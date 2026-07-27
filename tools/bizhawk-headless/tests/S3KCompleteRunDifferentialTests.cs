@@ -10,7 +10,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
     /// <summary>
     /// ROM-backed differential gate for the native S3K COMPLETE-RUN
     /// recorder (tools/bizhawk/s3k_complete_run_recorder.lua
-    /// v6.34-s3k-completerun; spec
+    /// v6.35-s3k-completerun; spec
     /// tools/bizhawk-headless/docs/s3k-run-publication.md). It runs the
     /// real CLI end-to-end through run.sh over the canonical Knuckles
     /// multi-bonus movie and asserts that the published bonus segment is
@@ -60,10 +60,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// The stamp the fixture and this port both carry, pinned as an
         /// exact literal so a shared drift fails rather than cancels out.
         /// </summary>
-        private const string FixtureLuaScriptVersionLine =
+        private const string LegacyLuaScriptVersionLine =
             "  \"lua_script_version\": \"6.33-s3k-completerun\",";
-        private const string CurrentLuaScriptVersionLine =
+        private const string PublishedHardwareLuaScriptVersionLine =
             "  \"lua_script_version\": \"6.34-s3k-completerun\",";
+        private const string CurrentLuaScriptVersionLine =
+            "  \"lua_script_version\": \"6.35-s3k-completerun\",";
         private const string FixtureTraceSchemaLine =
             "  \"trace_schema\": 6,";
         private const string CurrentTraceSchemaLine =
@@ -71,9 +73,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private const string HardwareTimingSchemaLine =
             "  \"hardware_timing_schema\": 1,";
         private const string HczTimingSha256 =
-            "ff922817c416cca6bc17533ee8bcb93bbdcd84a1da677a387ce9bd5f0af30c1f";
+            "edfa009a8c908b55702c5fa110ca8a72251e9c0f42343995c631d92ed83eb86eec";
         private const string AizTimingSha256 =
-            "d6f454521127c1152e78c8c1358fd2c1b02d951d2121e9f64043ae2758a2cf46";
+            "beef512cb1aec1da9c08b3e306fd7f40cb1455829eaddd3476a2c78e6a4c211a";
 
         // docs/s3k-run-publication.md §0.3, identity (C). The physics hash
         // was last moved by Lua 6.33-s3k-completerun (ADDR_VBLA_WORD 0xFE12
@@ -88,6 +90,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
         public static void Register(ICollection<TestMain.TestCase> tests)
         {
+            tests.Add(new TestMain.TestCase(
+                "S3KCompleteRunDifferential metadata compatibility accepts"
+                + " only exact current, published, or legacy shapes",
+                MetadataCompatibilityShapesAreExact));
             tests.Add(new TestMain.TestCase(
                 "S3KCompleteRunDifferential native capture matches the"
                 + " canonical bonus_gumball segment",
@@ -351,29 +357,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
             string[] expected = fixtureText.Split(
                 new[] { '\n' }, StringSplitOptions.None);
             string actualText = File.ReadAllText(producedPath);
-            AssertEx.Equal(
-                1, CountOccurrences(
-                    actualText, CurrentLuaScriptVersionLine));
-            AssertEx.Equal(
-                1, CountOccurrences(actualText, CurrentTraceSchemaLine));
-            AssertEx.Equal(
-                1, CountOccurrences(actualText, HardwareTimingSchemaLine));
-            bool fixtureIsCurrent =
-                CountOccurrences(fixtureText, CurrentLuaScriptVersionLine) == 1
-                && CountOccurrences(fixtureText, CurrentTraceSchemaLine) == 1
-                && CountOccurrences(fixtureText, HardwareTimingSchemaLine) == 1;
-            if (!fixtureIsCurrent)
-            {
-                actualText = actualText.Replace(
-                    CurrentLuaScriptVersionLine,
-                    FixtureLuaScriptVersionLine);
-                actualText = actualText.Replace(
-                    CurrentTraceSchemaLine,
-                    FixtureTraceSchemaLine);
-                actualText = actualText.Replace(
-                    HardwareTimingSchemaLine + "\n",
-                    "");
-            }
+            MetadataNormalization normalization =
+                NormalizeCurrentMetadataForFixture(
+                    fixtureText, actualText);
+            actualText = normalization.Text;
+            string fixtureVersionLine = normalization.VersionLine;
             string[] actual = actualText.Split(
                 new[] { '\n' }, StringSplitOptions.None);
             if (expected.Length != actual.Length)
@@ -385,9 +373,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             var versionLines = 0;
             for (var index = 0; index < expected.Length; index++)
             {
-                if (expected[index] == (fixtureIsCurrent
-                    ? CurrentLuaScriptVersionLine
-                    : FixtureLuaScriptVersionLine))
+                if (expected[index] == fixtureVersionLine)
                 {
                     versionLines++;
                 }
@@ -406,6 +392,146 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     + ">.");
             }
             AssertEx.Equal(1, versionLines);
+        }
+
+        private static MetadataNormalization NormalizeCurrentMetadataForFixture(
+            string fixtureText,
+            string producedText)
+        {
+            RequireMetadataShape(
+                producedText,
+                CurrentLuaScriptVersionLine,
+                CurrentTraceSchemaLine,
+                true,
+                "produced");
+
+            if (HasMetadataShape(
+                fixtureText,
+                CurrentLuaScriptVersionLine,
+                CurrentTraceSchemaLine,
+                true))
+            {
+                return new MetadataNormalization(
+                    producedText, CurrentLuaScriptVersionLine);
+            }
+            if (HasMetadataShape(
+                fixtureText,
+                PublishedHardwareLuaScriptVersionLine,
+                CurrentTraceSchemaLine,
+                true))
+            {
+                return new MetadataNormalization(
+                    producedText.Replace(
+                        CurrentLuaScriptVersionLine,
+                        PublishedHardwareLuaScriptVersionLine),
+                    PublishedHardwareLuaScriptVersionLine);
+            }
+            if (HasMetadataShape(
+                fixtureText,
+                LegacyLuaScriptVersionLine,
+                FixtureTraceSchemaLine,
+                false))
+            {
+                return new MetadataNormalization(
+                    producedText
+                        .Replace(
+                            CurrentLuaScriptVersionLine,
+                            LegacyLuaScriptVersionLine)
+                        .Replace(
+                            CurrentTraceSchemaLine,
+                            FixtureTraceSchemaLine)
+                        .Replace(HardwareTimingSchemaLine + "\n", ""),
+                    LegacyLuaScriptVersionLine);
+            }
+
+            throw new InvalidOperationException(
+                "Fixture metadata has an unknown or mixed S3K complete-run"
+                + " version/schema shape.");
+        }
+
+        private static bool HasMetadataShape(
+            string text,
+            string versionLine,
+            string traceSchemaLine,
+            bool hasHardwareTiming)
+        {
+            return CountOccurrences(text, "\"lua_script_version\":") == 1
+                && CountOccurrences(text, versionLine) == 1
+                && CountOccurrences(text, "\"trace_schema\":") == 1
+                && CountOccurrences(text, traceSchemaLine) == 1
+                && CountOccurrences(text, "\"hardware_timing_schema\":")
+                    == (hasHardwareTiming ? 1 : 0)
+                && CountOccurrences(text, HardwareTimingSchemaLine)
+                    == (hasHardwareTiming ? 1 : 0);
+        }
+
+        private static void RequireMetadataShape(
+            string text,
+            string versionLine,
+            string traceSchemaLine,
+            bool hasHardwareTiming,
+            string owner)
+        {
+            if (!HasMetadataShape(
+                text, versionLine, traceSchemaLine, hasHardwareTiming))
+            {
+                throw new InvalidOperationException(
+                    owner + " metadata does not have the exact current"
+                    + " S3K complete-run version/schema shape.");
+            }
+        }
+
+        private static void MetadataCompatibilityShapesAreExact()
+        {
+            string current = CurrentLuaScriptVersionLine + "\n"
+                + CurrentTraceSchemaLine + "\n"
+                + HardwareTimingSchemaLine + "\n";
+            string published = PublishedHardwareLuaScriptVersionLine + "\n"
+                + CurrentTraceSchemaLine + "\n"
+                + HardwareTimingSchemaLine + "\n";
+            string legacy = LegacyLuaScriptVersionLine + "\n"
+                + FixtureTraceSchemaLine + "\n";
+
+            AssertEx.Equal(
+                current,
+                NormalizeCurrentMetadataForFixture(
+                    current, current).Text);
+            AssertEx.Equal(
+                published,
+                NormalizeCurrentMetadataForFixture(
+                    published, current).Text);
+            AssertEx.Equal(
+                legacy,
+                NormalizeCurrentMetadataForFixture(
+                    legacy, current).Text);
+            AssertEx.Throws<InvalidOperationException>(
+                () => NormalizeCurrentMetadataForFixture(
+                    "  \"lua_script_version\":"
+                        + " \"9.99-s3k-completerun\",\n"
+                        + CurrentTraceSchemaLine + "\n"
+                        + HardwareTimingSchemaLine + "\n",
+                    current),
+                "unknown or mixed");
+            AssertEx.Throws<InvalidOperationException>(
+                () => NormalizeCurrentMetadataForFixture(
+                    current.Replace(
+                        CurrentLuaScriptVersionLine,
+                        CurrentLuaScriptVersionLine + "\n"
+                            + PublishedHardwareLuaScriptVersionLine),
+                    current),
+                "unknown or mixed");
+        }
+
+        private sealed class MetadataNormalization
+        {
+            internal MetadataNormalization(string text, string versionLine)
+            {
+                Text = text;
+                VersionLine = versionLine;
+            }
+
+            internal string Text { get; private set; }
+            internal string VersionLine { get; private set; }
         }
 
         private static string[] ReadLines(string path)

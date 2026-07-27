@@ -806,7 +806,7 @@ feat(s3k): model resumable Kos module readiness
 
 **Interfaces:**
 - Consumes: polled S3K Kos module queue/busy RAM state and canonical submission fields.
-- Produces: byte-identical `hardware_timing.jsonl`, metadata `hardware_timing_schema: 1`, `trace_schema: 7`, versions `6.34-s3k` and `6.34-s3k-completerun`.
+- Produces: byte-identical `hardware_timing.jsonl`, metadata `hardware_timing_schema: 1`, `trace_schema: 7`, versions `6.35-s3k` and `6.35-s3k-completerun`. Version 6.35 corrects immediate Kosinski descriptor refill and excludes synchronous initial-load completions from external authority while retaining their ordinals.
 
 - [ ] **Step 1: Write C# RED tests**
 

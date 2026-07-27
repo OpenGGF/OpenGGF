@@ -98,7 +98,7 @@ namespace OpenGGF.BizHawk.Headless
 
     /// <summary>
     /// Native port of the S3K complete-run recorder's DRIVER
-    /// (tools/bizhawk/s3k_complete_run_recorder.lua v6.34-s3k-completerun
+    /// (tools/bizhawk/s3k_complete_run_recorder.lua v6.35-s3k-completerun
     /// main loop L5850-5900; spec
     /// tools/bizhawk-headless/docs/s3k-run-publication.md). It owns only
     /// the loop and the wiring; every decision it makes is delegated:

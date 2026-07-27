@@ -69,8 +69,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private const string MultiBonusRunId = "s3k-multibonus";
         private const string FixtureVersionLine =
             "  \"lua_script_version\": \"6.33-s3k-completerun\",";
-        private const string CurrentVersionLine =
+        private const string PublishedHardwareVersionLine =
             "  \"lua_script_version\": \"6.34-s3k-completerun\",";
+        private const string CurrentVersionLine =
+            "  \"lua_script_version\": \"6.35-s3k-completerun\",";
         private const string FixtureTraceSchemaLine =
             "  \"trace_schema\": 6,";
         private const string CurrentTraceSchemaLine =
@@ -80,6 +82,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
         public static void Register(ICollection<TestMain.TestCase> tests)
         {
+            tests.Add(new TestMain.TestCase(
+                "S3KCompleteRunPublication metadata compatibility accepts"
+                + " only exact current, published, or legacy shapes",
+                MetadataCompatibilityShapesAreExact));
             foreach (MetadataFixture fixture in MetadataFixtures)
             {
                 MetadataFixture captured = fixture;
@@ -313,41 +319,145 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     + " complete-run recorder publishes LF in both modes.");
             }
             string actual = FormatFixture(fixture);
-            AssertEx.Equal(
-                1, CountOccurrences(actual, CurrentVersionLine));
-            AssertEx.Equal(
-                1, CountOccurrences(actual, HardwareTimingSchemaLine));
-            bool fixtureIsCurrent = expected.IndexOf(
-                CurrentVersionLine, StringComparison.Ordinal) >= 0
-                && expected.IndexOf(
-                    CurrentTraceSchemaLine, StringComparison.Ordinal) >= 0
-                && expected.IndexOf(
-                    HardwareTimingSchemaLine, StringComparison.Ordinal) >= 0;
-            if (!fixtureIsCurrent)
-            {
-                actual = actual.Replace(
-                    CurrentVersionLine, FixtureVersionLine);
-                actual = actual.Replace(HardwareTimingSchemaLine, "");
-                if (expected.IndexOf(
-                    FixtureTraceSchemaLine, StringComparison.Ordinal) >= 0)
-                {
-                    AssertEx.Equal(
-                        1, CountOccurrences(
-                            actual, CurrentTraceSchemaLine));
-                    actual = actual.Replace(
-                        CurrentTraceSchemaLine, FixtureTraceSchemaLine);
-                }
-                else
-                {
-                    AssertEx.Equal(
-                        1,
-                        CountOccurrences(
-                            actual, CurrentTraceSchemaLine + "\n"));
-                    actual = actual.Replace(
-                        CurrentTraceSchemaLine + "\n", "");
-                }
-            }
+            actual = NormalizeCurrentMetadataForFixture(expected, actual);
             AssertEx.Equal(expected, actual);
+        }
+
+        private static string NormalizeCurrentMetadataForFixture(
+            string fixtureText,
+            string producedText)
+        {
+            RequireMetadataShape(
+                producedText,
+                CurrentVersionLine,
+                CurrentTraceSchemaLine,
+                true,
+                "produced");
+
+            if (HasMetadataShape(
+                fixtureText,
+                CurrentVersionLine,
+                CurrentTraceSchemaLine,
+                true))
+            {
+                return producedText;
+            }
+            if (HasMetadataShape(
+                fixtureText,
+                PublishedHardwareVersionLine,
+                CurrentTraceSchemaLine,
+                true))
+            {
+                return producedText.Replace(
+                    CurrentVersionLine,
+                    PublishedHardwareVersionLine);
+            }
+            if (HasMetadataShape(
+                fixtureText,
+                FixtureVersionLine,
+                FixtureTraceSchemaLine,
+                false))
+            {
+                return producedText
+                    .Replace(CurrentVersionLine, FixtureVersionLine)
+                    .Replace(
+                        CurrentTraceSchemaLine,
+                        FixtureTraceSchemaLine)
+                    .Replace(HardwareTimingSchemaLine, "");
+            }
+            if (HasMetadataShape(
+                fixtureText,
+                FixtureVersionLine,
+                null,
+                false))
+            {
+                return producedText
+                    .Replace(CurrentVersionLine, FixtureVersionLine)
+                    .Replace(CurrentTraceSchemaLine + "\n", "")
+                    .Replace(HardwareTimingSchemaLine, "");
+            }
+
+            throw new InvalidOperationException(
+                "Fixture metadata has an unknown or mixed S3K complete-run"
+                + " publication version/schema shape.");
+        }
+
+        private static bool HasMetadataShape(
+            string text,
+            string versionLine,
+            string traceSchemaLine,
+            bool hasHardwareTiming)
+        {
+            int expectedTraceSchemas = traceSchemaLine == null ? 0 : 1;
+            return CountOccurrences(text, "\"lua_script_version\":") == 1
+                && CountOccurrences(text, versionLine) == 1
+                && CountOccurrences(text, "\"trace_schema\":")
+                    == expectedTraceSchemas
+                && (traceSchemaLine == null
+                    || CountOccurrences(text, traceSchemaLine) == 1)
+                && CountOccurrences(text, "\"hardware_timing_schema\":")
+                    == (hasHardwareTiming ? 1 : 0)
+                && CountOccurrences(text, HardwareTimingSchemaLine)
+                    == (hasHardwareTiming ? 1 : 0);
+        }
+
+        private static void RequireMetadataShape(
+            string text,
+            string versionLine,
+            string traceSchemaLine,
+            bool hasHardwareTiming,
+            string owner)
+        {
+            if (!HasMetadataShape(
+                text, versionLine, traceSchemaLine, hasHardwareTiming))
+            {
+                throw new InvalidOperationException(
+                    owner + " metadata does not have the exact current"
+                    + " S3K complete-run publication version/schema shape.");
+            }
+        }
+
+        private static void MetadataCompatibilityShapesAreExact()
+        {
+            string current = CurrentVersionLine + "\n"
+                + CurrentTraceSchemaLine + "\n"
+                + HardwareTimingSchemaLine;
+            string published = PublishedHardwareVersionLine + "\n"
+                + CurrentTraceSchemaLine + "\n"
+                + HardwareTimingSchemaLine;
+            string legacy = FixtureVersionLine + "\n"
+                + FixtureTraceSchemaLine + "\n";
+            string legacyWithoutSchema = FixtureVersionLine + "\n";
+
+            AssertEx.Equal(
+                current,
+                NormalizeCurrentMetadataForFixture(current, current));
+            AssertEx.Equal(
+                published,
+                NormalizeCurrentMetadataForFixture(published, current));
+            AssertEx.Equal(
+                legacy,
+                NormalizeCurrentMetadataForFixture(legacy, current));
+            AssertEx.Equal(
+                legacyWithoutSchema,
+                NormalizeCurrentMetadataForFixture(
+                    legacyWithoutSchema, current));
+            AssertEx.Throws<InvalidOperationException>(
+                () => NormalizeCurrentMetadataForFixture(
+                    "  \"lua_script_version\":"
+                        + " \"9.99-s3k-completerun\",\n"
+                        + CurrentTraceSchemaLine + "\n"
+                        + HardwareTimingSchemaLine,
+                    current),
+                "unknown or mixed");
+            AssertEx.Throws<InvalidOperationException>(
+                () => NormalizeCurrentMetadataForFixture(
+                    current.Replace(
+                        CurrentVersionLine,
+                        CurrentVersionLine + "\n"
+                            + PublishedHardwareVersionLine),
+                    current),
+                "unknown or mixed");
         }
 
         private static string FormatFixture(MetadataFixture fixture)
@@ -665,7 +775,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     SetBSegments,
                     transitions);
             const string CurrentManifestVersionLine =
-                "  \"lua_script_version\": \"6.34-s3k-completerun\",\n";
+                "  \"lua_script_version\": \"6.35-s3k-completerun\",\n";
             AssertEx.Equal(
                 1,
                 CountOccurrences(actual, CurrentManifestVersionLine));

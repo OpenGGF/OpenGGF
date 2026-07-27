@@ -23,7 +23,7 @@ namespace OpenGGF.BizHawk.Headless
 
     /// <summary>
     /// Native port of the S3K standard Lua trace recorder's frame loop
-    /// (tools/bizhawk/s3k_trace_recorder.lua v6.34-s3k; spec
+    /// (tools/bizhawk/s3k_trace_recorder.lua v6.35-s3k; spec
     /// tools/bizhawk-headless/docs/s3k-profiles-and-hooks.md §1/§3).
     /// Supports all three profiles:
     ///
@@ -290,6 +290,7 @@ namespace OpenGGF.BizHawk.Headless
             int startZoneId = 0;
             int startAct = 0;
             uint startRngSeed = 0;
+            bool hardwareCompletionAuthorityArmed = false;
             S3KAuxEventEngine auxEngine = null;
             var hardwareTimingEngine =
                 new HardwareTimingEventEngine(rom);
@@ -339,6 +340,15 @@ namespace OpenGGF.BizHawk.Headless
                     }
 
                     byte gameMode = S3KRam.U8(host, S3KRam.GameMode);
+                    if (gameMode == S3KRam.GameModeLevel)
+                    {
+                        // LoadLevelLoadBlock waits synchronously for its two
+                        // initial KosM jobs. Preserve those jobs in the
+                        // run-wide ordinal ledger, but do not export
+                        // completion authority until the ordinary LevelLoop
+                        // becomes observable.
+                        hardwareCompletionAuthorityArmed = true;
+                    }
 
                     // (1) Discard-and-reset (level-gated only, spec §3.2
                     // step 6): a pause+A soft reset or power-on loop
@@ -359,6 +369,7 @@ namespace OpenGGF.BizHawk.Headless
                         startZoneId = 0;
                         startAct = 0;
                         startRngSeed = 0;
+                        hardwareCompletionAuthorityArmed = false;
                         physicsSink.Discard();
                         auxSink.Discard();
                         hardwareTimingSink.Discard();
@@ -475,7 +486,11 @@ namespace OpenGGF.BizHawk.Headless
                         auxSink.AppendLine(line);
                     }
                     hardwareTimingEngine.ObservePostObjects(
-                        traceFrame, host, hardwareTimingSink);
+                        traceFrame,
+                        host,
+                        hardwareCompletionAuthorityArmed
+                            ? hardwareTimingSink
+                            : null);
                     traceFrame++;
                 }
 

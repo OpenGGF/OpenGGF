@@ -13,6 +13,7 @@ import com.openggf.game.GameStateManager;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareTimingService;
+import com.openggf.game.timing.HardwareTimingSnapshot;
 import com.openggf.game.timing.HardwareWorkHandle;
 import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.timing.HardwareWorkPreparation;
@@ -34,14 +35,116 @@ import com.openggf.game.solid.DefaultSolidExecutionRegistry;
 import com.openggf.timer.TimerManager;
 
 import java.util.List;
+import java.util.Map;
 
 import static com.openggf.game.timing.HardwareServiceBoundary.POST_OBJECTS;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestTraceRunHardwareTimingCoordinator {
+
+    @Test
+    void emptyInitialScheduleCannotSeedOrdinalFourDuringLaterHandoff() {
+        HardwareTimingService service = new HardwareTimingService();
+        HardwareTimingReplayPort port =
+                new HardwareTimingReplayPort(service.beginRecordedAdmission());
+        port.install(HardwareTimingSchedule.empty());
+        TimingFixture fixture = new TimingFixture(port);
+        fixture.installHardwareTimingReplay(port);
+        HardwareWorkSubmission submission = submission(false, 0, 0x2c);
+        HardwareCompletionEdge laterEdge = new HardwareCompletionEdge(
+                200,
+                POST_OBJECTS,
+                submission.kind(),
+                4,
+                com.openggf.game.timing.HardwareSubmissionFingerprint
+                        .compute(submission));
+        var coordinator = new TraceRunReplayWalker.HardwareTimingCoordinator(
+                fixture,
+                List.of(
+                        new TraceRunReplayWalker.HardwareTimingSegment(
+                                10, List.of(100), HardwareTimingSchedule.empty()),
+                        new TraceRunReplayWalker.HardwareTimingSegment(
+                                11, List.of(200),
+                                new HardwareTimingSchedule(List.of(laterEdge)))));
+
+        coordinator.beginPlaybackFrame(frame(10));
+        coordinator.beginPlaybackFrame(frame(11));
+        HardwareWorkHandle production = service.submit(submission);
+        service.service(POST_OBJECTS);
+
+        assertEquals(0, production.ordinal(),
+                "handoff must not reconstruct omitted run-start submissions");
+        IllegalStateException mismatch = assertThrows(
+                IllegalStateException.class,
+                () -> fixture.observer.onBoundary(POST_OBJECTS));
+        assertTrue(mismatch.getMessage().contains(
+                "expected completion: KOS_MODULE_QUEUE#4"),
+                mismatch::getMessage);
+        assertTrue(mismatch.getMessage().contains(
+                "engine pending: KOS_MODULE_QUEUE#0"),
+                mismatch::getMessage);
+    }
+
+    @Test
+    void explicitOrdinalFourBaseIsEstablishedBeforeRunAndSurvivesHandoff() {
+        HardwareTimingService service = new HardwareTimingService();
+        HardwareTimingReplayPort port =
+                new HardwareTimingReplayPort(service.beginRecordedAdmission());
+        port.install(
+                HardwareTimingSchedule.empty(),
+                Map.of(HardwareWorkKind.KOS_MODULE_QUEUE, 4L));
+        TimingFixture fixture = new TimingFixture(port);
+        fixture.installHardwareTimingReplay(port);
+        HardwareWorkSubmission submission = submission(false, 0, 0x2d);
+        HardwareCompletionEdge laterEdge = new HardwareCompletionEdge(
+                200,
+                POST_OBJECTS,
+                submission.kind(),
+                4,
+                com.openggf.game.timing.HardwareSubmissionFingerprint
+                        .compute(submission));
+        var coordinator = new TraceRunReplayWalker.HardwareTimingCoordinator(
+                fixture,
+                List.of(
+                        new TraceRunReplayWalker.HardwareTimingSegment(
+                                10, List.of(100), HardwareTimingSchedule.empty()),
+                        new TraceRunReplayWalker.HardwareTimingSegment(
+                                11, List.of(200),
+                                new HardwareTimingSchedule(List.of(laterEdge)))));
+
+        coordinator.beginPlaybackFrame(frame(10));
+        HardwareTimingSnapshot serviceBeforeHandoff = service.capture();
+        var portBeforeHandoff = port.capture();
+        coordinator.beginPlaybackFrame(frame(11));
+        HardwareWorkHandle production = service.submit(submission);
+        service.service(POST_OBJECTS);
+        fixture.observer.onBoundary(POST_OBJECTS);
+
+        assertEquals(4, production.ordinal());
+        assertTrue(service.isReady(production));
+
+        service.restore(serviceBeforeHandoff);
+        port.restore(portBeforeHandoff);
+        coordinator = new TraceRunReplayWalker.HardwareTimingCoordinator(
+                fixture,
+                List.of(
+                        new TraceRunReplayWalker.HardwareTimingSegment(
+                                10, List.of(100), HardwareTimingSchedule.empty()),
+                        new TraceRunReplayWalker.HardwareTimingSegment(
+                                11, List.of(200),
+                                new HardwareTimingSchedule(List.of(laterEdge)))));
+        coordinator.beginPlaybackFrame(frame(10));
+        coordinator.beginPlaybackFrame(frame(11));
+        HardwareWorkHandle replayed = service.submit(submission);
+        service.service(POST_OBJECTS);
+        fixture.observer.onBoundary(POST_OBJECTS);
+        assertEquals(production, replayed);
+        assertTrue(service.isReady(replayed));
+    }
 
     @Test
     void twoSegmentsLatchBeforeServicePreserveOrdinalAndCloseAdmission() {

@@ -7,7 +7,7 @@ namespace OpenGGF.BizHawk.Headless
     /// <summary>
     /// Byte-exact port of the S3K Lua trace recorder's metadata.json
     /// layout (tools/bizhawk/s3k_trace_recorder.lua write_metadata,
-    /// v6.34-s3k, trace_schema 7 / hardware_timing_schema 1; spec
+    /// v6.35-s3k, trace_schema 7 / hardware_timing_schema 1; spec
     /// tools/bizhawk-headless/docs/s3k-trace-recorder-behavior.md §6):
     /// 2-space indent, fixed key order, LF line endings, and a trailing
     /// newline after the closing brace. The Lua rewrites the file at arm,
@@ -39,7 +39,7 @@ namespace OpenGGF.BizHawk.Headless
     /// </summary>
     public static class S3KTraceMetadataWriter
     {
-        public const string LuaScriptVersion = "6.34-s3k";
+        public const string LuaScriptVersion = "6.35-s3k";
 
         /// <summary>
         /// The Lua's hardcoded S3K_ROM_CHECKSUM constant: the BizHawk

@@ -121,14 +121,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
             "^  \"recording_date\": \"[0-9]{4}-[0-9]{2}-[0-9]{2}\",$");
 
         /// <summary>
-        /// Exact fixture/current stamps for the approved 6.34 -> 6.33
+        /// Exact fixture/current stamps for the approved 6.35 -> 6.33
         /// normalization applied to metadata and run manifests. Any other
         /// version value fails rather than being normalized loosely.
         /// </summary>
         private const string FixtureVersionLine =
             "  \"lua_script_version\": \"6.33-s3k-completerun\",";
         private const string CurrentVersionLine =
-            "  \"lua_script_version\": \"6.34-s3k-completerun\",";
+            "  \"lua_script_version\": \"6.35-s3k-completerun\",";
         private const string FixtureTraceSchemaLine =
             "  \"trace_schema\": 6,";
         private const string CurrentTraceSchemaLine =

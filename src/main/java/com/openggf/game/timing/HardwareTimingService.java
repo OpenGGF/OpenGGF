@@ -274,6 +274,31 @@ public final class HardwareTimingService
 
     private final class RecordedAuthority implements RecordedCompletionAuthority {
         @Override
+        public void initializeOrdinalBases(
+                Map<HardwareWorkKind, Long> firstOrdinals) {
+            requireRecordedAdmission();
+            Objects.requireNonNull(firstOrdinals, "firstOrdinals");
+            for (Map.Entry<HardwareWorkKind, Long> entry
+                    : firstOrdinals.entrySet()) {
+                Objects.requireNonNull(entry.getKey(), "hardware work kind");
+                Long ordinal = Objects.requireNonNull(
+                        entry.getValue(), "first hardware work ordinal");
+                if (ordinal < 0) {
+                    throw new IllegalArgumentException(
+                            "hardware work ordinal base must be non-negative: "
+                                    + entry.getKey() + "#" + ordinal);
+                }
+            }
+            for (Map.Entry<HardwareWorkKind, Long> entry
+                    : firstOrdinals.entrySet()) {
+                HardwareWorkKind kind = entry.getKey();
+                if (!nextOrdinals.containsKey(kind)) {
+                    nextOrdinals.put(kind, entry.getValue());
+                }
+            }
+        }
+
+        @Override
         public void admitRecordedCompletion(
                 HardwareServiceBoundary boundary,
                 HardwareWorkKind kind,

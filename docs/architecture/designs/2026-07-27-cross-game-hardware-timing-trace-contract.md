@@ -92,6 +92,23 @@ Persistent values such as `V_int_run_count` may depend on power-on history
 that a segment trace does not replay. The trace may seed such a value once at
 a structural segment boundary. The engine then advances it natively.
 
+The same rule applies to hardware-work identity when a standalone segment
+begins after earlier work in its captured structural run. Before the first
+production submission of a kind, the timing schedule may establish that
+kind's first recorded ordinal as the production ledger's initial ordinal.
+This base is restored by rewind. It is not reapplied at a run-chain handoff,
+cannot renumber an existing submission, and does not change preparation,
+readiness, payload, or gameplay state. Edges for one kind must be contiguous
+within one timing stream. Exported edges across structural segments may have
+ordinal gaps where native phase work intentionally produced no completion
+edge; the production submissions and claims must advance the ledger through
+that gap. Handoff never seeds it. If those native submissions are absent, the
+later edge fails its ordinary engine-identity admission check.
+An empty initial run schedule does not infer a base from a later segment:
+when ordinal continuity depends on earlier production submissions, those
+submissions must occur. A reviewed nonzero initial base must be established
+explicitly at initial run installation, before production submits that kind.
+
 This is initial-state reconstruction, not recurring synchronization.
 
 ### 5. Diagnostic-only presentation timing
@@ -197,8 +214,8 @@ The container contract is exact:
 - filename: `hardware_timing.jsonl`;
 - metadata discovery key: `"hardware_timing_schema": 1`;
 - fixture trace schema: `trace_schema: 7`;
-- S3K standard recorder version: `6.34-s3k`;
-- S3K complete-run recorder version: `6.34-s3k-completerun`.
+- S3K standard recorder version: `6.35-s3k`;
+- S3K complete-run recorder version: `6.35-s3k-completerun`.
 
 For legacy `trace_schema <= 6` fixtures, absence of both the metadata key and
 file means no authoritative timing input; replay uses only the production
@@ -359,8 +376,8 @@ semantics, behavioral and unit tests, cross-implementation vectors where
 available, and independent code review. An existing candidate is valid when it
 was produced by the unchanged implementation that receives that review.
 Lua/native byte equivalence is optional corroboration, not a publication
-prerequisite. Version-1 differential coverage includes `6.34-s3k` standard and
-`6.34-s3k-completerun` captures and byte-exact empty streams for routes with no
+prerequisite. Version-1 differential coverage includes `6.35-s3k` standard and
+`6.35-s3k-completerun` captures and byte-exact empty streams for routes with no
 eligible completion. The stream is not declared through `aux_schema_extras`.
 
 After capture, publication records and pins the native candidate's digests,

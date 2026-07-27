@@ -1,7 +1,6 @@
 package com.openggf.trace.timing;
 
 import com.openggf.game.timing.HardwareServiceBoundary;
-
 import java.util.Objects;
 import java.util.Set;
 

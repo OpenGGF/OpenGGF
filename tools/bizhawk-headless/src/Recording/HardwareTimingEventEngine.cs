@@ -245,17 +245,8 @@ namespace OpenGGF.BizHawk.Headless
             int descriptorBits = 0;
             while (true)
             {
-                if (descriptorBits == 0)
-                {
-                    RequireRomBytes(position, 2);
-                    descriptor = rom[position]
-                        | (rom[position + 1] << 8);
-                    position += 2;
-                    descriptorBits = 16;
-                }
-                int first = descriptor & 1;
-                descriptor >>= 1;
-                descriptorBits--;
+                int first = PopDescriptorBit(
+                    ref descriptor, ref descriptorBits, ref position);
                 if (first != 0)
                 {
                     RequireRomBytes(position, 1);
@@ -263,17 +254,8 @@ namespace OpenGGF.BizHawk.Headless
                     continue;
                 }
 
-                if (descriptorBits == 0)
-                {
-                    RequireRomBytes(position, 2);
-                    descriptor = rom[position]
-                        | (rom[position + 1] << 8);
-                    position += 2;
-                    descriptorBits = 16;
-                }
-                int second = descriptor & 1;
-                descriptor >>= 1;
-                descriptorBits--;
+                int second = PopDescriptorBit(
+                    ref descriptor, ref descriptorBits, ref position);
                 if (second == 0)
                 {
                     // Short match: two more descriptor bits select the
@@ -338,6 +320,17 @@ namespace OpenGGF.BizHawk.Headless
             int bit = descriptor & 1;
             descriptor >>= 1;
             descriptorBits--;
+            if (descriptorBits == 0)
+            {
+                // Kos_Decomp_Loop / Kos_Decomp_Match reload d5 as soon as
+                // dbf consumes descriptor bit 16, before the selected
+                // command reads its literal or match bytes
+                // (sonic3k.asm:2572-2600).
+                RequireRomBytes(position, 2);
+                descriptor = rom[position] | (rom[position + 1] << 8);
+                position += 2;
+                descriptorBits = 16;
+            }
             return bit;
         }
 

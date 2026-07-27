@@ -7,7 +7,7 @@ namespace OpenGGF.BizHawk.Headless
     /// <summary>
     /// Byte-exact port of the S3K complete-run recorder's THREE
     /// metadata.json shapes (tools/bizhawk/s3k_complete_run_recorder.lua
-    /// v6.34-s3k-completerun: <c>write_metadata</c> for the level and
+    /// v6.35-s3k-completerun: <c>write_metadata</c> for the level and
     /// bonus shapes, <c>write_ss_metadata</c> L5103 for the special-stage
     /// shape; spec tools/bizhawk-headless/docs/s3k-run-publication.md §3).
     ///
@@ -64,7 +64,7 @@ namespace OpenGGF.BizHawk.Headless
         /// behavior). 6.32 -> 6.33 is the ADDR_VBLA_WORD fix: 0xFE12
         /// Life_count -> 0xFE0E, the V_int_run_count low word.
         /// </summary>
-        public const string LuaScriptVersion = "6.34-s3k-completerun";
+        public const string LuaScriptVersion = "6.35-s3k-completerun";
 
         /// <summary>
         /// The Lua's hardcoded S3K_ROM_CHECKSUM: the BizHawk movie-header

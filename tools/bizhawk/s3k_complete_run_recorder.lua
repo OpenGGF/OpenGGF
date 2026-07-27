@@ -300,6 +300,9 @@
 -- v6.34-s3k-completerun adds trace_schema 7 / hardware_timing_schema 1 for
 -- every level, bonus, and special-stage segment. The run-scoped Kos module
 -- FIFO observer stays live through unexported boundaries and SS-results $48.
+-- v6.35-s3k-completerun fixes Kosinski descriptor-word refill timing in the
+-- shared hardware-timing scanner so submission fingerprints use the
+-- canonical compressed span consumed by the ROM decoder.
 -- Existing captures carry the wrong column and need recapture.
 ------------------------------------------------------------------------------
 
@@ -368,7 +371,7 @@ end
 BIZHAWK_VERSION = "2.11"
 GENESIS_CORE = "Genplus-gx"
 S3K_ROM_CHECKSUM = "C5B1C655C19F462ADE0AC4E17A844D10"
-LUA_SCRIPT_VERSION = "6.34-s3k-completerun"   -- no "v" prefix (existing convention)
+LUA_SCRIPT_VERSION = "6.35-s3k-completerun"   -- no "v" prefix (existing convention)
 -- Overridable so non-default movies (e.g. the Knuckles multi-bonus route)
 -- get truthful source_bk2 metadata instead of the complete-run default.
 SOURCE_BK2_NAME = os.getenv("OGGF_BK2_BASENAME") or "s3k-complete-sonic-tails.bk2"

@@ -112,6 +112,15 @@ local function pop_bit(state)
     local bit = state.descriptor & 1
     state.descriptor = state.descriptor >> 1
     state.bits = state.bits - 1
+    if state.bits == 0 then
+        -- Kos_Decomp_Loop / Kos_Decomp_Match reload d5 immediately when
+        -- dbf consumes descriptor bit 16, before the selected command reads
+        -- its literal or match payload (sonic3k.asm:2572-2600).
+        state.descriptor = rom_u8(state.position)
+            | (rom_u8(state.position + 1) << 8)
+        state.position = state.position + 2
+        state.bits = 16
+    end
     return bit
 end
 

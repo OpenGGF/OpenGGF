@@ -51899,3 +51899,114 @@ mvn -q -Dmse=off -Dsurefire.forkCount=1 \
 - Focused touch, miniboss, rewind, and coverage suites pass. Established
   canaries retain standalone AIZ f8837 `rings`, standalone MGZ f23561
   `rings`, and CNZ complete-run f0 `y`.
+
+## 2026-07-27 - S3K KosM recorder identity and structural ordinal audit
+
+- Worktree: `.worktrees/trace-green-integration-20260727`, branch
+  `bugfix/ai-trace-green-integration-20260727`, base `2c7cd2ba3`.
+- Source-truth finding: both native and Lua timing scanners delayed the
+  Kosinski descriptor refill until the next bit request. The ROM reloads the
+  descriptor immediately when `dbf` consumes bit 16, before the selected
+  command reads its payload (`docs/skdisasm/sonic3k.asm:2572-2600`).
+- Recorder 6.35 now agrees with `ResumableKosinskiDecoder`. The standard
+  recorder also observes the synchronous `LoadLevelLoadBlock` pair only to
+  preserve ordinals 0/1; those completions are lag/phase evidence and are not
+  exported. Its first authoritative edge is therefore AIZ intro plane,
+  ordinal 2 at raw frame 361.
+- Standalone replay establishes a schedule's later-first ordinal once before
+  the first production submission of that kind (AIZ 2, HCZ 43). Run-chain
+  handoff never resets it, and rewind restores both base and edge progress.
+  Noncontiguous per-kind edges within one timing stream fail structurally.
+
+Focused verification:
+
+```bash
+mvn -q -Dmse=off \
+  "-Dtest=TestHardwareTimingReplayPort,TestHardwareTimingService,TestHardwareTimingRewind,TestTraceRunHardwareTimingCoordinator" \
+  test
+```
+
+- Pass: 36 tests, 0 failures.
+
+```bash
+env BIZHAWK_HOME=<bizhawk> S3K_ROM_PATH="$PWD/s3k.gen" \
+  tools/bizhawk-headless/test.sh --filter HardwareTiming
+```
+
+- Pass: 13 tests, 0 failures, 0 skips.
+
+```bash
+mvn -q -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=false \
+  "-Ds3k.rom.path=$PWD/s3k.gen" \
+  "-Dtest=TestS3kHardwareTimingReplay,TestS3kKosTimingRewindIntegration" \
+  test
+```
+
+- RED pending approved fixture replacement: 4 failures, first
+  `aizStandardFirstEdgeMatchesNativeIntroSubmission`, field
+  `submission_fingerprint` (committed recorder
+  `sha256:4886dc48...`, production `sha256:4423f6be...`).
+- Corrected uncommitted candidates keep physics/aux bytes unchanged.
+  Standard timing is 38 events, 8,246 bytes,
+  `sha256:349894a74ab42d2241f6e87a814e1795a716f276c6b41c2aca4edcf9b65d77e3`;
+  complete AIZ is 41 events, 8,909 bytes,
+  `sha256:beef512cb1aec1da9c08b3e306fd7f40cb1455829eaddd3476a2c78e6a4c211a`;
+  complete HCZ is 45 events, 9,779 bytes,
+  `sha256:edfa009a8c908b55702c5fa110ca8a72251e9c0f42343995c631d92ed83eb86eec`.
+- No trace frontier is claimed from these candidates until the exact fixture
+  bytes are reviewed and approved.
+
+### Task 9A prerequisite correction
+
+- Review found that a first timing edge in a later run segment could seed its
+  ordinal during handoff. That could mask omitted production work (for
+  example, an empty initial schedule followed by ordinal 4).
+- Handoff no longer has ordinal-base authority. A reviewed nonzero base can
+  be established only by initial installation, before production submission;
+  rewind preserves it. Focused port and run-coordinator tests exercise both
+  the rejected missing-continuity case and a valid explicit ordinal-4 base.
+- Native metadata comparisons now classify three exact shapes: current 6.35
+  schema 7 (direct comparison), published 6.34 schema 7 (exact version
+  normalization), and legacy schema 6 (exact version/schema normalization).
+  Unknown and mixed shapes fail.
+
+```bash
+mvn -Dmse=off \
+  "-Dtest=com.openggf.trace.timing.TestHardwareTimingReplayPort,com.openggf.tests.trace.runs.TestTraceRunHardwareTimingCoordinator" \
+  test
+```
+
+- Pass: 25 tests, 0 failures.
+
+```bash
+BIZHAWK_HOME=<bizhawk> tools/bizhawk-headless/test.sh \
+  --filter "metadata compatibility accepts" --jobs 1
+```
+
+- Pass: 3 matching metadata compatibility tests, 0 failures. The mandatory
+  harness dependency skipped because its unrelated S1 ROM was not supplied.
+- Task 9 acceptance remains pending corrected fixture publication and the
+  composed rings/live-window/recorded-rewind acceptance phase. The
+  candidate-only real-ROM integration classes remain outside this staged
+  prerequisite bundle.
+
+### Task 9A handoff-gap correction
+
+- Review identified that exported edge ordinals are not necessarily
+  contiguous across files. During structural phase work such as `$48`, the
+  recorder keeps advancing the production-identity ledger with a null writer,
+  so the next segment can legitimately begin several ordinals later.
+- Cross-handoff edge contiguity validation was removed. Within-stream
+  contiguity remains strict. Tests now prove that real intervening
+  submissions/preparation/claims advance the production ledger to the later
+  edge, while the same gap without those submissions fails naturally at
+  admission (`engine #3` versus expected `#5`). Handoff still cannot seed or
+  reset the ordinal base.
+
+```bash
+mvn -Dmse=off \
+  "-Dtest=com.openggf.trace.timing.TestHardwareTimingReplayPort,com.openggf.tests.trace.runs.TestTraceRunHardwareTimingCoordinator" \
+  test
+```
+
+- Pass: 26 tests, 0 failures.

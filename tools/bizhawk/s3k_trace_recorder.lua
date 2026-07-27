@@ -51,6 +51,11 @@
 -- the wrong column and need recapture.
 -- v6.34-s3k changes: add trace_schema 7 / hardware_timing_schema 1 and the
 -- authoritative hardware_timing.jsonl stream.
+-- v6.35-s3k fixes Kosinski descriptor-word refill timing in the shared
+-- hardware-timing scanner so submission fingerprints use the canonical
+-- compressed span consumed by the ROM decoder. Synchronous LoadLevelLoadBlock
+-- jobs remain in the ordinal ledger but are not exported as completion
+-- authority before the ordinary LevelLoop becomes observable.
 -- v6.0-s3k changes: emit per-frame cpu_state events with the full Tails CPU
 -- global block plus Ctrl_2_logical so engine SidekickCpuController state can
 -- be hydrated each frame in trace replay (closes the visibility gap that
@@ -676,6 +681,7 @@ local physics_file = nil
 local aux_file = nil
 hardware_timing_file = nil
 HARDWARE_TIMING_TRACKER = HARDWARE_TIMING.new_tracker()
+hardware_timing_authority_armed = false
 
 -----------------
 --- Helpers   ---
@@ -939,6 +945,7 @@ local function reset_recording_state()
     V66.boundary_state = nil
     V67_CNZ.cnz_cylinder_hits = {}
     HARDWARE_TIMING_TRACKER = HARDWARE_TIMING.new_tracker()
+    hardware_timing_authority_armed = false
     os.remove(OUTPUT_DIR .. "physics.csv")
     os.remove(OUTPUT_DIR .. "aux_state.jsonl")
     os.remove(OUTPUT_DIR .. "hardware_timing.jsonl")
@@ -993,7 +1000,7 @@ local function write_metadata()
     meta_file:write('  "sidekicks": ["tails"],\n')
     meta_file:write('  "rng_seed": "0x' .. hex(start_rng_seed, 8) .. '",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
-    meta_file:write('  "lua_script_version": "6.34-s3k",\n')
+    meta_file:write('  "lua_script_version": "6.35-s3k",\n')
     -- trace_schema 7 adds the authoritative hardware timing stream.
     -- csv_version 7
     -- adds player and sidekick animation_id/mapping_frame to physics.csv. New per-frame
@@ -4601,6 +4608,12 @@ function on_frame_end()
     end
 
     local game_mode = mainmemory.read_u8(ADDR_GAME_MODE)
+    if game_mode == GAMEMODE_LEVEL then
+        -- LoadLevelLoadBlock synchronously waits for the initial KosM pair.
+        -- Keep those jobs in the run-wide ordinal ledger, but external
+        -- completion authority begins only once LevelLoop is observable.
+        hardware_timing_authority_armed = true
+    end
 
     if should_discard_and_reset(game_mode) then
         print(string.format(
@@ -4945,7 +4958,9 @@ function on_frame_end()
     scan_objects(x, y)
 
     HARDWARE_TIMING.observe(
-        HARDWARE_TIMING_TRACKER, trace_frame, hardware_timing_file)
+        HARDWARE_TIMING_TRACKER,
+        trace_frame,
+        hardware_timing_authority_armed and hardware_timing_file or nil)
     trace_frame = trace_frame + 1
 end
 
@@ -4972,7 +4987,7 @@ elseif is_level_gated_reset_aware_profile() then
 else
     WAIT_DESC = "level gameplay (Game_Mode=0x0C, controls unlocked)"
 end
-print(string.format("S3K Trace Recorder v6.34-s3k loaded. Profile=%s. Waiting for %s...", TRACE_PROFILE, WAIT_DESC))
+print(string.format("S3K Trace Recorder v6.35-s3k loaded. Profile=%s. Waiting for %s...", TRACE_PROFILE, WAIT_DESC))
 
 -- Optional diagnostics are stage-gated. Capture the opaque event ids while
 -- registering so every segment close/reset can unregister the hooks instead

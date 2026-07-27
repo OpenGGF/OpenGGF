@@ -3,12 +3,15 @@ package com.openggf.trace.timing;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareWorkHandle;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.timing.PendingRecordedSubmission;
 import com.openggf.game.timing.RecordedCompletionAuthority;
 
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -46,6 +49,20 @@ public final class HardwareTimingReplayPort
 
     public void install(HardwareTimingSchedule schedule) {
         HardwareTimingSchedule checked = validateSchedule(schedule);
+        install(checked, firstOrdinals(checked));
+    }
+
+    /**
+     * Installs the initial structural-run schedule and its one-time hardware
+     * identity base. The explicit form is used when the first represented
+     * segment is empty but the run's initial state still has a reviewed base.
+     * Segment handoffs can never establish or change this base.
+     */
+    public void install(
+            HardwareTimingSchedule schedule,
+            Map<HardwareWorkKind, Long> initialOrdinalBases) {
+        HardwareTimingSchedule checked = validateSchedule(schedule);
+        Objects.requireNonNull(initialOrdinalBases, "initialOrdinalBases");
         if (installed && !runComplete) {
             throw new IllegalStateException(
                     "hardware timing replay is already installed");
@@ -53,6 +70,7 @@ public final class HardwareTimingReplayPort
         this.schedule = checked;
         edgeCursor = 0;
         consumedIdentities.clear();
+        authority.initializeOrdinalBases(initialOrdinalBases);
         rawFrameLatch = null;
         lastAppliedBoundary = null;
         installed = true;
@@ -280,6 +298,8 @@ public final class HardwareTimingReplayPort
         Objects.requireNonNull(schedule, "schedule");
         HardwareCompletionEdge previous = null;
         Set<String> identities = new LinkedHashSet<>();
+        EnumMap<HardwareWorkKind, Long> lastOrdinals =
+                new EnumMap<>(HardwareWorkKind.class);
         for (HardwareCompletionEdge edge : schedule.edges()) {
             Objects.requireNonNull(edge, "hardware completion edge");
             if (edge.rawFrame() < 0) {
@@ -306,9 +326,31 @@ public final class HardwareTimingReplayPort
                         "duplicate hardware completion edge identity: "
                                 + describe(edge));
             }
+            Long lastOrdinal = lastOrdinals.put(
+                    edge.kind(), edge.ordinal());
+            if (lastOrdinal != null
+                    && (lastOrdinal == Long.MAX_VALUE
+                    || edge.ordinal() != lastOrdinal + 1)) {
+                throw new IllegalArgumentException(
+                        "noncontiguous hardware completion ordinals for "
+                                + edge.kind() + ": expected ordinal "
+                                + (lastOrdinal == Long.MAX_VALUE
+                                ? "<exhausted>" : lastOrdinal + 1)
+                                + ", found " + edge.ordinal());
+            }
             previous = edge;
         }
         return schedule;
+    }
+
+    private static Map<HardwareWorkKind, Long> firstOrdinals(
+            HardwareTimingSchedule schedule) {
+        EnumMap<HardwareWorkKind, Long> firstOrdinals =
+                new EnumMap<>(HardwareWorkKind.class);
+        for (HardwareCompletionEdge edge : schedule.edges()) {
+            firstOrdinals.putIfAbsent(edge.kind(), edge.ordinal());
+        }
+        return Map.copyOf(firstOrdinals);
     }
 
     private static String identity(HardwareCompletionEdge edge) {

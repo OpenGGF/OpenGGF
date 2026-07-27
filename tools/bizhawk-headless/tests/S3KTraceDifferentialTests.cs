@@ -87,10 +87,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// Exact fixture/current literals for the approved version/schema
         /// normalization. Any other value fails.
         /// </summary>
-        private const string FixtureLuaScriptVersionLine =
+        private const string LegacyLuaScriptVersionLine =
             "  \"lua_script_version\": \"6.32-s3k\",";
-        private const string CurrentLuaScriptVersionLine =
+        private const string PublishedHardwareLuaScriptVersionLine =
             "  \"lua_script_version\": \"6.34-s3k\",";
+        private const string CurrentLuaScriptVersionLine =
+            "  \"lua_script_version\": \"6.35-s3k\",";
         private const string FixtureTraceSchemaLine =
             "  \"trace_schema\": 6,";
         private const string CurrentTraceSchemaLine =
@@ -110,8 +112,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 + "3b5a2a39",
                 "9d90d669de5b9fc0c00666ad2023a164d1d110d441b9bcc8403280d1"
                 + "a5d74b47",
-                "0f99c7aaf110d08930f9d3692546b6de462139b0b90742a185bbbe31e"
-                + "f3bedc9");
+                "349894a74ab42d2241f6e87a814e1795a716f276c6b41c2aca4edcf"
+                + "9b65d77e3");
 
         private static readonly S3KDifferentialCase CnzLevelGatedCase =
             new S3KDifferentialCase(
@@ -143,6 +145,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
         public static void Register(ICollection<TestMain.TestCase> tests)
         {
+            tests.Add(new TestMain.TestCase(
+                "S3KTraceDifferential metadata compatibility accepts only"
+                + " exact current, published, or legacy shapes",
+                MetadataCompatibilityShapesAreExact));
             tests.Add(new TestMain.TestCase(
                 "S3KTraceDifferential native capture matches canonical AIZ"
                 + " timing stream",
@@ -500,29 +506,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(true, fixtureText.EndsWith("\n"));
             AssertEx.Equal(true, producedText.EndsWith("\n"));
 
-            AssertEx.Equal(
-                1, CountOccurrences(
-                    producedText, CurrentLuaScriptVersionLine));
-            AssertEx.Equal(
-                1, CountOccurrences(producedText, CurrentTraceSchemaLine));
-            AssertEx.Equal(
-                1, CountOccurrences(producedText, HardwareTimingSchemaLine));
-            bool fixtureIsCurrent =
-                CountOccurrences(fixtureText, CurrentLuaScriptVersionLine) == 1
-                && CountOccurrences(fixtureText, CurrentTraceSchemaLine) == 1
-                && CountOccurrences(fixtureText, HardwareTimingSchemaLine) == 1;
-            if (!fixtureIsCurrent)
-            {
-                producedText = producedText.Replace(
-                    CurrentLuaScriptVersionLine,
-                    FixtureLuaScriptVersionLine);
-                producedText = producedText.Replace(
-                    CurrentTraceSchemaLine,
-                    FixtureTraceSchemaLine);
-                producedText = producedText.Replace(
-                    HardwareTimingSchemaLine + "\n",
-                    "");
-            }
+            MetadataNormalization normalization =
+                NormalizeCurrentMetadataForFixture(
+                    fixtureText, producedText);
+            producedText = normalization.Text;
+            string fixtureVersionLine = normalization.VersionLine;
 
             string[] fixtureLines = fixtureText.Split('\n');
             string[] producedLines = producedText.Split('\n');
@@ -549,15 +537,152 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 }
 
                 AssertEx.Equal(fixtureLine, producedLine);
-                if (fixtureLine == (fixtureIsCurrent
-                    ? CurrentLuaScriptVersionLine
-                    : FixtureLuaScriptVersionLine))
+                if (fixtureLine == fixtureVersionLine)
                 {
                     versionLines++;
                 }
             }
             AssertEx.Equal(1, recordingDateLines);
             AssertEx.Equal(1, versionLines);
+        }
+
+        private static MetadataNormalization NormalizeCurrentMetadataForFixture(
+            string fixtureText,
+            string producedText)
+        {
+            RequireMetadataShape(
+                producedText,
+                CurrentLuaScriptVersionLine,
+                CurrentTraceSchemaLine,
+                true,
+                "produced");
+
+            if (HasMetadataShape(
+                fixtureText,
+                CurrentLuaScriptVersionLine,
+                CurrentTraceSchemaLine,
+                true))
+            {
+                return new MetadataNormalization(
+                    producedText, CurrentLuaScriptVersionLine);
+            }
+            if (HasMetadataShape(
+                fixtureText,
+                PublishedHardwareLuaScriptVersionLine,
+                CurrentTraceSchemaLine,
+                true))
+            {
+                return new MetadataNormalization(
+                    producedText.Replace(
+                        CurrentLuaScriptVersionLine,
+                        PublishedHardwareLuaScriptVersionLine),
+                    PublishedHardwareLuaScriptVersionLine);
+            }
+            if (HasMetadataShape(
+                fixtureText,
+                LegacyLuaScriptVersionLine,
+                FixtureTraceSchemaLine,
+                false))
+            {
+                return new MetadataNormalization(
+                    producedText
+                        .Replace(
+                            CurrentLuaScriptVersionLine,
+                            LegacyLuaScriptVersionLine)
+                        .Replace(
+                            CurrentTraceSchemaLine,
+                            FixtureTraceSchemaLine)
+                        .Replace(HardwareTimingSchemaLine + "\n", ""),
+                    LegacyLuaScriptVersionLine);
+            }
+
+            throw new InvalidOperationException(
+                "Fixture metadata has an unknown or mixed S3K trace"
+                + " version/schema shape.");
+        }
+
+        private static bool HasMetadataShape(
+            string text,
+            string versionLine,
+            string traceSchemaLine,
+            bool hasHardwareTiming)
+        {
+            return CountOccurrences(text, "\"lua_script_version\":") == 1
+                && CountOccurrences(text, versionLine) == 1
+                && CountOccurrences(text, "\"trace_schema\":") == 1
+                && CountOccurrences(text, traceSchemaLine) == 1
+                && CountOccurrences(text, "\"hardware_timing_schema\":")
+                    == (hasHardwareTiming ? 1 : 0)
+                && CountOccurrences(text, HardwareTimingSchemaLine)
+                    == (hasHardwareTiming ? 1 : 0);
+        }
+
+        private static void RequireMetadataShape(
+            string text,
+            string versionLine,
+            string traceSchemaLine,
+            bool hasHardwareTiming,
+            string owner)
+        {
+            if (!HasMetadataShape(
+                text, versionLine, traceSchemaLine, hasHardwareTiming))
+            {
+                throw new InvalidOperationException(
+                    owner + " metadata does not have the exact current"
+                    + " S3K trace version/schema shape.");
+            }
+        }
+
+        private static void MetadataCompatibilityShapesAreExact()
+        {
+            string current = CurrentLuaScriptVersionLine + "\n"
+                + CurrentTraceSchemaLine + "\n"
+                + HardwareTimingSchemaLine + "\n";
+            string published = PublishedHardwareLuaScriptVersionLine + "\n"
+                + CurrentTraceSchemaLine + "\n"
+                + HardwareTimingSchemaLine + "\n";
+            string legacy = LegacyLuaScriptVersionLine + "\n"
+                + FixtureTraceSchemaLine + "\n";
+
+            AssertEx.Equal(
+                current,
+                NormalizeCurrentMetadataForFixture(
+                    current, current).Text);
+            AssertEx.Equal(
+                published,
+                NormalizeCurrentMetadataForFixture(
+                    published, current).Text);
+            AssertEx.Equal(
+                legacy,
+                NormalizeCurrentMetadataForFixture(
+                    legacy, current).Text);
+            AssertEx.Throws<InvalidOperationException>(
+                () => NormalizeCurrentMetadataForFixture(
+                    "  \"lua_script_version\": \"9.99-s3k\",\n"
+                        + CurrentTraceSchemaLine + "\n"
+                        + HardwareTimingSchemaLine + "\n",
+                    current),
+                "unknown or mixed");
+            AssertEx.Throws<InvalidOperationException>(
+                () => NormalizeCurrentMetadataForFixture(
+                    current.Replace(
+                        CurrentLuaScriptVersionLine,
+                        CurrentLuaScriptVersionLine + "\n"
+                            + PublishedHardwareLuaScriptVersionLine),
+                    current),
+                "unknown or mixed");
+        }
+
+        private sealed class MetadataNormalization
+        {
+            internal MetadataNormalization(string text, string versionLine)
+            {
+                Text = text;
+                VersionLine = versionLine;
+            }
+
+            internal string Text { get; private set; }
+            internal string VersionLine { get; private set; }
         }
 
         private static int CountOccurrences(string value, string needle)
