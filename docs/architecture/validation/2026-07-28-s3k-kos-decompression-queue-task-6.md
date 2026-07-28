@@ -142,3 +142,23 @@ publication. It is not treated as a passing differential, and no fixture
 payload was changed. After the round-2 changes, the 27 focused Maven guards
 were rerun with the command above and again passed with zero failures,
 errors, or skips.
+
+Round 3 corrected the differential validator's canonical same-frame boundary
+ranks to `vint_service = 0`, `pre_main_loop = 1`, and
+`post_objects = 2`. The regression test was observed RED with the old
+PRE-before-VINT ranks, then GREEN after the two-rank correction. It proves
+that VINT-to-PRE is accepted, PRE-to-VINT is rejected, and the existing
+PRE-to-POST order remains accepted.
+
+```text
+BIZHAWK_HOME=/home/farrell/code/projects/OpenGGF/docs/BizHawk-2.11-linux-x64 \
+  ./test.sh --filter "S3KTraceDifferential" --jobs 1
+PASS S3KTraceDifferential requires schema two and rejects schema one as load-only compatibility
+PASS S3KTraceDifferential requires direct and module timing ledgers
+PASS S3KTraceDifferential orders same-frame VINT before PRE before POST
+SKIP three ROM-backed gates: S3K_ROM_PATH is not set
+
+BIZHAWK_HOME=/home/farrell/code/projects/OpenGGF/docs/BizHawk-2.11-linux-x64 \
+  ./test.sh --filter "HardwareTimingEventEngine" --jobs 1
+15 passed
+```

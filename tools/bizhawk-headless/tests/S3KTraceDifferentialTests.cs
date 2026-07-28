@@ -143,6 +143,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 + " ledgers",
                 CurrentHardwareTimingRequiresBothLedgers));
             tests.Add(new TestMain.TestCase(
+                "S3KTraceDifferential orders same-frame VINT before PRE"
+                + " before POST",
+                CurrentHardwareTimingUsesCanonicalSameFrameOrder));
+            tests.Add(new TestMain.TestCase(
                 "S3KTraceDifferential native capture matches canonical AIZ"
                 + " timing stream",
                 () => NativeCaptureMatchesCanonicalTrace(AizEndToEndCase),
@@ -685,7 +689,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                             + " pre_main_loop.");
                     }
                     directSeen = true;
-                    boundaryRank = 0;
+                    boundaryRank = 1;
                     previousOrdinal = lastDirectOrdinal;
                     lastDirectOrdinal = ordinal;
                 }
@@ -700,7 +704,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                     moduleSeen = true;
                     boundaryRank =
-                        boundary == "vint_service" ? 1 : 2;
+                        boundary == "vint_service" ? 0 : 2;
                     previousOrdinal = lastModuleOrdinal;
                     lastModuleOrdinal = ordinal;
                 }
@@ -770,6 +774,56 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 AssertEx.Throws<InvalidOperationException>(
                     () => AssertCurrentHardwareTimingLedgers(path),
                     "kos_module_queue");
+            }
+            finally
+            {
+                if (Directory.Exists(root))
+                {
+                    Directory.Delete(root, true);
+                }
+            }
+        }
+
+        private static void CurrentHardwareTimingUsesCanonicalSameFrameOrder()
+        {
+            string root = TestScratch.CreateRootPath(
+                "openggf-s3k-trace-ledger-order");
+            string path = Path.Combine(root, "hardware_timing.jsonl");
+            const string vint =
+                "{\"event\":\"hardware_work_completed\",\"raw_frame\":13,"
+                + "\"boundary\":\"vint_service\","
+                + "\"kind\":\"kos_module_queue\",\"ordinal\":0,"
+                + "\"submission_fingerprint\":\"sha256:"
+                + "abcdef0123456789abcdef0123456789"
+                + "abcdef0123456789abcdef0123456789\"}\n";
+            const string pre =
+                "{\"event\":\"hardware_work_completed\",\"raw_frame\":13,"
+                + "\"boundary\":\"pre_main_loop\","
+                + "\"kind\":\"kos_decompression_queue\",\"ordinal\":0,"
+                + "\"submission_fingerprint\":\"sha256:"
+                + "0123456789abcdef0123456789abcdef"
+                + "0123456789abcdef0123456789abcdef\"}\n";
+            const string post =
+                "{\"event\":\"hardware_work_completed\",\"raw_frame\":13,"
+                + "\"boundary\":\"post_objects\","
+                + "\"kind\":\"kos_module_queue\",\"ordinal\":0,"
+                + "\"submission_fingerprint\":\"sha256:"
+                + "fedcba9876543210fedcba9876543210"
+                + "fedcba9876543210fedcba9876543210\"}\n";
+            try
+            {
+                Directory.CreateDirectory(root);
+
+                File.WriteAllText(path, vint + pre);
+                AssertCurrentHardwareTimingLedgers(path);
+
+                File.WriteAllText(path, pre + vint);
+                AssertEx.Throws<InvalidOperationException>(
+                    () => AssertCurrentHardwareTimingLedgers(path),
+                    "raw-frame and boundary order");
+
+                File.WriteAllText(path, pre + post);
+                AssertCurrentHardwareTimingLedgers(path);
             }
             finally
             {
