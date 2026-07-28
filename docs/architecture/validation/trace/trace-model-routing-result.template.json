@@ -158,7 +158,9 @@
     {
       "testClass": "com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay",
       "outcome": "passed",
-      "report": "target/surefire-reports/com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay.txt"
+      "reportKind": "surefire",
+      "report": "/tmp/trace-model-routing-retained-terra-sol-s2-cnz-shared-sidekick-control-20260728T120000Z-1234-ABCDEF/verification-reports/com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay.txt",
+      "reportSha256": "2222222222222222222222222222222222222222222222222222222222222222"
     }
   ],
   "regressions": []

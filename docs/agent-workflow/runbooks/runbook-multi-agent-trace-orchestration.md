@@ -306,6 +306,11 @@ command as a single boolean or substitute a same-package class.
 BENCH_ROM_PROPERTY=$(jq -r --arg case "$BENCH_CASE" '.cases[] | select(.id == $case) | .rom.property' "$BENCH_MANIFEST")
 BENCH_VERIFY_CLASSES=$(jq -r --arg case "$BENCH_CASE" '.cases[] | select(.id == $case) | .verificationClasses | join(",")' "$BENCH_MANIFEST")
 BENCH_VERIFY_OUTPUT="$BENCH_RETAIN/verification-command.log"
+BENCH_VERIFY_REPORT_DIR="$BENCH_RETAIN/verification-reports"
+mkdir -p "$BENCH_VERIFY_REPORT_DIR"
+while IFS= read -r testClass; do
+  test ! -e "$BENCH_WORKTREE/target/surefire-reports/${testClass}.txt"
+done < <(jq -r --arg case "$BENCH_CASE" '.cases[] | select(.id == $case) | .verificationClasses[]' "$BENCH_MANIFEST")
 if (
   cd "$BENCH_WORKTREE"
   mvn -q -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=true \
@@ -319,20 +324,41 @@ fi
 jq -n --arg case "$BENCH_CASE" --slurpfile manifest "$BENCH_MANIFEST" '
   ($manifest[0].cases[] | select(.id == $case) | .verificationClasses) |
   map({testClass: ., outcome: "pending",
-       report: ("target/surefire-reports/" + . + ".txt")})
+       reportKind: "command-log", report: "", reportSha256: ""})
 ' > "$BENCH_RETAIN/verification-results.json"
 while IFS= read -r testClass; do
   report="$BENCH_WORKTREE/target/surefire-reports/${testClass}.txt"
+  retainedReport="$BENCH_VERIFY_REPORT_DIR/${testClass}.command.log"
+  reportKind=command-log
   outcome=error
   if test -f "$report"; then
-    if grep -Eq 'Tests run: [1-9][0-9]*, Failures: 0, Errors: 0, Skipped: 0' "$report"; then outcome=passed
-    elif grep -Eq 'Failures: [1-9][0-9]*' "$report"; then outcome=failed
-    elif grep -Eq 'Errors: [1-9][0-9]*' "$report"; then outcome=error
-    else outcome=skipped
+    retainedReport="$BENCH_VERIFY_REPORT_DIR/${testClass}.txt"
+    reportKind=surefire
+    cp "$report" "$retainedReport"
+    if grep -Eq 'UnsatisfiedLinkError|lwjgl\\.(dll|so|dylib)|glfw\\.(dll|so|dylib)|TestBundledConfigResource' "$retainedReport"; then outcome=error
+    elif grep -Eq 'Errors: [1-9][0-9]*' "$retainedReport"; then outcome=error
+    elif grep -Eq 'Failures: [1-9][0-9]*' "$retainedReport"; then
+      if [[ "$testClass" == *".tests.trace."* ]] &&
+         grep -Fq 'org.opentest4j.AssertionFailedError' "$retainedReport" &&
+         grep -Eq 'First error: frame [0-9]+ -- [^[:space:]]+' "$retainedReport"; then outcome=failed
+      elif [[ "$testClass" != *".tests.trace."* ]] &&
+           grep -Eq 'org\\.opentest4j\\.AssertionFailedError|java\\.lang\\.AssertionError' "$retainedReport"; then outcome=failed
+      else outcome=error
+      fi
+    elif grep -Eq 'Skipped: [1-9][0-9]*' "$retainedReport"; then outcome=skipped
+    elif grep -Eq 'Tests run: [1-9][0-9]*, Failures: 0, Errors: 0, Skipped: 0' "$retainedReport"; then outcome=passed
+    else outcome=error
     fi
+  else
+    cp "$BENCH_VERIFY_OUTPUT" "$retainedReport"
   fi
+  reportSha256=$(sha256sum "$retainedReport" | cut -d' ' -f1)
   jq --arg class "$testClass" --arg outcome "$outcome" \
-    'map(if .testClass == $class then .outcome = $outcome else . end)' \
+    --arg reportKind "$reportKind" --arg report "$retainedReport" --arg reportSha256 "$reportSha256" \
+    'map(if .testClass == $class then
+      .outcome = $outcome | .reportKind = $reportKind |
+      .report = $report | .reportSha256 = $reportSha256
+    else . end)' \
     "$BENCH_RETAIN/verification-results.json" > "$BENCH_RETAIN/verification-results.next.json"
   mv "$BENCH_RETAIN/verification-results.next.json" "$BENCH_RETAIN/verification-results.json"
 done < <(jq -r --arg case "$BENCH_CASE" '.cases[] | select(.id == $case) | .verificationClasses[]' "$BENCH_MANIFEST")
@@ -428,7 +454,9 @@ jq -n -e --arg policy "$BENCH_POLICY" --arg case "$BENCH_CASE" --arg patch "$BEN
    $policyDef.enabled == true and
    all($policyDef.routes[][]; test("^gpt-5\\.6-(terra|sol)/(low|medium|high)$")) and
    ($caseDef.targetCommand | contains("-Dtest=" + $caseDef.testClass + "#")) and
-   (($result.verificationResults | map(.testClass)) == $caseDef.verificationClasses) and
+   (if ($result.stages | map(.name) | index("verify")) != null then
+      (($result.verificationResults | map(.testClass)) == $caseDef.verificationClasses)
+    else ($result.verificationResults | length) == 0 end) and
    (if $game == "s1" then $caseDef.rom.property == "sonic1.rom.path" and $caseDef.rom.sha1 == "69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B" and ($caseDef.targetCommand | contains("-Dsonic1.rom.path=<ROM_PATH>"))
     elif $game == "s2" then $caseDef.rom.property == "sonic2.rom.path" and $caseDef.rom.sha1 == "8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9" and ($caseDef.targetCommand | contains("-Dsonic2.rom.path=<ROM_PATH>"))
     else $caseDef.rom.property == "s3k.rom.path" and $caseDef.rom.sha1 == "CFBF98C36C776677290A872547AC47C53D2761D6" and ($caseDef.targetCommand | contains("-Ds3k.rom.path=<ROM_PATH>")) end) and
@@ -472,14 +500,20 @@ jq -n -e --arg policy "$BENCH_POLICY" --arg case "$BENCH_CASE" --arg patch "$BEN
    (all($result.stages[] | select(.name != "fix"); .attemptCount == 0)) and
    (([$result.stages[] | select(.name == "fix") | .attemptCount] | add // 0) == $result.totalAttemptCount) and
    (($result.stages | map(.regressionCount) | add) == ($result.regressions | length)) and
-   (($result.status == "advanced-with-regression") == (($result.regressions | length) > 0)) and
+   (if any($result.verificationResults[]; .outcome == "error") then
+      $result.status == "error"
+    elif ($result.regressions | length) > 0 then
+      $result.status == "advanced-with-regression"
+    else $result.status != "advanced-with-regression" end) and
    (($result.regressions | map(.testClass) | sort) ==
-    ($result.verificationResults | map(select(.outcome == "failed" or .outcome == "error") | .testClass) | sort)) and
-   (if $result.accepted then
-      $result.genuine and ($result.reviewerRejected | not) and
-      ($result.romCitations | length) > 0 and
-      oneOf($result.status; ["green", "advanced", "advanced-with-regression"])
-    else true end) and
+    ($result.verificationResults | map(select(.outcome == "failed") | .testClass) | sort)) and
+   (($result.genuine | not) or ($result.romCitations | length) > 0) and
+   ($result.accepted ==
+    (oneOf($result.status; ["green", "advanced", "advanced-with-regression"]) and
+     $result.genuine and ($result.reviewerRejected | not) and
+     (($result.stages | map(.name) | index("verify")) != null) and
+     (($result.verificationResults | map(.testClass)) == $caseDef.verificationClasses) and
+     all($result.verificationResults[]; .outcome != "error" and .outcome != "skipped"))) and
    (($result.status == "rejected-not-genuine") ==
     (($result.genuine | not) and $result.reviewerRejected)) and
    (if $result.status == "green" then $result.afterFrontier == null

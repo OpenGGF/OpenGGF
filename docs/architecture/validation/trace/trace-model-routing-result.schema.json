@@ -115,7 +115,6 @@
     },
     "verificationResults": {
       "type": "array",
-      "minItems": 1,
       "items": {"$ref": "#/$defs/verificationResult"}
     },
     "regressions": {
@@ -211,11 +210,16 @@
     "verificationResult": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["testClass", "outcome", "report"],
+      "required": ["testClass", "outcome", "reportKind", "report", "reportSha256"],
       "properties": {
         "testClass": {"type": "string", "pattern": "^(?:[A-Za-z_$][A-Za-z0-9_$]*\\.)+[A-Za-z_$][A-Za-z0-9_$]*$"},
         "outcome": {"enum": ["passed", "failed", "error", "skipped"]},
-        "report": {"type": "string", "pattern": "^target/surefire-reports/"}
+        "reportKind": {"enum": ["surefire", "command-log"]},
+        "report": {
+          "type": "string",
+          "pattern": "^/tmp/trace-model-routing-retained-[^/]+/verification-reports/[^/]+\\.(txt|log)$"
+        },
+        "reportSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
       }
     },
     "regression": {
