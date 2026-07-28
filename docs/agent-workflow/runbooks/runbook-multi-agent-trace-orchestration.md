@@ -307,9 +307,27 @@ BENCH_ROM_PROPERTY=$(jq -r --arg case "$BENCH_CASE" '.cases[] | select(.id == $c
 BENCH_VERIFY_CLASSES=$(jq -r --arg case "$BENCH_CASE" '.cases[] | select(.id == $case) | .verificationClasses | join(",")' "$BENCH_MANIFEST")
 BENCH_VERIFY_OUTPUT="$BENCH_RETAIN/verification-command.log"
 BENCH_VERIFY_REPORT_DIR="$BENCH_RETAIN/verification-reports"
-mkdir -p "$BENCH_VERIFY_REPORT_DIR"
+BENCH_PRE_VERIFY_REPORT_DIR="$BENCH_RETAIN/pre-verify-reports"
+BENCH_PRE_VERIFY_REPORT_HASHES="$BENCH_RETAIN/pre-verify-report-sha256.tsv"
+BENCH_VERIFY_REPORTS_ABSENT_AT_LAUNCH="$BENCH_RETAIN/verification-reports-absent-at-launch"
+mkdir -p "$BENCH_VERIFY_REPORT_DIR" "$BENCH_PRE_VERIFY_REPORT_DIR"
+: > "$BENCH_PRE_VERIFY_REPORT_HASHES"
+: > "$BENCH_VERIFY_REPORTS_ABSENT_AT_LAUNCH"
 while IFS= read -r testClass; do
-  test ! -e "$BENCH_WORKTREE/target/surefire-reports/${testClass}.txt"
+  report="$BENCH_WORKTREE/target/surefire-reports/${testClass}.txt"
+  if test -e "$report"; then
+    test -f "$report"
+    retainedPreVerifyReport="$BENCH_PRE_VERIFY_REPORT_DIR/${testClass}.txt"
+    test ! -e "$retainedPreVerifyReport"
+    preVerifySha256=$(sha256sum "$report" | cut -d' ' -f1)
+    cp -- "$report" "$retainedPreVerifyReport"
+    test "$preVerifySha256" = "$(sha256sum "$retainedPreVerifyReport" | cut -d' ' -f1)"
+    printf '%s\t%s\t%s\n' "$testClass" "$preVerifySha256" "$retainedPreVerifyReport" >> "$BENCH_PRE_VERIFY_REPORT_HASHES"
+    rm -- "$report"
+  fi
+  # A report accepted below must therefore have been written by this Maven run.
+  test ! -e "$report"
+  printf '%s\n' "$report" >> "$BENCH_VERIFY_REPORTS_ABSENT_AT_LAUNCH"
 done < <(jq -r --arg case "$BENCH_CASE" '.cases[] | select(.id == $case) | .verificationClasses[]' "$BENCH_MANIFEST")
 if (
   cd "$BENCH_WORKTREE"
@@ -332,6 +350,8 @@ while IFS= read -r testClass; do
   reportKind=command-log
   outcome=error
   if test -f "$report"; then
+    # The exact path was absent at launch, so this is fresh Surefire evidence.
+    grep -Fqx "$report" "$BENCH_VERIFY_REPORTS_ABSENT_AT_LAUNCH"
     retainedReport="$BENCH_VERIFY_REPORT_DIR/${testClass}.txt"
     reportKind=surefire
     cp "$report" "$retainedReport"
@@ -342,7 +362,7 @@ while IFS= read -r testClass; do
          grep -Fq 'org.opentest4j.AssertionFailedError' "$retainedReport" &&
          grep -Eq 'First error: frame [0-9]+ -- [^[:space:]]+' "$retainedReport"; then outcome=failed
       elif [[ "$testClass" != *".tests.trace."* ]] &&
-           grep -Eq 'org\\.opentest4j\\.AssertionFailedError|java\\.lang\\.AssertionError' "$retainedReport"; then outcome=failed
+           grep -Eq 'org\.opentest4j\.AssertionFailedError|java\.lang\.AssertionError' "$retainedReport"; then outcome=failed
       else outcome=error
       fi
     elif grep -Eq 'Skipped: [1-9][0-9]*' "$retainedReport"; then outcome=skipped
