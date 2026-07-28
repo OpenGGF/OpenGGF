@@ -7,6 +7,7 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.ShaderProgram;
 
 import java.nio.FloatBuffer;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -80,6 +81,9 @@ public class PerformancePanelRenderer {
     /** Reusable StringBuilder for formatting stats text */
     private final StringBuilder perfBuilder = new StringBuilder(64);
 
+    /** Reusable time-sorted section selection for the legend. */
+    private final List<SectionStats> legendSections = new ArrayList<>(6);
+
     // VAO/VBO for primitive rendering
     private int vaoId;
     private int vboId;
@@ -99,6 +103,30 @@ public class PerformancePanelRenderer {
         this.textRenderer = Objects.requireNonNull(textRenderer, "textRenderer");
         this.graphicsManager = Objects.requireNonNull(graphicsManager, "graphicsManager");
         this.profiler = Objects.requireNonNull(profiler, "profiler");
+    }
+
+    List<SectionStats> legendSections(ProfileSnapshot snapshot) {
+        List<SectionStats> sortedSections = snapshot.getSectionsSortedByTime();
+        legendSections.clear();
+        int limit = Math.min(6, sortedSections.size());
+        int audioIndex = -1;
+        for (int i = 0; i < sortedSections.size(); i++) {
+            if ("audio".equals(sortedSections.get(i).name())) {
+                audioIndex = i;
+                break;
+            }
+        }
+        if (audioIndex < 0 || audioIndex < limit || limit < 6) {
+            for (int i = 0; i < limit; i++) {
+                legendSections.add(sortedSections.get(i));
+            }
+            return legendSections;
+        }
+        for (int i = 0; i < 5; i++) {
+            legendSections.add(sortedSections.get(i));
+        }
+        legendSections.add(sortedSections.get(audioIndex));
+        return legendSections;
     }
 
     /**
@@ -242,11 +270,9 @@ public class PerformancePanelRenderer {
 
         // Section legend uses time-sorted sections, while the pie chart uses
         // a cached name-sorted view for stable slice positions.
-        List<SectionStats> sections = snapshot.getSectionsSortedByTime();
         int legendY = textY - lineHeight;
 
-        int count = 0;
-        for (SectionStats section : sections) {
+        for (SectionStats section : legendSections(snapshot)) {
             int colorIndex = getColorIndexForSection(section.name());
             DebugColor textColor = SECTION_COLOR_OBJECTS[colorIndex];
 
@@ -257,11 +283,6 @@ public class PerformancePanelRenderer {
             drawTextBottomLeft(pb.toString(), textX, legendY, textColor);
 
             legendY -= lineHeight;
-            count++;
-
-            if (count >= 6) {
-                break;
-            }
         }
 
         // Memory stats below the frame graph
