@@ -104,20 +104,27 @@ It reported BizHawk 2.11, the verified S1 hash, 4,806 movie frames, and a
 3,905-frame trace. That harness does not expose execute hooks and therefore
 cannot produce the isolated PLC event stream.
 
-The required Lua diagnostic launches for S1 complete-run and S2 ARZ were also
-attempted with `BIZHAWK_HOME` set explicitly. Both fail before Lua starts
-because this execution environment has no X server:
+The initial sandboxed launches could not reach X, but host-level `DISPLAY=:0`
+access was subsequently verified and used for execute-hook capture. The
+reviewed configurations above produced two complete, byte-identical captures
+for S1 GHZ1 and S2 ARZ2:
 
-```text
-System.ArgumentNullException: Could not open display (X-Server required)
-```
+| route | raw records | raw SHA-256 | vector SHA-256 | analyzer |
+|---|---:|---|---|---|
+| S1 `ghz1_fullrun` | 9,912 | `141bd5a2be4ea8f53de7ef7fcaa198b382b3a29b502b5f93d231554f154435bc` | `8b55a3771f5a9aaefdd4ff3ce02d30206ad72e1b4cb24d82f03b7bd1df775ed0` | match |
+| S2 `arz2` | 33,163 | `f87ae9260b6f60d14d9da23bf944595430de4bbd454d21502d456899d6b4ec80` | `20e0c58dbab71a10fea0f877059813daf4619d98999829075eb61157e2126e7a` | match |
 
-The missing acquisition dependency is an X-capable BizHawk 2.11 session (or a
-native headless execute-hook extension) able to replay each required lifecycle
-twice. Before that session is used for approval, the reviewed environment
-configuration must pin every required hook address. Until then there are no
-repeat hashes, no observed preparation-race disposition, and no
-approved/rejected predictor comparison.
+Each raw stream and derived vector was byte-identical across the two runs.
+The probes close and exit BizHawk when the movie reaches `FINISHED`, avoiding
+host-speed-dependent timeout truncation.
+
+All seven S1 and twelve S2 clear/replace observations on these routes had
+`patterns_left_before=0` and `patterns_left_after=0`. No event occurred
+between any captured preparation begin/end pair, so the retail preparation
+race disposition for these covered routes is
+`NOT_OBSERVED_ON_COVERED_ROUTES`. This does not prove the same facts for the
+still-uncovered Final Zone, Game Over, special-stage results, and other
+required complete-run lifecycles.
 
 ## S2 smoke ordering correction
 
@@ -196,7 +203,8 @@ prepare/service/pop/empty/poll edges against the oracle. Its unit test mutates
 handler, lag, HInt deferral, preparation, poll order, and budget; each
 mutation rejects the oracle.
 
-The committed gzip vector is an explicit incomplete-gate marker, not captured
-evidence. It must be replaced only with compact, reviewed derived vectors
-after byte-identical repeated captures cover title cards, boss readiness,
-results, Game Over, and special-stage results for both games.
+The committed gzip vector remains an explicit incomplete-gate marker. The
+successful short-route vectors are retained as reproducible scratch evidence
+identified by the hashes above; they do not promote the gate until repeated
+captures also cover title cards, boss readiness, results, Game Over, and
+special-stage results for both games.
