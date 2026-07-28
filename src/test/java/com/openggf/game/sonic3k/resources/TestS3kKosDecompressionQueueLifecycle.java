@@ -70,7 +70,7 @@ class TestS3kKosDecompressionQueueLifecycle {
     }
 
     @Test
-    void rewindRegistryRestoresTimingBeforePhysicalQueueAndResumesExactDecoderState()
+    void rewindRegistryRestoresTimingBeforePhysicalQueueAndReadyPayloadState()
             throws Exception {
         GameplayModeContext context = openAttachedContext();
         S3kKosDecompressionQueue queue = S3kRuntimeArtCoordinator.from(
@@ -95,27 +95,25 @@ class TestS3kKosDecompressionQueueLifecycle {
             S3kKosDecompressionSnapshot preparationCheckpoint = assertInstanceOf(
                     S3kKosDecompressionSnapshot.class,
                     timingCheckpoint.jobs().getFirst().preparationSnapshot());
-            assertArrayEquals(new byte[] {'A'},
+            assertArrayEquals(new byte[] {'A', 'B', 'C'},
                     preparationCheckpoint.decoder().output(),
-                    "one production PRE boundary must be captured in decoder state");
+                    "one production PRE boundary completes one direct child");
             S3kKosDecompressionQueueSnapshot queueCheckpoint = assertInstanceOf(
                     S3kKosDecompressionQueueSnapshot.class,
                     checkpoint.get(S3kKosDecompressionQueue.REWIND_KEY));
             assertEquals(1, queueCheckpoint.entries().size());
-            assertTrue(queueCheckpoint.entries().getFirst().physical());
+            assertFalse(queueCheckpoint.entries().getFirst().physical(),
+                    "ready-unclaimed work has retired from the physical FIFO");
 
-            runProductionHardwareScan(context);
-            runProductionHardwareScan(context);
-            runProductionHardwareScan(context);
             assertTrue(queue.isReady(handle));
             assertArrayEquals(new byte[] {'A', 'B', 'C'}, queue.claim(handle));
             assertEquals(0, queue.physicalQueueSize());
 
             context.getRewindRegistry().restore(checkpoint);
 
-            assertEquals(1, queue.physicalQueueSize());
-            assertTrue(queue.decompressionsPending());
-            assertFalse(queue.isReady(handle));
+            assertEquals(0, queue.physicalQueueSize());
+            assertFalse(queue.decompressionsPending());
+            assertTrue(queue.isReady(handle));
             CompositeSnapshot restored = context.getRewindRegistry().capture();
             HardwareTimingSnapshot restoredTiming = assertInstanceOf(
                     HardwareTimingSnapshot.class,
@@ -132,13 +130,6 @@ class TestS3kKosDecompressionQueueLifecycle {
             assertEquals(queueCheckpoint,
                     restored.get(S3kKosDecompressionQueue.REWIND_KEY));
 
-            runProductionHardwareScan(context);
-            assertFalse(queue.isReady(handle));
-            runProductionHardwareScan(context);
-            assertFalse(queue.isReady(handle));
-            runProductionHardwareScan(context);
-            assertTrue(queue.isReady(handle),
-                    "the restored decoder must resume after its captured first command");
             assertArrayEquals(new byte[] {'A', 'B', 'C'}, queue.claim(handle));
         }
     }
@@ -154,7 +145,8 @@ class TestS3kKosDecompressionQueueLifecycle {
             firstQueue.queueStandardKos(
                     rom, 0, S3kKosRamDestinations.BLOCK_TABLE);
             runProductionHardwareScan(firstContext);
-            assertEquals(1, firstQueue.physicalQueueSize());
+            assertEquals(0, firstQueue.physicalQueueSize(),
+                    "one PRE boundary retires one complete direct child");
             assertEquals(1, firstContext.hardwareTiming().pendingHandles().size());
 
             SessionManager.closeGameplaySession();
