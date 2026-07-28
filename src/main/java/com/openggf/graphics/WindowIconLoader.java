@@ -5,17 +5,12 @@ import org.lwjgl.stb.STBImage;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 
-import java.awt.Taskbar;
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
-import javax.imageio.ImageIO;
 
 import static org.lwjgl.glfw.GLFW.GLFW_WAYLAND_APP_ID;
 import static org.lwjgl.glfw.GLFW.GLFW_X11_CLASS_NAME;
@@ -65,7 +60,6 @@ public final class WindowIconLoader {
      * @param window GLFW window handle
      */
     public static void apply(long window) {
-        applyTaskbarIcon();
         List<ByteBuffer> pixelBuffers = new ArrayList<>();
         try (MemoryStack stack = MemoryStack.stackPush()) {
             GLFWImage.Buffer icons = GLFWImage.malloc(ICON_RESOURCES.length, stack);
@@ -109,33 +103,6 @@ public final class WindowIconLoader {
             for (ByteBuffer pixels : pixelBuffers) {
                 STBImage.stbi_image_free(pixels);
             }
-        }
-    }
-
-    /**
-     * macOS ignores {@code glfwSetWindowIcon} — the Dock icon comes from the application
-     * bundle, or from the AWT taskbar API when running from a plain JAR. Other platforms
-     * either have no taskbar image support or are already covered by the GLFW icon.
-     */
-    private static void applyTaskbarIcon() {
-        if (!System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("mac")) {
-            return;
-        }
-        try {
-            byte[] bytes = readResource("icon/openggf-256.png");
-            if (bytes == null || !Taskbar.isTaskbarSupported()) {
-                return;
-            }
-            Taskbar taskbar = Taskbar.getTaskbar();
-            if (!taskbar.isSupported(Taskbar.Feature.ICON_IMAGE)) {
-                return;
-            }
-            BufferedImage image = ImageIO.read(new ByteArrayInputStream(bytes));
-            if (image != null) {
-                taskbar.setIconImage(image);
-            }
-        } catch (Exception | LinkageError e) {
-            // Headless JREs and locked-down desktops just keep the default icon
         }
     }
 
