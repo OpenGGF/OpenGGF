@@ -20,8 +20,10 @@ baseline failures. End-to-end publication is not green:
   engine has no pending parent;
 - the fresh full Java attempt still contains broad baseline and publication
   failures; and
-- Maven again left an open execution handle after all 1,725 Surefire reports
-  were written.
+- Maven/Surefire again deadlocked after all 1,725 reports were written.
+  Surefire 3.2.5 recognized `-Dsurefire.exitTimeout=30`, but the fork remained
+  blocked in `futex_wait` for more than two minutes and emitted no timeout
+  diagnostic.
 
 Every reported missing-coordinator signature was repaired and independently
 rerun. The full attempt exposed one remaining feature-attributable HCZ
@@ -188,46 +190,59 @@ committed fixture remains schema-1 load-only compatibility and does not carry
 the schema-2 direct ledger needed for publication. The fixture was not edited
 or bypassed.
 
-## Fresh full Java attempt
+## Final all-ROM Java attempt
 
 The previous reports were moved to
-`/tmp/openggf-task7-final-reports.Wti7dZ/pre-final`. A fresh non-PTY run used
-all three verified ROM properties:
+`/tmp/openggf-task7-post4859-timeout-reports.PaLXIy/pre-run`. A fresh non-PTY
+post-fix run used all three verified ROM properties and Surefire's documented
+fork-exit timeout:
 
 ```text
-mvn -Dmse=off \
+mvn -Dsurefire.exitTimeout=30 \
   "-Dsonic1.rom.path=<rev01-s1>" \
   "-Dsonic2.rom.path=<rev01-s2>" \
   "-Ds3k.rom.path=<locked-on-s3k>" test
 ```
 
-The run wrote all 1,725 `TEST-*.xml` files, then stopped producing output
-without closing the execution handle; the stale handle was terminated. The
-fresh XML totals before any focused rerun were:
+The run wrote all 1,725 `TEST-*.xml` files. The Maven JVM and its Surefire
+fork then remained blocked in `futex_wait` for more than two minutes after
+the final report, despite the 30-second setting. The Surefire 3.2.5 plugin
+descriptor maps `${surefire.exitTimeout}` to
+`forkedProcessExitTimeoutInSeconds`, confirming that the property was
+recognized. It did not produce a timeout message or terminate the fork in
+this state, so the exact Maven/Surefire process pair was sent `SIGTERM`; the
+wrapper marker recorded exit status 143.
+
+The fresh XML totals were:
 
 ```text
 Tests represented: 13,488
-Passed: 13,399
-Failures: 54
-Errors: 4
+Passed: 13,401
+Failures: 53
+Errors: 3
 Skipped: 31
-Execution result: infrastructure-incomplete; stale handle terminated
+Execution result: infrastructure-incomplete; timeout ineffective; status 143
 ```
 
-The four errors were two known `TestGameLoop` reflection/source-shape errors,
-one pre-existing `TestScalarOnlyCodecDeletion` null results-element error, and
-the HCZ late-route FIFO overflow repaired after the full attempt. A scan of
-all fresh XML found zero instances of either missing-coordinator signature:
+The three errors were:
+
+- `TestGameLoop#userRecordingBoundaryDoesNotClassifyCursorZeroBeforeAnyMovieFrameApplied`
+  (`NoSuchMethodException`);
+- `TestGameLoop#setupAdmissionPrecedesSeamlessBoundaryAndTraceCameraMutations`
+  (`StringIndexOutOfBoundsException`); and
+- `TestScalarOnlyCodecDeletion#s3kResultsGenericRecreateRestoresCapturedConstructorStateAndPlayerRef`
+  (the pre-existing null results-element `NullPointerException`).
+
+The 53 failures remained distributed across 32 known baseline/publication
+suites. A scan of all fresh XML found zero missing-coordinator signatures and
+no feature-attributable HCZ FIFO error. The only
+`S3K KosM module FIFO is full` text was a tolerated warning in the passing
+`TestBonusStageReturnWaterRestore` report:
 
 ```text
 runtime-art coordination is unavailable in these object services
 S3K runtime art requires the S3K game-owned coordinator
 ```
-
-After the HCZ fixture repair, its isolated run passed 1/1 and the retained
-report aggregate became 13,400 passed, 54 failures, 3 errors, and 31 skipped.
-That mixed aggregate is not represented as a second completed full-suite run.
-No feature-attributable Java error remains in the focused post-fix matrices.
 
 ## Native recorder verification
 
