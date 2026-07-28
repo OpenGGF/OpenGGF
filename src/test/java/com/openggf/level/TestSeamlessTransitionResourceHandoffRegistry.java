@@ -1,5 +1,7 @@
 package com.openggf.level;
 
+import com.openggf.game.rewind.CompositeSnapshot;
+import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.level.resources.DeferredLevelResourceManifest;
 import org.junit.jupiter.api.Test;
 
@@ -29,6 +31,27 @@ class TestSeamlessTransitionResourceHandoffRegistry {
         assertSame(handoff, registry.claim(id));
         assertThrows(IllegalStateException.class,
                 () -> registry.claim(id));
+    }
+
+    @Test
+    void compositeRewindOnBothSidesOfClaimRestoresExactOwnership() {
+        SeamlessTransitionResourceHandoffRegistry handoffs =
+                new SeamlessTransitionResourceHandoffRegistry();
+        RewindRegistry rewind = new RewindRegistry();
+        rewind.register(handoffs);
+        TestHandoff handoff = new TestHandoff();
+        SeamlessTransitionResourceHandoffId id =
+                handoffs.register(handoff);
+        CompositeSnapshot beforeClaim = rewind.capture();
+
+        assertSame(handoff, handoffs.claim(id));
+        CompositeSnapshot afterClaim = rewind.capture();
+
+        rewind.restore(beforeClaim);
+        assertSame(handoff, handoffs.peek(id));
+        rewind.restore(afterClaim);
+        assertThrows(IllegalStateException.class,
+                () -> handoffs.peek(id));
     }
 
     @Test

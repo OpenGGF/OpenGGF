@@ -23,6 +23,7 @@ import com.openggf.level.Palette;
 import com.openggf.level.animation.AnimatedPaletteManager;
 import com.openggf.level.animation.AnimatedPatternManager;
 import com.openggf.level.resources.DeferredLevelResourceTracker;
+import com.openggf.level.resources.DeferredLevelResourceManifest;
 import com.openggf.level.resources.LevelResourcePlan;
 import com.openggf.level.resources.LoadOp;
 import com.openggf.game.sonic3k.objects.AizIntroTerrainSwap;
@@ -249,6 +250,19 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
         Sonic3kDeferredLevelResourceProfile deferredProfile =
                 Sonic3kDeferredLevelResourceProfile.forLevelLoadBlock(
                         llbIndex);
+        SecondaryResourceSources deferredSources =
+                deferredProfile != null
+                        ? readSecondaryResourceSources(
+                                deferredProfile
+                                        .deferredSourceLevelLoadBlockIndex())
+                        : null;
+        DeferredLevelResourceManifest expectedDeferredManifest =
+                deferredProfile != null
+                        ? deferredProfile.manifest(
+                                deferredSources.art(),
+                                deferredSources.chunks(),
+                                deferredSources.blocks())
+                        : DeferredLevelResourceManifest.EMPTY;
         DeferredLevelResourceTracker activeDeferredResources =
                 deferredResources != null
                         ? deferredResources
@@ -256,11 +270,13 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
         if (activeDeferredResources.isEmpty()
                 && deferredProfile != null
                 && deferredProfile.initiallyDeferred()) {
-            activeDeferredResources = deferredProfile.manifest(
-                            secondaryArtAddr,
-                            secondaryBlocksAddr,
-                            secondaryChunksAddr)
-                    .newTracker();
+            activeDeferredResources =
+                    expectedDeferredManifest.newTracker();
+        }
+        if (!activeDeferredResources.isEmpty()
+                && deferredProfile != null) {
+            activeDeferredResources.verifyExactRequest(
+                    expectedDeferredManifest);
         }
 
         boolean applyAiz1OverlayBridge = zone == 0
@@ -335,6 +351,18 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
             if (!deferred) {
                 planBuilder.addBlockOp(
                         LoadOp.kosinskiAppend(secondaryChunksAddr));
+            }
+        }
+        if (deferredProfile != null
+                && deferredProfile.deferredSourceLevelLoadBlockIndex()
+                        != llbIndex) {
+            for (var descriptor
+                    : expectedDeferredManifest.descriptors()) {
+                if (!activeDeferredResources.omitIfRequested(descriptor)) {
+                    throw new IllegalStateException(
+                            "target profile did not request its deferred declaration: "
+                                    + descriptor);
+                }
             }
         }
         activeDeferredResources.verifyFullyConsumed();
@@ -626,23 +654,39 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
 
     private Aiz1GameplayOverlay readAiz1GameplayOverlayFromIntroEntry() throws IOException {
         int introIndex = Sonic3kConstants.LEVEL_LOAD_BLOCK_AIZ1_INTRO_INDEX;
+        SecondaryResourceSources sources =
+                readSecondaryResourceSources(introIndex);
+
         int entryAddr = Sonic3kConstants.LEVEL_LOAD_BLOCK_ADDR
                 + introIndex * Sonic3kConstants.LEVEL_LOAD_BLOCK_ENTRY_SIZE;
-
         if (!isReadable(entryAddr, Sonic3kConstants.LEVEL_LOAD_BLOCK_ENTRY_SIZE)) {
             return null;
         }
-
-        int word1 = rom.read32BitAddr(entryAddr + 4);   // (plc2 << 24) | secondaryArtAddr
-        int word3 = rom.read32BitAddr(entryAddr + 12);  // (palette << 24) | secondaryBlocksAddr
-
-        int secondaryArtAddr = word1 & 0x00FFFFFF;
-        int secondaryBlocksAddr = word3 & 0x00FFFFFF;
-        if (!isReadable(secondaryArtAddr, 2) || !isReadable(secondaryBlocksAddr, 2)) {
+        if (!isReadable(sources.art(), 2)
+                || !isReadable(sources.chunks(), 2)) {
             return null;
         }
 
-        return new Aiz1GameplayOverlay(secondaryArtAddr, secondaryBlocksAddr);
+        return new Aiz1GameplayOverlay(
+                sources.art(), sources.chunks());
+    }
+
+    private SecondaryResourceSources readSecondaryResourceSources(
+            int levelLoadBlockIndex) throws IOException {
+        int entryAddr = Sonic3kConstants.LEVEL_LOAD_BLOCK_ADDR
+                + levelLoadBlockIndex
+                * Sonic3kConstants.LEVEL_LOAD_BLOCK_ENTRY_SIZE;
+        if (!isReadable(
+                entryAddr,
+                Sonic3kConstants.LEVEL_LOAD_BLOCK_ENTRY_SIZE)) {
+            throw new IOException(
+                    "Deferred LevelLoadBlock entry is outside the ROM: "
+                            + levelLoadBlockIndex);
+        }
+        return new SecondaryResourceSources(
+                rom.read32BitAddr(entryAddr + 4) & 0x00FF_FFFF,
+                rom.read32BitAddr(entryAddr + 12) & 0x00FF_FFFF,
+                rom.read32BitAddr(entryAddr + 20) & 0x00FF_FFFF);
     }
 
     /**
@@ -705,6 +749,7 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
 
     static record CollisionAddressInfo(int primaryAddress, int secondaryAddress, boolean interleaved) {}
     private record Aiz1GameplayOverlay(int secondaryArtAddr, int secondaryBlocksAddr) {}
+    private record SecondaryResourceSources(int art, int chunks, int blocks) {}
 
     /**
      * Gets the layout data ROM address for a zone/act from the LevelPtrs table.

@@ -263,7 +263,6 @@ public class TestSonic3kAIZEvents {
         camera.setX((short) 0x1400);
         camera.setFrozen(true);
         Sonic3kLevel level = (Sonic3kLevel) GameServices.level().getCurrentLevel();
-        byte[] patternBefore = snapshotPattern(level.getPattern(0x0BE));
 
         events.update(0, 0);
 
@@ -292,8 +291,14 @@ public class TestSonic3kAIZEvents {
         byte[] expectedDirectBlocks = new ResourceLoader(
                 GameServices.rom().getRom()).loadSingle(LoadOp.kosinskiBase(
                         directJobs.getFirst().romSourceAddress()));
+        byte[] expectedMainLevelPatterns = new ResourceLoader(
+                GameServices.rom().getRom()).loadSingle(LoadOp.kosinskiMBase(
+                        moduleJobs.getFirst().romSourceAddress()));
         assertFalse(chunkPayloadVisible(level, expectedDirectBlocks, 0x0268),
                 "the intro load must omit the separately queued main-level 16x16 payload");
+        assertFalse(patternPayloadVisible(
+                        level, expectedMainLevelPatterns, 0x00BE),
+                "the intro load must omit the separately queued main-level KosM payload");
         assertFalse(AizPlaneIntroInstance.isMainLevelPhaseActive(),
                 "synchronous publication cannot shadow-decompress before KosM readiness");
 
@@ -334,13 +339,15 @@ public class TestSonic3kAIZEvents {
                 "the direct-empty scan must advance deformation/resize ownership");
         assertEquals(0, camera.getMinY() & 0xFFFF,
                 "the direct-empty scan must publish the main-level Y boundary");
-        assertArrayEquals(patternBefore, snapshotPattern(level.getPattern(0x0BE)),
+        assertFalse(patternPayloadVisible(
+                        level, expectedMainLevelPatterns, 0x00BE),
                 "KosM patterns must not publish during the direct-empty scan");
 
         HardwareTimingJob.Snapshot parent;
         do {
             serviceHardware(GameServices.hardwareTiming(), HardwareServiceBoundary.POST_OBJECTS);
-            assertArrayEquals(patternBefore, snapshotPattern(level.getPattern(0x0BE)),
+            assertFalse(patternPayloadVisible(
+                            level, expectedMainLevelPatterns, 0x00BE),
                     "POST module work cannot become consumer-visible in the same frame");
             parent = GameServices.hardwareTiming().capture().jobs().stream()
                     .filter(job -> job.kind() == HardwareWorkKind.KOS_MODULE_QUEUE)
@@ -348,7 +355,8 @@ public class TestSonic3kAIZEvents {
             if (!parent.ready()) {
                 serviceHardware(GameServices.hardwareTiming(), HardwareServiceBoundary.PRE_MAIN_LOOP);
                 events.update(0, frame++);
-                assertArrayEquals(patternBefore, snapshotPattern(level.getPattern(0x0BE)),
+                assertFalse(patternPayloadVisible(
+                                level, expectedMainLevelPatterns, 0x00BE),
                         "intermediate KosM children must not publish partial pattern art");
             }
         } while (!parent.ready());
@@ -359,6 +367,9 @@ public class TestSonic3kAIZEvents {
                         .filter(job -> job.kind() == HardwareWorkKind.KOS_MODULE_QUEUE)
                         .findFirst().orElseThrow().claimed(),
                 "the scan after parent POST retirement must publish and claim the KosM payload");
+        assertTrue(patternPayloadVisible(
+                        level, expectedMainLevelPatterns, 0x00BE),
+                "the KosM publication scan must expose every prepared pattern byte");
     }
 
     private static void serviceHardware(
@@ -1574,6 +1585,32 @@ public class TestSonic3kAIZEvents {
                 if (actual[word] != expected) {
                     return false;
                 }
+            }
+        }
+        return true;
+    }
+
+    private static boolean patternPayloadVisible(
+            Sonic3kLevel level, byte[] payload, int destinationPattern) {
+        int count = payload.length / Pattern.PATTERN_SIZE_IN_ROM;
+        if (level.getPatternCount() < destinationPattern + count) {
+            return false;
+        }
+        Pattern expected = new Pattern();
+        byte[] tileBytes = new byte[Pattern.PATTERN_SIZE_IN_ROM];
+        for (int i = 0; i < count; i++) {
+            System.arraycopy(
+                    payload,
+                    i * Pattern.PATTERN_SIZE_IN_ROM,
+                    tileBytes,
+                    0,
+                    Pattern.PATTERN_SIZE_IN_ROM);
+            expected.fromSegaFormat(tileBytes);
+            if (!Arrays.equals(
+                    snapshotPattern(expected),
+                    snapshotPattern(level.getPattern(
+                            destinationPattern + i)))) {
+                return false;
             }
         }
         return true;

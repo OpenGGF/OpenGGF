@@ -156,6 +156,15 @@ class TestS3kIczAct1TransitionHeadless {
                     .findFirst().orElseThrow();
             assertFalse(parent.claimed(),
                     "POST module work remains invisible to the gameplay consumer in the same frame");
+            assertFalse(blockPayloadVisible(
+                            icz2Level, expectedBlocks128x128, 0x0A00),
+                    "no partial 128x128 publication is allowed before the consumer scan");
+            assertFalse(chunkPayloadVisible(
+                            icz2Level, expectedChunks16x16, 0x0408),
+                    "no partial 16x16 publication is allowed before the consumer scan");
+            assertFalse(patternPayloadVisible(
+                            icz2Level, expectedPatterns8x8, 0x0122),
+                    "no partial pattern publication is allowed before the consumer scan");
             if (!parent.ready()) {
                 service(HardwareServiceBoundary.PRE_MAIN_LOOP);
                 manager.update();
@@ -183,6 +192,43 @@ class TestS3kIczAct1TransitionHeadless {
         assertTrue(patternPayloadVisible(
                         icz2Level, expectedPatterns8x8, 0x0122),
                 "the publication scan must expose the claimed KosM archive");
+        int[][] publishedBlocks = snapshotBlockRange(
+                icz2Level,
+                0x0A00 / LevelConstants.BLOCK_SIZE_IN_ROM,
+                expectedBlocks128x128.length
+                        / LevelConstants.BLOCK_SIZE_IN_ROM);
+        int[][] publishedChunks = snapshotChunkRange(
+                icz2Level,
+                0x0408 / Chunk.CHUNK_SIZE_IN_ROM,
+                expectedChunks16x16.length
+                        / Chunk.CHUNK_SIZE_IN_ROM);
+        byte[][] publishedPatterns = snapshotPatternRange(
+                icz2Level,
+                0x0122,
+                expectedPatterns8x8.length
+                        / Pattern.PATTERN_SIZE_IN_ROM);
+        manager.update();
+        assertTrue(Arrays.deepEquals(
+                        publishedBlocks,
+                        snapshotBlockRange(
+                                icz2Level,
+                                0x0A00 / LevelConstants.BLOCK_SIZE_IN_ROM,
+                                publishedBlocks.length)),
+                "later scans must not republish or partially rewrite 128x128 terrain");
+        assertTrue(Arrays.deepEquals(
+                        publishedChunks,
+                        snapshotChunkRange(
+                                icz2Level,
+                                0x0408 / Chunk.CHUNK_SIZE_IN_ROM,
+                                publishedChunks.length)),
+                "later scans must not republish or partially rewrite 16x16 terrain");
+        assertTrue(Arrays.deepEquals(
+                        publishedPatterns,
+                        snapshotPatternRange(
+                                icz2Level,
+                                0x0122,
+                                publishedPatterns.length)),
+                "later scans must not republish or partially rewrite pattern art");
         assertEquals(0x00D0, sonic.getCentreX() & 0xFFFF,
                 "ICZ1BGE_Transition subtracts d0=$6880 from player x_pos");
         assertEquals(0x0800, sonic.getCentreY() & 0xFFFF,
@@ -192,6 +238,20 @@ class TestS3kIczAct1TransitionHeadless {
         assertEquals(0x0000, camera.getMinY() & 0xFFFF);
         assertEquals(0x0B20, camera.getMaxY() & 0xFFFF);
         assertEquals(0x0B20, camera.getMaxYTarget() & 0xFFFF);
+
+        GameServices.level().loadZoneAndAct(
+                Sonic3kZoneIds.ZONE_ICZ, 1);
+        Sonic3kLevel ordinaryReload =
+                (Sonic3kLevel) GameServices.level().getCurrentLevel();
+        assertTrue(blockPayloadVisible(
+                        ordinaryReload, expectedBlocks128x128, 0x0A00),
+                "a later ordinary ICZ2 load must not inherit the transition deferral");
+        assertTrue(chunkPayloadVisible(
+                        ordinaryReload, expectedChunks16x16, 0x0408),
+                "a later ordinary ICZ2 load must synchronously load 16x16 terrain");
+        assertTrue(patternPayloadVisible(
+                        ordinaryReload, expectedPatterns8x8, 0x0122),
+                "a later ordinary ICZ2 load must synchronously load its KosM art");
     }
 
     private static void service(HardwareServiceBoundary boundary) {
@@ -265,5 +325,40 @@ class TestS3kIczAct1TransitionHeadless {
             }
         }
         return true;
+    }
+
+    private static int[][] snapshotBlockRange(
+            Sonic3kLevel level, int start, int count) {
+        int[][] snapshot = new int[count][];
+        for (int i = 0; i < count; i++) {
+            snapshot[i] = level.getBlock(start + i).saveState();
+        }
+        return snapshot;
+    }
+
+    private static int[][] snapshotChunkRange(
+            Sonic3kLevel level, int start, int count) {
+        int[][] snapshot = new int[count][];
+        for (int i = 0; i < count; i++) {
+            snapshot[i] = level.getChunk(start + i).saveState();
+        }
+        return snapshot;
+    }
+
+    private static byte[][] snapshotPatternRange(
+            Sonic3kLevel level, int start, int count) {
+        byte[][] snapshot = new byte[count][];
+        for (int i = 0; i < count; i++) {
+            Pattern pattern = level.getPattern(start + i);
+            byte[] pixels = new byte[Pattern.PATTERN_SIZE_IN_MEM];
+            int cursor = 0;
+            for (int y = 0; y < Pattern.PATTERN_HEIGHT; y++) {
+                for (int x = 0; x < Pattern.PATTERN_WIDTH; x++) {
+                    pixels[cursor++] = pattern.getPixel(x, y);
+                }
+            }
+            snapshot[i] = pixels;
+        }
+        return snapshot;
     }
 }

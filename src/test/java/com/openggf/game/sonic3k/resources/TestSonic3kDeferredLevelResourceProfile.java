@@ -14,15 +14,20 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestSonic3kDeferredLevelResourceProfile {
 
     @Test
-    void ordinaryAizEntryHasNoDeferredResources() {
-        assertNull(Sonic3kDeferredLevelResourceProfile.forLevelLoadBlock(0));
+    void aizIntroActiveEntryDeclaresDeferredMainLevelResources() {
+        Sonic3kDeferredLevelResourceProfile profile =
+                Sonic3kDeferredLevelResourceProfile.forLevelLoadBlock(0);
+
+        assertEquals(
+                Sonic3kConstants.LEVEL_LOAD_BLOCK_AIZ1_INTRO_INDEX,
+                profile.deferredSourceLevelLoadBlockIndex());
+        assertTrue(profile.initiallyDeferred());
     }
 
     @Test
-    void aizIntroEntryDefersOnlyItsMainLevelPatternAndChunkStreams() {
+    void aizIntroCompositeDefersOnlyMainLevelPatternAndChunkStreams() {
         Sonic3kDeferredLevelResourceProfile profile =
-                Sonic3kDeferredLevelResourceProfile.forLevelLoadBlock(
-                        Sonic3kConstants.LEVEL_LOAD_BLOCK_AIZ1_INTRO_INDEX);
+                Sonic3kDeferredLevelResourceProfile.forLevelLoadBlock(0);
         var manifest = profile.manifest(0x100, 0x200, 0x300);
 
         assertTrue(profile.initiallyDeferred());
@@ -33,6 +38,12 @@ class TestSonic3kDeferredLevelResourceProfile {
                 manifest.descriptors().stream()
                         .map(DeferredLevelResourceDescriptor::kind)
                         .collect(Collectors.toSet()));
+    }
+
+    @Test
+    void postIntroEntryLoadsItsOwnSecondaryResourcesImmediately() {
+        assertNull(Sonic3kDeferredLevelResourceProfile.forLevelLoadBlock(
+                Sonic3kConstants.LEVEL_LOAD_BLOCK_AIZ1_INTRO_INDEX));
     }
 
     @Test

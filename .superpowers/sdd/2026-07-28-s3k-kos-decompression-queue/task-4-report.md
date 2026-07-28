@@ -60,10 +60,11 @@ and KosM parent queue. No trace fixture was added or changed.
   an opaque ID; the executor claims it before mutation, verifies exact
   per-load descriptor consumption, and transfers handles after target event
   initialization.
-- Added an immutable S3K LevelLoadBlock resource profile for AIZ intro entry
-  26 and ICZ2 entry 11. This omits only the exact secondary ROM
-  source/compression/destination triples whose production jobs already own
-  publication. Ordinary LevelLoadBlock entry 0 remains unchanged.
+- Added immutable S3K LevelLoadBlock resource profiles for the active AIZ
+  intro entry 0 and ICZ2 entry 11. AIZ entry 0 loads its own resources
+  immediately while declaring entry 26's secondary pattern/chunk resources as
+  deferred. Active entry 26 has no deferred profile, so skip/post-intro loads
+  publish its resources immediately.
 - ICZ2 now claims both direct jobs and the KosM parent in one consumer scan,
   then publishes all three prepared payloads atomically. The public boolean
   queue policy was replaced with the ICZ-specific intent method
@@ -84,3 +85,39 @@ and KosM parent queue. No trace fixture was added or changed.
   The baseline's AIZ main-level queue assertion is now green; the remaining
   11 AIZ failures and two fixed-air failures are the same pre-existing
   failures. No new regression was introduced.
+
+## Round-two review follow-up
+
+- Corrected the AIZ profile ownership inversion: the active intro
+  LevelLoadBlock is entry 0, with deferred declarations sourced from entry 26.
+  Entry 0's own resources remain immediate, while active entry 26 is ordinary
+  immediate loading for intro-skip and post-intro paths.
+- The loader now derives a mandatory manifest from the target profile and
+  requires exact requested-set equality before consuming any deferred
+  descriptor. Missing, extra, nonmatching, and duplicate declarations fail;
+  the existing per-load tracker still rejects repeat consumption.
+- Added ROM-backed loading acceptance tests for byte-exact AIZ entry 0
+  immediacy plus entry 26 hiding, entry 26 immediate skip loading, and an ICZ
+  load rejected before mutation when its mandatory terrain declarations are
+  incomplete.
+- Strengthened AIZ and ICZ acceptance to compare complete affected pattern,
+  chunk, and block ranges before publication, during intermediate scans, and
+  after publication. ICZ also proves a later POST scan does not rewrite the
+  published bytes and that a later ordinary load is isolated from the prior
+  tracker.
+- Added gameplay-composite rewind coverage before and after a handoff-registry
+  claim across an in-frame reload. Queued target reload, same-level reload,
+  failed consumption/no-retry, and exact-once ownership on the replayed
+  timeline are covered independently.
+
+### Round-two RED/GREEN evidence
+
+- RED: the profile tests did not compile because the model lacked a distinct
+  deferred source entry, and the tracker lacked mandatory exact-request
+  validation.
+- GREEN: the focused round-two set completed with 48 tests, 48 passed, no
+  failures or errors.
+- Prescribed six-class comparison: 112 tests, 99 passed, 13 failed, 0 errors.
+  Exact `d230501d4` baseline: 108 tests, 94 passed, 14 failed, 0 errors. The
+  remaining 11 AIZ and two fixed-air failures match the baseline categories;
+  no new regression was introduced.

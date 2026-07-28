@@ -12,7 +12,8 @@ import java.util.List;
  * ROM LevelLoadBlock-owned identities for resources published asynchronously.
  */
 public record Sonic3kDeferredLevelResourceProfile(
-        int levelLoadBlockIndex,
+        int activeLevelLoadBlockIndex,
+        int deferredSourceLevelLoadBlockIndex,
         int secondaryPatternDestination,
         int secondaryChunkDestination,
         int secondaryBlockDestination,
@@ -22,10 +23,10 @@ public record Sonic3kDeferredLevelResourceProfile(
 
     public static Sonic3kDeferredLevelResourceProfile forLevelLoadBlock(
             int levelLoadBlockIndex) {
-        if (levelLoadBlockIndex
-                == Sonic3kConstants.LEVEL_LOAD_BLOCK_AIZ1_INTRO_INDEX) {
+        if (levelLoadBlockIndex == 0) {
             return new Sonic3kDeferredLevelResourceProfile(
                     levelLoadBlockIndex,
+                    Sonic3kConstants.LEVEL_LOAD_BLOCK_AIZ1_INTRO_INDEX,
                     0x00BE * 32,
                     S3kKosRamDestinations.blockTableOffset(0x0268),
                     -1,
@@ -33,6 +34,7 @@ public record Sonic3kDeferredLevelResourceProfile(
         }
         if (levelLoadBlockIndex == ICZ2_LEVEL_LOAD_BLOCK_INDEX) {
             return new Sonic3kDeferredLevelResourceProfile(
+                    levelLoadBlockIndex,
                     levelLoadBlockIndex,
                     0x0122 * 32,
                     S3kKosRamDestinations.blockTableOffset(0x0408),

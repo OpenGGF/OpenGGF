@@ -45,6 +45,24 @@ public final class DeferredLevelResourceTracker {
         }
     }
 
+    public void verifyExactRequest(
+            DeferredLevelResourceManifest expectedManifest) {
+        Set<DeferredLevelResourceDescriptor> expected =
+                new LinkedHashSet<>(expectedManifest.descriptors());
+        if (!requested.equals(expected)) {
+            Set<DeferredLevelResourceDescriptor> missing =
+                    new LinkedHashSet<>(expected);
+            missing.removeAll(requested);
+            Set<DeferredLevelResourceDescriptor> extra =
+                    new LinkedHashSet<>(requested);
+            extra.removeAll(expected);
+            throw new IllegalStateException(
+                    "deferred level resource request does not match the target profile"
+                            + "; missing=" + missing
+                            + "; extra=" + extra);
+        }
+    }
+
     public boolean isEmpty() {
         return requested.isEmpty();
     }

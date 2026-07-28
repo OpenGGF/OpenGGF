@@ -61,4 +61,28 @@ class TestDeferredLevelResourceTracker {
         assertTrue(second.omitIfRequested(PATTERNS));
         second.verifyFullyConsumed();
     }
+
+    @Test
+    void exactManifestRejectsMissingExtraAndNonmatchingRequests() {
+        DeferredLevelResourceDescriptor other =
+                new DeferredLevelResourceDescriptor(
+                        PATTERNS.kind(),
+                        PATTERNS.romSourceAddress() + 2,
+                        PATTERNS.compressionType(),
+                        PATTERNS.destinationAddress());
+        DeferredLevelResourceManifest expected =
+                new DeferredLevelResourceManifest(List.of(PATTERNS));
+
+        assertThrows(IllegalStateException.class,
+                () -> DeferredLevelResourceManifest.EMPTY.newTracker()
+                        .verifyExactRequest(expected));
+        assertThrows(IllegalStateException.class,
+                () -> new DeferredLevelResourceManifest(
+                        List.of(PATTERNS, other)).newTracker()
+                        .verifyExactRequest(expected));
+        assertThrows(IllegalStateException.class,
+                () -> new DeferredLevelResourceManifest(List.of(other))
+                        .newTracker().verifyExactRequest(expected));
+        expected.newTracker().verifyExactRequest(expected);
+    }
 }
