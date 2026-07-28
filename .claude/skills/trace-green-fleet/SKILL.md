@@ -137,7 +137,77 @@ Every worker prompt must include:
 
 Stage output is the contract between workers. The conductor must reject or rerun a worker result if required fields are missing or internally inconsistent. Do not parse vague prose as a substitute for the JSON object.
 
-Required stage objects:
+### Model Routing Contract
+
+The active conductor cannot reroute itself. Start a fleet on Sol at medium effort when practical, but that is a launch recommendation, not an in-session override. The conductor selects every worker tier before launch and must use the same current routing policy:
+
+| Stage | Exact route |
+| --- | --- |
+| Discovery | `gpt-5.6-terra/low` |
+| Triage | `gpt-5.6-terra/medium` |
+| Narrow Fix | `gpt-5.6-terra/medium` |
+| Shared/deep Fix | `gpt-5.6-sol/high` |
+| Ordinary Verify | `gpt-5.6-terra/medium` |
+| Shared, Sol-fixed, disputed, or escalated Verify | `gpt-5.6-sol/high` |
+
+Apply the equivalent Terra/Sol tier intent when the Claude `Agent` API cannot express model and effort overrides; do not claim that it enforced unsupported overrides. Every Discovery, Triage, Fix, and Verify result embeds this conductor-owned routing object alongside its stage fields. Discovery sets `complexity` to `mechanical` and `attemptCount` to `0`. `modelRoute` is authored and preserved by the conductor; workers must not invent or amend it. Runtime telemetry is nullable and recorded only when exposed, never estimated.
+
+For a route plan, report each category's default route even when earlier execution-stage fields are not yet known. A `modelRoute` lists the initial route and only a replacement route on an actual model escalation; do not duplicate a route merely because separate scenario branches use the same stage. Thus ordinary Verify is Terra-medium, shared/Sol-fixed/disputed/escalated Verify is Sol-high, a narrow stalled Fix is `[terra-medium, sol-high]`, and an accepted shared Fix is `[sol-high]`.
+
+```json
+{
+  "requestedModel": "gpt-5.6-terra",
+  "requestedEffort": "medium",
+  "actualModel": null,
+  "actualEffort": null,
+  "complexity": "narrow",
+  "confidence": "high",
+  "beforeFrame": null,
+  "afterFrame": null,
+  "status": "pending",
+  "attemptCount": 0,
+  "regressionCount": 0,
+  "sharedSurfaces": [],
+  "needsEscalation": false,
+  "escalationReasons": [],
+  "modelRoute": ["gpt-5.6-terra/medium"],
+  "usage": {
+    "inputTokens": null,
+    "cachedInputTokens": null,
+    "outputTokens": null,
+    "reasoningTokens": null
+  },
+  "durationMs": null
+}
+```
+
+Allowed `complexity`: `mechanical`, `narrow`, `shared`, `deep`. Allowed `confidence`: `high`, `medium`, `low`. Allowed `escalationReasons`: `no-frontier-advance`, `multiple-owners`, `missing-rom-basis`, `low-confidence`, `unresolved-ownership`, `reasoning-insufficient`, `shared-surface-discovered`, `cross-game-semantics`, `regression`, `context-contradiction`, `recorder-evidence-required`, `causal-thread-lost`.
+
+Before launching, the conductor validates required routing fields, enums, and the requested route. It may request one schema-only repair from a completed worker; if unavailable, it may rerun once. A second malformed result is a stage error. `attemptCount` remains cumulative across replacement workers for that stage. Aggregate usage or duration only when every contributing value is exposed; otherwise use `null`.
+
+#### Deterministic routing and ownership
+
+- Terra Triage escalates once to Sol Triage for `multiple-owners`, `low-confidence`, `unresolved-ownership`, or `missing-rom-basis`. Accepted shared/deep Triage goes directly to Sol Fix. If Sol Triage still lacks ROM basis, return `missing-rom-basis` and block Fix.
+- Object-local collision/profile changes remain narrow. Route directly to Sol Fix for shared runtime physics, collision, sidekick, camera, oscillation, bootstrap, object lifecycle, recorder/publication contracts, or cross-game semantics.
+- A Terra Fix stops after two unsuccessful attempts and escalates once to Sol Fix for one final attempt (three total). Escalate also for no frontier advance, context contradiction, a newly discovered shared surface/cross-game semantics, recorder evidence required, causal-thread loss, or insufficient reasoning. Never change effort in place.
+- Route Verify directly to Sol after any Sol Fix, shared edit, disputed ROM evidence, or prior escalation. A Terra Verify that detects a regression returns an escalation handoff; Sol independently repeats Verify before acceptance.
+- Workers own a worktree sequentially, never concurrently. On Terra-to-Sol Fix handoff, Terra returns attempt history and dirty-worktree state; retain edits only when each is ROM-backed and listed in `filesTouched`, otherwise restore only its own edits. The conductor ends Terra ownership before launching Sol. Sol first reviews the retained diff, may restore only predecessor-listed files, then performs at most one edit/test attempt.
+
+| Condition before/after a stage | Conductor decision |
+| --- | --- |
+| Unsupported model ID | Reject before launch. |
+| Required Sol unavailable | Block the escalated stage; never silently fall back. |
+| A stage already escalated once | Return a blocker; never escalate twice. |
+| Sol Triage still lacks ROM basis | Block Fix with `missing-rom-basis`. |
+| Sol worker fails | Return a blocker. |
+| Terra Triage has multiple owners, low confidence, unresolved ownership, or no ROM basis | Launch one Sol Triage. |
+| Accepted shared/deep Triage or listed shared/cross-game owner | Launch Sol Fix directly. |
+| Object-local collision/profile owner | Keep Narrow Fix on Terra. |
+| Terra Fix has the listed escalation evidence | Stop after at most two unsuccessful attempts and launch one Sol final attempt. |
+| Sol Fix, shared edit, disputed ROM evidence, or escalated handoff | Launch Sol Verify directly. |
+| Terra Verify newly detects regression | Launch one Sol Verify. |
+
+Required stage objects (each also embeds the Model Routing Contract above, including `beforeFrame`, `afterFrame`, `status`, cumulative `attemptCount`, and `regressionCount`):
 
 - Triage object: `setupOk`, `worktreePath`, `branch`, `firstErrorFrame`, `field`, `brief`, `hypothesis`, `disasmCites`
 - Fix object: `changed`, `filesTouched`, `beforeFrame`, `afterFrame`, `targetedPasses`, `romCites`, `summary`, `worktreePath`, `branch`
@@ -165,10 +235,18 @@ The fleet proposes; the conductor disposes.
 
 ### Worker Prompt Templates
 
+Every stage prompt begins with this byte-stable prefix; put the dynamic JSON handoff after it. Start from compact first-divergence evidence and paths to large reports/disassemblies, then expand context when causality requires it.
+
+```text
+Follow the trace fleet non-negotiable rules. Trace data is comparison-only; model ROM state, cite ROM/disassembly evidence, and do not use zone/route/frame/game carve-outs. Return the requested stage JSON with the conductor-owned routing object unchanged. Do not estimate runtime telemetry. You own this worktree only for this stage; do not revert others' edits, stage only files you changed, and never use git add -A or git stash.
+```
+
 Triage worker:
 
 ```text
 Triage failing trace <testClass> (<game> <zone>) in an isolated worktree.
+Routing: <CONDUCTOR_ROUTING_JSON>
+
 Input: <FAILING_ITEM_JSON>
 
 Create or reuse worktree .worktrees/trace-<game>-<zone> on bugfix/ai-trace-<game>-<zone> from develop. Rerun the targeted trace, run TraceTriageTool, inspect the relevant disassembly, and return the TRIAGE JSON object. Do not edit engine code.
@@ -180,6 +258,8 @@ Fix worker:
 
 ```text
 Implement a trace fix for <testClass> in <worktreePath> on <branch>.
+Routing: <CONDUCTOR_ROUTING_JSON>
+
 Input: <TRIAGE_JSON>
 
 Use the triage hypothesis and disassembly cites. Iterate diagnose->fix up to 3 times, rerunning the targeted trace after each edit. Capture beforeFrame and afterFrame. Do not commit.
@@ -191,6 +271,8 @@ Verify worker:
 
 ```text
 Independently verify <testClass> in <worktreePath> on <branch>.
+Routing: <CONDUCTOR_ROUTING_JSON>
+
 Input: <FIX_JSON>
 
 Rerun the targeted trace and same-game green guard. Apply the genuineness gate. Commit only if genuine=true, changed=true, and status is green, advanced, or advanced-with-regression. Return the VERIFY JSON object.
@@ -221,6 +303,8 @@ Classify:
 Skip abstract bases and non-replay guard tests such as `TestTraceReplayInvariantGuard`.
 
 Attach same-game green guards to each failing item. For S3K, add the fallback green guards listed above. Exclude the failing class itself.
+
+Discovery output includes the classified failing/passing/ignored items and embeds the Model Routing Contract with `requestedModel="gpt-5.6-terra"`, `requestedEffort="low"`, `complexity="mechanical"`, `attemptCount=0`, the observed `beforeFrame`/`afterFrame` where applicable, `status`, and `regressionCount=0`.
 
 ## Phase 1: Triage
 
@@ -272,7 +356,7 @@ Triage output:
 
 Implement only after triage has a confirmed first divergence and ROM-backed hypothesis.
 
-Loop up to 3 times:
+For a Narrow Terra Fix, make at most two unsuccessful attempts. Return an escalation handoff rather than a third Terra attempt when the frontier does not advance or any deterministic escalation condition applies. A replacement Sol Fix reviews the retained diff and gets the one final attempt; all workers together remain capped at three attempts.
 
 1. Make the smallest disassembly-backed engine change.
 2. Run the targeted trace command.
@@ -298,6 +382,8 @@ Fix output:
   "branch": "bugfix/ai-trace-s3k-aiz"
 }
 ```
+
+Embed the Model Routing Contract in this object. Set `beforeFrame`, `afterFrame`, `status`, cumulative `attemptCount`, and `regressionCount` from observed results rather than leaving them implicit.
 
 ## Phase 3: Verify
 
@@ -361,6 +447,8 @@ Verify output:
 }
 ```
 
+Embed the Model Routing Contract in this object. `regressionCount` is the number of newly detected regressions; a Terra regression requires the Sol Verify handoff above.
+
 ## Final Summary
 
 Return:
@@ -373,6 +461,19 @@ Return:
   "advancedWithRegression": 1,
   "committed": 4,
   "rejectedNotGenuine": 0,
+  "routing": {
+    "stages": [],
+    "totalUsage": {
+      "inputTokens": null,
+      "cachedInputTokens": null,
+      "outputTokens": null,
+      "reasoningTokens": null
+    },
+    "totalDurationMs": null,
+    "acceptedResults": 0,
+    "tracesGreened": 0,
+    "escalations": 0
+  },
   "regressionQueue": [
     {
       "causedBy": "TestS3kAizTraceReplay",
@@ -383,6 +484,8 @@ Return:
   "results": []
 }
 ```
+
+`routing.stages` preserves accepted stage routing objects. `totalUsage` and `totalDurationMs` are aggregates only if every contributing runtime value is exposed; otherwise their affected aggregate is `null`.
 
 Also summarize human-readable:
 
