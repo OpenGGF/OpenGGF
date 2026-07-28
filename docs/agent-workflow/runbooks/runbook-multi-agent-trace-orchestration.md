@@ -142,6 +142,77 @@ restore only benchmark-owned enumerated files and confirm `git status --short`
 is empty. Never reset, `git clean`, or force-remove a dirty benchmark worktree:
 it is evidence to retain and diagnose, not permission to discard work.
 
+Use this lifecycle verbatim for one `<policy>` / `<case>` pair. It creates a
+dedicated branch and worktree from the case's immutable parent; it does not
+switch the lead checkout. The `git status --porcelain --untracked-files=no`
+checks deliberately assess tracked cleanliness because the repository's
+post-checkout hook may link local disassembly trees as untracked resources.
+
+```bash
+BENCH_ROOT=$(git rev-parse --show-toplevel)
+BENCH_POLICY=<policy>
+BENCH_CASE=<case>
+BENCH_MANIFEST="$BENCH_ROOT/docs/architecture/validation/trace/trace-model-routing-benchmark.json"
+BENCH_BASE=$(jq -r --arg case "$BENCH_CASE" '.cases[] | select(.id == $case) | .baseCommit' "$BENCH_MANIFEST")
+BENCH_BRANCH="benchmark/trace-model-routing-${BENCH_POLICY}-${BENCH_CASE}"
+BENCH_WORKTREE="$BENCH_ROOT/.worktrees/trace-model-routing-${BENCH_POLICY}-${BENCH_CASE}"
+BENCH_RESULT="$BENCH_WORKTREE/target/trace-model-routing/${BENCH_POLICY}/${BENCH_CASE}.json"
+BENCH_PATCH="${BENCH_RESULT%.json}.patch"
+BENCH_RETAIN="/tmp/trace-model-routing-retained/${BENCH_POLICY}/${BENCH_CASE}"
+
+git cat-file -e "${BENCH_BASE}^{commit}"
+test ! -e "$BENCH_WORKTREE"
+git worktree add -b "$BENCH_BRANCH" "$BENCH_WORKTREE" "$BENCH_BASE"
+git -C "$BENCH_WORKTREE" status --porcelain --untracked-files=no
+test -z "$(git -C "$BENCH_WORKTREE" status --porcelain --untracked-files=no)"
+```
+
+In that worktree, verify the exact input before invoking the manifest's
+`targetCommand` with `<ROM_PATH>` replaced by the supplied ROM. The fixture
+loop checks the bytes at the pinned parent, not the moving benchmark tree.
+
+```bash
+ROM_PATH=<absolute-user-supplied-ROM-path>
+test "$(sha1sum "$ROM_PATH" | cut -d' ' -f1 | tr '[:lower:]' '[:upper:]')" = "$(jq -r --arg case "$BENCH_CASE" '.cases[] | select(.id == $case) | .rom.sha1' "$BENCH_MANIFEST")"
+jq -r --arg case "$BENCH_CASE" '.cases[] | select(.id == $case) | .fixtures[] | [.path,.sha256] | @tsv' "$BENCH_MANIFEST" |
+while IFS=$'\t' read -r path expected; do
+  test "$(git -C "$BENCH_WORKTREE" show "${BENCH_BASE}:${path}" | sha256sum | cut -d' ' -f1)" = "$expected"
+done
+git -C "$BENCH_WORKTREE" status --porcelain --untracked-files=no > "$BENCH_WORKTREE/target/trace-model-routing/owned-before.txt"
+```
+
+After the run, create the result JSON against
+`trace-model-routing-result.schema.json`, capture tracked and untracked owned
+changes, then copy every artifact outside both `target/` and the worktree before
+any restoration. The untracked loop deliberately appends `--no-index` additions
+to the patch, so a newly-created file is not silently omitted.
+
+```bash
+mkdir -p "$(dirname "$BENCH_RESULT")" "$BENCH_RETAIN"
+git -C "$BENCH_WORKTREE" diff --binary HEAD > "$BENCH_PATCH"
+git -C "$BENCH_WORKTREE" diff --name-only HEAD > "${BENCH_RESULT%.json}.owned-tracked"
+git -C "$BENCH_WORKTREE" ls-files --others --exclude-standard > "${BENCH_RESULT%.json}.owned-untracked"
+while IFS= read -r path; do
+  git -C "$BENCH_WORKTREE" diff --no-index --binary -- /dev/null "$path" >> "$BENCH_PATCH" || test $? -eq 1
+done < "${BENCH_RESULT%.json}.owned-untracked"
+sha256sum "$BENCH_PATCH"
+git -C "$BENCH_WORKTREE" rev-parse HEAD^{tree}
+cp "$BENCH_RESULT" "$BENCH_PATCH" "${BENCH_RESULT%.json}.owned-tracked" "${BENCH_RESULT%.json}.owned-untracked" "$BENCH_RETAIN/"
+check-jsonschema --schemafile "$BENCH_ROOT/docs/architecture/validation/trace/trace-model-routing-result.schema.json" "$BENCH_RESULT"
+```
+
+Restore only the enumerated benchmark-owned paths. Tracked paths return to the
+base tree; untracked paths are moved into the retained directory rather than
+deleted. If either cleanliness check fails, stop and retain the worktree.
+
+```bash
+while IFS= read -r path; do git -C "$BENCH_WORKTREE" restore --source=HEAD --worktree -- "$path"; done < "${BENCH_RESULT%.json}.owned-tracked"
+while IFS= read -r path; do test -z "$path" || mv "$BENCH_WORKTREE/$path" "$BENCH_RETAIN/owned-untracked-$(basename "$path")"; done < "${BENCH_RESULT%.json}.owned-untracked"
+test -z "$(git -C "$BENCH_WORKTREE" status --porcelain --untracked-files=no)"
+git -C "$BENCH_WORKTREE" status --short
+git worktree remove "$BENCH_WORKTREE"
+```
+
 ## Shared-worktree hygiene (critical — many concurrent sessions)
 
 - **Stage ONLY your own authored files.** NEVER `git add -A`. There is frequently

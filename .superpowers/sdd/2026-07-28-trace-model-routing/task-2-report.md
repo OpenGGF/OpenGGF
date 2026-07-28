@@ -53,3 +53,39 @@ jq -e '([.cases[].id] | length == (unique | length)) and ([.cases[].game] | uniq
 The validator was installed only in temporary `/tmp/trace-model-routing-validator`
 because it was not available on PATH. The pinned commit-existence and historical
 fixture-object SHA-256 loops also exited zero.
+
+## Review fix round 1 — 2026-07-28
+
+`RomTestUtils` reads S1 and S2 ROM locations from `sonic1.rom.path` and
+`sonic2.rom.path`, not the obsolete shorthand names in the initial manifest.
+The manifest, schema, and per-game correlation constraints now use the actual
+property names. The following commands were rerun from their pinned historical
+parent worktrees and intentionally exited non-zero only because they reproduced
+the benchmark failure:
+
+```bash
+mvn -q -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=true \
+  "-Dsonic1.rom.path=/home/farrell/code/projects/OpenGGF/s1.gen" \
+  "-Dtest=com.openggf.tests.trace.s1.TestS1Lz2CompleteRunTraceReplay#replayMatchesTrace" test
+# 1,290 errors; first f6418 obj_s44_slot
+
+mvn -q -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=true \
+  "-Dsonic2.rom.path=/home/farrell/code/projects/OpenGGF/s2.gen" \
+  "-Dtest=com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay#replayMatchesTrace" test
+# 594 errors; first f202 tails_x
+```
+
+The result schema now requires the complete Task 1 route object in every
+stage, rejects extra keys, distinguishes per-stage `attemptCount` from
+top-level `totalAttemptCount`, and uses nullable observed telemetry. The
+`terra-sol` template keeps triage Terra-only; its shared classification routes
+the subsequent fix and verification directly to Sol without claiming a triage
+escalation. The runbook now supplies safe executable worktree, input hash,
+owned-file/patch (including untracked additions), external retention, schema,
+restoration, clean-status, and ordinary-removal commands.
+
+Post-fix validation reran `jq empty` for all four JSON artifacts,
+`check-jsonschema` for manifest, metaschemas, and result template, the
+unique-case/all-game/historical-confirmation query, all pinned commit checks,
+and all pinned fixture-object SHA-256 checks. Every validation command exited
+zero; each `check-jsonschema` invocation reported `ok -- validation done`.
