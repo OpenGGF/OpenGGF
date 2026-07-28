@@ -1,0 +1,130 @@
+package com.openggf.tools;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.zip.GZIPInputStream;
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class TestPlcTimingEvidenceTool {
+
+    @TempDir
+    Path temporaryDirectory;
+
+    @Test
+    void committedMarkerCannotBeMistakenForApprovedEvidence() throws Exception {
+        Path marker = Path.of("docs/architecture/research/trace/assets/s1-s2-plc-evidence-vectors.json.gz");
+        try (var input = new GZIPInputStream(Files.newInputStream(marker))) {
+            assertTrue(new String(input.readAllBytes()).contains("EVIDENCE_INCOMPLETE"));
+        }
+    }
+
+    /** Catches a CLI that accepts unordered raw hook records or trusts RAM deltas. */
+    @Test
+    void cliDerivesACompactVectorFromExecuteHookRecords() throws Exception {
+        Path rom = temporaryDirectory.resolve("test.gen");
+        byte[] bytes = new byte[0x1DD94];
+        bytes[0x40] = 0;
+        bytes[0x41] = 10;
+        bytes[0x1DD88] = 0;
+        bytes[0x1DD89] = 4;
+        bytes[0x1DD8A] = 0;
+        bytes[0x1DD8B] = 0;
+        bytes[0x1DD8C] = 0;
+        bytes[0x1DD8D] = 0;
+        bytes[0x1DD8E] = 0;
+        bytes[0x1DD8F] = 0x40;
+        Files.write(rom, bytes);
+        Path probe = temporaryDirectory.resolve("probe.jsonl");
+        Files.writeString(probe, """
+                {"raw_frame":10,"within_frame_order":1,"event":"plc_submission","operation":"append","plc_id":1,"game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false,"queue_source":64}
+                {"raw_frame":10,"within_frame_order":2,"event":"plc_prepare_end","game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false,"queue_source":64,"patterns_left_after":10}
+                {"raw_frame":11,"within_frame_order":1,"event":"plc_service","game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false,"queue_source":64,"patterns_left_after":1}
+                {"raw_frame":11,"within_frame_order":2,"event":"plc_consumer_observation","consumer_id":"ready_gate","queue_empty":false,"game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false,"queue_source":64,"patterns_left_after":1}
+                {"raw_frame":12,"within_frame_order":1,"event":"plc_service","game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false,"queue_source":64,"patterns_left_after":0}
+                {"raw_frame":12,"within_frame_order":2,"event":"plc_pop","game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false,"queue_source":64,"patterns_left_after":0}
+                {"raw_frame":12,"within_frame_order":3,"event":"plc_empty","game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false,"queue_source":0,"patterns_left_after":0}
+                {"raw_frame":12,"within_frame_order":4,"event":"plc_consumer_observation","consumer_id":"ready_gate","queue_empty":true,"game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false,"queue_source":0,"patterns_left_after":0}
+                """);
+        Path output = temporaryDirectory.resolve("vector.json");
+
+        assertTrue(PlcTimingEvidenceTool.run(new String[] {
+                "--game", "s1", "--rom", rom.toString(), "--probe", probe.toString(), "--out", output.toString()}));
+        assertTrue(Files.readString(output).contains("\"matches\" : true"));
+    }
+
+    /**
+     * Catches a predictor that ignores a structural input and simply trusts a
+     * diagnostic progress edge.
+     */
+    @Test
+    void structuralMutationsRejectTheObservedOracle() {
+        var evidence = fixture();
+        assertTrue(PlcTimingEvidenceTool.analyze(evidence).matches());
+
+        assertRejected(evidence.withRows(replace(evidence.rows(), 1,
+                evidence.rows().get(1).withInterruptHandler(0x08))));
+        assertRejected(evidence.withRows(replace(evidence.rows(), 1,
+                evidence.rows().get(1).withLag(true))));
+        assertRejected(evidence.withRows(replace(evidence.rows(), 1,
+                evidence.rows().get(1).withHblankDeferred(true))));
+        assertRejected(evidence.withRows(replace(evidence.rows(), 0,
+                evidence.rows().get(0).withRunPlcCalled(false))));
+        assertRejected(evidence.withRows(replace(evidence.rows(), 2,
+                evidence.rows().get(2).withConsumerPolls(List.of(
+                        new PlcTimingEvidenceTool.ConsumerPoll("ready_gate", 2),
+                        new PlcTimingEvidenceTool.ConsumerPoll("ready_gate", 1))))));
+        assertRejected(evidence.withHandlerBudgets(Map.of(0x0C, 3)));
+    }
+
+    private static void assertRejected(PlcTimingEvidenceTool.Evidence evidence) {
+        assertFalse(PlcTimingEvidenceTool.analyze(evidence).matches());
+    }
+
+    private static List<PlcTimingEvidenceTool.StructuralRow> replace(
+            List<PlcTimingEvidenceTool.StructuralRow> rows,
+            int index,
+            PlcTimingEvidenceTool.StructuralRow replacement) {
+        var copy = new java.util.ArrayList<>(rows);
+        copy.set(index, replacement);
+        return List.copyOf(copy);
+    }
+
+    private static PlcTimingEvidenceTool.Evidence fixture() {
+        return new PlcTimingEvidenceTool.Evidence(
+                "s1",
+                Map.of(0x08, 3, 0x0C, 9),
+                List.of(
+                        new PlcTimingEvidenceTool.StructuralRow(
+                                10, 12, 0x0C, false, false,
+                                List.of(new PlcTimingEvidenceTool.Submission(0x40, 10)),
+                                true, List.of()),
+                        new PlcTimingEvidenceTool.StructuralRow(
+                                11, 12, 0x0C, false, false, List.of(), false,
+                                List.of(new PlcTimingEvidenceTool.ConsumerPoll("ready_gate", 1))),
+                        new PlcTimingEvidenceTool.StructuralRow(
+                                12, 12, 0x0C, false, false, List.of(), false,
+                                List.of(new PlcTimingEvidenceTool.ConsumerPoll("ready_gate", 1)))),
+                List.of(
+                        new PlcTimingEvidenceTool.ObservedEdge(10,
+                                PlcTimingEvidenceTool.EdgeKind.PREPARE, 0x40, 10),
+                        new PlcTimingEvidenceTool.ObservedEdge(11,
+                                PlcTimingEvidenceTool.EdgeKind.SERVICE, 0x40, 1),
+                        new PlcTimingEvidenceTool.ObservedEdge(11,
+                                PlcTimingEvidenceTool.EdgeKind.CONSUMER_BUSY, 0x40, 1),
+                        new PlcTimingEvidenceTool.ObservedEdge(12,
+                                PlcTimingEvidenceTool.EdgeKind.SERVICE, 0x40, 0),
+                        new PlcTimingEvidenceTool.ObservedEdge(12,
+                                PlcTimingEvidenceTool.EdgeKind.POP, 0x40, 0),
+                        new PlcTimingEvidenceTool.ObservedEdge(12,
+                                PlcTimingEvidenceTool.EdgeKind.EMPTY, 0, 0),
+                        new PlcTimingEvidenceTool.ObservedEdge(12,
+                                PlcTimingEvidenceTool.EdgeKind.CONSUMER_EMPTY, 0, 0)));
+    }
+}
