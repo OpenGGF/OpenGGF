@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "policy", "caseId", "baseCommit", "resultTree", "patch", "stages", "tokens", "wallTimeMs", "attempts", "beforeFrontier", "afterFrontier", "status", "citations", "regressions"],
+  "properties": {
+    "$schema": {"type": "string"}, "schemaVersion": {"const": 1}, "policy": {"enum": ["sol-only", "terra-sol", "luna-terra-sol"]}, "caseId": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"}, "baseCommit": {"type": "string", "pattern": "^[0-9a-f]{40}$"}, "resultTree": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "patch": {"type": "object", "additionalProperties": false, "required": ["path", "sha256"], "properties": {"path": {"type": "string", "pattern": "^target/trace-model-routing/[^/]+/[^/]+\\.patch$"}, "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}}, "stages": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/stage"}}, "tokens": {"$ref": "#/$defs/tokens"}, "wallTimeMs": {"type": ["integer", "null"], "minimum": 0}, "attempts": {"type": "integer", "minimum": 0}, "beforeFrontier": {"$ref": "#/$defs/nullableFrontier"}, "afterFrontier": {"$ref": "#/$defs/nullableFrontier"}, "status": {"enum": ["green", "advanced", "no-change", "regressed", "blocked", "error"]}, "citations": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}, "regressions": {"type": "array", "items": {"type": "string", "minLength": 1}}
+  },
+  "$defs": {
+    "route": {"type": "string", "pattern": "^gpt-5\\.6-(luna|terra|sol)/(low|medium|high)$"}, "tokens": {"type": "object", "additionalProperties": false, "required": ["input", "cachedInput", "output", "reasoning"], "properties": {"input": {"type": ["integer", "null"], "minimum": 0}, "cachedInput": {"type": ["integer", "null"], "minimum": 0}, "output": {"type": ["integer", "null"], "minimum": 0}, "reasoning": {"type": ["integer", "null"], "minimum": 0}}}, "frontier": {"type": "object", "additionalProperties": false, "required": ["frame", "field"], "properties": {"frame": {"type": "integer", "minimum": 0}, "field": {"type": "string", "minLength": 1}}}, "nullableFrontier": {"anyOf": [{"$ref": "#/$defs/frontier"}, {"type": "null"}]}, "stage": {"type": "object", "additionalProperties": false, "required": ["name", "modelRoute", "tokens", "wallTimeMs"], "properties": {"name": {"enum": ["discovery", "triage", "fix", "verify"]}, "modelRoute": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/route"}}, "tokens": {"$ref": "#/$defs/tokens"}, "wallTimeMs": {"type": ["integer", "null"], "minimum": 0}}}
+  }
+}

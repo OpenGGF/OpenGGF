@@ -93,6 +93,55 @@ never hydrate engine state from the trace per-frame (frame-0 bootstrap only).
   worktrees and branch off each other. ALWAYS verify each incoming branch's actual
   commit content + merge-base before merging; never trust the isolation flag.
 
+## Model routing and escalation
+
+The conductor chooses every child route before launch; an active worker cannot
+reroute itself. Terra is the default for mechanical and object-local work, while
+Sol owns shared/deep work and defined escalation. Record requested and (when
+available) actual routes, reasons, cumulative attempts, and nullable telemetry;
+never estimate unavailable token or duration values.
+
+| Stage or classification | Exact route |
+| --- | --- |
+| Discovery | `gpt-5.6-terra/low` |
+| Triage | `gpt-5.6-terra/medium` |
+| Narrow object-local fix | `gpt-5.6-terra/medium` |
+| Shared/deep fix | `gpt-5.6-sol/high` |
+| Ordinary verify | `gpt-5.6-terra/medium` |
+| Verify after Sol, a shared edit, disputed ROM evidence, or escalation | `gpt-5.6-sol/high` |
+
+Classify shared runtime physics, collision, sidekick, camera, oscillation,
+bootstrap, object lifecycle, recorder/publication work, and cross-game semantics
+directly to Sol. Terra Triage escalates once to Sol for multiple owners, low
+confidence, unresolved ownership, or missing ROM basis. Sol Triage without ROM
+basis blocks Fix. Terra narrow Fix stops after two unsuccessful attempts and
+hands off once to Sol for one final attempt when there is no frontier advance,
+context contradiction, a newly discovered shared/cross-game surface, recorder
+evidence need, causal-thread loss, or insufficient reasoning. Never change
+effort in place or escalate a stage twice.
+
+Route Verify directly to Sol after Sol, shared, disputed, or escalated work. A
+Terra-detected regression is a Sol handoff for independent repeat verification.
+An unavailable required Sol route or a failed Sol worker blocks the stage; never
+silently fall back. The lead retains sole worktree ownership between sequential
+workers: end Terra ownership before launching Sol, retain only ROM-backed edits
+listed in `filesTouched`, and let Sol review that retained diff before its one
+attempt. Workers never own one worktree concurrently.
+
+### Reproducible routing benchmark
+
+Use the frozen protocol in
+[`trace-model-routing-benchmark.json`](../../architecture/validation/trace/trace-model-routing-benchmark.json).
+Run every case/policy in a newly-created clean worktree; verify the ROM SHA-1
+and fixture SHA-256 values first. Store the result at
+`target/trace-model-routing/<policy>/<case>.json` and its patch at the same path
+with `.patch`. The parent commit pins the recorded first error as benchmark input.
+
+Retain results and patches by default. Before normal `git worktree remove`,
+restore only benchmark-owned enumerated files and confirm `git status --short`
+is empty. Never reset, `git clean`, or force-remove a dirty benchmark worktree:
+it is evidence to retain and diagnose, not permission to discard work.
+
 ## Shared-worktree hygiene (critical — many concurrent sessions)
 
 - **Stage ONLY your own authored files.** NEVER `git add -A`. There is frequently

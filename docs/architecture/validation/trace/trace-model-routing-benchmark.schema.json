@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "resultRoot", "policies", "cases"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schemaVersion": {"const": 1},
+    "resultRoot": {"const": "target/trace-model-routing"},
+    "policies": {"type": "array", "minItems": 3, "items": {"$ref": "#/$defs/policy"}},
+    "cases": {"type": "array", "minItems": 3, "items": {"$ref": "#/$defs/case"}}
+  },
+  "$defs": {
+    "route": {"type": "string", "pattern": "^gpt-5\\.6-(luna|terra|sol)/(low|medium|high)$"},
+    "routes": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/route"}},
+    "policy": {"type": "object", "additionalProperties": false, "required": ["name", "enabled", "routes"], "properties": {"name": {"enum": ["sol-only", "terra-sol", "luna-terra-sol"]}, "enabled": {"type": "boolean"}, "disabledReason": {"type": "string", "minLength": 1}, "routes": {"type": "object", "additionalProperties": false, "required": ["discovery", "triage", "narrowFix", "sharedFix", "ordinaryVerify", "escalatedVerify"], "properties": {"discovery": {"$ref": "#/$defs/routes"}, "triage": {"$ref": "#/$defs/routes"}, "narrowFix": {"$ref": "#/$defs/routes"}, "sharedFix": {"$ref": "#/$defs/routes"}, "ordinaryVerify": {"$ref": "#/$defs/routes"}, "escalatedVerify": {"$ref": "#/$defs/routes"}}}}, "allOf": [{"if": {"properties": {"enabled": {"const": false}}}, "then": {"required": ["disabledReason"]}}]},
+    "fqcn": {"type": "string", "pattern": "^(?:[A-Za-z_$][A-Za-z0-9_$]*\\.)+[A-Za-z_$][A-Za-z0-9_$]*$"},
+    "frontier": {"type": "object", "additionalProperties": false, "required": ["frame", "field"], "properties": {"frame": {"type": "integer", "minimum": 0}, "field": {"type": "string", "minLength": 1}}},
+    "fixture": {"type": "object", "additionalProperties": false, "required": ["path", "sha256"], "properties": {"path": {"type": "string", "pattern": "^src/test/resources/traces/"}, "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}},
+    "rom": {"type": "object", "additionalProperties": false, "required": ["property", "sha1"], "properties": {"property": {"enum": ["s1.rom.path", "s2.rom.path", "s3k.rom.path"]}, "sha1": {"type": "string", "pattern": "^[0-9A-F]{40}$"}}},
+    "case": {"type": "object", "additionalProperties": false, "required": ["id", "baseCommit", "testClass", "game", "zone", "complexity", "startingFrontier", "fixtures", "rom", "targetCommand", "verificationClasses", "historicalFailureConfirmed"], "properties": {"id": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"}, "baseCommit": {"type": "string", "pattern": "^[0-9a-f]{40}$"}, "testClass": {"$ref": "#/$defs/fqcn"}, "game": {"enum": ["s1", "s2", "s3k"]}, "zone": {"type": "string", "pattern": "^[a-z0-9_]+$"}, "complexity": {"enum": ["narrow", "shared", "deep"]}, "startingFrontier": {"$ref": "#/$defs/frontier"}, "fixtures": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/fixture"}}, "rom": {"$ref": "#/$defs/rom"}, "targetCommand": {"type": "string", "pattern": "^mvn .*-D(s1|s2|s3k)\\.rom\\.path=<ROM_PATH>.*$"}, "verificationClasses": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/fqcn"}}, "historicalFailureConfirmed": {"const": true}}}
+  }
+}

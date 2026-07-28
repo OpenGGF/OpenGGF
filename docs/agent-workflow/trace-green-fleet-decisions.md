@@ -87,6 +87,24 @@ messages (per-fix ROM rationale).
     `develop` also requires a `README.md` release-log update per the branch
     documentation policy.
 
+## Model-routing decision — 2026-07-28
+
+16. **Terra-first, rather than universal Luna-first.** Discovery, ordinary
+    triage, and narrow object-local fixes begin on Terra at the route/effort in
+    the trace-fleet contract. `gpt-5.6-luna` remains future-only until it is an
+    explicitly supported, observable worker route; it is never substituted for
+    an available Terra or Sol route.
+17. **Sol owns shared/deep work and escalation.** Shared runtime surfaces,
+    cross-game semantics, disputed ROM evidence, and deep roots go directly to
+    Sol; a Terra stall gets one Sol final attempt after at most two unsuccessful
+    attempts. Verification likewise moves to Sol after Sol/shared/disputed/
+    escalated work, and Sol independently repeats a Terra-detected regression.
+18. **Measure accepted output first.** Primary measures are tokens per accepted
+    result and tokens per trace greened. Frontier movement is secondary and
+    within-trace only: it distinguishes an advanced red root from no change but
+    cannot compare remaining difficulty across traces or prove acceptance.
+    Missing runtime telemetry stays null rather than inferred.
+
 ## Run record — 2026-06-03
 
 - Baseline failing set: S2 ×16 (arz1/arz2/cnz1/cnz2/cpz1/cpz2/dez1/htz1/htz2/
