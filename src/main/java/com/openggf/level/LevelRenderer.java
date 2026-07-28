@@ -1183,9 +1183,7 @@ public final class LevelRenderer {
         // Pass the tilemap's source anchor to the shader so it offsets worldX before wrapping.
         // Shader: fboWorldOffsetX = -ScrollMidpoint - ExtraBuffer
         // We want fboWorldOffsetX = sourceX, so ScrollMidpoint = -sourceX.
-        BackgroundTilemapSampling sourceSampling = backgroundTilemapSampling(
-                lm.tilemapManager, 0);
-        int shaderScrollMidpoint = -sourceSampling.compositorWorldAnchorX();
+        int shaderScrollMidpoint = -lm.tilemapManager.getBackgroundTilemapSourceX();
         int shaderExtraBuffer = 0;
         float bgTilemapWorldOffsetX = 0.0f;
         boolean perLineScrollActive = false;
@@ -1277,8 +1275,8 @@ public final class LevelRenderer {
         // The parallax shader shifts the FBO sampling by (actualBgScrollY - alignedBgY)
         // so we must shift the waterline by the same amount to keep it steady on screen
         int vOffset = actualBgScrollY - alignedBgY;
-        BackgroundTilemapSampling sampling = backgroundTilemapSampling(
-                lm.tilemapManager, alignedBgY);
+        int tilePassWorldOffsetY =
+                alignedBgY - lm.tilemapManager.getBackgroundTilemapSourceY();
         float fboWaterlineY = (float) ((waterLevelWorldY - camera.getY()) + vOffset);
 
         // Compute screen-space waterline for BG parallax shimmer
@@ -1289,7 +1287,7 @@ public final class LevelRenderer {
         pendingBgTilePassRenderHeight = renderHeight;
         pendingBgTilePassHasWater = hasWater && !suppressUnderwaterPalette;
         pendingBgTilePassFboWaterlineY = fboWaterlineY;
-        pendingBgTilePassAlignedBgY = sampling.tilePassWorldOffsetY();
+        pendingBgTilePassAlignedBgY = tilePassWorldOffsetY;
         pendingBgTilePassBgTilemapWorldOffsetX = bgTilemapWorldOffsetX;
         pendingBgTilePassPerLineScroll = perLineScrollActive;
         // Per-column BG VScroll is screen-column VSRAM state, so the parallax
