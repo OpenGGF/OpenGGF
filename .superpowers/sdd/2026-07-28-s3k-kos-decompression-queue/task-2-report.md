@@ -24,7 +24,23 @@ overall invocation remains red on existing unrelated AIZ tests and the
 pre-existing rewind guard gap for
 `Flybot767BadnikInstance#layoutWaitUsesRetainedRenderFlag`.
 
+## Review follow-up
+
+- Direct preparation now advances one descriptor command per PRE boundary, so
+  active decoder state is a real rewind state rather than a completion loop.
+- Scanner coverage now includes descriptor refill, short/long matches,
+  no-output commands, terminators, malformed backreferences, and bounds.
+- Claimed handles are removed from the descriptor facade before queue capture;
+  a capture/restore after claim is covered explicitly. The descriptor contract
+  therefore lasts through claim only.
+
+Focused evidence: `TestS3kKosDecompressionQueue` has 7 passing tests and
+`TestResumableKosinskiDecoder` has 6 passing tests.
+
 ## Deferred
 
 `S3kKosModuleQueue` remains unchanged by design: composing module parents
 over direct children is Task 3.
+
+Production lifecycle coverage for the session facade, rewind registration
+ordering, and teardown reset remains an outstanding follow-up.

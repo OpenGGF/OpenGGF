@@ -166,6 +166,26 @@ class TestS3kKosDecompressionQueue {
         }
     }
 
+    @Test
+    void claimedDescriptorIsNotCapturedOrRestored() throws Exception {
+        try (Rom rom = romWith(ABC_STREAM)) {
+            HardwareTimingService timing = new HardwareTimingService();
+            S3kKosDecompressionQueue queue = new S3kKosDecompressionQueue(timing);
+            HardwareWorkHandle handle = queue.queueStandardKos(rom, 0,
+                    S3kKosRamDestinations.BLOCK_TABLE);
+            serviceUntilReady(timing, queue, handle);
+            queue.claim(handle);
+
+            var timingSnapshot = timing.capture();
+            var queueSnapshot = queue.capture();
+            timing.restore(timingSnapshot);
+            queue.restore(queueSnapshot);
+
+            assertTrue(queueSnapshot.entries().isEmpty());
+            assertThrows(IllegalArgumentException.class, () -> queue.descriptor(handle));
+        }
+    }
+
     private Rom romWith(byte[] bytes) throws Exception {
         Path path = tempDir.resolve("fixture-" + Files.list(tempDir).count() + ".gen");
         Files.write(path, bytes);

@@ -93,7 +93,9 @@ public final class S3kKosDecompressionQueue
     }
 
     public byte[] claim(HardwareWorkHandle handle) {
-        return timing.claim(handle);
+        byte[] payload = timing.claim(handle);
+        descriptors.remove(handle);
+        return payload;
     }
 
     public S3kKosDecompressionDescriptor descriptor(HardwareWorkHandle handle) {
