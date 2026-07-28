@@ -393,6 +393,9 @@ public final class LevelFrameStep {
         }
         context.hardwareTiming().service(boundary);
         context.hardwareTimingBoundaryObserver().onBoundary(boundary);
+        if (context.s3kKosDecompressionQueue() != null) {
+            context.s3kKosDecompressionQueue().afterTimingService(boundary);
+        }
     }
 
 }

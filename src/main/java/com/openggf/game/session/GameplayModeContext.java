@@ -32,8 +32,10 @@ import com.openggf.game.rewind.snapshot.OscillationStaticAdapter;
 import com.openggf.game.solid.DefaultSolidExecutionRegistry;
 import com.openggf.game.solid.SolidExecutionRegistry;
 import com.openggf.game.timing.HardwareTimingBoundaryObserver;
+import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.game.timing.HardwareTimingService;
+import com.openggf.game.sonic3k.resources.S3kKosDecompressionQueue;
 import com.openggf.game.timing.RecordedCompletionAuthority;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.graphics.FadeManager;
@@ -65,6 +67,7 @@ public final class GameplayModeContext implements ModeContext {
     private final int spawnY;
     private final EditorPlaytestStash resumeStash;
     private final HardwareTimingService hardwareTiming;
+    private final S3kKosDecompressionQueue s3kKosDecompressionQueue;
     private final RecordedCompletionAuthority recordedCompletionAuthority;
 
     private Camera camera;
@@ -137,6 +140,7 @@ public final class GameplayModeContext implements ModeContext {
         HardwareReadinessAdmissionPolicy checkedPolicy =
                 Objects.requireNonNull(admissionPolicy, "admissionPolicy");
         this.hardwareTiming = new HardwareTimingService();
+        this.s3kKosDecompressionQueue = new S3kKosDecompressionQueue(hardwareTiming);
         this.recordedCompletionAuthority =
                 checkedPolicy == HardwareReadinessAdmissionPolicy.RECORDED
                         ? hardwareTiming.beginRecordedAdmission()
@@ -233,6 +237,7 @@ public final class GameplayModeContext implements ModeContext {
 
         this.rewindRegistry = new RewindRegistry(profiler);
         this.rewindRegistry.register(hardwareTiming);
+        this.rewindRegistry.register(s3kKosDecompressionQueue);
         this.rewindRegistry.register(camera);
         this.rewindRegistry.register(gameStateManager);
         this.rewindRegistry.register(rng);
@@ -433,6 +438,16 @@ public final class GameplayModeContext implements ModeContext {
 
     public HardwareTimingService hardwareTiming() {
         return hardwareTiming;
+    }
+
+    /** Session-owned physical S3K standard-Kosinski FIFO. */
+    public S3kKosDecompressionQueue s3kKosDecompressionQueue() {
+        return s3kKosDecompressionQueue;
+    }
+
+    /** Completes direct physical retirement after timing admission at the boundary. */
+    public void afterHardwareTimingService(HardwareServiceBoundary boundary) {
+        s3kKosDecompressionQueue.afterTimingService(boundary);
     }
 
     public RecordedCompletionAuthority recordedCompletionAuthority() {
@@ -753,8 +768,10 @@ public final class GameplayModeContext implements ModeContext {
         }
         if (rewindRegistry != null) {
             rewindRegistry.deregister(HardwareTimingService.REWIND_KEY);
+            rewindRegistry.deregister(S3kKosDecompressionQueue.REWIND_KEY);
         }
         hardwareTiming.resetForMissingSnapshot();
+        s3kKosDecompressionQueue.resetForMissingSnapshot();
         hardwareTimingBoundaryObserver = HardwareTimingBoundaryObserver.NO_OP;
         if (zoneLayoutMutationPipeline != null) {
             zoneLayoutMutationPipeline.clear();

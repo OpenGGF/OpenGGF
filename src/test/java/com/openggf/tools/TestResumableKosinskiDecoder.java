@@ -6,7 +6,9 @@ import java.io.ByteArrayInputStream;
 import java.nio.channels.Channels;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestResumableKosinskiDecoder {
@@ -53,5 +55,27 @@ class TestResumableKosinskiDecoder {
 
         assertTrue(restored.complete());
         assertArrayEquals(original.output(), restored.output());
+    }
+
+    @Test
+    void rejectsBackreferenceBeforeAnyOutput() throws Exception {
+        byte[] invalidBackreference = {
+                0x04, 0x00,
+                (byte) 0xFF
+        };
+
+        ResumableKosinskiDecoder decoder =
+                new ResumableKosinskiDecoder(invalidBackreference);
+
+        assertThrows(java.io.IOException.class, () -> decoder.step(1));
+    }
+
+    @Test
+    void scannerCountsStandardKosDescriptorThroughTerminator() throws Exception {
+        KosinskiReader.StandardArchiveInfo info = KosinskiReader.inspectStandard(
+                ABC_STREAM, 0);
+
+        assertEquals(ABC_STREAM.length, info.compressedLength());
+        assertEquals(3, info.decompressedLength());
     }
 }

@@ -165,7 +165,8 @@ class TestLevelFrameHardwareTimingBoundaries {
                 null,
                 null,
                 timing,
-                observer);
+                observer,
+                null);
     }
 
     private static HardwareWorkSubmission submission(int workUnits) {
