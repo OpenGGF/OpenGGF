@@ -1,5 +1,22 @@
 # Trace Frontier Log
 
+## 2026-07-28 - S3K 90-slot allocation backport validation
+
+- Corrected the S3K managed allocation and initial-dispatch window from
+  absolute SST slots 4-92 to the ROM's 90 probes over slots 4-93. Slot 93 is
+  the first empty `Level_object_RAM` SST but remains part of both
+  `AllocateObject` and `Offset_ObjectsDuringTransition`.
+- The complete `*TraceReplay` sweep on updated commit `2091ddd8d` reports 108
+  tests, 27 failures, and 20 errors. This is the same failure/error count and
+  the same first-error set as the updated `develop` baseline: the three S2 MTZ
+  routes first diverge at frames 4045, 4074, and 2341, while the existing S3K
+  failures remain in AIZ/CNZ assertions and hardware-timing admission. No trace
+  frontier moved and no previously green replay regressed because of slot 93.
+- Command: `mvn -Dmse=off -Dtest='*TraceReplay'
+  -DfailIfNoTests=false -Dsonic1.rom.path=...
+  -Dsonic2.rom.path=... -Ds3k.rom.path=... test`, run from
+  `bugfix/ai-develop-backport-candidates` after merging updated `develop`.
+
 ## 2026-07-23 - LBZ final-boss defeat and launch sequence
 
 - **`s3k_lbz1` combined physics and animation advanced from frame 43495 to
