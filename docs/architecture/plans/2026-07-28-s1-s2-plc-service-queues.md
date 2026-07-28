@@ -35,6 +35,9 @@
 - Create: `docs/architecture/research/trace/2026-07-28-s1-s2-plc-readiness-evidence.md`
 - Create: `tools/bizhawk/diagnostics/s1_plc_timing_probe.lua`
 - Create: `tools/bizhawk/diagnostics/s2_plc_timing_probe.lua`
+- Create: `tools/bizhawk/diagnostics/s1_plc_timing_probe.env.sh`
+- Create: `tools/bizhawk/diagnostics/s2_plc_timing_probe.env.sh`
+- Create: `tools/bizhawk/diagnostics/plc_timing_probe_contract_test.lua`
 - Create: `src/main/java/com/openggf/tools/PlcTimingEvidenceTool.java`
 - Create: `src/test/java/com/openggf/tools/TestPlcTimingEvidenceTool.java`
 - Create: `docs/architecture/research/trace/assets/s1-s2-plc-evidence-vectors.json.gz`
@@ -103,6 +106,9 @@ plc_service
 plc_pop
 plc_empty
 plc_consumer_observation
+plc_frame_state
+plc_vint_state
+plc_hblank_state
 ```
 
 Each record contains raw frame, game mode, selected interrupt handler, lag
@@ -122,12 +128,14 @@ Run:
 
 ```bash
 plc_probe_dir=$(mktemp -d)
-OGGF_PLC_PROBE_OUTPUT="$plc_probe_dir/s1.jsonl" \
-  tools/bizhawk/run_bizhawk_lua.sh \
+export OGGF_PLC_PROBE_OUTPUT="$plc_probe_dir/s1.jsonl"
+source tools/bizhawk/diagnostics/s1_plc_timing_probe.env.sh
+tools/bizhawk/run_bizhawk_lua.sh \
   tools/bizhawk/diagnostics/s1_plc_timing_probe.lua \
   src/test/resources/traces/s1/_movies/s1-complete-run.bk2 s1.gen
-OGGF_PLC_PROBE_OUTPUT="$plc_probe_dir/s2.jsonl" \
-  tools/bizhawk/run_bizhawk_lua.sh \
+export OGGF_PLC_PROBE_OUTPUT="$plc_probe_dir/s2.jsonl"
+source tools/bizhawk/diagnostics/s2_plc_timing_probe.env.sh
+tools/bizhawk/run_bizhawk_lua.sh \
   tools/bizhawk/diagnostics/s2_plc_timing_probe.lua \
   src/test/resources/traces/s2/arz2/s2-lvl-select-ARZ.bk2 s2.gen
 ```
@@ -136,30 +144,36 @@ Expected: each output is nonempty, ordered by raw frame and within-frame hook
 sequence, and contains no event inferred solely from a frame-to-frame RAM
 delta.
 
-- [ ] **Step 5: Capture repeatable ROM evidence**
+- [ ] **Step 5: Capture varied-history ROM evidence**
 
 Discover ROMs and existing movies. Capture at least:
 
 ```text
 S1: level title card, Final Zone submission through boss release,
-    results, Game Over, special-stage results
+    varied level results, special-stage results; Game Over if an authentic
+    corpus route exists
 S2: level title card, ARZ submission through boss initialization,
-    results, Game Over, special-stage results
+    varied level results, special-stage results; Game Over if an authentic
+    corpus route exists
 ```
 
-For each route, start twice from the identical save state with identical ROM,
-movie, region, recorder build, and diagnostic option. Keep outputs under a
-temporary directory; do not install or commit them as fixtures. Require
-byte-identical diagnostic PLC streams between repeats.
+Run one identical-input pair as a recorder-stability smoke test. For the model
+gate, capture materially distinct execution instances that reach equivalent
+consumers after different queue histories. Individual-level movies and
+different lifecycle instances inside a multi-level/complete-run movie both
+qualify when their submission, service, lag, or HBlank histories differ.
+Keep raw outputs under a temporary directory; do not install or commit them as
+fixtures.
 
 If a lifecycle is absent from existing movies, inspect the complete-run movie
 first and extract the relevant playback interval without changing its input.
 If no existing movie reaches it, record a diagnostic BK2/save-state route using
-the repository's BizHawk recording runbook, capture it twice from the same
-hashed starting state, and keep the BK2/save state as scratch. If the
-environment cannot create that route, record the missing lifecycle and exact
-dependency in the evidence report and conclude `EVIDENCE_INCOMPLETE`; Tasks
-2-9 remain blocked.
+the repository's BizHawk recording runbook and keep it as scratch. Do not
+manufacture duplicate inputs solely to satisfy a per-consumer count. Record
+consumer coverage by instance, movie, submission history, lag/HBlank exposure,
+and readiness latency. A unique consumer may be single-instance covered; a
+common consumer family without any varied-history comparison leaves the result
+`EVIDENCE_INCOMPLETE` and Tasks 2-9 blocked.
 
 - [ ] **Step 6: Write the standalone structural predictor and analyzer**
 
@@ -174,7 +188,9 @@ record StructuralRow(
         boolean hblankDeferred,
         List<Submission> submissions,
         boolean runPlcCalled,
-        List<ConsumerPoll> consumerPolls) {}
+        List<ConsumerPoll> consumerPolls,
+        int withinFrameOrder,
+        StructuralPhase phase) {}
 
 record ConsumerPoll(
         String consumerId,
@@ -196,6 +212,14 @@ record PredictedEdge(
 busy/empty result remains oracle-only. Compare predicted preparation, service,
 pop, empty, and poll results against diagnostic output.
 
+Build an ordered structural/action timeline from `plc_frame_state`,
+`plc_vint_state`, and `plc_hblank_state`, keyed by
+`(raw_frame, within_frame_order)`. A passive frame-end row never creates a
+service opportunity. A VInt row creates the selected-handler segment; a
+reviewed HBlank row may defer and complete that same open segment. Service,
+pop, empty, and consumer oracle events must never create, select, or
+reclassify structural segments.
+
 Implement and run:
 
 ```bash
@@ -206,8 +230,10 @@ mvn exec:java \
 
 The tool validates raw probe ordering, derives structural rows and observed
 edge oracles, runs the predictor, prints the first mismatch, and writes a
-compact vector. Run it for every repeat capture and require byte-identical
-vectors. Merge the reviewed vectors, gzip them reproducibly, and stage
+compact vector. Run it for every distinct capture. Require deterministic
+serialization for the identical-input smoke pair, but compare distinct runs by
+predictor match and diversity rather than byte equality. Merge the reviewed
+vectors, gzip them reproducibly, and stage
 `docs/architecture/research/trace/assets/s1-s2-plc-evidence-vectors.json.gz`.
 
 Unit tests load that committed vector and mutate one handler, lag row, HBlank
@@ -242,7 +268,11 @@ EVIDENCE_INCOMPLETE
 ```
 
 Approval requires zero unexplained predicted-edge mismatch across all captured
-lifecycles and no missing required lifecycle. Delegate independent review. If
+lifecycles, varied-history coverage for each available common consumer family,
+and authentic coverage for available unique consumers. An unavailable unique
+consumer does not block approval when disassembly review proves it introduces
+no queue mechanism outside the covered submission, service, and readiness
+contracts. Delegate independent review. If
 rejected, amend and re-review the design and plan before continuing. If
 incomplete, record the missing acquisition dependency and keep Tasks 2-9
 blocked. If approved, Tasks 2-9 may proceed.

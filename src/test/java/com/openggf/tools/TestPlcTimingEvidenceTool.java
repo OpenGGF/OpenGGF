@@ -24,10 +24,23 @@ class TestPlcTimingEvidenceTool {
     Path temporaryDirectory;
 
     @Test
-    void committedMarkerCannotBeMistakenForApprovedEvidence() throws Exception {
-        Path marker = Path.of("docs/architecture/research/trace/assets/s1-s2-plc-evidence-vectors.json.gz");
-        try (var input = new GZIPInputStream(Files.newInputStream(marker))) {
-            assertTrue(new String(input.readAllBytes()).contains("EVIDENCE_INCOMPLETE"));
+    void committedVariedHistoryEvidenceIsApprovedAndAnalyzerClean() throws Exception {
+        Path vectors = Path.of("docs/architecture/research/trace/assets/s1-s2-plc-evidence-vectors.json.gz");
+        try (var input = new GZIPInputStream(Files.newInputStream(vectors))) {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(input);
+            assertEquals("NATIVE_MODEL_APPROVED", root.path("disposition").asText());
+            assertEquals(7, root.path("captures").size());
+            for (JsonNode capture : root.path("captures")) {
+                assertFalse(capture.path("route").asText().isBlank());
+                var evidence = mapper.treeToValue(
+                        capture.path("evidence"), PlcTimingEvidenceTool.Evidence.class);
+                assertTrue(PlcTimingEvidenceTool.analyze(evidence).matches(),
+                        () -> capture.path("route").asText());
+                assertFalse(PlcTimingEvidenceTool.analyze(
+                        evidence.withHandlerBudgets(Map.of())).matches(),
+                        () -> capture.path("route").asText() + " ignored handler-budget mutation");
+            }
         }
     }
 

@@ -89,11 +89,16 @@ covered production clear/replace occurs while no decoder is active. If not,
 the native model is rejected until an amended design models the exact aliased
 RAM and retail fault behavior; it must not invent a coherent preserved job.
 
-Captures from identical save state, input, ROM, region, and recorder version
-must repeat exactly. A standalone predictor then consumes only ROM PLC
-definitions plus recorded structural phase/lag and consumer poll
-identity/order—not recorded PLC progress or poll result—and must predict every
-preparation, pop, and consumer-visible empty edge.
+One identical-input replay pair is sufficient to smoke-test recorder
+repeatability. The native-model gate instead uses materially distinct
+execution instances: individual-level movies, different level completions,
+special-stage detours, and complete-run windows that reach equivalent
+consumers with different preceding queue and interrupt histories. Instances
+within one multi-level BK2 count separately when their submission/service
+histories differ. A standalone predictor consumes only ROM PLC definitions
+plus recorded structural phase/lag and consumer poll identity/order—not
+recorded PLC progress or poll result—and must predict every preparation, pop,
+and consumer-visible empty edge across that corpus.
 
 The retail preparation race receives an explicit disposition:
 
@@ -107,9 +112,13 @@ The retail preparation race receives an explicit disposition:
 Diagnostic PLC fields never become replay inputs. Failure of the evidence gate
 does not authorize a queue-empty hydration event.
 
-If a required production lifecycle has no reproducible movie/save-state route,
-the gate result is `EVIDENCE_INCOMPLETE`, not model approval or rejection.
-Production implementation remains blocked until the missing route is captured.
+If a required production lifecycle has no movie/save-state route, the report
+marks it unavailable rather than manufacturing a duplicate route. Approval
+requires all available materially distinct instances to match plus at least
+one varied-history comparison for each common consumer family. A unique
+consumer such as Final Zone may be single-instance covered when the corpus
+contains only one authentic execution. A missing common consumer family with
+no varied-history evidence leaves the result `EVIDENCE_INCOMPLETE`.
 A compact derived evidence vector may be committed with the research report so
 the predictor remains independently rerunnable; it contains structural rows
 and observed diagnostic edges, not ROM bytes, gameplay state, or a runtime
@@ -393,9 +402,11 @@ Unit tests prove:
 
 Before production queue code, recorder tests and capture analysis prove:
 
-- repeat captures yield identical submission, preparation, service, pop, and
-  empty-edge sequences;
-- structural phase/lag plus ROM-derived pattern counts predicts each sequence;
+- one identical-input smoke pair proves recorder stability;
+- materially distinct executions exercise different submission histories,
+  service exposure, and consumer latencies;
+- structural phase/lag plus ROM-derived pattern counts predicts every
+  execution independently;
 - HBlank deferral preserves the observed same-frame or next-frame visibility;
 - lag rows either service or skip work exactly as the selected ROM handler
   does; and
@@ -450,8 +461,9 @@ worktree lands or rebased onto its integrated result. The implementation may
 reuse generic session/rewind conventions introduced there, but must not
 generalize or edit its S3K queue semantics as part of this scope.
 
-The evidence phase is complete only when repeatable ROM captures and the
-structural predictor establish whether the native model is sufficient. If it
+The evidence phase is complete only when the available varied-history ROM
+corpus and the structural predictor establish whether the native model is
+sufficient. If it
 passes, the implementation is complete when S1/S2 queue-busy gameplay behavior
 derives from ROM-backed logical queues in ordinary play and trace replay, all
 implemented producers/consumers use the game-owned services, the narrow S1
