@@ -7,6 +7,7 @@ local output_path = os.getenv("OGGF_PLC_PROBE_OUTPUT")
 if not output_path or output_path == "" then error("OGGF_PLC_PROBE_OUTPUT is required") end
 if io.open(output_path, "r") then error("refusing to overwrite " .. output_path) end
 local out = assert(io.open(output_path, "w"))
+local flush_each_event = os.getenv("OGGF_PLC_PROBE_FLUSH_EACH_EVENT") == "1"
 
 emu.limitframerate(false)
 client.speedmode(6400)
@@ -68,7 +69,8 @@ local function emit(event, extra, source, before)
     frame_lag and "true" or "false", frame_hblank and "true" or "false",
     source or u32(PLC_BUFFER), u16(PLC_DEST), before.left, after.left,
     before.slot_count, after.slot_count)
-  out:write("{" .. fields .. (extra or "") .. "}\n"); out:flush()
+  out:write("{" .. fields .. (extra or "") .. "}\n")
+  if flush_each_event then out:flush() end
 end
 
 event.onmemoryexecute(function()

@@ -286,6 +286,7 @@ class TestPlcTimingEvidenceTool {
 
     private static void configureProbeEnvironment(Map<String, String> environment, Path output) {
         environment.put("OGGF_PLC_PROBE_OUTPUT", output.toString());
+        environment.put("OGGF_PLC_PROBE_FLUSH_EACH_EVENT", "1");
         environment.put("OGGF_PLC_CONSUMER_HOOKS", "ready_gate@118");
         environment.put("OGGF_PLC_BUFFER_RAM", "1000");
         environment.put("OGGF_PLC_DEST_RAM", "1100");
