@@ -2,11 +2,9 @@ package com.openggf.game.sonic3k.events;
 
 import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 
-import com.openggf.game.session.EngineServices;
 import com.openggf.tests.TestEnvironment;
 
 import com.openggf.camera.Camera;
-import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameRng;
@@ -69,7 +67,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 @RequiresRom(SonicGame.SONIC_3K)
@@ -131,9 +129,7 @@ public class TestSonic3kAIZEvents {
 
     @BeforeEach
     public void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
         AizIntroArtLoader.reset();
         fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(0, 0)
@@ -764,7 +760,7 @@ public class TestSonic3kAIZEvents {
         Path saveDir = Path.of("saves").resolve(gameCode);
         deleteRecursively(saveDir);
 
-        GameModule sessionModule = mock(GameModule.class);
+        GameModule sessionModule = spy(new Sonic3kGameModule());
         when(sessionModule.getSaveSnapshotProvider()).thenReturn((reason, ctx) -> Map.of("marker", "aiz_transition"));
         when(sessionModule.rngFlavour()).thenReturn(GameRng.Flavour.S3K);
 

@@ -2,11 +2,8 @@ package com.openggf.game.sonic3k.events;
 
 import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 
-import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
 import com.openggf.game.rewind.schema.ZoneEventSchemaSidecar;
-import com.openggf.game.session.EngineContext;
-import com.openggf.game.session.EngineServices;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.Sonic3kLoadBootstrap;
 import com.openggf.game.timing.HardwareServiceBoundary;
@@ -32,10 +29,7 @@ class TestS3kZoneKosRewind {
 
     @BeforeEach
     void setUp() {
-        TestEnvironment.resetAll();
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
         GameServices.hardwareTiming().resetForMissingSnapshot();
     }
 
