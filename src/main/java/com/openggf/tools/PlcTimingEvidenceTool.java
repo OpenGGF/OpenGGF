@@ -111,9 +111,13 @@ public final class PlcTimingEvidenceTool {
             if (event.equals("plc_frame_state")) {
                 current = new MutableRow(frame, order, StructuralPhase.PASSIVE, node);
                 rows.add(current);
+                openVint = null;
                 continue;
             }
             if (event.equals("plc_vint_state")) {
+                if (openVint != null) {
+                    throw new IllegalArgumentException("plc_vint_state arrived before the prior VInt segment resolved");
+                }
                 current = new MutableRow(frame, order, StructuralPhase.VINT, node);
                 rows.add(current);
                 openVint = current;
@@ -138,6 +142,7 @@ public final class PlcTimingEvidenceTool {
             if (current == null) {
                 throw new IllegalArgumentException("PLC record has no independent structural state");
             }
+            openVint = null;
             MutableRow row = MutableRow.action(frame, order, current);
             rows.add(row);
             int source = optionalInt(node, "queue_source", 0);

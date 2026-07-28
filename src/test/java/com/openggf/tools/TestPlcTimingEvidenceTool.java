@@ -1,5 +1,7 @@
 package com.openggf.tools;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -69,6 +71,63 @@ class TestPlcTimingEvidenceTool {
         String vector = Files.readString(output);
         assertTrue(vector.contains("\"matches\" : true"));
         assertTrue(vector.contains("\"HBLANK_SERVICE\""));
+        JsonNode predictedEdges = new ObjectMapper().readTree(vector).path("analysis").path("predictedEdges");
+        assertEquals(1, predictedEdgeCount(predictedEdges, "SERVICE"));
+        assertEquals(1, predictedEdgeCount(predictedEdges, "HBLANK_SERVICE"));
+    }
+
+    /** Catches a structural validator that lets HBlank events exist without one VInt segment. */
+    @Test
+    void cliRejectsOrphanAndDuplicateHblankStates() throws Exception {
+        assertCliRejectsRawJsonl("""
+                {"raw_frame":10,"within_frame_order":1,"event":"plc_hblank_state","game_mode":12,"interrupt_handler":8,"lag":false,"hblank_deferred":true}
+                """);
+        assertCliRejectsRawJsonl("""
+                {"raw_frame":10,"within_frame_order":1,"event":"plc_vint_state","game_mode":12,"interrupt_handler":8,"lag":false,"hblank_deferred":false}
+                {"raw_frame":10,"within_frame_order":2,"event":"plc_hblank_state","game_mode":12,"interrupt_handler":8,"lag":false,"hblank_deferred":true}
+                {"raw_frame":10,"within_frame_order":3,"event":"plc_hblank_state","game_mode":12,"interrupt_handler":8,"lag":false,"hblank_deferred":true}
+                """);
+    }
+
+    /** Catches an HBlank transition accepted from a VInt that cannot defer its service. */
+    @Test
+    void cliRejectsHblankAfterLagOrNonDeferCapableVint() throws Exception {
+        assertCliRejectsRawJsonl("""
+                {"raw_frame":10,"within_frame_order":1,"event":"plc_vint_state","game_mode":12,"interrupt_handler":8,"lag":true,"hblank_deferred":false}
+                {"raw_frame":10,"within_frame_order":2,"event":"plc_hblank_state","game_mode":12,"interrupt_handler":8,"lag":false,"hblank_deferred":true}
+                """);
+        assertCliRejectsRawJsonl("""
+                {"raw_frame":10,"within_frame_order":1,"event":"plc_vint_state","game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false}
+                {"raw_frame":10,"within_frame_order":2,"event":"plc_hblank_state","game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":true}
+                """);
+    }
+
+    /** Catches an HBlank record whose handler, lag, or deferred state disagrees with its VInt. */
+    @Test
+    void cliRejectsHblankStateContradictingItsVint() throws Exception {
+        assertCliRejectsRawJsonl("""
+                {"raw_frame":10,"within_frame_order":1,"event":"plc_vint_state","game_mode":12,"interrupt_handler":8,"lag":false,"hblank_deferred":false}
+                {"raw_frame":10,"within_frame_order":2,"event":"plc_hblank_state","game_mode":12,"interrupt_handler":16,"lag":false,"hblank_deferred":true}
+                """);
+        assertCliRejectsRawJsonl("""
+                {"raw_frame":10,"within_frame_order":1,"event":"plc_vint_state","game_mode":12,"interrupt_handler":8,"lag":false,"hblank_deferred":false}
+                {"raw_frame":10,"within_frame_order":2,"event":"plc_hblank_state","game_mode":12,"interrupt_handler":8,"lag":true,"hblank_deferred":true}
+                """);
+        assertCliRejectsRawJsonl("""
+                {"raw_frame":10,"within_frame_order":1,"event":"plc_vint_state","game_mode":12,"interrupt_handler":8,"lag":false,"hblank_deferred":false}
+                {"raw_frame":10,"within_frame_order":2,"event":"plc_hblank_state","game_mode":12,"interrupt_handler":8,"lag":false,"hblank_deferred":false}
+                """);
+    }
+
+    /** Catches a later VInt replacing the unresolved segment to which HBlank must belong. */
+    @Test
+    void cliRejectsHblankAssociationAfterASecondVint() throws Exception {
+        assertCliRejectsRawJsonl("""
+                {"raw_frame":10,"within_frame_order":1,"event":"plc_vint_state","game_mode":12,"interrupt_handler":8,"lag":false,"hblank_deferred":false}
+                {"raw_frame":10,"within_frame_order":2,"event":"plc_vint_state","game_mode":12,"interrupt_handler":8,"lag":false,"hblank_deferred":false}
+                {"raw_frame":10,"within_frame_order":3,"event":"plc_hblank_state","game_mode":12,"interrupt_handler":8,"lag":false,"hblank_deferred":true}
+                {"raw_frame":10,"within_frame_order":4,"event":"plc_consumer_observation","consumer_id":"ready_gate","queue_empty":true,"queue_source":0,"patterns_left_after":0}
+                """);
     }
 
     @Test
@@ -208,6 +267,27 @@ class TestPlcTimingEvidenceTool {
         environment.put("OGGF_PLC_POP_POST", "112");
         environment.put("OGGF_PLC_VINT_DISPATCH", "113");
         environment.put("OGGF_PLC_HBLANK_DEFERRED_ENTRY", "114");
+    }
+
+    private void assertCliRejectsRawJsonl(String records) throws Exception {
+        Path rom = temporaryDirectory.resolve("empty.gen");
+        Files.write(rom, new byte[0x1DD90]);
+        Path probe = temporaryDirectory.resolve("invalid-probe.jsonl");
+        Files.writeString(probe, records);
+
+        assertThrows(IllegalArgumentException.class, () -> PlcTimingEvidenceTool.run(new String[] {
+                "--game", "s1", "--rom", rom.toString(), "--probe", probe.toString(),
+                "--out", temporaryDirectory.resolve("should-not-exist.json").toString()}));
+    }
+
+    private static long predictedEdgeCount(JsonNode predictedEdges, String kind) {
+        long count = 0;
+        for (JsonNode edge : predictedEdges) {
+            if (kind.equals(edge.path("kind").asText())) {
+                count++;
+            }
+        }
+        return count;
     }
 
     private static void assertRejected(PlcTimingEvidenceTool.Evidence evidence) {
