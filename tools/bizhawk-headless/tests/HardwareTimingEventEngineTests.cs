@@ -60,17 +60,29 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "HardwareTimingEventEngine direct shift and append preserve FIFO ordinals",
                 DirectShiftAndAppendPreserveFifoOrdinals));
             tests.Add(new TestMain.TestCase(
+                "HardwareTimingEventEngine direct 1-to-1 retire and append reconciles",
+                DirectOneToOneRetireAndAppendReconciles));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTimingEventEngine direct 1-to-2 retire and append reconciles",
+                DirectOneToTwoRetireAndAppendReconciles));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTimingEventEngine direct 2-to-3 retire and append reconciles",
+                DirectTwoToThreeRetireAndAppendReconciles));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTimingEventEngine longer unchanged count uses maximum overlap",
+                DirectLongerUnchangedCountUsesMaximumOverlap));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTimingEventEngine unexplained direct slot zero mutation fails",
+                UnexplainedDirectSlotZeroMutationFails));
+            tests.Add(new TestMain.TestCase(
                 "HardwareTimingEventEngine identical direct jobs do not fabricate shifts",
                 IdenticalDirectJobsDoNotFabricateShifts));
             tests.Add(new TestMain.TestCase(
                 "HardwareTimingEventEngine direct PRE sorts before module POST",
                 DirectPreSortsBeforeModulePost));
             tests.Add(new TestMain.TestCase(
-                "HardwareTimingEventEngine direct fingerprints match Java destination vectors",
-                DirectFingerprintsMatchJavaDestinationVectors));
-            tests.Add(new TestMain.TestCase(
-                "HardwareTimingEventEngine direct scanner rejects an invalid backreference",
-                DirectScannerRejectsInvalidBackreference));
+                "HardwareTimingEventEngine scanner matches language-neutral vectors",
+                DirectScannerMatchesLanguageNeutralVectors));
             tests.Add(new TestMain.TestCase(
                 "HardwareTimingEventEngine schema one suppresses direct authority",
                 SchemaOneSuppressesDirectAuthority));
@@ -563,6 +575,114 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(true, lines[1].Contains("\"ordinal\":1"));
         }
 
+        private static void DirectOneToOneRetireAndAppendReconciles()
+        {
+            AssertGrowingRetireAndAppend(
+                new[] {0x100},
+                new[] {0x120});
+        }
+
+        private static void DirectOneToTwoRetireAndAppendReconciles()
+        {
+            AssertGrowingRetireAndAppend(
+                new[] {0x100},
+                new[] {0x120, 0x140});
+        }
+
+        private static void DirectTwoToThreeRetireAndAppendReconciles()
+        {
+            AssertGrowingRetireAndAppend(
+                new[] {0x100, 0x120},
+                new[] {0x120, 0x140, 0x160});
+        }
+
+        private static void DirectLongerUnchangedCountUsesMaximumOverlap()
+        {
+            AssertGrowingRetireAndAppend(
+                new[] {0x100, 0x120, 0x140},
+                new[] {0x120, 0x140, 0x160});
+        }
+
+        private static void UnexplainedDirectSlotZeroMutationFails()
+        {
+            byte[] rom = RomWithStandardStreams(0x100, 0x120);
+            var host = NewHost();
+            var engine = new HardwareTimingEventEngine(rom);
+
+            SetLevelFrame(host, 0x1234);
+            StageDirect(
+                host, 0, 0x100, unchecked((int)0xFFFF9000));
+            host.SetU16(S3KRam.KosDecompQueueCount, 1);
+            engine.ObserveFrameEnd(0, host, TextWriter.Null);
+
+            // A duplicate level frame admits no main-loop direct service,
+            // so a changed occupied head is mutation rather than a
+            // retire-plus-append transition.
+            StageDirect(
+                host, 0, 0x120, unchecked((int)0xFFFF9200));
+            AssertEx.Throws<InvalidDataException>(
+                () => engine.ObserveFrameEnd(1, host, TextWriter.Null),
+                "changed");
+        }
+
+        private static void AssertGrowingRetireAndAppend(
+            int[] priorSources,
+            int[] sampledSources)
+        {
+            var allSources = new List<int>();
+            allSources.AddRange(priorSources);
+            foreach (int source in sampledSources)
+            {
+                if (!allSources.Contains(source))
+                {
+                    allSources.Add(source);
+                }
+            }
+            byte[] rom = RomWithStandardStreams(allSources.ToArray());
+            var host = NewHost();
+            var writer = new StringWriter();
+            var engine = new HardwareTimingEventEngine(rom);
+
+            SetLevelFrame(host, 0x1234);
+            StageDirectSources(host, priorSources);
+            host.SetU16(
+                S3KRam.KosDecompQueueCount,
+                checked((ushort)priorSources.Length));
+            engine.ObserveFrameEnd(10, host, writer);
+
+            SetLevelFrame(host, 0x1235);
+            StageDirectSources(host, sampledSources);
+            host.SetU16(
+                S3KRam.KosDecompQueueCount,
+                checked((ushort)sampledSources.Length));
+            engine.ObserveFrameEnd(11, host, writer);
+
+            string[] lines = writer.ToString().Split(
+                new[] {'\n'}, StringSplitOptions.RemoveEmptyEntries);
+            AssertEx.Equal(1, lines.Length);
+            AssertEx.Equal(
+                true,
+                lines[0].Contains(
+                    "\"raw_frame\":11,\"boundary\":\"pre_main_loop\","
+                    + "\"kind\":\"kos_decompression_queue\","
+                    + "\"ordinal\":0"));
+        }
+
+        private static void StageDirectSources(
+            FakeS1Host host,
+            int[] sources)
+        {
+            for (int index = 0; index < sources.Length; index++)
+            {
+                StageDirect(
+                    host,
+                    index,
+                    sources[index],
+                    unchecked((int)(0xFFFF9000u
+                        + (uint)(sources[index] * 4))));
+            }
+        }
+
         private static void DirectPreSortsBeforeModulePost()
         {
             const int directSource = 0x100;
@@ -603,38 +723,90 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     + "\"kind\":\"kos_module_queue\""));
         }
 
-        private static void DirectFingerprintsMatchJavaDestinationVectors()
+        private static void DirectScannerMatchesLanguageNeutralVectors()
         {
-            AssertDirectFingerprint(
-                unchecked((int)0xFFFF9268),
-                "sha256:0418e4f19610e3b16be6b5edc8f8e403"
-                + "b36dc5190c58cc6a3dc225118d58c526");
-            AssertDirectFingerprint(
-                unchecked((int)0xFFFF0A00),
-                "sha256:3db4a4b3e0e05cf1305ffb7a4822d1b1"
-                + "8d9219d981d6a924513fb14bb099e33e");
-            AssertDirectFingerprint(
-                unchecked((int)0xFFFFD400),
-                "sha256:1816d99eefbfdbf2fb73485d8db80a11f"
-                + "17bec2ac4eb7fa4125d6a764ed0b047");
-        }
+            var coveredFeatures = new HashSet<string>();
+            foreach (StandardKosVector vector in LoadStandardKosVectors())
+            {
+                foreach (string feature in vector.Features.Split(','))
+                {
+                    coveredFeatures.Add(feature);
+                }
 
-        private static void DirectScannerRejectsInvalidBackreference()
-        {
-            const int source = 0x100;
-            var rom = new byte[0x200];
-            rom[source] = 0x04;
-            rom[source + 1] = 0x00;
-            rom[source + 2] = 0xFF;
-            var host = NewHost();
-            var engine = new HardwareTimingEventEngine(rom);
+                var rom = new byte[
+                    checked(vector.SourceAddress + vector.Bytes.Length)];
+                Array.Copy(
+                    vector.Bytes,
+                    0,
+                    rom,
+                    vector.SourceAddress,
+                    vector.Bytes.Length);
+                var host = NewHost();
+                var writer = new StringWriter();
+                var engine = new HardwareTimingEventEngine(rom);
+                StageDirect(
+                    host,
+                    0,
+                    vector.SourceAddress,
+                    vector.DestinationAddress);
+                host.SetU16(S3KRam.KosDecompQueueCount, 1);
 
-            StageDirect(host, 0, source, unchecked((int)0xFFFF9000));
-            host.SetU16(S3KRam.KosDecompQueueCount, 1);
+                if (vector.Outcome == "invalid_backreference")
+                {
+                    AssertEx.Throws<InvalidDataException>(
+                        () => engine.ObserveFrameEnd(
+                            0, host, TextWriter.Null),
+                        "backreference");
+                    continue;
+                }
+                if (vector.Outcome == "rom_bound")
+                {
+                    AssertEx.Throws<InvalidDataException>(
+                        () => engine.ObserveFrameEnd(
+                            0, host, TextWriter.Null),
+                        "outside the supplied ROM");
+                    continue;
+                }
 
-            AssertEx.Throws<InvalidDataException>(
-                () => engine.ObserveFrameEnd(0, host, TextWriter.Null),
-                "backreference");
+                AssertEx.Equal("ok", vector.Outcome);
+                AssertEx.Equal(
+                    vector.Fingerprint,
+                    HardwareTimingEventEngine.ComputeSubmissionFingerprint(
+                        "KOS_DECOMPRESSION_QUEUE",
+                        vector.SourceAddress,
+                        vector.CompressedLength,
+                        vector.DestinationAddress,
+                        vector.DecodedLength,
+                        "kosinski",
+                        1));
+                engine.ObserveFrameEnd(0, host, writer);
+                host.SetU16(S3KRam.KosDecompQueueCount, 0);
+                engine.ObserveFrameEnd(1, host, writer);
+                AssertEx.Equal(
+                    true,
+                    writer.ToString().Contains(
+                        "\"submission_fingerprint\":\""
+                        + vector.Fingerprint + "\""));
+            }
+
+            string[] requiredFeatures =
+            {
+                "descriptor_refill",
+                "literal",
+                "short_match",
+                "long_match",
+                "extended_match",
+                "no_output",
+                "invalid_backreference",
+                "terminator",
+                "rom_bound"
+            };
+            AssertEx.Equal(
+                requiredFeatures.Length, coveredFeatures.Count);
+            foreach (string feature in requiredFeatures)
+            {
+                AssertEx.Equal(true, coveredFeatures.Contains(feature));
+            }
         }
 
         private static void SchemaOneSuppressesDirectAuthority()
@@ -674,26 +846,100 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(true, lines[1].Contains("\"ordinal\":0"));
         }
 
-        private static void AssertDirectFingerprint(
-            int destination,
-            string expected)
+        private static IEnumerable<StandardKosVector>
+            LoadStandardKosVectors()
         {
-            const int source = 0x100;
-            byte[] rom = RomWithStandardStream(source);
-            var host = NewHost();
-            var writer = new StringWriter();
-            var engine = new HardwareTimingEventEngine(rom);
+            string path = Path.Combine(
+                EndToEndTests.RepositoryRoot,
+                "src",
+                "test",
+                "resources",
+                "kosinski",
+                "standard-scanner-vectors.tsv");
+            foreach (string line in File.ReadAllLines(path))
+            {
+                if (line.Length == 0 || line.StartsWith("#"))
+                {
+                    continue;
+                }
+                string[] fields = line.Split('\t');
+                if (fields.Length != 9)
+                {
+                    throw new InvalidDataException(
+                        "Standard Kosinski vector must have nine fields: "
+                        + line);
+                }
+                bool success = fields[1] == "ok";
+                yield return new StandardKosVector(
+                    fields[0],
+                    fields[1],
+                    fields[2],
+                    checked((int)Convert.ToUInt32(fields[3], 16)),
+                    unchecked((int)Convert.ToUInt32(fields[4], 16)),
+                    ParseHexBytes(fields[5]),
+                    success
+                        ? int.Parse(
+                            fields[6],
+                            System.Globalization.CultureInfo.InvariantCulture)
+                        : -1,
+                    success
+                        ? int.Parse(
+                            fields[7],
+                            System.Globalization.CultureInfo.InvariantCulture)
+                        : -1,
+                    fields[8]);
+            }
+        }
 
-            StageDirect(host, 0, source, destination);
-            host.SetU16(S3KRam.KosDecompQueueCount, 1);
-            engine.ObserveFrameEnd(0, host, writer);
-            host.SetU16(S3KRam.KosDecompQueueCount, 0);
-            engine.ObserveFrameEnd(1, host, writer);
+        private static byte[] ParseHexBytes(string value)
+        {
+            if ((value.Length & 1) != 0)
+            {
+                throw new InvalidDataException(
+                    "Kosinski vector hex must have an even length.");
+            }
+            var bytes = new byte[value.Length / 2];
+            for (int index = 0; index < bytes.Length; index++)
+            {
+                bytes[index] = Convert.ToByte(
+                    value.Substring(index * 2, 2), 16);
+            }
+            return bytes;
+        }
 
-            AssertEx.Equal(
-                true,
-                writer.ToString().Contains(
-                    "\"submission_fingerprint\":\"" + expected + "\""));
+        private sealed class StandardKosVector
+        {
+            public StandardKosVector(
+                string name,
+                string outcome,
+                string features,
+                int sourceAddress,
+                int destinationAddress,
+                byte[] bytes,
+                int compressedLength,
+                int decodedLength,
+                string fingerprint)
+            {
+                Name = name;
+                Outcome = outcome;
+                Features = features;
+                SourceAddress = sourceAddress;
+                DestinationAddress = destinationAddress;
+                Bytes = bytes;
+                CompressedLength = compressedLength;
+                DecodedLength = decodedLength;
+                Fingerprint = fingerprint;
+            }
+
+            public string Name { get; private set; }
+            public string Outcome { get; private set; }
+            public string Features { get; private set; }
+            public int SourceAddress { get; private set; }
+            public int DestinationAddress { get; private set; }
+            public byte[] Bytes { get; private set; }
+            public int CompressedLength { get; private set; }
+            public int DecodedLength { get; private set; }
+            public string Fingerprint { get; private set; }
         }
 
         private static void CompleteDirect(

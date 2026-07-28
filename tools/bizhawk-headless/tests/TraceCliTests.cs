@@ -228,9 +228,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
                             + "  \"zone\": \"cnz\",\n");
                         AssertContains(
                             metadata,
-                            "  \"lua_script_version\": \"6.37-s3k\",\n"
+                            "  \"lua_script_version\": \"6.38-s3k\",\n"
                             + "  \"trace_schema\": 7,\n"
-                            + "  \"hardware_timing_schema\": 1,\n");
+                            + "  \"hardware_timing_schema\": 2,\n");
                         AssertContains(
                             metadata,
                             "  \"trace_profile\": \"gameplay_unlock\",\n");

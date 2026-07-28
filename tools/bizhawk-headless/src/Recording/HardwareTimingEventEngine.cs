@@ -139,7 +139,6 @@ namespace OpenGGF.BizHawk.Headless
                 host,
                 writer,
                 directCountWord & 0x7FFF,
-                (directCountWord & 0x8000) != 0,
                 boundary != "vint_service");
 
             // 0x81 is specifically "the final module is active in the
@@ -174,7 +173,6 @@ namespace OpenGGF.BizHawk.Headless
             IGpgxHost host,
             TextWriter writer,
             int physicalCount,
-            bool busy,
             bool directServiceAdmitted)
         {
             if (physicalCount < 0
@@ -185,26 +183,24 @@ namespace OpenGGF.BizHawk.Headless
                     + " four-entry capacity: " + physicalCount + ".");
             }
 
-            bool retireAndAppend = physicalCount == directQueue.Count
-                && directQueue.Count >= 2
-                && DirectEntryMatches(host, 0, directQueue[1])
-                && (!DirectEntryMatches(
-                        host,
-                        physicalCount - 1,
-                        directQueue[directQueue.Count - 1])
-                    || (directServiceAdmitted && !busy));
-            int retiredCount = directQueue.Count - physicalCount
-                + (retireAndAppend ? 1 : 0);
-            if (retiredCount < 0)
-            {
-                retiredCount = 0;
-            }
+            int priorCount = directQueue.Count;
+            int overlap = FindLongestDirectOverlap(host, physicalCount);
+            int retiredCount = priorCount - overlap;
             if (retiredCount > 1)
             {
                 throw new InvalidDataException(
                     "Kosinski decompression FIFO lost " + retiredCount
                     + " mirrored submissions between observable"
                     + " boundaries.");
+            }
+            if (retiredCount == 1
+                && overlap == 0
+                && physicalCount >= priorCount
+                && !directServiceAdmitted)
+            {
+                throw new InvalidDataException(
+                    "Kosinski decompression FIFO changed occupied slot zero"
+                    + " without an admitted direct-service boundary.");
             }
 
             if (retiredCount == 1)
@@ -224,39 +220,47 @@ namespace OpenGGF.BizHawk.Headless
                 }
             }
 
-            int retained = Math.Min(directQueue.Count, physicalCount);
-            for (int index = 0; index < retained; index++)
-            {
-                // The active head's saved source/destination registers may
-                // advance while bit 15 is set. Its canonical identity was
-                // captured when the slot first appeared; only queued tails
-                // remain byte-stable throughout service.
-                if (index == 0)
-                {
-                    continue;
-                }
-                if (!DirectEntryMatches(host, index, directQueue[index]))
-                {
-                    throw new InvalidDataException(
-                        "Kosinski decompression FIFO changed without"
-                        + " retiring its mirrored head at entry "
-                        + index + ".");
-                }
-            }
-
-            if (physicalCount < directQueue.Count)
+            if (directQueue.Count != overlap)
             {
                 throw new InvalidDataException(
-                    "Kosinski decompression FIFO lost mirrored"
-                    + " submissions without one observable retirement.");
+                    "Kosinski decompression FIFO reconciliation retained an"
+                    + " inconsistent canonical overlap.");
             }
 
-            for (int index = directQueue.Count;
+            for (int index = overlap;
                 index < physicalCount;
                 index++)
             {
                 directQueue.Add(CreateDirectSubmission(host, index));
             }
+        }
+
+        private int FindLongestDirectOverlap(
+            IGpgxHost host,
+            int physicalCount)
+        {
+            int maximum = Math.Min(directQueue.Count, physicalCount);
+            for (int overlap = maximum; overlap > 0; overlap--)
+            {
+                int priorStart = directQueue.Count - overlap;
+                bool matches = true;
+                for (int index = 0; index < overlap; index++)
+                {
+                    if (!DirectEntryMatches(
+                        host,
+                        index,
+                        directQueue[priorStart + index]))
+                    {
+                        matches = false;
+                        break;
+                    }
+                }
+                if (matches)
+                {
+                    return overlap;
+                }
+            }
+            return 0;
         }
 
         private bool DirectEntryMatches(
