@@ -31,7 +31,7 @@ import com.openggf.game.mutation.ZoneLayoutMutationPipeline;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.game.zone.ZoneRuntimeState;
 import com.openggf.game.timing.HardwareTimingService;
-import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
+import com.openggf.game.RuntimeArtCoordinator;
 import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.BigRingReturnState;
@@ -159,10 +159,10 @@ public interface ObjectServices {
                 "hardware timing is unavailable in these object services");
     }
 
-    /** Session-owned S3K KosM parent coordinator. */
-    default S3kKosModuleQueue s3kKosModuleQueue() {
+    /** Game-owned runtime-art coordinator for this gameplay session. */
+    default RuntimeArtCoordinator runtimeArtCoordinator() {
         throw new IllegalStateException(
-                "S3K KosM coordination is unavailable in these object services");
+                "runtime-art coordination is unavailable in these object services");
     }
 
     // Player/sidekick access

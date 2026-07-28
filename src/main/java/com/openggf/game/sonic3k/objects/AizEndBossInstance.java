@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.rewind.RewindTransient;
@@ -359,7 +361,7 @@ public class AizEndBossInstance extends AbstractBossInstance
     private void serviceBossArtQueue() {
         try {
             if (bossArtQueue == null && bossArtOrdinal >= 0) {
-                bossArtQueue = services().s3kKosModuleQueue();
+                bossArtQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
                 bossArtHandle = services().hardwareTiming().pendingHandle(
                                 HardwareWorkKind.KOS_MODULE_QUEUE,
                                 bossArtOrdinal)
@@ -368,7 +370,7 @@ public class AizEndBossInstance extends AbstractBossInstance
                                         + bossArtOrdinal));
             }
             if (bossArtHandle == null && bossArtQueue == null) {
-                bossArtQueue = services().s3kKosModuleQueue();
+                bossArtQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
                 bossArtHandle = bossArtQueue.queue(
                         services().rom(),
                         Sonic3kConstants.ART_KOSM_AIZ_END_BOSS_ADDR,

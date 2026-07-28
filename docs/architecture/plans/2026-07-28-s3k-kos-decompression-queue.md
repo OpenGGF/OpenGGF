@@ -237,8 +237,10 @@ Prove:
   registry; carry only its opaque id on the request.
   `LevelActTransitionExecutor` atomically claims/removes the id before any
   mutation, creates a local consumption tracker, passes the policy through a
-  `LevelManager.loadLevelData`/`Game.loadLevel` overload, verifies exact-once
-  consumption, initializes target events, then transfers runtime ownership.
+  `LevelManager.loadLevelData` overload which selects the optional
+  level-layer `DeferredLevelResourceLoader` implemented by `Sonic3k` (without
+  adding a tracker overload to base `Game`), verifies exact-once consumption,
+  initializes target events, then transfers runtime ownership.
   Preserve the handoff when `RELOAD_SAME_LEVEL` is rebuilt. The S3K
   `LevelResourcePlan` builder consumes descriptor identity, omits each matched
   op exactly once, fails missing/duplicate/non-matches, and contains no
@@ -386,6 +388,33 @@ Repair attributable stale harnesses before the full suite:
   save-event tests.
 
 Run each repaired test in isolation before repeating combined verification.
+
+Resolve the independent-review blockers before repeating the full suite:
+
+- add a game-neutral runtime-art coordinator contract created by `GameModule`
+  from the session hardware-timing owner;
+- make shared session/frame/service/object layers depend only on that contract,
+  with concrete direct/module queues retained inside an S3K-local facade;
+- route S3K zone event queue access through protected
+  `Sonic3kZoneEvents` accessors and make the zone-event runtime-access guard
+  green;
+- replace the `Game.loadLevel(...DeferredLevelResourceTracker)` overload with
+  a level-layer `DeferredLevelResourceLoader` provider implemented by
+  `Sonic3k`;
+- make module FIFO capacity represent unprepared physical parents rather than
+  ready-but-unclaimed timing payloads, and prove repeated title-card/object-art
+  producers do not resubmit pending handles;
+- reproduce and green `TestS3kHeadlessInLevelTitleCardProgression`,
+  `TestS3kAiz1SkipHeadless`, and
+  `TestTitleCardObjectExecution#titleCardLegacyPath_s3kAiz1`;
+- repair `TestS3kObjectKosOwnerRewind` and
+  `TestS3kResultsKosQueueRewind` with session-backed neutral coordinator
+  services;
+- run `TestArchUnitRules` and `TestZoneEventRuntimeAccessGuard`, requiring no
+  feature-attributable violations;
+- remove task-local `.superpowers/sdd/...` reports introduced by this feature;
+  repository engineering reports remain under
+  `docs/architecture/validation/`.
 
 ### Java
 

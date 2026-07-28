@@ -567,8 +567,8 @@ class TestS3kKosStructuralSequence {
             HardwareTimingService timing,
             HardwareServiceBoundary boundary) {
         timing.service(boundary);
-        GameServices.s3kKosDecompressionQueue().afterTimingService(boundary);
-        GameServices.s3kKosModuleQueue().afterTimingService(boundary);
+        S3kRuntimeArtCoordinator.current().directQueue().afterTimingService(boundary);
+        S3kRuntimeArtCoordinator.current().moduleQueue().afterTimingService(boundary);
     }
 
     private static void assertCapturedSession(

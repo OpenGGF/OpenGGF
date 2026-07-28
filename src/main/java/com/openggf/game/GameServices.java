@@ -21,8 +21,6 @@ import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.game.zone.ZoneRuntimeState;
 import com.openggf.game.timing.HardwareTimingService;
-import com.openggf.game.sonic3k.resources.S3kKosDecompressionQueue;
-import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
 import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.LevelManager;
@@ -180,14 +178,9 @@ public final class GameServices {
         return mode != null ? mode.hardwareTiming() : null;
     }
 
-    public static S3kKosDecompressionQueue s3kKosDecompressionQueueOrNull() {
+    public static RuntimeArtCoordinator runtimeArtCoordinatorOrNull() {
         GameplayModeContext mode = gameplayModeOrNull();
-        return mode != null ? mode.s3kKosDecompressionQueue() : null;
-    }
-
-    public static S3kKosModuleQueue s3kKosModuleQueueOrNull() {
-        GameplayModeContext mode = gameplayModeOrNull();
-        return mode != null ? mode.s3kKosModuleQueue() : null;
+        return mode != null ? mode.runtimeArtCoordinator() : null;
     }
 
     public static SeamlessTransitionResourceHandoffRegistry
@@ -217,14 +210,10 @@ public final class GameServices {
         return requireGameplayMode("hardwareTiming").hardwareTiming();
     }
 
-    /** Session-owned physical S3K direct Kosinski queue for non-object facades. */
-    public static S3kKosDecompressionQueue s3kKosDecompressionQueue() {
-        return requireGameplayMode("s3kKosDecompressionQueue").s3kKosDecompressionQueue();
-    }
-
-    /** Session-owned S3K KosM parent coordinator. */
-    public static S3kKosModuleQueue s3kKosModuleQueue() {
-        return requireGameplayMode("s3kKosModuleQueue").s3kKosModuleQueue();
+    /** Game-owned runtime-art coordinator for non-object facades. */
+    public static RuntimeArtCoordinator runtimeArtCoordinator() {
+        return requireGameplayMode("runtimeArtCoordinator")
+                .runtimeArtCoordinator();
     }
 
     public static SeamlessTransitionResourceHandoffRegistry

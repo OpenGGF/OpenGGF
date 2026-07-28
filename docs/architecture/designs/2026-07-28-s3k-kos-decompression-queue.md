@@ -296,6 +296,37 @@ then KosM parent coordination. That drain helper is scoped to transition tests
 which explicitly submitted the queue work; unrelated intro and save-event
 harnesses must not gain implicit queue advancement.
 
+### Provider boundary and production ownership
+
+Shared session, frame, service, and object layers must depend only on a
+game-neutral runtime-art coordinator contract. `GameModule` creates that
+contract from the session-owned `HardwareTimingService`; S3K's implementation
+privately owns the concrete direct and module queues and supplies its
+rewind/reset adapters. `GameplayModeContext`, `LevelFrameContext`,
+`LevelFrameStep`, `GameServices`, and `ObjectServices` store or expose only the
+neutral contract. S3K code resolves its concrete facade through an S3K-local
+adapter; zone event subclasses use protected accessors on
+`Sonic3kZoneEvents`, not direct `GameServices` calls. No shared API returns an
+S3K queue type.
+
+The base `com.openggf.data.Game` abstraction remains independent of level
+runtime resource trackers. Optional deferred loading lives behind a
+level-layer `DeferredLevelResourceLoader` provider implemented by `Sonic3k`;
+`LevelManager` selects that provider when an explicit tracker is present and
+otherwise uses the ordinary `Game.loadLevel(int)` path.
+
+The physical module FIFO counts only parents that have not completed
+preparation. Ready-but-unclaimed timing payloads remain claimable by their
+consumer but no longer occupy one of the ROM's four module slots. Production,
+headless, title-card, and provider-driven loops all invoke the neutral
+coordinator at the same PRE/direct and POST/module boundaries. Repeated
+producer calls must retain their handle instead of resubmitting while pending.
+
+Object and results rewind tests construct session-backed `ObjectServices`
+which expose the neutral coordinator; tests must not fabricate fallback S3K
+queues. Architecture guards must pass with no new shared-to-S3K,
+data-to-runtime, or zone-event direct-service violations.
+
 The native headless recorder is the sole maintained fixture authority. The
 frozen Lua recorder is not extended merely for parity; independent Java/C#
 golden vectors and ROM/disassembly lifecycle tests provide cross-implementation
@@ -373,13 +404,15 @@ payload and creates a per-execution consumption tracker from its policy. A
 failed transition does not put the payload back, so retrying or applying the
 same request twice fails before resource loading. Rewind before the claim
 restores the registered payload; rewind after the claim preserves its consumed
-state. The executor passes the tracker through
-`LevelManager.loadLevelData(levelIndex, policy)` to the game loader. The base
-`Game` overload accepts only an empty policy; `Sonic3k.loadLevel` consumes
-matching descriptors while building its `LevelResourcePlan`. The S3K resource
-owner matches the exact already-submitted ICZ2 secondary chunk, block, and
-KosM descriptors and omits those load operations. Shared loading code carries
-and verifies descriptor identity only; it contains no ICZ or zone-name branch.
+state. The executor passes the tracker to
+`LevelManager.loadLevelData(levelIndex, policy)`, which selects the optional
+level-layer `DeferredLevelResourceLoader` implemented by `Sonic3k`; ordinary
+games continue through `Game.loadLevel(int)` and reject a non-empty policy.
+The S3K loader consumes matching descriptors while building its
+`LevelResourcePlan`. The S3K resource owner matches the exact
+already-submitted ICZ2 secondary chunk, block, and KosM descriptors and omits
+those load operations. Shared loading code carries and verifies descriptor
+identity only; it contains no ICZ or zone-name branch.
 A missing, duplicate, or non-matching descriptor fails the transition. The
 tracker verifies that every requested descriptor was consumed exactly once
 before transition execution continues.

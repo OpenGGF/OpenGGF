@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
+
 import com.openggf.data.RomByteReader;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindTransient;
@@ -687,7 +689,7 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
         }
         try {
             introSpriteArtQueue =
-                    services().s3kKosModuleQueue();
+                    S3kRuntimeArtCoordinator.from(services()).moduleQueue();
             planeArtHandle = introSpriteArtQueue.queue(
                     services().rom(),
                     Sonic3kConstants.ART_KOSM_AIZ_INTRO_PLANE_ADDR,
@@ -730,7 +732,7 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
                 || introSpriteArtQueue != null) {
             return;
         }
-        introSpriteArtQueue = services().s3kKosModuleQueue();
+        introSpriteArtQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
         if (planeArtOrdinal >= 0) {
             planeArtHandle = restoredIntroArtHandle(
                     planeArtOrdinal, "plane");

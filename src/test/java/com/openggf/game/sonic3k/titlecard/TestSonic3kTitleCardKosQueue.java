@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.titlecard;
 
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
+
 import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
 import com.openggf.game.rewind.snapshot.PlcProgressSnapshot;
@@ -241,11 +243,11 @@ class TestSonic3kTitleCardKosQueue {
     private void service(HardwareServiceBoundary boundary) {
         timing.service(boundary);
         directQueue().afterTimingService(boundary);
-        GameServices.s3kKosModuleQueue().afterTimingService(boundary);
+        S3kRuntimeArtCoordinator.current().moduleQueue().afterTimingService(boundary);
     }
 
     private S3kKosDecompressionQueue directQueue() {
-        return GameServices.s3kKosDecompressionQueue();
+        return S3kRuntimeArtCoordinator.current().directQueue();
     }
 
     private List<HardwareWorkHandle> moduleHandles() {

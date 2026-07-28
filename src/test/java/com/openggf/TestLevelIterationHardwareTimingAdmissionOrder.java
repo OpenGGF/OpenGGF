@@ -1,5 +1,7 @@
 package com.openggf;
 
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
+
 import com.openggf.camera.Camera;
 import com.openggf.data.Rom;
 import com.openggf.game.GameMode;
@@ -145,7 +147,7 @@ class TestLevelIterationHardwareTimingAdmissionOrder {
         HardwareWorkHandle handle;
         try (Rom rom = new Rom()) {
             assertTrue(rom.open(romPath.toString()));
-            handle = context.s3kKosModuleQueue().queue(rom, 0, 0x200);
+            handle = S3kRuntimeArtCoordinator.from(context.runtimeArtCoordinator()).moduleQueue().queue(rom, 0, 0x200);
             for (int frame = 0;
                     frame < 16 && !hasPreparedPayload(context, handle);
                     frame++) {

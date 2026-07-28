@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
+
 import com.openggf.audio.GameMusic;
 import com.openggf.data.Rom;
 import com.openggf.game.PlayableEntity;
@@ -932,7 +934,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                     character,
                     act,
                     services().romZoneId(),
-                    services().s3kKosModuleQueue());
+                    S3kRuntimeArtCoordinator.from(services()).moduleQueue());
             List<HardwareWorkHandle> resultsHandles = queuedResultsArt.handles();
             resultsGeneralArtOrdinal = resultsHandles.get(0).ordinal();
             resultsNumberArtOrdinal = resultsHandles.get(1).ordinal();
@@ -1000,7 +1002,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                 ? Sonic3kConstants.VRAM_RESULTS_CHAR_NAME_ACT1
                 : Sonic3kConstants.VRAM_RESULTS_CHAR_NAME_ACT2;
         queuedResultsArt = Sonic3kObjectArt.QueuedResultsArt.restore(
-                services().s3kKosModuleQueue(),
+                S3kRuntimeArtCoordinator.from(services()).moduleQueue(),
                 List.of(general, numbers, characterName),
                 new int[] {
                         0,

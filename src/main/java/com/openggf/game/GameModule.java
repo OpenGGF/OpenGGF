@@ -18,6 +18,7 @@ import com.openggf.sprites.art.SpriteArtSet;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SuperStateController;
 import com.openggf.sprites.managers.SpriteManager;
+import com.openggf.game.timing.HardwareTimingService;
 
 import java.util.Optional;
 
@@ -25,6 +26,12 @@ public interface GameModule {
     String getIdentifier();
 
     Game createGame(Rom rom);
+
+    /** Creates this game's session-owned runtime-art coordinator. */
+    default RuntimeArtCoordinator createRuntimeArtCoordinator(
+            HardwareTimingService timing) {
+        return RuntimeArtCoordinator.NONE;
+    }
 
     ObjectRegistry createObjectRegistry();
 

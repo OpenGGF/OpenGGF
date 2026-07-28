@@ -5,13 +5,12 @@ import com.openggf.game.GameModule;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.NoOpBonusStageProvider;
+import com.openggf.game.RuntimeArtCoordinator;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.timing.HardwareTimingBoundaryObserver;
 import com.openggf.game.timing.HardwareTimingService;
-import com.openggf.game.sonic3k.resources.S3kKosDecompressionQueue;
-import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.timer.TimerManager;
 
@@ -27,8 +26,7 @@ public record LevelFrameContext(GameModule gameModule,
                                 PaletteOwnershipRegistry paletteOwnershipRegistry,
                                 HardwareTimingService hardwareTiming,
                                 HardwareTimingBoundaryObserver hardwareTimingBoundaryObserver,
-                                S3kKosDecompressionQueue s3kKosDecompressionQueue,
-                                S3kKosModuleQueue s3kKosModuleQueue) {
+                                RuntimeArtCoordinator runtimeArtCoordinator) {
 
     public LevelFrameContext {
         Objects.requireNonNull(gameModule, "gameModule");
@@ -39,6 +37,9 @@ public record LevelFrameContext(GameModule gameModule,
         hardwareTimingBoundaryObserver = hardwareTimingBoundaryObserver != null
                 ? hardwareTimingBoundaryObserver
                 : HardwareTimingBoundaryObserver.NO_OP;
+        runtimeArtCoordinator = runtimeArtCoordinator != null
+                ? runtimeArtCoordinator
+                : RuntimeArtCoordinator.NONE;
     }
 
     public static LevelFrameContext from(GameplayModeContext context) {
@@ -55,7 +56,6 @@ public record LevelFrameContext(GameModule gameModule,
                 context.getPaletteOwnershipRegistry(),
                 context.hardwareTiming(),
                 context.hardwareTimingBoundaryObserver(),
-                context.s3kKosDecompressionQueue(),
-                context.s3kKosModuleQueue());
+                context.runtimeArtCoordinator());
     }
 }

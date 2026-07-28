@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.events;
 
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
+
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
 import com.openggf.game.rewind.schema.ZoneEventSchemaSidecar;
@@ -75,7 +77,7 @@ class TestS3kZoneKosRewind {
     void aizMainLevelSidecarRebindsDirectAndModuleHandlesWithoutResubmission()
             throws Exception {
         var timing = GameServices.hardwareTiming();
-        var directQueue = GameServices.s3kKosDecompressionQueue();
+        var directQueue = S3kRuntimeArtCoordinator.current().directQueue();
         Sonic3kAIZEvents events =
                 new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
         events.init(0);
@@ -127,8 +129,8 @@ class TestS3kZoneKosRewind {
     void aizMainLevelSidecarRebindsReadyUnclaimedHandlesAfterBothBoundaries()
             throws Exception {
         var timing = GameServices.hardwareTiming();
-        var directQueue = GameServices.s3kKosDecompressionQueue();
-        var moduleQueue = GameServices.s3kKosModuleQueue();
+        var directQueue = S3kRuntimeArtCoordinator.current().directQueue();
+        var moduleQueue = S3kRuntimeArtCoordinator.current().moduleQueue();
         Sonic3kAIZEvents events =
                 new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
         events.init(0);
@@ -196,7 +198,7 @@ class TestS3kZoneKosRewind {
     void iczSidecarRebindsTwoDirectHandlesAndTransferredModuleParent()
             throws Exception {
         var timing = GameServices.hardwareTiming();
-        var directQueue = GameServices.s3kKosDecompressionQueue();
+        var directQueue = S3kRuntimeArtCoordinator.current().directQueue();
         Sonic3kICZEvents events = new Sonic3kICZEvents();
         events.init(0);
         GameServices.camera().setX((short) 0x6900);

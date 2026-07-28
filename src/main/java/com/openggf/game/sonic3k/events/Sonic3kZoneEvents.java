@@ -13,7 +13,11 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.Sonic3kLevel;
+import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.Sonic3kPlcLoader;
+import com.openggf.game.sonic3k.resources.S3kKosDecompressionQueue;
+import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 import com.openggf.game.mutation.ZoneLayoutMutationPipeline;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
@@ -23,6 +27,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
 import com.openggf.level.Palette;
+import com.openggf.level.SeamlessTransitionResourceHandoffRegistry;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.DefaultObjectServices;
@@ -101,6 +106,37 @@ public abstract class Sonic3kZoneEvents {
 
     protected GameModule module() {
         return GameServices.module();
+    }
+
+    protected S3kKosDecompressionQueue directKosQueue() {
+        return S3kRuntimeArtCoordinator.current().directQueue();
+    }
+
+    protected S3kKosModuleQueue moduleKosQueue() {
+        return S3kRuntimeArtCoordinator.current().moduleQueue();
+    }
+
+    protected com.openggf.game.timing.HardwareTimingService hardwareTiming() {
+        return GameServices.hardwareTiming();
+    }
+
+    protected SeamlessTransitionResourceHandoffRegistry
+            seamlessTransitionResourceHandoffs() {
+        return GameServices.seamlessTransitionResourceHandoffs();
+    }
+
+    protected Sonic3kLevelEventManager eventManager() {
+        if (module().getLevelEventProvider()
+                instanceof Sonic3kLevelEventManager eventManager) {
+            return eventManager;
+        }
+        throw new IllegalStateException(
+                "S3K zone event requires the S3K level-event manager");
+    }
+
+    protected AizPreparedTransitionArtBridge
+            aizPreparedTransitionArtBridge() {
+        return eventManager();
     }
 
     protected PaletteOwnershipRegistry paletteRegistryOrNull() {

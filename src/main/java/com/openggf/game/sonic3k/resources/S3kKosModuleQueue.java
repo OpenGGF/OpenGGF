@@ -173,6 +173,10 @@ public final class S3kKosModuleQueue {
         return descriptor;
     }
 
+    void resetForMissingSnapshot() {
+        descriptors.clear();
+    }
+
     static HardwareWorkPreparation recreatePreparation(
             S3kKosModuleSnapshot snapshot) {
         return new S3kKosModulePreparation(snapshot);

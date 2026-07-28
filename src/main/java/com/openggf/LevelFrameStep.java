@@ -395,12 +395,7 @@ public final class LevelFrameStep {
         if (boundary == HardwareServiceBoundary.PRE_MAIN_LOOP) {
             context.hardwareTimingBoundaryObserver().onBoundary(boundary);
         }
-        if (context.s3kKosDecompressionQueue() != null) {
-            context.s3kKosDecompressionQueue().afterTimingService(boundary);
-        }
-        if (context.s3kKosModuleQueue() != null) {
-            context.s3kKosModuleQueue().afterTimingService(boundary);
-        }
+        context.runtimeArtCoordinator().afterTimingService(boundary);
         if (boundary != HardwareServiceBoundary.PRE_MAIN_LOOP) {
             context.hardwareTimingBoundaryObserver().onBoundary(boundary);
         }

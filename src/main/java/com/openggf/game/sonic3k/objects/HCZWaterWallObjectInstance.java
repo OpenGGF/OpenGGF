@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
+
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindTransient;
@@ -376,7 +378,7 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
         rebindArtAfterRestore();
         try {
             if (artHandle == null) {
-                artQueue = services().s3kKosModuleQueue();
+                artQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
                 artHandle = artQueue.queue(
                         services().rom(),
                         sourceAddress,
@@ -406,7 +408,7 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
                         HardwareWorkKind.KOS_MODULE_QUEUE, artOrdinal)
                 .orElseThrow(() -> new IllegalStateException(
                         "Missing restored HCZ water-wall KosM job " + artOrdinal));
-        artQueue = services().s3kKosModuleQueue();
+        artQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
     }
 
     /**

@@ -1,5 +1,7 @@
 package com.openggf.tests;
 
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
+
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.Sonic3k;
@@ -181,11 +183,11 @@ class TestS3kIczAct1TransitionHeadless {
 
         service(HardwareServiceBoundary.POST_OBJECTS);
         int frames = 0;
-        while (GameServices.s3kKosDecompressionQueue().decompressionsPending()
+        while (S3kRuntimeArtCoordinator.current().directQueue().decompressionsPending()
                 && frames++ < 100_000) {
             service(HardwareServiceBoundary.PRE_MAIN_LOOP);
             manager.update();
-            if (GameServices.s3kKosDecompressionQueue().decompressionsPending()) {
+            if (S3kRuntimeArtCoordinator.current().directQueue().decompressionsPending()) {
                 assertEquals(0, GameServices.level().getCurrentAct(),
                         "ICZ1BGE_Transition must wait on physical direct FIFO occupancy");
                 service(HardwareServiceBoundary.POST_OBJECTS);
@@ -352,8 +354,8 @@ class TestS3kIczAct1TransitionHeadless {
 
     private static void service(HardwareServiceBoundary boundary) {
         GameServices.hardwareTiming().service(boundary);
-        GameServices.s3kKosDecompressionQueue().afterTimingService(boundary);
-        GameServices.s3kKosModuleQueue().afterTimingService(boundary);
+        S3kRuntimeArtCoordinator.current().directQueue().afterTimingService(boundary);
+        S3kRuntimeArtCoordinator.current().moduleQueue().afterTimingService(boundary);
     }
 
     private static int[][] applyBlockPayload(

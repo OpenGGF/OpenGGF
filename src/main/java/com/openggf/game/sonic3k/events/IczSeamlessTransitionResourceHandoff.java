@@ -1,6 +1,5 @@
 package com.openggf.game.sonic3k.events;
 
-import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.resources.S3kKosDecompressionQueue;
 import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
@@ -19,6 +18,7 @@ final class IczSeamlessTransitionResourceHandoff
     private final HardwareWorkHandle blockHandle;
     private final S3kKosModuleQueue artQueue;
     private final HardwareWorkHandle artHandle;
+    private final Sonic3kLevelEventManager eventManager;
     private final DeferredLevelResourceManifest deferredResources;
 
     IczSeamlessTransitionResourceHandoff(
@@ -26,12 +26,14 @@ final class IczSeamlessTransitionResourceHandoff
             HardwareWorkHandle chunkHandle,
             HardwareWorkHandle blockHandle,
             S3kKosModuleQueue artQueue,
-            HardwareWorkHandle artHandle) {
+            HardwareWorkHandle artHandle,
+            Sonic3kLevelEventManager eventManager) {
         this.directQueue = directQueue;
         this.chunkHandle = chunkHandle;
         this.blockHandle = blockHandle;
         this.artQueue = artQueue;
         this.artHandle = artHandle;
+        this.eventManager = eventManager;
         Sonic3kDeferredLevelResourceProfile profile =
                 Sonic3kDeferredLevelResourceProfile.forLevelLoadBlock(
                         ICZ2_LEVEL_LOAD_BLOCK_INDEX);
@@ -52,11 +54,6 @@ final class IczSeamlessTransitionResourceHandoff
 
     @Override
     public void transferAfterTargetInit() {
-        if (!(GameServices.module().getLevelEventProvider()
-                instanceof Sonic3kLevelEventManager eventManager)) {
-            throw new IllegalStateException(
-                    "ICZ seamless transition has no S3K event resource owner");
-        }
         Sonic3kICZEvents target = eventManager.getIczEvents();
         if (target == null) {
             throw new IllegalStateException(

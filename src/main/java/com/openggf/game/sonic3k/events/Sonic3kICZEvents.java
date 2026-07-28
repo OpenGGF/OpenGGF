@@ -624,7 +624,7 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
     private void updateIcz2TransitionQueue() {
         if (act2TransitionHandoffId >= 0
                 && ((IczSeamlessTransitionResourceHandoff)
-                        GameServices.seamlessTransitionResourceHandoffs()
+                        seamlessTransitionResourceHandoffs()
                                 .peek(new SeamlessTransitionResourceHandoffId(
                                         act2TransitionHandoffId)))
                         .directQueueEmpty()) {
@@ -646,7 +646,7 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
             int blockSource = rom().read32BitAddr(entry + 12) & 0x00FF_FFFF;
             int chunkSource = rom().read32BitAddr(entry + 20) & 0x00FF_FFFF;
 
-            act2TransitionDirectQueue = GameServices.s3kKosDecompressionQueue();
+            act2TransitionDirectQueue = directKosQueue();
             act2TransitionChunkHandle = act2TransitionDirectQueue.queueStandardKos(
                     rom(), chunkSource,
                     S3kKosRamDestinations.RAM_START
@@ -658,21 +658,22 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
                             ICZ2_SECONDARY_BLOCK_DEST_BYTES));
             act2TransitionBlockOrdinal = act2TransitionBlockHandle.ordinal();
 
-            act2TransitionArtQueue = GameServices.s3kKosModuleQueue();
+            act2TransitionArtQueue = moduleKosQueue();
             act2TransitionArtHandle =
                     act2TransitionArtQueue.queueForIczSeamlessHandoff(
                             rom(), artSource,
                             ICZ2_SECONDARY_ART_DEST_TILE);
             act2TransitionArtOrdinal = act2TransitionArtHandle.ordinal();
             act2TransitionHandoffId =
-                    GameServices.seamlessTransitionResourceHandoffs()
+                    seamlessTransitionResourceHandoffs()
                             .register(
                                     new IczSeamlessTransitionResourceHandoff(
                                             act2TransitionDirectQueue,
                                             act2TransitionChunkHandle,
                                             act2TransitionBlockHandle,
                                             act2TransitionArtQueue,
-                                            act2TransitionArtHandle))
+                                            act2TransitionArtHandle,
+                                            eventManager()))
                             .value();
         } catch (IOException exception) {
             throw new IllegalStateException(
@@ -787,7 +788,7 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
         LayoutMutationContext context = new LayoutMutationContext(
                 LevelMutationSurface.forLevel(level),
                 manager::applyMutationEffects);
-        GameServices.zoneLayoutMutationPipeline().applyImmediately(mutationContext -> {
+        zoneLayoutMutationPipeline().applyImmediately(mutationContext -> {
             sonic3kLevel.applyBlockOverlay(
                     chunks128x128, ICZ2_SECONDARY_CHUNK_DEST_BYTES, false);
             sonic3kLevel.applyChunkOverlay(
@@ -810,7 +811,7 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
         LayoutMutationContext context = new LayoutMutationContext(
                 LevelMutationSurface.forLevel(level),
                 manager::applyMutationEffects);
-        GameServices.zoneLayoutMutationPipeline().applyImmediately(mutationContext -> {
+        zoneLayoutMutationPipeline().applyImmediately(mutationContext -> {
             sonic3kLevel.applyPatternOverlay(
                     tiles8x8,
                     ICZ2_SECONDARY_ART_DEST_TILE
@@ -836,7 +837,7 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
     }
 
     public void rebindHardwareWorkAfterRewind() {
-        var timing = GameServices.hardwareTiming();
+        var timing = hardwareTiming();
         act2TransitionChunkHandle = restoredHardwareHandle(
                 timing, HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
                 act2TransitionChunkOrdinal, "ICZ2 secondary chunks");
@@ -846,13 +847,13 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
         act2TransitionDirectQueue =
                 act2TransitionChunkHandle != null
                                 || act2TransitionBlockHandle != null
-                        ? GameServices.s3kKosDecompressionQueue()
+                        ? directKosQueue()
                         : null;
         act2TransitionArtHandle = restoredHardwareHandle(
                 timing, HardwareWorkKind.KOS_MODULE_QUEUE,
                 act2TransitionArtOrdinal, "ICZ2 secondary art");
         act2TransitionArtQueue = act2TransitionArtHandle != null
-                ? GameServices.s3kKosModuleQueue()
+                ? moduleKosQueue()
                 : null;
     }
 

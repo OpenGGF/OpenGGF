@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -239,7 +241,7 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
         rebindArtAfterRestore();
         try {
             if (artHandle == null && artQueue == null) {
-                artQueue = services().s3kKosModuleQueue();
+                artQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
                 artHandle = artQueue.queue(
                         services().rom(),
                         Sonic3kConstants.ART_KOSM_HCZ_GEYSER_VERT_ADDR,
@@ -267,7 +269,7 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
                         HardwareWorkKind.KOS_MODULE_QUEUE, artOrdinal)
                 .orElseThrow(() -> new IllegalStateException(
                         "Missing restored HCZ end-geyser KosM job " + artOrdinal));
-        artQueue = services().s3kKosModuleQueue();
+        artQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
     }
 
     private AbstractPlayableSprite resolveTargetPlayer(PlayableEntity playerEntity) {

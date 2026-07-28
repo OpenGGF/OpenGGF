@@ -223,7 +223,7 @@ public final class S3kSeamlessMutationExecutor {
         }
 
         byte[] fireOverlayTiles8x8 =
-                AizPreparedTransitionArtBridge.current()
+                currentAizPreparedTransitionArtBridge()
                         .aizFireOverlayCopy();
         if (applyAiz1FireOverlay(levelManager, fireOverlayTiles8x8) == 0) {
             throw new IllegalStateException(
@@ -239,6 +239,16 @@ public final class S3kSeamlessMutationExecutor {
         Sonic3kZoneEvents.loadPaletteFromPalPointers(PAL_POINTER_AIZ_FIRE_INDEX);
         Sonic3kAIZEvents.applyFireTransitionPaletteLine4(levelManager);
         LOG.info("Applied AIZ1 post-reload act 2 layout adjustment and fire palette");
+    }
+
+    private static AizPreparedTransitionArtBridge
+            currentAizPreparedTransitionArtBridge() {
+        if (GameServices.module().getLevelEventProvider()
+                instanceof AizPreparedTransitionArtBridge bridge) {
+            return bridge;
+        }
+        throw new IllegalStateException(
+                "S3K AIZ prepared transition art has no session owner");
     }
 
     private static int applyAiz1FireOverlay(

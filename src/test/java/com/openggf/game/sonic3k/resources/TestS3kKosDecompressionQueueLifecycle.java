@@ -4,6 +4,7 @@ import com.openggf.LevelFrameContext;
 import com.openggf.LevelFrameStep;
 import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
+import com.openggf.game.RuntimeArtCoordinator;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
@@ -56,20 +57,24 @@ class TestS3kKosDecompressionQueueLifecycle {
     }
 
     @Test
-    void gameplayContextOwnsOneDirectQueueAndEveryProductionFacadeResolvesIt() {
+    void gameplayContextExposesOnlyTheModuleCreatedNeutralCoordinator() {
         GameplayModeContext context = openAttachedContext();
-        S3kKosDecompressionQueue owned = context.s3kKosDecompressionQueue();
+        RuntimeArtCoordinator neutral = context.runtimeArtCoordinator();
+        S3kRuntimeArtCoordinator s3k =
+                S3kRuntimeArtCoordinator.from(neutral);
 
-        assertSame(owned, context.s3kKosDecompressionQueue());
-        assertSame(owned, GameServices.s3kKosDecompressionQueue());
-        assertSame(owned, GameServices.s3kKosDecompressionQueueOrNull());
+        assertSame(neutral, GameServices.runtimeArtCoordinator());
+        assertSame(neutral, GameServices.runtimeArtCoordinatorOrNull());
+        assertSame(s3k, S3kRuntimeArtCoordinator.from(
+                GameServices.runtimeArtCoordinator()));
     }
 
     @Test
     void rewindRegistryRestoresTimingBeforePhysicalQueueAndResumesExactDecoderState()
             throws Exception {
         GameplayModeContext context = openAttachedContext();
-        S3kKosDecompressionQueue queue = context.s3kKosDecompressionQueue();
+        S3kKosDecompressionQueue queue = S3kRuntimeArtCoordinator.from(
+                context.runtimeArtCoordinator()).directQueue();
         try (Rom rom = romWith(ABC_STREAM)) {
             HardwareWorkHandle handle = queue.queueStandardKos(
                     rom, 0, S3kKosRamDestinations.BLOCK_TABLE);
@@ -143,7 +148,8 @@ class TestS3kKosDecompressionQueueLifecycle {
             throws Exception {
         GameplayModeContext firstContext = openAttachedContext();
         S3kKosDecompressionQueue firstQueue =
-                GameServices.s3kKosDecompressionQueue();
+                S3kRuntimeArtCoordinator.from(
+                        GameServices.runtimeArtCoordinator()).directQueue();
         try (Rom rom = romWith(ABC_STREAM)) {
             firstQueue.queueStandardKos(
                     rom, 0, S3kKosRamDestinations.BLOCK_TABLE);
@@ -157,17 +163,20 @@ class TestS3kKosDecompressionQueueLifecycle {
                     "teardown must reset the retired context's physical owner");
             assertTrue(firstContext.hardwareTiming().pendingHandles().isEmpty(),
                     "teardown must reset the retired context's timing ledger");
-            assertNull(GameServices.s3kKosDecompressionQueueOrNull());
+            assertNull(GameServices.runtimeArtCoordinatorOrNull());
             assertThrows(IllegalStateException.class,
-                    GameServices::s3kKosDecompressionQueue);
+                    GameServices::runtimeArtCoordinator);
 
             GameplayModeContext secondContext = openAttachedContext();
             S3kKosDecompressionQueue secondQueue =
-                    GameServices.s3kKosDecompressionQueue();
+                    S3kRuntimeArtCoordinator.from(
+                            GameServices.runtimeArtCoordinator()).directQueue();
 
             assertNotSame(firstContext, secondContext);
             assertNotSame(firstQueue, secondQueue);
-            assertSame(secondContext.s3kKosDecompressionQueue(), secondQueue);
+            assertSame(S3kRuntimeArtCoordinator.from(
+                    secondContext.runtimeArtCoordinator()).directQueue(),
+                    secondQueue);
             assertEquals(0, secondQueue.physicalQueueSize());
             assertFalse(secondQueue.decompressionsPending());
             assertTrue(secondContext.hardwareTiming().pendingHandles().isEmpty());

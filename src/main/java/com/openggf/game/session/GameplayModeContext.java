@@ -11,6 +11,7 @@ import com.openggf.game.GameRng;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.NoOpBonusStageProvider;
 import com.openggf.game.SpecialStageProvider;
+import com.openggf.game.RuntimeArtCoordinator;
 import com.openggf.game.animation.AnimatedTileChannelGraph;
 import com.openggf.game.mutation.ZoneLayoutMutationPipeline;
 import com.openggf.game.palette.PaletteColorStateAdapter;
@@ -35,8 +36,6 @@ import com.openggf.game.timing.HardwareTimingBoundaryObserver;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.game.timing.HardwareTimingService;
-import com.openggf.game.sonic3k.resources.S3kKosDecompressionQueue;
-import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
 import com.openggf.level.SeamlessTransitionResourceHandoffRegistry;
 import com.openggf.game.timing.RecordedCompletionAuthority;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
@@ -69,8 +68,7 @@ public final class GameplayModeContext implements ModeContext {
     private final int spawnY;
     private final EditorPlaytestStash resumeStash;
     private final HardwareTimingService hardwareTiming;
-    private final S3kKosDecompressionQueue s3kKosDecompressionQueue;
-    private final S3kKosModuleQueue s3kKosModuleQueue;
+    private final RuntimeArtCoordinator runtimeArtCoordinator;
     private final SeamlessTransitionResourceHandoffRegistry
             seamlessTransitionResourceHandoffs;
     private final RecordedCompletionAuthority recordedCompletionAuthority;
@@ -145,9 +143,10 @@ public final class GameplayModeContext implements ModeContext {
         HardwareReadinessAdmissionPolicy checkedPolicy =
                 Objects.requireNonNull(admissionPolicy, "admissionPolicy");
         this.hardwareTiming = new HardwareTimingService();
-        this.s3kKosDecompressionQueue = new S3kKosDecompressionQueue(hardwareTiming);
-        this.s3kKosModuleQueue = new S3kKosModuleQueue(
-                hardwareTiming, s3kKosDecompressionQueue);
+        this.runtimeArtCoordinator = Objects.requireNonNull(
+                worldSession.getGameModule()
+                        .createRuntimeArtCoordinator(hardwareTiming),
+                "runtimeArtCoordinator");
         this.seamlessTransitionResourceHandoffs =
                 new SeamlessTransitionResourceHandoffRegistry();
         this.recordedCompletionAuthority =
@@ -246,7 +245,7 @@ public final class GameplayModeContext implements ModeContext {
 
         this.rewindRegistry = new RewindRegistry(profiler);
         this.rewindRegistry.register(hardwareTiming);
-        this.rewindRegistry.register(s3kKosDecompressionQueue);
+        runtimeArtCoordinator.registerRewindAdapters(this.rewindRegistry);
         this.rewindRegistry.register(seamlessTransitionResourceHandoffs);
         this.rewindRegistry.register(camera);
         this.rewindRegistry.register(gameStateManager);
@@ -450,14 +449,9 @@ public final class GameplayModeContext implements ModeContext {
         return hardwareTiming;
     }
 
-    /** Session-owned physical S3K standard-Kosinski FIFO. */
-    public S3kKosDecompressionQueue s3kKosDecompressionQueue() {
-        return s3kKosDecompressionQueue;
-    }
-
-    /** Session coordinator for S3K moduled Kosinski parents. */
-    public S3kKosModuleQueue s3kKosModuleQueue() {
-        return s3kKosModuleQueue;
+    /** Game-owned runtime-art coordinator for this gameplay session. */
+    public RuntimeArtCoordinator runtimeArtCoordinator() {
+        return runtimeArtCoordinator;
     }
 
     public SeamlessTransitionResourceHandoffRegistry
@@ -467,8 +461,7 @@ public final class GameplayModeContext implements ModeContext {
 
     /** Completes direct physical retirement after timing admission at the boundary. */
     public void afterHardwareTimingService(HardwareServiceBoundary boundary) {
-        s3kKosDecompressionQueue.afterTimingService(boundary);
-        s3kKosModuleQueue.afterTimingService(boundary);
+        runtimeArtCoordinator.afterTimingService(boundary);
     }
 
     public RecordedCompletionAuthority recordedCompletionAuthority() {
@@ -789,12 +782,12 @@ public final class GameplayModeContext implements ModeContext {
         }
         if (rewindRegistry != null) {
             rewindRegistry.deregister(HardwareTimingService.REWIND_KEY);
-            rewindRegistry.deregister(S3kKosDecompressionQueue.REWIND_KEY);
+            runtimeArtCoordinator.deregisterRewindAdapters(rewindRegistry);
             rewindRegistry.deregister(
                     seamlessTransitionResourceHandoffs.key());
         }
         hardwareTiming.resetForMissingSnapshot();
-        s3kKosDecompressionQueue.resetForMissingSnapshot();
+        runtimeArtCoordinator.resetForMissingSnapshot();
         seamlessTransitionResourceHandoffs.resetForMissingSnapshot();
         hardwareTimingBoundaryObserver = HardwareTimingBoundaryObserver.NO_OP;
         if (zoneLayoutMutationPipeline != null) {

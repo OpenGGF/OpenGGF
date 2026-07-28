@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -141,7 +143,7 @@ public class HCZLargeFanObjectInstance extends AbstractObjectInstance implements
 
     private void queueFanArt() {
         try {
-            artQueue = services().s3kKosModuleQueue();
+            artQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
             artHandle = artQueue.queue(
                     services().rom(),
                     Sonic3kConstants.ART_KOSM_HCZ_LARGE_FAN_ADDR,
@@ -161,7 +163,7 @@ public class HCZLargeFanObjectInstance extends AbstractObjectInstance implements
                         HardwareWorkKind.KOS_MODULE_QUEUE, artOrdinal)
                 .orElseThrow(() -> new IllegalStateException(
                         "Missing restored HCZ large-fan KosM job " + artOrdinal));
-        artQueue = services().s3kKosModuleQueue();
+        artQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
     }
 
     private boolean shouldActivate(AbstractPlayableSprite player) {

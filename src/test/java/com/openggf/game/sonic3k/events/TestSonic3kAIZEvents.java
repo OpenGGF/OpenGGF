@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.events;
 
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
+
 import com.openggf.game.session.EngineServices;
 import com.openggf.tests.TestEnvironment;
 
@@ -102,8 +104,8 @@ public class TestSonic3kAIZEvents {
     private static void serviceFireTransitionBoundary(
             HardwareServiceBoundary boundary) {
         GameServices.hardwareTiming().service(boundary);
-        GameServices.s3kKosDecompressionQueue().afterTimingService(boundary);
-        GameServices.s3kKosModuleQueue().afterTimingService(boundary);
+        S3kRuntimeArtCoordinator.current().directQueue().afterTimingService(boundary);
+        S3kRuntimeArtCoordinator.current().moduleQueue().afterTimingService(boundary);
     }
 
     private static boolean hasActiveObject(Class<?> type) {
@@ -367,7 +369,7 @@ public class TestSonic3kAIZEvents {
                 patternsBeforePublication, level, 0x00BE,
                 "POST before the module fence must preserve every deferred pattern byte");
         int frame = 2;
-        while (GameServices.s3kKosDecompressionQueue().decompressionsPending()
+        while (S3kRuntimeArtCoordinator.current().directQueue().decompressionsPending()
                 && frame < HARDWARE_DRAIN_FRAME_LIMIT) {
             serviceHardware(GameServices.hardwareTiming(), HardwareServiceBoundary.PRE_MAIN_LOOP);
             assert2dArrayEquals(
@@ -377,7 +379,7 @@ public class TestSonic3kAIZEvents {
             assertPatternRangeEquals(
                     patternsBeforePublication, level, 0x00BE,
                     "direct PRE retirement must preserve the complete pattern range");
-            if (GameServices.s3kKosDecompressionQueue().decompressionsPending()) {
+            if (S3kRuntimeArtCoordinator.current().directQueue().decompressionsPending()) {
                 events.update(0, frame++);
                 assert2dArrayEquals(
                         chunksBeforePublication,
@@ -396,7 +398,7 @@ public class TestSonic3kAIZEvents {
                         "intermediate POST scans must preserve every deferred pattern byte");
             }
         }
-        assertFalse(GameServices.s3kKosDecompressionQueue().decompressionsPending(),
+        assertFalse(S3kRuntimeArtCoordinator.current().directQueue().decompressionsPending(),
                 "test setup must reach the final direct PRE retirement");
         assert2dArrayEquals(
                 chunksBeforePublication,
@@ -481,8 +483,8 @@ public class TestSonic3kAIZEvents {
             com.openggf.game.timing.HardwareTimingService timing,
             HardwareServiceBoundary boundary) {
         timing.service(boundary);
-        GameServices.s3kKosDecompressionQueue().afterTimingService(boundary);
-        GameServices.s3kKosModuleQueue().afterTimingService(boundary);
+        S3kRuntimeArtCoordinator.current().directQueue().afterTimingService(boundary);
+        S3kRuntimeArtCoordinator.current().moduleQueue().afterTimingService(boundary);
     }
 
     @Test

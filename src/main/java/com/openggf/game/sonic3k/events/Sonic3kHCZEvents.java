@@ -728,8 +728,7 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
                     eventsFg5 = false;
                     bgRoutine = BG_STAGE_DO_TRANSITION;
                     try {
-                        transitionKosQueue =
-                                com.openggf.game.GameServices.s3kKosModuleQueue();
+                        transitionKosQueue = moduleKosQueue();
                         transitionKosHandle = transitionKosQueue.queue(
                                 rom(),
                                 Sonic3kConstants.ART_KOSM_HCZ2_SECONDARY_ADDR,
@@ -768,15 +767,14 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
             transitionKosHandle = null;
             return;
         }
-        var timing = com.openggf.game.GameServices.hardwareTiming();
+        var timing = hardwareTiming();
         transitionKosHandle = timing.pendingHandle(
                         HardwareWorkKind.KOS_MODULE_QUEUE,
                         transitionKosOrdinal)
                 .orElseThrow(() -> new IllegalStateException(
                         "restored HCZ transition owner cannot find KosM ordinal "
                                 + transitionKosOrdinal));
-        transitionKosQueue =
-                com.openggf.game.GameServices.s3kKosModuleQueue();
+        transitionKosQueue = moduleKosQueue();
     }
 
     /** Drops only derived facades; captured ordinal remains authoritative. */
