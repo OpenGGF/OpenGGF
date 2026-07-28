@@ -107,3 +107,60 @@ Final green focused verification:
 `mvn -Dmse=off "-Dtest=TestS3kKosDecompressionQueueLifecycle,TestS3kKosDecompressionQueue,TestGameplayModeContextRewindRegistry,TestStaticStateRewindCoverageGuard" test`
 
 Result: 30 tests, 30 passed.
+
+## Fix round 5 — scanner fixture repair
+
+### Root cause and repair
+
+- Reproduced
+  `TestResumableKosinskiDecoder#scannerHandlesDescriptorRefillAndAllMatchForms`
+  failing with `Unexpected end of Kosinski module`.
+- The short-match descriptor is consumed LSB-first. `0x21` encoded the literal
+  and short match but left bit 5 as another literal, so the bytes intended for
+  the terminator were consumed as data. Changed it to `0x41`, which encodes the
+  intended literal, two-byte short match, and following long-form terminator.
+- With the short fixture able to terminate, the same combined test reached a
+  second malformed pre-existing fixture: the long match's `0x01` high byte
+  omitted the `0xF8` distance bits, producing a backreference before output.
+  Changed it to `0xF9`, encoding distance -1 and a three-byte match while
+  retaining the existing terminator and expected decoded length.
+- No decoder or scanner production behavior changed.
+
+### RED and verification
+
+RED diagnosis:
+
+`mvn -Dmse=off "-Dtest=TestResumableKosinskiDecoder#scannerHandlesDescriptorRefillAndAllMatchForms" test`
+
+Result before repair: 1 test, 1 error,
+`Unexpected end of Kosinski module`.
+
+After correcting the short descriptor alone, the same command progressed to
+the next assertion and errored with `Kosinski backreference precedes output`,
+pinpointing the malformed long-match distance byte.
+
+Final targeted verification:
+
+`mvn -Dmse=off "-Dtest=TestResumableKosinskiDecoder#scannerHandlesDescriptorRefillAndAllMatchForms" test`
+
+Result: 1 test, 1 passed.
+
+`mvn -Dmse=off "-Dtest=TestResumableKosinskiDecoder" test`
+
+Result: 6 tests, 6 passed.
+
+Task 2 focused verification:
+
+`mvn -Dmse=off "-Dtest=TestS3kKosDecompressionQueueLifecycle,TestS3kKosDecompressionQueue,TestResumableKosinskiDecoder,TestHardwareTimingRewind,TestRewindCoverageGuard,TestStaticStateRewindCoverageGuard" test`
+
+Result: 26 tests, 25 passed, 1 failed. All Task 2 queue, lifecycle,
+resumable-decoder, hardware-timing rewind, and static-state guard tests pass.
+The sole failure remains the unrelated pre-existing
+`Flybot767BadnikInstance#finalScalar#layoutWaitUsesRetainedRenderFlag`
+rewind-coverage gap.
+
+Final green focused verification excluding that known unrelated guard:
+
+`mvn -Dmse=off "-Dtest=TestS3kKosDecompressionQueueLifecycle,TestS3kKosDecompressionQueue,TestResumableKosinskiDecoder,TestHardwareTimingRewind,TestStaticStateRewindCoverageGuard" test`
+
+Result: 25 tests, 25 passed.

@@ -89,8 +89,9 @@ class TestResumableKosinskiDecoder {
         refill[19] = 0;
         assertEquals(16, KosinskiReader.inspectStandard(refill, 0).decompressedLength());
 
-        byte[] shortMatch = {0x21, 0, 'A', (byte) 0xFF, 0, 0, 0};
-        byte[] longMatch = {0x15, 0, 'A', (byte) 0xFF, 1, 0, 0, 0};
+        // LSB-first: literal, two-byte short match, then long-form terminator.
+        byte[] shortMatch = {0x41, 0, 'A', (byte) 0xFF, 0, 0, 0};
+        byte[] longMatch = {0x15, 0, 'A', (byte) 0xFF, (byte) 0xF9, 0, 0, 0};
         byte[] noOutput = {0x15, 0, 'A', (byte) 0xFF, 0, 1, 0, 0, 0};
         assertEquals(3, KosinskiReader.inspectStandard(shortMatch, 0).decompressedLength());
         assertEquals(4, KosinskiReader.inspectStandard(longMatch, 0).decompressedLength());
