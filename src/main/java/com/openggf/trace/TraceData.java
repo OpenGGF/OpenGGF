@@ -14,10 +14,11 @@ import java.nio.file.Path;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Set;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 import java.util.zip.GZIPInputStream;
@@ -38,6 +39,7 @@ public class TraceData {
     private final HardwareTimingSchedule hardwareTimingSchedule;
     private final List<TraceFrame> frames;
     private final Map<Integer, List<TraceEvent>> eventsByFrame;
+    private final Set<Class<? extends TraceEvent>> observedEventTypes;
     private final List<Integer> checkpointFramesAscending;
     private final Map<Integer, TraceEvent.Checkpoint> checkpointsByFrame;
     private final List<Integer> zoneActStateFramesAscending;
@@ -56,7 +58,7 @@ public class TraceData {
         this.checkpointFramesAscending = new ArrayList<>();
         this.zoneActStatesByFrame = new HashMap<>();
         this.zoneActStateFramesAscending = new ArrayList<>();
-        buildLatestEventIndexes();
+        this.observedEventTypes = buildLatestEventIndexes();
     }
 
     public static TraceData load(Path traceDirectory) throws IOException {
@@ -367,10 +369,12 @@ public class TraceData {
         return index >= 0 ? zoneActStatesByFrame.get(zoneActStateFramesAscending.get(index)) : null;
     }
 
-    private void buildLatestEventIndexes() {
+    private Set<Class<? extends TraceEvent>> buildLatestEventIndexes() {
+        Set<Class<? extends TraceEvent>> eventTypes = new HashSet<>();
         for (Map.Entry<Integer, List<TraceEvent>> entry : eventsByFrame.entrySet()) {
             int frame = entry.getKey();
             for (TraceEvent event : entry.getValue()) {
+                eventTypes.add(event.getClass());
                 if (event instanceof TraceEvent.Checkpoint checkpoint && !checkpointsByFrame.containsKey(frame)) {
                     checkpointsByFrame.put(frame, checkpoint);
                     checkpointFramesAscending.add(frame);
@@ -382,6 +386,7 @@ public class TraceData {
         }
         Collections.sort(checkpointFramesAscending);
         Collections.sort(zoneActStateFramesAscending);
+        return Set.copyOf(eventTypes);
     }
 
     private static int latestIndexedFrameAtOrBefore(List<Integer> sortedFrames, int frame) {
@@ -393,14 +398,7 @@ public class TraceData {
     }
 
     private boolean hasEventOfType(Class<? extends TraceEvent> eventType) {
-        for (List<TraceEvent> events : eventsByFrame.values()) {
-            for (TraceEvent event : events) {
-                if (eventType.isInstance(event)) {
-                    return true;
-                }
-            }
-        }
-        return false;
+        return observedEventTypes.contains(eventType);
     }
 
     /**
