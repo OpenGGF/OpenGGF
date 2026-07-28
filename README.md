@@ -218,6 +218,8 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **S3K signpost integration regression repaired (2026-07-28):** a prior merge retained the ROM-backed signpost tests while dropping their matching production behavior, leaving every test and trace-replay sweep blocked at compilation. The falling signpost again checks sparkle/player contact before signed-word gravity and movement, honors the ROM cooldown and bump range, and keeps the results-child timing adjustment independent from the newer short-retire-tail lifecycle.
+
 - **Token-efficient trace fleet routing (2026-07-28):** the trace bug-fixing fleet now routes bounded discovery, triage, fixes, and verification across GPT-5.6 Terra and Sol with explicit reasoning effort, objective escalation triggers, sequential worktree ownership, and fail-closed result semantics. A pinned S1/S2/S3K benchmark protocol records model routes, token telemetry when available, ROM/disassembly evidence, independent regression guards, acceptance decisions, and durable reports so routing policies can be compared by verified outcomes rather than nominal token price.
 
 Highlights:

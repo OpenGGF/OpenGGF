@@ -17,6 +17,8 @@ import com.openggf.level.objects.TestObjectServices;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -45,6 +47,23 @@ class TestS3kResultsScreenObjectInstance {
     void shortResultsChildTailRetainsTwoMutatedTitleCreateDispatches() {
         assertEquals(38, S3kResultsScreenObjectInstance.mutatedTitleCardResetDispatches(false));
         assertEquals(40, S3kResultsScreenObjectInstance.mutatedTitleCardResetDispatches(true));
+    }
+
+    @Test
+    void timingCompensationStartsCreateGateOneDispatchCloserWithoutChangingShortTail() throws Exception {
+        S3kResultsScreenObjectInstance none = resultsWithTimingAdjustment("NONE", true);
+        S3kResultsScreenObjectInstance compensation = resultsWithTimingAdjustment(
+                "UNSUPPORTED_GROUNDED_COMPENSATION", true);
+
+        invokeCreateGate(none);
+        invokeCreateGate(compensation);
+
+        assertEquals(8, privateInt(none, "createGateFrames"));
+        assertEquals(7, privateInt(compensation, "createGateFrames"),
+                "the isolated grounded compensation starts the child one dispatch closer to readiness");
+        assertTrue(privateBoolean(none, "usesShortResultsChildRetireTail"));
+        assertTrue(privateBoolean(compensation, "usesShortResultsChildRetireTail"),
+                "short-tail retirement remains independent from create-gate timing compensation");
     }
 
     @Test
@@ -191,6 +210,54 @@ class TestS3kResultsScreenObjectInstance {
                 () -> ObjectConstructionContext.construct(
                         services,
                         () -> new S3kResultsScreenObjectInstance(character, act)));
+    }
+
+    private static S3kResultsScreenObjectInstance resultsWithTimingAdjustment(
+            String adjustmentName, boolean usesShortResultsChildRetireTail) throws Exception {
+        Class<?> adjustmentClass = Class.forName(
+                S3kSignpostInstance.class.getName() + "$ResultsChildTimingAdjustment");
+        @SuppressWarnings({"rawtypes", "unchecked"})
+        Object adjustment = Enum.valueOf((Class) adjustmentClass, adjustmentName);
+        Constructor<S3kResultsScreenObjectInstance> constructor =
+                S3kResultsScreenObjectInstance.class.getDeclaredConstructor(
+                        PlayerCharacter.class, int.class, int.class, int.class, int.class,
+                        adjustmentClass, boolean.class);
+        constructor.setAccessible(true);
+        TestObjectServices services = new TestObjectServices();
+        S3kResultsScreenObjectInstance results = ObjectConstructionContext.withRewindActiveRestore(
+                () -> ObjectConstructionContext.construct(services,
+                        () -> constructResults(constructor, adjustment, usesShortResultsChildRetireTail)));
+        results.setServices(services);
+        return results;
+    }
+
+    private static S3kResultsScreenObjectInstance constructResults(
+            Constructor<S3kResultsScreenObjectInstance> constructor,
+            Object adjustment, boolean usesShortResultsChildRetireTail) {
+        try {
+            return constructor.newInstance(PlayerCharacter.SONIC_AND_TAILS, 0,
+                    0, 0, 3, adjustment, usesShortResultsChildRetireTail);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Could not construct results child", e);
+        }
+    }
+
+    private static void invokeCreateGate(S3kResultsScreenObjectInstance results) throws Exception {
+        Method updateCreateGate = S3kResultsScreenObjectInstance.class.getDeclaredMethod("updateCreateGate");
+        updateCreateGate.setAccessible(true);
+        updateCreateGate.invoke(results);
+    }
+
+    private static int privateInt(Object instance, String fieldName) throws Exception {
+        Field field = instance.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.getInt(instance);
+    }
+
+    private static boolean privateBoolean(Object instance, String fieldName) throws Exception {
+        Field field = instance.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.getBoolean(instance);
     }
 
     private static final class TransitionRecordingServices extends TestObjectServices {

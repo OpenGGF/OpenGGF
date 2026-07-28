@@ -92,6 +92,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private int waitDurationAdjustment;
     private int postControlHandoffDelayEntries;
     private int carriedResultsRetireDispatches = CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES;
+    private S3kSignpostInstance.ResultsChildTimingAdjustment resultsChildTimingAdjustment =
+            S3kSignpostInstance.ResultsChildTimingAdjustment.NONE;
     private boolean usesShortResultsChildRetireTail;
     private boolean controlsReleasedAheadOfHandoff;
     private boolean carriedAcrossSeamlessTransition;
@@ -145,11 +147,26 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     S3kResultsScreenObjectInstance(PlayerCharacter character, int act, int waitDurationAdjustment,
             int postControlHandoffDelayEntries, int carriedResultsRetireDispatches) {
         this(character, act, waitDurationAdjustment, postControlHandoffDelayEntries,
-                carriedResultsRetireDispatches, false);
+                carriedResultsRetireDispatches,
+                S3kSignpostInstance.ResultsChildTimingAdjustment.NONE, false);
     }
 
     S3kResultsScreenObjectInstance(PlayerCharacter character, int act, int waitDurationAdjustment,
             int postControlHandoffDelayEntries, int carriedResultsRetireDispatches,
+            boolean usesShortResultsChildRetireTail) {
+        this(character, act, waitDurationAdjustment, postControlHandoffDelayEntries,
+                carriedResultsRetireDispatches,
+                S3kSignpostInstance.ResultsChildTimingAdjustment.NONE,
+                usesShortResultsChildRetireTail);
+    }
+
+    S3kResultsScreenObjectInstance(
+            PlayerCharacter character,
+            int act,
+            int waitDurationAdjustment,
+            int postControlHandoffDelayEntries,
+            int carriedResultsRetireDispatches,
+            S3kSignpostInstance.ResultsChildTimingAdjustment timingAdjustment,
             boolean usesShortResultsChildRetireTail) {
         super("S3kResults");
         this.character = character;
@@ -157,6 +174,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         this.waitDurationAdjustment = Math.max(0, waitDurationAdjustment);
         this.postControlHandoffDelayEntries = Math.max(0, postControlHandoffDelayEntries);
         this.carriedResultsRetireDispatches = Math.max(0, carriedResultsRetireDispatches);
+        this.resultsChildTimingAdjustment = timingAdjustment;
         this.usesShortResultsChildRetireTail = usesShortResultsChildRetireTail;
 
         // Calculate bonuses from current game state (ROM lines 62550-62578)
@@ -418,7 +436,9 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             return true;
         }
         if (createGateFrames < 0) {
-            createGateFrames = S3kTransitionWriteSupport.resultsCreateGateDispatches(services());
+            createGateFrames =
+                    S3kTransitionWriteSupport.resultsCreateGateDispatches(services())
+                            - resultsChildTimingAdjustment.catchUpEntries();
         }
 
         createGateFrames--;
