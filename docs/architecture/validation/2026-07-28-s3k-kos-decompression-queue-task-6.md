@@ -22,7 +22,8 @@ The final Task 6 file set is:
 - `docs/status/known-discrepancies.md`;
 - `src/test/java/com/openggf/trace/timing/TestCommittedHardwareTimingFixtures.java`;
 - `tools/bizhawk/README.md`; and
-- `tools/bizhawk-headless/docs/s3k-trace-recorder-behavior.md`.
+- `tools/bizhawk-headless/docs/s3k-trace-recorder-behavior.md`; and
+- `tools/bizhawk-headless/tests/S3KTraceDifferentialTests.cs`.
 
 Review fix round 1 restored the last file as the normative current
 6.38/schema-2 byte contract and corrected both STANDARD and complete-run
@@ -30,6 +31,16 @@ parity wording in `tools/bizhawk/README.md`. Historical 6.32/6.33 recorder
 derivation remains labelled as history; committed fixtures and frozen Lua are
 identified as 6.37/trace-schema-7/hardware-schema-1, distinct from current
 native 6.38/trace-schema-7/hardware-schema-2 output.
+
+Review fix round 2 removed the final stale schema-6 summary bullet and made
+the STANDARD differential enforce the publication boundary in executable
+tests. Current production metadata must be exactly
+6.38/trace-schema-7/hardware-schema-2, and the generated timing stream must
+contain exact-shape, independently increasing direct and module ledgers at
+their ROM-owned boundaries. Committed
+6.37/trace-schema-7/hardware-schema-1 fixtures remain explicitly load-only;
+the gate cannot normalize their module-only stream into direct-authority
+success.
 
 `docs/status/trace-frontier-log.md` was not changed. This documentation task
 did not measure a frontier move or regression, and the implementation plan
@@ -91,3 +102,43 @@ Both failures were classified:
 `git diff --check` passed. The existing frozen publication-manifest hashes
 also passed in `TestCommittedHardwareTimingFixtures`, proving that no
 committed fixture payload changed.
+
+Round-2 focused C# contract tests:
+
+```text
+BIZHAWK_HOME=/home/farrell/code/projects/OpenGGF/docs/BizHawk-2.11-linux-x64 \
+  ./test.sh --filter "S3KTraceDifferential requires" --jobs 1
+PASS S3KTraceDifferential requires schema two and rejects schema one as load-only compatibility
+PASS S3KTraceDifferential requires direct and module timing ledgers
+```
+
+The existing engine-level timing suite also remained green:
+
+```text
+BIZHAWK_HOME=/home/farrell/code/projects/OpenGGF/docs/BizHawk-2.11-linux-x64 \
+  ./test.sh --filter "HardwareTimingEventEngine" --jobs 1
+15 passed
+```
+
+The locked-on ROM at
+`/home/farrell/code/projects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen`
+was verified as SHA-1
+`CFBF98C36C776677290A872547AC47C53D2761D6`. The focused AIZ gate ran through
+the frozen physics/aux hash assertions and the new dual-ledger validation,
+then produced the required non-success at the publication boundary:
+
+```text
+S3K_ROM_PATH=".../Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  BIZHAWK_HOME=".../docs/BizHawk-2.11-linux-x64" \
+  ./test.sh \
+    --filter "S3KTraceDifferential native capture matches canonical AIZ timing stream" \
+    --jobs 1
+FAIL ... Fixture metadata is committed schema-one load-only compatibility
+and cannot establish schema-two direct-authority differential success.
+```
+
+That failure is the asserted release state until explicit schema-2 fixture
+publication. It is not treated as a passing differential, and no fixture
+payload was changed. After the round-2 changes, the 27 focused Maven guards
+were rerun with the command above and again passed with zero failures,
+errors, or skips.

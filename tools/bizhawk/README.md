@@ -356,15 +356,18 @@ boundary until a separately reviewed and explicitly approved schema-2
 publication replaces them. Do not hand-edit or regenerate committed fixture
 payloads as part of a recorder implementation change.
 
-**Schema-1 fixture parity and schema-2 publication boundary:** the three
+**Schema-1 compatibility and schema-2 publication boundary:** the three
 canonical STANDARD fixtures are committed as `6.37-s3k`,
 `trace_schema: 7`, `hardware_timing_schema: 1`. The frozen Lua recorder emits
 that schema-1 shape and module-only timing. The maintained native writer emits
 `6.38-s3k`, trace schema 7, hardware-timing schema 2 and the additional direct
-ledger. `S3KTraceDifferentialTests` continue to require byte identity for
-`physics.csv` / `aux_state.jsonl`; metadata compatibility accepts only the
-declared version/schema transition, and schema-2 timing output remains an
-approval-gated publication candidate rather than an allowed normalization:
+ledger. `S3KTraceDifferentialTests` require byte identity for `physics.csv` /
+`aux_state.jsonl`, validate the exact schema-2 event shape and the presence of
+independent direct and module ledgers, then deliberately reject the committed
+schema-1 metadata as load-only compatibility. The ROM-backed gate therefore
+remains red at that explicit publication boundary until separately approved
+schema-2 fixtures replace the committed payloads; schema-1 timing is never
+normalized into direct-authority success:
 
 - `src/test/resources/traces/s3k/aiz1_to_hcz_fullrun/` — `aiz_end_to_end`,
   BK2 frame offset 511, 20798 trace rows (ends on the BK2-end guard: 511 +

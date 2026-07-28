@@ -618,8 +618,12 @@ Different (S3K-specific — never copy S1/S2 values):
 - Much larger poll-driven aux vocabulary, including per-frame full-OST
   proximity scans against BOTH players (`object_state`) alongside the
   Player-1-only legacy scan (`object_near`).
-- Metadata: hardcoded characters/sidekicks, `trace_schema` 6,
-  `aux_schema_extras`, `capture_mode`, constant `rom_checksum`.
+- Metadata: the current native contract is `6.38-s3k`, `trace_schema` 7,
+  `hardware_timing_schema` 2, plus hardcoded characters/sidekicks,
+  `aux_schema_extras`, `capture_mode`, and constant `rom_checksum`.
+  Committed `6.37-s3k` / trace-schema-7 / hardware-schema-1 metadata is
+  historical load-only compatibility; Appendix A preserves the still older
+  pre-hardware trace-schema-6 layout.
 
 ---
 

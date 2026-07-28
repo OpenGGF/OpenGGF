@@ -269,6 +269,7 @@ Extend:
 - `tools/bizhawk-headless/tests/HardwareTimingEventEngineTests.cs`
 - `tools/bizhawk-headless/tests/S3KTraceMetadataWriterTests.cs`
 - `tools/bizhawk-headless/tests/S3KCompleteRunPublicationTests.cs`
+- `tools/bizhawk-headless/tests/S3KTraceDifferentialTests.cs`
 - applicable standard/complete-run capture runner tests
 
 Prove:
@@ -297,6 +298,10 @@ Prove:
 - no event is fabricated without a previously mirrored submission;
 - metadata publishes hardware timing schema 2 and bumped recorder versions.
 - schema-1 output remains deliberately selectable for compatibility tests.
+- STANDARD differential metadata validation accepts current production
+  `6.38-s3k` / trace-schema 7 / hardware-schema 2 output while retaining an
+  explicit load-only compatibility path for committed `6.37-s3k` /
+  trace-schema 7 / hardware-schema 1 fixtures.
 
 ### Implementation
 
@@ -308,6 +313,10 @@ Update:
 - `S3KCompleteRunMetadataWriter.cs`
 - standard and complete-run capture plumbing only where schema selection or
   reset/handoff requires it
+- `S3KTraceDifferentialTests.cs`, so current `6.38-s3k` / schema 7 /
+  hardware-schema 2 output validates both ledgers while committed
+  `6.37-s3k` / schema 7 / hardware-schema 1 remains load-only and cannot be
+  normalized into direct-authority differential success
 
 Keep the existing source file unless separation materially improves clarity;
 avoid new ignored files when unnecessary. Do not update the frozen Lua
