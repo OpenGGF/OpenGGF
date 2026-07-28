@@ -49,6 +49,17 @@ mainmemory = {
   end
 }
 
+movie = {
+  isloaded = function() return true end,
+  mode = function() return "PLAY" end
+}
+
+client = {
+  ispaused = function() return false end,
+  unpause = function() end,
+  exit = function() end
+}
+
 emu = {
   framecount = function() return state.raw_frame end,
   getregister = function() return 0 end,

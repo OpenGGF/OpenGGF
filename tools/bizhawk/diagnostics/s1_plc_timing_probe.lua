@@ -134,4 +134,13 @@ for spec in string.gmatch(consumer_hooks, "[^,]+") do
   end, tonumber(address))
 end
 event.onframeend(function() emit("plc_frame_state") end)
-while true do emu.frameadvance() end
+while true do
+  if movie.isloaded() and movie.mode() == "FINISHED" then
+    out:flush()
+    out:close()
+    client.exit()
+    break
+  end
+  if client.ispaused() then client.unpause() end
+  emu.frameadvance()
+end
