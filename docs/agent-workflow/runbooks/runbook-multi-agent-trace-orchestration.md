@@ -202,6 +202,56 @@ while IFS=$'\t' read -r path expected; do
 done
 ```
 
+The pinned target is intentionally red at its historical parent. Run it inside
+an `if`-guarded child shell so the outer fail-closed lifecycle can capture that
+expected non-zero status without disabling `errexit`. The child receives the
+ROM path through its environment; only the manifest's `<ROM_PATH>` placeholder
+is replaced. A non-zero command is accepted only when Surefire proves that the
+one requested test ran as a failure (not an error or skip) and the freshly
+written trace report has the manifest's exact first frontier. Preserve the
+combined command output, status, Surefire report, and trace report outside the
+worktree before continuing.
+
+```bash
+BENCH_TEST_CLASS=$(jq -r --arg case "$BENCH_CASE" '.cases[] | select(.id == $case) | .testClass' "$BENCH_MANIFEST")
+BENCH_EXPECTED_FRAME=$(jq -r --arg case "$BENCH_CASE" '.cases[] | select(.id == $case) | .startingFrontier.frame' "$BENCH_MANIFEST")
+BENCH_EXPECTED_FIELD=$(jq -r --arg case "$BENCH_CASE" '.cases[] | select(.id == $case) | .startingFrontier.field' "$BENCH_MANIFEST")
+BENCH_TARGET_TEMPLATE=$(jq -r --arg case "$BENCH_CASE" '.cases[] | select(.id == $case) | .targetCommand' "$BENCH_MANIFEST")
+BENCH_TARGET_COMMAND="${BENCH_TARGET_TEMPLATE//<ROM_PATH>/\$ROM_PATH}"
+BENCH_TARGET_OUTPUT="$BENCH_RETAIN/target-command.log"
+BENCH_TARGET_STATUS_FILE="$BENCH_RETAIN/target-command.status"
+BENCH_TARGET_REPORT="$BENCH_WORKTREE/target/surefire-reports/${BENCH_TEST_CLASS}.txt"
+BENCH_TRACE_REPORT_DIR="$BENCH_WORKTREE/target/trace-reports"
+
+test "$BENCH_TARGET_COMMAND" != "$BENCH_TARGET_TEMPLATE"
+test ! -e "$BENCH_TARGET_REPORT"
+test ! -e "$BENCH_TRACE_REPORT_DIR"
+if (
+  cd "$BENCH_WORKTREE"
+  export ROM_PATH
+  bash -o pipefail -c "$BENCH_TARGET_COMMAND"
+) >"$BENCH_TARGET_OUTPUT" 2>&1; then
+  BENCH_TARGET_STATUS=0
+else
+  BENCH_TARGET_STATUS=$?
+fi
+printf '%s\n' "$BENCH_TARGET_STATUS" > "$BENCH_TARGET_STATUS_FILE"
+
+test "$BENCH_TARGET_STATUS" -ne 0
+grep -Fq "Tests run: 1, Failures: 1, Errors: 0, Skipped: 0," "$BENCH_TARGET_REPORT"
+mapfile -t BENCH_TRACE_REPORTS < <(find "$BENCH_TRACE_REPORT_DIR" -maxdepth 1 -type f -name '*_report.json' -print)
+test "${#BENCH_TRACE_REPORTS[@]}" -eq 1
+BENCH_TRACE_REPORT="${BENCH_TRACE_REPORTS[0]}"
+jq -e --argjson frame "$BENCH_EXPECTED_FRAME" --arg field "$BENCH_EXPECTED_FIELD" '
+  (.bootstrap | length) == 0 and
+  (.errors | length) > 0 and
+  .errors[0].start_frame == $frame and
+  .errors[0].field == $field
+' "$BENCH_TRACE_REPORT" >/dev/null
+cp "$BENCH_TARGET_REPORT" "$BENCH_RETAIN/target-surefire-report.txt"
+cp "$BENCH_TRACE_REPORT" "$BENCH_RETAIN/target-trace-report.json"
+```
+
 Before workers run, initialize a case- and policy-specific result from the
 manifest. This does not copy the illustrative result template. It records only
 the initial route for each stage; workers replace pending values with observed

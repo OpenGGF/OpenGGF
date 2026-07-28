@@ -232,3 +232,25 @@ PASS wrong-route-retained
 PASS advanced-empty-retained
 PASS no-change-cleanup
 ```
+
+## Review fix round 6 — 2026-07-28
+
+The documented lifecycle now runs each historically red `targetCommand` in an
+`if`-guarded child shell. This captures the expected non-zero status without
+disabling the outer `set -euo pipefail`; all preflight, capture, schema,
+semantic, and cleanup gates therefore retain their fail-closed behavior.
+
+The target gate accepts the non-zero status only when a fresh Surefire report
+shows exactly one executed test, one failure, zero errors, and zero skips, and a
+fresh trace-report JSON has the manifest's exact first error frame and field.
+The combined target output, numeric status, Surefire report, and trace report
+are copied to external retention before worker execution or cleanup.
+
+An extracted shell probe exercised the documented guard with synthetic
+Surefire and trace reports:
+
+```text
+PASS expected-red
+PASS unexpected-skip-rejected
+PASS unexpected-success-rejected
+```
