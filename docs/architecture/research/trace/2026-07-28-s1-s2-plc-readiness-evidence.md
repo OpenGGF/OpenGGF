@@ -150,13 +150,47 @@ orders for every shared raw frame; it passes for both S1 and S2 after the
 change. A new real capture is still required before the analyzer can be run
 to an accepted vector; that capture was deliberately not performed here.
 
+## Structural state ordering correction
+
+No new capture was launched for this correction. The same supplied smoke
+stream exposes a second issue at raw frame 421: `plc_frame_state` is written
+with handler `0x00` and `lag=true` before the next VInt services six patterns
+under handler `0x12` and `lag=false`, while BizHawk still reports raw frame
+421. The frame-end callback is therefore an emulator boundary sample, not the
+identity of every later ROM event carrying the same `emu.framecount()`.
+Grouping by raw frame made the predictor use stale lag state and false-reject
+the service.
+
+Both probes now publish `plc_vint_state` at the reviewed pre-clear VInt hook
+and `plc_hblank_state` at the reviewed deferred-HBlank entry. These are
+ROM-control-flow facts independent of service, pop, empty, and consumer
+results. They share the existing sequence generator, so frame-end, VInt,
+HBlank, and oracle records retain strict total order even when the raw frame
+does not advance.
+
+`PlcTimingEvidenceTool` now derives an ordered structural/action timeline. A
+frame-end state is passive. A VInt state supplies an immediate service point
+only when the reviewed handler budget, non-lag state, and active decoder allow
+it. A legal HBlank transition marks the open VInt deferred and anchors its
+single service point at HBlank. Submission, completed preparation, and
+consumer execution identities retain their positions. Oracle result fields
+cannot create, finalize, or reclassify structural state.
+
+The Lua contract reproduces frame-end followed by a changed VInt and service
+under one raw frame, then a deferred HBlank transition before small service.
+The Java CLI contract deliberately gives the later service/pop/empty/consumer
+records stale handler, lag, and HBlank fields; analysis still matches the
+independently published structure and emits `HBLANK_SERVICE`. The disposition
+remains `EVIDENCE_INCOMPLETE`; repeated lifecycle captures are still required.
+
 ## Rerunnable analyzer
 
 `PlcTimingEvidenceTool` derives pattern counts directly from the supplied ROM
-Nemesis headers. A dedicated `plc_frame_state` record is the only source of a
-structural frame; it never builds a frame from service-oracle records. The
-tool requires a consumer observation and independently sampled progress at
-the preparation and service boundaries, slot-count reduction at pop, and a
+Nemesis headers. Dedicated `plc_frame_state`, `plc_vint_state`, and
+`plc_hblank_state` records are the only sources of interrupt structure; it
+never builds or reclassifies a segment from service-oracle records. The tool
+requires a consumer observation and independently sampled progress at the
+preparation and service boundaries, slot-count reduction at pop, and a
 zero-slot post-shift empty observation. It then compares its predicted
 prepare/service/pop/empty/poll edges against the oracle. Its unit test mutates
 handler, lag, HInt deferral, preparation, poll order, and budget; each
