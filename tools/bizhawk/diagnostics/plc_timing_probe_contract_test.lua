@@ -5,7 +5,7 @@ local callbacks = {}
 local frame_callback
 local state = {
   left = 0, slots = 0, source = 0x40, destination = 0x8000,
-  game_mode = 0x0C, vint = 0
+  game_mode = 0x0C, vint = 0, raw_frame = 1
 }
 
 local function address(name)
@@ -50,7 +50,7 @@ mainmemory = {
 }
 
 emu = {
-  framecount = function() return 1 end,
+  framecount = function() return state.raw_frame end,
   getregister = function() return 0 end,
   frameadvance = function()
     local function execute(name)
@@ -86,6 +86,19 @@ emu = {
         end
       end
       return matches
+    end
+
+    local function assert_strict_order_within_raw_frame()
+      local previous_order_by_raw_frame = {}
+      for _, line in ipairs(output_lines()) do
+        local raw_frame, within_frame_order = string.match(line,
+          '"raw_frame":(%d+),"within_frame_order":(%d+)')
+        assert(raw_frame and within_frame_order, "missing frame ordering fields")
+        local previous = previous_order_by_raw_frame[raw_frame]
+        assert(not previous or tonumber(within_frame_order) > previous,
+          string.format("within-frame order did not increase for raw frame %s", raw_frame))
+        previous_order_by_raw_frame[raw_frame] = tonumber(within_frame_order)
+      end
     end
 
     -- Submission is an observed completed queue mutation, never a routine
@@ -180,6 +193,23 @@ emu = {
     assert(string.find(failure, "without active decoder", 1, true))
 
     assert(frame_callback, "frame-state callback was not registered")
+
+    -- BizHawk may invoke the frame-end callback before later execute hooks
+    -- still report the same emulation frame. Frame state must retain its
+    -- semantics without resetting their ordering sequence.
+    frame_callback()
+    execute("OGGF_PLC_ADD_ENTRY")
+    state.slots = 1
+    execute("OGGF_PLC_ADD_POST")
+    assert_strict_order_within_raw_frame()
+
+    -- A new observed raw frame starts a fresh, strictly increasing sequence.
+    state.raw_frame = 2
+    execute("OGGF_PLC_CLEAR_BEGIN")
+    state.slots = 0
+    execute("OGGF_PLC_CLEAR_POST")
+    assert_strict_order_within_raw_frame()
+
     print("PLC_PROBE_CONTRACT_OK")
     os.exit(0)
   end

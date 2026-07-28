@@ -38,7 +38,7 @@ local POP_POST = required_address("OGGF_PLC_POP_POST")
 local VINT_DISPATCH = required_address("OGGF_PLC_VINT_DISPATCH")
 local HBLANK_DEFERRED_ENTRY = required_address("OGGF_PLC_HBLANK_DEFERRED_ENTRY")
 
-local sequence, active_source, append, replacement, clear_before, preparing, pending_service = 0, 0, nil, nil, nil, nil
+local sequence, observed_raw_frame, active_source, append, replacement, clear_before, preparing, pending_service = 0, nil, 0, nil, nil, nil, nil
 local frame_handler, frame_lag, frame_hblank, frame_mode = 0, true, false, 0
 local function u8(a) return mainmemory.read_u8(a) end
 local function u16(a) return mainmemory.read_u16_be(a) end
@@ -52,9 +52,14 @@ local function snapshot() return { left = u16(PLC_LEFT), slot_count = slots() } 
 local function emit(event, extra, source, before)
   local after = snapshot()
   before = before or after
+  local raw_frame = emu.framecount()
+  if observed_raw_frame ~= raw_frame then
+    sequence = 0
+    observed_raw_frame = raw_frame
+  end
   sequence = sequence + 1
   local fields = string.format('"raw_frame":%d,"within_frame_order":%d,"event":"%s","game_mode":%d,"interrupt_handler":%d,"lag":%s,"hblank_deferred":%s,"queue_source":%d,"queue_destination":%d,"patterns_left_before":%d,"patterns_left_after":%d,"queue_slots_before":%d,"queue_slots_after":%d',
-    emu.framecount(), sequence, event, frame_mode, frame_handler,
+    raw_frame, sequence, event, frame_mode, frame_handler,
     frame_lag and "true" or "false", frame_hblank and "true" or "false",
     source or u32(PLC_BUFFER), u16(PLC_DEST), before.left, after.left,
     before.slot_count, after.slot_count)
@@ -124,5 +129,5 @@ for spec in string.gmatch(consumer_hooks, "[^,]+") do
     emit("plc_consumer_observation", ',"consumer_id":"'..id..'","queue_empty":'..(empty and "true" or "false"), source)
   end, tonumber(address))
 end
-event.onframeend(function() emit("plc_frame_state"); sequence = 0 end)
+event.onframeend(function() emit("plc_frame_state") end)
 while true do emu.frameadvance() end

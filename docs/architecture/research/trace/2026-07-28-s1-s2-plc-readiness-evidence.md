@@ -119,6 +119,37 @@ configuration must pin every required hook address. Until then there are no
 repeat hashes, no observed preparation-race disposition, and no
 approved/rejected predictor comparison.
 
+## S2 smoke ordering correction
+
+No new capture was launched for this correction. The supplied real S2 smoke
+stream at `/tmp/openggf-s2-plc-smoke.swj6qH/s2.jsonl` was inspected with the
+read-only smoke command:
+
+```bash
+capture=/tmp/openggf-s2-plc-smoke.swj6qH/s2.jsonl
+wc -l "$capture"
+jq -r '.event' "$capture" | sort | uniq -c
+```
+
+It contains 17,041 records: 15,853 `plc_frame_state`, 676 `plc_service`, 214
+`plc_consumer_observation`, 84 each of `plc_prepare_begin` and
+`plc_prepare_end`, 83 `plc_pop`, 31 `plc_submission`, and 16 `plc_empty`.
+The first ordering defect is at raw frame 117, where `plc_frame_state` and
+`plc_submission` both claim `within_frame_order=1`; 717 raw frames have a
+non-increasing order sequence.
+
+`PlcTimingEvidenceTool` rejects that stream before evidence derivation with
+`probe records must be ordered by raw_frame and within_frame_order`. This is
+an intentional, independent analyzer failure, not a condition relaxed by the
+probe change. The defect was that both probes reset their sequence in the
+BizHawk frame-end callback even when a later execute hook still reported the
+same `emu.framecount()`. Both probes now reset only when `emit()` observes a
+changed raw frame. The executable Lua contract invokes the frame-end callback
+followed by a same-frame append completion and asserts strictly increasing
+orders for every shared raw frame; it passes for both S1 and S2 after the
+change. A new real capture is still required before the analyzer can be run
+to an accepted vector; that capture was deliberately not performed here.
+
 ## Rerunnable analyzer
 
 `PlcTimingEvidenceTool` derives pattern counts directly from the supplied ROM
