@@ -8,6 +8,8 @@ if not output_path or output_path == "" then error("OGGF_PLC_PROBE_OUTPUT is req
 if io.open(output_path, "r") then error("refusing to overwrite " .. output_path) end
 local out = assert(io.open(output_path, "w"))
 local flush_each_event = os.getenv("OGGF_PLC_PROBE_FLUSH_EACH_EVENT") == "1"
+local capture_start = tonumber(os.getenv("OGGF_PLC_CAPTURE_START") or "0")
+local capture_stop = tonumber(os.getenv("OGGF_PLC_CAPTURE_STOP") or tostring(0x7FFFFFFF))
 
 emu.limitframerate(false)
 client.speedmode(6400)
@@ -56,9 +58,10 @@ local function slots()
 end
 local function snapshot() return { left = u16(PLC_LEFT), slot_count = slots() } end
 local function emit(event, extra, source, before)
+  local raw_frame = emu.framecount()
+  if raw_frame < capture_start or raw_frame > capture_stop then return end
   local after = snapshot()
   before = before or after
-  local raw_frame = emu.framecount()
   if observed_raw_frame ~= raw_frame then
     sequence = 0
     observed_raw_frame = raw_frame
@@ -142,6 +145,12 @@ for spec in string.gmatch(consumer_hooks, "[^,]+") do
 end
 event.onframeend(function() emit("plc_frame_state") end)
 while true do
+  if emu.framecount() > capture_stop then
+    out:flush()
+    out:close()
+    client.exit()
+    break
+  end
   if movie.isloaded() and movie.mode() == "FINISHED" then
     out:flush()
     out:close()
