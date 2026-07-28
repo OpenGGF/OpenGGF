@@ -107,7 +107,10 @@ Required suite after the review fixes: 18 tests, 18 passed.
 Schema-1 replay after the review fixes: 4 tests, 3 passed and 1 errored. The
 sole remaining error is
 `standaloneAizCompleteRunConsumesFirstEdgeThroughProductionFrameDriver`, where
-the old raw-frame-73 module edge attempts admission before the production
-child chain has prepared `KOS_MODULE_QUEUE#2`. This is the previously approved
+the old schema-1 raw-frame-71 edge attempts admission before the production
+child chain has prepared `KOS_MODULE_QUEUE#2`, fingerprint
+`sha256:4423f6be47e039925c8575c68ed5eb22e9cba75f2aadd05f1d288d6c9579e723`.
+The observed error was `engine job is not prepared`. Raw frame 73 belongs to
+ordinal 3, not this failing ordinal 2 edge. This is the previously approved
 Task 8 fixture-regeneration concern; neither production cadence nor recorded
 authority was changed to accommodate it.
