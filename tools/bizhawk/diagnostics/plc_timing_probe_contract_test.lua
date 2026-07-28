@@ -5,7 +5,8 @@ local callbacks = {}
 local frame_callback
 local state = {
   left = 0, slots = 0, source = 0x40, destination = 0x8000,
-  game_mode = 0x0C, vint = 0, raw_frame = 1
+  game_mode = 0x0C, vint = 0, raw_frame = 1,
+  unlimited = false, speed = 0, invisible = false, sound = true
 }
 
 local function address(name)
@@ -55,15 +56,24 @@ movie = {
 }
 
 client = {
+  speedmode = function(value) state.speed = value end,
+  invisibleemulation = function(value) state.invisible = value end,
+  SetSoundOn = function(value) state.sound = value end,
   ispaused = function() return false end,
   unpause = function() end,
   exit = function() end
 }
 
 emu = {
+  limitframerate = function(value) state.unlimited = not value end,
   framecount = function() return state.raw_frame end,
   getregister = function() return 0 end,
   frameadvance = function()
+    assert(state.unlimited, "probe did not disable frame limiting")
+    assert(state.speed == 6400, "probe did not select 6400% speed")
+    assert(state.invisible, "probe did not enable invisible emulation")
+    assert(not state.sound, "probe did not disable sound")
+
     local function execute(name)
       local hook = address(name)
       assert(callbacks[hook], "missing callback for " .. name)

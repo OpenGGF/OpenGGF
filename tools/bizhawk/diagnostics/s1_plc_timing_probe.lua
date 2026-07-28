@@ -8,6 +8,11 @@ if not output_path or output_path == "" then error("OGGF_PLC_PROBE_OUTPUT is req
 if io.open(output_path, "r") then error("refusing to overwrite " .. output_path) end
 local out = assert(io.open(output_path, "w"))
 
+emu.limitframerate(false)
+client.speedmode(6400)
+client.invisibleemulation(true)
+if client.SetSoundOn then pcall(client.SetSoundOn, false) end
+
 local function required_address(name)
   local value = tonumber(os.getenv(name))
   if not value then error(name .. " must be a reviewed ROM/RAM address") end
