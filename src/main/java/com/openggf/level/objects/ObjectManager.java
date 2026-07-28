@@ -7,6 +7,7 @@ import com.openggf.debug.DebugOverlayManager;
 import com.openggf.debug.DebugOverlayToggle;
 import com.openggf.game.CollisionModel;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.PowerUpObject;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.identity.SpawnRefId;
 import com.openggf.game.solid.ContactKind;
@@ -92,6 +93,9 @@ public class ObjectManager {
     private int frameCounter;
     private int vblaCounter;
     private boolean updating;
+    private final InitialObjectDispatchController initialDispatch =
+            new InitialObjectDispatchController(this);
+    private final ObjectExecutionController execution = new ObjectExecutionController(this);
 
     // ROM parity: slot-ordered execution array for ExecuteObjects emulation.
     // This covers the complete processed SST range, while SlotAllocator below
@@ -107,6 +111,9 @@ public class ObjectManager {
      */
     private final ObjectWindowingStrategy windowingStrategy;
     private final ObjectInstance[] execOrder;
+    private final int[] playerCentreXAtSlotStart;
+    private final int[] playerCentreYAtSlotStart;
+    private final boolean[] playerCentreAtSlotStartValid;
     private int currentExecSlot = -1; // -1 when not in update loop
     private final boolean skipVerticalSpawnLoadFilterForGame;
 
@@ -121,6 +128,9 @@ public class ObjectManager {
     @SuppressWarnings("unchecked")
     private final List<ObjectInstance>[] highPriorityBuckets = new ArrayList[BUCKET_COUNT];
     private boolean bucketsDirty = true;
+    private final ObjectRenderBucketSnapshot renderBucketSnapshot =
+            new ObjectRenderBucketSnapshot();
+
     // Cached combined active objects list to avoid allocation in getActiveObjects()
     private final List<ObjectInstance> cachedActiveObjects = new ArrayList<>();
     private final List<ObjectInstance> cachedSolidProviderObjects = new ArrayList<>();
@@ -129,6 +139,7 @@ public class ObjectManager {
     private boolean activeObjectsCacheDirty = true;
     private final Set<ObjectInstance> deferredDynamicExecThisFrame =
             Collections.newSetFromMap(new IdentityHashMap<>());
+    private final ObjectManagerRuntimeState runtimeState = new ObjectManagerRuntimeState();
 
     // ROM parity: dynamic object slot tracking for the current game's allocatable
     // SST window. S1 uses 32..127, S2 uses 16..127, and S3K uses 4..92.
@@ -137,7 +148,6 @@ public class ObjectManager {
     private final SlotAllocator slotAllocator;
     private int s2LatchedObjectManagerCameraX = Integer.MIN_VALUE;
     private int twoAxisCameraYCoarse = Integer.MIN_VALUE;
-    private int ringFloorCheckCounterPhase;
     private int vIntRunCounterPhaseOffset;
 
     // ROM parity: Tracks child slots reserved by objects with getReservedChildSlotCount() > 0.
@@ -195,9 +205,6 @@ public class ObjectManager {
     // of each restore so it never leaks instances across passes.
     private final List<AbstractObjectInstance> rewindReconstructionChildren = new ArrayList<>();
     private boolean rewindReconstructionChildCapture;
-    private static final java.util.concurrent.ConcurrentMap<Class<?>, Boolean>
-            REWIND_IN_PLACE_REUSE_SAFE_CLASSES = new java.util.concurrent.ConcurrentHashMap<>();
-
     private final PlaneSwitchers planeSwitchers;
     private final ObjectSolidContactController solidContacts;
     private final ObjectTouchResponseController touchResponses;
@@ -230,7 +237,12 @@ public class ObjectManager {
                 camera != null ? camera::getWidth : com.openggf.level.spawn.PlacementViewportWidth::current);
         this.placement.setTwoAxisCursorPlacement(slotLayout.twoAxisCursorPlacement());
         this.placement.setWindowingStrategy(windowingStrategy);
+        // Indexed by execution slot, which spans the process slots (next's fixed
+        // SST slots sit above the dynamic range), not just the dynamic count.
         this.execOrder = new ObjectInstance[slotLayout.processSlotCount()];
+        this.playerCentreXAtSlotStart = new int[execOrder.length];
+        this.playerCentreYAtSlotStart = new int[execOrder.length];
+        this.playerCentreAtSlotStartValid = new boolean[execOrder.length];
         this.slotAllocator = new SlotAllocator(slotLayout,
                 slotLayout.twoAxisCursorPlacement()
                         ? SlotEmptyPredicate.ROUTINE_POINTER
@@ -274,9 +286,15 @@ public class ObjectManager {
         return new BootstrapObjectServices();
     }
 
+    /**
+     * Slots visited by Process_Sprites. This spans the whole process range, not
+     * just the allocatable dynamic window: next's fixed SST slots sit above that
+     * window and must still execute in global slot order.
+     */
     private boolean isManagedDynamicSlot(int slotIndex) {
         return slotLayout.isDynamicSlot(slotIndex);
     }
+
 
     void runObjectCallback(ObjectInstance instance, Runnable callback) { objectCallbacks.run(instance, callback); }
 
@@ -308,6 +326,8 @@ public class ObjectManager {
         return slotIndex >= 0 && slotIndex < slotLayout.lastProcessSlotExclusive();
     }
 
+    // Identity: next's fixed SST slots can sit below the dynamic window, so an
+    // offset mapping would index them negatively.
     private int execIndexForSlot(int slotIndex) {
         return slotIndex;
     }
@@ -360,9 +380,11 @@ public class ObjectManager {
         objectCallbacks.clear();
         auxiliaryDynamicObjects.clear();
         deferredDynamicExecThisFrame.clear();
+        runtimeState.clearPostExecDynamicSpawns();
         reservedChildSlots.clear();
         slotAllocator.clear();
         Arrays.fill(execOrder, null);
+        Arrays.fill(playerCentreAtSlotStartValid, false);
         cachedActiveObjects.clear();
         activeObjectsCacheDirty = true;
         bucketsDirty = true;
@@ -486,7 +508,7 @@ public class ObjectManager {
         if (bucketsDirty) {
             return;
         }
-        if (objectCallbacks.renderBucketInputsChanged(activeObjects.values(), dynamicObjects)) {
+        if (renderBucketSnapshot.inputsChanged(activeObjects.values(), dynamicObjects)) {
             bucketsDirty = true;
         }
     }
@@ -531,6 +553,7 @@ public class ObjectManager {
     public void snapshotTouchResponseState() { snapshotTouchResponseState(false); }
 
     public void snapshotTouchResponseState(boolean preservePreviousCollisionResponseList) {
+        solidContacts.clearSameFrameMonitorBreakBounces();
         updateCameraBounds();
         collisionResponseList.setUsePrevious(preservePreviousCollisionResponseList);
         for (ObjectInstance inst : activeObjects.values()) {
@@ -597,7 +620,9 @@ public class ObjectManager {
         // later-slot objects moved him" read this via getPlayerCentreYAtExecStart.
         solidContacts.captureExecStartPlayerCentreY(player, activeSidekicks);
         SolidExecutionRegistry solidExecutionRegistry = objectServices.solidExecutionRegistry();
-        solidExecutionRegistry.beginFrame(frameCounter, collectActivePlayers(player, activeSidekicks));
+        solidExecutionRegistry.beginFrame(
+                frameCounter,
+                execution.collectActivePlayers(player, activeSidekicks, activePlayersScratch));
         boolean counterBased = placement.isCounterBasedRespawn();
         boolean execThenLoad = placement.usesExecThenLoadPlacement();
 
@@ -618,8 +643,7 @@ public class ObjectManager {
                     // the X-cursor pass before the Y-camera pass
                     // (docs/skdisasm/sonic3k.asm:7884-7894, 37640-37762).
                     // S3K stays load-then-exec.
-                    placement.update(cameraX);
-                    syncActiveSpawnsLoad(false);
+                    runTwoAxisLoadThenExecutePlacement(cameraX, false);
                 }
                 // S2: NO pre-exec load. ROM S2 is RunObjects (s2.asm:5095) then
                 // exactly one ObjectsManager (s2.asm:5112) = exec -> one load.
@@ -635,6 +659,7 @@ public class ObjectManager {
                 syncActiveSpawnsLoad(true);
                 runExecLoop(cameraX, player, activeSidekicks, inlineSolidResolution, solidPostMovement);
             }
+            flushPostExecDynamicSpawns();
         } finally {
             if (inlineSolidResolution) {
                 solidContacts.finishInlineFrame(player, activeSidekicks);
@@ -666,74 +691,111 @@ public class ObjectManager {
         captureCollisionResponseListForNextFrame();
     }
 
+    public InitialObjectDispatchScope beginInitialProcessSprites(
+            int cameraX, PlayableEntity player,
+            List<? extends PlayableEntity> sidekicks) {
+        return initialDispatch.begin(cameraX, player, sidekicks);
+    }
+
+    public void loadInitialDynamicSlots(InitialObjectDispatchScope scope) {
+        initialDispatch.loadDynamicSlots(scope);
+    }
+
+    public void processInitialAbsoluteDynamicSlot3(InitialObjectDispatchScope scope) {
+        initialDispatch.processAbsoluteDynamicSlot3(scope);
+    }
+
+    public void processInitialDynamicSlots(InitialObjectDispatchScope scope) {
+        initialDispatch.processDynamicSlots(scope);
+    }
+
+    public void finishInitialProcessSprites(InitialObjectDispatchScope scope) {
+        initialDispatch.finish(scope);
+    }
+
+    public void freezeInitialCollisionResponseReadView() {
+        initialDispatch.freezeCollisionReadView();
+    }
+
+    public void resetInitialCollisionResponseBuild() {
+        initialDispatch.resetCollisionBuild();
+    }
+
+    public void markInitialDynamicCollisionBuildComplete() {
+        initialDispatch.markDynamicCollisionBuildComplete();
+    }
+
+    public void captureInitialCollisionResponseBuild() {
+        initialDispatch.captureCollisionBuild();
+    }
+
+    SolidExecutionRegistry beginInitialSolidExecution(
+            PlayableEntity player, List<? extends PlayableEntity> sidekicks) {
+        frameCounter++;
+        updateCameraBounds();
+        solidContacts.captureExecStartPlayerCentreY(player, sidekicks);
+        SolidExecutionRegistry registry = objectServices.solidExecutionRegistry();
+        registry.beginFrame(
+                frameCounter,
+                execution.collectActivePlayers(player, sidekicks, activePlayersScratch));
+        return registry;
+    }
+
+    int firstDynamicSlot() {
+        return slotLayout.firstDynamicSlot();
+    }
+
+    ObjectCollisionResponseList initialCollisionResponseList() {
+        return collisionResponseList;
+    }
+
+    void runTwoAxisLoadThenExecutePlacement(int cameraX, boolean observeSetupOrder) {
+        placement.update(cameraX);
+        syncActiveSpawnsLoad(false);
+    }
+
     private void runAfterExecBeforePlacement(Runnable afterExecBeforePlacement) {
         if (afterExecBeforePlacement != null) {
             afterExecBeforePlacement.run();
         }
     }
 
-    private List<PlayableEntity> collectActivePlayers(PlayableEntity player,
-            List<? extends PlayableEntity> sidekicks) {
-        List<? extends PlayableEntity> activeSidekicks = sidekicks != null ? sidekicks : List.of();
-        List<PlayableEntity> players = activePlayersScratch;
-        players.clear();
-        if (player != null) {
-            players.add(player);
-        }
-        for (PlayableEntity sidekick : activeSidekicks) {
-            if (sidekick != null) {
-                players.add(sidekick);
-            }
-        }
-        return players;
-    }
-
-    private void executeObjectWithSolidContext(ObjectInstance instance, PlayableEntity player,
+    void executeObjectWithSolidContext(ObjectInstance instance, PlayableEntity player,
             List<? extends PlayableEntity> sidekicks,
             boolean inlineSolidResolution, boolean solidPostMovement) {
-        SolidExecutionRegistry registry = objectServices.solidExecutionRegistry();
-        SolidExecutionMode mode = null;
-        if (instance instanceof SolidObjectProvider provider) {
-            SolidExecutionMode providerMode = objectCallbacks.call(instance, provider::solidExecutionMode);
-            if (inlineSolidResolution || providerMode == SolidExecutionMode.MANUAL_CHECKPOINT) {
-                mode = providerMode;
-            }
-        }
+        execution.execute(
+                instance, player, sidekicks, inlineSolidResolution, solidPostMovement);
+    }
 
-        ObjectSolidExecutionContext.Resolver resolver = null;
-        if (mode == SolidExecutionMode.MANUAL_CHECKPOINT) {
-            resolver = new ObjectSolidExecutionContext.Resolver() {
-                @Override
-                public SolidCheckpointBatch resolveNow() {
-                    return solidContacts.processManualCheckpoint(
-                            instance, player, sidekicks, solidPostMovement);
-                }
+    SolidExecutionRegistry solidExecutionRegistry() {
+        return objectServices.solidExecutionRegistry();
+    }
 
-                @Override
-                public SolidCheckpointBatch resolvePlayer(PlayableEntity participant) {
-                    return solidContacts.processManualCheckpoint(
-                            instance, participant, List.of(), solidPostMovement);
-                }
-            };
-        }
-        registry.beginObject(instance, resolver);
-        try {
-            objectCallbacks.run(instance, () -> instance.update(vblaCounter, player));
-            // ROM parity: the object has now run its own routine (the engine
-            // equivalent of DisplaySprite setting obRender bit 7), so a child that
-            // was awaiting its first execution becomes touch-eligible from the
-            // next frame's ReactToItem onward.
-            if (instance instanceof AbstractObjectInstance aoi) {
-                objectCallbacks.run(instance, aoi::clearAwaitingFirstTouchExecution);
-            }
-            if (mode == SolidExecutionMode.AUTO_AFTER_UPDATE
-                    && !objectCallbacks.call(instance, instance::isDestroyed)) {
-                registry.publishCheckpoint(
-                        solidContacts.processCompatibilityCheckpoint(
-                                instance, player, sidekicks, solidPostMovement));
-            }
-        } finally {
-            registry.endObject(instance);
+    int vblaCounter() {
+        return vblaCounter;
+    }
+
+    SolidCheckpointBatch processManualSolidCheckpoint(
+            ObjectInstance instance,
+            PlayableEntity player,
+            List<? extends PlayableEntity> sidekicks,
+            boolean solidPostMovement) {
+        return solidContacts.processManualCheckpoint(
+                instance, player, sidekicks, solidPostMovement);
+    }
+
+    SolidCheckpointBatch processCompatibilitySolidCheckpoint(
+            ObjectInstance instance,
+            PlayableEntity player,
+            List<? extends PlayableEntity> sidekicks,
+            boolean solidPostMovement) {
+        return solidContacts.processCompatibilityCheckpoint(
+                instance, player, sidekicks, solidPostMovement);
+    }
+
+    void publishInitialCollisionResponse(ObjectInstance instance) {
+        if (initialDispatch.isActive()) {
+            collisionResponseList.addToCurrentBuild(instance);
         }
     }
 
@@ -766,13 +828,20 @@ public class ObjectManager {
         }
 
         Arrays.fill(execOrder, null);
+        Arrays.fill(playerCentreAtSlotStartValid, false);
         for (ObjectInstance inst : activeObjects.values()) {
-            if (inst instanceof AbstractObjectInstance aoi && isProcessedSstSlot(executionSlotIndex(aoi))) {
+            if (initialDispatch.excludesFromDynamicPass(inst)) {
+                continue;
+            }
+            if (inst instanceof AbstractObjectInstance aoi && slotLayout.isExecutableSlot(executionSlotIndex(aoi))) {
                 execOrder[execIndexForSlot(executionSlotIndex(aoi))] = inst;
             }
         }
         for (ObjectInstance inst : dynamicObjects) {
-            if (inst instanceof AbstractObjectInstance aoi && isProcessedSstSlot(executionSlotIndex(aoi))) {
+            if (initialDispatch.excludesFromDynamicPass(inst)) {
+                continue;
+            }
+            if (inst instanceof AbstractObjectInstance aoi && slotLayout.isExecutableSlot(executionSlotIndex(aoi))) {
                 execOrder[execIndexForSlot(executionSlotIndex(aoi))] = inst;
             }
         }
@@ -781,6 +850,7 @@ public class ObjectManager {
         boolean objectsRemoved = false;
         try {
             for (currentExecSlot = 0; currentExecSlot < execOrder.length; currentExecSlot++) {
+                capturePlayerCentreAtSlotStart(player);
                 ObjectInstance instance = execOrder[currentExecSlot];
                 if (instance == null) continue;
 
@@ -846,7 +916,10 @@ public class ObjectManager {
             // Fallback: process dynamic objects without valid slots
             populateDynamicFallbackScratch();
             for (ObjectInstance inst : dynamicFallbackScratch) {
-                if (objectCallbacks.call(inst, inst::isDestroyed)) {
+                if (initialDispatch.excludesFromDynamicPass(inst)) {
+                    continue;
+                }
+                if (inst.isDestroyed()) {
                     releaseSlotIfManaged(inst);
                     objectCallbacks.runAndUnregister(inst, inst::onUnload);
                     removeDynamicObjectInstance(inst);
@@ -869,6 +942,9 @@ public class ObjectManager {
             // Fallback: process active objects without valid slots
             populateActiveFallbackScratch();
             for (ObjectInstance inst : activeFallbackScratch) {
+                if (initialDispatch.excludesFromDynamicPass(inst)) {
+                    continue;
+                }
                 ObjectSpawn spawn = instanceToSpawn.get(inst);
                 if (spawn == null) {
                     continue;
@@ -918,7 +994,7 @@ public class ObjectManager {
      * Runs the standard exec loop for non-counter-based respawn (S2/S3K).
      * This preserves the existing behavior where unload and load happen before exec.
      */
-    private void runExecLoop(int cameraX, PlayableEntity player,
+    void runExecLoop(int cameraX, PlayableEntity player,
             List<? extends PlayableEntity> sidekicks,
             boolean inlineSolidResolution, boolean solidPostMovement) {
         int unloadCameraX = objectUnloadCameraX(cameraX);
@@ -933,13 +1009,20 @@ public class ObjectManager {
         // ROM parity: Build slot-ordered execution array.
         slotsFreedDuringObjectPass.clear();
         Arrays.fill(execOrder, null);
+        Arrays.fill(playerCentreAtSlotStartValid, false);
         for (ObjectInstance inst : activeObjects.values()) {
-            if (inst instanceof AbstractObjectInstance aoi && isProcessedSstSlot(executionSlotIndex(aoi))) {
+            if (initialDispatch.excludesFromDynamicPass(inst)) {
+                continue;
+            }
+            if (inst instanceof AbstractObjectInstance aoi && slotLayout.isExecutableSlot(executionSlotIndex(aoi))) {
                 execOrder[execIndexForSlot(executionSlotIndex(aoi))] = inst;
             }
         }
         for (ObjectInstance inst : dynamicObjects) {
-            if (inst instanceof AbstractObjectInstance aoi && isProcessedSstSlot(executionSlotIndex(aoi))) {
+            if (initialDispatch.excludesFromDynamicPass(inst)) {
+                continue;
+            }
+            if (inst instanceof AbstractObjectInstance aoi && slotLayout.isExecutableSlot(executionSlotIndex(aoi))) {
                 execOrder[execIndexForSlot(executionSlotIndex(aoi))] = inst;
             }
         }
@@ -952,6 +1035,7 @@ public class ObjectManager {
         try {
             // ROM parity: Iterate slots in ascending order, matching ExecuteObjects.
             for (currentExecSlot = 0; currentExecSlot < execOrder.length; currentExecSlot++) {
+                capturePlayerCentreAtSlotStart(player);
                 ObjectInstance instance = execOrder[currentExecSlot];
                 if (instance == null) continue;
                 processedInExecLoop.add(instance);
@@ -1004,7 +1088,10 @@ public class ObjectManager {
             // Fallback: process objects without valid slots
             populateDynamicFallbackScratch();
             for (ObjectInstance inst : dynamicFallbackScratch) {
-                if (objectCallbacks.call(inst, inst::isDestroyed)) {
+                if (initialDispatch.excludesFromDynamicPass(inst)) {
+                    continue;
+                }
+                if (inst.isDestroyed()) {
                     releaseSlotIfManaged(inst);
                     objectCallbacks.runAndUnregister(inst, inst::onUnload);
                     removeDynamicObjectInstance(inst);
@@ -1027,6 +1114,9 @@ public class ObjectManager {
             }
             populateActiveFallbackScratch();
             for (ObjectInstance inst : activeFallbackScratch) {
+                if (initialDispatch.excludesFromDynamicPass(inst)) {
+                    continue;
+                }
                 ObjectSpawn spawn = instanceToSpawn.get(inst);
                 if (spawn == null) {
                     continue;
@@ -1244,8 +1334,44 @@ public class ObjectManager {
         }
         bucketsDirty = false;
 
-        objectCallbacks.populateRenderBuckets(activeObjects.values(), dynamicObjects,
-                lowPriorityBuckets, highPriorityBuckets);
+        // Clear all buckets
+        for (int i = 0; i < BUCKET_COUNT; i++) {
+            lowPriorityBuckets[i].clear();
+            highPriorityBuckets[i].clear();
+        }
+
+        // Bucket active objects
+        for (ObjectInstance instance : activeObjects.values()) {
+            int bucket = RenderPriority.clamp(instance.getPriorityBucket());
+            int idx = bucket - RenderPriority.MIN;
+            if (instance.isHighPriority()) {
+                highPriorityBuckets[idx].add(instance);
+            } else {
+                lowPriorityBuckets[idx].add(instance);
+            }
+        }
+
+        // Bucket dynamic objects
+        for (ObjectInstance instance : dynamicObjects) {
+            int bucket = RenderPriority.clamp(instance.getPriorityBucket());
+            int idx = bucket - RenderPriority.MIN;
+            if (instance.isHighPriority()) {
+                highPriorityBuckets[idx].add(instance);
+            } else {
+                lowPriorityBuckets[idx].add(instance);
+            }
+        }
+
+        // ROM parity: lower sprite-table indices render in front. Objects execute and
+        // call Draw_Sprite in slot order, so lower SST slots must be drawn later in
+        // painter's-algorithm order. Sort each bucket descending by slot so lower
+        // slot indices appear on top.
+        for (int i = 0; i < BUCKET_COUNT; i++) {
+            lowPriorityBuckets[i].sort(RENDER_SLOT_DESCENDING);
+            highPriorityBuckets[i].sort(RENDER_SLOT_DESCENDING);
+        }
+
+        renderBucketSnapshot.capture(activeObjects.values(), dynamicObjects);
     }
 
     public void drawPriorityBucket(int bucket, boolean highPriority) {
@@ -1622,6 +1748,10 @@ public class ObjectManager {
         return frameCounter;
     }
 
+    public boolean hasActiveInitialProcessSpritesDispatch() {
+        return initialDispatch.isActive();
+    }
+
     public int getActiveObjectSlotCount() {
         return slotAllocator.activeCount();
     }
@@ -1632,6 +1762,37 @@ public class ObjectManager {
 
     public int getObjectSlotCapacity() {
         return slotLayout.dynamicSlotCount();
+    }
+
+    /**
+     * Captures the live Player 1 target visible when each SST slot begins.
+     * {@code Obj_Attracted_Ring} reads Player 1 directly in its own object
+     * routine, so a carrier in an earlier slot has already moved that target
+     * while one in a later slot has not (sonic3k.asm:35710-35728,
+     * 35795-35841).
+     */
+    private void capturePlayerCentreAtSlotStart(PlayableEntity player) {
+        if (player == null) {
+            return;
+        }
+        playerCentreXAtSlotStart[currentExecSlot] = player.getCentreX();
+        playerCentreYAtSlotStart[currentExecSlot] = player.getCentreY();
+        playerCentreAtSlotStartValid[currentExecSlot] = true;
+    }
+
+    public boolean hasPlayerCentreAtObjectSlotStart(int slotIndex) {
+        int execIndex = execIndexForSlot(slotIndex);
+        return execIndex >= 0
+                && execIndex < playerCentreAtSlotStartValid.length
+                && playerCentreAtSlotStartValid[execIndex];
+    }
+
+    public int getPlayerCentreXAtObjectSlotStart(int slotIndex) {
+        return playerCentreXAtSlotStart[execIndexForSlot(slotIndex)];
+    }
+
+    public int getPlayerCentreYAtObjectSlotStart(int slotIndex) {
+        return playerCentreYAtSlotStart[execIndexForSlot(slotIndex)];
     }
 
     public Collection<ObjectSpawn> getActiveSpawns() {
@@ -1822,6 +1983,34 @@ public class ObjectManager {
     }
 
     /**
+     * Queues an allocation for the tail of the current Process_Sprites pass.
+     * S3K fixed player-effect SSTs execute after Dynamic_object_RAM, so children
+     * they create reserve slots only after every ordinary dynamic object has run.
+     */
+    public void queueDynamicObjectAfterExec(ObjectInstance object) { runtimeState.queueDynamicObjectAfterExec(object); }
+
+    /**
+     * Routes an engine-owned power-up object through its native fixed SST slot
+     * during the initial pass instead of the managed dynamic fallback.
+     */
+    public void registerInitialFixedDispatchObject(ObjectInstance object) {
+        initialDispatch.registerFixedObject(object);
+    }
+
+    public void processInitialFixedDispatchObject(
+            InitialObjectDispatchScope scope, ObjectInstance object) {
+        initialDispatch.processFixedObject(scope, object);
+    }
+
+    public void processInitialFixedDispatchObject(ObjectInstance object) {
+        initialDispatch.processFixedObject(object);
+    }
+
+    void flushPostExecDynamicSpawns() {
+        runtimeState.drainPostExecDynamicSpawns().forEach(this::addDynamicObjectNextFrame);
+    }
+
+    /**
      * Adds a dynamic object using AllocateObjectAfterCurrent semantics anchored
      * to an explicit parent slot. Use when ROM code calls
      * AllocateObjectAfterCurrent from a touch/collision callback rather than
@@ -1960,6 +2149,20 @@ public class ObjectManager {
     }
 
     /**
+     * Restores a captured dynamic SST occupant without minting a throwaway
+     * identity or advancing the next-spawn ordinal.
+     */
+    void addRestoredDynamicObjectAtSlot(
+            ObjectInstance object, int slotIndex, ObjectRefId capturedId) {
+        if (capturedId == null) {
+            throw new IllegalArgumentException("restored dynamic object identity is required");
+        }
+        rewindObjectIds.put(object, capturedId);
+        addDynamicObjectAtSlot(object, slotIndex);
+        collisionResponseList.bindRestoredObject(capturedId, object);
+    }
+
+    /**
      * Allocates the next available dynamic slot index for the current game's layout.
      * Equivalent to ROM's FindFreeObj — searches from the first dynamic slot forward.
      * Returns -1 if all slots are in use (overflow).
@@ -2061,7 +2264,8 @@ public class ObjectManager {
         registerInheritedCallbackOwner(ring);
         objectCallbacks.run(ring, () -> ring.setServices(objectServices));
         // Slot is already reserved by RingManager — do NOT re-allocate.
-        objectCallbacks.run(ring, () -> ring.setSlotIndex(reservedSlot));
+        ring.setSlotIndex(reservedSlot);
+        assignRewindObjectId(ring, ring.getSpawn());
         dynamicObjects.add(ring);
         if (updating && isManagedDynamicSlot(reservedSlot)) {
             int execIdx = execIndexForSlot(reservedSlot);
@@ -2076,29 +2280,29 @@ public class ObjectManager {
     }
 
     /**
+     * Registers an Obj37 continuation that has no distinct Java allocator slot.
+     * S3K's after-current spill ordering can outlive the engine's managed-slot
+     * projection when other native SST occupants are represented by consolidated
+     * Java objects. The ring remains ordered logically by the caller, executes in
+     * the slotless fallback, and neither consumes nor releases a physical slot.
+     */
+    public void spawnLogicalLostRingOverflow(AbstractObjectInstance ring) {
+        if (ring == null) {
+            return;
+        }
+        ring.setServices(objectServices);
+        ring.setSlotIndex(-1);
+        assignRewindObjectId(ring, ring.getSpawn());
+        dynamicObjects.add(ring);
+        bucketsDirty = true;
+        activeObjectsCacheDirty = true;
+    }
+
+    /**
      * Returns all live objects of the given concrete type, in ascending slot order.
      */
     public <T extends ObjectInstance> List<T> activeObjectsOfType(Class<T> type) {
-        List<T> matches = new ArrayList<>();
-        Set<ObjectInstance> seen = Collections.newSetFromMap(new IdentityHashMap<>());
-        for (ObjectInstance instance : activeObjects.values()) {
-            if (type.isInstance(instance) && seen.add(instance)) {
-                matches.add(type.cast(instance));
-            }
-        }
-        for (ObjectInstance instance : dynamicObjects) {
-            if (type.isInstance(instance) && seen.add(instance)) {
-                matches.add(type.cast(instance));
-            }
-        }
-        matches.sort((a, b) -> {
-            int slotA = a instanceof AbstractObjectInstance aoiA
-                    ? objectCallbacks.call(a, aoiA::getSlotIndex) : Integer.MAX_VALUE;
-            int slotB = b instanceof AbstractObjectInstance aoiB
-                    ? objectCallbacks.call(b, aoiB::getSlotIndex) : Integer.MAX_VALUE;
-            return Integer.compare(slotA, slotB);
-        });
-        return matches;
+        return ObjectInstanceQueries.activeObjectsOfType(activeObjects, dynamicObjects, type);
     }
 
     /**
@@ -2324,6 +2528,7 @@ public class ObjectManager {
                 // Mark slot as consumed in the reservation table so freeAllReservedChildSlots
                 // won't double-free this slot (the real child object now owns it).
                 childSlots[childIndex] = -1;
+                assignRewindObjectId(object, object.getSpawn());
                 dynamicObjects.add(object);
                 if (updating) {
                     int execIdx = execIndexForSlot(reservedSlot);
@@ -2465,13 +2670,13 @@ public class ObjectManager {
      * Trace recorders capture this independently because legacy S3K CSV fixtures
      * stored the adjacent V-int word rather than {@code V_int_run_count+2}.
      */
-    public void initRingFloorCheckCounterPhase(int phase) {
-        ringFloorCheckCounterPhase = phase;
-    }
+    public void initRingFloorCheckCounterPhase(int phase) { runtimeState.initRingFloorCheckCounterPhase(phase); }
 
-    public int getRingFloorCheckCounterPhase() {
-        return ringFloorCheckCounterPhase;
-    }
+    public void inheritRingFloorCheckCounterPhase(int phase) { runtimeState.inheritRingFloorCheckCounterPhase(phase); }
+
+    public int getRingFloorCheckCounterPhase() { return runtimeState.ringFloorCheckCounterPhase(); }
+
+    public boolean hasInheritedRingCounterPhase() { return runtimeState.hasInheritedRingCounterPhase(); }
 
     /**
      * Sets the phase difference between the general object-update clock and
@@ -2685,9 +2890,9 @@ public class ObjectManager {
         solidContacts.forceAirOnStaleObjectSupportLoss(player);
     }
 
-    public boolean hasPendingStaleObjectSupportLoss(PlayableEntity player) {
-        return solidContacts.hasPendingStaleObjectSupportLoss(player);
-    }
+    public boolean hasPendingStaleObjectSupportLoss(PlayableEntity player) { return solidContacts.hasPendingStaleObjectSupportLoss(player); }
+
+    public ObjectSolidContactController solidContacts() { return solidContacts; }
 
     /**
      * Preserves a non-solid object's ownership of the player's on-object state for the
@@ -2896,7 +3101,7 @@ public class ObjectManager {
      * are freed, matching the ROM's ExecuteObjects behavior where these objects
      * would delete themselves before ObjPosLoad runs.
      */
-    private void cleanupDestroyedDynamicObjects() {
+    void cleanupDestroyedDynamicObjects() {
         boolean changed = false;
         Iterator<ObjectInstance> iter = dynamicObjects.iterator();
         while (iter.hasNext()) {
@@ -2930,7 +3135,7 @@ public class ObjectManager {
      * constant bit-for-bit.  At widescreen widths the limit widens with the
      * configured viewport so objects near the visible right edge are not
      * incorrectly despawned (declared divergence — see
-     * docs/KNOWN_DISCREPANCIES.md "Object Despawn and Visibility Windows", entry #14).
+     * docs/status/known-discrepancies.md "Object Despawn and Visibility Windows", entry #14).
      * <p>
      * Used by {@link #isOutOfRangeS1} for non-S1-counter placement and mirrored
      * in {@link AbstractObjectInstance#isInRange()}.
@@ -3458,17 +3663,23 @@ public class ObjectManager {
      * {@link #dynamicObjectIdCounter} value (incremented after assignment), making
      * it unique within a session and re-mintable in the same order on re-simulation.
      *
-     * <p>If {@code spawn} is {@code null} (some internally-constructed dynamic objects
-     * have no spawn), no id is assigned — the object will not appear in the identity
-     * table and any object-reference fields pointing to it will encode as {@code null}.
+     * <p>Internally-constructed dynamics such as player-bound power-up SST owners
+     * have no placement spawn. They still receive a stable dynamic identity using
+     * their allocated slot plus the monotonic dynamic ordinal. Their captured
+     * dynamic entry carries that identity through recreation.
      */
     private void assignRewindObjectId(ObjectInstance instance, ObjectSpawn spawn) {
-        if (spawn == null) {
-            return;
-        }
         if (!rewindObjectIds.containsKey(instance)) {
-            SpawnRefId spawnRef = SpawnRefId.fromSpawn(spawn);
-            rewindObjectIds.put(instance, ObjectRefId.forObject(spawnRef, dynamicObjectIdCounter++));
+            if (spawn != null) {
+                SpawnRefId spawnRef = SpawnRefId.fromSpawn(spawn);
+                rewindObjectIds.put(
+                        instance, ObjectRefId.forObject(spawnRef, dynamicObjectIdCounter++));
+            } else {
+                int slot = instance instanceof AbstractObjectInstance object
+                        ? object.getSlotIndex() : -1;
+                rewindObjectIds.put(
+                        instance, ObjectRefId.dynamic(slot, 0, dynamicObjectIdCounter++));
+            }
         }
     }
 
@@ -3610,7 +3821,7 @@ public class ObjectManager {
                                 objectCallbacks.call(inst, aoi::getSlotIndex),
                                 spawn,
                                 aoi.getClass().getName(),
-                                captureObjectRewindState(aoi, rewindContext),
+                                objectCallbacks.captureRewind(aoi, rewindContext),
                                 rewindObjectIds.get(inst)
                         ));
                     }
@@ -3653,10 +3864,11 @@ public class ObjectManager {
                         dynamicEntries.add(
                                 new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry(
                                         inst.getClass().getName(),
-                                        objectCallbacks.call(inst, inst::getSpawn),
-                                        objectCallbacks.call(inst, aoi::getSlotIndex),
-                                        captureObjectRewindState(aoi, rewindContext),
-                                        playerBoundOwner(inst), rewindObjectIds.get(inst),
+                                        inst.getSpawn(),
+                                        aoi.getSlotIndex(),
+                                        objectCallbacks.captureRewind(aoi, rewindContext),
+                                        playerBoundOwner(inst),
+                                        rewindObjectIds.get(inst),
                                         objectCallbacks.owner(inst)));
                     }
                 }
@@ -3687,7 +3899,8 @@ public class ObjectManager {
                         touchResponses != null
                                 ? touchResponses.captureRewindState()
                                 : com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.TouchResponseOverlapState.empty(),
-                        dynamicObjectIdCounter
+                        dynamicObjectIdCounter,
+                        collisionResponseList.captureRewindState(rewindObjectIds::get)
                 );
             }
 
@@ -3810,12 +4023,15 @@ public class ObjectManager {
                             if (objectCallbacks.call(aoi, aoi::getSlotIndex) < 0 && targetSlot >= 0) {
                                 objectCallbacks.run(aoi, () -> aoi.setSlotIndex(targetSlot));
                             }
-                            registerActiveObject(spawn, inst);
-                            // Override the freshly-assigned rewind id with the captured one
-                            // from the snapshot (stable across re-simulation ordering) and
-                            // register it in the restore table so phase-2 refs resolve here.
+                            // Install a captured identity before registration so
+                            // registerActiveObject does not mint and consume a
+                            // throwaway dynamic ordinal. Legacy null-id entries
+                            // deliberately fall through and mint exactly once.
                             if (entry.objectId() != null) {
                                 rewindObjectIds.put(inst, entry.objectId());
+                            }
+                            registerActiveObject(spawn, inst);
+                            if (entry.objectId() != null) {
                                 restoreTable.registerObject(inst, entry.objectId());
                             }
                             // Wire into execOrder if within the managed slot window
@@ -3826,7 +4042,13 @@ public class ObjectManager {
                             // Defer per-instance field-blob application to phase 2.
                             activeStateWork.add(new RestoreStatePair<>(aoi, entry));
                         } else if (inst != null) {
+                            if (entry.objectId() != null) {
+                                rewindObjectIds.put(inst, entry.objectId());
+                            }
                             registerActiveObject(spawn, inst);
+                            if (entry.objectId() != null) {
+                                restoreTable.registerObject(inst, entry.objectId());
+                            }
                         }
                     }
                 } finally {
@@ -3987,11 +4209,13 @@ public class ObjectManager {
                 //    references to objects recreated later in phase 1.
                 for (RestoreStatePair<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PerSlotEntry>
                         work : activeStateWork) {
-                    restoreObjectRewindState(work.instance(), work.entry().state(), rewindContext);
+                    objectCallbacks.restoreRewind(
+                            work.instance(), work.entry().state(), rewindContext);
                 }
                 for (RestoreStatePair<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry>
                         work : dynamicStateWork) {
-                    restoreObjectRewindState(work.instance(), work.entry().state(), rewindContext);
+                    objectCallbacks.restoreRewind(
+                            work.instance(), work.entry().state(), rewindContext);
                 }
 
                 // 6b. Every object's own field-blob restore (including any of its children's)
@@ -4026,26 +4250,17 @@ public class ObjectManager {
                 // ObjectTouchResponseController' double-buffer overlap state must be restored
                 // AFTER object restoration so slot lookup resolves to live
                 // post-restore instances. See iter-1631 root-cause analysis in
-                // docs/superpowers/plans/2026-05-07-rewind-encounter-validation.md.
+                // docs/architecture/plans/2026-05-07-rewind-encounter-validation.md.
                 if (touchResponses != null) {
                     touchResponses.restoreRewindState(s.touchResponseOverlap());
                 }
+                collisionResponseList.restoreRewindState(
+                        s.collisionResponseState(), restoreTable::resolve);
 
                 bucketsDirty = true;
                 activeObjectsCacheDirty = true;
             }
         };
-    }
-
-    private PerObjectRewindSnapshot captureObjectRewindState(AbstractObjectInstance object,
-            com.openggf.game.rewind.schema.RewindCaptureContext context) {
-        return objectCallbacks.captureRewind(object, context);
-    }
-
-    private void restoreObjectRewindState(AbstractObjectInstance object,
-            PerObjectRewindSnapshot snapshot,
-            com.openggf.game.rewind.schema.RewindCaptureContext context) {
-        objectCallbacks.restoreRewind(object, snapshot, context);
     }
 
     /**
@@ -4075,11 +4290,6 @@ public class ObjectManager {
         }
         return isRewindInPlaceReuseSafeClass(type);
     }
-
-    private static final Set<Class<?>> REWIND_IMMUTABLE_VALUE_TYPES = Set.of(
-            Boolean.class, Byte.class, Character.class, Short.class,
-            Integer.class, Long.class, Float.class, Double.class, String.class);
-
 
     /**
      * Returns true when instances of {@code type} may be reused in place by the
@@ -4111,75 +4321,7 @@ public class ObjectManager {
      * <p>Public for the in-place restore audit test.
      */
     public static boolean isRewindInPlaceReuseSafeClass(Class<?> type) {
-        return REWIND_IN_PLACE_REUSE_SAFE_CLASSES.computeIfAbsent(type,
-                ObjectManager::computeRewindInPlaceReuseSafeClass);
-    }
-
-    private static boolean computeRewindInPlaceReuseSafeClass(Class<?> type) {
-        if (!AbstractObjectInstance.class.isAssignableFrom(type)
-                || Modifier.isAbstract(type.getModifiers())
-                || type.isAnnotationPresent(com.openggf.game.rewind.RewindRecreateOnRestore.class)) {
-            // The annotation pins classes whose constructors have restore-relevant
-            // side effects the field audit cannot see (e.g. global zone-state
-            // writes) onto the destroy/recreate path.
-            return false;
-        }
-        boolean badnik = AbstractBadnikInstance.class.isAssignableFrom(type);
-        boolean defaultCapture = badnik
-                ? com.openggf.game.rewind.GenericRewindEligibility.usesDefaultBadnikSubclassCapture(type)
-                : com.openggf.game.rewind.GenericRewindEligibility.usesDefaultObjectSubclassCapture(type);
-        if (!defaultCapture) {
-            // Concrete capture/restore override: hand-written coverage is not
-            // reflectively provable, so keep the recreate semantics.
-            return false;
-        }
-        Set<java.lang.reflect.Field> captured = new HashSet<>(
-                com.openggf.game.rewind.GenericFieldCapturer.defaultObjectSubclassCapturedFieldsForAudit(type));
-        for (Class<?> cls = type;
-                cls != null && cls != AbstractObjectInstance.class;
-                cls = cls.getSuperclass()) {
-            if (cls == AbstractBadnikInstance.class) {
-                continue; // hand-audited; see method Javadoc
-            }
-            for (java.lang.reflect.Field field : cls.getDeclaredFields()) {
-                if (Modifier.isStatic(field.getModifiers()) || field.isSynthetic()) {
-                    continue;
-                }
-                if (captured.contains(field)) {
-                    continue;
-                }
-                if (!isRewindReuseSafeNonCapturedField(field)) {
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
-    private static boolean isRewindReuseSafeNonCapturedField(java.lang.reflect.Field field) {
-        if (!Modifier.isFinal(field.getModifiers())) {
-            // Mutable non-captured state: recreate resets it, reuse cannot.
-            return false;
-        }
-        Class<?> type = field.getType();
-        if (type.isPrimitive() || type.isEnum() || REWIND_IMMUTABLE_VALUE_TYPES.contains(type)) {
-            return true;
-        }
-        if (type.isArray()
-                || Collection.class.isAssignableFrom(type)
-                || Map.class.isAssignableFrom(type)) {
-            // Non-captured mutable container content.
-            return false;
-        }
-        if (ObjectInstance.class.isAssignableFrom(type)
-                || PlayableEntity.class.isAssignableFrom(type)) {
-            // Cross-instance identity link; the target may be recreated by restore.
-            return false;
-        }
-        // Final structural reference (renderer handle, sheet/mapping data,
-        // services, spawn): the constructor derives it deterministically, so the
-        // live value matches what a reconstruction would compute.
-        return true;
+        return ObjectRewindTypeSafety.isSafe(type);
     }
 
     private long[] captureOwnedUsedSlotBits() {
@@ -4377,6 +4519,9 @@ public class ObjectManager {
     private PlayableEntity playerBoundOwner(ObjectInstance inst) {
         if (inst instanceof ShieldObjectInstance shield) {
             return objectCallbacks.call(inst, shield::getPlayer);
+        }
+        if (inst instanceof PowerUpObject powerUp && powerUp.isInvincibilityStars()) {
+            return powerUp.boundPlayer();
         }
         return null;
     }

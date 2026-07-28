@@ -14,7 +14,10 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.StubObjectServices;
+import com.openggf.tests.FullReset;
+import com.openggf.tests.SingletonResetExtension;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.lang.reflect.Field;
 import java.util.List;
@@ -25,6 +28,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@ExtendWith(SingletonResetExtension.class)
+@FullReset
 class TestMhzEndBossArenaHelperRewind {
 
     @Test

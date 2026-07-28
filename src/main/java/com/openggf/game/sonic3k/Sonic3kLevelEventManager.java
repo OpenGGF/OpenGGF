@@ -11,6 +11,8 @@ import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.events.AizObjectEventBridge;
+import com.openggf.game.sonic3k.events.AizPreparedTransitionArtBridge;
+import com.openggf.game.sonic3k.events.AizPreparedTransitionArtState;
 import com.openggf.game.sonic3k.events.CnzObjectEventBridge;
 import com.openggf.game.sonic3k.events.HczObjectEventBridge;
 import com.openggf.game.sonic3k.events.FbzObjectEventBridge;
@@ -94,7 +96,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         implements CheckpointRuntimeStateProvider,
         AizObjectEventBridge, CnzObjectEventBridge, HczObjectEventBridge, MgzObjectEventBridge,
         FbzObjectEventBridge,
-        S3kTransitionEventBridge {
+        S3kTransitionEventBridge, AizPreparedTransitionArtBridge {
     private static final Logger LOG = Logger.getLogger(Sonic3kLevelEventManager.class.getName());
     private static final int MHZ_POLLEN_SPAWNER_SLOT = 4;
     private static final int PACHINKO_TOP_EXIT_Y = -0x20;
@@ -115,6 +117,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     private Sonic3kLBZEvents lbzEvents;
     private Sonic3kMGZEvents mgzEvents;
     private Sonic3kMHZEvents mhzEvents;
+    private final AizPreparedTransitionArtState aizPreparedTransitionArt =
+            new AizPreparedTransitionArtState();
     private final S3kFixedAirCountdownManager fixedAirCountdownManager =
             new S3kFixedAirCountdownManager();
     private int fixedAirCountdownZone = -1;
@@ -307,6 +311,16 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         fixedAirCountdownManager.update();
     }
 
+    void processInitialFixedAirSlot(int playerIndex, AbstractPlayableSprite owner) {
+        if (playerIndex == 0) {
+            fixedAirCountdownManager.processInitialP1Slot(owner);
+        } else if (playerIndex == 1) {
+            fixedAirCountdownManager.processInitialP2Slot(owner);
+        } else {
+            throw new IllegalArgumentException("fixed air slot player index must be 0 or 1");
+        }
+    }
+
     @Override
     public boolean defersInitialObjectPlacementUntilAfterLevelEvents(int zone, int act) {
         // FBZ1_ScreenInit and FBZ2_ScreenInit allocate
@@ -324,6 +338,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             fbzEvents.advanceMagneticPhase(
                     levelManager.getFrameCounter() + 1,
                     fade != null && fade.isActive());
+        }
+        if (iczEvents != null) {
+            iczEvents.updatePostTitleAct2SizeWorkers();
         }
         if (hczEvents != null) {
             hczEvents.updateRetainedCarrierObjectPass(currentAct);
@@ -531,7 +548,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
         int minX = camera.getMinX();
         int maxX = camera.getMaxX();
-        int maxY = Math.max(camera.getMaxY(), camera.getMaxYTarget());
+        // Tails_Check_Screen_Boundaries reads Camera_max_Y_pos directly;
+        // Camera_target_max_Y_pos is only the resize destination and must not
+        // loosen the current-frame sidekick death plane.
+        int maxY = camera.getMaxY();
         for (AbstractPlayableSprite sidekick : sidekickSpritesFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
             if (sidekick.getCpuController() != null) {
                 sidekick.getCpuController().setLevelBounds(minX, maxX, maxY);
@@ -651,8 +671,6 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
      *
      * <p>Zones handled:
      * <ul>
-     *   <li>AIZ1 ($0000): Sonic+Tails intro parks Player 2 in dormant marker state
-     *       while Obj_AIZPlaneIntro owns the opening pan</li>
      *   <li>HCZ1 ($0100): Sonic/Tails anim $1B (tumble), Knuckles anim $21 (glide drop)</li>
      *   <li>MGZ1 ($0200): anim $1B, airborne (loc_68A6)</li>
      *   <li>ICZ1 ($0500): Sonic player modes spawn Obj_LevelIntroICZ1 and
@@ -662,10 +680,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
      * </ul>
      */
     public void applyZonePlayerState() {
-        if (currentZone == Sonic3kZoneIds.ZONE_AIZ && currentAct == 0
-                && AizPlaneIntroInstance.getActiveIntroInstance() != null) {
-            applyAizIntroSidekickDormantMarkersAfterSpawn();
-        }
+        // AIZ deliberately has no Player_2 mutation here. SpawnLevelMainSprites
+        // leaves fresh Tails at Player_1-$20,+4; Tails_Init returns before the
+        // later ordinary Tails_Control/loc_13A10 dispatch writes the dormant
+        // marker (sonic3k.asm:8351-8369,26101-26156,26389-26397).
         if (currentZone == Sonic3kZoneIds.ZONE_HCZ && currentAct == 0) {
             applyHcz1IntroState();
         }
@@ -692,19 +710,6 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         // TODO: LRZ1 non-Knuckles, SSZ falling intros (same loc_68A6 path)
     }
 
-    private void applyAizIntroSidekickDormantMarkersAfterSpawn() {
-        SpriteManager spriteManager = GameServices.spritesOrNull();
-        if (spriteManager == null) {
-            return;
-        }
-        for (AbstractPlayableSprite sidekick : spriteManager.getRegisteredSidekicks()) {
-            SidekickCpuController controller = sidekick.getCpuController();
-            if (controller != null && shouldEnterSidekickDormantMarker(sidekick)) {
-                controller.applyLevelEventDormantMarkerForBootstrap();
-            }
-        }
-    }
-
     private void applyIczIntroSidekickDormantMarkersAfterSpawn() {
         SpriteManager spriteManager = GameServices.spritesOrNull();
         if (spriteManager == null || iczEvents == null) {
@@ -727,7 +732,15 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
 
     public void applyCompleteRunSegmentPlayerStateAfterTitleCard() {
         applyZonePlayerStateAfterTitleCard();
-        releaseCompleteRunSegmentStartupLatchesAfterTitleCard();
+    }
+
+    /**
+     * Complete-run trace bootstrap entry point. Retained as the name the trace
+     * replay bootstrap calls; the body is the generalised placement-reset
+     * override so both paths restore the same event-owned objects.
+     */
+    public void restoreCompleteRunSegmentObjectsAfterPreludeReset() {
+        restoreEventOwnedObjectsAfterPlacementReset();
     }
 
     @Override
@@ -942,6 +955,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     @Override
     public java.util.List<com.openggf.game.rewind.RewindSnapshottable<?>> extraRewindAdapters() {
         return java.util.List.of(
+                aizPreparedTransitionArt,
                 new com.openggf.game.sonic3k.objects.Aiz2BossEndSequenceStaticAdapter(),
                 new Sonic3kLevelTriggerStaticAdapter(),
                 new com.openggf.game.sonic3k.features.HCZWaterSkimStaticAdapter(),
@@ -1378,6 +1392,13 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     @Override
+    public void preparePreloadedActTitleCardCompletion() {
+        if (iczEvents != null) {
+            iczEvents.preparePostTitleAct2SizeChange();
+        }
+    }
+
+    @Override
     public void requestMgzPostTransitionRelease() {
         this.mgzPendingPostTransitionRelease = true;
     }
@@ -1708,6 +1729,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     @Override
     public void resetState() {
         super.resetState();
+        aizPreparedTransitionArt.reset();
         introFallActiveOnPlayer = false;
         introFallActiveOnSidekick = false;
         clearPostTransitionHandoffState();
@@ -1725,6 +1747,21 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         AizHollowTreeObjectInstance.resetTreeRevealCounter();
         AizPlaneIntroInstance.resetIntroPhaseState();
         IczSnowboardArtLoader.reset();
+    }
+
+    @Override
+    public void retainAizFireOverlay(byte[] tiles8x8) {
+        aizPreparedTransitionArt.retainFireOverlay(tiles8x8);
+    }
+
+    @Override
+    public byte[] aizFireOverlayCopy() {
+        return aizPreparedTransitionArt.fireOverlayCopy();
+    }
+
+    @Override
+    public int aizFireOverlayTileCount() {
+        return aizPreparedTransitionArt.fireOverlayTileCount();
     }
 
     private void clearPostTransitionHandoffState() {
@@ -1821,6 +1858,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         //   4 bytes   icz schema payload length, when present
         //   N bytes   icz schema payload, when present
         //   28 bytes  fixed Breathing_bubbles/Breathing_bubbles_P2 sidecars
+        //   4 bytes   fixed-air owner zone
+        //   4 bytes   fixed-air owner act
         byte[] aizBytes = aizEvents != null ? ZoneEventSchemaSidecar.capture(aizEvents) : null;
         byte[] hczBytes = hczEvents != null ? ZoneEventSchemaSidecar.capture(hczEvents) : null;
         byte[] cnzBytes = cnzEvents != null ? ZoneEventSchemaSidecar.capture(cnzEvents) : null;
@@ -1834,7 +1873,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         size += mgzBytes != null ? 1 + Integer.BYTES + mgzBytes.length : 1;
         size += mhzBytes != null ? 1 + Integer.BYTES + mhzBytes.length : 1;
         size += iczBytes != null ? 1 + Integer.BYTES + iczBytes.length : 1;
-        size += S3kFixedAirCountdownManager.REWIND_STATE_BYTES;
+        size += S3kFixedAirCountdownManager.REWIND_STATE_BYTES
+                + (2 * Integer.BYTES);
         java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocate(size);
         // Manager-level
         buf.put((byte) bootstrap.mode().ordinal());
@@ -1898,6 +1938,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             buf.put((byte) 0);
         }
         fixedAirCountdownManager.writeRewindState(buf);
+        buf.putInt(fixedAirCountdownZone);
+        buf.putInt(fixedAirCountdownAct);
         return buf.array();
     }
 
@@ -2038,6 +2080,12 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (buf.remaining() >= S3kFixedAirCountdownManager.REWIND_STATE_BYTES) {
             fixedAirCountdownManager.readRewindState(buf);
         }
+        fixedAirCountdownZone = -1;
+        fixedAirCountdownAct = -1;
+        if (buf.remaining() >= 2 * Integer.BYTES) {
+            fixedAirCountdownZone = buf.getInt();
+            fixedAirCountdownAct = buf.getInt();
+        }
     }
 
     private boolean hasValidExtraFraming(byte[] extra) {
@@ -2155,9 +2203,11 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         byte[] before = ZoneEventSchemaSidecar.capture(aizEvents);
         try {
             ZoneEventSchemaSidecar.restore(aizEvents, bytes);
+            aizEvents.discardHardwareWorkFacadesAfterRewind();
         } catch (RuntimeException e) {
             try {
                 ZoneEventSchemaSidecar.restore(aizEvents, before);
+                aizEvents.discardHardwareWorkFacadesAfterRewind();
             } catch (RuntimeException rollbackFailure) {
                 e.addSuppressed(rollbackFailure);
             }
@@ -2169,9 +2219,11 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         byte[] before = ZoneEventSchemaSidecar.capture(hczEvents);
         try {
             ZoneEventSchemaSidecar.restore(hczEvents, bytes);
+            hczEvents.discardHardwareWorkFacadesAfterRewind();
         } catch (RuntimeException e) {
             try {
                 ZoneEventSchemaSidecar.restore(hczEvents, before);
+                hczEvents.discardHardwareWorkFacadesAfterRewind();
             } catch (RuntimeException rollbackFailure) {
                 e.addSuppressed(rollbackFailure);
             }

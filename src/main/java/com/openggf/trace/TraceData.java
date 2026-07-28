@@ -1,6 +1,8 @@
 package com.openggf.trace;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.openggf.trace.timing.HardwareTimingSchedule;
+import com.openggf.trace.timing.HardwareTimingStreamLoader;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -34,6 +36,7 @@ public class TraceData {
     private static final Set<Path> LEGACY_TRACE_WARNINGS = ConcurrentHashMap.newKeySet();
 
     private final TraceMetadata metadata;
+    private final HardwareTimingSchedule hardwareTimingSchedule;
     private final List<TraceFrame> frames;
     private final Map<Integer, List<TraceEvent>> eventsByFrame;
     private final List<Integer> checkpointFramesAscending;
@@ -44,8 +47,10 @@ public class TraceData {
     // Package-private so same-package test fixtures in src/test can
     // construct in-memory instances without going through disk I/O.
     TraceData(TraceMetadata metadata, List<TraceFrame> frames,
-              Map<Integer, List<TraceEvent>> eventsByFrame) {
+              Map<Integer, List<TraceEvent>> eventsByFrame,
+              HardwareTimingSchedule hardwareTimingSchedule) {
         this.metadata = metadata;
+        this.hardwareTimingSchedule = hardwareTimingSchedule;
         this.frames = frames;
         this.eventsByFrame = eventsByFrame;
         this.checkpointsByFrame = new HashMap<>();
@@ -68,10 +73,11 @@ public class TraceData {
         Map<Integer, List<TraceEvent>> events = auxPath != null
             ? loadAuxEvents(auxPath)
             : Collections.emptyMap();
+        HardwareTimingSchedule hardwareTimingSchedule = HardwareTimingStreamLoader.load(traceDirectory, metadata);
 
         warnIfLegacyExecutionCounters(traceDirectory, metadata, frames);
 
-        return new TraceData(metadata, frames, events);
+        return new TraceData(metadata, frames, events, hardwareTimingSchedule);
     }
 
     /**
@@ -98,11 +104,13 @@ public class TraceData {
         Map<Integer, List<TraceEvent>> events = auxPath != null
             ? loadAuxEvents(auxPath)
             : Collections.emptyMap();
+        HardwareTimingSchedule hardwareTimingSchedule = HardwareTimingStreamLoader.load(traceDirectory, metadata);
 
-        return new TraceData(metadata, Collections.emptyList(), events);
+        return new TraceData(metadata, Collections.emptyList(), events, hardwareTimingSchedule);
     }
 
     public TraceMetadata metadata() { return metadata; }
+    public HardwareTimingSchedule hardwareTimingSchedule() { return hardwareTimingSchedule; }
     public int frameCount() { return frames.size(); }
 
     /**

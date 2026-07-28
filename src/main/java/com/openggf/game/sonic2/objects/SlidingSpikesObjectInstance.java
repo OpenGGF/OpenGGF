@@ -168,7 +168,7 @@ public class SlidingSpikesObjectInstance extends AbstractObjectInstance
         int d1 = WIDTH_PIXELS + 0x0B;
         int d2 = Y_RADIUS;
         int d3 = Y_RADIUS + 1;
-        return new SolidObjectParams(d1, d2, d3);
+        return SolidObjectParams.of(d1, d2, d3);
     }
 
     @Override

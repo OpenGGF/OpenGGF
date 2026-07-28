@@ -1,6 +1,7 @@
 package com.openggf.audio.rewind;
 
 import com.openggf.audio.GameSound;
+import com.openggf.audio.presentation.AudioPresentationSnapshot;
 
 import java.util.Objects;
 import java.util.Set;
@@ -11,12 +12,12 @@ public record AudioLogicalSnapshot(
         long commandTimelineFrame,
         int commandTimelineNextOrder,
         int commandEntryCount,
-        AudioBackendLogicalSnapshot backend,
+        AudioPresentationSnapshot presentation,
         Set<String> donorGameIds,
         Set<DonorSfxBindingSnapshot> donorBindings) {
 
     public AudioLogicalSnapshot {
-        backend = Objects.requireNonNull(backend, "backend");
+        presentation = Objects.requireNonNull(presentation, "presentation");
         donorGameIds = Set.copyOf(Objects.requireNonNull(donorGameIds, "donorGameIds"));
         donorBindings = Set.copyOf(Objects.requireNonNull(donorBindings, "donorBindings"));
     }

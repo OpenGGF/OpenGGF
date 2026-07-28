@@ -13,6 +13,13 @@ public final class ModApiSignatureSurface {
      * No package-prefix exemption is used: a newly leaked platform type fails closed.
      */
     private static final Set<Class<?>> ALLOWED_PLATFORM_TYPES = Set.of(
+            // Jackson binding metadata on TraceMetadata. Annotations carry no
+            // structural obligation for creators; the record's components are
+            // what the contract pins.
+            com.fasterxml.jackson.annotation.JsonIgnoreProperties.class,
+            com.fasterxml.jackson.annotation.JsonProperty.class,
+            com.fasterxml.jackson.annotation.JsonProperty.Access.class,
+            com.fasterxml.jackson.annotation.OptBoolean.class,
             java.io.IOException.class, java.io.InputStream.class,
             AutoCloseable.class, Boolean.class, Class.class, Deprecated.class, Enum.class,
             Exception.class, Float.class, Integer.class, Long.class, Object.class, Record.class,
@@ -32,6 +39,83 @@ public final class ModApiSignatureSurface {
             java.util.function.LongSupplier.class, java.util.function.Predicate.class,
             java.util.function.Supplier.class, javax.net.ssl.SSLContext.class);
 
+    /**
+     * Engine-owned runtime types that appear in engine signatures but are not part
+     * of the creator contract.
+     *
+     * <p>The recursive walk treats each as a terminal: it is neither required to
+     * carry {@link ModApi} nor pinned into the signature surface. That keeps the
+     * published creator contract from silently absorbing engine internals just
+     * because an engine class that creators do touch happens to expose one.
+     *
+     * <p>Creators can still receive these references at runtime; the contract
+     * promise is simply that nothing about their shape is guaranteed. Adding an
+     * entry is an explicit review step, pinned by
+     * {@code mods/mod-api-engine-internal-types.txt}. A type that creator content
+     * is genuinely expected to consume belongs in the inventory with {@code @ModApi}
+     * instead of here.
+     */
+    private static final Set<String> ENGINE_INTERNAL_TYPES = Set.of(
+            // Hardware-timing service and its ROM work ledger: engine scheduling of
+            // ROM-paced work, reached via ObjectServices.hardwareTiming().
+            "com.openggf.game.timing.HardwareTimingService",
+            "com.openggf.game.timing.HardwareTimingSnapshot",
+            "com.openggf.game.timing.HardwareWorkHandle",
+            "com.openggf.game.timing.HardwareWorkKind",
+            "com.openggf.game.timing.HardwareWorkSubmission",
+            "com.openggf.game.timing.HardwareServiceBoundary",
+            "com.openggf.game.timing.HardwareReadinessAdmissionPolicy",
+            "com.openggf.game.timing.RecordedCompletionAuthority",
+            "com.openggf.game.timing.RomWorkBudgetScheduler",
+            // Initial ProcessSprites assembly: the engine's own level-start dispatch
+            // ordering, exposed through GameModule/LevelManager/SpriteManager plumbing.
+            "com.openggf.level.InitialFixedSstDispatcher",
+            "com.openggf.level.InitialProcessSpritesLevelManagerBase",
+            "com.openggf.level.objects.InitialObjectDispatchScope",
+            "com.openggf.sprites.managers.InitialPlayableInput",
+            "com.openggf.sprites.managers.PlayableSstDispatcher",
+            "com.openggf.sprites.managers.ProcessSpritesEpoch",
+            "com.openggf.game.InitialProcessSpritesLifecycle",
+            "com.openggf.game.LevelAssemblyKind",
+            // Solid-contact resolution internals reached from ObjectManager.
+            "com.openggf.level.objects.ObjectSolidContactController",
+            "com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$CollisionResponseState",
+            "com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$CollisionBuildStage",
+            // Trace replay profiles: engine test/replay plumbing on GameModule.
+            "com.openggf.game.profiles.trace.TracePlaybackProfile",
+            "com.openggf.game.profiles.trace.TracePlaybackProfile$LevelIdentity",
+            "com.openggf.game.profiles.trace.TracePlaybackProfile$RecordedLevelIdentityProfile",
+            // Audio presentation ownership: the producer/sink pipeline behind
+            // AudioManager. Creator audio goes through StreamedMusicPort instead.
+            "com.openggf.audio.MusicRestoreSink",
+            "com.openggf.audio.LiveCaptureAudioHandle",
+            "com.openggf.audio.output.AudioPresentationSink",
+            "com.openggf.audio.presentation.AudioPresentationFrameView",
+            "com.openggf.audio.presentation.AudioPresentationSnapshot",
+            "com.openggf.audio.presentation.PresentationMode",
+            "com.openggf.audio.smps.SmpsCoordFlagHandlerOwner",
+            "com.openggf.audio.smps.SmpsCoordFlagRuntimeState",
+            // Host-side observers and input chords.
+            "com.openggf.camera.Camera$UpdateObserver",
+            "com.openggf.configuration.KeyChord",
+            "com.openggf.configuration.KeyChord$Modifier",
+            "com.openggf.debug.FrameSampleSink",
+            "com.openggf.audio.AudioPresentationTuning",
+            "com.openggf.game.timing.HardwareTimingBoundaryObserver",
+            // The hardware-timing trace input port. Hard rule 4 confines this
+            // contract to the timing port itself; it is never creator API.
+            "com.openggf.trace.timing.HardwareTimingSchedule",
+            "com.openggf.trace.timing.HardwareCompletionEdge");
+
+    /** Curated engine-internal terminals, for explicit review pinning. */
+    public static SortedSet<String> engineInternalTypeNames() {
+        return new TreeSet<>(ENGINE_INTERNAL_TYPES);
+    }
+
+    private static boolean isEngineInternal(Class<?> type) {
+        return ENGINE_INTERNAL_TYPES.contains(type.getName());
+    }
+
     private ModApiSignatureSurface() { }
 
     public static SortedSet<Class<?>> recursiveTypes() {
@@ -39,7 +123,7 @@ public final class ModApiSignatureSurface {
         ArrayDeque<Class<?>> pending = new ArrayDeque<>(ModApiSurfaceInventory.rootTypes());
         while (!pending.isEmpty()) {
             Class<?> type = pending.removeFirst();
-            if (!isEngine(type) || !result.add(type)) continue;
+            if (!isEngine(type) || isEngineInternal(type) || !result.add(type)) continue;
             for (String name : classfileAnnotationReferencedTypeNames(type)) {
                 Class<?> referenced = loadReference(name, type.getClassLoader());
                 if (isEngine(referenced)) pending.add(referenced);

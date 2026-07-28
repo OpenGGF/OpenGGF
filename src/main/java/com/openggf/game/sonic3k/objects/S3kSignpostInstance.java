@@ -41,6 +41,27 @@ public class S3kSignpostInstance extends AbstractObjectInstance
     // ---- State machine ----
     private enum State { INIT, FALLING, LANDED, RESULTS, AFTER }
 
+    /**
+     * Engine-only timing adjustment retained until MGZ's real missing ROM
+     * owner is identified. This does not describe native SST allocation:
+     * captured MGZ and HCZ results children both allocate into lower slot 8
+     * and begin on the next object pass.
+     */
+    enum ResultsChildTimingAdjustment {
+        NONE(0),
+        UNSUPPORTED_GROUNDED_COMPENSATION(1);
+
+        private final int catchUpEntries;
+
+        ResultsChildTimingAdjustment(int catchUpEntries) {
+            this.catchUpEntries = catchUpEntries;
+        }
+
+        int catchUpEntries() {
+            return catchUpEntries;
+        }
+    }
+
     private State state = State.INIT;
 
     // ---- Physics (pixel-level velocities, fixed-point 8.8 where noted) ----
@@ -121,6 +142,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance
     private boolean landingSparklePending;
     private boolean preservesPostLandingSparkleGate;
     private boolean preservesPostObjectResultDispatchBoundary;
+    private boolean preservesGroundedResultsDispatchBoundary;
 
     /**
      * Creates the signpost at the given X position.
@@ -146,14 +168,13 @@ public class S3kSignpostInstance extends AbstractObjectInstance
 
     S3kSignpostInstance(int spawnX, int apparentAct, int resultsTimerCatchUpEntries,
             int resultsWaitDurationAdjustment, int resultsPostControlHandoffDelayEntries) {
-        this(spawnX, apparentAct, resultsTimerCatchUpEntries,
-                resultsWaitDurationAdjustment, resultsPostControlHandoffDelayEntries,
-                RESULTS_CARRIED_RETIRE_DISPATCHES);
+        this(spawnX, apparentAct, resultsTimerCatchUpEntries, resultsWaitDurationAdjustment,
+                resultsPostControlHandoffDelayEntries, false);
     }
 
     S3kSignpostInstance(int spawnX, int apparentAct, int resultsTimerCatchUpEntries,
             int resultsWaitDurationAdjustment, int resultsPostControlHandoffDelayEntries,
-            int resultsRetireDispatches) {
+            boolean preservesGroundedResultsDispatchBoundary) {
         super(null, "S3kSignpost");
         this.worldX = spawnX;
         this.worldY = 0; // Set properly in INIT
@@ -161,7 +182,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance
         this.resultsTimerCatchUpEntries = Math.max(0, resultsTimerCatchUpEntries);
         this.resultsWaitDurationAdjustment = Math.max(0, resultsWaitDurationAdjustment);
         this.resultsPostControlHandoffDelayEntries = Math.max(0, resultsPostControlHandoffDelayEntries);
-        this.resultsRetireDispatches = Math.max(0, resultsRetireDispatches);
+        this.preservesGroundedResultsDispatchBoundary = preservesGroundedResultsDispatchBoundary;
     }
 
     private S3kSignpostInstance() {
@@ -273,8 +294,18 @@ public class S3kSignpostInstance extends AbstractObjectInstance
     // =========================================================================
 
     private void updateFalling(int frameCounter, AbstractPlayableSprite player) {
-        // Apply gravity
-        yVel += GRAVITY;
+        // ROM Obj_EndSignFall owns interaction before gravity and MoveSprite2:
+        // sparkle -> EndSign_CheckPlayerHit -> addi #$C,y_vel -> movement.
+        if (isRomSparkleFrame(frameCounter)) {
+            spawnRomSparkle();
+        }
+        if (romBumpCheckAvailableAfterCooldownEntry(bumpCooldown)) {
+            checkBumpFromBelow(player);
+        } else {
+            bumpCooldown--;
+        }
+
+        yVel = romVelocityAfterGravity(yVel);
 
         // Move (8.8 fixed-point accumulation)
         subX += xVel;
@@ -284,21 +315,6 @@ public class S3kSignpostInstance extends AbstractObjectInstance
         subY += yVel;
         worldY += subY >> 8;
         subY &= 0xFF;
-
-        // Decrement bump cooldown
-        if (bumpCooldown > 0) {
-            bumpCooldown--;
-        }
-
-        // Sparkle effect
-        // ROM tests the global V_int_run_count low bits, not a counter local
-        // to the signpost's allocation frame.
-        if (isRomSparkleFrame(frameCounter)) {
-            spawnRomSparkle();
-        }
-
-        // Check bump from below
-        checkBumpFromBelow(player);
 
         // Wall bounce
         var camera = services().camera();
@@ -350,6 +366,14 @@ public class S3kSignpostInstance extends AbstractObjectInstance
 
     static boolean isRomSparkleFrame(int frameCounter) {
         return (frameCounter & (SPARKLE_INTERVAL - 1)) == 0;
+    }
+
+    static int romVelocityAfterGravity(int velocity) {
+        return (short) (velocity + GRAVITY);
+    }
+
+    static boolean romBumpCheckAvailableAfterCooldownEntry(int cooldown) {
+        return (cooldown & 0xFF) == 0;
     }
 
     /**
@@ -487,9 +511,8 @@ public class S3kSignpostInstance extends AbstractObjectInstance
         }
 
         boolean sidekickPoseWasAlreadyArmed = sidekickEndingPoseCheckArmed;
-        // Obj_EndSignResults applies P1's ending pose in routine 6 before
-        // allocating results and advancing to routine 8. P2 remains owned by
-        // the later Check_TailsEndPose dispatch.
+        // Obj_EndSignResults owns Set_PlayerEndingPose in routine 6 regardless
+        // of whether its first entry had to wait for Player_1 to land.
         applyMainPlayerEndingPose(player);
         sidekickEndingPoseCheckArmed = true;
 
@@ -513,18 +536,31 @@ public class S3kSignpostInstance extends AbstractObjectInstance
         if (services().gameState() != null) {
             services().gameState().setEndOfLevelActive(true);
         }
+        ResultsChildTimingAdjustment resultsChildTimingAdjustment = resultsChildTimingAdjustment(
+                resultsWaitedForPlayerLanding,
+                preservesPostObjectResultDispatchBoundary,
+                preservesGroundedResultsDispatchBoundary);
+        int resultsChildCatchUpEntries = resultsChildTimingAdjustment.catchUpEntries();
         spawnFreeChild(() -> new S3kResultsScreenObjectInstance(
                 getPlayerCharacter(), apparentAct, resultsWaitDurationAdjustment,
                 resultsPostControlHandoffDelayEntries
                         + (preservesPostObjectResultDispatchBoundary ? 1 : 0),
                 resultsWaitedForPlayerLanding || preservesPostObjectResultDispatchBoundary
-                        ? Math.min(resultsRetireDispatches, RESULTS_WAITED_LANDING_RETIRE_DISPATCHES)
-                        : resultsRetireDispatches));
+                        ? RESULTS_WAITED_LANDING_RETIRE_DISPATCHES
+                        : RESULTS_CARRIED_RETIRE_DISPATCHES - resultsChildCatchUpEntries,
+                resultsChildTimingAdjustment));
         LOG.fine("S3K Signpost RESULTS -> AFTER (results instance spawned)");
         state = State.AFTER;
         if (preservesPostObjectResultDispatchBoundary && sidekickPoseWasAlreadyArmed) {
             applyNativeSidekickEndingPose(player);
         }
+    }
+
+    static ResultsChildTimingAdjustment resultsChildTimingAdjustment(boolean waitedForPlayerLanding,
+            boolean preservesPostObjectBoundary, boolean preservesGroundedOwnerBoundary) {
+        return waitedForPlayerLanding || preservesPostObjectBoundary || preservesGroundedOwnerBoundary
+                ? ResultsChildTimingAdjustment.NONE
+                : ResultsChildTimingAdjustment.UNSUPPORTED_GROUNDED_COMPENSATION;
     }
 
     static void applySidekickInputLock(AbstractPlayableSprite sprite) {

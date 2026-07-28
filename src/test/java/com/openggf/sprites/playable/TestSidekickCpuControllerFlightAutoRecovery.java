@@ -3,7 +3,9 @@ package com.openggf.sprites.playable;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
+import com.openggf.level.WaterSystem;
 import com.openggf.physics.Direction;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,6 +36,13 @@ class TestSidekickCpuControllerFlightAutoRecovery {
         @Override protected void createSensorLines() {}
         void useGameRules(GameRules featureSet) {
             super.setGameRulesForTest(featureSet);
+        }
+    }
+
+    static class GameplayWaterLineSystem extends WaterSystem {
+        @Override
+        public int getGameplayWaterLevelY(int zoneId, int actId) {
+            return 0x0520;
         }
     }
 
@@ -87,6 +96,56 @@ class TestSidekickCpuControllerFlightAutoRecovery {
                 "X steps toward Sonic by (clamp(|dx|>>4, 0xC) + |Sonic.x_vel| + 1) = 0xD");
         assertEquals(Direction.LEFT, tails.getDirection(),
                 "ROM loc_13C98 sets Status_Facing when routine 4 steers Tails left toward the target");
+    }
+
+    @Test
+    void flightClampsDelayedTargetYToGameplayWaterLine() {
+        GameplayModeContext mode = TestEnvironment.activeGameplayMode();
+        mode.attachLevelManagers(new GameplayWaterLineSystem(), mode.getParallaxManager(),
+                mode.getTerrainCollisionManager(), mode.getCollisionSystem(),
+                mode.getSpriteManager(), mode.getLevelManager());
+
+        TestableSprite sonic = sonicAt(0x1000, 0x0600);
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.useGameRules(GameRules.SONIC_2);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x1100);
+        tails.setCentreY((short) 0x0500);
+        tails.setAir(true);
+        tails.setRenderFlagOnScreen(true);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.FLIGHT_AUTO_RECOVERY, 0);
+
+        controller.update(10);
+
+        assertEquals(0x0510, controller.targetY(),
+                "TailsCPU_Flying_Part2 clamps target_y to Water_Level_1-$10");
+    }
+
+    @Test
+    void s3kFlightPublishesDelayedTargetYBelowGameplayWaterLine() {
+        GameplayModeContext mode = TestEnvironment.activeGameplayMode();
+        mode.attachLevelManagers(new GameplayWaterLineSystem(), mode.getParallaxManager(),
+                mode.getTerrainCollisionManager(), mode.getCollisionSystem(),
+                mode.getSpriteManager(), mode.getLevelManager());
+
+        TestableSprite sonic = sonicAt(0x1000, 0x0600);
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.useGameRules(GameRules.SONIC_3K);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x1100);
+        tails.setCentreY((short) 0x0500);
+        tails.setAir(true);
+        tails.setRenderFlagOnScreen(true);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.FLIGHT_AUTO_RECOVERY, 0);
+
+        controller.update(10);
+
+        assertEquals(0x0600, controller.targetY(),
+                "Tails_FlySwim_Unknown publishes Pos_table Y without S2's water clamp");
     }
 
     @Test
@@ -381,6 +440,34 @@ class TestSidekickCpuControllerFlightAutoRecovery {
                 "ROM loc_13CBE leaves d1 non-zero when Y only became aligned after the +/-1 step");
         assertTrue(tails.isObjectControlled(), "object_control=$81 remains set until the following aligned frame");
         assertTrue(tails.getAir(), "flight recovery remains airborne while object-controlled");
+    }
+
+    @Test
+    void offscreenFlightContinuationClearsPriorObjectMappingOwnership() {
+        TestableSprite sonic = sonicAt(0x1000, 0x0400);
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.useGameRules(GameRules.SONIC_3K);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x1100);
+        tails.setCentreY((short) 0x0300);
+        tails.setAir(false);
+        tails.setRenderFlagOnScreen(false);
+        tails.setAnimationId(0);
+        tails.setForcedAnimationId(-1);
+        tails.setObjectMappingFrameControl(true);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.FLIGHT_AUTO_RECOVERY, 0);
+
+        controller.update(10);
+
+        assertSame(SidekickCpuController.State.FLIGHT_AUTO_RECOVERY, controller.getState());
+        assertEquals(0, tails.getAnimationId(),
+                "off-screen routine 4 preserves an animation byte written by a later object slot");
+        assertEquals(-1, tails.getForcedAnimationId(),
+                "off-screen routine 4 does not call Tails_Set_Flying_Animation");
+        assertFalse(tails.isObjectMappingFrameControl(),
+                "loc_13D42 writes object_control=$81, clearing bit 1 before Animate_Tails");
     }
 
     @Test

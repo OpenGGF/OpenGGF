@@ -100,7 +100,7 @@ avoid starting wide new zone work unless it directly advances a route slice or r
   focused tests.
 - S3K complete-run trace coverage exists as per-zone trace replay tests, using a single Sonic+Tails
   AIZ -> Doomsday route segmented by zone. Current frontiers are explicit in
-  `docs/TRACE_FRONTIER_LOG.md` rather than hidden as informal blockers.
+  `docs/status/trace-frontier-log.md` rather than hidden as informal blockers.
 - The release line gained substantial hardening: trace policy gates, ROM-asset policy checks,
   editor/config/save recovery paths, native/shader packaging validation, branch-policy hooks, and
   architecture ratchets.
@@ -143,7 +143,7 @@ avoid starting wide new zone work unless it directly advances a route slice or r
 
 #### 2. Trace Frontier Closure
 
-- Use `docs/TRACE_FRONTIER_LOG.md` as the canonical parity ledger for complete-run and level-select
+- Use `docs/status/trace-frontier-log.md` as the canonical parity ledger for complete-run and level-select
   trace state.
 - Prioritize first-divergence owners that block the opened route slices: sidekick CPU handoff,
   object slot/lifetime order, terrain/ring/hurt handoffs, boss/event transitions, and rewind-visible

@@ -51,6 +51,12 @@ public final class S3kTransitionWriteSupport {
         return false;
     }
 
+    public static void preparePreloadedActTitleCardCompletion(LevelEventProvider provider) {
+        if (provider instanceof S3kTransitionEventBridge bridge) {
+            bridge.preparePreloadedActTitleCardCompletion();
+        }
+    }
+
     public static void requestMgzPostTransitionRelease(LevelEventProvider provider) {
         if (provider instanceof S3kTransitionEventBridge bridge) {
             bridge.requestMgzPostTransitionRelease();

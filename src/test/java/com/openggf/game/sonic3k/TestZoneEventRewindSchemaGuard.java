@@ -42,8 +42,24 @@ public class TestZoneEventRewindSchemaGuard {
             // Test timing seam only. The production constructors resolve ObjectManager's
             // rewind-captured VBlank counter; this supplier is structural and cannot contribute
             // mutable gameplay state to a rewind snapshot.
-            "vblankCounterSource");
-    private static final Set<String> HCZ_ALLOWED_TRANSIENT_FIELDS = Set.of("wallObject");
+            "vblankCounterSource",
+            // Queue facades/handles are derived from the scalar ordinal codecs
+            // after HardwareTimingService restores its session ledger.
+            "mainLevelArtKosQueue",
+            "mainLevelArtHandle",
+            "battleshipKosQueue",
+            "battleshipTerrainArtHandle",
+            "battleshipObjectArtHandle",
+            "fireOverlayKosQueue",
+            "fireOverlayKosHandle",
+            "act2ArtKosQueue",
+            "act2PrimaryArtHandle",
+            "act2SecondaryArtHandle");
+    private static final Set<String> HCZ_ALLOWED_TRANSIENT_FIELDS = Set.of(
+            "wallObject",
+            // Derived from transitionKosOrdinal after the timing ledger restore.
+            "transitionKosQueue",
+            "transitionKosHandle");
     private static final Set<String> CNZ_ALLOWED_TRANSIENT_FIELDS = Set.of();
     private static final Set<String> MGZ_ALLOWED_TRANSIENT_FIELDS = Set.of(
             "activeRobotnik",

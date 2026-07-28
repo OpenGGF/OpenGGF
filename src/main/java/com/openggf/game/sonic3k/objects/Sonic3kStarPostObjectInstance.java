@@ -3,7 +3,9 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.BonusStageType;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.CheckpointState;
+import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -78,26 +80,40 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
      * <p>
      * Each variant maps to a different bonus stage and loads different star art:
      * <ul>
-     *   <li>YELLOW (Stars3, remainder=0) → Gumball Machine ($1500)</li>
+     *   <li>RED (Stars3, remainder=0) → Slot Machine ($1500)</li>
      *   <li>BLUE (Stars1, remainder=1) → Glowing Spheres ($1400)</li>
-     *   <li>RED (Stars2, remainder=2) → Slot Machine ($1300, S3K only)</li>
+     *   <li>YELLOW (Stars2, remainder=2) → Gumball Machine ($1300, S3K only)</li>
      * </ul>
      */
     public enum BonusStarVariant {
-        YELLOW(1.0f, 1.0f, 0.3f, BonusStageType.GUMBALL, ObjectArtKeys.CHECKPOINT_STAR_YELLOW),
-        BLUE(0.3f, 0.5f, 1.0f, BonusStageType.GLOWING_SPHERE, ObjectArtKeys.CHECKPOINT_STAR_BLUE),
-        RED(1.0f, 0.3f, 0.3f, BonusStageType.SLOT_MACHINE, ObjectArtKeys.CHECKPOINT_STAR_RED);
+        YELLOW(1.0f, 1.0f, 0.3f, BonusStageType.GUMBALL,
+                ObjectArtKeys.CHECKPOINT_STAR_YELLOW,
+                Sonic3kConstants.ART_KOSM_STARPOST_STARS2_ADDR),
+        BLUE(0.3f, 0.5f, 1.0f, BonusStageType.GLOWING_SPHERE,
+                ObjectArtKeys.CHECKPOINT_STAR_BLUE,
+                Sonic3kConstants.ART_KOSM_STARPOST_STARS1_ADDR),
+        RED(1.0f, 0.3f, 0.3f, BonusStageType.SLOT_MACHINE,
+                ObjectArtKeys.CHECKPOINT_STAR_RED,
+                Sonic3kConstants.ART_KOSM_STARPOST_STARS3_ADDR);
 
         public final float r, g, b;
         public final BonusStageType bonusStageType;
         public final String artKey;
+        public final int artSourceAddress;
 
-        BonusStarVariant(float r, float g, float b, BonusStageType bonusStageType, String artKey) {
+        BonusStarVariant(
+                float r,
+                float g,
+                float b,
+                BonusStageType bonusStageType,
+                String artKey,
+                int artSourceAddress) {
             this.r = r;
             this.g = g;
             this.b = b;
             this.bonusStageType = bonusStageType;
             this.artKey = artKey;
+            this.artSourceAddress = artSourceAddress;
         }
     }
 
@@ -346,6 +362,12 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
         for (int i = 0; i < 4; i++) {
             int angleOffset = i * 0x40;
             spawnChild(() -> new Sonic3kStarPostBonusStarChild(this, angleOffset, variant));
+        }
+        ObjectRenderManager renderManager = services().renderManager();
+        if (renderManager != null
+                && renderManager.getArtProvider()
+                instanceof Sonic3kObjectArtProvider provider) {
+            provider.queueStarPostBonusArt(variant.artSourceAddress);
         }
     }
 

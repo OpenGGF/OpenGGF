@@ -21,6 +21,7 @@ import com.openggf.game.solid.SolidExecutionRegistry;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.game.zone.ZoneRuntimeState;
+import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.LevelManager;
@@ -183,6 +184,11 @@ public final class GameServices {
         return mode != null ? mode.getSolidExecutionRegistry() : null;
     }
 
+    public static HardwareTimingService hardwareTimingOrNull() {
+        GameplayModeContext mode = gameplayModeOrNull();
+        return mode != null ? mode.hardwareTiming() : null;
+    }
+
     // â”€â”€ Gameplay-scoped managers (resolve through SessionManager) â”€â”€â”€â”€â”€â”€â”€â”€
 
     /**
@@ -195,6 +201,11 @@ public final class GameServices {
 
     public static LevelManager level() {
         return requireGameplayMode("level").getLevelManager();
+    }
+
+    /** Session-owned hardware preparation/readiness service for non-object code. */
+    public static HardwareTimingService hardwareTiming() {
+        return requireGameplayMode("hardwareTiming").hardwareTiming();
     }
 
     /**

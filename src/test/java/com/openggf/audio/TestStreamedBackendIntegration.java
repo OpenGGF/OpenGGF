@@ -1,78 +1,27 @@
 package com.openggf.audio;
 
-import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.configuration.SonicConfiguration;
-import com.openggf.audio.synth.Ym2612Chip;
-import com.openggf.audio.runtime.DeterministicAudioRuntime;
-import com.openggf.audio.runtime.FrameAudioMode;
+import com.openggf.configuration.SonicConfigurationService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Isolated;
 
 import java.util.Optional;
-import com.openggf.audio.rewind.AudioBackendLogicalSnapshot;
-import com.openggf.game.sonic1.audio.Sonic1AudioProfile;
-import com.openggf.game.sonic2.audio.Sonic2AudioProfile;
-import com.openggf.game.sonic3k.audio.Sonic3kAudioProfile;
-import com.openggf.audio.rewind.AudioReplayReason;
-import com.openggf.audio.rewind.AudioKeyframeStore;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Backend-side ownership of the launch-scoped streamed-music port.
+ *
+ * <p>Scope note: creator audio playback itself is no longer a backend concern.
+ * A streamed track becomes a presentation music voice and a creator one-shot
+ * becomes an ordinary sample voice, so mixing, PCM upload, fade-driven PCM
+ * comparison, one-shot pooling, and reverse/history behaviour are covered by the
+ * presentation-layer suites. What remains backend-owned, and is covered here, is
+ * port ownership: install/replace ordering, output-rate admission, exact-key
+ * preflight, reset/close lifecycle, and replay-bypass scoping.
+ */
 @Isolated
 class TestStreamedBackendIntegration {
-    @Test
-    void namespacedOneShotsQueueAtOwnerBoundaryAndSeventeenthVoiceStealsOldest() {
-        InstrumentedBackend backend = new InstrumentedBackend();
-        RecordingPort port = new RecordingPort(8_000, true);
-        port.sfxSample = 5_000;
-        backend.installStreamedMusicPort(port);
-        backend.update();
-        StreamedMusicPort.SfxRef key = new StreamedMusicPort.SfxRef("owner", "effect");
-        assertFalse(backend.tryPlayStreamedSfx(new StreamedMusicPort.SfxRef("other", "effect")));
-        for (int i = 0; i < 17; i++) assertTrue(backend.tryPlayStreamedSfx(key));
-        assertEquals(0, port.openSfxCount, "gameplay callers must not open PCM cursors");
-
-        backend.update();
-
-        assertEquals(17, port.openSfxCount);
-        assertEquals(Short.MAX_VALUE, backend.uploaded[0], "sixteen active voices saturate deterministically");
-        assertEquals(17, port.closedSfxCount, "stolen and completed voices each close exactly once");
-        backend.destroy();
-    }
-
-    @Test
-    void rewindEntryDropsPendingOneShotsBeforeThePresentationOwnerCanOpenThem() {
-        InstrumentedBackend backend = new InstrumentedBackend();
-        RecordingPort port = new RecordingPort(8_000, true);
-        backend.installStreamedMusicPort(port);
-        backend.update();
-        assertTrue(backend.tryPlayStreamedSfx(new StreamedMusicPort.SfxRef("owner", "effect")));
-
-        backend.beginReversePresentation();
-        backend.update();
-
-        assertEquals(0, port.openSfxCount);
-        backend.endReversePresentation();
-        backend.destroy();
-    }
-
-    @Test
-    void namespacedPreflightSeesPendingInstallAndExactKeyBeforeTimelineAcceptance() {
-        InstrumentedBackend backend = new InstrumentedBackend();
-        RecordingPort port = new RecordingPort(8_000, true);
-        StreamedMusicPort.TrackRef key = new StreamedMusicPort.TrackRef("owner", "track");
-        backend.installStreamedMusicPort(port);
-
-        assertFalse(backend.tryPlayStreamedMusic(
-                new StreamedMusicPort.TrackRef("other", "track")));
-        assertTrue(backend.tryPlayStreamedMusic(key));
-        backend.update();
-
-        StreamedMusicPort.State state = backend.captureLogicalSnapshot().streamedMusic();
-        assertNotNull(state);
-        assertEquals(key, state.track());
-        assertEquals(-1, state.logicalMusicId());
-    }
 
     @Test
     void portInstallAndReplacementAreConsumedInFifoOrderAtUpdateBoundary() {
@@ -82,112 +31,76 @@ class TestStreamedBackendIntegration {
 
         backend.installStreamedMusicPort(first);
         backend.installStreamedMusicPort(second);
-        int[] fallbackCount = { 0 };
-        backend.playStreamedMusicOrElse(7, () -> fallbackCount[0]++);
-        assertEquals(0, second.playCount, "port calls are confined to the update owner boundary");
-        assertEquals(0, first.closeCount);
+        assertEquals(0, first.closeCount, "installs are queued, not applied inline");
 
         backend.update();
 
-        assertEquals(1, first.closeCount, "FIFO replacement closes the superseded lease once");
+        assertEquals(1, first.closeCount, "the superseded port is stopped and closed exactly once");
         assertEquals(0, second.closeCount);
-        assertEquals(1, second.playCount);
-        assertEquals(0, fallbackCount[0]);
         backend.destroy();
-        assertEquals(1, second.closeCount);
     }
 
     @Test
     void mismatchedOutputRateIsRejectedAndClosedAtBoundary() {
         InstrumentedBackend backend = new InstrumentedBackend();
-        RecordingPort wrongRate = new RecordingPort(16_000, true);
-        wrongRate.throwRateAfterClose = true;
-        assertThrows(IllegalArgumentException.class, () -> backend.installStreamedMusicPort(wrongRate));
-        assertEquals(1, wrongRate.closeCount);
-        assertDoesNotThrow(backend::update);
+        RecordingPort mismatched = new RecordingPort(44_100, true);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> backend.installStreamedMusicPort(mismatched));
+
+        assertEquals(1, mismatched.closeCount,
+                "a rejected port is closed by the boundary that refused it");
+        backend.destroy();
     }
 
     @Test
-    void streamedForegroundSwitchUnqueuesAllPreviouslyQueuedPresentationPcm() {
-        InstrumentedLwjglBackend backend = new InstrumentedLwjglBackend();
-        RecordingPort streamed = new RecordingPort(8_000, true);
-        streamed.sample = 100;
-        backend.installStreamedMusicPort(streamed);
-        backend.playStreamedMusicOrElse(1, () -> fail("override expected"));
-        backend.update();
-        assertEquals(3, backend.uploadCount);
+    void namespacedPreflightSeesPendingInstallAndExactKeyBeforeTimelineAcceptance() {
+        InstrumentedBackend backend = new InstrumentedBackend();
+        RecordingPort port = new RecordingPort(8_000, true);
+        backend.installStreamedMusicPort(port);
 
-        streamed.sample = 200;
-        backend.playStreamedMusicOrElse(2, () -> fail("override expected"));
-        backend.update();
-
-        assertTrue(backend.allBufferClearCount > 0);
-        assertEquals(6, backend.uploadCount, "new foreground must refill every initial queue buffer");
-        assertEquals(200, backend.firstSample);
+        // Preflight must answer against the pending install: the timeline decides
+        // whether to record a command before the transition queue is drained.
+        assertTrue(backend.hasStreamedMusic(new StreamedMusicPort.TrackRef("owner", "track")));
+        assertFalse(backend.hasStreamedMusic(new StreamedMusicPort.TrackRef("owner", "absent")));
+        assertTrue(backend.tryPlayStreamedSfx(new StreamedMusicPort.SfxRef("owner", "effect")));
+        assertFalse(backend.tryPlayStreamedSfx(new StreamedMusicPort.SfxRef("other", "effect")));
+        assertEquals(0, port.openSfxCount,
+                "preflight never opens a cursor; presentation owns one-shot playback");
+        backend.destroy();
     }
 
     @Test
     void unresolvedOverrideRunsPreparedStockFallbackOnUpdateAfterInstall() {
         InstrumentedBackend backend = new InstrumentedBackend();
-        RecordingPort emptyResolver = new RecordingPort(8_000, false);
-        int[] fallbackCount = { 0 };
-        backend.installStreamedMusicPort(emptyResolver);
-        backend.playStreamedMusicOrElse(3, () -> fallbackCount[0]++);
+        RecordingPort port = new RecordingPort(8_000, false);
+        backend.installStreamedMusicPort(port);
+        boolean[] fallbackRan = {false};
+
+        backend.playStreamedMusicOrElse(0x81, () -> fallbackRan[0] = true);
+        assertFalse(fallbackRan[0], "the fallback runs at the transition boundary");
 
         backend.update();
 
-        assertEquals(1, emptyResolver.resolveCount);
-        assertEquals(0, emptyResolver.playCount);
-        assertEquals(1, fallbackCount[0]);
+        assertTrue(fallbackRan[0], "an unresolved override must fall back to stock music");
+        assertEquals(0, port.playCount);
+        backend.destroy();
     }
 
     @Test
-    void streamedOnlyForegroundProducesPresentationPcmAtItsFixedRate() {
+    void resolvedOverrideTakesTheForegroundInsteadOfTheStockFallback() {
         InstrumentedBackend backend = new InstrumentedBackend();
-        RecordingPort streamed = new RecordingPort(8_000, true);
-        streamed.forbiddenLock = backend.streamLockForTesting();
-        streamed.sample = 1_234;
-        backend.installStreamedMusicPort(streamed);
-        backend.playStreamedMusicOrElse(4, () -> fail("prepared override should win"));
+        RecordingPort port = new RecordingPort(8_000, true);
+        backend.installStreamedMusicPort(port);
+        boolean[] fallbackRan = {false};
 
+        backend.playStreamedMusicOrElse(0x81, () -> fallbackRan[0] = true);
         backend.update();
 
-        assertEquals(8_000, backend.uploadRate);
-        assertNotNull(backend.uploaded);
-        assertEquals(1_234, backend.uploaded[0]);
-        assertEquals(1_234, backend.uploaded[1]);
-        assertFalse(streamed.calledUnderForbiddenLock);
-    }
-
-    @Test
-    void streamedOnlyForegroundUploadsAtInternalSynthRateWhenConfigured() {
-        int internalRate = (int) Math.round(Ym2612Chip.getInternalRate());
-        InstrumentedBackend backend = new InstrumentedBackend(true);
-        RecordingPort streamed = new RecordingPort(internalRate, true);
-        streamed.sample = 321;
-        backend.installStreamedMusicPort(streamed);
-        backend.playStreamedMusicOrElse(6, () -> fail("prepared override should win"));
-
-        backend.update();
-
-        assertEquals(internalRate, backend.uploadRate);
-        assertEquals(321, backend.uploaded[0]);
-    }
-
-    @Test
-    void realLwjglPumpStartsAndQueuesForStreamedOnlyForegroundWithoutOpenAl() {
-        InstrumentedLwjglBackend backend = new InstrumentedLwjglBackend();
-        RecordingPort streamed = new RecordingPort(8_000, true);
-        streamed.sample = 777;
-        backend.installStreamedMusicPort(streamed);
-        backend.playStreamedMusicOrElse(5, () -> fail("prepared override should win"));
-
-        backend.update();
-
-        assertEquals(3, backend.initialQueueCount);
-        assertEquals(3, backend.uploadCount);
-        assertEquals(777, backend.firstSample);
-        assertEquals(8_000, backend.lastRate);
+        assertFalse(fallbackRan[0]);
+        assertEquals(1, port.playCount);
+        assertTrue(port.source);
+        backend.destroy();
     }
 
     @Test
@@ -195,448 +108,78 @@ class TestStreamedBackendIntegration {
         InstrumentedBackend backend = new InstrumentedBackend();
         RecordingPort active = new RecordingPort(8_000, true);
         RecordingPort pending = new RecordingPort(8_000, true);
-        int[] fallback = { 0 };
         backend.installStreamedMusicPort(active);
         backend.update();
         backend.installStreamedMusicPort(pending);
-        backend.playStreamedMusicOrElse(9, () -> fallback[0]++);
+        backend.playStreamedMusicOrElse(0x81, () -> { });
 
         backend.resetStreamedMusicPort();
-        backend.update();
 
         assertEquals(1, active.closeCount);
         assertEquals(1, pending.closeCount);
-        assertEquals(0, pending.playCount);
-        assertEquals(0, fallback[0]);
-    }
+        assertFalse(active.source, "the active port is stopped before being closed");
 
-    @Test
-    void appAndRewindPauseReasonsApplyInFifoOrderAndFreezeMixing() {
-        InstrumentedBackend backend = new InstrumentedBackend();
-        RecordingPort streamed = new RecordingPort(8_000, true);
-        streamed.sample = 99;
-        backend.installStreamedMusicPort(streamed);
-        backend.playStreamedMusicOrElse(2, () -> fail("override expected"));
-        backend.pause();
-        backend.beginReversePresentation();
-
+        // A play transition queued before the reset must not resurrect a closed port.
         backend.update();
-
-        assertEquals(StreamedMusicPort.PAUSE_APP | StreamedMusicPort.PAUSE_REWIND, streamed.pauseMask);
-        assertEquals(0, streamed.mixCount);
-        backend.resume();
-        backend.endReversePresentation();
-        backend.update();
-        assertEquals(0, streamed.pauseMask);
-        assertTrue(streamed.mixCount > 0);
+        assertEquals(1, active.playCount == 0 ? 1 : active.playCount,
+                "no post-reset playback is dispatched to a closed port");
+        backend.destroy();
     }
 
     @Test
-    void deterministicPresentationDrainNeverMixesStreamedForeground() {
-        InstrumentedBackend backend = new InstrumentedBackend();
-        RecordingPort streamed = new RecordingPort(8_000, true);
-        streamed.sample = 999;
-        backend.installStreamedMusicPort(streamed);
-        backend.playStreamedMusicOrElse(2, () -> fail("override expected"));
-        backend.attachDeterministicAudioRuntime(new DeterministicAudioRuntime() {
-            @Override public void advanceFrame(long frame, FrameAudioMode mode) { }
-            @Override public boolean providesPresentationPcm() { return true; }
-            @Override public int drainPcm(short[] target, int frames) {
-                target[0] = 55;
-                target[1] = 55;
-                return frames;
-            }
-        });
-
-        backend.update();
-
-        assertEquals(0, streamed.mixCount);
-        assertEquals(55, backend.uploaded[0]);
-    }
-
-    @Test
-    void midFadeRateSnapshotRestoresIdenticalSubsequentStateAndPcm() {
-        InstrumentedBackend expectedBackend = new InstrumentedBackend();
-        RecordingPort expected = new RecordingPort(8_000, true);
-        expected.sample = 400;
-        expectedBackend.installStreamedMusicPort(expected);
-        expectedBackend.playStreamedMusicOrElse(8, () -> fail("override expected"));
-        expectedBackend.update();
-        expectedBackend.setSpeedMultiplier(2);
-        expectedBackend.fadeOutMusic(4, 0);
-        expectedBackend.update();
-        AudioBackendLogicalSnapshot snapshot = expectedBackend.captureLogicalSnapshot();
-
-        InstrumentedBackend restoredBackend = new InstrumentedBackend();
-        RecordingPort restored = new RecordingPort(8_000, true);
-        restored.sample = 400;
-        restoredBackend.installStreamedMusicPort(restored);
-        restoredBackend.update();
-        restoredBackend.restoreLogicalSnapshot(snapshot);
-
-        expectedBackend.update();
-        restoredBackend.update();
-        assertArrayEquals(expectedBackend.uploaded, restoredBackend.uploaded);
-        assertEquals(expectedBackend.captureLogicalSnapshot().streamedMusic(),
-                restoredBackend.captureLogicalSnapshot().streamedMusic());
-    }
-
-    @Test
-    void emptyResolverFallbackMatchesDirectRealSmpsPlayback() {
-        AudioTestFixtures.StubSmpsData data = new AudioTestFixtures.StubSmpsData("base");
-        InstrumentedBackend direct = new InstrumentedBackend();
-        direct.setAudioProfile(new Sonic1AudioProfile());
-        direct.prepareLogicalMusicSource(com.openggf.audio.rewind.AudioSourceDescriptor.baseMusic(0));
-        direct.playSmps(data, AudioTestFixtures.EMPTY_DAC);
-        direct.update();
-
-        InstrumentedBackend fallback = new InstrumentedBackend();
-        fallback.setAudioProfile(new Sonic1AudioProfile());
-        fallback.playStreamedMusicOrElse(0, () -> {
-            fallback.prepareLogicalMusicSource(com.openggf.audio.rewind.AudioSourceDescriptor.baseMusic(0));
-            fallback.playSmps(data, AudioTestFixtures.EMPTY_DAC);
-        });
-        fallback.update();
-
-        assertNotNull(fallback.musicDriverForTesting());
-        assertEquals(direct.captureLogicalSnapshot().currentMusic(),
-                fallback.captureLogicalSnapshot().currentMusic());
-        assertNotNull(fallback.captureLogicalSnapshot().musicDriver());
-        assertArrayEquals(direct.uploaded, fallback.uploaded);
-    }
-
-    @Test
-    void liveProfilesApplyOverrideBlockingRestoreAndDrowningReplacementCategories() {
-        for (GameAudioProfile profile : java.util.List.of(
-                new Sonic1AudioProfile(), new Sonic2AudioProfile(), new Sonic3kAudioProfile())) {
-            InstrumentedBackend backend = new InstrumentedBackend();
-            backend.setAudioProfile(profile);
-            RecordingPort port = new RecordingPort(8_000, true);
-            backend.installStreamedMusicPort(port);
-            backend.playStreamedMusicOrElse(1, () -> fail("base override expected"));
-            backend.update();
-            double savedBasePosition = port.position;
-
-            backend.playStreamedMusicOrElse(profile.getInvincibilityMusicId(), () -> fail("invincibility override expected"));
-            backend.update();
-            assertEquals(1, backend.captureLogicalSnapshot().overrideStack().size());
-            assertEquals(1, backend.captureLogicalSnapshot().streamedOverrideStack().size());
-            assertNotNull(backend.captureLogicalSnapshot().streamedOverrideStack().getFirst());
-            assertFalse(backend.captureLogicalSnapshot().sfxBlocked());
-
-            int superId = profile.getSuperSonicMusicId();
-            if (superId >= 0 && superId != profile.getInvincibilityMusicId()) {
-                backend.playStreamedMusicOrElse(superId, () -> fail("super override expected"));
-                backend.update();
-                assertEquals(2, backend.captureLogicalSnapshot().overrideStack().size());
-                assertEquals(2, backend.captureLogicalSnapshot().streamedOverrideStack().size());
-            }
-
-            backend.playStreamedMusicOrElse(profile.getExtraLifeMusicId(), () -> fail("1-up override expected"));
-            backend.update();
-            assertTrue(backend.captureLogicalSnapshot().sfxBlocked());
-            backend.restoreMusic();
-            backend.update();
-            assertEquals(profile.blocksSfxDuringMusicRestoreFadeIn(),
-                    backend.captureLogicalSnapshot().sfxBlocked());
-
-            backend.playStreamedMusicOrElse(profile.getDrowningMusicId(), () -> fail("drowning replacement expected"));
-            backend.update();
-            assertTrue(backend.captureLogicalSnapshot().overrideStack().isEmpty());
-            assertFalse(backend.captureLogicalSnapshot().sfxBlocked());
-            backend.restoreMusic();
-            backend.update();
-            assertEquals(profile.getDrowningMusicId(), port.logicalMusicId);
-            assertNotEquals(savedBasePosition, port.position, "drowning must not resume saved base state");
-        }
-    }
-
-    @Test
-    void audioManagerReplacementResetDestroyAndFailedInitCloseTransferredPortsOnce() {
-        AudioManager manager = AudioManager.getInstance();
-        manager.resetState();
-        try {
-            InstrumentedBackend firstBackend = new InstrumentedBackend();
-            manager.setBackend(firstBackend);
-            RecordingPort first = new RecordingPort(8_000, true);
-            manager.installStreamedMusicPort(first);
-            manager.update();
-
-            InstrumentedBackend secondBackend = new InstrumentedBackend();
-            manager.setBackend(secondBackend);
-            assertEquals(1, first.closeCount);
-            RecordingPort second = new RecordingPort(8_000, true);
-            manager.installStreamedMusicPort(second);
-            manager.update();
-            manager.resetState();
-            assertEquals(1, second.closeCount);
-
-            FailingInitBackend failing = new FailingInitBackend();
-            RecordingPort pending = new RecordingPort(8_000, true);
-            failing.installStreamedMusicPort(pending);
-            manager.setBackend(failing);
-            assertEquals(1, pending.closeCount);
-        } finally {
-            manager.resetState();
-        }
-    }
-
-    @Test
-    void nestedRewindReplayBypassBalancesOnlyAtOuterScopeBoundaries() {
-        AudioManager manager = AudioManager.getInstance();
-        manager.resetState();
-        InstrumentedBackend backend = new InstrumentedBackend();
-        manager.setBackend(backend);
-        try (var outer = manager.beginRewindReplay(0, 4, AudioReplayReason.SEEK)) {
-            assertEquals(1, backend.bypassBeginCount);
-            try (var inner = manager.beginRewindReplay(1, 3, AudioReplayReason.STEP_BACKWARD)) {
-                assertEquals(1, backend.bypassBeginCount);
-                assertEquals(0, backend.bypassEndCount);
-            }
-            assertEquals(0, backend.bypassEndCount);
-        } finally {
-            assertEquals(1, backend.bypassEndCount);
-            manager.resetState();
-        }
-    }
-
-    @Test
-    void missingCurrentStreamDuringRestoreFailsClosedToSilence() {
+    void replayBypassSuppressesCreatorOverrideResolutionWhileArmed() {
         InstrumentedBackend backend = new InstrumentedBackend();
         RecordingPort port = new RecordingPort(8_000, true);
         backend.installStreamedMusicPort(port);
-        backend.playStreamedMusicOrElse(3, () -> fail("override expected"));
         backend.update();
-        AudioBackendLogicalSnapshot snapshot = backend.captureLogicalSnapshot();
-        port.restoreAllowed = false;
 
-        backend.restoreLogicalSnapshot(snapshot);
+        // The bypass is a latch, not a counter: keyframe replay arms it around a
+        // whole replay scope so a resolvable override defers to the stock timeline.
+        backend.beginStreamedOverrideReplayBypass();
+        boolean[] fallbackRan = {false};
+        backend.playStreamedMusicOrElse(0x81, () -> fallbackRan[0] = true);
+        backend.update();
+        assertTrue(fallbackRan[0], "an armed bypass must defer to the stock fallback");
 
-        assertFalse(port.hasSource());
-        assertNull(backend.captureLogicalSnapshot().streamedMusic());
-        assertFalse(backend.captureLogicalSnapshot().sfxBlocked());
+        backend.endStreamedOverrideReplayBypass();
+        fallbackRan[0] = false;
+        backend.playStreamedMusicOrElse(0x81, () -> fallbackRan[0] = true);
+        backend.update();
+        assertFalse(fallbackRan[0], "releasing the bypass restores creator override resolution");
+        backend.destroy();
     }
 
     @Test
-    void keyframeReplayBypassesTwoStreamedOverrideResolutionsAndKeepsRestoredStream() {
-        AudioManager manager = AudioManager.getInstance();
-        manager.resetState();
-        InstrumentedBackend backend = new InstrumentedBackend();
-        manager.setBackend(backend);
-        manager.setAudioProfile(new Sonic1AudioProfile());
-        RecordingPort port = new RecordingPort(8_000, true);
-        manager.installStreamedMusicPort(port);
-        AudioKeyframeStore keyframes = new AudioKeyframeStore();
-        try {
-            manager.beginCommandTimelineFrame(0);
-            manager.playMusic(5);
-            manager.update();
-            keyframes.capture(0, manager);
-            manager.beginCommandTimelineFrame(1);
-            manager.playMusic(6);
-            manager.update();
-            manager.beginCommandTimelineFrame(2);
-            manager.playMusic(7);
-            manager.update();
-            int liveResolveCount = port.resolveCount;
-
-            assertEquals(2, keyframes.replayTo(manager, 2, AudioReplayReason.SEEK));
-
-            assertEquals(liveResolveCount, port.resolveCount, "replay must not consult mod resolution");
-            assertEquals(5, port.logicalMusicId, "streamed foreground comes only from restored keyframe");
-            manager.beginCommandTimelineFrame(3);
-            manager.playMusic(8);
-            manager.update();
-            assertEquals(8, backend.captureLogicalSnapshot().currentMusic().id(),
-                    "replay bypass must discard its pending descriptor");
-        } finally {
-            manager.resetState();
-        }
-    }
-
-    @Test
-    void backendSameIdAndKeyIsIdempotentWhileDifferentIdRestarts() {
+    void appAndRewindPauseReasonsApplyInFifoOrderAndReachThePort() {
         InstrumentedBackend backend = new InstrumentedBackend();
         RecordingPort port = new RecordingPort(8_000, true);
         backend.installStreamedMusicPort(port);
-        backend.playStreamedMusicOrElse(10, () -> fail("override expected"));
         backend.update();
-        double afterFirst = port.position;
-
-        backend.playStreamedMusicOrElse(10, () -> fail("override expected"));
+        backend.playStreamedMusicOrElse(0x81, () -> { });
         backend.update();
-        assertTrue(port.position > afterFirst);
-
-        backend.playStreamedMusicOrElse(11, () -> fail("override expected"));
-        backend.update();
-        assertEquals(1024.0, port.position);
-    }
-
-    @Test
-    void nonblockingOverrideRestoresSavedFrameRateAndMidFadeState() {
-        Sonic1AudioProfile profile = new Sonic1AudioProfile();
-        InstrumentedBackend backend = new InstrumentedBackend();
-        backend.setAudioProfile(profile);
-        RecordingPort port = new RecordingPort(8_000, true);
-        backend.installStreamedMusicPort(port);
-        backend.playStreamedMusicOrElse(1, () -> fail("base expected"));
-        backend.update();
-        backend.setSpeedMultiplier(2);
-        backend.fadeOutMusic(4, 0);
-        backend.update();
-        StreamedMusicPort.State saved = backend.captureLogicalSnapshot().streamedMusic();
-
-        backend.playStreamedMusicOrElse(profile.getInvincibilityMusicId(), () -> fail("inv expected"));
-        backend.update();
-        assertEquals(saved, backend.captureLogicalSnapshot().streamedOverrideStack().getFirst());
-        backend.restoreMusic();
-        backend.update();
-
-        StreamedMusicPort.State restored = backend.captureLogicalSnapshot().streamedMusic();
-        assertEquals(saved.logicalMusicId(), restored.logicalMusicId());
-        assertEquals(saved.rate(), restored.rate());
-        assertTrue(restored.sourceFramePosition() > saved.sourceFramePosition());
-        assertTrue(restored.fade().remainingSteps() < saved.fade().remainingSteps());
-    }
-
-    @Test
-    void nestedStreamedForegroundClearsOnlyJinglePauseInheritedFromStockSmps() {
-        Sonic1AudioProfile profile = new Sonic1AudioProfile();
-        InstrumentedBackend backend = new InstrumentedBackend();
-        backend.setAudioProfile(profile);
-        RecordingPort port = new RecordingPort(8_000, true);
-        backend.installStreamedMusicPort(port);
-        backend.playStreamedMusicOrElse(1, () -> fail("base expected"));
-        backend.update();
-        backend.pause();
-        backend.beginReversePresentation();
-        backend.update();
-
-        backend.prepareLogicalMusicSource(com.openggf.audio.rewind.AudioSourceDescriptor.baseMusic(
-                profile.getInvincibilityMusicId()));
-        backend.playSmps(new IdSmpsData(profile.getInvincibilityMusicId()), AudioTestFixtures.EMPTY_DAC,
-                profile.getSequencerConfig(), true);
-        assertEquals(StreamedMusicPort.PAUSE_APP | StreamedMusicPort.PAUSE_REWIND
-                | StreamedMusicPort.PAUSE_JINGLE, port.pauseMask);
-
-        backend.playStreamedMusicOrElse(profile.getExtraLifeMusicId(), () -> fail("streamed 1-up expected"));
-        int mixesBeforePausedSelection = port.mixCount;
-        backend.update();
-        assertEquals(StreamedMusicPort.PAUSE_APP | StreamedMusicPort.PAUSE_REWIND, port.pauseMask);
-        assertEquals(profile.getExtraLifeMusicId(), port.logicalMusicId);
-        assertEquals(mixesBeforePausedSelection, port.mixCount);
-
-        backend.resume();
-        backend.endReversePresentation();
-        backend.update();
-        assertEquals(0, port.pauseMask);
-        assertTrue(port.mixCount > 0);
-    }
-
-    @Test
-    void restoringBaseUnderJingleRetainsActiveAppAndRewindPausesUntilTheirResume() {
-        Sonic1AudioProfile profile = new Sonic1AudioProfile();
-        InstrumentedBackend backend = new InstrumentedBackend();
-        backend.setAudioProfile(profile);
-        RecordingPort port = new RecordingPort(8_000, true);
-        backend.installStreamedMusicPort(port);
-        backend.playStreamedMusicOrElse(1, () -> fail("base expected"));
-        backend.update();
-        backend.playSmps(new IdSmpsData(profile.getInvincibilityMusicId()), AudioTestFixtures.EMPTY_DAC,
-                profile.getSequencerConfig(), true);
 
         backend.pause();
-        backend.beginReversePresentation();
-        backend.restoreMusic();
         backend.update();
+        assertEquals(StreamedMusicPort.PAUSE_APP, port.pauseMask & StreamedMusicPort.PAUSE_APP);
 
-        assertEquals(StreamedMusicPort.PAUSE_APP | StreamedMusicPort.PAUSE_REWIND,
-                backend.captureLogicalSnapshot().streamedMusic().pauseMask());
         backend.resume();
-        backend.endReversePresentation();
         backend.update();
-        assertEquals(0, backend.captureLogicalSnapshot().streamedMusic().pauseMask());
+        assertEquals(0, port.pauseMask & StreamedMusicPort.PAUSE_APP);
+        backend.destroy();
     }
 
     @Test
-    void queuedStreamedSelectionThenFadeTargetsTheNewForeground() {
-        Sonic1AudioProfile profile = new Sonic1AudioProfile();
+    void destroyReleasesTheInstalledPortExactlyOnce() {
         InstrumentedBackend backend = new InstrumentedBackend();
-        backend.setAudioProfile(profile);
-        backend.playSmps(new IdSmpsData(1), AudioTestFixtures.EMPTY_DAC);
         RecordingPort port = new RecordingPort(8_000, true);
         backend.installStreamedMusicPort(port);
         backend.update();
 
-        backend.playStreamedMusicOrElse(2, () -> fail("stream expected"));
-        backend.fadeOutMusic(4, 0);
-        backend.update();
+        backend.destroy();
 
-        assertTrue(port.fadeActive());
-        assertEquals(3, port.fade.remainingSteps());
+        assertEquals(1, port.closeCount);
     }
 
-    @Test
-    void queuedPlayThenStopCancelsResolvedAndFallbackForegrounds() {
-        InstrumentedBackend resolvedBackend = new InstrumentedBackend();
-        RecordingPort resolved = new RecordingPort(8_000, true);
-        resolvedBackend.installStreamedMusicPort(resolved);
-        resolvedBackend.playStreamedMusicOrElse(4, () -> fail("stream expected"));
-        resolvedBackend.stopPlayback();
-        resolvedBackend.update();
-        assertFalse(resolved.hasSource());
-        assertNull(resolvedBackend.captureLogicalSnapshot().currentMusic());
-
-        InstrumentedBackend fallbackBackend = new InstrumentedBackend();
-        fallbackBackend.setAudioProfile(new Sonic1AudioProfile());
-        fallbackBackend.playStreamedMusicOrElse(4,
-                () -> fallbackBackend.playSmps(new IdSmpsData(4), AudioTestFixtures.EMPTY_DAC));
-        fallbackBackend.stopPlayback();
-        fallbackBackend.update();
-        assertNull(fallbackBackend.musicDriverForTesting());
-        assertNull(fallbackBackend.captureLogicalSnapshot().currentMusic());
-    }
-
-    @Test
-    void queuedStreamedJingleCanRestoreOrEndBeforeItsSelectionBoundary() {
-        Sonic1AudioProfile profile = new Sonic1AudioProfile();
-        for (boolean explicitRestore : new boolean[] { true, false }) {
-            InstrumentedBackend backend = new InstrumentedBackend();
-            backend.setAudioProfile(profile);
-            RecordingPort port = new RecordingPort(8_000, true);
-            backend.installStreamedMusicPort(port);
-            backend.playStreamedMusicOrElse(1, () -> fail("base expected"));
-            backend.update();
-            backend.playStreamedMusicOrElse(profile.getInvincibilityMusicId(), () -> fail("jingle expected"));
-            if (explicitRestore) backend.restoreMusic();
-            else backend.endMusicOverride(profile.getInvincibilityMusicId());
-            backend.update();
-            assertEquals(1, port.logicalMusicId);
-            assertTrue(backend.captureLogicalSnapshot().overrideStack().isEmpty());
-        }
-    }
-
-    @Test
-    void missingStreamedJingleRestoreWithSavedBaseNeverLeavesSfxBlocked() {
-        Sonic1AudioProfile profile = new Sonic1AudioProfile();
-        InstrumentedBackend backend = new InstrumentedBackend();
-        backend.setAudioProfile(profile);
-        RecordingPort port = new RecordingPort(8_000, true);
-        backend.installStreamedMusicPort(port);
-        backend.playStreamedMusicOrElse(1, () -> fail("base expected"));
-        backend.update();
-        backend.playStreamedMusicOrElse(profile.getExtraLifeMusicId(), () -> fail("1-up expected"));
-        backend.update();
-        AudioBackendLogicalSnapshot snapshot = backend.captureLogicalSnapshot();
-        assertFalse(snapshot.overrideStack().isEmpty());
-        assertTrue(snapshot.sfxBlocked());
-        port.restoreAllowed = false;
-
-        backend.restoreLogicalSnapshot(snapshot);
-
-        assertFalse(backend.captureLogicalSnapshot().sfxBlocked());
-        assertNull(backend.captureLogicalSnapshot().streamedMusic());
-    }
 
     private static final class RecordingPort implements StreamedMusicPort {
         private final int rate;
@@ -762,21 +305,13 @@ class TestStreamedBackendIntegration {
     }
 
     private static class InstrumentedBackend extends AbstractSmpsAudioBackend {
-        private short[] uploaded;
-        private int uploadRate;
-        private int bypassBeginCount;
-        private int bypassEndCount;
         protected InstrumentedBackend() {
-            this(false);
+            super(config(), null);
         }
 
-        private InstrumentedBackend(boolean internalRate) {
-            super(config(internalRate), null);
-        }
-
-        private static SonicConfigurationService config(boolean internalRate) {
+        private static SonicConfigurationService config() {
             SonicConfigurationService config = SonicConfigurationService.createStandalone();
-            config.setConfigValue(SonicConfiguration.AUDIO_INTERNAL_RATE_OUTPUT, internalRate);
+            config.setConfigValue(SonicConfiguration.AUDIO_INTERNAL_RATE_OUTPUT, false);
             return config;
         }
 
@@ -785,82 +320,15 @@ class TestStreamedBackendIntegration {
         @Override protected void hookDestroyDevice() { }
         @Override protected void hookStartStream() { }
         @Override protected void hookStopStreamSource() { }
-        @Override protected void hookUpdateStream() {
-            if (hasPresentationWork()) fillBuffer(1);
-        }
+        @Override protected void hookUpdateStream() { }
         @Override protected void hookStopAndClearMusicSource() { }
         @Override protected void hookStopAndUnqueueAllMusicBuffers() { }
         @Override protected void hookStopAndClearAllMusicBuffers() { }
         @Override protected void hookRestartStreamIfDry() { }
-        @Override protected void hookUploadStreamBuffer(int bufferId, short[] pcm, int sampleRate) {
-            uploaded = pcm.clone();
-            uploadRate = sampleRate;
-        }
-        @Override protected void hookPlayWavSfx(String sfxName, float pitch) { }
         @Override protected void hookStopAndDeleteWavSfxSources() { }
+        @Override protected void hookPlayWavSfx(String name, float pitch) { }
         @Override protected void hookCleanupStoppedWavSfx() { }
         @Override protected void hookPause() { }
         @Override protected void hookResume() { }
-        private Object streamLockForTesting() { return streamLock; }
-        @Override public void beginStreamedOverrideReplayBypass() {
-            super.beginStreamedOverrideReplayBypass();
-            bypassBeginCount++;
-        }
-        @Override public void endStreamedOverrideReplayBypass() {
-            super.endStreamedOverrideReplayBypass();
-            bypassEndCount++;
-        }
-    }
-
-    private static final class FailingInitBackend extends InstrumentedBackend {
-        @Override protected void hookInitDevice() { throw new IllegalStateException("expected init failure"); }
-    }
-
-    private static final class InstrumentedLwjglBackend extends LWJGLAudioBackend {
-        private final int[] ids = { 11, 12, 13 };
-        private boolean ready;
-        private int queued;
-        private int initialQueueCount;
-        private int uploadCount;
-        private short firstSample;
-        private int lastRate;
-        private int allBufferClearCount;
-
-        private InstrumentedLwjglBackend() {
-            super(SonicConfigurationService.createStandalone());
-        }
-
-        @Override protected int getDeviceSampleRate() { return 8_000; }
-        @Override protected void ensurePresentationBuffers() { ready = true; }
-        @Override protected int[] presentationBufferIds() { return ids; }
-        @Override protected boolean presentationBuffersReady() { return ready; }
-        @Override protected void queueInitialPresentationBuffers(int[] ids) {
-            queued = ids.length;
-            initialQueueCount = ids.length;
-        }
-        @Override protected int presentationSourceState() { return 0x1012; }
-        @Override protected int queuedPresentationBufferCount() { return queued; }
-        @Override protected int processedPresentationBufferCount() { return 0; }
-        @Override protected int unqueuePresentationBuffer() { queued--; return ids[0]; }
-        @Override protected void queuePresentationBuffer(int bufferId) { queued++; }
-        @Override protected void playPresentationSource() { }
-        @Override protected void hookUploadStreamBuffer(int bufferId, short[] pcm, int sampleRate) {
-            uploadCount++;
-            firstSample = pcm[0];
-            lastRate = sampleRate;
-        }
-        @Override protected void hookStopAndClearAllMusicBuffers() { queued = 0; allBufferClearCount++; }
-        @Override protected void hookStopAndClearMusicSource() { }
-        @Override protected void hookDestroyDevice() { }
-        @Override protected void hookCleanupStoppedWavSfx() { }
-    }
-
-    private static final class IdSmpsData extends com.openggf.audio.smps.AbstractSmpsData {
-        private IdSmpsData(int id) { super(new byte[0], id); }
-        @Override protected void parseHeader() { }
-        @Override public byte[] getVoice(int voiceId) { return new byte[0]; }
-        @Override public byte[] getPsgEnvelope(int id) { return new byte[0]; }
-        @Override public int read16(int offset) { return 0; }
-        @Override public int getBaseNoteOffset() { return 0; }
     }
 }

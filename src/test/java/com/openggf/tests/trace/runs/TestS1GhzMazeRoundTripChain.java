@@ -6,6 +6,7 @@ import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.RecordedInputSnapshots;
 import com.openggf.game.GameServices;
+import com.openggf.game.GameMode;
 import com.openggf.game.sonic1.specialstage.Sonic1SpecialStageTraceData;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -30,12 +31,19 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @RequiresRom(SonicGame.SONIC_1)
 class TestS1GhzMazeRoundTripChain extends AbstractRunChainTest {
 
-    private static final Path RUN_DIR = Path.of(
+    private static final Path DEFAULT_RUN_DIR = Path.of(
             "src", "test", "resources", "traces", "s1", "runs", "s1-ghz-maze-roundtrip");
+    private static final String EXTERNAL_RUN_DIR_PROPERTY = "openggf.trace.s1.run.dir";
+
+    private Path activeRunDir;
 
     @Test
     void ghzMazeRoundTrip() throws Exception {
-        assertChainReplay(RUN_DIR);
+        String configuredRunDir = System.getProperty(EXTERNAL_RUN_DIR_PROPERTY);
+        activeRunDir = configuredRunDir == null || configuredRunDir.isBlank()
+                ? DEFAULT_RUN_DIR
+                : Path.of(configuredRunDir).toAbsolutePath().normalize();
+        assertChainReplay(activeRunDir);
     }
 
     /**
@@ -94,7 +102,7 @@ class TestS1GhzMazeRoundTripChain extends AbstractRunChainTest {
     @Override
     protected Runnable uncomparedInteriorStep(
             GameLoop loop, InputHandler inputHandler, Bk2Movie movie, SegmentPlan interior) {
-        Path ssDir = RUN_DIR.resolve(interior.segment().dir());
+        Path ssDir = activeRunDir.resolve(interior.segment().dir());
         Sonic1SpecialStageTraceData trace;
         try {
             trace = Sonic1SpecialStageTraceData.load(ssDir);
@@ -102,9 +110,15 @@ class TestS1GhzMazeRoundTripChain extends AbstractRunChainTest {
             throw new UncheckedIOException("Failed to load S1 special-stage lag trace: " + ssDir, e);
         }
         int bk2FrameOffset = interior.segment().bk2FrameOffset();
+        int recordedFrameCount = interior.segment().traceFrameCount();
         int[] traceRow = {0};
         return () -> {
             while (traceRow[0] < trace.frameCount() && trace.getFrame(traceRow[0]).lag()) {
+                // A lag row suppresses special-stage game logic, but is still a
+                // recorded console VBlank. The S1 lane consumes it without a
+                // GameLoop step, so advance the preserved global object clock
+                // explicitly once for that row.
+                GameServices.level().getObjectManager().advanceVblaCounter();
                 traceRow[0]++;
             }
             if (traceRow[0] >= trace.frameCount()) {
@@ -112,10 +126,18 @@ class TestS1GhzMazeRoundTripChain extends AbstractRunChainTest {
                 // plain engine step so the boundary await can still detect a
                 // late mode flip or trip its step cap instead of looping on
                 // an out-of-range trace read.
+                int beforeVblank = GameServices.level().getObjectManager().getVblaCounter();
                 AbstractRunChainTest.stepEngineFrame(loop);
+                var objectManager = GameServices.level().getObjectManager();
+                if (traceRow[0] < recordedFrameCount
+                        && objectManager.getVblaCounter() == beforeVblank) {
+                    objectManager.advanceVblaCounter();
+                }
+                traceRow[0]++;
                 return;
             }
             int absoluteRow = bk2FrameOffset + traceRow[0];
+            int beforeVblank = GameServices.level().getObjectManager().getVblaCounter();
             Bk2FrameInput current = movie.getFrame(absoluteRow);
             Bk2FrameInput previous = absoluteRow > 0 ? movie.getFrame(absoluteRow - 1) : null;
             inputHandler.setLogicalOverride(RecordedInputSnapshots.fromBk2(current, previous));
@@ -124,7 +146,23 @@ class TestS1GhzMazeRoundTripChain extends AbstractRunChainTest {
             } finally {
                 inputHandler.clearLogicalOverride();
             }
+            var objectManager = GameServices.level().getObjectManager();
+            if (objectManager.getVblaCounter() == beforeVblank) {
+                objectManager.advanceVblaCounter();
+            }
             traceRow[0]++;
+            if (loop.getCurrentGameMode() == GameMode.LEVEL
+                    && traceRow[0] < recordedFrameCount) {
+                // The advance-uncompared engine can complete its simplified SS
+                // choreography before the recorded interior segment ends. Those
+                // remaining BK2 rows are still elapsed VBlanks, so account for
+                // the unexecuted tail before the returned LEVEL comparator binds.
+                int remainingVblanks = recordedFrameCount - traceRow[0];
+                for (int frame = 0; frame < remainingVblanks; frame++) {
+                    objectManager.advanceVblaCounter();
+                }
+                traceRow[0] = recordedFrameCount;
+            }
         };
     }
 }

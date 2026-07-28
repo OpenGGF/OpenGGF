@@ -60,6 +60,7 @@ public class TestObjectServices implements ObjectServices {
     private ZoneLayoutMutationPipeline zoneLayoutMutationPipeline = new ZoneLayoutMutationPipeline();
     private SolidExecutionRegistry solidExecutionRegistry = SolidExecutionRegistry.inert();
     private Rom rom;
+    private boolean discoveredRomUnavailable;
     private RomByteReader romReader;
     private List<PlayableEntity> sidekicks = List.of();
     private WorldSession worldSession;
@@ -278,6 +279,17 @@ public class TestObjectServices implements ObjectServices {
         return gameState;
     }
 
+    // Objects that submit ROM-paced work need a real timing service rather than
+    // the interface default that refuses; one per instance keeps ordinals
+    // independent between tests.
+    private final com.openggf.game.timing.HardwareTimingService hardwareTiming =
+            new com.openggf.game.timing.HardwareTimingService();
+
+    @Override
+    public com.openggf.game.timing.HardwareTimingService hardwareTiming() {
+        return hardwareTiming;
+    }
+
     @Override
     public WorldSession worldSession() {
         if (worldSession != null) {
@@ -407,12 +419,50 @@ public class TestObjectServices implements ObjectServices {
 
     @Override
     public Rom rom() {
+        if (rom == null) {
+            openDiscoveredS3kRom();
+        }
         return rom;
     }
 
     @Override
     public RomByteReader romReader() {
+        if (romReader == null) {
+            openDiscoveredS3kRom();
+        }
         return romReader;
+    }
+
+    /**
+     * Lazily opens the discovered S3K ROM for tests that never set one.
+     *
+     * <p>Objects that queue ROM art during construction (the S3K results screen,
+     * for one) need real bytes, and creating them is now part of ordinary object
+     * tests rather than only ROM-backed integration tests. Discovery is the
+     * repo-standard property/env/config/filename lookup and yields null when no
+     * ROM is present, so this stays a fallback and never a requirement.
+     */
+    private void openDiscoveredS3kRom() {
+        if (discoveredRomUnavailable) {
+            return;
+        }
+        java.io.File romFile = com.openggf.tests.RomTestUtils.ensureSonic3kRomAvailable();
+        if (romFile == null) {
+            discoveredRomUnavailable = true;
+            return;
+        }
+        Rom opened = new Rom();
+        if (!opened.open(romFile.getPath())) {
+            discoveredRomUnavailable = true;
+            return;
+        }
+        rom = opened;
+        try {
+            romReader = new RomByteReader(opened.readAllBytes());
+        } catch (java.io.IOException failure) {
+            discoveredRomUnavailable = true;
+            rom = null;
+        }
     }
 
     @Override

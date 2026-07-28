@@ -124,6 +124,19 @@ public class DelegatingGameModule implements GameModule {
     }
 
     @Override
+    public com.openggf.game.profiles.trace.TracePlaybackProfile getTracePlaybackProfile() {
+        return base.getTracePlaybackProfile();
+    }
+
+    @Override
+    public com.openggf.level.InitialFixedSstDispatcher createInitialFixedSstDispatcher(
+            com.openggf.sprites.managers.SpriteManager sprites,
+            com.openggf.level.objects.ObjectManager objects,
+            com.openggf.game.ZoneFeatureProvider zoneFeatures) {
+        return base.createInitialFixedSstDispatcher(sprites, objects, zoneFeatures);
+    }
+
+    @Override
     public RespawnState createRespawnState() {
         return base.createRespawnState();
     }

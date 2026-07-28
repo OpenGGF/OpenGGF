@@ -53,6 +53,9 @@ import com.openggf.game.dataselect.DataSelectHostProfile;
 import com.openggf.game.dataselect.DataSelectPresentationProvider;
 import com.openggf.game.dataselect.DataSelectSessionController;
 import com.openggf.level.LevelManager;
+import com.openggf.level.InitialFixedSstDispatcher;
+import com.openggf.level.objects.ObjectManager;
+import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.ObjectRegistry;
@@ -214,6 +217,23 @@ public class Sonic3kGameModule implements GameModule {
     @Override
     public LevelEventProvider getLevelEventProvider() {
         return levelEventManager;
+    }
+
+    @Override
+    public InitialFixedSstDispatcher createInitialFixedSstDispatcher(
+            SpriteManager sprites,
+            ObjectManager objects,
+            ZoneFeatureProvider zoneFeatures) {
+        InitialWaveSplashSstOwner waveOwner =
+                zoneFeatures instanceof Sonic3kZoneFeatureProvider provider
+                        ? provider.initialWaveSplashSstOwner()
+                        : new InitialWaveSplashSstOwner() {
+                            @Override public boolean isRegistered() { return false; }
+                            @Override public void processInitialWaveSplash(
+                                    com.openggf.sprites.managers.ProcessSpritesEpoch epoch) { }
+                        };
+        return new S3kInitialFixedSstDispatcher(
+                levelEventManager, sprites, objects, waveOwner);
     }
 
     @Override

@@ -54,7 +54,7 @@ public abstract class AbstractSpikeObjectInstance extends AbstractObjectInstance
     public SolidObjectParams getSolidParams() {
         int widthPixels = getEntryValue(WIDTH_PIXELS);
         int yRadius = getEntryValue(Y_RADIUS);
-        return new SolidObjectParams(widthPixels + 0x0B, yRadius, yRadius + 1);
+        return SolidObjectParams.of(widthPixels + 0x0B, yRadius, yRadius + 1);
     }
 
     @Override

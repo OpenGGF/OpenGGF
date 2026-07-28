@@ -284,7 +284,7 @@ public class Sonic1FalseFloorInstance extends AbstractObjectInstance
     public SolidObjectParams getSolidParams() {
         // ROM: d1 = 0x0B + d0, d2 = 0x10, d3 = 0x11
         int halfWidth = 0x0B + currentHalfWidth;
-        return new SolidObjectParams(halfWidth, MASTER_HALF_HEIGHT, MASTER_HALF_HEIGHT + 1,
+        return SolidObjectParams.of(halfWidth, MASTER_HALF_HEIGHT, MASTER_HALF_HEIGHT + 1,
                 solidOffsetX, 0);
     }
 

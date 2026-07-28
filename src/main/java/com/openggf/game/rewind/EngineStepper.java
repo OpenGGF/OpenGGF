@@ -1,5 +1,7 @@
 package com.openggf.game.rewind;
 
+import com.openggf.LevelFrameResult;
+
 /**
  * Drives the engine forward one frame using the given inputs. Owned by
  * the visualiser / engine glue, passed into RewindController.
@@ -7,5 +9,5 @@ package com.openggf.game.rewind;
 @FunctionalInterface
 @com.openggf.game.ModApi
 public interface EngineStepper {
-    void step(com.openggf.debug.playback.Bk2FrameInput inputs);
+    LevelFrameResult step(com.openggf.debug.playback.Bk2FrameInput inputs);
 }

@@ -1,9 +1,15 @@
 package com.openggf.trace;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -11,18 +17,47 @@ import java.util.List;
 /**
  * Metadata for a trace recording directory, parsed from metadata.json.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 @com.openggf.game.ModApi
 public record TraceMetadata(
-    String game, String zone, Integer zoneId, int act, int bk2FrameOffset,
-    Integer ringFloorCheckCounterPhase, int traceFrameCount, String startXHex,
-    String startYHex, String recordingDate, String luaScriptVersion, Integer traceSchema,
-    Integer csvVersion, String traceProfile, String bizhawkVersion, String genesisCore,
-    List<String> auxSchemaExtras, Integer romZoneId, String route, String sourceBk2,
-    String romChecksum, String notes, List<String> characters, String mainCharacter,
-    List<String> sidekicks, Integer preTraceOscFrames, String rngSeedHex, String traceType,
-    String inputSource, Integer creditsDemoIndex, String creditsDemoSlug,
-    Integer specialStageIndex, String runId, Integer segmentIndex, String bonusStageType,
-    Boolean freshLoad, Integer vIntRunCount
+    @JsonProperty("game") String game,
+    @JsonProperty("zone") String zone,
+    @JsonProperty("zone_id") Integer zoneId,
+    @JsonProperty("act") int act,
+    @JsonProperty("bk2_frame_offset") int bk2FrameOffset,
+    @JsonProperty("ring_floor_check_counter_phase") Integer ringFloorCheckCounterPhase,
+    @JsonProperty("trace_frame_count") int traceFrameCount,
+    @JsonProperty("start_x") String startXHex,
+    @JsonProperty("start_y") String startYHex,
+    @JsonProperty("recording_date") String recordingDate,
+    @JsonProperty("lua_script_version") String luaScriptVersion,
+    @JsonProperty("trace_schema") Integer traceSchema,
+    @JsonProperty("csv_version") Integer csvVersion,
+    @JsonProperty("trace_profile") String traceProfile,
+    @JsonProperty("bizhawk_version") String bizhawkVersion,
+    @JsonProperty("genesis_core") String genesisCore,
+    @JsonProperty("aux_schema_extras") List<String> auxSchemaExtras,
+    @JsonProperty("rom_zone_id") Integer romZoneId,
+    @JsonProperty("route") String route,
+    @JsonProperty("source_bk2") String sourceBk2,
+    @JsonProperty("rom_checksum") String romChecksum,
+    @JsonProperty("notes") String notes,
+    @JsonProperty("characters") List<String> characters,
+    @JsonProperty("main_character") String mainCharacter,
+    @JsonProperty("sidekicks") List<String> sidekicks,
+    @JsonProperty("pre_trace_osc_frames") Integer preTraceOscFrames,
+    @JsonProperty("rng_seed") String rngSeedHex,
+    @JsonProperty("trace_type") String traceType,
+    @JsonProperty("input_source") String inputSource,
+    @JsonProperty("credits_demo_index") Integer creditsDemoIndex,
+    @JsonProperty("credits_demo_slug") String creditsDemoSlug,
+    @JsonProperty("special_stage_index") Integer specialStageIndex,
+    @JsonProperty("run_id") String runId,
+    @JsonProperty("segment_index") Integer segmentIndex,
+    @JsonProperty("bonus_stage_type") String bonusStageType,
+    @JsonProperty("fresh_load") Boolean freshLoad,
+    @JsonProperty("v_int_run_count") Integer vIntRunCount,
+    @JsonProperty("hardware_timing_schema") Integer hardwareTimingSchema
 ) {
 
     /**
@@ -467,55 +502,38 @@ public record TraceMetadata(
         return vIntRunCount != null ? (vIntRunCount.longValue() & 0xFFFFFFFFL) : null;
     }
 
+    public boolean hasHardwareTimingStream() {
+        return hardwareTimingSchema != null;
+    }
+
+    public int requiredHardwareTimingSchema() {
+        if (hardwareTimingSchema == null) {
+            return 0;
+        }
+        if (hardwareTimingSchema != 1) {
+            throw new IllegalArgumentException(
+                    "Unsupported hardware_timing_schema: " + hardwareTimingSchema);
+        }
+        return hardwareTimingSchema;
+    }
+
     /** Load metadata from a metadata.json file. */
     public static TraceMetadata load(Path metadataFile) throws IOException {
-        ObjectMapper mapper = new ObjectMapper();
-        JsonNode node = mapper.readTree(metadataFile.toFile());
-        return new TraceMetadata(
-                text(node, "game"), text(node, "zone"), integer(node, "zone_id"),
-                intValue(node, "act"), intValue(node, "bk2_frame_offset"),
-                integer(node, "ring_floor_check_counter_phase"),
-                intValue(node, "trace_frame_count"), text(node, "start_x"),
-                text(node, "start_y"), text(node, "recording_date"),
-                text(node, "lua_script_version"), integer(node, "trace_schema"),
-                integer(node, "csv_version"), text(node, "trace_profile"),
-                text(node, "bizhawk_version"), text(node, "genesis_core"),
-                strings(node, "aux_schema_extras"), integer(node, "rom_zone_id"),
-                text(node, "route"), text(node, "source_bk2"), text(node, "rom_checksum"),
-                text(node, "notes"), strings(node, "characters"), text(node, "main_character"),
-                strings(node, "sidekicks"), integer(node, "pre_trace_osc_frames"),
-                text(node, "rng_seed"), text(node, "trace_type"), text(node, "input_source"),
-                integer(node, "credits_demo_index"), text(node, "credits_demo_slug"),
-                integer(node, "special_stage_index"), text(node, "run_id"),
-                integer(node, "segment_index"), text(node, "bonus_stage_type"),
-                bool(node, "fresh_load"), integer(node, "v_int_run_count"));
-    }
-
-    private static String text(JsonNode node, String name) {
-        JsonNode value = node.get(name);
-        return value == null || value.isNull() ? null : value.asText();
-    }
-
-    private static Integer integer(JsonNode node, String name) {
-        JsonNode value = node.get(name);
-        return value == null || value.isNull() ? null : value.asInt();
-    }
-
-    private static Boolean bool(JsonNode node, String name) {
-        JsonNode value = node.get(name);
-        return value == null || value.isNull() ? null : value.asBoolean();
-    }
-
-    private static int intValue(JsonNode node, String name) {
-        Integer value = integer(node, name);
-        return value == null ? 0 : value;
-    }
-
-    private static List<String> strings(JsonNode node, String name) {
-        JsonNode value = node.get(name);
-        if (value == null || value.isNull()) return null;
-        List<String> result = new ArrayList<>();
-        value.forEach(element -> result.add(element.asText()));
-        return result;
+        JsonFactory factory = new JsonFactory()
+                .enable(JsonParser.Feature.STRICT_DUPLICATE_DETECTION);
+        ObjectMapper mapper = new ObjectMapper(factory);
+        try (InputStream input = Files.newInputStream(metadataFile);
+             JsonParser parser = factory.createParser(input)) {
+            JsonNode root = mapper.readTree(parser);
+            if (root == null || !root.isObject() || parser.nextToken() != null) {
+                throw new IOException(metadataFile.getFileName() + ": metadata must be one JSON object");
+            }
+            JsonNode timingSchema = root.get("hardware_timing_schema");
+            if (timingSchema != null && (!timingSchema.isInt() || timingSchema.intValue() != 1)) {
+                throw new IOException(metadataFile.getFileName()
+                        + ": hardware_timing_schema must be JSON integer 1");
+            }
+            return mapper.treeToValue(root, TraceMetadata.class);
+        }
     }
 }

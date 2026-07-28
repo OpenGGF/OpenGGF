@@ -50,7 +50,7 @@ class TestS3kIczEndBossGraphRewind {
     }
 
     @Test
-    void iczEndBossRestoresFreshWithRestoredSnowdustEmitterReferenceAndScalars() throws Exception {
+    void iczEndBossAndPlacedSnowdustEmitterRestoreIndependentlyWithBossScalars() throws Exception {
         Harness harness = Harness.create();
         ObjectManager objectManager = harness.objectManager();
         objectManager.setRewindInPlaceRestoreEnabledForTest(false);
@@ -58,8 +58,6 @@ class TestS3kIczEndBossGraphRewind {
                 () -> new IczEndBossInstance(BOSS_SPAWN));
         IczSnowPileObjectInstance sourceEmitter = objectManager.createDynamicObject(
                 () -> new IczSnowPileObjectInstance(EMITTER_SPAWN));
-        writeObjectField(sourceBoss, "bossSnowdustEmitter", sourceEmitter);
-        writeBooleanField(sourceBoss, "snowdustEmitterSpawned", true);
         writeBooleanField(sourceBoss, "arenaGateInitialized", true);
         writeBooleanField(sourceBoss, "arenaGateComplete", true);
         writeIntField(sourceBoss, "routineTimer", 37);
@@ -89,16 +87,10 @@ class TestS3kIczEndBossGraphRewind {
         assertNotSame(sourceBoss, restoredBoss, "restore must recreate the ICZ end boss");
         assertNotSame(sourceEmitter, restoredEmitter, "restore must recreate the snowdust emitter");
         assertNotSame(divergentEmitter, restoredEmitter, "restore must drop the divergent emitter");
-        assertSame(restoredEmitter, readObjectField(restoredBoss, "bossSnowdustEmitter"),
-                "boss snowdust emitter must resolve to the restored emitter");
-        assertNotSame(sourceEmitter, readObjectField(restoredBoss, "bossSnowdustEmitter"),
-                "boss must not retain the stale pre-restore emitter");
         assertEquals(BOSS_SPAWN.x(), restoredBoss.getX(),
                 "spawn-derived boss x coordinate must be rebuilt by recreate");
         assertEquals(BOSS_SPAWN.y(), restoredBoss.getY(),
                 "spawn-derived boss y coordinate must be rebuilt by recreate");
-        assertTrue(readBooleanField(restoredBoss, "snowdustEmitterSpawned"),
-                "snowdustEmitterSpawned flag must restore from compact state");
         assertTrue(readBooleanField(restoredBoss, "arenaGateInitialized"),
                 "arenaGateInitialized flag must restore from compact state");
         assertTrue(readBooleanField(restoredBoss, "arenaGateComplete"),
@@ -206,22 +198,6 @@ class TestS3kIczEndBossGraphRewind {
         assertEquals(0x0180, readIntField(readObjectField(restoredDebris, "motionState"), "xVel"));
         assertEquals(-0x0300, readIntField(readObjectField(restoredDebris, "motionState"), "yVel"));
         assertEquals(0x38, readIntField(restoredDebris, "gravity"));
-    }
-
-    @Test
-    void captureFailsWhenIczEndBossSnowdustEmitterHasNoRewindIdentity() throws Exception {
-        Harness harness = Harness.create();
-        IczEndBossInstance boss = harness.objectManager().createDynamicObject(
-                () -> new IczEndBossInstance(BOSS_SPAWN));
-        IczSnowPileObjectInstance unmanagedEmitter = new IczSnowPileObjectInstance(EMITTER_SPAWN);
-        unmanagedEmitter.setServices(harness.services());
-        writeObjectField(boss, "bossSnowdustEmitter", unmanagedEmitter);
-
-        IllegalStateException thrown = assertThrows(
-                IllegalStateException.class,
-                () -> registryFor(harness.objectManager()).capture());
-        assertTrue(thrown.getMessage().contains("no registered id for object reference"),
-                "missing ICZ snowdust emitter identity must fail loudly");
     }
 
     private record Harness(ObjectManager objectManager, ObjectServices services) {

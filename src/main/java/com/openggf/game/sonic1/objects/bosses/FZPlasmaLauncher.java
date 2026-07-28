@@ -183,8 +183,15 @@ public class FZPlasmaLauncher extends AbstractBossChild implements SolidObjectPr
             targetX += (random & 0x1F) - 0x10;
 
             final int fTargetX = targetX;
-            FZPlasmaBall ball = spawnFreeChild(() -> new FZPlasmaBall(
-                    this, LAUNCHER_X, LAUNCHER_Y, fTargetX));
+            // ROM BossPlasma_Loop calls FindNextFreeObj, not FindFreeObj. Keeping
+            // every ball after the launcher in SST order is observable when the
+            // last ball deletes: the launcher has already run that frame and only
+            // sees objoff_38 == 0 on the following ExecuteObjects pass.
+            FZPlasmaBall ball = spawnChild(
+                    () -> new FZPlasmaBall(this, LAUNCHER_X, LAUNCHER_Y, fTargetX));
+            // Boss children are also dispatched from their parent's update, where
+            // ObjectManager's live cursor still names the boss slot. Anchor the
+            // FindNextFreeObj scan to the launcher's actual SST slot explicitly.
             activeBalls.add(ball);
         }
 

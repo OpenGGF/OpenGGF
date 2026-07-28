@@ -42,7 +42,10 @@ class TestPlaybackController {
         InputSource inputs = new FakeInputSource(100);
         AtomicInteger stepCount = new AtomicInteger();
 
-        RewindController rc = new RewindController(reg, keyframes, inputs, (in) -> stepCount.incrementAndGet(), 5);
+        RewindController rc = new RewindController(reg, keyframes, inputs, (in) -> {
+            stepCount.incrementAndGet();
+            return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
+        }, 5);
         PlaybackController pc = new PlaybackController(rc);
 
         // PLAYING -> tick should step forward
@@ -73,7 +76,10 @@ class TestPlaybackController {
         InputSource inputs = new FakeInputSource(100);
         AtomicInteger stepCount = new AtomicInteger();
 
-        RewindController rc = new RewindController(reg, keyframes, inputs, (in) -> stepCount.incrementAndGet(), 5);
+        RewindController rc = new RewindController(reg, keyframes, inputs, (in) -> {
+            stepCount.incrementAndGet();
+            return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
+        }, 5);
         PlaybackController pc = new PlaybackController(rc);
 
         pc.stepForwardOnce();
@@ -88,7 +94,10 @@ class TestPlaybackController {
         InputSource inputs = new FakeInputSource(100);
         AtomicInteger stepCount = new AtomicInteger();
 
-        RewindController rc = new RewindController(reg, keyframes, inputs, (in) -> stepCount.incrementAndGet(), 5);
+        RewindController rc = new RewindController(reg, keyframes, inputs, (in) -> {
+            stepCount.incrementAndGet();
+            return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
+        }, 5);
         PlaybackController pc = new PlaybackController(rc);
 
         // Step forward to frame 5 first
@@ -107,7 +116,10 @@ class TestPlaybackController {
         InputSource inputs = new FakeInputSource(100);
         AtomicInteger stepCount = new AtomicInteger();
 
-        RewindController rc = new RewindController(reg, keyframes, inputs, (in) -> stepCount.incrementAndGet(), 5);
+        RewindController rc = new RewindController(reg, keyframes, inputs, (in) -> {
+            stepCount.incrementAndGet();
+            return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
+        }, 5);
         PlaybackController pc = new PlaybackController(rc);
 
         pc.rewind();
@@ -133,7 +145,12 @@ class TestPlaybackController {
         RewindRegistry reg = new RewindRegistry();
         InMemoryKeyframeStore keyframes = new InMemoryKeyframeStore();
         InputSource inputs = new FakeInputSource(100);
-        return new RewindController(reg, keyframes, inputs, (in) -> {}, 5);
+        return new RewindController(
+                reg,
+                keyframes,
+                inputs,
+                (in) -> com.openggf.LevelFrameResult.GAMEPLAY_FRAME,
+                5);
     }
 
     private static class FakeInputSource implements InputSource {

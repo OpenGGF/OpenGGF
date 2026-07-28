@@ -12,8 +12,8 @@ import com.openggf.level.objects.BakedSheetReader;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
+import com.openggf.io.PixelImage;
+import com.openggf.io.PngCodec;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -50,18 +50,22 @@ public final class ArtConverter {
         Objects.requireNonNull(manifestPath, "manifestPath");
         Objects.requireNonNull(outputPath, "outputPath");
         if(Files.size(imagePath)>limits.maxAssetBytes())throw new IllegalArgumentException("PNG exceeds asset byte limit");
-        int declaredWidth,declaredHeight;
-        try(var input=ImageIO.createImageInputStream(imagePath.toFile())){
-            if(input==null)throw new IllegalArgumentException("Input is not a readable PNG");
-            var readers=ImageIO.getImageReaders(input);if(!readers.hasNext())throw new IllegalArgumentException("Input is not a readable PNG");
-            var reader=readers.next();try{reader.setInput(input,true,true);
-                if(!"png".equalsIgnoreCase(reader.getFormatName()))throw new IllegalArgumentException("Input must be PNG");
-                declaredWidth=reader.getWidth(0);declaredHeight=reader.getHeight(0);
-            }finally{reader.dispose();}
+        byte[] encodedImage = Files.readAllBytes(imagePath);
+        // Header first: the declared geometry is validated before any decode so a
+        // hostile PNG cannot force a large pixel allocation.
+        PngCodec.Info declared;
+        try {
+            declared = PngCodec.info(encodedImage);
+        } catch (IOException notReadable) {
+            throw new IllegalArgumentException("Input is not a readable PNG", notReadable);
         }
-        validateDimensions(declaredWidth,declaredHeight);
-        BufferedImage image = ImageIO.read(imagePath.toFile());
-        if (image == null) throw new IllegalArgumentException("Input is not a readable PNG");
+        validateDimensions(declared.width(), declared.height());
+        PixelImage image;
+        try {
+            image = PngCodec.decode(encodedImage);
+        } catch (IOException notReadable) {
+            throw new IllegalArgumentException("Input is not a readable PNG", notReadable);
+        }
         validateDimensions(image.getWidth(),image.getHeight());
         byte[] manifestBytes=readBounded(manifestPath,limits.maxMetadataBytes(),"Art manifest exceeds metadata byte limit");
         Manifest manifest;
@@ -159,7 +163,7 @@ public final class ArtConverter {
         if (manifest.frames() == null) throw invalid("frames are required");
     }
 
-    private static void validatePiece(Piece piece, BufferedImage image) {
+    private static void validatePiece(Piece piece, PixelImage image) {
         if (piece == null) throw invalid("piece is required");
         if (piece.sourceX() < 0 || piece.sourceY() < 0 || piece.sourceX() % 8 != 0 || piece.sourceY() % 8 != 0
                 || piece.widthPixels() <= 0 || piece.heightPixels() <= 0

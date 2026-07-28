@@ -135,6 +135,33 @@ class TestS1FzBossGraphRewind {
     }
 
     @Test
+    void plasmaBallsAllocateAfterLauncherEvenWhenAnEarlierSlotIsFree() {
+        Harness harness = Harness.createWithBoss();
+        ObjectManager objectManager = harness.objectManager();
+        TestablePlayableSprite player = new TestablePlayableSprite(
+                "sonic", (short) Sonic1Constants.BOSS_FZ_X, (short) Sonic1Constants.BOSS_FZ_Y);
+
+        Sonic1FZBossInstance boss = only(objectManager, Sonic1FZBossInstance.class);
+        boss.update(0, player);
+        FZPlasmaLauncher launcher = only(objectManager, FZPlasmaLauncher.class);
+        FZCylinder earlierCylinder = liveObjects(objectManager, FZCylinder.class).stream()
+                .filter(cylinder -> cylinder.getSlotIndex() < launcher.getSlotIndex())
+                .findFirst()
+                .orElseThrow();
+        objectManager.removeDynamicObject(earlierCylinder);
+        harness.camera().setX((short) Sonic1Constants.BOSS_FZ_X);
+
+        writeInt(launcher, "launcherState", 1);
+        objectManager.update(Sonic1Constants.BOSS_FZ_X, player, List.of(), 1, false, false, false);
+
+        List<FZPlasmaBall> balls = liveObjects(objectManager, FZPlasmaBall.class);
+        assertEquals(4, balls.size());
+        assertTrue(balls.stream().allMatch(ball -> ball.getSlotIndex() > launcher.getSlotIndex()),
+                "BossPlasma_Loop uses FindNextFreeObj, so balls must never occupy a slot "
+                        + "that executes before their launcher");
+    }
+
+    @Test
     void genericRecreateDropsFzChildrenWhenRequiredLiveParentIsMissing() {
         Harness harness = Harness.create(List.of());
         ObjectManager objectManager = harness.objectManager();
@@ -483,14 +510,14 @@ class TestS1FzBossGraphRewind {
         }
     }
 
-    private record Harness(ObjectManager objectManager) {
+    private record Harness(ObjectManager objectManager, TestCamera camera) {
         static Harness createWithBoss() {
             return create(List.of(BOSS_SPAWN));
         }
 
         static Harness create(List<ObjectSpawn> spawns) {
             ObjectManager[] holder = new ObjectManager[1];
-            Camera camera = mockCameraAtOrigin();
+            TestCamera camera = new TestCamera();
             ObjectServices services = new StubObjectServices() {
                 @Override public ObjectManager objectManager() { return holder[0]; }
                 @Override public Camera camera() { return camera; }
@@ -506,17 +533,22 @@ class TestS1FzBossGraphRewind {
                     services);
             holder[0] = objectManager;
             objectManager.reset(0);
-            return new Harness(objectManager);
+            return new Harness(objectManager, camera);
         }
     }
 
-    private static Camera mockCameraAtOrigin() {
-        return new Camera() {
-            @Override public short getX() { return 0; }
-            @Override public short getY() { return 0; }
-            @Override public short getWidth() { return 320; }
-            @Override public short getHeight() { return 224; }
-            @Override public boolean isVerticalWrapEnabled() { return false; }
-        };
+    private static final class TestCamera extends Camera {
+        private short x;
+
+        @Override
+        public void setX(short x) {
+            this.x = x;
+        }
+
+        @Override public short getX() { return x; }
+        @Override public short getY() { return 0; }
+        @Override public short getWidth() { return 320; }
+        @Override public short getHeight() { return 224; }
+        @Override public boolean isVerticalWrapEnabled() { return false; }
     }
 }

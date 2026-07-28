@@ -163,7 +163,7 @@ public class Sonic1SmashBlockObjectInstance extends AbstractObjectInstance
         //   move.w #$1B,d1   ; half-width for X check
         //   move.w #$10,d2   ; half-height for air check
         //   move.w #$11,d3   ; half-height for ground check
-        return new SolidObjectParams(SOLID_HALF_WIDTH, SOLID_HALF_HEIGHT_AIR, SOLID_HALF_HEIGHT_GROUND);
+        return SolidObjectParams.of(SOLID_HALF_WIDTH, SOLID_HALF_HEIGHT_AIR, SOLID_HALF_HEIGHT_GROUND);
     }
 
     @Override

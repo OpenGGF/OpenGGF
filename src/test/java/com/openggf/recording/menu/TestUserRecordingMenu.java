@@ -39,8 +39,10 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SUPER;
 import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
 import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
 
@@ -272,6 +274,29 @@ class TestUserRecordingMenu {
         assertEquals(warned, request.entry());
         assertEquals(239, request.options().targetFrame());
         assertNull(state.consumePlaybackRequest());
+    }
+
+    /**
+     * The twelve menu keys are read through isKeyPressedWithoutModifiers, so a
+     * modifier that latched because its release went to another window disables
+     * the whole menu until the focus-loss clear drops it.
+     */
+    @Test
+    void aLatchedSuperKeyStopsTheMenuUntilFocusLossClearsIt() {
+        UserRecordingMenuState state =
+                new UserRecordingMenuState("s2", List.of(entry("s2", 60), entry("s2", 120)));
+        InputHandler input = new InputHandler();
+        input.handleKeyEvent(GLFW_KEY_LEFT_SUPER, GLFW_PRESS);
+        input.handleKeyEvent(GLFW_KEY_DOWN, GLFW_PRESS);
+
+        state.update(input);
+        assertEquals(0, state.cursor(), "held Super suppresses the unmodified menu key");
+
+        input.clearKeyState();
+        input.handleKeyEvent(GLFW_KEY_DOWN, GLFW_PRESS);
+        state.update(input);
+
+        assertEquals(1, state.cursor(), "the menu responds again after focus loss");
     }
 
     private static UserRecordingEntry entry(String gameId, int frameCount) {

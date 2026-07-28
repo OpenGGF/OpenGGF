@@ -77,7 +77,7 @@ class TestS3kSignpostInstance {
 
     @Test
     void sameFrameNativeP2BumpCanOverwriteNativeP1Velocity() {
-        TestablePlayableSprite sonic = eligibleBumpPlayer("sonic", 0x32A0, 0x045D);
+        TestablePlayableSprite sonic = eligibleBumpPlayer("sonic", 0x32B0, 0x045D);
         TestablePlayableSprite tails = eligibleBumpPlayer("tails", 0x329A, 0x045D);
         int signpostX = 0x329F;
         int signpostY = 0x045D;
@@ -95,17 +95,20 @@ class TestS3kSignpostInstance {
     }
 
     @Test
-    void bumpRangeTreatsRomWordsAsOriginAndExtent() {
-        TestablePlayableSprite player = eligibleBumpPlayer("tails", 0x3220, 0x4018);
+    void bumpRangeWordsEncodeOffsetAndWidth() {
+        TestablePlayableSprite player = eligibleBumpPlayer("sonic", 0, 0);
 
-        assertFalse(S3kSignpostInstance.isRomBumpCandidate(0x3200, 0x4000, player),
-                "Check_PlayerInRange excludes the right/bottom edge: EndSign_Range's $40/$30 words "
-                        + "are width and height, not +$40/+$30 offsets");
-
-        player.setCentreX((short) 0x321F);
-        player.setCentreY((short) 0x4017);
-        assertTrue(S3kSignpostInstance.isRomBumpCandidate(0x3200, 0x4000, player),
-                "the final pixels inside [-$20,+$20) x [-$18,+$18) remain eligible");
+        player.setCentreX((short) 0x120);
+        assertFalse(S3kSignpostInstance.isRomBumpCandidate(0x100, 0, player),
+                "EndSign_Range's second word is width $40 from x-$20, so x+$20 is exclusive");
+        player.setCentreX((short) 0x11F);
+        player.setCentreY((short) 0x18);
+        assertFalse(S3kSignpostInstance.isRomBumpCandidate(0x100, 0, player),
+                "EndSign_Range's fourth word is height $30 from y-$18, so y+$18 is exclusive");
+        player.setCentreY((short) 0x17);
+        assertTrue(S3kSignpostInstance.isRomBumpCandidate(0x100, 0, player),
+                "Check_PlayerInRange adds each width to its negative origin "
+                        + "(docs/skdisasm/sonic3k.asm:176410-176411,179994-180025)");
     }
 
     @Test
@@ -116,6 +119,37 @@ class TestS3kSignpostInstance {
         assertTrue(S3kSignpostInstance.romPostLandTimerExpired(0xFFFF),
                 "Obj_EndSignLanded advances only when the post-decrement word is negative "
                         + "(docs/skdisasm/sonic3k.asm:176198-176208)");
+    }
+
+    @Test
+    void groundedNoWaitKeepsIsolatedTimingCompensationUntilRealOwnerIsKnown() {
+        assertEquals(S3kSignpostInstance.ResultsChildTimingAdjustment.UNSUPPORTED_GROUNDED_COMPENSATION,
+                S3kSignpostInstance.resultsChildTimingAdjustment(false, false, false),
+                "the grounded no-wait path retains an explicit engine compensation, "
+                        + "not a claimed native SST owner");
+        assertEquals(1,
+                S3kSignpostInstance.ResultsChildTimingAdjustment.UNSUPPORTED_GROUNDED_COMPENSATION
+                        .catchUpEntries());
+        assertEquals(S3kSignpostInstance.ResultsChildTimingAdjustment.NONE,
+                S3kSignpostInstance.resultsChildTimingAdjustment(true, false, false),
+                "a sign that waited in routine 6 does not use the unsupported compensation");
+        assertEquals(S3kSignpostInstance.ResultsChildTimingAdjustment.NONE,
+                S3kSignpostInstance.resultsChildTimingAdjustment(false, true, false),
+                "a post-object sign does not use the unsupported compensation");
+        assertEquals(S3kSignpostInstance.ResultsChildTimingAdjustment.NONE,
+                S3kSignpostInstance.resultsChildTimingAdjustment(false, false, true),
+                "a separately retained grounded boundary does not use the unsupported compensation");
+    }
+
+    @Test
+    void fallingDispatchAppliesBumpBeforeGravityAndMovement() {
+        assertEquals(-0x1F4, S3kSignpostInstance.romVelocityAfterGravity(-0x200),
+                "Obj_EndSignFall checks the player hit before adding $0C gravity "
+                        + "(docs/skdisasm/sonic3k.asm:176149-176160)");
+        assertFalse(S3kSignpostInstance.romBumpCheckAvailableAfterCooldownEntry(1),
+                "a nonzero $20 cooldown decrements and returns even when it becomes zero "
+                        + "(docs/skdisasm/sonic3k.asm:176347-176405)");
+        assertTrue(S3kSignpostInstance.romBumpCheckAvailableAfterCooldownEntry(0));
     }
 
     @Test

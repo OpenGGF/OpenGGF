@@ -201,7 +201,7 @@ public class NutObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(HALF_WIDTH, Y_RADIUS, GROUND_HALF_HEIGHT);
+        return SolidObjectParams.of(HALF_WIDTH, Y_RADIUS, GROUND_HALF_HEIGHT);
     }
 
     @Override

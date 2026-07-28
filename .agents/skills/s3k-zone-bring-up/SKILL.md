@@ -204,7 +204,7 @@ Dispatch an agent with the `s3k-zone-analysis` skill for the target zone. The ag
 Agent prompt: "Use /s3k-zone-analysis {ZONE}"
 ```
 
-**Output:** `docs/s3k-zones/{zone}-analysis.md` (e.g., `docs/s3k-zones/hcz-analysis.md`)
+**Output:** `docs/architecture/research/s3k-zones/{zone}-analysis.md` (e.g., `docs/architecture/research/s3k-zones/hcz-analysis.md`)
 
 Wait for the analysis agent to complete before proceeding. The analysis spec is the input to all subsequent steps.
 
@@ -240,7 +240,7 @@ Zone Analysis Complete: {ZONE} ({Full Name})
   Palette Cycling: {N channels} (confidence: HIGH/MEDIUM/LOW)
   Cross-cutting:   {water/shake/character paths/...}
 
-Full spec: docs/s3k-zones/{zone}-analysis.md
+Full spec: docs/architecture/research/s3k-zones/{zone}-analysis.md
 Proceed with implementation? [Y/n]
 ```
 
@@ -356,7 +356,7 @@ Launch one agent per applicable feature in a separate worktree. Each agent recei
 ```
 Use /s3k-zone-events {ZONE}
 
-Zone analysis spec: docs/s3k-zones/{zone}-analysis.md
+Zone analysis spec: docs/architecture/research/s3k-zones/{zone}-analysis.md
 Read the Events section of the analysis spec first, then implement the zone event handler.
 ```
 
@@ -364,7 +364,7 @@ Read the Events section of the analysis spec first, then implement the zone even
 ```
 Use /s3k-parallax {ZONE}
 
-Zone analysis spec: docs/s3k-zones/{zone}-analysis.md
+Zone analysis spec: docs/architecture/research/s3k-zones/{zone}-analysis.md
 Read the Parallax section of the analysis spec first for band counts and data table locations.
 ```
 
@@ -372,7 +372,7 @@ Read the Parallax section of the analysis spec first for band counts and data ta
 ```
 Use /s3k-animated-tiles {ZONE}
 
-Zone analysis spec: docs/s3k-zones/{zone}-analysis.md
+Zone analysis spec: docs/architecture/research/s3k-zones/{zone}-analysis.md
 Read the Animated Tiles section of the analysis spec first for script addresses and gating conditions.
 ```
 
@@ -380,7 +380,7 @@ Read the Animated Tiles section of the analysis spec first for script addresses 
 ```
 Use /s3k-palette-cycling {ZONE}
 
-Zone analysis spec: docs/s3k-zones/{zone}-analysis.md
+Zone analysis spec: docs/architecture/research/s3k-zones/{zone}-analysis.md
 Read the Palette Cycling section of the analysis spec first for channel definitions and counter addresses.
 ```
 

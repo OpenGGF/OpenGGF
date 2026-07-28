@@ -30,6 +30,7 @@ import com.openggf.game.session.WorldSession;
 import com.openggf.game.solid.SolidExecutionRegistry;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.game.zone.ZoneRuntimeState;
+import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.BigRingReturnState;
@@ -298,6 +299,15 @@ public class DefaultObjectServices implements ObjectServices {
     }
 
     @Override
+    public HardwareTimingService hardwareTiming() {
+        if (gameplayMode == null) {
+            throw new IllegalStateException(
+                    "hardware timing requires session-backed object services");
+        }
+        return gameplayMode.hardwareTiming();
+    }
+
+    @Override
     public SpriteManager spriteManager() {
         return spriteManager;
     }
@@ -452,6 +462,15 @@ public class DefaultObjectServices implements ObjectServices {
             lm().spawnLostRingsAfterCurrentFrame(aps, frameCounter);
         } else {
             LOG.warning("spawnLostRingsAfterCurrentFrame: player is not AbstractPlayableSprite, rings not spawned");
+        }
+    }
+
+    @Override
+    public void spawnLostRingsWithDeferredOwner(PlayableEntity player, int frameCounter) {
+        if (player instanceof com.openggf.sprites.playable.AbstractPlayableSprite aps) {
+            lm().spawnLostRingsWithDeferredOwner(aps, frameCounter);
+        } else {
+            LOG.warning("spawnLostRingsWithDeferredOwner: player is not AbstractPlayableSprite, rings not spawned");
         }
     }
 

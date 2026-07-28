@@ -67,7 +67,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.intThat;
 import static org.mockito.Mockito.inOrder;
@@ -77,6 +76,8 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(SingletonResetExtension.class)
@@ -1585,7 +1586,16 @@ class TestMgzDrillingRobotnikInstance {
                 mock(com.openggf.level.render.PatternSpriteRenderer.class);
         private final PatternSpriteRenderer scaledRenderer;
         private final ObjectSpriteSheet scaledSheet;
-        private final Rom rom = mock(Rom.class);
+        private final Rom rom = spyDiscoveredRom();
+
+        private static Rom spyDiscoveredRom() {
+            java.io.File romFile = com.openggf.tests.RomTestUtils.ensureSonic3kRomAvailable();
+            if (romFile == null) {
+                return mock(Rom.class);
+            }
+            Rom real = new Rom();
+            return real.open(romFile.getPath()) ? spy(real) : mock(Rom.class);
+        }
         private LevelEventProvider levelEventProvider;
         private int playedSfxCount;
         private int paletteUpdates;

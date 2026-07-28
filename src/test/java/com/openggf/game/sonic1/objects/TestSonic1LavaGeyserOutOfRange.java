@@ -137,7 +137,7 @@ public class TestSonic1LavaGeyserOutOfRange {
     }
 
     /**
-     * Bug repro (S1 bug-triage row 6, docs/plans/s1-bug-batch-ledger-2026-07-05.md):
+     * Bug repro (S1 bug-triage row 6, docs/architecture/plans/s1-bug-batch-ledger-2026-07-05.md):
      * "Lavafall landing flicker" -- a single-frame flicker at a vertical
      * lavafall's eventual landing spot when it starts.
      * <p>

@@ -106,8 +106,8 @@ game's emerald palette rather than reusing raw host palette slots directly.
 
 ## How do I change controls?
 
-Key bindings accept either GLFW key codes (integers) or human-readable names. The following
-formats all work:
+Key bindings accept GLFW key codes (integers), human-readable names, or a name
+qualified by modifiers. The following formats all work:
 
 - `81`
 - `"81"`
@@ -115,8 +115,25 @@ formats all work:
 - `"SPACE"`
 - `"LEFT_SHIFT"`
 - `"GLFW_KEY_F9"`
+- `"SHIFT+O"`
+- `"CTRL+SHIFT+O"`
 
-Invalid names log a warning and fall back to the default binding for that action. If you want
+The modifier names are `CTRL`/`CONTROL`, `SHIFT`, `ALT`/`OPTION`, and
+`META`/`SUPER`/`CMD`/`COMMAND`/`WIN`, all case-insensitive. Matching is exact: a
+binding fires only with exactly the modifiers it names, so a plain `"O"` does not
+fire while Shift is held. Because `+` is the separator, bind the plus key as
+`"EQUAL"` or `"KP_ADD"`.
+
+Today `capture.toggleKey` (live viewport recording, default `"SHIFT+O"`) is the
+one shortcut that acts on a chord. Elsewhere the modifiers are parsed and then
+dropped, so the binding ends up on the bare key the chord names: writing
+`"CTRL+P"` binds plain `P`, and for a few shortcuts that only ever fire with no
+modifier held, the chord as written can never fire at all. The full per-binding
+table is in [CONFIGURATION.md](../../../CONFIGURATION.md).
+
+Invalid names log a warning and fall back to the default binding for that action.
+Leaving a binding empty (`""`) is different: it switches that shortcut off, and no
+default is substituted. If you want
 the raw numeric values, find the code for your preferred key in the
 [GLFW key reference](https://www.glfw.org/docs/latest/group__keys.html).
 

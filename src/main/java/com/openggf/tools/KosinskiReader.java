@@ -18,6 +18,7 @@ public class KosinskiReader {
 
     // Maximum decompressed output size (1MB - well above any Mega Drive data)
     private static final int MAX_OUTPUT_SIZE = 0x100000;
+    private static final int KOSM_MODULE_SIZE = 0x1000;
 
     /**
      * Decompresses data from the given ReadableByteChannel using the Kosinski algorithm.
@@ -214,7 +215,7 @@ public class KosinskiReader {
         }
 
         // Read 2-byte big-endian header: total uncompressed size
-        int fullSize = ((data[offset] & 0xFF) << 8) | (data[offset + 1] & 0xFF);
+        int fullSize = decodeModuledSize(data, offset);
         if (fullSize == 0) {
             return new byte[0];
         }
@@ -259,6 +260,62 @@ public class KosinskiReader {
             result = Arrays.copyOf(result, fullSize);
         }
         return result;
+    }
+
+    /**
+     * Parses a complete KosM archive without guessing its compressed span.
+     *
+     * <p>The returned source length includes the two-byte archive header and
+     * any inter-module alignment, but excludes bytes after the final module
+     * terminator. This is the canonical span used by hardware submission
+     * fingerprints.
+     */
+    public static ModuledArchiveInfo inspectModuled(byte[] data, int offset)
+            throws IOException {
+        int fullSize = decodeModuledSize(data, offset);
+        if (fullSize == 0) {
+            return new ModuledArchiveInfo(2, 0, 0);
+        }
+        int moduleCount = (fullSize + KOSM_MODULE_SIZE - 1) / KOSM_MODULE_SIZE;
+        int pos = offset + 2;
+        for (int module = 0; module < moduleCount; module++) {
+            ResumableKosinskiDecoder decoder =
+                    new ResumableKosinskiDecoder(data, pos);
+            while (!decoder.complete()) {
+                decoder.step(256);
+            }
+            pos += decoder.compressedBytesConsumed();
+            if (module + 1 < moduleCount) {
+                int relative = pos - (offset + 2);
+                pos = offset + 2 + ((relative + 0xF) & ~0xF);
+                if (pos > data.length) {
+                    throw new IOException(
+                            "Unexpected end of Kosinski Moduled alignment");
+                }
+            }
+        }
+        return new ModuledArchiveInfo(
+                pos - offset,
+                fullSize,
+                moduleCount);
+    }
+
+    private static int decodeModuledSize(byte[] data, int offset)
+            throws IOException {
+        if (offset < 0 || offset + 2 > data.length) {
+            throw new IOException("Not enough data for Kosinski Moduled header");
+        }
+        int encoded = ((data[offset] & 0xFF) << 8)
+                | (data[offset + 1] & 0xFF);
+        // The original Queue_Kos_Module treats the wrapped $A000 header as
+        // $8000 bytes before deriving the module count.
+        return encoded == 0xA000 ? 0x8000 : encoded;
+    }
+
+    public record ModuledArchiveInfo(
+            int compressedLength,
+            int decompressedLength,
+            int moduleCount) {
     }
 
     /**

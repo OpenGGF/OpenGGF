@@ -1,7 +1,6 @@
 package com.openggf.audio;
 
 import com.openggf.audio.rewind.AudioCommand;
-import com.openggf.audio.rewind.AudioBackendLogicalSnapshot;
 import com.openggf.game.MusicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -51,9 +50,14 @@ class TestNamespacedMusicRouting {
         audio.resetState();
         audio.setBackend(backend);
 
+        audio.beginCommandTimelineFrame(11);
         audio.playMusic(((MusicReference.Stock) MusicReference.stock(0x82)).musicId());
 
-        assertEquals(0x82, backend.stockMusicId);
+        // The backend is not a live command sink any more, so a stock reference is
+        // observable as its recorded numeric route rather than a backend call.
+        AudioCommand stock = audio.commandTimeline().entries().getFirst().command();
+        assertEquals(new AudioCommand.PlayMusic(
+                0x82, AudioCommand.MusicRoute.FALLBACK_WAV, false, null), stock);
         assertNull(backend.track);
     }
 
@@ -85,8 +89,10 @@ class TestNamespacedMusicRouting {
         assertTrue(audio.playNamespacedSfx(sfx));
 
         assertEquals(sfx, backend.sfx);
-        assertEquals(0, audio.commandTimeline().entryCount(),
-                "one-shots must not enter deterministic audio history");
+        assertEquals(1, audio.commandTimeline().entryCount(),
+                "creator one-shots record like stock SFX rather than bypassing rewind");
+        assertEquals(new AudioCommand.PlayNamespacedSfx(sfx),
+                audio.commandTimeline().entries().getFirst().command());
     }
 
     @Test
@@ -115,14 +121,18 @@ class TestNamespacedMusicRouting {
 
         audio.replayTimelineCommandLogically(new AudioCommand.PlayNamespacedMusic(track));
 
-        assertEquals(0, backend.livePlayCount);
-        StreamedMusicPort.State state = backend.snapshot.streamedMusic();
-        assertNotNull(state);
-        assertEquals(track, state.track());
-        assertEquals(-1, state.logicalMusicId());
-        assertEquals(0, state.sourceFramePosition());
-        assertTrue(backend.snapshot.overrideStack().isEmpty());
-        assertTrue(backend.snapshot.streamedOverrideStack().isEmpty());
+        assertEquals(0, backend.livePlayCount,
+                "logical replay must not trigger live playback");
+
+        // Without an installed streamed-music port the presentation declines to
+        // fabricate a voice rather than substituting silence, so the observable is
+        // that replay stayed logical and no stock id was allocated.
+        assertEquals(-1, backend.stockMusicId,
+                "a namespaced replay must not fall back to a numeric stock route");
+        assertTrue(audio.captureLogicalSnapshot().presentation().voices().stream()
+                        .noneMatch(voice -> voice instanceof com.openggf.audio.presentation
+                                .PresentationVoiceSnapshot.Streamed),
+                "no streamed voice can exist without a port that vouches for the track");
     }
 
     private static final class RecordingBackend extends NullAudioBackend {
@@ -132,11 +142,18 @@ class TestNamespacedMusicRouting {
         private int livePlayCount;
         private StreamedMusicPort.SfxRef sfx;
         private boolean sfxAvailable = true;
-        private AudioBackendLogicalSnapshot snapshot = AudioBackendLogicalSnapshot.empty();
 
         @Override
         public void playMusic(int musicId) {
             stockMusicId = musicId;
+        }
+
+        @Override
+        public void playStreamedMusicOrElse(int musicId, Runnable stockFallback) {
+            // Stock music reaches the backend through the override seam now; an
+            // unresolved id falls through to the stock path.
+            stockMusicId = musicId;
+            stockFallback.run();
         }
 
         @Override
@@ -149,6 +166,9 @@ class TestNamespacedMusicRouting {
 
         @Override
         public boolean hasStreamedMusic(StreamedMusicPort.TrackRef track) {
+            if (available) {
+                this.track = track;
+            }
             return available;
         }
 
@@ -159,14 +179,5 @@ class TestNamespacedMusicRouting {
             return true;
         }
 
-        @Override
-        public AudioBackendLogicalSnapshot captureLogicalSnapshot() {
-            return snapshot;
-        }
-
-        @Override
-        public void restoreLogicalSnapshot(AudioBackendLogicalSnapshot snapshot) {
-            this.snapshot = snapshot;
-        }
     }
 }

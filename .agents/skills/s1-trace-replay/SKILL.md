@@ -18,89 +18,90 @@ $ARGUMENTS: Optional zone name or action. Examples:
 
 ## Prerequisites
 
-- BizHawk 2.11 at: `docs/BizHawk-2.11-win-x64/EmuHawk.exe`
-- Sonic 1 REV01 ROM at project root: `Sonic The Hedgehog (W) (REV01) [!].gen`
-- BK2 movie files at: `docs/BizHawk-2.11-win-x64/Movies/`
-  - GHZ1: `Sonic The Hedgehog (W) (REV01) [!].bk2`
-  - MZ1: `s1-mz1.bk2`
-- Lua script: `tools/bizhawk/s1_trace_recorder.lua` (v2.2+)
+- Sonic 1 REV01 ROM discovered at the project root; export its path as `S1_ROM_PATH`
+  (SHA-1 `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`).
+- BK2 movies live beside their fixtures under
+  `src/test/resources/traces/s1/<zone>/`.
+- For the native recorder: Mono 6.12 + xbuild, and a BizHawk distribution at
+  `docs/BizHawk-2.11-linux-x64` (or `BIZHAWK_HOME`).
 
-## Step 1: Record Trace with BizHawk
+## Step 1: Record the trace
 
-BizHawk must be launched from its own directory. The Lua script writes to `tools/bizhawk/trace_output/` (relative to the script's location).
+**S1 recording is migrated to the native harness** (`tools/bizhawk-headless/`). It runs
+under Mono with no display, so prefer it over the Lua recorder:
 
-### Recording commands
-
-**MZ1:**
 ```bash
-cd "C:/Users/farre/IdeaProjects/sonic-engine/docs/BizHawk-2.11-win-x64" && \
-./EmuHawk.exe --chromeless \
-  --lua "../../tools/bizhawk/s1_trace_recorder.lua" \
-  --movie "Movies/s1-mz1.bk2" \
-  "../../Sonic The Hedgehog (W) (REV01) [!].gen" 2>&1 | tail -3
+tools/bizhawk-headless/run.sh \
+    --rom "$S1_ROM_PATH" \
+    --movie src/test/resources/traces/s1/<zone>/<movie>.bk2 \
+    --output /tmp/regen-<zone> \
+    --mode trace \
+    --trace-profile <profile>
 ```
 
-**GHZ1:**
-```bash
-cd "C:/Users/farre/IdeaProjects/sonic-engine/docs/BizHawk-2.11-win-x64" && \
-./EmuHawk.exe --chromeless \
-  --lua "../../tools/bizhawk/s1_trace_recorder.lua" \
-  --movie "Movies/Sonic The Hedgehog (W) (REV01) [!].bk2" \
-  "../../Sonic The Hedgehog (W) (REV01) [!].gen" 2>&1 | tail -3
-```
+`--output` must not already exist. Use `--run-id <id>` for complete-run / run-mode
+captures instead of `--trace-profile`. Validate changes with
+`tools/bizhawk-headless/test.sh --filter S1` — the differential gates compare against the
+committed fixtures byte-for-byte.
+
+The Lua recorder (`tools/bizhawk/s1_trace_recorder.lua`) remains the behavioural authority
+the native port is validated against, and still works on Linux via
+`tools/bizhawk/run_bizhawk_lua.sh <lua> <bk2> <rom>` with `DISPLAY=:0`. Reach for it when
+cross-checking the native output, not as the default path.
 
 ### Verify recording succeeded
 
-After each recording, check that the output was written with today's date:
+Check the written `metadata.json`:
 
-```bash
-cat "C:/Users/farre/IdeaProjects/sonic-engine/tools/bizhawk/trace_output/metadata.json"
-```
-
-Verify:
 - `recording_date` matches today
-- `zone` matches expected zone (`ghz` or `mz`)
-- `csv_version` is 4 (v2.2 format)
-- `trace_frame_count` is reasonable (GHZ1 ~3905, MZ1 ~7936)
+- `zone` matches the expected zone (`ghz`, `mz`, …)
+- `trace_frame_count` is plausible (GHZ1 ~3905, MZ1 ~7936)
 
 ### Important notes
 
-- BizHawk does NOT print Lua output to stdout in chromeless mode. Verify success by checking file timestamps and metadata, not console output.
-- The trace output directory is `tools/bizhawk/trace_output/` (NOT `docs/BizHawk-2.11-win-x64/Lua/trace_output/`). BizHawk sets the Lua working directory to the script's parent folder.
-- Each recording OVERWRITES the previous trace_output. Record and copy one zone at a time.
+- BizHawk does not print Lua output to stdout in chromeless mode. Judge Lua runs by output
+  files and timestamps, never console output. The native harness does report errors on
+  stderr and exits non-zero.
+- Lua output lands in `tools/bizhawk/trace_output/` (relative to the *script's* folder, not
+  BizHawk's), and each run OVERWRITES the previous one — record and copy one zone at a
+  time. The native harness writes to whatever `--output` you pass and refuses to clobber.
 
 ## Step 2: Copy Trace to Test Resources
 
-After each recording, copy the three output files to the correct test resource directory:
+After each recording, copy the three output files into the fixture directory (paths are
+repo-relative; `$SRC` is your `--output` dir for a native capture, or
+`tools/bizhawk/trace_output` for a Lua one). The `.bk2` is unchanged:
 
-**MZ1:**
 ```bash
-SRC="C:/Users/farre/IdeaProjects/sonic-engine/tools/bizhawk/trace_output"
-DST="C:/Users/farre/IdeaProjects/sonic-engine/src/test/resources/traces/s1/mz1_fullrun"
-cp "$SRC/physics.csv" "$DST/physics.csv" && \
-cp "$SRC/aux_state.jsonl" "$DST/aux_state.jsonl" && \
-cp "$SRC/metadata.json" "$DST/metadata.json"
+SRC=/tmp/regen-<zone>
+DST=src/test/resources/traces/s1/<zone>_fullrun
+cp "$SRC"/metadata.json "$DST/"
+# Payloads are committed GZIPPED. A native capture already produced .gz for
+# anything over 1 MiB; gzip whatever is still plain before copying.
+for f in physics.csv aux_state.jsonl; do
+    [ -f "$SRC/$f.gz" ] && cp "$SRC/$f.gz" "$DST/"
+    [ -f "$SRC/$f" ] && gzip -9 -n -c "$SRC/$f" > "$DST/$f.gz"
+done
 ```
 
-**GHZ1:**
-```bash
-SRC="C:/Users/farre/IdeaProjects/sonic-engine/tools/bizhawk/trace_output"
-DST="C:/Users/farre/IdeaProjects/sonic-engine/src/test/resources/traces/s1/ghz1_fullrun"
-cp "$SRC/physics.csv" "$DST/physics.csv" && \
-cp "$SRC/aux_state.jsonl" "$DST/aux_state.jsonl" && \
-cp "$SRC/metadata.json" "$DST/metadata.json"
-```
+`TestTraceFixtureCompressionGuard` fails the build if an uncompressed `physics*.csv` or
+`aux_state*.jsonl` lands under `src/test/resources/traces/`: uncompressed these run to
+hundreds of MB and exceed GitHub's per-file limit. The pre-existing uncompressed fixtures
+are grandfathered in `src/test/resources/trace-guard/uncompressed-payload-baseline.txt`.
+
+Fixtures are read-only ground truth: only overwrite one deliberately, to gain diagnostic
+data, and commit the regen separately from any recorder change.
 
 ## Step 3: Run Trace Replay Tests
 
 ```bash
-cd "C:/Users/farre/IdeaProjects/sonic-engine" && mvn test -Dtest="*TraceReplay"
+mvn "-Dtest=*TraceReplay" test
 ```
 
 Expected output pattern:
 - `MSE:TESTS total=15 passed=N failed=M errors=0 skipped=0`
 - GHZ1 (`TestS1Ghz1TraceReplay`) should PASS
-- MZ1 (`TestS1Mz1TraceReplay`): current per-trace error/warning counts live in `docs/TRACE_FRONTIER_LOG.md`, not here — baselines drift as fixes land, so check the log or regenerate rather than trusting a number quoted in this skill.
+- MZ1 (`TestS1Mz1TraceReplay`): current per-trace error/warning counts live in `docs/status/trace-frontier-log.md`, not here — baselines drift as fixes land, so check the log or regenerate rather than trusting a number quoted in this skill.
 
 ### Test class mapping
 
@@ -222,5 +223,5 @@ For a full re-record and test cycle:
 3. Copy 3 files to test resources
 4. Repeat for second zone if doing both
 5. Run `mvn test -Dtest="*TraceReplay"`
-6. Compare error count against the current baseline in `docs/TRACE_FRONTIER_LOG.md` (GHZ1 should stay 0)
+6. Compare error count against the current baseline in `docs/status/trace-frontier-log.md` (GHZ1 should stay 0)
 7. If errors changed: read report JSON and cross-reference aux events at first error frame

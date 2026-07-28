@@ -37,7 +37,7 @@ import java.util.logging.Logger;
  *   <li>IDLE - Solid body, waiting for button trigger (Pri_BodyMain, routine 2)</li>
  *   <li>EXPLODING - Spawning explosion particles, 60 frames (Pri_Explosion, routine $A)</li>
  *   <li>ANIMAL_SPAWN - Initial burst of 8 + continuous spawning, 150 frames (Pri_Animals, routine $C)</li>
- *   <li>END_ACT - Waiting for all animals to leave, then GotThroughAct (Pri_EndAct, routine $E)</li>
+ *   <li>END_ACT - Checking for all animals to leave, then GotThroughAct (Pri_EndAct, routine $E)</li>
  * </ol>
  */
 public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
@@ -74,10 +74,6 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
     // From disassembly: move.w #$C,objoff_36(a1) — animal delay
     private static final int SPAWN_ANIMAL_DELAY = 0xC;
 
-    // === End-act phase ===
-    // From disassembly: move.w #180,obTimeFrame(a0)
-    private static final int END_ACT_WAIT = 180;
-
     // === Explosion random spread ===
     // ROM: move.b d0,d1 / lsr.b #2,d1 / subi.w #$20,d1 → X range [-32, +31]
     // ROM: lsr.w #8,d0 / lsr.b #3,d0 → Y range [0, 31]
@@ -86,6 +82,12 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
     private static final int FRAME_CAPSULE = 0;
     private static final int FRAME_BROKEN = 2;
     private static final int FRAME_BLANK = 6;
+
+    // Released S1 Pri_EndAct starts at native slot 1 and uses
+    // ((128 - 1) / 2) - 1 as DBF's counter: 63 iterations, slots 1..63.
+    // Dynamic objects begin at slot 32, so animals in slots 64..127 are
+    // accidentally invisible to the completion scan.
+    private static final int RELEASED_END_ACT_LAST_SCANNED_SLOT = 63;
 
     // === State machine ===
     private enum State {
@@ -250,7 +252,6 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
         timer--;
         if (timer <= 0) {
             state = State.END_ACT;
-            timer = END_ACT_WAIT;
         }
     }
 
@@ -259,12 +260,9 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
      * ROM: Loops through object RAM looking for id_Animals (0x28).
      */
     private void updateEndAct(AbstractPlayableSprite player) {
-        if (timer > 0) {
-            timer--;
-            return;
-        }
-
-        // After wait, check every frame if animals are gone
+        // The released-game Pri_EndAct scans immediately. Its apparent
+        // `move.w #3*60,obTimeFrame(a0)` predecessor is guarded by FixBugs=0
+        // and is explicitly unused: Pri_EndAct never reads obTimeFrame.
         if (!areAnimalsPresent()) {
             triggerGotThroughAct(player);
         }
@@ -366,11 +364,17 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
         }
 
         for (var obj : objectManager.getActiveObjects()) {
-            if (obj instanceof EggPrisonAnimalInstance && !obj.isDestroyed()) {
+            if (obj instanceof EggPrisonAnimalInstance animal
+                    && !obj.isDestroyed()
+                    && releasedEndActScansSlot(animal.getSlotIndex())) {
                 return true;
             }
         }
         return false;
+    }
+
+    static boolean releasedEndActScansSlot(int slotIndex) {
+        return slotIndex >= 1 && slotIndex <= RELEASED_END_ACT_LAST_SCANNED_SLOT;
     }
 
     /**
@@ -417,7 +421,7 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(BODY_HALF_WIDTH, BODY_HALF_HEIGHT, BODY_HALF_HEIGHT);
+        return SolidObjectParams.of(BODY_HALF_WIDTH, BODY_HALF_HEIGHT, BODY_HALF_HEIGHT);
     }
 
     @Override

@@ -25,6 +25,10 @@ public interface StreamedMusicPort extends AutoCloseable {
             throw new IllegalArgumentException("No streamed track is installed: " + track);
         }
         @Override public boolean hasSfx(SfxRef sfx) { Objects.requireNonNull(sfx, "sfx"); return false; }
+        @Override public Optional<SfxPcm> sfxPcm(SfxRef sfx) {
+            Objects.requireNonNull(sfx, "sfx");
+            return Optional.empty();
+        }
         @Override public OneShot openSfx(SfxRef sfx) {
             throw new IllegalArgumentException("No streamed SFX is installed: " + sfx);
         }
@@ -66,6 +70,35 @@ public interface StreamedMusicPort extends AutoCloseable {
         public SfxRef {
             if (owner == null || owner.isBlank()) throw new IllegalArgumentException("SFX owner is required");
             if (name == null || name.isBlank()) throw new IllegalArgumentException("SFX name is required");
+        }
+    }
+
+    /**
+     * Prepared PCM for a namespaced one-shot, so the presentation layer can own
+     * its playback as an ordinary sample voice rather than the port mixing it
+     * privately. Presentation-owned playback is what gives creator SFX the same
+     * rewind snapshot/restore, history and capture behaviour as stock SFX.
+     *
+     * <p>{@code samples} is interleaved by {@code channels} and belongs to the
+     * caller: implementations hand out a copy or an already-immutable view.
+     */
+    @com.openggf.game.ModApi
+    record SfxPcm(int sampleRate, int channels, short[] samples, float gain) {
+        public SfxPcm {
+            if (sampleRate < 8_000 || sampleRate > 192_000) {
+                throw new IllegalArgumentException("Sample rate must be in 8000..192000");
+            }
+            if (channels < 1 || channels > 2) {
+                throw new IllegalArgumentException("Channels must be mono or stereo");
+            }
+            Objects.requireNonNull(samples, "samples");
+            if (samples.length == 0 || samples.length % channels != 0) {
+                throw new IllegalArgumentException(
+                        "PCM samples must contain complete nonempty frames");
+            }
+            if (!Float.isFinite(gain) || gain < 0.0f) {
+                throw new IllegalArgumentException("Gain must be finite and nonnegative");
+            }
         }
     }
 
@@ -151,6 +184,12 @@ public interface StreamedMusicPort extends AutoCloseable {
     default OneShot openSfx(SfxRef sfx) {
         throw new IllegalArgumentException("Unknown namespaced streamed SFX: "
                 + Objects.requireNonNull(sfx, "sfx"));
+    }
+
+    /** Prepared PCM for a namespaced one-shot; empty when the key is unknown. */
+    default Optional<SfxPcm> sfxPcm(SfxRef sfx) {
+        Objects.requireNonNull(sfx, "sfx");
+        return Optional.empty();
     }
     boolean hasSource();
     int mixInto(short[] output, int frames);

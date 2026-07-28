@@ -16,7 +16,7 @@ class TestFbzVisualEvidenceToolingContract {
     @Test
     void amendmentPreservesSupersededEvidenceAndVersionedReplacementPaths() throws Exception {
         JsonNode amendment = new ObjectMapper().readTree(Path.of(
-                "docs/s3k-zones/fbz-visual-evidence-amendment-proposal.json").toFile());
+                "docs/architecture/research/s3k-zones/fbz-visual-evidence-amendment-proposal.json").toFile());
         assertEquals("rejected-superseded",
                 amendment.path("policy").path("current_evidence_status").asText());
         assertEquals("refs/fbz/fbz1-start-outdoor-gameplay-v2-320x224.png",

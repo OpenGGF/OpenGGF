@@ -291,7 +291,6 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance impl
 
     private void beginLatchedCooldown(AbstractPlayableSprite player, CageState state) {
         state.cooldown = 1;
-        player.setControlLocked(true);
         // ROM Obj_CNZWireCage sets bits 6 and 1 of object_control (sonic3k.asm:69937-69938),
         // and bit 0 in the air-recapture branch (sonic3k.asm:69921 loc_3394C). None of
         // those is bit 7, so ROM keeps Tails_CPU_Control running each frame — that is
@@ -409,7 +408,6 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance impl
 
         if (Math.abs(player.getGSpeed()) < MIN_SPEED_TO_CONTINUE) {
             state.cooldown = 1;
-            player.setControlLocked(true);
             // See beginLatchedCooldown: ROM cage uses bits 1+6 (and 0 on
             // air-recapture), never bit 7, so the sidekick CPU keeps running.
             ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);

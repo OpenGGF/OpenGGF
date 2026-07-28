@@ -25,6 +25,9 @@ class TestGameRulesConstants {
         assertFalse(GameRules.SONIC_1.playerAnimation().angledLandingPublishesWalk());
         assertTrue(GameRules.SONIC_2.playerAnimation().angledLandingPublishesWalk());
         assertFalse(GameRules.SONIC_3K.playerAnimation().angledLandingPublishesWalk());
+        assertFalse(GameRules.SONIC_1.playerAnimation().angledLandingPublishesWalkUnlessSpindashing());
+        assertFalse(GameRules.SONIC_2.playerAnimation().angledLandingPublishesWalkUnlessSpindashing());
+        assertTrue(GameRules.SONIC_3K.playerAnimation().angledLandingPublishesWalkUnlessSpindashing());
     }
 
     @Test

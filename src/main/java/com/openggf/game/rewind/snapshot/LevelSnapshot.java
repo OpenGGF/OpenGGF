@@ -3,6 +3,7 @@ package com.openggf.game.rewind.snapshot;
 import com.openggf.level.Block;
 import com.openggf.level.Chunk;
 import com.openggf.game.CheckpointState;
+import com.openggf.game.InitialProcessSpritesLifecycle;
 
 /**
  * Reference-only level snapshot. Block/Chunk arrays are shared while the
@@ -36,7 +37,8 @@ public record LevelSnapshot(
         boolean levelTimerPaused,
         boolean respawnRequested,
         CheckpointState.RewindState checkpointState,
-        boolean transitionRingInitializationPending) {
+        boolean transitionRingInitializationPending,
+        InitialProcessSpritesLifecycle pendingInitialProcessSpritesLifecycle) {
 
     /** Compatibility constructor for snapshots predating deferred transition-ring initialization. */
     public LevelSnapshot(
@@ -54,7 +56,50 @@ public record LevelSnapshot(
             CheckpointState.RewindState checkpointState) {
         this(epochAtCapture, blocks, chunks, mapData, frameCounter,
                 hasLevelHudState, levelRings, levelRingExtraLifeFlags, levelTimerFrames,
-                levelTimerPaused, respawnRequested, checkpointState, false);
+                levelTimerPaused, respawnRequested, checkpointState, false,
+                InitialProcessSpritesLifecycle.NONE);
+    }
+
+    /** Compatibility constructor for snapshots predating initial-ProcessSprites lifecycle capture. */
+    public LevelSnapshot(
+            long epochAtCapture,
+            Block[] blocks,
+            Chunk[] chunks,
+            byte[] mapData,
+            int frameCounter,
+            boolean hasLevelHudState,
+            int levelRings,
+            int levelRingExtraLifeFlags,
+            long levelTimerFrames,
+            boolean levelTimerPaused,
+            boolean respawnRequested,
+            CheckpointState.RewindState checkpointState,
+            boolean transitionRingInitializationPending) {
+        this(epochAtCapture, blocks, chunks, mapData, frameCounter,
+                hasLevelHudState, levelRings, levelRingExtraLifeFlags, levelTimerFrames,
+                levelTimerPaused, respawnRequested, checkpointState,
+                transitionRingInitializationPending, InitialProcessSpritesLifecycle.NONE);
+    }
+
+    /** Compatibility constructor for snapshots predating deferred transition-ring initialization. */
+    public LevelSnapshot(
+            long epochAtCapture,
+            Block[] blocks,
+            Chunk[] chunks,
+            byte[] mapData,
+            int frameCounter,
+            boolean hasLevelHudState,
+            int levelRings,
+            int levelRingExtraLifeFlags,
+            long levelTimerFrames,
+            boolean levelTimerPaused,
+            boolean respawnRequested,
+            CheckpointState.RewindState checkpointState,
+            InitialProcessSpritesLifecycle pendingInitialProcessSpritesLifecycle) {
+        this(epochAtCapture, blocks, chunks, mapData, frameCounter,
+                hasLevelHudState, levelRings, levelRingExtraLifeFlags, levelTimerFrames,
+                levelTimerPaused, respawnRequested, checkpointState, false,
+                pendingInitialProcessSpritesLifecycle);
     }
 
     public LevelSnapshot(
@@ -64,7 +109,8 @@ public record LevelSnapshot(
             byte[] mapData,
             int frameCounter) {
         this(epochAtCapture, blocks, chunks, mapData, frameCounter,
-                false, 0, 0, 0, false, false, null, false);
+                false, 0, 0, 0, false, false, null, false,
+                InitialProcessSpritesLifecycle.NONE);
     }
 
     public LevelSnapshot(
@@ -75,7 +121,8 @@ public record LevelSnapshot(
             int frameCounter,
             boolean respawnRequested) {
         this(epochAtCapture, blocks, chunks, mapData, frameCounter,
-                false, 0, 0, 0, false, respawnRequested, null, false);
+                false, 0, 0, 0, false, respawnRequested, null, false,
+                InitialProcessSpritesLifecycle.NONE);
     }
 
     /** Compatibility constructor for callers predating ring-threshold flag capture. */
@@ -85,6 +132,6 @@ public record LevelSnapshot(
             CheckpointState.RewindState checkpointState) {
         this(epochAtCapture, blocks, chunks, mapData, frameCounter, hasLevelHudState,
                 levelRings, 0, levelTimerFrames, levelTimerPaused, respawnRequested,
-                checkpointState, false);
+                checkpointState, false, InitialProcessSpritesLifecycle.NONE);
     }
 }

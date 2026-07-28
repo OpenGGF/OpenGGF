@@ -67,6 +67,8 @@ public class LostRingObjectInstance extends AbstractObjectInstance
     private boolean romRenderFlagForFloorProbe = true;
     private boolean deferFirstPhysicsUpdate;
     private boolean clearMainPlayerRingsOnFirstUpdate;
+    private boolean touchStateAlreadyPostMovement;
+    private boolean deferFirstUpdateUntilOwnerPass;
 
     /**
      * Shared spin owner; the displayed frame = owner.frame() + phaseOffset. This is
@@ -279,6 +281,10 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         if (isDestroyed()) {
             return;
         }
+        if (deferFirstUpdateUntilOwnerPass) {
+            deferFirstUpdateUntilOwnerPass = false;
+            return;
+        }
         if (clearMainPlayerRingsOnFirstUpdate) {
             if (player instanceof com.openggf.sprites.playable.AbstractPlayableSprite playable) {
                 playable.setRingCount(0);
@@ -302,6 +308,19 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         // skipping ahead to another overlapping ring.
         if (collected && !collectionRoutineStarted) {
             collectionRoutineStarted = true;
+            // ROM Touch_ChkValue only writes routine=4. GiveRing runs when this
+            // Obj37 slot next executes (loc_1A7C2), which can be later in the
+            // same object pass or on the following frame depending on slot order.
+            ObjectServices services = servicesOrNull();
+            if (services != null && services.levelGamestate() != null) {
+                services.levelGamestate().addRings(1);
+            } else if (player instanceof com.openggf.sprites.playable.AbstractPlayableSprite playable) {
+                playable.addRings(1);
+            }
+            if (services != null) {
+                services.playSfx(com.openggf.audio.GameSound.RING);
+            }
+            sparkleStartFrame = executedFrame;
         }
         if (collected && collectedSparkleFinished(executedFrame)) {
             setDestroyed(true);
@@ -552,11 +571,28 @@ public class LostRingObjectInstance extends AbstractObjectInstance
 
     public void markCollected(int frameCounter) {
         collected = true;
-        // Touch response observes Obj37 after its object update for the frame;
-        // the collected sparkle routine takes effect when that slot next runs.
-        int collectionFrame = lastFrameCounter > 0 ? lastFrameCounter + 1 : frameCounter;
-        sparkleStartFrame = collectionFrame;
-        lastFrameCounter = collectionFrame;
+    }
+
+    public void markTouchStateAlreadyPostMovement() {
+        touchStateAlreadyPostMovement = true;
+    }
+
+    /**
+     * The Obj37 owner was allocated behind the current SST cursor, so children
+     * allocated eagerly by the engine must wait for that owner's next-pass init.
+     */
+    public void deferFirstUpdateUntilOwnerPass() {
+        deferFirstUpdateUntilOwnerPass = true;
+    }
+
+    @Override
+    public boolean usesCurrentTouchResponseState() {
+        // Obj37_Main calls MoveSprite2 before Add_SpriteToCollisionResponseList.
+        // A manager rebuilt across a seamless act handoff inherits the global
+        // V-int phase while its local execution counter restarts. Its Obj37
+        // snapshot is already the list-published post-movement position;
+        // ordinary uninterrupted managers retain the pre-update path.
+        return touchStateAlreadyPostMovement;
     }
 
     public int getSparkleStartFrame() {

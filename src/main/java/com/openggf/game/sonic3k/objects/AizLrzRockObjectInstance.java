@@ -335,7 +335,7 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
         int idx = Math.clamp(sizeIndex, 0, SIZE_TABLE.length - 1);
         int halfWidth = SIZE_TABLE[idx][0];
         int halfHeight = SIZE_TABLE[idx][1];
-        return new SolidObjectParams(halfWidth + 0x0B, halfHeight, halfHeight + 1);
+        return SolidObjectParams.of(halfWidth + 0x0B, halfHeight, halfHeight + 1);
     }
 
     @Override

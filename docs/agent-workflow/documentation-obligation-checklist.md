@@ -34,7 +34,7 @@ it must say `n/a`. So "lying" in either direction fails the hook.
 
 ## Pre-finalize checklist
 
-### 1. Trace frontier — `docs/TRACE_FRONTIER_LOG.md`
+### 1. Trace frontier — `docs/status/trace-frontier-log.md`
 
 - **REQUIRED** if a trace frontier **moved**, a previously passing trace
   **regressed**, a trace fix was committed, or a full `*TraceReplay` sweep was used
@@ -72,7 +72,7 @@ it must say `n/a`. So "lying" in either direction fails the hook.
   `n/a: docs-only`). Commits with other subject prefixes, or that don't touch
   `src/main/`, may use a plain `n/a`.
 
-### 4. Known discrepancies — `docs/KNOWN_DISCREPANCIES.md`  →  trailer `Known-Discrepancies`
+### 4. Known discrepancies — `docs/status/known-discrepancies.md`  →  trailer `Known-Discrepancies`
 
 - **REQUIRED** if you added, resolved, or changed an intentional/known divergence
   from ROM behavior (cross-game / non-S3K-specific): update the file, set
@@ -128,13 +128,13 @@ to non-merge commits by `prepare-commit-msg` — fill it in, do not delete it.
 |-------------|---------|-----------|-------|
 | `Changelog` | `CHANGELOG.md` | exact file | Bare `n/a` rejected on `feat`/`fix`/`perf` touching `src/main/`; use `n/a: <reason>`. |
 | `Guide` | `docs/guide/` | directory prefix | Contributor/player guide tree. |
-| `Known-Discrepancies` | `docs/KNOWN_DISCREPANCIES.md` | exact file | Cross-game intentional divergences. |
+| `Known-Discrepancies` | `docs/status/known-discrepancies.md` | exact file | Cross-game intentional divergences. |
 | `S3K-Known-Discrepancies` | `docs/S3K_KNOWN_DISCREPANCIES.md` | exact file | S3K-specific parity gaps. |
 | `Agent-Docs` | `AGENTS.md` **and** `CLAUDE.md` | both, exact | Must stage both together when `updated`. |
 | `Configuration-Docs` | `CONFIGURATION.md` | exact file | Config flags / key bindings / toggles. |
 | `Skills` | `.agents/skills/` **and** `.claude/skills/` | both, prefix | Must stage both mirrors together when `updated`. |
 
-`docs/TRACE_FRONTIER_LOG.md` has **no trailer** — it is a separate branch policy
+`docs/status/trace-frontier-log.md` has **no trailer** — it is a separate branch policy
 obligation (item 1). Update it in the same commit as the trace work it documents.
 
 ### Example trailer block
@@ -159,7 +159,7 @@ recorded an S3K parity gap; no config, guide, or root-agent-doc changes.)
 - Touched `src/main/` engine behavior? → `Changelog: updated` + `CHANGELOG.md`,
   **or** `Changelog: n/a: <reason>` on `feat`/`fix`/`perf`.
 - Trace frontier moved / regressed / drove target selection? → update
-  `docs/TRACE_FRONTIER_LOG.md` (no trailer).
+  `docs/status/trace-frontier-log.md` (no trailer).
 - Found a reusable pitfall? → update both `rom-pitfalls.md` mirrors → `Skills: updated`.
 - Changed a known divergence? → `Known-Discrepancies` and/or
   `S3K-Known-Discrepancies` = `updated`.

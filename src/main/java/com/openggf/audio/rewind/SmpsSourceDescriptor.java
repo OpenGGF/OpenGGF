@@ -5,7 +5,6 @@ import com.openggf.audio.smps.AbstractSmpsData;
 import java.util.Arrays;
 import java.util.Objects;
 
-@com.openggf.game.ModApi
 public record SmpsSourceDescriptor(
         Kind kind,
         int id,
@@ -16,7 +15,6 @@ public record SmpsSourceDescriptor(
         int dataHash,
         boolean palSpeedupDisabled) {
 
-    @com.openggf.game.ModApi
     public enum Kind {
         UNKNOWN,
         BASE_MUSIC,

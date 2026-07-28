@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -42,6 +43,9 @@ class TraceCaptureToolArgsTest {
         TraceRunManifest manifest = new TraceRunManifest(
                 TraceRunManifest.SUPPORTED_RUN_SCHEMA, "s3k", "run_aiz_gumball",
                 "shared.bk2", null, null, List.of(), List.of());
+        assertEquals(TraceRunManifest.ExpectedMovieEndMode.UNSPECIFIED,
+                manifest.expectedMovieEndMode(),
+                "legacy constructor must leave terminal mode unspecified");
         TraceEntry run = new TraceEntry(
                 Path.of("traces", "s3k", "runs", "run_aiz_gumball"),
                 "s3k", 0, 0, 6, 500, 0, null, null, null,
@@ -52,6 +56,26 @@ class TraceCaptureToolArgsTest {
                 () -> TraceCaptureTool.requireCapturable(run));
         assertTrue(ex.getMessage().contains("not capturable"),
                 "rejection must explain runs are not capturable: " + ex.getMessage());
+    }
+
+    @Test
+    void postBootFailureClosesSessionAndBootBeforePropagating() {
+        AtomicBoolean sessionClosed = new AtomicBoolean();
+        AtomicBoolean bootClosed = new AtomicBoolean();
+        RuntimeException primary = new RuntimeException("post-boot failure");
+
+        RuntimeException actual = assertThrows(RuntimeException.class, () -> {
+            try (TraceCaptureTool.BootOwnership<AutoCloseable> ignored =
+                    new TraceCaptureTool.BootOwnership<>(
+                            () -> bootClosed.set(true),
+                            () -> sessionClosed.set(true))) {
+                throw primary;
+            }
+        });
+
+        assertSame(primary, actual);
+        assertTrue(sessionClosed.get());
+        assertTrue(bootClosed.get());
     }
 
     @Test

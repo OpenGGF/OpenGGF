@@ -243,12 +243,34 @@ public class IczTensionPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getBalanceWidthPixels() {
+        // SetUp_ObjAttributes copies ObjDat_ICZTensionPlatform's
+        // width_pixels=$18 into the parent SST. Sonic_Move reads that byte for
+        // object-edge balance, not sub_8BA1C's extended d1=$23 solid width.
+        return 0x18;
+    }
+
+    @Override
     public SolidExecutionMode solidExecutionMode() {
         return SolidExecutionMode.MANUAL_CHECKPOINT;
     }
 
     @Override
     public boolean isTopSolidOnly() {
+        return true;
+    }
+
+    @Override
+    public boolean usesGroundHalfHeightForTopSolidContact() {
+        // SolidObjectTop's new-contact branch subtracts d3 from y_pos before
+        // comparing the player's feet (sonic3k.asm loc_1E44C-loc_1E45A).
+        return true;
+    }
+
+    @Override
+    public boolean rejectsZeroDistanceTopSolidLanding() {
+        // At d0 == 0, the preceding bhi does not branch, but the unsigned
+        // cmpi.w #-$10,d0 / blo still rejects the contact at loc_1E45A.
         return true;
     }
 

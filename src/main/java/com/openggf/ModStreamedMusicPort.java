@@ -88,6 +88,18 @@ public final class ModStreamedMusicPort implements StreamedMusicPort {
     }
 
     @Override
+    public Optional<SfxPcm> sfxPcm(SfxRef sfx) {
+        requireOpen();
+        Objects.requireNonNull(sfx, "sfx");
+        return music.resolveSfx(new SfxKey(sfx.owner(), sfx.name()))
+                .map(prepared -> new SfxPcm(
+                        prepared.pcm().sampleRate(),
+                        prepared.pcm().channels(),
+                        prepared.pcm().copySamples(),
+                        prepared.gain()));
+    }
+
+    @Override
     public OneShot openSfx(SfxRef sfx) {
         requireOpen();
         Objects.requireNonNull(sfx, "sfx");

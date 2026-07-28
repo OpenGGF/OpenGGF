@@ -166,7 +166,7 @@ public class AizFlippingBridgeObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(HALF_WIDTH, HEIGHT_PIXELS, HEIGHT_PIXELS + 1);
+        return SolidObjectParams.of(HALF_WIDTH, HEIGHT_PIXELS, HEIGHT_PIXELS + 1);
     }
 
     @Override

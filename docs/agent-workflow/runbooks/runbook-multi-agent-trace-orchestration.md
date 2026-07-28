@@ -108,7 +108,7 @@ never hydrate engine state from the trace per-frame (frame-0 bootstrap only).
   `origin/develop`**, verify, then push — the clean tree has none of the WIP.
 - Commit trailers: src/main feat/fix needs `Changelog: updated` **and** a CHANGELOG.md
   edit in the **same** commit. No `--no-verify`. Merges into develop need a README
-  release-log entry. Update `docs/TRACE_FRONTIER_LOG.md` whenever a frontier moves.
+  release-log entry. Update `docs/status/trace-frontier-log.md` whenever a frontier moves.
 - A correct, regression-free, ROM-faithful change that does **not** advance a frontier
   yet (e.g. a foundational bootstrap seed gated by a separate root) is committed to
   its **branch** but **not merged to develop** until a frontier actually moves — so

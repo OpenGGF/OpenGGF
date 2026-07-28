@@ -97,6 +97,39 @@ public class TestActTransitionHeadless {
     }
 
     @Test
+    public void executeActTransitionInheritsRingFloorPhaseWithoutChangingItsNumericValue() throws Exception {
+        LevelManager lm = GameServices.level();
+        lm.initRingFloorCheckCounterPhase(7);
+
+        SeamlessLevelTransitionRequest request = SeamlessLevelTransitionRequest
+                .builder(TransitionType.RELOAD_TARGET_LEVEL)
+                .targetZoneAct(ZONE_EHZ, ACT_2)
+                .preserveMusic(true)
+                .build();
+
+        lm.executeActTransition(request);
+
+        assertEquals(7, lm.getObjectManager().getRingFloorCheckCounterPhase(),
+                "Load_Level preserves the global V_int-derived floor-check phase");
+        assertTrue(lm.getObjectManager().hasInheritedRingCounterPhase(),
+                "the rebuilt manager separately records that its phase was inherited");
+    }
+
+    @Test
+    public void fullLevelReloadPreservesGlobalVintClock() {
+        LevelManager lm = GameServices.level();
+        ObjectManager beforeOM = lm.getObjectManager();
+        beforeOM.initVblaCounter(0x4567);
+
+        lm.loadCurrentLevel();
+
+        assertNotSame(beforeOM, lm.getObjectManager(),
+                "A full reload must rebuild dynamic object RAM");
+        assertEquals(0x4567, lm.getObjectManager().getVblaCounter(),
+                "Global V_int_run_count survives deaths and results-screen level loads");
+    }
+
+    @Test
     public void seamlessReloadTicksGlobalVintClockAcrossTransitionOnlyFrame() {
         LevelManager lm = GameServices.level();
         lm.getObjectManager().initVblaCounter(0x4567);

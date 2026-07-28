@@ -1,5 +1,4 @@
 package com.openggf.game.sonic1.objects.badniks;
-import com.openggf.game.GameServices;
 import com.openggf.game.PlayableEntity;
 
 import com.openggf.level.objects.AbstractBadnikInstance;
@@ -42,6 +41,11 @@ public class Sonic1CrabmeatBadnikInstance extends AbstractBadnikInstance impleme
 
     // From disassembly: obYRad = $10
     private static final int Y_RADIUS = 0x10;
+
+    // Crab_Main: obActWid = 42/2. BuildSprites uses the shared 32px
+    // assumed-height band because sprite_customheight_bit is clear.
+    private static final int DISPLAY_HALF_WIDTH = 42 / 2;
+    private static final int ASSUMED_RENDER_HALF_HEIGHT = 32;
 
     // Walking velocity: move.w #$80,obVelX(a0)
     private static final int WALK_VELOCITY = 0x80;
@@ -93,6 +97,9 @@ public class Sonic1CrabmeatBadnikInstance extends AbstractBadnikInstance impleme
     private final SubpixelMotion.State motion = new SubpixelMotion.State(0, 0, 0, 0, 0, 0);
     private int fallVelocity;      // obVelY for ObjectFall during init
     private boolean initialized;
+    // Crab_Main returns without DisplaySprite, so obRender bit 7 is guaranteed
+    // clear when the first Crab_Action frame tests it.
+    private boolean renderFlagClearFromInvisibleInit;
 
     // Animation state
     private int baseAnimIndex;     // Animation index from Crab_SetAni (0-2)
@@ -111,6 +118,7 @@ public class Sonic1CrabmeatBadnikInstance extends AbstractBadnikInstance impleme
         this.terrainAngle = 0;
         this.fallVelocity = 0;
         this.initialized = false;
+        this.renderFlagClearFromInvisibleInit = true;
         this.baseAnimIndex = 0;
         this.renderedFrame = 0;
     }
@@ -127,6 +135,7 @@ public class Sonic1CrabmeatBadnikInstance extends AbstractBadnikInstance impleme
             case STATE_WAIT_FIRE -> updateWaitFire();
             case STATE_WALK -> updateWalk();
         }
+        renderFlagClearFromInvisibleInit = false;
     }
 
     /**
@@ -177,7 +186,8 @@ public class Sonic1CrabmeatBadnikInstance extends AbstractBadnikInstance impleme
 
         // Timer expired
         // ROM: tst.b obRender(a0) / bpl.s .movecrab (off-screen → skip toggle, go to walk)
-        if (!isOnScreenX()) {
+        if (renderFlagClearFromInvisibleInit
+                || !isWithinRenderSpriteBounds(DISPLAY_HALF_WIDTH, ASSUMED_RENDER_HALF_HEIGHT)) {
             startWalking();
             return;
         }

@@ -356,8 +356,17 @@ class TestTraceReplayInvariantGuard {
         return normalize(source).equals("src/main/java/com/openggf/sprites/ghost/GhostTraceRenderer.java");
     }
 
+    /**
+     * The headless CLI tools' {@code TraceReplayFixture} view forwards the
+     * recording-cursor call straight to the driver. It advances a cursor over
+     * recorded <em>input</em>, which is what a replay is supposed to consume; it
+     * writes no recorded engine state anywhere.
+     */
     private static boolean isTraceCaptureToolRecordingAdapter(Path source, String trimmed) {
-        return normalize(source).equals("src/main/java/com/openggf/tools/TraceCaptureTool.java")
+        String normalized = normalize(source);
+        return (normalized.equals("src/main/java/com/openggf/tools/TraceReplayDrive.java")
+                || normalized.equals(
+                        "src/test/java/com/openggf/tests/HeadlessTestRunner.java"))
                 && trimmed.equals("driver.advanceRecordingCursor(frameCount);");
     }
 

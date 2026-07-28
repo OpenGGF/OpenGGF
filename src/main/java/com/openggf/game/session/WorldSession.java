@@ -19,7 +19,7 @@ public final class WorldSession {
 
     // Loaded-level metadata. Owned by WorldSession because the loaded zone/act
     // identity must survive editor mode swaps (per
-    // docs/superpowers/specs/2026-04-07-runtime-ownership-migration-design.md).
+    // docs/architecture/designs/2026-04-07-runtime-ownership-migration-design.md).
     // LevelManager mirrors these via write-through during level load; the
     // mirror exists for fast internal reads without touching session API.
     private int currentZone = 0;

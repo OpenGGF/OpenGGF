@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k;
 
 import com.openggf.game.AbstractLevelInitProfile;
 import com.openggf.game.InitStep;
+import com.openggf.game.InitialProcessSpritesLifecycle;
 import com.openggf.game.LevelLoadContext;
 import com.openggf.game.SidekickSpawnOffset;
 import com.openggf.game.StaticFixup;
@@ -40,6 +41,7 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile {
             steps.add(initLevelEventsStep());
             steps.add(spawnSidekickStep());
             steps.add(initZonePlayerStateStep());
+            steps.add(requestInitialProcessSpritesStep(ctx));
             if (!isPreviewCapture(ctx)) {
                 steps.add(requestTitleCardStep(ctx));
             }
@@ -59,10 +61,35 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile {
             levelEventManager::applyZonePlayerState);
     }
 
+    @Override
+    public InitialProcessSpritesLifecycle initialProcessSpritesLifecycle() {
+        return InitialProcessSpritesLifecycle.LOAD_THEN_PROCESS_ONCE;
+    }
+
+    /**
+     * ROM fresh-level assembly creates players and zone state before the
+     * initial Load_Sprites/Process_Sprites setup sequence
+     * (docs/skdisasm/sonic3k.asm:7849-7855, 7889-7906).
+     */
+    private InitStep requestInitialProcessSpritesStep(LevelLoadContext ctx) {
+        return new InitStep("RequestInitialProcessSprites",
+                "S3K: arm post-load Load_Sprites then Process_Sprites setup",
+                () -> ctx.requestInitialProcessSpritesFromProfile(initialProcessSpritesLifecycle()));
+    }
+
     /** S3K sidekick: -32px X, +4px Y (ROM: {@code player_pos - $20}, {@code player_pos + 4}). */
     @Override
     public SidekickSpawnOffset sidekickSpawnOffset() {
         return new SidekickSpawnOffset(-32, 4);
+    }
+
+    @Override
+    public boolean preserveFreshGroundedStatusUntilFirstDispatch() {
+        // ROM fresh-start frame 0 is already routine 2. Grounded control
+        // selects Wait before Player_AnglePos detaches at the platform edge;
+        // Animate_Sonic then publishes mapping $BA without an air-gravity tick
+        // (sonic3k.asm:24740-24771; AniSonic05).
+        return true;
     }
 
     @Override

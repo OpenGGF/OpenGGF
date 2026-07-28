@@ -225,8 +225,11 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
                     // stayed pinned at the ledge's last slope Y (GHZ3 f6464: engine
                     // held centre 0x038E where ROM re-seats to the 2px-higher terrain
                     // surface 0x038C).
-                    objectManager.clearRidingObject(player);
-                    player.setOnObject(false);
+                    // Ledge_WalkOff calls SlopeObject_AssumeStoodOn before the
+                    // native status bits are cleared below. Leave the engine's
+                    // ride link intact until the compatibility solid checkpoint:
+                    // sampleSlopeOnRideExit() gives that checkpoint the final
+                    // slope write and it then clears OnObj in the same order.
                     player.setPushing(false);
                     // Retail S1 also executes `move.b #id_Run,obPrevAni(a1)`
                     // here. The selected byte remains Walk, but the mismatched
@@ -390,7 +393,7 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
         // ROM SlopeObject logic does not add object half-height to surface checks;
         // it tests directly against (obY - slopeSample). Keep vertical extents at 0
         // so sloped contact matches Platform3 landing math.
-        return new SolidObjectParams(PLATFORM_HALF_WIDTH, 0, 0);
+        return SolidObjectParams.of(PLATFORM_HALF_WIDTH, 0, 0);
     }
 
     @Override
@@ -479,6 +482,16 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
         // timer is zero, so the transition frame does not run Ledge_WalkOff or
         // SlopeObject_AssumeStoodOn even though Sonic remains attached.
         return transitionFrameSlopeSkip;
+    }
+
+    @Override
+    public boolean sampleSlopeOnRideExit(PlayableEntity player) {
+        // ROM Ledge_FragmentPiece .delayCollapse decrements objoff_38, calls
+        // Ledge_WalkOff (including SlopeObject_AssumeStoodOn), and only then
+        // clears Status_OnObj when the delay reached zero. The object update and
+        // solid checkpoint are split in the engine, so expose that ROM state to
+        // the generic exit path rather than detaching before the final sample.
+        return routine == 6 && collapseFlag == false && collapseDelay <= 0;
     }
 
     @Override

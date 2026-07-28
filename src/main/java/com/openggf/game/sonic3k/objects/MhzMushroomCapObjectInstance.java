@@ -192,7 +192,7 @@ public final class MhzMushroomCapObjectInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         int heightIndex = Math.min(mappingFrame, MAPPING_GROUND_HALF_HEIGHTS.length - 1);
-        return new SolidObjectParams(
+        return SolidObjectParams.of(
                 SOLID_HALF_WIDTH,
                 SOLID_AIR_HALF_HEIGHT,
                 MAPPING_GROUND_HALF_HEIGHTS[heightIndex]);

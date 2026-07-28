@@ -1,6 +1,5 @@
 package com.openggf.audio;
 
-@com.openggf.game.ModApi
 public interface AudioStream {
     /**
      * Fills the buffer with audio samples.

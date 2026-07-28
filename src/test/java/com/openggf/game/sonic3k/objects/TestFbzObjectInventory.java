@@ -32,7 +32,7 @@ class TestFbzObjectInventory {
     @Test
     void everyVisualCheckpointHasExactlyOneCompleteDeterministicRecipe() throws IOException {
         JsonNode manifest = new ObjectMapper().readTree(
-                Path.of("docs/s3k-zones/fbz-visual-checkpoints.json").toFile());
+                Path.of("docs/architecture/research/s3k-zones/fbz-visual-checkpoints.json").toFile());
         Set<String> checkpointIds = new LinkedHashSet<>();
         manifest.path("checkpoints").forEach(checkpoint -> checkpointIds.add(checkpoint.path("id").asText()));
 

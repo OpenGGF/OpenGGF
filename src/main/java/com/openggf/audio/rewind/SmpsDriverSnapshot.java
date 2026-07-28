@@ -1,6 +1,6 @@
 package com.openggf.audio.rewind;
 
-import com.openggf.audio.AudioManager;
+import com.openggf.audio.MusicRestoreSink;
 import com.openggf.audio.driver.SmpsDriver;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
@@ -12,7 +12,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
-@com.openggf.game.ModApi
 public record SmpsDriverSnapshot(
         SmpsSequencer.Region region,
         SmpsDriver.ReadMode readMode,
@@ -63,13 +62,12 @@ public record SmpsDriverSnapshot(
         return Arrays.copyOf(psgLockSequencerIds, psgLockSequencerIds.length);
     }
 
-    @com.openggf.game.ModApi
     public interface DependencyResolver {
         AbstractSmpsData resolveSmpsData(SequencerEntry entry);
 
         DacData resolveDacData(SequencerEntry entry);
 
-        AudioManager resolveAudioManager(SequencerEntry entry);
+        MusicRestoreSink resolveAudioManager(SequencerEntry entry);
 
         SmpsSequencerConfig resolveConfig(SequencerEntry entry);
     }
@@ -87,7 +85,7 @@ public record SmpsDriverSnapshot(
             }
 
             @Override
-            public AudioManager resolveAudioManager(SequencerEntry entry) {
+            public MusicRestoreSink resolveAudioManager(SequencerEntry entry) {
                 return entry.audioManager();
             }
 
@@ -98,14 +96,13 @@ public record SmpsDriverSnapshot(
         };
     }
 
-    @com.openggf.game.ModApi
     public record SequencerEntry(
             boolean sfx,
             SmpsSourceDescriptor source,
             SmpsSourceDescriptor fallbackVoiceSource,
             AbstractSmpsData smpsData,
             DacData dacData,
-            AudioManager audioManager,
+            MusicRestoreSink audioManager,
             SmpsSequencerConfig config,
             SmpsSequencerSnapshot snapshot) {
 

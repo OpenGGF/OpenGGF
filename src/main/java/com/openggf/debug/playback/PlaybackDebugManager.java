@@ -42,6 +42,8 @@ public final class PlaybackDebugManager {
     private int periodicLogCounter;
     private PlaybackFrameObserver frameObserver;
     private boolean currentTickSuppressed;
+    private Bk2Movie pendingLevelLoadMovie;
+    private int pendingLevelLoadOffset = -1;
 
     /**
      * Observer hook that lets an external comparator classify each BK2
@@ -53,7 +55,25 @@ public final class PlaybackDebugManager {
     public interface PlaybackFrameObserver {
         boolean shouldSkipGameplayTick(Bk2FrameInput frame);
 
+        /** Whether a suppressed gameplay row still executed the ROM VBlank clock tick. */
+        default boolean shouldAdvanceVblankOnSkippedTick(Bk2FrameInput frame) {
+            return true;
+        }
+
+        /** Exact number of ROM VBlank ticks represented by a suppressed row. */
+        default int vblankAdvanceCountOnSkippedTick(Bk2FrameInput frame) {
+            return shouldAdvanceVblankOnSkippedTick(frame) ? 1 : 0;
+        }
+
         void afterFrameAdvanced(Bk2FrameInput frame, boolean wasSkipped);
+
+        /**
+         * Called at the transition request site, before the gameplay context
+         * can be replaced and regardless of where the request falls relative
+         * to the ordinary end-of-frame callback.
+         */
+        default void onSpecialStageRequestRaised() {
+        }
     }
 
     private PlaybackDebugManager() {
@@ -61,6 +81,13 @@ public final class PlaybackDebugManager {
 
     public synchronized void setFrameObserver(PlaybackFrameObserver observer) {
         this.frameObserver = observer;
+    }
+
+    /** Publishes a non-consuming special-stage request edge to trace tooling. */
+    public synchronized void onSpecialStageRequestRaised() {
+        if (frameObserver != null) {
+            frameObserver.onSpecialStageRequestRaised();
+        }
     }
 
     private SonicConfigurationService configService() {
@@ -164,7 +191,9 @@ public final class PlaybackDebugManager {
 
         int actionMask = frame.p1ActionMask();
         int pressed = (actionMask ^ previousActionMask) & actionMask;
-        currentForcedJumpPress = pressed != 0;
+        if (pressed != 0) {
+            currentForcedJumpPress = true;
+        }
         previousActionMask = actionMask;
         currentForcedStartPress = frame.p1StartPressed() && !previousStartPressed;
         previousStartPressed = frame.p1StartPressed();
@@ -178,6 +207,16 @@ public final class PlaybackDebugManager {
 
     public synchronized boolean isCurrentForcedStartPress() {
         return currentForcedStartPress;
+    }
+
+    /**
+     * Consumes a pending playback action edge after the level gameplay body
+     * actually ran. Input-only rows may advance the movie cursor without
+     * gameplay, so their edge remains latched across later held rows until this
+     * callback.
+     */
+    public synchronized void onCurrentGameplayTickExecuted() {
+        currentForcedJumpPress = false;
     }
 
     public synchronized void onLevelFrameAdvanced() {
@@ -222,6 +261,22 @@ public final class PlaybackDebugManager {
         return currentTickSuppressed;
     }
 
+    public synchronized boolean shouldAdvanceVblankOnCurrentSkippedTick() {
+        if (!currentTickSuppressed || movie == null || timeline == null || frameObserver == null) {
+            return false;
+        }
+        return frameObserver.shouldAdvanceVblankOnSkippedTick(
+                movie.getFrame(timeline.getCursorFrame()));
+    }
+
+    public synchronized int currentSkippedTickVblankAdvanceCount() {
+        if (!currentTickSuppressed || movie == null || timeline == null || frameObserver == null) {
+            return 0;
+        }
+        return frameObserver.vblankAdvanceCountOnSkippedTick(
+                movie.getFrame(timeline.getCursorFrame()));
+    }
+
     /**
      * Programmatic entrypoint used by {@code TraceSessionLauncher} to
      * drive playback without the hotkey / config-path path.
@@ -238,6 +293,53 @@ public final class PlaybackDebugManager {
         setStatus("Session started (" + movie.getFrameCount() + " frames)", true);
     }
 
+    /**
+     * Defers a movie-cursor rebind until the next synchronous level load.
+     * Level loads can complete in the middle of a {@code GameLoop} step and
+     * immediately fall through to the new level's first gameplay tick. Arming
+     * the rebind here lets that tick read the destination segment's frame 0
+     * input without advancing the destination cursor during the preceding fade.
+     */
+    public synchronized void scheduleSessionAtNextLevelLoad(Bk2Movie movie, int startOffsetIndex) {
+        this.pendingLevelLoadMovie = movie;
+        this.pendingLevelLoadOffset = Math.max(0, startOffsetIndex);
+    }
+
+    /**
+     * True once the preceding playback cursor has reached the destination row
+     * of a deferred level-load rebind. Additional engine-only transition ticks
+     * must not age global ROM clocks beyond that recorded boundary.
+     */
+    public synchronized boolean shouldHoldVblankForPendingLevelLoad() {
+        return pendingLevelLoadMovie != null
+                && timeline != null
+                && timeline.getCursorFrame() >= pendingLevelLoadOffset;
+    }
+
+    /** Returns whether whole-run playback is waiting to rebind at a level load. */
+    public synchronized boolean hasScheduledLevelLoadSession() {
+        return pendingLevelLoadMovie != null;
+    }
+
+    /**
+     * Activates a rebind scheduled by {@link #scheduleSessionAtNextLevelLoad}.
+     * Called by {@code GameLoop} immediately after a level load, before any
+     * same-step gameplay fallthrough.
+     *
+     * @return true when a pending session was activated
+     */
+    public synchronized boolean activateScheduledLevelLoadSession() {
+        if (pendingLevelLoadMovie == null) {
+            return false;
+        }
+        Bk2Movie scheduledMovie = pendingLevelLoadMovie;
+        int scheduledOffset = pendingLevelLoadOffset;
+        pendingLevelLoadMovie = null;
+        pendingLevelLoadOffset = -1;
+        startSession(scheduledMovie, scheduledOffset);
+        return true;
+    }
+
     /** Programmatic teardown for {@link #startSession}. Idempotent. */
     public synchronized void endSession() {
         if (timeline != null) {
@@ -249,6 +351,8 @@ public final class PlaybackDebugManager {
         this.firstActiveFrame = -1;
         this.frameObserver = null;
         this.currentTickSuppressed = false;
+        this.pendingLevelLoadMovie = null;
+        this.pendingLevelLoadOffset = -1;
         clearLastAppliedState();
         setStatus("Session ended", true);
     }

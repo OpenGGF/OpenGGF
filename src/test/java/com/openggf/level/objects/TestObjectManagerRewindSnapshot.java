@@ -8,6 +8,7 @@ import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.session.EngineContext;
 import com.openggf.graphics.GLCommand;
 import com.openggf.game.PlayableEntity;
+import com.openggf.level.rings.LostRingObjectInstance;
 import com.openggf.sprites.playable.Sonic;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -68,6 +69,36 @@ class TestObjectManagerRewindSnapshot {
         }
     }
 
+    private static final class NullSpawnRewindable extends AbstractObjectInstance
+            implements RewindRecreatable {
+        NullSpawnRewindable() {
+            super(null, "NullSpawnRewindable");
+        }
+
+        @Override public void appendRenderCommands(List<GLCommand> commands) {}
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
+            return new NullSpawnRewindable();
+        }
+    }
+
+    private static final class ReservedTouchPublisher extends AbstractObjectInstance
+            implements TouchResponseProvider, RewindRecreatable {
+        ReservedTouchPublisher(ObjectSpawn spawn) {
+            super(spawn, "ReservedTouchPublisher");
+        }
+
+        @Override public void appendRenderCommands(List<GLCommand> commands) {}
+        @Override public int getCollisionFlags() { return 0x47; }
+        @Override public int getCollisionProperty() { return 0; }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
+            return new ReservedTouchPublisher(context.spawn());
+        }
+    }
+
     // ------------------------------------------------------------------
     // Minimal registry
     // ------------------------------------------------------------------
@@ -113,6 +144,58 @@ class TestObjectManagerRewindSnapshot {
     // ------------------------------------------------------------------
     // Tests
     // ------------------------------------------------------------------
+
+    @Test
+    void reservedChildTouchPublisherHasIdentityWhenCollisionListIsCaptured() {
+        ObjectManager manager = makeManager(List.of(), new TrackingRegistry());
+        ObjectSpawn parentSpawn = spawn(100, 200);
+        manager.allocateChildSlots(parentSpawn, 1);
+        ReservedTouchPublisher child = new ReservedTouchPublisher(spawn(116, 200));
+
+        manager.addDynamicObjectToReservedSlot(child, parentSpawn, 0);
+        manager.initialCollisionResponseList().addToCurrentBuild(child);
+
+        assertDoesNotThrow(() -> manager.rewindSnapshottable().capture());
+    }
+
+    @Test
+    void reservedLostRingTouchPublisherHasIdentityWhenCollisionListIsCaptured() {
+        ObjectManager manager = makeManager(List.of(), new TrackingRegistry());
+        int slot = manager.allocateDynamicSlot();
+        LostRingObjectInstance ring = LostRingObjectInstance.forTest(
+                100, 200, 0, 0, 0, 0xFF);
+
+        manager.spawnLostRingObjectAtSlot(ring, slot);
+        manager.initialCollisionResponseList().addToCurrentBuild(ring);
+
+        assertDoesNotThrow(() -> manager.rewindSnapshottable().capture());
+    }
+
+    @Test
+    void activeObjectRepeatedRestoreDoesNotConsumeTheNextDynamicIdentity() {
+        ObjectSpawn sp = spawn(100, 200);
+        TrackingRegistry registry = new TrackingRegistry();
+        ObjectManager manager = makeManager(List.of(sp), registry);
+        manager.reset(0);
+        manager.update(0, null, null, 1);
+        ObjectManagerSnapshot source = manager.rewindSnapshottable().capture();
+        int expectedNextOrdinal = source.dynamicObjectIdCounter();
+
+        manager.rewindSnapshottable().restore(source);
+        assertEquals(expectedNextOrdinal,
+                manager.rewindSnapshottable().capture().dynamicObjectIdCounter());
+        manager.rewindSnapshottable().restore(source);
+        assertEquals(expectedNextOrdinal,
+                manager.rewindSnapshottable().capture().dynamicObjectIdCounter());
+
+        manager.addDynamicObject(new NullSpawnRewindable());
+        ObjectManagerSnapshot afterSpawn = manager.rewindSnapshottable().capture();
+        ObjectManagerSnapshot.DynamicObjectEntry next = afterSpawn.dynamicObjects().stream()
+                .filter(entry -> entry.className().equals(NullSpawnRewindable.class.getName()))
+                .findFirst()
+                .orElseThrow();
+        assertEquals(expectedNextOrdinal, next.objectId().dynamicId());
+    }
 
     @Test
     void captureRestoreRoundTrip_singleObject() {

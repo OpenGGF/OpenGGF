@@ -181,7 +181,7 @@ public class TensionBridgeObjectInstance extends AbstractObjectInstance
         // ROM: d1 = segCount*8 + 8 (half-width origin shift), d3 = 8 (half-height)
         // Matching S1 bridge pattern: halfWidth=N*8, offsetX=-8, offsetY=-8
         int halfWidth = segmentCount * 8;
-        return new SolidObjectParams(halfWidth, 0, 0, -8, -SURFACE_OFFSET);
+        return SolidObjectParams.of(halfWidth, 0, 0, -8, -SURFACE_OFFSET);
     }
 
     @Override
@@ -328,6 +328,17 @@ public class TensionBridgeObjectInstance extends AbstractObjectInstance
                 && objectManager.isRidingObject(nativeSidekick, this);
 
         if (playerOnBridge) {
+            if (v == Variant.ICZ_ROPE) {
+                // loc_38966 calls sub_38BD8 before adjusting the shared P1
+                // anchor or calculating sub_38D74. Unlike the normal bridge's
+                // sub_38A88 tail, the rope therefore publishes both riders'
+                // current segments in this same dispatch before bending.
+                nextPlayerSegmentIndex = segmentIndexFor(playerEntity);
+                playerSegmentIndex = nextPlayerSegmentIndex;
+                if (sidekickOnBridge) {
+                    sidekickSegmentIndex = segmentIndexFor(nativeSidekick);
+                }
+            }
             if (sidekickOnBridge) {
                 // loc_387F6 consumes P2's prior $3B and walks P1's $3F one
                 // segment toward it before calculating the shared bend.
@@ -372,7 +383,7 @@ public class TensionBridgeObjectInstance extends AbstractObjectInstance
 
         // Update slope data for collision
         updateSlopeData();
-        if (playerOnBridge && !sidekickOnBridge) {
+        if (playerOnBridge && !sidekickOnBridge && v != Variant.ICZ_ROPE) {
             // ROM loc_387E0 bends from the prior $3F value, then sub_38A88
             // stores the player's current segment for the following dispatch.
             playerSegmentIndex = nextPlayerSegmentIndex;

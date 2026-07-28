@@ -2,7 +2,6 @@ package com.openggf.audio;
 
 import org.junit.jupiter.api.Test;
 
-import com.openggf.audio.rewind.AudioBackendLogicalSnapshot;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
 
 import java.util.List;
@@ -77,13 +76,4 @@ class TestStreamedMusicPort {
         assertDoesNotThrow(() -> new StreamedMusicPort.FadeState(.5f, 2, 0, 0, .25f));
     }
 
-    @Test
-    void backendSnapshotRequiresSavedStreamStatesToAlignWithOverrideStack() {
-        StreamedMusicPort.State state = new StreamedMusicPort.State(
-                new StreamedMusicPort.TrackRef("owner", "track"), 1, 0, 0,
-                StreamedMusicPort.FadeState.idle(), 1);
-        assertThrows(IllegalArgumentException.class, () -> new AudioBackendLogicalSnapshot(
-                AudioSourceDescriptor.baseMusic(1), false, false, false, 1,
-                List.of(AudioSourceDescriptor.baseMusic(2)), null, null, state, List.of()));
-    }
 }

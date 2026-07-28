@@ -97,11 +97,23 @@ public class InputHandler {
 	/**
 	 * Checks whether a specific key is down.
 	 *
-	 * @param keyCode The GLFW key code to check
+	 * @param keyCode The GLFW key code to check, or a negative value for an
+	 *        unbound binding, which is never down
 	 * @return Whether the key is pressed or not
 	 */
 	public boolean isKeyDown(int keyCode) {
-		if (keyCode >= 0 && keyCode < MAX_KEYS && keys[keyCode]) {
+		// The twin of the guard in isKeyPressed, and load-bearing for the same
+		// reason. An unbound binding is -1, and so is rewindKey() when live
+		// rewind is unbound, so without this the pad-substitution tail below
+		// reports every unbound binding as held for as long as the pad's rewind
+		// bumper is -- and rewindHeld is not gated on LIVE_REWIND_ENABLED.
+		// P1_B, P1_C, P2_B and P2_C ship unbound and are read here through
+		// KeyboardInputMapper, so a held bumper handed both players a phantom
+		// B and C with no matching press edge, held disagreeing with pressed.
+		if (keyCode < 0) {
+			return false;
+		}
+		if (keyCode < MAX_KEYS && keys[keyCode]) {
 			return true;
 		}
 		return keyCode == inputBindings.rewindKey() && gamepadInputManager.isRewindHeld();
@@ -121,10 +133,19 @@ public class InputHandler {
 	/**
 	 * Checks whether a specific key was just pressed this frame.
 	 *
-	 * @param keyCode The GLFW key code to check
+	 * @param keyCode The GLFW key code to check, or a negative value for an
+	 *        unbound binding, which is never pressed
 	 * @return Whether the key was just pressed
 	 */
 	public boolean isKeyPressed(int keyCode) {
+		// An explicitly empty binding resolves to -1, and so do the unbound
+		// debugModeKey()/frameStepKey() bindings -- so without this an unbound
+		// shortcut matches a pad-substitution branch below and fires from a held
+		// gamepad button. Unbinding debug mode fired every other unbound binding
+		// with it, including all nine playback keys, which ship unbound.
+		if (keyCode < 0) {
+			return false;
+		}
 		if (keyCode == inputBindings.debugModeKey()) {
 			if (logicalOverride != null) {
 				return logicalOverride.debugModeTogglePressed();
@@ -186,15 +207,40 @@ public class InputHandler {
 	}
 
 	public boolean isAltDown() {
+		if (logicalOverride != null) {
+			return logicalOverride.debugAltDown();
+		}
 		return isKeyDown(GLFW_KEY_LEFT_ALT) || isKeyDown(GLFW_KEY_RIGHT_ALT);
 	}
 
+	public boolean isSuperDown() {
+		if (logicalOverride != null) {
+			return logicalOverride.debugSuperDown();
+		}
+		return isKeyDown(GLFW_KEY_LEFT_SUPER) || isKeyDown(GLFW_KEY_RIGHT_SUPER);
+	}
+
 	public boolean isAnyModifierDown() {
-		return isShiftDown() || isControlDown() || isAltDown();
+		return isShiftDown() || isControlDown() || isAltDown() || isSuperDown();
 	}
 
 	public boolean isKeyPressedWithoutModifiers(int keyCode) {
 		return isKeyPressed(keyCode) && !isAnyModifierDown();
+	}
+
+	/**
+	 * Drops all key state. A key is otherwise cleared only by an observed
+	 * GLFW_RELEASE, and the release for a window-switch modifier goes to the
+	 * window that took focus, so the modifier would latch for the rest of the
+	 * process and disable every shortcut requiring no modifier held.
+	 *
+	 * <p>{@code previousKeys} is cleared too, or the first press after the clear
+	 * is not seen as a rising edge. Mouse state is untouched — a focus change
+	 * does not strand a mouse button the way it strands a modifier.
+	 */
+	public void clearKeyState() {
+		java.util.Arrays.fill(keys, false);
+		java.util.Arrays.fill(previousKeys, false);
 	}
 
 	public double getMouseX() {

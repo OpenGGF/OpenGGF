@@ -1,7 +1,6 @@
 package com.openggf.level.objects;
 
 
-import com.openggf.audio.GameSound;
 import com.openggf.camera.Camera;
 import com.openggf.game.CollisionModel;
 import com.openggf.game.GameStateManager;
@@ -459,15 +458,15 @@ final class ObjectTouchResponseController {
 
             // ROM parity: ReactToItem/TouchResponse runs in the player slot
             // before dynamic objects update. S3K's previous collision-response
-            // list stores object RAM pointers, so membership is from the prior
-            // object pass but x_pos/y_pos are read live at this player slot.
-            // The retained pre-update snapshot is one object pass older here
-            // because snapshotTouchResponseState(true) intentionally preserves
-            // the list without refreshing that snapshot.
-            boolean useCurrentTouchState = usesCurrentTouchState(instance);
-            boolean useFrameStartSnapshot = usePreUpdateState
-                    && !usePreviousCollisionResponseList
-                    && !useCurrentTouchState;
+            // list stores object RAM pointers, but those pointers still hold
+            // frame-start x/y at this phase.
+            // Obj37's engine projection is already the preceding pass's
+            // published state here; its generic pre-update cache is one pass
+            // older than the live SST pointer consumed by Touch_Loop.
+            boolean useCurrentTouchState = usesCurrentTouchState(instance)
+                    || (usePreviousCollisionResponseList
+                    && instance instanceof LostRingObjectInstance);
+            boolean useFrameStartSnapshot = usePreUpdateState && !useCurrentTouchState;
             int objX = objectCallbacks.call(instance,
                     useFrameStartSnapshot ? instance::getPreUpdateX : instance::getX);
             int objY = objectCallbacks.call(instance,
@@ -520,17 +519,6 @@ final class ObjectTouchResponseController {
                     int invuln = lostRingCollectionInvulnerableFrames(aps, isSidekick);
                     if (invuln < LOST_RING_INVULNERABLE_THRESHOLD && !lostRing.isCollected()) {
                         lostRing.markCollected(currentFrameCounter);
-                        // Outside competition mode both CollectRing and
-                        // CollectRing_Tails fall through to the shared 1P
-                        // Ring_count increment. A CPU sidekick does not own a
-                        // player-local LevelState, so route this through the
-                        // gameplay-scoped counter instead of the touching sprite.
-                        if (objectManager.services().levelGamestate() != null) {
-                            objectManager.services().levelGamestate().addRings(1);
-                        } else {
-                            aps.addRings(1);
-                        }
-                        objectManager.services().playSfx(GameSound.RING);
                     }
                 }
                 break; // ROM: rts — first overlapping object ends the loop (both paths).
@@ -594,11 +582,7 @@ final class ObjectTouchResponseController {
     }
 
     private boolean usesCurrentTouchState(ObjectInstance instance) {
-        // S3K's Collision_response_list stores object RAM pointers, not copied
-        // coordinates. Obj37 publishes after MoveSprite2, so the next player
-        // pass observes the ring's live position from that published object.
-        return instance instanceof LostRingObjectInstance
-                || objectCallbacks.call(instance, instance::usesCurrentTouchResponseState);
+        return objectCallbacks.call(instance, instance::usesCurrentTouchResponseState);
     }
 
     /**

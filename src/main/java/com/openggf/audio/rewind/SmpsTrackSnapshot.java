@@ -4,7 +4,6 @@ import com.openggf.audio.smps.SmpsSequencer.TrackType;
 
 import java.util.Arrays;
 
-@com.openggf.game.ModApi
 public record SmpsTrackSnapshot(
         int pos,
         TrackType type,

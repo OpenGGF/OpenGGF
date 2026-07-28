@@ -312,7 +312,7 @@ public class HCZSpinningColumnObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(HALF_WIDTH + 0x0B, HALF_HEIGHT, HALF_HEIGHT + 1);
+        return SolidObjectParams.of(HALF_WIDTH + 0x0B, HALF_HEIGHT, HALF_HEIGHT + 1);
     }
 
     @Override

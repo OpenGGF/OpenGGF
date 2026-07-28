@@ -255,6 +255,16 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Object-local correction applied while the shared rider path re-seats a
+     * player on this object's top surface. This is separate from fresh landing
+     * placement because ROM objects may execute those paths at different SST
+     * phases.
+     */
+    default int getContinuedRideSnapAdjustment(PlayableEntity player, int solidTopYRadius) {
+        return 0;
+    }
+
+    /**
      * Whether a player landing on this object's top surface keeps its rolling
      * state instead of running the generic floor roll-clear.
      * <p>
@@ -616,6 +626,16 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether an engine-stale push-grace window must leave ordinary sidekick
+     * follow steering active while this object remains the live support.
+     * Native CPU code sees the current cleared {@code Status_Push} bit in this
+     * case and still executes its +/-1 follow-position nudge.
+     */
+    default boolean sidekickCpuStalePushGraceKeepsFollowSteeringWhileRiding(PlayableEntity player) {
+        return false;
+    }
+
+    /**
      * Whether the right edge of the full solid X window is inclusive.
      * <p>
      * Most engine objects keep the established exclusive bound. S3K horizontal
@@ -740,6 +760,14 @@ public interface SolidObjectProvider {
      * object's actual current position or side-contact cleanup.
      */
     default boolean usesPreUpdateYForContinuedRide(PlayableEntity player) {
+        return false;
+    }
+
+    /**
+     * Whether continued horizontal rider carry should use the object's
+     * pre-update X as this frame's platform position.
+     */
+    default boolean usesPreUpdateXForContinuedRide(PlayableEntity player) {
         return false;
     }
 

@@ -291,7 +291,7 @@ public class RisingLavaObjectInstance extends AbstractObjectInstance
                 break;
         }
 
-        return new SolidObjectParams(halfWidth, airHalfHeight, groundHalfHeight);
+        return SolidObjectParams.of(halfWidth, airHalfHeight, groundHalfHeight);
     }
 
     @Override

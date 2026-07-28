@@ -43,17 +43,23 @@ end
 local function s16(v) v = v % 0x10000; if v >= 0x8000 then v = v - 0x10000 end; return v end
 
 -- ============================================================================
--- USER SECTION 1 (optional): PC hooks. Use when you need register values at a
--- specific ROM instruction. Example:
+-- USER SECTION 1 (optional): stage-gated PC hooks. Put ALL hook registrations
+-- inside install_stage_hooks(); the main loop calls it only when START is
+-- reached. Keep the callback's frame guard as a second line of defence.
+-- Use when you need register values at a specific ROM instruction. Example:
 --   local function at_hook()
 --       local f = emu.framecount()
 --       if f < START or f > STOP then return end
 --       local d0 = s16(emu.getregister("M68K D0") or 0)
 --       log(string.format("f=%d HOOK d0=%d", f, d0))
 --   end
---   event.onmemoryexecute(at_hook, 0x00XXXX, "hook")
+--   local function install_stage_hooks()
+--       event.onmemoryexecute(at_hook, 0x00XXXX, "hook")
+--   end
 -- ============================================================================
-
+local function install_stage_hooks()
+    -- Add event.onmemoryexecute / event.onmemorywrite registrations here.
+end
 
 -- ============================================================================
 -- USER SECTION 2: per-frame RAM sampling in [START, STOP]. Fill in the reads
@@ -70,13 +76,18 @@ local function sample()
     -- log(string.format("f=%d y=%04X yVel=%d", f, yPos, yVel))
 end
 
--- ---- main loop: sample, then SELF-EXIT (fast + clean, never hangs) ----------
+-- ---- main loop: arm at START, sample, then SELF-EXIT -------------------------
+local stageHooksInstalled = false
 while true do
     if movie.isloaded() and movie.mode() == "FINISHED" then
         log("MOVIE FINISHED before STOP — exiting")
         if outfile then outfile:flush(); outfile:close() end
         client.exit()
         break
+    end
+    if not stageHooksInstalled and emu.framecount() >= START then
+        install_stage_hooks()
+        stageHooksInstalled = true
     end
     sample()
     if emu.framecount() > STOP then

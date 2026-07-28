@@ -12,8 +12,11 @@ import com.openggf.game.modzone.ModZoneRegistrationException;
 import com.openggf.game.modzone.ModZoneRuntimeContribution;
 import com.openggf.game.modzone.ModZoneRuntimeProfile;
 import com.openggf.game.palette.CustomZonePaletteBridge;
+import com.openggf.game.profiles.trace.TracePlaybackProfile;
 import com.openggf.game.startup.DonatedDataSelectWarmupTask;
 import com.openggf.level.LevelManager;
+import com.openggf.level.InitialFixedSstDispatcher;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectPlacementEncoding;
 import com.openggf.level.objects.PlaneSwitcherConfig;
@@ -21,6 +24,7 @@ import com.openggf.level.objects.TouchResponseTable;
 import com.openggf.sprites.art.SpriteArtSet;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SuperStateController;
+import com.openggf.sprites.managers.SpriteManager;
 
 import java.util.Optional;
 
@@ -122,6 +126,17 @@ public interface GameModule {
      * @return the level event provider, or null if the game has no dynamic level events
      */
     LevelEventProvider getLevelEventProvider();
+
+    /**
+     * Supplies the game-owned fixed-SST inventory for the initial native
+     * Process_Sprites pass. Games without that setup lifecycle remain inert.
+     */
+    default InitialFixedSstDispatcher createInitialFixedSstDispatcher(
+            SpriteManager sprites,
+            ObjectManager objects,
+            ZoneFeatureProvider zoneFeatures) {
+        return epoch -> { };
+    }
 
     /**
      * Creates a new respawn state instance for tracking checkpoint data.
@@ -366,6 +381,14 @@ public interface GameModule {
             throw new IllegalStateException("No PhysicsProvider for " + getIdentifier());
         }
         return provider.getRules();
+    }
+
+    /**
+     * Returns measured movie-replay timing facts for this game. Games opt in
+     * only when their ROM lifecycle timing has been established from captures.
+     */
+    default TracePlaybackProfile getTracePlaybackProfile() {
+        return TracePlaybackProfile.DISABLED;
     }
 
     /**

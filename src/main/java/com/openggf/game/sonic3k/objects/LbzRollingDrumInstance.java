@@ -220,7 +220,11 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
         if (player.getGSpeed() == 0) {
             player.setGSpeed((short) 1);
         }
-        applyRideAnimationState(player);
+        // loc_2C44E runs in the drum's later SST slot. The player animation
+        // slot has already completed this pass, so only arm object-owned tumble
+        // animation here; mapping_frame remains the pose published by the
+        // player's earlier slot until the next Process_Sprites pass.
+        armRideAnimationState(player);
     }
 
     private void updateActiveRide(AbstractPlayableSprite player, int nativePlayerIndex) {
@@ -256,6 +260,12 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
             }
         }
 
+        if (usesWalkTumbleScript(player)) {
+            applyRideAnimationState(player);
+        } else {
+            player.setObjectMappingFrameControl(false);
+        }
+
         int angle = getAngle(nativePlayerIndex) & 0xFF;
         int cos = TrigLookupTable.cosHex(angle);
         int radius = ((player.getYRadius() & 0xFFFF) << 8) + 0x4000;
@@ -269,7 +279,6 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
             player.setFlipType(FLIP_TYPE_ACTIVE_FROM_REST);
         }
         player.setHighPriority(((byte) player.getFlipAngle()) >= 0);
-        applyRideAnimationState(player);
         refreshRideLatch(player);
     }
 
@@ -368,8 +377,22 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
         }
     }
 
-    private void applyRideAnimationState(AbstractPlayableSprite player) {
+    private void armRideAnimationState(AbstractPlayableSprite player) {
         player.setAnimationId(ANIMATION_ROLLING_DRUM);
+        player.setForcedAnimationId(-1);
+        player.setObjectMappingFrameControl(true);
+    }
+
+    private boolean usesWalkTumbleScript(AbstractPlayableSprite player) {
+        var animationSet = player.getAnimationSet();
+        var script = animationSet != null ? animationSet.getScript(player.getAnimationId()) : null;
+        // Animate_Sonic sends only the $FF walk/run script through Anim_Tumble.
+        // $FE Roll and the other negative script controls keep their ordinary
+        // mappings (sonic3k.asm:24733-24811; Anim - Sonic.asm:AniSonic02).
+        return script == null || (script.delay() & 0xFF) == 0xFF;
+    }
+
+    private void applyRideAnimationState(AbstractPlayableSprite player) {
         player.setForcedAnimationId(-1);
         player.setObjectMappingFrameControl(true);
         applyRideRenderFlags(player);

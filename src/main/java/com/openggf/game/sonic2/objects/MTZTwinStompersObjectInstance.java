@@ -204,7 +204,7 @@ public class MTZTwinStompersObjectInstance extends AbstractObjectInstance
         // (s2.asm:52262); the engine's solid-contact pass applies the equivalent
         // on-screen gate (isWithinSolidContactBounds), so no extra gating is needed here.
         int halfWidth = widthPixels + 0x0B;
-        return new SolidObjectParams(halfWidth, collisionYRadius, collisionYRadius + 1);
+        return SolidObjectParams.of(halfWidth, collisionYRadius, collisionYRadius + 1);
     }
 
     @Override

@@ -1,7 +1,9 @@
 # Development-timeline clips — house style
 
-These are the GIFs and audio clips shown in [`docs/DEVELOPMENT_TIMELINE.md`](../../DEVELOPMENT_TIMELINE.md)
-(the visual companion to [`docs/AI_JOURNEY.md`](../../AI_JOURNEY.md)). Each one is a real
+These are the GIFs and audio clips shown in
+[`docs/project/development-timeline.md`](../../project/development-timeline.md)
+(the visual companion to
+[`docs/project/ai-journey.md`](../../project/ai-journey.md)). Each one is a real
 dev-build screen recording, trimmed and converted to a small, consistent format.
 
 If you're adding a clip, use [`make_clip.py`](make_clip.py) so it matches the rest of the
@@ -43,7 +45,7 @@ When a build is only interesting for its **sound** (early audio-engine work), sh
    It writes `my-clip-name.gif` (or `.mp3`) into this folder and prints the exact
    markdown snippet to paste.
 3. Paste that snippet into the right chronological section of
-   [`docs/DEVELOPMENT_TIMELINE.md`](../../DEVELOPMENT_TIMELINE.md), filling in the date and caption.
+   [`docs/project/development-timeline.md`](../../project/development-timeline.md), filling in the date and caption.
 4. Keep the whole gallery in a **~15–30 MB** budget. If a clip is heavy, drop the frame
    rate or length before reaching for a bigger size.
 

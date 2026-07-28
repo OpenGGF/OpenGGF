@@ -209,7 +209,7 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(WIDTH_PIXELS + SOLID_SIDE_PADDING, HEIGHT_PIXELS, HEIGHT_PIXELS + 1);
+        return SolidObjectParams.of(WIDTH_PIXELS + SOLID_SIDE_PADDING, HEIGHT_PIXELS, HEIGHT_PIXELS + 1);
     }
 
     @Override

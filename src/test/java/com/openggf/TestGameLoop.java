@@ -8,9 +8,11 @@ import org.junit.jupiter.api.parallel.Isolated;
 import com.openggf.control.GamepadInputManager;
 import com.openggf.control.GamepadStateSource;
 import com.openggf.control.InputHandler;
+import com.openggf.control.LogicalInputSnapshot;
 import com.openggf.audio.AudioManager;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.configuration.FrameRateResolver;
 import com.openggf.game.DataSelectProvider;
 import com.openggf.game.dataselect.DataSelectAction;
 import com.openggf.game.dataselect.DataSelectActionType;
@@ -73,6 +75,14 @@ import static org.lwjgl.glfw.GLFW.*;
  */
 @Isolated
 public class TestGameLoop {
+
+    @Test
+    void palFrameCadenceUsesFiftyHz() {
+        SonicConfigurationService config = SonicConfigurationService.createStandalone();
+        config.setConfigValue(SonicConfiguration.REGION, "PAL");
+        config.setConfigValue(SonicConfiguration.FPS, 60);
+        assertEquals(50, FrameRateResolver.effective(config));
+    }
 
     private GameLoop gameLoop;
     private InputHandler mockInputHandler;
@@ -283,11 +293,14 @@ public class TestGameLoop {
     public void traceRealtimeRewindRunsBeforePlaybackInputBridge() throws Exception {
         String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
         int rewind = source.indexOf("TraceSessionLauncher.active().handleRealtimeRewindInput(");
+        int admission = source.indexOf("levelIterationAdmission.admit(");
         int bridge = source.indexOf("syncPlaybackInputBridge();");
         assertTrue(rewind >= 0, "GameLoop must handle trace realtime rewind");
         assertTrue(bridge >= 0, "GameLoop must bridge playback input");
         assertTrue(rewind < bridge,
                 "Rewind release must seek/play the playback timeline before forced input is sampled");
+        assertTrue(admission >= 0 && admission < bridge,
+                "playback forced input must not be published before setup admission");
     }
 
     @Test
@@ -304,22 +317,24 @@ public class TestGameLoop {
     @Test
     public void userRecordingPlaybackPolicyRunsForLevelBoundaryReturns() throws Exception {
         String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
-        int helperStart = source.indexOf("private void finishUserRecordingPlaybackAtLevelBoundary(");
-        int helperEnd = source.indexOf("private void updateSpecialStageMode()", helperStart);
+        // The boundary policy now lives in LevelIterationAdmissionController; GameLoop
+        // only calls it. Assert the ordering where the logic actually is.
+        String admission = Files.readString(
+                Path.of("src/main/java/com/openggf/LevelIterationAdmissionController.java"));
+        int helperStart = admission.indexOf("void finishPlaybackBoundary(");
+        int helperEnd = admission.indexOf("void setLastAppliedPlaybackFrame(", helperStart);
         assertTrue(helperStart >= 0 && helperEnd > helperStart,
-                "GameLoop must centralize user-recording playback boundary handling");
-        String helperBody = source.substring(helperStart, helperEnd);
+                "Playback boundary handling must stay centralized in one helper");
+        String helperBody = admission.substring(helperStart, helperEnd);
 
-        int appliedFrame = helperBody.indexOf("appliedPlaybackFrame = playbackDebugManager.getCursorFrame();");
+        int appliedFrame = helperBody.indexOf("appliedFrame = playback.getCursorFrame();");
         int rememberAppliedFrame = helperBody.indexOf(
-                "lastAppliedUserRecordingPlaybackFrame = appliedPlaybackFrame;");
+                "lastAppliedPlaybackFrame = appliedFrame;");
         int reuseLastAppliedFrame = helperBody.indexOf(
-                "appliedPlaybackFrame = lastAppliedUserRecordingPlaybackFrame;");
-        int skipUnappliedFrame = helperBody.indexOf("if (appliedPlaybackFrame < 0)");
-        int advance = helperBody.indexOf("playbackDebugManager.onLevelFrameAdvanced();");
-        int classify = helperBody.indexOf("userRecordingControls.afterPlaybackFrame(\n" +
-                "                appliedPlaybackFrame,\n" +
-                "                true,");
+                "appliedFrame = lastAppliedPlaybackFrame;");
+        int skipUnappliedFrame = helperBody.indexOf("if (appliedFrame < 0)");
+        int advance = helperBody.indexOf("playback.onLevelFrameAdvanced();");
+        int classify = helperBody.indexOf("recordingControls.afterPlaybackFrame(");
         assertTrue(appliedFrame >= 0,
                 "Advancing boundary playback handling must capture the BK2 row applied by the boundary");
         assertTrue(rememberAppliedFrame > appliedFrame,
@@ -338,12 +353,10 @@ public class TestGameLoop {
         assertTrue(updateLevel >= 0 && updateLevelEnd > updateLevel, "updateLevelMode method must exist");
         String levelBody = source.substring(updateLevel, updateLevelEnd);
 
-        for (String required : List.of(
-                "finishUserRecordingPlaybackAtLevelBoundary(true);",
-                "finishUserRecordingPlaybackAtLevelBoundary(false);")) {
-            assertTrue(levelBody.contains(required),
-                    "Level-boundary returns must notify playback policy via " + required);
-        }
+        assertTrue(source.contains("finishPlaybackBoundary(\n                        true,"),
+                "Seamless boundary completion must notify playback policy");
+        assertTrue(levelBody.contains("finishPlaybackBoundary("),
+                "Fade-based level-boundary returns must notify playback policy");
     }
 
     @Test
@@ -367,8 +380,14 @@ public class TestGameLoop {
         setPrivateField(launcher, "activePlaybackOptions", new UserRecordingPlaybackOptions(0, true, false));
         setPrivateField(launcher, "activePlaybackState", UserRecordingPlaybackState.PLAYING);
 
-        invokePrivateMethod(loop, "finishUserRecordingPlaybackAtLevelBoundary",
-                new Class<?>[] { boolean.class }, false);
+        // The boundary helper now belongs to the admission controller.
+        Object admissionController = getPrivateField(loop, "levelIterationAdmission");
+        invokePrivateMethod(admissionController, "finishPlaybackBoundary",
+                new Class<?>[] {
+                        boolean.class,
+                        com.openggf.debug.playback.PlaybackDebugManager.class,
+                        com.openggf.game.recording.UserRecordingRuntimeControls.class },
+                false, playback, getPrivateField(loop, "userRecordingControls"));
 
         assertEquals(UserRecordingPlaybackState.PLAYING,
                 getPrivateField(launcher, "activePlaybackState"),
@@ -442,13 +461,40 @@ public class TestGameLoop {
     @Test
     public void playbackStartInputFeedsGameplayPauseEdge() throws Exception {
         String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
-        int updateLevel = source.indexOf("private boolean updateLevelMode(");
-        int levelEnd = source.indexOf("private void updateBonusStageMode(", updateLevel);
-        assertTrue(updateLevel >= 0 && levelEnd > updateLevel, "updateLevelMode method must exist");
-        String levelBody = source.substring(updateLevel, levelEnd);
+        int stepInternal = source.indexOf("private void stepInternal()");
+        int admission = source.indexOf("private boolean prepareAdmittedIteration(", stepInternal);
+        assertTrue(stepInternal >= 0 && admission > stepInternal, "stepInternal method must exist");
+        String outerFrameBody = source.substring(stepInternal, admission);
 
-        assertTrue(levelBody.contains("playbackDebugManager.isCurrentForcedStartPress()"),
+        assertTrue(outerFrameBody.contains("playbackDebugManager.isCurrentForcedStartPress()"),
                 "Recorded P1 Start must route to the same gameplay pause edge as live Start");
+    }
+
+    @Test
+    public void setupAdmissionPrecedesSeamlessBoundaryAndTraceCameraMutations() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
+        // Admission, boundary completion and trace-camera input now sit in
+        // prepareAdmittedIteration, which stepInternal calls.
+        int step = source.indexOf("private boolean prepareAdmittedIteration(");
+        int end = source.indexOf("private void updateSpecialStageMode()", step);
+        String body = source.substring(step, end);
+
+        int admission = body.indexOf("levelIterationAdmission.admit(");
+        int boundary = body.indexOf("levelIterationAdmission.completePendingBoundary", admission);
+        int traceCamera = body.indexOf("traceCameraFocusController.tick", admission);
+        int timers = body.indexOf("return true;", traceCamera);
+        assertTrue(admission >= 0 && boundary > admission && traceCamera > boundary
+                        && timers > traceCamera,
+                "seamless boundary completion and trace-camera input must follow setup admission");
+
+        String admissionSource = Files.readString(
+                Path.of("src/main/java/com/openggf/LevelIterationAdmissionController.java"));
+        int admit = admissionSource.indexOf("LevelFrameResult admit(");
+        int admitEnd = admissionSource.indexOf("boolean completePendingBoundary(", admit);
+        String admitBody = admissionSource.substring(admit, admitEnd);
+        assertTrue(admitBody.indexOf("levelManager.applySeamlessTransition(request)")
+                        < admitBody.indexOf("LevelFrameStep.admit("),
+                "a seamless load must arm its setup token before frame classification");
     }
 
     @Test
@@ -990,6 +1036,39 @@ public class TestGameLoop {
     public void testResolveBonusStageDebugShortcutIgnoresPlainB() {
         InputHandler handler = new InputHandler();
         handler.handleKeyEvent(GLFW_KEY_B, GLFW_PRESS);
+
+        assertEquals(BonusStageType.NONE, GameLoop.resolveBonusStageDebugShortcut(handler));
+    }
+
+    /**
+     * Shift and Ctrl already answered from the logical override here; Alt now
+     * answers from the same source, so the shortcut cannot pick a stage from a
+     * mixture of recorded and live modifiers.
+     *
+     * <p>No production caller evaluates this with an override installed today --
+     * {@code stepInternal:994} reaches it before any override window opens, and
+     * every window (LiveRewindStepper, RecordingFrameDriver, TraceSessionLauncher)
+     * both opens and closes later in the same frame. So this pins the contract,
+     * not a reachable defect. The reachable reader of the same override is
+     * {@code updateSpecialStageInput()}, inside TraceSessionLauncher's window.
+     */
+    @Test
+    public void testResolveBonusStageDebugShortcutReadsAltFromTheLogicalOverride() {
+        InputHandler handler = new InputHandler();
+        handler.handleKeyEvent(GLFW_KEY_B, GLFW_PRESS);
+        handler.setLogicalOverride(LogicalInputSnapshot.neutral()
+                .withDebugInput(false, false, false, true, false));
+
+        assertEquals(BonusStageType.SLOT_MACHINE, GameLoop.resolveBonusStageDebugShortcut(handler));
+    }
+
+    @Test
+    public void testResolveBonusStageDebugShortcutIgnoresLiveAltWhileAnOverrideIsInstalled() {
+        InputHandler handler = new InputHandler();
+        handler.handleKeyEvent(GLFW_KEY_LEFT_ALT, GLFW_PRESS);
+        handler.handleKeyEvent(GLFW_KEY_B, GLFW_PRESS);
+        handler.setLogicalOverride(LogicalInputSnapshot.neutral()
+                .withDebugInput(false, false, false, false, false));
 
         assertEquals(BonusStageType.NONE, GameLoop.resolveBonusStageDebugShortcut(handler));
     }
@@ -2251,6 +2330,17 @@ public class TestGameLoop {
         return field.get(target);
     }
 
+    private static com.openggf.physics.CollisionSystem mockCollisionSystem() {
+        com.openggf.physics.CollisionSystem collisionSystem =
+                mock(com.openggf.physics.CollisionSystem.class);
+        // The gameplay context registers the collision system for rewind, so the
+        // mock needs the same stable key the real one reports.
+        when(collisionSystem.key()).thenReturn("collision-system");
+        when(collisionSystem.capture()).thenReturn(
+                new com.openggf.game.rewind.snapshot.CollisionSystemSnapshot(0, 0));
+        return collisionSystem;
+    }
+
     private void bindMockGameplay(com.openggf.level.LevelManager levelManager,
                                   com.openggf.sprites.managers.SpriteManager spriteManager,
                                   FadeManager fadeManager) {
@@ -2300,7 +2390,7 @@ public class TestGameLoop {
                 new com.openggf.level.WaterSystem(),
                 new com.openggf.level.ParallaxManager(),
                 mock(com.openggf.physics.TerrainCollisionManager.class),
-                mock(com.openggf.physics.CollisionSystem.class),
+                mockCollisionSystem(),
                 spriteManager,
                 levelManager);
         gameplayMode.attachSharedRegistries(

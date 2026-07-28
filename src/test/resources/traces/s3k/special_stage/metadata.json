@@ -9,12 +9,14 @@
   "bk2_frame_offset": 48174,
   "trace_frame_count": 4630,
   "source_bk2": "s3-knux-multibonus-ss.bk2",
-  "lua_script_version": "6.31-s3k-completerun",
-  "recording_date": "2026-07-19",
+  "lua_script_version": "6.37-s3k-completerun",
+  "trace_schema": 7,
+  "hardware_timing_schema": 1,
+  "recording_date": "2026-07-27",
   "bizhawk_version": "2.11",
   "genesis_core": "Genplus-gx",
   "rom_checksum": "C5B1C655C19F462ADE0AC4E17A844D10",
-  "run_id": "s3-knux-multibonus-ss",
+  "run_id": "s3k-multibonus",
   "fresh_load": false,
   "segment_index": 12
 }

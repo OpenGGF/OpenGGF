@@ -5,6 +5,8 @@ import com.openggf.data.RomByteReader;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
+import com.openggf.game.timing.HardwareWorkHandle;
 import com.openggf.level.Level;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.ObjectSpriteSheet;
@@ -1058,6 +1060,117 @@ public class Sonic3kObjectArt {
         } catch (Exception e) {
             LOG.warning("Failed to load results screen art: " + e.getMessage());
             return null;
+        }
+    }
+
+    /**
+     * Queues the three ROM KosM archives owned by {@code Obj_LevelResultsInit}.
+     */
+    public QueuedResultsArt queueResultsArt(
+            Rom rom,
+            PlayerCharacter character,
+            int act,
+            int zone,
+            S3kKosModuleQueue queue) throws IOException {
+        int numArtAddr = (act == 0 && zone != 0x16)
+                ? Sonic3kConstants.ART_KOSM_TITLE_CARD_NUM1_ADDR
+                : Sonic3kConstants.ART_KOSM_TITLE_CARD_NUM2_ADDR;
+        int charDestVram = act == 0
+                ? Sonic3kConstants.VRAM_RESULTS_CHAR_NAME_ACT1
+                : Sonic3kConstants.VRAM_RESULTS_CHAR_NAME_ACT2;
+        List<HardwareWorkHandle> handles = List.of(
+                queue.queue(
+                        rom,
+                        Sonic3kConstants.ART_KOSM_RESULTS_GENERAL_ADDR,
+                        Sonic3kConstants.VRAM_RESULTS_BASE),
+                queue.queue(
+                        rom,
+                        numArtAddr,
+                        Sonic3kConstants.VRAM_RESULTS_NUMBERS),
+                queue.queue(
+                        rom,
+                        getCharacterNameArtAddr(character),
+                        charDestVram));
+        return new QueuedResultsArt(
+                queue,
+                handles,
+                new int[] {
+                        0,
+                        Sonic3kConstants.VRAM_RESULTS_NUMBERS
+                                - Sonic3kConstants.VRAM_RESULTS_BASE,
+                        charDestVram - Sonic3kConstants.VRAM_RESULTS_BASE
+                });
+    }
+
+    public static final class QueuedResultsArt {
+        private final S3kKosModuleQueue queue;
+        private final List<HardwareWorkHandle> handles;
+        private final int[] destinations;
+
+        private QueuedResultsArt(
+                S3kKosModuleQueue queue,
+                List<HardwareWorkHandle> handles,
+                int[] destinations) {
+            this.queue = queue;
+            this.handles = List.copyOf(handles);
+            this.destinations = destinations.clone();
+        }
+
+        /**
+         * Rebinds a results owner to jobs already present in the restored
+         * session timing ledger. This deliberately does not submit work.
+         */
+        public static QueuedResultsArt restore(
+                S3kKosModuleQueue queue,
+                List<HardwareWorkHandle> handles,
+                int[] destinations) {
+            if (handles.size() != 3 || destinations.length != 3) {
+                throw new IllegalArgumentException(
+                        "results art restore requires exactly three jobs");
+            }
+            return new QueuedResultsArt(queue, handles, destinations);
+        }
+
+        public List<HardwareWorkHandle> handles() {
+            return handles;
+        }
+
+        public boolean isReady() {
+            return handles.stream().allMatch(queue::isReady);
+        }
+
+        public Pattern[] claim() {
+            if (!isReady()) {
+                throw new IllegalStateException("results KosM art is not ready");
+            }
+            Pattern[] patterns =
+                    new Pattern[Sonic3kConstants.VRAM_RESULTS_ARRAY_SIZE];
+            Pattern empty = new Pattern();
+            Arrays.fill(patterns, empty);
+            for (int i = 0; i < handles.size(); i++) {
+                placePatterns(queue.claim(handles.get(i)), patterns, destinations[i]);
+            }
+            return patterns;
+        }
+
+        private static void placePatterns(
+                byte[] data,
+                Pattern[] patterns,
+                int destination) {
+            int tileCount = data.length / Pattern.PATTERN_SIZE_IN_ROM;
+            for (int tile = 0; tile < tileCount; tile++) {
+                int index = destination + tile;
+                if (index < 0 || index >= patterns.length) {
+                    continue;
+                }
+                byte[] tileData = Arrays.copyOfRange(
+                        data,
+                        tile * Pattern.PATTERN_SIZE_IN_ROM,
+                        (tile + 1) * Pattern.PATTERN_SIZE_IN_ROM);
+                Pattern pattern = new Pattern();
+                pattern.fromSegaFormat(tileData);
+                patterns[index] = pattern;
+            }
         }
     }
 

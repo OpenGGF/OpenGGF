@@ -119,6 +119,12 @@ public final class Lbz1GroundLaunchIntroInstance extends AbstractObjectInstance
                 sprite.setControlLocked(true);
                 sprite.clearForcedInputMask();
                 ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(sprite);
+                primeHeldCpuMappingFromCurrentAnimation(sprite);
+                // Obj_LevelIntro_PlayerLaunchFromGround writes object_control=$03.
+                // Bit 1 skips Animate_Sonic/Animate_Tails while the player remains
+                // buried in the 30-frame hold. sonic3k.asm:77207-77250,
+                // 21992-22018, 26242-26262.
+                sprite.setObjectMappingFrameControl(true);
             }
         }
     }
@@ -130,6 +136,10 @@ public final class Lbz1GroundLaunchIntroInstance extends AbstractObjectInstance
             if (player instanceof AbstractPlayableSprite sprite) {
                 sprite.setJumping(false);
                 applySpringLaunchAnimation(sprite);
+                // sub_39AB4 replaces object_control=$03 with $01, so movement
+                // remains object-owned but animation resumes at the next native
+                // player-slot dispatch. sonic3k.asm:77252-77281.
+                sprite.setObjectMappingFrameControl(false);
                 sprite.setControlLocked(true);
                 sprite.clearForcedInputMask();
                 ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(sprite);
@@ -142,16 +152,26 @@ public final class Lbz1GroundLaunchIntroInstance extends AbstractObjectInstance
         sprite.forceAnimationRestart();
         sprite.setAnimationFrameIndex(0);
         sprite.setAnimationTick(0);
+    }
 
+    private void primeHeldCpuMappingFromCurrentAnimation(AbstractPlayableSprite sprite) {
+        // A CPU follower can enter through the seamless ICZ handoff with a live
+        // animation byte whose mapping was published before this level instance
+        // existed. Publish that carried pose once before object_control bit 1
+        // freezes Animate_Tails; fresh players (animation 0) remain untouched.
+        if (!sprite.isCpuControlled() || sprite.getAnimationId() == 0
+                || sprite.getMappingFrame() != 0) {
+            return;
+        }
         var animationSet = sprite.getAnimationSet();
         if (animationSet == null) {
             return;
         }
-        var springScript = animationSet.getScript(Sonic3kAnimationIds.SPRING.id());
-        if (springScript == null || springScript.frames().isEmpty()) {
+        var currentScript = animationSet.getScript(sprite.getAnimationId());
+        if (currentScript == null || currentScript.frames().isEmpty()) {
             return;
         }
-        sprite.setMappingFrame(springScript.frames().getFirst());
+        sprite.setMappingFrame(currentScript.frames().getFirst());
     }
 
     private void holdInputLocked() {
@@ -204,6 +224,7 @@ public final class Lbz1GroundLaunchIntroInstance extends AbstractObjectInstance
     private void releasePlayer(AbstractPlayableSprite player) {
         player.setControlLocked(false);
         ObjectControlState.none().applyTo(player);
+        player.setObjectMappingFrameControl(false);
         player.clearForcedInputMask();
     }
 

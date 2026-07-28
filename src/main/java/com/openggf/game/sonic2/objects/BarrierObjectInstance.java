@@ -221,7 +221,7 @@ public class BarrierObjectInstance extends AbstractObjectInstance
         int halfWidth = widthPixels + SOLID_EXTRA_WIDTH;
         int airHalfHeight = SOLID_HALF_HEIGHT;
         int groundHalfHeight = SOLID_HALF_HEIGHT + 1;
-        return new SolidObjectParams(halfWidth, airHalfHeight, groundHalfHeight);
+        return SolidObjectParams.of(halfWidth, airHalfHeight, groundHalfHeight);
     }
 
     @Override

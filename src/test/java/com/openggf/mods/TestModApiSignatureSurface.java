@@ -30,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestModApiSignatureSurface {
     private static final String CANDIDATE_BASELINE = "mods/mod-api-signatures-0.7.txt";
     private static final String PLATFORM_ALLOWLIST = "mods/mod-api-platform-allowlist.txt";
+    private static final String ENGINE_INTERNAL_BASELINE = "mods/mod-api-engine-internal-types.txt";
     private static final SemanticVersion CANDIDATE_VERSION = new SemanticVersion(0, 7, 0);
 
     @Retention(RetentionPolicy.CLASS)
@@ -62,6 +63,30 @@ class TestModApiSignatureSurface {
                 "Platform allowlist baseline must be unique and sorted");
         assertEquals(new TreeSet<>(pinned), ModApiSignatureSurface.allowedPlatformTypeNames(),
                 "Platform allowlist changes require exact explicit review");
+    }
+
+    @Test
+    void engineInternalTerminalsArePinnedAndStayOutOfTheSurface() throws IOException {
+        List<String> pinned;
+        try (var input = getClass().getClassLoader().getResourceAsStream(ENGINE_INTERNAL_BASELINE)) {
+            if (input == null) throw new IOException("Missing " + ENGINE_INTERNAL_BASELINE);
+            try (var reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8))) {
+                pinned = reader.lines().filter(line -> !line.isBlank()).toList();
+            }
+        }
+        assertEquals(new ArrayList<>(new TreeSet<>(pinned)), pinned,
+                "Engine-internal baseline must be unique and sorted");
+        assertEquals(new TreeSet<>(pinned), ModApiSignatureSurface.engineInternalTypeNames(),
+                "Engine-internal terminal changes require exact explicit review");
+
+        // The point of the terminal set: these never enter the pinned creator contract.
+        Set<String> surface = ModApiSignatureSurface.recursiveTypes().stream()
+                .map(Class::getName)
+                .collect(java.util.stream.Collectors.toCollection(TreeSet::new));
+        for (String internal : pinned) {
+            assertFalse(surface.contains(internal),
+                    () -> internal + " is an engine internal and must not be a surface type");
+        }
     }
 
     @Test

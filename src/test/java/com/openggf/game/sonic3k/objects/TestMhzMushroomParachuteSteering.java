@@ -7,7 +7,10 @@ import com.openggf.physics.TerrainCheckResult;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import com.openggf.tests.FullReset;
+import com.openggf.tests.SingletonResetExtension;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.MockedStatic;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -20,6 +23,8 @@ import static org.mockito.Mockito.mockStatic;
  * wall collision (sub_3F7AE), ported per {@code Obj_MHZMushroomParachute}
  * (asm 83843) / {@code loc_3F51C} (asm 83872-83876).
  */
+@ExtendWith(SingletonResetExtension.class)
+@FullReset
 class TestMhzMushroomParachuteSteering {
     private static final int MHZ_MUSHROOM_PARACHUTE = 0x12;
 

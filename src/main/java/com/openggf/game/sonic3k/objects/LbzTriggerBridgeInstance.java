@@ -100,7 +100,7 @@ public final class LbzTriggerBridgeInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         // ROM loc_25FFE: d1 = width_pixels + $B, d2 = height_pixels, d3 = d2 + 1.
-        return new SolidObjectParams(widthPixels + SOLID_WIDTH_EXTRA, heightPixels, heightPixels + 1);
+        return SolidObjectParams.of(widthPixels + SOLID_WIDTH_EXTRA, heightPixels, heightPixels + 1);
     }
 
     @Override

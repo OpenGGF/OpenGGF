@@ -16,12 +16,23 @@ class TestSonic3kCollapsingPlatformTransitionSolid {
     @Test
     void fragmentTransitionRetainsExistingRiderButRejectsFreshContact() throws Exception {
         Sonic3kCollapsingPlatformObjectInstance platform = platform();
-        setBoolean(platform, "pendingTransitionSkip", true);
+        setBoolean(platform, "transitionFrameSlopeSkip", true);
 
         assertTrue(platform.solidForTransitionState(true),
                 "the rider's standing bit survives the skipped solid dispatch");
         assertFalse(platform.solidForTransitionState(false),
                 "CreateFragments does not run SolidObjectTopSloped2 for a fresh player");
+    }
+
+    @Test
+    void engineEarlyFragmentPassStillAcceptsFreshFinalDecrementLanding() throws Exception {
+        Sonic3kCollapsingPlatformObjectInstance platform = platform();
+        setBoolean(platform, "pendingTransitionSkip", true);
+
+        assertFalse(platform.solidForTransitionState(false),
+                "an unowned pending transition keeps the existing fresh-contact suppression");
+        assertTrue(platform.solidForTransitionState(false, true),
+                "a saved P2 standing bit makes pending compensation the native final-decrement solid pass");
     }
 
     @Test

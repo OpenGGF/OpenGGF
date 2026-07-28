@@ -5,8 +5,10 @@ import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.game.GameMode;
 import com.openggf.game.SpecialStageProvider;
+import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.trace.SpecialStageTraceData;
 import com.openggf.trace.TraceMetadata;
@@ -18,7 +20,10 @@ import org.junit.jupiter.api.Test;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -48,6 +53,7 @@ class TestGameLoopSpecialStageSkipGate {
     private TraceSessionLauncher session;
     private int lagFrame;
     private int nonLagFrame;
+    private List<HardwareServiceBoundary> hardwareBoundaries;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -78,6 +84,9 @@ class TestGameLoopSpecialStageSkipGate {
         loop.changeGameModeWithoutRewindBoundary(GameMode.SPECIAL_STAGE);
         provider = mock(SpecialStageProvider.class);
         setField(loop, "activeSpecialStageProvider", provider);
+        hardwareBoundaries = new ArrayList<>();
+        GameplayModeContext context = SessionManager.getCurrentGameplayMode();
+        context.setHardwareTimingBoundaryObserver(hardwareBoundaries::add);
     }
 
     @AfterEach
@@ -94,6 +103,9 @@ class TestGameLoopSpecialStageSkipGate {
         invokeUpdateSpecialStageMode();
 
         verify(provider, never()).update();
+        assertEquals(List.of(HardwareServiceBoundary.VINT_SERVICE),
+                hardwareBoundaries,
+                "a special-stage lag row must traverse VBlank service only");
     }
 
     @Test

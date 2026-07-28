@@ -49,6 +49,14 @@ final class S3kFixedAirCountdownManager {
         p2.update(sidekick);
     }
 
+    void processInitialP1Slot(AbstractPlayableSprite player) {
+        p1.update(player);
+    }
+
+    void processInitialP2Slot(AbstractPlayableSprite sidekick) {
+        p2.update(sidekick);
+    }
+
     boolean ownsCadenceFor(AbstractPlayableSprite owner) {
         if (owner == null) {
             return false;

@@ -76,6 +76,16 @@ public class StubObjectServices implements ObjectServices {
     @Override public void spawnLostRings(PlayableEntity player, int frameCounter) {}
     @Override public Camera camera() { return null; }
     @Override public GameStateManager gameState() { return null; }
+    // Objects that submit ROM-paced work need a real timing service, not the
+    // interface default that refuses. One per stub keeps ordinals independent
+    // between probes.
+    private final com.openggf.game.timing.HardwareTimingService hardwareTiming =
+            new com.openggf.game.timing.HardwareTimingService();
+
+    @Override public com.openggf.game.timing.HardwareTimingService hardwareTiming() {
+        return hardwareTiming;
+    }
+
     @Override public WorldSession worldSession() { return null; }
     @Override public GameModule gameModule() { return null; }
     @Override public List<PlayableEntity> sidekicks() { return List.of(); }
@@ -94,8 +104,44 @@ public class StubObjectServices implements ObjectServices {
     @Override public DebugOverlayManager debugOverlay() { return null; }
     @Override public RomManager romManager() { return null; }
     @Override public CrossGameFeatureProvider crossGameFeatures() { return null; }
-    @Override public Rom rom() { return null; }
-    @Override public RomByteReader romReader() { return null; }
+    // Objects that queue ROM art during construction need real bytes. Discovery is
+    // the repo-standard property/env/config/filename lookup and yields null when no
+    // ROM is present, so this stays a fallback and never a requirement.
+    private Rom discoveredRom;
+    private RomByteReader discoveredRomReader;
+    private boolean discoveredRomUnavailable;
+
+    @Override public Rom rom() {
+        openDiscoveredS3kRom();
+        return discoveredRom;
+    }
+
+    @Override public RomByteReader romReader() {
+        openDiscoveredS3kRom();
+        return discoveredRomReader;
+    }
+
+    private void openDiscoveredS3kRom() {
+        if (discoveredRom != null || discoveredRomUnavailable) {
+            return;
+        }
+        java.io.File romFile = com.openggf.tests.RomTestUtils.ensureSonic3kRomAvailable();
+        if (romFile == null) {
+            discoveredRomUnavailable = true;
+            return;
+        }
+        Rom opened = new Rom();
+        if (!opened.open(romFile.getPath())) {
+            discoveredRomUnavailable = true;
+            return;
+        }
+        try {
+            discoveredRomReader = new RomByteReader(opened.readAllBytes());
+            discoveredRom = opened;
+        } catch (java.io.IOException failure) {
+            discoveredRomUnavailable = true;
+        }
+    }
     @Override public WaterSystem waterSystem() { return null; }
     @Override public ParallaxManager parallaxManager() { return null; }
     @Override public CollisionSystem collisionSystem() { return null; }

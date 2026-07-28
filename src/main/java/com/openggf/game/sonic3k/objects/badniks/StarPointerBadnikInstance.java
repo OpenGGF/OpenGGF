@@ -49,6 +49,7 @@ public final class StarPointerBadnikInstance extends AbstractS3kBadnikInstance i
     private static final int WAIT_OFFSCREEN_HALF_SIZE = 0x20;
 
     private boolean initialized;
+    private boolean activeRoutineReady;
     private boolean releaseChildren;
 
     public StarPointerBadnikInstance(ObjectSpawn spawn) {
@@ -76,6 +77,16 @@ public final class StarPointerBadnikInstance extends AbstractS3kBadnikInstance i
             return;
         }
 
+        /*
+         * Obj_WaitOffscreen installs Obj_StarPointer's active address, but
+         * Process_Sprites does not dispatch loc_8BE74 until the following
+         * object pass. Preserve that admission phase before applying velocity.
+         */
+        if (!activeRoutineReady) {
+            activeRoutineReady = true;
+            return;
+        }
+
         moveWithVelocity();
         updateReleaseLatch(player);
     }
@@ -86,6 +97,16 @@ public final class StarPointerBadnikInstance extends AbstractS3kBadnikInstance i
 
     boolean isFacingRight() {
         return !facingLeft;
+    }
+
+    /**
+     * ROM {@code loc_8BE74} moves the parent before publishing its SST pointer
+     * to {@code Collision_response_list}. {@code Touch_Loop} later dereferences
+     * that pointer, so parent contact uses the live post-movement position.
+     */
+    @Override
+    public boolean usesCurrentTouchResponseState() {
+        return true;
     }
 
     private void initializeVelocity(AbstractPlayableSprite player) {
@@ -171,6 +192,8 @@ public final class StarPointerBadnikInstance extends AbstractS3kBadnikInstance i
 
         @RewindTransient(reason = "structural parent link; child captures its own motion state")
         private final StarPointerBadnikInstance parent;
+        private boolean initialized;
+        private boolean touchListPublishedThisFrame;
         private int currentX;
         private int currentY;
         private int xVelocity;
@@ -188,7 +211,14 @@ public final class StarPointerBadnikInstance extends AbstractS3kBadnikInstance i
             super(ownerSpawn, "StarPointerPoint");
             this.parent = parent;
             this.angle = (index * 0x40) & 0xFF; // byte_8BEE2: 0, $40, $80, $C0.
-            updateOrbitPosition();
+            // CreateChild3 copies the parent's full position into the child SST.
+            // loc_8BEB0 only installs attributes/angle on the child's first
+            // execution and returns without circular movement or touch-list
+            // publication; loc_8BEE6 starts on its next execution.
+            this.currentX = parent.getX();
+            this.currentY = parent.getY();
+            this.xSubpixel = parent.xSubpixel;
+            this.ySubpixel = parent.ySubpixel;
         }
 
         @Override
@@ -229,6 +259,12 @@ public final class StarPointerBadnikInstance extends AbstractS3kBadnikInstance i
 
         @Override
         public void update(int frameCounter, PlayableEntity playerEntity) {
+            touchListPublishedThisFrame = false;
+            if (!initialized) {
+                initialized = true;
+                return;
+            }
+            touchListPublishedThisFrame = true;
             if (breaking) {
                 advanceBreakAnimation();
                 return;
@@ -251,6 +287,11 @@ public final class StarPointerBadnikInstance extends AbstractS3kBadnikInstance i
             }
 
             updateOrbitPosition();
+        }
+
+        @Override
+        public boolean publishesTouchResponseListEntryThisFrame() {
+            return touchListPublishedThisFrame;
         }
 
         @Override

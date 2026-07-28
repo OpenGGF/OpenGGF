@@ -77,7 +77,7 @@ public class SinkingMudObjectInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         int surface = sharedSurfaceHeight();
-        return new SolidObjectParams(halfWidth, surface, surface);
+        return SolidObjectParams.of(halfWidth, surface, surface);
     }
 
     @Override

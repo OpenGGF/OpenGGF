@@ -4,7 +4,6 @@ import com.openggf.GameLoop;
 import com.openggf.ModSubsystem;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
-import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
 import com.openggf.capture.BackpressurePolicy;
@@ -20,9 +19,7 @@ import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.game.GameServices;
 import com.openggf.game.session.SessionManager;
-import com.openggf.graphics.GraphicsManager;
-import com.openggf.level.LevelManager;
-import com.openggf.sprites.managers.SpriteManager;
+import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.TraceFrame;
@@ -39,11 +36,6 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-
-import static org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT;
-import static org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT;
-import static org.lwjgl.opengl.GL11.glClear;
-import static org.lwjgl.opengl.GL11.glFinish;
 
 /**
  * Command-line trace-capture driver. Boots a headless gameplay session against
@@ -90,7 +82,7 @@ public final class TraceCaptureTool {
      * config defaults.
      */
     public record Args(String trace, Path outDir, int scale, int fps, String codec,
-                       boolean showGhosts, long verifyFrame, int[] verifyFrames,
+                       boolean showGhosts, int[] verifyFrames,
                        String clip, int tailFrames) {
 
         public static Args parse(String[] argv) {
@@ -124,7 +116,7 @@ public final class TraceCaptureTool {
             if (trace == null || trace.isBlank()) {
                 throw new IllegalArgumentException("--trace <id|name|dir> is required");
             }
-            return new Args(trace, Paths.get(outDir), scale, fps, codec, showGhosts, -1,
+            return new Args(trace, Paths.get(outDir), scale, fps, codec, showGhosts,
                     verifyFrames, clip, tailFrames);
         }
 
@@ -183,6 +175,16 @@ public final class TraceCaptureTool {
         GameServices.configuration().setConfigValue(
                 SonicConfiguration.TRACE_SHOW_DESYNC_GHOSTS, args.showGhosts());
 
+        // Capture fps must be the rate the presentation producer is clocked
+        // at: it presents exactly one packet of sampleRate/frameRate stereo
+        // frames per outer frame, so a container/lease clocked differently
+        // would truncate or zero-pad every packet. Push the requested fps into
+        // the engine frame rate BEFORE boot (the producer is realized from it
+        // and reads it lazily), then capture at whatever rate that actually
+        // resolves to — a PAL region, for instance, pins the engine to 50.
+        GameServices.configuration().setConfigValue(
+                SonicConfiguration.FPS, args.fps());
+
         // --- resolve trace -------------------------------------------------
         TraceEntry entry = resolveTrace(args.trace());
         System.out.println("Capturing trace: " + entry.dir()
@@ -200,8 +202,17 @@ public final class TraceCaptureTool {
 
         // --- boot headless gameplay session -------------------------------
         HeadlessGameBoot boot = new HeadlessGameBoot(SCREEN_WIDTH, SCREEN_HEIGHT);
+        try (BootOwnership<HeadlessGameBoot> ownership =
+                new BootOwnership<>(
+                        boot, SessionManager::closeGameplaySession)) {
         Path romPath = Paths.get(RomManager.resolveRomForGame(entry.gameId()));
-        GameLoop loop = boot.boot(romPath, entry.zone(), entry.act());
+        GameLoop loop = boot.boot(
+                romPath,
+                entry.zone(),
+                entry.act(),
+                meta.hasHardwareTimingStream()
+                        ? HardwareReadinessAdmissionPolicy.RECORDED
+                        : HardwareReadinessAdmissionPolicy.LIVE);
 
         // --- deterministic trace replay bootstrap -------------------------
         // Mirror AbstractTraceReplayTest steps 4-5: start position + ground
@@ -210,7 +221,7 @@ public final class TraceCaptureTool {
         // already-spawned player sprite and wire the BK2 movie + start frame.
         RecordingFrameDriver frameDriver =
                 new RecordingFrameDriver(GameServices.camera().getFocusedSprite());
-        CaptureFixture fixture = new CaptureFixture(frameDriver);
+        TraceReplayDrive.DriverFixture fixture = new TraceReplayDrive.DriverFixture(frameDriver);
         frameDriver.setBk2Movie(movie,
                 TraceReplayBootstrap.recordingStartFrameForTraceReplay(trace));
 
@@ -240,39 +251,205 @@ public final class TraceCaptureTool {
 
         if (args.verifyFrames() != null) {
             runVerify(trace, meta, frameDriver, replayStart, args.verifyFrames());
-            return boot;
+            int maxRequested = java.util.Arrays.stream(args.verifyFrames()).max().orElse(-1);
+            if (maxRequested >= trace.getFrame(trace.frameCount() - 1).frame()) {
+                fixture.closeHardwareTimingReplayRun();
+            }
+            return ownership.transfer();
         }
 
         // --- capture pipeline ---------------------------------------------
         String timestamp = ZonedDateTime.now(ZoneOffset.UTC).format(UTC_STAMP);
         String label = entry.dir().getFileName().toString();
         FfmpegEncoder encoder = new FfmpegEncoder(resolveFfmpeg(), args.scale());
+        // --codec / capture.codec was parsed and then never reached the
+        // encoder, so selecting one silently did nothing.
+        SonicConfigurationService captureConfig = GameServices.configuration();
+        encoder.setCodecs(args.codec(),
+                captureConfig.getString(SonicConfiguration.CAPTURE_AUDIO_CODEC));
+        encoder.setCommandOverrides(
+                captureConfig.getString(SonicConfiguration.CAPTURE_FFMPEG_PASS1_ARGS),
+                captureConfig.getString(SonicConfiguration.CAPTURE_FFMPEG_PASS2_ARGS));
         CaptureRecorder recorder = new CaptureRecorder(
                 encoder, BackpressurePolicy.BLOCK, /* queueCapacity */ 8,
                 args.outDir(), label, timestamp);
 
         GlReadPixelsGrabber grabber = new GlReadPixelsGrabber(SCREEN_WIDTH, SCREEN_HEIGHT);
         DrainPcmAudioTap audioTap = new DrainPcmAudioTap(GameServices.audio());
+        // The offline lease is a non-consuming view of the already-authoritative
+        // presentation producer, so both its rate and the container's rate are
+        // the producer's rates. Take it before the recorder opens so the first
+        // presented packet is observable.
         int sampleRate = GameServices.audio().outputSampleRate();
-        GameServices.audio().beginCaptureMode(sampleRate, args.fps());
-        recorder.start(SCREEN_WIDTH, SCREEN_HEIGHT, args.fps(), sampleRate);
+        int frameRate = GameServices.audio().presentationFrameRate();
+        if (frameRate != args.fps()) {
+            System.out.println("capture: requested " + args.fps()
+                    + " fps but the presentation producer is clocked at "
+                    + frameRate + " fps; capturing at " + frameRate
+                    + " so audio and video stay in sync");
+        }
+        GameServices.audio().beginCaptureMode(sampleRate, frameRate);
+        try {
+            recorder.start(SCREEN_WIDTH, SCREEN_HEIGHT, frameRate, sampleRate);
+        } catch (Throwable failedToOpen) {
+            // The recorder never opened, so nothing will stop it and run the
+            // finally below: release the lease here or it is leaked onto the
+            // producer for the rest of the process.
+            GameServices.audio().endCaptureMode();
+            throw failedToOpen;
+        }
+        HeadlessOuterAudioFrames audioFrames =
+                new HeadlessOuterAudioFrames(audioTap);
 
         long captured = 0;
         try {
             captured = args.clip() != null
-                    ? driveClip(trace, frameDriver, replayStart, grabber, audioTap,
+                    ? driveClip(trace, frameDriver, replayStart, grabber, audioFrames,
                             recorder, args.clip(), args.tailFrames())
                     : driveAndCapture(trace, meta, frameDriver, replayStart,
-                            loop, grabber, audioTap, recorder);
+                            loop, grabber, audioFrames, recorder);
+            if (args.clip() == null) {
+                fixture.closeHardwareTimingReplayRun();
+            }
         } finally {
-            Path out = recorder.stop();
-            GameServices.audio().endCaptureMode();
-            System.out.println("Captured " + captured + " frames -> " + out.toAbsolutePath());
-            if (Files.isRegularFile(out)) {
-                System.out.println("Output size: " + Files.size(out) + " bytes");
+            try {
+                Path out = recorder.stop();
+                System.out.println("Captured " + captured + " frames -> " + out.toAbsolutePath());
+                if (Files.isRegularFile(out)) {
+                    System.out.println("Output size: " + Files.size(out) + " bytes");
+                }
+            } finally {
+                GameServices.audio().endCaptureMode();
             }
         }
-        return boot;
+        return ownership.transfer();
+        }
+    }
+
+    /**
+     * Keeps ownership of a boot from the instant it is constructed until a
+     * successful run returns it to {@link #main(String[])}. This closes both
+     * the replay session and native boot if any post-construction step throws.
+     */
+    static final class BootOwnership<T extends AutoCloseable>
+            implements AutoCloseable {
+        private final T boot;
+        private final Runnable closeSession;
+        private boolean transferred;
+
+        BootOwnership(T boot, Runnable closeSession) {
+            this.boot = java.util.Objects.requireNonNull(boot, "boot");
+            this.closeSession = java.util.Objects.requireNonNull(
+                    closeSession, "closeSession");
+        }
+
+        T transfer() {
+            transferred = true;
+            return boot;
+        }
+
+        @Override
+        public void close() throws Exception {
+            if (transferred) {
+                return;
+            }
+            Throwable failure = null;
+            try {
+                closeSession.run();
+            } catch (Throwable sessionFailure) {
+                failure = sessionFailure;
+            }
+            try {
+                boot.close();
+            } catch (Throwable bootFailure) {
+                if (failure == null) {
+                    failure = bootFailure;
+                } else {
+                    failure.addSuppressed(bootFailure);
+                }
+            }
+            if (failure instanceof Exception exception) {
+                throw exception;
+            }
+            if (failure != null) {
+                throw new IllegalStateException(
+                        "capture teardown failed", failure);
+            }
+        }
+    }
+
+    /**
+     * Owns the headless capture loop's audio cadence: exactly one final-PCM
+     * presentation and exactly one drain of that packet per outer framebuffer
+     * frame the driver treats as presented.
+     *
+     * <p>Simulation-only fast-forward steps must not touch this object — they
+     * may enqueue audio commands, but presenting per simulation step would
+     * multiply the audio cadence by the number of steps. Conversely every
+     * presented frame must be drained exactly once (captured during the window,
+     * discarded outside it) so no stale packet is carried into the clip.
+     *
+     * <p>That contract is enforced here rather than merely documented: present
+     * and drain must strictly alternate. Wiring a present into a per-simulation
+     * -step body (the cadence-multiplying regression) therefore fails loudly on
+     * the first fast-forward frame that runs more than one simulation step,
+     * instead of silently emitting several packets per captured frame.
+     */
+    static final class HeadlessOuterAudioFrames {
+        private final DrainPcmAudioTap audioTap;
+        private final short[] discardBuffer = new short[16384];
+        private boolean presentedUndrained;
+        private int presentedFrames;
+        private int drainedFrames;
+
+        HeadlessOuterAudioFrames(DrainPcmAudioTap audioTap) {
+            this.audioTap = audioTap;
+        }
+
+        /** Presents this outer frame's packet. Call once per presented frame. */
+        void presentOuterFrame() {
+            if (presentedUndrained) {
+                throw new IllegalStateException(
+                        "the previously presented packet has not been drained:"
+                                + " exactly one presentation and one drain"
+                                + " belong to each presented outer frame");
+            }
+            HeadlessGameBoot.presentHeadlessOuterAudioFrame();
+            presentedUndrained = true;
+            presentedFrames++;
+        }
+
+        /** Drains the presented packet into the recorder's PCM buffer. */
+        int drainCaptured(short[] target) {
+            beginDrain();
+            return audioTap.drain(target);
+        }
+
+        /** Drains and discards the presented packet during fast-forward. */
+        int discardPresented() {
+            beginDrain();
+            return audioTap.drain(discardBuffer);
+        }
+
+        private void beginDrain() {
+            if (!presentedUndrained) {
+                throw new IllegalStateException(
+                        "no presented packet to drain: each drain must follow"
+                                + " exactly one presentOuterFrame()");
+            }
+            presentedUndrained = false;
+            drainedFrames++;
+        }
+
+        /** Test observation point: presented outer frames so far. */
+        int presentedFrames() {
+            return presentedFrames;
+        }
+
+        /** Test observation point: drained (captured or discarded) packets. */
+        int drainedFrames() {
+            return drainedFrames;
+        }
     }
 
     static void disableExternalContentForDeterminism() {
@@ -289,7 +466,7 @@ public final class TraceCaptureTool {
                                  TraceReplayBootstrap.ReplayStartState replayStart,
                                  GameLoop loop,
                                  GlReadPixelsGrabber grabber,
-                                 DrainPcmAudioTap audioTap,
+                                 HeadlessOuterAudioFrames audioFrames,
                                  CaptureRecorder recorder) throws Exception {
         short[] pcmBuffer = new short[16384];
         long frameIndex = 0;
@@ -304,12 +481,18 @@ public final class TraceCaptureTool {
             TraceExecutionPhase phase =
                     TraceReplayBootstrap.phaseForReplay(trace, previousDriveFrame, driveFrame);
 
-            boolean stepped = driveOneFrame(trace, frameDriver, replayStart, phase, driveTraceIndex);
+            TraceReplayDrive.DriveOutcome outcome =
+                    TraceReplayDrive.driveOneFrame(trace, frameDriver, replayStart, phase, driveTraceIndex);
+            if (!outcome.consumedRow()) {
+                continue;
+            }
 
-            if (stepped && TraceReplayBootstrap.shouldCompareGameplayStateForReplay(phase)) {
-                renderFrame();
+            if (outcome.gameplayFrame()
+                    && TraceReplayBootstrap.shouldCompareGameplayStateForReplay(phase)) {
+                audioFrames.presentOuterFrame();
+                TraceReplayDrive.renderFrame();
                 byte[] rgba = grabber.grab();
-                int sampleCount = audioTap.drain(pcmBuffer);
+                int sampleCount = audioFrames.drainCaptured(pcmBuffer);
                 recorder.submit(new CapturedFrame(rgba, SCREEN_WIDTH, SCREEN_HEIGHT,
                         pcmBuffer, sampleCount, frameIndex++));
             }
@@ -333,7 +516,8 @@ public final class TraceCaptureTool {
      */
     private long driveClip(TraceData trace, RecordingFrameDriver frameDriver,
                            TraceReplayBootstrap.ReplayStartState replayStart,
-                           GlReadPixelsGrabber grabber, DrainPcmAudioTap audioTap,
+                           GlReadPixelsGrabber grabber,
+                           HeadlessOuterAudioFrames audioFrames,
                            CaptureRecorder recorder, String clipName, int tailFrames)
             throws Exception {
         if (!"aiz-battleship-to-boss".equals(clipName)) {
@@ -350,7 +534,6 @@ public final class TraceCaptureTool {
         }
 
         short[] pcmBuffer = new short[16384];
-        short[] discardBuffer = new short[16384];
         long frameIndex = 0;          // captured (submitted) frame count
         boolean capturing = false;
         long fadeBaseline = -1;
@@ -366,9 +549,14 @@ public final class TraceCaptureTool {
             TraceFrame driveFrame = trace.getFrame(driveTraceIndex);
             TraceExecutionPhase phase =
                     TraceReplayBootstrap.phaseForReplay(trace, previousDriveFrame, driveFrame);
-            boolean stepped = driveOneFrame(trace, frameDriver, replayStart, phase, driveTraceIndex);
+            TraceReplayDrive.DriveOutcome outcome =
+                    TraceReplayDrive.driveOneFrame(trace, frameDriver, replayStart, phase, driveTraceIndex);
+            if (!outcome.consumedRow()) {
+                continue;
+            }
 
-            if (stepped && TraceReplayBootstrap.shouldCompareGameplayStateForReplay(phase)) {
+            if (outcome.gameplayFrame()
+                    && TraceReplayBootstrap.shouldCompareGameplayStateForReplay(phase)) {
                 if (!capturing) {
                     Sonic3kAIZEvents live = resolveAizEvents();
                     if (live != null && live.isBattleshipAutoScrollActive()) {
@@ -378,10 +566,13 @@ public final class TraceCaptureTool {
                                 + driveFrame.frame());
                     }
                 }
+                // Exactly one presentation per outer frame the clip treats as
+                // presented, whether or not the capture window is open.
+                audioFrames.presentOuterFrame();
                 if (capturing) {
-                    renderFrame();
+                    TraceReplayDrive.renderFrame();
                     byte[] rgba = grabber.grab();
-                    int sampleCount = audioTap.drain(pcmBuffer);
+                    int sampleCount = audioFrames.drainCaptured(pcmBuffer);
                     recorder.submit(new CapturedFrame(rgba, SCREEN_WIDTH, SCREEN_HEIGHT,
                             pcmBuffer, sampleCount, frameIndex++));
                     if (stopAtFrame < 0
@@ -395,9 +586,10 @@ public final class TraceCaptureTool {
                         break;
                     }
                 } else {
-                    // Fast-forward: advance audio synthesis but discard it so the
-                    // capture-mode ring does not overflow before the window opens.
-                    audioTap.drain(discardBuffer);
+                    // Fast-forward: the packet was presented above, so drain and
+                    // discard it. Leaving it undrained would carry a stale
+                    // packet into the first captured frame of the clip.
+                    audioFrames.discardPresented();
                 }
             }
 
@@ -449,7 +641,11 @@ public final class TraceCaptureTool {
             TraceFrame driveFrame = trace.getFrame(driveTraceIndex);
             TraceExecutionPhase phase =
                     TraceReplayBootstrap.phaseForReplay(trace, previousDriveFrame, driveFrame);
-            driveOneFrame(trace, frameDriver, replayStart, phase, driveTraceIndex);
+            TraceReplayDrive.DriveOutcome outcome =
+                    TraceReplayDrive.driveOneFrame(trace, frameDriver, replayStart, phase, driveTraceIndex);
+            if (!outcome.consumedRow()) {
+                continue;
+            }
 
             if (wanted.contains(driveFrame.frame())) {
                 var sprite = GameServices.camera().getFocusedSprite();
@@ -467,78 +663,6 @@ public final class TraceCaptureTool {
     }
 
     /**
-     * Drives one trace frame using the same phase rules as the test S3K loop.
-     * Returns {@code true} if a gameplay tick was executed (false for cursor-only
-     * advance phases).
-     */
-    private boolean driveOneFrame(TraceData trace, RecordingFrameDriver frameDriver,
-                                  TraceReplayBootstrap.ReplayStartState replayStart,
-                                  TraceExecutionPhase phase, int driveTraceIndex) {
-        // Begin the palette-ownership frame exactly as GameLoop.update does
-        // (GameLoop.java:448-450). The headless replay drive path
-        // (RecordingFrameDriver) omits this because the trace TEST never renders;
-        // without it PaletteOwnershipRegistry.writes accumulate across every
-        // captured frame (never cleared) and resolvedThisFrame stays set, so the
-        // rendered palette freezes/corrupts — e.g. the AIZ2 forest->boss palette
-        // transition garbles. Capture-only: physics/comparison is unaffected.
-        PaletteOwnershipRegistry paletteRegistry = GameServices.paletteOwnershipRegistryOrNull();
-        if (paletteRegistry != null) {
-            paletteRegistry.beginFrame();
-        }
-        if (phase == TraceExecutionPhase.VBLANK_ONLY
-                || phase == TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY) {
-            frameDriver.skipFrameFromRecording();
-            if (phase == TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY) {
-                frameDriver.advancePlayableAnimationsOnly();
-            }
-            // Mirror AbstractTraceReplayTest: the S3K complete-run handoff row
-            // is skipped for comparison, but ROM ran a full LevelLoop on it and
-            // incremented Level_frame_counter before Process_Sprites. Apply the
-            // single counter tick so S3K Tails-CPU gates read ROM-visible
-            // Level_frame_counter natively.
-            if (driveTraceIndex == replayStart.startingTraceIndex()
-                    && TraceReplayBootstrap.isS3kCompleteRunHandoffCounterTickRow(trace)) {
-                SpriteManager handoffSprites = GameServices.spritesOrNull();
-                if (handoffSprites != null) {
-                    handoffSprites.setFrameCounter(handoffSprites.getFrameCounter() + 1);
-                }
-            }
-            return false;
-        }
-        if (phase == TraceExecutionPhase.FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD) {
-            frameDriver.suppressFirstSidekickAnimationOnce();
-        }
-        // NOTE: the S3K replay loop in AbstractTraceReplayTest.replayS3kTrace
-        // does NOT special-case ADVANCE_ONLY; only VBLANK_ONLY is skipped and
-        // every other phase drives a gameplay tick. Mirror that exactly — an
-        // ADVANCE_ONLY frame still runs a tick (and advances the vbla counter),
-        // so do not divert it to consumeRecordingFrameInputOnly or the vbla
-        // counter slips by one mid-intro and the player path desyncs.
-        if (TraceReplayBootstrap.shouldUsePreviousRecordingInputForTraceReplay(trace)) {
-            frameDriver.stepFrameFromRecordingUsingPreviousInput();
-        } else {
-            frameDriver.stepFrameFromRecording();
-        }
-        return true;
-    }
-
-    /**
-     * Renders the current LEVEL scene to the back buffer. Mirrors the default
-     * LEVEL branch of {@code Engine.draw()}: clear with the level background
-     * colour, draw level + sprites by priority, flush, and block until GL is
-     * finished so the subsequent {@code glReadPixels} sees the completed frame.
-     */
-    private void renderFrame() {
-        LevelManager levelManager = GameServices.level();
-        GraphicsManager graphicsManager = GameServices.graphics();
-        levelManager.setClearColor();
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        levelManager.drawWithSpritePriority(GameServices.sprites());
-        graphicsManager.flush();
-        glFinish();
-    }
-
-    /**
      * Resolves {@code --trace} against the catalog by directory name, or by
      * 0-based catalog index, or as a direct filesystem path to a trace dir.
      *
@@ -550,7 +674,7 @@ public final class TraceCaptureTool {
      * with a clear message instead of failing opaquely mid-capture — capture the
      * run's individual segments (each an ordinary trace) instead.
      */
-    private TraceEntry resolveTrace(String spec) {
+    static TraceEntry resolveTrace(String spec) {
         Path catalogDir = Paths.get(GameServices.configuration()
                 .getString(SonicConfiguration.TRACE_CATALOG_DIR));
         List<TraceEntry> entries = TraceCatalog.scan(catalogDir);
@@ -603,64 +727,5 @@ public final class TraceCaptureTool {
         return FfmpegEncoder.findFfmpeg()
                 .map(Path::toString)
                 .orElse("ffmpeg");
-    }
-
-    /**
-     * {@link com.openggf.trace.replay.TraceReplayFixture} view backed by the
-     * shared {@link RecordingFrameDriver}, so {@link TraceReplaySessionBootstrap}
-     * sees exactly the fixture surface the test's {@code HeadlessTestFixture}
-     * provides (sprite, gameplay mode, recording-cursor helpers).
-     */
-    private static final class CaptureFixture implements com.openggf.trace.replay.TraceReplayFixture {
-        private final RecordingFrameDriver driver;
-
-        private CaptureFixture(RecordingFrameDriver driver) {
-            this.driver = driver;
-        }
-
-        @Override
-        public com.openggf.sprites.playable.AbstractPlayableSprite sprite() {
-            return driver.getSprite();
-        }
-
-        @Override
-        public com.openggf.game.session.GameplayModeContext gameplayMode() {
-            return SessionManager.getCurrentGameplayMode();
-        }
-
-        @Override
-        public int stepFrameFromRecording() {
-            return driver.stepFrameFromRecording();
-        }
-
-        @Override
-        public int skipFrameFromRecording() {
-            return driver.skipFrameFromRecording();
-        }
-
-        @Override
-        public void advancePlayableAnimationsOnly() {
-            driver.advancePlayableAnimationsOnly();
-        }
-
-        @Override
-        public void suppressFirstSidekickAnimationOnce() {
-            driver.suppressFirstSidekickAnimationOnce();
-        }
-
-        @Override
-        public int consumeRecordingFrameInputOnly() {
-            return driver.consumeRecordingFrameInputOnly();
-        }
-
-        @Override
-        public void advanceRecordingCursor(int frameCount) {
-            driver.advanceRecordingCursor(frameCount);
-        }
-
-        @Override
-        public int peekRecordingInputAt(int offset) {
-            return driver.peekRecordingInputAt(offset);
-        }
     }
 }

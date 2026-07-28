@@ -63,6 +63,12 @@ class TestS3kIczPathFollowPlatformObject {
         assertEquals(0, platform.getMappingFrameForTesting());
         assertEquals(Sonic3kObjectArtKeys.ICZ_PLATFORMS, platform.getArtKeyForTesting());
         assertEquals(5, platform.getPriorityBucket());
+        assertTrue(platform.usesInclusiveRightEdge(),
+                "SolidObjectFull includes the exact +$2B right edge");
+        assertTrue(platform.usesInstanceSolidStateLatchKey(),
+                "moving spawn coordinates must not change the native SST latch identity");
+        assertFalse(platform.seedsNewRideCarryFromPreUpdateX(),
+                "a fresh SolidObjectFull landing does not consume saved d4 carry");
     }
 
     @Test
@@ -98,18 +104,41 @@ class TestS3kIczPathFollowPlatformObject {
     }
 
     @Test
-    void subtypeZeroJitterUsesRomVintLowBitPhase() {
+    void subtypeZeroJitterMovesLeftOnOddResolvedVintPhase() {
         IczPathFollowPlatformObjectInstance platform = create(0);
+        platform.setServices(new StubObjectServices() {
+            @Override
+            public int vIntRunCounter(int objectUpdateCounter) {
+                return objectUpdateCounter;
+            }
+        });
         PlayableEntity player = mock(PlayableEntity.class);
 
         platform.onSolidContact(player, standingContact(), 0);
         platform.update(0, player);
 
         platform.update(1, player);
-        assertEquals(0x1201, platform.getX());
+        assertEquals(0x11FF, platform.getX(),
+                "loc_89FD6 negates its one-pixel step when V_int_run_count+3 is odd");
+    }
 
-        platform.update(2, player);
-        assertEquals(0x1200, platform.getX());
+    @Test
+    void subtypeZeroJitterMovesRightOnEvenResolvedVintPhase() {
+        IczPathFollowPlatformObjectInstance platform = create(0);
+        platform.setServices(new StubObjectServices() {
+            @Override
+            public int vIntRunCounter(int objectUpdateCounter) {
+                return objectUpdateCounter + 1;
+            }
+        });
+        PlayableEntity player = mock(PlayableEntity.class);
+
+        platform.onSolidContact(player, standingContact(), 0);
+        platform.update(0, player);
+
+        platform.update(1, player);
+        assertEquals(0x1201, platform.getX(),
+                "loc_89FD6 retains its positive one-pixel step when the resolved phase is even");
     }
 
     @Test
@@ -263,9 +292,18 @@ class TestS3kIczPathFollowPlatformObject {
 
         try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
             terrain.when(() -> ObjectTerrainUtils.checkFloorDistWithFlipAwareAngle(anyInt(), anyInt(), anyInt()))
-                    .thenReturn(new TerrainCheckResult(8, (byte) 0x20, 0));
+                    .thenReturn(new TerrainCheckResult(0, (byte) 0xE2, 0));
+            terrain.when(() -> ObjectTerrainUtils.checkRightWallDist(anyInt(), anyInt()))
+                    .thenReturn(new TerrainCheckResult(1, (byte) 0, 0));
 
             platform.update(16, player);
+        }
+
+        try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDistWithFlipAwareAngle(anyInt(), anyInt(), anyInt()))
+                    .thenReturn(new TerrainCheckResult(8, (byte) 0x20, 0));
+
+            platform.update(17, player);
         }
 
         int xBeforeWallStop = platform.getX();
@@ -275,12 +313,14 @@ class TestS3kIczPathFollowPlatformObject {
             terrain.when(() -> ObjectTerrainUtils.checkRightWallDist(anyInt(), anyInt()))
                     .thenReturn(new TerrainCheckResult(-5, (byte) 0, 0));
 
-            platform.update(17, player);
+            platform.update(18, player);
         }
 
         assertEquals(0x0A, platform.getRoutineByteForTesting());
         assertEquals(xBeforeWallStop - 4, platform.getX());
         assertEquals(0, platform.getXVelocityForTesting());
+        assertEquals(0x44, platform.getXSubpixelForTesting(),
+                "loc_8A154 corrects x_pos and x_vel without clearing x_sub");
         assertTrue(platform.getYVelocityForTesting() > 0);
     }
 
@@ -335,6 +375,7 @@ class TestS3kIczPathFollowPlatformObject {
             platform.onSolidContact(player, riddenPushingContact(), frame);
             platform.update(frame, player);
         }
+        platform.onSolidContact(player, standingContact(), 16);
 
         verify(camera).requestFastVerticalScroll();
     }

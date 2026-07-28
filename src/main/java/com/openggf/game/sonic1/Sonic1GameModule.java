@@ -52,6 +52,7 @@ import com.openggf.game.PlayerCharacter;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 import com.openggf.game.sonic1.titlecard.Sonic1TitleCardManager;
+import com.openggf.game.profiles.trace.TracePlaybackProfile;
 import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.PlaneSwitcherConfig;
 import com.openggf.level.objects.TouchResponseTable;
@@ -80,6 +81,7 @@ public class Sonic1GameModule implements GameModule {
     private final Sonic1ZoneRegistry zoneRegistry = new Sonic1ZoneRegistry();
     private final Sonic1SwitchManager switchManager = new Sonic1SwitchManager();
     private final Sonic1ConveyorState conveyorState = new Sonic1ConveyorState();
+    private final Sonic1FloatingBlockState floatingBlockState = new Sonic1FloatingBlockState();
     private final Sonic1TitleCardManager titleCardProvider = new Sonic1TitleCardManager();
     private final Sonic1TitleScreenManager titleScreenProvider = new Sonic1TitleScreenManager();
     private final Sonic1LevelSelectManager levelSelectProvider = new Sonic1LevelSelectManager();
@@ -100,6 +102,11 @@ public class Sonic1GameModule implements GameModule {
     @Override
     public GameId getGameId() {
         return GameId.S1;
+    }
+
+    @Override
+    public TracePlaybackProfile getTracePlaybackProfile() {
+        return TracePlaybackProfile.SONIC_1;
     }
 
     /**
@@ -268,6 +275,7 @@ public class Sonic1GameModule implements GameModule {
         if (type == Sonic1ZoneRegistry.class) return (T) zoneRegistry;
         if (type == Sonic1SwitchManager.class) return (T) switchManager;
         if (type == Sonic1ConveyorState.class) return (T) conveyorState;
+        if (type == Sonic1FloatingBlockState.class) return (T) floatingBlockState;
         return null;
     }
 
@@ -292,6 +300,8 @@ public class Sonic1GameModule implements GameModule {
         Sonic1StomperDoorObjectInstance.resetSbz3Flag();
         // Reset conveyor belt state for new level (Sonic 1 f_conveyrev + v_obj63)
         conveyorState.reset();
+        // Reset REV01 f_obj56 for every fresh level/restart.
+        floatingBlockState.reset();
     }
 
     @Override

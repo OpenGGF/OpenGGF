@@ -8,6 +8,8 @@ import com.openggf.game.NoOpBonusStageProvider;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.session.GameplayModeContext;
+import com.openggf.game.timing.HardwareTimingBoundaryObserver;
+import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.timer.TimerManager;
 import com.openggf.level.resources.KosinskiModuleQueue;
@@ -22,13 +24,19 @@ public record LevelFrameContext(GameModule gameModule,
                                 GameStateManager gameStateManager,
                                 TimerManager timerManager,
                                 PaletteOwnershipRegistry paletteOwnershipRegistry,
-                                KosinskiModuleQueue kosinskiModuleQueue) {
+                                KosinskiModuleQueue kosinskiModuleQueue,
+                                HardwareTimingService hardwareTiming,
+                                HardwareTimingBoundaryObserver hardwareTimingBoundaryObserver) {
 
     public LevelFrameContext {
         Objects.requireNonNull(gameModule, "gameModule");
         bonusStageProvider = bonusStageProvider != null
                 ? bonusStageProvider
                 : NoOpBonusStageProvider.INSTANCE;
+        Objects.requireNonNull(hardwareTiming, "hardwareTiming");
+        hardwareTimingBoundaryObserver = hardwareTimingBoundaryObserver != null
+                ? hardwareTimingBoundaryObserver
+                : HardwareTimingBoundaryObserver.NO_OP;
     }
 
     public static LevelFrameContext from(GameplayModeContext context) {
@@ -43,6 +51,8 @@ public record LevelFrameContext(GameModule gameModule,
                 context.getGameStateManager(),
                 context.getTimerManager(),
                 context.getPaletteOwnershipRegistry(),
-                context.getKosinskiModuleQueue());
+                context.getKosinskiModuleQueue(),
+                context.hardwareTiming(),
+                context.hardwareTimingBoundaryObserver());
     }
 }

@@ -75,6 +75,7 @@ public record GameRules(
                     false,
                     false,
                     true,
+                    false,
                     false
             ),
             new CameraRules(
@@ -129,6 +130,7 @@ public record GameRules(
                     1,
                     32,
                     1024,
+                    false,
                     false,
                     false,
                     false,
@@ -212,7 +214,8 @@ public record GameRules(
                     false,
                     true,
                     false,
-                    true
+                    true,
+                    false
             ),
             new CameraRules(
                     (short) 120,
@@ -266,6 +269,7 @@ public record GameRules(
                     1,
                     32,
                     1024,
+                    true,
                     false,
                     false,
                     true,
@@ -349,7 +353,8 @@ public record GameRules(
                     true,
                     true,
                     false,
-                    false
+                    false,
+                    true
             ),
             new CameraRules(
                     (short) 120,
@@ -403,6 +408,7 @@ public record GameRules(
                     1,
                     32,
                     1024,
+                    false,
                     true,
                     true,
                     true,

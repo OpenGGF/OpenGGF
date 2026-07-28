@@ -165,7 +165,7 @@ public class MGZLBZSmashingPillarObjectInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         // ROM: addi.w #$B,d1 (width pad); addq.w #1,d3 (air height one greater).
-        return new SolidObjectParams(halfWidth + 0x0B, halfHeight, halfHeight + 1);
+        return SolidObjectParams.of(halfWidth + 0x0B, halfHeight, halfHeight + 1);
     }
 
     @Override
@@ -177,6 +177,15 @@ public class MGZLBZSmashingPillarObjectInstance extends AbstractObjectInstance
         // Status_Push every frame the player holds against the pillar. The
         // engine's default exclusive (>=) X gate would instead drop the contact
         // at the flush edge and let the player's standing-still push-clear win.
+        return true;
+    }
+
+    @Override
+    public boolean groundedSquashEdgeSideContactSetsPush() {
+        // SolidObjectFull's grounded lower-half edge escape branches back to
+        // loc_1E042/loc_1E06E, which sets Status_Push even when the falling
+        // pillar is moving into a player who is moving away from its face
+        // (sonic3k.asm:41473-41495,41564-41568).
         return true;
     }
 

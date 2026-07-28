@@ -11,7 +11,7 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * Zone Analysis Spec Normalizer (Option 6 in {@code docs/AGENT_WORKFLOW_SUPPORT_OPTIONS.md}).
+ * Zone Analysis Spec Normalizer (Option 6 in {@code docs/agent-workflow/support-options.md}).
  *
  * <p>Reads a loose / partial S3K zone-analysis Markdown spec (as produced by the
  * {@code s3k-zone-analysis} skill, see {@code .claude/skills/s3k-zone-analysis/SKILL.md})
@@ -48,8 +48,8 @@ import java.util.Map;
  *
  * <p>Usage:
  * <pre>
- *   mvn exec:java "-Dexec.mainClass=com.openggf.tools.ZoneSpecNormalizerTool" "-Dexec.args=docs/s3k-zones/hcz-analysis.md"
- *   mvn exec:java "-Dexec.mainClass=com.openggf.tools.ZoneSpecNormalizerTool" "-Dexec.args=docs/s3k-zones/hcz-analysis.md -o docs/s3k-zones/hcz-normalized.md"
+ *   mvn exec:java "-Dexec.mainClass=com.openggf.tools.ZoneSpecNormalizerTool" "-Dexec.args=docs/architecture/research/s3k-zones/hcz-analysis.md"
+ *   mvn exec:java "-Dexec.mainClass=com.openggf.tools.ZoneSpecNormalizerTool" "-Dexec.args=docs/architecture/research/s3k-zones/hcz-analysis.md -o docs/architecture/research/s3k-zones/hcz-normalized.md"
  * </pre>
  */
 public final class ZoneSpecNormalizerTool {

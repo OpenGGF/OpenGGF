@@ -61,6 +61,9 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     private final boolean stageRingsUseObjectTouchCollection;
     private PatternSpriteRenderer.FrameBounds spinBounds;
     private final AttractedRing[] attractedRings;
+    private int attractedRingTargetX;
+    private int attractedRingTargetY;
+    private boolean attractedRingTargetCaptured;
 
 
     public RingManager(List<RingSpawn> spawns, RingSpriteSheet spriteSheet,
@@ -101,6 +104,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         lostRings.reset();
         spinBounds = null;
         releaseAttractedRingSlots();
+        attractedRingTargetCaptured = false;
     }
 
     /**
@@ -112,6 +116,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         placement.replaceSpawnsAndReset(newSpawns);
         lostRings.reset();
         releaseAttractedRingSlots();
+        attractedRingTargetCaptured = false;
     }
 
     public void ensurePatternsCached(GraphicsManager graphicsManager, int basePatternIndex) {
@@ -156,6 +161,14 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
      * can carry or reposition it.
      */
     public void attractStageRings(AbstractPlayableSprite player) {
+        if (player != null && !player.isCpuControlled()) {
+            // Obj_Attracted_Ring can execute before later platform slots carry
+            // Player 1. Capture the post-physics player-slot coordinates here
+            // so the subsystem-backed late update sees the native target phase.
+            attractedRingTargetX = player.getCentreX();
+            attractedRingTargetY = player.getCentreY();
+            attractedRingTargetCaptured = true;
+        }
         if (player == null || player.getDead() || !lightningShieldEnabled(player)
                 || player.getShieldType() != ShieldType.LIGHTNING) {
             return;
@@ -194,6 +207,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
      * object slot yet and therefore must not be visible to a later player in the same frame.
      */
     public void prepareAttractedRingTouchSnapshot() {
+        attractedRingTargetCaptured = false;
         for (AttractedRing ring : attractedRings) {
             ring.listedForTouchThisFrame = ring.active && !ring.collected;
         }
@@ -558,8 +572,17 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                                                     int frameCounter, int x, int y,
                                                     int[] preallocatedSlots,
                                                     boolean slotsFullyReserved) {
+        spawnLostRingsWithInitialObjectStep(player, ringCount, frameCounter, x, y,
+                preallocatedSlots, slotsFullyReserved, false);
+    }
+
+    public void spawnLostRingsWithInitialObjectStep(AbstractPlayableSprite player, int ringCount,
+                                                    int frameCounter, int x, int y,
+                                                    int[] preallocatedSlots,
+                                                    boolean slotsFullyReserved,
+                                                    boolean forceDeferredOwnerRingClear) {
         lostRings.spawnLostRings(player, ringCount, frameCounter, x, y,
-                preallocatedSlots, slotsFullyReserved, true);
+                preallocatedSlots, slotsFullyReserved, true, forceDeferredOwnerRingClear);
     }
 
     /** Shared spilled-ring spin owner feeding the LostRingObjectInstance object path. */
@@ -672,10 +695,9 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         int elapsed = frameCounter - sparkleStart;
         // ROM parity: Ani_Ring sparkle uses its own delay byte (5 in S1 = 6 VBlanks/frame
         // via AnimateSprite), distinct from SynchroAnimate's spin rate (8 VBlanks/frame).
-        // After sparkleFrameCount frames × sparkleDelay VBlanks, the afRoutine command
-        // fires but the ring still displays for one more frame (DisplaySprite runs).
-        // Ring_Delete runs on the NEXT frame, calling DeleteObject to free the SST slot.
-        // Total duration: sparkleFrameCount * sparkleDelay + 1.
+        // sparkleStart is the first Ring_Sparkle execution, rather than the
+        // ReactToItem collection frame. At frameCount × delay executions the
+        // next Ring_Delete dispatch frees the SST slot on this update.
         int sparkleDelay = renderer.getSparkleFrameDelay();
         int totalDuration = renderer.getSparkleFrameCount() * sparkleDelay + 1;
         return elapsed >= totalDuration;
@@ -776,8 +798,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
      * reverse quickly. Position updated via MoveSprite2 (velocity→subpixel).
      */
     private void updateAttractedRings(AbstractPlayableSprite player, int frameCounter, int cameraX) {
-        int pcx = player.getCentreX();
-        int pcy = player.getCentreY();
+        ObjectManager objectManager = levelManager != null ? levelManager.getObjectManager() : null;
         boolean lightningShieldActive = lightningShieldEnabled(player)
                 && player.getShieldType() == ShieldType.LIGHTNING;
         for (AttractedRing ar : activeAttractedRingsInSlotOrder()) {
@@ -790,9 +811,18 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 continue;
             }
 
+            boolean hasSlotTarget = objectManager != null
+                    && objectManager.hasPlayerCentreAtObjectSlotStart(ar.objectSlotIndex);
+            int pcx = hasSlotTarget
+                    ? objectManager.getPlayerCentreXAtObjectSlotStart(ar.objectSlotIndex)
+                    : attractedRingTargetCaptured ? attractedRingTargetX : player.getCentreX();
+            int pcy = hasSlotTarget
+                    ? objectManager.getPlayerCentreYAtObjectSlotStart(ar.objectSlotIndex)
+                    : attractedRingTargetCaptured ? attractedRingTargetY : player.getCentreY();
+
             // --- X axis acceleration (AttractedRing_Move) ---
             int accelX = ATTRACT_ACCEL;
-            if (pcx >= ar.x) {
+            if (Integer.compareUnsigned(pcx & 0xFFFF, ar.x & 0xFFFF) >= 0) {
                 // Player is right of ring: accelerate right (+)
                 if (ar.xVel < 0) {
                     // Moving wrong way: 4× to reverse
@@ -809,7 +839,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
 
             // --- Y axis acceleration ---
             int accelY = ATTRACT_ACCEL;
-            if (pcy >= ar.y) {
+            if (Integer.compareUnsigned(pcy & 0xFFFF, ar.y & 0xFFFF) >= 0) {
                 if (ar.yVel < 0) {
                     accelY *= 4;
                 }
@@ -824,12 +854,12 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             // --- MoveSprite2: apply velocity to position (subpixel precision) ---
             int xLong = (ar.x << 16) | (ar.xSub & 0xFFFF);
             xLong += ar.xVel << 8;
-            ar.x = xLong >> 16;
+            ar.x = (short) (xLong >> 16);
             ar.xSub = xLong & 0xFFFF;
 
             int yLong = (ar.y << 16) | (ar.ySub & 0xFFFF);
             yLong += ar.yVel << 8;
-            ar.y = yLong >> 16;
+            ar.y = (short) (yLong >> 16);
             ar.ySub = yLong & 0xFFFF;
 
             advanceAttractedRingSpin(ar);
@@ -1086,12 +1116,12 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             int objectSlotIndex = restoreAttractedRingObjectSlot(entry);
             ar.active = entry.active() && (entry.objectSlotIndex() < 0 || objectSlotIndex >= 0);
             ar.sourceIndex = entry.sourceIndex();
-            ar.x = entry.x();
-            ar.y = entry.y();
-            ar.xSub = entry.xSub();
-            ar.ySub = entry.ySub();
-            ar.xVel = entry.xVel();
-            ar.yVel = entry.yVel();
+            ar.x = (short) entry.x();
+            ar.y = (short) entry.y();
+            ar.xSub = entry.xSub() & 0xFFFF;
+            ar.ySub = entry.ySub() & 0xFFFF;
+            ar.xVel = (short) entry.xVel();
+            ar.yVel = (short) entry.yVel();
             ar.objectSlotIndex = objectSlotIndex;
             ar.collected = ar.active && entry.collected();
             ar.sparkleStartFrame = entry.sparkleStartFrame();
@@ -1542,13 +1572,22 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                     ? new int[] {preallocatedFirstSlot}
                     : new int[0];
             spawnLostRings(player, ringCount, frameCounter, x, y, slots,
-                    false, applyInitialObjectStep);
+                    false, applyInitialObjectStep, false);
         }
 
         private void spawnLostRings(AbstractPlayableSprite player, int ringCount, int frameCounter,
                                     int x, int y, int[] preallocatedSlots,
                                     boolean slotsFullyReserved,
                                     boolean applyInitialObjectStep) {
+            spawnLostRings(player, ringCount, frameCounter, x, y, preallocatedSlots,
+                    slotsFullyReserved, applyInitialObjectStep, false);
+        }
+
+        private void spawnLostRings(AbstractPlayableSprite player, int ringCount, int frameCounter,
+                                    int x, int y, int[] preallocatedSlots,
+                                    boolean slotsFullyReserved,
+                                    boolean applyInitialObjectStep,
+                                    boolean forceDeferredOwnerRingClear) {
             if (player == null || renderer == null) {
                 return;
             }
@@ -1579,7 +1618,10 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             if (preallocateOwnerSlot && firstReservedSlot < 0) {
                 firstReservedSlot = objectManager.allocateDynamicSlot();
             }
-            boolean deferRingCountClear = objectManager != null
+            boolean deferRingCountClear = forceDeferredOwnerRingClear || (objectManager != null
+                    && firstReservedSlot >= 0
+                    && objectManager.reservedSlotWaitsForNextObjectPass(firstReservedSlot));
+            boolean ownerWaitsForNextPass = objectManager != null
                     && firstReservedSlot >= 0
                     && objectManager.reservedSlotWaitsForNextObjectPass(firstReservedSlot);
             int previousSlot = firstReservedSlot;
@@ -1617,7 +1659,12 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                             ? objectManager.allocateSlotAfter(previousSlot)
                             : objectManager.allocateDynamicSlot();
                 }
-                if (slotIndex < 0) {
+                // S3K's Obj37 chain uses AllocateObjectAfterCurrent. Preserve the
+                // remaining logical entries when the engine's consolidated object
+                // model exhausts its physical slot projection; S1/S2 retain native
+                // stop-on-allocation-failure behavior.
+                boolean logicalOverflow = slotIndex < 0 && allocateRemainderAfterOwner;
+                if (slotIndex < 0 && !logicalOverflow) {
                     // ROM: no free slot → stop spilling (truncate the remainder).
                     int truncated = toSpawn - spawned;
                     LOG.log(System.Logger.Level.DEBUG, () -> "spawnLostRings: dynamic slot pool "
@@ -1625,7 +1672,11 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                     break;
                 }
 
-                int phase = phaseOffsetForSlot(objectManager, slotIndex);
+                // Process_Sprites' d7 countdown supplies both animation phase and
+                // floor-probe cadence. Continue that countdown across virtual entries;
+                // using -1 would collapse every overflow ring onto the same phase.
+                int phaseSlotIndex = logicalOverflow ? previousSlot + 1 : slotIndex;
+                int phase = phaseOffsetForSlot(objectManager, phaseSlotIndex);
                 LostRing ring = ringPool[activeRingCount];
                 ring.reset(phase, x, y,
                         xVel, yVel, LIFETIME_FRAMES);
@@ -1644,13 +1695,30 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                         // (docs/skdisasm/sonic3k.asm:21065-21088,35549-35616).
                         ringObject.clearMainPlayerRingsOnFirstUpdate();
                     }
-                    objectManager.spawnLostRingObjectAtSlot(ringObject, slotIndex);
-                    if (applyInitialObjectStep && appliesInitialObj37Step(slotIndex, firstReservedSlot)) {
+                    if (i > 0 && ownerWaitsForNextPass
+                            && !objectManager.reservedSlotWaitsForNextObjectPass(slotIndex)) {
+                        // Native AllocateObjectAfterCurrent does not create the
+                        // remainder until the behind-cursor owner initializes on
+                        // its next pass. Eager engine allocation preserves slot
+                        // ownership, but these ahead-cursor children must not
+                        // receive an extra movement step in the allocation pass.
+                        ringObject.deferFirstUpdateUntilOwnerPass();
+                    }
+                    if (logicalOverflow) {
+                        objectManager.spawnLogicalLostRingOverflow(ringObject);
+                    } else {
+                        objectManager.spawnLostRingObjectAtSlot(ringObject, slotIndex);
+                    }
+                    if (applyInitialObjectStep
+                            && (logicalOverflow || appliesInitialObj37Step(slotIndex, firstReservedSlot))) {
                         ringObject.updateMovement();
+                    }
+                    if (objectManager.hasInheritedRingCounterPhase()) {
+                        ringObject.markTouchStateAlreadyPostMovement();
                     }
                 }
                 activeRingCount++;
-                previousSlot = slotIndex;
+                previousSlot = phaseSlotIndex;
                 spawned++;
                 xVel = -xVel;
                 angle = -angle;

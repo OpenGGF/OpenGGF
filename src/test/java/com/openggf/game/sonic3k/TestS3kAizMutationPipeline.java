@@ -31,7 +31,7 @@ class TestS3kAizMutationPipeline {
         assertContains(content, "Sonic3kAIZEvents.applyFireTransitionPaletteLine4(levelManager);");
         assertContains(content, "Sonic3kZoneEvents.applyPlc(PLC_SPIKES_SPRINGS);");
         assertContains(content, "Sonic3kPlcLoader.refreshAffectedRenderers(overlayRanges, levelManager);");
-        assertContains(content, "LOG.info(\"Applied AIZ1 fire transition overlays");
+        assertContains(content, "LOG.info(\"Applied AIZ1 fire transition palette, PLC, and transition floor\");");
     }
 
     @Test

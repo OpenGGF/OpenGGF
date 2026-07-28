@@ -173,8 +173,12 @@ public class IczSwingingPlatformObjectInstance extends AbstractObjectInstance
 
     private void moveCircular() {
         int angle = (angleAccumulator >> 8) & 0xFF;
-        x = anchorX + (TrigLookupTable.sinHex(angle) >> 1);
-        y = anchorY + (TrigLookupTable.cosHex(angle) >> 1);
+        int xFixed = (anchorX << 16) + (TrigLookupTable.sinHex(angle) << 15);
+        int yFixed = (anchorY << 16) + (TrigLookupTable.cosHex(angle) << 15);
+        x = xFixed >> 16;
+        y = yFixed >> 16;
+        xSub = xFixed & 0xFFFF;
+        ySub = yFixed & 0xFFFF;
     }
 
     private void resetSwing() {
@@ -191,13 +195,11 @@ public class IczSwingingPlatformObjectInstance extends AbstractObjectInstance
         phase = Phase.FALLING;
         xVel = xFlip ? -RELEASE_X_VELOCITY : RELEASE_X_VELOCITY;
         yVel = RELEASE_Y_VELOCITY;
-        xSub = 0;
-        ySub = 0;
     }
 
     private void updateFalling() {
         SubpixelMotion.State motion = new SubpixelMotion.State(x, y, xSub, ySub, xVel, yVel);
-        SubpixelMotion.moveSprite(motion, SubpixelMotion.S3K_GRAVITY);
+        SubpixelMotion.objectFallXY(motion, SubpixelMotion.S3K_GRAVITY);
         x = motion.x;
         y = motion.y;
         xSub = motion.xSub;
@@ -235,7 +237,7 @@ public class IczSwingingPlatformObjectInstance extends AbstractObjectInstance
 
         xVel = nextVel;
         SubpixelMotion.State motion = new SubpixelMotion.State(x, y, xSub, ySub, xVel, yVel);
-        SubpixelMotion.moveSprite2(motion);
+        SubpixelMotion.speedToPos(motion);
         x = motion.x;
         y = motion.y;
         xSub = motion.xSub;
@@ -279,6 +281,30 @@ public class IczSwingingPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getPieceLandingHalfWidth(int pieceIndex) {
+        // SolidObjectFull's loc_1E154 re-reads each child SST's width_pixels:
+        // word_8B158 publishes $20 for the lower trigger, while word_8B15E
+        // publishes $30 for the adjusted upper solid. These are independent of
+        // the broad d1 values ($2B/$0F) passed into the initial overlap check.
+        if (pieceIndex == PIECE_UPPER) {
+            return 0x30;
+        }
+        return phase == Phase.IDLE ? 0x20 : LOWER_PARAMS.halfWidth();
+    }
+
+    @Override
+    public boolean usesPieceSpecificLandingHalfWidths() {
+        return true;
+    }
+
+    @Override
+    public boolean usesInclusiveRightEdge() {
+        // S3K SolidObjectFull rejects the broad X overlap with `bhi`, so a
+        // player exactly +d1 from either child remains inside its side box.
+        return true;
+    }
+
+    @Override
     public SolidObjectParams getSolidParams() {
         return LOWER_PARAMS;
     }
@@ -289,11 +315,34 @@ public class IczSwingingPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean usesCollisionHalfWidthForTopLanding() {
-        // Obj_ICZSwingingPlatform child slots pass d1=$2B/$0F directly to
-        // SolidObjectFull, rather than the obActWid+$0B width used by many
-        // generic solid callers.
+    public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
+        // Each solid child is a real SolidObjectFull SST slot. If its own
+        // standing bit is still set when a rider jumps, loc_1DC98 clears that
+        // bit and returns; the same slot cannot immediately re-enter the fresh
+        // top-contact branch and apply loc_1E154's upward-player lift.
         return true;
+    }
+
+    @Override
+    public boolean sidekickCpuStalePushGraceKeepsFollowSteeringWhileRiding(PlayableEntity player) {
+        // The lower child remains P2's live SolidObjectFull support after its
+        // transient side-push bit clears. TailsCPU therefore observes the
+        // cleared native Status_Push and still executes FollowLeft/Right.
+        return true;
+    }
+
+    @Override
+    public boolean usesSidekickCpuPushBypassObjectOrderStatusDelay(PlayableEntity player) {
+        // ObjB4 is folded from a parent plus two independent SolidObjectFull
+        // child SST slots (sub_8B054/sub_8B06A, sonic3k.asm:188977-189000).
+        // Their standing/pushing bits are published after TailsCPU_Normal in
+        // the object pass. At the CPU slot, the delayed Stat_table sample can
+        // therefore still carry the child-side Status_Push even though the
+        // engine's ordinary follower-history sample captured the folded
+        // parent before that child contact. Use the controller's object-order
+        // status sample for the d4 test only; d1 remains the normal delayed
+        // Ctrl_1 word (sonic3k.asm:26696-26705).
+        return player != null && player.isCpuControlled();
     }
 
     @Override
@@ -303,6 +352,12 @@ public class IczSwingingPlatformObjectInstance extends AbstractObjectInstance
 
     @Override
     public void onPieceContact(int pieceIndex, PlayableEntity player, SolidContact contact, int frameCounter) {
+        onPieceContact(pieceIndex, player, contact, frameCounter, false);
+    }
+
+    @Override
+    public void onPieceContact(int pieceIndex, PlayableEntity player, SolidContact contact, int frameCounter,
+            boolean standingBitWasSetAtEntry) {
         if (pieceIndex != PIECE_LOWER_TRIGGER || player == null || !contact.standing() || phase != Phase.IDLE) {
             return;
         }
@@ -317,7 +372,8 @@ public class IczSwingingPlatformObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        int swing = clamp(sign16(speed) >> 1, -MAX_SWING_VELOCITY, MAX_SWING_VELOCITY);
+        int triggerSpeed = standingBitWasSetAtEntry ? sign16(speed) >> 1 : speed;
+        int swing = clamp(sign16(triggerSpeed) >> 1, -MAX_SWING_VELOCITY, MAX_SWING_VELOCITY);
         swingVelocity = swing;
         // ROM child routine sub_8B0B0 sets parent flag/velocity and returns;
         // parent loc_8AD20 switches to the swing routine on its next update,
@@ -378,9 +434,12 @@ public class IczSwingingPlatformObjectInstance extends AbstractObjectInstance
         return y;
     }
 
-    @Override
-    public int getOutOfRangeReferenceX() {
-        return spawnX;
+    public int getXSubpixelForTesting() {
+        return xSub;
+    }
+
+    public int getYSubpixelForTesting() {
+        return ySub;
     }
 
     @Override

@@ -269,9 +269,10 @@ public class TestPostLoadAssemblyBehavior {
         Sonic1LevelInitProfile profile = newS1Profile();
         List<InitStep> steps = profile.levelLoadSteps(ctx);
 
-        // 12 resource steps + 6 post-load steps (no SpawnSidekick) = 18
+        // 12 resource steps + S1's v_misc_variables/RNG reset + 6 post-load
+        // steps (no SpawnSidekick) = 19
         // (InitObjectManager + InitCameraBounds merged into InitObjectSystem)
-        assertEquals(18, steps.size(), "S1 should have 18 steps (12 resource + 6 post-load)");
+        assertEquals(19, steps.size(), "S1 should have 19 steps (13 resource + 6 post-load)");
     }
 
     @Test
@@ -309,6 +310,30 @@ public class TestPostLoadAssemblyBehavior {
         assertTrue(step.romRoutine().contains("+4"), "S3K sidekick step should document the +4 Y offset");
     }
 
+    @Test
+    public void initialProcessSpritesLifecycleProfilesAndStepOrderAreTyped() {
+        assertEquals(InitialProcessSpritesLifecycle.NONE, newS1Profile().initialProcessSpritesLifecycle());
+        assertEquals(InitialProcessSpritesLifecycle.NONE, newS2Profile().initialProcessSpritesLifecycle());
+
+        Sonic3kLevelInitProfile profile = newS3kProfile();
+        assertEquals(InitialProcessSpritesLifecycle.LOAD_THEN_PROCESS_ONCE,
+                profile.initialProcessSpritesLifecycle());
+
+        LevelLoadContext ctx = new LevelLoadContext();
+        ctx.setIncludePostLoadAssembly(true);
+        ctx.setAssemblyKind(LevelAssemblyKind.FRESH_LEVEL_ASSEMBLY);
+        List<InitStep> steps = profile.levelLoadSteps(ctx);
+        int zoneState = indexOfStep(steps, "InitZonePlayerState");
+        int requestSetup = indexOfStep(steps, "RequestInitialProcessSprites");
+        int titleCard = indexOfStep(steps, "RequestTitleCard");
+
+        assertEquals(zoneState + 1, requestSetup);
+        assertEquals(requestSetup + 1, titleCard);
+        steps.get(requestSetup).execute();
+        assertEquals(InitialProcessSpritesLifecycle.LOAD_THEN_PROCESS_ONCE,
+                ctx.requestedInitialProcessSpritesLifecycle());
+    }
+
     // ========== Helpers ==========
 
     private CheckpointState createCheckpoint(int index, int x, int y) {
@@ -339,5 +364,13 @@ public class TestPostLoadAssemblyBehavior {
                 .findFirst()
                 .orElse(null);
     }
-}
 
+    private static int indexOfStep(List<InitStep> steps, String name) {
+        for (int i = 0; i < steps.size(); i++) {
+            if (steps.get(i).name().equals(name)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+}

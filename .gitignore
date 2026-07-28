@@ -8,6 +8,7 @@
 .vscode/
 /config.json
 /config.yaml
+/config.yaml.example
 /config.json.bak
 *.bin
 *.smd
@@ -31,8 +32,8 @@ __pycache__/
 stable-retro-*/
 stable-retro-*.zip
 
-# Audio debug files (keep locally, don't track)
-docs/audio-debug/
+# Raw audio captures are ignored globally; curated documentation research
+# assets live under docs/architecture/research/audio/.
 *.pcm
 *.raw
 
@@ -40,9 +41,6 @@ docs/audio-debug/
 /src/test/resources/audio-reference/
 /src/test/resources/visual-reference/
 /src/test/resources/EHZ*.kos
-
-# Archived planning docs
-docs/archive/
 
 # Debug tools (uncompiled standalone scripts)
 tools/*
@@ -98,7 +96,8 @@ tools/bizhawk/trace_output/
 /test-output-atlas.txt
 /mvn-test-output.txt
 /tmp_*.asm
-/docs/BizHawk-2.11-win-x64/*
+# Local BizHawk installations use BizHawk-<version>-<platform>-<architecture>.
+/docs/BizHawk-*/
 /.lwjgl/
 
 # Scratch files at repo root (ad-hoc diagnostic probes, BizHawk movies)

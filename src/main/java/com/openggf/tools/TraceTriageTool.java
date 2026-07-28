@@ -14,7 +14,7 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * Trace Triage Assistant (Option 5 of {@code docs/AGENT_WORKFLOW_SUPPORT_OPTIONS.md}).
+ * Trace Triage Assistant (Option 5 of {@code docs/agent-workflow/support-options.md}).
  *
  * <p>Reads existing trace-replay report artifacts that the engine already
  * produces and prints a short FIRST-DIVERGENCE brief. It performs no ROM run
@@ -407,7 +407,7 @@ public final class TraceTriageTool {
     }
 
     /**
-     * Decides whether {@code docs/TRACE_FRONTIER_LOG.md} likely needs an
+     * Decides whether {@code docs/status/trace-frontier-log.md} likely needs an
      * update. The frontier log must be updated when a trace frontier moves,
      * passes, regresses, or is used to select the next target. If the report
      * shows any errors, the frontier is currently failing and the log should
@@ -471,7 +471,7 @@ public final class TraceTriageTool {
             sb.append("\n");
             sb.append("Frontier log update likely needed: ")
                     .append(frontierLogLikelyNeedsUpdate(report) ? "YES" : "no")
-                    .append("  (file: docs/TRACE_FRONTIER_LOG.md)\n");
+                    .append("  (file: docs/status/trace-frontier-log.md)\n");
             return sb.toString();
         }
 
@@ -515,7 +515,7 @@ public final class TraceTriageTool {
         sb.append("\n");
         sb.append("Frontier log update likely needed: ")
                 .append(frontierLogLikelyNeedsUpdate(report) ? "YES" : "no")
-                .append("  (file: docs/TRACE_FRONTIER_LOG.md)\n");
+                .append("  (file: docs/status/trace-frontier-log.md)\n");
 
         return sb.toString();
     }

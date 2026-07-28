@@ -58,6 +58,10 @@ public record SolidRoutineAdapter(SolidObjectProvider provider, SolidRoutineProf
         return provider.getTopLandingSnapAdjustment(player, solidTopYRadius);
     }
 
+    public int getContinuedRideSnapAdjustment(PlayableEntity player, int solidTopYRadius) {
+        return provider.getContinuedRideSnapAdjustment(player, solidTopYRadius);
+    }
+
     public boolean skipsCpuSidekickWhenRenderFlagOffScreen() {
         return provider.skipsCpuSidekickWhenRenderFlagOffScreen();
     }

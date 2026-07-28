@@ -1,5 +1,6 @@
 package com.openggf.tests.rules;
 
+import com.openggf.tests.TestTempFiles;
 import com.openggf.data.Rom;
 import com.openggf.tests.RomTestUtils;
 import org.junit.jupiter.api.Test;
@@ -18,7 +19,7 @@ class TestRomCacheAvailability {
 
     @Test
     void invalidConfiguredRomFileIsUnavailable() throws Exception {
-        Path invalidRom = Files.createTempFile("openggf-invalid-rom", ".gen");
+        Path invalidRom = TestTempFiles.createTempFile("openggf-invalid-rom", ".gen");
         Files.writeString(invalidRom, "not a rom");
 
         String previous = System.getProperty("sonic1.rom.path");

@@ -7,10 +7,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-/**
- * Verifies title-card workaround knobs stay inactive except for the S3K
- * Sonic+Tails seed-row setup tick.
- */
+/** Verifies replay-only title-card workaround knobs stay inactive for S3K. */
 class TestPreludeFramesKnobsZero {
 
     @Test
@@ -33,10 +30,9 @@ class TestPreludeFramesKnobsZero {
     }
 
     @Test
-    void s3kSonicAndTailsSeedFrameReturnsOneSidekickSetupTick() {
-        // Mirrors the S3K CNZ Sonic+Tails level-select trace. Frame 0 remains
-        // a seed comparison row after one native sidekick setup tick when the
-        // fixture explicitly advertises that replay phase.
+    void s3kLegacySeedCapabilityCannotRequestReplayPrelude() {
+        // Mirrors the old S3K CNZ metadata. The capability remains parseable,
+        // but Task 1's production fresh-playable lifecycle now owns frame 0.
         TraceFrame seed = buildFrame(0, /* gfc */ 1,
                 /* xSpeed */ (short) 0, /* ySpeed */ (short) 0, /* gSpeed */ (short) 0,
                 /* xSub */ 0, /* ySub */ 0);
@@ -47,9 +43,11 @@ class TestPreludeFramesKnobsZero {
                         List.of("sidekick_seed_frame_prelude")),
                 List.of(seed, next));
 
-        assertEquals(1, TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace));
-        assertEquals(1, TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(trace),
-                "S3K Sonic+Tails seed-frame traces replay the native Process_Sprites setup pass before frame 1");
+        assertEquals(0, TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace));
+        assertEquals(0, TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(trace));
+        assertEquals(0, TraceReplayBootstrap.preTraceOscillationFramesForTraceReplay(trace, -1));
+        assertEquals(TraceReplayBootstrap.ReplayStartState.DEFAULT,
+                TraceReplayBootstrap.applyReplayStartStateForTraceReplay(trace, null));
     }
 
     @Test
@@ -64,23 +62,30 @@ class TestPreludeFramesKnobsZero {
                 List.of(seed, next));
 
         assertEquals(0, TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace),
-                "S3K sidekick seed-frame prelude should come from explicit fixture capability metadata, "
-                        + "not first-frame movement shape.");
+                "S3K replay scheduling must not infer a seed prelude from frame-zero outcome shape.");
+        assertEquals(0, TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(trace));
+        assertEquals(0, TraceReplayBootstrap.preTraceOscillationFramesForTraceReplay(trace, -1));
     }
 
     @Test
-    void s3kSonicAndTailsWithPrimaryMovementReturnsZero() {
-        // S3K MGZ-style frame 0 already has primary movement — old code returned 0 here too.
+    void s3kCompleteRunVisibleVelocityHoldShapeDoesNotControlPhase() {
         TraceFrame seed = buildFrame(0, /* gfc */ 1,
                 /* xSpeed */ (short) 0x18, (short) 0, (short) 0x18, 0, 0);
-        TraceFrame next = buildFrame(1, /* gfc */ 2,
-                (short) 0x20, (short) 0, (short) 0x20, 0, 0);
+        TraceFrame next = buildFrame(1, /* gfc */ 1,
+                (short) 0x18, (short) 0, (short) 0x18, 0, 0);
         TraceData trace = TraceFixtures.trace(
-                metadata("s3k", "mgz", 4, 0, List.of("sonic", "tails")),
+                metadataWithProfile(
+                        "s3k", "mgz", 4, 0, List.of("sonic", "tails"), "complete_run"),
                 List.of(seed, next));
 
         assertEquals(0, TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace));
-        assertEquals(0, TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(trace));
+        assertEquals(0, TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(trace),
+                "represented complete-run restoration is a semantic bootstrap envelope, "
+                        + "not a metadata-selected replay prelude knob");
+        assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
+                TraceReplayBootstrap.phaseForReplay(trace, null, seed),
+                "Matching frame-zero/next-row state with visible velocity is an outcome shape, "
+                        + "not phase scheduling evidence.");
     }
 
     @Test
@@ -209,6 +214,19 @@ class TestPreludeFramesKnobsZero {
     private static TraceMetadata metadata(String game, String zone, int zoneId, int act,
                                            List<String> characters,
                                            List<String> auxSchemaExtras) {
+        return metadata(game, zone, zoneId, act, characters, auxSchemaExtras, null);
+    }
+
+    private static TraceMetadata metadataWithProfile(
+            String game, String zone, int zoneId, int act,
+            List<String> characters, String traceProfile) {
+        return metadata(game, zone, zoneId, act, characters, null, traceProfile);
+    }
+
+    private static TraceMetadata metadata(String game, String zone, int zoneId, int act,
+                                           List<String> characters,
+                                           List<String> auxSchemaExtras,
+                                           String traceProfile) {
         return new TraceMetadata(
                 game,
                 zone,
@@ -223,7 +241,7 @@ class TestPreludeFramesKnobsZero {
                 /* luaScriptVersion */ "9.2-s2",
                 /* traceSchema */ 3,
                 /* csvVersion */ null,
-                /* traceProfile */ null,
+                traceProfile,
                 /* bizhawkVersion */ null,
                 /* genesisCore */ null,
                 /* auxSchemaExtras */ auxSchemaExtras,
@@ -248,6 +266,7 @@ class TestPreludeFramesKnobsZero {
                 /* segmentIndex */ null,
                 /* bonusStageType */ null,
                 /* freshLoad */ null,
-                /* vIntRunCount */ null);
+                /* vIntRunCount */ null,
+                /* hardwareTimingSchema */ null);
     }
 }

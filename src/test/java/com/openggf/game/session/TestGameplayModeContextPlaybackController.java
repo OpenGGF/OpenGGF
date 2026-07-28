@@ -68,7 +68,10 @@ class TestGameplayModeContextPlaybackController {
     void installAndGetReturnSameInstance() {
         GameplayModeContext ctx = buildAttachedContext();
         AtomicInteger stepCount = new AtomicInteger();
-        EngineStepper stepper = in -> stepCount.incrementAndGet();
+        EngineStepper stepper = in -> {
+            stepCount.incrementAndGet();
+            return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
+        };
 
         PlaybackController pc = ctx.installPlaybackController(stubInputs(10), stepper, 60);
         assertNotNull(pc);
@@ -80,7 +83,10 @@ class TestGameplayModeContextPlaybackController {
     void installAndTickInvokesStepperOnce() {
         GameplayModeContext ctx = buildAttachedContext();
         AtomicInteger stepCount = new AtomicInteger();
-        EngineStepper stepper = in -> stepCount.incrementAndGet();
+        EngineStepper stepper = in -> {
+            stepCount.incrementAndGet();
+            return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
+        };
 
         PlaybackController pc = ctx.installPlaybackController(stubInputs(10), stepper, 60);
         // Default state is PLAYING; tick() should advance one frame.
@@ -96,14 +102,20 @@ class TestGameplayModeContextPlaybackController {
         // attachGameplayManagers not called — registry is null
 
         assertThrows(IllegalStateException.class,
-                () -> ctx.installPlaybackController(stubInputs(10), in -> {}, 60),
+                () -> ctx.installPlaybackController(
+                        stubInputs(10),
+                        in -> com.openggf.LevelFrameResult.GAMEPLAY_FRAME,
+                        60),
                 "installPlaybackController should throw when registry is not initialised");
     }
 
     @Test
     void tearDownClearsPlaybackController() {
         GameplayModeContext ctx = buildAttachedContext();
-        ctx.installPlaybackController(stubInputs(10), in -> {}, 60);
+        ctx.installPlaybackController(
+                stubInputs(10),
+                in -> com.openggf.LevelFrameResult.GAMEPLAY_FRAME,
+                60);
         assertNotNull(ctx.getPlaybackController());
 
         ctx.tearDownManagers();
@@ -121,7 +133,10 @@ class TestGameplayModeContextPlaybackController {
     @Test
     void getRewindControllerIsNonNullAfterInstall() {
         GameplayModeContext ctx = buildAttachedContext();
-        ctx.installPlaybackController(stubInputs(10), in -> {}, 60);
+        ctx.installPlaybackController(
+                stubInputs(10),
+                in -> com.openggf.LevelFrameResult.GAMEPLAY_FRAME,
+                60);
         assertNotNull(ctx.getRewindController());
     }
 }

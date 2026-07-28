@@ -29,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *   <li>{@code isChkObjectVisible} uses {@code 0 <= dx < 528}</li>
  * </ul>
  *
- * This is a deliberate divergence documented in docs/KNOWN_DISCREPANCIES.md; at
+ * This is a deliberate divergence documented in docs/status/known-discrepancies.md; at
  * NATIVE_4_3 (320 px) both methods reproduce the ROM constants exactly.
  */
 class TestObjectViewportWindowWidth {

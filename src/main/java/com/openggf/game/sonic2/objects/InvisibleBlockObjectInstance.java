@@ -53,7 +53,7 @@ public class InvisibleBlockObjectInstance extends BoxObjectInstance
         int d1 = halfWidth + 11;
         int d2 = halfHeight;
         int d3 = halfHeight + 1;
-        return new SolidObjectParams(d1, d2, d3);
+        return SolidObjectParams.of(d1, d2, d3);
     }
 
     @Override

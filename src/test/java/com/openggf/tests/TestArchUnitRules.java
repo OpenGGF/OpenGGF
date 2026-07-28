@@ -115,6 +115,13 @@ class TestArchUnitRules {
             "audio -> data",
             "audio -> debug",
             "audio -> game",
+            // Offline benchmark harness. `bench` is a leaf: it consumes the
+            // profiler's raw-sample interface from `debug` and depends on
+            // nothing else in the runtime, and only the CLI tools consume it.
+            // Nothing in the engine may depend on `bench` — measurement code
+            // must never become something gameplay code reaches for.
+            "bench -> debug",
+            "tools -> bench",
             "camera -> configuration",
             "camera -> game",
             "camera -> sprites",

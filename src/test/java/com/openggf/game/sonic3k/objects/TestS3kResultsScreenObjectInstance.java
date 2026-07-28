@@ -22,6 +22,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -41,11 +42,28 @@ class TestS3kResultsScreenObjectInstance {
     }
 
     @Test
+    void productionConstructionSurfacesMissingHardwareTimingService() {
+        // The shared stub supplies a timing service so ordinary object tests work;
+        // this one is specifically about a session that has none.
+        TestObjectServices withoutTiming = new TestObjectServices() {
+            @Override
+            public com.openggf.game.timing.HardwareTimingService hardwareTiming() {
+                throw new IllegalStateException(
+                        "hardware timing is unavailable in these object services");
+            }
+        };
+        assertThrows(IllegalStateException.class,
+                () -> ObjectConstructionContext.construct(
+                        withoutTiming,
+                        () -> new S3kResultsScreenObjectInstance(
+                                PlayerCharacter.SONIC_AND_TAILS, 0)));
+    }
+
+    @Test
     void cnzActOneExitStartsActTwoTitleCardAndMusic() throws Exception {
         ActTransitionRecordingServices services = new ActTransitionRecordingServices(0x03, Sonic3kMusic.CNZ2.id);
-        S3kResultsScreenObjectInstance results = ObjectConstructionContext.construct(
-                services,
-                () -> new S3kResultsScreenObjectInstance(PlayerCharacter.SONIC_AND_TAILS, 0));
+        S3kResultsScreenObjectInstance results = transitionShell(
+                services, PlayerCharacter.SONIC_AND_TAILS, 0);
         results.setServices(services);
 
         Method onExitReady = S3kResultsScreenObjectInstance.class.getDeclaredMethod("onExitReady");
@@ -66,9 +84,8 @@ class TestS3kResultsScreenObjectInstance {
     @Test
     void carriedCnzActOneResultsKeepsReloadedActStateForNativeTitleCardReset() throws Exception {
         ActTransitionRecordingServices services = new ActTransitionRecordingServices(0x03, Sonic3kMusic.CNZ2.id);
-        S3kResultsScreenObjectInstance results = ObjectConstructionContext.construct(
-                services,
-                () -> new S3kResultsScreenObjectInstance(PlayerCharacter.SONIC_AND_TAILS, 0));
+        S3kResultsScreenObjectInstance results = transitionShell(
+                services, PlayerCharacter.SONIC_AND_TAILS, 0);
         results.setServices(services);
         results.onCarriedAcrossSeamlessTransition(-0x3000, 0x0200);
 
@@ -84,9 +101,8 @@ class TestS3kResultsScreenObjectInstance {
     @Test
     void aizActOneMinibossTitleHandoffDefersLevelGamestateResetToTitleCard() throws Exception {
         ActTransitionRecordingServices services = new ActTransitionRecordingServices(0x00, Sonic3kMusic.AIZ2.id);
-        S3kResultsScreenObjectInstance results = ObjectConstructionContext.construct(
-                services,
-                () -> new S3kResultsScreenObjectInstance(PlayerCharacter.SONIC_AND_TAILS, 0));
+        S3kResultsScreenObjectInstance results = transitionShell(
+                services, PlayerCharacter.SONIC_AND_TAILS, 0);
         results.setServices(services);
 
         Method onExitReady = S3kResultsScreenObjectInstance.class.getDeclaredMethod("onExitReady");
@@ -106,9 +122,8 @@ class TestS3kResultsScreenObjectInstance {
     void hczAndMgzSeamlessActOneExitSetsTransitionReadyFlag() throws Exception {
         for (int zone : List.of(0x01, 0x02)) {
             ActTransitionRecordingServices services = new ActTransitionRecordingServices(zone, Sonic3kMusic.HCZ2.id);
-            S3kResultsScreenObjectInstance results = ObjectConstructionContext.construct(
-                    services,
-                    () -> new S3kResultsScreenObjectInstance(PlayerCharacter.SONIC_AND_TAILS, 0));
+            S3kResultsScreenObjectInstance results = transitionShell(
+                    services, PlayerCharacter.SONIC_AND_TAILS, 0);
             results.setServices(services);
 
             Method onExitReady = S3kResultsScreenObjectInstance.class.getDeclaredMethod("onExitReady");
@@ -123,9 +138,8 @@ class TestS3kResultsScreenObjectInstance {
     void armedTransitionProviderPublishesReadyFlagWithoutZoneInference() throws Exception {
         ActTransitionRecordingServices services =
                 new ActTransitionRecordingServices(0x03, Sonic3kMusic.CNZ2.id, true);
-        S3kResultsScreenObjectInstance results = ObjectConstructionContext.construct(
-                services,
-                () -> new S3kResultsScreenObjectInstance(PlayerCharacter.SONIC_AND_TAILS, 0));
+        S3kResultsScreenObjectInstance results = transitionShell(
+                services, PlayerCharacter.SONIC_AND_TAILS, 0);
         results.setServices(services);
 
         Method onExitReady = S3kResultsScreenObjectInstance.class.getDeclaredMethod("onExitReady");
@@ -138,9 +152,8 @@ class TestS3kResultsScreenObjectInstance {
     @Test
     void iczActTwoExitKeepsBossLeftCameraLockWhenRestoringLevelBounds() throws Exception {
         IczExitRecordingServices services = new IczExitRecordingServices();
-        S3kResultsScreenObjectInstance results = ObjectConstructionContext.construct(
-                services,
-                () -> new S3kResultsScreenObjectInstance(PlayerCharacter.SONIC_ALONE, 1));
+        S3kResultsScreenObjectInstance results = transitionShell(
+                services, PlayerCharacter.SONIC_ALONE, 1);
         results.setServices(services);
 
         Method onExitReady = S3kResultsScreenObjectInstance.class.getDeclaredMethod("onExitReady");
@@ -158,9 +171,8 @@ class TestS3kResultsScreenObjectInstance {
     @Test
     void lbzActTwoExitHandsOffToDeathEggFallWithoutRestoringCameraBounds() throws Exception {
         LbzExitRecordingServices services = new LbzExitRecordingServices();
-        S3kResultsScreenObjectInstance results = ObjectConstructionContext.construct(
-                services,
-                () -> new S3kResultsScreenObjectInstance(PlayerCharacter.SONIC_AND_TAILS, 1));
+        S3kResultsScreenObjectInstance results = transitionShell(
+                services, PlayerCharacter.SONIC_AND_TAILS, 1);
         results.setServices(services);
 
         Method onExitReady = S3kResultsScreenObjectInstance.class.getDeclaredMethod("onExitReady");
@@ -174,6 +186,61 @@ class TestS3kResultsScreenObjectInstance {
                 "Restoring full level bounds here lets the generic camera path swallow the post-results fall sequence");
         assertEquals(0x0668, services.camera.getMinY() & 0xFFFF);
         assertEquals(0x0668, services.camera.getMaxY() & 0xFFFF);
+    }
+
+    private static S3kResultsScreenObjectInstance transitionShell(
+            TestObjectServices services, PlayerCharacter character, int act) {
+        return ObjectConstructionContext.withRewindActiveRestore(
+                () -> ObjectConstructionContext.construct(
+                        services,
+                        () -> new S3kResultsScreenObjectInstance(character, act)));
+    }
+
+    private static final class TransitionRecordingServices extends TestObjectServices {
+        private final int zone;
+        private final RecordingBridge bridge = new RecordingBridge();
+        private int signalCount;
+
+        private TransitionRecordingServices(int zone) {
+            this.zone = zone;
+        }
+
+        @Override
+        public int romZoneId() {
+            return zone;
+        }
+
+        @Override
+        public LevelEventProvider levelEventProvider() {
+            return bridge;
+        }
+
+        private final class RecordingBridge implements LevelEventProvider, S3kTransitionEventBridge {
+            @Override
+            public void initLevel(int zone, int act) {
+            }
+
+            @Override
+            public void update() {
+            }
+
+            @Override
+            public void signalActTransition() {
+                signalCount++;
+            }
+
+            @Override
+            public void requestHczPostTransitionCutscene() {
+            }
+
+            @Override
+            public void requestMgzPostTransitionRelease() {
+            }
+
+            @Override
+            public void requestCnzPostTransitionRelease(int framesUntilRelease) {
+            }
+        }
     }
 
     private static final class ActTransitionRecordingServices extends TestObjectServices {

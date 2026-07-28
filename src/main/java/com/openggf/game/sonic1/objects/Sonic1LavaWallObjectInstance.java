@@ -401,10 +401,11 @@ public class Sonic1LavaWallObjectInstance extends AbstractObjectInstance
         }
         displayFrame = ANIM_FRAMES[animFrameIndex];
 
-        // SpeedToPos: only if player is alive (routine < 4)
+        // ROM: cmpi.b #4,(v_player+obRoutine) / bhs skips SpeedToPos for both
+        // hurt (routine 4) and death (routine 6+), not death alone.
         // cmpi.b #4,(v_player+obRoutine).w / bhs.s .rangechk
-        boolean playerAlive = (player != null && !player.getDead());
-        if (playerAlive && velX != 0) {
+        boolean playerAllowsMovement = player != null && !player.isHurt() && !player.getDead();
+        if (playerAllowsMovement && velX != 0) {
             applySpeedToPosX();
         }
 
@@ -480,7 +481,17 @@ public class Sonic1LavaWallObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(SOLID_HALF_WIDTH, SOLID_AIR_HALF_HEIGHT, SOLID_GROUND_HALF_HEIGHT);
+        return SolidObjectParams.of(SOLID_HALF_WIDTH, SOLID_AIR_HALF_HEIGHT, SOLID_GROUND_HALF_HEIGHT);
+    }
+
+    @Override
+    public boolean usesPreUpdatePositionForSolidContact(PlayableEntity player) {
+        // LWall_Solid calls SolidObject before SpeedToPos. The engine updates
+        // objects before its shared solid-contact checkpoint, so contact must
+        // sample the saved pre-update position to preserve that ROM ordering.
+        // This matters while the advancing wall presses Sonic against another
+        // solid: using the post-move X pushes him one pixel ahead of the wall.
+        return role == Role.MAIN;
     }
 
     @Override

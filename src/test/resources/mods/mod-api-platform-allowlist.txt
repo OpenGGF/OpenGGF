@@ -1,3 +1,7 @@
+com.fasterxml.jackson.annotation.JsonIgnoreProperties
+com.fasterxml.jackson.annotation.JsonProperty
+com.fasterxml.jackson.annotation.JsonProperty$Access
+com.fasterxml.jackson.annotation.OptBoolean
 java.io.IOException
 java.io.InputStream
 java.lang.AutoCloseable

@@ -19,6 +19,8 @@ public record AudioSourceDescriptor(
         DONOR_SFX_ID,
         FALLBACK_MUSIC_ID,
         FALLBACK_SFX_NAME,
+        STREAMED_TRACK,
+        STREAMED_SFX,
         SYSTEM_COMMAND
     }
 
@@ -56,6 +58,22 @@ public record AudioSourceDescriptor(
     public static AudioSourceDescriptor fallbackSfx(String name) {
         return new AudioSourceDescriptor(Route.FALLBACK_SFX_NAME, null,
                 Objects.requireNonNull(name, "name"), null);
+    }
+
+    /**
+     * A creator-supplied streamed music override. {@code name} is the
+     * owner-scoped track key; creator content never allocates numeric ids, so
+     * there is no id component.
+     */
+    public static AudioSourceDescriptor streamedTrack(String trackKey) {
+        return new AudioSourceDescriptor(Route.STREAMED_TRACK, null,
+                Objects.requireNonNull(trackKey, "trackKey"), null);
+    }
+
+    /** A creator-supplied presentation-only streamed one-shot. */
+    public static AudioSourceDescriptor streamedSfx(String sfxKey) {
+        return new AudioSourceDescriptor(Route.STREAMED_SFX, null,
+                Objects.requireNonNull(sfxKey, "sfxKey"), null);
     }
 
     public static AudioSourceDescriptor systemCommand(int commandId) {

@@ -74,7 +74,7 @@ public final class CnzCannonInstance extends AbstractObjectInstance
 
     // ROM sub_3192C: move.w #$10,d1 / move.w #$29,d3 / jmp SolidObjectTop.
     private static final SolidObjectParams SOLID_PARAMS =
-            new SolidObjectParams(0x10, 0x29, 0x29);
+            SolidObjectParams.of(0x10, 0x29, 0x29);
 
     private int state = STATE_IDLE;
     private int stateTimer;

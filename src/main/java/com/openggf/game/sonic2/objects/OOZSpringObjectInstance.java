@@ -473,9 +473,9 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         if (horizontal) {
-            return new SolidObjectParams(31, 12, 13);
+            return SolidObjectParams.of(31, 12, 13);
         }
-        return new SolidObjectParams(27, 20, 20);
+        return SolidObjectParams.of(27, 20, 20);
     }
 
     @Override

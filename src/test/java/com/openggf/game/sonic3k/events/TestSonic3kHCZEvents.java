@@ -17,6 +17,8 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.timing.HardwareServiceBoundary;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.sonic3k.objects.HczTransitionBubbleInstance;
 import com.openggf.game.sonic3k.scroll.SwScrlHcz;
 import com.openggf.level.ParallaxManager;
@@ -24,6 +26,8 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.scroll.ZoneScrollHandler;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.TestablePlayableSprite;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,6 +50,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+@RequiresRom(SonicGame.SONIC_3K)
 class TestSonic3kHCZEvents {
 
     @BeforeEach
@@ -87,11 +92,43 @@ class TestSonic3kHCZEvents {
         events.setEventsFg5(true);
         GameServices.gameState().setEndOfLevelFlag(true);
 
+        var timing = GameServices.hardwareTiming();
+        timing.service(HardwareServiceBoundary.VINT_SERVICE);
+        timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
         events.update(0, 0);
-        for (int frame = 1; frame <= 131; frame++) {
+        timing.service(HardwareServiceBoundary.POST_OBJECTS);
+        assertFalse(events.isTransitionRequested());
+
+        int publicationFrame = -1;
+        int transitionFrame = -1;
+        for (int frame = 1;
+                frame < 100_000 && !events.isTransitionRequested();
+                frame++) {
+            int beforePre = timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE);
+            timing.service(HardwareServiceBoundary.VINT_SERVICE);
+            timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            assertEquals(beforePre,
+                    timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE),
+                    "PRE_MAIN_LOOP must not publish HCZ2 secondary art readiness");
             events.update(0, frame);
+            if (publicationFrame >= 0 && events.isTransitionRequested()) {
+                transitionFrame = frame;
+            }
+            timing.service(HardwareServiceBoundary.POST_OBJECTS);
+            boolean publishedThisFrame = beforePre > 0
+                    && timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE) == 0;
+            if (publishedThisFrame) {
+                assertFalse(events.isTransitionRequested(),
+                        "ScreenEvents runs before module retirement and cannot consume "
+                                + "same-dispatch readiness");
+                publicationFrame = frame;
+            }
         }
 
+        assertEquals(0, timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE));
+        assertTrue(events.isTransitionRequested());
+        assertEquals(publicationFrame + 1, transitionFrame,
+                "the event owner consumes POST retirement on its next dispatch");
         assertTrue(Files.exists(saveDir.resolve("slot1.json")));
     }
 

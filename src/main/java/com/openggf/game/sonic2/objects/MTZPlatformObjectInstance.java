@@ -123,7 +123,7 @@ public class MTZPlatformObjectInstance extends AbstractObjectInstance
         // From disassembly line 53930-53937:
         // d1 = width_pixels + 11 (half-width for collision)
         int halfWidth = widthPixels + 0x0B;
-        return new SolidObjectParams(halfWidth, yRadius, yRadius + 1);
+        return SolidObjectParams.of(halfWidth, yRadius, yRadius + 1);
     }
 
     @Override

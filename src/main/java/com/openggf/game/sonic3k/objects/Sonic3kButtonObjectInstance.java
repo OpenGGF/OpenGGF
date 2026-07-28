@@ -61,11 +61,11 @@ public class Sonic3kButtonObjectInstance extends AbstractObjectInstance
 
     // SolidObjectFull: d1=$1B, d2=4, d3=5
     private static final SolidObjectParams SOLID_PARAMS_FULL =
-            new SolidObjectParams(0x1B, 4, 5);
+            SolidObjectParams.of(0x1B, 4, 5);
 
     // SolidObjectTop: d1=$10, d3=6
     private static final SolidObjectParams SOLID_PARAMS_TOP =
-            new SolidObjectParams(0x10, 6, 6);
+            SolidObjectParams.of(0x10, 6, 6);
 
     // Frame indices
     private static final int FRAME_UNPRESSED = 0;
@@ -192,6 +192,15 @@ public class Sonic3kButtonObjectInstance extends AbstractObjectInstance
         // ROM SolidObjectTop_1P loc_1E45A accepts the negative overlap window
         // only: d0 == 0 reaches cmpi.w #-$10,d0 / blo locret_1E4D4.
         return topSolid;
+    }
+
+    @Override
+    public boolean usesInclusiveRightEdge() {
+        // SolidObjectFull's unsigned broad-X comparison rejects only values
+        // above d1*2 (bhi), so a player exactly on the right edge remains a
+        // valid zero-distance side contact. SolidObjectTop uses the same
+        // inclusive horizontal gate before its landing-only checks.
+        return true;
     }
 
     // ========================================================================================

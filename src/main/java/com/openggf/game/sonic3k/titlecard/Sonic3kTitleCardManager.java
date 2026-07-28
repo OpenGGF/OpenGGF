@@ -3,6 +3,10 @@ package com.openggf.game.sonic3k.titlecard;
 import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
 import com.openggf.game.TitleCardProvider;
+import com.openggf.game.sonic3k.events.S3kTransitionWriteSupport;
+import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
+import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
+import com.openggf.game.timing.HardwareWorkHandle;
 import com.openggf.game.titlecard.TitleCardMappings;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.graphics.GLCommand;
@@ -10,10 +14,10 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.graphics.TitleCardSpriteRenderer;
 import com.openggf.level.Pattern;
-import com.openggf.tools.KosinskiReader;
 
-import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.logging.Logger;
 
 /**
@@ -107,6 +111,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     // banner overwrites height_pixels with $70; the remaining values are the
     // width_pixels bytes in ObjArray_TtlCard.
     private static final int BANNER_RENDER_HEIGHT = 0x70;
+    private static final int PRELOADED_ACT_CAMERA_RELEASE_DISPATCHES = 11;
     private static final int[] ELEMENT_RENDER_WIDTH = {0, 0x80, 0x24, 0x1C};
 
     // ---- State ----
@@ -122,6 +127,8 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     private boolean inLevelPlayerControlLockOwned;
     private boolean inLevelGameplayOwnedExternally;
     private int inLevelExitDelayFrames;
+    private boolean releasePreloadedActCameraOnComplete;
+    private boolean preloadedActCompletionPrepared;
     private boolean bonusMode;  // 2-element "BONUS STAGE" layout
     private float bonusFadeProgress; // 0.0→1.0 over BONUS_DISPLAY_HOLD_FRAMES during DISPLAY
 
@@ -154,6 +161,10 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     private boolean artCached;
     private int lastLoadedZone = -1;
     private int lastLoadedAct = -1;
+    private S3kKosModuleQueue artQueue;
+    private final List<HardwareWorkHandle> artHandles = new ArrayList<>();
+    private final List<Integer> artDestinations = new ArrayList<>();
+    private boolean artLoading;
 
     public Sonic3kTitleCardManager() {}
 
@@ -274,6 +285,16 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         inLevelPlayerControlLockOwned = false;
     }
 
+    public void requestPreloadedActCameraReleaseOnComplete() {
+        if (inLevelMode) {
+            releasePreloadedActCameraOnComplete = true;
+            // A results SST that mutates into Obj_TitleCard retains the parent
+            // Wait2/child retirement entries which the slotless overlay folds
+            // away. Keep Scroll_lock through those remaining dispatches.
+            inLevelExitDelayFrames += PRELOADED_ACT_CAMERA_RELEASE_DISPATCHES;
+        }
+    }
+
     @Override
     public void requestInLevelExitAdditionalDispatches(int dispatches) {
         requestInLevelExitAdditionalDispatches(dispatches, 0);
@@ -352,6 +373,8 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         this.inLevelPlayerControlLockOwned = false;
         this.inLevelGameplayOwnedExternally = false;
         this.inLevelExitDelayFrames = 0;
+        this.releasePreloadedActCameraOnComplete = false;
+        this.preloadedActCompletionPrepared = false;
         this.state = Sonic3kTitleCardState.SLIDE_IN;
         this.stateTimer = 0;
         this.phaseCounter = 0;
@@ -387,6 +410,9 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
 
     @Override
     public void update() {
+        if (artLoading && !finishQueuedArtIfReady()) {
+            return;
+        }
         if (resetLevelGamestateOnInLevelDisplay && resetLevelGamestateCountdown > 0
                 && --resetLevelGamestateCountdown == 0) {
             consumeLevelGamestateResetRequest();
@@ -468,6 +494,16 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     }
 
     @Override
+    public boolean shouldRunLevelObjectsDuringLockedPhase() {
+        return false;
+    }
+
+    @Override
+    public boolean shouldAdvanceVblankClockDuringLockedPhase() {
+        return true;
+    }
+
+    @Override
     public void draw() {
         ensureArtCached();
 
@@ -538,6 +574,8 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         heldLevelCounterDispatchOwned = false;
         retainedResultsHeldLevelCounterOwned = false;
         inLevelExitDelayFrames = 0;
+        releasePreloadedActCameraOnComplete = false;
+        preloadedActCompletionPrepared = false;
         inLevelPlayerControlLockOwned = false;
         bonusMode = false;
         bonusFadeProgress = 0f;
@@ -549,6 +587,10 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         lastLoadedZone = -1;
         lastLoadedAct = -1;
         combinedPatterns = null;
+        artQueue = null;
+        artHandles.clear();
+        artDestinations.clear();
+        artLoading = false;
         Arrays.fill(elemX, 0);
         Arrays.fill(elemY, 0);
         Arrays.fill(elemFrame, 0);
@@ -677,6 +719,17 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
             }
             if (inLevelMode && inLevelExitDelayFrames > 0) {
                 inLevelExitDelayFrames--;
+                if (inLevelExitDelayFrames == 0
+                        && releasePreloadedActCameraOnComplete
+                        && !preloadedActCompletionPrepared) {
+                    // The retained EndSignControl slot runs one object pass
+                    // before Obj_TitleCard publishes its completion flag. It
+                    // installs Change_Act2Sizes workers while Scroll_lock is
+                    // still held for this frame.
+                    preloadedActCompletionPrepared = true;
+                    S3kTransitionWriteSupport.preparePreloadedActTitleCardCompletion(
+                            GameServices.module().getLevelEventProvider());
+                }
                 return;
             }
             state = Sonic3kTitleCardState.COMPLETE;
@@ -685,9 +738,21 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
                 // in-level title-card timer has elapsed and its child objects
                 // have disappeared (sonic3k.asm:62244-62279).
                 GameServices.gameState().setEndOfLevelFlag(true);
+                releasePreloadedActCamera();
             }
             LOG.fine("S3K title card: COMPLETE");
         }
+    }
+
+    private void releasePreloadedActCamera() {
+        if (!releasePreloadedActCameraOnComplete) {
+            return;
+        }
+        releasePreloadedActCameraOnComplete = false;
+        var camera = GameServices.camera();
+        // Scroll_lock does not clear H_scroll_frame_offset, so the horizontal
+        // history accumulated before the boss remains parked until this release.
+        camera.setScrollLocked(false);
     }
 
     private boolean isOutsideNativeViewport(int idx) {
@@ -776,30 +841,32 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
             combinedPatterns = new Pattern[VRAM_ARRAY_SIZE];
             Pattern empty = new Pattern();
             Arrays.fill(combinedPatterns, empty);
+            beginArtQueue();
 
             // 1. Load RedAct art → VRAM $500 (index 0)
-            loadKosmArt(rom, Sonic3kConstants.ART_KOSM_TITLE_CARD_RED_ACT_ADDR, 0);
+            queueKosmArt(rom, Sonic3kConstants.ART_KOSM_TITLE_CARD_RED_ACT_ADDR, 0);
 
             // 2. Load S3KZone text → VRAM $510 (index $10), overwrites part of RedAct
-            loadKosmArt(rom, Sonic3kConstants.ART_KOSM_TITLE_CARD_S3K_ZONE_ADDR,
+            queueKosmArt(rom, Sonic3kConstants.ART_KOSM_TITLE_CARD_S3K_ZONE_ADDR,
                     Sonic3kConstants.VRAM_TITLE_CARD_ZONE_TEXT - VRAM_BASE);
 
             // 3. Load act number art → VRAM $53D (index $3D)
             int actArtAddr = (actIndex == 0)
                     ? Sonic3kConstants.ART_KOSM_TITLE_CARD_NUM1_ADDR
                     : Sonic3kConstants.ART_KOSM_TITLE_CARD_NUM2_ADDR;
-            loadKosmArt(rom, actArtAddr,
+            queueKosmArt(rom, actArtAddr,
                     Sonic3kConstants.VRAM_TITLE_CARD_ACT_NUM - VRAM_BASE);
 
             // 4. Load zone-specific art → VRAM $54D (index $4D)
             // Zone 22 (HPZ) maps to art array index 13
             int artIndex = (zoneIndex == 22) ? 13 : zoneIndex;
             if (artIndex >= 0 && artIndex < Sonic3kConstants.TITLE_CARD_ZONE_ART_ADDRS.length) {
-                loadKosmArt(rom, Sonic3kConstants.TITLE_CARD_ZONE_ART_ADDRS[artIndex],
+                queueKosmArt(rom, Sonic3kConstants.TITLE_CARD_ZONE_ART_ADDRS[artIndex],
                         Sonic3kConstants.VRAM_TITLE_CARD_ZONE_ART - VRAM_BASE);
             }
 
-            artLoaded = true;
+            artLoading = true;
+            artLoaded = false;
             artCached = false;
             lastLoadedZone = zoneIndex;
             lastLoadedAct = actIndex;
@@ -826,19 +893,21 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
             combinedPatterns = new Pattern[VRAM_ARRAY_SIZE];
             Pattern empty = new Pattern();
             Arrays.fill(combinedPatterns, empty);
+            beginArtQueue();
 
             // 1. Load RedAct art -> VRAM $500 (index 0)
-            loadKosmArt(rom, Sonic3kConstants.ART_KOSM_TITLE_CARD_RED_ACT_ADDR, 0);
+            queueKosmArt(rom, Sonic3kConstants.ART_KOSM_TITLE_CARD_RED_ACT_ADDR, 0);
 
             // 2. Load S3KZone text -> VRAM $510 (index $10)
-            loadKosmArt(rom, Sonic3kConstants.ART_KOSM_TITLE_CARD_S3K_ZONE_ADDR,
+            queueKosmArt(rom, Sonic3kConstants.ART_KOSM_TITLE_CARD_S3K_ZONE_ADDR,
                     Sonic3kConstants.VRAM_TITLE_CARD_ZONE_TEXT - VRAM_BASE);
 
             // 3. Load bonus-specific letter art -> VRAM $54D (index $4D)
-            loadKosmArt(rom, Sonic3kConstants.ART_KOSM_BONUS_TITLE_CARD_ADDR,
+            queueKosmArt(rom, Sonic3kConstants.ART_KOSM_BONUS_TITLE_CARD_ADDR,
                     Sonic3kConstants.VRAM_TITLE_CARD_ZONE_ART - VRAM_BASE);
 
-            artLoaded = true;
+            artLoading = true;
+            artLoaded = false;
             artCached = false;
             lastLoadedZone = -2;  // Sentinel for "bonus art loaded"
             lastLoadedAct = -1;
@@ -849,21 +918,39 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         }
     }
 
-    /**
-     * Decompresses KosinskiM art and places patterns into the combined array.
-     */
-    private void loadKosmArt(Rom rom, int romAddr, int destIndex) throws IOException {
-        byte[] header = rom.readBytes(romAddr, 2);
-        int fullSize = ((header[0] & 0xFF) << 8) | (header[1] & 0xFF);
-        int inputSize = Math.min(Math.max(fullSize + 256, 0x10000), 0x40000);
-        long romSize = rom.getSize();
-        if (romAddr + inputSize > romSize) {
-            inputSize = (int) (romSize - romAddr);
+    private void beginArtQueue() {
+        artQueue = new S3kKosModuleQueue(GameServices.hardwareTiming());
+        artHandles.clear();
+        artDestinations.clear();
+    }
+
+    private void queueKosmArt(Rom rom, int romAddr, int destIndex) throws Exception {
+        artHandles.add(artQueue.queue(rom, romAddr, VRAM_BASE + destIndex));
+        artDestinations.add(destIndex);
+    }
+
+    private boolean finishQueuedArtIfReady() {
+        for (HardwareWorkHandle handle : artHandles) {
+            if (!artQueue.isReady(handle)) {
+                return false;
+            }
         }
+        for (int job = 0; job < artHandles.size(); job++) {
+            placeArt(artQueue.claim(artHandles.get(job)), artDestinations.get(job));
+        }
+        artHandles.clear();
+        artDestinations.clear();
+        artLoading = false;
+        artLoaded = true;
+        artCached = false;
+        if (GameServices.module().getObjectArtProvider() != null) {
+            GameServices.module().getObjectArtProvider()
+                    .onTitleCardArtRetired();
+        }
+        return true;
+    }
 
-        byte[] romData = rom.readBytes(romAddr, inputSize);
-        byte[] decompressed = KosinskiReader.decompressModuled(romData, 0);
-
+    private void placeArt(byte[] decompressed, int destIndex) {
         int tileCount = decompressed.length / Pattern.PATTERN_SIZE_IN_ROM;
         for (int i = 0; i < tileCount; i++) {
             int idx = destIndex + i;

@@ -9,9 +9,57 @@ public final class PcmHistoryRing {
     private final int capacityFrames;
     private long nextFrameIndex;
     private int storedFrames;
+    private long epoch;
     // Always equals ringSlot(nextFrameIndex); maintained incrementally so the
     // per-frame write path avoids a long floorMod inside the stream lock.
     private int writeSlot;
+
+    public record CursorState(
+            double sourceFrame,
+            long oldestReadableFrame,
+            double rate,
+            long epoch) {
+    }
+
+    public record DiagnosticSnapshot(
+            int capacityFrames,
+            long nextFrameIndex,
+            int storedFrames,
+            long epoch,
+            int writeSlot,
+            ReadablePcmFingerprint readablePcm) {
+    }
+
+    /**
+     * Immutable diagnostic copy of all readable PCM in chronological order.
+     */
+    public static final class ReadablePcmFingerprint {
+        private final short[] samples;
+
+        private ReadablePcmFingerprint(short[] samples) {
+            this.samples = samples;
+        }
+
+        public short[] samples() {
+            return samples.clone();
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            return other instanceof ReadablePcmFingerprint fingerprint
+                    && Arrays.equals(samples, fingerprint.samples);
+        }
+
+        @Override
+        public int hashCode() {
+            return Arrays.hashCode(samples);
+        }
+
+        @Override
+        public String toString() {
+            return "ReadablePcmFingerprint[samples=" + samples.length + "]";
+        }
+    }
 
     public PcmHistoryRing(int capacityFrames) {
         if (capacityFrames <= 0) {
@@ -54,11 +102,11 @@ public final class PcmHistoryRing {
     }
 
     public ReverseCursor createReverseCursor() {
-        return new ReverseCursor(nextFrameIndex - 1, nextFrameIndex - storedFrames);
+        return new ReverseCursor(nextFrameIndex - 1, nextFrameIndex - storedFrames, 1.0, epoch);
     }
 
     public void commitReverseCursor(ReverseCursor cursor) {
-        if (cursor == null) {
+        if (cursor == null || cursor.epoch != epoch) {
             return;
         }
         long newNextFrameIndex = cursor.committedNextFrameIndex();
@@ -69,10 +117,32 @@ public final class PcmHistoryRing {
     }
 
     public void clear() {
+        epoch++;
         nextFrameIndex = 0;
         storedFrames = 0;
         writeSlot = 0;
         Arrays.fill(samples, (short) 0);
+    }
+
+    public DiagnosticSnapshot diagnosticSnapshot() {
+        return new DiagnosticSnapshot(
+                capacityFrames, nextFrameIndex, storedFrames, epoch, writeSlot,
+                readablePcmFingerprint());
+    }
+
+    private ReadablePcmFingerprint readablePcmFingerprint() {
+        short[] readable = new short[storedFrames * CHANNELS];
+        long oldestFrame = nextFrameIndex - storedFrames;
+        int copiedFrames = 0;
+        while (copiedFrames < storedFrames) {
+            int slot = ringSlot(oldestFrame + copiedFrames);
+            int chunk = Math.min(storedFrames - copiedFrames,
+                    capacityFrames - slot);
+            System.arraycopy(samples, slot * CHANNELS, readable,
+                    copiedFrames * CHANNELS, chunk * CHANNELS);
+            copiedFrames += chunk;
+        }
+        return new ReadablePcmFingerprint(readable);
     }
 
     private int ringSlot(long frameIndex) {
@@ -91,11 +161,22 @@ public final class PcmHistoryRing {
     public final class ReverseCursor {
         private double sourceFrame;
         private final long oldestReadableFrame;
-        private double rate = 1.0;
+        private final long epoch;
+        private double rate;
 
-        private ReverseCursor(long initialSourceFrame, long oldestReadableFrame) {
+        private ReverseCursor(
+                double initialSourceFrame,
+                long oldestReadableFrame,
+                double rate,
+                long epoch) {
             this.sourceFrame = initialSourceFrame;
             this.oldestReadableFrame = oldestReadableFrame;
+            this.rate = rate;
+            this.epoch = epoch;
+        }
+
+        public ReverseCursor fork() {
+            return new ReverseCursor(sourceFrame, oldestReadableFrame, rate, epoch);
         }
 
         public void setRate(double rate) {
@@ -108,6 +189,10 @@ public final class PcmHistoryRing {
 
         public int readPrevious(short[] target, int frames) {
             validateBuffer(target, frames);
+            if (epoch != PcmHistoryRing.this.epoch) {
+                Arrays.fill(target, 0, frames * CHANNELS, (short) 0);
+                return 0;
+            }
             int read = 0;
             while (read < frames) {
                 long pickedFrame = (long) Math.floor(sourceFrame + 0.5);
@@ -125,6 +210,11 @@ public final class PcmHistoryRing {
                 Arrays.fill(target, read * CHANNELS, frames * CHANNELS, (short) 0);
             }
             return read;
+        }
+
+        public CursorState state() {
+            return new CursorState(
+                    sourceFrame, oldestReadableFrame, rate, epoch);
         }
 
         long committedNextFrameIndex() {

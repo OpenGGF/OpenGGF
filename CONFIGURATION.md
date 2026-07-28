@@ -1,6 +1,11 @@
 # Configuration Reference
 
 All settings live in `config.yaml` in the working directory (next to the JAR). The bundled
+`src/main/resources/config.yaml` is written to **`config.yaml.example`** alongside it on
+every run, so the fully commented current template — including the worked ffmpeg recipes —
+is always there to read or copy values from. Your own `config.yaml` is never overwritten by
+it; once written it holds your values and does not regain later comments or new keys.
+
 `src/main/resources/config.yaml` is used as the default template. On first run, a legacy
 `config.json` is automatically migrated to `config.yaml` and the original is backed up to
 `config.json.bak`. Keys are now grouped into nested YAML sections rather than being flat
@@ -271,14 +276,171 @@ Allowed launch profile enums:
 
 ## Capture
 
-Trace video capture (the headless trace-capture driver / `TraceCaptureTool`) renders a chosen trace and muxes a lossless MKV via ffmpeg. These keys set the code defaults; CLI flags override them. The bundled `config.yaml` omits the optional `capture` block until a user needs to override one of these defaults.
+OpenGGF has two separate recording systems:
+
+- **Live viewport recording:** press `Shift+O` — or whatever `capture.toggleKey`
+  is set to, since the modifiers are part of the value — during normal windowed
+  execution to start and press it again to stop. This
+  writes `capture-live-<UTC timestamp>.mkv` under `capture.outputDir` using
+  lossless FFV1 video and stereo FLAC audio. It captures only the physical game
+  viewport—not window borders or letterbox/pillarbox bars—and automatically
+  stops if the viewport moves or changes size. Forward play, pause/frame-step
+  silence, and held-rewind/release audio are synchronized with the displayed
+  frames. The red-dot/white-`REC` indicator is window-only: both the MKV and F12
+  screenshots exclude it. If a recording ends for a reason you did not ask for,
+  a red `REC STOPPED: RESIZED` or `REC STOPPED: ERROR` notice replaces the
+  indicator in the same corner for three seconds, so an interrupted recording
+  is distinguishable from one you stopped yourself. Pressing the toggle again
+  clears the notice. It is window-only on the same terms as the indicator.
+
+### Capture codecs
+
+`capture.codec` selects the video codec and `capture.audioCodec` the audio
+codec, for both live viewport recording and trace capture.
+
+| Codec | Lossless | Notes |
+|---|---|---|
+| `ffv1` (default) | yes | Largest files, most widely playable. |
+| `h264` | yes | Much smaller than FFV1. Encoded as RGB — see below. |
+| `h265` | yes | Smaller still, slowest to encode. Encoded as RGB. |
+| `flac` (default) | yes | Audio matches the engine's output exactly. |
+| `aac` | **no** | Lossy. Small files; the audio is not what the engine produced. |
+| `mp3` | **no** | Lossy. Most portable, largest quality loss. |
+
+**Why H.264 and H.265 use RGB.** The usual "lossless" settings — `-crf 0`, or
+`-x265-params lossless=1` — are lossless in the codec's own colour space, but
+the recorder submits RGB frames and converting them to YUV and back does not
+return the original pixels. Even 4:4:4, which discards no chroma resolution,
+differs. So `h264` uses `libx264rgb` and `h265` uses planar RGB (`gbrp`), which
+are byte-exact. The cost is compatibility: RGB H.264/H.265 is valid but some
+players will not decode it. If a recording will not play elsewhere, use `ffv1`.
+
+Choosing `aac` or `mp3` means the recording is no longer a faithful capture of
+the engine's audio. That is a legitimate choice for sharing a clip; it is not
+appropriate for comparing audio against reference material.
+
+### Containers
+
+`capture.container` sets the recording's file extension, and ffmpeg picks its
+muxer from it. Recent ffmpeg will write any of the codecs above into either
+container — FFV1 and FLAC in MP4 both produce valid files — but *player*
+support is far narrower than what ffmpeg will write:
+
+| Container | Plays reliably with |
+|---|---|
+| `mkv` (default) | Everything here. The safe choice. |
+| `mp4` | `h264` or `h265` video with `aac` audio. An MP4 holding FFV1 or FLAC is a valid file that most players will refuse. |
+
+So MP4 is worth choosing when the recording is going somewhere that expects
+it, paired with the lossy example below. For anything else, keep `mkv`.
+
+`-movflags +faststart` — the usual "web-optimised" flag — is an MP4 feature
+and only takes effect when the container is MP4. Add it through
+`capture.ffmpegPass2Args`.
+
+### Overriding the ffmpeg commands
+
+Recording runs ffmpeg twice: the first pass encodes frames arriving on
+`pipe:0` into a lossless intermediate, the second muxes that with the raw audio
+into the finished file. `capture.ffmpegPass1Args` and `capture.ffmpegPass2Args`
+replace the argument list of each pass independently. The executable itself is
+resolved from `PATH` and prepended; everything after it is yours.
+
+Each key takes one of three values:
+
+| Value | Effect |
+|---|---|
+| `default` | The engine's built-in command. Keep this unless you need something specific — it means later improvements still reach you. |
+| *(empty)* | Skip the pass. Only valid for pass 2: the encode output is published as-is, so **the recording has no audio**. A fast video-only capture. |
+| anything else | Used literally, after placeholder expansion. |
+
+Placeholders for pass 1: `{width}` `{height}` `{fps}` `{scale}`
+`{scaledWidth}` `{scaledHeight}` `{videoCodecArgs}` `{videoOut}`.
+For pass 2: `{videoIn}` `{audioIn}` `{sampleRate}` `{audioCodecArgs}`
+`{output}`.
+
+Arguments split on whitespace. Quote a value whose expansion may contain
+spaces — `"{output}"` — and the placeholder still expands inside the quotes. An
+unknown placeholder fails when the recording starts, rather than reaching
+ffmpeg as a filename and failing later with an unrelated error.
+
+Pass 1 cannot be empty: it is where the submitted frames are encoded. Frames
+always arrive as `rawvideo`/`rgba` on `pipe:0`, so a replacement command must
+still read them from there.
+
+```yaml
+capture:
+  codec: "h264"
+  audioCodec: "flac"
+  # Video only, no mux pass:
+  ffmpegPass2Args: ""
+```
+
+#### Example: small, portable, lossy
+
+The codec keys stay lossless by design, so compressing for sharing means
+replacing the encode pass. This writes CRF 24 H.264 in `yuv420p` — the
+most widely playable combination there is — and lets the built-in mux
+pass add AAC:
+
+```yaml
+capture:
+  audioCodec: "aac"
+  ffmpegPass1Args: >-
+    -y -f rawvideo -pix_fmt rgba -s {width}x{height} -r {fps} -i pipe:0
+    -vf vflip,scale={scaledWidth}:{scaledHeight}:flags=neighbor
+    -c:v libx264 -crf 24 -preset veryfast -pix_fmt yuv420p -an {videoOut}
+```
+
+Note what changed relative to the lossless `h264` codec setting: this uses
+`libx264` with `yuv420p` rather than `libx264rgb`, and a CRF of 24 rather
+than 0. Both make it lossy, which is the point here — the result is a
+small file that plays anywhere, and it is no longer a faithful capture.
+There is no large lossless intermediate either, since the encode pass
+compresses directly and the mux pass only copies the video stream.
+
+For a web-ready file, set `capture.container` to `mp4` as well and add
+`-movflags +faststart` to the mux pass:
+
+```yaml
+capture:
+  container: "mp4"
+  audioCodec: "aac"
+  ffmpegPass2Args: >-
+    -y -i {videoIn} -f s16le -ar {sampleRate} -ac 2 -i {audioIn}
+    -c:v copy {audioCodecArgs} -movflags +faststart {output}
+```
+
+- **Trace capture:** the headless `TraceCaptureTool` renders a chosen trace.
+  Its scale, frame-rate, and codec settings remain trace-tool options.
+
+Both paths require `ffmpeg` on `PATH`; live media verification and inspection
+also use `ffprobe`. Live recording is distinct from the Shift+F9
+`debug.recording.recordKey` input/movie recorder.
+
+Live recording treats an unavailable or failed audio tap as an audio-only
+failure: video continues and the MKV retains a phase-correct stereo-silence
+track. Encoder, output-file, and mux failures still stop the whole recording.
+For development validation only, launch the JVM with
+`-Dopenggf.debug.liveCaptureAudioFailAfterFrames=N` to inject a tap failure
+before drain `N + 1`, after exactly `N` successful audio-frame drains. The
+property is not stored in `config.yaml`; it is disabled when absent or set to
+`-1`. Invalid values and values below `-1` warn and disable injection.
+
+These keys set the code defaults; trace CLI flags override the trace-specific
+ones. The bundled `config.yaml` supplies the live toggle default.
 
 | Key | YAML path | Type | Default | Description |
 |-----|-----------|------|---------|-------------|
-| `CAPTURE_OUTPUT_DIR` | `capture.outputDir` | string | `"target/trace-videos"` | Output directory for trace capture videos. |
-| `CAPTURE_SCALE` | `capture.scale` | int | `4` | Integer nearest-neighbor upscale factor applied to the captured frames. |
-| `CAPTURE_FPS` | `capture.fps` | int | `60` | Output frame rate for the captured video. |
-| `CAPTURE_CODEC` | `capture.codec` | string | `"ffv1"` | Capture video codec (e.g. `ffv1`). |
+| `CAPTURE_OUTPUT_DIR` | `capture.outputDir` | string | `"target/trace-videos"` | Output directory for live and trace capture videos. |
+| `CAPTURE_TOGGLE_KEY` | `capture.toggleKey` | key | `SHIFT+O` | Live viewport recording toggle. The modifiers live in the value (`CTRL+SHIFT+O`, `META+O`, or a bare key such as `SCROLL_LOCK` for none) and are matched exactly. A bare `O` is reserved — the compatibility migration rewrites it back to `SHIFT+O` on every launch. |
+| `CAPTURE_SCALE` | `capture.scale` | int | `4` | Trace capture only: integer nearest-neighbor upscale factor applied to captured frames; live viewport recording always uses scale 1. |
+| `CAPTURE_FPS` | `capture.fps` | int | `60` | Trace capture only: output frame rate; live recording uses the engine's effective display rate. |
+| `CAPTURE_CODEC` | `capture.codec` | string | `"ffv1"` | Video codec for live and trace capture: `ffv1`, `h264` or `h265`. All three are lossless — see the note below. |
+| `CAPTURE_CONTAINER` | `capture.container` | string | `"mkv"` | Recording file extension. ffmpeg selects its muxer from this — see "Containers" below. |
+| `CAPTURE_AUDIO_CODEC` | `capture.audioCodec` | string | `"flac"` | Audio codec: `flac`, `aac` or `mp3`. **`aac` and `mp3` are lossy**: the recorded audio will not match what the engine produced. `flac` is lossless. |
+| `CAPTURE_FFMPEG_PASS1_ARGS` | `capture.ffmpegPass1Args` | string | `"default"` | **Advanced.** Full ffmpeg argument list for the encode pass. See "Overriding the ffmpeg commands" below. |
+| `CAPTURE_FFMPEG_PASS2_ARGS` | `capture.ffmpegPass2Args` | string | `"default"` | **Advanced.** Full ffmpeg argument list for the mux pass; leave empty to skip it and record video only. |
 
 Invoke the tool through Maven (requires a ROM in the working directory, an offscreen-capable GL context, and `ffmpeg` on `PATH`):
 
@@ -455,8 +617,86 @@ Key bindings accept any of the following formats:
 | Named key | `"SPACE"`, `"ENTER"`, `"F9"` | Special keys by name |
 | Modifier key | `"LEFT_SHIFT"`, `"RIGHT_CONTROL"` | Modifier keys |
 | GLFW prefix | `"GLFW_KEY_Q"` | Full GLFW constant name (prefix stripped) |
+| Chord | `"SHIFT+O"`, `"CTRL+SHIFT+O"`, `"META+LEFT_BRACKET"` | Key qualified by modifiers — acted on by the bindings listed under *Modifier support per binding* below |
 
 Invalid key names log a warning and fall back to the default binding for that key.
+
+#### Chord syntax
+
+- **Modifier aliases** (case-insensitive): `CTRL`/`CONTROL`, `SHIFT`,
+  `ALT`/`OPTION`, and `META`/`SUPER`/`CMD`/`COMMAND`/`WIN`. Whitespace around
+  `+` is tolerated, so `"Shift + O"` and `"shift+o"` are the same value.
+- **Canonical order is `CTRL, SHIFT, ALT, META`.** That is the spelling the
+  engine writes back when it saves the config, whatever order you typed.
+- **Matching is exact.** A binding fires only when its declared modifiers are
+  held *and* the others are released, so a plain `"O"` does not fire while any
+  modifier is down.
+- **Binding the plus key:** `+` is the separator, so write `EQUAL` (or `KP_ADD`
+  for the numpad). A value of only separators (`"+"`, `"++"`) names no key, so
+  it is an unresolvable value under the next bullet and falls back to the
+  binding's registered default — it does **not** unbind. `capture.toggleKey:
+  "+"` leaves recording live on `SHIFT+O`. Only `""` unbinds.
+- **Unresolvable values.** A **non-empty** value that resolves to no key —
+  `"NOT_A_KEY"`, `"CTRL+"`, an unknown modifier — logs a warning and falls back
+  to that binding's registered default. An **explicitly empty** value (`""`) is
+  unbound outright: no default is substituted. That asymmetry is how a shortcut
+  is deliberately switched off.
+- **`O` is reserved for `capture.toggleKey`.** The migration that carries
+  existing installs onto the `SHIFT+O` default matches on the value rather than
+  on a schema version, so it re-runs on every launch and rewrites every value
+  that resolves to an unmodified `O` — `O`, `GLFW_KEY_O`, `KEY_O`, `79` and the
+  quoted `"79"` — back to `SHIFT+O`. Binding *this one action* to a bare `O` is
+  not possible; pick another key.
+
+#### Modifier support per binding
+
+Modifiers parse everywhere, but only some bindings act on them. There are three
+states, and the third is invisible from the config file:
+
+| State | Meaning | Bindings |
+|-------|---------|----------|
+| Chord honoured | Read as a chord and matched exactly | `CAPTURE_TOGGLE_KEY` |
+| Modifiers ignored | Read as a bare key code; a chord resolves to its key and the modifiers are dropped, so `"CTRL+P"` fires on plain `P` | every binding not named in the other two rows |
+| Chord permanently dead | Read through a "no modifier held" check, so the modifier you must hold to type the chord is exactly what blocks the shortcut. The modifiers are still dropped, so `debug.playback.toggleKey: "CTRL+P"` binds plain `P`: the chord as written never fires, and an unmodified `P` does | the nine `PLAYBACK_*` keys; `SPECIAL_STAGE_KEY`, `SPECIAL_STAGE_COMPLETE_KEY`, `SPECIAL_STAGE_FAIL_KEY`, `SPECIAL_STAGE_SPRITE_DEBUG_KEY`, `SPECIAL_STAGE_PLANE_DEBUG_KEY`, `NEXT_ACT`, `NEXT_ZONE`, `DEBUG_LAST_CHECKPOINT_KEY`, `LEVEL_SELECT_KEY`, `CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY` |
+
+`UP`/`DOWN`/`LEFT`/`RIGHT` and `DEBUG_MODE_KEY` are in **two** states at once.
+Modifiers are ignored for `UP`/`DOWN`/`LEFT`/`RIGHT` on the gameplay path, and
+the chord is dead on the special-stage sprite-debug path, which reads them
+through the same unmodified-debug-key check. `DEBUG_MODE_KEY`'s chord is dead in
+`GameLoop` (both reads go through that check), but `SpriteManager`'s debug-mode
+toggle and the live-rewind input recorder read it with a plain key-pressed
+check, so `debug.keys.debugMode: "CTRL+D"` still toggles sprite debug mode on a
+plain `D` with the Ctrl neither required nor checked.
+
+Some shortcuts are hardcoded and consume a keystroke whatever a binding says:
+Shift/Ctrl/Alt+`B` (bonus-stage debug, exactly one modifier), Shift+`Tab`, left
+Ctrl+`P` (copy performance stats — debug-only, see below), the editor's
+`Tab`-without-Shift and Ctrl+`Z`/`S`/`Y`, and the display shader picker's confirm
+key. The sixteen debug-overlay toggles
+(`F1`-`F8`, `F10`-`F12`, `K`, `` ` ``, `=`, `P`, `O`) are hardcoded too. They fire
+on their bare key with any modifier held — a modifier is usually held for an
+unrelated reason, and player two's jump defaults to right Shift — but stand aside
+for the frame a chord bound to the *same* key is satisfied, which is what stops
+the `SHIFT+O` capture default toggling the object-debug overlay. Binding
+`capture.toggleKey` to one of these keys with no modifier makes both fire on the
+same keystroke.
+
+A toggle only stands aside for an action that can actually run, so `P` gives way
+to the stats copy only while `DEBUG_VIEW_ENABLED` is on. With debug shortcuts
+off — the shipped default — Ctrl+`P` toggles the performance overlay and copies
+nothing, so no install has a keystroke that silently overwrites the OS clipboard.
+The stats copy also needs the **left** Ctrl specifically: `CTRL` in a configured
+chord means either Ctrl, but right Ctrl is player two's default Start, so
+matching either would let player two's Start turn player one's `P` into a
+clipboard write. `RECORDING_RECORD_KEY` is a
+configurable binding whose Shift is still hardcoded at its call sites (the
+runtime recording controls and the master title screen), so its modifier cannot
+be moved into the value yet.
+
+**Under playback:** live rewind records and reproduces real Shift, Ctrl, Alt and
+Super states, so a chord behaves the same on replay as it did live. BK2 movies
+carry no modifier column at all, so all four read as released under BK2
+playback and any chord requiring a modifier does not fire there.
 
 The tables below list each key's name, default code, and the human-readable key name for the default.
 

@@ -33,11 +33,20 @@ Optional `greenByGame` may provide same-game passing trace classes:
 }
 ```
 
+Optional `excluded` lists routes, trace classes, or fixture prefixes that another owner has
+reserved. Treat exclusions as a hard scope boundary, not merely a queue filter:
+
+```json
+{
+  "excluded": ["<game>/<route>", "TestReservedTraceReplay"]
+}
+```
+
 If no failing list is supplied, run one discovery sweep from the main checkout.
 
 ## Constants
 
-- Repo root: `C:\Users\farre\IdeaProjects\sonic-engine`
+- Repo root: the current checkout — resolve it with `git rev-parse --show-toplevel`, never a hardcoded path
 - Worktree: `.worktrees/trace-<game>-<zone>`
 - Branch: `bugfix/ai-trace-<game>-<zone>`
 - Max parallel traces when explicitly authorized: 4
@@ -68,6 +77,11 @@ Always use `trace-replay-bug-fixing` for actual trace investigation or fixes.
 - This repo may have concurrent agent sessions. Stage only files you changed. Never use `git add -A`.
 - Never use `git stash`; stash is shared across worktrees. For clean-HEAD A/B checks, copy changed files aside, restore with `git checkout -- <path>`, run the baseline, then restore the copies, or create a throwaway worktree.
 - Do not delete other sessions' `.claude/worktrees/*` or `.worktrees/*`.
+- Freeze caller exclusions before discovery. Excluded routes/classes must not be discovered,
+  run, inspected, assigned, fixed, or documented. Apply the exclusion to shell globs and
+  broad validation commands before launching them; never run a wildcard sweep and filter
+  the report afterward. Repeat the exclusion ledger in every worker prompt and final
+  validation checklist.
 
 ## Orchestration Contract
 
@@ -143,7 +157,7 @@ After the fleet returns, the conductor reports committed per-trace branches and 
 
 1. Create a fresh integration worktree from current `origin/develop`.
 2. Cherry-pick committed genuine trace fixes.
-3. Resolve additive `CHANGELOG.md` and `docs/TRACE_FRONTIER_LOG.md` conflicts deliberately.
+3. Resolve additive `CHANGELOG.md` and `docs/status/trace-frontier-log.md` conflicts deliberately.
 4. Compose-verify the advanced/greened traces plus green guards against the current branch.
 5. Only then push or hand off for PR/merge, following the user's requested integration path.
 
@@ -188,9 +202,13 @@ Rerun the targeted trace and same-game green guard. Apply the genuineness gate. 
 
 If the caller supplied `failing`, use it. Otherwise run one sweep from the repo root:
 
-```powershell
-cmd /c "mvn.cmd -q -Dmse=relaxed ""-Ds1.rom.path=%S1_ROM%"" ""-Ds2.rom.path=%S2_ROM%"" ""-Ds3k.rom.path=%S3K_ROM%"" ""-Dtest=*TraceReplay"" test"
+```bash
+mvn -q -Dmse=relaxed "-Ds1.rom.path=$S1_ROM" "-Ds2.rom.path=$S2_ROM" "-Ds3k.rom.path=$S3K_ROM" "-Dtest=*TraceReplay" test
 ```
+
+Do not use this wildcard form when any exclusion is active. First enumerate concrete,
+executable replay classes, remove every excluded class/route, print the resulting allowlist,
+then pass only that comma-separated allowlist to `-Dtest=...`.
 
 Then read `target/surefire-reports/*TraceReplay*.txt`.
 
@@ -210,7 +228,7 @@ For each failing item:
 
 1. Create or reuse a persistent worktree from `develop`:
 
-   ```powershell
+   ```bash
    git worktree add -b bugfix/ai-trace-<game>-<zone> .worktrees/trace-<game>-<zone> develop
    ```
 
@@ -218,14 +236,14 @@ For each failing item:
 
 2. In the worktree, rerun the targeted trace:
 
-   ```powershell
-   cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-D<romProp>=C:\Users\farre\IdeaProjects\sonic-engine\<rom>.gen"" ""-Dtest=<testClass>#replayMatchesTrace"" test"
+   ```bash
+   mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-D<romProp>=<discovered rom path>" "-Dtest=<testClass>#replayMatchesTrace" test
    ```
 
 3. Run the triage tool:
 
-   ```powershell
-   cmd /c "mvn.cmd -q -Dmse=relaxed exec:java ""-Dexec.mainClass=com.openggf.tools.TraceTriageTool"" ""-Dexec.args=<game> <zone>"""
+   ```bash
+   mvn -q -Dmse=relaxed exec:java "-Dexec.mainClass=com.openggf.tools.TraceTriageTool" "-Dexec.args=<game> <zone>"
    ```
 
 4. Read the relevant disassembly around the diverging field/routine:
@@ -288,8 +306,8 @@ Verification must be independent of the fix attempt.
 1. Rerun the targeted trace in the worktree.
 2. Run the same-game green regression guard if available:
 
-   ```powershell
-   cmd /c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true ""-D<romProp>=C:\Users\farre\IdeaProjects\sonic-engine\<rom>.gen"" ""-Dtest=<comma-separated-green-classes>"" test"
+   ```bash
+   mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-D<romProp>=<discovered rom path>" "-Dtest=<comma-separated-green-classes>" test
    ```
 
 3. Ignore environmental flakes only after confirming they are not real parity divergences.
@@ -317,8 +335,8 @@ Commit if and only if `genuine=true`, `changed=true`, and status is `green`, `ad
 
 Commit requirements:
 
-- Stage only changed source files plus `CHANGELOG.md` and `docs/TRACE_FRONTIER_LOG.md` when required.
-- Update `docs/TRACE_FRONTIER_LOG.md` with exact command, worktree, branch, status, error count, before/after first-error frame/field, and any `REGRESSION INTRODUCED:` lines.
+- Stage only changed source files plus `CHANGELOG.md` and `docs/status/trace-frontier-log.md` when required.
+- Update `docs/status/trace-frontier-log.md` with exact command, worktree, branch, status, error count, before/after first-error frame/field, and any `REGRESSION INTRODUCED:` lines.
 - This touches `src/main` for real fixes, so update and stage `CHANGELOG.md`.
 - Run `git config core.hooksPath .githooks`.
 - Subject: `fix(trace): <zone> <one-line root cause>`. If it introduces a regression, add `(regresses <trace>@<frame>, follow-up)`.

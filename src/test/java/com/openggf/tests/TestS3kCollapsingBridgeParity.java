@@ -3,6 +3,7 @@ package com.openggf.tests;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.CollapsingBridgeObjectInstance;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.GameServices;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
@@ -67,11 +68,56 @@ class TestS3kCollapsingBridgeParity {
         Sonic rider = new Sonic("sonic", (short) 0, (short) 0);
         rider.setCentreX((short) 8);
         rider.setOnObject(true);
+        GameServices.level().getObjectManager().forceRidingObjectForBootstrap(rider, bridge);
 
         invokePerformCollapse(bridge, rider);
 
         assertTrue(bridge.isSolidFor(rider),
                 "The rider that triggered the collapse should remain supported until the release wave reaches them");
+    }
+
+    @Test
+    void triggerCollapse_doesNotClaimPlayerStandingOnDifferentSolid() throws Exception {
+        CollapsingBridgeObjectInstance triggeredBridge = GameServices.level().getObjectManager()
+                .createDynamicObject(() -> new CollapsingBridgeObjectInstance(
+                        new ObjectSpawn(0, 0, 0x0F, 0, 0x00, false, 0)));
+        initialiseMgzBridge(triggeredBridge, 0x00);
+        CollapsingBridgeObjectInstance actualSupport = new CollapsingBridgeObjectInstance(
+                new ObjectSpawn(0x100, 0, 0x0F, 0, 0x00, false, 0));
+        initialiseMgzBridge(actualSupport, 0x00);
+        rider.setOnObject(true);
+        GameServices.level().getObjectManager().forceRidingObjectForBootstrap(rider, actualSupport);
+
+        invokePerformCollapse(triggeredBridge, rider);
+
+        assertFalse(triggeredBridge.isSolidFor(rider),
+                "The bridge must snapshot its own standing bit, not global Status_OnObj");
+    }
+
+    @Test
+    void terrainHandoffClearsBridgeOwnershipBeforeLaterCollapse() throws Exception {
+        CollapsingBridgeObjectInstance bridge = GameServices.level().getObjectManager()
+                .createDynamicObject(() -> new CollapsingBridgeObjectInstance(
+                        new ObjectSpawn(0, 0, 0x0F, 0, 0x00, false, 0)));
+        initialiseMgzBridge(bridge, 0x00);
+        rider.setCentreX((short) 0);
+        GameServices.level().getObjectManager().forceRidingObjectForBootstrap(rider, bridge);
+
+        rider.setCentreX((short) 0x100);
+        GameServices.level().getObjectManager()
+                .processImmediateInlineSolidCheckpoint(bridge, rider, java.util.List.of());
+
+        assertFalse(GameServices.level().getObjectManager().isRidingObject(rider, bridge),
+                "SolidObjectTop walk-off must retire the engine ride owner with the native standing bit");
+        assertFalse(GameServices.level().getObjectManager().hasObjectStandingBit(rider, bridge));
+
+        // The terrain pass grounds Sonic after the bridge's walk-off path.
+        rider.setAir(false);
+        invokePerformCollapse(bridge, rider);
+        bridge.update(1, rider);
+
+        assertFalse(rider.getAir(),
+                "a later collapse must not release a player already handed off to terrain");
     }
 
     @Test
@@ -203,10 +249,15 @@ class TestS3kCollapsingBridgeParity {
     private static CollapsingBridgeObjectInstance newMgzBridge(int subtype) throws Exception {
         CollapsingBridgeObjectInstance bridge = new CollapsingBridgeObjectInstance(
                 new ObjectSpawn(0, 0, 0x0F, subtype, 0x00, false, 0));
+        initialiseMgzBridge(bridge, subtype);
+        return bridge;
+    }
+
+    private static void initialiseMgzBridge(CollapsingBridgeObjectInstance bridge, int subtype)
+            throws Exception {
         Method initMgz = CollapsingBridgeObjectInstance.class.getDeclaredMethod("initMGZ", int.class);
         initMgz.setAccessible(true);
         initMgz.invoke(bridge, subtype);
-        return bridge;
     }
 
     private static void invokePerformCollapse(CollapsingBridgeObjectInstance bridge, Sonic rider) throws Exception {

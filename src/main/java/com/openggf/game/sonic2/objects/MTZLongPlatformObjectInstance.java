@@ -178,7 +178,7 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
     public SolidObjectParams getSolidParams() {
         // From s2.asm lines 52457-52463: d1=width+5, d2=y_radius, d3=y_radius+1
         int halfWidth = widthPixels + 5;
-        return new SolidObjectParams(halfWidth, yRadius, yRadius + 1);
+        return SolidObjectParams.of(halfWidth, yRadius, yRadius + 1);
     }
 
     @Override

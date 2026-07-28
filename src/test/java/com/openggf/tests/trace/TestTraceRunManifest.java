@@ -66,6 +66,47 @@ class TestTraceRunManifest {
     }
 
     @Test
+    void defaultsMissingExpectedMovieEndModeToUnspecified(@TempDir Path dir) throws IOException {
+        TraceRunManifest run = TraceRunManifest.load(
+                writeRun(dir, VALID_MANIFEST, "seg00_aiz", "seg01_gumball", "seg02_aiz"));
+
+        assertEquals(TraceRunManifest.ExpectedMovieEndMode.UNSPECIFIED,
+                run.expectedMovieEndMode());
+    }
+
+    @Test
+    void parsesDeclaredExpectedMovieEndModes(@TempDir Path dir) throws IOException {
+        String level = VALID_MANIFEST.replace("\"segments\": [",
+                "\"expected_movie_end_mode\": \"level\",\n  \"segments\": [");
+        String titleScreen = VALID_MANIFEST.replace("\"segments\": [",
+                "\"expected_movie_end_mode\": \"title_screen\",\n  \"segments\": [");
+
+        assertEquals(TraceRunManifest.ExpectedMovieEndMode.LEVEL,
+                TraceRunManifest.load(writeRun(
+                        dir.resolve("level"), level,
+                        "seg00_aiz", "seg01_gumball", "seg02_aiz")).expectedMovieEndMode());
+        assertEquals(TraceRunManifest.ExpectedMovieEndMode.TITLE_SCREEN,
+                TraceRunManifest.load(writeRun(
+                        dir.resolve("title-screen"), titleScreen,
+                        "seg00_aiz", "seg01_gumball", "seg02_aiz")).expectedMovieEndMode());
+    }
+
+    @Test
+    void rejectsUnknownAndNonStringExpectedMovieEndModes(@TempDir Path dir) {
+        String unknown = VALID_MANIFEST.replace("\"segments\": [",
+                "\"expected_movie_end_mode\": \"credits\",\n  \"segments\": [");
+        String nonString = VALID_MANIFEST.replace("\"segments\": [",
+                "\"expected_movie_end_mode\": 12,\n  \"segments\": [");
+
+        assertThrows(IOException.class, () -> TraceRunManifest.load(writeRun(
+                dir.resolve("unknown"), unknown,
+                "seg00_aiz", "seg01_gumball", "seg02_aiz")));
+        assertThrows(IOException.class, () -> TraceRunManifest.load(writeRun(
+                dir.resolve("non-string"), nonString,
+                "seg00_aiz", "seg01_gumball", "seg02_aiz")));
+    }
+
+    @Test
     void rejectsUnknownSegmentKind(@TempDir Path dir) throws IOException {
         String bad = VALID_MANIFEST.replace("\"kind\": \"bonus_stage\"", "\"kind\": \"casino\"");
         Path manifest = writeRun(dir, bad, "seg00_aiz", "seg01_gumball", "seg02_aiz");
@@ -83,6 +124,17 @@ class TestTraceRunManifest {
         IllegalStateException ex =
             assertThrows(IllegalStateException.class, () -> run.validate(dir));
         assertTrue(ex.getMessage().contains("bk2_frame_offset"), ex.getMessage());
+    }
+
+    @Test
+    void rejectsDuplicateSegmentDirectories(@TempDir Path dir) throws IOException {
+        String bad = VALID_MANIFEST.replace("\"dir\": \"seg02_aiz\"", "\"dir\": \"seg00_aiz\"");
+        Path manifest = writeRun(dir, bad, "seg00_aiz", "seg01_gumball");
+        TraceRunManifest run = TraceRunManifest.load(manifest);
+        IllegalStateException ex =
+            assertThrows(IllegalStateException.class, () -> run.validate(dir));
+        assertTrue(ex.getMessage().contains("duplicate segment directory"), ex.getMessage());
+        assertTrue(ex.getMessage().contains("seg00_aiz"), ex.getMessage());
     }
 
     @Test

@@ -19,7 +19,10 @@ import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.StubObjectServices;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import com.openggf.tests.FullReset;
+import com.openggf.tests.SingletonResetExtension;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -34,6 +37,8 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@ExtendWith(SingletonResetExtension.class)
+@FullReset
 class TestMhzMinibossEscapeShardGraphRewind {
     private static final ObjectSpawn DISTRACTOR_PARENT_SPAWN =
             new ObjectSpawn(0x0340, 0x0500, Sonic3kObjectIds.AIZ_END_BOSS, 0, 0, false, 80);

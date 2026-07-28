@@ -2,6 +2,8 @@ package com.openggf.trace.replay;
 
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.trace.timing.HardwareTimingReplayPort;
+import com.openggf.trace.timing.HardwareTimingSchedule;
 
 /**
  * Narrow view of a fixture capable of driving trace replay. Implemented
@@ -12,6 +14,24 @@ public interface TraceReplayFixture {
     AbstractPlayableSprite sprite();
 
     GameplayModeContext gameplayMode();
+
+    /** Registers the replay port and its stateless production-boundary observer. */
+    void installHardwareTimingReplay(HardwareTimingReplayPort replayPort);
+
+    /** Latches the trace row's physical raw frame before any row work or retry. */
+    void beginTraceRow(int traceIndex, int rawFrame);
+
+    /** Deactivates recorded edge authority while no trace row is represented. */
+    void enterHardwareTimingGap();
+
+    /** Verifies that the current segment consumed every recorded completion edge. */
+    void verifyHardwareTimingSegmentEdges();
+
+    /** Validates and installs the next structural segment's completion schedule. */
+    void handoffHardwareTimingReplay(HardwareTimingSchedule nextSchedule);
+
+    /** Final-run verification, admission closure, observer removal, and deregistration. */
+    void closeHardwareTimingReplayRun();
 
     /** Run one gameplay tick using the next BK2 input. Returns the mask. */
     int stepFrameFromRecording();

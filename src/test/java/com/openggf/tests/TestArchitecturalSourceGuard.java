@@ -5,6 +5,7 @@ import com.openggf.game.rules.GameRules;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -16,6 +17,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -25,6 +27,26 @@ class TestArchitecturalSourceGuard {
     private static final String ENGINE_PATH = "com/openggf/Engine.java";
     private static final String GAME_LOOP_PATH = "com/openggf/GameLoop.java";
     private static final String OBJECT_MANAGER_PATH = "com/openggf/level/objects/ObjectManager.java";
+
+    @Test
+    void engineLiveCaptureOrderingStaysAtThePresentationBoundary() throws IOException {
+        String source = Files.readString(SRC_MAIN.resolve(ENGINE_PATH));
+        assertOrdered(source, "applyDisplayShaderPhase(ShaderPhase.FINAL)",
+                "liveCapturePresentation.present(");
+        assertOrdered(source, "handleLiveCaptureShortcut();",
+                "updateDisplayShaderInput()");
+        // next presents through the displayAndSwap seam rather than inline
+        // display()/glfwSwapBuffers() calls, so the ordering is structural: the
+        // swap runnable only runs after the display supplier returns true.
+        assertOrdered(source, "displayAndSwap(this::display,", "glfwSwapBuffers(window));");
+    }
+
+    private static void assertOrdered(String source, String first, String second) {
+        int firstIndex = source.indexOf(first);
+        int secondIndex = source.indexOf(second, firstIndex + first.length());
+        assertTrue(firstIndex >= 0 && secondIndex > firstIndex,
+                () -> first + " must precede " + second);
+    }
     // 2026-07-02: re-ratcheted 2747 -> 2821 after the S2 trace-parity batch
     // (8766a6889..0f7794de8) grew reserved-slot spawn and placement handling,
     // then 2821 -> 2823 for the rewind capture of the S2 post-camera unload
@@ -38,7 +60,11 @@ class TestArchitecturalSourceGuard {
     // delegate into ObjectRewindReferenceClosureValidator. Traversal stays extracted.
     // 2026-07-20: develop's trace-run and bonus-stage state integration combines
     // with next's mod/runtime ownership surface at 3020 effective lines.
-    private static final int OBJECT_MANAGER_MAX_EFFECTIVE_SOURCE_LINES = 3020;
+    // 2026-07-28: develop's initial-ProcessSprites dispatch, managed dynamic slots,
+    // and staged collision-response build merge with next's callback-routed
+    // ownership. Participant checkpoints stayed in ObjectSolidContactController and
+    // the unused rewind wrappers were dropped; freeze the combined shape at 3045.
+    private static final int OBJECT_MANAGER_MAX_EFFECTIVE_SOURCE_LINES = 3045;
     private static final Map<String, Integer> RELEASE_CRITICAL_CLASS_EFFECTIVE_SOURCE_LINE_BUDGETS = Map.of(
             "com/openggf/game/sonic1/Sonic1ObjectArtProvider.java", 2047,
             // 2026-07-02: 3065 -> 3115 after S2 trace fixes + the GameRules typed-rule
@@ -50,7 +76,10 @@ class TestArchitecturalSourceGuard {
             "com/openggf/sprites/playable/AbstractPlayableSprite.java", 3239,
             // 2026-07-20: merged develop's trace/bonus bootstrap dependencies with
             // next's mod-zone and editor/session integration.
-            "com/openggf/level/LevelManager.java", 2819,
+            // 2026-07-28: adds develop's InitialProcessSprites base, title-card VBlank
+            // advance, and oscillation gating on top of next's seamless-transition and
+            // rewind-boundary ownership.
+            "com/openggf/level/LevelManager.java", 2904,
             // 2026-07-02: 2888 -> 2890 for the live-rewind VHS effect envelope tick
             // (RewindEffectEnvelope wiring + intensity/speed accessors).
             // 2026-07-04: 2890 -> 2962. The solo-ghost-racing phase-1 tasks (time
@@ -79,7 +108,10 @@ class TestArchitecturalSourceGuard {
             // shape so subsequent work must still extract before growing GameLoop.
             // 2026-07-20: multi-stage trace-run dispatch adds its focused all-mode hook
             // on top of that combined shape; the state machine remains launcher-owned.
-            GAME_LOOP_PATH, 3188
+            // 2026-07-28: develop's LevelIterationAdmissionController boundary and
+            // vblank-hold gating merge with next's time-attack and multiplayer frame
+            // hooks. Both sides remain delegating calls, not inlined logic.
+            GAME_LOOP_PATH, 3245
     );
     private static final int ENGINE_MAX_LARGE_METHODS = 3;
     private static final int ENGINE_LARGE_METHOD_THRESHOLD = 100;
@@ -445,10 +477,10 @@ class TestArchitecturalSourceGuard {
 
     @Test
     void sonic1EmbeddedRuntimeDataExceptionsStayDocumentedAndBounded() throws IOException {
-        String discrepancies = Files.readString(Path.of("docs", "KNOWN_DISCREPANCIES.md"));
+        String discrepancies = Files.readString(Path.of("docs", "status", "known-discrepancies.md"));
         List<String> violations = new ArrayList<>();
         if (!discrepancies.contains("Sonic 1 Embedded Runtime Data Ratchet")) {
-            violations.add("docs/KNOWN_DISCREPANCIES.md must document the bounded Sonic 1 embedded runtime data debt");
+            violations.add("docs/status/known-discrepancies.md must document the bounded Sonic 1 embedded runtime data debt");
         }
 
         List<EmbeddedRuntimeDataBudget> budgets = List.of(
@@ -510,6 +542,29 @@ class TestArchitecturalSourceGuard {
 
         assertNoViolations("Sonic 1 embedded runtime data exceptions must stay documented and bounded",
                 violations);
+    }
+
+    @Test
+    void hardwareTimingAuthorityExceptionStaysDocumentedAndAgentGuidanceStaysMirrored() throws IOException {
+        Path agents = Path.of("AGENTS.md");
+        Path claude = Path.of("CLAUDE.md");
+        byte[] agentsBytes = Files.readAllBytes(agents);
+        assertArrayEquals(agentsBytes, Files.readAllBytes(claude),
+                "AGENTS.md and CLAUDE.md must remain byte-identical");
+
+        String agentGuidance = new String(agentsBytes, StandardCharsets.UTF_8);
+        assertTrue(agentGuidance.contains("Trace data is comparison-only by default."),
+                "agent guidance must retain the comparison-only trace rule");
+        assertTrue(agentGuidance.contains("dedicated hardware-timing input contract"),
+                "agent guidance must retain the dedicated hardware-timing exception");
+        assertTrue(agentGuidance.contains("it may release only the readiness of a matching, prepared, production-submitted"),
+                "agent guidance must retain the bounded timing-release rule");
+
+        String discrepancies = Files.readString(Path.of("docs", "status", "known-discrepancies.md"));
+        assertTrue(discrepancies.contains("## Hardware-Timing Replay Input Exception"),
+                "known discrepancies must retain the hardware-timing exception");
+        assertTrue(discrepancies.contains("Physics CSV and auxiliary events remain comparison-only."),
+                "known discrepancies must retain the physics/aux comparison-only boundary");
     }
 
     @Test

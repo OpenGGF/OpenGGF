@@ -216,7 +216,7 @@ public class FloatingPlatformObjectInstance extends AbstractObjectInstance
     public SolidObjectParams getSolidParams() {
         // ROM: move.b height_pixels(a0),d3; addq.w #1,d3 (sonic3k.asm:50839-50840)
         // height_pixels is never modified — only y_radius changes for ObjCheckCeilingDist
-        return new SolidObjectParams(halfWidth, halfHeight, halfHeight + 1);
+        return SolidObjectParams.of(halfWidth, halfHeight, halfHeight + 1);
     }
 
     @Override

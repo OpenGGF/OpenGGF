@@ -49,7 +49,6 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
     private static final int MIN_SNOWBOARD_G_SPEED = 0x1000;
     private static final int FAST_FRAME_G_SPEED_DECEL = 8;
     private static final int QUIET_SKID_INTERVAL = 16;
-    private static final int DUST_SPAWN_INTERVAL = 2;
     private static final int SNOWBOARD_OBJECT_GRAVITY = 0x28;
 
     // ROM byte_394F2: angle bucket -> Sonic snowboarding animation id.
@@ -124,7 +123,6 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
     private boolean initialized;
     private boolean sonicSnowboardOverlayActive;
     private boolean sonicSnowboardTouchedGround;
-    private int dustTimer;
 
     public IczSnowboardIntroInstance(ObjectSpawn spawn) {
         super(spawn, "ICZSnowboardIntro");
@@ -149,6 +147,11 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
             case SNOWBOARDING -> updateSnowboarding(player, frameCounter);
             case SCRIPTED_SLOPE -> updateScriptedSlope(player);
             case CRASHED -> setDestroyed(true);
+        }
+        if (sonicSnowboardOverlayActive && !isDestroyed()) {
+            // Native dust is an independent loc_398E6 child that runs for the
+            // whole controlled snowboard ride, including scripted-slope states.
+            spawnDustIfNeeded(player);
         }
         updateDynamicSpawn(currentX, currentY);
     }
@@ -247,7 +250,6 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
         lastOverlayAnimationId = -1;
         sonicSnowboardOverlayActive = false;
         sonicSnowboardTouchedGround = false;
-        dustTimer = 0;
         boardMotion.x = INITIAL_SNOWBOARD_X;
         boardMotion.y = INITIAL_SNOWBOARD_Y;
         boardMotion.xSub = 0;
@@ -274,17 +276,7 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
             return;
         }
         releaseStartupObjectControl(player);
-        applyStartupReleaseFrameMotion(player);
         state = State.WAIT_FOR_BOARD_JUMP;
-    }
-
-    private void applyStartupReleaseFrameMotion(AbstractPlayableSprite player) {
-        // ROM frame order runs Obj_LevelIntroICZ1's timer release before the
-        // player's Obj01_MdAir update is sampled for the trace frame. That frame
-        // therefore performs MoveSprite_TestGravity: SpeedToPos with the old
-        // y_vel, then y_vel += gravity.
-        player.move(player.getXSpeed(), player.getYSpeed());
-        player.setYSpeed((short) (player.getYSpeed() + player.getGravity()));
     }
 
     private void updateWaitForBoardJump(AbstractPlayableSprite player) {
@@ -344,8 +336,6 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
         if ((frameCounter & (QUIET_SKID_INTERVAL - 1)) == 0 && !player.getAir()) {
             services().playSfx(Sonic3kSfx.SLIDE_SKID_QUIET.id);
         }
-        spawnDustIfNeeded(player);
-
         if (speedMaintenanceActive) {
             if (player.getGSpeed() < MIN_SNOWBOARD_G_SPEED) {
                 player.setGSpeed((short) MIN_SNOWBOARD_G_SPEED);
@@ -428,11 +418,9 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
         if (player.getAir()) {
             return;
         }
-        if (++dustTimer < DUST_SPAWN_INTERVAL && currentMappingFrame != 7 && currentMappingFrame != 8) {
-            return;
-        }
-        dustTimer = 0;
-        int count = (currentMappingFrame == 7 || currentMappingFrame == 8) ? 4 : 1;
+        // loc_398FA calls sub_39924 twice on every grounded frame, then six
+        // additional times for the heavy-spray snowboard frames 7 and 8.
+        int count = (currentMappingFrame == 7 || currentMappingFrame == 8) ? 8 : 2;
         for (int i = 0; i < count; i++) {
             int random = services().rng().nextRaw();
             int x = player.getCentreX() - (random & 0x0F);

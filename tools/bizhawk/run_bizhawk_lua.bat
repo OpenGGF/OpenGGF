@@ -42,6 +42,7 @@ for %%I in ("%BIZHAWK_EXE%") do set "BIZHAWK_EXE=%%~fI"
 for %%I in ("%~1") do set "LUA_SCRIPT=%%~fI"
 for %%I in ("%~2") do set "BK2_PATH=%%~fI"
 for %%I in ("%~3") do set "ROM_PATH=%%~fI"
+if "%OGGF_TRACE_SOURCE_BK2%"=="" for %%I in ("%BK2_PATH%") do set "OGGF_TRACE_SOURCE_BK2=%%~nxI"
 set "BIZHAWK_EFFECTIVE_LUA=%LUA_SCRIPT%"
 set "BIZHAWK_LAUNCH_ID=%RANDOM%-%RANDOM%"
 if "%BIZHAWK_FAST_WRAPPER%"=="" set "BIZHAWK_FAST_WRAPPER=%TEMP%\openggf-bizhawk-fast-wrapper-%BIZHAWK_LAUNCH_ID%.lua"
@@ -112,6 +113,13 @@ if not "%OGGF_START%"=="" echo OGGF_START=%OGGF_START%
 if not "%OGGF_STOP%"=="" echo OGGF_STOP=%OGGF_STOP%
 if not "%OGGF_OUT%"=="" echo OGGF_OUT=%OGGF_OUT%
 echo.
+
+REM Authoritative shared-lib path for the recorders' oggf_lib_dir() loader
+REM (tools/bizhawk/lib/oggf_trace_common.lua). Wins over the debug.getinfo and
+REM CWD fallbacks; child EmuHawk inherits it on both the direct and wrapper
+REM launch routes. Trailing backslash matches the loader's dir .. "file" concat.
+set "OGGF_BIZHAWK_LIB=%~dp0lib\"
+set "OGGF_BIZHAWK_PROBE_RUNTIME=%~dp0probes\probe_runtime.lua"
 
 pushd "%~dp0" >nul
 if "%BIZHAWK_ALLOW_SLOW_LUA%"=="1" (

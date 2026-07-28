@@ -144,7 +144,7 @@ public class SmashableGroundObjectInstance extends BoxObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         // From disassembly: width_pixels = $10, use halfWidth + 11 for x check
-        return new SolidObjectParams(HALF_WIDTH + 11, yRadius, yRadius + 1);
+        return SolidObjectParams.of(HALF_WIDTH + 11, yRadius, yRadius + 1);
     }
 
     @Override

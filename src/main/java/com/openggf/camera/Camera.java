@@ -14,6 +14,13 @@ import com.openggf.sprites.playable.Tails;
 
 @com.openggf.game.ModApi
 public class Camera implements RewindSnapshottable<CameraSnapshot> {
+	/** Receives invocation-level camera lifecycle events without replacing camera state. */
+	public interface UpdateObserver {
+		void onUpdatePosition(boolean force);
+		void onUpdateBoundaryEasing();
+	}
+
+	private UpdateObserver updateObserver;
 	private short x = 0;
 	private short y = 0;
 	// ROM ScreenEvents snapshots. These are independent words: zone event/deform
@@ -157,6 +164,9 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	}
 
 	public void updatePosition(boolean force) {
+		if (updateObserver != null) {
+			updateObserver.onUpdatePosition(force);
+		}
 		if (force) {
 			// Position camera using ROM's level-load formula:
 			//   v_screenposx = MainCharacter.x_pos - $A0  (subi.w #160,d1)
@@ -666,6 +676,9 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * - Sets maxYChanging flag while boundary is transitioning
 	 */
 	public void updateBoundaryEasing() {
+		if (updateObserver != null) {
+			updateObserver.onUpdateBoundaryEasing();
+		}
 		maxXBeforeBoundaryEasing = maxX;
 		maxYChanging = false;
 
@@ -745,6 +758,11 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 				minX += Math.max(diff, -BOUNDARY_EASE_STEP);
 			}
 		}
+	}
+
+	/** Installs an optional observer used by lifecycle diagnostics and tests. */
+	public void setUpdateObserver(UpdateObserver updateObserver) {
+		this.updateObserver = updateObserver;
 	}
 
 	/**

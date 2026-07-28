@@ -26,6 +26,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * by clamping angle to 0x80 minimum before the trig lookup.
  */
 @ExtendWith(SingletonResetExtension.class)
+@ExtendWith(SingletonResetExtension.class)
+@FullReset
 class TestS3kHczSnakeBlocksObject {
 
     private static final int OBJECT_ID = 0x67;

@@ -1,5 +1,7 @@
 package com.openggf.tests.trace.s3k;
 
+import com.openggf.game.AbstractBonusStageCoordinator;
+import com.openggf.game.BonusStageType;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.Sonic;
 import com.openggf.sprites.playable.Tails;
@@ -9,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Unit-level (no ROM, no engine boot) coverage for
@@ -46,5 +49,28 @@ class TestS3kBonusComparedSpriteSeam {
                 AbstractS3kBonusStageTraceReplayTest.selectComparedSprite(null, fixtureSprite);
 
         assertSame(fixtureSprite, result);
+    }
+
+    @Test
+    void terminalBoundaryComesFromLiveBonusProviderCompletion() {
+        AbstractBonusStageCoordinator provider = new AbstractBonusStageCoordinator() {
+            @Override
+            public BonusStageType selectBonusStage(int ringCount) {
+                return BonusStageType.GUMBALL;
+            }
+
+            @Override
+            public int getZoneId(BonusStageType type) {
+                return 0;
+            }
+
+            @Override
+            public int getMusicId(BonusStageType type) {
+                return 0;
+            }
+        };
+        provider.requestExit();
+
+        assertTrue(AbstractS3kBonusStageTraceReplayTest.hasReachedTerminalBoundary(provider));
     }
 }

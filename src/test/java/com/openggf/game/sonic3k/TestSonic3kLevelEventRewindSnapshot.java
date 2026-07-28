@@ -8,6 +8,7 @@ import com.openggf.game.rewind.snapshot.LevelEventSnapshot;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.events.AizPreparedTransitionArtState;
 import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
 import com.openggf.game.sonic3k.events.Sonic3kHCZEvents;
@@ -307,6 +308,36 @@ class TestSonic3kLevelEventRewindSnapshot {
         assertEquals(0, get(mgr, "cnzAct2MaxXAccumulator"));
         assertEquals(0, get(mgr, "cnzAct2MinYAccumulator"));
         assertEquals(0, get(mgr, "cnzAct2MaxYAccumulator"));
+    }
+
+    @Test
+    void preparedAizTransitionArtIsSessionOwnedRewindableAndResettable() {
+        Sonic3kLevelEventManager mgr = new Sonic3kLevelEventManager();
+        var adapter = mgr.extraRewindAdapters().stream()
+                .filter(candidate -> "s3k-aiz-prepared-transition-art".equals(candidate.key()))
+                .findFirst();
+        assertTrue(adapter.isPresent(),
+                "prepared transition art must be owned by the session rewind registry");
+        AizPreparedTransitionArtState state = assertInstanceOf(
+                AizPreparedTransitionArtState.class, adapter.orElseThrow());
+
+        byte[] original = new byte[64];
+        original[0] = 0x12;
+        mgr.retainAizFireOverlay(original);
+        original[0] = 0x34;
+        assertEquals(2, mgr.aizFireOverlayTileCount());
+        assertEquals(0x12, mgr.aizFireOverlayCopy()[0],
+                "the session owner must retain an immutable copy");
+
+        byte[] snapshot = state.capture();
+        mgr.retainAizFireOverlay(new byte[32]);
+        state.restore(snapshot);
+        assertEquals(2, mgr.aizFireOverlayTileCount());
+        assertEquals(0x12, mgr.aizFireOverlayCopy()[0]);
+
+        mgr.resetState();
+        assertEquals(0, mgr.aizFireOverlayTileCount());
+        assertEquals(0, mgr.aizFireOverlayCopy().length);
     }
 
     @Test
@@ -1505,10 +1536,35 @@ class TestSonic3kLevelEventRewindSnapshot {
         LevelEventSnapshot snap = mgr.capture();
 
         setFixedControllerState(p1, false, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        set(mgr, "fixedAirCountdownZone", Sonic3kZoneIds.ZONE_AIZ);
+        set(mgr, "fixedAirCountdownAct", 0);
         mgr.restore(snap);
 
         assertEquals("true,10,129,4660,2,1,255,32832,50,22", fixedControllerState(p1),
                 "fixed Breathing_bubbles sidecar RAM must rewind with S3K event-manager snapshots");
+        assertEquals(Sonic3kZoneIds.ZONE_CNZ, get(mgr, "fixedAirCountdownZone"));
+        assertEquals(1, get(mgr, "fixedAirCountdownAct"));
+    }
+
+    @Test
+    void legacyFixedAirSnapshotClearsUnrepresentedOwner() throws Exception {
+        Sonic3kLevelEventManager mgr = new Sonic3kLevelEventManager();
+        mgr.initLevel(Sonic3kZoneIds.ZONE_CNZ, 1);
+        LevelEventSnapshot current = mgr.capture();
+        byte[] extra = current.extra();
+        LevelEventSnapshot legacy = new LevelEventSnapshot(
+                current.currentZone(), current.currentAct(),
+                current.eventRoutineFg(), current.eventRoutineBg(),
+                current.frameCounter(), current.timerFrames(), current.bossActive(),
+                current.eventDataFg(), current.eventDataBg(),
+                java.util.Arrays.copyOf(extra, extra.length - (2 * Integer.BYTES)));
+
+        set(mgr, "fixedAirCountdownZone", Sonic3kZoneIds.ZONE_AIZ);
+        set(mgr, "fixedAirCountdownAct", 0);
+        mgr.restore(legacy);
+
+        assertEquals(-1, get(mgr, "fixedAirCountdownZone"));
+        assertEquals(-1, get(mgr, "fixedAirCountdownAct"));
     }
 
     @Test

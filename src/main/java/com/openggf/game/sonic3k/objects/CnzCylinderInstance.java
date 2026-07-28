@@ -34,7 +34,7 @@ import java.util.Map;
 public final class CnzCylinderInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
     private static final SolidObjectParams SOLID_PARAMS =
-            new SolidObjectParams(0x2B, 0x20, 0x21);
+            SolidObjectParams.of(0x2B, 0x20, 0x21);
     private static final int PLAYER_CAPTURE_PRIORITY = RenderPriority.PLAYER_DEFAULT;
     private static final int OBJECT_PRIORITY_BUCKET = 5; // Obj_CNZCylinder: priority $280.
     private static final int PLAYER_TWIST_PRIORITY = RenderPriority.PLAYER_DEFAULT - 1;
@@ -60,6 +60,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         int priorityThresholdSource;
         AbstractPlayableSprite player;
         boolean jumpPressedLastFrame;
+        boolean externalAirRetirePending;
     }
 
     private static final class ExtensionRiderState extends RiderSlot
@@ -67,7 +68,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         @Override
         public Snapshot captureRewindStateValue() {
             return new Snapshot(active, contactLatched, twistAngle, horizontalDistance,
-                    priorityThresholdSource, jumpPressedLastFrame);
+                    priorityThresholdSource, jumpPressedLastFrame, externalAirRetirePending);
         }
 
         @Override
@@ -78,11 +79,13 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
             horizontalDistance = snapshot.horizontalDistance();
             priorityThresholdSource = snapshot.priorityThresholdSource();
             jumpPressedLastFrame = snapshot.jumpPressedLastFrame();
+            externalAirRetirePending = snapshot.externalAirRetirePending();
         }
 
         private record Snapshot(boolean active, boolean contactLatched, int twistAngle,
                                 int horizontalDistance, int priorityThresholdSource,
-                                boolean jumpPressedLastFrame) {}
+                                boolean jumpPressedLastFrame,
+                                boolean externalAirRetirePending) {}
     }
 
     private int baseX;
@@ -102,6 +105,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
     private int standingMaskCache;
     private int standingMask;
     private int nextStandingMask;
+    private int standingMaskDeferredBySkippedSolidPass;
     private int heldInputMask;
     private int nextHeldInputMask;
     private int capturedThisUpdateMask;
@@ -206,19 +210,24 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         // the alternating capture/release cycle in updateRiderSlot can
         // continue to re-capture the offscreen rider each frame.
         //
-        int preservedStanding = 0;
+        int preservedStanding = standingMaskDeferredBySkippedSolidPass;
+        int deferredByThisSkippedSolidPass = 0;
         if (playerOneSlot.player != null
                 && !riderRenderFlagOnScreen(playerOneSlot.player)) {
             preservedStanding |= (standingMask & 0x01);
+            deferredByThisSkippedSolidPass |= standingMask & 0x01;
         }
         if (playerTwoSlot.player != null
                 && !riderRenderFlagOnScreen(playerTwoSlot.player)) {
             preservedStanding |= (standingMask & 0x02);
+            deferredByThisSkippedSolidPass |= standingMask & 0x02;
         }
         if (extensionRiderStates.values().stream().anyMatch(slot -> slot.active
                 && slot.player != null && !riderRenderFlagOnScreen(slot.player))) {
             preservedStanding |= standingMask & 0x04;
+            deferredByThisSkippedSolidPass |= standingMask & 0x04;
         }
+        standingMaskDeferredBySkippedSolidPass = deferredByThisSkippedSolidPass;
         preservedStanding |= activeGroundedHeldStandingMask();
 
         standingMask = nextStandingMask | preservedStanding;
@@ -595,6 +604,12 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
 
         boolean standing = latchedContact || hasStandingBit(player);
         if (slot.active) {
+            if (slot.externalAirRetirePending) {
+                beginPlayerTwoDiagnostic(slot, "retire_external_air", player);
+                clearSlotOnly(slot);
+                endPlayerTwoDiagnostic(slot, player);
+                return;
+            }
             if (player.getAir() && !player.isObjectControlled()) {
                 // External launchers can preempt the cylinder hold before this
                 // object's pass. CNZ balloon sub_317AE writes y_vel=-$700,
@@ -608,7 +623,15 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
                 beginPlayerTwoDiagnostic(slot, "release_external_air", player);
                 holdSlotPositionOnly(slot);
                 clearStaleCylinderSupport(player);
-                clearSlotOnly(slot);
+                // The balloon runs before this cylinder, but SolidObjectFull
+                // clears the cylinder standing status only after sub_324C0
+                // has published this final twist. Keep the rider until the
+                // next cylinder dispatch reaches loc_32604; release only the
+                // mapping latch now so the earlier Player_1 slot can run
+                // Animate_Sonic first (sonic3k.asm:66809-66816,
+                // 68024-68025,68076-68083).
+                player.setObjectMappingFrameControl(false);
+                slot.externalAirRetirePending = true;
                 endPlayerTwoDiagnostic(slot, player);
                 return;
             }
@@ -648,21 +671,14 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
             return;
         }
 
-        // ROM sub_13ECA can write the offscreen CPU marker with
-        // object_control=$81 before Obj_CNZCylinder's P2 sub_324C0 pass
-        // (sonic3k.asm:26800-26809, 67656-67672). The inactive-cylinder path
-        // only tests the preserved standing bit before writing
-        // object_control=$03 and clearing Status_InAir (sonic3k.asm:
-        // 67985-68005), so do not let the engine's object-control boolean
-        // block that same-frame recapture.
-        boolean recapturesCpuMarkerFromStandingBit = standing
-                && !playerOnScreen
-                && player.isCpuControlled()
-                && player.isObjectControlled();
-        if (!standing || (player.isObjectControlled() && !recapturesCpuMarkerFromStandingBit)) {
-            if (!standing) {
-                clearStaleCylinderSupport(player);
-            }
+        // Tails_FlySwim_Unknown can write object_control=$81 before
+        // Obj_CNZCylinder's P2 sub_324C0 pass (sonic3k.asm:26651-26653,
+        // 67656-67672). The inactive-cylinder path tests only the cylinder's
+        // preserved standing bit before replacing object_control with $03 and
+        // clearing Status_InAir (sonic3k.asm:67985-68005), whether the prior
+        // BuildSprites result is on-screen or off-screen.
+        if (!standing) {
+            clearStaleCylinderSupport(player);
             return;
         }
         // ROM sub_324C0 (a2)==0 path re-captures immediately - no ROM cooldown.
@@ -800,15 +816,11 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         player.setPushing(false);
         player.setRollingJump(false);
         player.setJumping(false);
-        // ROM Obj_CNZCylinder calls sub_324C0 before SolidObjectFull in the
-        // same routine (sonic3k.asm:67656-67672). For an on-screen rider,
-        // SolidObjectFull_1P then consumes the standing bit and calls
-        // MvSonicOnPtfm, which writes y_pos = cylinder.y - d3 - y_radius
-        // after capture restores default_y_radius (sonic3k.asm:41016-41040,
-        // 41667-41679, 68002-68004). Offscreen Player_2 is skipped before
-        // SolidObjectFull_1P (sonic3k.asm:41006-41010), so keep the CPU
-        // despawn-marker position unchanged for that recapture path.
-        if (riderRenderFlagOnScreen(player)) {
+        // sub_324C0 itself never writes y_pos. The later SolidObjectFull pass
+        // owns any MvSonicOnPtfm snap when the rider still overlaps; a stale
+        // standing bit can instead be consumed and cleared without moving the
+        // rider (sonic3k.asm:67656-67672,67985-68005,41016-41040).
+        if (latchedContact && riderRenderFlagOnScreen(player)) {
             player.setCentreYPreserveSubpixel((short) (heldSupportAnchorY() + SOLID_PARAMS.offsetY()
                     - SOLID_PARAMS.groundHalfHeight() - player.getYRadius()));
         }
@@ -819,6 +831,14 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         player.setGSpeed((short) 0);
         player.setPriorityBucket(PLAYER_CAPTURE_PRIORITY);
         applyTwistFrame(player, slot.twistAngle);
+        if (!latchedContact && riderRenderFlagOnScreen(player)) {
+            // A standing bit preserved across an off-screen SolidObjectFull
+            // skip can be consumed on the first on-screen pass even though the
+            // rider no longer overlaps. Native sub_324C0 captures first, then
+            // the later SolidObjectFull active-rider branch clears standing
+            // and restores Status_InAir without clearing object_control.
+            player.setAir(true);
+        }
     }
 
     private int firstCaptureDistanceAnchorX(AbstractPlayableSprite player, boolean latchedContact) {
@@ -954,6 +974,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
 
     private void clearSlotOnly(RiderSlot slot) {
         slot.active = false;
+        slot.externalAirRetirePending = false;
     }
 
     private void releaseInvalidSlot(RiderSlot slot, int frameCounter) {
@@ -1091,6 +1112,16 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         return SOLID_PARAMS;
+    }
+
+    @Override
+    public boolean usesInclusiveRightEdge() {
+        // Obj_CNZCylinder calls SolidObjectFull, whose new-contact path enters
+        // SolidObject_cont. Its horizontal gate rejects only with `bhi`, so
+        // relX == d1*2 remains a zero-distance side contact and grounded
+        // players retain Status_Push (sonic3k.asm:67656-67672,
+        // 41383-41400,41468-41501).
+        return true;
     }
 
     @Override

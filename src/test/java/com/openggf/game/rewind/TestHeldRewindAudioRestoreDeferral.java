@@ -1,13 +1,12 @@
 package com.openggf.game.rewind;
 
 import com.openggf.audio.AudioManager;
+import com.openggf.audio.AudioManagerTestDiagnostics;
 import com.openggf.audio.GameSound;
 import com.openggf.audio.NullAudioBackend;
-import com.openggf.audio.rewind.AudioBackendLogicalSnapshot;
+import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.audio.rewind.AudioLogicalSnapshot;
 import com.openggf.audio.rewind.AudioPresentationPolicy;
-import com.openggf.audio.runtime.DeterministicAudioRuntime;
-import com.openggf.audio.runtime.FrameAudioMode;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
@@ -22,7 +21,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 
 import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
 import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
@@ -63,25 +61,25 @@ class TestHeldRewindAudioRestoreDeferral {
         for (int i = 0; i < 8; i++) {
             controller.step();
         }
-        backend.logicalRestores = 0;
+        AudioManagerTestDiagnostics.resetLogicalRestorePublications(audio);
 
         audio.beginReverseAudioPresentation();
         for (int i = 0; i < 3; i++) {
             assertTrue(controller.stepBackward());
         }
-        assertEquals(0, backend.logicalRestores,
+        assertEquals(0, AudioManagerTestDiagnostics.logicalRestorePublications(audio),
                 "held backward steps must not rebuild logical audio state per frame");
 
         controller.commitDeferredAudioRestore();
         audio.afterRewindRestore(controller.currentFrame(),
                 AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC);
 
-        assertEquals(1, backend.logicalRestores,
+        assertEquals(1, AudioManagerTestDiagnostics.logicalRestorePublications(audio),
                 "release must land exactly one logical restore at the committed frame");
         assertEquals(5, controller.currentFrame());
 
         controller.commitDeferredAudioRestore();
-        assertEquals(1, backend.logicalRestores, "commit must be one-shot");
+        assertEquals(1, AudioManagerTestDiagnostics.logicalRestorePublications(audio), "commit must be one-shot");
     }
 
     @Test
@@ -90,12 +88,12 @@ class TestHeldRewindAudioRestoreDeferral {
         for (int i = 0; i < 8; i++) {
             controller.step();
         }
-        backend.logicalRestores = 0;
+        AudioManagerTestDiagnostics.resetLogicalRestorePublications(audio);
 
         assertTrue(controller.stepBackward());
         assertTrue(controller.stepBackward());
 
-        assertEquals(2, backend.logicalRestores,
+        assertEquals(2, AudioManagerTestDiagnostics.logicalRestorePublications(audio),
                 "non-held backward stepping (trace tooling) must keep eager restores");
     }
 
@@ -138,17 +136,38 @@ class TestHeldRewindAudioRestoreDeferral {
         for (int i = 0; i < 5; i++) {
             fresh.step();
         }
+        // Live forward play only *enqueues* presentation commands; the queue is
+        // drained when a frame is presented. The rewind paths above drain it
+        // explicitly while staging/restoring, so the fresh run must present one
+        // (non-rendering) frame before the comparison, or it would be measured
+        // with frames 1..5 still queued. Without this the registry's
+        // ring-alternation mirror reads its initial `true` here instead of the
+        // `false` the ring sfx at frame 5 produced.
+        audio.presentFrame(PresentationMode.SILENT);
         AudioLogicalSnapshot freshState = audio.captureLogicalSnapshot();
 
         assertEquals(freshState.ringLeft(), deferredState.ringLeft());
         assertEquals(freshState.commandTimelineFrame(), deferredState.commandTimelineFrame());
         assertEquals(freshState.commandTimelineNextOrder(), deferredState.commandTimelineNextOrder());
         assertEquals(freshState.commandEntryCount(), deferredState.commandEntryCount());
-        // NullAudioBackend reports an empty backend snapshot, so this only
-        // asserts the AudioManager-level component here; backend (SmpsDriver/
-        // synth) restore equivalence is proven bit-exactly by
-        // TestLWJGLAudioBackendSnapshot.restoreLogicalSnapshotReusesExistingDriverInstanceBitExactly.
-        assertEquals(freshState.backend(), deferredState.backend());
+        // The presentation snapshot is the whole restored audio state now, so
+        // compare the whole record rather than a hand-picked subset.
+        assertEquals(freshState.presentation(), deferredState.presentation(),
+                "released held rewind must land the exact fresh-replay "
+                        + "presentation state");
+        // Called out explicitly because it is the one component the manager
+        // also tracks independently: AudioPresentationCommandResolver.submitSfx
+        // enqueues ResetRingAlternation for every RING_RESOLVED sfx, so the
+        // registry's mirror must equal the manager's authoritative alternation
+        // rather than merely matching between two rewind paths.
+        assertEquals(freshState.ringLeft(),
+                freshState.presentation().ringLeft(),
+                "the registry ring mirror must track the manager's ring "
+                        + "alternation");
+        assertEquals(deferredState.ringLeft(),
+                deferredState.presentation().ringLeft(),
+                "a held-rewind release must publish a registry ring mirror "
+                        + "that matches the manager's ring alternation");
     }
 
     @Test
@@ -169,17 +188,17 @@ class TestHeldRewindAudioRestoreDeferral {
         // fresh-init marker (standing in for initAudio's reinit) sets the
         // distinguishable value true.
         audio.resetRingSound();
-        backend.logicalRestores = 0;
+        AudioManagerTestDiagnostics.resetLogicalRestorePublications(audio);
 
         controller.resetToFrameZero();
 
-        assertEquals(0, backend.logicalRestores,
+        assertEquals(0, AudioManagerTestDiagnostics.logicalRestorePublications(audio),
                 "level-boundary re-root must drop, not commit, the stale deferred restore");
         assertTrue(audio.captureLogicalSnapshot().ringLeft(),
                 "freshly initialized new-level audio state must survive the re-root");
 
         controller.commitDeferredAudioRestore();
-        assertEquals(0, backend.logicalRestores,
+        assertEquals(0, AudioManagerTestDiagnostics.logicalRestorePublications(audio),
                 "dropped deferral must not resurrect on a later commit");
     }
 
@@ -194,11 +213,11 @@ class TestHeldRewindAudioRestoreDeferral {
             assertTrue(controller.stepBackward());
         }
         audio.resetRingSound();
-        backend.logicalRestores = 0;
+        AudioManagerTestDiagnostics.resetLogicalRestorePublications(audio);
 
         controller.resetBufferAtCurrentFrame();
 
-        assertEquals(0, backend.logicalRestores,
+        assertEquals(0, AudioManagerTestDiagnostics.logicalRestorePublications(audio),
                 "seamless-transition re-root must drop, not commit, the stale deferred restore");
         assertTrue(audio.captureLogicalSnapshot().ringLeft(),
                 "post-transition audio state must survive the re-root");
@@ -210,7 +229,7 @@ class TestHeldRewindAudioRestoreDeferral {
         for (int i = 0; i < 8; i++) {
             controller.step();
         }
-        backend.logicalRestores = 0;
+        AudioManagerTestDiagnostics.resetLogicalRestorePublications(audio);
         audio.beginReverseAudioPresentation();
         for (int i = 0; i < 3; i++) {
             assertTrue(controller.stepBackward());
@@ -219,28 +238,33 @@ class TestHeldRewindAudioRestoreDeferral {
 
         assertTrue(controller.recordExternalStep());
 
-        assertEquals(1, backend.logicalRestores,
+        assertEquals(1, AudioManagerTestDiagnostics.logicalRestorePublications(audio),
                 "forward resume must commit the deferred restore before recording live frames");
         assertEquals(6, controller.currentFrame());
     }
 
     @Test
-    void seekToSupersedesDeferredRestoreWithItsOwnSingleRestore() {
+    void seekToSupersedesDeferredTargetWithoutPublishingBeforeRelease() {
         RewindController controller = newController(scriptedStepper(), 4);
         for (int i = 0; i < 8; i++) {
             controller.step();
         }
-        backend.logicalRestores = 0;
+        AudioManagerTestDiagnostics.resetLogicalRestorePublications(audio);
         audio.beginReverseAudioPresentation();
         assertTrue(controller.stepBackward());
-        assertEquals(0, backend.logicalRestores);
+        assertEquals(0, AudioManagerTestDiagnostics.logicalRestorePublications(audio));
 
         controller.seekTo(3);
 
-        assertEquals(1, backend.logicalRestores, "seek commit lands exactly one restore");
+        assertEquals(0, AudioManagerTestDiagnostics.logicalRestorePublications(audio),
+                "seek target preparation must remain detached while reverse "
+                        + "presentation is held");
         controller.commitDeferredAudioRestore();
-        assertEquals(1, backend.logicalRestores,
-                "seek must clear the deferred flag so no second restore can fire");
+        assertEquals(0, AudioManagerTestDiagnostics.logicalRestorePublications(audio),
+                "seek must clear the controller deferral without publishing");
+        audio.endReverseAudioPresentation();
+        assertEquals(1, AudioManagerTestDiagnostics.logicalRestorePublications(audio),
+                "reverse release publishes the prepared seek target once");
     }
 
     @Test
@@ -259,22 +283,22 @@ class TestHeldRewindAudioRestoreDeferral {
             InputHandler input = new InputHandler();
             int rewindKey = config.getInt(SonicConfiguration.LIVE_REWIND_KEY);
 
-            backend.logicalRestores = 0;
+            AudioManagerTestDiagnostics.resetLogicalRestorePublications(audio);
             input.handleKeyEvent(rewindKey, GLFW_PRESS);
             assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input));
             assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input));
-            assertEquals(0, backend.logicalRestores,
+            assertEquals(0, AudioManagerTestDiagnostics.logicalRestorePublications(audio),
                     "held live rewind must defer logical restores while reverse presentation runs");
 
             input.handleKeyEvent(rewindKey, GLFW_RELEASE);
             assertFalse(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input));
 
-            assertEquals(1, backend.logicalRestores,
+            assertEquals(1, AudioManagerTestDiagnostics.logicalRestorePublications(audio),
                     "live rewind release must land exactly one committed logical restore");
-            int restoreIndex = backend.calls.indexOf("restoreLogicalSnapshot");
-            int stopSfxIndex = backend.calls.indexOf("stopAllSfx");
-            assertTrue(restoreIndex >= 0 && stopSfxIndex > restoreIndex,
-                    "committed restore must precede presentation cleanup, calls=" + backend.calls);
+            assertEquals(java.util.List.of(), backend.calls,
+                    "the restore is producer-owned; the source backend sees nothing");
+            assertFalse(audio.isReverseAudioPresentationActive(),
+                    "producer cleanup must follow the committed restore");
         } finally {
             config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, false);
             SessionManager.clear();
@@ -293,19 +317,17 @@ class TestHeldRewindAudioRestoreDeferral {
             InputHandler input = new InputHandler();
             input.handleKeyEvent(config.getInt(SonicConfiguration.LIVE_REWIND_KEY), GLFW_PRESS);
             assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input));
-            assertEquals(0, backend.logicalRestores);
+            assertEquals(0, AudioManagerTestDiagnostics.logicalRestorePublications(audio));
             audio.resetRingSound();
-            backend.logicalRestores = 0;
+            AudioManagerTestDiagnostics.resetLogicalRestorePublications(audio);
             backend.calls.clear();
 
             manager.markBoundary(RewindBoundary.LEVEL_LOAD);
 
-            assertEquals(0, backend.logicalRestores,
-                    "level-load boundary must drop stale deferred restore before cleanup");
-            assertTrue(backend.calls.contains("stopAllSfx"),
-                    "boundary must still clean transient reverse SFX presentation");
-            assertTrue(backend.calls.contains("restoreMusic"),
-                    "boundary must still resync music after reverse presentation");
+            assertEquals(1, AudioManagerTestDiagnostics.logicalRestorePublications(audio),
+                    "level-load boundary must publish the fresh boundary state exactly once");
+            assertEquals(java.util.List.of(), backend.calls,
+                    "the restore is producer-owned; the source backend sees nothing");
             assertFalse(audio.isReverseAudioPresentationActive(),
                     "boundary cleanup must end reverse audio presentation");
             assertTrue(audio.captureLogicalSnapshot().ringLeft(),
@@ -330,12 +352,13 @@ class TestHeldRewindAudioRestoreDeferral {
         try {
             TestEnvironment.activeGameplayMode();
             LiveRewindManager manager = liveManagerWithControllerAtFrame(config, 8);
-            CountingClearRuntime runtime = new CountingClearRuntime();
-            installDeterministicAudioRuntime(audio, runtime);
+            long epochBefore = AudioManagerTestDiagnostics
+                    .producerFingerprint(audio).history().epoch();
 
             manager.markBoundary(RewindBoundary.LEVEL_LOAD);
 
-            assertEquals(1, runtime.clearPcmHistoryCalls,
+            assertTrue(AudioManagerTestDiagnostics.producerFingerprint(audio)
+                            .history().epoch() > epochBefore,
                     "level-load boundary must clear the raw PCM rewind-history ring so held "
                             + "rewind audio cannot play samples recorded before this level started");
         } finally {
@@ -359,20 +382,24 @@ class TestHeldRewindAudioRestoreDeferral {
             InputHandler input = new InputHandler();
 
             manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input);
-            assertEquals(Boolean.TRUE, backend.lastRewindHistoryArmed,
+            assertTrue(AudioManagerTestDiagnostics.producerFingerprint(audio)
+                            .historyArmed(),
                     "a usable held-rewind session must arm PCM history recording");
 
             manager.handleRealtimeRewindInput(GameMode.TITLE_SCREEN, false, input);
-            assertEquals(Boolean.FALSE, backend.lastRewindHistoryArmed,
+            assertFalse(AudioManagerTestDiagnostics.producerFingerprint(audio)
+                            .historyArmed(),
                     "leaving GameMode.LEVEL must disarm PCM history recording");
 
             manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input);
-            assertEquals(Boolean.TRUE, backend.lastRewindHistoryArmed,
+            assertTrue(AudioManagerTestDiagnostics.producerFingerprint(audio)
+                            .historyArmed(),
                     "re-entering GameMode.LEVEL must re-arm PCM history recording");
 
             config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, false);
             manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input);
-            assertEquals(Boolean.FALSE, backend.lastRewindHistoryArmed,
+            assertFalse(AudioManagerTestDiagnostics.producerFingerprint(audio)
+                            .historyArmed(),
                     "disabling live rewind must disarm PCM history recording even in GameMode.LEVEL");
         } finally {
             config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, false);
@@ -392,19 +419,17 @@ class TestHeldRewindAudioRestoreDeferral {
             InputHandler input = new InputHandler();
             input.handleKeyEvent(config.getInt(SonicConfiguration.LIVE_REWIND_KEY), GLFW_PRESS);
             assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input));
-            assertEquals(0, backend.logicalRestores);
+            assertEquals(0, AudioManagerTestDiagnostics.logicalRestorePublications(audio));
             audio.resetRingSound();
-            backend.logicalRestores = 0;
+            AudioManagerTestDiagnostics.resetLogicalRestorePublications(audio);
             backend.calls.clear();
 
             manager.markBoundary(RewindBoundary.SEAMLESS_LEVEL_TRANSITION);
 
-            assertEquals(0, backend.logicalRestores,
-                    "seamless boundary must drop stale deferred restore before cleanup");
-            assertTrue(backend.calls.contains("stopAllSfx"),
-                    "boundary must still clean transient reverse SFX presentation");
-            assertTrue(backend.calls.contains("restoreMusic"),
-                    "boundary must still resync music after reverse presentation");
+            assertEquals(1, AudioManagerTestDiagnostics.logicalRestorePublications(audio),
+                    "seamless boundary must publish the fresh boundary state exactly once");
+            assertEquals(java.util.List.of(), backend.calls,
+                    "the restore is producer-owned; the source backend sees nothing");
             assertFalse(audio.isReverseAudioPresentationActive(),
                     "boundary cleanup must end reverse audio presentation");
             assertTrue(audio.captureLogicalSnapshot().ringLeft(),
@@ -437,6 +462,7 @@ class TestHeldRewindAudioRestoreDeferral {
                 case 3 -> audio.resetRingSound();
                 default -> { }
             }
+            return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
         };
     }
 
@@ -475,37 +501,8 @@ class TestHeldRewindAudioRestoreDeferral {
         field.set(target, value);
     }
 
-    private static void installDeterministicAudioRuntime(AudioManager audio, DeterministicAudioRuntime runtime)
-            throws Exception {
-        Method method = AudioManager.class.getDeclaredMethod(
-                "setDeterministicAudioRuntime", DeterministicAudioRuntime.class);
-        method.setAccessible(true);
-        method.invoke(audio, runtime);
-    }
-
-    private static final class CountingClearRuntime implements DeterministicAudioRuntime {
-        int clearPcmHistoryCalls;
-
-        @Override
-        public void advanceFrame(long frame, FrameAudioMode mode) {
-        }
-
-        @Override
-        public void clearPcmHistory() {
-            clearPcmHistoryCalls++;
-        }
-    }
-
     private static final class CountingRestoreBackend extends NullAudioBackend {
         final java.util.List<String> calls = new java.util.ArrayList<>();
-        int logicalRestores;
-        Boolean lastRewindHistoryArmed;
-
-        @Override
-        public void restoreLogicalSnapshot(AudioBackendLogicalSnapshot snapshot) {
-            logicalRestores++;
-            calls.add("restoreLogicalSnapshot");
-        }
 
         @Override
         public void stopAllSfx() {
@@ -517,10 +514,6 @@ class TestHeldRewindAudioRestoreDeferral {
             calls.add("restoreMusic");
         }
 
-        @Override
-        public void setRewindHistoryArmed(boolean armed) {
-            lastRewindHistoryArmed = armed;
-        }
     }
 
     private static final class FakeInputSource implements InputSource {

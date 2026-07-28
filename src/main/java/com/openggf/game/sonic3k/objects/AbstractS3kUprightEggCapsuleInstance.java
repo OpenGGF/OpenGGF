@@ -143,9 +143,9 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
     @Override
     public SolidObjectParams getPieceParams(int pieceIndex) {
         if (pieceIndex == PIECE_BUTTON) {
-            return new SolidObjectParams(BUTTON_HALF_WIDTH, BUTTON_AIR_HALF_HEIGHT, BUTTON_GROUND_HALF_HEIGHT);
+            return SolidObjectParams.of(BUTTON_HALF_WIDTH, BUTTON_AIR_HALF_HEIGHT, BUTTON_GROUND_HALF_HEIGHT);
         }
-        return new SolidObjectParams(BODY_HALF_WIDTH, BODY_HALF_HEIGHT, BODY_HALF_HEIGHT);
+        return SolidObjectParams.of(BODY_HALF_WIDTH, BODY_HALF_HEIGHT, BODY_HALF_HEIGHT);
     }
 
     @Override
@@ -282,6 +282,10 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
     }
 
     private void lockForResults(AbstractPlayableSprite sprite) {
+        // Set_PlayerEndingPose preserves status and Obj_EggCapsule still tail-calls
+        // SolidObjectFull after its routine dispatch. Keep this capsule as the
+        // sole valid support while object_control=$81 suppresses normal solids.
+        sprite.setObjectControlledSolidContactObject(this);
         ObjectControlState.nativeBit7FullControl().applyTo(sprite);
         sprite.setControlLocked(true);
         sprite.setXSpeed((short) 0);

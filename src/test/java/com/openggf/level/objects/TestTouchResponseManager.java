@@ -832,7 +832,7 @@ public class TestTouchResponseManager {
     // ==================== Overlap Persistence Tests ====================
 
     @Test
-    public void testTouchOnlyTriggersOncePerOverlap() {
+    public void specialTouchRemainsEdgeTriggeredWhileOverlapPersists() {
         MockTouchObject obj = new MockTouchObject(160, 112, 0x48); // SPECIAL category
         setupTableSize(8, 16, 16);
         objectManager.addDynamicObject(obj);
@@ -930,6 +930,24 @@ public class TestTouchResponseManager {
     }
 
     @Test
+    public void singleRegionEnemyTouchTriggersEveryOverlappingFrame() {
+        MockTouchObject enemy = new MockTouchObject(160, 112, 0x08);
+        setupTableSize(8, 16, 16);
+        objectManager.addDynamicObject(enemy);
+
+        objectManager.update(0, player, List.of(), 1);
+        assertTrue(enemy.wasTouched, "First ENEMY overlap frame should dispatch touch");
+
+        enemy.wasTouched = false;
+        objectManager.update(0, player, List.of(), 2);
+
+        // Touch_Loop polls ENEMY every frame; only SPECIAL/monitor contacts use
+        // the persistent-overlap edge latch (docs/skdisasm/sonic3k.asm:20655-20778).
+        assertTrue(enemy.wasTouched,
+                "ENEMY touch must poll continuously for single-region objects while overlap persists");
+    }
+
+    @Test
     public void testRunTouchResponsesForPlayerUsesLiveCurrentObjectPosition() {
         // Current position barely overlaps; pre-update position does not.
         MockTrackedTouchObject obj = new MockTrackedTouchObject(174, 112, 176, 112, 0x48);
@@ -985,7 +1003,7 @@ public class TestTouchResponseManager {
     }
 
     @Test
-    public void testS3kInlineTouchUsesPreviousCollisionResponseListLivePointerPosition() {
+    public void testS3kInlineTouchUsesPreviousCollisionResponseListFrameStartPosition() {
         when(player.getCentreX()).thenReturn((short) 160);
         when(player.getCentreY()).thenReturn((short) 112);
         when(player.getYRadius()).thenReturn((short) 15);
@@ -1002,8 +1020,13 @@ public class TestTouchResponseManager {
         objectManager.snapshotTouchResponseState(true);
         objectManager.runTouchResponsesForPlayer(player, 542, true);
 
-        assertTrue(enemy.wasAttacked,
-                "S3K TouchResponse consumes prior-list membership but reads x_pos/y_pos through the live SST pointer");
+        // Prior-list membership is read at frame-start x_pos/y_pos: the pointers
+        // still hold the previous pass's position at this phase. Only Obj37's
+        // engine projection (the lost ring) publishes a live position, which the
+        // trace-verified ICZ fix established. A mid-frame move is therefore not
+        // visible to this pass.
+        assertFalse(enemy.wasAttacked,
+                "prior-list membership reads frame-start position, not the live SST pointer");
     }
 
     @Test
@@ -1032,7 +1055,7 @@ public class TestTouchResponseManager {
     }
 
     @Test
-    public void testS3kPreviousCollisionResponseListReadsLivePointerPositionAtInstaShieldEdge() {
+    public void testS3kPreviousCollisionResponseListReadsFrameStartPositionAtInstaShieldEdge() {
         when(player.getCentreX()).thenReturn((short) 160);
         when(player.getCentreY()).thenReturn((short) 112);
         when(player.getYRadius()).thenReturn((short) 15);
@@ -1051,9 +1074,11 @@ public class TestTouchResponseManager {
         objectManager.snapshotTouchResponseState(true);
         objectManager.runTouchResponsesForPlayer(player, 542, true);
 
-        assertTrue(enemy.wasAttacked,
-                "S3K previous Collision_response_list entries are live SST pointers: membership is prior-frame, "
-                        + "but x_pos/y_pos are read at the player slot before the next object pass");
+        // Same rule as above: membership is prior-frame and so is the position the
+        // pointer still holds at this phase, so the enemy's mid-frame move is not
+        // yet visible to the insta-shield edge.
+        assertFalse(enemy.wasAttacked,
+                "prior-list entries are read at frame-start x_pos/y_pos");
     }
 
     @Test

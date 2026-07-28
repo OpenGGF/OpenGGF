@@ -43,7 +43,7 @@ public final class CnzTrapDoorInstance extends AbstractObjectInstance
 
     // ROM: move.w #$20,d1 / move.w #9,d3 / jsr SolidObjectTop
     private static final SolidObjectParams SOLID_PARAMS =
-            new SolidObjectParams(0x20, 9, 9);
+            SolidObjectParams.of(0x20, 9, 9);
 
     private static final int FRAME_CLOSED = 0;
     private static final int FRAME_OPENING = 1;

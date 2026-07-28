@@ -567,16 +567,16 @@ public class SpringObjectInstance extends BoxObjectInstance
         int type = getType();
         if (type == TYPE_HORIZONTAL) {
             // ROM: d2=$E (14), d3=$F (15) — air half-height and ground half-height
-            return new SolidObjectParams(19, 14, 15);
+            return SolidObjectParams.of(19, 14, 15);
         }
         if (type == TYPE_DIAGONAL_UP || type == TYPE_DIAGONAL_DOWN) {
             // ROM: Diagonal springs use d2=$10 (halfHeight=16), taller collision box
             // This is critical for catching the player when running off terrain edges
-            return new SolidObjectParams(27, 16, 16);
+            return SolidObjectParams.of(27, 16, 16);
         }
         // Up, Down springs use standard vertical params
         // ROM: d2=8, d3=$10 (16) — air half-height=8, ground half-height=16
-        return new SolidObjectParams(27, 8, 16);
+        return SolidObjectParams.of(27, 8, 16);
     }
 
     @Override

@@ -76,4 +76,21 @@ class TestSonic3kLightningShieldObjectInstance {
                 positionsAfterFirstMove,
                 "Obj_LightningShield_CreateSpark seeds +/-$200 velocities before MoveSprite2");
     }
+
+    @Test
+    void abilityDefersSparkAllocationUntilShieldObjectTurn() {
+        ObjectManager objectManager = mock(ObjectManager.class);
+        AbstractPlayableSprite sonic = new Tails("sonic", (short) 0x693, (short) 0x67F);
+        LightningShieldObjectInstance shield = new LightningShieldObjectInstance(sonic);
+        shield.setServices(new StubObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return objectManager;
+            }
+        });
+
+        shield.onAbilityActivated(1);
+        verify(objectManager, times(0)).addDynamicObjectAfterCurrent(org.mockito.ArgumentMatchers.any());
+        verify(objectManager, times(4)).queueDynamicObjectAfterExec(org.mockito.ArgumentMatchers.any());
+    }
 }

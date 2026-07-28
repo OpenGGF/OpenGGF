@@ -28,6 +28,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestEngineContext {
     @AfterEach
     void tearDown() {
+        // See TestEngine.tearDown: a leaked Engine static poisons the fork.
+        com.openggf.Engine.clearGlobalInstance();
         SessionManager.clear();
         SessionManager.clear();
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());

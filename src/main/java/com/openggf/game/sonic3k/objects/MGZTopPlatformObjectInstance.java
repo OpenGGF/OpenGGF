@@ -263,7 +263,7 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         // ROM loc_34F04: d1 = width+$B; d2 = height; d3 = height+1.
-        return new SolidObjectParams(WIDTH_PIXELS + 0x0B, HEIGHT_PIXELS, HEIGHT_PIXELS + 1);
+        return SolidObjectParams.of(WIDTH_PIXELS + 0x0B, HEIGHT_PIXELS, HEIGHT_PIXELS + 1);
     }
 
     @Override

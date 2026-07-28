@@ -382,8 +382,8 @@ class TestSampleRomArtRemixIntegration {
         }
 
         @Override
-        public void step(Bk2FrameInput input) {
-            runner.stepFrame(false, false, false, false, false);
+        public com.openggf.LevelFrameResult step(Bk2FrameInput input) {
+            return runner.stepFrame(false, false, false, false, false);
         }
 
         @Override

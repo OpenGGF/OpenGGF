@@ -184,6 +184,7 @@ class TestTraceSessionLauncherSsConfig {
                 null,
                 null,
                 freshLoad,
+                null,
                 null);
     }
 }

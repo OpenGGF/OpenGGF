@@ -57,12 +57,30 @@ class TestS3kIczCrushingColumnObject {
         assertEquals(Sonic3kObjectArtKeys.ICZ_WALL_AND_COLUMN, column.getArtKeyForTesting());
         assertEquals(5, column.getPriorityBucket());
         assertTrue(column.hasBottomDecorationForTesting());
+        assertTrue(column.usesInstanceSolidStateLatchKey());
+        assertTrue(column.usesInclusiveRightEdge());
     }
 
     @Test
-    void subtypeOneStartsCrushingUpwardWhenStoodOnThenReturnsToSpawnY() {
+    void nativeInitDispatchDoesNotRunSubtypeMovement() {
+        IczCrushingColumnObjectInstance column =
+                new IczCrushingColumnObjectInstance(spawn(6));
+
+        column.update(0, null);
+
+        assertEquals(0x0700, column.getY());
+        assertEquals(0x0C, column.getRoutineByteForTesting());
+
+        column.update(1, null);
+
+        assertEquals(0x06FF, column.getY());
+    }
+
+    @Test
+    void subtypeOneStartsCrushingUpwardWhenStoodOnThenReturnsToNativeEndpoint() {
         TestableColumn column = new TestableColumn(spawn(1));
         PlayableEntity player = mock(PlayableEntity.class);
+        column.update(-1, player);
 
         column.onSolidContact(player, standingContact(), 0);
         column.update(0, player);
@@ -76,6 +94,8 @@ class TestS3kIczCrushingColumnObject {
 
         assertEquals(0x12, column.getRoutineByteForTesting());
         assertEquals(0x0700 - 3 - 1, column.getY());
+        assertEquals(0xA000, column.getYSubpixelForTesting(),
+                "loc_8A540 corrects the integer y_pos word without clearing its subpixel word");
 
         for (int frame = 3; frame <= 35; frame++) {
             column.update(frame, player);
@@ -86,7 +106,8 @@ class TestS3kIczCrushingColumnObject {
             column.update(frame, player);
         }
 
-        assertEquals(0x0700, column.getY());
+        assertEquals(0x06FF, column.getY(),
+                "loc_8A5C8 resets before writing the terminal spawn-Y step");
         assertEquals(0x02, column.getRoutineByteForTesting());
         assertEquals(0x5F, column.getTimerForTesting());
     }
@@ -115,6 +136,7 @@ class TestS3kIczCrushingColumnObject {
 
             manager.updateSolidContacts(player);
             column.update(0, player);
+            column.update(1, player);
 
             assertFalse(player.getAir(),
                     "Subtype 1 should receive a real SolidObjectFull standing contact when the column top is on screen");
@@ -131,6 +153,7 @@ class TestS3kIczCrushingColumnObject {
     void subtypeOneRetainsVelocityForSecondCrushCycleTiming() {
         TestableColumn column = new TestableColumn(spawn(1));
         PlayableEntity player = mock(PlayableEntity.class);
+        column.update(-1, player);
 
         column.onSolidContact(player, standingContact(), 0);
         column.update(0, player);
@@ -146,7 +169,7 @@ class TestS3kIczCrushingColumnObject {
             column.update(frame, player);
         }
 
-        assertEquals(0x0700, column.getY());
+        assertEquals(0x06FF, column.getY());
         assertEquals(-0x40, column.getYVelocityForTesting());
 
         column.ceilingDistance = 1;
@@ -156,13 +179,13 @@ class TestS3kIczCrushingColumnObject {
 
         column.update(301, player);
         assertEquals(0x0C, column.getRoutineByteForTesting());
+        assertEquals(-0x60, column.getYVelocityForTesting(),
+                "the preserved impact fraction keeps the first second-cycle tick within y_pos $06FF");
 
         column.update(302, player);
-        assertEquals(0x0C, column.getRoutineByteForTesting());
-
-        column.update(303, player);
         assertEquals(0x12, column.getRoutineByteForTesting());
-        assertEquals(-0xA0, column.getYVelocityForTesting());
+        assertEquals(-0x80, column.getYVelocityForTesting(),
+                "the second tick carries the preserved fraction across the $06FE ceiling threshold");
     }
 
     @Test
@@ -184,6 +207,7 @@ class TestS3kIczCrushingColumnObject {
     void subtypeThreeUsesPlayerSideBeforeFastFloorCrushAndWaitsToReturn() {
         TestableColumn column = new TestableColumn(spawn(3));
         PlayableEntity player = mock(PlayableEntity.class);
+        column.update(-1, player);
         when(player.getCentreX()).thenReturn((short) 0x1750);
 
         column.update(0, player);
@@ -214,6 +238,14 @@ class TestS3kIczCrushingColumnObject {
         when(player.getCentreX()).thenReturn((short) 0x1800);
         column.update(38, player);
         assertEquals(0x14, column.getRoutineByteForTesting());
+
+        for (int frame = 39; frame <= 49; frame++) {
+            column.update(frame, player);
+        }
+        assertEquals(0x0701, column.getY(),
+                "loc_8A5AC resets before writing the terminal spawn-Y step");
+        assertEquals(0x06, column.getRoutineByteForTesting());
+        assertEquals(0x5F, column.getTimerForTesting());
     }
 
     @Test
@@ -250,7 +282,10 @@ class TestS3kIczCrushingColumnObject {
     }
 
     private static IczCrushingColumnObjectInstance create(int subtype) {
-        return new IczCrushingColumnObjectInstance(spawn(subtype));
+        IczCrushingColumnObjectInstance column =
+                new IczCrushingColumnObjectInstance(spawn(subtype));
+        column.update(-1, null);
+        return column;
     }
 
     private static ObjectSpawn spawn(int subtype) {

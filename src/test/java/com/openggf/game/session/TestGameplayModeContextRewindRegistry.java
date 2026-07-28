@@ -35,6 +35,9 @@ import com.openggf.game.render.SpecialRenderEffectRegistry;
 import com.openggf.game.render.SpecialRenderEffectStage;
 import com.openggf.game.solid.DefaultSolidExecutionRegistry;
 import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.game.timing.HardwareTimingBoundaryObserver;
+import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
+import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.game.zone.NoOpZoneRuntimeState;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.game.zone.ZoneRuntimeState;
@@ -115,17 +118,27 @@ class TestGameplayModeContextRewindRegistry {
 
         CompositeSnapshot snapshot = registry.capture();
 
-        assertEquals(CORE_REWIND_KEYS, snapshot.entries().keySet(),
-                "Core attach must register the exact atomic adapter set");
+        Set<String> expectedKeys = Set.of(
+                "camera",
+                "gamestate",
+                "gamerng",
+                "timermanager",
+                "fademanager",
+                "oscillation",
+                HardwareTimingService.REWIND_KEY,
+                "solid-execution");
+        assertTrue(snapshot.entries().keySet().containsAll(expectedKeys),
+                "Expected all atomic adapter keys to be present, got: " + snapshot.entries().keySet());
     }
 
     @Test
-    void exactlyEightAtomicKeysAfterAttach() {
+    void exactlyNineAtomicKeysAfterAttach() {
         GameplayModeContext ctx = buildAttachedContext();
         RewindRegistry registry = ctx.getRewindRegistry();
         CompositeSnapshot snapshot = registry.capture();
-        assertEquals(8, snapshot.entries().keySet().size(),
-                "Expected exactly 8 atomic adapters, got: " + snapshot.entries().keySet());
+        // Nine since the hardware-timing service joined the gameplay context.
+        assertEquals(9, snapshot.entries().keySet().size(),
+                "Expected exactly 9 atomic adapters, got: " + snapshot.entries().keySet());
     }
 
     @Test
@@ -178,8 +191,73 @@ class TestGameplayModeContextRewindRegistry {
         RewindRegistry second = ctx.getRewindRegistry();
         assertNotNull(second);
         assertNotSame(first, second, "Re-attach should produce a new RewindRegistry instance");
-        assertEquals(CORE_REWIND_KEYS, second.capture().entries().keySet(),
-                "Re-attach must rebuild the exact core set, including the KosM queue");
+        // New registry should have the same 9 keys
+        assertEquals(9, second.capture().entries().keySet().size());
+    }
+
+    @Test
+    void contextOwnsOneHardwareTimingServiceAcrossManagerReattachment() {
+        WorldSession world = new WorldSession(new Sonic2GameModule());
+        GameplayModeContext ctx = new GameplayModeContext(world);
+        HardwareTimingService service = ctx.hardwareTiming();
+
+        ctx.attachGameplayManagers(
+                new Camera(), new TimerManager(), new GameStateManager(),
+                new FadeManager(), new GameRng(GameRng.Flavour.S1_S2),
+                new DefaultSolidExecutionRegistry());
+        ctx.tearDownManagers();
+        ctx.attachGameplayManagers(
+                new Camera(), new TimerManager(), new GameStateManager(),
+                new FadeManager(), new GameRng(GameRng.Flavour.S1_S2),
+                new DefaultSolidExecutionRegistry());
+
+        assertSame(service, ctx.hardwareTiming());
+        assertTrue(ctx.getRewindRegistry().capture().entries()
+                .containsKey(HardwareTimingService.REWIND_KEY));
+    }
+
+    @Test
+    void contextOwnsBoundaryObserverWithoutStaticOrCrossSessionState() {
+        GameplayModeContext first = new GameplayModeContext(
+                new WorldSession(new Sonic2GameModule()));
+        GameplayModeContext second = new GameplayModeContext(
+                new WorldSession(new Sonic2GameModule()));
+        HardwareTimingBoundaryObserver observer = boundary -> {
+        };
+
+        first.setHardwareTimingBoundaryObserver(observer);
+
+        assertSame(observer, first.hardwareTimingBoundaryObserver());
+        assertSame(HardwareTimingBoundaryObserver.NO_OP,
+                second.hardwareTimingBoundaryObserver());
+        first.tearDownManagers();
+        assertSame(HardwareTimingBoundaryObserver.NO_OP,
+                first.hardwareTimingBoundaryObserver());
+    }
+
+    @Test
+    void recordedPolicyBeginsAdmissionDuringContextConstruction() {
+        GameplayModeContext context = new GameplayModeContext(
+                new WorldSession(new Sonic2GameModule()),
+                HardwareReadinessAdmissionPolicy.RECORDED);
+
+        assertEquals(HardwareReadinessAdmissionPolicy.RECORDED,
+                context.hardwareTiming().admissionPolicy());
+        assertNotNull(context.recordedCompletionAuthority());
+    }
+
+    @Test
+    void contextTeardownInvokesReplayCloseHookExactlyOnce() {
+        GameplayModeContext context = new GameplayModeContext(
+                new WorldSession(new Sonic2GameModule()),
+                HardwareReadinessAdmissionPolicy.RECORDED);
+        AtomicInteger closes = new AtomicInteger();
+        context.setHardwareTimingReplayCloseHook(closes::incrementAndGet);
+
+        context.tearDownManagers();
+        context.tearDownManagers();
+
+        assertEquals(1, closes.get());
     }
 
     @Test

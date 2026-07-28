@@ -5,9 +5,12 @@ import com.openggf.game.BonusStageProvider;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
+import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.level.LevelManager;
 import com.openggf.level.LevelPaletteBridgeAccess;
 import com.openggf.sprites.managers.SpriteManager;
+
+import java.util.Objects;
 
 /**
  * Canonical level-mode frame update sequence.
@@ -50,6 +53,19 @@ public final class LevelFrameStep {
         // Utility class
     }
 
+    public static FrameAdmission admit(
+            LevelFrameContext context, LevelManager levelManager,
+            boolean startEdgePressed) {
+        GameStateManager gameState = context.gameStateManager();
+        if (gameState != null && gameState.applyPauseToggle(startEdgePressed)) {
+            return new FrameAdmission(LevelFrameResult.PAUSED);
+        }
+        if (levelManager.consumePendingInitialProcessSpritesPass()) {
+            return new FrameAdmission(LevelFrameResult.SETUP_ONLY);
+        }
+        return new FrameAdmission(LevelFrameResult.GAMEPLAY_FRAME);
+    }
+
     /**
      * Executes one frame of level-mode updates in the canonical production order,
      * without any step wrapping.
@@ -59,9 +75,10 @@ public final class LevelFrameStep {
      * @param spriteUpdate callback that runs the sprite/player physics update
      *                     (e.g. {@code SpriteManager.update()} or headless equivalent)
      */
-    public static void execute(LevelFrameContext context, LevelManager levelManager, Camera camera,
-                               Runnable spriteUpdate) {
-        execute(context, levelManager, camera, spriteUpdate, DIRECT);
+    public static LevelFrameResult execute(
+            LevelFrameContext context, LevelManager levelManager, Camera camera,
+            Runnable spriteUpdate) {
+        return execute(context, levelManager, camera, spriteUpdate, DIRECT);
     }
 
     /**
@@ -76,25 +93,49 @@ public final class LevelFrameStep {
      * row), so a paused window stays frame-aligned.
      *
      * @param startEdgePressed true only on the leading edge of a Start press
-     * @return true if the level update ran, false if it was skipped due to pause
+     * @return {@link LevelFrameResult#PAUSED} when pause owns the row,
+     *         {@link LevelFrameResult#SETUP_ONLY} for the one-shot setup pass,
+     *         otherwise {@link LevelFrameResult#GAMEPLAY_FRAME}
      */
-    public static boolean executeWithPause(LevelFrameContext context, LevelManager levelManager,
-                                           Camera camera, Runnable spriteUpdate,
-                                           boolean startEdgePressed, StepWrapper wrapper) {
+    public static LevelFrameResult executeWithPause(
+            LevelFrameContext context, LevelManager levelManager,
+            Camera camera, Runnable spriteUpdate,
+            boolean startEdgePressed, StepWrapper wrapper) {
         GameStateManager gameState = context.gameStateManager();
         if (gameState != null && gameState.applyPauseToggle(startEdgePressed)) {
-            // Paused: ROM Pause_Loop runs only the V-int. Skip the level update
-            // entirely (objects, physics, camera, scroll). The caller's frame
-            // counter / input cursor still advanced before this call, so the
-            // paused window stays frame-aligned with the recorded ROM run.
-            return false;
+            serviceVBlankOnly(context);
+            return LevelFrameResult.PAUSED;
         }
-        execute(context, levelManager, camera, spriteUpdate, wrapper);
-        return true;
+        return execute(context, levelManager, camera, spriteUpdate, wrapper);
     }
 
     public static void updateTimers(LevelFrameContext context) {
         context.timerManager().update();
+    }
+
+    /**
+     * Services the sole production boundary traversed by a VBlank-only row.
+     */
+    public static void serviceVBlankOnly(LevelFrameContext context) {
+        serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
+    }
+
+    /**
+     * Services one admitted ROM loop whose object/sprite scan is owned outside
+     * the normal level-frame executor.
+     *
+     * <p>S3K's special-stage and locked title-card loops both run direct queue
+     * work around VBlank, scan their own sprites, then run module-queue service.
+     * Keeping that sequence here prevents alternate loops from inventing their
+     * own boundary dispatch.
+     */
+    public static void executeHardwareTimedObjectScan(
+            LevelFrameContext context, Runnable objectScan) {
+        Objects.requireNonNull(objectScan, "objectScan");
+        serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
+        serviceBoundary(context, HardwareServiceBoundary.PRE_MAIN_LOOP);
+        objectScan.run();
+        serviceBoundary(context, HardwareServiceBoundary.POST_OBJECTS);
     }
 
     /**
@@ -108,11 +149,23 @@ public final class LevelFrameStep {
      * @param spriteUpdate callback that runs the sprite/player physics update
      * @param wrapper      wraps individual steps (e.g. for profiling)
      */
-    public static void execute(LevelFrameContext context, LevelManager levelManager, Camera camera,
-                               Runnable spriteUpdate, StepWrapper wrapper) {
+    public static LevelFrameResult execute(
+            LevelFrameContext context, LevelManager levelManager, Camera camera,
+            Runnable spriteUpdate, StepWrapper wrapper) {
         if (context == null) {
             throw new NullPointerException("context");
         }
+
+        // S3K fresh-level assembly runs Load_Sprites then Process_Sprites once
+        // before entering LevelLoop (docs/skdisasm/sonic3k.asm:7849-7855,
+        // 7889-7906). executeWithPause reaches this body only after its pause
+        // gate, so a paused first frame retains the one-shot authority.
+        if (levelManager.consumePendingInitialProcessSpritesPass()) {
+            return LevelFrameResult.SETUP_ONLY;
+        }
+
+        serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
+        serviceBoundary(context, HardwareServiceBoundary.PRE_MAIN_LOOP);
 
         // 0a. Drain the per-frame palette-write accumulator at frame top, before
         //     any submitter (object palette writes in steps 2-3, zone palette
@@ -251,10 +304,18 @@ public final class LevelFrameStep {
         // frame's value while Sonic's position still updated one last time).
         boolean bonusStageExitRequestedThisFrame = bonusStageProvider != null
                 && bonusStageProvider.isStageComplete();
+        // A StartNewLevel-style object request sets the engine's inactive flag
+        // from inside Process_Sprites. ROM observes Restart_level_flag
+        // immediately after that object pass and branches back to Level before
+        // DeformBgLayer, leaving the camera at its prior position even though
+        // the final player/object updates remain visible on the boundary row.
+        boolean levelExitRequestedDuringObjects = levelManager.isLevelInactiveForTransition();
 
         // 4a. Camera scroll (ROM ScrollHoriz + ScrollVertical): move + clamp to the
         //     prior-frame bottom boundary, BEFORE the zone event handler runs.
-        if (!suppressDefaultCamera && !cameraDrivenScroll && !bonusStageExitRequestedThisFrame) {
+        if (!suppressDefaultCamera && !cameraDrivenScroll
+                && !bonusStageExitRequestedThisFrame
+                && !levelExitRequestedDuringObjects) {
             wrapper.wrap("camera-scroll", camera::updatePosition);
         }
 
@@ -272,6 +333,12 @@ public final class LevelFrameStep {
             levelEvents.update();
         }
 
+        // ROM LevelLoop runs ScreenEvents before Process_Kos_Module_Queue
+        // (docs/skdisasm/sonic3k.asm:7898-7908). A completion retired here is
+        // therefore first observable by object/event consumers on their next
+        // dispatch, never by this frame's ScreenEvents pass.
+        serviceBoundary(context, HardwareServiceBoundary.POST_OBJECTS);
+
         // 4c. Flush gameplay layout mutations queued by zone events before
         //     boundary easing and post-camera systems observe the changed level.
         levelManager.flushQueuedLayoutMutations();
@@ -279,7 +346,9 @@ public final class LevelFrameStep {
         // 4d. Boundary easing (ROM DynamicLevelEvents boundary tail): ease the
         //     bottom boundary toward target reading the post-scroll camera, and
         //     record the boundary state for the NEXT frame's scroll clamp.
-        if (!suppressDefaultCamera && !cameraDrivenScroll && !bonusStageExitRequestedThisFrame) {
+        if (!suppressDefaultCamera && !cameraDrivenScroll
+                && !bonusStageExitRequestedThisFrame
+                && !levelExitRequestedDuringObjects) {
             wrapper.wrap("camera-boundary", camera::updateBoundaryEasing);
         }
 
@@ -292,7 +361,7 @@ public final class LevelFrameStep {
             if (spriteManager != null) {
                 spriteManager.refreshPlayableRenderFlags(camera);
             }
-            return;
+            return LevelFrameResult.GAMEPLAY_FRAME;
         }
 
         if (integratedBonusStageUpdate) {
@@ -323,5 +392,16 @@ public final class LevelFrameStep {
             spriteManager.refreshPlayableRenderFlags(camera);
         }
         levelManager.clearSidekickRomVisibleReloadFrameCounterBridge();
+        return LevelFrameResult.GAMEPLAY_FRAME;
     }
+
+    private static void serviceBoundary(
+            LevelFrameContext context, HardwareServiceBoundary boundary) {
+        if (context == null) {
+            throw new NullPointerException("context");
+        }
+        context.hardwareTiming().service(boundary);
+        context.hardwareTimingBoundaryObserver().onBoundary(boundary);
+    }
+
 }

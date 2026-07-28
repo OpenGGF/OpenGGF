@@ -42,6 +42,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.IntSupplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestRewindPolicyRegistry {
@@ -139,6 +140,12 @@ class TestRewindPolicyRegistry {
 
         assertPolicy(schema, "value", RewindFieldPolicy.CAPTURED);
         assertTrue(schema.unsupportedFields().isEmpty());
+    }
+
+    @Test
+    void defaultExactPoliciesDoNotRetainRemovedIczBossEmitterField() {
+        assertFalse(DefaultObjectRewindPolicies.exactFieldPoliciesForAudit().containsKey(
+                new FieldKey(IczEndBossInstance.class.getName(), "bossSnowdustEmitter")));
     }
 
     @Test
@@ -263,13 +270,6 @@ class TestRewindPolicyRegistry {
                         classForName(bossPackage + "CnzEndBossFieldChild")
                                 .getDeclaredField("xOffset")).orElse(null),
                 "CnzEndBossFieldChild.xOffset");
-    }
-
-    @Test
-    void defaultObjectPolicyCapturesIczEndBossSnowdustEmitterReference() throws NoSuchFieldException {
-        Field snowdustEmitter = IczEndBossInstance.class.getDeclaredField("bossSnowdustEmitter");
-
-        assertEquals(RewindFieldPolicy.CAPTURED, RewindPolicyRegistry.policyForAudit(snowdustEmitter).orElse(null));
     }
 
     @Test

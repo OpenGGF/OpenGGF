@@ -7,6 +7,7 @@ import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectServices;
@@ -141,7 +142,11 @@ class TestSonic1LavaGeyserGraphRewind {
         assertTrue(readBoolean(restoredHead, "initialized"), "head initialized guard must restore");
         assertTrue(readBoolean(restoredThird, "initialized"), "third-piece initialized guard must restore");
 
+        AbstractObjectInstance.resetCameraBoundsForTests();
         restoredHead.update(1, null);
+        assertFalse(restoredHead.isDestroyed(), "restored head must remain live after its first update");
+        assertFalse(restoredBody.isDestroyed(), "restored body must remain live after the head update");
+        assertFalse(restoredThird.isDestroyed(), "restored third piece must remain live after the head update");
         assertEquals(3, liveGeysers(objectManager).size(),
                 "restored initialized head update must not spawn duplicate body pieces");
         assertSame(restoredHead, readObject(restoredBody, "parentGeyser"),

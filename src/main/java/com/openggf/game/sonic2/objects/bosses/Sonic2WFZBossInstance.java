@@ -1073,7 +1073,7 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
 
         // ROM: ObjC5_LaserWall calls SolidObject with d1=$13, d2=$40, d3=$80
         private static final SolidObjectParams WALL_SOLID_PARAMS =
-                new SolidObjectParams(0x13, 0x40, 0x80);
+                SolidObjectParams.of(0x13, 0x40, 0x80);
 
         @Override
         public SolidObjectParams getSolidParams() {
@@ -1394,7 +1394,7 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
         // ROM: ObjC5_PlatformMakeSolid - PlatformObject with d1=$10, d2=8, d3=8
         // PlatformObject = top-solid only platform
         private static final SolidObjectParams PLATFORM_SOLID_PARAMS =
-                new SolidObjectParams(0x10, 8, 8);
+                SolidObjectParams.of(0x10, 8, 8);
 
         @Override
         public SolidObjectParams getSolidParams() {

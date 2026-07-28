@@ -46,6 +46,9 @@ public class LevelLoadContext {
     private boolean showTitleCard = true;
     private LevelDescriptor levelData;
     private int spawnY = -1;
+    private LevelAssemblyKind assemblyKind = LevelAssemblyKind.DECODE_ONLY;
+    private InitialProcessSpritesLifecycle requestedInitialProcessSpritesLifecycle =
+            InitialProcessSpritesLifecycle.NONE;
 
     public Rom getRom() { return rom; }
     public void setRom(Rom rom) { this.rom = rom; }
@@ -101,6 +104,42 @@ public class LevelLoadContext {
 
     public int getSpawnY() { return spawnY; }
     public void setSpawnY(int spawnY) { this.spawnY = spawnY; }
+
+    public LevelAssemblyKind getAssemblyKind() { return assemblyKind; }
+    public void setAssemblyKind(LevelAssemblyKind assemblyKind) {
+        this.assemblyKind = assemblyKind == null ? LevelAssemblyKind.DECODE_ONLY : assemblyKind;
+    }
+
+    public boolean permitsInitialProcessSpritesRequest() {
+        return loadMode == LevelLoadMode.FULL
+                && includePostLoadAssembly
+                && assemblyKind == LevelAssemblyKind.FRESH_LEVEL_ASSEMBLY;
+    }
+
+    /**
+     * Clears load-attempt-owned output before profile steps run. This is a
+     * lifecycle boundary used by {@code LevelManager.loadLevel}; it prevents a
+     * reused mutable context from carrying fresh-load authority into a later
+     * decode, preview, or restoration attempt.
+     */
+    public void resetInitialProcessSpritesRequestForLoadAttempt() {
+        requestedInitialProcessSpritesLifecycle = InitialProcessSpritesLifecycle.NONE;
+    }
+
+    /**
+     * Records a profile-owned setup request in this load's private context.
+     * Publication to live state remains the responsibility of a successful
+     * {@code LevelManager.loadLevel} boundary.
+     */
+    public void requestInitialProcessSpritesFromProfile(InitialProcessSpritesLifecycle lifecycle) {
+        if (permitsInitialProcessSpritesRequest() && lifecycle != null) {
+            requestedInitialProcessSpritesLifecycle = lifecycle;
+        }
+    }
+
+    public InitialProcessSpritesLifecycle requestedInitialProcessSpritesLifecycle() {
+        return requestedInitialProcessSpritesLifecycle;
+    }
 
     /**
      * Snapshot checkpoint state from a {@link RespawnState} before level reload.

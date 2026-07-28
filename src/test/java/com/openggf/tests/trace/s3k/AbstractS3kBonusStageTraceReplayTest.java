@@ -1,5 +1,6 @@
 package com.openggf.tests.trace.s3k;
 
+import com.openggf.game.BonusStageProvider;
 import com.openggf.game.GameServices;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
@@ -34,6 +35,15 @@ public abstract class AbstractS3kBonusStageTraceReplayTest extends AbstractTrace
     protected AbstractPlayableSprite comparedSprite(HeadlessTestFixture fixture) {
         AbstractPlayableSprite focused = GameServices.camera().getFocusedSprite();
         return selectComparedSprite(focused, fixture.sprite());
+    }
+
+    @Override
+    protected boolean replayTerminalReached() {
+        return hasReachedTerminalBoundary(GameServices.bonusStageOrNull());
+    }
+
+    static boolean hasReachedTerminalBoundary(BonusStageProvider provider) {
+        return provider != null && provider.isStageComplete();
     }
 
     /**

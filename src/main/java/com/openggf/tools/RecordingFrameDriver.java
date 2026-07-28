@@ -1,7 +1,9 @@
 package com.openggf.tools;
 
 import com.openggf.LevelFrameContext;
+import com.openggf.LevelFrameResult;
 import com.openggf.LevelFrameStep;
+import com.openggf.FrameAdmission;
 import com.openggf.InputBindingFactory;
 import com.openggf.control.InputActionMasks;
 import com.openggf.control.InputHandler;
@@ -17,6 +19,7 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.level.LevelManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
 
 /**
  * Deterministic per-frame gameplay drive shared by headless trace tests and the
@@ -42,6 +45,19 @@ public final class RecordingFrameDriver {
 
     private int frameCounter = 0;
     private LogicalInputSnapshot previousDriverSnapshot = LogicalInputSnapshot.neutral();
+    private LevelFrameResult lastFrameResult = LevelFrameResult.GAMEPLAY_FRAME;
+    private boolean lastFrameRanGameplay = true;
+    private boolean pendingSeamlessBoundaryCompletion;
+    private TraceHardwareTimingBoundaryObserver hardwareTimingReplayObserver;
+
+    /**
+     * Wraps each canonical level-frame step. Defaults to the direct (unwrapped)
+     * runner so tests and capture pay nothing; the offline benchmark harness
+     * swaps in a profiling wrapper so a headless replay reports the same
+     * per-step section names ({@code physics}, {@code objects}, {@code level},
+     * {@code camera-scroll}, …) that {@code GameLoop} reports in a live run.
+     */
+    private LevelFrameStep.StepWrapper stepWrapper = LevelFrameStep.DIRECT_WRAPPER;
 
     // BK2 recording playback fields
     private Bk2Movie bk2Movie;
@@ -57,52 +73,134 @@ public final class RecordingFrameDriver {
         return sprite;
     }
 
+    /**
+     * Installs the per-step wrapper used by {@link LevelFrameStep}. Passing
+     * {@code null} restores the direct runner. The wrapper must not alter step
+     * ordering or skip steps — it exists for cross-cutting observation only.
+     */
+    public void setStepWrapper(LevelFrameStep.StepWrapper wrapper) {
+        this.stepWrapper = wrapper != null ? wrapper : LevelFrameStep.DIRECT_WRAPPER;
+    }
+
     public int getFrameCounter() {
         return frameCounter;
     }
 
+    public void installHardwareTimingReplayObserver(
+            TraceHardwareTimingBoundaryObserver observer) {
+        hardwareTimingReplayObserver = observer;
+    }
+
+    public void clearHardwareTimingReplayObserver() {
+        hardwareTimingReplayObserver = null;
+    }
+
+    public void beginTraceRow(int traceIndex, int rawFrame) {
+        if (traceIndex < 0) {
+            throw new IllegalArgumentException(
+                    "traceIndex must be non-negative: " + traceIndex);
+        }
+        if (hardwareTimingReplayObserver != null) {
+            hardwareTimingReplayObserver.beginRawFrame(rawFrame);
+        }
+    }
+
+    public void enterHardwareTimingGap() {
+        if (hardwareTimingReplayObserver != null) {
+            hardwareTimingReplayObserver.enterUnrepresentedGap();
+        }
+    }
+
     // ---- core frame step ----
 
-    public void stepFrame(boolean up, boolean down, boolean left, boolean right, boolean jump) {
-        stepFrame(up, down, left, right, jump, /* p2Mask */ 0, /* p2Start */ false, /* p1Start */ false);
+    public LevelFrameResult stepFrame(
+            boolean up, boolean down, boolean left, boolean right, boolean jump) {
+        return stepFrame(up, down, left, right, jump,
+                /* p2Mask */ 0, /* p2Start */ false, /* p1Start */ false);
     }
 
-    public void stepFrame(boolean up, boolean down, boolean left, boolean right, boolean jump,
-                          boolean p1Start) {
-        stepFrame(up, down, left, right, jump, /* p2Mask */ 0, /* p2Start */ false, p1Start);
+    public LevelFrameResult stepFrame(
+            boolean up, boolean down, boolean left, boolean right, boolean jump,
+            boolean p1Start) {
+        return stepFrame(up, down, left, right, jump,
+                /* p2Mask */ 0, /* p2Start */ false, p1Start);
     }
 
-    public void stepFrame(boolean up, boolean down, boolean left, boolean right, boolean jump,
-                          int p2Mask, boolean p2Start) {
-        stepFrame(up, down, left, right, jump, p2Mask, p2Start, /* p1Start */ false);
+    public LevelFrameResult stepFrame(
+            boolean up, boolean down, boolean left, boolean right, boolean jump,
+            int p2Mask, boolean p2Start) {
+        return stepFrame(up, down, left, right, jump,
+                p2Mask, p2Start, /* p1Start */ false);
     }
 
-    public void stepFrame(boolean up, boolean down, boolean left, boolean right, boolean jump,
-                          int p2Mask, boolean p2Start, boolean p1Start) {
-        stepFrame(driverSnapshot(up, down, left, right, jump, p2Mask, p2Start, p1Start));
+    public LevelFrameResult stepFrame(
+            boolean up, boolean down, boolean left, boolean right, boolean jump,
+            int p2Mask, boolean p2Start, boolean p1Start) {
+        return stepFrame(driverSnapshot(
+                up, down, left, right, jump, p2Mask, p2Start, p1Start));
     }
 
-    private void stepFrame(LogicalInputSnapshot snapshot) {
+    private LevelFrameResult stepFrame(LogicalInputSnapshot snapshot) {
+        return stepFrame(snapshot, () -> { });
+    }
+
+    private LevelFrameResult stepFrame(
+            LogicalInputSnapshot snapshot, Runnable beforeGameplay) {
+        updateActiveTitleCardOverlay();
+        if (applyPendingSeamlessTransition()) {
+            pendingSeamlessBoundaryCompletion = true;
+        }
+        startPendingInLevelTitleCardIfRequested();
+        LevelFrameContext context =
+                LevelFrameContext.from(SessionManager.getCurrentGameplayMode());
+        FrameAdmission admission = LevelFrameStep.admit(
+                context, levelManager, snapshot.player1().startPressed());
+        lastFrameResult = admission.result();
+        lastFrameRanGameplay = false;
+        if (lastFrameResult == LevelFrameResult.SETUP_ONLY) {
+            return lastFrameResult;
+        }
         frameCounter++;
+        if (lastFrameResult == LevelFrameResult.PAUSED) {
+            LevelFrameStep.serviceVBlankOnly(context);
+            inputHandler.update();
+            previousDriverSnapshot = snapshot;
+            return lastFrameResult;
+        }
+        if (pendingSeamlessBoundaryCompletion) {
+            pendingSeamlessBoundaryCompletion = false;
+            LevelFrameStep.serviceVBlankOnly(context);
+            inputHandler.update();
+            previousDriverSnapshot = snapshot;
+            return lastFrameResult;
+        }
         try {
-            updateActiveTitleCardOverlay();
-            if (applyPendingSeamlessTransition()) {
-                return;
+            if (lastFrameResult == LevelFrameResult.GAMEPLAY_FRAME) {
+                beforeGameplay.run();
+                LevelFrameStep.updateTimers(context);
+                inputHandler.setLogicalOverride(snapshot);
+                GameServices.sprites().publishHeldInputForLevelEvents(inputHandler);
+                lastFrameResult = LevelFrameStep.execute(
+                        context, levelManager, GameServices.camera(),
+                        () -> GameServices.sprites().update(inputHandler),
+                        stepWrapper);
+                lastFrameRanGameplay =
+                        lastFrameResult == LevelFrameResult.GAMEPLAY_FRAME;
             }
-            startPendingInLevelTitleCardIfRequested();
-            LevelFrameContext context = LevelFrameContext.from(SessionManager.getCurrentGameplayMode());
-            LevelFrameStep.updateTimers(context);
-            inputHandler.setLogicalOverride(snapshot);
-            GameServices.sprites().publishHeldInputForLevelEvents(inputHandler);
-            LevelFrameStep.executeWithPause(
-                    context, levelManager, GameServices.camera(),
-                    () -> GameServices.sprites().update(inputHandler),
-                    snapshot.player1().startPressed(), LevelFrameStep.DIRECT_WRAPPER);
         } finally {
             inputHandler.clearLogicalOverride();
             inputHandler.update();
             previousDriverSnapshot = snapshot;
         }
+        return lastFrameResult;
+    }
+
+    public LevelFrameResult getLastFrameResult() {
+        return lastFrameResult;
+    }
+
+    public boolean didLastFrameRunGameplay() {
+        return lastFrameRanGameplay;
     }
 
     public void primeInputState(Bk2FrameInput frameInput) {
@@ -170,6 +268,10 @@ public final class RecordingFrameDriver {
     }
 
     public int stepFrameFromRecording() {
+        return stepFrameFromRecording(() -> { });
+    }
+
+    public int stepFrameFromRecording(Runnable beforeGameplay) {
         requireMovie();
         if (currentBk2Index >= bk2Movie.getFrameCount()) {
             throw new IllegalStateException(
@@ -181,14 +283,23 @@ public final class RecordingFrameDriver {
         Bk2FrameInput previousInput = previousBk2Input(currentBk2Index);
         int mask = inputMask(frameInput);
 
-        applyP1ActionPressEdge(currentBk2Index);
-        stepFrame(RecordedInputSnapshots.fromBk2(frameInput, previousInput));
-        currentBk2Index++;
+        LevelFrameResult result =
+                stepFrame(RecordedInputSnapshots.fromBk2(frameInput, previousInput), () -> {
+                    applyP1ActionPressEdge(currentBk2Index);
+                    beforeGameplay.run();
+                });
+        if (result != LevelFrameResult.SETUP_ONLY) {
+            currentBk2Index++;
+        }
 
         return mask;
     }
 
     public int stepFrameFromRecordingUsingPreviousInput() {
+        return stepFrameFromRecordingUsingPreviousInput(() -> { });
+    }
+
+    public int stepFrameFromRecordingUsingPreviousInput(Runnable beforeGameplay) {
         requireMovie();
         if (currentBk2Index >= bk2Movie.getFrameCount()) {
             throw new IllegalStateException(
@@ -196,16 +307,22 @@ public final class RecordingFrameDriver {
                     + " (movie has " + bk2Movie.getFrameCount() + " frames)");
         }
         if (currentBk2Index <= 0) {
-            return stepFrameFromRecording();
+            return stepFrameFromRecording(beforeGameplay);
         }
 
         Bk2FrameInput validationInput = bk2Movie.getFrame(currentBk2Index);
         Bk2FrameInput driveInput = bk2Movie.getFrame(currentBk2Index - 1);
         int validationMask = inputMask(validationInput);
 
-        applyP1ActionPressEdge(currentBk2Index - 1);
-        stepFrame(RecordedInputSnapshots.fromBk2(driveInput, previousBk2Input(currentBk2Index - 1)));
-        currentBk2Index++;
+        LevelFrameResult result = stepFrame(
+                RecordedInputSnapshots.fromBk2(
+                        driveInput, previousBk2Input(currentBk2Index - 1)), () -> {
+                    applyP1ActionPressEdge(currentBk2Index - 1);
+                    beforeGameplay.run();
+                });
+        if (result != LevelFrameResult.SETUP_ONLY) {
+            currentBk2Index++;
+        }
 
         return validationMask;
     }
@@ -247,11 +364,15 @@ public final class RecordingFrameDriver {
 
         previousDriverSnapshot = RecordedInputSnapshots.fromBk2(frameInput, previousBk2Input(currentBk2Index));
         currentBk2Index++;
+        LevelFrameContext context =
+                LevelFrameContext.from(SessionManager.getCurrentGameplayMode());
         // S3K's in-level title-card wait runs Process_Sprites while the level
         // gameplay counter is held at zero. Such rows are VBlank-only to the
         // physics driver, but the title-card parent/children still dispatch.
         // Keep this overlay-only work moving without ticking player physics.
-        updateHeldCounterTitleCardOverlay();
+        if (!updateHeldCounterTitleCardOverlay(context)) {
+            LevelFrameStep.serviceVBlankOnly(context);
+        }
         if (levelManager.hasPendingInLevelTitleCardHeldCounterDispatch()) {
             startPendingInLevelTitleCardIfRequested();
         }
@@ -280,23 +401,27 @@ public final class RecordingFrameDriver {
         }
     }
 
-    private void updateHeldCounterTitleCardOverlay() {
+    private boolean updateHeldCounterTitleCardOverlay(LevelFrameContext context) {
         TitleCardProvider titleCardProvider = GameServices.module().getTitleCardProvider();
         if (titleCardProvider != null && titleCardProvider.advancesOnHeldLevelCounter()) {
-            titleCardProvider.update();
-            if (titleCardProvider.ownsRetainedResultsHeldLevelCounter()) {
-                var levelEvents = GameServices.module().getLevelEventProvider();
-                if (levelEvents != null) {
-                    // The retained Obj_LevelResults -> Obj_TitleCard path still
-                    // runs fixed SST entries while Level_frame_counter is held.
-                    levelEvents.updateFixedInLevelObjects();
+            LevelFrameStep.executeHardwareTimedObjectScan(context, () -> {
+                titleCardProvider.update();
+                if (titleCardProvider.ownsRetainedResultsHeldLevelCounter()) {
+                    var levelEvents = GameServices.module().getLevelEventProvider();
+                    if (levelEvents != null) {
+                        // The retained Obj_LevelResults -> Obj_TitleCard path still
+                        // runs fixed SST entries while Level_frame_counter is held.
+                        levelEvents.updateFixedInLevelObjects();
+                    }
                 }
-            }
+            });
             if (titleCardProvider.ownsInLevelPlayerControlLock()) {
                 applyInLevelTitleCardControlLock(
                         titleCardProvider.shouldLockPlayerControlForInLevelOverlay());
             }
+            return true;
         }
+        return false;
     }
 
     private static int inputMask(Bk2FrameInput frameInput) {
@@ -316,10 +441,10 @@ public final class RecordingFrameDriver {
         }
 
         Bk2FrameInput frameInput = bk2Movie.getFrame(currentBk2Index);
-        int mask = frameInput.p1InputMask();
-        if (frameInput.p1ActionMask() != 0) {
-            mask |= AbstractPlayableSprite.INPUT_JUMP;
-        }
+        int mask = inputMask(frameInput);
+        applyP1ActionPressEdge(currentBk2Index);
+        previousDriverSnapshot =
+                RecordedInputSnapshots.fromBk2(frameInput, previousBk2Input(currentBk2Index));
         currentBk2Index++;
         return mask;
     }

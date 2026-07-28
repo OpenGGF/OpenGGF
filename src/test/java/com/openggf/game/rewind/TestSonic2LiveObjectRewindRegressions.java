@@ -486,6 +486,7 @@ class TestSonic2LiveObjectRewindRegressions {
                 // Restoration reconstructs placed objects, so resolve the live monitor on every tick.
                 monitor(harness).onTouchResponse(player, MONITOR_TOUCH, input.frameIndex());
             }
+            return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
         };
         return new MonitorFixture(new RewindController(registry, new InMemoryKeyframeStore(),
                 new ListInputSource(rows), stepper, 60), player);

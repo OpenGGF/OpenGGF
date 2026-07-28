@@ -132,7 +132,7 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
     public SolidObjectParams getSolidParams() {
         // loc_2AE98/loc_2AF06 pass height_pixels(a0) directly as d3 to
         // SolidObjectTop; no bridge-local landing offset is applied afterward.
-        return new SolidObjectParams(halfWidth, HEIGHT_PIXELS, HEIGHT_PIXELS);
+        return SolidObjectParams.of(halfWidth, HEIGHT_PIXELS, HEIGHT_PIXELS);
     }
 
     @Override

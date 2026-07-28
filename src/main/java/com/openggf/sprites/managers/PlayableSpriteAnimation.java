@@ -151,7 +151,8 @@ public class PlayableSpriteAnimation {
                 sprite.setAnimationId(desiredAnimId);
             }
             restoreWaterTunnelPreviousAnimation(profile);
-            if (sprite.isObjectMappingFrameControl()) {
+            if (sprite.isObjectMappingFrameControl()
+                    && !selectedNonWalkScriptOverridesTumbleMapping()) {
                 applyDefaultFacingRenderFlips();
                 return;
             }
@@ -254,6 +255,17 @@ public class PlayableSpriteAnimation {
         }
 
         updateScriptWithDelay(script, delayOrFlag, 0);
+    }
+
+    private boolean selectedNonWalkScriptOverridesTumbleMapping() {
+        if ((sprite.getFlipType() & 0x80) == 0 || sprite.getAnimationSet() == null) {
+            return false;
+        }
+        SpriteAnimationScript script = sprite.getAnimationSet().getScript(sprite.getAnimationId());
+        // S1/S2/S3K dispatch tumble from the $FF walk/run control path. A
+        // movement-selected $FE Roll script remains authoritative even while
+        // an object continues publishing negative flip_type/flip_angle.
+        return script != null && (script.delay() & 0xFF) != 0xFF;
     }
 
     private boolean walkRunDelayLatchesRenderOrientation(SpriteAnimationScript script) {

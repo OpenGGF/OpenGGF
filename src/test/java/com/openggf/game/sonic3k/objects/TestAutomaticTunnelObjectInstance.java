@@ -182,12 +182,20 @@ class TestAutomaticTunnelObjectInstance {
         TestPlayableSprite player = new TestPlayableSprite();
         player.setCentreX((short) 0x0F60);
         player.setCentreY((short) 0x0578);
+        player.setSubpixelRaw(0x5100, 0x8500);
         player.setControlLocked(false);
         player.setObjectControlled(false);
+        player.setRolling(false);
 
         tunnel.update(0, player);
 
         assertTrue(player.isObjectControlled());
+        assertFalse(player.getRolling(),
+                "Obj_AutoTunnelInit writes anim=2 without setting Status_Roll");
+        assertEquals(0x5100, player.getXSubpixelRaw(),
+                "ROM word writes to x_pos preserve the fractional word");
+        assertEquals(0x8500, player.getYSubpixelRaw(),
+                "ROM word writes to y_pos preserve the fractional word");
         assertFalse(player.isObjectControlAllowsCpu());
         assertTrue(player.isObjectControlSuppressesMovement());
         assertTrue(player.isTouchResponseSuppressedByObjectControl());
@@ -224,7 +232,8 @@ class TestAutomaticTunnelObjectInstance {
         AbstractObjectInstance child = services.children.get(0);
         assertInstanceOf(TunnelExhaustControlObjectInstance.class, child);
         assertEquals(player.getCentreX(), child.getX());
-        assertEquals(player.getCentreY(), child.getY());
+        assertEquals(player.getCentreY() + 0x10, child.getY(),
+                "ROM allocates the exhaust before loc_29768 applies the final upward path step");
         assertEquals(0, intField(child, "subtype"),
                 "Obj_AutomaticTunnel exit spawn does not copy subtype; subtype 0 selects directional exhaust");
         assertEquals(0, intField(child, "xVel"));

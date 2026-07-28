@@ -413,6 +413,21 @@ public class Sonic1TitleCardManager implements TitleCardProvider {
     }
 
     @Override
+    public boolean shouldRunLevelObjectsDuringLockedPhase() {
+        return false;
+    }
+
+    @Override
+    public int levelObjectPreludePassesAtRelease() {
+        return 1;
+    }
+
+    @Override
+    public boolean shouldRunPlayerPreludeAtRelease() {
+        return true;
+    }
+
+    @Override
     public void reset() {
         state = Sonic1TitleCardState.COMPLETE;
         stateTimer = 0;

@@ -34,6 +34,10 @@ import com.openggf.game.LevelEventRewindResolver;
 import com.openggf.game.rewind.snapshot.OscillationStaticAdapter;
 import com.openggf.game.solid.DefaultSolidExecutionRegistry;
 import com.openggf.game.solid.SolidExecutionRegistry;
+import com.openggf.game.timing.HardwareTimingBoundaryObserver;
+import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
+import com.openggf.game.timing.HardwareTimingService;
+import com.openggf.game.timing.RecordedCompletionAuthority;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.graphics.FadeManager;
 import com.openggf.level.Level;
@@ -69,6 +73,8 @@ public final class GameplayModeContext implements ModeContext {
     private final int spawnX;
     private final int spawnY;
     private final EditorPlaytestStash resumeStash;
+    private final HardwareTimingService hardwareTiming;
+    private final RecordedCompletionAuthority recordedCompletionAuthority;
 
     private Camera camera;
     private TimerManager timerManager;
@@ -105,23 +111,50 @@ public final class GameplayModeContext implements ModeContext {
     private PlaybackController playbackController;
     private RewindBoundaryReporter rewindBoundaryReporter = RewindBoundaryReporter.NO_OP;
     private final Set<String> levelEventExtraRewindKeys = new LinkedHashSet<>();
+    private HardwareTimingBoundaryObserver hardwareTimingBoundaryObserver =
+            HardwareTimingBoundaryObserver.NO_OP;
+    private Runnable hardwareTimingReplayCloseHook;
 
     public GameplayModeContext(WorldSession worldSession) {
-        this(worldSession, 0, 0, null);
+        this(worldSession, 0, 0, null, HardwareReadinessAdmissionPolicy.LIVE);
+    }
+
+    public GameplayModeContext(
+            WorldSession worldSession,
+            HardwareReadinessAdmissionPolicy admissionPolicy) {
+        this(worldSession, 0, 0, null, admissionPolicy);
     }
 
     public GameplayModeContext(WorldSession worldSession, int spawnX, int spawnY) {
-        this(worldSession, spawnX, spawnY, null);
+        this(worldSession, spawnX, spawnY, null,
+                HardwareReadinessAdmissionPolicy.LIVE);
     }
 
     public GameplayModeContext(WorldSession worldSession,
                                int spawnX,
                                int spawnY,
                                EditorPlaytestStash resumeStash) {
+        this(worldSession, spawnX, spawnY, resumeStash,
+                HardwareReadinessAdmissionPolicy.LIVE);
+    }
+
+    public GameplayModeContext(
+            WorldSession worldSession,
+            int spawnX,
+            int spawnY,
+            EditorPlaytestStash resumeStash,
+            HardwareReadinessAdmissionPolicy admissionPolicy) {
         this.worldSession = Objects.requireNonNull(worldSession, "worldSession");
         this.spawnX = spawnX;
         this.spawnY = spawnY;
         this.resumeStash = resumeStash;
+        HardwareReadinessAdmissionPolicy checkedPolicy =
+                Objects.requireNonNull(admissionPolicy, "admissionPolicy");
+        this.hardwareTiming = new HardwareTimingService();
+        this.recordedCompletionAuthority =
+                checkedPolicy == HardwareReadinessAdmissionPolicy.RECORDED
+                        ? hardwareTiming.beginRecordedAdmission()
+                        : null;
     }
 
     public boolean isGameplayRuntimeReady() {
@@ -215,6 +248,7 @@ public final class GameplayModeContext implements ModeContext {
 
         this.rewindRegistry = new RewindRegistry(profiler);
         this.levelEventExtraRewindKeys.clear();
+        this.rewindRegistry.register(hardwareTiming);
         this.rewindRegistry.register(camera);
         this.rewindRegistry.register(gameStateManager);
         this.rewindRegistry.register(rng);
@@ -462,6 +496,42 @@ public final class GameplayModeContext implements ModeContext {
     /** Runtime owner for the ROM-visible Kosinski Moduled scheduling queue. */
     public KosinskiModuleQueue getKosinskiModuleQueue() {
         return kosinskiModuleQueue;
+    }
+
+    public HardwareTimingService hardwareTiming() {
+        return hardwareTiming;
+    }
+
+    public RecordedCompletionAuthority recordedCompletionAuthority() {
+        if (recordedCompletionAuthority == null) {
+            throw new IllegalStateException(
+                    "gameplay context was not constructed for recorded hardware admission");
+        }
+        return recordedCompletionAuthority;
+    }
+
+    public HardwareTimingBoundaryObserver hardwareTimingBoundaryObserver() {
+        return hardwareTimingBoundaryObserver;
+    }
+
+    public void setHardwareTimingBoundaryObserver(
+            HardwareTimingBoundaryObserver observer) {
+        hardwareTimingBoundaryObserver = observer != null
+                ? observer
+                : HardwareTimingBoundaryObserver.NO_OP;
+    }
+
+    public void setHardwareTimingReplayCloseHook(Runnable closeHook) {
+        if (hardwareTimingReplayCloseHook != null) {
+            throw new IllegalStateException(
+                    "hardware timing replay close hook is already installed");
+        }
+        hardwareTimingReplayCloseHook =
+                Objects.requireNonNull(closeHook, "closeHook");
+    }
+
+    public void clearHardwareTimingReplayCloseHook() {
+        hardwareTimingReplayCloseHook = null;
     }
 
     // ── Rewind framework ─────────────────────────────────────────────────
@@ -738,6 +808,21 @@ public final class GameplayModeContext implements ModeContext {
         }
         managersTornDown = true;
         installGameplayInputFilter(GameplayInputFilter.IDENTITY);
+        RuntimeException replayCloseFailure = null;
+        Runnable replayClose = hardwareTimingReplayCloseHook;
+        hardwareTimingReplayCloseHook = null;
+        if (replayClose != null) {
+            try {
+                replayClose.run();
+            } catch (RuntimeException failure) {
+                replayCloseFailure = failure;
+            }
+        }
+        if (rewindRegistry != null) {
+            rewindRegistry.deregister(HardwareTimingService.REWIND_KEY);
+        }
+        hardwareTiming.resetForMissingSnapshot();
+        hardwareTimingBoundaryObserver = HardwareTimingBoundaryObserver.NO_OP;
         if (zoneLayoutMutationPipeline != null) {
             zoneLayoutMutationPipeline.clear();
         }
@@ -817,13 +902,16 @@ public final class GameplayModeContext implements ModeContext {
         rewindBoundaryReporter = RewindBoundaryReporter.NO_OP;
         levelEventExtraRewindKeys.clear();
         rewindRegistry = null;
+        if (replayCloseFailure != null) {
+            throw replayCloseFailure;
+        }
     }
 
     /**
      * Resets session-progress counters to "fresh gameplay" defaults — score,
      * rings, lives, emeralds, timer, and (via LevelManager) checkpoint state.
      * Per the session ownership migration design
-     * (docs/superpowers/specs/2026-04-07-runtime-ownership-migration-design.md),
+     * (docs/architecture/designs/2026-04-07-runtime-ownership-migration-design.md),
      * editor exit must reinitialize gameplay session state as fresh gameplay,
      * not resumed state. Call this from the exit-editor flow after a new
      * gameplay mode context is wired up.

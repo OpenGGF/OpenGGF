@@ -5,7 +5,6 @@ import com.openggf.audio.smps.SmpsSequencer.Region;
 import java.util.List;
 import java.util.Objects;
 
-@com.openggf.game.ModApi
 public record SmpsSequencerSnapshot(
         Region region,
         boolean speedShoes,
@@ -37,7 +36,6 @@ public record SmpsSequencerSnapshot(
         tracks = List.copyOf(Objects.requireNonNull(tracks, "tracks"));
     }
 
-    @com.openggf.game.ModApi
     public record FadeSnapshot(
             int steps,
             int delayInit,

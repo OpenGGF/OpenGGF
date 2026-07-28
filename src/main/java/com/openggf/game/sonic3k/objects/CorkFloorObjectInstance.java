@@ -20,6 +20,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
+import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
@@ -39,13 +40,21 @@ import java.util.logging.Logger;
  * Object 0x2A - Cork Floor (Sonic 3 & Knuckles).
  */
 public class CorkFloorObjectInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SolidObjectListener, RomObjectCodePointerProvider, RewindRecreatable {
+        implements SolidObjectProvider, SlopedSolidProvider, SolidObjectListener,
+        RomObjectCodePointerProvider, RewindRecreatable {
 
     private static final Logger LOG = Logger.getLogger(CorkFloorObjectInstance.class.getName());
 
     private static final int FRAGMENT_GRAVITY = 0x18;
     private static final int PRIORITY = 5;
     private static final int ROLL_BREAK_LAUNCH_YVEL = -0x300;
+    /** {@code byte_2A894}, sampled by ICZ's {@code sub_1DDC6} path. */
+    private static final byte[] ICZ_SLOPE_DATA = {
+            0x23, 0x23, 0x22, 0x22, 0x21, 0x21, 0x20, 0x1F,
+            0x1F, 0x1E, 0x1E, 0x1D, 0x1D, 0x1C, 0x1B, 0x1B,
+            0x1A, 0x1A, 0x19, 0x19, 0x17, 0x16, 0x15, 0x15,
+            0x14, 0x14, 0x13, 0x13
+    };
     private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
             ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS;
 
@@ -161,7 +170,48 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(config.halfWidth + 0x0B, config.halfHeight, config.halfHeight + 1);
+        if (mode == Mode.ICZ_PLANE_SWITCH) {
+            // loc_2A6D4 passes only d2=height_pixels ($24) to sub_1DDC6;
+            // unlike SolidObjectFull, there is no grounded d3=d2+1 surface.
+            return SolidObjectParams.of(config.halfWidth + 0x0B, config.halfHeight, config.halfHeight);
+        }
+        return SolidObjectParams.of(config.halfWidth + 0x0B, config.halfHeight, config.halfHeight + 1);
+    }
+
+    @Override
+    public byte[] getSlopeData() {
+        // Only ICZ subtype bit 4 clear installs loc_2A6D4, which calls the
+        // sloped full-solid helper. Every other variant calls SolidObjectFull.
+        return mode == Mode.ICZ_PLANE_SWITCH ? ICZ_SLOPE_DATA : null;
+    }
+
+    @Override
+    public boolean isSlopeFlipped() {
+        return hFlip;
+    }
+
+    @Override
+    public int getSlopeBaseline() {
+        // sub_1DDC6 loc_1DECE subtracts byte_2A894[0] on fresh contact.
+        return ICZ_SLOPE_DATA[0];
+    }
+
+    @Override
+    public boolean addsSlopeCatchRangeToVerticalOverlap() {
+        // sub_1DDC6 enters loc_1DECE with d2=height_pixels, then adds the
+        // player's y_radius before classifying the sampled surface.
+        return mode == Mode.ICZ_PLANE_SWITCH;
+    }
+
+    @Override
+    public boolean forceAirOnRideExit() {
+        // ICZ's sloped helper has a deliberately different continued-ride
+        // exit from SolidObjectFull: sub_1DDC6/loc_1DE00 clears Status_OnObj
+        // and the object's standing bit but does not set Status_InAir
+        // (sonic3k.asm:41221-41264). This lets the next Player_AnglePos hand
+        // the rider directly to terrain beneath the cork floor. Other cork
+        // variants use SolidObjectFull and retain its ordinary airborne exit.
+        return mode != Mode.ICZ_PLANE_SWITCH;
     }
 
     @Override

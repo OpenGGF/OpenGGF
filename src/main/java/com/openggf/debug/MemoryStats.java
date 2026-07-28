@@ -1,6 +1,5 @@
 package com.openggf.debug;
 
-import com.sun.management.ThreadMXBean;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
@@ -23,7 +22,15 @@ public class MemoryStats {
 
     private final MemoryMXBean memoryBean;
     private final List<GarbageCollectorMXBean> gcBeans;
-    private final ThreadMXBean threadBean;
+    /**
+     * HotSpot's allocation-counting extension, or null on a JVM that does not
+     * implement {@code com.sun.management.ThreadMXBean}. Per-thread allocation
+     * counters are a HotSpot extension, not part of {@code java.lang.management},
+     * so an unconditional cast turns a foreign JVM into a hard startup failure —
+     * which is exactly the JVM a cross-runtime benchmark wants to run on.
+     * Allocation figures simply read zero there.
+     */
+    private final com.sun.management.ThreadMXBean threadBean;
     private final long mainThreadId;
 
     private long lastHeapUsed;
@@ -47,7 +54,8 @@ public class MemoryStats {
     public MemoryStats() {
         memoryBean = ManagementFactory.getMemoryMXBean();
         gcBeans = ManagementFactory.getGarbageCollectorMXBeans();
-        threadBean = (ThreadMXBean) ManagementFactory.getThreadMXBean();
+        threadBean = ManagementFactory.getThreadMXBean()
+                instanceof com.sun.management.ThreadMXBean hotspotBean ? hotspotBean : null;
         mainThreadId = Thread.currentThread().getId();
 
         lastHeapUsed = getHeapUsed();
@@ -57,6 +65,9 @@ public class MemoryStats {
     }
 
     private long getThreadAllocatedBytes() {
+        if (threadBean == null) {
+            return 0;
+        }
         try {
             return threadBean.getThreadAllocatedBytes(mainThreadId);
         } catch (Exception e) {

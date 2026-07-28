@@ -131,7 +131,7 @@ public class Sonic1BridgeObjectInstance extends AbstractObjectInstance
         // yRadius. Our landing formula includes halfHeight in the position
         // calculation, so we set it to 0 to avoid double-counting the -8.
         // The riding path ignores halfHeight for sloped objects (uses slope sample).
-        return new SolidObjectParams(halfWidth, 0, 0, -8, -8);
+        return SolidObjectParams.of(halfWidth, 0, 0, -8, -8);
     }
 
     @Override

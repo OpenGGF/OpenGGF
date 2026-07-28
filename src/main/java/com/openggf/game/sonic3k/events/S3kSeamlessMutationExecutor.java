@@ -25,6 +25,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.logging.Logger;
 
 /**
@@ -46,10 +47,11 @@ public final class S3kSeamlessMutationExecutor {
     private static final int AIZ2_LEVEL_LOAD_BLOCK_INDEX = 1;
     private static final int AIZ_SECONDARY_ART_DEST_TILE = 0x01FC;
     private static final int AIZ_SECONDARY_CHUNK_DEST_BYTES = 0x0AB8;
+    private static final int AIZ_FIRE_OVERLAY_DEST_TILE = 0x0500;
     private static final int PAL_POINTER_AIZ_FIRE_INDEX = 0x0B;
     private static final int PLC_SPIKES_SPRINGS = 0x4E;
 
-    private static volatile AizFireOverlayData cachedAizFireOverlay;
+    private static volatile AizFireTerrainData cachedAizFireTerrain;
 
     private S3kSeamlessMutationExecutor() {
     }
@@ -87,7 +89,7 @@ public final class S3kSeamlessMutationExecutor {
             if (rom == null) {
                 return;
             }
-            AizFireOverlayData overlay = loadAizFireOverlayData(rom);
+            AizFireTerrainData overlay = loadAizFireTerrainData(rom);
             if (overlay == null) {
                 return;
             }
@@ -112,61 +114,72 @@ public final class S3kSeamlessMutationExecutor {
 
     private static void applyAiz1FireTransitionStage(LevelManager levelManager) {
         Level level = levelManager.getCurrentLevel();
-        if (!(level instanceof Sonic3kLevel sonic3kLevel)) {
+        if (!(level instanceof Sonic3kLevel)) {
             return;
         }
 
-        try {
-            Rom rom = rom();
-            if (rom == null) {
-                return;
-            }
+        // AIZ1BGE_FireTransition queues AIZ2 block/chunk/art work, then
+        // allocates Obj_AIZTransitionFloor and enters delayed fire refresh
+        // (docs/skdisasm/sonic3k.asm:104664-104691, 104701-104714).
+        // The module art is not visible until Kos_modules_left reaches zero.
+        // Keep this stage to the non-art state owned before that wait.
+        Sonic3kZoneEvents.loadPaletteFromPalPointers(PAL_POINTER_AIZ_FIRE_INDEX);
+        Sonic3kAIZEvents.applyFireTransitionPaletteLine4(levelManager);
+        Sonic3kZoneEvents.applyPlc(PLC_SPIKES_SPRINGS);
+        spawnAizTransitionFloor(levelManager);
+        LOG.info("Applied AIZ1 fire transition palette, PLC, and transition floor");
+    }
 
-            AizFireOverlayData overlay = loadAizFireOverlayData(rom);
-            if (overlay == null) {
-                return;
-            }
-
-            // AIZ1BGE_FireTransition queues AIZ2 block/chunk/art work, then
-            // allocates Obj_AIZTransitionFloor and enters delayed fire refresh
-            // (docs/skdisasm/sonic3k.asm:104664-104691, 104701-104714).
-            // Load_Level/LoadSolids are later in AIZ1BGE_Finish after the Kos
-            // queue drains (docs/skdisasm/sonic3k.asm:104725-104738). Keep live
-            // terrain tables stable here; exposing the AIZ2 block/chunk tables
-            // immediately lets terrain collision preempt the transition floor.
-            applyImmediateMutation(levelManager, context -> {
-                sonic3kLevel.applyPatternOverlay(overlay.primaryTiles8x8(), 0, false);
-                sonic3kLevel.applyPatternOverlay(
-                        overlay.secondaryTiles8x8(),
-                        AIZ_SECONDARY_ART_DEST_TILE * Pattern.PATTERN_SIZE_IN_ROM,
-                        false);
-                return MutationEffects.redrawAllTilemaps();
-            });
-
-            // Fire transition stage requests only the fire palette and spikes/springs PLC.
-            Sonic3kZoneEvents.loadPaletteFromPalPointers(PAL_POINTER_AIZ_FIRE_INDEX);
-            Sonic3kAIZEvents.applyFireTransitionPaletteLine4(levelManager);
-            Sonic3kZoneEvents.applyPlc(PLC_SPIKES_SPRINGS);
-
-            // Refresh object renderers whose backing patterns were changed by the
-            // 8x8 overlays. Without this, level-art object sprites (spikes, springs,
-            // vines, etc.) retain stale GPU textures from the pre-fire pattern data.
-            List<Sonic3kPlcLoader.TileRange> overlayRanges = new ArrayList<>();
-            int primaryTileCount = overlay.primaryTiles8x8().length / Pattern.PATTERN_SIZE_IN_ROM;
-            if (primaryTileCount > 0) {
-                overlayRanges.add(new Sonic3kPlcLoader.TileRange(0, primaryTileCount));
-            }
-            int secondaryTileCount = overlay.secondaryTiles8x8().length / Pattern.PATTERN_SIZE_IN_ROM;
-            if (secondaryTileCount > 0) {
-                overlayRanges.add(new Sonic3kPlcLoader.TileRange(
-                        AIZ_SECONDARY_ART_DEST_TILE, secondaryTileCount));
-            }
-            Sonic3kPlcLoader.refreshAffectedRenderers(overlayRanges, levelManager);
-            spawnAizTransitionFloor(levelManager);
-            LOG.info("Applied AIZ1 fire transition overlays (128x128/16x16/8x8) and fire palette");
-        } catch (Exception e) {
-            LOG.warning("Failed to apply AIZ1 fire transition mutation: " + e.getMessage());
+    /**
+     * Publishes the AIZ2 module-art payloads after both timing handles have
+     * crossed POST readiness and been claimed by the AIZ event owner.
+     */
+    public static void applyAiz1FireTransitionPreparedArt(
+            LevelManager levelManager,
+            byte[] primaryTiles8x8,
+            byte[] secondaryTiles8x8) {
+        Objects.requireNonNull(levelManager, "levelManager");
+        Objects.requireNonNull(primaryTiles8x8, "primaryTiles8x8");
+        Objects.requireNonNull(secondaryTiles8x8, "secondaryTiles8x8");
+        if (primaryTiles8x8.length % Pattern.PATTERN_SIZE_IN_ROM != 0
+                || secondaryTiles8x8.length % Pattern.PATTERN_SIZE_IN_ROM != 0) {
+            throw new IllegalArgumentException(
+                    "prepared AIZ2 module art must contain whole patterns");
         }
+        Level level = levelManager.getCurrentLevel();
+        if (!(level instanceof Sonic3kLevel sonic3kLevel)) {
+            throw new IllegalStateException(
+                    "prepared AIZ2 module art requires a live Sonic3kLevel");
+        }
+
+        applyImmediateMutation(levelManager, context -> {
+            sonic3kLevel.applyPatternOverlay(primaryTiles8x8, 0, false);
+            sonic3kLevel.applyPatternOverlay(
+                    secondaryTiles8x8,
+                    AIZ_SECONDARY_ART_DEST_TILE * Pattern.PATTERN_SIZE_IN_ROM,
+                    false);
+            return MutationEffects.redrawAllTilemaps();
+        });
+
+        List<Sonic3kPlcLoader.TileRange> overlayRanges = new ArrayList<>();
+        int primaryTileCount = primaryTiles8x8.length / Pattern.PATTERN_SIZE_IN_ROM;
+        if (primaryTileCount > 0) {
+            overlayRanges.add(new Sonic3kPlcLoader.TileRange(0, primaryTileCount));
+        }
+        int secondaryTileCount = secondaryTiles8x8.length / Pattern.PATTERN_SIZE_IN_ROM;
+        if (secondaryTileCount > 0) {
+            overlayRanges.add(new Sonic3kPlcLoader.TileRange(
+                    AIZ_SECONDARY_ART_DEST_TILE, secondaryTileCount));
+        }
+        Sonic3kPlcLoader.refreshAffectedRenderers(overlayRanges, levelManager);
+        LOG.info("Published prepared AIZ2 primary and secondary module art");
+    }
+
+    /** Publishes the one prepared fire-overlay payload queued by the ROM. */
+    static int applyAiz1FireOverlayPreparedArt(
+            LevelManager levelManager,
+            byte[] fireOverlayTiles8x8) {
+        return applyAiz1FireOverlay(levelManager, fireOverlayTiles8x8);
     }
 
     private static void spawnAizTransitionFloor(LevelManager levelManager) {
@@ -219,6 +232,13 @@ public final class S3kSeamlessMutationExecutor {
             return;
         }
 
+        byte[] fireOverlayTiles8x8 =
+                AizPreparedTransitionArtBridge.current()
+                        .aizFireOverlayCopy();
+        if (applyAiz1FireOverlay(levelManager, fireOverlayTiles8x8) == 0) {
+            throw new IllegalStateException(
+                    "AIZ fire continuation has no prepared fire-overlay payload");
+        }
         applyImmediateMutation(levelManager, context -> {
             AizAct2LayoutAdjuster.apply(context, level.getMap());
             return MutationEffects.redrawAllTilemaps();
@@ -229,6 +249,31 @@ public final class S3kSeamlessMutationExecutor {
         Sonic3kZoneEvents.loadPaletteFromPalPointers(PAL_POINTER_AIZ_FIRE_INDEX);
         Sonic3kAIZEvents.applyFireTransitionPaletteLine4(levelManager);
         LOG.info("Applied AIZ1 post-reload act 2 layout adjustment and fire palette");
+    }
+
+    private static int applyAiz1FireOverlay(
+            LevelManager levelManager,
+            byte[] tiles8x8) {
+        if (tiles8x8 == null || tiles8x8.length == 0) {
+            return 0;
+        }
+        if (tiles8x8.length % Pattern.PATTERN_SIZE_IN_ROM != 0) {
+            throw new IllegalArgumentException(
+                    "prepared AIZ fire overlay must contain whole patterns");
+        }
+        Level level = levelManager != null ? levelManager.getCurrentLevel() : null;
+        if (!(level instanceof Sonic3kLevel sonic3kLevel)) {
+            throw new IllegalStateException(
+                    "prepared AIZ fire overlay requires a live Sonic3kLevel");
+        }
+        applyImmediateMutation(levelManager, context -> {
+            sonic3kLevel.applyPatternOverlay(
+                    tiles8x8,
+                    AIZ_FIRE_OVERLAY_DEST_TILE * Pattern.PATTERN_SIZE_IN_ROM,
+                    false);
+            return MutationEffects.redrawAllTilemaps();
+        });
+        return tiles8x8.length / Pattern.PATTERN_SIZE_IN_ROM;
     }
 
     private static void applyImmediateMutation(LevelManager levelManager, LayoutMutationIntent intent) {
@@ -247,38 +292,30 @@ public final class S3kSeamlessMutationExecutor {
         levelManager.applyMutationEffects(intent.apply(context));
     }
 
-    private static synchronized AizFireOverlayData loadAizFireOverlayData(Rom rom) throws IOException {
-        if (cachedAizFireOverlay != null) {
-            return cachedAizFireOverlay;
+    private static synchronized AizFireTerrainData loadAizFireTerrainData(Rom rom) throws IOException {
+        if (cachedAizFireTerrain != null) {
+            return cachedAizFireTerrain;
         }
 
         int entryAddr = Sonic3kConstants.LEVEL_LOAD_BLOCK_ADDR
                 + AIZ2_LEVEL_LOAD_BLOCK_INDEX * Sonic3kConstants.LEVEL_LOAD_BLOCK_ENTRY_SIZE;
-        int primaryArtAddr = rom.read32BitAddr(entryAddr + LLB_PRIMARY_ART) & 0x00FFFFFF;
-        int secondaryArtAddr = rom.read32BitAddr(entryAddr + LLB_SECONDARY_ART) & 0x00FFFFFF;
         int primaryChunksAddr = rom.read32BitAddr(entryAddr + LLB_PRIMARY_CHUNKS) & 0x00FFFFFF;
         int secondaryChunksAddr = rom.read32BitAddr(entryAddr + LLB_SECONDARY_CHUNKS) & 0x00FFFFFF;
         int blocksAddr = rom.read32BitAddr(entryAddr + LLB_PRIMARY_BLOCKS) & 0x00FFFFFF;
 
         ResourceLoader loader = new ResourceLoader(rom);
-        byte[] primaryTiles8x8 = loader.loadSingle(LoadOp.kosinskiMBase(primaryArtAddr));
-        byte[] secondaryTiles8x8 = loader.loadSingle(LoadOp.kosinskiMBase(secondaryArtAddr));
         byte[] primaryChunks16x16 = loader.loadSingle(LoadOp.kosinskiBase(primaryChunksAddr));
         byte[] secondaryChunks16x16 = loader.loadSingle(LoadOp.kosinskiBase(secondaryChunksAddr));
         byte[] blocks128x128 = loader.loadSingle(LoadOp.kosinskiBase(blocksAddr));
 
-        cachedAizFireOverlay = new AizFireOverlayData(
-                primaryTiles8x8,
-                secondaryTiles8x8,
+        cachedAizFireTerrain = new AizFireTerrainData(
                 primaryChunks16x16,
                 secondaryChunks16x16,
                 blocks128x128);
-        return cachedAizFireOverlay;
+        return cachedAizFireTerrain;
     }
 
-    private record AizFireOverlayData(
-            byte[] primaryTiles8x8,
-            byte[] secondaryTiles8x8,
+    private record AizFireTerrainData(
             byte[] primaryChunks16x16,
             byte[] secondaryChunks16x16,
             byte[] blocks128x128) {

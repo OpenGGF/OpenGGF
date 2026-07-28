@@ -20,18 +20,18 @@ returns no resources, additive `ModZoneLoader` remains Sonic-2-specific, the man
 contains music-only `audioOverrides`, standalone manifests cannot register patches,
 and S3K editor runtime re-apply remains gated.
 
-The exact corpus was the [root design](../superpowers/specs/2026-07-09-mod-support-design.md),
-all five sibling designs ([Phase 0](../superpowers/specs/2026-07-09-mod-support-phase0-design.md),
-[Phase 1](../superpowers/specs/2026-07-09-mod-support-phase1-design.md),
-[Phase 2](../superpowers/specs/2026-07-09-mod-support-phase2-design.md),
-[Phase 3](../superpowers/specs/2026-07-09-mod-support-phase3-design.md), and
-[Phase 4](../superpowers/specs/2026-07-09-mod-support-phase4-design.md)), their five
-[implementation plans](../superpowers/plans/2026-07-09-mod-support-phase0.md)
-([Phase 1](../superpowers/plans/2026-07-09-mod-support-phase1.md),
-[Phase 2](../superpowers/plans/2026-07-09-mod-support-phase2.md),
-[Phase 3](../superpowers/plans/2026-07-09-mod-support-phase3.md), and
-[Phase 4](../superpowers/plans/2026-07-09-mod-support-phase4.md)), and the
-[shared format/security contract](../superpowers/specs/2026-07-10-mod-support-format-security-contracts.md).
+The exact corpus was the [root design](../architecture/designs/2026-07-09-mod-support-design.md),
+all five sibling designs ([Phase 0](../architecture/designs/2026-07-09-mod-support-phase0-design.md),
+[Phase 1](../architecture/designs/2026-07-09-mod-support-phase1-design.md),
+[Phase 2](../architecture/designs/2026-07-09-mod-support-phase2-design.md),
+[Phase 3](../architecture/designs/2026-07-09-mod-support-phase3-design.md), and
+[Phase 4](../architecture/designs/2026-07-09-mod-support-phase4-design.md)), their five
+[implementation plans](../architecture/plans/2026-07-09-mod-support-phase0.md)
+([Phase 1](../architecture/plans/2026-07-09-mod-support-phase1.md),
+[Phase 2](../architecture/plans/2026-07-09-mod-support-phase2.md),
+[Phase 3](../architecture/plans/2026-07-09-mod-support-phase3.md), and
+[Phase 4](../architecture/plans/2026-07-09-mod-support-phase4.md)), and the
+[shared format/security contract](../architecture/designs/2026-07-10-mod-support-format-security-contracts.md).
 The case-insensitive sweep treated hyphen/space spellings as the same marker (for
 example, `out-of-scope`/`out of scope` and `when-demanded`/`when demanded`) and
 treated `defer` as the mandated stem, so it also counts `deferred`/`deferral`. It
@@ -78,9 +78,9 @@ spec commitments.
 
 | Item | Original source | Owner | Evidence and cost/risk | Verdict |
 |---|---|---|---|---|
-| Base-game streamed SFX overrides | Root design §1 manifest override maps and §4 audio; Phase 1 non-goals; shared contract §1 audio manifest | Audio/mod runtime | The standalone sample proves bounded WAV one-shot decode/mix, reducing implementation risk, but base-game identity, manifest vocabulary, conflict reporting, and SMPS fallback remain unsolved. | **Schedule**. [Workstream A](../superpowers/plans/2026-07-13-mod-support-original-scope-follow-ons.md#workstream-a--base-game-streamed-sfx-overrides). |
-| Sonic 1 new-zone adapter | Root design §8 Phase 2; Phase 0 §B; Phase 2 goal/out-of-scope | S1 level loading/mod zones | Original scope explicitly retained it. S1 bypasses the S2 plan seam, so a safe adapter needs dedicated architecture and parity gates. | **Schedule**. [Workstream B](../superpowers/plans/2026-07-13-mod-support-original-scope-follow-ons.md#workstream-b--sonic-1-mod-zone-adapter). |
-| Sonic 3&K new-zone adapter | Root design §8 Phase 2; Phase 2 goal/§D | S3K level/runtime frameworks | Original scope explicitly retained it. S3K zone sets and runtime registries make a mechanical S2 port unsafe. | **Schedule**. [Workstream C](../superpowers/plans/2026-07-13-mod-support-original-scope-follow-ons.md#workstream-c--sonic-3knuckles-mod-zone-adapter). |
+| Base-game streamed SFX overrides | Root design §1 manifest override maps and §4 audio; Phase 1 non-goals; shared contract §1 audio manifest | Audio/mod runtime | The standalone sample proves bounded WAV one-shot decode/mix, reducing implementation risk, but base-game identity, manifest vocabulary, conflict reporting, and SMPS fallback remain unsolved. | **Schedule**. [Workstream A](../architecture/plans/2026-07-13-mod-support-original-scope-follow-ons.md#workstream-a--base-game-streamed-sfx-overrides). |
+| Sonic 1 new-zone adapter | Root design §8 Phase 2; Phase 0 §B; Phase 2 goal/out-of-scope | S1 level loading/mod zones | Original scope explicitly retained it. S1 bypasses the S2 plan seam, so a safe adapter needs dedicated architecture and parity gates. | **Schedule**. [Workstream B](../architecture/plans/2026-07-13-mod-support-original-scope-follow-ons.md#workstream-b--sonic-1-mod-zone-adapter). |
+| Sonic 3&K new-zone adapter | Root design §8 Phase 2; Phase 2 goal/§D | S3K level/runtime frameworks | Original scope explicitly retained it. S3K zone sets and runtime registries make a mechanical S2 port unsafe. | **Schedule**. [Workstream C](../architecture/plans/2026-07-13-mod-support-original-scope-follow-ons.md#workstream-c--sonic-3knuckles-mod-zone-adapter). |
 
 The schedule above is the required disposition; none of these commitments is silently
 reclassified as optional.

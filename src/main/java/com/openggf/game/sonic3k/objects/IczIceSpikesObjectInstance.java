@@ -43,7 +43,7 @@ public class IczIceSpikesObjectInstance extends AbstractObjectInstance
 
     // loc_8B2DA: SolidObjectFull(d1=$17,d2=8,d3=8,d4=x_pos).
     private static final SolidObjectParams SUBTYPE_ZERO_SOLID =
-            new SolidObjectParams(0x17, 0x08, 0x08);
+            SolidObjectParams.of(0x17, 0x08, 0x08);
 
     // loc_8B2CC and loc_8B330.
     private static final int FALLING_COLLISION_FLAGS = 0x92;
@@ -143,7 +143,7 @@ public class IczIceSpikesObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        return subtypeZero ? SUBTYPE_ZERO_SOLID : new SolidObjectParams(0, 0, 0);
+        return subtypeZero ? SUBTYPE_ZERO_SOLID : SolidObjectParams.of(0, 0, 0);
     }
 
     @Override

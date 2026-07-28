@@ -80,6 +80,20 @@ class TestS3kPenguinatorBadnik {
     }
 
     @Test
+    void waitOffscreenStartsWhenPlaceholderRenderBoundsOverlapViewport() throws Exception {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 447, 223, 0);
+        PenguinatorBadnikInstance penguinator = new PenguinatorBadnikInstance(
+                new ObjectSpawn(478, 100, Sonic3kObjectIds.PENGUINATOR, 0, 0, false, 0));
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+
+        penguinator.update(0, player);
+
+        assertEquals("PATROL", readEnumName(penguinator, "state"),
+                "Obj_WaitOffscreen uses the $20 placeholder half extents, not a centre-point X gate");
+        assertEquals(478, penguinator.getX(), "activation frame initializes without moving");
+    }
+
+    @Test
     void slideWaitExpiresIntoSlideRecoveryInsteadOfRestartingPatrol() throws Exception {
         AbstractObjectInstance.updateCameraBounds(0, 0, 1024, 1024, 0);
         PenguinatorBadnikInstance penguinator = create(0);
@@ -102,6 +116,79 @@ class TestS3kPenguinatorBadnik {
                 "loc_8BC6C Obj_Wait callback must run loc_8BC94, not loc_8BB24");
         assertEquals(4, readInt(penguinator, "animFrame"),
                 "sub_8BD9C updates mapping_frame before loc_8BC94 seeds anim_frame to 8 - mapping_frame");
+    }
+
+    @Test
+    void slideRecoveryPublishesFinalFrameThreeBeforeDecelerating() throws Exception {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 1024, 1024, 0);
+        PenguinatorBadnikInstance penguinator = create(0);
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        setEnum(penguinator, "state", "SLIDE_RECOVER");
+        setInt(penguinator, "yRadius", 0x0B);
+        setInt(penguinator, "animFrame", 4);
+        setInt(penguinator, "animTimer", 0);
+        setInt(penguinator, "mappingFrame", 4);
+        setInt(penguinator, "xVelocity", -0x200);
+
+        try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(anyInt(), anyInt(), anyInt()))
+                    .thenReturn(new TerrainCheckResult(0, (byte) 0, 1));
+
+            for (int frame = 0; frame < 8; frame++) {
+                penguinator.update(frame, player);
+            }
+            assertEquals("SLIDE_RECOVER", readEnumName(penguinator, "state"));
+            assertEquals(3, readInt(penguinator, "mappingFrame"),
+                    "byte_8BE16 publishes its final frame 3 for a full delay interval");
+
+            penguinator.update(8, player);
+        }
+
+        assertEquals("DECELERATE", readEnumName(penguinator, "state"),
+                "the F4 callback runs only after the final frame-3 interval");
+    }
+
+    @Test
+    void hopEntryPreservesRawAnimatorPhase() throws Exception {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 1024, 1024, 0);
+        PenguinatorBadnikInstance penguinator = create(0);
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        setEnum(penguinator, "state", "WAIT");
+        setEnum(penguinator, "waitCallback", "JUMP");
+        setInt(penguinator, "routineTimer", 0);
+        setInt(penguinator, "animFrame", 2);
+        setInt(penguinator, "animTimer", 2);
+        setInt(penguinator, "mappingFrame", 1);
+
+        penguinator.update(0, player);
+
+        assertEquals("HOP", readEnumName(penguinator, "state"));
+        assertEquals(2, readInt(penguinator, "animFrame"));
+        assertEquals(2, readInt(penguinator, "animTimer"));
+        assertEquals(1, readInt(penguinator, "mappingFrame"),
+                "loc_8BBAC changes the raw script pointer without resetting its phase");
+    }
+
+    @Test
+    void groundAngleDecisionConsumesFindFloorFlipTransform() throws Exception {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 1024, 1024, 0);
+        PenguinatorBadnikInstance penguinator = create(1);
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        setEnum(penguinator, "state", "PATROL");
+        setBoolean(penguinator, "rawGetFasterPrimed", true);
+        setInt(penguinator, "rawDelay", 2);
+        setInt(penguinator, "animFrame", 0);
+        setInt(penguinator, "animTimer", 0);
+
+        try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDistWithFlipAwareAngle(0x0200, 0x0100, 0x0F))
+                    .thenReturn(new TerrainCheckResult(0, (byte) 0x04, 1));
+
+            penguinator.update(0, player);
+        }
+
+        assertEquals("HOP", readEnumName(penguinator, "state"),
+                "ObjCheckFloorDist publishes the chunk-flip-adjusted angle before the facing-bit test");
     }
 
     private static PenguinatorBadnikInstance create(int renderFlags) {
@@ -148,6 +235,16 @@ class TestS3kPenguinatorBadnik {
         try {
             field.setAccessible(true);
             field.setInt(penguinator, value);
+        } catch (IllegalAccessException e) {
+            throw new AssertionError("Failed to write " + fieldName, e);
+        }
+    }
+
+    private static void setBoolean(PenguinatorBadnikInstance penguinator, String fieldName, boolean value) {
+        Field field = findField(penguinator, fieldName);
+        try {
+            field.setAccessible(true);
+            field.setBoolean(penguinator, value);
         } catch (IllegalAccessException e) {
             throw new AssertionError("Failed to write " + fieldName, e);
         }

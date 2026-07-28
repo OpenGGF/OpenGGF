@@ -1,5 +1,6 @@
 package com.openggf.game;
 
+import com.openggf.tests.TestTempFiles;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.EngineContext;
@@ -80,7 +81,7 @@ class TestPowerUpGraphicsRegression {
 
     @Test
     void sonic2RomLookupHonorsConfiguredMavenPropertyPath() throws Exception {
-        Path configuredRom = Files.createTempFile("openggf-configured-sonic2", ".gen");
+        Path configuredRom = TestTempFiles.createTempFile("openggf-configured-sonic2", ".gen");
         String previous = System.getProperty("sonic2.rom.path");
         System.setProperty("sonic2.rom.path", configuredRom.toString());
         try {
@@ -94,7 +95,7 @@ class TestPowerUpGraphicsRegression {
 
     @Test
     void s3kDonorRomLookupHonorsConfiguredMavenPropertyPath() throws Exception {
-        Path configuredRom = Files.createTempFile("openggf-configured-s3k", ".gen");
+        Path configuredRom = TestTempFiles.createTempFile("openggf-configured-s3k", ".gen");
         String previous = System.getProperty("s3k.rom.path");
         System.setProperty("s3k.rom.path", configuredRom.toString());
         try {

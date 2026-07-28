@@ -132,7 +132,7 @@ public class ElevatorObjectInstance extends BoxObjectInstance
     public SolidObjectParams getSolidParams() {
         // S2 ObjD5 passes d3=9 directly to PlatformObjectD5; continued riding
         // uses that same value in MvSonicOnPtfm (s2.asm:58438-58443, 35621-35657).
-        return new SolidObjectParams(HALF_WIDTH, PLATFORM_HEIGHT, PLATFORM_HEIGHT);
+        return SolidObjectParams.of(HALF_WIDTH, PLATFORM_HEIGHT, PLATFORM_HEIGHT);
     }
 
     @Override

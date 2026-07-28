@@ -48,7 +48,8 @@ public final class LevelRewindSnapshotAdapter implements RewindSnapshottable<Lev
                 levelState != null && levelState.isTimerPaused(),
                 manager.isRespawnRequestedForRewind(),
                 manager.captureCheckpointStateForRewind(),
-                manager.isTransitionRingInitializationPendingForRewind()
+                manager.isTransitionRingInitializationPendingForRewind(),
+                manager.capturePendingInitialProcessSpritesLifecycleForRewind()
         );
     }
 
@@ -74,6 +75,8 @@ public final class LevelRewindSnapshotAdapter implements RewindSnapshottable<Lev
         manager.restoreCheckpointStateForRewind(snapshot.checkpointState());
         manager.restoreTransitionRingInitializationPendingForRewind(
                 snapshot.transitionRingInitializationPending());
+        manager.restorePendingInitialProcessSpritesLifecycleForRewind(
+                snapshot.pendingInitialProcessSpritesLifecycle());
     }
 
     private void restoreLevelHudState(LevelSnapshot snapshot) {

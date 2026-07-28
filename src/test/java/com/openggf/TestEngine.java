@@ -79,6 +79,11 @@ class TestEngine {
 
     @AfterEach
     void tearDown() {
+        // Constructing an Engine publishes it into a process-global static.
+        // Surefire reuses forks, so leaving it set lets an unrelated later test
+        // reach Engine.currentGameLoop() and drive a GL shader compile with no
+        // context, which aborts the JVM rather than failing a test.
+        Engine.clearGlobalInstance();
         SessionManager.clear();
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
     }
@@ -419,8 +424,7 @@ class TestEngine {
     }
 
     @Test
-    void createDataSelectSaveContext_preservesClearSaveStateFromPayload() throws Exception {
-        Path saveRoot = Files.createTempDirectory("engine-dataselect-save");
+    void createDataSelectSaveContext_preservesClearSaveStateFromPayload(@TempDir Path saveRoot) throws Exception {
         SaveManager saveManager = new SaveManager(saveRoot);
         saveManager.writeSlot("s3k", 1, Map.of(
                 "zone", 6,
@@ -457,8 +461,7 @@ class TestEngine {
     }
 
     @Test
-    void createDataSelectSaveContext_ignoresNonLoadableSavePayload() throws Exception {
-        Path saveRoot = Files.createTempDirectory("engine-dataselect-save-nonloadable");
+    void createDataSelectSaveContext_ignoresNonLoadableSavePayload(@TempDir Path saveRoot) throws Exception {
         SaveManager saveManager = new SaveManager(saveRoot);
         saveManager.writeSlot("s3k", 1, Map.of(
                 "zone", 6,
@@ -496,7 +499,7 @@ class TestEngine {
 
     @Test
     void createDataSelectSaveContext_usesStandaloneModuleNamespace() throws Exception {
-        SaveManager saveManager = new SaveManager(Files.createTempDirectory("standalone-save"));
+        SaveManager saveManager = new SaveManager(com.openggf.tests.TestTempFiles.createTempDirectory("standalone-save"));
         GameModule module = mock(GameModule.class);
         when(module.getGameId()).thenReturn(GameId.STANDALONE);
         when(module.getGameCode()).thenReturn("owner-game");
@@ -584,6 +587,17 @@ class TestEngine {
         public boolean isRunning() {
             return false;
         }
+    }
+
+    private static com.openggf.physics.CollisionSystem rewindableCollisionSystemMock() {
+        com.openggf.physics.CollisionSystem collisionSystem =
+                mock(com.openggf.physics.CollisionSystem.class);
+        // The gameplay context registers it for rewind, so it needs the same
+        // stable key and a non-null snapshot the real one provides.
+        when(collisionSystem.key()).thenReturn("collision-system");
+        when(collisionSystem.capture()).thenReturn(
+                new com.openggf.game.rewind.snapshot.CollisionSystemSnapshot(0, 0));
+        return collisionSystem;
     }
 
     private BootstrapHarness createBootstrapHarness(boolean donorActive) throws Exception {
@@ -676,7 +690,7 @@ class TestEngine {
                             new com.openggf.level.WaterSystem(),
                             new com.openggf.level.ParallaxManager(),
                             mock(com.openggf.physics.TerrainCollisionManager.class),
-                            mock(com.openggf.physics.CollisionSystem.class),
+                            rewindableCollisionSystemMock(),
                             spriteManager,
                             levelManager);
                     gameplayMode.attachSharedRegistries(

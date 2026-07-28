@@ -15,6 +15,7 @@ import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic2.objects.EggPrisonButtonObjectInstance;
 import com.openggf.game.sonic2.objects.RisingLavaObjectInstance;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.game.sonic3k.objects.IczSwingingPlatformObjectInstance;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
@@ -372,6 +373,7 @@ class TestSidekickCpuFollowParity {
                         false,
                         false,
                         false,
+                        false,
                         false)));
 
         short[] xHistory = new short[64];
@@ -706,6 +708,82 @@ class TestSidekickCpuFollowParity {
 
         assertEquals(0x1966, tails.getCentreX() & 0xFFFF,
                 "S3K loc_13DA6 gates the $20 lead offset on Status_OnObj, not a stale standing-object reference");
+    }
+
+    @Test
+    void s3kSlidingLeaderUsesPreEventGroundSpeedForLeadOffsetGate() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x527B);
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 16);
+        sonic.setGSpeed((short) 0x03C4);
+        sonic.capturePrePhysicsSnapshot();
+        sonic.capturePreZoneFeatureSnapshot();
+        sonic.setGSpeed((short) 0x0419);
+        sonic.setSliding(true);
+        sonic.setMoveLockTimer(21);
+
+        tails.setCentreXPreserveSubpixel((short) 0x525D);
+        tails.setDirection(Direction.RIGHT);
+        tails.setGSpeed((short) 0x02A3);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+
+        controller.update(0x1C59);
+
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        Assertions.assertAll(
+                () -> assertEquals(-2, diagnostics.dx(),
+                        "S3K loc_13DA6 sees the sliding leader's pre-event $03C4 ground_vel and applies the $20 lead offset"),
+                () -> assertEquals(0, diagnostics.appliedFollowNudge(),
+                        "The resulting target is left of a right-facing sidekick, so FollowLeft must not add a right nudge"),
+                () -> assertEquals(0x525D, tails.getCentreX() & 0xFFFF));
+    }
+
+    @Test
+    void s3kSlidingLeaderUsesPostPhysicsSpeedWhenProjectionCrossesLeadOffsetGate() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setGameRulesForTest(GameRules.SONIC_3K);
+        tails.setDirection(Direction.RIGHT);
+
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) 0x5910);
+        Arrays.fill(yHistory, (short) 0x00F3);
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 16);
+
+        sonic.setGSpeed((short) 0x03EE);
+        sonic.capturePrePhysicsSnapshot();
+        sonic.setGSpeed((short) 0x0403);
+        sonic.capturePreZoneFeatureSnapshot();
+        sonic.setGSpeed((short) 0x0443);
+        sonic.setSliding(true);
+
+        tails.setCentreXPreserveSubpixel((short) 0x58E0);
+        tails.setCentreYPreserveSubpixel((short) 0x00F2);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+        controller.update(0x2023);
+
+        SidekickCpuController.NormalStepDiagnostics diagnostics = controller.getLatestNormalStepDiagnostics();
+        Assertions.assertAll(
+                () -> assertEquals(0x30, diagnostics.dx(),
+                        "S3K loc_13DA6 sees the post-physics $0403 value and suppresses the $20 lead offset"),
+                () -> assertTrue(controller.getInputRight(),
+                        "the unbiased delayed target reaches the leader-fast follow branch"));
     }
 
     @Test
@@ -1901,6 +1979,52 @@ class TestSidekickCpuFollowParity {
                     () -> assertTrue(controller.getInputRight()),
                     () -> assertTrue(controller.getInputDown()),
                     () -> assertEquals(1, diagnostics.appliedFollowNudge()));
+        } finally {
+            installStandaloneGameModule(previous);
+        }
+    }
+
+    @Test
+    void s3kLivePushBypassDoesNotMasqueradeAsObjectOrderGraceNearAizGiantVine() throws Exception {
+        GameModule previous = GameModuleRegistry.getCurrent();
+        try {
+            installStandaloneGameModule(sonic3kWithSidekickContext(true));
+            TestableSprite sonic = new TestableSprite("sonic");
+            TestableSprite tails = new TestableSprite("tails_p2");
+            tails.setCpuControlled(true);
+            tails.setAir(false);
+            tails.setObjectControlled(false);
+            tails.setPushing(true);
+            tails.setCentreX((short) 0x1CED);
+            tails.setCentreY((short) 0x03C0);
+            tails.setGSpeed((short) 0x000C);
+            tails.setXSpeed((short) 0x000C);
+
+            short[] xHistory = new short[64];
+            short[] yHistory = new short[64];
+            short[] inputHistory = new short[64];
+            byte[] statusHistory = new byte[64];
+            Arrays.fill(xHistory, (short) 0x1C69);
+            Arrays.fill(yHistory, (short) 0x038B);
+            Arrays.fill(statusHistory, (byte) AbstractPlayableSprite.STATUS_ON_OBJECT);
+            sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+
+            SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+            tails.setGameRulesForTest(GameRules.SONIC_3K);
+            controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+            setNormalPushingGraceFrames(controller, 16);
+
+            controller.update(0x0972);
+
+            SidekickCpuController.NormalStepDiagnostics diagnostics =
+                    controller.getLatestNormalStepDiagnostics();
+            Assertions.assertAll(
+                    () -> assertEquals("current_push_bypass", diagnostics.followBranch()),
+                    () -> assertTrue(diagnostics.skipFollowSteering()),
+                    () -> assertFalse(controller.usedObjectOrderGracePushBypassThisFrame(),
+                            "ROM-visible Status_Push owns loc_13DD0 directly; the synthetic "
+                                    + "object-order bridge must not pre-clear its $000C inertia "
+                                    + "before Tails_InputAcceleration_Path."));
         } finally {
             installStandaloneGameModule(previous);
         }
@@ -4312,6 +4436,21 @@ class TestSidekickCpuFollowParity {
         };
     }
 
+    @Test
+    void s3kIczSwingingPlatformDeclaresCpuSidekickObjectOrderStatusBridge() {
+        IczSwingingPlatformObjectInstance platform = new IczSwingingPlatformObjectInstance(
+                new ObjectSpawn(0x0157, 0x00E1, 0xB4, 0, 0, false, 0));
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        TestableSprite sonic = new TestableSprite("sonic");
+
+        Assertions.assertAll(
+                () -> assertTrue(platform.usesSidekickCpuPushBypassObjectOrderStatusDelay(tails),
+                        "ObjB4's folded child SolidObjectFull slots require the object-order d4 sample."),
+                () -> assertFalse(platform.usesSidekickCpuPushBypassObjectOrderStatusDelay(sonic),
+                        "The bridge only belongs to TailsCPU_Normal."));
+    }
+
     private static void installStandaloneGameModule(GameModule module) {
         GameModuleRegistry.setCurrent(module);
         SessionManager.openGameplaySession(module);
@@ -4390,6 +4529,7 @@ class TestSidekickCpuFollowParity {
                 base.sidekickFlightYStep(),
                 base.sidekickFlightLeadXOffset(),
                 base.sidekickFlightLeadSuppressGSpeed(),
+                base.sidekickFlightClampsTargetYToWater(),
                 base.sidekickRespawnEntersCatchUpFlight(),
                 base.sidekickCpuUsesLevelFrameCounter(),
                 base.sidekickDeathUsesDeferredDespawn(),

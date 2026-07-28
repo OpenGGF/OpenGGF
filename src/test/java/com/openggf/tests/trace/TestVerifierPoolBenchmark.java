@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Proof-of-concept for the time-attack verifier's <b>pooled warm-level</b>
- * architecture (docs/superpowers/specs/2026-07-04-time-attack-security-design.md §6).
+ * architecture (docs/architecture/designs/2026-07-04-time-attack-security-design.md §6).
  *
  * <p>Models the real service shape: verification jobs are routed by fingerprint
  * to a worker that already holds the matching level in memory (§6.2). Instead of

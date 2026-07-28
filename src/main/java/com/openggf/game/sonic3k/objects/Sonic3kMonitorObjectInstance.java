@@ -547,7 +547,7 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
     // From disassembly: SolidObject_Monitor_SetValues params d1=$19, d2=$10, d3=$11
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(SOLID_WIDTH, SOLID_D2, SOLID_D3);
+        return SolidObjectParams.of(SOLID_WIDTH, SOLID_D2, SOLID_D3);
     }
 
     @Override

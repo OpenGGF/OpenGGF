@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -56,6 +57,7 @@ class TestS3kIczSwingingPlatformObject {
         assertEquals(0x1200, platform.getPieceX(0));
         assertEquals(0x0708, platform.getPieceY(0));
         assertEquals(0x2B, lower.halfWidth());
+        assertEquals(0x20, platform.getPieceLandingHalfWidth(0));
         assertEquals(8, lower.airHalfHeight());
         assertEquals(8, lower.groundHalfHeight());
 
@@ -63,6 +65,7 @@ class TestS3kIczSwingingPlatformObject {
         assertEquals(0x121C, platform.getPieceX(1));
         assertEquals(0x06F8, platform.getPieceY(1));
         assertEquals(0x0F, upper.halfWidth());
+        assertEquals(0x30, platform.getPieceLandingHalfWidth(1));
         assertEquals(8, upper.airHalfHeight());
         assertEquals(8, upper.groundHalfHeight());
 
@@ -70,7 +73,13 @@ class TestS3kIczSwingingPlatformObject {
         assertEquals(0x0700, platform.getY());
         assertEquals(1, platform.getPriorityBucket());
         assertTrue(platform.usesPieceScopedStandingBits());
-        assertTrue(platform.usesCollisionHalfWidthForTopLanding());
+        assertTrue(platform.airborneStaleStandingBitReturnsNoContact(mock(PlayableEntity.class)));
+        assertTrue(platform.sidekickCpuStalePushGraceKeepsFollowSteeringWhileRiding(
+                mock(PlayableEntity.class)));
+        assertFalse(platform.usesCollisionHalfWidthForTopLanding(),
+                "SolidObjectFull re-reads each child slot's width_pixels after the broad overlap");
+        assertTrue(platform.usesInclusiveRightEdge(),
+                "SolidObjectFull's broad child overlap rejects only values above the right edge");
     }
 
     @Test
@@ -90,6 +99,8 @@ class TestS3kIczSwingingPlatformObject {
         when(player.getXSpeed()).thenReturn((short) 0x1000);
 
         platform.onPieceContact(0, player, standingContact(), 0);
+        assertEquals(0x2B, platform.getPieceLandingHalfWidth(0),
+                "the armed child keeps its broad continued-contact window while its standing bit owns the rider");
         platform.update(1, player);
 
         assertEquals(0x1200, platform.getX(),
@@ -100,6 +111,19 @@ class TestS3kIczSwingingPlatformObject {
         assertTrue(platform.getX() > 0x1200);
         verify(player).setXSpeed((short) 0x0800);
         verify(player).setGSpeed((short) 0x0800);
+    }
+
+    @Test
+    void continuedStandingTriggerHalvesSpeedBeforeSwingClamp() {
+        IczSwingingPlatformObjectInstance platform = new IczSwingingPlatformObjectInstance(
+                new ObjectSpawn(0x1200, 0x0700, Sonic3kObjectIds.ICZ_SWINGING_PLATFORM, 0, 0, false, 0));
+        PlayableEntity player = mock(PlayableEntity.class);
+        when(player.getXSpeed()).thenReturn((short) 0x08F8);
+
+        platform.onPieceContact(0, player, standingContact(), 0, true);
+
+        verify(player).setXSpeed((short) 0x047C);
+        verify(player).setGSpeed((short) 0x047C);
     }
 
     @Test
@@ -132,6 +156,27 @@ class TestS3kIczSwingingPlatformObject {
 
         assertTrue(platform.getX() > 0x1200,
                 "platform should still be returning from the far swing arc, not snapped to spawn");
+    }
+
+    @Test
+    void releasedPlatformPreservesCircularFixedPointFraction() {
+        IczSwingingPlatformObjectInstance platform = new IczSwingingPlatformObjectInstance(
+                new ObjectSpawn(0x1200, 0x0700, Sonic3kObjectIds.ICZ_SWINGING_PLATFORM, 1, 0, false, 0));
+        PlayableEntity player = mock(PlayableEntity.class);
+        when(player.getXSpeed()).thenReturn((short) 0x0800);
+
+        platform.onPieceContact(0, player, standingContact(), 0);
+        for (int frame = 1; frame <= 100 && platform.getX() <= 0x1280; frame++) {
+            platform.update(frame, player);
+        }
+
+        assertEquals(0x1283, platform.getX());
+        assertEquals(0x066A, platform.getY());
+        assertEquals(0, platform.getXSubpixelForTesting());
+        assertEquals(0x8000, platform.getYSubpixelForTesting(),
+                "MoveSprite must retain the half-pixel produced by MoveSprite_CircularSimple");
+        assertEquals(0x1283, platform.getOutOfRangeReferenceX(),
+                "Sprite_CheckDeleteTouch2 checks the moving x_pos, including after chain release");
     }
 
     @Test

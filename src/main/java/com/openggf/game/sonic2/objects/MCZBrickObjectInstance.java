@@ -69,7 +69,7 @@ public class MCZBrickObjectInstance extends AbstractObjectInstance
     private static final int BRICK_BOTTOM_HEIGHT = 0x11; // 17 pixels
 
     private static final SolidObjectParams BRICK_PARAMS =
-            new SolidObjectParams(BRICK_HALF_WIDTH, BRICK_TOP_HEIGHT, BRICK_BOTTOM_HEIGHT);
+            SolidObjectParams.of(BRICK_HALF_WIDTH, BRICK_TOP_HEIGHT, BRICK_BOTTOM_HEIGHT);
 
     // Spike ball collision flags (from disassembly line 55092)
     // $9A = High nibble 0x90 (HURT category) + Low nibble 0x0A (size index)

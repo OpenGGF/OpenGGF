@@ -660,7 +660,7 @@ When implementing a new object:
 11. **Test manually, then write automated tests.** If a source guard needs a baseline for
     existing legacy code, ratchet it down when your object migrates instead of growing it.
 
-The [Object Checklists](../../OBJECT_CHECKLIST.md) show which objects are implemented and
+The [Object Checklists](../../../OBJECT_CHECKLIST.md) show which objects are implemented and
 which are still needed.
 
 ## Next Steps

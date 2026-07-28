@@ -2,6 +2,7 @@ package com.openggf.level;
 
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.snapshot.LevelSnapshot;
+import com.openggf.game.InitialProcessSpritesLifecycle;
 import com.openggf.game.LevelGamestate;
 import com.openggf.game.mutation.LevelMutationSurface;
 import org.junit.jupiter.api.Test;
@@ -9,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
 
 /**
  * Tests for LevelManager's rewind snapshot adapter.
@@ -17,6 +19,87 @@ import static org.junit.jupiter.api.Assertions.*;
  * Full integration tests would require a HeadlessTestRunner or similar fixture.
  */
 class TestLevelManagerRewindSnapshot {
+
+    @Test
+    void pendingInitialSetupLifecycleRoundTripsAndDispatchesExactlyOnce() {
+        InitialProcessSpritesLifecycleCoordinator coordinator = new InitialProcessSpritesLifecycleCoordinator();
+        coordinator.publish(InitialProcessSpritesLifecycle.LOAD_THEN_PROCESS_ONCE);
+
+        InitialProcessSpritesLifecycle captured = coordinator.captureForRewind();
+        coordinator.discard();
+        coordinator.restoreForRewind(captured);
+
+        int[] dispatches = {0};
+        assertTrue(coordinator.consume(() -> dispatches[0]++));
+        assertFalse(coordinator.consume(() -> dispatches[0]++));
+        assertEquals(1, dispatches[0]);
+    }
+
+    @Test
+    void consumedInitialSetupLifecycleRoundTripsWithoutDispatchAuthority() {
+        InitialProcessSpritesLifecycleCoordinator coordinator = new InitialProcessSpritesLifecycleCoordinator();
+        coordinator.publish(InitialProcessSpritesLifecycle.LOAD_THEN_PROCESS_ONCE);
+        coordinator.consume(() -> { });
+
+        InitialProcessSpritesLifecycle captured = coordinator.captureForRewind();
+        coordinator.publish(InitialProcessSpritesLifecycle.LOAD_THEN_PROCESS_ONCE);
+        coordinator.restoreForRewind(captured);
+
+        assertFalse(coordinator.consume(() -> fail("consumed lifecycle must not dispatch")));
+    }
+
+    @Test
+    void exceptionAfterConsumeRestoresConsumedStateWithoutReplay() {
+        InitialProcessSpritesLifecycleCoordinator coordinator = new InitialProcessSpritesLifecycleCoordinator();
+        coordinator.publish(InitialProcessSpritesLifecycle.LOAD_THEN_PROCESS_ONCE);
+        assertThrows(IllegalStateException.class,
+                () -> coordinator.consume(() -> {
+                    throw new IllegalStateException("setup boom");
+                }));
+
+        InitialProcessSpritesLifecycle captured = coordinator.captureForRewind();
+        coordinator.publish(InitialProcessSpritesLifecycle.LOAD_THEN_PROCESS_ONCE);
+        coordinator.restoreForRewind(captured);
+
+        assertEquals(InitialProcessSpritesLifecycle.NONE, captured);
+        assertFalse(coordinator.consume(() -> fail("exception-consumed lifecycle must not replay")));
+    }
+
+    @Test
+    void levelManagerFacadeRoundTripsTypedInitialSetupLifecycle() {
+        com.openggf.game.session.EngineContext services =
+                mock(com.openggf.game.session.EngineContext.class);
+        org.mockito.Mockito.when(services.graphics())
+                .thenReturn(mock(com.openggf.graphics.GraphicsManager.class));
+        org.mockito.Mockito.when(services.audio())
+                .thenReturn(mock(com.openggf.audio.AudioManager.class));
+        org.mockito.Mockito.when(services.configuration())
+                .thenReturn(mock(com.openggf.configuration.SonicConfigurationService.class));
+        org.mockito.Mockito.when(services.debugOverlay())
+                .thenReturn(mock(com.openggf.debug.DebugOverlayManager.class));
+        org.mockito.Mockito.when(services.profiler())
+                .thenReturn(mock(com.openggf.debug.PerformanceProfiler.class));
+        org.mockito.Mockito.when(services.crossGameFeatures())
+                .thenReturn(mock(com.openggf.game.CrossGameFeatureProvider.class));
+        LevelManager manager = new LevelManager(
+                mock(com.openggf.camera.Camera.class),
+                mock(com.openggf.sprites.managers.SpriteManager.class),
+                mock(com.openggf.level.ParallaxManager.class),
+                mock(com.openggf.physics.CollisionSystem.class),
+                mock(com.openggf.level.WaterSystem.class),
+                mock(com.openggf.game.GameStateManager.class),
+                services,
+                mock(com.openggf.game.session.WorldSession.class));
+
+        manager.restorePendingInitialProcessSpritesLifecycleForRewind(
+                InitialProcessSpritesLifecycle.LOAD_THEN_PROCESS_ONCE);
+
+        assertEquals(InitialProcessSpritesLifecycle.LOAD_THEN_PROCESS_ONCE,
+                manager.capturePendingInitialProcessSpritesLifecycleForRewind());
+        manager.restorePendingInitialProcessSpritesLifecycleForRewind(InitialProcessSpritesLifecycle.NONE);
+        assertEquals(InitialProcessSpritesLifecycle.NONE,
+                manager.capturePendingInitialProcessSpritesLifecycleForRewind());
+    }
 
     /**
      * Minimal concrete stub for testing level snapshots without full load.
@@ -89,10 +172,12 @@ class TestLevelManagerRewindSnapshot {
                             0,
                             true,
                             levelGamestate.getRings(),
+                            levelGamestate.getRingExtraLifeFlags(),
                             levelGamestate.getTimerFrames(),
                             levelGamestate.isTimerPaused(),
                             false,
-                            null
+                            null,
+                            InitialProcessSpritesLifecycle.NONE
                     );
                 }
 

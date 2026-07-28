@@ -10,7 +10,7 @@ import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
-import java.awt.image.BufferedImage;
+import com.openggf.io.PixelImage;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -62,7 +62,7 @@ public final class TmxLevelImporter {
         Parsed parsed = parse(tmx, root);
         Palette palette = readPalette(paletteFile);
         Profiles profiles = new TmxSolidProfileReader(limits).read(solidProfileDirectory);
-        BufferedImage image = new TmxPngReader().read(parsed.tileset().image(),
+        PixelImage image = new TmxPngReader().read(parsed.tileset().image(),
                 parsed.tileset().imageWidth(), parsed.tileset().imageHeight(), limits);
         Compiled compiled = compile(parsed, image, palette, profiles.count());
         Path output = new TmxLevelExportPublisher().publish(outputDirectory, parsed, palette, profiles, compiled, music);
@@ -485,7 +485,7 @@ public final class TmxLevelImporter {
         }
     }
 
-    private Compiled compile(Parsed parsed, BufferedImage image, Palette palette, int profileCount) throws IOException {
+    private Compiled compile(Parsed parsed, PixelImage image, Palette palette, int profileCount) throws IOException {
         List<byte[]> patterns = new ArrayList<>();
         patterns.add(new byte[32]);
         Map<Bytes, Integer> patternIds = new LinkedHashMap<>();
@@ -521,7 +521,7 @@ public final class TmxLevelImporter {
         return new Compiled(patterns, chunks, blocks, fgMap, bgMap, mapWidth, mapHeight);
     }
 
-    private void compileTile(int tile, Parsed parsed, BufferedImage image, Palette palette,
+    private void compileTile(int tile, Parsed parsed, PixelImage image, Palette palette,
                              List<byte[]> patterns, Map<Bytes, Integer> patternIds,
                              int[][] tileDescriptors) throws IOException {
             int tileX = (tile % parsed.tileset().columns()) * 16;
@@ -588,7 +588,7 @@ public final class TmxLevelImporter {
         return (int) gid;
     }
 
-    private Pattern encodePattern(BufferedImage image, int ox, int oy, Palette palette) throws IOException {
+    private Pattern encodePattern(PixelImage image, int ox, int oy, Palette palette) throws IOException {
         int selectedLine = -1;
         int[] selected = null;
         for (int line = 0; line < palette.lines(); line++) {

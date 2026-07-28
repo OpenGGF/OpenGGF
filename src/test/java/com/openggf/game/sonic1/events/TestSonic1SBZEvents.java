@@ -271,6 +271,8 @@ public class TestSonic1SBZEvents {
         cam.setX((short) 0x2148);
         events.updateFZ();
         assertEquals(2, events.getEventRoutine(), "Should advance to routine 2 when X >= 0x2148");
+        assertEquals(279, events.getFzPlcFramesRemaining(),
+                "The FZ boss PLC must be queued at the DLE_FZmain transition");
         assertEquals((short) 0x2148, cam.getMinX(), "Should lock minX to camera X");
     }
 
@@ -347,3 +349,4 @@ public class TestSonic1SBZEvents {
         assertEquals((short) 0x2600, cam.getMinX(), "Should lock minX to camera X");
     }
 }
+

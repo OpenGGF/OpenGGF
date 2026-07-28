@@ -32,8 +32,34 @@
 -- v5.3-s3k changes: emit pre-trace CPU/object snapshots on the first
 -- recorded physics frame so snapshot state and trace frame 0 share the same
 -- end-of-frame ROM instant.
--- v5.4-s3k changes: write pre_trace_osc_frames from Level_frame_counter so
--- seeded replays restore the ROM's global oscillation phase.
+-- v6.29-s3k changes: stop advertising replay phase controls in metadata.
+-- Replay derives prefix and LEVEL-transition scheduling from recorded mode
+-- events; recorder values remain comparison diagnostics only.
+-- v6.30-s3k changes: derive every profile's input column from
+-- bk2_frame_offset + trace_row with no profile-dependent adjustment.
+-- v6.31-s3k changes: point ADDR_FRAMECOUNT at Level_frame_counter (0xFE04)
+-- instead of Debug_placement_mode (0xFE08), which is dead-zero during normal
+-- gameplay. Fixes the all-zero physics.csv gameplay_frame_counter column and
+-- every aux "vfc" / oscillation_state "level_frame_counter" field. Mirrors the
+-- same fix already applied to s3k_complete_run_recorder.lua. Existing captures
+-- carry the dead column and need recapture.
+-- v6.32-s3k changes: point ADDR_VBLA_WORD at the low word of V_int_run_count
+-- (0xFE0E) instead of Life_count (0xFE12). Fixes the physics.csv
+-- vblank_counter column, which was recording the lives counter -- constant
+-- except on 1UPs -- rather than the ROM's free-running V-int counter. Matches
+-- the S1 and S2 recorders, which already read 0xFE0E. Existing captures carry
+-- the wrong column and need recapture.
+-- v6.34-s3k changes: add trace_schema 7 / hardware_timing_schema 1 and the
+-- authoritative hardware_timing.jsonl stream.
+-- v6.35-s3k fixes Kosinski descriptor-word refill timing in the shared
+-- hardware-timing scanner so submission fingerprints use the canonical
+-- compressed span consumed by the ROM decoder. Synchronous LoadLevelLoadBlock
+-- jobs remain in the ordinal ledger but are not exported as completion
+-- authority before the ordinary LevelLoop becomes observable.
+-- v6.37-s3k classifies a completion on a held Level_frame_counter row at
+-- vint_service unless the frame-zero Obj_TitleCard parent has armed loc_62CC.
+-- That semantic lifecycle remains active while either the parent wait flag or
+-- Nem_decomp_queue keeps its Process_Sprites/module-service loop alive.
 -- v6.0-s3k changes: emit per-frame cpu_state events with the full Tails CPU
 -- global block plus Ctrl_2_logical so engine SidekickCpuController state can
 -- be hydrated each frame in trace replay (closes the visibility gap that
@@ -108,7 +134,7 @@
 -- plus the Ctrl_1_logical / Ctrl_2_logical 16-bit latches. Emitted on
 -- every frame where any of those four bytes change, plus a baseline
 -- snapshot every SNAPSHOT_INTERVAL frames. Diagnostic-only.
--- Targets the AIZ F7361-F7365 blocker (docs/S3K_KNOWN_BUGS.md "AIZ2
+-- Targets the AIZ F7361-F7365 blocker (docs/status/s3k-known-bugs.md "AIZ2
 -- Trace F7381"): the engine never enters controlLocked, so its
 -- inputHistory mirror never zeroes the Tails leader-input slot that
 -- ROM zeroes via Ctrl_1_locked, causing the F7381 -0x18 x_vel drift.
@@ -117,7 +143,7 @@
 -- v6.13-s3k adds terrain_wall_sensor_per_frame and extends the existing
 -- velocity_write / position_write windows with an AIZ F7549-F7560
 -- sub-window. Targets the AIZ F7552 sidekick airborne wall-collision
--- blocker (docs/S3K_KNOWN_BUGS.md "AIZ F7552"): Tails wedges at
+-- blocker (docs/status/s3k-known-bugs.md "AIZ F7552"): Tails wedges at
 -- x=0x1208 with x_sub=0x0000 and x_speed=0x0000 across many airborne
 -- frames -- the canonical ROM right-wall-collision-while-airborne
 -- result of Tails_DoLevelCollision (sonic3k.asm:28871-29117). The new
@@ -144,7 +170,7 @@
 -- these events.
 -- v6.15-s3k adds collision_response_list_per_frame and
 -- collision_response_list_end_of_frame events. Targets the CNZ F=621
--- Clamer re-fire blocker (docs/S3K_KNOWN_BUGS.md "CNZ F=621 Clamer
+-- Clamer re-fire blocker (docs/status/s3k-known-bugs.md "CNZ F=621 Clamer
 -- re-fire — ROM dispatch path narrowing"): the prior round narrowed
 -- the dispatch path to Touch_Special writing collision_property(a1)
 -- ($29) inside Touch_Loop when a player rect overlaps a SPECIAL-
@@ -233,6 +259,33 @@
 -- Diagnostic-only.
 ------------------------------------------------------------------------------
 
+------------------
+--- Shared lib ---
+------------------
+
+-- Locate tools/bizhawk/lib/ robustly across the .bat/%TEMP%-wrapper route, the
+-- direct --lua= route, and headless launches (see lib/oggf_trace_common.lua and
+-- SHARED_MODULE_HANDOFF.md). The launcher-provided env var wins; otherwise fall
+-- back to this recorder's own directory, then CWD. Scoped in a do-block so the
+-- helper's local slot is freed (these recorders sit near Lua's 200-locals cap).
+local C
+do
+    local function oggf_lib_dir()
+        local env = os.getenv("OGGF_BIZHAWK_LIB")        -- launcher-provided, most robust
+        if env and #env > 0 then return env end
+        local src = debug.getinfo(1, "S").source         -- "@<abs path to this recorder>"
+        local dir = src:match("^@(.*[/\\])")             -- strip filename
+        if dir then return dir .. "lib/" end
+        return "lib/"                                     -- CWD fallback
+    end
+    -- assert() so a bad path surfaces as a load error (visible without
+    -- --chromeless) instead of silently skipping the whole recorder.
+    local dir = oggf_lib_dir()
+    C = assert(loadfile(dir .. "oggf_trace_common.lua"))()
+    HARDWARE_TIMING =
+        assert(loadfile(dir .. "oggf_hardware_timing.lua"))()
+end
+
 -----------------
 --- Constants ---
 -----------------
@@ -246,7 +299,15 @@ local MOVIE_FRAME_SAFETY_MARGIN = 30
 local TRACE_PROFILE = os.getenv("OGGF_S3K_TRACE_PROFILE") or "gameplay_unlock"
 TRACE_STOP_FRAME = tonumber(os.getenv("OGGF_TRACE_STOP_FRAME") or "")
 local BK2_FRAME_COUNT = tonumber(os.getenv("OGGF_BK2_FRAME_COUNT") or "")
-LIGHTWEIGHT_REGEN = os.getenv("OGGF_TRACE_LIGHTWEIGHT") == "1"
+-- Fixture regeneration is physics/animation-only by default. PC-execution
+-- diagnostics cross the Lua/C# boundary frequently and are especially costly
+-- under Mono; opt into them only for focused frontier investigation.
+DIAGNOSTIC_HOOKS_ENABLED =
+    os.getenv("OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS") == "1"
+LIGHTWEIGHT_REGEN = not DIAGNOSTIC_HOOKS_ENABLED
+if os.getenv("OGGF_TRACE_QUIET") == "1" then
+    print = function() end
+end
 local BIZHAWK_VERSION = "2.11"
 local GENESIS_CORE = "Genplus-gx"
 local S3K_ROM_CHECKSUM = "C5B1C655C19F462ADE0AC4E17A844D10"
@@ -337,7 +398,7 @@ OBJ_CNZ_CYLINDER            = 0x00032188
 local OBJ_CNZ_MINIBOSS_SCROLL_CONTROL = 0x00052004
 local OBJ_ID_CNZ_BALLOON    = 0x41
 
-local ADDR_FRAMECOUNT       = 0xFE08
+local ADDR_FRAMECOUNT       = 0xFE04  -- Level_frame_counter (was 0xFE08 = Debug_placement_mode, dead-zero since inception; matches S1/S2 recorders)
 -- Oscillating_table address ($FFFFFE6E in S3K RAM, $42 bytes total).
 -- First word ($FE6E/$FE6F) is the control bitfield (Osc_Data $0000 first dc.w),
 -- followed by 16 (value, delta) word pairs. Computed from
@@ -345,7 +406,7 @@ local ADDR_FRAMECOUNT       = 0xFE08
 -- $FFFF0000 -> CrossResetRAM at $FFFFFE00 -> Oscillating_table at offset $6E.
 local ADDR_OSC_TABLE        = 0xFE6E
 local OSC_TABLE_SIZE        = 0x42
-local ADDR_VBLA_WORD        = 0xFE12
+local ADDR_VBLA_WORD        = 0xFE0E  -- V_int_run_count low word (was 0xFE12 = Life_count, constant except on 1UPs; matches S1/S2 recorders)
 local ADDR_LAG_FRAME_COUNT  = 0xF628
 local ADDR_RNG_SEED         = 0xF636
 ADDR_RANDOM_NUMBER          = 0x001D24
@@ -384,11 +445,13 @@ local ADDR_STAT_TABLE        = 0xE400
 local ADDR_POS_TABLE         = 0xE500
 local ADDR_POS_TABLE_INDEX   = 0xEE26
 
-local INPUT_UP    = 0x01
-local INPUT_DOWN  = 0x02
-local INPUT_LEFT  = 0x04
-local INPUT_RIGHT = 0x08
-local INPUT_JUMP  = 0x10
+-- Genesis joypad bitmask — single-sourced in lib/oggf_trace_common.lua;
+-- rebound locally to keep hot-loop lookups cheap.
+local INPUT_UP    = C.INPUT_UP
+local INPUT_DOWN  = C.INPUT_DOWN
+local INPUT_LEFT  = C.INPUT_LEFT
+local INPUT_RIGHT = C.INPUT_RIGHT
+local INPUT_JUMP  = C.INPUT_JUMP
 
 local GAMEMODE_SEGA       = 0x00  -- verified from GameModes entry 0 label <Sega_Screen>       (sonic3k.asm:431)
 local GAMEMODE_TITLE      = 0x04  -- verified from GameModes entry 1 label <Title_Screen>      (sonic3k.asm:432)
@@ -620,82 +683,30 @@ local WRITE_DIAG = {
 }
 local physics_file = nil
 local aux_file = nil
+hardware_timing_file = nil
+HARDWARE_TIMING_TRACKER = HARDWARE_TIMING.new_tracker()
+hardware_timing_authority_armed = false
 
 -----------------
 --- Helpers   ---
 -----------------
 
-local function read_speed(base, offset)
-    return mainmemory.read_s16_be(base + offset)
-end
+-- Leaf helpers single-sourced in lib/oggf_trace_common.lua. Rebound to locals
+-- so the many call sites below stay unchanged; the two that captured file-scope
+-- upvalues (bk2_input_mask -> bk2_frame_offset, write_aux -> aux_file) keep thin
+-- local wrappers that forward those upvalues.
+local read_speed = C.read_speed
+local hex = C.hex
+local angle_to_ground_mode = C.angle_to_ground_mode
+local json_quote = C.json_quote
 
-local function rom_joypad_to_mask(raw)
-    local mask = raw & 0x0F
-    if (raw & 0x70) ~= 0 then
-        mask = mask + INPUT_JUMP
-    end
-    return mask
-end
-
--- Mirrors the S2/S1 recorder's BK2-derived input read. ROM-side $FFF604
--- updates from inside the Genesis V-int subroutines that call ReadJoypads;
--- on lag frames and during long V-int paths the written byte can lag the
--- BK2 logical input by one game frame, producing spurious "Input alignment
--- error" failures in S3K trace replay. Read the BK2 movie input directly
--- so the CSV input column matches what the test fixture's BK2 reader sees.
 local function bk2_input_mask(fallback_raw, trace_row)
-    if not movie.isloaded() then
-        return rom_joypad_to_mask(fallback_raw)
-    end
-    -- Replay metadata defines trace row N as BK2 frame
-    -- (bk2_frame_offset + N). Use that same convention here; direct
-    -- emu.framecount() is one frame ahead in this recorder loop.
-    local frame_index = bk2_frame_offset ~= nil
-        and trace_row ~= nil
-        and (bk2_frame_offset + trace_row)
-        or emu.framecount()
-    local jp = movie.getinput(frame_index, 1)
-    if jp == nil then
-        return rom_joypad_to_mask(fallback_raw)
-    end
-    local mask = 0
-    if jp["P1 Up"]    or jp["Up"]    then mask = mask | INPUT_UP    end
-    if jp["P1 Down"]  or jp["Down"]  then mask = mask | INPUT_DOWN  end
-    if jp["P1 Left"]  or jp["Left"]  then mask = mask | INPUT_LEFT  end
-    if jp["P1 Right"] or jp["Right"] then mask = mask | INPUT_RIGHT end
-    if jp["P1 A"] or jp["A"] or jp["P1 B"] or jp["B"]
-            or jp["P1 C"] or jp["C"] then
-        mask = mask | INPUT_JUMP
-    end
-    return mask
-end
-
-local function hex(val, width)
-    width = width or 4
-    if val < 0 then
-        val = val + 0x10000
-    end
-    return string.format("%0" .. width .. "X", val)
-end
-
-local function angle_to_ground_mode(angle)
-    if angle <= 0x1F or angle >= 0xE0 then return 0 end
-    if angle >= 0x20 and angle <= 0x5F then return 1 end
-    if angle >= 0x60 and angle <= 0x9F then return 2 end
-    return 3
+    return C.bk2_input_mask(
+        fallback_raw, trace_row, bk2_frame_offset, 0)
 end
 
 local function write_aux(json_str)
-    if aux_file then
-        aux_file:write(json_str .. "\n")
-        aux_file:flush()
-    end
-end
-
-local function json_quote(value)
-    return '"' .. tostring(value)
-        :gsub("\\", "\\\\")
-        :gsub('"', '\\"') .. '"'
+    C.write_aux(aux_file, json_str)
 end
 
 local function json_int_or_null(value)
@@ -887,13 +898,22 @@ end
 --- Recording ---
 -----------------
 
+local function open_empty_hardware_timing_file()
+    if hardware_timing_file then hardware_timing_file:close() end
+    hardware_timing_file =
+        io.open(OUTPUT_DIR .. "hardware_timing.jsonl", "w")
+end
+
 local function reset_recording_state()
     -- Abandon any in-progress recording buffers and reset all frame
     -- counters so the next level-gameplay entry starts fresh.
+    deactivate_diagnostic_hooks()
     if physics_file then physics_file:close() end
     if aux_file then aux_file:close() end
+    if hardware_timing_file then hardware_timing_file:close() end
     physics_file = nil
     aux_file = nil
+    hardware_timing_file = nil
     started = false
     trace_frame = 0
     bk2_frame_offset = 0
@@ -928,14 +948,25 @@ local function reset_recording_state()
     V65.normal_step = nil
     V66.boundary_state = nil
     V67_CNZ.cnz_cylinder_hits = {}
+    HARDWARE_TIMING_TRACKER = HARDWARE_TIMING.new_tracker()
+    hardware_timing_authority_armed = false
     os.remove(OUTPUT_DIR .. "physics.csv")
     os.remove(OUTPUT_DIR .. "aux_state.jsonl")
+    os.remove(OUTPUT_DIR .. "hardware_timing.jsonl")
     os.remove(OUTPUT_DIR .. "metadata.json")
+    open_empty_hardware_timing_file()
 end
 
 local function open_files()
+    if hardware_timing_file then
+        hardware_timing_file:close()
+        hardware_timing_file = nil
+    end
     physics_file = io.open(OUTPUT_DIR .. "physics.csv", "w")
     aux_file = io.open(OUTPUT_DIR .. "aux_state.jsonl", "w")
+    hardware_timing_file =
+        io.open(OUTPUT_DIR .. "hardware_timing.jsonl", "w")
+    activate_diagnostic_hooks()
 
     physics_file:write("frame,input,camera_x,camera_y,rings,gameplay_frame_counter,"
         .. "vblank_counter,lag_counter,player_present,player_x,player_y,player_x_speed,"
@@ -966,7 +997,6 @@ local function write_metadata()
     meta_file:write('  "act": ' .. (start_act + 1) .. ',\n')
     meta_file:write('  "bk2_frame_offset": ' .. bk2_frame_offset .. ',\n')
     meta_file:write('  "trace_frame_count": ' .. trace_frame .. ',\n')
-    meta_file:write('  "pre_trace_osc_frames": ' .. start_gameplay_frame_counter .. ',\n')
     meta_file:write('  "start_x": "0x' .. hex(start_x) .. '",\n')
     meta_file:write('  "start_y": "0x' .. hex(start_y) .. '",\n')
     meta_file:write('  "characters": ["sonic", "tails"],\n')
@@ -974,8 +1004,9 @@ local function write_metadata()
     meta_file:write('  "sidekicks": ["tails"],\n')
     meta_file:write('  "rng_seed": "0x' .. hex(start_rng_seed, 8) .. '",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
-    meta_file:write('  "lua_script_version": "6.28-s3k",\n')
-    -- trace_schema remains 6 for the auxiliary event vocabulary. csv_version 7
+    meta_file:write('  "lua_script_version": "6.37-s3k",\n')
+    -- trace_schema 7 adds the authoritative hardware timing stream.
+    -- csv_version 7
     -- adds player and sidekick animation_id/mapping_frame to physics.csv. New per-frame
     -- cpu_state, oscillation_state, object_state, and interact_state aux
     -- events are detected by parsers via aux_schema_extras rather than a
@@ -1040,10 +1071,11 @@ local function write_metadata()
     -- and camera copy).
     -- Diagnostic-only.
     -- All diagnostic-only.
-    meta_file:write('  "trace_schema": 6,\n')
+    meta_file:write('  "trace_schema": 7,\n')
+    meta_file:write('  "hardware_timing_schema": 1,\n')
     meta_file:write('  "csv_version": 7,\n')
     if LIGHTWEIGHT_REGEN then
-        meta_file:write('  "capture_mode": "physics_animation_only",\n')
+        meta_file:write('  "capture_mode": "physics_animation_aux_without_diagnostic_hooks",\n')
     end
     local aux_schema_extras = {
         "cpu_state_per_frame",
@@ -1280,6 +1312,7 @@ local function read_character_trace_state(base)
 end
 
 local function close_files()
+    deactivate_diagnostic_hooks()
     if physics_file then
         physics_file:close()
         physics_file = nil
@@ -1287,6 +1320,10 @@ local function close_files()
     if aux_file then
         aux_file:close()
         aux_file = nil
+    end
+    if hardware_timing_file then
+        hardware_timing_file:close()
+        hardware_timing_file = nil
     end
 end
 
@@ -3566,6 +3603,8 @@ local V69_AIZ = {
     ADDR_DYNAMIC_RESIZE_ROUTINE = 0xEE33,
     ADDR_OBJECT_LOAD_ROUTINE = 0xF76C,
     ADDR_RINGS_MANAGER_ROUTINE = 0xF710,
+    -- Published schema-6 diagnostic compatibility. The authoritative
+    -- schema-7 observer reads the audited $FF60 owner in its shared module.
     ADDR_KOS_MODULES_LEFT = 0xFF04,
     OFF_TOP_SOLID_BIT = 0x46,
     HANDOFF_TERRAIN_FRAME_START =
@@ -3828,7 +3867,7 @@ end
 -- AIZ terrain wall-sensor per-frame snapshot (v6.13-s3k)
 -- =====================================================================
 -- Targets the AIZ F7552 sidekick airborne wall-collision blocker
--- (docs/S3K_KNOWN_BUGS.md "AIZ F7552"): Tails wedges at x=0x1208 with
+-- (docs/status/s3k-known-bugs.md "AIZ F7552"): Tails wedges at x=0x1208 with
 -- x_sub=0x0000 and x_speed=0x0000 across many consecutive airborne
 -- frames while still rising (y_speed negative, decreasing). The triple
 -- signature is the canonical ROM right-wall-collision-while-airborne
@@ -4102,7 +4141,7 @@ end
 -- =====================================================================
 -- Collision_response_list per-frame snapshot (v6.15-s3k)
 -- =====================================================================
--- Targets the CNZ F=621 Clamer re-fire blocker (docs/S3K_KNOWN_BUGS.md
+-- Targets the CNZ F=621 Clamer re-fire blocker (docs/status/s3k-known-bugs.md
 -- "CNZ F=621 Clamer re-fire — ROM dispatch path narrowing"): the prior
 -- diagnosis rounds traced ROM dispatch through Check_PlayerCollision
 -- (sonic3k.asm:179904-179916) reading collision_property(a0) ($29)
@@ -4530,6 +4569,30 @@ function on_frame_end()
         return
     end
 
+    -- Movie termination is capture-scoped, not segment-scoped. A malformed
+    -- route that never reaches the arm gate must still close its zero-byte
+    -- timing stream and exit rather than emulating forever.
+    if HEADLESS then
+        if movie.isloaded() then
+            local movie_length = movie.length()
+            if movie_length and movie_length > 0
+                and emu.framecount() >= movie_length
+            then
+                print(string.format(
+                    "Reached movie input end before/after arm (emu frame %d >= movie length %d). Finalising.",
+                    emu.framecount(), movie_length))
+                finished = true
+                return
+            end
+        elseif emu.framecount() > 0 then
+            print(string.format(
+                "Movie unloaded before/after arm at emu frame %d. Finalising.",
+                emu.framecount()))
+            finished = true
+            return
+        end
+    end
+
     if HEADLESS and started then
         if TRACE_STOP_FRAME ~= nil and trace_frame >= TRACE_STOP_FRAME then
             print(string.format(
@@ -4546,16 +4609,15 @@ function on_frame_end()
             finished = true
             return
         end
-        if not movie.isloaded() then
-            print(string.format(
-                "Movie unloaded at trace frame %d (emu frame %d). Finalising before memory access.",
-                trace_frame, emu.framecount()))
-            finished = true
-            return
-        end
     end
 
     local game_mode = mainmemory.read_u8(ADDR_GAME_MODE)
+    if game_mode == GAMEMODE_LEVEL then
+        -- LoadLevelLoadBlock synchronously waits for the initial KosM pair.
+        -- Keep those jobs in the run-wide ordinal ledger, but external
+        -- completion authority begins only once LevelLoop is observable.
+        hardware_timing_authority_armed = true
+    end
 
     if should_discard_and_reset(game_mode) then
         print(string.format(
@@ -4603,6 +4665,8 @@ function on_frame_end()
                 print(string.format("Movie length: %d frames", movie.length()))
             end
             if not is_aiz_end_to_end_profile() then
+                HARDWARE_TIMING.observe(
+                    HARDWARE_TIMING_TRACKER, 0, nil)
                 return
             end
         end
@@ -4644,10 +4708,8 @@ function on_frame_end()
     end
 
     if not pre_trace_snapshots_written then
-        if not LIGHTWEIGHT_REGEN then
-            write_tails_cpu_snapshot()
-            write_object_snapshots()
-        end
+        write_tails_cpu_snapshot()
+        write_object_snapshots()
         pre_trace_snapshots_written = true
         -- v6.1-s3k: capture Level_frame_counter at the moment the first
         -- physics row is recorded. The engine's seeded-frame-0 mode
@@ -4749,11 +4811,6 @@ function on_frame_end()
     end
     if trace_frame % 300 == 0 then
         write_metadata()
-    end
-
-    if LIGHTWEIGHT_REGEN then
-        trace_frame = trace_frame + 1
-        return
     end
 
     emit_s3k_semantic_events(trace_frame)
@@ -4904,10 +4961,15 @@ function on_frame_end()
 
     scan_objects(x, y)
 
+    HARDWARE_TIMING.observe(
+        HARDWARE_TIMING_TRACKER,
+        trace_frame,
+        hardware_timing_authority_armed and hardware_timing_file or nil)
     trace_frame = trace_frame + 1
 end
 
 os.execute("mkdir \"" .. OUTPUT_DIR .. "\" 2>NUL")
+open_empty_hardware_timing_file()
 
 HEADLESS_VISIBLE = false
 if HEADLESS then
@@ -4916,7 +4978,7 @@ if HEADLESS then
     if client.SetSoundOn then
         pcall(client.SetSoundOn, false)
     end
-    if not HEADLESS_VISIBLE then
+    if not HEADLESS_VISIBLE and client.invisibleemulation then
         client.invisibleemulation(true)
     end
 end
@@ -4929,46 +4991,112 @@ elseif is_level_gated_reset_aware_profile() then
 else
     WAIT_DESC = "level gameplay (Game_Mode=0x0C, controls unlocked)"
 end
-print(string.format("S3K Trace Recorder v6.28-s3k loaded. Profile=%s. Waiting for %s...", TRACE_PROFILE, WAIT_DESC))
+print(string.format("S3K Trace Recorder v6.37-s3k loaded. Profile=%s. Waiting for %s...", TRACE_PROFILE, WAIT_DESC))
 
--- Register the CNZ wire cage execution hooks. Done once at script load
--- before the main loop runs so the memoryexecute callbacks are armed for
--- every frame the script processes. Only active when 'started' so we
--- don't accumulate hits during pre-trace level loading.
-if not LIGHTWEIGHT_REGEN then
-    CAGE_DIAG.register_cage_hooks()
-    WRITE_DIAG.register_velocity_hooks()
-    WRITE_DIAG.register_position_hooks()
-    V618_AIZ_SHIP.register_hooks()
-    V621_SONIC_RECORD.register_hooks()
-    V625_RNG_CALLS.register_hooks()
-    V65.register_tails_cpu_normal_step_hooks()
-    V66.register_aiz_boundary_hooks()
-    V67_AIZ.register_aiz_transition_floor_hooks()
-    V69_AIZ.register_aiz_handoff_terrain_hooks()
-    V67_CNZ.register_cnz_cylinder_hooks()
-    V611_SOLID.register_hooks()
-    V615_CRL.register_hooks()
+-- Optional diagnostics are stage-gated. Capture the opaque event ids while
+-- registering so every segment close/reset can unregister the hooks instead
+-- of leaving callbacks armed across title/load/special-stage phases.
+DIAGNOSTIC_HOOK_IDS = {}
+function activate_diagnostic_hooks()
+    if LIGHTWEIGHT_REGEN or #DIAGNOSTIC_HOOK_IDS > 0 then return end
+    local original_execute = event.onmemoryexecute
+    local original_write = event.onmemorywrite
+    event.onmemoryexecute = function(...)
+        local id = original_execute(...)
+        if id ~= nil then
+            DIAGNOSTIC_HOOK_IDS[#DIAGNOSTIC_HOOK_IDS + 1] = id
+        end
+        return id
+    end
+    event.onmemorywrite = function(...)
+        local id = original_write(...)
+        if id ~= nil then
+            DIAGNOSTIC_HOOK_IDS[#DIAGNOSTIC_HOOK_IDS + 1] = id
+        end
+        return id
+    end
+    local ok, message = pcall(function()
+        CAGE_DIAG.register_cage_hooks()
+        WRITE_DIAG.register_velocity_hooks()
+        WRITE_DIAG.register_position_hooks()
+        V618_AIZ_SHIP.register_hooks()
+        V621_SONIC_RECORD.register_hooks()
+        V625_RNG_CALLS.register_hooks()
+        V65.register_tails_cpu_normal_step_hooks()
+        V66.register_aiz_boundary_hooks()
+        V67_AIZ.register_aiz_transition_floor_hooks()
+        V69_AIZ.register_aiz_handoff_terrain_hooks()
+        V67_CNZ.register_cnz_cylinder_hooks()
+        V611_SOLID.register_hooks()
+        V615_CRL.register_hooks()
+    end)
+    event.onmemoryexecute = original_execute
+    event.onmemorywrite = original_write
+    if not ok then error(message) end
 end
+
+function deactivate_diagnostic_hooks()
+    for _, id in ipairs(DIAGNOSTIC_HOOK_IDS or {}) do
+        pcall(event.unregisterbyid, id)
+    end
+    DIAGNOSTIC_HOOK_IDS = {}
+    CAGE_DIAG.hooks_registered = false
+    WRITE_DIAG.velocity_hooks_registered = false
+    WRITE_DIAG.position_hooks_registered = false
+    V618_AIZ_SHIP.hooks_registered = false
+    V621_SONIC_RECORD.hooks_registered = false
+    V625_RNG_CALLS.hooks_registered = false
+    V65.tails_cpu_hooks_registered = false
+    V66.hooks_registered = false
+    V67_AIZ.hooks_registered = false
+    V69_AIZ.hooks_registered = false
+    V67_CNZ.hooks_registered = false
+    V611_SOLID.hooks_registered = false
+    V615_CRL.hooks_registered = false
+end
+
+-- Hard capture-scoped backstop, evaluated outside the `started` gate.
+-- Movie-length and explicit BK2 bounds get a small finalisation margin;
+-- a missing/zero movie signal still has a finite absolute ceiling.
+function absolute_frame_cap()
+    local len = movie.isloaded() and movie.length() or 0
+    if BK2_FRAME_COUNT ~= nil and BK2_FRAME_COUNT > len then
+        len = BK2_FRAME_COUNT
+    end
+    if len > 0 then return len + 64 end
+    return 2000000
+end
+FRAME_CAP = absolute_frame_cap()
 
 while true do
     on_frame_end()
 
+    if not finished and emu.framecount() >= FRAME_CAP then
+        print(string.format(
+            "Frame cap %d reached before/after arm; finalising and exiting.",
+            FRAME_CAP))
+        finished = true
+    end
+
     if finished then
         print("Recording complete. Writing final output...")
-        if is_level_gated_reset_aware_profile() and aux_file then
-            END_ZONE = mainmemory.read_u8(ADDR_ZONE)
-            END_ACT = mainmemory.read_u8(ADDR_ACT)
-            END_APPARENT_ACT = mainmemory.read_u8(ADDR_APPARENT_ACT)
-            END_GAME_MODE = mainmemory.read_u8(ADDR_GAME_MODE)
-            emit_checkpoint_once(trace_frame, "gameplay_end",
-                END_ZONE, END_ACT, END_APPARENT_ACT, END_GAME_MODE, nil)
+        if started then
+            if is_level_gated_reset_aware_profile() and aux_file then
+                END_ZONE = mainmemory.read_u8(ADDR_ZONE)
+                END_ACT = mainmemory.read_u8(ADDR_ACT)
+                END_APPARENT_ACT = mainmemory.read_u8(ADDR_APPARENT_ACT)
+                END_GAME_MODE = mainmemory.read_u8(ADDR_GAME_MODE)
+                emit_checkpoint_once(trace_frame, "gameplay_end",
+                    END_ZONE, END_ACT, END_APPARENT_ACT, END_GAME_MODE, nil)
+            end
+            if physics_file then physics_file:flush() end
+            write_metadata()
+            print(string.format("Trace finalised: %s act %d, %d frames.",
+                start_zone_name, start_act + 1, trace_frame))
+        else
+            print("No trace segment armed; closing zero-byte timing stream.")
         end
-        if physics_file then physics_file:flush() end
-        write_metadata()
         close_files()
-        print(string.format("Trace finalised: %s act %d, %d frames.",
-            start_zone_name, start_act + 1, trace_frame))
         if HEADLESS then
             client.exit()
         end

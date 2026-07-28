@@ -26,6 +26,7 @@ import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import com.openggf.game.timing.HardwareServiceBoundary;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static com.openggf.game.sonic3k.events.AizEventTestFixtures.newFireTransitionEvents;
@@ -71,7 +72,7 @@ public class TestAizFireCurtainRendererRom {
         boolean sawRefreshCurtain = false;
 
         for (int frame = 0; frame < 360 && !events.isAct2TransitionRequested(); frame++) {
-            events.update(0, frame);
+            updateWithHardware(events, 0, frame);
             FireCurtainRenderState state = events.getFireCurtainRenderState(224);
             if (!state.active() || state.coverHeightPx() <= 0) {
                 continue;
@@ -118,7 +119,7 @@ public class TestAizFireCurtainRendererRom {
         boolean sawDenseCurtain = false;
 
         for (int frame = 0; frame < 360 && !events.isAct2TransitionRequested(); frame++) {
-            events.update(0, frame);
+            updateWithHardware(events, 0, frame);
             FireCurtainRenderState state = events.getFireCurtainRenderState(224);
             if (!state.active() || state.coverHeightPx() <= 0) {
                 continue;
@@ -177,7 +178,7 @@ public class TestAizFireCurtainRendererRom {
         EnumMap<FireCurtainStage, PhaseStats> statsByStage = new EnumMap<>(FireCurtainStage.class);
 
         for (int frame = 0; frame < 360 && !events.isAct2TransitionRequested(); frame++) {
-            events.update(0, frame);
+            updateWithHardware(events, 0, frame);
             FireCurtainRenderState state = events.getFireCurtainRenderState(224);
             collectStageStats(renderer, state, overlayTileBase, overlayTileEnd, statsByStage);
         }
@@ -300,5 +301,19 @@ public class TestAizFireCurtainRendererRom {
                 }
             }
         }
+    }
+
+    /**
+     * AIZ's fire phases are paced by the hardware timing service, so a bare
+     * {@code events.update} never advances art readiness and the curtain stays
+     * inactive. Mirrors {@code TestSonic3kAIZEvents#updateWithHardware}.
+     */
+    private static void updateWithHardware(
+            com.openggf.game.sonic3k.events.Sonic3kAIZEvents events, int act, int frame) {
+        var timing = com.openggf.game.GameServices.hardwareTiming();
+        timing.service(HardwareServiceBoundary.VINT_SERVICE);
+        timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        events.update(act, frame);
+        timing.service(HardwareServiceBoundary.POST_OBJECTS);
     }
 }

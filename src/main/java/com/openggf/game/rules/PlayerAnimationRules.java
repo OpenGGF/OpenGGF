@@ -6,4 +6,6 @@ public record PlayerAnimationRules(
         boolean singleFacingBalanceAnimationSet,
         boolean animationChangeClearsPush,
         boolean walkRunDelayLatchesRenderOrientation,
-        boolean angledLandingPublishesWalk) {}
+        boolean angledLandingPublishesWalk,
+        boolean angledLandingPublishesWalkUnlessSpindashing) {
+}

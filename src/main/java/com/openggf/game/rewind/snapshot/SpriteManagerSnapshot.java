@@ -7,7 +7,7 @@ import java.util.Map;
 /**
  * Snapshot of {@link com.openggf.sprites.managers.SpriteManager}'s
  * gameplay-relevant runtime state — the per-sprite captures keyed by
- * sprite code, plus the manager's own per-frame counter.
+ * sprite code and the manager's own per-frame counter.
  *
  * <p>SpriteManager.frameCounter is incremented every {@code stepFrame} and
  * passed into {@code SidekickCpuController.update(frameCount)} and the

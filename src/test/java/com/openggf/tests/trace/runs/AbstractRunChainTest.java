@@ -12,8 +12,10 @@ import com.openggf.debug.playback.RecordedInputSnapshots;
 import com.openggf.game.BonusStageType;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
+import com.openggf.game.OscillationManager;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.trace.ToleranceConfig;
@@ -25,9 +27,14 @@ import com.openggf.trace.replay.TraceReplayDriver;
 import com.openggf.trace.replay.TraceReplayFixture;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker;
+import com.openggf.trace.timing.HardwareTimingReplayPort;
+import com.openggf.trace.timing.HardwareTimingSchedule;
+import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker.BoundaryEntryMode;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker.BoundaryObservation;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker.BoundaryProbe;
+import com.openggf.trace.replay.runs.TraceRunReplayWalker.HardwareTimingCoordinator;
+import com.openggf.trace.replay.runs.TraceRunReplayWalker.HardwareTimingSegment;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker.ReturnAssertionMode;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker.SegmentPlan;
 
@@ -48,7 +55,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Reusable base for multi-stage trace RUN chain tests (spec/API contract:
  * "Decisions locked with the owner" and Component 2 in
- * docs/superpowers/specs/2026-07-18-multi-stage-trace-runs-design.md). Drives
+ * docs/architecture/designs/2026-07-18-multi-stage-trace-runs-design.md). Drives
  * ONE continuous {@link GameLoop} through EVERY segment of a
  * {@link TraceRunManifest} — with NO hardcoded segment count and NO
  * zone/route/frame carve-out — and asserts that the engine organically raises
@@ -113,7 +120,15 @@ abstract class AbstractRunChainTest {
         // standalone lane's AbstractTraceReplayTest#act() override returns 0 for
         // Act 1). Convert once here so the boot call sites below never see the
         // raw manifest value.
-        Integer bootAct = engineAct(manifestBootAct);
+        // No game module exists until the ROM bootstrap below, so resolve the
+        // first segment through the manifest game id. Subsequent seams use the
+        // active module's profile.
+        var bootProfile = "s1".equals(run.game())
+                ? com.openggf.game.profiles.trace.TracePlaybackProfile.SONIC_1
+                : com.openggf.game.profiles.trace.TracePlaybackProfile.DISABLED;
+        var bootIdentity = bootProfile.resolveRecordedLevel(bootZone, manifestBootAct);
+        Integer bootAct = bootIdentity.act();
+        bootZone = bootIdentity.zone();
         // --- Step 2: boot segment 0 ---------------------------------------------
         TraceData trace0 = first.trace();
         Path bk2Path = resolveRunBk2(runDir, run.sourceBk2());
@@ -130,6 +145,8 @@ abstract class AbstractRunChainTest {
         // matches the standalone AbstractTraceReplayTest ordering
         // (prepareConfiguration before its one and only fixture build).
         TraceReplaySessionBootstrap.prepareConfiguration(trace0, trace0.metadata());
+        boolean recordedHardwareTiming =
+                TraceRunReplayWalker.hasHardwareTimingStream(plans);
 
         // Mirrors TestPachinkoTitleCardIntegration's engine setup: a
         // HeadlessTestFixture build initializes the headless engine before a real
@@ -137,44 +154,79 @@ abstract class AbstractRunChainTest {
         // afterward -- TraceReplayDriver.start() performs its own full reset +
         // team registration + level load, so a stale cached sprite reference
         // would desync from the engine's actual roster.
-        HeadlessTestFixture.builder().withZoneAndAct(bootZone, bootAct).build();
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(bootZone, bootAct)
+                .withHardwareReadinessAdmissionPolicy(
+                        recordedHardwareTiming
+                                ? HardwareReadinessAdmissionPolicy.RECORDED
+                                : HardwareReadinessAdmissionPolicy.LIVE)
+                .build();
         InputHandler inputHandler = new InputHandler();
         GameLoop loop = new GameLoop(inputHandler);
 
         LiveEngineFixture fixture = new LiveEngineFixture(movie);
         TraceReplayDriver driver = new TraceReplayDriver(
-                trace0, movie, fixture, loop, fixture::sprite, () -> { });
+                trace0, movie, fixture, loop, fixture::sprite, () -> { },
+                recordedHardwareTiming);
         driver.start(bootZone, bootAct);
 
-        PlaybackDebugManager playback = GameServices.playbackDebug();
-        RealEngineHooks hooks = new RealEngineHooks(loop);
-        BoundaryProbe probe = new BoundaryProbe(hooks);
-        // Replace the raw comparator TraceReplayDriver.start() installed with the
-        // probe; the probe is the only observer for the rest of the chain,
-        // delegating comparison to whichever segment comparator is attached.
-        playback.setFrameObserver(probe);
-        probe.setDelegate(driver.comparator());
+        HardwareTimingCoordinator hardwareTiming =
+                new HardwareTimingCoordinator(
+                        fixture, TraceRunReplayWalker.hardwareTimingSegments(plans));
+        Throwable primaryFailure = null;
+        try {
+            PlaybackDebugManager playback = GameServices.playbackDebug();
+            RealEngineHooks hooks = new RealEngineHooks(loop);
+            BoundaryProbe probe = new BoundaryProbe(hooks);
+            probe.setBeforeFrameObserver(hardwareTiming::beginPlaybackFrame);
+            // Replace the raw comparator TraceReplayDriver.start() installed with the
+            // probe; the probe is the only observer for the rest of the chain,
+            // delegating comparison to whichever segment comparator is attached.
+            playback.setFrameObserver(probe);
+            probe.setDelegate(driver.comparator());
 
-        // --- Step 3: walk every segment -----------------------------------------
-        LiveTraceComparator activeComparator = driver.comparator();
-        int i = 0;
-        while (i < plans.size()) {
+            // --- Step 3: walk every segment -------------------------------------
+            LiveTraceComparator activeComparator = driver.comparator();
+            SegmentPlan uncomparedInteriorSourceLevel = null;
+            int uncomparedInteriorSourceVblank = 0;
+            int i = 0;
+            while (i < plans.size()) {
             SegmentPlan seg = plans.get(i);
+            Object levelAtSegmentStart = GameServices.level().getCurrentLevel();
             TraceRunManifest.Transition exit = seg.exitBoundary();
             boolean last = (i == plans.size() - 1);
 
             if (exit == null) {
                 // Last segment, OR a plain level->level boundary (no transition
                 // record). Compare through this segment's recorded frames.
-                stepFrames(loop, seg.trace().frameCount());
+                int remainingFrames = TraceRunReplayWalker.remainingSegmentFrames(
+                        seg.trace().frameCount(), activeComparator.cursor());
+                stepFrames(loop, remainingFrames);
                 maybeWriteReport(run.runId(), i, activeComparator);
                 if (last) {
+                    hardwareTiming.close();
+                    replayTerminalMovieTail(run, loop, inputHandler, movie, seg);
                     break;
+                }
+                SegmentPlan next = plans.get(i + 1);
+                if (TraceRunReplayWalker.isLagOnlySameLevelContinuation(
+                        seg.segment(), next.segment(), seg.trace().frameCount(),
+                        activeComparator.laggedFrames())) {
+                    int sourceTailVblank = TraceRunReplayWalker.sourceTailVblankAtBoundary(
+                            seg.segment(), playback.getCursorFrame(),
+                            GameServices.level().getObjectManager().getVblaCounter());
+                    completeInterLevelVblankBudget(seg, next, 0, sourceTailVblank);
+                    OscillationManager.suppressNextFrames(1);
+                    activeComparator = attachLevelSegment(
+                            playback, probe, movie, next, fixture);
+                    i++;
+                    continue;
                 }
                 // Plain level->level: cross the act/zone title-card cycle and
                 // rebind onto the next level segment.
                 activeComparator = handoffAcrossLevelBoundary(
-                        loop, playback, probe, movie, plans.get(i + 1), stepCap, fixture);
+                        loop, playback, probe, movie, seg, next, stepCap, fixture,
+                        levelAtSegmentStart);
                 i++;
                 continue;
             }
@@ -205,9 +257,25 @@ abstract class AbstractRunChainTest {
                 // and no field comparison happens during this segment
                 // (attachInteriorComparator keeps returning null for special_stage).
                 boolean uncomparedInterior = TraceRunReplayWalker.isUncomparedInterior(seg.segment());
-                Runnable stepOneFrame = uncomparedInterior
-                        ? uncomparedInteriorStep(loop, inputHandler, movie, seg)
-                        : () -> stepEngineFrame(loop);
+                Runnable stepOneFrame;
+                if (uncomparedInterior) {
+                    Runnable driveInterior =
+                            uncomparedInteriorStep(loop, inputHandler, movie, seg);
+                    int segmentIndex = i;
+                    int[] traceRow = {0};
+                    stepOneFrame = () -> {
+                        if (traceRow[0] < seg.segment().traceFrameCount()) {
+                            hardwareTiming.beginSegmentRow(
+                                    segmentIndex, traceRow[0]);
+                        } else {
+                            fixture.enterHardwareTimingGap();
+                        }
+                        driveInterior.run();
+                        traceRow[0]++;
+                    };
+                } else {
+                    stepOneFrame = () -> stepEngineFrame(loop);
+                }
                 int returnOffset = plans.get(i + 1).segment().bk2FrameOffset();
                 // The shared BK2 cursor is handled OPPOSITELY for the two interior
                 // kinds, because they advance it oppositely:
@@ -263,6 +331,17 @@ abstract class AbstractRunChainTest {
                 assertReturnBoundary(plans, i, runDir);
                 // Attach the return comparator, keying on interior kind.
                 if (uncomparedInterior) {
+                    if (GameServices.module().getTracePlaybackProfile()
+                            .alignUncomparedInteriorReturnVblank()) {
+                        if (uncomparedInteriorSourceLevel == null) {
+                            throw new AssertionError(
+                                    "Uncompared interior return has no source-level clock anchor");
+                        }
+                        alignUncomparedInteriorReturnVblank(
+                                uncomparedInteriorSourceLevel, plans.get(i + 1),
+                                uncomparedInteriorSourceVblank);
+                        uncomparedInteriorSourceLevel = null;
+                    }
                     // Pre-seeked SS interior: its single title-card-exit fall-through
                     // frame consumed the return segment's frame 0 (framesConsumed == 1)
                     // and the cursor is already in lockstep -- attach WITHOUT re-seeking.
@@ -288,18 +367,47 @@ abstract class AbstractRunChainTest {
                 // This segment is a LEVEL; its exit is an ENTRY boundary into the
                 // interior at i+1. Await the transient entry request, then hand
                 // off into the interior mode.
+                SegmentPlan interior = plans.get(i + 1);
+                boolean anchorUncomparedInterior =
+                        TraceRunReplayWalker.isUncomparedInterior(interior.segment())
+                                && GameServices.module().getTracePlaybackProfile()
+                                        .alignUncomparedInteriorReturnVblank();
                 BoundaryObservation obs =
-                        TraceRunReplayWalker.awaitBoundary(probe, exit, stepCap, () -> stepEngineFrame(loop));
+                        TraceRunReplayWalker.awaitBoundary(
+                                probe, exit, stepCap, () -> stepEngineFrame(loop));
                 // Report BEFORE asserting -- see the stage_exit branch above for
                 // why: a level segment's own interior divergence is the usual
                 // cause of a missed entry boundary, and this is the only report
                 // this segment's comparator will ever get if the assert throws.
                 maybeWriteReport(run.runId(), i, activeComparator);
-                assertTrue(obs.observed(), "Segment exit boundary (" + exit.entryKind()
+                assertTrue(obs.observed(), "Segment " + i + " (" + seg.segment().dir()
+                        + ") exit boundary (" + exit.entryKind()
                         + ") was never observed within the boundary window for " + runDir);
+                if (anchorUncomparedInterior) {
+                    uncomparedInteriorSourceLevel = seg;
+                    uncomparedInteriorSourceVblank =
+                            TraceRunReplayWalker.sourceTailVblankAtBoundary(
+                                    seg.segment(), obs.observedBk2Frame(),
+                                    GameServices.level().getObjectManager().getVblaCounter());
+                }
                 activeComparator = handoffIntoInterior(
-                        loop, playback, probe, movie, plans.get(i + 1), stepCap, fixture);
+                        loop, playback, probe, movie, interior, stepCap, fixture);
                 i++;
+            }
+            }
+            hardwareTiming.close();
+        } catch (Exception | Error failure) {
+            primaryFailure = failure;
+            throw failure;
+        } finally {
+            try {
+                hardwareTiming.close();
+            } catch (RuntimeException | Error closeFailure) {
+                if (primaryFailure != null) {
+                    primaryFailure.addSuppressed(closeFailure);
+                } else {
+                    throw closeFailure;
+                }
             }
         }
     }
@@ -495,25 +603,116 @@ abstract class AbstractRunChainTest {
     /**
      * Crosses a plain level->level boundary that carries NO transition record
      * (e.g. S3K AIZ->HCZ seg 8->9, HCZ->MGZ seg 18->19). The engine runs an
-     * act/zone title-card cycle: wait out of LEVEL (into the title card), back
-     * into LEVEL, then rebind onto the next level segment. This is the documented
-     * refinement seam for the S3K lane; the S1/S2 runs never take this path.
+     * act/zone title-card cycle. If that cycle completed inside the preceding
+     * segment's recorded tail, the target level is already active and we rebind
+     * immediately. Otherwise wait out of LEVEL and back, then rebind.
      */
     private LiveTraceComparator handoffAcrossLevelBoundary(
             GameLoop loop, PlaybackDebugManager playback, BoundaryProbe probe,
-            Bk2Movie movie, SegmentPlan nextLevel, int stepCap, LiveEngineFixture fixture) {
+            Bk2Movie movie, SegmentPlan currentLevel, SegmentPlan nextLevel,
+            int stepCap, LiveEngineFixture fixture,
+        Object levelAtSegmentStart) {
+        int sourceTailVblank = TraceRunReplayWalker.sourceTailVblankAtBoundary(
+                currentLevel.segment(), playback.getCursorFrame(),
+                GameServices.level().getObjectManager().getVblaCounter());
         probe.setDelegate(null);
-        waitForModeToLeave(loop, GameMode.LEVEL, stepCap);
-        waitForMode(loop, GameMode.LEVEL, stepCap);
+        if (!isNewActiveLevelSegment(nextLevel, levelAtSegmentStart)) {
+            int offset = nextLevel.segment().bk2FrameOffset();
+            playback.scheduleSessionAtNextLevelLoad(movie, offset);
+            waitForModeToLeaveOrLevelActivate(
+                    loop, GameMode.LEVEL, nextLevel, levelAtSegmentStart, stepCap);
+            int firstGameplayFrame = playback.getCursorFrame() - offset;
+            if (firstGameplayFrame < 0 || firstGameplayFrame > 1) {
+                throw new AssertionError("Destination playback cursor advanced "
+                        + firstGameplayFrame + " frames during level-load handoff");
+            }
+            completeInterLevelVblankBudget(
+                    currentLevel, nextLevel, firstGameplayFrame, sourceTailVblank);
+            LiveTraceComparator comparator = new LiveTraceComparator(
+                    nextLevel.trace(), ToleranceConfig.DEFAULT,
+                    firstGameplayFrame, fixture::sprite);
+            probe.setDelegate(comparator);
+            if (loop.getCurrentGameMode() == GameMode.TITLE_CARD
+                    || GameServices.level().isTitleCardRequested()) {
+                if (loop.getCurrentGameMode() == GameMode.LEVEL) {
+                    waitForModeToLeave(loop, GameMode.LEVEL, stepCap);
+                }
+                waitForMode(loop, GameMode.LEVEL, stepCap);
+            }
+            int settledFramesConsumed = playback.getCursorFrame() - offset;
+            if (settledFramesConsumed < firstGameplayFrame || settledFramesConsumed > 1) {
+                throw new AssertionError("Destination playback cursor advanced "
+                        + settledFramesConsumed + " frames after title-card handoff");
+            }
+            // The level can become active while its title card still owns the
+            // loop. Reconcile once more after that choreography settles so any
+            // same-step LEVEL fall-through is included in the manifest-derived
+            // budget and cannot leave the destination clock one tick adrift.
+            completeInterLevelVblankBudget(
+                    currentLevel, nextLevel, settledFramesConsumed, sourceTailVblank);
+            return comparator;
+        }
+		var profile = GameServices.module().getTracePlaybackProfile();
+		if (profile.reinitializeOscillationAtLoadedLevelAttach()) {
+			// The destination Level has already loaded inside the source segment's
+			// death/exit tail. Re-establish the ROM's OscillateNumInit boundary at
+			// the point where the destination movie segment attaches; otherwise
+			// engine-only choreography frames advance v_oscillate before recorded
+			// gameplay frame 0. This is movie-clock lifecycle pacing only: no trace
+			// field is read into engine state.
+			OscillationManager.resetForSonic1();
+		}
+        completeInterLevelVblankBudget(currentLevel, nextLevel, 0, sourceTailVblank);
         return attachLevelSegment(playback, probe, movie, nextLevel, fixture);
     }
+
+    private void completeInterLevelVblankBudget(
+            SegmentPlan currentLevel,
+            SegmentPlan nextLevel,
+            int nextFramesConsumed,
+            int sourceTailVblank) {
+        var profile = GameServices.module().getTracePlaybackProfile();
+        if (!profile.alignsInterLevelVblank()) {
+            return;
+        }
+        int requiredTicks = TraceRunReplayWalker.interLevelVblankBudget(
+                currentLevel.segment(), nextLevel.segment(), nextFramesConsumed,
+                profile.interLevelNonAdvancingMovieRows());
+        var objectManager = GameServices.level().getObjectManager();
+        int actualTicks = objectManager.getVblaCounter() - sourceTailVblank;
+        if (actualTicks != requiredTicks) {
+            // This is movie-clock pacing, not trace-field hydration: the target
+            // comes only from BK2/manifest row counts plus the game profile's
+            // measured non-advancing rows. It both fills shortened engine
+            // transitions and removes synthetic host ticks that the ROM did not
+            // count (notably S1's six-row death/act seam).
+            objectManager.initVblaCounter(sourceTailVblank + requiredTicks);
+        }
+    }
+
+    private void alignUncomparedInteriorReturnVblank(
+            SegmentPlan sourceLevel,
+            SegmentPlan returnLevel,
+            int sourceVblank) {
+        var profile = GameServices.module().getTracePlaybackProfile();
+        if (!profile.alignUncomparedInteriorReturnVblank()) {
+            return;
+        }
+        int requiredTicks = TraceRunReplayWalker.uncomparedInteriorReturnVblankBudget(
+                sourceLevel.segment(), returnLevel.segment());
+        // Movie-clock pacing only: the target derives from the source engine
+        // counter and manifest/BK2 row distance. No trace field is read back
+        // into engine state.
+        GameServices.level().getObjectManager().initVblaCounter(sourceVblank + requiredTicks);
+    }
+
 
     /**
      * SS-INTERIOR SEAM (policy v1 = ADVANCE-UNCOMPARED). Per-frame special-stage
      * field comparison is an explicitly LATER workflow; when it lands, build the
      * special-stage comparator HERE instead of returning {@code null} for a
      * {@code special_stage} segment. See "Decisions locked with the owner" item 1
-     * in docs/superpowers/specs/2026-07-18-multi-stage-trace-runs-design.md.
+     * in docs/architecture/designs/2026-07-18-multi-stage-trace-runs-design.md.
      *
      * <p>v1: a {@code bonus_stage} interior returns a per-frame
      * {@link LiveTraceComparator}; a {@code special_stage} interior returns
@@ -722,7 +921,9 @@ abstract class AbstractRunChainTest {
         }
         Integer returnZone = returnLevel.segment().zoneId();
         if (returnZone != null) {
-            assertEquals(returnZone.intValue(), GameServices.level().getRomZoneId(),
+            int expectedZone = GameServices.module().getTracePlaybackProfile()
+                    .resolveRecordedLevel(returnZone, returnLevel.segment().act()).zone();
+            assertEquals(expectedZone, GameServices.level().getCurrentZone(),
                     "Next-act advance (zone) after special-stage return for " + runDir);
         }
     }
@@ -786,7 +987,44 @@ abstract class AbstractRunChainTest {
      */
     protected Runnable uncomparedInteriorStep(
             GameLoop loop, InputHandler inputHandler, Bk2Movie movie, SegmentPlan interior) {
-        return specialStageDrivenStep(loop, inputHandler, movie, interior.segment().bk2FrameOffset());
+        return specialStageDrivenStep(loop, inputHandler, movie,
+                interior.segment().bk2FrameOffset(), interior.segment().traceFrameCount());
+    }
+
+    /** Replays and asserts only the terminal behavior declared by the run manifest. */
+    private static void replayTerminalMovieTail(
+            TraceRunManifest run,
+            GameLoop loop, InputHandler inputHandler, Bk2Movie movie, SegmentPlan lastSegment) {
+        int tailStart = lastSegment.segment().bk2FrameOffset()
+                + lastSegment.segment().traceFrameCount();
+        var tailPlan = TraceRunReplayWalker.planTerminalMovieTail(
+                run.expectedMovieEndMode(),
+                tailStart, movie.getFrameCount());
+        if (!tailPlan.shouldAssertExpectedMode()) {
+            return;
+        }
+
+        // Level-segment comparison is finished. Stop its cursor/observer input
+        // bridge so each remaining physical movie row is fed exactly once by
+        // the local terminal-tail driver, including non-LEVEL modes where the
+        // ordinary playback cursor intentionally remains frozen.
+        GameServices.playbackDebug().endSession();
+        for (int absoluteRow = tailPlan.tailStart();
+                absoluteRow < movie.getFrameCount(); absoluteRow++) {
+            Bk2FrameInput current = movie.getFrame(absoluteRow);
+            Bk2FrameInput previous = absoluteRow > 0 ? movie.getFrame(absoluteRow - 1) : null;
+            inputHandler.setLogicalOverride(RecordedInputSnapshots.fromBk2(current, previous));
+            try {
+                stepEngineFrame(loop);
+            } finally {
+                inputHandler.clearLogicalOverride();
+            }
+        }
+
+        System.out.printf("[TRACE-RUN-TAIL] rows=%d finalMode=%s%n",
+                tailPlan.rowsToReplay(), loop.getCurrentGameMode());
+        assertEquals(tailPlan.expectedMode(), loop.getCurrentGameMode(),
+                "Complete movie must finish in the manifest-declared mode");
     }
 
     /**
@@ -810,9 +1048,12 @@ abstract class AbstractRunChainTest {
      * plumbing.
      */
     static Runnable specialStageDrivenStep(
-            GameLoop loop, InputHandler inputHandler, Bk2Movie movie, int bk2FrameOffset) {
+            GameLoop loop, InputHandler inputHandler, Bk2Movie movie,
+            int bk2FrameOffset, int recordedFrameCount) {
         int[] localRow = {0};
         return () -> {
+            var beforeManager = GameServices.level().getObjectManager();
+            int beforeVblank = beforeManager.getVblaCounter();
             int absoluteRow = bk2FrameOffset + localRow[0];
             Bk2FrameInput current = movie.getFrame(absoluteRow);
             Bk2FrameInput previous = absoluteRow > 0 ? movie.getFrame(absoluteRow - 1) : null;
@@ -821,6 +1062,17 @@ abstract class AbstractRunChainTest {
                 stepEngineFrame(loop);
             } finally {
                 inputHandler.clearLogicalOverride();
+            }
+            // Special-stage policy v1 deliberately advances without a field
+            // comparator. Account for at most the recorded number of interior
+            // VBlank rows. If the simplified engine choreography takes extra
+            // host steps to reach LEVEL, those steps are not extra BK2 VBlanks;
+            // if a step already advanced the preserved ObjectManager clock (for
+            // example the title-card-exit LEVEL fall-through), do not double-tick.
+            var afterManager = GameServices.level().getObjectManager();
+            if (localRow[0] < recordedFrameCount
+                    && afterManager.getVblaCounter() == beforeVblank) {
+                afterManager.advanceVblaCounter();
             }
             localRow[0]++;
         };
@@ -864,14 +1116,47 @@ abstract class AbstractRunChainTest {
         return steps;
     }
 
+    private static void waitForModeToLeaveOrLevelActivate(
+            GameLoop loop, GameMode from, SegmentPlan targetLevel,
+            Object levelAtSegmentStart, int maxSteps) {
+        int steps = 0;
+        while (loop.getCurrentGameMode() == from
+                && !isNewActiveLevelSegment(targetLevel, levelAtSegmentStart)) {
+            stepEngineFrame(loop);
+            steps++;
+            if (steps >= maxSteps) {
+				var segment = targetLevel.segment();
+				var identity = GameServices.module().getTracePlaybackProfile()
+						.resolveRecordedLevel(segment.zoneId(), segment.act());
+                throw new AssertionError("Mode never left " + from + " within "
+                        + maxSteps + " frames and target level never activated"
+						+ " (target=" + segment.dir() + " " + identity.zone() + ":" + identity.act()
+						+ ", actual=" + GameServices.level().getCurrentZone() + ":"
+						+ GameServices.level().getCurrentAct() + ")");
+            }
+        }
+    }
+
+    private static boolean isNewActiveLevelSegment(
+            SegmentPlan targetLevel, Object levelAtSegmentStart) {
+        var segment = targetLevel.segment();
+        if (!"level".equals(segment.kind()) || segment.zoneId() == null || segment.act() == null) {
+            return false;
+        }
+        var identity = GameServices.module().getTracePlaybackProfile()
+                .resolveRecordedLevel(segment.zoneId(), segment.act());
+        return GameServices.level().getCurrentLevel() != levelAtSegmentStart
+                && GameServices.level().getCurrentZone() == identity.zone()
+                && GameServices.level().getCurrentAct() == identity.act();
+    }
+
     private static void waitForModeToLeave(GameLoop loop, GameMode from, int maxSteps) {
         int steps = 0;
         while (loop.getCurrentGameMode() == from) {
             stepEngineFrame(loop);
-            steps++;
-            if (steps >= maxSteps) {
+            if (++steps >= maxSteps) {
                 throw new AssertionError("Mode never left " + from + " within "
-                        + maxSteps + " frames (expected an act/zone title-card cycle)");
+                        + maxSteps + " frames (expected title-card entry)");
             }
         }
     }
@@ -934,6 +1219,17 @@ abstract class AbstractRunChainTest {
         summary.put("warningCount", comparator.warningCount());
         summary.put("laggedFrames", comparator.laggedFrames());
         summary.put("complete", comparator.isComplete());
+        MismatchEntry firstPhysics = comparator.firstNonCameraPhysicsMismatch();
+        if (firstPhysics != null) {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("frame", firstPhysics.frame());
+            row.put("field", firstPhysics.field());
+            row.put("romValue", firstPhysics.romValue());
+            row.put("engineValue", firstPhysics.engineValue());
+            row.put("delta", firstPhysics.delta());
+            row.put("severity", firstPhysics.severity().name());
+            summary.put("firstNonCameraPhysicsMismatch", row);
+        }
         List<Map<String, Object>> mismatches = new ArrayList<>();
         for (MismatchEntry entry : comparator.recentMismatches()) {
             Map<String, Object> row = new LinkedHashMap<>();
@@ -1021,6 +1317,9 @@ abstract class AbstractRunChainTest {
      */
     protected static final class LiveEngineFixture implements TraceReplayFixture {
         private final Bk2Movie movie;
+        private HardwareTimingReplayPort hardwareTimingReplayPort;
+        private TraceHardwareTimingBoundaryObserver hardwareTimingObserver;
+        private boolean hardwareTimingReplayClosed;
 
         private LiveEngineFixture(Bk2Movie movie) {
             this.movie = movie;
@@ -1034,6 +1333,61 @@ abstract class AbstractRunChainTest {
         @Override
         public GameplayModeContext gameplayMode() {
             return SessionManager.getCurrentGameplayMode();
+        }
+
+        @Override
+        public void installHardwareTimingReplay(HardwareTimingReplayPort replayPort) {
+            hardwareTimingReplayPort = replayPort;
+            hardwareTimingObserver = new TraceHardwareTimingBoundaryObserver(replayPort);
+            gameplayMode().getRewindRegistry().register(replayPort);
+            gameplayMode().setHardwareTimingBoundaryObserver(hardwareTimingObserver);
+            gameplayMode().setHardwareTimingReplayCloseHook(
+                    this::closeHardwareTimingReplayRun);
+        }
+
+        @Override
+        public void beginTraceRow(int traceIndex, int rawFrame) {
+            if (hardwareTimingObserver != null) {
+                hardwareTimingObserver.beginRawFrame(rawFrame);
+            }
+        }
+
+        @Override
+        public void enterHardwareTimingGap() {
+            if (hardwareTimingObserver != null) {
+                hardwareTimingObserver.enterUnrepresentedGap();
+            }
+        }
+
+        @Override
+        public void verifyHardwareTimingSegmentEdges() {
+            if (hardwareTimingReplayPort != null) {
+                hardwareTimingReplayPort.verifySegmentEdges();
+            }
+        }
+
+        @Override
+        public void handoffHardwareTimingReplay(HardwareTimingSchedule nextSchedule) {
+            if (hardwareTimingReplayPort != null) {
+                hardwareTimingReplayPort.handoffTo(nextSchedule);
+            }
+        }
+
+        @Override
+        public void closeHardwareTimingReplayRun() {
+            if (hardwareTimingReplayClosed || hardwareTimingReplayPort == null) {
+                return;
+            }
+            hardwareTimingReplayClosed = true;
+            try {
+                hardwareTimingReplayPort.verifyRunComplete();
+            } finally {
+                gameplayMode().setHardwareTimingBoundaryObserver(null);
+                gameplayMode().getRewindRegistry()
+                        .deregister(HardwareTimingReplayPort.REWIND_KEY);
+                gameplayMode().clearHardwareTimingReplayCloseHook();
+                hardwareTimingObserver = null;
+            }
         }
 
         @Override

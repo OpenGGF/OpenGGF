@@ -1,5 +1,6 @@
 package com.openggf.tests.trace;
 
+import com.openggf.tests.TestTempFiles;
 import com.openggf.trace.*;
 
 import org.junit.jupiter.api.Test;
@@ -365,7 +366,7 @@ class TestTraceExecutionModel {
     }
 
     private static TraceData twoFrameS3kTraceWithGameMode(int gameMode) throws Exception {
-        Path dir = Files.createTempDirectory("s3k-phase-model");
+        Path dir = TestTempFiles.createTempDirectory("s3k-phase-model");
         Files.writeString(dir.resolve("metadata.json"), """
             {
               "game": "s3k",

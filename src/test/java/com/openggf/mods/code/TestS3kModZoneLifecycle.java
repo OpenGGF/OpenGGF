@@ -112,9 +112,12 @@ class TestS3kModZoneLifecycle {
                     resumed.getRewindRegistry(),
                     new InMemoryKeyframeStore(),
                     new TwoFrameInputSource(),
-                    input -> new DirectLevelMutationSurface(
-                            resumed.getLevelManager().getCurrentLevel())
-                            .setBlockInMapWithoutRedraw(0, 0, 0, MUTATED_CELL),
+                    input -> {
+                        new DirectLevelMutationSurface(
+                                resumed.getLevelManager().getCurrentLevel())
+                                .setBlockInMapWithoutRedraw(0, 0, 0, MUTATED_CELL);
+                        return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
+                    },
                     1);
             rewind.step();
             assertActiveZoneAndCell(resumed.getLevelManager(), MOD_ZONE, MUTATED_CELL);

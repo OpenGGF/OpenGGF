@@ -29,4 +29,11 @@ class TestS3kResultsCameraBoundsPolicy {
         assertFalse(results.shouldRestoreCameraBoundsOnExit(0x07, 0),
                 "Load_Level retained this owner after the background event offset the live camera bounds");
     }
+
+    @Test
+    void preloadedNextActKeepsCameraOwnedByInLevelTitleHandoff() {
+        assertTrue(S3kResultsScreenObjectInstance.isPreloadedNextActHandoff(0, 1));
+        assertFalse(S3kResultsScreenObjectInstance.isPreloadedNextActHandoff(0, 0));
+        assertFalse(S3kResultsScreenObjectInstance.isPreloadedNextActHandoff(1, 1));
+    }
 }

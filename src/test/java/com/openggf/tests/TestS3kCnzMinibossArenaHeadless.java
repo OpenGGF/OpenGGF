@@ -141,6 +141,7 @@ class TestS3kCnzMinibossArenaHeadless {
                 .build();
         Sonic3kCNZEvents events = getCnzEvents();
         GameServices.camera().setX((short) 0x31E0);
+        events.enterMinibossArenaFromObjectSlot();
         for (int frame = 0; frame < 121; frame++) {
             events.update(0, frame);
         }

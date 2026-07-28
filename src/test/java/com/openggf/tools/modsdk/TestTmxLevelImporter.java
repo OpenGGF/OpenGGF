@@ -101,7 +101,7 @@ class TestTmxLevelImporter {
 
     @Test
     void rejectsExternalPathEscapeAbsolutePathAndSymlinkEscape() throws Exception {
-        Path outside = Files.createTempDirectory("tmx-outside-");
+        Path outside = com.openggf.tests.TestTempFiles.createTempDirectory("tmx-outside-");
         try {
             writeSolidChunk(outside.resolve("outside.png"), 0xFF0000FF);
             Files.writeString(outside.resolve("outside.tsx"), tileset("outside.png", ""));

@@ -27,6 +27,7 @@ import com.openggf.physics.Direction;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.NativePositionOps;
 
 import com.openggf.debug.DebugColor;
 import java.util.Collection;
@@ -281,6 +282,7 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
         //   loc_C1F2 (state 6): bsr SpeedToPos / andi ... / subq #2,obSolid / rts
         //   loc_C218 (state 0): bsr Solid_ChkEnter (the only path that calls it)
         int enteringSolidState = solidState;
+        int preMoveX = x;
 
         if (inMotion) {
             // loc_C046: lava sliding physics (only when objoff_32 != 0)
@@ -327,22 +329,36 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
                 solidState = 2;
             }
         } else if (enteringSolidState == 2) {
-            if (!isPlayerRidingThisBlock()) {
+            int halfWidth = getSolidParams().halfWidth();
+            int relativeX = player.getCentreX() - x;
+            boolean nativeStandingBitSurvives = player.isOnObject()
+                    && !player.getAir()
+                    && relativeX >= -halfWidth
+                    && relativeX < halfWidth;
+            if (!nativeStandingBitSurvives) {
                 // PushB_SolidAction.sonicOnBlock calls ExitPlatform, then tests
-                // Sonic's live Status_OnObj. The engine's exact ride owner is the
-                // corresponding evidence: a global OnObj bit can belong to an
-                // earlier/later solid and must not keep this Obj33 state alive.
-                // Clearing obSolid returns immediately without a same-slot
-                // Solid_ChkCollision, leaving this object's Status_Push bit for
-                // the next state-0 checkpoint.
+                // Sonic's live global Status_OnObj. ExitPlatform clears that bit
+                // for air/range exits, then Obj33 returns without a same-slot
+                // Solid_ChkCollision, leaving its Status_Push bit for the next
+                // state-0 checkpoint.
+                player.setOnObject(false);
+                if (isPlayerRidingThisBlock() && services().objectManager() != null) {
+                    services().objectManager().clearRidingObject(player);
+                }
                 solidState = 0;
                 pushReleasePendingAfterRideExit = true;
             } else {
-                SolidCheckpointBatch batch = checkpointAll();
-                if (!hasStandingContact(batch)) {
-                    solidState = 0;
-                    pushReleasePendingAfterRideExit = true;
+                // PushB_OnLava saves pre-move X in d4, moves the block, then
+                // PushB_SolidAction state 2 calls MvSonicOnPtfm. The native
+                // routine deliberately relies only on the global OnObj bit: a
+                // later Obj52 may own Sonic's stand-on slot while Obj33 still
+                // carries him from its own retained obSolid=2 state.
+                int deltaX = x - preMoveX;
+                if (deltaX != 0) {
+                    player.shiftX(deltaX);
                 }
+                int centreY = y - getSolidParams().groundHalfHeight() - player.getYRadius();
+                NativePositionOps.writeYPosPreserveSubpixel(player, centreY);
             }
         }
 
@@ -954,7 +970,7 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
     public SolidObjectParams getSolidParams() {
         // d1 = obActWid + $B
         int halfWidth = activeWidth + 0x0B;
-        return new SolidObjectParams(halfWidth, SOLID_AIR_HALF_HEIGHT, SOLID_GROUND_HALF_HEIGHT);
+        return SolidObjectParams.of(halfWidth, SOLID_AIR_HALF_HEIGHT, SOLID_GROUND_HALF_HEIGHT);
     }
 
     @Override

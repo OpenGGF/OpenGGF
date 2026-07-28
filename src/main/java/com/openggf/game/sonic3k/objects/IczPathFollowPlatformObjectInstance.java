@@ -67,7 +67,7 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
     // which differs from the $2B SolidObjectFull X-collision half-width above.
     private static final int BALANCE_WIDTH_PIXELS = 0x20;
     private static final SolidObjectParams SOLID_PARAMS =
-            new SolidObjectParams(SOLID_HALF_WIDTH, SOLID_HALF_HEIGHT, SOLID_HALF_HEIGHT);
+            SolidObjectParams.of(SOLID_HALF_WIDTH, SOLID_HALF_HEIGHT, SOLID_HALF_HEIGHT);
 
     private static final int JITTER_TIMER = 0x0F; // loc_89FC0: move.w #$F,$2E(a0).
     private static final int PUSH_DELAY = 0x10; // loc_8A00A: cmpi.b #$10,$39(a0).
@@ -118,6 +118,19 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // SolidObjectFull's unsigned broad-X gate branches on BHI, so +d1 is contact.
+        return true;
+    }
+
+    @Override
+    public boolean usesInstanceSolidStateLatchKey() {
+        // Dynamic spawn coordinates follow the moving platform, but native
+        // standing/pushing bits remain owned by this one SST instance.
+        return true;
+    }
+
+    @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         if (isDestroyed()) {
             return;
@@ -158,7 +171,6 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
             }
         }
 
-        updateFastVerticalScrollRequest(standing);
         updateDynamicSpawn(x, y);
     }
 
@@ -173,8 +185,10 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
 
     private void updateJitterWait(int frameCounter) {
         // loc_89FD6 reads V_int_run_count+3, not Level_frame_counter.
-        // Object updates receive the ROM-visible level frame, so the V-int low bit is one tick ahead here.
-        int vIntLowByte = frameCounter + 1;
+        // ObjectManager supplies its VBlank clock; the service resolves the
+        // independent low-bit phase retained for legacy S3K replay starts.
+        ObjectServices svc = tryServices();
+        int vIntLowByte = svc != null ? svc.vIntRunCounter(frameCounter) : frameCounter;
         x += (vIntLowByte & 1) == 0 ? 1 : -1;
         if (waitTimer-- <= 0) {
             phase = Phase.FALLING;
@@ -305,7 +319,6 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
     private void stopFallingAgainstWall(int wallDistance) {
         x += wallDistance;
         xVel = 0;
-        xSub = 0;
     }
 
     private void spawnRevealedSpring() {
@@ -326,8 +339,8 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
         playerEntity.setAir(true);
     }
 
-    private void updateFastVerticalScrollRequest(boolean standing) {
-        if (!standing || (xVel == 0 && yVel == 0)) {
+    private void requestFastVerticalScrollIfMoving() {
+        if (xVel == 0 && yVel == 0) {
             return;
         }
         ObjectServices services = tryServices();
@@ -412,19 +425,15 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean seedsNewRideCarryFromPreUpdateX() {
-        // loc_89F4E-loc_89F62 saves x_pos before ICZPathFollowPlatform_Index
-        // and passes the saved value in d4 to SolidObjectFull.
-        return true;
-    }
-
-    @Override
     public void onSolidContact(PlayableEntity player, SolidContact contact, int frameCounter) {
         if (contact == null) {
             return;
         }
         if (contact.standing()) {
             standingThisFrame = true;
+            // sub_8A3C4 runs after SolidObjectFull and sees a newly established
+            // p1_standing_bit in this same object pass.
+            requestFastVerticalScrollIfMoving();
         }
         if (contact.pushing() && player != null) {
             pushingThisFrame = true;
@@ -501,6 +510,10 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
 
     public int getYVelocityForTesting() {
         return yVel;
+    }
+
+    public int getXSubpixelForTesting() {
+        return xSub;
     }
 
     public int getMappingFrameForTesting() {

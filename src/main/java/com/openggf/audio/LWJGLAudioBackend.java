@@ -1,40 +1,20 @@
 package com.openggf.audio;
 
-import org.lwjgl.openal.*;
-import org.lwjgl.system.MemoryStack;
-import org.lwjgl.system.MemoryUtil;
-
+import com.openggf.audio.output.AudioPresentationSink;
+import com.openggf.audio.output.OpenAlPcmSink;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.debug.PerformanceProfiler;
 
-import java.io.InputStream;
-import java.nio.ByteBuffer;
-import java.nio.IntBuffer;
-import java.nio.ShortBuffer;
-import java.util.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.function.Consumer;
 
-import static org.lwjgl.openal.AL10.*;
-import static org.lwjgl.openal.ALC10.*;
-import static org.lwjgl.openal.ALC11.*;
-import static org.lwjgl.openal.SOFTHRTF.*;
-
+/**
+ * LWJGL profile/source compatibility backend.
+ *
+ * <p>OpenAL ownership lives exclusively in {@link OpenAlPcmSink}. This class
+ * does not own independent music, SFX, WAV, or streaming output sources.</p>
+ */
 public class LWJGLAudioBackend extends AbstractSmpsAudioBackend {
-    private static final Logger LOGGER = Logger.getLogger(LWJGLAudioBackend.class.getName());
-
-    private long device;
-    private long context;
-
-    private final Map<String, Integer> buffers = new HashMap<>();
-    private final List<Integer> sfxSources = new ArrayList<>();
-    private int musicSource = -1;
-
-    private int[] streamBuffers;
-    private static final int STREAM_BUFFER_COUNT = 3;
-    private int deviceSampleRate = 48000;  // Default fallback, updated in init()
-    // Reusable DirectBuffer to avoid allocation in fillBuffer() hot path
-    private ShortBuffer directShortBuffer;
+    private int deviceSampleRate = 48_000;
 
     public LWJGLAudioBackend() {
         this(SonicConfigurationService.createStandalone(), null);
@@ -44,8 +24,20 @@ public class LWJGLAudioBackend extends AbstractSmpsAudioBackend {
         this(configService, null);
     }
 
-    public LWJGLAudioBackend(SonicConfigurationService configService, PerformanceProfiler profiler) {
+    public LWJGLAudioBackend(
+            SonicConfigurationService configService,
+            PerformanceProfiler profiler) {
         super(configService, profiler);
+    }
+
+    @Override
+    public AudioPresentationSink createPresentationSink(
+            Consumer<Throwable> failureHandler,
+            Consumer<String> warningHandler) {
+        OpenAlPcmSink sink = OpenAlPcmSink.openDefault(
+                failureHandler, warningHandler);
+        deviceSampleRate = sink.sampleRate();
+        return sink;
     }
 
     @Override
@@ -53,398 +45,46 @@ public class LWJGLAudioBackend extends AbstractSmpsAudioBackend {
         return deviceSampleRate;
     }
 
-    @Override
-    protected void hookInitDevice() {
-        try {
-            // Open default device
-            device = alcOpenDevice((ByteBuffer) null);
-            if (device == 0) {
-                throw new RuntimeException("Could not open ALC device");
-            }
-
-            // Request 48000 Hz sample rate explicitly and disable HRTF for clean stereo output
-            try (MemoryStack stack = MemoryStack.stackPush()) {
-                IntBuffer contextAttribs = stack.ints(
-                    ALC_FREQUENCY, 48000,
-                    ALC_HRTF_SOFT, ALC_FALSE,  // Disable HRTF processing
-                    0  // Terminate list
-                );
-                context = alcCreateContext(device, contextAttribs);
-            }
-            if (context == 0) {
-                throw new RuntimeException("Could not create ALC context");
-            }
-
-            alcMakeContextCurrent(context);
-
-            // Create capabilities (required for LWJGL OpenAL)
-            ALCCapabilities alcCaps = ALC.createCapabilities(device);
-            AL.createCapabilities(alcCaps);
-
-            // Verify the actual frequency (may differ from request)
-            deviceSampleRate = alcGetInteger(device, ALC_FREQUENCY);
-            if (deviceSampleRate <= 0) {
-                deviceSampleRate = 48000;  // Use our requested rate as fallback
-            }
-
-            if (alGetError() != AL_NO_ERROR) {
-                throw new RuntimeException("AL Error during init");
-            }
-
-            // Log HRTF status
-            if (ALC.getCapabilities().ALC_SOFT_HRTF) {
-                int hrtfStatus = alcGetInteger(device, ALC_HRTF_STATUS_SOFT);
-                String hrtfStatusStr = switch (hrtfStatus) {
-                    case ALC_HRTF_DISABLED_SOFT -> "Disabled";
-                    case ALC_HRTF_ENABLED_SOFT -> "Enabled";
-                    case ALC_HRTF_DENIED_SOFT -> "Denied";
-                    case ALC_HRTF_REQUIRED_SOFT -> "Required";
-                    case ALC_HRTF_HEADPHONES_DETECTED_SOFT -> "Headphones Detected";
-                    case ALC_HRTF_UNSUPPORTED_FORMAT_SOFT -> "Unsupported Format";
-                    default -> "Unknown (" + hrtfStatus + ")";
-                };
-                LOGGER.info("HRTF Status: " + hrtfStatusStr);
-            }
-
-            // Log device info
-            String deviceName = alcGetString(device, ALC_DEVICE_SPECIFIER);
-            int monoSources = alcGetInteger(device, ALC_MONO_SOURCES);
-            int stereoSources = alcGetInteger(device, ALC_STEREO_SOURCES);
-            LOGGER.info("OpenAL Device: " + deviceName);
-            LOGGER.info("Mono sources: " + monoSources + ", Stereo sources: " + stereoSources);
-
-            LOGGER.info("LWJGL OpenAL Initialized. Device sample rate: " + deviceSampleRate + " Hz, Buffer Size: " + STREAM_BUFFER_SIZE);
-            // Preload SFX
-            for (String sfxPath : sfxFallback.values()) {
-                loadWav(sfxPath);
-            }
-
-            // Generate music source
-            musicSource = alGenSources();
-
-            // Pre-allocate reusable DirectBuffer to avoid per-fillBuffer allocations
-            if (directShortBuffer != null) {
-                MemoryUtil.memFree(directShortBuffer);
-            }
-            directShortBuffer = MemoryUtil.memAllocShort(STREAM_BUFFER_SIZE * 2);
-
-        } catch (Throwable t) {
-            LOGGER.log(Level.SEVERE, "LWJGL OpenAL Init failed", t);
-            destroyDeviceAfterFailedInit(t);
-            throw new RuntimeException(t);
-        }
+    @Override protected void hookInitDevice() {
     }
 
-    private void destroyDeviceAfterFailedInit(Throwable primary) {
-        try {
-            hookDestroyDevice();
-        } catch (Throwable cleanupFailure) {
-            primary.addSuppressed(cleanupFailure);
-            LOGGER.log(Level.WARNING, "Failed to clean up partial LWJGL OpenAL init", cleanupFailure);
-        }
+    @Override protected void hookDestroyDevice() {
     }
 
-    @Override
-    protected void playWavMusic(String filename, int musicId) {
-        playWav(filename, musicSource, true);
+    @Override protected void hookStartStream() {
     }
 
-    @Override
-    protected void hookStartStream() {
-        ensurePresentationBuffers();
-
-        int[] ids = presentationBufferIds();
-        for (int id : ids) {
-            fillBuffer(id);
-        }
-
-        queueInitialPresentationBuffers(ids);
-        playPresentationSource();
+    @Override protected void hookStopStreamSource() {
     }
 
-    protected void ensurePresentationBuffers() {
-        if (streamBuffers == null) {
-            streamBuffers = new int[STREAM_BUFFER_COUNT];
-            for (int i = 0; i < STREAM_BUFFER_COUNT; i++) streamBuffers[i] = alGenBuffers();
-        }
+    @Override protected void hookUpdateStream() {
     }
 
-    protected int[] presentationBufferIds() {
-        return streamBuffers;
+    @Override protected void hookStopAndClearMusicSource() {
     }
 
-    protected boolean presentationBuffersReady() {
-        return streamBuffers != null;
+    @Override protected void hookStopAndUnqueueAllMusicBuffers() {
     }
 
-    protected void queueInitialPresentationBuffers(int[] ids) {
-        try (MemoryStack stack = MemoryStack.stackPush()) {
-            IntBuffer bufferIds = stack.mallocInt(ids.length);
-            for (int i = 0; i < ids.length; i++) bufferIds.put(i, ids[i]);
-            alSourceQueueBuffers(musicSource, bufferIds);
-        }
+    @Override protected void hookStopAndClearAllMusicBuffers() {
     }
 
-    protected int presentationSourceState() { return alGetSourcei(musicSource, AL_SOURCE_STATE); }
-    protected int queuedPresentationBufferCount() { return alGetSourcei(musicSource, AL_BUFFERS_QUEUED); }
-    protected int processedPresentationBufferCount() { return alGetSourcei(musicSource, AL_BUFFERS_PROCESSED); }
-    protected int unqueuePresentationBuffer() { return alSourceUnqueueBuffers(musicSource); }
-    protected void queuePresentationBuffer(int bufferId) { alSourceQueueBuffers(musicSource, bufferId); }
-    protected void playPresentationSource() { alSourcePlay(musicSource); }
-
-    @Override
-    protected void hookStopStreamSource() {
-        if (musicSource >= 0) {
-            alSourceStop(musicSource);
-            int queued = alGetSourcei(musicSource, AL_BUFFERS_QUEUED);
-            while (queued > 0) {
-                alSourceUnqueueBuffers(musicSource);
-                queued--;
-            }
-            alSourcei(musicSource, AL_BUFFER, 0);
-        }
+    @Override protected void hookRestartStreamIfDry() {
     }
 
-    @Override
-    protected void hookUpdateStream() {
-        boolean hasStream = hasPresentationWork();
-        if (hasStream && !presentationBuffersReady()) {
-            startStream();
-        }
-        if (hasStream) {
-            int state = presentationSourceState();
-            int queued = queuedPresentationBufferCount();
-            if (!presentationBuffersReady() || queued == 0) {
-                startStream();
-                return;
-            }
-            int processed = processedPresentationBufferCount();
-
-            while (processed > 0) {
-                int bufferId = unqueuePresentationBuffer();
-                fillBuffer(bufferId);
-                queuePresentationBuffer(bufferId);
-                processed--;
-            }
-
-            // Check state again
-            state = presentationSourceState();
-            if (state != AL_PLAYING) {
-                playPresentationSource();
-            }
-        }
+    @Override protected void hookStopAndDeleteWavSfxSources() {
     }
 
-    @Override
-    protected void hookStopAndClearMusicSource() {
-        alSourceStop(musicSource);
-        alSourcei(musicSource, AL_BUFFER, 0);
+    @Override protected void hookPlayWavSfx(String sfxName, float pitch) {
     }
 
-    @Override
-    protected void hookStopAndUnqueueAllMusicBuffers() {
-        alSourceStop(musicSource);
-
-        // Unqueue ALL buffers (both processed and queued) to avoid OpenAL errors
-        int queued = alGetSourcei(musicSource, AL_BUFFERS_QUEUED);
-        for (int i = 0; i < queued; i++) {
-            alSourceUnqueueBuffers(musicSource);
-        }
+    @Override protected void hookCleanupStoppedWavSfx() {
     }
 
-    @Override
-    protected void hookStopAndClearAllMusicBuffers() {
-        if (musicSource >= 0) {
-            alSourceStop(musicSource);
-            int queued = alGetSourcei(musicSource, AL_BUFFERS_QUEUED);
-            while (queued > 0) {
-                alSourceUnqueueBuffers(musicSource);
-                queued--;
-            }
-            alSourcei(musicSource, AL_BUFFER, 0);
-        }
+    @Override protected void hookPause() {
     }
 
-    @Override
-    protected void hookRestartStreamIfDry() {
-        int queued = alGetSourcei(musicSource, AL_BUFFERS_QUEUED);
-        if (queued == 0) {
-            alSourceStop(musicSource);
-            alSourcei(musicSource, AL_BUFFER, 0);
-            startStream();
-        }
+    @Override protected void hookResume() {
     }
 
-    @Override
-    protected void hookUploadStreamBuffer(int bufferId, short[] pcm, int sampleRate) {
-        directShortBuffer.clear();
-        directShortBuffer.put(pcm);
-        directShortBuffer.flip();
-        alBufferData(bufferId, AL_FORMAT_STEREO16, directShortBuffer, sampleRate);
-    }
-
-    @Override
-    protected void hookPlayWavSfx(String sfxName, float pitch) {
-        String filename = sfxFallback.get(sfxName);
-        if (filename != null) {
-            int source = alGenSources();
-            sfxSources.add(source);
-            playWav(filename, source, false, pitch);
-        }
-    }
-
-    @Override
-    protected void hookStopAndDeleteWavSfxSources() {
-        for (int source : sfxSources) {
-            alSourceStop(source);
-            alDeleteSources(source);
-        }
-        sfxSources.clear();
-    }
-
-    @Override
-    protected void hookCleanupStoppedWavSfx() {
-        // Cleanup stopped sources
-        Iterator<Integer> it = sfxSources.iterator();
-        while (it.hasNext()) {
-            int src = it.next();
-            int state = alGetSourcei(src, AL_SOURCE_STATE);
-            if (state == AL_STOPPED) {
-                alDeleteSources(src);
-                it.remove();
-            }
-        }
-    }
-
-    private void playWav(String resourcePath, int source, boolean loop) {
-        playWav(resourcePath, source, loop, 1.0f);
-    }
-
-    private void playWav(String resourcePath, int source, boolean loop, float pitch) {
-        try {
-            // Check if buffer exists
-            if (!buffers.containsKey(resourcePath)) {
-                loadWav(resourcePath);
-            }
-
-            Integer buffer = buffers.get(resourcePath);
-            if (buffer != null) {
-                alSourceStop(source);
-                alSourcei(source, AL_BUFFER, buffer);
-                alSourcei(source, AL_LOOPING, loop ? AL_TRUE : AL_FALSE);
-                alSourcef(source, AL_PITCH, pitch);
-                alSourcePlay(source);
-            } else {
-                LOGGER.fine("Could not load buffer for: " + resourcePath);
-            }
-        } catch (Exception e) {
-            LOGGER.warning("Failed to play WAV: " + resourcePath + " - " + e.getMessage());
-        }
-    }
-
-    private void loadWav(String resourcePath) {
-        try (InputStream is = getClass().getClassLoader().getResourceAsStream(resourcePath)) {
-            if (is == null) {
-                LOGGER.fine("Audio resource not found: " + resourcePath);
-                return;
-            }
-
-            WavDecoder wav = WavDecoder.decode(is);
-
-            int alFormat;
-            if (wav.channels == 1) {
-                alFormat = (wav.bitsPerSample == 8) ? AL_FORMAT_MONO8 : AL_FORMAT_MONO16;
-            } else {
-                alFormat = (wav.bitsPerSample == 8) ? AL_FORMAT_STEREO8 : AL_FORMAT_STEREO16;
-            }
-
-            ByteBuffer bufferData = MemoryUtil.memAlloc(wav.data.length);
-            bufferData.put(wav.data);
-            bufferData.flip();
-
-            int buf = alGenBuffers();
-            alBufferData(buf, alFormat, bufferData, wav.sampleRate);
-
-            MemoryUtil.memFree(bufferData);
-
-            buffers.put(resourcePath, buf);
-        } catch (Exception e) {
-            LOGGER.warning("Error loading WAV " + resourcePath + ": " + e.getMessage());
-        }
-    }
-
-    @Override
-    protected void hookDestroyDevice() {
-        // Free the pre-allocated buffer
-        if (directShortBuffer != null) {
-            MemoryUtil.memFree(directShortBuffer);
-            directShortBuffer = null;
-        }
-
-        // Delete all buffers
-        for (int bufferId : buffers.values()) {
-            alDeleteBuffers(bufferId);
-        }
-        buffers.clear();
-
-        // Delete stream buffers
-        if (streamBuffers != null) {
-            for (int bufferId : streamBuffers) {
-                alDeleteBuffers(bufferId);
-            }
-            streamBuffers = null;
-        }
-
-        // Delete sources
-        if (musicSource >= 0) {
-            alDeleteSources(musicSource);
-            musicSource = -1;
-        }
-        for (int source : sfxSources) {
-            alDeleteSources(source);
-        }
-        sfxSources.clear();
-
-        // Destroy context and close device
-        if (context != 0) {
-            alcMakeContextCurrent(0);
-            alcDestroyContext(context);
-            context = 0;
-        }
-        if (device != 0) {
-            alcCloseDevice(device);
-            device = 0;
-        }
-    }
-
-    @Override
-    protected void hookPause() {
-        if (musicSource >= 0) {
-            alSourcePause(musicSource);
-        }
-        for (int src : sfxSources) {
-            alSourcePause(src);
-        }
-    }
-
-    @Override
-    protected void hookResume() {
-        if (musicSource >= 0) {
-            int state = alGetSourcei(musicSource, AL_SOURCE_STATE);
-            if (state == AL_PAUSED) {
-                alSourcePlay(musicSource);
-            }
-        }
-        for (int src : sfxSources) {
-            int state = alGetSourcei(src, AL_SOURCE_STATE);
-            if (state == AL_PAUSED) {
-                alSourcePlay(src);
-            }
-        }
-    }
-
-    @Override
-    protected boolean canRestartPresentationAfterRestore() {
-        return musicSource >= 0;
-    }
 }

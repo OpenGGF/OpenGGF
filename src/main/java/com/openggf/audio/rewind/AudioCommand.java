@@ -36,6 +36,12 @@ public sealed interface AudioCommand {
     }
 
     @com.openggf.game.ModApi
+    record PlayNamespacedSfx(com.openggf.audio.StreamedMusicPort.SfxRef sfx)
+            implements AudioCommand {
+        public PlayNamespacedSfx { java.util.Objects.requireNonNull(sfx, "sfx"); }
+    }
+
+    @com.openggf.game.ModApi
     record PlaySfx(int sfxId, String sfxName, SfxRoute route, float pitch,
                    String donorGameId) implements AudioCommand {}
 

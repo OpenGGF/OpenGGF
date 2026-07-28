@@ -482,9 +482,10 @@ class TestMhzBossObjects {
                 .orElseThrow();
         assertEquals(1, readIntField(flow, "signpostResultsTimerCatchUpEntries"),
                 "the slot-replacing MHZ handoff has already consumed the signpost's first results-timer entry");
-        assertEquals(0, readIntField(flow, "resultsRetireDispatches"),
-                "MHZ's native results parent transforms as soon as its final child retires; "
-                        + "it has no carried-child retirement entries");
+        // The retire-dispatch count is derived from the catch-up entries now rather
+        // than passed in, so the observable is the boundary flag that survives.
+        assertEquals(false, readBooleanField(flow, "preservesGroundedResultsDispatchBoundary"),
+                "MHZ's native results parent transforms as soon as its final child retires");
         assertTrue(readBooleanField(flow, "changeAct2SizesOnTitleComplete"),
                 "Obj_EndSignControlDoStart must create MHZ's gradual Act 2 size worker");
         assertTrue(spawned.stream().anyMatch(S3kBossExplosionChild.class::isInstance),

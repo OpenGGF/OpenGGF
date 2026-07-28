@@ -71,15 +71,17 @@ public class TestS3kAiz2SidekickBoundsSync {
         assertNotNull(controller, "CPU sidekick should have a controller");
 
         controller.setLevelBounds(0x1111, 0x2222, 0x3333);
+        fixture.camera().setMaxY((short) 0x02F2);
+        fixture.camera().setMaxYTarget((short) 0x0800);
         GameServices.module().getLevelEventProvider().update();
 
         assertEquals(fixture.camera().getMinX(), controller.getMinXBound(Integer.MIN_VALUE),
                 "S3K level events should refresh sidekick minX bounds from camera");
         assertEquals(fixture.camera().getMaxX(), controller.getMaxXBound(Integer.MIN_VALUE),
                 "S3K level events should refresh sidekick maxX bounds from camera");
-        assertEquals(Math.max(fixture.camera().getMaxY(), fixture.camera().getMaxYTarget()),
+        assertEquals(fixture.camera().getMaxY(),
                 controller.getMaxYBound(Integer.MIN_VALUE),
-                "S3K level events should refresh sidekick maxY bounds from camera");
+                "S3K Tails uses the live Camera_max_Y_pos rather than its resize target");
     }
 
     @Test

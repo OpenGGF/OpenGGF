@@ -64,6 +64,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
 import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
+import static org.lwjgl.glfw.GLFW.glfwInit;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kDataSelectPresentation {
@@ -2591,6 +2592,7 @@ class TestS3kDataSelectPresentation {
     void visualCapture_selectedSaveSlotShowsRightBodyRail() throws Exception {
         File rom = RomTestUtils.ensureSonic3kRomAvailable();
         assumeTrue(rom != null && rom.exists(), "S3K ROM required for visual regression capture");
+        assumeTrue(glfwAvailable(), "GLFW unavailable for visual regression capture");
 
         System.setProperty("s3k.rom.path", rom.getAbsolutePath());
         S3kDataSelectVisualCapture.main(new String[0]);
@@ -2602,6 +2604,10 @@ class TestS3kDataSelectPresentation {
                 "selected slot left body rail should render over the background");
         assertNotEquals(0xFFFFFFFF, image.argb(173, 89),
                 "selected slot right body rail should render over the background");
+    }
+
+    private static boolean glfwAvailable() {
+        return glfwInit();
     }
 
     private static class RecordingAssets implements S3kDataSelectAssetSource {

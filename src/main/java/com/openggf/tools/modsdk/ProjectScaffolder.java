@@ -2,8 +2,8 @@ package com.openggf.tools.modsdk;
 
 import com.openggf.game.ModKeySyntax;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
+import com.openggf.io.PixelImage;
+import com.openggf.io.PngCodec;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -86,10 +86,10 @@ public final class ProjectScaffolder {
 
     private static void writeSamplePng(Path path) throws IOException {
         Files.createDirectories(path.getParent());
-        BufferedImage image = new BufferedImage(8, 8, BufferedImage.TYPE_INT_ARGB);
+        PixelImage image = PixelImage.blank(8, 8);
         for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x++)
             image.setRGB(x, y, ((x + y) & 1) == 0 ? 0xFF000000 : 0xFFFFFFFF);
-        if (!ImageIO.write(image, "png", path.toFile())) throw new IOException("PNG writer unavailable");
+        PngCodec.write(path, image);
     }
 
     /** A visible two-pattern sample with an empty upper block and solid lower floor. */

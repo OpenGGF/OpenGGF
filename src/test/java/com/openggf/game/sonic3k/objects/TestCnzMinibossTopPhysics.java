@@ -204,6 +204,17 @@ class TestCnzMinibossTopPhysics {
     }
 
     @Test
+    void collisionResponseListDereferencesLivePostMovementPosition() {
+        CnzMinibossTopInstance top = new CnzMinibossTopInstance(
+                new ObjectSpawn(0x3240, 0x0300, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
+
+        assertTrue(top.usesCurrentTouchResponseState(),
+                "Obj_CNZMinibossTopMain runs MoveSprite2 before Draw_And_Touch_Sprite, "
+                        + "so Touch_Loop must dereference the live post-movement x_pos/y_pos "
+                        + "(sonic3k.asm:145058-145064,178041-178043,20660-20712)");
+    }
+
+    @Test
     void topMainExposesRomSolidObjectFullCall() {
         CnzMinibossTopInstance top = new CnzMinibossTopInstance(
                 new ObjectSpawn(0x3240, 0x0300, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
@@ -749,12 +760,8 @@ class TestCnzMinibossTopPhysics {
         }
 
         boss.update(25, fixture.sprite());
-        assertEquals(0x0C, boss.getCurrentRoutine(),
-                "the final frame-0 publication remains Closing for the previous touch list");
-
-        boss.update(26, fixture.sprite());
         assertEquals(0x06, boss.getCurrentRoutine(),
-                "the deferred $F4 terminator invokes Obj_CNZMinibossCloseGo after frame 0 was published "
+                "the $F4 terminator invokes Obj_CNZMinibossCloseGo in the same animation dispatch "
                         + "(docs/skdisasm/sonic3k.asm:144960-144969,145707-145708,177558-177586)");
     }
 

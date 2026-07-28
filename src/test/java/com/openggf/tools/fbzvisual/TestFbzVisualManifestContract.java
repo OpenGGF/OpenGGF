@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestFbzVisualManifestContract {
 
-    private static final Path MANIFEST = Path.of("docs/s3k-zones/fbz-visual-checkpoints.json");
+    private static final Path MANIFEST = Path.of("docs/architecture/research/s3k-zones/fbz-visual-checkpoints.json");
     private static final String MANIFEST_SHA256 =
             "D13D037BAF52BBD65D28096A71A54ACACB4229B8C4C560C76DCB921E90DC40DD";
 

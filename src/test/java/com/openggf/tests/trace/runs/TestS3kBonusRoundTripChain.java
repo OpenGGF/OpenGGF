@@ -10,7 +10,7 @@ import java.nio.file.Path;
 
 /**
  * Chain integration test for an S3K level -> bonus-stage -> level round trip
- * (spec: docs/superpowers/specs/2026-07-18-multi-stage-trace-runs-design.md,
+ * (spec: docs/architecture/designs/2026-07-18-multi-stage-trace-runs-design.md,
  * plan (c) Task 4). Drives ONE continuous {@code GameLoop} through all segments
  * of a {@link com.openggf.trace.TraceRunManifest} via the shared
  * {@link AbstractRunChainTest} base, asserting the engine organically raises

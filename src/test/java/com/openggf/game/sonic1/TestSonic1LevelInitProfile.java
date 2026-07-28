@@ -97,6 +97,8 @@ public class TestSonic1LevelInitProfile {
 
         // Verify key ROM-aligned resource loading steps are present
         assertTrue(steps.stream().anyMatch(s -> s.name().equals("InitGameModule")), "Should include InitGameModule");
+        assertTrue(steps.stream().anyMatch(s -> s.name().equals("ResetRng")),
+                "S1 GM_Level clears v_misc_variables, including v_random");
         assertTrue(steps.stream().anyMatch(s -> s.name().equals("InitAudio")), "Should include InitAudio");
         assertTrue(steps.stream().anyMatch(s -> s.name().equals("LoadLevelData")), "Should include LoadLevelData");
         assertTrue(steps.stream().anyMatch(s -> s.name().equals("InitAnimatedContent")), "Should include InitAnimatedContent");
@@ -116,6 +118,12 @@ public class TestSonic1LevelInitProfile {
         assertTrue(steps.stream().anyMatch(s -> s.name().equals("InitCamera")), "Should include InitCamera");
         assertTrue(steps.stream().anyMatch(s -> s.name().equals("InitLevelEvents")), "Should include InitLevelEvents");
         assertTrue(steps.stream().anyMatch(s -> s.name().equals("RequestTitleCard")), "Should include RequestTitleCard");
+
+        int moduleIndex = indexOfStep(steps, "InitGameModule");
+        int rngIndex = indexOfStep(steps, "ResetRng");
+        int audioIndex = indexOfStep(steps, "InitAudio");
+        assertTrue(moduleIndex < rngIndex && rngIndex < audioIndex,
+                "S1 v_misc_variables clear belongs at the start of GM_Level before resource setup");
     }
 
     @Test
@@ -135,5 +143,13 @@ public class TestSonic1LevelInitProfile {
         assertTrue(steps.stream().anyMatch(s -> s.name().equals("InitLevelEvents")),
                 "Preview capture should still include level events");
     }
-}
 
+    private static int indexOfStep(List<InitStep> steps, String name) {
+        for (int i = 0; i < steps.size(); i++) {
+            if (steps.get(i).name().equals(name)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+}

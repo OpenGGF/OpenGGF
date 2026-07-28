@@ -103,19 +103,19 @@ https://github.com/sonicretro/skdisasm
 
 ## AI-Assisted Development & Trace Testing
 
-Special thanks to **[Tibo Sottiaux](https://x.com/thsottiaux) (`@thsottiaux`)** for announcing **13 Codex and ChatGPT Work usage-limit resets—10 direct and 3 banked—between 27 June and 18 July 2026**. Those resets enabled JamesJ999 and Raiscan to carry out agent-intensive OpenGGF development and trace testing at a scale that would not have been practical under conventional usage limits.
+Special thanks to **[Tibo Sottiaux](https://x.com/thsottiaux) (`@thsottiaux`)** for announcing **14 Codex and ChatGPT Work usage-limit resets—11 direct and 3 banked—between 27 June and 25 July 2026**. Those resets enabled JamesJ999 and Raiscan to carry out agent-intensive OpenGGF development and trace testing at a scale that would not have been practical under conventional usage limits.
 
 For that inclusive period, `ccusage` reports the following usage from **Raiscan's Codex activity alone**:
 
 | Usage category | Tokens |
 |----------------|-------:|
-| Cached input | 71,359,212,544 |
-| Uncached input | 1,308,630,824 |
-| Output | 86,248,778 |
-| Reasoning output (included in output usage) | 23,346,743 |
-| **Total processed** | **72,754,092,146** |
+| Cached input | 84,394,651,136 |
+| Uncached input | 1,520,255,460 |
+| Output | 101,258,604 |
+| Reasoning output (included in output usage) | 27,191,007 |
+| **Total processed** | **86,016,165,200** |
 
-At the pricing data used by `ccusage`, that activity represents an estimated **$47,375.21 in API-equivalent inference value**. This is an estimate, not an invoice or an amount paid. It does not include JamesJ999's separate agent usage.
+At the pricing data used by `ccusage`, that activity represents an estimated **$55,360.28 in API-equivalent inference value**. This is an estimate, not an invoice or an amount paid. It does not include JamesJ999's separate agent usage.
 
 ---
 

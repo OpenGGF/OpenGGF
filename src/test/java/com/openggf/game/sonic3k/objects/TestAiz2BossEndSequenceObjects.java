@@ -46,6 +46,7 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -819,7 +820,7 @@ class TestAiz2BossEndSequenceObjects {
     }
 
     @Test
-    void aizCapsuleClearsSignedSidekickLockWhenEndingPoseCheckRuns() throws Exception {
+    void aizCapsuleEndingPosePreservesCompletedCpuWordUntilNextPlayerTwoDispatch() throws Exception {
         Camera camera = TestEnvironment.activeGameplayMode().getCamera();
         camera.resetState();
 
@@ -828,6 +829,19 @@ class TestAiz2BossEndSequenceObjects {
         TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
         TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
         SidekickCpuController tailsCpu = new SidekickCpuController(tails, sonic);
+        short[] xHistory = new short[64];
+        short[] yHistory = new short[64];
+        short[] inputHistory = new short[64];
+        byte[] statusHistory = new byte[64];
+        Arrays.fill(xHistory, (short) tails.getCentreX());
+        Arrays.fill(yHistory, (short) tails.getCentreY());
+        Arrays.fill(inputHistory, (short) (AbstractPlayableSprite.INPUT_RIGHT
+                | AbstractPlayableSprite.INPUT_JUMP));
+        sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 20);
+        tailsCpu.setInitialState(SidekickCpuController.State.NORMAL);
+        tailsCpu.update(0);
+        assertEquals(0x18, tailsCpu.getDiagnosticGeneratedHeldInput(),
+                "The completed Player_2 CPU slot must expose the delayed leader word.");
         tailsCpu.setController2SignedLocked(true);
         tails.setCpuController(tailsCpu);
         tails.setXSpeed((short) 0x0120);
@@ -845,10 +859,11 @@ class TestAiz2BossEndSequenceObjects {
         assertFalse(tailsCpu.isController2SignedLocked(),
                 "Check_TailsEndPose clears Ctrl_2_locked before Set_PlayerEndingPose "
                         + "(sonic3k.asm:181919-181939)");
-        assertEquals(0, tailsCpu.getDiagnosticGeneratedHeldInput(),
-                "After Ctrl_2_locked clears, Tails_Control copies raw Ctrl_2 into "
-                        + "Ctrl_2_logical before the ending-pose object-control gate "
-                        + "(sonic3k.asm:26196-26203).");
+        assertEquals(0x18, tailsCpu.getDiagnosticGeneratedHeldInput(),
+                "The late capsule slot must not rewrite the Ctrl_2_logical word already "
+                        + "published by this frame's Player_2 CPU slot; Check_TailsEndPose "
+                        + "and Set_PlayerEndingPose do not write that word "
+                        + "(sonic3k.asm:181919-181992).");
         assertTrue(tails.isObjectControlled(),
                 "Check_TailsEndPose immediately applies Set_PlayerEndingPose to Player_2.");
         assertFalse(tails.isObjectControlAllowsCpu());
@@ -856,6 +871,13 @@ class TestAiz2BossEndSequenceObjects {
         assertEquals(0, tails.getYSpeed());
         assertEquals(0, tails.getGSpeed());
         assertEquals(Sonic3kAnimationIds.VICTORY.id(), tails.getAnimationId());
+
+        tailsCpu.update(1);
+
+        assertEquals(0, tailsCpu.getDiagnosticGeneratedHeldInput(),
+                "On the following Player_2 dispatch, unlocked Tails_Control copies raw "
+                        + "Ctrl_2=0 before object_control=$81 blocks CPU steering "
+                        + "(sonic3k.asm:26195-26212,26668-26675).");
     }
 
     @Test
@@ -1148,6 +1170,44 @@ class TestAiz2BossEndSequenceObjects {
                         + "walk-right sequence.");
         assertEquals(0, tailsCpu.getDiagnosticGeneratedHeldInput(),
                 "loc_863C0's positive Ctrl_2 lock clears the post-CPU logical word");
+        assertEquals(0, tailsCpu.getDiagnosticGeneratedPressedInput());
+    }
+
+    @Test
+    void postResultsDelayClearsPositiveLockedSidekickLogicalWordAfterCpu() throws Exception {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.resetState();
+        camera.setMaxX((short) 0x4880);
+        camera.setX((short) 0x4880);
+
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        player.setXSpeed((short) 0x0200);
+        player.setYSpeed((short) 0x0100);
+        player.setGSpeed((short) 0x0180);
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        SidekickCpuController tailsCpu = new SidekickCpuController(tails, player);
+        tails.setCpuController(tailsCpu);
+        setField(tailsCpu, "diagnosticCtrl2HeldLatch", AbstractPlayableSprite.INPUT_UP);
+        setField(tailsCpu, "diagnosticCtrl2PressedLatch", AbstractPlayableSprite.INPUT_UP);
+
+        Aiz2BossEndSequenceController controller = new Aiz2BossEndSequenceController(0x4880, 0x0000);
+        controller.setServices(new QueryOnlyServices(camera, player, List.of(tails)));
+        setField(controller, "postResultsControlRestoreDelay", 2);
+        Aiz2BossEndSequenceState.releaseEggCapsule();
+
+        controller.update(1, player);
+
+        assertEquals(1, getIntField(controller, "postResultsControlRestoreDelay"));
+        assertTrue(player.isObjectControlled(),
+                "The results-delay owner must continue holding Sonic's ending pose");
+        assertTrue(player.isControlLocked());
+        assertEquals(0, player.getXSpeed());
+        assertEquals(0, player.getYSpeed());
+        assertEquals(0, player.getGSpeed());
+        assertEquals(0, tailsCpu.getDiagnosticGeneratedHeldInput(),
+                "ROM slot 8 loc_863D6 clears Ctrl_2_logical after Player_2 even while "
+                        + "the earlier results-delay owner remains active "
+                        + "(sonic3k.asm:181354-181372).");
         assertEquals(0, tailsCpu.getDiagnosticGeneratedPressedInput());
     }
 

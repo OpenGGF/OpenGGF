@@ -98,7 +98,7 @@ public class TurtloidBadnikInstance extends AbstractBadnikInstance
         this.animFrame = 0;
 
         // PlatformObject: d1=$18 (half-width), d2=$8 (air half-height), d3=$E (ground half-height)
-        this.platformParams = new SolidObjectParams(
+        this.platformParams = SolidObjectParams.of(
                 PLATFORM_HALF_WIDTH, PLATFORM_Y_RADIUS, PLATFORM_Y_OFFSET);
     }
 
@@ -257,7 +257,7 @@ public class TurtloidBadnikInstance extends AbstractBadnikInstance
         spawnFreeChild(() -> new ExplosionObjectInstance(
                 0x27, riderX, riderY, services().renderManager()));
 
-        spawnFreeChild(() -> AnimalObjectInstance.sonic2DeferredArtVariant(
+        spawnFreeChild(() -> AnimalObjectInstance.deferredArtVariant(
                 new ObjectSpawn(riderX, riderY, 0x28, 0, 0, false, 0), services(), null));
 
         int pointsValue = 100;

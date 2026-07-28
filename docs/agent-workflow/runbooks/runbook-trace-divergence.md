@@ -77,10 +77,14 @@ mvn exec:java "-Dexec.mainClass=com.openggf.tools.disasm.RomOffsetFinder" "-Dexe
 1. Model the ROM state at the divergence; change shared engine code to match (no carve-out).
 2. Re-run the focused replay test.
 3. If the trace itself needs regeneration (recorder extended), follow the regeneration workflow in the `trace-replay-bug-fixing` skill — do not hand-edit recorded data.
-   For S3K animation-column refreshes, `OGGF_TRACE_LIGHTWEIGHT=1` records the
-   authoritative CSV v7 physics/animation stream without the expensive
-   auxiliary memory hooks; retain the fixture's existing `aux_state.jsonl.gz`
-   when installing this `physics_animation_only` output.
+   S3K fixture regeneration records the authoritative CSV v7
+   physics/animation stream and RAM-sampled aux/bootstrap events without the
+   expensive PC-execution hooks by default. Install its physics, aux, and
+   metadata outputs atomically.
+   Set `OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS=1` only when a focused frontier
+   investigation needs the PC-execution diagnostics. The Linux launcher also
+   defaults `OGGF_TRACE_QUIET=1` to avoid Mono's full Lua Console repaint on
+   every status line; set it to `0` for interactive recorder output.
 4. Re-run the full `*TraceReplay` sweep to confirm no regressions elsewhere.
 
 ---
@@ -118,7 +122,7 @@ Cite the exact routine label and the ROM-state condition (status bit, routine co
 
 ## 7. Documentation & commit-trailer obligations
 
-- **`docs/TRACE_FRONTIER_LOG.md` MUST be updated** when a trace frontier moves, a trace fix is committed, a previously passing trace regresses, or a `*TraceReplay` sweep is used to choose the next target. Record: command, commit/worktree context, pass/fail status, error count, first-error frame/field.
+- **`docs/status/trace-frontier-log.md` MUST be updated** when a trace frontier moves, a trace fix is committed, a previously passing trace regresses, or a `*TraceReplay` sweep is used to choose the next target. Record: command, commit/worktree context, pass/fail status, error count, first-error frame/field.
 - If the fix revealed a reusable pitfall: update `.agents/skills/s{1,2,3k}-implement-object/rom-pitfalls.md` and the mirrored `.claude/skills/...`, set `Skills: updated`.
 - `CHANGELOG.md` + `Changelog: updated` for engine fixes.
 - Fill all trailers; never `--no-verify`.

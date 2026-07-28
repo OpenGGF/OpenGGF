@@ -25,6 +25,16 @@ import java.util.List;
 public interface ObjectArtProvider {
 
     /**
+     * Opens any runtime-art admission held behind level-presentation work.
+     *
+     * <p>A normal level load calls this when title-card art retires. A
+     * title-card-free seamless load calls it immediately because there is no
+     * presentation queue ahead of the runtime art.
+     */
+    default void onTitleCardArtRetired() {
+    }
+
+    /**
      * Loads object art for the specified zone.
      *
      * @param zoneIndex the zone index (-1 for default/non-zone-specific)

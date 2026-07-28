@@ -284,7 +284,7 @@ public class HTZLiftObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(
+        return SolidObjectParams.of(
                 COLLISION_WIDTH,
                 COLLISION_Y_RADIUS,
                 COLLISION_Y_RADIUS,

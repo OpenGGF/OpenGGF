@@ -1,18 +1,21 @@
 package com.openggf.trace;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 /**
  * Parsed {@code run_manifest.json} for a multi-segment trace run
- * (spec: docs/superpowers/specs/2026-07-18-multi-stage-trace-runs-design.md).
+ * (spec: docs/architecture/designs/2026-07-18-multi-stage-trace-runs-design.md).
  * A run bundles ordered per-mode segment trace directories recorded from one
  * shared BK2 movie, plus the transition boundary records between them.
  * Comparison-only: this class is read by replay/validation code and never
@@ -27,13 +30,51 @@ public record TraceRunManifest(
     @JsonProperty("rom_checksum") String romChecksum,
     @JsonProperty("lua_script_version") String luaScriptVersion,
     @JsonProperty("segments") List<Segment> segments,
-    @JsonProperty("transitions") List<Transition> transitions
+    @JsonProperty("transitions") List<Transition> transitions,
+    @JsonProperty("expected_movie_end_mode") ExpectedMovieEndMode expectedMovieEndMode
 ) {
 
     public static final int SUPPORTED_RUN_SCHEMA = 1;
     public static final Set<String> SEGMENT_KINDS = Set.of("level", "special_stage", "bonus_stage");
     public static final Set<String> ENTRY_KINDS =
-        Set.of("giant_ring", "starpost_special", "starpost_bonus", "stage_exit");
+        Set.of("giant_ring", "starpost_special", "starpost_bonus", "stage_exit",
+            "death_restart", "level_advance");
+
+    public TraceRunManifest {
+        if (expectedMovieEndMode == null) {
+            expectedMovieEndMode = ExpectedMovieEndMode.UNSPECIFIED;
+        }
+    }
+
+    /** Source-compatible constructor for manifests created before terminal mode was recorded. */
+    public TraceRunManifest(
+            int runSchema, String game, String runId, String sourceBk2,
+            String romChecksum, String luaScriptVersion, List<Segment> segments,
+            List<Transition> transitions) {
+        this(runSchema, game, runId, sourceBk2, romChecksum, luaScriptVersion,
+                segments, transitions, ExpectedMovieEndMode.UNSPECIFIED);
+    }
+
+    /**
+     * Terminal mode sampled by the recorder at movie completion. Its wire form
+     * is deliberately lowercase and optional: missing data disables terminal
+     * tail playback rather than inferring a lifecycle from the game.
+     */
+    public enum ExpectedMovieEndMode {
+        UNSPECIFIED,
+        LEVEL,
+        TITLE_SCREEN;
+
+        @JsonCreator
+        public static ExpectedMovieEndMode fromJson(String wireValue) {
+            return switch (wireValue) {
+                case "level" -> LEVEL;
+                case "title_screen" -> TITLE_SCREEN;
+                default -> throw new IllegalArgumentException(
+                        "Unknown expected_movie_end_mode '" + wireValue + "'");
+            };
+        }
+    }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record Segment(
@@ -66,7 +107,12 @@ public record TraceRunManifest(
 
     public static TraceRunManifest load(Path manifestPath) throws IOException {
         ObjectMapper mapper = new ObjectMapper();
-        return mapper.readValue(Files.readString(manifestPath), TraceRunManifest.class);
+        JsonNode root = mapper.readTree(Files.readString(manifestPath));
+        JsonNode expectedEndMode = root.get("expected_movie_end_mode");
+        if (expectedEndMode != null && !expectedEndMode.isTextual()) {
+            throw new IOException("expected_movie_end_mode must be a string when present");
+        }
+        return mapper.treeToValue(root, TraceRunManifest.class);
     }
 
     /**
@@ -81,6 +127,7 @@ public record TraceRunManifest(
             throw new IllegalStateException("Manifest has no segments");
         }
         int previousOffset = -1;
+        Set<String> segmentDirs = new HashSet<>();
         for (int i = 0; i < segments.size(); i++) {
             Segment seg = segments.get(i);
             if (!SEGMENT_KINDS.contains(seg.kind())) {
@@ -100,6 +147,10 @@ public record TraceRunManifest(
             if ("special_stage".equals(seg.kind()) && seg.specialStageIndex() == null) {
                 throw new IllegalStateException(
                     "Segment " + i + " is special_stage but has no special_stage_index");
+            }
+            if (!segmentDirs.add(seg.dir())) {
+                throw new IllegalStateException(
+                    "Segment " + i + " has duplicate segment directory '" + seg.dir() + "'");
             }
             Path segDir = runDir.resolve(seg.dir());
             if (!Files.isDirectory(segDir) || !Files.exists(segDir.resolve("metadata.json"))) {

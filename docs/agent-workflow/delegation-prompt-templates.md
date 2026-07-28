@@ -4,10 +4,10 @@ Ready-to-copy prompts for delegating bounded OpenGGF tasks to an external agent 
 has **no chat context**. Copy one template, fill the `<...>` placeholders, and paste it
 as the agent's full instructions. Each template embeds the non-negotiable project rules
 relevant to that task and defines an **OUTPUT FORMAT** whose result merges directly into
-`docs/AGENT_WORKFLOW_SUPPORT_OPTIONS.md` (the tracking doc) or a follow-on plan.
+`docs/agent-workflow/support-options.md` (the tracking doc) or a follow-on plan.
 
-This is Option 10 of `docs/AGENT_WORKFLOW_SUPPORT_OPTIONS.md`. See also:
-- `docs/AGENT_WORKFLOW_SUPPORT_OPTIONS.md` — tracking board (update only your assigned row).
+This is Option 10 of `docs/agent-workflow/support-options.md`. See also:
+- `docs/agent-workflow/support-options.md` — tracking board (update only your assigned row).
 - Skills under `.agents/skills/` and `.claude/skills/` (mirrored): `s3k-disasm-guide`,
   `s3k-implement-object`, `s3k-implement-boss`, `s3k-zone-analysis`,
   `trace-replay-bug-fixing`, `plc-system`, `s3k-plc-system`.
@@ -198,7 +198,7 @@ oggf.trace.hydrate must stay unset — guarded by TestTraceReplayInvariantGuard 
 TestTraceHydrateSwitchDefault), 11.
 Do NOT propose a zone/route/frame "exception" as a fix.
 
-OUTPUT FORMAT (Markdown — merges into docs/TRACE_FRONTIER_LOG.md and a follow-on plan):
+OUTPUT FORMAT (Markdown — merges into docs/status/trace-frontier-log.md and a follow-on plan):
 ## Trace Triage: <TRACE>
 - Command run + commit/worktree context.
 - Pass/fail, total error count.
@@ -282,10 +282,10 @@ CHECK AGAINST RULE BLOCK (cite the specific rule + guard test for each finding):
 9  JUnit 5 only. Guards: TestJunit5MigrationGuard, TestArchitecturalReviewGuard.
 DOCS (Branch Documentation Policy): commit-message trailers each set to `updated` or `n/a`:
   Changelog (CHANGELOG.md), Guide + Agent-Docs (AGENTS.md + CLAUDE.md),
-  Known-Discrepancies (docs/KNOWN_DISCREPANCIES.md),
+  Known-Discrepancies (docs/status/known-discrepancies.md),
   S3K-Known-Discrepancies (docs/S3K_KNOWN_DISCREPANCIES.md),
   Configuration-Docs (CONFIGURATION.md), Skills (.agents/skills/* + .claude/skills/* — must be mirrored).
-  Trace frontier work must update docs/TRACE_FRONTIER_LOG.md. A feat/fix/perf commit touching
+  Trace frontier work must update docs/status/trace-frontier-log.md. A feat/fix/perf commit touching
   src/main/ must set Changelog: updated or justify with `Changelog: n/a: <reason>`.
 
 GUIDANCE: Flag baseline expansion of any guard test unless the change documents an explicit,
@@ -311,9 +311,9 @@ OUTPUT FORMAT (Markdown):
 
 - **Tracking board:** paste the agent's OUTPUT FORMAT result into the relevant row's
   "Evidence / Notes" cell of the Progress Tracking table in
-  `docs/AGENT_WORKFLOW_SUPPORT_OPTIONS.md`, and set the row Status
+  `docs/agent-workflow/support-options.md`, and set the row Status
   (`Researching` / `Implementing` / `Ready For Review` / `Done`). Update only your assigned row.
 - **Follow-on plans:** Template 1 briefs feed Template 2; Template 3 triage feeds a
-  `trace-replay-bug-fixing` fix session and a `docs/TRACE_FRONTIER_LOG.md` update.
+  `trace-replay-bug-fixing` fix session and a `docs/status/trace-frontier-log.md` update.
 - **Doc obligations:** the Template 5 documentation table maps 1:1 to the commit trailers, so a
   passing review is the attestation that the trailer block can be filled with `updated`/`n/a`.

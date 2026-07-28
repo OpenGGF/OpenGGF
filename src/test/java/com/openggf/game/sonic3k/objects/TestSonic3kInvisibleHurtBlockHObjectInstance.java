@@ -88,7 +88,7 @@ public class TestSonic3kInvisibleHurtBlockHObjectInstance {
     }
 
     @Test
-    public void ringedPlayerUsesDelayedLostRingSpawnOrdering() {
+    public void ringedPlayerUsesOrdinaryHurtCharacterLostRingOrdering() {
         Sonic3kInvisibleHurtBlockHObjectInstance block = new Sonic3kInvisibleHurtBlockHObjectInstance(
                 new ObjectSpawn(0x100, 0x180, 0x6A, 0x11, 0, false, 0));
         RecordingServices services = new RecordingServices();
@@ -99,9 +99,10 @@ public class TestSonic3kInvisibleHurtBlockHObjectInstance {
         block.onSolidContact(player, new SolidContact(true, false, false, true, false), 0x0C66);
 
         assertEquals(0, services.immediateLostRingSpawns,
-                "sub_1F58C allocates Obj_Bouncing_Ring first; ring count is spent when it runs next frame");
+                "sub_1F58C allocates Obj_Bouncing_Ring through HurtCharacter");
         assertEquals(1, services.delayedLostRingSpawns);
-        assertEquals(0x0C66, services.lastDelayedFrame);
+        assertFalse(services.deferredOwnerLostRingSpawn,
+                "invisible hurt blocks use the same ring-clear timing as other HurtCharacter callers");
         assertTrue(player.hurtOrDeathCalled);
         assertTrue(player.lastHadRings);
     }
@@ -165,6 +166,7 @@ public class TestSonic3kInvisibleHurtBlockHObjectInstance {
         private int immediateLostRingSpawns;
         private int delayedLostRingSpawns;
         private int lastDelayedFrame;
+        private boolean deferredOwnerLostRingSpawn;
 
         @Override
         public void spawnLostRings(com.openggf.game.PlayableEntity player, int frameCounter) {
@@ -176,6 +178,13 @@ public class TestSonic3kInvisibleHurtBlockHObjectInstance {
             delayedLostRingSpawns++;
             lastDelayedFrame = frameCounter;
         }
+
+        @Override
+        public void spawnLostRingsWithDeferredOwner(
+                com.openggf.game.PlayableEntity player, int frameCounter) {
+            delayedLostRingSpawns++;
+            lastDelayedFrame = frameCounter;
+            deferredOwnerLostRingSpawn = true;
+        }
     }
 }
-

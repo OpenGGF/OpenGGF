@@ -255,6 +255,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         protected boolean prePhysicsAir = false;
         protected byte prePhysicsAngle = 0;
         protected short prePhysicsGSpeed = 0;
+        /** Ground velocity after player physics but before late zone-feature updates. */
+        protected short preZoneFeatureGSpeed = 0;
         protected short prePhysicsXSpeed = 0;
         protected short prePhysicsYSpeed = 0;
         protected short prePhysicsCentreX = 0;
@@ -933,6 +935,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         topSolidBit, lrbSolidBit,
                         prePhysicsAir, prePhysicsAngle,
                         prePhysicsGSpeed, prePhysicsXSpeed, prePhysicsYSpeed,
+                        preZoneFeatureGSpeed,
                         prePhysicsCentreX, prePhysicsCentreY,
                         air, rolling, jumping, rollingJump,
                         pinballMode, pinballSpeedLock, preserveRollingOnNextLanding,
@@ -1058,6 +1061,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.prePhysicsGSpeed = extra.prePhysicsGSpeed();
                 this.prePhysicsXSpeed = extra.prePhysicsXSpeed();
                 this.prePhysicsYSpeed = extra.prePhysicsYSpeed();
+                this.preZoneFeatureGSpeed = extra.preZoneFeatureGSpeed();
                 this.prePhysicsCentreX = extra.prePhysicsCentreX();
                 this.prePhysicsCentreY = extra.prePhysicsCentreY();
                 this.air = extra.air();
@@ -2177,6 +2181,16 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 return prePhysicsGSpeed;
         }
 
+        /** Captures the phase immediately before late zone-feature velocity writes. */
+        public void capturePreZoneFeatureSnapshot() {
+                this.preZoneFeatureGSpeed = this.gSpeed;
+        }
+
+        /** Ground velocity after player physics and before late zone-feature updates. */
+        public short getPreZoneFeatureGSpeed() {
+                return preZoneFeatureGSpeed;
+        }
+
         /** Pre-physics X velocity from {@link #capturePrePhysicsSnapshot()}. */
         public short getPrePhysicsXSpeed() {
                 return prePhysicsXSpeed;
@@ -2730,23 +2744,12 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // matching the ROM's word-only modification. getRollHeightAdjustment() returns
                 // the full height difference (e.g. 10 for Sonic), which when subtracted from
                 // yPixel produces the same centreY shift as the ROM's radius-based subtraction.
-                boolean wasRolling = getRolling();
-                setRolling(false);
-                GameRules currentRules = getGameRules();
-                boolean restoresSplitSidekickRadii = !(this instanceof Tails)
-                                || currentRules == null || currentRules.sidekickCpu() == null
-                                || currentRules.sidekickCpu().sidekickHurtRestoresRadiiWithoutRoll();
                 // S3K HurtCharacter calls Player_TouchFloor, whose Tails branch
                 // restores default radii before testing Status_Roll. S2's 1P sidekick
                 // hurt path instead branches to Hurt_Sidekick and preserves a split
                 // status/radius state (observed by the HTZ2 trace). Keep that ROM
                 // distinction in the movement profile rather than a game-name branch.
-                if (restoresSplitSidekickRadii) {
-                        applyStandingRadii(false);
-                }
-                if (wasRolling) {
-                        setY((short) (getY() - getRollHeightAdjustment()));
-                }
+                PlayableHurtRadiusTransition.apply(this);
 
                 setCrouching(false);
                 // HurtCharacter calls the reset-on-floor tail before setting InAir;
@@ -3207,8 +3210,13 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 controller.notifyObjectControlledSolidContactInvalidated(candidate);
         }
 
-        public void setMgzTopPlatformCarrySolidContactObject(ObjectInstance instance) {
+        public void setObjectControlledSolidContactObject(ObjectInstance instance) {
                 controller.setObjectControlledSolidContactOwner(instance);
+        }
+
+        /** Legacy MGZ name retained for source compatibility. */
+        public void setMgzTopPlatformCarrySolidContactObject(ObjectInstance instance) {
+                setObjectControlledSolidContactObject(instance);
         }
 
         public boolean isMgzTopPlatformCarryOwnedBy(ObjectInstance instance) {
@@ -4647,6 +4655,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         jumpPressHistory[i] = 0;
                         statusHistory[i] = 0;
                 }
+                historyPos = 0;
                 followerHistoryRecordedThisTick = false;
         }
 

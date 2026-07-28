@@ -66,6 +66,7 @@ class TestTraceReplayReferenceClosureGuard {
                 () -> { events.add("step"); return 11; },
                 () -> { events.add("previous"); return 12; },
                 () -> { events.add("skip"); return 13; },
+                () -> { events.add("consume"); return 14; },
                 () -> events.add("animate"),
                 () -> events.add("suppress"),
                 () -> events.add("validate"));
@@ -85,6 +86,7 @@ class TestTraceReplayReferenceClosureGuard {
                 () -> { events.add("step"); return 11; },
                 () -> { events.add("previous"); return 12; },
                 () -> { events.add("skip"); return 13; },
+                () -> { events.add("consume"); return 14; },
                 () -> events.add("animate"),
                 () -> events.add("suppress"),
                 () -> events.add("validate"));
@@ -92,6 +94,28 @@ class TestTraceReplayReferenceClosureGuard {
 
         assertEquals(List.of("previous", "validate", "compare"), events);
         assertEquals(12, input);
+    }
+
+    @Test
+    void advanceOnlyConsumesInputWithoutTickingResidentLevel() {
+        List<String> events = new ArrayList<>();
+
+        int input = TraceReplayFrameClosureDriver.driveS3k(
+                TraceExecutionPhase.ADVANCE_ONLY,
+                true,
+                () -> { events.add("step"); return 11; },
+                () -> { events.add("previous"); return 12; },
+                () -> { events.add("skip"); return 13; },
+                () -> { events.add("consume"); return 14; },
+                () -> events.add("animate"),
+                () -> events.add("suppress"),
+                () -> events.add("validate"));
+        events.add("compare");
+
+        assertEquals(List.of("consume", "compare"), events,
+                "an input-latch row advances the BK2 cursor without dispatching "
+                        + "the already-resident level or mutating timing counters");
+        assertEquals(14, input);
     }
 
     @Test
@@ -110,6 +134,7 @@ class TestTraceReplayReferenceClosureGuard {
                 () -> { s3kEvents.add("step"); return 11; },
                 () -> { s3kEvents.add("previous"); return 12; },
                 () -> { s3kEvents.add("skip"); return 13; },
+                () -> { s3kEvents.add("consume"); return 14; },
                 () -> s3kEvents.add("animate"),
                 () -> s3kEvents.add("suppress"),
                 () -> s3kEvents.add("validate"));
@@ -130,6 +155,7 @@ class TestTraceReplayReferenceClosureGuard {
                 () -> { events.add("step"); return 11; },
                 () -> { events.add("previous"); return 12; },
                 () -> { events.add("skip"); return 13; },
+                () -> { events.add("consume"); return 14; },
                 () -> events.add("animate"),
                 () -> events.add("suppress"),
                 () -> events.add("validate"));
@@ -149,6 +175,7 @@ class TestTraceReplayReferenceClosureGuard {
                 () -> { events.add("step"); return 11; },
                 () -> { events.add("previous"); return 12; },
                 () -> { events.add("skip"); return 13; },
+                () -> { events.add("consume"); return 14; },
                 () -> events.add("animate"),
                 () -> events.add("suppress"),
                 () -> events.add("validate"));

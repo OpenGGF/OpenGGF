@@ -32,6 +32,8 @@ public final class RecordedInputSnapshots {
         return LogicalInputSnapshot.ofPlayers(p1, p2).withDebugInput(
                 current.debugModeTogglePressed(),
                 current.debugShiftDown(),
-                current.debugControlDown());
+                current.debugControlDown(),
+                current.debugAltDown(),
+                current.debugSuperDown());
     }
 }

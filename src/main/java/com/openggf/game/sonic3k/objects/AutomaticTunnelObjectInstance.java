@@ -409,8 +409,8 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
         player.setControlLocked(true);
         state.controlGeneration = player.getObjectControlGeneration();
 
-        // ROM: move.b #2,anim(a1)
-        player.setRolling(true);
+        // ROM writes only anim(a1), not Status_Roll. The tunnel displays the
+        // rolling animation while retaining the player's existing roll status.
         player.setAnimationId(2);
 
         // ROM: clr.b jumping(a1)
@@ -428,8 +428,8 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
         player.setAir(true);
 
         // ROM: move.w x_pos(a0),x_pos(a1); move.w y_pos(a0),y_pos(a1)
-        player.setCentreX((short) spawn.x());
-        player.setCentreY((short) spawn.y());
+        com.openggf.sprites.NativePositionOps.writeXPosPreserveSubpixel(player, (short) spawn.x());
+        com.openggf.sprites.NativePositionOps.writeYPosPreserveSubpixel(player, (short) spawn.y());
 
         // Setup path and calculate initial velocity
         setupPath(player, state);
@@ -491,8 +491,8 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
         state.pathRemaining = (waypointCount - 1) * 4;
 
         // ROM: move.w (a2)+,d4; move.w d4,x_pos(a1); move.w (a2)+,d5; move.w d5,y_pos(a1)
-        player.setCentreX((short) state.path[0]);
-        player.setCentreY((short) state.path[1]);
+        com.openggf.sprites.NativePositionOps.writeXPosPreserveSubpixel(player, (short) state.path[0]);
+        com.openggf.sprites.NativePositionOps.writeYPosPreserveSubpixel(player, (short) state.path[1]);
         state.pathIndex = 2;
 
         // Calculate velocity to next waypoint
@@ -515,8 +515,8 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
 
         // ROM: lea (a2,d0.w),a2 — jump to end of path data
         int lastIdx = state.path.length - 2;
-        player.setCentreX((short) state.path[lastIdx]);
-        player.setCentreY((short) state.path[lastIdx + 1]);
+        com.openggf.sprites.NativePositionOps.writeXPosPreserveSubpixel(player, (short) state.path[lastIdx]);
+        com.openggf.sprites.NativePositionOps.writeYPosPreserveSubpixel(player, (short) state.path[lastIdx + 1]);
 
         // ROM: subq.w #8,a2 — back up one waypoint
         state.pathIndex = lastIdx - 2;
@@ -541,8 +541,8 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
         // ROM: movea.l 6(a4),a2; move.w (a2)+,d4; move.w d4,x_pos(a1); ...
         int waypointX = state.path[state.pathIndex];
         int waypointY = state.path[state.pathIndex + 1];
-        player.setCentreX((short) waypointX);
-        player.setCentreY((short) waypointY);
+        com.openggf.sprites.NativePositionOps.writeXPosPreserveSubpixel(player, (short) waypointX);
+        com.openggf.sprites.NativePositionOps.writeYPosPreserveSubpixel(player, (short) waypointY);
 
         // Advance path pointer
         // ROM: tst.b subtype(a0); bpl.s +; subq.w #8,a2
@@ -557,6 +557,9 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
         if (state.pathRemaining <= 0) {
             // Path exhausted — transition to LAST_MOVE
             beginExit(player, state);
+            // loc_2970A falls through loc_29768, so the final path velocity is
+            // still applied on the transition frame.
+            moveCharacter(player);
             return;
         }
 
@@ -585,7 +588,7 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
 
         // ROM: andi.w #$FFF,y_pos(a1)
         int y = player.getCentreY() & 0xFFF;
-        player.setCentreY((short) y);
+        com.openggf.sprites.NativePositionOps.writeYPosPreserveSubpixel(player, (short) y);
 
         // ROM: btst #6,subtype(a0); bne.s loc_2972C
         if (!maintainVelocity) {

@@ -2,7 +2,8 @@
 
 Executable, copy-paste runbooks for the recurring high-risk OpenGGF workflows. Each runbook is self-contained: an external agent with no chat context can pick one up, run the listed commands, touch the listed files, run the listed tests, and satisfy the documentation/commit obligations.
 
-These runbooks implement **Option 1** of [`docs/AGENT_WORKFLOW_SUPPORT_OPTIONS.md`](../../AGENT_WORKFLOW_SUPPORT_OPTIONS.md).
+These runbooks implement **Option 1** of
+[`docs/agent-workflow/support-options.md`](../support-options.md).
 
 ## Index
 
@@ -16,6 +17,7 @@ These runbooks implement **Option 1** of [`docs/AGENT_WORKFLOW_SUPPORT_OPTIONS.m
 | [`runbook-multi-agent-trace-orchestration.md`](runbook-multi-agent-trace-orchestration.md) | Running a fleet of trace-replay bug-fixing agents as the lead/orchestrator (the continuous survey → assign → gate → merge → reassign loop). |
 | [`runbook-rom-art-mappings-plc.md`](runbook-rom-art-mappings-plc.md) | Adding ROM-backed object art, sprite mappings, DPLCs, or PLC registration. |
 | [`runbook-gameplay-level-mutation.md`](runbook-gameplay-level-mutation.md) | Editing level tile data from gameplay code (terrain modifiers, breakables, layout changes). |
+| [`runbook-jvm-benchmark.md`](runbook-jvm-benchmark.md) | Measuring engine performance — comparing JVMs, checking a change for frame-time cost, or finding which subsystem dominates a frame. |
 
 ## Non-negotiable project rules (apply to every runbook)
 

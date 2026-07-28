@@ -212,7 +212,7 @@ public class AizFallingLogObjectInstance extends AbstractObjectInstance implemen
         private static final int BOB_MASK = 3;
         // ROM: cmpi.w #$280,d0 — coarse range threshold for culling
         private static final SolidObjectParams SOLID_PARAMS =
-                new SolidObjectParams(HALF_WIDTH, HALF_HEIGHT, HALF_HEIGHT);
+                SolidObjectParams.of(HALF_WIDTH, HALF_HEIGHT, HALF_HEIGHT);
 
         private static final int STATE_FALLING = 0;
         private static final int STATE_AT_WATER = 1;

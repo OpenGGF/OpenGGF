@@ -15,6 +15,7 @@ import com.openggf.level.objects.AbstractFallingFragment;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.GravityDebrisChild;
 import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
@@ -581,7 +582,7 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         // ROM: SolidObjectTop with d1=width_pixels, d3=$10
-        return new SolidObjectParams(halfWidth, SOLID_HEIGHT, SOLID_HEIGHT);
+        return SolidObjectParams.of(halfWidth, SOLID_HEIGHT, SOLID_HEIGHT);
     }
 
     @Override
@@ -604,6 +605,15 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
         // Player_TouchFloor restores the default radii (41996-42039). It does
         // not use PlatformObject_ChkYRange's absolute surface re-seat.
         return false;
+    }
+
+    @Override
+    public boolean clearsStandingBitOnContinuedRideExit(PlayableEntity player) {
+        // SolidObjectTop's out-of-bounds/airborne exit clears both
+        // Status_OnObj and this object's d6 standing bit before returning
+        // (sonic3k.asm:41798-41825). Keeping only the engine ride owner clear
+        // leaves a hidden stale bit for Check_CollapsePlayerRelease.
+        return true;
     }
 
     @Override
@@ -989,14 +999,21 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
     }
 
     private boolean shouldTrackCollapseRider(AbstractPlayableSprite player) {
-        if (player.isOnObject()) {
-            return true;
-        }
         try {
-            return services().objectManager() != null && services().objectManager().isRidingObject(player, this);
+            ObjectManager objectManager = services().objectManager();
+            if (objectManager != null) {
+                // The native collapse wave snapshots this bridge's own P1/P2
+                // standing bits, not the player's global Status_OnObj bit. A
+                // trigger-mode bridge may shatter while Sonic is standing on
+                // an unrelated solid; treating that global bit as ownership
+                // invents a rider and later writes prev_anim=1 on release.
+                return objectManager.isRidingObject(player, this)
+                        || objectManager.hasObjectStandingBit(player, this);
+            }
         } catch (Exception e) {
-            return false;
+            // Reflection-level tests may instantiate the bridge without services.
         }
+        return player.isOnObject();
     }
 
     private void seedCollapseWaveRiders(AbstractPlayableSprite fallbackPlayer) {

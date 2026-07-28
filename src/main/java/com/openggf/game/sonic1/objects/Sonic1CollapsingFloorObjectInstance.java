@@ -319,6 +319,22 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
                     && objectManager.isAnyPlayerRiding(this);
 
             if (!playerRiding) {
+                // CFlo_FragmentPiece .delayCollapse calls CFlo_WalkOff even
+                // when this fragment is no longer the player's current support.
+                // ExitPlatform owns a global Status_OnObj clear: a later ROM
+                // slot can therefore clear the bit that an earlier slot just
+                // established, while leaving standonobject pointing at that
+                // earlier support. Preserve that odd but observable ordering;
+                // Sonic's next control tick turns the cleared bit into the
+                // one-frame airborne state before he can land again.
+                if (player != null && exitsPlatform(
+                        player.getAir(), player.getCentreX(), x)) {
+                    if (!player.getAir() && player.isOnObject()) {
+                        objectManager.solidContacts()
+                                .noteGroundedOnObjectClearedBeforePhysics(player, this);
+                    }
+                    player.setOnObject(false);
+                }
                 // loc_842E: Player walked off - clear flag, stay in routine 6
                 collapseFlag = false;
                 routine = 6;
@@ -350,6 +366,16 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
         if (!isOnScreen()) {
             destroyWithWindowGatedRespawn();
         }
+    }
+
+    static boolean exitsPlatform(boolean playerAirborne, int playerX, int objectX) {
+        if (playerAirborne) {
+            return true;
+        }
+        // ExitPlatform uses 16-bit word arithmetic and an exclusive right
+        // edge: relX = playerX - objectX + halfWidth; 0 <= relX < width.
+        int relX = (short) (playerX - objectX + PLATFORM_HALF_WIDTH);
+        return relX < 0 || relX >= PLATFORM_HALF_WIDTH * 2;
     }
 
     /**
@@ -485,7 +511,7 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
         // CFlo_WalkOff -> MvSonicOnPtfm2 (subi.w #9,d0). The first landing instead
         // uses CFlo_ChkTouch -> PlatformObject's obY-8 surface, recovered via
         // getTopLandingSnapAdjustment().
-        return new SolidObjectParams(PLATFORM_HALF_WIDTH, PLATFORM_HALF_HEIGHT, PLATFORM_HALF_HEIGHT);
+        return SolidObjectParams.of(PLATFORM_HALF_WIDTH, PLATFORM_HALF_HEIGHT, PLATFORM_HALF_HEIGHT);
     }
 
     @Override
@@ -587,6 +613,26 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
             // routine-4 update skips this frame, matching that one-frame deferral.
             routine = 4;
             collapseEnteredThisFrame = true;
+        }
+    }
+
+    @Override
+    public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
+        // Routine 4 is CFlo_OnPlatform. Its solid path is CFlo_WalkOff ->
+        // ExitPlatform, not the routine-2 PlatformObject entry check. When
+        // Sonic_AnglePos has just set Status_InAir, ExitPlatform immediately
+        // clears this floor's standing bit and returns; it cannot fall through
+        // to PlatformObject and land Sonic again in the same object slot.
+        return routine == 4;
+    }
+
+    @Override
+    public void onSolidContactCleared(PlayableEntity player, int frameCounter) {
+        if (routine == 4 && player != null && player.getAir()) {
+            // ExitPlatform: move.b #2,obRoutine(a0). collapseFlag intentionally
+            // survives; routine 2 consumes it on the next object execution.
+            routine = 2;
+            collapseEnteredThisFrame = false;
         }
     }
 

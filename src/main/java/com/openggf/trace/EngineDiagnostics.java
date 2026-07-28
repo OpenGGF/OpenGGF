@@ -90,6 +90,15 @@ public record EngineDiagnostics(
                 -1, -1, -1, -1, animationId, mappingFrame);
     }
 
+    /** Preformatted diagnostics retaining strict camera, animation, and subpixel values. */
+    public static EngineDiagnostics formattedWithCameraAnimationAndSubpixel(
+            int cameraX, int cameraY, int animationId, int mappingFrame,
+            int xSub, int ySub, String formatted) {
+        return new EngineDiagnostics(-1, -1, -1, -1, -1, cameraX, cameraY,
+                -1, -1, -1, -1, formatted == null ? "" : formatted,
+                xSub, ySub, -1, -1, animationId, mappingFrame);
+    }
+
     /**
      * Format as a compact string for the context window.
      */
@@ -144,4 +153,3 @@ public record EngineDiagnostics(
         return sb.toString();
     }
 }
-

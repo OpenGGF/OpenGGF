@@ -38,7 +38,7 @@ class TestRewindFixS1Batch7Codecs {
         for (String name : acceptDrop) {
             assertFalse(DeletedDynamicRewindCodecs.hasRegisteredDynamicCodec(name),
                     "batch-7 accept-drop class unexpectedly acquired a rewind codec: " + name
-                            + " (see docs/KNOWN_DISCREPANCIES.md 'Batch-7 Rewind: Transient "
+                            + " (see docs/status/known-discrepancies.md 'Batch-7 Rewind: Transient "
                             + "Cosmetic Children Not Rewound')");
         }
     }

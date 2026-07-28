@@ -180,15 +180,21 @@ class TestPhase3StandaloneSampleIntegration {
         PreparedModMusic music = PreparedModMusic.build(fixture.catalog.effective(), tracks, sfx,
                 session, 8_000, OWNER);
         PcmPoolBackend backend = new PcmPoolBackend();
-        backend.installStreamedMusicPort(new com.openggf.ModStreamedMusicPort(
-                music, new StreamedMusicPlayer(8_000), OWNER));
+        StreamedMusicPort port = new com.openggf.ModStreamedMusicPort(
+                music, new StreamedMusicPlayer(8_000), OWNER);
+        backend.installStreamedMusicPort(port);
         backend.update();
-        assertTrue(backend.tryPlayStreamedSfx(new StreamedMusicPort.SfxRef(OWNER, "hit")));
-        backend.update();
-        assertNotNull(backend.uploaded);
-        assertTrue(java.util.stream.IntStream.range(0, backend.uploaded.length)
-                        .anyMatch(index -> backend.uploaded[index] != 0),
-                "The packaged WAV must decode and mix non-zero PCM through the bounded one-shot pool");
+        StreamedMusicPort.SfxRef hit = new StreamedMusicPort.SfxRef(OWNER, "hit");
+        assertTrue(backend.tryPlayStreamedSfx(hit));
+
+        // The presentation layer now owns one-shot playback, so the bounded pool's
+        // job ends at handing out decoded PCM. Assert that boundary directly rather
+        // than through a device upload the backend no longer performs.
+        StreamedMusicPort.SfxPcm pcm = port.sfxPcm(hit).orElseThrow();
+        assertEquals(8_000, pcm.sampleRate());
+        assertTrue(java.util.stream.IntStream.range(0, pcm.samples().length)
+                        .anyMatch(index -> pcm.samples()[index] != 0),
+                "The packaged WAV must decode to non-zero PCM through the bounded pool");
         backend.destroy();
     }
 
@@ -454,14 +460,18 @@ class TestPhase3StandaloneSampleIntegration {
         @Override public boolean tryPlayStreamedMusic(StreamedMusicPort.TrackRef value) {
             track = value; return true;
         }
-        @Override public boolean hasStreamedMusic(StreamedMusicPort.TrackRef value) { return true; }
+        // The engine preflights a namespaced track with hasStreamedMusic and lets the
+        // presentation layer play it from the recorded command, so this query — not
+        // tryPlayStreamedMusic — is where the resolved key is now observable.
+        @Override public boolean hasStreamedMusic(StreamedMusicPort.TrackRef value) {
+            track = value; return true;
+        }
         @Override public boolean tryPlayStreamedSfx(StreamedMusicPort.SfxRef value) {
             sfx = value; return true;
         }
     }
 
     private static final class PcmPoolBackend extends AbstractSmpsAudioBackend {
-        private short[] uploaded;
 
         private PcmPoolBackend() {
             super(SonicConfigurationService.createStandalone(), null);
@@ -472,14 +482,11 @@ class TestPhase3StandaloneSampleIntegration {
         @Override protected void hookDestroyDevice() { }
         @Override protected void hookStartStream() { }
         @Override protected void hookStopStreamSource() { }
-        @Override protected void hookUpdateStream() { if (hasPresentationWork()) fillBuffer(1); }
+        @Override protected void hookUpdateStream() { }
         @Override protected void hookStopAndClearMusicSource() { }
         @Override protected void hookStopAndUnqueueAllMusicBuffers() { }
         @Override protected void hookStopAndClearAllMusicBuffers() { }
         @Override protected void hookRestartStreamIfDry() { }
-        @Override protected void hookUploadStreamBuffer(int id, short[] pcm, int rate) {
-            uploaded = pcm.clone();
-        }
         @Override protected void hookPlayWavSfx(String name, float pitch) { }
         @Override protected void hookStopAndDeleteWavSfxSources() { }
         @Override protected void hookCleanupStoppedWavSfx() { }

@@ -82,7 +82,7 @@ public class ARZRotPformsObjectInstance extends AbstractObjectInstance
 
     // Collision parameters (shared by all platforms)
     private static final SolidObjectParams PLATFORM_PARAMS =
-            new SolidObjectParams(PLATFORM_HALF_WIDTH, PLATFORM_TOP_HEIGHT, PLATFORM_BOTTOM_HEIGHT);
+            SolidObjectParams.of(PLATFORM_HALF_WIDTH, PLATFORM_TOP_HEIGHT, PLATFORM_BOTTOM_HEIGHT);
 
     // Static mapping data
     private static final LazyMappingHolder MAPPINGS = new LazyMappingHolder();

@@ -5,7 +5,7 @@ Produces either a short, palette-optimised GIF or (for sound-only builds) a
 short MP3, using the exact settings the rest of the gallery was built with so
 new contributions stay visually/sonically consistent. See README.md in this
 folder for the full conventions and how to wire the result into
-docs/DEVELOPMENT_TIMELINE.md.
+docs/project/development-timeline.md.
 
 Requires ffmpeg + ffprobe on PATH.
 
@@ -115,7 +115,7 @@ def main():
 
     size = os.path.getsize(out)
     print(f"wrote {out}  ({size/1e6:.2f} MB)  start={start:.2f}s len={length}s")
-    print("\nmarkdown to paste into docs/DEVELOPMENT_TIMELINE.md:")
+    print("\nmarkdown to paste into docs/project/development-timeline.md:")
     if args.audio:
         print(f'**YYYY-MM-DD** — <caption>.\n\n'
               f'<audio controls src="assets/timeline/{args.slug}.mp3"></audio>\n\n'

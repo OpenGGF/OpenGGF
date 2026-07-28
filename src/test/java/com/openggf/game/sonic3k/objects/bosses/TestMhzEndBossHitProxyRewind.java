@@ -16,7 +16,10 @@ import com.openggf.level.objects.TouchCategory;
 import com.openggf.level.objects.TouchResponseResult;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import com.openggf.tests.FullReset;
+import com.openggf.tests.SingletonResetExtension;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.lang.reflect.Field;
 import java.util.List;
@@ -26,6 +29,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
+@ExtendWith(SingletonResetExtension.class)
+@FullReset
 class TestMhzEndBossHitProxyRewind {
 
     @BeforeEach

@@ -1,9 +1,13 @@
 package com.openggf.tests.trace.s3k;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
+import com.openggf.game.sonic3k.objects.CnzBalloonInstance;
 import com.openggf.game.sonic3k.objects.CnzMinibossInstance;
 import com.openggf.game.sonic3k.objects.CnzMinibossScrollControlInstance;
 import com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance;
@@ -19,27 +23,47 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.SharedLevel;
+import com.openggf.tests.TestEnvironment;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceExecutionPhase;
+import com.openggf.trace.TraceEvent;
 import com.openggf.trace.TraceFrame;
 import com.openggf.trace.TraceReplayBootstrap;
+import com.openggf.trace.TraceCharacterState;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import com.openggf.tests.trace.AbstractTraceReplayTest;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.nio.file.Path;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_3K)
 public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
 
     private static final Path TRACE_DIR = Path.of("src/test/resources/traces/s3k/cnz");
+    private static final ObjectMapper JSON = new ObjectMapper();
+
+    @TempDir
+    Path tempDir;
     private static final int FRAME_FIRST_CARRY_RIGHT_PULSE = 31;
     private static final int FRAME_DELAYED_RIGHT_REACHES_TAILS = 123;
     private static final int FRAME_FIRST_MAIN_JUMP = 142;
@@ -50,6 +74,7 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
     private static final int FRAME_CNZ_MINIBOSS_GO3_HANDOFF = 14712;
     private static final int FRAME_CNZ_MINIBOSS_SECOND_CLOSEGO = 15004;
     private static final int FRAME_CNZ_MINIBOSS_SECOND_BODY_PASS = 15059;
+    private static final int FRAME_CNZ_MINIBOSS_TAILS_HURT_CONTACT = 15096;
     private static final int FRAME_CNZ_MINIBOSS_TAILS_HURT_HISTORY_PUSH = 15194;
     private static final int FRAME_CNZ_MINIBOSS_POST_OPEN_STORED_CHANGEDIR = 15409;
     private static final int FRAME_CNZ_MINIBOSS_LOOK_DOWN_CAMERA_PAN = 15569;
@@ -77,6 +102,114 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
     @Override
     protected Path traceDirectory() {
         return TRACE_DIR;
+    }
+
+    /**
+     * CNZ starts Sonic on the right edge of the opening platform. ROM frame 0
+     * therefore runs the ordinary grounded routine-2 path: it selects Wait
+     * before {@code Player_AnglePos} detaches Sonic, then animation dispatch
+     * publishes Wait's first {@code $BA} mapping without applying air gravity
+     * ({@code sonic3k.asm:24740-24771};
+     * {@code General/Sprites/Sonic/Anim - Sonic S3.asm:AniSonic05}).
+     */
+    @Test
+    void freshCnzStartRunsGroundedWalkOffBeforeCarryInit() throws Exception {
+        try (BootstrappedCnzReplay replay = bootstrappedCnzReplay()) {
+            assertEquals(0, replay.replayStart().startingTraceIndex(),
+                    "CNZ lifecycle regression requires the fresh frame-0 start");
+
+            replay.fixture().stepFrameFromRecording();
+
+            AbstractPlayableSprite sonic = replay.fixture().sprite();
+            AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().getFirst();
+            SidekickCpuController tailsCpu = tails.getCpuController();
+
+            assertTrue(sonic.getAir(), "frame 0 terrain walk-off must mark Sonic airborne");
+            assertEquals((short) 0x0000, sonic.getYSpeed(),
+                    "frame 0 grounded dispatch must not apply air gravity");
+            assertEquals(0x05, sonic.getAnimationId(),
+                    "frame 0 grounded idle selection must choose Wait");
+            assertEquals(0xBA, sonic.getMappingFrame(),
+                    "frame 0 Wait dispatch must publish its first mapping");
+            assertEquals(SidekickCpuController.State.CARRY_INIT, tailsCpu.getState(),
+                    "frame 0 must publish native Tails CPU carry-init routine $0C");
+            assertEquals((short) 0x0038, tails.getYSpeed(),
+                    "frame 0 carry-init arm still runs ordinary Tails air gravity");
+            assertFalse(tailsCpu.isFlyingCarrying(),
+                    "frame 0 routine $0C is armed but has not entered the carry body");
+
+            replay.fixture().stepFrameFromRecording();
+
+            assertEquals(0x22, sonic.getAnimationId(),
+                    "frame 1 carry body must select the carried animation");
+            assertEquals(0x91, sonic.getMappingFrame(),
+                    "frame 1 carry body must publish the carried mapping");
+            assertTrue(sonic.isObjectControlled(),
+                    "frame 1 native object_control=$03 must own Sonic");
+            assertTrue(sonic.isObjectControlAllowsCpu(),
+                    "frame 1 native object_control=$03 must retain bit-1 CPU allowance");
+            assertTrue(sonic.isObjectControlSuppressesMovement(),
+                    "frame 1 native object_control=$03 must suppress normal movement");
+        }
+    }
+
+    @Test
+    void productionSetupAndFirstOrdinaryFrameMatchRecordedBalloonEpochs() throws Exception {
+        try (BootstrappedCnzReplay replay = bootstrappedCnzReplay()) {
+            assertEquals(List.of(0x11, 0x38, 0x38, 0xA8), liveOpeningBalloonAngles());
+            assertEquals(0x14A7ABBBL, GameServices.rng().getSeed());
+            int vblankBefore = GameServices.level().getObjectManager().getVblaCounter();
+
+            replay.fixture().stepFrameFromRecording();
+
+            List<Integer> recorded = replay.trace().preTraceObjectSnapshots().stream()
+                    .filter(snapshot -> snapshot.objectType() == 0x41)
+                    .sorted(Comparator.comparingInt(TraceEvent.ObjectStateSnapshot::slot))
+                    .map(snapshot -> snapshot.fields().angle() & 0xFF)
+                    .toList();
+            assertEquals(recorded, liveOpeningBalloonAngles());
+            assertEquals(1, GameServices.level().getFrameCounter());
+            assertEquals(vblankBefore + 1,
+                    GameServices.level().getObjectManager().getVblaCounter());
+            assertEquals(0x14A7ABBBL, GameServices.rng().getSeed(),
+                    "the ordinary frame advances balloon angles without consuming RNG");
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(MetadataVariant.class)
+    void productionSetupTokenIsInvariantToTraceMetadata(MetadataVariant variant) throws Exception {
+        Path variantDirectory = metadataVariantDirectory(variant);
+        TraceData trace = TraceData.load(variantDirectory);
+
+        try (BootstrappedCnzReplay replay =
+                     bootstrappedCnzReplay(trace, false, false)) {
+            assertFalse(GameServices.level().hasPendingInitialProcessSpritesPass(), variant.name());
+            assertFalse(GameServices.level().consumePendingInitialProcessSpritesPass(), variant.name());
+        }
+    }
+
+    @Test
+    void metadataCannotCreateSetupAuthorityWhenFreshLoadTokenWasDiscarded() throws Exception {
+        TraceData trace = TraceData.load(TRACE_DIR);
+
+        try (BootstrappedCnzReplay replay =
+                     bootstrappedCnzReplay(trace, true, false)) {
+            assertFalse(GameServices.level().hasPendingInitialProcessSpritesPass());
+            assertFalse(GameServices.level().consumePendingInitialProcessSpritesPass());
+        }
+    }
+
+    @Test
+    void bootstrapConvergesWithFixedMetadataProductionConsumerState() throws Exception {
+        TraceData trace = TraceData.load(TRACE_DIR);
+        RuntimeState production = fixedMetadataRuntimeState(trace, false);
+        TestEnvironment.resetAll();
+        RuntimeState bootstrap = fixedMetadataRuntimeState(trace, true);
+
+        assertEquals(production, bootstrap,
+                "byte-identical metadata must produce the same concrete state whether "
+                        + "production or replay consumes the fresh-load token");
     }
 
     @Override
@@ -355,6 +488,39 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
                             + "Sonic hurt knockback, so loc_13DD0's current Status_Push bypass "
                             + "must not replay live RIGHT into Tails ground acceleration "
                             + "(docs/skdisasm/sonic3k.asm:22132,24449-24467,26702-26705)");
+        }
+    }
+
+    @Test
+    void traceReplayCnzMinibossTopHurtsTailsOnNativeNextFrameBoundary() throws Exception {
+        try (BootstrappedCnzReplay replay = bootstrappedCnzReplay()) {
+            driveReplayToTraceFrame(
+                    replay.trace(),
+                    replay.fixture(),
+                    replay.replayStart(),
+                    FRAME_CNZ_MINIBOSS_TAILS_HURT_CONTACT);
+
+            AbstractPlayableSprite tails = GameServices.sprites().getRegisteredSidekicks().getFirst();
+            TraceFrame beforeContact =
+                    traceFrame(replay.trace(), FRAME_CNZ_MINIBOSS_TAILS_HURT_CONTACT);
+            assertEquals((short) -0x0340, beforeContact.sidekick().xSpeed());
+            assertEquals(beforeContact.sidekick().xSpeed(), tails.getXSpeed(),
+                    "Frame 15096: Touch_Loop must read the top's live prior-pass X=$32D8; "
+                            + "its right edge $32E8 still misses Tails' left edge $32E9");
+            assertEquals(beforeContact.sidekick().routine(), TraceCharacterState.routineFromSprite(tails),
+                    "Frame 15096 must finish the ordinary Tails routine before contact");
+
+            replay.fixture().stepFrameFromRecording();
+
+            TraceFrame contact =
+                    traceFrame(replay.trace(), FRAME_CNZ_MINIBOSS_TAILS_HURT_CONTACT + 1);
+            assertEquals((short) 0x0200, contact.sidekick().xSpeed());
+            assertEquals(contact.sidekick().xSpeed(), tails.getXSpeed(),
+                    "Frame 15097: Tails' left edge reaches the moving top and HurtCharacter "
+                            + "must apply the native rightward knockback");
+            assertEquals(contact.sidekick().routine(), TraceCharacterState.routineFromSprite(tails),
+                    "Frame 15097 must enter native hurt routine 4 "
+                            + "(sonic3k.asm:20660-20712,21050-21104)");
         }
     }
 
@@ -1078,6 +1244,13 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
 
     private static BootstrappedCnzReplay bootstrappedCnzReplay() throws Exception {
         TraceData trace = TraceData.load(TRACE_DIR);
+        return bootstrappedCnzReplay(trace, false, true);
+    }
+
+    private static BootstrappedCnzReplay bootstrappedCnzReplay(
+            TraceData trace,
+            boolean discardProductionToken,
+            boolean assertOpeningState) throws Exception {
         var configSnapshot = TraceReplaySessionBootstrap.snapshotGameplayConfig();
         TraceReplaySessionBootstrap.prepareConfiguration(trace, trace.metadata());
 
@@ -1088,10 +1261,28 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
                 .withRecordingStartFrame(TraceReplayBootstrap.recordingStartFrameForTraceReplay(trace))
                 .startPosition(trace.metadata().startX(), trace.metadata().startY())
                 .startPositionIsCentre()
+                .withFreshLevelStartLifecycle()
                 .build();
 
+        assertTrue(GameServices.level().hasPendingInitialProcessSpritesPass(),
+                "a genuine production load must publish setup authority");
+        if (discardProductionToken) {
+            GameServices.level().discardPendingInitialProcessSpritesForStateRestoration();
+        }
+        int objectFrameBefore = GameServices.level().getObjectManager().getFrameCounter();
         TraceReplaySessionBootstrap.BootstrapResult boot =
                 TraceReplaySessionBootstrap.applyBootstrap(trace, fixture, -1);
+        assertEquals(objectFrameBefore + (discardProductionToken ? 0 : 1),
+                GameServices.level().getObjectManager().getFrameCounter(),
+                "bootstrap may execute only authority published by the production load");
+        assertFalse(GameServices.level().consumePendingInitialProcessSpritesPass(),
+                "bootstrap must already consume the production setup token");
+        if (assertOpeningState) {
+            assertEquals(List.of(0x11, 0x38, 0x38, 0xA8), liveOpeningBalloonAngles(),
+                    "zero-seed production setup must initialize the native balloon epoch");
+            assertEquals(trace.metadata().initialRngSeed().longValue(), GameServices.rng().getSeed(),
+                    "frame-zero RNG must be applied after native object setup");
+        }
         TraceReplayBootstrap.ReplayStartState replayStart = boot.replayStart();
         TraceFrame previousDriveFrame = replayStart.hasSeededTraceState()
                 ? trace.getFrame(replayStart.seededTraceIndex())
@@ -1101,6 +1292,132 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
                 trace.getFrame(replayStart.startingTraceIndex()));
         return new BootstrappedCnzReplay(trace, sharedLevel, fixture, replayStart,
                 configSnapshot);
+    }
+
+    private Path metadataVariantDirectory(MetadataVariant variant) throws Exception {
+        Path directory = tempDir.resolve(variant.name().toLowerCase());
+        Files.createDirectories(directory);
+        Files.copy(TRACE_DIR.resolve("physics.csv.gz"), directory.resolve("physics.csv.gz"));
+
+        ObjectNode metadata = (ObjectNode) JSON.readTree(TRACE_DIR.resolve("metadata.json").toFile());
+        switch (variant) {
+            case TRACE_PROFILE -> metadata.put("trace_profile", "metadata-must-not-select-setup");
+            case SIDEKICK_CHARACTERS -> {
+                ArrayNode characters = metadata.putArray("characters");
+                characters.add("sonic");
+                metadata.putArray("sidekicks");
+            }
+            case CHECKPOINT_NAMES -> {
+                // The checkpoint is aux data rather than metadata.json, but it is still
+                // comparison input and must not become setup authority.
+            }
+            case RECORDING_FILENAME -> metadata.put(
+                    "source_bk2", "renamed-recording-must-not-select-setup.bk2");
+            case RNG_SEED -> metadata.put("rng_seed", "0x89ABCDEF");
+            case START_POSITION -> {
+                metadata.put("start_x", "0x0118");
+                metadata.put("start_y", "0x0700");
+            }
+        }
+        JSON.writerWithDefaultPrettyPrinter()
+                .writeValue(directory.resolve("metadata.json").toFile(), metadata);
+
+        if (variant == MetadataVariant.CHECKPOINT_NAMES) {
+            rewriteCheckpointNames(
+                    TRACE_DIR.resolve("aux_state.jsonl.gz"),
+                    directory.resolve("aux_state.jsonl.gz"));
+        } else {
+            Files.copy(TRACE_DIR.resolve("aux_state.jsonl.gz"),
+                    directory.resolve("aux_state.jsonl.gz"));
+        }
+        return directory;
+    }
+
+    private static void rewriteCheckpointNames(Path source, Path destination) throws Exception {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+                     new GZIPInputStream(Files.newInputStream(source)), StandardCharsets.UTF_8));
+             BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(
+                     new GZIPOutputStream(Files.newOutputStream(destination)), StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                writer.write(line.contains("\"event\":\"checkpoint\"")
+                        ? line.replace("\"name\":\"", "\"name\":\"renamed_")
+                        : line);
+                writer.newLine();
+            }
+        }
+    }
+
+    private static List<Integer> liveOpeningBalloonAngles() {
+        return GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(CnzBalloonInstance.class::isInstance)
+                .map(CnzBalloonInstance.class::cast)
+                .filter(balloon -> balloon.getSlotIndex() >= 4 && balloon.getSlotIndex() <= 7)
+                .sorted(Comparator.comparingInt(CnzBalloonInstance::getSlotIndex))
+                .map(balloon -> Integer.parseInt(
+                        balloon.traceDebugDetails().substring(4, 6), 16))
+                .toList();
+    }
+
+    private static RuntimeState fixedMetadataRuntimeState(TraceData trace, boolean bootstrap)
+            throws Exception {
+        var configSnapshot = TraceReplaySessionBootstrap.snapshotGameplayConfig();
+        TraceReplaySessionBootstrap.prepareConfiguration(trace, trace.metadata());
+        SharedLevel sharedLevel = SharedLevel.load(SonicGame.SONIC_3K, 0x03, 0x00);
+        try {
+            HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                    .withSharedLevel(sharedLevel)
+                    .withRecording(TRACE_DIR.resolve("s3k-cnz-sonic-tails.bk2"))
+                    .withRecordingStartFrame(
+                            TraceReplayBootstrap.recordingStartFrameForTraceReplay(trace))
+                    .startPosition(trace.metadata().startX(), trace.metadata().startY())
+                    .startPositionIsCentre()
+                    .withFreshLevelStartLifecycle()
+                    .build();
+            if (bootstrap) {
+                TraceReplaySessionBootstrap.applyBootstrap(trace, fixture, -1);
+            } else {
+                GameServices.level().getObjectManager().initVIntRunCounterPhaseOffset(
+                        trace.initialVIntRunCounterPhaseOffset());
+                GameServices.level().getObjectManager().initVblaCounter(
+                        trace.initialVblankCounter() - 1);
+                assertTrue(GameServices.level().consumePendingInitialProcessSpritesPass());
+                TraceReplaySessionBootstrap.applyInitialRngSeedForReplay(trace.metadata());
+            }
+            TraceReplaySessionBootstrap.alignFrameCountersForReplayStart(
+                    null, trace.getFrame(0));
+            return captureRuntimeState();
+        } finally {
+            sharedLevel.dispose();
+            TraceReplaySessionBootstrap.restoreGameplayConfig(configSnapshot);
+        }
+    }
+
+    private static RuntimeState captureRuntimeState() {
+        ObjectManager manager = GameServices.level().getObjectManager();
+        List<ObjectRow> objects = manager.getActiveObjects().stream()
+                .filter(AbstractObjectInstance.class::isInstance)
+                .map(AbstractObjectInstance.class::cast)
+                .map(object -> new ObjectRow(object.getSlotIndex(),
+                        object.getClass().getName(), object.getX(), object.getY()))
+                .sorted(Comparator.comparingInt(ObjectRow::slot)
+                        .thenComparing(ObjectRow::className))
+                .toList();
+        AbstractPlayableSprite player = GameServices.sprites().getMainPlayable();
+        List<PlayerState> sidekicks = GameServices.sprites().getSidekicks().stream()
+                .map(TestS3kCnzTraceReplay::capturePlayerState)
+                .toList();
+        return new RuntimeState(objects, objects.size(), manager.getFrameCounter(),
+                manager.getVblaCounter(), GameServices.level().getFrameCounter(),
+                GameServices.camera().getX(), GameServices.camera().getY(),
+                GameServices.rng().getSeed(), capturePlayerState(player), sidekicks);
+    }
+
+    private static PlayerState capturePlayerState(AbstractPlayableSprite player) {
+        return new PlayerState(player.getCentreX(), player.getCentreY(),
+                player.getXSpeed(), player.getYSpeed(), player.getGSpeed(),
+                TraceCharacterState.statusByteFromSprite(player),
+                player.getAnimationId(), player.getMappingFrame());
     }
 
     private static TraceFrame traceFrame(TraceData trace, int frame) {
@@ -1140,6 +1457,28 @@ public class TestS3kCnzTraceReplay extends AbstractTraceReplayTest {
             sharedLevel.dispose();
             TraceReplaySessionBootstrap.restoreGameplayConfig(configSnapshot);
         }
+    }
+
+    private enum MetadataVariant {
+        TRACE_PROFILE,
+        SIDEKICK_CHARACTERS,
+        CHECKPOINT_NAMES,
+        RECORDING_FILENAME,
+        RNG_SEED,
+        START_POSITION
+    }
+
+    private record ObjectRow(int slot, String className, int x, int y) {
+    }
+
+    private record PlayerState(int centreX, int centreY, int xSpeed, int ySpeed,
+                               int groundSpeed, int status, int animation, int mapping) {
+    }
+
+    private record RuntimeState(List<ObjectRow> objects, int activeSlotCount,
+                                int objectFrame, int vbla, int levelFrame,
+                                int cameraX, int cameraY, long rngSeed,
+                                PlayerState player, List<PlayerState> sidekicks) {
     }
 
 }

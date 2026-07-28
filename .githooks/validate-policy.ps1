@@ -296,7 +296,10 @@ function Validate-FileSizePolicyForFiles([string[]]$Files, [scriptblock]$SizeRes
         if ((($fileName -like "aux_state*.jsonl") -or ($fileName -like "physics*.csv")) -and
                 $size -ge $script:TraceCompressionThresholdBytes) {
             $message = ("``$path`` is an uncompressed trace payload ({0} bytes). " +
-                    "Run ``tools/traces/compress-traces.ps1`` and commit the ``.gz`` file instead.") -f $size
+                    "Commit the ``.gz`` instead: the native harness " +
+                    "(tools/bizhawk-headless) compresses at capture time by default, " +
+                    "and ``tools/traces/compress-traces.ps1`` does it for a Lua " +
+                    "capture directory.") -f $size
             Add-ValidationError $message
         }
         if ($size -ge $script:GithubFileSizeLimitBytes) {
@@ -462,7 +465,7 @@ function Validate-NonMasterCommitMessage([string]$Message, [string[]]$Files) {
     Validate-ExactTrailer $Message $Files "Changelog" "CHANGELOG.md" "CHANGELOG.md"
     Validate-ChangelogJustification $Message $Files
     Validate-PrefixTrailer $Message $Files "Guide" "docs/guide/" "docs/guide/"
-    Validate-ExactTrailer $Message $Files "Known-Discrepancies" "docs/KNOWN_DISCREPANCIES.md" "docs/KNOWN_DISCREPANCIES.md"
+    Validate-ExactTrailer $Message $Files "Known-Discrepancies" "docs/status/known-discrepancies.md" "docs/status/known-discrepancies.md"
     Validate-ExactTrailer $Message $Files "S3K-Known-Discrepancies" "docs/S3K_KNOWN_DISCREPANCIES.md" "docs/S3K_KNOWN_DISCREPANCIES.md"
     Validate-AgentDocsTrailer $Message $Files
     Validate-ExactTrailer $Message $Files "Configuration-Docs" "CONFIGURATION.md" "CONFIGURATION.md"
@@ -579,7 +582,7 @@ function Validate-CiCommitRange([string]$EffectiveBaseSha, [string]$HeadSha) {
         Validate-ExactTrailer $message $files "Changelog" "CHANGELOG.md" "CHANGELOG.md"
         Validate-ChangelogJustification $message $files
         Validate-PrefixTrailer $message $files "Guide" "docs/guide/" "docs/guide/"
-        Validate-ExactTrailer $message $files "Known-Discrepancies" "docs/KNOWN_DISCREPANCIES.md" "docs/KNOWN_DISCREPANCIES.md"
+        Validate-ExactTrailer $message $files "Known-Discrepancies" "docs/status/known-discrepancies.md" "docs/status/known-discrepancies.md"
         Validate-ExactTrailer $message $files "S3K-Known-Discrepancies" "docs/S3K_KNOWN_DISCREPANCIES.md" "docs/S3K_KNOWN_DISCREPANCIES.md"
         Validate-AgentDocsTrailer $message $files
         Validate-ExactTrailer $message $files "Configuration-Docs" "CONFIGURATION.md" "CONFIGURATION.md"

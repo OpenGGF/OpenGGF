@@ -139,7 +139,7 @@ class TestDestructionEffects {
                 0, null, null, null, GameServices.camera(), services);
         DestructionConfig config = new DestructionConfig(
                 -1,
-                (spawn, svc) -> new AnimalObjectInstance(spawn, svc,
+                (spawn, svc) -> AnimalObjectInstance.deferredArtVariant(spawn, svc,
                         (pointsSpawn, pointsSvc, points) -> new RecordingChildObject(
                                 pointsSpawn, "Points-" + points)),
                 true,

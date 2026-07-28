@@ -256,7 +256,7 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
         //   d1 = width_pixels + 0x0B  -> collision half-width
         //   d2 = y_radius              -> collision half-height (top)
         //   d3 = y_radius + 1          -> collision half-height (bottom)
-        return new SolidObjectParams(HALF_WIDTH, yRadius, yRadius + 1);
+        return SolidObjectParams.of(HALF_WIDTH, yRadius, yRadius + 1);
     }
 
     @Override

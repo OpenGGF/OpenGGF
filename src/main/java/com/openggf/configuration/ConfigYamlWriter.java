@@ -126,7 +126,11 @@ public final class ConfigYamlWriter {
                 try {
                     keyName = GlfwKeyNameResolver.nameOf(Integer.parseInt(s));
                 } catch (NumberFormatException ignored) {
-                    keyName = s;
+                    // A value carrying modifiers is neither a key name nor a
+                    // number; write it back in one canonical spelling so a
+                    // round trip is stable whatever the player typed.
+                    KeyChord chord = KeyChord.parse(s);
+                    keyName = chord.isBound() ? chord.format() : s;
                 }
             }
         }

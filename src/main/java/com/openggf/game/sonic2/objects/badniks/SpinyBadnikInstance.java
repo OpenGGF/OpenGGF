@@ -285,7 +285,7 @@ public class SpinyBadnikInstance extends AbstractBadnikInstance implements Rewin
             // projectile one frame ahead of ROM's Obj98 at sidekick-touch time, hurting
             // the co-located CPU sidekick one frame early (CPZ1 f1157; ROM hurts f1158).
             // One extra stationary (initialDelay) frame realigns the spike's trajectory
-            // with ROM frame-for-frame. See docs/TRACE_FRONTIER_LOG.md (CPZ1 f1157).
+            // with ROM frame-for-frame. See docs/status/trace-frontier-log.md (CPZ1 f1157).
             BadnikProjectileInstance spike = new BadnikProjectileInstance(
                     spawn,
                     BadnikProjectileInstance.ProjectileType.SPINY_SPIKE,

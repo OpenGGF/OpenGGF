@@ -19,6 +19,7 @@ import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.TraceFrame;
 import com.openggf.trace.TraceMetadata;
+import com.openggf.trace.VerificationGroup;
 import com.openggf.trace.TraceReplayBootstrap;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 
@@ -49,6 +50,7 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
     private int laggedFrames;
     private boolean firstErrorLogged;
     private boolean firstWarningLogged;
+    private MismatchEntry firstNonCameraPhysicsMismatch;
     private int lastActionMask;
     private int lastInputMask;
     private boolean lastStartPressed;
@@ -100,7 +102,33 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
             }
         }
         return phase == TraceExecutionPhase.VBLANK_ONLY
+                || phase == TraceExecutionPhase.ADVANCE_ONLY
                 || phase == TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY;
+    }
+
+    @Override
+    public boolean shouldAdvanceVblankOnSkippedTick(Bk2FrameInput frame) {
+        return vblankAdvanceCountOnSkippedTick(frame) > 0;
+    }
+
+    @Override
+    public int vblankAdvanceCountOnSkippedTick(Bk2FrameInput frame) {
+        if (cursor >= trace.frameCount()) {
+            return 1;
+        }
+        TraceFrame previous = cursor > 0 ? trace.getFrame(cursor - 1) : null;
+        TraceFrame current = trace.getFrame(cursor);
+        if (TraceReplayBootstrap.phaseForReplay(trace, previous, current)
+                == TraceExecutionPhase.ADVANCE_ONLY) {
+            return 0;
+        }
+        if (previous == null) {
+            return 1;
+        }
+        if (previous.vblankCounter() < 0 || current.vblankCounter() < 0) {
+            return 1;
+        }
+        return (current.vblankCounter() - previous.vblankCounter()) & 0xFFFF;
     }
 
     @Override
@@ -123,7 +151,9 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
             if (skippedPhase == TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY) {
                 advancePlayableAnimationsOnly();
             } else {
-                laggedFrames++;
+                if (skippedPhase != TraceExecutionPhase.ADVANCE_ONLY) {
+                    laggedFrames++;
+                }
                 cursor++;
                 checkComplete();
                 return;
@@ -154,9 +184,24 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
         // flagging every recorded sidekick field as divergent (EHZ1
         // etc. record Sonic+Tails).
         TraceCharacterState actualSidekick = captureFirstSidekickState();
+        var diagnosticLevelManager = GameServices.levelOrNull();
+        ObjectManager diagnosticObjectManager = diagnosticLevelManager != null
+                ? diagnosticLevelManager.getObjectManager()
+                : null;
+        String engineFrameClock = diagnosticObjectManager != null
+                ? String.format("vbc=%04X sub=(%04X,%04X)",
+                        diagnosticObjectManager.getVblaCounter() & 0xFFFF,
+                        sprite.getXSubpixelRaw(), sprite.getYSubpixelRaw())
+                : String.format("sub=(%04X,%04X)",
+                        sprite.getXSubpixelRaw(), sprite.getYSubpixelRaw());
+        var diagnosticCamera = GameServices.cameraOrNull();
+        int diagnosticCameraX = diagnosticCamera != null ? diagnosticCamera.getX() : -1;
+        int diagnosticCameraY = diagnosticCamera != null ? diagnosticCamera.getY() : -1;
         EngineDiagnostics animationDiagnostics =
-                EngineDiagnostics.formattedWithCameraAndAnimation(
-                        -1, -1, sprite.getAnimationId(), sprite.getMappingFrame(), "");
+                EngineDiagnostics.formattedWithCameraAnimationAndSubpixel(
+                        diagnosticCameraX, diagnosticCameraY,
+                        sprite.getAnimationId(), sprite.getMappingFrame(),
+                        sprite.getXSubpixelRaw(), sprite.getYSubpixelRaw(), engineFrameClock);
         FrameComparison result = binder.compareFrame(expected,
                 sprite.getCentreX(), sprite.getCentreY(),
                 sprite.getXSpeed(), sprite.getYSpeed(), sprite.getGSpeed(),
@@ -213,7 +258,8 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
                         fc.delta(),
                         result,
                         summariseNearbyObjects());
-            } else if (sev == Severity.WARNING && !firstWarningLogged) {
+            }
+            if (sev == Severity.WARNING && !firstWarningLogged) {
                 firstWarningLogged = true;
                 System.err.printf(
                         "[LiveTraceComparator] FIRST WARNING at trace frame %d:%n"
@@ -228,14 +274,21 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
                         result,
                         summariseNearbyObjects());
             }
-            mismatches.push(new MismatchEntry(
+            MismatchEntry mismatch = new MismatchEntry(
                     frameNumber,
                     fc.fieldName(),
                     fc.expected(),
                     fc.actual(),
                     Integer.toString(fc.delta()),
                     sev,
-                    1));
+                    1);
+            if (firstNonCameraPhysicsMismatch == null
+                    && sev == Severity.ERROR
+                    && fc.verificationGroup() == VerificationGroup.PHYSICS
+                    && !fc.fieldName().startsWith("camera_")) {
+                firstNonCameraPhysicsMismatch = mismatch;
+            }
+            mismatches.push(mismatch);
         }
     }
 
@@ -324,6 +377,8 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
     public int errorCount() { return errorCount; }
     public int warningCount() { return warningCount; }
     public int laggedFrames() { return laggedFrames; }
+    public int cursor() { return cursor; }
+    public MismatchEntry firstNonCameraPhysicsMismatch() { return firstNonCameraPhysicsMismatch; }
     public boolean hasRecordingDesync() { return firstErrorLogged; }
     public boolean isComplete() { return complete; }
     public List<MismatchEntry> recentMismatches() { return mismatches.recent(); }

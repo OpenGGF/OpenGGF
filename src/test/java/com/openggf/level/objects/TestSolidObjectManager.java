@@ -13,6 +13,7 @@ import com.openggf.game.sonic1.Sonic1GameModule;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic2.objects.EggPrisonObjectInstance;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.game.sonic3k.objects.CnzCylinderInstance;
 import com.openggf.game.sonic1.objects.Sonic1CollapsingLedgeObjectInstance;
 import com.openggf.game.sonic3k.objects.AizTransitionFloorObjectInstance;
 import com.openggf.game.sonic3k.objects.CnzTrapDoorInstance;
@@ -599,7 +600,7 @@ public class TestSolidObjectManager {
     @Test
     public void collapsingLedgeForcedReleasePublishesRunAsPreviousAnimation() throws Exception {
         GameModuleRegistry.setCurrent(new Sonic1GameModule());
-        ObjectSpawn spawn = new ObjectSpawn(100, 100, 0x1A, 0, 0, false, 0);
+        ObjectSpawn spawn = new ObjectSpawn(100, 100, 0x1A, 0, 1, false, 0);
         Sonic1CollapsingLedgeObjectInstance ledge = new Sonic1CollapsingLedgeObjectInstance(spawn);
         ObjectManager manager = buildManager(ledge);
         ledge.setServices(new StubObjectServices() {
@@ -613,8 +614,9 @@ public class TestSolidObjectManager {
         player.useGameRules(GameRules.SONIC_1);
         player.setWidth(20);
         player.setHeight(20);
-        player.setCentreX((short) 64);
-        player.setCentreY((short) 49);
+        player.applyCustomRadii(9, 19);
+        player.setCentreX((short) 71);
+        player.setCentreY((short) 34);
         player.setYSpeed((short) 0x100);
         player.setAir(true);
         SpriteAnimationSet animations = new SpriteAnimationSet();
@@ -633,8 +635,10 @@ public class TestSolidObjectManager {
         setPrivateBoolean(ledge, "collapseFlag", true);
         setPrivateInt(ledge, "collapseDelay", 1);
 
-        ledge.update(1, player);
+        manager.update(0, player, List.of(), 1, false, true, true);
         assertFalse(player.isOnObject());
+        assertEquals(33, player.getCentreY(),
+                "The release checkpoint must apply the final flipped-slope sample before detaching Sonic");
         assertEquals(1, player.getAnimationManager().captureRewindState().lastAnimationId(),
                 "Ledge_TimeZero writes canonical Run to prev_anim");
         player.getAnimationManager().update(2);
@@ -682,6 +686,25 @@ public class TestSolidObjectManager {
         assertTrue(player.getPushing());
         assertTrue(manager.hasObjectPushingBit(player),
                 "SolidObject side contact must retain the native per-player pushing latch");
+    }
+
+    @Test
+    public void exactHorizontalCentreTieResolvesTowardLeftEdge() {
+        SolidObjectParams params = new SolidObjectParams(16, 8, 8);
+        TestSolidObject object = new TestSolidObject(100, 100, params);
+        ObjectManager manager = buildManager(object);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.setWidth(20);
+        player.setHeight(20);
+        player.setAir(false);
+        player.setCentreX((short) 100);
+        player.setCentreY((short) 100);
+
+        manager.updateSolidContacts(player);
+
+        assertEquals(84, player.getCentreX(),
+                "cmp.w d0,d1 / bhs chooses the left half when player and solid centres are equal");
     }
 
     @Test
@@ -1364,6 +1387,33 @@ public class TestSolidObjectManager {
     }
 
     @Test
+    public void cnzCylinderExactRightEdgeRetainsGroundPushWhileMovingAway() {
+        CnzCylinderInstance cylinder = new CnzCylinderInstance(
+                new ObjectSpawn(0x15C0, 0x04FF, 0x47, 0x45, 0, false, 0));
+        ObjectManager manager = buildManager(cylinder);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.useGameRules(GameRules.SONIC_3K);
+        player.setWidth(20);
+        player.setHeight(38);
+        player.setAir(false);
+        player.setXSpeed((short) 0x000C);
+        player.setGSpeed((short) 0x000C);
+        player.setCentreX((short) (0x15C0 + cylinder.getSolidParams().halfWidth()));
+        player.setCentreY((short) 0x052C);
+
+        manager.updateSolidContacts(player);
+
+        assertTrue(player.getPushing(),
+                "SolidObject_cont accepts relX == d1*2 and sets Status_Push for a grounded side contact");
+        assertEquals(0x000C, player.getXSpeed(),
+                "loc_1E042 preserves velocity when the rider is moving away from the cylinder");
+        assertEquals(0x000C, player.getGSpeed());
+        assertEquals(0x15C0 + cylinder.getSolidParams().halfWidth(), player.getCentreX(),
+                "the exact edge has d0=0 and does not manufacture an X correction");
+    }
+
+    @Test
     public void zeroDistanceOnlyMotionHookPreservesExactEdgeWithoutChangingNonzeroCorrection() {
         SolidObjectParams params = new SolidObjectParams(19, 14, 15);
         TestSolidObject object = new ZeroDistanceMotionInclusiveRightEdgeSolidObject(100, 100, params);
@@ -2030,6 +2080,98 @@ public class TestSolidObjectManager {
         assertFalse(player.isOnObject());
         assertFalse(manager.isRidingObject(player));
         assertEquals(0x0038, player.getYSpeed() & 0xFFFF);
+    }
+
+    @Test
+    public void batchedAirborneRideExitDoesNotRelandSameObject() {
+        SolidObjectParams params = new SolidObjectParams(0x20, 8, 9);
+        TestSolidObject object = new TestSolidObject(100, 100, params, true,
+                null, true);
+        ObjectManager manager = buildManager(object);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.useGameRules(GameRules.SONIC_1);
+        player.setWidth(20);
+        player.setHeight(20);
+        player.setCentreX((short) 72);
+        player.setCentreY((short) (100 - params.groundHalfHeight()
+                - player.getYRadius()));
+        player.setYSpeed((short) 0);
+        manager.forceRidingObjectForBootstrap(player, object);
+
+        // Sonic's own update can set Status_InAir while the previous frame's
+        // Status_OnObj/object standing bit is still latched. ExitPlatform sees
+        // the airborne bit, clears the ride, and returns through MvSonicOnPtfm2;
+        // it does not run PlatformObject again for the same slot this frame.
+        player.setAir(true);
+        player.setOnObject(true);
+
+        manager.updateSolidContacts(player);
+
+        assertTrue(player.getAir());
+        assertFalse(player.isOnObject());
+        assertFalse(manager.isRidingObject(player));
+    }
+
+    @Test
+    public void groundedPrePhysicsStatusClearWaitsForLaterRidingCheckpoint() {
+        AutoCheckpointProbeObject clearingObject = new AutoCheckpointProbeObject(60, 100);
+        AutoCheckpointProbeObject support = new AutoCheckpointProbeObject(100, 100);
+        SolidObjectParams params = support.getSolidParams();
+        ObjectManager manager = buildManager(clearingObject);
+        manager.addDynamicObject(support);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.useGameRules(GameRules.SONIC_1);
+        player.setWidth(20);
+        player.setHeight(20);
+        player.setCentreX((short) 100);
+        player.setCentreY((short) (100 - params.groundHalfHeight()
+                - player.getYRadius()));
+        player.setYSpeed((short) 0);
+        manager.forceRidingObjectForBootstrap(player, support);
+
+        // A lower SST slot runs after Sonic in the ROM, but before physics in
+        // the engine's legacy order. Its grounded Status_OnObj clear must not
+        // manufacture InAir before this later support slot executes.
+        manager.solidContacts().noteGroundedOnObjectClearedBeforePhysics(player, clearingObject);
+        player.setOnObject(false);
+        player.setAir(true);
+
+        manager.updateSolidContacts(player);
+
+        assertFalse(player.getAir());
+        assertTrue(player.isOnObject());
+        assertTrue(manager.isRidingObject(player, support));
+    }
+
+    @Test
+    public void groundedStatusClearAfterRidingCheckpointIsNotRestored() {
+        AutoCheckpointProbeObject support = new AutoCheckpointProbeObject(100, 100);
+        AutoCheckpointProbeObject laterClearingObject = new AutoCheckpointProbeObject(140, 100);
+        SolidObjectParams params = support.getSolidParams();
+        ObjectManager manager = buildManager(support);
+        manager.addDynamicObject(laterClearingObject);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.useGameRules(GameRules.SONIC_1);
+        player.setWidth(20);
+        player.setHeight(20);
+        player.setCentreX((short) 100);
+        player.setCentreY((short) (100 - params.groundHalfHeight()
+                - player.getYRadius()));
+        player.setYSpeed((short) 0);
+        manager.forceRidingObjectForBootstrap(player, support);
+
+        manager.solidContacts().noteGroundedOnObjectClearedBeforePhysics(player, laterClearingObject);
+        player.setOnObject(false);
+        player.setAir(true);
+
+        manager.updateSolidContacts(player);
+
+        assertTrue(player.getAir());
+        assertFalse(player.isOnObject());
+        assertFalse(manager.isRidingObject(player));
     }
 
     @Test

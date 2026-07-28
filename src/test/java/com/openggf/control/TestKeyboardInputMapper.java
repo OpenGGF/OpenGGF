@@ -1,5 +1,6 @@
 package com.openggf.control;
 
+import com.openggf.tests.TestTempFiles;
 import com.openggf.InputBindingFactory;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -80,6 +81,6 @@ class TestKeyboardInputMapper {
     }
 
     private static SonicConfigurationService newConfig() throws IOException {
-        return SonicConfigurationService.createStandalone(Files.createTempDirectory("keyboard-input-mapper"));
+        return SonicConfigurationService.createStandalone(TestTempFiles.createTempDirectory("keyboard-input-mapper"));
     }
 }

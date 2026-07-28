@@ -175,7 +175,13 @@ public class Aiz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
             boolean wasAir = sidekick.getAir();
             boolean wasOnObject = sidekick.isOnObject();
             sidekick.getCpuController().setController2SignedLocked(false);
-            sidekick.getCpuController().mirrorRawController2LogicalForEndingPose();
+            // Check_TailsEndPose runs from the capsule's later SST slot. It
+            // clears Ctrl_2_locked and tail-calls Set_PlayerEndingPose, but
+            // neither routine writes Ctrl_2_logical; retain the word already
+            // published by Player_2 this frame. The following Tails_Control
+            // dispatch copies raw Ctrl_2 before object_control=$81 blocks CPU
+            // steering (sonic3k.asm:181924-181944,181982-181992,
+            // 26195-26212).
             lockForResults(sidekick);
             sidekick.setAir(wasAir);
             sidekick.setOnObject(wasOnObject);

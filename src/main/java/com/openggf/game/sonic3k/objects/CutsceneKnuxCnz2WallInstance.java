@@ -36,7 +36,7 @@ public final class CutsceneKnuxCnz2WallInstance extends AbstractObjectInstance
     // The tall vertical extent makes the barrier impassable across the whole
     // cutscene play area; only the side push matters at ground level.
     private static final SolidObjectParams SOLID_PARAMS =
-            new SolidObjectParams(0x13, 0x100, 0x200);
+            SolidObjectParams.of(0x13, 0x100, 0x200);
 
     private final ObjectInstance owner;
 

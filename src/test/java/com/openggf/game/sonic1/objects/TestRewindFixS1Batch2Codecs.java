@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>{@code Sonic1MotobugSmokeInstance} is intentionally excluded: it is an
  * accept-drop transient cosmetic (re-emitted in-frame by its parent), documented
- * in {@code docs/KNOWN_DISCREPANCIES.md}.
+ * in {@code docs/status/known-discrepancies.md}.
  */
 class TestRewindFixS1Batch2Codecs {
 

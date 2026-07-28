@@ -103,7 +103,7 @@ class TestS2ReplayBootstrapTailsFrame0 {
     }
 
     @ParameterizedTest(name = "{0} bootstrap history matches ROM prelude snapshot")
-    @ValueSource(strings = {"ehz1_fullrun", "scz", "wfz"})
+    @ValueSource(strings = {"ehz1_fullrun", "scz", "wfz", "dez_ending"})
     void nativePreludeSeedsPlayerHistoryFromRomOrdering(String route) throws Exception {
         Path traceDir = Path.of("src/test/resources/traces/s2").resolve(route);
         Assumptions.assumeTrue(Files.isDirectory(traceDir), "Trace directory not found: " + traceDir);
@@ -168,6 +168,7 @@ class TestS2ReplayBootstrapTailsFrame0 {
             case "ehz1_fullrun" -> Sonic2ZoneConstants.ZONE_EHZ;
             case "scz" -> Sonic2ZoneConstants.ZONE_SCZ;
             case "wfz" -> Sonic2ZoneConstants.ZONE_WFZ;
+            case "dez_ending" -> Sonic2ZoneConstants.ZONE_DEZ;
             default -> throw new IllegalArgumentException("Unhandled S2 trace route: " + route);
         };
     }

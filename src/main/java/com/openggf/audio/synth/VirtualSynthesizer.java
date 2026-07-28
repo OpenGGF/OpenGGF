@@ -56,6 +56,23 @@ public class VirtualSynthesizer implements Synthesizer {
         ym.setDacData(data);
     }
 
+    /**
+     * Captures the identity-bearing DAC bank selected by a live command.
+     * General synth/rewind snapshots intentionally omit this process-local
+     * dependency and continue to resolve it through sequencer descriptors.
+     */
+    protected final DacData captureLiveDacDataReference() {
+        return ym.liveDacDataReference();
+    }
+
+    /**
+     * Restores a live command's exact DAC dependency before restoring YM
+     * playback fields that resolve their current sample through that bank.
+     */
+    protected final void restoreLiveDacDataReference(DacData data) {
+        ym.setDacData(data);
+    }
+
     @Override
     public void playDac(Object source, int note) {
         ym.playDac(note);
@@ -161,7 +178,6 @@ public class VirtualSynthesizer implements Synthesizer {
         ym.forceSilenceChannel(channelId);
     }
 
-    @com.openggf.game.ModApi
     public record Snapshot(
             double outputSampleRate,
             Ym2612Chip.Snapshot ym,

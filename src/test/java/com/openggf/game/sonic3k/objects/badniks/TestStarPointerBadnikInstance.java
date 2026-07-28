@@ -10,6 +10,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
@@ -30,11 +31,21 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class TestStarPointerBadnikInstance {
+
+    @Test
+    void parentTouchUsesLiveSstPositionPublishedAfterMovement() {
+        StarPointerBadnikInstance starPointer = new StarPointerBadnikInstance(
+                new ObjectSpawn(160, 100, Sonic3kObjectIds.STAR_POINTER, 0, 0, false, 0));
+
+        assertTrue(starPointer.usesCurrentTouchResponseState(),
+                "Obj_StarPointer moves before publishing its SST pointer to Collision_response_list");
+    }
 
     @Test
     void registryCreatesStarPointerForS3klZones() {
@@ -68,7 +79,7 @@ class TestStarPointerBadnikInstance {
     }
 
     @Test
-    void subtypeSixTracksLeftAtOnePixelPerFrameAfterInit() {
+    void activeRoutineStartsOneDispatchAfterWaitOffscreenInitialization() {
         AbstractObjectInstance.updateCameraBounds(0, 0, 319, 223, 0);
         StarPointerBadnikInstance starPointer = new StarPointerBadnikInstance(
                 new ObjectSpawn(160, 100, Sonic3kObjectIds.STAR_POINTER, 0x06, 0, false, 0));
@@ -81,9 +92,76 @@ class TestStarPointerBadnikInstance {
         assertEquals(160, starPointer.getX(), "init frame should only set velocity and children");
 
         starPointer.update(1, player);
+        assertEquals(160, starPointer.getX(),
+                "Process_Sprites does not dispatch loc_8BE74 on the first active pass");
 
+        starPointer.update(2, player);
         assertEquals(159, starPointer.getX(),
                 "subtype bits 1-2 = 3 select ROM speed -$100 toward the player");
+    }
+
+    @Test
+    void offscreenReentryInitializesOnceThenConsumesOneActiveRoutinePass() {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 319, 223, 0);
+        StarPointerBadnikInstance starPointer = new StarPointerBadnikInstance(
+                new ObjectSpawn(400, 100, Sonic3kObjectIds.STAR_POINTER, 0x06, 0, false, 0));
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        when(player.getCentreX()).thenReturn((short) 100);
+        when(player.getCentreY()).thenReturn((short) 100);
+        when(player.getDead()).thenReturn(false);
+        ObjectServices services = mock(ObjectServices.class);
+        ObjectManager objectManager = mock(ObjectManager.class);
+        when(services.objectManager()).thenReturn(objectManager);
+        when(services.playerQuery()).thenReturn(new ObjectPlayerQuery(() -> player, List::of));
+        starPointer.setServices(services);
+
+        starPointer.update(0, player);
+        verify(objectManager, never()).addDynamicObjectAfterCurrent(
+                org.mockito.ArgumentMatchers.any(StarPointerBadnikInstance.OrbitingPointInstance.class));
+        assertEquals(400, starPointer.getX(), "offscreen wait must not initialize or move");
+
+        AbstractObjectInstance.updateCameraBounds(100, 0, 419, 223, 0);
+        starPointer.update(1, player);
+        verify(objectManager, times(4)).addDynamicObjectAfterCurrent(
+                org.mockito.ArgumentMatchers.any(StarPointerBadnikInstance.OrbitingPointInstance.class));
+        assertEquals(400, starPointer.getX(), "re-entry initializes without active movement");
+
+        starPointer.update(2, player);
+        assertEquals(400, starPointer.getX(), "first active dispatch only arms loc_8BE74");
+
+        starPointer.update(3, player);
+        starPointer.update(4, player);
+        assertEquals(398, starPointer.getX(), "later active dispatches move at the subtype speed");
+        verify(objectManager, times(4)).addDynamicObjectAfterCurrent(
+                org.mockito.ArgumentMatchers.any(StarPointerBadnikInstance.OrbitingPointInstance.class));
+    }
+
+    @Test
+    void rewindBetweenInitializationAndActiveDispatchPreservesDelayAndReleaseState() {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 319, 223, 0);
+        ObjectSpawn spawn = new ObjectSpawn(
+                160, 100, Sonic3kObjectIds.STAR_POINTER, 0x06, 0, false, 0);
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        when(player.getCentreX()).thenReturn((short) 100);
+        when(player.getCentreY()).thenReturn((short) 100);
+        when(player.getDead()).thenReturn(false);
+        StarPointerBadnikInstance source = new StarPointerBadnikInstance(spawn);
+
+        source.update(0, player);
+        PerObjectRewindSnapshot initializedSnapshot = source.captureRewindState();
+
+        StarPointerBadnikInstance restored = new StarPointerBadnikInstance(spawn);
+        restored.restoreRewindState(initializedSnapshot);
+        restored.update(1, player);
+        assertEquals(160, restored.getX(),
+                "restored initialized object must still consume its pending active-routine pass");
+        assertFalse(restored.shouldReleaseChildren(),
+                "pending active-routine pass must not evaluate the release latch");
+
+        restored.update(2, player);
+        assertEquals(159, restored.getX(), "movement begins on the following restored dispatch");
+        assertTrue(restored.shouldReleaseChildren(),
+                "release latch resumes together with ROM loc_8BE74");
     }
 
     @Test
@@ -99,6 +177,7 @@ class TestStarPointerBadnikInstance {
         starPointer.update(0, player);
         AbstractObjectInstance.updateCameraBounds(1000, 0, 1319, 223, 0);
         starPointer.update(1, player);
+        starPointer.update(2, player);
 
         assertEquals(159, starPointer.getX(),
                 "ROM loc_8BE74/loc_8BEA6 moves after Obj_WaitOffscreen installs the active routine");
@@ -116,6 +195,7 @@ class TestStarPointerBadnikInstance {
 
         starPointer.update(0, player);
         starPointer.update(1, player);
+        starPointer.update(2, player);
 
         assertEquals(477, starPointer.getX(),
                 "Obj_WaitOffscreen uses a $20x$20 dummy sprite render flag, not a center-point X gate");
@@ -158,6 +238,7 @@ class TestStarPointerBadnikInstance {
 
         starPointer.update(0, sonic);
         starPointer.update(1, sonic);
+        starPointer.update(2, sonic);
 
         assertTrue(starPointer.shouldReleaseChildren(),
                 "ROM loc_8BE74 calls Find_SonicTails before latching child release");
@@ -174,10 +255,12 @@ class TestStarPointerBadnikInstance {
         when(player.getDead()).thenReturn(false);
         starPointer.update(0, player);
         starPointer.update(1, player);
+        starPointer.update(2, player);
         assertTrue(starPointer.shouldReleaseChildren(), "test setup should latch child release");
 
         StarPointerBadnikInstance.OrbitingPointInstance point =
                 new StarPointerBadnikInstance.OrbitingPointInstance(starPointer.getSpawn(), starPointer, 0);
+        point.update(1, player); // loc_8BEB0 initialization-only execution
         setIntField(point, "angle", 0xFF);
         setIntField(point, "currentX", 0);
         setIntField(point, "currentY", 0);
@@ -191,6 +274,33 @@ class TestStarPointerBadnikInstance {
     }
 
     @Test
+    void firstChildExecutionOnlyInitializesAndDoesNotPublishTouchEntry() {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 319, 223, 0);
+        StarPointerBadnikInstance starPointer = new StarPointerBadnikInstance(
+                new ObjectSpawn(160, 100, Sonic3kObjectIds.STAR_POINTER, 0, 0, false, 0));
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        when(player.getCentreX()).thenReturn((short) 100);
+        when(player.getCentreY()).thenReturn((short) 100);
+        when(player.getDead()).thenReturn(false);
+        starPointer.update(0, player);
+
+        StarPointerBadnikInstance.OrbitingPointInstance point =
+                new StarPointerBadnikInstance.OrbitingPointInstance(starPointer.getSpawn(), starPointer, 0);
+
+        assertEquals(starPointer.getX(), point.getX());
+        assertEquals(starPointer.getY(), point.getY());
+        point.update(0, player);
+        assertEquals(starPointer.getX(), point.getX(), "loc_8BEB0 does not run circular movement");
+        assertEquals(starPointer.getY(), point.getY(), "loc_8BEB0 preserves the copied parent position");
+        assertFalse(point.publishesTouchResponseListEntryThisFrame(),
+                "loc_8BEB0 returns before Child_DrawTouch_Sprite");
+
+        point.update(2, player);
+        assertTrue(point.publishesTouchResponseListEntryThisFrame(),
+                "loc_8BEE6 publishes the point after its first active update");
+    }
+
+    @Test
     void orbitingPointPreservesParentSubpixelDuringCircularMove() throws Exception {
         AbstractObjectInstance.updateCameraBounds(0, 0, 319, 223, 0);
         StarPointerBadnikInstance starPointer = new StarPointerBadnikInstance(
@@ -201,11 +311,13 @@ class TestStarPointerBadnikInstance {
         when(player.getDead()).thenReturn(false);
         starPointer.update(0, player);
         starPointer.update(1, player);
+        starPointer.update(2, player);
 
         StarPointerBadnikInstance.OrbitingPointInstance point =
                 new StarPointerBadnikInstance.OrbitingPointInstance(starPointer.getSpawn(), starPointer, 0);
         setIntField(point, "angle", 1);
 
+        point.update(0, player);
         point.update(1, player);
 
         assertEquals(starPointer.getX() + 1, point.getX(),

@@ -4,7 +4,10 @@ import com.openggf.audio.GameMusic;
 import com.openggf.data.Rom;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.save.SaveReason;
+import com.openggf.game.timing.HardwareWorkHandle;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.level.objects.AbstractResultsScreen;
 import com.openggf.game.sonic3k.Sonic3kObjectArt;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -12,6 +15,7 @@ import com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.events.S3kTransitionWriteSupport;
+import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
 import com.openggf.tools.NemesisReader;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.PatternAtlasRange;
@@ -90,6 +94,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private int waitDurationAdjustment;
     private int postControlHandoffDelayEntries;
     private int carriedResultsRetireDispatches = CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES;
+    private S3kSignpostInstance.ResultsChildTimingAdjustment resultsChildTimingAdjustment =
+            S3kSignpostInstance.ResultsChildTimingAdjustment.NONE;
     private boolean controlsReleasedAheadOfHandoff;
     private boolean carriedAcrossSeamlessTransition;
 
@@ -103,6 +109,11 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private List<SpriteMappingFrame> mappingFrames;
     private boolean artLoaded;
     private boolean artCached;
+    @RewindTransient(reason = "queue facade is rebound to the restored session ledger by captured ordinals")
+    private Sonic3kObjectArt.QueuedResultsArt queuedResultsArt;
+    private long resultsGeneralArtOrdinal = -1;
+    private long resultsNumberArtOrdinal = -1;
+    private long resultsCharacterArtOrdinal = -1;
 
     // Rendering
     private ObjectSpriteSheet spriteSheet;
@@ -116,41 +127,66 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
 
     // Native child-SST creation/exit queue state.
     private int exitQueueCounter;
-    // ROM $30 is initialized to 12 before child allocation. A later
-    // CreateNewSprite4 failure does not repair this count, so a partial prefix
-    // intentionally leaves Wait2 stalled with the residual count.
+    // ROM $30 is initialized to 12 before child allocation. A later CreateNewSprite4
+    // failure does not repair this count, so a partial prefix intentionally leaves
+    // Wait2 stalled with the residual count.
     private int childrenRemaining = S3kResultsElementObjectInstance.ENTRY_COUNT;
     private boolean actTransitionSignaled;
+    private boolean resultsChildrenCreated;
+    private boolean resultsArtClaimed;
     private CarriedTitlePhase carriedTitlePhase = CarriedTitlePhase.RESULTS;
     private int carriedTitleWaitTimer;
     private int carriedResultsRenderRetireDispatches;
     private boolean exitRetireDispatchesInitialized;
 
     public S3kResultsScreenObjectInstance(PlayerCharacter character, int act) {
-        this(character, act, 0, 0, CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES, true);
+        this(character, act, 0, 0, CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES,
+                S3kSignpostInstance.ResultsChildTimingAdjustment.NONE, true);
+    }
+
+    /** Zero-arg probe/recreate entry point required by the generic rewind harness. */
+    private S3kResultsScreenObjectInstance() {
+        this(true);
     }
 
     /** Side-effect-free shell used only by generic rewind recreation. */
     protected S3kResultsScreenObjectInstance(boolean rewindShell) {
         this(PlayerCharacter.SONIC_AND_TAILS, 0, 0, 0,
-                CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES, !rewindShell);
+                CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES,
+                S3kSignpostInstance.ResultsChildTimingAdjustment.NONE, !rewindShell);
     }
 
     S3kResultsScreenObjectInstance(PlayerCharacter character, int act, int waitDurationAdjustment,
             int postControlHandoffDelayEntries) {
         this(character, act, waitDurationAdjustment, postControlHandoffDelayEntries,
-                CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES, true);
+                CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES,
+                S3kSignpostInstance.ResultsChildTimingAdjustment.NONE, true);
     }
 
     S3kResultsScreenObjectInstance(PlayerCharacter character, int act, int waitDurationAdjustment,
             int postControlHandoffDelayEntries, int carriedResultsRetireDispatches) {
         this(character, act, waitDurationAdjustment, postControlHandoffDelayEntries,
-                carriedResultsRetireDispatches, true);
+                carriedResultsRetireDispatches,
+                S3kSignpostInstance.ResultsChildTimingAdjustment.NONE);
     }
 
+    S3kResultsScreenObjectInstance(PlayerCharacter character, int act, int waitDurationAdjustment,
+            int postControlHandoffDelayEntries, int carriedResultsRetireDispatches,
+            S3kSignpostInstance.ResultsChildTimingAdjustment resultsChildTimingAdjustment) {
+        this(character, act, waitDurationAdjustment, postControlHandoffDelayEntries,
+                carriedResultsRetireDispatches, resultsChildTimingAdjustment, true);
+    }
+
+    /**
+     * Canonical constructor. {@code initializeRuntimeState} is false only for the
+     * generic rewind shell, which must not recalculate bonuses, fade music, or
+     * load art before its captured scalars are restored.
+     */
     private S3kResultsScreenObjectInstance(PlayerCharacter character, int act,
             int waitDurationAdjustment, int postControlHandoffDelayEntries,
-            int carriedResultsRetireDispatches, boolean initializeRuntimeState) {
+            int carriedResultsRetireDispatches,
+            S3kSignpostInstance.ResultsChildTimingAdjustment resultsChildTimingAdjustment,
+            boolean initializeRuntimeState) {
         super("S3kResults");
         setRomWorldPositioned(false);
         this.character = character;
@@ -158,6 +194,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         this.waitDurationAdjustment = Math.max(0, waitDurationAdjustment);
         this.postControlHandoffDelayEntries = Math.max(0, postControlHandoffDelayEntries);
         this.carriedResultsRetireDispatches = Math.max(0, carriedResultsRetireDispatches);
+        this.resultsChildTimingAdjustment = resultsChildTimingAdjustment;
 
         if (!initializeRuntimeState) {
             return;
@@ -169,36 +206,20 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         // Fade out current music immediately (ROM line 62513)
         fadeOutMusic();
 
-        // The Java renderer may load immediately, but the ROM-visible KosM queue
-        // remains authoritative for Obj_LevelResultsCreate readiness.
-        enqueueResultsKosModules();
-        loadArt();
+        // Rewind restoration reconstructs a scalar shell, then rebinds the
+        // captured hardware ordinals after GenericFieldCapturer restores them.
+        if (!ObjectConstructionContext.isRewindActiveRestore()) {
+            loadArt();
+        }
 
         LOG.fine(() -> String.format("S3K results init: character=%s act=%d timeBonus=%d ringBonus=%d",
                 character, act, timeBonus, ringBonus));
-    }
-
-    private S3kResultsScreenObjectInstance() {
-        this(true);
     }
 
     @Override
     public AbstractResultsScreen recreateForRewind(RewindRecreateContext ctx) {
         return ObjectConstructionContext.construct(ctx.objectServices(),
                 () -> new S3kResultsScreenObjectInstance(true));
-    }
-
-    @Override
-    protected void afterRewindRestoreSettled() {
-        // Rebuild only derived art after restored character/act scalars settle.
-        // The gameplay KosM queue snapshot remains the sole readiness owner.
-        combinedPatterns = null;
-        mappingFrames = null;
-        spriteSheet = null;
-        renderer = null;
-        artLoaded = false;
-        artCached = false;
-        loadArt();
     }
 
     @Override
@@ -209,7 +230,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                 stateTimer & 0xFFFF,
                 totalFrames & 0xFFFF,
                 act,
-                services().kosinskiModuleQueue().modulesLeftRaw() & 0xFF,
+                queuedResultsArt != null ? 1 : 0,
                 childrenRemaining,
                 actTransitionSignaled,
                 timeBonus,
@@ -281,9 +302,10 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
      * first AllocateObjectAfterCurrent leaves this routine active for a retry;
      * later CreateNewSprite4 failures leave the already-created prefix intact.
      */
-    private void createResultChildSsts() {
+    /** @return false when the first child allocation failed, leaving Create active. */
+    private boolean createResultChildSsts() {
         if (services().objectManager() == null) {
-            return;
+            return false;
         }
         for (int entryIndex = 0; entryIndex < S3kResultsElementObjectInstance.ENTRY_COUNT; entryIndex++) {
             int index = entryIndex;
@@ -291,7 +313,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                     () -> new S3kResultsElementObjectInstance(this, index, character));
             if (child.isDestroyed() || child.getSlotIndex() < 0) {
                 if (entryIndex == 0) {
-                    return;
+                    return false;
                 }
                 break;
             }
@@ -302,6 +324,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         // first 360-frame countdown decrement belongs to the next dispatch.
         state = STATE_PRE_TALLY_DELAY;
         stateTimer = 0;
+        return true;
     }
 
     // ---- Bonus calculation ----
@@ -366,11 +389,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             return;
         }
         this.frameCounter = frameCounter;
-        if (!actTransitionSignaled) {
-            // Obj_LevelResultsCreate is a distinct routine. Waiting on KosM,
-            // retrying the first allocation, and the successful create/publish
-            // dispatch all return without consuming Obj_LevelResultsWait's $2E.
-            updateCreateGate();
+        if (!updateCreateGate()) {
             return;
         }
         stateTimer++;
@@ -400,14 +419,33 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         }
     }
 
-    private void updateCreateGate() {
-        if (actTransitionSignaled) {
-            return;
+    private boolean updateCreateGate() {
+        if (resultsChildrenCreated) {
+            return true;
         }
-        if (!services().kosinskiModuleQueue().isIdle()) {
-            return;
+        // ROM Obj_LevelResultsInit queues three Kosinski module loads and advances
+        // to Obj_LevelResultsCreate; Create polls Kos_modules_left before
+        // allocating child objects and setting Events_fg_5
+        // (docs/skdisasm/sonic3k.asm:62512-62584, 62586-62616).
+        if (!resultsArtClaimed) {
+            rebindQueuedResultsArtAfterRestore();
+            if (queuedResultsArt == null || !queuedResultsArt.isReady()) {
+                return false;
+            }
+            finishQueuedArt();
+            resultsArtClaimed = true;
         }
-        createResultChildSsts();
+        // A failed first AllocateObjectAfterCurrent leaves Create active for a
+        // retry: nothing is published and Events_fg_5 stays clear until at least
+        // the first child exists. The art stays claimed across that retry, since
+        // the ROM's queue poll already completed (sonic3k.asm:62586-62616).
+        if (!createResultChildSsts()) {
+            return false;
+        }
+        resultsChildrenCreated = true;
+        // Create advances to Obj_LevelResultsWait and returns; the first wait
+        // decrement belongs to the next dispatch, so this pass stops here.
+        return false;
     }
 
     /**
@@ -665,6 +703,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         // changes underneath. The seamless transition handler in executeActTransition
         // resets the player state after the layout reload, so they fall naturally.
         boolean lbzAct2PostBossHandoff = zone == 0x06 && act == 1;
+        boolean preloadedNextActHandoff = isPreloadedNextActHandoff(act, services().currentAct());
         if (!controlsReleasedAheadOfHandoff) {
             releasePlayerControlsForExit();
         }
@@ -682,8 +721,11 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         // to the pre-boss area (ROM: loc_694D4 uses Obj_IncLevEndXGradual).
         boolean iczAct2EndBossHandoff = zone == 0x05 && act == 1;
         var cam = services().camera();
-        applyCameraFollowExitState(cam, lbzAct2PostBossHandoff);
+        if (!preloadedNextActHandoff) {
+            applyCameraFollowExitState(cam, lbzAct2PostBossHandoff);
+        }
         if (!hasSeamlessTransition && !retainedReloadState
+                && !preloadedNextActHandoff
                 && shouldRestoreCameraBoundsOnExit(zone, act)
                 && !Aiz2BossEndSequenceState.isCutsceneOverrideObjectsActive()) {
             var level = services().currentLevel();
@@ -750,16 +792,21 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                 if (titleCardProvider instanceof Sonic3kTitleCardManager s3kTitleCard) {
                     if (fbzCarriedTitleOwner) {
                         s3kTitleCard.useExternalInLevelGameplayOwner();
-                    } else if (aizAct1MinibossTitleHandoff) {
+                    }
+                    if (preloadedNextActHandoff) {
+                        s3kTitleCard.requestPreloadedActCameraReleaseOnComplete();
+                    }
+                    if (aizAct1MinibossTitleHandoff) {
                         s3kTitleCard.requestLevelGamestateResetAtInLevelDisplay();
                     } else if (retainedReloadState) {
                         // This Obj_LevelResults survived an earlier Load_Level and
                         // now mutates into Obj_TitleCard. The in-level title owner
-                        // resets Timer/Ring_count after the native create passes.
+                        // resets Timer/Ring_count on its first Wait dispatch after
+                        // the queued create passes (sonic3k.asm:62708-62720,
+                        // 62150-62235).
                         s3kTitleCard.requestLevelGamestateResetAfterCreateDispatches(
                                 MUTATED_TITLE_CARD_RESET_DISPATCHES);
                     }
-                }
                 if (fbzCarriedTitleOwner) {
                     carriedTitlePhase = CarriedTitlePhase.TITLE_CARD_WAIT;
                     carriedTitleWaitTimer = 0;
@@ -786,6 +833,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         }
         LOG.fine(() -> String.format("S3K results exit: zone=%X act=%d isAct2OrSpecial=%b",
                 zone, act, isAct2OrSpecial));
+        }
     }
 
     private void releasePlayerControlsForExit() {
@@ -802,8 +850,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                     sprite.setControlLocked(false);
                     ObjectControlState.none().applyTo(sprite);
                     sprite.setForcedAnimationId(-1);
-                    if (shouldPublishWaitAnimationOnControlRestore(
-                            waitDurationAdjustment, carriedAcrossSeamlessTransition)) {
+                    if (shouldPublishWaitAnimationOnControlRestore()) {
                         // Restore_PlayerControl writes anim/prev_anim to Wait.
                         // A retained results owner runs after player animation,
                         // so publish the new animation id while retaining the
@@ -820,11 +867,24 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         return waitDurationAdjustment > 0 || carriedAcrossSeamlessTransition;
     }
 
+    protected boolean shouldPublishWaitAnimationOnControlRestore() {
+        return shouldPublishWaitAnimationOnControlRestore(
+                waitDurationAdjustment, carriedAcrossSeamlessTransition);
+    }
+
     static boolean shouldRestoreLevelCameraBoundsOnExit(int zone, int act) {
         boolean actOneInLevelTitleHandoff = act == 0
                 && (zone == 0x00 || zone == 0x01 || zone == 0x02 || zone == 0x04);
         boolean lbzActTwoPostBossHandoff = zone == 0x06 && act == 1;
         return !actOneInLevelTitleHandoff && !lbzActTwoPostBossHandoff;
+    }
+
+    static boolean isPreloadedNextActHandoff(int resultsAct, int currentAct) {
+        // Some mid-act bosses run after the next act's level state has already
+        // been loaded while Apparent_act still belongs to the results owner.
+        // The in-level title card, not Obj_LevelResults, later releases the
+        // retained Scroll_lock and camera bounds.
+        return resultsAct == 0 && currentAct > resultsAct;
     }
 
     protected boolean shouldRestoreCameraBoundsOnExit(int zone, int act) {
@@ -931,47 +991,92 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             var rom = services().rom();
             var reader = services().romReader();
             Sonic3kObjectArt objectArt = new Sonic3kObjectArt(null, reader);
-
-            combinedPatterns = objectArt.loadResultsArt(character, act);
+            queuedResultsArt = objectArt.queueResultsArt(
+                    rom,
+                    character,
+                    act,
+                    services().romZoneId(),
+                    new S3kKosModuleQueue(services().hardwareTiming()));
+            List<HardwareWorkHandle> resultsHandles = queuedResultsArt.handles();
+            resultsGeneralArtOrdinal = resultsHandles.get(0).ordinal();
+            resultsNumberArtOrdinal = resultsHandles.get(1).ordinal();
+            resultsCharacterArtOrdinal = resultsHandles.get(2).ordinal();
             List<SpriteMappingFrame> rawMappings = objectArt.loadResultsMappings();
-
-            if (combinedPatterns != null && !rawMappings.isEmpty()) {
-                // Some mapping frames (TIME/RING/BONUS labels) reference HUD text tiles
-                // at VRAM $6CA+. These are from ArtNem_RingHUDText loaded to ArtTile_Ring ($6BC).
-                // First 14 tiles are ring art, tiles 14+ are HUD text (S,C,O,R,E,R,I,N,G,S,T,I,M,E).
-                loadHudTextIntoPatterns(rom, combinedPatterns);
-
-                // Adjust tile indices: ROM mappings use absolute VRAM tile indices (e.g. 0x520),
-                // but our patterns array is 0-based (patterns[0] = VRAM $520).
-                // Subtract VRAM_RESULTS_BASE so piece.tileIndex() maps to array indices.
-                mappingFrames = Sonic3kObjectArt.adjustTileIndices(rawMappings, -Sonic3kConstants.VRAM_RESULTS_BASE);
-
-                // ROM: The character name child object's art_tile is 0 (act 1) or $28 (act 2).
-                // This offset is added at render time by Draw_Sprite. Since we don't have
-                // per-element art_tile, bake the act 2 offset into the mapping tile indices.
-                // $28 = VRAM_RESULTS_CHAR_NAME_ACT2 - VRAM_RESULTS_CHAR_NAME_ACT1 = $5A0 - $578
-                if (act != 0) {
-                    int charNameTileOffset = Sonic3kConstants.VRAM_RESULTS_CHAR_NAME_ACT2
-                            - Sonic3kConstants.VRAM_RESULTS_CHAR_NAME_ACT1;
-                    adjustCharNameFrameTiles(charNameTileOffset);
-                }
-
-                // Create sprite sheet and renderer
-                spriteSheet = new ObjectSpriteSheet(combinedPatterns, mappingFrames, 0, 1);
-                renderer = new PatternSpriteRenderer(spriteSheet);
-                artLoaded = true;
-            } else {
-                artLoaded = false;
-                LOG.warning("Failed to load results screen art");
+            mappingFrames = Sonic3kObjectArt.adjustTileIndices(
+                    rawMappings, -Sonic3kConstants.VRAM_RESULTS_BASE);
+            if (act != 0) {
+                int charNameTileOffset = Sonic3kConstants.VRAM_RESULTS_CHAR_NAME_ACT2
+                        - Sonic3kConstants.VRAM_RESULTS_CHAR_NAME_ACT1;
+                adjustCharNameFrameTiles(charNameTileOffset);
             }
+            artLoaded = false;
 
             // Note: The level results screen uses the existing level palette.
             // Pal_Results in the ROM is for the special stage results screen, not here.
             // (S2 results screen also does not load a palette.)
-        } catch (Exception e) {
-            artLoaded = false;
-            LOG.warning("Failed to load results screen art: " + e.getMessage());
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException(
+                    "Unable to queue results-screen ROM art", e);
         }
+    }
+
+    private void finishQueuedArt() {
+        combinedPatterns = queuedResultsArt.claim();
+        queuedResultsArt = null;
+        resultsGeneralArtOrdinal = -1;
+        resultsNumberArtOrdinal = -1;
+        resultsCharacterArtOrdinal = -1;
+        Rom rom;
+        try {
+            rom = services().rom();
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException(
+                    "Unable to resolve results-screen ROM", e);
+        }
+        loadHudTextIntoPatterns(rom, combinedPatterns);
+        if (mappingFrames == null || mappingFrames.isEmpty()) {
+            throw new IllegalStateException(
+                    "Results-screen mapping table is empty");
+        }
+        spriteSheet = new ObjectSpriteSheet(combinedPatterns, mappingFrames, 0, 1);
+        renderer = new PatternSpriteRenderer(spriteSheet);
+        artLoaded = true;
+    }
+
+    private void rebindQueuedResultsArtAfterRestore() {
+        if (queuedResultsArt != null || resultsGeneralArtOrdinal < 0) {
+            return;
+        }
+        var timing = services().hardwareTiming();
+        HardwareWorkHandle general = timing.pendingHandle(
+                        HardwareWorkKind.KOS_MODULE_QUEUE,
+                        resultsGeneralArtOrdinal)
+                .orElseThrow(() -> missingRestoredResultsJob(resultsGeneralArtOrdinal));
+        HardwareWorkHandle numbers = timing.pendingHandle(
+                        HardwareWorkKind.KOS_MODULE_QUEUE,
+                        resultsNumberArtOrdinal)
+                .orElseThrow(() -> missingRestoredResultsJob(resultsNumberArtOrdinal));
+        HardwareWorkHandle characterName = timing.pendingHandle(
+                        HardwareWorkKind.KOS_MODULE_QUEUE,
+                        resultsCharacterArtOrdinal)
+                .orElseThrow(() -> missingRestoredResultsJob(resultsCharacterArtOrdinal));
+        int charDestination = act == 0
+                ? Sonic3kConstants.VRAM_RESULTS_CHAR_NAME_ACT1
+                : Sonic3kConstants.VRAM_RESULTS_CHAR_NAME_ACT2;
+        queuedResultsArt = Sonic3kObjectArt.QueuedResultsArt.restore(
+                new S3kKosModuleQueue(timing),
+                List.of(general, numbers, characterName),
+                new int[] {
+                        0,
+                        Sonic3kConstants.VRAM_RESULTS_NUMBERS
+                                - Sonic3kConstants.VRAM_RESULTS_BASE,
+                        charDestination - Sonic3kConstants.VRAM_RESULTS_BASE
+                });
+    }
+
+    private static IllegalStateException missingRestoredResultsJob(long ordinal) {
+        return new IllegalStateException(
+                "restored results owner cannot find KosM ordinal " + ordinal);
     }
 
     /**
@@ -1003,8 +1108,9 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                 }
             }
             LOG.fine("Loaded " + totalTiles + " ring/HUD text tiles from ROM");
-        } catch (Exception e) {
-            LOG.warning("Failed to load HUD text tiles: " + e.getMessage());
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException(
+                    "Unable to load results-screen HUD text from ROM", e);
         }
     }
 

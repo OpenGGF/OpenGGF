@@ -1,6 +1,7 @@
 package com.openggf.audio.smps;
 
 import com.openggf.audio.AudioManager;
+import com.openggf.audio.MusicRestoreSink;
 import com.openggf.audio.driver.SmpsDriver;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import com.openggf.audio.rewind.SmpsSequencerSnapshot;
@@ -21,7 +22,7 @@ import java.util.logging.Logger;
 public class SmpsSequencer implements AudioStream, CoordFlagContext {
     private static final Logger LOGGER = Logger.getLogger(SmpsSequencer.class.getName());
     private final AbstractSmpsData smpsData;
-    private final AudioManager audioManager;
+    private final MusicRestoreSink audioManager;
     private AbstractSmpsData fallbackVoiceData;
     private SmpsSourceDescriptor sourceDescriptor;
     private final byte[] data;
@@ -31,7 +32,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     private final int tempoModBase;
     private final List<Track> tracks = new ArrayList<>();
 
-    @com.openggf.game.ModApi
     public enum Region {
         NTSC(60.0), PAL(50.0);
 
@@ -126,6 +126,50 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
     public boolean hasFadeCompleteCallback() {
         return onFadeComplete != null;
+    }
+
+    /**
+     * Identity-preserving state used only to roll back a failed live command.
+     * Rewind snapshots deliberately remain callback-free.
+     */
+    public static final class LiveCommandMutationToken {
+        private final SmpsSequencer owner;
+        private final SmpsSequencerSnapshot snapshot;
+        private final AbstractSmpsData fallbackVoiceData;
+        private final SmpsSourceDescriptor sourceDescriptor;
+        private final Runnable onFadeComplete;
+
+        private LiveCommandMutationToken(
+                SmpsSequencer owner,
+                SmpsSequencerSnapshot snapshot,
+                AbstractSmpsData fallbackVoiceData,
+                SmpsSourceDescriptor sourceDescriptor,
+                Runnable onFadeComplete) {
+            this.owner = owner;
+            this.snapshot = snapshot;
+            this.fallbackVoiceData = fallbackVoiceData;
+            this.sourceDescriptor = sourceDescriptor;
+            this.onFadeComplete = onFadeComplete;
+        }
+    }
+
+    public LiveCommandMutationToken captureLiveCommandMutation() {
+        return new LiveCommandMutationToken(
+                this, captureSnapshot(), fallbackVoiceData,
+                sourceDescriptor, onFadeComplete);
+    }
+
+    public void rollbackLiveCommandMutation(
+            LiveCommandMutationToken token) {
+        Objects.requireNonNull(token, "token");
+        if (token.owner != this) {
+            throw new IllegalArgumentException(
+                    "live command token belongs to another sequencer");
+        }
+        restoreSnapshot(token.snapshot);
+        fallbackVoiceData = token.fallbackVoiceData;
+        sourceDescriptor = token.sourceDescriptor;
+        onFadeComplete = token.onFadeComplete;
     }
 
     private static class FadeState {
@@ -313,7 +357,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         this(smpsData, dacData, new VirtualSynthesizer(), GameServices.audio(), config);
     }
 
-    public SmpsSequencer(AbstractSmpsData smpsData, DacData dacData, AudioManager audioManager,
+    public SmpsSequencer(AbstractSmpsData smpsData, DacData dacData, MusicRestoreSink audioManager,
             SmpsSequencerConfig config) {
         this(smpsData, dacData, new VirtualSynthesizer(), audioManager, config);
     }
@@ -324,7 +368,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     }
 
     public SmpsSequencer(AbstractSmpsData smpsData, DacData dacData, Synthesizer synth,
-            AudioManager audioManager, SmpsSequencerConfig config) {
+            MusicRestoreSink audioManager, SmpsSequencerConfig config) {
         this.smpsData = smpsData;
         this.sourceDescriptor = SmpsSourceDescriptor.from(smpsData);
         this.audioManager = Objects.requireNonNull(audioManager, "audioManager");
@@ -461,7 +505,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         return dacData;
     }
 
-    public AudioManager getAudioManager() {
+    public MusicRestoreSink getAudioManager() {
         return audioManager;
     }
 

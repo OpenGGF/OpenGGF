@@ -1131,12 +1131,12 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
 
     private void resetWallCeilingLandingState(AbstractPlayableSprite sprite, int angle) {
         if (sprite.isObjectControlled()) {
+            publishAngledLandingWalk(sprite);
             sprite.setAir(false);
             return;
         }
 
         PlayerMovementRules rules = playerMovementRulesOrNull(sprite);
-        PlayerAnimationRules animationRules = playerAnimationRulesOrNull(sprite);
         boolean preservePinballRoll = rules != null && rules.pinballLandingPreservesRoll();
         boolean preservePinballMode = rules != null && rules.pinballLandingPreservesPinballMode();
         if (sprite.getRolling() && (!sprite.getPinballMode() || !preservePinballRoll)) {
@@ -1178,18 +1178,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
         if (!(sprite.getRolling() && sprite.getPinballMode() && preservePinballMode)) {
             sprite.setPinballMode(false);
         }
-        if (!sprite.getPinballMode()
-                && animationRules != null
-                && animationRules.angledLandingPublishesWalk()) {
-            // Sonic_ResetOnFloor publishes Walk before clearing the airborne
-            // state on every accepted S2 terrain landing, including the angled
-            // ceiling/wall path (s2.asm:38049-38052,38123-38127). S1 and S3K
-            // do not own that write here and can retain Spring.
-            int walkAnimationId = sprite.resolveAnimationId(CanonicalAnimation.WALK);
-            if (walkAnimationId >= 0) {
-                sprite.setAnimationId(walkAnimationId);
-            }
-        }
+        publishAngledLandingWalk(sprite);
         sprite.setAir(false);
         sprite.setPushing(false);
         sprite.setRollingJump(false);
@@ -1199,6 +1188,30 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
         sprite.setFlipTurned(false);
         sprite.setFlipsRemaining(0);
         sprite.setLookDelayCounter((short) 0);
+    }
+
+    private void publishAngledLandingWalk(AbstractPlayableSprite sprite) {
+        PlayerAnimationRules animationRules = playerAnimationRulesOrNull(sprite);
+        if (sprite.getPinballMode()
+                || animationRules == null
+                || (!animationRules.angledLandingPublishesWalk()
+                    && (sprite.getSpindash()
+                        || !animationRules.angledLandingPublishesWalkUnlessSpindashing()))) {
+            return;
+        }
+        // S2 Sonic_ResetOnFloor publishes Walk on accepted angled terrain
+        // landings (s2.asm:38049-38052,38123-38127). S3K's
+        // Player_TouchFloor_Check_Spindash performs the same write before
+        // Player_TouchFloor unless spin_dash_flag is live. When rolling,
+        // Player_TouchFloor publishes Walk again while clearing Status_Roll
+        // (sonic3k.asm:24325-24350,29123-29148). Publish before the
+        // object-control cleanup gate: collision acceptance owns this native
+        // animation byte even when an object's release is resolved later in
+        // the engine frame.
+        int walkAnimationId = sprite.resolveAnimationId(CanonicalAnimation.WALK);
+        if (walkAnimationId >= 0) {
+            sprite.setAnimationId(walkAnimationId);
+        }
     }
 
     private boolean doCeilingCollisionInternal(AbstractPlayableSprite sprite, SensorResult[] results) {

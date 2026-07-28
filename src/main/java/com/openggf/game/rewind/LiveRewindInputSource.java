@@ -44,6 +44,8 @@ public final class LiveRewindInputSource implements InputSource {
                 input.isKeyPressed(config.getInt(SonicConfiguration.DEBUG_MODE_KEY)),
                 input.isShiftDown(),
                 input.isControlDown(),
+                input.isAltDown(),
+                input.isSuperDown(),
                 "live:" + frameIndex));
     }
 
@@ -107,6 +109,6 @@ public final class LiveRewindInputSource implements InputSource {
 
     private static Bk2FrameInput neutralFrameInput(int frame) {
         return new Bk2FrameInput(frame, 0, 0, false, 0, 0, false,
-                false, false, false, "live:" + frame);
+                false, false, false, false, false, "live:" + frame);
     }
 }

@@ -28,7 +28,7 @@ import java.util.List;
 /**
  * Object 0xB6 - ICZ ice cube.
  * <p>
- * ROM reference: {@code Obj_ICZIceCube} at sonic3k.asm:189620. The cube is a
+ * ROM reference: {@code Obj_ICZIceCube} at sonic3k.asm:189703. The cube is a
  * {@code SolidObjectFull} block that shatters when a player standing on it has
  * animation {@code 2} (roll), launches that player upward, and spawns 12
  * {@code CreateChild1_Normal} ice debris pieces.
@@ -92,12 +92,20 @@ public class IczIceCubeObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(SOLID_HALF_WIDTH, SOLID_HALF_HEIGHT, SOLID_HALF_HEIGHT);
+        return SolidObjectParams.of(SOLID_HALF_WIDTH, SOLID_HALF_HEIGHT, SOLID_HALF_HEIGHT);
     }
 
     @Override
     public int getTopLandingHalfWidth(PlayableEntity player, int collisionHalfWidth) {
         return TOUCH_HALF_WIDTH;
+    }
+
+    @Override
+    public boolean usesInclusiveRightEdge() {
+        // loc_8B384 calls S3K SolidObjectFull with d1=$23. Its unsigned
+        // broad-X rejection is `bhi`, so a player exactly +$23 from the cube
+        // still reaches the zero-distance side/push path.
+        return true;
     }
 
     @Override
@@ -110,7 +118,14 @@ public class IczIceCubeObjectInstance extends AbstractObjectInstance
         if (shattered || isDestroyed() || player == null || contact == null || !contact.standing()) {
             return;
         }
-        if (player.getAnimationId() != Sonic3kAnimationIds.ROLL.id()) {
+        // loc_8B384 snapshots Player_1/Player_2 anim into $3A/$3B before
+        // SolidObjectFull can clear rolling on a fresh landing; sub_8B3AA then
+        // tests those saved bytes (sonic3k.asm:189711-189741).
+        ObjectServices services = tryServices();
+        int preContactAnimationId = services != null && services.objectManager() != null
+                ? services.objectManager().getPreContactAnimationId()
+                : player.getAnimationId();
+        if (preContactAnimationId != Sonic3kAnimationIds.ROLL.id()) {
             return;
         }
 
@@ -134,6 +149,14 @@ public class IczIceCubeObjectInstance extends AbstractObjectInstance
         player.setYSpeed((short) SHATTER_Y_SPEED);
         player.setAir(true);
         player.setOnObject(false);
+        ObjectServices services = tryServices();
+        if (services != null && services.objectManager() != null) {
+            // The cube deletes its SST immediately after clearing Status_OnObj.
+            // Drop the engine's parallel ride reference as part of that same
+            // native release so the freed slot cannot re-seat the player after
+            // a snow particle reuses it.
+            services.objectManager().clearRidingObject(player);
+        }
         if (player instanceof AbstractPlayableSprite playable) {
             playable.setAnimationId(Sonic3kAnimationIds.ROLL);
         } else {

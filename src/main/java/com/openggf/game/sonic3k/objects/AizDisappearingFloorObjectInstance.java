@@ -219,7 +219,7 @@ public class AizDisappearingFloorObjectInstance extends AbstractObjectInstance
 
         @Override
         public SolidObjectParams getSolidParams() {
-            return new SolidObjectParams(HALF_WIDTH, HALF_HEIGHT_AIR, HALF_HEIGHT_GROUND);
+            return SolidObjectParams.of(HALF_WIDTH, HALF_HEIGHT_AIR, HALF_HEIGHT_GROUND);
         }
 
         @Override

@@ -14,7 +14,10 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.LevelManager;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.tests.TestablePlayableSprite;
+import com.openggf.tests.FullReset;
+import com.openggf.tests.SingletonResetExtension;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +31,8 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+@ExtendWith(SingletonResetExtension.class)
+@FullReset
 class TestMhzPollenObjects {
     private static final ObjectSpawn SPAWNER_SPAWN = new ObjectSpawn(0, 0, 0, 0, 0, false, 0);
 

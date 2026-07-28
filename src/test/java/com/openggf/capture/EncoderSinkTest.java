@@ -164,4 +164,36 @@ class EncoderSinkTest {
         assertTrue(failure.getMessage().contains("encoder thread did not stop"));
         assertTrue(enc.aborted, "stalled encoder must be aborted so ffmpeg pipes/processes are released");
     }
+
+    @Test
+    @Timeout(5)
+    void concurrentAbortWakesStopAndAbortIsAuthoritative() throws Exception {
+        BlockingEncoder enc = new BlockingEncoder();
+        EncoderSink sink = new EncoderSink(enc, BackpressurePolicy.BLOCK, 2, 2_000);
+        sink.open(Path.of("out.mkv"), 1, 1, 60, 48000);
+        sink.submit(frame(0));
+        assertTrue(enc.enteredEncode.await(1, TimeUnit.SECONDS));
+        var stopResult = new java.util.concurrent.atomic.AtomicReference<Throwable>();
+        Thread stopper = new Thread(() -> {
+            try { sink.stop(); } catch (Throwable t) { stopResult.set(t); }
+        });
+        stopper.start();
+        sink.abort();
+        stopper.join(2_000);
+        assertFalse(stopper.isAlive());
+        assertInstanceOf(CaptureException.class, stopResult.get());
+        assertTrue(stopResult.get().getMessage().contains("aborted"));
+    }
+
+    @Test
+    void workerFailureMaySelfAbortWithoutJoiningItself() throws Exception {
+        FailingEncoder enc = new FailingEncoder();
+        EncoderSink sink = new EncoderSink(enc, BackpressurePolicy.BLOCK, 1);
+        sink.open(Path.of("out.mkv"), 1, 1, 60, 48000);
+        sink.submit(frame(0));
+        long end = System.nanoTime() + TimeUnit.SECONDS.toNanos(1);
+        while (!enc.aborted && System.nanoTime() < end) Thread.onSpinWait();
+        assertTrue(enc.aborted);
+        assertThrows(CaptureException.class, sink::stop);
+    }
 }

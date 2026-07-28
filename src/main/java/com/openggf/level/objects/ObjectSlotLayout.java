@@ -83,6 +83,21 @@ public record ObjectSlotLayout(
         return slotIndex >= firstDynamicSlot && slotIndex < lastDynamicSlotExclusive();
     }
 
+    /**
+     * Whether a slot has a position in the process-slot execution order. Wider
+     * than {@link #isDynamicSlot}: explicit fixed SST occupants sit outside the
+     * allocatable dynamic window but still execute in global slot order, matching
+     * S3K Process_Sprites walking the whole Object_RAM table
+     * (docs/skdisasm/sonic3k.constants.asm:303-323).
+     *
+     * <p>Deliberately package-private: {@code ObjectSlotLayout} is pinned into the
+     * 0.7 Mod API surface, and execution-order classification is engine-internal
+     * bookkeeping, not part of the creator contract.
+     */
+    boolean isExecutableSlot(int slotIndex) {
+        return slotIndex >= 0 && slotIndex < processSlotCount;
+    }
+
     public int toExecIndex(int slotIndex) {
         return slotIndex - firstDynamicSlot;
     }

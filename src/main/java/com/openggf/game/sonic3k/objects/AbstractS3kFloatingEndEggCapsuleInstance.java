@@ -135,7 +135,7 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
 
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(SOLID_HALF_WIDTH, SOLID_HALF_HEIGHT, SOLID_HALF_HEIGHT);
+        return SolidObjectParams.of(SOLID_HALF_WIDTH, SOLID_HALF_HEIGHT, SOLID_HALF_HEIGHT);
     }
 
     @Override
@@ -164,7 +164,7 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
     @Override
     public SolidObjectParams getPieceParams(int pieceIndex) {
         if (pieceIndex == PIECE_BUTTON) {
-            return new SolidObjectParams(BUTTON_SOLID_HALF_WIDTH,
+            return SolidObjectParams.of(BUTTON_SOLID_HALF_WIDTH,
                     BUTTON_SOLID_HALF_HEIGHT_AIR, BUTTON_SOLID_HALF_HEIGHT_GROUND);
         }
         return getSolidParams();

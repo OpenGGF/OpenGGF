@@ -68,6 +68,9 @@ public class PerformanceProfiler implements SectionProfiler {
     private final ProfileSnapshot reusableSnapshot = new ProfileSnapshot();
     private final MemoryStats memoryStats = new MemoryStats();
 
+    /** Optional raw-sample consumer (offline benchmarking). Null in normal runs. */
+    private FrameSampleSink sampleSink;
+
     private PerformanceProfiler() {
     }
 
@@ -119,6 +122,15 @@ public class PerformanceProfiler implements SectionProfiler {
 
         long frameEndNanos = System.nanoTime();
         long frameDurationNanos = frameEndNanos - frameStartNanos;
+
+        // Hand the raw samples to any offline consumer before they are folded
+        // into the rolling means below — the means are lossy by design.
+        if (sampleSink != null) {
+            for (Map.Entry<String, Long> entry : currentFrameSections.entrySet()) {
+                sampleSink.frameSample(entry.getKey(), entry.getValue());
+            }
+            sampleSink.frameComplete(frameDurationNanos);
+        }
 
         // Update memory stats tracking
         memoryStats.update();
@@ -257,6 +269,34 @@ public class PerformanceProfiler implements SectionProfiler {
     public MemoryStats memoryStats() {
         assertOwnerThread();
         return memoryStats;
+    }
+
+    /**
+     * Installs (or clears, with {@code null}) the raw per-frame sample consumer.
+     * At most one sink is active; offline harnesses own it for the length of a
+     * measured run and clear it afterwards.
+     */
+    public void setSampleSink(FrameSampleSink sink) {
+        assertOwnerThread();
+        this.sampleSink = sink;
+    }
+
+    /**
+     * Enables or disables per-section allocation tracking independently of
+     * section timing.
+     *
+     * <p>Allocation tracking reads {@code ThreadMXBean.getThreadAllocatedBytes}
+     * once inside {@code beginSection} — after the section's start timestamp is
+     * taken — so its cost lands inside every section's measured time. That is
+     * acceptable for the live overlay, where both numbers are wanted together,
+     * but it is a systematic and <em>JVM-dependent</em> bias: the call is cheap
+     * on HotSpot and comparatively expensive elsewhere, which would show up as a
+     * fake timing difference in a cross-JVM comparison. Offline timing runs turn
+     * it off; frame-level heap/GC/allocation-rate tracking is unaffected.
+     */
+    public void setAllocationTrackingEnabled(boolean allocationTrackingEnabled) {
+        assertOwnerThread();
+        memoryStats.setEnabled(allocationTrackingEnabled);
     }
 
     /**

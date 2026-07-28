@@ -17,6 +17,7 @@ public record SidekickCpuRules(
         int sidekickFlightYStep,
         int sidekickFlightLeadXOffset,
         int sidekickFlightLeadSuppressGSpeed,
+        boolean sidekickFlightClampsTargetYToWater,
         boolean sidekickRespawnEntersCatchUpFlight,
         boolean sidekickCpuUsesLevelFrameCounter,
         boolean sidekickDeathUsesDeferredDespawn,

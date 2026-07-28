@@ -5,6 +5,7 @@ import com.openggf.game.GameModule;
 import com.openggf.game.GameDataSource;
 import com.openggf.game.StockGameDataSources;
 import com.openggf.game.save.SaveSessionContext;
+import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 
 import java.util.Objects;
 
@@ -13,13 +14,22 @@ public final class SessionManager {
     private static volatile WorldSession currentWorldSession;
     private static volatile GameplayModeContext currentGameplayMode;
     private static volatile EditorModeContext currentEditorMode;
+    private static HardwareReadinessAdmissionPolicy nextGameplayAdmissionPolicy =
+            HardwareReadinessAdmissionPolicy.LIVE;
     private static final EditorSessionFactory EDITOR_SESSION_FACTORY = new EditorSessionFactory();
 
     private SessionManager() {
     }
 
     public static synchronized GameplayModeContext openGameplaySession(GameModule module) {
-        return openGameplaySession(module, null);
+        return openGameplaySession(
+                module, null, consumeNextGameplayAdmissionPolicy());
+    }
+
+    public static synchronized GameplayModeContext openGameplaySession(
+            GameModule module,
+            HardwareReadinessAdmissionPolicy admissionPolicy) {
+        return openGameplaySession(module, null, admissionPolicy);
     }
 
     public static synchronized GameplayModeContext openGameplaySession(GameModule module,
@@ -27,35 +37,85 @@ public final class SessionManager {
         return openGameplaySession(module, module, saveSessionContext);
     }
 
+    public static synchronized GameplayModeContext openGameplaySession(
+            GameModule module,
+            SaveSessionContext saveSessionContext,
+            HardwareReadinessAdmissionPolicy admissionPolicy) {
+        return openGameplaySession(module, module, saveSessionContext, admissionPolicy);
+    }
+
     public static synchronized GameplayModeContext openGameplaySession(GameModule rootModule,
             GameModule resolvedModule, SaveSessionContext saveSessionContext) {
+        return openGameplaySession(rootModule, resolvedModule, saveSessionContext,
+                consumeNextGameplayAdmissionPolicy());
+    }
+
+    public static synchronized GameplayModeContext openGameplaySession(GameModule rootModule,
+            GameModule resolvedModule, SaveSessionContext saveSessionContext,
+            HardwareReadinessAdmissionPolicy admissionPolicy) {
         Objects.requireNonNull(rootModule, "rootModule");
         Objects.requireNonNull(resolvedModule, "resolvedModule");
+        Objects.requireNonNull(admissionPolicy, "admissionPolicy");
         try {
             if (EngineServices.current().roms().isRomAvailable()) {
                 return openGameplaySession(rootModule, resolvedModule,
                         StockGameDataSources.pinned(
                                 EngineServices.current().roms().getRom(), rootModule),
-                        saveSessionContext);
+                        saveSessionContext, admissionPolicy);
             }
         } catch (java.io.IOException sourceFailure) {
             throw new IllegalStateException("Failed to pin active ROM data source", sourceFailure);
         }
+        nextGameplayAdmissionPolicy = HardwareReadinessAdmissionPolicy.LIVE;
         destroyCurrentMode();
         currentWorldSession = new WorldSession(rootModule, resolvedModule, saveSessionContext);
-        currentGameplayMode = new GameplayModeContext(currentWorldSession);
+        currentGameplayMode = new GameplayModeContext(currentWorldSession, admissionPolicy);
         return currentGameplayMode;
     }
 
     public static synchronized GameplayModeContext openGameplaySession(GameModule rootModule,
             GameModule resolvedModule, GameDataSource dataSource,
             SaveSessionContext saveSessionContext) {
+        return openGameplaySession(rootModule, resolvedModule, dataSource, saveSessionContext,
+                consumeNextGameplayAdmissionPolicy());
+    }
+
+    public static synchronized GameplayModeContext openGameplaySession(GameModule rootModule,
+            GameModule resolvedModule, GameDataSource dataSource,
+            SaveSessionContext saveSessionContext,
+            HardwareReadinessAdmissionPolicy admissionPolicy) {
         Objects.requireNonNull(rootModule, "rootModule");
         Objects.requireNonNull(resolvedModule, "resolvedModule");
         Objects.requireNonNull(dataSource, "dataSource");
+        Objects.requireNonNull(admissionPolicy, "admissionPolicy");
+        nextGameplayAdmissionPolicy = HardwareReadinessAdmissionPolicy.LIVE;
         destroyCurrentMode();
-        currentWorldSession = new WorldSession(rootModule, resolvedModule, dataSource, saveSessionContext);
-        currentGameplayMode = new GameplayModeContext(currentWorldSession);
+        currentWorldSession =
+                new WorldSession(rootModule, resolvedModule, dataSource, saveSessionContext);
+        currentGameplayMode = new GameplayModeContext(currentWorldSession, admissionPolicy);
+        return currentGameplayMode;
+    }
+
+    public static synchronized void armNextGameplayAdmissionPolicy(
+            HardwareReadinessAdmissionPolicy admissionPolicy) {
+        nextGameplayAdmissionPolicy =
+                Objects.requireNonNull(admissionPolicy, "admissionPolicy");
+    }
+
+    public static synchronized void clearNextGameplayAdmissionPolicy() {
+        nextGameplayAdmissionPolicy = HardwareReadinessAdmissionPolicy.LIVE;
+    }
+
+    public static synchronized GameplayModeContext reopenGameplaySession(
+            HardwareReadinessAdmissionPolicy admissionPolicy) {
+        Objects.requireNonNull(admissionPolicy, "admissionPolicy");
+        if (currentWorldSession == null) {
+            throw new IllegalStateException(
+                    "Cannot reopen gameplay without an active world session");
+        }
+        destroyCurrentMode();
+        currentGameplayMode =
+                new GameplayModeContext(currentWorldSession, admissionPolicy);
         return currentGameplayMode;
     }
 
@@ -104,11 +164,13 @@ public final class SessionManager {
     public static synchronized void clear() {
         destroyCurrentMode();
         currentWorldSession = null;
+        clearNextGameplayAdmissionPolicy();
     }
 
     public static synchronized void closeGameplaySession() {
         destroyCurrentMode();
         currentWorldSession = null;
+        clearNextGameplayAdmissionPolicy();
     }
 
     public static synchronized GameModule requireCurrentGameModule() {
@@ -145,6 +207,14 @@ public final class SessionManager {
 
     public static EditorModeContext getCurrentEditorMode() {
         return currentEditorMode;
+    }
+
+    private static HardwareReadinessAdmissionPolicy
+    consumeNextGameplayAdmissionPolicy() {
+        HardwareReadinessAdmissionPolicy policy =
+                nextGameplayAdmissionPolicy;
+        nextGameplayAdmissionPolicy = HardwareReadinessAdmissionPolicy.LIVE;
+        return policy;
     }
 
 }

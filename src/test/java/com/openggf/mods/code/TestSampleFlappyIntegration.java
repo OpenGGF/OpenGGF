@@ -221,7 +221,10 @@ class TestSampleFlappyIntegration {
                     .sorted(Comparator.comparingInt(TestSampleFlappyIntegration::centreX))
                     .toList();
             assertEquals(6, initialPipes.size());
-            assertEquals(game.camera().getX() + game.camera().getWidth() + 64,
+            // The controller spawns each pipe into a free SST slot above its own, and
+            // ROM ExecuteObjects reaches a higher slot in the same pass, so every pipe
+            // takes one PIPE_SPEED step (0x200 = 2px) in its spawn frame.
+            assertEquals(game.camera().getX() + game.camera().getWidth() + 64 - 2,
                     centreX(initialPipes.getFirst()));
             for (int index = 1; index < initialPipes.size(); index++) {
                 assertEquals(224,
@@ -349,7 +352,8 @@ class TestSampleFlappyIntegration {
                     "Flappy score must bypass collectible-ring extra lives");
             assertEquals(stockScoreBefore, GameServices.gameState().getScore(),
                     "the stock score counter is not part of Flappy scoring");
-            assertEquals(audioBefore.backend().currentMusic(), audioAfter.backend().currentMusic(),
+            assertEquals(audioBefore.presentation().activeMusic(),
+                    audioAfter.presentation().activeMusic(),
                     "crossing 100 Flappy points must not replace music with the 1-up cue");
             assertEquals(audioBefore.commandEntryCount() + 1, audioAfter.commandEntryCount(),
                     "only the gate's ring SFX command should be emitted");

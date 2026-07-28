@@ -1,0 +1,374 @@
+# Recorded test wall clock, seconds TAB name, slowest first.
+# Scheduling hint only; regenerate with --update-timings.
+370.516	S3KCompleteRunSegmentsDifferential native capture matches all seven canonical completerun segments
+221.164	S2TraceDifferential native run mode capture matches canonical complete emeralds run
+90.442	S1CompleteRunDifferential native capture matches all 19 canonical complete-run segments
+75.574	S3KRunModeDifferential native run-mode capture reproduces the s3-knux-multibonus-ss run byte for byte
+70.961	S3KRunModeDifferential native run-mode capture matches the four canonical identity-(C) segments
+37.618	S3KTraceDifferential native capture matches canonical CNZ level-gated trace
+28.654	S3KTraceDifferential native capture matches canonical MGZ level-gated trace
+19.321	S3KTraceDifferential native capture matches canonical AIZ end-to-end trace
+7.460	S2TraceDifferential native run mode capture matches canonical halfpipe round trip
+5.106	S2TraceDifferential native segment 1 capture matches canonical ARZ2 trace
+4.952	S3KCompleteRunDifferential native capture matches the canonical bonus_gumball segment
+3.236	S1RunModeDifferential native run mode capture matches canonical maze round trip
+3.118	S1RunModeDifferential native run mode ss segment matches standalone special-stage fixture
+2.967	S1TraceDifferential native capture matches canonical MZ1 trace
+2.699	S2TraceDifferential native segment 0 capture matches canonical ARZ trace
+2.421	S2TraceDifferential native capture matches canonical EHZ1 trace
+1.656	S1TraceDifferential native capture matches canonical GHZ1 trace
+1.227	EndToEnd
+0.624	S3KHookAbsence complete-run fixture lbz_completerun aux stream has no hook-driven events
+0.540	TraceCli S3K complete-run does not refuse the variables that cannot change its output
+0.505	TraceCli S3K trace refuses every unmodeled output affecting environment variable
+0.496	S3KHookAbsence complete-run fixture cnz_completerun aux stream has no hook-driven events
+0.493	S3KHookAbsence complete-run fixture mgz_completerun aux stream has no hook-driven events
+0.490	S3KHookAbsence complete-run fixture hcz_completerun aux stream has no hook-driven events
+0.489	S3KHookAbsence CNZ fixture aux stream has no hook-driven events
+0.436	S3KHookAbsence complete-run fixture mhz_completerun aux stream has no hook-driven events
+0.425	S3KHookAbsence MGZ fixture aux stream has no hook-driven events
+0.424	TraceCli S3K complete-run refuses every unmodeled output affecting environment variable
+0.410	S3KHookAbsence complete-run fixture icz_completerun aux stream has no hook-driven events
+0.409	S3KHookAbsence complete-run fixture aiz_completerun aux stream has no hook-driven events
+0.296	S3KHookAbsence AIZ fixture aux stream has no hook-driven events
+0.292	TraceCli S3K trace does not refuse the deferred families' hook-gated window overrides
+0.142	S3KHookAbsence complete-run fixture run hcz_2 aux stream has no hook-driven events
+0.124	S3KHookAbsence complete-run fixture run hcz_6 aux stream has no hook-driven events
+0.106	GpgxHost binds 64KiB 68K RAM before compatibility Main RAM
+0.102	EndToEnd child runner kills a timed-out process
+0.097	Bk2Reader reads the canonical S3K fixture movies
+0.079	S3KHookAbsence complete-run fixture run mgz_3 aux stream has no hook-driven events
+0.078	GpgxHost advances ten frames
+0.072	S3KHookAbsence complete-run fixture run mgz aux stream has no hook-driven events
+0.047	Bk2Reader reads the tracked GHZ1 prefix
+0.043	TraceCli S3K complete-run mode publishes segment directories and a manifest with labeled stdout
+0.043	TraceCli S3K complete_run profile publishes segments with no manifest and no run_id
+0.043	TraceCli S3K trace publishes with labeled stdout
+0.042	TraceCli rejects the gameplay-segment argument with the S3K ROM
+0.038	EndToEnd child runner drains both output pipes concurrently
+0.027	ROM identity reports mutated Sonic 3 & Knuckles SHA-1
+0.025	S3KHookAbsence complete-run fixture bonus_pachinko aux stream has no hook-driven events
+0.020	S3KHookAbsence complete-run fixture bonus_gumball aux stream has no hook-driven events
+0.014	ROM identity accepts Sonic 3 & Knuckles locked-on
+0.013	ROM identity detects Sonic 3 & Knuckles by SHA-1
+0.013	TraceCli S2 run mode publishes segments and manifest
+0.012	TraceCli S2 trace run publishes with labeled stdout
+0.011	TraceCli S2 run mode failure leaves no partial outputs
+0.011	TraceCli trace run compresses payloads by default and honors --no-compress
+0.010	TraceCli rejects S2-only arguments with the Sonic 1 ROM
+0.009	TraceCli trace run publishes three files with labeled stdout
+0.008	TraceCli S1 complete run publishes level segments with LF
+0.008	Cli run script invokes only harness Mono with DISPLAY absent
+0.007	TraceCli trace run failure leaves no partial outputs
+0.007	TraceCli S1 run mode publishes segments and manifest with CRLF
+0.007	ROM identity reports mutated Sonic 2 SHA-1
+0.007	TraceCli S1 complete run emits the manifest for a detour without a run id
+0.007	TraceCli S1 run mode failure leaves no partial outputs
+0.006	S3K complete-run reproduces the set (A) fixture table
+0.006	TraceCli S1 complete run refuses an existing run manifest
+0.006	TraceCli rejects S2 arguments with the Sonic 1 ROM
+0.006	Bk2Reader validates the canonical GHZ1 archive
+0.005	S3KHookAbsence complete-run fixture bonus_slots aux stream has no hook-driven events
+0.005	ROM identity detects supported games by SHA-1
+0.005	Cli rejects a dangling final-output symlink before host construction
+0.005	S3KStagedSegmentSink publishes nothing until the staged set is published, then every file as LF
+0.005	EndToEnd shell validates an explicit ROM before missing BizHawk skip
+0.004	S3K aux: zone_act_state baseline and gameplay_start match CNZ literals and dedup
+0.004	ROM identity accepts Sonic 1 REV01
+0.003	ROM identity accepts Sonic 2 REV01
+0.003	Bk2Reader maps every supported P1 input bit
+0.003	ROM identity reports mutated SHA-1
+0.003	S2RunCaptureRunner records a level-ss-level round trip
+0.003	S3K complete-run reproduces the set (B) transition table
+0.003	S3KCompleteRunCaptureRunner publishes a level-bonus-level-ss-level round trip
+0.003	S3K complete-run reproduces the set (B) fixture table
+0.002	S1RunCaptureRunner stage-free finalizes and re-arms across a mode exit
+0.002	SmokeCaptureRunner warms up then records post-advance UTF-8
+0.002	Bk2Reader rejects wrong missing and extra sync fields
+0.002	S2AuxEventEngine reproduces ehz1_fullrun frame 0 aux sequence
+0.002	S1RunCaptureRunner records a level-ss-level round trip
+0.002	S1TraceCsvWriter reproduces ghz1_fullrun fixture row 0
+0.002	Bk2Reader rejects wrong sync JSON scalar token types
+0.002	BizHawk installation accepts pinned distribution
+0.002	S2TraceCaptureRunner captures byte-exact gameplay_unlock output
+0.001	S1TraceCaptureRunner detects offset and captures byte-exact files
+0.001	S1AuxEventEngine reproduces ghz1_fullrun frame 0 aux lines
+0.001	S3K complete-run arm requires raw 0x0C, not the level family
+0.001	Cli restores native descriptors after partial failures
+0.001	S2AuxEventEngine reproduces ehz1_fullrun arm block
+0.001	S3K runner captures byte-exact gameplay_unlock output
+0.001	BizHawk installation reports missing GPGX core
+0.001	Bk2Reader rejects duplicate sync JSON properties
+0.001	S1TraceMetadataWriter renders act plus one and hex widths
+0.001	Bk2Reader rejects duplicate and missing required entries
+0.001	TracePayloadCompressor honors the size threshold in both directions
+0.001	TracePayloadCompressor verification failure keeps the original and leaves no gz
+0.001	S3K runner streams the non-discarding profiles and buffers only the discarding one, byte-identically
+0.001	S3KCompleteRunCaptureRunner indexes the input column by BK2 row across a mid-segment excursion
+0.001	TraceCli mode defaults to smoke and accepts explicit values
+0.001	S3KCompleteRunCaptureRunner aligns each row's input column with BK2 row bk2_frame_offset + N
+0.001	TraceCli compresses by default and opts out with --no-compress
+0.001	Bk2Reader rejects malformed input group lengths
+0.001	S1RunManifest writer reproduces the canonical fixture bytes
+0.001	S3KStagedSegmentSink discards a capture that fails mid-segment
+0.001	Publisher set stages and publishes three UTF-8 LF finals
+0.001	S3KCompleteRunCaptureRunner omits the manifest for a detour-free pass without a run id
+0.001	S2TraceCaptureRunner discards EHZ bootstrap leaving level mode on final movie frame
+0.001	S3K runner level-gated discard ships only the last armed segment
+0.001	S2RunCaptureRunner survives a death restart reload and re-arms
+0.001	S2RunCaptureRunner numbers repeat detours and level arms
+0.001	Bk2Reader rejects duplicate and missing Core or Platform
+0.001	Publisher creates missing nested directory
+0.001	S1RunCaptureRunner suffixes repeat detours and level re-entries
+0.001	EndToEnd dependency checks validate present inputs before skipping
+0.001	S1RunCaptureRunner stage-free carries trackers across segment boundaries
+0.001	Bk2Reader rejects malformed input row delimiters
+0.001	S1RunCaptureRunner stage-free emits complete-run aux events byte-exactly
+0.001	Bk2Reader only hashes the canonical archive identity
+0.001	S2TraceCaptureRunner sees sidekick appearing on final unrecorded frame
+0.001	S2RunCaptureRunner classifies a changed zone-act reload as level advance
+0.001	S1RunCaptureRunner stage-free keeps one segment through an in-mode death
+0.001	S3KCompleteRunPublication metadata.json reproduces aiz_completerun byte for byte
+0.001	S1TraceCaptureRunner applies buttons per row in smoke-runner order
+0.001	S1SmokeRecorder decodes big-endian RAM words as uppercase hex
+0.001	S2TraceCsvWriter reproduces ehz1_fullrun fixture row 0
+0.001	S3KCompleteRunCaptureRunner emits an empty-transitions manifest for a detour-free pass with a run id
+0.001	TracePayloadCompressor verification failure publishes nothing at all
+0.001	Bk2Reader rejects six-button and controller changes
+0.001	S1TraceCaptureRunner finishes on game-mode exit without partial row
+0.001	S2SpecialStage csv row uses lowercase hex and zeroed absentees
+0.001	S2RunCaptureRunner emits the special-stage aux event stream
+0.001	S2TraceCaptureRunner discards EHZ bootstrap when reset-aware
+0.001	S1RunCaptureRunner re-arms after a non-ss mode exit
+0.001	S1RunCaptureRunner forces the manifest for a detour-free run with a run id
+0.001	S3K runner aiz profile records the arm frame with one-ahead input
+0.001	TracePayloadCompressor compresses streamed session files
+0.001	TraceCli validates the S2 trace arguments
+0.001	S3K runner level-gated discard beats zone-leave on the same frame
+0.001	Bk2Reader maps Power and Reset independently
+0.001	S2RunCaptureRunner finalizes ss segment when movie ends mid-detour
+0.000	TracePayloadCompressor round-trips published payloads byte-for-byte
+0.000	S1RunCaptureRunner stage-free suffixes repeated zone-act dir tokens
+0.000	S3KTraceCsvWriter reproduces aiz1_to_hcz_fullrun fixture row 0
+0.000	S1RunCaptureRunner finalizes ss segment when movie ends mid-detour
+0.000	S3K aux: cpu_state_snapshot matches the CNZ fixture literal
+0.000	S1RunCaptureRunner honors stop-at-frame inside a detour
+0.000	S2TraceCaptureRunner finishes on movie exhaustion with CNZ gate armed
+0.000	S2TraceCaptureRunner counts EHZ segment under gameplay_unlock
+0.000	TracePayloadCompressor writes deterministic gzip bytes
+0.000	S2TraceCaptureRunner does not arm on the movie's final frame
+0.000	S2TraceCaptureRunner waits for S2 move_lock release
+0.000	S3K runner waits for move_lock AND Ctrl_1_locked release
+0.000	S2TraceCaptureRunner does not discard EHZ under gameplay_unlock
+0.000	Cli host disposal failure leaves no final output
+0.000	S1RunCaptureRunner never arms ss without a started level segment
+0.000	S3K runner gameplay_unlock stops without recording the mode-exit row
+0.000	Bk2Reader frame streams reopen the archive
+0.000	S2TraceCaptureRunner skips EHZ segment without counting when reset-aware
+0.000	S1RunCaptureRunner stage-free drops the movie's last input row
+0.000	S1RunCaptureRunner stage-free never re-arms after the ending modes
+0.000	S1CompleteRunMetadataWriter matches ghz1_completerun fixture bytes
+0.000	S2TraceCaptureRunner fails clearly when target segment never reached
+0.000	S2RunCaptureRunner discards a pending reload when the run ends first
+0.000	S1RunCaptureRunner stage-free honors the stop-at-frame hard stop
+0.000	S2RunCaptureRunner never arms ss without a started level segment
+0.000	S1TraceCaptureRunner finishes on movie exhaustion
+0.000	SmokeCaptureRunner applies system and P1 buttons in order
+0.000	S2RunCaptureRunner ends the run on a non-level non-ss mode
+0.000	S2RunCaptureRunner ends the run on the continue screen while armed
+0.000	S1TraceCaptureRunner waits for control lock release before starting
+0.000	S1TraceCaptureRunner fails clearly when detection never fires
+0.000	S3K runner level-gated arm on the final input row idles once then finalizes empty
+0.000	S2RunCaptureRunner honors the effective movie length override
+0.000	SmokeCaptureRunner rejects invalid ranges before capture
+0.000	S3K runner throws clearly when the recorder never arms
+0.000	S2RunManifest writer reproduces the canonical fixture bytes
+0.000	Publisher set stages and publishes subdirectory finals
+0.000	S3K runner aiz arm on the final input row finalizes with zero rows
+0.000	Cli publication is the final non-failing commit point
+0.000	Publisher session stages incrementally and publishes all-or-nothing
+0.000	EndToEnd production assembly excludes frontend references
+0.000	S3K aux: object_state_snapshot emits the CNZ balloon literal for balloon slots only
+0.000	Bk2Reader rejects unknown groups and buttons
+0.000	S3KCompleteRun reproduces special_stage physics row 0
+0.000	S2AuxEventEngine dedups frame-0 zone_act_state after arm priming
+0.000	SmokeCaptureRunner rejects movie exhaustion before capture
+0.000	S3K metadata matches the AIZ fixture bytes at version 6.30
+0.000	SmokeCaptureRunner rejects completed-frame drift
+0.000	S2AuxEventEngine gates cnz_slot_machine_state on armed CNZ zone
+0.000	TracePayloadCompressor reports every payload it considered
+0.000	S3K aux: terrain_wall_sensor matches the AIZ frame-7549 literal and zone gate
+0.000	Bk2Reader derives button positions from LogKey
+0.000	TraceCli run mode refuses only an existing run manifest
+0.000	Cli requires ROM movie and output arguments
+0.000	S3K aux: scan_objects appeared/near/removed/slot_dump match fixture literals
+0.000	S3K complete-run special-stage detour opens and closes once
+0.000	S2TraceMetadataWriter matches ehz1_fullrun fixture bytes
+0.000	S1SpecialStage csv row reproduces the ss fixture row 0
+0.000	Cli defaults and validates BK2 frame offset
+0.000	Publisher preserves a pre-existing final file
+0.000	Bk2Reader rejects savestate and SaveRAM starts
+0.000	Publisher set revokes subdirectory finals on partial failure
+0.000	Publisher set rolls back published finals on later link race
+0.000	TraceCli trace mode refuses each existing final output
+0.000	S3K aux: collision_response_list_end_of_frame matches the CNZ frame-618 literal
+0.000	ROM identity skips only when S3K_ROM_PATH is absent
+0.000	TraceCli rejects incompatible compression arguments
+0.000	Publisher loses deterministic final-link race without replacement
+0.000	Bk2Reader accepts explicit false power-on header flags
+0.000	S1SpecialStage metadata reproduces the ss fixture bytes
+0.000	ROM identity skips only when S1_ROM_PATH is absent
+0.000	S3KCompleteRunPublication run_manifest.json reproduces the s3-knux-multibonus-ss manifest byte for byte
+0.000	S1AuxEventEngine emits s1_obj64_state before proximity
+0.000	S2AuxEventEngine emits tornado state with unsigned y velocity
+0.000	S3K complete-run re-arms into the same zone after a detour
+0.000	Publisher set refuses to publish over an existing final
+0.000	S1TraceMetadataWriter formats canonical GHZ1 shape byte-exactly
+0.000	Cli reporting failure leaves no final output
+0.000	Bk2Reader rejects multiple input sections
+0.000	Bk2Reader fixture sync payload has canonical SHA-256
+0.000	TraceCli modes only refuse their own existing outputs
+0.000	S3KCompleteRun emits the aiz_completerun frame-0 game_paused_state line
+0.000	Publisher set removes all temporaries after writer failure
+0.000	ROM identity rejects unknown ROM in game detection
+0.000	Cli descriptor restore failure leaves no final output
+0.000	Publisher session publish failure revokes linked finals
+0.000	Publisher removes temporary output after writer failure
+0.000	S3KCompleteRun aux vfc and the standard profiles' aux vfc both read Level_frame_counter
+0.000	GpgxHost GHZ1 sync settings match tracked movie
+0.000	Publisher session dispose without complete removes temporaries
+0.000	Publisher ignores temporary cleanup failure after final link
+0.000	Bk2Reader rejects active P2
+0.000	S3K complete-run transition fields come from the push frame
+0.000	TraceCli parses the compression threshold
+0.000	S2AuxEventEngine emits air mode change with immediate snapshot
+0.000	TraceCli refuses an existing compressed final unless compression is off
+0.000	Publisher session refuses staging after complete
+0.000	Publisher leaves one UTF-8 LF final file
+0.000	S2AuxEventEngine emits control_locked transitions from S2 move_lock
+0.000	Cli defaults and validates capture frame count
+0.000	S2AuxEventEngine emits hurt routine change with stand object context
+0.000	Cli rejects an existing final output
+0.000	S3KCompleteRunPublication metadata.json reproduces special_stage byte for byte
+0.000	S3KAuxEventEngine reads ADDR_FRAMECOUNT 0xFE04 for every profile with no address seam
+0.000	Publisher set dispose without publish removes temporaries
+0.000	S1RunManifest omits the run_id line when no run id was set
+0.000	S2SpecialStage metadata matches the ss fixture byte layout
+0.000	S3K zone tokens diverge from the standard zone names
+0.000	S3KCompleteRunPublication level metadata omits the bonus keys and special-stage metadata omits capture_mode
+0.000	S1InputMask collapses BK2 buttons and excludes Start
+0.000	S3K zone tokens resolve bonus zones before the zone table
+0.000	S2RunManifest optional fields render by presence not value
+0.000	S3K complete-run pushes stage_exit and starpost_bonus independently
+0.000	S3K aux: frame-0 emission order matches the CNZ fixture event sequence
+0.000	S3K aux: mode_change air, state_snapshot, routine_change match CNZ frame-0 literals in order
+0.000	S3K aux: object_state matches the CNZ literal and honors both proximity arms
+0.000	S3K aux: routine_change carries the stood-on object context literal
+0.000	TracePayloadCompressor targets only the payload names
+0.000	S3K aux: aiz_handoff_terrain_state emits the hook-less skeleton literal in-window
+0.000	S2AuxEventEngine zeroes tails tracking while sidekick absent
+0.000	S3K aux: act_transition_to_cnz2 fires once on the act edge
+0.000	S1AuxEventEngine emits hurt routine change with stand context
+0.000	S1AuxEventEngine emits fixture air and rolling mode changes
+0.000	S3KHookAbsence complete-run fixture special_stage aux stream has no hook-driven events
+0.000	TraceCli rejects unknown mode values
+0.000	S2AuxEventEngine emits act transition checkpoints once per name
+0.000	S3KCompleteRunPublication manifest emission gate is transition-or-run-id
+0.000	S3K aux: cnz_cylinder_state matches the CNZ literal inside its window only
+0.000	S1TraceCsvWriter derives ground mode with angle wrap
+0.000	S2AuxEventEngine renders object snapshot velocities unsigned
+0.000	S3KRam pins the S3K OST geometry and mode helpers
+0.000	S3K aux: air_countdown_state resolves the owner and visible children literal
+0.000	S3KCompleteRun emits exactly one game_paused_state per recorded frame
+0.000	S3K aux: control_lock_state baseline literal, change suppression, 60-frame force
+0.000	S2AuxEventEngine gates snapshots on interval and hardcoded windows
+0.000	S3K aux: aiz_fire_transition matches the AIZ literal and is profile-gated
+0.000	S3K aux: finalization emits the MGZ gameplay_end literal for level-gated only
+0.000	S3K complete-run arm frame belongs to no segment
+0.000	S3K complete-run arm requires both control gates clear
+0.000	S3K complete-run zone gate is one-time per segment
+0.000	S3K aux: interact_state emits sonic always and tails only when present
+0.000	S3K aux: player_mode_set emits baseline then only on change
+0.000	S2RunManifest quotes run_id with Lua percent-q escaping
+0.000	S1CompleteRunMetadataWriter rejects source_bk2 needing escaping
+0.000	S3K complete-run finalizes a truncated special stage as ss
+0.000	Publisher session with no files publishes nothing
+0.000	S3K standard profiles emit no game_paused_state
+0.000	S3KCompleteRun emits game_paused_state between oscillation_state and object_state
+0.000	Cli rejects unknown and duplicate arguments
+0.000	TraceCli trace mode rejects smoke-only arguments
+0.000	S2TraceCsvWriter renders negative speeds for both characters
+0.000	S1TraceCsvWriter renders negative speeds as two's complement
+0.000	S2TraceCsvWriter derives sidekick air and ground mode from own state
+0.000	S3KTraceCsvWriter renders negative speeds for both characters
+0.000	S3KCompleteRun special-stage started renders as a 0/1 flag
+0.000	S3KCompleteRun profile emits no checkpoint, no aiz_fire_transition and no finalization event
+0.000	S3KTraceCsvWriter derives sidekick air and ground mode from own state
+0.000	S1AuxEventEngine emits fixture object_near at boundary 160
+0.000	S3KCompleteRunPublication metadata.json reproduces bonus_gumball byte for byte
+0.000	S3KCompleteRun row and standard row both read Level_frame_counter
+0.000	S3K aux: aiz profile emits the intro_begin literal at frame 0
+0.000	S3KTraceCsvWriter resolves stand_on_obj only for exact slot addresses
+0.000	S2AuxEventEngine scopes object_near per character and skips tails self
+0.000	S1AuxEventEngine emits slot_dump only on appearance frames
+0.000	S3KCompleteRun emits the hcz_completerun paused game_paused_state line from a WORD read
+0.000	S3K aux: cage_state matches the CNZ literal for cage-coded slots
+0.000	S2SpecialStage csv header matches the recorder's 48 columns
+0.000	S1AuxEventEngine emits fixture object_removed line
+0.000	S3K aux: cpu_state matches the CNZ frame-0 literal
+0.000	S3K complete-run records the level-family handoff tail
+0.000	S3KCompleteRun reproduces aiz_completerun physics row 0
+0.000	S3KCompleteRun special-stage input mask excludes Start
+0.000	S2SpecialStage input mask collapses ABC and includes Start
+0.000	S2AuxEventEngine emits cursor_state on change with direction rule
+0.000	S3K complete-run ignores a special stage before any arm
+0.000	S3K complete-run movie-end stop drops the terminal frame
+0.000	S3K aux: oscillation_state matches the CNZ frame-0 literal
+0.000	S3K complete-run pre-trace snapshot latch resets per segment
+0.000	S3K aux: sidekick_interact_object matches the CNZ frame-0 literal
+0.000	S1AuxEventEngine emits control_locked transitions
+0.000	S3K complete-run skips non-level-family frames without closing
+0.000	S3K aux: level-gated gameplay_start is zone-3-literal (MGZ emits none)
+0.000	S3KTraceCsvWriter reproduces the AIZ ADVANCE_ONLY prefix row 0x00A1
+0.000	S3K aux: air_countdown_state emits the empty p1/p2 literals every frame
+0.000	S2AuxEventEngine maps ROM joypad bytes to engine masks
+0.000	S2AuxEventEngine wraps the delayed cpu_state history index
+0.000	S3K complete-run trace stop frame truncates at exactly N rows
+0.000	S1SpecialStage csv header matches the recorder's 14 columns
+0.000	S3K metadata scopes the CNZ notes to level-gated cnz only
+0.000	S3KCompleteRunPublication metadata.json reproduces hcz_completerun byte for byte
+0.000	S3KCompleteRun reproduces bonus_gumball physics row 0
+0.000	S3K complete-run BK2 frame count stop truncates at the limit
+0.000	S3KTraceCsvWriter reads vblank_counter from the V_int_run_count low word, not Life_count
+0.000	S1SpecialStage metadata omits run_id when no run id was set
+0.000	S1CompleteRunMetadataWriter matches fz_completerun fixture bytes (ROM sbz act 3)
+0.000	S3KCompleteRun special-stage row wraps negative velocity (fixture row 3295)
+0.000	S3KTraceCsvWriter renders player_present 1 for all-zero player RAM
+0.000	S1CompleteRunMetadataWriter names SBZ3 as ROM lz act 4
+0.000	S2TraceMetadataWriter matches arz2 fixture bytes
+0.000	S1AuxEventEngine emits fixture cursor_state with dir L
+0.000	S1TraceMetadataWriter maps zone names with unknown fallback
+0.000	S3KTraceCsvWriter reads a real lag counter from Lag_frame_count
+0.000	S2TraceCsvWriter renders absent sidekick as constant zero block
+0.000	S3KCompleteRun special-stage row emits rate before rate_timer (fixture row 1000)
+0.000	S3KCompleteRunPublication metadata.json reproduces bonus_slots byte for byte
+0.000	S3KCompleteRunPublication metadata.json reproduces bonus_pachinko byte for byte
+0.000	S2TraceMetadataWriter applies MTZ alternate act shift
+0.000	S3KCompleteRun special-stage row reports the host lag flag (fixture row 22)
+0.000	Harness scaffold runs
+0.000	S3KTraceCsvWriter renders absent sidekick as constant zero block
+0.000	S3K metadata matches the CNZ fixture bytes at version 6.30
+0.000	S3KCompleteRun special-stage row renders y_pos unsigned (fixture row 4629)
+0.000	S2TraceMetadataWriter falls back to unknown zone naming
+0.000	S3K complete-run absolute frame cap matches the Lua
+0.000	S2TraceMetadataWriter json-escapes profile and source
+0.000	S2TraceMetadataWriter renders sonic-alone character lists
+0.000	S2TraceMetadataWriter matches arz fixture bytes
+0.000	S3K metadata gives unknown profiles the non-AIZ surface verbatim
+0.000	S2TraceCsvWriter header matches canonical fixture header
+0.000	S3K metadata matches the MGZ fixture bytes minus pre_trace_osc_frames
+0.000	S1TraceCsvWriter header matches canonical fixture header
+0.000	S3KCompleteRun level header matches the completerun fixture header
+0.000	S1CompleteRunMetadataWriter renders unknown zones lowercase
+0.000	S3KTraceCsvWriter header matches canonical fixture header
+0.000	S3KCompleteRun special-stage header matches the special_stage fixture header

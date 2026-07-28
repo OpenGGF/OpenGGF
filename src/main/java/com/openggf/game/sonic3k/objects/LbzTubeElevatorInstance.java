@@ -17,6 +17,7 @@ import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
@@ -74,9 +75,13 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
     private static final int[] CHILD_X_OFFSETS = {0, -8, -8, 0, 8, 8};
 
     private static final SolidObjectParams FULL_SOLID =
-            new SolidObjectParams(WIDTH_PIXELS + SOLID_SIDE_PADDING, HEIGHT_PIXELS, HEIGHT_PIXELS + 1);
+            SolidObjectParams.of(WIDTH_PIXELS + SOLID_SIDE_PADDING, HEIGHT_PIXELS, HEIGHT_PIXELS + 1);
     private static final SolidObjectParams OPEN_SOLID =
-            new SolidObjectParams(WIDTH_PIXELS + SOLID_SIDE_PADDING, 8, 0x20);
+            // SolidObjectFull_Offset uses d3 as a downward collision anchor
+            // offset and d2 as the radius on both sides. This equivalent
+            // geometry also preserves the established-rider placement
+            // y_pos(object)+$20-$08-y_radius.
+            SolidObjectParams.of(WIDTH_PIXELS + SOLID_SIDE_PADDING, 8, 8, 0, 0x20);
 
     private final PlayerTubeState p1 = new PlayerTubeState();
     private final PlayerTubeState p2 = new PlayerTubeState();
@@ -135,13 +140,26 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
             // migration only moves ownership when the configured roster changes.
             p1Owner = bindNativeState(p1, p1Owner, player1);
             p2Owner = bindNativeState(p2, p2Owner, player2);
+            int actionState = state;
             updateAction();
+            // Obj_LBZTubeElevatorActive executes its action (including each
+            // SolidObjectFull[_Offset] call) before CheckPlayer. MovePath is
+            // the sole action state without a solid call.
+            if (actionState != STATE_MOVE_PATH) {
+                checkpointAll();
+            }
             processPlayers(player1, player2, participants);
         } else {
             suppressClosedDestinationIfAnyPlayerIsEntering(playerEntity, participants);
             updateClosedBob();
+            checkpointAll();
         }
         updateDynamicSpawn(x, y);
+    }
+
+    @Override
+    public SolidExecutionMode solidExecutionMode() {
+        return SolidExecutionMode.MANUAL_CHECKPOINT;
     }
 
     @Override
@@ -161,7 +179,10 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
 
     @Override
     public boolean isTopSolidOnly() {
-        return state == STATE_WAIT_PLAYER || state == STATE_WAIT_EXIT;
+        // WaitPlayer/WaitExit call SolidObjectFull_Offset with d2=$08 and
+        // d3=$20; they are not SolidObjectTop surfaces
+        // (sonic3k.asm:57970-57977,58139-58146).
+        return false;
     }
 
     @Override

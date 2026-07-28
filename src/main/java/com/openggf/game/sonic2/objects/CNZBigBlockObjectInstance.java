@@ -182,7 +182,7 @@ public class CNZBigBlockObjectInstance extends BoxObjectInstance
     public SolidObjectParams getSolidParams() {
         // No offset needed: getX()/getY() already return the current oscillating position,
         // so the collision anchor is already correct without additional displacement.
-        return new SolidObjectParams(HALF_WIDTH, AIR_HALF_HEIGHT, GROUND_HALF_HEIGHT, 0, 0);
+        return SolidObjectParams.of(HALF_WIDTH, AIR_HALF_HEIGHT, GROUND_HALF_HEIGHT, 0, 0);
     }
 
     @Override

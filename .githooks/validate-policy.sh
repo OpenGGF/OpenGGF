@@ -347,7 +347,7 @@ validate_file_size_policy() {
         case "$path" in
             aux_state*.jsonl|physics*.csv|*/aux_state*.jsonl|*/physics*.csv)
                 if [ "$size" -ge "$TRACE_COMPRESSION_THRESHOLD_BYTES" ]; then
-                    append_error "\`$path\` is an uncompressed trace payload (${size} bytes). Run \`tools/traces/compress-traces.ps1\` and commit the \`.gz\` file instead."
+                    append_error "\`$path\` is an uncompressed trace payload (${size} bytes). Commit the \`.gz\` instead: the native harness (tools/bizhawk-headless) compresses at capture time by default, and \`tools/traces/compress-traces.ps1\` does it for a Lua capture directory."
                 fi
                 ;;
         esac
@@ -555,7 +555,7 @@ validate_non_master_commit_message() {
     validate_exact_trailer "$message" "$files" "Changelog" "CHANGELOG.md" "CHANGELOG.md"
     validate_changelog_justification "$message" "$files"
     validate_prefix_trailer "$message" "$files" "Guide" "docs/guide/" "docs/guide/"
-    validate_exact_trailer "$message" "$files" "Known-Discrepancies" "docs/KNOWN_DISCREPANCIES.md" "docs/KNOWN_DISCREPANCIES.md"
+    validate_exact_trailer "$message" "$files" "Known-Discrepancies" "docs/status/known-discrepancies.md" "docs/status/known-discrepancies.md"
     validate_exact_trailer "$message" "$files" "S3K-Known-Discrepancies" "docs/S3K_KNOWN_DISCREPANCIES.md" "docs/S3K_KNOWN_DISCREPANCIES.md"
     validate_agent_docs_trailer "$message" "$files"
     validate_exact_trailer "$message" "$files" "Configuration-Docs" "CONFIGURATION.md" "CONFIGURATION.md"
@@ -697,7 +697,7 @@ validate_ci_commit_range() {
         validate_exact_trailer "$message" "$files" "Changelog" "CHANGELOG.md" "CHANGELOG.md"
         validate_changelog_justification "$message" "$files"
         validate_prefix_trailer "$message" "$files" "Guide" "docs/guide/" "docs/guide/"
-        validate_exact_trailer "$message" "$files" "Known-Discrepancies" "docs/KNOWN_DISCREPANCIES.md" "docs/KNOWN_DISCREPANCIES.md"
+        validate_exact_trailer "$message" "$files" "Known-Discrepancies" "docs/status/known-discrepancies.md" "docs/status/known-discrepancies.md"
         validate_exact_trailer "$message" "$files" "S3K-Known-Discrepancies" "docs/S3K_KNOWN_DISCREPANCIES.md" "docs/S3K_KNOWN_DISCREPANCIES.md"
         validate_agent_docs_trailer "$message" "$files"
         validate_exact_trailer "$message" "$files" "Configuration-Docs" "CONFIGURATION.md" "CONFIGURATION.md"

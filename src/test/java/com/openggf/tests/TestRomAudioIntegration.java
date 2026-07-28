@@ -211,6 +211,35 @@ public class TestRomAudioIntegration {
                 "Metropolis playback should match the single-frame reference driver output");
     }
 
+    /**
+     * The ROM bindings the unified-presentation parity coverage depends on:
+     * {@code GameMusic.SPECIAL_STAGE} and both sides of the ring alternation
+     * must resolve to real SMPS data in this ROM, not merely to a mapped id.
+     * Without this, a parity test could pass on a queued command whose asset
+     * never existed.
+     */
+    @Test
+    public void specialStageMusicAndBothRingSfxResolveToRomSmpsData() {
+        com.openggf.game.sonic2.audio.Sonic2AudioProfile profile =
+                new com.openggf.game.sonic2.audio.Sonic2AudioProfile();
+
+        Integer specialStageMusicId = profile.getMusicMap()
+                .get(com.openggf.audio.GameMusic.SPECIAL_STAGE);
+        assertNotNull(specialStageMusicId,
+                "Sonic 2 must map GameMusic.SPECIAL_STAGE");
+        assertNotNull(loader.loadMusic(specialStageMusicId),
+                "special stage music must decompress from ROM");
+
+        for (com.openggf.audio.GameSound ring : java.util.List.of(
+                com.openggf.audio.GameSound.RING_LEFT,
+                com.openggf.audio.GameSound.RING_RIGHT)) {
+            Integer sfxId = profile.getSoundMap().get(ring);
+            assertNotNull(sfxId, ring + " must be mapped to a ROM SFX id");
+            assertNotNull(loader.loadSfx(sfxId),
+                    ring + " must load real SMPS data from ROM");
+        }
+    }
+
     @Test
     public void testLevelMusicMapping() throws IOException {
         Sonic2 game = new Sonic2(rom);

@@ -172,7 +172,17 @@ public class Sonic1LZWaterEvents {
     private int vblaByte() {
         com.openggf.level.objects.ObjectManager om =
                 levelManager() != null ? levelManager().getObjectManager() : null;
-        return om != null ? (om.getVblaCounter() & 0xFF) : 0;
+        return om != null ? romVisibleVblaByteBeforeObjectExecution(om.getVblaCounter()) : 0;
+    }
+
+    /**
+     * {@code ObjectManager.vblaCounter} is the engine's ROM-visible VBlank
+     * clock for the current level frame. LZWaterFeatures runs before the object
+     * dispatcher but reads that already-published value; it must not predict
+     * the dispatcher's subsequent increment.
+     */
+    static int romVisibleVblaByteBeforeObjectExecution(int storedVblaCounter) {
+        return storedVblaCounter & 0xFF;
     }
 
     public Sonic1LZWaterEvents() {
@@ -851,14 +861,14 @@ public class Sonic1LZWaterEvents {
             // ROM: btst #bitUp,(v_jpadhold2).w / beq.s .down
             // subq.w #1,obY(a1)  - nudge up (word write, preserves obSubpixelY)
             // (LZWaterFeatures.asm:348)
-            if (player.isUpPressed()) {
+            if (isLogicalDirectionHeld(player, AbstractPlayableSprite.INPUT_UP)) {
                 player.setCentreYPreserveSubpixel((short) (player.getCentreY() - 1));
             }
 
             // ROM: btst #bitDn,(v_jpadhold2).w / beq.s .end
             // addq.w #1,obY(a1)  - nudge down (word write, preserves obSubpixelY)
             // (LZWaterFeatures.asm:353)
-            if (player.isDownPressed()) {
+            if (isLogicalDirectionHeld(player, AbstractPlayableSprite.INPUT_DOWN)) {
                 player.setCentreYPreserveSubpixel((short) (player.getCentreY() + 1));
             }
 
@@ -903,6 +913,16 @@ public class Sonic1LZWaterEvents {
             case 2 -> WIND_TUNNEL_ACT3; // Act 3: 1 tunnel
             default -> null;
         };
+    }
+
+    /**
+     * LZWaterFeatures executes before Sonic_Control copies the current physical
+     * pad word into {@code v_jpadhold2}. Tunnel nudges therefore read the
+     * logical word left by the preceding player tick, while later objects such
+     * as Obj0B can still read the current physical pad state.
+     */
+    static boolean isLogicalDirectionHeld(AbstractPlayableSprite player, int directionMask) {
+        return player != null && (player.getLogicalInputState() & directionMask) != 0;
     }
 
     /**
@@ -979,10 +999,10 @@ public class Sonic1LZWaterEvents {
             player.setForcedAnimationId(floatAnimation);
             player.setAir(true);
 
-            if (player.isUpPressed()) {
+            if (isLogicalDirectionHeld(player, AbstractPlayableSprite.INPUT_UP)) {
                 player.setCentreYPreserveSubpixel((short) (player.getCentreY() - 1));
             }
-            if (player.isDownPressed()) {
+            if (isLogicalDirectionHeld(player, AbstractPlayableSprite.INPUT_DOWN)) {
                 player.setCentreYPreserveSubpixel((short) (player.getCentreY() + 1));
             }
             return;
@@ -1168,11 +1188,11 @@ public class Sonic1LZWaterEvents {
             return false;
         }
         int playerX = player.getCentreX() & 0xFFFF;
-        // LZ3's flap-door tunnel lip keeps Sonic grounded through x=$0B00,
-        // then the wind tunnel's normal airborne path takes over. The later
-        // pole lip has a one-frame exact-surface landing at x=$112C.
-        return actId == 2 && ((windTunnelPreserveGroundContact && playerX <= 0x0B00)
-                || playerX == 0x112C);
+        // Preserve a contact that existed when the tunnel took control until
+        // Sonic leaves the flap-door lip. An already-airborne player must not
+        // be landed merely because a floor probe reports an exact zero: the ROM
+        // keeps the airborne bit and tunnel Y velocity in that case.
+        return actId == 2 && windTunnelPreserveGroundContact && playerX <= 0x0B00;
     }
 
     /**

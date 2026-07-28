@@ -220,7 +220,7 @@ public class HCZWaterRushObjectInstance extends AbstractObjectInstance implement
             int d1 = HALF_WIDTH + 0xB;
             int d2 = HALF_HEIGHT;
             int d3 = HALF_HEIGHT + 1;
-            return new SolidObjectParams(d1, d2, d3);
+            return SolidObjectParams.of(d1, d2, d3);
         }
 
         @Override
@@ -291,7 +291,6 @@ public class HCZWaterRushObjectInstance extends AbstractObjectInstance implement
      */
     public static final class HCZBreakableBarState {
         private static int state;
-        private static boolean largeFanModulePrimed;
 
         private HCZBreakableBarState() {}
 
@@ -303,32 +302,20 @@ public class HCZWaterRushObjectInstance extends AbstractObjectInstance implement
         public static void clearBit(int bit) { state &= ~(1 << bit); }
         /** ROM: btst d5,(_unkF7C7).w — test individual player bit */
         public static boolean testBit(int bit) { return (state & (1 << bit)) != 0; }
-        /**
-         * Claims the emulated KosM queue wait for Obj39. The first HCZ large
-         * fan shares the still-busy level module queue; later fans see the
-         * already-drained fan-art workload and clear one object sample sooner.
-         */
-        public static int claimLargeFanModuleWaitFrames() {
-            int waitFrames = largeFanModulePrimed ? 2 : 3;
-            largeFanModulePrimed = true;
-            return waitFrames;
-        }
         public static void reset() {
             state = 0;
-            largeFanModulePrimed = false;
         }
 
-        /** Immutable rewind snapshot of the HCZ cross-object latch/queue state. */
-        public record Snapshot(int state, boolean largeFanModulePrimed) {
+        /** Immutable rewind snapshot of the HCZ cross-object latch state. */
+        public record Snapshot(int state) {
         }
 
         public static Snapshot snapshot() {
-            return new Snapshot(state, largeFanModulePrimed);
+            return new Snapshot(state);
         }
 
         public static void restore(Snapshot snapshot) {
             state = snapshot.state();
-            largeFanModulePrimed = snapshot.largeFanModulePrimed();
         }
     }
 

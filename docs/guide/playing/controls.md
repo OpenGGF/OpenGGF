@@ -2,8 +2,10 @@
 
 Gameplay accepts keyboard input and standard GLFW gamepads. Keyboard bindings
 can be changed in `config.yaml` (see [Configuration](configuration.md)) using
-either GLFW integer codes or human-readable key names such as `"SPACE"` and
-`"F9"`.
+GLFW integer codes, human-readable key names such as `"SPACE"` and `"F9"`, or a
+name carrying its own modifiers such as `"CTRL+SHIFT+O"` — see
+[Configuration](configuration.md) for the chord syntax and which shortcuts act on
+one.
 
 ## Gameplay
 

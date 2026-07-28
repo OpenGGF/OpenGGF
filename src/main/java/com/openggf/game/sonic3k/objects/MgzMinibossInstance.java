@@ -1270,7 +1270,7 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
 
         @Override
         public SolidObjectParams getSolidParams() {
-            return new SolidObjectParams(HALF_WIDTH + SIDE_PADDING, HALF_HEIGHT, HALF_HEIGHT + 1);
+            return SolidObjectParams.of(HALF_WIDTH + SIDE_PADDING, HALF_HEIGHT, HALF_HEIGHT + 1);
         }
 
         @Override
@@ -1354,10 +1354,12 @@ public final class MgzMinibossInstance extends AbstractBossInstance implements S
                 setDestroyed(true);
                 return;
             }
-            int nextX = Math.min((camera.getX() & 0xFFFF) + 1, targetX);
+            // ROM loc_887DA increments and publishes the camera word before
+            // comparing it with $2E00. It neither clamps the increment nor
+            // writes Camera_max_X_pos (sonic3k.asm:185020-185027).
+            int nextX = ((camera.getX() & 0xFFFF) + 1) & 0xFFFF;
             camera.setX((short) nextX);
             camera.setMinX((short) nextX);
-            camera.setMaxX((short) nextX);
             if (nextX >= targetX) {
                 setDestroyed(true);
             }

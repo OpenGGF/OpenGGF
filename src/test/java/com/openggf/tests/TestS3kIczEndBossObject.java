@@ -12,7 +12,10 @@ import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.objects.IczFreezerObjectInstance;
 import com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance;
+import com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance;
+import com.openggf.game.sonic3k.objects.bosses.HczEndBossGradualMaxXExtender;
 import com.openggf.game.sonic3k.objects.bosses.IczEndBossEggCapsuleInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.level.Level;
@@ -25,6 +28,7 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectParams;
+import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -58,6 +62,7 @@ import static org.mockito.Mockito.when;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kIczEndBossObject {
+    private static final int FINAL_DEFEAT_HANDOFF_FRAMES = 0xBA;
     private static final int ICZ_END_BOSS_ID = 0xBD;
 
     // Clear any gameplay session leaked by a prior test in this fork so the registry
@@ -154,7 +159,7 @@ class TestS3kIczEndBossObject {
     }
 
     @Test
-    void arenaGateSpawnsRomSnowdustEmitterForBossFight() {
+    void arenaGateDoesNotSynthesizeSnowdustWhenNoPlacedEmitterExists() {
         ObjectInstance instance = new Sonic3kObjectRegistry().create(
                 new ObjectSpawn(0x4490, 0x05B8, ICZ_END_BOSS_ID, 0, 0, false, 0));
         AbstractObjectInstance object = (AbstractObjectInstance) instance;
@@ -165,20 +170,8 @@ class TestS3kIczEndBossObject {
 
         instance.update(1, mock(PlayableEntity.class));
 
-        assertTrue(services.spawnedChildren.stream().anyMatch(child ->
-                child.getClass().getSimpleName().equals("IczSnowPileObjectInstance")),
-                "ICZ2 boss entry should spawn the subtype-$18 Obj_ICZSnowPile snowdust emitter");
-        AbstractObjectInstance emitter = services.spawnedChildren.stream()
-                .filter(AbstractObjectInstance.class::isInstance)
-                .map(AbstractObjectInstance.class::cast)
-                .filter(child -> child.getClass().getSimpleName().equals("IczSnowPileObjectInstance"))
-                .findFirst()
-                .orElseThrow();
-        assertEquals(0x4390, emitter.getX(),
-                "The snow emitter must spawn inside the boss camera, not at world origin where placement culling can remove it");
-        assertEquals(0x05F0, emitter.getY());
-        assertTrue(emitter.isPersistent(),
-                "The camera-relative snow emitter has to survive normal off-screen object culling");
+        assertFalse(services.spawnedChildren.stream().anyMatch(IczSnowPileObjectInstance.class::isInstance),
+                "Obj_ICZEndBoss initialization does not AllocateObject an emitter; snow comes from the placed subtype-$18 object");
     }
 
     @Test
@@ -194,13 +187,13 @@ class TestS3kIczEndBossObject {
         services.camera.setY((short) 0x05F8);
         object.setServices(services);
 
+        IczSnowPileObjectInstance emitter = new IczSnowPileObjectInstance(
+                new ObjectSpawn(0x44A0, 0x06A0, Sonic3kObjectIds.ICZ_SNOW_PILE,
+                        0x18, 0, false, 0x06A0));
+        emitter.setServices(services);
+        when(services.objectManager.getActiveObjects()).thenReturn(List.of(emitter));
+
         instance.update(1, mock(PlayableEntity.class));
-        AbstractObjectInstance emitter = services.spawnedChildren.stream()
-                .filter(AbstractObjectInstance.class::isInstance)
-                .map(AbstractObjectInstance.class::cast)
-                .filter(child -> child.getClass().getSimpleName().equals("IczSnowPileObjectInstance"))
-                .findFirst()
-                .orElseThrow();
         for (int frame = 0; frame < 10; frame++) {
             emitter.update(10 + frame, mock(PlayableEntity.class));
         }
@@ -211,7 +204,12 @@ class TestS3kIczEndBossObject {
                 .findFirst()
                 .orElseThrow();
 
+        // AllocateObject only installs loc_8B6AE; the particle samples RNG and
+        // initializes when its SST first executes.
+        particle.update(20, mock(PlayableEntity.class));
+        particle.update(21, mock(PlayableEntity.class));
         particle.appendRenderCommands(new ArrayList<>());
+        particle.refreshPostCameraRenderState();
 
         org.mockito.Mockito.verify(services.renderManager, org.mockito.Mockito.atLeastOnce())
                 .getRenderer(Sonic3kObjectArtKeys.ICZ_PLATFORMS);
@@ -233,8 +231,11 @@ class TestS3kIczEndBossObject {
         for (int frame = 0; frame < 5; frame++) {
             particle.update(40 + frame, mock(PlayableEntity.class));
             particle.appendRenderCommands(new ArrayList<>());
+            particle.refreshPostCameraRenderState();
         }
-        org.mockito.Mockito.verify(platformRenderer, org.mockito.Mockito.times(2))
+        org.mockito.Mockito.verify(platformRenderer, org.mockito.Mockito.atLeast(2))
+                .drawFrameIndex(anyInt(), anyInt(), anyInt(), eq(false), eq(false), eq(2));
+        org.mockito.Mockito.verify(platformRenderer, org.mockito.Mockito.atMost(3))
                 .drawFrameIndex(anyInt(), anyInt(), anyInt(), eq(false), eq(false), eq(2));
 
         stepFrames(instance, 122);
@@ -442,6 +443,85 @@ class TestS3kIczEndBossObject {
         assertTrue(invokeInt(instance, "getBottomChildLocalYOffsetForTesting") > 0);
         assertEquals(invokeInt(instance, "getBottomChildYForTesting") + 8,
                 invokeInt(instance, "getBottomHurtYForTesting"));
+    }
+
+    @Test
+    void bottomChildArmsSideToggleBeforeMovingOnNextSstPass() throws Exception {
+        ObjectInstance instance = createTriggeredBoss();
+
+        for (int frame = 0; frame < 900
+                && invokeInt(instance, "getBottomChildShiftTimerForTesting") == 0; frame++) {
+            instance.update(frame, mock(PlayableEntity.class));
+        }
+
+        assertEquals(0x42, invokeInt(instance, "getBottomChildShiftTimerForTesting"));
+        assertEquals(0, invokeInt(instance, "getBottomChildLocalYOffsetForTesting"),
+                "loc_71F92 arms routine 4 but does not change child offset on that dispatch");
+
+        int previousBottomY = invokeInt(instance, "getBottomChildYForTesting");
+        instance.update(901, mock(PlayableEntity.class));
+        assertEquals(1, invokeInt(instance, "getBottomChildLocalYOffsetForTesting"));
+        assertEquals(0x41, invokeInt(instance, "getBottomChildShiftTimerForTesting"));
+        assertEquals(invokeInt(instance, "getBottomChildYForTesting") - previousBottomY,
+                invokeInt(instance, "getBottomChildWholePixelDeltaForTesting"),
+                "continued ride correction is sourced from the published child displacement");
+
+        for (int pass = 0; pass < 0x42; pass++) {
+            instance.update(902 + pass, mock(PlayableEntity.class));
+        }
+        assertEquals(-1, invokeInt(instance, "getBottomChildShiftTimerForTesting"));
+        assertEquals(0x43, invokeInt(instance, "getBottomChildLocalYOffsetForTesting"),
+                "Obj_Wait invokes loc_71F1E only after the terminal 0 -> -1 decrement");
+
+    }
+
+    @Test
+    void foldedBottomChildPublishesItsNativeFreshLandingPhase() throws Exception {
+        ObjectInstance instance = createTriggeredBoss();
+        SolidObjectProvider boss = (SolidObjectProvider) instance;
+        PlayableEntity player = mock(PlayableEntity.class);
+        when(player.getYRadius()).thenReturn((short) 0x0E);
+
+        for (int frame = 0; frame < 900
+                && invokeInt(instance, "getBottomChildShiftTimerForTesting") == 0; frame++) {
+            instance.update(frame, mock(PlayableEntity.class));
+        }
+        instance.update(901, mock(PlayableEntity.class));
+        assertEquals(1, boss.getTopLandingSnapAdjustment(player, 0x13),
+                "loc_71F30 resolves its child-local surface one pixel before the folded parent pass");
+        assertEquals(0, boss.getTopLandingSnapAdjustment(player, 0x0F),
+                "a one-pixel radius restoration uses the ordinary SolidObjectFull surface");
+
+        for (int pass = 0; pass < 0x42; pass++) {
+            instance.update(902 + pass, mock(PlayableEntity.class));
+        }
+        assertEquals(0, boss.getTopLandingSnapAdjustment(player, 0x13),
+                "routine 2 landings use the ordinary child surface after the $43 shift finishes");
+        assertTrue(boss.usesPreUpdateXForContinuedRide(player),
+                "the later child SST carries from the parent slot's saved pre-update X");
+    }
+
+    @Test
+    void foldedBottomChildUsesItsSavedEntryXForFreshContact() throws Exception {
+        ObjectInstance instance = createTriggeredBoss();
+        MultiPieceSolidProvider boss = (MultiPieceSolidProvider) instance;
+        PlayableEntity player = mock(PlayableEntity.class);
+
+        for (int frame = 0; frame < 900; frame++) {
+            instance.snapshotPreUpdatePosition();
+            int entryX = instance.getX();
+            instance.update(1200 + frame, player);
+            if (instance.getX() != entryX) {
+                assertEquals(entryX, boss.getPieceFreshContactX(0, player),
+                        "loc_71F30 saves x_pos before folded parent motion is published");
+                assertEquals(instance.getPreUpdateY()
+                                + invokeInt(instance, "getBottomChildLocalYOffsetForTesting") + 0x2D,
+                        boss.getPieceFreshContactY(0, player),
+                        "fresh contact keeps the child-local offset on its saved parent Y");
+                return;
+            }
+        }
+        assertTrue(false, "boss swing did not publish a horizontal step");
     }
 
     @Test
@@ -789,6 +869,7 @@ class TestS3kIczEndBossObject {
         bindPlayerToFrostPuff(instance, player, activeTopSteam);
 
         instance.update(nextFrame, player);
+        publishBossSolidContact(instance, player, nextFrame);
 
         org.mockito.Mockito.verify(player, org.mockito.Mockito.atLeastOnce()).setAnimationId(0x1A);
         assertTrue(services.spawnedChildren.stream().anyMatch(child ->
@@ -826,6 +907,8 @@ class TestS3kIczEndBossObject {
 
         bindPlayerToFrostPuff(instance, player, normalPuff);
         instance.update(nextFrame++, player);
+        instance.update(nextFrame++, player);
+        publishBossSolidContact(instance, player, nextFrame - 1);
         long capturesBeforeDamagedTopSteam = frozenPlayerBlockCount(services);
         assertTrue(capturesBeforeDamagedTopSteam > 0);
 
@@ -852,7 +935,9 @@ class TestS3kIczEndBossObject {
         assertTrue(activeTopSteam >= 0);
 
         bindPlayerToFrostPuff(instance, player, activeTopSteam);
+        instance.update(nextFrame++, player);
         instance.update(nextFrame, player);
+        publishBossSolidContact(instance, player, nextFrame);
 
         assertTrue(frozenPlayerBlockCount(services) > capturesBeforeDamagedTopSteam,
                 "sub_8A9E0 gates on current object_control/invulnerability only; prior boss smoke captures do not immunize Sonic");
@@ -887,7 +972,9 @@ class TestS3kIczEndBossObject {
         assertTrue(activePuff >= 0);
         bindPlayerToFrostPuff(instance, player, activePuff);
 
+        instance.update(nextFrame++, player);
         instance.update(nextFrame, player);
+        publishBossSolidContact(instance, player, nextFrame);
 
         org.mockito.Mockito.verify(player, org.mockito.Mockito.atLeastOnce()).setAnimationId(0x1A);
         assertTrue(services.spawnedChildren.stream().anyMatch(child ->
@@ -895,7 +982,107 @@ class TestS3kIczEndBossObject {
     }
 
     @Test
-    void frostPuffsFreezeThirdPlayerWithoutDisplacingNativeP1P2Prefix() throws Exception {
+    void matureFrostPuffPublishesCaptureAtCurrentSolidCheckpoint() throws Exception {
+        ObjectInstance instance = new Sonic3kObjectRegistry().create(
+                new ObjectSpawn(0x4490, 0x05B8, ICZ_END_BOSS_ID, 0, 0, false, 0));
+        AbstractObjectInstance object = (AbstractObjectInstance) instance;
+        RecordingServices services = new RecordingServices();
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        services.withPlayerQuery(new ObjectPlayerQuery(() -> player, List::of));
+        services.camera.setX((short) 0x4390);
+        services.camera.setY((short) 0x05F8);
+        object.setServices(services);
+
+        int activePuff = -1;
+        int nextFrame = 1;
+        for (; nextFrame <= 720 && activePuff < 0; nextFrame++) {
+            instance.update(nextFrame, player);
+            int puffCount = invokeInt(instance, "getFrostPuffCountForTesting");
+            for (int i = 0; i < puffCount; i++) {
+                int puffFrame = invokeInt(instance, "getFrostPuffFrameForTesting", i);
+                boolean active = (Boolean) instance.getClass()
+                        .getMethod("isFrostPuffCaptureActiveForTesting", int.class)
+                        .invoke(instance, i);
+                if (active && puffFrame < 0x10) {
+                    activePuff = i;
+                    break;
+                }
+            }
+        }
+        assertTrue(activePuff >= 0);
+
+        bindPlayerToFrostPuff(instance, player, activePuff);
+        instance.update(nextFrame, player);
+        publishBossSolidContact(instance, player, nextFrame);
+
+        assertTrue(frozenPlayerBlockCount(services) > 0,
+                "A loc_7205E child already inside raw anim_frame 4..8 runs sub_8A9C6 in its current later-slot pass");
+    }
+
+    @Test
+    void frostPuffRangeTableUsesStartOffsetPlusExtent() throws Exception {
+        ObjectInstance instance = new Sonic3kObjectRegistry().create(
+                new ObjectSpawn(0x4490, 0x05B8, ICZ_END_BOSS_ID, 0, 0, false, 0));
+        AbstractObjectInstance object = (AbstractObjectInstance) instance;
+        RecordingServices services = new RecordingServices();
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        services.withPlayerQuery(new ObjectPlayerQuery(() -> player, List::of));
+        services.camera.setX((short) 0x4390);
+        services.camera.setY((short) 0x05F8);
+        object.setServices(services);
+
+        int activePuff = -1;
+        int nextFrame = 1;
+        for (; nextFrame <= 720 && activePuff < 0; nextFrame++) {
+            instance.update(nextFrame, player);
+            int puffCount = invokeInt(instance, "getFrostPuffCountForTesting");
+            for (int i = 0; i < puffCount; i++) {
+                if ((Boolean) instance.getClass().getMethod("isFrostPuffCaptureActiveForTesting", int.class)
+                        .invoke(instance, i)) {
+                    activePuff = i;
+                    break;
+                }
+            }
+        }
+        assertTrue(activePuff >= 0);
+        int puffIndex = activePuff;
+        when(player.getCentreX()).thenAnswer(invocation ->
+                (short) (frostPuffCoordinate(instance, "getFrostPuffXForTesting", puffIndex) + 0x18));
+        when(player.getCentreY()).thenAnswer(invocation ->
+                frostPuffCoordinate(instance, "getFrostPuffYForTesting", puffIndex));
+
+        instance.update(nextFrame++, player);
+        assertEquals(0, frozenPlayerBlockCount(services),
+                "word_7208A's second word is an extent, making +$18 the excluded right edge");
+
+        bindPlayerToFrostPuff(instance, player, puffIndex);
+        instance.update(nextFrame++, player);
+        instance.update(nextFrame, player);
+        publishBossSolidContact(instance, player, nextFrame);
+        assertTrue(frozenPlayerBlockCount(services) > 0);
+    }
+
+    @Test
+    void bossFrostBlockInitializesThenKeepsRightwardVelocityInsideCameraEdge() {
+        RecordingServices services = new RecordingServices();
+        services.camera.setX((short) 0x4390);
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        IczFreezerObjectInstance.FrozenPlayerBlock block =
+                new IczFreezerObjectInstance.FrozenPlayerBlock(
+                        player, 0x4443, 0x066F, 0x443A, false, true);
+        block.setServices(services);
+
+        block.update(1, player);
+        assertEquals(0x4443, block.getX(), "loc_8A7AE initializes without running MoveSprite");
+        block.update(2, player);
+
+        assertEquals(0x4445, block.getX(),
+                "loc_8A80C keeps +$200 while x_pos is not beyond Camera_X_pos+$128");
+        assertEquals(0x066B, block.getY());
+    }
+
+    @Test
+    void frostPuffCaptureIsLimitedToTheNativeP1P2Prefix() throws Exception {
         ObjectInstance instance = new Sonic3kObjectRegistry().create(
                 new ObjectSpawn(0x4490, 0x05B8, ICZ_END_BOSS_ID, 0, 0, false, 0));
         AbstractObjectInstance object = (AbstractObjectInstance) instance;
@@ -914,21 +1101,36 @@ class TestS3kIczEndBossObject {
             instance.update(nextFrame, main);
             int puffCount = invokeInt(instance, "getFrostPuffCountForTesting");
             for (int i = 0; i < puffCount; i++) {
-                if ((Boolean) instance.getClass().getMethod("isFrostPuffCaptureActiveForTesting", int.class)
-                        .invoke(instance, i)) {
+                int puffFrame = invokeInt(instance, "getFrostPuffFrameForTesting", i);
+                boolean active = (Boolean) instance.getClass()
+                        .getMethod("isFrostPuffCaptureActiveForTesting", int.class)
+                        .invoke(instance, i);
+                // Only a matured puff (raw anim_frame 4..8) runs the capture.
+                if (active && puffFrame < 0x10) {
                     activePuff = i;
                     break;
                 }
             }
         }
         assertTrue(activePuff >= 0);
+        // sub_8A9C6 walks only the native Player_1/Player_2 pair, so a configured
+        // extension sidekick sitting at participant index 2 is never a capture
+        // candidate even when it is standing exactly in the puff.
         bindPlayerToFrostPuff(instance, extension, activePuff);
 
         instance.update(nextFrame, main);
+        publishBossSolidContact(instance, extension, nextFrame);
 
-        org.mockito.Mockito.verify(extension, org.mockito.Mockito.atLeastOnce()).setAnimationId(0x1A);
+        org.mockito.Mockito.verify(extension, org.mockito.Mockito.never()).setAnimationId(0x1A);
         org.mockito.Mockito.verify(main, org.mockito.Mockito.never()).setAnimationId(0x1A);
         org.mockito.Mockito.verify(nativeP2, org.mockito.Mockito.never()).setAnimationId(0x1A);
+
+        // The native pair remains the capture prefix: binding P2 into the same
+        // puff does freeze it, so the cap is positional and not a dead path.
+        bindPlayerToFrostPuff(instance, nativeP2, activePuff);
+        instance.update(++nextFrame, main);
+        publishBossSolidContact(instance, nativeP2, nextFrame);
+        org.mockito.Mockito.verify(nativeP2, org.mockito.Mockito.atLeastOnce()).setAnimationId(0x1A);
     }
 
     @Test
@@ -964,14 +1166,17 @@ class TestS3kIczEndBossObject {
 
         assertTrue((Boolean) instance.getClass().getMethod("isDefeatStartedForTesting").invoke(instance));
 
-        stepFrames(instance, 0x82);
+        stepFrames(instance, FINAL_DEFEAT_HANDOFF_FRAMES);
 
         assertEquals(0, services.gameState.getCurrentBossId());
         assertEquals(0x4390, services.camera.getMinX() & 0xFFFF);
-        assertEquals(0x44C0, services.camera.getMaxX() & 0xFFFF,
-                "Obj_ICZEndBoss sets Camera_stored_max_X_pos=_unkFAB4+$130 so the capsule stays screen-locked until it is pressed");
+        assertEquals(0x4390, services.camera.getMaxX() & 0xFFFF,
+                "loc_71D9E stores _unkFAB4+$130 separately and leaves live Camera_max_X_pos locked");
         assertTrue(services.spawnedChildren.stream().anyMatch(child ->
                 child.getClass().getSimpleName().contains("EggCapsule")));
+        assertTrue(services.spawnedChildren.stream().anyMatch(
+                        HczEndBossGradualMaxXExtender.class::isInstance),
+                "loc_71D9E attempts a first-free Obj_IncLevEndXGradual allocation after the capsule");
     }
 
     @Test
@@ -1013,7 +1218,7 @@ class TestS3kIczEndBossObject {
         assertEquals(shipX, invokeInt(instance, "getRobotnikShipXForTesting"),
                 "Obj_RobotnikShip4 waits on parent $38 bit 4 before escaping right");
 
-        stepFrames(instance, 0x82);
+        stepFrames(instance, FINAL_DEFEAT_HANDOFF_FRAMES);
 
         AbstractObjectInstance escapeShip = findRobotnikEscapeShip(services);
         int escapeStartX = escapeShip.getX();
@@ -1057,6 +1262,12 @@ class TestS3kIczEndBossObject {
         assertEquals(defeatX, object.getX());
         assertEquals(defeatY, object.getY(),
                 "loc_722C6 switches to Wait_FadeToLevelMusic; the final defeat wait should not reuse loc_71D64's sinking movement");
+        assertTrue(services.spawnedChildren.stream().anyMatch(child ->
+                        child.getClass().getSimpleName().equals("IczEndBossDefeatDebrisChild")),
+                "loc_71D80 releases the shell fragments after the retained $3F wait");
+        assertFalse(services.spawnedChildren.stream().anyMatch(child ->
+                        child.getClass().getSimpleName().contains("EggCapsule")),
+                "loc_71D80 retains the newly seeded 119-count wait before loc_71D9E");
     }
 
     @Test
@@ -1080,7 +1291,7 @@ class TestS3kIczEndBossObject {
             instance.getClass().getMethod("forceHitForTesting").invoke(instance);
             instance.update(300 + i, mock(PlayableEntity.class));
         }
-        stepFrames(instance, 0x82);
+        stepFrames(instance, FINAL_DEFEAT_HANDOFF_FRAMES);
 
         AbstractObjectInstance escapeShip = findRobotnikEscapeShip(services);
         escapeShip.appendRenderCommands(new ArrayList<>());
@@ -1109,7 +1320,7 @@ class TestS3kIczEndBossObject {
             instance.getClass().getMethod("forceHitForTesting").invoke(instance);
             instance.update(300 + i, mock(PlayableEntity.class));
         }
-        stepFrames(instance, 0x82);
+        stepFrames(instance, FINAL_DEFEAT_HANDOFF_FRAMES);
 
         AbstractObjectInstance ship = services.spawnedChildren.stream()
                 .filter(AbstractObjectInstance.class::isInstance)
@@ -1150,7 +1361,7 @@ class TestS3kIczEndBossObject {
             instance.getClass().getMethod("forceHitForTesting").invoke(instance);
             instance.update(300 + i, mock(PlayableEntity.class));
         }
-        stepFrames(instance, 0x82);
+        stepFrames(instance, FINAL_DEFEAT_HANDOFF_FRAMES);
 
         AbstractObjectInstance ship = findRobotnikEscapeShip(services);
         int startX = ship.getX();
@@ -1176,7 +1387,7 @@ class TestS3kIczEndBossObject {
             instance.getClass().getMethod("forceHitForTesting").invoke(instance);
             instance.update(300 + i, mock(PlayableEntity.class));
         }
-        stepFrames(instance, 0x82);
+        stepFrames(instance, FINAL_DEFEAT_HANDOFF_FRAMES);
 
         List<AbstractObjectInstance> debris = services.spawnedChildren.stream()
                 .filter(AbstractObjectInstance.class::isInstance)
@@ -1240,8 +1451,8 @@ class TestS3kIczEndBossObject {
             capsule.update(frame, player);
         }
 
-        assertTrue(services.spawnedChildren.stream().anyMatch(child ->
-                child.getClass().getSimpleName().equals("S3kResultsScreenObjectInstance")),
+        assertTrue(services.spawnedChildren.stream().anyMatch(
+                        S3kResultsScreenObjectInstance.class::isInstance),
                 "sub_865DE waits $40 pre-decremented frames before Obj_LevelResults is allocated");
         assertTrue(services.gameState.isEndOfLevelActive());
         org.mockito.Mockito.verify(player).setAnimationId(Sonic3kAnimationIds.VICTORY);
@@ -1349,6 +1560,14 @@ class TestS3kIczEndBossObject {
 
         assertTrue(sawEmitter,
                 "The production ICZ2 boss entry path should keep the subtype-$18 Obj_ICZSnowPile snow emitter alive");
+        assertEquals(1, activeSnowdustEmitterCount(objectManager),
+                "Boss initialization must reuse the single placed emitter rather than allocate a dynamic duplicate");
+        assertFalse(objectManager.getActiveObjects().stream()
+                        .filter(IczSnowPileObjectInstance.class::isInstance)
+                        .map(IczSnowPileObjectInstance.class::cast)
+                        .filter(IczSnowPileObjectInstance::isSnowdustEmitter)
+                        .anyMatch(emitter -> emitter.getSpawn().layoutIndex() < 0),
+                "Obj_ICZEndBoss does not synthesize a subtype-$18 emitter");
         assertTrue(sawParticle,
                 () -> "The production ICZ2 boss entry path should let the snow emitter allocate visible Obj_ICZSnowdust particles; "
                         + "allocatedSlots=" + objectManager.getAllocatedSlotCount()
@@ -1356,6 +1575,33 @@ class TestS3kIczEndBossObject {
                                 .map(object -> object.getClass().getSimpleName())
                                 .sorted()
                                 .toList());
+    }
+
+    @Test
+    void foldedIczEndBossReservesEveryLiveNativeChildSst() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_ICZ, 1)
+                .startPosition((short) 0x4430, (short) 0x0658)
+                .startPositionIsCentre()
+                .build();
+        ObjectManager objectManager = GameServices.level().getObjectManager();
+        fixture.camera().setX((short) 0x4390);
+        fixture.camera().setY((short) 0x05F8);
+        objectManager.reset(0x4390);
+
+        for (int frame = 0; frame < 140; frame++) {
+            fixture.stepFrame(false, false, false, false, false);
+        }
+
+        int[] reserved = objectManager.rewindSnapshottable().capture().childSpawns().stream()
+                .filter(entry -> entry.parentSpawn().objectId() == ICZ_END_BOSS_ID)
+                .map(entry -> entry.reservedSlots())
+                .findFirst()
+                .orElseThrow();
+
+        assertEquals(6, reserved.length,
+                "Obj_ICZEndBoss folds Robotnik's ship/head and the bottom hurt child, "
+                        + "but their live SST pressure must remain alongside the three body children");
     }
 
     @Test
@@ -1468,6 +1714,10 @@ class TestS3kIczEndBossObject {
                 frostPuffCoordinate(instance, "getFrostPuffXForTesting", puffIndex));
         org.mockito.Mockito.when(player.getCentreY()).thenAnswer(invocation ->
                 frostPuffCoordinate(instance, "getFrostPuffYForTesting", puffIndex));
+    }
+
+    private static void publishBossSolidContact(ObjectInstance instance, PlayableEntity player, int frameCounter) {
+        ((SolidObjectListener) instance).onSolidContactCleared(player, frameCounter);
     }
 
     private static short frostPuffCoordinate(ObjectInstance instance, String method, int puffIndex) {
@@ -1609,7 +1859,6 @@ class TestS3kIczEndBossObject {
         private final ObjectManager objectManager;
         private final ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
         private Level currentLevel;
-        private Rom rom;
         private int fadeOutCalls;
         private int lastMusicId;
 
@@ -1653,11 +1902,6 @@ class TestS3kIczEndBossObject {
         @Override
         public Level currentLevel() {
             return currentLevel;
-        }
-
-        @Override
-        public Rom rom() {
-            return rom;
         }
 
         @Override

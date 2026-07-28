@@ -137,7 +137,7 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
     private OOZLauncherObjectInstance(ObjectSpawn spawn, String name, boolean invisibleLauncherOnly) {
         super(spawn, name);
         this.isVertical = (spawn.subtype() & 0xFF) == 0;
-        this.solidParams = new SolidObjectParams(SOLID_HALF_WIDTH, SOLID_HEIGHT_D2, SOLID_HALF_HEIGHT);
+        this.solidParams = SolidObjectParams.of(SOLID_HALF_WIDTH, SOLID_HEIGHT_D2, SOLID_HALF_HEIGHT);
         this.invisibleLauncherOnly = invisibleLauncherOnly;
         if (invisibleLauncherOnly) {
             this.broken = true;

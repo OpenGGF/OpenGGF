@@ -191,14 +191,15 @@ public class CnzBumperObjectInstance extends AbstractObjectInstance
         ObjectServices svc = tryServices();
         LevelManager levelManager = svc != null ? svc.levelManager() : null;
         if (levelManager != null) {
-            // The object pass runs with LevelManager.frameCounter + 1. Obj_Bumper
-            // then reads the low byte at Level_frame_counter+1 during its object
-            // routine. A retained results owner that has mutated into the Act 2
+            // The fresh-load Process_Sprites setup dispatch is represented by
+            // ObjectManager's production setup lifecycle. The stored counter
+            // therefore owns the adjacent Level_frame_counter epoch read by
+            // Obj_Bumper. A retained results owner that has mutated into the Act 2
             // title card holds the native counter while engine dispatch continues;
             // its provenance exposes the additional visible owner dispatch.
             int retainedResultsDispatch = svc.titleCardProvider() != null
                     && svc.titleCardProvider().ownsRetainedResultsHeldLevelCounter() ? 1 : 0;
-            return levelManager.getFrameCounter() + 2 + retainedResultsDispatch;
+            return levelManager.getFrameCounter() + 1 + retainedResultsDispatch;
         }
         return objectFrameCounter + 1;
     }

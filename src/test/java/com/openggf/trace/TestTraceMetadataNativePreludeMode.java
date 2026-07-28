@@ -1,5 +1,6 @@
 package com.openggf.trace;
 
+import com.openggf.tests.TestTempFiles;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -40,7 +41,7 @@ public class TestTraceMetadataNativePreludeMode {
 
     @Test
     void absentVersionReturnsFalse() throws IOException {
-        Path dir = Files.createTempDirectory("trace-meta-no-version");
+        Path dir = TestTempFiles.createTempDirectory("trace-meta-no-version");
         Files.writeString(dir.resolve("metadata.json"),
                 "{\n" + baseMetadata(null) + "}\n");
 
@@ -52,7 +53,7 @@ public class TestTraceMetadataNativePreludeMode {
 
     @Test
     void legacyVersionReturnsFalse() throws IOException {
-        Path dir = Files.createTempDirectory("trace-meta-v9-1");
+        Path dir = TestTempFiles.createTempDirectory("trace-meta-v9-1");
         Files.writeString(dir.resolve("metadata.json"),
                 "{\n" + baseMetadata("9.1-s2") + "}\n");
 
@@ -64,7 +65,7 @@ public class TestTraceMetadataNativePreludeMode {
 
     @Test
     void minimumEligibleVersionReturnsTrue() throws IOException {
-        Path dir = Files.createTempDirectory("trace-meta-v9-2");
+        Path dir = TestTempFiles.createTempDirectory("trace-meta-v9-2");
         Files.writeString(dir.resolve("metadata.json"),
                 "{\n" + baseMetadata("9.2-s2") + "}\n");
 
@@ -76,7 +77,7 @@ public class TestTraceMetadataNativePreludeMode {
 
     @Test
     void laterMinorVersionReturnsTrue() throws IOException {
-        Path dir = Files.createTempDirectory("trace-meta-v9-10");
+        Path dir = TestTempFiles.createTempDirectory("trace-meta-v9-10");
         Files.writeString(dir.resolve("metadata.json"),
                 "{\n" + baseMetadata("9.10-s2") + "}\n");
 
@@ -88,7 +89,7 @@ public class TestTraceMetadataNativePreludeMode {
 
     @Test
     void laterMajorVersionReturnsTrue() throws IOException {
-        Path dir = Files.createTempDirectory("trace-meta-v10");
+        Path dir = TestTempFiles.createTempDirectory("trace-meta-v10");
         Files.writeString(dir.resolve("metadata.json"),
                 "{\n" + baseMetadata("10.0-s2") + "}\n");
 
@@ -100,7 +101,7 @@ public class TestTraceMetadataNativePreludeMode {
 
     @Test
     void malformedVersionReturnsFalseWithoutException() throws IOException {
-        Path dir = Files.createTempDirectory("trace-meta-malformed-version");
+        Path dir = TestTempFiles.createTempDirectory("trace-meta-malformed-version");
         Files.writeString(dir.resolve("metadata.json"),
                 "{\n" + baseMetadata("alpha-test") + "}\n");
 
@@ -114,7 +115,7 @@ public class TestTraceMetadataNativePreludeMode {
 
     @Test
     void s1RecorderVersionPrefixReturnsFalse() throws IOException {
-        Path dir = Files.createTempDirectory("trace-meta-s1");
+        Path dir = TestTempFiles.createTempDirectory("trace-meta-s1");
         // S1 recorder is on its own version line (no -s2 suffix);
         // bootstrap eligibility only applies to S2 traces for now.
         // But the version-parse logic still resolves major/minor numerically,

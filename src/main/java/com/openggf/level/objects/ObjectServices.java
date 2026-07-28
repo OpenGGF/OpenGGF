@@ -30,6 +30,7 @@ import com.openggf.game.solid.SolidExecutionRegistry;
 import com.openggf.game.mutation.ZoneLayoutMutationPipeline;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.game.zone.ZoneRuntimeState;
+import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.BigRingReturnState;
@@ -117,6 +118,11 @@ public interface ObjectServices {
         spawnLostRings(player, frameCounter);
     }
 
+    /** Queues a spill whose Obj37 owner defers the native ring-count clear. */
+    default void spawnLostRingsWithDeferredOwner(PlayableEntity player, int frameCounter) {
+        spawnLostRingsAfterCurrentFrame(player, frameCounter);
+    }
+
     /** Returns the runtime-owned ROM-accurate pseudo-random number generator. */
     GameRng rng();
 
@@ -161,6 +167,12 @@ public interface ObjectServices {
 
     /** Returns the active game module owned by the current world session. */
     GameModule gameModule();
+
+    /** Session-owned hardware preparation/readiness service. */
+    default HardwareTimingService hardwareTiming() {
+        throw new IllegalStateException(
+                "hardware timing is unavailable in these object services");
+    }
 
     // Player/sidekick access
     List<PlayableEntity> sidekicks();

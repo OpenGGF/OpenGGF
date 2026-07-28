@@ -39,27 +39,36 @@ class TestS3kResultsKosQueueAndChildren {
         S3kResultsScreenObjectInstance root = createResults();
         GameServices.level().getObjectManager().addDynamicObject(root);
 
-        assertEquals(List.of(
-                        Sonic3kConstants.ART_KOSM_RESULTS_GENERAL_ADDR,
-                Sonic3kConstants.ART_KOSM_RESULTS_GENERAL_ADDR,
-                Sonic3kConstants.ART_KOSM_TITLE_CARD_NUM1_ADDR,
-                Sonic3kConstants.ART_KOSM_RESULTS_SONIC_ADDR),
-                queue.queuedArchives().stream()
-                        .map(KosinskiModuleQueue.ArchiveState::archiveAddress).toList());
+        // The results screen's three KosM loads are scheduled through the
+        // hardware-timing service, so that is where they are observable; the
+        // pre-enqueued archive above stays on the gameplay queue and is what makes
+        // this a "queue already busy" case.
+        assertEquals(3, com.openggf.game.GameServices.hardwareTiming()
+                        .incompleteCount(com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE),
+                "Obj_LevelResultsInit queues three Kosinski module loads");
         assertEquals(Sonic3kConstants.ART_KOSM_RESULTS_GENERAL_ADDR + 2,
                 queue.activeSourceAddress(),
                 "Process_Kos_Module_Queue_Init consumes the active archive header immediately");
-        assertEquals(List.of(0x2000, 0x520 * 0x20, 0x568 * 0x20, 0x578 * 0x20),
+        assertEquals(List.of(0x2000),
                 queue.queuedArchives().stream()
                         .map(KosinskiModuleQueue.ArchiveState::destinationVramBytes).toList());
 
-        for (int phase = 0; phase < 8; phase++) {
-            fixture.stepFrame(false, false, false, false, false);
+        // Publication is gated on HardwareWorkKind.KOS_MODULE_QUEUE, which is the
+        // engine's Kos_modules_left: S3kKosModuleQueue enforces the ROM's four-deep
+        // FIFO over that one kind, and every S3K KosM consumer shares it. The
+        // gameplay-scoped KosinskiModuleQueue above is a separate owner used only by
+        // the PLC loader and FBZ, so its pending archive is deliberately not part of
+        // this gate (see the KosM ownership section of the merge status doc).
+        int guard = 0;
+        while (com.openggf.game.GameServices.hardwareTiming()
+                .incompleteCount(com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE) > 0) {
             assertEquals(0, GameServices.level().getCurrentAct(),
-                    "Obj_LevelResultsCreate may not publish while Kos_modules_left is nonzero");
+                    "Obj_LevelResultsCreate may not publish while its own KosM loads are pending");
             assertTrue(resultChildren().isEmpty());
             assertEquals(0, root.activeResultsFrames(),
                     "Obj_LevelResultsCreate must return without consuming the 360-frame wait");
+            fixture.stepFrame(false, false, false, false, false);
+            assertTrue(++guard < 64, "results KosM work must complete");
         }
         assertTrue(queue.isIdle());
 
