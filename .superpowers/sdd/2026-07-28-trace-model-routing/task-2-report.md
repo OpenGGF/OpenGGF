@@ -184,10 +184,10 @@ The pre-fix behavioral probes reproduced all findings: the old gate accepted a
 wrong Terra shared-Fix route, a pending stage, and the disabled Luna policy,
 while `test -s "$BENCH_OWNED"` rejected the empty list.
 
-The final validation pass ran the four `jq empty` checks, manifest and result
+The round-4 validation pass ran the four `jq empty` checks, manifest and result
 schema validation, both metaschema checks, unique-case/all-game/history checks,
-all pinned commit checks, and all pinned fixture hashes. It then executed the
-gate extracted directly from the runbook. Output:
+all pinned commit checks, and all pinned fixture hashes. Its component-level
+gate probes produced:
 
 ```text
 ok -- validation done
@@ -198,6 +198,37 @@ blocked zero-diff accepted tree=b1bbb79fb6e03f6f0591f3b04b1e7d8a08f85cd4 patch=e
 executed terra-sol route accepted
 wrong-model route rejected
 pending stage rejected
-disabled Luna policy rejected before allocation
+disabled Luna policy predicate rejected
 all Task 2 validations passed
+```
+
+Those component probes established the predicates but did not exercise the
+entire documented shell lifecycle. Round 5 below supersedes the lifecycle
+claims about allocation and cleanup.
+
+## Review fix round 5 — 2026-07-28
+
+The lifecycle now starts with `set -euo pipefail`. A disabled or unsupported
+policy therefore exits at preflight before retention, branch, or worktree
+allocation. Result-schema or semantic failure exits before any restoration or
+ordinary worktree removal, leaving the worktree and its retained evidence
+available for review.
+
+The semantic gate now binds the computed patch hash and result tree to outcome
+status. If either the patch is empty or the result tree equals the pinned base
+tree, both must indicate zero source change and the status must be `blocked`,
+`error`, or `no-change`. `green` and `advanced` cannot claim acceptance without
+a source diff.
+
+Shell-level tests assembled and executed the exact command blocks from the
+runbook in disposable Git repositories. Before the fix, disabled Luna allocated
+a worktree, and wrong-route plus advanced/empty-patch results continued through
+cleanup and removed their worktrees. The no-change/zero-diff positive path
+cleaned up normally. After the fix:
+
+```text
+PASS disabled-preflight
+PASS wrong-route-retained
+PASS advanced-empty-retained
+PASS no-change-cleanup
 ```

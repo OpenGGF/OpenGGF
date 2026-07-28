@@ -149,6 +149,8 @@ state before the worker starts. Hook-created disassembly links and foreign files
 are baseline state, never benchmark-owned files.
 
 ```bash
+set -euo pipefail
+
 BENCH_ROOT=$(git rev-parse --show-toplevel)
 BENCH_POLICY=<policy>
 BENCH_CASE=<case>
@@ -293,11 +295,13 @@ cp "$BENCH_RESULT" "$BENCH_RETAIN/"
 The semantic gate is intentionally separate from JSON Schema. It binds the
 selected result to an enabled manifest policy and case, checks the game inputs,
 requires an executed stage prefix, validates each requested/actual route against
-the selected policy, and checks status, frontier, attempt, regression, and stage
-completion consistency. A route outside the selected policy always fails.
+the selected policy, and checks status, frontier, attempt, regression, stage
+completion, and source-change consistency. A route outside the selected policy
+always fails. An empty patch and unchanged result tree are valid only for
+`blocked`, `error`, or `no-change`; `green` and `advanced` require a source diff.
 
 ```bash
-jq -n -e --arg policy "$BENCH_POLICY" --arg case "$BENCH_CASE" --arg patch "$BENCH_PATCH_REL" --slurpfile manifest "$BENCH_MANIFEST" --slurpfile result "$BENCH_RESULT" '
+jq -n -e --arg policy "$BENCH_POLICY" --arg case "$BENCH_CASE" --arg patch "$BENCH_PATCH_REL" --arg baseTree "$BENCH_BASE_TREE" --arg emptyPatchSha256 "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" --slurpfile manifest "$BENCH_MANIFEST" --slurpfile result "$BENCH_RESULT" '
   ($manifest[0]) as $manifest | ($result[0]) as $result |
   ($manifest.policies[] | select(.name == $policy)) as $policyDef |
   ($manifest.cases[] | select(.id == $case)) as $caseDef |
@@ -328,6 +332,10 @@ jq -n -e --arg policy "$BENCH_POLICY" --arg case "$BENCH_CASE" --arg patch "$BEN
    $result.policy == $policyDef.name and $result.caseId == $caseDef.id and
    $result.baseCommit == $caseDef.baseCommit and $result.beforeFrontier == $caseDef.startingFrontier and
    $result.patch.path == $patch and
+   (if $result.patch.sha256 == $emptyPatchSha256 or $result.resultTree == $baseTree then
+      $result.patch.sha256 == $emptyPatchSha256 and $result.resultTree == $baseTree and
+      oneOf($result.status; ["blocked", "error", "no-change"])
+    else true end) and
    ($result.stages | map(.name)) == (["discovery", "triage", "fix", "verify"][0:($result.stages | length)]) and
    all($result.stages[]; . as $stage |
      isPrefix($stage.modelRoute; allowedRoutes($stage)) and

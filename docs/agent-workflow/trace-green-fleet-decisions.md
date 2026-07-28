@@ -109,7 +109,11 @@ messages (per-fix ROM rationale).
     policy, and cross-checks stage completion, attempts, regressions, and
     frontiers. A blocked, error, or no-change run remains valid evidence even
     with no owned source changes: it retains an empty patch with its SHA-256 and
-    a result tree equal to the pinned base tree.
+    a result tree equal to the pinned base tree. The lifecycle runs with strict
+    shell error handling, so a disabled-policy preflight or invalid final result
+    stops before allocation or cleanup respectively. Empty-patch/base-tree
+    results are reserved for blocked, error, or no-change outcomes; green and
+    advanced results require a source diff.
 
 ## Run record — 2026-06-03
 
