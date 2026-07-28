@@ -154,11 +154,14 @@ BENCH_POLICY=<policy>
 BENCH_CASE=<case>
 BENCH_MANIFEST="$BENCH_ROOT/docs/architecture/validation/trace/trace-model-routing-benchmark.json"
 BENCH_BASE=$(jq -r --arg case "$BENCH_CASE" '.cases[] | select(.id == $case) | .baseCommit' "$BENCH_MANIFEST")
-BENCH_BRANCH="feature/ai-trace-model-benchmark-${BENCH_POLICY}-${BENCH_CASE}"
-BENCH_WORKTREE="$BENCH_ROOT/.worktrees/trace-model-routing-${BENCH_POLICY}-${BENCH_CASE}"
+BENCH_RUN_ID="$(date -u +%Y%m%dT%H%M%SZ)-$$"
+BENCH_BRANCH="feature/ai-trace-model-benchmark-${BENCH_POLICY}-${BENCH_CASE}-${BENCH_RUN_ID}"
+BENCH_WORKTREE="$BENCH_ROOT/.worktrees/trace-model-routing-${BENCH_POLICY}-${BENCH_CASE}-${BENCH_RUN_ID}"
 BENCH_RESULT="$BENCH_WORKTREE/target/trace-model-routing/${BENCH_POLICY}/${BENCH_CASE}.json"
 BENCH_PATCH="${BENCH_RESULT%.json}.patch"
-BENCH_RETAIN="/tmp/trace-model-routing-retained/${BENCH_POLICY}/${BENCH_CASE}"
+BENCH_RESULT_REL="target/trace-model-routing/${BENCH_POLICY}/${BENCH_CASE}.json"
+BENCH_PATCH_REL="${BENCH_RESULT_REL%.json}.patch"
+BENCH_RETAIN=$(mktemp -d "/tmp/trace-model-routing-retained-${BENCH_POLICY}-${BENCH_CASE}-${BENCH_RUN_ID}-XXXXXX")
 BENCH_OWNED="$BENCH_RETAIN/owned-files"
 BENCH_BASELINE_TRACKED="$BENCH_RETAIN/baseline-tracked"
 BENCH_BASELINE_UNTRACKED="$BENCH_RETAIN/baseline-untracked"
@@ -187,6 +190,44 @@ jq -r --arg case "$BENCH_CASE" '.cases[] | select(.id == $case) | .fixtures[] | 
 while IFS=$'\t' read -r path expected; do
   test "$(git -C "$BENCH_WORKTREE" show "${BENCH_BASE}:${path}" | sha256sum | cut -d' ' -f1)" = "$expected"
 done
+```
+
+Before workers run, initialize a case- and policy-specific result from the
+manifest. This does not copy the illustrative result template. It records only
+the initial route for each stage; workers replace pending values with observed
+route fields and actual results. Narrow Fix starts at the policy's first narrow
+route, shared/deep Fix at its shared route, and shared/deep Verify at its Sol
+verification route.
+
+```bash
+mkdir -p "$(dirname "$BENCH_RESULT")"
+jq -n --arg policy "$BENCH_POLICY" --arg case "$BENCH_CASE" --arg patch "$BENCH_PATCH_REL" --slurpfile manifest "$BENCH_MANIFEST" '
+  ($manifest[0]) as $manifest |
+  ($manifest.policies[] | select(.name == $policy)) as $policyDef |
+  ($manifest.cases[] | select(.id == $case)) as $caseDef |
+  def routeFields($name; $route; $complexity; $before):
+    ($route | split("/")) as $parts |
+    {name: $name, requestedModel: $parts[0], requestedEffort: $parts[1],
+     actualModel: null, actualEffort: null, complexity: $complexity,
+     confidence: "medium", beforeFrame: $before, afterFrame: $before,
+     status: "pending", attemptCount: 0, regressionCount: 0,
+     sharedSurfaces: [], needsEscalation: false, escalationReasons: [],
+     modelRoute: [$route], usage: {inputTokens: null, cachedInputTokens: null,
+     outputTokens: null, reasoningTokens: null}, durationMs: null};
+  ($caseDef.complexity) as $complexity |
+  (if $complexity == "narrow" then $policyDef.routes.narrowFix[0] else $policyDef.routes.sharedFix[0] end) as $fixRoute |
+  (if $complexity == "narrow" then $policyDef.routes.ordinaryVerify[0] else $policyDef.routes.escalatedVerify[0] end) as $verifyRoute |
+  {schemaVersion: 1, policy: $policyDef.name, caseId: $caseDef.id,
+   baseCommit: $caseDef.baseCommit, resultTree: "0000000000000000000000000000000000000000",
+   patch: {path: $patch, sha256: "0000000000000000000000000000000000000000000000000000000000000000"},
+   stages: [routeFields("discovery"; $policyDef.routes.discovery[0]; "mechanical"; null),
+            routeFields("triage"; $policyDef.routes.triage[0]; $complexity; $caseDef.startingFrontier.frame),
+            routeFields("fix"; $fixRoute; $complexity; $caseDef.startingFrontier.frame),
+            routeFields("verify"; $verifyRoute; $complexity; $caseDef.startingFrontier.frame)],
+   tokens: {inputTokens: null, cachedInputTokens: null, outputTokens: null, reasoningTokens: null},
+   wallTimeMs: null, totalAttemptCount: 0, beforeFrontier: $caseDef.startingFrontier,
+   afterFrontier: $caseDef.startingFrontier, status: "no-change",
+   citations: ["git:" + $caseDef.baseCommit], regressions: []}' > "$BENCH_RESULT"
 ```
 
 Before capture, the worker lists each file it authored or intentionally changed,
@@ -222,13 +263,34 @@ while IFS= read -r path; do GIT_INDEX_FILE="$BENCH_TEMP_INDEX" git -C "$BENCH_WO
 while IFS= read -r path; do GIT_INDEX_FILE="$BENCH_TEMP_INDEX" git -C "$BENCH_WORKTREE" add -- "$path"; done < "$BENCH_OWNED_NEW"
 BENCH_RESULT_TREE=$(GIT_INDEX_FILE="$BENCH_TEMP_INDEX" git -C "$BENCH_WORKTREE" write-tree)
 
-mkdir -p "$(dirname "$BENCH_RESULT")"
-cp "$BENCH_ROOT/docs/architecture/validation/trace/trace-model-routing-result.template.json" "$BENCH_RESULT"
 jq --arg tree "$BENCH_RESULT_TREE" --arg patchSha256 "$BENCH_PATCH_SHA256" '.resultTree = $tree | .patch.sha256 = $patchSha256' "$BENCH_RESULT" > "$BENCH_RETAIN/result.json"
 mv "$BENCH_RETAIN/result.json" "$BENCH_RESULT"
 cp "$BENCH_RETAIN/worker.patch" "$BENCH_PATCH"
 check-jsonschema --schemafile "$BENCH_ROOT/docs/architecture/validation/trace/trace-model-routing-result.schema.json" "$BENCH_RESULT"
-cp "$BENCH_RESULT" "$BENCH_PATCH" "$BENCH_OWNED" "$BENCH_OWNED_TRACKED" "$BENCH_OWNED_NEW" "$BENCH_RETAIN/"
+test -f "$BENCH_PATCH"
+# `$BENCH_OWNED`, `$BENCH_OWNED_TRACKED`, and `$BENCH_OWNED_NEW` already live
+# in `$BENCH_RETAIN`; copy only the result out of the worktree.
+cp "$BENCH_RESULT" "$BENCH_RETAIN/"
+```
+
+The semantic gate is intentionally separate from JSON Schema: it binds the
+selected result to the selected manifest case and policy, and rejects a target
+command or verifier from the wrong game/package even when its syntax is valid.
+
+```bash
+jq -e --arg policy "$BENCH_POLICY" --arg case "$BENCH_CASE" --arg patch "$BENCH_PATCH_REL" --slurpfile manifest "$BENCH_MANIFEST" --slurpfile result "$BENCH_RESULT" '
+  ($manifest[0]) as $manifest | ($result[0]) as $result |
+  ($manifest.policies[] | select(.name == $policy)) as $policyDef |
+  ($manifest.cases[] | select(.id == $case)) as $caseDef |
+  ($caseDef.game as $game |
+   ($caseDef.targetCommand | contains("-Dtest=" + $caseDef.testClass + "#")) and
+   (all($caseDef.verificationClasses[]; startswith("com.openggf.tests.trace." + $game + "."))) and
+   (if $game == "s1" then $caseDef.rom.property == "sonic1.rom.path" and $caseDef.rom.sha1 == "69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B" and ($caseDef.targetCommand | contains("-Dsonic1.rom.path=<ROM_PATH>"))
+    elif $game == "s2" then $caseDef.rom.property == "sonic2.rom.path" and $caseDef.rom.sha1 == "8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9" and ($caseDef.targetCommand | contains("-Dsonic2.rom.path=<ROM_PATH>"))
+    else $caseDef.rom.property == "s3k.rom.path" and $caseDef.rom.sha1 == "CFBF98C36C776677290A872547AC47C53D2761D6" and ($caseDef.targetCommand | contains("-Ds3k.rom.path=<ROM_PATH>")) end) and
+   $result.policy == $policyDef.name and $result.caseId == $caseDef.id and
+   $result.baseCommit == $caseDef.baseCommit and $result.beforeFrontier == $caseDef.startingFrontier and
+   $result.patch.path == $patch)' "$BENCH_MANIFEST"
 ```
 
 The result and patch are now preserved outside `target/` and the worktree.
@@ -256,6 +318,9 @@ for path in docs/kis2disasm docs/s1disasm docs/s2disasm docs/scddisasm docs/skdi
 done
 test -z "$(git -C "$BENCH_WORKTREE" status --porcelain)"
 git worktree remove "$BENCH_WORKTREE"
+# Retain a branch that carries benchmark commits for audit. If the run made no
+# commits, this safe non-force deletion may reclaim the otherwise-empty branch.
+if test -z "$(git log --format=%H "${BENCH_BASE}..${BENCH_BRANCH}")"; then git branch -d "$BENCH_BRANCH"; fi
 ```
 
 ## Shared-worktree hygiene (critical — many concurrent sessions)

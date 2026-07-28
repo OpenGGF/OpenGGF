@@ -123,3 +123,41 @@ The manifest schema now requires exactly three ordered policy identities with
 their exact route tables: enabled `sol-only`, enabled `terra-sol`, and disabled
 `luna-terra-sol` with its reason. Its game-specific conditions also bind ROM
 property and SHA-1, command property, and trace package.
+
+## Review fix round 3 — 2026-07-28
+
+Result initialization no longer copies the illustrative template. The lifecycle
+derives `policy`, `caseId`, `baseCommit`, `beforeFrontier`, target-relative
+patch path, and the initial per-stage routes from the selected manifest pair.
+Workers subsequently replace the pending route fields with observations. The
+retention directory, branch, and worktree include a UTC/PID run identifier (and
+the retention directory additionally uses `mktemp`), so reruns cannot reuse
+another run's artifacts. Empty no-commit branches are safely deleted after an
+ordinary worktree removal; branches with commits remain for audit.
+
+The capture no longer recopies files that already reside in external retention:
+it writes the result from the worktree there once, while `owned-files`,
+`owned-tracked`, `owned-new`, and `worker.patch` are already external. A
+separate semantic `jq` gate binds the output to the selected manifest policy,
+case, base commit, before frontier, and patch destination. It also rejects a
+target test class, verifier package, ROM property, ROM SHA-1, or command ROM
+property that does not match the case's game binding.
+
+Two clean lifecycle dry-runs initialized, captured, schema-validated, passed
+that semantic gate, compared their final tracked/untracked state to their
+pre-worker baselines, retained artifacts externally, and used ordinary
+`git worktree remove`:
+
+| Policy / case | Derived base and frontier | Initial routes (Discovery, Triage, Fix, Verify) | Result patch path |
+| --- | --- | --- | --- |
+| `sol-only` / `s1-lz2-monitor-break-narrow` | `5e3ba3ea3d6a609f98cd7662a0767bce21fef06c`; `f6418 obj_s44_slot` | Sol/high, Sol/high, Sol/high, Sol/high | `target/trace-model-routing/sol-only/s1-lz2-monitor-break-narrow.patch` |
+| `terra-sol` / `s2-cnz-shared-sidekick-control` | `7fe4b63fa7f411515fe20c8dd5d1b5f9321d2b7f`; `f202 tails_x` | Terra/low, Terra/medium, Sol/high, Sol/high | `target/trace-model-routing/terra-sol/s2-cnz-shared-sidekick-control.patch` |
+
+The S1 dry run produced result tree
+`2c4ff98b096178d8f5716163cedb9b4d5e2529dc` and patch SHA-256
+`00752ae8ebeb731f2a8ab25263c5a903ace66eb3811fdf975e389c8e7102fd32`.
+The S2 run produced result tree
+`daa255069b0289f99098cf1113a9dfc45995538f` and patch SHA-256
+`9ce7df9e4ee055692e85f9be0cfc71e6fb201e2f22f635c0073d9f351ffdb72c`.
+Each patch contained only the explicit `benchmark-owned.txt` fixture. Both
+`check-jsonschema` invocations reported `ok -- validation done`.
