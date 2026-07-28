@@ -51,6 +51,46 @@ ROM hashes were verified:
 | S1 World REV01 | `69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b` |
 | S2 World REV01 | `8bca5dcef1af3e00098666fd892dc1c2a76333f9` |
 
+## Reviewed diagnostic hook configurations
+
+The sourceable configurations
+`tools/bizhawk/diagnostics/s1_plc_timing_probe.env.sh` and
+`tools/bizhawk/diagnostics/s2_plc_timing_probe.env.sh` are the only approved
+address inputs for a future capture. They require a caller-selected, absent
+`OGGF_PLC_PROBE_OUTPUT`; sourcing a configuration does not launch BizHawk.
+Both use BizHawk `mainmemory` offsets rather than 24-bit CPU addresses:
+`buffer=0xF680`, `destination=0xF684`, `patterns_left=0xF6F8`,
+`game_mode=0xF600`, and `vint_selector=0xF62A`. Each publishes the reviewed
+consumer-hook list for its covered lifecycles.
+
+Every address below was byte-checked against the named REV01 ROM. Execute
+callbacks run before the listed opcode, so begin hooks retain the PLC id or
+pre-state, while post hooks are the first instruction after the retail copy
+or final state store.
+
+| boundary | S1 PC / bytes | S2 PC / bytes |
+|---|---|---|
+| append begin | `0x1578` / `48 E7 00 60` | `0x161E` / `48 E7 00 60` |
+| append post-copy | `0x15A4` / `4C DF 06 00` | `0x164A` / `4C DF 06 00` |
+| replace begin / post-copy | `0x15AA` / `48 E7 00 60`; `0x15D0` / `4C DF 06 00` | `0x1650` / `48 E7 00 60`; `0x1676` / `4C DF 06 00` |
+| clear begin / post | `0x15DA` / `70 1F`; `0x15E2` / `4E 75` | `0x167C` / `45 F8 F6 80`; `0x1688` / `4E 75` |
+| prepare begin | `0x15F0` / `20 78 F6 80` | `0x1696` / `20 78 F6 80` |
+| early `PatternsLeft` publish | `0x160A` / `31 C2 F6 F8` | `0x16B0` / `31 C2 F6 F8` |
+| final prepare store / true shared return | `0x1634` / `21 C6 F6 F4`; `0x1638` / `4E 75` | `0x16DA` / `21 C6 F6 F4`; `0x16DE` / `4E 75` |
+| full / small active service pre | `0x1642` / `31 FC 00 09 F6 FA`; `0x165C` / `31 FC 00 03 F6 FA` | `0x16E8` / `31 FC 00 06 F6 FA`; `0x1702` / `31 FC 00 03 F6 FA` |
+| partial return / pop pre / post | `0x16D2` / `4E 75`; `0x16D4` / `41 F8 F6 80`; `0x16E2` / `4E 75` | `0x1778` / `4E 75`; `0x177A` / `41 F8 F6 80`; `0x1788` / `4E 75` |
+| VInt selection | `0x0B14` / `4A 38 F6 2A` | `0x0408` / `48 E7 FF FE` |
+| deferred-HBlank entry | `0x119E` / `42 38 F6 4F` | `0x1072` / `42 38 F6 4F` |
+
+The preparation-return PC is also reached by empty and already-active guards.
+The probes therefore arm `preparing` only at the active-path begin and emit a
+single end edge only if that arm is present. They similarly capture append id
+and pre-state at begin and emit its submission only at the post-copy hook.
+At the VInt hook they sample the selector before the ROM clears it;
+`lag = (selector == 0x00)`. The HBlank hook marks the deferred path before it
+clears the deferral latch, so subsequent small-service records retain both the
+selected VInt identity and the HBlank classification.
+
 The native headless harness was exercised successfully with the S1 GHZ movie:
 
 ```bash

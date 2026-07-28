@@ -189,6 +189,7 @@ class TestPlcTimingEvidenceTool {
         environment.put("OGGF_PLC_INTERRUPT_HANDLER_RAM", "1105");
         environment.put("OGGF_PLC_LAG_HANDLER", "0");
         environment.put("OGGF_PLC_ADD_ENTRY", "101");
+        environment.put("OGGF_PLC_ADD_POST", "115");
         environment.put("OGGF_PLC_REPLACE_BEGIN", "102");
         environment.put("OGGF_PLC_REPLACE_POST", "103");
         environment.put("OGGF_PLC_CLEAR_BEGIN", "104");

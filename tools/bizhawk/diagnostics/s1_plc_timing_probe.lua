@@ -23,6 +23,7 @@ local GAME_MODE = required_address("OGGF_PLC_GAME_MODE_RAM")
 local VINT = required_address("OGGF_PLC_INTERRUPT_HANDLER_RAM")
 local LAG_HANDLER = required_address("OGGF_PLC_LAG_HANDLER")
 local ADD = required_address("OGGF_PLC_ADD_ENTRY")
+local ADD_POST = required_address("OGGF_PLC_ADD_POST")
 local REPLACE_BEGIN = required_address("OGGF_PLC_REPLACE_BEGIN")
 local REPLACE_POST = required_address("OGGF_PLC_REPLACE_POST")
 local CLEAR_BEGIN = required_address("OGGF_PLC_CLEAR_BEGIN")
@@ -37,7 +38,7 @@ local POP_POST = required_address("OGGF_PLC_POP_POST")
 local VINT_DISPATCH = required_address("OGGF_PLC_VINT_DISPATCH")
 local HBLANK_DEFERRED_ENTRY = required_address("OGGF_PLC_HBLANK_DEFERRED_ENTRY")
 
-local sequence, active_source, replacement, clear_before, pending_service = 0, 0, nil, nil, nil
+local sequence, active_source, append, replacement, clear_before, preparing, pending_service = 0, 0, nil, nil, nil, nil
 local frame_handler, frame_lag, frame_hblank, frame_mode = 0, true, false, 0
 local function u8(a) return mainmemory.read_u8(a) end
 local function u16(a) return mainmemory.read_u16_be(a) end
@@ -61,8 +62,14 @@ local function emit(event, extra, source, before)
 end
 
 event.onmemoryexecute(function()
-  emit("plc_submission", ',"operation":"append","plc_id":' .. ((emu.getregister("M68K D0") or 0) % 0x10000))
+  if append then error("append began before previous append completed") end
+  append = { id = (emu.getregister("M68K D0") or 0) % 0x10000, before = snapshot() }
 end, ADD)
+event.onmemoryexecute(function()
+  if not append then error("append post reached without append begin") end
+  emit("plc_submission", ',"operation":"append","plc_id":' .. append.id, nil, append.before)
+  append = nil
+end, ADD_POST)
 event.onmemoryexecute(function()
   replacement = { id = (emu.getregister("M68K D0") or 0) % 0x10000, before = snapshot() }
 end, REPLACE_BEGIN)
@@ -79,10 +86,14 @@ event.onmemoryexecute(function()
 end, REPLACE_POST)
 event.onmemoryexecute(function()
   active_source = u32(PLC_BUFFER)
-  _G.plc_prepare_before = snapshot()
-  emit("plc_prepare_begin", nil, active_source, _G.plc_prepare_before)
+  preparing = { source = active_source, before = snapshot() }
+  emit("plc_prepare_begin", nil, preparing.source, preparing.before)
 end, PREPARE_BEGIN)
-event.onmemoryexecute(function() emit("plc_prepare_end", nil, active_source, _G.plc_prepare_before) end, PREPARE_END)
+event.onmemoryexecute(function()
+  if not preparing then return end
+  emit("plc_prepare_end", nil, preparing.source, preparing.before)
+  preparing = nil
+end, PREPARE_END)
 local function service_pre()
   if pending_service then error("service began before previous service completed") end
   pending_service = snapshot()
