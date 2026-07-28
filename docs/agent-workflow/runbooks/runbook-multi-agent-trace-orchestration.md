@@ -153,6 +153,14 @@ BENCH_ROOT=$(git rev-parse --show-toplevel)
 BENCH_POLICY=<policy>
 BENCH_CASE=<case>
 BENCH_MANIFEST="$BENCH_ROOT/docs/architecture/validation/trace/trace-model-routing-benchmark.json"
+# Fail closed before allocating retention, a branch, or a worktree. An enabled
+# policy may contain only routes supported by this runbook.
+jq -e --arg policy "$BENCH_POLICY" --arg case "$BENCH_CASE" '
+  ([.policies[] | select(.name == $policy)] | length) == 1 and
+  ([.cases[] | select(.id == $case)] | length) == 1 and
+  (.policies[] | select(.name == $policy) |
+   .enabled == true and all(.routes[][]; test("^gpt-5\\.6-(terra|sol)/(low|medium|high)$")))
+' "$BENCH_MANIFEST" >/dev/null
 BENCH_BASE=$(jq -r --arg case "$BENCH_CASE" '.cases[] | select(.id == $case) | .baseCommit' "$BENCH_MANIFEST")
 BENCH_RUN_ID="$(date -u +%Y%m%dT%H%M%SZ)-$$"
 BENCH_BRANCH="feature/ai-trace-model-benchmark-${BENCH_POLICY}-${BENCH_CASE}-${BENCH_RUN_ID}"
@@ -195,9 +203,12 @@ done
 Before workers run, initialize a case- and policy-specific result from the
 manifest. This does not copy the illustrative result template. It records only
 the initial route for each stage; workers replace pending values with observed
-route fields and actual results. Narrow Fix starts at the policy's first narrow
-route, shared/deep Fix at its shared route, and shared/deep Verify at its Sol
-verification route.
+route fields and actual results. Before final validation, delete stages that
+never started and replace every retained `pending` status. Narrow Fix starts at
+the policy's first narrow route, shared/deep Fix at its shared route, and
+shared/deep Verify at its Sol verification route. Nullable runtime telemetry
+may remain null when the runtime did not expose it; that does not make a stage
+pending.
 
 ```bash
 mkdir -p "$(dirname "$BENCH_RESULT")"
@@ -231,14 +242,15 @@ jq -n --arg policy "$BENCH_POLICY" --arg case "$BENCH_CASE" --arg patch "$BENCH_
 ```
 
 Before capture, the worker lists each file it authored or intentionally changed,
-one repo-relative path per line in `$BENCH_OWNED`. Do not add hook-created links,
-baseline files, result files, or foreign paths. The following commands reject an
-owned-file list that contains an unchanged file or an untracked baseline path.
-They capture exactly the listed tracked diff and listed new files; no broad
-untracked scan ever enters the patch or cleanup.
+one repo-relative path per line in `$BENCH_OWNED`. Create an empty file when a
+blocked, error, or no-change run owns no source changes. Do not add hook-created
+links, baseline files, result files, or foreign paths. The following commands
+reject a non-empty owned-file list that contains an unchanged file or an
+untracked baseline path. They capture exactly the listed tracked diff and listed
+new files; no broad untracked scan ever enters the patch or cleanup.
 
 ```bash
-test -s "$BENCH_OWNED"
+test -f "$BENCH_OWNED"
 sort -u "$BENCH_OWNED" -o "$BENCH_OWNED"
 git -C "$BENCH_WORKTREE" ls-files --others --exclude-standard | sort | comm -13 "$BENCH_BASELINE_UNTRACKED" - > "$BENCH_NEW_UNTRACKED"
 : > "$BENCH_OWNED_TRACKED"
@@ -262,6 +274,11 @@ GIT_INDEX_FILE="$BENCH_TEMP_INDEX" git -C "$BENCH_WORKTREE" read-tree HEAD
 while IFS= read -r path; do GIT_INDEX_FILE="$BENCH_TEMP_INDEX" git -C "$BENCH_WORKTREE" add -- "$path"; done < "$BENCH_OWNED_TRACKED"
 while IFS= read -r path; do GIT_INDEX_FILE="$BENCH_TEMP_INDEX" git -C "$BENCH_WORKTREE" add -- "$path"; done < "$BENCH_OWNED_NEW"
 BENCH_RESULT_TREE=$(GIT_INDEX_FILE="$BENCH_TEMP_INDEX" git -C "$BENCH_WORKTREE" write-tree)
+BENCH_BASE_TREE=$(git -C "$BENCH_WORKTREE" rev-parse "${BENCH_BASE}^{tree}")
+if test ! -s "$BENCH_OWNED"; then
+  test ! -s "$BENCH_RETAIN/worker.patch"
+  test "$BENCH_RESULT_TREE" = "$BENCH_BASE_TREE"
+fi
 
 jq --arg tree "$BENCH_RESULT_TREE" --arg patchSha256 "$BENCH_PATCH_SHA256" '.resultTree = $tree | .patch.sha256 = $patchSha256' "$BENCH_RESULT" > "$BENCH_RETAIN/result.json"
 mv "$BENCH_RETAIN/result.json" "$BENCH_RESULT"
@@ -273,16 +290,36 @@ test -f "$BENCH_PATCH"
 cp "$BENCH_RESULT" "$BENCH_RETAIN/"
 ```
 
-The semantic gate is intentionally separate from JSON Schema: it binds the
-selected result to the selected manifest case and policy, and rejects a target
-command or verifier from the wrong game/package even when its syntax is valid.
+The semantic gate is intentionally separate from JSON Schema. It binds the
+selected result to an enabled manifest policy and case, checks the game inputs,
+requires an executed stage prefix, validates each requested/actual route against
+the selected policy, and checks status, frontier, attempt, regression, and stage
+completion consistency. A route outside the selected policy always fails.
 
 ```bash
-jq -e --arg policy "$BENCH_POLICY" --arg case "$BENCH_CASE" --arg patch "$BENCH_PATCH_REL" --slurpfile manifest "$BENCH_MANIFEST" --slurpfile result "$BENCH_RESULT" '
+jq -n -e --arg policy "$BENCH_POLICY" --arg case "$BENCH_CASE" --arg patch "$BENCH_PATCH_REL" --slurpfile manifest "$BENCH_MANIFEST" --slurpfile result "$BENCH_RESULT" '
   ($manifest[0]) as $manifest | ($result[0]) as $result |
   ($manifest.policies[] | select(.name == $policy)) as $policyDef |
   ($manifest.cases[] | select(.id == $case)) as $caseDef |
+  def routeOf($stage): $stage.requestedModel + "/" + $stage.requestedEffort;
+  def isPrefix($actual; $allowed):
+    ($actual | length) > 0 and ($actual | length) <= ($allowed | length) and
+    all(range(0; $actual | length); . as $index | $actual[$index] == $allowed[$index]);
+  def allowedRoutes($stage):
+    if $stage.name == "discovery" then $policyDef.routes.discovery
+    elif $stage.name == "triage" then $policyDef.routes.triage
+    elif $stage.name == "fix" then
+      if $stage.complexity == "narrow" then $policyDef.routes.narrowFix else $policyDef.routes.sharedFix end
+    else
+      if $stage.complexity != "narrow" or
+         any($result.stages[] | select(.name != "verify");
+             (.modelRoute | length) > 1 or (.modelRoute[-1] | startswith("gpt-5.6-sol/")))
+      then $policyDef.routes.escalatedVerify else $policyDef.routes.ordinaryVerify end
+    end;
+  def oneOf($value; $allowed): any($allowed[]; . == $value);
   ($caseDef.game as $game |
+   $policyDef.enabled == true and
+   all($policyDef.routes[][]; test("^gpt-5\\.6-(terra|sol)/(low|medium|high)$")) and
    ($caseDef.targetCommand | contains("-Dtest=" + $caseDef.testClass + "#")) and
    (all($caseDef.verificationClasses[]; startswith("com.openggf.tests.trace." + $game + "."))) and
    (if $game == "s1" then $caseDef.rom.property == "sonic1.rom.path" and $caseDef.rom.sha1 == "69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B" and ($caseDef.targetCommand | contains("-Dsonic1.rom.path=<ROM_PATH>"))
@@ -290,7 +327,53 @@ jq -e --arg policy "$BENCH_POLICY" --arg case "$BENCH_CASE" --arg patch "$BENCH_
     else $caseDef.rom.property == "s3k.rom.path" and $caseDef.rom.sha1 == "CFBF98C36C776677290A872547AC47C53D2761D6" and ($caseDef.targetCommand | contains("-Ds3k.rom.path=<ROM_PATH>")) end) and
    $result.policy == $policyDef.name and $result.caseId == $caseDef.id and
    $result.baseCommit == $caseDef.baseCommit and $result.beforeFrontier == $caseDef.startingFrontier and
-   $result.patch.path == $patch)' "$BENCH_MANIFEST"
+   $result.patch.path == $patch and
+   ($result.stages | map(.name)) == (["discovery", "triage", "fix", "verify"][0:($result.stages | length)]) and
+   all($result.stages[]; . as $stage |
+     isPrefix($stage.modelRoute; allowedRoutes($stage)) and
+     routeOf($stage) == $stage.modelRoute[-1] and
+     (($stage.actualModel == null and $stage.actualEffort == null) or
+      ($stage.actualModel + "/" + $stage.actualEffort) == routeOf($stage)) and
+     $stage.needsEscalation == false and
+     (($stage.modelRoute | length) == 1 or ($stage.escalationReasons | length) > 0) and
+     (if $stage.name == "discovery" then
+        $stage.complexity == "mechanical" and $stage.beforeFrame == null and $stage.afterFrame == null and
+        $stage.attemptCount == 0 and oneOf($stage.status; ["completed", "blocked", "error"])
+      elif $stage.name == "triage" then
+        $stage.complexity == $caseDef.complexity and
+        $stage.beforeFrame == $caseDef.startingFrontier.frame and $stage.afterFrame == $stage.beforeFrame and
+        oneOf($stage.status; ["completed", "blocked", "error"])
+      else
+        $stage.complexity == $caseDef.complexity and
+        oneOf($stage.status; ["green", "advanced", "no-change", "regressed", "blocked", "error"])
+      end)) and
+   all(range(0; ($result.stages | length) - 1); . as $index |
+     ($result.stages[$index] |
+      if .name == "discovery" or .name == "triage" then .status == "completed"
+      else oneOf(.status; ["green", "advanced"]) end)) and
+   ($result.stages[-1] as $last |
+     (if $last.name == "discovery" or $last.name == "triage" then oneOf($last.status; ["blocked", "error"])
+      elif $last.name == "fix" then oneOf($last.status; ["no-change", "regressed", "blocked", "error"])
+      else true end) and
+     $result.status == $last.status and
+     (if $last.afterFrame == null then $result.afterFrontier == null
+      else $result.afterFrontier != null and $result.afterFrontier.frame == $last.afterFrame end)) and
+   (($result.stages | map(.attemptCount) | add) == $result.totalAttemptCount) and
+   (($result.stages | map(.regressionCount) | add) == ($result.regressions | length)) and
+   (($result.status == "regressed") == (($result.regressions | length) > 0)) and
+   (if $result.status == "green" then $result.afterFrontier == null
+    elif $result.status == "advanced" then $result.afterFrontier.frame > $result.beforeFrontier.frame
+    elif $result.status == "no-change" then $result.afterFrontier == $result.beforeFrontier
+    else true end) and
+   (if ($result.stages | map(.name) | index("fix")) != null then
+      ($result.stages[] | select(.name == "fix") | .beforeFrame == $caseDef.startingFrontier.frame)
+    else true end) and
+   (if ($result.stages | map(.name) | index("verify")) != null then
+      (($result.stages[] | select(.name == "fix") | .afterFrame) as $fixAfter |
+       ($result.stages[] | select(.name == "verify") |
+        .beforeFrame == $fixAfter and .afterFrame == .beforeFrame))
+    else true end))
+'
 ```
 
 The result and patch are now preserved outside `target/` and the worktree.

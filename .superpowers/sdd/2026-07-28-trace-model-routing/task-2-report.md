@@ -161,3 +161,43 @@ The S2 run produced result tree
 `9ce7df9e4ee055692e85f9be0cfc71e6fb201e2f22f635c0073d9f351ffdb72c`.
 Each patch contained only the explicit `benchmark-owned.txt` fixture. Both
 `check-jsonschema` invocations reported `ok -- validation done`.
+
+## Review fix round 4 — 2026-07-28
+
+The final-result schema no longer accepts planning-state `pending` stages. The
+semantic gate now requires the executed stages to form a Discovery → Triage →
+Fix → Verify prefix, binds every requested route and `modelRoute` prefix to the
+selected enabled policy, validates observable actual model/effort when present,
+and rejects incomplete escalation state. It also cross-checks stage status,
+overall status, before/after frontier, total attempts, regressions, and
+Fix/Verify frame continuity. The disabled-policy preflight now runs before
+retention allocation, result initialization, branch creation, or worktree
+creation, and an enabled policy cannot emit Luna while Luna is unsupported.
+
+Zero-source-change outcomes are now first-class evidence. An empty
+`owned-files` list produces an empty binary patch with SHA-256
+`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`;
+the temporary index writes the unchanged pinned base tree. For the S2 case that
+tree is `b1bbb79fb6e03f6f0591f3b04b1e7d8a08f85cd4`.
+
+The pre-fix behavioral probes reproduced all findings: the old gate accepted a
+wrong Terra shared-Fix route, a pending stage, and the disabled Luna policy,
+while `test -s "$BENCH_OWNED"` rejected the empty list.
+
+The final validation pass ran the four `jq empty` checks, manifest and result
+schema validation, both metaschema checks, unique-case/all-game/history checks,
+all pinned commit checks, and all pinned fixture hashes. It then executed the
+gate extracted directly from the runbook. Output:
+
+```text
+ok -- validation done
+ok -- validation done
+ok -- validation done
+no-change zero-diff accepted tree=b1bbb79fb6e03f6f0591f3b04b1e7d8a08f85cd4 patch=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+blocked zero-diff accepted tree=b1bbb79fb6e03f6f0591f3b04b1e7d8a08f85cd4 patch=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+executed terra-sol route accepted
+wrong-model route rejected
+pending stage rejected
+disabled Luna policy rejected before allocation
+all Task 2 validations passed
+```

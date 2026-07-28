@@ -104,6 +104,12 @@ messages (per-fix ROM rationale).
     within-trace only: it distinguishes an advanced red root from no change but
     cannot compare remaining difficulty across traces or prove acceptance.
     Missing runtime telemetry stays null rather than inferred.
+19. **Benchmark results are executed records, not route plans.** Final result
+    validation rejects pending stages and routes outside the selected enabled
+    policy, and cross-checks stage completion, attempts, regressions, and
+    frontiers. A blocked, error, or no-change run remains valid evidence even
+    with no owned source changes: it retains an empty patch with its SHA-256 and
+    a result tree equal to the pinned base tree.
 
 ## Run record — 2026-06-03
 
