@@ -4,6 +4,9 @@ import org.lwjgl.glfw.GLFWImage;
 import org.lwjgl.stb.STBImage;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
+import org.lwjgl.system.Platform;
+import org.lwjgl.system.SharedLibrary;
+import org.lwjgl.system.macosx.ObjCRuntime;
 
 import java.io.InputStream;
 import java.nio.ByteBuffer;
@@ -17,6 +20,13 @@ import static org.lwjgl.glfw.GLFW.GLFW_X11_CLASS_NAME;
 import static org.lwjgl.glfw.GLFW.GLFW_X11_INSTANCE_NAME;
 import static org.lwjgl.glfw.GLFW.glfwSetWindowIcon;
 import static org.lwjgl.glfw.GLFW.glfwWindowHintString;
+import static org.lwjgl.system.JNI.invokePPP;
+import static org.lwjgl.system.JNI.invokePPPP;
+import static org.lwjgl.system.JNI.invokePPPPP;
+import static org.lwjgl.system.JNI.invokePPPV;
+import static org.lwjgl.system.JNI.invokePPV;
+import static org.lwjgl.system.macosx.ObjCRuntime.objc_getClass;
+import static org.lwjgl.system.macosx.ObjCRuntime.sel_registerName;
 
 /**
  * Applies the application icon to a GLFW window.
@@ -60,6 +70,11 @@ public final class WindowIconLoader {
      * @param window GLFW window handle
      */
     public static void apply(long window) {
+        if (isMacOs()) {
+            applyCocoaApplicationIcon();
+            return;
+        }
+
         List<ByteBuffer> pixelBuffers = new ArrayList<>();
         try (MemoryStack stack = MemoryStack.stackPush()) {
             GLFWImage.Buffer icons = GLFWImage.malloc(ICON_RESOURCES.length, stack);
@@ -103,6 +118,55 @@ public final class WindowIconLoader {
             for (ByteBuffer pixels : pixelBuffers) {
                 STBImage.stbi_image_free(pixels);
             }
+        }
+    }
+
+    private static boolean isMacOs() {
+        return Platform.get() == Platform.MACOSX;
+    }
+
+    /**
+     * Cocoa does not support per-window icons. Set the NSApplication icon instead so
+     * direct JAR launches receive the same Dock icon as the packaged app.
+     */
+    private static void applyCocoaApplicationIcon() {
+        byte[] bytes = readResource("icon/openggf-256.png");
+        if (bytes == null) {
+            return;
+        }
+
+        ByteBuffer encoded = MemoryUtil.memAlloc(bytes.length);
+        try {
+            encoded.put(bytes).flip();
+
+            SharedLibrary objc = ObjCRuntime.getLibrary();
+            long objcMsgSend = objc.getFunctionAddress("objc_msgSend");
+            long nsDataClass = objc_getClass("NSData");
+            long nsImageClass = objc_getClass("NSImage");
+            long nsApplicationClass = objc_getClass("NSApplication");
+            if (objcMsgSend == MemoryUtil.NULL
+                    || nsDataClass == MemoryUtil.NULL
+                    || nsImageClass == MemoryUtil.NULL
+                    || nsApplicationClass == MemoryUtil.NULL) {
+                return;
+            }
+
+            long data = invokePPPPP(nsDataClass, sel_registerName("dataWithBytes:length:"),
+                    MemoryUtil.memAddress(encoded), bytes.length, objcMsgSend);
+            long image = invokePPP(nsImageClass, sel_registerName("alloc"), objcMsgSend);
+            image = invokePPPP(image, sel_registerName("initWithData:"), data, objcMsgSend);
+            long application = invokePPP(nsApplicationClass,
+                    sel_registerName("sharedApplication"), objcMsgSend);
+            if (data != MemoryUtil.NULL && image != MemoryUtil.NULL && application != MemoryUtil.NULL) {
+                invokePPPV(application, sel_registerName("setApplicationIconImage:"), image, objcMsgSend);
+            }
+            if (image != MemoryUtil.NULL) {
+                invokePPV(image, sel_registerName("release"), objcMsgSend);
+            }
+        } catch (RuntimeException | LinkageError ignored) {
+            // Keep the platform default if Cocoa or the packaged image is unavailable.
+        } finally {
+            MemoryUtil.memFree(encoded);
         }
     }
 
