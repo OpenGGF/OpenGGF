@@ -247,10 +247,13 @@ Follow the trace fleet non-negotiable rules. Trace data is comparison-only; mode
 Triage worker:
 
 ```text
-Triage failing trace <testClass> (<game> <zone>) in an isolated worktree.
+Follow the trace fleet non-negotiable rules. Trace data is comparison-only; model ROM state, cite ROM/disassembly evidence, and do not use zone/route/frame/game carve-outs. Return the requested stage JSON with the conductor-owned routing object unchanged. Do not estimate runtime telemetry. You own this worktree only for this stage; do not revert others' edits, stage only files you changed, and never use git add -A or git stash.
+
 Routing: <CONDUCTOR_ROUTING_JSON>
 
 Input: <FAILING_ITEM_JSON>
+
+Triage failing trace <testClass> (<game> <zone>) in an isolated worktree.
 
 Create or reuse worktree .worktrees/trace-<game>-<zone> on bugfix/ai-trace-<game>-<zone> from develop. Rerun the targeted trace, run TraceTriageTool, inspect the relevant disassembly, and return the TRIAGE JSON object. Do not edit engine code.
 
@@ -260,12 +263,15 @@ Create or reuse worktree .worktrees/trace-<game>-<zone> on bugfix/ai-trace-<game
 Fix worker:
 
 ```text
-Implement a trace fix for <testClass> in <worktreePath> on <branch>.
+Follow the trace fleet non-negotiable rules. Trace data is comparison-only; model ROM state, cite ROM/disassembly evidence, and do not use zone/route/frame/game carve-outs. Return the requested stage JSON with the conductor-owned routing object unchanged. Do not estimate runtime telemetry. You own this worktree only for this stage; do not revert others' edits, stage only files you changed, and never use git add -A or git stash.
+
 Routing: <CONDUCTOR_ROUTING_JSON>
 
 Input: <TRIAGE_JSON>
 
-Use the triage hypothesis and disassembly cites. Iterate diagnose->fix up to 3 times, rerunning the targeted trace after each edit. Capture beforeFrame and afterFrame. Do not commit.
+Implement a trace fix for <testClass> in <worktreePath> on <branch>.
+
+Use the triage hypothesis and disassembly cites. Terra makes at most two unsuccessful attempts; a Sol escalation gets exactly one final attempt, with a cumulative cap of three. Rerun the targeted trace after each edit and capture beforeFrame and afterFrame. Do not commit.
 
 <NON_NEGOTIABLE_RULES>
 ```
@@ -273,10 +279,13 @@ Use the triage hypothesis and disassembly cites. Iterate diagnose->fix up to 3 t
 Verify worker:
 
 ```text
-Independently verify <testClass> in <worktreePath> on <branch>.
+Follow the trace fleet non-negotiable rules. Trace data is comparison-only; model ROM state, cite ROM/disassembly evidence, and do not use zone/route/frame/game carve-outs. Return the requested stage JSON with the conductor-owned routing object unchanged. Do not estimate runtime telemetry. You own this worktree only for this stage; do not revert others' edits, stage only files you changed, and never use git add -A or git stash.
+
 Routing: <CONDUCTOR_ROUTING_JSON>
 
 Input: <FIX_JSON>
+
+Independently verify <testClass> in <worktreePath> on <branch>.
 
 Rerun the targeted trace and same-game green guard. Apply the genuineness gate. Commit only if genuine=true, changed=true, and status is green, advanced, or advanced-with-regression. Return the VERIFY JSON object.
 
@@ -307,7 +316,11 @@ Skip abstract bases and non-replay guard tests such as `TestTraceReplayInvariant
 
 Attach same-game green guards to each failing item. For S3K, add the fallback green guards listed above. Exclude the failing class itself.
 
-Discovery output includes the classified failing/passing/ignored items and embeds the Model Routing Contract with `requestedModel="gpt-5.6-terra"`, `requestedEffort="low"`, `complexity="mechanical"`, `attemptCount=0`, the observed `beforeFrame`/`afterFrame` where applicable, `status`, and `regressionCount=0`.
+Discovery output example:
+
+```json
+{"failing": [], "requestedModel": "gpt-5.6-terra", "requestedEffort": "low", "actualModel": null, "actualEffort": null, "complexity": "mechanical", "confidence": "high", "beforeFrame": null, "afterFrame": null, "status": "completed", "attemptCount": 0, "regressionCount": 0, "sharedSurfaces": [], "needsEscalation": false, "escalationReasons": [], "modelRoute": ["gpt-5.6-terra/low"], "usage": {"inputTokens": null, "cachedInputTokens": null, "outputTokens": null, "reasoningTokens": null}, "durationMs": null}
+```
 
 ## Phase 1: Triage
 
@@ -351,7 +364,11 @@ Triage output:
   "field": "x_pos",
   "brief": "one concise divergence brief",
   "hypothesis": "ROM-cited fix hypothesis",
-  "disasmCites": ["docs/skdisasm/sonic3k.asm:12345"]
+  "disasmCites": ["docs/skdisasm/sonic3k.asm:12345"],
+  "requestedModel": "gpt-5.6-terra", "requestedEffort": "medium", "actualModel": null, "actualEffort": null,
+  "complexity": "narrow", "confidence": "high", "beforeFrame": 12345, "afterFrame": 12345, "status": "accepted",
+  "attemptCount": 0, "regressionCount": 0, "sharedSurfaces": [], "needsEscalation": false, "escalationReasons": [],
+  "modelRoute": ["gpt-5.6-terra/medium"], "usage": {"inputTokens": null, "cachedInputTokens": null, "outputTokens": null, "reasoningTokens": null}, "durationMs": null
 }
 ```
 
@@ -382,7 +399,11 @@ Fix output:
   "romCites": ["docs/skdisasm/sonic3k.asm:12345"],
   "summary": "what changed and why",
   "worktreePath": ".worktrees/trace-s3k-aiz",
-  "branch": "bugfix/ai-trace-s3k-aiz"
+  "branch": "bugfix/ai-trace-s3k-aiz",
+  "requestedModel": "gpt-5.6-terra", "requestedEffort": "medium", "actualModel": null, "actualEffort": null,
+  "complexity": "narrow", "confidence": "high", "status": "advanced", "attemptCount": 1, "regressionCount": 0,
+  "sharedSurfaces": [], "needsEscalation": false, "escalationReasons": [], "modelRoute": ["gpt-5.6-terra/medium"],
+  "usage": {"inputTokens": null, "cachedInputTokens": null, "outputTokens": null, "reasoningTokens": null}, "durationMs": null
 }
 ```
 
@@ -446,7 +467,11 @@ Verify output:
   "regressionsIntroduced": [],
   "afterFrame": 13000,
   "frontierLogUpdated": true,
-  "notes": "verification summary"
+  "notes": "verification summary",
+  "requestedModel": "gpt-5.6-terra", "requestedEffort": "medium", "actualModel": null, "actualEffort": null,
+  "complexity": "narrow", "confidence": "high", "beforeFrame": 12345, "attemptCount": 1, "regressionCount": 0,
+  "sharedSurfaces": [], "needsEscalation": false, "escalationReasons": [], "modelRoute": ["gpt-5.6-terra/medium"],
+  "usage": {"inputTokens": null, "cachedInputTokens": null, "outputTokens": null, "reasoningTokens": null}, "durationMs": null
 }
 ```
 
