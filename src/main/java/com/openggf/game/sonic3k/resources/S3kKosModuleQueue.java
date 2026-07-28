@@ -50,10 +50,19 @@ public final class S3kKosModuleQueue {
             Rom rom,
             int source,
             int destinationPatternAddress) throws IOException {
-        return queue(rom, source, destinationPatternAddress, false);
+        return queueInternal(
+                rom, source, destinationPatternAddress, false);
     }
 
-    public HardwareWorkHandle queue(
+    public HardwareWorkHandle queueForIczSeamlessHandoff(
+            Rom rom,
+            int source,
+            int destinationPatternAddress) throws IOException {
+        return queueInternal(
+                rom, source, destinationPatternAddress, true);
+    }
+
+    private HardwareWorkHandle queueInternal(
             Rom rom,
             int source,
             int destinationPatternAddress,

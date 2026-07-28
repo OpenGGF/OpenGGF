@@ -22,9 +22,11 @@ import com.openggf.level.Level;
 import com.openggf.level.Palette;
 import com.openggf.level.animation.AnimatedPaletteManager;
 import com.openggf.level.animation.AnimatedPatternManager;
+import com.openggf.level.resources.DeferredLevelResourceTracker;
 import com.openggf.level.resources.LevelResourcePlan;
 import com.openggf.level.resources.LoadOp;
 import com.openggf.game.sonic3k.objects.AizIntroTerrainSwap;
+import com.openggf.game.sonic3k.resources.Sonic3kDeferredLevelResourceProfile;
 
 import java.util.LinkedHashSet;
 import java.io.IOException;
@@ -198,6 +200,14 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
 
     @Override
     public Level loadLevel(int levelIdx) throws IOException {
+        return loadLevel(levelIdx, DeferredLevelResourceTracker.none());
+    }
+
+    @Override
+    public Level loadLevel(
+            int levelIdx,
+            DeferredLevelResourceTracker deferredResources)
+            throws IOException {
         // Convert levelIdx to zone/act
         int s3kIdx = levelIdx;
         if (levelIdx >= 0xC0) {
@@ -236,6 +246,22 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
         int secondaryBlocksAddr = word3 & 0x00FFFFFF;
         int primaryChunksAddr = word4 & 0x00FFFFFF;
         int secondaryChunksAddr = word5 & 0x00FFFFFF;
+        Sonic3kDeferredLevelResourceProfile deferredProfile =
+                Sonic3kDeferredLevelResourceProfile.forLevelLoadBlock(
+                        llbIndex);
+        DeferredLevelResourceTracker activeDeferredResources =
+                deferredResources != null
+                        ? deferredResources
+                        : DeferredLevelResourceTracker.none();
+        if (activeDeferredResources.isEmpty()
+                && deferredProfile != null
+                && deferredProfile.initiallyDeferred()) {
+            activeDeferredResources = deferredProfile.manifest(
+                            secondaryArtAddr,
+                            secondaryBlocksAddr,
+                            secondaryChunksAddr)
+                    .newTracker();
+        }
 
         boolean applyAiz1OverlayBridge = zone == 0
                 && act == 0
@@ -268,7 +294,15 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
         // Patterns (KosM)
         planBuilder.addPatternOp(LoadOp.kosinskiMBase(primaryArtAddr));
         if (secondaryArtAddr != primaryArtAddr && secondaryArtAddr > 0) {
-            planBuilder.addPatternOp(LoadOp.kosinskiMAppend(secondaryArtAddr));
+            boolean deferred = deferredProfile != null
+                    && deferredProfile.defersPatterns()
+                    && activeDeferredResources.omitIfRequested(
+                            deferredProfile.patternDescriptor(
+                                    secondaryArtAddr));
+            if (!deferred) {
+                planBuilder.addPatternOp(
+                        LoadOp.kosinskiMAppend(secondaryArtAddr));
+            }
         }
         addLevelPlcPatternOps(planBuilder, zone, act, bootstrap, plcPrimary, plcSecondary);
 
@@ -277,7 +311,15 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
         // second stream appends immediately after the first in Block_table.
         planBuilder.addChunkOp(LoadOp.kosinskiBase(primaryBlocksAddr));
         if (secondaryBlocksAddr != primaryBlocksAddr && secondaryBlocksAddr > 0) {
-            planBuilder.addChunkOp(LoadOp.kosinskiAppend(secondaryBlocksAddr));
+            boolean deferred = deferredProfile != null
+                    && deferredProfile.defersChunks()
+                    && activeDeferredResources.omitIfRequested(
+                            deferredProfile.chunkDescriptor(
+                                    secondaryBlocksAddr));
+            if (!deferred) {
+                planBuilder.addChunkOp(
+                        LoadOp.kosinskiAppend(secondaryBlocksAddr));
+            }
         }
 
         // Chunks (128x128, Kosinski) - "blocks" in engine terminology.
@@ -285,8 +327,17 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
         // the secondary stream appends after primary in RAM_start.
         planBuilder.addBlockOp(LoadOp.kosinskiBase(primaryChunksAddr));
         if (secondaryChunksAddr != primaryChunksAddr && secondaryChunksAddr > 0) {
-            planBuilder.addBlockOp(LoadOp.kosinskiAppend(secondaryChunksAddr));
+            boolean deferred = deferredProfile != null
+                    && deferredProfile.defersBlocks()
+                    && activeDeferredResources.omitIfRequested(
+                            deferredProfile.blockDescriptor(
+                                    secondaryChunksAddr));
+            if (!deferred) {
+                planBuilder.addBlockOp(
+                        LoadOp.kosinskiAppend(secondaryChunksAddr));
+            }
         }
+        activeDeferredResources.verifyFullyConsumed();
 
         // Collision indices (loaded directly, not through resource plan)
         // Returns [primaryAddr, secondaryAddr, interleavedFlag]

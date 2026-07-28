@@ -104,6 +104,7 @@ class TestSonic3kIczRewindRoundTrip {
         setLong(original, "act2TransitionChunkOrdinal", 3);
         setLong(original, "act2TransitionBlockOrdinal", 4);
         setLong(original, "act2TransitionArtOrdinal", 2);
+        setLong(original, "act2TransitionHandoffId", 9);
         setBoolean(original, "act2TransitionDirectPublished", true);
         setBoolean(original, "act2TransitionArtPublished", false);
 
@@ -114,6 +115,7 @@ class TestSonic3kIczRewindRoundTrip {
         assertEquals(3L, longField(restored, "act2TransitionChunkOrdinal"));
         assertEquals(4L, longField(restored, "act2TransitionBlockOrdinal"));
         assertEquals(2L, longField(restored, "act2TransitionArtOrdinal"));
+        assertEquals(9L, longField(restored, "act2TransitionHandoffId"));
         assertTrue(booleanField(restored, "act2TransitionDirectPublished"));
         assertEquals(false,
                 booleanField(restored, "act2TransitionArtPublished"));

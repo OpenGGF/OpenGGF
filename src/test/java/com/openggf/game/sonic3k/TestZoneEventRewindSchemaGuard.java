@@ -297,6 +297,7 @@ public class TestZoneEventRewindSchemaGuard {
             "indoorPaletteCyclingActive",
             "bigSnowPileSpawned",
             "act2TransitionRequested",
+            "act2TransitionHandoffId",
             "act2TransitionDirectPublished",
             "act2TransitionArtPublished",
             "act2TransitionChunkOrdinal",

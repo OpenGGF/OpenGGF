@@ -59,6 +59,7 @@ import com.openggf.level.objects.PersistentRespawnState;
 import com.openggf.level.objects.TouchResponseTable;
 import com.openggf.level.rings.RingManager;
 import com.openggf.level.rings.RingSpriteSheet;
+import com.openggf.level.resources.DeferredLevelResourceTracker;
 import com.openggf.level.scroll.BgTilemapUpdateMode;
 import com.openggf.level.animation.AnimatedPaletteManager;
 import com.openggf.level.animation.AnimatedPatternManager;
@@ -434,7 +435,14 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * @return the loaded Level instance (also assigned to {@code this.level})
      */
     public Level loadLevelData(int levelIndex) throws IOException {
-        Level loaded = game.loadLevel(levelIndex);
+        return loadLevelData(levelIndex, DeferredLevelResourceTracker.none());
+    }
+
+    public Level loadLevelData(
+            int levelIndex,
+            DeferredLevelResourceTracker deferredResources)
+            throws IOException {
+        Level loaded = game.loadLevel(levelIndex, deferredResources);
         writeCurrentLevel(loaded);
         rebuildLevelDerivedState();
         return loaded;
@@ -3638,6 +3646,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                             .cameraOffset(request.cameraOffsetX(), request.cameraOffsetY())
                             .mutationKey(request.mutationKey())
                             .musicOverrideId(request.musicOverrideId())
+                            .resourceHandoff(request.resourceHandoffId())
                             .build();
                     executeActTransition(adjusted);
                     advanceFrameCounterAcrossSeamlessReload();

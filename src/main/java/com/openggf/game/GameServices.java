@@ -27,6 +27,7 @@ import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.LevelManager;
 import com.openggf.level.ParallaxManager;
+import com.openggf.level.SeamlessTransitionResourceHandoffRegistry;
 import com.openggf.level.WaterSystem;
 import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.TerrainCollisionManager;
@@ -189,6 +190,14 @@ public final class GameServices {
         return mode != null ? mode.s3kKosModuleQueue() : null;
     }
 
+    public static SeamlessTransitionResourceHandoffRegistry
+            seamlessTransitionResourceHandoffsOrNull() {
+        GameplayModeContext mode = gameplayModeOrNull();
+        return mode != null
+                ? mode.seamlessTransitionResourceHandoffs()
+                : null;
+    }
+
     // â”€â”€ Gameplay-scoped managers (resolve through SessionManager) â”€â”€â”€â”€â”€â”€â”€â”€
 
     /**
@@ -216,6 +225,12 @@ public final class GameServices {
     /** Session-owned S3K KosM parent coordinator. */
     public static S3kKosModuleQueue s3kKosModuleQueue() {
         return requireGameplayMode("s3kKosModuleQueue").s3kKosModuleQueue();
+    }
+
+    public static SeamlessTransitionResourceHandoffRegistry
+            seamlessTransitionResourceHandoffs() {
+        return requireGameplayMode("seamlessTransitionResourceHandoffs")
+                .seamlessTransitionResourceHandoffs();
     }
 
     /**

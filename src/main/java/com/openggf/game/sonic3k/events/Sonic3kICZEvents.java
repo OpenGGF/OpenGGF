@@ -29,6 +29,7 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 import com.openggf.level.SeamlessLevelTransitionRequest;
+import com.openggf.level.SeamlessTransitionResourceHandoffId;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -165,6 +166,7 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
     @RewindTransient(reason = "handle is rebound to the restored session ledger by captured ordinal")
     private HardwareWorkHandle act2TransitionArtHandle;
     private long act2TransitionArtOrdinal = -1;
+    private long act2TransitionHandoffId = -1;
     private int activeAct;
     private boolean postTitleAct2SizeChangeActive;
     private int act2MaxXAccumulator;
@@ -203,6 +205,7 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
         act2TransitionArtQueue = null;
         act2TransitionArtHandle = null;
         act2TransitionArtOrdinal = -1;
+        act2TransitionHandoffId = -1;
         postTitleAct2SizeChangeActive = false;
         act2MaxXAccumulator = 0;
         act2MinYAccumulator = 0;
@@ -619,8 +622,12 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
     }
 
     private void updateIcz2TransitionQueue() {
-        if (act2TransitionDirectQueue != null
-                && !act2TransitionDirectQueue.decompressionsPending()) {
+        if (act2TransitionHandoffId >= 0
+                && ((IczSeamlessTransitionResourceHandoff)
+                        GameServices.seamlessTransitionResourceHandoffs()
+                                .peek(new SeamlessTransitionResourceHandoffId(
+                                        act2TransitionHandoffId)))
+                        .directQueueEmpty()) {
             requestIcz2Transition();
         }
     }
@@ -652,9 +659,21 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
             act2TransitionBlockOrdinal = act2TransitionBlockHandle.ordinal();
 
             act2TransitionArtQueue = GameServices.s3kKosModuleQueue();
-            act2TransitionArtHandle = act2TransitionArtQueue.queue(
-                    rom(), artSource, ICZ2_SECONDARY_ART_DEST_TILE, true);
+            act2TransitionArtHandle =
+                    act2TransitionArtQueue.queueForIczSeamlessHandoff(
+                            rom(), artSource,
+                            ICZ2_SECONDARY_ART_DEST_TILE);
             act2TransitionArtOrdinal = act2TransitionArtHandle.ordinal();
+            act2TransitionHandoffId =
+                    GameServices.seamlessTransitionResourceHandoffs()
+                            .register(
+                                    new IczSeamlessTransitionResourceHandoff(
+                                            act2TransitionDirectQueue,
+                                            act2TransitionChunkHandle,
+                                            act2TransitionBlockHandle,
+                                            act2TransitionArtQueue,
+                                            act2TransitionArtHandle))
+                            .value();
         } catch (IOException exception) {
             throw new IllegalStateException(
                     "Unable to queue ICZ2 seamless-transition resources",
@@ -683,6 +702,9 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
                 .postTransitionMaxYTarget(ICZ2_CAMERA_MAX_Y)
                 .playerOffset(ICZ1_TO_ICZ2_OFFSET_X, ICZ1_TO_ICZ2_OFFSET_Y)
                 .cameraOffset(ICZ1_TO_ICZ2_OFFSET_X, ICZ1_TO_ICZ2_OFFSET_Y)
+                .resourceHandoff(
+                        new SeamlessTransitionResourceHandoffId(
+                                act2TransitionHandoffId))
                 .build();
 
         SessionSaveRequests.requestCurrentSessionSave(SaveReason.PROGRESSION_SAVE);
@@ -695,25 +717,14 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
         } catch (IOException e) {
             throw new IllegalStateException("Failed to apply ICZ act transition", e);
         }
-        transferIcz2ResourceOwnership();
     }
 
-    private void transferIcz2ResourceOwnership() {
-        if (!(GameServices.module().getLevelEventProvider()
-                instanceof Sonic3kLevelEventManager eventManager)) {
-            throw new IllegalStateException(
-                    "ICZ seamless transition has no S3K event resource owner");
-        }
-        Sonic3kICZEvents target = eventManager.getIczEvents();
-        if (target == null || target == this) {
-            throw new IllegalStateException(
-                    "ICZ seamless transition did not install its Act 2 resource owner");
-        }
-        target.acceptTransferredIcz2Resources(this);
-        target.publishTransferredIcz2Resources();
-    }
-
-    private void acceptTransferredIcz2Resources(Sonic3kICZEvents source) {
+    void acceptTransferredIcz2Resources(
+            S3kKosDecompressionQueue directQueue,
+            HardwareWorkHandle chunkHandle,
+            HardwareWorkHandle blockHandle,
+            S3kKosModuleQueue artQueue,
+            HardwareWorkHandle artHandle) {
         if (activeAct != 1
                 || act2TransitionChunkHandle != null
                 || act2TransitionBlockHandle != null
@@ -721,30 +732,23 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
             throw new IllegalStateException(
                     "ICZ2 resource owner cannot accept duplicate or out-of-act work");
         }
-        act2TransitionDirectQueue = source.act2TransitionDirectQueue;
-        act2TransitionChunkHandle = source.act2TransitionChunkHandle;
-        act2TransitionBlockHandle = source.act2TransitionBlockHandle;
-        act2TransitionChunkOrdinal = source.act2TransitionChunkOrdinal;
-        act2TransitionBlockOrdinal = source.act2TransitionBlockOrdinal;
-        act2TransitionArtQueue = source.act2TransitionArtQueue;
-        act2TransitionArtHandle = source.act2TransitionArtHandle;
-        act2TransitionArtOrdinal = source.act2TransitionArtOrdinal;
-
-        source.act2TransitionDirectQueue = null;
-        source.act2TransitionChunkHandle = null;
-        source.act2TransitionBlockHandle = null;
-        source.act2TransitionChunkOrdinal = -1;
-        source.act2TransitionBlockOrdinal = -1;
-        source.act2TransitionArtQueue = null;
-        source.act2TransitionArtHandle = null;
-        source.act2TransitionArtOrdinal = -1;
+        act2TransitionDirectQueue = directQueue;
+        act2TransitionChunkHandle = chunkHandle;
+        act2TransitionBlockHandle = blockHandle;
+        act2TransitionChunkOrdinal = chunkHandle.ordinal();
+        act2TransitionBlockOrdinal = blockHandle.ordinal();
+        act2TransitionArtQueue = artQueue;
+        act2TransitionArtHandle = artHandle;
+        act2TransitionArtOrdinal = artHandle.ordinal();
     }
 
     private void publishTransferredIcz2Resources() {
         if (!act2TransitionDirectPublished
                 && act2TransitionChunkHandle != null
                 && act2TransitionBlockHandle != null
-                && !act2TransitionDirectQueue.decompressionsPending()) {
+                && act2TransitionArtHandle != null
+                && act2TransitionArtQueue.isReady(
+                        act2TransitionArtHandle)) {
             if (!act2TransitionDirectQueue.isReady(act2TransitionChunkHandle)
                     || !act2TransitionDirectQueue.isReady(act2TransitionBlockHandle)) {
                 throw new IllegalStateException(
@@ -754,24 +758,19 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
                     act2TransitionDirectQueue.claim(act2TransitionChunkHandle);
             byte[] blocks16x16 =
                     act2TransitionDirectQueue.claim(act2TransitionBlockHandle);
-            applyIcz2PreparedTerrain(chunks128x128, blocks16x16);
-            act2TransitionChunkHandle = null;
-            act2TransitionBlockHandle = null;
-            act2TransitionChunkOrdinal = -1;
-            act2TransitionBlockOrdinal = -1;
-            act2TransitionDirectQueue = null;
-            act2TransitionDirectPublished = true;
-        }
-
-        if (!act2TransitionArtPublished
-                && act2TransitionArtHandle != null
-                && act2TransitionArtQueue.isReady(act2TransitionArtHandle)) {
             byte[] tiles8x8 =
                     act2TransitionArtQueue.claim(act2TransitionArtHandle);
+            applyIcz2PreparedTerrain(chunks128x128, blocks16x16);
             applyIcz2PreparedArt(tiles8x8);
+            act2TransitionChunkHandle = null;
+            act2TransitionBlockHandle = null;
             act2TransitionArtHandle = null;
+            act2TransitionChunkOrdinal = -1;
+            act2TransitionBlockOrdinal = -1;
             act2TransitionArtOrdinal = -1;
+            act2TransitionDirectQueue = null;
             act2TransitionArtQueue = null;
+            act2TransitionDirectPublished = true;
             act2TransitionArtPublished = true;
         }
     }

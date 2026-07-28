@@ -52,3 +52,35 @@ and KosM parent queue. No trace fixture was added or changed.
   does not alter fixed-air ownership or the unrelated AIZ intro/fire sequence.
 - Maven validate logs a read-only `.git/config` warning while attempting to
   install hooks; builds and tests continue normally.
+
+## Review follow-up
+
+- Replaced the ICZ event-object transfer with a gameplay-session-owned,
+  rewind-snapshottable handoff registry. The transition request carries only
+  an opaque ID; the executor claims it before mutation, verifies exact
+  per-load descriptor consumption, and transfers handles after target event
+  initialization.
+- Added an immutable S3K LevelLoadBlock resource profile for AIZ intro entry
+  26 and ICZ2 entry 11. This omits only the exact secondary ROM
+  source/compression/destination triples whose production jobs already own
+  publication. Ordinary LevelLoadBlock entry 0 remains unchanged.
+- ICZ2 now claims both direct jobs and the KosM parent in one consumer scan,
+  then publishes all three prepared payloads atomically. The public boolean
+  queue policy was replaced with the ICZ-specific intent method
+  `queueForIczSeamlessHandoff`.
+- Added negative exact-once/isolation tests for manifests and trackers,
+  registry claim/failure/rewind tests, scalar handoff-ID rewind coverage, exact ICZ
+  post-publication bytes, and a whole-payload AIZ direct publication check.
+- ICZ2's two direct payloads and KosM payload remain byte-hidden while their
+  exact jobs are unclaimed. All three are asserted byte-exact after the
+  atomic publication scan.
+
+### Review verification
+
+- Isolated review-focused set: pass, 31 tests.
+- `TestS3kIczAct1TransitionHeadless`: pass.
+- Prescribed six-class comparison: 112 tests, 99 passed, 13 failed, 0 errors.
+  Exact `d230501d4` baseline was 108 tests, 94 passed, 14 failed, 0 errors.
+  The baseline's AIZ main-level queue assertion is now green; the remaining
+  11 AIZ failures and two fixed-air failures are the same pre-existing
+  failures. No new regression was introduced.

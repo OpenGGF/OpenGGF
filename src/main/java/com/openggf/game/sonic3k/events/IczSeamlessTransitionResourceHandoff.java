@@ -1,0 +1,72 @@
+package com.openggf.game.sonic3k.events;
+
+import com.openggf.game.GameServices;
+import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
+import com.openggf.game.sonic3k.resources.S3kKosDecompressionQueue;
+import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
+import com.openggf.game.sonic3k.resources.Sonic3kDeferredLevelResourceProfile;
+import com.openggf.game.timing.HardwareWorkHandle;
+import com.openggf.level.SeamlessTransitionResourceHandoff;
+import com.openggf.level.resources.DeferredLevelResourceManifest;
+
+/** Exact production resources carried by the ICZ1-to-ICZ2 reload. */
+final class IczSeamlessTransitionResourceHandoff
+        implements SeamlessTransitionResourceHandoff {
+    private static final int ICZ2_LEVEL_LOAD_BLOCK_INDEX = 11;
+
+    private final S3kKosDecompressionQueue directQueue;
+    private final HardwareWorkHandle chunkHandle;
+    private final HardwareWorkHandle blockHandle;
+    private final S3kKosModuleQueue artQueue;
+    private final HardwareWorkHandle artHandle;
+    private final DeferredLevelResourceManifest deferredResources;
+
+    IczSeamlessTransitionResourceHandoff(
+            S3kKosDecompressionQueue directQueue,
+            HardwareWorkHandle chunkHandle,
+            HardwareWorkHandle blockHandle,
+            S3kKosModuleQueue artQueue,
+            HardwareWorkHandle artHandle) {
+        this.directQueue = directQueue;
+        this.chunkHandle = chunkHandle;
+        this.blockHandle = blockHandle;
+        this.artQueue = artQueue;
+        this.artHandle = artHandle;
+        Sonic3kDeferredLevelResourceProfile profile =
+                Sonic3kDeferredLevelResourceProfile.forLevelLoadBlock(
+                        ICZ2_LEVEL_LOAD_BLOCK_INDEX);
+        this.deferredResources = profile.manifest(
+                artQueue.descriptor(artHandle).sourceAddress(),
+                directQueue.descriptor(blockHandle).sourceAddress(),
+                directQueue.descriptor(chunkHandle).sourceAddress());
+    }
+
+    @Override
+    public DeferredLevelResourceManifest deferredResources() {
+        return deferredResources;
+    }
+
+    boolean directQueueEmpty() {
+        return !directQueue.decompressionsPending();
+    }
+
+    @Override
+    public void transferAfterTargetInit() {
+        if (!(GameServices.module().getLevelEventProvider()
+                instanceof Sonic3kLevelEventManager eventManager)) {
+            throw new IllegalStateException(
+                    "ICZ seamless transition has no S3K event resource owner");
+        }
+        Sonic3kICZEvents target = eventManager.getIczEvents();
+        if (target == null) {
+            throw new IllegalStateException(
+                    "ICZ seamless transition did not install its Act 2 resource owner");
+        }
+        target.acceptTransferredIcz2Resources(
+                directQueue,
+                chunkHandle,
+                blockHandle,
+                artQueue,
+                artHandle);
+    }
+}

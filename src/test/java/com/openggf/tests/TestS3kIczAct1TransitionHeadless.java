@@ -2,6 +2,7 @@ package com.openggf.tests;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
+import com.openggf.game.sonic3k.Sonic3kLevel;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.events.Sonic3kICZEvents;
@@ -9,10 +10,18 @@ import com.openggf.game.sonic3k.resources.S3kKosRamDestinations;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareTimingJob;
 import com.openggf.game.timing.HardwareWorkKind;
+import com.openggf.level.Chunk;
+import com.openggf.level.LevelConstants;
+import com.openggf.level.Pattern;
+import com.openggf.level.resources.LoadOp;
+import com.openggf.level.resources.ResourceLoader;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
+
+import java.io.IOException;
+import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -23,7 +32,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestS3kIczAct1TransitionHeadless {
 
     @Test
-    void act1OutdoorTransitionReloadsIcz2AndAppliesRomCameraBounds() {
+    void act1OutdoorTransitionReloadsIcz2AndAppliesRomCameraBounds()
+            throws IOException {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_ICZ, 0)
                 .build();
@@ -69,6 +79,29 @@ class TestS3kIczAct1TransitionHeadless {
                         .map(HardwareTimingJob.Snapshot::destinationAddress)
                         .collect(java.util.stream.Collectors.toSet()));
         assertEquals(0x0122 * 32, moduleJobs.getFirst().destinationAddress());
+        ResourceLoader loader =
+                new ResourceLoader(GameServices.rom().getRom());
+        byte[] expectedBlocks128x128 = loader.loadSingle(LoadOp.kosinskiBase(
+                directJobs.stream()
+                        .filter(job -> job.destinationAddress()
+                                == S3kKosRamDestinations.RAM_START + 0x0A00)
+                        .findFirst().orElseThrow().romSourceAddress()));
+        byte[] expectedChunks16x16 = loader.loadSingle(LoadOp.kosinskiBase(
+                directJobs.stream()
+                        .filter(job -> job.destinationAddress()
+                                == S3kKosRamDestinations.blockTableOffset(0x0408))
+                        .findFirst().orElseThrow().romSourceAddress()));
+        byte[] expectedPatterns8x8 =
+                loader.loadSingle(LoadOp.kosinskiMBase(
+                        moduleJobs.getFirst().romSourceAddress()));
+        assertTrue(expectedBlocks128x128.length >= LevelConstants.BLOCK_SIZE_IN_ROM,
+                "queued ICZ2 128x128 payload must contain a whole block; length="
+                        + expectedBlocks128x128.length);
+        assertTrue(expectedChunks16x16.length >= Chunk.CHUNK_SIZE_IN_ROM,
+                "queued ICZ2 16x16 payload must contain a whole chunk; length="
+                        + expectedChunks16x16.length);
+        assertTrue(expectedPatterns8x8.length > 0,
+                "queued ICZ2 KosM payload must not be empty");
 
         service(HardwareServiceBoundary.POST_OBJECTS);
         int frames = 0;
@@ -91,17 +124,28 @@ class TestS3kIczAct1TransitionHeadless {
         Sonic3kICZEvents icz2Events = manager.getIczEvents();
         assertNotSame(events, icz2Events,
                 "the seamless reload must transfer queue ownership to the new ICZ2 event owner");
+        Sonic3kLevel icz2Level =
+                (Sonic3kLevel) GameServices.level().getCurrentLevel();
         var beforePost = GameServices.hardwareTiming().capture().jobs();
         assertTrue(beforePost.stream()
                         .filter(job -> job.kind() == HardwareWorkKind.KOS_DECOMPRESSION_QUEUE)
                         .filter(job -> job.destinationAddress()
                                 != S3kKosRamDestinations.KOS_DECOMP_BUFFER)
-                        .allMatch(HardwareTimingJob.Snapshot::claimed),
-                "ICZ2 must publish and claim both direct payloads after the in-frame reload");
+                        .noneMatch(HardwareTimingJob.Snapshot::claimed),
+                "ICZ2 must retain both direct payloads until the transferred archive publishes");
         assertFalse(beforePost.stream()
                         .filter(job -> job.kind() == HardwareWorkKind.KOS_MODULE_QUEUE)
                         .findFirst().orElseThrow().claimed(),
                 "the KosM parent cannot publish before the later POST boundary");
+        assertFalse(blockPayloadVisible(
+                        icz2Level, expectedBlocks128x128, 0x0A00),
+                "the in-frame reload must omit the queued secondary 128x128 stream");
+        assertFalse(chunkPayloadVisible(
+                        icz2Level, expectedChunks16x16, 0x0408),
+                "the in-frame reload must omit the queued secondary 16x16 stream");
+        assertFalse(patternPayloadVisible(
+                        icz2Level, expectedPatterns8x8, 0x0122),
+                "the in-frame reload must omit the queued secondary KosM archive");
 
         HardwareTimingJob.Snapshot parent;
         int moduleFrames = 0;
@@ -123,6 +167,22 @@ class TestS3kIczAct1TransitionHeadless {
                         .filter(job -> job.kind() == HardwareWorkKind.KOS_MODULE_QUEUE)
                         .findFirst().orElseThrow().claimed(),
                 "ICZ2 must publish the transferred KosM payload on the following scan");
+        assertTrue(GameServices.hardwareTiming().capture().jobs().stream()
+                        .filter(job -> job.kind()
+                                == HardwareWorkKind.KOS_DECOMPRESSION_QUEUE)
+                        .filter(job -> job.destinationAddress()
+                                != S3kKosRamDestinations.KOS_DECOMP_BUFFER)
+                        .allMatch(HardwareTimingJob.Snapshot::claimed),
+                "the same ICZ2 publication scan must claim both direct payloads");
+        assertTrue(blockPayloadVisible(
+                        icz2Level, expectedBlocks128x128, 0x0A00),
+                "the publication scan must expose the claimed 128x128 stream");
+        assertTrue(chunkPayloadVisible(
+                        icz2Level, expectedChunks16x16, 0x0408),
+                "the publication scan must expose the claimed 16x16 stream");
+        assertTrue(patternPayloadVisible(
+                        icz2Level, expectedPatterns8x8, 0x0122),
+                "the publication scan must expose the claimed KosM archive");
         assertEquals(0x00D0, sonic.getCentreX() & 0xFFFF,
                 "ICZ1BGE_Transition subtracts d0=$6880 from player x_pos");
         assertEquals(0x0800, sonic.getCentreY() & 0xFFFF,
@@ -138,5 +198,72 @@ class TestS3kIczAct1TransitionHeadless {
         GameServices.hardwareTiming().service(boundary);
         GameServices.s3kKosDecompressionQueue().afterTimingService(boundary);
         GameServices.s3kKosModuleQueue().afterTimingService(boundary);
+    }
+
+    private static boolean blockPayloadVisible(
+            Sonic3kLevel level, byte[] payload, int destinationBytes) {
+        int start = destinationBytes / LevelConstants.BLOCK_SIZE_IN_ROM;
+        int count = payload.length / LevelConstants.BLOCK_SIZE_IN_ROM;
+        if (level.getBlockCount() < start + count) {
+            return false;
+        }
+        for (int block = 0; block < count; block++) {
+            int[] actual = level.getBlock(start + block).saveState();
+            int payloadOffset = block * LevelConstants.BLOCK_SIZE_IN_ROM;
+            for (int word = 0; word < actual.length; word++) {
+                int byteOffset = payloadOffset + word * 2;
+                int expected = ((payload[byteOffset] & 0xFF) << 8)
+                        | (payload[byteOffset + 1] & 0xFF);
+                if (actual[word] != expected) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private static boolean chunkPayloadVisible(
+            Sonic3kLevel level, byte[] payload, int destinationBytes) {
+        int start = destinationBytes / Chunk.CHUNK_SIZE_IN_ROM;
+        int count = payload.length / Chunk.CHUNK_SIZE_IN_ROM;
+        if (level.getChunkCount() < start + count) {
+            return false;
+        }
+        for (int chunk = 0; chunk < count; chunk++) {
+            int[] actual = level.getChunk(start + chunk).saveState();
+            int payloadOffset = chunk * Chunk.CHUNK_SIZE_IN_ROM;
+            for (int word = 0; word < Chunk.PATTERNS_PER_CHUNK; word++) {
+                int byteOffset = payloadOffset + word * 2;
+                int expected = ((payload[byteOffset] & 0xFF) << 8)
+                        | (payload[byteOffset + 1] & 0xFF);
+                if (actual[word] != expected) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private static boolean patternPayloadVisible(
+            Sonic3kLevel level, byte[] payload, int destinationPattern) {
+        int count = payload.length / Pattern.PATTERN_SIZE_IN_ROM;
+        if (level.getPatternCount() < destinationPattern + count) {
+            return false;
+        }
+        for (int patternIndex = 0; patternIndex < count; patternIndex++) {
+            Pattern expected = new Pattern();
+            int start = patternIndex * Pattern.PATTERN_SIZE_IN_ROM;
+            expected.fromSegaFormat(Arrays.copyOfRange(
+                    payload, start, start + Pattern.PATTERN_SIZE_IN_ROM));
+            Pattern actual = level.getPattern(destinationPattern + patternIndex);
+            for (int y = 0; y < Pattern.PATTERN_HEIGHT; y++) {
+                for (int x = 0; x < Pattern.PATTERN_WIDTH; x++) {
+                    if (actual.getPixel(x, y) != expected.getPixel(x, y)) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
     }
 }

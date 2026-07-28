@@ -37,6 +37,7 @@ import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.game.sonic3k.resources.S3kKosDecompressionQueue;
 import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
+import com.openggf.level.SeamlessTransitionResourceHandoffRegistry;
 import com.openggf.game.timing.RecordedCompletionAuthority;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.graphics.FadeManager;
@@ -70,6 +71,8 @@ public final class GameplayModeContext implements ModeContext {
     private final HardwareTimingService hardwareTiming;
     private final S3kKosDecompressionQueue s3kKosDecompressionQueue;
     private final S3kKosModuleQueue s3kKosModuleQueue;
+    private final SeamlessTransitionResourceHandoffRegistry
+            seamlessTransitionResourceHandoffs;
     private final RecordedCompletionAuthority recordedCompletionAuthority;
 
     private Camera camera;
@@ -145,6 +148,8 @@ public final class GameplayModeContext implements ModeContext {
         this.s3kKosDecompressionQueue = new S3kKosDecompressionQueue(hardwareTiming);
         this.s3kKosModuleQueue = new S3kKosModuleQueue(
                 hardwareTiming, s3kKosDecompressionQueue);
+        this.seamlessTransitionResourceHandoffs =
+                new SeamlessTransitionResourceHandoffRegistry();
         this.recordedCompletionAuthority =
                 checkedPolicy == HardwareReadinessAdmissionPolicy.RECORDED
                         ? hardwareTiming.beginRecordedAdmission()
@@ -242,6 +247,7 @@ public final class GameplayModeContext implements ModeContext {
         this.rewindRegistry = new RewindRegistry(profiler);
         this.rewindRegistry.register(hardwareTiming);
         this.rewindRegistry.register(s3kKosDecompressionQueue);
+        this.rewindRegistry.register(seamlessTransitionResourceHandoffs);
         this.rewindRegistry.register(camera);
         this.rewindRegistry.register(gameStateManager);
         this.rewindRegistry.register(rng);
@@ -452,6 +458,11 @@ public final class GameplayModeContext implements ModeContext {
     /** Session coordinator for S3K moduled Kosinski parents. */
     public S3kKosModuleQueue s3kKosModuleQueue() {
         return s3kKosModuleQueue;
+    }
+
+    public SeamlessTransitionResourceHandoffRegistry
+            seamlessTransitionResourceHandoffs() {
+        return seamlessTransitionResourceHandoffs;
     }
 
     /** Completes direct physical retirement after timing admission at the boundary. */
@@ -779,9 +790,12 @@ public final class GameplayModeContext implements ModeContext {
         if (rewindRegistry != null) {
             rewindRegistry.deregister(HardwareTimingService.REWIND_KEY);
             rewindRegistry.deregister(S3kKosDecompressionQueue.REWIND_KEY);
+            rewindRegistry.deregister(
+                    seamlessTransitionResourceHandoffs.key());
         }
         hardwareTiming.resetForMissingSnapshot();
         s3kKosDecompressionQueue.resetForMissingSnapshot();
+        seamlessTransitionResourceHandoffs.resetForMissingSnapshot();
         hardwareTimingBoundaryObserver = HardwareTimingBoundaryObserver.NO_OP;
         if (zoneLayoutMutationPipeline != null) {
             zoneLayoutMutationPipeline.clear();

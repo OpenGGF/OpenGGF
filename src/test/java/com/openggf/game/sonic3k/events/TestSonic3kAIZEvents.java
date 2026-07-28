@@ -31,6 +31,9 @@ import com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance;
 import com.openggf.game.sonic3k.objects.AizEndBossInstance;
 import com.openggf.game.sonic3k.objects.AizIntroArtLoader;
 import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
+import com.openggf.level.Chunk;
+import com.openggf.level.resources.LoadOp;
+import com.openggf.level.resources.ResourceLoader;
 import com.openggf.level.LevelManager;
 import com.openggf.level.Pattern;
 import com.openggf.level.SeamlessLevelTransitionRequest;
@@ -286,6 +289,11 @@ public class TestSonic3kAIZEvents {
                                 * Sonic3kConstants.LEVEL_LOAD_BLOCK_ENTRY_SIZE
                                 + 12) & 0x00FF_FFFF,
                 directJobs.getFirst().romSourceAddress());
+        byte[] expectedDirectBlocks = new ResourceLoader(
+                GameServices.rom().getRom()).loadSingle(LoadOp.kosinskiBase(
+                        directJobs.getFirst().romSourceAddress()));
+        assertFalse(chunkPayloadVisible(level, expectedDirectBlocks, 0x0268),
+                "the intro load must omit the separately queued main-level 16x16 payload");
         assertFalse(AizPlaneIntroInstance.isMainLevelPhaseActive(),
                 "synchronous publication cannot shadow-decompress before KosM readiness");
 
@@ -316,6 +324,16 @@ public class TestSonic3kAIZEvents {
 
         assertTrue(AizPlaneIntroInstance.isMainLevelPhaseActive(),
                 "the first scan after final PRE retirement must publish the direct block overlay");
+        assertTrue(chunkPayloadVisible(level, expectedDirectBlocks, 0x0268),
+                "the direct-empty scan must publish every claimed 16x16 destination byte");
+        assertFalse(events.isEventsFg5(),
+                "the direct-empty scan must clear the intro Events_fg_5 redraw gate");
+        assertFalse(events.isIntroNormalRefreshPending(),
+                "the direct-empty scan must finish the intro redraw progression");
+        assertTrue(events.isBoundariesUnlocked(),
+                "the direct-empty scan must advance deformation/resize ownership");
+        assertEquals(0, camera.getMinY() & 0xFFFF,
+                "the direct-empty scan must publish the main-level Y boundary");
         assertArrayEquals(patternBefore, snapshotPattern(level.getPattern(0x0BE)),
                 "KosM patterns must not publish during the direct-empty scan");
 
@@ -1537,6 +1555,28 @@ public class TestSonic3kAIZEvents {
             }
         }
         return pixels;
+    }
+
+    private static boolean chunkPayloadVisible(
+            Sonic3kLevel level, byte[] payload, int destinationBytes) {
+        int start = destinationBytes / Chunk.CHUNK_SIZE_IN_ROM;
+        int count = payload.length / Chunk.CHUNK_SIZE_IN_ROM;
+        if (level.getChunkCount() < start + count) {
+            return false;
+        }
+        for (int chunk = 0; chunk < count; chunk++) {
+            int[] actual = level.getChunk(start + chunk).saveState();
+            int payloadOffset = chunk * Chunk.CHUNK_SIZE_IN_ROM;
+            for (int word = 0; word < Chunk.PATTERNS_PER_CHUNK; word++) {
+                int byteOffset = payloadOffset + word * 2;
+                int expected = ((payload[byteOffset] & 0xFF) << 8)
+                        | (payload[byteOffset + 1] & 0xFF);
+                if (actual[word] != expected) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     private static void assertPatternRangeEquals(

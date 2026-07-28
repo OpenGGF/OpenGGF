@@ -1452,6 +1452,7 @@ class TestSonic3kLevelEventRewindSnapshot {
         set(iczPayloadSource, "act2TransitionChunkOrdinal", 3L);
         set(iczPayloadSource, "act2TransitionBlockOrdinal", 4L);
         set(iczPayloadSource, "act2TransitionArtOrdinal", 2L);
+        set(iczPayloadSource, "act2TransitionHandoffId", 9L);
         set(iczPayloadSource, "act2TransitionDirectPublished", true);
         set(iczPayloadSource, "act2TransitionArtPublished", true);
 
@@ -1490,6 +1491,8 @@ class TestSonic3kLevelEventRewindSnapshot {
                 "ICZ block-job identity must remain aligned in the manager sidecar");
         assertEquals(2L, get(iczTarget, "act2TransitionArtOrdinal"),
                 "ICZ module-parent identity must remain aligned in the manager sidecar");
+        assertEquals(9L, get(iczTarget, "act2TransitionHandoffId"),
+                "ICZ handoff identity must remain aligned in the manager sidecar");
         assertEquals(true, get(iczTarget, "act2TransitionDirectPublished"),
                 "ICZ direct publication state must remain aligned in the manager sidecar");
         assertEquals(true, get(iczTarget, "act2TransitionArtPublished"),
