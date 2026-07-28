@@ -2,6 +2,8 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
+import com.openggf.game.RuntimeArtCoordinator;
+import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.game.timing.HardwareWorkKind;
@@ -13,6 +15,7 @@ import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.TestablePlayableSprite;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
@@ -24,6 +27,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestHCZWaterWallObjectInstance {
+
+    @BeforeEach
+    void setUp() {
+        TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
+    }
 
     @Test
     void verticalGeyserLockAndReleaseUseFullObjectControlPolicyForPlayerAndSidekick() throws Exception {
@@ -89,6 +97,11 @@ class TestHCZWaterWallObjectInstance {
             public Rom rom() {
                 return rom;
             }
+
+            @Override
+            public RuntimeArtCoordinator runtimeArtCoordinator() {
+                return GameServices.runtimeArtCoordinator();
+            }
         };
         waterWall.setServices(services.withSidekicks(List.of(sidekick)));
         int playerInitialY = player.getCentreY();
@@ -103,7 +116,7 @@ class TestHCZWaterWallObjectInstance {
         int frame = 1;
         while (timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE) > 0
                 && frame < 10_000) {
-            timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            serviceBoundary(HardwareServiceBoundary.PRE_MAIN_LOOP);
             int incompleteBeforeObject = timing.incompleteCount(
                     HardwareWorkKind.KOS_MODULE_QUEUE);
             waterWall.update(frame, player);
@@ -115,7 +128,7 @@ class TestHCZWaterWallObjectInstance {
             assertEquals(incompleteBeforeObject,
                     timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE),
                     "object polling must not publish hardware readiness");
-            timing.service(HardwareServiceBoundary.POST_OBJECTS);
+            serviceBoundary(HardwareServiceBoundary.POST_OBJECTS);
             frame++;
         }
 
@@ -124,9 +137,9 @@ class TestHCZWaterWallObjectInstance {
         assertEquals(wallInitialY, waterWall.getY(),
                 "POST_OBJECTS publishes readiness but does not run the object consumer");
 
-        timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        serviceBoundary(HardwareServiceBoundary.PRE_MAIN_LOOP);
         waterWall.update(frame, player);
-        timing.service(HardwareServiceBoundary.POST_OBJECTS);
+        serviceBoundary(HardwareServiceBoundary.POST_OBJECTS);
 
         assertEquals(playerInitialY - ((pullUpdates + 1) * 8), player.getCentreY(),
                 "loc_302FA falls through into the first loc_30338 rise tick when the queue clears");
@@ -146,7 +159,7 @@ class TestHCZWaterWallObjectInstance {
     }
 
     private static TestObjectServices timedServices() {
-        HardwareTimingService timing = new HardwareTimingService();
+        HardwareTimingService timing = GameServices.hardwareTiming();
         Rom rom = TestEnvironment.currentRom();
         return new TestObjectServices() {
             @Override
@@ -158,7 +171,17 @@ class TestHCZWaterWallObjectInstance {
             public Rom rom() {
                 return rom;
             }
+
+            @Override
+            public RuntimeArtCoordinator runtimeArtCoordinator() {
+                return GameServices.runtimeArtCoordinator();
+            }
         };
+    }
+
+    private static void serviceBoundary(HardwareServiceBoundary boundary) {
+        GameServices.hardwareTiming().service(boundary);
+        GameServices.runtimeArtCoordinator().afterTimingService(boundary);
     }
 
     private static void assertNoControl(TestablePlayableSprite player) {
@@ -178,7 +201,7 @@ class TestHCZWaterWallObjectInstance {
 
     private static final class QueryOnlyServices extends TestObjectServices {
         private final ObjectPlayerQuery playerQuery;
-        private final HardwareTimingService timing = new HardwareTimingService();
+        private final HardwareTimingService timing = GameServices.hardwareTiming();
         private final Rom rom = TestEnvironment.currentRom();
 
         QueryOnlyServices(TestablePlayableSprite main, List<TestablePlayableSprite> sidekicks) {
@@ -198,6 +221,11 @@ class TestHCZWaterWallObjectInstance {
         @Override
         public Rom rom() {
             return rom;
+        }
+
+        @Override
+        public RuntimeArtCoordinator runtimeArtCoordinator() {
+            return GameServices.runtimeArtCoordinator();
         }
 
         @Override

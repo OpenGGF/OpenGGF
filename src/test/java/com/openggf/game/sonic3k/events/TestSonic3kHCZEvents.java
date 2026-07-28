@@ -1,9 +1,7 @@
 package com.openggf.game.sonic3k.events;
 
-import com.openggf.game.session.EngineServices;
 import com.openggf.tests.TestEnvironment;
 
-import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameRng;
@@ -48,6 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 @RequiresRom(SonicGame.SONIC_3K)
@@ -55,10 +54,7 @@ class TestSonic3kHCZEvents {
 
     @BeforeEach
     void setUp() {
-        TestEnvironment.resetAll();
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
     }
 
     @AfterEach
@@ -78,7 +74,7 @@ class TestSonic3kHCZEvents {
         Path saveDir = Path.of("saves").resolve(gameCode);
         deleteRecursively(saveDir);
 
-        GameModule sessionModule = mock(GameModule.class);
+        GameModule sessionModule = spy(new Sonic3kGameModule());
         when(sessionModule.getSaveSnapshotProvider()).thenReturn((reason, ctx) -> Map.of("marker", "hcz_transition"));
         when(sessionModule.rngFlavour()).thenReturn(GameRng.Flavour.S3K);
 
@@ -93,10 +89,10 @@ class TestSonic3kHCZEvents {
         GameServices.gameState().setEndOfLevelFlag(true);
 
         var timing = GameServices.hardwareTiming();
-        timing.service(HardwareServiceBoundary.VINT_SERVICE);
-        timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        serviceBoundary(HardwareServiceBoundary.VINT_SERVICE);
+        serviceBoundary(HardwareServiceBoundary.PRE_MAIN_LOOP);
         events.update(0, 0);
-        timing.service(HardwareServiceBoundary.POST_OBJECTS);
+        serviceBoundary(HardwareServiceBoundary.POST_OBJECTS);
         assertFalse(events.isTransitionRequested());
 
         int publicationFrame = -1;
@@ -105,8 +101,8 @@ class TestSonic3kHCZEvents {
                 frame < 100_000 && !events.isTransitionRequested();
                 frame++) {
             int beforePre = timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE);
-            timing.service(HardwareServiceBoundary.VINT_SERVICE);
-            timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            serviceBoundary(HardwareServiceBoundary.VINT_SERVICE);
+            serviceBoundary(HardwareServiceBoundary.PRE_MAIN_LOOP);
             assertEquals(beforePre,
                     timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE),
                     "PRE_MAIN_LOOP must not publish HCZ2 secondary art readiness");
@@ -114,7 +110,7 @@ class TestSonic3kHCZEvents {
             if (publicationFrame >= 0 && events.isTransitionRequested()) {
                 transitionFrame = frame;
             }
-            timing.service(HardwareServiceBoundary.POST_OBJECTS);
+            serviceBoundary(HardwareServiceBoundary.POST_OBJECTS);
             boolean publishedThisFrame = beforePre > 0
                     && timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE) == 0;
             if (publishedThisFrame) {
@@ -130,6 +126,11 @@ class TestSonic3kHCZEvents {
         assertEquals(publicationFrame + 1, transitionFrame,
                 "the event owner consumes POST retirement on its next dispatch");
         assertTrue(Files.exists(saveDir.resolve("slot1.json")));
+    }
+
+    private static void serviceBoundary(HardwareServiceBoundary boundary) {
+        GameServices.hardwareTiming().service(boundary);
+        GameServices.runtimeArtCoordinator().afterTimingService(boundary);
     }
 
     @Test
