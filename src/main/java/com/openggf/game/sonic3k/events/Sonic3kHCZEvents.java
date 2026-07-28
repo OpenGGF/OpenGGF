@@ -730,7 +730,7 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
                     try {
                         transitionKosQueue =
                                 new S3kKosModuleQueue(
-                                        com.openggf.game.GameServices.hardwareTiming());
+                                        hardwareTiming());
                         transitionKosHandle = transitionKosQueue.queue(
                                 rom(),
                                 Sonic3kConstants.ART_KOSM_HCZ2_SECONDARY_ADDR,
@@ -769,7 +769,7 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
             transitionKosHandle = null;
             return;
         }
-        var timing = com.openggf.game.GameServices.hardwareTiming();
+        var timing = hardwareTiming();
         transitionKosHandle = timing.pendingHandle(
                         HardwareWorkKind.KOS_MODULE_QUEUE,
                         transitionKosOrdinal)

@@ -51,7 +51,7 @@ public final class IczEndBossEggCapsuleInstance extends AbstractS3kUprightEggCap
         }
 
         private IczEndBossResultsScreenObjectInstance() {
-            this(PlayerCharacter.SONIC_AND_TAILS, 1);
+            super(true);
         }
 
         @Override

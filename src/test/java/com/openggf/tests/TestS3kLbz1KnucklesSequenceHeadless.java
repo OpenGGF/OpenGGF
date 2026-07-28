@@ -800,18 +800,17 @@ class TestS3kLbz1KnucklesSequenceHeadless {
         placePlayerInsideHelperBox(player);
 
         CutsceneKnucklesLbz1Instance knuckles = spawnKnuckles();
-        fixture.stepFrame(false, false, false, false, false);
+        fixture.stepFrame(false, false, false, true, false);
 
-        assertEquals(0x02, knuckles.getRoutineForTest(),
-                "Init should advance to the helper-signal wait routine.");
+        assertEquals(0x04, knuckles.getRoutineForTest(),
+                "The ROM setup Process_Sprites pass initializes the parent/helper; "
+                        + "the first gameplay frame observes the helper signal and starts Obj_Wait.");
         assertEquals(0x16, knuckles.getMappingFrameForTest(),
                 "LBZ1 initializes Knuckles on mapping frame $16.");
         assertEquals(0x00A0, fixture.camera().getMinY() & 0xFFFF,
                 "Init writes Camera_min_Y_pos=$00A0.");
         assertNotNull(findActive(CutsceneKnucklesLbz1RangeHelper.class),
                 "Init should create the invisible range helper at x offset -$40.");
-
-        fixture.stepFrame(false, false, false, true, false);
 
         assertTrue(knuckles.hasHelperSignalForTest(),
                 "Helper overlap should set parent signal bit 3.");
@@ -872,6 +871,24 @@ class TestS3kLbz1KnucklesSequenceHeadless {
         fixture.stepFrame(false, false, false, false, false);
         CutsceneKnucklesLbz1Instance knuckles = findActive(CutsceneKnucklesLbz1Instance.class);
         assertNotNull(knuckles, "The ROM-placed subtype $14 object should spawn when the camera reaches LBZ1 Knuckles.");
+        CutsceneKnucklesLbz1RangeHelper helper = findActive(CutsceneKnucklesLbz1RangeHelper.class);
+        assertNotNull(helper, "The Knuckles setup pass should create the Player_1/Player_2 capture helper.");
+        for (AbstractPlayableSprite sidekick : GameServices.sprites().getRegisteredSidekicks()) {
+            // The setup Process_Sprites pass owns initial P2 CPU state. Once
+            // that pass has completed, place the live sidekick inside the
+            // ROM helper range, hold the fixture in
+            // the ordinary routine-6 CPU state so this long integration run
+            // verifies loc_6278A's object_control clear rather than a later,
+            // unrelated off-screen catch-up marker reclaiming bit 7.
+            placePlayerInsideHelperBox(sidekick);
+            sidekick.getCpuController().setInitialState(
+                    com.openggf.sprites.playable.SidekickCpuController.State.NORMAL);
+        }
+        helper.update(0, player);
+        for (AbstractPlayableSprite sidekick : GameServices.sprites().getRegisteredSidekicks()) {
+            assertTrue(sidekick.isObjectControlled(),
+                    "The live Player_2 slot must be captured before exercising the exit release.");
+        }
         PatternSpriteRenderer bossExplosionRenderer = GameServices.level().getObjectRenderManager()
                 .getBossExplosionRenderer();
         assertNotNull(bossExplosionRenderer,
@@ -926,11 +943,13 @@ class TestS3kLbz1KnucklesSequenceHeadless {
                 "The visual collapse should move at least one foreground VScroll column.");
 
         while (frame++ < 1000 && (GameServices.level().getCurrentLevel().getMap().getValue(0, 0x74, 0) & 0xFF) != 0) {
+            keepRegisteredSidekicksOnScreen();
             fixture.stepFrame(false, false, false, false, false);
         }
         assertEndingLayoutApplied();
 
         while (frame++ < 1100 && !knuckles.isDestroyed()) {
+            keepRegisteredSidekicksOnScreen();
             fixture.stepFrame(false, false, false, false, false);
         }
 
@@ -1029,6 +1048,13 @@ class TestS3kLbz1KnucklesSequenceHeadless {
         player.clearLogicalInputState();
     }
 
+    private void keepRegisteredSidekicksOnScreen() {
+        for (AbstractPlayableSprite sidekick : GameServices.sprites().getRegisteredSidekicks()) {
+            sidekick.setCentreX((short) ((GameServices.camera().getX() & 0xFFFF) + 0x60));
+            sidekick.setCentreY((short) ((GameServices.camera().getY() & 0xFFFF) + 0x60));
+        }
+    }
+
     private void removeLbz1GroundLaunchIntro() {
         ObjectManager objectManager = GameServices.level().getObjectManager();
         List<ObjectInstance> intros = objectManager.getActiveObjects().stream()
@@ -1042,6 +1068,12 @@ class TestS3kLbz1KnucklesSequenceHeadless {
     private void applyTitleCardHandoff() {
         ((Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider())
                 .applyZonePlayerStateAfterTitleCard();
+        // This class exercises the later rival-Knuckles/miniboss route. The
+        // title-card handoff legitimately creates the independent buried
+        // ground-launch controller, so remove that controller after publishing
+        // the handoff instead of letting it reclaim P1/P2 object_control during
+        // the sequence under test.
+        removeLbz1GroundLaunchIntro();
     }
 
     private <T> T findActive(Class<T> type) {

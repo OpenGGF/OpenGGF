@@ -5,6 +5,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.OscillationManager;
+import com.openggf.level.animation.SeamlessTransitionAnimationClock;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
@@ -66,6 +67,9 @@ final class LevelActTransitionExecutor {
         }
 
         levelManager.initAnimatedContent();
+        if (levelManager.animatedPatternManager instanceof SeamlessTransitionAnimationClock clock) {
+            clock.advanceForSeamlessTransition();
+        }
 
         ObjectArtProvider artProvider = levelManager.gameModule != null
                 ? levelManager.gameModule.getObjectArtProvider()

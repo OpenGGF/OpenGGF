@@ -1023,6 +1023,47 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
+        public void s3kHurtAppliesNativeLiveRadiusDeltaSignForBothAngleHalvesAndGravityStates() {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                int[][] cases = {
+                        {0x00, 0, 1},
+                        {0x00, 1, -1},
+                        {0x40, 0, -1},
+                        {0x40, 1, 1}
+                };
+                try {
+                        for (int[] testCase : cases) {
+                                int angle = testCase[0];
+                                boolean reverseGravity = testCase[1] != 0;
+                                int expectedDeltaSign = testCase[2];
+                                GameServices.gameState().setReverseGravityActive(reverseGravity);
+                                Sonic sonic = new Sonic("sonic", (short) 0x200, (short) 0x300);
+                                sonic.setRolling(true);
+                                sonic.applyRollingRadii(false);
+                                sonic.setAngle((byte) angle);
+                                sonic.setCentreYPreserveSubpixel((short) 0x340);
+                                sonic.setSubpixelRaw(0x5A00, 0xA500);
+                                int centreYBeforeHurt = sonic.getCentreY();
+                                int radiusDelta = sonic.getYRadius() - sonic.getStandYRadius();
+                                String scenario = "angle=$%02X reverseGravity=%s"
+                                                .formatted(angle, reverseGravity);
+
+                                assertTrue(sonic.applyHurt(sonic.getCentreX() - 16), scenario);
+
+                                assertEquals(
+                                                centreYBeforeHurt + expectedDeltaSign * radiusDelta,
+                                                sonic.getCentreY(),
+                                                "Player_TouchFloor sign contract for " + scenario);
+                                assertEquals(0xA500, sonic.getYSubpixelRaw(),
+                                                "Player_TouchFloor add.w preserves fractional Y for " + scenario);
+                                assertFalse(sonic.getRolling(), scenario);
+                        }
+                } finally {
+                        GameServices.gameState().setReverseGravityActive(false);
+                }
+        }
+
+        @Test
         public void s3kHurtUsesLiveRadiusDeltaWhenRollBitOutlivesRollingRadii() {
                 GameModuleRegistry.setCurrent(new Sonic3kGameModule());
                 Sonic sonic = new Sonic("sonic", (short) 0x200, (short) 0x300);

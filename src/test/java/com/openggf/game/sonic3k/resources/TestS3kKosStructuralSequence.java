@@ -374,7 +374,14 @@ class TestS3kKosStructuralSequence {
         assertLiteralJob(timing, 1, 0x0D6D84, 0x568);
         assertLiteralJob(timing, 2, 0x15B95C, 0x578);
         drainHardware(timing);
-        results.update(0, player);
+        Sonic3kLevelEventManager manager =
+                (Sonic3kLevelEventManager) GameServices.module()
+                        .getLevelEventProvider();
+        for (int dispatch = 0;
+                dispatch < manager.resultsCreateGateDispatches();
+                dispatch++) {
+            results.update(dispatch, player);
+        }
 
         assertCapturedSession(timing, List.of(
                 RESULTS_GENERAL,

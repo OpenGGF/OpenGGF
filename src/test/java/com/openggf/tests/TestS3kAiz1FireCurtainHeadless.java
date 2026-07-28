@@ -21,6 +21,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -259,32 +260,33 @@ public class TestS3kAiz1FireCurtainHeadless {
     }
 
     @Test
-    public void finishQueueCompletesAtMinimumWhenVblankPhaseIsReady() {
+    public void finishQueueDoesNotInferReadinessFromVblankPhase() {
         Sonic3kAIZEvents events = getAizEvents();
         events.setFireSequencePhaseOrdinal(3);
         events.setFirePhaseFrames(63);
         GameServices.level().getObjectManager().initVblaCounter(2);
 
-        fixture.stepIdleFrames(1);
+        fixture.stepIdleFrames(3);
 
-        assertTrue(events.isAct2TransitionRequested(),
-                "the 64th finish tick should hand off immediately on VBlank queue phase 3");
+        assertFalse(events.isAct2TransitionRequested(),
+                "VBlank phase alone cannot release transition art that was never submitted");
     }
 
     @Test
-    public void finishQueueWaitsForNextReadyVblankPhase() {
-        Sonic3kAIZEvents events = getAizEvents();
-        events.setFireSequencePhaseOrdinal(3);
-        events.setFirePhaseFrames(63);
-        GameServices.level().getObjectManager().initVblaCounter(0);
+    public void finishQueueCompletesAfterSubmittedKosArtIsReady() {
+        teleportToMinibossArea();
+        runRightUntilCameraSettles(3 * FPS);
 
-        fixture.stepIdleFrames(1);
-        assertTrue(!events.isAct2TransitionRequested(),
-                "minimum work alone must not bypass the module DMA phase");
-        fixture.stepIdleFrames(2);
+        Sonic3kAIZEvents events = getAizEvents();
+        events.setEventsFg5(true);
+        for (int frame = 0;
+                frame < 600 && !events.isAct2TransitionRequested();
+                frame++) {
+            fixture.stepIdleFrames(1);
+        }
 
         assertTrue(events.isAct2TransitionRequested(),
-                "the queue should hand off at tick 66 when phase 3 is next reached");
+                "the finish phase must hand off after its submitted AIZ2 art is ready");
     }
 
     @Test
@@ -562,4 +564,3 @@ public class TestS3kAiz1FireCurtainHeadless {
         return ((b3 & 0x7) << 9) | ((g3 & 0x7) << 5) | ((r3 & 0x7) << 1);
     }
 }
-

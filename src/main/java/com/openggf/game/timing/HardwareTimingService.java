@@ -78,6 +78,21 @@ public final class HardwareTimingService
         return job.claim();
     }
 
+    /**
+     * Reads the preserved result of already-claimed work during rewind-owner
+     * reconstruction. This does not change the job lifecycle.
+     */
+    public byte[] claimedPayload(HardwareWorkKind kind, long ordinal) {
+        Objects.requireNonNull(kind, "kind");
+        HardwareTimingJob job = jobs.stream()
+                .filter(candidate -> candidate.handle().kind() == kind
+                        && candidate.handle().ordinal() == ordinal)
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "unknown hardware work identity: " + kind + "#" + ordinal));
+        return job.claimedPayload();
+    }
+
     public List<HardwareWorkHandle> pendingHandles() {
         return jobs.stream()
                 .filter(job -> !job.isClaimed())

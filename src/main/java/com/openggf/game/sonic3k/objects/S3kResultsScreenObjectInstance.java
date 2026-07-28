@@ -4,7 +4,7 @@ import com.openggf.audio.GameMusic;
 import com.openggf.data.Rom;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
-import com.openggf.game.rewind.RewindTransient;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.timing.HardwareWorkHandle;
 import com.openggf.game.timing.HardwareWorkKind;
@@ -108,7 +108,6 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private List<SpriteMappingFrame> mappingFrames;
     private boolean artLoaded;
     private boolean artCached;
-    @RewindTransient(reason = "queue facade is rebound to the restored session ledger by captured ordinals")
     private Sonic3kObjectArt.QueuedResultsArt queuedResultsArt;
     private long resultsGeneralArtOrdinal = -1;
     private long resultsNumberArtOrdinal = -1;
@@ -198,16 +197,31 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                 character, act, timeBonus, ringBonus));
     }
 
-    private S3kResultsScreenObjectInstance(boolean restoreOnly) {
+    private S3kResultsScreenObjectInstance() {
+        this(true);
+    }
+
+    protected S3kResultsScreenObjectInstance(boolean restoreOnly) {
         super("S3kResults");
         this.character = PlayerCharacter.SONIC_AND_TAILS;
         this.act = 0;
+        createElements();
     }
 
     @Override
     public AbstractResultsScreen recreateForRewind(RewindRecreateContext ctx) {
         return ObjectConstructionContext.construct(ctx.objectServices(),
                 () -> new S3kResultsScreenObjectInstance(true));
+    }
+
+    @Override
+    protected void afterGenericRewindStateRestored(RewindCaptureContext context) {
+        if (mappingFrames == null) {
+            loadDerivedMappingsFromRom();
+        }
+        if (artLoaded && renderer == null) {
+            restoreClaimedArtRenderOwner();
+        }
     }
 
     @Override
@@ -937,14 +951,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             resultsGeneralArtOrdinal = resultsHandles.get(0).ordinal();
             resultsNumberArtOrdinal = resultsHandles.get(1).ordinal();
             resultsCharacterArtOrdinal = resultsHandles.get(2).ordinal();
-            List<SpriteMappingFrame> rawMappings = objectArt.loadResultsMappings();
-            mappingFrames = Sonic3kObjectArt.adjustTileIndices(
-                    rawMappings, -Sonic3kConstants.VRAM_RESULTS_BASE);
-            if (act != 0) {
-                int charNameTileOffset = Sonic3kConstants.VRAM_RESULTS_CHAR_NAME_ACT2
-                        - Sonic3kConstants.VRAM_RESULTS_CHAR_NAME_ACT1;
-                adjustCharNameFrameTiles(charNameTileOffset);
-            }
+            loadDerivedMappings(objectArt);
             artLoaded = false;
 
             // Note: The level results screen uses the existing level palette.
@@ -956,12 +963,50 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         }
     }
 
+    private void loadDerivedMappingsFromRom() {
+        try {
+            loadDerivedMappings(new Sonic3kObjectArt(null, services().romReader()));
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException(
+                    "Unable to restore results-screen ROM mappings", e);
+        }
+    }
+
+    private void loadDerivedMappings(Sonic3kObjectArt objectArt) {
+        List<SpriteMappingFrame> rawMappings = objectArt.loadResultsMappings();
+        mappingFrames = Sonic3kObjectArt.adjustTileIndices(
+                rawMappings, -Sonic3kConstants.VRAM_RESULTS_BASE);
+        if (act != 0) {
+            int charNameTileOffset = Sonic3kConstants.VRAM_RESULTS_CHAR_NAME_ACT2
+                    - Sonic3kConstants.VRAM_RESULTS_CHAR_NAME_ACT1;
+            adjustCharNameFrameTiles(charNameTileOffset);
+        }
+    }
+
     private void finishQueuedArt() {
         combinedPatterns = queuedResultsArt.claim();
         queuedResultsArt = null;
-        resultsGeneralArtOrdinal = -1;
-        resultsNumberArtOrdinal = -1;
-        resultsCharacterArtOrdinal = -1;
+        rebuildArtRenderOwner();
+    }
+
+    private void restoreClaimedArtRenderOwner() {
+        var timing = services().hardwareTiming();
+        combinedPatterns = Sonic3kObjectArt.assembleClaimedResultsArt(
+                List.of(
+                        timing.claimedPayload(
+                                HardwareWorkKind.KOS_MODULE_QUEUE,
+                                resultsGeneralArtOrdinal),
+                        timing.claimedPayload(
+                                HardwareWorkKind.KOS_MODULE_QUEUE,
+                                resultsNumberArtOrdinal),
+                        timing.claimedPayload(
+                                HardwareWorkKind.KOS_MODULE_QUEUE,
+                                resultsCharacterArtOrdinal)),
+                act);
+        rebuildArtRenderOwner();
+    }
+
+    private void rebuildArtRenderOwner() {
         Rom rom;
         try {
             rom = services().rom();
@@ -977,10 +1022,11 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         spriteSheet = new ObjectSpriteSheet(combinedPatterns, mappingFrames, 0, 1);
         renderer = new PatternSpriteRenderer(spriteSheet);
         artLoaded = true;
+        artCached = false;
     }
 
     private void rebindQueuedResultsArtAfterRestore() {
-        if (queuedResultsArt != null || resultsGeneralArtOrdinal < 0) {
+        if (artLoaded || queuedResultsArt != null || resultsGeneralArtOrdinal < 0) {
             return;
         }
         var timing = services().hardwareTiming();

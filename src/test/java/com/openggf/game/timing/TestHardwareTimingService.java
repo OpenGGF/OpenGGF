@@ -99,6 +99,28 @@ class TestHardwareTimingService {
     }
 
     @Test
+    void claimedPayloadLookupIsReadOnlyAndRejectsNonClaimedWork() {
+        HardwareTimingService service = new HardwareTimingService();
+        HardwareWorkHandle handle = service.submit(
+                submission(1, new byte[] {12, 13}));
+
+        assertThrows(IllegalStateException.class,
+                () -> service.claimedPayload(handle.kind(), handle.ordinal()));
+        service.service(POST_OBJECTS);
+        assertThrows(IllegalStateException.class,
+                () -> service.claimedPayload(handle.kind(), handle.ordinal()));
+        service.claim(handle);
+
+        byte[] firstLookup =
+                service.claimedPayload(handle.kind(), handle.ordinal());
+        firstLookup[0] = 99;
+        assertArrayEquals(new byte[] {12, 13},
+                service.claimedPayload(handle.kind(), handle.ordinal()));
+        assertThrows(IllegalArgumentException.class,
+                () -> service.claimedPayload(handle.kind(), handle.ordinal() + 1));
+    }
+
+    @Test
     void recordedAdmissionHoldsPreparedJobUntilMatchingEdge() {
         HardwareTimingService service = new HardwareTimingService();
         RecordedCompletionAuthority authority = service.beginRecordedAdmission();

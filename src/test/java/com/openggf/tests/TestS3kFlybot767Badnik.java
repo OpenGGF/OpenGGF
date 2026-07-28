@@ -226,6 +226,18 @@ class TestS3kFlybot767Badnik {
     }
 
     @Test
+    void rewindRestoresWhetherWaitOffscreenUsesTheLayoutRenderFlag() {
+        AbstractObjectInstance placed = createPlacedFlybotAt(0x0800, 0x0120);
+        AbstractObjectInstance recreatedShell = createFlybotAt(0x0800, 0x0120);
+
+        assertFalse(readBoolean(recreatedShell, "layoutWaitUsesRetainedRenderFlag"));
+        recreatedShell.restoreRewindState(placed.captureRewindState());
+
+        assertTrue(readBoolean(recreatedShell, "layoutWaitUsesRetainedRenderFlag"),
+                "the layout-vs-dynamic wait contract is durable rewind state");
+    }
+
+    @Test
     void lbzArtPlanRegistersUncompressedDplcFlybotSheet() {
         Sonic3kPlcArtRegistry.StandaloneArtEntry entry =
                 Sonic3kPlcArtRegistry.getPlan(0x06, 0).standaloneArt().stream()
@@ -307,6 +319,16 @@ class TestS3kFlybot767Badnik {
             return field.getInt(target);
         } catch (IllegalAccessException e) {
             throw new AssertionError("Failed to read " + fieldName, e);
+        }
+    }
+
+    private static boolean readBoolean(Object target, String fieldName) {
+        try {
+            Field field = findField(target, fieldName);
+            field.setAccessible(true);
+            return field.getBoolean(target);
+        } catch (IllegalAccessException e) {
+            throw new AssertionError(e);
         }
     }
 

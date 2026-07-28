@@ -34,6 +34,7 @@ import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ResultsHardwareTimingFixture;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -46,6 +47,8 @@ import com.openggf.tests.SingletonResetExtension;
 import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.sprites.playable.Sonic;
 import com.openggf.sprites.playable.Tails;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
 import com.openggf.sprites.playable.TailsCarryController;
 import org.mockito.MockedStatic;
 import org.mockito.InOrder;
@@ -83,6 +86,7 @@ import static org.mockito.Mockito.when;
 @FullReset
 @Isolated
 @Execution(ExecutionMode.SAME_THREAD)
+@RequiresRom(SonicGame.SONIC_3K)
 class TestMgzDrillingRobotnikInstance {
 
     private Camera camera;
@@ -814,7 +818,8 @@ class TestMgzDrillingRobotnikInstance {
 
     @Test
     void mgzFloatingCapsuleStartsResultsDuringTailsCarryFlyOffWithoutFreezingPlayers() throws Exception {
-        RecordingServices services = new RecordingServices(camera);
+        RecordingServices services = new RecordingServices(camera)
+                .withResultsArtFromRom(TestEnvironment.currentRom());
         GameStateManager gameState = new GameStateManager();
         services.withGameState(gameState);
         services.withZoneAct(2, 1);
@@ -850,7 +855,8 @@ class TestMgzDrillingRobotnikInstance {
 
     @Test
     void mgzFloatingCapsuleUsesPlayerQueryForTailsCarryFlyOffTrigger() throws Exception {
-        RecordingServices services = new RecordingServices(camera);
+        RecordingServices services = new RecordingServices(camera)
+                .withResultsArtFromRom(TestEnvironment.currentRom());
         GameStateManager gameState = new GameStateManager();
         services.withGameState(gameState);
         services.withZoneAct(2, 1);
@@ -882,7 +888,8 @@ class TestMgzDrillingRobotnikInstance {
 
     @Test
     void mgzFloatingCapsuleStartsResultsForTailsEvenWhileAirborne() throws Exception {
-        RecordingServices services = new RecordingServices(camera);
+        RecordingServices services = new RecordingServices(camera)
+                .withResultsArtFromRom(TestEnvironment.currentRom());
         GameStateManager gameState = new GameStateManager();
         services.withGameState(gameState);
         services.withZoneAct(2, 1);
@@ -933,7 +940,8 @@ class TestMgzDrillingRobotnikInstance {
 
     @Test
     void mgzResultsExitPreservesFlyOffCarryControlUntilFadeTransition() throws Exception {
-        RecordingServices services = new RecordingServices(camera);
+        RecordingServices services = new RecordingServices(camera)
+                .withResultsArtFromRom(TestEnvironment.currentRom());
         GameStateManager gameState = new GameStateManager();
         services.withGameState(gameState);
         services.withZoneAct(2, 1);
@@ -1563,6 +1571,7 @@ class TestMgzDrillingRobotnikInstance {
     }
 
     private static final class RecordingServices extends TestObjectServices {
+        private final ResultsHardwareTimingFixture resultsTiming = new ResultsHardwareTimingFixture();
         private final Camera camera;
         private final Level level;
         private final Palette paletteLine0 = new Palette();
@@ -1582,6 +1591,7 @@ class TestMgzDrillingRobotnikInstance {
         private final PatternSpriteRenderer scaledRenderer;
         private final ObjectSpriteSheet scaledSheet;
         private final Rom rom = mock(Rom.class);
+        private Rom resultsRom;
         private LevelEventProvider levelEventProvider;
         private int playedSfxCount;
         private int paletteUpdates;
@@ -1663,6 +1673,21 @@ class TestMgzDrillingRobotnikInstance {
             return this;
         }
 
+        RecordingServices withResultsArtFromRom(Rom resultsRom) {
+            this.resultsRom = resultsRom;
+            try {
+                withRomReader(com.openggf.data.RomByteReader.fromRom(resultsRom));
+            } catch (java.io.IOException e) {
+                throw new java.io.UncheckedIOException(e);
+            }
+            return this;
+        }
+
+        @Override
+        public com.openggf.game.timing.HardwareTimingService hardwareTiming() {
+            return resultsTiming.hardwareTiming();
+        }
+
         @Override
         public Camera camera() {
             return camera;
@@ -1725,7 +1750,7 @@ class TestMgzDrillingRobotnikInstance {
 
         @Override
         public Rom rom() {
-            return rom;
+            return resultsRom != null ? resultsRom : rom;
         }
 
         @Override

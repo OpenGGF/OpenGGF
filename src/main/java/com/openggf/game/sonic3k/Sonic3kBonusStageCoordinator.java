@@ -1,9 +1,13 @@
 package com.openggf.game.sonic3k;
 
 import com.openggf.game.AbstractBonusStageCoordinator;
+import com.openggf.game.BonusStageProvider;
 import com.openggf.game.BonusStageType;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotBonusStageRuntime;
+import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance;
+import com.openggf.level.objects.ObjectSpawn;
 
 /**
  * S3K-specific bonus stage coordinator.
@@ -38,8 +42,21 @@ public class Sonic3kBonusStageCoordinator extends AbstractBonusStageCoordinator 
     private static final int RING_DIVISOR   = 15;
     private static final int STAGE_COUNT    = 3;
 
+    private static final BonusStageProvider.BootstrapObject PACHINKO_BOOTSTRAP =
+            new BonusStageProvider.BootstrapObject(
+                    new ObjectSpawn(0x78, 0x0F30,
+                            Sonic3kObjectIds.PACHINKO_ENERGY_TRAP,
+                            0, 0, false, 0),
+                    PachinkoEnergyTrapObjectInstance.class,
+                    PachinkoEnergyTrapObjectInstance::new);
+
     private S3kSlotBonusStageRuntime slotRuntime;
     private int slotFrameCounter;
+
+    @Override
+    public BonusStageProvider.BootstrapObject bootstrapObject(BonusStageType type) {
+        return type == BonusStageType.GLOWING_SPHERE ? PACHINKO_BOOTSTRAP : null;
+    }
 
     @Override
     public BonusStageType selectBonusStage(int ringCount) {

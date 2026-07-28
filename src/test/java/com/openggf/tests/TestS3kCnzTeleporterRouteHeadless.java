@@ -83,6 +83,8 @@ class TestS3kCnzTeleporterRouteHeadless {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 1)
                 .build();
+        assertTrue(GameServices.level().consumePendingInitialProcessSpritesPass(),
+                "consume the native load-time Process_Sprites pass before injecting the later route object");
 
         CnzTeleporterInstance teleporter = new CnzTeleporterInstance(
                 new ObjectSpawn(0x4A40, 0x0A38, 0, 0, 0, false, 0));
