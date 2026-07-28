@@ -137,9 +137,12 @@ the runtime exposes them; it never asks a worker to estimate them.
 The conductor spawns workers with explicit overrides, for example:
 
 ```text
-spawn_agent(model="gpt-5.6-terra", reasoning_effort="medium", ...)
-spawn_agent(model="gpt-5.6-sol", reasoning_effort="high", ...)
+spawn_agent(fork_turns="none", model="gpt-5.6-terra", reasoning_effort="medium", ...)
+spawn_agent(fork_turns="none", model="gpt-5.6-sol", reasoning_effort="high", ...)
 ```
+
+When fleet discovery is needed, it is performed by a fresh Terra-low child, not
+by the conductor. A caller-supplied failing list skips that child.
 
 ## Prompt and cache discipline
 
@@ -163,7 +166,8 @@ Each stage result records:
 - wall-clock duration;
 - before and after frontier;
 - green/advanced/rejected/error status;
-- edit-attempt count and regression count.
+- edit-attempt count and regression count. Discovery, Triage, and Verify always
+  record zero attempts; totals count only Fix edit/test attempts.
 
 When runtime token counters are unavailable, fields are `null`; they are never
 estimated. The conductor includes a machine-readable `routing` block in its
@@ -173,13 +177,16 @@ The repository will also contain a versioned manual benchmark manifest. Each cas
 pins a repository base commit, fixture paths and hashes, expected ROM hash and
 property name (the ROM path remains user-supplied), test class, game, zone, failure
 field, starting frontier, exact targeted command, verification set, and complexity.
-A result template records the route, all attempted stages, usage, wall time, status,
-citations, and regressions.
+A result template records all stages, usage, wall time, fleet statuses including
+`advanced-with-regression` and `rejected-not-genuine`, independent `accepted`,
+`genuine`, and `reviewerRejected` flags, structured ROM citations, exact
+regression-guard outcomes, and structured regressions.
 
 Each policy runs in a newly created benchmark worktree and branch from the pinned
 base commit. The operator verifies fixture and ROM hashes before starting. Retaining
 the worktree is the default. The result captures a patch plus the exact base and
-resulting tree hashes. Cleanup is permitted only after restoring the benchmark
+resulting tree hashes against the pinned benchmark base, including Verify commits,
+later working edits, and enumerated new owned files. Cleanup is permitted only after restoring the benchmark
 worker's enumerated files to the pinned base, confirming the worktree is clean, and
 using ordinary `git worktree remove <exact-benchmark-path>`. Unrepresented or
 foreign changes are never restored or force-removed; cleanup that would discard

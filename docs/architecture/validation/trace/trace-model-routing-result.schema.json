@@ -16,7 +16,11 @@
     "beforeFrontier",
     "afterFrontier",
     "status",
-    "citations",
+    "accepted",
+    "genuine",
+    "reviewerRejected",
+    "romCitations",
+    "verificationResults",
     "regressions"
   ],
   "properties": {
@@ -95,26 +99,28 @@
       "enum": [
         "green",
         "advanced",
+        "advanced-with-regression",
         "no-change",
-        "regressed",
+        "rejected-not-genuine",
         "blocked",
         "error"
       ]
     },
-    "citations": {
+    "accepted": {"type": "boolean"},
+    "genuine": {"type": "boolean"},
+    "reviewerRejected": {"type": "boolean"},
+    "romCitations": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/romCitation"}
+    },
+    "verificationResults": {
       "type": "array",
       "minItems": 1,
-      "items": {
-        "type": "string",
-        "minLength": 1
-      }
+      "items": {"$ref": "#/$defs/verificationResult"}
     },
     "regressions": {
       "type": "array",
-      "items": {
-        "type": "string",
-        "minLength": 1
-      }
+      "items": {"$ref": "#/$defs/regression"}
     }
   },
   "$defs": {
@@ -188,6 +194,40 @@
           ],
           "minimum": 0
         }
+      }
+    },
+    "romCitation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "lineStart", "lineEnd", "symbol", "claim"],
+      "properties": {
+        "path": {"type": "string", "pattern": "^docs/(s1disasm|s2disasm|skdisasm)/"},
+        "lineStart": {"type": "integer", "minimum": 1},
+        "lineEnd": {"type": "integer", "minimum": 1},
+        "symbol": {"type": "string", "minLength": 1},
+        "claim": {"type": "string", "minLength": 1}
+      }
+    },
+    "verificationResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["testClass", "outcome", "report"],
+      "properties": {
+        "testClass": {"type": "string", "pattern": "^(?:[A-Za-z_$][A-Za-z0-9_$]*\\.)+[A-Za-z_$][A-Za-z0-9_$]*$"},
+        "outcome": {"enum": ["passed", "failed", "error", "skipped"]},
+        "report": {"type": "string", "pattern": "^target/surefire-reports/"}
+      }
+    },
+    "regression": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["testClass", "previousOutcome", "currentOutcome", "evidence"],
+      "properties": {
+        "testClass": {"type": "string", "pattern": "^(?:[A-Za-z_$][A-Za-z0-9_$]*\\.)+[A-Za-z_$][A-Za-z0-9_$]*$"},
+        "previousOutcome": {"const": "passed"},
+        "currentOutcome": {"enum": ["failed", "error"]},
+        "firstError": {"$ref": "#/$defs/nullableFrontier"},
+        "evidence": {"type": "string", "minLength": 1}
       }
     },
     "stage": {
@@ -294,8 +334,9 @@
             "completed",
             "green",
             "advanced",
+            "advanced-with-regression",
             "no-change",
-            "regressed",
+            "rejected-not-genuine",
             "blocked",
             "error"
           ]

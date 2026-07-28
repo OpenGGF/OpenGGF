@@ -178,6 +178,8 @@ BENCH_BASELINE_UNTRACKED="$BENCH_RETAIN/baseline-untracked"
 BENCH_NEW_UNTRACKED="$BENCH_RETAIN/new-untracked"
 BENCH_OWNED_TRACKED="$BENCH_RETAIN/owned-tracked"
 BENCH_OWNED_NEW="$BENCH_RETAIN/owned-new"
+BENCH_COMPLETE_TRACKED="$BENCH_RETAIN/complete-tracked"
+BENCH_COMPLETE_OWNED="$BENCH_RETAIN/complete-owned"
 BENCH_TEMP_INDEX="$BENCH_RETAIN/result-tree.index"
 
 git cat-file -e "${BENCH_BASE}^{commit}"
@@ -290,7 +292,53 @@ jq -n --arg policy "$BENCH_POLICY" --arg case "$BENCH_CASE" --arg patch "$BENCH_
    tokens: {inputTokens: null, cachedInputTokens: null, outputTokens: null, reasoningTokens: null},
    wallTimeMs: null, totalAttemptCount: 0, beforeFrontier: $caseDef.startingFrontier,
    afterFrontier: $caseDef.startingFrontier, status: "no-change",
-   citations: ["git:" + $caseDef.baseCommit], regressions: []}' > "$BENCH_RESULT"
+   accepted: false, genuine: false, reviewerRejected: false,
+   romCitations: [], verificationResults: [], regressions: []}' > "$BENCH_RESULT"
+```
+
+After Verify has committed or returned its final result, run the manifest's exact
+regression set against the complete branch plus working tree. This is independent
+of the historical red target. It includes a same-game green trace for S1/S2 and
+the four S3K fallback guards. Record every class outcome; do not summarize the
+command as a single boolean or substitute a same-package class.
+
+```bash
+BENCH_ROM_PROPERTY=$(jq -r --arg case "$BENCH_CASE" '.cases[] | select(.id == $case) | .rom.property' "$BENCH_MANIFEST")
+BENCH_VERIFY_CLASSES=$(jq -r --arg case "$BENCH_CASE" '.cases[] | select(.id == $case) | .verificationClasses | join(",")' "$BENCH_MANIFEST")
+BENCH_VERIFY_OUTPUT="$BENCH_RETAIN/verification-command.log"
+if (
+  cd "$BENCH_WORKTREE"
+  mvn -q -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=true \
+    "-D${BENCH_ROM_PROPERTY}=${ROM_PATH}" "-Dtest=${BENCH_VERIFY_CLASSES}" test
+) >"$BENCH_VERIFY_OUTPUT" 2>&1; then
+  BENCH_VERIFY_STATUS=0
+else
+  BENCH_VERIFY_STATUS=$?
+fi
+
+jq -n --arg case "$BENCH_CASE" --slurpfile manifest "$BENCH_MANIFEST" '
+  ($manifest[0].cases[] | select(.id == $case) | .verificationClasses) |
+  map({testClass: ., outcome: "pending",
+       report: ("target/surefire-reports/" + . + ".txt")})
+' > "$BENCH_RETAIN/verification-results.json"
+while IFS= read -r testClass; do
+  report="$BENCH_WORKTREE/target/surefire-reports/${testClass}.txt"
+  outcome=error
+  if test -f "$report"; then
+    if grep -Eq 'Tests run: [1-9][0-9]*, Failures: 0, Errors: 0, Skipped: 0' "$report"; then outcome=passed
+    elif grep -Eq 'Failures: [1-9][0-9]*' "$report"; then outcome=failed
+    elif grep -Eq 'Errors: [1-9][0-9]*' "$report"; then outcome=error
+    else outcome=skipped
+    fi
+  fi
+  jq --arg class "$testClass" --arg outcome "$outcome" \
+    'map(if .testClass == $class then .outcome = $outcome else . end)' \
+    "$BENCH_RETAIN/verification-results.json" > "$BENCH_RETAIN/verification-results.next.json"
+  mv "$BENCH_RETAIN/verification-results.next.json" "$BENCH_RETAIN/verification-results.json"
+done < <(jq -r --arg case "$BENCH_CASE" '.cases[] | select(.id == $case) | .verificationClasses[]' "$BENCH_MANIFEST")
+jq --slurpfile verification "$BENCH_RETAIN/verification-results.json" \
+  '.verificationResults = $verification[0]' "$BENCH_RESULT" > "$BENCH_RETAIN/result-with-verification.json"
+mv "$BENCH_RETAIN/result-with-verification.json" "$BENCH_RESULT"
 ```
 
 Before capture, the worker lists each file it authored or intentionally changed,
@@ -299,12 +347,17 @@ blocked, error, or no-change run owns no source changes. Do not add hook-created
 links, baseline files, result files, or foreign paths. The following commands
 reject a non-empty owned-file list that contains an unchanged file or an
 untracked baseline path. They capture exactly the listed tracked diff and listed
-new files; no broad untracked scan ever enters the patch or cleanup.
+new files; no broad untracked scan ever enters the patch or cleanup. All comparisons
+are against pinned `BENCH_BASE`, not the possibly advanced benchmark `HEAD`, so a
+Verify commit and any later working-tree edits are represented together.
 
 ```bash
 test -f "$BENCH_OWNED"
 sort -u "$BENCH_OWNED" -o "$BENCH_OWNED"
 git -C "$BENCH_WORKTREE" ls-files --others --exclude-standard | sort | comm -13 "$BENCH_BASELINE_UNTRACKED" - > "$BENCH_NEW_UNTRACKED"
+git -C "$BENCH_WORKTREE" diff --name-only "$BENCH_BASE" -- | sort > "$BENCH_COMPLETE_TRACKED"
+{ cat "$BENCH_COMPLETE_TRACKED"; cat "$BENCH_NEW_UNTRACKED"; } | sort -u > "$BENCH_COMPLETE_OWNED"
+cmp "$BENCH_OWNED" "$BENCH_COMPLETE_OWNED"
 : > "$BENCH_OWNED_TRACKED"
 : > "$BENCH_OWNED_NEW"
 while IFS= read -r path; do
@@ -312,17 +365,17 @@ while IFS= read -r path; do
   if grep -Fqx "$path" "$BENCH_NEW_UNTRACKED"; then
     printf '%s\n' "$path" >> "$BENCH_OWNED_NEW"
   else
-    git -C "$BENCH_WORKTREE" diff --quiet HEAD -- "$path" && exit 1
+    git -C "$BENCH_WORKTREE" diff --quiet "$BENCH_BASE" -- "$path" && exit 1
     printf '%s\n' "$path" >> "$BENCH_OWNED_TRACKED"
   fi
 done < "$BENCH_OWNED"
 
 : > "$BENCH_RETAIN/worker.patch"
-while IFS= read -r path; do git -C "$BENCH_WORKTREE" diff --binary HEAD -- "$path" >> "$BENCH_RETAIN/worker.patch"; done < "$BENCH_OWNED_TRACKED"
+while IFS= read -r path; do git -C "$BENCH_WORKTREE" diff --binary "$BENCH_BASE" -- "$path" >> "$BENCH_RETAIN/worker.patch"; done < "$BENCH_OWNED_TRACKED"
 while IFS= read -r path; do git -C "$BENCH_WORKTREE" diff --no-index --binary -- /dev/null "$path" >> "$BENCH_RETAIN/worker.patch" || test $? -eq 1; done < "$BENCH_OWNED_NEW"
 BENCH_PATCH_SHA256=$(sha256sum "$BENCH_RETAIN/worker.patch" | cut -d' ' -f1)
 
-GIT_INDEX_FILE="$BENCH_TEMP_INDEX" git -C "$BENCH_WORKTREE" read-tree HEAD
+GIT_INDEX_FILE="$BENCH_TEMP_INDEX" git -C "$BENCH_WORKTREE" read-tree "$BENCH_BASE"
 while IFS= read -r path; do GIT_INDEX_FILE="$BENCH_TEMP_INDEX" git -C "$BENCH_WORKTREE" add -- "$path"; done < "$BENCH_OWNED_TRACKED"
 while IFS= read -r path; do GIT_INDEX_FILE="$BENCH_TEMP_INDEX" git -C "$BENCH_WORKTREE" add -- "$path"; done < "$BENCH_OWNED_NEW"
 BENCH_RESULT_TREE=$(GIT_INDEX_FILE="$BENCH_TEMP_INDEX" git -C "$BENCH_WORKTREE" write-tree)
@@ -375,7 +428,7 @@ jq -n -e --arg policy "$BENCH_POLICY" --arg case "$BENCH_CASE" --arg patch "$BEN
    $policyDef.enabled == true and
    all($policyDef.routes[][]; test("^gpt-5\\.6-(terra|sol)/(low|medium|high)$")) and
    ($caseDef.targetCommand | contains("-Dtest=" + $caseDef.testClass + "#")) and
-   (all($caseDef.verificationClasses[]; startswith("com.openggf.tests.trace." + $game + "."))) and
+   (($result.verificationResults | map(.testClass)) == $caseDef.verificationClasses) and
    (if $game == "s1" then $caseDef.rom.property == "sonic1.rom.path" and $caseDef.rom.sha1 == "69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B" and ($caseDef.targetCommand | contains("-Dsonic1.rom.path=<ROM_PATH>"))
     elif $game == "s2" then $caseDef.rom.property == "sonic2.rom.path" and $caseDef.rom.sha1 == "8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9" and ($caseDef.targetCommand | contains("-Dsonic2.rom.path=<ROM_PATH>"))
     else $caseDef.rom.property == "s3k.rom.path" and $caseDef.rom.sha1 == "CFBF98C36C776677290A872547AC47C53D2761D6" and ($caseDef.targetCommand | contains("-Ds3k.rom.path=<ROM_PATH>")) end) and
@@ -403,22 +456,32 @@ jq -n -e --arg policy "$BENCH_POLICY" --arg case "$BENCH_CASE" --arg patch "$BEN
         oneOf($stage.status; ["completed", "blocked", "error"])
       else
         $stage.complexity == $caseDef.complexity and
-        oneOf($stage.status; ["green", "advanced", "no-change", "regressed", "blocked", "error"])
+        oneOf($stage.status; ["green", "advanced", "advanced-with-regression", "no-change", "rejected-not-genuine", "blocked", "error"])
       end)) and
    all(range(0; ($result.stages | length) - 1); . as $index |
      ($result.stages[$index] |
       if .name == "discovery" or .name == "triage" then .status == "completed"
-      else oneOf(.status; ["green", "advanced"]) end)) and
+      else oneOf(.status; ["green", "advanced", "advanced-with-regression"]) end)) and
    ($result.stages[-1] as $last |
      (if $last.name == "discovery" or $last.name == "triage" then oneOf($last.status; ["blocked", "error"])
-      elif $last.name == "fix" then oneOf($last.status; ["no-change", "regressed", "blocked", "error"])
+      elif $last.name == "fix" then oneOf($last.status; ["no-change", "rejected-not-genuine", "blocked", "error"])
       else true end) and
      $result.status == $last.status and
      (if $last.afterFrame == null then $result.afterFrontier == null
       else $result.afterFrontier != null and $result.afterFrontier.frame == $last.afterFrame end)) and
-   (($result.stages | map(.attemptCount) | add) == $result.totalAttemptCount) and
+   (all($result.stages[] | select(.name != "fix"); .attemptCount == 0)) and
+   (([$result.stages[] | select(.name == "fix") | .attemptCount] | add // 0) == $result.totalAttemptCount) and
    (($result.stages | map(.regressionCount) | add) == ($result.regressions | length)) and
-   (($result.status == "regressed") == (($result.regressions | length) > 0)) and
+   (($result.status == "advanced-with-regression") == (($result.regressions | length) > 0)) and
+   (($result.regressions | map(.testClass) | sort) ==
+    ($result.verificationResults | map(select(.outcome == "failed" or .outcome == "error") | .testClass) | sort)) and
+   (if $result.accepted then
+      $result.genuine and ($result.reviewerRejected | not) and
+      ($result.romCitations | length) > 0 and
+      oneOf($result.status; ["green", "advanced", "advanced-with-regression"])
+    else true end) and
+   (($result.status == "rejected-not-genuine") ==
+    (($result.genuine | not) and $result.reviewerRejected)) and
    (if $result.status == "green" then $result.afterFrontier == null
     elif $result.status == "advanced" then $result.afterFrontier.frame > $result.beforeFrontier.frame
     elif $result.status == "no-change" then $result.afterFrontier == $result.beforeFrontier

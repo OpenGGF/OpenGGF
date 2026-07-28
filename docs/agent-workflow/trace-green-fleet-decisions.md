@@ -93,7 +93,9 @@ messages (per-fix ROM rationale).
     triage, and narrow object-local fixes begin on Terra at the route/effort in
     the trace-fleet contract. `gpt-5.6-luna` remains future-only until it is an
     explicitly supported, observable worker route; it is never substituted for
-    an available Terra or Sol route.
+    an available Terra or Sol route. Even in the disabled Luna benchmark policy,
+    Luna is limited to Discovery/mechanical collection; Triage and Fix remain
+    Terra-first until objective Sol escalation.
 17. **Sol owns shared/deep work and escalation.** Shared runtime surfaces,
     cross-game semantics, disputed ROM evidence, and deep roots go directly to
     Sol; a Terra stall gets one Sol final attempt after at most two unsuccessful
@@ -114,6 +116,12 @@ messages (per-fix ROM rationale).
     stops before allocation or cleanup respectively. Empty-patch/base-tree
     results are reserved for blocked, error, or no-change outcomes; green and
     advanced results require a source diff.
+20. **Benchmark evidence preserves fleet semantics.** Results retain
+    `advanced-with-regression` and `rejected-not-genuine` plus independent
+    acceptance, genuineness, and reviewer-rejection flags. Exact guard outcomes
+    and structured ROM citations make rejection, citation-completeness, token,
+    and regression metrics computable. Complete patch/tree capture compares
+    commits plus working edits and new owned files to the pinned base.
 
 ## Run record — 2026-06-03
 

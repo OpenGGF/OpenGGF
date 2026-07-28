@@ -106,7 +106,7 @@
       "beforeFrame": 3675,
       "afterFrame": 3675,
       "status": "advanced",
-      "attemptCount": 1,
+      "attemptCount": 0,
       "regressionCount": 0,
       "sharedSurfaces": [
         "SidekickCpuController"
@@ -132,7 +132,7 @@
     "reasoningTokens": null
   },
   "wallTimeMs": null,
-  "totalAttemptCount": 2,
+  "totalAttemptCount": 1,
   "beforeFrontier": {
     "frame": 202,
     "field": "tails_x"
@@ -142,9 +142,24 @@
     "field": "tails_cpu_ctrl2_held"
   },
   "status": "advanced",
-  "citations": [
-    "git:12c3a4d46e9537127ddc5ad342d755c0c3fa6ab5",
-    "docs/status/trace-frontier-log.md"
+  "accepted": true,
+  "genuine": true,
+  "reviewerRejected": false,
+  "romCitations": [
+    {
+      "path": "docs/s2disasm/s2.asm",
+      "lineStart": 123,
+      "lineEnd": 130,
+      "symbol": "Obj15",
+      "claim": "the ROM updates the sidekick control state before collision"
+    }
+  ],
+  "verificationResults": [
+    {
+      "testClass": "com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay",
+      "outcome": "passed",
+      "report": "target/surefire-reports/com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay.txt"
+    }
   ],
   "regressions": []
 }

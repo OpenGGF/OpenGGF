@@ -150,7 +150,7 @@ The active conductor cannot reroute itself. Start a fleet on Sol at medium effor
 | Ordinary Verify | `gpt-5.6-terra/medium` |
 | Shared, Sol-fixed, disputed, or escalated Verify | `gpt-5.6-sol/high` |
 
-Apply the equivalent Terra/Sol tier intent when the Claude `Agent` API cannot express model and effort overrides; do not claim that it enforced unsupported overrides. Every Discovery, Triage, Fix, and Verify result embeds this conductor-owned routing object alongside its stage fields. Discovery sets `complexity` to `mechanical` and `attemptCount` to `0`. `modelRoute` is authored and preserved by the conductor; workers must not invent or amend it. Runtime telemetry is nullable and recorded only when exposed, never estimated.
+Apply the equivalent Terra/Sol tier intent when the Claude `Agent` API cannot express model and effort overrides; do not claim that it enforced unsupported overrides. Every Discovery, Triage, Fix, and Verify result embeds this conductor-owned routing object alongside its stage fields. Discovery, Triage, and Verify set `attemptCount` to `0`; the field counts only Fix edit/test attempts, remains cumulative across replacement Fix workers, and is the sole input to `totalAttemptCount`. Discovery sets `complexity` to `mechanical`. `modelRoute` is authored and preserved by the conductor; workers must not invent or amend it. Runtime telemetry is nullable and recorded only when exposed, never estimated.
 
 For a route plan, report each category's default route even when earlier execution-stage fields are not yet known. A `modelRoute` lists the initial route and only a replacement route on an actual model escalation; do not duplicate a route merely because separate scenario branches use the same stage. Thus ordinary Verify is Terra-medium, shared/Sol-fixed/disputed/escalated Verify is Sol-high, a narrow stalled Fix is `[terra-medium, sol-high]`, and an accepted shared Fix is `[sol-high]`.
 
@@ -183,7 +183,7 @@ For a route plan, report each category's default route even when earlier executi
 
 Allowed `complexity`: `mechanical`, `narrow`, `shared`, `deep`. Allowed `confidence`: `high`, `medium`, `low`. Allowed `escalationReasons`: `no-frontier-advance`, `multiple-owners`, `missing-rom-basis`, `low-confidence`, `unresolved-ownership`, `reasoning-insufficient`, `shared-surface-discovered`, `cross-game-semantics`, `regression`, `context-contradiction`, `recorder-evidence-required`, `causal-thread-lost`.
 
-Before launching, the conductor validates required routing fields, enums, and the requested route. It may request one schema-only repair from a completed worker; if unavailable, it may rerun once. A second malformed result is a stage error. `attemptCount` remains cumulative across replacement workers for that stage. Aggregate usage or duration only when every contributing value is exposed; otherwise use `null`.
+Before launching, the conductor validates required routing fields, enums, and the requested route. It may request one schema-only repair from a completed worker; if unavailable, it may rerun once. A second malformed result is a stage error. `attemptCount` remains cumulative across replacement Fix workers and is always zero for Discovery, Triage, and Verify. Aggregate usage or duration only when every contributing value is exposed; otherwise use `null`.
 
 #### Deterministic routing and ownership
 
@@ -211,7 +211,9 @@ Required stage objects (each also embeds the Model Routing Contract above, inclu
 
 - Triage object: `setupOk`, `worktreePath`, `branch`, `firstErrorFrame`, `field`, `brief`, `hypothesis`, `disasmCites`
 - Fix object: `changed`, `filesTouched`, `beforeFrame`, `afterFrame`, `targetedPasses`, `romCites`, `summary`, `worktreePath`, `branch`
-- Verify object: `status`, `genuine`, `committed`, `commit`, `regressionsIntroduced`, `afterFrame`, `frontierLogUpdated`, `notes`
+- Verify object: `status`, `accepted`, `genuine`, `reviewerRejected`, `committed`,
+  `commit`, `romCitations`, `verificationResults`, `regressionsIntroduced`,
+  `afterFrame`, `frontierLogUpdated`, `notes`
 
 Cross-check before spawning the next stage:
 
@@ -291,7 +293,12 @@ Rerun the targeted trace and same-game green guard. Apply the genuineness gate. 
 
 ## Phase 0: Discover
 
-If the caller supplied `failing`, use it. Otherwise run one sweep from the repo root:
+If the caller supplied `failing`, use it. Otherwise Discovery is real worker work:
+launch one fresh Discovery `Agent` with a self-contained prompt and Terra/low tier
+intent, then have that child run one sweep from the repo root and return the
+Discovery object. Record the requested route, but do not claim Claude enforced a
+model/effort override it cannot express. The conductor validates and schedules the
+result; it must not perform fleet discovery itself.
 
 ```bash
 mvn -q -Dmse=relaxed "-Ds1.rom.path=$S1_ROM" "-Ds2.rom.path=$S2_ROM" "-Ds3k.rom.path=$S3K_ROM" "-Dtest=*TraceReplay" test
@@ -440,6 +447,13 @@ Status:
 
 Commit if and only if `genuine=true`, `changed=true`, and status is `green`, `advanced`, or `advanced-with-regression`. A real same-game regression does not block a genuine commit, but it must be recorded.
 
+Preserve `accepted`, `genuine`, and `reviewerRejected` as independent booleans.
+Set `reviewerRejected=true` for `rejected-not-genuine`; never rename a detected
+regression to `regressed`. Record ROM evidence as structured `romCitations` and
+every exact regression-guard class/outcome in `verificationResults`, so aggregate
+token, rejection, citation-completeness, and regression-detection metrics can be
+computed from results without parsing notes.
+
 Commit requirements:
 
 - Stage only changed source files plus `CHANGELOG.md` and `docs/status/trace-frontier-log.md` when required.
@@ -458,15 +472,33 @@ Verify output:
   "game": "s3k",
   "zone": "aiz",
   "status": "advanced",
+  "accepted": true,
   "genuine": true,
+  "reviewerRejected": false,
   "committed": true,
   "commit": "abcdef1",
+  "romCitations": [
+    {
+      "path": "docs/skdisasm/sonic3k.asm",
+      "lineStart": 12345,
+      "lineEnd": 12350,
+      "symbol": "Obj_AIZ",
+      "claim": "the object updates ROM x_pos before collision"
+    }
+  ],
+  "verificationResults": [
+    {
+      "testClass": "com.openggf.tests.TestS3kAiz1SkipHeadless",
+      "outcome": "passed",
+      "report": "target/surefire-reports/com.openggf.tests.TestS3kAiz1SkipHeadless.txt"
+    }
+  ],
   "regressionsIntroduced": [],
   "afterFrame": 13000,
   "frontierLogUpdated": true,
   "notes": "verification summary",
   "requestedModel": "gpt-5.6-terra", "requestedEffort": "medium", "actualModel": null, "actualEffort": null,
-  "complexity": "narrow", "confidence": "high", "beforeFrame": 12345, "attemptCount": 1, "regressionCount": 0,
+  "complexity": "narrow", "confidence": "high", "beforeFrame": 12345, "attemptCount": 0, "regressionCount": 0,
   "sharedSurfaces": [], "needsEscalation": false, "escalationReasons": [], "modelRoute": ["gpt-5.6-terra/medium"],
   "usage": {"inputTokens": null, "cachedInputTokens": null, "outputTokens": null, "reasoningTokens": null}, "durationMs": null
 }
@@ -510,7 +542,13 @@ Return:
 }
 ```
 
-`routing.stages` preserves accepted stage routing objects. `totalUsage` and `totalDurationMs` are aggregates only if every contributing runtime value is exposed; otherwise their affected aggregate is `null`.
+`routing.stages` preserves every completed stage routing object, including
+`advanced-with-regression` and `rejected-not-genuine` Verify results.
+`acceptedResults` counts results whose Verify object has `accepted=true`; preserve
+`accepted`, `genuine`, and `reviewerRejected` rather than inferring one from the
+status. `totalUsage` and `totalDurationMs` are aggregates only if every
+contributing runtime value is exposed; otherwise their affected aggregate is
+`null`. Total attempts count only Fix edit/test attempts.
 
 Also summarize human-readable:
 

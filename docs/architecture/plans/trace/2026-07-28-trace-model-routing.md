@@ -84,8 +84,8 @@ Return one JSON object only with:
 - unspecified as an array describing anything the skill does not define.
 ```
 
-Spawn the pressure worker as `gpt-5.6-terra`/medium with no forked conversation
-context. Set `<SKILL_PATH>` to the absolute path under this worktree,
+Spawn the pressure worker with `fork_turns="none"` as
+`gpt-5.6-terra`/medium with no forked conversation context. Set `<SKILL_PATH>` to the absolute path under this worktree,
 `<SKILL_REVISION>` to `git rev-parse HEAD` for RED and the literal
 `working-tree-after-routing-edit` for GREEN, and `<CASE_INPUT_JSON>` to the saved
 case's `input` object serialized by `jq -c`. Copy the worker's raw final output
@@ -111,6 +111,8 @@ State that Sol/medium is recommended for fleet launch but the active conductor c
 Add the common routing fields and enums from the design to Discovery, Triage, Fix,
 and Verify examples. Every applicable stage also records `beforeFrame`,
 `afterFrame`, `status`, cumulative edit `attemptCount`, and `regressionCount`.
+Discovery, Triage, and Verify use zero attempts; totals count only Fix edit/test
+attempts.
 Specify conductor ownership of `modelRoute`, nullable runtime telemetry, and one
 schema-only repair followed by at most one rerun; a second malformed result is a
 stage error.
@@ -170,7 +172,7 @@ Add an explicit decision table covering:
 
 - [ ] **Step 5: Update worker prompt templates**
 
-Put the invariant rules in a stable prefix, dynamic JSON afterward, and instruct workers to start with compact evidence but expand context when causality requires it. Include exact Codex spawn overrides in the Codex skill; describe equivalent tier intent without claiming unsupported overrides in the Claude skill.
+Put the invariant rules in a stable prefix, dynamic JSON afterward, and instruct workers to start with compact evidence but expand context when causality requires it. Include exact Codex spawn overrides with `fork_turns="none"` in the Codex skill; describe equivalent tier intent without claiming unsupported overrides in the Claude skill. Discovery, when needed, is a real fresh Terra-low child.
 
 - [ ] **Step 6: Run the GREEN pressure scenario**
 
@@ -263,7 +265,9 @@ frontier. Each accepted case contains:
 }
 ```
 
-Every class is fully qualified and executable. Commands use `<ROM_PATH>` only for
+Every class is fully qualified and executable. S1/S2 use known same-game green
+traces beyond the target; S3K uses the exact four fallback guards, and the
+lifecycle records every outcome. Commands use `<ROM_PATH>` only for
 the user-supplied ROM location. Store results as
 `target/trace-model-routing/<policy>/<case>.json` and patches as the same path with
 `.patch`; record both SHA-256 values in the result. Pin only cases whose base commit,
@@ -279,7 +283,9 @@ games, historical confirmation, and policy route definitions.
 
 Create a Draft 2020-12 result schema requiring policy name, case ID,
 base/result-tree hashes, patch path/hash, stage routes, nullable token categories,
-wall time, attempts, before/after frontier, status, citations, and regressions.
+wall time, Fix-only attempts, before/after frontier, fleet status, independent
+accepted/genuine/reviewer-rejected fields, structured ROM citations, exact
+verification outcomes, and structured regressions.
 Create a concrete result template populated with schema-valid sentinel values for
 one `terra-sol` case; it is copied and edited for each benchmark run.
 
