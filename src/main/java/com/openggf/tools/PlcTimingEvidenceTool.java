@@ -487,7 +487,7 @@ public final class PlcTimingEvidenceTool {
             List<ObservedEdge> observedEdges) {
         public Evidence {
             Objects.requireNonNull(game, "game");
-            handlerBudgets = Map.copyOf(handlerBudgets);
+            handlerBudgets = java.util.Collections.unmodifiableMap(new TreeMap<>(handlerBudgets));
             rows = List.copyOf(rows);
             observedEdges = List.copyOf(observedEdges);
         }

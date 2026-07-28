@@ -31,6 +31,16 @@ class TestPlcTimingEvidenceTool {
         }
     }
 
+    @Test
+    void evidenceBudgetsSerializeInStableNumericOrder() {
+        var evidence = new PlcTimingEvidenceTool.Evidence(
+                "s1", Map.of(0x18, 9, 0x04, 9, 0x10, 3),
+                List.of(), List.of());
+
+        assertEquals(List.of(0x04, 0x10, 0x18),
+                List.copyOf(evidence.handlerBudgets().keySet()));
+    }
+
     /** Catches a CLI that accepts unordered raw hook records or trusts RAM deltas. */
     @Test
     void cliDerivesACompactVectorFromExecuteHookRecords() throws Exception {
