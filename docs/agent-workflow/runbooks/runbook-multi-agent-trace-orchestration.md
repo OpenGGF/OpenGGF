@@ -144,9 +144,9 @@ it is evidence to retain and diagnose, not permission to discard work.
 
 Use this lifecycle verbatim for one `<policy>` / `<case>` pair. It creates a
 dedicated branch and worktree from the case's immutable parent; it does not
-switch the lead checkout. The `git status --porcelain --untracked-files=no`
-checks deliberately assess tracked cleanliness because the repository's
-post-checkout hook may link local disassembly trees as untracked resources.
+switch the lead checkout. It snapshots both tracked and untracked baseline
+state before the worker starts. Hook-created disassembly links and foreign files
+are baseline state, never benchmark-owned files.
 
 ```bash
 BENCH_ROOT=$(git rev-parse --show-toplevel)
@@ -154,17 +154,26 @@ BENCH_POLICY=<policy>
 BENCH_CASE=<case>
 BENCH_MANIFEST="$BENCH_ROOT/docs/architecture/validation/trace/trace-model-routing-benchmark.json"
 BENCH_BASE=$(jq -r --arg case "$BENCH_CASE" '.cases[] | select(.id == $case) | .baseCommit' "$BENCH_MANIFEST")
-BENCH_BRANCH="benchmark/trace-model-routing-${BENCH_POLICY}-${BENCH_CASE}"
+BENCH_BRANCH="feature/ai-trace-model-benchmark-${BENCH_POLICY}-${BENCH_CASE}"
 BENCH_WORKTREE="$BENCH_ROOT/.worktrees/trace-model-routing-${BENCH_POLICY}-${BENCH_CASE}"
 BENCH_RESULT="$BENCH_WORKTREE/target/trace-model-routing/${BENCH_POLICY}/${BENCH_CASE}.json"
 BENCH_PATCH="${BENCH_RESULT%.json}.patch"
 BENCH_RETAIN="/tmp/trace-model-routing-retained/${BENCH_POLICY}/${BENCH_CASE}"
+BENCH_OWNED="$BENCH_RETAIN/owned-files"
+BENCH_BASELINE_TRACKED="$BENCH_RETAIN/baseline-tracked"
+BENCH_BASELINE_UNTRACKED="$BENCH_RETAIN/baseline-untracked"
+BENCH_NEW_UNTRACKED="$BENCH_RETAIN/new-untracked"
+BENCH_OWNED_TRACKED="$BENCH_RETAIN/owned-tracked"
+BENCH_OWNED_NEW="$BENCH_RETAIN/owned-new"
+BENCH_TEMP_INDEX="$BENCH_RETAIN/result-tree.index"
 
 git cat-file -e "${BENCH_BASE}^{commit}"
 test ! -e "$BENCH_WORKTREE"
+mkdir -p "$BENCH_RETAIN"
 git worktree add -b "$BENCH_BRANCH" "$BENCH_WORKTREE" "$BENCH_BASE"
-git -C "$BENCH_WORKTREE" status --porcelain --untracked-files=no
-test -z "$(git -C "$BENCH_WORKTREE" status --porcelain --untracked-files=no)"
+git -C "$BENCH_WORKTREE" status --porcelain --untracked-files=no > "$BENCH_BASELINE_TRACKED"
+git -C "$BENCH_WORKTREE" ls-files --others --exclude-standard | sort > "$BENCH_BASELINE_UNTRACKED"
+test ! -s "$BENCH_BASELINE_TRACKED"
 ```
 
 In that worktree, verify the exact input before invoking the manifest's
@@ -178,38 +187,74 @@ jq -r --arg case "$BENCH_CASE" '.cases[] | select(.id == $case) | .fixtures[] | 
 while IFS=$'\t' read -r path expected; do
   test "$(git -C "$BENCH_WORKTREE" show "${BENCH_BASE}:${path}" | sha256sum | cut -d' ' -f1)" = "$expected"
 done
-git -C "$BENCH_WORKTREE" status --porcelain --untracked-files=no > "$BENCH_WORKTREE/target/trace-model-routing/owned-before.txt"
 ```
 
-After the run, create the result JSON against
-`trace-model-routing-result.schema.json`, capture tracked and untracked owned
-changes, then copy every artifact outside both `target/` and the worktree before
-any restoration. The untracked loop deliberately appends `--no-index` additions
-to the patch, so a newly-created file is not silently omitted.
+Before capture, the worker lists each file it authored or intentionally changed,
+one repo-relative path per line in `$BENCH_OWNED`. Do not add hook-created links,
+baseline files, result files, or foreign paths. The following commands reject an
+owned-file list that contains an unchanged file or an untracked baseline path.
+They capture exactly the listed tracked diff and listed new files; no broad
+untracked scan ever enters the patch or cleanup.
 
 ```bash
-mkdir -p "$(dirname "$BENCH_RESULT")" "$BENCH_RETAIN"
-git -C "$BENCH_WORKTREE" diff --binary HEAD > "$BENCH_PATCH"
-git -C "$BENCH_WORKTREE" diff --name-only HEAD > "${BENCH_RESULT%.json}.owned-tracked"
-git -C "$BENCH_WORKTREE" ls-files --others --exclude-standard > "${BENCH_RESULT%.json}.owned-untracked"
+test -s "$BENCH_OWNED"
+sort -u "$BENCH_OWNED" -o "$BENCH_OWNED"
+git -C "$BENCH_WORKTREE" ls-files --others --exclude-standard | sort | comm -13 "$BENCH_BASELINE_UNTRACKED" - > "$BENCH_NEW_UNTRACKED"
+: > "$BENCH_OWNED_TRACKED"
+: > "$BENCH_OWNED_NEW"
 while IFS= read -r path; do
-  git -C "$BENCH_WORKTREE" diff --no-index --binary -- /dev/null "$path" >> "$BENCH_PATCH" || test $? -eq 1
-done < "${BENCH_RESULT%.json}.owned-untracked"
-sha256sum "$BENCH_PATCH"
-git -C "$BENCH_WORKTREE" rev-parse HEAD^{tree}
-cp "$BENCH_RESULT" "$BENCH_PATCH" "${BENCH_RESULT%.json}.owned-tracked" "${BENCH_RESULT%.json}.owned-untracked" "$BENCH_RETAIN/"
+  test -n "$path"
+  if grep -Fqx "$path" "$BENCH_NEW_UNTRACKED"; then
+    printf '%s\n' "$path" >> "$BENCH_OWNED_NEW"
+  else
+    git -C "$BENCH_WORKTREE" diff --quiet HEAD -- "$path" && exit 1
+    printf '%s\n' "$path" >> "$BENCH_OWNED_TRACKED"
+  fi
+done < "$BENCH_OWNED"
+
+: > "$BENCH_RETAIN/worker.patch"
+while IFS= read -r path; do git -C "$BENCH_WORKTREE" diff --binary HEAD -- "$path" >> "$BENCH_RETAIN/worker.patch"; done < "$BENCH_OWNED_TRACKED"
+while IFS= read -r path; do git -C "$BENCH_WORKTREE" diff --no-index --binary -- /dev/null "$path" >> "$BENCH_RETAIN/worker.patch" || test $? -eq 1; done < "$BENCH_OWNED_NEW"
+BENCH_PATCH_SHA256=$(sha256sum "$BENCH_RETAIN/worker.patch" | cut -d' ' -f1)
+
+GIT_INDEX_FILE="$BENCH_TEMP_INDEX" git -C "$BENCH_WORKTREE" read-tree HEAD
+while IFS= read -r path; do GIT_INDEX_FILE="$BENCH_TEMP_INDEX" git -C "$BENCH_WORKTREE" add -- "$path"; done < "$BENCH_OWNED_TRACKED"
+while IFS= read -r path; do GIT_INDEX_FILE="$BENCH_TEMP_INDEX" git -C "$BENCH_WORKTREE" add -- "$path"; done < "$BENCH_OWNED_NEW"
+BENCH_RESULT_TREE=$(GIT_INDEX_FILE="$BENCH_TEMP_INDEX" git -C "$BENCH_WORKTREE" write-tree)
+
+mkdir -p "$(dirname "$BENCH_RESULT")"
+cp "$BENCH_ROOT/docs/architecture/validation/trace/trace-model-routing-result.template.json" "$BENCH_RESULT"
+jq --arg tree "$BENCH_RESULT_TREE" --arg patchSha256 "$BENCH_PATCH_SHA256" '.resultTree = $tree | .patch.sha256 = $patchSha256' "$BENCH_RESULT" > "$BENCH_RETAIN/result.json"
+mv "$BENCH_RETAIN/result.json" "$BENCH_RESULT"
+cp "$BENCH_RETAIN/worker.patch" "$BENCH_PATCH"
 check-jsonschema --schemafile "$BENCH_ROOT/docs/architecture/validation/trace/trace-model-routing-result.schema.json" "$BENCH_RESULT"
+cp "$BENCH_RESULT" "$BENCH_PATCH" "$BENCH_OWNED" "$BENCH_OWNED_TRACKED" "$BENCH_OWNED_NEW" "$BENCH_RETAIN/"
 ```
 
-Restore only the enumerated benchmark-owned paths. Tracked paths return to the
-base tree; untracked paths are moved into the retained directory rather than
-deleted. If either cleanliness check fails, stop and retain the worktree.
+The result and patch are now preserved outside `target/` and the worktree.
+Restore only the enumerated worker-owned paths. Tracked paths return to the base
+tree; untracked paths and the two protocol artifacts move into the retained
+directory rather than being deleted. The final comparison is against the exact
+baseline, so hook-created and foreign untracked files must remain unchanged. If
+either comparison fails, stop and retain the worktree.
 
 ```bash
-while IFS= read -r path; do git -C "$BENCH_WORKTREE" restore --source=HEAD --worktree -- "$path"; done < "${BENCH_RESULT%.json}.owned-tracked"
-while IFS= read -r path; do test -z "$path" || mv "$BENCH_WORKTREE/$path" "$BENCH_RETAIN/owned-untracked-$(basename "$path")"; done < "${BENCH_RESULT%.json}.owned-untracked"
-test -z "$(git -C "$BENCH_WORKTREE" status --porcelain --untracked-files=no)"
-git -C "$BENCH_WORKTREE" status --short
+while IFS= read -r path; do git -C "$BENCH_WORKTREE" restore --source=HEAD --worktree -- "$path"; done < "$BENCH_OWNED_TRACKED"
+while IFS= read -r path; do mv "$BENCH_WORKTREE/$path" "$BENCH_RETAIN/owned-new-$(basename "$path")"; done < "$BENCH_OWNED_NEW"
+mv "$BENCH_RESULT" "$BENCH_PATCH" "$BENCH_RETAIN/"
+rmdir --ignore-fail-on-non-empty "$(dirname "$BENCH_RESULT")" 2>/dev/null || true
+git -C "$BENCH_WORKTREE" status --porcelain --untracked-files=no > "$BENCH_RETAIN/final-tracked"
+git -C "$BENCH_WORKTREE" ls-files --others --exclude-standard | sort > "$BENCH_RETAIN/final-untracked"
+cmp "$BENCH_BASELINE_TRACKED" "$BENCH_RETAIN/final-tracked"
+cmp "$BENCH_BASELINE_UNTRACKED" "$BENCH_RETAIN/final-untracked"
+# The post-checkout hook creates only these disposable symlinks. They were
+# baseline state, not worker-owned files; unlinking them here never touches
+# their targets. Any other baseline untracked path leaves the worktree retained.
+for path in docs/kis2disasm docs/s1disasm docs/s2disasm docs/scddisasm docs/skdisasm; do
+  test ! -e "$BENCH_WORKTREE/$path" || test -L "$BENCH_WORKTREE/$path"
+  test ! -L "$BENCH_WORKTREE/$path" || unlink "$BENCH_WORKTREE/$path"
+done
+test -z "$(git -C "$BENCH_WORKTREE" status --porcelain)"
 git worktree remove "$BENCH_WORKTREE"
 ```
 

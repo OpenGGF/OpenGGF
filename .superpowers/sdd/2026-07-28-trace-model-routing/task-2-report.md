@@ -89,3 +89,37 @@ Post-fix validation reran `jq empty` for all four JSON artifacts,
 unique-case/all-game/historical-confirmation query, all pinned commit checks,
 and all pinned fixture-object SHA-256 checks. Every validation command exited
 zero; each `check-jsonschema` invocation reported `ok -- validation done`.
+
+## Review fix round 2 — 2026-07-28
+
+The lifecycle now creates `/tmp` retention before any redirected snapshot,
+uses the compliant `feature/ai-trace-model-benchmark-<policy>-<case>` branch
+form, and snapshots tracked plus untracked baseline state. Only the worker's
+explicit `owned-files` list can contribute to the patch, temporary-index result
+tree, or restoration; a listed unchanged path or baseline untracked path fails
+capture. Hook-created disassembly symlinks are baseline resources, not owned
+files, and are unlinked only after baseline equality is proven so ordinary
+worktree removal can proceed without touching their targets. Other foreign
+baseline untracked state prevents removal and retains the worktree.
+
+The capture computes `resultTree` with `GIT_INDEX_FILE=<external temporary
+index> git read-tree HEAD`, stages only enumerated changed/new paths in that
+temporary index, and calls `git write-tree`; it does not read `HEAD^{tree}` or
+mutate the user's index. It computes the patch SHA-256, writes both fields into
+the target result before schema validation, and retains copies outside both the
+worktree and `target/` before cleanup.
+
+Dry-run command sequence used a disposable worktree at parent
+`5e3ba3ea3d6a609f98cd7662a0767bce21fef06c`, one explicit new file
+`benchmark-owned.txt`, and baseline hook links. It passed result-schema
+validation, produced working-tree hash
+`aad04a2c24c317fa1a37522f2c57473b8def7e46` and patch SHA-256
+`ebaf7f7006f4390a096da5a9459a8989f411d5c17fca821837c3cc1323d31b67`,
+matched both final baseline snapshots, retained artifacts under
+`/tmp/trace-model-routing-lifecycle-retain2`, and removed the worktree with
+ordinary `git worktree remove`.
+
+The manifest schema now requires exactly three ordered policy identities with
+their exact route tables: enabled `sol-only`, enabled `terra-sol`, and disabled
+`luna-terra-sol` with its reason. Its game-specific conditions also bind ROM
+property and SHA-1, command property, and trace package.
