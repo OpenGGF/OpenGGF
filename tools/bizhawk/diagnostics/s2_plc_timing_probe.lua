@@ -88,7 +88,8 @@ local function service_pre()
   pending_service = snapshot()
 end
 local function partial_service_post()
-  if not pending_service or pending_service.left == 0 then error("partial service post reached without active decoder") end
+  if not pending_service then return end
+  if pending_service.left == 0 then error("partial service post reached without active decoder") end
   emit("plc_service", nil, active_source, pending_service); pending_service = nil
 end
 event.onmemoryexecute(service_pre, FULL_PRE); event.onmemoryexecute(service_pre, SMALL_PRE)

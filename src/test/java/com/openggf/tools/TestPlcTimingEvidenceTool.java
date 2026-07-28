@@ -1,14 +1,17 @@
 package com.openggf.tools;
 
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.zip.GZIPInputStream;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.GZIPInputStream;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -157,17 +160,48 @@ class TestPlcTimingEvidenceTool {
     }
 
     @Test
-    void bothProbesUseOneSharedPartialServiceReturnHook() throws Exception {
+    void bothProbeStateMachinesHandleEmptyPartialAndCompletingCalls() throws Exception {
+        Path lua = Path.of("/usr/bin/lua");
+        Assumptions.assumeTrue(Files.isExecutable(lua), "Lua is unavailable for the behavioral contract test");
+        Path harness = Path.of("tools/bizhawk/diagnostics/plc_timing_probe_contract_test.lua");
         for (Path probe : List.of(
                 Path.of("tools/bizhawk/diagnostics/s1_plc_timing_probe.lua"),
                 Path.of("tools/bizhawk/diagnostics/s2_plc_timing_probe.lua"))) {
-            String script = Files.readString(probe);
-            assertTrue(script.contains("OGGF_PLC_PARTIAL_SERVICE_POST"));
-            assertFalse(script.contains("FULL_PARTIAL_POST"));
-            assertFalse(script.contains("SMALL_PARTIAL_POST"));
-            assertTrue(script.contains("event.onmemoryexecute(service_pre, FULL_PRE); event.onmemoryexecute(service_pre, SMALL_PRE)"));
-            assertTrue(script.contains("event.onmemoryexecute(partial_service_post, PARTIAL_SERVICE_POST)"));
+            Path output = temporaryDirectory.resolve(probe.getFileName() + ".jsonl");
+            ProcessBuilder builder = new ProcessBuilder(
+                    lua.toString(), harness.toString(), probe.toString()).redirectErrorStream(true);
+            configureProbeEnvironment(builder.environment(), output);
+            Process process = builder.start();
+            String console = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+
+            assertEquals(0, process.waitFor(), () -> probe + " contract failed:\n" + console);
+            assertTrue(console.contains("PLC_PROBE_CONTRACT_OK"), console);
         }
+    }
+
+    private static void configureProbeEnvironment(Map<String, String> environment, Path output) {
+        environment.put("OGGF_PLC_PROBE_OUTPUT", output.toString());
+        environment.put("OGGF_PLC_CONSUMER_HOOKS", "ready_gate@118");
+        environment.put("OGGF_PLC_BUFFER_RAM", "1000");
+        environment.put("OGGF_PLC_DEST_RAM", "1100");
+        environment.put("OGGF_PLC_LEFT_RAM", "1102");
+        environment.put("OGGF_PLC_GAME_MODE_RAM", "1104");
+        environment.put("OGGF_PLC_INTERRUPT_HANDLER_RAM", "1105");
+        environment.put("OGGF_PLC_LAG_HANDLER", "0");
+        environment.put("OGGF_PLC_ADD_ENTRY", "101");
+        environment.put("OGGF_PLC_REPLACE_BEGIN", "102");
+        environment.put("OGGF_PLC_REPLACE_POST", "103");
+        environment.put("OGGF_PLC_CLEAR_BEGIN", "104");
+        environment.put("OGGF_PLC_CLEAR_POST", "105");
+        environment.put("OGGF_PLC_PREPARE_BEGIN", "106");
+        environment.put("OGGF_PLC_PREPARE_END", "107");
+        environment.put("OGGF_PLC_FULL_SERVICE_PRE", "108");
+        environment.put("OGGF_PLC_PARTIAL_SERVICE_POST", "109");
+        environment.put("OGGF_PLC_SMALL_SERVICE_PRE", "110");
+        environment.put("OGGF_PLC_POP_PRE", "111");
+        environment.put("OGGF_PLC_POP_POST", "112");
+        environment.put("OGGF_PLC_VINT_DISPATCH", "113");
+        environment.put("OGGF_PLC_HBLANK_DEFERRED_ENTRY", "114");
     }
 
     private static void assertRejected(PlcTimingEvidenceTool.Evidence evidence) {

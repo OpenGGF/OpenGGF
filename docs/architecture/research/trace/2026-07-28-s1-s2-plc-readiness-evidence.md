@@ -30,13 +30,19 @@ sampling, the explicit lag-handler value, each preparation/service/pop
 boundary, replacement and standalone-clear completion, and every consumer.
 The pop completion hook conditionally emits empty only when the shifted queue
 is actually empty; it also supplies the completion-through-pop service edge,
-while both full and small entry paths share one partial-return post hook. This is intentional: routine-entry placeholders
-cannot yield approval. Their JSONL records contain raw frame/order, handler,
+while both full and small entry paths share one partial-return post hook. That
+shared return is also the ordinary empty-PLC fast path: with no captured
+service pre-state it emits nothing, while a captured zero-pattern transition
+still fails closed. A stock-Lua behavioral harness loads each probe unchanged
+and executes empty full/small calls, partial calls through both entries,
+completion through pop, and the malformed zero-pattern case. This is
+intentional: routine-entry placeholders and source-text assertions cannot
+yield approval. The probes' JSONL records contain raw frame/order, handler,
 lag, HInt deferral, queue head/destination/count, and slot count. Replacement
 is emitted only after its post-copy boundary and requires idle decoder
-snapshots before and after; its nested retail clear is represented atomically rather
-than as a false replace-then-clear queue transition. They are deliberately
-separate from canonical trace recorders.
+snapshots before and after; its nested retail clear is represented atomically
+rather than as a false replace-then-clear queue transition. They are
+deliberately separate from canonical trace recorders.
 
 ROM hashes were verified:
 
