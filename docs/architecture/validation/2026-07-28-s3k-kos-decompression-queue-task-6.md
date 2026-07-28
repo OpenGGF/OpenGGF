@@ -10,6 +10,27 @@ agent-facing authority rule, changelog, and README release log. It added a
 checked compatibility inventory without publishing or modifying trace
 payloads.
 
+The final Task 6 file set is:
+
+- `AGENTS.md`, `CLAUDE.md`;
+- `CHANGELOG.md`, `README.md`;
+- `docs/architecture/audits/2026-07-27-s3k-hardware-timing-inventory.md`;
+- `docs/architecture/designs/2026-07-27-cross-game-hardware-timing-trace-contract.md`;
+- `docs/architecture/designs/2026-07-28-s3k-kos-decompression-queue.md`;
+- `docs/architecture/plans/2026-07-28-s3k-kos-decompression-queue.md`;
+- this validation report;
+- `docs/status/known-discrepancies.md`;
+- `src/test/java/com/openggf/trace/timing/TestCommittedHardwareTimingFixtures.java`;
+- `tools/bizhawk/README.md`; and
+- `tools/bizhawk-headless/docs/s3k-trace-recorder-behavior.md`.
+
+Review fix round 1 restored the last file as the normative current
+6.38/schema-2 byte contract and corrected both STANDARD and complete-run
+parity wording in `tools/bizhawk/README.md`. Historical 6.32/6.33 recorder
+derivation remains labelled as history; committed fixtures and frozen Lua are
+identified as 6.37/trace-schema-7/hardware-schema-1, distinct from current
+native 6.38/trace-schema-7/hardware-schema-2 output.
+
 `docs/status/trace-frontier-log.md` was not changed. This documentation task
 did not measure a frontier move or regression, and the implementation plan
 requires that ledger to change only when one is measured.

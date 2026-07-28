@@ -356,10 +356,15 @@ boundary until a separately reviewed and explicitly approved schema-2
 publication replaces them. Do not hand-edit or regenerate committed fixture
 payloads as part of a recorder implementation change.
 
-**Byte-parity guarantee vs the Lua recorder:** three ROM-backed differential
-gates in `tools/bizhawk-headless/test.sh` (`S3KTraceDifferentialTests`) prove
-the port end to end against the canonical fixtures, each with zero
-normalization on `physics.csv` / `aux_state.jsonl`:
+**Schema-1 fixture parity and schema-2 publication boundary:** the three
+canonical STANDARD fixtures are committed as `6.37-s3k`,
+`trace_schema: 7`, `hardware_timing_schema: 1`. The frozen Lua recorder emits
+that schema-1 shape and module-only timing. The maintained native writer emits
+`6.38-s3k`, trace schema 7, hardware-timing schema 2 and the additional direct
+ledger. `S3KTraceDifferentialTests` continue to require byte identity for
+`physics.csv` / `aux_state.jsonl`; metadata compatibility accepts only the
+declared version/schema transition, and schema-2 timing output remains an
+approval-gated publication candidate rather than an allowed normalization:
 
 - `src/test/resources/traces/s3k/aiz1_to_hcz_fullrun/` — `aiz_end_to_end`,
   BK2 frame offset 511, 20798 trace rows (ends on the BK2-end guard: 511 +
@@ -373,29 +378,14 @@ normalization on `physics.csv` / `aux_state.jsonl`:
   despite never starting in CNZ, and legitimately carries no
   `gameplay_start`/act-transition checkpoint — only `gameplay_end`).
 
-**Pinned metadata delta (no loose normalization):** `metadata.json` differs
-from these three fixtures only in `recording_date` — both sides stamp the
-literal `lua_script_version` `"6.32-s3k"`, so there is no version-line delta
-to normalize. This is a regeneration, not a widened allowance: the fixtures
-previously in tree were captured before `95c36166c` fixed
-`s3k_trace_recorder.lua`'s `ADDR_FRAMECOUNT` from `0xFE08`
-(`Debug_placement_mode`, dead-zero in normal gameplay) to `0xFE04`
-(`Level_frame_counter`), so `physics.csv`'s `gameplay_frame_counter` column
-and every aux `vfc` / `oscillation_state.level_frame_counter` read a constant
-`0`/`0000` across all three fixtures' entire length. All three were
-recaptured on the fixed recorder (`3eebb13bf`) and now carry a live,
-ROM-plausible counter (monotonic apart from documented lag-frame stalls and
-level re-init clears); the MGZ fixture's leftover `"pre_trace_osc_frames": 0,`
-line (retired from `write_metadata()` in v6.29, already dropped from the
-AIZ/CNZ fixtures) is dropped here too. Every delta is asserted as an exact
-literal at an exact position, never a loose regex or a "drop unknown keys"
-normalization.
-The byte-level porting contract lives in
+The byte-level contract lives in
 `tools/bizhawk-headless/docs/s3k-trace-recorder-behavior.md` (RAM map,
-physics.csv, metadata) and `tools/bizhawk-headless/docs/s3k-profiles-and-hooks.md`
+physics CSV, schema-2 timing ledgers/stream, metadata) and
+`tools/bizhawk-headless/docs/s3k-profiles-and-hooks.md`
 (profiles, stop ordering, hook architecture); `tools/bizhawk-headless/docs/s3k-aux-events.md`
-owns the aux event surface. Where any spec text and the Lua disagree, the
-Lua wins.
+owns the aux event surface. For the frozen physics/aux schema-1 surface, the
+published Lua bytes remain historical truth. For current schema-2 timing, the
+native recorder and approved hardware-timing contract are authoritative.
 
 **Deferred: hook-driven aux families.** The Lua's M68K exec/memory-write
 diagnostic hooks (`OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS=1`) drive 13 aux event
@@ -432,10 +422,11 @@ Full table and rationale: `s3k-aux-events.md` §5.1.
 
 ### Sonic 3 & Knuckles complete-run and run mode
 
-With the S3&K locked-on ROM, `--mode trace` also replaces
-`s3k_complete_run_recorder.lua` (`6.33-s3k-completerun`) on Linux — the
-separate per-zone-segment / bonus-stage / special-stage recorder, distinct
-from the STANDARD recorder above. It is selected the same way as S1's
+With the S3&K locked-on ROM, `--mode trace` also replaces the frozen
+`s3k_complete_run_recorder.lua` (`6.37-s3k-completerun`) on Linux — the
+maintained native writer is `6.38-s3k-completerun`. This is the separate
+per-zone-segment / bonus-stage / special-stage recorder, distinct from the
+STANDARD recorder above. It is selected the same way as S1's
 complete-run recorder, not via `--trace-profile <one of the three STANDARD
 profiles>`:
 
@@ -491,9 +482,15 @@ tools/bizhawk-headless/run.sh \
   --run-id s3-knux-multibonus-ss
 ```
 
-**Byte-parity guarantee vs the Lua recorder:** three ROM-backed differential
-gates in `tools/bizhawk-headless/test.sh` prove the port, covering three
-distinct capture identities (`docs/s3k-run-publication.md` §0):
+**Schema-1 fixture parity and schema-2 publication boundary:** committed
+complete-run/run fixtures are `6.37-s3k-completerun`, trace schema 7,
+hardware-timing schema 1. The frozen Lua recorder emits that module-only
+shape; the maintained native writer emits `6.38-s3k-completerun`, trace
+schema 7, hardware-timing schema 2. Three ROM-backed differential gates cover
+the capture identities below (`docs/s3k-run-publication.md` §0). In this
+historical inventory, “byte-identical” refers to physics/aux payloads and
+manifests; current metadata has the exact declared version/schema delta, and
+schema-2 timing streams are publication candidates:
 
 - **`S3KCompleteRunSegmentsDifferentialTests`** — one untruncated
   `--trace-profile complete_run` pass over the 466,334-row complete-playthrough
@@ -529,11 +526,13 @@ distinct capture identities (`docs/s3k-run-publication.md` §0):
   aux events, including the four (B) segments (`hcz_2`, `hcz_6`, `mgz`,
   `mgz_3`) that used to carry real ones before the hooks-off recapture.
 
-**Pinned metadata delta (no loose normalization):** all three identities were
-captured by the same `6.33-s3k-completerun` Lua build this port targets, so
-`metadata.json` differs from every committed fixture **only** in
-`recording_date` — there is no version-line delta to normalize, unlike the
-S1/S2 complete-run ports.
+**Pinned metadata compatibility (no loose normalization):** committed
+metadata carries `6.37-s3k-completerun`, trace schema 7, hardware-timing
+schema 1. Current native metadata carries `6.38-s3k-completerun`, trace
+schema 7, hardware-timing schema 2. Apart from `recording_date`, only those
+exact version/schema literals may differ. Direct timing events are not
+normalized away and cannot replace committed schema-1 payloads without the
+separate publication approval.
 
 Identity (B) reached that state by regeneration rather than by normalization.
 The committed `runs/s3-knux-multibonus-ss/` set was a 2026-07-19 Windows
@@ -560,8 +559,9 @@ profiles, the retired `ADDR_FRAMECOUNT` recorder-identity fork now unified on
 `0xFE04` for both S3K recorders, the `game_paused_state` aux addition), and
 `tools/bizhawk-headless/docs/s3k-run-publication.md`
 (directory/metadata/manifest byte layout, the three capture identities, the
-full environment-variable surface); where any spec text and the Lua
-disagree, the Lua wins.
+full environment-variable surface). Frozen Lua bytes remain authoritative
+for their published schema-1 physics/aux surface; current schema-2 timing is
+owned by the native recorder and approved timing contract.
 
 **Deferred: hook-driven aux families (same deferral as the STANDARD
 recorder).** Every committed fixture across all three identities is now
