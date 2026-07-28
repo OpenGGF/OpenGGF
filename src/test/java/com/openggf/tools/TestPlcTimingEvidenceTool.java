@@ -56,7 +56,7 @@ class TestPlcTimingEvidenceTool {
                 {"raw_frame":11,"within_frame_order":2,"event":"plc_vint_state","game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false}
                 {"raw_frame":11,"within_frame_order":3,"event":"plc_service","game_mode":12,"interrupt_handler":0,"lag":true,"hblank_deferred":false,"queue_source":64,"patterns_left_before":10,"patterns_left_after":1}
                 {"raw_frame":11,"within_frame_order":4,"event":"plc_consumer_observation","consumer_id":"ready_gate","queue_empty":false,"game_mode":12,"interrupt_handler":0,"lag":true,"hblank_deferred":false,"queue_source":64,"patterns_left_after":1}
-                {"raw_frame":12,"within_frame_order":1,"event":"plc_frame_state","game_mode":12,"interrupt_handler":0,"lag":true,"hblank_deferred":false}
+                {"raw_frame":12,"within_frame_order":1,"event":"plc_frame_state","game_mode":12,"interrupt_handler":8,"lag":false,"hblank_deferred":true}
                 {"raw_frame":12,"within_frame_order":2,"event":"plc_vint_state","game_mode":12,"interrupt_handler":8,"lag":false,"hblank_deferred":false}
                 {"raw_frame":12,"within_frame_order":3,"event":"plc_hblank_state","game_mode":12,"interrupt_handler":8,"lag":false,"hblank_deferred":true}
                 {"raw_frame":12,"within_frame_order":4,"event":"plc_service","game_mode":12,"interrupt_handler":0,"lag":true,"hblank_deferred":false,"queue_source":64,"patterns_left_before":1,"patterns_left_after":0}

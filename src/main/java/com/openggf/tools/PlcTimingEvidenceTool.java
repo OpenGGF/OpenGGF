@@ -349,7 +349,8 @@ public final class PlcTimingEvidenceTool {
             this.gameMode = requiredInt(node, "game_mode");
             this.handler = requiredInt(node, "interrupt_handler");
             this.lag = requiredBoolean(node, "lag");
-            this.hblankDeferred = requiredBoolean(node, "hblank_deferred");
+            this.hblankDeferred = phase != StructuralPhase.PASSIVE
+                    && requiredBoolean(node, "hblank_deferred");
         }
 
         private MutableRow(int frame, int withinFrameOrder, MutableRow state) {
