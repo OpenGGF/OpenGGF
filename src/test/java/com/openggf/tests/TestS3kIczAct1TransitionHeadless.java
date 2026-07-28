@@ -17,6 +17,7 @@ import com.openggf.level.Pattern;
 import com.openggf.level.resources.CompressionType;
 import com.openggf.level.resources.DeferredLevelResourceDescriptor;
 import com.openggf.level.resources.DeferredLevelResourceManifest;
+import com.openggf.level.resources.DeferredLevelResourceLoader;
 import com.openggf.level.resources.LoadOp;
 import com.openggf.level.resources.ResourceLoader;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -140,8 +141,9 @@ class TestS3kIczAct1TransitionHeadless {
                                 S3kKosRamDestinations.RAM_START
                                         + 0x0A00)));
         Sonic3kLevel independentlyDeferredIcz2 =
-                (Sonic3kLevel) new Sonic3k(GameServices.rom().getRom())
-                        .loadLevel(
+                (Sonic3kLevel) ((DeferredLevelResourceLoader)
+                        new Sonic3k(GameServices.rom().getRom()))
+                        .loadLevelWithDeferredResources(
                                 0xC0 + 11,
                                 transitionManifest.newTracker());
         int blockStart =

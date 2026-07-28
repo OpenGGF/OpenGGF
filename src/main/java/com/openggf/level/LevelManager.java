@@ -60,6 +60,7 @@ import com.openggf.level.objects.TouchResponseTable;
 import com.openggf.level.rings.RingManager;
 import com.openggf.level.rings.RingSpriteSheet;
 import com.openggf.level.resources.DeferredLevelResourceTracker;
+import com.openggf.level.resources.DeferredLevelResourceLoader;
 import com.openggf.level.scroll.BgTilemapUpdateMode;
 import com.openggf.level.animation.AnimatedPaletteManager;
 import com.openggf.level.animation.AnimatedPatternManager;
@@ -435,14 +436,33 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * @return the loaded Level instance (also assigned to {@code this.level})
      */
     public Level loadLevelData(int levelIndex) throws IOException {
-        return loadLevelData(levelIndex, DeferredLevelResourceTracker.none());
+        Level loaded = game.loadLevel(levelIndex);
+        writeCurrentLevel(loaded);
+        rebuildLevelDerivedState();
+        return loaded;
     }
 
     public Level loadLevelData(
             int levelIndex,
             DeferredLevelResourceTracker deferredResources)
             throws IOException {
-        Level loaded = game.loadLevel(levelIndex, deferredResources);
+        DeferredLevelResourceTracker activeDeferredResources =
+                deferredResources != null
+                        ? deferredResources
+                        : DeferredLevelResourceTracker.none();
+        Level loaded;
+        if (activeDeferredResources.hasExplicitPolicy()
+                && game instanceof DeferredLevelResourceLoader loader) {
+            loaded = loader.loadLevelWithDeferredResources(
+                    levelIndex, activeDeferredResources);
+        } else {
+            if (!activeDeferredResources.isEmpty()) {
+                throw new IllegalStateException(
+                        game.getIdentifier()
+                                + " does not support deferred level resources");
+            }
+            loaded = game.loadLevel(levelIndex);
+        }
         writeCurrentLevel(loaded);
         rebuildLevelDerivedState();
         return loaded;

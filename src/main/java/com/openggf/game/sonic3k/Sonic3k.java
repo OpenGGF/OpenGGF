@@ -23,6 +23,7 @@ import com.openggf.level.Palette;
 import com.openggf.level.animation.AnimatedPaletteManager;
 import com.openggf.level.animation.AnimatedPatternManager;
 import com.openggf.level.resources.DeferredLevelResourceTracker;
+import com.openggf.level.resources.DeferredLevelResourceLoader;
 import com.openggf.level.resources.DeferredLevelResourceManifest;
 import com.openggf.level.resources.LevelResourcePlan;
 import com.openggf.level.resources.LoadOp;
@@ -48,7 +49,7 @@ import java.util.logging.Logger;
  */
 public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDustArtProvider,
         DynamicStartPositionProvider, AnimatedPatternProvider, AnimatedPaletteProvider,
-        LevelLoadPaletteOverrideProvider {
+        LevelLoadPaletteOverrideProvider, DeferredLevelResourceLoader {
     private static final Logger LOG = Logger.getLogger(Sonic3k.class.getName());
     private static final int[] ICZ1_LOCK_ON_INTRO_PALETTE_LINE4_COLORS_1_TO_15 = {
             0x0EEE, 0x0EEC, 0x0EEA, 0x0ECA, 0x0EC8,
@@ -201,11 +202,12 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
 
     @Override
     public Level loadLevel(int levelIdx) throws IOException {
-        return loadLevel(levelIdx, DeferredLevelResourceTracker.none());
+        return loadLevelWithDeferredResources(
+                levelIdx, DeferredLevelResourceTracker.none());
     }
 
     @Override
-    public Level loadLevel(
+    public Level loadLevelWithDeferredResources(
             int levelIdx,
             DeferredLevelResourceTracker deferredResources)
             throws IOException {

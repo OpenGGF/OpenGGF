@@ -2,7 +2,6 @@ package com.openggf.data;
 
 import com.openggf.audio.GameSound;
 import com.openggf.level.Level;
-import com.openggf.level.resources.DeferredLevelResourceTracker;
 
 import java.io.IOException;
 import java.util.List;
@@ -17,18 +16,6 @@ public abstract class Game {
     public abstract List<String> getTitleCards();
 
     public abstract Level loadLevel(int levelIdx) throws IOException;
-
-    public Level loadLevel(
-            int levelIdx,
-            DeferredLevelResourceTracker deferredResources)
-            throws IOException {
-        if (deferredResources != null && !deferredResources.isEmpty()) {
-            throw new IllegalStateException(
-                    getIdentifier()
-                            + " does not support deferred level resources");
-        }
-        return loadLevel(levelIdx);
-    }
 
     public abstract int getMusicId(int levelIdx) throws IOException;
 

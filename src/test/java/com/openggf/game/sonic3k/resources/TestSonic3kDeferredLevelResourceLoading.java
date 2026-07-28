@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.resources;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.data.Game;
 import com.openggf.data.Rom;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.Sonic3k;
@@ -14,6 +15,7 @@ import com.openggf.level.resources.ResourceLoader;
 import com.openggf.level.resources.CompressionType;
 import com.openggf.level.resources.DeferredLevelResourceDescriptor;
 import com.openggf.level.resources.DeferredLevelResourceManifest;
+import com.openggf.level.resources.DeferredLevelResourceLoader;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -21,6 +23,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -111,7 +114,7 @@ class TestSonic3kDeferredLevelResourceLoading {
                                 0x0122 * Pattern.PATTERN_SIZE_IN_ROM)));
 
         assertThrows(IllegalStateException.class,
-                () -> new Sonic3k(rom).loadLevel(
+                () -> deferredLoader(rom).loadLevelWithDeferredResources(
                         0xC0 + 11, incomplete.newTracker()));
     }
 
@@ -128,9 +131,24 @@ class TestSonic3kDeferredLevelResourceLoading {
         Rom rom = TestEnvironment.currentRom();
 
         assertThrows(IllegalStateException.class,
-                () -> new Sonic3k(rom).loadLevel(
+                () -> deferredLoader(rom).loadLevelWithDeferredResources(
                         0xC0 + 11,
                         DeferredLevelResourceManifest.EMPTY.newTracker()));
+    }
+
+    @Test
+    void deferredLoadingIsOwnedByTheS3kLevelLayerRatherThanBaseGame() throws Exception {
+        Class<?> loaderType = Class.forName(
+                "com.openggf.level.resources.DeferredLevelResourceLoader");
+
+        assertTrue(loaderType.isAssignableFrom(Sonic3k.class),
+                "S3K must expose deferred loading through the level-layer provider");
+        for (Method method : Game.class.getDeclaredMethods()) {
+            assertFalse(Arrays.stream(method.getParameterTypes()).anyMatch(
+                            parameter -> parameter.getSimpleName()
+                                    .equals("DeferredLevelResourceTracker")),
+                    "base Game must not depend on level-runtime resource trackers");
+        }
     }
 
     private Sonic3kLevel loadAiz1(boolean skipIntros) throws Exception {
@@ -142,6 +160,11 @@ class TestSonic3kDeferredLevelResourceLoading {
                 SonicConfiguration.S3K_SKIP_INTROS, skipIntros);
         return (Sonic3kLevel) new Sonic3k(
                 TestEnvironment.currentRom()).loadLevel(0xC0);
+    }
+
+    private static DeferredLevelResourceLoader deferredLoader(Rom rom)
+            throws IOException {
+        return new Sonic3k(rom);
     }
 
     private static LlbSources readSources(Rom rom, int index)
