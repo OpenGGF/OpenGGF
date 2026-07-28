@@ -27,6 +27,39 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestHardwareTimingReplayPort {
 
     @Test
+    void schemaTwoAdmitsDirectPreEdgeBeforeIndependentModulePostEdge() {
+        HardwareTimingService service = new HardwareTimingService(
+                com.openggf.game.timing.RomWorkBudgetScheduler.oneWorkUnitAt(PRE_MAIN_LOOP));
+        RecordedCompletionAuthority authority = service.beginRecordedAdmission();
+        HardwareWorkSubmission directSubmission = submission(
+                HardwareWorkKind.KOS_DECOMPRESSION_QUEUE, false, 1, 70);
+        HardwareWorkSubmission moduleSubmission = submission(
+                HardwareWorkKind.KOS_MODULE_QUEUE, false, 1, 71);
+        HardwareCompletionEdge directEdge = new HardwareCompletionEdge(
+                0, PRE_MAIN_LOOP, HardwareWorkKind.KOS_DECOMPRESSION_QUEUE, 0,
+                HardwareSubmissionFingerprint.compute(directSubmission));
+        HardwareCompletionEdge moduleEdge = new HardwareCompletionEdge(
+                0, POST_OBJECTS, HardwareWorkKind.KOS_MODULE_QUEUE, 0,
+                HardwareSubmissionFingerprint.compute(moduleSubmission));
+        HardwareTimingReplayPort port = port(authority,
+                new HardwareTimingSchedule(2, List.of(directEdge, moduleEdge)));
+        HardwareWorkHandle direct = service.submit(directSubmission);
+        HardwareWorkHandle module = service.submit(moduleSubmission);
+
+        port.beginRawFrame(0);
+        service.service(PRE_MAIN_LOOP);
+        port.apply(PRE_MAIN_LOOP);
+
+        assertTrue(service.isReady(direct));
+        assertFalse(service.isReady(module));
+
+        service.service(POST_OBJECTS);
+        port.apply(POST_OBJECTS);
+
+        assertTrue(service.isReady(module));
+    }
+
+    @Test
     void standaloneLaterFirstSchedulesSeedAizAndHczOrdinals() {
         for (long firstOrdinal : List.of(2L, 43L)) {
             HardwareTimingService service = new HardwareTimingService();
@@ -598,8 +631,13 @@ class TestHardwareTimingReplayPort {
 
     private static HardwareWorkSubmission submission(
             boolean exportable, int workUnits, int payloadByte) {
+        return submission(HardwareWorkKind.KOS_MODULE_QUEUE, exportable, workUnits, payloadByte);
+    }
+
+    private static HardwareWorkSubmission submission(
+            HardwareWorkKind kind, boolean exportable, int workUnits, int payloadByte) {
         return new HardwareWorkSubmission(
-                HardwareWorkKind.KOS_MODULE_QUEUE,
+                kind,
                 0x3000 + payloadByte,
                 0x100,
                 0x5000,

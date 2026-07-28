@@ -3,6 +3,7 @@ package com.openggf.game.timing;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Map;
 
 import static com.openggf.game.timing.HardwareServiceBoundary.POST_OBJECTS;
 import static com.openggf.game.timing.HardwareServiceBoundary.VINT_SERVICE;
@@ -154,9 +155,47 @@ class TestHardwareTimingService {
         assertThrows(IllegalStateException.class, service::beginRecordedAdmission);
     }
 
+    @Test
+    void schemaOneRecordsOnlyModuleWorkWhileDirectWorkRemainsLive() {
+        HardwareTimingService service = new HardwareTimingService();
+        RecordedCompletionAuthority authority = service.beginRecordedAdmission();
+        HardwareWorkHandle direct = service.submit(submission(
+                HardwareWorkKind.KOS_DECOMPRESSION_QUEUE, 1, new byte[] {21}));
+        HardwareWorkHandle module = service.submit(submission(
+                HardwareWorkKind.KOS_MODULE_QUEUE, 1, new byte[] {22}));
+
+        service.service(POST_OBJECTS);
+
+        assertTrue(service.isReady(direct));
+        assertFalse(service.isReady(module));
+        IllegalStateException rejected = assertThrows(IllegalStateException.class,
+                () -> authority.admitRecordedCompletion(
+                        POST_OBJECTS, direct.kind(), direct.ordinal(),
+                        direct.submissionFingerprint()));
+        assertTrue(rejected.getMessage().contains("not recorded"), rejected::getMessage);
+
+        authority.admitRecordedCompletion(
+                POST_OBJECTS, module.kind(), module.ordinal(),
+                module.submissionFingerprint());
+        assertTrue(service.isReady(module));
+    }
+
+    @Test
+    void recordedPolicyMapIsCompleteAndCannotLeaveAStreamFullyLive() {
+        HardwareTimingService service = new HardwareTimingService();
+
+        assertThrows(IllegalArgumentException.class,
+                () -> service.beginRecordedAdmission(Map.of()));
+    }
+
     private static HardwareWorkSubmission submission(int workUnits, byte[] payload) {
+        return submission(HardwareWorkKind.KOS_MODULE_QUEUE, workUnits, payload);
+    }
+
+    private static HardwareWorkSubmission submission(
+            HardwareWorkKind kind, int workUnits, byte[] payload) {
         return new HardwareWorkSubmission(
-                HardwareWorkKind.KOS_MODULE_QUEUE,
+                kind,
                 0x1000 + payload[0],
                 0x100,
                 0x4000,

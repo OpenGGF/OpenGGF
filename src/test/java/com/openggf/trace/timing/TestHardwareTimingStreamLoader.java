@@ -45,18 +45,35 @@ class TestHardwareTimingStreamLoader {
 
     @Test
     void unknownSchemaFails() throws IOException {
-        Path fixture = writeFixture(7, 2, "", 2);
+        Path fixture = writeFixture(7, 3, "", 2);
 
         assertRejected(fixture, "metadata.json", "hardware_timing_schema");
     }
 
     @Test
-    void metadataTimingSchemaMustBeJsonIntegerOne() throws IOException {
+    void metadataTimingSchemaMustBeJsonIntegerOneOrTwo() throws IOException {
         for (String token : List.of("\"1\"", "1.0", "true", "{}", "[]", "null")) {
             Path fixture = writeFixtureWithMetadataToken(7, token, "", 2);
 
             assertRejected(fixture, "metadata.json", "JSON integer 1");
         }
+    }
+
+    @Test
+    void schemaOneRejectsDirectKindButSchemaTwoAcceptsBothKinds() throws IOException {
+        String direct = edge(0, "pre_main_loop", "kos_decompression_queue", 0);
+        Path schemaOne = writeFixture(7, 1, direct + "\n", 2);
+        assertRejected(schemaOne, "hardware_timing.jsonl", "not authorized");
+
+        Path schemaTwo = writeFixture(7, 2, direct + "\n"
+                + edge(1, "post_objects", "kos_module_queue", 0) + "\n", 2);
+        HardwareTimingSchedule schedule = TraceData.load(schemaTwo).hardwareTimingSchedule();
+
+        assertEquals(2, schedule.edges().size());
+        assertEquals(HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
+                schedule.edges().getFirst().kind());
+        assertEquals(HardwareWorkKind.KOS_MODULE_QUEUE,
+                schedule.edges().get(1).kind());
     }
 
     @Test
@@ -240,8 +257,12 @@ class TestHardwareTimingStreamLoader {
     }
 
     private static String edge(int rawFrame, String boundary, long ordinal) {
+        return edge(rawFrame, boundary, "kos_module_queue", ordinal);
+    }
+
+    private static String edge(int rawFrame, String boundary, String kind, long ordinal) {
         return "{\"event\":\"hardware_work_completed\",\"raw_frame\":" + rawFrame
-                + ",\"boundary\":\"" + boundary + "\",\"kind\":\"kos_module_queue\","
+                + ",\"boundary\":\"" + boundary + "\",\"kind\":\"" + kind + "\","
                 + "\"ordinal\":" + ordinal + ",\"submission_fingerprint\":\""
                 + fingerprint() + "\"}";
     }

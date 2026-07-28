@@ -70,6 +70,7 @@ public final class HardwareTimingReplayPort
         this.schedule = checked;
         edgeCursor = 0;
         consumedIdentities.clear();
+        authority.configureAdmissionPolicies(checked.admissionPolicies());
         authority.initializeOrdinalBases(initialOrdinalBases);
         rawFrameLatch = null;
         lastAppliedBoundary = null;
@@ -166,6 +167,10 @@ public final class HardwareTimingReplayPort
         requireActive();
         verifySegmentEdges();
         HardwareTimingSchedule checkedNext = validateSchedule(nextSchedule);
+        if (!checkedNext.admissionPolicies().equals(schedule.admissionPolicies())) {
+            throw new IllegalArgumentException(
+                    "hardware timing segment changes recorded admission policy");
+        }
         for (HardwareCompletionEdge edge : checkedNext.edges()) {
             if (consumedIdentities.contains(identity(edge))) {
                 throw new IllegalStateException(
@@ -309,6 +314,12 @@ public final class HardwareTimingReplayPort
             }
             Objects.requireNonNull(edge.boundary(), "hardware completion boundary");
             Objects.requireNonNull(edge.kind(), "hardware completion kind");
+            if (schedule.admissionPolicies().get(edge.kind())
+                    != com.openggf.game.timing.HardwareReadinessAdmissionPolicy.RECORDED) {
+                throw new IllegalArgumentException(
+                        "hardware completion edge kind is not recorded by schema "
+                                + schedule.schema() + ": " + edge.kind());
+            }
             Objects.requireNonNull(
                     edge.submissionFingerprint(), "hardware completion fingerprint");
             if (edge.ordinal() < 0) {

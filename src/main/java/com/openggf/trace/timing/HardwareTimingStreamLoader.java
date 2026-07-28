@@ -68,10 +68,11 @@ public final class HardwareTimingStreamLoader {
         if (!hasFile) {
             throw rejected(timingPath, "hardware_timing_schema requires " + FILE_NAME);
         }
-        return loadVersionOne(timingPath, metadata.traceFrameCount());
+        return loadVersion(timingPath, metadata.traceFrameCount(), timingSchema);
     }
 
-    private static HardwareTimingSchedule loadVersionOne(Path timingPath, int traceFrameCount)
+    private static HardwareTimingSchedule loadVersion(
+            Path timingPath, int traceFrameCount, int timingSchema)
             throws IOException {
         if (traceFrameCount < 0) {
             throw rejected(timingPath, "trace_frame_count must not be negative");
@@ -92,6 +93,11 @@ public final class HardwareTimingStreamLoader {
                 throw rejected(timingPath, "line " + (index + 1) + " must be one compact JSON event");
             }
             HardwareCompletionEdge edge = parseEdge(timingPath, index + 1, line);
+            if (edge.kind() == HardwareWorkKind.KOS_DECOMPRESSION_QUEUE
+                    && timingSchema == 1) {
+                throw rejected(timingPath, "line " + (index + 1)
+                        + " kind is not authorized by hardware_timing_schema 1");
+            }
             if (edge.rawFrame() < 0 || edge.rawFrame() >= traceFrameCount) {
                 throw rejected(timingPath, "raw_frame " + edge.rawFrame()
                         + " is outside [0, " + traceFrameCount + ")");
@@ -110,7 +116,9 @@ public final class HardwareTimingStreamLoader {
             previous = edge;
             edges.add(edge);
         }
-        return edges.isEmpty() ? HardwareTimingSchedule.empty() : new HardwareTimingSchedule(edges);
+        return edges.isEmpty() && timingSchema == 1
+                ? HardwareTimingSchedule.empty()
+                : new HardwareTimingSchedule(timingSchema, edges);
     }
 
     private static HardwareCompletionEdge parseEdge(Path timingPath, int lineNumber, String line)
