@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
@@ -83,7 +82,7 @@ public final class PlcTimingEvidenceTool {
     }
 
     private static Evidence derive(String game, Path rom, Path probe) throws IOException {
-        Map<Integer, MutableRow> rows = new TreeMap<>();
+        List<MutableRow> rows = new ArrayList<>();
         List<ObservedEdge> observed = new ArrayList<>();
         List<JsonNode> records = new ArrayList<>();
         boolean sawConsumerObservation = false;
@@ -103,26 +102,44 @@ public final class PlcTimingEvidenceTool {
             lastOrder = order;
             records.add(node);
         }
-        for (JsonNode node : records) {
-            if (!requiredText(node, "event").equals("plc_frame_state")) {
-                continue;
-            }
-            int frame = requiredInt(node, "raw_frame");
-            if (rows.putIfAbsent(frame, new MutableRow(frame, node)) != null) {
-                throw new IllegalArgumentException("exactly one plc_frame_state is required for each raw frame");
-            }
-        }
+        MutableRow current = null;
+        MutableRow openVint = null;
         for (JsonNode node : records) {
             int frame = requiredInt(node, "raw_frame");
             int order = requiredInt(node, "within_frame_order");
             String event = requiredText(node, "event");
             if (event.equals("plc_frame_state")) {
+                current = new MutableRow(frame, order, StructuralPhase.PASSIVE, node);
+                rows.add(current);
                 continue;
             }
-            MutableRow row = rows.get(frame);
-            if (row == null) {
-                throw new IllegalArgumentException("PLC oracle record has no independent plc_frame_state");
+            if (event.equals("plc_vint_state")) {
+                current = new MutableRow(frame, order, StructuralPhase.VINT, node);
+                rows.add(current);
+                openVint = current;
+                continue;
             }
+            if (event.equals("plc_hblank_state")) {
+                if (openVint == null || openVint.lag || !hblankCapable(game, openVint.handler)) {
+                    throw new IllegalArgumentException("plc_hblank_state requires an open non-lag defer-capable VInt");
+                }
+                if (!requiredBoolean(node, "hblank_deferred")
+                        || requiredInt(node, "interrupt_handler") != openVint.handler
+                        || requiredBoolean(node, "lag")) {
+                    throw new IllegalArgumentException("plc_hblank_state contradicts its open VInt");
+                }
+                openVint.phase = StructuralPhase.DEFERRED_VINT;
+                openVint.hblankDeferred = true;
+                current = new MutableRow(frame, order, StructuralPhase.HBLANK, node);
+                rows.add(current);
+                openVint = null;
+                continue;
+            }
+            if (current == null) {
+                throw new IllegalArgumentException("PLC record has no independent structural state");
+            }
+            MutableRow row = MutableRow.action(frame, order, current);
+            rows.add(row);
             int source = optionalInt(node, "queue_source", 0);
             int remaining = optionalInt(node, "patterns_left_after", 0);
             switch (event) {
@@ -147,7 +164,9 @@ public final class PlcTimingEvidenceTool {
                 case "plc_service" -> {
                     requireDecrease(node, "plc_service", "patterns_left_before", "patterns_left_after");
                     observed.add(new ObservedEdge(frame,
-                            row.hblankDeferred ? EdgeKind.HBLANK_SERVICE : EdgeKind.SERVICE, source, remaining));
+                            current.phase == StructuralPhase.HBLANK
+                                    ? EdgeKind.HBLANK_SERVICE : EdgeKind.SERVICE,
+                            source, remaining));
                 }
                 case "plc_pop" -> {
                     requireDecrease(node, "plc_pop", "queue_slots_before", "queue_slots_after");
@@ -176,7 +195,15 @@ public final class PlcTimingEvidenceTool {
         if (!sawConsumerObservation) {
             throw new IllegalArgumentException("probe contains no consumer observation; PLC readiness approval is forbidden");
         }
-        return new Evidence(game, handlerBudgets(game), rows.values().stream().map(MutableRow::freeze).toList(), observed);
+        return new Evidence(game, handlerBudgets(game), rows.stream().map(MutableRow::freeze).toList(), observed);
+    }
+
+    private static boolean hblankCapable(String game, int handler) {
+        return switch (game) {
+            case "s1" -> handler == 0x08 || handler == 0x10;
+            case "s2" -> handler == 0x08;
+            default -> false;
+        };
     }
 
     private static void requireIncrease(JsonNode node, String event, String beforeField, String afterField) {
@@ -300,25 +327,43 @@ public final class PlcTimingEvidenceTool {
 
     private static final class MutableRow {
         private final int frame;
+        private final int withinFrameOrder;
         private final int gameMode;
         private final int handler;
         private final boolean lag;
-        private final boolean hblankDeferred;
+        private boolean hblankDeferred;
+        private StructuralPhase phase;
         private final List<Submission> submissions = new ArrayList<>();
         private final List<ConsumerPoll> consumerPolls = new ArrayList<>();
         private boolean runPlcCalled;
 
-        private MutableRow(int frame, JsonNode node) {
+        private MutableRow(int frame, int withinFrameOrder, StructuralPhase phase, JsonNode node) {
             this.frame = frame;
+            this.withinFrameOrder = withinFrameOrder;
+            this.phase = phase;
             this.gameMode = requiredInt(node, "game_mode");
             this.handler = requiredInt(node, "interrupt_handler");
             this.lag = requiredBoolean(node, "lag");
             this.hblankDeferred = requiredBoolean(node, "hblank_deferred");
         }
 
+        private MutableRow(int frame, int withinFrameOrder, MutableRow state) {
+            this.frame = frame;
+            this.withinFrameOrder = withinFrameOrder;
+            this.phase = StructuralPhase.ACTION;
+            this.gameMode = state.gameMode;
+            this.handler = state.handler;
+            this.lag = state.lag;
+            this.hblankDeferred = state.hblankDeferred;
+        }
+
+        private static MutableRow action(int frame, int withinFrameOrder, MutableRow state) {
+            return new MutableRow(frame, withinFrameOrder, state);
+        }
+
         private StructuralRow freeze() {
             return new StructuralRow(frame, gameMode, handler, lag, hblankDeferred,
-                    submissions, runPlcCalled, consumerPolls);
+                    submissions, runPlcCalled, consumerPolls, withinFrameOrder, phase);
         }
     }
 
@@ -336,6 +381,8 @@ public final class PlcTimingEvidenceTool {
     }
 
     public enum SubmissionOperation { APPEND, REPLACE, CLEAR }
+
+    public enum StructuralPhase { PASSIVE, VINT, DEFERRED_VINT, HBLANK, ACTION }
 
     public record Submission(int sourceAddress, int patternCount, SubmissionOperation operation) {
         public Submission(int sourceAddress, int patternCount) {
@@ -367,38 +414,57 @@ public final class PlcTimingEvidenceTool {
             boolean hblankDeferred,
             List<Submission> submissions,
             boolean runPlcCalled,
-            List<ConsumerPoll> consumerPolls) {
+            List<ConsumerPoll> consumerPolls,
+            int withinFrameOrder,
+            StructuralPhase phase) {
+        public StructuralRow(
+                int rawFrame,
+                int gameMode,
+                int interruptHandler,
+                boolean lag,
+                boolean hblankDeferred,
+                List<Submission> submissions,
+                boolean runPlcCalled,
+                List<ConsumerPoll> consumerPolls) {
+            this(rawFrame, gameMode, interruptHandler, lag, hblankDeferred,
+                    submissions, runPlcCalled, consumerPolls, 1, StructuralPhase.VINT);
+        }
+
         public StructuralRow {
             if (rawFrame < 0) {
                 throw new IllegalArgumentException("rawFrame must not be negative");
             }
+            if (withinFrameOrder < 1) {
+                throw new IllegalArgumentException("withinFrameOrder must be positive");
+            }
+            Objects.requireNonNull(phase, "phase");
             submissions = List.copyOf(submissions);
             consumerPolls = List.copyOf(consumerPolls);
         }
 
         public StructuralRow withInterruptHandler(int value) {
             return new StructuralRow(rawFrame, gameMode, value, lag, hblankDeferred,
-                    submissions, runPlcCalled, consumerPolls);
+                    submissions, runPlcCalled, consumerPolls, withinFrameOrder, phase);
         }
 
         public StructuralRow withLag(boolean value) {
             return new StructuralRow(rawFrame, gameMode, interruptHandler, value, hblankDeferred,
-                    submissions, runPlcCalled, consumerPolls);
+                    submissions, runPlcCalled, consumerPolls, withinFrameOrder, phase);
         }
 
         public StructuralRow withHblankDeferred(boolean value) {
             return new StructuralRow(rawFrame, gameMode, interruptHandler, lag, value,
-                    submissions, runPlcCalled, consumerPolls);
+                    submissions, runPlcCalled, consumerPolls, withinFrameOrder, phase);
         }
 
         public StructuralRow withRunPlcCalled(boolean value) {
             return new StructuralRow(rawFrame, gameMode, interruptHandler, lag, hblankDeferred,
-                    submissions, value, consumerPolls);
+                    submissions, value, consumerPolls, withinFrameOrder, phase);
         }
 
         public StructuralRow withConsumerPolls(List<ConsumerPoll> value) {
             return new StructuralRow(rawFrame, gameMode, interruptHandler, lag, hblankDeferred,
-                    submissions, runPlcCalled, value);
+                    submissions, runPlcCalled, value, withinFrameOrder, phase);
         }
     }
 
@@ -474,17 +540,30 @@ public final class PlcTimingEvidenceTool {
         Submission active = null;
         int remaining = 0;
         int previousFrame = -1;
+        int previousOrder = -1;
 
         for (StructuralRow row : evidence.rows()) {
-            if (row.rawFrame() <= previousFrame) {
-                throw new IllegalArgumentException("structural rows must be in increasing raw-frame order");
+            if (row.rawFrame() < previousFrame
+                    || row.rawFrame() == previousFrame && row.withinFrameOrder() <= previousOrder) {
+                throw new IllegalArgumentException(
+                        "structural rows must be ordered by raw frame and within-frame order");
             }
             previousFrame = row.rawFrame();
+            previousOrder = row.withinFrameOrder();
+            if ((row.phase() == StructuralPhase.VINT || row.phase() == StructuralPhase.PASSIVE)
+                    && row.hblankDeferred()
+                    || (row.phase() == StructuralPhase.HBLANK
+                    || row.phase() == StructuralPhase.DEFERRED_VINT) && !row.hblankDeferred()) {
+                throw new IllegalArgumentException("structural phase contradicts HBlank state");
+            }
 
             Integer budget = evidence.handlerBudgets().get(row.interruptHandler());
-            if (!row.lag() && budget != null && active != null) {
+            boolean servicePoint = row.phase() == StructuralPhase.VINT
+                    || row.phase() == StructuralPhase.HBLANK;
+            if (servicePoint && !row.lag() && budget != null && active != null) {
                 remaining -= Math.min(remaining, budget);
-                EdgeKind serviceKind = row.hblankDeferred() ? EdgeKind.HBLANK_SERVICE : EdgeKind.SERVICE;
+                EdgeKind serviceKind = row.phase() == StructuralPhase.HBLANK
+                        ? EdgeKind.HBLANK_SERVICE : EdgeKind.SERVICE;
                 result.add(new PredictedEdge(row.rawFrame(), serviceKind, active.sourceAddress(), remaining));
                 if (remaining == 0) {
                     result.add(new PredictedEdge(row.rawFrame(), EdgeKind.POP, active.sourceAddress(), 0));
@@ -518,13 +597,13 @@ public final class PlcTimingEvidenceTool {
                         active.sourceAddress(), remaining));
             }
 
-            List<ConsumerPoll> polls = row.consumerPolls().stream()
-                    .sorted(Comparator.comparingInt(ConsumerPoll::withinFrameOrder))
-                    .toList();
-            if (!polls.equals(row.consumerPolls())) {
-                throw new IllegalArgumentException("consumer polls must be in increasing within-frame order");
-            }
-            for (ConsumerPoll ignored : polls) {
+            int previousPollOrder = -1;
+            for (ConsumerPoll ignored : row.consumerPolls()) {
+                if (ignored.withinFrameOrder() <= previousPollOrder) {
+                    throw new IllegalArgumentException(
+                            "consumer polls must be in increasing within-frame order");
+                }
+                previousPollOrder = ignored.withinFrameOrder();
                 if (active == null && queue.isEmpty()) {
                     result.add(new PredictedEdge(row.rawFrame(), EdgeKind.CONSUMER_EMPTY, 0, 0));
                 } else if (active != null) {

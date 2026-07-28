@@ -118,8 +118,12 @@ event.onmemoryexecute(function()
 end, POP_POST)
 event.onmemoryexecute(function()
   frame_handler = u8(VINT); frame_lag = frame_handler == LAG_HANDLER; frame_hblank = false; frame_mode = u8(GAME_MODE)
+  emit("plc_vint_state")
 end, VINT_DISPATCH)
-event.onmemoryexecute(function() frame_hblank = true end, HBLANK_DEFERRED_ENTRY)
+event.onmemoryexecute(function()
+  frame_hblank = true
+  emit("plc_hblank_state")
+end, HBLANK_DEFERRED_ENTRY)
 for spec in string.gmatch(consumer_hooks, "[^,]+") do
   local id, address = string.match(spec, "([^@]+)@(.+)")
   if not id or not address or not tonumber(address) then error("OGGF_PLC_CONSUMER_HOOKS entries are consumer@0xROM") end

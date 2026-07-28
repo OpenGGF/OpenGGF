@@ -184,6 +184,56 @@ emu = {
     assert(string.find(pop_lines[1], '"event":"plc_pop"', 1, true))
     assert(string.find(empty_lines[1], '"event":"plc_empty"', 1, true))
 
+    -- BizHawk may call onframeend before the next ROM VInt while retaining
+    -- the same emulation frame number. The ROM dispatch must publish a new
+    -- structural state before the later service.
+    state.left, state.slots = 0, 0
+    execute("OGGF_PLC_ADD_ENTRY")
+    state.slots = 1
+    execute("OGGF_PLC_ADD_POST")
+    execute("OGGF_PLC_PREPARE_BEGIN")
+    state.left = 6
+    execute("OGGF_PLC_PREPARE_END")
+    frame_callback()
+    state.vint = 0x12
+    execute("OGGF_PLC_VINT_DISPATCH")
+    state.left = 6
+    execute("OGGF_PLC_FULL_SERVICE_PRE")
+    state.left = 0
+    execute("OGGF_PLC_POP_PRE")
+    state.slots = 0
+    execute("OGGF_PLC_POP_POST")
+
+    local vint_lines = event_lines("plc_vint_state")
+    assert(#vint_lines == 2, "VInt dispatch did not publish structural state")
+    assert(string.find(vint_lines[2],
+      '"interrupt_handler":18,"lag":false,"hblank_deferred":false', 1, true))
+
+    -- Deferred HBlank is a later structural transition for the same selected
+    -- interrupt, and must precede the service it classifies.
+    state.raw_frame = 2
+    state.left, state.slots = 0, 0
+    execute("OGGF_PLC_ADD_ENTRY")
+    state.slots = 1
+    execute("OGGF_PLC_ADD_POST")
+    execute("OGGF_PLC_PREPARE_BEGIN")
+    state.left = 6
+    execute("OGGF_PLC_PREPARE_END")
+    frame_callback()
+    state.vint = 0x08
+    execute("OGGF_PLC_VINT_DISPATCH")
+    execute("OGGF_PLC_HBLANK_DEFERRED_ENTRY")
+    state.left = 6
+    execute("OGGF_PLC_SMALL_SERVICE_PRE")
+    state.left = 3
+    execute("OGGF_PLC_PARTIAL_SERVICE_POST")
+
+    local hblank_lines = event_lines("plc_hblank_state")
+    assert(#hblank_lines == 2, "HBlank entry did not publish structural state")
+    assert(string.find(hblank_lines[2],
+      '"interrupt_handler":8,"lag":false,"hblank_deferred":true', 1, true))
+    assert_strict_order_within_raw_frame()
+
     -- A pre-hook claiming an active service with zero work is malformed and
     -- must continue to fail closed.
     state.left = 0
@@ -194,17 +244,14 @@ emu = {
 
     assert(frame_callback, "frame-state callback was not registered")
 
-    -- BizHawk may invoke the frame-end callback before later execute hooks
-    -- still report the same emulation frame. Frame state must retain its
-    -- semantics without resetting their ordering sequence.
-    frame_callback()
+    -- A later queue event under the same raw frame retains total order.
     execute("OGGF_PLC_ADD_ENTRY")
     state.slots = 1
     execute("OGGF_PLC_ADD_POST")
     assert_strict_order_within_raw_frame()
 
     -- A new observed raw frame starts a fresh, strictly increasing sequence.
-    state.raw_frame = 2
+    state.raw_frame = 3
     execute("OGGF_PLC_CLEAR_BEGIN")
     state.slots = 0
     execute("OGGF_PLC_CLEAR_POST")

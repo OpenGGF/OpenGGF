@@ -50,20 +50,25 @@ class TestPlcTimingEvidenceTool {
                 {"raw_frame":10,"within_frame_order":1,"event":"plc_frame_state","game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false}
                 {"raw_frame":10,"within_frame_order":2,"event":"plc_submission","operation":"append","plc_id":1,"game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false,"queue_source":64}
                 {"raw_frame":10,"within_frame_order":3,"event":"plc_prepare_end","game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false,"queue_source":64,"patterns_left_before":0,"patterns_left_after":10}
-                {"raw_frame":11,"within_frame_order":1,"event":"plc_frame_state","game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false}
-                {"raw_frame":11,"within_frame_order":2,"event":"plc_service","game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false,"queue_source":64,"patterns_left_before":10,"patterns_left_after":1}
-                {"raw_frame":11,"within_frame_order":3,"event":"plc_consumer_observation","consumer_id":"ready_gate","queue_empty":false,"game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false,"queue_source":64,"patterns_left_after":1}
-                {"raw_frame":12,"within_frame_order":1,"event":"plc_frame_state","game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false}
-                {"raw_frame":12,"within_frame_order":2,"event":"plc_service","game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false,"queue_source":64,"patterns_left_before":1,"patterns_left_after":0}
-                {"raw_frame":12,"within_frame_order":3,"event":"plc_pop","game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false,"queue_source":64,"patterns_left_after":0,"queue_slots_before":1,"queue_slots_after":0}
-                {"raw_frame":12,"within_frame_order":4,"event":"plc_empty","game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false,"queue_source":0,"patterns_left_after":0,"queue_slots_after":0}
-                {"raw_frame":12,"within_frame_order":5,"event":"plc_consumer_observation","consumer_id":"ready_gate","queue_empty":true,"game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false,"queue_source":0,"patterns_left_after":0}
+                {"raw_frame":11,"within_frame_order":1,"event":"plc_frame_state","game_mode":12,"interrupt_handler":0,"lag":true,"hblank_deferred":false}
+                {"raw_frame":11,"within_frame_order":2,"event":"plc_vint_state","game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false}
+                {"raw_frame":11,"within_frame_order":3,"event":"plc_service","game_mode":12,"interrupt_handler":0,"lag":true,"hblank_deferred":false,"queue_source":64,"patterns_left_before":10,"patterns_left_after":1}
+                {"raw_frame":11,"within_frame_order":4,"event":"plc_consumer_observation","consumer_id":"ready_gate","queue_empty":false,"game_mode":12,"interrupt_handler":0,"lag":true,"hblank_deferred":false,"queue_source":64,"patterns_left_after":1}
+                {"raw_frame":12,"within_frame_order":1,"event":"plc_frame_state","game_mode":12,"interrupt_handler":0,"lag":true,"hblank_deferred":false}
+                {"raw_frame":12,"within_frame_order":2,"event":"plc_vint_state","game_mode":12,"interrupt_handler":8,"lag":false,"hblank_deferred":false}
+                {"raw_frame":12,"within_frame_order":3,"event":"plc_hblank_state","game_mode":12,"interrupt_handler":8,"lag":false,"hblank_deferred":true}
+                {"raw_frame":12,"within_frame_order":4,"event":"plc_service","game_mode":12,"interrupt_handler":0,"lag":true,"hblank_deferred":false,"queue_source":64,"patterns_left_before":1,"patterns_left_after":0}
+                {"raw_frame":12,"within_frame_order":5,"event":"plc_pop","game_mode":12,"interrupt_handler":0,"lag":true,"hblank_deferred":false,"queue_source":64,"patterns_left_after":0,"queue_slots_before":1,"queue_slots_after":0}
+                {"raw_frame":12,"within_frame_order":6,"event":"plc_empty","game_mode":12,"interrupt_handler":0,"lag":true,"hblank_deferred":false,"queue_source":0,"patterns_left_after":0,"queue_slots_after":0}
+                {"raw_frame":12,"within_frame_order":7,"event":"plc_consumer_observation","consumer_id":"ready_gate","queue_empty":true,"game_mode":12,"interrupt_handler":0,"lag":true,"hblank_deferred":false,"queue_source":0,"patterns_left_after":0}
                 """);
         Path output = temporaryDirectory.resolve("vector.json");
 
         assertTrue(PlcTimingEvidenceTool.run(new String[] {
                 "--game", "s1", "--rom", rom.toString(), "--probe", probe.toString(), "--out", output.toString()}));
-        assertTrue(Files.readString(output).contains("\"matches\" : true"));
+        String vector = Files.readString(output);
+        assertTrue(vector.contains("\"matches\" : true"));
+        assertTrue(vector.contains("\"HBLANK_SERVICE\""));
     }
 
     @Test
