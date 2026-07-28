@@ -31,6 +31,7 @@ import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.timing.HardwareTimingBoundaryObserver;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.game.timing.HardwareTimingService;
+import com.openggf.game.sonic3k.resources.S3kKosDecompressionQueue;
 import com.openggf.game.zone.NoOpZoneRuntimeState;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.game.zone.ZoneRuntimeState;
@@ -109,6 +110,7 @@ class TestGameplayModeContextRewindRegistry {
                 "fademanager",
                 "oscillation",
                 HardwareTimingService.REWIND_KEY,
+                S3kKosDecompressionQueue.REWIND_KEY,
                 "solid-execution");
         assertTrue(snapshot.entries().keySet().containsAll(expectedKeys),
                 "Expected all atomic adapter keys to be present, got: " + snapshot.entries().keySet());
@@ -119,8 +121,8 @@ class TestGameplayModeContextRewindRegistry {
         GameplayModeContext ctx = buildAttachedContext();
         RewindRegistry registry = ctx.getRewindRegistry();
         CompositeSnapshot snapshot = registry.capture();
-        assertEquals(8, snapshot.entries().keySet().size(),
-                "Expected exactly 8 atomic adapters, got: " + snapshot.entries().keySet());
+        assertEquals(9, snapshot.entries().keySet().size(),
+                "Expected exactly 9 atomic adapters, got: " + snapshot.entries().keySet());
     }
 
     @Test
@@ -173,8 +175,8 @@ class TestGameplayModeContextRewindRegistry {
         RewindRegistry second = ctx.getRewindRegistry();
         assertNotNull(second);
         assertNotSame(first, second, "Re-attach should produce a new RewindRegistry instance");
-        // New registry should have the same 8 keys
-        assertEquals(8, second.capture().entries().keySet().size());
+        // New registry should have the same 9 keys
+        assertEquals(9, second.capture().entries().keySet().size());
     }
 
     @Test
