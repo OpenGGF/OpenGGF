@@ -11,11 +11,13 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import java.util.List;
 
 /**
- * Explicit inventory adapter for S3K fixed SST slots 93-109.
+ * Explicit inventory adapter for S3K post-dynamic fixed SST slots 94-109.
  *
  * <p>The slot labels and order are defined at
  * docs/skdisasm/sonic3k.constants.asm:309-323. Empty visits below are
- * intentional fresh-level invariants, not omitted work.
+ * intentional fresh-level invariants, not omitted work. Absolute slot 93 is
+ * the first, empty {@code Level_object_RAM} SST, but the ROM's allocation and
+ * transition loops include it in the managed 4-93 window.
  */
 final class S3kInitialFixedSstDispatcher implements InitialFixedSstDispatcher {
     private final Sonic3kLevelEventManager levelEvents;
@@ -58,7 +60,6 @@ final class S3kInitialFixedSstDispatcher implements InitialFixedSstDispatcher {
 
     @Override
     public void processPostDynamicFixedSlots(ProcessSpritesEpoch epoch) {
-        empty(93);
         levelEvents.processInitialFixedAirSlot(0, p1);       // 94 Breathing_bubbles
         levelEvents.processInitialFixedAirSlot(1, p2);       // 95 Breathing_bubbles_P2
         empty(96);                                           // Tails_tails_2P

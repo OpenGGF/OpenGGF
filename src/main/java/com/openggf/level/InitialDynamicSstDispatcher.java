@@ -10,5 +10,5 @@ interface InitialDynamicSstDispatcher {
 
     void processAbsoluteDynamicSlot3();
 
-    void processManagedDynamicSlots4Through92();
+    void processManagedDynamicSlots4Through93();
 }
