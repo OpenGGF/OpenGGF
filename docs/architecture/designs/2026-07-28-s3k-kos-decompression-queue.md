@@ -327,6 +327,25 @@ which expose the neutral coordinator; tests must not fabricate fallback S3K
 queues. Architecture guards must pass with no new shared-to-S3K,
 data-to-runtime, or zone-event direct-service violations.
 
+Fresh level assembly arms the existing setup-only initial `Process_Sprites`
+lifecycle before post-load assembly, and gameplay reset discards any
+unconsumed token. Runtime-art queue work must not cause title release to
+consume an ordinary-frame pass or leak the one-shot setup lifecycle across
+teardown. Results-object rewind harnesses follow the production multi-dispatch
+creation gate before asserting queued-art ownership.
+
+The ROM can preserve bit 15 and resume an interrupted active decompressor
+through its Kos bookmark registers; recorded authority remains the source of
+truth for that observed completion timing. The engine's non-cycle-accurate
+live fallback cannot infer a VInt interruption budget, so one admitted PRE
+executes the complete codec call for the active direct child instead of
+yielding after one descriptor command. Thus the live fallback completes one
+direct FIFO head per PRE. The decoder remains snapshot-capable for
+prepared/recorded authority and rewind restoration, while live execution does
+not invent a hundreds-of-frames command cadence. Real AIZ title archives must
+retire quickly enough that later plane/object-art producers observe physical
+module capacity in the ROM order.
+
 The native headless recorder is the sole maintained fixture authority. The
 frozen Lua recorder is not extended merely for parity; independent Java/C#
 golden vectors and ROM/disassembly lifecycle tests provide cross-implementation

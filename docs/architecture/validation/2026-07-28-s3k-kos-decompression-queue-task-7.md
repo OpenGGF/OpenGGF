@@ -4,41 +4,54 @@ Date: 2026-07-28
 
 ## Outcome
 
-Task 7 completed the required `LevelManager` extraction, repaired three stale
-verification harnesses, and ran the focused Java and native matrices. Focused
-queue/timing tests and both native `--no-gates` modes pass. End-to-end
-publication and integration are not green:
+Task 7 completed the `LevelManager` extraction and the independent-review
+runtime fixes. The final runtime uses a game-neutral session-owned art
+coordinator, a level-owned deferred resource loader, a four-entry physical
+KosM parent FIFO, and one complete live direct child per admitted PRE. Fresh
+level assembly and teardown preserve the one-shot initial
+`Process_Sprites` lifecycle.
 
-- the committed schema-1 ICZ complete-run fixture admits
-  `KOS_MODULE_QUEUE#158` before the engine's parent is prepared, which is the
-  expected schema-2 publication gate;
-- the full Java suite contains unresolved queue-integration and architecture
-  failures in addition to known baseline failures; and
-- both full-suite attempts produced all 1,724 Surefire reports and then left a
-  stale execution handle after the Maven/Java processes had disappeared.
+The focused queue, timing, architecture, rewind, title-card, headless, and
+native matrices are green except for explicitly identified pre-existing
+baseline failures. End-to-end publication is not green:
+
+- the committed schema-1 ICZ complete-run fixture now reaches
+  `KOS_MODULE_QUEUE#160`, where it expects a recorded completion after the
+  engine has no pending parent;
+- the fresh full Java attempt still contains broad baseline and publication
+  failures; and
+- Maven again left an open execution handle after all 1,725 Surefire reports
+  were written.
+
+Every reported missing-coordinator signature was repaired and independently
+rerun. The full attempt exposed one remaining feature-attributable HCZ
+late-route fixture error: a direct teleport activated four historical
+horizontal geyser art producers and the target vertical geyser in one
+dispatch, overflowing the physical four-parent FIFO. The fixture now drains
+initial runtime art and warms the route window through production boundaries
+before entering the vertical pipe; it passes independently and in the final
+72-test compact matrix. The FIFO and production object behavior were not
+weakened.
 
 No trace fixture or disassembly content was changed.
 
-## Delivered Task 7 commits
+## Task 7 commits
 
 - `7cca4692d refactor: extract level pattern locator`
 - `6c7d20200 test: align S3K queue verification harnesses`
+- `aca800da4 docs: record S3K queue Task 7 validation`
+- `9a00a9633 refactor: isolate deferred level resource loading`
+- `3c253d154 refactor: isolate S3K runtime art queues`
+- `35bbeef34 fix: preserve S3K Kos queue progression`
+- `1c396116f test: use session-owned S3K art coordinator`
+- `d2c96cccb test: align direct queue lifecycle cadence`
+- `3e23ddb8a test: supply S3K runtime art fixtures`
+- `42d160246 test: repair runtime art coordinator fixtures`
+- `4859c294d test: warm late HCZ route art state`
 
-`LevelPatternLocator` now owns the former pattern search implementation.
-`LevelManager.findPatternOffset(...)` remains a thin public delegate with
-unchanged search and coordinate semantics. The size guard no longer reports
-`LevelManager`; its frozen limit remains 2,500 effective lines.
-
-The repaired harnesses:
-
-- prepare admission-order KosM work through the runtime direct/module queues,
-  instead of submitting a fabricated raw timing job;
-- assert the seamless-transition handoff rewind key and the resulting ten-key
-  gameplay registry; and
-- service only AIZ fire-transition queue tests in production order: timing
-  service, direct FIFO retirement, then KosM parent coordination.
-
-The ordinary AIZ intro/save helper remains unchanged.
+The tracked Task 2, 3, and 4 feature reports under
+`.superpowers/sdd/2026-07-28-s3k-kos-decompression-queue/` were removed as
+requested. Their briefs and all other reports were preserved.
 
 ## Environment and ROM identity
 
@@ -53,78 +66,108 @@ Java version: 21.0.11
 | Sonic 2 World REV01 | `Sonic The Hedgehog 2 (W) (REV01) [!].gen` | `7B905383` | `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9` |
 | Sonic 3&K locked-on | `Sonic and Knuckles & Sonic 3 (W) [!].gen` | `63522553` | `CFBF98C36C776677290A872547AC47C53D2761D6` |
 
-BizHawk 2.11 was supplied from
-`docs/BizHawk-2.11-linux-x64`.
+BizHawk 2.11 was supplied from `docs/BizHawk-2.11-linux-x64`.
 
-## TDD and focused Java verification
+## Focused Java verification
 
-The locator test was first observed RED at test compilation because
-`LevelPatternLocator` did not exist. After extraction:
-
-```text
-mvn -Dmse=off "-Dtest=TestLevelPatternLocator" test
-Tests run: 4, Failures: 0, Errors: 0, Skipped: 0
-```
-
-The focused source guard then reported only the existing `GameLoop`
-3,014 > 3,005 and `AbstractPlayableSprite` 3,164 > 3,159 overages.
-`LevelManager` was absent from the failure.
-
-The admission-order harness was observed RED with one error in three tests:
-the raw fake parent had an unexpected preparation owner. The gameplay rewind
-registry was observed RED because its expected nine keys became ten. After
-the runtime-owned harness repairs:
+Architecture ownership is green:
 
 ```text
 mvn -Dmse=off \
-  "-Dtest=TestLevelIterationHardwareTimingAdmissionOrder,TestGameplayModeContextRewindRegistry" \
-  test
-Tests run: 22, Failures: 0, Errors: 0, Skipped: 0
+  "-Dtest=TestArchUnitRules,TestZoneEventRuntimeAccessGuard" test
+Tests run: 30, Failures: 0, Errors: 0, Skipped: 0
 ```
 
-The focused timing/authority matrix passed:
+The complete Task 1 timing/authority matrix is green:
 
 ```text
-mvn -Dmse=off "-Ds3k.rom.path=<locked-on-rom>" \
-  "-Dtest=TestHardwareTimingService,TestHardwareTimingRewind,TestHardwareTimingStreamLoader,TestHardwareTimingReplayPort,TestHardwareTimingAuthorityGuard,TestTraceDataHardwareTiming,TestCommittedHardwareTimingFixtures,TestLevelFrameHardwareTimingBoundaries,TestLevelIterationHardwareTimingAdmissionOrder,TestRecordingFrameDriverHardwareTiming" \
-  test
 Tests run: 99, Failures: 0, Errors: 0, Skipped: 0
 ```
 
-The direct/module structural matrix passed 18/18. The queue/rewind matrix
-passed 22 of 23 tests; its sole failure was the known unrelated
-`Flybot767BadnikInstance#finalScalar#layoutWaitUsesRetainedRenderFlag`
-rewind-coverage gap.
-
-The exact AIZ/ICZ/rewind-registry matrix was:
+The Task 2 queue/decoder/rewind-guard matrix ran 23 tests. Twenty-two passed;
+the sole failure is the known unrelated baseline gap:
 
 ```text
-mvn -Dmse=off "-Ds3k.rom.path=<locked-on-rom>" \
-  "-Dtest=TestSonic3kAIZEvents,TestSonic3kIczRewindRoundTrip,TestSonic3kIczSlideTerrain,TestSonic3kLevelEventRewindSnapshot,TestGameplayModeContextRewindRegistry" \
+com.openggf.game.sonic3k.objects.badniks.Flybot767BadnikInstance
+  #finalScalar#layoutWaitUsesRetainedRenderFlag
+```
+
+The Task 3 composition matrix, including physical-parent capacity, is green:
+
+```text
+mvn -Dmse=off \
+  "-Dtest=TestS3kKosModuleQueue,TestS3kKosModuleReadiness,TestS3kKosStructuralSequence,TestS3kKosTimingRewindIntegration" \
   test
-Tests run: 112, Failures: 6, Errors: 0, Skipped: 0
+Tests run: 19, Failures: 0, Errors: 0, Skipped: 0
 ```
 
-Both ICZ classes passed 10/10 and the registry passed 19/19. The six remaining
-failures match the known branch baseline:
+The Task 4 AIZ/ICZ matrix ran 112 tests: 107 passed, five failed, and none
+errored. All five zone Kos rewind cases and the ICZ transition headless case
+pass. The remaining failures match the branch baseline:
 
-- three AIZ intro assertions;
-- `eventsFg5TransitionWritesProgressionSaveForActiveSlot`, whose harness
-  clears the live level;
-- `roundTripFixedAirCountdownSidecarRam`; and
-- `legacyFixedAirSnapshotClearsUnrepresentedOwner`.
+- two AIZ intro/sidekick assertions;
+- the AIZ active-slot save harness whose live level has been reset; and
+- two FixedAir snapshot assertions.
 
-The scoped AIZ repair reduced this matrix from its initial 13 failures to
-those six without changing the unrelated helpers.
-
-The committed-fixture inventory passes independently:
+Additional post-review matrices:
 
 ```text
-mvn -Dmse=off "-Dtest=TestCommittedHardwareTimingFixtures" test
+TestS3kObjectKosOwnerRewind,
+TestS3kResultsKosQueueRewind,
+TestS3kInitialObjectSetupLifecycle
+Tests run: 24, Failures: 0, Errors: 0, Skipped: 0
+
+TestS3kKosDecompressionQueueLifecycle
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0
+
+TestS3kKosDecompressionQueue,TestS3kKosModuleQueue
+Tests run: 17, Failures: 0, Errors: 0, Skipped: 2
+
+TestS3kHeadlessInLevelTitleCardProgression
 Tests run: 2, Failures: 0, Errors: 0, Skipped: 0
+
+TestS3kAiz1SkipHeadless
+Tests run: 8, Failures: 0, Errors: 0, Skipped: 0
+
+TestSonic3kTitleCardKosQueue
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0
+
+TestTitleCardObjectExecution#titleCardLegacyPath_s3kAiz1
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0
 ```
 
-The complete ICZ replay reaches the required publication gate:
+The final post-fix compact matrix combined architecture ownership, object and
+results queue rewind, initial object setup lifecycle, direct queue lifecycle,
+title-card progression, AIZ skip, and the repaired HCZ late route:
+
+```text
+Tests run: 72, Failures: 0, Errors: 0, Skipped: 0
+```
+
+The remaining runtime-coordinator fixture classes were also isolated:
+
+```text
+TestEngine                                      26/26
+TestZoneLayoutMutationPipeline                   9/9
+TestActiveGameplayTeamResolver                  12/12
+TestAiz2BossEndSequenceObjects                  36/36
+TestAizPlaneIntroInstance                       14/14
+TestS3kIczEndBossObject                         55/55
+```
+
+`TestGameLoop` passed 81/86 with its five known source-shape/reflection
+baseline failures and no coordinator error. The targeted
+`TestScalarOnlyCodecDeletion` results-screen case no longer fails at
+coordinator lookup; it reaches its pre-existing null results-element failure.
+Unrelated generic-recreate production seams were deliberately not changed.
+
+With the S3K ROM property supplied explicitly, the direct and module queue
+classes pass 7/7 and 10/10 respectively.
+
+The committed-fixture inventory is included in the green 99-test Task 1
+matrix and passes 2/2 independently.
+
+## ICZ complete-run publication boundary
 
 ```text
 mvn -Dmse=off "-Ds3k.rom.path=<locked-on-rom>" \
@@ -132,89 +175,71 @@ mvn -Dmse=off "-Ds3k.rom.path=<locked-on-rom>" \
 Tests run: 1, Failures: 0, Errors: 1, Skipped: 0
 ```
 
-The error is:
+The final error is:
 
 ```text
-expected completion: KOS_MODULE_QUEUE#158
-sha256:9d76abb5369bb27fca1574b28bf37d429af1904dbd45edabef04fd0ab1e0f594
-engine job is not prepared
+expected completion: KOS_MODULE_QUEUE#160
+sha256:0fbbcb25822bda53fc0b212780f2218200ef117c753fa623fa1a05c66379f152
+engine pending: <none>
 ```
 
-The committed fixture is schema-1 load-only compatibility and lacks the
-schema-2 direct FIFO authority needed to admit that parent edge. This is a
-publication blocker, not permission to edit or replace the fixture.
+This is later than the pre-fix `#158 engine job is not prepared` stop. The
+committed fixture remains schema-1 load-only compatibility and does not carry
+the schema-2 direct ledger needed for publication. The fixture was not edited
+or bypassed.
 
-## Full Java suite
+## Fresh full Java attempt
 
-The full suite was run twice with all three verified ROM properties. Before
-the second run, the first run's Surefire reports were moved intact to
-`/tmp/openggf-task7-surefire-reports-pty-20260728-2010` and Maven generated a
-fresh report directory.
-
-Both attempts generated 1,724 `TEST-*.xml` reports and last wrote
-`TestRewindTorture`. In each attempt Maven, Java, Surefire, Mono, and
-PulseAudio processes had exited, but the execution handle did not close and
-had to be interrupted. The fresh report totals are:
+The previous reports were moved to
+`/tmp/openggf-task7-final-reports.Wti7dZ/pre-final`. A fresh non-PTY run used
+all three verified ROM properties:
 
 ```text
-Tests represented: 13,484
-Failures: 71
-Errors: 30
+mvn -Dmse=off \
+  "-Dsonic1.rom.path=<rev01-s1>" \
+  "-Dsonic2.rom.path=<rev01-s2>" \
+  "-Ds3k.rom.path=<locked-on-s3k>" test
+```
+
+The run wrote all 1,725 `TEST-*.xml` files, then stopped producing output
+without closing the execution handle; the stale handle was terminated. The
+fresh XML totals before any focused rerun were:
+
+```text
+Tests represented: 13,488
+Passed: 13,399
+Failures: 54
+Errors: 4
 Skipped: 31
 Execution result: infrastructure-incomplete; stale handle terminated
 ```
 
-The first attempt represented the same 13,484 tests with 72 failures,
-30 errors, and 31 skipped. The one-failure variation is consistent with the
-existing broad-suite instability and does not turn either attempt into a
-completed Maven result.
+The four errors were two known `TestGameLoop` reflection/source-shape errors,
+one pre-existing `TestScalarOnlyCodecDeletion` null results-element error, and
+the HCZ late-route FIFO overflow repaired after the full attempt. A scan of
+all fresh XML found zero instances of either missing-coordinator signature:
 
-Known baseline signatures include the two large-class source-guard failures,
-the four AIZ intro/save failures, the two FixedAir snapshot failures, the
-Flybot rewind gap, and the stale AIZ mutation-pipeline source assertion.
+```text
+runtime-art coordination is unavailable in these object services
+S3K runtime art requires the S3K game-owned coordinator
+```
 
-The fresh run reports failures or errors in 48 classes. Several are directly
-related to unresolved queue integration and must remain attributable until
-fixed or baseline-proven:
-
-- `TestArchUnitRules`, `TestZoneEventRuntimeAccessGuard`, and
-  `TestPlayableRuntimeAccessGuard` report new concrete/runtime dependency
-  edges;
-- `TestS3kObjectKosOwnerRewind` and `TestS3kResultsKosQueueRewind` report
-  queue-owner rewind harness failures;
-- results-screen and boss harnesses report unavailable KosM coordination;
-- AIZ/HCZ headless harnesses report full module FIFOs or unpublished queue
-  work; and
-- title-card/headless progression harnesses fail to release while their
-  initial Kos work remains pending.
-
-Other broad-suite failures span pre-existing movement, rewind, lifecycle,
-object-registration, and architecture baselines. No green baseline full-suite
-run was produced during Task 7, so failures outside the explicitly known
-baseline list are unresolved rather than claimed pre-existing. The full suite
-therefore does not support an integration-complete claim.
+After the HCZ fixture repair, its isolated run passed 1/1 and the retained
+report aggregate became 13,400 passed, 54 failures, 3 errors, and 31 skipped.
+That mixed aggregate is not represented as a second completed full-suite run.
+No feature-attributable Java error remains in the focused post-fix matrices.
 
 ## Native recorder verification
-
-Focused event-engine verification:
 
 ```text
 BIZHAWK_HOME=<bizhawk> ./test.sh \
   --filter HardwareTimingEventEngine --jobs 1
 15 passed; unrelated GpgxHost test skipped because S1_ROM_PATH was absent
-```
 
-Without ROM environment variables:
-
-```text
 env -u S1_ROM_PATH -u S2_ROM_PATH -u S3K_ROM_PATH \
   BIZHAWK_HOME=<bizhawk> ./test.sh --no-gates
 408 total: 378 passed, 0 failed, 30 skipped
-```
 
-With all three verified ROM environment variables:
-
-```text
 BIZHAWK_HOME=<bizhawk> \
 S1_ROM_PATH=<rev01-s1> \
 S2_ROM_PATH=<rev01-s2> \
@@ -223,17 +248,10 @@ S3K_ROM_PATH=<locked-on-s3k> \
 410 total: 410 passed, 0 failed, 0 skipped
 ```
 
-The no-gates native implementation is green in both required modes. The
-schema-1 fixture publication boundary remains intentionally visible in the
-Java complete-run replay and was not bypassed.
-
 ## Repository integrity
 
 `git diff --name-only -- src/test/resources/traces` produced no output.
-`git diff --check` passed before the harness commit. No ROM, trace fixture, or
-disassembly bytes were renamed, copied, deleted, linked, or modified.
-
-The full suite regenerated `docs/status/rewind-round-trip-gaps.md`; that
-test-generated report is not a Task 7 deliverable and is not staged with this
-validation report.
-
+`git diff --check` passed before the runtime commit. The full suite's
+generated `docs/status/rewind-round-trip-gaps.md` change was restored and is
+not part of this work. No ROM, trace fixture, or disassembly bytes were
+renamed, copied, deleted, linked, or modified.

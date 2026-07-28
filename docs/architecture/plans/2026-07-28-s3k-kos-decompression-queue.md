@@ -404,12 +404,34 @@ Resolve the independent-review blockers before repeating the full suite:
 - make module FIFO capacity represent unprepared physical parents rather than
   ready-but-unclaimed timing payloads, and prove repeated title-card/object-art
   producers do not resubmit pending handles;
+- make the non-cycle-accurate live fallback decode the active standard-Kos
+  direct child through its terminator in each admitted PRE (one physical head
+  per PRE), while recorded authority preserves ROM-observed interrupt/bookmark
+  completion timing; prove real AIZ title archives complete in bounded
+  production scans and update rewind tests away from a false
+  one-command-per-frame live assumption while retaining prepared/recorded
+  snapshot coverage;
 - reproduce and green `TestS3kHeadlessInLevelTitleCardProgression`,
   `TestS3kAiz1SkipHeadless`, and
   `TestTitleCardObjectExecution#titleCardLegacyPath_s3kAiz1`;
 - repair `TestS3kObjectKosOwnerRewind` and
-  `TestS3kResultsKosQueueRewind` with session-backed neutral coordinator
-  services;
+  `TestS3kResultsKosQueueRewind`, `TestS3kZoneKosRewind`, and AIZ save-event
+  queue fixtures with session-backed neutral coordinator services and
+  production multi-dispatch creation cadence;
+- migrate every S3K object/event fixture that submits runtime Kos art,
+  including HCZ event, WaterWall, LargeFan, MGZ drilling Robotnik, and LBZ
+  FinalBoss1 coverage, away from bare `TestObjectServices` instances to the
+  session-backed neutral coordinator fixture; production remains fail-closed
+  when a coordinator is genuinely absent;
+- make late-route shared-level headless fixtures drain their initial
+  title/level runtime-art parents through production boundaries before
+  teleporting directly into an object activation range, and warm up earlier
+  neighboring art producers in route order before activating the target; do
+  not enlarge the four-slot FIFO or suppress the object's fifth submission to
+  accommodate an impossible simultaneous first dispatch;
+- restore the fresh-level initial-`Process_Sprites` token before post-load
+  assembly and discard it during gameplay reset; prove title release consumes
+  only the setup pass and teardown cannot leak the token;
 - run `TestArchUnitRules` and `TestZoneEventRuntimeAccessGuard`, requiring no
   feature-attributable violations;
 - remove task-local `.superpowers/sdd/...` reports introduced by this feature;
