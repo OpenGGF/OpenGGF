@@ -392,6 +392,12 @@ public final class S3kSlotBonusStageRuntime {
         return S3kSlotMachineDisplayState.fromState(slotStageState, anchor.worldX(), anchor.worldY());
     }
 
+    public void syncSlotMachinePanel(S3kSlotMachinePanelAnimator animator) {
+        if (animator != null) {
+            animator.syncPanelPatterns(slotStageState);
+        }
+    }
+
     public void startGoalExitForTest() {
         if (slotPlayerRuntime != null && slotPlayer != null) {
             slotPlayerRuntime.startGoalExit(slotPlayer);

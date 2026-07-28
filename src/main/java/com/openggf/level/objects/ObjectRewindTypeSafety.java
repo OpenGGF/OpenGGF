@@ -11,6 +11,18 @@ import java.util.concurrent.ConcurrentHashMap;
 /** Reflective proof used by the in-place object rewind restore fast path. */
 final class ObjectRewindTypeSafety {
     private static final Map<Class<?>, Boolean> CACHE = new ConcurrentHashMap<>();
+    private static final ClassValue<DispatchRoute> DISPATCH_ROUTES =
+            new ClassValue<>() {
+                @Override
+                protected DispatchRoute computeValue(Class<?> type) {
+                    return new DispatchRoute(
+                            hasLegacyOverride(type, "captureRewindState"),
+                            hasLegacyOverride(
+                                    type,
+                                    "restoreRewindState",
+                                    PerObjectRewindSnapshot.class));
+                }
+            };
     private static final Set<Class<?>> IMMUTABLE_VALUES = Set.of(
             Boolean.class, Byte.class, Character.class, Short.class,
             Integer.class, Long.class, Float.class, Double.class, String.class);
@@ -25,7 +37,7 @@ final class ObjectRewindTypeSafety {
     static PerObjectRewindSnapshot capture(
             AbstractObjectInstance object,
             com.openggf.game.rewind.schema.RewindCaptureContext context) {
-        return hasLegacyOverride(object.getClass(), "captureRewindState")
+        return dispatchRoute(object.getClass()).legacyCapture()
                 ? object.captureRewindState()
                 : object.captureRewindState(context);
     }
@@ -34,14 +46,15 @@ final class ObjectRewindTypeSafety {
             AbstractObjectInstance object,
             PerObjectRewindSnapshot snapshot,
             com.openggf.game.rewind.schema.RewindCaptureContext context) {
-        if (hasLegacyOverride(
-                object.getClass(),
-                "restoreRewindState",
-                PerObjectRewindSnapshot.class)) {
+        if (dispatchRoute(object.getClass()).legacyRestore()) {
             object.restoreRewindState(snapshot);
         } else {
             object.restoreRewindState(snapshot, context);
         }
+    }
+
+    static DispatchRoute dispatchRoute(Class<?> type) {
+        return DISPATCH_ROUTES.get(type);
     }
 
     private static boolean hasLegacyOverride(
@@ -64,6 +77,9 @@ final class ObjectRewindTypeSafety {
             }
         }
         return false;
+    }
+
+    record DispatchRoute(boolean legacyCapture, boolean legacyRestore) {
     }
 
     private static boolean compute(Class<?> type) {

@@ -8,12 +8,15 @@ import com.openggf.game.PlayerCharacter;
 import com.openggf.game.TitleCardProvider;
 import com.openggf.game.ZoneRegistry;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
+import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.events.S3kTransitionEventBridge;
 import com.openggf.camera.Camera;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.TestObjectServices;
+import com.openggf.sprites.playable.ObjectControlState;
+import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
@@ -76,6 +79,131 @@ class TestS3kResultsScreenObjectInstance {
     }
 
     @Test
+    void publicationRestoresControlThroughLaterOwnerBeforeNextDispatchTitleInit()
+            throws Exception {
+        ActTransitionRecordingServices services =
+                new ActTransitionRecordingServices(0x00, Sonic3kMusic.AIZ2.id);
+        S3kResultsScreenObjectInstance results = transitionShell(
+                services, PlayerCharacter.SONIC_AND_TAILS, 0);
+        results.setServices(services);
+        prepareFinalExitDispatch(results);
+
+        S3kBossDefeatSignpostFlow controlOwner =
+                new S3kBossDefeatSignpostFlow(
+                        0x1180, 0, S3kBossDefeatSignpostFlow.CleanupAction.NONE);
+        controlOwner.setServices(services);
+        setPrivate(controlOwner, "initialized", true);
+        setPrivateEnum(controlOwner, "phase", "AWAIT_RESULTS");
+
+        TestablePlayableSprite player =
+                new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
+        player.setAirForTest(true);
+        player.setAnimationId(Sonic3kAnimationIds.VICTORY);
+        player.setAnimationFrameIndex(3);
+        player.setAnimationTick(9);
+
+        results.update(0, player);
+
+        assertTrue(services.titleCard.calls.isEmpty(),
+                "Obj_LevelResultsWait2 publishes _unkFAA8 before its mutated "
+                        + "Obj_TitleCard init dispatch");
+        assertFalse(results.isDestroyed(),
+                "the published results SST must remain live for its next dispatch");
+        assertTrue(player.isObjectControlled(),
+                "the result publication must not consume the independent "
+                        + "EndSignControl restore");
+
+        controlOwner.update(0, player);
+
+        assertFalse(player.isObjectControlled(),
+                "the later EndSignControl slot consumes the publication in the same object pass");
+        assertFalse(player.getAir());
+        assertEquals(Sonic3kAnimationIds.WAIT.id(), player.getAnimationId());
+
+        results.update(1, player);
+
+        assertEquals(List.of("0:1"), services.titleCard.calls,
+                "the mutated results owner initializes title art exactly one dispatch later");
+        assertTrue(results.isDestroyed(),
+                "title initialization hands ownership to the manager and retires the SST");
+    }
+
+    @Test
+    void aizBossFlowDoesNotRepeatDisplacedOwnerEntriesInResultsWait()
+            throws Exception {
+        ActTransitionRecordingServices services =
+                new ActTransitionRecordingServices(0x00, Sonic3kMusic.AIZ2.id);
+        int aizWaitAdjustment = privateStaticInt(
+                AizMinibossInstance.class, "RESULTS_WAIT_DURATION_ADJUSTMENT");
+        S3kResultsScreenObjectInstance results =
+                ObjectConstructionContext.withRewindActiveRestore(
+                        () -> ObjectConstructionContext.construct(
+                                services,
+                                () -> new S3kResultsScreenObjectInstance(
+                                        PlayerCharacter.SONIC_AND_TAILS, 0,
+                                        aizWaitAdjustment, 13, 0, true)));
+        results.setServices(services);
+        prepareWaitDispatch(results);
+
+        TestablePlayableSprite player =
+                new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        for (int dispatch = 0; dispatch < 90; dispatch++) {
+            results.update(dispatch, player);
+        }
+
+        assertEquals(4, superclassInt(results, "state"),
+                "Obj_LevelResultsWait2 owns exactly the ROM's #90 countdown; "
+                        + "AIZ's displaced EndSignControl entries are already "
+                        + "carried by the boss/signpost bridge and must not be "
+                        + "added to the results owner "
+                        + "(docs/skdisasm/sonic3k.asm:62676-62690)");
+    }
+
+    @Test
+    void resultsChildrenRetireFromPriorRenderFlagBeforeParentPublishes()
+            throws Exception {
+        ActTransitionRecordingServices services =
+                new ActTransitionRecordingServices(0x00, Sonic3kMusic.AIZ2.id);
+        S3kResultsScreenObjectInstance results = transitionShell(
+                services, PlayerCharacter.SONIC_AND_TAILS, 0);
+        results.setServices(services);
+        invokeCreateElements(results);
+        placeElementsAtTargets(results);
+        setPrivate(results, "resultsChildrenCreated", true);
+        setPrivate(results, "exitRetireDispatchesInitialized", true);
+        setPrivate(results, "carriedResultsRenderRetireDispatches", 0);
+        Field state = com.openggf.level.objects.AbstractResultsScreen.class
+                .getDeclaredField("state");
+        state.setAccessible(true);
+        state.setInt(results, 4);
+
+        TestablePlayableSprite player =
+                new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        for (int dispatch = 0; dispatch < 18; dispatch++) {
+            results.update(dispatch, player);
+        }
+
+        assertEquals(0, privateInt(results, "childrenRemaining"),
+                "LevelResults_MoveElement deletes a child when the prior "
+                        + "Render_Sprites pass cleared render_flags.on_screen; "
+                        + "the final queue-9 child retires on queue dispatch 18 "
+                        + "(docs/skdisasm/sonic3k.asm:62799-62824,36336-36402)");
+        verify(services.gameState, never()).setEndOfLevelActive(false);
+
+        results.update(18, player);
+
+        verify(services.gameState).setEndOfLevelActive(false);
+        assertTrue(services.titleCard.calls.isEmpty(),
+                "the parent publishes after observing child count zero but "
+                        + "does not initialize the mutated title owner yet");
+
+        results.update(19, player);
+
+        assertEquals(List.of("0:1"), services.titleCard.calls);
+    }
+
+    @Test
     void cnzActOneExitStartsActTwoTitleCardAndMusic() throws Exception {
         ActTransitionRecordingServices services = new ActTransitionRecordingServices(0x03, Sonic3kMusic.CNZ2.id);
         S3kResultsScreenObjectInstance results = transitionShell(
@@ -84,6 +212,7 @@ class TestS3kResultsScreenObjectInstance {
 
         Method onExitReady = S3kResultsScreenObjectInstance.class.getDeclaredMethod("onExitReady");
         onExitReady.setAccessible(true);
+        onExitReady.invoke(results);
         onExitReady.invoke(results);
 
         assertEquals(List.of(Sonic3kMusic.CNZ2.id), services.playedMusic,
@@ -108,6 +237,7 @@ class TestS3kResultsScreenObjectInstance {
         Method onExitReady = S3kResultsScreenObjectInstance.class.getDeclaredMethod("onExitReady");
         onExitReady.setAccessible(true);
         onExitReady.invoke(results);
+        onExitReady.invoke(results);
 
         assertEquals(List.of("3:1"), services.titleCard.calls,
                 "The retained results SST mutates into the native in-level Act 2 title card");
@@ -123,6 +253,7 @@ class TestS3kResultsScreenObjectInstance {
 
         Method onExitReady = S3kResultsScreenObjectInstance.class.getDeclaredMethod("onExitReady");
         onExitReady.setAccessible(true);
+        onExitReady.invoke(results);
         onExitReady.invoke(results);
 
         assertEquals(1, services.apparentAct,
@@ -248,8 +379,43 @@ class TestS3kResultsScreenObjectInstance {
         updateCreateGate.invoke(results);
     }
 
+    private static void invokeCreateElements(S3kResultsScreenObjectInstance results)
+            throws Exception {
+        Method createElements =
+                S3kResultsScreenObjectInstance.class.getDeclaredMethod("createElements");
+        createElements.setAccessible(true);
+        createElements.invoke(results);
+    }
+
+    private static void placeElementsAtTargets(
+            S3kResultsScreenObjectInstance results) throws Exception {
+        Field elementsField =
+                S3kResultsScreenObjectInstance.class.getDeclaredField("elements");
+        elementsField.setAccessible(true);
+        Object[] elements = (Object[]) elementsField.get(results);
+        for (Object element : elements) {
+            Field targetX = element.getClass().getDeclaredField("targetX");
+            Field currentX = element.getClass().getDeclaredField("currentX");
+            targetX.setAccessible(true);
+            currentX.setAccessible(true);
+            currentX.setInt(element, targetX.getInt(element));
+        }
+    }
+
     private static int privateInt(Object instance, String fieldName) throws Exception {
         Field field = instance.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.getInt(instance);
+    }
+
+    private static int privateStaticInt(Class<?> type, String fieldName) throws Exception {
+        Field field = type.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.getInt(null);
+    }
+
+    private static int superclassInt(Object instance, String fieldName) throws Exception {
+        Field field = instance.getClass().getSuperclass().getDeclaredField(fieldName);
         field.setAccessible(true);
         return field.getInt(instance);
     }
@@ -258,6 +424,42 @@ class TestS3kResultsScreenObjectInstance {
         Field field = instance.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         return field.getBoolean(instance);
+    }
+
+    private static void prepareFinalExitDispatch(
+            S3kResultsScreenObjectInstance results) throws Exception {
+        setPrivate(results, "resultsChildrenCreated", true);
+        setPrivate(results, "childrenRemaining", 0);
+        setPrivate(results, "exitRetireDispatchesInitialized", true);
+        setPrivate(results, "carriedResultsRenderRetireDispatches", 0);
+        Field state = com.openggf.level.objects.AbstractResultsScreen.class
+                .getDeclaredField("state");
+        state.setAccessible(true);
+        state.setInt(results, 4);
+    }
+
+    private static void prepareWaitDispatch(
+            S3kResultsScreenObjectInstance results) throws Exception {
+        setPrivate(results, "resultsChildrenCreated", true);
+        Field state = com.openggf.level.objects.AbstractResultsScreen.class
+                .getDeclaredField("state");
+        state.setAccessible(true);
+        state.setInt(results, 3);
+    }
+
+    private static void setPrivate(Object target, String fieldName, Object value)
+            throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(target, value);
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static void setPrivateEnum(
+            Object target, String fieldName, String constant) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(target, Enum.valueOf((Class<? extends Enum>) field.getType(), constant));
     }
 
     private static final class TransitionRecordingServices extends TestObjectServices {
