@@ -1,0 +1,3 @@
+**/trace/**
+**/*Trace*.java
+**/TestS3kCnzVisualCapture.java

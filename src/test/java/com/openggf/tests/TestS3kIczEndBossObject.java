@@ -26,6 +26,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ResultsHardwareTimingFixture;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectListener;
@@ -1801,6 +1802,7 @@ class TestS3kIczEndBossObject {
     }
 
     private static final class RecordingServices extends StubObjectServices {
+        private final ResultsHardwareTimingFixture resultsTiming = new ResultsHardwareTimingFixture();
         private final Camera camera = new Camera();
         private final GameStateManager gameState = new GameStateManager();
         private final List<ObjectInstance> spawnedChildren = new ArrayList<>();
@@ -1855,7 +1857,21 @@ class TestS3kIczEndBossObject {
 
         @Override
         public Rom rom() {
-            return rom;
+            return rom != null ? rom : TestEnvironment.currentRom();
+        }
+
+        @Override
+        public com.openggf.data.RomByteReader romReader() {
+            try {
+                return com.openggf.data.RomByteReader.fromRom(rom());
+            } catch (java.io.IOException e) {
+                throw new java.io.UncheckedIOException(e);
+            }
+        }
+
+        @Override
+        public com.openggf.game.timing.HardwareTimingService hardwareTiming() {
+            return resultsTiming.hardwareTiming();
         }
 
         @Override

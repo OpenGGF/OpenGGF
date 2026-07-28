@@ -19,6 +19,7 @@ import com.openggf.level.objects.EggPrisonAnimalInstance;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ResultsHardwareTimingFixture;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.game.solid.ObjectSolidExecutionContext;
@@ -30,6 +31,8 @@ import com.openggf.level.objects.TestObjectServices;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.tests.TestablePlayableSprite;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,6 +48,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@RequiresRom(SonicGame.SONIC_3K)
 class TestAiz2BossEndSequenceObjects {
     @BeforeEach
     void setUp() {
@@ -1318,6 +1322,7 @@ class TestAiz2BossEndSequenceObjects {
     }
 
     private static class QueryOnlyServices extends TestObjectServices {
+        private final ResultsHardwareTimingFixture resultsTiming = new ResultsHardwareTimingFixture();
         private final Camera camera;
         private final ObjectPlayerQuery playerQuery;
 
@@ -1340,6 +1345,11 @@ class TestAiz2BossEndSequenceObjects {
         public List<com.openggf.game.PlayableEntity> sidekicks() {
             throw new AssertionError("AIZ2 end sequence should use ObjectPlayerQuery for cutscene sidekick control");
         }
+
+        @Override
+        public com.openggf.game.timing.HardwareTimingService hardwareTiming() {
+            return resultsTiming.hardwareTiming();
+        }
     }
 
     private static final class Aiz2Act2QueryServices extends QueryOnlyServices {
@@ -1357,6 +1367,20 @@ class TestAiz2BossEndSequenceObjects {
         @Override
         public int currentAct() {
             return 1;
+        }
+
+        @Override
+        public com.openggf.data.Rom rom() {
+            return TestEnvironment.currentRom();
+        }
+
+        @Override
+        public com.openggf.data.RomByteReader romReader() {
+            try {
+                return com.openggf.data.RomByteReader.fromRom(rom());
+            } catch (java.io.IOException e) {
+                throw new java.io.UncheckedIOException(e);
+            }
         }
     }
 

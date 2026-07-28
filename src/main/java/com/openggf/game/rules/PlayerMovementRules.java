@@ -9,10 +9,8 @@ public record PlayerMovementRules(
         boolean slopeResistStartsFromRest,
         boolean slopeRepelChecksOnObject,
         boolean slopeRepelUsesS3kSlipKick,
-        boolean pinballLandingPreservesRoll,
-        boolean pinballLandingPreservesPinballMode,
+        PlayerLandingRules landing,
         boolean rollingJumpPinballGateRequiresSpindashFlag,
-        boolean landingRollClearUsesCurrentYRadiusDelta,
         boolean rollStopsBelowMinimumSpeed,
         boolean rollControlledDecelUsesEffectiveDecelQuarter,
         boolean levelBoundaryRightStrict,
@@ -22,6 +20,9 @@ public record PlayerMovementRules(
         boolean waterExitBoostSkipsFastUpwardVelocity,
         boolean slopeResistAppliesAtZeroInertia,
         boolean levelBoundaryLockUsesScreenLockFlag,
-        boolean levelBoundaryUsesPreEasedMaxXDuringBossLock,
-        boolean objectSolidHurtLandingRetainsRoutine) {
+        boolean levelBoundaryUsesPreEasedMaxXDuringBossLock) {
+
+    public boolean objectSolidHurtLandingRetainsRoutine() {
+        return landing.objectSolidHurtLandingRetainsRoutine();
+    }
 }

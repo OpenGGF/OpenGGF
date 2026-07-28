@@ -619,7 +619,7 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
         // ROM changes y_radius/status without changing centre-based y_pos.
         // setRolling changes the engine's visual bounds, so restore the same
         // native centre word while preserving its subpixel fraction.
-        player.setCentreYPreserveSubpixel(releaseY);
+        NativePositionOps.writeYPosPreserveSubpixel(player, releaseY);
         player.setRollingJump(false);
         if (player.isLeftPressed()) {
             player.setXSpeed((short) -0x200);

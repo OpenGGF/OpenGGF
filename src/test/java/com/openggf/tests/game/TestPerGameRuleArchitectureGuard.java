@@ -8,6 +8,7 @@ import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.ObjectInteractionRules;
 import com.openggf.game.rules.PlayerAnimationRules;
 import com.openggf.game.rules.PlayerCapabilityRules;
+import com.openggf.game.rules.PlayerLandingRules;
 import com.openggf.game.rules.PlayerMovementRules;
 import com.openggf.game.rules.PowerUpRules;
 import com.openggf.game.rules.RingRules;
@@ -19,7 +20,6 @@ import java.lang.reflect.RecordComponent;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Map;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -35,14 +35,10 @@ class TestPerGameRuleArchitectureGuard {
     private static final Pattern BLOCK_COMMENT = Pattern.compile("/\\*.*?\\*/", Pattern.DOTALL);
     private static final Pattern LINE_COMMENT = Pattern.compile("//.*$", Pattern.MULTILINE);
     private static final int MAX_RULE_COMPONENTS = 20;
-    // Existing migration surface: keep it frozen until the next split, and do not let other groups grow this large.
-    private static final Map<Class<? extends Record>, Integer> FROZEN_RULE_COMPONENT_LIMITS = Map.of(
-            PlayerMovementRules.class, 22
-    );
-
     private static final List<Class<? extends Record>> RULE_RECORDS = List.of(
             GameRules.class,
             PlayerMovementRules.class,
+            PlayerLandingRules.class,
             PlayerCapabilityRules.class,
             CollisionRules.class,
             AirCollisionRules.class,
@@ -88,14 +84,6 @@ class TestPerGameRuleArchitectureGuard {
     void typedRuleRecordsStaySmallEnoughToReview() {
         for (Class<? extends Record> ruleRecord : RULE_RECORDS) {
             RecordComponent[] components = ruleRecord.getRecordComponents();
-
-            Integer frozenComponents = FROZEN_RULE_COMPONENT_LIMITS.get(ruleRecord);
-            if (frozenComponents != null) {
-                assertEquals(frozenComponents, components.length,
-                        () -> ruleRecord.getSimpleName() + " has changed size; split the group or update the"
-                                + " explicit frozen migration limit with architecture review");
-                continue;
-            }
 
             assertTrue(components.length <= MAX_RULE_COMPONENTS,
                     () -> ruleRecord.getSimpleName() + " has " + components.length

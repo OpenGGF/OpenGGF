@@ -7,6 +7,7 @@ import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.PlaybackDebugManager;
 import com.openggf.game.GameMode;
+import com.openggf.game.GameServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
@@ -63,6 +64,12 @@ class TestPlaybackAdvanceOnlyInputBridge {
                     "publishing the following held row must not erase the pending edge");
             assertTrue(fixture.sprite().isForcedJumpPress(),
                     "the first gameplay row must observe the pending action edge");
+            invokeUpdateLevelMode(loop);
+
+            assertTrue(playback.isCurrentForcedJumpPress(),
+                    "the initial Process_Sprites setup pass must not consume the pending gameplay edge");
+            assertFalse(GameServices.level().hasPendingInitialProcessSpritesPass(),
+                    "the setup-only retry should consume the fresh-level setup authority");
             invokeUpdateLevelMode(loop);
 
             assertFalse(playback.isCurrentForcedJumpPress(),

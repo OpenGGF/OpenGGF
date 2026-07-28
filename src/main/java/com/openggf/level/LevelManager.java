@@ -21,7 +21,6 @@ import com.openggf.debug.playback.PlaybackDebugManager;
 import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.mutation.MutationEffects;
-import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.snapshot.LevelSnapshot;
 import com.openggf.game.rewind.snapshot.LevelTilemapSnapshot;
@@ -619,30 +618,18 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * the same lifecycle path as production gameplay.</p>
      */
     public void refreshPlayablePowerUpSpawners() {
-        DefaultPowerUpSpawner spawner = new DefaultPowerUpSpawner(objectManager);
-        Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
-        if (player instanceof AbstractPlayableSprite playable) {
-            playable.setPowerUpSpawner(spawner);
-        }
-        for (AbstractPlayableSprite sidekick : spriteManager.getSidekicks()) {
-            sidekick.setPowerUpSpawner(spawner);
-        }
+        LevelManagerInitializationSupport.rebindPowerUpSpawners(
+                objectManager, spriteManager, resolveMainCharacterCode());
     }
 
     /**
      * Phase G: Reset camera bounds and initialize object placement window.
      */
     public void initCameraBounds() {
-        // Reset camera state from previous level (signpost may have locked it)
-        camera.setFrozen(false);
-        // ROM: LevelSizeLoad sets v_limitleft2 and v_limitright2 from LevelSizeArray.
-        // Use the level's ROM boundaries (not map pixel width) so the camera is
-        // constrained to the same region as the original hardware.
-        camera.setMinX((short) level.getMinX());
-        camera.setMaxX((short) level.getMaxX());
         PersistentRespawnState persistentRespawnState = persistentRespawnStateForNextObjectReset;
         persistentRespawnStateForNextObjectReset = null;
-        objectManager.reset(camera.getX(), persistentRespawnState);
+        LevelManagerInitializationSupport.resetCameraBounds(
+                camera, level, objectManager, persistentRespawnState);
     }
 
     /**
@@ -686,15 +673,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * Phase H: Create RingManager and cache ring patterns.
      */
     public void initRings() {
-        RingSpriteSheet ringSpriteSheet = level.getRingSpriteSheet();
-        ringManager = new RingManager(level.getRings(), ringSpriteSheet, this, touchResponseTable, audioManager);
-        ringManager.reset(camera.getX());
-        ringManager.ensurePatternsCached(graphicsManager, level.getPatternCount());
-        com.openggf.game.session.GameplayModeContext gameplayMode =
-                com.openggf.game.session.SessionManager.getCurrentGameplayMode();
-        if (gameplayMode != null) {
-            gameplayMode.registerRingAdapter(ringManager);
-        }
+        ringManager = LevelManagerInitializationSupport.initializeRings(
+                this, level, touchResponseTable, audioManager, camera, graphicsManager);
     }
 
     /**
@@ -717,18 +697,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     void resetZoneScopedRegistriesForLevelLoad() {
-        PaletteOwnershipRegistry paletteOwnershipRegistry = GameServices.paletteOwnershipRegistryOrNull();
-        SpecialRenderEffectRegistry specialRenderEffectRegistry = GameServices.specialRenderEffectRegistryOrNull();
-        AdvancedRenderModeController advancedRenderModeController = GameServices.advancedRenderModeControllerOrNull();
-        if (paletteOwnershipRegistry != null) {
-            paletteOwnershipRegistry.clear();
-        }
-        if (specialRenderEffectRegistry != null) {
-            specialRenderEffectRegistry.clear();
-        }
-        if (advancedRenderModeController != null) {
-            advancedRenderModeController.clear();
-        }
+        LevelZoneScopedRegistryResetter.reset();
     }
 
     private void applyLevelLoadPaletteOverrides() {
@@ -2725,8 +2694,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             return;
         }
         for (AbstractPlayableSprite sidekick : spriteManager.getSidekicks()) {
-            sidekick.setX((short) (player.getX() + xOffset));
-            sidekick.setY((short) (player.getY() + yOffset));
+            sidekick.setCentreXPreserveSubpixel((short) (player.getCentreX() + xOffset));
+            sidekick.setCentreYPreserveSubpixel((short) (player.getCentreY() + yOffset));
             sidekick.setXSpeed((short) 0);
             sidekick.setYSpeed((short) 0);
             sidekick.setGSpeed((short) 0);
@@ -2869,6 +2838,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             ctx.setShowTitleCard(showTitleCard);
             ctx.setLevelData(levelData);
             ctx.setIncludePostLoadAssembly(true);
+            ctx.setAssemblyKind(LevelAssemblyKind.FRESH_LEVEL_ASSEMBLY);
             ctx.snapshotCheckpoint(checkpointCoordinator.state());
 
             resetCounterPlacementAfterCameraSnap = runtimeReload;
@@ -3173,12 +3143,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 graphicsManager,
                 camera,
                 buildObjectServices());
-        // Ordinary seamless reloads consume one transition dispatch before the
-        // rebuilt object list becomes visible. A retained end-level owner
-        // survives Load_Level and keeps the current Process_Sprites phase
-        // instead.
-        int inheritedRingPhase = ringFloorCheckCounterPhase - (retainedEndLevelOwner ? 0 : 1);
-        objectManager.inheritRingFloorCheckCounterPhase(inheritedRingPhase);
+        // V_int_run_count is global work RAM and Load_Level does not consume a
+        // Process_Sprites dispatch. Preserve Obj37's floor-check phase unchanged.
+        objectManager.inheritRingFloorCheckCounterPhase(ringFloorCheckCounterPhase);
         GameRules gameRules = gameModule.getRules();
         if (gameRules != null
                 && gameRules.collision() != null
@@ -3452,6 +3419,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * {@link com.openggf.game.session.WorldSession} level and zone metadata.
      */
     public void resetGameplayState() {
+        discardInitialProcessSpritesLifecycle();
         com.openggf.game.session.GameplayModeContext gameplayMode =
                 com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         if (gameplayMode != null && gameplayMode.getRewindRegistry() != null) {

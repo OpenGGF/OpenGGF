@@ -19,13 +19,13 @@ final class CnzResultsScreenObjectInstance extends S3kResultsScreenObjectInstanc
     }
 
     private CnzResultsScreenObjectInstance() {
-        this(PlayerCharacter.SONIC_AND_TAILS, 1);
+        super(true);
     }
 
     @Override
     public CnzResultsScreenObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return ObjectConstructionContext.construct(ctx.objectServices(),
-                () -> new CnzResultsScreenObjectInstance(PlayerCharacter.SONIC_AND_TAILS, 1));
+                CnzResultsScreenObjectInstance::new);
     }
 
     @Override

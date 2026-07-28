@@ -62,7 +62,7 @@ public final class Flybot767BadnikInstance extends AbstractS3kBadnikInstance imp
     private int animTimer;
     private boolean inLoop;
     private boolean waitingForOnscreen = true;
-    private final boolean layoutWaitUsesRetainedRenderFlag;
+    private boolean layoutWaitUsesRetainedRenderFlag;
     private boolean placeholderRenderedOnscreen;
     private boolean publishedTouchResponseListEntryThisFrame;
 

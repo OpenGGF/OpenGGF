@@ -4854,7 +4854,7 @@ public final class ObjectSolidContactController {
 
     private boolean usesCurrentYRadiusDeltaOnLanding(AbstractPlayableSprite sprite) {
         PlayerMovementRules rules = playerMovementRulesOrNull(sprite);
-        return rules != null && rules.landingRollClearUsesCurrentYRadiusDelta();
+        return rules != null && rules.landing().landingRollClearUsesCurrentYRadiusDelta();
     }
 
     private static CollisionRules collisionRulesOrNull(PlayableEntity player) {

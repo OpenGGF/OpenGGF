@@ -85,12 +85,16 @@ public final class UserRecordingSmokeHarness {
 
         List<RecordedFrameInput> inputs = new ArrayList<>(frameCount);
         List<DesyncLiteFrame> sidecarFrames = new ArrayList<>(frameCount);
-        for (int frame = 0; frame < frameCount; frame++) {
+        for (int frame = 0; frame < frameCount;) {
             SmokeInput input = inputFor(frame);
             recordDriver.stepFrame(input.up(), input.down(), input.left(), input.right(), input.jump(),
                     input.p2Mask(), input.p2Start(), input.p1Start());
+            if (!recordDriver.didLastFrameRunGameplay()) {
+                continue;
+            }
             inputs.add(input.toRecordedFrame(frame));
             sidecarFrames.add(DesyncLiteSnapshotter.capture(frame));
+            frame++;
         }
 
         Path bk2Path = outputDirectory.resolve("user-recording-determinism-smoke.bk2");
@@ -106,10 +110,14 @@ public final class UserRecordingSmokeHarness {
         replayDriver.setBk2Movie(movie, 0);
 
         UserRecordingVerifier verifier = new UserRecordingVerifier(reloadedSidecarFrames);
-        for (int frame = 0; frame < movie.getFrameCount(); frame++) {
+        for (int frame = 0; frame < movie.getFrameCount();) {
             Bk2FrameInput frameInput = movie.getFrame(frame);
             replayDriver.stepFrameFromRecording();
+            if (!replayDriver.didLastFrameRunGameplay()) {
+                continue;
+            }
             verifier.observer().afterFrameAdvanced(frameInput, false);
+            frame++;
         }
 
         return new Result(bk2Path, reloadedManifest.launchContext(),

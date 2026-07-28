@@ -1304,7 +1304,15 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         } else if (s.genericState() != null) {
             GenericFieldCapturer.restore(this, s.genericState());
         }
+        afterGenericRewindStateRestored(context);
         // badnikExtra is handled by subclass overrides; base class does nothing
+    }
+
+    /**
+     * Rebuilds state derived from restored generic fields without requiring a full
+     * {@link #restoreRewindState(PerObjectRewindSnapshot, RewindCaptureContext)} override.
+     */
+    protected void afterGenericRewindStateRestored(RewindCaptureContext context) {
     }
 
     /** Concrete classes already warned about a context-less getRenderManager() call. */

@@ -96,10 +96,17 @@ public class TestS3kAizIntroEventsHeadless {
         SidekickCpuController controller = tails.getCpuController();
         assertNotNull(controller, "CPU Tails should have a controller");
 
+        assertEquals(SidekickCpuController.State.INIT, controller.getState(),
+                "Load_Level must not run Tails_Control before its first ordinary Player_2 dispatch");
+        assertFalse(tails.isObjectControlled(),
+                "AIZ bootstrap must not eagerly manufacture the dormant object_control state");
+
+        fixture.stepFrame(false, false, false, false, false);
+
         assertEquals(SidekickCpuController.State.DORMANT_MARKER, controller.getState(),
-                "Visual trace replay renders skipped pre-LevelLoop frames before the first CPU tick");
+                "the first ordinary Player_2 dispatch owns the AIZ dormant marker");
         assertEquals(0x7F00, tails.getCentreX() & 0xFFFF,
-                "AIZ intro Tails must already be parked at the ROM dormant marker");
+                "AIZ intro Tails must park at the ROM dormant marker on that dispatch");
         assertEquals(0, tails.getCentreY() & 0xFFFF,
                 "AIZ intro Tails must not render from normal level-start placement during visual replay");
         assertTrue(tails.isObjectControlled(),

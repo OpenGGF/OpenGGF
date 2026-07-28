@@ -5,14 +5,11 @@ import com.openggf.tests.TestEnvironment;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.session.EngineContext;
-import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
-import com.openggf.game.GameRng;
 import com.openggf.game.GameServices;
 import com.openggf.game.SidekickSpawnOffset;
 import com.openggf.game.save.SaveSessionContext;
 import com.openggf.game.save.SelectedTeam;
-import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.Sonic3kLevel;
@@ -62,8 +59,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 @RequiresRom(SonicGame.SONIC_3K)
 public class TestSonic3kAIZEvents {
@@ -555,16 +550,19 @@ public class TestSonic3kAIZEvents {
         Path saveDir = Path.of("saves").resolve(gameCode);
         deleteRecursively(saveDir);
 
-        GameModule sessionModule = mock(GameModule.class);
-        when(sessionModule.getSaveSnapshotProvider()).thenReturn((reason, ctx) -> Map.of("marker", "aiz_transition"));
-        when(sessionModule.rngFlavour()).thenReturn(GameRng.Flavour.S3K);
+        Sonic3kGameModule sessionModule = new Sonic3kGameModule() {
+            @Override
+            public com.openggf.game.save.SaveSnapshotProvider getSaveSnapshotProvider() {
+                return (reason, ctx) -> Map.of("marker", "aiz_transition");
+            }
+        };
 
         SaveSessionContext saveContext = SaveSessionContext.forSlot(
                 gameCode, 1, new SelectedTeam("sonic", List.of("tails")), 0, 0);
-        GameplayModeContext gameplayMode = SessionManager.openGameplaySession(sessionModule, saveContext);
-        TestEnvironment.activeGameplayMode();
-
-        GameServices.level().resetState();
+        SessionManager.openGameplaySession(sessionModule, saveContext);
+        fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(0, 0)
+                .build();
         Camera camera = GameServices.camera();
         camera.setX((short) 0x2F10);
         camera.setY((short) 0x0200);

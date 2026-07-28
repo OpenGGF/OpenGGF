@@ -17,10 +17,14 @@ import com.openggf.game.zone.ZoneRuntimeState;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ResultsHardwareTimingFixture;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.TestablePlayableSprite;
+import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -34,6 +38,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@RequiresRom(SonicGame.SONIC_3K)
 class TestLbzFinalBoss1Instance {
     private static final int OBJ_LBZ_FINAL_BOSS_1 = 0xCA;
 
@@ -693,6 +698,7 @@ class TestLbzFinalBoss1Instance {
     }
 
     private static final class HarnessServices extends StubObjectServices {
+        private final ResultsHardwareTimingFixture resultsTiming = new ResultsHardwareTimingFixture();
         private final Camera camera = new Camera();
         private final LbzZoneRuntimeState lbzState;
         private final GameStateManager gameState = new GameStateManager();
@@ -729,6 +735,25 @@ class TestLbzFinalBoss1Instance {
         @Override
         public Camera camera() {
             return camera;
+        }
+
+        @Override
+        public com.openggf.game.timing.HardwareTimingService hardwareTiming() {
+            return resultsTiming.hardwareTiming();
+        }
+
+        @Override
+        public com.openggf.data.Rom rom() {
+            return TestEnvironment.currentRom();
+        }
+
+        @Override
+        public com.openggf.data.RomByteReader romReader() {
+            try {
+                return com.openggf.data.RomByteReader.fromRom(rom());
+            } catch (java.io.IOException e) {
+                throw new java.io.UncheckedIOException(e);
+            }
         }
 
         @Override

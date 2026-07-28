@@ -1,4 +1,7 @@
-# CLAUDE.md
+# Guidance for AI agents
+
+This guidance is mirrored between `AGENTS.md` and `CLAUDE.md`; keep the two in sync (the
+`Agent-Docs` trailer requires both to be staged together).
 
 ## What this is
 
@@ -7,10 +10,15 @@ preservation of classic Mega Drive / Genesis platform games — the mainline Son
 Hedgehog series. It is not affiliated with, sponsored by, approved by, or endorsed by Sega.
 It reimplements the original hardware's physics and rendering using data loaded from
 user-supplied ROM images (Sonic 1, 2, and 3&K). No copyrighted assets live in this repo.
+Alongside faithful emulation of behaviour it aims to provide modern tooling: an in-engine
+level editor and an open framework for modding.
 
 **Accuracy is the point.** The engine must replicate original physics pixel-for-pixel.
 The disassembly is the source of truth — verify against it rather than tuning values until
 a test goes green.
+
+The project is in **alpha**. All three games are supported with game-specific modules,
+level loading, objects, audio, and scroll handlers.
 
 ## Current priority
 
@@ -37,6 +45,8 @@ mvn "-Dtest=TestCollisionLogic" test # focused run
 java -jar target/OpenGGF-0.6.prerelease-jar-with-dependencies.jar
 ```
 
+- Entry point is `com.openggf.Engine` (declared in the manifest): a GLFW window with a
+  manual timing game loop.
 - **Build on JDK 21** — what CI and the release workflow use. Surefire forks inherit
   *Maven's* JVM, not the `java` on `PATH`, so `mvn -v` is the check that matters; if it
   reports anything but 21, `export JAVA_HOME=/path/to/jdk-21` first. A newer JDK makes the
@@ -124,10 +134,24 @@ rules on PRs into `develop`.
 - Merging a non-`master` branch into `develop` requires a staged `README.md` update
   summarising the change in the release/change log section.
 - Branch naming: `feature/ai-*`, `bugfix/ai-*`. Keep a session's PRs on one branch.
-- Trace frontier work keeps [docs/TRACE_FRONTIER_LOG.md](docs/TRACE_FRONTIER_LOG.md)
+- Trace frontier work keeps [docs/status/trace-frontier-log.md](docs/status/trace-frontier-log.md)
   current — when a frontier moves, a fix lands, a passing trace regresses, or a full
   `*TraceReplay` sweep picks the next target. Record command, commit/worktree context,
   pass/fail, error count, and first-error frame/field.
+- Never commit an uncompressed trace payload (`physics*.csv`, `aux_state*.jsonl`) under
+  `src/test/resources/traces/` — they exceed GitHub's per-file limit. Enforced by
+  `TestTraceFixtureCompressionGuard`.
+- **Architecture artifact placement.** Designs, specifications, implementation plans,
+  research notes, audits, validation reports, and similar agent-generated engineering
+  artifacts live under the matching `docs/architecture/` subdirectory described in
+  [docs/README.md](docs/README.md). Classify documentation by purpose before creating it:
+  point-in-time assessments belong in `docs/architecture/audits/`, and audio
+  investigations with their supporting assets belong in
+  `docs/architecture/research/audio/`. These repository paths override skill defaults.
+  Never create loose Markdown in `docs/`, `docs/superpowers`, a top-level `docs/plans`,
+  or generic `archive`, `misc`, `notes`, or tool-named dumping grounds. Before finishing,
+  stage every relevant artifact created for the task; do not leave documentation or its
+  supporting assets untracked.
 
 ## Gotchas
 
@@ -154,7 +178,7 @@ from the last column first, V-flip from the bottom row first.
 `0x7FF` with a non-overlapping base per category; use
 `GraphicsManager.renderPatternWithId()` when IDs exceed the VDP range, and pick a fresh
 base for a new category. Range table in
-[docs/KNOWN_DISCREPANCIES.md](docs/KNOWN_DISCREPANCIES.md).
+[docs/status/known-discrepancies.md](docs/status/known-discrepancies.md).
 
 **ENEMY touch responses poll every frame** while the overlap persists (matching the ROM
 `Touch_Loop`) — SPECIAL/monitor contacts stay edge-triggered. Don't add consumed-once
@@ -174,6 +198,9 @@ not a baseline entry, unless the gap is genuinely intentional.
 `@ExtendWith(SingletonResetExtension.class)` over manual teardown. Set
 `startup.legalDisclaimer=false` in tests that boot the full `Engine`.
 
+**Audio accuracy:** reference the libvgm chip cores and the SMPSPlay source rather than
+simplified versions. Diagnose against a source of truth instead of twiddling knobs.
+
 ### Sonic 3&K bring-up notes
 
 Full detail in [AGENTS_S3K.md](AGENTS_S3K.md) and the `s3k-*` skills. The expensive ones:
@@ -186,8 +213,8 @@ Full detail in [AGENTS_S3K.md](AGENTS_S3K.md) and the `s3k-*` skills. The expens
   verify the object's code points there, then use it. Don't loop hunting for an S&K
   equivalent that doesn't exist.
 - **Dual object pointer tables.** S3K remaps many object IDs by zone set: `S3kZoneSet.S3KL`
-  (zones 0-6, AIZ-LBZ) and `SKL` (zones 7-13, MHZ-DDZ). Resolve names via
-  `Sonic3kObjectRegistry.getPrimaryName(id, zoneSet)`.
+  (zones 0-6, AIZ-LBZ, 256 entries) and `SKL` (zones 7-13, MHZ-DDZ, 185 entries). Resolve
+  names via `Sonic3kObjectRegistry.getPrimaryName(id, zoneSet)`.
 - **Compression type is encoded in the label suffix** (e.g. `AIZ1_8x8_Primary_KosM`), since
   S3K files use a `.bin` extension. `RomOffsetFinder` auto-infers it.
 - **Known limitation:** some S3K acts log `maxChunkPatternIndex > patternCount` (dynamic
@@ -198,7 +225,7 @@ Full detail in [AGENTS_S3K.md](AGENTS_S3K.md) and the `s3k-*` skills. The expens
 ## Where to look next
 
 Skills carry the step-by-step procedures — reach for them rather than reconstructing a
-workflow:
+workflow. Sources live in `.agents/skills/` (mirrored in `.claude/skills/`).
 
 | Task | Skill |
 |---|---|
@@ -216,9 +243,9 @@ Deeper reference, loaded when the work needs it:
 | [docs/architecture/engine-map.md](docs/architecture/engine-map.md) | Service tiers, session ownership, runtime framework stack, `LevelManager` decomposition, multi-game and physics providers, level events, sidekicks, rewind, audio, config, tooling |
 | [docs/architecture/object-implementation-reference.md](docs/architecture/object-implementation-reference.md) | Object registration, behaviour contracts, base classes, shared utilities, per-game art loading, constants files |
 | [docs/architecture/per-game-rule-placement.md](docs/architecture/per-game-rule-placement.md) | Where a per-game behavioural difference belongs |
-| [docs/testing/headless-testing.md](docs/testing/headless-testing.md) | `HeadlessTestRunner`, singleton reset, test infrastructure |
+| [docs/guide/contributing/headless-testing.md](docs/guide/contributing/headless-testing.md) | `HeadlessTestRunner`, singleton reset, test infrastructure |
 | [docs/agent-workflow/README.md](docs/agent-workflow/README.md) | Workflow CLIs, per-task runbooks, CI guard-failure explainer, pitfall index, documentation-obligation checklist |
-| [docs/KNOWN_DISCREPANCIES.md](docs/KNOWN_DISCREPANCIES.md) | Intentional divergences from the ROM, virtual pattern ID ranges, trace bootstrap contracts |
+| [docs/status/known-discrepancies.md](docs/status/known-discrepancies.md) | Intentional divergences from the ROM, virtual pattern ID ranges, trace bootstrap contracts |
 | [AGENTS_S3K.md](AGENTS_S3K.md) | Sonic 3&K specifics |
 | [CONFIGURATION.md](CONFIGURATION.md) | `config.yaml` keys, bindings, debug flags |
 

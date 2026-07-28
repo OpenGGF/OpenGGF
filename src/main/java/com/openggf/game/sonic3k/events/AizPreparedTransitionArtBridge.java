@@ -1,6 +1,5 @@
 package com.openggf.game.sonic3k.events;
 
-import com.openggf.game.GameServices;
 import com.openggf.game.LevelEventProvider;
 
 /**
@@ -15,9 +14,7 @@ public interface AizPreparedTransitionArtBridge {
 
     int aizFireOverlayTileCount();
 
-    static AizPreparedTransitionArtBridge current() {
-        LevelEventProvider provider =
-                GameServices.module().getLevelEventProvider();
+    static AizPreparedTransitionArtBridge current(LevelEventProvider provider) {
         if (provider instanceof AizPreparedTransitionArtBridge bridge) {
             return bridge;
         }

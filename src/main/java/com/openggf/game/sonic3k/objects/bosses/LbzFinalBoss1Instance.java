@@ -21,7 +21,9 @@ import com.openggf.game.sonic3k.objects.SongFadeTransitionInstance;
 import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
+import com.openggf.level.objects.AbstractResultsScreen;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
@@ -1543,8 +1545,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
         private final LaserHeadChild head;
         @RewindTransient(reason = "Constructor-derived fire direction.")
         private final boolean fireFlip;
-        @RewindTransient(reason = "Constructor-derived detached child-chain allocation path.")
-        private final boolean detachedChainAtCreation;
+        private boolean detachedChainAtCreation;
         private int countdownTimer;
         private int countdownStep = 8;
         private int blinkTimer = 0x18;
@@ -1988,6 +1989,16 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
             extends S3kResultsScreenObjectInstance {
         private LbzFinalBossResultsScreenObjectInstance(PlayerCharacter character) {
             super(character, 1);
+        }
+
+        private LbzFinalBossResultsScreenObjectInstance() {
+            super(true);
+        }
+
+        @Override
+        public AbstractResultsScreen recreateForRewind(RewindRecreateContext ctx) {
+            return ObjectConstructionContext.construct(ctx.objectServices(),
+                    LbzFinalBossResultsScreenObjectInstance::new);
         }
 
         @Override

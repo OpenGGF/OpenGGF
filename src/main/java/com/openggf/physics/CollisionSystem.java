@@ -1081,17 +1081,18 @@ public class CollisionSystem {
     }
 
     private void resetWallCeilingLandingState(AbstractPlayableSprite sprite, int angle) {
+        PlayerAnimationRules animationRules = playerAnimationRulesOrNull(sprite);
         if (sprite.isObjectControlled()) {
+            publishWalkOnAcceptedLanding(sprite, animationRules);
             sprite.setAir(false);
             return;
         }
 
         PlayerMovementRules rules = playerMovementRulesOrNull(sprite);
-        PlayerAnimationRules animationRules = playerAnimationRulesOrNull(sprite);
-        boolean preservePinballRoll = rules != null && rules.pinballLandingPreservesRoll();
-        boolean preservePinballMode = rules != null && rules.pinballLandingPreservesPinballMode();
+        boolean preservePinballRoll = rules != null && rules.landing().pinballLandingPreservesRoll();
+        boolean preservePinballMode = rules != null && rules.landing().pinballLandingPreservesPinballMode();
         if (sprite.getRolling() && (!sprite.getPinballMode() || !preservePinballRoll)) {
-            if (rules != null && rules.landingRollClearUsesCurrentYRadiusDelta()) {
+            if (rules != null && rules.landing().landingRollClearUsesCurrentYRadiusDelta()) {
                 int oldYRadius = sprite.getYRadius();
                 int centreX = sprite.getCentreX();
                 int centreY = sprite.getCentreY();
@@ -1129,7 +1130,24 @@ public class CollisionSystem {
         if (!(sprite.getRolling() && sprite.getPinballMode() && preservePinballMode)) {
             sprite.setPinballMode(false);
         }
-        if (!sprite.getPinballMode()
+        if (!sprite.getPinballMode()) {
+            publishWalkOnAcceptedLanding(sprite, animationRules);
+        }
+        sprite.setAir(false);
+        sprite.setPushing(false);
+        sprite.setRollingJump(false);
+        sprite.setJumping(false);
+        sprite.setFlipAngle(0);
+        sprite.setFlipType(0);
+        sprite.setFlipTurned(false);
+        sprite.setFlipsRemaining(0);
+        sprite.setLookDelayCounter((short) 0);
+    }
+
+    private void publishWalkOnAcceptedLanding(
+            AbstractPlayableSprite sprite,
+            PlayerAnimationRules animationRules) {
+        if (!sprite.getSpindash()
                 && animationRules != null
                 && animationRules.angledLandingPublishesWalk()) {
             // Player_TouchFloor_Check_Spindash publishes Walk before clearing
@@ -1141,15 +1159,6 @@ public class CollisionSystem {
                 sprite.setAnimationId(walkAnimationId);
             }
         }
-        sprite.setAir(false);
-        sprite.setPushing(false);
-        sprite.setRollingJump(false);
-        sprite.setJumping(false);
-        sprite.setFlipAngle(0);
-        sprite.setFlipType(0);
-        sprite.setFlipTurned(false);
-        sprite.setFlipsRemaining(0);
-        sprite.setLookDelayCounter((short) 0);
     }
 
     private boolean doCeilingCollisionInternal(AbstractPlayableSprite sprite, SensorResult[] results) {

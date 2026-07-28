@@ -3,6 +3,7 @@ package com.openggf;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.LevelEventProvider;
 import com.openggf.game.NoOpBonusStageProvider;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareTimingService;
@@ -21,13 +22,84 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class TestLevelFrameHardwareTimingBoundaries {
 
     @Test
-    void fullFrameServicesCanonicalBoundariesAndObservesAfterService() {
+    void legacyFrameRetiresPostObjectsAfterScreenEventsAndOnTheNextDispatch() {
+        List<String> events = new ArrayList<>();
+        HardwareTimingService timing = spy(new HardwareTimingService(
+                new RomWorkBudgetScheduler(Map.of(
+                        HardwareServiceBoundary.VINT_SERVICE, 1,
+                        HardwareServiceBoundary.PRE_MAIN_LOOP, 1,
+                        HardwareServiceBoundary.POST_OBJECTS, 1))));
+        TestPreparation preparation = new TestPreparation(3);
+        HardwareWorkHandle handle = timing.submit(submission(preparation));
+        LevelEventProvider levelEvents = mock(LevelEventProvider.class);
+        doAnswer(ignored -> {
+            events.add("screen-events:ready=" + timing.isReady(handle));
+            return null;
+        }).when(levelEvents).update();
+        LevelFrameContext context = context(timing, levelEvents, boundary ->
+                events.add("observer:" + boundary + ":ready=" + timing.isReady(handle)));
+        LevelManager level = mock(LevelManager.class);
+        doAnswer(ignored -> {
+            events.add("objects:ready=" + timing.isReady(handle));
+            return null;
+        }).when(level).updateObjectPositionsWithoutTouches();
+        Camera camera = mock(Camera.class);
+        doAnswer(ignored -> {
+            events.add("camera");
+            return null;
+        }).when(camera).updatePosition();
+
+        LevelFrameResult firstResult = LevelFrameStep.execute(
+                context,
+                level,
+                camera,
+                () -> events.add("physics"),
+                LevelFrameStep.DIRECT_WRAPPER);
+        LevelFrameResult secondResult = LevelFrameStep.execute(
+                context,
+                level,
+                camera,
+                () -> events.add("physics"),
+                LevelFrameStep.DIRECT_WRAPPER);
+
+        assertEquals(List.of(
+                        "observer:VINT_SERVICE:ready=false",
+                        "observer:PRE_MAIN_LOOP:ready=false",
+                        "objects:ready=false",
+                        "physics",
+                        "camera",
+                        "screen-events:ready=false",
+                        "observer:POST_OBJECTS:ready=true",
+                        "observer:VINT_SERVICE:ready=true",
+                        "observer:PRE_MAIN_LOOP:ready=true",
+                        "objects:ready=true",
+                        "physics",
+                        "camera",
+                        "screen-events:ready=true",
+                        "observer:POST_OBJECTS:ready=true"),
+                events);
+        assertEquals(LevelFrameResult.GAMEPLAY_FRAME, firstResult);
+        assertEquals(LevelFrameResult.GAMEPLAY_FRAME, secondResult);
+        assertEquals(3, preparation.completedWorkUnits(),
+                "the first frame must retire exactly one unit at each canonical boundary");
+        verify(timing, times(2)).service(HardwareServiceBoundary.VINT_SERVICE);
+        verify(timing, times(2)).service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        verify(timing, times(2)).service(HardwareServiceBoundary.POST_OBJECTS);
+    }
+
+    @Test
+    void inlineSolidFrameRunsPhysicsBeforeObjectsAndStillRetiresAfterScreenEvents() {
         List<String> events = new ArrayList<>();
         HardwareTimingService timing = new HardwareTimingService(
                 new RomWorkBudgetScheduler(Map.of(
@@ -35,31 +107,42 @@ class TestLevelFrameHardwareTimingBoundaries {
                         HardwareServiceBoundary.PRE_MAIN_LOOP, 1,
                         HardwareServiceBoundary.POST_OBJECTS, 1)));
         HardwareWorkHandle handle = timing.submit(submission(3));
-        LevelFrameContext context = context(timing, boundary ->
-                events.add(boundary + ":ready=" + timing.isReady(handle)));
+        LevelEventProvider levelEvents = mock(LevelEventProvider.class);
+        doAnswer(ignored -> {
+            events.add("screen-events:ready=" + timing.isReady(handle));
+            return null;
+        }).when(levelEvents).update();
+        LevelFrameContext context = context(timing, levelEvents, boundary ->
+                events.add("observer:" + boundary + ":ready=" + timing.isReady(handle)));
         LevelManager level = mock(LevelManager.class);
+        when(level.objectsExecuteAfterPlayerPhysics()).thenReturn(true);
+        doAnswer(ignored -> {
+            events.add("objects:ready=" + timing.isReady(handle));
+            return null;
+        }).when(level).updateObjectPositionsPostPhysicsWithoutTouches(any());
         Camera camera = mock(Camera.class);
+        doAnswer(ignored -> {
+            events.add("camera");
+            return null;
+        }).when(camera).updatePosition();
 
         LevelFrameResult result = LevelFrameStep.execute(
                 context,
                 level,
                 camera,
                 () -> events.add("physics"),
-                (name, step) -> {
-                    events.add(name + "-start");
-                    step.run();
-                    events.add(name + "-end");
-                });
+                LevelFrameStep.DIRECT_WRAPPER);
 
         assertEquals(LevelFrameResult.GAMEPLAY_FRAME, result);
         assertEquals(List.of(
-                        "VINT_SERVICE:ready=false",
-                        "PRE_MAIN_LOOP:ready=false",
-                        "objects-start",
-                        "objects-end",
-                        "POST_OBJECTS:ready=true",
-                        "physics-start"),
-                events.subList(0, 6));
+                        "observer:VINT_SERVICE:ready=false",
+                        "observer:PRE_MAIN_LOOP:ready=false",
+                        "physics",
+                        "objects:ready=false",
+                        "camera",
+                        "screen-events:ready=false",
+                        "observer:POST_OBJECTS:ready=true"),
+                events);
     }
 
     @Test
@@ -113,17 +196,32 @@ class TestLevelFrameHardwareTimingBoundaries {
     private static LevelFrameContext context(
             HardwareTimingService timing,
             com.openggf.game.timing.HardwareTimingBoundaryObserver observer) {
-        return context(timing, observer, null);
+        return context(timing, null, observer, null);
     }
 
     private static LevelFrameContext context(
             HardwareTimingService timing,
             com.openggf.game.timing.HardwareTimingBoundaryObserver observer,
             GameStateManager gameState) {
+        return context(timing, null, observer, gameState);
+    }
+
+    private static LevelFrameContext context(
+            HardwareTimingService timing,
+            LevelEventProvider levelEvents,
+            com.openggf.game.timing.HardwareTimingBoundaryObserver observer) {
+        return context(timing, levelEvents, observer, null);
+    }
+
+    private static LevelFrameContext context(
+            HardwareTimingService timing,
+            LevelEventProvider levelEvents,
+            com.openggf.game.timing.HardwareTimingBoundaryObserver observer,
+            GameStateManager gameState) {
         return new LevelFrameContext(
                 mock(GameModule.class),
                 null,
-                null,
+                levelEvents,
                 NoOpBonusStageProvider.INSTANCE,
                 null,
                 gameState,
@@ -134,6 +232,10 @@ class TestLevelFrameHardwareTimingBoundaries {
     }
 
     private static HardwareWorkSubmission submission(int workUnits) {
+        return submission(new TestPreparation(workUnits));
+    }
+
+    private static HardwareWorkSubmission submission(TestPreparation preparation) {
         return new HardwareWorkSubmission(
                 HardwareWorkKind.KOS_MODULE_QUEUE,
                 0x1234,
@@ -143,7 +245,7 @@ class TestLevelFrameHardwareTimingBoundaries {
                 "KosM",
                 1,
                 false,
-                new TestPreparation(workUnits));
+                preparation);
     }
 
     private record PreparationSnapshot(int remainingUnits)
@@ -156,6 +258,7 @@ class TestLevelFrameHardwareTimingBoundaries {
 
     private static final class TestPreparation implements HardwareWorkPreparation {
         private int remainingUnits;
+        private int completedWorkUnits;
 
         private TestPreparation(int remainingUnits) {
             this.remainingUnits = remainingUnits;
@@ -164,7 +267,12 @@ class TestLevelFrameHardwareTimingBoundaries {
         @Override
         public boolean stepOneWorkUnit() {
             remainingUnits--;
+            completedWorkUnits++;
             return true;
+        }
+
+        private int completedWorkUnits() {
+            return completedWorkUnits;
         }
 
         @Override

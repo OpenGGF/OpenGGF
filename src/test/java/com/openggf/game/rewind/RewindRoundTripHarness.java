@@ -13,6 +13,7 @@ import com.openggf.game.sonic3k.objects.CutsceneKnucklesMhz2Instance;
 import com.openggf.game.sonic3k.objects.CnzMinibossInstance;
 import com.openggf.game.sonic3k.objects.IczCrushingColumnObjectInstance;
 import com.openggf.game.sonic3k.objects.IczTensionPlatformObjectInstance;
+import com.openggf.game.sonic3k.objects.Lbz2RobotnikShipInstance;
 import com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance;
 import com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance;
 import com.openggf.game.sonic3k.objects.MhzMinibossInstance;
@@ -1342,6 +1343,7 @@ public final class RewindRoundTripHarness {
                  "com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance",
                  "com.openggf.game.sonic3k.objects.Mhz1CutsceneKnucklesInstance",
                  "com.openggf.game.sonic3k.objects.MhzMinibossInstance",
+                 "com.openggf.game.sonic3k.objects.Lbz2RobotnikShipInstance",
                  "com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance" -> true;
             default -> false;
         };
@@ -1392,6 +1394,10 @@ public final class RewindRoundTripHarness {
             case "com.openggf.game.sonic3k.objects.MhzMinibossInstance" ->
                     spawn.objectId() == Sonic3kObjectIds.MHZ_MINIBOSS
                             ? new MhzMinibossInstance(spawn)
+                            : null;
+            case "com.openggf.game.sonic3k.objects.Lbz2RobotnikShipInstance" ->
+                    spawn.objectId() == 0xC6
+                            ? new Lbz2RobotnikShipInstance(spawn)
                             : null;
             case "com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance" ->
                     spawn.objectId() == Sonic3kObjectIds.PACHINKO_ENERGY_TRAP
@@ -1524,7 +1530,19 @@ public final class RewindRoundTripHarness {
                 }
             }
 
-            // Strategy 8: (int, int) — primitive-only coordinate generic-recreate object.
+            // Strategy 8: (ObjectSpawn, int, int) — trailing scalar placeholders,
+            // e.g. velocity components restored by compact scalar state.
+            Constructor<? extends AbstractObjectInstance> spawnIntIntCtor =
+                    findCtor(cls, ObjectSpawn.class, int.class, int.class);
+            if (spawnIntIntCtor != null) {
+                try {
+                    return ObjectConstructionContext.construct(stub,
+                            () -> invokeWith(spawnIntIntCtor, PROBE_SPAWN, 0, 0));
+                } catch (Throwable ignored) {
+                }
+            }
+
+            // Strategy 9: (int, int) — primitive-only coordinate generic-recreate object.
             Constructor<? extends AbstractObjectInstance> intIntCtor =
                     findCtor(cls, int.class, int.class);
             if (intIntCtor != null) {
@@ -1596,6 +1614,7 @@ public final class RewindRoundTripHarness {
                         + " (ObjectSpawn,int,int,ParentType),"
                         + " (ObjectSpawn,ParentType,int),"
                         + " (ObjectSpawn,ParentType,int,int),"
+                        + " (ObjectSpawn,ParentType,int,int,boolean),"
                         + " (ObjectSpawn,ParentType,int,int,int))");
     }
 
@@ -1627,6 +1646,8 @@ public final class RewindRoundTripHarness {
         // constructors do not spawn these children; update routines do.
         m.put("com.openggf.game.sonic3k.objects.badniks.OrbinautBadnikInstance$OrbinautOrbInstance",
                 "com.openggf.game.sonic3k.objects.badniks.OrbinautBadnikInstance");
+        m.put("com.openggf.game.sonic3k.objects.Lbz2RobotnikShipInstance$GradualCameraMaxXChild",
+                "com.openggf.game.sonic3k.objects.Lbz2RobotnikShipInstance");
         m.put("com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotActiveChild",
                 "com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance");
         m.put("com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance$RibotVisualChild",
@@ -1815,7 +1836,9 @@ public final class RewindRoundTripHarness {
             Map.entry("com.openggf.game.sonic3k.objects.Sonic3kSSEntryRingObjectInstance", 0x85),
             // Sonic1SpikedBallChainObjectInstance: Sonic1ObjectIds.SPIKED_BALL_CHAIN = 0x57
             Map.entry("com.openggf.game.sonic1.objects.Sonic1SpikedBallChainObjectInstance",
-                    Sonic1ObjectIds.SPIKED_BALL_CHAIN)
+                    Sonic1ObjectIds.SPIKED_BALL_CHAIN),
+            // LBZ2 Robotnik ship: Obj C6 (camera child is spawned only after the ride sequence).
+            Map.entry("com.openggf.game.sonic3k.objects.Lbz2RobotnikShipInstance", 0xC6)
             // Omitted: BalkiryBadnikInstance (spawns jet in ctor — would pollute OM)
             // Omitted: Sonic2CPZBossInstance (spawns 5 children in ctor — would pollute OM)
     );
@@ -2113,6 +2136,12 @@ public final class RewindRoundTripHarness {
                     && params[1].isAssignableFrom(liveParent.getClass())
                     && params[2] == int.class
                     && params[3] == int.class;
+            boolean spawnParentIntIntBoolean = params.length == 5
+                    && params[0] == ObjectSpawn.class
+                    && params[1].isAssignableFrom(liveParent.getClass())
+                    && params[2] == int.class
+                    && params[3] == int.class
+                    && params[4] == boolean.class;
             boolean spawnParentIntIntInt = params.length == 5
                     && params[0] == ObjectSpawn.class
                     && params[1].isAssignableFrom(liveParent.getClass())
@@ -2121,7 +2150,8 @@ public final class RewindRoundTripHarness {
                     && params[4] == int.class;
             if (!spawnAndParent && !parentOnly && !parentString && !parentIntInt
                     && !parentIntIntBoolean && !parentAnchorIntInt && !spawnIntIntParent
-                    && !spawnParentInt && !spawnParentIntInt && !spawnParentIntIntInt) continue;
+                    && !spawnParentInt && !spawnParentIntInt && !spawnParentIntIntBoolean
+                    && !spawnParentIntIntInt) continue;
             Constructor<? extends AbstractObjectInstance> ctor =
                     (Constructor<? extends AbstractObjectInstance>) rawCtor;
             ctor.setAccessible(true);
@@ -2159,6 +2189,10 @@ public final class RewindRoundTripHarness {
                     return ObjectConstructionContext.construct(stub,
                             () -> invokeWith(ctor, PROBE_SPAWN, parent, 0, 0));
                 }
+                if (spawnParentIntIntBoolean) {
+                    return ObjectConstructionContext.construct(stub,
+                            () -> invokeWith(ctor, PROBE_SPAWN, parent, 0, 0, false));
+                }
                 if (spawnParentIntIntInt) {
                     return ObjectConstructionContext.construct(stub,
                             () -> invokeWith(ctor, PROBE_SPAWN, parent, 0, PROBE_SPAWN.x(), PROBE_SPAWN.y()));
@@ -2182,6 +2216,7 @@ public final class RewindRoundTripHarness {
      * {@code (ObjectSpawn, int, int, ParentType)},
      * {@code (ObjectSpawn, ParentType, int)}, or
      * {@code (ObjectSpawn, ParentType, int, int)}, or
+     * {@code (ObjectSpawn, ParentType, int, int, boolean)}, or
      * {@code (ObjectSpawn, ParentType, int, int, int)} where {@code ParentType} is
      * a concrete, non-abstract
      * {@link AbstractObjectInstance} subclass. When found:
@@ -2227,6 +2262,11 @@ public final class RewindRoundTripHarness {
                     && params[0] == ObjectSpawn.class
                     && params[2] == int.class
                     && params[3] == int.class;
+            boolean spawnParentIntIntBoolean = params.length == 5
+                    && params[0] == ObjectSpawn.class
+                    && params[2] == int.class
+                    && params[3] == int.class
+                    && params[4] == boolean.class;
             boolean spawnParentIntIntInt = params.length == 5
                     && params[0] == ObjectSpawn.class
                     && params[2] == int.class
@@ -2234,8 +2274,10 @@ public final class RewindRoundTripHarness {
                     && params[4] == int.class;
             if (!spawnAndParent && !parentOnly && !parentString && !parentIntInt
                     && !parentIntIntBoolean && !parentAnchorIntInt && !spawnIntIntParent
-                    && !spawnParentInt && !spawnParentIntInt && !spawnParentIntIntInt) continue;
-            Class<?> parentType = (spawnIntIntParent || spawnParentIntInt || spawnParentIntIntInt)
+                    && !spawnParentInt && !spawnParentIntInt && !spawnParentIntIntBoolean
+                    && !spawnParentIntIntInt) continue;
+            Class<?> parentType = (spawnIntIntParent || spawnParentIntInt
+                    || spawnParentIntIntBoolean || spawnParentIntIntInt)
                     ? (spawnIntIntParent ? params[3] : params[1])
                     : (spawnAndParent || spawnParentInt ? params[1] : params[0]);
             if (!AbstractObjectInstance.class.isAssignableFrom(parentType)) continue;
@@ -2283,6 +2325,10 @@ public final class RewindRoundTripHarness {
                 if (spawnParentIntInt) {
                     return ObjectConstructionContext.construct(stub,
                             () -> invokeWith(ctor, PROBE_SPAWN, finalParent, 0, 0));
+                }
+                if (spawnParentIntIntBoolean) {
+                    return ObjectConstructionContext.construct(stub,
+                            () -> invokeWith(ctor, PROBE_SPAWN, finalParent, 0, 0, false));
                 }
                 if (spawnParentIntIntInt) {
                     return ObjectConstructionContext.construct(stub,

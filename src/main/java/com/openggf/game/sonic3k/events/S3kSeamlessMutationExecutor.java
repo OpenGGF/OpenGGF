@@ -223,7 +223,8 @@ public final class S3kSeamlessMutationExecutor {
         }
 
         byte[] fireOverlayTiles8x8 =
-                AizPreparedTransitionArtBridge.current()
+                AizPreparedTransitionArtBridge.current(
+                                levelManager.getGameModule().getLevelEventProvider())
                         .aizFireOverlayCopy();
         if (applyAiz1FireOverlay(levelManager, fireOverlayTiles8x8) == 0) {
             throw new IllegalStateException(

@@ -3,7 +3,6 @@ package com.openggf.game.sonic3k.events;
 import com.openggf.camera.Camera;
 import com.openggf.data.Rom;
 import com.openggf.game.CheckpointState;
-import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindTransient;
@@ -769,7 +768,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                 int source = rom().read32BitAddr(introEntry + 4)
                         & 0x00FF_FFFF;
                 mainLevelArtKosQueue =
-                        new S3kKosModuleQueue(GameServices.hardwareTiming());
+                        new S3kKosModuleQueue(hardwareTiming());
                 mainLevelArtHandle = mainLevelArtKosQueue.queue(
                         rom(), source, 0x0BE);
                 mainLevelArtOrdinal = mainLevelArtHandle.ordinal();
@@ -1765,7 +1764,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         }
         try {
             battleshipKosQueue =
-                    new S3kKosModuleQueue(GameServices.hardwareTiming());
+                    new S3kKosModuleQueue(hardwareTiming());
             battleshipTerrainArtHandle = battleshipKosQueue.queue(
                     rom(),
                     Sonic3kConstants.AIZ2_8X8_BOMBERSHIP_ADDR,
@@ -2343,7 +2342,9 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                             S3kSeamlessMutationExecutor.MUTATION_AIZ1_FIRE_TERRAIN_READY);
                     fireTerrainTablesLoaded = true;
                 }
-                if (act2KosArtReady() && !act2TransitionRequested) {
+                if (fireOverlayTilesLoaded
+                        && act2KosArtReady()
+                        && !act2TransitionRequested) {
                     LevelManager levelManager = levelManager();
                     if (!(levelManager.getCurrentLevel() instanceof Sonic3kLevel)) {
                         throw new IllegalStateException(
@@ -2440,7 +2441,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             int primarySource = rom.read32BitAddr(entry) & 0x00FF_FFFF;
             int secondarySource = rom.read32BitAddr(entry + 4) & 0x00FF_FFFF;
             act2ArtKosQueue =
-                    new S3kKosModuleQueue(GameServices.hardwareTiming());
+                    new S3kKosModuleQueue(hardwareTiming());
             act2PrimaryArtHandle =
                     act2ArtKosQueue.queue(rom, primarySource, 0x000);
             act2PrimaryArtOrdinal = act2PrimaryArtHandle.ordinal();
@@ -2465,7 +2466,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
      * scalar zone-event sidecar have both been restored.
      */
     public void rebindHardwareWorkAfterRewind() {
-        var timing = GameServices.hardwareTiming();
+        var timing = hardwareTiming();
 
         mainLevelArtHandle = restoredKosHandle(
                 timing, mainLevelArtOrdinal, "AIZ1 main-level art");
@@ -2635,7 +2636,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             }
             if (fireOverlayKosHandle == null) {
                 fireOverlayKosQueue =
-                        new S3kKosModuleQueue(GameServices.hardwareTiming());
+                        new S3kKosModuleQueue(hardwareTiming());
                 fireOverlayKosHandle = fireOverlayKosQueue.queue(
                         rom,
                         Sonic3kConstants.ART_KOSM_AIZ1_FIRE_OVERLAY_ADDR,
@@ -2654,7 +2655,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             fireOverlayTileCount =
                     S3kSeamlessMutationExecutor.applyAiz1FireOverlayPreparedArt(
                             levelManager, fireOverlay8x8);
-            AizPreparedTransitionArtBridge.current()
+            preparedTransitionArtBridge()
                     .retainAizFireOverlay(fireOverlay8x8);
             applyPlc(FIRE_OVERLAY_PLC);
             levelManager.invalidateAllTilemaps();
@@ -2701,7 +2702,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         // The engine's host-level recreation reapplies the already-prepared ROM
         // payload in the seamless mutation; it must not enqueue another job.
         fireOverlayTileCount =
-                AizPreparedTransitionArtBridge.current()
+                preparedTransitionArtBridge()
                         .aizFireOverlayTileCount();
         if (fireOverlayTileCount == 0) {
             throw new IllegalStateException(

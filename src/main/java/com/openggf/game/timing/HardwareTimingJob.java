@@ -102,6 +102,14 @@ public final class HardwareTimingJob {
         return preparedPayload.clone();
     }
 
+    byte[] claimedPayload() {
+        if (!claimed) {
+            throw new IllegalStateException(
+                    "hardware work has not been claimed: " + describe(handle));
+        }
+        return preparedPayload.clone();
+    }
+
     Snapshot snapshot() {
         return new Snapshot(
                 submission.kind(),

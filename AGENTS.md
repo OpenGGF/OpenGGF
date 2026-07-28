@@ -1,6 +1,6 @@
 # Guidance for AI agents
 
-The same guidance is mirrored in [CLAUDE.md](CLAUDE.md); keep the two in sync (the
+This guidance is mirrored between `AGENTS.md` and `CLAUDE.md`; keep the two in sync (the
 `Agent-Docs` trailer requires both to be staged together).
 
 ## What this is

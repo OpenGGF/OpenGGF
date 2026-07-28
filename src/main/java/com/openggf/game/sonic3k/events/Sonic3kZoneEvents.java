@@ -123,6 +123,14 @@ public abstract class Sonic3kZoneEvents {
         return new DefaultObjectServices(gameplayMode, EngineServices.current());
     }
 
+    protected com.openggf.game.timing.HardwareTimingService hardwareTiming() {
+        return objectServices().hardwareTiming();
+    }
+
+    protected AizPreparedTransitionArtBridge preparedTransitionArtBridge() {
+        return AizPreparedTransitionArtBridge.current(module().getLevelEventProvider());
+    }
+
     protected ZoneRuntimeRegistry zoneRuntimeRegistry() {
         return GameServices.zoneRuntimeRegistry();
     }
