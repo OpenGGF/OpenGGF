@@ -2,10 +2,10 @@
 
 ## Status
 
-Candidate implementation and independent review are complete. Point-in-time
-compatibility validation is complete through `bd0f366ce`; later concurrent
-`develop` changes are disclosed below and require a fresh post-selection
-baseline before integration.
+The recommended candidate set (A, C, D, F, H, and I) has been assembled and
+validated against the refreshed `develop` baseline at `fd3ca4525`. The full
+suite has the same 77 failing/error test identities as that red baseline, all
+focused candidate coverage passes, and the engine packages successfully.
 
 ## Coordination baseline
 
@@ -286,6 +286,47 @@ changes and removed. Their seven temporary local validation branches were also
 deleted. The six offered candidate worktrees and branches remain available for
 selection.
 
+## Selected-set integration validation
+
+The user selected the recommended set: production candidates A, C, D, H, and
+I, plus profiling audit F and the coordination design, plan, and report. The
+commits were cherry-picked onto
+`feature/ai-performance-followup-integration`, aggregate `CHANGELOG.md` and
+`README.md` release notes were added, and then the branch was reconciled with
+the latest `develop`.
+
+During validation, `develop` advanced to `fd3ca4525` with the restored macOS
+application-icon implementation and tests. The integration branch merged that
+updated baseline. The sole conflict was the top `CHANGELOG.md` section; the
+resolution retained both the performance summary and the newer icon entry.
+There were no production-code conflicts.
+
+The refreshed full-suite comparison used the real display/native environment:
+
+| Tree | Tests | Failures | Errors | Skips |
+|---|---:|---:|---:|---:|
+| `develop` at `fd3ca4525` | 13,406 | 62 | 15 | 13 |
+| selected integration at `960564e02` | 13,423 | 62 | 15 | 16 |
+
+The integrated branch adds 17 tests and three intentionally skipped
+performance benchmarks. XML comparison found all 77 baseline failure/error
+identities unchanged. A separately run trace-parser report can remain beside
+the full-suite reports because that class is excluded from the normal full
+suite; it is not part of the 13,423-test result.
+
+The combined focused selection for rewind dispatch, auxiliary schema indexing,
+timing-authority guards, S3K slot-panel state, background rendering, build and
+architecture guards, and the upstream window-icon loader exited successfully.
+The excluded trace parser was run independently on both trees:
+
+- baseline: 47 tests, one failure;
+- integration: 49 tests, one failure;
+- both fail only
+  `parsesRecordedRingFloorCheckCounterPhase`, expecting 2 and receiving null.
+
+The two candidate-added parser tests pass. Finally,
+`mvn -Dmse=off -q -DskipTests package` succeeds on the assembled branch.
+
 ## Disproved candidates
 
 ### B — One-pass default object snapshot
@@ -327,7 +368,6 @@ time gate failed, so the experiment was removed; no commit exists.
 
 ## Remaining work
 
-1. Obtain the user's candidate selection.
-2. Apply the selected commits to `develop`, add the aggregate release
-   documentation required by repository policy, run the post-merge regression
-   comparison, push, and clean the completed worktrees/branches.
+Merge the validated integration branch into `develop`, verify the exact merged
+commit against the recorded baseline, push, and clean the completed worktrees
+and local branches.
