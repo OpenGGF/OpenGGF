@@ -517,6 +517,13 @@ public final class GameplayModeContext implements ModeContext {
                 levelEventManager = alem;
                 rewindRegistry.register(alem);
             }
+            rewindRegistry.deregister(
+                    com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager.REWIND_KEY);
+            if (levelManager.getGameModule().getTitleCardProvider()
+                    instanceof com.openggf.game.rewind.RewindSnapshottable<?> titleCard) {
+                rewindRegistry.deregister(titleCard.key());
+                rewindRegistry.register(titleCard);
+            }
         }
         // Register game-specific extra adapters contributed by the level-event manager
         // (e.g. S3K AIZ2 boss-endgame static latches). Deregister first for idempotency.

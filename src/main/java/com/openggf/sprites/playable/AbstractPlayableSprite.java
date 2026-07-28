@@ -1820,6 +1820,20 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         /**
+         * Applies a ROM routine's direct {@code bclr #Status_InAir,status(a0)}
+         * without synthesising the engine's terrain-landing side effects.
+         *
+         * <p>This is intentionally narrower than {@link #setAir(boolean)}:
+         * control-restoration routines clear the native status bit but do not
+         * run {@code Sonic_ResetOnFloor}, reset the item-bonus chain, or claim
+         * a landing animation transition.
+         */
+        public void clearAirForNativeControlRestore() {
+                this.air = false;
+                updatePushSensorYOffset();
+        }
+
+        /**
          * Object/platform solid landings can clear Status_InAir while Sonic is
          * still in routine 4. ROM then runs Sonic_HurtStop on the next player
          * update and only there clears routine 4 plus velocities.

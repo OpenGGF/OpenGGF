@@ -220,6 +220,8 @@ Development since `v0.5.20260411` is the active 0.6 prerelease line. The release
 
 - **S3K signpost integration regression repaired (2026-07-28):** a prior merge retained the ROM-backed signpost tests while dropping their matching production behavior, leaving every test and trace-replay sweep blocked at compilation. The falling signpost again checks sparkle/player contact before signed-word gravity and movement, honors the ROM cooldown and bump range, and keeps the results-child timing adjustment independent from the newer short-retire-tail lifecycle.
 
+- **AIZ results-to-title handoff restored (2026-07-28):** Act 1 results now publish the ROM end-level signal before the independent end-sign owner restores player control, then initialize the mutated Act 2 title owner on its following dispatch. ROM-width child retirement and rewind-safe title-job rebinding advance the AIZ hardware frontier from title job 23 at frame 8800 to the separate MonkeyDude runtime-art job 27 at frame 8943.
+
 - **Token-efficient trace fleet routing (2026-07-28):** the trace bug-fixing fleet now routes bounded discovery, triage, fixes, and verification across GPT-5.6 Terra and Sol with explicit reasoning effort, objective escalation triggers, sequential worktree ownership, and fail-closed result semantics. A pinned S1/S2/S3K benchmark protocol records model routes, token telemetry when available, ROM/disassembly evidence, independent regression guards, acceptance decisions, and durable reports so routing policies can be compared by verified outcomes rather than nominal token price.
 
 Highlights:
