@@ -4,14 +4,18 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -19,6 +23,8 @@ import static org.junit.jupiter.api.Assertions.fail;
 class TestHardwareTimingAuthorityGuard {
     private static final Path SRC_MAIN = Path.of("src", "main", "java");
     private static final Path SRC_TEST = Path.of("src", "test", "java", "com", "openggf", "trace", "timing");
+    private static final SourceCatalogueLoader SOURCE_CATALOGUES =
+            new SourceCatalogueLoader(new FileSystemSourceTreeAccess());
     private static final String TIMING_PACKAGE_PREFIX = "com.openggf.trace.timing";
     private static final String HARDWARE_TIMING_SERVICE = "com.openggf.game.timing.HardwareTimingService";
     private static final String HARDWARE_TIMING_FILE = "hardware_timing.jsonl";
@@ -66,6 +72,85 @@ class TestHardwareTimingAuthorityGuard {
             "com.openggf.Engine",
             "com.openggf.GameLoop",
             "com.openggf.LevelIterationAdmissionController");
+
+    @Test
+    void sourceCatalogueLoadsTheSameRootOnlyOnce() throws IOException {
+        Path root = Path.of("production");
+        Path first = root.resolve("sample/First.java");
+        Path second = root.resolve("sample/Second.java");
+        CountingSourceTreeAccess access = new CountingSourceTreeAccess(
+                Map.of(root, List.of(first, second)),
+                Map.of(
+                        first, "package sample; class First {}",
+                        second, "package sample; class Second {}"));
+        SourceCatalogueLoader loader = new SourceCatalogueLoader(access);
+
+        List<SourceFile> firstLoad = loader.load(root);
+        List<SourceFile> secondLoad = loader.load(root);
+
+        assertEquals(firstLoad, secondLoad);
+        assertEquals(1, access.walkCount(root));
+        assertEquals(2, access.readCount());
+        assertThrows(UnsupportedOperationException.class,
+                () -> firstLoad.add(new SourceFile("Other.java", "sample", "Other.java", "")));
+    }
+
+    @Test
+    void sourceCatalogueKeepsDifferentRootsIsolated() throws IOException {
+        Path firstRoot = Path.of("first-production");
+        Path secondRoot = Path.of("second-production");
+        Path first = firstRoot.resolve("first/One.java");
+        Path second = secondRoot.resolve("second/Two.java");
+        CountingSourceTreeAccess access = new CountingSourceTreeAccess(
+                Map.of(
+                        firstRoot, List.of(first),
+                        secondRoot, List.of(second)),
+                Map.of(
+                        first, "package first; class One {}",
+                        second, "package second; class Two {}"));
+        SourceCatalogueLoader loader = new SourceCatalogueLoader(access);
+
+        List<SourceFile> firstSources = loader.load(firstRoot);
+        List<SourceFile> secondSources = loader.load(secondRoot);
+
+        assertEquals(List.of("first/One.java"),
+                firstSources.stream().map(SourceFile::relativePath).toList());
+        assertEquals(List.of("second/Two.java"),
+                secondSources.stream().map(SourceFile::relativePath).toList());
+        assertEquals(1, access.walkCount(firstRoot));
+        assertEquals(1, access.walkCount(secondRoot));
+    }
+
+    @Test
+    void sourceCatalogueKeepsCraftedViolationOrderAndTextExact() throws IOException {
+        Path root = Path.of("production");
+        Path first = root.resolve("first/First.java");
+        Path second = root.resolve("second/Second.java");
+        CountingSourceTreeAccess access = new CountingSourceTreeAccess(
+                Map.of(root, List.of(second, first)),
+                Map.of(
+                        first, """
+                                package sample.first;
+                                class First { String file = "hardware_timing.jsonl"; }
+                                """,
+                        second, """
+                                package sample.second;
+                                class Second { String file = HARDWARE_TIMING_FILE; }
+                                """));
+        SourceCatalogueLoader loader = new SourceCatalogueLoader(access);
+
+        List<String> violations = new ArrayList<>();
+        for (SourceFile source : loader.load(root)) {
+            violations.addAll(scanUnauthorizedTimingFilenameConstruction(
+                    source.packageName(), source.fileName(), source.content()));
+        }
+
+        assertEquals(List.of(
+                "sample.first.First.java constructs hardware_timing.jsonl outside "
+                        + "com.openggf.trace.timing.HardwareTimingStreamLoader",
+                "sample.second.Second.java constructs hardware_timing.jsonl outside "
+                        + "com.openggf.trace.timing.HardwareTimingStreamLoader"), violations);
+    }
 
     @Test
     void rejectsDirectWildcardStaticAndFullyQualifiedTimingServiceAccess() {
@@ -253,13 +338,11 @@ class TestHardwareTimingAuthorityGuard {
     @Test
     void comparisonAndAuxiliaryParsersDoNotImportTheGameplayTimingService() throws IOException {
         List<String> violations = new ArrayList<>();
-        for (Path file : productionFiles()) {
-            String relative = relative(file);
-            String source = Files.readString(file);
-            if (!isComparisonOrAuxiliaryParser(relative, source)) {
+        for (SourceFile source : productionSources()) {
+            if (!isComparisonOrAuxiliaryParser(source.relativePath(), source.content())) {
                 continue;
             }
-            violations.addAll(scanForbiddenTimingServiceAccess(relative, source));
+            violations.addAll(scanForbiddenTimingServiceAccess(source.relativePath(), source.content()));
         }
 
         assertNoViolations("comparison and aux parsers must not control gameplay timing", violations);
@@ -268,9 +351,9 @@ class TestHardwareTimingAuthorityGuard {
     @Test
     void onlyTheDedicatedTimingPackageMayParseTheHardwareTimingFile() throws IOException {
         List<String> violations = new ArrayList<>();
-        for (Path file : productionFiles()) {
+        for (SourceFile source : productionSources()) {
             violations.addAll(scanUnauthorizedTimingFilenameConstruction(
-                    packageName(file), file.getFileName().toString(), Files.readString(file)));
+                    source.packageName(), source.fileName(), source.content()));
         }
 
         assertNoViolations("only the timing parser package may parse the hardware timing stream", violations);
@@ -279,10 +362,9 @@ class TestHardwareTimingAuthorityGuard {
     @Test
     void gameplayOwnersDoNotImportTimingParserTypes() throws IOException {
         List<String> violations = new ArrayList<>();
-        for (Path file : productionFiles()) {
-            String packageName = packageName(file);
+        for (SourceFile source : productionSources()) {
             violations.addAll(scanGameplayTimingParserAccess(
-                    packageName, file.getFileName().toString(), Files.readString(file)));
+                    source.packageName(), source.fileName(), source.content()));
         }
 
         assertNoViolations("gameplay owners must receive timing readiness through the gameplay service", violations);
@@ -308,36 +390,29 @@ class TestHardwareTimingAuthorityGuard {
     @Test
     void onlyTheBoundaryObserverMayInvokeReplayPortApply() throws IOException {
         List<String> violations = new ArrayList<>();
-        for (Path file : productionFiles()) {
-            violations.addAll(scanReplayPortApply(relative(file), Files.readString(file)));
+        for (SourceFile source : productionSources()) {
+            violations.addAll(scanReplayPortApply(source.relativePath(), source.content()));
         }
         assertNoViolations("only the stateless boundary observer may apply replay edges", violations);
     }
 
     @Test
     void replayPortDoesNotDependOnGameplaySubsystems() throws IOException {
-        Path port = SRC_MAIN.resolve(
+        SourceFile port = productionSource(
                 "com/openggf/trace/timing/HardwareTimingReplayPort.java");
         assertNoViolations("replay port must remain bounded to timing authority",
-                scanReplayPortDependencies(Files.readString(port)));
+                scanReplayPortDependencies(port.content()));
     }
 
-    private static List<Path> productionFiles() throws IOException {
-        try (Stream<Path> stream = Files.walk(SRC_MAIN)) {
-            return stream.filter(path -> path.toString().endsWith(".java")).sorted().toList();
-        }
+    private static List<SourceFile> productionSources() throws IOException {
+        return SOURCE_CATALOGUES.load(SRC_MAIN);
     }
 
-    private static String relative(Path file) {
-        return SRC_MAIN.relativize(file).toString().replace('\\', '/');
-    }
-
-    private static String packageName(Path file) throws IOException {
-        var matcher = PACKAGE_DECLARATION.matcher(Files.readString(file));
-        if (!matcher.find()) {
-            throw new AssertionError("missing package declaration: " + relative(file));
-        }
-        return matcher.group(1);
+    private static SourceFile productionSource(String relativePath) throws IOException {
+        return productionSources().stream()
+                .filter(source -> source.relativePath().equals(relativePath))
+                .findFirst()
+                .orElseThrow(() -> new NoSuchFileException(SRC_MAIN.resolve(relativePath).toString()));
     }
 
     private static boolean hasPackagePrefix(String packageName, List<String> prefixes) {
@@ -561,6 +636,95 @@ class TestHardwareTimingAuthorityGuard {
     private static void assertNoViolations(String message, List<String> violations) {
         if (!violations.isEmpty()) {
             fail(message + ":\n  " + String.join("\n  ", violations));
+        }
+    }
+
+    private record SourceFile(String relativePath, String packageName, String fileName, String content) {
+    }
+
+    private interface SourceTreeAccess {
+        List<Path> javaFiles(Path root) throws IOException;
+
+        String readString(Path file) throws IOException;
+    }
+
+    private static final class SourceCatalogueLoader {
+        private final SourceTreeAccess access;
+        private final Map<Path, List<SourceFile>> sourcesByRoot = new java.util.HashMap<>();
+
+        private SourceCatalogueLoader(SourceTreeAccess access) {
+            this.access = access;
+        }
+
+        private List<SourceFile> load(Path root) throws IOException {
+            Path rootKey = root.toAbsolutePath().normalize();
+            List<SourceFile> cachedSources = sourcesByRoot.get(rootKey);
+            if (cachedSources != null) {
+                return cachedSources;
+            }
+            List<SourceFile> sources = new ArrayList<>();
+            for (Path file : access.javaFiles(root).stream().sorted().toList()) {
+                String content = access.readString(file);
+                var matcher = PACKAGE_DECLARATION.matcher(content);
+                String relative = root.relativize(file).toString().replace('\\', '/');
+                if (!matcher.find()) {
+                    throw new AssertionError("missing package declaration: " + relative);
+                }
+                sources.add(new SourceFile(
+                        relative,
+                        matcher.group(1),
+                        file.getFileName().toString(),
+                        content));
+            }
+            List<SourceFile> catalogue = List.copyOf(sources);
+            sourcesByRoot.put(rootKey, catalogue);
+            return catalogue;
+        }
+    }
+
+    private static final class CountingSourceTreeAccess implements SourceTreeAccess {
+        private final Map<Path, List<Path>> filesByRoot;
+        private final Map<Path, String> contents;
+        private final Map<Path, Integer> walkCounts = new java.util.HashMap<>();
+        private int readCount;
+
+        private CountingSourceTreeAccess(Map<Path, List<Path>> filesByRoot, Map<Path, String> contents) {
+            this.filesByRoot = filesByRoot;
+            this.contents = contents;
+        }
+
+        @Override
+        public List<Path> javaFiles(Path root) {
+            walkCounts.merge(root, 1, Integer::sum);
+            return filesByRoot.getOrDefault(root, List.of());
+        }
+
+        @Override
+        public String readString(Path file) {
+            readCount++;
+            return contents.get(file);
+        }
+
+        private int walkCount(Path root) {
+            return walkCounts.getOrDefault(root, 0);
+        }
+
+        private int readCount() {
+            return readCount;
+        }
+    }
+
+    private static final class FileSystemSourceTreeAccess implements SourceTreeAccess {
+        @Override
+        public List<Path> javaFiles(Path root) throws IOException {
+            try (Stream<Path> stream = Files.walk(root)) {
+                return stream.filter(path -> path.toString().endsWith(".java")).toList();
+            }
+        }
+
+        @Override
+        public String readString(Path file) throws IOException {
+            return Files.readString(file);
         }
     }
 }

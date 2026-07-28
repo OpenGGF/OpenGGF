@@ -511,8 +511,7 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
             return;
         }
         if (slotMachinePanelAnimator != null && slotMachinePanelAnimator.isInitialized()) {
-            slotMachinePanelAnimator.syncPanelPatterns(
-                    coordinator.activeSlotRuntime().slotMachineDisplayState());
+            coordinator.activeSlotRuntime().syncSlotMachinePanel(slotMachinePanelAnimator);
         }
         coordinator.activeSlotRuntime().renderSlotLayout(camera);
     }
