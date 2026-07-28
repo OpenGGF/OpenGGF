@@ -247,7 +247,11 @@ public final class S3kKosDecompressionQueue
             if (boundary != HardwareServiceBoundary.PRE_MAIN_LOOP || decoder.complete()) {
                 return false;
             }
-            return stepOneWorkUnit();
+            boolean advanced = false;
+            while (!decoder.complete()) {
+                advanced |= stepOneWorkUnit();
+            }
+            return advanced;
         }
     }
 }

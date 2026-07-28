@@ -285,6 +285,35 @@ class TestS3kKosModuleQueue {
     }
 
     @Test
+    void preparedButNotYetAdmittedParentsDoNotOccupyPhysicalFifoCapacity()
+            throws Exception {
+        Path romPath = tempDir.resolve("recorded-empty-kosm.gen");
+        Files.write(romPath, EMPTY_KOSM);
+        try (Rom rom = new Rom()) {
+            assertTrue(rom.open(romPath.toString()));
+            HardwareTimingService timing = new HardwareTimingService();
+            timing.beginRecordedAdmission();
+            S3kKosDecompressionQueue direct =
+                    new S3kKosDecompressionQueue(timing);
+            S3kKosModuleQueue queue =
+                    new S3kKosModuleQueue(timing, direct);
+
+            for (int index = 0; index < 4; index++) {
+                HardwareWorkHandle parent =
+                        queue.queue(rom, 0, 0x500 + index);
+                queue.processModuleQueueAfterObjects();
+                assertFalse(queue.isReady(parent),
+                        "recorded admission must retain prepared results");
+                assertNotNull(timing.capture().jobs().get(index)
+                                .preparedPayload(),
+                        "the parent must have left the physical FIFO");
+            }
+
+            assertNotNull(queue.queue(rom, 0, 0x504));
+        }
+    }
+
+    @Test
     void rejectsDirectOwnerFromAnotherTimingLedger() {
         HardwareTimingService parentTiming = new HardwareTimingService();
         HardwareTimingService directTiming = new HardwareTimingService();

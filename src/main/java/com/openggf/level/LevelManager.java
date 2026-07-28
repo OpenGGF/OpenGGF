@@ -2897,6 +2897,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             ctx.setShowTitleCard(showTitleCard);
             ctx.setLevelData(levelData);
             ctx.setIncludePostLoadAssembly(true);
+            ctx.setAssemblyKind(LevelAssemblyKind.FRESH_LEVEL_ASSEMBLY);
             ctx.snapshotCheckpoint(checkpointCoordinator.state());
 
             resetCounterPlacementAfterCameraSnap = runtimeReload;
@@ -3480,6 +3481,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * {@link com.openggf.game.session.WorldSession} level and zone metadata.
      */
     public void resetGameplayState() {
+        discardInitialProcessSpritesLifecycle();
         com.openggf.game.session.GameplayModeContext gameplayMode =
                 com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         if (gameplayMode != null && gameplayMode.getRewindRegistry() != null) {

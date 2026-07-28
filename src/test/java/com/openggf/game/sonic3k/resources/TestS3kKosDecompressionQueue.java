@@ -129,14 +129,12 @@ class TestS3kKosDecompressionQueue {
     }
 
     @Test
-    void restoresPhysicalFifoAndActiveDecoderFromMatchingTimingSnapshot() throws Exception {
+    void restoresPhysicalFifoAndQueuedDecoderFromMatchingTimingSnapshot() throws Exception {
         try (Rom rom = romWith(ABC_STREAM)) {
             HardwareTimingService timing = new HardwareTimingService();
             S3kKosDecompressionQueue queue = new S3kKosDecompressionQueue(timing);
             HardwareWorkHandle handle = queue.queueStandardKos(rom, 0,
                     S3kKosRamDestinations.BLOCK_TABLE);
-            timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
-            queue.afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
             var timingSnapshot = timing.capture();
             var queueSnapshot = queue.capture();
 

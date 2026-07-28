@@ -1,9 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
-import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.PlayerCharacter;
-import com.openggf.game.session.EngineContext;
-import com.openggf.game.session.EngineServices;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareTimingSnapshot;
@@ -31,10 +28,7 @@ class TestS3kResultsKosQueueRewind {
 
     @BeforeEach
     void setUp() {
-        TestEnvironment.resetAll();
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
     }
 
     @Test
@@ -45,6 +39,7 @@ class TestS3kResultsKosQueueRewind {
                 services,
                 () -> new S3kResultsScreenObjectInstance(
                         PlayerCharacter.SONIC_AND_TAILS, 0));
+        results.setServices(services);
 
         List<HardwareWorkHandle> submitted = timing.pendingHandles();
         assertEquals(List.of(0L, 1L, 2L),
@@ -56,20 +51,28 @@ class TestS3kResultsKosQueueRewind {
         assertCreateHasNotRun(results);
         assertEquals(submitted, timing.pendingHandles());
 
-        HardwareTimingSnapshot pendingSnapshot = timing.capture();
+        var rewindRegistry =
+                TestEnvironment.activeGameplayMode().getRewindRegistry();
+        var pendingSnapshot = rewindRegistry.capture();
 
         for (int frame = 0;
                 frame < 100_000
                         && timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE) > 0;
                 frame++) {
             timing.service(HardwareServiceBoundary.VINT_SERVICE);
+            services.runtimeArtCoordinator().afterTimingService(
+                    HardwareServiceBoundary.VINT_SERVICE);
             timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            services.runtimeArtCoordinator().afterTimingService(
+                    HardwareServiceBoundary.PRE_MAIN_LOOP);
             timing.service(HardwareServiceBoundary.POST_OBJECTS);
+            services.runtimeArtCoordinator().afterTimingService(
+                    HardwareServiceBoundary.POST_OBJECTS);
         }
         assertEquals(0, timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE));
-        HardwareTimingSnapshot readySnapshot = timing.capture();
+        var readySnapshot = rewindRegistry.capture();
 
-        timing.restore(pendingSnapshot);
+        rewindRegistry.restore(pendingSnapshot);
         S3kResultsScreenObjectInstance pendingRestored =
                 recreateWithCapturedOrdinals(results, services);
         assertEquals(submitted, timing.pendingHandles());
@@ -79,12 +82,19 @@ class TestS3kResultsKosQueueRewind {
         assertEquals(3L, nextKosOrdinal(timing.capture()),
                 "pending restore must bind the original three ordinals");
 
-        timing.restore(readySnapshot);
+        rewindRegistry.restore(readySnapshot);
         S3kResultsScreenObjectInstance readyRestored =
                 recreateWithCapturedOrdinals(results, services);
         assertEquals(submitted, timing.pendingHandles(),
                 "ready-but-unclaimed jobs retain their original identities");
-        readyRestored.update(2, player);
+        for (int dispatch = 1; dispatch <= 9; dispatch++) {
+            readyRestored.update(1 + dispatch, player);
+            assertEquals(3L, nextKosOrdinal(timing.capture()),
+                    "ready restore must not submit replacement art");
+            if (dispatch < 9) {
+                assertCreateHasNotRun(readyRestored);
+            }
+        }
 
         assertTrue((boolean) field(readyRestored, "resultsChildrenCreated"));
         assertEquals(0, field(readyRestored, "stateTimer"),

@@ -68,8 +68,7 @@ public final class S3kKosModuleQueue {
             int destinationPatternAddress,
             boolean exportableAcrossSegment) throws IOException {
         Objects.requireNonNull(rom, "rom");
-        if (timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE)
-                >= MAX_QUEUE_DEPTH) {
+        if (physicalQueueSize() >= MAX_QUEUE_DEPTH) {
             throw new IllegalStateException("S3K KosM module FIFO is full");
         }
         long remaining = rom.getSize() - source;
@@ -133,6 +132,9 @@ public final class S3kKosModuleQueue {
                         "KosM parent has an unexpected preparation owner");
             }
             descriptors.putIfAbsent(handle, preparation.descriptor);
+            if (preparation.isPrepared()) {
+                continue;
+            }
             boolean becamePrepared = preparation.coordinate(
                     handle, directQueue);
             if (becamePrepared) {
@@ -141,6 +143,17 @@ public final class S3kKosModuleQueue {
             }
             return;
         }
+    }
+
+    int physicalQueueSize() {
+        int count = 0;
+        for (HardwareWorkHandle handle : timing.pendingHandles()) {
+            if (handle.kind() == HardwareWorkKind.KOS_MODULE_QUEUE
+                    && !timing.coordinatorPreparation(handle).isPrepared()) {
+                count++;
+            }
+        }
+        return count;
     }
 
     public boolean modulesLeft() {
