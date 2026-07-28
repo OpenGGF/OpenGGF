@@ -136,12 +136,19 @@ class TestS3kHardwareTimingReplay {
 
         replay.beginRawFrame(edge.rawFrame());
         for (int servicePass = 0;
-                servicePass < 64 && !isPrepared(timing);
+                servicePass < 4096 && !isPrepared(timing);
                 servicePass++) {
             timing.service(HardwareServiceBoundary.POST_OBJECTS);
+            queue.afterTimingService(HardwareServiceBoundary.POST_OBJECTS);
             timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            direct.afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
         }
         timing.service(edge.boundary());
+        if (edge.boundary() == HardwareServiceBoundary.POST_OBJECTS) {
+            queue.afterTimingService(edge.boundary());
+        } else {
+            direct.afterTimingService(edge.boundary());
+        }
         assertTrue(isPrepared(timing),
                 "the production decoder must prepare the archive independently");
         assertFalse(queue.isReady(handle),

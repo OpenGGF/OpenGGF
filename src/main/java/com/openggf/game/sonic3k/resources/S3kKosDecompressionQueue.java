@@ -37,6 +37,10 @@ public final class S3kKosDecompressionQueue
         this.timing = Objects.requireNonNull(timing, "timing");
     }
 
+    HardwareTimingService timingOwner() {
+        return timing;
+    }
+
     public HardwareWorkHandle queueStandardKos(
             Rom rom, int sourceAddress, int destinationAddress) throws IOException {
         Objects.requireNonNull(rom, "rom");

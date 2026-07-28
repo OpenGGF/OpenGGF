@@ -40,6 +40,10 @@ public final class S3kKosModuleQueue {
             S3kKosDecompressionQueue directQueue) {
         this.timing = Objects.requireNonNull(timing, "timing");
         this.directQueue = Objects.requireNonNull(directQueue, "directQueue");
+        if (directQueue.timingOwner() != timing) {
+            throw new IllegalArgumentException(
+                    "KosM and direct Kos queues must share one hardware timing ledger");
+        }
     }
 
     public HardwareWorkHandle queue(
@@ -176,7 +180,7 @@ public final class S3kKosModuleQueue {
             this.output = new ByteArrayOutputStream(
                     descriptor.destinationLength());
             this.activeModuleOffset = 2;
-            this.prepared = descriptor.moduleCount() == 0;
+            this.prepared = false;
         }
 
         private S3kKosModulePreparation(S3kKosModuleSnapshot snapshot) {
@@ -198,6 +202,10 @@ public final class S3kKosModuleQueue {
                 S3kKosDecompressionQueue directQueue) {
             if (prepared) {
                 return false;
+            }
+            if (descriptor.moduleCount() == 0) {
+                prepared = true;
+                return true;
             }
             if (activeChild == null) {
                 if (!directQueue.hasCapacity()) {

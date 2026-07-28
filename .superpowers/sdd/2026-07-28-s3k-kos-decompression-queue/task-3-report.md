@@ -52,7 +52,7 @@ Expanded regression/guard command:
 
 Result: 85 tests, 85 passed.
 
-Legacy schema-1 replay audit:
+Initial legacy schema-1 replay audit, before the review-fix round below:
 
 `mvn -Dmse=off "-Ds3k.rom.path=/home/farrell/code/projects/OpenGGF/s3k.gen" "-Dtest=TestS3kHardwareTimingReplay" test`
 
@@ -80,3 +80,34 @@ legacy schema-1 replay incompatibility. The constructor was removed and all
 production callers now resolve the matched session coordinator. The schema-1
 incompatibility is retained and reported for Task 8, as required by the
 approved compatibility design.
+
+## Review-fix round
+
+The follow-up review identified four additional ownership gaps. Each was
+covered test-first and resolved:
+
+- A zero-module KosM parent no longer starts prepared in its constructor.
+  PRE and VINT leave it untouched; the POST coordinator owns its sole
+  preparation transition.
+- `S3kKosModuleQueue` now rejects a direct queue backed by a different
+  `HardwareTimingService`, preventing split parent/child ledgers.
+- A stronger full-FIFO test proves a child submitted behind ordinary work
+  cannot advance its parent until the complete physical direct FIFO drains,
+  followed by the correct later POST.
+- The three isolated schema-1 replay helpers now drive the production
+  boundary choreography: POST parent coordination and PRE direct admission
+  and physical retirement. Their readiness assertions remain unchanged.
+
+Focused RED result: three new tests ran; the zero-module and mismatched-ledger
+tests failed, while the stronger ordinary-ahead case already passed. Focused
+GREEN result: all three passed.
+
+Required suite after the review fixes: 18 tests, 18 passed.
+
+Schema-1 replay after the review fixes: 4 tests, 3 passed and 1 errored. The
+sole remaining error is
+`standaloneAizCompleteRunConsumesFirstEdgeThroughProductionFrameDriver`, where
+the old raw-frame-73 module edge attempts admission before the production
+child chain has prepared `KOS_MODULE_QUEUE#2`. This is the previously approved
+Task 8 fixture-regeneration concern; neither production cadence nor recorded
+authority was changed to accommodate it.

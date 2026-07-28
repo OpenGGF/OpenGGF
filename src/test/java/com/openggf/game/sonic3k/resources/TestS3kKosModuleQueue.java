@@ -18,6 +18,8 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestS3kKosModuleQueue {
@@ -27,6 +29,7 @@ class TestS3kKosModuleQueue {
             'A', 'B', 'C',
             0x00, 0x00, 0x00
     };
+    private static final byte[] EMPTY_KOSM = {0x00, 0x00};
     private static final byte[] TWO_MODULE_KOSM = {
             0x10, 0x01,
             0x17, 0x00, 'A', 'B', 'C', 0x00, 0x00, 0x00,
@@ -252,6 +255,91 @@ class TestS3kKosModuleQueue {
                     .filter(job -> job.kind()
                             == com.openggf.game.timing.HardwareWorkKind.KOS_DECOMPRESSION_QUEUE)
                     .count());
+        }
+    }
+
+    @Test
+    void zeroModuleParentCanOnlyPrepareAtPostObjects() throws Exception {
+        Path romPath = tempDir.resolve("empty-kosm.gen");
+        Files.write(romPath, EMPTY_KOSM);
+        try (Rom rom = new Rom()) {
+            assertTrue(rom.open(romPath.toString()));
+            HardwareTimingService timing = new HardwareTimingService();
+            S3kKosDecompressionQueue direct = new S3kKosDecompressionQueue(timing);
+            S3kKosModuleQueue queue = new S3kKosModuleQueue(timing, direct);
+            HardwareWorkHandle parent = queue.queue(rom, 0, 0x500);
+
+            timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            direct.afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            assertNull(timing.capture().jobs().getFirst().preparedPayload());
+            assertFalse(queue.isReady(parent));
+
+            timing.service(HardwareServiceBoundary.VINT_SERVICE);
+            assertNull(timing.capture().jobs().getFirst().preparedPayload());
+            assertFalse(queue.isReady(parent));
+
+            queue.processModuleQueueAfterObjects();
+            assertTrue(queue.isReady(parent));
+            assertArrayEquals(new byte[0], queue.claim(parent));
+        }
+    }
+
+    @Test
+    void rejectsDirectOwnerFromAnotherTimingLedger() {
+        HardwareTimingService parentTiming = new HardwareTimingService();
+        HardwareTimingService directTiming = new HardwareTimingService();
+        S3kKosDecompressionQueue direct =
+                new S3kKosDecompressionQueue(directTiming);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> new S3kKosModuleQueue(parentTiming, direct));
+    }
+
+    @Test
+    void ordinaryHeadWorkDelaysChildAndParentUntilLaterPost() throws Exception {
+        Path romPath = tempDir.resolve("ordinary-head.gen");
+        Files.write(romPath, ABC_KOSM);
+        try (Rom rom = new Rom()) {
+            assertTrue(rom.open(romPath.toString()));
+            HardwareTimingService timing = new HardwareTimingService();
+            S3kKosDecompressionQueue direct = new S3kKosDecompressionQueue(timing);
+            S3kKosModuleQueue queue = new S3kKosModuleQueue(timing, direct);
+            for (int index = 0; index < 4; index++) {
+                direct.queueStandardKos(
+                        rom, 2, S3kKosRamDestinations.blockTableOffset(index));
+            }
+            HardwareWorkHandle parent = queue.queue(rom, 0, 0x500);
+
+            queue.processModuleQueueAfterObjects();
+            assertNull(preparation(timing.capture()).activeChild());
+
+            while (direct.physicalQueueSize() == 4) {
+                queue.prepareQueuedModuleBeforeVSync();
+            }
+            queue.processModuleQueueAfterObjects();
+            HardwareWorkHandle child =
+                    preparation(timing.capture()).activeChild();
+            assertNotNull(child);
+            assertEquals(4, direct.physicalQueueSize(),
+                    "the module child must join behind three ordinary entries");
+
+            while (!direct.isReady(child)) {
+                queue.prepareQueuedModuleBeforeVSync();
+                if (!direct.isReady(child)) {
+                    queue.processModuleQueueAfterObjects();
+                    assertEquals(0,
+                            preparation(timing.capture()).completedModules());
+                    assertFalse(queue.isReady(parent));
+                }
+            }
+            assertFalse(direct.decompressionsPending());
+            assertEquals(0, preparation(timing.capture()).completedModules());
+            assertFalse(queue.isReady(parent),
+                    "PRE retirement cannot advance the module parent");
+
+            queue.processModuleQueueAfterObjects();
+            assertTrue(queue.isReady(parent),
+                    "the following POST owns the one parent transition");
         }
     }
 
