@@ -4,7 +4,7 @@ Support material to help agents implement OpenGGF objects/zones/trace-fixes with
 
 ## Tools
 
-Five `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each `-D...` property).
+Seven `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each `-D...` property).
 
 | Tool | Purpose | Invocation |
 |------|---------|------------|
@@ -13,6 +13,8 @@ Five `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each
 | `ObjectScaffoldTool` | Guard-friendly object/badnik skeleton + JUnit5 test shell (no `getInstance()`, no ctor `services()`, no `addDynamicObject`/`setDestroyed`; center-coord note). `--game s3k --badnik` emits the `...sonic3k.objects.badniks` package extending `AbstractS3kBadnikInstance`. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.ObjectScaffoldTool" "-Dexec.args=--game s3k --class MhzFooObjectInstance --id 0x8A --badnik"` |
 | `TraceTriageTool` | Reads `target/trace-reports/<game>_<zone>_report.json` and prints a first-divergence brief (frame/field, ROM vs engine, likely owning subsystem, disasm search terms). Comparison-only; never hydrates engine state. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.TraceTriageTool" "-Dexec.args=s2 mtz1"` |
 | `ZoneSpecNormalizerTool` | Normalizes an `s3k-zone-analysis` spec into the stable 13-section layout (palette cycling vs mutation kept separate; `(not analyzed)` placeholders for gaps). | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.ZoneSpecNormalizerTool" "-Dexec.args=<path-to-zone-analysis-spec.md>"` |
+| `TraceBenchmarkTool` | Replays a trace headlessly with no pacing and reports per-subsystem frame-time percentiles, for comparing JVMs or catching a performance regression. Writes a JSON report. Never quote its numbers without checking the trajectory digest matched. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.TraceBenchmarkTool" "-Dexec.args=--trace aiz1 --json target/bench/temurin21-g1.json"` |
+| `BenchmarkCompareTool` | Renders a Markdown comparison from two or more benchmark reports; the first is the baseline. Pure post-processing, so it can run under any JVM. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.BenchmarkCompareTool" "-Dexec.args=--out target/bench/comparison.md target/bench/a.json target/bench/b.json"` |
 
 ## Docs
 
@@ -26,4 +28,6 @@ Five `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each
 
 Run `AgentWorkflowTool` for a preflight, read the matching runbook, scaffold with
 `ObjectScaffoldTool`, intake art with `RomArtIntakeTool`, and triage traces with
-`TraceTriageTool`.
+`TraceTriageTool`. For performance work, start from
+[`runbooks/runbook-jvm-benchmark.md`](runbooks/runbook-jvm-benchmark.md) rather
+than the benchmark CLIs directly — the numbers are easy to misread.

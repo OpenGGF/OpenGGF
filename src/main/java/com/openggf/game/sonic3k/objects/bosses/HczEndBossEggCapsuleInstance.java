@@ -121,7 +121,7 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(SOLID_HALF_WIDTH, SOLID_HALF_HEIGHT, SOLID_HALF_HEIGHT);
+        return SolidObjectParams.of(SOLID_HALF_WIDTH, SOLID_HALF_HEIGHT, SOLID_HALF_HEIGHT);
     }
 
     @Override
@@ -341,7 +341,8 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
         int geyserY = camera.getY() + 0x130;
 
         // Spawn geyser cutscene as a dynamic object (ROM: loc_6B7BC)
-        spawnChild(() -> new HczEndBossGeyserCutscene(geyserX, geyserY));
+        spawnChild(() -> HczEndBossGeyserCutscene.createWithQueuedArt(
+                geyserX, geyserY));
         LOG.info("HCZ Egg Capsule: results complete, geyser cutscene spawned at X="
                 + geyserX + " Y=" + geyserY);
     }

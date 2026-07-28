@@ -27,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *   <li>ULTRA_21_9 (528 px): 848</li>
  * </ul>
  *
- * See docs/KNOWN_DISCREPANCIES.md entry #14.
+ * See docs/status/known-discrepancies.md entry #14.
  */
 class TestObjectRangeHelpers {
 

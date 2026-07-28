@@ -72,7 +72,7 @@ public class Sonic1JunctionObjectInstance extends AbstractObjectInstance
     private static final int SOLID_AIR_HALF_HEIGHT = 0x30;
     private static final int SOLID_GROUND_HALF_HEIGHT = 0x31;
     private static final SolidObjectParams SOLID_PARAMS =
-            new SolidObjectParams(SOLID_HALF_WIDTH, SOLID_AIR_HALF_HEIGHT, SOLID_GROUND_HALF_HEIGHT);
+            SolidObjectParams.of(SOLID_HALF_WIDTH, SOLID_AIR_HALF_HEIGHT, SOLID_GROUND_HALF_HEIGHT);
 
     // move.b #4,obPriority(a0) — main object priority
     private static final int PRIORITY_MAIN = 4;

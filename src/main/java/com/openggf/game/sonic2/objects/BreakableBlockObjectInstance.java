@@ -117,7 +117,7 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
     public SolidObjectParams getSolidParams() {
         // From disassembly: width_pixels = $10 (CPZ) / $18 (HTZ)
         // SolidObject routine uses: halfWidth + 11 for x check, halfHeight for y check
-        return new SolidObjectParams(halfWidth + 11, HALF_HEIGHT, HALF_HEIGHT + 1);
+        return SolidObjectParams.of(halfWidth + 11, HALF_HEIGHT, HALF_HEIGHT + 1);
     }
 
     @Override

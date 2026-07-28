@@ -101,7 +101,7 @@ public class DestroyedEggPrisonObjectInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         // Same collision as the original capsule body
-        return new SolidObjectParams(
+        return SolidObjectParams.of(
             BODY_HALF_WIDTH,    // 0x2B = 43 pixels
             BODY_HALF_HEIGHT,   // 0x18 = 24 pixels (air)
             BODY_HALF_HEIGHT    // 0x18 = 24 pixels (ground)

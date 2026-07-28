@@ -970,7 +970,7 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
     public SolidObjectParams getSolidParams() {
         // d1 = obActWid + $B
         int halfWidth = activeWidth + 0x0B;
-        return new SolidObjectParams(halfWidth, SOLID_AIR_HALF_HEIGHT, SOLID_GROUND_HALF_HEIGHT);
+        return SolidObjectParams.of(halfWidth, SOLID_AIR_HALF_HEIGHT, SOLID_GROUND_HALF_HEIGHT);
     }
 
     @Override

@@ -6,7 +6,7 @@ import com.openggf.control.InputHandler;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.game.GameServices;
-import com.openggf.game.rewind.EngineStepper;
+import com.openggf.game.rewind.RewindSeekAwareEngineStepper;
 import com.openggf.game.session.SessionManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
@@ -16,6 +16,7 @@ import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceEvent;
 import com.openggf.trace.TraceFixtures;
 import com.openggf.trace.TraceFrame;
+import com.openggf.trace.replay.TraceReplayFixture;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -27,6 +28,9 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.clearInvocations;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestTraceSessionLauncherAdvanceOnlyRewind {
@@ -45,9 +49,11 @@ class TestTraceSessionLauncherAdvanceOnlyRewind {
             HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                     .withZoneAndAct(0, 0)
                     .build();
+            TraceReplayFixture timingFixture = mock(TraceReplayFixture.class);
             GameLoop loop = new GameLoop(new InputHandler());
             Bk2Movie movie = heldActionMovie();
-            EngineStepper stepper = visualStepper(loop, movie, advanceOnlyTrace());
+            RewindSeekAwareEngineStepper stepper =
+                    visualStepper(loop, movie, advanceOnlyTrace(), timingFixture);
             int spriteFrame = GameServices.sprites().getFrameCounter();
             int levelFrame = GameServices.level().getFrameCounter();
             int vblank = GameServices.level().getObjectManager().getVblaCounter();
@@ -75,7 +81,12 @@ class TestTraceSessionLauncherAdvanceOnlyRewind {
             assertTrue(fixture.sprite().isForcedJumpPress(),
                     "the action edge must remain pending across later no-gameplay rows");
 
-            stepper.step(movie.getFrame(2));
+            int setupRetries = 0;
+            do {
+                stepper.step(movie.getFrame(2));
+                setupRetries++;
+            } while (GameServices.sprites().getFrameCounter() == spriteFrame
+                    && setupRetries < 120);
 
             assertEquals(spriteFrame + 1, GameServices.sprites().getFrameCounter(),
                     "the following gameplay row must dispatch exactly one playable tick");
@@ -84,20 +95,31 @@ class TestTraceSessionLauncherAdvanceOnlyRewind {
             assertTrue(fixture.sprite().getYSpeed() < 0);
             assertFalse(fixture.sprite().isForcedJumpPress(),
                     "the gameplay dispatch must consume the action edge once");
+
+            clearInvocations(timingFixture);
+            stepper.restoreToFrame(0, movie.getFrame(0));
+            stepper.step(movie.getFrame(0));
+            verify(timingFixture).beginTraceRow(1, 1);
         } finally {
             config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS,
                     oldSkipIntros != null ? oldSkipIntros : false);
         }
     }
 
-    private static EngineStepper visualStepper(
-            GameLoop loop, Bk2Movie movie, TraceData trace) throws Exception {
+    private static RewindSeekAwareEngineStepper visualStepper(
+            GameLoop loop,
+            Bk2Movie movie,
+            TraceData trace,
+            TraceReplayFixture fixture) throws Exception {
         Class<?> type = Class.forName(
                 "com.openggf.TraceSessionLauncher$VisualTraceRewindStepper");
         Constructor<?> constructor = type.getDeclaredConstructor(
-                GameLoop.class, Bk2Movie.class, TraceData.class, int.class, int.class);
+                GameLoop.class, Bk2Movie.class, TraceData.class,
+                com.openggf.trace.replay.TraceReplayFixture.class,
+                int.class, int.class);
         constructor.setAccessible(true);
-        return (EngineStepper) constructor.newInstance(loop, movie, trace, 0, 1);
+        return (RewindSeekAwareEngineStepper) constructor.newInstance(
+                loop, movie, trace, fixture, 0, 1);
     }
 
     private static Bk2Movie heldActionMovie() {

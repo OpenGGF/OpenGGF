@@ -643,7 +643,7 @@ public class Sonic2DEZEggmanInstance extends AbstractObjectInstance implements R
 
         @Override
         public SolidObjectParams getSolidParams() {
-            return new SolidObjectParams(WALL_HALF_WIDTH, WALL_HALF_HEIGHT, WALL_HALF_HEIGHT);
+            return SolidObjectParams.of(WALL_HALF_WIDTH, WALL_HALF_HEIGHT, WALL_HALF_HEIGHT);
         }
 
         @Override

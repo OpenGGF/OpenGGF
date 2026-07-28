@@ -103,7 +103,7 @@ public final class Sonic1SpecialStageManager {
      * globals stay frozen at whatever value they held before the special-stage
      * mode switch for 44 consecutive VBlank ticks. See
      * {@link #advanceToEntryPresentation()} for the FAST-policy bypass and
-     * {@code docs/superpowers/plans/2026-07-18-...} design note for the S2
+     * {@code docs/architecture/plans/2026-07-18-...} design note for the S2
      * {@code SpecialStageStartupPolicy} precedent this mirrors.
      */
     private static final int SS_STARTUP_HOLD_TICKS = 44;

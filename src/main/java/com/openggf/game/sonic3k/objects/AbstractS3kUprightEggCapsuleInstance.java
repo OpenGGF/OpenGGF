@@ -143,9 +143,9 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
     @Override
     public SolidObjectParams getPieceParams(int pieceIndex) {
         if (pieceIndex == PIECE_BUTTON) {
-            return new SolidObjectParams(BUTTON_HALF_WIDTH, BUTTON_AIR_HALF_HEIGHT, BUTTON_GROUND_HALF_HEIGHT);
+            return SolidObjectParams.of(BUTTON_HALF_WIDTH, BUTTON_AIR_HALF_HEIGHT, BUTTON_GROUND_HALF_HEIGHT);
         }
-        return new SolidObjectParams(BODY_HALF_WIDTH, BODY_HALF_HEIGHT, BODY_HALF_HEIGHT);
+        return SolidObjectParams.of(BODY_HALF_WIDTH, BODY_HALF_HEIGHT, BODY_HALF_HEIGHT);
     }
 
     @Override

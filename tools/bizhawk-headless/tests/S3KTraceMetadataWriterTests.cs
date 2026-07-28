@@ -24,8 +24,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
             + "  \"sidekicks\": [\"tails\"],\n";
 
         private const string SharedVersionBlock =
-            "  \"lua_script_version\": \"6.32-s3k\",\n"
-            + "  \"trace_schema\": 6,\n"
+            "  \"lua_script_version\": \"6.37-s3k\",\n"
+            + "  \"trace_schema\": 7,\n"
+            + "  \"hardware_timing_schema\": 1,\n"
             + "  \"csv_version\": 7,\n"
             + "  \"capture_mode\": "
             + "\"physics_animation_aux_without_diagnostic_hooks\",\n";

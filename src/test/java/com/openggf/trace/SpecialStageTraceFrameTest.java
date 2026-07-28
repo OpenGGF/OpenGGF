@@ -145,6 +145,40 @@ class SpecialStageTraceFrameTest {
         assertEquals(2, data.stageFinishedObservedFrame().orElseThrow(),
                 "finish mapping must preserve the raw observation that saw the flag rise");
         assertEquals(2, data.resultsStartedFrame().orElseThrow());
+        assertTrue(data.hardwareTimingSchedule().edges().isEmpty(),
+                "legacy special-stage traces remain timing-stream free");
+    }
+
+    @Test
+    void loadStrictlyParsesDedicatedHardwareTimingStream(@TempDir Path dir)
+            throws IOException {
+        writeHardwareTimingMetadata(dir);
+        Files.writeString(dir.resolve("physics.csv"),
+                HEADER + "\n" + rowForFrame(0) + "\n");
+        Files.writeString(dir.resolve("hardware_timing.jsonl"), """
+                {"event":"hardware_work_completed","raw_frame":0,"boundary":"post_objects","kind":"kos_module_queue","ordinal":0,"submission_fingerprint":"sha256:%s"}
+                """.formatted("a".repeat(64)));
+
+        SpecialStageTraceData data = SpecialStageTraceData.load(dir);
+
+        assertEquals(1, data.hardwareTimingSchedule().edges().size());
+        assertEquals(0,
+                data.hardwareTimingSchedule().edges().getFirst().rawFrame());
+    }
+
+    @Test
+    void loadRejectsTimingSchemaWithoutDedicatedStream(@TempDir Path dir)
+            throws IOException {
+        writeHardwareTimingMetadata(dir);
+        Files.writeString(dir.resolve("physics.csv"),
+                HEADER + "\n" + rowForFrame(0) + "\n");
+
+        IOException error = assertThrows(
+                IOException.class,
+                () -> SpecialStageTraceData.load(dir));
+
+        assertTrue(error.getMessage().contains("hardware_timing.jsonl"),
+                error::getMessage);
     }
 
     @Test
@@ -182,5 +216,25 @@ class SpecialStageTraceFrameTest {
               "rom_checksum": ""%s
             }
             """.formatted(traceProfile, ssIndexLine));
+    }
+
+    private static void writeHardwareTimingMetadata(Path dir)
+            throws IOException {
+        Files.writeString(dir.resolve("metadata.json"), """
+            {
+              "game": "s2",
+              "trace_profile": "s2_special_stage",
+              "trace_schema": 7,
+              "csv_version": 1,
+              "hardware_timing_schema": 1,
+              "act": 1,
+              "bk2_frame_offset": 0,
+              "trace_frame_count": 1,
+              "start_x": "0x0000",
+              "start_y": "0x0000",
+              "recording_date": "2026-07-27",
+              "rom_checksum": ""
+            }
+            """);
     }
 }

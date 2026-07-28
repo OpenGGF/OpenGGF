@@ -26,22 +26,34 @@ final class LevelIterationAdmissionController {
             GameplayModeContext gameplayMode,
             boolean startEdge,
             UserRecordingRuntimeControls recordingControls,
-            Runnable startPendingTitleCard) {
+            Runnable startPendingTitleCard,
+            Runnable activateRepresentedHardwareTiming,
+            Runnable deactivateHardwareTimingGap) {
         if (mode == GameMode.TITLE_CARD) {
-            return updateTitleCard.getAsBoolean()
-                    ? titleReleaseResult.get()
-                    : LevelFrameResult.SETUP_ONLY;
+            deactivateHardwareTimingGap.run();
+            if (!updateTitleCard.getAsBoolean()) {
+                return LevelFrameResult.SETUP_ONLY;
+            }
+            LevelFrameResult releaseResult = titleReleaseResult.get();
+            if (releaseResult == LevelFrameResult.GAMEPLAY_FRAME) {
+                activateRepresentedHardwareTiming.run();
+            }
+            return releaseResult;
         }
         if (mode != GameMode.LEVEL) {
+            activateRepresentedHardwareTiming.run();
             return LevelFrameResult.GAMEPLAY_FRAME;
         }
         SeamlessLevelTransitionRequest request =
                 levelManager.consumeSeamlessTransitionRequest();
         if (request != null) {
+            deactivateHardwareTimingGap.run();
             recordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
             levelManager.applySeamlessTransition(request);
             startPendingTitleCard.run();
             seamlessBoundaryCompletionPending = true;
+        } else {
+            activateRepresentedHardwareTiming.run();
         }
         return LevelFrameStep.admit(
                 LevelFrameContext.from(gameplayMode), levelManager, startEdge).result();
@@ -110,6 +122,20 @@ final class LevelIterationAdmissionController {
         TraceSessionLauncher session = TraceSessionLauncher.active();
         if (session != null) {
             session.runAdvanceTickIfActive(mode, cursorFrame);
+        }
+    }
+
+    static void prepareTraceHardwareTimingForAdmission(GameMode mode) {
+        TraceSessionLauncher session = TraceSessionLauncher.active();
+        if (session != null) {
+            session.prepareHardwareTimingForAdmission(mode);
+        }
+    }
+
+    static void deactivateTraceHardwareTimingForAdmission() {
+        TraceSessionLauncher session = TraceSessionLauncher.active();
+        if (session != null) {
+            session.deactivateHardwareTimingForAdmission();
         }
     }
 

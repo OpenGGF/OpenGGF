@@ -8,7 +8,7 @@ import java.util.List;
 
 /**
  * Segment-advance state machine for a visual multi-stage trace run session
- * (spec: docs/superpowers/specs/2026-07-18-multi-stage-trace-runs-design.md).
+ * (spec: docs/architecture/designs/2026-07-18-multi-stage-trace-runs-design.md).
  * A pure function of each frame's {@code (GameMode, cursorFrame)} pair — no
  * engine access, independently unit-testable, and never throws for any mode
  * sequence: an unrecognised mode transition (flicker, wrong target mode)

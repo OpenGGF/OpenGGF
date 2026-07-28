@@ -33,24 +33,29 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 class TestOpenAlPcmSink {
     @Test
-    void aggregatesVariablePresentationPacketsInto1024FrameDeviceBuffers() {
+    void primesThreeDeviceBuffersBeforeStartingPlayback() {
         FakeDevice device = new FakeDevice(57_600);
         OpenAlPcmSink sink = sink(device);
-        short[] source = stereoRamp(1_920);
+        short[] source = stereoRamp(3_840);
         AudioPresentationProducer producer = producer(
                 sink, 57_600, 60, sourceRegistry(57_600, source));
         int queued;
         try {
             producer.present(0, PresentationMode.FORWARD);
             producer.present(1, PresentationMode.FORWARD);
+            producer.present(2, PresentationMode.FORWARD);
+            sink.updateDevice();
+            assertEquals(List.of(), device.enqueuedFrames);
+            producer.present(3, PresentationMode.FORWARD);
             sink.updateDevice();
             queued = sink.queuedStereoFrames();
         } finally { producer.close(); }
 
-        assertEquals(List.of(1_024), device.enqueuedFrames);
+        assertEquals(List.of(1_024, 1_024, 1_024),
+                device.enqueuedFrames);
         assertArrayEquals(java.util.Arrays.copyOf(source, 1_024 * 2),
                 device.enqueuedSamples.getFirst());
-        assertEquals(896, queued);
+        assertEquals(768, queued);
     }
 
     @Test
@@ -66,6 +71,35 @@ class TestOpenAlPcmSink {
 
         assertEquals(0, sink.queuedStereoFrames());
         assertEquals(1, device.flushCount);
+    }
+
+    @Test
+    void pausedSinkDoesNotAccumulateSilenceAcrossFocusTransitions() {
+        FakeDevice device = new FakeDevice(48_000);
+        OpenAlPcmSink sink = sink(device);
+        AudioPresentationProducer producer = producer(sink, 48_000, 60);
+        try {
+            for (int frame = 0; frame < 4; frame++) {
+                producer.present(frame, PresentationMode.FORWARD);
+            }
+            sink.updateDevice();
+            assertEquals(128, sink.queuedStereoFrames());
+
+            sink.pause();
+            sink.pause();
+            for (int frame = 4; frame < 184; frame++) {
+                producer.present(frame, PresentationMode.SILENT);
+                sink.updateDevice();
+            }
+            sink.pause();
+
+            assertEquals(128, sink.queuedStereoFrames());
+            assertEquals(1, device.pauseCount);
+            sink.resume();
+            assertEquals(1, device.resumeCount);
+        } finally {
+            producer.close();
+        }
     }
 
     @Test
@@ -121,6 +155,8 @@ class TestOpenAlPcmSink {
         AudioPresentationProducer producer = producer(sink, 61_440, 60);
         try {
             producer.present(0, PresentationMode.SILENT);
+            producer.present(1, PresentationMode.SILENT);
+            producer.present(2, PresentationMode.SILENT);
             sink.updateDevice();
             sink.updateDevice();
         } finally { producer.close(); }
@@ -310,6 +346,9 @@ class TestOpenAlPcmSink {
         private boolean failClose;
         private int flushCount;
         private int closeCount;
+        private int queuedBuffers;
+        private int pauseCount;
+        private int resumeCount;
 
         private FakeDevice(int sampleRate) {
             this.sampleRate = sampleRate;
@@ -329,26 +368,31 @@ class TestOpenAlPcmSink {
             enqueuedFrames.add(stereoFrames);
             enqueuedSamples.add(java.util.Arrays.copyOf(
                     stereoPcm, stereoFrames * 2));
+            queuedBuffers++;
         }
 
         @Override
-        public void update() {
+        public int update() {
             if (failUpdate) {
                 throw new IllegalStateException("update");
             }
+            return queuedBuffers;
         }
 
         @Override
         public void flush() {
             flushCount++;
+            queuedBuffers = 0;
         }
 
         @Override
         public void pause() {
+            pauseCount++;
         }
 
         @Override
         public void resume() {
+            resumeCount++;
         }
 
         @Override

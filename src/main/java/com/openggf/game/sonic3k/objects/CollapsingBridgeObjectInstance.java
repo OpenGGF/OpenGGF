@@ -582,7 +582,7 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         // ROM: SolidObjectTop with d1=width_pixels, d3=$10
-        return new SolidObjectParams(halfWidth, SOLID_HEIGHT, SOLID_HEIGHT);
+        return SolidObjectParams.of(halfWidth, SOLID_HEIGHT, SOLID_HEIGHT);
     }
 
     @Override

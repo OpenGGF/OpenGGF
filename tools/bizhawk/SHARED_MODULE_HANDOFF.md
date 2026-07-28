@@ -166,7 +166,7 @@ went green because its subject row became representable, and one new red
 appeared in `TestTraceReplayStartPositionPolicy` because a test premise that
 depended on the frozen counter lost its subject. Full numbers, the
 prediction-vs-actual phase-flip table, and the remaining open items are in the
-2026-07-27 entry at the top of `docs/TRACE_FRONTIER_LOG.md`.
+2026-07-27 entry at the top of `docs/status/trace-frontier-log.md`.
 
 ### 2.3 Other pairs audited, no defect found
 
@@ -247,7 +247,7 @@ and the manifest's 25 segments / 22 transitions all reproducing exactly; and
 `e234a9d6b` re-pinned the native C# port (`S3KRam.VblankWord`) and its four S3K
 differential gates. Engine-side consequences (all frontiers held; MGZ -2,584
 errors; one red assertion recovered, one test premise died) are recorded in the
-2026-07-27 entry of `docs/TRACE_FRONTIER_LOG.md`.
+2026-07-27 entry of `docs/status/trace-frontier-log.md`.
 
 **Nothing from this audit is outstanding.** Both defects are closed and the
 §2.3 pairs re-checked clean at `e234a9d6b`. The next recorder change should
@@ -411,5 +411,5 @@ bleed); the env var wins for headless `.bat`.
 
 Per `CLAUDE.md`: recorder-schema changes commit separately from any regenerated
 trace payloads; use the trailer block (no `--no-verify`); keep
-`docs/TRACE_FRONTIER_LOG.md` updated only if a frontier moves (this refactor should
+`docs/status/trace-frontier-log.md` updated only if a frontier moves (this refactor should
 not move any).

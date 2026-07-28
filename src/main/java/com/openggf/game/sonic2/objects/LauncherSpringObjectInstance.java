@@ -751,9 +751,9 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         int offsetX = currentSpriteX - baseX;
         int offsetY = currentSpriteY - baseY;
         if (isDiagonal()) {
-            return new SolidObjectParams(35, 8, 5, offsetX, offsetY);
+            return SolidObjectParams.of(35, 8, 5, offsetX, offsetY);
         }
-        return new SolidObjectParams(35, 32, 29, offsetX, offsetY);
+        return SolidObjectParams.of(35, 32, 29, offsetX, offsetY);
     }
 
     @Override

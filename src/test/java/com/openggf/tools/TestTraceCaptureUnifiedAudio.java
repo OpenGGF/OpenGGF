@@ -329,10 +329,28 @@ class TestTraceCaptureUnifiedAudio {
                 "audioFrames.drainCaptured(", "audioFrames.discardPresented(");
 
         // --- the simulation step itself presents nothing --------------------
-        String driveOneFrame = methodBody(tool, "private DriveOutcome driveOneFrame(");
+        // The step lives in TraceReplayDrive, shared with the benchmark tool.
+        // That makes these checks stricter rather than weaker: a presentation
+        // added there would multiply the audio cadence for every CLI driver at
+        // once, on each simulation step rather than each outer frame.
+        String drive = stripComments(Files.readString(Path.of(
+                "src/main/java/com/openggf/tools/TraceReplayDrive.java")));
+        String driveOneFrame = methodBody(drive, "static DriveOutcome driveOneFrame(");
+        assertEquals(1, count(driveOneFrame, "frameDriver.beginTraceRow("),
+                "the shared drive must arm timing authority once per represented row");
+        for (String captureLoop : List.of(driveAndCapture, driveClip)) {
+            assertEquals(0, count(captureLoop, "beginTraceRow("),
+                    "capture loops delegate row authority to the shared drive");
+        }
+        String benchmark = stripComments(Files.readString(Path.of(
+                "src/main/java/com/openggf/tools/TraceBenchmarkTool.java")));
+        String benchmarkIteration = methodBody(
+                benchmark, "private static BenchmarkReport.Iteration runIteration(");
+        assertEquals(0, count(benchmarkIteration, "beginTraceRow("),
+                "benchmark delegates row authority to the shared drive");
         assertFalse(driveOneFrame.contains("paletteRegistry.beginFrame()"),
                 "setup-only admission must precede capture palette-frame mutation");
-        assertTrue(driveOneFrame.contains("TraceCaptureTool::beginPaletteFrame"),
+        assertTrue(driveOneFrame.contains("TraceReplayDrive::beginPaletteFrame"),
                 "palette-frame mutation must be supplied as an admitted-gameplay callback");
         for (String forbidden : List.of("audioFrames", "presentOuterFrame",
                 "presentHeadlessOuterAudioFrame", "drainCaptured",

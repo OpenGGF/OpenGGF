@@ -30,10 +30,11 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 16. [S2 Tornado Ride-Start Trace Bootstrap Contract](#s2-tornado-ride-start-trace-bootstrap-contract)
 17. [S2 CNZ Slot-Machine Trace Bootstrap Contract](#s2-cnz-slot-machine-trace-bootstrap-contract)
 18. [S3K Production Lifecycle and Structural Trace Replay Scheduling](#s3k-production-lifecycle-and-structural-trace-replay-scheduling)
-19. [S3K Complete-Run Segment Start-Position Bootstrap Debt](#s3k-complete-run-segment-start-position-bootstrap-debt)
-20. [Frame-0 Trace Bootstrap Snapshot Coverage Debt](#frame-0-trace-bootstrap-snapshot-coverage-debt)
-21. [Sonic 1 Embedded Runtime Data Ratchet](#sonic-1-embedded-runtime-data-ratchet)
-22. [Special-stage Live Rewind Scope](#special-stage-live-rewind-scope)
+19. [Hardware-Timing Replay Input Exception](#hardware-timing-replay-input-exception)
+20. [S3K Complete-Run Segment Start-Position Bootstrap Debt](#s3k-complete-run-segment-start-position-bootstrap-debt)
+21. [Frame-0 Trace Bootstrap Snapshot Coverage Debt](#frame-0-trace-bootstrap-snapshot-coverage-debt)
+22. [Sonic 1 Embedded Runtime Data Ratchet](#sonic-1-embedded-runtime-data-ratchet)
+23. [Special-stage Live Rewind Scope](#special-stage-live-rewind-scope)
 
 ---
 
@@ -929,6 +930,47 @@ diagnostic hooks remain explicitly opt-in and quiet mode remains supported.
 Keep this entry while trace replay exists. It documents the invariant that
 production lifecycle execution, rather than trace outcome data, establishes
 runtime state.
+
+---
+
+## Hardware-Timing Replay Input Exception
+
+**Location:** Dedicated hardware-timing fixture stream and the bounded
+hardware-timing replay port described by
+`docs/architecture/designs/2026-07-27-cross-game-hardware-timing-trace-contract.md`.
+**Scope:** Readiness timing for production-submitted ROM-backed hardware jobs
+only.
+
+### Accepted Boundary
+
+Physics CSV and auxiliary events remain comparison-only. They cannot drive the
+engine. A separate hardware-timing input stream may release the observable
+readiness of a job only when the engine independently submitted and prepared
+the same job and its kind, ordinal, stable submission fingerprint, and service
+boundary match the recording.
+
+This is a narrow external-timing input, analogous to replaying the time at
+which emulated hardware completed work. It is not permission to copy rings,
+positions, routines, object state, queue descriptors, archive addresses, or
+any other gameplay/work payload from the fixture. The timing port cannot call
+gameplay owners or create missing work. A mismatch fails structurally.
+
+### Rationale
+
+Lag rows already reproduce work whose only observable effect is a missed main
+loop. Some hardware queues remain pending while normal main-loop code continues
+and polls a completion gate. Host execution time cannot represent Mega Drive
+completion timing, while a fully cycle-accurate machine is outside the engine's
+scope. The dedicated stream supplies only that otherwise-external completion
+edge; the ROM-modeled consumer still owns every downstream mutation.
+
+### Guard and Removal Conditions
+
+Keep this entry while authoritative hardware-timing input exists. Guard tests
+must prove that only matching prepared jobs can be released and that
+physics/aux data has no path into the timing port. Remove the exception if all
+eligible hardware queues become sufficiently cycle-accurate that recorded
+completion edges are no longer needed.
 
 ---
 

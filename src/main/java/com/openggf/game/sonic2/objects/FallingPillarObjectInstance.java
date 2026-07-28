@@ -268,13 +268,13 @@ public class FallingPillarObjectInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         if (isChild) {
-            return new SolidObjectParams(
+            return SolidObjectParams.of(
                     CHILD_HALF_WIDTH + 0x0B,
                     CHILD_HALF_HEIGHT,
                     CHILD_HALF_HEIGHT + 1
             );
         }
-        return new SolidObjectParams(
+        return SolidObjectParams.of(
                 TOP_HALF_WIDTH + 0x0B,
                 TOP_HALF_HEIGHT,
                 TOP_HALF_HEIGHT + 1

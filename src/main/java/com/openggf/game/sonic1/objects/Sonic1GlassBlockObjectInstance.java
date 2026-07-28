@@ -228,9 +228,9 @@ public class Sonic1GlassBlockObjectInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         if (isTall) {
-            return new SolidObjectParams(HALF_WIDTH, TALL_HALF_HEIGHT_AIR, TALL_HALF_HEIGHT_GND);
+            return SolidObjectParams.of(HALF_WIDTH, TALL_HALF_HEIGHT_AIR, TALL_HALF_HEIGHT_GND);
         } else {
-            return new SolidObjectParams(HALF_WIDTH, SHORT_HALF_HEIGHT_AIR, SHORT_HALF_HEIGHT_GND);
+            return SolidObjectParams.of(HALF_WIDTH, SHORT_HALF_HEIGHT_AIR, SHORT_HALF_HEIGHT_GND);
         }
     }
 

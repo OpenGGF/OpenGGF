@@ -663,7 +663,8 @@ namespace OpenGGF.BizHawk.Headless
                 + "\",\"draw_rows\":\"0x"
                 + Hex4(S3KRam.U16(host, S3KRam.DrawDelayedRowCount))
                 + "\",\"kos_modules_left\":\"0x"
-                + Hex2(S3KRam.U8(host, S3KRam.KosModulesLeft))
+                + Hex2(S3KRam.U8(
+                    host, S3KRam.LegacyAizHandoffKosModulesLeft))
                 + "\",\"current_zone_act\":\"0x"
                 + Hex4(S3KRam.U16(host, S3KRam.Zone))
                 + "\",\"dynamic_resize\":\"0x"

@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -9,7 +10,10 @@ import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.events.S3kAizEventWriteSupport;
+import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
+import com.openggf.game.timing.HardwareWorkHandle;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.Palette;
@@ -185,6 +189,11 @@ public class AizEndBossInstance extends AbstractBossInstance
     private AizEndBossShipChild shipChild;
     private AizEndBossArmChild leftArm;
     private AizEndBossArmChild rightArm;
+    @RewindTransient(reason = "queue facade is rebound to the restored session ledger by captured ordinal")
+    private S3kKosModuleQueue bossArtQueue;
+    @RewindTransient(reason = "handle is rebound to the restored session ledger by captured ordinal")
+    private HardwareWorkHandle bossArtHandle;
+    private long bossArtOrdinal = -1;
 
     public AizEndBossInstance(ObjectSpawn spawn) {
         super(spawn, "AIZEndBoss");
@@ -312,6 +321,7 @@ public class AizEndBossInstance extends AbstractBossInstance
 
     @Override
     protected void updateBossLogic(int frameCounter, PlayableEntity playerEntity) {
+        serviceBossArtQueue();
         if (collisionEnablePending) {
             collisionEnabled = true;
             collisionEnablePending = false;
@@ -343,6 +353,45 @@ public class AizEndBossInstance extends AbstractBossInstance
             case ROUTINE_CAMERA_SCROLL -> updateCameraScroll();
             case ROUTINE_MOVE_WAIT -> updateMoveWait();
             case ROUTINE_DEFEATED -> updateDefeated();
+        }
+    }
+
+    private void serviceBossArtQueue() {
+        try {
+            if (bossArtQueue == null && bossArtOrdinal >= 0) {
+                bossArtQueue = new S3kKosModuleQueue(services().hardwareTiming());
+                bossArtHandle = services().hardwareTiming().pendingHandle(
+                                HardwareWorkKind.KOS_MODULE_QUEUE,
+                                bossArtOrdinal)
+                        .orElseThrow(() -> new IllegalStateException(
+                                "restored AIZ end-boss owner cannot find KosM ordinal "
+                                        + bossArtOrdinal));
+            }
+            if (bossArtHandle == null && bossArtQueue == null) {
+                bossArtQueue = new S3kKosModuleQueue(services().hardwareTiming());
+                bossArtHandle = bossArtQueue.queue(
+                        services().rom(),
+                        Sonic3kConstants.ART_KOSM_AIZ_END_BOSS_ADDR,
+                        Sonic3kConstants.ART_TILE_AIZ_END_BOSS);
+                bossArtOrdinal = bossArtHandle.ordinal();
+                return;
+            }
+            if (bossArtHandle != null && bossArtQueue.isReady(bossArtHandle)) {
+                bossArtQueue.claim(bossArtHandle);
+                bossArtHandle = null;
+                bossArtQueue = null;
+                bossArtOrdinal = -1;
+            }
+        } catch (Exception unavailable) {
+            if (bossArtOrdinal >= 0) {
+                throw new IllegalStateException(
+                        "AIZ end-boss KosM owner lost its submitted job",
+                        unavailable);
+            }
+            // Lightweight object tests can exercise the independent native
+            // $78 wait without a session timing/ROM service.
+            bossArtQueue = null;
+            bossArtHandle = null;
         }
     }
 

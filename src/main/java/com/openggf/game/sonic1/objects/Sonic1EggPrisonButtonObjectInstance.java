@@ -177,7 +177,7 @@ public class Sonic1EggPrisonButtonObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(
+        return SolidObjectParams.of(
                 HALF_WIDTH,
                 HALF_HEIGHT,
                 HALF_HEIGHT,

@@ -53,7 +53,7 @@ public class Sonic1LamppostTwirlInstance extends AbstractObjectInstance implemen
     // getCenterX()/getCenterY() at construction, so the true parent's live position is
     // always exactly 0px from this twirl's captured spawn. A few px of headroom covers
     // int-arithmetic slack only; anything farther away (e.g. a different lamppost still
-    // loaded elsewhere in the act, docs/plans/s1-bug-batch-ledger-2026-07-05.md row 5's
+    // loaded elsewhere in the act, docs/architecture/plans/s1-bug-batch-ledger-2026-07-05.md row 5's
     // "wrong lamppost" follow-up) is not a legitimate match and must drop instead of
     // silently adopting the wrong post.
     private static final int MAX_PARENT_RELINK_DISTANCE = 8;

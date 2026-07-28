@@ -2,9 +2,14 @@ package com.openggf.trace;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -50,7 +55,8 @@ public record TraceMetadata(
     @JsonProperty("segment_index") Integer segmentIndex,
     @JsonProperty("bonus_stage_type") String bonusStageType,
     @JsonProperty("fresh_load") Boolean freshLoad,
-    @JsonProperty("v_int_run_count") Integer vIntRunCount
+    @JsonProperty("v_int_run_count") Integer vIntRunCount,
+    @JsonProperty("hardware_timing_schema") Integer hardwareTimingSchema
 ) {
 
     /**
@@ -495,9 +501,38 @@ public record TraceMetadata(
         return vIntRunCount != null ? (vIntRunCount.longValue() & 0xFFFFFFFFL) : null;
     }
 
+    public boolean hasHardwareTimingStream() {
+        return hardwareTimingSchema != null;
+    }
+
+    public int requiredHardwareTimingSchema() {
+        if (hardwareTimingSchema == null) {
+            return 0;
+        }
+        if (hardwareTimingSchema != 1) {
+            throw new IllegalArgumentException(
+                    "Unsupported hardware_timing_schema: " + hardwareTimingSchema);
+        }
+        return hardwareTimingSchema;
+    }
+
     /** Load metadata from a metadata.json file. */
     public static TraceMetadata load(Path metadataFile) throws IOException {
-        ObjectMapper mapper = new ObjectMapper();
-        return mapper.readValue(metadataFile.toFile(), TraceMetadata.class);
+        JsonFactory factory = new JsonFactory()
+                .enable(JsonParser.Feature.STRICT_DUPLICATE_DETECTION);
+        ObjectMapper mapper = new ObjectMapper(factory);
+        try (InputStream input = Files.newInputStream(metadataFile);
+             JsonParser parser = factory.createParser(input)) {
+            JsonNode root = mapper.readTree(parser);
+            if (root == null || !root.isObject() || parser.nextToken() != null) {
+                throw new IOException(metadataFile.getFileName() + ": metadata must be one JSON object");
+            }
+            JsonNode timingSchema = root.get("hardware_timing_schema");
+            if (timingSchema != null && (!timingSchema.isInt() || timingSchema.intValue() != 1)) {
+                throw new IOException(metadataFile.getFileName()
+                        + ": hardware_timing_schema must be JSON integer 1");
+            }
+            return mapper.treeToValue(root, TraceMetadata.class);
+        }
     }
 }

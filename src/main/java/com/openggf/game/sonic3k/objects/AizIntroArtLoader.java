@@ -795,6 +795,7 @@ public class AizIntroArtLoader {
                  corkFloorPatterns.length));
     }
 
+
     /** Returns the plane renderer, lazily caching if needed. */
     public static PatternSpriteRenderer getPlaneRenderer() {
         return getPlaneRenderer(new BootstrapObjectServices());

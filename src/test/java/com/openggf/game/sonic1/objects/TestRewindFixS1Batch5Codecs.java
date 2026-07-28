@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
  * is intentionally excluded: it is a {@code GameMode.TRY_AGAIN_END} display
  * object that is never instantiated in gameplay and therefore can never enter a
  * gameplay-scoped rewind snapshot (documented in
- * docs/KNOWN_DISCREPANCIES.md "Batch-5 Rewind: Transient Cosmetic Children Not
+ * docs/status/known-discrepancies.md "Batch-5 Rewind: Transient Cosmetic Children Not
  * Rewound"), so it must NOT have a codec.
  *
  * <p>Pure metadata test: it reads deleted-codec state without a ROM, OpenGL, or

@@ -29,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * spawnChildren()}). Registering a codec for them would double their count on restore
  * (boss reconstruction re-spawns them, then the codec adds another copy). They are
  * re-established by boss reconstruction and must NOT have codecs.
- * See {@code TestBossChildNoDoubleSpawnParity} and {@code docs/KNOWN_DISCREPANCIES.md}.
+ * See {@code TestBossChildNoDoubleSpawnParity} and {@code docs/status/known-discrepancies.md}.
  * The WFZ floating-platform, laser-wall, and platform-hurt children now restore
  * through graph-tested {@code RewindRecreatable} generic recreate.
  *

@@ -70,9 +70,36 @@ public record SolidRoutineProfile(
                 carriesAirborneRiderAfterExitPlatform);
     }
 
+    /**
+     * Per-thread cache of converted profiles, keyed by the canonical profile's
+     * own signature. Every factory on this class funnels through here, so one
+     * cache covers them all.
+     *
+     * <p>This is the second of the two allocations the solid path used to make
+     * per object per player per frame — {@code fromProvider} built a canonical
+     * profile and then immediately converted it. Both are now cached.
+     */
+    private static final ThreadLocal<
+            com.openggf.game.profiles.solidroutine.SolidRoutineProfileInterner<SolidRoutineProfile>>
+            INTERNER = ThreadLocal.withInitial(
+                    com.openggf.game.profiles.solidroutine.SolidRoutineProfileInterner::new);
+
     public static SolidRoutineProfile fromCanonical(
             com.openggf.game.profiles.solidroutine.SolidRoutineProfile canonical) {
         Objects.requireNonNull(canonical, "canonical");
+        long signature = canonical.signature();
+        var interner = INTERNER.get();
+        SolidRoutineProfile cached = interner.get(signature);
+        if (cached != null) {
+            return cached;
+        }
+        SolidRoutineProfile built = buildFrom(canonical);
+        interner.put(signature, built);
+        return built;
+    }
+
+    private static SolidRoutineProfile buildFrom(
+            com.openggf.game.profiles.solidroutine.SolidRoutineProfile canonical) {
         return new SolidRoutineProfile(
                 SolidRoutineKind.fromCanonical(canonical.kind()),
                 canonical.topSolidOnly(),

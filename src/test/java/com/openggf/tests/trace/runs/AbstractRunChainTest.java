@@ -15,6 +15,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.OscillationManager;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.trace.ToleranceConfig;
@@ -26,9 +27,14 @@ import com.openggf.trace.replay.TraceReplayDriver;
 import com.openggf.trace.replay.TraceReplayFixture;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker;
+import com.openggf.trace.timing.HardwareTimingReplayPort;
+import com.openggf.trace.timing.HardwareTimingSchedule;
+import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker.BoundaryEntryMode;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker.BoundaryObservation;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker.BoundaryProbe;
+import com.openggf.trace.replay.runs.TraceRunReplayWalker.HardwareTimingCoordinator;
+import com.openggf.trace.replay.runs.TraceRunReplayWalker.HardwareTimingSegment;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker.ReturnAssertionMode;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker.SegmentPlan;
 
@@ -49,7 +55,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Reusable base for multi-stage trace RUN chain tests (spec/API contract:
  * "Decisions locked with the owner" and Component 2 in
- * docs/superpowers/specs/2026-07-18-multi-stage-trace-runs-design.md). Drives
+ * docs/architecture/designs/2026-07-18-multi-stage-trace-runs-design.md). Drives
  * ONE continuous {@link GameLoop} through EVERY segment of a
  * {@link TraceRunManifest} — with NO hardcoded segment count and NO
  * zone/route/frame carve-out — and asserts that the engine organically raises
@@ -139,6 +145,8 @@ abstract class AbstractRunChainTest {
         // matches the standalone AbstractTraceReplayTest ordering
         // (prepareConfiguration before its one and only fixture build).
         TraceReplaySessionBootstrap.prepareConfiguration(trace0, trace0.metadata());
+        boolean recordedHardwareTiming =
+                TraceRunReplayWalker.hasHardwareTimingStream(plans);
 
         // Mirrors TestPachinkoTitleCardIntegration's engine setup: a
         // HeadlessTestFixture build initializes the headless engine before a real
@@ -146,31 +154,43 @@ abstract class AbstractRunChainTest {
         // afterward -- TraceReplayDriver.start() performs its own full reset +
         // team registration + level load, so a stale cached sprite reference
         // would desync from the engine's actual roster.
-        HeadlessTestFixture.builder().withZoneAndAct(bootZone, bootAct).build();
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(bootZone, bootAct)
+                .withHardwareReadinessAdmissionPolicy(
+                        recordedHardwareTiming
+                                ? HardwareReadinessAdmissionPolicy.RECORDED
+                                : HardwareReadinessAdmissionPolicy.LIVE)
+                .build();
         InputHandler inputHandler = new InputHandler();
         GameLoop loop = new GameLoop(inputHandler);
 
         LiveEngineFixture fixture = new LiveEngineFixture(movie);
         TraceReplayDriver driver = new TraceReplayDriver(
-                trace0, movie, fixture, loop, fixture::sprite, () -> { });
+                trace0, movie, fixture, loop, fixture::sprite, () -> { },
+                recordedHardwareTiming);
         driver.start(bootZone, bootAct);
 
+        HardwareTimingCoordinator hardwareTiming =
+                new HardwareTimingCoordinator(
+                        fixture, TraceRunReplayWalker.hardwareTimingSegments(plans));
+        Throwable primaryFailure = null;
+        try {
+            PlaybackDebugManager playback = GameServices.playbackDebug();
+            RealEngineHooks hooks = new RealEngineHooks(loop);
+            BoundaryProbe probe = new BoundaryProbe(hooks);
+            probe.setBeforeFrameObserver(hardwareTiming::beginPlaybackFrame);
+            // Replace the raw comparator TraceReplayDriver.start() installed with the
+            // probe; the probe is the only observer for the rest of the chain,
+            // delegating comparison to whichever segment comparator is attached.
+            playback.setFrameObserver(probe);
+            probe.setDelegate(driver.comparator());
 
-        PlaybackDebugManager playback = GameServices.playbackDebug();
-        RealEngineHooks hooks = new RealEngineHooks(loop);
-        BoundaryProbe probe = new BoundaryProbe(hooks);
-        // Replace the raw comparator TraceReplayDriver.start() installed with the
-        // probe; the probe is the only observer for the rest of the chain,
-        // delegating comparison to whichever segment comparator is attached.
-        playback.setFrameObserver(probe);
-        probe.setDelegate(driver.comparator());
-
-        // --- Step 3: walk every segment -----------------------------------------
-        LiveTraceComparator activeComparator = driver.comparator();
-        SegmentPlan uncomparedInteriorSourceLevel = null;
-        int uncomparedInteriorSourceVblank = 0;
-        int i = 0;
-        while (i < plans.size()) {
+            // --- Step 3: walk every segment -------------------------------------
+            LiveTraceComparator activeComparator = driver.comparator();
+            SegmentPlan uncomparedInteriorSourceLevel = null;
+            int uncomparedInteriorSourceVblank = 0;
+            int i = 0;
+            while (i < plans.size()) {
             SegmentPlan seg = plans.get(i);
             Object levelAtSegmentStart = GameServices.level().getCurrentLevel();
             TraceRunManifest.Transition exit = seg.exitBoundary();
@@ -184,6 +204,7 @@ abstract class AbstractRunChainTest {
                 stepFrames(loop, remainingFrames);
                 maybeWriteReport(run.runId(), i, activeComparator);
                 if (last) {
+                    hardwareTiming.close();
                     replayTerminalMovieTail(run, loop, inputHandler, movie, seg);
                     break;
                 }
@@ -236,9 +257,25 @@ abstract class AbstractRunChainTest {
                 // and no field comparison happens during this segment
                 // (attachInteriorComparator keeps returning null for special_stage).
                 boolean uncomparedInterior = TraceRunReplayWalker.isUncomparedInterior(seg.segment());
-                Runnable stepOneFrame = uncomparedInterior
-                        ? uncomparedInteriorStep(loop, inputHandler, movie, seg)
-                        : () -> stepEngineFrame(loop);
+                Runnable stepOneFrame;
+                if (uncomparedInterior) {
+                    Runnable driveInterior =
+                            uncomparedInteriorStep(loop, inputHandler, movie, seg);
+                    int segmentIndex = i;
+                    int[] traceRow = {0};
+                    stepOneFrame = () -> {
+                        if (traceRow[0] < seg.segment().traceFrameCount()) {
+                            hardwareTiming.beginSegmentRow(
+                                    segmentIndex, traceRow[0]);
+                        } else {
+                            fixture.enterHardwareTimingGap();
+                        }
+                        driveInterior.run();
+                        traceRow[0]++;
+                    };
+                } else {
+                    stepOneFrame = () -> stepEngineFrame(loop);
+                }
                 int returnOffset = plans.get(i + 1).segment().bk2FrameOffset();
                 // The shared BK2 cursor is handled OPPOSITELY for the two interior
                 // kinds, because they advance it oppositely:
@@ -356,6 +393,21 @@ abstract class AbstractRunChainTest {
                 activeComparator = handoffIntoInterior(
                         loop, playback, probe, movie, interior, stepCap, fixture);
                 i++;
+            }
+            }
+            hardwareTiming.close();
+        } catch (Exception | Error failure) {
+            primaryFailure = failure;
+            throw failure;
+        } finally {
+            try {
+                hardwareTiming.close();
+            } catch (RuntimeException | Error closeFailure) {
+                if (primaryFailure != null) {
+                    primaryFailure.addSuppressed(closeFailure);
+                } else {
+                    throw closeFailure;
+                }
             }
         }
     }
@@ -660,7 +712,7 @@ abstract class AbstractRunChainTest {
      * field comparison is an explicitly LATER workflow; when it lands, build the
      * special-stage comparator HERE instead of returning {@code null} for a
      * {@code special_stage} segment. See "Decisions locked with the owner" item 1
-     * in docs/superpowers/specs/2026-07-18-multi-stage-trace-runs-design.md.
+     * in docs/architecture/designs/2026-07-18-multi-stage-trace-runs-design.md.
      *
      * <p>v1: a {@code bonus_stage} interior returns a per-frame
      * {@link LiveTraceComparator}; a {@code special_stage} interior returns
@@ -1265,6 +1317,9 @@ abstract class AbstractRunChainTest {
      */
     protected static final class LiveEngineFixture implements TraceReplayFixture {
         private final Bk2Movie movie;
+        private HardwareTimingReplayPort hardwareTimingReplayPort;
+        private TraceHardwareTimingBoundaryObserver hardwareTimingObserver;
+        private boolean hardwareTimingReplayClosed;
 
         private LiveEngineFixture(Bk2Movie movie) {
             this.movie = movie;
@@ -1278,6 +1333,61 @@ abstract class AbstractRunChainTest {
         @Override
         public GameplayModeContext gameplayMode() {
             return SessionManager.getCurrentGameplayMode();
+        }
+
+        @Override
+        public void installHardwareTimingReplay(HardwareTimingReplayPort replayPort) {
+            hardwareTimingReplayPort = replayPort;
+            hardwareTimingObserver = new TraceHardwareTimingBoundaryObserver(replayPort);
+            gameplayMode().getRewindRegistry().register(replayPort);
+            gameplayMode().setHardwareTimingBoundaryObserver(hardwareTimingObserver);
+            gameplayMode().setHardwareTimingReplayCloseHook(
+                    this::closeHardwareTimingReplayRun);
+        }
+
+        @Override
+        public void beginTraceRow(int traceIndex, int rawFrame) {
+            if (hardwareTimingObserver != null) {
+                hardwareTimingObserver.beginRawFrame(rawFrame);
+            }
+        }
+
+        @Override
+        public void enterHardwareTimingGap() {
+            if (hardwareTimingObserver != null) {
+                hardwareTimingObserver.enterUnrepresentedGap();
+            }
+        }
+
+        @Override
+        public void verifyHardwareTimingSegmentEdges() {
+            if (hardwareTimingReplayPort != null) {
+                hardwareTimingReplayPort.verifySegmentEdges();
+            }
+        }
+
+        @Override
+        public void handoffHardwareTimingReplay(HardwareTimingSchedule nextSchedule) {
+            if (hardwareTimingReplayPort != null) {
+                hardwareTimingReplayPort.handoffTo(nextSchedule);
+            }
+        }
+
+        @Override
+        public void closeHardwareTimingReplayRun() {
+            if (hardwareTimingReplayClosed || hardwareTimingReplayPort == null) {
+                return;
+            }
+            hardwareTimingReplayClosed = true;
+            try {
+                hardwareTimingReplayPort.verifyRunComplete();
+            } finally {
+                gameplayMode().setHardwareTimingBoundaryObserver(null);
+                gameplayMode().getRewindRegistry()
+                        .deregister(HardwareTimingReplayPort.REWIND_KEY);
+                gameplayMode().clearHardwareTimingReplayCloseHook();
+                hardwareTimingObserver = null;
+            }
         }
 
         @Override

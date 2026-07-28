@@ -243,7 +243,7 @@ public class Sonic1MovingBlockObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(activeWidth, HALF_HEIGHT, MV_SONIC_OFFSET);
+        return SolidObjectParams.of(activeWidth, HALF_HEIGHT, MV_SONIC_OFFSET);
     }
 
     @Override

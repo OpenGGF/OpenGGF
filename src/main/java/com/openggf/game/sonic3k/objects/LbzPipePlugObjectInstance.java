@@ -108,7 +108,7 @@ public final class LbzPipePlugObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(SOLID_HALF_WIDTH, AIR_HALF_HEIGHT, GROUND_HALF_HEIGHT);
+        return SolidObjectParams.of(SOLID_HALF_WIDTH, AIR_HALF_HEIGHT, GROUND_HALF_HEIGHT);
     }
 
     @Override

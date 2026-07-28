@@ -2090,7 +2090,7 @@ public class SidekickCpuController {
         // ticks run) is intended to recover the ROM mid-frame view, but is
         // NOT plumbed in here yet — the engine's own frame-start OnObj
         // diverges from ROM's mid-frame OnObj at some object-release
-        // transitions (see docs/S3K_KNOWN_BUGS.md, CNZ F7872 / AIZ F7381),
+        // transitions (see docs/status/s3k-known-bugs.md, CNZ F7872 / AIZ F7381),
         // so swapping in the snapshot alone regresses AIZ1 around F2021.
         // Resolving that requires aligning the engine's OnObj clear timing
         // with ROM's solid-object-processing-driven clear; until then this

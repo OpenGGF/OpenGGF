@@ -8,6 +8,7 @@ import com.openggf.game.save.SaveSessionContext;
 import com.openggf.game.save.SelectedTeam;
 import com.openggf.game.sonic1.Sonic1GameModule;
 import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.camera.Camera;
 import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.GraphicsManager;
@@ -202,6 +203,14 @@ class TestSessionManager {
         assertNull(SessionManager.getCurrentWorldSession());
         assertSame(bootstrapFade, graphics.getFadeManager());
     }
+
+    @Test
+    void openGameplaySessionAcceptsAdmissionPolicyBeforeContextConstruction() {
+        GameplayModeContext gameplay = SessionManager.openGameplaySession(
+                new Sonic2GameModule(), HardwareReadinessAdmissionPolicy.RECORDED);
+
+        assertEquals(HardwareReadinessAdmissionPolicy.RECORDED,
+                gameplay.hardwareTiming().admissionPolicy());
+        assertNotNull(gameplay.recordedCompletionAuthority());
+    }
 }
-
-

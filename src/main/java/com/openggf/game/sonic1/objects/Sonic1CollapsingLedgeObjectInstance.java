@@ -393,7 +393,7 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
         // ROM SlopeObject logic does not add object half-height to surface checks;
         // it tests directly against (obY - slopeSample). Keep vertical extents at 0
         // so sloped contact matches Platform3 landing math.
-        return new SolidObjectParams(PLATFORM_HALF_WIDTH, 0, 0);
+        return SolidObjectParams.of(PLATFORM_HALF_WIDTH, 0, 0);
     }
 
     @Override

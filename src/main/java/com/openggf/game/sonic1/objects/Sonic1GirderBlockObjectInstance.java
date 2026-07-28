@@ -176,7 +176,7 @@ public class Sonic1GirderBlockObjectInstance extends AbstractObjectInstance
         // d2 = obHeight = $18 (air half-height)
         // d3 = d2 + 1 = $19 (ground half-height)
         // bsr.w SolidObject — full-sided solid
-        return new SolidObjectParams(SOLID_HALF_WIDTH, SOLID_AIR_HALF_HEIGHT, SOLID_GND_HALF_HEIGHT);
+        return SolidObjectParams.of(SOLID_HALF_WIDTH, SOLID_AIR_HALF_HEIGHT, SOLID_GND_HALF_HEIGHT);
     }
 
     @Override

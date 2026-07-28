@@ -337,7 +337,7 @@ public class Sonic1LZConveyorObjectInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         if (mode == Mode.PLATFORM) {
-            return new SolidObjectParams(HALF_WIDTH, HALF_HEIGHT, HALF_HEIGHT);
+            return SolidObjectParams.of(HALF_WIDTH, HALF_HEIGHT, HALF_HEIGHT);
         }
         return null;
     }

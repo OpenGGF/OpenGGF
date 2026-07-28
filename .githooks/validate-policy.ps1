@@ -358,7 +358,7 @@ function Validate-NonMasterCommitMessage([string]$Message, [string[]]$Files) {
     Validate-ExactTrailer $Message $Files "Changelog" "CHANGELOG.md" "CHANGELOG.md"
     Validate-ChangelogJustification $Message $Files
     Validate-PrefixTrailer $Message $Files "Guide" "docs/guide/" "docs/guide/"
-    Validate-ExactTrailer $Message $Files "Known-Discrepancies" "docs/KNOWN_DISCREPANCIES.md" "docs/KNOWN_DISCREPANCIES.md"
+    Validate-ExactTrailer $Message $Files "Known-Discrepancies" "docs/status/known-discrepancies.md" "docs/status/known-discrepancies.md"
     Validate-ExactTrailer $Message $Files "S3K-Known-Discrepancies" "docs/S3K_KNOWN_DISCREPANCIES.md" "docs/S3K_KNOWN_DISCREPANCIES.md"
     Validate-AgentDocsTrailer $Message $Files
     Validate-ExactTrailer $Message $Files "Configuration-Docs" "CONFIGURATION.md" "CONFIGURATION.md"
@@ -474,7 +474,7 @@ function Validate-CiCommitRange([string]$EffectiveBaseSha, [string]$HeadSha) {
         Validate-ExactTrailer $message $files "Changelog" "CHANGELOG.md" "CHANGELOG.md"
         Validate-ChangelogJustification $message $files
         Validate-PrefixTrailer $message $files "Guide" "docs/guide/" "docs/guide/"
-        Validate-ExactTrailer $message $files "Known-Discrepancies" "docs/KNOWN_DISCREPANCIES.md" "docs/KNOWN_DISCREPANCIES.md"
+        Validate-ExactTrailer $message $files "Known-Discrepancies" "docs/status/known-discrepancies.md" "docs/status/known-discrepancies.md"
         Validate-ExactTrailer $message $files "S3K-Known-Discrepancies" "docs/S3K_KNOWN_DISCREPANCIES.md" "docs/S3K_KNOWN_DISCREPANCIES.md"
         Validate-AgentDocsTrailer $message $files
         Validate-ExactTrailer $message $files "Configuration-Docs" "CONFIGURATION.md" "CONFIGURATION.md"

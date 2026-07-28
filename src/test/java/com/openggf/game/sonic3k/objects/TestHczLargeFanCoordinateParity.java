@@ -1,17 +1,23 @@
 package com.openggf.game.sonic3k.objects;
 
-import com.openggf.game.PlayerCharacter;
+import com.openggf.data.Rom;
+import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
-import com.openggf.game.sonic3k.events.Sonic3kHCZEvents;
-import com.openggf.game.sonic3k.runtime.HczZoneRuntimeState;
+import com.openggf.game.timing.HardwareServiceBoundary;
+import com.openggf.game.timing.HardwareTimingService;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.StubObjectServices;
+import com.openggf.level.objects.TestObjectServices;
+import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.TestablePlayableSprite;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
 
 import static com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance.HCZBreakableBarState;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+@RequiresRom(SonicGame.SONIC_3K)
 class TestHczLargeFanCoordinateParity {
 
     @Test
@@ -21,7 +27,20 @@ class TestHczLargeFanCoordinateParity {
         int fanY = 0x0580;
         HCZLargeFanObjectInstance fan = new HCZLargeFanObjectInstance(
                 new ObjectSpawn(fanX, fanY, Sonic3kObjectIds.HCZ_LARGE_FAN, 0, 0, false, 0));
-        fan.setServices(new StubObjectServices());
+        HardwareTimingService timing = GameServices.hardwareTiming();
+        timing.resetForMissingSnapshot();
+        Rom rom = TestEnvironment.currentRom();
+        fan.setServices(new TestObjectServices() {
+            @Override
+            public HardwareTimingService hardwareTiming() {
+                return timing;
+            }
+
+            @Override
+            public Rom rom() {
+                return rom;
+            }
+        });
 
         TestablePlayableSprite player = standingPlayer();
         player.setCentreX((short) (fanX + 0x20));
@@ -30,27 +49,22 @@ class TestHczLargeFanCoordinateParity {
         fan.update(1, player);
         assertEquals(fanY, fan.getY(),
                 "Obj_HCZLargeFan queues Kosinski art on trigger before the first drop tick");
-        fan.update(2, player);
-        fan.update(3, player);
-        fan.update(4, player);
+        int frame = 2;
+        while (timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE) > 0
+                && frame < 10_000) {
+            timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            fan.update(frame++, player);
+            timing.service(HardwareServiceBoundary.POST_OBJECTS);
+        }
+        assertEquals(0, timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE));
         assertEquals(fanY, fan.getY(),
                 "Obj_HCZLargeFan waits for queued art before initializing the falling fan");
-        fan.update(5, player);
+        timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        fan.update(frame, player);
+        timing.service(HardwareServiceBoundary.POST_OBJECTS);
 
         assertEquals(fanY + 8, fan.getY(),
                 "Obj_HCZLargeFan compares ROM x_pos/y_pos, which map to player centre coordinates");
-    }
-
-    @Test
-    void laterActFanConsumesSessionPrimedModuleQueueOneDispatchSooner() {
-        HczZoneRuntimeState actOneState = new HczZoneRuntimeState(
-                0, PlayerCharacter.SONIC_AND_TAILS, new Sonic3kHCZEvents(() -> 0));
-        HCZBreakableBarState.reset();
-
-        assertEquals(3, HCZBreakableBarState.claimLargeFanModuleWaitFrames());
-        new HczZoneRuntimeState(1, actOneState.playerCharacter(), new Sonic3kHCZEvents(() -> 0));
-        assertEquals(2, HCZBreakableBarState.claimLargeFanModuleWaitFrames(),
-                "the shared KosM queue remains primed across HCZ's seamless act runtime replacement");
     }
 
     private static TestablePlayableSprite standingPlayer() {

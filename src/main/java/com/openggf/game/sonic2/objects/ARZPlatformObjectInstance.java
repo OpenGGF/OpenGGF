@@ -168,9 +168,9 @@ public class ARZPlatformObjectInstance extends AbstractObjectInstance
             int halfWidth = widthPixels + SOLID_EXTRA_WIDTH;
             int airHalfHeight = Math.max(1, yRadius);
             int groundHalfHeight = Math.max(1, yRadius + 1);
-            return new SolidObjectParams(halfWidth, airHalfHeight, groundHalfHeight);
+            return SolidObjectParams.of(halfWidth, airHalfHeight, groundHalfHeight);
         }
-        return new SolidObjectParams(widthPixels, HALF_HEIGHT, HALF_HEIGHT);
+        return SolidObjectParams.of(widthPixels, HALF_HEIGHT, HALF_HEIGHT);
     }
 
     @Override

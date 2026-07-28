@@ -23,7 +23,7 @@ namespace OpenGGF.BizHawk.Headless
 
     /// <summary>
     /// Native port of the S3K standard Lua trace recorder's frame loop
-    /// (tools/bizhawk/s3k_trace_recorder.lua v6.32-s3k; spec
+    /// (tools/bizhawk/s3k_trace_recorder.lua v6.37-s3k; spec
     /// tools/bizhawk-headless/docs/s3k-profiles-and-hooks.md §1/§3).
     /// Supports all three profiles:
     ///
@@ -111,7 +111,7 @@ namespace OpenGGF.BizHawk.Headless
         /// 213 MB of ASCII, i.e. ~426 MB of char storage duplicated for
         /// the duration of a single Write call.
         /// </summary>
-        private sealed class TraceStreamSink
+        private sealed class TraceStreamSink : TextWriter
         {
             private const int FlushBlockChars = 64 * 1024;
 
@@ -126,15 +126,39 @@ namespace OpenGGF.BizHawk.Headless
                 this.buffer = discardable ? new StringBuilder() : null;
             }
 
-            public void AppendLine(string line)
+            public override Encoding Encoding
+            {
+                get { return Encoding.UTF8; }
+            }
+
+            public override void Write(char value)
             {
                 if (buffer == null)
                 {
-                    writer.Write(line);
-                    writer.Write('\n');
-                    return;
+                    writer.Write(value);
                 }
-                buffer.Append(line).Append('\n');
+                else
+                {
+                    buffer.Append(value);
+                }
+            }
+
+            public override void Write(string value)
+            {
+                if (buffer == null)
+                {
+                    writer.Write(value);
+                }
+                else
+                {
+                    buffer.Append(value);
+                }
+            }
+
+            public void AppendLine(string line)
+            {
+                Write(line);
+                Write('\n');
             }
 
             /// <summary>
@@ -155,7 +179,7 @@ namespace OpenGGF.BizHawk.Headless
                 buffer.Length = 0;
             }
 
-            public void Flush()
+            public override void Flush()
             {
                 if (buffer == null)
                 {
@@ -182,6 +206,29 @@ namespace OpenGGF.BizHawk.Headless
             TextWriter auxStateJsonl,
             TextWriter metadataJson)
         {
+            return Capture(
+                movie,
+                host,
+                traceProfile,
+                recordingDate,
+                new byte[0],
+                physicsCsv,
+                auxStateJsonl,
+                TextWriter.Null,
+                metadataJson);
+        }
+
+        public static S3KTraceCaptureResult Capture(
+            Bk2Movie movie,
+            IGpgxHost host,
+            string traceProfile,
+            string recordingDate,
+            byte[] rom,
+            TextWriter physicsCsv,
+            TextWriter auxStateJsonl,
+            TextWriter hardwareTimingJsonl,
+            TextWriter metadataJson)
+        {
             if (movie == null)
             {
                 throw new ArgumentNullException("movie");
@@ -206,6 +253,14 @@ namespace OpenGGF.BizHawk.Headless
             {
                 throw new ArgumentNullException("auxStateJsonl");
             }
+            if (rom == null)
+            {
+                throw new ArgumentNullException("rom");
+            }
+            if (hardwareTimingJsonl == null)
+            {
+                throw new ArgumentNullException("hardwareTimingJsonl");
+            }
             if (metadataJson == null)
             {
                 throw new ArgumentNullException("metadataJson");
@@ -223,6 +278,8 @@ namespace OpenGGF.BizHawk.Headless
             // for holding the capture in memory.
             var physicsSink = new TraceStreamSink(physicsCsv, levelGated);
             var auxSink = new TraceStreamSink(auxStateJsonl, levelGated);
+            var hardwareTimingSink =
+                new TraceStreamSink(hardwareTimingJsonl, levelGated);
 
             bool started = false;
             bool preTraceSnapshotsWritten = false;
@@ -233,7 +290,10 @@ namespace OpenGGF.BizHawk.Headless
             int startZoneId = 0;
             int startAct = 0;
             uint startRngSeed = 0;
+            bool hardwareCompletionAuthorityArmed = false;
             S3KAuxEventEngine auxEngine = null;
+            var hardwareTimingEngine =
+                new HardwareTimingEventEngine(rom);
 
             using (IEnumerator<Bk2Frame> frames =
                 movie.OpenFrameStream().GetEnumerator())
@@ -280,6 +340,15 @@ namespace OpenGGF.BizHawk.Headless
                     }
 
                     byte gameMode = S3KRam.U8(host, S3KRam.GameMode);
+                    if (gameMode == S3KRam.GameModeLevel)
+                    {
+                        // LoadLevelLoadBlock waits synchronously for its two
+                        // initial KosM jobs. Preserve those jobs in the
+                        // run-wide ordinal ledger, but do not export
+                        // completion authority until the ordinary LevelLoop
+                        // becomes observable.
+                        hardwareCompletionAuthorityArmed = true;
+                    }
 
                     // (1) Discard-and-reset (level-gated only, spec §3.2
                     // step 6): a pause+A soft reset or power-on loop
@@ -300,9 +369,13 @@ namespace OpenGGF.BizHawk.Headless
                         startZoneId = 0;
                         startAct = 0;
                         startRngSeed = 0;
+                        hardwareCompletionAuthorityArmed = false;
                         physicsSink.Discard();
                         auxSink.Discard();
+                        hardwareTimingSink.Discard();
                         auxEngine = null;
+                        hardwareTimingEngine =
+                            new HardwareTimingEventEngine(rom);
                         continue;
                     }
 
@@ -349,6 +422,8 @@ namespace OpenGGF.BizHawk.Headless
                         auxEngine = new S3KAuxEventEngine(profile);
                         if (!aiz)
                         {
+                            hardwareTimingEngine.ObserveFrameEnd(
+                                0, host, null);
                             continue;   // Arm frame dropped (row 0 = next).
                         }
                         // aiz_end_to_end falls through: the arm frame is
@@ -410,6 +485,12 @@ namespace OpenGGF.BizHawk.Headless
                     {
                         auxSink.AppendLine(line);
                     }
+                    hardwareTimingEngine.ObserveFrameEnd(
+                        traceFrame,
+                        host,
+                        hardwareCompletionAuthorityArmed
+                            ? hardwareTimingSink
+                            : null);
                     traceFrame++;
                 }
 
@@ -426,6 +507,7 @@ namespace OpenGGF.BizHawk.Headless
                 }
                 physicsSink.Flush();
                 auxSink.Flush();
+                hardwareTimingSink.Flush();
                 metadataJson.Write(S3KTraceMetadataWriter.Format(
                     startZoneId,
                     startAct,

@@ -262,7 +262,7 @@ public class Sonic1LargeGrassyPlatformObjectInstance extends AbstractObjectInsta
         // that the engine's resolveSlopedContact (which uses groundHalfHeight) creates the
         // correct vertical acceptance window for side collision detection.
         int slopeCatchRange = (mappingFrame == 2) ? 0x30 : 0x20;
-        return new SolidObjectParams(platformWidth + 0x0B, slopeCatchRange, slopeCatchRange);
+        return SolidObjectParams.of(platformWidth + 0x0B, slopeCatchRange, slopeCatchRange);
     }
 
     @Override

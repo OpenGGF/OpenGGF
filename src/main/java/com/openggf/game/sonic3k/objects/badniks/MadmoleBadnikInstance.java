@@ -160,7 +160,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(0x1F, 4, 5, 0, homeY - currentY);
+        return SolidObjectParams.of(0x1F, 4, 5, 0, homeY - currentY);
     }
 
     @Override

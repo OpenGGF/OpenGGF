@@ -57,7 +57,7 @@ class TestBuildToolingGuard {
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - private static int findCheckpointFrame(TraceData trace, String checkpointName) {",
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - && checkpointName.equals(checkpoint.name())) {",
             // s3k_bonus_stage profile discriminator gates the bonus-stage entry
-            // bootstrap seam (spec docs/superpowers/specs/2026-07-18-multi-stage-trace-runs-design.md,
+            // bootstrap seam (spec docs/architecture/designs/2026-07-18-multi-stage-trace-runs-design.md,
             // engine addition #7); data-driven trace_profile gate, not a
             // zone/route/frame carve-out; comparison-only -- seeds only the
             // bootstrap "load save state" set (frame-0 rings, mirroring ROM
@@ -73,7 +73,9 @@ class TestBuildToolingGuard {
             // carve-out; comparison-only (removes a fixture-side mutation).
             "src/main/java/com/openggf/trace/TraceReplayBootstrap.java - && \"s3k_bonus_stage\".equals(metadata.traceProfile());");
     private static final Set<String> REVIEWED_S3K_STATIC_SESSION_STATE = Set.of(
-            "src/main/java/com/openggf/game/sonic3k/events/S3kSeamlessMutationExecutor.java - private static volatile AizFireOverlayData cachedAizFireOverlay;",
+            // Immutable ROM-derived terrain bytes only; no readiness or
+            // timing-produced runtime payload is stored in this cache.
+            "src/main/java/com/openggf/game/sonic3k/events/S3kSeamlessMutationExecutor.java - private static volatile AizFireTerrainData cachedAizFireTerrain;",
             "src/main/java/com/openggf/game/sonic3k/events/Sonic3kAIZEvents.java - private static volatile PendingFireSequence pendingFireSequence;",
             "src/main/java/com/openggf/game/sonic3k/features/HCZWaterSkimHandler.java - private static boolean skimActiveP1;",
             "src/main/java/com/openggf/game/sonic3k/features/HCZWaterSkimHandler.java - private static boolean skimActiveP2;",
@@ -131,17 +133,13 @@ class TestBuildToolingGuard {
             "src/main/java/com/openggf/game/sonic3k/objects/AizIntroTerrainSwap.java - private static OverlayData cachedOverlayData;",
             "src/main/java/com/openggf/game/sonic3k/objects/AizPlaneIntroInstance.java - private static int introScrollOffset = 0;",
             "src/main/java/com/openggf/game/sonic3k/objects/AizPlaneIntroInstance.java - private static boolean mainLevelPhaseActive = false;",
-            "src/main/java/com/openggf/game/sonic3k/objects/AizPlaneIntroInstance.java - private static boolean mainLevelTerrainSwapAttempted = false;",
-            "src/main/java/com/openggf/game/sonic3k/objects/AizPlaneIntroInstance.java - private static int decompressionCountdown = 0;",
             "src/main/java/com/openggf/game/sonic3k/objects/AizPlaneIntroInstance.java - private static AizPlaneIntroInstance activeIntroInstance;",
-            "src/main/java/com/openggf/game/sonic3k/objects/AizPlaneIntroInstance.java - private static boolean simulateDecompressionLoading = true;",
             "src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesCnz2AInstance.java - private static volatile CutsceneKnucklesCnz2AInstance activeInstance;",
             "src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesCnz2BInstance.java - private static volatile CutsceneKnucklesCnz2BInstance activeInstance;",
             "src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesHcz2Instance.java - private static volatile CutsceneKnucklesHcz2Instance activeInstance;",
             "src/main/java/com/openggf/game/sonic3k/objects/GumballMachineObjectInstance.java - private static volatile int debugBucketFilter = -1;",
             "src/main/java/com/openggf/game/sonic3k/objects/GumballMachineObjectInstance.java - private static volatile int debugSourceFilter = -1;",
             "src/main/java/com/openggf/game/sonic3k/objects/HCZWaterRushObjectInstance.java - private static int state;",
-            "src/main/java/com/openggf/game/sonic3k/objects/HCZWaterRushObjectInstance.java - private static boolean largeFanModulePrimed;",
             "src/main/java/com/openggf/game/sonic3k/objects/HCZWaterRushObjectInstance.java - private static boolean active;",
             "src/main/java/com/openggf/game/sonic3k/objects/IczSnowboardArtLoader.java - private static PatternSpriteRenderer sonicRenderer;",
             "src/main/java/com/openggf/game/sonic3k/objects/IczSnowboardArtLoader.java - private static PatternSpriteRenderer snowboardRenderer;",

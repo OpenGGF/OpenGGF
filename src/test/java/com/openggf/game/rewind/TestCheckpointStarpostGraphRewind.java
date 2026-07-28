@@ -116,7 +116,7 @@ class TestCheckpointStarpostGraphRewind {
     }
 
     /**
-     * Bug repro (S1 bug-triage row 5, docs/plans/s1-bug-batch-ledger-2026-07-05.md):
+     * Bug repro (S1 bug-triage row 5, docs/architecture/plans/s1-bug-batch-ledger-2026-07-05.md):
      * "Lamppost head sometimes stops duplicated and X-offset." Drives a real
      * activation through {@link Sonic1LamppostObjectInstance#update} (not direct
      * field pokes) so the twirl child spawns exactly as gameplay would trigger
@@ -327,7 +327,7 @@ class TestCheckpointStarpostGraphRewind {
     }
 
     /**
-     * Bug repro (docs/plans/s1-bug-batch-ledger-2026-07-05.md row 5's tracked
+     * Bug repro (docs/architecture/plans/s1-bug-batch-ledger-2026-07-05.md row 5's tracked
      * follow-up): before the bounded relink fix, {@code recreateForRewind} picked
      * whichever live lamppost was geometrically NEAREST at restore time with no
      * distance check, so a twirl whose true parent was torn down before capture (e.g.

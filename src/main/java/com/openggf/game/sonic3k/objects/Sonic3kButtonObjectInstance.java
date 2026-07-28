@@ -61,11 +61,11 @@ public class Sonic3kButtonObjectInstance extends AbstractObjectInstance
 
     // SolidObjectFull: d1=$1B, d2=4, d3=5
     private static final SolidObjectParams SOLID_PARAMS_FULL =
-            new SolidObjectParams(0x1B, 4, 5);
+            SolidObjectParams.of(0x1B, 4, 5);
 
     // SolidObjectTop: d1=$10, d3=6
     private static final SolidObjectParams SOLID_PARAMS_TOP =
-            new SolidObjectParams(0x10, 6, 6);
+            SolidObjectParams.of(0x10, 6, 6);
 
     // Frame indices
     private static final int FRAME_UNPRESSED = 0;

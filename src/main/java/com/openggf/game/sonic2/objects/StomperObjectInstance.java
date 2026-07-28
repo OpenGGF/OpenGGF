@@ -182,7 +182,7 @@ public class StomperObjectInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         // From disassembly lines 24113-24120
-        return new SolidObjectParams(COLLISION_HALF_WIDTH, COLLISION_HEIGHT, COLLISION_Y_RADIUS);
+        return SolidObjectParams.of(COLLISION_HALF_WIDTH, COLLISION_HEIGHT, COLLISION_Y_RADIUS);
     }
 
     @Override

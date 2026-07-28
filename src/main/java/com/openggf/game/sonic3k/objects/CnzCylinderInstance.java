@@ -30,7 +30,7 @@ import java.util.List;
 public final class CnzCylinderInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
     private static final SolidObjectParams SOLID_PARAMS =
-            new SolidObjectParams(0x2B, 0x20, 0x21);
+            SolidObjectParams.of(0x2B, 0x20, 0x21);
     private static final int PLAYER_CAPTURE_PRIORITY = RenderPriority.PLAYER_DEFAULT;
     private static final int OBJECT_PRIORITY_BUCKET = 5; // Obj_CNZCylinder: priority $280.
     private static final int PLAYER_TWIST_PRIORITY = RenderPriority.PLAYER_DEFAULT - 1;

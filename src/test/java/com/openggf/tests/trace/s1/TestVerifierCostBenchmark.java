@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Cost benchmark for the time-attack <b>replay verifier</b>
- * (docs/superpowers/specs/2026-07-04-time-attack-security-design.md §6).
+ * (docs/architecture/designs/2026-07-04-time-attack-security-design.md §6).
  *
  * <p>The trace-replay suite measures engine sim <em>plus</em> heavy per-frame
  * validation (full physics-field diff against physics.csv, aux-state parse,

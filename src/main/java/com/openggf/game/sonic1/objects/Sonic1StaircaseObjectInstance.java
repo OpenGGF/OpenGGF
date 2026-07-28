@@ -82,7 +82,7 @@ public class Sonic1StaircaseObjectInstance extends AbstractObjectInstance
 
     // Collision parameters (shared by all pieces)
     private static final SolidObjectParams PIECE_PARAMS =
-            new SolidObjectParams(PIECE_HALF_WIDTH, PIECE_TOP_HEIGHT, PIECE_BOTTOM_HEIGHT);
+            SolidObjectParams.of(PIECE_HALF_WIDTH, PIECE_TOP_HEIGHT, PIECE_BOTTOM_HEIGHT);
 
     // State
     private int state;              // subtype & 0x07 — incremented by state machine

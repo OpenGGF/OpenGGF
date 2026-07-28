@@ -182,7 +182,7 @@ public final class LbzMovingPlatformObjectInstance extends AbstractObjectInstanc
 
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(halfWidth, halfHeight, SOLID_GROUND_HALF_HEIGHT);
+        return SolidObjectParams.of(halfWidth, halfHeight, SOLID_GROUND_HALF_HEIGHT);
     }
 
     @Override

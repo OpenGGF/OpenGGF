@@ -18,6 +18,7 @@ import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.GameplaySessionFactory;
 import com.openggf.game.session.GameplayTeamBootstrap;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 
@@ -162,6 +163,11 @@ public final class HeadlessGameBoot implements AutoCloseable {
      * the fully bound loop ready to be stepped.
      */
     public GameLoop boot(Path romPath, int zone, int act) throws IOException {
+        return boot(romPath, zone, act, HardwareReadinessAdmissionPolicy.LIVE);
+    }
+
+    public GameLoop boot(Path romPath, int zone, int act,
+            HardwareReadinessAdmissionPolicy admissionPolicy) throws IOException {
         // Process-wide services were configured in initGl(); resolve them via
         // the EngineServices locator rather than raw singletons.
         EngineContext services = EngineServices.current();
@@ -179,7 +185,8 @@ public final class HeadlessGameBoot implements AutoCloseable {
                 new IOException("No game module detected for ROM: " + romPath));
 
         // --- gameplay session + managers --------------------------------
-        GameplayModeContext mode = SessionManager.openGameplaySession(module);
+        GameplayModeContext mode =
+                SessionManager.openGameplaySession(module, admissionPolicy);
         GameplaySessionFactory.attachManagers(mode, services);
         if (!mode.isGameplayRuntimeReady()) {
             throw new IllegalStateException(
@@ -242,6 +249,44 @@ public final class HeadlessGameBoot implements AutoCloseable {
         GameServices.camera().updatePosition(true);
 
         return loop;
+    }
+
+    /**
+     * Closes the current gameplay session and ROM, then boots a fresh one on the
+     * existing GL context.
+     *
+     * <p>Repeated measured passes need a genuinely fresh session — a second
+     * bootstrap over a session whose objects have already spawned and despawned
+     * is not the same workload as the first — but they must not pay for GL/GLFW
+     * re-initialisation, and they must not accumulate ROM images: a leaked ~4MB
+     * image per pass would show up directly in the heap and GC figures the run
+     * exists to report.
+     */
+    public GameLoop reboot(Path romPath, int zone, int act) throws IOException {
+        return reboot(
+                romPath, zone, act, HardwareReadinessAdmissionPolicy.LIVE);
+    }
+
+    public GameLoop reboot(
+            Path romPath,
+            int zone,
+            int act,
+            HardwareReadinessAdmissionPolicy admissionPolicy)
+            throws IOException {
+        try {
+            SessionManager.closeGameplaySession();
+        } catch (Exception ignored) {
+            // best-effort teardown; boot() below re-opens a fresh session
+        }
+        if (rom != null) {
+            try {
+                rom.close();
+            } catch (Exception ignored) {
+                // best-effort teardown
+            }
+            rom = null;
+        }
+        return boot(romPath, zone, act, admissionPolicy);
     }
 
     /**

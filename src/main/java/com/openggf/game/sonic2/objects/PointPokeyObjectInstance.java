@@ -140,7 +140,7 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         // From disassembly: d1 = 0x23 (half-width), d2 = 0x10 (air), d3 = 0x11 (ground)
-        return new SolidObjectParams(HALF_WIDTH, AIR_HALF_HEIGHT, GROUND_HALF_HEIGHT);
+        return SolidObjectParams.of(HALF_WIDTH, AIR_HALF_HEIGHT, GROUND_HALF_HEIGHT);
     }
 
     @Override

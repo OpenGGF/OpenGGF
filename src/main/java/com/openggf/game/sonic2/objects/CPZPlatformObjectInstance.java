@@ -120,7 +120,7 @@ public class CPZPlatformObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(widthPixels, HALF_HEIGHT, HALF_HEIGHT);
+        return SolidObjectParams.of(widthPixels, HALF_HEIGHT, HALF_HEIGHT);
     }
 
     /**

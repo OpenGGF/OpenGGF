@@ -105,7 +105,7 @@ hygiene was corrected before accepting RED evidence.
   ROM SHA-1 `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`.
 - Metadata `bk2_frame_offset` is parsed as an integer, required to equal `840`,
   and the parsed value drives both process launches and BK2 row mapping.
-- Existing unrelated changes in `docs/rewind/real-gaps.md` and ignored
+- Existing unrelated changes in `docs/status/rewind-round-trip-gaps.md` and ignored
   disassembly paths were not modified or staged.
 
 Concerns: none blocking. The build continues to emit the pre-existing Mono

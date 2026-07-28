@@ -1,5 +1,20 @@
 # S3K Complete-Run Recorder — Byte-Level SEGMENTATION Specification
 
+> **2026-07-27 publication note.** The committed fleet is now native
+> recorder v6.37, not the v6.33 Lua fixture generation described in the
+> historical sections below. The Sonic+Tails pass publishes all 15 captured
+> segments through the ending, and the Knuckles B/C identities were freshly
+> captured rather than metadata-patched. Exact destinations, source tokens,
+> schemas, hashes, lengths, and timing inventories are frozen in
+> `src/test/resources/traces/s3k/hardware-timing-publication.tsv`. The raw
+> terminal tokens are curated semantically as `hpz22 -> hpz`, `hpz -> ssz`,
+> `ssz -> dez`, `dez23 -> ddz`, and `ddz -> ending`.
+>
+> This document remains the segmentation research record. Native publication
+> authority and review requirements are defined by `../AGENTS.md` and
+> `../README.md`; Lua is retained as optional corroboration and diagnostic
+> substrate, not as fixture-publishing authority.
+
 Authoritative specification for the **segmentation** half of
 `tools/bizhawk/s3k_complete_run_recorder.lua`
 (`LUA_SCRIPT_VERSION = "6.33-s3k-completerun"`, 5918 lines, loading
@@ -30,8 +45,9 @@ The shared run/manifest model is
 [s2-run-mode-behavior.md](s2-run-mode-behavior.md) §11; S3K differs from
 both in material ways, called out in §2.3.
 
-**The Lua is the behavioral authority.** Where this document and the Lua
-disagree, the Lua wins and this document is the bug.
+For the historical v6.33 behavior described below, the Lua and this document
+must agree. Current fixture publication follows the native authority policy
+linked above.
 
 ---
 

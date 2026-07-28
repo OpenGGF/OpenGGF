@@ -1,5 +1,15 @@
 # S3K Complete-Run Recorder — Publication Specification (directories, metadata.json, run_manifest.json, encodings)
 
+> **2026-07-27 publication note.** The canonical committed fleet is native
+> recorder v6.37. It contains 47 timing-owned fixture destinations plus the
+> 25-segment/22-transition Knuckles B manifest. The immutable, machine-checked
+> inventory is
+> `src/test/resources/traces/s3k/hardware-timing-publication.tsv`; it records
+> destination ownership, raw recorder token, schemas, exact file hashes and
+> lengths, and hardware-event ranges. Historical v6.33 tables below remain
+> useful for byte-level provenance, but no longer enumerate the current
+> published fleet.
+
 Authoritative byte-level contract for **how the S3K complete-run recorder
 publishes output**: which directories it creates and how it picks their
 names, which files each segment kind writes, the exact byte layout of
@@ -7,7 +17,7 @@ names, which files each segment kind writes, the exact byte layout of
 line-ending convention, and the recorder's full environment-variable
 surface.
 
-Behavioral authority order:
+Historical v6.33 behavioral authority order:
 
 1. `tools/bizhawk/s3k_complete_run_recorder.lua` (5918 lines,
    `LUA_SCRIPT_VERSION = "6.33-s3k-completerun"` at L357) plus
@@ -15,6 +25,9 @@ Behavioral authority order:
 2. The canonical fixtures under `src/test/resources/traces/s3k/`
    (read-only; gunzip to a temp dir to inspect).
 3. `docs/skdisasm` for RAM questions.
+
+Current publication authority is the reviewed native harness under
+`tools/bizhawk-headless/AGENTS.md`; Lua is optional corroboration.
 
 Companion specs: `s3k-trace-recorder-behavior.md` (CORE physics.csv /
 RAM map / standard-recorder metadata), `s3k-aux-events.md` (aux event

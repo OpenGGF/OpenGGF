@@ -129,7 +129,7 @@ public class BridgeObjectInstance extends BoxObjectInstance
         // ROM Obj11 passes d1 = subtype*8 + 8 and d2 = subtype*16 into
         // PlatformObject11_cont, with the collision span centered 8px left of
         // the object origin and the surface fixed at obY-8.
-        return new SolidObjectParams(getHalfWidth(), 0, 0, COLLISION_X_OFFSET, -8);
+        return SolidObjectParams.of(getHalfWidth(), 0, 0, COLLISION_X_OFFSET, -8);
     }
 
     @Override

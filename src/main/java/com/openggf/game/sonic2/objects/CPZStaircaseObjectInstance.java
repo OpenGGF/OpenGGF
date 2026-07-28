@@ -60,7 +60,7 @@ public class CPZStaircaseObjectInstance extends AbstractObjectInstance
 
     // Collision parameters (shared by all pieces)
     private static final SolidObjectParams PIECE_PARAMS =
-            new SolidObjectParams(PIECE_HALF_WIDTH, PIECE_TOP_HEIGHT, PIECE_BOTTOM_HEIGHT);
+            SolidObjectParams.of(PIECE_HALF_WIDTH, PIECE_TOP_HEIGHT, PIECE_BOTTOM_HEIGHT);
 
     // State
     private int state;  // 0-7 (subtype & 0x07)

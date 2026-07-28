@@ -181,7 +181,7 @@ public class TensionBridgeObjectInstance extends AbstractObjectInstance
         // ROM: d1 = segCount*8 + 8 (half-width origin shift), d3 = 8 (half-height)
         // Matching S1 bridge pattern: halfWidth=N*8, offsetX=-8, offsetY=-8
         int halfWidth = segmentCount * 8;
-        return new SolidObjectParams(halfWidth, 0, 0, -8, -SURFACE_OFFSET);
+        return SolidObjectParams.of(halfWidth, 0, 0, -8, -SURFACE_OFFSET);
     }
 
     @Override

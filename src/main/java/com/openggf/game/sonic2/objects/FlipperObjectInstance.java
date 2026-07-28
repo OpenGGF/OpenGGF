@@ -440,10 +440,10 @@ public class FlipperObjectInstance extends BoxObjectInstance
     public SolidObjectParams getSolidParams() {
         if (isHorizontal()) {
             // ROM: d1=#$13 (19), d2=#$18 (24), d3=#$19 (25) at loc_2B312
-            return new SolidObjectParams(19, 24, 25);
+            return SolidObjectParams.of(19, 24, 25);
         }
         // ROM: d1=#$23 (35), d2=#6 at loc_2B1B6
-        return new SolidObjectParams(35, 6, 6);
+        return SolidObjectParams.of(35, 6, 6);
     }
 
     @Override

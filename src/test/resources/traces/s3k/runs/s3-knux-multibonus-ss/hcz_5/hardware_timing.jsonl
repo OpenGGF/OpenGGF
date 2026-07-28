@@ -1,0 +1,10 @@
+{"event":"hardware_work_completed","raw_frame":36,"boundary":"post_objects","kind":"kos_module_queue","ordinal":180,"submission_fingerprint":"sha256:9c1e13887bd31bf56ed6edecb5dc212e2befe5289a10318081cc54989e78dc2e"}
+{"event":"hardware_work_completed","raw_frame":41,"boundary":"post_objects","kind":"kos_module_queue","ordinal":181,"submission_fingerprint":"sha256:a0cfa4e1dcbf68a9f43d444fe8b581988a40218afc636158cffc6eecdbad5cde"}
+{"event":"hardware_work_completed","raw_frame":43,"boundary":"post_objects","kind":"kos_module_queue","ordinal":182,"submission_fingerprint":"sha256:03987fe59d7e6ee2d0b3f8aa2cdf093d9583175911848154872734d89f503deb"}
+{"event":"hardware_work_completed","raw_frame":46,"boundary":"post_objects","kind":"kos_module_queue","ordinal":183,"submission_fingerprint":"sha256:0956edb5f52b6e64cc09fc8ab775b37a044c3f3c3d97de85e62fdf4af9690197"}
+{"event":"hardware_work_completed","raw_frame":3156,"boundary":"post_objects","kind":"kos_module_queue","ordinal":184,"submission_fingerprint":"sha256:28a69b8f385d0f7355d90a7aa996d75d45e26eb4b2672d7ce3e0eec11a513b3f"}
+{"event":"hardware_work_completed","raw_frame":3323,"boundary":"post_objects","kind":"kos_module_queue","ordinal":185,"submission_fingerprint":"sha256:10eb568a70724c579f022914f56227c2c7fa421aafa8578aebaa874f0cffb0ca"}
+{"event":"hardware_work_completed","raw_frame":3325,"boundary":"post_objects","kind":"kos_module_queue","ordinal":186,"submission_fingerprint":"sha256:05324378670c6afa8c6d99f6e5313d625d2d926e6bc16f25cd9d8d1a5a195bf8"}
+{"event":"hardware_work_completed","raw_frame":3327,"boundary":"post_objects","kind":"kos_module_queue","ordinal":187,"submission_fingerprint":"sha256:7059802f2a045495d22a16d8c858c1758b786bf5d5f46c45838fa10bc0d1f6aa"}
+{"event":"hardware_work_completed","raw_frame":3329,"boundary":"post_objects","kind":"kos_module_queue","ordinal":188,"submission_fingerprint":"sha256:3f7193a29cfe5ec7d3f890c239a0e9bf3c25d7b18e6e91dcca3d304210747e6a"}
+{"event":"hardware_work_completed","raw_frame":3429,"boundary":"vint_service","kind":"kos_module_queue","ordinal":189,"submission_fingerprint":"sha256:7a80f893a3cc1de0d3aca6085453482fdcb99b0f7bf5c3e3299c5e5f3af61d80"}

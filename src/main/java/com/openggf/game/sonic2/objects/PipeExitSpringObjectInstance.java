@@ -218,7 +218,7 @@ public class PipeExitSpringObjectInstance extends BoxObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         // Width radius = 27, height (air) = 8, height (ground) = 8
-        return new SolidObjectParams(27, 8, 8);
+        return SolidObjectParams.of(27, 8, 8);
     }
 
     @Override

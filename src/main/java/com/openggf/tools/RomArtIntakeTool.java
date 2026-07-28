@@ -11,7 +11,7 @@ import java.util.Locale;
 /**
  * RomArtIntakeTool — S3K ROM-backed object art / mapping / PLC intake helper.
  *
- * <p>This tool implements Option 3 of {@code docs/AGENT_WORKFLOW_SUPPORT_OPTIONS.md}. It targets the
+ * <p>This tool implements Option 3 of {@code docs/agent-workflow/support-options.md}. It targets the
  * most error-prone S3K asset path: ROM-backed object art and mappings. It does <b>not</b> duplicate
  * offset-finding logic — it wraps {@link RomOffsetFinder} (always with the {@code --game s3k} profile)
  * and layers S3K-specific guardrails and recommendations on top of the raw search results.

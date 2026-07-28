@@ -133,7 +133,7 @@ public final class IczBigSnowPileInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(HALF_WIDTH, 0, 0);
+        return SolidObjectParams.of(HALF_WIDTH, 0, 0);
     }
 
     @Override

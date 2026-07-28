@@ -707,7 +707,7 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(
+        return SolidObjectParams.of(
                 zoneConfig.widthPixels,
                 zoneConfig.yRadius,
                 zoneConfig.yRadius + 1);

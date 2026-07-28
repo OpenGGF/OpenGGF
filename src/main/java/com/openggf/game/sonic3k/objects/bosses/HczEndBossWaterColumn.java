@@ -111,7 +111,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
     private static final int SOLID_HALF_WIDTH  = 0x1F;
     private static final int SOLID_HALF_HEIGHT = 0x0C;
     private static final SolidObjectParams SOLID_PARAMS =
-            new SolidObjectParams(SOLID_HALF_WIDTH, SOLID_HALF_HEIGHT, SOLID_HALF_HEIGHT);
+            SolidObjectParams.of(SOLID_HALF_WIDTH, SOLID_HALF_HEIGHT, SOLID_HALF_HEIGHT);
 
     // =========================================================================
     // Spin-up animation: byte_6BE0C

@@ -318,10 +318,10 @@ public class Sonic1SpringObjectInstance extends AbstractObjectInstance
     public SolidObjectParams getSolidParams() {
         if (springType == TYPE_HORIZONTAL) {
             // Spring_LR: d1=$13 (19), d2=$E (14), d3=$F (15)
-            return new SolidObjectParams(19, 14, 15);
+            return SolidObjectParams.of(19, 14, 15);
         }
         // Spring_Up / Spring_Dwn: d1=$1B (27), d2=8, d3=$10 (16)
-        return new SolidObjectParams(27, 8, 16);
+        return SolidObjectParams.of(27, 8, 16);
     }
 
     @Override

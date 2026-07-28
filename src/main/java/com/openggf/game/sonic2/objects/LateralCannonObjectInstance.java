@@ -340,7 +340,7 @@ public class LateralCannonObjectInstance extends AbstractObjectInstance
      */
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(PLATFORM_HALF_WIDTH, PLATFORM_HALF_HEIGHT_AIR, PLATFORM_HALF_HEIGHT_GND);
+        return SolidObjectParams.of(PLATFORM_HALF_WIDTH, PLATFORM_HALF_HEIGHT_AIR, PLATFORM_HALF_HEIGHT_GND);
     }
 
     @Override

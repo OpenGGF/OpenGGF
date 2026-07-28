@@ -22,22 +22,21 @@ the Lua recorders are retired rather than kept at feature parity. It is roughly
 under `--chromeless` swallows errors into a silent no-output run, and is the only
 one of the two with a test suite.
 
-Two things keep the Lua recorders around, and neither is a parity obligation:
+**This harness is also the canonical fixture-publication authority.** Establish
+recorder correctness before publication from named ROM/disassembly semantics,
+behavioral and unit tests, and independent review. Existing fixture vectors and
+Lua byte parity are optional corroboration, not publication prerequisites.
 
-1. **They are the regeneration oracle.** When a recorder must change, the sequence
-   is: fix the Lua, recapture with it, then make this harness independently
-   reproduce those bytes. That last step is the check. Capture a replacement
-   fixture *with this harness* and the gate compares the port against its own
-   output, which proves nothing. Keep the Lua runnable — frozen and unmaintained
-   is fine — so that check survives.
-2. **They are the substrate for ad-hoc debugging.** The `event.onmemoryexecute` /
-   `onmemorywrite` families live only there, and a twenty-line throwaway script
-   beats adding a `.cs` to two non-SDK csproj files for something you intend to
-   delete within the hour.
+Never make a capture certify itself. Freeze the candidate's literal hashes,
+lengths, versions, inventories, counts, ordering, and ranges; tests must not
+derive their expected values dynamically from the same invocation. Obtain
+explicit user approval for the exact bytes and deltas before installing them.
 
-So: when the two disagree today, the Lua is right by definition and the port is
-fixed. That is a statement about which artifact is the oracle, not a commitment
-to maintaining two recorders forever.
+Keep the Lua recorders runnable for optional differential evidence and ad-hoc
+debugging. The `event.onmemoryexecute` / `onmemorywrite` families live only there,
+and a twenty-line throwaway script beats adding a `.cs` to two non-SDK csproj
+files for something you intend to delete within the hour. Frozen and
+unmaintained Lua is fine; it is not the fixture publisher.
 
 ## Requirements
 
@@ -207,8 +206,27 @@ and never commit it. Every ROM-backed differential gate here passes it: they
 capture into a temp directory and compare raw bytes.
 
 [`../traces/compress-traces.ps1`](../traces/compress-traces.ps1) implements the
-same semantics for a directory and remains the path for the **Windows Lua route**,
-whose recorders still write uncompressed output.
+same semantics for scratch output from the **Windows Lua diagnostic route**,
+whose recorders still write uncompressed output. That output is corroborative
+only and must never be installed as a canonical fixture.
+
+## Publishing a canonical fixture
+
+1. Establish the native recorder's correctness from named ROM/disassembly
+   semantics, behavioral and unit tests, and independent review. Treat existing
+   fixture vectors and Lua parity as optional corroboration.
+2. Capture with the unchanged reviewed native implementation into scratch.
+3. Record literal SHA-256 digests, byte lengths, metadata versions, segment
+   inventories, row/event counts, ordering, ranges, and the named cause of every
+   byte-level delta. Stop on any unexplained delta.
+4. Obtain explicit user approval for those exact candidate bytes and reported
+   deltas, then install the native output byte-for-byte with no hand edits.
+5. Re-run native gates and repository fixture guards, then measure and record
+   replay-frontier movement.
+
+Publication tests assert the frozen literal evidence; they never rerun capture
+to derive expectations. Until the exact-byte approval in Step 4, committed
+fixtures remain read-only ground truth.
 
 ## The differential gates
 
@@ -218,10 +236,11 @@ normalization**, and `metadata.json` line-for-line with only `recording_date` an
 an exactly-pinned version line permitted to differ. Fixtures are decompressed into
 the test's temp directory and hashed there — the gates never modify them.
 
-That is the whole value of the harness: it is not "a recorder that looks right",
-it is a recorder proven to reproduce the authority's bytes. Treat a gate failure
-as a defect in this code, never as a reason to relax the comparison or to
-regenerate a fixture.
+These gates provide strong regression and cross-implementation evidence, but
+they do not let the recorder certify a newly proposed fixture. Treat a
+pre-publication gate failure as a defect in the recorder or its proposed
+contract, never as a reason to relax the comparison or silently replace a
+fixture.
 
 ## Specs
 
@@ -236,7 +255,8 @@ permitted deltas:
 | S3K standard | `s3k-trace-recorder-behavior.md`, `s3k-aux-events.md`, `s3k-profiles-and-hooks.md` |
 | S3K complete-run | `s3k-complete-run-behavior.md`, `s3k-completerun-profiles.md`, `s3k-run-publication.md` |
 
-Where a spec and the Lua disagree, **the Lua wins** and the spec is corrected.
+Where sources disagree, resolve the behavior against the ROM/disassembly and
+update the spec, implementation, or optional Lua corroboration accordingly.
 
 ## Layout
 

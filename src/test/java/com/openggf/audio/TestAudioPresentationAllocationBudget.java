@@ -772,6 +772,7 @@ class TestAudioPresentationAllocationBudget {
         private final int sampleRate;
         private final List<Integer> enqueuedFrames = new ArrayList<>();
         private int updateCalls;
+        private int queuedBuffers;
 
         private FakeDevice(int sampleRate) {
             this.sampleRate = sampleRate;
@@ -786,15 +787,18 @@ class TestAudioPresentationAllocationBudget {
         public void enqueue(
                 short[] stereoPcm, int stereoFrames, int rate) {
             enqueuedFrames.add(stereoFrames);
+            queuedBuffers++;
         }
 
         @Override
-        public void update() {
+        public int update() {
             updateCalls++;
+            return queuedBuffers;
         }
 
         @Override
         public void flush() {
+            queuedBuffers = 0;
         }
 
         @Override

@@ -443,7 +443,7 @@ public class RisingPillarObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(
+        return SolidObjectParams.of(
                 HALF_WIDTH + 0x0B,
                 yRadius,
                 yRadius + 1

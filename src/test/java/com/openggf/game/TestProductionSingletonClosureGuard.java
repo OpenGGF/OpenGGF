@@ -3,12 +3,14 @@ package com.openggf.game;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.EngineContext;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -59,6 +61,11 @@ public class TestProductionSingletonClosureGuard {
             "Engine.getInstance(",
             "Engine.current("
     );
+    private static final Set<String> NON_SINGLETON_GET_INSTANCE_OWNERS = Set.of(
+            "java.security.MessageDigest"
+    );
+    private static final Pattern RAW_GET_INSTANCE_PATTERN =
+            Pattern.compile("\\.\\s*getInstance\\s*\\(");
 
     private static final String ENGINE_SERVICES_BOOTSTRAP_EXCEPTION =
             "com/openggf/game/session/EngineContext.java";
@@ -203,10 +210,12 @@ public class TestProductionSingletonClosureGuard {
             "com/openggf/Engine.java",
             "com/openggf/game/session/EngineContext.java",
             "com/openggf/game/session/EngineServices.java",
-            // Headless composition roots for the trace-capture tool: configure
-            // EngineServices from the legacy singletons exactly like Engine does.
+            // Headless composition roots for the trace-driven CLI tools:
+            // configure EngineServices from the legacy singletons exactly like
+            // Engine does.
             "com/openggf/tools/HeadlessGameBoot.java",
-            "com/openggf/tools/TraceCaptureTool.java"
+            "com/openggf/tools/TraceCaptureTool.java",
+            "com/openggf/tools/TraceBenchmarkTool.java"
     );
 
     @Test
@@ -255,12 +264,11 @@ public class TestProductionSingletonClosureGuard {
         }
 
         List<String> violations = new ArrayList<>();
-        Pattern rawGetInstancePattern = Pattern.compile("\\.getInstance\\(");
         Files.walk(srcMain)
                 .filter(path -> path.toString().endsWith(".java"))
                 .filter(path -> !ENGINE_SERVICES_BOOTSTRAP_EXCEPTION.equals(
                         srcMain.relativize(path).toString().replace('\\', '/')))
-                .forEach(path -> scanRawPattern(srcMain, path, violations, rawGetInstancePattern, ".getInstance("));
+                .forEach(path -> scanRawGetInstanceCalls(srcMain, path, violations));
 
         if (!violations.isEmpty()) {
             fail("Found raw .getInstance() usage outside EngineContext bootstrap bridge:\n  "
@@ -992,6 +1000,84 @@ public class TestProductionSingletonClosureGuard {
         assertTrue(violations.contains("sample/Alias.java:6 - DebugRenderer.current("));
     }
 
+    @Test
+    public void rawGetInstanceGuardIgnoresOnlyImportedJdkFactoryAcrossWhitespace(@TempDir Path tempDir)
+            throws IOException {
+        Path source = tempDir.resolve("ImportedFactory.java");
+        Files.writeString(source, """
+                package sample;
+
+                import java.security.MessageDigest;
+
+                class ImportedFactory {
+                    void hash() throws Exception {
+                        MessageDigest.getInstance("SHA-256");
+                        MessageDigest
+                                .
+                                getInstance
+                                ("SHA-256");
+                    }
+                }
+                """);
+
+        List<String> violations = new ArrayList<>();
+        scanRawGetInstanceCalls(tempDir, source, violations);
+
+        assertTrue(violations.isEmpty());
+    }
+
+    @Test
+    public void rawGetInstanceGuardStillDetectsProjectAndLookalikeReceiversAcrossWhitespace(@TempDir Path tempDir)
+            throws IOException {
+        Path source = tempDir.resolve("ProjectFactories.java");
+        Files.writeString(source, """
+                package sample;
+
+                class ProjectFactories {
+                    void use() {
+                        ProjectRegistry
+                                .
+                                getInstance
+                                ();
+                        MessageDigest.getInstance("custom");
+                    }
+                }
+
+                class MessageDigest {
+                    static MessageDigest getInstance(String algorithm) {
+                        return new MessageDigest();
+                    }
+                }
+                """);
+
+        List<String> violations = new ArrayList<>();
+        scanRawGetInstanceCalls(tempDir, source, violations);
+
+        assertEquals(List.of(
+                "ProjectFactories.java:5 - .getInstance(",
+                "ProjectFactories.java:9 - .getInstance("), violations);
+    }
+
+    @Test
+    public void rawGetInstanceGuardIgnoresCommentAndStringDecoys(@TempDir Path tempDir)
+            throws IOException {
+        Path source = tempDir.resolve("Comments.java");
+        Files.writeString(source, """
+                package sample;
+
+                class Comments {
+                    // ProjectRegistry.getInstance();
+                    /* MessageDigest.getInstance("SHA-256"); */
+                    String example = "ProjectRegistry.getInstance()";
+                }
+                """);
+
+        List<String> violations = new ArrayList<>();
+        scanRawGetInstanceCalls(tempDir, source, violations);
+
+        assertTrue(violations.isEmpty());
+    }
+
     private static void scanFile(Path srcMain, Path file, List<String> violations) {
         scanFile(srcMain, file, violations, FORBIDDEN_SINGLETONS);
     }
@@ -1005,17 +1091,84 @@ public class TestProductionSingletonClosureGuard {
         }
     }
 
-    private static void scanRawPattern(Path srcMain, Path file, List<String> violations,
-                                       Pattern pattern, String label) {
+    private static void scanRawGetInstanceCalls(Path srcMain, Path file, List<String> violations) {
         try {
             String relative = srcMain.relativize(file).toString().replace('\\', '/');
-            String source = Files.readString(file);
-            Matcher matcher = pattern.matcher(source);
+            String source = stripComments(Files.readString(file));
+            Matcher matcher = RAW_GET_INSTANCE_PATTERN.matcher(source);
             while (matcher.find()) {
-                violations.add(relative + ":" + lineNumberForOffset(source, matcher.start()) + " - " + label);
+                Receiver receiver = receiverBefore(source, matcher.start());
+                if (!isNonSingletonGetInstanceOwner(source, receiver.name())) {
+                    violations.add(relative + ":" + lineNumberForOffset(source, receiver.start())
+                            + " - .getInstance(");
+                }
             }
         } catch (IOException ignored) {
         }
+    }
+
+    private static boolean isNonSingletonGetInstanceOwner(String source, String receiver) {
+        if (NON_SINGLETON_GET_INSTANCE_OWNERS.contains(receiver)) {
+            return true;
+        }
+        if (receiver.indexOf('.') >= 0) {
+            return false;
+        }
+        return NON_SINGLETON_GET_INSTANCE_OWNERS.stream()
+                .filter(owner -> owner.endsWith("." + receiver))
+                .anyMatch(owner -> hasExactImport(source, owner));
+    }
+
+    private static boolean hasExactImport(String source, String owner) {
+        String ownerPattern = Pattern.quote(owner).replace(".", "\\E\\s*\\.\\s*\\Q");
+        Pattern importPattern = Pattern.compile(
+                "(?m)^\\s*import\\s+" + ownerPattern + "\\s*;");
+        return importPattern.matcher(source).find();
+    }
+
+    private static Receiver receiverBefore(String source, int dotOffset) {
+        int cursor = skipWhitespaceBackward(source, dotOffset - 1);
+        int receiverEnd = cursor + 1;
+        int receiverStart = scanIdentifierBackward(source, cursor);
+        if (receiverStart == receiverEnd) {
+            return new Receiver("", dotOffset);
+        }
+        cursor = receiverStart - 1;
+
+        while (true) {
+            int separator = skipWhitespaceBackward(source, cursor);
+            if (separator < 0 || source.charAt(separator) != '.') {
+                break;
+            }
+            int precedingIdentifierEnd = skipWhitespaceBackward(source, separator - 1);
+            int precedingIdentifierStart = scanIdentifierBackward(source, precedingIdentifierEnd);
+            if (precedingIdentifierStart == precedingIdentifierEnd + 1) {
+                break;
+            }
+            receiverStart = precedingIdentifierStart;
+            cursor = receiverStart - 1;
+        }
+
+        String receiver = source.substring(receiverStart, receiverEnd).replaceAll("\\s+", "");
+        return new Receiver(receiver, receiverStart);
+    }
+
+    private static int skipWhitespaceBackward(String source, int cursor) {
+        while (cursor >= 0 && Character.isWhitespace(source.charAt(cursor))) {
+            cursor--;
+        }
+        return cursor;
+    }
+
+    private static int scanIdentifierBackward(String source, int identifierEnd) {
+        int cursor = identifierEnd;
+        while (cursor >= 0 && Character.isJavaIdentifierPart(source.charAt(cursor))) {
+            cursor--;
+        }
+        return cursor + 1;
+    }
+
+    private record Receiver(String name, int start) {
     }
 
     static List<String> scanSourceText(String relative, String source, List<String> forbiddenSingletons) {
@@ -1176,5 +1329,3 @@ public class TestProductionSingletonClosureGuard {
         return Files.isDirectory(srcMain) ? srcMain : null;
     }
 }
-
-

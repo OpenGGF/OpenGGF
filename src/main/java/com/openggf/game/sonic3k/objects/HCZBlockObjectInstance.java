@@ -81,7 +81,7 @@ public class HCZBlockObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(halfWidth + 0x0B, halfHeight, halfHeight + 1);
+        return SolidObjectParams.of(halfWidth + 0x0B, halfHeight, halfHeight + 1);
     }
 
     @Override

@@ -22,8 +22,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
     ///   bytes are decompressed read-only into the temp root and hashed
     ///   there before the produced files are hashed. The fixtures under
     ///   src/test/resources/traces/ are never written to.
-    /// - metadata.json line-for-line equality with EXACTLY ONE permitted
-    ///   delta: the recording_date value, which is nondeterministic.
+    /// - metadata.json line-for-line equality after exact approved
+    ///   normalization of 6.34 -> 6.32, trace_schema 7 -> 6, and removal of
+    ///   hardware_timing_schema; recording_date is nondeterministic.
     ///
     /// The metadata allowances this gate used to carry are deleted, not
     /// loosened. It previously permitted the fixtures' lua_script_version
@@ -83,12 +84,21 @@ namespace OpenGGF.BizHawk.Headless.Tests
             "^  \"recording_date\": \"[0-9]{4}-[0-9]{2}-[0-9]{2}\",$");
 
         /// <summary>
-        /// The stamp the regenerated fixtures and this port both carry,
-        /// pinned as an exact literal on BOTH sides of every metadata
-        /// comparison. There is no version delta left to allow for.
+        /// Exact fixture/current literals for the approved version/schema
+        /// normalization. Any other value fails.
         /// </summary>
-        private const string CurrentLuaScriptVersionLine =
+        private const string LegacyLuaScriptVersionLine =
             "  \"lua_script_version\": \"6.32-s3k\",";
+        private const string PublishedHardwareLuaScriptVersionLine =
+            "  \"lua_script_version\": \"6.35-s3k\",";
+        private const string CurrentLuaScriptVersionLine =
+            "  \"lua_script_version\": \"6.37-s3k\",";
+        private const string FixtureTraceSchemaLine =
+            "  \"trace_schema\": 6,";
+        private const string CurrentTraceSchemaLine =
+            "  \"trace_schema\": 7,";
+        private const string HardwareTimingSchemaLine =
+            "  \"hardware_timing_schema\": 1,";
 
         private static readonly S3KDifferentialCase AizEndToEndCase =
             new S3KDifferentialCase(
@@ -101,7 +111,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "3c219725d85d64762b514f973263edced337a37cd16fb8bf50f2b0ac"
                 + "3b5a2a39",
                 "9d90d669de5b9fc0c00666ad2023a164d1d110d441b9bcc8403280d1"
-                + "a5d74b47");
+                + "a5d74b47",
+                "349894a74ab42d2241f6e87a814e1795a716f276c6b41c2aca4edcf"
+                + "9b65d77e3");
 
         private static readonly S3KDifferentialCase CnzLevelGatedCase =
             new S3KDifferentialCase(
@@ -114,7 +126,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "195de5a64bd879f6d920ffe9a487931beb4f6366516587d23268b105"
                 + "9a7b46e2",
                 "17ddb988b74e8718d6e3d73a7aaefff56d077e6e5d015c7ab875a4674"
-                + "a94052e");
+                + "a94052e",
+                null);
 
         private static readonly S3KDifferentialCase MgzLevelGatedCase =
             new S3KDifferentialCase(
@@ -127,13 +140,18 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "16bff6712e4228494b8aeac587006edeee9f6befc62aa7b9078a465d"
                 + "b4e2d611",
                 "4ce8ee02e8e6dc1664659a494578427da0c6111e5a4c0fb88b71026b2"
-                + "b2c2035");
+                + "b2c2035",
+                null);
 
         public static void Register(ICollection<TestMain.TestCase> tests)
         {
             tests.Add(new TestMain.TestCase(
+                "S3KTraceDifferential metadata compatibility accepts only"
+                + " exact current, published, or legacy shapes",
+                MetadataCompatibilityShapesAreExact));
+            tests.Add(new TestMain.TestCase(
                 "S3KTraceDifferential native capture matches canonical AIZ"
-                + " end-to-end trace",
+                + " timing stream",
                 () => NativeCaptureMatchesCanonicalTrace(AizEndToEndCase),
                 game: "s3k",
                 movie: "s3-aiz1-2-sonictails",
@@ -177,7 +195,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 int traceFrameCount,
                 int movieFrameCount,
                 string physicsSha256,
-                string auxStateSha256)
+                string auxStateSha256,
+                string hardwareTimingSha256)
             {
                 FixtureDirectoryName = fixtureDirectoryName;
                 MovieFileName = movieFileName;
@@ -187,6 +206,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 MovieFrameCount = movieFrameCount;
                 PhysicsSha256 = physicsSha256;
                 AuxStateSha256 = auxStateSha256;
+                HardwareTimingSha256 = hardwareTimingSha256;
             }
 
             public string FixtureDirectoryName { get; private set; }
@@ -197,6 +217,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             public int MovieFrameCount { get; private set; }
             public string PhysicsSha256 { get; private set; }
             public string AuxStateSha256 { get; private set; }
+            public string HardwareTimingSha256 { get; private set; }
         }
 
         private static void NativeCaptureMatchesCanonicalTrace(
@@ -259,6 +280,19 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     differentialCase.AuxStateSha256,
                     EndToEndTests.ComputeSha256(
                         Path.Combine(output, "aux_state.jsonl")));
+                string hardwareTimingPath =
+                    Path.Combine(output, "hardware_timing.jsonl");
+                AssertEx.Equal(true, File.Exists(hardwareTimingPath));
+                AssertEx.Equal(
+                    false,
+                    File.Exists(hardwareTimingPath
+                        + TracePayloadCompressor.GzipExtension));
+                if (differentialCase.HardwareTimingSha256 != null)
+                {
+                    AssertEx.Equal(
+                        differentialCase.HardwareTimingSha256,
+                        EndToEndTests.ComputeSha256(hardwareTimingPath));
+                }
                 AssertRecordingDateOnlyMetadataEquality(
                     Path.Combine(traceDirectory, "metadata.json"),
                     Path.Combine(output, "metadata.json"));
@@ -442,6 +476,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 + Path.Combine(output, "physics.csv") + "\n"
                 + "Aux state JSONL: "
                 + Path.Combine(output, "aux_state.jsonl") + "\n"
+                + "Hardware timing JSONL: "
+                + Path.Combine(output, "hardware_timing.jsonl") + "\n"
                 + "Metadata JSON: "
                 + Path.Combine(output, "metadata.json") + "\n";
         }
@@ -455,14 +491,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// It must occur exactly once.
         ///
         /// Everything else is exact-line equality, including the line
-        /// count, so an inserted or dropped line fails. The
-        /// lua_script_version line is additionally pinned as an exact
-        /// literal on BOTH sides: the fixtures and this port both stamp
-        /// 6.32-s3k, so a fixture regenerated at another version fails
-        /// here instead of silently redefining the gate. There is no
-        /// fixture-only line allowance any more — MGZ's leftover
-        /// "pre_trace_osc_frames": 0 is gone from the regenerated fixture,
-        /// so the allowance was deleted rather than retained-but-unused.
+        /// count, so an inserted or dropped line fails. Published schema-7
+        /// fixtures compare directly; legacy schema-6 fixtures receive only
+        /// the exact approved version/schema normalization.
         /// </summary>
         private static void AssertRecordingDateOnlyMetadataEquality(
             string fixturePath,
@@ -474,6 +505,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(false, producedText.IndexOf('\r') >= 0);
             AssertEx.Equal(true, fixtureText.EndsWith("\n"));
             AssertEx.Equal(true, producedText.EndsWith("\n"));
+
+            MetadataNormalization normalization =
+                NormalizeCurrentMetadataForFixture(
+                    fixtureText, producedText);
+            producedText = normalization.Text;
+            string fixtureVersionLine = normalization.VersionLine;
 
             string[] fixtureLines = fixtureText.Split('\n');
             string[] producedLines = producedText.Split('\n');
@@ -500,13 +537,165 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 }
 
                 AssertEx.Equal(fixtureLine, producedLine);
-                if (fixtureLine == CurrentLuaScriptVersionLine)
+                if (fixtureLine == fixtureVersionLine)
                 {
                     versionLines++;
                 }
             }
             AssertEx.Equal(1, recordingDateLines);
             AssertEx.Equal(1, versionLines);
+        }
+
+        private static MetadataNormalization NormalizeCurrentMetadataForFixture(
+            string fixtureText,
+            string producedText)
+        {
+            RequireMetadataShape(
+                producedText,
+                CurrentLuaScriptVersionLine,
+                CurrentTraceSchemaLine,
+                true,
+                "produced");
+
+            if (HasMetadataShape(
+                fixtureText,
+                CurrentLuaScriptVersionLine,
+                CurrentTraceSchemaLine,
+                true))
+            {
+                return new MetadataNormalization(
+                    producedText, CurrentLuaScriptVersionLine);
+            }
+            if (HasMetadataShape(
+                fixtureText,
+                PublishedHardwareLuaScriptVersionLine,
+                CurrentTraceSchemaLine,
+                true))
+            {
+                return new MetadataNormalization(
+                    producedText.Replace(
+                        CurrentLuaScriptVersionLine,
+                        PublishedHardwareLuaScriptVersionLine),
+                    PublishedHardwareLuaScriptVersionLine);
+            }
+            if (HasMetadataShape(
+                fixtureText,
+                LegacyLuaScriptVersionLine,
+                FixtureTraceSchemaLine,
+                false))
+            {
+                return new MetadataNormalization(
+                    producedText
+                        .Replace(
+                            CurrentLuaScriptVersionLine,
+                            LegacyLuaScriptVersionLine)
+                        .Replace(
+                            CurrentTraceSchemaLine,
+                            FixtureTraceSchemaLine)
+                        .Replace(HardwareTimingSchemaLine + "\n", ""),
+                    LegacyLuaScriptVersionLine);
+            }
+
+            throw new InvalidOperationException(
+                "Fixture metadata has an unknown or mixed S3K trace"
+                + " version/schema shape.");
+        }
+
+        private static bool HasMetadataShape(
+            string text,
+            string versionLine,
+            string traceSchemaLine,
+            bool hasHardwareTiming)
+        {
+            return CountOccurrences(text, "\"lua_script_version\":") == 1
+                && CountOccurrences(text, versionLine) == 1
+                && CountOccurrences(text, "\"trace_schema\":") == 1
+                && CountOccurrences(text, traceSchemaLine) == 1
+                && CountOccurrences(text, "\"hardware_timing_schema\":")
+                    == (hasHardwareTiming ? 1 : 0)
+                && CountOccurrences(text, HardwareTimingSchemaLine)
+                    == (hasHardwareTiming ? 1 : 0);
+        }
+
+        private static void RequireMetadataShape(
+            string text,
+            string versionLine,
+            string traceSchemaLine,
+            bool hasHardwareTiming,
+            string owner)
+        {
+            if (!HasMetadataShape(
+                text, versionLine, traceSchemaLine, hasHardwareTiming))
+            {
+                throw new InvalidOperationException(
+                    owner + " metadata does not have the exact current"
+                    + " S3K trace version/schema shape.");
+            }
+        }
+
+        private static void MetadataCompatibilityShapesAreExact()
+        {
+            string current = CurrentLuaScriptVersionLine + "\n"
+                + CurrentTraceSchemaLine + "\n"
+                + HardwareTimingSchemaLine + "\n";
+            string published = PublishedHardwareLuaScriptVersionLine + "\n"
+                + CurrentTraceSchemaLine + "\n"
+                + HardwareTimingSchemaLine + "\n";
+            string legacy = LegacyLuaScriptVersionLine + "\n"
+                + FixtureTraceSchemaLine + "\n";
+
+            AssertEx.Equal(
+                current,
+                NormalizeCurrentMetadataForFixture(
+                    current, current).Text);
+            AssertEx.Equal(
+                published,
+                NormalizeCurrentMetadataForFixture(
+                    published, current).Text);
+            AssertEx.Equal(
+                legacy,
+                NormalizeCurrentMetadataForFixture(
+                    legacy, current).Text);
+            AssertEx.Throws<InvalidOperationException>(
+                () => NormalizeCurrentMetadataForFixture(
+                    "  \"lua_script_version\": \"9.99-s3k\",\n"
+                        + CurrentTraceSchemaLine + "\n"
+                        + HardwareTimingSchemaLine + "\n",
+                    current),
+                "unknown or mixed");
+            AssertEx.Throws<InvalidOperationException>(
+                () => NormalizeCurrentMetadataForFixture(
+                    current.Replace(
+                        CurrentLuaScriptVersionLine,
+                        CurrentLuaScriptVersionLine + "\n"
+                            + PublishedHardwareLuaScriptVersionLine),
+                    current),
+                "unknown or mixed");
+        }
+
+        private sealed class MetadataNormalization
+        {
+            internal MetadataNormalization(string text, string versionLine)
+            {
+                Text = text;
+                VersionLine = versionLine;
+            }
+
+            internal string Text { get; private set; }
+            internal string VersionLine { get; private set; }
+        }
+
+        private static int CountOccurrences(string value, string needle)
+        {
+            int count = 0;
+            int start = 0;
+            while ((start = value.IndexOf(
+                needle, start, StringComparison.Ordinal)) >= 0)
+            {
+                count++;
+                start += needle.Length;
+            }
+            return count;
         }
 
         private static void Gunzip(string sourcePath, string destinationPath)
