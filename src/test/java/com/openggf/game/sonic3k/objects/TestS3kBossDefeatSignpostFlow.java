@@ -29,7 +29,11 @@ class TestS3kBossDefeatSignpostFlow {
         ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setInteractSlotIndex(23);
         player.setControlLocked(true);
+        player.setAir(true);
         player.setAnimationId(Sonic3kAnimationIds.VICTORY);
+        player.getAnimationManager().publishPreviousAnimationId(Sonic3kAnimationIds.VICTORY.id());
+        player.setAnimationFrameIndex(7);
+        player.setAnimationTick(11);
         player.setXSpeed((short) -7);
         player.setYSpeed((short) 2);
 
@@ -39,7 +43,14 @@ class TestS3kBossDefeatSignpostFlow {
         assertEquals(0, player.getInteractSlotIndex());
         assertTrue(player.isControlLocked(),
                 "Restore_PlayerControl must not clear the title-card controller lock");
-        assertEquals(Sonic3kAnimationIds.VICTORY.id(), player.getAnimationId());
+        assertFalse(player.getAir(),
+                "Restore_PlayerControl clears Status_InAir");
+        assertEquals(Sonic3kAnimationIds.WAIT.id(), player.getAnimationId());
+        assertEquals(Sonic3kAnimationIds.WAIT.id(),
+                player.getAnimationManager().captureRewindState().lastAnimationId(),
+                "Restore_PlayerControl writes anim and prev_anim together");
+        assertEquals(0, player.getAnimationFrameIndex());
+        assertEquals(0, player.getAnimationTick());
         assertEquals(-7, player.getXSpeed());
         assertEquals(2, player.getYSpeed());
     }

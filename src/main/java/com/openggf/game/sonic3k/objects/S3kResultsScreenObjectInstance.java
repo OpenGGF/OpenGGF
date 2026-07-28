@@ -133,6 +133,11 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private boolean resultsChildrenCreated;
     private int carriedResultsRenderRetireDispatches;
     private boolean exitRetireDispatchesInitialized;
+    private boolean exitPublicationComplete;
+    private boolean titleInitializationPending;
+    private boolean pendingPreloadedTitleHandoff;
+    private boolean pendingAizTitleHandoff;
+    private boolean pendingRetainedReloadTitleHandoff;
 
     public S3kResultsScreenObjectInstance(PlayerCharacter character, int act) {
         this(character, act, 0, 0);
@@ -242,6 +247,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         final SlideDirection slideDirection;
         int currentX;
         boolean exitStarted;
+        boolean renderOnScreen = true;
         boolean offScreen;
 
         ResultsElement(Type type, int targetX, int startX, int y,
@@ -275,7 +281,11 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             } else {
                 currentX += SLIDE_OUT_SPEED;
             }
-            offScreen = (currentX < -256 || currentX > 576);
+            // Render_Sprites clears and recomputes render_flags.on_screen
+            // after the object pass. LevelResults_MoveElement consumes that
+            // prior-pass bit on the child's next dispatch.
+            renderOnScreen = currentX + widthPixels >= 0
+                    && currentX - widthPixels < SCREEN_WIDTH;
         }
     }
 
@@ -481,35 +491,23 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                 carriedResultsRenderRetireDispatches--;
                 return;
             }
-            if (postControlHandoffDelayEntries > 0) {
-                if (!controlsReleasedAheadOfHandoff) {
-                    // Restore_PlayerControl and the later title-card handoff are
-                    // separate native owners. Preserve that ordering when the
-                    // retained results object is carrying elapsed owner state.
-                    releasePlayerControlsForExit();
-                    controlsReleasedAheadOfHandoff = true;
-                    return;
-                }
-                postControlHandoffDelayEntries--;
-                if (postControlHandoffDelayEntries > 0) {
-                    return;
-                }
-            }
             onExitReady();
-            complete = true;
+            complete = !titleInitializationPending;
             return;
         }
         exitQueueCounter++;
         for (ResultsElement elem : elements) {
             if (elem == null || elem.offScreen) continue;
+            if (!elem.renderOnScreen) {
+                elem.offScreen = true;
+                childrenRemaining--;
+                continue;
+            }
             if (exitQueueCounter >= elem.exitQueuePriority) {
                 elem.exitStarted = true;
             }
             if (elem.exitStarted) {
                 elem.slideOut();
-                if (elem.offScreen) {
-                    childrenRemaining--;
-                }
             }
         }
     }
@@ -662,14 +660,21 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
 
     @Override
     protected void onExitReady() {
+        if (exitPublicationComplete) {
+            if (titleInitializationPending) {
+                initializePublishedTitleCard();
+                titleInitializationPending = false;
+                complete = true;
+                ObjectLifetimeOps.deleteNoRespawn(this);
+            }
+            return;
+        }
+        exitPublicationComplete = true;
         int zone = services().romZoneId();
         boolean hasSeamlessTransition = (act == 0) && (zone == 0x01 || zone == 0x02);
         boolean retainedReloadState = act == 0 && carriedAcrossSeamlessTransition;
         boolean lbzAct2PostBossHandoff = zone == 0x06 && act == 1;
         boolean preloadedNextActHandoff = isPreloadedNextActHandoff(act, services().currentAct());
-        if (!controlsReleasedAheadOfHandoff) {
-            releasePlayerControlsForExit();
-        }
         boolean aizAct1MinibossTitleHandoff = zone == 0x00 && act == 0;
 
         // Restore camera. AIZ Act 1 is excluded because ROM Obj_LevelResults
@@ -747,25 +752,10 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             // ROM lines 62713-62720
             boolean skipTitleCard = (zone == 0x08) || (zone == 0x0B);
             if (!skipTitleCard && !hasSeamlessTransition) {
-                var titleCardProvider = services().titleCardProvider();
-                titleCardProvider.initializeInLevel(zone, 1);
-                if (titleCardProvider instanceof Sonic3kTitleCardManager s3kTitleCard) {
-                    if (preloadedNextActHandoff) {
-                        s3kTitleCard.requestPreloadedActCameraReleaseOnComplete();
-                    }
-                    if (aizAct1MinibossTitleHandoff) {
-                        s3kTitleCard.requestLevelGamestateResetAtInLevelDisplay();
-                    } else if (retainedReloadState) {
-                        // This Obj_LevelResults survived an earlier Load_Level and
-                        // now mutates into Obj_TitleCard. The in-level title owner
-                        // resets Timer/Ring_count on its first Wait dispatch after
-                        // the queued create passes (sonic3k.asm:62708-62720,
-                        // 62150-62235).
-                        s3kTitleCard.requestLevelGamestateResetAfterCreateDispatches(
-                                mutatedTitleCardResetDispatches(
-                                        usesShortResultsChildRetireTail));
-                    }
-                }
+                titleInitializationPending = true;
+                pendingPreloadedTitleHandoff = preloadedNextActHandoff;
+                pendingAizTitleHandoff = aizAct1MinibossTitleHandoff;
+                pendingRetainedReloadTitleHandoff = retainedReloadState;
             }
 
             // ROM: Timer and ring count reset on act transition. For zones with
@@ -783,9 +773,45 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             }
         }
 
-        ObjectLifetimeOps.deleteNoRespawn(this);
+        if (!titleInitializationPending && !controlsReleasedAheadOfHandoff) {
+            releasePlayerControlsForExit();
+            controlsReleasedAheadOfHandoff = true;
+        }
+        if (!titleInitializationPending) {
+            ObjectLifetimeOps.deleteNoRespawn(this);
+        }
         LOG.fine(() -> String.format("S3K results exit: zone=%X act=%d isAct2OrSpecial=%b",
                 zone, act, isAct2OrSpecial));
+    }
+
+    /**
+     * ROM {@code Obj_LevelResultsWait2} has already changed this retained SST
+     * into {@code Obj_TitleCard}; its next object dispatch performs
+     * {@code Obj_TitleCardInit} and queues the four ROM-backed KosM jobs
+     * (docs/skdisasm/sonic3k.asm:62108-62166, 62684-62725).
+     */
+    private void initializePublishedTitleCard() {
+        int zone = services().romZoneId();
+        var titleCardProvider = services().titleCardProvider();
+        titleCardProvider.initializeInLevel(zone, 1);
+        if (titleCardProvider instanceof Sonic3kTitleCardManager s3kTitleCard) {
+            if (pendingPreloadedTitleHandoff) {
+                s3kTitleCard.requestPreloadedActCameraReleaseOnComplete();
+            }
+            if (pendingAizTitleHandoff) {
+                s3kTitleCard.requestLevelGamestateResetAtInLevelDisplay();
+            } else if (pendingRetainedReloadTitleHandoff) {
+                // This Obj_LevelResults survived an earlier Load_Level and now
+                // dispatches as Obj_TitleCard. The title owner resets the
+                // counters after its native create dispatches.
+                s3kTitleCard.requestLevelGamestateResetAfterCreateDispatches(
+                        mutatedTitleCardResetDispatches(
+                                usesShortResultsChildRetireTail));
+            }
+        }
+        pendingPreloadedTitleHandoff = false;
+        pendingAizTitleHandoff = false;
+        pendingRetainedReloadTitleHandoff = false;
     }
 
     static int mutatedTitleCardResetDispatches(boolean usesShortResultsChildRetireTail) {

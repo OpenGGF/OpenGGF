@@ -54216,3 +54216,67 @@ mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \
   introduced. Trace inputs remain comparison-only; no fixture bytes changed,
   and the shared level lifecycle calls only the game provider's semantic
   post-title-card hook (a no-op for S1/S2).
+
+## 2026-07-28 - AIZ results/title ownership raw f8800 -> f8943
+
+- Worktree: `.worktrees/trace-s3k-aiz-f2696`, branch
+  `bugfix/ai-trace-s3k-aiz-f2696`; implementation remained uncommitted for
+  parent-lane verification.
+- ROM basis: `Obj_LevelResultsWait` writes the literal `#90` and falls into
+  `Obj_LevelResultsWait2`; `LevelResults_MoveElement` consumes the prior
+  `render_flags.on_screen` bit before moving by `$20`; `Render_Sprites`
+  recomputes that bit from `width_pixels`; the results SST then publishes
+  `_unkFAA8`, the independent `Obj_EndSignControlAwaitStart` owner runs
+  `Restore_PlayerControl`, and the mutated SST dispatches
+  `Obj_TitleCardInit` on its following entry
+  (`docs/skdisasm/sonic3k.asm:62108-62166,62627-62824,36336-36402,
+  180361-180424`).
+- Fix: results publication and title initialization are distinct captured
+  owner phases; the AIZ typed results wait no longer repeats the two sign
+  entries already carried by the boss/signpost bridge; embedded results
+  children use the preceding render-visibility latch and authored half-width;
+  the later sign-control owner performs every native animation/control/status
+  write; and the live title manager snapshots/rebinds its four existing
+  hardware handles through the gameplay rewind registry without submission.
+- Focused command:
+
+```bash
+mvn -Dmse=relaxed \
+  "-Dtest=com.openggf.game.sonic3k.objects.TestS3kResultsScreenObjectInstance,\
+com.openggf.game.sonic3k.objects.TestS3kBossDefeatSignpostFlow,\
+com.openggf.game.sonic3k.titlecard.TestSonic3kTitleCardManagerRewind" \
+  "-Ds3k.rom.path=/home/farrell/code/projects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  test
+```
+
+- Pass: 18 selected tests, 0 failures, 0 errors.
+- Required S3K bring-up guards
+  (`TestS3kAiz1SkipHeadless`, both `TestSonic3kLevelLoading` classes,
+  `TestSonic3kBootstrapResolver`, and `TestSonic3kDecodingUtils`) pass 52
+  selected tests with 0 failures and 0 errors. The focused signpost and
+  hardware-authority guards pass another 31 selected tests.
+- Target replay command:
+
+```bash
+mvn -Dmse=relaxed \
+  "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" \
+  "-Ds3k.rom.path=/home/farrell/code/projects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  test
+```
+
+- **Advanced:** title ordinals 23–26 are submitted through production and
+  admitted at raw frames 8800, 8802, 8804, and 8807. The replay's first
+  unconsumed hardware edge advances to raw frame **8943**, ordinal 27,
+  fingerprint
+  `sha256:65c8c371e1ca1f70acf3a74cc1fa689867dcffbe93617a8c968e3de9242f89b3`;
+  the engine has no pending job. Surefire reports 1 test, 0 assertion
+  failures, and 1 hardware-authority error. This is the later post-title AIZ
+  `LoadEnemyArt` owner: the first `PLCKosM_AIZ` request,
+  `ArtKosM_AIZ_MonkeyDude` at `ArtTile_MonkeyDude`
+  (`sonic3k.asm:62287-62300,64281-64352`), not a remaining
+  results/title-init cadence adjustment.
+- The complete `TestS3kAizTraceReplay` scenario class runs 16 tests: 11 pass,
+  four existing AIZ canaries remain red (fire-reveal camera 40/46,
+  reload-camera lock `$0010`/`$6000`, sidekick fallthrough auto-jump
+  true/false, and miniboss arena camera `$10E0`/`$0010`), and the target replay
+  reports the ordinal-27 authority error above.
