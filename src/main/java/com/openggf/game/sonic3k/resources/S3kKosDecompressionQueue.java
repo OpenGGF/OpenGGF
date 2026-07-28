@@ -9,7 +9,6 @@ import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.timing.HardwareWorkPreparation;
 import com.openggf.game.timing.HardwareWorkPreparationSnapshot;
 import com.openggf.game.timing.HardwareWorkSubmission;
-import com.openggf.tools.DecoderStepResult;
 import com.openggf.tools.KosinskiReader;
 import com.openggf.tools.ResumableKosinskiDecoder;
 
@@ -27,7 +26,6 @@ public final class S3kKosDecompressionQueue
         implements RewindSnapshottable<S3kKosDecompressionQueueSnapshot> {
     public static final String REWIND_KEY = "s3k-kos-decompression-queue";
     private static final int MAX_QUEUE_DEPTH = 4;
-    private static final int INSPECTION_LIMIT = 0x40000;
     private static final String COMPRESSION_VARIANT = "kosinski";
 
     private final HardwareTimingService timing;
@@ -50,7 +48,10 @@ public final class S3kKosDecompressionQueue
             throw new IOException("Kosinski source is outside ROM: 0x"
                     + Integer.toHexString(sourceAddress));
         }
-        int inspectionLength = (int) Math.min(remaining, INSPECTION_LIMIT);
+        if (remaining > Integer.MAX_VALUE) {
+            throw new IOException("Kosinski stream exceeds Java inspection limit");
+        }
+        int inspectionLength = (int) remaining;
         byte[] inspection = rom.readBytes(sourceAddress, inspectionLength);
         KosinskiReader.StandardArchiveInfo info = KosinskiReader.inspectStandard(inspection, 0);
         byte[] compressed = info.compressedLength() == inspection.length
@@ -110,9 +111,10 @@ public final class S3kKosDecompressionQueue
 
     @Override
     public S3kKosDecompressionQueueSnapshot capture() {
-        return new S3kKosDecompressionQueueSnapshot(physicalEntries.stream()
-                .map(handle -> new S3kKosDecompressionQueueSnapshot.Entry(
-                        handle, descriptor(handle)))
+        return new S3kKosDecompressionQueueSnapshot(descriptors.entrySet().stream()
+                .sorted(java.util.Comparator.comparingLong(entry -> entry.getKey().ordinal()))
+                .map(entry -> new S3kKosDecompressionQueueSnapshot.Entry(
+                        entry.getKey(), entry.getValue(), physicalEntries.contains(entry.getKey())))
                 .toList());
     }
 
@@ -121,12 +123,14 @@ public final class S3kKosDecompressionQueue
         Objects.requireNonNull(snapshot, "snapshot");
         physicalEntries.clear();
         descriptors.clear();
-        for (S3kKosDecompressionQueueSnapshot.Entry entry : snapshot.physicalEntries()) {
+        for (S3kKosDecompressionQueueSnapshot.Entry entry : snapshot.entries()) {
             if (timing.pendingHandle(entry.handle().kind(), entry.handle().ordinal()).isEmpty()) {
                 throw new IllegalArgumentException("direct queue snapshot references missing timing job");
             }
-            physicalEntries.addLast(entry.handle());
             descriptors.put(entry.handle(), entry.descriptor());
+            if (entry.physical()) {
+                physicalEntries.addLast(entry.handle());
+            }
         }
     }
 
@@ -163,7 +167,14 @@ public final class S3kKosDecompressionQueue
 
         @Override
         public boolean stepOneWorkUnit() {
-            return false;
+            if (decoder.complete()) {
+                return false;
+            }
+            try {
+                return decoder.step(1).descriptorsProcessed() != 0;
+            } catch (IOException exception) {
+                throw new IllegalStateException("Unable to prepare S3K Kosinski stream", exception);
+            }
         }
 
         @Override
@@ -200,16 +211,7 @@ public final class S3kKosDecompressionQueue
             if (boundary != HardwareServiceBoundary.PRE_MAIN_LOOP || decoder.complete()) {
                 return false;
             }
-            try {
-                boolean advanced = false;
-                while (!decoder.complete()) {
-                    DecoderStepResult result = decoder.step(1);
-                    advanced |= result.descriptorsProcessed() != 0;
-                }
-                return advanced;
-            } catch (IOException exception) {
-                throw new IllegalStateException("Unable to prepare S3K Kosinski stream", exception);
-            }
+            return stepOneWorkUnit();
         }
     }
 }

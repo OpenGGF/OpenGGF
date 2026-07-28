@@ -45,8 +45,7 @@ class TestS3kKosDecompressionQueue {
             queue.afterTimingService(HardwareServiceBoundary.POST_OBJECTS);
             assertTrue(queue.decompressionsPending());
 
-            timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
-            queue.afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            serviceUntilReady(timing, queue, handle);
 
             assertTrue(queue.isReady(handle));
             assertFalse(queue.decompressionsPending());
@@ -61,8 +60,7 @@ class TestS3kKosDecompressionQueue {
             S3kKosDecompressionQueue queue = new S3kKosDecompressionQueue(timing);
             HardwareWorkHandle first = queue.queueStandardKos(rom, 0,
                     S3kKosRamDestinations.BLOCK_TABLE);
-            timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
-            queue.afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            serviceUntilReady(timing, queue, first);
             assertTrue(queue.isReady(first));
 
             for (int index = 0; index < 4; index++) {
@@ -91,8 +89,10 @@ class TestS3kKosDecompressionQueue {
             HardwareWorkHandle handle = queue.queueStandardKos(rom, 0,
                     S3kKosRamDestinations.BLOCK_TABLE);
 
-            timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
-            queue.afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            for (int frame = 0; frame < 4; frame++) {
+                timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+                queue.afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            }
             assertFalse(queue.isReady(handle));
             assertTrue(queue.decompressionsPending());
 
@@ -114,12 +114,13 @@ class TestS3kKosDecompressionQueue {
             HardwareWorkHandle second = queue.queueStandardKos(rom, 0,
                     S3kKosRamDestinations.BLOCK_TABLE);
 
-            timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
-            queue.afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            serviceUntilReady(timing, queue, first);
             HardwareWorkHandle third = queue.queueStandardKos(rom, 0,
                     S3kKosRamDestinations.BLOCK_TABLE);
 
-            var entries = queue.capture().physicalEntries();
+            var entries = queue.capture().entries().stream()
+                    .filter(S3kKosDecompressionQueueSnapshot.Entry::physical)
+                    .toList();
             assertEquals(2, entries.size());
             assertEquals(second, entries.get(0).handle());
             assertEquals(third, entries.get(1).handle());
@@ -134,19 +135,19 @@ class TestS3kKosDecompressionQueue {
             S3kKosDecompressionQueue queue = new S3kKosDecompressionQueue(timing);
             HardwareWorkHandle handle = queue.queueStandardKos(rom, 0,
                     S3kKosRamDestinations.BLOCK_TABLE);
+            timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            queue.afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
             var timingSnapshot = timing.capture();
             var queueSnapshot = queue.capture();
 
-            timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
-            queue.afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            serviceUntilReady(timing, queue, handle);
             assertTrue(queue.isReady(handle));
 
             timing.restore(timingSnapshot);
             queue.restore(queueSnapshot);
             assertFalse(queue.isReady(handle));
             assertTrue(queue.decompressionsPending());
-            timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
-            queue.afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            serviceUntilReady(timing, queue, handle);
             assertArrayEquals(new byte[] {'A', 'B', 'C'}, queue.claim(handle));
         }
     }
@@ -171,5 +172,15 @@ class TestS3kKosDecompressionQueue {
         Rom rom = new Rom();
         assertTrue(rom.open(path.toString()));
         return rom;
+    }
+
+    private static void serviceUntilReady(HardwareTimingService timing,
+                                          S3kKosDecompressionQueue queue,
+                                          HardwareWorkHandle handle) {
+        for (int frame = 0; frame < 16 && !queue.isReady(handle); frame++) {
+            timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            queue.afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        }
+        assertTrue(queue.isReady(handle));
     }
 }

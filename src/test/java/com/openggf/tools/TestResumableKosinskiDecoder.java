@@ -78,4 +78,30 @@ class TestResumableKosinskiDecoder {
         assertEquals(ABC_STREAM.length, info.compressedLength());
         assertEquals(3, info.decompressedLength());
     }
+
+    @Test
+    void scannerHandlesDescriptorRefillAndAllMatchForms() throws Exception {
+        byte[] refill = new byte[23];
+        refill[0] = (byte) 0xFF;
+        refill[1] = (byte) 0xFF;
+        for (int index = 0; index < 16; index++) refill[index + 2] = (byte) index;
+        refill[18] = 0x02;
+        refill[19] = 0;
+        assertEquals(16, KosinskiReader.inspectStandard(refill, 0).decompressedLength());
+
+        byte[] shortMatch = {0x21, 0, 'A', (byte) 0xFF, 0, 0, 0};
+        byte[] longMatch = {0x15, 0, 'A', (byte) 0xFF, 1, 0, 0, 0};
+        byte[] noOutput = {0x15, 0, 'A', (byte) 0xFF, 0, 1, 0, 0, 0};
+        assertEquals(3, KosinskiReader.inspectStandard(shortMatch, 0).decompressedLength());
+        assertEquals(4, KosinskiReader.inspectStandard(longMatch, 0).decompressedLength());
+        assertEquals(1, KosinskiReader.inspectStandard(noOutput, 0).decompressedLength());
+    }
+
+    @Test
+    void scannerRejectsRomBoundAndInvalidBackreferenceStreams() {
+        assertThrows(java.io.IOException.class,
+                () -> KosinskiReader.inspectStandard(new byte[] {1, 0, 'A'}, 0));
+        assertThrows(java.io.IOException.class,
+                () -> KosinskiReader.inspectStandard(new byte[] {4, 0, (byte) 0xFF}, 0));
+    }
 }

@@ -6,12 +6,13 @@ import java.util.List;
 import java.util.Objects;
 
 /** Physical direct-FIFO membership, separate from timing payload ownership. */
-public record S3kKosDecompressionQueueSnapshot(List<Entry> physicalEntries) {
+public record S3kKosDecompressionQueueSnapshot(List<Entry> entries) {
     public S3kKosDecompressionQueueSnapshot {
-        physicalEntries = List.copyOf(Objects.requireNonNull(physicalEntries, "physicalEntries"));
+        entries = List.copyOf(Objects.requireNonNull(entries, "entries"));
     }
 
-    public record Entry(HardwareWorkHandle handle, S3kKosDecompressionDescriptor descriptor) {
+    public record Entry(HardwareWorkHandle handle, S3kKosDecompressionDescriptor descriptor,
+                        boolean physical) {
         public Entry {
             Objects.requireNonNull(handle, "handle");
             Objects.requireNonNull(descriptor, "descriptor");
