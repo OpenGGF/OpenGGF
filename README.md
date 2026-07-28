@@ -218,6 +218,8 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **Token-efficient trace fleet routing (2026-07-28):** the trace bug-fixing fleet now routes bounded discovery, triage, fixes, and verification across GPT-5.6 Terra and Sol with explicit reasoning effort, objective escalation triggers, sequential worktree ownership, and fail-closed result semantics. A pinned S1/S2/S3K benchmark protocol records model routes, token telemetry when available, ROM/disassembly evidence, independent regression guards, acceptance decisions, and durable reports so routing policies can be compared by verified outcomes rather than nominal token price.
+
 Highlights:
 
 - **Audio performance metric restored (2026-07-28):** the performance overlay once again measures unified audio presentation and device pumping, and keeps the aggregate audio row visible within its six-line legend.
