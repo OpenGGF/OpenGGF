@@ -7,15 +7,21 @@ using System.Text;
 namespace OpenGGF.BizHawk.Headless
 {
     /// <summary>
-    /// Mirrors the S3K Kosinski-module FIFO and emits an authoritative
-    /// completion edge at the boundary admitted by the observed frame.
-    /// Submission identity is retained while the active RAM aliases advance.
+    /// Mirrors the S3K direct and Kosinski-module FIFOs and emits each
+    /// authoritative completion at its ROM-owned phase boundary. Submission
+    /// identity is retained while active RAM aliases advance.
     /// </summary>
     public sealed class HardwareTimingEventEngine
     {
-        private const string KindName = "KOS_MODULE_QUEUE";
-        private const string EventKind = "kos_module_queue";
-        private const string CompressionVariant = "kosinski_moduled";
+        public const int LegacySchema = 1;
+        public const int CurrentSchema = 2;
+        private const string ModuleKindName = "KOS_MODULE_QUEUE";
+        private const string ModuleEventKind = "kos_module_queue";
+        private const string ModuleCompressionVariant = "kosinski_moduled";
+        private const string DirectKindName = "KOS_DECOMPRESSION_QUEUE";
+        private const string DirectEventKind = "kos_decompression_queue";
+        private const string DirectCompressionVariant = "kosinski";
+        private const int MaxKosinskiOutput = 0x100000;
         private const uint TitleCardObjectCode = 0x0002D690;
         private const int TitleCardParentSlot = 8;
         private const int TitleCardWaitOffset = 0x48;
@@ -35,20 +41,61 @@ namespace OpenGGF.BizHawk.Headless
             public int ModuleCount;
         }
 
+        private sealed class DirectSubmission
+        {
+            public long Ordinal;
+            public uint Source;
+            public uint Destination;
+            public string Fingerprint;
+        }
+
+        private sealed class StandardKosShape
+        {
+            public int CompressedLength;
+            public int DestinationLength;
+        }
+
         private readonly byte[] rom;
         private readonly List<Submission> queue = new List<Submission>();
+        private readonly List<DirectSubmission> directQueue =
+            new List<DirectSubmission>();
         private long nextOrdinal;
+        private long nextDirectOrdinal;
         private byte priorModulesLeft;
         private ushort? priorLevelFrameCounter;
         private bool titleCardLoadLoopActive;
+        private readonly int hardwareTimingSchema;
 
         public HardwareTimingEventEngine(byte[] rom)
+            : this(rom, CurrentSchema)
+        {
+        }
+
+        public HardwareTimingEventEngine(byte[] rom, int hardwareTimingSchema)
         {
             if (rom == null)
             {
                 throw new ArgumentNullException("rom");
             }
+            if (hardwareTimingSchema != LegacySchema
+                && hardwareTimingSchema != CurrentSchema)
+            {
+                throw new ArgumentOutOfRangeException(
+                    "hardwareTimingSchema");
+            }
             this.rom = rom;
+            this.hardwareTimingSchema = hardwareTimingSchema;
+        }
+
+        public void Reset()
+        {
+            queue.Clear();
+            directQueue.Clear();
+            nextOrdinal = 0;
+            nextDirectOrdinal = 0;
+            priorModulesLeft = 0;
+            priorLevelFrameCounter = null;
+            titleCardLoadLoopActive = false;
         }
 
         /// <summary>
@@ -74,7 +121,7 @@ namespace OpenGGF.BizHawk.Headless
 
             byte modulesLeft =
                 S3KRam.U8(host, S3KRam.KosModulesLeft);
-            int physicalCount = ReadPhysicalCount(host);
+            int physicalCount = ReadModulePhysicalCount(host);
             ushort levelFrameCounter =
                 S3KRam.U16(host, S3KRam.LevelFrameCounter);
             bool titleCardLoopAdmitted =
@@ -85,6 +132,15 @@ namespace OpenGGF.BizHawk.Headless
                     && !titleCardLoopAdmitted
                 ? "vint_service"
                 : "post_objects";
+            ushort directCountWord =
+                S3KRam.U16(host, S3KRam.KosDecompQueueCount);
+            ObserveDirectQueue(
+                rawFrame,
+                host,
+                writer,
+                directCountWord & 0x7FFF,
+                (directCountWord & 0x8000) != 0,
+                boundary != "vint_service");
 
             // 0x81 is specifically "the final module is active in the
             // direct decoder". A fall from any other busy value is only a
@@ -99,13 +155,241 @@ namespace OpenGGF.BizHawk.Headless
                 if (writer != null)
                 {
                     WriteCompletion(
-                        writer, rawFrame, boundary, completed);
+                        writer,
+                        rawFrame,
+                        boundary,
+                        ModuleEventKind,
+                        completed.Ordinal,
+                        completed.Fingerprint);
                 }
             }
 
             ReconcileQueue(host, physicalCount);
             priorModulesLeft = modulesLeft;
             priorLevelFrameCounter = levelFrameCounter;
+        }
+
+        private void ObserveDirectQueue(
+            int rawFrame,
+            IGpgxHost host,
+            TextWriter writer,
+            int physicalCount,
+            bool busy,
+            bool directServiceAdmitted)
+        {
+            if (physicalCount < 0
+                || physicalCount > S3KRam.KosDecompQueueCapacity)
+            {
+                throw new InvalidDataException(
+                    "Kosinski decompression FIFO count is outside its"
+                    + " four-entry capacity: " + physicalCount + ".");
+            }
+
+            bool retireAndAppend = physicalCount == directQueue.Count
+                && directQueue.Count >= 2
+                && DirectEntryMatches(host, 0, directQueue[1])
+                && (!DirectEntryMatches(
+                        host,
+                        physicalCount - 1,
+                        directQueue[directQueue.Count - 1])
+                    || (directServiceAdmitted && !busy));
+            int retiredCount = directQueue.Count - physicalCount
+                + (retireAndAppend ? 1 : 0);
+            if (retiredCount < 0)
+            {
+                retiredCount = 0;
+            }
+            if (retiredCount > 1)
+            {
+                throw new InvalidDataException(
+                    "Kosinski decompression FIFO lost " + retiredCount
+                    + " mirrored submissions between observable"
+                    + " boundaries.");
+            }
+
+            if (retiredCount == 1)
+            {
+                DirectSubmission completed = directQueue[0];
+                directQueue.RemoveAt(0);
+                if (hardwareTimingSchema == CurrentSchema
+                    && writer != null)
+                {
+                    WriteCompletion(
+                        writer,
+                        rawFrame,
+                        "pre_main_loop",
+                        DirectEventKind,
+                        completed.Ordinal,
+                        completed.Fingerprint);
+                }
+            }
+
+            int retained = Math.Min(directQueue.Count, physicalCount);
+            for (int index = 0; index < retained; index++)
+            {
+                // The active head's saved source/destination registers may
+                // advance while bit 15 is set. Its canonical identity was
+                // captured when the slot first appeared; only queued tails
+                // remain byte-stable throughout service.
+                if (index == 0)
+                {
+                    continue;
+                }
+                if (!DirectEntryMatches(host, index, directQueue[index]))
+                {
+                    throw new InvalidDataException(
+                        "Kosinski decompression FIFO changed without"
+                        + " retiring its mirrored head at entry "
+                        + index + ".");
+                }
+            }
+
+            if (physicalCount < directQueue.Count)
+            {
+                throw new InvalidDataException(
+                    "Kosinski decompression FIFO lost mirrored"
+                    + " submissions without one observable retirement.");
+            }
+
+            for (int index = directQueue.Count;
+                index < physicalCount;
+                index++)
+            {
+                directQueue.Add(CreateDirectSubmission(host, index));
+            }
+        }
+
+        private bool DirectEntryMatches(
+            IGpgxHost host,
+            int index,
+            DirectSubmission submission)
+        {
+            int entry = S3KRam.KosDecompQueue
+                + index * S3KRam.KosDecompQueueEntrySize;
+            return S3KRam.U32(host, entry) == submission.Source
+                && S3KRam.U32(host, entry + 4)
+                    == submission.Destination;
+        }
+
+        private DirectSubmission CreateDirectSubmission(
+            IGpgxHost host,
+            int index)
+        {
+            int entry = S3KRam.KosDecompQueue
+                + index * S3KRam.KosDecompQueueEntrySize;
+            uint source = S3KRam.U32(host, entry);
+            uint destination = S3KRam.U32(host, entry + 4);
+            StandardKosShape shape = InspectStandardKos(source);
+            long ordinal = nextDirectOrdinal++;
+            return new DirectSubmission
+            {
+                Ordinal = ordinal,
+                Source = source,
+                Destination = destination,
+                Fingerprint = ComputeSubmissionFingerprint(
+                    DirectKindName,
+                    checked((int)source),
+                    shape.CompressedLength,
+                    unchecked((int)destination),
+                    shape.DestinationLength,
+                    DirectCompressionVariant,
+                    1)
+            };
+        }
+
+        private StandardKosShape InspectStandardKos(uint canonicalSource)
+        {
+            int start = checked((int)canonicalSource);
+            int position = start;
+            int descriptor = 0;
+            int descriptorBits = 0;
+            int outputLength = 0;
+
+            while (true)
+            {
+                int first = PopDescriptorBit(
+                    ref descriptor, ref descriptorBits, ref position);
+                if (first != 0)
+                {
+                    RequireRomBytes(position, 1);
+                    position++;
+                    outputLength = CheckedOutputLength(outputLength, 1);
+                    continue;
+                }
+
+                int second = PopDescriptorBit(
+                    ref descriptor, ref descriptorBits, ref position);
+                int distance;
+                int count;
+                if (second != 0)
+                {
+                    RequireRomBytes(position, 2);
+                    int lowByte = rom[position++];
+                    int highByte = rom[position++];
+                    distance = ((highByte & 0xF8) << 5) | lowByte;
+                    distance = ((distance ^ 0x1FFF) + 1) & 0x1FFF;
+                    count = highByte & 7;
+                    if (count != 0)
+                    {
+                        count += 2;
+                    }
+                    else
+                    {
+                        RequireRomBytes(position, 1);
+                        count = rom[position++] + 1;
+                        if (count == 1)
+                        {
+                            return new StandardKosShape
+                            {
+                                CompressedLength = position - start,
+                                DestinationLength = outputLength
+                            };
+                        }
+                        if (count == 2)
+                        {
+                            continue;
+                        }
+                    }
+                }
+                else
+                {
+                    count = 2;
+                    if (PopDescriptorBit(
+                        ref descriptor, ref descriptorBits, ref position)
+                        != 0)
+                    {
+                        count += 2;
+                    }
+                    if (PopDescriptorBit(
+                        ref descriptor, ref descriptorBits, ref position)
+                        != 0)
+                    {
+                        count++;
+                    }
+                    RequireRomBytes(position, 1);
+                    distance = (rom[position++] ^ 0xFF) + 1;
+                    distance &= 0xFF;
+                }
+
+                if (outputLength - distance < 0)
+                {
+                    throw new InvalidDataException(
+                        "Kosinski backreference precedes output at ROM"
+                        + " 0x" + position.ToString("X") + ".");
+                }
+                outputLength = CheckedOutputLength(outputLength, count);
+            }
+        }
+
+        private static int CheckedOutputLength(int outputLength, int count)
+        {
+            if (count < 0 || outputLength > MaxKosinskiOutput - count)
+            {
+                throw new InvalidDataException(
+                    "Kosinski decompression exceeds the maximum output"
+                    + " length.");
+            }
+            return outputLength + count;
         }
 
         private bool UpdateTitleCardLoadLoop(
@@ -260,12 +544,12 @@ namespace OpenGGF.BizHawk.Headless
                 Source = canonicalSource,
                 Destination = destination,
                 Fingerprint = ComputeSubmissionFingerprint(
-                    KindName,
+                    ModuleKindName,
                     checked((int)canonicalSource),
                     shape.CompressedLength,
                     destination,
                     shape.DestinationLength,
-                    CompressionVariant,
+                    ModuleCompressionVariant,
                     shape.ModuleCount)
             };
         }
@@ -346,7 +630,7 @@ namespace OpenGGF.BizHawk.Headless
             }
         }
 
-        private int ReadPhysicalCount(IGpgxHost host)
+        private int ReadModulePhysicalCount(IGpgxHost host)
         {
             int count = 0;
             for (int index = 0;
@@ -417,7 +701,9 @@ namespace OpenGGF.BizHawk.Headless
             TextWriter writer,
             int rawFrame,
             string boundary,
-            Submission submission)
+            string eventKind,
+            long ordinal,
+            string fingerprint)
         {
             writer.Write("{\"event\":\"hardware_work_completed\",");
             writer.Write("\"raw_frame\":");
@@ -426,11 +712,11 @@ namespace OpenGGF.BizHawk.Headless
             writer.Write(boundary);
             writer.Write("\",");
             writer.Write("\"kind\":\"");
-            writer.Write(EventKind);
+            writer.Write(eventKind);
             writer.Write("\",\"ordinal\":");
-            writer.Write(submission.Ordinal);
+            writer.Write(ordinal);
             writer.Write(",\"submission_fingerprint\":\"");
-            writer.Write(submission.Fingerprint);
+            writer.Write(fingerprint);
             writer.Write("\"}\n");
         }
 

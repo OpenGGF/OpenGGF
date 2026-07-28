@@ -374,8 +374,7 @@ namespace OpenGGF.BizHawk.Headless
                         auxSink.Discard();
                         hardwareTimingSink.Discard();
                         auxEngine = null;
-                        hardwareTimingEngine =
-                            new HardwareTimingEventEngine(rom);
+                        hardwareTimingEngine.Reset();
                         continue;
                     }
 
