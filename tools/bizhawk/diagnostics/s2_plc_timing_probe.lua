@@ -30,9 +30,8 @@ local CLEAR_POST = required_address("OGGF_PLC_CLEAR_POST")
 local PREPARE_BEGIN = required_address("OGGF_PLC_PREPARE_BEGIN")
 local PREPARE_END = required_address("OGGF_PLC_PREPARE_END")
 local FULL_PRE = required_address("OGGF_PLC_FULL_SERVICE_PRE")
-local FULL_PARTIAL_POST = required_address("OGGF_PLC_FULL_PARTIAL_POST")
+local PARTIAL_SERVICE_POST = required_address("OGGF_PLC_PARTIAL_SERVICE_POST")
 local SMALL_PRE = required_address("OGGF_PLC_SMALL_SERVICE_PRE")
-local SMALL_PARTIAL_POST = required_address("OGGF_PLC_SMALL_PARTIAL_POST")
 local POP_PRE = required_address("OGGF_PLC_POP_PRE")
 local POP_POST = required_address("OGGF_PLC_POP_POST")
 local VINT_DISPATCH = required_address("OGGF_PLC_VINT_DISPATCH")
@@ -92,8 +91,8 @@ local function partial_service_post()
   if not pending_service or pending_service.left == 0 then error("partial service post reached without active decoder") end
   emit("plc_service", nil, active_source, pending_service); pending_service = nil
 end
-event.onmemoryexecute(service_pre, FULL_PRE); event.onmemoryexecute(partial_service_post, FULL_PARTIAL_POST)
-event.onmemoryexecute(service_pre, SMALL_PRE); event.onmemoryexecute(partial_service_post, SMALL_PARTIAL_POST)
+event.onmemoryexecute(service_pre, FULL_PRE); event.onmemoryexecute(service_pre, SMALL_PRE)
+event.onmemoryexecute(partial_service_post, PARTIAL_SERVICE_POST)
 event.onmemoryexecute(function() _G.plc_pop_before = snapshot() end, POP_PRE)
 event.onmemoryexecute(function()
   if pending_service then emit("plc_service", nil, active_source, pending_service); pending_service = nil end

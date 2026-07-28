@@ -156,6 +156,20 @@ class TestPlcTimingEvidenceTool {
                 "--probe", probe.toString(), "--out", temporaryDirectory.resolve("replace-vector.json").toString()}));
     }
 
+    @Test
+    void bothProbesUseOneSharedPartialServiceReturnHook() throws Exception {
+        for (Path probe : List.of(
+                Path.of("tools/bizhawk/diagnostics/s1_plc_timing_probe.lua"),
+                Path.of("tools/bizhawk/diagnostics/s2_plc_timing_probe.lua"))) {
+            String script = Files.readString(probe);
+            assertTrue(script.contains("OGGF_PLC_PARTIAL_SERVICE_POST"));
+            assertFalse(script.contains("FULL_PARTIAL_POST"));
+            assertFalse(script.contains("SMALL_PARTIAL_POST"));
+            assertTrue(script.contains("event.onmemoryexecute(service_pre, FULL_PRE); event.onmemoryexecute(service_pre, SMALL_PRE)"));
+            assertTrue(script.contains("event.onmemoryexecute(partial_service_post, PARTIAL_SERVICE_POST)"));
+        }
+    }
+
     private static void assertRejected(PlcTimingEvidenceTool.Evidence evidence) {
         assertFalse(PlcTimingEvidenceTool.analyze(evidence).matches());
     }
