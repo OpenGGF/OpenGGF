@@ -121,3 +121,39 @@ and KosM parent queue. No trace fixture was added or changed.
   Exact `d230501d4` baseline: 108 tests, 94 passed, 14 failed, 0 errors. The
   remaining 11 AIZ and two fixed-air failures match the baseline categories;
   no new regression was introduced.
+
+## Round-three review follow-up
+
+- `DeferredLevelResourceTracker` now records whether it represents an
+  explicitly supplied policy. `none()` means an ordinary load with no policy;
+  every manifest-created tracker is explicit, including an empty manifest.
+- ICZ2 exact-profile validation is therefore applied to every supplied
+  handoff. An explicitly empty ICZ2 handoff fails with all three mandatory
+  descriptors missing, while an ordinary ICZ2 load still publishes all
+  secondary resources synchronously.
+- Removed the AIZ and ICZ pre-publication `payloadVisible` predicates. AIZ
+  snapshots its complete affected chunk and pattern ranges before the initial
+  queue-submission scan and proves byte-for-byte stability after every
+  intermediate consumer, PRE, and POST boundary up to each owning fence.
+- ICZ constructs an independently deferred ICZ2 level as the expected
+  post-reload baseline. The in-frame reload and every later PRE, POST, and
+  consumer scan must match the complete block, chunk, and pattern snapshots;
+  absent pre-publication table entries are represented explicitly so any
+  prefix capacity growth or write also fails.
+- Publication checks compare every ROM payload word/pixel against the
+  decompressed expected bytes, then snapshot the published ranges to prove
+  later scans leave them unchanged. Sanity assertions establish that each
+  complete pre-publication range differs from its expected published state.
+
+### Round-three RED/GREEN evidence
+
+- RED: the policy-presence tests failed compilation because the tracker had no
+  explicit-policy contract. Before the fix, the new ROM-backed empty-handoff
+  assertion would also have observed a successful ICZ2 load.
+- GREEN: the policy/loading pair completed with 10 tests, all passed.
+- GREEN: the complete round-three focused set completed with 51 tests, all
+  passed, with no failures or errors in the requested Surefire reports.
+- Prescribed six-class comparison remains 112 tests, 99 passed, 13 failed,
+  0 errors. The 11 AIZ and two fixed-air failures are unchanged from the
+  round-two comparison and introduce no new regression against the exact
+  `d230501d4` baseline.

@@ -18,6 +18,14 @@ class TestDeferredLevelResourceTracker {
                     0xFFFF1780);
 
     @Test
+    void distinguishesNoPolicyFromAnExplicitEmptyManifest() {
+        assertFalse(DeferredLevelResourceTracker.none()
+                .hasExplicitPolicy());
+        assertTrue(DeferredLevelResourceManifest.EMPTY.newTracker()
+                .hasExplicitPolicy());
+    }
+
+    @Test
     void consumesEveryExactDescriptorOnce() {
         DeferredLevelResourceTracker tracker =
                 new DeferredLevelResourceManifest(List.of(PATTERNS))

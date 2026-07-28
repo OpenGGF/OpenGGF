@@ -9,16 +9,23 @@ import java.util.Set;
  */
 public final class DeferredLevelResourceTracker {
     private final Set<DeferredLevelResourceDescriptor> requested;
+    private final boolean explicitPolicy;
     private final Set<DeferredLevelResourceDescriptor> consumed =
             new LinkedHashSet<>();
 
     DeferredLevelResourceTracker(
-            List<DeferredLevelResourceDescriptor> descriptors) {
+            List<DeferredLevelResourceDescriptor> descriptors,
+            boolean explicitPolicy) {
         requested = new LinkedHashSet<>(descriptors);
+        this.explicitPolicy = explicitPolicy;
     }
 
     public static DeferredLevelResourceTracker none() {
-        return DeferredLevelResourceManifest.EMPTY.newTracker();
+        return new DeferredLevelResourceTracker(List.of(), false);
+    }
+
+    public boolean hasExplicitPolicy() {
+        return explicitPolicy;
     }
 
     public boolean omitIfRequested(

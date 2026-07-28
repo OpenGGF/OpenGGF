@@ -22,6 +22,6 @@ public record DeferredLevelResourceManifest(
     }
 
     public DeferredLevelResourceTracker newTracker() {
-        return new DeferredLevelResourceTracker(descriptors);
+        return new DeferredLevelResourceTracker(descriptors, true);
     }
 }

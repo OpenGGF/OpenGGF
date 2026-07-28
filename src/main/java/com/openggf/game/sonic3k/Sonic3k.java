@@ -267,13 +267,13 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
                 deferredResources != null
                         ? deferredResources
                         : DeferredLevelResourceTracker.none();
-        if (activeDeferredResources.isEmpty()
+        if (!activeDeferredResources.hasExplicitPolicy()
                 && deferredProfile != null
                 && deferredProfile.initiallyDeferred()) {
             activeDeferredResources =
                     expectedDeferredManifest.newTracker();
         }
-        if (!activeDeferredResources.isEmpty()
+        if (activeDeferredResources.hasExplicitPolicy()
                 && deferredProfile != null) {
             activeDeferredResources.verifyExactRequest(
                     expectedDeferredManifest);

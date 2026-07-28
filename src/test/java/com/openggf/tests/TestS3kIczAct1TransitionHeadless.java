@@ -2,6 +2,7 @@ package com.openggf.tests;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
+import com.openggf.game.sonic3k.Sonic3k;
 import com.openggf.game.sonic3k.Sonic3kLevel;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
@@ -13,6 +14,9 @@ import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.level.Chunk;
 import com.openggf.level.LevelConstants;
 import com.openggf.level.Pattern;
+import com.openggf.level.resources.CompressionType;
+import com.openggf.level.resources.DeferredLevelResourceDescriptor;
+import com.openggf.level.resources.DeferredLevelResourceManifest;
 import com.openggf.level.resources.LoadOp;
 import com.openggf.level.resources.ResourceLoader;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -22,6 +26,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -102,6 +107,75 @@ class TestS3kIczAct1TransitionHeadless {
                         + expectedChunks16x16.length);
         assertTrue(expectedPatterns8x8.length > 0,
                 "queued ICZ2 KosM payload must not be empty");
+        DeferredLevelResourceManifest transitionManifest =
+                new DeferredLevelResourceManifest(List.of(
+                        new DeferredLevelResourceDescriptor(
+                                DeferredLevelResourceDescriptor.Kind
+                                        .PATTERNS_8X8,
+                                moduleJobs.getFirst().romSourceAddress(),
+                                CompressionType.KOSINSKI_MODULED,
+                                moduleJobs.getFirst().destinationAddress()),
+                        new DeferredLevelResourceDescriptor(
+                                DeferredLevelResourceDescriptor.Kind
+                                        .CHUNKS_16X16,
+                                directJobs.stream()
+                                        .filter(job -> job.destinationAddress()
+                                                == S3kKosRamDestinations
+                                                        .blockTableOffset(0x0408))
+                                        .findFirst().orElseThrow()
+                                        .romSourceAddress(),
+                                CompressionType.KOSINSKI,
+                                S3kKosRamDestinations
+                                        .blockTableOffset(0x0408)),
+                        new DeferredLevelResourceDescriptor(
+                                DeferredLevelResourceDescriptor.Kind
+                                        .BLOCKS_128X128,
+                                directJobs.stream()
+                                        .filter(job -> job.destinationAddress()
+                                                == S3kKosRamDestinations.RAM_START
+                                                        + 0x0A00)
+                                        .findFirst().orElseThrow()
+                                        .romSourceAddress(),
+                                CompressionType.KOSINSKI,
+                                S3kKosRamDestinations.RAM_START
+                                        + 0x0A00)));
+        Sonic3kLevel independentlyDeferredIcz2 =
+                (Sonic3kLevel) new Sonic3k(GameServices.rom().getRom())
+                        .loadLevel(
+                                0xC0 + 11,
+                                transitionManifest.newTracker());
+        int blockStart =
+                0x0A00 / LevelConstants.BLOCK_SIZE_IN_ROM;
+        int blockCount = expectedBlocks128x128.length
+                / LevelConstants.BLOCK_SIZE_IN_ROM;
+        int chunkStart = 0x0408 / Chunk.CHUNK_SIZE_IN_ROM;
+        int chunkCount = expectedChunks16x16.length
+                / Chunk.CHUNK_SIZE_IN_ROM;
+        int patternStart = 0x0122;
+        int patternCount = expectedPatterns8x8.length
+                / Pattern.PATTERN_SIZE_IN_ROM;
+        int[][] blocksBeforePublication = snapshotBlockRange(
+                independentlyDeferredIcz2, blockStart, blockCount);
+        int[][] chunksBeforePublication = snapshotChunkRange(
+                independentlyDeferredIcz2, chunkStart, chunkCount);
+        byte[][] patternsBeforePublication = snapshotPatternRange(
+                independentlyDeferredIcz2, patternStart, patternCount);
+        int[][] expectedPublishedBlocks = applyBlockPayload(
+                blocksBeforePublication, expectedBlocks128x128);
+        int[][] expectedPublishedChunks = applyChunkPayload(
+                chunksBeforePublication, expectedChunks16x16);
+        byte[][] expectedPublishedPatterns =
+                decodePatternPayload(expectedPatterns8x8);
+        assertFalse(Arrays.deepEquals(
+                        blocksBeforePublication, expectedPublishedBlocks),
+                "test fixture must distinguish deferred ICZ blocks from their payload");
+        assertFalse(Arrays.deepEquals(
+                        chunksBeforePublication, expectedPublishedChunks),
+                "test fixture must distinguish deferred ICZ chunks from their payload");
+        assertFalse(Arrays.deepEquals(
+                        patternsBeforePublication,
+                        expectedPublishedPatterns),
+                "test fixture must distinguish deferred ICZ patterns from their payload");
 
         service(HardwareServiceBoundary.POST_OBJECTS);
         int frames = 0;
@@ -137,15 +211,18 @@ class TestS3kIczAct1TransitionHeadless {
                         .filter(job -> job.kind() == HardwareWorkKind.KOS_MODULE_QUEUE)
                         .findFirst().orElseThrow().claimed(),
                 "the KosM parent cannot publish before the later POST boundary");
-        assertFalse(blockPayloadVisible(
-                        icz2Level, expectedBlocks128x128, 0x0A00),
-                "the in-frame reload must omit the queued secondary 128x128 stream");
-        assertFalse(chunkPayloadVisible(
-                        icz2Level, expectedChunks16x16, 0x0408),
-                "the in-frame reload must omit the queued secondary 16x16 stream");
-        assertFalse(patternPayloadVisible(
-                        icz2Level, expectedPatterns8x8, 0x0122),
-                "the in-frame reload must omit the queued secondary KosM archive");
+        assert2dArrayEquals(
+                blocksBeforePublication,
+                snapshotBlockRange(icz2Level, blockStart, blockCount),
+                "the in-frame reload must preserve every deferred 128x128 byte");
+        assert2dArrayEquals(
+                chunksBeforePublication,
+                snapshotChunkRange(icz2Level, chunkStart, chunkCount),
+                "the in-frame reload must preserve every deferred 16x16 byte");
+        assert2dArrayEquals(
+                patternsBeforePublication,
+                snapshotPatternRange(icz2Level, patternStart, patternCount),
+                "the in-frame reload must preserve every deferred pattern byte");
 
         HardwareTimingJob.Snapshot parent;
         int moduleFrames = 0;
@@ -156,18 +233,52 @@ class TestS3kIczAct1TransitionHeadless {
                     .findFirst().orElseThrow();
             assertFalse(parent.claimed(),
                     "POST module work remains invisible to the gameplay consumer in the same frame");
-            assertFalse(blockPayloadVisible(
-                            icz2Level, expectedBlocks128x128, 0x0A00),
-                    "no partial 128x128 publication is allowed before the consumer scan");
-            assertFalse(chunkPayloadVisible(
-                            icz2Level, expectedChunks16x16, 0x0408),
-                    "no partial 16x16 publication is allowed before the consumer scan");
-            assertFalse(patternPayloadVisible(
-                            icz2Level, expectedPatterns8x8, 0x0122),
-                    "no partial pattern publication is allowed before the consumer scan");
+            assert2dArrayEquals(
+                    blocksBeforePublication,
+                    snapshotBlockRange(icz2Level, blockStart, blockCount),
+                    "POST must not publish any 128x128 prefix before the owning scan");
+            assert2dArrayEquals(
+                    chunksBeforePublication,
+                    snapshotChunkRange(icz2Level, chunkStart, chunkCount),
+                    "POST must not publish any 16x16 prefix before the owning scan");
+            assert2dArrayEquals(
+                    patternsBeforePublication,
+                    snapshotPatternRange(
+                            icz2Level, patternStart, patternCount),
+                    "POST must not publish any pattern prefix before the owning scan");
             if (!parent.ready()) {
                 service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+                assert2dArrayEquals(
+                        blocksBeforePublication,
+                        snapshotBlockRange(
+                                icz2Level, blockStart, blockCount),
+                        "PRE must preserve every deferred 128x128 byte");
+                assert2dArrayEquals(
+                        chunksBeforePublication,
+                        snapshotChunkRange(
+                                icz2Level, chunkStart, chunkCount),
+                        "PRE must preserve every deferred 16x16 byte");
+                assert2dArrayEquals(
+                        patternsBeforePublication,
+                        snapshotPatternRange(
+                                icz2Level, patternStart, patternCount),
+                        "PRE must preserve every deferred pattern byte");
                 manager.update();
+                assert2dArrayEquals(
+                        blocksBeforePublication,
+                        snapshotBlockRange(
+                                icz2Level, blockStart, blockCount),
+                        "intermediate consumer scans must preserve all deferred blocks");
+                assert2dArrayEquals(
+                        chunksBeforePublication,
+                        snapshotChunkRange(
+                                icz2Level, chunkStart, chunkCount),
+                        "intermediate consumer scans must preserve all deferred chunks");
+                assert2dArrayEquals(
+                        patternsBeforePublication,
+                        snapshotPatternRange(
+                                icz2Level, patternStart, patternCount),
+                        "intermediate consumer scans must preserve all deferred patterns");
             }
         } while (!parent.ready() && moduleFrames++ < 100_000);
         assertTrue(parent.ready(), "test setup must reach ICZ2 KosM parent retirement");
@@ -183,51 +294,34 @@ class TestS3kIczAct1TransitionHeadless {
                                 != S3kKosRamDestinations.KOS_DECOMP_BUFFER)
                         .allMatch(HardwareTimingJob.Snapshot::claimed),
                 "the same ICZ2 publication scan must claim both direct payloads");
-        assertTrue(blockPayloadVisible(
-                        icz2Level, expectedBlocks128x128, 0x0A00),
-                "the publication scan must expose the claimed 128x128 stream");
-        assertTrue(chunkPayloadVisible(
-                        icz2Level, expectedChunks16x16, 0x0408),
-                "the publication scan must expose the claimed 16x16 stream");
-        assertTrue(patternPayloadVisible(
-                        icz2Level, expectedPatterns8x8, 0x0122),
-                "the publication scan must expose the claimed KosM archive");
-        int[][] publishedBlocks = snapshotBlockRange(
-                icz2Level,
-                0x0A00 / LevelConstants.BLOCK_SIZE_IN_ROM,
-                expectedBlocks128x128.length
-                        / LevelConstants.BLOCK_SIZE_IN_ROM);
-        int[][] publishedChunks = snapshotChunkRange(
-                icz2Level,
-                0x0408 / Chunk.CHUNK_SIZE_IN_ROM,
-                expectedChunks16x16.length
-                        / Chunk.CHUNK_SIZE_IN_ROM);
-        byte[][] publishedPatterns = snapshotPatternRange(
-                icz2Level,
-                0x0122,
-                expectedPatterns8x8.length
-                        / Pattern.PATTERN_SIZE_IN_ROM);
+        assert2dArrayEquals(
+                expectedPublishedBlocks,
+                snapshotBlockRange(icz2Level, blockStart, blockCount),
+                "the publication scan must expose every claimed 128x128 byte");
+        assertChunkPayloadEquals(
+                icz2Level, expectedChunks16x16, chunkStart,
+                "the publication scan must expose every claimed 16x16 byte");
+        assert2dArrayEquals(
+                expectedPublishedPatterns,
+                snapshotPatternRange(icz2Level, patternStart, patternCount),
+                "the publication scan must expose every claimed pattern byte");
+        int[][] chunksAfterPublication =
+                snapshotChunkRange(icz2Level, chunkStart, chunkCount);
         manager.update();
         assertTrue(Arrays.deepEquals(
-                        publishedBlocks,
+                        expectedPublishedBlocks,
                         snapshotBlockRange(
-                                icz2Level,
-                                0x0A00 / LevelConstants.BLOCK_SIZE_IN_ROM,
-                                publishedBlocks.length)),
+                                icz2Level, blockStart, blockCount)),
                 "later scans must not republish or partially rewrite 128x128 terrain");
         assertTrue(Arrays.deepEquals(
-                        publishedChunks,
+                        chunksAfterPublication,
                         snapshotChunkRange(
-                                icz2Level,
-                                0x0408 / Chunk.CHUNK_SIZE_IN_ROM,
-                                publishedChunks.length)),
+                                icz2Level, chunkStart, chunkCount)),
                 "later scans must not republish or partially rewrite 16x16 terrain");
         assertTrue(Arrays.deepEquals(
-                        publishedPatterns,
+                        expectedPublishedPatterns,
                         snapshotPatternRange(
-                                icz2Level,
-                                0x0122,
-                                publishedPatterns.length)),
+                                icz2Level, patternStart, patternCount)),
                 "later scans must not republish or partially rewrite pattern art");
         assertEquals(0x00D0, sonic.getCentreX() & 0xFFFF,
                 "ICZ1BGE_Transition subtracts d0=$6880 from player x_pos");
@@ -243,14 +337,14 @@ class TestS3kIczAct1TransitionHeadless {
                 Sonic3kZoneIds.ZONE_ICZ, 1);
         Sonic3kLevel ordinaryReload =
                 (Sonic3kLevel) GameServices.level().getCurrentLevel();
-        assertTrue(blockPayloadVisible(
-                        ordinaryReload, expectedBlocks128x128, 0x0A00),
+        assertBlockPayloadEquals(
+                ordinaryReload, expectedBlocks128x128, blockStart,
                 "a later ordinary ICZ2 load must not inherit the transition deferral");
-        assertTrue(chunkPayloadVisible(
-                        ordinaryReload, expectedChunks16x16, 0x0408),
+        assertChunkPayloadEquals(
+                ordinaryReload, expectedChunks16x16, chunkStart,
                 "a later ordinary ICZ2 load must synchronously load 16x16 terrain");
-        assertTrue(patternPayloadVisible(
-                        ordinaryReload, expectedPatterns8x8, 0x0122),
+        assertPatternPayloadEquals(
+                ordinaryReload, expectedPatterns8x8, patternStart,
                 "a later ordinary ICZ2 load must synchronously load its KosM art");
     }
 
@@ -260,78 +354,133 @@ class TestS3kIczAct1TransitionHeadless {
         GameServices.s3kKosModuleQueue().afterTimingService(boundary);
     }
 
-    private static boolean blockPayloadVisible(
-            Sonic3kLevel level, byte[] payload, int destinationBytes) {
-        int start = destinationBytes / LevelConstants.BLOCK_SIZE_IN_ROM;
+    private static int[][] applyBlockPayload(
+            int[][] baseline, byte[] payload) {
+        assertEquals(0, payload.length % LevelConstants.BLOCK_SIZE_IN_ROM);
         int count = payload.length / LevelConstants.BLOCK_SIZE_IN_ROM;
-        if (level.getBlockCount() < start + count) {
-            return false;
-        }
+        assertEquals(count, baseline.length);
+        int[][] expected = new int[count][];
         for (int block = 0; block < count; block++) {
-            int[] actual = level.getBlock(start + block).saveState();
+            expected[block] = baseline[block].length == 0
+                    ? new int[LevelConstants.CHUNKS_PER_BLOCK]
+                    : baseline[block].clone();
             int payloadOffset = block * LevelConstants.BLOCK_SIZE_IN_ROM;
-            for (int word = 0; word < actual.length; word++) {
+            for (int word = 0; word < expected[block].length; word++) {
                 int byteOffset = payloadOffset + word * 2;
-                int expected = ((payload[byteOffset] & 0xFF) << 8)
+                expected[block][word] =
+                        ((payload[byteOffset] & 0xFF) << 8)
                         | (payload[byteOffset + 1] & 0xFF);
-                if (actual[word] != expected) {
-                    return false;
-                }
             }
         }
-        return true;
+        return expected;
     }
 
-    private static boolean chunkPayloadVisible(
-            Sonic3kLevel level, byte[] payload, int destinationBytes) {
-        int start = destinationBytes / Chunk.CHUNK_SIZE_IN_ROM;
+    private static int[][] applyChunkPayload(
+            int[][] baseline, byte[] payload) {
+        assertEquals(0, payload.length % Chunk.CHUNK_SIZE_IN_ROM);
         int count = payload.length / Chunk.CHUNK_SIZE_IN_ROM;
-        if (level.getChunkCount() < start + count) {
-            return false;
-        }
+        assertEquals(count, baseline.length);
+        int[][] expected = new int[count][];
         for (int chunk = 0; chunk < count; chunk++) {
-            int[] actual = level.getChunk(start + chunk).saveState();
+            expected[chunk] = baseline[chunk].length == 0
+                    ? new int[Chunk.PATTERNS_PER_CHUNK + 2]
+                    : baseline[chunk].clone();
             int payloadOffset = chunk * Chunk.CHUNK_SIZE_IN_ROM;
             for (int word = 0; word < Chunk.PATTERNS_PER_CHUNK; word++) {
                 int byteOffset = payloadOffset + word * 2;
-                int expected = ((payload[byteOffset] & 0xFF) << 8)
+                expected[chunk][word] =
+                        ((payload[byteOffset] & 0xFF) << 8)
                         | (payload[byteOffset + 1] & 0xFF);
-                if (actual[word] != expected) {
-                    return false;
-                }
             }
         }
-        return true;
+        return expected;
     }
 
-    private static boolean patternPayloadVisible(
-            Sonic3kLevel level, byte[] payload, int destinationPattern) {
+    private static byte[][] decodePatternPayload(byte[] payload) {
+        assertEquals(0, payload.length % Pattern.PATTERN_SIZE_IN_ROM);
         int count = payload.length / Pattern.PATTERN_SIZE_IN_ROM;
-        if (level.getPatternCount() < destinationPattern + count) {
-            return false;
-        }
+        byte[][] expected = new byte[count][];
         for (int patternIndex = 0; patternIndex < count; patternIndex++) {
-            Pattern expected = new Pattern();
+            Pattern pattern = new Pattern();
             int start = patternIndex * Pattern.PATTERN_SIZE_IN_ROM;
-            expected.fromSegaFormat(Arrays.copyOfRange(
+            pattern.fromSegaFormat(Arrays.copyOfRange(
                     payload, start, start + Pattern.PATTERN_SIZE_IN_ROM));
-            Pattern actual = level.getPattern(destinationPattern + patternIndex);
+            byte[] pixels = new byte[Pattern.PATTERN_SIZE_IN_MEM];
+            int cursor = 0;
             for (int y = 0; y < Pattern.PATTERN_HEIGHT; y++) {
                 for (int x = 0; x < Pattern.PATTERN_WIDTH; x++) {
-                    if (actual.getPixel(x, y) != expected.getPixel(x, y)) {
-                        return false;
-                    }
+                    pixels[cursor++] = pattern.getPixel(x, y);
                 }
             }
+            expected[patternIndex] = pixels;
         }
-        return true;
+        return expected;
+    }
+
+    private static void assertBlockPayloadEquals(
+            Sonic3kLevel level,
+            byte[] payload,
+            int startBlock,
+            String message) {
+        int count = payload.length / LevelConstants.BLOCK_SIZE_IN_ROM;
+        int[][] actual = snapshotBlockRange(level, startBlock, count);
+        assert2dArrayEquals(
+                applyBlockPayload(actual, payload), actual, message);
+    }
+
+    private static void assertChunkPayloadEquals(
+            Sonic3kLevel level,
+            byte[] payload,
+            int startChunk,
+            String message) {
+        int count = payload.length / Chunk.CHUNK_SIZE_IN_ROM;
+        int[][] actual = snapshotChunkRange(level, startChunk, count);
+        assert2dArrayEquals(
+                applyChunkPayload(actual, payload), actual, message);
+    }
+
+    private static void assertPatternPayloadEquals(
+            Sonic3kLevel level,
+            byte[] payload,
+            int startPattern,
+            String message) {
+        assert2dArrayEquals(
+                decodePatternPayload(payload),
+                snapshotPatternRange(
+                        level,
+                        startPattern,
+                        payload.length / Pattern.PATTERN_SIZE_IN_ROM),
+                message);
+    }
+
+    private static void assert2dArrayEquals(
+            int[][] expected, int[][] actual, String message) {
+        assertEquals(expected.length, actual.length, message + " length");
+        for (int i = 0; i < expected.length; i++) {
+            if (!Arrays.equals(expected[i], actual[i])) {
+                throw new AssertionError(message + " at index " + i);
+            }
+        }
+    }
+
+    private static void assert2dArrayEquals(
+            byte[][] expected, byte[][] actual, String message) {
+        assertEquals(expected.length, actual.length, message + " length");
+        for (int i = 0; i < expected.length; i++) {
+            if (!Arrays.equals(expected[i], actual[i])) {
+                throw new AssertionError(message + " at index " + i);
+            }
+        }
     }
 
     private static int[][] snapshotBlockRange(
             Sonic3kLevel level, int start, int count) {
         int[][] snapshot = new int[count][];
         for (int i = 0; i < count; i++) {
-            snapshot[i] = level.getBlock(start + i).saveState();
+            int index = start + i;
+            snapshot[i] = index < level.getBlockCount()
+                    ? level.getBlock(index).saveState()
+                    : new int[0];
         }
         return snapshot;
     }
@@ -340,7 +489,10 @@ class TestS3kIczAct1TransitionHeadless {
             Sonic3kLevel level, int start, int count) {
         int[][] snapshot = new int[count][];
         for (int i = 0; i < count; i++) {
-            snapshot[i] = level.getChunk(start + i).saveState();
+            int index = start + i;
+            snapshot[i] = index < level.getChunkCount()
+                    ? level.getChunk(index).saveState()
+                    : new int[0];
         }
         return snapshot;
     }
@@ -349,7 +501,12 @@ class TestS3kIczAct1TransitionHeadless {
             Sonic3kLevel level, int start, int count) {
         byte[][] snapshot = new byte[count][];
         for (int i = 0; i < count; i++) {
-            Pattern pattern = level.getPattern(start + i);
+            int index = start + i;
+            if (index >= level.getPatternCount()) {
+                snapshot[i] = new byte[0];
+                continue;
+            }
+            Pattern pattern = level.getPattern(index);
             byte[] pixels = new byte[Pattern.PATTERN_SIZE_IN_MEM];
             int cursor = 0;
             for (int y = 0; y < Pattern.PATTERN_HEIGHT; y++) {

@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.util.Arrays;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -112,6 +113,24 @@ class TestSonic3kDeferredLevelResourceLoading {
         assertThrows(IllegalStateException.class,
                 () -> new Sonic3k(rom).loadLevel(
                         0xC0 + 11, incomplete.newTracker()));
+    }
+
+    @Test
+    void ordinaryIcz2LoadWithoutADeferredPolicySucceeds() {
+        Rom rom = TestEnvironment.currentRom();
+
+        assertDoesNotThrow(
+                () -> new Sonic3k(rom).loadLevel(0xC0 + 11));
+    }
+
+    @Test
+    void icz2HandoffWithAnExplicitEmptyManifestFailsMandatoryValidation() {
+        Rom rom = TestEnvironment.currentRom();
+
+        assertThrows(IllegalStateException.class,
+                () -> new Sonic3k(rom).loadLevel(
+                        0xC0 + 11,
+                        DeferredLevelResourceManifest.EMPTY.newTracker()));
     }
 
     private Sonic3kLevel loadAiz1(boolean skipIntros) throws Exception {
