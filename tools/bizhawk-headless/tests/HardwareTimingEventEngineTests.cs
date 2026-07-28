@@ -75,6 +75,15 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "HardwareTimingEventEngine unexplained direct slot zero mutation fails",
                 UnexplainedDirectSlotZeroMutationFails));
             tests.Add(new TestMain.TestCase(
+                "HardwareTimingEventEngine busy-to-idle identical replacement gets a new ordinal",
+                BusyToIdleIdenticalReplacementGetsNewOrdinal));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTimingEventEngine still-busy slot zero mutation fails",
+                StillBusyDirectSlotZeroMutationFails));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTimingEventEngine stable identical head emits no completion",
+                StableIdenticalDirectHeadEmitsNoCompletion));
+            tests.Add(new TestMain.TestCase(
                 "HardwareTimingEventEngine identical direct jobs do not fabricate shifts",
                 IdenticalDirectJobsDoNotFabricateShifts));
             tests.Add(new TestMain.TestCase(
@@ -530,7 +539,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             // Head retires and a tail appends between samples: count stays 2.
             StageDirect(host, 0, second, unchecked((int)0xFFFF0A00));
             StageDirect(host, 1, third, unchecked((int)0xFFFFD400));
-            host.SetU16(S3KRam.KosDecompQueueCount, 0x8002);
+            host.SetU16(S3KRam.KosDecompQueueCount, 2);
             engine.ObserveFrameEnd(21, host, writer);
 
             StageDirect(host, 0, third, unchecked((int)0xFFFFD400));
@@ -623,6 +632,85 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Throws<InvalidDataException>(
                 () => engine.ObserveFrameEnd(1, host, TextWriter.Null),
                 "changed");
+        }
+
+        private static void BusyToIdleIdenticalReplacementGetsNewOrdinal()
+        {
+            const int source = 0x100;
+            const int destination = unchecked((int)0xFFFF9268);
+            byte[] rom = RomWithStandardStream(source);
+            var host = NewHost();
+            var writer = new StringWriter();
+            var engine = new HardwareTimingEventEngine(rom);
+
+            SetLevelFrame(host, 0x1234);
+            StageDirect(host, 0, source, destination);
+            host.SetU16(S3KRam.KosDecompQueueCount, 0x8001);
+            engine.ObserveFrameEnd(0, host, writer);
+
+            // The old busy A completed after an identical A was appended
+            // and shifted into slot zero. Identity alone is ambiguous; the
+            // sampled busy-to-idle edge proves the old ordinal retired.
+            SetLevelFrame(host, 0x1235);
+            StageDirect(host, 0, source, destination);
+            host.SetU16(S3KRam.KosDecompQueueCount, 1);
+            engine.ObserveFrameEnd(1, host, writer);
+
+            SetLevelFrame(host, 0x1236);
+            host.SetU16(S3KRam.KosDecompQueueCount, 0);
+            engine.ObserveFrameEnd(2, host, writer);
+
+            string[] lines = writer.ToString().Split(
+                new[] {'\n'}, StringSplitOptions.RemoveEmptyEntries);
+            AssertEx.Equal(2, lines.Length);
+            AssertEx.Equal(true, lines[0].Contains("\"ordinal\":0"));
+            AssertEx.Equal(true, lines[1].Contains("\"ordinal\":1"));
+        }
+
+        private static void StillBusyDirectSlotZeroMutationFails()
+        {
+            byte[] rom = RomWithStandardStreams(0x100, 0x120);
+            var host = NewHost();
+            var engine = new HardwareTimingEventEngine(rom);
+
+            SetLevelFrame(host, 0x1234);
+            StageDirect(
+                host, 0, 0x100, unchecked((int)0xFFFF9000));
+            host.SetU16(S3KRam.KosDecompQueueCount, 0x8001);
+            engine.ObserveFrameEnd(0, host, TextWriter.Null);
+
+            SetLevelFrame(host, 0x1235);
+            StageDirect(
+                host, 0, 0x120, unchecked((int)0xFFFF9200));
+            host.SetU16(S3KRam.KosDecompQueueCount, 0x8001);
+            AssertEx.Throws<InvalidDataException>(
+                () => engine.ObserveFrameEnd(1, host, TextWriter.Null),
+                "busy");
+        }
+
+        private static void StableIdenticalDirectHeadEmitsNoCompletion()
+        {
+            const int source = 0x100;
+            const int destination = unchecked((int)0xFFFF9268);
+            byte[] rom = RomWithStandardStream(source);
+            var host = NewHost();
+            var writer = new StringWriter();
+            var engine = new HardwareTimingEventEngine(rom);
+
+            SetLevelFrame(host, 0x1234);
+            StageDirect(host, 0, source, destination);
+            host.SetU16(S3KRam.KosDecompQueueCount, 1);
+            engine.ObserveFrameEnd(0, host, writer);
+
+            SetLevelFrame(host, 0x1235);
+            engine.ObserveFrameEnd(1, host, writer);
+            AssertEx.Equal("", writer.ToString());
+
+            SetLevelFrame(host, 0x1236);
+            host.SetU16(S3KRam.KosDecompQueueCount, 0);
+            engine.ObserveFrameEnd(2, host, writer);
+            AssertEx.Equal(
+                true, writer.ToString().Contains("\"ordinal\":0"));
         }
 
         private static void AssertGrowingRetireAndAppend(

@@ -64,6 +64,7 @@ namespace OpenGGF.BizHawk.Headless
         private byte priorModulesLeft;
         private ushort? priorLevelFrameCounter;
         private bool titleCardLoadLoopActive;
+        private bool priorDirectBusy;
         private readonly int hardwareTimingSchema;
 
         public HardwareTimingEventEngine(byte[] rom)
@@ -96,6 +97,7 @@ namespace OpenGGF.BizHawk.Headless
             priorModulesLeft = 0;
             priorLevelFrameCounter = null;
             titleCardLoadLoopActive = false;
+            priorDirectBusy = false;
         }
 
         /// <summary>
@@ -139,6 +141,7 @@ namespace OpenGGF.BizHawk.Headless
                 host,
                 writer,
                 directCountWord & 0x7FFF,
+                (directCountWord & 0x8000) != 0,
                 boundary != "vint_service");
 
             // 0x81 is specifically "the final module is active in the
@@ -173,6 +176,7 @@ namespace OpenGGF.BizHawk.Headless
             IGpgxHost host,
             TextWriter writer,
             int physicalCount,
+            bool busy,
             bool directServiceAdmitted)
         {
             if (physicalCount < 0
@@ -182,10 +186,45 @@ namespace OpenGGF.BizHawk.Headless
                     "Kosinski decompression FIFO count is outside its"
                     + " four-entry capacity: " + physicalCount + ".");
             }
+            if (busy && physicalCount == 0)
+            {
+                throw new InvalidDataException(
+                    "Kosinski decompression FIFO is busy with no occupied"
+                    + " head.");
+            }
 
             int priorCount = directQueue.Count;
-            int overlap = FindLongestDirectOverlap(host, physicalCount);
-            int retiredCount = priorCount - overlap;
+            int overlap;
+            int retiredCount;
+            if (priorDirectBusy && !busy)
+            {
+                retiredCount = 1;
+                overlap = priorCount - 1;
+                RequireDirectOverlap(
+                    host,
+                    physicalCount,
+                    overlap,
+                    1,
+                    "after busy head retirement");
+            }
+            else if (priorDirectBusy || busy)
+            {
+                retiredCount = 0;
+                overlap = priorCount;
+                RequireDirectOverlap(
+                    host,
+                    physicalCount,
+                    overlap,
+                    0,
+                    priorDirectBusy
+                        ? "while the prior head remains busy"
+                        : "when the prior head starts busy service");
+            }
+            else
+            {
+                overlap = FindLongestDirectOverlap(host, physicalCount);
+                retiredCount = priorCount - overlap;
+            }
             if (retiredCount > 1)
             {
                 throw new InvalidDataException(
@@ -232,6 +271,34 @@ namespace OpenGGF.BizHawk.Headless
                 index++)
             {
                 directQueue.Add(CreateDirectSubmission(host, index));
+            }
+            priorDirectBusy = busy;
+        }
+
+        private void RequireDirectOverlap(
+            IGpgxHost host,
+            int physicalCount,
+            int overlap,
+            int priorStart,
+            string context)
+        {
+            if (overlap < 0 || physicalCount < overlap)
+            {
+                throw new InvalidDataException(
+                    "Kosinski decompression FIFO lost mirrored submissions "
+                    + context + ".");
+            }
+            for (int index = 0; index < overlap; index++)
+            {
+                if (!DirectEntryMatches(
+                    host,
+                    index,
+                    directQueue[priorStart + index]))
+                {
+                    throw new InvalidDataException(
+                        "Kosinski decompression FIFO changed entry "
+                        + index + " " + context + ".");
+                }
             }
         }
 
