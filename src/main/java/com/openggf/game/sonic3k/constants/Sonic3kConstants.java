@@ -1498,8 +1498,10 @@ public class Sonic3kConstants {
 
     // ===== ICZ Badnik Art =====
     public static final int ART_KOSM_ICZ_SNOWDUST_ADDR = 0x375134;
+    public static final int ARTTILE_ICZ_SNOWDUST = 0x0558;
     public static final int MAP_ICZ_SNOWDUST_ADDR = 0x361F0E;
     public static final int ART_KOSM_ICZ_STAR_POINTER_ADDR = 0x3751C6;
+    public static final int ARTTILE_ICZ_STAR_POINTER = 0x0548;
     public static final int MAP_STAR_POINTER_ADDR = 0x361FAE;
     public static final int ART_UNC_ICZ_PENGUINATOR_ADDR = 0x374154;
     public static final int ART_UNC_ICZ_PENGUINATOR_SIZE = 4064;

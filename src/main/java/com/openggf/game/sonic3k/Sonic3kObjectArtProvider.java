@@ -1388,6 +1388,16 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
                             new EnemyKosEntry(
                                     Sonic3kConstants.ART_KOSM_HCZ_POINTDEXTER_ADDR,
                                     Sonic3kConstants.ARTTILE_HCZ_POINTDEXTER));
+            // ROM PLCKosM_ICZ queues these entries in this order from
+            // LoadEnemyArt after the title-card owner retires.
+            // docs/skdisasm/sonic3k.asm:62287-62300, 64392-64395
+            case Sonic3kZoneIds.ZONE_ICZ -> List.of(
+                    new EnemyKosEntry(
+                            Sonic3kConstants.ART_KOSM_ICZ_SNOWDUST_ADDR,
+                            Sonic3kConstants.ARTTILE_ICZ_SNOWDUST),
+                    new EnemyKosEntry(
+                            Sonic3kConstants.ART_KOSM_ICZ_STAR_POINTER_ADDR,
+                            Sonic3kConstants.ARTTILE_ICZ_STAR_POINTER));
             default -> List.of();
         };
     }

@@ -54151,3 +54151,68 @@ com.openggf.trace.timing.TestCommittedHardwareTimingFixtures" test
   no green/red claim is made. Existing observed frontiers remain unchanged.
   LBZ was regenerated, strictly loaded, and guard-validated only; its replay
   frontier was neither inspected nor remediated.
+
+## 2026-07-28 - ICZ complete-run initial LoadEnemyArt timing f35 -> f12351
+
+- Worktree: `.worktrees/trace-s3k-icz-complete-run`, branch
+  `bugfix/ai-trace-s3k-icz-complete-run`, base `bd0f366ce`; measured with the
+  four source/test edits uncommitted during independent Sol verification.
+- ROM basis: `Obj_TitleCardWait2` calls `LoadEnemyArt` after the normal
+  title-card owner retires (`docs/skdisasm/sonic3k.asm:62287-62300`);
+  `LoadEnemyArt` appends every selected descriptor through
+  `Queue_Kos_Module` (`sonic3k.asm:2668-2685,64281-64313`); and
+  `PLCKosM_ICZ` queues Snowdust to tile `$0558` followed by StarPointer to
+  tile `$0548` (`sonic3k.asm:64392-64395`,
+  `sonic3k.constants.asm:1243-1244`). The verified locked-on ROM contains
+  the unique archives at `$375134` and `$3751C6`.
+- Fresh target command:
+
+```bash
+mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \
+  "-Ds3k.rom.path=/home/farrell/code/projects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test
+```
+
+- **Advanced:** the previous raw-frame-35 hardware-timing frontier is
+  admitted with the ROM's Snowdust fingerprint. The next target error is raw
+  frame **12351**, ordinal 162: the fixture expects
+  `sha256:d5dfb0ecd8614aa05ab8e73f90122374c8606443ec73e65d56dc8610a510c80c`
+  while the engine has rescheduled ICZ Snowdust
+  (`sha256:9d76abb5369bb27fca1574b28bf37d429af1904dbd45edabef04fd0ab1e0f594`).
+  Surefire reports 1 test, 0 assertion failures, and 1 hardware-authority
+  error; the next owner is the act-transition runtime-art schedule.
+- Focused, comparison-only, hardware-authority, S3K fallback, and special-stage
+  command:
+
+```bash
+mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \
+  "-Ds3k.rom.path=/home/farrell/code/projects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dtest=TestSonic3kPlcArtRewindSnapshot,TestS3kSpecialStageTraceReplay,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestTraceReplayInvariantGuard,TestTraceHydrateSwitchDefault,TestHardwareTimingAuthorityGuard" test
+```
+
+- Pass: 88 selected tests, 0 failures, 0 errors. This includes both
+  `TestSonic3kLevelLoading` classes, the focused ICZ queue-order assertion,
+  all four S3K fallback guards, the S3K special-stage replay, and the
+  comparison-only/hardware-authority guards.
+- Mandatory PLC corruption guard:
+
+```bash
+mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \
+  "-Ds3k.rom.path=/home/farrell/code/projects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dtest=TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits" test
+```
+
+- Pass: 1 test, 0 failures, 0 errors.
+- Cross-game shared-lifecycle sentinels:
+
+```bash
+mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \
+  "-Ds1.rom.path=/home/farrell/code/projects/OpenGGF/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Ds2.rom.path=/home/farrell/code/projects/OpenGGF/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Dtest=TestS1Ghz1TraceReplay,TestS2Ehz1TraceReplay" test
+```
+
+- Pass: 2 tests, 0 failures, 0 errors. No green replay regression was
+  introduced. Trace inputs remain comparison-only; no fixture bytes changed,
+  and the shared level lifecycle calls only the game provider's semantic
+  post-title-card hook (a no-op for S1/S2).

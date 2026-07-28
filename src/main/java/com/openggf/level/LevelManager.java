@@ -2765,13 +2765,31 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     public void requestTitleCardIfNeeded(LevelLoadContext ctx) {
         boolean headlessWholeRunHandoff = graphicsManager.isHeadlessMode()
                 && GameServices.playbackDebug().hasScheduledLevelLoadSession();
-        if (ctx.isShowTitleCard()
-                && (!graphicsManager.isHeadlessMode() || headlessWholeRunHandoff)
-                && !(zoneFeatureProvider != null && zoneFeatureProvider.shouldSuppressInitialTitleCard(currentZone, currentAct))) {
+        if (!ctx.isShowTitleCard()) {
+            return;
+        }
+        boolean presentationSuppressed = zoneFeatureProvider != null
+                && zoneFeatureProvider.shouldSuppressInitialTitleCard(
+                        currentZone, currentAct);
+        if (presentationSuppressed) {
+            return;
+        }
+        if (!graphicsManager.isHeadlessMode() || headlessWholeRunHandoff) {
             // ROM: title card reads Apparent_act, not Current_act.
             // After AIZ's seamless fire transition, Current_act is 1 but
             // Apparent_act stays 0 until the results screen exits.
             requestTitleCard(currentZone, apparentAct);
+            return;
+        }
+
+        // A headless fresh load omits presentation, but it still begins at the
+        // post-title-card production boundary. Publish the same runtime-art
+        // admission that Obj_TitleCardWait2 opens via LoadEnemyArt; this only
+        // arms ROM-owned work, and the ordinary level frame submits it later.
+        // docs/skdisasm/sonic3k.asm:62287-62300, 64302-64309
+        var objectArtProvider = activeGameModule().getObjectArtProvider();
+        if (objectArtProvider != null) {
+            objectArtProvider.onTitleCardArtRetired();
         }
     }
 
