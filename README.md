@@ -218,6 +218,8 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **S3K direct Kosinski queue parity (2026-07-28):** ordinary Kosinski work and KosM child streams now share the ROM's four-entry FIFO, with rewind-safe production ownership and native queue-empty progression for the AIZ intro and ICZ act transition. Hardware-timing schema 2 records direct retirement at the pre-main-loop boundary without granting traces payload or submission authority; schema-1 fixtures remain loadable but are explicitly excluded from certifying the affected direct-count boundaries until a separately approved fixture publication.
+
 - **Validated `develop` backports restored (2026-07-28):** S3K dynamic allocation and initial dispatch now follow the ROM's full 90-probe window over absolute SST slots 4–93, rewind null-snapshot failures identify their adapter class, modifier-documentation checks no longer contaminate sibling calls, and AIZ ROM integration tests service the production hardware-timing boundaries. The trace fleet retains its existing failure/frontier set.
 
 - **S3K signpost integration regression repaired (2026-07-28):** a prior merge retained the ROM-backed signpost tests while dropping their matching production behavior, leaving every test and trace-replay sweep blocked at compilation. The falling signpost again checks sparkle/player contact before signed-word gravity and movement, honors the ROM cooldown and bump range, and keeps the results-child timing adjustment independent from the newer short-retire-tail lifecycle.

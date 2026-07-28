@@ -287,8 +287,9 @@ Lua wins.
 
 ### Sonic 3 & Knuckles trace mode (STANDARD recorder, all three profiles)
 
-With the S3&K locked-on ROM, `--mode trace` replaces `s3k_trace_recorder.lua`
-(v6.32-s3k) on Linux across its three STANDARD-recorder profiles, selected
+With the S3&K locked-on ROM, `--mode trace` replaces the frozen
+`s3k_trace_recorder.lua` (v6.37-s3k) on Linux across its three
+STANDARD-recorder profiles, selected
 with `--trace-profile` (mirroring the Lua's `OGGF_S3K_TRACE_PROFILE`):
 
 - **`gameplay_unlock`** — the default; no extra flags.
@@ -300,7 +301,7 @@ with `--trace-profile` (mirroring the Lua's `OGGF_S3K_TRACE_PROFILE`):
   movie-end stop.
 
 `s3k_complete_run_recorder.lua` (the separate per-zone-segment / bonus /
-special-stage recorder, `6.33-s3k-completerun` fixture stamps) is a
+special-stage recorder, frozen at `6.37-s3k-completerun`) is a
 **separately natively ported recorder** — see "Sonic 3 & Knuckles
 complete-run and run mode" below — selected by `--trace-profile complete_run`
 or `--run-id` instead of a `--trace-profile` value from the table above;
@@ -328,6 +329,32 @@ tools/bizhawk-headless/run.sh \
   --output "$PWD/target/bizhawk-headless-s3k-trace" \
   --trace-profile level_gated_reset_aware
 ```
+
+#### S3K hardware-timing stream
+
+Current native S3K captures keep `trace_schema: 7` and write
+`hardware_timing_schema: 2`, `hardware_timing.jsonl`, and recorder versions
+`6.38-s3k` / `6.38-s3k-completerun`. Schema 2 authorizes exactly two
+production-submitted work kinds:
+
+- `KOS_DECOMPRESSION_QUEUE`, emitted when the mirrored `$FF40-$FF5F` direct
+  FIFO retires a proven head at `pre_main_loop`; and
+- `KOS_MODULE_QUEUE`, emitted when the module parent retires at
+  `vint_service` or `post_objects` according to the ROM-owned loop.
+
+Each kind owns an independent ordinal ledger. Events carry only kind,
+ordinal, submission fingerprint, raw frame, and boundary; they never contain
+compressed or decoded bytes. When both kinds retire on one raw frame, the
+direct `pre_main_loop` edge sorts before the module `post_objects` edge.
+
+The native recorder is the maintained publication authority. The Lua S3K
+recorders are intentionally frozen at schema 1 and emit module edges only.
+Existing schema-1 fixtures remain loadable, with direct jobs using the live
+production scheduler. The AIZ intro and ICZ act-transition fixtures listed in
+the S3K hardware-timing inventory cannot certify their direct queue-empty
+boundary until a separately reviewed and explicitly approved schema-2
+publication replaces them. Do not hand-edit or regenerate committed fixture
+payloads as part of a recorder implementation change.
 
 **Byte-parity guarantee vs the Lua recorder:** three ROM-backed differential
 gates in `tools/bizhawk-headless/test.sh` (`S3KTraceDifferentialTests`) prove

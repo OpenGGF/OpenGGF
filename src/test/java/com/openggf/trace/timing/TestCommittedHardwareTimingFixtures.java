@@ -130,6 +130,20 @@ class TestCommittedHardwareTimingFixtures {
             "soz_completerun",
             "special_stage",
             "ssz_completerun");
+    /**
+     * Schema-1 fixtures whose represented route reaches a gameplay consumer
+     * of {@code Kos_decomp_queue_count}. They remain loadable for module
+     * timing, but cannot certify these direct-count boundaries until an
+     * explicitly approved schema-2 publication replaces their payloads.
+     *
+     * <p>The multi-bonus run's first AIZ segment begins at camera X 0x1300,
+     * after the intro consumer, so it is intentionally absent.</p>
+     */
+    private static final Map<String, String> SCHEMA_ONE_DIRECT_CONSUMER_FIXTURES =
+            Map.of(
+                    "aiz1_to_hcz_fullrun", "AIZ intro",
+                    "aiz_completerun", "AIZ intro",
+                    "icz_completerun", "ICZ1-to-ICZ2 act transition");
 
     @Test
     void approvedFleetMatchesFrozenPublicationEvidence() throws Exception {
@@ -159,6 +173,39 @@ class TestCommittedHardwareTimingFixtures {
         assertEquals(EXPECTED_DESTINATIONS, observedDestinations);
         assertEquals(1, runManifests.size());
         assertRunManifest(runManifests.getFirst());
+    }
+
+    @Test
+    void schemaOneDirectConsumerInventoryRemainsLoadableAndModuleOnly()
+            throws Exception {
+        assertEquals(Set.of(
+                        "aiz1_to_hcz_fullrun",
+                        "aiz_completerun",
+                        "icz_completerun"),
+                SCHEMA_ONE_DIRECT_CONSUMER_FIXTURES.keySet());
+
+        for (Map.Entry<String, String> inventory :
+                SCHEMA_ONE_DIRECT_CONSUMER_FIXTURES.entrySet()) {
+            String directory = inventory.getKey();
+            assertTrue(EXPECTED_DESTINATIONS.contains(directory),
+                    inventory.getValue());
+
+            Path fixture = FIXTURE_ROOT.resolve(directory);
+            TraceMetadata metadata =
+                    TraceMetadata.load(fixture.resolve("metadata.json"));
+            assertEquals(7, metadata.traceSchema(), inventory.getValue());
+            assertEquals(1, metadata.hardwareTimingSchema(),
+                    inventory.getValue());
+
+            List<HardwareCompletionEdge> edges =
+                    HardwareTimingStreamLoader.load(fixture, metadata).edges();
+            assertFalse(edges.isEmpty(), inventory.getValue());
+            assertTrue(edges.stream().allMatch(edge ->
+                            edge.kind() == HardwareWorkKind.KOS_MODULE_QUEUE
+                                    && edge.boundary()
+                                    != HardwareServiceBoundary.PRE_MAIN_LOOP),
+                    inventory.getValue());
+        }
     }
 
     private static void assertOwnership(ExpectedFixture expected) {
