@@ -1715,9 +1715,7 @@ public class GameLoop {
             advanceGameplayAudioFrameForTick(doFrameStep);
             return;
         }
-        profiler.beginSection("audio");
         audioUpdatedThisStep = true;
-        profiler.endSection("audio");
     }
 
     private boolean shouldAdvanceGameplayAudioForCurrentMode() {
@@ -1735,9 +1733,7 @@ public class GameLoop {
         if (audioUpdatedThisStep) {
             return;
         }
-        profiler.beginSection("audio");
         audioUpdatedThisStep = true;
-        profiler.endSection("audio");
     }
 
     boolean handlePlaybackTakeoverBeforePlaybackInputBridge(InputHandler input) {
