@@ -364,6 +364,15 @@ Run documentation/authority/fixture guards.
 
 ## Task 7: End-to-end verification and review
 
+Before the end-to-end runs, restore the `LevelManager` source-size guard
+without increasing its budget. Extract the self-contained implementation of
+`findPatternOffset(...)` to a package-local `LevelPatternLocator`; keep the
+existing public method as a thin delegate and add focused parity tests for
+successful lookup, search order, coordinate conversion, and not-found
+results. Run `TestArchitecturalSourceGuard` to prove `LevelManager` is at or
+below 2500 effective lines. Do not change the pre-existing GameLoop or
+AbstractPlayableSprite budgets/failures as part of this extraction.
+
 ### Java
 
 Discover actual ROM filenames at repository root and supply the verified S3K

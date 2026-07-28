@@ -276,6 +276,13 @@ module ledgers. Its compatibility path continues to load committed
 `6.37-s3k`, trace-schema 7, hardware-schema 1 fixtures, but does not grant
 those fixtures direct-count boundary authority.
 
+The deferred-resource load overload must not worsen the existing
+`LevelManager` size ratchet. Move its self-contained pattern-location search
+algorithm to a package-local level utility and retain the public
+`LevelManager.findPatternOffset(...)` API as a thin delegate. This is an
+ownership-preserving extraction only: map selection, coordinate conversion,
+search order, return shape, and callers remain unchanged.
+
 The native headless recorder is the sole maintained fixture authority. The
 frozen Lua recorder is not extended merely for parity; independent Java/C#
 golden vectors and ROM/disassembly lifecycle tests provide cross-implementation
