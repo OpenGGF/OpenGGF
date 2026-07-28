@@ -63,7 +63,7 @@ import static org.mockito.Mockito.mock;
  * Unit tests for the {@link RewindRegistry} integration on
  * {@link GameplayModeContext}.
  *
- * <p>Tests verify that the eight always-available atomic adapters are
+ * <p>Tests verify that the nine always-available atomic adapters are
  * registered automatically when {@link GameplayModeContext#attachGameplayManagers}
  * is called, without requiring a full level load or ROM access.
  */
@@ -117,7 +117,7 @@ class TestGameplayModeContextRewindRegistry {
     }
 
     @Test
-    void exactlyEightAtomicKeysAfterAttach() {
+    void exactlyNineAtomicKeysAfterAttach() {
         GameplayModeContext ctx = buildAttachedContext();
         RewindRegistry registry = ctx.getRewindRegistry();
         CompositeSnapshot snapshot = registry.capture();

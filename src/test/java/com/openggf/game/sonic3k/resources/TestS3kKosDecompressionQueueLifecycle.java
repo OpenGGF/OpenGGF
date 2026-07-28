@@ -1,0 +1,197 @@
+package com.openggf.game.sonic3k.resources;
+
+import com.openggf.LevelFrameContext;
+import com.openggf.LevelFrameStep;
+import com.openggf.data.Rom;
+import com.openggf.game.GameServices;
+import com.openggf.game.rewind.CompositeSnapshot;
+import com.openggf.game.session.EngineContext;
+import com.openggf.game.session.EngineServices;
+import com.openggf.game.session.GameplayModeContext;
+import com.openggf.game.session.GameplaySessionFactory;
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.game.timing.HardwareTimingService;
+import com.openggf.game.timing.HardwareTimingSnapshot;
+import com.openggf.game.timing.HardwareWorkHandle;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class TestS3kKosDecompressionQueueLifecycle {
+    private static final byte[] ABC_STREAM = {
+            0x17, 0x00,
+            'A', 'B', 'C',
+            0x00, 0x00, 0x00
+    };
+
+    @TempDir
+    Path tempDir;
+
+    @BeforeEach
+    void setUp() {
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        SessionManager.clear();
+    }
+
+    @AfterEach
+    void tearDown() {
+        SessionManager.clear();
+    }
+
+    @Test
+    void gameplayContextOwnsOneDirectQueueAndEveryProductionFacadeResolvesIt() {
+        GameplayModeContext context = openAttachedContext();
+        S3kKosDecompressionQueue owned = context.s3kKosDecompressionQueue();
+
+        assertSame(owned, context.s3kKosDecompressionQueue());
+        assertSame(owned, GameServices.s3kKosDecompressionQueue());
+        assertSame(owned, GameServices.s3kKosDecompressionQueueOrNull());
+    }
+
+    @Test
+    void rewindRegistryRestoresTimingBeforePhysicalQueueAndResumesExactDecoderState()
+            throws Exception {
+        GameplayModeContext context = openAttachedContext();
+        S3kKosDecompressionQueue queue = context.s3kKosDecompressionQueue();
+        try (Rom rom = romWith(ABC_STREAM)) {
+            HardwareWorkHandle handle = queue.queueStandardKos(
+                    rom, 0, S3kKosRamDestinations.BLOCK_TABLE);
+            runProductionHardwareScan(context);
+
+            CompositeSnapshot checkpoint = context.getRewindRegistry().capture();
+            List<String> registrationOrder =
+                    new ArrayList<>(checkpoint.entries().keySet());
+            int timingIndex = registrationOrder.indexOf(HardwareTimingService.REWIND_KEY);
+            int queueIndex = registrationOrder.indexOf(S3kKosDecompressionQueue.REWIND_KEY);
+            assertTrue(timingIndex >= 0 && timingIndex < queueIndex,
+                    "timing must restore before its dependent physical queue: "
+                            + registrationOrder);
+
+            HardwareTimingSnapshot timingCheckpoint = assertInstanceOf(
+                    HardwareTimingSnapshot.class,
+                    checkpoint.get(HardwareTimingService.REWIND_KEY));
+            S3kKosDecompressionSnapshot preparationCheckpoint = assertInstanceOf(
+                    S3kKosDecompressionSnapshot.class,
+                    timingCheckpoint.jobs().getFirst().preparationSnapshot());
+            assertArrayEquals(new byte[] {'A'},
+                    preparationCheckpoint.decoder().output(),
+                    "one production PRE boundary must be captured in decoder state");
+            S3kKosDecompressionQueueSnapshot queueCheckpoint = assertInstanceOf(
+                    S3kKosDecompressionQueueSnapshot.class,
+                    checkpoint.get(S3kKosDecompressionQueue.REWIND_KEY));
+            assertEquals(1, queueCheckpoint.entries().size());
+            assertTrue(queueCheckpoint.entries().getFirst().physical());
+
+            runProductionHardwareScan(context);
+            runProductionHardwareScan(context);
+            runProductionHardwareScan(context);
+            assertTrue(queue.isReady(handle));
+            assertArrayEquals(new byte[] {'A', 'B', 'C'}, queue.claim(handle));
+            assertEquals(0, queue.physicalQueueSize());
+
+            context.getRewindRegistry().restore(checkpoint);
+
+            assertEquals(1, queue.physicalQueueSize());
+            assertTrue(queue.decompressionsPending());
+            assertFalse(queue.isReady(handle));
+            CompositeSnapshot restored = context.getRewindRegistry().capture();
+            HardwareTimingSnapshot restoredTiming = assertInstanceOf(
+                    HardwareTimingSnapshot.class,
+                    restored.get(HardwareTimingService.REWIND_KEY));
+            S3kKosDecompressionSnapshot restoredPreparation = assertInstanceOf(
+                    S3kKosDecompressionSnapshot.class,
+                    restoredTiming.jobs().getFirst().preparationSnapshot());
+            assertEquals(preparationCheckpoint.decoder().readPosition(),
+                    restoredPreparation.decoder().readPosition());
+            assertEquals(preparationCheckpoint.decoder().descriptorBitsRemaining(),
+                    restoredPreparation.decoder().descriptorBitsRemaining());
+            assertArrayEquals(preparationCheckpoint.decoder().output(),
+                    restoredPreparation.decoder().output());
+            assertEquals(queueCheckpoint,
+                    restored.get(S3kKosDecompressionQueue.REWIND_KEY));
+
+            runProductionHardwareScan(context);
+            assertFalse(queue.isReady(handle));
+            runProductionHardwareScan(context);
+            assertFalse(queue.isReady(handle));
+            runProductionHardwareScan(context);
+            assertTrue(queue.isReady(handle),
+                    "the restored decoder must resume after its captured first command");
+            assertArrayEquals(new byte[] {'A', 'B', 'C'}, queue.claim(handle));
+        }
+    }
+
+    @Test
+    void sessionCloseWithdrawsFacadeAndFreshContextStartsWithoutLeakedQueueState()
+            throws Exception {
+        GameplayModeContext firstContext = openAttachedContext();
+        S3kKosDecompressionQueue firstQueue =
+                GameServices.s3kKosDecompressionQueue();
+        try (Rom rom = romWith(ABC_STREAM)) {
+            firstQueue.queueStandardKos(
+                    rom, 0, S3kKosRamDestinations.BLOCK_TABLE);
+            runProductionHardwareScan(firstContext);
+            assertEquals(1, firstQueue.physicalQueueSize());
+            assertEquals(1, firstContext.hardwareTiming().pendingHandles().size());
+
+            SessionManager.closeGameplaySession();
+
+            assertEquals(0, firstQueue.physicalQueueSize(),
+                    "teardown must reset the retired context's physical owner");
+            assertTrue(firstContext.hardwareTiming().pendingHandles().isEmpty(),
+                    "teardown must reset the retired context's timing ledger");
+            assertNull(GameServices.s3kKosDecompressionQueueOrNull());
+            assertThrows(IllegalStateException.class,
+                    GameServices::s3kKosDecompressionQueue);
+
+            GameplayModeContext secondContext = openAttachedContext();
+            S3kKosDecompressionQueue secondQueue =
+                    GameServices.s3kKosDecompressionQueue();
+
+            assertNotSame(firstContext, secondContext);
+            assertNotSame(firstQueue, secondQueue);
+            assertSame(secondContext.s3kKosDecompressionQueue(), secondQueue);
+            assertEquals(0, secondQueue.physicalQueueSize());
+            assertFalse(secondQueue.decompressionsPending());
+            assertTrue(secondContext.hardwareTiming().pendingHandles().isEmpty());
+        }
+    }
+
+    private static GameplayModeContext openAttachedContext() {
+        GameplayModeContext context =
+                SessionManager.openGameplaySession(new Sonic3kGameModule());
+        GameplaySessionFactory.attachManagers(context, EngineServices.current());
+        return context;
+    }
+
+    private static void runProductionHardwareScan(GameplayModeContext context) {
+        LevelFrameStep.executeHardwareTimedObjectScan(
+                LevelFrameContext.from(context), () -> {
+                });
+    }
+
+    private Rom romWith(byte[] bytes) throws Exception {
+        Path path = tempDir.resolve("fixture.gen");
+        Files.write(path, bytes);
+        Rom rom = new Rom();
+        assertTrue(rom.open(path.toString()));
+        return rom;
+    }
+}
