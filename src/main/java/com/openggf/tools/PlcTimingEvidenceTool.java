@@ -618,7 +618,7 @@ public final class PlcTimingEvidenceTool {
                 } else {
                     Submission head = queue.getFirst();
                     result.add(new PredictedEdge(row.rawFrame(), EdgeKind.CONSUMER_BUSY,
-                            head.sourceAddress(), head.patternCount()));
+                            head.sourceAddress(), 0));
                 }
             }
         }

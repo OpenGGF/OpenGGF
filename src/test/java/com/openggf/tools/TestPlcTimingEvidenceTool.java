@@ -205,6 +205,37 @@ class TestPlcTimingEvidenceTool {
     }
 
     @Test
+    void consumerSeesQueuedHeadBeforeRunPlcPreparesItsDecoder() {
+        var evidence = new PlcTimingEvidenceTool.Evidence(
+                "s1", Map.of(0x0C, 1),
+                List.of(
+                        new PlcTimingEvidenceTool.StructuralRow(
+                                10, 12, 0, true, false,
+                                List.of(
+                                        new PlcTimingEvidenceTool.Submission(0x40, 1),
+                                        new PlcTimingEvidenceTool.Submission(0x80, 6)),
+                                true, List.of()),
+                        new PlcTimingEvidenceTool.StructuralRow(
+                                11, 12, 0x0C, false, false, List.of(), false,
+                                List.of(new PlcTimingEvidenceTool.ConsumerPoll("ready_gate", 1))),
+                        new PlcTimingEvidenceTool.StructuralRow(
+                                12, 12, 0x0C, false, false, List.of(), true, List.of())),
+                List.of(
+                        new PlcTimingEvidenceTool.ObservedEdge(10,
+                                PlcTimingEvidenceTool.EdgeKind.PREPARE, 0x40, 1),
+                        new PlcTimingEvidenceTool.ObservedEdge(11,
+                                PlcTimingEvidenceTool.EdgeKind.SERVICE, 0x40, 0),
+                        new PlcTimingEvidenceTool.ObservedEdge(11,
+                                PlcTimingEvidenceTool.EdgeKind.POP, 0x40, 0),
+                        new PlcTimingEvidenceTool.ObservedEdge(11,
+                                PlcTimingEvidenceTool.EdgeKind.CONSUMER_BUSY, 0x80, 0),
+                        new PlcTimingEvidenceTool.ObservedEdge(12,
+                                PlcTimingEvidenceTool.EdgeKind.PREPARE, 0x80, 6)));
+
+        assertTrue(PlcTimingEvidenceTool.analyze(evidence).matches());
+    }
+
+    @Test
     void atomicReplacementRecordCarriesTheCompletedIdlePostState() throws Exception {
         Path rom = temporaryDirectory.resolve("replace.gen");
         byte[] bytes = new byte[0x1DD94];
