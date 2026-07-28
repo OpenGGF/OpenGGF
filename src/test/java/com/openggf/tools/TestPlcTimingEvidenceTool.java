@@ -137,6 +137,25 @@ class TestPlcTimingEvidenceTool {
         assertTrue(PlcTimingEvidenceTool.analyze(evidence).matches());
     }
 
+    @Test
+    void atomicReplacementRecordCarriesTheCompletedIdlePostState() throws Exception {
+        Path rom = temporaryDirectory.resolve("replace.gen");
+        byte[] bytes = new byte[0x1DD94];
+        bytes[0x40] = 0; bytes[0x41] = 3;
+        bytes[0x1DD88] = 0; bytes[0x1DD89] = 4;
+        bytes[0x1DD8E] = 0; bytes[0x1DD8F] = 0x40;
+        Files.write(rom, bytes);
+        Path probe = temporaryDirectory.resolve("replace.jsonl");
+        Files.writeString(probe, """
+                {"raw_frame":10,"within_frame_order":1,"event":"plc_frame_state","game_mode":12,"interrupt_handler":0,"lag":true,"hblank_deferred":false}
+                {"raw_frame":10,"within_frame_order":2,"event":"plc_submission","operation":"replace","plc_id":1,"patterns_left_before":0,"patterns_left_after":0,"queue_slots_after":1}
+                {"raw_frame":10,"within_frame_order":3,"event":"plc_prepare_end","queue_source":64,"patterns_left_before":0,"patterns_left_after":3}
+                {"raw_frame":10,"within_frame_order":4,"event":"plc_consumer_observation","consumer_id":"ready_gate","queue_empty":false,"queue_source":64,"patterns_left_after":3}
+                """);
+        assertTrue(PlcTimingEvidenceTool.run(new String[] {"--game", "s1", "--rom", rom.toString(),
+                "--probe", probe.toString(), "--out", temporaryDirectory.resolve("replace-vector.json").toString()}));
+    }
+
     private static void assertRejected(PlcTimingEvidenceTool.Evidence evidence) {
         assertFalse(PlcTimingEvidenceTool.analyze(evidence).matches());
     }

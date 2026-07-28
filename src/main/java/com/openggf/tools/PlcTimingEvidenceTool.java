@@ -126,8 +126,19 @@ public final class PlcTimingEvidenceTool {
             int source = optionalInt(node, "queue_source", 0);
             int remaining = optionalInt(node, "patterns_left_after", 0);
             switch (event) {
-                case "plc_submission" -> row.submissions.addAll(romSubmissions(
-                        game, rom, requiredText(node, "operation"), optionalInt(node, "plc_id", -1)));
+                case "plc_submission" -> {
+                    String operation = requiredText(node, "operation");
+                    if (operation.equals("replace") || operation.equals("clear")) {
+                        if (requiredInt(node, "patterns_left_before") != 0
+                                || requiredInt(node, "patterns_left_after") != 0) {
+                            throw new IllegalArgumentException(operation + " requires an idle decoder before and after completion");
+                        }
+                    }
+                    if (operation.equals("replace") && requiredInt(node, "queue_slots_after") == 0) {
+                        throw new IllegalArgumentException("replacement post-state must contain its copied queue entry");
+                    }
+                    row.submissions.addAll(romSubmissions(game, rom, operation, optionalInt(node, "plc_id", -1)));
+                }
                 case "plc_prepare_end" -> {
                     requireIncrease(node, "plc_prepare_end", "patterns_left_before", "patterns_left_after");
                     row.runPlcCalled = true;

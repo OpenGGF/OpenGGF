@@ -26,11 +26,15 @@ model it.
 The diagnostic Lua scripts write only to an explicit
 `OGGF_PLC_PROBE_OUTPUT` path and reject an existing path. They refuse to run
 until reviewed environment-supplied addresses pin the RAM fields, VInt/HInt
-sampling, each preparation/service/pop pre/post pair, the post-shift empty
-point, and every consumer. This is intentional: routine-entry placeholders
+sampling, the explicit lag-handler value, each preparation/service/pop
+boundary, replacement and standalone-clear completion, and every consumer.
+The pop completion hook conditionally emits empty only when the shifted queue
+is actually empty; it also supplies the completion-through-pop service edge,
+while partial service has its own post hook. This is intentional: routine-entry placeholders
 cannot yield approval. Their JSONL records contain raw frame/order, handler,
 lag, HInt deferral, queue head/destination/count, and slot count. Replacement
-suppresses its nested retail clear, so it is represented atomically rather
+is emitted only after its post-copy boundary and requires idle decoder
+snapshots before and after; its nested retail clear is represented atomically rather
 than as a false replace-then-clear queue transition. They are deliberately
 separate from canonical trace recorders.
 

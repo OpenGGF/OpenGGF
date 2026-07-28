@@ -21,23 +21,24 @@ local PLC_DEST = required_address("OGGF_PLC_DEST_RAM")
 local PLC_LEFT = required_address("OGGF_PLC_LEFT_RAM")
 local GAME_MODE = required_address("OGGF_PLC_GAME_MODE_RAM")
 local VINT = required_address("OGGF_PLC_INTERRUPT_HANDLER_RAM")
-local LAG = required_address("OGGF_PLC_LAG_RAM")
+local LAG_HANDLER = required_address("OGGF_PLC_LAG_HANDLER")
 local ADD = required_address("OGGF_PLC_ADD_ENTRY")
-local REPLACE = required_address("OGGF_PLC_REPLACE_ENTRY")
-local CLEAR = required_address("OGGF_PLC_CLEAR_ENTRY")
+local REPLACE_BEGIN = required_address("OGGF_PLC_REPLACE_BEGIN")
+local REPLACE_POST = required_address("OGGF_PLC_REPLACE_POST")
+local CLEAR_BEGIN = required_address("OGGF_PLC_CLEAR_BEGIN")
+local CLEAR_POST = required_address("OGGF_PLC_CLEAR_POST")
 local PREPARE_BEGIN = required_address("OGGF_PLC_PREPARE_BEGIN")
 local PREPARE_END = required_address("OGGF_PLC_PREPARE_END")
 local FULL_PRE = required_address("OGGF_PLC_FULL_SERVICE_PRE")
-local FULL_POST = required_address("OGGF_PLC_FULL_SERVICE_POST")
+local FULL_PARTIAL_POST = required_address("OGGF_PLC_FULL_PARTIAL_POST")
 local SMALL_PRE = required_address("OGGF_PLC_SMALL_SERVICE_PRE")
-local SMALL_POST = required_address("OGGF_PLC_SMALL_SERVICE_POST")
+local SMALL_PARTIAL_POST = required_address("OGGF_PLC_SMALL_PARTIAL_POST")
 local POP_PRE = required_address("OGGF_PLC_POP_PRE")
 local POP_POST = required_address("OGGF_PLC_POP_POST")
-local EMPTY_POST = required_address("OGGF_PLC_EMPTY_POST")
 local VINT_DISPATCH = required_address("OGGF_PLC_VINT_DISPATCH")
 local HBLANK_DEFERRED_ENTRY = required_address("OGGF_PLC_HBLANK_DEFERRED_ENTRY")
 
-local sequence, active_source, suppress_internal_clear = 0, 0, false
+local sequence, active_source, replacement, clear_before, pending_service = 0, 0, nil, nil, nil
 local frame_handler, frame_lag, frame_hblank, frame_mode = 0, true, false, 0
 local function u8(a) return mainmemory.read_u8(a) end
 local function u16(a) return mainmemory.read_u16_be(a) end
@@ -64,40 +65,52 @@ event.onmemoryexecute(function()
   emit("plc_submission", ',"operation":"append","plc_id":' .. ((emu.getregister("M68K D0") or 0) % 0x10000))
 end, ADD)
 event.onmemoryexecute(function()
-  suppress_internal_clear = true
-  emit("plc_submission", ',"operation":"replace","plc_id":' .. ((emu.getregister("M68K D0") or 0) % 0x10000))
-end, REPLACE)
+  replacement = { id = (emu.getregister("M68K D0") or 0) % 0x10000, before = snapshot() }
+end, REPLACE_BEGIN)
 event.onmemoryexecute(function()
-  if suppress_internal_clear then suppress_internal_clear = false else emit("plc_submission", ',"operation":"clear"') end
-end, CLEAR)
+  if not replacement then clear_before = snapshot() end
+end, CLEAR_BEGIN)
+event.onmemoryexecute(function()
+  if not replacement then emit("plc_submission", ',"operation":"clear"', nil, clear_before) end
+end, CLEAR_POST)
+event.onmemoryexecute(function()
+  if not replacement then error("replacement post reached without replacement begin") end
+  emit("plc_submission", ',"operation":"replace","plc_id":' .. replacement.id, nil, replacement.before)
+  replacement = nil
+end, REPLACE_POST)
 event.onmemoryexecute(function()
   active_source = u32(PLC_BUFFER)
   _G.plc_prepare_before = snapshot()
   emit("plc_prepare_begin", nil, active_source, _G.plc_prepare_before)
 end, PREPARE_BEGIN)
 event.onmemoryexecute(function() emit("plc_prepare_end", nil, active_source, _G.plc_prepare_before) end, PREPARE_END)
-local function service_pre() _G.plc_service_before = snapshot() end
-local function service_post()
-  if _G.plc_service_before.left == 0 then error("service post reached without active decoder") end
-  emit("plc_service", nil, active_source, _G.plc_service_before)
+local function service_pre()
+  if pending_service then error("service began before previous service completed") end
+  pending_service = snapshot()
 end
-event.onmemoryexecute(service_pre, FULL_PRE); event.onmemoryexecute(service_post, FULL_POST)
-event.onmemoryexecute(service_pre, SMALL_PRE); event.onmemoryexecute(service_post, SMALL_POST)
+local function partial_service_post()
+  if not pending_service or pending_service.left == 0 then error("partial service post reached without active decoder") end
+  emit("plc_service", nil, active_source, pending_service); pending_service = nil
+end
+event.onmemoryexecute(service_pre, FULL_PRE); event.onmemoryexecute(partial_service_post, FULL_PARTIAL_POST)
+event.onmemoryexecute(service_pre, SMALL_PRE); event.onmemoryexecute(partial_service_post, SMALL_PARTIAL_POST)
 event.onmemoryexecute(function() _G.plc_pop_before = snapshot() end, POP_PRE)
-event.onmemoryexecute(function() emit("plc_pop", nil, active_source, _G.plc_pop_before) end, POP_POST)
 event.onmemoryexecute(function()
-  if slots() ~= 0 then error("empty hook is not after the final queue entry was removed") end
-  emit("plc_empty", nil, 0)
-end, EMPTY_POST)
+  if pending_service then emit("plc_service", nil, active_source, pending_service); pending_service = nil end
+  emit("plc_pop", nil, active_source, _G.plc_pop_before)
+  if slots() == 0 then active_source = 0; emit("plc_empty", nil, 0) end
+end, POP_POST)
 event.onmemoryexecute(function()
-  frame_handler = u8(VINT); frame_lag = u8(LAG) ~= 0; frame_hblank = false; frame_mode = u8(GAME_MODE)
+  frame_handler = u8(VINT); frame_lag = frame_handler == LAG_HANDLER; frame_hblank = false; frame_mode = u8(GAME_MODE)
 end, VINT_DISPATCH)
 event.onmemoryexecute(function() frame_hblank = true end, HBLANK_DEFERRED_ENTRY)
 for spec in string.gmatch(consumer_hooks, "[^,]+") do
   local id, address = string.match(spec, "([^@]+)@(.+)")
   if not id or not address or not tonumber(address) then error("OGGF_PLC_CONSUMER_HOOKS entries are consumer@0xROM") end
   event.onmemoryexecute(function()
-    emit("plc_consumer_observation", ',"consumer_id":"'..id..'","queue_empty":'..(u32(PLC_BUFFER)==0 and "true" or "false"), active_source)
+    local empty = u32(PLC_BUFFER) == 0 and u16(PLC_LEFT) == 0
+    local source = empty and 0 or (u16(PLC_LEFT) ~= 0 and active_source or u32(PLC_BUFFER))
+    emit("plc_consumer_observation", ',"consumer_id":"'..id..'","queue_empty":'..(empty and "true" or "false"), source)
   end, tonumber(address))
 end
 event.onframeend(function() emit("plc_frame_state"); sequence = 0 end)
