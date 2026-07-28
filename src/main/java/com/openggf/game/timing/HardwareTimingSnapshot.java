@@ -17,6 +17,7 @@ public record HardwareTimingSnapshot(
         Objects.requireNonNull(nextOrdinals, "nextOrdinals");
         Objects.requireNonNull(jobs, "jobs");
         Objects.requireNonNull(admissionPolicies, "admissionPolicies");
+        validateAdmissionPolicies(admissionPolicies, recordedAdmissionActive);
         nextOrdinals = Map.copyOf(nextOrdinals);
         admissionPolicies = Map.copyOf(admissionPolicies);
         jobs = List.copyOf(jobs);
@@ -27,5 +28,24 @@ public record HardwareTimingSnapshot(
         return recordedAdmissionActive
                 ? HardwareReadinessAdmissionPolicy.RECORDED
                 : HardwareReadinessAdmissionPolicy.LIVE;
+    }
+
+    static void validateAdmissionPolicies(
+            Map<HardwareWorkKind, HardwareReadinessAdmissionPolicy> admissionPolicies,
+            boolean recordedAdmissionActive) {
+        Objects.requireNonNull(admissionPolicies, "admissionPolicies");
+        boolean anyRecorded = false;
+        for (HardwareWorkKind kind : HardwareWorkKind.values()) {
+            HardwareReadinessAdmissionPolicy policy = admissionPolicies.get(kind);
+            if (policy == null) {
+                throw new IllegalArgumentException(
+                        "hardware timing snapshot policy is missing kind " + kind);
+            }
+            anyRecorded |= policy == HardwareReadinessAdmissionPolicy.RECORDED;
+        }
+        if (recordedAdmissionActive && !anyRecorded) {
+            throw new IllegalArgumentException(
+                    "active recorded hardware timing snapshot cannot leave every kind live");
+        }
     }
 }

@@ -98,6 +98,11 @@ public final class HardwareTimingStreamLoader {
                 throw rejected(timingPath, "line " + (index + 1)
                         + " kind is not authorized by hardware_timing_schema 1");
             }
+            if (edge.kind() == HardwareWorkKind.KOS_DECOMPRESSION_QUEUE
+                    && edge.boundary() != HardwareServiceBoundary.PRE_MAIN_LOOP) {
+                throw rejected(timingPath, "line " + (index + 1)
+                        + " direct completion kind requires pre_main_loop boundary");
+            }
             if (edge.rawFrame() < 0 || edge.rawFrame() >= traceFrameCount) {
                 throw rejected(timingPath, "raw_frame " + edge.rawFrame()
                         + " is outside [0, " + traceFrameCount + ")");
@@ -110,7 +115,8 @@ public final class HardwareTimingStreamLoader {
             if (previousOrdinal != null && edge.ordinal() <= previousOrdinal) {
                 throw rejected(timingPath, "ordinal must increase per kind " + edge.kind());
             }
-            if (previous != null && compare(previous, edge) >= 0) {
+            if (previous != null
+                    && HardwareTimingSchedule.CANONICAL_ORDER.compare(previous, edge) >= 0) {
                 throw rejected(timingPath, "events must use canonical ordering");
             }
             previous = edge;
@@ -213,19 +219,6 @@ public final class HardwareTimingStreamLoader {
         } catch (CharacterCodingException e) {
             throw rejected(path, "hardware_timing.jsonl must be valid UTF-8");
         }
-    }
-
-    private static int compare(HardwareCompletionEdge left, HardwareCompletionEdge right) {
-        int rawFrame = Integer.compare(left.rawFrame(), right.rawFrame());
-        if (rawFrame != 0) {
-            return rawFrame;
-        }
-        int boundary = Integer.compare(left.boundary().ordinal(), right.boundary().ordinal());
-        if (boundary != 0) {
-            return boundary;
-        }
-        int kind = Integer.compare(left.kind().ordinal(), right.kind().ordinal());
-        return kind != 0 ? kind : Long.compare(left.ordinal(), right.ordinal());
     }
 
     private static IOException rejected(Path path, String reason) {

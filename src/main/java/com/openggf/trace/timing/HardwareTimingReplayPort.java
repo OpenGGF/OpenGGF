@@ -7,7 +7,6 @@ import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.timing.PendingRecordedSubmission;
 import com.openggf.game.timing.RecordedCompletionAuthority;
 
-import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -26,12 +25,6 @@ import java.util.Set;
 public final class HardwareTimingReplayPort
         implements RewindSnapshottable<HardwareTimingReplaySnapshot> {
     public static final String REWIND_KEY = "hardware-timing-replay";
-
-    private static final Comparator<HardwareCompletionEdge> CANONICAL_ORDER =
-            Comparator.comparingInt(HardwareCompletionEdge::rawFrame)
-                    .thenComparingInt(edge -> edge.boundary().ordinal())
-                    .thenComparing(edge -> edge.kind().name())
-                    .thenComparingLong(HardwareCompletionEdge::ordinal);
 
     private final RecordedCompletionAuthority authority;
     private final Set<String> consumedIdentities = new LinkedHashSet<>();
@@ -327,7 +320,8 @@ public final class HardwareTimingReplayPort
                         "hardware completion ordinal must be non-negative: "
                                 + edge.ordinal());
             }
-            if (previous != null && CANONICAL_ORDER.compare(previous, edge) > 0) {
+            if (previous != null
+                    && HardwareTimingSchedule.CANONICAL_ORDER.compare(previous, edge) > 0) {
                 throw new IllegalArgumentException(
                         "hardware completion edges are not in canonical order at "
                                 + describe(edge));

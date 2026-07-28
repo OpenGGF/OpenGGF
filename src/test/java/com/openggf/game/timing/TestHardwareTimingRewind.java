@@ -190,6 +190,23 @@ class TestHardwareTimingRewind {
                 HardwareWorkKind.KOS_DECOMPRESSION_QUEUE, 1, 20)).ordinal());
     }
 
+    @Test
+    void snapshotRejectsIncompleteOrAllLiveRecordedPolicyMaps() {
+        assertThrows(IllegalArgumentException.class, () -> new HardwareTimingSnapshot(
+                Map.of(), java.util.List.of(),
+                Map.of(HardwareWorkKind.KOS_MODULE_QUEUE,
+                        HardwareReadinessAdmissionPolicy.RECORDED),
+                true, false, null));
+        assertThrows(IllegalArgumentException.class, () -> new HardwareTimingSnapshot(
+                Map.of(), java.util.List.of(),
+                Map.of(
+                        HardwareWorkKind.KOS_MODULE_QUEUE,
+                        HardwareReadinessAdmissionPolicy.LIVE,
+                        HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
+                        HardwareReadinessAdmissionPolicy.LIVE),
+                true, false, null));
+    }
+
     private static HardwareWorkSubmission submission(int workUnits, int payloadByte) {
         return submission(HardwareWorkKind.KOS_MODULE_QUEUE, workUnits, payloadByte);
     }

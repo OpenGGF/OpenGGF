@@ -181,6 +181,8 @@ public final class HardwareTimingService
     @Override
     public void restore(HardwareTimingSnapshot snapshot) {
         Objects.requireNonNull(snapshot, "snapshot");
+        HardwareTimingSnapshot.validateAdmissionPolicies(
+                snapshot.admissionPolicies(), snapshot.recordedAdmissionActive());
         nextOrdinals.clear();
         nextOrdinals.putAll(snapshot.nextOrdinals());
         jobs.clear();

@@ -77,6 +77,31 @@ class TestHardwareTimingStreamLoader {
     }
 
     @Test
+    void schemaTwoDirectEdgesRequireThePreMainLoopBoundary() throws IOException {
+        for (String boundary : List.of("vint_service", "post_objects")) {
+            Path fixture = writeFixture(7, 2,
+                    edge(0, boundary, "kos_decompression_queue", 0) + "\n", 2);
+
+            assertRejected(fixture, "hardware_timing.jsonl", "pre_main_loop");
+        }
+    }
+
+    @Test
+    void loaderCanonicalOrderInstallsIntoReplayForMixedKindsAtOneBoundary()
+            throws IOException {
+        Path fixture = writeFixture(7, 2,
+                edge(0, "pre_main_loop", "kos_module_queue", 0) + "\n"
+                        + edge(0, "pre_main_loop", "kos_decompression_queue", 0) + "\n", 2);
+
+        HardwareTimingSchedule schedule = TraceData.load(fixture).hardwareTimingSchedule();
+        var authority = new com.openggf.game.timing.HardwareTimingService()
+                .beginRecordedAdmission();
+        HardwareTimingReplayPort port = new HardwareTimingReplayPort(authority);
+
+        port.install(schedule);
+    }
+
+    @Test
     void malformedOrUnknownEventFails() throws IOException {
         Path unknownEvent = writeFixture(7, 1,
                 "{\"event\":\"hardware_work_pending\",\"raw_frame\":0,"

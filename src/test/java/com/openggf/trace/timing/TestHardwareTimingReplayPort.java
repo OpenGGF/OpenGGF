@@ -27,6 +27,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestHardwareTimingReplayPort {
 
     @Test
+    void schemaTwoScheduleRejectsDirectEdgesOutsidePreMainLoop() {
+        for (HardwareServiceBoundary boundary : List.of(VINT_SERVICE, POST_OBJECTS)) {
+            HardwareCompletionEdge edge = new HardwareCompletionEdge(
+                    0, boundary, HardwareWorkKind.KOS_DECOMPRESSION_QUEUE, 0,
+                    fingerprint('a'));
+
+            assertThrows(IllegalArgumentException.class,
+                    () -> new HardwareTimingSchedule(2, List.of(edge)));
+        }
+    }
+
+    @Test
     void schemaTwoAdmitsDirectPreEdgeBeforeIndependentModulePostEdge() {
         HardwareTimingService service = new HardwareTimingService(
                 com.openggf.game.timing.RomWorkBudgetScheduler.oneWorkUnitAt(PRE_MAIN_LOOP));
