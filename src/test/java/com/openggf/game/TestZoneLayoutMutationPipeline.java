@@ -210,6 +210,8 @@ class TestZoneLayoutMutationPipeline {
     @Test
     void levelFrameStepFlushesQueuedMutationsAfterCameraScrollAndEventsBeforeBoundary() {
         GameModule module = mock(GameModule.class);
+        when(module.createRuntimeArtCoordinator(
+                org.mockito.ArgumentMatchers.any())).thenReturn(RuntimeArtCoordinator.NONE);
         LevelEventProvider levelEvents = mock(LevelEventProvider.class);
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
         when(module.getSpecialStageCycleCount()).thenReturn(7);

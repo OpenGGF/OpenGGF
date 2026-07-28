@@ -6736,8 +6736,9 @@ public class TestScalarOnlyCodecDeletion {
             @Override public ObjectRenderManager renderManager() { return INERT_RENDER_MANAGER; }
             @Override public SonicConfigurationService configuration() { return DEFAULT_CONFIGURATION; }
         };
-        S3kResultsScreenObjectInstance source = ObjectConstructionContext.construct(stub,
-                () -> new S3kResultsScreenObjectInstance(PlayerCharacter.TAILS_ALONE, 1));
+        S3kResultsScreenObjectInstance source = ObjectConstructionContext.withRewindActiveRestore(
+                () -> ObjectConstructionContext.construct(stub,
+                        () -> new S3kResultsScreenObjectInstance(PlayerCharacter.TAILS_ALONE, 1)));
         setIntField(source, "timeBonus", 4321);
         setIntField(source, "ringBonus", 210);
         setIntField(source, "totalBonusCountUp", 1234);

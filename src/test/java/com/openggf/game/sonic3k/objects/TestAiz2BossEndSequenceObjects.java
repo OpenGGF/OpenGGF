@@ -1090,7 +1090,9 @@ class TestAiz2BossEndSequenceObjects {
         Aiz2EndEggCapsuleInstance capsule = new Aiz2EndEggCapsuleInstance(0x4A08, 0x011A);
         capsule.setServices(services);
         S3kResultsScreenObjectInstance results = (S3kResultsScreenObjectInstance)
-                ObjectConstructionContext.construct(services, capsule::createResultsScreen);
+                ObjectConstructionContext.withRewindActiveRestore(
+                        () -> ObjectConstructionContext.construct(
+                                services, capsule::createResultsScreen));
         results.setServices(services);
 
         Method onExitReady = S3kResultsScreenObjectInstance.class.getDeclaredMethod("onExitReady");
