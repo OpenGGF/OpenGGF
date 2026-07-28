@@ -11,6 +11,7 @@ import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareTimingSnapshot;
 import com.openggf.game.timing.HardwareWorkHandle;
 import com.openggf.game.timing.HardwareWorkKind;
+import com.openggf.game.sonic3k.resources.S3kKosDecompressionQueueSnapshot;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -22,6 +23,7 @@ import java.lang.reflect.Method;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kZoneKosRewind {
@@ -67,6 +69,174 @@ class TestS3kZoneKosRewind {
         events.update(1, 1);
         assertEquals(2L, nextKosOrdinal(timing.capture()),
                 "AIZ owner restore must poll the original jobs, not resubmit them");
+    }
+
+    @Test
+    void aizMainLevelSidecarRebindsDirectAndModuleHandlesWithoutResubmission()
+            throws Exception {
+        var timing = GameServices.hardwareTiming();
+        var directQueue = GameServices.s3kKosDecompressionQueue();
+        Sonic3kAIZEvents events =
+                new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
+        events.init(0);
+        GameServices.camera().setX((short) 0x1400);
+        events.update(0, 0);
+
+        HardwareWorkHandle directHandle = timing.pendingHandles().stream()
+                .filter(handle -> handle.kind()
+                        == HardwareWorkKind.KOS_DECOMPRESSION_QUEUE)
+                .findFirst().orElseThrow();
+        HardwareWorkHandle moduleHandle = timing.pendingHandles().stream()
+                .filter(handle -> handle.kind()
+                        == HardwareWorkKind.KOS_MODULE_QUEUE)
+                .findFirst().orElseThrow();
+        byte[] eventSnapshot = ZoneEventSchemaSidecar.capture(events);
+        HardwareTimingSnapshot timingSnapshot = timing.capture();
+        S3kKosDecompressionQueueSnapshot directSnapshot =
+                directQueue.capture();
+
+        timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        directQueue.afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        events.init(0);
+
+        timing.restore(timingSnapshot);
+        directQueue.restore(directSnapshot);
+        ZoneEventSchemaSidecar.restore(events, eventSnapshot);
+        events.discardHardwareWorkFacadesAfterRewind();
+        events.rebindHardwareWorkAfterRewind();
+
+        assertEquals(directHandle, field(events, "mainLevelBlockHandle"));
+        assertEquals(moduleHandle, field(events, "mainLevelArtHandle"));
+        assertEquals(List.of(directHandle, moduleHandle),
+                timing.pendingHandles());
+        assertEquals(nextOrdinal(
+                        timingSnapshot,
+                        HardwareWorkKind.KOS_DECOMPRESSION_QUEUE),
+                nextOrdinal(
+                        timing.capture(),
+                        HardwareWorkKind.KOS_DECOMPRESSION_QUEUE));
+        assertEquals(nextOrdinal(
+                        timingSnapshot,
+                        HardwareWorkKind.KOS_MODULE_QUEUE),
+                nextOrdinal(
+                        timing.capture(),
+                        HardwareWorkKind.KOS_MODULE_QUEUE));
+    }
+
+    @Test
+    void aizMainLevelSidecarRebindsReadyUnclaimedHandlesAfterBothBoundaries()
+            throws Exception {
+        var timing = GameServices.hardwareTiming();
+        var directQueue = GameServices.s3kKosDecompressionQueue();
+        var moduleQueue = GameServices.s3kKosModuleQueue();
+        Sonic3kAIZEvents events =
+                new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
+        events.init(0);
+        GameServices.camera().setX((short) 0x1400);
+        events.update(0, 0);
+
+        HardwareWorkHandle directHandle = timing.pendingHandles().stream()
+                .filter(handle -> handle.kind()
+                        == HardwareWorkKind.KOS_DECOMPRESSION_QUEUE)
+                .findFirst().orElseThrow();
+        HardwareWorkHandle moduleHandle = timing.pendingHandles().stream()
+                .filter(handle -> handle.kind()
+                        == HardwareWorkKind.KOS_MODULE_QUEUE)
+                .findFirst().orElseThrow();
+        int boundaries = 0;
+        while (!timing.isReady(moduleHandle) && boundaries++ < 100_000) {
+            timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            directQueue.afterTimingService(
+                    HardwareServiceBoundary.PRE_MAIN_LOOP);
+            timing.service(HardwareServiceBoundary.POST_OBJECTS);
+            directQueue.afterTimingService(
+                    HardwareServiceBoundary.POST_OBJECTS);
+            moduleQueue.afterTimingService(
+                    HardwareServiceBoundary.POST_OBJECTS);
+        }
+        assertTrue(timing.isReady(directHandle),
+                "ordinary stream must be ready after its decisive PRE boundary");
+        assertTrue(timing.isReady(moduleHandle),
+                "KosM parent must be ready after its decisive POST boundary");
+
+        byte[] eventSnapshot = ZoneEventSchemaSidecar.capture(events);
+        HardwareTimingSnapshot timingSnapshot = timing.capture();
+        S3kKosDecompressionQueueSnapshot directSnapshot =
+                directQueue.capture();
+
+        events.init(0);
+
+        timing.restore(timingSnapshot);
+        directQueue.restore(directSnapshot);
+        ZoneEventSchemaSidecar.restore(events, eventSnapshot);
+        events.discardHardwareWorkFacadesAfterRewind();
+        events.rebindHardwareWorkAfterRewind();
+
+        assertEquals(directHandle, field(events, "mainLevelBlockHandle"));
+        assertEquals(moduleHandle, field(events, "mainLevelArtHandle"));
+        assertTrue(timing.isReady(directHandle));
+        assertTrue(timing.isReady(moduleHandle));
+        assertEquals(List.of(directHandle, moduleHandle),
+                timing.pendingHandles());
+        assertEquals(nextOrdinal(
+                        timingSnapshot,
+                        HardwareWorkKind.KOS_DECOMPRESSION_QUEUE),
+                nextOrdinal(
+                        timing.capture(),
+                        HardwareWorkKind.KOS_DECOMPRESSION_QUEUE));
+        assertEquals(nextOrdinal(
+                        timingSnapshot,
+                        HardwareWorkKind.KOS_MODULE_QUEUE),
+                nextOrdinal(
+                        timing.capture(),
+                        HardwareWorkKind.KOS_MODULE_QUEUE));
+    }
+
+    @Test
+    void iczSidecarRebindsTwoDirectHandlesAndTransferredModuleParent()
+            throws Exception {
+        var timing = GameServices.hardwareTiming();
+        var directQueue = GameServices.s3kKosDecompressionQueue();
+        Sonic3kICZEvents events = new Sonic3kICZEvents();
+        events.init(0);
+        GameServices.camera().setX((short) 0x6900);
+        events.forceAct1NormalBackgroundRoutineForTest();
+        events.update(0, 0);
+
+        List<HardwareWorkHandle> directHandles = timing.pendingHandles().stream()
+                .filter(handle -> handle.kind()
+                        == HardwareWorkKind.KOS_DECOMPRESSION_QUEUE)
+                .toList();
+        HardwareWorkHandle moduleHandle = timing.pendingHandles().stream()
+                .filter(handle -> handle.kind()
+                        == HardwareWorkKind.KOS_MODULE_QUEUE)
+                .findFirst().orElseThrow();
+        assertEquals(2, directHandles.size());
+        byte[] eventSnapshot = ZoneEventSchemaSidecar.capture(events);
+        HardwareTimingSnapshot timingSnapshot = timing.capture();
+        S3kKosDecompressionQueueSnapshot directSnapshot =
+                directQueue.capture();
+
+        timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        directQueue.afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        events.init(0);
+
+        timing.restore(timingSnapshot);
+        directQueue.restore(directSnapshot);
+        ZoneEventSchemaSidecar.restore(events, eventSnapshot);
+        events.discardHardwareWorkFacadesAfterRewind();
+        events.rebindHardwareWorkAfterRewind();
+
+        assertEquals(directHandles.get(0),
+                field(events, "act2TransitionChunkHandle"));
+        assertEquals(directHandles.get(1),
+                field(events, "act2TransitionBlockHandle"));
+        assertEquals(moduleHandle,
+                field(events, "act2TransitionArtHandle"));
+        assertEquals(2L, nextOrdinal(
+                timing.capture(), HardwareWorkKind.KOS_DECOMPRESSION_QUEUE));
+        assertEquals(1L, nextOrdinal(
+                timing.capture(), HardwareWorkKind.KOS_MODULE_QUEUE));
     }
 
     @Test
@@ -120,7 +290,11 @@ class TestS3kZoneKosRewind {
     }
 
     private static long nextKosOrdinal(HardwareTimingSnapshot snapshot) {
-        return snapshot.nextOrdinals().getOrDefault(
-                HardwareWorkKind.KOS_MODULE_QUEUE, 0L);
+        return nextOrdinal(snapshot, HardwareWorkKind.KOS_MODULE_QUEUE);
+    }
+
+    private static long nextOrdinal(
+            HardwareTimingSnapshot snapshot, HardwareWorkKind kind) {
+        return snapshot.nextOrdinals().getOrDefault(kind, 0L);
     }
 }

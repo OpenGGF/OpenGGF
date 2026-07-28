@@ -1449,6 +1449,11 @@ class TestSonic3kLevelEventRewindSnapshot {
         iczPayloadSource.setIndoorPaletteCyclingActive(false);
         set(iczPayloadSource, "backgroundRoutine", 8);
         set(iczPayloadSource, "bigSnowOffset", 0x1234);
+        set(iczPayloadSource, "act2TransitionChunkOrdinal", 3L);
+        set(iczPayloadSource, "act2TransitionBlockOrdinal", 4L);
+        set(iczPayloadSource, "act2TransitionArtOrdinal", 2L);
+        set(iczPayloadSource, "act2TransitionDirectPublished", true);
+        set(iczPayloadSource, "act2TransitionArtPublished", true);
 
         Sonic3kLevelEventManager source = new Sonic3kLevelEventManager();
         Object sourceFixed = fixedAirCountdownManager(source);
@@ -1479,6 +1484,16 @@ class TestSonic3kLevelEventRewindSnapshot {
                 "length-prefixed ICZ schema sidecar must restore ICZ ints");
         assertEquals(0x1234, iczTarget.getIcz1BigSnowOffset(),
                 "length-prefixed ICZ schema sidecar must restore ICZ snow state");
+        assertEquals(3L, get(iczTarget, "act2TransitionChunkOrdinal"),
+                "ICZ chunk-job identity must remain aligned in the manager sidecar");
+        assertEquals(4L, get(iczTarget, "act2TransitionBlockOrdinal"),
+                "ICZ block-job identity must remain aligned in the manager sidecar");
+        assertEquals(2L, get(iczTarget, "act2TransitionArtOrdinal"),
+                "ICZ module-parent identity must remain aligned in the manager sidecar");
+        assertEquals(true, get(iczTarget, "act2TransitionDirectPublished"),
+                "ICZ direct publication state must remain aligned in the manager sidecar");
+        assertEquals(true, get(iczTarget, "act2TransitionArtPublished"),
+                "ICZ art publication state must remain aligned in the manager sidecar");
         assertEquals("true,10,129,4660,2,1,255,32832,50,22", fixedControllerState(targetP1),
                 "fixed Breathing_bubbles sidecar must remain aligned after ICZ schema payload");
     }

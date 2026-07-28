@@ -19,6 +19,8 @@ import com.openggf.game.sonic3k.Sonic3kLevel;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.Sonic3kLoadBootstrap;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.resources.S3kKosRamDestinations;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareTimingJob;
 import com.openggf.game.timing.HardwareWorkKind;
@@ -251,31 +253,102 @@ public class TestSonic3kAIZEvents {
     }
 
     @Test
-    public void act1ResizeOwnerQueuesMainLevelKosmAndAppliesItsPreparedPayload() {
+    public void act1ResizeOwnerQueuesMainLevelKosmAndAppliesItsPreparedPayload() throws IOException {
         Camera camera = GameServices.camera();
         var events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
         events.init(0);
         camera.setX((short) 0x1400);
         camera.setFrozen(true);
+        Sonic3kLevel level = (Sonic3kLevel) GameServices.level().getCurrentLevel();
+        byte[] patternBefore = snapshotPattern(level.getPattern(0x0BE));
 
         events.update(0, 0);
 
-        List<HardwareTimingJob.Snapshot> jobs = GameServices.hardwareTiming()
-                .capture().jobs().stream()
+        List<HardwareTimingJob.Snapshot> allJobs = GameServices.hardwareTiming()
+                .capture().jobs();
+        List<HardwareTimingJob.Snapshot> moduleJobs = allJobs.stream()
                 .filter(job -> job.kind() == HardwareWorkKind.KOS_MODULE_QUEUE)
                 .toList();
-        assertEquals(1, jobs.size(),
+        List<HardwareTimingJob.Snapshot> directJobs = allJobs.stream()
+                .filter(job -> job.kind() == HardwareWorkKind.KOS_DECOMPRESSION_QUEUE)
+                .toList();
+        assertEquals(1, moduleJobs.size(),
                 "AIZ1_Resize $1400 owner must submit its real Queue_Kos_Module job");
-        assertEquals(0x3A944E, jobs.getFirst().romSourceAddress());
-        assertEquals(0x0BE * 32, jobs.getFirst().destinationAddress());
+        assertEquals(1, directJobs.size(),
+                "AIZ1_Resize $1400 owner must submit its real Queue_Kos block stream");
+        assertEquals(0x3A944E, moduleJobs.getFirst().romSourceAddress());
+        assertEquals(0x0BE * 32, moduleJobs.getFirst().destinationAddress());
+        assertEquals(S3kKosRamDestinations.blockTableOffset(0x268),
+                directJobs.getFirst().destinationAddress());
+        assertEquals(GameServices.rom().getRom().read32BitAddr(
+                        Sonic3kConstants.LEVEL_LOAD_BLOCK_ADDR
+                                + Sonic3kConstants.LEVEL_LOAD_BLOCK_AIZ1_INTRO_INDEX
+                                * Sonic3kConstants.LEVEL_LOAD_BLOCK_ENTRY_SIZE
+                                + 12) & 0x00FF_FFFF,
+                directJobs.getFirst().romSourceAddress());
         assertFalse(AizPlaneIntroInstance.isMainLevelPhaseActive(),
                 "synchronous publication cannot shadow-decompress before KosM readiness");
 
-        drainKosModuleHardware();
         events.update(0, 1);
+        assertEquals(1, GameServices.hardwareTiming()
+                        .incompleteCount(HardwareWorkKind.KOS_DECOMPRESSION_QUEUE),
+                "repeated scans must not resubmit the AIZ direct stream");
+        assertEquals(1, GameServices.hardwareTiming()
+                        .incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE),
+                "repeated scans must not resubmit the AIZ KosM parent");
+
+        serviceHardware(GameServices.hardwareTiming(), HardwareServiceBoundary.POST_OBJECTS);
+        int frame = 2;
+        while (GameServices.s3kKosDecompressionQueue().decompressionsPending()
+                && frame < HARDWARE_DRAIN_FRAME_LIMIT) {
+            serviceHardware(GameServices.hardwareTiming(), HardwareServiceBoundary.PRE_MAIN_LOOP);
+            if (GameServices.s3kKosDecompressionQueue().decompressionsPending()) {
+                events.update(0, frame++);
+                serviceHardware(GameServices.hardwareTiming(), HardwareServiceBoundary.POST_OBJECTS);
+            }
+        }
+        assertFalse(GameServices.s3kKosDecompressionQueue().decompressionsPending(),
+                "test setup must reach the final direct PRE retirement");
+        assertFalse(AizPlaneIntroInstance.isMainLevelPhaseActive(),
+                "direct readiness is consumer-visible only when the event scan runs");
+
+        events.update(0, frame++);
 
         assertTrue(AizPlaneIntroInstance.isMainLevelPhaseActive(),
-                "the resize owner must publish the claimed prepared payload");
+                "the first scan after final PRE retirement must publish the direct block overlay");
+        assertArrayEquals(patternBefore, snapshotPattern(level.getPattern(0x0BE)),
+                "KosM patterns must not publish during the direct-empty scan");
+
+        HardwareTimingJob.Snapshot parent;
+        do {
+            serviceHardware(GameServices.hardwareTiming(), HardwareServiceBoundary.POST_OBJECTS);
+            assertArrayEquals(patternBefore, snapshotPattern(level.getPattern(0x0BE)),
+                    "POST module work cannot become consumer-visible in the same frame");
+            parent = GameServices.hardwareTiming().capture().jobs().stream()
+                    .filter(job -> job.kind() == HardwareWorkKind.KOS_MODULE_QUEUE)
+                    .findFirst().orElseThrow();
+            if (!parent.ready()) {
+                serviceHardware(GameServices.hardwareTiming(), HardwareServiceBoundary.PRE_MAIN_LOOP);
+                events.update(0, frame++);
+                assertArrayEquals(patternBefore, snapshotPattern(level.getPattern(0x0BE)),
+                        "intermediate KosM children must not publish partial pattern art");
+            }
+        } while (!parent.ready());
+        assertFalse(parent.claimed(),
+                "the retired KosM payload must remain owned until the following event scan");
+        events.update(0, frame);
+        assertTrue(GameServices.hardwareTiming().capture().jobs().stream()
+                        .filter(job -> job.kind() == HardwareWorkKind.KOS_MODULE_QUEUE)
+                        .findFirst().orElseThrow().claimed(),
+                "the scan after parent POST retirement must publish and claim the KosM payload");
+    }
+
+    private static void serviceHardware(
+            com.openggf.game.timing.HardwareTimingService timing,
+            HardwareServiceBoundary boundary) {
+        timing.service(boundary);
+        GameServices.s3kKosDecompressionQueue().afterTimingService(boundary);
+        GameServices.s3kKosModuleQueue().afterTimingService(boundary);
     }
 
     @Test

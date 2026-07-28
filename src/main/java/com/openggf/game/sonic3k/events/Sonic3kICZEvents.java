@@ -1,25 +1,40 @@
 package com.openggf.game.sonic3k.events;
 
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.GameServices;
+import com.openggf.game.mutation.LayoutMutationContext;
+import com.openggf.game.mutation.LevelMutationSurface;
+import com.openggf.game.mutation.MutationEffects;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.save.SessionSaveRequests;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
+import com.openggf.game.sonic3k.Sonic3kLevel;
+import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
+import com.openggf.game.sonic3k.Sonic3kPlcLoader;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.IczBigSnowPileInstance;
 import com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance;
+import com.openggf.game.sonic3k.resources.S3kKosDecompressionQueue;
+import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
+import com.openggf.game.sonic3k.resources.S3kKosRamDestinations;
+import com.openggf.game.timing.HardwareWorkHandle;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
 import com.openggf.level.Palette;
+import com.openggf.level.Pattern;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.io.IOException;
+import java.util.List;
 
 /**
  * IceCap Zone dynamic level events.
@@ -48,8 +63,11 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
     private static final int ICZ1_BG_NORMAL = 16;
     private static final int ICZ1_BG_TRANSITION = 20;
     private static final int ICZ1_TRANSITION_CAMERA_X = 0x6900;
-    /** ROM Kos/KosM queue workload published by ICZ1BGE_Normal before the reload can run. */
-    private static final int ICZ2_SECONDARY_KOS_DRAIN_FRAMES = 41;
+    private static final int ICZ2_LEVEL_LOAD_BLOCK_INDEX =
+            Sonic3kZoneIds.ZONE_ICZ * 2 + 1;
+    private static final int ICZ2_SECONDARY_CHUNK_DEST_BYTES = 0x0A00;
+    private static final int ICZ2_SECONDARY_BLOCK_DEST_BYTES = 0x0408;
+    private static final int ICZ2_SECONDARY_ART_DEST_TILE = 0x0122;
     private static final int ICZ1_TO_ICZ2_OFFSET_X = -0x6880;
     private static final int ICZ1_TO_ICZ2_OFFSET_Y = 0x0100;
     private static final int ICZ2_CAMERA_MIN_X = 0x0000;
@@ -132,7 +150,21 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
     private int bigSnowVelocity;
     private boolean bigSnowPileSpawned;
     private boolean act2TransitionRequested;
-    private int act2TransitionKosDrainFrames;
+    private boolean act2TransitionDirectPublished;
+    private boolean act2TransitionArtPublished;
+    @RewindTransient(reason = "queue facade is rebound to the restored session ledger by captured ordinals")
+    private S3kKosDecompressionQueue act2TransitionDirectQueue;
+    @RewindTransient(reason = "handle is rebound to the restored session ledger by captured ordinal")
+    private HardwareWorkHandle act2TransitionChunkHandle;
+    @RewindTransient(reason = "handle is rebound to the restored session ledger by captured ordinal")
+    private HardwareWorkHandle act2TransitionBlockHandle;
+    private long act2TransitionChunkOrdinal = -1;
+    private long act2TransitionBlockOrdinal = -1;
+    @RewindTransient(reason = "queue facade is rebound to the restored session ledger by captured ordinal")
+    private S3kKosModuleQueue act2TransitionArtQueue;
+    @RewindTransient(reason = "handle is rebound to the restored session ledger by captured ordinal")
+    private HardwareWorkHandle act2TransitionArtHandle;
+    private long act2TransitionArtOrdinal = -1;
     private int activeAct;
     private boolean postTitleAct2SizeChangeActive;
     private int act2MaxXAccumulator;
@@ -161,7 +193,16 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
         bigSnowVelocity = 0;
         bigSnowPileSpawned = false;
         act2TransitionRequested = false;
-        act2TransitionKosDrainFrames = 0;
+        act2TransitionDirectPublished = false;
+        act2TransitionArtPublished = false;
+        act2TransitionDirectQueue = null;
+        act2TransitionChunkHandle = null;
+        act2TransitionBlockHandle = null;
+        act2TransitionChunkOrdinal = -1;
+        act2TransitionBlockOrdinal = -1;
+        act2TransitionArtQueue = null;
+        act2TransitionArtHandle = null;
+        act2TransitionArtOrdinal = -1;
         postTitleAct2SizeChangeActive = false;
         act2MaxXAccumulator = 0;
         act2MinYAccumulator = 0;
@@ -178,6 +219,10 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
 
     @Override
     public void update(int act, int frameCounter) {
+        rebindHardwareWorkIfNeeded();
+        if (act == 1) {
+            publishTransferredIcz2Resources();
+        }
         // ROM LevelLoop runs ShakeScreen_Setup after the sprites; the scroll
         // handler consumes the previously published sample this frame while the
         // countdown produces the next one (matching the AIZ/CNZ shake ordering).
@@ -569,14 +614,51 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
         if ((camera().getX() & 0xFFFF) < ICZ1_TRANSITION_CAMERA_X) {
             return;
         }
+        queueIcz2TransitionResources();
         backgroundRoutine = ICZ1_BG_TRANSITION;
-        act2TransitionKosDrainFrames = 0;
     }
 
     private void updateIcz2TransitionQueue() {
-        act2TransitionKosDrainFrames++;
-        if (act2TransitionKosDrainFrames >= ICZ2_SECONDARY_KOS_DRAIN_FRAMES) {
+        if (act2TransitionDirectQueue != null
+                && !act2TransitionDirectQueue.decompressionsPending()) {
             requestIcz2Transition();
+        }
+    }
+
+    private void queueIcz2TransitionResources() {
+        if (act2TransitionChunkHandle != null
+                || act2TransitionBlockHandle != null
+                || act2TransitionArtHandle != null) {
+            return;
+        }
+        try {
+            int entry = Sonic3kConstants.LEVEL_LOAD_BLOCK_ADDR
+                    + ICZ2_LEVEL_LOAD_BLOCK_INDEX
+                    * Sonic3kConstants.LEVEL_LOAD_BLOCK_ENTRY_SIZE;
+            int artSource = rom().read32BitAddr(entry + 4) & 0x00FF_FFFF;
+            int blockSource = rom().read32BitAddr(entry + 12) & 0x00FF_FFFF;
+            int chunkSource = rom().read32BitAddr(entry + 20) & 0x00FF_FFFF;
+
+            act2TransitionDirectQueue = GameServices.s3kKosDecompressionQueue();
+            act2TransitionChunkHandle = act2TransitionDirectQueue.queueStandardKos(
+                    rom(), chunkSource,
+                    S3kKosRamDestinations.RAM_START
+                            + ICZ2_SECONDARY_CHUNK_DEST_BYTES);
+            act2TransitionChunkOrdinal = act2TransitionChunkHandle.ordinal();
+            act2TransitionBlockHandle = act2TransitionDirectQueue.queueStandardKos(
+                    rom(), blockSource,
+                    S3kKosRamDestinations.blockTableOffset(
+                            ICZ2_SECONDARY_BLOCK_DEST_BYTES));
+            act2TransitionBlockOrdinal = act2TransitionBlockHandle.ordinal();
+
+            act2TransitionArtQueue = GameServices.s3kKosModuleQueue();
+            act2TransitionArtHandle = act2TransitionArtQueue.queue(
+                    rom(), artSource, ICZ2_SECONDARY_ART_DEST_TILE, true);
+            act2TransitionArtOrdinal = act2TransitionArtHandle.ordinal();
+        } catch (IOException exception) {
+            throw new IllegalStateException(
+                    "Unable to queue ICZ2 seamless-transition resources",
+                    exception);
         }
     }
 
@@ -613,6 +695,188 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
         } catch (IOException e) {
             throw new IllegalStateException("Failed to apply ICZ act transition", e);
         }
+        transferIcz2ResourceOwnership();
+    }
+
+    private void transferIcz2ResourceOwnership() {
+        if (!(GameServices.module().getLevelEventProvider()
+                instanceof Sonic3kLevelEventManager eventManager)) {
+            throw new IllegalStateException(
+                    "ICZ seamless transition has no S3K event resource owner");
+        }
+        Sonic3kICZEvents target = eventManager.getIczEvents();
+        if (target == null || target == this) {
+            throw new IllegalStateException(
+                    "ICZ seamless transition did not install its Act 2 resource owner");
+        }
+        target.acceptTransferredIcz2Resources(this);
+        target.publishTransferredIcz2Resources();
+    }
+
+    private void acceptTransferredIcz2Resources(Sonic3kICZEvents source) {
+        if (activeAct != 1
+                || act2TransitionChunkHandle != null
+                || act2TransitionBlockHandle != null
+                || act2TransitionArtHandle != null) {
+            throw new IllegalStateException(
+                    "ICZ2 resource owner cannot accept duplicate or out-of-act work");
+        }
+        act2TransitionDirectQueue = source.act2TransitionDirectQueue;
+        act2TransitionChunkHandle = source.act2TransitionChunkHandle;
+        act2TransitionBlockHandle = source.act2TransitionBlockHandle;
+        act2TransitionChunkOrdinal = source.act2TransitionChunkOrdinal;
+        act2TransitionBlockOrdinal = source.act2TransitionBlockOrdinal;
+        act2TransitionArtQueue = source.act2TransitionArtQueue;
+        act2TransitionArtHandle = source.act2TransitionArtHandle;
+        act2TransitionArtOrdinal = source.act2TransitionArtOrdinal;
+
+        source.act2TransitionDirectQueue = null;
+        source.act2TransitionChunkHandle = null;
+        source.act2TransitionBlockHandle = null;
+        source.act2TransitionChunkOrdinal = -1;
+        source.act2TransitionBlockOrdinal = -1;
+        source.act2TransitionArtQueue = null;
+        source.act2TransitionArtHandle = null;
+        source.act2TransitionArtOrdinal = -1;
+    }
+
+    private void publishTransferredIcz2Resources() {
+        if (!act2TransitionDirectPublished
+                && act2TransitionChunkHandle != null
+                && act2TransitionBlockHandle != null
+                && !act2TransitionDirectQueue.decompressionsPending()) {
+            if (!act2TransitionDirectQueue.isReady(act2TransitionChunkHandle)
+                    || !act2TransitionDirectQueue.isReady(act2TransitionBlockHandle)) {
+                throw new IllegalStateException(
+                        "ICZ2 direct FIFO emptied before both transition payloads became ready");
+            }
+            byte[] chunks128x128 =
+                    act2TransitionDirectQueue.claim(act2TransitionChunkHandle);
+            byte[] blocks16x16 =
+                    act2TransitionDirectQueue.claim(act2TransitionBlockHandle);
+            applyIcz2PreparedTerrain(chunks128x128, blocks16x16);
+            act2TransitionChunkHandle = null;
+            act2TransitionBlockHandle = null;
+            act2TransitionChunkOrdinal = -1;
+            act2TransitionBlockOrdinal = -1;
+            act2TransitionDirectQueue = null;
+            act2TransitionDirectPublished = true;
+        }
+
+        if (!act2TransitionArtPublished
+                && act2TransitionArtHandle != null
+                && act2TransitionArtQueue.isReady(act2TransitionArtHandle)) {
+            byte[] tiles8x8 =
+                    act2TransitionArtQueue.claim(act2TransitionArtHandle);
+            applyIcz2PreparedArt(tiles8x8);
+            act2TransitionArtHandle = null;
+            act2TransitionArtOrdinal = -1;
+            act2TransitionArtQueue = null;
+            act2TransitionArtPublished = true;
+        }
+    }
+
+    private void applyIcz2PreparedTerrain(
+            byte[] chunks128x128,
+            byte[] blocks16x16) {
+        LevelManager manager = levelManager();
+        Level level = manager.getCurrentLevel();
+        if (!(level instanceof Sonic3kLevel sonic3kLevel)) {
+            throw new IllegalStateException(
+                    "ICZ2 transition terrain requires a live Sonic3kLevel");
+        }
+        LayoutMutationContext context = new LayoutMutationContext(
+                LevelMutationSurface.forLevel(level),
+                manager::applyMutationEffects);
+        GameServices.zoneLayoutMutationPipeline().applyImmediately(mutationContext -> {
+            sonic3kLevel.applyBlockOverlay(
+                    chunks128x128, ICZ2_SECONDARY_CHUNK_DEST_BYTES, false);
+            sonic3kLevel.applyChunkOverlay(
+                    blocks16x16, ICZ2_SECONDARY_BLOCK_DEST_BYTES, false);
+            return MutationEffects.redrawAllTilemaps();
+        }, context);
+    }
+
+    private void applyIcz2PreparedArt(byte[] tiles8x8) {
+        if (tiles8x8.length % Pattern.PATTERN_SIZE_IN_ROM != 0) {
+            throw new IllegalArgumentException(
+                    "prepared ICZ2 module art must contain whole patterns");
+        }
+        LevelManager manager = levelManager();
+        Level level = manager.getCurrentLevel();
+        if (!(level instanceof Sonic3kLevel sonic3kLevel)) {
+            throw new IllegalStateException(
+                    "ICZ2 transition art requires a live Sonic3kLevel");
+        }
+        LayoutMutationContext context = new LayoutMutationContext(
+                LevelMutationSurface.forLevel(level),
+                manager::applyMutationEffects);
+        GameServices.zoneLayoutMutationPipeline().applyImmediately(mutationContext -> {
+            sonic3kLevel.applyPatternOverlay(
+                    tiles8x8,
+                    ICZ2_SECONDARY_ART_DEST_TILE
+                            * Pattern.PATTERN_SIZE_IN_ROM,
+                    false);
+            return MutationEffects.redrawAllTilemaps();
+        }, context);
+        Sonic3kPlcLoader.refreshAffectedRenderers(
+                List.of(new Sonic3kPlcLoader.TileRange(
+                        ICZ2_SECONDARY_ART_DEST_TILE,
+                        tiles8x8.length / Pattern.PATTERN_SIZE_IN_ROM)),
+                manager);
+    }
+
+    private void rebindHardwareWorkIfNeeded() {
+        if (((act2TransitionChunkOrdinal >= 0
+                        || act2TransitionBlockOrdinal >= 0)
+                && act2TransitionDirectQueue == null)
+                || (act2TransitionArtOrdinal >= 0
+                        && act2TransitionArtQueue == null)) {
+            rebindHardwareWorkAfterRewind();
+        }
+    }
+
+    public void rebindHardwareWorkAfterRewind() {
+        var timing = GameServices.hardwareTiming();
+        act2TransitionChunkHandle = restoredHardwareHandle(
+                timing, HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
+                act2TransitionChunkOrdinal, "ICZ2 secondary chunks");
+        act2TransitionBlockHandle = restoredHardwareHandle(
+                timing, HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
+                act2TransitionBlockOrdinal, "ICZ2 secondary blocks");
+        act2TransitionDirectQueue =
+                act2TransitionChunkHandle != null
+                                || act2TransitionBlockHandle != null
+                        ? GameServices.s3kKosDecompressionQueue()
+                        : null;
+        act2TransitionArtHandle = restoredHardwareHandle(
+                timing, HardwareWorkKind.KOS_MODULE_QUEUE,
+                act2TransitionArtOrdinal, "ICZ2 secondary art");
+        act2TransitionArtQueue = act2TransitionArtHandle != null
+                ? GameServices.s3kKosModuleQueue()
+                : null;
+    }
+
+    public void discardHardwareWorkFacadesAfterRewind() {
+        act2TransitionDirectQueue = null;
+        act2TransitionChunkHandle = null;
+        act2TransitionBlockHandle = null;
+        act2TransitionArtQueue = null;
+        act2TransitionArtHandle = null;
+    }
+
+    private static HardwareWorkHandle restoredHardwareHandle(
+            com.openggf.game.timing.HardwareTimingService timing,
+            HardwareWorkKind kind,
+            long ordinal,
+            String owner) {
+        if (ordinal < 0) {
+            return null;
+        }
+        return timing.pendingHandle(kind, ordinal)
+                .orElseThrow(() -> new IllegalStateException(
+                        "restored " + owner + " owner cannot find "
+                                + kind + " ordinal " + ordinal));
     }
 
     private void updateAct1ScreenEvent() {

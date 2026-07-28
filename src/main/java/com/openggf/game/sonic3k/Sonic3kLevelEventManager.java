@@ -2101,9 +2101,11 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         byte[] before = ZoneEventSchemaSidecar.capture(iczEvents);
         try {
             ZoneEventSchemaSidecar.restore(iczEvents, bytes);
+            iczEvents.discardHardwareWorkFacadesAfterRewind();
         } catch (RuntimeException e) {
             try {
                 ZoneEventSchemaSidecar.restore(iczEvents, before);
+                iczEvents.discardHardwareWorkFacadesAfterRewind();
             } catch (RuntimeException rollbackFailure) {
                 e.addSuppressed(rollbackFailure);
             }

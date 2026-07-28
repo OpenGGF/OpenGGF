@@ -50,6 +50,14 @@ public final class S3kKosModuleQueue {
             Rom rom,
             int source,
             int destinationPatternAddress) throws IOException {
+        return queue(rom, source, destinationPatternAddress, false);
+    }
+
+    public HardwareWorkHandle queue(
+            Rom rom,
+            int source,
+            int destinationPatternAddress,
+            boolean exportableAcrossSegment) throws IOException {
         Objects.requireNonNull(rom, "rom");
         if (timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE)
                 >= MAX_QUEUE_DEPTH) {
@@ -83,7 +91,7 @@ public final class S3kKosModuleQueue {
                 descriptor.destinationLength(),
                 COMPRESSION_VARIANT,
                 descriptor.moduleCount(),
-                false,
+                exportableAcrossSegment,
                 preparation));
         descriptors.put(handle, descriptor);
         return handle;
