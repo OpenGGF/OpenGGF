@@ -141,7 +141,7 @@ public class HCZLargeFanObjectInstance extends AbstractObjectInstance implements
 
     private void queueFanArt() {
         try {
-            artQueue = new S3kKosModuleQueue(services().hardwareTiming());
+            artQueue = services().s3kKosModuleQueue();
             artHandle = artQueue.queue(
                     services().rom(),
                     Sonic3kConstants.ART_KOSM_HCZ_LARGE_FAN_ADDR,
@@ -161,7 +161,7 @@ public class HCZLargeFanObjectInstance extends AbstractObjectInstance implements
                         HardwareWorkKind.KOS_MODULE_QUEUE, artOrdinal)
                 .orElseThrow(() -> new IllegalStateException(
                         "Missing restored HCZ large-fan KosM job " + artOrdinal));
-        artQueue = new S3kKosModuleQueue(services().hardwareTiming());
+        artQueue = services().s3kKosModuleQueue();
     }
 
     private boolean shouldActivate(AbstractPlayableSprite player) {

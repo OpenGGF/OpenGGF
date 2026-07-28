@@ -81,6 +81,39 @@ public final class HardwareTimingService
         return job.claim();
     }
 
+    /**
+     * Captures payload prepared by a production coordinator at the boundary
+     * just serviced. Recorded authority still controls final readiness.
+     */
+    public void captureCoordinatorPreparation(
+            HardwareWorkHandle handle,
+            HardwareServiceBoundary boundary) {
+        Objects.requireNonNull(boundary, "boundary");
+        if (lastServicedBoundary != boundary) {
+            throw new IllegalStateException(
+                    "coordinator boundary mismatch: expected " + boundary
+                            + ", production serviced " + lastServicedBoundary);
+        }
+        HardwareTimingJob job = requireKnown(handle);
+        job.capturePreparedPayload();
+        if (admissionPolicyFor(handle.kind())
+                == HardwareReadinessAdmissionPolicy.LIVE) {
+            releasePreparedInFifoOrder(handle.kind());
+        }
+    }
+
+    /** Returns a pending preparation to its production-owned coordinator. */
+    public HardwareWorkPreparation coordinatorPreparation(
+            HardwareWorkHandle handle) {
+        HardwareTimingJob job = requireKnown(handle);
+        if (job.isClaimed()) {
+            throw new IllegalStateException(
+                    "hardware work was already claimed: "
+                            + HardwareTimingJob.describe(handle));
+        }
+        return job.preparation();
+    }
+
     public List<HardwareWorkHandle> pendingHandles() {
         return jobs.stream()
                 .filter(job -> !job.isClaimed())

@@ -31,6 +31,7 @@ import com.openggf.game.solid.SolidExecutionRegistry;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.game.zone.ZoneRuntimeState;
 import com.openggf.game.timing.HardwareTimingService;
+import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
 import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.BigRingReturnState;
@@ -280,6 +281,15 @@ public class DefaultObjectServices implements ObjectServices {
                     "hardware timing requires session-backed object services");
         }
         return gameplayMode.hardwareTiming();
+    }
+
+    @Override
+    public S3kKosModuleQueue s3kKosModuleQueue() {
+        if (gameplayMode == null) {
+            throw new IllegalStateException(
+                    "S3K KosM coordination requires session-backed object services");
+        }
+        return gameplayMode.s3kKosModuleQueue();
     }
 
     @Override

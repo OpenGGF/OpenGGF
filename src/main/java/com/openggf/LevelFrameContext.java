@@ -11,6 +11,7 @@ import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.timing.HardwareTimingBoundaryObserver;
 import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.game.sonic3k.resources.S3kKosDecompressionQueue;
+import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.timer.TimerManager;
 
@@ -26,7 +27,8 @@ public record LevelFrameContext(GameModule gameModule,
                                 PaletteOwnershipRegistry paletteOwnershipRegistry,
                                 HardwareTimingService hardwareTiming,
                                 HardwareTimingBoundaryObserver hardwareTimingBoundaryObserver,
-                                S3kKosDecompressionQueue s3kKosDecompressionQueue) {
+                                S3kKosDecompressionQueue s3kKosDecompressionQueue,
+                                S3kKosModuleQueue s3kKosModuleQueue) {
 
     public LevelFrameContext {
         Objects.requireNonNull(gameModule, "gameModule");
@@ -53,6 +55,7 @@ public record LevelFrameContext(GameModule gameModule,
                 context.getPaletteOwnershipRegistry(),
                 context.hardwareTiming(),
                 context.hardwareTimingBoundaryObserver(),
-                context.s3kKosDecompressionQueue());
+                context.s3kKosDecompressionQueue(),
+                context.s3kKosModuleQueue());
     }
 }

@@ -376,7 +376,7 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
         rebindArtAfterRestore();
         try {
             if (artHandle == null) {
-                artQueue = new S3kKosModuleQueue(services().hardwareTiming());
+                artQueue = services().s3kKosModuleQueue();
                 artHandle = artQueue.queue(
                         services().rom(),
                         sourceAddress,
@@ -406,7 +406,7 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
                         HardwareWorkKind.KOS_MODULE_QUEUE, artOrdinal)
                 .orElseThrow(() -> new IllegalStateException(
                         "Missing restored HCZ water-wall KosM job " + artOrdinal));
-        artQueue = new S3kKosModuleQueue(services().hardwareTiming());
+        artQueue = services().s3kKosModuleQueue();
     }
 
     /**

@@ -2,7 +2,7 @@ package com.openggf.game.sonic3k.resources;
 
 import com.openggf.game.timing.HardwareWorkPreparation;
 import com.openggf.game.timing.HardwareWorkPreparationSnapshot;
-import com.openggf.tools.DecoderSnapshot;
+import com.openggf.game.timing.HardwareWorkHandle;
 
 import java.util.Objects;
 
@@ -12,7 +12,8 @@ public record S3kKosModuleSnapshot(
         byte[] archive,
         int completedModules,
         int activeModuleOffset,
-        DecoderSnapshot activeDecoder,
+        HardwareWorkHandle activeChild,
+        int activeChildCompressedLength,
         byte[] output,
         boolean prepared) implements HardwareWorkPreparationSnapshot {
 

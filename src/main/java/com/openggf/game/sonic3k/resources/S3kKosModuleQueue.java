@@ -8,22 +8,21 @@ import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.timing.HardwareWorkPreparation;
 import com.openggf.game.timing.HardwareWorkPreparationSnapshot;
 import com.openggf.game.timing.HardwareWorkSubmission;
-import com.openggf.tools.DecoderSnapshot;
 import com.openggf.tools.KosinskiReader;
-import com.openggf.tools.ResumableKosinskiDecoder;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
 /**
- * S3K's four-entry {@code Queue_Kos_Module} FIFO backed by session timing.
+ * Coordinator for S3K's four-entry {@code Queue_Kos_Module} FIFO.
  *
- * <p>The internal standard-Kosinski decoder is serviced before the main loop;
- * module retirement and final readiness are visible only after object scans.
- * It is intentionally not submitted as separate direct-queue hardware work.
+ * <p>Archive parents own no decoder. Each aligned standard-Kosinski module is
+ * submitted to the one session-owned direct FIFO and claimed only after that
+ * complete physical FIFO becomes empty.
  */
 public final class S3kKosModuleQueue {
     private static final int MAX_QUEUE_DEPTH = 4;
@@ -32,11 +31,15 @@ public final class S3kKosModuleQueue {
     private static final String COMPRESSION_VARIANT = "kosinski_moduled";
 
     private final HardwareTimingService timing;
+    private final S3kKosDecompressionQueue directQueue;
     private final Map<HardwareWorkHandle, S3kKosModuleDescriptor> descriptors =
             new HashMap<>();
 
-    public S3kKosModuleQueue(HardwareTimingService timing) {
+    public S3kKosModuleQueue(
+            HardwareTimingService timing,
+            S3kKosDecompressionQueue directQueue) {
         this.timing = Objects.requireNonNull(timing, "timing");
+        this.directQueue = Objects.requireNonNull(directQueue, "directQueue");
     }
 
     public HardwareWorkHandle queue(
@@ -84,10 +87,39 @@ public final class S3kKosModuleQueue {
 
     public void prepareQueuedModuleBeforeVSync() {
         timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        directQueue.afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
     }
 
     public void processModuleQueueAfterObjects() {
         timing.service(HardwareServiceBoundary.POST_OBJECTS);
+        afterTimingService(HardwareServiceBoundary.POST_OBJECTS);
+    }
+
+    /** Runs after generic timing and direct retirement at a production boundary. */
+    public void afterTimingService(HardwareServiceBoundary boundary) {
+        if (boundary != HardwareServiceBoundary.POST_OBJECTS) {
+            return;
+        }
+        for (HardwareWorkHandle handle : timing.pendingHandles()) {
+            if (handle.kind() != HardwareWorkKind.KOS_MODULE_QUEUE
+                    || timing.isReady(handle)) {
+                continue;
+            }
+            HardwareWorkPreparation generic =
+                    timing.coordinatorPreparation(handle);
+            if (!(generic instanceof S3kKosModulePreparation preparation)) {
+                throw new IllegalStateException(
+                        "KosM parent has an unexpected preparation owner");
+            }
+            descriptors.putIfAbsent(handle, preparation.descriptor);
+            boolean becamePrepared = preparation.coordinate(
+                    handle, directQueue);
+            if (becamePrepared) {
+                timing.captureCoordinatorPreparation(
+                        handle, HardwareServiceBoundary.POST_OBJECTS);
+            }
+            return;
+        }
     }
 
     public boolean modulesLeft() {
@@ -99,11 +131,20 @@ public final class S3kKosModuleQueue {
     }
 
     public byte[] claim(HardwareWorkHandle handle) {
-        return timing.claim(handle);
+        byte[] payload = timing.claim(handle);
+        descriptors.remove(handle);
+        return payload;
     }
 
     public S3kKosModuleDescriptor descriptor(HardwareWorkHandle handle) {
         S3kKosModuleDescriptor descriptor = descriptors.get(handle);
+        if (descriptor == null
+                && timing.isPending(handle)
+                && timing.coordinatorPreparation(handle)
+                instanceof S3kKosModulePreparation preparation) {
+            descriptor = preparation.descriptor;
+            descriptors.put(handle, descriptor);
+        }
         if (descriptor == null) {
             throw new IllegalArgumentException(
                     "descriptor is not owned by this queue facade");
@@ -123,7 +164,8 @@ public final class S3kKosModuleQueue {
         private final ByteArrayOutputStream output;
         private int completedModules;
         private int activeModuleOffset;
-        private ResumableKosinskiDecoder activeDecoder;
+        private HardwareWorkHandle activeChild;
+        private int activeChildCompressedLength;
         private boolean prepared;
 
         private S3kKosModulePreparation(
@@ -142,19 +184,75 @@ public final class S3kKosModuleQueue {
             this.archive = snapshot.archive();
             this.completedModules = snapshot.completedModules();
             this.activeModuleOffset = snapshot.activeModuleOffset();
+            this.activeChild = snapshot.activeChild();
+            this.activeChildCompressedLength =
+                    snapshot.activeChildCompressedLength();
             this.output = new ByteArrayOutputStream(
                     descriptor.destinationLength());
             this.output.writeBytes(snapshot.output());
-            DecoderSnapshot decoderSnapshot = snapshot.activeDecoder();
-            this.activeDecoder = decoderSnapshot != null
-                    ? ResumableKosinskiDecoder.fromSnapshot(decoderSnapshot)
-                    : null;
             this.prepared = snapshot.prepared();
+        }
+
+        private boolean coordinate(
+                HardwareWorkHandle parent,
+                S3kKosDecompressionQueue directQueue) {
+            if (prepared) {
+                return false;
+            }
+            if (activeChild == null) {
+                if (!directQueue.hasCapacity()) {
+                    return false;
+                }
+                try {
+                    activeChild = directQueue.queueModuleChild(
+                            archive,
+                            activeModuleOffset,
+                            descriptor.sourceAddress() + activeModuleOffset,
+                            S3kKosRamDestinations.KOS_DECOMP_BUFFER);
+                    activeChildCompressedLength =
+                            directQueue.descriptor(activeChild).compressedLength();
+                    return false;
+                } catch (IOException exception) {
+                    throw new IllegalStateException(
+                            "Unable to submit S3K KosM child for "
+                                    + parent.kind() + "#" + parent.ordinal(),
+                            exception);
+                }
+            }
+            S3kKosDecompressionDescriptor childDescriptor =
+                    directQueue.descriptor(activeChild);
+            if (childDescriptor.sourceAddress()
+                    != descriptor.sourceAddress() + activeModuleOffset
+                    || childDescriptor.compressedLength()
+                    != activeChildCompressedLength
+                    || childDescriptor.destinationAddress()
+                    != S3kKosRamDestinations.KOS_DECOMP_BUFFER) {
+                throw new IllegalStateException(
+                        "KosM parent/child descriptor mismatch for "
+                                + parent.kind() + "#" + parent.ordinal());
+            }
+            if (directQueue.decompressionsPending()
+                    || !directQueue.isReady(activeChild)) {
+                return false;
+            }
+
+            output.writeBytes(directQueue.claim(activeChild));
+            completedModules++;
+            int moduleEnd = activeModuleOffset
+                    + activeChildCompressedLength;
+            activeChild = null;
+            activeChildCompressedLength = 0;
+            if (completedModules >= descriptor.moduleCount()) {
+                prepared = true;
+                return true;
+            }
+            activeModuleOffset = 2 + align16(moduleEnd - 2);
+            return false;
         }
 
         @Override
         public boolean stepOneWorkUnit() {
-            return prepareCurrentModule();
+            return false;
         }
 
         @Override
@@ -167,12 +265,8 @@ public final class S3kKosModuleQueue {
             if (!prepared) {
                 throw new IllegalStateException("KosM archive is not prepared");
             }
-            byte[] bytes = output.toByteArray();
-            if (bytes.length == descriptor.destinationLength()) {
-                return bytes;
-            }
-            return java.util.Arrays.copyOf(
-                    bytes, descriptor.destinationLength());
+            return Arrays.copyOf(
+                    output.toByteArray(), descriptor.destinationLength());
         }
 
         @Override
@@ -182,7 +276,8 @@ public final class S3kKosModuleQueue {
                     archive,
                     completedModules,
                     activeModuleOffset,
-                    activeDecoder != null ? activeDecoder.snapshot() : null,
+                    activeChild,
+                    activeChildCompressedLength,
                     output.toByteArray(),
                     prepared);
         }
@@ -196,73 +291,6 @@ public final class S3kKosModuleQueue {
         @Override
         public boolean isBoundaryDriven() {
             return true;
-        }
-
-        @Override
-        public boolean serviceBoundary(HardwareServiceBoundary boundary) {
-            if (prepared) {
-                return false;
-            }
-            return switch (boundary) {
-                case PRE_MAIN_LOOP -> prepareCurrentModule();
-                case POST_OBJECTS -> processModuleQueue();
-                case VINT_SERVICE -> false;
-            };
-        }
-
-        private boolean prepareCurrentModule() {
-            if (activeDecoder == null || activeDecoder.complete()) {
-                return false;
-            }
-            try {
-                // Process_Kos_Queue normally runs until VBlank interrupts it.
-                // The host has no instruction-accurate VBlank interruption
-                // point, so one PRE service completes exactly one queued
-                // module. The resumable decoder remains the preparation state
-                // authority and is snapshotted before/after this service.
-                boolean advanced = false;
-                while (!activeDecoder.complete()) {
-                    advanced |= activeDecoder.step(1)
-                            .descriptorsProcessed() != 0;
-                }
-                return advanced;
-            } catch (IOException e) {
-                throw new IllegalStateException(
-                        "Unable to prepare S3K KosM module", e);
-            }
-        }
-
-        private boolean processModuleQueue() {
-            if (activeDecoder == null) {
-                activeDecoder = newDecoder(activeModuleOffset);
-                return true;
-            }
-            if (!activeDecoder.complete()) {
-                return false;
-            }
-
-            output.writeBytes(activeDecoder.output());
-            completedModules++;
-            int moduleEnd = activeModuleOffset
-                    + activeDecoder.compressedBytesConsumed();
-            if (completedModules >= descriptor.moduleCount()) {
-                activeDecoder = null;
-                prepared = true;
-                return true;
-            }
-
-            activeModuleOffset = 2 + align16(moduleEnd - 2);
-            activeDecoder = newDecoder(activeModuleOffset);
-            return true;
-        }
-
-        private ResumableKosinskiDecoder newDecoder(int offset) {
-            try {
-                return new ResumableKosinskiDecoder(archive, offset);
-            } catch (IOException e) {
-                throw new IllegalStateException(
-                        "Unable to start S3K KosM module", e);
-            }
         }
 
         private static int align16(int value) {

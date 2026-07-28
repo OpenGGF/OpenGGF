@@ -2,6 +2,7 @@ package com.openggf.tests.trace.s3k;
 
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
+import com.openggf.game.sonic3k.resources.S3kKosDecompressionQueue;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.game.timing.HardwareWorkHandle;
@@ -120,7 +121,9 @@ class TestS3kHardwareTimingReplay {
         HardwareTimingReplayPort replay = new HardwareTimingReplayPort(
                 timing.beginRecordedAdmission());
         replay.install(trace.hardwareTimingSchedule());
-        S3kKosModuleQueue queue = new S3kKosModuleQueue(timing);
+        S3kKosDecompressionQueue direct =
+                new S3kKosDecompressionQueue(timing);
+        S3kKosModuleQueue queue = new S3kKosModuleQueue(timing, direct);
 
         HardwareWorkHandle handle = queue.queue(
                 TestEnvironment.currentRom(), romSource, destinationPattern);

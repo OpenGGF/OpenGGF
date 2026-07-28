@@ -392,9 +392,17 @@ public final class LevelFrameStep {
             throw new NullPointerException("context");
         }
         context.hardwareTiming().service(boundary);
-        context.hardwareTimingBoundaryObserver().onBoundary(boundary);
+        if (boundary == HardwareServiceBoundary.PRE_MAIN_LOOP) {
+            context.hardwareTimingBoundaryObserver().onBoundary(boundary);
+        }
         if (context.s3kKosDecompressionQueue() != null) {
             context.s3kKosDecompressionQueue().afterTimingService(boundary);
+        }
+        if (context.s3kKosModuleQueue() != null) {
+            context.s3kKosModuleQueue().afterTimingService(boundary);
+        }
+        if (boundary != HardwareServiceBoundary.PRE_MAIN_LOOP) {
+            context.hardwareTimingBoundaryObserver().onBoundary(boundary);
         }
     }
 

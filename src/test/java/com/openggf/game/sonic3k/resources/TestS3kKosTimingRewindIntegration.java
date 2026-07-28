@@ -37,7 +37,9 @@ class TestS3kKosTimingRewindIntegration {
         HardwareTimingReplayPort replay = new HardwareTimingReplayPort(
                 timing.beginRecordedAdmission());
         replay.install(trace.hardwareTimingSchedule());
-        S3kKosModuleQueue queue = new S3kKosModuleQueue(timing);
+        S3kKosDecompressionQueue direct =
+                new S3kKosDecompressionQueue(timing);
+        S3kKosModuleQueue queue = new S3kKosModuleQueue(timing, direct);
         HardwareWorkHandle handle = queue.queue(
                 TestEnvironment.currentRom(),
                 Sonic3kConstants.ART_KOSM_HCZ_BLASTOID_ADDR,
@@ -47,13 +49,13 @@ class TestS3kKosTimingRewindIntegration {
                 handle.submissionFingerprint());
 
         replay.beginRawFrame(edge.rawFrame());
+        queue.processModuleQueueAfterObjects();
         for (int servicePass = 0;
-                servicePass < 64 && !isPrepared(timing);
+                servicePass < 4096 && !isPrepared(timing);
                 servicePass++) {
-            timing.service(edge.boundary());
-            timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            queue.prepareQueuedModuleBeforeVSync();
+            queue.processModuleQueueAfterObjects();
         }
-        timing.service(edge.boundary());
         assertTrue(isPrepared(timing));
         assertFalse(queue.isReady(handle));
 

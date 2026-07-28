@@ -687,7 +687,7 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
         }
         try {
             introSpriteArtQueue =
-                    new S3kKosModuleQueue(services().hardwareTiming());
+                    services().s3kKosModuleQueue();
             planeArtHandle = introSpriteArtQueue.queue(
                     services().rom(),
                     Sonic3kConstants.ART_KOSM_AIZ_INTRO_PLANE_ADDR,
@@ -730,7 +730,7 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
                 || introSpriteArtQueue != null) {
             return;
         }
-        introSpriteArtQueue = new S3kKosModuleQueue(services().hardwareTiming());
+        introSpriteArtQueue = services().s3kKosModuleQueue();
         if (planeArtOrdinal >= 0) {
             planeArtHandle = restoredIntroArtHandle(
                     planeArtOrdinal, "plane");

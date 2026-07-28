@@ -769,7 +769,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                 int source = rom().read32BitAddr(introEntry + 4)
                         & 0x00FF_FFFF;
                 mainLevelArtKosQueue =
-                        new S3kKosModuleQueue(GameServices.hardwareTiming());
+                        GameServices.s3kKosModuleQueue();
                 mainLevelArtHandle = mainLevelArtKosQueue.queue(
                         rom(), source, 0x0BE);
                 mainLevelArtOrdinal = mainLevelArtHandle.ordinal();
@@ -1765,7 +1765,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         }
         try {
             battleshipKosQueue =
-                    new S3kKosModuleQueue(GameServices.hardwareTiming());
+                    GameServices.s3kKosModuleQueue();
             battleshipTerrainArtHandle = battleshipKosQueue.queue(
                     rom(),
                     Sonic3kConstants.AIZ2_8X8_BOMBERSHIP_ADDR,
@@ -2440,7 +2440,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             int primarySource = rom.read32BitAddr(entry) & 0x00FF_FFFF;
             int secondarySource = rom.read32BitAddr(entry + 4) & 0x00FF_FFFF;
             act2ArtKosQueue =
-                    new S3kKosModuleQueue(GameServices.hardwareTiming());
+                    GameServices.s3kKosModuleQueue();
             act2PrimaryArtHandle =
                     act2ArtKosQueue.queue(rom, primarySource, 0x000);
             act2PrimaryArtOrdinal = act2PrimaryArtHandle.ordinal();
@@ -2470,7 +2470,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         mainLevelArtHandle = restoredKosHandle(
                 timing, mainLevelArtOrdinal, "AIZ1 main-level art");
         mainLevelArtKosQueue = mainLevelArtHandle != null
-                ? new S3kKosModuleQueue(timing)
+                ? GameServices.s3kKosModuleQueue()
                 : null;
 
         battleshipTerrainArtHandle = restoredKosHandle(
@@ -2479,13 +2479,13 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                 timing, battleshipObjectArtOrdinal, "AIZ battleship object");
         battleshipKosQueue = battleshipTerrainArtHandle != null
                 || battleshipObjectArtHandle != null
-                        ? new S3kKosModuleQueue(timing)
+                        ? GameServices.s3kKosModuleQueue()
                         : null;
 
         fireOverlayKosHandle = restoredKosHandle(
                 timing, fireOverlayKosOrdinal, "AIZ fire overlay");
         fireOverlayKosQueue = fireOverlayKosHandle != null
-                ? new S3kKosModuleQueue(timing)
+                ? GameServices.s3kKosModuleQueue()
                 : null;
 
         act2PrimaryArtHandle = restoredKosHandle(
@@ -2494,7 +2494,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                 timing, act2SecondaryArtOrdinal, "AIZ2 secondary transition art");
         act2ArtKosQueue = act2PrimaryArtHandle != null
                 || act2SecondaryArtHandle != null
-                        ? new S3kKosModuleQueue(timing)
+                        ? GameServices.s3kKosModuleQueue()
                         : null;
     }
 
@@ -2635,7 +2635,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             }
             if (fireOverlayKosHandle == null) {
                 fireOverlayKosQueue =
-                        new S3kKosModuleQueue(GameServices.hardwareTiming());
+                        GameServices.s3kKosModuleQueue();
                 fireOverlayKosHandle = fireOverlayKosQueue.queue(
                         rom,
                         Sonic3kConstants.ART_KOSM_AIZ1_FIRE_OVERLAY_ADDR,

@@ -324,7 +324,7 @@ public class Sonic3kTitleCardManager
                 artHandles.add(rebound);
             }
             artDestinations.addAll(snapshot.artDestinations());
-            artQueue = new S3kKosModuleQueue(timing);
+            artQueue = GameServices.s3kKosModuleQueue();
         } else {
             artQueue = null;
         }
@@ -1087,7 +1087,7 @@ public class Sonic3kTitleCardManager
     }
 
     private void beginArtQueue() {
-        artQueue = new S3kKosModuleQueue(GameServices.hardwareTiming());
+        artQueue = GameServices.s3kKosModuleQueue();
         artHandles.clear();
         artDestinations.clear();
     }

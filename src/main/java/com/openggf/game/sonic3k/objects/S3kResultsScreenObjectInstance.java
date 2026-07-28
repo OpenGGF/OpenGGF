@@ -932,7 +932,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                     character,
                     act,
                     services().romZoneId(),
-                    new S3kKosModuleQueue(services().hardwareTiming()));
+                    services().s3kKosModuleQueue());
             List<HardwareWorkHandle> resultsHandles = queuedResultsArt.handles();
             resultsGeneralArtOrdinal = resultsHandles.get(0).ordinal();
             resultsNumberArtOrdinal = resultsHandles.get(1).ordinal();
@@ -1000,7 +1000,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                 ? Sonic3kConstants.VRAM_RESULTS_CHAR_NAME_ACT1
                 : Sonic3kConstants.VRAM_RESULTS_CHAR_NAME_ACT2;
         queuedResultsArt = Sonic3kObjectArt.QueuedResultsArt.restore(
-                new S3kKosModuleQueue(timing),
+                services().s3kKosModuleQueue(),
                 List.of(general, numbers, characterName),
                 new int[] {
                         0,

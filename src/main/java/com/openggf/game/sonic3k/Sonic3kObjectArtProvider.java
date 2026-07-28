@@ -1295,7 +1295,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
             Rom rom = GameServices.rom().getRom();
             if (enemyKosQueue == null) {
                 enemyKosQueue =
-                        new S3kKosModuleQueue(GameServices.hardwareTiming());
+                        GameServices.s3kKosModuleQueue();
             }
             // Preserve native FIFO order if activation occurs while the
             // title-retired enemy group is waiting to submit.
@@ -1413,7 +1413,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
             var timing = GameServices.hardwareTiming();
             try {
                 Rom rom = GameServices.rom().getRom();
-                enemyKosQueue = new S3kKosModuleQueue(timing);
+                enemyKosQueue = GameServices.s3kKosModuleQueue();
                 for (EnemyKosEntry entry : pendingEnemyKosEntries) {
                     enemyKosHandles.add(enemyKosQueue.queue(
                             rom, entry.source(), entry.destinationTile()));
@@ -2103,7 +2103,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         enemyKosQueue = null;
         if (!snap.pendingKosOrdinals().isEmpty()) {
             var timing = GameServices.hardwareTiming();
-            enemyKosQueue = new S3kKosModuleQueue(timing);
+            enemyKosQueue = GameServices.s3kKosModuleQueue();
             for (long ordinal : snap.pendingKosOrdinals()) {
                 enemyKosHandles.add(timing.pendingHandle(
                                 HardwareWorkKind.KOS_MODULE_QUEUE, ordinal)

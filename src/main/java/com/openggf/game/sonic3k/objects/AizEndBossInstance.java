@@ -359,7 +359,7 @@ public class AizEndBossInstance extends AbstractBossInstance
     private void serviceBossArtQueue() {
         try {
             if (bossArtQueue == null && bossArtOrdinal >= 0) {
-                bossArtQueue = new S3kKosModuleQueue(services().hardwareTiming());
+                bossArtQueue = services().s3kKosModuleQueue();
                 bossArtHandle = services().hardwareTiming().pendingHandle(
                                 HardwareWorkKind.KOS_MODULE_QUEUE,
                                 bossArtOrdinal)
@@ -368,7 +368,7 @@ public class AizEndBossInstance extends AbstractBossInstance
                                         + bossArtOrdinal));
             }
             if (bossArtHandle == null && bossArtQueue == null) {
-                bossArtQueue = new S3kKosModuleQueue(services().hardwareTiming());
+                bossArtQueue = services().s3kKosModuleQueue();
                 bossArtHandle = bossArtQueue.queue(
                         services().rom(),
                         Sonic3kConstants.ART_KOSM_AIZ_END_BOSS_ADDR,

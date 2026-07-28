@@ -56,6 +56,36 @@ public final class S3kKosDecompressionQueue
         KosinskiReader.StandardArchiveInfo info = KosinskiReader.inspectStandard(inspection, 0);
         byte[] compressed = info.compressedLength() == inspection.length
                 ? inspection : rom.readBytes(sourceAddress, info.compressedLength());
+        return queueInspected(
+                compressed, sourceAddress, destinationAddress, info);
+    }
+
+    HardwareWorkHandle queueModuleChild(
+            byte[] archive,
+            int archiveOffset,
+            int sourceAddress,
+            int destinationAddress) throws IOException {
+        Objects.requireNonNull(archive, "archive");
+        KosinskiReader.StandardArchiveInfo info =
+                KosinskiReader.inspectStandard(archive, archiveOffset);
+        byte[] compressed = java.util.Arrays.copyOfRange(
+                archive, archiveOffset, archiveOffset + info.compressedLength());
+        return queueInspected(
+                compressed, sourceAddress, destinationAddress, info);
+    }
+
+    public boolean hasCapacity() {
+        return physicalEntries.size() < MAX_QUEUE_DEPTH;
+    }
+
+    private HardwareWorkHandle queueInspected(
+            byte[] compressed,
+            int sourceAddress,
+            int destinationAddress,
+            KosinskiReader.StandardArchiveInfo info) {
+        if (!hasCapacity()) {
+            throw new IllegalStateException("S3K Kosinski decompression FIFO is full");
+        }
         S3kKosDecompressionDescriptor descriptor = new S3kKosDecompressionDescriptor(
                 sourceAddress, info.compressedLength(), destinationAddress,
                 info.decompressedLength());

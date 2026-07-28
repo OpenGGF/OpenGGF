@@ -84,9 +84,10 @@ class TestResumableKosinskiDecoder {
         byte[] refill = new byte[23];
         refill[0] = (byte) 0xFF;
         refill[1] = (byte) 0xFF;
-        for (int index = 0; index < 16; index++) refill[index + 2] = (byte) index;
-        refill[18] = 0x02;
-        refill[19] = 0;
+        for (int index = 0; index < 15; index++) refill[index + 2] = (byte) index;
+        refill[17] = 0x02;
+        refill[18] = 0;
+        refill[19] = 15;
         assertEquals(16, KosinskiReader.inspectStandard(refill, 0).decompressedLength());
 
         // LSB-first: literal, two-byte short match, then long-form terminator.

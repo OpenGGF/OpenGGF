@@ -6,6 +6,8 @@ import com.openggf.game.rewind.snapshot.PlcProgressSnapshot;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
+import com.openggf.game.sonic3k.resources.S3kKosDecompressionQueue;
+import com.openggf.game.sonic3k.resources.S3kKosDecompressionQueueSnapshot;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.game.timing.HardwareTimingSnapshot;
@@ -61,25 +63,28 @@ class TestSonic3kTitleCardKosQueue {
 
         manager.initialize(0, 0);
 
-        assertEquals(expected, timing.pendingHandles(),
+        assertEquals(expected, moduleHandles(),
                 "normal title art must retain native four-archive FIFO order");
         assertTrue(isArtLoading(manager));
         assertEquals(0, readyCount(expected));
 
-        timing.service(HardwareServiceBoundary.POST_OBJECTS);
-        timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        service(HardwareServiceBoundary.POST_OBJECTS);
+        service(HardwareServiceBoundary.PRE_MAIN_LOOP);
         assertEquals(0, readyCount(expected),
                 "PRE_MAIN_LOOP may advance descriptors but must not publish readiness");
         HardwareTimingSnapshot rewindPoint = timing.capture();
+        S3kKosDecompressionQueueSnapshot directRewindPoint =
+                directQueue().capture();
 
-        timing.service(HardwareServiceBoundary.POST_OBJECTS);
-        timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
-        timing.service(HardwareServiceBoundary.POST_OBJECTS);
+        service(HardwareServiceBoundary.POST_OBJECTS);
+        service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        service(HardwareServiceBoundary.POST_OBJECTS);
         timing.restore(rewindPoint);
+        directQueue().restore(directRewindPoint);
 
         assertEquals(HardwareServiceBoundary.PRE_MAIN_LOOP,
                 timing.capture().lastServicedBoundary());
-        assertEquals(expected, timing.pendingHandles());
+        assertEquals(expected, moduleHandles());
         assertEquals(0, readyCount(expected),
                 "rewind must restore the exact in-flight, not-ready decoder state");
 
@@ -93,7 +98,7 @@ class TestSonic3kTitleCardKosQueue {
 
         manager.initializeBonus();
 
-        assertEquals(expected, timing.pendingHandles(),
+        assertEquals(expected, moduleHandles(),
                 "bonus title art must retain native three-archive FIFO order");
         assertTrue(isArtLoading(manager));
         drainThroughPostObjects(expected);
@@ -109,24 +114,24 @@ class TestSonic3kTitleCardKosQueue {
         schedule.invoke(provider, 0, 0);
 
         manager.initialize(0, 0);
-        List<HardwareWorkHandle> titleHandles = List.copyOf(timing.pendingHandles());
+        List<HardwareWorkHandle> titleHandles = moduleHandles();
         for (int frame = 0;
                 frame < 100_000 && readyCount(titleHandles) < titleHandles.size();
                 frame++) {
-            timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
-            timing.service(HardwareServiceBoundary.POST_OBJECTS);
+            service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            service(HardwareServiceBoundary.POST_OBJECTS);
         }
         assertEquals(titleHandles.size(), readyCount(titleHandles));
 
         provider.processRuntimeArtQueue();
-        assertEquals(titleHandles, timing.pendingHandles(),
+        assertEquals(titleHandles, moduleHandles(),
                 "readiness alone is not native title-card retirement");
 
         manager.update();
         provider.processRuntimeArtQueue();
 
         assertEquals(List.of(4L, 5L, 6L),
-                timing.pendingHandles().stream()
+                moduleHandles().stream()
                         .map(HardwareWorkHandle::ordinal)
                         .toList(),
                 "LoadEnemyArt submits explicitly after the four title jobs retire");
@@ -145,33 +150,36 @@ class TestSonic3kTitleCardKosQueue {
 
         manager.initialize(0, 0);
         List<HardwareWorkHandle> titleHandles =
-                List.copyOf(timing.pendingHandles());
+                moduleHandles();
         for (int frame = 0;
                 frame < 4096 && readyCount(titleHandles) < titleHandles.size();
                 frame++) {
-            timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
-            timing.service(HardwareServiceBoundary.POST_OBJECTS);
+            service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            service(HardwareServiceBoundary.POST_OBJECTS);
         }
         manager.update();
         provider.processRuntimeArtQueue();
 
         List<HardwareWorkHandle> enemyHandles =
-                List.copyOf(timing.pendingHandles());
+                moduleHandles();
         assertEquals(List.of(4L, 5L, 6L),
                 enemyHandles.stream().map(HardwareWorkHandle::ordinal).toList());
         HardwareTimingSnapshot timingSnapshot = timing.capture();
+        S3kKosDecompressionQueueSnapshot directSnapshot =
+                directQueue().capture();
         PlcProgressSnapshot providerSnapshot = provider.capture();
         assertTrue(providerSnapshot.kosSubmissionArmed());
         assertEquals(List.of(4L, 5L, 6L),
                 providerSnapshot.pendingKosOrdinals());
 
-        timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
-        timing.service(HardwareServiceBoundary.POST_OBJECTS);
+        service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        service(HardwareServiceBoundary.POST_OBJECTS);
         timing.restore(timingSnapshot);
+        directQueue().restore(directSnapshot);
         provider.restore(providerSnapshot);
         provider.processRuntimeArtQueue();
 
-        assertEquals(enemyHandles, timing.pendingHandles());
+        assertEquals(enemyHandles, moduleHandles());
         assertEquals(7L, timing.capture().nextOrdinals()
                 .get(com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE));
     }
@@ -179,7 +187,8 @@ class TestSonic3kTitleCardKosQueue {
     private List<HardwareWorkHandle> expectedHandles(
             int[] sources, int[] destinations) throws Exception {
         HardwareTimingService expectedTiming = new HardwareTimingService();
-        S3kKosModuleQueue expectedQueue = new S3kKosModuleQueue(expectedTiming);
+        S3kKosModuleQueue expectedQueue = new S3kKosModuleQueue(
+                expectedTiming, new S3kKosDecompressionQueue(expectedTiming));
         List<HardwareWorkHandle> handles = new ArrayList<>(sources.length);
         for (int i = 0; i < sources.length; i++) {
             handles.add(expectedQueue.queue(rom, sources[i], destinations[i]));
@@ -191,7 +200,7 @@ class TestSonic3kTitleCardKosQueue {
         boolean sawPostObjectsPublication = false;
         for (int frame = 0; frame < 4096 && readyCount(handles) < handles.size(); frame++) {
             int readyBefore = readyCount(handles);
-            timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            service(HardwareServiceBoundary.PRE_MAIN_LOOP);
             assertEquals(readyBefore, readyCount(handles),
                     "PRE_MAIN_LOOP must not publish newly completed KosM work");
 
@@ -199,7 +208,7 @@ class TestSonic3kTitleCardKosQueue {
             assertTrue(isArtLoading(manager),
                     "the title-card consumer must keep polling until every archive is ready");
 
-            timing.service(HardwareServiceBoundary.POST_OBJECTS);
+            service(HardwareServiceBoundary.POST_OBJECTS);
             int readyAfter = readyCount(handles);
             if (readyAfter > readyBefore) {
                 sawPostObjectsPublication = true;
@@ -227,6 +236,23 @@ class TestSonic3kTitleCardKosQueue {
             }
         }
         return count;
+    }
+
+    private void service(HardwareServiceBoundary boundary) {
+        timing.service(boundary);
+        directQueue().afterTimingService(boundary);
+        GameServices.s3kKosModuleQueue().afterTimingService(boundary);
+    }
+
+    private S3kKosDecompressionQueue directQueue() {
+        return GameServices.s3kKosDecompressionQueue();
+    }
+
+    private List<HardwareWorkHandle> moduleHandles() {
+        return timing.pendingHandles().stream()
+                .filter(handle -> handle.kind()
+                        == com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE)
+                .toList();
     }
 
     private static boolean isArtLoading(Sonic3kTitleCardManager manager) throws Exception {

@@ -166,6 +166,7 @@ class TestLevelFrameHardwareTimingBoundaries {
                 null,
                 timing,
                 observer,
+                null,
                 null);
     }
 

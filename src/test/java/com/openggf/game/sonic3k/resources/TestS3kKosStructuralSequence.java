@@ -180,7 +180,7 @@ class TestS3kKosStructuralSequence {
         Sonic player = new Sonic("sonic", (short) 0x40, (short) 0x420);
         GameServices.camera().setFocusedSprite(player);
         for (int frame = 0; frame < 80
-                && timing.capture().jobs().size() < 9; frame++) {
+                && moduleJobs(timing).size() < 9; frame++) {
             intro.update(frame, player);
         }
         assertLiteralJob(timing, 7, 0x382624, 0x529);
@@ -203,9 +203,9 @@ class TestS3kKosStructuralSequence {
         act1.setEventsFg5(true);
         for (int frame = 2; frame < 100_000
                 && !act1.isAct2TransitionRequested(); frame++) {
-            timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            service(timing, HardwareServiceBoundary.PRE_MAIN_LOOP);
             act1.update(0, frame);
-            timing.service(HardwareServiceBoundary.POST_OBJECTS);
+            service(timing, HardwareServiceBoundary.POST_OBJECTS);
         }
         assertTrue(act1.isAct2TransitionRequested());
         assertLiteralJob(timing, 10, 0x3AF5D0, 0x500);
@@ -298,7 +298,7 @@ class TestS3kKosStructuralSequence {
         assertLiteralJob(timing, 7, 0x187C4E, 0x5EC);
         drainHardware(timing);
         provider.processRuntimeArtQueue();
-        var job = timing.capture().jobs().get(7);
+        var job = moduleJobs(timing).get(7);
         assertEquals(STARPOST_RED.compressedLength(),
                 job.compressedLength());
         assertEquals(STARPOST_RED.destinationLength(),
@@ -323,9 +323,9 @@ class TestS3kKosStructuralSequence {
 
         for (int frame = 0; frame < 100_000
                 && !act1.isAct2TransitionRequested(); frame++) {
-            timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            service(timing, HardwareServiceBoundary.PRE_MAIN_LOOP);
             act1.update(0, frame);
-            timing.service(HardwareServiceBoundary.POST_OBJECTS);
+            service(timing, HardwareServiceBoundary.POST_OBJECTS);
         }
         assertTrue(act1.isAct2TransitionRequested());
         assertLiteralJob(timing, 0, 0x3AF5D0, 0x500);
@@ -354,7 +354,7 @@ class TestS3kKosStructuralSequence {
         assertLiteralJob(timing, 3, 0x36800C, 0x548);
         assertLiteralJob(timing, 4, 0x367DCA, 0x52A);
         assertLiteralJob(timing, 5, 0x3681FE, 0x55F);
-        assertEquals(6, timing.capture().jobs().size(),
+        assertEquals(6, moduleJobs(timing).size(),
                 "AIZ1BGE_Finish must continue with LoadEnemyArt, without "
                         + "inserting a second fire-overlay job");
     }
@@ -374,7 +374,11 @@ class TestS3kKosStructuralSequence {
         assertLiteralJob(timing, 1, 0x0D6D84, 0x568);
         assertLiteralJob(timing, 2, 0x15B95C, 0x578);
         drainHardware(timing);
-        results.update(0, player);
+        for (int frame = 0;
+                frame < 120 && !timing.pendingHandles().isEmpty();
+                frame++) {
+            results.update(frame, player);
+        }
 
         assertCapturedSession(timing, List.of(
                 RESULTS_GENERAL,
@@ -425,14 +429,14 @@ class TestS3kKosStructuralSequence {
         drainHardware(timing);
         horizontalWall.update(2, player);
 
-        int beforeWaterRush = timing.capture().jobs().size();
+        int beforeWaterRush = moduleJobs(timing).size();
         HCZWaterRushObjectInstance waterRush = ObjectConstructionContext.construct(
                 services,
                 () -> new HCZWaterRushObjectInstance(
                         new ObjectSpawn(0x0200, 0x0500, 0x37, 0, 0, false, 0)));
         waterRush.setServices(services);
         waterRush.update(0, player);
-        assertEquals(beforeWaterRush, timing.capture().jobs().size(),
+        assertEquals(beforeWaterRush, moduleJobs(timing).size(),
                 "HCZ Water Rush is Nemesis level-PLC art and must not consume a KosM ordinal");
         assertEquals(0x390348, Sonic3kConstants.ART_NEM_HCZ_WATER_RUSH_ADDR);
         assertEquals(0x037A, Sonic3kConstants.ARTTILE_HCZ_WATER_RUSH);
@@ -536,6 +540,8 @@ class TestS3kKosStructuralSequence {
             int source,
             int destinationTile) {
         var job = timing.capture().jobs().stream()
+                .filter(candidate -> candidate.kind()
+                        == com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE)
                 .filter(candidate -> candidate.handle().ordinal() == ordinal)
                 .findFirst()
                 .orElseThrow();
@@ -546,20 +552,28 @@ class TestS3kKosStructuralSequence {
 
     private static void drainHardware(HardwareTimingService timing) {
         for (int frame = 0;
-                frame < 4096
+                frame < 100_000
                         && timing.incompleteCount(
                         com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE) > 0;
                 frame++) {
-            timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
-            timing.service(HardwareServiceBoundary.POST_OBJECTS);
+            service(timing, HardwareServiceBoundary.PRE_MAIN_LOOP);
+            service(timing, HardwareServiceBoundary.POST_OBJECTS);
         }
         assertEquals(0, timing.incompleteCount(
                 com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE));
     }
 
+    private static void service(
+            HardwareTimingService timing,
+            HardwareServiceBoundary boundary) {
+        timing.service(boundary);
+        GameServices.s3kKosDecompressionQueue().afterTimingService(boundary);
+        GameServices.s3kKosModuleQueue().afterTimingService(boundary);
+    }
+
     private static void assertCapturedSession(
             HardwareTimingService timing, List<Spec> expected) {
-        var jobs = timing.capture().jobs();
+        var jobs = moduleJobs(timing);
         assertEquals(expected.size(), jobs.size());
         for (int ordinal = 0; ordinal < expected.size(); ordinal++) {
             Spec spec = expected.get(ordinal);
@@ -581,6 +595,14 @@ class TestS3kKosStructuralSequence {
                     spec.owner() + " must retire through its production consumer");
         }
         assertTrue(timing.pendingHandles().isEmpty());
+    }
+
+    private static List<com.openggf.game.timing.HardwareTimingJob.Snapshot>
+            moduleJobs(HardwareTimingService timing) {
+        return timing.capture().jobs().stream()
+                .filter(job -> job.kind()
+                        == com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE)
+                .toList();
     }
 
     private record Spec(

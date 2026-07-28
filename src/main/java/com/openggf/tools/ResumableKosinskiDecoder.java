@@ -162,12 +162,12 @@ public final class ResumableKosinskiDecoder {
     }
 
     private boolean popDescriptor() throws IOException {
-        if (descriptorBitsRemaining == 0) {
-            readDescriptor();
-        }
         boolean result = (descriptor & 1) != 0;
         descriptor >>>= 1;
         descriptorBitsRemaining--;
+        if (descriptorBitsRemaining == 0) {
+            readDescriptor();
+        }
         return result;
     }
 

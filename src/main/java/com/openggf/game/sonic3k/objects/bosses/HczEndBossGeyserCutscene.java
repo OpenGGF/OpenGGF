@@ -239,7 +239,7 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
         rebindArtAfterRestore();
         try {
             if (artHandle == null && artQueue == null) {
-                artQueue = new S3kKosModuleQueue(services().hardwareTiming());
+                artQueue = services().s3kKosModuleQueue();
                 artHandle = artQueue.queue(
                         services().rom(),
                         Sonic3kConstants.ART_KOSM_HCZ_GEYSER_VERT_ADDR,
@@ -267,7 +267,7 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
                         HardwareWorkKind.KOS_MODULE_QUEUE, artOrdinal)
                 .orElseThrow(() -> new IllegalStateException(
                         "Missing restored HCZ end-geyser KosM job " + artOrdinal));
-        artQueue = new S3kKosModuleQueue(services().hardwareTiming());
+        artQueue = services().s3kKosModuleQueue();
     }
 
     private AbstractPlayableSprite resolveTargetPlayer(PlayableEntity playerEntity) {
