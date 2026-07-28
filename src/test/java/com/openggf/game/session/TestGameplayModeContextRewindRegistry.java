@@ -63,7 +63,7 @@ import static org.mockito.Mockito.mock;
  * Unit tests for the {@link RewindRegistry} integration on
  * {@link GameplayModeContext}.
  *
- * <p>Tests verify that the nine always-available atomic adapters are
+ * <p>Tests verify that the ten always-available atomic adapters are
  * registered automatically when {@link GameplayModeContext#attachGameplayManagers}
  * is called, without requiring a full level load or ROM access.
  */
@@ -111,18 +111,19 @@ class TestGameplayModeContextRewindRegistry {
                 "oscillation",
                 HardwareTimingService.REWIND_KEY,
                 S3kKosDecompressionQueue.REWIND_KEY,
+                ctx.seamlessTransitionResourceHandoffs().key(),
                 "solid-execution");
         assertTrue(snapshot.entries().keySet().containsAll(expectedKeys),
                 "Expected all atomic adapter keys to be present, got: " + snapshot.entries().keySet());
     }
 
     @Test
-    void exactlyNineAtomicKeysAfterAttach() {
+    void exactlyTenAtomicKeysAfterAttach() {
         GameplayModeContext ctx = buildAttachedContext();
         RewindRegistry registry = ctx.getRewindRegistry();
         CompositeSnapshot snapshot = registry.capture();
-        assertEquals(9, snapshot.entries().keySet().size(),
-                "Expected exactly 9 atomic adapters, got: " + snapshot.entries().keySet());
+        assertEquals(10, snapshot.entries().keySet().size(),
+                "Expected exactly 10 atomic adapters, got: " + snapshot.entries().keySet());
     }
 
     @Test
@@ -175,8 +176,8 @@ class TestGameplayModeContextRewindRegistry {
         RewindRegistry second = ctx.getRewindRegistry();
         assertNotNull(second);
         assertNotSame(first, second, "Re-attach should produce a new RewindRegistry instance");
-        // New registry should have the same 9 keys
-        assertEquals(9, second.capture().entries().keySet().size());
+        // New registry should have the same 10 keys
+        assertEquals(10, second.capture().entries().keySet().size());
     }
 
     @Test

@@ -283,6 +283,19 @@ algorithm to a package-local level utility and retain the public
 ownership-preserving extraction only: map selection, coordinate conversion,
 search order, return shape, and callers remain unchanged.
 
+Tests that exercise level-iteration timing admission must prepare Kos work
+through the runtime-owned direct/module coordinator rather than fabricating a
+raw `KOS_MODULE_QUEUE` submission at the timing service. Rewind-registry
+coverage must include the new seamless-transition handoff adapter as a tenth
+gameplay-mode key. These are production-contract updates to stale harness
+expectations, not authority bypasses or guard baselines.
+
+AIZ event tests that drain the fire-transition Kos work must execute the same
+production callback order as gameplay: timing service, direct FIFO retirement,
+then KosM parent coordination. That drain helper is scoped to transition tests
+which explicitly submitted the queue work; unrelated intro and save-event
+harnesses must not gain implicit queue advancement.
+
 The native headless recorder is the sole maintained fixture authority. The
 frozen Lua recorder is not extended merely for parity; independent Java/C#
 golden vectors and ROM/disassembly lifecycle tests provide cross-implementation

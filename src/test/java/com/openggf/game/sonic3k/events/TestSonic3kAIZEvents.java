@@ -91,6 +91,21 @@ public class TestSonic3kAIZEvents {
         timing.service(HardwareServiceBoundary.POST_OBJECTS);
     }
 
+    private static void updateFireTransitionWithHardware(
+            Sonic3kAIZEvents events, int act, int frame) {
+        serviceFireTransitionBoundary(HardwareServiceBoundary.VINT_SERVICE);
+        serviceFireTransitionBoundary(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        events.update(act, frame);
+        serviceFireTransitionBoundary(HardwareServiceBoundary.POST_OBJECTS);
+    }
+
+    private static void serviceFireTransitionBoundary(
+            HardwareServiceBoundary boundary) {
+        GameServices.hardwareTiming().service(boundary);
+        GameServices.s3kKosDecompressionQueue().afterTimingService(boundary);
+        GameServices.s3kKosModuleQueue().afterTimingService(boundary);
+    }
+
     private static boolean hasActiveObject(Class<?> type) {
         return GameServices.level().getObjectManager().getActiveObjects().stream()
                 .anyMatch(type::isInstance);
@@ -102,11 +117,11 @@ public class TestSonic3kAIZEvents {
         while (timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE) > 0
                 && frames++ < HARDWARE_DRAIN_FRAME_LIMIT) {
             int beforePre = timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE);
-            timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            serviceFireTransitionBoundary(HardwareServiceBoundary.PRE_MAIN_LOOP);
             assertEquals(beforePre,
                     timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE),
                     "PRE_MAIN_LOOP must not publish newly completed KosM work");
-            timing.service(HardwareServiceBoundary.POST_OBJECTS);
+            serviceFireTransitionBoundary(HardwareServiceBoundary.POST_OBJECTS);
         }
         assertEquals(0, timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE),
                 "final KosM readiness must publish at POST_OBJECTS");
@@ -179,7 +194,7 @@ public class TestSonic3kAIZEvents {
 
             for (int i = 0; i < HARDWARE_DRAIN_FRAME_LIMIT
                     && !events.isAct2TransitionRequested(); i++) {
-                updateWithHardware(events, 0, i);
+                updateFireTransitionWithHardware(events, 0, i);
             }
 
             assertTrue(events.isAct2TransitionRequested());
@@ -722,7 +737,7 @@ public class TestSonic3kAIZEvents {
 
         for (int i = 1; i < HARDWARE_DRAIN_FRAME_LIMIT
                 && !events.isAct2TransitionRequested(); i++) {
-            updateWithHardware(events, 0, i);
+            updateFireTransitionWithHardware(events, 0, i);
         }
 
         assertTrue(events.isAct2TransitionRequested());
@@ -907,12 +922,12 @@ public class TestSonic3kAIZEvents {
         assertFalse(events.isPostFireHazeActive());
 
         events.setEventsFg5(true);
-        updateWithHardware(events, 0, 0);
+        updateFireTransitionWithHardware(events, 0, 0);
         assertFalse(events.isPostFireHazeActive());
 
         for (int i = 1; i < HARDWARE_DRAIN_FRAME_LIMIT
                 && !events.isAct2TransitionRequested(); i++) {
-            updateWithHardware(events, 0, i);
+            updateFireTransitionWithHardware(events, 0, i);
         }
 
         assertTrue(events.isAct2TransitionRequested());
@@ -940,7 +955,7 @@ public class TestSonic3kAIZEvents {
 
         for (int i = 0; i < HARDWARE_DRAIN_FRAME_LIMIT
                 && !events.isAct2TransitionRequested(); i++) {
-            updateWithHardware(events, 0, i);
+            updateFireTransitionWithHardware(events, 0, i);
         }
 
         assertTrue(events.isAct2TransitionRequested());
@@ -1108,7 +1123,7 @@ public class TestSonic3kAIZEvents {
         act1Events.setEventsFg5(true);
         for (int i = 0; i < HARDWARE_DRAIN_FRAME_LIMIT
                 && !act1Events.isAct2TransitionRequested(); i++) {
-            updateWithHardware(act1Events, 0, i);
+            updateFireTransitionWithHardware(act1Events, 0, i);
         }
 
         var act2Events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
@@ -1158,7 +1173,7 @@ public class TestSonic3kAIZEvents {
         act1Events.setEventsFg5(true);
         for (int i = 0; i < HARDWARE_DRAIN_FRAME_LIMIT
                 && !act1Events.isAct2TransitionRequested(); i++) {
-            updateWithHardware(act1Events, 0, i);
+            updateFireTransitionWithHardware(act1Events, 0, i);
         }
         assertTrue(act1Events.isAct2TransitionRequested(), "Fire transition should have requested act 2");
 

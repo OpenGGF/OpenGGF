@@ -373,6 +373,20 @@ results. Run `TestArchitecturalSourceGuard` to prove `LevelManager` is at or
 below 2500 effective lines. Do not change the pre-existing GameLoop or
 AbstractPlayableSprite budgets/failures as part of this extraction.
 
+Repair attributable stale harnesses before the full suite:
+
+- make `TestLevelIterationHardwareTimingAdmissionOrder` prepare Kos work
+  through the runtime-owned direct/module queue path instead of submitting a
+  fake raw module job to `HardwareTimingService`;
+- update `TestGameplayModeContextRewindRegistry` to assert the registered
+  seamless-transition handoff adapter and the resulting ten-key registry.
+- give AIZ fire-transition queue tests a deliberately scoped drain helper that
+  invokes timing admission, direct-FIFO retirement, and module-parent
+  coordination in production order; do not call it from unrelated intro or
+  save-event tests.
+
+Run each repaired test in isolation before repeating combined verification.
+
 ### Java
 
 Discover actual ROM filenames at repository root and supply the verified S3K
