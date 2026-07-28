@@ -85,6 +85,8 @@ public final class PlcTimingEvidenceTool {
     private static Evidence derive(String game, Path rom, Path probe) throws IOException {
         Map<Integer, MutableRow> rows = new TreeMap<>();
         List<ObservedEdge> observed = new ArrayList<>();
+        List<JsonNode> records = new ArrayList<>();
+        boolean sawConsumerObservation = false;
         int lastFrame = -1;
         int lastOrder = -1;
         for (String line : Files.readAllLines(probe)) {
@@ -99,23 +101,55 @@ public final class PlcTimingEvidenceTool {
             }
             lastFrame = frame;
             lastOrder = order;
-            MutableRow row = rows.computeIfAbsent(frame, unused -> new MutableRow(frame, node));
-            row.requireSameStructure(node);
+            records.add(node);
+        }
+        for (JsonNode node : records) {
+            if (!requiredText(node, "event").equals("plc_frame_state")) {
+                continue;
+            }
+            int frame = requiredInt(node, "raw_frame");
+            if (rows.putIfAbsent(frame, new MutableRow(frame, node)) != null) {
+                throw new IllegalArgumentException("exactly one plc_frame_state is required for each raw frame");
+            }
+        }
+        for (JsonNode node : records) {
+            int frame = requiredInt(node, "raw_frame");
+            int order = requiredInt(node, "within_frame_order");
             String event = requiredText(node, "event");
+            if (event.equals("plc_frame_state")) {
+                continue;
+            }
+            MutableRow row = rows.get(frame);
+            if (row == null) {
+                throw new IllegalArgumentException("PLC oracle record has no independent plc_frame_state");
+            }
             int source = optionalInt(node, "queue_source", 0);
             int remaining = optionalInt(node, "patterns_left_after", 0);
             switch (event) {
                 case "plc_submission" -> row.submissions.addAll(romSubmissions(
                         game, rom, requiredText(node, "operation"), optionalInt(node, "plc_id", -1)));
                 case "plc_prepare_end" -> {
+                    requireIncrease(node, "plc_prepare_end", "patterns_left_before", "patterns_left_after");
                     row.runPlcCalled = true;
                     observed.add(new ObservedEdge(frame, EdgeKind.PREPARE, source, remaining));
                 }
-                case "plc_service" -> observed.add(new ObservedEdge(frame,
-                        row.hblankDeferred ? EdgeKind.HBLANK_SERVICE : EdgeKind.SERVICE, source, remaining));
-                case "plc_pop" -> observed.add(new ObservedEdge(frame, EdgeKind.POP, source, remaining));
-                case "plc_empty" -> observed.add(new ObservedEdge(frame, EdgeKind.EMPTY, 0, 0));
+                case "plc_service" -> {
+                    requireDecrease(node, "plc_service", "patterns_left_before", "patterns_left_after");
+                    observed.add(new ObservedEdge(frame,
+                            row.hblankDeferred ? EdgeKind.HBLANK_SERVICE : EdgeKind.SERVICE, source, remaining));
+                }
+                case "plc_pop" -> {
+                    requireDecrease(node, "plc_pop", "queue_slots_before", "queue_slots_after");
+                    observed.add(new ObservedEdge(frame, EdgeKind.POP, source, remaining));
+                }
+                case "plc_empty" -> {
+                    if (requiredInt(node, "queue_slots_after") != 0) {
+                        throw new IllegalArgumentException("plc_empty must be sampled after the final queue entry is removed");
+                    }
+                    observed.add(new ObservedEdge(frame, EdgeKind.EMPTY, 0, 0));
+                }
                 case "plc_consumer_observation" -> {
+                    sawConsumerObservation = true;
                     row.consumerPolls.add(new ConsumerPoll(requiredText(node, "consumer_id"), order));
                     observed.add(new ObservedEdge(frame,
                             requiredBoolean(node, "queue_empty") ? EdgeKind.CONSUMER_EMPTY : EdgeKind.CONSUMER_BUSY,
@@ -126,9 +160,26 @@ public final class PlcTimingEvidenceTool {
             }
         }
         if (rows.isEmpty()) {
-            throw new IllegalArgumentException("probe contains no diagnostic records");
+            throw new IllegalArgumentException("probe contains no plc_frame_state records");
+        }
+        if (!sawConsumerObservation) {
+            throw new IllegalArgumentException("probe contains no consumer observation; PLC readiness approval is forbidden");
         }
         return new Evidence(game, handlerBudgets(game), rows.values().stream().map(MutableRow::freeze).toList(), observed);
+    }
+
+    private static void requireIncrease(JsonNode node, String event, String beforeField, String afterField) {
+        if (requiredInt(node, afterField) <= requiredInt(node, beforeField)) {
+            throw new IllegalArgumentException(event + " needs independently sampled " + beforeField
+                    + " and later " + afterField);
+        }
+    }
+
+    private static void requireDecrease(JsonNode node, String event, String beforeField, String afterField) {
+        if (requiredInt(node, afterField) >= requiredInt(node, beforeField)) {
+            throw new IllegalArgumentException(event + " needs independently sampled " + beforeField
+                    + " and later " + afterField);
+        }
     }
 
     private static int romPatternCount(Path rom, int sourceAddress) throws IOException {
@@ -205,8 +256,8 @@ public final class PlcTimingEvidenceTool {
 
     private static Map<Integer, Integer> handlerBudgets(String game) {
         return switch (game) {
-            case "s1" -> Map.of(0x04, 9, 0x08, 3, 0x0C, 9, 0x12, 9, 0x16, 9, 0x18, 9);
-            case "s2" -> Map.of(0x04, 6, 0x08, 6, 0x0A, 3, 0x0C, 6, 0x18, 6);
+            case "s1" -> Map.of(0x04, 9, 0x08, 3, 0x0C, 9, 0x10, 3, 0x12, 9, 0x18, 9);
+            case "s2" -> Map.of(0x04, 6, 0x08, 3, 0x0A, 3, 0x0C, 6, 0x12, 6, 0x16, 6);
             default -> throw new IllegalArgumentException("--game must be s1 or s2");
         };
     }
@@ -252,13 +303,6 @@ public final class PlcTimingEvidenceTool {
             this.handler = requiredInt(node, "interrupt_handler");
             this.lag = requiredBoolean(node, "lag");
             this.hblankDeferred = requiredBoolean(node, "hblank_deferred");
-        }
-
-        private void requireSameStructure(JsonNode node) {
-            if (gameMode != requiredInt(node, "game_mode") || handler != requiredInt(node, "interrupt_handler")
-                    || lag != requiredBoolean(node, "lag") || hblankDeferred != requiredBoolean(node, "hblank_deferred")) {
-                throw new IllegalArgumentException("all probe events in one raw frame need identical structural state");
-            }
         }
 
         private StructuralRow freeze() {

@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestPlcTimingEvidenceTool {
@@ -43,20 +44,53 @@ class TestPlcTimingEvidenceTool {
         Files.write(rom, bytes);
         Path probe = temporaryDirectory.resolve("probe.jsonl");
         Files.writeString(probe, """
-                {"raw_frame":10,"within_frame_order":1,"event":"plc_submission","operation":"append","plc_id":1,"game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false,"queue_source":64}
-                {"raw_frame":10,"within_frame_order":2,"event":"plc_prepare_end","game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false,"queue_source":64,"patterns_left_after":10}
-                {"raw_frame":11,"within_frame_order":1,"event":"plc_service","game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false,"queue_source":64,"patterns_left_after":1}
-                {"raw_frame":11,"within_frame_order":2,"event":"plc_consumer_observation","consumer_id":"ready_gate","queue_empty":false,"game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false,"queue_source":64,"patterns_left_after":1}
-                {"raw_frame":12,"within_frame_order":1,"event":"plc_service","game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false,"queue_source":64,"patterns_left_after":0}
-                {"raw_frame":12,"within_frame_order":2,"event":"plc_pop","game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false,"queue_source":64,"patterns_left_after":0}
-                {"raw_frame":12,"within_frame_order":3,"event":"plc_empty","game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false,"queue_source":0,"patterns_left_after":0}
-                {"raw_frame":12,"within_frame_order":4,"event":"plc_consumer_observation","consumer_id":"ready_gate","queue_empty":true,"game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false,"queue_source":0,"patterns_left_after":0}
+                {"raw_frame":10,"within_frame_order":1,"event":"plc_frame_state","game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false}
+                {"raw_frame":10,"within_frame_order":2,"event":"plc_submission","operation":"append","plc_id":1,"game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false,"queue_source":64}
+                {"raw_frame":10,"within_frame_order":3,"event":"plc_prepare_end","game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false,"queue_source":64,"patterns_left_before":0,"patterns_left_after":10}
+                {"raw_frame":11,"within_frame_order":1,"event":"plc_frame_state","game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false}
+                {"raw_frame":11,"within_frame_order":2,"event":"plc_service","game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false,"queue_source":64,"patterns_left_before":10,"patterns_left_after":1}
+                {"raw_frame":11,"within_frame_order":3,"event":"plc_consumer_observation","consumer_id":"ready_gate","queue_empty":false,"game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false,"queue_source":64,"patterns_left_after":1}
+                {"raw_frame":12,"within_frame_order":1,"event":"plc_frame_state","game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false}
+                {"raw_frame":12,"within_frame_order":2,"event":"plc_service","game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false,"queue_source":64,"patterns_left_before":1,"patterns_left_after":0}
+                {"raw_frame":12,"within_frame_order":3,"event":"plc_pop","game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false,"queue_source":64,"patterns_left_after":0,"queue_slots_before":1,"queue_slots_after":0}
+                {"raw_frame":12,"within_frame_order":4,"event":"plc_empty","game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false,"queue_source":0,"patterns_left_after":0,"queue_slots_after":0}
+                {"raw_frame":12,"within_frame_order":5,"event":"plc_consumer_observation","consumer_id":"ready_gate","queue_empty":true,"game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false,"queue_source":0,"patterns_left_after":0}
                 """);
         Path output = temporaryDirectory.resolve("vector.json");
 
         assertTrue(PlcTimingEvidenceTool.run(new String[] {
                 "--game", "s1", "--rom", rom.toString(), "--probe", probe.toString(), "--out", output.toString()}));
         assertTrue(Files.readString(output).contains("\"matches\" : true"));
+    }
+
+    @Test
+    void cliRejectsOracleOnlyRecordsWithoutAnIndependentFrameSnapshot() throws Exception {
+        Path rom = temporaryDirectory.resolve("empty.gen");
+        Files.write(rom, new byte[0x1DD90]);
+        Path probe = temporaryDirectory.resolve("oracle-only.jsonl");
+        Files.writeString(probe, """
+                {"raw_frame":10,"within_frame_order":1,"event":"plc_service","game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false,"queue_source":64,"patterns_left_after":1}
+                """);
+
+        assertThrows(IllegalArgumentException.class, () -> PlcTimingEvidenceTool.run(new String[] {
+                "--game", "s1", "--rom", rom.toString(), "--probe", probe.toString(),
+                "--out", temporaryDirectory.resolve("should-not-exist.json").toString()}));
+    }
+
+    @Test
+    void cliRejectsAServiceHookThatDidNotCaptureItsPostServiceState() throws Exception {
+        Path rom = temporaryDirectory.resolve("empty.gen");
+        Files.write(rom, new byte[0x1DD90]);
+        Path probe = temporaryDirectory.resolve("unsafe-service.jsonl");
+        Files.writeString(probe, """
+                {"raw_frame":10,"within_frame_order":1,"event":"plc_frame_state","game_mode":12,"interrupt_handler":12,"lag":false,"hblank_deferred":false}
+                {"raw_frame":10,"within_frame_order":2,"event":"plc_service","queue_source":64,"patterns_left_after":1}
+                {"raw_frame":10,"within_frame_order":3,"event":"plc_consumer_observation","consumer_id":"ready_gate","queue_empty":false}
+                """);
+
+        assertThrows(IllegalArgumentException.class, () -> PlcTimingEvidenceTool.run(new String[] {
+                "--game", "s1", "--rom", rom.toString(), "--probe", probe.toString(),
+                "--out", temporaryDirectory.resolve("should-not-exist.json").toString()}));
     }
 
     /**
@@ -81,6 +115,26 @@ class TestPlcTimingEvidenceTool {
                         new PlcTimingEvidenceTool.ConsumerPoll("ready_gate", 2),
                         new PlcTimingEvidenceTool.ConsumerPoll("ready_gate", 1))))));
         assertRejected(evidence.withHandlerBudgets(Map.of(0x0C, 3)));
+    }
+
+    @Test
+    void replacementDiscardsTheOldQueueWithoutClearingItsOwnReplacement() {
+        var evidence = new PlcTimingEvidenceTool.Evidence(
+                "s1", Map.of(),
+                List.of(new PlcTimingEvidenceTool.StructuralRow(
+                        10, 12, 0, false, false,
+                        List.of(
+                                new PlcTimingEvidenceTool.Submission(0x20, 3),
+                                new PlcTimingEvidenceTool.Submission(0x40, 10,
+                                        PlcTimingEvidenceTool.SubmissionOperation.REPLACE)),
+                        true, List.of(new PlcTimingEvidenceTool.ConsumerPoll("ready_gate", 1)))),
+                List.of(
+                        new PlcTimingEvidenceTool.ObservedEdge(10,
+                                PlcTimingEvidenceTool.EdgeKind.PREPARE, 0x40, 10),
+                        new PlcTimingEvidenceTool.ObservedEdge(10,
+                                PlcTimingEvidenceTool.EdgeKind.CONSUMER_BUSY, 0x40, 10)));
+
+        assertTrue(PlcTimingEvidenceTool.analyze(evidence).matches());
     }
 
     private static void assertRejected(PlcTimingEvidenceTool.Evidence evidence) {
