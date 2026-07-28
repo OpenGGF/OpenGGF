@@ -157,7 +157,7 @@ class TestInitialProcessSpritesPartialRewind {
                 objects.processInitialAbsoluteDynamicSlot3(scope);
             }
 
-            @Override public void processManagedDynamicSlots4Through92() {
+            @Override public void processManagedDynamicSlots4Through93() {
                 objects.processInitialDynamicSlots(scope);
             }
         };

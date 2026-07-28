@@ -955,9 +955,10 @@ class TestLostRingObjectInstance {
                 .filter(ring -> ring.getSlotIndex() < 0)
                 .toList();
         assertEquals(29, logical.size());
-        assertEquals(16, logical.get(0).getPhaseOffset(),
-                "the first virtual entry continues after physical slot 92 in the 110-slot process loop");
-        assertEquals(15, logical.get(1).getPhaseOffset(),
+        assertEquals(15, logical.get(0).getPhaseOffset(),
+                "the first virtual entry continues after the ROM-probed physical slot 93 "
+                        + "in the 110-slot process loop");
+        assertEquals(14, logical.get(1).getPhaseOffset(),
                 "successive virtual entries retain distinct Process_Sprites countdown phases");
     }
 

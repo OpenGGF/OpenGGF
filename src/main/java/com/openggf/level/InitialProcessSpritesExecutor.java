@@ -56,7 +56,7 @@ final class InitialProcessSpritesExecutor {
             }
 
             @Override
-            public void processManagedDynamicSlots4Through92() {
+            public void processManagedDynamicSlots4Through93() {
                 objectManager.processInitialDynamicSlots(scope);
             }
         };

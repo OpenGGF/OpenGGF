@@ -8,7 +8,7 @@ import com.openggf.sprites.managers.InitialPlayableInput;
  * engine's separately-owned SST domains.
  *
  * <p>ROM order: {@code Load_Sprites}, Player 1, Player 2, collision-list reset,
- * absolute dynamic slot 3, managed dynamic slots 4-92, then fixed slots 93-109
+ * absolute dynamic slot 3, managed dynamic slots 4-93, then fixed slots 94-109
  * (docs/skdisasm/sonic3k.asm:7848-7856,35965-36008;
  * docs/skdisasm/sonic3k.constants.asm:303-323).
  */
@@ -41,7 +41,7 @@ final class InitialProcessSpritesCoordinator {
             checkpoint.accept(Checkpoint.AFTER_PLAYABLES_BEFORE_RESET);
             stages.collisionList().resetCurrentBuild();
             dynamic.processAbsoluteDynamicSlot3();
-            dynamic.processManagedDynamicSlots4Through92();
+            dynamic.processManagedDynamicSlots4Through93();
             stages.collisionList().markDynamicBuildComplete();
             checkpoint.accept(Checkpoint.AFTER_DYNAMIC_BEFORE_FIXED);
             stages.fixed().processPostDynamicFixedSlots(context.epoch());

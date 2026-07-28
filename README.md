@@ -218,6 +218,8 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **Validated `develop` backports restored (2026-07-28):** S3K dynamic allocation and initial dispatch now follow the ROM's full 90-probe window over absolute SST slots 4–93, rewind null-snapshot failures identify their adapter class, modifier-documentation checks no longer contaminate sibling calls, and AIZ ROM integration tests service the production hardware-timing boundaries. The trace fleet retains its existing failure/frontier set.
+
 - **S3K signpost integration regression repaired (2026-07-28):** a prior merge retained the ROM-backed signpost tests while dropping their matching production behavior, leaving every test and trace-replay sweep blocked at compilation. The falling signpost again checks sparkle/player contact before signed-word gravity and movement, honors the ROM cooldown and bump range, and keeps the results-child timing adjustment independent from the newer short-retire-tail lifecycle.
 
 - **AIZ results-to-title handoff restored (2026-07-28):** Act 1 results now publish the ROM end-level signal before the independent end-sign owner restores player control, then initialize the mutated Act 2 title owner on its following dispatch. ROM-width child retirement and rewind-safe title-job rebinding advance the AIZ hardware frontier from title job 23 at frame 8800 to the separate MonkeyDude runtime-art job 27 at frame 8943.

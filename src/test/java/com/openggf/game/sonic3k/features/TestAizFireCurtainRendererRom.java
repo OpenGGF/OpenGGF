@@ -8,6 +8,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.events.FireCurtainRenderState;
 import com.openggf.game.sonic3k.events.FireCurtainStage;
 import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
+import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.level.LevelManager;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
@@ -70,7 +71,7 @@ public class TestAizFireCurtainRendererRom {
         boolean sawRefreshCurtain = false;
 
         for (int frame = 0; frame < 360 && !events.isAct2TransitionRequested(); frame++) {
-            events.update(0, frame);
+            updateWithHardware(events, 0, frame);
             FireCurtainRenderState state = events.getFireCurtainRenderState(224);
             if (!state.active() || state.coverHeightPx() <= 0) {
                 continue;
@@ -117,7 +118,7 @@ public class TestAizFireCurtainRendererRom {
         boolean sawDenseCurtain = false;
 
         for (int frame = 0; frame < 360 && !events.isAct2TransitionRequested(); frame++) {
-            events.update(0, frame);
+            updateWithHardware(events, 0, frame);
             FireCurtainRenderState state = events.getFireCurtainRenderState(224);
             if (!state.active() || state.coverHeightPx() <= 0) {
                 continue;
@@ -176,7 +177,7 @@ public class TestAizFireCurtainRendererRom {
         EnumMap<FireCurtainStage, PhaseStats> statsByStage = new EnumMap<>(FireCurtainStage.class);
 
         for (int frame = 0; frame < 360 && !events.isAct2TransitionRequested(); frame++) {
-            events.update(0, frame);
+            updateWithHardware(events, 0, frame);
             FireCurtainRenderState state = events.getFireCurtainRenderState(224);
             collectStageStats(renderer, state, overlayTileBase, overlayTileEnd, statsByStage);
         }
@@ -185,7 +186,7 @@ public class TestAizFireCurtainRendererRom {
             Sonic3kAIZEvents act2Events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
             act2Events.init(1);
             for (int frame = 0; frame < 240 && act2Events.getFireCurtainRenderState(224).active(); frame++) {
-                act2Events.update(1, frame);
+                updateWithHardware(act2Events, 1, frame);
                 FireCurtainRenderState state = act2Events.getFireCurtainRenderState(224);
                 collectStageStats(renderer, state, overlayTileBase, overlayTileEnd, statsByStage);
             }
@@ -229,7 +230,7 @@ public class TestAizFireCurtainRendererRom {
         act1Events.setEventsFg5(true);
 
         for (int frame = 0; frame < 360 && !act1Events.isAct2TransitionRequested(); frame++) {
-            act1Events.update(0, frame);
+            updateWithHardware(act1Events, 0, frame);
         }
 
         levelManager.loadZoneAndAct(0, 1);
@@ -299,5 +300,14 @@ public class TestAizFireCurtainRendererRom {
                 }
             }
         }
+    }
+
+    private static void updateWithHardware(
+            Sonic3kAIZEvents events, int act, int frame) {
+        var timing = GameServices.hardwareTiming();
+        timing.service(HardwareServiceBoundary.VINT_SERVICE);
+        timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        events.update(act, frame);
+        timing.service(HardwareServiceBoundary.POST_OBJECTS);
     }
 }

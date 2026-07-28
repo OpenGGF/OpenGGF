@@ -80,7 +80,8 @@ public final class RewindRegistry {
                 if (value == null) {
                     throw new NullPointerException(
                             "Rewind snapshot must not be null for key: "
-                                    + state.layout.keyAt(i));
+                                    + state.layout.keyAt(i)
+                                    + " (" + state.adapters[i].getClass().getName() + ")");
                 }
                 values[i] = value;
             }

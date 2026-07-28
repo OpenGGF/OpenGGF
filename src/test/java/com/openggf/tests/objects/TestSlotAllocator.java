@@ -49,6 +49,17 @@ class TestSlotAllocator {
     }
 
     @Test
+    void s3kAllocationIncludesFinalRomProbe() {
+        SlotAllocator allocator =
+                new SlotAllocator(ObjectSlotLayout.SONIC_3K, SlotEmptyPredicate.ID_BYTE);
+        for (int slot = 4; slot <= 93; slot++) {
+            assertEquals(slot, allocator.allocate());
+        }
+        assertEquals(-1, allocator.allocate());
+        assertFalse(allocator.reserve(94));
+    }
+
+    @Test
     void hasFreeSlotMatchesAllocateSuccess() {
         // ROM FindFreeObj probe used by routines that branch on success/failure
         // without spawning (e.g. S1 LZ drowning countdown retry when the pool is
