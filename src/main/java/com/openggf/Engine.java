@@ -1878,9 +1878,15 @@ public class Engine {
 			GameLoop loop,
 			boolean modalPicker,
 			boolean frameStepRequested) {
-		Objects.requireNonNull(loop, "loop").presentOuterFrame(
-				modalPicker, frameStepRequested);
-		GameServices.audio().update();
+		long audioStartNanos = System.nanoTime();
+		try {
+			Objects.requireNonNull(loop, "loop").presentOuterFrame(
+					modalPicker, frameStepRequested);
+			GameServices.audio().update();
+		} finally {
+			GameServices.profiler().recordSectionTime(
+					"audio", System.nanoTime() - audioStartNanos);
+		}
 	}
 
 	static LiveCapturePresentationState resolveLiveCapturePresentationState(

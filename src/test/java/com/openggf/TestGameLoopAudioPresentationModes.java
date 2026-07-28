@@ -8,6 +8,8 @@ import com.openggf.audio.NullAudioBackend;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
+import com.openggf.debug.FrameSampleSink;
+import com.openggf.debug.PerformanceProfiler;
 import com.openggf.game.GameMode;
 import com.openggf.game.recording.UserRecordingRuntimeControls;
 import com.openggf.game.rewind.LiveRewindManager;
@@ -24,9 +26,13 @@ import org.junit.jupiter.params.provider.EnumSource;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -104,6 +110,51 @@ class TestGameLoopAudioPresentationModes {
                 AudioManager.getInstance());
         assertEquals(2, parity.presentedFrames());
         assertEquals(2, parity.silentFrames());
+    }
+
+    @Test
+    void outerAudioBoundaryCreditsAggregateAudioMetric() {
+        PerformanceProfiler profiler = PerformanceProfiler.getInstance();
+        Map<String, Long> samples = new HashMap<>();
+        AtomicLong frameNanos = new AtomicLong();
+        AtomicLong probeWork = new AtomicLong();
+        try {
+            profiler.reset();
+            profiler.setEnabled(true);
+            profiler.setAllocationTrackingEnabled(false);
+            profiler.setSampleSink(new FrameSampleSink() {
+                @Override
+                public void frameSample(String section, long elapsedNanos) {
+                    samples.put(section, elapsedNanos);
+                }
+
+                @Override
+                public void frameComplete(long elapsedNanos) {
+                    frameNanos.set(elapsedNanos);
+                }
+            });
+            profiler.beginFrame();
+            profiler.beginSection("update");
+            loop.setAudioPresentationProbe(ignored -> {
+                for (int i = 0; i < 100_000; i++) {
+                    probeWork.incrementAndGet();
+                }
+            });
+
+            Engine.presentOuterAudioFrame(loop, false, false);
+
+            profiler.endSection("update");
+            profiler.endFrame();
+            assertTrue(samples.getOrDefault("audio", 0L) > 0L);
+            assertTrue(samples.getOrDefault("update", 0L) > 0L);
+            assertTrue(samples.get("audio") + samples.get("update")
+                    <= frameNanos.get());
+            assertEquals(100_000L, probeWork.get());
+        } finally {
+            profiler.setSampleSink(null);
+            profiler.setAllocationTrackingEnabled(true);
+            profiler.reset();
+        }
     }
 
     @Test
