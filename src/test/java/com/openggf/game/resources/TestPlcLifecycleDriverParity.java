@@ -1,14 +1,27 @@
 package com.openggf.game.resources;
 
 import com.openggf.LevelFrameStep;
+import com.openggf.GameLoop;
+import com.openggf.control.InputHandler;
+import com.openggf.game.GameModule;
+import com.openggf.game.RuntimeArtCoordinator;
+import com.openggf.game.TitleCardProvider;
+import com.openggf.game.session.GameplayModeContext;
+import com.openggf.game.session.WorldSession;
+import com.openggf.game.timing.HardwareTimingService;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Modifier;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class TestPlcLifecycleDriverParity {
 
@@ -58,6 +71,58 @@ class TestPlcLifecycleDriverParity {
         }
     }
 
+    @Test
+    void lockedSonic2TitleCardUsesOneTitleCardTokenWithoutOrdinaryNesting()
+            throws Exception {
+        List<String> events = new ArrayList<>();
+        PlcLifecycleService service = recording(events);
+        PlcFrameLifecycleCoordinator coordinator =
+                new PlcFrameLifecycleCoordinator(service);
+        GameModule module = mock(GameModule.class);
+        WorldSession world = mock(WorldSession.class);
+        when(world.getGameModule()).thenReturn(module);
+        GameplayModeContext gameplay = mock(GameplayModeContext.class);
+        when(gameplay.getWorldSession()).thenReturn(world);
+        when(gameplay.hardwareTiming()).thenReturn(new HardwareTimingService());
+        when(gameplay.runtimeArtCoordinator()).thenReturn(RuntimeArtCoordinator.NONE);
+        TitleCardProvider titleCard = mock(TitleCardProvider.class);
+        when(titleCard.shouldAdvanceVblankClockDuringLockedPhase()).thenReturn(true);
+        when(titleCard.shouldReleaseControl()).thenReturn(false);
+        doAnswer(ignored -> {
+            events.add("provider");
+            return null;
+        }).when(titleCard).update();
+
+        GameLoop loop = new GameLoop(new InputHandler());
+        set(loop, "gameplayMode", gameplay);
+        set(loop, "titleCardProvider", titleCard);
+        set(loop, "levelManager", mock(com.openggf.level.LevelManager.class));
+        set(loop, "camera", mock(com.openggf.camera.Camera.class));
+        set(loop, "audioManager", mock(com.openggf.audio.AudioManager.class));
+        var frame = coordinator.latchBeforeFadeUpdate();
+        set(loop, "activePlcLifecycleFrame", frame);
+        Method update = GameLoop.class.getDeclaredMethod(
+                "updateTitleCardMode", boolean.class);
+        update.setAccessible(true);
+
+        update.invoke(loop, true);
+        frame.finish();
+
+        assertEquals(List.of(
+                "service:LEVEL_TITLE_CARD",
+                "provider",
+                "prepare:LEVEL_TITLE_CARD"), events);
+        assertTrue(events.stream().noneMatch(
+                "service:ORDINARY_LEVEL"::equals));
+    }
+
+    private static void set(Object target, String fieldName, Object value)
+            throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(target, value);
+    }
+
     private static List<String> runRepresentativeIterations() {
         List<String> events = new ArrayList<>();
         PlcFrameLifecycleCoordinator coordinator =
@@ -88,7 +153,8 @@ class TestPlcLifecycleDriverParity {
             @Override
             public boolean hasPreparationBoundary(PlcLifecyclePhase phase) {
                 return phase == PlcLifecyclePhase.ORDINARY_LEVEL
-                        || phase == PlcLifecyclePhase.PALETTE_FADE;
+                        || phase == PlcLifecyclePhase.PALETTE_FADE
+                        || phase == PlcLifecyclePhase.LEVEL_TITLE_CARD;
             }
 
             @Override

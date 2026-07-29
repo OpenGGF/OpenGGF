@@ -6,7 +6,12 @@ import com.openggf.control.InputHandler;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.game.GameServices;
+import com.openggf.game.InitialProcessSpritesLifecycle;
+import com.openggf.game.resources.PlcFrameLifecycleCoordinator;
+import com.openggf.game.resources.PlcLifecyclePhase;
+import com.openggf.game.resources.PlcLifecycleService;
 import com.openggf.game.rewind.RewindSeekAwareEngineStepper;
+import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
@@ -21,9 +26,11 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -106,6 +113,48 @@ class TestTraceSessionLauncherAdvanceOnlyRewind {
         }
     }
 
+    @Test
+    void visualRewindDistinguishesPausedSetupAndUnpauseLifecycleRows()
+            throws Exception {
+        HeadlessTestFixture.builder().withZoneAndAct(0, 0).build();
+        GameplayModeContext gameplay = SessionManager.getCurrentGameplayMode();
+        List<String> events = new ArrayList<>();
+        replaceCoordinator(gameplay,
+                new PlcFrameLifecycleCoordinator(recording(events)));
+        gameplay.setHardwareTimingBoundaryObserver(
+                boundary -> events.add(boundary.name()));
+        GameLoop loop = new GameLoop(new InputHandler());
+        TraceReplayFixture timingFixture = mock(TraceReplayFixture.class);
+        TraceData trace = fullFrameTrace();
+
+        gameplay.getGameStateManager().setGamePaused(true);
+        RewindSeekAwareEngineStepper paused = visualStepper(
+                loop, singleFrameMovie(false), trace, timingFixture);
+        paused.step(singleFrameMovie(false).getFrame(0));
+        assertEquals(List.of(
+                "service:NORMAL_PAUSE", "VINT_SERVICE"), events);
+
+        events.clear();
+        gameplay.getGameStateManager().setGamePaused(false);
+        GameServices.level().restorePendingInitialProcessSpritesLifecycleForRewind(
+                InitialProcessSpritesLifecycle.LOAD_THEN_PROCESS_ONCE);
+        RewindSeekAwareEngineStepper setup = visualStepper(
+                loop, singleFrameMovie(false), trace, timingFixture);
+        setup.step(singleFrameMovie(false).getFrame(0));
+        assertEquals(List.of(), events);
+
+        events.clear();
+        gameplay.getGameStateManager().setGamePaused(true);
+        Bk2Movie unpauseMovie = singleFrameMovie(true);
+        RewindSeekAwareEngineStepper unpause = visualStepper(
+                loop, unpauseMovie, trace, timingFixture);
+        unpause.step(unpauseMovie.getFrame(0));
+        assertTrue(events.contains("service:ORDINARY_LEVEL"));
+        assertTrue(events.contains("prepare:ORDINARY_LEVEL"));
+        assertEquals(1, events.stream()
+                .filter("service:ORDINARY_LEVEL"::equals).count());
+    }
+
     private static RewindSeekAwareEngineStepper visualStepper(
             GameLoop loop,
             Bk2Movie movie,
@@ -133,6 +182,54 @@ class TestTraceSessionLauncherAdvanceOnlyRewind {
                         new Bk2FrameInput(1, heldMask, 1, false, "hold"),
                         new Bk2FrameInput(2, heldMask, 1, false, "hold")),
                 1);
+    }
+
+    private static Bk2Movie singleFrameMovie(boolean startPressed) {
+        return new Bk2Movie(
+                Path.of("synthetic-visual-lifecycle.bk2"),
+                "logkey", Map.of(),
+                List.of(new Bk2FrameInput(
+                        0, 0, 0, startPressed, 0, 0, false, "row")),
+                1);
+    }
+
+    private static TraceData fullFrameTrace() {
+        return TraceFixtures.trace(
+                TraceFixtures.metadata("s3k", 0, 0),
+                List.of(
+                        TraceFrame.of(0, 0, (short) 0, (short) 0,
+                                (short) 0, (short) 0, (short) 0,
+                                (byte) 0, false, false, 0),
+                        TraceFrame.executionTestFrame(1, 1, 1, 0)),
+                Map.of());
+    }
+
+    private static PlcLifecycleService recording(List<String> events) {
+        return new PlcLifecycleService() {
+            @Override
+            public void serviceVBlank(PlcLifecyclePhase phase) {
+                events.add("service:" + phase);
+            }
+
+            @Override
+            public boolean hasPreparationBoundary(PlcLifecyclePhase phase) {
+                return phase == PlcLifecyclePhase.ORDINARY_LEVEL;
+            }
+
+            @Override
+            public void prepareAfterLoop(PlcLifecyclePhase phase) {
+                events.add("prepare:" + phase);
+            }
+        };
+    }
+
+    private static void replaceCoordinator(
+            GameplayModeContext gameplay,
+            PlcFrameLifecycleCoordinator coordinator) throws Exception {
+        Field field = GameplayModeContext.class.getDeclaredField(
+                "plcFrameLifecycle");
+        field.setAccessible(true);
+        field.set(gameplay, coordinator);
     }
 
     private static TraceData advanceOnlyTrace() {
