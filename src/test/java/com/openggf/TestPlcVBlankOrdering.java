@@ -5,11 +5,19 @@ import com.openggf.game.GameModule;
 import com.openggf.game.NoOpBonusStageProvider;
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.resources.PlcLifecycleService;
+import com.openggf.game.resources.PlcFrameLifecycleCoordinator;
 import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.level.LevelManager;
 import com.openggf.level.resources.NemesisPlcServiceQueue;
 import com.openggf.level.resources.PlcParser.PlcDefinition;
 import com.openggf.level.resources.PlcParser.PlcEntry;
+import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectRegistry;
+import com.openggf.level.objects.ObjectSlotLayout;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectWindowingStrategy;
+import com.openggf.level.objects.TestObjectServices;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -57,14 +65,30 @@ class TestPlcVBlankOrdering {
                 List.of(3, 5));
         queue.prepareHead();
 
-        queue.servicePatterns(3);
-        queue.prepareHead();
+        PlcLifecycleService lifecycle = queueLifecycle(queue);
+        PlcFrameLifecycleCoordinator coordinator =
+                new PlcFrameLifecycleCoordinator(lifecycle);
+        LevelFrameContext frameContext = context(mock(GameModule.class),
+                new ArrayList<>());
+        var first = coordinator.latchBeforeFadeUpdate();
+        LevelFrameStep.executeHardwareTimedObjectScan(
+                frameContext, first, PlcLifecyclePhase.SPECIAL_STAGE, () -> {
+                    var duringScan = queue.capture();
+                    assertEquals(null, duringScan.activeEntry());
+                    assertEquals(1, duringScan.queuedEntries().size());
+                    assertEquals(5,
+                            duringScan.queuedEntries().getFirst().remainingPatterns());
+                });
+        first.finish();
 
         var afterPreparation = queue.capture();
         assertEquals(5, afterPreparation.activeEntry().remainingPatterns());
         assertEquals(0, afterPreparation.queuedEntries().size());
 
-        queue.servicePatterns(3);
+        var second = coordinator.latchBeforeFadeUpdate();
+        LevelFrameStep.executeHardwareTimedObjectScan(
+                frameContext, second, PlcLifecyclePhase.SPECIAL_STAGE, () -> { });
+        second.finish();
         assertEquals(2, queue.capture().activeEntry().remainingPatterns());
     }
 
@@ -73,14 +97,14 @@ class TestPlcVBlankOrdering {
         MutableFacade facade = new MutableFacade();
         List<List<String>> observations = new ArrayList<>();
 
-        facade.scan(
+        dispatchObjectSlots(
                 () -> facade.append("append"),
                 () -> observations.add(facade.snapshot()));
         assertEquals(List.of(List.of("append")), observations);
 
         observations.clear();
         facade.replace("seed");
-        facade.scan(
+        dispatchObjectSlots(
                 () -> observations.add(facade.snapshot()),
                 facade::clear);
         assertEquals(List.of(List.of("seed")), observations);
@@ -88,13 +112,13 @@ class TestPlcVBlankOrdering {
 
         observations.clear();
         facade.append("old");
-        facade.scan(
+        dispatchObjectSlots(
                 () -> facade.replace("replacement"),
                 () -> observations.add(facade.snapshot()));
         assertEquals(List.of(List.of("replacement")), observations);
 
         observations.clear();
-        facade.scan(
+        dispatchObjectSlots(
                 () -> observations.add(facade.snapshot()),
                 () -> facade.append("later"));
         assertEquals(List.of(List.of("replacement")), observations);
@@ -132,6 +156,41 @@ class TestPlcVBlankOrdering {
         };
     }
 
+    private static PlcLifecycleService queueLifecycle(
+            NemesisPlcServiceQueue queue) {
+        return new PlcLifecycleService() {
+            @Override
+            public void serviceVBlank(PlcLifecyclePhase phase) {
+                queue.servicePatterns(3);
+            }
+
+            @Override
+            public boolean hasPreparationBoundary(PlcLifecyclePhase phase) {
+                return true;
+            }
+
+            @Override
+            public void prepareAfterLoop(PlcLifecyclePhase phase) {
+                queue.prepareHead();
+            }
+        };
+    }
+
+    private static void dispatchObjectSlots(Runnable first, Runnable second) {
+        ObjectRegistry registry = mock(ObjectRegistry.class);
+        when(registry.objectSlotLayout()).thenReturn(ObjectSlotLayout.SONIC_1);
+        when(registry.objectWindowingStrategy())
+                .thenReturn(ObjectWindowingStrategy.LEGACY);
+        Camera camera = mock(Camera.class);
+        when(camera.getWidth()).thenReturn((short) 320);
+        TestObjectServices services = new TestObjectServices().withCamera(camera);
+        ObjectManager manager = new ObjectManager(
+                List.of(), registry, -1, null, null, null, camera, services);
+        manager.createDynamicObject(() -> new SlotCallbackObject(first));
+        manager.createDynamicObject(() -> new SlotCallbackObject(second));
+        manager.update(0, null, List.of(), 0);
+    }
+
     private static final class MutableFacade {
         private final List<String> queued = new ArrayList<>();
 
@@ -152,9 +211,25 @@ class TestPlcVBlankOrdering {
             return List.copyOf(queued);
         }
 
-        void scan(Runnable firstSlot, Runnable secondSlot) {
-            firstSlot.run();
-            secondSlot.run();
+    }
+
+    private static final class SlotCallbackObject extends AbstractObjectInstance {
+        private final Runnable callback;
+
+        private SlotCallbackObject(Runnable callback) {
+            super(new ObjectSpawn(0, 0, 1, 0, 0, false, 0),
+                    "PLC slot callback");
+            this.callback = callback;
+        }
+
+        @Override
+        public void update(int frameCounter, com.openggf.game.PlayableEntity player) {
+            callback.run();
+        }
+
+        @Override
+        public void appendRenderCommands(
+                List<com.openggf.graphics.GLCommand> commands) {
         }
     }
 }

@@ -520,6 +520,6 @@ class TestRewindController {
         return new FadeManagerSnapshot(
                 poisoned ? FadeManager.FadeState.FADING_TO_BLACK : FadeManager.FadeState.NONE,
                 frame, 0, 0, 0, 0, FadeManager.FadeType.BLACK,
-                0, 0, 1, 1, 1, poisoned);
+                0, 0, 1, 1, 1, false, poisoned);
     }
 }

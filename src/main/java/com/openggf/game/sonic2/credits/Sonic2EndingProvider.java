@@ -8,6 +8,7 @@ import com.openggf.game.sonic2.constants.Sonic2AudioConstants;
 import com.openggf.game.resources.NativeFadeLifecycle;
 import com.openggf.game.resources.NativeFadeLifecycleAware;
 import com.openggf.game.resources.NoOpNativeFadeLifecycle;
+import com.openggf.graphics.FadeManager;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -68,6 +69,15 @@ public class Sonic2EndingProvider implements EndingProvider, NativeFadeLifecycle
     private int currentSlide;
     private int slideTimer;
     private NativeFadeLifecycle nativeFadeLifecycle = NoOpNativeFadeLifecycle.INSTANCE;
+    private final FadeManager injectedFadeManager;
+
+    public Sonic2EndingProvider() {
+        this(null);
+    }
+
+    Sonic2EndingProvider(FadeManager fadeManager) {
+        injectedFadeManager = fadeManager;
+    }
 
     @Override
     public void bindNativeFadeLifecycle(NativeFadeLifecycle lifecycle) {
@@ -117,7 +127,7 @@ public class Sonic2EndingProvider implements EndingProvider, NativeFadeLifecycle
                         // ROM: PaletteFadeOut after plane flyaway
                         slideTimer = 0;
                         state = InternalState.CUTSCENE_FADE_OUT;
-                        GameServices.fade().startFadeToBlack(nativeCompletion(() -> { }));
+                        fadeManager().startFadeToBlack(nativeCompletion(() -> { }));
                     }
                 } else {
                     // No cutscene manager (ROM unavailable) -- skip to credits
@@ -144,7 +154,7 @@ public class Sonic2EndingProvider implements EndingProvider, NativeFadeLifecycle
                     // ROM: PaletteFadeOut after each credit slide
                     slideTimer = 0;
                     state = InternalState.CREDITS_FADE_OUT;
-                    GameServices.fade().startFadeToBlack(nativeCompletion(() -> { }));
+                    fadeManager().startFadeToBlack(nativeCompletion(() -> { }));
                 }
             }
             case CREDITS_FADE_OUT -> {
@@ -158,7 +168,7 @@ public class Sonic2EndingProvider implements EndingProvider, NativeFadeLifecycle
                         // ROM: PaletteFadeIn for next credit slide
                         slideTimer = 0;
                         state = InternalState.CREDITS_FADE_IN;
-                        GameServices.fade().startFadeFromBlack(nativeCompletion(() -> { }));
+                        fadeManager().startFadeFromBlack(nativeCompletion(() -> { }));
                     }
                 }
             }
@@ -167,7 +177,7 @@ public class Sonic2EndingProvider implements EndingProvider, NativeFadeLifecycle
                 logoFlashManager.initialize();
                 state = InternalState.LOGO_FLASH;
                 // ROM: PaletteFadeIn to reveal logo
-                GameServices.fade().startFadeFromBlack(nativeCompletion(() -> { }));
+                fadeManager().startFadeFromBlack(nativeCompletion(() -> { }));
             }
             case LOGO_FLASH -> {
                 // Logo flash update is driven by GameLoop.updateEndingPostCredits()
@@ -319,9 +329,19 @@ public class Sonic2EndingProvider implements EndingProvider, NativeFadeLifecycle
         state = InternalState.CREDITS_FADE_IN;
 
         // ROM: PaletteFadeIn to reveal first credit slide
-        GameServices.fade().startFadeFromBlack(nativeCompletion(() -> { }));
+        fadeManager().startFadeFromBlack(nativeCompletion(() -> { }));
 
         LOGGER.info("Sonic2EndingProvider: cutscene complete, starting credits text");
+    }
+
+    private FadeManager fadeManager() {
+        return injectedFadeManager != null ? injectedFadeManager : GameServices.fade();
+    }
+
+    void beginCreditsTextExitForLifecycleTest() {
+        state = InternalState.CREDITS_TEXT;
+        currentSlide = 0;
+        slideTimer = Sonic2CreditsData.SLIDE_DURATION_60FPS - 1;
     }
 
     /**

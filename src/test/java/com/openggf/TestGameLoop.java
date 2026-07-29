@@ -2299,6 +2299,7 @@ public class TestGameLoop {
                 1,
                 0.0f,
                 0,
+                false,
                 false));
         when(spriteManager.rewindSnapshottable()).thenReturn(
                 new com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.SpriteManagerSnapshot>() {

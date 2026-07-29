@@ -59,14 +59,22 @@ public class Sonic1CreditsManager {
     private boolean requestTextReturn;
     private boolean requestFinished;
     private final NativeFadeLifecycle nativeFadeLifecycle;
+    private final com.openggf.graphics.FadeManager injectedFadeManager;
 
     public Sonic1CreditsManager() {
-        this(com.openggf.game.resources.NoOpNativeFadeLifecycle.INSTANCE);
+        this(com.openggf.game.resources.NoOpNativeFadeLifecycle.INSTANCE, null);
     }
 
     public Sonic1CreditsManager(NativeFadeLifecycle nativeFadeLifecycle) {
+        this(nativeFadeLifecycle, null);
+    }
+
+    Sonic1CreditsManager(
+            NativeFadeLifecycle nativeFadeLifecycle,
+            com.openggf.graphics.FadeManager fadeManager) {
         this.nativeFadeLifecycle = java.util.Objects.requireNonNull(
                 nativeFadeLifecycle, "nativeFadeLifecycle");
+        this.injectedFadeManager = fadeManager;
     }
 
     private Runnable nativeCompletion(Runnable completion) {
@@ -100,7 +108,7 @@ public class Sonic1CreditsManager {
 
         // Start with fade from black to reveal first credit text
         state = State.TEXT_FADE_IN;
-        GameServices.fade().startFadeFromBlack(nativeCompletion(() -> {
+        fadeManager().startFadeFromBlack(nativeCompletion(() -> {
             state = State.TEXT_DISPLAY;
             timer = Sonic1CreditsDemoData.TEXT_DISPLAY_FRAMES;
             textPacingDelay = getTextPacingDelayFrames(creditsNum);
@@ -158,14 +166,14 @@ public class Sonic1CreditsManager {
         if (creditsNum >= Sonic1CreditsDemoData.DEMO_CREDITS) {
             // Credit 8 ("PRESENTED BY SEGA"): no demo, go to finished
             state = State.TEXT_FADE_OUT;
-            GameServices.fade().startFadeToBlack(nativeCompletion(() -> {
+            fadeManager().startFadeToBlack(nativeCompletion(() -> {
                 state = State.FINISHED;
                 requestFinished = true;
             }));
         } else {
             // Credits 0-7: fade to black, then load demo zone
             state = State.TEXT_FADE_OUT;
-            GameServices.fade().startFadeToBlack(nativeCompletion(() -> {
+            fadeManager().startFadeToBlack(nativeCompletion(() -> {
                 state = State.DEMO_LOADING;
                 requestDemoLoad = true;
             }));
@@ -182,7 +190,7 @@ public class Sonic1CreditsManager {
         }
 
         state = State.DEMO_FADE_IN;
-        GameServices.fade().startFadeFromBlack(
+        fadeManager().startFadeFromBlack(
                 nativeCompletion(() -> state = State.DEMO_PLAYING));
     }
 
@@ -202,7 +210,7 @@ public class Sonic1CreditsManager {
             // Objects and demo input continue running during the fade.
             scrollFrozen = true;
             state = State.DEMO_FADING_OUT;
-            GameServices.fade().startFadeToBlack(() -> {
+            fadeManager().startFadeToBlack(() -> {
                 scrollFrozen = false;
                 creditsNum++;
                 if (creditsNum >= Sonic1CreditsDemoData.TOTAL_CREDITS) {
@@ -263,13 +271,27 @@ public class Sonic1CreditsManager {
 
         // Start fade from black to reveal credit text
         state = State.TEXT_FADE_IN;
-        GameServices.fade().startFadeFromBlack(nativeCompletion(() -> {
+        fadeManager().startFadeFromBlack(nativeCompletion(() -> {
             state = State.TEXT_DISPLAY;
             timer = Sonic1CreditsDemoData.TEXT_DISPLAY_FRAMES;
             textPacingDelay = getTextPacingDelayFrames(creditsNum);
         }));
 
         LOGGER.info("Showing credit text " + creditsNum);
+    }
+
+    void beginDemoPlayingForLifecycleTest(int framesUntilFade) {
+        state = State.DEMO_PLAYING;
+        timer = framesUntilFade;
+        demoInputPlayer = null;
+    }
+
+    boolean hasTextReturnRequestForLifecycleTest() {
+        return requestTextReturn;
+    }
+
+    private com.openggf.graphics.FadeManager fadeManager() {
+        return injectedFadeManager != null ? injectedFadeManager : GameServices.fade();
     }
 
     /**

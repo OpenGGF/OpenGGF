@@ -87,6 +87,7 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
     private Runnable onFadeComplete;
     private boolean holdRestoredFrameForNextUpdate;
     private int reversePresentationDepth;
+    private boolean exactToFadeDuration;
 
     // Hold duration in frames (for optional pause at full white)
     private int holdDuration = 0;
@@ -120,6 +121,7 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
         effectiveFPC = FRAMES_PER_CHANNEL;
         effectiveIncrement = CHANNEL_INCREMENT;
         effectiveDuration = FADE_DURATION;
+        exactToFadeDuration = false;
     }
 
     /**
@@ -253,10 +255,12 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
             this.effectiveFPC = totalDuration / 3;
             this.effectiveIncrement = 1.0f / this.effectiveFPC;
             this.effectiveDuration = totalDuration;
+            this.exactToFadeDuration = true;
         } else {
             this.effectiveFPC = FRAMES_PER_CHANNEL;
             this.effectiveIncrement = CHANNEL_INCREMENT;
             this.effectiveDuration = FADE_DURATION;
+            this.exactToFadeDuration = false;
         }
     }
 
@@ -438,6 +442,9 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
                 state = FadeState.HOLD_BLACK;
                 holdFrameCount = 0;
             } else {
+                if (exactToFadeDuration) {
+                    state = FadeState.HOLD_BLACK;
+                }
                 completeFade();
             }
         }
@@ -726,6 +733,7 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
         onFadeComplete = null;
         holdDuration = 0;
         holdFrameCount = 0;
+        exactToFadeDuration = false;
     }
 
     public void cleanup() {
@@ -756,7 +764,7 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
         return new FadeManagerSnapshot(
                 state, frameCount, fadeR, fadeG, fadeB, fadeAlpha,
                 fadeType, holdDuration, holdFrameCount,
-                effectiveFPC, effectiveIncrement, effectiveDuration,
+                effectiveFPC, effectiveIncrement, effectiveDuration, exactToFadeDuration,
                 onFadeComplete != null);
     }
 
@@ -774,6 +782,7 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
         this.effectiveFPC = snapshot.effectiveFPC();
         this.effectiveIncrement = snapshot.effectiveIncrement();
         this.effectiveDuration = snapshot.effectiveDuration();
+        this.exactToFadeDuration = snapshot.exactToFadeDuration();
         // Note: onFadeComplete callback is NOT restored (transient)
         this.onFadeComplete = null;
         this.holdRestoredFrameForNextUpdate = true;

@@ -24,6 +24,7 @@ public record FadeManagerSnapshot(
         int effectiveFPC,
         float effectiveIncrement,
         int effectiveDuration,
+        boolean exactToFadeDuration,
         boolean hadPendingCompletion) {
 
     /**
