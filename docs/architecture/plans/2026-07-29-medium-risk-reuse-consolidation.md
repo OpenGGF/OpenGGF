@@ -536,24 +536,31 @@ feature branch, and prune metadata.
 
 **Files:**
 
-- Modify only after root-cause evidence identifies the owning production or
-  test-reset boundary.
 - Modify: `docs/architecture/archunit-exceptions.md`
 - Modify: `src/test/java/com/openggf/tests/TestArchUnitRules.java`
 - Modify: `src/test/resources/archunit/frozen/stored.rules`
 - Modify:
   `docs/architecture/validation/2026-07-29-medium-risk-reuse-consolidation.md`
+- Create:
+  `src/test/java/com/openggf/tests/RuntimeStateContaminationExtension.java`
 - Test: `src/test/java/com/openggf/tests/TestPlayableSpriteRollSpeed.java`
 - Test:
   `src/test/java/com/openggf/trace/live/TestLiveTraceComparatorObserver.java`
 
 **Interfaces:**
 
-- Produces an automated reproduction of each branch-only failure or repeatable
-  evidence identifying a non-order suite-context cause.
-- Preserves production behavior and fixes only the owner proven by evidence.
-- Aligns the shared-layer frozen baseline metadata to 14 without changing the
-  frozen rule ID.
+- Produces `RuntimeStateContaminationExtension`, a test-only
+  `BeforeEachCallback` that installs both proven contaminated session owners.
+- Declares the contaminator immediately before `SingletonResetExtension` in
+  one `@ExtendWith` chain on each affected consumer class.
+- Uses existing consumer behavior assertions to prove the real full-reset
+  callback replaces both owners before every test body.
+- Preserves production behavior; does not depend on suite order, retries,
+  source-text inspection, or annotation reflection.
+- Aligns the shared-layer frozen baseline metadata to 14 without changing
+  frozen rule ID `e0b8ef04-86e9-4001-b35e-c5de3ef4d940`, and documents entries
+  1–9 as `MasterTitleRomPreview` dependencies and entries 10–14 as
+  `DefaultPowerUpSpawner` dependencies.
 
 - [ ] **Step 1: Re-run design and plan review loops**
 
@@ -619,39 +626,74 @@ their writers and readers. Name the observed difference, owner, expected
 lifecycle, and evidence before proposing a fix. Do not assume the cause is a
 singleton, static field, configuration service, or reset boundary.
 
-- [ ] **Step 5: Add a failing ordered regression test**
+- [ ] **Step 5: Add the failing deterministic contamination regression**
 
-For a branch-owned cause, encode the smallest behavior-level reproduction in
-the relevant existing test or reset-contract suite. Run it against the current
-branch and confirm the expected failure. Do not add a source-text or
-test-order-only assertion.
+Create `RuntimeStateContaminationExtension` as a test-only
+`BeforeEachCallback`. Its callback first establishes a known
+`TestEnvironment`, then installs the two runtime states identified in Step 4:
 
-For a proven environmental cause, do not add a speculative regression test.
-Retain the repeated controlled reproducer and branch/base evidence instead.
+1. a CPU-controlled `Tails` registered in the active gameplay mode's sprite
+   manager; and
+2. a session-owned `CollisionSystem` whose
+   `resolveGroundWallCollision(FrameCollisionPlan, AbstractPlayableSprite)`
+   sets ground speed to zero.
+
+On `TestPlayableSpriteRollSpeed` and
+`TestLiveTraceComparatorObserver`, declare the contaminator in one
+`@ExtendWith` chain but temporarily omit `SingletonResetExtension`. Keep
+`@FullReset` and all existing consumer assertions unchanged.
+
+Run:
+
+```bash
+mvn -Dmse=off \
+  -Dsonic1.rom.path="$S1_ROM" \
+  -Dsonic2.rom.path="$S2_ROM" \
+  -Ds3k.rom.path="$S3K_ROM" \
+  -Dtest=com.openggf.tests.TestPlayableSpriteRollSpeed,com.openggf.trace.live.TestLiveTraceComparatorObserver \
+  test
+```
+
+Expected RED: 9 tests with 5 failures. The two comparator cases observe the
+registered sidekick, while three roll-speed cases observe zero ground speed.
+The regression must not invoke a suspected writer class, inspect annotations,
+read source text, or rely on Surefire ordering.
 
 - [ ] **Step 6: Implement the single root-cause fix**
 
-For a branch-owned cause, change only the owner identified in Step 4. Do not
-weaken the affected assertions, add retries, skip tests, reorder the suite, or
-special-case the failing test classes.
+Restore `SingletonResetExtension` immediately after
+`RuntimeStateContaminationExtension` in each class's single ordered
+`@ExtendWith` chain:
 
-For a proven environmental cause, make no production or reset-boundary change.
+```java
+@ExtendWith({
+        RuntimeStateContaminationExtension.class,
+        SingletonResetExtension.class
+})
+```
+
+JUnit's `BeforeEachCallback` registration order makes the contaminator run
+first and the real reset run second. Do not weaken assertions, add retries,
+skip tests, change production state lookup, or rely on external class order.
 
 - [ ] **Step 7: Verify red-green and affected suites**
 
-For a branch-owned cause, run the regression test, minimized ordered
-reproducer, both originally failing classes, and the exact 106-test focused
-command from Task 4. Record exact counts and results.
+Rerun the exact Step 5 command after restoring only the reset extension.
+Expected GREEN: 9 tests, 0 failures, 0 errors, 0 skips.
 
-For a proven environmental cause, repeat the controlled reproducer enough to
-establish the classification, run both originally failing classes and the
-exact 106-test focused command, and record exact counts and results.
+Then run both minimized single-fork ordered reproducers from Step 3 and the
+exact 106-test focused command from Task 4. Record exact counts and results.
+The ordered reproducers remain diagnosis evidence; the self-contained
+extension chain is the committed regression.
 
 - [ ] **Step 8: Correct architecture baseline metadata**
 
 Update the published shared-layer count, rule metadata, and stored-rule mapping
 from 20 to 14 while preserving the frozen rule ID and current 14-entry
-violation file. Run both ArchUnit suites.
+violation file. Correct `docs/architecture/archunit-exceptions.md` to identify
+frozen entries 1–9 as `MasterTitleRomPreview` dependencies and entries 10–14
+as `DefaultPowerUpSpawner` dependencies. Preserve count 14 and UUID
+`e0b8ef04-86e9-4001-b35e-c5de3ef4d940`. Run both ArchUnit suites.
 
 - [ ] **Step 9: Rerun clean same-ROM full comparison**
 
@@ -672,11 +714,23 @@ is allowed only if no test passing on base fails on branch. Preserve reports
 separately, classify any generated files, then remove the disposable base
 worktree after comparison.
 
+If a later review commit changes the deterministic regression or its extension
+ordering after this comparison, rerun the clean normal-configuration branch
+suite at that exact reviewed head. Compare it with the retained clean
+exact-base report set using testcase identities as well as aggregate counts.
+Back up and restore every generated tracked report around the sweep.
+
 - [ ] **Step 10: Amend validation evidence and commit**
 
 Enumerate every base-only SnaleBlaster failing testcase, record the debugging
-reproducer and root cause, update final full-suite counts, run both worktree and
-range `git diff --check`, and commit the fix plus documentation with required
+reproducer, root cause, deterministic contamination regression, and extension
+ordering. Record the exact head commit for the final full sweep, aggregate
+counts, and complete failure/error identities. Correct the documented
+ownership of all 14 shared-layer frozen violations: entries 1–9 are
+`MasterTitleRomPreview` dependencies and entries 10–14 are
+`DefaultPowerUpSpawner` dependencies. Preserve count 14 and UUID
+`e0b8ef04-86e9-4001-b35e-c5de3ef4d940`. Run both worktree and range
+`git diff --check`, and commit the fix plus documentation with required
 trailers.
 
 - [ ] **Step 11: Resume final review and integration**

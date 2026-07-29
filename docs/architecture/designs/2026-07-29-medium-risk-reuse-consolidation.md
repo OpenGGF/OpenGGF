@@ -179,36 +179,55 @@ from the same-ROM base sweep:
 - `TestLiveTraceComparatorObserver.existingFiveArgConstructorDelegatesWithNullObserver`
 - `TestLiveTraceComparatorObserver.nullObserverIsHonoured`
 
-All three pass when their two classes run alone. This is not evidence that they
-are harmless; it establishes only that the full-suite context matters and
-blocks integration. Possible causes include deterministic order interaction,
-leaked state, resource pressure, environment, or nondeterminism; none is
-selected without further evidence.
+All three passed when their two consumer classes ran alone. Retained
+full-suite reports and fixed single-fork reproducers subsequently proved two
+pre-existing runtime-state leaks: a prior headless fixture could leave a
+registered sidekick in the active session sprite manager, and a prior level
+diagnostic could leave a session collision system that zeroed the roll-speed
+test's ground speed. The consolidation changed fork neighbours and exposed the
+leaks; it did not create their runtime state.
 
-The remediation must follow systematic debugging:
+The affected consumer classes participate in the existing full-reset contract
+with `@FullReset` and `SingletonResetExtension`. To make that contract a
+committed deterministic regression rather than relying on incidental Maven
+suite order, test support also provides
+`RuntimeStateContaminationExtension`. Before every affected consumer test, the
+contaminator:
 
-1. rerun and immediately archive every branch sweep because the original
-   failing class reports were overwritten by the isolated rerun; if the first
-   attempt is green, make at most three identical normal-configuration
-   attempts total and retain their reproduction frequency and fork evidence;
-2. inventory branch/base suite-context differences and reproduce each failure
-   with the smallest deterministic context supported by the evidence;
-3. compare base and branch under the same reduced execution and environment;
-4. form and test one root-cause hypothesis at a time, tracing the relevant
-   inputs and state back to their owner; and
-5. classify the cause before changing code.
+- resets to a known test environment and registers a CPU-controlled Tails in
+  the active session sprite manager; and
+- attaches a session-owned collision system whose ground-wall response sets
+  the playable sprite's ground speed to zero.
 
-For branch-owned contamination, add a regression test that fails before the
-fix, implement the smallest fix at the owner identified by evidence rather
-than weakening assertions or changing test order, then rerun the reproducer,
-combined focused suite, and clean same-ROM full comparison.
+Each consumer declares one ordered `@ExtendWith` chain:
 
-For a proven pre-existing environmental or nondeterministic cause, make no
-speculative production or reset-boundary change. Instead, record repeatable
-branch/base evidence, the controlled factor and repetitions, and the reason no
-branch-owned fix is warranted. A passing isolated rerun alone is insufficient.
+```java
+@ExtendWith({
+        RuntimeStateContaminationExtension.class,
+        SingletonResetExtension.class
+})
+```
 
-The same remediation closes two documentation consistency items before final
-review: align all shared-layer frozen-baseline metadata with its 14-entry
-violation set, and enumerate the removed base-only SnaleBlaster test failures in
-the validation artifact.
+JUnit invokes the contaminator first and the real reset callback second. The
+existing comparator and roll-speed assertions then prove that the reset
+replaced both contaminated session owners before the test body. Removing the
+reset extension yields five failures in the nine affected tests; restoring
+only that extension makes the same command green. The regression therefore
+uses behavior, not source-text inspection, annotation reflection, retries, or
+test-class ordering.
+
+Production state ownership and runtime lookup behavior remain unchanged. The
+ordered legacy reproducers remain supporting diagnosis evidence, while the
+extension-chain test is the durable regression gate. Final validation must run
+the affected classes, both ordered reproducers, the focused tranche, the
+ArchUnit suites, and a clean same-ROM full sweep at the exact reviewed head.
+That exact-head sweep is compared to retained clean exact-base reports, and
+generated rewind reports are restored afterward.
+
+The remediation also aligns all shared-layer frozen-baseline metadata with its
+14-entry violation set and preserves frozen rule UUID
+`e0b8ef04-86e9-4001-b35e-c5de3ef4d940`. The exception guide must identify
+entries 1–9 as `MasterTitleRomPreview` dependencies and entries 10–14 as
+`DefaultPowerUpSpawner` dependencies, rather than attributing all 14 to the
+spawner. The validation record also enumerates the earlier base-only
+SnaleBlaster failures.

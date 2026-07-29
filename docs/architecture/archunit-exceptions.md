@@ -176,8 +176,12 @@ Target direction:
 
 Rule: `shared level and game layers should not depend on game-specific packages`
 
-Frozen violations are limited to `DefaultPowerUpSpawner`, which constructs Sonic 1 splash and S3K shield/insta-shield
-  visuals from shared object code.
+Frozen violations 1–9 are in `MasterTitleRomPreview`, which composes the
+cross-game master-title previews through concrete Sonic 1, Sonic 2, and Sonic
+3&K title-screen mappings. Violations 10–14 are in
+`DefaultPowerUpSpawner`, which constructs Sonic 1 splash and S3K
+shield/insta-shield visuals from shared object code. The frozen set remains 14
+entries under UUID `e0b8ef04-86e9-4001-b35e-c5de3ef4d940`.
 
 Target direction:
 
