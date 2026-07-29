@@ -51,6 +51,10 @@ import com.openggf.game.GameRng;
 import com.openggf.game.RuntimeArtCoordinator;
 import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 import com.openggf.game.timing.HardwareTimingService;
+import com.openggf.game.timing.LoadTimeProfile;
+import com.openggf.game.timing.LoadTimeProfileFactory;
+import com.openggf.game.timing.LoadTimeSimulationMode;
+import com.openggf.game.timing.ProfiledLoadTimeManifest;
 import com.openggf.game.OscillationManager;
 import com.openggf.game.dataselect.DataSelectHostProfile;
 import com.openggf.game.dataselect.DataSelectPresentationProvider;
@@ -75,6 +79,8 @@ import com.openggf.sprites.playable.SuperStateController;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -141,6 +147,39 @@ public class Sonic3kGameModule implements GameModule {
     public RuntimeArtCoordinator createRuntimeArtCoordinator(
             HardwareTimingService timing) {
         return new S3kRuntimeArtCoordinator(timing);
+    }
+
+    @Override
+    public LoadTimeProfile createLoadTimeProfile(
+            LoadTimeSimulationMode mode,
+            Consumer<String> warningSink) {
+        LoadTimeProfile profiled;
+        try {
+            var resource = Sonic3kGameModule.class.getResourceAsStream(
+                    "/load-time-profiles/s3k-v1.json");
+            if (resource == null) {
+                throw new IllegalStateException("missing S3K load-time manifest");
+            }
+            try (resource) {
+                profiled = ProfiledLoadTimeManifest.load(resource, warningSink);
+            }
+        } catch (IOException exception) {
+            throw new IllegalStateException(
+                    "failed to load S3K load-time manifest", exception);
+        }
+        LoadTimeProfile s3kProfile = (submission, handle) -> {
+            if (submission.kind()
+                    == com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE
+                    && "kosinski_moduled".equals(submission.compressionVariant())) {
+                return new com.openggf.game.timing.LoadTimeDecision(
+                        0,
+                        Set.of(),
+                        com.openggf.game.timing.LoadTimeDecisionSource.IMMEDIATE,
+                        "s3k-kos-v1-composite-parent");
+            }
+            return profiled.assign(submission, handle);
+        };
+        return LoadTimeProfileFactory.resolve(mode, s3kProfile, warningSink);
     }
 
     @Override
