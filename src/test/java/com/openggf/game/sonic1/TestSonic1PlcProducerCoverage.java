@@ -12,6 +12,7 @@ import com.openggf.game.sonic1.titlecard.Sonic1TitleCardState;
 import com.openggf.game.sonic1.objects.Sonic1EggPrisonObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1SignpostObjectInstance;
 import com.openggf.game.sonic1.specialstage.Sonic1SpecialStageProvider;
+import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
@@ -179,6 +180,36 @@ class TestSonic1PlcProducerCoverage {
         provider.onEnterResults();
         assertEquals(expected, queue.capture().queuedEntries(),
                 "S1 results retry must not duplicate its successful batch");
+    }
+
+    @Test
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    void specialStageResultsRewindRestoresPendingRetryAndCompletedNoDuplicateDirection() throws Exception {
+        Sonic1PlcService queue = GameServices.module().getGameService(Sonic1PlcService.class);
+        queue.append(0);
+        queue.prepare();
+        Sonic1SpecialStageProvider provider = new Sonic1SpecialStageProvider();
+        provider.resetForResults();
+        RewindSnapshottable adapter = (RewindSnapshottable) provider.rewindAdapter().orElseThrow();
+        Object pending = adapter.capture();
+
+        drainActive(queue);
+        provider.onEnterResults();
+        List<NemesisPlcQueueSnapshot.Entry> expected = expectedDescriptors(0, 27);
+        assertEquals(expected, queue.capture().queuedEntries(), "retry must succeed after the pending capture");
+
+        adapter.restore(pending);
+        queue.clearQueued();
+        provider.onEnterResults();
+        assertEquals(expected, queue.capture().queuedEntries(),
+                "restoring pending state must re-arm the provider-owned results retry");
+
+        Object completed = adapter.capture();
+        queue.clearQueued();
+        adapter.restore(completed);
+        provider.onEnterResults();
+        assertEquals(List.of(), queue.capture().queuedEntries(),
+                "restoring completed state must not resubmit results PLC work");
     }
 
     @Test

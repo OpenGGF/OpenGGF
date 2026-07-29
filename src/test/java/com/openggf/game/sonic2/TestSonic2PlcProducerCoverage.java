@@ -5,6 +5,7 @@ import com.openggf.game.LevelLoadContext;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.rewind.snapshot.NemesisPlcQueueSnapshot;
+import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.events.Sonic2ARZEvents;
 import com.openggf.game.sonic2.events.Sonic2CNZEvents;
@@ -281,6 +282,36 @@ class TestSonic2PlcProducerCoverage {
         provider.onEnterResults();
         assertEquals(expected, queue.capture().queuedEntries(),
                 "S2 results retry must not duplicate its successful replacement");
+    }
+
+    @Test
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    void specialStageResultsRewindRestoresPendingRetryAndCompletedNoDuplicateDirection() throws Exception {
+        Sonic2PlcService queue = GameServices.module().getGameService(Sonic2PlcService.class);
+        queue.append(0);
+        queue.prepare();
+        Sonic2SpecialStageProvider provider = new Sonic2SpecialStageProvider();
+        provider.resetForResults();
+        RewindSnapshottable adapter = (RewindSnapshottable) provider.rewindAdapter().orElseThrow();
+        Object pending = adapter.capture();
+
+        drainActive(queue);
+        provider.onEnterResults();
+        List<NemesisPlcQueueSnapshot.Entry> expected = expectedDescriptors(0);
+        assertEquals(expected, queue.capture().queuedEntries(), "retry must succeed after the pending capture");
+
+        adapter.restore(pending);
+        queue.clearQueued();
+        provider.onEnterResults();
+        assertEquals(expected, queue.capture().queuedEntries(),
+                "restoring pending state must re-arm the provider-owned results retry");
+
+        Object completed = adapter.capture();
+        queue.clearQueued();
+        adapter.restore(completed);
+        provider.onEnterResults();
+        assertEquals(List.of(), queue.capture().queuedEntries(),
+                "restoring completed state must not resubmit results PLC work");
     }
 
     @Test

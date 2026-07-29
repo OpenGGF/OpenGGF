@@ -57,7 +57,8 @@ public final class Sonic1SpecialStageProvider implements SpecialStageProvider {
 
     @Override
     public Optional<RewindSnapshottable<?>> rewindAdapter() {
-        return Optional.of(new Sonic1SpecialStageRewindAdapter(manager));
+        return Optional.of(new Sonic1SpecialStageRewindAdapter(manager,
+                () -> resultsPlcSubmitted, submitted -> resultsPlcSubmitted = submitted));
     }
 
     @Override
@@ -232,8 +233,8 @@ public final class Sonic1SpecialStageProvider implements SpecialStageProvider {
     @Override
     public ResultsScreen createResultsScreen(int ringsCollected, boolean gotEmerald,
             int stageIndex, int totalEmeraldCount) {
-        return new Sonic1SpecialStageResultsScreen(
-                ringsCollected, gotEmerald, stageIndex, totalEmeraldCount);
+        return ResultsScreen.withBeforeUpdate(new Sonic1SpecialStageResultsScreen(
+                ringsCollected, gotEmerald, stageIndex, totalEmeraldCount), this::onEnterResults);
     }
 
     @Override

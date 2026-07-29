@@ -73,7 +73,8 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
 
     @Override
     public Optional<RewindSnapshottable<?>> rewindAdapter() {
-        return Optional.of(new Sonic2SpecialStageRewindAdapter(manager));
+        return Optional.of(new Sonic2SpecialStageRewindAdapter(manager,
+                () -> resultsPlcSubmitted, submitted -> resultsPlcSubmitted = submitted));
     }
 
     @Override
@@ -260,8 +261,10 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
         }
         DefaultObjectServices services = new DefaultObjectServices(
                 gameplayMode, EngineServices.current());
-        return ObjectConstructionContext.construct(services, () -> new SpecialStageResultsScreenObjectInstance(
-                ringsCollected, gotEmerald, stageIndex, totalEmeraldCount, services));
+        return ResultsScreen.withBeforeUpdate(ObjectConstructionContext.construct(services,
+                () -> new SpecialStageResultsScreenObjectInstance(
+                        ringsCollected, gotEmerald, stageIndex, totalEmeraldCount, services)),
+                this::onEnterResults);
     }
 
     // ==================== MiniGameProvider Methods ====================

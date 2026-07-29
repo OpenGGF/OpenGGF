@@ -1262,9 +1262,6 @@ public class GameLoop {
      */
     private void updateSpecialStageResultsMode() {
         activePlcLifecycleFrame.claim(PlcLifecyclePhase.SPECIAL_STAGE_RESULTS);
-        // Retry provider-owned results PLC work without recreating the results
-        // screen or replaying the special-stage transition.
-        getActiveSpecialStageProvider().onEnterResults();
         // Update results screen
         resultsFrameCounter++;
         if (resultsScreen != null) {
