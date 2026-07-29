@@ -54,6 +54,7 @@ public class Sonic2CNZEvents extends Sonic2ZoneEvents {
 
     @Override
     public void update(int act, int frameCounter) {
+        if (retryPendingPlc()) return;
         if (act == 0) {
             // Act 1: No dynamic events (ROM: LevEvents_CNZ just calls SlotMachine and returns)
             return;

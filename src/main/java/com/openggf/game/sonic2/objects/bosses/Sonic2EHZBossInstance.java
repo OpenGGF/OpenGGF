@@ -379,7 +379,7 @@ public class Sonic2EHZBossInstance extends AbstractBossInstance
 
     @Override
     protected void onDefeatStarted() {
-        if (!Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE)) return;
+        if (!isDefeatEntryPrepared() && !Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE)) return;
         // ROM: s2.asm:63149-63162 (loc_2F4EE - boss defeated)
         // ROM: s2.asm:63152 - move.b #6,routine_secondary(a0)
         state.routineSecondary = SUB6_DEFEATED_FALLING;
@@ -401,6 +401,11 @@ public class Sonic2EHZBossInstance extends AbstractBossInstance
                 break;
             }
         }
+    }
+
+    @Override
+    protected boolean prepareDefeatEntry() {
+        return Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE);
     }
 
     /**

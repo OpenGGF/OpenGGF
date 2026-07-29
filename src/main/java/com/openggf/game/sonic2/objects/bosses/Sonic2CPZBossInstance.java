@@ -168,13 +168,18 @@ public class Sonic2CPZBossInstance extends AbstractBossInstance
 
     @Override
     protected void onDefeatStarted() {
-        if (!Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE)) return;
+        if (!isDefeatEntryPrepared() && !Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE)) return;
         bossDefeated = true;
         state.routine = MAIN_EXPLODE;
         defeatTimer = DEFEAT_TIMER_START;
         if (robotnik != null) {
             robotnik.setAnim(4);
         }
+    }
+
+    @Override
+    protected boolean prepareDefeatEntry() {
+        return Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE);
     }
 
     @Override

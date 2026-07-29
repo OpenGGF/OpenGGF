@@ -47,6 +47,7 @@ class Sonic1LZEvents extends Sonic1ZoneEvents {
 
     @Override
     void update(int act) {
+        if (retryPendingPlc()) return;
         switch (act) {
             case 0, 1 -> { /* DLE_LZ12: rts */ }
             case 2 -> updateAct3();

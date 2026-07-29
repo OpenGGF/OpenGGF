@@ -61,6 +61,7 @@ class Sonic1SBZEvents extends Sonic1ZoneEvents {
 
     @Override
     void update(int act) {
+        if (retryPendingPlc()) return;
         switch (act) {
             case 0 -> updateAct1();
             case 1 -> updateAct2();
@@ -74,6 +75,7 @@ class Sonic1SBZEvents extends Sonic1ZoneEvents {
      * which is safe because init() resets it on each level load.
      */
     void updateFZ() {
+        if (retryPendingPlc()) return;
         if (!fzPlcTimingInitialized) {
             fzPlcTiming.resetForFinalZoneGameplay();
             fzPlcTimingInitialized = true;

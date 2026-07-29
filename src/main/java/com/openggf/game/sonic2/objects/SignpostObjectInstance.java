@@ -339,9 +339,11 @@ public class SignpostObjectInstance extends BoxObjectInstance implements PostPla
     }
 
     private void spawnResultsScreen(AbstractPlayableSprite player) {
+        if (!queueResultsPlc()) {
+            return;
+        }
         resultsSpawned = true;
         routineState = STATE_DONE;
-        queueResultsPlc();
         LOGGER.info("Player off-screen, triggering end of act sequence");
 
         // ROM Obj0D_Main_State3 sets global Control_Locked and Ctrl_1_Logical
@@ -370,7 +372,7 @@ public class SignpostObjectInstance extends BoxObjectInstance implements PostPla
         }
     }
 
-    private void queueResultsPlc() {
+    private boolean queueResultsPlc() {
         try {
             Sonic2PlcService plc = services().gameModule().getGameService(Sonic2PlcService.class);
             if (plc != null) {
@@ -379,7 +381,10 @@ public class SignpostObjectInstance extends BoxObjectInstance implements PostPla
                 plc.transact(Sonic2PlcService.replaceOperation(events != null && events.getPlayerCharacter() == PlayerCharacter.TAILS_ALONE
                         ? 66 : 38));
             }
-        } catch (Exception ignored) { }
+            return true;
+        } catch (Exception ignored) {
+            return false;
+        }
     }
 
     @Override

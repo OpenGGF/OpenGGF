@@ -20,6 +20,7 @@ import java.io.IOException;
  */
 abstract class Sonic1ZoneEvents {
     protected int eventRoutine;
+    private Integer pendingPlcId;
 
     Sonic1ZoneEvents() {
     }
@@ -52,15 +53,29 @@ abstract class Sonic1ZoneEvents {
         return GameServices.module().getGameService(type);
     }
 
+    /** Services rejected one-shot work before re-entering an event state machine. */
+    protected boolean retryPendingPlc() {
+        if (pendingPlcId == null) return false;
+        if (publishSonic1Plc(pendingPlcId)) pendingPlcId = null;
+        return true;
+    }
+
     /** Submits an S1 {@code AddPLC} cue while preserving the eager object-art path. */
-    protected void requestSonic1Plc(int plcId) {
+    protected boolean requestSonic1Plc(int plcId) {
+        if (publishSonic1Plc(plcId)) return true;
+        pendingPlcId = plcId;
+        return false;
+    }
+
+    private boolean publishSonic1Plc(int plcId) {
         try {
             Sonic1PlcService plcService = gameService(Sonic1PlcService.class);
             if (plcService != null) {
                 plcService.append(plcId);
             }
+            return true;
         } catch (IOException | RuntimeException ignored) {
-            // The existing event transition remains non-fatal when a runtime PLC cannot be read.
+            return false;
         }
     }
 
@@ -75,6 +90,7 @@ abstract class Sonic1ZoneEvents {
     /** Reset event state for a new level. */
     void init() {
         eventRoutine = 0;
+        pendingPlcId = null;
     }
 
     /** Run per-frame event logic for the given act. */

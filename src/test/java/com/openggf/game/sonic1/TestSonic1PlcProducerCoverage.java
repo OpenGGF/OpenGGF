@@ -23,11 +23,14 @@ import com.openggf.tests.rules.SonicGame;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -55,10 +58,12 @@ class TestSonic1PlcProducerCoverage {
                 "S1 title initialization must replace the native Main PLC before presentation");
     }
 
-    @Test
-    void titleCardOwnerPublishesExplodeThenNativeZoneAnimalAtExitEdge() throws Exception {
+    @ParameterizedTest(name = "title-card progression zone {0} maps to native animal PLC {1}")
+    @MethodSource("titleCardZones")
+    void titleCardOwnerPublishesExplodeThenNativeZoneAnimalAtExitEdge(int progressionZone, int animalPlc)
+            throws Exception {
         Sonic1TitleCardManager card = new Sonic1TitleCardManager();
-        card.initialize(1, 0); // Labyrinth is progression zone 1, native zone 2.
+        card.initialize(progressionZone, 0);
         Field state = Sonic1TitleCardManager.class.getDeclaredField("state");
         state.setAccessible(true);
         state.set(card, Sonic1TitleCardState.SLIDE_OUT);
@@ -71,8 +76,18 @@ class TestSonic1PlcProducerCoverage {
         }
 
         Sonic1PlcService queue = GameServices.module().getGameService(Sonic1PlcService.class);
-        assertEquals(expectedDescriptors(2, 23), queue.capture().queuedEntries(),
-                "Card_ChangeArt must publish explode then the native LZ animal PLC at text exit");
+        assertEquals(expectedDescriptors(2, animalPlc), queue.capture().queuedEntries(),
+                "Card_ChangeArt must publish explode then its native-zone animal PLC at text exit");
+    }
+
+    private static Stream<org.junit.jupiter.params.provider.Arguments> titleCardZones() {
+        return Stream.of(
+                org.junit.jupiter.params.provider.Arguments.of(0, 21),
+                org.junit.jupiter.params.provider.Arguments.of(1, 23),
+                org.junit.jupiter.params.provider.Arguments.of(2, 25),
+                org.junit.jupiter.params.provider.Arguments.of(3, 22),
+                org.junit.jupiter.params.provider.Arguments.of(4, 24),
+                org.junit.jupiter.params.provider.Arguments.of(5, 26));
     }
 
     @Test

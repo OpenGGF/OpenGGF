@@ -386,9 +386,11 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
         if (resultsTriggered) {
             return;
         }
+        if (!queueResultsPlc()) {
+            return;
+        }
         resultsTriggered = true;
         state = State.COMPLETE;
-        queueResultsPlc();
 
         LOGGER.info("S1 EggPrison: all animals gone, triggering GotThroughAct");
 
@@ -419,11 +421,14 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
         }
     }
 
-    private void queueResultsPlc() {
+    private boolean queueResultsPlc() {
         try {
             Sonic1PlcService plc = services().gameModule().getGameService(Sonic1PlcService.class);
             if (plc != null) plc.replaceQueued(16);
-        } catch (Exception ignored) { }
+            return true;
+        } catch (Exception ignored) {
+            return false;
+        }
     }
 
     // === SolidObjectProvider ===

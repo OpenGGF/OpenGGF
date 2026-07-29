@@ -154,6 +154,7 @@ public class Sonic2HTZEvents extends Sonic2ZoneEvents {
 
     @Override
     public void update(int act, int frameCounter) {
+        if (retryPendingPlc()) return;
         if (act == 0) {
             updateHTZAct1(frameCounter);
         } else {

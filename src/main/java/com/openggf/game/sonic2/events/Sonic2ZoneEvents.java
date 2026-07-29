@@ -35,6 +35,8 @@ public abstract class Sonic2ZoneEvents {
 
     protected int eventRoutine;
     protected int bossSpawnDelay;
+    /** Deferred logical/eager cue after a transition has performed its one-shot effects. */
+    private Integer pendingPlcId;
 
     protected Sonic2ZoneEvents() {
     }
@@ -83,6 +85,7 @@ public abstract class Sonic2ZoneEvents {
     public void init(int act) {
         eventRoutine = 0;
         bossSpawnDelay = 0;
+        pendingPlcId = null;
     }
 
     /** Run per-frame event logic for the given act. */
@@ -174,7 +177,37 @@ public abstract class Sonic2ZoneEvents {
      * one-shot boundary must not advance their routine until this returns true:
      * a rejected preflight is retryable work, not a consumed ROM cue.
      */
+    /**
+     * Services a deferred one-shot cue before a zone owner re-enters its
+     * state machine. Returns true when this frame was consumed by retry work,
+     * whether the attempt succeeded or remains pending.
+     */
+    protected boolean retryPendingPlc() {
+        if (pendingPlcId == null) {
+            return false;
+        }
+        if (publishSonic2Plc(pendingPlcId)) {
+            pendingPlcId = null;
+        }
+        return true;
+    }
+
     protected boolean requestSonic2Plc(int plcId) {
+        if (pendingPlcId != null) {
+            if (pendingPlcId == plcId && publishSonic2Plc(plcId)) {
+                pendingPlcId = null;
+                return true;
+            }
+            return false;
+        }
+        if (publishSonic2Plc(plcId)) {
+            return true;
+        }
+        pendingPlcId = plcId;
+        return false;
+    }
+
+    private boolean publishSonic2Plc(int plcId) {
         try {
             if (!GameServices.hasRuntime()) {
                 return true;
@@ -193,13 +226,6 @@ public abstract class Sonic2ZoneEvents {
             return true;
         } catch (RuntimeException | IOException e) {
             LOGGER.fine(() -> "S2 PLC request " + plcId + " deferred: " + e.getMessage());
-            // Every ordinary S2 event producer advances its native dynamic
-            // routine by two immediately before LoadPLC. Roll that one-shot
-            // advance back so the next level-event pass retries the same ROM
-            // request rather than losing it after an atomic preflight reject.
-            if (eventRoutine >= 2) {
-                eventRoutine -= 2;
-            }
             return false;
         }
     }

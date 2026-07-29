@@ -37,6 +37,7 @@ public class Sonic2DEZEvents extends Sonic2ZoneEvents {
 
     @Override
     public void update(int act, int frameCounter) {
+        if (retryPendingPlc()) return;
         // DEZ has only one act in the ROM (act index 0)
         switch (eventRoutine) {
             case 0 -> {

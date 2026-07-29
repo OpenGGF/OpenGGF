@@ -345,9 +345,11 @@ public class Sonic1SignpostObjectInstance extends AbstractObjectInstance
      *      move.w #bgm_GotThrough,d0; jsr (QueueSound2).l
      */
     private void triggerGotThroughAct(AbstractPlayableSprite player) {
+        if (!queueResultsPlc()) {
+            return;
+        }
         resultsSpawned = true;
         routineState = STATE_COMPLETE;
-        queueResultsPlc();
         LOGGER.info("S1 Player off-screen, triggering GotThroughAct");
 
         // ROM: clr.b (v_invinc).w - disable invincibility
@@ -372,11 +374,14 @@ public class Sonic1SignpostObjectInstance extends AbstractObjectInstance
         }
     }
 
-    private void queueResultsPlc() {
+    private boolean queueResultsPlc() {
         try {
             Sonic1PlcService plc = services().gameModule().getGameService(Sonic1PlcService.class);
             if (plc != null) plc.replaceQueued(16);
-        } catch (Exception ignored) { }
+            return true;
+        } catch (Exception ignored) {
+            return false;
+        }
     }
 
     @Override

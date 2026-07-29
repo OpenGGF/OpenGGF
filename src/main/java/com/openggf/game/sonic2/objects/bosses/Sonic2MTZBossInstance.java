@@ -460,7 +460,6 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
      */
     private void applyPendingHitReactionAfterMove() {
         if (pendingDefeatReaction) {
-            if (!Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE)) return;
             // ROM Obj54_CheckHit killing-hit branch: Obj54_Defeated replaces the
             // AnimateFace break reaction entirely (the invulnerable-time == $3F
             // branch never runs because CheckHit branched out before setting it).
@@ -1014,12 +1013,18 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
 
     @Override
     protected void onDefeatStarted() {
+        if (!isDefeatEntryPrepared() && !Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE)) return;
         // ROM: Obj54_Defeated (s2.asm:67258-67265) runs from Obj54_CheckHit,
         // after this frame's old-routine movement. Latch and apply post-move in
         // applyPendingHitReactionAfterMove(); dispatching Sub10 on the killing
         // touch frame starts the defeat countdown (and later the Sub12 flee
         // camera opening) one frame ahead of ROM.
         pendingDefeatReaction = true;
+    }
+
+    @Override
+    protected boolean prepareDefeatEntry() {
+        return Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE);
     }
 
     @Override

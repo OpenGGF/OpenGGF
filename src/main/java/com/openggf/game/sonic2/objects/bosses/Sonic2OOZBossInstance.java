@@ -796,7 +796,7 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
 
     @Override
     protected void onDefeatStarted() {
-        if (!Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE)) return;
+        if (!isDefeatEntryPrepared() && !Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE)) return;
         bossSubtype = SUB_MAIN;
         state.routineSecondary = MAIN_DEFEATED;
         bossCountdown = DEFEAT_TIMER_START;
@@ -804,6 +804,11 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
         childSpriteCount = 1;
         alignMainVehicleChild();
         collisionFlags = 0;
+    }
+
+    @Override
+    protected boolean prepareDefeatEntry() {
+        return Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE);
     }
 
     @Override

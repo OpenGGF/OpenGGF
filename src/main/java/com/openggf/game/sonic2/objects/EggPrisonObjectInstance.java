@@ -613,8 +613,10 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
         if (resultsTriggered) {
             return;
         }
+        if (!queueResultsPlc()) {
+            return;
+        }
         resultsTriggered = true;
-        queueResultsPlc();
 
         LOGGER.info("All animals gone, triggering Load_EndOfAct");
 
@@ -650,7 +652,7 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
         brokenSlotChild = null;
     }
 
-    private void queueResultsPlc() {
+    private boolean queueResultsPlc() {
         try {
             Sonic2PlcService plc = services().gameModule().getGameService(Sonic2PlcService.class);
             if (plc != null) {
@@ -659,7 +661,10 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
                 plc.transact(Sonic2PlcService.replaceOperation(events != null && events.getPlayerCharacter() == PlayerCharacter.TAILS_ALONE
                         ? 66 : 38));
             }
-        } catch (Exception ignored) { }
+            return true;
+        } catch (Exception ignored) {
+            return false;
+        }
     }
 
     @Override

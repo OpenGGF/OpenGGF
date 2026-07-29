@@ -921,10 +921,15 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance
 
     @Override
     protected void onDefeatStarted() {
-        if (!Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE)) return;
+        if (!isDefeatEntryPrepared() && !Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE)) return;
         // ROM: Obj57_FinalDefeat (s2.asm:65715-65722)
         countdown = DEFEAT_COUNTDOWN;
         state.routineSecondary = SUB8_DEFEATED;
+    }
+
+    @Override
+    protected boolean prepareDefeatEntry() {
+        return Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE);
     }
 
     @Override

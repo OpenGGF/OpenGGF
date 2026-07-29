@@ -560,7 +560,7 @@ public class Sonic2HTZBossInstance extends AbstractBossInstance implements Rewin
 
     @Override
     protected void onDefeatStarted() {
-        if (!Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE)) return;
+        if (!isDefeatEntryPrepared() && !Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE)) return;
         // ROM: s2.asm:64036-64043
         // Initialize defeat timer
         defeatTimer = DEFEAT_TIMER_START;
@@ -568,6 +568,11 @@ public class Sonic2HTZBossInstance extends AbstractBossInstance implements Rewin
 
         // Transition to defeated state
         state.routineSecondary = SUB8_DEFEATED;
+    }
+
+    @Override
+    protected boolean prepareDefeatEntry() {
+        return Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE);
     }
 
     // Note: getCollisionFlags() is inherited from AbstractBossInstance which

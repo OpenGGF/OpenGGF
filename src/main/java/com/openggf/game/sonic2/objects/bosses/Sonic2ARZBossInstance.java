@@ -195,12 +195,17 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance implements Rewin
 
     @Override
     protected void onDefeatStarted() {
-        if (!Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE)) return;
+        if (!isDefeatEntryPrepared() && !Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE)) return;
         bossCountdown = DEFEAT_TIMER_START;
         state.routine = MAIN_SUB8;
         bossAnim[2] = 0x05;
         bossAnim[3] = 0x00;
         sub2MapFrame = 5;
+    }
+
+    @Override
+    protected boolean prepareDefeatEntry() {
+        return Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE);
     }
 
     @Override
