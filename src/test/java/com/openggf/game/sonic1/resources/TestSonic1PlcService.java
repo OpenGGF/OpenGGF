@@ -96,6 +96,28 @@ class TestSonic1PlcService {
     }
 
     @Test
+    void rejectsOutOfRangeIdsBeforeMutatingQueuedState() throws IOException {
+        NemesisPlcServiceQueue queue = new NemesisPlcServiceQueue();
+        Sonic1PlcService service = new Sonic1PlcService(rom, queue);
+        PlcDefinition definition = firstNonEmptyPlc();
+        service.append(definition.plcId());
+        var before = queue.capture();
+
+        IllegalArgumentException negative = assertThrows(IllegalArgumentException.class,
+                () -> service.append(-1));
+        assertTrue(negative.getMessage().contains("Sonic 1"));
+        assertTrue(negative.getMessage().contains("-1"));
+        assertEquals(before, queue.capture());
+
+        IllegalArgumentException upperBound = assertThrows(IllegalArgumentException.class,
+                () -> service.replaceQueued(Sonic1Constants.ART_LOAD_CUES_ENTRY_COUNT));
+        assertTrue(upperBound.getMessage().contains("Sonic 1"));
+        assertTrue(upperBound.getMessage().contains(
+                String.valueOf(Sonic1Constants.ART_LOAD_CUES_ENTRY_COUNT)));
+        assertEquals(before, queue.capture());
+    }
+
+    @Test
     void moduleRegistersOneRomBoundServiceForTheActiveGame() {
         Sonic1GameModule module = new Sonic1GameModule();
         module.createGame(rom);

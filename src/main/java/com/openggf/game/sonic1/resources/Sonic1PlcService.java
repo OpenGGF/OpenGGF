@@ -69,8 +69,16 @@ public final class Sonic1PlcService implements PlcVBlankService {
     }
 
     private Submission readSubmission(int plcId) throws IOException {
+        validatePlcId(plcId);
         PlcDefinition definition = PlcParser.parse(rom, Sonic1Constants.ART_LOAD_CUES_ADDR, plcId);
         return new Submission(definition, NemesisPlcPatternCounts.derive(rom, definition));
+    }
+
+    private static void validatePlcId(int plcId) {
+        if (plcId < 0 || plcId >= Sonic1Constants.ART_LOAD_CUES_ENTRY_COUNT) {
+            throw new IllegalArgumentException("Sonic 1 PLC ID out of range: " + plcId
+                    + " (expected 0-" + (Sonic1Constants.ART_LOAD_CUES_ENTRY_COUNT - 1) + ")");
+        }
     }
 
     private void requireAppendFits(PlcDefinition definition) {
