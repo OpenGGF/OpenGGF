@@ -102,7 +102,7 @@ class TestS3kHardwareTimingReplay {
             IllegalStateException remaining = org.junit.jupiter.api.Assertions.assertThrows(
                     IllegalStateException.class,
                     fixture::verifyHardwareTimingSegmentEdges);
-            assertTrue(remaining.getMessage().contains("raw_frame=73"),
+            assertTrue(remaining.getMessage().contains("raw_frame=70"),
                     remaining::getMessage);
         } finally {
             fixture.abortHardwareTimingReplayRun();
@@ -125,8 +125,21 @@ class TestS3kHardwareTimingReplay {
                 new S3kKosDecompressionQueue(timing);
         S3kKosModuleQueue queue = new S3kKosModuleQueue(timing, direct);
 
-        HardwareWorkHandle handle = queue.queue(
+        HardwareWorkHandle parent = queue.queue(
                 TestEnvironment.currentRom(), romSource, destinationPattern);
+        boolean directEdge = edge.kind()
+                == com.openggf.game.timing.HardwareWorkKind.KOS_DECOMPRESSION_QUEUE;
+        HardwareWorkHandle handle;
+        if (directEdge) {
+            queue.processModuleQueueAfterObjects();
+            handle = timing.capture().jobs().stream()
+                    .filter(job -> job.kind() == edge.kind())
+                    .findFirst()
+                    .orElseThrow()
+                    .handle();
+        } else {
+            handle = parent;
+        }
 
         assertEquals(edge.kind(), handle.kind());
         assertEquals(edge.ordinal(), handle.ordinal());
@@ -136,7 +149,7 @@ class TestS3kHardwareTimingReplay {
 
         replay.beginRawFrame(edge.rawFrame());
         for (int servicePass = 0;
-                servicePass < 4096 && !isPrepared(timing);
+                servicePass < 4096 && !isPrepared(timing, handle);
                 servicePass++) {
             timing.service(HardwareServiceBoundary.POST_OBJECTS);
             queue.afterTimingService(HardwareServiceBoundary.POST_OBJECTS);
@@ -149,17 +162,22 @@ class TestS3kHardwareTimingReplay {
         } else {
             direct.afterTimingService(edge.boundary());
         }
-        assertTrue(isPrepared(timing),
+        assertTrue(isPrepared(timing, handle),
                 "the production decoder must prepare the archive independently");
-        assertFalse(queue.isReady(handle),
+        assertFalse(directEdge ? direct.isReady(handle) : queue.isReady(handle),
                 "recorded admission must hold prepared work until its edge");
 
         replay.apply(edge.boundary());
 
-        assertTrue(queue.isReady(handle));
+        assertTrue(directEdge ? direct.isReady(handle) : queue.isReady(handle));
     }
 
-    private static boolean isPrepared(HardwareTimingService timing) {
-        return timing.capture().jobs().getFirst().preparedPayload() != null;
+    private static boolean isPrepared(
+            HardwareTimingService timing, HardwareWorkHandle handle) {
+        return timing.capture().jobs().stream()
+                .filter(job -> job.handle().equals(handle))
+                .findFirst()
+                .orElseThrow()
+                .preparedPayload() != null;
     }
 }

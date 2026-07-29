@@ -186,8 +186,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// (Player_mode 0) — and identity (C) — the run pass under
         /// --run-id s3k-multibonus, Knuckles solo (Player_mode 3), whose
         /// three bonus dirs carry capture_mode AND v_int_run_count while
-        /// special_stage/ carries neither. AIZ and HCZ were published with
-        /// hardware timing on 2026-07-27; the remaining fixtures retain
+        /// special_stage/ carries neither. AIZ and HCZ were republished with
+        /// hardware timing on 2026-07-29; the remaining fixtures retain
         /// their 2026-07-25 capture date. These comparisons are FULL-FILE
         /// equality, so each date is injected to match the fixture rather
         /// than allowed to differ.
@@ -210,7 +210,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 PlayerMode = 0,
                 SourceBk2 = CompleteRunSourceBk2,
                 RunId = null,
-                RecordingDate = "2026-07-27"
+                RecordingDate = "2026-07-29"
             },
             new MetadataFixture
             {
@@ -228,7 +228,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 PlayerMode = 0,
                 SourceBk2 = CompleteRunSourceBk2,
                 RunId = null,
-                RecordingDate = "2026-07-27"
+                RecordingDate = "2026-07-29"
             },
             new MetadataFixture
             {

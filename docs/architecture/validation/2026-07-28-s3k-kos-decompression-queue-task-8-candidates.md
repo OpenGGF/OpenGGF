@@ -559,3 +559,59 @@ It would not authorize recorder or engine changes beyond the reviewed diff,
 hand edits to candidate files, further native recapture, trace-derived
 gameplay submissions, resolution of the upstream StarPost/reload gaps, merge,
 or push.
+
+## Publication completed (2026-07-29)
+
+The user authorized the corrected v5 payload without another approval pause.
+The four reviewed files were copied byte-for-byte from each of the six
+corrected candidate directories into the mapped fixture directory. No
+validation capture was installed. Although unchanged complete-run physics and
+aux gzip members do not appear in the Git diff, all 24 publication files were
+copied and verified.
+
+`hardware-timing-publication.tsv` now freezes all six schema-2 identities:
+
+| Fixture | Events | Direct PRE | Module POST/VINT | Timing SHA-256 |
+|---|---:|---:|---:|---|
+| `aiz1_to_hcz_fullrun` | 95 | 57 | 38/0 | `e458a2fafd800d53cff4fbbc4e15e2df493312c67b46b6b138641372bf3fe284` |
+| `aiz_completerun` | 107 | 66 | 38/3 | `c80a9c2f0383cfb3ad153ea5448684657543676f1c5920a0e472095a09f8d9e4` |
+| `hcz_completerun` | 101 | 56 | 43/2 | `a19d98bd7cf341ffcf1c19871e22044abc00bbde99ad352a0e1d41e8f3a34aeb` |
+| `mgz_completerun` | 104 | 66 | 37/1 | `82cc794ff12d811cc4be3c99af2e28d1cb8ea4b8ddb04f0ea53142275d387562` |
+| `cnz_completerun` | 69 | 37 | 30/2 | `821810c7cd400064f2f204eed333b16880f86a3b81dc333e7c7b74d16d086c2f` |
+| `icz_completerun` | 65 | 39 | 24/2 | `bc006d24b4065ac13fd9d464a14d12618f4811e9a9679ce2f45f62b554677b92` |
+
+The Java committed-fixture guard passes 2 tests. The expanded submission
+fingerprint, queue, stream-loader, replay-port, and production replay command
+passes 58 tests. The native no-gates suite passes 387 tests with zero failures
+and 30 ROM-environment skips. A temporary ROM-backed STANDARD differential
+also passes: the current recorder reproduces the installed AIZ timing stream
+byte-for-byte.
+
+An intermediate full 466,334-row complete-run segment differential was
+attempted with temporary output only. Independent review found that this
+intermediate gate compared metadata and timing only through ICZ, suppressing
+the later schema-1 publication boundary. The run had not produced a verdict
+after approximately 9 minutes 20 seconds and was stopped at the requested
+bounded cutoff (`SIGINT`, exit 130); it is rejected as evidence. The gate now
+again compares metadata and timing for every fixture-bearing segment, so the
+unapproved later identities remain an explicit failure. That corrected full
+gate was not run to a verdict. The installed fixture tree was untouched: a
+post-attempt source/destination `cmp` and size/SHA-256 sweep passed for all 24
+files.
+
+The six installed-fixture replay methods reproduce the reviewed next
+frontiers exactly. Each method reports one hardware-authority error and no
+assertion failure:
+
+| Replay | First error |
+|---|---|
+| AIZ STANDARD | direct `#25`, raw 3879, `66961069e564ef707173bbad733f75e3ab034e29e3f4833a02e2e26af452d8fd` |
+| AIZ complete | direct `#35`, raw 6346, `c3e8ddd34bf587540ca7d131fc68d371538d1a746da64c4eee3ec01f524948b7` |
+| HCZ complete | direct `#80`, raw 1335, `82c973d77d76a07873ede88ecf76104306b834aa6410710f0cfc10f95240331f` |
+| MGZ complete | direct `#134`, raw 14631, `c2db2fda975f758607b601f686bc782c7ebe55e2413f540f23b193ba2b6f1741` |
+| CNZ complete | direct `#201`, raw 5337, `66961069e564ef707173bbad733f75e3ab034e29e3f4833a02e2e26af452d8fd` |
+| ICZ complete | direct `#236`, raw 1629, `107442b529cf8edafb0750d0198606ee2c4a667f4f99bb3c68065188177cf1e6` |
+
+These are upstream object/reload lifecycle frontiers. Publication did not add
+a trace exception, hydrate gameplay from comparison data, or change an engine
+owner to make a fixture pass.

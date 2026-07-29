@@ -40,20 +40,20 @@ class TestCommittedHardwareTimingFixtures {
     private static final Map<String, Ownership> EXPECTED_STANDALONE_OWNERSHIP =
             Map.ofEntries(
                     Map.entry("aiz1_to_hcz_fullrun",
-                            new Ownership("v637-aiz-hcz-transition",
+                            new Ownership("v638-aiz-hcz-transition",
                                     "aiz1_to_hcz_fullrun")),
                     Map.entry("cnz", new Ownership("v637-standard-cnz", ".")),
                     Map.entry("mgz", new Ownership("v637-standard-mgz", ".")),
                     Map.entry("aiz_completerun",
-                            new Ownership("v637-complete-sonic-tails", "aiz")),
+                            new Ownership("v638-complete-sonic-tails-task8", "aiz")),
                     Map.entry("hcz_completerun",
-                            new Ownership("v637-complete-sonic-tails", "hcz")),
+                            new Ownership("v638-complete-sonic-tails-task8", "hcz")),
                     Map.entry("mgz_completerun",
-                            new Ownership("v637-complete-sonic-tails", "mgz")),
+                            new Ownership("v638-complete-sonic-tails-task8", "mgz")),
                     Map.entry("cnz_completerun",
-                            new Ownership("v637-complete-sonic-tails", "cnz")),
+                            new Ownership("v638-complete-sonic-tails-task8", "cnz")),
                     Map.entry("icz_completerun",
-                            new Ownership("v637-complete-sonic-tails", "icz")),
+                            new Ownership("v638-complete-sonic-tails-task8", "icz")),
                     Map.entry("lbz_completerun",
                             new Ownership("v637-complete-sonic-tails", "lbz")),
                     Map.entry("mhz_completerun",
@@ -131,19 +131,25 @@ class TestCommittedHardwareTimingFixtures {
             "special_stage",
             "ssz_completerun");
     /**
-     * Schema-1 fixtures whose represented route reaches a gameplay consumer
-     * of {@code Kos_decomp_queue_count}. They remain loadable for module
-     * timing, but cannot certify these direct-count boundaries until an
-     * explicitly approved schema-2 publication replaces their payloads.
+     * Approved schema-2 fixtures whose represented route reaches a gameplay
+     * consumer of {@code Kos_decomp_queue_count}. Each must carry both direct
+     * and module ledgers at its ROM-owned boundaries.
      *
      * <p>The multi-bonus run's first AIZ segment begins at camera X 0x1300,
      * after the intro consumer, so it is intentionally absent.</p>
      */
-    private static final Map<String, String> SCHEMA_ONE_DIRECT_CONSUMER_FIXTURES =
-            Map.of(
-                    "aiz1_to_hcz_fullrun", "AIZ intro",
-                    "aiz_completerun", "AIZ intro",
-                    "icz_completerun", "ICZ1-to-ICZ2 act transition");
+    private static final Map<String, String> SCHEMA_TWO_DIRECT_CONSUMER_FIXTURES =
+            Map.ofEntries(
+                    Map.entry("aiz1_to_hcz_fullrun", "AIZ intro"),
+                    Map.entry("aiz_completerun", "AIZ intro"),
+                    Map.entry("hcz_completerun",
+                            "HCZ decompression consumer"),
+                    Map.entry("mgz_completerun",
+                            "MGZ decompression consumer"),
+                    Map.entry("cnz_completerun",
+                            "CNZ decompression consumer"),
+                    Map.entry("icz_completerun",
+                            "ICZ1-to-ICZ2 act transition"));
 
     @Test
     void approvedFleetMatchesFrozenPublicationEvidence() throws Exception {
@@ -176,16 +182,19 @@ class TestCommittedHardwareTimingFixtures {
     }
 
     @Test
-    void schemaOneDirectConsumerInventoryRemainsLoadableAndModuleOnly()
+    void approvedDirectConsumerInventoryUsesSchemaTwoAndBothLedgers()
             throws Exception {
         assertEquals(Set.of(
                         "aiz1_to_hcz_fullrun",
                         "aiz_completerun",
+                        "hcz_completerun",
+                        "mgz_completerun",
+                        "cnz_completerun",
                         "icz_completerun"),
-                SCHEMA_ONE_DIRECT_CONSUMER_FIXTURES.keySet());
+                SCHEMA_TWO_DIRECT_CONSUMER_FIXTURES.keySet());
 
         for (Map.Entry<String, String> inventory :
-                SCHEMA_ONE_DIRECT_CONSUMER_FIXTURES.entrySet()) {
+                SCHEMA_TWO_DIRECT_CONSUMER_FIXTURES.entrySet()) {
             String directory = inventory.getKey();
             assertTrue(EXPECTED_DESTINATIONS.contains(directory),
                     inventory.getValue());
@@ -194,16 +203,23 @@ class TestCommittedHardwareTimingFixtures {
             TraceMetadata metadata =
                     TraceMetadata.load(fixture.resolve("metadata.json"));
             assertEquals(7, metadata.traceSchema(), inventory.getValue());
-            assertEquals(1, metadata.hardwareTimingSchema(),
+            assertEquals(2, metadata.hardwareTimingSchema(),
                     inventory.getValue());
 
             List<HardwareCompletionEdge> edges =
                     HardwareTimingStreamLoader.load(fixture, metadata).edges();
             assertFalse(edges.isEmpty(), inventory.getValue());
-            assertTrue(edges.stream().allMatch(edge ->
-                            edge.kind() == HardwareWorkKind.KOS_MODULE_QUEUE
+            assertTrue(edges.stream().anyMatch(edge ->
+                            edge.kind() == HardwareWorkKind.KOS_DECOMPRESSION_QUEUE
                                     && edge.boundary()
-                                    != HardwareServiceBoundary.PRE_MAIN_LOOP),
+                                    == HardwareServiceBoundary.PRE_MAIN_LOOP),
+                    inventory.getValue());
+            assertTrue(edges.stream().anyMatch(edge ->
+                            edge.kind() == HardwareWorkKind.KOS_MODULE_QUEUE
+                                    && (edge.boundary()
+                                    == HardwareServiceBoundary.VINT_SERVICE
+                                    || edge.boundary()
+                                    == HardwareServiceBoundary.POST_OBJECTS)),
                     inventory.getValue());
         }
     }
@@ -262,12 +278,23 @@ class TestCommittedHardwareTimingFixtures {
         assertFalse(edges.isEmpty(), expected.directory());
         assertEdge(edges.getFirst(), expected.firstEdge(), expected.directory());
         assertEdge(edges.getLast(), expected.lastEdge(), expected.directory());
-        assertTrue(edges.stream().allMatch(edge ->
-                        edge.rawFrame() >= 0
-                                && edge.rawFrame() < metadata.traceFrameCount()
-                                && (edge.boundary() == HardwareServiceBoundary.VINT_SERVICE
-                                    || edge.boundary() == HardwareServiceBoundary.POST_OBJECTS)
-                                && edge.kind() == HardwareWorkKind.KOS_MODULE_QUEUE),
+        assertTrue(edges.stream().allMatch(edge -> {
+            if (edge.rawFrame() < 0
+                    || edge.rawFrame() >= metadata.traceFrameCount()) {
+                return false;
+            }
+            if (edge.kind() == HardwareWorkKind.KOS_DECOMPRESSION_QUEUE) {
+                return expected.hardwareSchema() == 2
+                        && edge.boundary()
+                        == HardwareServiceBoundary.PRE_MAIN_LOOP;
+            }
+            return edge.kind() == HardwareWorkKind.KOS_MODULE_QUEUE
+                    && (edge.boundary() == HardwareServiceBoundary.VINT_SERVICE
+                    || edge.boundary() == HardwareServiceBoundary.POST_OBJECTS);
+        }), expected.directory());
+        assertEquals(expected.preMainLoopEventCount(),
+                edges.stream().filter(edge ->
+                        edge.boundary() == HardwareServiceBoundary.PRE_MAIN_LOOP).count(),
                 expected.directory());
         assertEquals(expected.vintServiceEventCount(),
                 edges.stream().filter(edge ->
@@ -338,10 +365,14 @@ class TestCommittedHardwareTimingFixtures {
             int postObjectsEventCount,
             int vintServiceEventCount,
             EdgeExpectation firstEdge,
-            EdgeExpectation lastEdge) {
+            EdgeExpectation lastEdge,
+            int preMainLoopEventCount) {
 
         private static ExpectedFixture parse(String[] fields) {
-            assertFieldCount(fields, 17);
+            if (fields.length != 17 && fields.length != 18) {
+                throw new IllegalArgumentException(
+                        "Expected 17 or 18 fields, got " + fields.length);
+            }
             return new ExpectedFixture(
                     fields[1], fields[2], fields[3],
                     Integer.parseInt(fields[4]), Integer.parseInt(fields[5]),
@@ -353,7 +384,8 @@ class TestCommittedHardwareTimingFixtures {
                     Integer.parseInt(fields[12]), Integer.parseInt(fields[13]),
                     Integer.parseInt(fields[14]),
                     EdgeExpectation.parse(fields[15]),
-                    EdgeExpectation.parse(fields[16]));
+                    EdgeExpectation.parse(fields[16]),
+                    fields.length == 18 ? Integer.parseInt(fields[17]) : 0);
         }
     }
 

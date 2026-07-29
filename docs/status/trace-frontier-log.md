@@ -54297,3 +54297,54 @@ mvn -Dmse=relaxed \
   reload-camera lock `$0010`/`$6000`, sidekick fallthrough auto-jump
   true/false, and miniboss arena camera `$10E0`/`$0010`), and the target replay
   reports the ordinal-27 authority error above.
+
+## 2026-07-29 - S3K v6.38 direct Kos queue fixture publication
+
+- Worktree: `.worktrees/ai-s3k-kos-decompression-queue`, branch
+  `bugfix/ai-s3k-kos-decompression-queue`, publication applied over
+  `bd8b08668`.
+- Published the reviewed corrected v5 four-file identity byte-for-byte for
+  `aiz1_to_hcz_fullrun`, `aiz_completerun`, `hcz_completerun`,
+  `mgz_completerun`, `cnz_completerun`, and `icz_completerun`.
+  `hardware-timing-publication.tsv` now freezes their schema-2 direct and
+  module ledgers. A post-validation `cmp`, byte-count, and SHA-256 sweep
+  matched all 24 reviewed source files.
+- Publication guards:
+
+```bash
+mvn -Dmse=off \
+  -Dtest=com.openggf.trace.timing.TestCommittedHardwareTimingFixtures test
+
+mvn -Dmse=off \
+  "-Dtest=TestHardwareSubmissionFingerprint,TestS3kKosDecompressionQueue,\
+TestHardwareTimingStreamLoader,TestHardwareTimingReplayPort,\
+TestS3kHardwareTimingReplay" test
+```
+
+- Pass: 2 committed-fixture tests and 58 expanded timing/replay tests, with
+  zero failures, errors, or skips. The native no-gates suite passes 387 tests
+  with zero failures and 30 missing-ROM skips. A temporary ROM-backed STANDARD
+  differential reproduces the installed AIZ timing stream byte-for-byte.
+- An intermediate temporary full complete-run segment differential was
+  stopped at the bounded cutoff after approximately 9 minutes 20 seconds
+  (`SIGINT`, exit 130). Independent review found that this intermediate gate
+  suppressed metadata/timing comparison after ICZ, so the attempt is rejected
+  as evidence. Exact comparison for all fixture-bearing segments is restored;
+  the later schema-1 publication boundary remains visible. The corrected full
+  gate was not run to a verdict, and no temporary output was installed.
+- Fresh ROM-backed frontier commands targeted only `replayMatchesTrace` with
+  the verified S3K ROM. Each method reports one error, zero assertion
+  failures, and zero skips. The first-error field is hardware timing:
+
+| Replay | First-error raw frame | Expected completion |
+|---|---:|---|
+| AIZ STANDARD | 3879 | direct `#25`, `66961069e564ef707173bbad733f75e3ab034e29e3f4833a02e2e26af452d8fd` |
+| AIZ complete | 6346 | direct `#35`, `c3e8ddd34bf587540ca7d131fc68d371538d1a746da64c4eee3ec01f524948b7` |
+| HCZ complete | 1335 | direct `#80`, `82c973d77d76a07873ede88ecf76104306b834aa6410710f0cfc10f95240331f` |
+| MGZ complete | 14631 | direct `#134`, `c2db2fda975f758607b601f686bc782c7ebe55e2413f540f23b193ba2b6f1741` |
+| CNZ complete | 5337 | direct `#201`, `66961069e564ef707173bbad733f75e3ab034e29e3f4833a02e2e26af452d8fd` |
+| ICZ complete | 1629 | direct `#236`, `107442b529cf8edafb0750d0198606ee2c4a667f4f99bb3c68065188177cf1e6` |
+
+- These are the same upstream StarPost, enemy-art, and reload lifecycle gaps
+  identified in the corrected-candidate review. No trace-derived submission,
+  timing exception, or upstream gameplay fix was added during publication.
