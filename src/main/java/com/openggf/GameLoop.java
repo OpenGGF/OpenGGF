@@ -3097,6 +3097,13 @@ public class GameLoop {
             return;
         }
 
+        // ROM HPZ results rebuild the sanctuary, set
+        // HPZ_special_stage_completed, and retain Saved2 until the player
+        // leaves through the teleporter.
+        if (activeSpecialStageRewardKind == EmeraldRewardKind.SUPER_EMERALD) {
+            levelManager.markSanctuaryReentry(ssStageIndex);
+        }
+
         // ROM: returning from special stage always runs the full Level: function,
         // which clears all object RAM (bridges/stateful objects reset to initial state)
         // and reloads level data. This applies to all games:
@@ -3142,20 +3149,10 @@ public class GameLoop {
         if (sprite instanceof AbstractPlayableSprite playable) {
             RespawnState checkpointState = levelManager.getCheckpointState();
 
-            if (levelManager.hasBigRingReturn()) {
+            if (levelManager.hasBigRingReturn()
+                    && levelManager.sanctuaryReentryStage().isEmpty()) {
                 // S3K big ring path: restore all Saved2_* state
-                BigRingReturnState br = levelManager.getBigRingReturn();
-                br.restoreToPlayer(playable, camera, levelManager.getLevelGamestate(),
-                        waterSystem, levelManager.getFeatureZoneId(), levelManager.getFeatureActId());
-                // ROM: restore Dynamic_resize_routine AFTER initLevel() has reset it to 0.
-                // Without this, the resize state machine restarts from routine 0 and
-                // rapidly re-processes all boundary thresholds with the camera already
-                // deep in the level, causing incorrect camera locks.
-                LevelEventProvider eventProvider = GameServices.module().getLevelEventProvider();
-                if (eventProvider instanceof AbstractLevelEventManager eventMgr) {
-                    eventMgr.restoreEventRoutineState(br.dynamicResizeRoutine(), 0);
-                }
-                levelManager.clearBigRingReturn();
+                restoreBigRingReturn(playable, false);
             } else if (checkpointState != null && checkpointState.isActive()) {
                 // S2 checkpoint star path: restore to checkpoint (ROM: Saved_* variables)
                 checkpointState.restoreToPlayer(playable, camera);
@@ -3221,6 +3218,27 @@ public class GameLoop {
         // Notify listener of mode change
         if (gameModeChangeListener != null) {
             gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
+        }
+    }
+
+    private void restoreBigRingReturn(AbstractPlayableSprite playable,
+                                      boolean sanctuaryOriginRestore) {
+        BigRingReturnState br = levelManager.getBigRingReturn();
+        if (br == null) {
+            return;
+        }
+        br.restoreToPlayer(playable, camera, levelManager.getLevelGamestate(),
+                waterSystem, levelManager.getFeatureZoneId(), levelManager.getFeatureActId());
+        br.restoreCheckpointState(levelManager.getCheckpointState());
+        // ROM: restore Dynamic_resize_routine after level initialization reset it.
+        LevelEventProvider eventProvider = GameServices.module().getLevelEventProvider();
+        if (eventProvider instanceof AbstractLevelEventManager eventMgr) {
+            eventMgr.restoreEventRoutineState(br.dynamicResizeRoutine(), 0);
+        }
+        if (sanctuaryOriginRestore) {
+            levelManager.completeSanctuaryOriginRestore();
+        } else {
+            levelManager.clearBigRingReturn();
         }
     }
 
@@ -4295,6 +4313,8 @@ public class GameLoop {
      * Actually loads the specified zone/act after fade-to-black completes.
      */
     private void doZoneAct(int zone, int act, int postLoadMusicId) {
+        boolean restoreSanctuaryOrigin =
+                levelManager.isSanctuaryOriginRestorePending(zone, act);
         try {
             // A cutscene may still have a source-zone music fade in flight.
             // Load the destination normally, then issue its requested track
@@ -4306,6 +4326,12 @@ public class GameLoop {
             activateScheduledPlaybackForLoadedLevel();
             if (postLoadMusicId >= 0) {
                 audioManager.playMusic(postLoadMusicId);
+            }
+            if (restoreSanctuaryOrigin) {
+                var sprite = spriteManager.getSprite(resolveMainCharacterCode());
+                if (sprite instanceof AbstractPlayableSprite playable) {
+                    restoreBigRingReturn(playable, true);
+                }
             }
         } catch (IOException e) {
             throw new RuntimeException("Failed to load zone " + zone + " act " + act, e);

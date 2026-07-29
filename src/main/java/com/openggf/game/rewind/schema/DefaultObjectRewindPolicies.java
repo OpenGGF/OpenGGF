@@ -586,6 +586,11 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzSwingBarHorizontalObjectInstance", "hangStates"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzSwingBarHorizontalObjectInstance", "hangingPlayers"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.MhzSwingBarVerticalObjectInstance", "playerStates"), RewindFieldPolicy.CAPTURED),
+            // HPZ sanctuary children preserve their controller identity through
+            // ObjectRefId capture and two-phase restore (manual for pedestals,
+            // compact object-reference codec for falling crystals).
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HPZSuperEmeraldObjectInstance", "parentRef"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HPZSanctuaryFallingCrystalObjectInstance", "parentRef"), RewindFieldPolicy.CAPTURED),
             // Pending-touch latch mirroring CnzBumperObjectInstance: the touch listener records the
             // colliding sprite here and the update loop consumes+clears it one frame later to apply
             // the bounce response outside the touch callback.

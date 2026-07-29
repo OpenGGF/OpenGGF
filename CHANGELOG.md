@@ -3,6 +3,16 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Feature: Sonic 3 & Knuckles now implements the Hidden Palace Super Emerald
+  sanctuary flow. Its ROM-backed controller, pedestals, Master Emerald,
+  teleporter, falling-crystal ceremony, player/camera choreography, exact-stage
+  Special Stage re-entry, and origin-level return survive save and rewind while
+  preserving the emeralds' four native progression states.
+- Feature: Sonic 3 & Knuckles powered forms now have the ROM-ordered screen
+  attack foundation used by Hyper Sonic and Hyper Knuckles. Eligible on-screen
+  badniks use the native destruction and escalating score path, bosses remain
+  immune, reactive projectiles deflect, and property-special targets retain
+  their character-specific response.
 - Feature: Sonic 3 & Knuckles big rings now follow the locked-on ROM's
   Super-Emerald routing rules, including the glowing forced Mushroom Hill ring,
   completion-time Hidden Palace return snapshots, and rewind-safe flash

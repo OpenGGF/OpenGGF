@@ -133,13 +133,13 @@ class TestGameplayModeContextRewindRegistry {
     }
 
     @Test
-    void exactlyNineAtomicKeysAfterAttach() {
+    void exactlyTenAtomicKeysAfterAttach() {
         GameplayModeContext ctx = buildAttachedContext();
         RewindRegistry registry = ctx.getRewindRegistry();
         CompositeSnapshot snapshot = registry.capture();
-        // Nine since the hardware-timing service joined the gameplay context.
-        assertEquals(9, snapshot.entries().keySet().size(),
-                "Expected exactly 9 atomic adapters, got: " + snapshot.entries().keySet());
+        // Ten including the hardware-timing and solid-execution services.
+        assertEquals(10, snapshot.entries().keySet().size(),
+                "Expected exactly 10 atomic adapters, got: " + snapshot.entries().keySet());
     }
 
     @Test
@@ -192,8 +192,8 @@ class TestGameplayModeContextRewindRegistry {
         RewindRegistry second = ctx.getRewindRegistry();
         assertNotNull(second);
         assertNotSame(first, second, "Re-attach should produce a new RewindRegistry instance");
-        // New registry should have the same 9 keys
-        assertEquals(9, second.capture().entries().keySet().size());
+        // New registry should have the same 10 keys
+        assertEquals(10, second.capture().entries().keySet().size());
     }
 
     @Test

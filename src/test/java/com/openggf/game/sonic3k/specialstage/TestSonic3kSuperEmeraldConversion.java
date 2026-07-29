@@ -44,14 +44,30 @@ class TestSonic3kSuperEmeraldConversion {
 
     @Test
     void s3kSuperRewardPublishesExactlyOnce() {
-        GameStateManager state = mock(GameStateManager.class);
+        GameStateManager state = new GameStateManager();
+        state.restoreS3kEmeraldProgress(java.util.List.of(0, 0, 0, 0, 2, 0, 0), true);
 
         boolean published = Sonic3kSpecialStageManager.publishEmeraldReward(
                 state, 4, true, false);
         Sonic3kSpecialStageManager.publishEmeraldReward(state, 4, true, published);
 
-        verify(state, times(1)).markSuperEmeraldCollected(4);
-        verify(state, never()).markEmeraldCollected(4);
+        assertEquals(java.util.List.of(0, 0, 0, 0, 3, 0, 0),
+                state.getS3kEmeraldStates());
+    }
+
+    @Test
+    void superRewardCannotPromoteAbsentChaosOrAlreadySuperStates() {
+        for (int initial : new int[] {0, 1, 3}) {
+            GameStateManager state = new GameStateManager();
+            state.restoreS3kEmeraldProgress(
+                    java.util.List.of(initial, 0, 0, 0, 0, 0, 0), true);
+
+            org.junit.jupiter.api.Assertions.assertFalse(
+                    Sonic3kSpecialStageManager.publishEmeraldReward(
+                            state, 0, true, false));
+
+            assertEquals(initial, state.getS3kEmeraldStates().getFirst());
+        }
     }
 
     @Test

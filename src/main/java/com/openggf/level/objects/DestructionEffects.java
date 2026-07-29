@@ -1,6 +1,7 @@
 package com.openggf.level.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.sprites.playable.PoweredBadnikScoring;
 
 /**
  * Centralised badnik destruction sequence shared across S1, S2, and S3K.
@@ -93,6 +94,18 @@ public final class DestructionEffects {
     public static void destroyBadnik(int x, int y, ObjectSpawn spawn, int badnikSlot,
             PlayableEntity player, ObjectServices services,
             DestructionConfig config) {
+        destroyBadnik(x, y, spawn, badnikSlot, player, services, config, false);
+    }
+
+    public static void destroyBadnikPowered(int x, int y, ObjectSpawn spawn, int badnikSlot,
+            PlayableEntity player, ObjectServices services,
+            DestructionConfig config) {
+        destroyBadnik(x, y, spawn, badnikSlot, player, services, config, true);
+    }
+
+    private static void destroyBadnik(int x, int y, ObjectSpawn spawn, int badnikSlot,
+            PlayableEntity player, ObjectServices services,
+            DestructionConfig config, boolean poweredAttack) {
 
         // --- Respawn tracking ---
         var objectManager = services != null ? services.objectManager() : null;
@@ -107,7 +120,9 @@ public final class DestructionEffects {
         // --- Calculate and award chain score ---
         int pointsValue = 100;
         if (player != null) {
-            pointsValue = player.incrementBadnikChain();
+            pointsValue = poweredAttack
+                    ? PoweredBadnikScoring.incrementChain(player)
+                    : player.incrementBadnikChain();
             if (services != null) {
                 services.gameState().addScore(pointsValue);
             }

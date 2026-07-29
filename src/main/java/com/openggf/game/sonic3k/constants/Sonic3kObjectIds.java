@@ -295,6 +295,11 @@ public final class Sonic3kObjectIds {
     public static final int STAR_POINTER = 0xAE;
     // S3KL object table: Obj_ICZCrushingColumn.
     public static final int ICZ_CRUSHING_COLUMN = 0xAF;
+    // HPZ uses the SKL pointer-table identities below.
+    public static final int SSZ_HPZ_TELEPORTER = 0x79;
+    public static final int HPZ_MASTER_EMERALD = 0xB0;
+    public static final int HPZ_SUPER_EMERALD = 0xB4;
+    public static final int HPZ_SS_ENTRY_CONTROL = 0xB5;
 
     private Sonic3kObjectIds() {
     }

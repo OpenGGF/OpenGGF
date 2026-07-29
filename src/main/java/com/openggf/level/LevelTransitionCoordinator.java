@@ -3,6 +3,8 @@ package com.openggf.level;
 import com.openggf.game.BonusStageType;
 import com.openggf.game.SpecialStageEntryRequest;
 
+import java.util.OptionalInt;
+
 /**
  * Holds all transition request/consume state that was previously scattered
  * across LevelManager fields.  LevelManager owns a single instance and
@@ -20,6 +22,20 @@ public class LevelTransitionCoordinator {
 
     // ── S3K big ring return (ROM: Saved2_* variables) ──────────
     private BigRingReturnState bigRingReturn;
+    private int sanctuaryReentryStage = -1;
+    private boolean sanctuaryOriginRestorePending;
+
+    record SanctuaryRewindState(
+            BigRingReturnState bigRingReturn,
+            int sanctuaryReentryStage,
+            boolean sanctuaryOriginRestorePending,
+            boolean specificZoneActRequested,
+            int requestedZone,
+            int requestedAct,
+            int requestedMusicId,
+            boolean levelInactiveForTransition,
+            boolean suppressNextMusicChange) {
+    }
 
     // ── Bonus stage ───────────────────────────────────────────────────
     private BonusStageType bonusStageRequested;
@@ -165,6 +181,69 @@ public class LevelTransitionCoordinator {
     /** Clears the big ring return state. */
     public void clearBigRingReturn() {
         this.bigRingReturn = null;
+    }
+
+    /** Records the ROM HPZ_special_stage_completed re-entry context. */
+    public void markSanctuaryReentry(int stageIndex) {
+        if (stageIndex < 0) {
+            throw new IllegalArgumentException("stageIndex");
+        }
+        sanctuaryReentryStage = stageIndex;
+    }
+
+    public OptionalInt sanctuaryReentryStage() {
+        return sanctuaryReentryStage >= 0
+                ? OptionalInt.of(sanctuaryReentryStage)
+                : OptionalInt.empty();
+    }
+
+    /**
+     * Requests the saved origin level without consuming Saved2. The state is
+     * cleared only after the destination level has applied every saved field.
+     */
+    public boolean requestSanctuaryExit() {
+        if (sanctuaryOriginRestorePending || bigRingReturn == null
+                || bigRingReturn.originZone() < 0 || bigRingReturn.originAct() < 0) {
+            return false;
+        }
+        sanctuaryOriginRestorePending = true;
+        requestZoneAndAct(bigRingReturn.originZone(), bigRingReturn.originAct(), true);
+        return true;
+    }
+
+    public boolean isSanctuaryOriginRestorePending(int zone, int act) {
+        return sanctuaryOriginRestorePending && bigRingReturn != null
+                && bigRingReturn.originZone() == zone
+                && bigRingReturn.originAct() == act;
+    }
+
+    public void completeSanctuaryOriginRestore() {
+        if (!sanctuaryOriginRestorePending) {
+            return;
+        }
+        sanctuaryOriginRestorePending = false;
+        sanctuaryReentryStage = -1;
+        bigRingReturn = null;
+    }
+
+    SanctuaryRewindState captureSanctuaryRewindState() {
+        return new SanctuaryRewindState(
+                bigRingReturn, sanctuaryReentryStage, sanctuaryOriginRestorePending,
+                specificZoneActRequested, requestedZone, requestedAct, requestedMusicId,
+                levelInactiveForTransition, suppressNextMusicChange);
+    }
+
+    void restoreSanctuaryRewindState(SanctuaryRewindState state) {
+        java.util.Objects.requireNonNull(state, "state");
+        bigRingReturn = state.bigRingReturn();
+        sanctuaryReentryStage = state.sanctuaryReentryStage();
+        sanctuaryOriginRestorePending = state.sanctuaryOriginRestorePending();
+        specificZoneActRequested = state.specificZoneActRequested();
+        requestedZone = state.requestedZone();
+        requestedAct = state.requestedAct();
+        requestedMusicId = state.requestedMusicId();
+        levelInactiveForTransition = state.levelInactiveForTransition();
+        suppressNextMusicChange = state.suppressNextMusicChange();
     }
 
     // ================================================================
@@ -724,6 +803,8 @@ public class LevelTransitionCoordinator {
         specialStageEntryRequest = null;
         specialStageReturnLevelReloadRequested = false;
         bigRingReturn = null;
+        sanctuaryReentryStage = -1;
+        sanctuaryOriginRestorePending = false;
         bonusStageRequested = null;
         bonusStageReturnCheckpointIndex = -1;
         titleCardRequested = false;

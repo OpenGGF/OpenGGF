@@ -7,6 +7,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.PoweredScreenAttackSpecial;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchCategory;
@@ -22,7 +23,8 @@ import java.util.List;
 
 /** Locked-on {@code Obj_FBZExitDoor} ($CE), {@code loc_70C20-loc_70C72}. */
 public final class FbzExitDoorInstance extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseListener, SpawnRewindRecreatable {
+        implements TouchResponseProvider, TouchResponseListener,
+        PoweredScreenAttackSpecial, SpawnRewindRecreatable {
     private int currentX;
     private int currentY;
     private int xSub;
@@ -66,7 +68,9 @@ public final class FbzExitDoorInstance extends AbstractObjectInstance
     }
 
     @Override public int getCollisionFlags() { return !flying ? 0xD7 : 0; }
-    @Override public int getCollisionProperty() { return 0; }
+    private int poweredCollisionProperty;
+    @Override public int getCollisionProperty() { return poweredCollisionProperty; }
+    @Override public void orCollisionProperty(int mask) { poweredCollisionProperty |= mask; }
     @Override public boolean usesS3kTouchSpecialPropertyResponse() { return true; }
     @Override public TouchResponseProfile getTouchResponseProfile() {
         return TouchResponseProfile.fromProvider(this);

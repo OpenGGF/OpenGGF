@@ -118,6 +118,69 @@ final class ObjectTouchResponseController {
     }
 
     /**
+     * ROM {@code HyperAttackTouchResponse}: applies the powered full-screen
+     * attack to the already-frozen collision-response list.
+     */
+    void applyPoweredScreenAttack(PlayableEntity player) {
+        if (player == null) {
+            return;
+        }
+        for (ObjectInstance instance : objectManager.initialCollisionResponseList().playerReadView()) {
+            if (instance == null || objectCallbacks.call(instance, instance::isDestroyed)) {
+                continue;
+            }
+            if (instance instanceof AbstractObjectInstance object
+                    && !objectCallbacks.call(instance, object::isOnScreenForTouch)) {
+                continue;
+            }
+            if (!(instance instanceof TouchResponseProvider provider)) {
+                continue;
+            }
+            int flags = objectCallbacks.call(instance, provider::getCollisionFlags) & 0xFF;
+            if (flags == 0) {
+                continue;
+            }
+            TouchResponseProfile profile =
+                    objectCallbacks.call(instance, provider::getTouchResponseProfile);
+            TouchCategory category = decodeCategory(flags, profile);
+            if (category == TouchCategory.ENEMY) {
+                int property = objectCallbacks.call(instance, provider::getCollisionProperty) & 0xFF;
+                if (property == 0 && instance instanceof PoweredScreenAttackable attackable) {
+                    objectCallbacks.run(instance, () -> attackable.onPoweredScreenAttack(player));
+                }
+                continue;
+            }
+            if (category == TouchCategory.HURT) {
+                int reaction = objectCallbacks.call(instance, provider::getShieldReactionFlags);
+                if ((reaction & SHIELD_REACTION_BOUNCE_BIT) != 0) {
+                    objectCallbacks.run(instance, () -> provider.onShieldDeflect(player));
+                }
+                continue;
+            }
+            if (category == TouchCategory.SPECIAL
+                    && profile.categoryDecodeMode() == TouchCategoryDecodeMode.S3K_SPECIAL_PROPERTY) {
+                if (instance instanceof PoweredScreenAttackSpecial special) {
+                    objectCallbacks.run(instance, () -> special.orCollisionProperty(3));
+                }
+                PlayableEntity nativeP2 = objectManager.services().playerQuery().nativeP2OrNull();
+                if (nativeP2 != null) {
+                    if (player instanceof Knuckles) {
+                        int targetX = objectCallbacks.call(instance, instance::getX);
+                        int targetY = objectCallbacks.call(instance, instance::getY);
+                        nativeP2.setCentreX((short) targetX);
+                        nativeP2.setCentreYPreserveSubpixel((short) targetY);
+                    }
+                    nativeP2.setRolling(true);
+                    nativeP2.setAir(true);
+                    if (nativeP2 instanceof AbstractPlayableSprite sprite) {
+                        sprite.setAnimationId(2);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
      * Captures the double-buffer overlap state for rewind. Encodes set
      * content as slot indices (object Java refs change identity on
      * restore) and the buffer-swap parity as a boolean. See

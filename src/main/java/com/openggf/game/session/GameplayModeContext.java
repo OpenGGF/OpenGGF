@@ -29,6 +29,7 @@ import com.openggf.game.rewind.RewindBoundaryReporter;
 import com.openggf.game.rewind.RewindController;
 import com.openggf.game.rewind.BonusStageCoordinatorRewindAdapter;
 import com.openggf.game.rewind.RewindRegistry;
+import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.AbstractLevelEventManager;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.LevelEventRewindResolver;
@@ -593,6 +594,7 @@ public final class GameplayModeContext implements ModeContext {
             return;
         }
         rewindRegistry.deregister("level");
+        rewindRegistry.deregister("level-transition");
         rewindRegistry.deregister("level-tilemap");
         rewindRegistry.deregister("object-manager");
         rewindRegistry.deregister("level-event");
@@ -603,6 +605,11 @@ public final class GameplayModeContext implements ModeContext {
         }
         levelEventExtraRewindKeys.clear();
         rewindRegistry.register(levelManager.levelRewindSnapshottable());
+        RewindSnapshottable<?> transitionAdapter =
+                levelManager.levelTransitionRewindSnapshottable();
+        if (transitionAdapter != null) {
+            rewindRegistry.register(transitionAdapter);
+        }
         rewindRegistry.register(levelManager.levelTilemapRewindSnapshottable());
         if (levelManager.getObjectManager() != null) {
             rewindRegistry.register(levelManager.getObjectManager().rewindSnapshottable());

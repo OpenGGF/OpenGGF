@@ -18,6 +18,7 @@ import com.openggf.game.GameStateManager;
 import com.openggf.game.GameModule;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.LevelState;
+import com.openggf.game.ModApi;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.RespawnState;
 import com.openggf.game.SpecialStageEntryRequest;
@@ -57,7 +58,7 @@ import java.util.List;
  * Injected by {@link ObjectManager} via
  * {@link AbstractObjectInstance#setServices(ObjectServices)}.
  */
-@com.openggf.game.ModApi
+@ModApi
 public interface ObjectServices {
     // Object management
     ObjectManager objectManager();
@@ -265,6 +266,16 @@ public interface ObjectServices {
     /** Requests an exact or ordinary special-stage entry with explicit reward semantics. */
     default void requestSpecialStageEntry(SpecialStageEntryRequest request) {
         levelManager().requestSpecialStageEntry(request);
+    }
+
+    /** HPZ result re-entry stage, or empty on a fresh sanctuary visit. */
+    default java.util.OptionalInt sanctuaryReentryStage() {
+        return levelManager().sanctuaryReentryStage();
+    }
+
+    /** Requests the idempotent HPZ teleporter return to the saved origin. */
+    default void requestSanctuaryExit() {
+        levelManager().requestSanctuaryExit();
     }
 
     /** Invalidates the cached foreground tilemap (e.g., after block changes). */

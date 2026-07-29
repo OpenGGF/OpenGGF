@@ -49,7 +49,9 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             new ObjectDiscoveryTool.LevelConfig(LevelData.S3K_SKY_SANCTUARY_2, "SSZ", "Sky Sanctuary Zone", 2),
             new ObjectDiscoveryTool.LevelConfig(LevelData.S3K_DEATH_EGG_1, "DEZ", "Death Egg Zone", 1),
             new ObjectDiscoveryTool.LevelConfig(LevelData.S3K_DEATH_EGG_2, "DEZ", "Death Egg Zone", 2),
-            new ObjectDiscoveryTool.LevelConfig(LevelData.S3K_DOOMSDAY, "DDZ", "The Doomsday Zone", 1)
+            new ObjectDiscoveryTool.LevelConfig(LevelData.S3K_DOOMSDAY, "DDZ", "The Doomsday Zone", 1),
+            new ObjectDiscoveryTool.LevelConfig(LevelData.S3K_HIDDEN_PALACE_SANCTUARY,
+                    "HPZ", "Hidden Palace Sanctuary", 1)
     );
 
     // Shared objects implemented for both zone sets.
@@ -230,8 +232,9 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
         lbz.add(0x21); // LBZGateLaser
         LBZ_IMPLEMENTED_IDS = Set.copyOf(lbz);
 
-        // No SKL-specific objects implemented yet
-        SKL_IMPLEMENTED_IDS = Set.copyOf(SHARED_IMPLEMENTED_IDS);
+        var skl = new HashSet<>(SHARED_IMPLEMENTED_IDS);
+        skl.addAll(Set.of(0x79, 0xB0, 0xB4, 0xB5));
+        SKL_IMPLEMENTED_IDS = Set.copyOf(skl);
     }
 
     // S3KL badniks (SK Set 1, zones 0-6: AIZ through LBZ)

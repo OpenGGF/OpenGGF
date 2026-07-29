@@ -15,6 +15,7 @@ import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.TouchResponseAttackable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.level.objects.PoweredScreenAttackable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -25,7 +26,7 @@ import java.util.List;
  * position/collision, and sprite rendering.
  */
 abstract class AbstractS3kBadnikInstance extends AbstractBadnikInstance
-        implements TouchResponseProvider, TouchResponseAttackable {
+        implements TouchResponseProvider, TouchResponseAttackable, PoweredScreenAttackable {
 
     private final String rendererKey;
     private int collisionSizeIndex;
@@ -62,6 +63,18 @@ abstract class AbstractS3kBadnikInstance extends AbstractBadnikInstance
     public void onPlayerAttack(PlayableEntity playerEntity, TouchResponseResult result) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         defeat(player);
+    }
+
+    @Override
+    public void onPoweredScreenAttack(PlayableEntity playerEntity) {
+        if (isDestroyed()) {
+            return;
+        }
+        int mySlot = ObjectLifetimeOps.detachSlotForTransfer(this);
+        setDestroyed(true);
+        DestructionEffects.destroyBadnikPowered(
+                getBodyAnchorX(), getBodyAnchorY(), spawn, mySlot, playerEntity, services(),
+                S3K_DESTRUCTION_CONFIG);
     }
 
     /** S3K destruction config: spawn animal + points popup, no respawn tracking, S3K break SFX. */

@@ -1,0 +1,209 @@
+package com.openggf.game.sonic3k.objects;
+
+import com.openggf.game.EmeraldRewardKind;
+import com.openggf.game.PlayableEntity;
+import com.openggf.game.SpecialStageEntryRequest;
+import com.openggf.game.sonic3k.S3kEmeraldProgression;
+import com.openggf.game.sonic3k.S3kSanctuaryRuntimeState;
+import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.graphics.GLCommand;
+import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.PerObjectRewindSnapshot;
+import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SolidObjectParams;
+import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.game.rewind.identity.ObjectRefId;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
+
+import java.util.List;
+
+/** ROM {@code Obj_HPZSuperEmerald} (SKL object $B4). */
+public final class HPZSuperEmeraldObjectInstance extends AbstractObjectInstance
+        implements RewindRecreatable, SolidObjectProvider {
+    private static final int[][] POSITIONS = {
+            {0x1640, 0x368}, {0x15E0, 0x3A0}, {0x16A0, 0x3A0},
+            {0x15A0, 0x350}, {0x16E0, 0x350}, {0x1550, 0x390},
+            {0x1730, 0x390}
+    };
+    private static final SolidObjectParams SOLID = new SolidObjectParams(0x1B, 0x10, 0x10);
+    private static final int[] COMPLETED_PALETTE_LINES = {2, 0, 2, 0, 0, 1, 3};
+    private static final int[] KNUCKLES_COMPLETED_PALETTE_LINES = {2, 1, 2, 2, 0, 0, 3};
+
+    public enum Display { GRAY, COLORED }
+    public enum SanctuaryPlayerMode { SONIC_TAILS, KNUCKLES }
+
+    private int subtype;
+    private HPZSSEntryControlObjectInstance parentRef;
+    private S3kEmeraldProgression progression;
+    private S3kSanctuaryRuntimeState runtime;
+    private boolean requestPublished;
+
+    private record RewindExtra(
+            S3kSanctuaryRuntimeState.Snapshot runtime,
+            boolean requestPublished,
+            int subtype,
+            ObjectRefId parentId)
+            implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
+
+    public HPZSuperEmeraldObjectInstance(ObjectSpawn spawn) {
+        this(spawn, null, null);
+    }
+
+    public HPZSuperEmeraldObjectInstance(
+            ObjectSpawn spawn, S3kEmeraldProgression progression, S3kSanctuaryRuntimeState runtime) {
+        super(spawn, "HPZSuperEmerald");
+        subtype = Math.min(6, spawn.subtype());
+        this.progression = progression;
+        this.runtime = runtime;
+        if (progression != null && progression.state(subtype) == S3kEmeraldProgression.EmeraldState.ABSENT) {
+            setDestroyed(true);
+        }
+    }
+
+    public HPZSuperEmeraldObjectInstance(
+            ObjectSpawn spawn, HPZSSEntryControlObjectInstance parent) {
+        this(spawn, parent.progressionForChild(), parent.runtimeForChild());
+        parentRef = parent;
+    }
+
+    @Override
+    public HPZSuperEmeraldObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new HPZSuperEmeraldObjectInstance(ctx.spawn());
+    }
+
+    private void ensureState() {
+        if (parentRef != null) {
+            progression = parentRef.progressionForChild();
+            runtime = parentRef.runtimeForChild();
+        }
+        if (progression == null) {
+            progression = S3kEmeraldProgression.from(services().gameState());
+        }
+        if (runtime == null) {
+            runtime = new S3kSanctuaryRuntimeState(progression, true);
+        }
+        if (progression.state(subtype) == S3kEmeraldProgression.EmeraldState.ABSENT) {
+            setDestroyed(true);
+        }
+    }
+
+    @Override
+    public void update(int frameCounter, PlayableEntity player) {
+        ensureState();
+        if (isDestroyed() || requestPublished) {
+            return;
+        }
+        if (runtime.phase() == S3kSanctuaryRuntimeState.Phase.SELECTING
+                && runtime.selectedStage() == subtype) {
+            updateSelection();
+            return;
+        }
+        if (isSelectable() && tryServices() != null && services().objectManager() != null
+                && services().objectManager().isRidingObject(player, this)) {
+            beginSelection();
+        }
+    }
+
+    public boolean beginSelection() {
+        ensureState();
+        return runtime.beginPedestalSelection(subtype);
+    }
+
+    public void updateSelection() {
+        ensureState();
+        if (!requestPublished && runtime.updatePedestalSelection()) {
+            requestPublished = true;
+            services().requestSpecialStageEntry(
+                    new SpecialStageEntryRequest(subtype, EmeraldRewardKind.SUPER_EMERALD));
+        }
+    }
+
+    public boolean isSelectable() {
+        ensureState();
+        return progression.state(subtype) == S3kEmeraldProgression.EmeraldState.GRAY_SUPER;
+    }
+
+    public Display display() {
+        ensureState();
+        return progression.state(subtype) == S3kEmeraldProgression.EmeraldState.SUPER
+                ? Display.COLORED : Display.GRAY;
+    }
+
+    public int completedPaletteLine() {
+        return COMPLETED_PALETTE_LINES[subtype];
+    }
+
+    public int completedPaletteLine(SanctuaryPlayerMode playerMode) {
+        return playerMode == SanctuaryPlayerMode.KNUCKLES
+                ? KNUCKLES_COMPLETED_PALETTE_LINES[subtype]
+                : COMPLETED_PALETTE_LINES[subtype];
+    }
+
+    private SanctuaryPlayerMode sanctuaryPlayerMode() {
+        if (tryServices() != null) {
+            for (PlayableEntity player : services().playerQuery().playersFor(
+                    com.openggf.level.objects.ObjectPlayerParticipationPolicy.MAIN_ONLY_NATIVE)) {
+                if (player.getClass().getSimpleName().contains("Knuckles")) {
+                    return SanctuaryPlayerMode.KNUCKLES;
+                }
+            }
+        }
+        return SanctuaryPlayerMode.SONIC_TAILS;
+    }
+
+    boolean sharesRuntimeWithForTest(HPZSSEntryControlObjectInstance controller) {
+        ensureState();
+        return parentRef == controller && runtime == controller.runtimeForChild();
+    }
+
+    @Override public SolidObjectParams getSolidParams() { return SOLID; }
+    @Override public boolean isTopSolidOnly() { return true; }
+    @Override public boolean isSolidFor(PlayableEntity player) { return !isDestroyed(); }
+    @Override public int getX() { return POSITIONS[subtype][0]; }
+    @Override public int getY() { return POSITIONS[subtype][1]; }
+    @Override public int getOutOfRangeReferenceX() { return getX(); }
+    @Override public int getPriorityBucket() { return subtype == 1 || subtype == 2 ? 1 : 4; }
+
+    @Override
+    public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
+        ensureState();
+        ObjectRefId parentId = context.identityTable()
+                .map(table -> table.encodeObject(parentRef)).orElse(null);
+        return super.captureRewindState(context).withObjectSubclassExtra(
+                new RewindExtra(runtime.capture(), requestPublished, subtype, parentId));
+    }
+
+    @Override
+    public void restoreRewindState(
+            PerObjectRewindSnapshot snapshot, RewindCaptureContext context) {
+        super.restoreRewindState(snapshot, context);
+        if (snapshot.objectSubclassExtra() instanceof RewindExtra extra) {
+            if (extra.parentId() != null) {
+                parentRef = (HPZSSEntryControlObjectInstance) context.requireIdentityTable()
+                        .resolveObject(extra.parentId(), true);
+            }
+            ensureState();
+            runtime.restore(extra.runtime());
+            requestPublished = extra.requestPublished();
+            subtype = extra.subtype();
+        }
+    }
+
+    @Override
+    public void appendRenderCommands(List<GLCommand> commands) {
+        if (isDestroyed()) return;
+        String key = display() == Display.COLORED
+                ? Sonic3kObjectArtKeys.HPZ_MASTER_EMERALD
+                : Sonic3kObjectArtKeys.HPZ_GRAY_EMERALD;
+        PatternSpriteRenderer renderer = getRenderer(key);
+        if (renderer != null) {
+            renderer.drawFrameIndex(display() == Display.COLORED ? subtype : 0,
+                    getX(), getY(), false, false,
+                    display() == Display.COLORED
+                            ? completedPaletteLine(sanctuaryPlayerMode()) : 0);
+        }
+    }
+}

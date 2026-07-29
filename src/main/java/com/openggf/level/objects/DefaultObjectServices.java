@@ -517,6 +517,16 @@ public class DefaultObjectServices implements ObjectServices {
     }
 
     @Override
+    public java.util.OptionalInt sanctuaryReentryStage() {
+        return lm().sanctuaryReentryStage();
+    }
+
+    @Override
+    public void requestSanctuaryExit() {
+        lm().requestSanctuaryExit();
+    }
+
+    @Override
     public void invalidateForegroundTilemap() {
         lm().invalidateForegroundTilemap();
     }

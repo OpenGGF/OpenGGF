@@ -2837,7 +2837,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
         int spawnY = -1;
         // ROM: Level_FromSavedGame sets Saved2_* position before level init.
-        if (transitions.hasBigRingReturn()) {
+        if (transitions.hasBigRingReturn()
+                && (transitions.sanctuaryReentryStage().isEmpty()
+                    || transitions.isSanctuaryOriginRestorePending(currentZone, currentAct))) {
             BigRingReturnState br = transitions.getBigRingReturn();
             player.setCentreX((short) br.playerX());
             player.setCentreY((short) br.playerY());
@@ -3795,6 +3797,26 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     /** @see LevelTransitionCoordinator#clearBigRingReturn() */
     public void clearBigRingReturn() { transitions.clearBigRingReturn(); }
 
+    public java.util.OptionalInt sanctuaryReentryStage() {
+        return transitions.sanctuaryReentryStage();
+    }
+
+    public void markSanctuaryReentry(int stageIndex) {
+        transitions.markSanctuaryReentry(stageIndex);
+    }
+
+    public boolean requestSanctuaryExit() {
+        return transitions.requestSanctuaryExit();
+    }
+
+    public boolean isSanctuaryOriginRestorePending(int zone, int act) {
+        return transitions.isSanctuaryOriginRestorePending(zone, act);
+    }
+
+    public void completeSanctuaryOriginRestore() {
+        transitions.completeSanctuaryOriginRestore();
+    }
+
     /** @see LevelTransitionCoordinator#setBonusStageReturnCheckpointIndex(int) */
     public void setBonusStageReturnCheckpointIndex(int idx) { transitions.setBonusStageReturnCheckpointIndex(idx); }
 
@@ -3924,6 +3946,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         if (gameplayMode != null && gameplayMode.getRewindRegistry() != null) {
             gameplayMode.getRewindRegistry().deregister("level");
+            gameplayMode.getRewindRegistry().deregister("level-transition");
             gameplayMode.getRewindRegistry().deregister("object-manager");
             gameplayMode.getRewindRegistry().deregister("level-event");
         }
@@ -4290,6 +4313,10 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      */
     public RewindSnapshottable<LevelSnapshot> levelRewindSnapshottable() {
         return LevelRewindSnapshotAdapter.create(this);
+    }
+
+    public RewindSnapshottable<?> levelTransitionRewindSnapshottable() {
+        return new LevelTransitionRewindAdapter(transitions);
     }
 
     /** Returns the rewind adapter for the history-dependent persistent Plane B nametable. */

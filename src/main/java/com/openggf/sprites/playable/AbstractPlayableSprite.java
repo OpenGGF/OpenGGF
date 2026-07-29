@@ -2305,6 +2305,19 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 };
         }
 
+        int incrementPoweredBadnikChain() {
+                badnikChainCounter++;
+                if (badnikChainCounter >= 16) {
+                        return 10_000;
+                }
+                return switch (badnikChainCounter) {
+                        case 1 -> 100;
+                        case 2 -> 200;
+                        case 3 -> 500;
+                        default -> 1000;
+                };
+        }
+
         public byte getTopSolidBit() {
                 return topSolidBit;
         }

@@ -1362,8 +1362,21 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> new FbzRotatingPlatformObjectInstance(spawn));
         factories.put(Sonic3kObjectIds.FBZ_DEZ_PLAYER_LAUNCHER,
                 (spawn, registry) -> new FbzDezPlayerLauncherObjectInstance(spawn));
-        registerZoneSetBound(Sonic3kObjectIds.FBZ_DISAPPEARING_PLATFORM, S3kZoneSet.S3KL,
-                (spawn, registry) -> new FbzDisappearingPlatformObjectInstance(spawn));
+        ObjectFactory disappearingPlatformOrHpzTeleporter = (spawn, registry) -> {
+            if (getCurrentZoneSet() == S3kZoneSet.S3KL) {
+                return new FbzDisappearingPlatformObjectInstance(spawn);
+            }
+            return new SSZHPZTeleporterObjectInstance(spawn);
+        };
+        factories.put(Sonic3kObjectIds.FBZ_DISAPPEARING_PLATFORM,
+                disappearingPlatformOrHpzTeleporter);
+        factoryEntries.put(Sonic3kObjectIds.FBZ_DISAPPEARING_PLATFORM,
+                new FactoryEntry(disappearingPlatformOrHpzTeleporter,
+                        context -> context.zoneSet() == S3kZoneSet.S3KL
+                                || (context.source() == S3kObjectCreationContext.Source.STOCK
+                                && context.zoneSet() == S3kZoneSet.SKL
+                                && context.stockRomZoneId().orElse(-1)
+                                == Sonic3kZoneIds.ZONE_HPZ)));
         registerZoneSetBound(Sonic3kObjectIds.FBZ_SCREW_DOOR, S3kZoneSet.S3KL,
                 (spawn, registry) -> new FbzScrewDoorObjectInstance(spawn));
         registerZoneSetBound(Sonic3kObjectIds.FBZ_SPINNING_POLE, S3kZoneSet.S3KL,
@@ -1391,6 +1404,15 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         registerStockRomZoneBound(Sonic3kObjectIds.FBZ_MAGNETIC_PENDULUM,
                 S3kZoneSet.S3KL, Sonic3kZoneIds.ZONE_FBZ,
                 (spawn, registry) -> new FbzMagneticPendulumObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.HPZ_MASTER_EMERALD,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_HPZ,
+                (spawn, registry) -> new HPZMasterEmeraldObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.HPZ_SUPER_EMERALD,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_HPZ,
+                (spawn, registry) -> new HPZSuperEmeraldObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.HPZ_SS_ENTRY_CONTROL,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_HPZ,
+                (spawn, registry) -> new HPZSSEntryControlObjectInstance(spawn));
 
         factories.forEach(this::registerSetOnly);
     }

@@ -527,6 +527,16 @@ public class ObjectManager {
     }
 
     /**
+     * Applies a ROM-style powered full-screen attack to the current
+     * collision-response read view.
+     */
+    public void applyPoweredScreenAttack(PlayableEntity player) {
+        if (touchResponses != null) {
+            touchResponses.applyPoweredScreenAttack(player);
+        }
+    }
+
+    /**
      * Runs the inline player-slot touch pass against the frame-start snapshot.
      * ROM order: player slots scan before later level-object slots update.
      */

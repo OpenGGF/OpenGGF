@@ -1226,7 +1226,13 @@ public class Sonic3kSpecialStageManager {
             return alreadyPublished;
         }
         if (superEmeraldMode) {
-            gameState.markSuperEmeraldCollected(stageIndex);
+            com.openggf.game.sonic3k.S3kEmeraldProgression progression =
+                    com.openggf.game.sonic3k.S3kEmeraldProgression.from(gameState);
+            if (progression.state(stageIndex)
+                    != com.openggf.game.sonic3k.S3kEmeraldProgression.EmeraldState.GRAY_SUPER) {
+                return false;
+            }
+            progression.awardSuper(stageIndex);
         } else {
             gameState.markEmeraldCollected(stageIndex);
         }
