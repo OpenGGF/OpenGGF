@@ -193,6 +193,13 @@ public abstract class Sonic2ZoneEvents {
             return true;
         } catch (RuntimeException | IOException e) {
             LOGGER.fine(() -> "S2 PLC request " + plcId + " deferred: " + e.getMessage());
+            // Every ordinary S2 event producer advances its native dynamic
+            // routine by two immediately before LoadPLC. Roll that one-shot
+            // advance back so the next level-event pass retries the same ROM
+            // request rather than losing it after an atomic preflight reject.
+            if (eventRoutine >= 2) {
+                eventRoutine -= 2;
+            }
             return false;
         }
     }
