@@ -218,6 +218,13 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **Portable worktree resource-link policy (2026-07-29):** linked-worktree
+  checkout scaffolding now uses relative filesystem-only targets, while hooks
+  and all-branch CI reject generated configuration/disassembly links,
+  repository-wide ROM-like assets (`.gen`, `.smd`, `.bin`, `.sms`, `.gg`, and
+  `.32x`), absolute symlinks, machine-local user-home paths, and root
+  merge/handover scratch files before they can be published. Merge resolutions
+  and new branch histories receive the same validation as ordinary commits.
 - **Typed production ROM location policy (2026-07-29):** runtime and trace tools now share a filesystem-neutral, provenance-carrying resolver for configured S1, S2, and S3&K paths. Production still selects a nonblank configured path even when it is missing, `RomManager` preserves legacy raw-path diagnostics and null/unknown-to-S2 compatibility, while trace capture and benchmark metadata now fail before headless boot when configuration is blank or the game id is unknown.
 - **S3K seamless-transition Kosinski parity (2026-07-29):** a disassembly-wide audit now tracks all 187 direct/module queue call instructions across 124 submission clusters. HCZ, MGZ, and LBZ act transitions submit their ROM-ordered chunk, block, and module workloads, wait on the global module-queue predicate, and retain rewind-safe payload ownership instead of omitting direct work or approximating completion with fixed delays.
 - **Profiled normal-play load timing (2026-07-29):** `gameplay.loadTimeSimulation: PROFILED` now reproduces deterministic S3K Kosinski queue pacing from five native movie replays. The published manifest covers 170 exact direct-job fingerprints and uses a held-out-validated ROM command-stream estimator for unseen jobs, while trace replay remains governed exclusively by recorded hardware-timing edges.
