@@ -10,14 +10,19 @@ import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.timing.HardwareWorkPreparation;
 import com.openggf.game.timing.HardwareWorkPreparationSnapshot;
 import com.openggf.game.timing.HardwareWorkSubmission;
+import com.openggf.game.resources.QueueDiagnosticSnapshot;
+import com.openggf.game.resources.QueueServiceObservation;
 import com.openggf.tools.KosinskiReader;
 import com.openggf.tools.ResumableKosinskiDecoder;
 
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Session-owned physical four-entry owner of S3K's {@code Queue_Kos} FIFO.
@@ -33,6 +38,7 @@ public final class S3kKosDecompressionQueue
     private final ArrayDeque<HardwareWorkHandle> physicalEntries = new ArrayDeque<>();
     private final Map<HardwareWorkHandle, S3kKosDecompressionDescriptor> descriptors =
             new HashMap<>();
+    private final Set<HardwareWorkHandle> preparedEntries = new HashSet<>();
 
     public S3kKosDecompressionQueue(HardwareTimingService timing) {
         this.timing = Objects.requireNonNull(timing, "timing");
@@ -117,8 +123,12 @@ public final class S3kKosDecompressionQueue
         if (boundary != HardwareServiceBoundary.PRE_MAIN_LOOP) {
             return;
         }
+        HardwareWorkHandle servicedHead = physicalEntries.peekFirst();
+        if (servicedHead != null) {
+            preparedEntries.add(servicedHead);
+        }
         while (!physicalEntries.isEmpty() && timing.isReady(physicalEntries.peekFirst())) {
-            physicalEntries.removeFirst();
+            preparedEntries.remove(physicalEntries.removeFirst());
         }
     }
 
@@ -130,6 +140,32 @@ public final class S3kKosDecompressionQueue
         return physicalEntries.size();
     }
 
+    QueueDiagnosticSnapshot captureDiagnostics(
+            List<QueueServiceObservation> observations) {
+        if (physicalEntries.isEmpty()) {
+            return QueueDiagnosticSnapshot.idle(
+                    QueueDiagnosticSnapshot.Kind.S3K_KOS_DIRECT,
+                    observations);
+        }
+        HardwareWorkHandle active = physicalEntries.peekFirst();
+        S3kKosDecompressionDescriptor activeDescriptor =
+                Objects.requireNonNull(descriptors.get(active));
+        List<String> waiting = physicalEntries.stream()
+                .skip(1)
+                .map(descriptors::get)
+                .map(descriptor -> QueueDiagnosticSnapshot.fingerprint(
+                        QueueDiagnosticSnapshot.Kind.S3K_KOS_DIRECT,
+                        descriptor.sourceAddress(),
+                        descriptor.destinationAddress(), null))
+                .toList();
+        return new QueueDiagnosticSnapshot(
+                QueueDiagnosticSnapshot.Kind.S3K_KOS_DIRECT,
+                true, preparedEntries.contains(active),
+                activeDescriptor.sourceAddress(),
+                activeDescriptor.destinationAddress(),
+                -1, -1, waiting, observations);
+    }
+
     public boolean isReady(HardwareWorkHandle handle) {
         return timing.isReady(handle);
     }
@@ -137,6 +173,7 @@ public final class S3kKosDecompressionQueue
     public byte[] claim(HardwareWorkHandle handle) {
         byte[] payload = timing.claim(handle);
         descriptors.remove(handle);
+        preparedEntries.remove(handle);
         return payload;
     }
 
@@ -158,7 +195,9 @@ public final class S3kKosDecompressionQueue
         return new S3kKosDecompressionQueueSnapshot(descriptors.entrySet().stream()
                 .sorted(java.util.Comparator.comparingLong(entry -> entry.getKey().ordinal()))
                 .map(entry -> new S3kKosDecompressionQueueSnapshot.Entry(
-                        entry.getKey(), entry.getValue(), physicalEntries.contains(entry.getKey())))
+                        entry.getKey(), entry.getValue(),
+                        physicalEntries.contains(entry.getKey()),
+                        preparedEntries.contains(entry.getKey())))
                 .toList());
     }
 
@@ -167,6 +206,7 @@ public final class S3kKosDecompressionQueue
         Objects.requireNonNull(snapshot, "snapshot");
         physicalEntries.clear();
         descriptors.clear();
+        preparedEntries.clear();
         for (S3kKosDecompressionQueueSnapshot.Entry entry : snapshot.entries()) {
             if (timing.pendingHandle(entry.handle().kind(), entry.handle().ordinal()).isEmpty()) {
                 throw new IllegalArgumentException("direct queue snapshot references missing timing job");
@@ -175,6 +215,9 @@ public final class S3kKosDecompressionQueue
             if (entry.physical()) {
                 physicalEntries.addLast(entry.handle());
             }
+            if (entry.prepared()) {
+                preparedEntries.add(entry.handle());
+            }
         }
     }
 
@@ -182,6 +225,7 @@ public final class S3kKosDecompressionQueue
     public void resetForMissingSnapshot() {
         physicalEntries.clear();
         descriptors.clear();
+        preparedEntries.clear();
     }
 
     static HardwareWorkPreparation recreatePreparation(S3kKosDecompressionSnapshot snapshot) {

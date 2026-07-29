@@ -19,6 +19,8 @@ import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.render.AdvancedRenderModeController;
 import com.openggf.game.render.SpecialRenderEffectRegistry;
 import com.openggf.game.resources.PlcFrameLifecycleCoordinator;
+import com.openggf.game.resources.PlcLifecycleService;
+import com.openggf.game.resources.QueueDiagnosticSnapshot;
 import com.openggf.game.rewind.EngineStepper;
 import com.openggf.game.rewind.InMemoryKeyframeStore;
 import com.openggf.game.rewind.InputSource;
@@ -56,6 +58,10 @@ import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.timer.TimerManager;
 
 import java.util.Optional;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.logging.Logger;
 
@@ -476,6 +482,26 @@ public final class GameplayModeContext implements ModeContext {
     /** Game-owned runtime-art coordinator for this gameplay session. */
     public RuntimeArtCoordinator runtimeArtCoordinator() {
         return runtimeArtCoordinator;
+    }
+
+    /** Captures comparison-only physical queue state at the logical frame boundary. */
+    public List<QueueDiagnosticSnapshot> captureQueueDiagnostics() {
+        List<QueueDiagnosticSnapshot> snapshots = new ArrayList<>();
+        PlcLifecycleService plc = worldSession.getGameModule()
+                .getGameService(PlcLifecycleService.class);
+        if (plc != null) {
+            snapshots.addAll(plc.captureQueueDiagnostics());
+        }
+        snapshots.addAll(runtimeArtCoordinator.captureQueueDiagnostics());
+        snapshots.sort(Comparator.comparing(QueueDiagnosticSnapshot::kind));
+        HashSet<QueueDiagnosticSnapshot.Kind> kinds = new HashSet<>();
+        for (QueueDiagnosticSnapshot snapshot : snapshots) {
+            if (!kinds.add(snapshot.kind())) {
+                throw new IllegalStateException(
+                        "duplicate queue diagnostic kind: " + snapshot.kind().wireName());
+            }
+        }
+        return List.copyOf(snapshots);
     }
 
     public SeamlessTransitionResourceHandoffRegistry

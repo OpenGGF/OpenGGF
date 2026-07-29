@@ -96,6 +96,8 @@
     <Compile Include="src/Recording/S2Zones.cs" />
     <Compile Include="src/Recording/S3KAuxEventEngine.cs" />
     <Compile Include="src/Recording/HardwareTimingEventEngine.cs" />
+    <Compile Include="src/Recording/LoadQueueStateEvent.cs" />
+    <Compile Include="src/Recording/LoadQueueStateProjector.cs" />
     <Compile Include="src/Recording/S3KCompleteRunCaptureRunner.cs" />
     <Compile Include="src/Recording/S3KCompleteRunMetadataWriter.cs" />
     <Compile Include="src/Recording/S3KCompleteRunSegmenter.cs" />

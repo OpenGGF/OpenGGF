@@ -3,6 +3,8 @@ package com.openggf.game.sonic1.resources;
 import com.openggf.data.Rom;
 import com.openggf.game.sonic1.Sonic1GameModule;
 import com.openggf.game.resources.PlcLifecycleService;
+import com.openggf.game.resources.PlcLifecyclePhase;
+import com.openggf.game.resources.QueueDiagnosticSnapshot;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.level.resources.NemesisPlcPatternCounts;
 import com.openggf.level.resources.NemesisPlcServiceQueue;
@@ -127,6 +129,31 @@ class TestSonic1PlcService {
                 module.getGameService(Sonic1PlcService.class));
         assertSame(service, module.getGameService(Sonic1PlcService.class));
         assertSame(service, module.getGameService(PlcLifecycleService.class));
+    }
+
+    @Test
+    void diagnosticsExposeWaitingActiveAndFrameServiceState() throws IOException {
+        PlcDefinition definition = firstPlcWhoseFirstEntryHasAtLeast(10);
+        Sonic1PlcService service = new Sonic1PlcService(rom);
+        service.append(definition.plcId());
+
+        QueueDiagnosticSnapshot waiting =
+                service.captureQueueDiagnostics().getFirst();
+        assertTrue(waiting.busy());
+        assertFalse(waiting.prepared());
+        assertEquals(-1, waiting.activeSource());
+        assertEquals(definition.entries().size(),
+                waiting.queuedFingerprints().size());
+
+        service.prepare();
+        service.serviceVBlank(PlcLifecyclePhase.ORDINARY_LEVEL);
+        QueueDiagnosticSnapshot active =
+                service.captureQueueDiagnostics().getFirst();
+        assertTrue(active.prepared());
+        assertEquals(-1, active.activeSource());
+        assertEquals(-1, active.activeDestination());
+        assertEquals(-1, active.activeTotalWork());
+        assertTrue(active.serviceObservations().isEmpty());
     }
 
     private PlcDefinition firstNonEmptyPlc() throws IOException {

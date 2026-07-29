@@ -1,6 +1,8 @@
 package com.openggf.level.resources;
 
 import com.openggf.game.rewind.snapshot.NemesisPlcQueueSnapshot;
+import com.openggf.game.resources.QueueDiagnosticSnapshot;
+import com.openggf.game.resources.QueueServiceObservation;
 import com.openggf.level.resources.PlcParser.PlcDefinition;
 import com.openggf.level.resources.PlcParser.PlcEntry;
 
@@ -78,6 +80,29 @@ public final class NemesisPlcServiceQueue {
     /** Captures immutable active and FIFO state for rewind. */
     public NemesisPlcQueueSnapshot capture() {
         return new NemesisPlcQueueSnapshot(activeEntry, List.copyOf(queuedEntries));
+    }
+
+    public QueueDiagnosticSnapshot captureDiagnostics(
+            QueueDiagnosticSnapshot.Kind kind,
+            List<QueueServiceObservation> observations) {
+        observations = List.of();
+        List<String> waiting = queuedEntries.stream()
+                .map(entry -> QueueDiagnosticSnapshot.fingerprint(
+                        kind, entry.sourceAddress(), entry.destinationTile(),
+                        entry.totalPatterns()))
+                .toList();
+        if (activeEntry == null) {
+            if (waiting.isEmpty()) {
+                return QueueDiagnosticSnapshot.idle(kind, observations);
+            }
+            return new QueueDiagnosticSnapshot(
+                    kind, true, false, -1, -1, -1, -1,
+                    waiting, observations);
+        }
+        return new QueueDiagnosticSnapshot(
+                kind, true, true,
+                -1, -1, -1, activeEntry.remainingPatterns(),
+                waiting, observations);
     }
 
     /** Restores a validated immutable snapshot without partially mutating live queue state. */

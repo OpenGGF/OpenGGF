@@ -3,6 +3,7 @@ package com.openggf.game.sonic1.resources;
 import com.openggf.data.Rom;
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.resources.PlcLifecycleService;
+import com.openggf.game.resources.QueueDiagnosticSnapshot;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.level.resources.NemesisPlcPatternCounts;
@@ -138,6 +139,13 @@ public final class Sonic1PlcService
                 // The selected S1 VBlank handler does not service PLCs.
             }
         }
+    }
+
+    @Override
+    public List<QueueDiagnosticSnapshot> captureQueueDiagnostics() {
+        return List.of(queue.captureDiagnostics(
+                QueueDiagnosticSnapshot.Kind.S1_NEMESIS_PLC,
+                List.of()));
     }
 
     @Override

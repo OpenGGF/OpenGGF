@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Feature: trace recordings can now opt into exact frame-level physical load-queue
+  diagnostics for Sonic 1/2 Nemesis PLCs and Sonic 3 & Knuckles direct
+  Kosinski/KosM queues. Replay reports queue lifecycle, remaining work, waiting
+  order, and service-boundary mismatches as ordinary zero-tolerance frontiers
+  before downstream audio, event, object, or physics symptoms; legacy traces
+  remain unchanged and recorded queue state is comparison-only.
 - Fix: skipped and visible Sonic 1/2 title-card paths now converge on the same
   idempotent, ROM-owned initial PLC boundary. S1 preserves its partial
   post-fade secondary queue; S2 publishes the level-header secondary cue after

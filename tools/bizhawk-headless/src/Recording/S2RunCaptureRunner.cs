@@ -104,7 +104,8 @@ namespace OpenGGF.BizHawk.Headless
             string sourceBk2,
             string recordingDate,
             int effectiveMovieLength,
-            IRunSegmentSink segmentSink)
+            IRunSegmentSink segmentSink,
+            byte[] loadQueueRom = null)
         {
             if (movie == null)
             {
@@ -142,7 +143,8 @@ namespace OpenGGF.BizHawk.Headless
                 effectiveMovieLength == 0
                     ? movie.FrameCount
                     : effectiveMovieLength,
-                segmentSink);
+                segmentSink,
+                loadQueueRom);
 
             using (IEnumerator<Bk2Frame> frames =
                 movie.OpenFrameStream().GetEnumerator())
@@ -332,19 +334,22 @@ namespace OpenGGF.BizHawk.Headless
 
             private bool manifestWritten;
             private string runManifestJson;
+            private readonly byte[] loadQueueRom;
 
             internal RunState(
                 string runId,
                 string sourceBk2,
                 string recordingDate,
                 int effectiveMovieLength,
-                IRunSegmentSink segmentSink)
+                IRunSegmentSink segmentSink,
+                byte[] loadQueueRom)
             {
                 this.runId = runId;
                 this.sourceBk2 = sourceBk2;
                 this.recordingDate = recordingDate;
                 this.segmentSink = segmentSink;
                 EffectiveMovieLength = effectiveMovieLength;
+                this.loadQueueRom = loadQueueRom;
             }
 
             internal int EffectiveMovieLength { get; private set; }
@@ -430,7 +435,7 @@ namespace OpenGGF.BizHawk.Headless
             {
                 S2TraceCaptureRunner.AppendRecordedRow(
                     physicsWriter, auxWriter, auxEngine, traceFrame, frame,
-                    host);
+                    host, loadQueueRom);
                 if (S2Ram.U8(host, S2Ram.SidekickBase + S2Ram.OffId) != 0)
                 {
                     recordedSidekickPresent = true;
@@ -463,7 +468,8 @@ namespace OpenGGF.BizHawk.Headless
                     sourceBk2,
                     recordingDate,
                     runId,
-                    segments.Count);
+                    segments.Count,
+                    loadQueueRom != null);
                 var entry = new RunManifestSegment(
                     dirToken,
                     RunManifestSegment.LevelKind,

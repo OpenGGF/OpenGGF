@@ -8,6 +8,8 @@ import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.timing.HardwareWorkPreparation;
 import com.openggf.game.timing.HardwareWorkPreparationSnapshot;
 import com.openggf.game.timing.HardwareWorkSubmission;
+import com.openggf.game.resources.QueueDiagnosticSnapshot;
+import com.openggf.game.resources.QueueServiceObservation;
 import com.openggf.tools.KosinskiReader;
 
 import java.io.ByteArrayOutputStream;
@@ -15,6 +17,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -170,6 +173,44 @@ public final class S3kKosModuleQueue {
 
     public boolean modulesLeft() {
         return timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE) != 0;
+    }
+
+    QueueDiagnosticSnapshot captureDiagnostics(
+            List<QueueServiceObservation> observations) {
+        List<HardwareWorkHandle> physical = timing.pendingHandles().stream()
+                .filter(handle -> handle.kind() == HardwareWorkKind.KOS_MODULE_QUEUE)
+                .filter(handle -> !timing.coordinatorPreparation(handle).isPrepared())
+                .sorted(java.util.Comparator.comparingLong(
+                        HardwareWorkHandle::ordinal))
+                .toList();
+        if (physical.isEmpty()) {
+            return QueueDiagnosticSnapshot.idle(
+                    QueueDiagnosticSnapshot.Kind.S3K_KOS_MODULE,
+                    observations);
+        }
+        HardwareWorkHandle active = physical.getFirst();
+        S3kKosModulePreparation activePreparation =
+                (S3kKosModulePreparation) timing.coordinatorPreparation(active);
+        S3kKosModuleDescriptor activeDescriptor =
+                activePreparation.descriptor;
+        List<String> waiting = physical.stream()
+                .skip(1)
+                .map(handle -> (S3kKosModulePreparation)
+                        timing.coordinatorPreparation(handle))
+                .map(preparation -> preparation.descriptor)
+                .map(descriptor -> QueueDiagnosticSnapshot.fingerprint(
+                        QueueDiagnosticSnapshot.Kind.S3K_KOS_MODULE,
+                        descriptor.sourceAddress(),
+                        descriptor.destinationAddress(),
+                        descriptor.moduleCount()))
+                .toList();
+        return new QueueDiagnosticSnapshot(
+                QueueDiagnosticSnapshot.Kind.S3K_KOS_MODULE,
+                true, true,
+                -1, -1, -1,
+                activeDescriptor.moduleCount()
+                        - activePreparation.completedModules,
+                waiting, observations);
     }
 
     public boolean isReady(HardwareWorkHandle handle) {

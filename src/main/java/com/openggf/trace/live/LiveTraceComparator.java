@@ -208,6 +208,12 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
                 sprite.getGroundMode().ordinal(),
                 null, animationDiagnostics,
                 "sidekick", actualSidekick);
+        if (trace.metadata().hasPerFrameLoadQueueState()) {
+            binder.compareLoadQueues(expected.frame(),
+                    trace.loadQueueStatesForFrame(expected.frame()),
+                    GameServices.captureQueueDiagnostics());
+            result = binder.comparisonForFrame(expected.frame());
+        }
         if (perFrameObserver != null) {
             perFrameObserver.accept(result);
         }

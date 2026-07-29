@@ -73,7 +73,9 @@ public class TraceData {
 
         warnIfLegacyExecutionCounters(traceDirectory, metadata, frames);
 
-        return new TraceData(metadata, frames, events, hardwareTimingSchedule);
+        TraceData trace = new TraceData(metadata, frames, events, hardwareTimingSchedule);
+        trace.validateAdvertisedLoadQueueStates();
+        return trace;
     }
 
     /**
@@ -210,6 +212,103 @@ public class TraceData {
 
     public List<TraceEvent> getEventsForFrame(int traceFrame) {
         return eventsByFrame.getOrDefault(traceFrame, Collections.emptyList());
+    }
+
+    public List<TraceEvent.LoadQueueState> loadQueueStatesForFrame(int frame) {
+        List<TraceEvent.LoadQueueState> states = new ArrayList<>();
+        for (TraceEvent event : eventsByFrame.getOrDefault(frame, Collections.emptyList())) {
+            if (event instanceof TraceEvent.LoadQueueState state) {
+                states.add(state);
+            }
+        }
+        return List.copyOf(states);
+    }
+
+    public void validateAdvertisedLoadQueueStates() {
+        if (!metadata.hasPerFrameLoadQueueState()) {
+            return;
+        }
+        Set<String> expectedKinds = switch (metadata.game()) {
+            case "s1" -> Set.of("s1_nemesis_plc");
+            case "s2" -> Set.of("s2_nemesis_plc");
+            case "s3k" -> Set.of("s3k_kos_direct", "s3k_kos_module");
+            default -> throw new IllegalArgumentException(
+                    "load queue capability is unsupported for game: " + metadata.game());
+        };
+        Set<Integer> frameDomain = new HashSet<>();
+        for (TraceFrame frame : frames) {
+            frameDomain.add(frame.frame());
+        }
+        for (Map.Entry<Integer, List<TraceEvent>> entry : eventsByFrame.entrySet()) {
+            for (TraceEvent event : entry.getValue()) {
+                if (event instanceof TraceEvent.LoadQueueState state) {
+                    if (!frameDomain.contains(state.frame())) {
+                        throw new IllegalArgumentException(
+                                "load queue event outside physics frame domain: " + state.frame());
+                    }
+                    if (!expectedKinds.contains(state.kind())) {
+                        throw new IllegalArgumentException(
+                                "unexpected load queue kind: " + state.kind());
+                    }
+                    validateLoadQueueShape(state);
+                }
+            }
+        }
+        for (int frame : frameDomain) {
+            List<TraceEvent.LoadQueueState> states = loadQueueStatesForFrame(frame);
+            Set<String> found = new HashSet<>();
+            for (TraceEvent.LoadQueueState state : states) {
+                if (!found.add(state.kind())) {
+                    throw new IllegalArgumentException(
+                            "duplicate load queue kind at frame " + frame + ": " + state.kind());
+                }
+            }
+            if (!found.equals(expectedKinds)) {
+                throw new IllegalArgumentException(
+                        "incomplete load queue state at frame " + frame
+                                + ": expected " + expectedKinds + " but found " + found);
+            }
+        }
+    }
+
+    private static void validateLoadQueueShape(TraceEvent.LoadQueueState state) {
+        boolean maskedIdentity = state.activeSource() == -1
+                && state.activeDestination() == -1
+                && state.totalWork() == -1;
+        switch (state.kind()) {
+            case "s1_nemesis_plc", "s2_nemesis_plc", "s3k_kos_module" -> {
+                if (!state.busy()) {
+                    return;
+                }
+                if (!maskedIdentity) {
+                    throw new IllegalArgumentException(
+                            "mutable prepared queue identity must be masked: " + state.kind());
+                }
+                if (state.prepared()) {
+                    if (state.remainingWork() <= 0) {
+                        throw new IllegalArgumentException(
+                                "prepared queue requires positive remaining work: "
+                                        + state.kind());
+                    }
+                } else if (state.remainingWork() != -1
+                        || state.queuedFingerprints().isEmpty()) {
+                    throw new IllegalArgumentException(
+                            "unprepared queue requires only waiting fingerprints: "
+                                    + state.kind());
+                }
+            }
+            case "s3k_kos_direct" -> {
+                if (state.busy() && (state.activeSource() < 0
+                        || state.activeDestination() < 0
+                        || state.totalWork() != -1
+                        || state.remainingWork() != -1)) {
+                    throw new IllegalArgumentException(
+                            "invalid direct Kosinski active projection");
+                }
+            }
+            default -> throw new IllegalArgumentException(
+                    "unknown load queue kind: " + state.kind());
+        }
     }
 
     public List<TraceEvent> getEventsInRange(int startFrame, int endFrame) {

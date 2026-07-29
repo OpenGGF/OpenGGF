@@ -135,6 +135,7 @@ The game is auto-detected from the ROM's SHA-1; there is no `--game` flag.
 | `--gameplay-segment <n>` | S2 only — selects one segment of a multi-segment movie |
 | `--run-id <id>` | Run mode: emits `run_manifest.json` and per-segment directories |
 | `--effective-movie-length <n>` | Run mode only — overrides the movie-length signal |
+| `--load-queue-state` | Trace mode only — records complete per-frame physical load-queue diagnostics and advertises `load_queue_state_per_frame`; off by default so legacy differential fixtures remain byte-identical |
 | `--no-compress` | Trace mode only: publish the payloads uncompressed (compression is the default) |
 | `--compress` | States the default explicitly; mutually exclusive with `--no-compress` |
 | `--compress-threshold <bytes>` | Size floor for compressing a payload (default 1048576) |

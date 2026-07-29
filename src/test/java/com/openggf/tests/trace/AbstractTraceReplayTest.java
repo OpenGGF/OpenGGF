@@ -436,6 +436,8 @@ public abstract class AbstractTraceReplayTest {
                                 engineDiag.animationId(), engineDiag.mappingFrame(), engineDiagText),
                         secondaryCharacterLabel, actualSidekick,
                         expectedSidekickCpu, actualSidekickCpu, expectedSidekickNormalStep);
+                    compareLoadQueuesIfAdvertised(
+                            trace, binder, comparisonExpected.frame());
                     if (compareObjectNearEvents()) {
                         binder.compareObjectNear(
                                 comparisonExpected.frame(),
@@ -742,6 +744,7 @@ public abstract class AbstractTraceReplayTest {
                         expectedSidekickCpu,
                         actualSidekickCpu,
                         expectedSidekickNormalStep);
+                compareLoadQueuesIfAdvertised(trace, binder, driveFrame.frame());
                 if (observeFrontierAndShouldStop(frontierStopper, binder, driveFrame.frame())) {
                     break;
                 }
@@ -762,6 +765,14 @@ public abstract class AbstractTraceReplayTest {
 
             driveTraceIndex++;
             previousDriveFrame = driveFrame;
+        }
+    }
+
+    private static void compareLoadQueuesIfAdvertised(
+            TraceData trace, TraceBinder binder, int frame) {
+        if (trace.metadata().hasPerFrameLoadQueueState()) {
+            binder.compareLoadQueues(frame, trace.loadQueueStatesForFrame(frame),
+                    GameServices.captureQueueDiagnostics());
         }
     }
 

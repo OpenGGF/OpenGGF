@@ -39,7 +39,8 @@ namespace OpenGGF.BizHawk.Headless
             string recordingDate,
             TextWriter physicsCsv,
             TextWriter auxStateJsonl,
-            TextWriter metadataJson)
+            TextWriter metadataJson,
+            byte[] loadQueueRom = null)
         {
             if (movie == null)
             {
@@ -171,6 +172,12 @@ namespace OpenGGF.BizHawk.Headless
                         auxStateJsonl.Write(line);
                         auxStateJsonl.Write('\n');
                     }
+                    if (loadQueueRom != null)
+                    {
+                        auxStateJsonl.Write(LoadQueueStateProjector.CaptureS1(
+                            traceFrame, loadQueueRom, host));
+                        auxStateJsonl.Write('\n');
+                    }
                     traceFrame++;
                 }
 
@@ -182,7 +189,8 @@ namespace OpenGGF.BizHawk.Headless
                     startX,
                     startY,
                     rngSeed,
-                    recordingDate));
+                    recordingDate,
+                    loadQueueRom != null));
                 return new S1TraceCaptureResult(offset, traceFrame);
             }
         }
