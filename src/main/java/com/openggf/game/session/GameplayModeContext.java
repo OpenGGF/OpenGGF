@@ -149,8 +149,11 @@ public final class GameplayModeContext implements ModeContext {
         LoadTimeProfile profile = checkedPolicy
                 == HardwareReadinessAdmissionPolicy.RECORDED
                 ? LoadTimeProfile.IMMEDIATE
-                : worldSession.getGameModule().createLoadTimeProfile(
-                        worldSession.loadTimeSimulationMode(), LOG::warning);
+                : Objects.requireNonNullElse(
+                        worldSession.getGameModule().createLoadTimeProfile(
+                                worldSession.loadTimeSimulationMode(),
+                                LOG::warning),
+                        LoadTimeProfile.IMMEDIATE);
         this.hardwareTiming = new HardwareTimingService(
                 com.openggf.game.timing.RomWorkBudgetScheduler.oneWorkUnitAt(
                         HardwareServiceBoundary.POST_OBJECTS),
