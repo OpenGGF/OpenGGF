@@ -6,7 +6,6 @@ import com.openggf.game.GameServices;
 
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -97,13 +96,13 @@ public class RomManager implements AutoCloseable {
         if (existing != null && existing.isOpen()) {
             return existing;
         }
-        String filename = resolveRomForGame(gameId);
-        if (filename == null || filename.isEmpty()) {
+        RomLocation location = resolveRomLocation(legacyRomGame(gameId));
+        if (location == null) {
             throw new IOException("No ROM configured for game: " + gameId);
         }
         Rom secondaryRom = new Rom();
-        if (!secondaryRom.open(filename)) {
-            throw new IOException("Failed to open secondary ROM: " + filename);
+        if (!secondaryRom.open(location.resolvedPath().toString())) {
+            throw new IOException("Failed to open secondary ROM: " + location.configuredValue());
         }
         LOGGER.info("Opened secondary ROM (" + gameId + "): " + secondaryRom.readDomesticName());
         secondaryRoms.put(gameId, secondaryRom);
@@ -121,39 +120,34 @@ public class RomManager implements AutoCloseable {
             rom.close();
         }
 
-        String romFilename = resolveRomForGame(configService().getString(SonicConfiguration.DEFAULT_ROM));
-        if (romFilename == null || romFilename.isEmpty()) {
+        RomLocation location = resolveRomLocation(
+                legacyRomGame(configService().getString(SonicConfiguration.DEFAULT_ROM)));
+        if (location == null) {
             throw new IOException("ROM filename not configured (DEFAULT_ROM not set or per-game ROM key empty)");
         }
 
-        Path romPath = resolveConfiguredRomPath(romFilename);
-        if (!Files.exists(romPath)) {
+        if (!Files.exists(location.resolvedPath())) {
             rom = null;
             initialized = false;
-            throw new IOException(MISSING_ROM_PREFIX + romFilename);
+            throw new IOException(MISSING_ROM_PREFIX + location.configuredValue());
         }
 
-        LOGGER.info("Opening ROM: " + romFilename);
+        LOGGER.info("Opening ROM: " + location.configuredValue());
 
         rom = new Rom();
-        if (!rom.open(romFilename)) {
+        if (!rom.open(location.resolvedPath().toString())) {
             rom = null;
             initialized = false;
-            throw new IOException("Failed to open ROM file: " + romFilename);
+            throw new IOException("Failed to open ROM file: " + location.configuredValue());
         }
 
         initialized = true;
     }
 
-    private static Path resolveConfiguredRomPath(String romFilename) {
-        Path path = Path.of(romFilename);
-        if (!path.isAbsolute()) {
-            String userDir = System.getProperty("user.dir");
-            if (userDir != null) {
-                path = Path.of(userDir).resolve(path);
-            }
-        }
-        return path;
+    private RomLocation resolveRomLocation(RomGame game) {
+        return RomLocationResolver.forCurrentWorkingDirectory(configService())
+                .resolve(game)
+                .orElse(null);
     }
 
     public static boolean isConfiguredRomMissing(Throwable failure) {
@@ -174,12 +168,25 @@ public class RomManager implements AutoCloseable {
      * @param gameId "s1", "s2", or "s3k"
      * @return the configured ROM filename for that game
      */
+    @Deprecated
     public static String resolveRomForGame(String gameId) {
-        SonicConfigurationService svc = GameServices.configuration();
+        SonicConfigurationService configuration = GameServices.configuration();
+        return configuredRomValue(legacyRomGame(gameId), configuration);
+    }
+
+    private static String configuredRomValue(RomGame game, SonicConfigurationService configuration) {
+        return switch (game) {
+            case S1 -> configuration.getString(SonicConfiguration.SONIC_1_ROM);
+            case S2 -> configuration.getString(SonicConfiguration.SONIC_2_ROM);
+            case S3K -> configuration.getString(SonicConfiguration.SONIC_3K_ROM);
+        };
+    }
+
+    private static RomGame legacyRomGame(String gameId) {
         return switch (gameId != null ? gameId.toLowerCase() : "s2") {
-            case "s1" -> svc.getString(SonicConfiguration.SONIC_1_ROM);
-            case "s3k" -> svc.getString(SonicConfiguration.SONIC_3K_ROM);
-            default -> svc.getString(SonicConfiguration.SONIC_2_ROM);
+            case "s1" -> RomGame.S1;
+            case "s3k" -> RomGame.S3K;
+            default -> RomGame.S2;
         };
     }
 
