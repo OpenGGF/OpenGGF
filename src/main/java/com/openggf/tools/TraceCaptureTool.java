@@ -191,12 +191,12 @@ public final class TraceCaptureTool {
         TraceReplaySessionBootstrap.prepareConfiguration(trace, meta);
 
         // --- boot headless gameplay session -------------------------------
+        Path romPath = TraceToolRomLocations.resolve(
+                entry.gameId(), GameServices.configuration(), Path.of(""));
         HeadlessGameBoot boot = new HeadlessGameBoot(SCREEN_WIDTH, SCREEN_HEIGHT);
         try (BootOwnership<HeadlessGameBoot> ownership =
                 new BootOwnership<>(
                         boot, SessionManager::closeGameplaySession)) {
-        Path romPath = TraceToolRomLocations.resolve(
-                entry.gameId(), GameServices.configuration(), Path.of(""));
         GameLoop loop = boot.boot(
                 romPath,
                 entry.zone(),
