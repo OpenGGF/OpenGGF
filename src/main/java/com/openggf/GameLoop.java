@@ -202,6 +202,7 @@ public class GameLoop {
     private int ssRingsCollected;
     private boolean ssEmeraldCollected;
     private int ssStageIndex;
+    private EmeraldRewardKind activeSpecialStageRewardKind = EmeraldRewardKind.CHAOS_EMERALD;
     private int resultsFrameCounter = 0;
 
     // Flag to track when returning from special stage (for title card exit
@@ -1792,8 +1793,10 @@ public class GameLoop {
             // Check if a checkpoint star requested a special stage. The request is
             // always consumed here regardless of time-attack state (see
             // enterSpecialStage(), which swallows entry uniformly for every caller).
-            if (levelManager.consumeSpecialStageRequest()) {
-                enterSpecialStage();
+            SpecialStageEntryRequest specialStageRequest =
+                    levelManager.consumeSpecialStageEntryRequest();
+            if (specialStageRequest != null) {
+                enterSpecialStage(specialStageRequest);
             }
 
             // Check if a bonus star requested a bonus stage
@@ -2322,11 +2325,10 @@ public class GameLoop {
         ssEmeraldCollected = emeraldCollected;
         ssStageIndex = getActiveSpecialStageProvider().getCurrentStage();
 
-        // Mark emerald as collected now (so it shows in results screen)
+        // Publish only for providers that retain legacy GameLoop ownership.
         if (emeraldCollected) {
-            GameStateManager gsm = this.gameState;
-            gsm.markEmeraldCollected(ssStageIndex);
-            LOGGER.info("DEBUG: Collected emerald " + (ssStageIndex + 1) + "! Total: " + gsm.getEmeraldCount());
+            publishEmeraldRewardIfLoopOwned(getActiveSpecialStageProvider(), gameState,
+                    ssStageIndex, activeSpecialStageRewardKind);
         }
 
         // Start fade-to-white, then show results when complete
@@ -2351,6 +2353,10 @@ public class GameLoop {
      * Performs fade-to-white transition before entering.
      */
     public void enterSpecialStage() {
+        enterSpecialStage(SpecialStageEntryRequest.ordinary());
+    }
+
+    private void enterSpecialStage(SpecialStageEntryRequest request) {
         if (currentGameMode != GameMode.LEVEL) {
             return;
         }
@@ -2401,7 +2407,8 @@ public class GameLoop {
         audioManager.fadeOutMusic();
 
         // Determine which stage to enter
-        final int stageIndex = ssProvider.consumeStageIndexForEntry(this.gameState);
+        final int stageIndex = resolveSpecialStageIndex(request, ssProvider, gameState);
+        activeSpecialStageRewardKind = request.rewardKind();
 
         if (screenAlreadyFaded) {
             // Screen is already fully faded (from S1 results screen after big ring).
@@ -2420,6 +2427,24 @@ public class GameLoop {
         }
     }
 
+    static int resolveSpecialStageIndex(SpecialStageEntryRequest request,
+                                        SpecialStageProvider provider,
+                                        GameStateManager gameState) {
+        return request.forcedStageIndex() != null
+                ? request.forcedStageIndex()
+                : provider.consumeStageIndexForEntry(gameState);
+    }
+
+    static void publishEmeraldRewardIfLoopOwned(SpecialStageProvider provider,
+                                                GameStateManager gameState,
+                                                int stageIndex,
+                                                EmeraldRewardKind rewardKind) {
+        if (provider.ownsEmeraldReward()) {
+            return;
+        }
+        provider.publishEmeraldReward(gameState, stageIndex, rewardKind);
+    }
+
     /**
      * Actually enters the special stage after the transition fade completes.
      * Called by the fade callback (fade-to-white) or directly (screen-already-black).
@@ -2430,7 +2455,8 @@ public class GameLoop {
     void doEnterSpecialStage(SpecialStageProvider ssProvider, int stageIndex,
                                      boolean fadeFromBlack) {
         SpecialStageStartupPolicy startupPolicy = defaultSpecialStageStartupPolicy();
-        doEnterSpecialStage(ssProvider, stageIndex, fadeFromBlack, startupPolicy);
+        doEnterSpecialStage(ssProvider, stageIndex, fadeFromBlack, startupPolicy,
+                activeSpecialStageRewardKind);
         if (startupPolicy == SpecialStageStartupPolicy.TRACE_ACCURATE) {
             // TraceSessionLauncher#enterSpecialStageTrace pairs its TRACE_ACCURATE
             // entry with provider.setLagCompensation(0) -- "startup observations
@@ -2471,12 +2497,26 @@ public class GameLoop {
 
     void doEnterSpecialStage(SpecialStageProvider ssProvider, int stageIndex,
                              boolean fadeFromBlack, SpecialStageStartupPolicy startupPolicy) {
+        doEnterSpecialStage(ssProvider, stageIndex, fadeFromBlack, startupPolicy,
+                EmeraldRewardKind.CHAOS_EMERALD);
+    }
+
+    private void doEnterSpecialStage(SpecialStageProvider ssProvider, int stageIndex,
+                                     boolean fadeFromBlack,
+                                     SpecialStageStartupPolicy startupPolicy,
+                                     EmeraldRewardKind rewardKind) {
         // Clear the transition freeze flag (now we're in special stage mode)
         specialStageTransitionPending = false;
+        activeSpecialStageRewardKind = rewardKind;
 
         try {
             ssProvider.reset();
-            ssProvider.initializeStage(stageIndex, startupPolicy);
+            if (activeSpecialStageRewardKind == EmeraldRewardKind.CHAOS_EMERALD) {
+                // Preserve the established S1/S2 and ordinary S3K startup seam.
+                ssProvider.initializeStage(stageIndex, startupPolicy);
+            } else {
+                ssProvider.initializeStage(stageIndex, startupPolicy, activeSpecialStageRewardKind);
+            }
             activeSpecialStageProvider = ssProvider;
             GameplayModeContext context = resolveGameplayModeContext();
             if (context != null) {
@@ -2948,9 +2988,8 @@ public class GameLoop {
 
         // Mark emerald as collected now (so it shows in results screen)
         if (emeraldCollected) {
-            GameStateManager gsm = this.gameState;
-            gsm.markEmeraldCollected(ssStageIndex);
-            LOGGER.info("Collected emerald " + (ssStageIndex + 1) + "! Total: " + gsm.getEmeraldCount());
+            publishEmeraldRewardIfLoopOwned(ssProvider, gameState, ssStageIndex,
+                    activeSpecialStageRewardKind);
         }
 
         if (fadeAlreadyWhite) {

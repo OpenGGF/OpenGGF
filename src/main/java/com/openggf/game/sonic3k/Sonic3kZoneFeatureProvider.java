@@ -658,6 +658,10 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
 
     @Override
     public boolean shouldSuppressInitialTitleCard(int zoneIndex, int actIndex) {
+        if (zoneIndex == Sonic3kZoneIds.ZONE_HPZ && actIndex == 1) {
+            return Sonic3kLevelResourceProfile.resolve(zoneIndex, actIndex)
+                    .requireCustomResources().suppressTitleCard();
+        }
         if (zoneIndex != 0 || actIndex != 0) {
             return false;
         }

@@ -251,6 +251,7 @@ CF-ANNOTATION TYPE com.openggf.game.DebugOverlayProvider$TouchResponseDebugInfo 
 CF-ANNOTATION TYPE com.openggf.game.DemoLamppostState visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.DonorCapabilities visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.DynamicWaterHandler visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.EmeraldRewardKind visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.EndingPhase visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.EndingProvider visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.GameDataSource visible @com.openggf.game.ModApi
@@ -323,6 +324,7 @@ CF-ANNOTATION TYPE com.openggf.game.ShieldType visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.SidekickSpawnOffset visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.SpecialStageAccessType visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.SpecialStageDebugProvider visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.SpecialStageEntryRequest visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.SpecialStageProvider visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.SpecialStageStartupPolicy visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.StaticFixup visible @com.openggf.game.ModApi
@@ -1166,6 +1168,7 @@ CONSTRUCTOR com.openggf.game.PhysicsProfile public  <init>(short,short,short,sho
 CONSTRUCTOR com.openggf.game.PlayableCharacterRegistry$Resolution public  <init>(com.openggf.game.CharacterKey,com.openggf.game.CharacterKey,java.util.Optional<com.openggf.game.CharacterDefinition>,com.openggf.game.PlayableCharacterRegistry$FallbackReason)
 CONSTRUCTOR com.openggf.game.RomDataSource public  <init>(com.openggf.data.Rom,java.lang.String)
 CONSTRUCTOR com.openggf.game.SidekickSpawnOffset public  <init>(int,int)
+CONSTRUCTOR com.openggf.game.SpecialStageEntryRequest public  <init>(java.lang.Integer,com.openggf.game.EmeraldRewardKind)
 CONSTRUCTOR com.openggf.game.StaticFixup public  <init>(java.lang.String,java.lang.String,java.lang.Runnable)
 CONSTRUCTOR com.openggf.game.ZoneArtProvider$ArtLoadRequest public  <init>(java.lang.String,int,int,com.openggf.tools.disasm.CompressionType)
 CONSTRUCTOR com.openggf.game.ZoneArtProvider$ObjectArtConfig public  <init>(int,int,com.openggf.tools.disasm.CompressionType)
@@ -2297,6 +2300,8 @@ FIELD com.openggf.game.DataSelectProvider$State public,static,final com.openggf.
 FIELD com.openggf.game.DataSelectProvider$State public,static,final com.openggf.game.DataSelectProvider$State EXITING
 FIELD com.openggf.game.DataSelectProvider$State public,static,final com.openggf.game.DataSelectProvider$State FADE_IN
 FIELD com.openggf.game.DataSelectProvider$State public,static,final com.openggf.game.DataSelectProvider$State INACTIVE
+FIELD com.openggf.game.EmeraldRewardKind public,static,final com.openggf.game.EmeraldRewardKind CHAOS_EMERALD
+FIELD com.openggf.game.EmeraldRewardKind public,static,final com.openggf.game.EmeraldRewardKind SUPER_EMERALD
 FIELD com.openggf.game.EndingPhase public,static,final com.openggf.game.EndingPhase CREDITS_DEMO
 FIELD com.openggf.game.EndingPhase public,static,final com.openggf.game.EndingPhase CREDITS_TEXT
 FIELD com.openggf.game.EndingPhase public,static,final com.openggf.game.EndingPhase CUTSCENE
@@ -4702,6 +4707,8 @@ METHOD com.openggf.game.DonorCapabilities public,abstract  java.util.Set<com.ope
 METHOD com.openggf.game.DonorCapabilities public,static <E extends java.lang.Enum<E>&com.openggf.game.AnimationId> java.util.Map<com.openggf.game.CanonicalAnimation,com.openggf.game.CanonicalAnimation> buildFallbackMap(E[],java.util.function.Function<E,com.openggf.game.CanonicalAnimation>,java.util.Map<com.openggf.game.CanonicalAnimation,com.openggf.game.CanonicalAnimation>)
 METHOD com.openggf.game.DynamicWaterHandler public  boolean shakeTimerOccupiesObjectSlot()
 METHOD com.openggf.game.DynamicWaterHandler public,abstract  void update(com.openggf.level.WaterSystem$DynamicWaterState,int,int)
+METHOD com.openggf.game.EmeraldRewardKind public,static  com.openggf.game.EmeraldRewardKind valueOf(java.lang.String)
+METHOD com.openggf.game.EmeraldRewardKind public,static  com.openggf.game.EmeraldRewardKind[] values()
 METHOD com.openggf.game.EndingPhase public,static  com.openggf.game.EndingPhase valueOf(java.lang.String)
 METHOD com.openggf.game.EndingPhase public,static  com.openggf.game.EndingPhase[] values()
 METHOD com.openggf.game.EndingProvider public  boolean consumePostCreditsExitRequest()
@@ -4870,6 +4877,7 @@ METHOD com.openggf.game.GameStateManager public  int getSpecialStageCount()
 METHOD com.openggf.game.GameStateManager public  java.lang.String key()
 METHOD com.openggf.game.GameStateManager public  java.util.List<java.lang.Integer> getCollectedChaosEmeraldIndices()
 METHOD com.openggf.game.GameStateManager public  java.util.List<java.lang.Integer> getCollectedSuperEmeraldIndices()
+METHOD com.openggf.game.GameStateManager public  java.util.List<java.lang.Integer> getS3kEmeraldStates()
 METHOD com.openggf.game.GameStateManager public  void addContinue()
 METHOD com.openggf.game.GameStateManager public  void addLife()
 METHOD com.openggf.game.GameStateManager public  void addScore(int)
@@ -4900,6 +4908,7 @@ METHOD com.openggf.game.GameStateManager public  void setWfzFireToggle(boolean)
 METHOD com.openggf.game.GameStateManager public,synchronized  void configureSpecialStageProgress(int,int)
 METHOD com.openggf.game.GameStateManager public,synchronized  void markEmeraldCollected(int)
 METHOD com.openggf.game.GameStateManager public,synchronized  void markSuperEmeraldCollected(int)
+METHOD com.openggf.game.GameStateManager public,synchronized  void restoreS3kEmeraldProgress(java.util.List<java.lang.Integer>,boolean)
 METHOD com.openggf.game.GameStateManager public,volatile  java.lang.Object capture()
 METHOD com.openggf.game.GameStateManager public,volatile  void restore(java.lang.Object)
 METHOD com.openggf.game.GameplayInputFilter public,abstract  com.openggf.control.PlayerInputState filter(com.openggf.control.PlayerInputState)
@@ -5370,9 +5379,16 @@ METHOD com.openggf.game.SpecialStageDebugProvider public,abstract  void nextSet(
 METHOD com.openggf.game.SpecialStageDebugProvider public,abstract  void previousPage()
 METHOD com.openggf.game.SpecialStageDebugProvider public,abstract  void previousSet()
 METHOD com.openggf.game.SpecialStageDebugProvider public,abstract  void toggle()
+METHOD com.openggf.game.SpecialStageEntryRequest public  com.openggf.game.EmeraldRewardKind rewardKind()
+METHOD com.openggf.game.SpecialStageEntryRequest public  java.lang.Integer forcedStageIndex()
+METHOD com.openggf.game.SpecialStageEntryRequest public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.SpecialStageEntryRequest public,final  int hashCode()
+METHOD com.openggf.game.SpecialStageEntryRequest public,final  java.lang.String toString()
+METHOD com.openggf.game.SpecialStageEntryRequest public,static  com.openggf.game.SpecialStageEntryRequest ordinary()
 METHOD com.openggf.game.SpecialStageProvider public  boolean isEntryPresentationReady()
 METHOD com.openggf.game.SpecialStageProvider public  boolean isGameplayDebugMode()
 METHOD com.openggf.game.SpecialStageProvider public  boolean isLagCompensationDisplayEnabled()
+METHOD com.openggf.game.SpecialStageProvider public  boolean ownsEmeraldReward()
 METHOD com.openggf.game.SpecialStageProvider public  boolean supportsRewind()
 METHOD com.openggf.game.SpecialStageProvider public  com.openggf.audio.GameMusic getResultsMusic()
 METHOD com.openggf.game.SpecialStageProvider public  com.openggf.audio.GameMusic getStageMusic()
@@ -5386,6 +5402,8 @@ METHOD com.openggf.game.SpecialStageProvider public  void debugNextStage()
 METHOD com.openggf.game.SpecialStageProvider public  void debugToggleLayoutSet()
 METHOD com.openggf.game.SpecialStageProvider public  void handlePlayer2Input(int,int)
 METHOD com.openggf.game.SpecialStageProvider public  void initializeStage(int,com.openggf.game.SpecialStageStartupPolicy) THROWS java.io.IOException
+METHOD com.openggf.game.SpecialStageProvider public  void initializeStage(int,com.openggf.game.SpecialStageStartupPolicy,com.openggf.game.EmeraldRewardKind) THROWS java.io.IOException
+METHOD com.openggf.game.SpecialStageProvider public  void publishEmeraldReward(com.openggf.game.GameStateManager,int,com.openggf.game.EmeraldRewardKind)
 METHOD com.openggf.game.SpecialStageProvider public  void setClearColor()
 METHOD com.openggf.game.SpecialStageProvider public  void toggleGameplayDebugMode()
 METHOD com.openggf.game.SpecialStageProvider public  void toggleLagCompensationDisplay()
@@ -6984,6 +7002,7 @@ METHOD com.openggf.game.save.SaveSlotSummary public,final  int hashCode()
 METHOD com.openggf.game.save.SaveSlotSummary public,final  java.lang.String toString()
 METHOD com.openggf.game.save.SaveSlotSummary public,static  com.openggf.game.save.SaveSlotSummary empty(int)
 METHOD com.openggf.game.save.SaveSlotSummary public,static  com.openggf.game.save.SaveSlotSummary unavailable(int)
+METHOD com.openggf.game.save.SaveSnapshotProvider public  boolean restoreProgress(com.openggf.game.GameStateManager,int,int,java.util.Map<java.lang.String,java.lang.Object>)
 METHOD com.openggf.game.save.SaveSnapshotProvider public,abstract  java.util.Map<java.lang.String,java.lang.Object> capture(com.openggf.game.save.SaveReason,com.openggf.game.save.RuntimeSaveContext)
 METHOD com.openggf.game.save.SelectedTeam public  java.lang.String mainCharacter()
 METHOD com.openggf.game.save.SelectedTeam public  java.util.List<java.lang.String> sidekicks()
@@ -8105,6 +8124,7 @@ METHOD com.openggf.level.LevelManager public  com.openggf.game.CheckpointState$R
 METHOD com.openggf.level.LevelManager public  com.openggf.game.GameModule getGameModule()
 METHOD com.openggf.level.LevelManager public  com.openggf.game.LevelState getLevelGamestate()
 METHOD com.openggf.level.LevelManager public  com.openggf.game.RespawnState getCheckpointState()
+METHOD com.openggf.level.LevelManager public  com.openggf.game.SpecialStageEntryRequest consumeSpecialStageEntryRequest()
 METHOD com.openggf.level.LevelManager public  com.openggf.game.ZoneFeatureProvider getZoneFeatureProvider()
 METHOD com.openggf.level.LevelManager public  com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.LevelSnapshot> levelRewindSnapshottable()
 METHOD com.openggf.level.LevelManager public  com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.LevelTilemapSnapshot> levelTilemapRewindSnapshottable()
@@ -8236,6 +8256,7 @@ METHOD com.openggf.level.LevelManager public  void requestNextZone()
 METHOD com.openggf.level.LevelManager public  void requestRespawn()
 METHOD com.openggf.level.LevelManager public  void requestSeamlessTransition(com.openggf.level.SeamlessLevelTransitionRequest)
 METHOD com.openggf.level.LevelManager public  void requestSpecialStageEntry()
+METHOD com.openggf.level.LevelManager public  void requestSpecialStageEntry(com.openggf.game.SpecialStageEntryRequest)
 METHOD com.openggf.level.LevelManager public  void requestSpecialStageFromCheckpoint()
 METHOD com.openggf.level.LevelManager public  void requestTimeAttackMenuReturn()
 METHOD com.openggf.level.LevelManager public  void requestTitleCard(int,int)
@@ -8385,6 +8406,7 @@ METHOD com.openggf.level.LevelTransitionCoordinator public  boolean isSuppressNe
 METHOD com.openggf.level.LevelTransitionCoordinator public  boolean isTitleCardRequested()
 METHOD com.openggf.level.LevelTransitionCoordinator public  com.openggf.game.BonusStageType consumeBonusStageRequest()
 METHOD com.openggf.level.LevelTransitionCoordinator public  com.openggf.game.BonusStageType peekBonusStageRequest()
+METHOD com.openggf.level.LevelTransitionCoordinator public  com.openggf.game.SpecialStageEntryRequest consumeSpecialStageEntryRequest()
 METHOD com.openggf.level.LevelTransitionCoordinator public  com.openggf.level.BigRingReturnState getBigRingReturn()
 METHOD com.openggf.level.LevelTransitionCoordinator public  com.openggf.level.SeamlessLevelTransitionRequest consumeSeamlessTransitionRequest()
 METHOD com.openggf.level.LevelTransitionCoordinator public  int consumeInLevelTitleCardExitAdditionalDispatches()
@@ -8415,6 +8437,7 @@ METHOD com.openggf.level.LevelTransitionCoordinator public  void requestNextZone
 METHOD com.openggf.level.LevelTransitionCoordinator public  void requestRespawn()
 METHOD com.openggf.level.LevelTransitionCoordinator public  void requestSeamlessTransition(com.openggf.level.SeamlessLevelTransitionRequest)
 METHOD com.openggf.level.LevelTransitionCoordinator public  void requestSpecialStageEntry()
+METHOD com.openggf.level.LevelTransitionCoordinator public  void requestSpecialStageEntry(com.openggf.game.SpecialStageEntryRequest)
 METHOD com.openggf.level.LevelTransitionCoordinator public  void requestSpecialStageFromCheckpoint()
 METHOD com.openggf.level.LevelTransitionCoordinator public  void requestTimeAttackMenuReturn()
 METHOD com.openggf.level.LevelTransitionCoordinator public  void requestTitleCard(int,int)
@@ -9280,6 +9303,7 @@ METHOD com.openggf.level.objects.ObjectServices public  int apparentAct()
 METHOD com.openggf.level.objects.ObjectServices public  int currentZone()
 METHOD com.openggf.level.objects.ObjectServices public  int vIntRunCounter(int)
 METHOD com.openggf.level.objects.ObjectServices public  void requestSeamlessTransition(com.openggf.level.SeamlessLevelTransitionRequest)
+METHOD com.openggf.level.objects.ObjectServices public  void requestSpecialStageEntry(com.openggf.game.SpecialStageEntryRequest)
 METHOD com.openggf.level.objects.ObjectServices public  void requestZoneAndAct(int,int,boolean,int)
 METHOD com.openggf.level.objects.ObjectServices public  void spawnLostRingsAfterCurrentFrame(com.openggf.game.PlayableEntity,int)
 METHOD com.openggf.level.objects.ObjectServices public  void spawnLostRingsWithDeferredOwner(com.openggf.game.PlayableEntity,int)
@@ -13789,6 +13813,8 @@ RECORD-COMPONENT com.openggf.game.PlayableCharacterRegistry$Resolution requested
 RECORD-COMPONENT com.openggf.game.PlayableCharacterRegistry$Resolution resolvedKey com.openggf.game.CharacterKey
 RECORD-COMPONENT com.openggf.game.SidekickSpawnOffset xOffset int
 RECORD-COMPONENT com.openggf.game.SidekickSpawnOffset yOffset int
+RECORD-COMPONENT com.openggf.game.SpecialStageEntryRequest forcedStageIndex java.lang.Integer
+RECORD-COMPONENT com.openggf.game.SpecialStageEntryRequest rewardKind com.openggf.game.EmeraldRewardKind
 RECORD-COMPONENT com.openggf.game.StaticFixup action java.lang.Runnable
 RECORD-COMPONENT com.openggf.game.StaticFixup name java.lang.String
 RECORD-COMPONENT com.openggf.game.StaticFixup reason java.lang.String
@@ -16178,6 +16204,7 @@ TYPE enum public,final com.openggf.game.BonusStageType SUPER java.lang.Enum<com.
 TYPE enum public,final com.openggf.game.CanonicalAnimation SUPER java.lang.Enum<com.openggf.game.CanonicalAnimation>
 TYPE enum public,final com.openggf.game.CollisionModel SUPER java.lang.Enum<com.openggf.game.CollisionModel>
 TYPE enum public,final com.openggf.game.DamageCause SUPER java.lang.Enum<com.openggf.game.DamageCause>
+TYPE enum public,final com.openggf.game.EmeraldRewardKind SUPER java.lang.Enum<com.openggf.game.EmeraldRewardKind>
 TYPE enum public,final com.openggf.game.EndingPhase SUPER java.lang.Enum<com.openggf.game.EndingPhase>
 TYPE enum public,final com.openggf.game.GameId SUPER java.lang.Enum<com.openggf.game.GameId>
 TYPE enum public,final com.openggf.game.GameMode SUPER java.lang.Enum<com.openggf.game.GameMode>
@@ -16485,6 +16512,7 @@ TYPE record public,final com.openggf.game.InitStep SUPER java.lang.Record
 TYPE record public,final com.openggf.game.PhysicsModifiers SUPER java.lang.Record
 TYPE record public,final com.openggf.game.PhysicsProfile SUPER java.lang.Record
 TYPE record public,final com.openggf.game.SidekickSpawnOffset SUPER java.lang.Record
+TYPE record public,final com.openggf.game.SpecialStageEntryRequest SUPER java.lang.Record
 TYPE record public,final com.openggf.game.StaticFixup SUPER java.lang.Record
 TYPE record public,final com.openggf.game.animation.ChannelContext SUPER java.lang.Record
 TYPE record public,final com.openggf.game.animation.DestinationPlan SUPER java.lang.Record
@@ -17022,6 +17050,7 @@ TYPE-ANNOTATION com.openggf.game.DebugOverlayProvider$TouchResponseDebugInfo @co
 TYPE-ANNOTATION com.openggf.game.DemoLamppostState @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.DonorCapabilities @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.DynamicWaterHandler @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.EmeraldRewardKind @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.EndingPhase @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.EndingProvider @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.GameDataSource @com.openggf.game.ModApi
@@ -17094,6 +17123,7 @@ TYPE-ANNOTATION com.openggf.game.ShieldType @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.SidekickSpawnOffset @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.SpecialStageAccessType @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.SpecialStageDebugProvider @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.SpecialStageEntryRequest @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.SpecialStageProvider @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.SpecialStageStartupPolicy @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.StaticFixup @com.openggf.game.ModApi

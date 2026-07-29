@@ -16,8 +16,19 @@ import java.util.List;
  * at zone 0x13 (19) can be loaded via {@code loadZoneAndAct(19, 0)}.
  */
 public class Sonic3kZoneRegistry extends AbstractZoneRegistry {
+    private static final LevelDescriptor UNAVAILABLE_HPZ_ACT_ZERO =
+            new LevelDescriptor() {
+                private IllegalArgumentException unavailable() {
+                    return new IllegalArgumentException(
+                            "canonical HPZ exposes only sanctuary act 1");
+                }
 
-    // Zone names for title cards — indexed by zone ID (0-21)
+                @Override public int levelIndex() { throw unavailable(); }
+                @Override public int startX() { throw unavailable(); }
+                @Override public int startY() { throw unavailable(); }
+            };
+
+    // Zone names for title cards — indexed by canonical engine zone ID (0-22)
     // Competition zones and bonus stages use descriptive names
     private static final String[] ZONE_NAMES = {
             "ANGEL ISLAND",         // 0
@@ -41,7 +52,8 @@ public class Sonic3kZoneRegistry extends AbstractZoneRegistry {
             "",                     // 18 (reserved/unused)
             "GUMBALL",              // 19 (bonus stage)
             "GLOWING SPHERES",      // 20 (bonus stage)
-            "SLOT MACHINE"          // 21 (bonus stage)
+            "SLOT MACHINE",         // 21 (bonus stage)
+            "HIDDEN PALACE"         // 22 (Super Emerald sanctuary)
     };
 
     // Music IDs per zone/act - S3K has different music per act for most zones.
@@ -70,7 +82,8 @@ public class Sonic3kZoneRegistry extends AbstractZoneRegistry {
             {-1},                                           // 18 (reserved)
             {0x1E},                                         // 19 Gumball
             {0x1B},                                         // 20 Glowing Spheres / Pachinko
-            {0x1D}                                          // 21 Slot Machine
+            {0x1D},                                         // 21 Slot Machine
+            {Sonic3kMusic.LRZ2.id, Sonic3kMusic.LRZ2.id}    // 22 HPZ sanctuary
     };
 
     public Sonic3kZoneRegistry() {
@@ -98,7 +111,10 @@ public class Sonic3kZoneRegistry extends AbstractZoneRegistry {
                 List.of(LevelData.S3K_RESERVED_18),                                     // 18 (reserved)
                 List.of(LevelData.S3K_GUMBALL),                                         // 19 Gumball
                 List.of(LevelData.S3K_GLOWING_SPHERE),                                  // 20 Glowing Spheres
-                List.of(LevelData.S3K_SLOT_MACHINE)                                     // 21 Slot Machine
+                List.of(LevelData.S3K_SLOT_MACHINE),                                    // 21 Slot Machine
+                // Canonical HPZ transitions use act 1 ($1601).
+                List.of(UNAVAILABLE_HPZ_ACT_ZERO,
+                        LevelData.S3K_HIDDEN_PALACE_SANCTUARY)                           // 22 HPZ
         ), ZONE_NAMES);
     }
 
@@ -117,6 +133,11 @@ public class Sonic3kZoneRegistry extends AbstractZoneRegistry {
 
     @Override
     public int getMusicId(int zoneIndex, int actIndex) {
+        if (zoneIndex == com.openggf.game.sonic3k.constants.Sonic3kZoneIds.ZONE_HPZ
+                && actIndex != 1) {
+            throw new IllegalArgumentException(
+                    "canonical HPZ exposes only sanctuary act 1");
+        }
         if (zoneIndex < 0 || zoneIndex >= ZONE_MUSIC.length) {
             return -1;
         }

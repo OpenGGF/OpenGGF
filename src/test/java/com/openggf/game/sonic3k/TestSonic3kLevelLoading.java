@@ -1,6 +1,8 @@
 package com.openggf.game.sonic3k;
 
 import com.openggf.game.sonic3k.scroll.Sonic3kZoneConstants;
+import com.openggf.game.sonic3k.constants.S3kZoneSet;
+import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -191,6 +193,67 @@ class TestSonic3kLevelLoading {
         }
     }
 
+    @Test
+    void superEmeraldSanctuaryLoadsRom1701LayoutBoundsAndObjectSet() throws Exception {
+        Sonic sprite = new Sonic(mainCharacter, (short) 0x1640, (short) 0x03AC);
+        GameServices.sprites().addSprite(sprite);
+        Camera camera = GameServices.camera();
+        camera.setFocusedSprite(sprite);
+        camera.setFrozen(false);
+
+        levelManager.loadZoneAndAct(Sonic3kZoneIds.ZONE_HPZ, 1);
+        GroundSensor.setLevelManager(levelManager);
+
+        Sonic3kLevel level = assertInstanceOf(
+                Sonic3kLevel.class, levelManager.getCurrentLevel());
+        assertEquals(0x1500, level.getMinX());
+        assertEquals(0x1640, level.getMaxX());
+        assertEquals(0x0320, level.getMinY());
+        assertEquals(0x0320, level.getMaxY());
+        assertEquals(S3kZoneSet.SKL, level.getObjectZoneSet());
+        assertEquals(52, level.getLayerWidthBlocks(0));
+        assertEquals(24, level.getLayerHeightBlocks(0));
+        assertEquals(32, level.getLayerWidthBlocks(1));
+        assertEquals(6, level.getLayerHeightBlocks(1));
+        assertTrue(level.getPatternLoadCueSchedule().contains(0x48));
+        assertColorWord(level.getPalette(3).getColor(0), 0x0000,
+                "Pal_HPZIntro must be the visible entry palette");
+        assertArrayEquals(new byte[]{0x00, 0x00},
+                GameServices.paletteOwnershipRegistry()
+                        .targetSegaData(0, 0, 1),
+                "character target palette line must remain untouched");
+        assertArrayEquals(new byte[]{0x00, 0x00},
+                GameServices.paletteOwnershipRegistry()
+                        .targetSegaData(1, 0, 1),
+                "target palette line 2 must remain untouched");
+        assertArrayEquals(new byte[]{0x00, 0x00},
+                GameServices.paletteOwnershipRegistry()
+                        .targetSegaData(2, 0, 1),
+                "Pal_HPZ+$20 first word must target palette line 3");
+        assertArrayEquals(new byte[]{0x02, 0x22},
+                GameServices.paletteOwnershipRegistry()
+                        .targetSegaData(3, 0, 1),
+                "Pal_HPZ+$40 first word must target palette line 4");
+        assertEquals("none",
+                GameServices.paletteOwnershipRegistry().targetOwnerAt(0, 0));
+        assertEquals("none",
+                GameServices.paletteOwnershipRegistry().targetOwnerAt(1, 0));
+        assertEquals(S3kPaletteOwners.HPZ_PALETTE_CONTROL,
+                GameServices.paletteOwnershipRegistry().targetOwnerAt(2, 0));
+        assertEquals(S3kPaletteOwners.HPZ_PALETTE_CONTROL,
+                GameServices.paletteOwnershipRegistry().targetOwnerAt(3, 0));
+        assertEquals(0x1640, sprite.getCentreX());
+        assertEquals(0x03AC, sprite.getCentreY());
+        assertEquals(0x15A0, camera.getX() & 0xFFFF);
+        assertEquals(0x0240, camera.getY() & 0xFFFF);
+    }
+
+    @Test
+    void canonicalHpzActZeroCannotLoad() {
+        assertThrows(IllegalArgumentException.class,
+                () -> levelManager.loadZoneAndAct(Sonic3kZoneIds.ZONE_HPZ, 0));
+    }
+
     static Stream<Arguments> zoneActProvider() {
         return Stream.of(
                 Arguments.of(Sonic3kZoneConstants.ZONE_AIZ, 0, "Angel Island Act 1"),
@@ -273,4 +336,3 @@ class TestSonic3kLevelLoading {
         return color;
     }
 }
-

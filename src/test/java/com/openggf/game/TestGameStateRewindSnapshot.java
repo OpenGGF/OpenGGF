@@ -1,6 +1,7 @@
 package com.openggf.game;
 
 import com.openggf.game.rewind.snapshot.GameStateSnapshot;
+import com.openggf.game.sonic3k.S3kEmeraldProgression;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -56,10 +57,11 @@ class TestGameStateRewindSnapshot {
         assertEquals(1, gameState.getContinues());
         assertTrue(gameState.hasEmerald(0));
         assertTrue(gameState.hasEmerald(3));
-        assertFalse(gameState.hasEmerald(1));
+        // ROM state 3 (Super Emerald) remains a nonzero collected emerald state.
+        assertTrue(gameState.hasEmerald(1));
         assertTrue(gameState.hasSuperEmerald(1));
         assertTrue(gameState.isEmeraldsConverted());
-        assertEquals(2, gameState.getEmeraldCount());
+        assertEquals(3, gameState.getEmeraldCount());
         assertEquals(42, gameState.getCurrentBossId());
         assertTrue(gameState.isScreenShakeActive());
         assertTrue(gameState.isBackgroundCollisionFlag());
@@ -101,5 +103,20 @@ class TestGameStateRewindSnapshot {
 
         assertTrue(gameState.isEmeraldsConverted());
         assertTrue(gameState.getCollectedSuperEmeraldIndices().isEmpty());
+    }
+
+    @Test
+    void mixedEmeraldStatesRoundTripDuringSanctuaryConversion() {
+        S3kEmeraldProgression.restore(
+                gameState, java.util.List.of(0, 2, 1, 3, 0, 1, 2), true);
+
+        GameStateSnapshot snapshot = gameState.capture();
+        S3kEmeraldProgression.restore(
+                gameState, java.util.List.of(0, 0, 0, 0, 0, 0, 0), false);
+        gameState.restore(snapshot);
+
+        assertEquals(java.util.List.of(0, 2, 1, 3, 0, 1, 2),
+                S3kEmeraldProgression.from(gameState).states());
+        assertTrue(gameState.isEmeraldsConverted());
     }
 }

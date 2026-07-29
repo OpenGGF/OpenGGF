@@ -20,6 +20,7 @@ import com.openggf.game.LevelEventProvider;
 import com.openggf.game.LevelState;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.RespawnState;
+import com.openggf.game.SpecialStageEntryRequest;
 import com.openggf.game.TitleCardProvider;
 import com.openggf.game.ZoneFeatureProvider;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
@@ -260,6 +261,11 @@ public interface ObjectServices {
 
     /** Requests entry into a special stage. */
     void requestSpecialStageEntry();
+
+    /** Requests an exact or ordinary special-stage entry with explicit reward semantics. */
+    default void requestSpecialStageEntry(SpecialStageEntryRequest request) {
+        levelManager().requestSpecialStageEntry(request);
+    }
 
     /** Invalidates the cached foreground tilemap (e.g., after block changes). */
     void invalidateForegroundTilemap();

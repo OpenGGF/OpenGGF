@@ -19,6 +19,7 @@ import com.openggf.game.LevelEventProvider;
 import com.openggf.game.LevelState;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.RespawnState;
+import com.openggf.game.SpecialStageEntryRequest;
 import com.openggf.game.TitleCardProvider;
 import com.openggf.game.ZoneFeatureProvider;
 import com.openggf.game.mutation.ZoneLayoutMutationPipeline;
@@ -508,6 +509,11 @@ public class DefaultObjectServices implements ObjectServices {
     @Override
     public void requestSpecialStageEntry() {
         lm().requestSpecialStageEntry();
+    }
+
+    @Override
+    public void requestSpecialStageEntry(SpecialStageEntryRequest request) {
+        lm().requestSpecialStageEntry(request);
     }
 
     @Override

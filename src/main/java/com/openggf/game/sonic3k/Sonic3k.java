@@ -229,6 +229,10 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
         int zone = s3kIdx / 2;
         int act = s3kIdx % 2;
         Sonic3kLoadBootstrap bootstrap = Sonic3kBootstrapResolver.resolve(zone, act);
+        Sonic3kLevelResourceProfile resourceProfile =
+                Sonic3kLevelResourceProfile.resolve(zone, act);
+        int resourceZone = resourceProfile.romZone();
+        int resourceAct = resourceProfile.romAct();
 
         LOG.info(String.format("Loading S3K level: zone=%d act=%d (levelIdx=0x%X)", zone, act, levelIdx));
 
@@ -258,6 +262,20 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
         int secondaryBlocksAddr = word3 & 0x00FFFFFF;
         int primaryChunksAddr = word4 & 0x00FFFFFF;
         int secondaryChunksAddr = word5 & 0x00FFFFFF;
+        var customResources = resourceProfile.customResources().orElse(null);
+        if (customResources != null) {
+            // HPZS is assembled from explicit ROM sources by the special-stage
+            // return path; consume the typed profile instead of relying on the
+            // coincidentally adjacent generic table layout.
+            plcPrimary = customResources.primaryPlc();
+            plcSecondary = customResources.secondaryPlc();
+            primaryArtAddr = customResources.primaryArtAddress();
+            secondaryArtAddr = customResources.secondaryArtAddress();
+            primaryBlocksAddr = customResources.primaryBlocksAddress();
+            secondaryBlocksAddr = customResources.secondaryBlocksAddress();
+            primaryChunksAddr = customResources.primaryChunksAddress();
+            secondaryChunksAddr = customResources.secondaryChunksAddress();
+        }
         Sonic3kDeferredLevelResourceProfile deferredProfile =
                 Sonic3kDeferredLevelResourceProfile.forLevelLoadBlock(
                         llbIndex);
@@ -380,7 +398,8 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
 
         // Collision indices (loaded directly, not through resource plan)
         // Returns [primaryAddr, secondaryAddr, interleavedFlag]
-        CollisionAddressInfo collisionInfo = getCollisionAddresses(zone, act);
+        CollisionAddressInfo collisionInfo =
+                getCollisionAddresses(resourceZone, resourceAct);
         int primaryCollisionAddr = collisionInfo.primaryAddress();
         int secondaryCollisionAddr = collisionInfo.secondaryAddress();
         boolean interleavedCollision = collisionInfo.interleaved();
@@ -388,10 +407,13 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
         LevelResourcePlan plan = planBuilder.build();
 
         // Get layout address from LevelPtrs
-        int layoutAddr = getLayoutAddr(zone, act);
+        int layoutAddr = customResources != null
+                ? customResources.layoutAddress()
+                : getLayoutAddr(resourceZone, resourceAct);
 
         // Get level boundaries address from LevelSizes
-        int boundariesAddr = getLevelBoundariesAddr(zone, act, bootstrap);
+        int boundariesAddr =
+                getLevelBoundariesAddr(resourceZone, resourceAct, bootstrap);
         Integer boundariesMinXOverride = null;
         if (zone == 0 && act == 0
                 && bootstrap != null
@@ -416,7 +438,9 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
         }
 
         // Get palette address
-        int levelPaletteAddr = getLevelPaletteAddr(paletteIndex);
+        int levelPaletteAddr = customResources != null
+                ? customResources.introPaletteAddress()
+                : getLevelPaletteAddr(paletteIndex);
 
         // Character palette — Knuckles uses Pal_Knuckles, Sonic/Tails share Pal_SonicTails
         String mainCharCode = resolveActiveMainCharacterCode();
@@ -430,10 +454,10 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
         // Load objects and rings
         RomByteReader romReader = RomByteReader.fromRom(rom);
         var objectPlacement = new Sonic3kObjectPlacement(romReader);
-        var objectSpawns = objectPlacement.load(zone, act);
+        var objectSpawns = objectPlacement.load(resourceZone, resourceAct);
 
         var ringPlacement = new Sonic3kRingPlacement(romReader);
-        var ringSpawns = ringPlacement.load(zone, act);
+        var ringSpawns = ringPlacement.load(resourceZone, resourceAct);
 
         var ringSpriteSheet = loadRingSpriteSheet();
 
@@ -446,6 +470,7 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
                 characterPaletteAddr, levelPaletteAddr,
                 boundariesMinXOverride,
                 objectSpawns, ringSpawns, ringSpriteSheet);
+        validateCustomBounds(level, customResources);
         applyLockOnStartupPalette(level, zone, act);
 
         // Pre-decompress AIZ intro overlay data during level load so the
@@ -462,10 +487,61 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
         return level;
     }
 
+    private static void validateCustomBounds(
+            Sonic3kLevel level,
+            Sonic3kLevelResourceProfile.CustomLevelResources resources) {
+        if (resources == null) {
+            return;
+        }
+        if (level.getMinX() != resources.minX()
+                || level.getMaxX() != resources.maxX()
+                || level.getMinY() != resources.minY()
+                || level.getMaxY() != resources.maxY()) {
+            throw new IllegalStateException(String.format(
+                    "custom S3K bounds drift: loaded=[%04X,%04X,%04X,%04X] profile=[%04X,%04X,%04X,%04X]",
+                    level.getMinX(), level.getMaxX(), level.getMinY(), level.getMaxY(),
+                    resources.minX(), resources.maxX(), resources.minY(), resources.maxY()));
+        }
+    }
+
     @Override
     public void applyLevelLoadPaletteOverrides(Level level, int zone, int act) {
         if (level instanceof Sonic3kLevel sonic3kLevel) {
             applyLockOnStartupPalette(sonic3kLevel, zone, act);
+            applyHpzSanctuaryPaletteLifecycle(zone, act);
+        }
+    }
+
+    private void applyHpzSanctuaryPaletteLifecycle(int zone, int act) {
+        if (zone != Sonic3kZoneIds.ZONE_HPZ || act != 1) {
+            return;
+        }
+        var resources = Sonic3kLevelResourceProfile.resolve(zone, act)
+                .requireCustomResources();
+        var registry = GameServices.paletteOwnershipRegistryOrNull();
+        if (registry == null) {
+            return;
+        }
+        try {
+            // ROM: lea (Pal_HPZ+$20),a1 / target destination
+            // Normal_palette_line_3. Character and target line 2 are untouched.
+            byte[] mainPalette = rom.readBytes(
+                    resources.sanctuaryPaletteAddress(true)
+                            + Palette.PALETTE_SIZE_IN_ROM,
+                    2 * Palette.PALETTE_SIZE_IN_ROM);
+            for (int line = 0; line < 2; line++) {
+                registry.applyTargetPatch(
+                        S3kPaletteOwners.HPZ_PALETTE_CONTROL,
+                        line + 2,
+                        0,
+                        java.util.Arrays.copyOfRange(
+                                mainPalette,
+                                line * Palette.PALETTE_SIZE_IN_ROM,
+                                (line + 1) * Palette.PALETTE_SIZE_IN_ROM));
+            }
+        } catch (IOException e) {
+            throw new IllegalStateException(
+                    "failed to stage HPZ sanctuary target palette", e);
         }
     }
 
@@ -539,8 +615,9 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
             return null;
         }
 
-        int act = Math.max(0, Math.min(actIndex, Sonic3kConstants.ACTS_PER_ZONE_STRIDE - 1));
-        int entryIndex = zoneIndex * Sonic3kConstants.ACTS_PER_ZONE_STRIDE + act;
+        Sonic3kLevelResourceProfile resourceProfile =
+                Sonic3kLevelResourceProfile.resolve(zoneIndex, actIndex);
+        int entryIndex = resourceProfile.tableIndex();
         int entryAddr = startTableAddr + entryIndex * Sonic3kConstants.START_LOCATION_ENTRY_SIZE;
 
         if (!isReadable(entryAddr, Sonic3kConstants.START_LOCATION_ENTRY_SIZE)) {
@@ -777,7 +854,7 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
     }
 
     static int resolveLevelLoadBlockIndex(int zone, int act, Sonic3kLoadBootstrap bootstrap) {
-        int baseIndex = zone * Sonic3kConstants.ACTS_PER_ZONE_STRIDE + act;
+        int baseIndex = Sonic3kLevelResourceProfile.resolve(zone, act).tableIndex();
 
         // ROM parity (LoadLevelLoadBlock / LoadLevelLoadBlock2):
         // For AIZ1 Sonic/Tails with no starpost (intro path), d0 is NOT overridden

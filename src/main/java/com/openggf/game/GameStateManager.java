@@ -30,6 +30,11 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
     private int chaosEmeraldCount;
     private boolean[] gotEmeralds;
     private boolean[] gotSuperEmeralds;
+    /*
+     * For rewind compatibility these existing arrays encode the two ROM bits:
+     * gotEmeralds is bit 0 and gotSuperEmeralds is bit 1. Public legacy
+     * queries below expose possession semantics, not the raw bits.
+     */
     /** S3K ROM: Emeralds_converted_flag. Durable across levels and rewind. */
     private boolean emeraldsConverted;
 
@@ -320,6 +325,57 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
         this.emeraldsConverted = emeraldsConverted != null
                 ? emeraldsConverted
                 : superEmeralds != null && !superEmeralds.isEmpty();
+        for (int i = 0; i < gotEmeralds.length; i++) {
+            int state = gotSuperEmeralds[i] ? 3
+                    : gotEmeralds[i] ? (this.emeraldsConverted ? 2 : 1) : 0;
+            writeS3kEmeraldState(i, state);
+        }
+        this.emeraldsConverted = this.emeraldsConverted
+                || getS3kEmeraldStates().stream().anyMatch(state -> state >= 2);
+        synchronizeEmeraldCount();
+    }
+
+    public synchronized void restoreS3kEmeraldProgress(List<Integer> states, boolean emeraldsConverted) {
+        if (states == null || states.size() != gotEmeralds.length) {
+            throw new IllegalArgumentException(
+                    "Expected " + gotEmeralds.length + " S3K emerald states");
+        }
+        for (int i = 0; i < states.size(); i++) {
+            Integer value = states.get(i);
+            if (value == null || value < 0 || value > 3) {
+                throw new IllegalArgumentException("Invalid S3K emerald state at index " + i + ": " + value);
+            }
+            writeS3kEmeraldState(i, value);
+        }
+        this.emeraldsConverted = emeraldsConverted
+                || states.stream().anyMatch(value -> value >= 2);
+        synchronizeEmeraldCount();
+    }
+
+    public List<Integer> getS3kEmeraldStates() {
+        List<Integer> states = new ArrayList<>(gotEmeralds.length);
+        for (int i = 0; i < gotEmeralds.length; i++) {
+            states.add(readS3kEmeraldState(i));
+        }
+        return List.copyOf(states);
+    }
+
+    private int readS3kEmeraldState(int index) {
+        return (gotEmeralds[index] ? 1 : 0) | (gotSuperEmeralds[index] ? 2 : 0);
+    }
+
+    private void writeS3kEmeraldState(int index, int state) {
+        gotEmeralds[index] = (state & 1) != 0;
+        gotSuperEmeralds[index] = (state & 2) != 0;
+    }
+
+    private void synchronizeEmeraldCount() {
+        emeraldCount = 0;
+        for (int i = 0; i < gotEmeralds.length; i++) {
+            if (readS3kEmeraldState(i) != 0) {
+                emeraldCount++;
+            }
+        }
     }
 
     public void loseLife() {
@@ -391,13 +447,13 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
      * @param index Emerald index (0-6)
      */
     public boolean hasEmerald(int index) {
-        return index >= 0 && index < gotEmeralds.length && gotEmeralds[index];
+        return index >= 0 && index < gotEmeralds.length && readS3kEmeraldState(index) != 0;
     }
 
     public List<Integer> getCollectedChaosEmeraldIndices() {
         List<Integer> indices = new ArrayList<>();
         for (int i = 0; i < gotEmeralds.length; i++) {
-            if (gotEmeralds[i]) {
+            if (readS3kEmeraldState(i) != 0) {
                 indices.add(i);
             }
         }
@@ -410,7 +466,7 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
             return List.of();
         }
         for (int i = 0; i < gotSuperEmeralds.length; i++) {
-            if (gotSuperEmeralds[i]) {
+            if (readS3kEmeraldState(i) == 3) {
                 indices.add(i);
             }
         }
@@ -427,8 +483,8 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
                 " but valid range is 0-" + (gotEmeralds.length - 1));
             return;
         }
-        if (!gotEmeralds[index]) {
-            gotEmeralds[index] = true;
+        if (readS3kEmeraldState(index) == 0) {
+            writeS3kEmeraldState(index, 1);
             emeraldCount++;
         }
     }
@@ -437,7 +493,7 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
         return gotSuperEmeralds != null
                 && index >= 0
                 && index < gotSuperEmeralds.length
-                && gotSuperEmeralds[index];
+                && readS3kEmeraldState(index) == 3;
     }
 
     public synchronized void markSuperEmeraldCollected(int index) {
@@ -446,7 +502,8 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
                     " but valid range is 0-" + ((gotSuperEmeralds == null ? 0 : gotSuperEmeralds.length) - 1));
             return;
         }
-        gotSuperEmeralds[index] = true;
+        writeS3kEmeraldState(index, 3);
+        synchronizeEmeraldCount();
         emeraldsConverted = true;
     }
 
@@ -454,8 +511,8 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
         if (gotSuperEmeralds == null || gotSuperEmeralds.length == 0) {
             return false;
         }
-        for (boolean gotSuperEmerald : gotSuperEmeralds) {
-            if (!gotSuperEmerald) {
+        for (int i = 0; i < gotSuperEmeralds.length; i++) {
+            if (readS3kEmeraldState(i) != 3) {
                 return false;
             }
         }
@@ -467,7 +524,8 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
     }
 
     public void setEmeraldsConverted(boolean emeraldsConverted) {
-        this.emeraldsConverted = emeraldsConverted;
+        this.emeraldsConverted = emeraldsConverted
+                || getS3kEmeraldStates().stream().anyMatch(state -> state >= 2);
     }
 
     /**
@@ -844,7 +902,9 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
         this.emeraldCount = snapshot.emeraldCount();
         this.gotEmeralds = snapshot.gotEmeralds().clone();
         this.gotSuperEmeralds = snapshot.gotSuperEmeralds().clone();
-        this.emeraldsConverted = snapshot.emeraldsConverted();
+        this.emeraldsConverted = snapshot.emeraldsConverted()
+                || getS3kEmeraldStates().stream().anyMatch(state -> state >= 2);
+        synchronizeEmeraldCount();
         this.currentBossId = snapshot.currentBossId();
         this.bossDefeatedFlag = snapshot.bossDefeatedFlag();
         this.screenShakeActive = snapshot.screenShakeActive();

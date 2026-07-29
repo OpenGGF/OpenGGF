@@ -125,6 +125,13 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             new S3kFixedAirCountdownManager();
     private int fixedAirCountdownZone = -1;
     private int fixedAirCountdownAct = -1;
+    private int activeRomEventIdentity = -1;
+    private ScreenEventIdentity screenEventIdentity = ScreenEventIdentity.STANDARD;
+
+    public enum ScreenEventIdentity {
+        STANDARD,
+        HPZ_SPECIAL_STAGE_HUB
+    }
 
     // Tracks whether the intro-fall forced animation is active on each player.
     // Cleared per-player when they land (air → ground transition).
@@ -183,6 +190,18 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
 
     @Override
     protected void onInitLevel(int zone, int act) {
+        if (zone >= 0 && act >= 0) {
+            Sonic3kLevelResourceProfile resourceProfile =
+                    Sonic3kLevelResourceProfile.resolve(zone, act);
+            activeRomEventIdentity = resourceProfile.romEventIdentity();
+            screenEventIdentity = resourceProfile.eventKind()
+                    == Sonic3kLevelResourceProfile.EventKind.HPZ_SPECIAL_STAGE_HUB
+                    ? ScreenEventIdentity.HPZ_SPECIAL_STAGE_HUB
+                    : ScreenEventIdentity.STANDARD;
+        } else {
+            activeRomEventIdentity = -1;
+            screenEventIdentity = ScreenEventIdentity.STANDARD;
+        }
         fbzCloudRecreationBatchFactory = null;
         bootstrap = Sonic3kBootstrapResolver.resolve(zone, act);
         introFallActiveOnPlayer = false;
@@ -270,6 +289,14 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         installZoneRuntimeState(zone, act);
         restoreFbzMagneticTransitionState(fbzMagneticTransitionState);
         installFixedDynamicObjects(zone);
+    }
+
+    public int getActiveRomEventIdentity() {
+        return activeRomEventIdentity;
+    }
+
+    public ScreenEventIdentity getScreenEventIdentity() {
+        return screenEventIdentity;
     }
 
     private FbzZoneRuntimeState.MagneticTransitionState captureFbzMagneticTransitionState(
@@ -481,6 +508,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         // foreground and background event handlers. Keep these as independent
         // words: transition/deform code can subsequently mutate the copies.
         camera().copyLivePositionToScreenEventWords();
+        if (screenEventIdentity == ScreenEventIdentity.HPZ_SPECIAL_STAGE_HUB) {
+            applyHpzsScreenEvent(camera());
+        }
 
         // ROM: ScreenEvents dispatches to both FG and BG handlers each frame.
         // Boss_flag gates FG events during boss fights.
@@ -513,6 +543,14 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         releasePendingCnzPostTransition();
         updatePendingCnzAct2LevelSizeChange();
         syncSidekickBoundsToCamera();
+    }
+
+    /**
+     * ROM {@code HPZS_ScreenEvent}: publish screen shake on the copied camera
+     * word before the ordinary tile-movement draw consumes it.
+     */
+    static void applyHpzsScreenEvent(com.openggf.camera.Camera camera) {
+        camera.setYCopy((short) (camera.getYCopy() + camera.getShakeOffsetY()));
     }
 
     @Override

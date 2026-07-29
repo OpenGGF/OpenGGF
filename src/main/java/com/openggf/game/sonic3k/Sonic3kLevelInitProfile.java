@@ -37,7 +37,7 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile {
             steps.add(restoreCheckpointStep(ctx));
             steps.add(spawnPlayerStep(ctx));
             steps.add(resetPlayerStateStep(ctx));
-            steps.add(initCameraStep());
+            steps.add(initCameraStep(ctx));
             steps.add(initLevelEventsStep());
             steps.add(spawnSidekickStep());
             steps.add(initZonePlayerStateStep());
@@ -59,6 +59,30 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile {
         return new InitStep("InitZonePlayerState",
             "S3K: SpawnLevelMainSprites — zone-specific player animation/air state",
             levelEventManager::applyZonePlayerState);
+    }
+
+    private InitStep initCameraStep(LevelLoadContext ctx) {
+        return new InitStep("InitCamera",
+                "S3K Get_LevelSizeStart / HPZ special-stage hub camera",
+                () -> {
+                    GameServices.level().initCameraForLevel();
+                    int zone = GameServices.level().getCurrentZone();
+                    int act = GameServices.level().getCurrentAct();
+                    if (ctx.hasCheckpoint()
+                            || zone != com.openggf.game.sonic3k.constants.Sonic3kZoneIds.ZONE_HPZ
+                            || act != 1) {
+                        return;
+                    }
+                    Sonic3kLevelResourceProfile profile =
+                            Sonic3kLevelResourceProfile.resolve(zone, act);
+                    Sonic3kLevelResourceProfile.CustomLevelResources resources =
+                            profile.requireCustomResources();
+                    var camera = GameServices.camera();
+                    camera.setX((short) resources.cameraX());
+                    camera.setY((short) resources.cameraY());
+                    camera.setXCopy((short) resources.cameraX());
+                    camera.setYCopy((short) resources.cameraY());
+                });
     }
 
     @Override

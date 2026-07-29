@@ -39,6 +39,19 @@ public class Sonic3kConstants {
     // LevelLoadBlock entry index for "SONIC/TAILS INTRO" in sonic3k.asm levartptrs table.
     // Used by AIZ1 intro-skip bootstrap to source gameplay-ready 16x16/8x8 secondary data.
     public static final int LEVEL_LOAD_BLOCK_AIZ1_INTRO_INDEX = 26;
+    // Current_zone_and_act=$1701: nonlinear resource slot used by the
+    // Super Emerald sanctuary presented to the engine as canonical HPZ $1601.
+    public static final int LEVEL_LOAD_BLOCK_HPZ_SANCTUARY_INDEX = 47;
+    public static final int HPZ_SANCTUARY_LAYOUT_ADDR = 0x0A7924;
+    public static final int HPZ_PRIMARY_ART_ADDR = 0x1BEE58;
+    public static final int HPZ_SECONDARY_ART_ADDR = 0x1C3F2C;
+    public static final int HPZ_PRIMARY_BLOCKS_ADDR = 0x1BECF8;
+    public static final int HPZ_SECONDARY_BLOCKS_ADDR = 0x1C30FC;
+    public static final int HPZ_PRIMARY_CHUNKS_ADDR = 0x1BFBEA;
+    public static final int HPZ_SECONDARY_CHUNKS_ADDR = 0x1C71FE;
+    public static final int HPZ_INTRO_PALETTE_ADDR = 0x0A9D3C;
+    public static final int HPZ_MAIN_PALETTE_ADDR = 0x0669D2;
+    public static final int HPZ_LEVEL_PLC = 0x48;
 
     // ===== Level sizes table =====
     // 8 bytes per act: dc.w xstart, xend, ystart, yend

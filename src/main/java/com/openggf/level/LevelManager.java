@@ -3762,8 +3762,17 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         GameServices.playbackDebug().onSpecialStageRequestRaised();
     }
 
+    public void requestSpecialStageEntry(com.openggf.game.SpecialStageEntryRequest request) {
+        transitions.requestSpecialStageEntry(request);
+        GameServices.playbackDebug().onSpecialStageRequestRaised();
+    }
+
     /** @see LevelTransitionCoordinator#consumeSpecialStageRequest() */
     public boolean consumeSpecialStageRequest() { return transitions.consumeSpecialStageRequest(); }
+
+    public com.openggf.game.SpecialStageEntryRequest consumeSpecialStageEntryRequest() {
+        return transitions.consumeSpecialStageEntryRequest();
+    }
 
     /** @see LevelTransitionCoordinator#consumeSpecialStageReturnLevelReloadRequest() */
     public boolean consumeSpecialStageReturnLevelReloadRequest() { return transitions.consumeSpecialStageReturnLevelReloadRequest(); }

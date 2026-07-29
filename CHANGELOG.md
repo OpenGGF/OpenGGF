@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Feature: Sonic 3 & Knuckles now has the runtime foundations for ROM-accurate
+  Super Emerald progression. Exact four-state emerald data survives save and
+  rewind, Special Stage requests can select an explicit emerald and reward
+  without double publication, and the Hidden Palace sanctuary resolves its
+  nonlinear `$1701` resources, palettes, PLC, camera, and event identity.
 - Fix: Sonic 3 & Knuckles now models the ROM's full 90-entry dynamic object window instead of 89. `Dynamic_object_RAM ds.b object_size*90` (sonic3k.constants.asm:307), and with the engine's dynamic base at slot 4 the window is absolute SST slots 4-93 — exactly the range `Offset_ObjectsDuringTransition` walks in its 90 `dbf` iterations (sonic3k.asm:104166-104180). At 89 the last slot dropped out of the allocatable window, displacing any object the ROM would place there and shifting every downstream slot identity, including lost-ring spill phases.
 - Fix: objects can no longer be seated below the first dynamic slot. The predicate that gates `createDynamicObjectInSlot` was shared with the object execution-order bookkeeping, so widening it to let explicit fixed SST occupants execute also widened the allocation guard. Execution-order classification now has its own predicate and the allocation guard is back to the true dynamic window.
 - Fix: creator one-shots defined by a mod could never play. `playNamespacedSfx` was gated on the retired live-backend command path, which is hardwired off, so the command was never recorded and the presentation layer had nothing to materialize.

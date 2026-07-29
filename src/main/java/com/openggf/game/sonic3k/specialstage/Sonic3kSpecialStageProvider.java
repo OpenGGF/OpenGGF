@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.specialstage;
 
 import com.openggf.audio.GameMusic;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.EmeraldRewardKind;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.ResultsScreen;
 import com.openggf.game.SpecialStageAccessType;
@@ -34,9 +35,7 @@ public class Sonic3kSpecialStageProvider implements SpecialStageProvider {
 
     @Override
     public int consumeStageIndexForEntry(GameStateManager gameState) {
-        boolean superEmeraldMode = gameState.hasAllEmeralds()
-                && !gameState.hasAllSuperEmeralds();
-        return gameState.consumeCurrentSpecialStageIndexAndAdvanceSkippingCollected(superEmeraldMode);
+        return gameState.consumeCurrentSpecialStageIndexAndAdvanceSkippingCollected(false);
     }
 
     @Override
@@ -82,6 +81,21 @@ public class Sonic3kSpecialStageProvider implements SpecialStageProvider {
     public void initializeStage(int stageIndex) throws IOException {
         manager.reset();
         manager.initialize(stageIndex);
+    }
+
+    @Override
+    public void initializeStage(int stageIndex,
+                                com.openggf.game.SpecialStageStartupPolicy policy,
+                                EmeraldRewardKind rewardKind) throws IOException {
+        java.util.Objects.requireNonNull(policy, "policy");
+        java.util.Objects.requireNonNull(rewardKind, "rewardKind");
+        manager.reset();
+        manager.initialize(stageIndex, rewardKind);
+    }
+
+    @Override
+    public boolean ownsEmeraldReward() {
+        return true;
     }
 
     @Override

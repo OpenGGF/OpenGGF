@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.specialstage;
 import com.openggf.audio.GameMusic;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.EmeraldRewardKind;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
@@ -194,6 +195,11 @@ public class Sonic3kSpecialStageManager {
      * @throws IOException if ROM data loading fails
      */
     public void initialize(int stageIndex) throws IOException {
+        initialize(stageIndex, EmeraldRewardKind.CHAOS_EMERALD);
+    }
+
+    public void initialize(int stageIndex, EmeraldRewardKind rewardKind) throws IOException {
+        java.util.Objects.requireNonNull(rewardKind, "rewardKind");
         LOGGER.info("Initializing S3K special stage " + stageIndex);
         this.currentStage = stageIndex;
         this.initialized = true;
@@ -217,8 +223,7 @@ public class Sonic3kSpecialStageManager {
         // Resolve character from configuration
         this.playerCharacter = resolvePlayerCharacter();
         this.tailsEnabled = (playerCharacter == PlayerCharacter.SONIC_AND_TAILS);
-        GameStateManager state = GameServices.gameState();
-        this.superEmeraldMode = resolveSuperEmeraldMode(state);
+        this.superEmeraldMode = isSuperEmeraldReward(rewardKind);
 
         this.bannerPhase = 0;
         this.bannerTimer = 0;
@@ -257,15 +262,8 @@ public class Sonic3kSpecialStageManager {
         tailsTailsMappingFrame = 1;
     }
 
-    static boolean resolveSuperEmeraldMode(GameStateManager state) {
-        boolean superEmeraldMode = state.hasAllEmeralds() && !state.hasAllSuperEmeralds();
-        if (superEmeraldMode) {
-            // ROM progression converts the Chaos Emeralds before the first
-            // Super Emerald is awarded; leaving this stage must not re-enable
-            // the Chaos-Emerald transformation route.
-            state.setEmeraldsConverted(true);
-        }
-        return superEmeraldMode;
+    static boolean isSuperEmeraldReward(EmeraldRewardKind rewardKind) {
+        return rewardKind == EmeraldRewardKind.SUPER_EMERALD;
     }
 
     /** Pattern ID base for special stage art (avoids conflicts with level patterns). */
@@ -847,16 +845,7 @@ public class Sonic3kSpecialStageManager {
      * ROM: loc_9CE6 (sonic3k.asm:12664)
      */
     private void collectEmerald() {
-        // Mark emerald collected in game state
-        GameStateManager gameState = GameServices.gameState();
-        if (currentStage < EMERALD_COUNT) {
-            emeraldCollected = true;
-            if (superEmeraldMode) {
-                gameState.markSuperEmeraldCollected(currentStage);
-            } else {
-                gameState.markEmeraldCollected(currentStage);
-            }
-        }
+        publishEmeraldReward();
 
         clearRoutine = 4; // Skip to completion
         player.setFadeTimer(1);
@@ -1219,7 +1208,29 @@ public class Sonic3kSpecialStageManager {
     }
 
     public void setEmeraldCollected(boolean collected) {
-        this.emeraldCollected = collected;
+        if (collected) {
+            publishEmeraldReward();
+        } else {
+            this.emeraldCollected = false;
+        }
+    }
+
+    private void publishEmeraldReward() {
+        emeraldCollected = publishEmeraldReward(
+                GameServices.gameState(), currentStage, superEmeraldMode, emeraldCollected);
+    }
+
+    static boolean publishEmeraldReward(GameStateManager gameState, int stageIndex,
+                                        boolean superEmeraldMode, boolean alreadyPublished) {
+        if (alreadyPublished || stageIndex < 0 || stageIndex >= EMERALD_COUNT) {
+            return alreadyPublished;
+        }
+        if (superEmeraldMode) {
+            gameState.markSuperEmeraldCollected(stageIndex);
+        } else {
+            gameState.markEmeraldCollected(stageIndex);
+        }
+        return true;
     }
 
     public int getRingsCollected() {

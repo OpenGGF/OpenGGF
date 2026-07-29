@@ -118,6 +118,33 @@ public interface SpecialStageProvider extends MiniGameProvider {
         initializeStage(stageIndex);
     }
 
+    /** Initializes a stage using the reward semantics carried by its entry request. */
+    default void initializeStage(int stageIndex, SpecialStageStartupPolicy policy,
+                                 EmeraldRewardKind rewardKind) throws IOException {
+        Objects.requireNonNull(rewardKind, "rewardKind");
+        initializeStage(stageIndex, policy);
+    }
+
+    /**
+     * Whether the stage implementation publishes its emerald reward directly.
+     * Providers returning false retain the legacy GameLoop-owned Chaos Emerald award.
+     */
+    default boolean ownsEmeraldReward() {
+        return false;
+    }
+
+    /** Publishes a successful reward for providers retaining GameLoop delegation. */
+    default void publishEmeraldReward(GameStateManager gameState, int stageIndex,
+                                      EmeraldRewardKind rewardKind) {
+        Objects.requireNonNull(gameState, "gameState");
+        Objects.requireNonNull(rewardKind, "rewardKind");
+        if (rewardKind == EmeraldRewardKind.SUPER_EMERALD) {
+            gameState.markSuperEmeraldCollected(stageIndex);
+        } else {
+            gameState.markEmeraldCollected(stageIndex);
+        }
+    }
+
     /** Returns whether entry presentation may reveal the initialized stage. */
     default boolean isEntryPresentationReady() {
         return true;

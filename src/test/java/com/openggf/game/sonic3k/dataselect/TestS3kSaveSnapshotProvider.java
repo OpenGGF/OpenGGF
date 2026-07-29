@@ -19,6 +19,17 @@ import static org.mockito.Mockito.*;
 class TestS3kSaveSnapshotProvider {
 
     @Test
+    void restoreProgressRejectsFractionalEmeraldStates() {
+        com.openggf.game.GameStateManager state = new com.openggf.game.GameStateManager();
+
+        boolean restored = new S3kSaveSnapshotProvider().restoreProgress(
+                state, 3, 0, Map.of("emeraldStates", List.of(0, 1, 2, 3, 0, 1, 2.5)));
+
+        assertFalse(restored);
+        assertEquals(List.of(0, 0, 0, 0, 0, 0, 0), state.getS3kEmeraldStates());
+    }
+
+    @Test
     void capture_includesTeamAndStartLocation() {
         SaveSessionContext ctx = SaveSessionContext.forSlot("s3k", 1,
                 new SelectedTeam("sonic", List.of("tails")), 0, 0);
@@ -78,6 +89,7 @@ class TestS3kSaveSnapshotProvider {
         when(gameState.getCollectedChaosEmeraldIndices()).thenReturn(List.of(0, 2, 4, 6));
         when(gameState.getCollectedSuperEmeraldIndices()).thenReturn(List.of(2));
         when(gameState.isEmeraldsConverted()).thenReturn(true);
+        when(gameState.getS3kEmeraldStates()).thenReturn(List.of(0, 2, 1, 0, 1, 0, 3));
 
         S3kSaveSnapshotProvider provider = new S3kSaveSnapshotProvider();
         Map<String, Object> payload = provider.capture(
@@ -91,6 +103,7 @@ class TestS3kSaveSnapshotProvider {
         assertEquals(List.of(0, 2, 4, 6), payload.get("chaosEmeralds"));
         assertEquals(List.of(2), payload.get("superEmeralds"));
         assertEquals(true, payload.get("emeraldsConverted"));
+        assertEquals(List.of(0, 2, 1, 0, 1, 0, 3), payload.get("emeraldStates"));
     }
 
     @Test

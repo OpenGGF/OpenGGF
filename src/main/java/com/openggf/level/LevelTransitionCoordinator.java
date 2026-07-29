@@ -1,6 +1,7 @@
 package com.openggf.level;
 
 import com.openggf.game.BonusStageType;
+import com.openggf.game.SpecialStageEntryRequest;
 
 /**
  * Holds all transition request/consume state that was previously scattered
@@ -14,7 +15,7 @@ import com.openggf.game.BonusStageType;
 public class LevelTransitionCoordinator {
 
     // ── Special stage ──────────────────────────────────────────────────
-    private boolean specialStageRequestedFromCheckpoint;
+    private SpecialStageEntryRequest specialStageEntryRequest;
     private boolean specialStageReturnLevelReloadRequested;
 
     // ── S3K big ring return (ROM: Saved2_* variables) ──────────
@@ -87,7 +88,17 @@ public class LevelTransitionCoordinator {
      * Request entry to special stage using the current game's access method.
      */
     public void requestSpecialStageEntry() {
-        this.specialStageRequestedFromCheckpoint = true;
+        requestSpecialStageEntry(SpecialStageEntryRequest.ordinary());
+    }
+
+    public void requestSpecialStageEntry(SpecialStageEntryRequest request) {
+        this.specialStageEntryRequest = java.util.Objects.requireNonNull(request, "request");
+    }
+
+    public SpecialStageEntryRequest consumeSpecialStageEntryRequest() {
+        SpecialStageEntryRequest request = specialStageEntryRequest;
+        specialStageEntryRequest = null;
+        return request;
     }
 
     /**
@@ -96,9 +107,7 @@ public class LevelTransitionCoordinator {
      * @return true if a special stage was requested since last check
      */
     public boolean consumeSpecialStageRequest() {
-        boolean requested = specialStageRequestedFromCheckpoint;
-        specialStageRequestedFromCheckpoint = false;
-        return requested;
+        return consumeSpecialStageEntryRequest() != null;
     }
 
     /**
@@ -108,7 +117,7 @@ public class LevelTransitionCoordinator {
      * transition without swallowing it (spec 2026-07-18, addition #1).
      */
     public boolean isSpecialStageRequested() {
-        return specialStageRequestedFromCheckpoint;
+        return specialStageEntryRequest != null;
     }
 
     /**
@@ -712,7 +721,7 @@ public class LevelTransitionCoordinator {
      * Called from {@code LevelManager.resetState()}.
      */
     public void resetState() {
-        specialStageRequestedFromCheckpoint = false;
+        specialStageEntryRequest = null;
         specialStageReturnLevelReloadRequested = false;
         bigRingReturn = null;
         bonusStageRequested = null;

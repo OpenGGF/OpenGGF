@@ -232,6 +232,16 @@ public class TestGameStateManager {
     }
 
     @Test
+    public void convertedFlagCannotClearWhileGrayOrSuperStateExists() {
+        com.openggf.game.sonic3k.S3kEmeraldProgression.restore(
+                gsm, java.util.List.of(0, 0, 2, 0, 0, 0, 3), true);
+
+        gsm.setEmeraldsConverted(false);
+
+        assertTrue(gsm.isEmeraldsConverted());
+    }
+
+    @Test
     public void collectingFirstSuperEmeraldMarksChaosEmeraldsConverted() {
         gsm.markEmeraldCollected(0);
 

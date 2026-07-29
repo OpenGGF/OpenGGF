@@ -2322,12 +2322,21 @@ public class Engine {
 		}
 		int lives = readInt(payload, "lives", gameplayMode.getGameStateManager().getLives());
 		int continues = readInt(payload, "continues", gameplayMode.getGameStateManager().getContinues());
-		gameplayMode.getGameStateManager().restoreSaveProgress(
-				lives,
-				continues,
-				readIntList(payload.get("chaosEmeralds")),
-				readIntList(payload.get("superEmeralds")),
-				payload.get("emeraldsConverted") instanceof Boolean converted ? converted : null);
+		GameStateManager gameState = gameplayMode.getGameStateManager();
+		com.openggf.game.save.SaveSnapshotProvider saveProvider =
+				gameplayMode.getWorldSession() == null
+						? null
+						: gameplayMode.getWorldSession().getGameModule().getSaveSnapshotProvider();
+		boolean restored = saveProvider != null
+				&& saveProvider.restoreProgress(gameState, lives, continues, payload);
+		if (!restored) {
+			gameState.restoreSaveProgress(
+					lives,
+					continues,
+					readIntList(payload.get("chaosEmeralds")),
+					readIntList(payload.get("superEmeralds")),
+					payload.get("emeraldsConverted") instanceof Boolean converted ? converted : null);
+		}
 	}
 
 	private static SelectedTeam teamFromPayload(Map<String, Object> payload, SelectedTeam fallback) {

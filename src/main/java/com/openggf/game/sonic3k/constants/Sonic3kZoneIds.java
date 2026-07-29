@@ -38,5 +38,5 @@ public class Sonic3kZoneIds {
     public static final int ZONE_SLOT_MACHINE   = 0x15;  // Slot Machine
 
     public static final int MAIN_ZONE_COUNT = 13; // AIZ through DDZ
-    public static final int TOTAL_ZONE_COUNT = 22; // AIZ(0) through Slots(21), including gaps
+    public static final int TOTAL_ZONE_COUNT = 23; // AIZ(0) through canonical HPZ(22), including gaps
 }

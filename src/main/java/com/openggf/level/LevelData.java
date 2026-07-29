@@ -91,7 +91,11 @@ public enum LevelData implements LevelDescriptor {
     // Start positions are loaded from ROM at runtime; values here are fallback defaults
     S3K_GUMBALL(0xE6, 0x0100, 0x0120),
     S3K_GLOWING_SPHERE(0xE8, 0x0120, 0x0100),
-    S3K_SLOT_MACHINE(0xEA, 0x0120, 0x0100);
+    S3K_SLOT_MACHINE(0xEA, 0x0120, 0x0100),
+
+    // Canonical HPZ identity ($1601), backed by the ROM's nonlinear $1701
+    // Super Emerald sanctuary resource slot.
+    S3K_HIDDEN_PALACE_SANCTUARY(0xED, 0x1640, 0x03AC);
 
     private final int levelIndex;
     private final int startXPos;

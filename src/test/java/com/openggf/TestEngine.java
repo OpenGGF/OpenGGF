@@ -107,6 +107,68 @@ class TestEngine {
     }
 
     @Test
+    void restoreS3kSaveProgressPreservesExactMixedRomStates() {
+        GameStateManager sourceState = new GameStateManager();
+        com.openggf.game.sonic3k.S3kEmeraldProgression.restore(
+                sourceState, List.of(0, 2, 1, 3, 0, 1, 2), true);
+        GameplayModeContext sourceGameplay = mock(GameplayModeContext.class);
+        LevelManager sourceLevel = mock(LevelManager.class);
+        GameModule sourceModule = mock(GameModule.class);
+        when(sourceGameplay.getGameStateManager()).thenReturn(sourceState);
+        when(sourceGameplay.getLevelManager()).thenReturn(sourceLevel);
+        when(sourceLevel.getCurrentZone()).thenReturn(7);
+        when(sourceLevel.getCurrentAct()).thenReturn(0);
+        when(sourceLevel.getGameModule()).thenReturn(sourceModule);
+        when(sourceModule.getZoneRegistry()).thenReturn(new com.openggf.game.sonic3k.Sonic3kZoneRegistry());
+        SaveSessionContext save = SaveSessionContext.forSlot(
+                "s3k", 1, new SelectedTeam("sonic", List.of("tails")), 7, 0);
+        Map<String, Object> payload =
+                new com.openggf.game.sonic3k.dataselect.S3kSaveSnapshotProvider().capture(
+                        SaveReason.PROGRESSION_SAVE,
+                        com.openggf.game.save.RuntimeSaveContext.forGameplayMode(sourceGameplay, save));
+
+        GameplayModeContext targetGameplay = mock(GameplayModeContext.class);
+        GameStateManager gameState = new GameStateManager();
+        when(targetGameplay.getGameStateManager()).thenReturn(gameState);
+        com.openggf.game.session.WorldSession targetWorld =
+                mock(com.openggf.game.session.WorldSession.class);
+        GameModule targetModule = mock(GameModule.class);
+        when(targetGameplay.getWorldSession()).thenReturn(targetWorld);
+        when(targetWorld.getGameModule()).thenReturn(targetModule);
+        when(targetModule.getSaveSnapshotProvider()).thenReturn(
+                new com.openggf.game.sonic3k.dataselect.S3kSaveSnapshotProvider());
+        Engine.restoreGameplayModeFromDataSelectPayload(targetGameplay, payload);
+
+        assertEquals(List.of(0, 2, 1, 3, 0, 1, 2),
+                com.openggf.game.sonic3k.S3kEmeraldProgression.from(gameState).states());
+        assertEquals(List.of(1, 2, 3, 5, 6), gameState.getCollectedChaosEmeraldIndices());
+        assertEquals(List.of(3), gameState.getCollectedSuperEmeraldIndices());
+    }
+
+    @Test
+    void restoreS3kSaveProgressFallsBackWhenExactStatePayloadIsInvalid() {
+        GameplayModeContext gameplayMode = mock(GameplayModeContext.class);
+        GameStateManager gameState = new GameStateManager();
+        when(gameplayMode.getGameStateManager()).thenReturn(gameState);
+        com.openggf.game.session.WorldSession world =
+                mock(com.openggf.game.session.WorldSession.class);
+        GameModule module = mock(GameModule.class);
+        when(gameplayMode.getWorldSession()).thenReturn(world);
+        when(world.getGameModule()).thenReturn(module);
+        when(module.getSaveSnapshotProvider()).thenReturn(
+                new com.openggf.game.sonic3k.dataselect.S3kSaveSnapshotProvider());
+
+        Engine.restoreGameplayModeFromDataSelectPayload(gameplayMode, Map.of(
+                "emeraldStates", List.of(0, 4),
+                "chaosEmeralds", List.of(1, 4),
+                "superEmeralds", List.of(4),
+                "emeraldsConverted", true));
+
+        assertEquals(List.of(0, 2, 0, 0, 3, 0, 0),
+                com.openggf.game.sonic3k.S3kEmeraldProgression.from(gameState).states());
+    }
+
+    @Test
     void drawMasterTitleScreenDoesNotRequireGameplayCamera() throws Exception {
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         Engine engine = new Engine();

@@ -15,6 +15,8 @@ import java.util.List;
  * @param continues     the player's remaining continues
  * @param chaosEmeralds collected chaos emerald indices
  * @param superEmeralds collected super emerald indices
+ * @param emeraldStates exact two-bit ROM state for each emerald
+ * @param emeraldsConverted whether sanctuary conversion has begun
  * @param clear         whether this slot represents a completed game
  */
 public record S3kSavePayload(
@@ -26,5 +28,7 @@ public record S3kSavePayload(
         int continues,
         List<Integer> chaosEmeralds,
         List<Integer> superEmeralds,
+        List<Integer> emeraldStates,
+        boolean emeraldsConverted,
         boolean clear
 ) {}
