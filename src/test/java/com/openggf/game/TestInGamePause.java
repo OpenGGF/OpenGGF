@@ -3,6 +3,7 @@ package com.openggf.game;
 import com.openggf.LevelFrameContext;
 import com.openggf.LevelFrameResult;
 import com.openggf.LevelFrameStep;
+import com.openggf.LevelFrameTestStep;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
@@ -140,7 +141,7 @@ class TestInGamePause {
         // short-circuits before touching level managers, so null camera/levelManager
         // are never dereferenced on the paused path.
         advanceFrame.run();
-        LevelFrameResult frame1 = LevelFrameStep.executeWithPause(
+        LevelFrameResult frame1 = LevelFrameTestStep.executeWithPause(
                 context, /* levelManager */ null, /* camera */ null,
                 spriteUpdate, /* startEdgePressed */ true, LevelFrameStep.DIRECT_WRAPPER);
         assertEquals(LevelFrameResult.PAUSED, frame1);
@@ -150,7 +151,7 @@ class TestInGamePause {
 
         // Frame 2: Start released (no edge), still paused -> skip again.
         advanceFrame.run();
-        LevelFrameResult frame2 = LevelFrameStep.executeWithPause(
+        LevelFrameResult frame2 = LevelFrameTestStep.executeWithPause(
                 context, null, null, spriteUpdate, false, LevelFrameStep.DIRECT_WRAPPER);
         assertEquals(LevelFrameResult.PAUSED, frame2);
         assertEquals(2, frameCounter.get(), "frame counter advanced again while paused");

@@ -296,11 +296,14 @@ public final class LiveRewindManager {
         }
         inputSource = new LiveRewindInputSource();
         EngineStepper stepper = requiredKind == StepperKind.SPECIAL_STAGE
-                ? new SpecialStageStepper(inputSource, () -> activeInputHandler, specialStageProviderSupplier)
+                ? new SpecialStageStepper(
+                        inputSource, () -> activeInputHandler,
+                        specialStageProviderSupplier, () -> gameplayMode)
                 : new LiveRewindStepper(
                         inputSource,
                         () -> activeInputHandler,
-                        () -> LevelFrameContext.from(gameplayMode));
+                        () -> LevelFrameContext.from(gameplayMode),
+                        () -> gameplayMode);
         gameplayMode.installPlaybackController(
                 inputSource,
                 stepper,

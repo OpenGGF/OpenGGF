@@ -163,6 +163,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             S1TraceCsvWriterTests.Register(tests);
             S1TraceMetadataWriterTests.Register(tests);
             S1AuxEventEngineTests.Register(tests);
+            LoadQueueStateEventTests.Register(tests);
             S1TraceCaptureRunnerTests.Register(tests);
             S1CompleteRunMetadataWriterTests.Register(tests);
             S1RunCaptureRunnerStageFreeTests.Register(tests);

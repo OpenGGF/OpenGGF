@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.resources;
 
 import com.openggf.LevelFrameContext;
 import com.openggf.LevelFrameStep;
+import com.openggf.LevelFrameTestStep;
 import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
 import com.openggf.game.RuntimeArtCoordinator;
@@ -184,7 +185,7 @@ class TestS3kKosDecompressionQueueLifecycle {
     }
 
     private static void runProductionHardwareScan(GameplayModeContext context) {
-        LevelFrameStep.executeHardwareTimedObjectScan(
+        LevelFrameTestStep.executeHardwareTimedObjectScan(
                 LevelFrameContext.from(context), () -> {
                 });
     }

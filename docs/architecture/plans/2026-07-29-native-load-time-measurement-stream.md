@@ -38,5 +38,5 @@ manifests, and publish a validated optional estimator without changing replay au
   S3K manifest, validation Markdown, and publication TSV at the exact design paths, then
   regenerate into a fresh target directory and compare bytes plus unique coverage with
   the 125 S3K and 436 cross-game provisional lower bounds.
-- [ ] Run headless C# tests, focused Java timing/S3K tests, full Java tests, and the
+- [x] Run headless C# tests, focused Java timing/S3K tests, full Java tests, and the
   repository integration workflow.

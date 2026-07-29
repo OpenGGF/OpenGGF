@@ -208,7 +208,8 @@ namespace OpenGGF.BizHawk.Headless
             string recordingDate,
             int effectiveMovieLength,
             byte[] rom,
-            IS3KCompleteRunSegmentSink sink)
+            IS3KCompleteRunSegmentSink sink,
+            bool loadQueueState = false)
         {
             if (movie == null)
             {
@@ -245,7 +246,8 @@ namespace OpenGGF.BizHawk.Headless
                 ? movie.FrameCount
                 : effectiveMovieLength;
             var state = new CaptureState(
-                host, sink, runId, sourceBk2, recordingDate, rom);
+                host, sink, runId, sourceBk2, recordingDate, rom,
+                loadQueueState);
             var segmenter = new S3KCompleteRunSegmenter(
                 true, movieLength, 0, 0);
             segmenter.SegmentOpened = state.OpenSegment;
@@ -397,6 +399,8 @@ namespace OpenGGF.BizHawk.Headless
             private TextWriter aux;
             private TextWriter hardwareTiming;
             private readonly HardwareTimingEventEngine hardwareTimingEngine;
+            private readonly byte[] rom;
+            private readonly bool loadQueueState;
 
             // Per-segment: a fresh engine at every arm, so each segment
             // re-emits its own pre-trace snapshot and re-latches its own
@@ -410,13 +414,16 @@ namespace OpenGGF.BizHawk.Headless
                 string runId,
                 string sourceBk2,
                 string recordingDate,
-                byte[] rom)
+                byte[] rom,
+                bool loadQueueState)
             {
                 this.host = host;
                 this.sink = sink;
                 this.runId = runId;
                 this.sourceBk2 = sourceBk2;
                 this.recordingDate = recordingDate;
+                this.rom = rom;
+                this.loadQueueState = loadQueueState;
                 hardwareTimingEngine =
                     new HardwareTimingEventEngine(rom);
                 ManifestSegments = new List<RunManifestSegment>();
@@ -480,6 +487,14 @@ namespace OpenGGF.BizHawk.Headless
                 }
                 hardwareTimingEngine.ObserveFrameEnd(
                     rowIndex, host, hardwareTiming);
+                if (loadQueueState)
+                {
+                    foreach (string line in LoadQueueStateProjector.CaptureS3k(
+                        rowIndex, rom, host))
+                    {
+                        WriteLine(aux, line);
+                    }
+                }
             }
 
             /// <summary>
@@ -549,7 +564,9 @@ namespace OpenGGF.BizHawk.Headless
                         sourceBk2,
                         recordingDate,
                         runId,
-                        playerMode);
+                        playerMode,
+                        HardwareTimingEventEngine.CurrentSchema,
+                        loadQueueState);
                 var entry = new RunManifestSegment(
                     segment.Dir,
                     segment.Kind,

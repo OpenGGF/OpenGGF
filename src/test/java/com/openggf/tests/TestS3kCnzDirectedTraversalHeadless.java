@@ -3,6 +3,7 @@ package com.openggf.tests;
 import com.openggf.game.GameServices;
 import com.openggf.LevelFrameContext;
 import com.openggf.LevelFrameStep;
+import com.openggf.LevelFrameTestStep;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
@@ -1102,7 +1103,7 @@ public class TestS3kCnzDirectedTraversalHeadless {
         sidekick.setJumpInputPressed(false);
         sidekick.setDirectionalInputPressed(false, false, false, false);
 
-        LevelFrameStep.execute(LevelFrameContext.from(SessionManager.getCurrentGameplayMode()),
+        LevelFrameTestStep.execute(LevelFrameContext.from(SessionManager.getCurrentGameplayMode()),
                 GameServices.level(), GameServices.camera(), () -> {
             SpriteManager.tickPlayablePhysics(player, false, false, false, false, false,
                     false, false, false, GameServices.level(), frameCounter);

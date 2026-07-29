@@ -1179,6 +1179,16 @@ public final class TraceSessionLauncher {
 
         @Override
         public LevelFrameResult step(Bk2FrameInput inputs) {
+            var gameplayMode = SessionManager.getCurrentGameplayMode();
+            return gameplayMode.plcFrameLifecycle().runLogicalIteration(
+                    gameplayMode.getFadeManager()::update,
+                    frame -> step(inputs, frame));
+        }
+
+        private LevelFrameResult step(
+                Bk2FrameInput inputs,
+                com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame
+                        lifecycleFrame) {
             int relative = Math.max(0, inputs.frameIndex() - movieBaseFrame + 1);
             int traceIndex = traceBaseFrame + relative - 1;
             if (traceIndex >= 0 && traceIndex < trace.frameCount()) {
@@ -1195,6 +1205,10 @@ public final class TraceSessionLauncher {
             if (phase == TraceExecutionPhase.VBLANK_ONLY
                     || phase == TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY) {
                 var level = GameServices.levelOrNull();
+                LevelFrameStep.serviceVBlankOnly(
+                        LevelFrameContext.from(SessionManager.getCurrentGameplayMode()),
+                        lifecycleFrame,
+                        com.openggf.game.resources.PlcLifecyclePhase.LAG);
                 if (level != null && level.getObjectManager() != null) {
                     level.getObjectManager().advanceVblaCounter();
                 }
@@ -1226,7 +1240,14 @@ public final class TraceSessionLauncher {
                     LevelFrameContext.from(SessionManager.getCurrentGameplayMode()),
                     level,
                     inputs.p1StartPressed());
-            if (!admission.runsGameplay()) {
+            if (admission.result() == LevelFrameResult.PAUSED) {
+                LevelFrameStep.serviceVBlankOnly(
+                        LevelFrameContext.from(SessionManager.getCurrentGameplayMode()),
+                        lifecycleFrame,
+                        com.openggf.game.resources.PlcLifecyclePhase.NORMAL_PAUSE);
+                return admission.result();
+            }
+            if (admission.result() == LevelFrameResult.SETUP_ONLY) {
                 return admission.result();
             }
             publishPlaybackInput(inputs);
@@ -1234,7 +1255,10 @@ public final class TraceSessionLauncher {
             sprites.publishHeldInputForLevelEvents(loop.getInputHandler());
             LevelFrameResult result = LevelFrameStep.execute(
                     LevelFrameContext.from(SessionManager.getCurrentGameplayMode()),
-                    level, camera, () -> sprites.update(loop.getInputHandler()));
+                    lifecycleFrame,
+                    com.openggf.game.resources.PlcLifecyclePhase.ORDINARY_LEVEL,
+                    level, camera, () -> sprites.update(loop.getInputHandler()),
+                    LevelFrameStep.DIRECT_WRAPPER);
             if (result == LevelFrameResult.GAMEPLAY_FRAME) {
                 pendingForcedJumpPress = false;
             }

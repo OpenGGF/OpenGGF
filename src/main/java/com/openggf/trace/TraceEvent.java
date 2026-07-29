@@ -637,6 +637,22 @@ public sealed interface TraceEvent {
             boolean solidVerticalSeen, int solidPreY, int solidSurfaceY, int solidDelta)
         implements TraceEvent {}
 
+    /** Comparison-only physical load queue state sampled at end of logical frame. */
+    record LoadQueueState(
+            int frame,
+            String kind,
+            boolean busy,
+            boolean prepared,
+            int activeSource,
+            int activeDestination,
+            int totalWork,
+            int remainingWork,
+            List<String> queuedFingerprints,
+            List<ServiceObservation> serviceObservations)
+            implements TraceEvent {
+        public record ServiceObservation(String boundary, int budget) {}
+    }
+
     /**
      * Parse a single JSONL line into the appropriate TraceEvent subtype.
      * Unknown event types are returned as StateSnapshot with all fields preserved.
@@ -648,6 +664,7 @@ public sealed interface TraceEvent {
             String event = node.has("event") ? node.get("event").asText() : "unknown";
 
             return switch (event) {
+                case "load_queue_state" -> parseLoadQueueState(frame, node);
                 case "object_appeared" -> new ObjectAppeared(
                     frame,
                     node.get("slot").asInt(),
@@ -1285,6 +1302,69 @@ public sealed interface TraceEvent {
         }
     }
 
+    private static LoadQueueState parseLoadQueueState(int frame, JsonNode node) {
+        String kind = requiredText(node, "kind");
+        boolean busy = requiredBoolean(node, "busy");
+        boolean prepared = requiredBoolean(node, "prepared");
+        int activeSource = requiredInt(node, "active_source");
+        int activeDestination = requiredInt(node, "active_destination");
+        int totalWork = requiredInt(node, "total_work");
+        int remainingWork = requiredInt(node, "remaining_work");
+        JsonNode queued = requiredArray(node, "queued_fingerprints");
+        java.util.ArrayList<String> fingerprints = new java.util.ArrayList<>();
+        for (JsonNode value : queued) {
+            if (!value.isTextual() || !value.asText().matches("[0-9a-f]{64}")) {
+                throw new IllegalArgumentException("invalid queued fingerprint");
+            }
+            fingerprints.add(value.asText());
+        }
+        JsonNode observationsNode = requiredArray(node, "service_observations");
+        if (!observationsNode.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "version 1 service observations must be empty");
+        }
+        if (!busy && (prepared || activeSource != -1 || activeDestination != -1
+                || totalWork != -1 || remainingWork != -1
+                || !fingerprints.isEmpty())) {
+            throw new IllegalArgumentException("idle load queue state is not canonical");
+        }
+        return new LoadQueueState(frame, kind, busy, prepared, activeSource,
+                activeDestination, totalWork, remainingWork,
+                List.copyOf(fingerprints), List.of());
+    }
+
+    private static JsonNode requiredArray(JsonNode node, String field) {
+        JsonNode value = node.get(field);
+        if (value == null || !value.isArray()) {
+            throw new IllegalArgumentException("missing or invalid array field: " + field);
+        }
+        return value;
+    }
+
+    private static String requiredText(JsonNode node, String field) {
+        JsonNode value = node.get(field);
+        if (value == null || !value.isTextual() || value.asText().isBlank()) {
+            throw new IllegalArgumentException("missing or invalid text field: " + field);
+        }
+        return value.asText();
+    }
+
+    private static boolean requiredBoolean(JsonNode node, String field) {
+        JsonNode value = node.get(field);
+        if (value == null || !value.isBoolean()) {
+            throw new IllegalArgumentException("missing or invalid boolean field: " + field);
+        }
+        return value.asBoolean();
+    }
+
+    private static int requiredInt(JsonNode node, String field) {
+        JsonNode value = node.get(field);
+        if (value == null || !value.isIntegralNumber() || !value.canConvertToInt()) {
+            throw new IllegalArgumentException("missing or invalid integer field: " + field);
+        }
+        return value.asInt();
+    }
+
     private static short parseHexShort(JsonNode node, String... fields) {
         for (String field : fields) {
             if (!node.has(field)) {
@@ -1412,5 +1492,3 @@ public sealed interface TraceEvent {
         return out;
     }
 }
-
-

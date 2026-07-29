@@ -3,6 +3,7 @@ package com.openggf.game.sonic2.objects;
 import com.openggf.game.ResultsScreen;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
+import com.openggf.game.sonic2.resources.Sonic2PlcService;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageConstants;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageDataLoader;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageManager;
@@ -138,6 +139,8 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
     private int totalFrames = 0;
     private int slideProgress = 0;
     private boolean complete = false;
+    /** True once Obj6F_Init has observed an empty PLC queue. */
+    private boolean plcReadinessPassed;
 
     // Input data
     private final int ringsCollected;
@@ -753,6 +756,13 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
     @Override
     public void update(int frameCounter, Object context) {
         this.frameCounter = frameCounter;
+        if (!plcReadinessPassed) {
+            Sonic2PlcService plcService = services().gameService(Sonic2PlcService.class);
+            if (plcService != null && plcService.isBusy()) {
+                return;
+            }
+            plcReadinessPassed = true;
+        }
         stateTimer++;
         totalFrames++;
 
@@ -788,7 +798,10 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
 
     @Override
     public boolean isComplete() {
-        return complete;
+        // Obj6F's initialization gate is one-shot, but the special-stage mode
+        // loop performs its own final FIFO poll before it leaves results.
+        Sonic2PlcService plcService = services().gameService(Sonic2PlcService.class);
+        return complete && (plcService == null || !plcService.isBusy());
     }
 
     @Override
@@ -1286,4 +1299,3 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
     public boolean didGetEmerald() { return gotEmerald; }
     public int getState() { return state; }
 }
-

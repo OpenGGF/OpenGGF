@@ -50,6 +50,11 @@ staged_files() {
 }
 
 staged_candidates() {
+    merge_oid=$(merge_head_oid)
+    if [ -n "$merge_oid" ]; then
+        git diff --cached --no-renames --name-only --diff-filter=AMT "$merge_oid"
+        return
+    fi
     if git rev-parse -q --verify HEAD >/dev/null 2>&1; then
         git diff --cached --no-renames --name-only --diff-filter=AMT HEAD
     else

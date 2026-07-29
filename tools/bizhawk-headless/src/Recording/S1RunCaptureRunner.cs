@@ -101,7 +101,8 @@ namespace OpenGGF.BizHawk.Headless
             string recordingDate,
             string luaScriptVersion,
             int stopAtFrame,
-            IRunSegmentSink segmentSink)
+            IRunSegmentSink segmentSink,
+            byte[] loadQueueRom = null)
         {
             if (movie == null)
             {
@@ -136,7 +137,7 @@ namespace OpenGGF.BizHawk.Headless
 
             var state = new RunState(
                 runId, sourceBk2, recordingDate, luaScriptVersion,
-                segmentSink);
+                segmentSink, loadQueueRom);
 
             using (IEnumerator<Bk2Frame> frames =
                 movie.OpenFrameStream().GetEnumerator())
@@ -280,6 +281,7 @@ namespace OpenGGF.BizHawk.Headless
             private readonly string recordingDate;
             private readonly string luaScriptVersion;
             private readonly IRunSegmentSink segmentSink;
+            private readonly byte[] loadQueueRom;
 
             private readonly List<RunManifestSegment> segments =
                 new List<RunManifestSegment>();
@@ -329,13 +331,15 @@ namespace OpenGGF.BizHawk.Headless
                 string sourceBk2,
                 string recordingDate,
                 string luaScriptVersion,
-                IRunSegmentSink segmentSink)
+                IRunSegmentSink segmentSink,
+                byte[] loadQueueRom)
             {
                 this.runId = runId;
                 this.sourceBk2 = sourceBk2;
                 this.recordingDate = recordingDate;
                 this.luaScriptVersion = luaScriptVersion;
                 this.segmentSink = segmentSink;
+                this.loadQueueRom = loadQueueRom;
             }
 
             internal bool Started { get; private set; }
@@ -392,6 +396,11 @@ namespace OpenGGF.BizHawk.Headless
                 {
                     WriteLine(auxWriter, line);
                 }
+                if (loadQueueRom != null)
+                {
+                    WriteLine(auxWriter, LoadQueueStateProjector.CaptureS1(
+                        traceFrame, loadQueueRom, host));
+                }
                 traceFrame++;
             }
 
@@ -413,7 +422,8 @@ namespace OpenGGF.BizHawk.Headless
                     startRngSeed,
                     recordingDate,
                     sourceBk2,
-                    luaScriptVersion);
+                    luaScriptVersion,
+                    loadQueueRom != null);
                 var entry = new RunManifestSegment(
                     dirToken,
                     RunManifestSegment.LevelKind,

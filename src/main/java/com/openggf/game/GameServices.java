@@ -13,6 +13,7 @@ import com.openggf.game.animation.AnimatedTileChannelGraph;
 import com.openggf.game.mutation.ZoneLayoutMutationPipeline;
 import com.openggf.game.render.AdvancedRenderModeController;
 import com.openggf.game.render.SpecialRenderEffectRegistry;
+import com.openggf.game.resources.QueueDiagnosticSnapshot;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.WorldSession;
@@ -31,6 +32,8 @@ import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.TerrainCollisionManager;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.timer.TimerManager;
+
+import java.util.List;
 
 /**
  * Thin service locator for non-object code.
@@ -316,6 +319,11 @@ public final class GameServices {
 
     public static ZoneRuntimeState zoneRuntimeState() {
         return zoneRuntimeRegistry().current();
+    }
+
+    public static List<QueueDiagnosticSnapshot> captureQueueDiagnostics() {
+        GameplayModeContext mode = gameplayModeOrNull();
+        return mode != null ? mode.captureQueueDiagnostics() : List.of();
     }
 
     public static PaletteOwnershipRegistry paletteOwnershipRegistry() {

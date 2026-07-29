@@ -14,7 +14,8 @@ class TestLiveRewindStepperAdmission {
         String source = Files.readString(
                 Path.of("src/main/java/com/openggf/game/rewind/LiveRewindStepper.java"));
         int admission = source.indexOf("LevelFrameStep.admit(");
-        int setupReturn = source.indexOf("if (!admission.runsGameplay())", admission);
+        int setupReturn = source.indexOf(
+                "if (admission.result() == LevelFrameResult.SETUP_ONLY)", admission);
         int publication = source.indexOf("liveInput.setLogicalOverride(", setupReturn);
 
         assertTrue(admission >= 0 && setupReturn > admission && publication > setupReturn,

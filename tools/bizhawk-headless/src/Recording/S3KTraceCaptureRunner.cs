@@ -227,7 +227,8 @@ namespace OpenGGF.BizHawk.Headless
             TextWriter physicsCsv,
             TextWriter auxStateJsonl,
             TextWriter hardwareTimingJsonl,
-            TextWriter metadataJson)
+            TextWriter metadataJson,
+            bool loadQueueState = false)
         {
             if (movie == null)
             {
@@ -494,6 +495,14 @@ namespace OpenGGF.BizHawk.Headless
                         hardwareCompletionAuthorityArmed
                             ? hardwareTimingSink
                             : null);
+                    if (loadQueueState)
+                    {
+                        foreach (string line in LoadQueueStateProjector.CaptureS3k(
+                            traceFrame, rom, host))
+                        {
+                            auxSink.AppendLine(line);
+                        }
+                    }
                     traceFrame++;
                 }
 
@@ -520,7 +529,9 @@ namespace OpenGGF.BizHawk.Headless
                     startY,
                     startRngSeed,
                     traceProfile,
-                    recordingDate));
+                    recordingDate,
+                    HardwareTimingEventEngine.CurrentSchema,
+                    loadQueueState));
                 return new S3KTraceCaptureResult(offset, traceFrame);
             }
         }

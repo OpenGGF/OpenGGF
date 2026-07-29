@@ -44,7 +44,8 @@ namespace OpenGGF.BizHawk.Headless
             uint rngSeed,
             string traceProfile,
             string sourceBk2,
-            string recordingDate)
+            string recordingDate,
+            bool loadQueueState = false)
         {
             return Format(
                 romZoneId,
@@ -60,7 +61,8 @@ namespace OpenGGF.BizHawk.Headless
                 sourceBk2,
                 recordingDate,
                 null,
-                0);
+                0,
+                loadQueueState);
         }
 
         /// <summary>
@@ -86,7 +88,8 @@ namespace OpenGGF.BizHawk.Headless
             string sourceBk2,
             string recordingDate,
             string runId,
-            int segmentIndex)
+            int segmentIndex,
+            bool loadQueueState = false)
         {
             if (traceProfile == null)
             {
@@ -139,7 +142,12 @@ namespace OpenGGF.BizHawk.Headless
             json.Append("  \"csv_version\": 7,\n");
             json.Append("  \"aux_schema_extras\": "
                 + "[\"cnz_slot_machine_state_per_frame\", "
-                + "\"cpu_state_per_frame\"],\n");
+                + "\"cpu_state_per_frame\"");
+            if (loadQueueState)
+            {
+                json.Append(", \"load_queue_state_per_frame\"");
+            }
+            json.Append("],\n");
             json.Append("  \"trace_profile\": \"")
                 .Append(JsonEscape(traceProfile)).Append("\",\n");
             json.Append("  \"bizhawk_version\": \"2.11\",\n");

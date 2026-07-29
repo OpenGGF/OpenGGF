@@ -89,3 +89,102 @@ the test coverage for the supported BK2/ROM/GPGX path. The initial
 whole-branch whitespace check identified only the fixture's trailing blank
 line noted above; no critical or important implementation findings remained
 after that correction.
+
+---
+
+## PLC producer-coverage completion (2026-07-29)
+
+The former `TestSonic1PlcProducerCoverage` and
+`TestSonic2PlcProducerCoverage` literal-array checks did not exercise a
+producer or inspect native FIFO state.  They have been replaced with ROM-backed
+descriptor tests.  The S1 suite drives the real credits owner across all nine
+text pages, including the `EndDemo_Levels[8]` `$0101` LZ overread, and compares
+the actual queue snapshot with the ROM-parsed primary/Main2 sequence.  Both
+suites validate each audited logical cue against complete FIFO descriptors,
+including normal-boss capsule/animal/explosion order.
+
+`TestPlcProducerCoverageGuard` now prevents an audit/test disconnect: it
+requires both suites to load, pins the 39 represented `Route` rows, and checks
+that every audited owner retains its specific logical-submission token.  This
+turns an accidentally absent `-Dtest` selector into a failure rather than a
+Maven success with a reduced test set.
+
+The broad owner/rewind/PLC sweep exposed an attributable S2 lifecycle defect:
+level initialization attempted eager renderer publication before
+`ObjectRenderManager` existed. `Sonic2LevelInitProfile` now uses the logical
+transaction alone until the level owns a render manager; later runtime
+producers still use the atomic eager publisher. This preserves logical
+submission while avoiding an invalid early cache refresh.
+
+### Verification
+
+```bash
+mvn -Dmse=off -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen \
+  "-Dtest=TestSonic1PlcProducerCoverage,TestSonic2PlcProducerCoverage,TestPlcProducerCoverageGuard,TestSonic2RuntimePlcRendererRefresh,TestSonic2PlcParser" test
+```
+
+Result: **26 tests passed**.
+
+```bash
+mvn -Dmse=off -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=s3k.bin \
+  "-Dtest=TestSonic2UnifiedAudioPresentationRomIntegration,TestSonic2RuntimePlcRendererRefresh,TestSonic2PlcProducerCoverage" test
+```
+
+Result: **13 tests passed**; this is the focused regression for the formerly
+failing early level-init renderer publication.
+
+The broad PLC/owner/rewind/authority selection (3,240 tests) no longer has any
+S2 level-load/renderer-manager errors. It retains four unrelated baseline
+failures: the GameLoop source-size ratchet, native-fade re-entry in
+`TestGameLoopSpecialStageRewindBoundary`, the logical-input admission assertion
+in `TestLiveRewindStepperAdmission`, and the pre-existing S3K slots hardware
+completion edge in `TestS3kSlotsBonusTraceReplay`.
+
+### Retry-safety corrective follow-up
+
+Runtime PLC publication now reports success to its S2 owners. WFZ keeps both
+boss and Tornado event gates armed until atomic eager/logical publication
+succeeds; the renderer test forces a rejected publication, verifies no FIFO or
+renderer effects, then verifies a successful retry advances exactly once.
+The special-stage Bombs handoff and ordinary-boss capsule/animal-explosion
+handoffs likewise retain their phase/latch until the request succeeds.
+
+### Live owner/threshold corrective coverage
+
+`TestSonic2PlcProducerCoverage` now boots a production gameplay session for
+each dynamic-event route, loads the route's real object-art provider, advances
+the concrete event owner at its audited camera/routine threshold, and compares
+the native FIFO descriptor snapshot with the ROM PLC. The same session checks
+the eager renderer preflight remains usable after the owner publication. The
+table covers EHZ, MTZ, WFZ boss/Tornado, HTZ, OOZ, MCZ, CNZ, CPZ, both DEZ
+transitions, and ARZ.
+
+`TestSonic1PlcProducerOwnerCoverage` similarly executes the concrete S1 DLE
+owners for GHZ, LZ, MZ, SLZ, SYZ, and the Final Zone art threshold, rather than
+calling a PLC façade with literal IDs.
+
+```bash
+mvn -Dmse=off -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen \
+  "-Dtest=TestSonic1PlcProducerOwnerCoverage,TestSonic2PlcProducerCoverage" test
+```
+
+Result: **20 tests passed**.
+
+### All-route executable owner follow-up
+
+The façade/literal checks have been replaced or supplemented by concrete owner
+fixtures.  The coverage now executes the two title owners, level-init queue
+step, title-card exit edge, all nine S1 credits pages, both normal end-act
+owners, S1 special-stage result boundary, seven S1 DLE thresholds, twelve S2
+DLE thresholds, S2 special-stage result and Bombs WAIT2 gate, both S2
+end-of-act owners, and each ordinary boss's killing-hit plus its distinct
+animal/explosion handoff.  FIFO assertions compare complete ROM-derived
+descriptors, not just queue occupancy.  The coverage guard now loads all four
+required executable suites alongside the 39-row audit cardinality check.
+
+```bash
+mvn -Dmse=off -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen \
+  "-Dtest=TestSonic1PlcProducerCoverage,TestSonic1PlcProducerOwnerCoverage,TestSonic2PlcProducerCoverage,TestSonic2BossPlcProducerCoverage,TestPlcProducerCoverageGuard" test
+```
+
+Result: **52 tests passed**.

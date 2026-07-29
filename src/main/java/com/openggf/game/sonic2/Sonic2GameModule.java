@@ -7,6 +7,8 @@ import com.openggf.data.RomByteReader;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.constants.Sonic2ObjectConstants;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
+import com.openggf.game.sonic2.resources.Sonic2PlcService;
+import com.openggf.game.resources.PlcLifecycleService;
 import com.openggf.game.sonic2.credits.Sonic2EndingProvider;
 import com.openggf.game.sonic2.dataselect.S2SaveSnapshotProvider;
 import com.openggf.game.sonic2.dataselect.S2DataSelectImageCacheManager;
@@ -71,6 +73,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Optional;
 
 import static java.security.MessageDigest.getInstance;
@@ -78,6 +81,8 @@ import static java.security.MessageDigest.getInstance;
 public class Sonic2GameModule implements GameModule {
     private final GameAudioProfile audioProfile = new Sonic2AudioProfile();
     private final Sonic2LevelEventManager levelEventManager = new Sonic2LevelEventManager();
+    private final Sonic2PlayerArtModeAuthority playerArtModeAuthority = () ->
+            Sonic2PlayerArtModeAuthority.onePlayer(levelEventManager.getPlayerCharacter()).initialLifePlc();
     private final Sonic2ZoneRegistry zoneRegistry = new Sonic2ZoneRegistry();
     private final com.openggf.game.sonic2.debug.Sonic2SpecialStageSpriteDebug specialStageSpriteDebug =
             new com.openggf.game.sonic2.debug.Sonic2SpecialStageSpriteDebug();
@@ -86,7 +91,8 @@ public class Sonic2GameModule implements GameModule {
     private final SpecialStageProvider specialStageProvider = new Sonic2SpecialStageProvider(specialStageManager);
     private final DebugModeProvider debugModeProvider =
             new Sonic2DebugModeProvider(specialStageManager, specialStageSpriteDebug);
-    private final LevelInitProfile levelInitProfile = new Sonic2LevelInitProfile(levelEventManager);
+    private final LevelInitProfile levelInitProfile = new Sonic2LevelInitProfile(
+            levelEventManager, playerArtModeAuthority);
     private final TitleCardManager titleCardProvider = new TitleCardManager();
     private final TitleScreenManager titleScreenProvider = new TitleScreenManager();
     private final LevelSelectManager levelSelectProvider = new LevelSelectManager();
@@ -98,6 +104,7 @@ public class Sonic2GameModule implements GameModule {
     private Sonic2ZoneFeatureProvider zoneFeatureProvider;
     private PhysicsProvider physicsProvider;
     private ObjectRegistry objectRegistry;
+    private Sonic2PlcService plcService;
 
     @Override
     public String getIdentifier() {
@@ -116,7 +123,13 @@ public class Sonic2GameModule implements GameModule {
 
     @Override
     public Game createGame(Rom rom) {
+        plcService = new Sonic2PlcService(rom);
         return new Sonic2(rom);
+    }
+
+    @Override
+    public List<com.openggf.game.rewind.RewindSnapshottable<?>> rewindAdapters() {
+        return plcService == null ? List.of() : List.of(plcService);
     }
 
     @Override
@@ -254,6 +267,8 @@ public class Sonic2GameModule implements GameModule {
             return (T) specialStageSpriteDebug;
         if (type == com.openggf.game.sonic2.specialstage.Sonic2SpecialStageManager.class)
             return (T) specialStageManager;
+        if (type == Sonic2PlcService.class) return (T) plcService;
+        if (type == PlcLifecycleService.class) return (T) plcService;
         return null;
     }
 
@@ -278,6 +293,11 @@ public class Sonic2GameModule implements GameModule {
         SmashableGroundObjectInstance.resetGlobalState();
         MTZLongPlatformObjectInstance.resetGlobalState();
         BombPrizeObjectInstance.resetGlobalState();
+    }
+
+    @Override
+    public void resetModuleScopedState() {
+        plcService = null;
     }
 
     @Override

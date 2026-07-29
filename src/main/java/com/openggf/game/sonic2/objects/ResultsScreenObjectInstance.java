@@ -4,6 +4,7 @@ import com.openggf.camera.Camera;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
+import com.openggf.game.sonic2.resources.Sonic2PlcService;
 import com.openggf.level.objects.AbstractResultsScreen;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
@@ -66,6 +67,8 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen
     private int lastRingBonus = Integer.MIN_VALUE;
     private int lastTotalBonus = Integer.MIN_VALUE;
     private int lastPerfectBonus = Integer.MIN_VALUE;
+    /** True once Obj3A routine 0 has observed an empty PLC queue. */
+    private boolean plcReadinessPassed;
     private final Pattern blankDigit = new Pattern();
 
     public ResultsScreenObjectInstance(int elapsedTimeSeconds, int ringCount, int actNumber,
@@ -104,6 +107,19 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen
     }
 
     @Override
+    public void update(int frameCounter, com.openggf.game.PlayableEntity player) {
+        if (!plcReadinessPassed) {
+            Sonic2PlcService plcService = services().gameService(Sonic2PlcService.class);
+            if (plcService != null && plcService.isBusy()) {
+                this.frameCounter = frameCounter;
+                return;
+            }
+            plcReadinessPassed = true;
+        }
+        super.update(frameCounter, player);
+    }
+
+    @Override
     protected TallyResult performTallyStep() {
         boolean anyRemaining = false;
         int totalIncrement = 0;
@@ -133,6 +149,11 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen
     }
 
     @Override
+    protected int getWaitDuration() {
+        return totalBonus >= 1000 ? 0x12C : 0xB4;
+    }
+
+    @Override
     protected void onExitReady() {
         triggerFadeToBlack();
     }
@@ -145,7 +166,8 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen
 
         // Start fade to black, then transition to next level when fade completes
         var fadeManager = services().fadeManager();
-        fadeManager.startFadeToBlack(() -> {
+        var marker = services().nativeFadeLifecycle().beginNativeBlockingFade();
+        fadeManager.startFadeToBlack(marker.wrapCompletion(() -> {
             // Mark this object as done
             setDestroyed(true);
 
@@ -156,8 +178,9 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen
 
             // Keep transition atomic: once the new level is loaded, immediately
             // start the reveal fade to avoid remaining in HOLD_BLACK.
-            fadeManager.startFadeFromBlack(null);
-        });
+            var reveal = services().nativeFadeLifecycle().beginNativeBlockingFade();
+            fadeManager.startFadeFromBlack(reveal.wrapCompletion(() -> { }));
+        }));
     }
 
     @Override

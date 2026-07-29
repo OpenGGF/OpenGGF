@@ -60,6 +60,7 @@ public final class Sonic1Constants {
     //   dc.l rom_address, dc.w vram_byte_offset
     // Divide vram_byte_offset by 0x20 to get tile index.
     public static final int ART_LOAD_CUES_ADDR = 0x01DD86;
+    public static final int ART_LOAD_CUES_ENTRY_COUNT = 32;
 
     // Per-zone art addresses (patterns, 16x16, 256x256) are read dynamically
     // from LevelHeaders at runtime - no need for per-zone constants here.

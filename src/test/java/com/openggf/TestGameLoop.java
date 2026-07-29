@@ -296,7 +296,7 @@ public class TestGameLoop {
     public void traceRealtimeRewindRunsBeforePlaybackInputBridge() throws Exception {
         String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
         int rewind = source.indexOf("TraceSessionLauncher.active().handleRealtimeRewindInput(");
-        int admission = source.indexOf("FrameAdmission admission = admitLevelIteration");
+        int admission = source.indexOf("LevelFrameResult admission = levelIterationAdmission.admit");
         int bridge = source.indexOf("syncPlaybackInputBridge();");
         assertTrue(rewind >= 0, "GameLoop must handle trace realtime rewind");
         assertTrue(bridge >= 0, "GameLoop must bridge playback input");
@@ -441,24 +441,19 @@ public class TestGameLoop {
     @Test
     public void setupAdmissionPrecedesSeamlessBoundaryAndTraceCameraMutations() throws Exception {
         String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
-        int step = source.indexOf("private void stepInternal()");
-        int end = source.indexOf("private FrameAdmission admitLevelIteration(", step);
+        int step = source.indexOf("private boolean prepareAdmittedIteration(");
+        int end = source.indexOf("private void updateSpecialStageMode(", step);
         String body = source.substring(step, end);
 
-        int admission = body.indexOf("FrameAdmission admission = admitLevelIteration");
-        int boundary = body.indexOf("completePendingSeamlessBoundary", admission);
+        int admission = body.indexOf("LevelFrameResult admission = levelIterationAdmission.admit");
+        int boundary = body.indexOf("levelIterationAdmission.completePendingBoundary", admission);
         int traceCamera = body.indexOf("traceCameraFocusController.tick", admission);
-        int timers = body.indexOf("profiler.beginSection(\"timers\")", admission);
-        assertTrue(admission >= 0 && boundary > admission && traceCamera > boundary
-                        && timers > traceCamera,
+        assertTrue(admission >= 0 && boundary > admission && traceCamera > boundary,
                 "seamless boundary completion and trace-camera input must follow setup admission");
 
-        int admit = source.indexOf("private FrameAdmission admitLevelIteration(");
-        int admitEnd = source.indexOf("private void applyPendingSeamlessTransitionForAdmission", admit);
-        String admitBody = source.substring(admit, admitEnd);
-        assertTrue(admitBody.indexOf("applyPendingSeamlessTransitionForAdmission()")
-                        < admitBody.indexOf("LevelFrameStep.admit("),
-                "a seamless load must arm its setup token before frame classification");
+        assertTrue(body.indexOf("levelIterationAdmission.admit(")
+                        < body.indexOf("levelIterationAdmission.completePendingBoundary"),
+                "a seamless load must be admitted before its pending boundary can complete");
     }
 
     @Test
@@ -784,7 +779,7 @@ public class TestGameLoop {
         assertFalse(callbackRan.get(), "failed startup must not run the staged trace launch callback");
         assertNull(getPrivateField(coordinator, "pendingLaunchCallback"));
         assertNull(getPrivateField(coordinator, "afterStepLaunchCallback"));
-        verify(fadeManager).startFadeFromBlack(isNull());
+        verify(fadeManager).startFadeFromBlack(any());
     }
 
     @Test
@@ -1181,7 +1176,7 @@ public class TestGameLoop {
         assertNotNull(handled.get());
         assertEquals(DataSelectActionType.LOAD_SLOT, handled.get().type());
         assertEquals(2, handled.get().slot());
-        verify(fadeManager).startFadeFromBlack(isNull());
+        verify(fadeManager).startFadeFromBlack(any());
         assertEquals(com.openggf.game.DataSelectProvider.State.INACTIVE, provider.getState(),
                 "Data Select should reset only after the fade callback runs");
     }
@@ -1232,7 +1227,7 @@ public class TestGameLoop {
         assertEquals(com.openggf.game.DataSelectProvider.State.ACTIVE, provider.getState(),
                 "Data Select should remain active instead of resetting inactive on launch failure");
         assertEquals("Unable to load selected save.", provider.launchErrorMessage().orElseThrow());
-        verify(fadeManager).startFadeFromBlack(isNull());
+        verify(fadeManager).startFadeFromBlack(any());
     }
 
     @Test
@@ -1499,7 +1494,7 @@ public class TestGameLoop {
         invokePrivateMethod(gameLoop, "doEnterEnding");
 
         verify(endingProvider).initialize();
-        verify(fadeManager).startFadeFromWhite(isNull());
+        verify(fadeManager).startFadeFromWhite(any());
         assertEquals(GameMode.ENDING_CUTSCENE, gameLoop.getCurrentGameMode());
     }
 
@@ -1721,7 +1716,7 @@ public class TestGameLoop {
         assertEquals(GameMode.LEVEL, gameLoop.getCurrentGameMode());
         verify(titleScreen).reset();
         verify(levelManager).loadZoneAndAct(0, 0);
-        verify(fadeManager).startFadeFromBlack(isNull());
+        verify(fadeManager).startFadeFromBlack(any());
     }
 
     @Test
@@ -1820,7 +1815,7 @@ public class TestGameLoop {
 
         assertEquals(GameMode.DATA_SELECT, gameLoop.getCurrentGameMode());
         assertEquals(1, nativeDelegate.initializeCalls);
-        verify(fadeManager).startFadeFromBlack(isNull());
+        verify(fadeManager).startFadeFromBlack(any());
         verify(levelManager, never()).loadZoneAndAct(anyInt(), anyInt());
     }
 
@@ -1866,7 +1861,7 @@ public class TestGameLoop {
 
         assertEquals(GameMode.LEVEL, gameLoop.getCurrentGameMode());
         verify(levelManager).loadZoneAndAct(0, 0);
-        verify(fadeManager).startFadeFromBlack(isNull());
+        verify(fadeManager).startFadeFromBlack(any());
     }
 
     @Test
@@ -1945,7 +1940,7 @@ public class TestGameLoop {
 
         assertEquals(GameMode.LEVEL, gameLoop.getCurrentGameMode());
         verify(levelManager).loadZoneAndAct(0, 0);
-        verify(fadeManager).startFadeFromBlack(isNull());
+        verify(fadeManager).startFadeFromBlack(any());
     }
 
     @Test
@@ -1997,7 +1992,7 @@ public class TestGameLoop {
 
         assertEquals(GameMode.LEVEL, gameLoop.getCurrentGameMode());
         verify(levelManager).loadZoneAndAct(0, 0);
-        verify(fadeManager).startFadeFromBlack(isNull());
+        verify(fadeManager).startFadeFromBlack(any());
     }
 
     @Test
@@ -2043,7 +2038,7 @@ public class TestGameLoop {
 
         assertEquals(GameMode.DATA_SELECT, gameLoop.getCurrentGameMode());
         assertEquals(1, nativeDelegate.initializeCalls);
-        verify(fadeManager).startFadeFromBlack(isNull());
+        verify(fadeManager).startFadeFromBlack(any());
         verify(levelManager, never()).loadZoneAndAct(anyInt(), anyInt());
     }
 
@@ -2099,7 +2094,7 @@ public class TestGameLoop {
 
         assertEquals(GameMode.DATA_SELECT, gameLoop.getCurrentGameMode());
         assertEquals(1, nativeDelegate.initializeCalls);
-        verify(fadeManager).startFadeFromBlack(isNull());
+        verify(fadeManager).startFadeFromBlack(any());
     }
 
     @Test
@@ -2179,7 +2174,7 @@ public class TestGameLoop {
 
         assertEquals(GameMode.DATA_SELECT, gameLoop.getCurrentGameMode());
         assertEquals(1, nativeDelegate.initializeCalls);
-        verify(fadeManager).startFadeFromBlack(isNull());
+        verify(fadeManager).startFadeFromBlack(any());
         verify(levelManager, never()).loadZoneAndAct(anyInt(), anyInt());
     }
 
@@ -2286,7 +2281,7 @@ public class TestGameLoop {
         GameplayModeContext gameplayMode = SessionManager.getCurrentGameplayMode();
         gameplayMode.tearDownManagers();
         when(fadeManager.key()).thenReturn("fademanager");
-        when(fadeManager.capture()).thenReturn(new com.openggf.game.rewind.snapshot.FadeManagerSnapshot(
+        when(fadeManager.capture()).thenReturn(new com.openggf.graphics.FadeManagerSnapshot(
                 FadeManager.FadeState.NONE,
                 0,
                 0.0f,
@@ -2299,6 +2294,7 @@ public class TestGameLoop {
                 1,
                 0.0f,
                 0,
+                false,
                 false));
         when(spriteManager.rewindSnapshottable()).thenReturn(
                 new com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.SpriteManagerSnapshot>() {

@@ -20,6 +20,10 @@ namespace OpenGGF.BizHawk.Headless
         public const int Random = 0xF636;                // u32be v_random
         public const int FrameCount = 0xFE04;            // u16be v_framecount
         public const int VblankWord = 0xFE0E;            // u16be VBlank word (NOT 0xFE0C)
+        public const int PlcBuffer = 0xF680;             // 16 source:u32be,destination:u16be slots
+        public const int PlcPatternsLeft = 0xF6F8;       // u16be prepared Nemesis patterns remaining
+        public const int PlcEntrySize = 6;
+        public const int PlcCapacity = 16;
 
         // Special-stage state (s1_complete_run_recorder.lua run mode).
         public const int SsAngle = 0xF780;               // u16be v_ssangle

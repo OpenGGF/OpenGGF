@@ -5,6 +5,8 @@ import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.audio.Sonic2Music;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
+import com.openggf.game.sonic2.constants.Sonic2Constants;
+import com.openggf.game.sonic2.resources.Sonic2PlcRequests;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -369,6 +371,8 @@ public class Sonic2HTZBossInstance extends AbstractBossInstance implements Rewin
             // Camera_Max_X_pos writes until the following object update.
             // Disasm: docs/s2disasm/s2.asm:64593-64605.
             if (!defeatFleeStarted) {
+                if (!Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_ANIMALS_HTZ_MTZ_WFZ,
+                        Sonic2Constants.PLC_EXPLOSION)) return;
                 defeatFleeStarted = true;
                 services().gameState().setBossDefeatedFlag(true);
                 services().playMusic(Sonic2Music.HILL_TOP.id);
@@ -556,6 +560,7 @@ public class Sonic2HTZBossInstance extends AbstractBossInstance implements Rewin
 
     @Override
     protected void onDefeatStarted() {
+        if (!isDefeatEntryPrepared() && !Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE)) return;
         // ROM: s2.asm:64036-64043
         // Initialize defeat timer
         defeatTimer = DEFEAT_TIMER_START;
@@ -563,6 +568,11 @@ public class Sonic2HTZBossInstance extends AbstractBossInstance implements Rewin
 
         // Transition to defeated state
         state.routineSecondary = SUB8_DEFEATED;
+    }
+
+    @Override
+    protected boolean prepareDefeatEntry() {
+        return Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE);
     }
 
     // Note: getCollisionFlags() is inherited from AbstractBossInstance which

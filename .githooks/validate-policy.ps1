@@ -101,6 +101,10 @@ function Get-StagedFiles() {
 }
 
 function Get-StagedCandidates() {
+    $mergeOid = Get-MergeHeadOid
+    if (-not [string]::IsNullOrWhiteSpace($mergeOid)) {
+        return Invoke-GitLines @("diff", "--cached", "--no-renames", "--name-only", "--diff-filter=AMT", $mergeOid)
+    }
     if (Test-GitSuccess @("rev-parse", "-q", "--verify", "HEAD")) {
         return Invoke-GitLines @("diff", "--cached", "--no-renames", "--name-only", "--diff-filter=AMT", "HEAD")
     }

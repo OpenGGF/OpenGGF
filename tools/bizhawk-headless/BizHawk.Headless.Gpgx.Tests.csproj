@@ -88,6 +88,7 @@
     <Compile Include="tests/TestTimings.cs" />
     <Compile Include="tests/TracePayloadCompressorTests.cs" />
     <Compile Include="tests/TraceCliTests.cs" />
+    <Compile Include="tests/LoadQueueStateEventTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="fixtures/*.txt">

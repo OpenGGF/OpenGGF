@@ -212,6 +212,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     // All transition request/consume state lives in the coordinator
     private final LevelTransitionCoordinator transitions = new LevelTransitionCoordinator();
+    private boolean initialPresentationPlcsCompleted;
 
     // ROM: LZ3/SBZ2 vertical wrapping — FG layer wraps Y instead of clamping
     boolean verticalWrapEnabled = false;
@@ -2760,15 +2761,18 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * Skipped in headless mode and when zone feature provider suppresses it.
      */
     public void requestTitleCardIfNeeded(LevelLoadContext ctx) {
+        initialPresentationPlcsCompleted = false;
         boolean headlessWholeRunHandoff = graphicsManager.isHeadlessMode()
                 && GameServices.playbackDebug().hasScheduledLevelLoadSession();
         if (!ctx.isShowTitleCard()) {
+            completeSkippedInitialTitleCardPresentation();
             return;
         }
         boolean presentationSuppressed = zoneFeatureProvider != null
                 && zoneFeatureProvider.shouldSuppressInitialTitleCard(
                         currentZone, currentAct);
         if (presentationSuppressed) {
+            completeSkippedInitialTitleCardPresentation();
             return;
         }
         if (!graphicsManager.isHeadlessMode() || headlessWholeRunHandoff) {
@@ -2779,6 +2783,26 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             return;
         }
 
+        completeSkippedInitialTitleCardPresentation();
+    }
+
+    /**
+     * Consumes one pending initial title-card request and reaches the same
+     * production PLC boundary as an intentionally omitted presentation.
+     *
+     * <p>This is the live-tool/headless transition boundary. Callers cannot
+     * select game-specific phase counts or mutate a PLC service directly.
+     */
+    public boolean skipPendingInitialTitleCardPresentation() {
+        if (!transitions.consumeTitleCardRequest()) {
+            return false;
+        }
+        completeSkippedInitialTitleCardPresentation();
+        return true;
+    }
+
+    private void completeSkippedInitialTitleCardPresentation() {
+        completeInitialTitleCardPresentation();
         // A headless fresh load omits presentation, but it still begins at the
         // post-title-card production boundary. Publish the same runtime-art
         // admission that Obj_TitleCardWait2 opens via LoadEnemyArt; this only
@@ -2788,6 +2812,19 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         if (objectArtProvider != null) {
             objectArtProvider.onTitleCardArtRetired();
         }
+    }
+
+    /**
+     * Reaches the ROM's game-owned PLC boundary between the locked initial
+     * title-card loop and the first ordinary level iteration.
+     */
+    public void completeInitialTitleCardPresentation() {
+        if (initialPresentationPlcsCompleted) {
+            return;
+        }
+        activeGameModule().getLevelInitProfile()
+                .completeInitialPresentationPlcs();
+        initialPresentationPlcsCompleted = true;
     }
 
     /**
