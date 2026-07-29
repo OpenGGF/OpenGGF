@@ -80,7 +80,8 @@ public class Sonic2LevelInitProfile extends AbstractLevelInitProfile {
             lifePlc.ifPresent(id -> operations.add(Sonic2PlcService.appendOperation(id)));
             Sonic2PlcService.Operation[] transaction = operations.toArray(Sonic2PlcService.Operation[]::new);
             if (GameServices.module().getObjectArtProvider() instanceof Sonic2ObjectArtProvider artProvider
-                    && GameServices.levelOrNull() != null) {
+                    && GameServices.levelOrNull() != null
+                    && GameServices.levelOrNull().getObjectRenderManager() != null) {
                 Sonic2RuntimePlcPublisher.transact(artProvider, plcService,
                         GameServices.levelOrNull()::refreshObjectArtPatterns, transaction);
             } else {
