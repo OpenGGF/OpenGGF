@@ -1450,6 +1450,40 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    void preCommitAcceptsNestedPathBelowHandoverNamedDirectory(@TempDir Path temporaryDirectory) throws Exception {
+        Path repository = newRepository(temporaryDirectory, "nested-handover-guide");
+        writeAndStage(repository, "HANDOVER-guides/summary.md", "retained contributor guide\n");
+
+        assertPolicyAccepts(runPolicy(repository, "pre-commit"));
+    }
+
+    @Test
+    void stagedAndPublishedTypeChangesCannotHideAbsoluteSymlinkHistory(@TempDir Path temporaryDirectory) throws Exception {
+        Path remote = newBareRemote(temporaryDirectory, "type-change-remote");
+        Path repository = newRepository(temporaryDirectory, "type-change-local");
+        writeAndStage(repository, "docs/portable-resource", "regular base\n");
+        commit(repository, "initial regular resource");
+        addRemoteAndPush(repository, remote, "main");
+        git(repository, "switch", "-c", "feature/type-change");
+
+        Files.delete(repository.resolve("docs/portable-resource"));
+        stageSymlink(repository, "docs/portable-resource", "/" + "opt" + "/machine-resource", false);
+        assertPolicyRejects(runPolicy(repository, "pre-commit"), "docs/portable-resource");
+        commit(repository, "replace regular resource with absolute link");
+
+        Files.delete(repository.resolve("docs/portable-resource"));
+        writeAndStage(repository, "docs/portable-resource", "regular restored\n");
+        commit(repository, "restore regular resource");
+        String localOid = gitOutput(repository, "rev-parse", "HEAD").trim();
+
+        assertPolicyRejects(runPolicyWithInput(repository, "refs/heads/feature/type-change " + localOid
+                + " refs/heads/feature/type-change " + ALL_ZERO_OID + "\n",
+                "pre-push", "origin", remote.toString()), "docs/portable-resource");
+        assertPolicyRejects(runPolicy(repository, "ci-push", ALL_ZERO_OID, localOid, "feature/type-change"),
+                "docs/portable-resource");
+    }
+
+    @Test
     void everyDisassemblyPathIsIgnoredAsDirectoryAndSymlink(@TempDir Path temporaryDirectory) throws Exception {
         Path repository = newRepository(temporaryDirectory, "disassembly-ignore");
         installProjectIgnoreRules(repository);
@@ -1528,6 +1562,74 @@ class TestBuildToolingGuard {
         assertPolicyAccepts(runPolicyWithInput(repository, "refs/heads/feature/clean-from-remediated " + localOid
                 + " refs/heads/feature/clean-from-remediated " + ALL_ZERO_OID + "\n", "pre-push", "origin", remote.toString()));
         assertPolicyAccepts(runPolicy(repository, "ci-push", ALL_ZERO_OID, localOid, "feature/clean-from-remediated"));
+    }
+
+    @Test
+    void ciNewBranchRetainsSameNamedRefOnAnotherRemoteAsPublishedBoundary(
+            @TempDir Path temporaryDirectory) throws Exception {
+        Path upstream = newBareRemote(temporaryDirectory, "same-name-upstream");
+        Path origin = newBareRemote(temporaryDirectory, "same-name-origin");
+        Path repository = newRepository(temporaryDirectory, "same-name-local");
+        createInitialCommit(repository);
+        git(repository, "switch", "-c", "feature/shared");
+        stageSymlink(repository, "docs/skdisasm", "../../shared/skdisasm", true);
+        commit(repository, "old published bad link");
+        deleteAndStage(repository, "docs/skdisasm");
+        commit(repository, "published remediation");
+        git(repository, "remote", "add", "upstream", upstream.toString());
+        git(repository, "remote", "add", "origin", origin.toString());
+        git(repository, "push", "-u", "upstream", "feature/shared");
+
+        writeAndStage(repository, "docs/architecture/audits/new-work.md", "clean unpublished work\n");
+        commit(repository, "clean feature work");
+        String localOid = gitOutput(repository, "rev-parse", "HEAD").trim();
+        git(repository, "update-ref", "refs/remotes/origin/feature/shared", localOid);
+        git(repository, "update-ref", "refs/remotes/origin/prefix/feature/shared", localOid);
+
+        ProcessResult wrongPushedRef = runPolicy(repository, "ci-push", ALL_ZERO_OID, localOid,
+                "feature/shared", "refs/remotes/origin/prefix/feature/shared");
+        assertTrue(wrongPushedRef.exitCode() != 0,
+                () -> "a different branch at the same tip must not stand in for the pushed ref:\n"
+                        + wrongPushedRef.output());
+        assertTrue(wrongPushedRef.output().contains("feature/shared"),
+                () -> "wrong-ref rejection must identify the pushed branch:\n" + wrongPushedRef.output());
+        assertPolicyAccepts(runPolicy(repository, "ci-push", ALL_ZERO_OID, localOid,
+                "feature/shared", "refs/remotes/origin/feature/shared"));
+    }
+
+    @Test
+    void ciPushFailsClosedWhenTipTreeEnumerationIsMalformed(@TempDir Path temporaryDirectory) throws Exception {
+        Path repository = newRepository(temporaryDirectory, "tip-tree-failure");
+        createInitialCommit(repository);
+        String baseOid = gitOutput(repository, "rev-parse", "HEAD").trim();
+        writeAndStage(repository, "clean.txt", "clean tip\n");
+        commit(repository, "clean tip");
+        String localOid = gitOutput(repository, "rev-parse", "HEAD").trim();
+
+        Path fakeBin = temporaryDirectory.resolve("tip-tree-fake-bin");
+        Files.createDirectories(fakeBin);
+        Path fakeGit = fakeBin.resolve("git");
+        Files.writeString(fakeGit, """
+                #!/bin/sh
+                if [ "$1" = "ls-tree" ] && [ "$2" = "-r" ]; then
+                    printf '100644 blob not-an-object-id\tclean.txt\n'
+                    exit 0
+                fi
+                PATH="$ORIGINAL_PATH"
+                export PATH
+                exec git "$@"
+                """);
+        assertTrue(fakeGit.toFile().setExecutable(true), "test git wrapper must be executable");
+        String originalPath = System.getenv("PATH");
+        String path = fakeBin + System.getProperty("path.separator") + originalPath;
+
+        ProcessResult result = runPolicy(repository,
+                Map.of("PATH", path, "ORIGINAL_PATH", originalPath),
+                "ci-push", baseOid, localOid, "feature/tree-failure");
+
+        assertTrue(result.exitCode() != 0, () -> "malformed tree enumeration must reject the push:\n" + result.output());
+        assertTrue(result.output().contains("delivered tip tree"),
+                () -> "failure must identify malformed delivered tip tree data:\n" + result.output());
     }
 
     @Test
@@ -1710,9 +1812,17 @@ class TestBuildToolingGuard {
     }
 
     private static ProcessResult runPolicy(Path repository, String mode, String... arguments) throws Exception {
+        return runPolicy(repository, Map.of(), mode, arguments);
+    }
+
+    private static ProcessResult runPolicy(
+            Path repository,
+            Map<String, String> environment,
+            String mode,
+            String... arguments) throws Exception {
         List<String> command = new ArrayList<>(List.of("sh", POLICY_SCRIPT.toString(), mode));
         command.addAll(List.of(arguments));
-        return run(repository, command, null);
+        return run(repository, command, null, environment);
     }
 
     private static ProcessResult runPolicyWithInput(Path repository, String input, String mode, String... arguments) throws Exception {
