@@ -123,7 +123,7 @@ When a frozen baseline shrinks or grows intentionally, update the matching count
 in the same commit.
 
 - `low_level_layers_do_not_depend_on_runtime_layers`: 209
-- `shared_layers_do_not_depend_on_game_specific_packages`: 20
+- `shared_layers_do_not_depend_on_game_specific_packages`: 14
 - `per_game_packages_do_not_cross_depend`: 37
 
 ## Package Cycle Ratchets

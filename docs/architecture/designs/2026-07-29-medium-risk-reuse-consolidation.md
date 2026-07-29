@@ -187,21 +187,26 @@ selected without further evidence.
 
 The remediation must follow systematic debugging:
 
-1. inventory branch/base suite-context differences and reproduce each failure
+1. rerun and immediately archive every branch sweep because the original
+   failing class reports were overwritten by the isolated rerun; if the first
+   attempt is green, make at most three identical normal-configuration
+   attempts total and retain their reproduction frequency and fork evidence;
+2. inventory branch/base suite-context differences and reproduce each failure
    with the smallest deterministic context supported by the evidence;
-2. compare base and branch under the same reduced execution and environment;
-3. form and test one root-cause hypothesis at a time, tracing the relevant
-   inputs and state back to their owner;
-4. add a regression test that fails before the fix under the proven
-   reproduction;
-5. implement the smallest fix at the owner identified by evidence rather than
-   weakening assertions or changing test order; and
-6. rerun the affected ordered reproducer, combined focused suite, and clean
-   same-ROM full comparison.
+3. compare base and branch under the same reduced execution and environment;
+4. form and test one root-cause hypothesis at a time, tracing the relevant
+   inputs and state back to their owner; and
+5. classify the cause before changing code.
 
-If the root cause is a pre-existing nondeterministic environmental failure, the
-investigation must record repeatable evidence. A passing isolated rerun alone
-is insufficient.
+For branch-owned contamination, add a regression test that fails before the
+fix, implement the smallest fix at the owner identified by evidence rather
+than weakening assertions or changing test order, then rerun the reproducer,
+combined focused suite, and clean same-ROM full comparison.
+
+For a proven pre-existing environmental or nondeterministic cause, make no
+speculative production or reset-boundary change. Instead, record repeatable
+branch/base evidence, the controlled factor and repetitions, and the reason no
+branch-owned fix is warranted. A passing isolated rerun alone is insufficient.
 
 The same remediation closes two documentation consistency items before final
 review: align all shared-layer frozen-baseline metadata with its 14-entry

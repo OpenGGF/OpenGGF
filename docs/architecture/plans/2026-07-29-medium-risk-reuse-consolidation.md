@@ -566,11 +566,17 @@ worktree reports. Do not switch the main workspace or feature worktree.
 
 - [ ] **Step 2: Capture exact failure evidence and suite predecessors**
 
-Read the failing Surefire XML and dump files from the branch clean sweep,
-including stack traces, test method names, timestamps, fork configuration,
-environment, and resource diagnostics. Inventory every observable branch/base
-suite-context difference. Use report order only as one candidate signal. Do not
-edit code.
+The Task 4 isolated rerun overwrote the two failing class XML files. Before any
+other test command, rerun the branch with the normal four-fork clean full-suite
+command from Step 9. Immediately copy the complete `target/surefire-reports`
+tree to a task-specific retained evidence directory outside `target`, whether
+the attempt is red or green. If the first attempt is green, make at most three
+identical normal-configuration attempts total and retain every attempt. Record
+the reproduction frequency and fork assignments rather than assuming the next
+sweep will fail. Read any fresh failing XML and dump files there, including
+stack traces, test method names, timestamps, fork configuration, environment,
+and resource diagnostics. Inventory every observable branch/base suite-context
+difference. Use report order only as one candidate signal. Do not edit code.
 
 - [ ] **Step 3: Minimize ordered reproduction**
 
@@ -592,15 +598,19 @@ mvn -Dmse=off \
 Choose a fixed class set whose alphabetical names place each candidate writer
 before the consumer, and verify from the reports/process evidence that both ran
 in the same fork. Reduce that set while retaining the failure. Do not treat the
-order of a comma-separated `-Dtest` value as an execution guarantee. If the
-failure requires the normal four-fork configuration, make assignment and
-repetition deterministic and record the exact mechanism before inferring
-causality. If resource or environment evidence is implicated, vary only that
-one factor. Run the identical reduced command in a clean base worktree at
-`8c9b7378b` with the same ROM properties and environment.
+order of a comma-separated `-Dtest` value as an execution guarantee. If class
+names cannot express the needed lexical order, use either a recorded fixed
+Surefire random-order seed or a behavior-level same-JVM reproducer that invokes
+the suspected writer behavior before the consumer; record and verify the exact
+mechanism. If the failure requires the normal four-fork configuration, make
+assignment and repetition deterministic and record the exact mechanism before
+inferring causality. If resource or environment evidence is implicated, vary
+only that one factor. Run the identical reduced command in a clean base
+worktree at `8c9b7378b` with the same ROM properties and environment.
 
-Expected: a repeatable branch/base distinction, or repeatable evidence that
-the failure is environmental rather than branch-caused.
+Expected: a repeatable branch/base distinction, or repeatable controlled
+evidence that the failure is environmental rather than branch-caused. Classify
+which path applies before continuing.
 
 - [ ] **Step 4: Trace contaminated state to its owner**
 
@@ -611,21 +621,31 @@ singleton, static field, configuration service, or reset boundary.
 
 - [ ] **Step 5: Add a failing ordered regression test**
 
-Encode the smallest behavior-level reproduction in the relevant existing test
-or reset-contract suite. Run it against the current branch and confirm the
-expected failure. Do not add a source-text or test-order-only assertion.
+For a branch-owned cause, encode the smallest behavior-level reproduction in
+the relevant existing test or reset-contract suite. Run it against the current
+branch and confirm the expected failure. Do not add a source-text or
+test-order-only assertion.
+
+For a proven environmental cause, do not add a speculative regression test.
+Retain the repeated controlled reproducer and branch/base evidence instead.
 
 - [ ] **Step 6: Implement the single root-cause fix**
 
-Change only the owner identified in Step 4. Do not weaken the affected
-assertions, add retries, skip tests, reorder the suite, or special-case the
-failing test classes.
+For a branch-owned cause, change only the owner identified in Step 4. Do not
+weaken the affected assertions, add retries, skip tests, reorder the suite, or
+special-case the failing test classes.
+
+For a proven environmental cause, make no production or reset-boundary change.
 
 - [ ] **Step 7: Verify red-green and affected suites**
 
-Run the regression test, minimized ordered reproducer, both originally failing
-classes, and the exact 106-test focused command from Task 4. Record exact
-counts and results.
+For a branch-owned cause, run the regression test, minimized ordered
+reproducer, both originally failing classes, and the exact 106-test focused
+command from Task 4. Record exact counts and results.
+
+For a proven environmental cause, repeat the controlled reproducer enough to
+establish the classification, run both originally failing classes and the
+exact 106-test focused command, and record exact counts and results.
 
 - [ ] **Step 8: Correct architecture baseline metadata**
 
