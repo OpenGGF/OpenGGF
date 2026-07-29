@@ -67,6 +67,10 @@ commit_files() {
 }
 
 commit_parent_or_empty_tree() {
+    if git rev-parse -q --verify "$1^2" >/dev/null 2>&1; then
+        git rev-parse "$1^2"
+        return
+    fi
     git rev-parse -q --verify "$1^1" 2>/dev/null || printf '%s\n' "$EMPTY_TREE_OID"
 }
 

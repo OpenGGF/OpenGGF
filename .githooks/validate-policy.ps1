@@ -116,6 +116,10 @@ function Get-CommitFiles([string]$Commit) {
 }
 
 function Get-CommitParentOrEmptyTree([string]$Commit) {
+    $mergeParent = Invoke-GitText @("rev-parse", "-q", "--verify", "$Commit^2") -AllowFailure
+    if (-not [string]::IsNullOrWhiteSpace($mergeParent)) {
+        return $mergeParent
+    }
     $parent = Invoke-GitText @("rev-parse", "-q", "--verify", "$Commit^1") -AllowFailure
     if ([string]::IsNullOrWhiteSpace($parent)) {
         return $script:EmptyTreeOid
