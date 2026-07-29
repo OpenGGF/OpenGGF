@@ -1,6 +1,6 @@
 # Medium-Risk Reuse Consolidation
 
-**Date:** 2026-07-29  
+**Date:** 2026-07-29
 **Base:** `develop` at `8c9b7378b3bf255bd979292c61a4b8584272c12c`
 
 ## Purpose
@@ -169,3 +169,41 @@ quality review before the tranche-level review.
 - Headless fixture migration is deferred. Most direct runner use is
   intentional; the two AIZ intro diagnostics require characterization of team,
   camera, event, and intro state before any fixture substitution.
+
+## Validation-discovered suite interaction
+
+The first clean branch sweep introduced three full-suite-only failures absent
+from the same-ROM base sweep:
+
+- `TestPlayableSpriteRollSpeed.s3kTailsStopsRollingBelowMinimumRollSpeedThreshold`
+- `TestLiveTraceComparatorObserver.existingFiveArgConstructorDelegatesWithNullObserver`
+- `TestLiveTraceComparatorObserver.nullObserverIsHonoured`
+
+All three pass when their two classes run alone. This is not evidence that they
+are harmless; it establishes only that the full-suite context matters and
+blocks integration. Possible causes include deterministic order interaction,
+leaked state, resource pressure, environment, or nondeterminism; none is
+selected without further evidence.
+
+The remediation must follow systematic debugging:
+
+1. inventory branch/base suite-context differences and reproduce each failure
+   with the smallest deterministic context supported by the evidence;
+2. compare base and branch under the same reduced execution and environment;
+3. form and test one root-cause hypothesis at a time, tracing the relevant
+   inputs and state back to their owner;
+4. add a regression test that fails before the fix under the proven
+   reproduction;
+5. implement the smallest fix at the owner identified by evidence rather than
+   weakening assertions or changing test order; and
+6. rerun the affected ordered reproducer, combined focused suite, and clean
+   same-ROM full comparison.
+
+If the root cause is a pre-existing nondeterministic environmental failure, the
+investigation must record repeatable evidence. A passing isolated rerun alone
+is insufficient.
+
+The same remediation closes two documentation consistency items before final
+review: align all shared-layer frozen-baseline metadata with its 14-entry
+violation set, and enumerate the removed base-only SnaleBlaster test failures in
+the validation artifact.

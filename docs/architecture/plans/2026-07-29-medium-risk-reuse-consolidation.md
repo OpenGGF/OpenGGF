@@ -529,3 +529,148 @@ updated baseline if it moved; merge into the main workspace; run the full
 post-merge suite and compare failures; push only `develop`; then verify the
 worktree is free of unknown changes, remove it, delete the fully merged local
 feature branch, and prune metadata.
+
+---
+
+### Task 5: Resolve validation-discovered suite interaction
+
+**Files:**
+
+- Modify only after root-cause evidence identifies the owning production or
+  test-reset boundary.
+- Modify: `docs/architecture/archunit-exceptions.md`
+- Modify: `src/test/java/com/openggf/tests/TestArchUnitRules.java`
+- Modify: `src/test/resources/archunit/frozen/stored.rules`
+- Modify:
+  `docs/architecture/validation/2026-07-29-medium-risk-reuse-consolidation.md`
+- Test: `src/test/java/com/openggf/tests/TestPlayableSpriteRollSpeed.java`
+- Test:
+  `src/test/java/com/openggf/trace/live/TestLiveTraceComparatorObserver.java`
+
+**Interfaces:**
+
+- Produces an automated reproduction of each branch-only failure or repeatable
+  evidence identifying a non-order suite-context cause.
+- Preserves production behavior and fixes only the owner proven by evidence.
+- Aligns the shared-layer frozen baseline metadata to 14 without changing the
+  frozen rule ID.
+
+- [ ] **Step 1: Re-run design and plan review loops**
+
+Delegate the amended design and plan for review. Fix all blocking/Important
+issues and repeat until both are green before beginning investigation.
+Then create a disposable clean detached worktree at exact base `8c9b7378b`,
+link the same three discovered ROMs through the repository hook, and retain it
+through Step 9. Keep its `target/surefire-reports` separate from the feature
+worktree reports. Do not switch the main workspace or feature worktree.
+
+- [ ] **Step 2: Capture exact failure evidence and suite predecessors**
+
+Read the failing Surefire XML and dump files from the branch clean sweep,
+including stack traces, test method names, timestamps, fork configuration,
+environment, and resource diagnostics. Inventory every observable branch/base
+suite-context difference. Use report order only as one candidate signal. Do not
+edit code.
+
+- [ ] **Step 3: Minimize ordered reproduction**
+
+Based on Step 2 evidence, test one hypothesis at a time. If same-JVM order is
+implicated, use one reused fork:
+
+```bash
+mvn -Dmse=off \
+  -Dsonic1.rom.path="$S1_ROM" \
+  -Dsonic2.rom.path="$S2_ROM" \
+  -Ds3k.rom.path="$S3K_ROM" \
+  -Dsurefire.forkCount=1 \
+  -Dsurefire.reuseForks=true \
+  -Dsurefire.runOrder=alphabetical \
+  -Dtest=<fixed-alphabetical-class-set> \
+  test
+```
+
+Choose a fixed class set whose alphabetical names place each candidate writer
+before the consumer, and verify from the reports/process evidence that both ran
+in the same fork. Reduce that set while retaining the failure. Do not treat the
+order of a comma-separated `-Dtest` value as an execution guarantee. If the
+failure requires the normal four-fork configuration, make assignment and
+repetition deterministic and record the exact mechanism before inferring
+causality. If resource or environment evidence is implicated, vary only that
+one factor. Run the identical reduced command in a clean base worktree at
+`8c9b7378b` with the same ROM properties and environment.
+
+Expected: a repeatable branch/base distinction, or repeatable evidence that
+the failure is environmental rather than branch-caused.
+
+- [ ] **Step 4: Trace contaminated state to its owner**
+
+Trace the inputs or state implicated by the confirmed hypothesis back through
+their writers and readers. Name the observed difference, owner, expected
+lifecycle, and evidence before proposing a fix. Do not assume the cause is a
+singleton, static field, configuration service, or reset boundary.
+
+- [ ] **Step 5: Add a failing ordered regression test**
+
+Encode the smallest behavior-level reproduction in the relevant existing test
+or reset-contract suite. Run it against the current branch and confirm the
+expected failure. Do not add a source-text or test-order-only assertion.
+
+- [ ] **Step 6: Implement the single root-cause fix**
+
+Change only the owner identified in Step 4. Do not weaken the affected
+assertions, add retries, skip tests, reorder the suite, or special-case the
+failing test classes.
+
+- [ ] **Step 7: Verify red-green and affected suites**
+
+Run the regression test, minimized ordered reproducer, both originally failing
+classes, and the exact 106-test focused command from Task 4. Record exact
+counts and results.
+
+- [ ] **Step 8: Correct architecture baseline metadata**
+
+Update the published shared-layer count, rule metadata, and stored-rule mapping
+from 20 to 14 while preserving the frozen rule ID and current 14-entry
+violation file. Run both ArchUnit suites.
+
+- [ ] **Step 9: Rerun clean same-ROM full comparison**
+
+Use the disposable base worktree retained from Step 1; do not switch either the
+main workspace or feature worktree. Run the branch and base worktrees with the
+same normal four-fork configuration:
+
+```bash
+mvn -Dmse=off \
+  -Dsonic1.rom.path="$S1_ROM" \
+  -Dsonic2.rom.path="$S2_ROM" \
+  -Ds3k.rom.path="$S3K_ROM" \
+  clean test
+```
+
+Aggregate complete Surefire XML after the documented idle-tail hang. Integration
+is allowed only if no test passing on base fails on branch. Preserve reports
+separately, classify any generated files, then remove the disposable base
+worktree after comparison.
+
+- [ ] **Step 10: Amend validation evidence and commit**
+
+Enumerate every base-only SnaleBlaster failing testcase, record the debugging
+reproducer and root cause, update final full-suite counts, run both worktree and
+range `git diff --check`, and commit the fix plus documentation with required
+trailers.
+
+- [ ] **Step 11: Resume final review and integration**
+
+Run a whole-branch review and fix every Critical/Important finding to green.
+Fetch and fast-forward the main-workspace `develop` branch without overwriting
+user changes. If `develop` moved, create a clean worktree at the updated
+integration baseline, rerun the same-ROM full suite there, and rerun focused
+and full verification on the rebased/merged feature state.
+
+Merge the reviewed feature branch into the main-workspace `develop` without
+switching that workspace. Preserve its pre-existing dirty rewind report
+byte-for-byte across the post-merge same-ROM full suite. Compare the merged
+failure/error set with the updated clean baseline; push only `develop` when no
+new regression exists. Then verify the feature worktree contains no unknown
+changes, remove it, delete its fully merged local branch, and prune worktree
+metadata.
