@@ -23,6 +23,7 @@ import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
@@ -39,6 +40,7 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Executes each ordinary boss's actual killing-hit hook, not a PLC facade. */
 @Isolated
@@ -71,6 +73,17 @@ class TestSonic2BossPlcProducerCoverage {
         SessionManager.clear();
     }
 
+    @Test
+    void rewindRetainsPendingDefeatEntryWithoutReplayingTheKillingHit() throws Exception {
+        var captured = com.openggf.game.rewind.GenericFieldCapturer
+                .defaultObjectSubclassCapturedFieldsForAudit(Sonic2EHZBossInstance.class)
+                .stream().map(java.lang.reflect.Field::getName).toList();
+        assertTrue(captured.contains("defeatEntryPending"),
+                "rewind schema must capture rejected defeat-entry work");
+        assertTrue(captured.contains("defeatEntryPrepared"),
+                "rewind schema must capture successful defeat-entry publication");
+    }
+
     @ParameterizedTest(name = "{0}")
     @MethodSource("bosses")
     void killingHitOwnerAppendsCapsulePlc(BossRoute route) throws Exception {
@@ -83,6 +96,7 @@ class TestSonic2BossPlcProducerCoverage {
         Sonic2PlcService queue = GameServices.module().getGameService(Sonic2PlcService.class);
         assertEquals(expectedDescriptors(Sonic2Constants.PLC_CAPSULE), queue.capture().queuedEntries(),
                 route.name() + " must append the capsule PLC from its real killing-hit owner");
+        assertPreparedRenderersPublished(Sonic2Constants.PLC_CAPSULE);
     }
 
     /**
@@ -106,6 +120,15 @@ class TestSonic2BossPlcProducerCoverage {
         assertEquals(expectedDescriptors(route.animalPlc(), Sonic2Constants.PLC_EXPLOSION),
                 queue.capture().queuedEntries(),
                 route.name() + " must append its zone animal before the explosion PLC");
+        assertPreparedRenderersPublished(route.animalPlc(), Sonic2Constants.PLC_EXPLOSION);
+    }
+
+    private static void assertPreparedRenderersPublished(int... plcIds) throws Exception {
+        Sonic2ObjectArtProvider provider =
+                (Sonic2ObjectArtProvider) GameServices.module().getObjectArtProvider();
+        provider.preparePlcs(plcIds).sheets().forEach(sheet ->
+                assertEquals(true, provider.getRenderer(sheet.key()) != null,
+                        "owner publication must leave eager renderer available for " + sheet.key()));
     }
 
     private static Stream<BossRoute> bosses() {

@@ -117,6 +117,16 @@ public abstract class Sonic2ZoneEvents {
         this.bossSpawnDelay = delay;
     }
 
+    /** Rewind sidecar for deferred native PLC publication. */
+    public final int getPendingPlcIdForRewind() {
+        return pendingPlcId == null ? -1 : pendingPlcId;
+    }
+
+    /** Restores deferred native PLC publication without replaying owner effects. */
+    public final void setPendingPlcIdForRewind(int plcId) {
+        pendingPlcId = plcId < 0 ? null : plcId;
+    }
+
     /** Spawn a dynamic object into the level. */
     protected void spawnObject(ObjectInstance object) {
         LevelManager lm = levelManager();

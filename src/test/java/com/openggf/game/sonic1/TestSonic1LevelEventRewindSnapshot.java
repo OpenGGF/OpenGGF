@@ -73,6 +73,29 @@ class TestSonic1LevelEventRewindSnapshot {
     }
 
     @Test
+    void roundTripDeferredNativePlcWork() throws Exception {
+        Sonic1LevelEventManager mgr = new Sonic1LevelEventManager();
+        mgr.initLevel(0, 2);
+        Object ghz = field(Sonic1LevelEventManager.class, "ghzEvents").get(mgr);
+        var pending = ghz.getClass().getSuperclass().getDeclaredField("pendingPlcId");
+        pending.setAccessible(true);
+        pending.set(ghz, 17);
+
+        LevelEventSnapshot snapshot = mgr.capture();
+        pending.set(ghz, null);
+        mgr.restore(snapshot);
+
+        assertEquals(17, pending.get(ghz),
+                "rewind must retain deferred PLC work instead of replaying the event owner");
+    }
+
+    private static java.lang.reflect.Field field(Class<?> type, String name) throws Exception {
+        var field = type.getDeclaredField(name);
+        field.setAccessible(true);
+        return field;
+    }
+
+    @Test
     void restoreExtraWithNullIsNoOp() {
         Sonic1LevelEventManager mgr = new Sonic1LevelEventManager();
         mgr.initLevel(0, 2);

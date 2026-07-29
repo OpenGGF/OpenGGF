@@ -38,6 +38,21 @@ class TestPlcProducerCoverageGuard {
         Class.forName("com.openggf.game.sonic1.events.TestSonic1PlcProducerOwnerCoverage");
         Class.forName("com.openggf.game.sonic2.TestSonic2PlcProducerCoverage");
         Class.forName("com.openggf.game.sonic2.objects.bosses.TestSonic2BossPlcProducerCoverage");
+        assertEquals(39, PlcProducerRouteRegistry.bindings().size(),
+                "every audit row needs exactly one registered executable owner case");
+        assertEquals(39, PlcProducerRouteRegistry.bindings().stream()
+                        .map(PlcProducerRouteRegistry.Binding::key).collect(java.util.stream.Collectors.toSet()).size(),
+                "route keys must be unique; a duplicate cannot stand in for a missing owner case");
+    }
+
+    @Test
+    void everyRouteKeyStillNamesItsConcreteExecutableOwnerCase() throws IOException {
+        for (PlcProducerRouteRegistry.Binding binding : PlcProducerRouteRegistry.bindings()) {
+            String testSource = Files.readString(Path.of(binding.testSource()));
+            assertTrue(testSource.contains(binding.executableAnchor()),
+                    () -> binding.key() + " no longer has its registered production-owner test case "
+                            + binding.executableAnchor());
+        }
     }
 
     @Test

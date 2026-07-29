@@ -111,4 +111,14 @@ abstract class Sonic1ZoneEvents {
     void setEventRoutine(int routine) {
         this.eventRoutine = routine;
     }
+
+    /** Rewind sidecar for deferred native PLC publication. */
+    final int getPendingPlcIdForRewind() {
+        return pendingPlcId == null ? -1 : pendingPlcId;
+    }
+
+    /** Restores deferred native PLC publication without replaying owner effects. */
+    final void setPendingPlcIdForRewind(int plcId) {
+        pendingPlcId = plcId < 0 ? null : plcId;
+    }
 }

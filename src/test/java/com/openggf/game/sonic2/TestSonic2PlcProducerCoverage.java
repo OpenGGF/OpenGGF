@@ -91,6 +91,7 @@ class TestSonic2PlcProducerCoverage {
             throws Exception {
         RuntimeFixture fixture = installRuntime(route.romZone());
         Sonic2PlcService queue = GameServices.module().getGameService(Sonic2PlcService.class);
+        var prepared = fixture.provider().preparePlcs(route.plcId());
         Sonic2ZoneEvents owner = route.owner().get();
         owner.init(route.act());
         owner.setEventRoutine(route.routine());
@@ -102,12 +103,11 @@ class TestSonic2PlcProducerCoverage {
 
         assertEquals(expectedDescriptors(route.plcId()), queue.capture().queuedEntries(),
                 route.name() + " must submit its ROM LoadPLC descriptor through the native FIFO");
-        assertFalse(fixture.provider().preparePlcs(route.plcId()).sheets().isEmpty()
-                        && fixture.provider().getRendererKeys().isEmpty(),
-                route.name() + " must retain an eager renderer path after queue publication");
-        assertDoesNotThrow(() -> fixture.provider().preflightPreparedPlc(
-                        fixture.provider().preparePlcs(route.plcId())),
+        assertDoesNotThrow(() -> fixture.provider().preflightPreparedPlc(prepared),
                 route.name() + " eager art must be immediately usable after its owner transition");
+        prepared.sheets().forEach(sheet -> assertEquals(true,
+                fixture.provider().getRenderer(sheet.key()) != null,
+                route.name() + " must publish the prepared renderer " + sheet.key()));
     }
 
     private static Stream<EventRoute> eventRoutes() {
