@@ -1406,7 +1406,9 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             if (!useRawCameraWindow) {
                 return getWindowEnd(cameraX);
             }
-            return cameraX + S3K_RAW_WINDOW_AHEAD;
+            // The ROM end pointer is exclusive: a ring exactly at the computed
+            // endpoint belongs to the next placement window.
+            return cameraX + S3K_RAW_WINDOW_AHEAD - 1;
         }
 
         private boolean areAllCollected() {

@@ -22,8 +22,9 @@ class TestS3kResultsElementObjectInstance {
                 "x-width==320 is outside the native right boundary");
 
         TestObjectServices services = new TestObjectServices();
-        S3kResultsScreenObjectInstance parent = ObjectConstructionContext.construct(services,
-                () -> new S3kResultsScreenObjectInstance(PlayerCharacter.SONIC_ALONE, 1));
+        S3kResultsScreenObjectInstance parent = ObjectConstructionContext.withRewindActiveRestore(
+                () -> ObjectConstructionContext.construct(services,
+                        () -> new S3kResultsScreenObjectInstance(PlayerCharacter.SONIC_ALONE, 1)));
         parent.setServices(services);
         S3kResultsElementObjectInstance child = new S3kResultsElementObjectInstance(
                 parent, 1, PlayerCharacter.SONIC_ALONE); // width=$30, exits left

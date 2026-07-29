@@ -72,7 +72,8 @@ final class LevelActTransitionExecutor {
         LevelDescriptor levelData = levelManager.levels.get(levelManager.currentZone).get(levelManager.currentAct);
         levelManager.beginSeamlessTransitionLoad(request);
         try {
-            levelManager.loadLevelData(levelData.levelIndex());
+            levelManager.loadLevelData(levelData.levelIndex(), deferredResources);
+            deferredResources.verifyFullyConsumed();
         } finally {
             levelManager.endSeamlessTransitionLoad();
         }

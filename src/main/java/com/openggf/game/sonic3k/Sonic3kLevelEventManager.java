@@ -97,7 +97,7 @@ import java.util.logging.Logger;
 public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         implements CheckpointRuntimeStateProvider,
         AizObjectEventBridge, CnzObjectEventBridge, HczObjectEventBridge, MgzObjectEventBridge,
-        FbzObjectEventBridge,
+        FbzObjectEventBridge, IczObjectEventBridge,
         S3kTransitionEventBridge, AizPreparedTransitionArtBridge {
     private static final Logger LOG = Logger.getLogger(Sonic3kLevelEventManager.class.getName());
     private static final int MHZ_POLLEN_SPAWNER_SLOT = 4;
@@ -343,6 +343,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
         if (iczEvents != null) {
             iczEvents.updatePostTitleAct2SizeWorkers();
+        }
+        if (lbzEvents != null) {
+            lbzEvents.updatePostTitleAct2SizeWorkers();
         }
         if (hczEvents != null) {
             hczEvents.updateRetainedCarrierObjectPass(currentAct);

@@ -84,7 +84,7 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
      * @param cleanupAction action to run after spawning the signpost (e.g. palette restore)
      */
     public S3kBossDefeatSignpostFlow(int signpostX, int apparentAct, CleanupAction cleanupAction) {
-        this(signpostX, apparentAct, cleanupAction, 0, 0, 0, 0, false, false);
+        this(signpostX, apparentAct, cleanupAction, 0, 0, 0, 0, false, false, false);
     }
 
     S3kBossDefeatSignpostFlow(int signpostX, int apparentAct, CleanupAction cleanupAction,
@@ -92,7 +92,7 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
             int resultsPostControlHandoffDelayEntries) {
         this(signpostX, apparentAct, cleanupAction, 0,
                 signpostResultsTimerCatchUpEntries, resultsWaitDurationAdjustment,
-                resultsPostControlHandoffDelayEntries, false, false);
+                resultsPostControlHandoffDelayEntries, false, false, false);
     }
 
     S3kBossDefeatSignpostFlow(int signpostX, int apparentAct, CleanupAction cleanupAction,
@@ -100,7 +100,7 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
             int resultsWaitDurationAdjustment, int resultsPostControlHandoffDelayEntries) {
         this(signpostX, apparentAct, cleanupAction, initialWaitCatchUpEntries,
                 signpostResultsTimerCatchUpEntries, resultsWaitDurationAdjustment,
-                resultsPostControlHandoffDelayEntries, false, false);
+                resultsPostControlHandoffDelayEntries, false, false, false);
     }
 
     S3kBossDefeatSignpostFlow(int signpostX, int apparentAct, CleanupAction cleanupAction,
@@ -110,13 +110,14 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
         this(signpostX, apparentAct, cleanupAction, initialWaitCatchUpEntries,
                 signpostResultsTimerCatchUpEntries, resultsWaitDurationAdjustment,
                 resultsPostControlHandoffDelayEntries,
-                preservesGroundedResultsDispatchBoundary, false);
+                preservesGroundedResultsDispatchBoundary, false, false);
     }
 
     S3kBossDefeatSignpostFlow(int signpostX, int apparentAct, CleanupAction cleanupAction,
             int initialWaitCatchUpEntries, int signpostResultsTimerCatchUpEntries,
             int resultsWaitDurationAdjustment, int resultsPostControlHandoffDelayEntries,
             boolean preservesGroundedResultsDispatchBoundary,
+            boolean usesShortResultsChildRetireTail,
             boolean changeAct2SizesOnTitleComplete) {
         super(new ObjectSpawn(signpostX, 0, 0, 0, 0, false, 0), "S3kBossDefeatSignpostFlow");
         this.signpostX = signpostX;
@@ -127,7 +128,7 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
         this.resultsWaitDurationAdjustment = Math.max(0, resultsWaitDurationAdjustment);
         this.resultsPostControlHandoffDelayEntries = Math.max(0, resultsPostControlHandoffDelayEntries);
         this.preservesGroundedResultsDispatchBoundary = preservesGroundedResultsDispatchBoundary;
-        this.usesShortResultsChildRetireTail = changeAct2SizesOnTitleComplete;
+        this.usesShortResultsChildRetireTail = usesShortResultsChildRetireTail;
         this.changeAct2SizesOnTitleComplete = changeAct2SizesOnTitleComplete;
         this.phase = Phase.WAIT_FADE;
         this.timer = FADE_TIMER;

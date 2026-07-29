@@ -506,7 +506,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                 return;
             }
             onExitReady();
-            complete = carriedTitlePhase == CarriedTitlePhase.RESULTS;
+            complete = !titleInitializationPending
+                    && carriedTitlePhase == CarriedTitlePhase.RESULTS;
             return;
         }
         exitQueueCounter++;
@@ -700,6 +701,15 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
 
     @Override
     protected void onExitReady() {
+        if (exitPublicationComplete) {
+            if (titleInitializationPending) {
+                initializePublishedTitleCard();
+                titleInitializationPending = false;
+                complete = true;
+                ObjectLifetimeOps.deleteNoRespawn(this);
+            }
+            return;
+        }
         // A finished/abandoned time attack attempt returns to the time attack
         // menu instead of any of the below: the in-place Apparent_act flip
         // (most Act 1 zones), arming the seamless-reload trigger via
@@ -715,6 +725,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             ObjectLifetimeOps.deleteNoRespawn(this);
             return;
         }
+        exitPublicationComplete = true;
 
         int zone = services().romZoneId();
         // Zones whose Act 1 → Act 2 boundary is a seamless level reload:
@@ -811,27 +822,13 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             // ROM lines 62713-62720
             boolean skipTitleCard = (zone == 0x08) || (zone == 0x0B);
             if (!skipTitleCard && (!hasSeamlessTransition || fbzCarriedTitleOwner)) {
-                var titleCardProvider = services().titleCardProvider();
-                titleCardProvider.initializeInLevel(zone, 1);
-                if (titleCardProvider instanceof Sonic3kTitleCardManager s3kTitleCard) {
-                    if (fbzCarriedTitleOwner) {
-                        s3kTitleCard.useExternalInLevelGameplayOwner();
-                    }
-                    if (preloadedNextActHandoff) {
-                        s3kTitleCard.requestPreloadedActCameraReleaseOnComplete();
-                    }
-                    if (aizAct1MinibossTitleHandoff) {
-                        s3kTitleCard.requestLevelGamestateResetAtInLevelDisplay();
-                    } else if (retainedReloadState) {
-                        // This Obj_LevelResults survived an earlier Load_Level and
-                        // now mutates into Obj_TitleCard. The in-level title owner
-                        // resets Timer/Ring_count on its first Wait dispatch after
-                        // the queued create passes (sonic3k.asm:62708-62720,
-                        // 62150-62235).
-                        s3kTitleCard.requestLevelGamestateResetAfterCreateDispatches(
-                                MUTATED_TITLE_CARD_RESET_DISPATCHES);
-                    }
+                titleInitializationPending = true;
+                pendingPreloadedTitleHandoff = preloadedNextActHandoff;
+                pendingAizTitleHandoff = aizAct1MinibossTitleHandoff;
+                pendingRetainedReloadTitleHandoff = retainedReloadState;
                 if (fbzCarriedTitleOwner) {
+                    initializePublishedTitleCard();
+                    titleInitializationPending = false;
                     carriedTitlePhase = CarriedTitlePhase.TITLE_CARD_WAIT;
                     carriedTitleWaitTimer = 0;
                 }
@@ -852,12 +849,15 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             }
         }
 
-        if (!fbzCarriedTitleOwner) {
+        if (!titleInitializationPending && !controlsReleasedAheadOfHandoff) {
+            releasePlayerControlsForExit();
+            controlsReleasedAheadOfHandoff = true;
+        }
+        if (!titleInitializationPending && !fbzCarriedTitleOwner) {
             ObjectLifetimeOps.deleteNoRespawn(this);
         }
         LOG.fine(() -> String.format("S3K results exit: zone=%X act=%d isAct2OrSpecial=%b",
                 zone, act, isAct2OrSpecial));
-        }
     }
 
     /**
@@ -871,6 +871,9 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         var titleCardProvider = services().titleCardProvider();
         titleCardProvider.initializeInLevel(zone, 1);
         if (titleCardProvider instanceof Sonic3kTitleCardManager s3kTitleCard) {
+            if (act == 0 && zone == 0x04) {
+                s3kTitleCard.useExternalInLevelGameplayOwner();
+            }
             if (pendingPreloadedTitleHandoff) {
                 s3kTitleCard.requestPreloadedActCameraReleaseOnComplete();
             }

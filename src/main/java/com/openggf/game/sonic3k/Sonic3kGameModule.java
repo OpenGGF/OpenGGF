@@ -178,6 +178,12 @@ public class Sonic3kGameModule implements GameModule {
     }
 
     @Override
+    public RuntimeArtCoordinator createRuntimeArtCoordinator(
+            HardwareTimingService timing) {
+        return new S3kRuntimeArtCoordinator(timing);
+    }
+
+    @Override
     public ObjectRegistry createObjectRegistry() {
         if (objectRegistry == null) {
             objectRegistry = new Sonic3kObjectRegistry();

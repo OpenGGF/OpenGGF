@@ -650,7 +650,7 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         spawnChild(() -> new S3kBossDefeatSignpostFlow(
                 homeX, SIGNPOST_APPARENT_ACT,
                 S3kBossDefeatSignpostFlow.CleanupAction.LOAD_MHZ2_OBJECT_PALETTE,
-                0, 0, 0, 0, false, true));
+                0, 0, 0, 0, false, false, true));
     }
 
     private boolean allPanelsGone() {
