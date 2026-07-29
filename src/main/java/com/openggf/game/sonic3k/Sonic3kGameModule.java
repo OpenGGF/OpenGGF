@@ -48,6 +48,9 @@ import com.openggf.game.TitleScreenProvider;
 import com.openggf.game.sonic3k.levelselect.Sonic3kLevelSelectManager;
 import com.openggf.game.GameId;
 import com.openggf.game.GameRng;
+import com.openggf.game.RuntimeArtCoordinator;
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
+import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.game.OscillationManager;
 import com.openggf.game.dataselect.DataSelectHostProfile;
 import com.openggf.game.dataselect.DataSelectPresentationProvider;
@@ -132,6 +135,12 @@ public class Sonic3kGameModule implements GameModule {
             LOGGER.severe("Failed to create S3K game: " + e.getMessage());
             return null;
         }
+    }
+
+    @Override
+    public RuntimeArtCoordinator createRuntimeArtCoordinator(
+            HardwareTimingService timing) {
+        return new S3kRuntimeArtCoordinator(timing);
     }
 
     @Override

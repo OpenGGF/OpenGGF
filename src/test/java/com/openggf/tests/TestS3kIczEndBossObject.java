@@ -5,6 +5,7 @@ import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.RuntimeArtCoordinator;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
@@ -66,11 +67,11 @@ class TestS3kIczEndBossObject {
     private static final int FINAL_DEFEAT_HANDOFF_FRAMES = 0xBA;
     private static final int ICZ_END_BOSS_ID = 0xBD;
 
-    // Clear any gameplay session leaked by a prior test in this fork so the registry
-    // resolves the S3KL zone set (not a leaked SKL zone). Parallel-suite flake fix.
+    // Reset per-test state without discarding the @RequiresRom S3K gameplay session,
+    // so registry and runtime-art ownership both remain tied to the S3KL fixture.
     @BeforeEach
-    void clearLeakedGameplaySession() {
-        com.openggf.game.session.SessionManager.clear();
+    void resetS3kGameplayFixture() {
+        TestEnvironment.resetPerTest();
     }
 
     @Test
@@ -1872,6 +1873,11 @@ class TestS3kIczEndBossObject {
         @Override
         public com.openggf.game.timing.HardwareTimingService hardwareTiming() {
             return resultsTiming.hardwareTiming();
+        }
+
+        @Override
+        public RuntimeArtCoordinator runtimeArtCoordinator() {
+            return TestEnvironment.activeGameplayMode().runtimeArtCoordinator();
         }
 
         @Override

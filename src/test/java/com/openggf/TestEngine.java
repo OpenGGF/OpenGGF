@@ -2,6 +2,7 @@ package com.openggf;
 
 import com.openggf.game.GameId;
 import com.openggf.game.GameModule;
+import com.openggf.game.RuntimeArtCoordinator;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameStateManager;
@@ -519,7 +520,7 @@ class TestEngine {
         Knuckles knuckles = new Knuckles("knuckles", (short) 100, (short) 624);
         when(spriteManager.getSprite("knuckles")).thenReturn(knuckles);
 
-        GameplayModeContext gameplayMode = SessionManager.openGameplaySession(mock(GameModule.class),
+        GameplayModeContext gameplayMode = SessionManager.openGameplaySession(neutralGameModule(),
                 SaveSessionContext.noSave("s1", new SelectedTeam("knuckles", List.of()), 0, 0));
         setPrivateField(engine, "gameplayMode", gameplayMode);
         setPrivateField(engine, "spriteManager", spriteManager);
@@ -531,6 +532,12 @@ class TestEngine {
         Object resolved = method.invoke(engine);
 
         assertSame(knuckles, resolved);
+    }
+
+    private static GameModule neutralGameModule() {
+        GameModule module = mock(GameModule.class);
+        when(module.createRuntimeArtCoordinator(any())).thenReturn(RuntimeArtCoordinator.NONE);
+        return module;
     }
 
     private static final class TrackingS1ImageCacheManager extends S1DataSelectImageCacheManager

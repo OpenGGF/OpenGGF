@@ -329,14 +329,20 @@ public class TestAizFireCurtainRendererRom {
             Sonic3kAIZEvents events, int act, int frame) {
         var timing = GameServices.hardwareTiming();
         timing.service(HardwareServiceBoundary.VINT_SERVICE);
+        GameServices.runtimeArtCoordinator()
+                .afterTimingService(HardwareServiceBoundary.VINT_SERVICE);
         timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        GameServices.runtimeArtCoordinator()
+                .afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
         events.update(act, frame);
         timing.service(HardwareServiceBoundary.POST_OBJECTS);
+        GameServices.runtimeArtCoordinator()
+                .afterTimingService(HardwareServiceBoundary.POST_OBJECTS);
     }
 
     private static void stageFireOverlay(Sonic3kAIZEvents events) {
         for (int frame = 0;
-                frame < 64 && !events.isFireOverlayTilesLoaded();
+                frame < 100_000 && !events.isFireOverlayTilesLoaded();
                 frame++) {
             updateWithHardware(events, 0, frame);
         }

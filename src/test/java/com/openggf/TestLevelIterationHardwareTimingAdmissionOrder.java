@@ -1,6 +1,9 @@
 package com.openggf;
 
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
+
 import com.openggf.camera.Camera;
+import com.openggf.data.Rom;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameRng;
 import com.openggf.game.GameStateManager;
@@ -10,10 +13,6 @@ import com.openggf.game.session.WorldSession;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.game.timing.HardwareWorkHandle;
-import com.openggf.game.timing.HardwareWorkKind;
-import com.openggf.game.timing.HardwareWorkPreparation;
-import com.openggf.game.timing.HardwareWorkPreparationSnapshot;
-import com.openggf.game.timing.HardwareWorkSubmission;
 import com.openggf.graphics.FadeManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.game.solid.DefaultSolidExecutionRegistry;
@@ -23,7 +22,10 @@ import com.openggf.trace.timing.HardwareTimingReplayPort;
 import com.openggf.trace.timing.HardwareTimingSchedule;
 import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 import static com.openggf.game.timing.HardwareServiceBoundary.VINT_SERVICE;
@@ -35,9 +37,18 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class TestLevelIterationHardwareTimingAdmissionOrder {
+    private static final byte[] ABC_KOSM = {
+            0x00, 0x03,
+            0x17, 0x00,
+            'A', 'B', 'C',
+            0x00, 0x00, 0x00
+    };
+
+    @TempDir
+    Path tempDir;
 
     @Test
-    void pausedAdmissionActivatesCurrentRowBeforeVintService() {
+    void pausedAdmissionActivatesCurrentRowBeforeVintService() throws Exception {
         Harness harness = harness(1);
         harness.context().getGameStateManager().setGamePaused(true);
         harness.port().beginRawFrame(0);
@@ -65,7 +76,7 @@ class TestLevelIterationHardwareTimingAdmissionOrder {
     }
 
     @Test
-    void seamlessAdmissionDeactivatesStaleRowBeforeTransitionVint() {
+    void seamlessAdmissionDeactivatesStaleRowBeforeTransitionVint() throws Exception {
         Harness harness = harness(0);
         harness.port().beginRawFrame(0);
         var controller = new LevelIterationAdmissionController();
@@ -94,7 +105,7 @@ class TestLevelIterationHardwareTimingAdmissionOrder {
     }
 
     @Test
-    void lockedTitleCardDeactivatesStaleRowBeforeItsHardwareScan() {
+    void lockedTitleCardDeactivatesStaleRowBeforeItsHardwareScan() throws Exception {
         Harness harness = harness(0);
         harness.port().beginRawFrame(0);
         var controller = new LevelIterationAdmissionController();
@@ -120,7 +131,7 @@ class TestLevelIterationHardwareTimingAdmissionOrder {
         assertEquals(null, harness.port().capture().rawFrameLatch());
     }
 
-    private static Harness harness(int edgeRawFrame) {
+    private Harness harness(int edgeRawFrame) throws Exception {
         GameplayModeContext context = new GameplayModeContext(
                 new WorldSession(new Sonic3kGameModule()),
                 HardwareReadinessAdmissionPolicy.RECORDED);
@@ -131,9 +142,25 @@ class TestLevelIterationHardwareTimingAdmissionOrder {
                 new FadeManager(),
                 new GameRng(GameRng.Flavour.S3K),
                 new DefaultSolidExecutionRegistry());
-        HardwareWorkHandle handle =
-                context.hardwareTiming().submit(submission());
-        context.hardwareTiming().service(POST_OBJECTS);
+        Path romPath = tempDir.resolve("timing-admission-kosm.gen");
+        Files.write(romPath, ABC_KOSM);
+        HardwareWorkHandle handle;
+        try (Rom rom = new Rom()) {
+            assertTrue(rom.open(romPath.toString()));
+            handle = S3kRuntimeArtCoordinator.from(context.runtimeArtCoordinator()).moduleQueue().queue(rom, 0, 0x200);
+            for (int frame = 0;
+                    frame < 16 && !hasPreparedPayload(context, handle);
+                    frame++) {
+                context.hardwareTiming().service(
+                        com.openggf.game.timing.HardwareServiceBoundary.PRE_MAIN_LOOP);
+                context.afterHardwareTimingService(
+                        com.openggf.game.timing.HardwareServiceBoundary.PRE_MAIN_LOOP);
+                context.hardwareTiming().service(POST_OBJECTS);
+                context.afterHardwareTimingService(POST_OBJECTS);
+            }
+        }
+        assertTrue(hasPreparedPayload(context, handle),
+                "runtime-owned direct/module queues must prepare the scheduled parent");
         HardwareCompletionEdge edge = new HardwareCompletionEdge(
                 edgeRawFrame,
                 VINT_SERVICE,
@@ -149,17 +176,13 @@ class TestLevelIterationHardwareTimingAdmissionOrder {
         return new Harness(context, handle, port, observer);
     }
 
-    private static HardwareWorkSubmission submission() {
-        return new HardwareWorkSubmission(
-                HardwareWorkKind.KOS_MODULE_QUEUE,
-                0x1000,
-                0x20,
-                0x4000,
-                1,
-                "KosM",
-                1,
-                false,
-                new PreparedWork());
+    private static boolean hasPreparedPayload(
+            GameplayModeContext context, HardwareWorkHandle handle) {
+        return context.hardwareTiming().capture().jobs().stream()
+                .filter(job -> job.handle().equals(handle))
+                .findFirst()
+                .orElseThrow()
+                .preparedPayload() != null;
     }
 
     private record Harness(
@@ -167,40 +190,5 @@ class TestLevelIterationHardwareTimingAdmissionOrder {
             HardwareWorkHandle handle,
             HardwareTimingReplayPort port,
             TraceHardwareTimingBoundaryObserver observer) {
-    }
-
-    private record PreparationSnapshot()
-            implements HardwareWorkPreparationSnapshot {
-        @Override
-        public HardwareWorkPreparation recreatePreparation() {
-            return new PreparedWork();
-        }
-    }
-
-    private static final class PreparedWork
-            implements HardwareWorkPreparation {
-        @Override
-        public boolean stepOneWorkUnit() {
-            return false;
-        }
-
-        @Override
-        public boolean isPrepared() {
-            return true;
-        }
-
-        @Override
-        public byte[] preparedPayload() {
-            return new byte[] {1};
-        }
-
-        @Override
-        public HardwareWorkPreparationSnapshot snapshot() {
-            return new PreparationSnapshot();
-        }
-
-        @Override
-        public void restore(HardwareWorkPreparationSnapshot snapshot) {
-        }
     }
 }

@@ -14,6 +14,10 @@ import com.openggf.game.timing.HardwareWorkPreparationSnapshot;
 import com.openggf.game.timing.HardwareWorkSubmission;
 import com.openggf.game.timing.RomWorkBudgetScheduler;
 import com.openggf.level.LevelManager;
+import com.openggf.trace.timing.HardwareCompletionEdge;
+import com.openggf.trace.timing.HardwareTimingReplayPort;
+import com.openggf.trace.timing.HardwareTimingSchedule;
+import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -146,6 +150,37 @@ class TestLevelFrameHardwareTimingBoundaries {
     }
 
     @Test
+    void schemaTwoDirectReadinessIsVisibleToSameFrameObjectsAfterPreBoundary() {
+        HardwareTimingService timing = new HardwareTimingService(
+                RomWorkBudgetScheduler.oneWorkUnitAt(HardwareServiceBoundary.PRE_MAIN_LOOP));
+        var authority = timing.beginRecordedAdmission(Map.of(
+                HardwareWorkKind.KOS_MODULE_QUEUE,
+                com.openggf.game.timing.HardwareReadinessAdmissionPolicy.RECORDED,
+                HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
+                com.openggf.game.timing.HardwareReadinessAdmissionPolicy.RECORDED));
+        HardwareWorkSubmission submission = submission(
+                HardwareWorkKind.KOS_DECOMPRESSION_QUEUE, 1);
+        HardwareCompletionEdge edge = new HardwareCompletionEdge(
+                0, HardwareServiceBoundary.PRE_MAIN_LOOP,
+                HardwareWorkKind.KOS_DECOMPRESSION_QUEUE, 0,
+                com.openggf.game.timing.HardwareSubmissionFingerprint.compute(submission));
+        HardwareTimingReplayPort port = new HardwareTimingReplayPort(authority);
+        port.install(new HardwareTimingSchedule(2, List.of(edge)));
+        HardwareWorkHandle direct = timing.submit(submission);
+        port.beginRawFrame(0);
+        LevelFrameContext context = context(timing,
+                new TraceHardwareTimingBoundaryObserver(port));
+
+        LevelFrameStep.execute(context, mock(LevelManager.class), mock(Camera.class), () -> { },
+                (name, step) -> {
+                    if ("objects".equals(name)) {
+                        assertTrue(timing.isReady(direct));
+                    }
+                    step.run();
+                });
+    }
+
+    @Test
     void vblankOnlyPathEmitsOnlyVintService() {
         List<HardwareServiceBoundary> boundaries = new ArrayList<>();
         HardwareTimingService timing = new HardwareTimingService();
@@ -228,7 +263,8 @@ class TestLevelFrameHardwareTimingBoundaries {
                 null,
                 null,
                 timing,
-                observer);
+                observer,
+                null);
     }
 
     private static HardwareWorkSubmission submission(int workUnits) {
@@ -236,8 +272,20 @@ class TestLevelFrameHardwareTimingBoundaries {
     }
 
     private static HardwareWorkSubmission submission(TestPreparation preparation) {
+        return submission(HardwareWorkKind.KOS_MODULE_QUEUE, preparation);
+    }
+
+    private static HardwareWorkSubmission submission(
+            HardwareWorkKind kind,
+            int workUnits) {
+        return submission(kind, new TestPreparation(workUnits));
+    }
+
+    private static HardwareWorkSubmission submission(
+            HardwareWorkKind kind,
+            TestPreparation preparation) {
         return new HardwareWorkSubmission(
-                HardwareWorkKind.KOS_MODULE_QUEUE,
+                kind,
                 0x1234,
                 0x20,
                 0x4000,

@@ -1,6 +1,5 @@
 package com.openggf.game.sonic3k.objects;
 
-import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.rewind.identity.PlayerRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
@@ -37,10 +36,7 @@ class TestS3kResultsKosQueueRewind {
 
     @BeforeEach
     void setUp() {
-        TestEnvironment.resetAll();
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
     }
 
     @Test
@@ -160,14 +156,20 @@ class TestS3kResultsKosQueueRewind {
             }
 
             timing.service(HardwareServiceBoundary.VINT_SERVICE);
+            TestEnvironment.activeGameplayMode().runtimeArtCoordinator()
+                    .afterTimingService(HardwareServiceBoundary.VINT_SERVICE);
             assertEquals(readyBefore, readyHandles(timing, submitted),
                     "VINT_SERVICE must not expose results art before its FIFO POST_OBJECTS retirement");
 
             timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            TestEnvironment.activeGameplayMode().runtimeArtCoordinator()
+                    .afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
             assertEquals(readyBefore, readyHandles(timing, submitted),
                     "PRE_MAIN_LOOP must prepare work without exposing results art readiness");
 
             timing.service(HardwareServiceBoundary.POST_OBJECTS);
+            TestEnvironment.activeGameplayMode().runtimeArtCoordinator()
+                    .afterTimingService(HardwareServiceBoundary.POST_OBJECTS);
             List<HardwareWorkHandle> readyAfterPostObjects = readyHandles(timing, submitted);
             assertEquals(submitted.subList(0, readyAfterPostObjects.size()), readyAfterPostObjects,
                     "POST_OBJECTS may expose only the next FIFO results-art handle");

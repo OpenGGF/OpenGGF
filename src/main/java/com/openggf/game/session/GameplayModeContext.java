@@ -11,6 +11,7 @@ import com.openggf.game.GameRng;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.NoOpBonusStageProvider;
 import com.openggf.game.SpecialStageProvider;
+import com.openggf.game.RuntimeArtCoordinator;
 import com.openggf.game.animation.AnimatedTileChannelGraph;
 import com.openggf.game.mutation.ZoneLayoutMutationPipeline;
 import com.openggf.game.palette.PaletteColorStateAdapter;
@@ -32,8 +33,10 @@ import com.openggf.game.rewind.snapshot.OscillationStaticAdapter;
 import com.openggf.game.solid.DefaultSolidExecutionRegistry;
 import com.openggf.game.solid.SolidExecutionRegistry;
 import com.openggf.game.timing.HardwareTimingBoundaryObserver;
+import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.game.timing.HardwareTimingService;
+import com.openggf.level.SeamlessTransitionResourceHandoffRegistry;
 import com.openggf.game.timing.RecordedCompletionAuthority;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.graphics.FadeManager;
@@ -65,6 +68,9 @@ public final class GameplayModeContext implements ModeContext {
     private final int spawnY;
     private final EditorPlaytestStash resumeStash;
     private final HardwareTimingService hardwareTiming;
+    private final RuntimeArtCoordinator runtimeArtCoordinator;
+    private final SeamlessTransitionResourceHandoffRegistry
+            seamlessTransitionResourceHandoffs;
     private final RecordedCompletionAuthority recordedCompletionAuthority;
 
     private Camera camera;
@@ -137,6 +143,12 @@ public final class GameplayModeContext implements ModeContext {
         HardwareReadinessAdmissionPolicy checkedPolicy =
                 Objects.requireNonNull(admissionPolicy, "admissionPolicy");
         this.hardwareTiming = new HardwareTimingService();
+        this.runtimeArtCoordinator = Objects.requireNonNull(
+                worldSession.getGameModule()
+                        .createRuntimeArtCoordinator(hardwareTiming),
+                "runtimeArtCoordinator");
+        this.seamlessTransitionResourceHandoffs =
+                new SeamlessTransitionResourceHandoffRegistry();
         this.recordedCompletionAuthority =
                 checkedPolicy == HardwareReadinessAdmissionPolicy.RECORDED
                         ? hardwareTiming.beginRecordedAdmission()
@@ -233,6 +245,8 @@ public final class GameplayModeContext implements ModeContext {
 
         this.rewindRegistry = new RewindRegistry(profiler);
         this.rewindRegistry.register(hardwareTiming);
+        runtimeArtCoordinator.registerRewindAdapters(this.rewindRegistry);
+        this.rewindRegistry.register(seamlessTransitionResourceHandoffs);
         this.rewindRegistry.register(camera);
         this.rewindRegistry.register(gameStateManager);
         this.rewindRegistry.register(rng);
@@ -433,6 +447,21 @@ public final class GameplayModeContext implements ModeContext {
 
     public HardwareTimingService hardwareTiming() {
         return hardwareTiming;
+    }
+
+    /** Game-owned runtime-art coordinator for this gameplay session. */
+    public RuntimeArtCoordinator runtimeArtCoordinator() {
+        return runtimeArtCoordinator;
+    }
+
+    public SeamlessTransitionResourceHandoffRegistry
+            seamlessTransitionResourceHandoffs() {
+        return seamlessTransitionResourceHandoffs;
+    }
+
+    /** Completes direct physical retirement after timing admission at the boundary. */
+    public void afterHardwareTimingService(HardwareServiceBoundary boundary) {
+        runtimeArtCoordinator.afterTimingService(boundary);
     }
 
     public RecordedCompletionAuthority recordedCompletionAuthority() {
@@ -753,8 +782,13 @@ public final class GameplayModeContext implements ModeContext {
         }
         if (rewindRegistry != null) {
             rewindRegistry.deregister(HardwareTimingService.REWIND_KEY);
+            runtimeArtCoordinator.deregisterRewindAdapters(rewindRegistry);
+            rewindRegistry.deregister(
+                    seamlessTransitionResourceHandoffs.key());
         }
         hardwareTiming.resetForMissingSnapshot();
+        runtimeArtCoordinator.resetForMissingSnapshot();
+        seamlessTransitionResourceHandoffs.resetForMissingSnapshot();
         hardwareTimingBoundaryObserver = HardwareTimingBoundaryObserver.NO_OP;
         if (zoneLayoutMutationPipeline != null) {
             zoneLayoutMutationPipeline.clear();

@@ -9,6 +9,7 @@ import com.openggf.level.animation.SeamlessTransitionAnimationClock;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
+import com.openggf.level.resources.DeferredLevelResourceTracker;
 
 import java.io.IOException;
 import java.util.List;
@@ -27,6 +28,16 @@ final class LevelActTransitionExecutor {
         if (request == null) {
             return;
         }
+
+        SeamlessTransitionResourceHandoff handoff =
+                request.resourceHandoffId() != null
+                        ? GameServices.seamlessTransitionResourceHandoffs()
+                                .claim(request.resourceHandoffId())
+                        : null;
+        DeferredLevelResourceTracker deferredResources =
+                handoff != null
+                        ? handoff.deferredResources().newTracker()
+                        : DeferredLevelResourceTracker.none();
 
         Camera cam = levelManager.camera;
 
@@ -60,7 +71,9 @@ final class LevelActTransitionExecutor {
             levelManager.refreshZoneList();
         }
         LevelData levelData = levelManager.levels.get(levelManager.currentZone).get(levelManager.currentAct);
-        levelManager.loadLevelData(levelData.getLevelIndex());
+        levelManager.loadLevelData(
+                levelData.getLevelIndex(), deferredResources);
+        deferredResources.verifyFullyConsumed();
 
         if (request.mutationKey() != null && !request.mutationKey().isBlank()) {
             levelManager.applySeamlessMutation(request.mutationKey());
@@ -112,6 +125,9 @@ final class LevelActTransitionExecutor {
 
         resetSidekickCpuBoundsAfterTransition(cam);
         levelManager.initLevelEventsForCurrentZoneAct();
+        if (handoff != null) {
+            handoff.transferAfterTargetInit();
+        }
 
         try {
             levelManager.reinitializeZoneFeaturesForActTransition();

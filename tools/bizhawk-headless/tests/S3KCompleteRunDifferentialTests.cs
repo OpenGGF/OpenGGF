@@ -10,7 +10,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
     /// <summary>
     /// ROM-backed differential gate for the native S3K COMPLETE-RUN
     /// recorder (tools/bizhawk/s3k_complete_run_recorder.lua
-    /// v6.37-s3k-completerun; spec
+    /// v6.38-s3k-completerun; spec
     /// tools/bizhawk-headless/docs/s3k-run-publication.md). It runs the
     /// real CLI end-to-end through run.sh over the canonical Knuckles
     /// multi-bonus movie and asserts that the published bonus segment is
@@ -65,17 +65,19 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private const string PublishedHardwareLuaScriptVersionLine =
             "  \"lua_script_version\": \"6.35-s3k-completerun\",";
         private const string CurrentLuaScriptVersionLine =
-            "  \"lua_script_version\": \"6.37-s3k-completerun\",";
+            "  \"lua_script_version\": \"6.38-s3k-completerun\",";
         private const string FixtureTraceSchemaLine =
             "  \"trace_schema\": 6,";
         private const string CurrentTraceSchemaLine =
             "  \"trace_schema\": 7,";
-        private const string HardwareTimingSchemaLine =
+        private const string PublishedHardwareTimingSchemaLine =
             "  \"hardware_timing_schema\": 1,";
+        private const string CurrentHardwareTimingSchemaLine =
+            "  \"hardware_timing_schema\": 2,";
         private const string HczTimingSha256 =
-            "8d7d92b3eb03ceaf4b563b10da9cf4268c27690e0a5625ef429cb9f8c5f0c67e";
+            "a19d98bd7cf341ffcf1c19871e22044abc00bbde99ad352a0e1d41e8f3a34aeb";
         private const string AizTimingSha256 =
-            "a61c169cc98facbdd7aa4af62c7bc0eca89733f2dce695531e787bdf046f89ba";
+            "c80a9c2f0383cfb3ad153ea5448684657543676f1c5920a0e472095a09f8d9e4";
 
         // docs/s3k-run-publication.md §0.3, identity (C). The physics hash
         // was last moved by Lua 6.33-s3k-completerun (ADDR_VBLA_WORD 0xFE12
@@ -402,14 +404,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 producedText,
                 CurrentLuaScriptVersionLine,
                 CurrentTraceSchemaLine,
-                true,
+                CurrentHardwareTimingSchemaLine,
                 "produced");
 
             if (HasMetadataShape(
                 fixtureText,
                 CurrentLuaScriptVersionLine,
                 CurrentTraceSchemaLine,
-                true))
+                CurrentHardwareTimingSchemaLine))
             {
                 return new MetadataNormalization(
                     producedText, CurrentLuaScriptVersionLine);
@@ -418,19 +420,21 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 fixtureText,
                 PublishedHardwareLuaScriptVersionLine,
                 CurrentTraceSchemaLine,
-                true))
+                PublishedHardwareTimingSchemaLine))
             {
                 return new MetadataNormalization(
                     producedText.Replace(
                         CurrentLuaScriptVersionLine,
-                        PublishedHardwareLuaScriptVersionLine),
+                        PublishedHardwareLuaScriptVersionLine).Replace(
+                            CurrentHardwareTimingSchemaLine,
+                            PublishedHardwareTimingSchemaLine),
                     PublishedHardwareLuaScriptVersionLine);
             }
             if (HasMetadataShape(
                 fixtureText,
                 LegacyLuaScriptVersionLine,
                 FixtureTraceSchemaLine,
-                false))
+                null))
             {
                 return new MetadataNormalization(
                     producedText
@@ -440,7 +444,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         .Replace(
                             CurrentTraceSchemaLine,
                             FixtureTraceSchemaLine)
-                        .Replace(HardwareTimingSchemaLine + "\n", ""),
+                        .Replace(
+                            CurrentHardwareTimingSchemaLine + "\n", ""),
                     LegacyLuaScriptVersionLine);
             }
 
@@ -453,27 +458,30 @@ namespace OpenGGF.BizHawk.Headless.Tests
             string text,
             string versionLine,
             string traceSchemaLine,
-            bool hasHardwareTiming)
+            string hardwareTimingSchemaLine)
         {
             return CountOccurrences(text, "\"lua_script_version\":") == 1
                 && CountOccurrences(text, versionLine) == 1
                 && CountOccurrences(text, "\"trace_schema\":") == 1
                 && CountOccurrences(text, traceSchemaLine) == 1
                 && CountOccurrences(text, "\"hardware_timing_schema\":")
-                    == (hasHardwareTiming ? 1 : 0)
-                && CountOccurrences(text, HardwareTimingSchemaLine)
-                    == (hasHardwareTiming ? 1 : 0);
+                    == (hardwareTimingSchemaLine == null ? 0 : 1)
+                && (hardwareTimingSchemaLine == null
+                    || CountOccurrences(text, hardwareTimingSchemaLine) == 1);
         }
 
         private static void RequireMetadataShape(
             string text,
             string versionLine,
             string traceSchemaLine,
-            bool hasHardwareTiming,
+            string hardwareTimingSchemaLine,
             string owner)
         {
             if (!HasMetadataShape(
-                text, versionLine, traceSchemaLine, hasHardwareTiming))
+                text,
+                versionLine,
+                traceSchemaLine,
+                hardwareTimingSchemaLine))
             {
                 throw new InvalidOperationException(
                     owner + " metadata does not have the exact current"
@@ -485,10 +493,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
         {
             string current = CurrentLuaScriptVersionLine + "\n"
                 + CurrentTraceSchemaLine + "\n"
-                + HardwareTimingSchemaLine + "\n";
+                + CurrentHardwareTimingSchemaLine + "\n";
             string published = PublishedHardwareLuaScriptVersionLine + "\n"
                 + CurrentTraceSchemaLine + "\n"
-                + HardwareTimingSchemaLine + "\n";
+                + PublishedHardwareTimingSchemaLine + "\n";
             string legacy = LegacyLuaScriptVersionLine + "\n"
                 + FixtureTraceSchemaLine + "\n";
 
@@ -509,7 +517,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     "  \"lua_script_version\":"
                         + " \"9.99-s3k-completerun\",\n"
                         + CurrentTraceSchemaLine + "\n"
-                        + HardwareTimingSchemaLine + "\n",
+                        + CurrentHardwareTimingSchemaLine + "\n",
                     current),
                 "unknown or mixed");
             AssertEx.Throws<InvalidOperationException>(

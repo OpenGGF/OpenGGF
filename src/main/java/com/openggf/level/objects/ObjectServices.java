@@ -31,6 +31,7 @@ import com.openggf.game.mutation.ZoneLayoutMutationPipeline;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.game.zone.ZoneRuntimeState;
 import com.openggf.game.timing.HardwareTimingService;
+import com.openggf.game.RuntimeArtCoordinator;
 import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.BigRingReturnState;
@@ -156,6 +157,12 @@ public interface ObjectServices {
     default HardwareTimingService hardwareTiming() {
         throw new IllegalStateException(
                 "hardware timing is unavailable in these object services");
+    }
+
+    /** Game-owned runtime-art coordinator for this gameplay session. */
+    default RuntimeArtCoordinator runtimeArtCoordinator() {
+        throw new IllegalStateException(
+                "runtime-art coordination is unavailable in these object services");
     }
 
     // Player/sidekick access

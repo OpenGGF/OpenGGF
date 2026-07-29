@@ -2,11 +2,15 @@
 
 ## Status
 
-Approved after independent review. The symptom-first direction and the
-narrow authoritative hardware-completion exception are user-approved. This
-document inventories timing-sensitive Mega Drive activities used by Sonic 1,
-Sonic 2, and Sonic 3 & Knuckles and defines the minimum authority a dedicated
-hardware-timing input stream may have over them.
+Approved after independent review. The symptom-first direction, the narrow
+authoritative hardware-completion exception, and the schema-2 S3K direct
+Kosinski extension are user-approved. This document inventories
+timing-sensitive Mega Drive activities used by Sonic 1, Sonic 2, and Sonic 3
+& Knuckles and defines the minimum authority a dedicated hardware-timing
+input stream may have over them. The direct-queue implementation details are
+owned by
+[`2026-07-28-s3k-kos-decompression-queue.md`](2026-07-28-s3k-kos-decompression-queue.md);
+this document remains the cross-game authority boundary.
 
 The governing principle is:
 
@@ -129,7 +133,7 @@ the eligibility gate above before receiving trace authority.
 |---|---|---|---|---|---|
 | Long synchronous decompression or level initialization | Physical VInts occur while the main loop is unavailable | Explicitly visible in special-stage and level-start lag rows | Present during black-screen level loads and other initialization | Lag | S1/S2 substantially covered; audit S3K lag capture parity |
 | Normal PLC processing | `RunPLC` services a persistent queue while ordinary loops and some objects poll it | Normal/fade/special handlers service a persistent queue; ordinary gameplay can poll it | PLC/AniPLC coexist with later Kos queues | Native deterministic service queue; external completion candidate only if lag/phase is insufficient | Do not record individual PLC entries; audit service cadence and polled gates |
-| Direct Kosinski decompression queue | Not used as the S3K-style owner | Not used as the S3K-style owner | `Kos_decomp_queue_count` independently gates AIZ intro and ICZ act-transition progression | Native deterministic service queue and reviewed completion candidate | Separate from the module queue |
+| Direct Kosinski decompression queue | Not used as the S3K-style owner | Not used as the S3K-style owner | `Kos_decomp_queue_count` independently gates AIZ intro and ICZ act-transition progression | External completion in S3K schema 2 | `KOS_DECOMPRESSION_QUEUE` is authoritative only under the reviewed schema-2 registry |
 | Kosinski/KosinskiM module queue | Not used as the S3K-style owner | Not used as the S3K-style owner | Resumable module queue remains pending while results/title/event code continues polling | External completion | `KOS_MODULE_QUEUE` is the first approved authoritative kind |
 | Nemesis, Enigma, Saxman, raw map decompression | Normally synchronous from gameplay's point of view | Normally synchronous; special-stage work produces lag rows | Normally synchronous unless wrapped in an explicit deferred queue | Lag | No codec-specific trace authority |
 | VDP DMA transfer and FIFO pressure | Can consume VInt budget or contribute to lag | Can consume VInt budget; controller/DMA VInt is structurally distinct | Queued art, palette, tile and plane transfers may have completion flags | Lag, phase, or completion candidate | Record a completion only when the ROM polls a gameplay-visible fence |
@@ -212,31 +216,48 @@ Authoritative edges live in a dedicated hardware-timing stream, not
 The container contract is exact:
 
 - filename: `hardware_timing.jsonl`;
-- metadata discovery key: `"hardware_timing_schema": 1`;
+- metadata discovery key: `"hardware_timing_schema": 1` or
+  `"hardware_timing_schema": 2`;
 - fixture trace schema: `trace_schema: 7`;
-- S3K standard recorder version: `6.37-s3k`;
-- S3K complete-run recorder version: `6.37-s3k-completerun`.
+- native S3K standard recorder version for schema 2: `6.38-s3k`;
+- native S3K complete-run recorder version for schema 2:
+  `6.38-s3k-completerun`; and
+- the frozen Lua recorders remain at `6.37-s3k` and
+  `6.37-s3k-completerun`, emitting schema 1 only.
 
 For legacy `trace_schema <= 6` fixtures, absence of both the metadata key and
 file means no authoritative timing input; replay uses only the production
-scheduler and existing lag/phase contracts. A file without the metadata key,
-the key without the file, a value other than integer `1`, or an unknown future
-version is a hard fixture-load failure. An empty version-1 stream is valid.
+scheduler and existing lag/phase contracts. For `trace_schema: 7`, a file
+without the metadata key, the key without the file, a value other than integer
+`1` or `2`, or an unknown future version is a hard fixture-load failure. An
+empty stream is valid in either hardware-timing schema.
 
 Events use UTF-8, one compact JSON object per LF-terminated line, and canonical
 ordering by `raw_frame`, then boundary order `vint_service`,
 `pre_main_loop`, `post_objects`, then `kind`, then `ordinal`. Duplicate event
 identities and out-of-order lines are rejected rather than normalized.
 
-The initial authoritative kind registry contains only:
+The kind registry is selected by the metadata version:
 
 ```text
-KOS_MODULE_QUEUE
+schema 1: KOS_MODULE_QUEUE
+schema 2: KOS_MODULE_QUEUE, KOS_DECOMPRESSION_QUEUE
 ```
 
-`KOS_DECOMPRESSION_QUEUE`, `PLC_QUEUE`, VDP transfer fences, and plane-draw
-fences remain non-authoritative inventory candidates. Each requires separate
-ROM evidence and design review.
+Under schema 1, `KOS_MODULE_QUEUE` uses recorded final readiness while
+`KOS_DECOMPRESSION_QUEUE` remains a live production queue. Under schema 2,
+both kinds use recorded final readiness. No timing stream may configure both
+kinds as live, and an event kind not admitted by the selected registry fails
+loading or admission. `PLC_QUEUE`, VDP transfer fences, and plane-draw fences
+remain non-authoritative inventory candidates; each requires separate ROM
+evidence and design review.
+
+Committed schema-1 fixtures remain loadable. A fixture that crosses the AIZ
+intro or ICZ act-transition direct-count consumer cannot certify that
+boundary, because its direct work is live rather than edge-authorized. The
+checked compatibility inventory lives in
+`TestCommittedHardwareTimingFixtures`; replacement with schema-2 native
+output is a separate publication action requiring explicit approval.
 
 ### Boundary application
 
@@ -269,11 +290,13 @@ immediately, but observable readiness remains owned by the timing service.
 
 ### Ordinary play
 
-One production queue/decoder state machine serves both ordinary play and
-replay. It retains the ROM descriptor, bookmark, source/destination, module,
-FIFO, and service-point state required by that queue. Ordinary play releases
-work from ROM-derived work units at the disassembly-defined VInt service
-points, never from host wall-clock duration.
+The same production queue/decoder state machines serve both ordinary play and
+replay. They retain the ROM descriptor, bookmark, source/destination, module,
+FIFO, and service-point state required by each physical queue. S3K standard
+Kosinski work uses one shared four-entry direct FIFO; KosM parents enqueue
+their child streams into that FIFO and advance only through their coordinator.
+Ordinary play releases work from ROM-derived work units at the
+disassembly-defined service points, never from host wall-clock duration.
 
 The recorded scheduler may replace only the final readiness admission. It does
 not replace submission, preparation, queue order, decoder progress, service
@@ -283,8 +306,8 @@ trace green alone is insufficient evidence of live accuracy.
 
 ### Trace replay
 
-For an eligible kind, the dedicated recorded edge is authoritative over final
-readiness:
+For a kind configured as recorded by the selected schema, the dedicated edge
+is authoritative over final readiness:
 
 - an engine job whose data is ready early remains observably pending;
 - the matching kind, ordinal, fingerprint, and boundary are released at the
@@ -361,11 +384,15 @@ release assertions and must disappear once the completion contract is active.
 Recorders should poll stable RAM symptoms at the normal capture point. They
 should not install broad execute/write hooks merely to infer hardware causes.
 
-For the S3K Kos queue:
+For the S3K Kos queues:
 
-- observe the ROM queue/busy owner already read by consumer routines;
+- observe the ROM queue/busy owners already read by consumer routines;
 - emit an edge only on the eligible pending-to-complete transition;
-- assign the ordinal from observed queue lifecycles;
+- assign independent per-kind ordinals from observed FIFO lifecycles;
+- retain direct slot identity across bit-15 busy progress and reconcile
+  retirement plus append without requiring a sampled zero;
+- emit direct retirement at `pre_main_loop` before any same-frame module
+  retirement at `post_objects`;
 - keep stage gating ahead of any optional diagnostic hook;
 - retain invisible, sound-disabled, maximum-speed operation; and
 - terminate within a bounded window.
@@ -378,7 +405,9 @@ was produced by the unchanged implementation that receives that review.
 Lua/native byte equivalence is optional corroboration, not a publication
 prerequisite. Version-1 differential coverage includes `6.37-s3k` standard and
 `6.37-s3k-completerun` captures and byte-exact empty streams for routes with no
-eligible completion. Recorder 6.37 treats an unchanged
+eligible completion. The maintained native schema-2 recorders are
+`6.38-s3k` and `6.38-s3k-completerun`; they emit both module and direct
+retirements. Recorder 6.37 treats an unchanged
 `Level_frame_counter` as `vint_service` unless the ROM is inside its
 held-counter title-card load loop. That loop is armed only by the fixed
 `Obj_TitleCard` parent in physical SST slot 8 with `objoff_48` set, and its
@@ -401,12 +430,13 @@ The first implementation is accepted only when:
 1. S1 and S2 PLC audits prove their per-handler service and polling behavior;
    existing replay results remain unchanged unless a separately reviewed
    timing kind is justified.
-2. AIZ and HCZ submit matching generic Kos queue work without zone or trace
-   predicates.
+2. AIZ, HCZ, and ICZ submit matching generic Kos queue work without zone or
+   trace predicates; module children contend in the shared direct FIFO.
 3. Recorded Kos completion edges release only matching prepared kind,
    ordinal, fingerprint, and boundary.
-4. AIZ and HCZ ring-reset timing emerges from their ordinary results/title
-   routines.
+4. AIZ intro and ICZ act-transition progression emerge from the production
+   direct-count predicate; AIZ and HCZ ring-reset timing still emerges from
+   the ordinary results/title routines.
 5. Missing, duplicate, reordered, mismatched, wrong-boundary, and unprepared
    edges fail structurally; a shifted valid edge causes strict downstream
    comparison failure.
@@ -417,6 +447,9 @@ The first implementation is accepted only when:
 10. All previously-green non-LBZ S3K replays and the repository's required
     S3K bootstrap/loading guards remain green. LBZ is not used as a trace-work
     validation target.
+11. Schema-1 consumer-crossing fixtures remain loadable but are not described
+    as direct-boundary certification; schema-2 replacement remains behind the
+    fixture-publication approval gate.
 
 ## Follow-up audit outputs
 

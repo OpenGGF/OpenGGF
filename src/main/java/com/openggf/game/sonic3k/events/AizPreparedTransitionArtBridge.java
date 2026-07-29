@@ -13,7 +13,6 @@ public interface AizPreparedTransitionArtBridge {
     byte[] aizFireOverlayCopy();
 
     int aizFireOverlayTileCount();
-
     static AizPreparedTransitionArtBridge current(LevelEventProvider provider) {
         if (provider instanceof AizPreparedTransitionArtBridge bridge) {
             return bridge;

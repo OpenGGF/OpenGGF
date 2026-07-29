@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k;
 
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
+
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.GameServices;
@@ -1295,7 +1297,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
             Rom rom = GameServices.rom().getRom();
             if (enemyKosQueue == null) {
                 enemyKosQueue =
-                        new S3kKosModuleQueue(GameServices.hardwareTiming());
+                        S3kRuntimeArtCoordinator.current().moduleQueue();
             }
             // Preserve native FIFO order if activation occurs while the
             // title-retired enemy group is waiting to submit.
@@ -1388,6 +1390,37 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
                             new EnemyKosEntry(
                                     Sonic3kConstants.ART_KOSM_HCZ_POINTDEXTER_ADDR,
                                     Sonic3kConstants.ARTTILE_HCZ_POINTDEXTER));
+            case Sonic3kZoneIds.ZONE_MGZ -> actIndex == 0
+                    ? List.of(
+                            new EnemyKosEntry(
+                                    Sonic3kConstants.ART_KOSM_MGZ_SPIKER_ADDR,
+                                    Sonic3kConstants.ARTTILE_MGZ_SPIKER),
+                            new EnemyKosEntry(
+                                    Sonic3kConstants.ART_KOSM_MGZ_MINIBOSS_ADDR,
+                                    Sonic3kConstants.ARTTILE_MGZ_MINIBOSS),
+                            new EnemyKosEntry(
+                                    Sonic3kConstants.ART_KOSM_MGZ_ENDBOSS_DEBRIS_ADDR,
+                                    Sonic3kConstants.ARTTILE_MGZ_ENDBOSS_DEBRIS))
+                    : List.of(
+                            new EnemyKosEntry(
+                                    Sonic3kConstants.ART_KOSM_MGZ_SPIKER_ADDR,
+                                    Sonic3kConstants.ARTTILE_MGZ_SPIKER),
+                            new EnemyKosEntry(
+                                    Sonic3kConstants.ART_KOSM_MGZ_MANTIS_ADDR,
+                                    Sonic3kConstants.ARTTILE_MGZ_MANTIS));
+            case Sonic3kZoneIds.ZONE_CNZ -> List.of(
+                    new EnemyKosEntry(
+                            Sonic3kConstants.ART_KOSM_CNZ_SPARKLE_ADDR,
+                            Sonic3kConstants.ARTTILE_CNZ_SPARKLE),
+                    new EnemyKosEntry(
+                            Sonic3kConstants.ART_KOSM_CNZ_BATBOT_ADDR,
+                            Sonic3kConstants.ARTTILE_CNZ_BATBOT),
+                    new EnemyKosEntry(
+                            Sonic3kConstants.ART_KOSM_CLAMER_SHOT_ADDR,
+                            Sonic3kConstants.ARTTILE_CNZ_CLAMER_SHOT),
+                    new EnemyKosEntry(
+                            Sonic3kConstants.ART_KOSM_CNZ_BALLOON_ADDR,
+                            Sonic3kConstants.ARTTILE_CNZ_BALLOON_PLC));
             // ROM PLCKosM_ICZ queues these entries in this order from
             // LoadEnemyArt after the title-card owner retires.
             // docs/skdisasm/sonic3k.asm:62287-62300, 64392-64395
@@ -1413,7 +1446,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
             var timing = GameServices.hardwareTiming();
             try {
                 Rom rom = GameServices.rom().getRom();
-                enemyKosQueue = new S3kKosModuleQueue(timing);
+                enemyKosQueue = S3kRuntimeArtCoordinator.current().moduleQueue();
                 for (EnemyKosEntry entry : pendingEnemyKosEntries) {
                     enemyKosHandles.add(enemyKosQueue.queue(
                             rom, entry.source(), entry.destinationTile()));
@@ -2103,7 +2136,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         enemyKosQueue = null;
         if (!snap.pendingKosOrdinals().isEmpty()) {
             var timing = GameServices.hardwareTiming();
-            enemyKosQueue = new S3kKosModuleQueue(timing);
+            enemyKosQueue = S3kRuntimeArtCoordinator.current().moduleQueue();
             for (long ordinal : snap.pendingKosOrdinals()) {
                 enemyKosHandles.add(timing.pendingHandle(
                                 HardwareWorkKind.KOS_MODULE_QUEUE, ordinal)

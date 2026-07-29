@@ -111,6 +111,8 @@ file is guidance you can weigh against the situation in front of you.
    call gameplay owners, or create work the engine did not submit. Guard tests must keep
    this exception confined to the timing port. `TestHardwareTimingAuthorityGuard` enforces
    parser/authority isolation and forbids physics/aux/gameplay and reflective mutation paths.
+   S3K schema 1 records only module-queue readiness; schema 2 records module and direct
+   Kosinski readiness, while both schemas still require production-submitted ROM work.
 5. **Objects never call `getInstance()`.** Use the injected `services()`.
 6. **Gameplay tile edits route through `ZoneLayoutMutationPipeline` / a
    `LevelMutationSurface`** — never a direct `getMap().setValue(...)`. Editor commands and

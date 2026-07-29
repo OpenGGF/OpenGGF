@@ -4,6 +4,7 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameModule;
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.RuntimeArtCoordinator;
 import com.openggf.game.save.SaveSessionContext;
 import com.openggf.game.save.SelectedTeam;
 import org.junit.jupiter.api.AfterEach;
@@ -14,6 +15,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class TestActiveGameplayTeamResolver {
 
@@ -42,7 +44,7 @@ class TestActiveGameplayTeamResolver {
     @Test
     void resolveMainCharacterCode_withSession_prefersSessionOverConfig() {
         config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
-        SessionManager.openGameplaySession(mock(GameModule.class),
+        SessionManager.openGameplaySession(neutralGameModule(),
                 SaveSessionContext.noSave("s3k", new SelectedTeam("knuckles", List.of()), 0, 0));
         assertEquals("knuckles", ActiveGameplayTeamResolver.resolveMainCharacterCode(config));
     }
@@ -89,7 +91,7 @@ class TestActiveGameplayTeamResolver {
     void resolvePlayerCharacter_sessionKnuckles_configSonic_returnsKnuckles() {
         config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
         config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
-        SessionManager.openGameplaySession(mock(GameModule.class),
+        SessionManager.openGameplaySession(neutralGameModule(),
                 SaveSessionContext.noSave("s3k", new SelectedTeam("knuckles", List.of()), 0, 0));
         assertEquals(PlayerCharacter.KNUCKLES,
                 ActiveGameplayTeamResolver.resolvePlayerCharacter(config));
@@ -98,7 +100,7 @@ class TestActiveGameplayTeamResolver {
     @Test
     void resolvePlayerCharacter_sessionSonicWithTails_configKnuckles_returnsSonicAndTails() {
         config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "knuckles");
-        SessionManager.openGameplaySession(mock(GameModule.class),
+        SessionManager.openGameplaySession(neutralGameModule(),
                 SaveSessionContext.noSave("s3k",
                         new SelectedTeam("sonic", List.of("tails")), 0, 0));
         assertEquals(PlayerCharacter.SONIC_AND_TAILS,
@@ -108,7 +110,7 @@ class TestActiveGameplayTeamResolver {
     @Test
     void resolvePlayerCharacter_sessionTails_configSonic_returnsTailsAlone() {
         config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
-        SessionManager.openGameplaySession(mock(GameModule.class),
+        SessionManager.openGameplaySession(neutralGameModule(),
                 SaveSessionContext.noSave("s3k",
                         new SelectedTeam("tails", List.of()), 0, 0));
         assertEquals(PlayerCharacter.TAILS_ALONE,
@@ -119,7 +121,7 @@ class TestActiveGameplayTeamResolver {
     void resolvePlayerCharacter_sessionSonicAlone_configSonicAndTails_returnsSonicAlone() {
         config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
         config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
-        SessionManager.openGameplaySession(mock(GameModule.class),
+        SessionManager.openGameplaySession(neutralGameModule(),
                 SaveSessionContext.noSave("s3k",
                         new SelectedTeam("sonic", List.of()), 0, 0));
         assertEquals(PlayerCharacter.SONIC_ALONE,
@@ -132,5 +134,12 @@ class TestActiveGameplayTeamResolver {
 
         assertEquals(List.of("tails", "knuckles", "sonic"),
                 ActiveGameplayTeamResolver.resolveSidekicks(config));
+    }
+
+    private static GameModule neutralGameModule() {
+        GameModule module = mock(GameModule.class);
+        when(module.createRuntimeArtCoordinator(
+                org.mockito.ArgumentMatchers.any())).thenReturn(RuntimeArtCoordinator.NONE);
+        return module;
     }
 }

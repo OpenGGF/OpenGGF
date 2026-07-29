@@ -1,10 +1,13 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.camera.Camera;
+import com.openggf.data.Rom;
 import com.openggf.game.GameRng;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.RuntimeArtCoordinator;
+import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -26,6 +29,7 @@ import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Constructor;
@@ -41,6 +45,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @RequiresRom(SonicGame.SONIC_3K)
 class TestLbzFinalBoss1Instance {
     private static final int OBJ_LBZ_FINAL_BOSS_1 = 0xCA;
+
+    @BeforeEach
+    void setUp() {
+        TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
+    }
 
     @AfterEach
     void resetObjectCameraBounds() {
@@ -764,6 +773,11 @@ class TestLbzFinalBoss1Instance {
         @Override
         public GameStateManager gameState() {
             return gameState;
+        }
+
+        @Override
+        public RuntimeArtCoordinator runtimeArtCoordinator() {
+            return TestEnvironment.activeGameplayMode().runtimeArtCoordinator();
         }
 
         @Override

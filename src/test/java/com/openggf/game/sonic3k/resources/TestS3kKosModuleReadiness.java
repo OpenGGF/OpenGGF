@@ -27,38 +27,47 @@ class TestS3kKosModuleReadiness {
     Path tempDir;
 
     @Test
-    void rewindRestoresInFlightModuleDecoder() throws Exception {
+    void rewindAfterDirectRetirementBeforeParentClaimIsExact() throws Exception {
         Path romPath = tempDir.resolve("fixture.gen");
         Files.write(romPath, ABC_KOSM);
         try (Rom rom = new Rom()) {
             assertTrue(rom.open(romPath.toString()));
             HardwareTimingService timing = new HardwareTimingService();
-            S3kKosModuleQueue queue = new S3kKosModuleQueue(timing);
+            S3kKosDecompressionQueue direct = new S3kKosDecompressionQueue(timing);
+            S3kKosModuleQueue queue = new S3kKosModuleQueue(timing, direct);
             HardwareWorkHandle handle = queue.queue(rom, 0, 0x500);
 
-            timing.service(HardwareServiceBoundary.POST_OBJECTS);
-            timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            queue.processModuleQueueAfterObjects();
+            HardwareWorkHandle child = ((S3kKosModuleSnapshot) timing.capture()
+                    .jobs().getFirst().preparationSnapshot()).activeChild();
+            while (!direct.isReady(child)) {
+                queue.prepareQueuedModuleBeforeVSync();
+            }
             HardwareTimingSnapshot snapshot = timing.capture();
+            S3kKosDecompressionQueueSnapshot directSnapshot = direct.capture();
 
-            drain(timing, queue, handle);
+            drain(queue, handle);
             byte[] expected = queue.claim(handle);
 
             timing.restore(snapshot);
-            S3kKosModuleQueue restoredQueue = new S3kKosModuleQueue(timing);
+            direct.restore(directSnapshot);
+            S3kKosModuleQueue restoredQueue =
+                    new S3kKosModuleQueue(timing, direct);
             assertFalse(restoredQueue.isReady(handle));
-            drain(timing, restoredQueue, handle);
+            assertFalse(direct.decompressionsPending());
+            assertTrue(direct.isReady(child));
+            drain(restoredQueue, handle);
 
             assertArrayEquals(expected, restoredQueue.claim(handle));
         }
     }
 
     private static void drain(
-            HardwareTimingService timing,
             S3kKosModuleQueue queue,
             HardwareWorkHandle handle) {
         for (int frame = 0; frame < 16 && !queue.isReady(handle); frame++) {
-            timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
-            timing.service(HardwareServiceBoundary.POST_OBJECTS);
+            queue.prepareQueuedModuleBeforeVSync();
+            queue.processModuleQueueAfterObjects();
         }
         assertTrue(queue.isReady(handle));
     }

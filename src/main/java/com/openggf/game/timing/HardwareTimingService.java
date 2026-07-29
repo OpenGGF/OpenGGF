@@ -22,8 +22,9 @@ public final class HardwareTimingService
             new EnumMap<>(HardwareWorkKind.class);
     private final List<HardwareTimingJob> jobs = new ArrayList<>();
 
-    private HardwareReadinessAdmissionPolicy admissionPolicy =
-            HardwareReadinessAdmissionPolicy.LIVE;
+    private final EnumMap<HardwareWorkKind, HardwareReadinessAdmissionPolicy>
+            admissionPolicies = liveAdmissionPolicies();
+    private boolean recordedAdmissionActive;
     private boolean hasSubmitted;
     private HardwareServiceBoundary lastServicedBoundary;
 
@@ -55,10 +56,12 @@ public final class HardwareTimingService
 
     public void service(HardwareServiceBoundary boundary) {
         Objects.requireNonNull(boundary, "boundary");
-        serviceBoundaryDrivenHead(boundary);
-        scheduler.service(boundary, jobs);
-        if (admissionPolicy == HardwareReadinessAdmissionPolicy.LIVE) {
-            releasePreparedInFifoOrder();
+        for (HardwareWorkKind kind : HardwareWorkKind.values()) {
+            serviceBoundaryDrivenHead(boundary, kind);
+            scheduler.service(boundary, jobsOfKind(kind));
+            if (admissionPolicyFor(kind) == HardwareReadinessAdmissionPolicy.LIVE) {
+                releasePreparedInFifoOrder(kind);
+            }
         }
         lastServicedBoundary = boundary;
     }
@@ -91,6 +94,39 @@ public final class HardwareTimingService
                 .orElseThrow(() -> new IllegalArgumentException(
                         "unknown hardware work identity: " + kind + "#" + ordinal));
         return job.claimedPayload();
+    }
+
+    /**
+     * Captures payload prepared by a production coordinator at the boundary
+     * just serviced. Recorded authority still controls final readiness.
+     */
+    public void captureCoordinatorPreparation(
+            HardwareWorkHandle handle,
+            HardwareServiceBoundary boundary) {
+        Objects.requireNonNull(boundary, "boundary");
+        if (lastServicedBoundary != boundary) {
+            throw new IllegalStateException(
+                    "coordinator boundary mismatch: expected " + boundary
+                            + ", production serviced " + lastServicedBoundary);
+        }
+        HardwareTimingJob job = requireKnown(handle);
+        job.capturePreparedPayload();
+        if (admissionPolicyFor(handle.kind())
+                == HardwareReadinessAdmissionPolicy.LIVE) {
+            releasePreparedInFifoOrder(handle.kind());
+        }
+    }
+
+    /** Returns a pending preparation to its production-owned coordinator. */
+    public HardwareWorkPreparation coordinatorPreparation(
+            HardwareWorkHandle handle) {
+        HardwareTimingJob job = requireKnown(handle);
+        if (job.isClaimed()) {
+            throw new IllegalStateException(
+                    "hardware work was already claimed: "
+                            + HardwareTimingJob.describe(handle));
+        }
+        return job.preparation();
     }
 
     public List<HardwareWorkHandle> pendingHandles() {
@@ -141,19 +177,32 @@ public final class HardwareTimingService
      * provide payload bytes.
      */
     public RecordedCompletionAuthority beginRecordedAdmission() {
-        if (admissionPolicy != HardwareReadinessAdmissionPolicy.LIVE) {
+        return beginRecordedAdmission(schemaOneAdmissionPolicies());
+    }
+
+    /** Begins recorded readiness with one complete policy for every known work kind. */
+    public RecordedCompletionAuthority beginRecordedAdmission(
+            Map<HardwareWorkKind, HardwareReadinessAdmissionPolicy> policies) {
+        if (recordedAdmissionActive) {
             throw new IllegalStateException("recorded hardware admission is already active");
         }
         if (hasSubmitted) {
             throw new IllegalStateException(
                     "recorded hardware admission must begin before the first submission");
         }
-        admissionPolicy = HardwareReadinessAdmissionPolicy.RECORDED;
+        installAdmissionPolicies(policies);
+        recordedAdmissionActive = true;
         return recordedAuthority;
     }
 
     public HardwareReadinessAdmissionPolicy admissionPolicy() {
-        return admissionPolicy;
+        return recordedAdmissionActive
+                ? HardwareReadinessAdmissionPolicy.RECORDED
+                : HardwareReadinessAdmissionPolicy.LIVE;
+    }
+
+    public HardwareReadinessAdmissionPolicy admissionPolicyFor(HardwareWorkKind kind) {
+        return admissionPolicies.get(Objects.requireNonNull(kind, "kind"));
     }
 
     @Override
@@ -171,7 +220,8 @@ public final class HardwareTimingService
         return new HardwareTimingSnapshot(
                 ordinalSnapshot,
                 jobSnapshots,
-                admissionPolicy,
+                admissionPolicies,
+                recordedAdmissionActive,
                 hasSubmitted,
                 lastServicedBoundary);
     }
@@ -179,13 +229,17 @@ public final class HardwareTimingService
     @Override
     public void restore(HardwareTimingSnapshot snapshot) {
         Objects.requireNonNull(snapshot, "snapshot");
+        HardwareTimingSnapshot.validateAdmissionPolicies(
+                snapshot.admissionPolicies(), snapshot.recordedAdmissionActive());
         nextOrdinals.clear();
         nextOrdinals.putAll(snapshot.nextOrdinals());
         jobs.clear();
         for (HardwareTimingJob.Snapshot jobSnapshot : snapshot.jobs()) {
             jobs.add(HardwareTimingJob.restore(jobSnapshot));
         }
-        admissionPolicy = snapshot.admissionPolicy();
+        admissionPolicies.clear();
+        admissionPolicies.putAll(snapshot.admissionPolicies());
+        recordedAdmissionActive = snapshot.recordedAdmissionActive();
         hasSubmitted = snapshot.hasSubmitted();
         lastServicedBoundary = snapshot.lastServicedBoundary();
     }
@@ -194,13 +248,18 @@ public final class HardwareTimingService
     public void resetForMissingSnapshot() {
         nextOrdinals.clear();
         jobs.clear();
-        admissionPolicy = HardwareReadinessAdmissionPolicy.LIVE;
+        admissionPolicies.clear();
+        admissionPolicies.putAll(liveAdmissionPolicies());
+        recordedAdmissionActive = false;
         hasSubmitted = false;
         lastServicedBoundary = null;
     }
 
-    private void releasePreparedInFifoOrder() {
+    private void releasePreparedInFifoOrder(HardwareWorkKind kind) {
         for (HardwareTimingJob job : jobs) {
+            if (job.handle().kind() != kind) {
+                continue;
+            }
             if (job.isClaimed() || job.isReady()) {
                 continue;
             }
@@ -211,8 +270,12 @@ public final class HardwareTimingService
         }
     }
 
-    private void serviceBoundaryDrivenHead(HardwareServiceBoundary boundary) {
+    private void serviceBoundaryDrivenHead(
+            HardwareServiceBoundary boundary, HardwareWorkKind kind) {
         for (HardwareTimingJob job : jobs) {
+            if (job.handle().kind() != kind) {
+                continue;
+            }
             if (job.isClaimed() || job.hasPreparedPayload()) {
                 continue;
             }
@@ -263,7 +326,9 @@ public final class HardwareTimingService
 
     private List<PendingRecordedSubmission> recordedPendingSubmissions() {
         return jobs.stream()
-                .filter(job -> !job.isClaimed())
+                .filter(job -> !job.isClaimed()
+                        && admissionPolicyFor(job.handle().kind())
+                        == HardwareReadinessAdmissionPolicy.RECORDED)
                 .map(job -> new PendingRecordedSubmission(
                         job.handle(),
                         job.submission().exportableAcrossSegment()))
@@ -271,7 +336,7 @@ public final class HardwareTimingService
     }
 
     private void requireRecordedAdmission() {
-        if (admissionPolicy != HardwareReadinessAdmissionPolicy.RECORDED) {
+        if (!recordedAdmissionActive) {
             throw new IllegalStateException("recorded hardware admission is not active");
         }
     }
@@ -288,6 +353,20 @@ public final class HardwareTimingService
     }
 
     private final class RecordedAuthority implements RecordedCompletionAuthority {
+        @Override
+        public void configureAdmissionPolicies(
+                Map<HardwareWorkKind, HardwareReadinessAdmissionPolicy> policies) {
+            requireRecordedAdmission();
+            if (hasSubmitted && !admissionPolicies.equals(policies)) {
+                throw new IllegalStateException(
+                        "recorded hardware admission policy must be configured before the first submission");
+            }
+            if (hasSubmitted) {
+                return;
+            }
+            installAdmissionPolicies(policies);
+        }
+
         @Override
         public void initializeOrdinalBases(
                 Map<HardwareWorkKind, Long> firstOrdinals) {
@@ -323,6 +402,10 @@ public final class HardwareTimingService
             Objects.requireNonNull(boundary, "boundary");
             Objects.requireNonNull(kind, "kind");
             Objects.requireNonNull(submissionFingerprint, "submissionFingerprint");
+            if (admissionPolicyFor(kind) != HardwareReadinessAdmissionPolicy.RECORDED) {
+                throw new IllegalStateException(
+                        "recorded completion kind is not recorded by this stream: " + kind);
+            }
             if (lastServicedBoundary != boundary) {
                 throw new IllegalStateException(
                         "recorded completion boundary mismatch: expected " + boundary
@@ -367,8 +450,55 @@ public final class HardwareTimingService
                 throw new IllegalStateException(
                         "unexpected pending hardware submissions at final run: " + pending);
             }
-            admissionPolicy = HardwareReadinessAdmissionPolicy.LIVE;
+            admissionPolicies.clear();
+            admissionPolicies.putAll(liveAdmissionPolicies());
+            recordedAdmissionActive = false;
             lastServicedBoundary = null;
         }
+    }
+
+    private List<HardwareTimingJob> jobsOfKind(HardwareWorkKind kind) {
+        return jobs.stream().filter(job -> job.handle().kind() == kind).toList();
+    }
+
+    private void installAdmissionPolicies(
+            Map<HardwareWorkKind, HardwareReadinessAdmissionPolicy> policies) {
+        Objects.requireNonNull(policies, "admissionPolicies");
+        EnumMap<HardwareWorkKind, HardwareReadinessAdmissionPolicy> checked =
+                new EnumMap<>(HardwareWorkKind.class);
+        for (HardwareWorkKind kind : HardwareWorkKind.values()) {
+            HardwareReadinessAdmissionPolicy policy = policies.get(kind);
+            if (policy == null) {
+                throw new IllegalArgumentException(
+                        "recorded admission policy is missing kind " + kind);
+            }
+            checked.put(kind, policy);
+        }
+        if (checked.values().stream().noneMatch(
+                policy -> policy == HardwareReadinessAdmissionPolicy.RECORDED)) {
+            throw new IllegalArgumentException(
+                    "recorded admission policy cannot leave every kind live");
+        }
+        admissionPolicies.clear();
+        admissionPolicies.putAll(checked);
+    }
+
+    private static EnumMap<HardwareWorkKind, HardwareReadinessAdmissionPolicy>
+            liveAdmissionPolicies() {
+        EnumMap<HardwareWorkKind, HardwareReadinessAdmissionPolicy> policies =
+                new EnumMap<>(HardwareWorkKind.class);
+        for (HardwareWorkKind kind : HardwareWorkKind.values()) {
+            policies.put(kind, HardwareReadinessAdmissionPolicy.LIVE);
+        }
+        return policies;
+    }
+
+    private static Map<HardwareWorkKind, HardwareReadinessAdmissionPolicy>
+            schemaOneAdmissionPolicies() {
+        EnumMap<HardwareWorkKind, HardwareReadinessAdmissionPolicy> policies =
+                liveAdmissionPolicies();
+        policies.put(HardwareWorkKind.KOS_MODULE_QUEUE,
+                HardwareReadinessAdmissionPolicy.RECORDED);
+        return Map.copyOf(policies);
     }
 }

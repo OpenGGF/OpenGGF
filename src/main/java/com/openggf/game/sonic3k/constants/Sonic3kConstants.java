@@ -1402,9 +1402,11 @@ public class Sonic3kConstants {
     public static final int ARTTILE_HCZ_GEYSER = 0x0500;
 
     // ===== MGZ Badnik Art =====
-    public static final int ART_KOSM_SPIKER_ADDR = 0x36E0C4;
+    public static final int ART_KOSM_MGZ_SPIKER_ADDR = 0x36E0C4;
+    public static final int ART_KOSM_SPIKER_ADDR = ART_KOSM_MGZ_SPIKER_ADDR;
     public static final int MAP_SPIKER_ADDR = 0x361CB8;
-    public static final int ART_KOSM_MANTIS_ADDR = 0x36E2D6;
+    public static final int ART_KOSM_MGZ_MANTIS_ADDR = 0x36E2D6;
+    public static final int ART_KOSM_MANTIS_ADDR = ART_KOSM_MGZ_MANTIS_ADDR;
     public static final int MAP_MANTIS_ADDR = 0x361D26;
     public static final int ART_UNC_BUBBLES_BADNIK_ADDR = 0x36D6A4;
     public static final int ART_UNC_BUBBLES_BADNIK_SIZE = 0x0A20;
@@ -1427,11 +1429,17 @@ public class Sonic3kConstants {
     public static final int PAL_MGZ_FADE_CNZ_ROWS = 16;
     public static final int ART_KOSM_MGZ_ENDBOSS_DEBRIS_ADDR = 0x36D572;
     public static final int MAP_MGZ_ENDBOSS_DEBRIS_ADDR = 0x3637D6;
+    public static final int ARTTILE_MGZ_SPIKER = 0x0530;
+    public static final int ARTTILE_MGZ_MINIBOSS = 0x054F;
+    public static final int ARTTILE_MGZ_MANTIS = 0x054F;
+    public static final int ARTTILE_MGZ_ENDBOSS_DEBRIS = 0x0570;
 
     // ===== CNZ Badnik Art =====
-    public static final int ART_KOSM_SPARKLE_ADDR = 0x3700CA;
+    public static final int ART_KOSM_CNZ_SPARKLE_ADDR = 0x3700CA;
+    public static final int ART_KOSM_SPARKLE_ADDR = ART_KOSM_CNZ_SPARKLE_ADDR;
     public static final int MAP_SPARKLE_ADDR = 0x361B34;
-    public static final int ART_KOSM_BATBOT_ADDR = 0x3703EC;
+    public static final int ART_KOSM_CNZ_BATBOT_ADDR = 0x3703EC;
+    public static final int ART_KOSM_BATBOT_ADDR = ART_KOSM_CNZ_BATBOT_ADDR;
     public static final int MAP_BATBOT_ADDR = 0x361BD0;
     public static final int ART_UNC_CLAMER_ADDR = 0x36EF18;
     public static final int ART_UNC_CLAMER_SIZE = 0x1140;
@@ -1439,6 +1447,9 @@ public class Sonic3kConstants {
     public static final int MAP_CLAMER_ADDR = 0x361ABC;
     public static final int ART_KOSM_CLAMER_SHOT_ADDR = 0x370058;
     public static final int ART_KOSM_CNZ_BALLOON_ADDR = 0x37060E;
+    public static final int ARTTILE_CNZ_SPARKLE = 0x0524;
+    public static final int ARTTILE_CNZ_BATBOT = 0x0552;
+    public static final int ARTTILE_CNZ_CLAMER_SHOT = 0x0570;
     // CNZ traversal object sheets live in the LockOn S3 half of the combined ROM.
     // Keep these addresses paired with the S3K disassembly labels; do not shift
     // them to raw Sonic 3 source offsets.

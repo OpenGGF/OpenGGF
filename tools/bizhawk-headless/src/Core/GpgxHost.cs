@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using BizHawk.Emulation.Common;
 using BizHawk.Emulation.Cores;
@@ -11,6 +12,12 @@ namespace OpenGGF.BizHawk.Headless
         private readonly GPGX core;
         private readonly MutableController controller;
         private readonly MemoryDomain mainRam;
+        private readonly IMemoryCallbackSystem memoryCallbacks;
+        private readonly List<ExecuteCallbackRegistration>
+            executeCallbackRegistrations =
+                new List<ExecuteCallbackRegistration>();
+        private Exception pendingExecuteCallbackException;
+        private bool disposed;
 
         private GpgxHost(GPGX core)
         {
@@ -36,6 +43,31 @@ namespace OpenGGF.BizHawk.Headless
                 throw new InvalidOperationException(
                     "GPGX memory domain '" + mainRam.Name + "' has size "
                     + mainRam.Size + "; expected exactly 65536 bytes.");
+            }
+            IDebuggable debugger =
+                core.ServiceProvider.GetService<IDebuggable>();
+            if (debugger == null
+                || !debugger.MemoryCallbacks.ExecuteCallbacksAvailable)
+            {
+                core.Dispose();
+                throw new InvalidOperationException(
+                    "GPGX did not expose required M68K execute callbacks.");
+            }
+            memoryCallbacks = debugger.MemoryCallbacks;
+            bool hasM68kBus = false;
+            foreach (string scope in memoryCallbacks.AvailableScopes)
+            {
+                if (scope == "M68K BUS")
+                {
+                    hasM68kBus = true;
+                    break;
+                }
+            }
+            if (!hasM68kBus)
+            {
+                core.Dispose();
+                throw new InvalidOperationException(
+                    "GPGX execute callbacks do not expose M68K BUS.");
             }
         }
 
@@ -150,6 +182,58 @@ namespace OpenGGF.BizHawk.Headless
         public void Advance()
         {
             core.FrameAdvance(controller, false, false);
+            if (pendingExecuteCallbackException != null)
+            {
+                Exception callbackFailure =
+                    pendingExecuteCallbackException;
+                pendingExecuteCallbackException = null;
+                throw new InvalidOperationException(
+                    "An M68K execute callback failed during FrameAdvance: "
+                    + callbackFailure.Message,
+                    callbackFailure);
+            }
+        }
+
+        public IDisposable RegisterExecuteCallback(
+            uint address, Action callback)
+        {
+            if (callback == null)
+            {
+                throw new ArgumentNullException("callback");
+            }
+            if (disposed)
+            {
+                throw new ObjectDisposedException("GpgxHost");
+            }
+
+            MemoryCallbackDelegate rootedDelegate =
+                (callbackAddress, value, flags) =>
+                {
+                    try
+                    {
+                        callback();
+                    }
+                    catch (Exception exception)
+                    {
+                        if (pendingExecuteCallbackException == null)
+                        {
+                            pendingExecuteCallbackException = exception;
+                        }
+                    }
+                    return null;
+                };
+            var memoryCallback = new MemoryCallback(
+                "M68K BUS",
+                MemoryCallbackType.Execute,
+                "OpenGGF hardware-timing submission observer",
+                rootedDelegate,
+                address,
+                null);
+            memoryCallbacks.Add(memoryCallback);
+            var registration = new ExecuteCallbackRegistration(
+                this, rootedDelegate, callback);
+            executeCallbackRegistrations.Add(registration);
+            return registration;
         }
 
         public byte ReadMainRamByte(int offset)
@@ -159,7 +243,57 @@ namespace OpenGGF.BizHawk.Headless
 
         public void Dispose()
         {
+            if (disposed)
+            {
+                return;
+            }
+            disposed = true;
+            while (executeCallbackRegistrations.Count != 0)
+            {
+                executeCallbackRegistrations[
+                    executeCallbackRegistrations.Count - 1].Dispose();
+            }
             core.Dispose();
+        }
+
+        private void UnregisterExecuteCallback(
+            ExecuteCallbackRegistration registration,
+            MemoryCallbackDelegate callback)
+        {
+            memoryCallbacks.Remove(callback);
+            executeCallbackRegistrations.Remove(registration);
+        }
+
+        private sealed class ExecuteCallbackRegistration : IDisposable
+        {
+            private GpgxHost owner;
+            private readonly MemoryCallbackDelegate callback;
+
+            // Strongly root the user callback independently of the native
+            // interop delegate for the full registration lifetime.
+            private readonly Action observedAction;
+
+            public ExecuteCallbackRegistration(
+                GpgxHost owner,
+                MemoryCallbackDelegate callback,
+                Action observedAction)
+            {
+                this.owner = owner;
+                this.callback = callback;
+                this.observedAction = observedAction;
+            }
+
+            public void Dispose()
+            {
+                if (owner == null)
+                {
+                    return;
+                }
+                GpgxHost registeredOwner = owner;
+                owner = null;
+                registeredOwner.UnregisterExecuteCallback(this, callback);
+                GC.KeepAlive(observedAction);
+            }
         }
     }
 }

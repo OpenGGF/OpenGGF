@@ -9,6 +9,13 @@ import java.util.Map;
  */
 public interface RecordedCompletionAuthority {
     /**
+     * Selects the kinds for which this recorded stream owns final readiness.
+     * The selection is fixed before production submits any work.
+     */
+    void configureAdmissionPolicies(
+            Map<HardwareWorkKind, HardwareReadinessAdmissionPolicy> admissionPolicies);
+
+    /**
      * Establishes the hardware-relative identity base for kinds whose
      * production ledger has not yet submitted work.
      *

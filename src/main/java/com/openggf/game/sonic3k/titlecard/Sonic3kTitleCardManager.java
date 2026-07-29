@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.titlecard;
 
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
+
 import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
 import com.openggf.game.TitleCardProvider;
@@ -324,7 +326,7 @@ public class Sonic3kTitleCardManager
                 artHandles.add(rebound);
             }
             artDestinations.addAll(snapshot.artDestinations());
-            artQueue = new S3kKosModuleQueue(timing);
+            artQueue = S3kRuntimeArtCoordinator.current().moduleQueue();
         } else {
             artQueue = null;
         }
@@ -1087,7 +1089,7 @@ public class Sonic3kTitleCardManager
     }
 
     private void beginArtQueue() {
-        artQueue = new S3kKosModuleQueue(GameServices.hardwareTiming());
+        artQueue = S3kRuntimeArtCoordinator.current().moduleQueue();
         artHandles.clear();
         artDestinations.clear();
     }

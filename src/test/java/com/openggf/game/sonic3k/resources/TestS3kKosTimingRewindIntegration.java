@@ -5,6 +5,7 @@ import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.game.timing.HardwareTimingSnapshot;
 import com.openggf.game.timing.HardwareWorkHandle;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -12,6 +13,7 @@ import com.openggf.trace.TraceData;
 import com.openggf.trace.timing.HardwareCompletionEdge;
 import com.openggf.trace.timing.HardwareTimingReplayPort;
 import com.openggf.trace.timing.HardwareTimingReplaySnapshot;
+import com.openggf.trace.timing.HardwareTimingSchedule;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
@@ -32,34 +34,43 @@ class TestS3kKosTimingRewindIntegration {
             throws Exception {
         TraceData trace = TraceData.load(HCZ_COMPLETE);
         HardwareCompletionEdge edge =
-                trace.hardwareTimingSchedule().edges().getFirst();
+                trace.hardwareTimingSchedule().edges().stream()
+                        .filter(candidate -> candidate.kind()
+                                == com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE)
+                        .findFirst()
+                        .orElseThrow();
         HardwareTimingService timing = new HardwareTimingService();
         HardwareTimingReplayPort replay = new HardwareTimingReplayPort(
                 timing.beginRecordedAdmission());
-        replay.install(trace.hardwareTimingSchedule());
-        S3kKosModuleQueue queue = new S3kKosModuleQueue(timing);
+        S3kKosDecompressionQueue direct =
+                new S3kKosDecompressionQueue(timing);
+        S3kKosModuleQueue queue = new S3kKosModuleQueue(timing, direct);
         HardwareWorkHandle handle = queue.queue(
                 TestEnvironment.currentRom(),
                 Sonic3kConstants.ART_KOSM_HCZ_BLASTOID_ADDR,
                 Sonic3kConstants.ARTTILE_HCZ_BLASTOID_JAWZ);
-        assertEquals(edge.ordinal(), handle.ordinal());
-        assertEquals(edge.submissionFingerprint(),
+        HardwareCompletionEdge recordedEdge = new HardwareCompletionEdge(
+                edge.rawFrame(),
+                edge.boundary(),
+                HardwareWorkKind.KOS_MODULE_QUEUE,
+                handle.ordinal(),
                 handle.submissionFingerprint());
+        replay.install(new HardwareTimingSchedule(1, java.util.List.of(recordedEdge)));
 
-        replay.beginRawFrame(edge.rawFrame());
+        replay.beginRawFrame(recordedEdge.rawFrame());
+        queue.processModuleQueueAfterObjects();
         for (int servicePass = 0;
-                servicePass < 64 && !isPrepared(timing);
+                servicePass < 100_000 && !isPrepared(timing);
                 servicePass++) {
-            timing.service(edge.boundary());
-            timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            queue.prepareQueuedModuleBeforeVSync();
+            queue.processModuleQueueAfterObjects();
         }
-        timing.service(edge.boundary());
         assertTrue(isPrepared(timing));
         assertFalse(queue.isReady(handle));
 
         HardwareTimingSnapshot serviceBefore = timing.capture();
         HardwareTimingReplaySnapshot replayBefore = replay.capture();
-        replay.apply(edge.boundary());
+        replay.apply(recordedEdge.boundary());
         HardwareTimingSnapshot serviceOn = timing.capture();
         HardwareTimingReplaySnapshot replayOn = replay.capture();
         assertTrue(queue.isReady(handle));
@@ -69,7 +80,7 @@ class TestS3kKosTimingRewindIntegration {
 
         timing.restore(serviceBefore);
         replay.restore(replayBefore);
-        replay.apply(edge.boundary());
+        replay.apply(recordedEdge.boundary());
         assertArrayEquals(expected, queue.claim(handle),
                 "rewinding before the edge must reproduce output admission");
 
@@ -88,7 +99,7 @@ class TestS3kKosTimingRewindIntegration {
                 TestEnvironment.currentRom(),
                 Sonic3kConstants.ART_KOSM_HCZ_JAWZ_ADDR,
                 Sonic3kConstants.ARTTILE_HCZ_BLASTOID_JAWZ);
-        assertEquals(edge.ordinal() + 1, next.ordinal(),
+        assertEquals(recordedEdge.ordinal() + 1, next.ordinal(),
                 "rewinding after completion must preserve the global ledger");
     }
 

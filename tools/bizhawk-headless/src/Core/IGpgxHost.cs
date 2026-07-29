@@ -24,6 +24,7 @@ namespace OpenGGF.BizHawk.Headless
 
         void ClearButtons();
         void SetButton(string name, bool pressed);
+        IDisposable RegisterExecuteCallback(uint address, Action callback);
         void Advance();
         byte ReadMainRamByte(int offset);
     }

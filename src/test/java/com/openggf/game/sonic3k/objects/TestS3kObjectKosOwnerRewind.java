@@ -1,17 +1,17 @@
 package com.openggf.game.sonic3k.objects;
 
-import com.openggf.camera.Camera;
-import com.openggf.data.Rom;
+import com.openggf.game.RuntimeArtCoordinator;
+import com.openggf.game.rewind.CompositeSnapshot;
+import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossGeyserCutscene;
-import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.game.timing.HardwareWorkHandle;
 import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.TestObjectServices;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -37,7 +37,7 @@ class TestS3kObjectKosOwnerRewind {
         invoke(fan, "queueFanArt");
 
         verifyPendingAndReadyRestore(
-                fan, context.timing(),
+                fan, context,
                 List.of("artQueue", "artHandle"),
                 () -> invoke(fan, "rebindArtAfterRestore"),
                 () -> {
@@ -58,7 +58,7 @@ class TestS3kObjectKosOwnerRewind {
                 Sonic3kConstants.ART_KOSM_HCZ_GEYSER_HORZ_ADDR);
 
         verifyPendingAndReadyRestore(
-                wall, context.timing(),
+                wall, context,
                 List.of("artQueue", "artHandle"),
                 () -> invoke(wall, "rebindArtAfterRestore"),
                 () -> assertTrue((boolean) invoke(
@@ -77,7 +77,7 @@ class TestS3kObjectKosOwnerRewind {
         invoke(geyser, "serviceQueuedArt");
 
         verifyPendingAndReadyRestore(
-                geyser, context.timing(),
+                geyser, context,
                 List.of("artQueue", "artHandle"),
                 () -> invoke(geyser, "rebindArtAfterRestore"),
                 () -> invoke(geyser, "serviceQueuedArt"));
@@ -93,7 +93,7 @@ class TestS3kObjectKosOwnerRewind {
         invoke(intro, "queueIntroSpriteArt");
 
         verifyPendingAndReadyRestore(
-                intro, context.timing(),
+                intro, context,
                 List.of("introSpriteArtQueue",
                         "planeArtHandle", "emeraldArtHandle"),
                 () -> invoke(intro, "rebindIntroSpriteArtAfterRestore"),
@@ -105,25 +105,26 @@ class TestS3kObjectKosOwnerRewind {
 
     private static void verifyPendingAndReadyRestore(
             AbstractObjectInstance owner,
-            HardwareTimingService timing,
+            OwnerContext context,
             List<String> transientFields,
             ThrowingRunnable rebind,
             ThrowingRunnable consume) throws Exception {
-        var pendingSnapshot = timing.capture();
+        HardwareTimingService timing = context.timing();
+        CompositeSnapshot pendingSnapshot = context.rewindRegistry().capture();
         List<HardwareWorkHandle> expectedHandles =
                 List.copyOf(timing.pendingHandles());
         long nextOrdinal = nextKosOrdinal(timing);
         clear(owner, transientFields);
-        timing.restore(pendingSnapshot);
+        context.rewindRegistry().restore(pendingSnapshot);
         rebind.run();
         assertEquals(expectedHandles, timing.pendingHandles());
         assertEquals(nextOrdinal, nextKosOrdinal(timing),
                 "pending restore must not submit replacement work");
 
-        drain(timing);
-        var readySnapshot = timing.capture();
+        drain(context);
+        CompositeSnapshot readySnapshot = context.rewindRegistry().capture();
         clear(owner, transientFields);
-        timing.restore(readySnapshot);
+        context.rewindRegistry().restore(readySnapshot);
         consume.run();
         assertTrue(timing.pendingHandles().isEmpty(),
                 "ready restore must claim the original work");
@@ -132,31 +133,28 @@ class TestS3kObjectKosOwnerRewind {
     }
 
     private static OwnerContext ownerContext() {
-        HardwareTimingService timing = new HardwareTimingService();
-        Rom rom = TestEnvironment.currentRom();
-        TestObjectServices services = new TestObjectServices() {
-            @Override
-            public HardwareTimingService hardwareTiming() {
-                return timing;
-            }
-
-            @Override
-            public Rom rom() {
-                return rom;
-            }
-        };
-        services.withCamera(new Camera());
-        return new OwnerContext(timing, services);
+        var gameplayMode = TestEnvironment.activeGameplayMode();
+        ObjectServices services = TestEnvironment.objectServices();
+        return new OwnerContext(
+                services.hardwareTiming(),
+                services.runtimeArtCoordinator(),
+                gameplayMode.getRewindRegistry(),
+                services);
     }
 
-    private static void drain(HardwareTimingService timing) {
+    private static void drain(OwnerContext context) {
+        HardwareTimingService timing = context.timing();
         for (int frame = 0;
                 frame < 4096
                         && timing.incompleteCount(
                         HardwareWorkKind.KOS_MODULE_QUEUE) > 0;
                 frame++) {
             timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            context.runtimeArtCoordinator().afterTimingService(
+                    HardwareServiceBoundary.PRE_MAIN_LOOP);
             timing.service(HardwareServiceBoundary.POST_OBJECTS);
+            context.runtimeArtCoordinator().afterTimingService(
+                    HardwareServiceBoundary.POST_OBJECTS);
         }
         assertEquals(0,
                 timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE));
@@ -197,7 +195,9 @@ class TestS3kObjectKosOwnerRewind {
 
     private record OwnerContext(
             HardwareTimingService timing,
-            TestObjectServices services) {
+            RuntimeArtCoordinator runtimeArtCoordinator,
+            RewindRegistry rewindRegistry,
+            ObjectServices services) {
     }
 
     @FunctionalInterface
