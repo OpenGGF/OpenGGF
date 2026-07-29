@@ -116,10 +116,6 @@ class TestSpecialStageVisualTraceSession {
         assertFalse(provider.isEntryPresentationReady(),
                 "trace-accurate startup must retain the PRE_ROLL observation");
 
-        Method updateSpecialStageMode =
-                GameLoop.class.getDeclaredMethod("updateSpecialStageMode");
-        updateSpecialStageMode.setAccessible(true);
-
         int stepped = 0;
         int skipped = 0;
         int safetyCap = trace.frameCount() + 16;
@@ -127,7 +123,7 @@ class TestSpecialStageVisualTraceSession {
         boolean revealObserved = false;
         while (!fadeStarted(session) && iterations < safetyCap) {
             boolean skip = session.shouldSkipCurrentSpecialStageTick();
-            updateSpecialStageMode.invoke(loop);
+            GameLoopTestStep.invoke(loop, "updateSpecialStageMode", new Class<?>[0]);
             if (!revealObserved && provider.isEntryPresentationReady()) {
                 revealObserved = true;
                 assertEquals(FadeManager.FadeState.FADING_FROM_BLACK,

@@ -30,6 +30,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
@@ -73,7 +74,7 @@ class TestGameLoopSpecialStageEntryPresentation {
         InOrder order = inOrder(provider, audio, fade, listener);
         order.verify(provider).initializeStage(2, SpecialStageStartupPolicy.FAST);
         order.verify(audio).playMusic(GameMusic.SPECIAL_STAGE);
-        order.verify(fade).startFadeFromWhite(isNull());
+        order.verify(fade).startFadeFromWhite(any());
         order.verify(listener).onGameModeChanged(GameMode.LEVEL, GameMode.SPECIAL_STAGE);
         verify(fade, never()).holdWhite();
         assertEquals(GameMode.SPECIAL_STAGE, loop.getCurrentGameMode());
@@ -97,9 +98,9 @@ class TestGameLoopSpecialStageEntryPresentation {
 
         InOrder order = inOrder(audio, fade);
         order.verify(audio).playMusic(GameMusic.SPECIAL_STAGE);
-        order.verify(fade).startFadeFromBlack(isNull());
+        order.verify(fade).startFadeFromBlack(any());
         verify(audio, times(1)).playMusic(GameMusic.SPECIAL_STAGE);
-        verify(fade, times(1)).startFadeFromBlack(isNull());
+        verify(fade, times(1)).startFadeFromBlack(any());
     }
 
     @Test
@@ -119,6 +120,15 @@ class TestGameLoopSpecialStageEntryPresentation {
 
     @Test
     void concreteS1AndS3kProvidersRetainImmediateWhiteAndBlackEntry() throws Exception {
+        doAnswer(invocation -> {
+            invocation.<Runnable>getArgument(0).run();
+            return null;
+        }).when(fade).startFadeFromWhite(any());
+        doAnswer(invocation -> {
+            invocation.<Runnable>getArgument(0).run();
+            return null;
+        }).when(fade).startFadeFromBlack(any());
+
         Sonic1SpecialStageProvider s1 = spy(new Sonic1SpecialStageProvider());
         doNothing().when(s1).reset();
         doNothing().when(s1).initializeStage(anyInt(), eq(SpecialStageStartupPolicy.FAST));
@@ -126,7 +136,7 @@ class TestGameLoopSpecialStageEntryPresentation {
         doReturn(Optional.empty()).when(s1).rewindAdapter();
 
         loop.doEnterSpecialStage(s1, 0, false);
-        verify(fade).startFadeFromWhite(isNull());
+        verify(fade).startFadeFromWhite(any());
         verify(fade, never()).holdWhite();
 
         loop.changeGameModeForBoundary(GameMode.LEVEL);
@@ -137,7 +147,7 @@ class TestGameLoopSpecialStageEntryPresentation {
         doReturn(Optional.empty()).when(s3k).rewindAdapter();
 
         loop.doEnterSpecialStage(s3k, 0, true);
-        verify(fade).startFadeFromBlack(isNull());
+        verify(fade).startFadeFromBlack(any());
         verify(fade, never()).holdBlack();
         assertTrue(s1.isEntryPresentationReady());
         assertTrue(s3k.isEntryPresentationReady());
@@ -158,9 +168,7 @@ class TestGameLoopSpecialStageEntryPresentation {
     }
 
     private void invokeUpdateSpecialStageMode() throws Exception {
-        Method method = GameLoop.class.getDeclaredMethod("updateSpecialStageMode");
-        method.setAccessible(true);
-        method.invoke(loop);
+        GameLoopTestStep.invoke(loop, "updateSpecialStageMode", new Class<?>[0]);
     }
 
     private boolean entryPresentationPending() throws Exception {

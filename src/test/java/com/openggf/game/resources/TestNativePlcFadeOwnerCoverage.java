@@ -12,13 +12,15 @@ class TestNativePlcFadeOwnerCoverage {
 
     @Test
     void sharedGameplayTransitionsUseTheNativeMarkerHelpers() throws IOException {
-        String source = source("com/openggf/GameLoop.java");
-        assertTrue(source.contains("beginNativeBlockingFade()"));
-        assertTrue(source.contains(".wrapCompletion(callback)"));
-        assertTrue(source.contains("startNativeFadeToBlack("));
-        assertTrue(source.contains("startNativeFadeFromBlack("));
-        assertTrue(source.contains("startNativeFadeToWhite("));
-        assertTrue(source.contains("startNativeFadeFromWhite("));
+        String lifecycle = source("com/openggf/GameLoopPlcLifecycle.java");
+        String gameLoop = source("com/openggf/GameLoop.java");
+        assertTrue(lifecycle.contains("beginNativeBlockingFade()"));
+        assertTrue(lifecycle.contains(".wrapCompletion(callback)"));
+        assertTrue(lifecycle.contains("startToBlack("));
+        assertTrue(lifecycle.contains("startFromBlack("));
+        assertTrue(lifecycle.contains("startToWhite("));
+        assertTrue(lifecycle.contains("startFromWhite("));
+        assertTrue(gameLoop.contains("GameLoopPlcLifecycle.start"));
     }
 
     @Test

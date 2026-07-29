@@ -1447,6 +1447,9 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
             try {
                 Rom rom = GameServices.rom().getRom();
                 enemyKosQueue = S3kRuntimeArtCoordinator.current().moduleQueue();
+                if (!enemyKosQueue.hasCapacityFor(pendingEnemyKosEntries.size())) {
+                    return;
+                }
                 for (EnemyKosEntry entry : pendingEnemyKosEntries) {
                     enemyKosHandles.add(enemyKosQueue.queue(
                             rom, entry.source(), entry.destinationTile()));

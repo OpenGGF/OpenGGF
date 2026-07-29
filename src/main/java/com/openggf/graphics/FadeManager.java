@@ -1,7 +1,6 @@
 package com.openggf.graphics;
 
 import com.openggf.game.rewind.RewindSnapshottable;
-import com.openggf.game.rewind.snapshot.FadeManagerSnapshot;
 
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL14.*;

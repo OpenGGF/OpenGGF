@@ -262,8 +262,7 @@ class TestS3kInitialObjectSetupLifecycle {
             int before = manager.getObjectManager().getFrameCounter();
             GameLoop loop = releasingTitleCardLoop("BONUS_STAGE");
 
-            assertTrue((boolean) invoke(loop, "updateTitleCardMode",
-                    new Class<?>[] { boolean.class }, false));
+            assertTrue(releaseTitleCardInLogicalIteration(loop));
 
             assertEquals(GameMode.BONUS_STAGE, loop.getCurrentGameMode());
             assertTrue(manager.hasPendingInitialProcessSpritesPass());
@@ -283,7 +282,6 @@ class TestS3kInitialObjectSetupLifecycle {
             loop.setGameplayMode(TestEnvironment.activeGameplayMode());
             SpecialStageProvider provider = GameServices.module().getSpecialStageProvider();
 
-            loop.enterSpecialStage();
             assertTrue(manager.hasPendingInitialProcessSpritesPass());
             assertEquals(before, manager.getObjectManager().getFrameCounter());
 
@@ -306,6 +304,7 @@ class TestS3kInitialObjectSetupLifecycle {
                     "a paused special-stage tick must not dispatch level objects");
             loop.resume();
             assertFalse(loop.isPaused());
+            advanceActiveFade(loop);
 
             invoke(loop, "doEnterResultsScreen", new Class<?>[0]);
             loop.step();
@@ -337,8 +336,7 @@ class TestS3kInitialObjectSetupLifecycle {
                     "the genuine return load publishes one fresh setup token");
             int beforeRelease = manager.getObjectManager().getFrameCounter();
             installReleasingTitleProvider(loop);
-            assertTrue((boolean) invoke(loop, "updateTitleCardMode",
-                    new Class<?>[] { boolean.class }, false));
+            assertTrue(releaseTitleCardInLogicalIteration(loop));
 
             assertEquals(GameMode.LEVEL, loop.getCurrentGameMode());
             assertFalse(manager.hasPendingInitialProcessSpritesPass());
@@ -366,8 +364,7 @@ class TestS3kInitialObjectSetupLifecycle {
             manager.discardPendingInitialProcessSpritesForStateRestoration();
             int beforeRelease = manager.getObjectManager().getFrameCounter();
             installReleasingTitleProvider(loop);
-            assertTrue((boolean) invoke(loop, "updateTitleCardMode",
-                    new Class<?>[] { boolean.class }, false));
+            assertTrue(releaseTitleCardInLogicalIteration(loop));
 
             assertEquals(GameMode.LEVEL, loop.getCurrentGameMode());
             assertFalse(manager.hasPendingInitialProcessSpritesPass());
@@ -588,8 +585,7 @@ class TestS3kInitialObjectSetupLifecycle {
             LevelManager manager = GameServices.level();
             OscillatorState before = captureOscillator();
             GameLoop loop = releasingTitleCardLoop("LEVEL");
-            assertTrue((boolean) invoke(loop, "updateTitleCardMode",
-                    new Class<?>[] { boolean.class }, false));
+            assertTrue(releaseTitleCardInLogicalIteration(loop));
             assertFalse(manager.hasPendingInitialProcessSpritesPass());
             assertEquals(LevelFrameResult.GAMEPLAY_FRAME,
                     LevelFrameTestStep.execute(
@@ -644,6 +640,26 @@ class TestS3kInitialObjectSetupLifecycle {
                 destination);
         setField(loop, "postTitleCardDestination", target);
         return loop;
+    }
+
+    private static boolean releaseTitleCardInLogicalIteration(GameLoop loop) throws Exception {
+        var frame = TestEnvironment.activeGameplayMode().plcFrameLifecycle()
+                .latchBeforeFadeUpdate();
+        setField(loop, "activePlcLifecycleFrame", frame);
+        try {
+            return (boolean) invoke(loop, "updateTitleCardMode",
+                    new Class<?>[] { boolean.class }, false);
+        } finally {
+            setField(loop, "activePlcLifecycleFrame", null);
+            frame.finish();
+        }
+    }
+
+    private static void advanceActiveFade(GameLoop loop) {
+        for (int frame = 0; frame < 64 && GameServices.fade().isActive(); frame++) {
+            loop.step();
+        }
+        assertFalse(GameServices.fade().isActive(), "the entry reveal must complete first");
     }
 
     private static void installReleasingTitleProvider(GameLoop loop) throws Exception {

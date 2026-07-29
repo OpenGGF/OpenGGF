@@ -9,7 +9,7 @@ import com.openggf.debug.playback.RecordedInputSnapshots;
 import com.openggf.game.GameServices;
 import com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame;
 import com.openggf.game.resources.PlcLifecyclePhase;
-import com.openggf.game.session.SessionManager;
+import com.openggf.game.session.GameplayModeContext;
 
 import java.util.Objects;
 import java.util.function.Supplier;
@@ -22,13 +22,16 @@ final class LiveRewindStepper implements RewindSeekAwareEngineStepper {
     private final LiveRewindInputSource inputs;
     private final Supplier<InputHandler> inputHandlerSupplier;
     private final Supplier<LevelFrameContext> frameContextSupplier;
+    private final Supplier<GameplayModeContext> gameplayModeSupplier;
 
     LiveRewindStepper(LiveRewindInputSource inputs,
                       Supplier<InputHandler> inputHandlerSupplier,
-                      Supplier<LevelFrameContext> frameContextSupplier) {
+                      Supplier<LevelFrameContext> frameContextSupplier,
+                      Supplier<GameplayModeContext> gameplayModeSupplier) {
         this.inputs = Objects.requireNonNull(inputs, "inputs");
         this.inputHandlerSupplier = Objects.requireNonNull(inputHandlerSupplier, "inputHandlerSupplier");
         this.frameContextSupplier = Objects.requireNonNull(frameContextSupplier, "frameContextSupplier");
+        this.gameplayModeSupplier = Objects.requireNonNull(gameplayModeSupplier, "gameplayModeSupplier");
     }
 
     @Override
@@ -43,7 +46,10 @@ final class LiveRewindStepper implements RewindSeekAwareEngineStepper {
         if (liveInput == null) {
             return LevelFrameResult.PAUSED;
         }
-        var gameplayMode = SessionManager.getCurrentGameplayMode();
+        var gameplayMode = gameplayModeSupplier.get();
+        if (gameplayMode == null) {
+            return LevelFrameResult.PAUSED;
+        }
         return gameplayMode.plcFrameLifecycle().runLogicalIteration(
                 gameplayMode.getFadeManager()::update,
                 frame -> step(input, sprites, level, camera, liveInput, frame));

@@ -62,6 +62,14 @@ public final class S3kKosModuleQueue {
                 rom, source, destinationPatternAddress, true);
     }
 
+    /** Whether a producer can append an entire native FIFO batch without partial submission. */
+    public boolean hasCapacityFor(int submissions) {
+        if (submissions < 0) {
+            throw new IllegalArgumentException("submissions must not be negative");
+        }
+        return physicalQueueSize() + submissions <= MAX_QUEUE_DEPTH;
+    }
+
     private HardwareWorkHandle queueInternal(
             Rom rom,
             int source,

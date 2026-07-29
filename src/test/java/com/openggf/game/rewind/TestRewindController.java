@@ -2,7 +2,7 @@ package com.openggf.game.rewind;
 
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.graphics.FadeManager;
-import com.openggf.game.rewind.snapshot.FadeManagerSnapshot;
+import com.openggf.graphics.FadeManagerSnapshot;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;

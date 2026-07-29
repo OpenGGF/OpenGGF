@@ -62,7 +62,7 @@ class TestLiveRewindStepperPlcLifecycle {
         LevelManager level = mock(LevelManager.class);
         LiveRewindInputSource inputs = new LiveRewindInputSource();
         LiveRewindStepper stepper = new LiveRewindStepper(
-                inputs, InputHandler::new, () -> context);
+                inputs, InputHandler::new, () -> context, () -> null);
         return new Fixture(
                 stepper, coordinator, context, level,
                 mock(SpriteManager.class), events);

@@ -302,7 +302,8 @@ public final class LiveRewindManager {
                 : new LiveRewindStepper(
                         inputSource,
                         () -> activeInputHandler,
-                        () -> LevelFrameContext.from(gameplayMode));
+                        () -> LevelFrameContext.from(gameplayMode),
+                        () -> gameplayMode);
         gameplayMode.installPlaybackController(
                 inputSource,
                 stepper,

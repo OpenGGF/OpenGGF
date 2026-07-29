@@ -16,20 +16,6 @@ import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.debug.DebugObjectArtViewer;
-import com.openggf.game.AbstractLevelEventManager;
-import com.openggf.game.BonusStageProvider;
-import com.openggf.game.BonusStageState;
-import com.openggf.game.BonusStageType;
-import com.openggf.game.GameMode;
-import com.openggf.game.GameStateManager;
-import com.openggf.game.LevelEventProvider;
-import com.openggf.game.LevelSelectProvider;
-import com.openggf.game.TitleScreenProvider;
-import com.openggf.game.RespawnState;
-import com.openggf.game.GameId;
-import com.openggf.game.ResultsScreen;
-import com.openggf.game.NoOpSpecialStageProvider;
-import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.sonic1.Sonic1GameModule;
 import com.openggf.game.sonic1.dataselect.S1DataSelectImageCacheManager;
 import com.openggf.game.sonic1.dataselect.S1DataSelectImageGenerator;
@@ -1017,11 +1003,13 @@ public class GameLoop {
         } else if (currentGameMode == GameMode.TITLE_CARD) {
             throw new IllegalStateException("title-card admission must own the iteration");
         } else if (currentGameMode == GameMode.TITLE_SCREEN) {
-            runPlcPhase(PlcLifecyclePhase.TITLE_SCREEN, this::updateTitleScreenMode);
+            GameLoopPlcLifecycle.runPhase(activePlcLifecycleFrame,
+                    PlcLifecyclePhase.TITLE_SCREEN, this::updateTitleScreenMode);
             profiler.endSection("input");
             return;
         } else if (currentGameMode == GameMode.LEVEL_SELECT) {
-            runPlcPhase(PlcLifecyclePhase.LEVEL_SELECT, this::updateLevelSelectMode);
+            GameLoopPlcLifecycle.runPhase(activePlcLifecycleFrame,
+                    PlcLifecyclePhase.LEVEL_SELECT, this::updateLevelSelectMode);
             profiler.endSection("input");
             return;
         } else if (currentGameMode == GameMode.DATA_SELECT) {
@@ -1032,7 +1020,8 @@ public class GameLoop {
                 || currentGameMode == GameMode.CREDITS_DEMO
                 || currentGameMode == GameMode.TRY_AGAIN_END
                 || currentGameMode == GameMode.ENDING_CUTSCENE) {
-            runPlcPhase(plcEndingPhase(), this::updateEnding);
+            GameLoopPlcLifecycle.runPhase(activePlcLifecycleFrame,
+                    GameLoopPlcLifecycle.endingPhase(endingProvider), this::updateEnding);
             inputHandler.update();
             profiler.endSection("input");
             return;
@@ -1061,57 +1050,6 @@ public class GameLoop {
     public boolean ownsGameplayFadeLifecycle() {
         GameplayModeContext context = resolveGameplayModeContext();
         return context != null && context.isGameplayRuntimeReady();
-    }
-
-    private void runPlcPhase(PlcLifecyclePhase phase, Runnable body) {
-        activePlcLifecycleFrame.claim(phase);
-        body.run();
-        prepareActivePhase(phase);
-    }
-
-    private void prepareActivePhase(PlcLifecyclePhase phase) {
-        if (activePlcLifecycleFrame.isOwnedBy(phase)) {
-            activePlcLifecycleFrame.prepareAfterLoop(phase);
-        }
-    }
-
-    private PlcLifecyclePhase plcEndingPhase() {
-        if (endingProvider == null) {
-            return PlcLifecyclePhase.ENDING;
-        }
-        return endingProvider.plcLifecyclePhaseOverride().orElseGet(() ->
-                switch (endingProvider.getCurrentPhase()) {
-                    case CREDITS_TEXT -> PlcLifecyclePhase.CREDITS_TEXT;
-                    case CREDITS_DEMO -> PlcLifecyclePhase.CREDITS_DEMO;
-                    case POST_CREDITS, FINISHED -> PlcLifecyclePhase.POST_CREDITS;
-                    case CUTSCENE -> PlcLifecyclePhase.ENDING;
-                });
-    }
-
-    private Runnable nativeFadeCompletion(Runnable completion) {
-        GameplayModeContext context = resolveGameplayModeContext();
-        Runnable callback = completion != null ? completion : () -> { };
-        if (context == null || !context.isGameplayRuntimeReady()) {
-            return callback;
-        }
-        return context.plcFrameLifecycle().beginNativeBlockingFade()
-                .wrapCompletion(callback);
-    }
-
-    private void startNativeFadeToBlack(FadeManager fade, Runnable completion) {
-        fade.startFadeToBlack(nativeFadeCompletion(completion));
-    }
-
-    private void startNativeFadeFromBlack(FadeManager fade, Runnable completion) {
-        fade.startFadeFromBlack(nativeFadeCompletion(completion));
-    }
-
-    private void startNativeFadeToWhite(FadeManager fade, Runnable completion) {
-        fade.startFadeToWhite(nativeFadeCompletion(completion));
-    }
-
-    private void startNativeFadeFromWhite(FadeManager fade, Runnable completion) {
-        fade.startFadeFromWhite(nativeFadeCompletion(completion));
     }
 
     private boolean prepareAdmittedIteration(boolean doFrameStep) {
@@ -1282,135 +1220,19 @@ public class GameLoop {
      *         {@code false} if the card is still in its locked phase
      */
     private boolean updateTitleCardMode(boolean doFrameStep) {
-        activePlcLifecycleFrame.claim(PlcLifecyclePhase.LEVEL_TITLE_CARD);
-        // Update title card animation
-        TitleCardProvider tcpCard = getTitleCardProviderLazy();
-        boolean hardwareTimedProviderScan = tcpCard != null
-                && tcpCard.shouldAdvanceVblankClockDuringLockedPhase();
-        boolean titlePhasePreparedByFrameStep = hardwareTimedProviderScan;
-        if (hardwareTimedProviderScan) {
-            LevelFrameStep.executeHardwareTimedObjectScan(
-                    LevelFrameContext.from(gameplayMode), activePlcLifecycleFrame,
-                    PlcLifecyclePhase.LEVEL_TITLE_CARD, tcpCard::update);
-        } else if (tcpCard != null) {
-            tcpCard.update();
-        }
-
-        // From disassembly lines 5073-5078: control is released at the START of
-        // TEXT_WAIT,
-        // not when the title card is complete. This allows the player to move while the
-        // text is still visible on screen.
-        if (tcpCard == null || tcpCard.shouldReleaseControl()) {
-            if (tcpCard != null) {
-                int preludePasses = tcpCard.levelObjectPreludePassesAtRelease();
-                for (int i = 0; i < preludePasses; i++) {
-                    // Native S1 runs this ExecuteObjects pass before
-                    // Level_MainLoop, so OscillateNumDo has not run yet and
-                    // touch responses are not part of the handoff.
-                    levelManager.suppressGlobalOscillationForTitleCardPass();
-                    if (tcpCard.shouldRunPlayerPreludeAtRelease()) {
-                        // Native Sonic occupies object slot 0. The engine keeps
-                        // playables in SpriteManager, so reproduce that portion
-                        // of ExecuteObjects before dispatching level objects.
-                        // The trace input bridge uses forced-input masks, which
-                        // deliberately bypass normal control locks. Hide those
-                        // masks for this native locked prelude, then restore
-                        // them for the first real Level_MainLoop pass.
-                        runInputNeutralTitleCardPlayerPrelude();
-                    }
-                    levelManager.updateObjectPositionsWithoutTouches();
-                }
-            }
-            // S3K's fresh level performs its one Load_Sprites/Process_Sprites
-            // setup dispatch after the title-card wait and before LevelLoop
-            // (docs/skdisasm/sonic3k.asm:7737-7748, 7849-7855).
-            if (!titlePhasePreparedByFrameStep) {
-                prepareActivePhase(PlcLifecyclePhase.LEVEL_TITLE_CARD);
-            }
-            // Finish the final locked-title RunPLC preparation before the
-            // post-title owner publishes its header-secondary cue.
-            titleReleaseResult =
-                    postTitleCardDestination.completeRelease(levelManager, this::exitTitleCard);
-            // The setup-only pass owns this outer iteration. Ordinary LEVEL
-            // processing begins on the next iteration.
-            return true;
-        }
-        // Still in locked phase. The work performed differs by game,
-        // matching the ROM title-card wait loops:
-        //
-        //   S1  Level_TtlCardLoop (sonic.asm:2766-2794) -> ExecuteObjects
-        //                                                  + BuildSprites + RunPLC
-        //                                                  (NO camera, NO level events)
-        //   S2  Level_TtlCard     (s2.asm:4914-4924)    -> RunObjects + BuildSprites
-        //                                                  + RunPLC_RAM (camera ticks
-        //                                                  via VInt routine)
-        //   S3K title-card wait   (sonic3k.asm:7737-7748) -> Process_Sprites
-        //                                                  + Render_Sprites
-        //                                                  (NO camera, NO level events)
-        //
-        // The {@link TitleCardProvider#shouldRunPlayerPhysics()} gate
-        // selects per-game behaviour:
-        //   - S2 ROM advances player object slots through RunObjects
-        //     during Level_TtlCard so Sonic settles onto the Tornado
-        //     in SCZ. Use the full LevelFrameStep canonical order
-        //     (objects + camera + dynamic events + parallax + water).
-        //   - S1 leaves the loaded level ObjectManager untouched and retains
-        //     its forced camera step while native title-card SSTs still own
-        //     object RAM.
-        //   - S3K likewise leaves loaded level objects untouched; its provider
-        //     represents the title-card SSTs and advances only VBlank.
-        beginGameplayAudioFrameForTick();
-        // ROM: the title-card wait loops (docs/s2disasm/s2.asm:4914-4924 and
-        // 5060-5066; docs/s1disasm/sonic.asm Level_TtlCardLoop 2811-2839) run
-        // RunObjects but NOT OscillateNumDo -- the global oscillator only
-        // advances inside Level_MainLoop (s2.asm:5108). Suppress the oscillator
-        // advance for this locked title-card object pass so it holds at its
-        // OscillateNumInit baseline until gameplay unlocks. Without this, each
-        // locked title-card frame over-advances the global oscillator, phase-
-        // offsetting oscillation-driven moving platforms (Obj18) when control
-        // returns -- visible after a special-stage return where the engine runs
-        // the real title card (rather than the trace bootstrap that skips it).
-        if (tcpCard.shouldRunPlayerPhysics()) {
-            // S2: full title-card frame step.
-            levelManager.suppressGlobalOscillationForTitleCardPass();
-            spriteManager.publishHeldInputForLevelEvents(inputHandler);
-            LevelFrameStep.execute(LevelFrameContext.from(gameplayMode),
-                    activePlcLifecycleFrame, PlcLifecyclePhase.LEVEL_TITLE_CARD,
-                    levelManager, camera, () -> spriteManager.update(inputHandler),
-                    (name, step) -> {
-                        profiler.beginSection(name);
-                        step.run();
-                        profiler.endSection(name);
-                    });
-            titlePhasePreparedByFrameStep = true;
-        } else {
-            // S1/S3K: ROM TitleCard_Main / Level_TtlCardLoop runs
-            // the native object dispatcher only -- no player physics,
-            // level-event routines, or scroll update. The provider decides
-            // whether those native slots are already the engine's level
-            // objects: S1 still has title-card objects in object RAM here and
-            // therefore must leave ObjectManager untouched until gameplay
-            // handoff; S3K's provider represents its title-card SSTs and
-            // advances only the VBlank clock through the branch below.
-            if (tcpCard.shouldRunLevelObjectsDuringLockedPhase()) {
-                levelManager.suppressGlobalOscillationForTitleCardPass();
-                levelManager.updateObjectPositions();
-                camera.updatePosition(true);
-            } else if (tcpCard.shouldAdvanceVblankClockDuringLockedPhase()) {
-                // S3K's native wait loop is dispatching title-card SSTs here.
-                // The provider-owned sprite scan and hardware boundaries ran
-                // above; loaded level objects and camera remain untouched.
-                levelManager.advanceTitleCardVblankOnly();
-            }
-                // S1 retains its locked-card forced camera step while its
-                // level-object RAM remains unpopulated.
-            else camera.updatePosition(true);
-        }
-        advanceGameplayAudioFrameForTick(doFrameStep);
-        if (!titlePhasePreparedByFrameStep) {
-            prepareActivePhase(PlcLifecyclePhase.LEVEL_TITLE_CARD);
-        }
-        return false; // Don't process LEVEL mode logic yet
+        return GameLoopTitleCardLifecycle.update(
+                doFrameStep, getTitleCardProviderLazy(), activePlcLifecycleFrame,
+                gameplayMode, levelManager, spriteManager, camera, inputHandler,
+                this::runInputNeutralTitleCardPlayerPrelude, postTitleCardDestination,
+                this::exitTitleCard, result -> titleReleaseResult = result,
+                this::beginGameplayAudioFrameForTick,
+                () -> advanceGameplayAudioFrameForTick(doFrameStep),
+                phase -> GameLoopPlcLifecycle.prepare(activePlcLifecycleFrame, phase),
+                (name, step) -> {
+                    profiler.beginSection(name);
+                    step.run();
+                    profiler.endSection(name);
+                });
     }
 
     /**
@@ -2163,7 +1985,7 @@ public class GameLoop {
         }
 
         // Start fade-to-white, then show results when complete
-        startNativeFadeToWhite(fadeManager, () -> {
+        GameLoopPlcLifecycle.startToWhite(resolveGameplayModeContext(), fadeManager, () -> {
             doEnterResultsScreenDebug();
         });
 
@@ -2242,7 +2064,7 @@ public class GameLoop {
         } else {
             // Normal path (S2 checkpoint star): freeze level, fade to white, then enter
             specialStageTransitionPending = true;
-            startNativeFadeToWhite(fadeManager, () -> {
+            GameLoopPlcLifecycle.startToWhite(resolveGameplayModeContext(), fadeManager, () -> {
                 doEnterSpecialStage(ssProvider, stageIndex, false);
             });
             LOGGER.info("Starting fade-to-white for Special Stage " + (stageIndex + 1));
@@ -2789,7 +2611,7 @@ public class GameLoop {
             doEnterResultsScreen();
         } else {
             // Normal path (S2): start fade-to-white, then callback to results
-            startNativeFadeToWhite(fadeManager, () -> {
+            GameLoopPlcLifecycle.startToWhite(resolveGameplayModeContext(), fadeManager, () -> {
                 doEnterResultsScreen();
             });
         }
@@ -2826,7 +2648,7 @@ public class GameLoop {
         }
 
         // Start fade-from-white to reveal the results screen
-        startNativeFadeFromWhite(fadeManager, null);
+        GameLoopPlcLifecycle.startFromWhite(resolveGameplayModeContext(), fadeManager, null);
 
         LOGGER.info("Entered Special Stage Results Screen (rings=" + ssRingsCollected +
                 ", emerald=" + ssEmeraldCollected + ")");
@@ -2852,7 +2674,7 @@ public class GameLoop {
         playSpecialStageTransitionSfx(getActiveSpecialStageProvider());
 
         // Start fade-to-white, then show title card when complete
-        startNativeFadeToWhite(fadeManager, () -> {
+        GameLoopPlcLifecycle.startToWhite(resolveGameplayModeContext(), fadeManager, () -> {
             doExitResultsScreen();
         });
 
@@ -2882,7 +2704,7 @@ public class GameLoop {
                 gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
             }
 
-            startNativeFadeFromWhite(fadeManager, null);
+            GameLoopPlcLifecycle.startFromWhite(resolveGameplayModeContext(), fadeManager, null);
 
             LOGGER.info("Exited Results Screen, loaded starting level (no previous level)");
             return;
@@ -2912,7 +2734,7 @@ public class GameLoop {
         // Reveal the title card by fading from white (the screen is currently white
         // from exitResultsScreen()'s fade-to-white). Without this, the white overlay
         // persists indefinitely because completeFade() sees no new fade was started.
-        startNativeFadeFromWhite(fadeManager, null);
+        GameLoopPlcLifecycle.startFromWhite(resolveGameplayModeContext(), fadeManager, null);
         requestSessionSave(SaveReason.SPECIAL_STAGE_SAVE);
 
         LOGGER.info("Exited Results Screen, entering Title Card for zone " + zoneIndex + " act " + actIndex);
@@ -3474,7 +3296,8 @@ public class GameLoop {
         audioManager.fadeOutMusic();
 
         if (shouldFadeTitleScreenExit(route)) {
-            startNativeFadeToBlack(fadeManager, () -> doExitTitleScreen(route));
+            GameLoopPlcLifecycle.startToBlack(resolveGameplayModeContext(), fadeManager,
+                    () -> doExitTitleScreen(route));
             LOGGER.info("Title screen exit fading to " + route);
             return;
         }
@@ -3557,7 +3380,7 @@ public class GameLoop {
         } catch (IOException e) {
             throw new RuntimeException("Failed to load title screen start level", e);
         }
-        startNativeFadeFromBlack(fadeManager, null);
+        GameLoopPlcLifecycle.startFromBlack(resolveGameplayModeContext(), fadeManager, null);
     }
 
     private void handleTitleScreenExitFromProvider() {
@@ -3579,7 +3402,8 @@ public class GameLoop {
         }
 
         if (shouldFadeTitleScreenExit(route)) {
-            startNativeFadeToBlack(fadeManager, () -> doExitTitleScreen(route));
+            GameLoopPlcLifecycle.startToBlack(resolveGameplayModeContext(), fadeManager,
+                    () -> doExitTitleScreen(route));
             return;
         }
 
@@ -3814,7 +3638,7 @@ public class GameLoop {
         audioManager.fadeOutMusic();
 
         // Start fade-to-black, then enter level select when complete
-        startNativeFadeToBlack(fadeManager, () -> {
+        GameLoopPlcLifecycle.startToBlack(resolveGameplayModeContext(), fadeManager, () -> {
             doEnterLevelSelect();
         });
 
@@ -3843,7 +3667,7 @@ public class GameLoop {
         }
 
         // Start fade-from-black to reveal the level select
-        startNativeFadeFromBlack(fadeManager, null);
+        GameLoopPlcLifecycle.startFromBlack(resolveGameplayModeContext(), fadeManager, null);
 
         LOGGER.info("Entered Level Select screen");
     }
@@ -3894,7 +3718,7 @@ public class GameLoop {
             audioManager.fadeOutMusic();
 
             // Start fade-to-black, then load level
-            startNativeFadeToBlack(fadeManager, () -> {
+            GameLoopPlcLifecycle.startToBlack(resolveGameplayModeContext(), fadeManager, () -> {
                 doExitLevelSelectToZone(zone, act);
             });
 
@@ -3922,7 +3746,7 @@ public class GameLoop {
         }
 
         // Start fade-from-black to reveal the title card
-        startNativeFadeFromBlack(fadeManager, null);
+        GameLoopPlcLifecycle.startFromBlack(resolveGameplayModeContext(), fadeManager, null);
 
         LOGGER.info("Loaded zone " + zone + " act " + act + " from level select");
     }
@@ -3959,7 +3783,7 @@ public class GameLoop {
         audioManager.fadeOutMusic();
 
         // Start fade-to-black, then respawn when complete
-        startNativeFadeToBlack(fadeManager, this::doRespawn);
+        GameLoopPlcLifecycle.startToBlack(resolveGameplayModeContext(), fadeManager, this::doRespawn);
     }
 
     /**
@@ -3971,7 +3795,7 @@ public class GameLoop {
         activateScheduledPlaybackForLoadedLevel();
 
         // Start fade-from-black to reveal the title card
-        startNativeFadeFromBlack(fadeManager, null);
+        GameLoopPlcLifecycle.startFromBlack(resolveGameplayModeContext(), fadeManager, null);
 
         LOGGER.info("Respawned player, entering title card");
     }
@@ -3986,7 +3810,7 @@ public class GameLoop {
         audioManager.fadeOutMusic();
 
         // Start fade-to-black, then load next act when complete
-        startNativeFadeToBlack(fadeManager, this::doNextAct);
+        GameLoopPlcLifecycle.startToBlack(resolveGameplayModeContext(), fadeManager, this::doNextAct);
     }
 
     /**
@@ -4001,7 +3825,7 @@ public class GameLoop {
         }
 
         // Start fade-from-black to reveal the title card
-        startNativeFadeFromBlack(fadeManager, null);
+        GameLoopPlcLifecycle.startFromBlack(resolveGameplayModeContext(), fadeManager, null);
 
         LOGGER.info("Loaded next act");
     }
@@ -4016,7 +3840,7 @@ public class GameLoop {
         audioManager.fadeOutMusic();
 
         // Start fade-to-black, then load next zone when complete
-        startNativeFadeToBlack(fadeManager, this::doNextZone);
+        GameLoopPlcLifecycle.startToBlack(resolveGameplayModeContext(), fadeManager, this::doNextZone);
     }
 
     /**
@@ -4031,7 +3855,7 @@ public class GameLoop {
         }
 
         // Start fade-from-black to reveal the title card
-        startNativeFadeFromBlack(fadeManager, null);
+        GameLoopPlcLifecycle.startFromBlack(resolveGameplayModeContext(), fadeManager, null);
 
         LOGGER.info("Loaded next zone");
     }
@@ -4044,7 +3868,7 @@ public class GameLoop {
 
         audioManager.fadeOutMusic();
 
-        startNativeFadeToBlack(fadeManager,
+        GameLoopPlcLifecycle.startToBlack(resolveGameplayModeContext(), fadeManager,
                 () -> doZoneAct(zone, act, postLoadMusicId));
     }
 
@@ -4068,7 +3892,7 @@ public class GameLoop {
             throw new RuntimeException("Failed to load zone " + zone + " act " + act, e);
         }
 
-        startNativeFadeFromBlack(fadeManager, null);
+        GameLoopPlcLifecycle.startFromBlack(resolveGameplayModeContext(), fadeManager, null);
 
         LOGGER.info("Loaded zone " + zone + " act " + act);
     }
@@ -4207,7 +4031,7 @@ public class GameLoop {
         }
         endingTransitionPending = true;
         audioManager.fadeOutMusic();
-        startNativeFadeToWhite(fadeManager, this::doEnterEnding);
+        GameLoopPlcLifecycle.startToWhite(resolveGameplayModeContext(), fadeManager, this::doEnterEnding);
     }
 
     /**
@@ -4242,7 +4066,7 @@ public class GameLoop {
         if (!fadeManager.isActive() || fadeManager.getState() == FadeManager.FadeState.HOLD_WHITE) {
             // Screen is currently white from startEndingFade's fade-to-white.
             // ROM: Normal_palette starts all $0EEE (white), display enabled.
-            startNativeFadeFromWhite(fadeManager, null);
+            GameLoopPlcLifecycle.startFromWhite(resolveGameplayModeContext(), fadeManager, null);
         }
 
         LOGGER.info("Entered ending sequence, phase=" + endingProvider.getCurrentPhase());
@@ -4554,7 +4378,8 @@ public class GameLoop {
 
         FadeManager fadeManager = this.fadeManager;
         if (!fadeManager.isActive()) {
-            startNativeFadeToBlack(fadeManager, this::doExitEndingToTitleScreen);
+            GameLoopPlcLifecycle.startToBlack(resolveGameplayModeContext(), fadeManager,
+                    this::doExitEndingToTitleScreen);
         } else {
             doExitEndingToTitleScreen();
         }
@@ -4576,7 +4401,7 @@ public class GameLoop {
             titleScreen.initialize();
         }
 
-        startNativeFadeFromBlack(fadeManager, null);
+        GameLoopPlcLifecycle.startFromBlack(resolveGameplayModeContext(), fadeManager, null);
         LOGGER.info("Ending -> Title Screen");
     }
 
