@@ -24,6 +24,12 @@ import com.openggf.game.sonic3k.objects.MgzDrillingRobotnikInstance;
 import com.openggf.game.sonic3k.objects.Mgz2LevelCollapseSolidInstance;
 import com.openggf.game.sonic3k.runtime.MgzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
+import com.openggf.game.sonic3k.resources.S3kKosDecompressionQueue;
+import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
+import com.openggf.game.sonic3k.resources.S3kKosRamDestinations;
+import com.openggf.game.sonic3k.resources.S3kKosTransitionPreflight;
+import com.openggf.game.timing.HardwareWorkHandle;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
@@ -80,8 +86,6 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     /** ROM: MGZ1BGE_Transition applies (-$2E00, -$600) to player/camera/objects. */
     private static final int TRANSITION_OFFSET_X = -0x2E00;
     private static final int TRANSITION_OFFSET_Y = -0x600;
-    /** Three queued MGZ2 secondary Kos/KosM streams remain busy for these ScreenEvents entries. */
-    private static final int MGZ2_SECONDARY_KOS_DRAIN_FRAMES = 26;
 
     // ========================================================================
     // Act 2 quake-event state machine (MGZ2_QuakeEvent)
@@ -275,8 +279,19 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
 
     /** Prevents requesting the transition more than once. */
     private boolean transitionRequested;
-    /** ROM: Kos_modules_left workload queued by MGZ1BGE_Normal. */
-    private int transitionKosDrainFrames;
+    @RewindTransient(reason = "queue facades are rebound from captured ordinals")
+    private S3kKosDecompressionQueue transitionDirectQueue;
+    @RewindTransient(reason = "queue facades are rebound from captured ordinals")
+    private S3kKosModuleQueue transitionModuleQueue;
+    @RewindTransient(reason = "handles are rebound from captured ordinals")
+    private HardwareWorkHandle transitionChunkHandle;
+    @RewindTransient(reason = "handles are rebound from captured ordinals")
+    private HardwareWorkHandle transitionBlockHandle;
+    @RewindTransient(reason = "handles are rebound from captured ordinals")
+    private HardwareWorkHandle transitionArtHandle;
+    private long transitionChunkOrdinal = -1;
+    private long transitionBlockOrdinal = -1;
+    private long transitionArtOrdinal = -1;
 
     /**
      * Retained Obj_EndSignControlDoStart ownership after the Act 1 reload.
@@ -376,7 +391,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         bgRoutine = BG_STAGE_NORMAL;
         eventsFg5 = false;
         transitionRequested = false;
-        transitionKosDrainFrames = 0;
+        clearTransitionKosOwnership();
         act2SizeChangeArmed = false;
         act2SizeChangeActive = false;
         act2SizeMaxXAccumulator = 0;
@@ -2306,7 +2321,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
                 if (eventsFg5) {
                     eventsFg5 = false;
                     bgRoutine = BG_STAGE_DO_TRANSITION;
-                    transitionKosDrainFrames = 0;
+                    queueMgz2TransitionResources();
                     LOG.info("MGZ1 BG: Events_fg_5 detected, advancing to transition stage");
                 }
             }
@@ -2315,14 +2330,82 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
                 // queued by MGZ1BGE_Normal. Obj_LevelResults remains alive and
                 // continues its tally across Load_Level; End_of_level_flag is
                 // therefore not this transition's owner.
-                transitionKosDrainFrames++;
-                if (!transitionRequested
-                        && transitionKosDrainFrames >= MGZ2_SECONDARY_KOS_DRAIN_FRAMES) {
+                rebindTransitionKosAfterRewind();
+                if (!transitionRequested && transitionArtHandle != null
+                        && !transitionModuleQueue.modulesLeft()) {
+                    claimTransitionKos("MGZ2");
                     requestMgz2Transition();
                 }
             }
             default -> { }
         }
+    }
+
+    private void queueMgz2TransitionResources() {
+        try {
+            transitionDirectQueue = directKosQueue();
+            transitionModuleQueue = moduleKosQueue();
+            S3kKosTransitionPreflight.validate(
+                    rom(), transitionDirectQueue, transitionModuleQueue,
+                    Sonic3kConstants.KOS_MGZ2_SECONDARY_CHUNK_ADDR,
+                    Sonic3kConstants.KOS_MGZ2_SECONDARY_BLOCK_ADDR,
+                    Sonic3kConstants.KOSM_MGZ2_SECONDARY_ART_ADDR);
+            transitionChunkHandle = transitionDirectQueue.queueStandardKos(
+                    rom(), Sonic3kConstants.KOS_MGZ2_SECONDARY_CHUNK_ADDR,
+                    S3kKosRamDestinations.RAM_START + 0x6B00);
+            transitionChunkOrdinal = transitionChunkHandle.ordinal();
+            transitionBlockHandle = transitionDirectQueue.queueStandardKos(
+                    rom(), Sonic3kConstants.KOS_MGZ2_SECONDARY_BLOCK_ADDR,
+                    S3kKosRamDestinations.blockTableOffset(0xC60));
+            transitionBlockOrdinal = transitionBlockHandle.ordinal();
+            transitionArtHandle = transitionModuleQueue.queue(
+                    rom(), Sonic3kConstants.KOSM_MGZ2_SECONDARY_ART_ADDR, 0x252);
+            transitionArtOrdinal = transitionArtHandle.ordinal();
+        } catch (IOException e) {
+            throw new IllegalStateException("Unable to queue MGZ2 transition resources", e);
+        }
+    }
+
+    private void claimTransitionKos(String zone) {
+        if (!transitionDirectQueue.isReady(transitionChunkHandle)
+                || !transitionDirectQueue.isReady(transitionBlockHandle)
+                || !transitionModuleQueue.isReady(transitionArtHandle)) {
+            throw new IllegalStateException(zone + " queue emptied before owned payloads were ready");
+        }
+        transitionDirectQueue.claim(transitionChunkHandle);
+        transitionDirectQueue.claim(transitionBlockHandle);
+        transitionModuleQueue.claim(transitionArtHandle);
+        clearTransitionKosOwnership();
+    }
+
+    private void rebindTransitionKosAfterRewind() {
+        if (transitionArtOrdinal < 0 || transitionModuleQueue != null) {
+            return;
+        }
+        var timing = hardwareTiming();
+        transitionChunkHandle = timing.pendingHandle(
+                HardwareWorkKind.KOS_DECOMPRESSION_QUEUE, transitionChunkOrdinal).orElseThrow();
+        transitionBlockHandle = timing.pendingHandle(
+                HardwareWorkKind.KOS_DECOMPRESSION_QUEUE, transitionBlockOrdinal).orElseThrow();
+        transitionArtHandle = timing.pendingHandle(
+                HardwareWorkKind.KOS_MODULE_QUEUE, transitionArtOrdinal).orElseThrow();
+        transitionDirectQueue = directKosQueue();
+        transitionModuleQueue = moduleKosQueue();
+    }
+
+    public void discardHardwareWorkFacadesAfterRewind() {
+        transitionDirectQueue = null;
+        transitionModuleQueue = null;
+        transitionChunkHandle = null;
+        transitionBlockHandle = null;
+        transitionArtHandle = null;
+    }
+
+    private void clearTransitionKosOwnership() {
+        discardHardwareWorkFacadesAfterRewind();
+        transitionChunkOrdinal = -1;
+        transitionBlockOrdinal = -1;
+        transitionArtOrdinal = -1;
     }
 
     /**

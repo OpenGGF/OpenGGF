@@ -62,12 +62,20 @@ public class TestZoneEventRewindSchemaGuard {
             "wallObject",
             // Derived from transitionKosOrdinal after the timing ledger restore.
             "transitionKosQueue",
-            "transitionKosHandle");
+            "transitionKosHandle",
+            "transitionDirectQueue",
+            "transitionChunkHandle",
+            "transitionBlockHandle");
     private static final Set<String> CNZ_ALLOWED_TRANSIENT_FIELDS = Set.of();
     private static final Set<String> MGZ_ALLOWED_TRANSIENT_FIELDS = Set.of(
             "activeRobotnik",
             "cachedMgzQuakeChunkData",
-            "collapseSolids");
+            "collapseSolids",
+            "transitionDirectQueue",
+            "transitionModuleQueue",
+            "transitionChunkHandle",
+            "transitionBlockHandle",
+            "transitionArtHandle");
     private static final Set<String> MHZ_ALLOWED_TRANSIENT_FIELDS = Set.of();
     private static final Set<String> ICZ_ALLOWED_TRANSIENT_FIELDS = Set.of(
             "snowboardIntro",

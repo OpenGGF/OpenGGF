@@ -11,6 +11,8 @@ import com.openggf.game.timing.HardwareTimingSnapshot;
 import com.openggf.game.timing.HardwareWorkHandle;
 import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.sonic3k.resources.S3kKosDecompressionQueueSnapshot;
+import com.openggf.game.sonic3k.resources.S3kKosRamDestinations;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -293,7 +295,7 @@ class TestS3kZoneKosRewind {
         events.update(0, 0);
 
         List<HardwareWorkHandle> originalHandles = timing.pendingHandles();
-        assertEquals(List.of(0L),
+        assertEquals(List.of(0L, 1L, 0L),
                 originalHandles.stream().map(HardwareWorkHandle::ordinal).toList());
         byte[] eventSnapshot = ZoneEventSchemaSidecar.capture(events);
         HardwareTimingSnapshot timingSnapshot = timing.capture();
@@ -308,13 +310,100 @@ class TestS3kZoneKosRewind {
         events.rebindHardwareWorkAfterRewind();
 
         assertEquals(0L, longField(events, "transitionKosOrdinal"));
-        assertEquals(originalHandles.getFirst(), field(events, "transitionKosHandle"));
+        assertEquals(originalHandles.get(2), field(events, "transitionKosHandle"));
+        assertEquals(originalHandles.getFirst(), field(events, "transitionChunkHandle"));
+        assertEquals(originalHandles.get(1), field(events, "transitionBlockHandle"));
         assertEquals(originalHandles, timing.pendingHandles());
         assertEquals(1L, nextKosOrdinal(timing.capture()));
 
         events.update(0, 1);
         assertEquals(1L, nextKosOrdinal(timing.capture()),
                 "HCZ owner restore must poll the original job, not resubmit it");
+    }
+
+    @Test
+    void mgzTransitionDescriptorsAndPendingRewindRetainOriginalJobs() throws Exception {
+        assertTransitionBatchAndRewind(
+                new Sonic3kMGZEvents(),
+                "queueMgz2TransitionResources",
+                "rebindTransitionKosAfterRewind",
+                "transitionChunkHandle",
+                "transitionBlockHandle",
+                "transitionArtHandle",
+                Sonic3kConstants.KOS_MGZ2_SECONDARY_CHUNK_ADDR,
+                S3kKosRamDestinations.RAM_START + 0x6B00,
+                Sonic3kConstants.KOS_MGZ2_SECONDARY_BLOCK_ADDR,
+                S3kKosRamDestinations.blockTableOffset(0xC60),
+                Sonic3kConstants.KOSM_MGZ2_SECONDARY_ART_ADDR,
+                0x252 * 32);
+    }
+
+    @Test
+    void lbzTransitionDescriptorsAndPendingRewindRetainOriginalJobs() throws Exception {
+        assertTransitionBatchAndRewind(
+                new Sonic3kLBZEvents(),
+                "queueLbz2TransitionResources",
+                "rebindTransitionKosAfterRewind",
+                "lbz2TransitionChunkHandle",
+                "lbz2TransitionBlockHandle",
+                "lbz2TransitionArtHandle",
+                Sonic3kConstants.KOS_LBZ2_CHUNK_ADDR,
+                S3kKosRamDestinations.RAM_START,
+                Sonic3kConstants.KOS_LBZ2_SECONDARY_BLOCK_ADDR,
+                S3kKosRamDestinations.blockTableOffset(0x6B8),
+                Sonic3kConstants.KOSM_LBZ2_SECONDARY_ART_ADDR,
+                0x19D * 32);
+    }
+
+    private static void assertTransitionBatchAndRewind(
+            Sonic3kZoneEvents events,
+            String queueMethod,
+            String rebindMethod,
+            String chunkField,
+            String blockField,
+            String artField,
+            int chunkSource,
+            int chunkDestination,
+            int blockSource,
+            int blockDestination,
+            int artSource,
+            int artDestination) throws Exception {
+        var timing = GameServices.hardwareTiming();
+        var coordinator = S3kRuntimeArtCoordinator.current();
+        events.init(0);
+        invoke(events, queueMethod);
+
+        List<HardwareWorkHandle> handles = timing.pendingHandles();
+        assertEquals(List.of(
+                        HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
+                        HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
+                        HardwareWorkKind.KOS_MODULE_QUEUE),
+                handles.stream().map(HardwareWorkHandle::kind).toList());
+        var chunk = coordinator.directQueue().descriptor(handles.get(0));
+        var block = coordinator.directQueue().descriptor(handles.get(1));
+        var art = coordinator.moduleQueue().descriptor(handles.get(2));
+        assertEquals(chunkSource, chunk.sourceAddress());
+        assertEquals(chunkDestination, chunk.destinationAddress());
+        assertEquals(blockSource, block.sourceAddress());
+        assertEquals(blockDestination, block.destinationAddress());
+        assertEquals(artSource, art.sourceAddress());
+        assertEquals(artDestination, art.destinationAddress());
+
+        byte[] eventSnapshot = ZoneEventSchemaSidecar.capture(events);
+        HardwareTimingSnapshot timingSnapshot = timing.capture();
+        S3kKosDecompressionQueueSnapshot directSnapshot =
+                coordinator.directQueue().capture();
+        events.init(0);
+        timing.restore(timingSnapshot);
+        coordinator.directQueue().restore(directSnapshot);
+        ZoneEventSchemaSidecar.restore(events, eventSnapshot);
+        invoke(events, "discardHardwareWorkFacadesAfterRewind");
+        invoke(events, rebindMethod);
+
+        assertEquals(handles.get(0), field(events, chunkField));
+        assertEquals(handles.get(1), field(events, blockField));
+        assertEquals(handles.get(2), field(events, artField));
+        assertEquals(handles, timing.pendingHandles());
     }
 
     private static void invoke(Object target, String methodName) throws Exception {
