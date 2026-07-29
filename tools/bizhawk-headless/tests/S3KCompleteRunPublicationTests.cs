@@ -1039,16 +1039,21 @@ namespace OpenGGF.BizHawk.Headless.Tests
             WithMovie(MaskRows(40), movie =>
             {
                 var sink = new RecordingSink();
+                var host = RoundTripHost();
                 S3KCompleteRunCaptureResult result =
                     S3KCompleteRunCaptureRunner.Capture(
                         movie,
-                        RoundTripHost(),
+                        host,
                         MultiBonusRunId,
                         "synthetic.bk2",
                         "2026-07-24",
                         0,
                         sink);
 
+                AssertEx.Equal(
+                    (uint?)HardwareTimingEventEngine.ModuleChildSubmissionPc,
+                    host.ExecuteCallbackAddress);
+                AssertEx.Equal(true, host.ExecuteCallbackDisposed);
                 AssertEx.Equal(5, result.Segments.Count);
                 AssertSegment(
                     result.Segments[0], "aiz", Level, LevelProfile,

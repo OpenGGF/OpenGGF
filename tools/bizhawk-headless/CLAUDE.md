@@ -173,12 +173,20 @@ each, behind `OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS`. This harness implements **non
 them, and that is a decision rather than a gap — `docs/s3k-profiles-and-hooks.md` §2.4
 records the reasoning, and `tests/S3KHookAbsenceTests.cs` pins it to the fixture bytes.
 
-Do not "helpfully" add M68K exec/memory-write callback support. Nothing gates it: no
-fixture contains hook output, so it would be the only significant surface here with no
-differential coverage, in a harness whose value depends on reviewed, test-backed capture
-correctness. It would also
-mean Mono delegate GC-pinning (a collected delegate while registered is the classic interop
-crash), and hook-enabled captures are what has previously breached git's file-size limits.
+Do not "helpfully" add general M68K exec/memory-write callback support. The sole
+permitted exception is the address-filtered S3K hardware-timing submission observer at
+`M68K BUS` PC `0x001B46`, immediately after `Process_Kos_Module_Queue` returns from
+`Queue_Kos`. It may mirror or stage direct-FIFO submission lifecycle only; it must not
+emit a completion, select a trace sync point, mutate emulation state, or enable any
+diagnostic-hook output. Its Mono delegate must remain strongly rooted while registered
+and be deterministically unregistered when capture ends. Behavioral tests,
+ROM/disassembly evidence, independent review, and corrected-candidate differentials gate
+this exception.
+
+No other fixture contains hook output, so broader callback support would be the only
+significant surface here with no differential coverage, in a harness whose value depends
+on reviewed, test-backed capture correctness. Hook-enabled diagnostic captures are also
+what has previously breached git's file-size limits.
 
 If a frontier genuinely needs hook-derived data, use a **one-off throwaway Lua script** on
 the Lua route and delete it afterwards. The division is: **this harness validates, the Lua

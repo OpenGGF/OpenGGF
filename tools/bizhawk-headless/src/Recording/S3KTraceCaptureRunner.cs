@@ -295,6 +295,10 @@ namespace OpenGGF.BizHawk.Headless
             var hardwareTimingEngine =
                 new HardwareTimingEventEngine(rom);
 
+            using (IDisposable directSubmissionObserver =
+                host.RegisterExecuteCallback(
+                    HardwareTimingEventEngine.ModuleChildSubmissionPc,
+                    () => hardwareTimingEngine.ObserveDirectSubmissions(host)))
             using (IEnumerator<Bk2Frame> frames =
                 movie.OpenFrameStream().GetEnumerator())
             {

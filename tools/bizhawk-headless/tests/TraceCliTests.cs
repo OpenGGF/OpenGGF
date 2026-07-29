@@ -2610,6 +2610,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
             {
             }
 
+            public IDisposable RegisterExecuteCallback(
+                uint address, Action callback)
+            {
+                return NoOpCallbackRegistration.Instance;
+            }
+
             public void Advance()
             {
                 CompletedFrame++;

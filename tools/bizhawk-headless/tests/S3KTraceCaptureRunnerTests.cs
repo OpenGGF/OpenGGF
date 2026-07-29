@@ -66,6 +66,38 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S3K runner streams the non-discarding profiles and"
                 + " buffers only the discarding one, byte-identically",
                 StreamsNonDiscardingProfilesAndBuffersOnlyTheDiscardingOne));
+            tests.Add(new TestMain.TestCase(
+                "S3K runner scopes the module-child execute callback",
+                ScopesModuleChildExecuteCallback));
+        }
+
+        private static void ScopesModuleChildExecuteCallback()
+        {
+            WithMovie(
+                Rows(4),
+                movie =>
+                {
+                    var host = new FakeS1Host((h, frame) =>
+                    {
+                        h.Ram[S3KRam.GameMode] =
+                            S3KRam.GameModeLevel;
+                    });
+
+                    S3KTraceCaptureRunner.Capture(
+                        movie,
+                        host,
+                        S3KTraceCaptureRunner.AizEndToEndProfile,
+                        "2026-07-29",
+                        new StringWriter(),
+                        new StringWriter(),
+                        new StringWriter());
+
+                    AssertEx.Equal(
+                        (uint?)HardwareTimingEventEngine
+                            .ModuleChildSubmissionPc,
+                        host.ExecuteCallbackAddress);
+                    AssertEx.Equal(true, host.ExecuteCallbackDisposed);
+                });
         }
 
         /// <summary>

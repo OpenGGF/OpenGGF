@@ -15,6 +15,7 @@ namespace OpenGGF.BizHawk.Headless
     {
         public const int LegacySchema = 1;
         public const int CurrentSchema = 2;
+        public const uint ModuleChildSubmissionPc = 0x001B46;
         private const string ModuleKindName = "KOS_MODULE_QUEUE";
         private const string ModuleEventKind = "kos_module_queue";
         private const string ModuleCompressionVariant = "kosinski_moduled";
@@ -65,6 +66,7 @@ namespace OpenGGF.BizHawk.Headless
         private ushort? priorLevelFrameCounter;
         private bool titleCardLoadLoopActive;
         private bool priorDirectBusy;
+        private int stagedDirectRetirements;
         private readonly int hardwareTimingSchema;
 
         public HardwareTimingEventEngine(byte[] rom)
@@ -98,6 +100,84 @@ namespace OpenGGF.BizHawk.Headless
             priorLevelFrameCounter = null;
             titleCardLoadLoopActive = false;
             priorDirectBusy = false;
+            stagedDirectRetirements = 0;
+        }
+
+        /// <summary>
+        /// Observes the exact post-Queue_Kos module-child submission boundary.
+        /// This callback proves one enqueue occurred. It may stage one
+        /// intervening PRE head retirement, but completion ownership remains
+        /// with the next frame-end reconciliation.
+        /// </summary>
+        public void ObserveDirectSubmissions(IGpgxHost host)
+        {
+            if (host == null)
+            {
+                throw new ArgumentNullException("host");
+            }
+            if (stagedDirectRetirements != 0)
+            {
+                throw new InvalidDataException(
+                    "Kosinski decompression FIFO received another module"
+                    + " submission callback before its staged PRE retirement"
+                    + " reached frame-end reconciliation.");
+            }
+
+            int physicalCount =
+                S3KRam.U16(host, S3KRam.KosDecompQueueCount) & 0x7FFF;
+            if (physicalCount < 1
+                || physicalCount > S3KRam.KosDecompQueueCapacity)
+            {
+                throw new InvalidDataException(
+                    "Post-Queue_Kos observation requires one to four"
+                    + " occupied direct FIFO entries; observed "
+                    + physicalCount + ".");
+            }
+
+            if (directQueue.Count == 0)
+            {
+                for (int index = 0; index < physicalCount; index++)
+                {
+                    directQueue.Add(CreateDirectSubmission(host, index));
+                }
+                return;
+            }
+
+            int priorCount = directQueue.Count;
+            if (physicalCount == priorCount + 1)
+            {
+                RequireDirectOverlap(
+                    host,
+                    physicalCount,
+                    priorCount,
+                    0,
+                    "at the module-child submission callback");
+                directQueue.Add(
+                    CreateDirectSubmission(host, physicalCount - 1));
+                return;
+            }
+
+            if (priorCount != 0 && physicalCount == priorCount)
+            {
+                int retainedCount = priorCount - 1;
+                RequireDirectOverlap(
+                    host,
+                    physicalCount,
+                    retainedCount,
+                    1,
+                    "after one PRE head retirement at the"
+                    + " module-child submission callback");
+                stagedDirectRetirements = 1;
+                directQueue.Add(
+                    CreateDirectSubmission(host, physicalCount - 1));
+                return;
+            }
+
+            throw new InvalidDataException(
+                "Post-Queue_Kos observation must represent exactly one"
+                + " enqueue with no retirement or one PRE head retirement;"
+                + " logical count was " + priorCount + " and physical count"
+                + " is " + physicalCount + ".");
         }
 
         /// <summary>
@@ -136,6 +216,7 @@ namespace OpenGGF.BizHawk.Headless
                 : "post_objects";
             ushort directCountWord =
                 S3KRam.U16(host, S3KRam.KosDecompQueueCount);
+            EmitStagedDirectRetirements(rawFrame, writer);
             ObserveDirectQueue(
                 rawFrame,
                 host,
@@ -171,6 +252,40 @@ namespace OpenGGF.BizHawk.Headless
             priorLevelFrameCounter = levelFrameCounter;
         }
 
+        private void EmitStagedDirectRetirements(
+            int rawFrame, TextWriter writer)
+        {
+            if (stagedDirectRetirements == 0)
+            {
+                return;
+            }
+            if (stagedDirectRetirements != 1 || directQueue.Count == 0)
+            {
+                throw new InvalidDataException(
+                    "Kosinski decompression FIFO staged an inconsistent PRE"
+                    + " retirement.");
+            }
+
+            DirectSubmission completed = directQueue[0];
+            directQueue.RemoveAt(0);
+            stagedDirectRetirements = 0;
+
+            // The staged head owned the prior busy-state sample. Its proven
+            // PRE retirement ends that evidence before current physical RAM
+            // is reconciled.
+            priorDirectBusy = false;
+            if (hardwareTimingSchema == CurrentSchema && writer != null)
+            {
+                WriteCompletion(
+                    writer,
+                    rawFrame,
+                    "pre_main_loop",
+                    DirectEventKind,
+                    completed.Ordinal,
+                    completed.Fingerprint);
+            }
+        }
+
         private void ObserveDirectQueue(
             int rawFrame,
             IGpgxHost host,
@@ -192,7 +307,6 @@ namespace OpenGGF.BizHawk.Headless
                     "Kosinski decompression FIFO is busy with no occupied"
                     + " head.");
             }
-
             int priorCount = directQueue.Count;
             int overlap;
             int retiredCount;
