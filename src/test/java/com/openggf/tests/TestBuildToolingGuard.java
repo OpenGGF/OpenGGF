@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -28,6 +29,8 @@ import static org.junit.jupiter.api.Assertions.fail;
 class TestBuildToolingGuard {
 
     private static final Path POLICY_SCRIPT = Path.of(".githooks/validate-policy.sh").toAbsolutePath();
+    private static final Path POWERSHELL_POLICY_SCRIPT =
+            Path.of(".githooks/validate-policy.ps1").toAbsolutePath();
     private static final Path POST_CHECKOUT_HOOK = Path.of(".githooks/post-checkout").toAbsolutePath();
     private static final Path PROJECT_GITIGNORE = Path.of(".gitignore").toAbsolutePath();
     private static final String ALL_ZERO_OID = "0000000000000000000000000000000000000000";
@@ -282,6 +285,13 @@ class TestBuildToolingGuard {
         if (!workflow.contains(".githooks/validate-policy.sh ci-push")) {
             violations.add(".github/workflows/release.yml does not run validate-policy.sh ci-push for direct master pushes");
         }
+        if (!workflow.contains("Fetch remote branch history")
+                || !workflow.contains("+refs/heads/*:refs/remotes/origin/*")) {
+            violations.add(".github/workflows/release.yml push validation does not fetch remote branch history");
+        }
+        if (!workflow.contains("\"refs/remotes/origin/${{ github.ref_name }}\"")) {
+            violations.add(".github/workflows/release.yml does not identify the exact pushed master remote ref");
+        }
 
         if (!violations.isEmpty()) {
             fail("release PRs into master must not bypass branch policy validation:\n  "
@@ -525,11 +535,10 @@ class TestBuildToolingGuard {
 
     @Test
     void developCiShouldProtectPullRequests() throws Exception {
-        // 2026-07-02: direct-push CI on develop was deliberately removed by
-        // f18d4d9be ("fix: stop develop push CI"), and that decision was
-        // confirmed. This guard now covers the pull-request path plus the
-        // scheduled develop trace-replay job; it no longer requires a push
-        // trigger or the validate-policy ci-push step.
+        // 2026-07-02: the full Maven suite on direct develop pushes was
+        // deliberately removed by f18d4d9be ("fix: stop develop push CI").
+        // The lightweight all-branch push policy is a separate backstop; this
+        // guard still covers the PR path and scheduled develop trace replay.
         String ci = Files.readString(Path.of(".github/workflows/ci.yml"));
         String shellPolicy = Files.readString(Path.of(".githooks/validate-policy.sh"));
         String powershellPolicy = Files.readString(Path.of(".githooks/validate-policy.ps1"));
@@ -758,7 +767,7 @@ class TestBuildToolingGuard {
         if (!shellPolicy.contains("if [ \"$base_ref\" != \"develop\" ] && [ \"$base_ref\" != \"master\" ]; then")) {
             violations.add(".githooks/validate-policy.sh ci-pr mode must continue for base_ref=master");
         }
-        if (!powershellPolicy.contains("if ($BaseRef -ne \"develop\" -and $BaseRef -ne \"master\") {")) {
+        if (!powershellPolicy.contains("if ($BaseRef -cne \"develop\" -and $BaseRef -cne \"master\") {")) {
             violations.add(".githooks/validate-policy.ps1 ci-pr mode must continue for BaseRef=master");
         }
 
@@ -816,6 +825,291 @@ class TestBuildToolingGuard {
 
         if (!violations.isEmpty()) {
             fail("Windows hook dispatch must not stop at a broken pwsh shim before trying powershell.exe:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void resourcePolicyImplementationsShouldKeepConstantsAndControlFlowInParity() throws Exception {
+        String shellPolicy = Files.readString(Path.of(".githooks/validate-policy.sh"));
+        String powershellPolicy = Files.readString(Path.of(".githooks/validate-policy.ps1"));
+        List<String> violations = new ArrayList<>();
+
+        Map<String, String> expectedConstants = Map.ofEntries(
+                Map.entry("GITHUB_FILE_SIZE_LIMIT_BYTES", "100000000"),
+                Map.entry("TRACE_COMPRESSION_THRESHOLD_BYTES", "1048576"),
+                Map.entry("RELEASE_TRAILER_CUTOVER_BASE", "677447024a08db9e25f3461588d661c23ba26848"),
+                Map.entry("EMPTY_TREE_OID", "4b825dc642cb6eb9a060e54bf8d69288fbee4904"),
+                Map.entry("ALL_ZERO_OID", ALL_ZERO_OID),
+                Map.entry("POSIX_HOME_ROOT", "/home"),
+                Map.entry("VAR_HOME_ROOT", "/var/home"),
+                Map.entry("MACOS_HOME_ROOT", "/Users"),
+                Map.entry("WINDOWS_USERS_ROOT", "[A-Za-z]:\\\\[Uu][Ss][Ee][Rr][Ss]"));
+        Map<String, String> powershellNames = Map.ofEntries(
+                Map.entry("GITHUB_FILE_SIZE_LIMIT_BYTES", "GithubFileSizeLimitBytes"),
+                Map.entry("TRACE_COMPRESSION_THRESHOLD_BYTES", "TraceCompressionThresholdBytes"),
+                Map.entry("RELEASE_TRAILER_CUTOVER_BASE", "ReleaseTrailerCutoverBase"),
+                Map.entry("EMPTY_TREE_OID", "EmptyTreeOid"),
+                Map.entry("ALL_ZERO_OID", "AllZeroOid"),
+                Map.entry("POSIX_HOME_ROOT", "PosixHomeRoot"),
+                Map.entry("VAR_HOME_ROOT", "VarHomeRoot"),
+                Map.entry("MACOS_HOME_ROOT", "MacosHomeRoot"),
+                Map.entry("WINDOWS_USERS_ROOT", "WindowsUsersRoot"));
+        expectedConstants.forEach((shellName, expectedValue) -> {
+            String shellValue = policyAssignment(shellPolicy, shellName);
+            String powershellValue = policyAssignment(powershellPolicy, "script:" + powershellNames.get(shellName));
+            if (!expectedValue.equals(shellValue)) {
+                violations.add(".githooks/validate-policy.sh assigns " + shellName + "=" + shellValue
+                        + " instead of " + expectedValue);
+            }
+            if (!expectedValue.equals(powershellValue)) {
+                violations.add(".githooks/validate-policy.ps1 assigns " + powershellNames.get(shellName)
+                        + "=" + powershellValue + " instead of " + expectedValue);
+            }
+        });
+
+        String shellStagedCandidates = scriptFunction(shellPolicy, "staged_candidates() {");
+        String powershellStagedCandidates = scriptFunction(powershellPolicy, "function Get-StagedCandidates()");
+        String shellCommitCandidates = scriptFunction(shellPolicy, "commit_candidates() {");
+        String powershellCommitCandidates = scriptFunction(powershellPolicy, "function Get-CommitCandidates(");
+        for (String commandArgument : List.of("--no-renames", "--diff-filter=AMT")) {
+            if (!shellStagedCandidates.contains(commandArgument)
+                    || !powershellStagedCandidates.contains(commandArgument)) {
+                violations.add("staged candidate implementations do not both use " + commandArgument);
+            }
+            if (!shellCommitCandidates.contains(commandArgument)
+                    || !powershellCommitCandidates.contains(commandArgument)) {
+                violations.add("commit candidate implementations do not both use " + commandArgument);
+            }
+        }
+
+        String shellCommitMsg = scriptFunction(shellPolicy, "validate_commit_msg_hook() {");
+        String powershellCommitMsg = scriptFunction(powershellPolicy, "function Validate-CommitMsgHook(");
+        int shellStagedValidation = shellCommitMsg.indexOf("validate_staged_content");
+        int shellMergeReturn = shellCommitMsg.indexOf("is_merge_in_progress");
+        if (shellStagedValidation < 0 || shellMergeReturn < 0 || shellStagedValidation > shellMergeReturn) {
+            violations.add(".githooks/validate-policy.sh commit-msg validates staged content after its merge return");
+        }
+        int powershellStagedValidation = powershellCommitMsg.indexOf("Validate-StagedContent");
+        int powershellMergeReturn = powershellCommitMsg.indexOf("Test-MergeInProgress");
+        if (powershellStagedValidation < 0
+                || powershellMergeReturn < 0
+                || powershellStagedValidation > powershellMergeReturn) {
+            violations.add(".githooks/validate-policy.ps1 commit-msg validates staged content after its merge return");
+        }
+
+        String shellCiRange = scriptFunction(shellPolicy, "validate_ci_commit_range() {");
+        String powershellCiRange = scriptFunction(powershellPolicy, "function Validate-CiCommitRange(");
+        if (!shellCiRange.contains("validate_content_commit_list \"$commits\" \"$head_sha\"")
+                || !powershellCiRange.contains("Validate-ContentCommitList $commits $HeadSha")) {
+            violations.add("CI commit-range implementations do not validate all commit content and the delivered tip");
+        }
+        if (!shellCiRange.contains("if [ \"$#\" -gt 2 ]; then")
+                || !powershellCiRange.contains("if ($parentFields.Count -gt 2)")) {
+            violations.add("CI commit-range implementations do not both limit trailer checks to non-merge commits");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("shell and PowerShell must share policy values, Git candidate commands, and validation order:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void powershellResourcePolicyShouldUseOrdinalCaseSensitiveRefIdentity(@TempDir Path temporaryDirectory)
+            throws Exception {
+        String powershellPolicy = Files.readString(POWERSHELL_POLICY_SCRIPT);
+        String resolveRef = scriptFunction(powershellPolicy, "function Resolve-PushedRemoteRef(");
+        String newRefCommits = scriptFunction(powershellPolicy, "function Get-CiNewRefCommits(");
+        String ciPush = scriptFunction(powershellPolicy, "function Validate-CiPush(");
+        List<String> violations = new ArrayList<>();
+
+        if (!Pattern.compile(
+                        "\\[string]::Equals\\(\\s*\\$SuppliedRef\\s*,\\s*\\$expectedRef\\s*,\\s*"
+                                + "\\[System\\.StringComparison]::Ordinal\\s*\\)",
+                        Pattern.DOTALL)
+                .matcher(resolveRef)
+                .find()) {
+            violations.add("Resolve-PushedRemoteRef does not compare supplied and expected refs ordinally");
+        }
+        if (!Pattern.compile(
+                        "\\[string]::Equals\\(\\s*\\$remoteRef\\s*,\\s*\\$pushedRemoteRef\\s*,\\s*"
+                                + "\\[System\\.StringComparison]::Ordinal\\s*\\)",
+                        Pattern.DOTALL)
+                .matcher(newRefCommits)
+                .find()) {
+            violations.add("Get-CiNewRefCommits does not exclude only the ordinally identical pushed ref");
+        }
+        if (!ciPush.contains("$RefName -ceq \"develop\"") || !ciPush.contains("$RefName -ceq \"master\"")) {
+            violations.add("Validate-CiPush routes branch names with case-insensitive comparisons");
+        }
+        if (!violations.isEmpty()) {
+            fail("PowerShell Git ref identity must match shell's case-sensitive comparisons:\n  "
+                    + String.join("\n  ", violations));
+        }
+
+        String powershell = availablePowerShell();
+        Path caseProbe = temporaryDirectory.resolve("case-sensitive-probe");
+        Files.writeString(caseProbe, "probe\n");
+        boolean caseSensitiveFileSystem =
+                !Files.exists(temporaryDirectory.resolve("CASE-SENSITIVE-PROBE"));
+        Files.delete(caseProbe);
+        if (powershell == null || !caseSensitiveFileSystem) {
+            return;
+        }
+
+        Path remote = newBareRemote(temporaryDirectory, "case-distinct-origin");
+        Path repository = newRepository(temporaryDirectory, "case-distinct-local");
+        createInitialCommit(repository);
+        git(repository, "switch", "-c", "feature/shared");
+        addRemoteAndPush(repository, remote, "feature/shared");
+        String localOid = gitOutput(repository, "rev-parse", "HEAD").trim();
+        git(repository, "update-ref", "refs/remotes/origin/Feature/shared", localOid);
+
+        ProcessResult result = runPowerShellPolicy(
+                repository,
+                powershell,
+                "ci-push",
+                ALL_ZERO_OID,
+                localOid,
+                "feature/shared",
+                "refs/remotes/origin/Feature/shared");
+        assertTrue(result.exitCode() != 0,
+                () -> "case-distinct remote ref must not stand in for the pushed branch:\n" + result.output());
+        assertTrue(result.output().contains("feature/shared"),
+                () -> "case-distinct ref rejection must identify the pushed branch:\n" + result.output());
+
+        Path exclusionRemote = newBareRemote(temporaryDirectory, "case-exclusion-origin");
+        Path exclusionRepository = newRepository(temporaryDirectory, "case-exclusion-local");
+        createInitialCommit(exclusionRepository);
+        git(exclusionRepository, "remote", "add", "origin", exclusionRemote.toString());
+        git(exclusionRepository, "switch", "-c", "feature/shared");
+        stageSymlink(exclusionRepository, "docs/skdisasm", "../../shared/skdisasm", true);
+        commit(exclusionRepository, "old published bad link");
+        deleteAndStage(exclusionRepository, "docs/skdisasm");
+        commit(exclusionRepository, "published remediation");
+        String remediatedOid = gitOutput(exclusionRepository, "rev-parse", "HEAD").trim();
+        writeAndStage(exclusionRepository, "docs/architecture/audits/new-work.md", "clean unique work\n");
+        commit(exclusionRepository, "clean unique work");
+        String cleanTipOid = gitOutput(exclusionRepository, "rev-parse", "HEAD").trim();
+        git(exclusionRepository, "update-ref", "refs/remotes/origin/Feature/shared", remediatedOid);
+        git(exclusionRepository, "update-ref", "refs/remotes/origin/feature/shared", cleanTipOid);
+
+        assertPolicyAccepts(runPowerShellPolicy(
+                exclusionRepository,
+                powershell,
+                "ci-push",
+                ALL_ZERO_OID,
+                cleanTipOid,
+                "feature/shared",
+                "refs/remotes/origin/feature/shared"));
+    }
+
+    @Test
+    void powershellResourcePolicyShouldMatchFailClosedShellDiagnostics() throws Exception {
+        String shellPolicy = Files.readString(POLICY_SCRIPT);
+        String powershellPolicy = Files.readString(POWERSHELL_POLICY_SCRIPT);
+        List<String> violations = new ArrayList<>();
+
+        List<String> shellDiagnostics = List.of(
+                "\\`$path\\` is a symlink whose committed target blob could not be read.",
+                "delivered tip tree $tip contains a malformed object id for $path.",
+                "delivered tip tree $tip contains a truncated object id for $path.");
+        List<String> powershellDiagnostics = List.of(
+                "``$path`` is a symlink whose committed target blob could not be read.",
+                "delivered tip tree $Tip contains a malformed object id for $path.",
+                "delivered tip tree $Tip contains a truncated object id for $path.");
+        for (int i = 0; i < shellDiagnostics.size(); i++) {
+            if (!shellPolicy.contains(shellDiagnostics.get(i))) {
+                violations.add(".githooks/validate-policy.sh is missing expected diagnostic "
+                        + shellDiagnostics.get(i));
+            }
+            if (!powershellPolicy.contains(powershellDiagnostics.get(i))) {
+                violations.add(".githooks/validate-policy.ps1 is missing matching diagnostic "
+                        + powershellDiagnostics.get(i));
+            }
+        }
+
+        if (!violations.isEmpty()) {
+            fail("fail-closed PowerShell diagnostics must communicate the same reason as shell:\n  "
+                    + String.join("\n  ", violations));
+        }
+    }
+
+    @Test
+    void resourcePolicyHookDispatchersShouldBeTrackedExecutable() throws Exception {
+        String runPolicy = Files.readString(Path.of(".githooks/run-policy"));
+        List<String> violations = new ArrayList<>();
+
+        for (String hook : List.of("pre-commit", "commit-msg", "pre-push")) {
+            String path = ".githooks/" + hook;
+            String indexEntry = gitOutput(Path.of("."), "ls-files", "--stage", "--", path);
+            if (!indexEntry.startsWith("100755 ")) {
+                violations.add(path + " must be tracked executable");
+            }
+            String dispatcher = Files.readString(Path.of(path));
+            if (!dispatcher.contains("\"$HOOK_DIR/run-policy\" " + hook)) {
+                violations.add(path + " must dispatch " + hook + " through .githooks/run-policy");
+            }
+        }
+        if (!runPolicy.contains("exec \"$HOOK_DIR/validate-policy.sh\" \"$@\"")) {
+            violations.add(".githooks/run-policy must preserve the shell fallback and its arguments");
+        }
+        if (!runPolicy.contains("\"$@\" <&0")) {
+            violations.add(".githooks/run-policy must preserve Git hook standard input for PowerShell pre-push");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("resource policy hook entry points must be executable portable dispatchers:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void allBranchPushPolicyShouldRemainLightweight() throws Exception {
+        String workflow = normalizeLineEndings(Files.readString(Path.of(".github/workflows/ci.yml")));
+        List<String> violations = new ArrayList<>();
+
+        String pushTrigger = yamlIndentedBlock(workflow, "  push:", 2);
+        if (!pushTrigger.contains("branches:\n") || !pushTrigger.contains("- '**'")) {
+            violations.add(".github/workflows/ci.yml push trigger is not explicitly limited to all branches");
+        }
+        if (pushTrigger.contains("tags:")) {
+            violations.add(".github/workflows/ci.yml branch policy push trigger also declares tag reachability");
+        }
+        String policyJob = yamlIndentedBlock(workflow, "  policy:", 2);
+        if (!policyJob.contains("if: github.event_name == 'pull_request' || github.event_name == 'push'")) {
+            violations.add(".github/workflows/ci.yml policy job is not limited to PR and push events");
+        }
+        if (!policyJob.contains("Fetch remote branch history")) {
+            violations.add(".github/workflows/ci.yml does not fetch remote branch refs for new-branch range selection");
+        }
+        if (!policyJob.contains("+refs/heads/*:refs/remotes/origin/*")) {
+            violations.add(".github/workflows/ci.yml does not fetch every remote branch as a published-history boundary");
+        }
+        if (!policyJob.contains("Validate pushed branch resource policy")) {
+            violations.add(".github/workflows/ci.yml does not define a push-range policy step");
+        }
+        if (!policyJob.contains(".githooks/validate-policy.sh ci-push")) {
+            violations.add(".github/workflows/ci.yml does not invoke ci-push policy");
+        }
+        if (!policyJob.contains("\"refs/remotes/origin/${{ github.ref_name }}\"")) {
+            violations.add(".github/workflows/ci.yml does not identify the exact pushed remote ref");
+        }
+
+        for (Map.Entry<String, String> job : yamlJobBlocks(workflow).entrySet()) {
+            if (!job.getValue().contains("mvn ")) {
+                continue;
+            }
+            String jobCondition = yamlJobCondition(job.getValue());
+            if (!conditionExcludesPush(jobCondition)) {
+                violations.add(".github/workflows/ci.yml Maven-bearing job " + job.getKey()
+                        + " is reachable from a branch push");
+            }
+        }
+
+        if (!violations.isEmpty()) {
+            fail("all-branch pushes need a lightweight policy-only CI path with fetched remote context:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
     }
@@ -1831,6 +2125,42 @@ class TestBuildToolingGuard {
         return run(repository, command, input);
     }
 
+    private static String availablePowerShell() throws Exception {
+        for (String candidate : List.of("pwsh", "powershell.exe")) {
+            try {
+                ProcessResult result = run(
+                        Path.of("."),
+                        List.of(candidate, "-NoLogo", "-NoProfile", "-Command", "exit 0"),
+                        null);
+                if (result.exitCode() == 0) {
+                    return candidate;
+                }
+            } catch (java.io.IOException ignored) {
+                // The static semantic assertions still run when PowerShell is
+                // unavailable in the current build environment.
+            }
+        }
+        return null;
+    }
+
+    private static ProcessResult runPowerShellPolicy(
+            Path repository,
+            String powershell,
+            String mode,
+            String... arguments) throws Exception {
+        List<String> command = new ArrayList<>(List.of(
+                powershell,
+                "-NoLogo",
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                POWERSHELL_POLICY_SCRIPT.toString(),
+                mode));
+        command.addAll(List.of(arguments));
+        return run(repository, command, null);
+    }
+
     private static ProcessResult run(Path repository, List<String> command, String input) throws Exception {
         return run(repository, command, input, Map.of());
     }
@@ -1893,6 +2223,105 @@ class TestBuildToolingGuard {
 
     private static String normalizeLineEndings(String text) {
         return text.replace("\r\n", "\n").replace('\r', '\n');
+    }
+
+    private static String policyAssignment(String source, String variableName) {
+        Pattern assignment = Pattern.compile(
+                "(?m)^\\$?" + Pattern.quote(variableName)
+                        + "\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)'|([^\\r\\n]+))$");
+        var matcher = assignment.matcher(source);
+        if (!matcher.find()) {
+            return null;
+        }
+        for (int group = 1; group <= 3; group++) {
+            if (matcher.group(group) != null) {
+                return matcher.group(group).trim();
+            }
+        }
+        return null;
+    }
+
+    private static String scriptFunction(String source, String declaration) {
+        int start = source.indexOf(declaration);
+        if (start < 0) {
+            fail("missing script function declaration: " + declaration);
+        }
+        int end = source.indexOf("\n}\n", start);
+        if (end < 0) {
+            fail("unterminated script function declaration: " + declaration);
+        }
+        return source.substring(start, end + 2);
+    }
+
+    private static String yamlIndentedBlock(String source, String declaration, int indentation) {
+        int start = source.indexOf(declaration);
+        if (start < 0) {
+            return "";
+        }
+        int cursor = source.indexOf('\n', start);
+        if (cursor < 0) {
+            return source.substring(start);
+        }
+        cursor++;
+        while (cursor < source.length()) {
+            int lineEnd = source.indexOf('\n', cursor);
+            if (lineEnd < 0) {
+                lineEnd = source.length();
+            }
+            String line = source.substring(cursor, lineEnd);
+            if (!line.isBlank()) {
+                int leadingSpaces = 0;
+                while (leadingSpaces < line.length() && line.charAt(leadingSpaces) == ' ') {
+                    leadingSpaces++;
+                }
+                if (leadingSpaces <= indentation) {
+                    return source.substring(start, cursor);
+                }
+            }
+            cursor = lineEnd + 1;
+        }
+        return source.substring(start);
+    }
+
+    private static Map<String, String> yamlJobBlocks(String workflow) {
+        int jobsStart = workflow.indexOf("\njobs:\n");
+        if (jobsStart < 0) {
+            return Map.of();
+        }
+        String jobs = workflow.substring(jobsStart + 1);
+        var matcher = Pattern.compile("(?m)^  ([A-Za-z0-9_-]+):\\n").matcher(jobs);
+        List<String> names = new ArrayList<>();
+        List<Integer> starts = new ArrayList<>();
+        while (matcher.find()) {
+            names.add(matcher.group(1));
+            starts.add(matcher.start());
+        }
+        Map<String, String> blocks = new LinkedHashMap<>();
+        for (int i = 0; i < names.size(); i++) {
+            int end = i + 1 < starts.size() ? starts.get(i + 1) : jobs.length();
+            blocks.put(names.get(i), jobs.substring(starts.get(i), end));
+        }
+        return blocks;
+    }
+
+    private static String yamlJobCondition(String jobBlock) {
+        var matcher = Pattern.compile("(?m)^    if:\\s*(.+)$").matcher(jobBlock);
+        return matcher.find() ? matcher.group(1).trim() : "";
+    }
+
+    private static boolean conditionExcludesPush(String condition) {
+        if (condition.contains("github.event_name != 'push'")) {
+            return true;
+        }
+        var eventMatches = Pattern.compile("github\\.event_name == '([^']+)'").matcher(condition);
+        boolean constrainsEvent = false;
+        while (eventMatches.find()) {
+            constrainsEvent = true;
+            if ("push".equals(eventMatches.group(1))) {
+                return false;
+            }
+        }
+        return constrainsEvent;
     }
 
     private static Set<String> trackedFiles(String pathspec) throws Exception {
