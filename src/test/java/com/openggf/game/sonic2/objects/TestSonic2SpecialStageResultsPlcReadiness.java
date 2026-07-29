@@ -53,10 +53,28 @@ class TestSonic2SpecialStageResultsPlcReadiness {
         assertEquals(2, totalFrames(), "Obj6F routines after init do not re-poll the PLC FIFO");
     }
 
+    @Test
+    void completedSpecialResultsHoldModeExitUntilTheFinalFifoPollIsEmpty() throws Exception {
+        markObjectComplete();
+        plc.append(0);
+
+        assertEquals(false, results.isComplete(), "the special-stage mode must wait for its final PLC poll");
+
+        drain();
+
+        assertEquals(true, results.isComplete(), "the first empty frame releases the completed special-stage mode");
+    }
+
     private int totalFrames() throws Exception {
         Field field = SpecialStageResultsScreenObjectInstance.class.getDeclaredField("totalFrames");
         field.setAccessible(true);
         return field.getInt(results);
+    }
+
+    private void markObjectComplete() throws Exception {
+        Field field = SpecialStageResultsScreenObjectInstance.class.getDeclaredField("complete");
+        field.setAccessible(true);
+        field.setBoolean(results, true);
     }
 
     private void drain() {

@@ -798,7 +798,10 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
 
     @Override
     public boolean isComplete() {
-        return complete;
+        // Obj6F's initialization gate is one-shot, but the special-stage mode
+        // loop performs its own final FIFO poll before it leaves results.
+        Sonic2PlcService plcService = services().gameService(Sonic2PlcService.class);
+        return complete && (plcService == null || !plcService.isBusy());
     }
 
     @Override

@@ -47,10 +47,28 @@ class TestSonic1SpecialStageResultsPlcReadiness {
         assertEquals(2, totalFrames(), "SSR routines after SSR_ChkPLC continue while later work is queued");
     }
 
+    @Test
+    void completedSpecialResultsHoldModeExitUntilTheFinalFifoPollIsEmpty() throws Exception {
+        markObjectComplete();
+        plc.append(27);
+
+        assertEquals(false, results.isComplete(), "the special-stage mode must wait for its final PLC poll");
+
+        drain();
+
+        assertEquals(true, results.isComplete(), "the first empty frame releases the completed special-stage mode");
+    }
+
     private int totalFrames() throws Exception {
         Field field = Sonic1SpecialStageResultsScreen.class.getDeclaredField("totalFrames");
         field.setAccessible(true);
         return field.getInt(results);
+    }
+
+    private void markObjectComplete() throws Exception {
+        Field field = Sonic1SpecialStageResultsScreen.class.getDeclaredField("complete");
+        field.setAccessible(true);
+        field.setBoolean(results, true);
     }
 
     private void drain() {

@@ -242,7 +242,11 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
 
     @Override
     public boolean isComplete() {
-        return complete;
+        // The special-stage mode loop exits only once Obj7E has completed and
+        // the final PLC poll sees an empty FIFO. This is deliberately separate
+        // from SSR_ChkPLC: later work must not freeze the running card.
+        Sonic1PlcService plcService = GameServices.module().getGameService(Sonic1PlcService.class);
+        return complete && (plcService == null || !plcService.isBusy());
     }
 
     @Override
