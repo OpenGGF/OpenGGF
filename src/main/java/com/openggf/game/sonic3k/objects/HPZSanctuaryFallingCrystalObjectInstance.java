@@ -93,9 +93,6 @@ public final class HPZSanctuaryFallingCrystalObjectInstance extends AbstractObje
                 rawAnimationTimer--;
             } else {
                 published = true;
-                if (tryServices() != null && subtype != 7) {
-                    services().playSfx(Sonic3kSfx.SUPER_EMERALD.id);
-                }
                 parentRef.onFallingCrystalAnimationComplete(subtype);
                 setDestroyed(true);
             }
@@ -201,5 +198,6 @@ public final class HPZSanctuaryFallingCrystalObjectInstance extends AbstractObje
     @Override public int getX() { return x; }
     @Override public int getY() { return y; }
     @Override public int getOutOfRangeReferenceX() { return x; }
+    @Override public boolean isHighPriority() { return true; }
     HPZSSEntryControlObjectInstance parentForTest() { return parentRef; }
 }

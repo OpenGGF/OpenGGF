@@ -4,7 +4,11 @@ import com.openggf.game.EmeraldRewardKind;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.SpecialStageEntryRequest;
 import com.openggf.game.sonic3k.S3kEmeraldProgression;
+import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kSanctuaryRuntimeState;
+import com.openggf.game.palette.PaletteOwnershipRegistry;
+import com.openggf.game.palette.PaletteSurface;
+import com.openggf.level.Palette;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.camera.Camera;
@@ -101,6 +105,119 @@ class TestHpzSanctuaryObjects {
     }
 
     @Test
+    void sanctuaryVisualAttributesMatchRomObjectData() {
+        GameStateManager gsm = new GameStateManager();
+        S3kEmeraldProgression progression = S3kEmeraldProgression.restore(
+                gsm, List.of(2, 2, 2, 2, 2, 2, 2), true);
+        S3kSanctuaryRuntimeState runtime = new S3kSanctuaryRuntimeState(progression, true);
+
+        HPZMasterEmeraldObjectInstance master = new HPZMasterEmeraldObjectInstance(
+                new ObjectSpawn(0x1640, 0x340, 0xB0, 0, 0, false, 0));
+        assertEquals(0xB, master.mappingFrameForTest());
+        assertEquals(3, master.renderPaletteLineForTest());
+        assertEquals(4, master.getPriorityBucket());
+        assertFalse(master.isHighPriority());
+
+        SSZHPZTeleporterObjectInstance teleporter = new SSZHPZTeleporterObjectInstance(
+                new ObjectSpawn(0x1640, 0x3C7, 0x79, 0, 0, false, 0));
+        assertEquals(0xA, teleporter.mappingFrameForTest());
+        assertEquals(0, teleporter.renderPaletteLineForTest());
+        assertEquals(3, teleporter.getPriorityBucket());
+        assertFalse(teleporter.isHighPriority());
+
+        for (int subtype = 0; subtype < 7; subtype++) {
+            assertTrue(pedestal(subtype, progression, runtime).isHighPriority(),
+                    "Obj_HPZSuperEmerald art_tile priority bit for subtype " + subtype);
+        }
+        assertTrue(new HPZSanctuaryFallingCrystalObjectInstance(
+                controller(progression, false), 7).isHighPriority());
+    }
+
+    @Test
+    void incompleteMasterEmeraldOwnsTheRomGreenColors() {
+        PaletteOwnershipRegistry registry = new PaletteOwnershipRegistry();
+        Palette[] palettes = {new Palette(), new Palette(), new Palette(), new Palette()};
+        ObjectServices services = mock(ObjectServices.class);
+        when(services.paletteOwnershipRegistryOrNull()).thenReturn(registry);
+        when(services.gameState()).thenReturn(new GameStateManager());
+
+        HPZMasterEmeraldObjectInstance master = new HPZMasterEmeraldObjectInstance(
+                new ObjectSpawn(0x1640, 0x340, 0xB0, 0, 0, false, 0));
+        master.setServices(services);
+
+        registry.beginFrame();
+        master.update(0, null);
+        registry.resolveInto(palettes, null, null, palettes[0]);
+
+        assertEquals(S3kPaletteOwners.HPZ_MASTER_EMERALD,
+                registry.ownerAt(PaletteSurface.NORMAL, 3, 1));
+        assertEquals(S3kPaletteOwners.HPZ_MASTER_EMERALD,
+                registry.ownerAt(PaletteSurface.NORMAL, 3, 2));
+        assertSegaColor(palettes[3], 1, 0x06A0);
+        assertSegaColor(palettes[3], 2, 0x0660);
+    }
+
+    @Test
+    void completedMasterEmeraldRunsTheRomPaletteRotationScript() {
+        PaletteOwnershipRegistry registry = new PaletteOwnershipRegistry();
+        Palette[] palettes = {new Palette(), new Palette(), new Palette(), new Palette()};
+        ObjectServices services = mock(ObjectServices.class);
+        GameStateManager gameState = mock(GameStateManager.class);
+        when(gameState.hasAllSuperEmeralds()).thenReturn(true);
+        when(services.paletteOwnershipRegistryOrNull()).thenReturn(registry);
+        when(services.gameState()).thenReturn(gameState);
+
+        HPZMasterEmeraldObjectInstance master = new HPZMasterEmeraldObjectInstance(
+                new ObjectSpawn(0x1640, 0x340, 0xB0, 0, 0, false, 0));
+        master.setServices(services);
+
+        for (int frame = 0; frame < 16; frame++) {
+            registry.beginFrame();
+            master.update(frame, null);
+            registry.resolveInto(palettes, null, null, palettes[0]);
+            assertSegaColor(palettes[3], 1, 0x06A0);
+            assertSegaColor(palettes[3], 2, 0x0660);
+        }
+
+        registry.beginFrame();
+        master.update(16, null);
+        registry.resolveInto(palettes, null, null, palettes[0]);
+        assertSegaColor(palettes[3], 1, 0x08C0);
+        assertSegaColor(palettes[3], 2, 0x0680);
+    }
+
+    @Test
+    void smallEmeraldCeremonyParentUsesTheRomHalfPixelRiseFor128Updates() {
+        HPZSanctuarySmallEmeraldCeremonyObjectInstance ceremony =
+                new HPZSanctuarySmallEmeraldCeremonyObjectInstance();
+
+        assertEquals(0x3AC, ceremony.getY());
+        for (int frame = 0; frame < 128; frame++) {
+            ceremony.update(frame, null);
+        }
+        assertEquals(0x36C, ceremony.getY());
+        ceremony.update(128, null);
+        assertEquals(0x36C, ceremony.getY(),
+                "loc_90DDC stops MoveSprite2 after the $7F timer expires");
+    }
+
+    @Test
+    void conversionPlayerPosesAreIndexedByScanOrdinalNotEmeraldSubtype() {
+        int[][] expected = {
+                {1, 1}, {1, 0}, {0, 0}, {1, 1}, {0, 1}, {1, 0}, {0, 0}
+        };
+        for (int ordinal = 0; ordinal < expected.length; ordinal++) {
+            assertArrayEquals(expected[ordinal],
+                    HPZSSEntryControlObjectInstance.conversionPoseForTest(ordinal),
+                    "byte_90BBC row " + ordinal);
+        }
+        // First ROM scan subtype is 5, but its pose must still be row zero.
+        assertFalse(java.util.Arrays.equals(
+                HPZSSEntryControlObjectInstance.conversionPoseForTest(0),
+                HPZSSEntryControlObjectInstance.conversionPoseForTest(5)));
+    }
+
+    @Test
     void controllerConversionCountdownsUseSubqBplBoundaries() {
         GameStateManager gsm = new GameStateManager();
         S3kEmeraldProgression progression = S3kEmeraldProgression.restore(
@@ -192,7 +309,7 @@ class TestHpzSanctuaryObjects {
     }
 
     @Test
-    void cameraPanMovesExactlyTenPixelsHexPerUpdateAndClampsAtTarget() {
+    void cameraPanMovesExactlyTenPixelsHexPerUpdateAndCallsBackInsideFinalStep() {
         GameStateManager gsm = new GameStateManager();
         S3kEmeraldProgression progression = S3kEmeraldProgression.restore(
                 gsm, List.of(1, 0, 0, 0, 0, 0, 0), false);
@@ -205,6 +322,8 @@ class TestHpzSanctuaryObjects {
         assertFalse(controller.panCameraForTest(camera, 0x1520));
         verify(camera).setX((short) 0x1520);
         assertTrue(controller.panCameraForTest(camera, 0x1520));
+        verify(camera, times(3)).getX();
+        verifyNoMoreInteractions(camera);
     }
 
     @Test
@@ -327,5 +446,14 @@ class TestHpzSanctuaryObjects {
             S3kEmeraldProgression progression, boolean reentry) {
         return new HPZSSEntryControlObjectInstance(
                 new ObjectSpawn(0, 0, 0xB5, 0, 0, false, 0), progression, reentry);
+    }
+
+    private static void assertSegaColor(Palette palette, int colorIndex, int segaWord) {
+        byte[] encoded = {(byte) (segaWord >>> 8), (byte) segaWord};
+        Palette expected = new Palette();
+        expected.getColor(colorIndex).fromSegaFormat(encoded, 0);
+        assertEquals(expected.getColor(colorIndex).r, palette.getColor(colorIndex).r);
+        assertEquals(expected.getColor(colorIndex).g, palette.getColor(colorIndex).g);
+        assertEquals(expected.getColor(colorIndex).b, palette.getColor(colorIndex).b);
     }
 }

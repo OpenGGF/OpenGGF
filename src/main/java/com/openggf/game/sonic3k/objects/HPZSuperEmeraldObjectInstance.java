@@ -166,6 +166,7 @@ public final class HPZSuperEmeraldObjectInstance extends AbstractObjectInstance
     @Override public int getY() { return POSITIONS[subtype][1]; }
     @Override public int getOutOfRangeReferenceX() { return getX(); }
     @Override public int getPriorityBucket() { return subtype == 1 || subtype == 2 ? 1 : 4; }
+    @Override public boolean isHighPriority() { return true; }
 
     @Override
     public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {

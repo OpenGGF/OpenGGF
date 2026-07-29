@@ -8,6 +8,8 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.SlopedSolidProvider;
+import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -17,7 +19,17 @@ import java.util.List;
  * readiness bit for the centre-exit gate.
  */
 public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
-        implements RewindRecreatable {
+        implements RewindRecreatable, SlopedSolidProvider {
+    private static final int HPZ_MAPPING_FRAME = 0xA;
+    private static final int HPZ_PALETTE_LINE = 0;
+    private static final byte[] HPZ_SLOPE = {
+            9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 0xB, 0xD, 0xF, 0x11,
+            0x11, 0x11, 0x11, 0x11, 0x11, 0xF, 0xD, 0xB,
+            9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9
+    };
+    private static final SolidObjectParams SOLID =
+            SolidObjectParams.of(0x23, 0x10, 0x10);
+
     private int x;
     private int y;
     private int buildTimer = 0x10;
@@ -49,7 +61,13 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
     @Override public int getX() { return x; }
     @Override public int getY() { return y; }
     @Override public int getOutOfRangeReferenceX() { return x; }
-    @Override public int getPriorityBucket() { return 4; }
+    @Override public int getPriorityBucket() { return 3; }
+    @Override public SolidObjectParams getSolidParams() { return SOLID; }
+    @Override public boolean isTopSolidOnly() { return true; }
+    @Override public byte[] getSlopeData() { return HPZ_SLOPE; }
+    @Override public boolean isSlopeFlipped() { return false; }
+    int mappingFrameForTest() { return HPZ_MAPPING_FRAME; }
+    int renderPaletteLineForTest() { return HPZ_PALETTE_LINE; }
 
     @Override
     public PerObjectRewindSnapshot captureRewindState() {
@@ -72,7 +90,8 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
     public void appendRenderCommands(List<GLCommand> commands) {
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.HPZ_ENTRY_TELEPORTER);
         if (renderer != null) {
-            renderer.drawFrameIndex(ready ? 3 : 0, x, y, false, false, 3);
+            renderer.drawFrameIndex(
+                    HPZ_MAPPING_FRAME, x, y, false, false, HPZ_PALETTE_LINE);
         }
     }
 }

@@ -158,7 +158,12 @@ consumes the descriptor without a zone check.
    Master Emerald, teleporter, and the visible subset of seven pedestal objects.
 4. After the intro signal, the controller scans states in ROM order
    `[5,3,1,0,2,4,6]`. If state 1 exists, it sets the conversion flag and runs
-   the exact sequential `1 -> 2` choreography, saving each completed change.
+   the immediate seven-small-Emerald orbit ceremony in parallel with the
+   signed `$21F` controller countdown. The countdown is not a blank delay:
+   the orbit parent rises for `$80` updates, its seven children expand and
+   rotate into place, and the completion sound plays once when all seven have
+   arrived. The controller then runs the sequential `1 -> 2` drops, saving
+   each completed change.
 5. Standing on a state-2 pedestal locks the primary player for the native delay,
    then publishes an exact-stage Super Emerald request.
 6. Success awards state `2 -> 3`; failure does not mutate progression. Results
@@ -180,12 +185,20 @@ the feature leaves existing save fields readable by the previous build.
 ### Sanctuary presentation and objects
 
 - `HPZSSEntryControl` owns intro sequencing, ROM art/PLC readiness, spawn order,
-  conversion ordering, control locks, and exit enablement.
+  conversion ordering, `Scroll_lock` camera pans, terminal return to camera
+  X `$15A0`, player mapping/priority control, and exit enablement. It clears
+  player control only after the final pan, never at the last pedestal midpoint.
+- `HPZSanctuarySmallEmeraldCeremony` owns the visible seven-Emerald orbit that
+  runs during the `$21F` countdown, including its single Signpost and
+  Super-Emerald sound events and the children flying away after arrival.
 - `HPZSuperEmerald` owns one pedestal's ROM position, visual state, top solidity,
   fifteen-frame selection delay, and exact-stage publication.
-- `SSZHPZTeleporter` owns centre-exit and sanctuary/special-stage transition
-  presentation.
-- `HPZMasterEmerald` owns altar rendering and glow/palette choreography.
+- `SSZHPZTeleporter` uses HPZ mapping frame `$A`, palette line 0, priority
+  `$180`, and the ROM slope table. The controller's centre exit checks the
+  teleporter's real standing contact; there is no construction/readiness timer.
+- `HPZMasterEmerald` renders frame `$B` on palette line 3 and owns the fixed
+  incomplete-state green colors `$06A0/$0660`, plus completed-state
+  glow/palette choreography.
 - `HPZPaletteControl` swaps intro/main palettes at the ROM camera threshold via
   existing palette ownership.
 - All dynamic children capture role, subtype, phase, timers, positions, and

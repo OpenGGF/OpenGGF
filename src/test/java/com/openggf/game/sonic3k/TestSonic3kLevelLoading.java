@@ -234,6 +234,10 @@ class TestSonic3kLevelLoading {
                 GameServices.paletteOwnershipRegistry()
                         .targetSegaData(3, 0, 1),
                 "Pal_HPZ+$40 first word must target palette line 4");
+        assertArrayEquals(new byte[]{0x06, (byte) 0xA0, 0x06, 0x60},
+                GameServices.paletteOwnershipRegistry()
+                        .targetSegaData(3, 1, 2),
+                "B5 controller must make the Master Emerald green before fade-in");
         assertEquals("none",
                 GameServices.paletteOwnershipRegistry().targetOwnerAt(0, 0));
         assertEquals("none",

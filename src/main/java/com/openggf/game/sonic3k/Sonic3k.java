@@ -539,6 +539,13 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
                                 line * Palette.PALETTE_SIZE_IN_ROM,
                                 (line + 1) * Palette.PALETTE_SIZE_IN_ROM));
             }
+            // Obj_HPZSSEntryControl writes these over target line 4 before
+            // the fade-in. Pal_HPZ's source colors are the red placeholder.
+            registry.applyTargetPatch(
+                    S3kPaletteOwners.HPZ_PALETTE_CONTROL,
+                    3,
+                    1,
+                    new byte[]{0x06, (byte) 0xA0, 0x06, 0x60});
         } catch (IOException e) {
             throw new IllegalStateException(
                     "failed to stage HPZ sanctuary target palette", e);
