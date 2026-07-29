@@ -149,6 +149,11 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen
     }
 
     @Override
+    protected int getWaitDuration() {
+        return totalBonus >= 1000 ? 0x12C : 0xB4;
+    }
+
+    @Override
     protected void onExitReady() {
         triggerFadeToBlack();
     }

@@ -9,6 +9,7 @@ import com.openggf.game.rewind.snapshot.PlcProgressSnapshot;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
+import com.openggf.game.sonic2.events.Sonic2ARZEvents;
 import com.openggf.game.sonic2.events.Sonic2ZoneEvents;
 import com.openggf.game.sonic2.events.Sonic2WFZEvents;
 import com.openggf.game.sonic2.resources.Sonic2PlcService;
@@ -269,6 +270,55 @@ class TestSonic2RuntimePlcRendererRefresh {
 
         assertDoesNotThrow(fixture.levelEvents()::update);
         assertEquals(4, wfz.getWfzSubRoutine(), "a successful one-shot does not submit twice");
+        verify(fixture.levelManager(), times(1)).refreshObjectArtPatterns();
+    }
+
+    @Test
+    void failedEventRetryRetainsPendingCueWithoutSuppressingCurrentDleRoutine() throws Exception {
+        OverflowingSonic2ObjectArtProvider overflowingProvider =
+                new OverflowingSonic2ObjectArtProvider();
+        Sonic2RuntimeFixture fixture = installSonic2RuntimeWithProvider(overflowingProvider);
+        Sonic2ARZEvents arz = new Sonic2ARZEvents();
+        arz.init(1);
+        arz.setEventRoutine(4);
+        arz.setPendingPlcIdForRewind(Sonic2Constants.PLC_ARZ_BOSS);
+        overflowingProvider.enableOverflow();
+
+        arz.update(1, 0);
+
+        assertEquals(1, arz.getBossSpawnDelay(),
+                "retry bookkeeping must not suppress ARZ routine 4's delay tick");
+        assertEquals(Sonic2Constants.PLC_ARZ_BOSS, arz.getPendingPlcIdForRewind());
+        assertFalse(GameServices.module().getGameService(Sonic2PlcService.class).isBusy());
+        verify(fixture.levelManager(), never()).refreshObjectArtPatterns();
+    }
+
+    @Test
+    void successfulEventRetryClearsPendingCueAndRunsCurrentDleRoutineExactlyOnce() throws Exception {
+        OverflowingSonic2ObjectArtProvider retryProvider =
+                new OverflowingSonic2ObjectArtProvider();
+        Sonic2RuntimeFixture fixture = installSonic2RuntimeWithProvider(retryProvider);
+        Sonic2ARZEvents arz = new Sonic2ARZEvents();
+        arz.init(1);
+        arz.setEventRoutine(4);
+        arz.setPendingPlcIdForRewind(Sonic2Constants.PLC_ARZ_BOSS);
+        Sonic2PlcService plcService =
+                GameServices.module().getGameService(Sonic2PlcService.class);
+
+        arz.update(1, 0);
+
+        assertEquals(1, arz.getBossSpawnDelay());
+        assertEquals(-1, arz.getPendingPlcIdForRewind());
+        assertTrue(plcService.isBusy());
+        var submittedQueue = plcService.capture();
+        verify(fixture.levelManager(), times(1)).refreshObjectArtPatterns();
+
+        arz.update(1, 1);
+
+        assertEquals(2, arz.getBossSpawnDelay(),
+                "the current DLE routine must execute once on each frame");
+        assertEquals(submittedQueue, plcService.capture(),
+                "the successful retry must not replay the original one-shot producer");
         verify(fixture.levelManager(), times(1)).refreshObjectArtPatterns();
     }
 

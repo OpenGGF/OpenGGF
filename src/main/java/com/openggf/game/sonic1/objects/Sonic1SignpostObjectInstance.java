@@ -345,6 +345,11 @@ public class Sonic1SignpostObjectInstance extends AbstractObjectInstance
      *      move.w #bgm_GotThrough,d0; jsr (QueueSound2).l
      */
     private void triggerGotThroughAct(AbstractPlayableSprite player) {
+        if (hasActiveResultsCard()) {
+            resultsSpawned = true;
+            routineState = STATE_COMPLETE;
+            return;
+        }
         if (!queueResultsPlc()) {
             return;
         }
@@ -372,6 +377,20 @@ public class Sonic1SignpostObjectInstance extends AbstractObjectInstance
                     elapsedSeconds, ringCount, actNumber));
             LOGGER.info("S1 Results screen spawned");
         }
+    }
+
+    private boolean hasActiveResultsCard() {
+        ObjectManager objectManager = services().objectManager();
+        if (objectManager == null) {
+            return false;
+        }
+        for (var object : objectManager.getActiveObjects()) {
+            if (object instanceof Sonic1ResultsScreenObjectInstance results
+                    && !results.isDestroyed()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean queueResultsPlc() {

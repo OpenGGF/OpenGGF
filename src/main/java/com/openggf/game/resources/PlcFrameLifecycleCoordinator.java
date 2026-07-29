@@ -48,14 +48,26 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
         Objects.requireNonNull(fadeUpdate, "fadeUpdate");
         Objects.requireNonNull(iteration, "iteration");
         PlcLifecycleFrame frame = latchBeforeFadeUpdate();
+        Throwable primaryFailure = null;
         try {
             fadeUpdate.run();
             if (frame.isOwnedBy(PlcLifecyclePhase.PALETTE_FADE)) {
                 frame.prepareAfterLoop(PlcLifecyclePhase.PALETTE_FADE);
             }
             return iteration.apply(frame);
+        } catch (RuntimeException | Error failure) {
+            primaryFailure = failure;
+            throw failure;
         } finally {
-            frame.finish();
+            try {
+                frame.finish();
+            } catch (RuntimeException | Error validationFailure) {
+                if (primaryFailure != null) {
+                    primaryFailure.addSuppressed(validationFailure);
+                } else {
+                    throw validationFailure;
+                }
+            }
         }
     }
 

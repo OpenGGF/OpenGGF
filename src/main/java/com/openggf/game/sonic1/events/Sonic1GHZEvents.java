@@ -24,7 +24,7 @@ class Sonic1GHZEvents extends Sonic1ZoneEvents {
 
     @Override
     void update(int act) {
-        if (retryPendingPlc()) return;
+        retryPendingPlc();
         switch (act) {
             case 0 -> updateAct1();
             case 1 -> updateAct2();

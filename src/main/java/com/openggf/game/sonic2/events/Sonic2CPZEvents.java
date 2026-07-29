@@ -31,7 +31,7 @@ public class Sonic2CPZEvents extends Sonic2ZoneEvents {
 
     @Override
     public void update(int act, int frameCounter) {
-        if (retryPendingPlc()) return;
+        retryPendingPlc();
         if (act != 1) {
             // Only Act 2 has water rise events
             return;

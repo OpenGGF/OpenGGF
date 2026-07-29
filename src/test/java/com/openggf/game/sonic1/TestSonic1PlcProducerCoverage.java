@@ -10,10 +10,12 @@ import com.openggf.game.sonic1.titlescreen.Sonic1TitleScreenManager;
 import com.openggf.game.sonic1.titlecard.Sonic1TitleCardManager;
 import com.openggf.game.sonic1.titlecard.Sonic1TitleCardState;
 import com.openggf.game.sonic1.objects.Sonic1EggPrisonObjectInstance;
+import com.openggf.game.sonic1.objects.Sonic1ResultsScreenObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1SignpostObjectInstance;
 import com.openggf.game.sonic1.specialstage.Sonic1SpecialStageProvider;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.level.objects.ObjectConstructionContext;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -152,6 +154,40 @@ class TestSonic1PlcProducerCoverage {
             assertEquals(expectedDescriptors(16), queue.capture().queuedEntries(),
                     owner.getClass().getSimpleName() + " must replace results art at GotThroughAct");
         }
+    }
+
+    @Test
+    void duplicateSignpostsShareTheFixedNativeEndcardSlot() throws Exception {
+        ObjectManager objects = org.mockito.Mockito.mock(ObjectManager.class);
+        Sonic1ResultsScreenObjectInstance existing =
+                new Sonic1ResultsScreenObjectInstance(30, 0, 2);
+        org.mockito.Mockito.when(objects.getActiveObjects()).thenReturn(List.of(existing));
+        TestObjectServices services = new TestObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return objects;
+            }
+        }.withGameModule(GameServices.module());
+        existing.setServices(services);
+
+        Sonic1PlcService queue =
+                GameServices.module().getGameService(Sonic1PlcService.class);
+        queue.replaceQueued(16);
+        List<NemesisPlcQueueSnapshot.Entry> expected = queue.capture().queuedEntries();
+
+        Sonic1SignpostObjectInstance duplicate = new Sonic1SignpostObjectInstance(
+                new ObjectSpawn(0x2960, 0x04B1, 0x0D, 0, 0, false, 0));
+        duplicate.setServices(services);
+        AbstractPlayableSprite player = org.mockito.Mockito.mock(AbstractPlayableSprite.class);
+        java.lang.reflect.Method handoff = Sonic1SignpostObjectInstance.class
+                .getDeclaredMethod("triggerGotThroughAct", AbstractPlayableSprite.class);
+        handoff.setAccessible(true);
+        handoff.invoke(duplicate, player);
+
+        assertEquals(expected, queue.capture().queuedEntries(),
+                "the second GotThroughAct must not replace the fixed v_endcard PLC again");
+        org.mockito.Mockito.verify(objects, org.mockito.Mockito.never())
+                .addDynamicObject(org.mockito.ArgumentMatchers.any());
     }
 
     @Test

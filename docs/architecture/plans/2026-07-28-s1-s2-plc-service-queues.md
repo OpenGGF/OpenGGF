@@ -1069,6 +1069,15 @@ Use `Changelog: updated`.
    Tails-alone. Do not synthesize or claim coverage for `6`/`7`/`8` until a
    session-owned source supplies those inputs. Test the default contract and a
    rejected two-item batch with zero queue/renderer/refresh effects.
+5. Treat a capacity-rejected event request as deferred publication bookkeeping,
+   not as a new DLE state. Retry it before the next game-owned DLE call without
+   returning early: on failure, retain the request and execute the current DLE
+   routine exactly once; on success, clear the request and execute the current
+   DLE routine exactly once. Because the original one-shot producer advanced
+   its routine before publication, the retry must not repeat the producer.
+   Apply this contract to every S1 and S2 event owner. Add focused S1 and S2
+   tests for both retry failure and retry success, asserting DLE progression,
+   pending-request state, and exactly one successful queue/render publication.
 
 ---
 
@@ -1331,6 +1340,174 @@ test(trace): guard native S1 and S2 PLC timing
 
 Use truthful documentation trailers based on whether the frontier or known
 discrepancy files changed.
+
+---
+
+### Task 8A: Reproduce the native PLC boundary when level presentation is skipped
+
+**Files:**
+- Modify: `src/main/java/com/openggf/game/LevelInitProfile.java`
+- Modify: `src/main/java/com/openggf/game/sonic1/Sonic1LevelInitProfile.java`
+- Modify: `src/main/java/com/openggf/game/sonic2/Sonic2LevelInitProfile.java`
+- Modify: `src/main/java/com/openggf/GameLoop.java`
+- Modify: `src/main/java/com/openggf/level/LevelManager.java`
+- Modify: `src/main/java/com/openggf/trace/replay/TraceReplayDriver.java`
+- Create: focused skipped-presentation lifecycle tests under
+  `src/test/java/com/openggf/game/`
+- Create: a production/trace isolation guard under
+  `src/test/java/com/openggf/trace/`
+
+**Interfaces:**
+- Consumes: the production level-transition decision to omit presentation,
+  current ROM-backed level header, and session-owned PLC lifecycle service.
+- Produces: the same logical PLC boundary native execution reaches before its
+  first ordinary gameplay iteration, without any trace timing authority.
+
+- [ ] **Step 1: Pin the native sequence and expected S1 queue snapshot**
+
+Record the disassembly evidence:
+
+```text
+S1 Level_TtlCardLoop: title VBlank -> ExecuteObjects -> BuildSprites -> RunPLC,
+                      repeat until v_plc_buffer is empty
+S1 LevelDataLoad:     append header byte +4 as the second PLC
+S1 Level_DelayLoop:   four level VBlanks, no RunPLC
+S1 PalFadeIn_Alt:     22 x (palette VBlank -> fade update -> RunPLC)
+
+S2 Level_TtlCard:     title VBlank -> RunObjects -> BuildSprites -> RunPLC_RAM,
+                      repeat until Plc_Buffer is empty
+S2 loadZoneBlockMaps: append level-header byte +4 after that locked loop
+```
+
+Use the discovered S1 ROM to assert that SBZ/FZ's secondary PLC is ID 15 with
+pattern counts `16,41,31,15,15,20,49,4,48,12,8,16,14`. The expected
+post-skip snapshot has descriptor seven active with 22 patterns remaining and
+descriptors eight through thirteen queued. This is a ROM-derived oracle, not a
+captured-state fixture.
+
+- [ ] **Step 2: Write RED production lifecycle tests**
+
+Test the game-owned level-init profiles through the normal PLC lifecycle:
+
+1. S1 drains primary + `Main2` through `LEVEL_TITLE_CARD`.
+2. S1 appends the current header's secondary PLC only after that drain.
+3. S1 performs exactly 22 `PALETTE_FADE` service/prepare iterations and leaves
+   the ROM-derived partial secondary snapshot, rather than draining it.
+4. S2 drains its initial primary + `Std2` queue through `LEVEL_TITLE_CARD`,
+   then appends the ROM header's secondary cue without draining it.
+5. A no-PLC game/profile is a no-op.
+6. Repeating completion for the same consumed transition does not advance the
+   queue twice.
+7. A visible S2 release finishes the final locked-title preparation before
+   publishing the header-secondary cue, leaving that cue queued and
+   unprepared on publication.
+
+Expected before implementation: lifecycle API/method missing or snapshots do
+not match.
+
+- [ ] **Step 3: Add the trace-isolation guard**
+
+Assert that the production skipped-presentation API:
+
+```text
+imports no com.openggf.trace package;
+accepts no TraceData, TraceFrame, metadata, fixture, BK2, route, or frame count;
+is invoked from the production level-transition owner;
+is not implemented in TraceReplaySessionBootstrap; and
+leaves replay/bootstrap code unable to call append/replace/clear/prepare or
+service methods on Sonic1PlcService/Sonic2PlcService.
+```
+
+The live trace driver may consume the production transition through
+`LevelManager`; it must not contain a game-specific phase count or queue call.
+
+- [ ] **Step 4: Implement the production-owned skip path**
+
+Add a narrow `LevelInitProfile` operation for completing an initial locked
+presentation's PLC lifecycle. Drive every represented iteration through
+`PlcFrameLifecycleCoordinator` in service-before-prepare order. S1 reads the
+secondary PLC from the active level header and owns the fixed 22-frame palette
+sequence. S2 owns its queue-until-empty title-card sequence and then reads and
+appends the active level header's secondary PLC. Do not add zone, route, trace,
+or fixture branches.
+
+`LevelManager.requestTitleCardIfNeeded` invokes the operation whenever a level
+entry deliberately omits presentation (`showTitleCard=false`, headless, or a
+production suppression provider). A live tool that has a pending title-card
+request uses one `LevelManager` transition method to consume it and complete
+the same skip. A visible `PostTitleCardDestination.LEVEL` release invokes the
+same production boundary exactly once before its first ordinary gameplay
+iteration. These transition methods are the idempotency boundary; replay code
+does not call the profile or PLC services.
+
+For a visible release, `GameLoop` finishes the already-claimed
+`LEVEL_TITLE_CARD` preparation before calling the completion owner. Do not
+append the header-secondary cue and then let the outgoing locked-title frame
+prepare it.
+
+- [ ] **Step 5: Run GREEN and regression traces**
+
+Run the focused skipped-presentation lifecycle and isolation guards, then the
+retry continuity suite:
+
+```bash
+mvn -Dmse=off \
+  "-Dsonic1.rom.path=s1.gen" \
+  "-Dsonic2.rom.path=s2.gen" \
+  "-Dtest=TestSonic1SkippedPresentationPlcLifecycle,TestSonic2SkippedPresentationPlcLifecycle,TestSkippedPresentationPlcTraceIsolationGuard,TestSonic1PlcRetryDleContinuity,TestSonic2RuntimePlcRendererRefresh" test
+```
+
+Then rerun all nine measured S1/S2 trace classes. Expected: no missing
+preparation boundary and no new divergence relative to their pre-queue
+baseline. Any remaining failure must be diagnosed independently and reflected
+in this design/plan before changing the lifecycle contract again.
+
+---
+
+### Task 8B: Close source-truth lifecycle regressions exposed by queue waits
+
+**Files:**
+- Modify: `src/main/java/com/openggf/game/sonic2/objects/ResultsScreenObjectInstance.java`
+- Modify: `src/main/java/com/openggf/game/sonic1/objects/Sonic1ResultsScreenObjectInstance.java`
+- Modify: `src/main/java/com/openggf/game/sonic1/objects/Sonic1SignpostObjectInstance.java`
+- Modify: `src/main/java/com/openggf/game/resources/PlcFrameLifecycleCoordinator.java`
+- Modify: focused S1/S2 results and lifecycle tests
+
+- [ ] **Step 1: Write RED owner tests**
+
+Assert that S2 normal results select a 180-frame post-tally wait below 1000
+points and a 300-frame wait at or above 1000, matching `loc_141E6`. Assert
+that two active S1 signpost owners share the fixed results-card slot and
+publish the results replacement only once. Assert that a primary exception
+thrown after an ordinary-level claim remains the thrown exception when
+end-of-frame validation also detects missing preparation, with the validation
+failure attached as suppressed context. For the S1 SBZ2 card, assert that the
+movement scan which first reaches `got_finalX` returns, the next scan changes
+to `Got_SBZ2_Boundary` without scrolling, and only the following scan adds two
+to the right boundary.
+
+- [ ] **Step 2: Implement the smallest owners**
+
+Override the wait duration in the S2 results class using its accumulated
+`totalBonus`. Before the S1 signpost publishes or allocates a results card,
+query the active object manager for the existing live S1 results-card owner
+and complete the duplicate signpost without a second submission. Keep this
+logic in S1 code; do not add a game check to the shared object manager.
+
+Make `PlcFrameLifecycleCoordinator.runLogicalIteration` preserve an exception
+from fade/mode work. Its `finally` validation still runs; if validation also
+fails, attach that failure to the primary exception rather than replacing it.
+In the S1 results card, mark a move-out element complete only when a later
+scan begins at `got_finalX`; reaching that coordinate by movement is not yet
+the native equal-position dispatch.
+
+- [ ] **Step 3: Run focused tests and affected traces**
+
+Run the focused result-wait, singleton, lifecycle-coordinator, retry, and
+skipped-presentation tests. Then rerun S1 SYZ2, S1 SBZ2, S1 FZ, and the six
+measured S2 end-of-act traces. Expected: SYZ no duplicate fade failure, FZ
+remains green, S2 traces no longer transition 120 frames too early, and no new
+frontier regression.
 
 ---
 

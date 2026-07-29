@@ -1324,11 +1324,13 @@ public class GameLoop {
             // S3K's fresh level performs its one Load_Sprites/Process_Sprites
             // setup dispatch after the title-card wait and before LevelLoop
             // (docs/skdisasm/sonic3k.asm:7737-7748, 7849-7855).
-            titleReleaseResult =
-                    postTitleCardDestination.completeRelease(levelManager, this::exitTitleCard);
             if (!titlePhasePreparedByFrameStep) {
                 prepareActivePhase(PlcLifecyclePhase.LEVEL_TITLE_CARD);
             }
+            // Finish the final locked-title RunPLC preparation before the
+            // post-title owner publishes its header-secondary cue.
+            titleReleaseResult =
+                    postTitleCardDestination.completeRelease(levelManager, this::exitTitleCard);
             // The setup-only pass owns this outer iteration. Ordinary LEVEL
             // processing begins on the next iteration.
             return true;

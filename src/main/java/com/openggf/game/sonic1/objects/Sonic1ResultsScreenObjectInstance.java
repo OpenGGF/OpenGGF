@@ -453,7 +453,6 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
             // Check if reached or passed target
             if ((direction > 0 && next >= target) || (direction < 0 && next <= target)) {
                 next = target;
-                elemExited[i] = true;
             }
 
             elemCurrentX[i] = next;

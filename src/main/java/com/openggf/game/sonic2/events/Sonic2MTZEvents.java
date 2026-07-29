@@ -32,7 +32,7 @@ public class Sonic2MTZEvents extends Sonic2ZoneEvents {
 
     @Override
     public void update(int act, int frameCounter) {
-        if (retryPendingPlc()) return;
+        retryPendingPlc();
         if (act < 2) {
             // Acts 1 & 2 (act 0, 1): No dynamic events
             // ROM: LevEvents_MTZ just rts

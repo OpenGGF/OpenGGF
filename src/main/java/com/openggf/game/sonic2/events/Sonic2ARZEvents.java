@@ -28,7 +28,7 @@ public class Sonic2ARZEvents extends Sonic2ZoneEvents {
 
     @Override
     public void update(int act, int frameCounter) {
-        if (retryPendingPlc()) return;
+        retryPendingPlc();
         if (act == 0) {
             // Act 1: No dynamic events
             return;

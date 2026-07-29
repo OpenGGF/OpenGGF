@@ -819,6 +819,16 @@ ARZ-specific timing constant.
   either effect, then commit the logical mutation and a non-throwing prepared
   renderer registration. If registration can still fail, roll back before
   exposing the request. A partial logical submission is forbidden.
+- Deferred fail-closed producer publication is bookkeeping only. A game-owned
+  event owner retries pending work before its Dynamic Level Event routine, but
+  retry failure or success never consumes or suppresses that ROM DLE frame.
+  The original producer boundary already advanced the event routine before
+  submitting the PLC, so a retry must not rerun that one-shot transition.
+  Failed retries remain pending while the current DLE routine executes exactly
+  once; successful retries clear the pending request and then execute that
+  routine exactly once. This matches S1 `DLE_FZ_Main`, where `AddPLC` falls
+  through to `DLE_SBZ2_SetBoundary`, and applies to the equivalent S2
+  game-owned event boundary.
 
 ## Testing strategy
 
@@ -893,6 +903,101 @@ must not suppress queue-active rows.
 Focused S1 and S2 trace replays covering Final Zone and ARZ are run when the
 required ROM fixtures exist. The full Maven suite then verifies no S3K Kos
 module or in-flight Kos decompression behavior was changed.
+
+### Deliberately skipped level presentation
+
+Trace replay exposed a production lifecycle gap rather than a need for trace
+timing authority. A normal ROM level entry services its initial PLC work while
+the title card and palette transition are running. A headless or live caller
+that deliberately omits that presentation must still arrive at the same
+post-presentation PLC boundary. Simply consuming the title-card request leaves
+the full level-start queue in place and delays later boss/results work by
+hundreds of gameplay frames.
+
+The skip is a production level-entry operation. Its only inputs are the active
+game module, the current ROM-backed level header, the game-owned PLC service,
+and the fact that the level transition owner has selected the
+presentation-omitted path. It must not accept `TraceData`, `TraceFrame`,
+metadata, BK2 offsets, route names, zone exceptions, fixture identity, or
+recorded queue/readiness values. Headless level loads and live tooling that
+consume a pending initial-title-card request call the same operation. Trace
+code may select the existing presentation-omitted transition, but may neither
+choose its phase counts nor manipulate an S1/S2 PLC service directly.
+
+The native sequences are:
+
+- **S1:** `Level_TtlCardLoop` repeatedly performs the title-card VBlank,
+  object scan, and `RunPLC` until the initial primary + `Main2` queue is empty.
+  `LevelDataLoad` then appends the second PLC byte at level-header offset
+  `+4`. Four `id_VBlank_Levels` delay frames do not call `RunPLC` and therefore
+  do not alter the queue. `PalFadeIn_Alt` then executes exactly 22 palette-fade
+  iterations in VBlank-before-`RunPLC` order. The shared lifecycle coordinator
+  therefore drains the initial queue through `LEVEL_TITLE_CARD`, publishes the
+  ROM header's secondary PLC, and executes 22 `PALETTE_FADE` service/prepare
+  iterations. It deliberately does **not** drain the secondary queue.
+- **S2:** the first `Level_TtlCard` loop performs title-card VBlank,
+  `RunObjects`, and `RunPLC_RAM` until both title-card placement and the
+  initial primary + `Std2` queue are complete. `loadZoneBlockMaps`, called
+  immediately after `LoadZoneTiles`, then appends the level-header PLC byte at
+  offset `+4` before ordinary gameplay begins. The
+  initial-presentation boundary therefore drains the first queue through
+  `LEVEL_TITLE_CARD` and appends that ROM-selected secondary cue without
+  draining it. Both a visible title-card release and a deliberately omitted
+  locked presentation use this game-owned boundary. The later
+  `Obj34_LoadStandardWaterAndAnimalArt` calls remain owned by the title-card
+  text-exit overlay and are not folded into this earlier release.
+
+The S1 order is independently observable. At the first compared FZ gameplay
+frame of the complete-run BK2, BizHawk reports PLC 15 partially active at its
+seventh descriptor with the final six descriptors queued. The PLC 15
+ROM-derived pattern counts are
+`16,41,31,15,15,20,49,4,48,12,8,16,14`. Twenty-two lifecycle iterations mean
+the first iteration only prepares the head and the following 21 VBlanks
+service nine patterns each, losing the unused per-frame budget at descriptor
+boundaries exactly like `ProcessPLC_9Tiles`. That leaves descriptor seven with
+22 patterns and the observed six-entry tail. This derives the state from ROM
+work and native control flow; the capture is validation, never runtime input.
+
+The skip operation is idempotent per level-entry transition: a requested
+presentation is either displayed normally or consumed once by the skip owner.
+It is not a general queue-drain helper callable from replay bootstrap. Source
+and reflection guards keep all trace types out of the production API and
+forbid replay/bootstrap code from calling S1/S2 queue mutation or service
+methods.
+
+On the visible path, the outer title-card frame must finish its already-claimed
+`LEVEL_TITLE_CARD` preparation before invoking the post-title completion
+owner. In S2 the last `RunPLC_RAM` precedes `LoadZoneTiles` and
+`loadZoneBlockMaps`; preparing after the completion owner would incorrectly
+promote the newly appended header-secondary descriptor on that old locked
+frame. S1 likewise begins its post-title synthetic fade sequence only after
+the final locked-title preparation has finished.
+
+### Validation blockers exposed by queue-accurate results waits
+
+Queue readiness can extend an end-of-act card far enough to expose lifecycle
+bugs that were previously hidden beyond a trace's early terminal boundary.
+Those bugs are corrected from their ROM owners; they are not compensated by
+changing queue budgets or consuming trace timing:
+
+- S2 `Obj3A` sets its post-tally timer to `$B4` when the accumulated bonus is
+  below 1000 and `$12C` when it is at least 1000. The game-owned S2 results
+  object must select 180 or 300 from its own accumulated bonus. The common
+  results base must not gain an S2 rule.
+- S1 `v_endcard` is one fixed results-card slot. If two simultaneously loaded
+  signposts reach `GotThroughAct`, the second handoff observes/reuses the
+  already active S1 results card rather than allocating another card or
+  replacing its PLC again.
+- If gameplay throws after claiming a PLC lifecycle frame, end-of-frame
+  preparation validation must not replace that primary exception. The
+  validation failure is attached as suppressed context so the actual owner
+  remains diagnosable.
+- S1 `Got_SBZ2_MoveOut` reaches `got_finalX` on one object scan and returns.
+  Only the following scan, which begins with equal current and final
+  positions, advances the ring-bonus card to `Got_SBZ2_Boundary`; the first
+  `+2` right-boundary increment occurs on the scan after that. The consolidated
+  Java results card must retain those three distinct scans instead of entering
+  the boundary routine on the movement that first reaches `got_finalX`.
 
 ## Delivery boundaries
 

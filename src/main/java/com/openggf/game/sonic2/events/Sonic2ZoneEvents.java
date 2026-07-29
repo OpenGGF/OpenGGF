@@ -182,24 +182,14 @@ public abstract class Sonic2ZoneEvents {
                 (int) cam.getMaxYTarget());
     }
 
-    /**
-     * Attempts the native logical/eager PLC publication. Callers that are at a
-     * one-shot boundary must not advance their routine until this returns true:
-     * a rejected preflight is retryable work, not a consumed ROM cue.
-     */
-    /**
-     * Services a deferred one-shot cue before a zone owner re-enters its
-     * state machine. Returns true when this frame was consumed by retry work,
-     * whether the attempt succeeded or remains pending.
-     */
-    protected boolean retryPendingPlc() {
+    /** Retries a deferred one-shot cue without consuming the current DLE frame. */
+    protected void retryPendingPlc() {
         if (pendingPlcId == null) {
-            return false;
+            return;
         }
         if (publishSonic2Plc(pendingPlcId)) {
             pendingPlcId = null;
         }
-        return true;
     }
 
     protected boolean requestSonic2Plc(int plcId) {

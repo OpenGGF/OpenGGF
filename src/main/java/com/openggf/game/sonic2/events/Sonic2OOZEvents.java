@@ -65,7 +65,7 @@ public class Sonic2OOZEvents extends Sonic2ZoneEvents {
 
     @Override
     public void update(int act, int frameCounter) {
-        if (retryPendingPlc()) return;
+        retryPendingPlc();
         if (oilManager != null) {
             // ROM Obj07_Main (oil surface) runs during object processing, after the
             // player object (s2.asm:49659-49749). Mirror that post-physics here.

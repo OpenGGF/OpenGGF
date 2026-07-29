@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -51,6 +52,24 @@ class TestPlcFrameLifecycleCoordinator {
         assertThrows(IllegalStateException.class,
                 () -> duplicate.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL));
         duplicate.finish();
+    }
+
+    @Test
+    void preparationValidationDoesNotMaskThePrimaryIterationFailure() {
+        PlcFrameLifecycleCoordinator coordinator =
+                new PlcFrameLifecycleCoordinator(recording(new ArrayList<>()));
+        IllegalArgumentException primary = new IllegalArgumentException("primary");
+
+        IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class,
+                () -> coordinator.runLogicalIteration(() -> { }, frame -> {
+                    frame.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
+                    throw primary;
+                }));
+
+        assertSame(primary, thrown);
+        org.junit.jupiter.api.Assertions.assertEquals(1, thrown.getSuppressed().length);
+        assertTrue(thrown.getSuppressed()[0].getMessage()
+                .contains("missing PLC preparation for ORDINARY_LEVEL"));
     }
 
     private static PlcLifecycleService recording(List<String> events) {

@@ -6,6 +6,8 @@ import com.openggf.game.LevelLoadContext;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic1.events.Sonic1LevelEventManager;
 import com.openggf.game.sonic1.objects.Sonic1StomperDoorObjectInstance;
+import com.openggf.game.resources.PlcLifecyclePhase;
+import com.openggf.game.resources.SkippedPresentationPlcLifecycle;
 import com.openggf.game.sonic1.resources.Sonic1PlcService;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
 
@@ -104,6 +106,47 @@ public class Sonic1LevelInitProfile extends AbstractLevelInitProfile {
         } catch (IOException failure) {
             throw new IllegalStateException("Failed to queue S1 initial PLCs", failure);
         }
+    }
+
+    @Override
+    public void completeInitialPresentationPlcs() {
+        Sonic1PlcService plcService =
+                GameServices.module().getGameService(Sonic1PlcService.class);
+        var levelManager = GameServices.levelOrNull();
+        if (plcService == null
+                || levelManager == null
+                || levelManager.getCurrentLevel() == null) {
+            return;
+        }
+        try {
+            completeInitialPresentationPlcs(
+                    GameServices.rom().getRom(),
+                    plcService,
+                    levelManager.getCurrentLevel().getZoneIndex());
+        } catch (IOException failure) {
+            throw new IllegalStateException(
+                    "Failed to access S1 ROM for initial presentation PLCs",
+                    failure);
+        }
+    }
+
+    static void completeInitialPresentationPlcs(
+            com.openggf.data.Rom rom, Sonic1PlcService plcService, int zoneIndex) {
+        SkippedPresentationPlcLifecycle.drain(
+                plcService, PlcLifecyclePhase.LEVEL_TITLE_CARD,
+                plcService::isBusy);
+        try {
+            int header = Sonic1Constants.LEVEL_HEADERS_ADDR + zoneIndex * 16;
+            int secondary = (rom.read32BitAddr(header + 4) >>> 24) & 0xFF;
+            if (secondary != 0) {
+                plcService.append(secondary);
+            }
+        } catch (IOException failure) {
+            throw new IllegalStateException(
+                    "Failed to queue S1 post-title-card PLC", failure);
+        }
+        SkippedPresentationPlcLifecycle.runIterations(
+                plcService, PlcLifecyclePhase.PALETTE_FADE, 22);
     }
 
     @Override

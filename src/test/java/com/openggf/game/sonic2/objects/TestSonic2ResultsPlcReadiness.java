@@ -53,6 +53,20 @@ class TestSonic2ResultsPlcReadiness {
         assertEquals(2, stateTimer(), "Obj3A routines after init do not re-poll the PLC FIFO");
     }
 
+    @Test
+    void postTallyWaitUsesTheNativeAccumulatedBonusThreshold() throws Exception {
+        Field totalBonus = ResultsScreenObjectInstance.class.getDeclaredField("totalBonus");
+        totalBonus.setAccessible(true);
+        var waitDuration = ResultsScreenObjectInstance.class
+                .getDeclaredMethod("getWaitDuration");
+        waitDuration.setAccessible(true);
+
+        totalBonus.setInt(results, 999);
+        assertEquals(180, waitDuration.invoke(results));
+        totalBonus.setInt(results, 1000);
+        assertEquals(300, waitDuration.invoke(results));
+    }
+
     private int stateTimer() throws Exception {
         Field field = com.openggf.level.objects.AbstractResultsScreen.class.getDeclaredField("stateTimer");
         field.setAccessible(true);

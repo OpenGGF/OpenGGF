@@ -53,6 +53,7 @@ the stated order.
 |---|---:|---|---|---|
 | `TitleScreen` (`s2.asm`) title setup | `0` (`Std1`) / replace | `GameLoop.initializeTitleScreenMode` through `TitleScreenManager.initialize`, after title ROM data is available and before the title presentation begins | `Sonic2TitleScreenDataLoader` | Route once per title-screen initialization; the next `TITLE_SCREEN` lifecycle row services the prepared queue |
 | `Level` setup (`s2.asm`) | clear; zone-art primary / append; `1` (`Std2`) / append; selected player-life `6` (Miles 2P), `7` (Miles 1P), `8` (Tails 2P), or `9` (Tails 1P) / append | `Sonic2LevelInitProfile.levelLoadSteps`, after ROM level-art and player-mode information are available and before the title-card loop | `Sonic2ObjectArtProvider.loadArtForZone` | Route in exact order; apply the ROM player/two-player/graphics flag selection, skip an absent primary, and submit **no** life PLC in 1P when `Player_mode != 2` (the ROM branches directly to `Level_ClrRam`) |
+| `loadZoneBlockMaps` after `LoadZoneTiles` (`s2.asm:20069-20110`) | level-header secondary at byte `+4` / append | the `Sonic2LevelInitProfile` initial-presentation completion invoked by visible `PostTitleCardDestination.LEVEL` release and by the production omitted-presentation boundary | `Sonic2ObjectArtProvider.loadArtForZone` already materializes the same ROM cue | Route once after the primary + `Std2` queue has drained; do not drain the secondary synchronously and do not fold the later standard-water/animal overlay calls into this boundary |
 | `LevEvents_EHZ2_Routine2` (`s2.asm`) | `41` / append | `Sonic2EHZEvents`, routine 2 at camera X `0x28f0` | `Sonic2ZoneEvents.requestSonic2Plc` → `Sonic2ObjectArtProvider.requestPlc` | Route |
 | `LevEvents_MTZ3_Routine3` | `46` / append | `Sonic2MTZEvents`, routine 4 at camera X `0x2a80` | same | Route |
 | `LevEvents_WFZ_Routine0` | `62` / append | `Sonic2WFZEvents.secondaryRoutine0BossPlc`, camera X `0x2880` and Y `0x400` | same | Route |
@@ -117,6 +118,7 @@ the row count; amend this table and the registry together.
 | `S1_SPECIAL_RESULTS` | S1 special-stage result setup |
 | `S2_TITLE` | S2 title setup |
 | `S2_LEVEL` | S2 level setup |
+| `S2_LEVEL_SECONDARY` | S2 post-title `loadZoneBlockMaps` |
 | `S2_EHZ_EVENT` | S2 EHZ event |
 | `S2_MTZ_EVENT` | S2 MTZ event |
 | `S2_WFZ_BOSS_EVENT` | S2 WFZ routine 0 |

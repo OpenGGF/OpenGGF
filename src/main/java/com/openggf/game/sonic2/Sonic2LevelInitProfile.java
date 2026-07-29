@@ -8,6 +8,9 @@ import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic2.resources.Sonic2PlcService;
 import com.openggf.game.sonic2.resources.Sonic2RuntimePlcPublisher;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
+import com.openggf.game.resources.PlcLifecyclePhase;
+import com.openggf.game.resources.SkippedPresentationPlcLifecycle;
+import com.openggf.data.Rom;
 
 import java.util.List;
 import java.io.IOException;
@@ -89,6 +92,42 @@ public class Sonic2LevelInitProfile extends AbstractLevelInitProfile {
             }
         } catch (IOException failure) {
             throw new IllegalStateException("Failed to queue S2 initial PLCs", failure);
+        }
+    }
+
+    @Override
+    public void completeInitialPresentationPlcs() {
+        Sonic2PlcService plcService =
+                GameServices.module().getGameService(Sonic2PlcService.class);
+        if (plcService != null
+                && GameServices.levelOrNull() != null
+                && GameServices.levelOrNull().getCurrentLevel() != null) {
+            try {
+                completeInitialPresentationPlcs(
+                        GameServices.rom().getRom(),
+                        plcService,
+                        GameServices.levelOrNull().getCurrentLevel().getZoneIndex());
+            } catch (IOException failure) {
+                throw new IllegalStateException(
+                        "Failed to access S2 ROM for initial presentation PLCs",
+                        failure);
+            }
+        }
+    }
+
+    static void completeInitialPresentationPlcs(
+            Rom rom, Sonic2PlcService plcService, int zoneIndex) {
+        SkippedPresentationPlcLifecycle.drain(
+                plcService, PlcLifecyclePhase.LEVEL_TITLE_CARD,
+                plcService::isBusy);
+        try {
+            int secondary = Sonic2PlcLoader.getZonePlcIds(rom, zoneIndex)[1];
+            if (secondary != 0) {
+                plcService.append(secondary);
+            }
+        } catch (IOException failure) {
+            throw new IllegalStateException(
+                    "Failed to append S2 post-title secondary PLC", failure);
         }
     }
 

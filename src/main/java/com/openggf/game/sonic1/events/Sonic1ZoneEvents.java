@@ -53,11 +53,10 @@ abstract class Sonic1ZoneEvents {
         return GameServices.module().getGameService(type);
     }
 
-    /** Services rejected one-shot work before re-entering an event state machine. */
-    protected boolean retryPendingPlc() {
-        if (pendingPlcId == null) return false;
+    /** Retries rejected one-shot work without consuming the current DLE frame. */
+    protected void retryPendingPlc() {
+        if (pendingPlcId == null) return;
         if (publishSonic1Plc(pendingPlcId)) pendingPlcId = null;
-        return true;
     }
 
     /** Submits an S1 {@code AddPLC} cue while preserving the eager object-art path. */

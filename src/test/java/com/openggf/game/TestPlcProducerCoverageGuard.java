@@ -33,14 +33,14 @@ class TestPlcProducerCoverageGuard {
         // title/result owners, S1 DLE thresholds, S2 lifecycle/event owners,
         // and each ordinary-boss killing-hit plus post-defeat handoff. Keep
         // these explicit so a reduced Maven selector cannot silently turn the
-        // 39-row audit back into façade-only coverage.
+        // 40-row audit back into façade-only coverage.
         Class.forName("com.openggf.game.sonic1.TestSonic1PlcProducerCoverage");
         Class.forName("com.openggf.game.sonic1.events.TestSonic1PlcProducerOwnerCoverage");
         Class.forName("com.openggf.game.sonic2.TestSonic2PlcProducerCoverage");
         Class.forName("com.openggf.game.sonic2.objects.bosses.TestSonic2BossPlcProducerCoverage");
-        assertEquals(39, PlcProducerRouteRegistry.bindings().size(),
+        assertEquals(40, PlcProducerRouteRegistry.bindings().size(),
                 "every audit row needs exactly one registered executable owner case");
-        assertEquals(39, PlcProducerRouteRegistry.bindings().stream()
+        assertEquals(40, PlcProducerRouteRegistry.bindings().stream()
                         .map(PlcProducerRouteRegistry.Binding::key).collect(java.util.stream.Collectors.toSet()).size(),
                 "route keys must be unique; a duplicate cannot stand in for a missing owner case");
     }
@@ -82,7 +82,7 @@ class TestPlcProducerCoverageGuard {
 
     private record OwnerSubmission(String path, String token) { }
 
-    // Each entry corresponds to at least one of the 39 rows above.  Grouped
+    // Each entry corresponds to at least one of the 40 rows above.  Grouped
     // event/boss owners retain the exact PLC identifier rather than merely an
     // import or a helper name, so an art-only regression cannot satisfy this guard.
     private static final List<OwnerSubmission> OWNER_SUBMISSIONS = List.of(

@@ -3,7 +3,7 @@ package com.openggf.game;
 import java.util.List;
 
 /**
- * The executable counterpart of the 39 represented rows in the PLC producer
+ * The executable counterpart of the 40 represented rows in the PLC producer
  * audit.  A binding names the concrete production-owner test case that must
  * remain in the suite; the guard reads that source, so removing a parameter
  * case or its owner assertion makes the audit boundary fail mechanically.
@@ -30,6 +30,8 @@ final class PlcProducerRouteRegistry {
                 b("S1_SPECIAL_RESULTS", S1, "specialStageResultsOwnerReplacesMainThenAppendsResultsArt"),
                 b("S2_TITLE", S2, "titleScreenOwnerPublishesStd1BeforePresentationBegins"),
                 b("S2_LEVEL", S2, "levelInitOwnerClearsThenPublishesHeaderPrimaryStd2AndTailsLifeArt"),
+                b("S2_LEVEL_SECONDARY", S2,
+                        "initialPresentationOwnerPublishesHeaderSecondaryAfterLockedTitleDrain"),
                 b("S2_EHZ_EVENT", S2, "EHZ boss arena"), b("S2_MTZ_EVENT", S2, "MTZ boss arena"),
                 b("S2_WFZ_BOSS_EVENT", S2, "WFZ boss PLC"), b("S2_WFZ_TORNADO_EVENT", S2, "WFZ Tornado PLC"),
                 b("S2_HTZ_EVENT", S2, "HTZ boss arena"), b("S2_OOZ_EVENT", S2, "OOZ boss arena"),

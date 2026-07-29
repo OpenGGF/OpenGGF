@@ -220,6 +220,24 @@ class TestSonic2PlcProducerCoverage {
     }
 
     @Test
+    void initialPresentationOwnerPublishesHeaderSecondaryAfterLockedTitleDrain()
+            throws Exception {
+        Sonic2PlcService queue =
+                GameServices.module().getGameService(Sonic2PlcService.class);
+        queue.transact(
+                Sonic2PlcService.clearOperation(),
+                Sonic2PlcService.appendOperation(Sonic2Constants.PLC_EHZ1),
+                Sonic2PlcService.appendOperation(Sonic2Constants.PLC_STD2));
+
+        Sonic2LevelInitProfile.completeInitialPresentationPlcs(
+                GameServices.rom().getRom(), queue, 0);
+
+        assertEquals(expectedDescriptors(Sonic2Constants.PLC_EHZ2),
+                queue.capture().queuedEntries(),
+                "loadZoneBlockMaps must append the header secondary after the locked title drain");
+    }
+
+    @Test
     void specialStageIntroOwnerPublishesBombsAtWait2OneShotGate() throws Exception {
         Sonic2SpecialStageIntro intro = new Sonic2SpecialStageIntro();
         intro.initialize(0, 50);
