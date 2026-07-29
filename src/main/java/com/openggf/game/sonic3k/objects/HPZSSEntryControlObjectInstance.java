@@ -36,10 +36,11 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
     private boolean introSignal;
     private boolean introCrystalSpawned;
     private int conversionTimer = -1;
-    private boolean conversionCrystalActive;
+    private int conversionSpawnCursor;
     private int cameraTargetX = -1;
     private int teleporterReadyTimer = 0x10;
     private boolean playersLocked;
+    private boolean freshLockApplied;
     private boolean finalPanStarted;
     private boolean conversionSequenceStarted;
 
@@ -52,10 +53,11 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
             boolean introSignal,
             boolean introCrystalSpawned,
             int conversionTimer,
-            boolean conversionCrystalActive,
+            int conversionSpawnCursor,
             int cameraTargetX,
             int teleporterReadyTimer,
             boolean playersLocked,
+            boolean freshLockApplied,
             boolean finalPanStarted,
             boolean conversionSequenceStarted)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
@@ -95,9 +97,10 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
         if (!childrenSpawned) {
             spawnInitialChildren();
         }
-        if (!reentry && !playersLocked && player instanceof AbstractPlayableSprite sprite) {
+        if (!reentry && !freshLockApplied && player instanceof AbstractPlayableSprite sprite) {
             applyFreshLockToParticipants(sprite);
             playersLocked = true;
+            freshLockApplied = true;
         }
 
         if (runtime.phase() == S3kSanctuaryRuntimeState.Phase.INTRO_WAIT) {
@@ -114,25 +117,16 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
                 conversionSequenceStarted = true;
                 spawnChild(HPZSanctuarySmallEmeraldCeremonyObjectInstance::new);
             }
-        } else if (runtime.phase() == S3kSanctuaryRuntimeState.Phase.CONVERTING) {
+        } else if (conversionSequenceStarted && playersLocked) {
             updateConversionChoreography();
         }
-        if (playersLocked && !conversionCrystalActive
+        if (playersLocked
                 && runtime.phase() == S3kSanctuaryRuntimeState.Phase.READY
                 && player instanceof AbstractPlayableSprite sprite) {
             if (!conversionSequenceStarted) {
                 releaseFreshLockFromParticipants(sprite);
                 playersLocked = false;
                 return;
-            }
-            if (!finalPanStarted) {
-                finalPanStarted = true;
-                applyFinalPlayerMappings();
-            }
-            if (panCameraForTest(services().camera(), 0x15A0)) {
-                services().camera().setScrollLocked(false);
-                releaseFreshLockFromParticipants(sprite);
-                playersLocked = false;
             }
         }
 
@@ -166,10 +160,7 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
     void onFallingCrystalAnimationComplete(int subtype) {
         if (subtype == 7) {
             introSignal = true;
-            return;
         }
-        conversionCrystalActive = false;
-        conversionTimer = 0x1F;
     }
 
     private void applyMidpointPlayerMappings() {
@@ -192,8 +183,9 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
                 com.openggf.level.objects.ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
             if (entity instanceof AbstractPlayableSprite sprite) {
                 String name = sprite.getClass().getSimpleName();
-                sprite.setMappingFrame(name.contains("Tails") ? 0xB0
-                        : name.contains("Knuckles") ? 0xD6 : 0xC4);
+                sprite.setRenderFlips(false, false);
+                sprite.setMappingFrame(name.contains("Tails") ? 0xAD
+                        : name.contains("Knuckles") ? 0x56 : 0xBA);
             }
         }
     }
@@ -228,30 +220,43 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
     }
 
     private void updateConversionChoreography() {
-        if (conversionCrystalActive) {
-            return;
-        }
-        int cursor = runtime.capture().conversionCursor();
-        if (cursor >= runtime.conversionOrder().size()) {
-            return;
-        }
-        int subtype = runtime.conversionOrder().get(cursor);
         if (cameraTargetX < 0) {
             if (--conversionTimer >= 0) {
                 return;
             }
             services().camera().setScrollLocked(true);
-            cameraTargetX = conversionCameraTarget(subtype);
-            applyConversionPlayerMappings(cursor);
+            if (conversionSpawnCursor >= runtime.conversionOrder().size()) {
+                finalPanStarted = true;
+                cameraTargetX = 0x15A0;
+                applyFinalPlayerMappings();
+            } else {
+                int subtype = runtime.conversionOrder().get(conversionSpawnCursor);
+                cameraTargetX = conversionCameraTarget(subtype);
+                applyConversionPlayerMappings(conversionSpawnCursor);
+            }
         }
         if (!panCameraForTest(services().camera(), cameraTargetX)) {
             return;
         }
         cameraTargetX = -1;
-        conversionCrystalActive = true;
+        if (finalPanStarted) {
+            services().camera().setScrollLocked(false);
+            for (PlayableEntity entity : services().playerQuery().playersFor(
+                    com.openggf.level.objects.ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+                if (entity instanceof AbstractPlayableSprite sprite) {
+                    releaseFreshLockForTest(sprite);
+                }
+            }
+            playersLocked = false;
+            return;
+        }
+        int subtype = runtime.conversionOrder().get(conversionSpawnCursor++);
         int startY = (services().camera().getY() & 0xFFFF) - 0x80;
         spawnChild(() -> new HPZSanctuaryFallingCrystalObjectInstance(
                 this, subtype, startY));
+        // loc_90BF4 switches the controller to loc_90C2A immediately. This
+        // countdown runs concurrently with the falling crystal child.
+        conversionTimer = 0x1F;
     }
 
     private static int conversionCameraTarget(int subtype) {
@@ -307,6 +312,13 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
     }
 
     void applyFreshLockForTest(AbstractPlayableSprite player) {
+        var superState = player.getSuperStateController();
+        if (superState != null && superState.isSuper()) {
+            // Player initialization on every ROM level load clears
+            // Super_Sonic_Knux_flag before the B5 controller assigns normal
+            // player mappings.
+            superState.debugDeactivate();
+        }
         NativePositionOps.writeXPosPreserveSubpixel(player, 0x1640);
         NativePositionOps.writeYPosPreserveSubpixel(player, 0x3A3);
         ObjectControlState.nativeBit7FullControl().applyTo(player);
@@ -425,8 +437,8 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
         ensureState();
         return "phase=" + runtime.phase()
                 + ",cursor=" + runtime.capture().conversionCursor()
+                + ",spawnCursor=" + conversionSpawnCursor
                 + ",conversionTimer=" + conversionTimer
-                + ",crystalActive=" + conversionCrystalActive
                 + ",cameraTarget=" + cameraTargetX
                 + ",finalPan=" + finalPanStarted
                 + ",playersLocked=" + playersLocked;
@@ -447,8 +459,8 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
         return super.captureRewindState().withObjectSubclassExtra(
                 new RewindExtra(runtime.capture(), reentry, childrenSpawned,
                         exitBandArmed, exitRequested, introSignal, introCrystalSpawned,
-                        conversionTimer, conversionCrystalActive, cameraTargetX,
-                        teleporterReadyTimer, playersLocked, finalPanStarted,
+                        conversionTimer, conversionSpawnCursor, cameraTargetX,
+                        teleporterReadyTimer, playersLocked, freshLockApplied, finalPanStarted,
                         conversionSequenceStarted));
     }
 
@@ -465,10 +477,11 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
             introSignal = extra.introSignal();
             introCrystalSpawned = extra.introCrystalSpawned();
             conversionTimer = extra.conversionTimer();
-            conversionCrystalActive = extra.conversionCrystalActive();
+            conversionSpawnCursor = extra.conversionSpawnCursor();
             cameraTargetX = extra.cameraTargetX();
             teleporterReadyTimer = extra.teleporterReadyTimer();
             playersLocked = extra.playersLocked();
+            freshLockApplied = extra.freshLockApplied();
             finalPanStarted = extra.finalPanStarted();
             conversionSequenceStarted = extra.conversionSequenceStarted();
         }

@@ -163,7 +163,10 @@ consumes the descriptor without a zone check.
    the orbit parent rises for `$80` updates, its seven children expand and
    rotate into place, and the completion sound plays once when all seven have
    arrived. The controller then runs the sequential `1 -> 2` drops, saving
-   each completed change.
+   each completed change. After each falling crystal is allocated, the
+   controller immediately starts its signed `$1F` countdown in parallel with
+   that child; it does not wait for the crystal's landing animation to finish
+   before preparing the next camera target.
 5. Standing on a state-2 pedestal locks the primary player for the native delay,
    then publishes an exact-stage Super Emerald request.
 6. Success awards state `2 -> 3`; failure does not mutate progression. Results
@@ -188,6 +191,10 @@ the feature leaves existing save fields readable by the previous build.
   conversion ordering, `Scroll_lock` camera pans, terminal return to camera
   X `$15A0`, player mapping/priority control, and exit enablement. It clears
   player control only after the final pan, never at the last pedestal midpoint.
+  The fresh-entry lock also mirrors ROM player initialization by reverting an
+  active powered form before normal-player ceremony mappings are assigned. Its
+  one-shot initialization state is rewind-captured; after the controller
+  advances to the exit routine, unlocking cannot re-enter initialization.
 - `HPZSanctuarySmallEmeraldCeremony` owns the visible seven-Emerald orbit that
   runs during the `$21F` countdown, including its single Signpost and
   Super-Emerald sound events and the children flying away after arrival.

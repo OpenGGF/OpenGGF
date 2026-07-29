@@ -11,7 +11,11 @@ All notable changes to the OpenGGF project are documented in this file.
   the emeralds' four native progression states. The Master Emerald uses its
   green palette, ceremony sprites use their native priority layers, sounds
   fire only at their ROM owners, and the terminal camera pan restores a visible,
-  controllable player.
+  controllable player. Falling-crystal placements overlap the controller's
+  native `$1F` cadence instead of serialising each crystal lifecycle, and entry
+  resets any active powered-form renderer before applying normal ceremony
+  mapping frames. Fresh-entry initialization is one-shot, so the controller
+  cannot teleport or relock the player after the terminal release.
 - Feature: Sonic 3 & Knuckles powered forms now have the ROM-ordered screen
   attack foundation used by Hyper Sonic and Hyper Knuckles. Eligible on-screen
   badniks use the native destruction and escalating score path, bosses remain

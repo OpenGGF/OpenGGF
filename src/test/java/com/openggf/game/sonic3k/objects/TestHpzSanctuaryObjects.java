@@ -218,6 +218,46 @@ class TestHpzSanctuaryObjects {
     }
 
     @Test
+    void freshSanctuaryLockRevertsAnActivePoweredFormBeforeUsingNormalMappings() {
+        GameStateManager gsm = new GameStateManager();
+        S3kEmeraldProgression progression = S3kEmeraldProgression.restore(
+                gsm, List.of(1, 1, 1, 1, 1, 1, 1), false);
+        HPZSSEntryControlObjectInstance controller = controller(progression, false);
+        AbstractPlayableSprite sonic = mock(AbstractPlayableSprite.class);
+        var superState = mock(com.openggf.sprites.playable.SuperStateController.class);
+        when(sonic.getSuperStateController()).thenReturn(superState);
+        when(superState.isSuper()).thenReturn(true);
+
+        controller.applyFreshLockForTest(sonic);
+
+        var order = inOrder(superState, sonic);
+        order.verify(superState).debugDeactivate();
+        order.verify(sonic).setMappingFrame(0);
+    }
+
+    @Test
+    void terminalCameraPanUsesTheRomRowSevenVisiblePlayerPose() throws Exception {
+        GameStateManager gsm = new GameStateManager();
+        S3kEmeraldProgression progression = S3kEmeraldProgression.restore(
+                gsm, List.of(2, 2, 2, 2, 2, 2, 2), true);
+        HPZSSEntryControlObjectInstance controller = controller(progression, false);
+        AbstractPlayableSprite sonic = mock(AbstractPlayableSprite.class);
+        ObjectServices services = mock(ObjectServices.class);
+        var players = mock(com.openggf.level.objects.ObjectPlayerQuery.class);
+        when(services.playerQuery()).thenReturn(players);
+        when(players.playersFor(any())).thenReturn(List.of(sonic));
+        controller.setServices(services);
+
+        var method = HPZSSEntryControlObjectInstance.class
+                .getDeclaredMethod("applyFinalPlayerMappings");
+        method.setAccessible(true);
+        method.invoke(controller);
+
+        verify(sonic).setRenderFlips(false, false);
+        verify(sonic).setMappingFrame(0xBA);
+    }
+
+    @Test
     void controllerConversionCountdownsUseSubqBplBoundaries() {
         GameStateManager gsm = new GameStateManager();
         S3kEmeraldProgression progression = S3kEmeraldProgression.restore(
