@@ -3,6 +3,7 @@ package com.openggf.game.sonic2.objects;
 import com.openggf.game.ResultsScreen;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
+import com.openggf.game.sonic2.resources.Sonic2PlcService;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageConstants;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageDataLoader;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageManager;
@@ -753,6 +754,10 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
     @Override
     public void update(int frameCounter, Object context) {
         this.frameCounter = frameCounter;
+        Sonic2PlcService plcService = services().gameService(Sonic2PlcService.class);
+        if (plcService != null && plcService.isBusy()) {
+            return;
+        }
         stateTimer++;
         totalFrames++;
 
@@ -1286,4 +1291,3 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
     public boolean didGetEmerald() { return gotEmerald; }
     public int getState() { return state; }
 }
-

@@ -1,0 +1,57 @@
+package com.openggf.game.sonic1.objects;
+
+import com.openggf.game.GameServices;
+import com.openggf.game.sonic1.resources.Sonic1PlcService;
+import com.openggf.level.objects.TestObjectServices;
+import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import java.lang.reflect.Field;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+@RequiresRom(SonicGame.SONIC_1)
+class TestSonic1ResultsPlcReadiness {
+    private Sonic1PlcService plc;
+    private Sonic1ResultsScreenObjectInstance results;
+
+    @BeforeEach
+    void setUp() {
+        GameServices.module().createGame(TestEnvironment.currentRom());
+        plc = GameServices.module().getGameService(Sonic1PlcService.class);
+        results = new Sonic1ResultsScreenObjectInstance(30, 7, 1);
+        results.setServices(new TestObjectServices() {
+            @Override
+            public <T> T gameService(Class<T> type) {
+                return GameServices.module().getGameService(type);
+            }
+        }.withGameModule(GameServices.module()));
+    }
+
+    @Test
+    void resultsAdvanceOnTheFirstEmptyFrameNotAStaticTileCountdown() throws Exception {
+        plc.append(16);
+        results.update(1, null);
+        assertEquals(0, stateTimer(), "results routine must poll the FIFO while work remains");
+
+        drain();
+        results.update(2, null);
+        assertEquals(1, stateTimer(), "the first empty frame starts the results card");
+    }
+
+    private int stateTimer() throws Exception {
+        Field field = com.openggf.level.objects.AbstractResultsScreen.class.getDeclaredField("stateTimer");
+        field.setAccessible(true);
+        return field.getInt(results);
+    }
+
+    private void drain() {
+        while (plc.isBusy()) {
+            plc.prepare();
+            plc.serviceLevelVBlank();
+        }
+    }
+}

@@ -38,8 +38,6 @@ class Sonic1SBZEvents extends Sonic1ZoneEvents {
 
     // Guard against re-triggering the SBZ3->FZ transition during fade
     private boolean fzTransitionRequested;
-    private final Sonic1FzPlcTimingQueue fzPlcTiming = new Sonic1FzPlcTimingQueue();
-    private boolean fzPlcTimingInitialized;
 
     Sonic1SBZEvents() {
     }
@@ -48,16 +46,10 @@ class Sonic1SBZEvents extends Sonic1ZoneEvents {
     void init() {
         super.init();
         fzTransitionRequested = false;
-        fzPlcTiming.clear();
-        fzPlcTimingInitialized = false;
     }
 
     boolean isFzTransitionRequested() { return fzTransitionRequested; }
     void setFzTransitionRequested(boolean v) { fzTransitionRequested = v; }
-    int getFzPlcFramesRemaining() { return fzPlcTiming.framesRemaining(); }
-    void setFzPlcFramesRemaining(int frames) { fzPlcTiming.restoreFramesRemaining(frames); }
-    boolean isFzPlcTimingInitialized() { return fzPlcTimingInitialized; }
-    void setFzPlcTimingInitialized(boolean initialized) { fzPlcTimingInitialized = initialized; }
 
     @Override
     void update(int act) {
@@ -76,13 +68,6 @@ class Sonic1SBZEvents extends Sonic1ZoneEvents {
      */
     void updateFZ() {
         if (retryPendingPlc()) return;
-        if (!fzPlcTimingInitialized) {
-            fzPlcTiming.resetForFinalZoneGameplay();
-            fzPlcTimingInitialized = true;
-        }
-        // RunPLC/ProcessPLC completes during the preceding VBlank; expose that
-        // result before this frame's DynamicLevelEvents and ExecuteObjects reads.
-        fzPlcTiming.tickVBlank();
         updateFinalZone();
     }
 
@@ -294,7 +279,6 @@ class Sonic1SBZEvents extends Sonic1ZoneEvents {
         if (camX >= (BOSS_FZ_X - 0x308)) {
             // addq.b #2,(v_dle_routine).w
             eventRoutine += 2;
-            fzPlcTiming.enqueueFzBossCue();
             requestSonic1Plc(31);
         }
 
@@ -317,8 +301,7 @@ class Sonic1SBZEvents extends Sonic1ZoneEvents {
             ObjectSpawn bossSpawn = new ObjectSpawn(
                     BOSS_FZ_X + 0x160, BOSS_FZ_Y + 0x80,
                     Sonic1ObjectIds.FZ_BOSS, 0, 0, false, 0);
-            lm.getObjectManager().addDynamicObject(
-                    new Sonic1FZBossInstance(bossSpawn, fzPlcTiming.framesRemaining()));
+            lm.getObjectManager().addDynamicObject(new Sonic1FZBossInstance(bossSpawn));
             gameState().setCurrentBossId(Sonic1ObjectIds.FZ_BOSS);
 
             // addq.b #2,(v_dle_routine).w

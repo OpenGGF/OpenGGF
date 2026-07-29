@@ -10,6 +10,7 @@ import com.openggf.game.sonic1.S1SpriteDataLoader;
 import com.openggf.game.sonic1.Sonic1ResultsMappingLoader;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
+import com.openggf.game.sonic1.resources.Sonic1PlcService;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.PatternAtlasRange;
@@ -171,6 +172,11 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
     public void update(int frameCounter, Object context) {
         this.frameCounter = Math.max(this.frameCounter, frameCounter);
         if (complete) {
+            return;
+        }
+
+        Sonic1PlcService plcService = GameServices.module().getGameService(Sonic1PlcService.class);
+        if (plcService != null && plcService.isBusy()) {
             return;
         }
 

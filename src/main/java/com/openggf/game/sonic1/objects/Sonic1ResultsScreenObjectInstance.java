@@ -6,6 +6,7 @@ import com.openggf.game.sonic1.audio.Sonic1Music;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
+import com.openggf.game.sonic1.resources.Sonic1PlcService;
 import com.openggf.game.sonic1.scroll.Sonic1ZoneConstants;
 import com.openggf.level.objects.AbstractResultsScreen;
 import com.openggf.graphics.GLCommand;
@@ -122,22 +123,6 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
     private static final int SLIDE_IN_FRAMES = 68;
 
     // -----------------------------------------------------------------------
-    // Got_ChkPLC (routine 0): the card waits for the title-card PLC to finish
-    // decompressing before the slide-in. The title-card art (Nem_TitleCard,
-    // sonic.asm @ $39204; PLC_TitleCard in Pattern Load Cues.asm) is 128 tiles
-    // (artnem/Title Cards.nem header word $8080, low 15 bits = $80). Gameplay
-    // VBlank decompresses 3 Nemesis tiles/frame (ProcessPLC_3Tiles, called from
-    // VBlank_UpdateScreen for id_VBlank_Levels), so the card holds for
-    // ceil(128 / 3) = 43 frames. This is game-wide S1 act-end behaviour, not an
-    // SBZ2 carve-out; SBZ2 is simply where the resulting timing is observable
-    // (the right-boundary scroll cascade).
-    // -----------------------------------------------------------------------
-    private static final int TITLE_CARD_TILE_COUNT = 0x80; // Nem_TitleCard header (XOR flag masked)
-    private static final int PLC_TILES_PER_FRAME = 3;      // ProcessPLC_3Tiles (gameplay VBlank)
-    private static final int PLC_DECOMPRESS_FRAMES =
-            (TITLE_CARD_TILE_COUNT + PLC_TILES_PER_FRAME - 1) / PLC_TILES_PER_FRAME; // ceil = 43
-
-    // -----------------------------------------------------------------------
     // SBZ Act 2 special transition states (ROM: Got_Move2 / loc_C766)
     //
     // After tally, SBZ2 skips the normal level-advance fade and instead:
@@ -182,13 +167,6 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
     /** Tracks whether SBZ2 slide-out elements have reached their exit positions. */
     private final boolean[] elemExited = new boolean[ELEMENT_COUNT];
 
-    /**
-     * Got_ChkPLC (routine 0) countdown: frames remaining before the title-card PLC
-     * is considered decompressed and the slide-in begins. Captured by the generic
-     * rewind field capturer so a held-rewind recreate restores mid-wait state.
-     */
-    private int plcDecompressFramesRemaining = PLC_DECOMPRESS_FRAMES;
-
     public void setSpecialStageAfter(boolean specialStageAfter) {
         this.specialStageAfter = specialStageAfter;
     }
@@ -232,15 +210,11 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
 
-        // ROM Got_ChkPLC (routine 0): the end-of-act card idles until the title-card
-        // PLC has finished decompressing before Got_Main sets up the card elements and
-        // the slide-in begins (3A Got Through Card.asm: tst.l (v_plc_buffer); beq Got_Main; rts).
-        // The engine's PLC pipeline loads art instantly, so model the decompression
-        // delay directly (see PLC_DECOMPRESS_FRAMES). This holds the whole end-of-act
-        // sequence back by the same number of frames as the hardware, which matters for
-        // SBZ2 where the right-boundary scroll timing is observable.
-        if (plcDecompressFramesRemaining > 0) {
-            plcDecompressFramesRemaining--;
+        // ROM Got_ChkPLC idles until the full PLC FIFO has drained. Renderer
+        // availability is deliberately irrelevant: the queued ROM descriptors own
+        // the gameplay-ready edge.
+        Sonic1PlcService plcService = services().gameService(Sonic1PlcService.class);
+        if (plcService != null && plcService.isBusy()) {
             this.frameCounter = frameCounter;
             return;
         }
@@ -535,9 +509,8 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        // ROM Got_ChkPLC (routine 0) only idles (rts) — the card elements are not set
-        // up by Got_Main until the title-card PLC finishes, so nothing renders yet.
-        if (plcDecompressFramesRemaining > 0) {
+        Sonic1PlcService plcService = services().gameService(Sonic1PlcService.class);
+        if (plcService != null && plcService.isBusy()) {
             return;
         }
         var camera = services().camera();

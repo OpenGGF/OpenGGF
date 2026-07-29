@@ -4,6 +4,7 @@ import com.openggf.camera.Camera;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
+import com.openggf.game.sonic2.resources.Sonic2PlcService;
 import com.openggf.level.objects.AbstractResultsScreen;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
@@ -101,6 +102,16 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen
 
         // Total starts at 0 and counts up as bonuses tally
         totalBonus = 0;
+    }
+
+    @Override
+    public void update(int frameCounter, com.openggf.game.PlayableEntity player) {
+        Sonic2PlcService plcService = services().gameService(Sonic2PlcService.class);
+        if (plcService != null && plcService.isBusy()) {
+            this.frameCounter = frameCounter;
+            return;
+        }
+        super.update(frameCounter, player);
     }
 
     @Override

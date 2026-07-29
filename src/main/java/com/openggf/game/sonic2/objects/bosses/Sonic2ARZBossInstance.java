@@ -8,6 +8,7 @@ import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic2.Sonic2Rng;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.resources.Sonic2PlcRequests;
+import com.openggf.game.sonic2.resources.Sonic2PlcService;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
@@ -240,6 +241,10 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance implements Rewin
     }
 
     private boolean checkInitConditions(AbstractPlayableSprite player) {
+        Sonic2PlcService plcService = services().gameService(Sonic2PlcService.class);
+        if (plcService != null && plcService.isBusy()) {
+            return false;
+        }
         var participants = services().playerQuery().playersFor(
                 ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
         if (participants.size() <= 1) {
