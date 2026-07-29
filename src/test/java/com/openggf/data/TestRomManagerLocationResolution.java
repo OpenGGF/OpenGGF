@@ -4,9 +4,12 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
+import com.openggf.tests.FullReset;
+import com.openggf.tests.SingletonResetExtension;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
@@ -17,6 +20,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@FullReset
+@ExtendWith(SingletonResetExtension.class)
 class TestRomManagerLocationResolution {
 
     @TempDir
