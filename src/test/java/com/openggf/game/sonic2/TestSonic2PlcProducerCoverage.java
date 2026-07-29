@@ -62,6 +62,7 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /** Native FIFO descriptor coverage for every currently represented S2 producer cue. */
 @RequiresRom(SonicGame.SONIC_2)
@@ -157,6 +158,26 @@ class TestSonic2PlcProducerCoverage {
     }
 
     @Test
+    void titleScreenRetriesRejectedStd1ReplacementOnceTheDecoderBecomesIdle() throws Exception {
+        Sonic2PlcService queue = GameServices.module().getGameService(Sonic2PlcService.class);
+        queue.append(0);
+        queue.prepare();
+        assertNotNull(queue.capture().activeEntry(), "fixture must force a native replace rejection");
+
+        TitleScreenManager manager = TitleScreenManager.getInstance();
+        manager.initialize();
+        drainActive(queue);
+        manager.update(org.mockito.Mockito.mock(com.openggf.control.InputHandler.class));
+
+        List<NemesisPlcQueueSnapshot.Entry> expected = expectedDescriptors(0);
+        assertEquals(expected, queue.capture().queuedEntries(),
+                "S2 title retry must publish Std1 once the decoder is idle");
+        manager.update(org.mockito.Mockito.mock(com.openggf.control.InputHandler.class));
+        assertEquals(expected, queue.capture().queuedEntries(),
+                "S2 title retry must not duplicate its successful replacement");
+    }
+
+    @Test
     void titleCardOwnerPublishesWaterThenZoneAnimalAtTextExit() throws Exception {
         TitleCardManager card = new TitleCardManager();
         card.initialize(0, 0);
@@ -243,6 +264,26 @@ class TestSonic2PlcProducerCoverage {
     }
 
     @Test
+    void specialStageResultsRetriesRejectedReplacementExactlyOnceAfterActiveDecode() throws Exception {
+        Sonic2PlcService queue = GameServices.module().getGameService(Sonic2PlcService.class);
+        queue.append(0);
+        queue.prepare();
+        assertNotNull(queue.capture().activeEntry(), "fixture must force a native transaction rejection");
+
+        Sonic2SpecialStageProvider provider = new Sonic2SpecialStageProvider();
+        provider.resetForResults();
+        drainActive(queue);
+        provider.onEnterResults();
+
+        List<NemesisPlcQueueSnapshot.Entry> expected = expectedDescriptors(0);
+        assertEquals(expected, queue.capture().queuedEntries(),
+                "S2 results retry must publish Std1 once the decoder is idle");
+        provider.onEnterResults();
+        assertEquals(expected, queue.capture().queuedEntries(),
+                "S2 results retry must not duplicate its successful replacement");
+    }
+
+    @Test
     void everyAuditedS2CuePublishesItsRomDescriptorsInOperationOrder() throws Exception {
         Sonic2PlcService queue = GameServices.module().getGameService(Sonic2PlcService.class);
         int[] appendIds = {1, 2, 9, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49,
@@ -288,6 +329,12 @@ class TestSonic2PlcProducerCoverage {
             }
         }
         return result;
+    }
+
+    private static void drainActive(Sonic2PlcService queue) {
+        while (queue.capture().activeEntry() != null) {
+            queue.serviceNormalVBlank();
+        }
     }
 
     private static void invokeResultsOwner(Object owner, TestObjectServices services, String method,

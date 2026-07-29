@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * Executes the S1-owned credits producer and records the complete descriptor
@@ -56,6 +57,26 @@ class TestSonic1PlcProducerCoverage {
 
         assertEquals(expectedDescriptors(0), queue.capture().queuedEntries(),
                 "S1 title initialization must replace the native Main PLC before presentation");
+    }
+
+    @Test
+    void titleScreenRetriesRejectedMainReplacementOnceTheDecoderBecomesIdle() throws Exception {
+        Sonic1PlcService queue = GameServices.module().getGameService(Sonic1PlcService.class);
+        queue.append(0);
+        queue.prepare();
+        assertNotNull(queue.capture().activeEntry(), "fixture must force a native replace rejection");
+
+        Sonic1TitleScreenManager manager = Sonic1TitleScreenManager.getInstance();
+        manager.initialize();
+        drainActive(queue);
+        manager.update(org.mockito.Mockito.mock(com.openggf.control.InputHandler.class));
+
+        List<NemesisPlcQueueSnapshot.Entry> expected = expectedDescriptors(0);
+        assertEquals(expected, queue.capture().queuedEntries(),
+                "S1 title retry must publish Main once the decoder is idle");
+        manager.update(org.mockito.Mockito.mock(com.openggf.control.InputHandler.class));
+        assertEquals(expected, queue.capture().queuedEntries(),
+                "S1 title retry must not duplicate its successful replacement");
     }
 
     @ParameterizedTest(name = "title-card progression zone {0} maps to native animal PLC {1}")
@@ -141,6 +162,26 @@ class TestSonic1PlcProducerCoverage {
     }
 
     @Test
+    void specialStageResultsRetriesRejectedBatchExactlyOnceAfterActiveDecode() throws Exception {
+        Sonic1PlcService queue = GameServices.module().getGameService(Sonic1PlcService.class);
+        queue.append(0);
+        queue.prepare();
+        assertNotNull(queue.capture().activeEntry(), "fixture must force a native transaction rejection");
+
+        Sonic1SpecialStageProvider provider = new Sonic1SpecialStageProvider();
+        provider.resetForResults();
+        drainActive(queue);
+        provider.onEnterResults();
+
+        List<NemesisPlcQueueSnapshot.Entry> expected = expectedDescriptors(0, 27);
+        assertEquals(expected, queue.capture().queuedEntries(),
+                "S1 results retry must publish Main then result art once idle");
+        provider.onEnterResults();
+        assertEquals(expected, queue.capture().queuedEntries(),
+                "S1 results retry must not duplicate its successful batch");
+    }
+
+    @Test
     void creditsOwnerPrequeuesEveryTextPageInNativeRomZoneOrder() throws Exception {
         Sonic1CreditsManager credits = new Sonic1CreditsManager();
         Sonic1PlcService queue = GameServices.module().getGameService(Sonic1PlcService.class);
@@ -180,6 +221,12 @@ class TestSonic1PlcProducerCoverage {
         Field field = Sonic1CreditsManager.class.getDeclaredField("creditsNum");
         field.setAccessible(true);
         field.setInt(credits, value);
+    }
+
+    private static void drainActive(Sonic1PlcService queue) {
+        while (queue.capture().activeEntry() != null) {
+            queue.serviceFastVBlank();
+        }
     }
 
     private static int primaryForNativeZone(int zone) throws IOException {

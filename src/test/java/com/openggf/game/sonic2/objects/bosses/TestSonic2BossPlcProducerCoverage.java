@@ -15,6 +15,7 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.TestObjectServices;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.resources.NemesisPlcPatternCounts;
 import com.openggf.level.resources.PlcParser;
 import com.openggf.tests.SingletonResetExtension;
@@ -37,6 +38,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -123,6 +125,42 @@ class TestSonic2BossPlcProducerCoverage {
         assertPreparedRenderersPublished(route.animalPlc(), Sonic2Constants.PLC_EXPLOSION);
     }
 
+    /**
+     * A full native FIFO rejects the first attempt.  Each concrete handoff
+     * must retain its semantic gate until that submission succeeds, then
+     * publish precisely one animal/explosion batch on retry.
+     */
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("animalExplosionRetryRoutes")
+    void postDefeatAnimalHandoffRetriesRejectedBatchExactlyOnce(RetryRoute route) throws Exception {
+        TestObjectServices services = new TestObjectServices()
+                .withGameModule(GameServices.module())
+                .withLevelManager(GameServices.level())
+                .withCamera(GameServices.camera())
+                .withGameState(GameServices.gameState());
+        Sonic2PlcService queue = GameServices.module().getGameService(Sonic2PlcService.class);
+        fillQueueToNativeCapacity(queue);
+
+        AbstractObjectInstance[] created = new AbstractObjectInstance[1];
+        ObjectConstructionContext.with(services, () -> created[0] = route.create().get());
+        AbstractObjectInstance boss = created[0];
+        route.prepare().accept(boss, services);
+        route.invoke().accept(boss);
+        assertEquals(15, queue.capture().queuedEntries().size(),
+                route.name() + " must leave a rejected batch unpublished");
+
+        queue.clearQueued();
+        route.invoke().accept(boss);
+        List<NemesisPlcQueueSnapshot.Entry> expected = expectedDescriptors(
+                route.animalPlc(), Sonic2Constants.PLC_EXPLOSION);
+        assertEquals(expected, queue.capture().queuedEntries(),
+                route.name() + " must retry its retained native handoff");
+
+        route.invoke().accept(boss);
+        assertEquals(expected, queue.capture().queuedEntries(),
+                route.name() + " must not duplicate the successful handoff");
+    }
+
     private static void assertPreparedRenderersPublished(int... plcIds) throws Exception {
         Sonic2ObjectArtProvider provider =
                 (Sonic2ObjectArtProvider) GameServices.module().getObjectArtProvider();
@@ -169,12 +207,55 @@ class TestSonic2BossPlcProducerCoverage {
                         TestSonic2BossPlcProducerCoverage::invokeArzHandoff));
     }
 
+    private static Stream<RetryRoute> animalExplosionRetryRoutes() {
+        return Stream.of(
+                retry("EHZ flying-off tertiary-2 expiry", Sonic2Constants.PLC_ANIMALS_EHZ,
+                        () -> new Sonic2EHZBossInstance(spawn()), TestSonic2BossPlcProducerCoverage::prepareEhz,
+                        boss -> invokeNoArgs(boss, "updateSubAFlyingOff")),
+                retry("HTZ defeated flee boundary", Sonic2Constants.PLC_ANIMALS_HTZ_MTZ_WFZ,
+                        () -> new Sonic2HTZBossInstance(spawn()), (boss, services) -> prepare(boss, services,
+                                "defeatTimer", -0x3B),
+                        boss -> invokeNoArgs(boss, "updateDefeated")),
+                retry("MCZ hover-down countdown 0x18", Sonic2Constants.PLC_ANIMALS_MCZ,
+                        () -> new Sonic2MCZBossInstance(spawn()), (boss, services) -> prepare(boss, services,
+                                "countdown", 0x17),
+                        boss -> invokeNoArgs(boss, "updateSubAHoverDown")),
+                retry("CNZ defeat-bounce countdown 0x18", Sonic2Constants.PLC_ANIMALS_CNZ,
+                        () -> new Sonic2CNZBossInstance(spawn()), (boss, services) -> prepare(boss, services,
+                                "bossCountdown", 0x17),
+                        boss -> invokeNoArgs(boss, "updateDefeatBounce")),
+                retry("CPZ level-music handoff", Sonic2Constants.PLC_ANIMALS_CPZ,
+                        () -> new Sonic2CPZBossInstance(spawn()), (boss, services) -> prepare(boss, services,
+                                "defeatTimer", 0x2F),
+                        boss -> invokeNoArgs(boss, "updateMainStopExploding")),
+                retry("MTZ first flee pass", Sonic2Constants.PLC_ANIMALS_HTZ_MTZ_WFZ,
+                        () -> new Sonic2MTZBossInstance(spawn()), (boss, services) -> prepare(boss, services),
+                        boss -> invokeNoArgs(boss, "updateSub12Flee")),
+                retry("OOZ defeated-flag handoff", Sonic2Constants.PLC_ANIMALS_OOZ,
+                        () -> new Sonic2OOZBossInstance(spawn()), (boss, services) -> prepare(boss, services,
+                                "bossCountdown", 0),
+                        boss -> invoke(boss, "updateMainDefeated", 0)),
+                retry("ARZ defeated ascent countdown 0x18", Sonic2Constants.PLC_ANIMALS_ARZ,
+                        () -> new Sonic2ARZBossInstance(spawn()), (boss, services) -> prepare(boss, services,
+                                "bossCountdown", 0x17),
+                        boss -> invoke(boss, "updateMainSubA",
+                                new Class<?>[] {com.openggf.sprites.playable.AbstractPlayableSprite.class},
+                                org.mockito.Mockito.mock(com.openggf.sprites.playable.AbstractPlayableSprite.class)))
+        );
+    }
+
     private static BossRoute boss(String name, Consumer<TestObjectServices> invoke) {
         return new BossRoute(name, invoke, -1);
     }
 
     private static BossRoute handoff(String name, int animalPlc, Consumer<TestObjectServices> invoke) {
         return new BossRoute(name, invoke, animalPlc);
+    }
+
+    private static RetryRoute retry(String name, int animalPlc,
+                                    Supplier<? extends AbstractObjectInstance> create,
+                                    RetryPreparation prepare, Consumer<AbstractObjectInstance> invoke) {
+        return new RetryRoute(name, animalPlc, create, prepare, invoke);
     }
 
     private static ObjectSpawn spawn() {
@@ -253,6 +334,73 @@ class TestSonic2BossPlcProducerCoverage {
         }
     }
 
+    private static void prepareEhz(AbstractObjectInstance boss, TestObjectServices services) {
+        try {
+            boss.setServices(services);
+            Field waitTimer = Sonic2EHZBossInstance.class.getDeclaredField("waitTimer");
+            waitTimer.setAccessible(true);
+            waitTimer.setInt(boss, 0);
+            Field state = findField(boss.getClass(), "state");
+            Object bossState = state.get(boss);
+            Field tertiary = bossState.getClass().getField("routineTertiary");
+            tertiary.setInt(bossState, 2);
+        } catch (ReflectiveOperationException failure) {
+            throw new AssertionError("Unable to prepare EHZ's tertiary-2 handoff", failure);
+        }
+    }
+
+    private static void prepare(AbstractObjectInstance boss, TestObjectServices services,
+                                Object... fieldAndValues) {
+        try {
+            boss.setServices(services);
+            for (int index = 0; index < fieldAndValues.length; index += 2) {
+                Field field = findField(boss.getClass(), (String) fieldAndValues[index]);
+                field.setInt(boss, (Integer) fieldAndValues[index + 1]);
+            }
+        } catch (ReflectiveOperationException failure) {
+            throw new AssertionError("Unable to prepare production retry handoff", failure);
+        }
+    }
+
+    private static void invokeNoArgs(AbstractObjectInstance boss, String method) {
+        invoke(boss, method);
+    }
+
+    private static void invoke(AbstractObjectInstance boss, String method, Object... arguments) {
+        Class<?>[] types = new Class<?>[arguments.length];
+        for (int index = 0; index < arguments.length; index++) {
+            types[index] = arguments[index] instanceof Integer ? int.class : arguments[index].getClass();
+        }
+        invoke(boss, method, types, arguments);
+    }
+
+    private static void invoke(AbstractObjectInstance boss, String method, Class<?>[] types,
+                               Object... arguments) {
+        try {
+            Method target = boss.getClass().getDeclaredMethod(method, types);
+            target.setAccessible(true);
+            target.invoke(boss, arguments);
+        } catch (ReflectiveOperationException failure) {
+            throw new AssertionError("Unable to drive production retry handoff " + method, failure);
+        }
+    }
+
+    private static void fillQueueToNativeCapacity(Sonic2PlcService queue) throws IOException {
+        while (queue.capture().queuedEntries().size() < 15) {
+            int before = queue.capture().queuedEntries().size();
+            try {
+                queue.append(Sonic2Constants.PLC_CAPSULE);
+            } catch (IllegalStateException ignored) {
+                break;
+            }
+            if (queue.capture().queuedEntries().size() == before) {
+                throw new AssertionError("test fixture could not fill the native PLC FIFO");
+            }
+        }
+        assertEquals(15, queue.capture().queuedEntries().size(),
+                "fixture must force the producer's append preflight to reject");
+    }
+
     private static Field findField(Class<?> type, String name) throws NoSuchFieldException {
         for (Class<?> candidate = type; candidate != null; candidate = candidate.getSuperclass()) {
             try {
@@ -282,5 +430,15 @@ class TestSonic2BossPlcProducerCoverage {
     }
 
     private record BossRoute(String name, Consumer<TestObjectServices> invoke, int animalPlc) {
+    }
+
+    private record RetryRoute(String name, int animalPlc,
+                              Supplier<? extends AbstractObjectInstance> create,
+                              RetryPreparation prepare, Consumer<AbstractObjectInstance> invoke) {
+    }
+
+    @FunctionalInterface
+    private interface RetryPreparation {
+        void accept(AbstractObjectInstance boss, TestObjectServices services);
     }
 }
