@@ -153,6 +153,11 @@ public class Sonic3kGameModule implements GameModule {
     public LoadTimeProfile createLoadTimeProfile(
             LoadTimeSimulationMode mode,
             Consumer<String> warningSink) {
+        if (mode == LoadTimeSimulationMode.NONE
+                || mode == LoadTimeSimulationMode.FAST) {
+            return LoadTimeProfileFactory.resolve(
+                    mode, LoadTimeProfile.IMMEDIATE, warningSink);
+        }
         LoadTimeProfile profiled;
         try {
             var resource = Sonic3kGameModule.class.getResourceAsStream(

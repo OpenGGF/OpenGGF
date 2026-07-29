@@ -37,8 +37,6 @@ import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.game.timing.LoadTimeProfile;
-import com.openggf.game.timing.LoadTimeSimulationMode;
-import com.openggf.configuration.SonicConfiguration;
 import com.openggf.level.SeamlessTransitionResourceHandoffRegistry;
 import com.openggf.game.timing.RecordedCompletionAuthority;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
@@ -152,10 +150,7 @@ public final class GameplayModeContext implements ModeContext {
                 == HardwareReadinessAdmissionPolicy.RECORDED
                 ? LoadTimeProfile.IMMEDIATE
                 : worldSession.getGameModule().createLoadTimeProfile(
-                        LoadTimeSimulationMode.parse(
-                                GameServices.configuration().getString(
-                                        SonicConfiguration.LOAD_TIME_SIMULATION)),
-                        LOG::warning);
+                        worldSession.loadTimeSimulationMode(), LOG::warning);
         this.hardwareTiming = new HardwareTimingService(
                 com.openggf.game.timing.RomWorkBudgetScheduler.oneWorkUnitAt(
                         HardwareServiceBoundary.POST_OBJECTS),

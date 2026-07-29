@@ -36,6 +36,7 @@ public final class HardwareTimingJob {
                 snapshot.compressionVariant(),
                 snapshot.moduleCount(),
                 snapshot.exportableAcrossSegment(),
+                snapshot.features(),
                 preparation);
         this.handle = snapshot.handle();
         this.preparedPayload = snapshot.preparedPayload();
@@ -168,6 +169,7 @@ public final class HardwareTimingJob {
                 submission.compressionVariant(),
                 submission.moduleCount(),
                 submission.exportableAcrossSegment(),
+                submission.features(),
                 handle,
                 Objects.requireNonNull(
                         preparation().snapshot(), "preparation snapshot"),
@@ -202,6 +204,7 @@ public final class HardwareTimingJob {
             String compressionVariant,
             int moduleCount,
             boolean exportableAcrossSegment,
+            HardwareWorkFeatures features,
             HardwareWorkHandle handle,
             HardwareWorkPreparationSnapshot preparationSnapshot,
             byte[] preparedPayload,
@@ -219,6 +222,7 @@ public final class HardwareTimingJob {
             Objects.requireNonNull(kind, "kind");
             Objects.requireNonNull(compressionVariant, "compressionVariant");
             Objects.requireNonNull(handle, "handle");
+            Objects.requireNonNull(features, "features");
             Objects.requireNonNull(preparationSnapshot, "preparationSnapshot");
             eligibleBoundaries = Set.copyOf(Objects.requireNonNull(
                     eligibleBoundaries, "eligibleBoundaries"));

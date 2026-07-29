@@ -13,78 +13,78 @@ replay authority and is never loaded by production gameplay.
 
 `tools/bizhawk-headless/src/Recording/HardwareTimingEventEngine.cs` already mirrors the
 native direct and KosM FIFOs from RAM and computes the same fingerprints as Java. It
-remains the run-wide ledger, but frame-end inference is only corroboration. Native
-execution callbacks are the measurement authority.
+remains the run-wide ledger and lifecycle authority. The scoped native-harness contract
+permits exactly one execute callback: the already reviewed instruction after
+`Process_Kos_Module_Queue` returns from `Queue_Kos`
+(`ModuleChildSubmissionPc = 0x001B46`). Measurement reuses that callback and the existing
+audited frame-end FIFO reconciliation; it does not add general callback registrations.
+The locked-ROM instruction-byte golden test for the permitted callback remains the
+fail-fast revision check.
 
-For the locked-on ROM, register before/after callbacks at the instruction boundaries
-resolved from these `docs/skdisasm/sonic3k.asm` labels:
-
-- `Queue_Kos` entry and its sole `rts` (all top-level and child direct submissions);
-- `Queue_Kos_Module` entry plus both return paths
-  (`$$freeSlotFound` and `Process_Kos_Module_Queue_Init`);
-- `Process_Kos_Queue` entry, `Process_Kos_Queue_Main`, every resumable
-  `Process_Kos_Queue_Loop` entry, and `Process_Kos_Queue_Done`;
-- the accepted `Set_Kos_Bookmark` path, `Backup_Kos_Registers`, and
-  `Restore_Kos_Bookmark`, including the restored loop-PC handoff;
-- `Process_Kos_Module_Queue` entry, the instruction after its `bsr Queue_Kos`
-  (currently locked by the existing `ModuleChildSubmissionPc = 0x001B46` test), its DMA
-  coordination branch, parent shift, and all returns;
-- queue-clear/reset writers reached during startup, level reset, title reset, and session
-  reset.
-
-Implementation constants record exact S&K-half PCs and cite the labels. A ROM golden test
-hashes the instruction bytes at every constant, so a changed ROM/revision fails before
-capture rather than silently moving a hook.
+The permitted callback gives module-child submission identity and ordering exactly.
+Top-level direct submissions are first observed when frame-end reconciliation sees their
+occupied FIFO entries and can also be invisible when they submit and retire between
+samples. They are coverage diagnostics only: the generator rejects them from runtime rows,
+estimator training, and estimator validation. Records mark this provenance explicitly.
+KosM parents likewise remain validation-only.
 
 The existing `hardware_timing.jsonl` format and schema remain unchanged. Measurement uses
 a separate `load_time_measurements.jsonl` diagnostic artifact and a separate recorder
 version. Trace loaders and `HardwareTimingReplayPort` must reject this filename;
 guard tests forbid imports from measurement tooling into replay/runtime authority.
 
-## Records
+## Aggregate records
 
-Every execute callback calls the ledger with the current raw movie frame and a shared
-run-wide `sequence_in_frame` counter. The counter resets only when the raw frame changes.
-Callback records precede that frame's `ObserveFrameEnd` reconciliation records.
-`ObserveFrameEnd` may validate RAM state and boundaries but cannot create a measurement
-submission, activation, service, or retirement absent a callback.
+The permitted execute callback and `ObserveFrameEnd` reconciliation update the existing
+run-wide ledger. The tooling stream emits one immutable aggregate only when a direct job
+retires; it does not expose internal lifecycle hooks as a second replay-like authority.
+The aggregate is sufficient because the production-owned ledger has already enforced FIFO
+submission and retirement before emission, while the strict offline parser independently
+recomputes identity and validates ordering.
 
-Every LF-terminated JSONL record contains:
+Every LF-terminated JSONL aggregate contains:
 
 - `measurement_schema: 1`;
 - immutable movie SHA-256 and ROM SHA-1;
-- fixture family and segment identity;
-- raw frame plus monotonic `sequence_in_frame`;
-- `kind`, ordinal, fingerprint, and `service_model`;
-- hook: `submitted`, `head_activated`, `service`, `prepared`, or `retired`;
-- the eligible boundary for `service`/`retired`;
-- parent identity for module-created direct children where present;
-- canonical descriptor and deterministic command-stream feature vector on `submitted`.
+- fixture/movie SHA-256, ROM SHA-1, recorder version, and service model;
+- reset epoch, raw retirement frame, and monotonic `sequence_in_frame`;
+- `kind`, epoch-local ordinal, fingerprint, and eligible retirement boundary;
+- parent fingerprint for exact module-created direct children, or null for censored
+  top-level diagnostics;
+- canonical descriptor and deterministic command-stream feature vector;
+- exact/censored precision, classified flag, and observed service opportunities.
+- `observation_precision`: `exact_callback` or `frame_end_censored`.
 
-Records use a stable field order. Duplicate JSON keys, unknown fields/hooks, nonmonotonic
-sequences, impossible FIFO order, or identity disagreement invalidate the whole capture.
+Records use a stable field order. Duplicate JSON keys, unknown fields, nonmonotonic
+epoch/frame/sequence/ordinal order, invalid boundary/model/hash, recomputed fingerprint
+disagreement, parent-precision disagreement, or descriptor/feature disagreement invalidate
+the whole capture. Ordinal gaps are permitted because reset-aborted jobs never emit.
 
 ## Cost attribution
 
-Cost is the count of eligible native service opportunities from physical-head activation
-through the opportunity that retires the head, inclusive. Direct jobs advance only at
-`pre_main_loop`. KosM parents have zero additional units; their direct children carry the
-decoder cost. Waiting behind another physical head is excluded.
+Cost is the count of observed eligible native service opportunities from physical-head
+activation through the opportunity that retires the head, inclusive. Direct jobs advance
+only at `pre_main_loop`. Only exact-callback child samples with at least one observed
+opportunity whose whole lifetime stays in classified service modes are eligible for
+publication. A zero-opportunity completion proves an unobserved synchronous lifetime and
+is excluded. A duplicate level counter outside
+the title-card exception marks an active sample unclassified and excludes it. Censored
+top-level observations carry no runtime cost label. KosM parents have zero additional
+units; their direct children carry the decoder cost. Waiting behind another physical head
+is excluded.
 
 The run-wide ledger state machine is `queued -> active-head -> retired`, with claimed
-state irrelevant to native capture. `Queue_Kos`/`Queue_Kos_Module` return callbacks emit
-submission after RAM contains the new entry. When no older physical entry exists, the
-same callback activates it. A direct service-entry callback emits one service opportunity;
-the matching exit/done callback determines whether it retired or bookmarked. Module
-coordination callbacks identify parent/child edges and the zero-cost parent retirement.
-Clear callbacks retire no work: they abort/reset the ledger and fail capture if unexplained
-pending jobs exist.
+state irrelevant to native capture. The permitted module-child callback emits the exact
+child submission after RAM contains it. Frame-end reconciliation discovers top-level
+submissions, counts admitted direct-service boundaries, and observes retirement using the
+same rules that publish schema-2 hardware timing. Reset clears the ledger and reports
+aborted pending work separately rather than converting it into completed samples.
 
 Staged PRE retirements, title-card POST_OBJECTS exceptions, VInt-only frames, and
-same-frame retire/enqueue are ordered solely by callbacks and the shared sequence.
-Frame-end logic confirms the expected boundary classification. Ordinals and ledger state
-remain run-wide across complete-run segments and seamless transitions; per-segment writers
-are filtered views and never own/reset the ledger.
+same-frame retire/enqueue use the existing callback/reconciliation ordering and the shared
+sequence. Ordinals and ledger state remain run-wide inside a reset epoch across complete-run
+segments and seamless transitions. Power/reset advances the epoch, clears pending work,
+and restarts ordinals; per-segment writers never own/reset the ledger.
 
 ## Aggregation
 
@@ -182,7 +182,7 @@ acceptance thresholds.
 ## Verification
 
 - synthetic FIFO tests cover activation, waiting exclusion, same-frame replacement,
-  module-child callbacks, eligible-boundary counting, and reset;
+  the permitted module-child callback, eligible-boundary counting, censor labels, and reset;
 - native/Lua differential tests preserve existing completion output byte-for-byte;
 - strict parser and generator tests cover malformed order, identity disagreement,
   lower median, provenance dictionary, and byte stability;
