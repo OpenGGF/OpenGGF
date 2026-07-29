@@ -1,17 +1,19 @@
 package com.openggf.game.resources;
 
+import com.openggf.LevelFrameStep;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestPlcLifecycleDriverParity {
 
     @Test
-    void liveAndHeadlessLogicalIterationsUseTheSameOrdering() {
-        assertEquals(runRepresentativeIterations(), runRepresentativeIterations());
+    void logicalIterationPinsServiceFadePreparationAndBodyOrdering() {
         assertEquals(List.of(
                 "fade", "service:ORDINARY_LEVEL", "body",
                 "prepare:ORDINARY_LEVEL",
@@ -38,6 +40,22 @@ class TestPlcLifecycleDriverParity {
 
         assertEquals(List.of(
                 "fade", "service:LAG", "fade", "service:LAG"), events);
+    }
+
+    @Test
+    void publicPlcFrameEntriesRequireTheCallersLatchedToken() {
+        List<String> phaseOwned = List.of(
+                "execute", "executeWithPause", "serviceVBlankOnly",
+                "executeHardwareTimedObjectScan");
+        for (var method : LevelFrameStep.class.getDeclaredMethods()) {
+            if (Modifier.isPublic(method.getModifiers())
+                    && phaseOwned.contains(method.getName())) {
+                assertTrue(method.getParameterCount() > 1
+                                && method.getParameterTypes()[1]
+                                == PlcFrameLifecycleCoordinator.PlcLifecycleFrame.class,
+                        method.toString());
+            }
+        }
     }
 
     private static List<String> runRepresentativeIterations() {

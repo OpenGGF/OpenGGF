@@ -11,6 +11,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
 
 class TestSonic1PlcLifecycle {
     private final NemesisPlcServiceQueue queue = mock(NemesisPlcServiceQueue.class);
@@ -46,5 +47,18 @@ class TestSonic1PlcLifecycle {
             org.junit.jupiter.api.Assertions.assertEquals(
                     prepared.contains(phase), service.hasPreparationBoundary(phase), phase.name());
         }
+    }
+
+    @Test
+    void creditsDemoSlowFadeServicesThreeForAllSixtyIterationsWithoutPreparation() {
+        for (int iteration = 0; iteration < 60; iteration++) {
+            service.serviceVBlank(PlcLifecyclePhase.CREDITS_DEMO_FADE);
+            if (service.hasPreparationBoundary(PlcLifecyclePhase.CREDITS_DEMO_FADE)) {
+                service.prepareAfterLoop(PlcLifecyclePhase.CREDITS_DEMO_FADE);
+            }
+        }
+
+        verify(queue, times(60)).servicePatterns(3);
+        verify(queue, never()).prepareHead();
     }
 }

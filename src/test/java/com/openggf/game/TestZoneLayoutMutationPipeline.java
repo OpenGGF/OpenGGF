@@ -5,6 +5,7 @@ import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.EngineContext;
 import com.openggf.LevelFrameContext;
 import com.openggf.LevelFrameStep;
+import com.openggf.LevelFrameTestStep;
 import com.openggf.game.mutation.DirectLevelMutationSurface;
 import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.LayoutMutationIntent;
@@ -278,11 +279,11 @@ class TestZoneLayoutMutationPipeline {
             return null;
         }).when(levelEvents).update();
 
-        LevelFrameStep.execute(LevelFrameContext.from(gameplayMode), levelManager, camera, () -> { });
+        LevelFrameTestStep.execute(LevelFrameContext.from(gameplayMode), levelManager, camera, () -> { });
         assertEquals("DPEMIB", log.toString(),
                 "queued gameplay mutations should flush after camera scroll and level events, before boundary easing");
 
-        LevelFrameStep.execute(LevelFrameContext.from(gameplayMode), levelManager, camera, () -> { });
+        LevelFrameTestStep.execute(LevelFrameContext.from(gameplayMode), levelManager, camera, () -> { });
         assertEquals("DPEMIBDPEB", log.toString(),
                 "queued mutation batch should be empty on the next frame while processDirtyRegions stays at frame start");
     }

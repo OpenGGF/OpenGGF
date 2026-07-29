@@ -30,7 +30,7 @@ class TestPlcVBlankOrdering {
             return null;
         }).when(level).updateObjectPositionsWithoutTouches();
 
-        LevelFrameStep.execute(context(module, calls), level, mock(Camera.class), () -> calls.add("physics"));
+        LevelFrameTestStep.execute(context(module, calls), level, mock(Camera.class), () -> calls.add("physics"));
 
         assertEquals(List.of("vblank-service", "vint", "objects", "physics", "prepare"), calls);
     }
@@ -41,7 +41,7 @@ class TestPlcVBlankOrdering {
         GameModule module = mock(GameModule.class);
         when(module.getGameService(PlcLifecycleService.class)).thenReturn(recordingService(calls));
 
-        LevelFrameStep.serviceVBlankOnly(context(module, calls));
+        LevelFrameTestStep.serviceVBlankOnly(context(module, calls));
 
         assertEquals(List.of("vint"), calls);
     }

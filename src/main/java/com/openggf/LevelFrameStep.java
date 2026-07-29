@@ -5,7 +5,6 @@ import com.openggf.game.BonusStageProvider;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
-import com.openggf.game.resources.PlcFrameLifecycleCoordinator;
 import com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame;
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.timing.HardwareServiceBoundary;
@@ -77,16 +76,6 @@ public final class LevelFrameStep {
      * @param spriteUpdate callback that runs the sprite/player physics update
      *                     (e.g. {@code SpriteManager.update()} or headless equivalent)
      */
-    public static LevelFrameResult execute(
-            LevelFrameContext context, LevelManager levelManager, Camera camera,
-            Runnable spriteUpdate) {
-        PlcLifecycleFrame frame = temporaryFrame(context);
-        LevelFrameResult result = execute(context, frame, PlcLifecyclePhase.ORDINARY_LEVEL,
-                levelManager, camera, spriteUpdate, DIRECT);
-        frame.finish();
-        return result;
-    }
-
     /**
      * Executes one frame of level-mode updates, applying ROM in-game pause first.
      * <p>
@@ -103,18 +92,6 @@ public final class LevelFrameStep {
      *         {@link LevelFrameResult#SETUP_ONLY} for the one-shot setup pass,
      *         otherwise {@link LevelFrameResult#GAMEPLAY_FRAME}
      */
-    public static LevelFrameResult executeWithPause(
-            LevelFrameContext context, LevelManager levelManager,
-            Camera camera, Runnable spriteUpdate,
-            boolean startEdgePressed, StepWrapper wrapper) {
-        PlcLifecycleFrame frame = temporaryFrame(context);
-        LevelFrameResult result = executeWithPause(context, frame,
-                PlcLifecyclePhase.ORDINARY_LEVEL, PlcLifecyclePhase.NORMAL_PAUSE,
-                levelManager, camera, spriteUpdate, startEdgePressed, wrapper);
-        frame.finish();
-        return result;
-    }
-
     public static LevelFrameResult executeWithPause(
             LevelFrameContext context, PlcLifecycleFrame frame,
             PlcLifecyclePhase activePhase, PlcLifecyclePhase pausePhase,
@@ -135,12 +112,6 @@ public final class LevelFrameStep {
     /**
      * Services the sole production boundary traversed by a VBlank-only row.
      */
-    public static void serviceVBlankOnly(LevelFrameContext context) {
-        PlcLifecycleFrame frame = temporaryFrame(context);
-        serviceVBlankOnly(context, frame, PlcLifecyclePhase.LAG);
-        frame.finish();
-    }
-
     public static void serviceVBlankOnly(
             LevelFrameContext context, PlcLifecycleFrame frame, PlcLifecyclePhase phase) {
         if (phase != PlcLifecyclePhase.LAG
@@ -166,14 +137,6 @@ public final class LevelFrameStep {
      * own boundary dispatch.
      */
     public static void executeHardwareTimedObjectScan(
-            LevelFrameContext context, Runnable objectScan) {
-        PlcLifecycleFrame frame = temporaryFrame(context);
-        executeHardwareTimedObjectScan(
-                context, frame, PlcLifecyclePhase.SPECIAL_STAGE, objectScan);
-        frame.finish();
-    }
-
-    public static void executeHardwareTimedObjectScan(
             LevelFrameContext context, PlcLifecycleFrame frame,
             PlcLifecyclePhase phase, Runnable objectScan) {
         Objects.requireNonNull(objectScan, "objectScan");
@@ -198,16 +161,6 @@ public final class LevelFrameStep {
      * @param spriteUpdate callback that runs the sprite/player physics update
      * @param wrapper      wraps individual steps (e.g. for profiling)
      */
-    public static LevelFrameResult execute(
-            LevelFrameContext context, LevelManager levelManager, Camera camera,
-            Runnable spriteUpdate, StepWrapper wrapper) {
-        PlcLifecycleFrame frame = temporaryFrame(context);
-        LevelFrameResult result = execute(context, frame, PlcLifecyclePhase.ORDINARY_LEVEL,
-                levelManager, camera, spriteUpdate, wrapper);
-        frame.finish();
-        return result;
-    }
-
     public static LevelFrameResult execute(
             LevelFrameContext context, PlcLifecycleFrame frame, PlcLifecyclePhase phase,
             LevelManager levelManager, Camera camera,
@@ -464,10 +417,6 @@ public final class LevelFrameStep {
         if (boundary != HardwareServiceBoundary.PRE_MAIN_LOOP) {
             context.hardwareTimingBoundaryObserver().onBoundary(boundary);
         }
-    }
-
-    private static PlcLifecycleFrame temporaryFrame(LevelFrameContext context) {
-        return new PlcFrameLifecycleCoordinator(context.gameModule()).latchBeforeFadeUpdate();
     }
 
 }

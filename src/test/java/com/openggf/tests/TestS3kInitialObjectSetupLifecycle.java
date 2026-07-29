@@ -4,6 +4,7 @@ import com.openggf.GameLoop;
 import com.openggf.LevelFrameContext;
 import com.openggf.LevelFrameResult;
 import com.openggf.LevelFrameStep;
+import com.openggf.LevelFrameTestStep;
 import com.openggf.control.InputHandler;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameModule;
@@ -69,7 +70,7 @@ class TestS3kInitialObjectSetupLifecycle {
             int levelBefore = manager.getFrameCounter();
             int p2ControlBefore = nativeObjectControl(p2);
 
-            LevelFrameResult setup = LevelFrameStep.executeWithPause(
+            LevelFrameResult setup = LevelFrameTestStep.executeWithPause(
                     LevelFrameContext.from(TestEnvironment.activeGameplayMode()),
                     manager, GameServices.camera(), () -> {
                         throw new AssertionError("SETUP_ONLY must not enter ordinary physics");
@@ -84,7 +85,7 @@ class TestS3kInitialObjectSetupLifecycle {
             assertEquals(0x53, nativeObjectControl(p1));
             assertEquals(p2ControlBefore, nativeObjectControl(p2));
 
-            LevelFrameResult gameplay = LevelFrameStep.executeWithPause(
+            LevelFrameResult gameplay = LevelFrameTestStep.executeWithPause(
                     LevelFrameContext.from(TestEnvironment.activeGameplayMode()),
                     manager, GameServices.camera(), () -> {
                     }, false, LevelFrameStep.DIRECT_WRAPPER);
@@ -112,7 +113,7 @@ class TestS3kInitialObjectSetupLifecycle {
             LevelManager manager = GameServices.level();
             int objectBefore = manager.getObjectManager().getFrameCounter();
 
-            LevelFrameResult result = LevelFrameStep.executeWithPause(
+            LevelFrameResult result = LevelFrameTestStep.executeWithPause(
                     LevelFrameContext.from(TestEnvironment.activeGameplayMode()),
                     manager, GameServices.camera(), () -> {
                         throw new AssertionError("PAUSED must not enter ordinary physics");
@@ -384,7 +385,7 @@ class TestS3kInitialObjectSetupLifecycle {
             LevelManager manager = GameServices.level();
             int before = manager.getObjectManager().getFrameCounter();
 
-            LevelFrameResult paused = LevelFrameStep.executeWithPause(
+            LevelFrameResult paused = LevelFrameTestStep.executeWithPause(
                     LevelFrameContext.from(TestEnvironment.activeGameplayMode()),
                     manager, GameServices.camera(), () -> {
                     }, true, LevelFrameStep.DIRECT_WRAPPER);
@@ -393,7 +394,7 @@ class TestS3kInitialObjectSetupLifecycle {
             assertTrue(manager.hasPendingInitialProcessSpritesPass());
             assertEquals(before, manager.getObjectManager().getFrameCounter());
 
-            LevelFrameResult resumed = LevelFrameStep.executeWithPause(
+            LevelFrameResult resumed = LevelFrameTestStep.executeWithPause(
                     LevelFrameContext.from(TestEnvironment.activeGameplayMode()),
                     manager, GameServices.camera(), () -> {
                     }, true, LevelFrameStep.DIRECT_WRAPPER);
@@ -591,7 +592,7 @@ class TestS3kInitialObjectSetupLifecycle {
                     new Class<?>[] { boolean.class }, false));
             assertFalse(manager.hasPendingInitialProcessSpritesPass());
             assertEquals(LevelFrameResult.GAMEPLAY_FRAME,
-                    LevelFrameStep.execute(
+                    LevelFrameTestStep.execute(
                             LevelFrameContext.from(TestEnvironment.activeGameplayMode()),
                             manager, GameServices.camera(), () -> {
                             }));
@@ -608,12 +609,12 @@ class TestS3kInitialObjectSetupLifecycle {
             LevelManager manager = GameServices.level();
             OscillatorState before = captureOscillator();
             assertEquals(LevelFrameResult.SETUP_ONLY,
-                    LevelFrameStep.execute(
+                    LevelFrameTestStep.execute(
                             LevelFrameContext.from(TestEnvironment.activeGameplayMode()),
                             manager, GameServices.camera(), () -> {
                             }));
             assertEquals(LevelFrameResult.GAMEPLAY_FRAME,
-                    LevelFrameStep.execute(
+                    LevelFrameTestStep.execute(
                             LevelFrameContext.from(TestEnvironment.activeGameplayMode()),
                             manager, GameServices.camera(), () -> {
                             }));

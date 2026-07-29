@@ -1240,7 +1240,14 @@ public final class TraceSessionLauncher {
                     LevelFrameContext.from(SessionManager.getCurrentGameplayMode()),
                     level,
                     inputs.p1StartPressed());
-            if (!admission.runsGameplay()) {
+            if (admission.result() == LevelFrameResult.PAUSED) {
+                LevelFrameStep.serviceVBlankOnly(
+                        LevelFrameContext.from(SessionManager.getCurrentGameplayMode()),
+                        lifecycleFrame,
+                        com.openggf.game.resources.PlcLifecyclePhase.NORMAL_PAUSE);
+                return admission.result();
+            }
+            if (admission.result() == LevelFrameResult.SETUP_ONLY) {
                 return admission.result();
             }
             publishPlaybackInput(inputs);
