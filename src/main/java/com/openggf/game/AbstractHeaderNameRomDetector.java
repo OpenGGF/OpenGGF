@@ -10,8 +10,13 @@ import java.util.logging.Logger;
  */
 public abstract class AbstractHeaderNameRomDetector implements RomDetector {
 
-    @Override
-    public final boolean canHandle(Rom rom) {
+    /**
+     * Runs the shared ROM-header detection algorithm.
+     *
+     * @param rom the ROM to inspect
+     * @return whether the normalized domestic or international name matches
+     */
+    protected final boolean canHandleHeaderName(Rom rom) {
         if (rom == null || !rom.isOpen()) {
             return false;
         }

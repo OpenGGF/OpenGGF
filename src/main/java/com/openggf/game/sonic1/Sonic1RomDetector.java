@@ -1,5 +1,6 @@
 package com.openggf.game.sonic1;
 
+import com.openggf.data.Rom;
 import com.openggf.game.AbstractHeaderNameRomDetector;
 import com.openggf.game.GameModule;
 
@@ -20,6 +21,11 @@ public class Sonic1RomDetector extends AbstractHeaderNameRomDetector {
 
     // Lower priority number = checked first (before Sonic 2's priority of 100)
     private static final int PRIORITY = 90;
+
+    @Override
+    public boolean canHandle(Rom rom) {
+        return canHandleHeaderName(rom);
+    }
 
     @Override
     protected boolean matchesNormalizedName(String normalizedName) {

@@ -96,8 +96,8 @@ malformed-input correction, not a supported-input compatibility change.
 
 ### ROM-header detectors
 
-Add `com.openggf.game.AbstractHeaderNameRomDetector`. Its final
-`canHandle(Rom)` template:
+Add `com.openggf.game.AbstractHeaderNameRomDetector`. Its protected final
+`canHandleHeaderName(Rom)` template:
 
 1. rejects null or closed ROMs;
 2. reads and tests the domestic name;
@@ -117,7 +117,10 @@ protected abstract Logger logger();
 The three public concrete detectors retain matching constants/predicates,
 priorities, game names, and module construction. S1 exclusions and all S3K
 aliases remain explicit. `RomDetectionService` registration and priority
-sorting do not change.
+sorting do not change. Each non-final concrete detector continues to declare a
+public, non-final `canHandle(Rom)` method that forwards to the protected final
+template. This preserves the pre-extraction subclass override surface while
+keeping the shared orchestration non-overridable.
 
 Fine-level detector log wording is diagnostic rather than contractual. The
 template preserves success/miss/failure logging and detector identity, but does
@@ -169,6 +172,8 @@ continue normalizing null inputs to empty arrays and returning a bundle.
   through to the international name.
 - Concrete detector and HUD factory classes remain public and retain their
   existing method signatures.
+- Each concrete detector declares a public, non-final `canHandle(Rom)` so
+  downstream subclasses retain their existing override compatibility.
 - No `Pattern` instance is cloned or mutated.
 
 ## Testing
@@ -188,7 +193,8 @@ as integration coverage.
 
 Add cross-game tests for null/closed ROM rejection, domestic short-circuit,
 international fallback, read failures, normalization, S1 exclusions, S3K
-aliases, priorities, names, and module types.
+aliases, priorities, names, module types, and reflection-based verification
+that each concrete detector declares a public, non-final `canHandle(Rom)`.
 
 ### HUD tests
 
@@ -213,7 +219,8 @@ The focused baseline has one known fixture failure. At fork baseline
 and received `null`. The HCZ/MGZ fixture metadata omit
 `ring_floor_check_counter_phase`. The tranche command must retain that exact
 single failure and introduce no additional focused failure or error; it ran 150
-tests with the same 1/0 result.
+tests before the compatibility correction and 151 afterward, with the same 1/0
+result.
 
 The full JDK 21 suite runs after all three tasks because these shared utilities
 affect bootstrap and trace tooling even though they do not alter gameplay. Use

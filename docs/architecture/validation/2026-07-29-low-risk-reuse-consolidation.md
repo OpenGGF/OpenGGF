@@ -21,7 +21,7 @@ mvn -Dmse=off \
 | Revision / set | Tests | Failures | Errors | Result |
 |---|---:|---:|---:|---|
 | Fork baseline `eb1b138c4`, comparable set excluding tranche tests | 127 | 1 | 0 | `TestTraceDataParsing.parsesRecordedRingFloorCheckCounterPhase` expected `2`, got `null` |
-| Consolidation tranche, complete set | 150 | 1 | 0 | Same method and assertion only |
+| Consolidation tranche after detector compatibility correction, complete set | 151 | 1 | 0 | Same method and assertion only |
 
 The pre-existing HCZ/MGZ metadata do not contain
 `ring_floor_check_counter_phase`. This is a known fixture failure, so focused
@@ -40,14 +40,32 @@ mvn clean test
 | Revision | Suites | Tests | Failures | Errors | Skipped | Failure/error set |
 |---|---:|---:|---:|---:|---:|---|
 | Detached clean baseline `eb1b138c4` | 1,726 | 13,497 | 1 | 1 | 35 | `TestGameLoop` only |
-| Consolidation tranche | 1,728 | 13,521 | 1 | 1 | 35 | Same `TestGameLoop` only |
+| Consolidation tranche before detector compatibility correction | 1,728 | 13,521 | 1 | 1 | 35 | Same `TestGameLoop` only |
 
 The unchanged `TestGameLoop` cases were
 `traceRealtimeRewindRunsBeforePlaybackInputBridge` (failure: expected `true`,
 got `false`) and
 `setupAdmissionPrecedesSeamlessBoundaryAndTraceCameraMutations` (error:
 `StringIndexOutOfBoundsException`, `Range [34669, -1) out of bounds for length
-191573`). The tranche adds two suites and 24 tests but no failure or error.
+191573`). That clean tranche run added two suites and 24 tests but no failure
+or error. The subsequent detector compatibility correction adds one reflection
+test; its focused verification is recorded below. A future clean tranche sweep
+is therefore expected to report 13,522 tests, but this correction does not
+retroactively change the completed clean-run measurement above.
+
+## Detector override compatibility correction
+
+Review identified that moving `canHandle(Rom)` to a final public method on the
+abstract template removed the concrete detectors' previously overridable
+declared methods. The correction keeps the shared algorithm in protected final
+`canHandleHeaderName(Rom)` and restores a public, non-final forwarding
+`canHandle(Rom)` declaration on each concrete detector.
+
+The focused detector test first failed with 11 tests / 1 failure / 0 errors:
+reflection reported `NoSuchMethodException` for all three concrete classes.
+After the correction, the detector and architecture command ran 45 tests / 0
+failures / 0 errors. The complete focused tranche command then ran 151 tests /
+1 failure / 0 errors, retaining only the known trace-metadata assertion.
 
 ## Methodology and termination state
 

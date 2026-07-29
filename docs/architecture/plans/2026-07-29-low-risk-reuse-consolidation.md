@@ -224,7 +224,12 @@ Skills: n/a
 
 - Produces abstract hooks:
   `matchesNormalizedName(String) -> boolean` and `logger() -> Logger`.
+- Produces protected final template method:
+  `canHandleHeaderName(Rom) -> boolean`.
 - Preserves all methods of the three public concrete detectors.
+- Each concrete detector remains non-final and declares an
+  `@Override public boolean canHandle(Rom)` forwarding method that is itself
+  non-final.
 
 - [ ] **Step 1: Write failing template tests**
 
@@ -265,6 +270,8 @@ Add parameterized or explicit tests for:
 - game names remain unchanged; and
 - `createModule()` returns `Sonic1GameModule`, `Sonic2GameModule`, and
   `Sonic3kGameModule`.
+- reflection via `getDeclaredMethod("canHandle", Rom.class)` confirms that all
+  three concrete detectors still declare a public, non-final method.
 
 The helper is:
 
@@ -294,8 +301,8 @@ exist.
 
 - [ ] **Step 3: Implement the template**
 
-Implement final `canHandle` with the existing read/error ordering. Provide a
-protected final normalization helper that uses the current
+Implement protected final `canHandleHeaderName` with the existing read/error
+ordering. Provide a protected final normalization helper that uses the current
 `toUpperCase().replaceAll("\\s+", " ").trim()` behavior. Log detector identity
 at fine level for domestic/international success and miss, and warning on
 `IOException`. Exact wording is not contractual.
@@ -303,8 +310,11 @@ at fine level for domestic/international success and miss, and warning on
 - [ ] **Step 4: Convert the three concrete detectors**
 
 Extend the template, implement `matchesNormalizedName` and `logger`, and remove
-only duplicated orchestration/normalization. Keep public class names, matching
-constants, priorities, module construction, and game names.
+only duplicated orchestration/normalization. Each concrete detector declares
+`@Override public boolean canHandle(Rom rom)` and forwards to
+`canHandleHeaderName(rom)`; neither the class nor forwarding method is final.
+Keep public class names, matching constants, priorities, module construction,
+and game names.
 
 - [ ] **Step 5: Run detector and architecture tests**
 
@@ -447,7 +457,8 @@ Skills: n/a
 Run the focused command from the design. The acceptance result is exactly one
 known failure and zero errors: baseline `eb1b138c4` ran the comparable
 pre-tranche set as 127 tests / 1 failure / 0 errors, and the completed tranche
-ran 150 / 1 / 0. In both cases the sole failure is
+after the detector override-compatibility correction ran 151 / 1 / 0. In both
+cases the sole failure is
 `TestTraceDataParsing.parsesRecordedRingFloorCheckCounterPhase`, which expects
 `2` and receives `null` because the HCZ/MGZ metadata omit
 `ring_floor_check_counter_phase`. Any additional focused failure or error is a
@@ -467,8 +478,11 @@ printing final output; after confirming their XML reports were complete, they
 were terminated and the XML result was used as the authoritative outcome.
 
 The clean baseline produced 1,726 suites / 13,497 tests / 1 failure / 1 error /
-35 skipped. The tranche produced 1,728 / 13,521 / 1 / 1 / 35. Both contain only
-the two observed `TestGameLoop` failures:
+35 skipped. Before the detector override-compatibility correction, the tranche
+produced 1,728 / 13,521 / 1 / 1 / 35. The correction adds one reflection test,
+so the next clean tranche sweep is expected to report 13,522 tests with the
+same suite count. Both completed clean runs contain only the two observed
+`TestGameLoop` failures:
 
 - `traceRealtimeRewindRunsBeforePlaybackInputBridge`
 - `setupAdmissionPrecedesSeamlessBoundaryAndTraceCameraMutations`

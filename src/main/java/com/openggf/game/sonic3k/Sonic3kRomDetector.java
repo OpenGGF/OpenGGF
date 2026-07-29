@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k;
 
+import com.openggf.data.Rom;
 import com.openggf.game.AbstractHeaderNameRomDetector;
 import com.openggf.game.GameModule;
 
@@ -18,6 +19,11 @@ public class Sonic3kRomDetector extends AbstractHeaderNameRomDetector {
 
     // Checked before S1 (90) and S2 (100)
     private static final int PRIORITY = 80;
+
+    @Override
+    public boolean canHandle(Rom rom) {
+        return canHandleHeaderName(rom);
+    }
 
     @Override
     protected boolean matchesNormalizedName(String normalizedName) {

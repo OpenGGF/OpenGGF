@@ -10,7 +10,11 @@ import com.openggf.game.sonic3k.Sonic3kRomDetector;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -114,6 +118,23 @@ class TestHeaderNameRomDetectors {
         assertTrue(AbstractHeaderNameRomDetector.class.isAssignableFrom(Sonic1RomDetector.class));
         assertTrue(AbstractHeaderNameRomDetector.class.isAssignableFrom(Sonic2RomDetector.class));
         assertTrue(AbstractHeaderNameRomDetector.class.isAssignableFrom(Sonic3kRomDetector.class));
+    }
+
+    @Test
+    void concreteDetectorsRetainOverridableDeclaredCanHandleMethods() {
+        assertAll(
+                () -> assertDeclaresPublicNonFinalCanHandle(Sonic1RomDetector.class),
+                () -> assertDeclaresPublicNonFinalCanHandle(Sonic2RomDetector.class),
+                () -> assertDeclaresPublicNonFinalCanHandle(Sonic3kRomDetector.class)
+        );
+    }
+
+    private static void assertDeclaresPublicNonFinalCanHandle(Class<?> detectorClass) {
+        assertFalse(Modifier.isFinal(detectorClass.getModifiers()));
+        Method canHandle = assertDoesNotThrow(
+                () -> detectorClass.getDeclaredMethod("canHandle", Rom.class));
+        assertTrue(Modifier.isPublic(canHandle.getModifiers()));
+        assertFalse(Modifier.isFinal(canHandle.getModifiers()));
     }
 
     private static Rom openRom(String domestic, String international) throws IOException {
