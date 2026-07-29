@@ -2,6 +2,7 @@ package com.openggf.game.sonic1.specialstage;
 
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceEvent;
+import com.openggf.trace.TraceFiles;
 import com.openggf.trace.TraceMetadata;
 
 import java.io.BufferedReader;
@@ -49,11 +50,11 @@ public final class Sonic1SpecialStageTraceData {
                     + traceProfile + "' in " + metadataPath);
         }
 
-        Path physicsPath = TraceData.resolveTraceFile(traceDirectory, "physics.csv");
+        Path physicsPath = TraceFiles.resolve(traceDirectory, "physics.csv");
         if (physicsPath == null) {
             throw new NoSuchFileException(traceDirectory.resolve("physics.csv").toString());
         }
-        Path auxPath = TraceData.resolveTraceFile(traceDirectory, "aux_state.jsonl");
+        Path auxPath = TraceFiles.resolve(traceDirectory, "aux_state.jsonl");
 
         List<Sonic1SpecialStageTraceFrame> frames = loadPhysicsCsv(physicsPath);
         Map<Integer, List<TraceEvent>> events = auxPath != null
@@ -95,7 +96,7 @@ public final class Sonic1SpecialStageTraceData {
 
     private static List<Sonic1SpecialStageTraceFrame> loadPhysicsCsv(Path csvPath) throws IOException {
         List<Sonic1SpecialStageTraceFrame> frames = new ArrayList<>();
-        try (BufferedReader reader = TraceData.openTraceReader(csvPath)) {
+        try (BufferedReader reader = TraceFiles.openReader(csvPath)) {
             String line = reader.readLine(); // skip header
             if (line == null) return frames;
             while ((line = reader.readLine()) != null) {
