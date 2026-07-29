@@ -122,6 +122,16 @@ public interface SpecialStageProvider extends MiniGameProvider {
         return true;
     }
 
+    /** Called at the native one-player special-stage results setup boundary. */
+    default void onEnterResults() {
+    }
+
+    /** Resets the stage and publishes its game-owned results PLC producer. */
+    default void resetForResults() {
+        reset();
+        onEnterResults();
+    }
+
     /**
      * Gets the current stage index.
      *

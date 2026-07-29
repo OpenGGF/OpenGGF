@@ -6,6 +6,7 @@ import com.openggf.game.sonic1.audio.Sonic1Music;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
+import com.openggf.game.sonic1.resources.Sonic1PlcService;
 import com.openggf.game.sonic1.scroll.Sonic1ZoneConstants;
 import com.openggf.level.objects.AbstractResultsScreen;
 import com.openggf.graphics.GLCommand;
@@ -39,6 +40,8 @@ import java.util.logging.Logger;
 public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
         implements ZeroScalarArgsRewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(Sonic1ResultsScreenObjectInstance.class.getName());
+    /** True once the ROM's routine-0 PLC gate has released this card. */
+    private boolean plcReadinessPassed;
 
     // -----------------------------------------------------------------------
     // Time bonus table (from s1disasm 0D Signpost.asm:TimeBonuses)
@@ -122,22 +125,6 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
     private static final int SLIDE_IN_FRAMES = 68;
 
     // -----------------------------------------------------------------------
-    // Got_ChkPLC (routine 0): the card waits for the title-card PLC to finish
-    // decompressing before the slide-in. The title-card art (Nem_TitleCard,
-    // sonic.asm @ $39204; PLC_TitleCard in Pattern Load Cues.asm) is 128 tiles
-    // (artnem/Title Cards.nem header word $8080, low 15 bits = $80). Gameplay
-    // VBlank decompresses 3 Nemesis tiles/frame (ProcessPLC_3Tiles, called from
-    // VBlank_UpdateScreen for id_VBlank_Levels), so the card holds for
-    // ceil(128 / 3) = 43 frames. This is game-wide S1 act-end behaviour, not an
-    // SBZ2 carve-out; SBZ2 is simply where the resulting timing is observable
-    // (the right-boundary scroll cascade).
-    // -----------------------------------------------------------------------
-    private static final int TITLE_CARD_TILE_COUNT = 0x80; // Nem_TitleCard header (XOR flag masked)
-    private static final int PLC_TILES_PER_FRAME = 3;      // ProcessPLC_3Tiles (gameplay VBlank)
-    private static final int PLC_DECOMPRESS_FRAMES =
-            (TITLE_CARD_TILE_COUNT + PLC_TILES_PER_FRAME - 1) / PLC_TILES_PER_FRAME; // ceil = 43
-
-    // -----------------------------------------------------------------------
     // SBZ Act 2 special transition states (ROM: Got_Move2 / loc_C766)
     //
     // After tally, SBZ2 skips the normal level-advance fade and instead:
@@ -182,13 +169,6 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
     /** Tracks whether SBZ2 slide-out elements have reached their exit positions. */
     private final boolean[] elemExited = new boolean[ELEMENT_COUNT];
 
-    /**
-     * Got_ChkPLC (routine 0) countdown: frames remaining before the title-card PLC
-     * is considered decompressed and the slide-in begins. Captured by the generic
-     * rewind field capturer so a held-rewind recreate restores mid-wait state.
-     */
-    private int plcDecompressFramesRemaining = PLC_DECOMPRESS_FRAMES;
-
     public void setSpecialStageAfter(boolean specialStageAfter) {
         this.specialStageAfter = specialStageAfter;
     }
@@ -232,17 +212,15 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
 
-        // ROM Got_ChkPLC (routine 0): the end-of-act card idles until the title-card
-        // PLC has finished decompressing before Got_Main sets up the card elements and
-        // the slide-in begins (3A Got Through Card.asm: tst.l (v_plc_buffer); beq Got_Main; rts).
-        // The engine's PLC pipeline loads art instantly, so model the decompression
-        // delay directly (see PLC_DECOMPRESS_FRAMES). This holds the whole end-of-act
-        // sequence back by the same number of frames as the hardware, which matters for
-        // SBZ2 where the right-boundary scroll timing is observable.
-        if (plcDecompressFramesRemaining > 0) {
-            plcDecompressFramesRemaining--;
-            this.frameCounter = frameCounter;
-            return;
+        // ROM Got_ChkPLC is routine 0 only. Once it has released, later card
+        // routines must keep running even when unrelated PLC work is submitted.
+        if (!plcReadinessPassed) {
+            Sonic1PlcService plcService = services().gameService(Sonic1PlcService.class);
+            if (plcService != null && plcService.isBusy()) {
+                this.frameCounter = frameCounter;
+                return;
+            }
+            plcReadinessPassed = true;
         }
 
         // Handle SBZ2 special states outside the base class state machine
@@ -399,7 +377,8 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
         }
 
         var fadeManager = services().fadeManager();
-        fadeManager.startFadeToWhite(() -> {
+        var marker = services().nativeFadeLifecycle().beginNativeBlockingFade();
+        fadeManager.startFadeToWhite(marker.wrapCompletion(() -> {
             setDestroyed(true);
             if (true) {
                 // Giant Ring collected: advance zone/act first (ROM-accurate: Got_NextLevel),
@@ -410,7 +389,7 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
             // Don't start fadeFromWhite here — let the screen stay white
             // (HOLD_WHITE). enterSpecialStage() will detect HOLD_WHITE and
             // transition directly, fading from white to reveal the special stage.
-        });
+        }));
     }
 
     private void triggerFadeToBlack() {
@@ -420,14 +399,16 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
         services().requestSessionSave(SaveReason.PROGRESSION_SAVE);
 
         var fadeManager = services().fadeManager();
-        fadeManager.startFadeToBlack(() -> {
+        var marker = services().nativeFadeLifecycle().beginNativeBlockingFade();
+        fadeManager.startFadeToBlack(marker.wrapCompletion(() -> {
             setDestroyed(true);
             if (true) {
                 services().advanceToNextLevel();
                 // Keep transition atomic: immediately reveal the next scene.
-                fadeManager.startFadeFromBlack(null);
+                var reveal = services().nativeFadeLifecycle().beginNativeBlockingFade();
+                fadeManager.startFadeFromBlack(reveal.wrapCompletion(() -> { }));
             }
-        });
+        }));
     }
 
     // -----------------------------------------------------------------------
@@ -472,7 +453,6 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
             // Check if reached or passed target
             if ((direction > 0 && next >= target) || (direction < 0 && next <= target)) {
                 next = target;
-                elemExited[i] = true;
             }
 
             elemCurrentX[i] = next;
@@ -532,9 +512,7 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        // ROM Got_ChkPLC (routine 0) only idles (rts) — the card elements are not set
-        // up by Got_Main until the title-card PLC finishes, so nothing renders yet.
-        if (plcDecompressFramesRemaining > 0) {
+        if (!plcReadinessPassed) {
             return;
         }
         var camera = services().camera();

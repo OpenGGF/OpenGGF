@@ -8,7 +8,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -31,7 +31,7 @@ class TestSpecialStageEntryPresentationController {
 
         InOrder order = inOrder(music, fade);
         order.verify(music).run();
-        order.verify(fade).startFadeFromWhite(isNull());
+        order.verify(fade).startFadeFromWhite(any());
         assertFalse(controller.isPending());
     }
 
@@ -57,7 +57,7 @@ class TestSpecialStageEntryPresentationController {
 
         InOrder order = inOrder(music, fade);
         order.verify(music).run();
-        order.verify(fade).startFadeFromBlack(isNull());
+        order.verify(fade).startFadeFromBlack(any());
         verifyNoMoreInteractions(music);
         assertFalse(controller.isPending());
     }
@@ -95,7 +95,7 @@ class TestSpecialStageEntryPresentationController {
         controller.update(provider, fade, music);
 
         verify(music, never()).run();
-        verify(fade, never()).startFadeFromBlack(isNull());
+        verify(fade, never()).startFadeFromBlack(any());
         assertFalse(controller.isPending());
     }
 }

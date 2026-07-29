@@ -33,6 +33,8 @@ import com.openggf.game.dataselect.DataSelectHostProfile;
 import com.openggf.game.dataselect.DataSelectPresentationProvider;
 import com.openggf.game.startup.DonatedDataSelectWarmupTask;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
+import com.openggf.game.sonic1.resources.Sonic1PlcService;
+import com.openggf.game.resources.PlcLifecycleService;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.game.sonic1.credits.Sonic1EndingProvider;
 import com.openggf.game.sonic1.dataselect.S1DataSelectProfile;
@@ -64,6 +66,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Optional;
 
 import static java.security.MessageDigest.getInstance;
@@ -90,6 +93,7 @@ public class Sonic1GameModule implements GameModule {
             new Sonic1LevelInitProfile(levelEventManager, switchManager, conveyorState);
     private PhysicsProvider physicsProvider;
     private ObjectRegistry objectRegistry;
+    private Sonic1PlcService plcService;
 
     @Override
     public String getIdentifier() {
@@ -119,7 +123,13 @@ public class Sonic1GameModule implements GameModule {
 
     @Override
     public Game createGame(Rom rom) {
+        plcService = new Sonic1PlcService(rom);
         return new Sonic1(rom);
+    }
+
+    @Override
+    public List<com.openggf.game.rewind.RewindSnapshottable<?>> rewindAdapters() {
+        return plcService == null ? List.of() : List.of(plcService);
     }
 
     @Override
@@ -268,6 +278,8 @@ public class Sonic1GameModule implements GameModule {
         if (type == Sonic1SwitchManager.class) return (T) switchManager;
         if (type == Sonic1ConveyorState.class) return (T) conveyorState;
         if (type == Sonic1FloatingBlockState.class) return (T) floatingBlockState;
+        if (type == Sonic1PlcService.class) return (T) plcService;
+        if (type == PlcLifecycleService.class) return (T) plcService;
         return null;
     }
 
@@ -294,6 +306,11 @@ public class Sonic1GameModule implements GameModule {
         conveyorState.reset();
         // Reset REV01 f_obj56 for every fresh level/restart.
         floatingBlockState.reset();
+    }
+
+    @Override
+    public void resetModuleScopedState() {
+        plcService = null;
     }
 
     @Override

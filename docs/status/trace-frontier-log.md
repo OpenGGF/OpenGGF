@@ -1,5 +1,36 @@
 # Trace Frontier Log
 
+## 2026-07-29 - S1/S2 native PLC queue timing regressions closed
+
+- Worktree: `.worktrees/ai-s1-s2-plc-service-queues`, branch
+  `bugfix/ai-s1-s2-plc-service-queues`, uncommitted candidate over
+  `2fc683157`.
+- The S1/S2 PLC implementation now reaches the same production boundary when
+  an initial title card is visible or deliberately omitted. S2 results use the
+  ROM's 180/300-frame accumulated-bonus threshold; duplicate S1 signposts share
+  the fixed `v_endcard` owner; and S1 SBZ2 preserves the separate move-to-final,
+  equal-position routine-change, and first boundary-scroll scans.
+- The previously observed S2 early-transition frontiers at ARZ frame 5019,
+  CNZ frame 9418, CPZ2 frame 12130, EHZ frame 5798, and MTZ frame 10080 are
+  closed. The prior S1 SBZ2 one-frame camera error at frame 8983 is closed, the
+  SYZ2 duplicate-results fade failure is closed, and FZ remains green.
+- Focused PLC lifecycle, producer, results, idempotency, and trace-isolation
+  command: `mvn -Dmse=off -Dsonic1.rom.path=s1.gen
+  -Dsonic2.rom.path=s2.gen -Dtest=<15 focused classes> test`.
+  Result: 81 tests, 0 failures, 0 errors, 0 skips.
+- Affected replay command selected S1 SYZ2/SBZ2/FZ plus S2
+  ARZ/CNZ/CPZ2/EHZ1/HTZ/MTZ with both ROM properties. Result: 9 tests,
+  0 failures, 0 errors, 0 skips. No trace fixture or recorded readiness value
+  was changed or consumed.
+- Fresh serial full-matrix command selected the preserved 30 S1 and 20 S2
+  concrete replay classes, with `-Dsurefire.forkCount=1` and both ROM
+  properties. Result: 50 classes / 51 test methods, 0 failures, 0 errors,
+  0 skips (7m24s). This matches the pre-queue 50-class baseline. The S2
+  special-stage class contributes two test methods. The single fork also
+  exercises reset/isolation boundaries between sequential classes. Trace recording remains
+  comparison-only: neither the trace driver nor a timing stream submits,
+  services, prepares, clears, replaces, or releases S1/S2 PLC work.
+
 ## 2026-07-28 - S3K 90-slot allocation backport validation
 
 - Corrected the S3K managed allocation and initial-dispatch window from

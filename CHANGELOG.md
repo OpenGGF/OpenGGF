@@ -3,6 +3,21 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: skipped and visible Sonic 1/2 title-card paths now converge on the same
+  idempotent, ROM-owned initial PLC boundary. S1 preserves its partial
+  post-fade secondary queue; S2 publishes the level-header secondary cue after
+  the locked title drain. Results timing now follows the native S2 bonus
+  threshold and S1 SBZ2 move-out scan boundary, while duplicate S1 signposts
+  share the fixed end-card slot.
+- Fix: capacity-deferred Sonic 1 and Sonic 2 PLC publications now remain
+  bookkeeping-only retries instead of consuming the next Dynamic Level Event
+  frame. Failed retries stay pending and successful retries publish once, while
+  the already-advanced event routine continues its native camera, sidekick, and
+  boss-delay work on that same frame.
+- Fix: Sonic 1 and Sonic 2 PLC consumers now wait on their session-owned ROM FIFO rather than fixed decompression countdowns. Final Zone and ARZ preserve their native camera, RNG, player, and sidekick ordering while polling the whole queue; normal and special-stage results begin on the first empty frame. The obsolete Final Zone-only timing surrogate and its rewind payload are removed.
+- Fix: Sonic 1 and Sonic 2 now submit their represented ROM PLC producers at title, level, title-card, results, special-stage, credits, boss, and runtime-event boundaries. Sonic 2 preflights complete ordered PLC batches with eager art before publishing either side, so a rejected request leaves no FIFO work, renderer registration, or cache refresh; cache hits still submit their logical work. The represented one-player S2 life-art authority submits PLC 9 only for Tails-alone and records the missing retail two-player/graphics source as an explicit session seam.
+- Fix: Sonic 1 and Sonic 2 now service and prepare their ROM-backed PLC queues at each native title, title-card, level, fade, results, credits, ending, special-stage, and pause lifecycle boundary. One session-owned token prevents nested loops or fade-completion callbacks from double-servicing a represented VBlank, while live, recording, trace-rewind, and live-rewind drivers advance the same phase contract independently of rendering cadence. Sonic 1's custom 60-frame credits-demo fade now completes on its exact final logical frame while retaining the black hold; S3K hardware and Kosinski queue boundaries remain unchanged.
+- Feat: Sonic 1 and Sonic 2 now have a deterministic, rewind-safe logical Nemesis PLC service kernel. ROM-backed pattern counts, explicit preparation, bounded service, FIFO duplicate preservation, and immutable active/tail snapshots establish PLC readiness without changing any S3K queue semantics.
 - Feature: normal-play hardware load jobs can now carry a deterministic profiled admission countdown that starts at physical FIFO-head activation and runs alongside production preparation. Readiness requires both gates, rewind preserves assigned timing state, ready-but-unclaimed jobs no longer occupy the modeled physical head, recorded trace kinds bypass profile lookup entirely, and S3K KosM parents add no cost beyond their direct child jobs.
 - Feature: normal play can now select deterministic hardware load-time simulation. `NONE` remains the default; `PROFILED` uses 170 exact S3K Kosinski fingerprints gathered from five native movie replays plus a held-out-validated command-stream estimator for unknown direct jobs; `FAST` currently warns and falls back to `NONE`; and `REALISTIC` currently warns and falls back to `PROFILED`. Trace replay keeps its independent recorded hardware-timing authority.
 - Fix: HCZ, MGZ, and LBZ seamless act transitions now submit the ROM's ordered direct chunk, direct block, and Kosinski-module art workloads and wait for the global module queue to empty. This replaces MGZ/LBZ's fixed decompression delays, restores HCZ's omitted RAM jobs, and keeps submission identity rewind-safe.

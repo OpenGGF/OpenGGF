@@ -269,10 +269,10 @@ public class TestPostLoadAssemblyBehavior {
         Sonic1LevelInitProfile profile = newS1Profile();
         List<InitStep> steps = profile.levelLoadSteps(ctx);
 
-        // 12 resource steps + S1's v_misc_variables/RNG reset + 6 post-load
-        // steps (no SpawnSidekick) = 19
+        // 12 resource steps + S1's v_misc_variables/RNG reset + native PLC
+        // lifecycle assembly + 6 post-load steps (no SpawnSidekick) = 20
         // (InitObjectManager + InitCameraBounds merged into InitObjectSystem)
-        assertEquals(19, steps.size(), "S1 should have 19 steps (13 resource + 6 post-load)");
+        assertEquals(20, steps.size(), "S1 should have 20 steps (14 resource + 6 post-load)");
     }
 
     @Test

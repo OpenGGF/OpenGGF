@@ -18,6 +18,7 @@ import com.openggf.game.palette.PaletteColorStateAdapter;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.render.AdvancedRenderModeController;
 import com.openggf.game.render.SpecialRenderEffectRegistry;
+import com.openggf.game.resources.PlcFrameLifecycleCoordinator;
 import com.openggf.game.rewind.EngineStepper;
 import com.openggf.game.rewind.InMemoryKeyframeStore;
 import com.openggf.game.rewind.InputSource;
@@ -76,6 +77,7 @@ public final class GameplayModeContext implements ModeContext {
     private final SeamlessTransitionResourceHandoffRegistry
             seamlessTransitionResourceHandoffs;
     private final RecordedCompletionAuthority recordedCompletionAuthority;
+    private final PlcFrameLifecycleCoordinator plcFrameLifecycle;
 
     private Camera camera;
     private TimerManager timerManager;
@@ -164,6 +166,8 @@ public final class GameplayModeContext implements ModeContext {
                 "runtimeArtCoordinator");
         this.seamlessTransitionResourceHandoffs =
                 new SeamlessTransitionResourceHandoffRegistry();
+        this.plcFrameLifecycle =
+                new PlcFrameLifecycleCoordinator(worldSession.getGameModule());
         this.recordedCompletionAuthority =
                 checkedPolicy == HardwareReadinessAdmissionPolicy.RECORDED
                         ? hardwareTiming.beginRecordedAdmission()
@@ -268,6 +272,7 @@ public final class GameplayModeContext implements ModeContext {
         this.rewindRegistry.register(timerManager);
         this.rewindRegistry.register(fadeManager);
         this.rewindRegistry.register(new OscillationStaticAdapter());
+        registerGameModuleRewindAdapters();
         // Register solid-execution adapter (no-op if not DefaultSolidExecutionRegistry)
         if (solidExecutionRegistry instanceof DefaultSolidExecutionRegistry dser) {
             this.rewindRegistry.register(dser);
@@ -398,6 +403,10 @@ public final class GameplayModeContext implements ModeContext {
 
     public FadeManager getFadeManager() {
         return fadeManager;
+    }
+
+    public PlcFrameLifecycleCoordinator plcFrameLifecycle() {
+        return plcFrameLifecycle;
     }
 
     public GameRng getRng() {
@@ -539,6 +548,18 @@ public final class GameplayModeContext implements ModeContext {
         if (rewindRegistry == null) {
             return;
         }
+        // Game modules create ROM-bound services during LevelManager.initGameModule().
+        // Register again at the post-createGame level boundary so the façade
+        // instance captured by rewind is the live service, not the empty
+        // pre-ROM module graph seen when the gameplay session was attached.
+        registerGameModuleRewindAdapters();
+        // A production level load calls this after its tilemap owner exists.
+        // Retaining the game-service registration here also makes the lifecycle
+        // safe for an early caller: it must not install a level-tilemap adapter
+        // around a not-yet-created manager.
+        if (levelManager.getTilemapManager() == null) {
+            return;
+        }
         rewindRegistry.deregister("level");
         rewindRegistry.deregister("level-tilemap");
         rewindRegistry.deregister("object-manager");
@@ -596,6 +617,22 @@ public final class GameplayModeContext implements ModeContext {
                 tilemapManager.resetTilemapsForRewindRestore();
             }
         });
+    }
+
+    /**
+     * Registers the current session module's rewindable services idempotently.
+     * This is deliberately separate from the core-manager attachment because
+     * ROM-bound game services are created later by the level lifecycle.
+     */
+    public void registerGameModuleRewindAdapters() {
+        if (rewindRegistry == null) {
+            return;
+        }
+        for (com.openggf.game.rewind.RewindSnapshottable<?> adapter
+                : worldSession.getGameModule().rewindAdapters()) {
+            rewindRegistry.deregister(adapter.key());
+            rewindRegistry.register(adapter);
+        }
     }
 
     /**
@@ -803,6 +840,7 @@ public final class GameplayModeContext implements ModeContext {
         }
         hardwareTiming.resetForMissingSnapshot();
         runtimeArtCoordinator.resetForMissingSnapshot();
+        plcFrameLifecycle.reset();
         seamlessTransitionResourceHandoffs.resetForMissingSnapshot();
         hardwareTimingBoundaryObserver = HardwareTimingBoundaryObserver.NO_OP;
         if (zoneLayoutMutationPipeline != null) {

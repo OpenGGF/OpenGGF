@@ -7,6 +7,7 @@ import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
+import com.openggf.game.sonic1.resources.Sonic1PlcService;
 import com.openggf.level.objects.boss.BossExplosionObjectInstance;
 import com.openggf.game.sonic1.scroll.Sonic1ZoneConstants;
 import com.openggf.graphics.GLCommand;
@@ -126,17 +127,11 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
     private int escapeHitTimer;
     private int escapeCollisionFlags;
     private boolean endingTransitionRequested;
-    private int startupPlcFramesRemaining;
     private boolean suppressCurrentRollAttack;
     private boolean suppressedRollLeftInitialMapping;
 
     public Sonic1FZBossInstance(ObjectSpawn spawn) {
-        this(spawn, 0);
-    }
-
-    public Sonic1FZBossInstance(ObjectSpawn spawn, int startupPlcFramesRemaining) {
         super(spawn, "FZ Boss");
-        this.startupPlcFramesRemaining = Math.max(0, startupPlcFramesRemaining);
     }
 
     @Override
@@ -329,10 +324,8 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
     }
 
     // === State 0: WAIT (loc_19E90 / BossFinal_Eggman_Wait) ===
-    // Wait for camera to reach boss_fz_x. ROM advances out of wait when the PLC
-    // buffer is empty AND the camera has reached boss_fz_x. Our art pipeline loads
-    // synchronously, so the PLC buffer is always empty here and only the camera
-    // gate applies.
+    // Wait for camera to reach boss_fz_x. ROM advances out of wait only when the
+    // game-owned PLC FIFO is empty and the camera has reached boss_fz_x.
     private void updateWait() {
         // ROM BossFinal_Eggman_Wait reads (v_screenposx).w from inside ExecuteObjects,
         // which runs BEFORE DeformLayers/ScrollHoriz in the level main loop
@@ -348,10 +341,8 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
         // exactly what ROM's ExecuteObjects-time read sees. Read it directly.
         int camX = services().camera().getX() & 0xFFFF;
 
-        boolean plcBusy = startupPlcFramesRemaining > 0;
-        if (plcBusy) {
-            startupPlcFramesRemaining--;
-        }
+        Sonic1PlcService plcService = services().gameService(Sonic1PlcService.class);
+        boolean plcBusy = plcService != null && plcService.isBusy();
 
         if (!plcBusy && camX >= BOSS_FZ_X) {
             state.routineSecondary = STATE_CYLINDER_ATTACK;

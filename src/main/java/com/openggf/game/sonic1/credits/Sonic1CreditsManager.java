@@ -5,7 +5,10 @@ import com.openggf.game.TitleScreenProvider;
 import com.openggf.game.sonic1.audio.Sonic1Music;
 import com.openggf.game.sonic1.titlescreen.Sonic1TitleScreenDataLoader;
 import com.openggf.game.sonic1.titlescreen.Sonic1TitleScreenManager;
+import com.openggf.game.sonic1.constants.Sonic1Constants;
+import com.openggf.game.sonic1.resources.Sonic1PlcService;
 import com.openggf.graphics.FadeManager;
+import com.openggf.game.resources.NativeFadeLifecycle;
 
 import java.io.IOException;
 import java.util.logging.Logger;
@@ -57,6 +60,28 @@ public class Sonic1CreditsManager {
     private boolean requestDemoLoad;
     private boolean requestTextReturn;
     private boolean requestFinished;
+    private final NativeFadeLifecycle nativeFadeLifecycle;
+    private final com.openggf.graphics.FadeManager injectedFadeManager;
+
+    public Sonic1CreditsManager() {
+        this(com.openggf.game.resources.NoOpNativeFadeLifecycle.INSTANCE, null);
+    }
+
+    public Sonic1CreditsManager(NativeFadeLifecycle nativeFadeLifecycle) {
+        this(nativeFadeLifecycle, null);
+    }
+
+    Sonic1CreditsManager(
+            NativeFadeLifecycle nativeFadeLifecycle,
+            com.openggf.graphics.FadeManager fadeManager) {
+        this.nativeFadeLifecycle = java.util.Objects.requireNonNull(
+                nativeFadeLifecycle, "nativeFadeLifecycle");
+        this.injectedFadeManager = fadeManager;
+    }
+
+    private Runnable nativeCompletion(Runnable completion) {
+        return nativeFadeLifecycle.beginNativeBlockingFade().wrapCompletion(completion);
+    }
 
     /**
      * Initializes the credits sequence. Plays credits music and starts
@@ -71,6 +96,7 @@ public class Sonic1CreditsManager {
         requestDemoLoad = false;
         requestTextReturn = false;
         requestFinished = false;
+        queueNextDemoPlcs();
 
         // Initialize text renderer from title screen data.
         // Ensure data is loaded (it normally is from the title screen, but be safe).
@@ -85,11 +111,11 @@ public class Sonic1CreditsManager {
 
         // Start with fade from black to reveal first credit text
         state = State.TEXT_FADE_IN;
-        GameServices.fade().startFadeFromBlack(() -> {
+        fadeManager().startFadeFromBlack(nativeCompletion(() -> {
             state = State.TEXT_DISPLAY;
             timer = Sonic1CreditsDemoData.TEXT_DISPLAY_FRAMES;
             textPacingDelay = getTextPacingDelayFrames(creditsNum);
-        });
+        }));
 
         LOGGER.info("Credits sequence initialized, starting credit 0");
     }
@@ -143,17 +169,17 @@ public class Sonic1CreditsManager {
         if (creditsNum >= Sonic1CreditsDemoData.DEMO_CREDITS) {
             // Credit 8 ("PRESENTED BY SEGA"): no demo, go to finished
             state = State.TEXT_FADE_OUT;
-            GameServices.fade().startFadeToBlack(() -> {
+            fadeManager().startFadeToBlack(nativeCompletion(() -> {
                 state = State.FINISHED;
                 requestFinished = true;
-            });
+            }));
         } else {
             // Credits 0-7: fade to black, then load demo zone
             state = State.TEXT_FADE_OUT;
-            GameServices.fade().startFadeToBlack(() -> {
+            fadeManager().startFadeToBlack(nativeCompletion(() -> {
                 state = State.DEMO_LOADING;
                 requestDemoLoad = true;
-            });
+            }));
         }
     }
 
@@ -167,7 +193,8 @@ public class Sonic1CreditsManager {
         }
 
         state = State.DEMO_FADE_IN;
-        GameServices.fade().startFadeFromBlack(() -> state = State.DEMO_PLAYING);
+        fadeManager().startFadeFromBlack(
+                nativeCompletion(() -> state = State.DEMO_PLAYING));
     }
 
     /**
@@ -186,7 +213,7 @@ public class Sonic1CreditsManager {
             // Objects and demo input continue running during the fade.
             scrollFrozen = true;
             state = State.DEMO_FADING_OUT;
-            GameServices.fade().startFadeToBlack(() -> {
+            fadeManager().startFadeToBlack(() -> {
                 scrollFrozen = false;
                 creditsNum++;
                 if (creditsNum >= Sonic1CreditsDemoData.TOTAL_CREDITS) {
@@ -241,19 +268,55 @@ public class Sonic1CreditsManager {
     public void onReturnToText() {
         demoInputPlayer = null;
         demoLoadDelay = 0;
+        queueNextDemoPlcs();
 
         // Zone loading during demo phase overwrites GPU patterns/palette
         textRenderer.markGpuDirty();
 
         // Start fade from black to reveal credit text
         state = State.TEXT_FADE_IN;
-        GameServices.fade().startFadeFromBlack(() -> {
+        fadeManager().startFadeFromBlack(nativeCompletion(() -> {
             state = State.TEXT_DISPLAY;
             timer = Sonic1CreditsDemoData.TEXT_DISPLAY_FRAMES;
             textPacingDelay = getTextPacingDelayFrames(creditsNum);
-        });
+        }));
 
         LOGGER.info("Showing credit text " + creditsNum);
+    }
+
+    /** Mirrors EndingDemoLoad's pre-text ClearPLC/AddPLC/AddPLC sequence. */
+    private void queueNextDemoPlcs() {
+        try {
+            Sonic1PlcService plcService = GameServices.module().getGameService(Sonic1PlcService.class);
+            if (plcService == null) {
+                return;
+            }
+            int zone = creditsNum < Sonic1CreditsDemoData.DEMO_CREDITS
+                    ? new int[] {0, 2, 4, 1, 3, 5, 5, 0}[creditsNum]
+                    // EndDemo_Levels[8] overreads the following EndDemo_LampVar bytes: $0101 (LZ1).
+                    : 1;
+            int header = Sonic1Constants.LEVEL_HEADERS_ADDR + zone * 16;
+            int primary = GameServices.rom().getRom().readByte(header) & 0xFF;
+            plcService.transact(primary == 0
+                    ? new Sonic1PlcService.Operation[] {Sonic1PlcService.clear(), Sonic1PlcService.appendOperation(1)}
+                    : new Sonic1PlcService.Operation[] {Sonic1PlcService.clear(), Sonic1PlcService.appendOperation(primary), Sonic1PlcService.appendOperation(1)});
+        } catch (Exception e) {
+            LOGGER.fine("Credits PLC queue unavailable: " + e.getMessage());
+        }
+    }
+
+    void beginDemoPlayingForLifecycleTest(int framesUntilFade) {
+        state = State.DEMO_PLAYING;
+        timer = framesUntilFade;
+        demoInputPlayer = null;
+    }
+
+    boolean hasTextReturnRequestForLifecycleTest() {
+        return requestTextReturn;
+    }
+
+    private com.openggf.graphics.FadeManager fadeManager() {
+        return injectedFadeManager != null ? injectedFadeManager : GameServices.fade();
     }
 
     /**

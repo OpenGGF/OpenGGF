@@ -101,6 +101,8 @@ public class TestSonic1LevelInitProfile {
                 "S1 GM_Level clears v_misc_variables, including v_random");
         assertTrue(steps.stream().anyMatch(s -> s.name().equals("InitAudio")), "Should include InitAudio");
         assertTrue(steps.stream().anyMatch(s -> s.name().equals("LoadLevelData")), "Should include LoadLevelData");
+        assertTrue(steps.stream().anyMatch(s -> s.name().equals("QueueInitialPlcs")),
+                "S1 Level must clear then enqueue its primary and Main2 PLCs before title-card admission");
         assertTrue(steps.stream().anyMatch(s -> s.name().equals("InitAnimatedContent")), "Should include InitAnimatedContent");
         assertTrue(steps.stream().anyMatch(s -> s.name().equals("InitObjectSystem")), "Should include InitObjectSystem");
         assertTrue(steps.stream().anyMatch(s -> s.name().equals("InitGameplayState")), "Should include InitGameplayState");
