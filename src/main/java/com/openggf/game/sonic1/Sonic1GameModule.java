@@ -33,6 +33,7 @@ import com.openggf.game.dataselect.DataSelectHostProfile;
 import com.openggf.game.dataselect.DataSelectPresentationProvider;
 import com.openggf.game.startup.DonatedDataSelectWarmupTask;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
+import com.openggf.game.sonic1.resources.Sonic1PlcService;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.game.sonic1.credits.Sonic1EndingProvider;
 import com.openggf.game.sonic1.dataselect.S1DataSelectProfile;
@@ -90,6 +91,7 @@ public class Sonic1GameModule implements GameModule {
             new Sonic1LevelInitProfile(levelEventManager, switchManager, conveyorState);
     private PhysicsProvider physicsProvider;
     private ObjectRegistry objectRegistry;
+    private Sonic1PlcService plcService;
 
     @Override
     public String getIdentifier() {
@@ -119,6 +121,7 @@ public class Sonic1GameModule implements GameModule {
 
     @Override
     public Game createGame(Rom rom) {
+        plcService = new Sonic1PlcService(rom);
         return new Sonic1(rom);
     }
 
@@ -268,6 +271,7 @@ public class Sonic1GameModule implements GameModule {
         if (type == Sonic1SwitchManager.class) return (T) switchManager;
         if (type == Sonic1ConveyorState.class) return (T) conveyorState;
         if (type == Sonic1FloatingBlockState.class) return (T) floatingBlockState;
+        if (type == Sonic1PlcService.class) return (T) plcService;
         return null;
     }
 
@@ -294,6 +298,11 @@ public class Sonic1GameModule implements GameModule {
         conveyorState.reset();
         // Reset REV01 f_obj56 for every fresh level/restart.
         floatingBlockState.reset();
+    }
+
+    @Override
+    public void resetModuleScopedState() {
+        plcService = null;
     }
 
     @Override

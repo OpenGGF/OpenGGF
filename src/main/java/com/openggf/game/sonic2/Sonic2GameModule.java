@@ -7,6 +7,7 @@ import com.openggf.data.RomByteReader;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.constants.Sonic2ObjectConstants;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
+import com.openggf.game.sonic2.resources.Sonic2PlcService;
 import com.openggf.game.sonic2.credits.Sonic2EndingProvider;
 import com.openggf.game.sonic2.dataselect.S2SaveSnapshotProvider;
 import com.openggf.game.sonic2.dataselect.S2DataSelectImageCacheManager;
@@ -98,6 +99,7 @@ public class Sonic2GameModule implements GameModule {
     private Sonic2ZoneFeatureProvider zoneFeatureProvider;
     private PhysicsProvider physicsProvider;
     private ObjectRegistry objectRegistry;
+    private Sonic2PlcService plcService;
 
     @Override
     public String getIdentifier() {
@@ -116,6 +118,7 @@ public class Sonic2GameModule implements GameModule {
 
     @Override
     public Game createGame(Rom rom) {
+        plcService = new Sonic2PlcService(rom);
         return new Sonic2(rom);
     }
 
@@ -254,6 +257,7 @@ public class Sonic2GameModule implements GameModule {
             return (T) specialStageSpriteDebug;
         if (type == com.openggf.game.sonic2.specialstage.Sonic2SpecialStageManager.class)
             return (T) specialStageManager;
+        if (type == Sonic2PlcService.class) return (T) plcService;
         return null;
     }
 
@@ -278,6 +282,11 @@ public class Sonic2GameModule implements GameModule {
         SmashableGroundObjectInstance.resetGlobalState();
         MTZLongPlatformObjectInstance.resetGlobalState();
         BombPrizeObjectInstance.resetGlobalState();
+    }
+
+    @Override
+    public void resetModuleScopedState() {
+        plcService = null;
     }
 
     @Override

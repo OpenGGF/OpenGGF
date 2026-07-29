@@ -1,0 +1,94 @@
+package com.openggf.game.sonic1.resources;
+
+import com.openggf.data.Rom;
+import com.openggf.game.resources.PlcVBlankService;
+import com.openggf.game.sonic1.constants.Sonic1Constants;
+import com.openggf.level.resources.NemesisPlcPatternCounts;
+import com.openggf.level.resources.NemesisPlcServiceQueue;
+import com.openggf.level.resources.PlcParser;
+import com.openggf.level.resources.PlcParser.PlcDefinition;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Objects;
+
+/** Sonic 1-owned façade for the ROM's logical Pattern Load Cue FIFO. */
+public final class Sonic1PlcService implements PlcVBlankService {
+    private static final int SAFE_QUEUE_CAPACITY = 15;
+
+    private final Rom rom;
+    private final NemesisPlcServiceQueue queue;
+
+    public Sonic1PlcService(Rom rom) {
+        this(rom, new NemesisPlcServiceQueue());
+    }
+
+    Sonic1PlcService(Rom rom, NemesisPlcServiceQueue queue) {
+        this.rom = Objects.requireNonNull(rom, "rom");
+        this.queue = Objects.requireNonNull(queue, "queue");
+    }
+
+    /** Models S1 {@code NewPLC}: replace idle waiting descriptors from one ROM PLC. */
+    public void replaceQueued(int plcId) throws IOException {
+        Submission submission = readSubmission(plcId);
+        requireReplacementFits(submission.definition());
+        queue.replaceQueued(submission.definition(), submission.patternCounts());
+    }
+
+    /** Models S1 {@code AddPLC}: append every descriptor from one ROM PLC. */
+    public void append(int plcId) throws IOException {
+        Submission submission = readSubmission(plcId);
+        requireAppendFits(submission.definition());
+        queue.append(submission.definition(), submission.patternCounts());
+    }
+
+    /** Models S1 {@code ClearPLC}; an active decoder is never interrupted. */
+    public void clearQueued() {
+        queue.clearQueued();
+    }
+
+    /** Models S1 {@code RunPLC}, which arms only the current FIFO head. */
+    public void prepare() {
+        queue.prepareHead();
+    }
+
+    /** Models S1's three-pattern ordinary level VBlank service. */
+    @Override
+    public void serviceLevelVBlank() {
+        queue.servicePatterns(3);
+    }
+
+    /** Models S1's nine-pattern fast VBlank service. */
+    public void serviceFastVBlank() {
+        queue.servicePatterns(9);
+    }
+
+    /** Returns whether either the active decoder or a waiting ROM PLC descriptor remains. */
+    public boolean isBusy() {
+        return queue.isBusy();
+    }
+
+    private Submission readSubmission(int plcId) throws IOException {
+        PlcDefinition definition = PlcParser.parse(rom, Sonic1Constants.ART_LOAD_CUES_ADDR, plcId);
+        return new Submission(definition, NemesisPlcPatternCounts.derive(rom, definition));
+    }
+
+    private void requireAppendFits(PlcDefinition definition) {
+        if (occupiedDescriptorCount() + definition.entries().size() > SAFE_QUEUE_CAPACITY) {
+            throw new IllegalStateException("Sonic 1 PLC queue cannot use the retail-retained sixteenth slot");
+        }
+    }
+
+    private void requireReplacementFits(PlcDefinition definition) {
+        if (definition.entries().size() > SAFE_QUEUE_CAPACITY) {
+            throw new IllegalStateException("Sonic 1 PLC replacement exceeds safe queue capacity");
+        }
+    }
+
+    private int occupiedDescriptorCount() {
+        return queue.queuedEntryCount() + (queue.capture().activeEntry() == null ? 0 : 1);
+    }
+
+    private record Submission(PlcDefinition definition, List<Integer> patternCounts) {
+    }
+}
