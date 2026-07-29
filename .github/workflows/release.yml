@@ -19,17 +19,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Fetch remote branch history
-        if: github.event_name == 'push' && github.event.deleted == false
-        run: git fetch --no-tags origin '+refs/heads/*:refs/remotes/origin/*'
-
       - name: Validate branch policy
         if: github.event_name == 'pull_request'
         run: bash .githooks/validate-policy.sh ci-pr "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}" "${{ github.base_ref }}" "${{ github.head_ref }}"
 
       - name: Validate branch policy (push)
         if: github.event_name == 'push' && github.event.deleted == false
-        run: bash .githooks/validate-policy.sh ci-push "${{ github.event.before }}" "${{ github.sha }}" "${{ github.ref_name }}" "refs/remotes/origin/${{ github.ref_name }}"
+        run: bash .githooks/validate-policy.sh ci-push "${{ github.event.before }}" "${{ github.sha }}" "${{ github.ref_name }}"
 
   test:
     runs-on: [self-hosted, release-fixtures]

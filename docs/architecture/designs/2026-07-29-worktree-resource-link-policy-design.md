@@ -34,8 +34,9 @@ not prevent generated filesystem scaffolding from becoming repository content.
   POSIX, drive-qualified Windows, or UNC target.
 - Newly committed textual content must not embed a machine-local user-home
   workspace path (`/home/<user>/`, `/var/home/<user>/`, `/Users/<user>/`, or
-  `<drive>:\Users\<user>\`). Use repository-relative paths, environment
-  variables, or neutral placeholders instead.
+  `<drive>:\Users\<user>\`). Windows separators may be forward, backward,
+  mixed, or escaped/doubled in source text. Use repository-relative paths,
+  environment variables, or neutral placeholders instead.
 - Root-level `MERGE-STATUS*.md` and `HANDOVER*.md` scratch artifacts are not
   deliverables. Intentional audits or handovers must be classified under the
   applicable `docs/architecture/` directory.
@@ -58,6 +59,12 @@ absolute prefix.
 The source existence checks may continue using an internal absolute path; only
 the text stored in the symlink must be relative.
 
+When a protected path already contains a legacy absolute symlink, the hook
+replaces it only if the target exists and canonically resolves to the expected
+main-worktree resource. It prepares the relative replacement before removing
+the old link and restores the old target if installation fails. Relative,
+broken, unknown, and user-authored symlinks remain untouched.
+
 This derivation assumes the repository's existing convention that the common
 Git directory is `<main-worktree>/.git`. The hook will verify that basename and
 fail closed rather than emit a wrong link for a bare or separate-git-dir
@@ -71,7 +78,7 @@ hook-created links.
 ### Staged-index validation
 
 The policy implementations will derive added and modified candidates from
-`git diff --cached --no-renames --diff-filter=AM` against `HEAD` (or the empty
+`git diff --cached --no-renames --diff-filter=AMT` against `HEAD` (or the empty
 tree for an unborn branch). Disabling rename detection deliberately represents
 a rename destination as an added path. They will then query each candidate's
 index mode with `git ls-files --stage` and read symlink blobs through
@@ -93,6 +100,11 @@ matches, providing one cross-platform definition without decoding blobs in
 PowerShell. The existing ROM denylist remains repository-wide and covers
 `.gen`, `.smd`, `.bin`, `.sms`, `.gg`, and `.32x`, rather than introducing a
 second root-only ROM rule.
+
+The shared Windows-home expression accepts one or more forward or backward
+slashes at every separator boundary. This covers native, mixed, and
+escaped/doubled textual representations without classifying `$USER`,
+`%USERNAME%`, or angle-bracket placeholders as concrete usernames.
 
 This validation runs before merge-specific early returns in `commit-msg`, and
 also through a new `pre-commit` hook. The duplicate entry points are
@@ -133,11 +145,17 @@ GitHub Actions will run the push-range policy on all branch pushes, not only
 `master`. This is an independent detection backstop; actually preventing a
 noncompliant remote ref update requires the repository ruleset to make that
 check required. The local `pre-push` hook is the in-repository preventive gate.
-For a new branch whose event `before` OID is all zero, the workflow fetches all
-remote branch refs. Excluding the just-created pushed ref, CI validates commits
-reachable from the new tip but not reachable from any other remote branch,
-plus the tip tree. This mirrors `pre-push`: previously published history is not
-revalidated, while every uniquely published commit is checked.
+For a new branch whose event `before` OID is all zero, CI uses the fixed
+worktree-resource-policy cutover commit
+`268fb374f77ec7b156e780d0cebb33b3e88e81ac` as its stable pre-publication
+boundary. This is the immutable `develop` ancestor from which the policy branch
+was created, avoiding a self-reference to a future policy commit.
+The cutover must be an ancestor of the new tip; otherwise CI fails closed and
+requires the branch to incorporate the policy baseline. CI validates every
+commit after that cutover plus the tip tree. Unlike post-update remote refs,
+this boundary cannot be influenced by peer branches created together.
+CI checkout fetches full history so the cutover object is locally available.
+Shell and PowerShell constants must contain the identical OID.
 
 ### Regression coverage
 
@@ -158,13 +176,19 @@ Tests will prove that:
 - both `pre-push` and `ci-push` reject a new branch with a clean tip when an
   earlier newly published commit contains a forbidden artifact;
 - a new branch from a remediated remote branch is accepted when the old bad
-  commit is already reachable from that other remote ref and the new tip is
-  clean;
+  commit is already reachable from the policy cutover, the cutover is
+  reachable from the new tip, and the new tip is clean;
+- two newly created refs sharing a forbidden-and-removed post-cutover commit
+  are both rejected;
+- an existing-ref range whose base contains a forbidden link and whose only
+  outgoing commit removes it is accepted with a clean tip;
 - the workflow invokes push-range validation for every branch push;
 - root merge/handover scratch artifacts and machine-local paths are rejected;
   and
 - a temporary main repository plus linked worktree runs `post-checkout`,
   produces a relative target, and resolves that target to the intended source.
+- a legacy absolute link resolving to the expected main resource is migrated
+  to a relative target, while an unknown symlink is preserved.
 
 Machine-path fixtures will assemble forbidden strings from fragments at
 runtime so the guard does not reject its own test source. Boundary coverage

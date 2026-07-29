@@ -24,8 +24,8 @@ Java 21, JUnit 5.
 - Newly published machine-local home paths are rejected.
 - Existing legitimate relative symlinks remain permitted.
 - Shell and PowerShell policy behavior must remain equivalent.
-- New-branch validation checks uniquely published history and does not rescan
-  commits already reachable from another remote branch.
+- New-branch validation uses the fixed worktree-resource-policy cutover as a
+  stable boundary and rejects branches that do not contain it.
 - `AGENTS.md` and `CLAUDE.md` remain byte-for-byte synchronized when changed.
 - Do not bypass repository hooks with `--no-verify`.
 
@@ -82,8 +82,10 @@ Create temporary bare remotes and histories proving:
 - an existing-branch update containing a bad merge is rejected;
 - a new branch with a clean tip but an earlier uniquely unpublished bad commit
   is rejected by `pre-push` and `ci-push`;
-- a new branch based on a clean, remediated remote branch does not rescan the
-  already-published old bad commit; and
+- a new branch based on a clean, remediated remote branch accepts pre-cutover
+  old bad history;
+- two peer new refs sharing a post-cutover bad-and-removed commit are rejected;
+- an existing range that only removes a base violation is accepted; and
 - a deleted ref is accepted.
 
 - [ ] **Step 5: Add functional checkout-hook RED test**
@@ -128,6 +130,11 @@ its basename is `.git`, strip that component to obtain the relative main-tree
 root, and pass `<relative-main>/<resource-path>` to `ln -s`. Retain absolute
 paths only for source existence checks.
 
+Migrate an existing absolute symlink only when it resolves to the expected main
+resource. Prepare the relative replacement before removing the legacy link,
+restore the old target if installation fails, and preserve relative, broken,
+or unknown symlinks. Add both migration and preservation regressions.
+
 - [ ] **Step 3: Run focused tests**
 
 Run:
@@ -156,10 +163,15 @@ Expected: checkout-hook and ignore tests pass; policy-mode tests remain red.
 
 - [ ] **Step 1: Implement candidate and blob helpers**
 
-Use cached `--no-renames --diff-filter=AM` candidates for local commits. Query
+Use cached `--no-renames --diff-filter=AMT` candidates for local commits. Query
 index/tree modes and symlink blobs with Git plumbing. Implement protected-path,
 absolute-link, root-scratch, and machine-local-text predicates with actionable
 path-specific errors.
+
+In both shell and PowerShell, match concrete Windows user-home paths using
+forward, backward, mixed, and doubled separators. Exercise all forms through
+each available policy runtime and enforce identical predicate constants. Keep
+environment-variable and neutral-placeholder username components accepted.
 
 - [ ] **Step 2: Validate before merge early returns**
 
@@ -181,9 +193,10 @@ fail closed when the remote name or required objects cannot be resolved.
 
 - [ ] **Step 5: Implement CI new-ref selection**
 
-Allow `ci-push` to distinguish an all-zero `before` OID and enumerate commits
-reachable from the pushed tip but not other supplied/fetched remote refs,
-excluding the pushed ref itself.
+For an all-zero `before` OID, require the fixed resource-policy cutover commit
+`268fb374f77ec7b156e780d0cebb33b3e88e81ac` to be an ancestor of the pushed
+tip and validate the complete `<cutover>..<tip>` range. Require identical shell
+and PowerShell constants.
 
 - [ ] **Step 6: Run focused tests**
 
@@ -208,7 +221,7 @@ Expected: shell-policy, merge, pre-push, and new-branch tests pass.
 **Interfaces:**
 
 - PowerShell modes and errors match the shell policy.
-- GitHub Actions supplies fetched remote-ref context for new branch pushes.
+- GitHub Actions fetches full history so the fixed cutover object is available.
 
 - [ ] **Step 1: Port candidate and path policy to PowerShell**
 
@@ -216,23 +229,25 @@ Implement the same Git-command candidate selection, mode/blob inspection,
 protected path rules, Git text classification, commit-delta validation, and
 tip-tree validation.
 
+Retain case-sensitive Git ref identity while mirroring the shell path predicate.
+
 - [ ] **Step 2: Port pre-push and new-ref range selection**
 
 Parse standard-input updates and mirror shell existing/new/deletion behavior.
 
 - [ ] **Step 3: Wire all-branch push CI**
 
-Run `ci-push` for every branch push, fetch sufficient remote history, and
-exclude the pushed remote ref when determining uniquely published commits.
-Retain existing PR and release validation. Keep the all-branch push policy as a
-lightweight job/step with conditions that do not trigger the full Maven suite
-on every branch push.
+Run `ci-push` for every branch push and fetch full history so the fixed cutover
+object is available. For new refs, use only the cutover constant and tip;
+fetched peer refs must not influence range selection. Retain existing PR and
+release validation. Keep the all-branch push policy as a lightweight job/step
+with conditions that do not trigger the full Maven suite on every branch push.
 
 - [ ] **Step 4: Add parity assertions**
 
 Extend `TestBuildToolingGuard` to require both policy implementations, tracked
 executable hook dispatchers, all-branch workflow wiring, and matching policy
-constants/predicates.
+constants/predicates, including the exact cutover OID.
 
 - [ ] **Step 5: Run focused tests**
 

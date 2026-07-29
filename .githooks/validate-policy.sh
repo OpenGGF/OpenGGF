@@ -5,13 +5,14 @@ set -eu
 GITHUB_FILE_SIZE_LIMIT_BYTES=100000000
 TRACE_COMPRESSION_THRESHOLD_BYTES=1048576
 RELEASE_TRAILER_CUTOVER_BASE=677447024a08db9e25f3461588d661c23ba26848
+RESOURCE_POLICY_CUTOVER=268fb374f77ec7b156e780d0cebb33b3e88e81ac
 ROM_LIKE_DENYLIST_EXTENSIONS=".gen .smd .bin .sms .gg .32x"
 EMPTY_TREE_OID=4b825dc642cb6eb9a060e54bf8d69288fbee4904
 ALL_ZERO_OID=0000000000000000000000000000000000000000
 POSIX_HOME_ROOT=/home
 VAR_HOME_ROOT=/var/home
 MACOS_HOME_ROOT=/Users
-WINDOWS_USERS_ROOT='[A-Za-z]:\\[Uu][Ss][Ee][Rr][Ss]'
+WINDOWS_USERS_ROOT='[A-Za-z]:[\\/]+[Uu][Ss][Ee][Rr][Ss]'
 
 die() {
     echo "policy: $*" >&2
@@ -131,7 +132,7 @@ staged_blob_has_machine_local_home() {
         -e "$POSIX_HOME_ROOT/"'[^/$<[:space:]][^/[:space:]]*/' \
         -e "$VAR_HOME_ROOT/"'[^/$<[:space:]][^/[:space:]]*/' \
         -e "$MACOS_HOME_ROOT/"'[^/$<[:space:]][^/[:space:]]*/' \
-        -e "$WINDOWS_USERS_ROOT"'\\[^\\$<%[:space:]][^\\[:space:]]*\\' \
+        -e "$WINDOWS_USERS_ROOT"'[\\/]+[^\\/$<%[:space:]][^\\/[:space:]]*[\\/]' \
         -- ":(literal)$1"
 }
 
@@ -140,7 +141,7 @@ commit_blob_has_machine_local_home() {
         -e "$POSIX_HOME_ROOT/"'[^/$<[:space:]][^/[:space:]]*/' \
         -e "$VAR_HOME_ROOT/"'[^/$<[:space:]][^/[:space:]]*/' \
         -e "$MACOS_HOME_ROOT/"'[^/$<[:space:]][^/[:space:]]*/' \
-        -e "$WINDOWS_USERS_ROOT"'\\[^\\$<%[:space:]][^\\[:space:]]*\\' \
+        -e "$WINDOWS_USERS_ROOT"'[\\/]+[^\\/$<%[:space:]][^\\/[:space:]]*[\\/]' \
         "$1" -- ":(literal)$2"
 }
 
@@ -904,100 +905,27 @@ validate_pre_push() {
     done
 }
 
-resolve_pushed_remote_ref() {
+validate_ci_new_ref() {
     after_sha=$1
-    branch_name=$2
-    supplied_ref=${3:-}
-    remote_names=$(git remote) ||
-        die "could not enumerate configured remotes while resolving pushed branch $branch_name."
-
-    if [ -n "$supplied_ref" ]; then
-        supplied_matches_branch=1
-        old_ifs=$IFS
-        IFS='
-'
-        for remote_name in $remote_names; do
-            if [ "$supplied_ref" = "refs/remotes/$remote_name/$branch_name" ]; then
-                supplied_matches_branch=0
-                break
-            fi
-        done
-        IFS=$old_ifs
-        if [ "$supplied_matches_branch" -ne 0 ]; then
-            die "supplied pushed remote ref \`$supplied_ref\` does not identify pushed branch $branch_name on a configured remote."
-        fi
-        if ! git show-ref --verify --quiet "$supplied_ref"; then
-            die "supplied pushed remote ref \`$supplied_ref\` is not available."
-        fi
-        supplied_oid=$(git rev-parse "$supplied_ref")
-        if [ "$supplied_oid" != "$after_sha" ]; then
-            die "supplied pushed remote ref \`$supplied_ref\` does not resolve to pushed tip $after_sha."
-        fi
-        printf '%s\n' "$supplied_ref"
-        return 0
+    if ! git cat-file -e "$RESOURCE_POLICY_CUTOVER^{commit}" 2>/dev/null; then
+        die "resource-policy cutover $RESOURCE_POLICY_CUTOVER is not available as a commit."
     fi
-
-    matches=""
-    old_ifs=$IFS
-    IFS='
-'
-    for remote_name in $remote_names; do
-        remote_ref="refs/remotes/$remote_name/$branch_name"
-        if ! git show-ref --verify --quiet "$remote_ref"; then
-            continue
-        fi
-        remote_oid=$(git rev-parse "$remote_ref")
-        if [ "$remote_oid" = "$after_sha" ]; then
-            if [ -n "$matches" ]; then
-                IFS=$old_ifs
-                die "multiple fetched remote refs resolve to pushed branch $branch_name; supply the exact pushed remote ref."
-            fi
-            matches=$remote_ref
-        fi
-    done
-    IFS=$old_ifs
-    printf '%s\n' "$matches"
-}
-
-ci_new_ref_commits() {
-    after_sha=$1
-    ref_name=$2
-    supplied_pushed_ref=${3:-}
-    case "$ref_name" in
-        refs/heads/*)
-            branch_name=${ref_name#refs/heads/}
-            ;;
-        *)
-            branch_name=$ref_name
-            ;;
-    esac
-
-    pushed_remote_ref=$(resolve_pushed_remote_ref "$after_sha" "$branch_name" "$supplied_pushed_ref")
-    set -- "$after_sha"
-    remote_refs=$(git for-each-ref --format='%(refname)' refs/remotes) ||
-        die "could not enumerate fetched remote refs for new branch $branch_name."
-    old_ifs=$IFS
-    IFS='
-'
-    for remote_ref in $remote_refs; do
-        [ -n "$remote_ref" ] || continue
-        [ "$remote_ref" != "$pushed_remote_ref" ] || continue
-        set -- "$@" "^$remote_ref"
-    done
-    IFS=$old_ifs
-    git rev-list --reverse "$@" ||
-        die "could not enumerate commits unique to new branch $branch_name."
+    if ! git cat-file -e "$after_sha^{commit}" 2>/dev/null; then
+        die "required pushed tip $after_sha is not available as a commit."
+    fi
+    if ! git merge-base --is-ancestor "$RESOURCE_POLICY_CUTOVER" "$after_sha"; then
+        die "resource-policy cutover $RESOURCE_POLICY_CUTOVER is not an ancestor of new-ref tip $after_sha."
+    fi
+    validate_content_range "$RESOURCE_POLICY_CUTOVER" "$after_sha"
 }
 
 validate_ci_push() {
     before_sha=$1
     after_sha=$2
     ref_name=$3
-    pushed_remote_ref=${4:-}
 
     if [ "$before_sha" = "$ALL_ZERO_OID" ]; then
-        commits=$(ci_new_ref_commits "$after_sha" "$ref_name" "$pushed_remote_ref")
-        validate_content_commit_list "$commits" "$after_sha"
+        validate_ci_new_ref "$after_sha"
         return 0
     fi
 
@@ -1031,7 +959,7 @@ case "$mode" in
         validate_ci_pr "$2" "$3" "$4" "$5"
         ;;
     ci-push)
-        validate_ci_push "$2" "$3" "$4" "${5:-}"
+        validate_ci_push "$2" "$3" "$4"
         ;;
     *)
         die "usage: $0 {prepare-commit-msg|pre-commit|commit-msg|pre-merge-commit|pre-push|ci-pr|ci-push} ..."

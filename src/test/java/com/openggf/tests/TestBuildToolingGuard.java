@@ -34,6 +34,7 @@ class TestBuildToolingGuard {
     private static final Path POST_CHECKOUT_HOOK = Path.of(".githooks/post-checkout").toAbsolutePath();
     private static final Path PROJECT_GITIGNORE = Path.of(".gitignore").toAbsolutePath();
     private static final String ALL_ZERO_OID = "0000000000000000000000000000000000000000";
+    private static final String RESOURCE_POLICY_CUTOVER = "268fb374f77ec7b156e780d0cebb33b3e88e81ac";
 
     private static final List<String> TRACE_REPLAY_DIAGNOSTIC_EXCLUDES = List.of(
             "**/Debug*.java",
@@ -285,12 +286,11 @@ class TestBuildToolingGuard {
         if (!workflow.contains(".githooks/validate-policy.sh ci-push")) {
             violations.add(".github/workflows/release.yml does not run validate-policy.sh ci-push for direct master pushes");
         }
-        if (!workflow.contains("Fetch remote branch history")
-                || !workflow.contains("+refs/heads/*:refs/remotes/origin/*")) {
-            violations.add(".github/workflows/release.yml push validation does not fetch remote branch history");
+        if (!workflow.contains("fetch-depth: 0")) {
+            violations.add(".github/workflows/release.yml push validation does not fetch full cutover history");
         }
-        if (!workflow.contains("\"refs/remotes/origin/${{ github.ref_name }}\"")) {
-            violations.add(".github/workflows/release.yml does not identify the exact pushed master remote ref");
+        if (workflow.contains("\"refs/remotes/origin/${{ github.ref_name }}\"")) {
+            violations.add(".github/workflows/release.yml still supplies a peer-influenced pushed remote ref");
         }
 
         if (!violations.isEmpty()) {
@@ -839,16 +839,18 @@ class TestBuildToolingGuard {
                 Map.entry("GITHUB_FILE_SIZE_LIMIT_BYTES", "100000000"),
                 Map.entry("TRACE_COMPRESSION_THRESHOLD_BYTES", "1048576"),
                 Map.entry("RELEASE_TRAILER_CUTOVER_BASE", "677447024a08db9e25f3461588d661c23ba26848"),
+                Map.entry("RESOURCE_POLICY_CUTOVER", RESOURCE_POLICY_CUTOVER),
                 Map.entry("EMPTY_TREE_OID", "4b825dc642cb6eb9a060e54bf8d69288fbee4904"),
                 Map.entry("ALL_ZERO_OID", ALL_ZERO_OID),
                 Map.entry("POSIX_HOME_ROOT", "/home"),
                 Map.entry("VAR_HOME_ROOT", "/var/home"),
                 Map.entry("MACOS_HOME_ROOT", "/Users"),
-                Map.entry("WINDOWS_USERS_ROOT", "[A-Za-z]:\\\\[Uu][Ss][Ee][Rr][Ss]"));
+                Map.entry("WINDOWS_USERS_ROOT", "[A-Za-z]:[\\\\/]+[Uu][Ss][Ee][Rr][Ss]"));
         Map<String, String> powershellNames = Map.ofEntries(
                 Map.entry("GITHUB_FILE_SIZE_LIMIT_BYTES", "GithubFileSizeLimitBytes"),
                 Map.entry("TRACE_COMPRESSION_THRESHOLD_BYTES", "TraceCompressionThresholdBytes"),
                 Map.entry("RELEASE_TRAILER_CUTOVER_BASE", "ReleaseTrailerCutoverBase"),
+                Map.entry("RESOURCE_POLICY_CUTOVER", "ResourcePolicyCutover"),
                 Map.entry("EMPTY_TREE_OID", "EmptyTreeOid"),
                 Map.entry("ALL_ZERO_OID", "AllZeroOid"),
                 Map.entry("POSIX_HOME_ROOT", "PosixHomeRoot"),
@@ -916,93 +918,29 @@ class TestBuildToolingGuard {
     }
 
     @Test
-    void powershellResourcePolicyShouldUseOrdinalCaseSensitiveRefIdentity(@TempDir Path temporaryDirectory)
-            throws Exception {
+    void powershellResourcePolicyShouldUseFixedCutoverAndCaseSensitiveBranchIdentity() throws Exception {
         String powershellPolicy = Files.readString(POWERSHELL_POLICY_SCRIPT);
-        String resolveRef = scriptFunction(powershellPolicy, "function Resolve-PushedRemoteRef(");
-        String newRefCommits = scriptFunction(powershellPolicy, "function Get-CiNewRefCommits(");
         String ciPush = scriptFunction(powershellPolicy, "function Validate-CiPush(");
+        String ciNewRef = scriptFunction(powershellPolicy, "function Validate-CiNewRef(");
         List<String> violations = new ArrayList<>();
 
-        if (!Pattern.compile(
-                        "\\[string]::Equals\\(\\s*\\$SuppliedRef\\s*,\\s*\\$expectedRef\\s*,\\s*"
-                                + "\\[System\\.StringComparison]::Ordinal\\s*\\)",
-                        Pattern.DOTALL)
-                .matcher(resolveRef)
-                .find()) {
-            violations.add("Resolve-PushedRemoteRef does not compare supplied and expected refs ordinally");
+        if (!ciPush.contains("Validate-CiNewRef $AfterSha")
+                || !ciNewRef.contains("$script:ResourcePolicyCutover")
+                || !ciNewRef.contains("\"merge-base\"")
+                || !ciNewRef.contains("\"--is-ancestor\"")) {
+            violations.add("Validate-CiPush does not gate new refs on the fixed resource-policy cutover");
         }
-        if (!Pattern.compile(
-                        "\\[string]::Equals\\(\\s*\\$remoteRef\\s*,\\s*\\$pushedRemoteRef\\s*,\\s*"
-                                + "\\[System\\.StringComparison]::Ordinal\\s*\\)",
-                        Pattern.DOTALL)
-                .matcher(newRefCommits)
-                .find()) {
-            violations.add("Get-CiNewRefCommits does not exclude only the ordinally identical pushed ref");
+        if (powershellPolicy.contains("function Resolve-PushedRemoteRef(")
+                || powershellPolicy.contains("function Get-CiNewRefCommits(")) {
+            violations.add("PowerShell still derives new-ref history from mutable peer refs");
         }
         if (!ciPush.contains("$RefName -ceq \"develop\"") || !ciPush.contains("$RefName -ceq \"master\"")) {
             violations.add("Validate-CiPush routes branch names with case-insensitive comparisons");
         }
         if (!violations.isEmpty()) {
-            fail("PowerShell Git ref identity must match shell's case-sensitive comparisons:\n  "
+            fail("PowerShell CI must use the fixed cutover and preserve case-sensitive Git branch identity:\n  "
                     + String.join("\n  ", violations));
         }
-
-        String powershell = availablePowerShell();
-        Path caseProbe = temporaryDirectory.resolve("case-sensitive-probe");
-        Files.writeString(caseProbe, "probe\n");
-        boolean caseSensitiveFileSystem =
-                !Files.exists(temporaryDirectory.resolve("CASE-SENSITIVE-PROBE"));
-        Files.delete(caseProbe);
-        if (powershell == null || !caseSensitiveFileSystem) {
-            return;
-        }
-
-        Path remote = newBareRemote(temporaryDirectory, "case-distinct-origin");
-        Path repository = newRepository(temporaryDirectory, "case-distinct-local");
-        createInitialCommit(repository);
-        git(repository, "switch", "-c", "feature/shared");
-        addRemoteAndPush(repository, remote, "feature/shared");
-        String localOid = gitOutput(repository, "rev-parse", "HEAD").trim();
-        git(repository, "update-ref", "refs/remotes/origin/Feature/shared", localOid);
-
-        ProcessResult result = runPowerShellPolicy(
-                repository,
-                powershell,
-                "ci-push",
-                ALL_ZERO_OID,
-                localOid,
-                "feature/shared",
-                "refs/remotes/origin/Feature/shared");
-        assertTrue(result.exitCode() != 0,
-                () -> "case-distinct remote ref must not stand in for the pushed branch:\n" + result.output());
-        assertTrue(result.output().contains("feature/shared"),
-                () -> "case-distinct ref rejection must identify the pushed branch:\n" + result.output());
-
-        Path exclusionRemote = newBareRemote(temporaryDirectory, "case-exclusion-origin");
-        Path exclusionRepository = newRepository(temporaryDirectory, "case-exclusion-local");
-        createInitialCommit(exclusionRepository);
-        git(exclusionRepository, "remote", "add", "origin", exclusionRemote.toString());
-        git(exclusionRepository, "switch", "-c", "feature/shared");
-        stageSymlink(exclusionRepository, "docs/skdisasm", "../../shared/skdisasm", true);
-        commit(exclusionRepository, "old published bad link");
-        deleteAndStage(exclusionRepository, "docs/skdisasm");
-        commit(exclusionRepository, "published remediation");
-        String remediatedOid = gitOutput(exclusionRepository, "rev-parse", "HEAD").trim();
-        writeAndStage(exclusionRepository, "docs/architecture/audits/new-work.md", "clean unique work\n");
-        commit(exclusionRepository, "clean unique work");
-        String cleanTipOid = gitOutput(exclusionRepository, "rev-parse", "HEAD").trim();
-        git(exclusionRepository, "update-ref", "refs/remotes/origin/Feature/shared", remediatedOid);
-        git(exclusionRepository, "update-ref", "refs/remotes/origin/feature/shared", cleanTipOid);
-
-        assertPolicyAccepts(runPowerShellPolicy(
-                exclusionRepository,
-                powershell,
-                "ci-push",
-                ALL_ZERO_OID,
-                cleanTipOid,
-                "feature/shared",
-                "refs/remotes/origin/feature/shared"));
     }
 
     @Test
@@ -1081,11 +1019,8 @@ class TestBuildToolingGuard {
         if (!policyJob.contains("if: github.event_name == 'pull_request' || github.event_name == 'push'")) {
             violations.add(".github/workflows/ci.yml policy job is not limited to PR and push events");
         }
-        if (!policyJob.contains("Fetch remote branch history")) {
-            violations.add(".github/workflows/ci.yml does not fetch remote branch refs for new-branch range selection");
-        }
-        if (!policyJob.contains("+refs/heads/*:refs/remotes/origin/*")) {
-            violations.add(".github/workflows/ci.yml does not fetch every remote branch as a published-history boundary");
+        if (!policyJob.contains("fetch-depth: 0")) {
+            violations.add(".github/workflows/ci.yml policy checkout does not fetch full cutover history");
         }
         if (!policyJob.contains("Validate pushed branch resource policy")) {
             violations.add(".github/workflows/ci.yml does not define a push-range policy step");
@@ -1093,8 +1028,9 @@ class TestBuildToolingGuard {
         if (!policyJob.contains(".githooks/validate-policy.sh ci-push")) {
             violations.add(".github/workflows/ci.yml does not invoke ci-push policy");
         }
-        if (!policyJob.contains("\"refs/remotes/origin/${{ github.ref_name }}\"")) {
-            violations.add(".github/workflows/ci.yml does not identify the exact pushed remote ref");
+        if (policyJob.contains("\"refs/remotes/origin/${{ github.ref_name }}\"")
+                || policyJob.contains("+refs/heads/*:refs/remotes/origin/*")) {
+            violations.add(".github/workflows/ci.yml still lets fetched peer refs influence new-branch selection");
         }
 
         for (Map.Entry<String, String> job : yamlJobBlocks(workflow).entrySet()) {
@@ -1725,6 +1661,28 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    void shellAndPowerShellRejectWindowsHomePathsWithPortableSeparatorForms(
+            @TempDir Path temporaryDirectory) throws Exception {
+        Map<String, String> forms = new LinkedHashMap<>();
+        forms.put("forward", "C:" + "/" + "Users" + "/policy-user/workspace");
+        forms.put("backward", "D:" + "\\" + "Users" + "\\policy-user\\workspace");
+        forms.put("mixed", "E:" + "\\" + "Users" + "/policy-user\\workspace");
+        forms.put("doubled", "F:" + "\\\\" + "Users" + "\\\\policy-user\\\\workspace");
+        String powershell = availablePowerShell();
+
+        for (Map.Entry<String, String> form : forms.entrySet()) {
+            Path repository = newRepository(temporaryDirectory, "windows-home-" + form.getKey());
+            String relativePath = "docs/architecture/audits/" + form.getKey() + ".md";
+            writeAndStage(repository, relativePath, "local checkout: " + form.getValue() + "\n");
+
+            assertPolicyRejects(runPolicy(repository, "pre-commit"), relativePath);
+            if (powershell != null) {
+                assertPolicyRejects(runPowerShellPolicy(repository, powershell, "pre-commit"), relativePath);
+            }
+        }
+    }
+
+    @Test
     void preCommitRejectsRootMergeAndHandoverScratchArtifacts(@TempDir Path temporaryDirectory) throws Exception {
         Path mergeRepository = newRepository(temporaryDirectory, "merge-status-scratch");
         writeAndStage(mergeRepository, "MERGE-STATUS-incident.md", "temporary status\n");
@@ -1773,7 +1731,20 @@ class TestBuildToolingGuard {
         assertPolicyRejects(runPolicyWithInput(repository, "refs/heads/feature/type-change " + localOid
                 + " refs/heads/feature/type-change " + ALL_ZERO_OID + "\n",
                 "pre-push", "origin", remote.toString()), "docs/portable-resource");
-        assertPolicyRejects(runPolicy(repository, "ci-push", ALL_ZERO_OID, localOid, "feature/type-change"),
+
+        Path ciRepository = newCutoverRepository(
+                temporaryDirectory, "type-change-ci", "feature/type-change-ci");
+        writeAndStage(ciRepository, "docs/portable-resource", "regular base\n");
+        commit(ciRepository, "add regular resource");
+        Files.delete(ciRepository.resolve("docs/portable-resource"));
+        stageSymlink(ciRepository, "docs/portable-resource", "/" + "opt" + "/machine-resource", false);
+        commit(ciRepository, "replace regular resource with absolute link");
+        Files.delete(ciRepository.resolve("docs/portable-resource"));
+        writeAndStage(ciRepository, "docs/portable-resource", "regular restored\n");
+        commit(ciRepository, "restore regular resource");
+        String ciTip = gitOutput(ciRepository, "rev-parse", "HEAD").trim();
+        assertPolicyRejects(runPolicy(
+                ciRepository, "ci-push", ALL_ZERO_OID, ciTip, "feature/type-change-ci"),
                 "docs/portable-resource");
     }
 
@@ -1821,6 +1792,21 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    void existingCiRangeAcceptsCommitThatRemovesBaseViolation(@TempDir Path temporaryDirectory) throws Exception {
+        Path repository = newRepository(temporaryDirectory, "existing-range-removal");
+        createInitialCommit(repository);
+        stageSymlink(repository, "docs/skdisasm", "../../shared/skdisasm", true);
+        commit(repository, "base contains old generated link");
+        String baseOid = gitOutput(repository, "rev-parse", "HEAD").trim();
+        deleteAndStage(repository, "docs/skdisasm");
+        commit(repository, "remove old generated link");
+        String cleanTipOid = gitOutput(repository, "rev-parse", "HEAD").trim();
+
+        assertPolicyAccepts(runPolicy(
+                repository, "ci-push", baseOid, cleanTipOid, "feature/removal-only"));
+    }
+
+    @Test
     void prePushAndCiPushRejectNewBranchWithEarlierUniqueBadCommit(@TempDir Path temporaryDirectory) throws Exception {
         Path remote = newBareRemote(temporaryDirectory, "new-branch-remote");
         Path repository = newRepository(temporaryDirectory, "new-branch-local");
@@ -1835,7 +1821,16 @@ class TestBuildToolingGuard {
 
         assertPolicyRejects(runPolicyWithInput(repository, "refs/heads/feature/clean-tip " + localOid
                 + " refs/heads/feature/clean-tip " + ALL_ZERO_OID + "\n", "pre-push", "origin", remote.toString()), "docs/skdisasm");
-        assertPolicyRejects(runPolicy(repository, "ci-push", ALL_ZERO_OID, localOid, "feature/clean-tip"), "docs/skdisasm");
+
+        Path ciRepository = newCutoverRepository(
+                temporaryDirectory, "new-branch-ci", "feature/clean-tip-ci");
+        stageSymlink(ciRepository, "docs/skdisasm", "../../shared/skdisasm", true);
+        commit(ciRepository, "bad post-cutover link");
+        deleteAndStage(ciRepository, "docs/skdisasm");
+        commit(ciRepository, "remove post-cutover link");
+        String ciTip = gitOutput(ciRepository, "rev-parse", "HEAD").trim();
+        assertPolicyRejects(runPolicy(
+                ciRepository, "ci-push", ALL_ZERO_OID, ciTip, "feature/clean-tip-ci"), "docs/skdisasm");
     }
 
     @Test
@@ -1855,40 +1850,59 @@ class TestBuildToolingGuard {
 
         assertPolicyAccepts(runPolicyWithInput(repository, "refs/heads/feature/clean-from-remediated " + localOid
                 + " refs/heads/feature/clean-from-remediated " + ALL_ZERO_OID + "\n", "pre-push", "origin", remote.toString()));
-        assertPolicyAccepts(runPolicy(repository, "ci-push", ALL_ZERO_OID, localOid, "feature/clean-from-remediated"));
+
+        Path ciRepository = newCutoverRepository(
+                temporaryDirectory, "remediated-ci", "feature/clean-from-cutover");
+        writeAndStage(ciRepository, "docs/architecture/audits/new-work.md", "clean post-cutover work\n");
+        commit(ciRepository, "clean post-cutover work");
+        String ciTip = gitOutput(ciRepository, "rev-parse", "HEAD").trim();
+        assertPolicyAccepts(runPolicy(
+                ciRepository, "ci-push", ALL_ZERO_OID, ciTip, "feature/clean-from-cutover"));
     }
 
     @Test
-    void ciNewBranchRetainsSameNamedRefOnAnotherRemoteAsPublishedBoundary(
-            @TempDir Path temporaryDirectory) throws Exception {
-        Path upstream = newBareRemote(temporaryDirectory, "same-name-upstream");
-        Path origin = newBareRemote(temporaryDirectory, "same-name-origin");
-        Path repository = newRepository(temporaryDirectory, "same-name-local");
-        createInitialCommit(repository);
-        git(repository, "switch", "-c", "feature/shared");
+    void ciNewBranchesRejectSharedBadHistoryRegardlessOfPeerRefs(@TempDir Path temporaryDirectory)
+            throws Exception {
+        Path repository = newCutoverRepository(
+                temporaryDirectory, "peer-new-refs", "feature/peer-a");
         stageSymlink(repository, "docs/skdisasm", "../../shared/skdisasm", true);
-        commit(repository, "old published bad link");
+        commit(repository, "shared bad post-cutover link");
         deleteAndStage(repository, "docs/skdisasm");
-        commit(repository, "published remediation");
-        git(repository, "remote", "add", "upstream", upstream.toString());
-        git(repository, "remote", "add", "origin", origin.toString());
-        git(repository, "push", "-u", "upstream", "feature/shared");
-
-        writeAndStage(repository, "docs/architecture/audits/new-work.md", "clean unpublished work\n");
-        commit(repository, "clean feature work");
+        commit(repository, "shared clean removal");
         String localOid = gitOutput(repository, "rev-parse", "HEAD").trim();
-        git(repository, "update-ref", "refs/remotes/origin/feature/shared", localOid);
-        git(repository, "update-ref", "refs/remotes/origin/prefix/feature/shared", localOid);
+        git(repository, "update-ref", "refs/remotes/origin/feature/peer-a", localOid);
+        git(repository, "update-ref", "refs/remotes/origin/feature/peer-b", localOid);
 
-        ProcessResult wrongPushedRef = runPolicy(repository, "ci-push", ALL_ZERO_OID, localOid,
-                "feature/shared", "refs/remotes/origin/prefix/feature/shared");
-        assertTrue(wrongPushedRef.exitCode() != 0,
-                () -> "a different branch at the same tip must not stand in for the pushed ref:\n"
-                        + wrongPushedRef.output());
-        assertTrue(wrongPushedRef.output().contains("feature/shared"),
-                () -> "wrong-ref rejection must identify the pushed branch:\n" + wrongPushedRef.output());
-        assertPolicyAccepts(runPolicy(repository, "ci-push", ALL_ZERO_OID, localOid,
-                "feature/shared", "refs/remotes/origin/feature/shared"));
+        assertPolicyRejects(runPolicy(
+                repository, "ci-push", ALL_ZERO_OID, localOid, "feature/peer-a"), "docs/skdisasm");
+        assertPolicyRejects(runPolicy(
+                repository, "ci-push", ALL_ZERO_OID, localOid, "feature/peer-b"), "docs/skdisasm");
+    }
+
+    @Test
+    void ciNewBranchFailsClosedWhenCutoverIsMissingOrUnreachable(@TempDir Path temporaryDirectory)
+            throws Exception {
+        Path missingRepository = newRepository(temporaryDirectory, "missing-cutover");
+        createInitialCommit(missingRepository);
+        String missingTip = gitOutput(missingRepository, "rev-parse", "HEAD").trim();
+        ProcessResult missingResult = runPolicy(
+                missingRepository, "ci-push", ALL_ZERO_OID, missingTip, "feature/missing-cutover");
+        assertTrue(missingResult.exitCode() != 0,
+                () -> "missing cutover object must reject new-ref CI:\n" + missingResult.output());
+        assertTrue(missingResult.output().contains(RESOURCE_POLICY_CUTOVER),
+                () -> "missing-cutover rejection must identify the fixed boundary:\n" + missingResult.output());
+
+        Path unrelatedRepository = newRepository(temporaryDirectory, "unreachable-cutover");
+        createInitialCommit(unrelatedRepository);
+        String unrelatedTip = gitOutput(unrelatedRepository, "rev-parse", "HEAD").trim();
+        git(unrelatedRepository, "fetch", "--no-tags",
+                Path.of(".").toAbsolutePath().normalize().toString(), RESOURCE_POLICY_CUTOVER);
+        ProcessResult unrelatedResult = runPolicy(
+                unrelatedRepository, "ci-push", ALL_ZERO_OID, unrelatedTip, "feature/unreachable-cutover");
+        assertTrue(unrelatedResult.exitCode() != 0,
+                () -> "unreachable cutover must reject new-ref CI:\n" + unrelatedResult.output());
+        assertTrue(unrelatedResult.output().contains("ancestor"),
+                () -> "unreachable-cutover rejection must explain ancestry:\n" + unrelatedResult.output());
     }
 
     @Test
@@ -1958,6 +1972,52 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    void postCheckoutMigratesLegacyAbsoluteLinkToExpectedMainResource(@TempDir Path temporaryDirectory)
+            throws Exception {
+        Path mainRepository = newRepository(temporaryDirectory, "legacy-link-main");
+        createInitialCommit(mainRepository);
+        Path source = mainRepository.resolve("docs/skdisasm");
+        Files.createDirectories(source);
+        Files.writeString(source.resolve("marker.txt"), "source\n");
+        Path linkedWorktree = temporaryDirectory.resolve("legacy-link-worktree");
+        git(mainRepository, "worktree", "add", "-b", "feature/legacy-link", linkedWorktree.toString());
+        Path link = linkedWorktree.resolve("docs/skdisasm");
+        Files.createDirectories(link.getParent());
+        Files.createSymbolicLink(link, source.toAbsolutePath());
+
+        ProcessResult result = run(linkedWorktree,
+                List.of("bash", POST_CHECKOUT_HOOK.toString(), ALL_ZERO_OID, ALL_ZERO_OID, "1"), null);
+
+        assertEquals(0, result.exitCode(), () -> "post-checkout failed:\n" + result.output());
+        Path target = Files.readSymbolicLink(link);
+        assertFalse(target.isAbsolute(), "legacy absolute link must be replaced with a relative target: " + target);
+        assertEquals(source.toRealPath(), link.getParent().resolve(target).toRealPath());
+    }
+
+    @Test
+    void postCheckoutPreservesUnknownAbsoluteSymlink(@TempDir Path temporaryDirectory) throws Exception {
+        Path mainRepository = newRepository(temporaryDirectory, "unknown-link-main");
+        createInitialCommit(mainRepository);
+        Files.createDirectories(mainRepository.resolve("docs/skdisasm"));
+        Path unknownSource = temporaryDirectory.resolve("user-owned-skdisasm");
+        Files.createDirectories(unknownSource);
+        Path linkedWorktree = temporaryDirectory.resolve("unknown-link-worktree");
+        git(mainRepository, "worktree", "add", "-b", "feature/unknown-link", linkedWorktree.toString());
+        Path link = linkedWorktree.resolve("docs/skdisasm");
+        Files.createDirectories(link.getParent());
+        Path originalTarget = unknownSource.toAbsolutePath();
+        Files.createSymbolicLink(link, originalTarget);
+
+        ProcessResult result = run(linkedWorktree,
+                List.of("bash", POST_CHECKOUT_HOOK.toString(), ALL_ZERO_OID, ALL_ZERO_OID, "1"), null);
+
+        assertEquals(0, result.exitCode(), () -> "post-checkout failed:\n" + result.output());
+        assertEquals(originalTarget, Files.readSymbolicLink(link),
+                "unknown user-authored symlink must remain untouched");
+        assertEquals(unknownSource.toRealPath(), link.toRealPath());
+    }
+
+    @Test
     void postCheckoutCreatesRelativeDisassemblyLinkWhenDestinationParentIsMissing(@TempDir Path temporaryDirectory) throws Exception {
         Path mainRepository = newRepository(temporaryDirectory, "missing-parent-main");
         createInitialCommit(mainRepository);
@@ -2021,6 +2081,24 @@ class TestBuildToolingGuard {
         git(repository, "init", "-b", "main");
         git(repository, "config", "user.name", "Policy Test");
         git(repository, "config", "user.email", "policy-test@example.invalid");
+        git(repository, "config", "gc.auto", "0");
+        git(repository, "config", "maintenance.auto", "false");
+        return repository;
+    }
+
+    private static Path newCutoverRepository(Path temporaryDirectory, String name, String branch) throws Exception {
+        Path repository = temporaryDirectory.resolve(name);
+        Path sourceRepository = Path.of(".").toAbsolutePath().normalize();
+        ProcessResult clone = run(temporaryDirectory,
+                List.of("git", "clone", "--shared", "--no-checkout",
+                        sourceRepository.toString(), repository.toString()),
+                null);
+        assertEquals(0, clone.exitCode(), () -> "could not create shared cutover fixture:\n" + clone.output());
+        git(repository, "config", "user.name", "Policy Test");
+        git(repository, "config", "user.email", "policy-test@example.invalid");
+        git(repository, "config", "gc.auto", "0");
+        git(repository, "config", "maintenance.auto", "false");
+        git(repository, "switch", "-c", branch, RESOURCE_POLICY_CUTOVER);
         return repository;
     }
 

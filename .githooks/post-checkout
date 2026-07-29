@@ -60,13 +60,77 @@ relative_main_tree() {
     dirname "$relative_common_dir"
 }
 
+absolute_link_target() {
+    case "$1" in
+        /*|[A-Za-z]:[\\/]*|\\\\*)
+            return 0
+            ;;
+    esac
+    return 1
+}
+
+canonical_existing_path() {
+    local path="$1"
+    local parent
+    local leaf
+    [ -e "$path" ] || return 1
+    if [ -d "$path" ]; then
+        (cd "$path" && pwd -P)
+        return
+    fi
+    parent="$(dirname "$path")"
+    leaf="$(basename "$path")"
+    parent="$(cd "$parent" && pwd -P)" || return 1
+    printf '%s/%s\n' "$parent" "$leaf"
+}
+
+# Replace only an absolute link that resolves to the resource this hook owns.
+# Unknown, broken, relative, or user-authored links remain untouched.
+migrate_legacy_link() {
+    local resource="$1"
+    local src="$2"
+    local dst="$3"
+    local old_target
+    local resolved_target
+    local resolved_source
+    local relative_main
+    local replacement
+
+    old_target="$(readlink "$dst")" || return 1
+    absolute_link_target "$old_target" || return 0
+    resolved_target="$(canonical_existing_path "$old_target" 2>/dev/null)" || return 0
+    resolved_source="$(canonical_existing_path "$src" 2>/dev/null)" || return 0
+    [ "$resolved_target" = "$resolved_source" ] || return 0
+
+    relative_main="$(relative_main_tree "$(dirname "$dst")")" || return 1
+    replacement="$dst.policy-link.$$"
+    [ ! -e "$replacement" ] && [ ! -L "$replacement" ] || {
+        echo "[post-checkout] Temporary migration path already exists: $replacement" >&2
+        return 1
+    }
+    ln -s "$relative_main/$resource" "$replacement" || return 1
+    if ! rm "$dst"; then
+        rm "$replacement" 2>/dev/null
+        return 1
+    fi
+    if ! mv "$replacement" "$dst"; then
+        ln -s "$old_target" "$dst" 2>/dev/null
+        rm "$replacement" 2>/dev/null
+        return 1
+    fi
+    echo "  Migrated legacy link: $resource"
+}
+
 # Link a single file (idempotent, never clobbers)
 link_file() {
     local src="$MAIN_TREE/$1"
     local dst="$WORK_TREE/$1"
     local relative_main
     [ -e "$src" ] || return 0           # Source doesn't exist
-    [ -L "$dst" ] && return 0           # Already a symlink
+    if [ -L "$dst" ]; then
+        migrate_legacy_link "$1" "$src" "$dst"
+        return
+    fi
     [ -e "$dst" ] && return 0           # Real file exists — don't clobber
     relative_main="$(relative_main_tree "$(dirname "$dst")")" || return 1
     ln -s "$relative_main/$1" "$dst" && echo "  Linked: $1"
@@ -78,7 +142,10 @@ link_dir() {
     local dst="$WORK_TREE/$1"
     local relative_main
     [ -d "$src" ] || return 0           # Source doesn't exist
-    [ -L "$dst" ] && return 0           # Already a symlink
+    if [ -L "$dst" ]; then
+        migrate_legacy_link "$1" "$src" "$dst"
+        return
+    fi
     [ -e "$dst" ] && [ ! -d "$dst" ] && return 0  # Real file exists — don't clobber
     [ -d "$dst" ] && [ -n "$(ls -A "$dst" 2>/dev/null)" ] && return 0  # Non-empty dir — don't clobber
     relative_main="$(relative_main_tree "$(dirname "$dst")")" || return 1

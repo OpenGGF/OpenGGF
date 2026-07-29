@@ -11,13 +11,14 @@ $ErrorActionPreference = "Stop"
 $script:GithubFileSizeLimitBytes = 100000000
 $script:TraceCompressionThresholdBytes = 1048576
 $script:ReleaseTrailerCutoverBase = "677447024a08db9e25f3461588d661c23ba26848"
+$script:ResourcePolicyCutover = "268fb374f77ec7b156e780d0cebb33b3e88e81ac"
 $script:RomLikeDenylistExtensions = @(".gen", ".smd", ".bin", ".sms", ".gg", ".32x")
 $script:EmptyTreeOid = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
 $script:AllZeroOid = "0000000000000000000000000000000000000000"
 $script:PosixHomeRoot = "/home"
 $script:VarHomeRoot = "/var/home"
 $script:MacosHomeRoot = "/Users"
-$script:WindowsUsersRoot = '[A-Za-z]:\\[Uu][Ss][Ee][Rr][Ss]'
+$script:WindowsUsersRoot = '[A-Za-z]:[\\/]+[Uu][Ss][Ee][Rr][Ss]'
 
 function Fail([string]$Message) {
     [Console]::Error.WriteLine("policy: $Message")
@@ -214,7 +215,7 @@ function Get-MachineLocalHomeGrepArguments([string]$Path, [string]$Commit) {
         "-e",
         ($script:MacosHomeRoot + '/[^/$<[:space:]][^/[:space:]]*/'),
         "-e",
-        ($script:WindowsUsersRoot + '\\[^\\$<%[:space:]][^\\[:space:]]*\\')
+        ($script:WindowsUsersRoot + '[\\/]+[^\\/$<%[:space:]][^\\/[:space:]]*[\\/]')
     )) {
         $arguments.Add($argument) | Out-Null
     }
@@ -869,100 +870,30 @@ function Validate-PrePush([string]$RemoteName) {
     }
 }
 
-function Resolve-PushedRemoteRef([string]$AfterSha, [string]$BranchName, [string]$SuppliedRef) {
-    try {
-        $remoteNames = @(Invoke-GitLines @("remote"))
-    } catch {
-        Fail "could not enumerate configured remotes while resolving pushed branch $BranchName."
+function Validate-CiNewRef([string]$AfterSha) {
+    if (-not (Test-GitSuccess @("cat-file", "-e", "$script:ResourcePolicyCutover^{commit}"))) {
+        Fail "resource-policy cutover $script:ResourcePolicyCutover is not available as a commit."
     }
-
-    if (-not [string]::IsNullOrWhiteSpace($SuppliedRef)) {
-        $suppliedMatchesBranch = $false
-        foreach ($remoteName in $remoteNames) {
-            $expectedRef = "refs/remotes/$remoteName/$BranchName"
-            if ([string]::Equals(
-                    $SuppliedRef,
-                    $expectedRef,
-                    [System.StringComparison]::Ordinal)) {
-                $suppliedMatchesBranch = $true
-                break
-            }
-        }
-        if (-not $suppliedMatchesBranch) {
-            Fail "supplied pushed remote ref ``$SuppliedRef`` does not identify pushed branch $BranchName on a configured remote."
-        }
-        if (-not (Test-GitSuccess @("show-ref", "--verify", "--quiet", $SuppliedRef))) {
-            Fail "supplied pushed remote ref ``$SuppliedRef`` is not available."
-        }
-        $suppliedOid = Invoke-GitText @("rev-parse", $SuppliedRef)
-        if ($suppliedOid -cne $AfterSha) {
-            Fail "supplied pushed remote ref ``$SuppliedRef`` does not resolve to pushed tip $AfterSha."
-        }
-        return $SuppliedRef
+    if (-not (Test-GitSuccess @("cat-file", "-e", "$AfterSha^{commit}"))) {
+        Fail "required pushed tip $AfterSha is not available as a commit."
     }
-
-    $matches = New-Object System.Collections.Generic.List[string]
-    foreach ($remoteName in $remoteNames) {
-        $remoteRef = "refs/remotes/$remoteName/$BranchName"
-        if (-not (Test-GitSuccess @("show-ref", "--verify", "--quiet", $remoteRef))) {
-            continue
-        }
-        $remoteOid = Invoke-GitText @("rev-parse", $remoteRef)
-        if ($remoteOid -ceq $AfterSha) {
-            $matches.Add($remoteRef) | Out-Null
-        }
+    if (-not (Test-GitSuccess @(
+            "merge-base",
+            "--is-ancestor",
+            $script:ResourcePolicyCutover,
+            $AfterSha
+        ))) {
+        Fail "resource-policy cutover $script:ResourcePolicyCutover is not an ancestor of new-ref tip $AfterSha."
     }
-    if ($matches.Count -gt 1) {
-        Fail "multiple fetched remote refs resolve to pushed branch $BranchName; supply the exact pushed remote ref."
-    }
-    if ($matches.Count -eq 1) {
-        return $matches[0]
-    }
-    return ""
-}
-
-function Get-CiNewRefCommits([string]$AfterSha, [string]$RefName, [string]$SuppliedPushedRef) {
-    $branchName = if ($RefName.StartsWith("refs/heads/", [System.StringComparison]::Ordinal)) {
-        $RefName.Substring("refs/heads/".Length)
-    } else {
-        $RefName
-    }
-    $pushedRemoteRef = Resolve-PushedRemoteRef $AfterSha $branchName $SuppliedPushedRef
-
-    try {
-        $remoteRefs = @(Invoke-GitLines @("for-each-ref", "--format=%(refname)", "refs/remotes"))
-    } catch {
-        Fail "could not enumerate fetched remote refs for new branch $branchName."
-    }
-    $revisionArguments = New-Object System.Collections.Generic.List[string]
-    $revisionArguments.Add("rev-list") | Out-Null
-    $revisionArguments.Add("--reverse") | Out-Null
-    $revisionArguments.Add($AfterSha) | Out-Null
-    foreach ($remoteRef in $remoteRefs) {
-        if ([string]::IsNullOrWhiteSpace($remoteRef) -or
-                [string]::Equals(
-                    $remoteRef,
-                    $pushedRemoteRef,
-                    [System.StringComparison]::Ordinal)) {
-            continue
-        }
-        $revisionArguments.Add("^$remoteRef") | Out-Null
-    }
-    try {
-        return Invoke-GitLines $revisionArguments.ToArray()
-    } catch {
-        Fail "could not enumerate commits unique to new branch $branchName."
-    }
+    Validate-ContentRange $script:ResourcePolicyCutover $AfterSha
 }
 
 function Validate-CiPush(
         [string]$BeforeSha,
         [string]$AfterSha,
-        [string]$RefName,
-        [string]$PushedRemoteRef) {
+        [string]$RefName) {
     if ($BeforeSha -ceq $script:AllZeroOid) {
-        $commits = @(Get-CiNewRefCommits $AfterSha $RefName $PushedRemoteRef)
-        Validate-ContentCommitList $commits $AfterSha
+        Validate-CiNewRef $AfterSha
         return
     }
 
@@ -1023,8 +954,7 @@ switch -CaseSensitive ($Mode) {
         if ($RemainingArgs.Count -lt 3) {
             Fail "usage: validate-policy.ps1 ci-push <before-sha> <after-sha> <ref-name>"
         }
-        $pushedRemoteRef = if ($RemainingArgs.Count -ge 4) { $RemainingArgs[3] } else { "" }
-        Validate-CiPush $RemainingArgs[0] $RemainingArgs[1] $RemainingArgs[2] $pushedRemoteRef
+        Validate-CiPush $RemainingArgs[0] $RemainingArgs[1] $RemainingArgs[2]
     }
     default {
         Fail "usage: validate-policy.ps1 {prepare-commit-msg|pre-commit|commit-msg|pre-merge-commit|pre-push|ci-pr|ci-push} ..."
