@@ -7,6 +7,7 @@ import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.game.sonic1.resources.Sonic1PlcService;
 import com.openggf.level.resources.NemesisPlcPatternCounts;
 import com.openggf.level.resources.PlcParser;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.tests.SingletonResetExtension;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
@@ -21,6 +22,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
@@ -39,9 +41,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @RequiresRom(SonicGame.SONIC_1)
 class TestSonic1PlcProducerOwnerCoverage {
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         GameServices.module().createGame(TestEnvironment.currentRom());
         TestEnvironment.activeGameplayMode();
+        // SBZ2's real threshold first spawns the false floor, then publishes
+        // PLC 30.  Supply the normal manager dependency so the test reaches
+        // the production queue call rather than bypassing the preceding owner
+        // action.
+        Field objectManager = GameServices.level().getClass().getDeclaredField("objectManager");
+        objectManager.setAccessible(true);
+        objectManager.set(GameServices.level(), org.mockito.Mockito.mock(ObjectManager.class));
     }
 
     @AfterEach
@@ -76,6 +85,7 @@ class TestSonic1PlcProducerOwnerCoverage {
                 new EventRoute("MZ3 boss", Sonic1MZEvents::new, 2, 0, 0x17F0, 0, 17, false),
                 new EventRoute("SLZ3 boss", Sonic1SLZEvents::new, 2, 2, 0x2000, 0, 17, false),
                 new EventRoute("SYZ3 boss", Sonic1SYZEvents::new, 2, 2, 0x2C00, 0, 17, false),
+                new EventRoute("SBZ2 false-floor boundary", Sonic1SBZEvents::new, 1, 2, 0x1EB0, 0, 30, false),
                 new EventRoute("FZ art boundary", Sonic1SBZEvents::new, 0, 0, 0x2148, 0, 31, true));
     }
 

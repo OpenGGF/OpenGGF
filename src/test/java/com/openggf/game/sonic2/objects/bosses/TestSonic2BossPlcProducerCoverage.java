@@ -7,6 +7,7 @@ import com.openggf.game.sonic2.Sonic2ObjectArtProvider;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.resources.Sonic2PlcService;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
+import com.openggf.game.rewind.snapshot.NemesisPlcQueueSnapshot;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
@@ -14,6 +15,8 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.TestObjectServices;
+import com.openggf.level.resources.NemesisPlcPatternCounts;
+import com.openggf.level.resources.PlcParser;
 import com.openggf.tests.SingletonResetExtension;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
@@ -29,10 +32,13 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /** Executes each ordinary boss's actual killing-hit hook, not a PLC facade. */
 @Isolated
@@ -67,13 +73,39 @@ class TestSonic2BossPlcProducerCoverage {
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("bosses")
-    void killingHitOwnerAppendsCapsulePlc(BossRoute route) {
+    void killingHitOwnerAppendsCapsulePlc(BossRoute route) throws Exception {
         TestObjectServices services = new TestObjectServices()
                 .withGameModule(GameServices.module())
-                .withLevelManager(GameServices.level());
+                .withLevelManager(GameServices.level())
+                .withCamera(GameServices.camera())
+                .withGameState(GameServices.gameState());
         ObjectConstructionContext.with(services, () -> route.invoke().accept(services));
         Sonic2PlcService queue = GameServices.module().getGameService(Sonic2PlcService.class);
-        assertTrue(queue.isBusy(), route.name() + " must append the capsule PLC from onDefeatStarted");
+        assertEquals(expectedDescriptors(Sonic2Constants.PLC_CAPSULE), queue.capture().queuedEntries(),
+                route.name() + " must append the capsule PLC from its real killing-hit owner");
+    }
+
+    /**
+     * Drives the eight distinct post-defeat handoffs that call the ROM
+     * LoadPLC_AnimalExplosion helper.  This deliberately enters the concrete
+     * owner method at its native timer/tertiary boundary; asserting merely
+     * that the shared request façade accepts IDs would miss every one of
+     * these game-specific handoffs.
+     */
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("animalExplosionRoutes")
+    void postDefeatOwnerAppendsZoneAnimalThenExplosionAtNativeBoundary(BossRoute route)
+            throws Exception {
+        TestObjectServices services = new TestObjectServices()
+                .withGameModule(GameServices.module())
+                .withLevelManager(GameServices.level())
+                .withCamera(GameServices.camera())
+                .withGameState(GameServices.gameState());
+        ObjectConstructionContext.with(services, () -> route.invoke().accept(services));
+        Sonic2PlcService queue = GameServices.module().getGameService(Sonic2PlcService.class);
+        assertEquals(expectedDescriptors(route.animalPlc(), Sonic2Constants.PLC_EXPLOSION),
+                queue.capture().queuedEntries(),
+                route.name() + " must append its zone animal before the explosion PLC");
     }
 
     private static Stream<BossRoute> bosses() {
@@ -88,8 +120,38 @@ class TestSonic2BossPlcProducerCoverage {
                 boss("OOZ", s -> { Sonic2OOZBossInstance b = new Sonic2OOZBossInstance(spawn()); b.setServices(s); b.onDefeatStarted(); }));
     }
 
+    private static Stream<BossRoute> animalExplosionRoutes() {
+        return Stream.of(
+                handoff("EHZ flying-off tertiary-2 expiry", Sonic2Constants.PLC_ANIMALS_EHZ,
+                        TestSonic2BossPlcProducerCoverage::invokeEhzHandoff),
+                handoff("HTZ defeated flee boundary", Sonic2Constants.PLC_ANIMALS_HTZ_MTZ_WFZ,
+                        s -> invokeHandoff(new Sonic2HTZBossInstance(spawn()), s,
+                                "updateDefeated", new String[] {"defeatTimer"}, new int[] {-0x3B})),
+                handoff("MCZ hover-down countdown 0x18", Sonic2Constants.PLC_ANIMALS_MCZ,
+                        s -> invokeHandoff(new Sonic2MCZBossInstance(spawn()), s,
+                                "updateSubAHoverDown", new String[] {"countdown"}, new int[] {0x17})),
+                handoff("CNZ defeat-bounce countdown 0x18", Sonic2Constants.PLC_ANIMALS_CNZ,
+                        s -> invokeHandoff(new Sonic2CNZBossInstance(spawn()), s,
+                                "updateDefeatBounce", new String[] {"bossCountdown"}, new int[] {0x17})),
+                handoff("CPZ level-music handoff", Sonic2Constants.PLC_ANIMALS_CPZ,
+                        s -> invokeHandoff(new Sonic2CPZBossInstance(spawn()), s,
+                                "updateMainStopExploding", new String[] {"defeatTimer"}, new int[] {0x2F})),
+                handoff("MTZ first flee pass", Sonic2Constants.PLC_ANIMALS_HTZ_MTZ_WFZ,
+                        s -> invokeHandoff(new Sonic2MTZBossInstance(spawn()), s,
+                                "updateSub12Flee", new String[0], new int[0])),
+                handoff("OOZ defeated-flag handoff", Sonic2Constants.PLC_ANIMALS_OOZ,
+                        s -> invokeHandoff(new Sonic2OOZBossInstance(spawn()), s,
+                                "updateMainDefeated", new String[] {"bossCountdown"}, new int[] {0}, 0)),
+                handoff("ARZ defeated ascent countdown 0x18", Sonic2Constants.PLC_ANIMALS_ARZ,
+                        TestSonic2BossPlcProducerCoverage::invokeArzHandoff));
+    }
+
     private static BossRoute boss(String name, Consumer<TestObjectServices> invoke) {
-        return new BossRoute(name, invoke);
+        return new BossRoute(name, invoke, -1);
+    }
+
+    private static BossRoute handoff(String name, int animalPlc, Consumer<TestObjectServices> invoke) {
+        return new BossRoute(name, invoke, animalPlc);
     }
 
     private static ObjectSpawn spawn() {
@@ -110,6 +172,92 @@ class TestSonic2BossPlcProducerCoverage {
         }
     }
 
-    private record BossRoute(String name, Consumer<TestObjectServices> invoke) {
+    private static void invokeHandoff(Object boss, TestObjectServices services, String method,
+                                      String[] fields, int[] values, Object... arguments) {
+        try {
+            ((com.openggf.level.objects.AbstractObjectInstance) boss).setServices(services);
+            for (int index = 0; index < fields.length; index++) {
+                Field field = boss.getClass().getDeclaredField(fields[index]);
+                field.setAccessible(true);
+                field.setInt(boss, values[index]);
+            }
+            Class<?>[] types = new Class<?>[arguments.length];
+            for (int index = 0; index < arguments.length; index++) {
+                types[index] = arguments[index] instanceof Integer ? int.class
+                        : arguments[index] == null ? com.openggf.sprites.playable.AbstractPlayableSprite.class
+                        : arguments[index].getClass();
+            }
+            Method target = boss.getClass().getDeclaredMethod(method, types);
+            target.setAccessible(true);
+            target.invoke(boss, arguments);
+        } catch (ReflectiveOperationException failure) {
+            throw new AssertionError("Unable to drive production handoff " + method, failure);
+        }
+    }
+
+    private static void invokeEhzHandoff(TestObjectServices services) {
+        Sonic2EHZBossInstance boss = new Sonic2EHZBossInstance(spawn());
+        try {
+            boss.setServices(services);
+            Field waitTimer = Sonic2EHZBossInstance.class.getDeclaredField("waitTimer");
+            waitTimer.setAccessible(true);
+            waitTimer.setInt(boss, 0);
+            Field state = findField(boss.getClass(), "state");
+            Object bossState = state.get(boss);
+            Field tertiary = bossState.getClass().getField("routineTertiary");
+            tertiary.setInt(bossState, 2);
+            Method method = Sonic2EHZBossInstance.class.getDeclaredMethod("updateSubAFlyingOff");
+            method.setAccessible(true);
+            method.invoke(boss);
+        } catch (ReflectiveOperationException failure) {
+            throw new AssertionError("Unable to drive EHZ's tertiary-2 handoff", failure);
+        }
+    }
+
+    private static void invokeArzHandoff(TestObjectServices services) {
+        Sonic2ARZBossInstance boss = new Sonic2ARZBossInstance(spawn());
+        try {
+            boss.setServices(services);
+            Field countdown = Sonic2ARZBossInstance.class.getDeclaredField("bossCountdown");
+            countdown.setAccessible(true);
+            countdown.setInt(boss, 0x17);
+            Method method = Sonic2ARZBossInstance.class.getDeclaredMethod("updateMainSubA",
+                    com.openggf.sprites.playable.AbstractPlayableSprite.class);
+            method.setAccessible(true);
+            method.invoke(boss, org.mockito.Mockito.mock(com.openggf.sprites.playable.AbstractPlayableSprite.class));
+        } catch (ReflectiveOperationException failure) {
+            throw new AssertionError("Unable to drive ARZ's defeated-ascent handoff", failure);
+        }
+    }
+
+    private static Field findField(Class<?> type, String name) throws NoSuchFieldException {
+        for (Class<?> candidate = type; candidate != null; candidate = candidate.getSuperclass()) {
+            try {
+                Field field = candidate.getDeclaredField(name);
+                field.setAccessible(true);
+                return field;
+            } catch (NoSuchFieldException ignored) {
+                // Continue to the state-owning base class.
+            }
+        }
+        throw new NoSuchFieldException(name);
+    }
+
+    private static List<NemesisPlcQueueSnapshot.Entry> expectedDescriptors(int... ids) throws IOException {
+        List<NemesisPlcQueueSnapshot.Entry> result = new ArrayList<>();
+        for (int id : ids) {
+            PlcParser.PlcDefinition definition = PlcParser.parse(GameServices.rom().getRom(),
+                    Sonic2Constants.ART_LOAD_CUES_ADDR, id);
+            List<Integer> counts = NemesisPlcPatternCounts.derive(GameServices.rom().getRom(), definition);
+            for (int index = 0; index < definition.entries().size(); index++) {
+                PlcParser.PlcEntry entry = definition.entries().get(index);
+                int count = counts.get(index);
+                result.add(new NemesisPlcQueueSnapshot.Entry(entry.romAddr(), entry.tileIndex(), count, count));
+            }
+        }
+        return result;
+    }
+
+    private record BossRoute(String name, Consumer<TestObjectServices> invoke, int animalPlc) {
     }
 }

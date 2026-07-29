@@ -1,6 +1,7 @@
 package com.openggf.game.sonic2;
 
 import com.openggf.game.GameServices;
+import com.openggf.game.LevelLoadContext;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.rewind.snapshot.NemesisPlcQueueSnapshot;
@@ -18,10 +19,21 @@ import com.openggf.game.sonic2.events.Sonic2WFZEvents;
 import com.openggf.game.sonic2.events.Sonic2ZoneEvents;
 import com.openggf.game.sonic2.resources.Sonic2PlcService;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
+import com.openggf.game.sonic2.titlescreen.TitleScreenManager;
+import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageIntro;
+import com.openggf.game.sonic2.Sonic2SpecialStageProvider;
+import com.openggf.game.sonic2.objects.EggPrisonObjectInstance;
+import com.openggf.game.sonic2.objects.SignpostObjectInstance;
+import com.openggf.game.sonic2.titlecard.TitleCardManager;
+import com.openggf.game.sonic2.titlecard.TitleCardState;
+import com.openggf.game.titlecard.TitleCardElement;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.ObjectConstructionContext;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.resources.NemesisPlcPatternCounts;
 import com.openggf.level.resources.PlcParser;
 import com.openggf.tests.rules.RequiresRom;
@@ -42,6 +54,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.OptionalInt;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -135,6 +148,101 @@ class TestSonic2PlcProducerCoverage {
     }
 
     @Test
+    void titleScreenOwnerPublishesStd1BeforePresentationBegins() throws Exception {
+        TitleScreenManager.getInstance().initialize();
+        Sonic2PlcService queue = GameServices.module().getGameService(Sonic2PlcService.class);
+
+        assertEquals(expectedDescriptors(0), queue.capture().queuedEntries(),
+                "S2 title initialization must replace the native Std1 PLC before presentation");
+    }
+
+    @Test
+    void titleCardOwnerPublishesWaterThenZoneAnimalAtTextExit() throws Exception {
+        TitleCardManager card = new TitleCardManager();
+        card.initialize(0, 0);
+        for (String name : List.of("zoneNameElement", "zoneTextElement", "actNumberElement")) {
+            Field element = TitleCardManager.class.getDeclaredField(name);
+            element.setAccessible(true);
+            ((TitleCardElement) element.get(card)).startExit();
+        }
+        Field state = TitleCardManager.class.getDeclaredField("state");
+        state.setAccessible(true);
+        state.set(card, TitleCardState.TEXT_EXIT);
+        for (int frame = 0; frame < 20; frame++) {
+            card.update();
+        }
+
+        Sonic2PlcService queue = GameServices.module().getGameService(Sonic2PlcService.class);
+        assertEquals(expectedDescriptors(Sonic2Constants.PLC_STD_WATER,
+                Sonic2Constants.PLC_ANIMALS_EHZ), queue.capture().queuedEntries(),
+                "Obj34 must publish standard-water then the zone animal PLC at its text-exit edge");
+    }
+
+    @Test
+    void levelInitOwnerClearsThenPublishesHeaderPrimaryStd2AndTailsLifeArt() throws Exception {
+        LevelLoadContext context = new LevelLoadContext();
+        Level level = org.mockito.Mockito.mock(Level.class);
+        org.mockito.Mockito.when(level.getZoneIndex()).thenReturn(0);
+        context.setLevel(level);
+        Sonic2LevelInitProfile profile = new Sonic2LevelInitProfile(new Sonic2LevelEventManager(),
+                () -> OptionalInt.of(9));
+        profile.levelLoadSteps(context).stream()
+                .filter(step -> step.name().equals("QueueInitialPlcs"))
+                .findFirst().orElseThrow().execute();
+
+        int primary = GameServices.rom().getRom().readByte(Sonic2Constants.LEVEL_DATA_DIR) & 0xFF;
+        Sonic2PlcService queue = GameServices.module().getGameService(Sonic2PlcService.class);
+        assertEquals(expectedDescriptors(primary, Sonic2Constants.PLC_STD2, 9),
+                queue.capture().queuedEntries(),
+                "S2 Level must commit ClearPLC/header-primary/Std2/life through its lifecycle owner");
+    }
+
+    @Test
+    void specialStageIntroOwnerPublishesBombsAtWait2OneShotGate() throws Exception {
+        Sonic2SpecialStageIntro intro = new Sonic2SpecialStageIntro();
+        intro.initialize(0, 50);
+        Field phase = Sonic2SpecialStageIntro.class.getDeclaredField("currentPhase");
+        phase.setAccessible(true);
+        @SuppressWarnings({"unchecked", "rawtypes"})
+        Object wait2 = Enum.valueOf((Class) phase.getType(), "WAIT2");
+        phase.set(intro, wait2);
+        Field timer = Sonic2SpecialStageIntro.class.getDeclaredField("phaseTimer");
+        timer.setAccessible(true);
+        timer.setInt(intro, 30);
+        intro.update();
+
+        Sonic2PlcService queue = GameServices.module().getGameService(Sonic2PlcService.class);
+        assertEquals(expectedDescriptors(Sonic2Constants.PLC_SPECIAL_STAGE_BOMBS),
+                queue.capture().queuedEntries(),
+                "special-stage WAIT2 completion must append Bombs before advancing its one-shot phase");
+    }
+
+    @Test
+    void bothNormalEndActOwnersReplaceResultsPlcAtTheirActualHandoff() throws Exception {
+        TestObjectServices services = new TestObjectServices().withGameModule(GameServices.module());
+        SignpostObjectInstance signpost = new SignpostObjectInstance(new ObjectSpawn(0, 0, 0, 0, 0, false, 0),
+                "signpost");
+        EggPrisonObjectInstance eggPrison = new EggPrisonObjectInstance(new ObjectSpawn(0, 0, 0, 0, 0, false, 0),
+                "capsule");
+        invokeResultsOwner(signpost, services, "spawnResultsScreen",
+                org.mockito.Mockito.mock(com.openggf.sprites.playable.AbstractPlayableSprite.class));
+        assertEquals(expectedDescriptors(38), GameServices.module().getGameService(Sonic2PlcService.class)
+                .capture().queuedEntries(), "S2 signpost must replace results art at Load_EndOfAct");
+
+        invokeResultsOwner(eggPrison, services, "triggerEndOfAct");
+        assertEquals(expectedDescriptors(38), GameServices.module().getGameService(Sonic2PlcService.class)
+                .capture().queuedEntries(), "S2 EggPrison must replace results art at Load_EndOfAct");
+    }
+
+    @Test
+    void specialStageResultsOwnerReplacesStd1BeforeResultsLoop() throws Exception {
+        new Sonic2SpecialStageProvider().resetForResults();
+        Sonic2PlcService queue = GameServices.module().getGameService(Sonic2PlcService.class);
+        assertEquals(expectedDescriptors(0), queue.capture().queuedEntries(),
+                "S2 special-stage results boundary must replace Std1 before the results loop");
+    }
+
+    @Test
     void everyAuditedS2CuePublishesItsRomDescriptorsInOperationOrder() throws Exception {
         Sonic2PlcService queue = GameServices.module().getGameService(Sonic2PlcService.class);
         int[] appendIds = {1, 2, 9, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49,
@@ -180,6 +288,24 @@ class TestSonic2PlcProducerCoverage {
             }
         }
         return result;
+    }
+
+    private static void invokeResultsOwner(Object owner, TestObjectServices services, String method,
+                                           Object... arguments) throws Exception {
+        ObjectConstructionContext.with(services, () -> {
+            ((com.openggf.level.objects.AbstractObjectInstance) owner).setServices(services);
+            try {
+                Class<?>[] types = new Class<?>[arguments.length];
+                for (int index = 0; index < arguments.length; index++) {
+                    types[index] = com.openggf.sprites.playable.AbstractPlayableSprite.class;
+                }
+                java.lang.reflect.Method handoff = owner.getClass().getDeclaredMethod(method, types);
+                handoff.setAccessible(true);
+                handoff.invoke(owner, arguments);
+            } catch (ReflectiveOperationException failure) {
+                throw new AssertionError("normal end-act owner handoff unavailable", failure);
+            }
+        });
     }
 
     private static RuntimeFixture installRuntime(int romZone) throws Exception {

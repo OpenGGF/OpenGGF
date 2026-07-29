@@ -169,3 +169,22 @@ mvn -Dmse=off -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen \
 ```
 
 Result: **20 tests passed**.
+
+### All-route executable owner follow-up
+
+The façade/literal checks have been replaced or supplemented by concrete owner
+fixtures.  The coverage now executes the two title owners, level-init queue
+step, title-card exit edge, all nine S1 credits pages, both normal end-act
+owners, S1 special-stage result boundary, seven S1 DLE thresholds, twelve S2
+DLE thresholds, S2 special-stage result and Bombs WAIT2 gate, both S2
+end-of-act owners, and each ordinary boss's killing-hit plus its distinct
+animal/explosion handoff.  FIFO assertions compare complete ROM-derived
+descriptors, not just queue occupancy.  The coverage guard now loads all four
+required executable suites alongside the 39-row audit cardinality check.
+
+```bash
+mvn -Dmse=off -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen \
+  "-Dtest=TestSonic1PlcProducerCoverage,TestSonic1PlcProducerOwnerCoverage,TestSonic2PlcProducerCoverage,TestSonic2BossPlcProducerCoverage,TestPlcProducerCoverageGuard" test
+```
+
+Result: **52 tests passed**.

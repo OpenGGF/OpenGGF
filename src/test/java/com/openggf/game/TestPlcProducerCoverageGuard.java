@@ -29,8 +29,15 @@ class TestPlcProducerCoverageGuard {
                 "a represented Route added or removed from the audit requires producer-test coverage");
         assertTrue(audit.contains("## Sonic 2 boss-defeat producers"));
         assertTrue(audit.contains("EndDemo_Levels[8]"));
+        // The four suites jointly execute every audit row: S1 lifecycle and
+        // title/result owners, S1 DLE thresholds, S2 lifecycle/event owners,
+        // and each ordinary-boss killing-hit plus post-defeat handoff. Keep
+        // these explicit so a reduced Maven selector cannot silently turn the
+        // 39-row audit back into façade-only coverage.
         Class.forName("com.openggf.game.sonic1.TestSonic1PlcProducerCoverage");
+        Class.forName("com.openggf.game.sonic1.events.TestSonic1PlcProducerOwnerCoverage");
         Class.forName("com.openggf.game.sonic2.TestSonic2PlcProducerCoverage");
+        Class.forName("com.openggf.game.sonic2.objects.bosses.TestSonic2BossPlcProducerCoverage");
     }
 
     @Test
