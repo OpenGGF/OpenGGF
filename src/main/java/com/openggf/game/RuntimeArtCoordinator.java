@@ -1,6 +1,7 @@
 package com.openggf.game;
 
 import com.openggf.game.rewind.RewindRegistry;
+import com.openggf.game.resources.QueueDiagnosticsProvider;
 import com.openggf.game.timing.HardwareServiceBoundary;
 
 /**
@@ -10,7 +11,7 @@ import com.openggf.game.timing.HardwareServiceBoundary;
  * implementations remain inside the game module which creates the
  * coordinator.
  */
-public interface RuntimeArtCoordinator {
+public interface RuntimeArtCoordinator extends QueueDiagnosticsProvider {
     RuntimeArtCoordinator NONE = new RuntimeArtCoordinator() {
     };
 

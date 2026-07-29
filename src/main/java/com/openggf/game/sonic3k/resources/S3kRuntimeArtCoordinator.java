@@ -3,11 +3,13 @@ package com.openggf.game.sonic3k.resources;
 import com.openggf.game.RuntimeArtCoordinator;
 import com.openggf.game.GameServices;
 import com.openggf.game.rewind.RewindRegistry;
+import com.openggf.game.resources.QueueDiagnosticSnapshot;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.level.objects.ObjectServices;
 
 import java.util.Objects;
+import java.util.List;
 
 /** S3K-owned facade for the direct Kosinski FIFO and KosM parent queue. */
 public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator {
@@ -49,6 +51,13 @@ public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator {
     public void afterTimingService(HardwareServiceBoundary boundary) {
         directQueue.afterTimingService(boundary);
         moduleQueue.afterTimingService(boundary);
+    }
+
+    @Override
+    public List<QueueDiagnosticSnapshot> captureQueueDiagnostics() {
+        return List.of(
+                directQueue.captureDiagnostics(List.of()),
+                moduleQueue.captureDiagnostics(List.of()));
     }
 
     @Override

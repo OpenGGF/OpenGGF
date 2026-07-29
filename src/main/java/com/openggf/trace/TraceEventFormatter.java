@@ -315,6 +315,14 @@ public final class TraceEventFormatter {
                         cameraBoundary.limitBtm2() & 0xFFFF,
                         cameraBoundary.lookShift() & 0xFFFF,
                         cameraBoundary.bgScrollVert() & 0xFF);
+            case TraceEvent.LoadQueueState queue ->
+                    String.format(
+                            "queue %s busy=%s prepared=%s remain=%d waiting=%d service=%s",
+                            queue.kind(), queue.busy(), queue.prepared(),
+                            queue.remainingWork(), queue.queuedFingerprints().size(),
+                            queue.serviceObservations().stream()
+                                    .map(value -> value.boundary() + ":" + value.budget())
+                                    .collect(java.util.stream.Collectors.joining(",")));
             default -> "";
         };
     }

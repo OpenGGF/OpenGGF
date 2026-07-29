@@ -80,7 +80,8 @@ namespace OpenGGF.BizHawk.Headless
             string traceProfile,
             string recordingDate,
             int hardwareTimingSchema =
-                HardwareTimingEventEngine.CurrentSchema)
+                HardwareTimingEventEngine.CurrentSchema,
+            bool loadQueueState = false)
         {
             if (traceProfile == null)
             {
@@ -140,6 +141,10 @@ namespace OpenGGF.BizHawk.Headless
                 + "\"physics_animation_aux_without_diagnostic_hooks\",\n");
             json.Append("  \"aux_schema_extras\": [");
             AppendAuxSchemaExtras(json, aiz);
+            if (loadQueueState)
+            {
+                json.Append(", \"load_queue_state_per_frame\"");
+            }
             json.Append("],\n");
             json.Append("  \"trace_profile\": \"")
                 .Append(traceProfile).Append("\",\n");

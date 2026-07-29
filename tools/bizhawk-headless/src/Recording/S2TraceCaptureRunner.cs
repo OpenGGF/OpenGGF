@@ -75,7 +75,8 @@ namespace OpenGGF.BizHawk.Headless
             string recordingDate,
             TextWriter physicsCsv,
             TextWriter auxStateJsonl,
-            TextWriter metadataJson)
+            TextWriter metadataJson,
+            byte[] loadQueueRom = null)
         {
             if (movie == null)
             {
@@ -318,7 +319,7 @@ namespace OpenGGF.BizHawk.Headless
                     // before the CSV row, then the frame-shared aux events.
                     AppendRecordedRow(
                         physicsBufWriter, auxBufWriter, auxEngine,
-                        traceFrame, frame, host);
+                        traceFrame, frame, host, loadQueueRom);
                     if (S2Ram.U8(host, S2Ram.SidekickBase + S2Ram.OffId) != 0)
                     {
                         recordedSidekickPresent = true;
@@ -346,7 +347,8 @@ namespace OpenGGF.BizHawk.Headless
                     startRngSeed,
                     traceProfile,
                     sourceBk2,
-                    recordingDate));
+                    recordingDate,
+                    loadQueueRom != null));
                 return new S2TraceCaptureResult(
                     offset, traceFrame, gameplaySegmentIndex);
             }
@@ -366,7 +368,8 @@ namespace OpenGGF.BizHawk.Headless
             S2AuxEventEngine auxEngine,
             int traceFrame,
             Bk2Frame frame,
-            IGpgxHost host)
+            IGpgxHost host,
+            byte[] loadQueueRom = null)
         {
             foreach (string line in
                 auxEngine.ProcessFrameStart(traceFrame, host))
@@ -382,6 +385,11 @@ namespace OpenGGF.BizHawk.Headless
             foreach (string line in auxEngine.ProcessFrame(traceFrame, host))
             {
                 WriteLine(auxStateJsonl, line);
+            }
+            if (loadQueueRom != null)
+            {
+                WriteLine(auxStateJsonl, LoadQueueStateProjector.CaptureS2(
+                    traceFrame, loadQueueRom, host));
             }
         }
 

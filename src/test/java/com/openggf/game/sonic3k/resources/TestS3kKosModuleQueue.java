@@ -7,6 +7,7 @@ import com.openggf.game.timing.HardwareTimingSnapshot;
 import com.openggf.game.timing.HardwareWorkHandle;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.tools.KosinskiReader;
+import com.openggf.game.resources.QueueDiagnosticSnapshot;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -127,6 +128,36 @@ class TestS3kKosModuleQueue {
             assertTrue(queue.isReady(handle));
             assertFalse(queue.modulesLeft());
             assertArrayEquals(new byte[] {'A', 'B', 'C'}, queue.claim(handle));
+        }
+    }
+
+    @Test
+    void diagnosticsKeepModuleParentsSeparateFromDirectChildren()
+            throws Exception {
+        Path romPath = tempDir.resolve("diagnostics.gen");
+        Files.write(romPath, TWO_MODULE_KOSM);
+        try (Rom rom = new Rom()) {
+            assertTrue(rom.open(romPath.toString()));
+            HardwareTimingService timing = new HardwareTimingService();
+            S3kKosDecompressionQueue direct =
+                    new S3kKosDecompressionQueue(timing);
+            S3kKosModuleQueue modules =
+                    new S3kKosModuleQueue(timing, direct);
+            modules.queue(rom, 0, 0x500);
+            modules.processModuleQueueAfterObjects();
+
+            QueueDiagnosticSnapshot snapshot = modules.captureDiagnostics(
+                    java.util.List.of());
+            assertEquals(QueueDiagnosticSnapshot.Kind.S3K_KOS_MODULE,
+                    snapshot.kind());
+            assertEquals(-1, snapshot.activeSource());
+            assertEquals(-1, snapshot.activeTotalWork());
+            assertEquals(2, snapshot.activeRemainingWork());
+            assertEquals(-1, snapshot.activeDestination());
+            assertEquals(1, direct.physicalQueueSize(),
+                    "active child belongs only to the direct queue");
+            assertFalse(direct.captureDiagnostics(java.util.List.of()).prepared(),
+                    "a KosM child queued at POST_OBJECTS is not armed until PRE_MAIN_LOOP");
         }
     }
 

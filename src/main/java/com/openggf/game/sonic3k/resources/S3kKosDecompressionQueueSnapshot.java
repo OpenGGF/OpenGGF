@@ -12,7 +12,7 @@ public record S3kKosDecompressionQueueSnapshot(List<Entry> entries) {
     }
 
     public record Entry(HardwareWorkHandle handle, S3kKosDecompressionDescriptor descriptor,
-                        boolean physical) {
+                        boolean physical, boolean prepared) {
         public Entry {
             Objects.requireNonNull(handle, "handle");
             Objects.requireNonNull(descriptor, "descriptor");

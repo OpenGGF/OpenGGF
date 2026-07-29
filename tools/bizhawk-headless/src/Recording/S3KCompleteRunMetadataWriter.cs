@@ -160,7 +160,8 @@ namespace OpenGGF.BizHawk.Headless
             string runId,
             int playerMode,
             int hardwareTimingSchema =
-                HardwareTimingEventEngine.CurrentSchema)
+                HardwareTimingEventEngine.CurrentSchema,
+            bool loadQueueState = false)
         {
             if (arm == null)
             {
@@ -219,6 +220,10 @@ namespace OpenGGF.BizHawk.Headless
                     json.Append(", ");
                 }
                 json.Append(JsonQuote(AuxSchemaExtras[index]));
+            }
+            if (loadQueueState)
+            {
+                json.Append(", \"load_queue_state_per_frame\"");
             }
             json.Append("],\n");
             if (arm.BonusStageType != null)
