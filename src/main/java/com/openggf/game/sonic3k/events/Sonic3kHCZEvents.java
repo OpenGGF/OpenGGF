@@ -12,6 +12,9 @@ import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
+import com.openggf.game.sonic3k.resources.S3kKosDecompressionQueue;
+import com.openggf.game.sonic3k.resources.S3kKosRamDestinations;
+import com.openggf.game.sonic3k.resources.S3kKosTransitionPreflight;
 import com.openggf.game.timing.HardwareWorkHandle;
 import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.sonic3k.objects.HCZ2WallObjectInstance;
@@ -172,6 +175,14 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
     @RewindTransient(reason = "handle is rebound to the restored session ledger by captured ordinal")
     private HardwareWorkHandle transitionKosHandle;
     private long transitionKosOrdinal = -1;
+    @RewindTransient(reason = "queue facade is rebound to the restored session ledger by captured ordinals")
+    private S3kKosDecompressionQueue transitionDirectQueue;
+    @RewindTransient(reason = "handles are rebound to the restored session ledger by captured ordinals")
+    private HardwareWorkHandle transitionChunkHandle;
+    @RewindTransient(reason = "handles are rebound to the restored session ledger by captured ordinals")
+    private HardwareWorkHandle transitionBlockHandle;
+    private long transitionChunkOrdinal = -1;
+    private long transitionBlockOrdinal = -1;
 
     /**
      * ROM: Boss_flag — set by the boss object when the fight begins.
@@ -283,6 +294,11 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
         transitionKosQueue = null;
         transitionKosHandle = null;
         transitionKosOrdinal = -1;
+        transitionDirectQueue = null;
+        transitionChunkHandle = null;
+        transitionBlockHandle = null;
+        transitionChunkOrdinal = -1;
+        transitionBlockOrdinal = -1;
         bossFlag = false;
         cutsceneActive = false;
         carrierMovementPending = false;
@@ -728,16 +744,31 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
                     eventsFg5 = false;
                     bgRoutine = BG_STAGE_DO_TRANSITION;
                     try {
+                        transitionDirectQueue = directKosQueue();
                         transitionKosQueue = moduleKosQueue();
+                        S3kKosTransitionPreflight.validate(
+                                rom(), transitionDirectQueue, transitionKosQueue,
+                                Sonic3kConstants.KOS_HCZ2_SECONDARY_CHUNK_ADDR,
+                                Sonic3kConstants.KOS_HCZ2_SECONDARY_BLOCK_ADDR,
+                                Sonic3kConstants.ART_KOSM_HCZ2_SECONDARY_ADDR);
+                        transitionChunkHandle = transitionDirectQueue.queueStandardKos(
+                                rom(),
+                                Sonic3kConstants.KOS_HCZ2_SECONDARY_CHUNK_ADDR,
+                                S3kKosRamDestinations.RAM_START + 0xA00);
+                        transitionChunkOrdinal = transitionChunkHandle.ordinal();
+                        transitionBlockHandle = transitionDirectQueue.queueStandardKos(
+                                rom(),
+                                Sonic3kConstants.KOS_HCZ2_SECONDARY_BLOCK_ADDR,
+                                S3kKosRamDestinations.blockTableOffset(0x558));
+                        transitionBlockOrdinal = transitionBlockHandle.ordinal();
                         transitionKosHandle = transitionKosQueue.queue(
                                 rom(),
                                 Sonic3kConstants.ART_KOSM_HCZ2_SECONDARY_ADDR,
                                 0x11B);
                         transitionKosOrdinal = transitionKosHandle.ordinal();
                     } catch (IOException e) {
-                        LOG.fine("HCZ2 secondary KosM unavailable in bootstrap context: "
-                                + e.getMessage());
-                        requestHcz2Transition();
+                        throw new IllegalStateException(
+                                "Unable to queue HCZ2 transition resources", e);
                     }
                     LOG.info("HCZ1 BG: Events_fg_5 detected, advancing to transition stage");
                 }
@@ -749,8 +780,21 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
                 // later End_of_level_flag is not this transition's owner.
                 if (!transitionRequested
                         && transitionKosHandle != null
-                        && transitionKosQueue.isReady(transitionKosHandle)) {
+                        && !transitionKosQueue.modulesLeft()) {
+                    if (!transitionDirectQueue.isReady(transitionChunkHandle)
+                            || !transitionDirectQueue.isReady(transitionBlockHandle)
+                            || !transitionKosQueue.isReady(transitionKosHandle)) {
+                        throw new IllegalStateException(
+                                "HCZ2 transition queue emptied before owned payloads were ready");
+                    }
+                    transitionDirectQueue.claim(transitionChunkHandle);
+                    transitionDirectQueue.claim(transitionBlockHandle);
                     transitionKosQueue.claim(transitionKosHandle);
+                    transitionChunkHandle = null;
+                    transitionBlockHandle = null;
+                    transitionDirectQueue = null;
+                    transitionChunkOrdinal = -1;
+                    transitionBlockOrdinal = -1;
                     transitionKosHandle = null;
                     transitionKosQueue = null;
                     transitionKosOrdinal = -1;
@@ -775,12 +819,28 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
                         "restored HCZ transition owner cannot find KosM ordinal "
                                 + transitionKosOrdinal));
         transitionKosQueue = moduleKosQueue();
+        transitionChunkHandle = timing.pendingHandle(
+                        HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
+                        transitionChunkOrdinal)
+                .orElseThrow(() -> new IllegalStateException(
+                        "restored HCZ transition owner cannot find chunk ordinal "
+                                + transitionChunkOrdinal));
+        transitionBlockHandle = timing.pendingHandle(
+                        HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
+                        transitionBlockOrdinal)
+                .orElseThrow(() -> new IllegalStateException(
+                        "restored HCZ transition owner cannot find block ordinal "
+                                + transitionBlockOrdinal));
+        transitionDirectQueue = directKosQueue();
     }
 
     /** Drops only derived facades; captured ordinal remains authoritative. */
     public void discardHardwareWorkFacadesAfterRewind() {
         transitionKosQueue = null;
         transitionKosHandle = null;
+        transitionDirectQueue = null;
+        transitionChunkHandle = null;
+        transitionBlockHandle = null;
     }
 
     /**

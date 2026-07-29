@@ -92,6 +92,9 @@ class TestSonic3kHCZEvents {
         serviceBoundary(HardwareServiceBoundary.VINT_SERVICE);
         serviceBoundary(HardwareServiceBoundary.PRE_MAIN_LOOP);
         events.update(0, 0);
+        assertEquals(2,
+                timing.incompleteCount(HardwareWorkKind.KOS_DECOMPRESSION_QUEUE),
+                "HCZ transition must queue chunks and blocks before its KosM art");
         serviceBoundary(HardwareServiceBoundary.POST_OBJECTS);
         assertFalse(events.isTransitionRequested());
 

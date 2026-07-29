@@ -82,6 +82,10 @@ public final class S3kKosDecompressionQueue
         return physicalEntries.size() < MAX_QUEUE_DEPTH;
     }
 
+    public int availableCapacity() {
+        return MAX_QUEUE_DEPTH - physicalEntries.size();
+    }
+
     private HardwareWorkHandle queueInspected(
             byte[] compressed,
             int sourceAddress,
