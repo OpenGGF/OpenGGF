@@ -29,7 +29,7 @@ target rather than walking back the assertion.
 | Rule | Baseline | Target | Trigger |
 |------|----------|--------|---------|
 | `low_level_layers_do_not_depend_on_runtime_layers` | 209 | <=150 | AudioManager/GraphicsManager runtime callbacks migrate off direct level/sprite imports |
-| `shared_layers_do_not_depend_on_game_specific_packages` | 20 | 0 | `DefaultPowerUpSpawner` visual object creation and master-title ROM preview mapping move behind provider contracts and bootstrap module construction becomes an explicit composition-root allowlist |
+| `shared_layers_do_not_depend_on_game_specific_packages` | 14 | 0 | `DefaultPowerUpSpawner` visual object creation and master-title ROM preview mapping move behind provider contracts |
 | `per_game_packages_do_not_cross_depend` | 37 | <=20 | Data-select preview loading, payload validation, and menu animation helpers extracted out of per-game packages |
 
 ## Source Ratchets
@@ -176,16 +176,13 @@ Target direction:
 
 Rule: `shared level and game layers should not depend on game-specific packages`
 
-Frozen violations fall into these categories:
-
-- `GameModuleRegistry` and `RomDetectionService` construct built-in game modules
-  and detectors as bootstrap composition-root behavior.
-- `DefaultPowerUpSpawner` constructs Sonic 1 splash and S3K shield/insta-shield
+Frozen violations are limited to `DefaultPowerUpSpawner`, which constructs Sonic 1 splash and S3K shield/insta-shield
   visuals from shared object code.
 
 Target direction:
 
-- Move game-specific visual object creation behind providers.
+- Keep bootstrap assembly behind explicitly annotated composition roots, and move
+  game-specific visual object creation behind providers.
 
 ### Per-Game Packages Must Not Cross-Depend
 

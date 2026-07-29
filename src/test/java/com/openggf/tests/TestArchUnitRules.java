@@ -711,6 +711,7 @@ class TestArchUnitRules {
                                     "com.openggf.game.sonic1..",
                                     "com.openggf.game.sonic2..",
                                     "com.openggf.game.sonic3k..")
+                            .and().areNotAnnotatedWith(CompositionRoot.class)
                             .should().dependOnClassesThat().resideInAnyPackage(
                                     "com.openggf.game.sonic1..",
                                     "com.openggf.game.sonic2..",

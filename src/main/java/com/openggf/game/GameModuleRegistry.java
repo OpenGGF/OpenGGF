@@ -81,7 +81,17 @@ public final class GameModuleRegistry {
      * @return true if detection succeeded, false if using fallback
      */
     public static boolean detectAndSetModule(Rom rom) {
-        Optional<GameModule> detectedModule = GameServices.romDetection().detectAndCreateModule(rom);
+        return applyDetectedModule(GameServices.romDetection().detectAndCreateModule(rom));
+    }
+
+    /**
+     * Applies a completed ROM detection result to the bootstrap module default.
+     * This registry owns the bootstrap mutation and Sonic 2 fallback behavior.
+     *
+     * @param detectedModule the already-detected module, if any
+     * @return true if detection succeeded, false if using fallback
+     */
+    static boolean applyDetectedModule(Optional<GameModule> detectedModule) {
         if (detectedModule.isPresent()) {
             setCurrent(detectedModule.get());
             return true;

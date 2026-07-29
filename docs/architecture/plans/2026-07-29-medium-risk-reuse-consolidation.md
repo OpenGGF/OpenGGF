@@ -80,7 +80,7 @@ Expected: test compilation fails because `BuiltInRomDetectors` does not exist.
 
 - [ ] **Step 3: Implement the minimal fresh-instance catalog**
 
-Use a public uninstantiable final class with public static methods. `all()`
+Use a public uninstantiable final composition-root class with public static methods. `all()`
 constructs the three detectors and returns `List.of(...)`; `forGame` uses an
 exhaustive `GameId` switch. Do not cache detector objects.
 

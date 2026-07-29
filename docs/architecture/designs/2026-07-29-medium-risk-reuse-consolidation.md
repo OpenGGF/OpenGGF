@@ -53,6 +53,9 @@ detector instances:
 - `all()` returns the built-ins in their declared order;
 - `forGame(GameId)` returns the detector for one game.
 
+The catalog is an explicitly annotated composition root because it is the
+single approved shared-layer boundary that assembles concrete game detectors.
+
 Fresh instances preserve the existing extension assumption that detectors may
 eventually hold state. `RomDetectionService` uses `all()` instead of directly
 constructing three detectors. Test `RomCache` maps its test game enum to
