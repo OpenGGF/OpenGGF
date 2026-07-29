@@ -399,7 +399,8 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
         }
 
         var fadeManager = services().fadeManager();
-        fadeManager.startFadeToWhite(() -> {
+        var marker = services().nativeFadeLifecycle().beginNativeBlockingFade();
+        fadeManager.startFadeToWhite(marker.wrapCompletion(() -> {
             setDestroyed(true);
             if (true) {
                 // Giant Ring collected: advance zone/act first (ROM-accurate: Got_NextLevel),
@@ -410,7 +411,7 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
             // Don't start fadeFromWhite here — let the screen stay white
             // (HOLD_WHITE). enterSpecialStage() will detect HOLD_WHITE and
             // transition directly, fading from white to reveal the special stage.
-        });
+        }));
     }
 
     private void triggerFadeToBlack() {
@@ -420,14 +421,16 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
         services().requestSessionSave(SaveReason.PROGRESSION_SAVE);
 
         var fadeManager = services().fadeManager();
-        fadeManager.startFadeToBlack(() -> {
+        var marker = services().nativeFadeLifecycle().beginNativeBlockingFade();
+        fadeManager.startFadeToBlack(marker.wrapCompletion(() -> {
             setDestroyed(true);
             if (true) {
                 services().advanceToNextLevel();
                 // Keep transition atomic: immediately reveal the next scene.
-                fadeManager.startFadeFromBlack(null);
+                var reveal = services().nativeFadeLifecycle().beginNativeBlockingFade();
+                fadeManager.startFadeFromBlack(reveal.wrapCompletion(() -> { }));
             }
-        });
+        }));
     }
 
     // -----------------------------------------------------------------------

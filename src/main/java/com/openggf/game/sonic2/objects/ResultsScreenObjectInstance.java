@@ -145,7 +145,8 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen
 
         // Start fade to black, then transition to next level when fade completes
         var fadeManager = services().fadeManager();
-        fadeManager.startFadeToBlack(() -> {
+        var marker = services().nativeFadeLifecycle().beginNativeBlockingFade();
+        fadeManager.startFadeToBlack(marker.wrapCompletion(() -> {
             // Mark this object as done
             setDestroyed(true);
 
@@ -156,8 +157,9 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen
 
             // Keep transition atomic: once the new level is loaded, immediately
             // start the reveal fade to avoid remaining in HOLD_BLACK.
-            fadeManager.startFadeFromBlack(null);
-        });
+            var reveal = services().nativeFadeLifecycle().beginNativeBlockingFade();
+            fadeManager.startFadeFromBlack(reveal.wrapCompletion(() -> { }));
+        }));
     }
 
     @Override

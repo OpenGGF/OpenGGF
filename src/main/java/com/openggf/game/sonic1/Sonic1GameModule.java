@@ -34,7 +34,7 @@ import com.openggf.game.dataselect.DataSelectPresentationProvider;
 import com.openggf.game.startup.DonatedDataSelectWarmupTask;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.game.sonic1.resources.Sonic1PlcService;
-import com.openggf.game.resources.PlcVBlankService;
+import com.openggf.game.resources.PlcLifecycleService;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.game.sonic1.credits.Sonic1EndingProvider;
 import com.openggf.game.sonic1.dataselect.S1DataSelectProfile;
@@ -273,7 +273,7 @@ public class Sonic1GameModule implements GameModule {
         if (type == Sonic1ConveyorState.class) return (T) conveyorState;
         if (type == Sonic1FloatingBlockState.class) return (T) floatingBlockState;
         if (type == Sonic1PlcService.class) return (T) plcService;
-        if (type == PlcVBlankService.class) return (T) plcService;
+        if (type == PlcLifecycleService.class) return (T) plcService;
         return null;
     }
 

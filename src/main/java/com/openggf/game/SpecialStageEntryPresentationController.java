@@ -1,6 +1,7 @@
 package com.openggf.game;
 
 import com.openggf.graphics.FadeManager;
+import com.openggf.game.resources.NativeFadeLifecycle;
 
 import java.util.Objects;
 
@@ -11,12 +12,19 @@ public final class SpecialStageEntryPresentationController {
 
     public void begin(SpecialStageProvider provider, boolean fromBlack,
                       FadeManager fade, Runnable musicStart) {
+        begin(provider, fromBlack, fade, musicStart,
+                com.openggf.game.resources.NoOpNativeFadeLifecycle.INSTANCE);
+    }
+
+    public void begin(SpecialStageProvider provider, boolean fromBlack,
+                      FadeManager fade, Runnable musicStart,
+                      NativeFadeLifecycle lifecycle) {
         Objects.requireNonNull(provider, "provider");
         Objects.requireNonNull(fade, "fade");
         Objects.requireNonNull(musicStart, "musicStart");
         clear();
         if (provider.isEntryPresentationReady()) {
-            reveal(fromBlack, fade, musicStart);
+            reveal(fromBlack, fade, musicStart, lifecycle);
             return;
         }
         pending = true;
@@ -28,10 +36,16 @@ public final class SpecialStageEntryPresentationController {
         }
     }
 
-    public void update(SpecialStageProvider provider, FadeManager fade, Runnable musicStart) {
+    public void update(SpecialStageProvider provider, FadeManager fade, Runnable musicStart,
+                       NativeFadeLifecycle lifecycle) {
         if (pending && provider.isEntryPresentationReady()) {
-            reveal(revealFromBlack, fade, musicStart);
+            reveal(revealFromBlack, fade, musicStart, lifecycle);
         }
+    }
+
+    public void update(SpecialStageProvider provider, FadeManager fade, Runnable musicStart) {
+        update(provider, fade, musicStart,
+                com.openggf.game.resources.NoOpNativeFadeLifecycle.INSTANCE);
     }
 
     public void clear() {
@@ -43,13 +57,16 @@ public final class SpecialStageEntryPresentationController {
         return pending;
     }
 
-    private void reveal(boolean fromBlack, FadeManager fade, Runnable musicStart) {
+    private void reveal(boolean fromBlack, FadeManager fade, Runnable musicStart,
+                        NativeFadeLifecycle lifecycle) {
         pending = false;
         musicStart.run();
+        Runnable completion = lifecycle.beginNativeBlockingFade()
+                .wrapCompletion(() -> { });
         if (fromBlack) {
-            fade.startFadeFromBlack(null);
+            fade.startFadeFromBlack(completion);
         } else {
-            fade.startFadeFromWhite(null);
+            fade.startFadeFromWhite(completion);
         }
     }
 }

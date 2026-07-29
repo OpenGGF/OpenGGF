@@ -7,6 +7,9 @@ import com.openggf.control.InputHandler;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.RecordedInputSnapshots;
 import com.openggf.game.GameServices;
+import com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame;
+import com.openggf.game.resources.PlcLifecyclePhase;
+import com.openggf.game.session.SessionManager;
 
 import java.util.Objects;
 import java.util.function.Supplier;
@@ -40,6 +43,19 @@ final class LiveRewindStepper implements RewindSeekAwareEngineStepper {
         if (liveInput == null) {
             return LevelFrameResult.PAUSED;
         }
+        var gameplayMode = SessionManager.getCurrentGameplayMode();
+        return gameplayMode.plcFrameLifecycle().runLogicalIteration(
+                gameplayMode.getFadeManager()::update,
+                frame -> step(input, sprites, level, camera, liveInput, frame));
+    }
+
+    private LevelFrameResult step(
+            Bk2FrameInput input,
+            com.openggf.sprites.managers.SpriteManager sprites,
+            com.openggf.level.LevelManager level,
+            com.openggf.camera.Camera camera,
+            InputHandler liveInput,
+            PlcLifecycleFrame lifecycleFrame) {
         LevelFrameContext context = frameContextSupplier.get();
         var admission = LevelFrameStep.admit(
                 context, level, input.p1StartPressed());
@@ -52,7 +68,9 @@ final class LiveRewindStepper implements RewindSeekAwareEngineStepper {
         try {
             sprites.publishHeldInputForLevelEvents(liveInput);
             return LevelFrameStep.execute(
-                    context, level, camera, () -> sprites.update(liveInput));
+                    context, lifecycleFrame, PlcLifecyclePhase.ORDINARY_LEVEL,
+                    level, camera, () -> sprites.update(liveInput),
+                    LevelFrameStep.DIRECT_WRAPPER);
         } finally {
             liveInput.clearLogicalOverride();
         }

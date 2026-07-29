@@ -5,6 +5,9 @@ import com.openggf.game.EndingProvider;
 import com.openggf.game.GameServices;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.sonic2.constants.Sonic2AudioConstants;
+import com.openggf.game.resources.NativeFadeLifecycle;
+import com.openggf.game.resources.NativeFadeLifecycleAware;
+import com.openggf.game.resources.NoOpNativeFadeLifecycle;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -29,7 +32,7 @@ import java.util.logging.Logger;
  * The internal state machine uses finer-grained states than EndingPhase to
  * track fade-in/display/fade-out timing for each credit slide.
  */
-public class Sonic2EndingProvider implements EndingProvider {
+public class Sonic2EndingProvider implements EndingProvider, NativeFadeLifecycleAware {
     private static final Logger LOGGER = Logger.getLogger(Sonic2EndingProvider.class.getName());
 
     /**
@@ -64,6 +67,16 @@ public class Sonic2EndingProvider implements EndingProvider {
     private InternalState state = InternalState.CUTSCENE;
     private int currentSlide;
     private int slideTimer;
+    private NativeFadeLifecycle nativeFadeLifecycle = NoOpNativeFadeLifecycle.INSTANCE;
+
+    @Override
+    public void bindNativeFadeLifecycle(NativeFadeLifecycle lifecycle) {
+        nativeFadeLifecycle = java.util.Objects.requireNonNull(lifecycle, "lifecycle");
+    }
+
+    private Runnable nativeCompletion(Runnable completion) {
+        return nativeFadeLifecycle.beginNativeBlockingFade().wrapCompletion(completion);
+    }
 
     // ========================================================================
     // EndingProvider lifecycle
@@ -104,7 +117,7 @@ public class Sonic2EndingProvider implements EndingProvider {
                         // ROM: PaletteFadeOut after plane flyaway
                         slideTimer = 0;
                         state = InternalState.CUTSCENE_FADE_OUT;
-                        GameServices.fade().startFadeToBlack(() -> {});
+                        GameServices.fade().startFadeToBlack(nativeCompletion(() -> { }));
                     }
                 } else {
                     // No cutscene manager (ROM unavailable) -- skip to credits
@@ -131,7 +144,7 @@ public class Sonic2EndingProvider implements EndingProvider {
                     // ROM: PaletteFadeOut after each credit slide
                     slideTimer = 0;
                     state = InternalState.CREDITS_FADE_OUT;
-                    GameServices.fade().startFadeToBlack(() -> {});
+                    GameServices.fade().startFadeToBlack(nativeCompletion(() -> { }));
                 }
             }
             case CREDITS_FADE_OUT -> {
@@ -145,7 +158,7 @@ public class Sonic2EndingProvider implements EndingProvider {
                         // ROM: PaletteFadeIn for next credit slide
                         slideTimer = 0;
                         state = InternalState.CREDITS_FADE_IN;
-                        GameServices.fade().startFadeFromBlack(null);
+                        GameServices.fade().startFadeFromBlack(nativeCompletion(() -> { }));
                     }
                 }
             }
@@ -154,7 +167,7 @@ public class Sonic2EndingProvider implements EndingProvider {
                 logoFlashManager.initialize();
                 state = InternalState.LOGO_FLASH;
                 // ROM: PaletteFadeIn to reveal logo
-                GameServices.fade().startFadeFromBlack(null);
+                GameServices.fade().startFadeFromBlack(nativeCompletion(() -> { }));
             }
             case LOGO_FLASH -> {
                 // Logo flash update is driven by GameLoop.updateEndingPostCredits()
@@ -306,7 +319,7 @@ public class Sonic2EndingProvider implements EndingProvider {
         state = InternalState.CREDITS_FADE_IN;
 
         // ROM: PaletteFadeIn to reveal first credit slide
-        GameServices.fade().startFadeFromBlack(null);
+        GameServices.fade().startFadeFromBlack(nativeCompletion(() -> { }));
 
         LOGGER.info("Sonic2EndingProvider: cutscene complete, starting credits text");
     }

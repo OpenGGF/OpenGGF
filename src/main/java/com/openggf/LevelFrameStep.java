@@ -5,7 +5,9 @@ import com.openggf.game.BonusStageProvider;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
-import com.openggf.game.resources.PlcVBlankService;
+import com.openggf.game.resources.PlcFrameLifecycleCoordinator;
+import com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame;
+import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.level.LevelManager;
 import com.openggf.sprites.managers.SpriteManager;
@@ -78,7 +80,11 @@ public final class LevelFrameStep {
     public static LevelFrameResult execute(
             LevelFrameContext context, LevelManager levelManager, Camera camera,
             Runnable spriteUpdate) {
-        return execute(context, levelManager, camera, spriteUpdate, DIRECT);
+        PlcLifecycleFrame frame = temporaryFrame(context);
+        LevelFrameResult result = execute(context, frame, PlcLifecyclePhase.ORDINARY_LEVEL,
+                levelManager, camera, spriteUpdate, DIRECT);
+        frame.finish();
+        return result;
     }
 
     /**
@@ -101,12 +107,25 @@ public final class LevelFrameStep {
             LevelFrameContext context, LevelManager levelManager,
             Camera camera, Runnable spriteUpdate,
             boolean startEdgePressed, StepWrapper wrapper) {
+        PlcLifecycleFrame frame = temporaryFrame(context);
+        LevelFrameResult result = executeWithPause(context, frame,
+                PlcLifecyclePhase.ORDINARY_LEVEL, PlcLifecyclePhase.NORMAL_PAUSE,
+                levelManager, camera, spriteUpdate, startEdgePressed, wrapper);
+        frame.finish();
+        return result;
+    }
+
+    public static LevelFrameResult executeWithPause(
+            LevelFrameContext context, PlcLifecycleFrame frame,
+            PlcLifecyclePhase activePhase, PlcLifecyclePhase pausePhase,
+            LevelManager levelManager, Camera camera, Runnable spriteUpdate,
+            boolean startEdgePressed, StepWrapper wrapper) {
         GameStateManager gameState = context.gameStateManager();
         if (gameState != null && gameState.applyPauseToggle(startEdgePressed)) {
-            serviceVBlankOnly(context);
+            serviceVBlankOnly(context, frame, pausePhase);
             return LevelFrameResult.PAUSED;
         }
-        return execute(context, levelManager, camera, spriteUpdate, wrapper);
+        return execute(context, frame, activePhase, levelManager, camera, spriteUpdate, wrapper);
     }
 
     public static void updateTimers(LevelFrameContext context) {
@@ -117,6 +136,23 @@ public final class LevelFrameStep {
      * Services the sole production boundary traversed by a VBlank-only row.
      */
     public static void serviceVBlankOnly(LevelFrameContext context) {
+        PlcLifecycleFrame frame = temporaryFrame(context);
+        serviceVBlankOnly(context, frame, PlcLifecyclePhase.LAG);
+        frame.finish();
+    }
+
+    public static void serviceVBlankOnly(
+            LevelFrameContext context, PlcLifecycleFrame frame, PlcLifecyclePhase phase) {
+        if (phase != PlcLifecyclePhase.LAG
+                && phase != PlcLifecyclePhase.NORMAL_PAUSE
+                && phase != PlcLifecyclePhase.SPECIAL_STAGE_PAUSE) {
+            throw new IllegalArgumentException("not a VBlank-only PLC phase: " + phase);
+        }
+        frame.claim(phase);
+        serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
+    }
+
+    public static void serviceHardwareVBlankOnly(LevelFrameContext context) {
         serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
     }
 
@@ -131,11 +167,24 @@ public final class LevelFrameStep {
      */
     public static void executeHardwareTimedObjectScan(
             LevelFrameContext context, Runnable objectScan) {
+        PlcLifecycleFrame frame = temporaryFrame(context);
+        executeHardwareTimedObjectScan(
+                context, frame, PlcLifecyclePhase.SPECIAL_STAGE, objectScan);
+        frame.finish();
+    }
+
+    public static void executeHardwareTimedObjectScan(
+            LevelFrameContext context, PlcLifecycleFrame frame,
+            PlcLifecyclePhase phase, Runnable objectScan) {
         Objects.requireNonNull(objectScan, "objectScan");
+        frame.claim(phase);
         serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
         serviceBoundary(context, HardwareServiceBoundary.PRE_MAIN_LOOP);
         objectScan.run();
         serviceBoundary(context, HardwareServiceBoundary.POST_OBJECTS);
+        if (frame.isOwnedBy(phase)) {
+            frame.prepareAfterLoop(phase);
+        }
     }
 
     /**
@@ -152,6 +201,17 @@ public final class LevelFrameStep {
     public static LevelFrameResult execute(
             LevelFrameContext context, LevelManager levelManager, Camera camera,
             Runnable spriteUpdate, StepWrapper wrapper) {
+        PlcLifecycleFrame frame = temporaryFrame(context);
+        LevelFrameResult result = execute(context, frame, PlcLifecyclePhase.ORDINARY_LEVEL,
+                levelManager, camera, spriteUpdate, wrapper);
+        frame.finish();
+        return result;
+    }
+
+    public static LevelFrameResult execute(
+            LevelFrameContext context, PlcLifecycleFrame frame, PlcLifecyclePhase phase,
+            LevelManager levelManager, Camera camera,
+            Runnable spriteUpdate, StepWrapper wrapper) {
         if (context == null) {
             throw new NullPointerException("context");
         }
@@ -164,7 +224,7 @@ public final class LevelFrameStep {
             return LevelFrameResult.SETUP_ONLY;
         }
 
-        serviceOrdinaryLevelVBlank(context);
+        frame.claim(phase);
         serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
         serviceBoundary(context, HardwareServiceBoundary.PRE_MAIN_LOOP);
 
@@ -335,6 +395,9 @@ public final class LevelFrameStep {
         // therefore first observable by object/event consumers on their next
         // dispatch, never by this frame's ScreenEvents pass.
         serviceBoundary(context, HardwareServiceBoundary.POST_OBJECTS);
+        if (frame.isOwnedBy(phase)) {
+            frame.prepareAfterLoop(phase);
+        }
 
         // 4c. Flush gameplay layout mutations queued by zone events before
         //     boundary easing and post-camera systems observe the changed level.
@@ -403,16 +466,8 @@ public final class LevelFrameStep {
         }
     }
 
-    /**
-     * Models the ordinary level VInt PLC service before the admitted main loop.
-     * VBlank-only rows deliberately use {@link #serviceVBlankOnly(LevelFrameContext)}
-     * instead: a lag VInt has no selected PLC service routine.
-     */
-    private static void serviceOrdinaryLevelVBlank(LevelFrameContext context) {
-        PlcVBlankService service = context.gameModule().getGameService(PlcVBlankService.class);
-        if (service != null) {
-            service.serviceLevelVBlank();
-        }
+    private static PlcLifecycleFrame temporaryFrame(LevelFrameContext context) {
+        return new PlcFrameLifecycleCoordinator(context.gameModule()).latchBeforeFadeUpdate();
     }
 
 }

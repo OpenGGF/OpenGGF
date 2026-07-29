@@ -1,6 +1,7 @@
 package com.openggf.game;
 
 import com.openggf.game.save.SaveReason;
+import com.openggf.game.resources.PlcLifecyclePhase;
 
 import java.util.Optional;
 
@@ -17,6 +18,9 @@ import java.util.Optional;
  * that do not interleave demos (e.g., S2) can ignore these defaults.
  */
 public interface EndingProvider {
+    default Optional<PlcLifecyclePhase> plcLifecyclePhaseOverride() {
+        return Optional.empty();
+    }
     /**
      * Returns a save request to issue when the engine starts the ending
      * transition. Most games do not save here; S2 persists progression before

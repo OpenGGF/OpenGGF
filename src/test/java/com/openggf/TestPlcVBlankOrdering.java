@@ -3,7 +3,8 @@ package com.openggf;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameModule;
 import com.openggf.game.NoOpBonusStageProvider;
-import com.openggf.game.resources.PlcVBlankService;
+import com.openggf.game.resources.PlcLifecyclePhase;
+import com.openggf.game.resources.PlcLifecycleService;
 import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.level.LevelManager;
 import org.junit.jupiter.api.Test;
@@ -21,8 +22,8 @@ class TestPlcVBlankOrdering {
     void ordinaryLevelServicesPlcBeforeEventsAndObjects() {
         List<String> calls = new ArrayList<>();
         GameModule module = mock(GameModule.class);
-        PlcVBlankService service = () -> calls.add("vblank-service");
-        when(module.getGameService(PlcVBlankService.class)).thenReturn(service);
+        PlcLifecycleService service = recordingService(calls);
+        when(module.getGameService(PlcLifecycleService.class)).thenReturn(service);
         LevelManager level = mock(LevelManager.class);
         org.mockito.Mockito.doAnswer(ignored -> {
             calls.add("objects");
@@ -31,14 +32,14 @@ class TestPlcVBlankOrdering {
 
         LevelFrameStep.execute(context(module, calls), level, mock(Camera.class), () -> calls.add("physics"));
 
-        assertEquals(List.of("vblank-service", "vint", "objects", "physics"), calls);
+        assertEquals(List.of("vblank-service", "vint", "objects", "physics", "prepare"), calls);
     }
 
     @Test
     void vblankOnlyRowDoesNotServiceLevelPlc() {
         List<String> calls = new ArrayList<>();
         GameModule module = mock(GameModule.class);
-        when(module.getGameService(PlcVBlankService.class)).thenReturn(() -> calls.add("vblank-service"));
+        when(module.getGameService(PlcLifecycleService.class)).thenReturn(recordingService(calls));
 
         LevelFrameStep.serviceVBlankOnly(context(module, calls));
 
@@ -53,5 +54,26 @@ class TestPlcVBlankOrdering {
                         calls.add("vint");
                     }
                 }, null);
+    }
+
+    private static PlcLifecycleService recordingService(List<String> calls) {
+        return new PlcLifecycleService() {
+            @Override
+            public void serviceVBlank(PlcLifecyclePhase phase) {
+                if (phase == PlcLifecyclePhase.ORDINARY_LEVEL) {
+                    calls.add("vblank-service");
+                }
+            }
+
+            @Override
+            public boolean hasPreparationBoundary(PlcLifecyclePhase phase) {
+                return phase == PlcLifecyclePhase.ORDINARY_LEVEL;
+            }
+
+            @Override
+            public void prepareAfterLoop(PlcLifecyclePhase phase) {
+                calls.add("prepare");
+            }
+        };
     }
 }

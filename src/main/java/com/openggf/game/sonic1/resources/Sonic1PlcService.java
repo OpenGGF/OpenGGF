@@ -1,7 +1,8 @@
 package com.openggf.game.sonic1.resources;
 
 import com.openggf.data.Rom;
-import com.openggf.game.resources.PlcVBlankService;
+import com.openggf.game.resources.PlcLifecyclePhase;
+import com.openggf.game.resources.PlcLifecycleService;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.level.resources.NemesisPlcPatternCounts;
 import com.openggf.level.resources.NemesisPlcServiceQueue;
@@ -13,7 +14,7 @@ import java.util.List;
 import java.util.Objects;
 
 /** Sonic 1-owned façade for the ROM's logical Pattern Load Cue FIFO. */
-public final class Sonic1PlcService implements PlcVBlankService {
+public final class Sonic1PlcService implements PlcLifecycleService {
     private static final int SAFE_QUEUE_CAPACITY = 15;
 
     private final Rom rom;
@@ -53,7 +54,6 @@ public final class Sonic1PlcService implements PlcVBlankService {
     }
 
     /** Models S1's three-pattern ordinary level VBlank service. */
-    @Override
     public void serviceLevelVBlank() {
         queue.servicePatterns(3);
     }
@@ -66,6 +66,37 @@ public final class Sonic1PlcService implements PlcVBlankService {
     /** Returns whether either the active decoder or a waiting ROM PLC descriptor remains. */
     public boolean isBusy() {
         return queue.isBusy();
+    }
+
+    @Override
+    public void serviceVBlank(PlcLifecyclePhase phase) {
+        switch (phase) {
+            case TITLE_SCREEN, LEVEL_SELECT, LEVEL_TITLE_CARD, PALETTE_FADE,
+                    SPECIAL_STAGE_RESULTS, CREDITS_TEXT, ENDING, POST_CREDITS ->
+                    serviceFastVBlank();
+            case ORDINARY_LEVEL, CREDITS_DEMO, CREDITS_DEMO_FADE, NORMAL_PAUSE ->
+                    serviceLevelVBlank();
+            case LAG, SPECIAL_STAGE, TWO_PLAYER_RESULTS, SPECIAL_STAGE_PAUSE -> {
+                // The selected S1 VBlank handler does not service PLCs.
+            }
+        }
+    }
+
+    @Override
+    public boolean hasPreparationBoundary(PlcLifecyclePhase phase) {
+        return switch (phase) {
+            case TITLE_SCREEN, LEVEL_SELECT, LEVEL_TITLE_CARD, ORDINARY_LEVEL,
+                    PALETTE_FADE, SPECIAL_STAGE_RESULTS, CREDITS_TEXT, CREDITS_DEMO -> true;
+            case LAG, SPECIAL_STAGE, TWO_PLAYER_RESULTS, CREDITS_DEMO_FADE,
+                    ENDING, POST_CREDITS, NORMAL_PAUSE, SPECIAL_STAGE_PAUSE -> false;
+        };
+    }
+
+    @Override
+    public void prepareAfterLoop(PlcLifecyclePhase phase) {
+        if (hasPreparationBoundary(phase)) {
+            prepare();
+        }
     }
 
     private Submission readSubmission(int plcId) throws IOException {

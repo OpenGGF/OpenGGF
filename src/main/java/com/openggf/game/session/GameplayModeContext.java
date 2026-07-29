@@ -18,6 +18,7 @@ import com.openggf.game.palette.PaletteColorStateAdapter;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.render.AdvancedRenderModeController;
 import com.openggf.game.render.SpecialRenderEffectRegistry;
+import com.openggf.game.resources.PlcFrameLifecycleCoordinator;
 import com.openggf.game.rewind.EngineStepper;
 import com.openggf.game.rewind.InMemoryKeyframeStore;
 import com.openggf.game.rewind.InputSource;
@@ -72,6 +73,7 @@ public final class GameplayModeContext implements ModeContext {
     private final SeamlessTransitionResourceHandoffRegistry
             seamlessTransitionResourceHandoffs;
     private final RecordedCompletionAuthority recordedCompletionAuthority;
+    private final PlcFrameLifecycleCoordinator plcFrameLifecycle;
 
     private Camera camera;
     private TimerManager timerManager;
@@ -149,6 +151,8 @@ public final class GameplayModeContext implements ModeContext {
                 "runtimeArtCoordinator");
         this.seamlessTransitionResourceHandoffs =
                 new SeamlessTransitionResourceHandoffRegistry();
+        this.plcFrameLifecycle =
+                new PlcFrameLifecycleCoordinator(worldSession.getGameModule());
         this.recordedCompletionAuthority =
                 checkedPolicy == HardwareReadinessAdmissionPolicy.RECORDED
                         ? hardwareTiming.beginRecordedAdmission()
@@ -383,6 +387,10 @@ public final class GameplayModeContext implements ModeContext {
 
     public FadeManager getFadeManager() {
         return fadeManager;
+    }
+
+    public PlcFrameLifecycleCoordinator plcFrameLifecycle() {
+        return plcFrameLifecycle;
     }
 
     public GameRng getRng() {
@@ -788,6 +796,7 @@ public final class GameplayModeContext implements ModeContext {
         }
         hardwareTiming.resetForMissingSnapshot();
         runtimeArtCoordinator.resetForMissingSnapshot();
+        plcFrameLifecycle.reset();
         seamlessTransitionResourceHandoffs.resetForMissingSnapshot();
         hardwareTimingBoundaryObserver = HardwareTimingBoundaryObserver.NO_OP;
         if (zoneLayoutMutationPipeline != null) {

@@ -2,7 +2,7 @@ package com.openggf.game.sonic2.resources;
 
 import com.openggf.data.Rom;
 import com.openggf.game.sonic2.Sonic2GameModule;
-import com.openggf.game.resources.PlcVBlankService;
+import com.openggf.game.resources.PlcLifecycleService;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.level.resources.NemesisPlcPatternCounts;
 import com.openggf.level.resources.NemesisPlcServiceQueue;
@@ -132,7 +132,7 @@ class TestSonic2PlcService {
         Sonic2PlcService service = assertInstanceOf(Sonic2PlcService.class,
                 module.getGameService(Sonic2PlcService.class));
         assertSame(service, module.getGameService(Sonic2PlcService.class));
-        assertSame(service, module.getGameService(PlcVBlankService.class));
+        assertSame(service, module.getGameService(PlcLifecycleService.class));
     }
 
     private PlcDefinition firstNonEmptyPlc() throws IOException {
