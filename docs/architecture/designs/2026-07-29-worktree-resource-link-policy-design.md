@@ -147,7 +147,7 @@ noncompliant remote ref update requires the repository ruleset to make that
 check required. The local `pre-push` hook is the in-repository preventive gate.
 For a new branch whose event `before` OID is all zero, CI uses the fixed
 worktree-resource-policy cutover commit
-`268fb374f77ec7b156e780d0cebb33b3e88e81ac` as its stable pre-publication
+`ccdd33edf4f9cd4a7937791f1d4c2f37cbeeb5e0` as its stable pre-policy integration
 boundary. This is the immutable `develop` ancestor from which the policy branch
 was created, avoiding a self-reference to a future policy commit.
 The cutover must be an ancestor of the new tip; otherwise CI fails closed and

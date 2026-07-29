@@ -34,7 +34,7 @@ class TestBuildToolingGuard {
     private static final Path POST_CHECKOUT_HOOK = Path.of(".githooks/post-checkout").toAbsolutePath();
     private static final Path PROJECT_GITIGNORE = Path.of(".gitignore").toAbsolutePath();
     private static final String ALL_ZERO_OID = "0000000000000000000000000000000000000000";
-    private static final String RESOURCE_POLICY_CUTOVER = "268fb374f77ec7b156e780d0cebb33b3e88e81ac";
+    private static final String RESOURCE_POLICY_CUTOVER = "ccdd33edf4f9cd4a7937791f1d4c2f37cbeeb5e0";
 
     private static final List<String> TRACE_REPLAY_DIAGNOSTIC_EXCLUDES = List.of(
             "**/Debug*.java",

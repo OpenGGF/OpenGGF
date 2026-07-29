@@ -194,7 +194,7 @@ fail closed when the remote name or required objects cannot be resolved.
 - [ ] **Step 5: Implement CI new-ref selection**
 
 For an all-zero `before` OID, require the fixed resource-policy cutover commit
-`268fb374f77ec7b156e780d0cebb33b3e88e81ac` to be an ancestor of the pushed
+`ccdd33edf4f9cd4a7937791f1d4c2f37cbeeb5e0` to be an ancestor of the pushed
 tip and validate the complete `<cutover>..<tip>` range. Require identical shell
 and PowerShell constants.
 
