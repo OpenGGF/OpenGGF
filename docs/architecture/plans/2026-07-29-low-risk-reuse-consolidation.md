@@ -437,26 +437,46 @@ Skills: n/a
   `docs/architecture/designs/2026-07-29-low-risk-reuse-consolidation.md`
 - Stage:
   `docs/architecture/plans/2026-07-29-low-risk-reuse-consolidation.md`
+- Create and stage:
+  `docs/architecture/validation/2026-07-29-low-risk-reuse-consolidation.md`
 - Modify: `CHANGELOG.md` only if required by the chosen final commit type
 - Modify during integration: `README.md` release/change-log section
 
 - [ ] **Step 1: Run the complete focused verification set**
 
-Run the focused command from the design. Expected: zero failures and errors.
+Run the focused command from the design. The acceptance result is exactly one
+known failure and zero errors: baseline `eb1b138c4` ran the comparable
+pre-tranche set as 127 tests / 1 failure / 0 errors, and the completed tranche
+ran 150 / 1 / 0. In both cases the sole failure is
+`TestTraceDataParsing.parsesRecordedRingFloorCheckCounterPhase`, which expects
+`2` and receives `null` because the HCZ/MGZ metadata omit
+`ring_floor_check_counter_phase`. Any additional focused failure or error is a
+regression.
 
 - [ ] **Step 2: Run the full JDK 21 suite**
 
 ```bash
-mvn -Dmse=off test
+mvn clean test
 ```
 
-Record exact failures and compare them with the baseline. The starting baseline
-has two observed `TestGameLoop` failures:
+Run this in a clean detached worktree at `eb1b138c4` and in the tranche
+worktree, then aggregate only the XML reports produced after the clean. This is
+mandatory: non-clean `target/surefire-reports` can contain focused-run reports
+and corrupt a full-suite aggregate. Both observed Maven processes hung after
+printing final output; after confirming their XML reports were complete, they
+were terminated and the XML result was used as the authoritative outcome.
+
+The clean baseline produced 1,726 suites / 13,497 tests / 1 failure / 1 error /
+35 skipped. The tranche produced 1,728 / 13,521 / 1 / 1 / 35. Both contain only
+the two observed `TestGameLoop` failures:
 
 - `traceRealtimeRewindRunsBeforePlaybackInputBridge`
 - `setupAdmissionPrecedesSeamlessBoundaryAndTraceCameraMutations`
 
-No new failure or changed failure attributable to this tranche is acceptable.
+The suite-count/test-count growth is from this tranche's added tests. No new
+failure or changed failure attributable to this tranche is acceptable. Record
+the exact commands, complete-report methodology, and comparison in the
+validation artifact.
 
 - [ ] **Step 3: Run policy and diff checks**
 
@@ -466,7 +486,7 @@ git status --short
 ```
 
 Confirm the disassembly links created by the worktree hook remain untracked and
-unstaged. Stage the two architecture artifacts explicitly.
+unstaged. Stage the three architecture artifacts explicitly.
 
 - [ ] **Step 4: Commit documentation**
 

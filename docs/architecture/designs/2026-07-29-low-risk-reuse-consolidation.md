@@ -206,8 +206,20 @@ mvn -Dmse=off \
   test
 ```
 
+The focused baseline has one known fixture failure. At fork baseline
+`eb1b138c4`, the comparable command (excluding this tranche's new tests) ran
+127 tests with one failure and zero errors:
+`TestTraceDataParsing.parsesRecordedRingFloorCheckCounterPhase` expected `2`
+and received `null`. The HCZ/MGZ fixture metadata omit
+`ring_floor_check_counter_phase`. The tranche command must retain that exact
+single failure and introduce no additional focused failure or error; it ran 150
+tests with the same 1/0 result.
+
 The full JDK 21 suite runs after all three tasks because these shared utilities
-affect bootstrap and trace tooling even though they do not alter gameplay.
+affect bootstrap and trace tooling even though they do not alter gameplay. Use
+`mvn clean test` for the comparison so its Surefire XML contains only that run;
+the recorded clean baseline and tranche comparison is in
+`docs/architecture/validation/2026-07-29-low-risk-reuse-consolidation.md`.
 
 ## Delivery sequence
 
