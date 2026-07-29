@@ -103,19 +103,18 @@ https://github.com/sonicretro/skdisasm
 
 ## AI-Assisted Development & Trace Testing
 
-Special thanks to **[Tibo Sottiaux](https://x.com/thsottiaux) (`@thsottiaux`)** for announcing **14 Codex and ChatGPT Work usage-limit resets—11 direct and 3 banked—between 27 June and 25 July 2026**. Those resets enabled JamesJ999 and Raiscan to carry out agent-intensive OpenGGF development and trace testing at a scale that would not have been practical under conventional usage limits.
+Special thanks to **[Tibo Sottiaux](https://x.com/thsottiaux) (`@thsottiaux`)** for announcing **17 Codex and ChatGPT Work usage-limit resets—14 direct and 3 banked—between 27 June and 29 July 2026**. Those resets enabled JamesJ999 and Raiscan to carry out agent-intensive OpenGGF development and trace testing at a scale that would not have been practical under conventional usage limits.
 
-For that inclusive period, `ccusage` reports the following usage from **Raiscan's Codex activity alone**:
+For that inclusive period, `ccusage` reports the following usage from **Raiscan's Codex activity alone**, as captured at 09:03 BST on 29 July:
 
 | Usage category | Tokens |
 |----------------|-------:|
-| Cached input | 84,394,651,136 |
-| Uncached input | 1,520,255,460 |
-| Output | 101,258,604 |
-| Reasoning output (included in output usage) | 27,191,007 |
-| **Total processed** | **86,016,165,200** |
+| Cached input | 40,327,503,744 |
+| Uncached input | 1,066,382,464 |
+| Output (including reasoning) | 77,114,087 |
+| **Total processed** | **41,471,000,295** |
 
-At the pricing data used by `ccusage`, that activity represents an estimated **$55,360.28 in API-equivalent inference value**. This is an estimate, not an invoice or an amount paid. It does not include JamesJ999's separate agent usage.
+Using the corrected replay deduplication and derived-token accounting in `ccusage` 20.0.19, that activity represents an estimated **$29,338.82 in API-equivalent inference value**. This is an estimate, not an invoice or an amount paid. It does not include JamesJ999's separate agent usage.
 
 ---
 
