@@ -19,13 +19,25 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SuperStateController;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.game.timing.HardwareTimingService;
+import com.openggf.game.rewind.RewindSnapshottable;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface GameModule {
     String getIdentifier();
 
     Game createGame(Rom rom);
+
+    /**
+     * Returns session-owned game services whose mutable state participates in
+     * a gameplay rewind. The composition root registers these adapters once
+     * per {@link com.openggf.game.session.WorldSession}; games without such
+     * services remain empty.
+     */
+    default List<RewindSnapshottable<?>> rewindAdapters() {
+        return List.of();
+    }
 
     /** Creates this game's session-owned runtime-art coordinator. */
     default RuntimeArtCoordinator createRuntimeArtCoordinator(

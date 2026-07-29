@@ -73,6 +73,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Optional;
 
 import static java.security.MessageDigest.getInstance;
@@ -124,6 +125,11 @@ public class Sonic2GameModule implements GameModule {
     public Game createGame(Rom rom) {
         plcService = new Sonic2PlcService(rom);
         return new Sonic2(rom);
+    }
+
+    @Override
+    public List<com.openggf.game.rewind.RewindSnapshottable<?>> rewindAdapters() {
+        return plcService == null ? List.of() : List.of(plcService);
     }
 
     @Override

@@ -257,6 +257,11 @@ public final class GameplayModeContext implements ModeContext {
         this.rewindRegistry.register(timerManager);
         this.rewindRegistry.register(fadeManager);
         this.rewindRegistry.register(new OscillationStaticAdapter());
+        for (com.openggf.game.rewind.RewindSnapshottable<?> adapter
+                : worldSession.getGameModule().rewindAdapters()) {
+            this.rewindRegistry.deregister(adapter.key());
+            this.rewindRegistry.register(adapter);
+        }
         // Register solid-execution adapter (no-op if not DefaultSolidExecutionRegistry)
         if (solidExecutionRegistry instanceof DefaultSolidExecutionRegistry dser) {
             this.rewindRegistry.register(dser);

@@ -3,6 +3,7 @@ package com.openggf.game.sonic1.resources;
 import com.openggf.data.Rom;
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.resources.PlcLifecycleService;
+import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.level.resources.NemesisPlcPatternCounts;
 import com.openggf.level.resources.NemesisPlcServiceQueue;
@@ -15,7 +16,9 @@ import java.util.List;
 import java.util.Objects;
 
 /** Sonic 1-owned façade for the ROM's logical Pattern Load Cue FIFO. */
-public final class Sonic1PlcService implements PlcLifecycleService {
+public final class Sonic1PlcService
+        implements PlcLifecycleService, RewindSnapshottable<NemesisPlcQueueSnapshot> {
+    public static final String REWIND_KEY = "sonic1-plc-service";
     private static final int SAFE_QUEUE_CAPACITY = 15;
 
     private final Rom rom;
@@ -104,7 +107,24 @@ public final class Sonic1PlcService implements PlcLifecycleService {
     }
 
     /** Immutable logical FIFO state for producer-contract tests and rewind adapters. */
+    @Override
     public NemesisPlcQueueSnapshot capture() { return queue.capture(); }
+
+    /** Restores only logical queue state; restoration neither parses nor submits work. */
+    @Override
+    public void restore(NemesisPlcQueueSnapshot snapshot) {
+        queue.restore(snapshot);
+    }
+
+    @Override
+    public String key() {
+        return REWIND_KEY;
+    }
+
+    @Override
+    public void resetForMissingSnapshot() {
+        queue.restore(new NemesisPlcQueueSnapshot(null, List.of()));
+    }
 
     @Override
     public void serviceVBlank(PlcLifecyclePhase phase) {
