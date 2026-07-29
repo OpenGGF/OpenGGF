@@ -21,6 +21,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -259,32 +260,93 @@ public class TestS3kAiz1FireCurtainHeadless {
     }
 
     @Test
-    public void finishQueueCompletesAtMinimumWhenVblankPhaseIsReady() {
+    public void finishQueueWaitsForDirectAndModuleWorkWhenVblankPhaseIsReady()
+            throws Exception {
+        drainStartupKosWork();
         Sonic3kAIZEvents events = getAizEvents();
         events.setFireSequencePhaseOrdinal(3);
         events.setFirePhaseFrames(63);
+        events.setFireOverlayTilesLoaded(true);
+        queueAct2TransitionArt(events);
         GameServices.level().getObjectManager().initVblaCounter(2);
 
         fixture.stepIdleFrames(1);
+        assertFalse(events.isAct2TransitionRequested(),
+                "the fire owner must not bypass the three earlier Queue_Kos jobs");
+        for (int frame = 0;
+                frame < 100_000 && !events.isAct2TransitionRequested();
+                frame++) {
+            fixture.stepIdleFrames(1);
+        }
 
         assertTrue(events.isAct2TransitionRequested(),
-                "the 64th finish tick should hand off immediately on VBlank queue phase 3");
+                "the handoff should occur after all three direct jobs and both "
+                        + "module parents become ready");
     }
 
     @Test
-    public void finishQueueWaitsForNextReadyVblankPhase() {
+    public void finishQueueWaitsForNextReadyVblankPhase() throws Exception {
+        drainStartupKosWork();
         Sonic3kAIZEvents events = getAizEvents();
         events.setFireSequencePhaseOrdinal(3);
         events.setFirePhaseFrames(63);
+        events.setFireOverlayTilesLoaded(true);
+        queueAct2TransitionArt(events);
         GameServices.level().getObjectManager().initVblaCounter(0);
 
         fixture.stepIdleFrames(1);
-        assertTrue(!events.isAct2TransitionRequested(),
-                "minimum work alone must not bypass the module DMA phase");
-        fixture.stepIdleFrames(2);
+        assertFalse(events.isAct2TransitionRequested(),
+                "minimum work alone must not bypass the direct or module queues");
+        for (int frame = 0;
+                frame < 100_000 && !events.isAct2TransitionRequested();
+                frame++) {
+            fixture.stepIdleFrames(1);
+        }
 
         assertTrue(events.isAct2TransitionRequested(),
-                "the queue should hand off at tick 66 when phase 3 is next reached");
+                "the queue should hand off at the next eligible phase after "
+                        + "all direct and module work is ready");
+    }
+
+    @Test
+    public void finishQueueCompletesAfterSubmittedKosArtIsReady() {
+        teleportToMinibossArea();
+        runRightUntilCameraSettles(3 * FPS);
+
+        Sonic3kAIZEvents events = getAizEvents();
+        events.setEventsFg5(true);
+        for (int frame = 0;
+                frame < 600 && !events.isAct2TransitionRequested();
+                frame++) {
+            fixture.stepIdleFrames(1);
+        }
+
+        assertTrue(events.isAct2TransitionRequested(),
+                "the finish phase must hand off after its submitted AIZ2 art is ready");
+    }
+
+    private static void queueAct2TransitionArt(Sonic3kAIZEvents events)
+            throws Exception {
+        var method = Sonic3kAIZEvents.class.getDeclaredMethod("queueAct2KosArt");
+        method.setAccessible(true);
+        method.invoke(events);
+    }
+
+    private void drainStartupKosWork() {
+        fixture.stepIdleFrames(1);
+        for (int frame = 0;
+                frame < 100_000
+                        && (GameServices.hardwareTiming().incompleteCount(
+                        com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE) > 0
+                        || GameServices.hardwareTiming().incompleteCount(
+                        com.openggf.game.timing.HardwareWorkKind.KOS_DECOMPRESSION_QUEUE) > 0);
+                frame++) {
+            fixture.stepIdleFrames(1);
+        }
+        assertEquals(0, GameServices.hardwareTiming().incompleteCount(
+                com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE));
+        assertEquals(0, GameServices.hardwareTiming().incompleteCount(
+                com.openggf.game.timing.HardwareWorkKind.KOS_DECOMPRESSION_QUEUE));
     }
 
     @Test
@@ -562,4 +624,3 @@ public class TestS3kAiz1FireCurtainHeadless {
         return ((b3 & 0x7) << 9) | ((g3 & 0x7) << 5) | ((r3 & 0x7) << 1);
     }
 }
-

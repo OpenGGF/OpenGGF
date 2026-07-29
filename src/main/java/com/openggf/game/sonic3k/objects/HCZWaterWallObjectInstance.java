@@ -1,8 +1,9 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
+
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
@@ -126,9 +127,7 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
     private int ySub;
     private boolean playersControlled;
     private boolean debrisSpawned;
-    @RewindTransient(reason = "queue facade is rebound to the restored session ledger by captured ordinal")
     private S3kKosModuleQueue artQueue;
-    @RewindTransient(reason = "handle is rebound to the restored session ledger by captured ordinal")
     private HardwareWorkHandle artHandle;
     private long artOrdinal = -1;
 
@@ -376,7 +375,7 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
         rebindArtAfterRestore();
         try {
             if (artHandle == null) {
-                artQueue = new S3kKosModuleQueue(services().hardwareTiming());
+                artQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
                 artHandle = artQueue.queue(
                         services().rom(),
                         sourceAddress,
@@ -406,7 +405,7 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
                         HardwareWorkKind.KOS_MODULE_QUEUE, artOrdinal)
                 .orElseThrow(() -> new IllegalStateException(
                         "Missing restored HCZ water-wall KosM job " + artOrdinal));
-        artQueue = new S3kKosModuleQueue(services().hardwareTiming());
+        artQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
     }
 
     /**

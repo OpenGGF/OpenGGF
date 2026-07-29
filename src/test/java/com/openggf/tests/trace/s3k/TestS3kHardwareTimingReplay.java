@@ -2,6 +2,7 @@ package com.openggf.tests.trace.s3k;
 
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
+import com.openggf.game.sonic3k.resources.S3kKosDecompressionQueue;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.game.timing.HardwareWorkHandle;
@@ -101,7 +102,7 @@ class TestS3kHardwareTimingReplay {
             IllegalStateException remaining = org.junit.jupiter.api.Assertions.assertThrows(
                     IllegalStateException.class,
                     fixture::verifyHardwareTimingSegmentEdges);
-            assertTrue(remaining.getMessage().contains("raw_frame=73"),
+            assertTrue(remaining.getMessage().contains("raw_frame=70"),
                     remaining::getMessage);
         } finally {
             fixture.abortHardwareTimingReplayRun();
@@ -120,10 +121,25 @@ class TestS3kHardwareTimingReplay {
         HardwareTimingReplayPort replay = new HardwareTimingReplayPort(
                 timing.beginRecordedAdmission());
         replay.install(trace.hardwareTimingSchedule());
-        S3kKosModuleQueue queue = new S3kKosModuleQueue(timing);
+        S3kKosDecompressionQueue direct =
+                new S3kKosDecompressionQueue(timing);
+        S3kKosModuleQueue queue = new S3kKosModuleQueue(timing, direct);
 
-        HardwareWorkHandle handle = queue.queue(
+        HardwareWorkHandle parent = queue.queue(
                 TestEnvironment.currentRom(), romSource, destinationPattern);
+        boolean directEdge = edge.kind()
+                == com.openggf.game.timing.HardwareWorkKind.KOS_DECOMPRESSION_QUEUE;
+        HardwareWorkHandle handle;
+        if (directEdge) {
+            queue.processModuleQueueAfterObjects();
+            handle = timing.capture().jobs().stream()
+                    .filter(job -> job.kind() == edge.kind())
+                    .findFirst()
+                    .orElseThrow()
+                    .handle();
+        } else {
+            handle = parent;
+        }
 
         assertEquals(edge.kind(), handle.kind());
         assertEquals(edge.ordinal(), handle.ordinal());
@@ -133,23 +149,35 @@ class TestS3kHardwareTimingReplay {
 
         replay.beginRawFrame(edge.rawFrame());
         for (int servicePass = 0;
-                servicePass < 64 && !isPrepared(timing);
+                servicePass < 4096 && !isPrepared(timing, handle);
                 servicePass++) {
             timing.service(HardwareServiceBoundary.POST_OBJECTS);
+            queue.afterTimingService(HardwareServiceBoundary.POST_OBJECTS);
             timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            direct.afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
         }
         timing.service(edge.boundary());
-        assertTrue(isPrepared(timing),
+        if (edge.boundary() == HardwareServiceBoundary.POST_OBJECTS) {
+            queue.afterTimingService(edge.boundary());
+        } else {
+            direct.afterTimingService(edge.boundary());
+        }
+        assertTrue(isPrepared(timing, handle),
                 "the production decoder must prepare the archive independently");
-        assertFalse(queue.isReady(handle),
+        assertFalse(directEdge ? direct.isReady(handle) : queue.isReady(handle),
                 "recorded admission must hold prepared work until its edge");
 
         replay.apply(edge.boundary());
 
-        assertTrue(queue.isReady(handle));
+        assertTrue(directEdge ? direct.isReady(handle) : queue.isReady(handle));
     }
 
-    private static boolean isPrepared(HardwareTimingService timing) {
-        return timing.capture().jobs().getFirst().preparedPayload() != null;
+    private static boolean isPrepared(
+            HardwareTimingService timing, HardwareWorkHandle handle) {
+        return timing.capture().jobs().stream()
+                .filter(job -> job.handle().equals(handle))
+                .findFirst()
+                .orElseThrow()
+                .preparedPayload() != null;
     }
 }

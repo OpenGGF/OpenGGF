@@ -5,6 +5,8 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.timing.HardwareServiceBoundary;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.sprites.playable.Sonic;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -29,6 +31,7 @@ public class TestS3kHcz1WaterTunnelUpwardPipe {
     private static final short START_Y = 1715;
     private static final int TARGET_Y = 1100;
     private static final int MAX_FRAMES = 180;
+    private static final int INITIAL_ART_DRAIN_LIMIT = 4096;
 
     private static Object oldSkipIntros, oldMainCharacter, oldSidekickCharacter;
     private static SharedLevel sharedLevel;
@@ -65,7 +68,23 @@ public class TestS3kHcz1WaterTunnelUpwardPipe {
         fixture = HeadlessTestFixture.builder()
                 .withSharedLevel(sharedLevel)
                 .build();
+        drainInitialRuntimeArt();
         sprite = (Sonic) fixture.sprite();
+
+        // This fixture teleports directly to a late HCZ route window. In normal
+        // play the horizontal geysers in that window have already run their
+        // y-guard and retired before Sonic reaches the upward pipe. Dispatch
+        // that guard once at the route camera before entering the pipe so the
+        // synthetic teleport does not enqueue four historical geyser archives
+        // alongside the vertical archive on one frame.
+        Camera camera = fixture.camera();
+        sprite.setX(START_X);
+        sprite.setY(START_Y);
+        camera.updatePosition(true);
+        camera.setFrozen(true);
+        sprite.setCentreY((short) 0x400);
+        GameServices.level().getObjectManager().reset(camera.getX());
+        fixture.stepFrame(false, false, false, false, false);
 
         sprite.setX(START_X);
         sprite.setY(START_Y);
@@ -82,9 +101,28 @@ public class TestS3kHcz1WaterTunnelUpwardPipe {
         sprite.setObjectControlled(false);
         sprite.setForcedAnimationId(-1);
 
-        Camera camera = fixture.camera();
+        camera.setFrozen(false);
         camera.updatePosition(true);
-        GameServices.level().getObjectManager().reset(camera.getX());
+    }
+
+    private static void drainInitialRuntimeArt() {
+        int frames = 0;
+        while (GameServices.hardwareTiming()
+                .incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE) > 0
+                && frames++ < INITIAL_ART_DRAIN_LIMIT) {
+            serviceArtBoundary(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            serviceArtBoundary(HardwareServiceBoundary.POST_OBJECTS);
+        }
+        if (GameServices.hardwareTiming()
+                .incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE) != 0) {
+            fail("Initial HCZ runtime art did not drain within "
+                    + INITIAL_ART_DRAIN_LIMIT + " hardware frames");
+        }
+    }
+
+    private static void serviceArtBoundary(HardwareServiceBoundary boundary) {
+        GameServices.hardwareTiming().service(boundary);
+        GameServices.runtimeArtCoordinator().afterTimingService(boundary);
     }
 
     /**
@@ -123,5 +161,3 @@ public class TestS3kHcz1WaterTunnelUpwardPipe {
                 + " objCtrl=" + sprite.isObjectControlled());
     }
 }
-
-

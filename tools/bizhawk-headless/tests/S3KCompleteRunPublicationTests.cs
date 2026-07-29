@@ -71,13 +71,17 @@ namespace OpenGGF.BizHawk.Headless.Tests
             "  \"lua_script_version\": \"6.33-s3k-completerun\",";
         private const string PublishedHardwareVersionLine =
             "  \"lua_script_version\": \"6.35-s3k-completerun\",";
-        private const string CurrentVersionLine =
+        private const string PublishedDirectPredecessorVersionLine =
             "  \"lua_script_version\": \"6.37-s3k-completerun\",";
+        private const string CurrentVersionLine =
+            "  \"lua_script_version\": \"6.38-s3k-completerun\",";
         private const string FixtureTraceSchemaLine =
             "  \"trace_schema\": 6,";
         private const string CurrentTraceSchemaLine =
             "  \"trace_schema\": 7,";
         private const string HardwareTimingSchemaLine =
+            "  \"hardware_timing_schema\": 2,\n";
+        private const string LegacyHardwareTimingSchemaLine =
             "  \"hardware_timing_schema\": 1,\n";
 
         public static void Register(ICollection<TestMain.TestCase> tests)
@@ -86,6 +90,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S3KCompleteRunPublication metadata compatibility accepts"
                 + " only exact current, published, or legacy shapes",
                 MetadataCompatibilityShapesAreExact));
+            tests.Add(new TestMain.TestCase(
+                "S3KCompleteRunPublication metadata defaults to schema two"
+                + " and selects schema one",
+                MetadataDefaultsToSchemaTwoAndSelectsSchemaOne));
             foreach (MetadataFixture fixture in MetadataFixtures)
             {
                 MetadataFixture captured = fixture;
@@ -178,8 +186,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// (Player_mode 0) — and identity (C) — the run pass under
         /// --run-id s3k-multibonus, Knuckles solo (Player_mode 3), whose
         /// three bonus dirs carry capture_mode AND v_int_run_count while
-        /// special_stage/ carries neither. AIZ and HCZ were published with
-        /// hardware timing on 2026-07-27; the remaining fixtures retain
+        /// special_stage/ carries neither. AIZ and HCZ were republished with
+        /// hardware timing on 2026-07-29; the remaining fixtures retain
         /// their 2026-07-25 capture date. These comparisons are FULL-FILE
         /// equality, so each date is injected to match the fixture rather
         /// than allowed to differ.
@@ -202,7 +210,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 PlayerMode = 0,
                 SourceBk2 = CompleteRunSourceBk2,
                 RunId = null,
-                RecordingDate = "2026-07-27"
+                RecordingDate = "2026-07-29"
             },
             new MetadataFixture
             {
@@ -220,7 +228,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 PlayerMode = 0,
                 SourceBk2 = CompleteRunSourceBk2,
                 RunId = null,
-                RecordingDate = "2026-07-27"
+                RecordingDate = "2026-07-29"
             },
             new MetadataFixture
             {
@@ -240,7 +248,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 PlayerMode = 3,
                 SourceBk2 = MultiBonusSourceBk2,
                 RunId = MultiBonusRunId,
-                RecordingDate = "2026-07-25"
+                RecordingDate = "2026-07-27"
             },
             new MetadataFixture
             {
@@ -260,7 +268,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 PlayerMode = 3,
                 SourceBk2 = MultiBonusSourceBk2,
                 RunId = MultiBonusRunId,
-                RecordingDate = "2026-07-25"
+                RecordingDate = "2026-07-27"
             },
             new MetadataFixture
             {
@@ -280,7 +288,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 PlayerMode = 3,
                 SourceBk2 = MultiBonusSourceBk2,
                 RunId = MultiBonusRunId,
-                RecordingDate = "2026-07-25"
+                RecordingDate = "2026-07-27"
             },
             new MetadataFixture
             {
@@ -293,7 +301,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 PlayerMode = 3,
                 SourceBk2 = MultiBonusSourceBk2,
                 RunId = MultiBonusRunId,
-                RecordingDate = "2026-07-25"
+                RecordingDate = "2026-07-27"
             }
         };
 
@@ -344,13 +352,31 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
             if (HasMetadataShape(
                 fixtureText,
+                PublishedDirectPredecessorVersionLine,
+                CurrentTraceSchemaLine,
+                true))
+            {
+                return producedText
+                    .Replace(
+                        CurrentVersionLine,
+                        PublishedDirectPredecessorVersionLine)
+                    .Replace(
+                        HardwareTimingSchemaLine,
+                        LegacyHardwareTimingSchemaLine);
+            }
+            if (HasMetadataShape(
+                fixtureText,
                 PublishedHardwareVersionLine,
                 CurrentTraceSchemaLine,
                 true))
             {
-                return producedText.Replace(
-                    CurrentVersionLine,
-                    PublishedHardwareVersionLine);
+                return producedText
+                    .Replace(
+                        CurrentVersionLine,
+                        PublishedHardwareVersionLine)
+                    .Replace(
+                        HardwareTimingSchemaLine,
+                        LegacyHardwareTimingSchemaLine);
             }
             if (HasMetadataShape(
                 fixtureText,
@@ -397,8 +423,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     || CountOccurrences(text, traceSchemaLine) == 1)
                 && CountOccurrences(text, "\"hardware_timing_schema\":")
                     == (hasHardwareTiming ? 1 : 0)
-                && CountOccurrences(text, HardwareTimingSchemaLine)
-                    == (hasHardwareTiming ? 1 : 0);
+                && (!hasHardwareTiming
+                    || CountOccurrences(text, HardwareTimingSchemaLine)
+                        + CountOccurrences(
+                            text, LegacyHardwareTimingSchemaLine) == 1);
         }
 
         private static void RequireMetadataShape(
@@ -409,7 +437,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
             string owner)
         {
             if (!HasMetadataShape(
-                text, versionLine, traceSchemaLine, hasHardwareTiming))
+                text, versionLine, traceSchemaLine, hasHardwareTiming)
+                || (hasHardwareTiming
+                    && CountOccurrences(
+                        text, HardwareTimingSchemaLine) != 1))
             {
                 throw new InvalidOperationException(
                     owner + " metadata does not have the exact current"
@@ -422,9 +453,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
             string current = CurrentVersionLine + "\n"
                 + CurrentTraceSchemaLine + "\n"
                 + HardwareTimingSchemaLine;
-            string published = PublishedHardwareVersionLine + "\n"
+            string published = PublishedDirectPredecessorVersionLine + "\n"
                 + CurrentTraceSchemaLine + "\n"
-                + HardwareTimingSchemaLine;
+                + LegacyHardwareTimingSchemaLine;
             string legacy = FixtureVersionLine + "\n"
                 + FixtureTraceSchemaLine + "\n";
             string legacyWithoutSchema = FixtureVersionLine + "\n";
@@ -458,6 +489,33 @@ namespace OpenGGF.BizHawk.Headless.Tests
                             + PublishedHardwareVersionLine),
                     current),
                 "unknown or mixed");
+        }
+
+        private static void MetadataDefaultsToSchemaTwoAndSelectsSchemaOne()
+        {
+            MetadataFixture fixture = MetadataFixtures[0];
+            S3KSegmentArm arm = ArmFor(fixture);
+            string current = S3KCompleteRunMetadataWriter.Format(
+                arm,
+                fixture.TraceFrameCount,
+                fixture.SourceBk2,
+                fixture.RecordingDate,
+                fixture.RunId,
+                fixture.PlayerMode);
+            string legacy = S3KCompleteRunMetadataWriter.Format(
+                arm,
+                fixture.TraceFrameCount,
+                fixture.SourceBk2,
+                fixture.RecordingDate,
+                fixture.RunId,
+                fixture.PlayerMode,
+                HardwareTimingEventEngine.LegacySchema);
+
+            AssertContains(
+                current,
+                "\"lua_script_version\": \"6.38-s3k-completerun\"");
+            AssertContains(current, "\"hardware_timing_schema\": 2");
+            AssertContains(legacy, "\"hardware_timing_schema\": 1");
         }
 
         private static string FormatFixture(MetadataFixture fixture)
@@ -750,7 +808,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     + " modes (docs/s3k-run-publication.md section 6).");
             }
             const string FixtureManifestVersionLine =
-                "  \"lua_script_version\": \"6.33-s3k-completerun\",\n";
+                "  \"lua_script_version\": \"6.37-s3k-completerun\",\n";
             AssertContains(expected, FixtureManifestVersionLine);
 
             var transitions = new List<RunManifestTransition>();
@@ -775,7 +833,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     SetBSegments,
                     transitions);
             const string CurrentManifestVersionLine =
-                "  \"lua_script_version\": \"6.37-s3k-completerun\",\n";
+                "  \"lua_script_version\": \"6.38-s3k-completerun\",\n";
             AssertEx.Equal(
                 1,
                 CountOccurrences(actual, CurrentManifestVersionLine));
@@ -981,16 +1039,21 @@ namespace OpenGGF.BizHawk.Headless.Tests
             WithMovie(MaskRows(40), movie =>
             {
                 var sink = new RecordingSink();
+                var host = RoundTripHost();
                 S3KCompleteRunCaptureResult result =
                     S3KCompleteRunCaptureRunner.Capture(
                         movie,
-                        RoundTripHost(),
+                        host,
                         MultiBonusRunId,
                         "synthetic.bk2",
                         "2026-07-24",
                         0,
                         sink);
 
+                AssertEx.Equal(
+                    (uint?)HardwareTimingEventEngine.ModuleChildSubmissionPc,
+                    host.ExecuteCallbackAddress);
+                AssertEx.Equal(true, host.ExecuteCallbackDisposed);
                 AssertEx.Equal(5, result.Segments.Count);
                 AssertSegment(
                     result.Segments[0], "aiz", Level, LevelProfile,

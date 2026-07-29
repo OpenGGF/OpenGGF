@@ -251,6 +251,10 @@ namespace OpenGGF.BizHawk.Headless
             segmenter.SegmentOpened = state.OpenSegment;
             segmenter.SegmentClosed = state.CloseSegment;
 
+            using (IDisposable directSubmissionObserver =
+                host.RegisterExecuteCallback(
+                    HardwareTimingEventEngine.ModuleChildSubmissionPc,
+                    state.ObserveDirectSubmission))
             using (IEnumerator<Bk2Frame> frames =
                 movie.OpenFrameStream().GetEnumerator())
             {
@@ -422,6 +426,11 @@ namespace OpenGGF.BizHawk.Headless
             {
                 get;
                 private set;
+            }
+
+            internal void ObserveDirectSubmission()
+            {
+                hardwareTimingEngine.ObserveDirectSubmissions(host);
             }
 
             /// <summary>

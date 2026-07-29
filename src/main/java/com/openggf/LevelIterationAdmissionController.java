@@ -8,9 +8,11 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.game.recording.UserRecordingRuntimeControls;
 import com.openggf.game.recording.UserRecordingStopReason;
+import com.openggf.game.recording.menu.UserRecordingMenu;
 import com.openggf.debug.playback.PlaybackDebugManager;
 
 import java.util.function.BooleanSupplier;
+import java.util.Objects;
 import java.util.function.Supplier;
 
 /** Owns level/title admission and deferred seamless-boundary completion. */
@@ -116,6 +118,15 @@ final class LevelIterationAdmissionController {
 
     void resetLastAppliedPlaybackFrame() {
         lastAppliedPlaybackFrame = -1;
+    }
+
+    UserRecordingMenu.PlaybackStarter withAppliedPlaybackFrameReset(
+            UserRecordingMenu.PlaybackStarter starter) {
+        Objects.requireNonNull(starter, "starter");
+        return (entry, options) -> {
+            resetLastAppliedPlaybackFrame();
+            starter.start(entry, options);
+        };
     }
 
     static void driveTraceRunSession(GameMode mode, int cursorFrame) {

@@ -509,7 +509,7 @@ public record TraceMetadata(
         if (hardwareTimingSchema == null) {
             return 0;
         }
-        if (hardwareTimingSchema != 1) {
+        if (hardwareTimingSchema != 1 && hardwareTimingSchema != 2) {
             throw new IllegalArgumentException(
                     "Unsupported hardware_timing_schema: " + hardwareTimingSchema);
         }
@@ -528,9 +528,10 @@ public record TraceMetadata(
                 throw new IOException(metadataFile.getFileName() + ": metadata must be one JSON object");
             }
             JsonNode timingSchema = root.get("hardware_timing_schema");
-            if (timingSchema != null && (!timingSchema.isInt() || timingSchema.intValue() != 1)) {
+            if (timingSchema != null && (!timingSchema.isInt()
+                    || (timingSchema.intValue() != 1 && timingSchema.intValue() != 2))) {
                 throw new IOException(metadataFile.getFileName()
-                        + ": hardware_timing_schema must be JSON integer 1");
+                        + ": hardware_timing_schema must be JSON integer 1 or 2");
             }
             return mapper.treeToValue(root, TraceMetadata.class);
         }

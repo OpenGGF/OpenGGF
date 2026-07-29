@@ -38,6 +38,7 @@ import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
 import com.openggf.game.session.SessionManager;
 import com.openggf.level.LevelManager;
 import com.openggf.level.Level;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerQuery;
@@ -75,6 +76,7 @@ public class TestTornadoObjectInstance {
 
     @BeforeEach
     public void setUp() {
+        AbstractObjectInstance.resetCameraBoundsForTests();
         previousModule = GameModuleRegistry.getCurrent();
         GameModuleRegistry.setCurrent(new Sonic2GameModule());
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
@@ -92,6 +94,7 @@ public class TestTornadoObjectInstance {
         GameServices.level().resetState();
         GameModuleRegistry.setCurrent(previousModule);
         SessionManager.clear();
+        AbstractObjectInstance.resetCameraBoundsForTests();
     }
 
     @Test

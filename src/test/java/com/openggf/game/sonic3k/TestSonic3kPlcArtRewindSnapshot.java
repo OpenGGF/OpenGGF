@@ -147,4 +147,58 @@ class TestSonic3kPlcArtRewindSnapshot {
                 "LoadEnemyArt runs when the normal title-card owner retires "
                         + "(sonic3k.asm:62287-62300)");
     }
+
+    @Test
+    void mgzAndCnzEnemyArtSchedulesMatchLoadEnemyArtTable() throws Exception {
+        assertEnemyArtProfile(
+                Sonic3kZoneIds.ZONE_MGZ,
+                0,
+                List.of(
+                        new PlcProgressSnapshot.PendingKosModule(0x36E0C4, 0x0530),
+                        new PlcProgressSnapshot.PendingKosModule(0x36B02C, 0x054F),
+                        new PlcProgressSnapshot.PendingKosModule(0x36D572, 0x0570)));
+        assertEnemyArtProfile(
+                Sonic3kZoneIds.ZONE_MGZ,
+                1,
+                List.of(
+                        new PlcProgressSnapshot.PendingKosModule(0x36E0C4, 0x0530),
+                        new PlcProgressSnapshot.PendingKosModule(0x36E2D6, 0x054F)));
+        assertEnemyArtProfile(
+                Sonic3kZoneIds.ZONE_CNZ,
+                0,
+                List.of(
+                        new PlcProgressSnapshot.PendingKosModule(0x3700CA, 0x0524),
+                        new PlcProgressSnapshot.PendingKosModule(0x3703EC, 0x0552),
+                        new PlcProgressSnapshot.PendingKosModule(0x370058, 0x0570),
+                        new PlcProgressSnapshot.PendingKosModule(0x37060E, 0x0574)));
+    }
+
+    private static void assertEnemyArtProfile(
+            int zone, int act,
+            List<PlcProgressSnapshot.PendingKosModule> expected)
+            throws Exception {
+        Sonic3kObjectArtProvider provider = new Sonic3kObjectArtProvider();
+        Method schedule = Sonic3kObjectArtProvider.class.getDeclaredMethod(
+                "scheduleEnemyKosArt", int.class, int.class);
+        schedule.setAccessible(true);
+        schedule.invoke(provider, zone, act);
+
+        PlcProgressSnapshot beforeRetirement = provider.capture();
+        assertEquals(expected, beforeRetirement.pendingKosModules());
+        assertEquals(List.of(), beforeRetirement.pendingKosOrdinals(),
+                "LoadEnemyArt must not submit before title-card retirement");
+        assertFalse(beforeRetirement.kosSubmissionArmed());
+
+        provider.onTitleCardArtRetired();
+        PlcProgressSnapshot armed = provider.capture();
+        assertTrue(armed.kosSubmissionArmed());
+
+        Sonic3kObjectArtProvider restored = new Sonic3kObjectArtProvider();
+        restored.restore(armed);
+        assertEquals(armed.pendingKosModules(),
+                restored.capture().pendingKosModules());
+        assertEquals(armed.pendingKosOrdinals(),
+                restored.capture().pendingKosOrdinals());
+        assertTrue(restored.capture().kosSubmissionArmed());
+    }
 }

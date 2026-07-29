@@ -598,8 +598,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
      *
      * <p>Zones handled:
      * <ul>
-     *   <li>AIZ1 ($0000): Sonic+Tails intro parks Player 2 in dormant marker state
-     *       while Obj_AIZPlaneIntro owns the opening pan</li>
+     *   <li>AIZ1 ($0000): Player 2 enters the dormant marker from the first
+     *       ordinary CPU-control dispatch while Obj_AIZPlaneIntro owns the opening pan</li>
      *   <li>HCZ1 ($0100): Sonic/Tails anim $1B (tumble), Knuckles anim $21 (glide drop)</li>
      *   <li>MGZ1 ($0200): anim $1B, airborne (loc_68A6)</li>
      *   <li>ICZ1 ($0500): Sonic player modes spawn Obj_LevelIntroICZ1 and
@@ -609,10 +609,6 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
      * </ul>
      */
     public void applyZonePlayerState() {
-        if (currentZone == Sonic3kZoneIds.ZONE_AIZ && currentAct == 0
-                && AizPlaneIntroInstance.getActiveIntroInstance() != null) {
-            applyAizIntroSidekickDormantMarkersAfterSpawn();
-        }
         if (currentZone == Sonic3kZoneIds.ZONE_HCZ && currentAct == 0) {
             applyHcz1IntroState();
         }
@@ -637,19 +633,6 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             cnzEvents.spawnSoloLeaderCarryInTailsIfNeeded(currentAct);
         }
         // TODO: LRZ1 non-Knuckles, SSZ falling intros (same loc_68A6 path)
-    }
-
-    private void applyAizIntroSidekickDormantMarkersAfterSpawn() {
-        SpriteManager spriteManager = GameServices.spritesOrNull();
-        if (spriteManager == null) {
-            return;
-        }
-        for (AbstractPlayableSprite sidekick : spriteManager.getRegisteredSidekicks()) {
-            SidekickCpuController controller = sidekick.getCpuController();
-            if (controller != null && shouldEnterSidekickDormantMarker(sidekick)) {
-                controller.applyLevelEventDormantMarkerForBootstrap();
-            }
-        }
     }
 
     private void applyIczIntroSidekickDormantMarkersAfterSpawn() {
@@ -1656,6 +1639,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         //   4 bytes   lbz schema payload length, when present
         //   N bytes   lbz schema payload, when present
         //   28 bytes  fixed Breathing_bubbles/Breathing_bubbles_P2 sidecars
+        //   4 bytes   fixed-air countdown owning zone
+        //   4 bytes   fixed-air countdown owning act
         byte[] aizBytes = aizEvents != null ? ZoneEventSchemaSidecar.capture(aizEvents) : null;
         byte[] hczBytes = hczEvents != null ? ZoneEventSchemaSidecar.capture(hczEvents) : null;
         byte[] cnzBytes = cnzEvents != null ? ZoneEventSchemaSidecar.capture(cnzEvents) : null;
@@ -1671,7 +1656,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         size += mhzBytes != null ? 1 + Integer.BYTES + mhzBytes.length : 1;
         size += iczBytes != null ? 1 + Integer.BYTES + iczBytes.length : 1;
         size += lbzBytes != null ? 1 + Integer.BYTES + lbzBytes.length : 1;
-        size += S3kFixedAirCountdownManager.REWIND_STATE_BYTES;
+        size += S3kFixedAirCountdownManager.REWIND_STATE_BYTES + 2 * Integer.BYTES;
         java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocate(size);
         // Manager-level
         buf.put((byte) bootstrap.mode().ordinal());
@@ -1743,6 +1728,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             buf.put((byte) 0);
         }
         fixedAirCountdownManager.writeRewindState(buf);
+        buf.putInt(fixedAirCountdownZone);
+        buf.putInt(fixedAirCountdownAct);
         return buf.array();
     }
 
@@ -1900,6 +1887,16 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
         if (buf.remaining() >= S3kFixedAirCountdownManager.REWIND_STATE_BYTES) {
             fixedAirCountdownManager.readRewindState(buf);
+        }
+        if (buf.remaining() >= 2 * Integer.BYTES) {
+            fixedAirCountdownZone = buf.getInt();
+            fixedAirCountdownAct = buf.getInt();
+        } else {
+            // Older snapshots predate the owner metadata. Treat the restored
+            // countdown as unowned so a later init cannot mistake it for a
+            // seamless continuation in the wrong zone.
+            fixedAirCountdownZone = -1;
+            fixedAirCountdownAct = -1;
         }
     }
 
@@ -2101,9 +2098,11 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         byte[] before = ZoneEventSchemaSidecar.capture(iczEvents);
         try {
             ZoneEventSchemaSidecar.restore(iczEvents, bytes);
+            iczEvents.discardHardwareWorkFacadesAfterRewind();
         } catch (RuntimeException e) {
             try {
                 ZoneEventSchemaSidecar.restore(iczEvents, before);
+                iczEvents.discardHardwareWorkFacadesAfterRewind();
             } catch (RuntimeException rollbackFailure) {
                 e.addSuppressed(rollbackFailure);
             }

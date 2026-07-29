@@ -5,9 +5,10 @@ using System.Text;
 namespace OpenGGF.BizHawk.Headless
 {
     /// <summary>
-    /// Byte-exact port of the S3K complete-run recorder's THREE
-    /// metadata.json shapes (tools/bizhawk/s3k_complete_run_recorder.lua
-    /// v6.37-s3k-completerun: <c>write_metadata</c> for the level and
+    /// Native writer for the S3K complete-run recorder's THREE
+    /// metadata.json shapes, derived from the frozen Lua layout
+    /// (tools/bizhawk/s3k_complete_run_recorder.lua) and advanced to
+    /// v6.38-s3k-completerun: <c>write_metadata</c> for the level and
     /// bonus shapes, <c>write_ss_metadata</c> L5103 for the special-stage
     /// shape; spec tools/bizhawk-headless/docs/s3k-run-publication.md §3).
     ///
@@ -33,7 +34,7 @@ namespace OpenGGF.BizHawk.Headless
     ///   pre_trace_osc_frames, no start_x/start_y, no rng_seed, no
     ///   csv_version, no capture_mode, no aux_schema_extras, no
     ///   bonus_stage_type, no v_int_run_count, no notes; plus
-    ///   trace_schema 7 / hardware_timing_schema 1,
+    ///   trace_schema 7 / hardware_timing_schema 2,
     ///   ss_csv_version and a hardcoded fresh_load false.
     ///
     /// The two special-stage absences that look like env or version deltas
@@ -64,7 +65,7 @@ namespace OpenGGF.BizHawk.Headless
         /// behavior). 6.32 -> 6.33 is the ADDR_VBLA_WORD fix: 0xFE12
         /// Life_count -> 0xFE0E, the V_int_run_count low word.
         /// </summary>
-        public const string LuaScriptVersion = "6.37-s3k-completerun";
+        public const string LuaScriptVersion = "6.38-s3k-completerun";
 
         /// <summary>
         /// The Lua's hardcoded S3K_ROM_CHECKSUM: the BizHawk movie-header
@@ -157,7 +158,9 @@ namespace OpenGGF.BizHawk.Headless
             string sourceBk2,
             string recordingDate,
             string runId,
-            int playerMode)
+            int playerMode,
+            int hardwareTimingSchema =
+                HardwareTimingEventEngine.CurrentSchema)
         {
             if (arm == null)
             {
@@ -171,6 +174,7 @@ namespace OpenGGF.BizHawk.Headless
             {
                 throw new ArgumentNullException("recordingDate");
             }
+            RequireHardwareTimingSchema(hardwareTimingSchema);
 
             var json = new StringBuilder(2048);
             json.Append("{\n");
@@ -202,7 +206,8 @@ namespace OpenGGF.BizHawk.Headless
                 .Append(RunManifestWriter.LuaQ(LuaScriptVersion))
                 .Append(",\n");
             json.Append("  \"trace_schema\": 7,\n");
-            json.Append("  \"hardware_timing_schema\": 1,\n");
+            json.Append("  \"hardware_timing_schema\": ")
+                .Append(Dec(hardwareTimingSchema)).Append(",\n");
             json.Append("  \"csv_version\": 7,\n");
             json.Append("  \"capture_mode\": \"").Append(CaptureMode)
                 .Append("\",\n");
@@ -267,7 +272,9 @@ namespace OpenGGF.BizHawk.Headless
             string sourceBk2,
             string recordingDate,
             string runId,
-            int playerMode)
+            int playerMode,
+            int hardwareTimingSchema =
+                HardwareTimingEventEngine.CurrentSchema)
         {
             if (arm == null)
             {
@@ -281,6 +288,7 @@ namespace OpenGGF.BizHawk.Headless
             {
                 throw new ArgumentNullException("recordingDate");
             }
+            RequireHardwareTimingSchema(hardwareTimingSchema);
 
             var json = new StringBuilder(768);
             json.Append("{\n");
@@ -300,7 +308,8 @@ namespace OpenGGF.BizHawk.Headless
                 .Append(RunManifestWriter.LuaQ(LuaScriptVersion))
                 .Append(",\n");
             json.Append("  \"trace_schema\": 7,\n");
-            json.Append("  \"hardware_timing_schema\": 1,\n");
+            json.Append("  \"hardware_timing_schema\": ")
+                .Append(Dec(hardwareTimingSchema)).Append(",\n");
             json.Append("  \"recording_date\": \"").Append(recordingDate)
                 .Append("\",\n");
             json.Append("  \"bizhawk_version\": \"").Append(BizHawkVersion)
@@ -378,6 +387,16 @@ namespace OpenGGF.BizHawk.Headless
         private static string Dec(uint value)
         {
             return value.ToString(CultureInfo.InvariantCulture);
+        }
+
+        private static void RequireHardwareTimingSchema(int schema)
+        {
+            if (schema != HardwareTimingEventEngine.LegacySchema
+                && schema != HardwareTimingEventEngine.CurrentSchema)
+            {
+                throw new ArgumentOutOfRangeException(
+                    "hardwareTimingSchema");
+            }
         }
 
         private static string Hex4(int value)

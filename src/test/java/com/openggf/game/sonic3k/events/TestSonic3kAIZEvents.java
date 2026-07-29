@@ -1,24 +1,24 @@
 package com.openggf.game.sonic3k.events;
 
-import com.openggf.game.session.EngineServices;
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
+
 import com.openggf.tests.TestEnvironment;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.session.EngineContext;
-import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
-import com.openggf.game.GameRng;
 import com.openggf.game.GameServices;
 import com.openggf.game.SidekickSpawnOffset;
 import com.openggf.game.save.SaveSessionContext;
 import com.openggf.game.save.SelectedTeam;
-import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.Sonic3kLevel;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.Sonic3kLoadBootstrap;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.resources.S3kKosRamDestinations;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareTimingJob;
 import com.openggf.game.timing.HardwareWorkKind;
@@ -29,6 +29,9 @@ import com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance;
 import com.openggf.game.sonic3k.objects.AizEndBossInstance;
 import com.openggf.game.sonic3k.objects.AizIntroArtLoader;
 import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
+import com.openggf.level.Chunk;
+import com.openggf.level.resources.LoadOp;
+import com.openggf.level.resources.ResourceLoader;
 import com.openggf.level.LevelManager;
 import com.openggf.level.Pattern;
 import com.openggf.level.SeamlessLevelTransitionRequest;
@@ -62,8 +65,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 @RequiresRom(SonicGame.SONIC_3K)
 public class TestSonic3kAIZEvents {
@@ -79,11 +80,25 @@ public class TestSonic3kAIZEvents {
 
     private static void updateWithHardware(
             Sonic3kAIZEvents events, int act, int frame) {
-        var timing = GameServices.hardwareTiming();
-        timing.service(HardwareServiceBoundary.VINT_SERVICE);
-        timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        serviceFireTransitionBoundary(HardwareServiceBoundary.VINT_SERVICE);
+        serviceFireTransitionBoundary(HardwareServiceBoundary.PRE_MAIN_LOOP);
         events.update(act, frame);
-        timing.service(HardwareServiceBoundary.POST_OBJECTS);
+        serviceFireTransitionBoundary(HardwareServiceBoundary.POST_OBJECTS);
+    }
+
+    private static void updateFireTransitionWithHardware(
+            Sonic3kAIZEvents events, int act, int frame) {
+        serviceFireTransitionBoundary(HardwareServiceBoundary.VINT_SERVICE);
+        serviceFireTransitionBoundary(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        events.update(act, frame);
+        serviceFireTransitionBoundary(HardwareServiceBoundary.POST_OBJECTS);
+    }
+
+    private static void serviceFireTransitionBoundary(
+            HardwareServiceBoundary boundary) {
+        GameServices.hardwareTiming().service(boundary);
+        S3kRuntimeArtCoordinator.current().directQueue().afterTimingService(boundary);
+        S3kRuntimeArtCoordinator.current().moduleQueue().afterTimingService(boundary);
     }
 
     private static boolean hasActiveObject(Class<?> type) {
@@ -97,11 +112,11 @@ public class TestSonic3kAIZEvents {
         while (timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE) > 0
                 && frames++ < HARDWARE_DRAIN_FRAME_LIMIT) {
             int beforePre = timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE);
-            timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            serviceFireTransitionBoundary(HardwareServiceBoundary.PRE_MAIN_LOOP);
             assertEquals(beforePre,
                     timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE),
                     "PRE_MAIN_LOOP must not publish newly completed KosM work");
-            timing.service(HardwareServiceBoundary.POST_OBJECTS);
+            serviceFireTransitionBoundary(HardwareServiceBoundary.POST_OBJECTS);
         }
         assertEquals(0, timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE),
                 "final KosM readiness must publish at POST_OBJECTS");
@@ -109,9 +124,7 @@ public class TestSonic3kAIZEvents {
 
     @BeforeEach
     public void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
         AizIntroArtLoader.reset();
         fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(0, 0)
@@ -174,7 +187,7 @@ public class TestSonic3kAIZEvents {
 
             for (int i = 0; i < HARDWARE_DRAIN_FRAME_LIMIT
                     && !events.isAct2TransitionRequested(); i++) {
-                updateWithHardware(events, 0, i);
+                updateFireTransitionWithHardware(events, 0, i);
             }
 
             assertTrue(events.isAct2TransitionRequested());
@@ -251,31 +264,218 @@ public class TestSonic3kAIZEvents {
     }
 
     @Test
-    public void act1ResizeOwnerQueuesMainLevelKosmAndAppliesItsPreparedPayload() {
+    public void act1ResizeOwnerQueuesMainLevelKosmAndAppliesItsPreparedPayload() throws IOException {
         Camera camera = GameServices.camera();
         var events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
         events.init(0);
         camera.setX((short) 0x1400);
         camera.setFrozen(true);
+        Sonic3kLevel level = (Sonic3kLevel) GameServices.level().getCurrentLevel();
+        int expectedModuleSource = 0x3A944E;
+        int expectedDirectSource =
+                GameServices.rom().getRom().read32BitAddr(
+                        Sonic3kConstants.LEVEL_LOAD_BLOCK_ADDR
+                                + Sonic3kConstants.LEVEL_LOAD_BLOCK_AIZ1_INTRO_INDEX
+                                * Sonic3kConstants.LEVEL_LOAD_BLOCK_ENTRY_SIZE
+                                + 12) & 0x00FF_FFFF;
+        ResourceLoader loader = new ResourceLoader(
+                GameServices.rom().getRom());
+        byte[] expectedDirectBlocks = loader.loadSingle(
+                LoadOp.kosinskiBase(expectedDirectSource));
+        byte[] expectedMainLevelPatterns = loader.loadSingle(
+                LoadOp.kosinskiMBase(expectedModuleSource));
+        int chunkStart = 0x0268 / Chunk.CHUNK_SIZE_IN_ROM;
+        int chunkCount =
+                expectedDirectBlocks.length / Chunk.CHUNK_SIZE_IN_ROM;
+        int patternCount = expectedMainLevelPatterns.length
+                / Pattern.PATTERN_SIZE_IN_ROM;
+        int[][] chunksBeforePublication =
+                snapshotChunkRange(level, chunkStart, chunkCount);
+        byte[][] patternsBeforePublication =
+                snapshotPatterns(level, 0x00BE, patternCount);
+        int[][] expectedPublishedChunks = applyChunkPayload(
+                chunksBeforePublication, expectedDirectBlocks);
+        byte[][] expectedPublishedPatterns =
+                decodePatternPayload(expectedMainLevelPatterns);
+        assertFalse(Arrays.deepEquals(
+                        chunksBeforePublication, expectedPublishedChunks),
+                "test fixture must distinguish deferred main-level chunks from their payload");
+        assertFalse(Arrays.deepEquals(
+                        patternsBeforePublication,
+                        expectedPublishedPatterns),
+                "test fixture must distinguish deferred main-level patterns from their payload");
 
         events.update(0, 0);
+        assert2dArrayEquals(
+                chunksBeforePublication,
+                snapshotChunkRange(level, chunkStart, chunkCount),
+                "the queue-submission scan must preserve every deferred chunk byte");
+        assertPatternRangeEquals(
+                patternsBeforePublication, level, 0x00BE,
+                "the queue-submission scan must preserve every deferred pattern byte");
 
-        List<HardwareTimingJob.Snapshot> jobs = GameServices.hardwareTiming()
-                .capture().jobs().stream()
+        List<HardwareTimingJob.Snapshot> allJobs = GameServices.hardwareTiming()
+                .capture().jobs();
+        List<HardwareTimingJob.Snapshot> moduleJobs = allJobs.stream()
                 .filter(job -> job.kind() == HardwareWorkKind.KOS_MODULE_QUEUE)
                 .toList();
-        assertEquals(1, jobs.size(),
+        List<HardwareTimingJob.Snapshot> directJobs = allJobs.stream()
+                .filter(job -> job.kind() == HardwareWorkKind.KOS_DECOMPRESSION_QUEUE)
+                .toList();
+        assertEquals(1, moduleJobs.size(),
                 "AIZ1_Resize $1400 owner must submit its real Queue_Kos_Module job");
-        assertEquals(0x3A944E, jobs.getFirst().romSourceAddress());
-        assertEquals(0x0BE * 32, jobs.getFirst().destinationAddress());
+        assertEquals(1, directJobs.size(),
+                "AIZ1_Resize $1400 owner must submit its real Queue_Kos block stream");
+        assertEquals(expectedModuleSource,
+                moduleJobs.getFirst().romSourceAddress());
+        assertEquals(0x0BE * 32, moduleJobs.getFirst().destinationAddress());
+        assertEquals(S3kKosRamDestinations.blockTableOffset(0x268),
+                directJobs.getFirst().destinationAddress());
+        assertEquals(expectedDirectSource,
+                directJobs.getFirst().romSourceAddress());
         assertFalse(AizPlaneIntroInstance.isMainLevelPhaseActive(),
                 "synchronous publication cannot shadow-decompress before KosM readiness");
 
-        drainKosModuleHardware();
         events.update(0, 1);
+        assert2dArrayEquals(
+                chunksBeforePublication,
+                snapshotChunkRange(level, chunkStart, chunkCount),
+                "repeat event scans before PRE must preserve every deferred chunk byte");
+        assertPatternRangeEquals(
+                patternsBeforePublication, level, 0x00BE,
+                "repeat event scans before PRE must preserve every deferred pattern byte");
+        assertEquals(1, GameServices.hardwareTiming()
+                        .incompleteCount(HardwareWorkKind.KOS_DECOMPRESSION_QUEUE),
+                "repeated scans must not resubmit the AIZ direct stream");
+        assertEquals(1, GameServices.hardwareTiming()
+                        .incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE),
+                "repeated scans must not resubmit the AIZ KosM parent");
+
+        serviceHardware(GameServices.hardwareTiming(), HardwareServiceBoundary.POST_OBJECTS);
+        assert2dArrayEquals(
+                chunksBeforePublication,
+                snapshotChunkRange(level, chunkStart, chunkCount),
+                "POST before the direct fence must preserve every deferred chunk byte");
+        assertPatternRangeEquals(
+                patternsBeforePublication, level, 0x00BE,
+                "POST before the module fence must preserve every deferred pattern byte");
+        int frame = 2;
+        while (S3kRuntimeArtCoordinator.current().directQueue().decompressionsPending()
+                && frame < HARDWARE_DRAIN_FRAME_LIMIT) {
+            serviceHardware(GameServices.hardwareTiming(), HardwareServiceBoundary.PRE_MAIN_LOOP);
+            assert2dArrayEquals(
+                    chunksBeforePublication,
+                    snapshotChunkRange(level, chunkStart, chunkCount),
+                    "direct PRE retirement must not publish any chunk prefix");
+            assertPatternRangeEquals(
+                    patternsBeforePublication, level, 0x00BE,
+                    "direct PRE retirement must preserve the complete pattern range");
+            if (S3kRuntimeArtCoordinator.current().directQueue().decompressionsPending()) {
+                events.update(0, frame++);
+                assert2dArrayEquals(
+                        chunksBeforePublication,
+                        snapshotChunkRange(level, chunkStart, chunkCount),
+                        "intermediate direct consumer scans must preserve every deferred chunk byte");
+                assertPatternRangeEquals(
+                        patternsBeforePublication, level, 0x00BE,
+                        "intermediate direct consumer scans must preserve every deferred pattern byte");
+                serviceHardware(GameServices.hardwareTiming(), HardwareServiceBoundary.POST_OBJECTS);
+                assert2dArrayEquals(
+                        chunksBeforePublication,
+                        snapshotChunkRange(level, chunkStart, chunkCount),
+                        "intermediate POST scans must preserve every deferred chunk byte");
+                assertPatternRangeEquals(
+                        patternsBeforePublication, level, 0x00BE,
+                        "intermediate POST scans must preserve every deferred pattern byte");
+            }
+        }
+        assertFalse(S3kRuntimeArtCoordinator.current().directQueue().decompressionsPending(),
+                "test setup must reach the final direct PRE retirement");
+        assert2dArrayEquals(
+                chunksBeforePublication,
+                snapshotChunkRange(level, chunkStart, chunkCount),
+                "final direct PRE retirement must preserve all chunks until the owning scan");
+        assertPatternRangeEquals(
+                patternsBeforePublication, level, 0x00BE,
+                "final direct PRE retirement must preserve all patterns until their owning scan");
+        assertFalse(AizPlaneIntroInstance.isMainLevelPhaseActive(),
+                "direct readiness is consumer-visible only when the event scan runs");
+
+        events.update(0, frame++);
 
         assertTrue(AizPlaneIntroInstance.isMainLevelPhaseActive(),
-                "the resize owner must publish the claimed prepared payload");
+                "the first scan after final PRE retirement must publish the direct block overlay");
+        assertChunkPayloadEquals(
+                level, expectedDirectBlocks, chunkStart,
+                "the direct-empty scan must publish every claimed 16x16 destination byte");
+        int[][] chunksAfterPublication =
+                snapshotChunkRange(level, chunkStart, chunkCount);
+        assertFalse(events.isEventsFg5(),
+                "the direct-empty scan must clear the intro Events_fg_5 redraw gate");
+        assertFalse(events.isIntroNormalRefreshPending(),
+                "the direct-empty scan must finish the intro redraw progression");
+        assertTrue(events.isBoundariesUnlocked(),
+                "the direct-empty scan must advance deformation/resize ownership");
+        assertEquals(0, camera.getMinY() & 0xFFFF,
+                "the direct-empty scan must publish the main-level Y boundary");
+        assertPatternRangeEquals(
+                patternsBeforePublication, level, 0x00BE,
+                "KosM patterns must not publish during the direct-empty scan");
+
+        HardwareTimingJob.Snapshot parent;
+        do {
+            serviceHardware(GameServices.hardwareTiming(), HardwareServiceBoundary.POST_OBJECTS);
+            assert2dArrayEquals(
+                    chunksAfterPublication,
+                    snapshotChunkRange(level, chunkStart, chunkCount),
+                    "module POST scans must not rewrite the published direct range");
+            assertPatternRangeEquals(
+                    patternsBeforePublication, level, 0x00BE,
+                    "POST module work cannot become consumer-visible in the same frame");
+            parent = GameServices.hardwareTiming().capture().jobs().stream()
+                    .filter(job -> job.kind() == HardwareWorkKind.KOS_MODULE_QUEUE)
+                    .findFirst().orElseThrow();
+            if (!parent.ready()) {
+                serviceHardware(GameServices.hardwareTiming(), HardwareServiceBoundary.PRE_MAIN_LOOP);
+                assert2dArrayEquals(
+                        chunksAfterPublication,
+                        snapshotChunkRange(level, chunkStart, chunkCount),
+                        "module PRE scans must preserve the published direct range");
+                assertPatternRangeEquals(
+                        patternsBeforePublication, level, 0x00BE,
+                        "module PRE scans must not publish any pattern prefix");
+                events.update(0, frame++);
+                assert2dArrayEquals(
+                        chunksAfterPublication,
+                        snapshotChunkRange(level, chunkStart, chunkCount),
+                        "intermediate module consumer scans must preserve the direct range");
+                assertPatternRangeEquals(
+                        patternsBeforePublication, level, 0x00BE,
+                        "intermediate KosM children must not publish partial pattern art");
+            }
+        } while (!parent.ready());
+        assertFalse(parent.claimed(),
+                "the retired KosM payload must remain owned until the following event scan");
+        events.update(0, frame);
+        assertTrue(GameServices.hardwareTiming().capture().jobs().stream()
+                        .filter(job -> job.kind() == HardwareWorkKind.KOS_MODULE_QUEUE)
+                        .findFirst().orElseThrow().claimed(),
+                "the scan after parent POST retirement must publish and claim the KosM payload");
+        assert2dArrayEquals(
+                chunksAfterPublication,
+                snapshotChunkRange(level, chunkStart, chunkCount),
+                "KosM publication must leave the direct range byte-exact");
+        assertPatternRangeEquals(
+                expectedPublishedPatterns, level, 0x00BE,
+                "the KosM publication scan must expose every prepared pattern byte");
+    }
+
+    private static void serviceHardware(
+            com.openggf.game.timing.HardwareTimingService timing,
+            HardwareServiceBoundary boundary) {
+        timing.service(boundary);
+        S3kRuntimeArtCoordinator.current().directQueue().afterTimingService(boundary);
+        S3kRuntimeArtCoordinator.current().moduleQueue().afterTimingService(boundary);
     }
 
     @Test
@@ -530,7 +730,7 @@ public class TestSonic3kAIZEvents {
 
         for (int i = 1; i < HARDWARE_DRAIN_FRAME_LIMIT
                 && !events.isAct2TransitionRequested(); i++) {
-            updateWithHardware(events, 0, i);
+            updateFireTransitionWithHardware(events, 0, i);
         }
 
         assertTrue(events.isAct2TransitionRequested());
@@ -555,16 +755,19 @@ public class TestSonic3kAIZEvents {
         Path saveDir = Path.of("saves").resolve(gameCode);
         deleteRecursively(saveDir);
 
-        GameModule sessionModule = mock(GameModule.class);
-        when(sessionModule.getSaveSnapshotProvider()).thenReturn((reason, ctx) -> Map.of("marker", "aiz_transition"));
-        when(sessionModule.rngFlavour()).thenReturn(GameRng.Flavour.S3K);
+        Sonic3kGameModule sessionModule = new Sonic3kGameModule() {
+            @Override
+            public com.openggf.game.save.SaveSnapshotProvider getSaveSnapshotProvider() {
+                return (reason, ctx) -> Map.of("marker", "aiz_transition");
+            }
+        };
 
         SaveSessionContext saveContext = SaveSessionContext.forSlot(
                 gameCode, 1, new SelectedTeam("sonic", List.of("tails")), 0, 0);
-        GameplayModeContext gameplayMode = SessionManager.openGameplaySession(sessionModule, saveContext);
-        TestEnvironment.activeGameplayMode();
-
-        GameServices.level().resetState();
+        SessionManager.openGameplaySession(sessionModule, saveContext);
+        fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(0, 0)
+                .build();
         Camera camera = GameServices.camera();
         camera.setX((short) 0x2F10);
         camera.setY((short) 0x0200);
@@ -715,12 +918,12 @@ public class TestSonic3kAIZEvents {
         assertFalse(events.isPostFireHazeActive());
 
         events.setEventsFg5(true);
-        updateWithHardware(events, 0, 0);
+        updateFireTransitionWithHardware(events, 0, 0);
         assertFalse(events.isPostFireHazeActive());
 
         for (int i = 1; i < HARDWARE_DRAIN_FRAME_LIMIT
                 && !events.isAct2TransitionRequested(); i++) {
-            updateWithHardware(events, 0, i);
+            updateFireTransitionWithHardware(events, 0, i);
         }
 
         assertTrue(events.isAct2TransitionRequested());
@@ -748,7 +951,7 @@ public class TestSonic3kAIZEvents {
 
         for (int i = 0; i < HARDWARE_DRAIN_FRAME_LIMIT
                 && !events.isAct2TransitionRequested(); i++) {
-            updateWithHardware(events, 0, i);
+            updateFireTransitionWithHardware(events, 0, i);
         }
 
         assertTrue(events.isAct2TransitionRequested());
@@ -916,7 +1119,7 @@ public class TestSonic3kAIZEvents {
         act1Events.setEventsFg5(true);
         for (int i = 0; i < HARDWARE_DRAIN_FRAME_LIMIT
                 && !act1Events.isAct2TransitionRequested(); i++) {
-            updateWithHardware(act1Events, 0, i);
+            updateFireTransitionWithHardware(act1Events, 0, i);
         }
 
         var act2Events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
@@ -966,7 +1169,7 @@ public class TestSonic3kAIZEvents {
         act1Events.setEventsFg5(true);
         for (int i = 0; i < HARDWARE_DRAIN_FRAME_LIMIT
                 && !act1Events.isAct2TransitionRequested(); i++) {
-            updateWithHardware(act1Events, 0, i);
+            updateFireTransitionWithHardware(act1Events, 0, i);
         }
         assertTrue(act1Events.isAct2TransitionRequested(), "Fire transition should have requested act 2");
 
@@ -1446,6 +1649,15 @@ public class TestSonic3kAIZEvents {
         return snapshot;
     }
 
+    private static int[][] snapshotChunkRange(
+            Sonic3kLevel level, int startChunk, int chunkCount) {
+        int[][] snapshot = new int[chunkCount][];
+        for (int i = 0; i < chunkCount; i++) {
+            snapshot[i] = level.getChunk(startChunk + i).saveState();
+        }
+        return snapshot;
+    }
+
     private static byte[][] snapshotPatterns(
             Sonic3kLevel level, int startPattern, int patternCount) {
         byte[][] snapshot = new byte[patternCount][];
@@ -1464,6 +1676,66 @@ public class TestSonic3kAIZEvents {
             }
         }
         return pixels;
+    }
+
+    private static int[][] applyChunkPayload(
+            int[][] baseline, byte[] payload) {
+        assertEquals(0, payload.length % Chunk.CHUNK_SIZE_IN_ROM);
+        int count = payload.length / Chunk.CHUNK_SIZE_IN_ROM;
+        assertEquals(count, baseline.length);
+        int[][] expected = new int[count][];
+        for (int chunk = 0; chunk < count; chunk++) {
+            expected[chunk] = baseline[chunk].clone();
+            int payloadOffset = chunk * Chunk.CHUNK_SIZE_IN_ROM;
+            for (int word = 0; word < Chunk.PATTERNS_PER_CHUNK; word++) {
+                int byteOffset = payloadOffset + word * 2;
+                expected[chunk][word] =
+                        ((payload[byteOffset] & 0xFF) << 8)
+                        | (payload[byteOffset + 1] & 0xFF);
+            }
+        }
+        return expected;
+    }
+
+    private static void assertChunkPayloadEquals(
+            Sonic3kLevel level,
+            byte[] payload,
+            int startChunk,
+            String message) {
+        assertEquals(0, payload.length % Chunk.CHUNK_SIZE_IN_ROM);
+        int count = payload.length / Chunk.CHUNK_SIZE_IN_ROM;
+        for (int chunk = 0; chunk < count; chunk++) {
+            int[] actual = level.getChunk(startChunk + chunk).saveState();
+            int payloadOffset = chunk * Chunk.CHUNK_SIZE_IN_ROM;
+            for (int word = 0; word < Chunk.PATTERNS_PER_CHUNK; word++) {
+                int byteOffset = payloadOffset + word * 2;
+                int expected = ((payload[byteOffset] & 0xFF) << 8)
+                        | (payload[byteOffset + 1] & 0xFF);
+                assertEquals(
+                        expected, actual[word],
+                        message + " at chunk " + chunk
+                                + ", word " + word);
+            }
+        }
+    }
+
+    private static byte[][] decodePatternPayload(byte[] payload) {
+        assertEquals(0, payload.length % Pattern.PATTERN_SIZE_IN_ROM);
+        int count = payload.length / Pattern.PATTERN_SIZE_IN_ROM;
+        byte[][] expected = new byte[count][];
+        byte[] tileBytes = new byte[Pattern.PATTERN_SIZE_IN_ROM];
+        for (int i = 0; i < count; i++) {
+            System.arraycopy(
+                    payload,
+                    i * Pattern.PATTERN_SIZE_IN_ROM,
+                    tileBytes,
+                    0,
+                    Pattern.PATTERN_SIZE_IN_ROM);
+            Pattern pattern = new Pattern();
+            pattern.fromSegaFormat(tileBytes);
+            expected[i] = snapshotPattern(pattern);
+        }
+        return expected;
     }
 
     private static void assertPatternRangeEquals(

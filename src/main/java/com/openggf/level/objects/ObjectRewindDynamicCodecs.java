@@ -123,6 +123,8 @@ public final class ObjectRewindDynamicCodecs {
      *       harmless zero placeholder</li>
      *   <li>{@code (ObjectSpawn, ParentType, int, int)} — spawn, a live parent, and
      *       harmless zero offset placeholders</li>
+     *   <li>{@code (ObjectSpawn, ParentType, int, int, boolean)} — spawn, a live parent,
+     *       zero offsets, and a default option</li>
      *   <li>{@code (ObjectSpawn, ParentType, int, int, int)} — spawn, a live parent,
      *       and harmless zero coordinate/index placeholders</li>
      *   <li>{@code (ObjectSpawn, int, int, ParentType)} — spawn, coordinate
@@ -226,6 +228,12 @@ public final class ObjectRewindDynamicCodecs {
             return invokeProbeCtor(cls, spawnIntCtor, ctx, spawn, 0);
         }
 
+        Constructor<? extends AbstractObjectInstance> spawnIntIntCtor =
+                findCtor(cls, ObjectSpawn.class, int.class, int.class);
+        if (spawnIntIntCtor != null) {
+            return invokeProbeCtor(cls, spawnIntIntCtor, ctx, spawn, 0, 0);
+        }
+
         Constructor<? extends AbstractObjectInstance> spawnBooleanCtor =
                 findCtor(cls, ObjectSpawn.class, boolean.class);
         if (spawnBooleanCtor != null) {
@@ -260,6 +268,12 @@ public final class ObjectRewindDynamicCodecs {
                 constructSpawnParentIntIntProbe(cls, spawn, ctx);
         if (spawnParentIntIntProbe != null) {
             return spawnParentIntIntProbe;
+        }
+
+        AbstractObjectInstance spawnParentIntIntBooleanProbe =
+                constructSpawnParentIntIntBooleanProbe(cls, spawn, ctx);
+        if (spawnParentIntIntBooleanProbe != null) {
+            return spawnParentIntIntBooleanProbe;
         }
 
         AbstractObjectInstance spawnParentIntIntIntProbe =
@@ -420,6 +434,33 @@ public final class ObjectRewindDynamicCodecs {
                     (Constructor<? extends AbstractObjectInstance>) rawCtor;
             ctor.setAccessible(true);
             return invokeProbeCtor(cls, ctor, ctx, spawn, parent, 0, 0);
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static AbstractObjectInstance constructSpawnParentIntIntBooleanProbe(
+            Class<? extends AbstractObjectInstance> cls,
+            ObjectSpawn spawn,
+            DynamicObjectRecreateContext ctx) {
+        for (Constructor<?> rawCtor : cls.getDeclaredConstructors()) {
+            Class<?>[] params = rawCtor.getParameterTypes();
+            if (params.length != 5
+                    || params[0] != ObjectSpawn.class
+                    || !ObjectInstance.class.isAssignableFrom(params[1])
+                    || params[2] != int.class
+                    || params[3] != int.class
+                    || params[4] != boolean.class) {
+                continue;
+            }
+            ObjectInstance parent = findLiveAssignableParentForProbe(params[1], ctx);
+            if (parent == null) {
+                return null;
+            }
+            Constructor<? extends AbstractObjectInstance> ctor =
+                    (Constructor<? extends AbstractObjectInstance>) rawCtor;
+            ctor.setAccessible(true);
+            return invokeProbeCtor(cls, ctor, ctx, spawn, parent, 0, 0, false);
         }
         return null;
     }

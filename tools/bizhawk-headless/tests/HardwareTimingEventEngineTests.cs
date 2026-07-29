@@ -54,8 +54,77 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "HardwareTiming FIFO head shift emits without a sampled zero",
                 FifoHeadShiftEmitsWithoutSampledZero));
             tests.Add(new TestMain.TestCase(
+                "HardwareTimingEventEngine direct busy count retires despite stale slot zero",
+                DirectBusyCountRetiresDespiteStaleSlotZero));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTimingEventEngine direct shift and append preserve FIFO ordinals",
+                DirectShiftAndAppendPreserveFifoOrdinals));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTimingEventEngine direct 1-to-1 retire and append reconciles",
+                DirectOneToOneRetireAndAppendReconciles));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTimingEventEngine direct 1-to-2 retire and append reconciles",
+                DirectOneToTwoRetireAndAppendReconciles));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTimingEventEngine direct 2-to-3 retire and append reconciles",
+                DirectTwoToThreeRetireAndAppendReconciles));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTimingEventEngine longer unchanged count uses maximum overlap",
+                DirectLongerUnchangedCountUsesMaximumOverlap));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTimingEventEngine unexplained direct slot zero mutation fails",
+                UnexplainedDirectSlotZeroMutationFails));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTimingEventEngine busy-to-idle identical replacement gets a new ordinal",
+                BusyToIdleIdenticalReplacementGetsNewOrdinal));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTimingEventEngine still-busy slot zero mutation fails",
+                StillBusyDirectSlotZeroMutationFails));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTimingEventEngine stable identical head emits no completion",
+                StableIdenticalDirectHeadEmitsNoCompletion));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTimingEventEngine identical direct jobs do not fabricate shifts",
+                IdenticalDirectJobsDoNotFabricateShifts));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTimingEventEngine direct PRE sorts before module POST",
+                DirectPreSortsBeforeModulePost));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTimingEventEngine callback observes short-lived child",
+                CallbackObservesShortLivedChild));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTimingEventEngine callback bootstraps occupied FIFO",
+                CallbackBootstrapsOccupiedFifo));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTimingEventEngine callback stages shift and append",
+                CallbackStagesShiftAndAppend));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTimingEventEngine callback distinguishes identical replacement",
+                CallbackDistinguishesIdenticalReplacement));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTimingEventEngine callback rejects multi-head loss",
+                CallbackRejectsMultiHeadLoss));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTimingEventEngine callback gap and reset preserve authority",
+                CallbackGapAndResetPreserveAuthority));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTimingEventEngine callback direct PRE sorts before module POST",
+                CallbackDirectPreSortsBeforeModulePost));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTimingEventEngine scanner matches language-neutral vectors",
+                DirectScannerMatchesLanguageNeutralVectors));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTimingEventEngine schema one suppresses direct authority",
+                SchemaOneSuppressesDirectAuthority));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTimingEventEngine reset clears both ledgers and ordinal bases",
+                ResetClearsBothLedgersAndOrdinalBases));
+            tests.Add(new TestMain.TestCase(
                 "HardwareTiming fingerprint matches the Java golden vector",
                 FingerprintMatchesJavaGoldenVector));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTimingEventEngine AIZ module child identity",
+                AizModuleChildIdentityMatchesRomQueue));
             tests.Add(new TestMain.TestCase(
                 "HardwareTiming descriptor refill precedes boundary command payload",
                 DescriptorRefillPrecedesBoundaryCommandPayload));
@@ -448,6 +517,786 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(true, lines[1].Contains("\"ordinal\":1"));
         }
 
+        private static void DirectBusyCountRetiresDespiteStaleSlotZero()
+        {
+            const int source = 0x100;
+            byte[] rom = RomWithStandardStream(source);
+            var host = NewHost();
+            var writer = new StringWriter();
+            var engine = new HardwareTimingEventEngine(rom);
+
+            StageDirect(host, 0, source, unchecked((int)0xFFFF9268));
+            host.SetU16(S3KRam.KosDecompQueueCount, 0x8001);
+            engine.ObserveFrameEnd(10, host, writer);
+
+            // Process_Kos_Queue writes advanced saved pointers into slot
+            // zero on final retirement. Count, not a zero sentinel, owns
+            // physical occupancy.
+            host.SetU32(S3KRam.KosDecompQueue, 0x00ABCDEF);
+            host.SetU32(S3KRam.KosDecompQueue + 4, 0xFFFF9999);
+            host.SetU16(S3KRam.KosDecompQueueCount, 0);
+            engine.ObserveFrameEnd(11, host, writer);
+
+            AssertEx.Equal(
+                true,
+                writer.ToString().Contains(
+                    "\"raw_frame\":11,\"boundary\":\"pre_main_loop\","
+                    + "\"kind\":\"kos_decompression_queue\","
+                    + "\"ordinal\":0"));
+        }
+
+        private static void DirectShiftAndAppendPreserveFifoOrdinals()
+        {
+            const int first = 0x100;
+            const int second = 0x120;
+            const int third = 0x140;
+            byte[] rom = RomWithStandardStreams(first, second, third);
+            var host = NewHost();
+            var writer = new StringWriter();
+            var engine = new HardwareTimingEventEngine(rom);
+
+            StageDirect(host, 0, first, unchecked((int)0xFFFF9268));
+            StageDirect(host, 1, second, unchecked((int)0xFFFF0A00));
+            host.SetU16(S3KRam.KosDecompQueueCount, 2);
+            engine.ObserveFrameEnd(20, host, writer);
+
+            // Head retires and a tail appends between samples: count stays 2.
+            StageDirect(host, 0, second, unchecked((int)0xFFFF0A00));
+            StageDirect(host, 1, third, unchecked((int)0xFFFFD400));
+            host.SetU16(S3KRam.KosDecompQueueCount, 2);
+            engine.ObserveFrameEnd(21, host, writer);
+
+            StageDirect(host, 0, third, unchecked((int)0xFFFFD400));
+            host.SetU16(S3KRam.KosDecompQueueCount, 1);
+            engine.ObserveFrameEnd(22, host, writer);
+            host.SetU16(S3KRam.KosDecompQueueCount, 0);
+            engine.ObserveFrameEnd(23, host, writer);
+
+            string[] lines = writer.ToString().Split(
+                new[] {'\n'}, StringSplitOptions.RemoveEmptyEntries);
+            AssertEx.Equal(3, lines.Length);
+            AssertEx.Equal(true, lines[0].Contains("\"ordinal\":0"));
+            AssertEx.Equal(true, lines[1].Contains("\"ordinal\":1"));
+            AssertEx.Equal(true, lines[2].Contains("\"ordinal\":2"));
+        }
+
+        private static void IdenticalDirectJobsDoNotFabricateShifts()
+        {
+            const int source = 0x100;
+            const int destination = unchecked((int)0xFFFF9268);
+            byte[] rom = RomWithStandardStream(source);
+            var host = NewHost();
+            var writer = new StringWriter();
+            var engine = new HardwareTimingEventEngine(rom);
+
+            StageDirect(host, 0, source, destination);
+            StageDirect(host, 1, source, destination);
+            host.SetU16(S3KRam.KosDecompQueueCount, 2);
+            engine.ObserveFrameEnd(0, host, writer);
+            engine.ObserveFrameEnd(1, host, writer);
+            AssertEx.Equal("", writer.ToString());
+
+            host.SetU16(S3KRam.KosDecompQueueCount, 1);
+            engine.ObserveFrameEnd(2, host, writer);
+            host.SetU16(S3KRam.KosDecompQueueCount, 0);
+            engine.ObserveFrameEnd(3, host, writer);
+
+            string[] lines = writer.ToString().Split(
+                new[] {'\n'}, StringSplitOptions.RemoveEmptyEntries);
+            AssertEx.Equal(2, lines.Length);
+            AssertEx.Equal(true, lines[0].Contains("\"ordinal\":0"));
+            AssertEx.Equal(true, lines[1].Contains("\"ordinal\":1"));
+        }
+
+        private static void DirectOneToOneRetireAndAppendReconciles()
+        {
+            AssertGrowingRetireAndAppend(
+                new[] {0x100},
+                new[] {0x120});
+        }
+
+        private static void DirectOneToTwoRetireAndAppendReconciles()
+        {
+            AssertGrowingRetireAndAppend(
+                new[] {0x100},
+                new[] {0x120, 0x140});
+        }
+
+        private static void DirectTwoToThreeRetireAndAppendReconciles()
+        {
+            AssertGrowingRetireAndAppend(
+                new[] {0x100, 0x120},
+                new[] {0x120, 0x140, 0x160});
+        }
+
+        private static void DirectLongerUnchangedCountUsesMaximumOverlap()
+        {
+            AssertGrowingRetireAndAppend(
+                new[] {0x100, 0x120, 0x140},
+                new[] {0x120, 0x140, 0x160});
+        }
+
+        private static void UnexplainedDirectSlotZeroMutationFails()
+        {
+            byte[] rom = RomWithStandardStreams(0x100, 0x120);
+            var host = NewHost();
+            var engine = new HardwareTimingEventEngine(rom);
+
+            SetLevelFrame(host, 0x1234);
+            StageDirect(
+                host, 0, 0x100, unchecked((int)0xFFFF9000));
+            host.SetU16(S3KRam.KosDecompQueueCount, 1);
+            engine.ObserveFrameEnd(0, host, TextWriter.Null);
+
+            // A duplicate level frame admits no main-loop direct service,
+            // so a changed occupied head is mutation rather than a
+            // retire-plus-append transition.
+            StageDirect(
+                host, 0, 0x120, unchecked((int)0xFFFF9200));
+            AssertEx.Throws<InvalidDataException>(
+                () => engine.ObserveFrameEnd(1, host, TextWriter.Null),
+                "changed");
+        }
+
+        private static void BusyToIdleIdenticalReplacementGetsNewOrdinal()
+        {
+            const int source = 0x100;
+            const int destination = unchecked((int)0xFFFF9268);
+            byte[] rom = RomWithStandardStream(source);
+            var host = NewHost();
+            var writer = new StringWriter();
+            var engine = new HardwareTimingEventEngine(rom);
+
+            SetLevelFrame(host, 0x1234);
+            StageDirect(host, 0, source, destination);
+            host.SetU16(S3KRam.KosDecompQueueCount, 0x8001);
+            engine.ObserveFrameEnd(0, host, writer);
+
+            // The old busy A completed after an identical A was appended
+            // and shifted into slot zero. Identity alone is ambiguous; the
+            // sampled busy-to-idle edge proves the old ordinal retired.
+            SetLevelFrame(host, 0x1235);
+            StageDirect(host, 0, source, destination);
+            host.SetU16(S3KRam.KosDecompQueueCount, 1);
+            engine.ObserveFrameEnd(1, host, writer);
+
+            SetLevelFrame(host, 0x1236);
+            host.SetU16(S3KRam.KosDecompQueueCount, 0);
+            engine.ObserveFrameEnd(2, host, writer);
+
+            string[] lines = writer.ToString().Split(
+                new[] {'\n'}, StringSplitOptions.RemoveEmptyEntries);
+            AssertEx.Equal(2, lines.Length);
+            AssertEx.Equal(true, lines[0].Contains("\"ordinal\":0"));
+            AssertEx.Equal(true, lines[1].Contains("\"ordinal\":1"));
+        }
+
+        private static void StillBusyDirectSlotZeroMutationFails()
+        {
+            byte[] rom = RomWithStandardStreams(0x100, 0x120);
+            var host = NewHost();
+            var engine = new HardwareTimingEventEngine(rom);
+
+            SetLevelFrame(host, 0x1234);
+            StageDirect(
+                host, 0, 0x100, unchecked((int)0xFFFF9000));
+            host.SetU16(S3KRam.KosDecompQueueCount, 0x8001);
+            engine.ObserveFrameEnd(0, host, TextWriter.Null);
+
+            SetLevelFrame(host, 0x1235);
+            StageDirect(
+                host, 0, 0x120, unchecked((int)0xFFFF9200));
+            host.SetU16(S3KRam.KosDecompQueueCount, 0x8001);
+            AssertEx.Throws<InvalidDataException>(
+                () => engine.ObserveFrameEnd(1, host, TextWriter.Null),
+                "busy");
+        }
+
+        private static void StableIdenticalDirectHeadEmitsNoCompletion()
+        {
+            const int source = 0x100;
+            const int destination = unchecked((int)0xFFFF9268);
+            byte[] rom = RomWithStandardStream(source);
+            var host = NewHost();
+            var writer = new StringWriter();
+            var engine = new HardwareTimingEventEngine(rom);
+
+            SetLevelFrame(host, 0x1234);
+            StageDirect(host, 0, source, destination);
+            host.SetU16(S3KRam.KosDecompQueueCount, 1);
+            engine.ObserveFrameEnd(0, host, writer);
+
+            SetLevelFrame(host, 0x1235);
+            engine.ObserveFrameEnd(1, host, writer);
+            AssertEx.Equal("", writer.ToString());
+
+            SetLevelFrame(host, 0x1236);
+            host.SetU16(S3KRam.KosDecompQueueCount, 0);
+            engine.ObserveFrameEnd(2, host, writer);
+            AssertEx.Equal(
+                true, writer.ToString().Contains("\"ordinal\":0"));
+        }
+
+        private static void AssertGrowingRetireAndAppend(
+            int[] priorSources,
+            int[] sampledSources)
+        {
+            var allSources = new List<int>();
+            allSources.AddRange(priorSources);
+            foreach (int source in sampledSources)
+            {
+                if (!allSources.Contains(source))
+                {
+                    allSources.Add(source);
+                }
+            }
+            byte[] rom = RomWithStandardStreams(allSources.ToArray());
+            var host = NewHost();
+            var writer = new StringWriter();
+            var engine = new HardwareTimingEventEngine(rom);
+
+            SetLevelFrame(host, 0x1234);
+            StageDirectSources(host, priorSources);
+            host.SetU16(
+                S3KRam.KosDecompQueueCount,
+                checked((ushort)priorSources.Length));
+            engine.ObserveFrameEnd(10, host, writer);
+
+            SetLevelFrame(host, 0x1235);
+            StageDirectSources(host, sampledSources);
+            host.SetU16(
+                S3KRam.KosDecompQueueCount,
+                checked((ushort)sampledSources.Length));
+            engine.ObserveFrameEnd(11, host, writer);
+
+            string[] lines = writer.ToString().Split(
+                new[] {'\n'}, StringSplitOptions.RemoveEmptyEntries);
+            AssertEx.Equal(1, lines.Length);
+            AssertEx.Equal(
+                true,
+                lines[0].Contains(
+                    "\"raw_frame\":11,\"boundary\":\"pre_main_loop\","
+                    + "\"kind\":\"kos_decompression_queue\","
+                    + "\"ordinal\":0"));
+        }
+
+        private static void StageDirectSources(
+            FakeS1Host host,
+            int[] sources)
+        {
+            for (int index = 0; index < sources.Length; index++)
+            {
+                StageDirect(
+                    host,
+                    index,
+                    sources[index],
+                    unchecked((int)(0xFFFF9000u
+                        + (uint)(sources[index] * 4))));
+            }
+        }
+
+        private static void DirectPreSortsBeforeModulePost()
+        {
+            const int directSource = 0x100;
+            const int moduleSource = 0x200;
+            byte[] rom = RomWithStandardStreams(directSource);
+            byte[] moduleRom = RomWithSingleModule(moduleSource);
+            Array.Resize(ref rom, moduleRom.Length);
+            Array.Copy(moduleRom, moduleSource, rom, moduleSource, 7);
+            var host = NewHost();
+            var writer = new StringWriter();
+            var engine = new HardwareTimingEventEngine(rom);
+
+            SetLevelFrame(host, 0x1234);
+            StageActive(host, moduleSource, 0xA400, 0x81);
+            StageDirect(host, 0, directSource, unchecked((int)0xFFFF9268));
+            host.SetU16(S3KRam.KosDecompQueueCount, 0x8001);
+            engine.ObserveFrameEnd(30, host, writer);
+
+            SetLevelFrame(host, 0x1235);
+            StageEmpty(host);
+            // Keep stale direct slot bytes while the count becomes zero.
+            StageDirect(host, 0, directSource + 3, unchecked((int)0xFFFF926B));
+            host.SetU16(S3KRam.KosDecompQueueCount, 0);
+            engine.ObserveFrameEnd(31, host, writer);
+
+            string[] lines = writer.ToString().Split(
+                new[] {'\n'}, StringSplitOptions.RemoveEmptyEntries);
+            AssertEx.Equal(2, lines.Length);
+            AssertEx.Equal(
+                true,
+                lines[0].Contains(
+                    "\"boundary\":\"pre_main_loop\","
+                    + "\"kind\":\"kos_decompression_queue\""));
+            AssertEx.Equal(
+                true,
+                lines[1].Contains(
+                    "\"boundary\":\"post_objects\","
+                    + "\"kind\":\"kos_module_queue\""));
+        }
+
+        private static void CallbackObservesShortLivedChild()
+        {
+            const int source = 0x100;
+            byte[] rom = RomWithStandardStream(source);
+            var host = NewHost();
+            var writer = new StringWriter();
+            var engine = new HardwareTimingEventEngine(rom);
+
+            SetLevelFrame(host, 0x1234);
+            host.SetU16(S3KRam.KosDecompQueueCount, 0);
+            engine.ObserveFrameEnd(20, host, writer);
+
+            StageDirect(
+                host, 0, source, unchecked((int)0xFFFFD000));
+            host.SetU16(S3KRam.KosDecompQueueCount, 1);
+            engine.ObserveDirectSubmissions(host);
+            AssertEx.Equal("", writer.ToString());
+
+            SetLevelFrame(host, 0x1235);
+            host.SetU16(S3KRam.KosDecompQueueCount, 0);
+            engine.ObserveFrameEnd(21, host, writer);
+
+            string[] lines = writer.ToString().Split(
+                new[] {'\n'}, StringSplitOptions.RemoveEmptyEntries);
+            AssertEx.Equal(1, lines.Length);
+            AssertEx.Equal(
+                true,
+                lines[0].Contains(
+                    "\"raw_frame\":21,\"boundary\":\"pre_main_loop\","
+                    + "\"kind\":\"kos_decompression_queue\","
+                    + "\"ordinal\":0"));
+        }
+
+        private static void CallbackBootstrapsOccupiedFifo()
+        {
+            byte[] rom = RomWithStandardStreams(0x100, 0x120);
+            var host = NewHost();
+            var writer = new StringWriter();
+            var engine = new HardwareTimingEventEngine(rom);
+
+            host.SetU16(S3KRam.KosDecompQueueCount, 0);
+            engine.ObserveFrameEnd(24, host, null);
+
+            // The first lifecycle observation is the exact post-Queue_Kos
+            // callback after an empty frame-end sample in an unexported boot
+            // gap. A was already pending; B is the proven new module child.
+            StageDirectSources(host, new[] {0x100, 0x120});
+            host.SetU16(S3KRam.KosDecompQueueCount, 2);
+            engine.ObserveDirectSubmissions(host);
+            engine.ObserveFrameEnd(25, host, null);
+
+            StageDirectSources(host, new[] {0x120});
+            host.SetU16(S3KRam.KosDecompQueueCount, 1);
+            engine.ObserveFrameEnd(26, host, writer);
+            host.SetU16(S3KRam.KosDecompQueueCount, 0);
+            engine.ObserveFrameEnd(27, host, writer);
+
+            string[] lines = writer.ToString().Split(
+                new[] {'\n'}, StringSplitOptions.RemoveEmptyEntries);
+            AssertEx.Equal(2, lines.Length);
+            AssertEx.Equal(true, lines[0].Contains("\"ordinal\":0"));
+            AssertEx.Equal(true, lines[1].Contains("\"ordinal\":1"));
+        }
+
+        private static void CallbackStagesShiftAndAppend()
+        {
+            const int first = 0x100;
+            const int second = 0x120;
+            const int third = 0x140;
+            byte[] rom = RomWithStandardStreams(first, second, third);
+            var host = NewHost();
+            var writer = new StringWriter();
+            var engine = new HardwareTimingEventEngine(rom);
+
+            SetLevelFrame(host, 0x1234);
+            StageDirectSources(host, new[] {first, second});
+            host.SetU16(S3KRam.KosDecompQueueCount, 2);
+            engine.ObserveFrameEnd(30, host, writer);
+
+            // One PRE retires A; the exact module callback then observes
+            // Queue_Kos having appended C behind the retained B.
+            StageDirectSources(host, new[] {second, third});
+            host.SetU16(S3KRam.KosDecompQueueCount, 2);
+            engine.ObserveDirectSubmissions(host);
+            AssertEx.Equal("", writer.ToString());
+
+            SetLevelFrame(host, 0x1235);
+            engine.ObserveFrameEnd(31, host, writer);
+            StageDirectSources(host, new[] {third});
+            host.SetU16(S3KRam.KosDecompQueueCount, 1);
+            SetLevelFrame(host, 0x1236);
+            engine.ObserveFrameEnd(32, host, writer);
+            host.SetU16(S3KRam.KosDecompQueueCount, 0);
+            SetLevelFrame(host, 0x1237);
+            engine.ObserveFrameEnd(33, host, writer);
+
+            string[] lines = writer.ToString().Split(
+                new[] {'\n'}, StringSplitOptions.RemoveEmptyEntries);
+            AssertEx.Equal(3, lines.Length);
+            AssertEx.Equal(true, lines[0].Contains("\"ordinal\":0"));
+            AssertEx.Equal(true, lines[1].Contains("\"ordinal\":1"));
+            AssertEx.Equal(true, lines[2].Contains("\"ordinal\":2"));
+        }
+
+        private static void CallbackDistinguishesIdenticalReplacement()
+        {
+            const int source = 0x100;
+            const int destination = unchecked((int)0xFFFFD000);
+            byte[] rom = RomWithStandardStream(source);
+            var host = NewHost();
+            var writer = new StringWriter();
+            var engine = new HardwareTimingEventEngine(rom);
+
+            SetLevelFrame(host, 0x1234);
+            StageDirect(host, 0, source, destination);
+            host.SetU16(S3KRam.KosDecompQueueCount, 1);
+            engine.ObserveFrameEnd(40, host, writer);
+
+            // The exact callback proves Queue_Kos appended a new A after
+            // the old A retired, despite identical physical bytes/count.
+            engine.ObserveDirectSubmissions(host);
+            SetLevelFrame(host, 0x1235);
+            engine.ObserveFrameEnd(41, host, writer);
+            host.SetU16(S3KRam.KosDecompQueueCount, 0);
+            SetLevelFrame(host, 0x1236);
+            engine.ObserveFrameEnd(42, host, writer);
+
+            string[] lines = writer.ToString().Split(
+                new[] {'\n'}, StringSplitOptions.RemoveEmptyEntries);
+            AssertEx.Equal(2, lines.Length);
+            AssertEx.Equal(true, lines[0].Contains("\"ordinal\":0"));
+            AssertEx.Equal(true, lines[1].Contains("\"ordinal\":1"));
+        }
+
+        private static void CallbackRejectsMultiHeadLoss()
+        {
+            byte[] rom = RomWithStandardStreams(0x100, 0x120, 0x140);
+            var host = NewHost();
+            var engine = new HardwareTimingEventEngine(rom);
+
+            SetLevelFrame(host, 0x1234);
+            StageDirectSources(host, new[] {0x100, 0x120});
+            host.SetU16(S3KRam.KosDecompQueueCount, 2);
+            engine.ObserveFrameEnd(50, host, TextWriter.Null);
+
+            StageDirectSources(host, new[] {0x140});
+            host.SetU16(S3KRam.KosDecompQueueCount, 1);
+            AssertEx.Throws<InvalidDataException>(
+                () => engine.ObserveDirectSubmissions(host),
+                "one");
+        }
+
+        private static void CallbackGapAndResetPreserveAuthority()
+        {
+            byte[] rom = RomWithStandardStreams(0x100, 0x120);
+            var host = NewHost();
+            var writer = new StringWriter();
+            var engine = new HardwareTimingEventEngine(rom);
+
+            StageDirect(
+                host, 0, 0x100, unchecked((int)0xFFFFD000));
+            host.SetU16(S3KRam.KosDecompQueueCount, 1);
+            engine.ObserveDirectSubmissions(host);
+            host.SetU16(S3KRam.KosDecompQueueCount, 0);
+            engine.ObserveFrameEnd(60, host, null);
+
+            StageDirect(
+                host, 0, 0x120, unchecked((int)0xFFFFD000));
+            host.SetU16(S3KRam.KosDecompQueueCount, 1);
+            engine.ObserveDirectSubmissions(host);
+            host.SetU16(S3KRam.KosDecompQueueCount, 0);
+            engine.ObserveFrameEnd(61, host, writer);
+            AssertEx.Equal(
+                true, writer.ToString().Contains("\"ordinal\":1"));
+            AssertEx.Equal(
+                false, writer.ToString().Contains("\"ordinal\":0"));
+
+            engine.Reset();
+            writer.GetStringBuilder().Length = 0;
+            StageDirect(
+                host, 0, 0x100, unchecked((int)0xFFFFD000));
+            host.SetU16(S3KRam.KosDecompQueueCount, 1);
+            engine.ObserveDirectSubmissions(host);
+            host.SetU16(S3KRam.KosDecompQueueCount, 0);
+            engine.ObserveFrameEnd(62, host, writer);
+            AssertEx.Equal(
+                true, writer.ToString().Contains("\"ordinal\":0"));
+        }
+
+        private static void CallbackDirectPreSortsBeforeModulePost()
+        {
+            const int directSource = 0x100;
+            const int moduleSource = 0x200;
+            byte[] rom = RomWithStandardStream(directSource);
+            byte[] moduleRom = RomWithSingleModule(moduleSource);
+            Array.Resize(ref rom, moduleRom.Length);
+            Array.Copy(moduleRom, moduleSource, rom, moduleSource, 7);
+            var host = NewHost();
+            var writer = new StringWriter();
+            var engine = new HardwareTimingEventEngine(rom);
+
+            SetLevelFrame(host, 0x1234);
+            StageActive(host, moduleSource, 0xA400, 0x81);
+            host.SetU16(S3KRam.KosDecompQueueCount, 0);
+            engine.ObserveFrameEnd(70, host, writer);
+
+            StageDirect(
+                host, 0, directSource, unchecked((int)0xFFFFD000));
+            host.SetU16(S3KRam.KosDecompQueueCount, 1);
+            engine.ObserveDirectSubmissions(host);
+            SetLevelFrame(host, 0x1235);
+            StageEmpty(host);
+            host.SetU16(S3KRam.KosDecompQueueCount, 0);
+            engine.ObserveFrameEnd(71, host, writer);
+
+            string[] lines = writer.ToString().Split(
+                new[] {'\n'}, StringSplitOptions.RemoveEmptyEntries);
+            AssertEx.Equal(2, lines.Length);
+            AssertEx.Equal(
+                true,
+                lines[0].Contains(
+                    "\"boundary\":\"pre_main_loop\","
+                    + "\"kind\":\"kos_decompression_queue\""));
+            AssertEx.Equal(
+                true,
+                lines[1].Contains(
+                    "\"boundary\":\"post_objects\","
+                    + "\"kind\":\"kos_module_queue\""));
+        }
+
+        private static void DirectScannerMatchesLanguageNeutralVectors()
+        {
+            var coveredFeatures = new HashSet<string>();
+            foreach (StandardKosVector vector in LoadStandardKosVectors())
+            {
+                foreach (string feature in vector.Features.Split(','))
+                {
+                    coveredFeatures.Add(feature);
+                }
+
+                var rom = new byte[
+                    checked(vector.SourceAddress + vector.Bytes.Length)];
+                Array.Copy(
+                    vector.Bytes,
+                    0,
+                    rom,
+                    vector.SourceAddress,
+                    vector.Bytes.Length);
+                var host = NewHost();
+                var writer = new StringWriter();
+                var engine = new HardwareTimingEventEngine(rom);
+                StageDirect(
+                    host,
+                    0,
+                    vector.SourceAddress,
+                    vector.DestinationAddress);
+                host.SetU16(S3KRam.KosDecompQueueCount, 1);
+
+                if (vector.Outcome == "invalid_backreference")
+                {
+                    AssertEx.Throws<InvalidDataException>(
+                        () => engine.ObserveFrameEnd(
+                            0, host, TextWriter.Null),
+                        "backreference");
+                    continue;
+                }
+                if (vector.Outcome == "rom_bound")
+                {
+                    AssertEx.Throws<InvalidDataException>(
+                        () => engine.ObserveFrameEnd(
+                            0, host, TextWriter.Null),
+                        "outside the supplied ROM");
+                    continue;
+                }
+
+                AssertEx.Equal("ok", vector.Outcome);
+                AssertEx.Equal(
+                    vector.Fingerprint,
+                    HardwareTimingEventEngine.ComputeSubmissionFingerprint(
+                        "KOS_DECOMPRESSION_QUEUE",
+                        vector.SourceAddress,
+                        vector.CompressedLength,
+                        vector.DestinationAddress,
+                        vector.DecodedLength,
+                        "kosinski",
+                        1));
+                engine.ObserveFrameEnd(0, host, writer);
+                host.SetU16(S3KRam.KosDecompQueueCount, 0);
+                engine.ObserveFrameEnd(1, host, writer);
+                AssertEx.Equal(
+                    true,
+                    writer.ToString().Contains(
+                        "\"submission_fingerprint\":\""
+                        + vector.Fingerprint + "\""));
+            }
+
+            string[] requiredFeatures =
+            {
+                "descriptor_refill",
+                "literal",
+                "short_match",
+                "long_match",
+                "extended_match",
+                "no_output",
+                "invalid_backreference",
+                "terminator",
+                "rom_bound"
+            };
+            AssertEx.Equal(
+                requiredFeatures.Length, coveredFeatures.Count);
+            foreach (string feature in requiredFeatures)
+            {
+                AssertEx.Equal(true, coveredFeatures.Contains(feature));
+            }
+        }
+
+        private static void SchemaOneSuppressesDirectAuthority()
+        {
+            const int source = 0x100;
+            byte[] rom = RomWithStandardStream(source);
+            var host = NewHost();
+            var writer = new StringWriter();
+            var engine = new HardwareTimingEventEngine(
+                rom, HardwareTimingEventEngine.LegacySchema);
+
+            StageDirect(host, 0, source, unchecked((int)0xFFFF9268));
+            host.SetU16(S3KRam.KosDecompQueueCount, 1);
+            engine.ObserveFrameEnd(0, host, writer);
+            host.SetU16(S3KRam.KosDecompQueueCount, 0);
+            engine.ObserveFrameEnd(1, host, writer);
+
+            AssertEx.Equal("", writer.ToString());
+        }
+
+        private static void ResetClearsBothLedgersAndOrdinalBases()
+        {
+            const int source = 0x100;
+            byte[] rom = RomWithStandardStream(source);
+            var host = NewHost();
+            var writer = new StringWriter();
+            var engine = new HardwareTimingEventEngine(rom);
+
+            CompleteDirect(engine, host, writer, source);
+            engine.Reset();
+            CompleteDirect(engine, host, writer, source);
+
+            string[] lines = writer.ToString().Split(
+                new[] {'\n'}, StringSplitOptions.RemoveEmptyEntries);
+            AssertEx.Equal(2, lines.Length);
+            AssertEx.Equal(true, lines[0].Contains("\"ordinal\":0"));
+            AssertEx.Equal(true, lines[1].Contains("\"ordinal\":0"));
+        }
+
+        private static IEnumerable<StandardKosVector>
+            LoadStandardKosVectors()
+        {
+            string path = Path.Combine(
+                EndToEndTests.RepositoryRoot,
+                "src",
+                "test",
+                "resources",
+                "kosinski",
+                "standard-scanner-vectors.tsv");
+            foreach (string line in File.ReadAllLines(path))
+            {
+                if (line.Length == 0 || line.StartsWith("#"))
+                {
+                    continue;
+                }
+                string[] fields = line.Split('\t');
+                if (fields.Length != 9)
+                {
+                    throw new InvalidDataException(
+                        "Standard Kosinski vector must have nine fields: "
+                        + line);
+                }
+                bool success = fields[1] == "ok";
+                yield return new StandardKosVector(
+                    fields[0],
+                    fields[1],
+                    fields[2],
+                    checked((int)Convert.ToUInt32(fields[3], 16)),
+                    unchecked((int)Convert.ToUInt32(fields[4], 16)),
+                    ParseHexBytes(fields[5]),
+                    success
+                        ? int.Parse(
+                            fields[6],
+                            System.Globalization.CultureInfo.InvariantCulture)
+                        : -1,
+                    success
+                        ? int.Parse(
+                            fields[7],
+                            System.Globalization.CultureInfo.InvariantCulture)
+                        : -1,
+                    fields[8]);
+            }
+        }
+
+        private static byte[] ParseHexBytes(string value)
+        {
+            if ((value.Length & 1) != 0)
+            {
+                throw new InvalidDataException(
+                    "Kosinski vector hex must have an even length.");
+            }
+            var bytes = new byte[value.Length / 2];
+            for (int index = 0; index < bytes.Length; index++)
+            {
+                bytes[index] = Convert.ToByte(
+                    value.Substring(index * 2, 2), 16);
+            }
+            return bytes;
+        }
+
+        private sealed class StandardKosVector
+        {
+            public StandardKosVector(
+                string name,
+                string outcome,
+                string features,
+                int sourceAddress,
+                int destinationAddress,
+                byte[] bytes,
+                int compressedLength,
+                int decodedLength,
+                string fingerprint)
+            {
+                Name = name;
+                Outcome = outcome;
+                Features = features;
+                SourceAddress = sourceAddress;
+                DestinationAddress = destinationAddress;
+                Bytes = bytes;
+                CompressedLength = compressedLength;
+                DecodedLength = decodedLength;
+                Fingerprint = fingerprint;
+            }
+
+            public string Name { get; private set; }
+            public string Outcome { get; private set; }
+            public string Features { get; private set; }
+            public int SourceAddress { get; private set; }
+            public int DestinationAddress { get; private set; }
+            public byte[] Bytes { get; private set; }
+            public int CompressedLength { get; private set; }
+            public int DecodedLength { get; private set; }
+            public string Fingerprint { get; private set; }
+        }
+
+        private static void CompleteDirect(
+            HardwareTimingEventEngine engine,
+            FakeS1Host host,
+            TextWriter writer,
+            int source)
+        {
+            StageDirect(host, 0, source, unchecked((int)0xFFFF9268));
+            host.SetU16(S3KRam.KosDecompQueueCount, 1);
+            engine.ObserveFrameEnd(0, host, writer);
+            host.SetU16(S3KRam.KosDecompQueueCount, 0);
+            engine.ObserveFrameEnd(1, host, writer);
+        }
+
         private static void FingerprintMatchesJavaGoldenVector()
         {
             AssertEx.Equal(
@@ -460,6 +1309,20 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     0x11223344,
                     "KosM",
                     7));
+        }
+
+        private static void AizModuleChildIdentityMatchesRomQueue()
+        {
+            AssertEx.Equal(
+                "sha256:c381a8f75b41d3e2d1e52fb90ae8a5c269b1daeb88dd198bd8fb3d07d3703a7b",
+                HardwareTimingEventEngine.ComputeSubmissionFingerprint(
+                    "KOS_DECOMPRESSION_QUEUE",
+                    0x382626,
+                    1894,
+                    unchecked((int)0xFFFFD000),
+                    4096,
+                    "kosinski",
+                    1));
         }
 
         private static void DescriptorRefillPrecedesBoundaryCommandPayload()
@@ -706,10 +1569,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private static void LagBoundaryHasNewRecorderVersion()
         {
             AssertEx.Equal(
-                "6.37-s3k",
+                "6.38-s3k",
                 S3KTraceMetadataWriter.LuaScriptVersion);
             AssertEx.Equal(
-                "6.37-s3k-completerun",
+                "6.38-s3k-completerun",
                 S3KCompleteRunMetadataWriter.LuaScriptVersion);
 
             string standard = File.ReadAllText(Path.Combine(
@@ -987,6 +1850,33 @@ namespace OpenGGF.BizHawk.Headless.Tests
             return rom;
         }
 
+        private static byte[] RomWithStandardStream(int source)
+        {
+            return RomWithStandardStreams(source);
+        }
+
+        private static byte[] RomWithStandardStreams(params int[] sources)
+        {
+            int length = 0x400;
+            foreach (int source in sources)
+            {
+                length = Math.Max(length, source + 8);
+            }
+            var rom = new byte[length];
+            foreach (int source in sources)
+            {
+                rom[source] = 0x17;
+                rom[source + 1] = 0x00;
+                rom[source + 2] = (byte)'A';
+                rom[source + 3] = (byte)'B';
+                rom[source + 4] = (byte)'C';
+                rom[source + 5] = 0x00;
+                rom[source + 6] = 0x00;
+                rom[source + 7] = 0x00;
+            }
+            return rom;
+        }
+
         private static byte[] RomWithDescriptorBoundaryModule(
             int source,
             bool appendSecondModule)
@@ -1073,6 +1963,18 @@ namespace OpenGGF.BizHawk.Headless.Tests
             ClearQueue(host);
             host.Ram[S3KRam.KosModulesLeft] = 0;
             host.SetU16(S3KRam.KosDecompQueueCount, 0);
+        }
+
+        private static void StageDirect(
+            FakeS1Host host,
+            int index,
+            int source,
+            int destination)
+        {
+            int entry = S3KRam.KosDecompQueue
+                + index * S3KRam.KosDecompQueueEntrySize;
+            host.SetU32(entry, (uint)source);
+            host.SetU32(entry + 4, unchecked((uint)destination));
         }
 
         private static void ClearQueue(FakeS1Host host)

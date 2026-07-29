@@ -24,9 +24,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
             + "  \"sidekicks\": [\"tails\"],\n";
 
         private const string SharedVersionBlock =
-            "  \"lua_script_version\": \"6.37-s3k\",\n"
+            "  \"lua_script_version\": \"6.38-s3k\",\n"
             + "  \"trace_schema\": 7,\n"
-            + "  \"hardware_timing_schema\": 1,\n"
+            + "  \"hardware_timing_schema\": 2,\n"
             + "  \"csv_version\": 7,\n"
             + "  \"capture_mode\": "
             + "\"physics_animation_aux_without_diagnostic_hooks\",\n";
@@ -89,6 +89,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "S3K metadata scopes the CNZ notes to level-gated cnz only",
                 CnzNotesRequireLevelGatedCnz));
+            tests.Add(new TestMain.TestCase(
+                "S3K metadata defaults to schema two and selects schema one",
+                DefaultsToSchemaTwoAndSelectsSchemaOne));
         }
 
         /// <summary>
@@ -278,6 +281,28 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(
                 true,
                 levelGatedInAiz.Contains("  \"notes\": \"\"\n"));
+        }
+
+        private static void DefaultsToSchemaTwoAndSelectsSchemaOne()
+        {
+            string current = S3KTraceMetadataWriter.Format(
+                0, 0, 1, 1, 0, 0, 0,
+                "gameplay_unlock", "2026-07-28");
+            string legacy = S3KTraceMetadataWriter.Format(
+                0, 0, 1, 1, 0, 0, 0,
+                "gameplay_unlock", "2026-07-28",
+                HardwareTimingEventEngine.LegacySchema);
+
+            AssertEx.Equal(
+                true,
+                current.Contains(
+                    "\"lua_script_version\": \"6.38-s3k\""));
+            AssertEx.Equal(
+                true,
+                current.Contains("\"hardware_timing_schema\": 2"));
+            AssertEx.Equal(
+                true,
+                legacy.Contains("\"hardware_timing_schema\": 1"));
         }
     }
 }

@@ -2,6 +2,8 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
+import com.openggf.game.RuntimeArtCoordinator;
+import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareTimingService;
@@ -12,6 +14,7 @@ import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.TestablePlayableSprite;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance.HCZBreakableBarState;
@@ -19,6 +22,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestHczLargeFanCoordinateParity {
+
+    @BeforeEach
+    void setUp() {
+        TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
+    }
 
     @Test
     void activationWindowUsesPlayerRomCentrePositionAfterKosLoadWait() {
@@ -40,6 +48,11 @@ class TestHczLargeFanCoordinateParity {
             public Rom rom() {
                 return rom;
             }
+
+            @Override
+            public RuntimeArtCoordinator runtimeArtCoordinator() {
+                return GameServices.runtimeArtCoordinator();
+            }
         });
 
         TestablePlayableSprite player = standingPlayer();
@@ -52,19 +65,24 @@ class TestHczLargeFanCoordinateParity {
         int frame = 2;
         while (timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE) > 0
                 && frame < 10_000) {
-            timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            serviceBoundary(HardwareServiceBoundary.PRE_MAIN_LOOP);
             fan.update(frame++, player);
-            timing.service(HardwareServiceBoundary.POST_OBJECTS);
+            serviceBoundary(HardwareServiceBoundary.POST_OBJECTS);
         }
         assertEquals(0, timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE));
         assertEquals(fanY, fan.getY(),
                 "Obj_HCZLargeFan waits for queued art before initializing the falling fan");
-        timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        serviceBoundary(HardwareServiceBoundary.PRE_MAIN_LOOP);
         fan.update(frame, player);
-        timing.service(HardwareServiceBoundary.POST_OBJECTS);
+        serviceBoundary(HardwareServiceBoundary.POST_OBJECTS);
 
         assertEquals(fanY + 8, fan.getY(),
                 "Obj_HCZLargeFan compares ROM x_pos/y_pos, which map to player centre coordinates");
+    }
+
+    private static void serviceBoundary(HardwareServiceBoundary boundary) {
+        GameServices.hardwareTiming().service(boundary);
+        GameServices.runtimeArtCoordinator().afterTimingService(boundary);
     }
 
     private static TestablePlayableSprite standingPlayer() {

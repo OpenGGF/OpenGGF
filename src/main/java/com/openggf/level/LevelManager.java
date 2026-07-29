@@ -21,7 +21,6 @@ import com.openggf.debug.playback.PlaybackDebugManager;
 import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.mutation.MutationEffects;
-import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.snapshot.LevelSnapshot;
 import com.openggf.game.rewind.snapshot.LevelTilemapSnapshot;
@@ -59,6 +58,8 @@ import com.openggf.level.objects.PersistentRespawnState;
 import com.openggf.level.objects.TouchResponseTable;
 import com.openggf.level.rings.RingManager;
 import com.openggf.level.rings.RingSpriteSheet;
+import com.openggf.level.resources.DeferredLevelResourceTracker;
+import com.openggf.level.resources.DeferredLevelResourceLoader;
 import com.openggf.level.scroll.BgTilemapUpdateMode;
 import com.openggf.level.animation.AnimatedPaletteManager;
 import com.openggf.level.animation.AnimatedPatternManager;
@@ -440,6 +441,32 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         return loaded;
     }
 
+    public Level loadLevelData(
+            int levelIndex,
+            DeferredLevelResourceTracker deferredResources)
+            throws IOException {
+        DeferredLevelResourceTracker activeDeferredResources =
+                deferredResources != null
+                        ? deferredResources
+                        : DeferredLevelResourceTracker.none();
+        Level loaded;
+        if (activeDeferredResources.hasExplicitPolicy()
+                && game instanceof DeferredLevelResourceLoader loader) {
+            loaded = loader.loadLevelWithDeferredResources(
+                    levelIndex, activeDeferredResources);
+        } else {
+            if (!activeDeferredResources.isEmpty()) {
+                throw new IllegalStateException(
+                        game.getIdentifier()
+                                + " does not support deferred level resources");
+            }
+            loaded = game.loadLevel(levelIndex);
+        }
+        writeCurrentLevel(loaded);
+        rebuildLevelDerivedState();
+        return loaded;
+    }
+
     /**
      * Re-runs the post-load setup steps over the currently-loaded {@link Level}
      * (block dimensions, debug renderer, dimension cache, tilemap manager).
@@ -619,30 +646,18 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * the same lifecycle path as production gameplay.</p>
      */
     public void refreshPlayablePowerUpSpawners() {
-        DefaultPowerUpSpawner spawner = new DefaultPowerUpSpawner(objectManager);
-        Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
-        if (player instanceof AbstractPlayableSprite playable) {
-            playable.setPowerUpSpawner(spawner);
-        }
-        for (AbstractPlayableSprite sidekick : spriteManager.getSidekicks()) {
-            sidekick.setPowerUpSpawner(spawner);
-        }
+        LevelManagerInitializationSupport.rebindPowerUpSpawners(
+                objectManager, spriteManager, resolveMainCharacterCode());
     }
 
     /**
      * Phase G: Reset camera bounds and initialize object placement window.
      */
     public void initCameraBounds() {
-        // Reset camera state from previous level (signpost may have locked it)
-        camera.setFrozen(false);
-        // ROM: LevelSizeLoad sets v_limitleft2 and v_limitright2 from LevelSizeArray.
-        // Use the level's ROM boundaries (not map pixel width) so the camera is
-        // constrained to the same region as the original hardware.
-        camera.setMinX((short) level.getMinX());
-        camera.setMaxX((short) level.getMaxX());
         PersistentRespawnState persistentRespawnState = persistentRespawnStateForNextObjectReset;
         persistentRespawnStateForNextObjectReset = null;
-        objectManager.reset(camera.getX(), persistentRespawnState);
+        LevelManagerInitializationSupport.resetCameraBounds(
+                camera, level, objectManager, persistentRespawnState);
     }
 
     /**
@@ -686,15 +701,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * Phase H: Create RingManager and cache ring patterns.
      */
     public void initRings() {
-        RingSpriteSheet ringSpriteSheet = level.getRingSpriteSheet();
-        ringManager = new RingManager(level.getRings(), ringSpriteSheet, this, touchResponseTable, audioManager);
-        ringManager.reset(camera.getX());
-        ringManager.ensurePatternsCached(graphicsManager, level.getPatternCount());
-        com.openggf.game.session.GameplayModeContext gameplayMode =
-                com.openggf.game.session.SessionManager.getCurrentGameplayMode();
-        if (gameplayMode != null) {
-            gameplayMode.registerRingAdapter(ringManager);
-        }
+        ringManager = LevelManagerInitializationSupport.initializeRings(
+                this, level, touchResponseTable, audioManager, camera, graphicsManager);
     }
 
     /**
@@ -717,18 +725,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     void resetZoneScopedRegistriesForLevelLoad() {
-        PaletteOwnershipRegistry paletteOwnershipRegistry = GameServices.paletteOwnershipRegistryOrNull();
-        SpecialRenderEffectRegistry specialRenderEffectRegistry = GameServices.specialRenderEffectRegistryOrNull();
-        AdvancedRenderModeController advancedRenderModeController = GameServices.advancedRenderModeControllerOrNull();
-        if (paletteOwnershipRegistry != null) {
-            paletteOwnershipRegistry.clear();
-        }
-        if (specialRenderEffectRegistry != null) {
-            specialRenderEffectRegistry.clear();
-        }
-        if (advancedRenderModeController != null) {
-            advancedRenderModeController.clear();
-        }
+        LevelZoneScopedRegistryResetter.reset();
     }
 
     private void applyLevelLoadPaletteOverrides() {
@@ -2725,8 +2722,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             return;
         }
         for (AbstractPlayableSprite sidekick : spriteManager.getSidekicks()) {
-            sidekick.setX((short) (player.getX() + xOffset));
-            sidekick.setY((short) (player.getY() + yOffset));
+            sidekick.setCentreXPreserveSubpixel((short) (player.getCentreX() + xOffset));
+            sidekick.setCentreYPreserveSubpixel((short) (player.getCentreY() + yOffset));
             sidekick.setXSpeed((short) 0);
             sidekick.setYSpeed((short) 0);
             sidekick.setGSpeed((short) 0);
@@ -2869,6 +2866,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             ctx.setShowTitleCard(showTitleCard);
             ctx.setLevelData(levelData);
             ctx.setIncludePostLoadAssembly(true);
+            ctx.setAssemblyKind(LevelAssemblyKind.FRESH_LEVEL_ASSEMBLY);
             ctx.snapshotCheckpoint(checkpointCoordinator.state());
 
             resetCounterPlacementAfterCameraSnap = runtimeReload;
@@ -3173,12 +3171,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 graphicsManager,
                 camera,
                 buildObjectServices());
-        // Ordinary seamless reloads consume one transition dispatch before the
-        // rebuilt object list becomes visible. A retained end-level owner
-        // survives Load_Level and keeps the current Process_Sprites phase
-        // instead.
-        int inheritedRingPhase = ringFloorCheckCounterPhase - (retainedEndLevelOwner ? 0 : 1);
-        objectManager.inheritRingFloorCheckCounterPhase(inheritedRingPhase);
+        // V_int_run_count is global work RAM and Load_Level does not consume a
+        // Process_Sprites dispatch. Preserve Obj37's floor-check phase unchanged.
+        objectManager.inheritRingFloorCheckCounterPhase(ringFloorCheckCounterPhase);
         GameRules gameRules = gameModule.getRules();
         if (gameRules != null
                 && gameRules.collision() != null
@@ -3452,6 +3447,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * {@link com.openggf.game.session.WorldSession} level and zone metadata.
      */
     public void resetGameplayState() {
+        discardInitialProcessSpritesLifecycle();
         com.openggf.game.session.GameplayModeContext gameplayMode =
                 com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         if (gameplayMode != null && gameplayMode.getRewindRegistry() != null) {
@@ -3638,6 +3634,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                             .cameraOffset(request.cameraOffsetX(), request.cameraOffsetY())
                             .mutationKey(request.mutationKey())
                             .musicOverrideId(request.musicOverrideId())
+                            .resourceHandoff(request.resourceHandoffId())
                             .build();
                     executeActTransition(adjusted);
                     advanceFrameCounterAcrossSeamlessReload();
@@ -3777,107 +3774,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      *         or null if no matching pattern found
      */
     public int[] findPatternOffset(int refX, int refY, int minTileIdx, int maxTileIdx, int searchRadius) {
-        if (level == null) {
-            return null;
-        }
-
-        Map map = level.getMap();
-        if (map == null) {
-            return null;
-        }
-
-        // Calculate search bounds in world coordinates
-        int startX = refX - searchRadius;
-        int startY = refY - searchRadius;
-        int endX = refX + searchRadius;
-        int endY = refY + searchRadius;
-
-        // Clamp to level bounds
-        startX = Math.max(startX, level.getMinX());
-        startY = Math.max(startY, level.getMinY());
-        endX = Math.min(endX, level.getMaxX());
-        endY = Math.min(endY, level.getMaxY());
-
-        // Scan through patterns (8x8 pixel grid)
-        for (int worldY = startY; worldY < endY; worldY += 8) {
-            for (int worldX = startX; worldX < endX; worldX += 8) {
-                int tileIdx = getPatternIndexAt(worldX, worldY, map);
-                if (tileIdx >= minTileIdx && tileIdx <= maxTileIdx) {
-                    // Found a matching pattern - snap to actual pattern boundary
-                    // Patterns are 8x8 and aligned to 8-pixel grid within the level
-                    int patternLeftX = worldX - (Math.floorMod(worldX, 8));
-                    int patternTopY = worldY - (Math.floorMod(worldY, 8));
-                    // Calculate offset from ref to pattern center
-                    int offsetX = (patternLeftX + 4) - refX;
-                    int offsetY = (patternTopY + 4) - refY;
-                    return new int[]{offsetX, offsetY};
-                }
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Gets the VRAM tile index for the pattern at the given world coordinates.
-     * Traverses the map -> block -> chunk -> pattern hierarchy.
-     *
-     * @param worldX World X coordinate
-     * @param worldY World Y coordinate
-     * @param map    The level map
-     * @return The pattern's VRAM tile index, or -1 if out of bounds
-     */
-    private int getPatternIndexAt(int worldX, int worldY, Map map) {
-        try {
-            // Block is 128x128 pixels
-            int blockX = worldX / blockPixelSize;
-            int blockY = worldY / blockPixelSize;
-
-            if (blockX < 0 || blockX >= map.getWidth() || blockY < 0 || blockY >= map.getHeight()) {
-                return -1;
-            }
-
-            // Get block index from map (layer 0 = foreground)
-            int blockIdx = map.getValue(0, blockX, blockY) & 0xFF;
-            if (blockIdx == 0 || blockIdx >= level.getBlockCount()) {
-                return -1;
-            }
-
-            Block block = level.getBlock(blockIdx);
-            if (block == null) {
-                return -1;
-            }
-
-            // Chunk within block (16x16 pixels each, 8x8 grid of chunks)
-            int chunkX = (worldX % blockPixelSize) / 16;
-            int chunkY = (worldY % blockPixelSize) / 16;
-            ChunkDesc chunkDesc = block.getChunkDesc(chunkX, chunkY);
-            if (chunkDesc == null) {
-                return -1;
-            }
-
-            int chunkIdx = chunkDesc.getChunkIndex();
-            if (chunkIdx == 0 || chunkIdx >= level.getChunkCount()) {
-                return -1;
-            }
-
-            Chunk chunk = level.getChunk(chunkIdx);
-            if (chunk == null) {
-                return -1;
-            }
-
-            // Pattern within chunk (8x8 pixels each, 2x2 grid)
-            int patternX = (worldX % 16) / 8;
-            int patternY = (worldY % 16) / 8;
-            PatternDesc patternDesc = chunk.getPatternDesc(patternX, patternY);
-            if (patternDesc == null) {
-                return -1;
-            }
-
-            return patternDesc.getPatternIndex();
-        } catch (Exception e) {
-            return -1;
-        }
+        return LevelPatternLocator.findPatternOffset(
+                level, blockPixelSize, refX, refY, minTileIdx, maxTileIdx, searchRadius);
     }
 
     /**

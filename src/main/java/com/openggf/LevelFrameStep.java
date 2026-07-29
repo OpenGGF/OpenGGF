@@ -392,7 +392,13 @@ public final class LevelFrameStep {
             throw new NullPointerException("context");
         }
         context.hardwareTiming().service(boundary);
-        context.hardwareTimingBoundaryObserver().onBoundary(boundary);
+        if (boundary == HardwareServiceBoundary.PRE_MAIN_LOOP) {
+            context.hardwareTimingBoundaryObserver().onBoundary(boundary);
+        }
+        context.runtimeArtCoordinator().afterTimingService(boundary);
+        if (boundary != HardwareServiceBoundary.PRE_MAIN_LOOP) {
+            context.hardwareTimingBoundaryObserver().onBoundary(boundary);
+        }
     }
 
 }

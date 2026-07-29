@@ -1,7 +1,8 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
+
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -168,9 +169,7 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
     /** True once debris children have been spawned. */
     private boolean debrisSpawned;
     private boolean targetsNativeP2;
-    @RewindTransient(reason = "queue facade is rebound to the restored session ledger by captured ordinal")
     private S3kKosModuleQueue artQueue;
-    @RewindTransient(reason = "handle is rebound to the restored session ledger by captured ordinal")
     private HardwareWorkHandle artHandle;
     private long artOrdinal = -1;
 
@@ -239,7 +238,7 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
         rebindArtAfterRestore();
         try {
             if (artHandle == null && artQueue == null) {
-                artQueue = new S3kKosModuleQueue(services().hardwareTiming());
+                artQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
                 artHandle = artQueue.queue(
                         services().rom(),
                         Sonic3kConstants.ART_KOSM_HCZ_GEYSER_VERT_ADDR,
@@ -267,7 +266,7 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
                         HardwareWorkKind.KOS_MODULE_QUEUE, artOrdinal)
                 .orElseThrow(() -> new IllegalStateException(
                         "Missing restored HCZ end-geyser KosM job " + artOrdinal));
-        artQueue = new S3kKosModuleQueue(services().hardwareTiming());
+        artQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
     }
 
     private AbstractPlayableSprite resolveTargetPlayer(PlayableEntity playerEntity) {

@@ -54,6 +54,7 @@ class TestS3kLbz1GroundLaunchIntroHeadless {
                 .build();
         AbstractPlayableSprite sonic = fixture.sprite();
         int startY = sonic.getCentreY() & 0xFFFF;
+        consumeInitialProcessSpritesBeforeTitleCard();
         applyTitleCardHandoff();
 
         assertTrue(hasGroundLaunchIntro(), "LBZ1 should spawn Obj_LevelIntro_PlayerLaunchFromGround.");
@@ -107,6 +108,7 @@ class TestS3kLbz1GroundLaunchIntroHeadless {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_LBZ, 0)
                 .build();
+        consumeInitialProcessSpritesBeforeTitleCard();
         applyTitleCardHandoff();
 
         assertTrue(hasGroundLaunchIntro(),
@@ -134,6 +136,7 @@ class TestS3kLbz1GroundLaunchIntroHeadless {
                 .build();
         AbstractPlayableSprite sonic = fixture.sprite();
         int startY = sonic.getCentreY() & 0xFFFF;
+        consumeInitialProcessSpritesBeforeTitleCard();
 
         for (int frame = 0; frame < 45; frame++) {
             GameServices.level().updateObjectPositions();
@@ -163,6 +166,7 @@ class TestS3kLbz1GroundLaunchIntroHeadless {
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_LBZ, 0)
                 .build();
         AbstractPlayableSprite sonic = fixture.sprite();
+        consumeInitialProcessSpritesBeforeTitleCard();
         applyTitleCardHandoff();
 
         for (int frame = 0; frame < 30; frame++) {
@@ -201,6 +205,7 @@ class TestS3kLbz1GroundLaunchIntroHeadless {
         tails.setAnimationId(5);
         tails.setMappingFrame(0);
 
+        consumeInitialProcessSpritesBeforeTitleCard();
         applyTitleCardHandoff();
 
         assertEquals(firstFrameOfAnimation(tails, 5), tails.getMappingFrame(),
@@ -216,6 +221,7 @@ class TestS3kLbz1GroundLaunchIntroHeadless {
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_LBZ, 0)
                 .build();
         AbstractPlayableSprite sonic = fixture.sprite();
+        consumeInitialProcessSpritesBeforeTitleCard();
         applyTitleCardHandoff();
 
         assertFalse(sonic.getSpindashDustController().isSurfaceSplashActive(),
@@ -237,6 +243,11 @@ class TestS3kLbz1GroundLaunchIntroHeadless {
         return GameServices.level().getObjectManager().getActiveObjects().stream()
                 .map(ObjectInstance::getName)
                 .anyMatch("LBZ1GroundLaunchIntro"::equals);
+    }
+
+    private void consumeInitialProcessSpritesBeforeTitleCard() {
+        assertTrue(GameServices.level().consumePendingInitialProcessSpritesPass(),
+                "ROM level assembly runs the initial Process_Sprites pass before the title-card handoff");
     }
 
     private void applyTitleCardHandoff() {

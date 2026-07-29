@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects.badniks;
 
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
+import com.openggf.game.session.SessionManager;
 import com.openggf.level.LevelData;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
@@ -11,6 +12,8 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tools.ObjectDiscoveryTool.LevelConfig;
 import com.openggf.tools.Sonic3kObjectProfile;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -26,6 +29,18 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class TestRibotBadnikInstance {
+    @BeforeEach
+    void resetRuntimeState() {
+        SessionManager.clear();
+        AbstractObjectInstance.resetCameraBoundsForTests();
+    }
+
+    @AfterEach
+    void clearRuntimeState() {
+        SessionManager.clear();
+        AbstractObjectInstance.resetCameraBoundsForTests();
+    }
+
     @Test
     void registryCreatesRibotAndProfileMarksS3klSlotOnly() {
         ObjectInstance instance = new Sonic3kObjectRegistry().create(

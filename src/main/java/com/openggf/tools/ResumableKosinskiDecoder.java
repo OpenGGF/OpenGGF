@@ -153,7 +153,10 @@ public final class ResumableKosinskiDecoder {
 
         for (int i = 0; i < count; i++) {
             int source = outputSize - distance;
-            byte value = source >= 0 ? output[source] : 0;
+            if (source < 0) {
+                throw new IOException("Kosinski backreference precedes output");
+            }
+            byte value = output[source];
             writeByte(value & 0xFF);
         }
     }

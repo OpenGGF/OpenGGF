@@ -2,7 +2,6 @@ package com.openggf.sprites.managers;
 
 import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.GameModule;
-import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.rules.CollisionRules;
@@ -3238,7 +3237,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 	private Consumer<SensorResult[]> landingTiltPublisher() {
 		PlayerAnimationRules animationRules = playerAnimationRulesOrNull();
-		var sprites = GameServices.spritesOrNull();
+		var sprites = sprite.currentSpriteManagerOrNull();
 		return animationRules != null
 				&& animationRules.airLandingPublishesTiltAngles()
 				&& sprites != null
@@ -3426,14 +3425,16 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 
 		PlayerMovementRules movementRules = playerMovementRulesOrNull();
-		boolean preservePinballRoll = movementRules != null && movementRules.pinballLandingPreservesRoll();
-		boolean preservePinballMode = movementRules != null && movementRules.pinballLandingPreservesPinballMode();
+		boolean preservePinballRoll = movementRules != null
+				&& movementRules.landing().pinballLandingPreservesRoll();
+		boolean preservePinballMode = movementRules != null
+				&& movementRules.landing().pinballLandingPreservesPinballMode();
 		boolean preserveObjectLandingRoll = sprite.consumePreserveRollingOnNextLanding();
 		boolean skipLandingRollClear = sprite.getRolling()
 				&& ((sprite.getPinballMode() && preservePinballRoll) || preserveObjectLandingRoll);
 		boolean clearsRolling = sprite.getRolling() && !skipLandingRollClear;
 		if (clearsRolling) {
-			if (movementRules != null && movementRules.landingRollClearUsesCurrentYRadiusDelta()) {
+			if (movementRules != null && movementRules.landing().landingRollClearUsesCurrentYRadiusDelta()) {
 				int oldCentreY = sprite.getCentreY();
 				int oldYRadius = sprite.getYRadius();
 				sprite.setRolling(false);
@@ -3453,7 +3454,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// (01 Sonic.asm:1839-1864; SolidObject.asm:378-383).
 			setWalkAnimationAfterRollingLanding(sprite);
 		} else if (movementRules != null
-				&& movementRules.landingRollClearUsesCurrentYRadiusDelta()
+				&& movementRules.landing().landingRollClearUsesCurrentYRadiusDelta()
 				&& !skipLandingRollClear
 				&& (sprite.getYRadius() != sprite.getStandYRadius()
 				|| sprite.getXRadius() != sprite.getStandXRadius())) {

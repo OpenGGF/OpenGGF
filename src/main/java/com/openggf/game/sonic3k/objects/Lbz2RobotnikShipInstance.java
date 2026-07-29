@@ -17,9 +17,15 @@ import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SpawnRewindRecreatable;
+import com.openggf.level.objects.TouchActorContextPolicy;
+import com.openggf.level.objects.TouchAttackBouncePolicy;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
 import com.openggf.level.objects.TouchResponseListener;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.physics.SwingMotion;
@@ -57,6 +63,16 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
     /** ROM Swing_Setup1: y_vel = $C0, $3E = $C0, $40 = $10. */
     private static final int SWING_MAX = 0xC0;
     private static final int SWING_ACCEL = 0x10;
+    private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = new TouchResponseProfile(
+            TouchCategoryDecodeMode.S3K_SPECIAL_PROPERTY,
+            true,
+            true,
+            false,
+            TouchShieldDeflectCapability.NONE,
+            0,
+            TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+            TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+            TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
 
     private enum Phase {
         WAIT,
@@ -412,6 +428,16 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
     }
 
     @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TOUCH_RESPONSE_PROFILE;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return TOUCH_RESPONSE_PROFILE;
+    }
+
+    @Override
     public void onTouchResponse(PlayableEntity player, TouchResponseResult result, int frameCounter) {
         if (phase != Phase.WAIT || result.sizeIndex() != COLLISION_SIZE_INDEX) {
             return;
@@ -503,7 +529,6 @@ public final class Lbz2RobotnikShipInstance extends AbstractObjectInstance
     static final class GradualCameraMaxXChild extends AbstractObjectInstance implements RewindRecreatable {
         private static final int TARGET_MAX_X = 0x6000;
 
-        @RewindTransient(reason = "Structural parent link; lifetime follows the live ship.")
         private final Lbz2RobotnikShipInstance parent;
         private int accumulator;
 

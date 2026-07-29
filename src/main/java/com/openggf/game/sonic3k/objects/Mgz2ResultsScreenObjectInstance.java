@@ -21,13 +21,13 @@ public class Mgz2ResultsScreenObjectInstance extends S3kResultsScreenObjectInsta
 
     // Probe-only constructor used by RewindRecreatable generic recreate.
     private Mgz2ResultsScreenObjectInstance() {
-        this(PlayerCharacter.SONIC_AND_TAILS, 0);
+        super(true);
     }
 
     @Override
     public Mgz2ResultsScreenObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return ObjectConstructionContext.construct(ctx.objectServices(),
-                () -> new Mgz2ResultsScreenObjectInstance(PlayerCharacter.SONIC_AND_TAILS, 0));
+                Mgz2ResultsScreenObjectInstance::new);
     }
 
     @Override

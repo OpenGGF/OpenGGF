@@ -20,6 +20,24 @@ public class KosinskiReader {
     private static final int MAX_OUTPUT_SIZE = 0x100000;
     private static final int KOSM_MODULE_SIZE = 0x1000;
 
+    /** Exact consumed and produced spans for one standard Kosinski stream. */
+    public record StandardArchiveInfo(int compressedLength, int decompressedLength) {
+    }
+
+    /**
+     * Inspects one standard Kosinski stream beginning at its descriptor field.
+     * Unlike KosM, standard streams carry neither a size header nor alignment.
+     */
+    public static StandardArchiveInfo inspectStandard(byte[] data, int offset)
+            throws IOException {
+        ResumableKosinskiDecoder decoder = new ResumableKosinskiDecoder(data, offset);
+        while (!decoder.complete()) {
+            decoder.step(1);
+        }
+        return new StandardArchiveInfo(
+                decoder.compressedBytesConsumed(), decoder.output().length);
+    }
+
     /**
      * Decompresses data from the given ReadableByteChannel using the Kosinski algorithm.
      * This method is thread-safe and statically callable.

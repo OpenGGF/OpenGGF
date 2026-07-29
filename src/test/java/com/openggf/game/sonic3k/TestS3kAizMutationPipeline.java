@@ -31,7 +31,6 @@ class TestS3kAizMutationPipeline {
         assertContains(content, "Sonic3kAIZEvents.applyFireTransitionPaletteLine4(levelManager);");
         assertContains(content, "Sonic3kZoneEvents.applyPlc(PLC_SPIKES_SPRINGS);");
         assertContains(content, "Sonic3kPlcLoader.refreshAffectedRenderers(overlayRanges, levelManager);");
-        assertContains(content, "LOG.info(\"Applied AIZ1 fire transition overlays");
     }
 
     @Test
@@ -47,6 +46,23 @@ class TestS3kAizMutationPipeline {
         assertContains(content, "Sonic3kPlcLoader.refreshAffectedRenderers(modifiedRanges, levelManager);");
         assertContains(content, "if (!levelManager.swapToPrebuiltTilemaps()) {");
         assertContains(content, "levelManager.invalidateAllTilemaps();");
+    }
+
+    @Test
+    void aizIntroDirectAndModulePayloadsHaveSeparatePublicationFences()
+            throws IOException {
+        String content = Files.readString(INTRO_TERRAIN_SWAP);
+
+        assertContains(content, "applyMainLevelBlockOverlay(");
+        assertContains(content, "preparedMainLevelBlocks16x16");
+        assertContains(content, "sonic3kLevel.applyChunkOverlay(");
+        assertContains(content, "levelManager.swapToPrebuiltTilemaps()");
+
+        assertContains(content, "applyMainLevelPatternOverlay(");
+        assertContains(content, "preparedMainLevelTiles8x8");
+        assertContains(content, "sonic3kLevel.applyPatternOverlay(");
+        assertContains(content,
+                "Sonic3kPlcLoader.refreshAffectedRenderers(modifiedRanges, levelManager);");
     }
 
     @Test

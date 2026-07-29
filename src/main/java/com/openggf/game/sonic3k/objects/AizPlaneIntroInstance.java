@@ -1,8 +1,9 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
+
 import com.openggf.data.RomByteReader;
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.Sonic3kPlayerArt;
 import com.openggf.game.sonic3k.Sonic3kSuperStateController;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
@@ -213,11 +214,8 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
     private PlayerSpriteRenderer sonicRenderer;
     private PlayerSpriteRenderer superSonicRenderer;
     private boolean renderersLoaded;
-    @RewindTransient(reason = "queue facade is rebound to the restored session ledger by captured ordinals")
     private S3kKosModuleQueue introSpriteArtQueue;
-    @RewindTransient(reason = "handle is rebound to the restored session ledger by captured ordinal")
     private HardwareWorkHandle planeArtHandle;
-    @RewindTransient(reason = "handle is rebound to the restored session ledger by captured ordinal")
     private HardwareWorkHandle emeraldArtHandle;
     private long planeArtOrdinal = -1;
     private long emeraldArtOrdinal = -1;
@@ -687,7 +685,7 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
         }
         try {
             introSpriteArtQueue =
-                    new S3kKosModuleQueue(services().hardwareTiming());
+                    S3kRuntimeArtCoordinator.from(services()).moduleQueue();
             planeArtHandle = introSpriteArtQueue.queue(
                     services().rom(),
                     Sonic3kConstants.ART_KOSM_AIZ_INTRO_PLANE_ADDR,
@@ -730,7 +728,7 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
                 || introSpriteArtQueue != null) {
             return;
         }
-        introSpriteArtQueue = new S3kKosModuleQueue(services().hardwareTiming());
+        introSpriteArtQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
         if (planeArtOrdinal >= 0) {
             planeArtHandle = restoredIntroArtHandle(
                     planeArtOrdinal, "plane");
