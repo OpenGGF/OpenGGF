@@ -9,6 +9,7 @@ import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceFixtures;
 import com.openggf.trace.TraceFrame;
 import com.openggf.tests.FullReset;
+import com.openggf.tests.RuntimeStateContaminationExtension;
 import com.openggf.tests.SingletonResetExtension;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,7 +24,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @FullReset
-@ExtendWith(SingletonResetExtension.class)
+@ExtendWith({
+        RuntimeStateContaminationExtension.class,
+        SingletonResetExtension.class
+})
 class TestLiveTraceComparatorObserver {
 
     private static AbstractPlayableSprite stubSprite() {

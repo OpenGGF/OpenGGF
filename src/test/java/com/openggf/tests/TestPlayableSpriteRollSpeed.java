@@ -20,7 +20,10 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @FullReset
-@ExtendWith(SingletonResetExtension.class)
+@ExtendWith({
+        RuntimeStateContaminationExtension.class,
+        SingletonResetExtension.class
+})
 class TestPlayableSpriteRollSpeed {
 
     @Test
