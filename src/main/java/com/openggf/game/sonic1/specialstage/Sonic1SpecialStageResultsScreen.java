@@ -127,6 +127,8 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
     private int stateTimer;
     private int totalFrames;
     private boolean complete;
+    /** True once SSR_ChkPLC has completed its routine-0 readiness poll. */
+    private boolean plcReadinessPassed;
     private int frameCounter;
 
     private int textX;
@@ -175,9 +177,12 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
             return;
         }
 
-        Sonic1PlcService plcService = GameServices.module().getGameService(Sonic1PlcService.class);
-        if (plcService != null && plcService.isBusy()) {
-            return;
+        if (!plcReadinessPassed) {
+            Sonic1PlcService plcService = GameServices.module().getGameService(Sonic1PlcService.class);
+            if (plcService != null && plcService.isBusy()) {
+                return;
+            }
+            plcReadinessPassed = true;
         }
 
         totalFrames++;

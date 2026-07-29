@@ -36,6 +36,17 @@ class TestSonic1SpecialStageResultsPlcReadiness {
         assertEquals(1, totalFrames());
     }
 
+    @Test
+    void unrelatedPlcWorkAfterRoutineZeroDoesNotFreezeTheSpecialResultsCard() throws Exception {
+        results.update(1, null);
+        assertEquals(1, totalFrames());
+
+        plc.append(27);
+        results.update(2, null);
+
+        assertEquals(2, totalFrames(), "SSR routines after SSR_ChkPLC continue while later work is queued");
+    }
+
     private int totalFrames() throws Exception {
         Field field = Sonic1SpecialStageResultsScreen.class.getDeclaredField("totalFrames");
         field.setAccessible(true);

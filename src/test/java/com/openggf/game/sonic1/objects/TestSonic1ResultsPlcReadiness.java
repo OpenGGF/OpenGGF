@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -28,7 +29,8 @@ class TestSonic1ResultsPlcReadiness {
             public <T> T gameService(Class<T> type) {
                 return GameServices.module().getGameService(type);
             }
-        }.withGameModule(GameServices.module()));
+        }.withGameModule(GameServices.module())
+                .withCamera(GameServices.camera()));
     }
 
     @Test
@@ -40,6 +42,20 @@ class TestSonic1ResultsPlcReadiness {
         drain();
         results.update(2, null);
         assertEquals(1, stateTimer(), "the first empty frame starts the results card");
+    }
+
+    @Test
+    void unrelatedPlcWorkAfterRoutineZeroDoesNotFreezeOrHideTheCard() throws Exception {
+        results.update(1, null);
+        assertEquals(1, stateTimer());
+
+        plc.append(16);
+        results.update(2, null);
+
+        assertEquals(2, stateTimer(), "later Got routines do not re-poll the PLC FIFO");
+        var commands = new ArrayList<com.openggf.graphics.GLCommand>();
+        results.appendRenderCommands(commands);
+        assertEquals(false, commands.isEmpty(), "an initialized card stays visible during unrelated PLC work");
     }
 
     private int stateTimer() throws Exception {

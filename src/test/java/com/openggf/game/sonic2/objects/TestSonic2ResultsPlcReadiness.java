@@ -42,6 +42,17 @@ class TestSonic2ResultsPlcReadiness {
         assertEquals(1, stateTimer());
     }
 
+    @Test
+    void unrelatedPlcWorkAfterRoutineZeroDoesNotFreezeTheResultsCard() throws Exception {
+        results.update(1, null);
+        assertEquals(1, stateTimer());
+
+        plc.append(38);
+        results.update(2, null);
+
+        assertEquals(2, stateTimer(), "Obj3A routines after init do not re-poll the PLC FIFO");
+    }
+
     private int stateTimer() throws Exception {
         Field field = com.openggf.level.objects.AbstractResultsScreen.class.getDeclaredField("stateTimer");
         field.setAccessible(true);

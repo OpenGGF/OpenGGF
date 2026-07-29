@@ -40,6 +40,8 @@ import java.util.logging.Logger;
 public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
         implements ZeroScalarArgsRewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(Sonic1ResultsScreenObjectInstance.class.getName());
+    /** True once the ROM's routine-0 PLC gate has released this card. */
+    private boolean plcReadinessPassed;
 
     // -----------------------------------------------------------------------
     // Time bonus table (from s1disasm 0D Signpost.asm:TimeBonuses)
@@ -210,13 +212,15 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
 
-        // ROM Got_ChkPLC idles until the full PLC FIFO has drained. Renderer
-        // availability is deliberately irrelevant: the queued ROM descriptors own
-        // the gameplay-ready edge.
-        Sonic1PlcService plcService = services().gameService(Sonic1PlcService.class);
-        if (plcService != null && plcService.isBusy()) {
-            this.frameCounter = frameCounter;
-            return;
+        // ROM Got_ChkPLC is routine 0 only. Once it has released, later card
+        // routines must keep running even when unrelated PLC work is submitted.
+        if (!plcReadinessPassed) {
+            Sonic1PlcService plcService = services().gameService(Sonic1PlcService.class);
+            if (plcService != null && plcService.isBusy()) {
+                this.frameCounter = frameCounter;
+                return;
+            }
+            plcReadinessPassed = true;
         }
 
         // Handle SBZ2 special states outside the base class state machine
@@ -509,8 +513,7 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        Sonic1PlcService plcService = services().gameService(Sonic1PlcService.class);
-        if (plcService != null && plcService.isBusy()) {
+        if (!plcReadinessPassed) {
             return;
         }
         var camera = services().camera();

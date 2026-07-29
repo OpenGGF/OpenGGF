@@ -59,6 +59,26 @@ class TestSonic1FinalZonePlcIntegration {
     }
 
     @Test
+    void finalServiceAndCameraThresholdReleaseBossAndAdvanceRngOnTheSameFrame() throws Exception {
+        GameServices.camera().setX((short) 0x244F);
+        plc.append(31);
+        long seedBeforeRelease = rng.getSeed();
+
+        while (plc.isBusy()) {
+            plc.prepare();
+            plc.serviceLevelVBlank();
+        }
+        assertTrue(!plc.isBusy(), "the VBlank service must empty the ROM descriptor before the object scan");
+
+        GameServices.camera().setX((short) 0x2450);
+        runWait();
+
+        assertEquals(2, routineSecondary(), "the threshold crossed on the just-emptied queue frame releases FZ");
+        assertEquals(seedBeforeRelease + 1, rng.getSeed(),
+                "the FZ wait-tail RNG increment occurs on that same release frame");
+    }
+
+    @Test
     void unrelatedEarlierEntryExtendsTheBossWait() throws Exception {
         plc.append(31);
         int bossOnlyFrames = drainFrames();

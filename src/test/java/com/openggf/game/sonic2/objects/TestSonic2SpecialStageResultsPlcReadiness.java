@@ -42,6 +42,17 @@ class TestSonic2SpecialStageResultsPlcReadiness {
         assertEquals(1, totalFrames());
     }
 
+    @Test
+    void unrelatedPlcWorkAfterInitDoesNotFreezeTheSpecialResultsCard() throws Exception {
+        results.update(1, null);
+        assertEquals(1, totalFrames());
+
+        plc.append(0);
+        results.update(2, null);
+
+        assertEquals(2, totalFrames(), "Obj6F routines after init do not re-poll the PLC FIFO");
+    }
+
     private int totalFrames() throws Exception {
         Field field = SpecialStageResultsScreenObjectInstance.class.getDeclaredField("totalFrames");
         field.setAccessible(true);

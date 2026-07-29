@@ -67,6 +67,8 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen
     private int lastRingBonus = Integer.MIN_VALUE;
     private int lastTotalBonus = Integer.MIN_VALUE;
     private int lastPerfectBonus = Integer.MIN_VALUE;
+    /** True once Obj3A routine 0 has observed an empty PLC queue. */
+    private boolean plcReadinessPassed;
     private final Pattern blankDigit = new Pattern();
 
     public ResultsScreenObjectInstance(int elapsedTimeSeconds, int ringCount, int actNumber,
@@ -106,10 +108,13 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen
 
     @Override
     public void update(int frameCounter, com.openggf.game.PlayableEntity player) {
-        Sonic2PlcService plcService = services().gameService(Sonic2PlcService.class);
-        if (plcService != null && plcService.isBusy()) {
-            this.frameCounter = frameCounter;
-            return;
+        if (!plcReadinessPassed) {
+            Sonic2PlcService plcService = services().gameService(Sonic2PlcService.class);
+            if (plcService != null && plcService.isBusy()) {
+                this.frameCounter = frameCounter;
+                return;
+            }
+            plcReadinessPassed = true;
         }
         super.update(frameCounter, player);
     }

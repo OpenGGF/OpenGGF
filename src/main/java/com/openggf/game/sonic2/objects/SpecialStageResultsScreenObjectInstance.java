@@ -139,6 +139,8 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
     private int totalFrames = 0;
     private int slideProgress = 0;
     private boolean complete = false;
+    /** True once Obj6F_Init has observed an empty PLC queue. */
+    private boolean plcReadinessPassed;
 
     // Input data
     private final int ringsCollected;
@@ -754,9 +756,12 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
     @Override
     public void update(int frameCounter, Object context) {
         this.frameCounter = frameCounter;
-        Sonic2PlcService plcService = services().gameService(Sonic2PlcService.class);
-        if (plcService != null && plcService.isBusy()) {
-            return;
+        if (!plcReadinessPassed) {
+            Sonic2PlcService plcService = services().gameService(Sonic2PlcService.class);
+            if (plcService != null && plcService.isBusy()) {
+                return;
+            }
+            plcReadinessPassed = true;
         }
         stateTimer++;
         totalFrames++;
