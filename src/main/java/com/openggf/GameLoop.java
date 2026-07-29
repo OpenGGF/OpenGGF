@@ -2801,8 +2801,7 @@ public class GameLoop {
     private void doEnterResultsScreen() {
         // Reset special stage provider
         SpecialStageProvider ssProvider = getActiveSpecialStageProvider();
-        ssProvider.reset();
-        ssProvider.onEnterResults();
+        ssProvider.resetForResults();
 
         // Transition to results mode
         GameMode oldMode = changeGameModeForBoundary(GameMode.SPECIAL_STAGE_RESULTS);

@@ -6,6 +6,7 @@ import com.openggf.game.LevelLoadContext;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic2.resources.Sonic2PlcService;
+import com.openggf.game.sonic2.resources.Sonic2RuntimePlcPublisher;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 
 import java.util.List;
@@ -68,21 +69,23 @@ public class Sonic2LevelInitProfile extends AbstractLevelInitProfile {
             int zone = ctx.getLevel().getZoneIndex();
             int offset = Sonic2Constants.LEVEL_DATA_DIR + zone * Sonic2Constants.LEVEL_DATA_DIR_ENTRY_SIZE;
             int primary = GameServices.rom().getRom().readByte(offset) & 0xFF;
-            plcService.clearQueued();
-            if (primary != 0) {
-                plcService.append(primary);
-            }
-            plcService.append(Sonic2Constants.PLC_STD2);
             // Retail 1P bypasses this load unless Player_mode == 2. OpenGGF
             // currently has no separate two-player graphics flag owner, so the
             // represented Tails-alone path selects the native Tails life cue.
-            playerArtModeAuthority.initialLifePlc().ifPresent(plcId -> {
-                try {
-                    plcService.append(plcId);
-                } catch (IOException e) {
-                    throw new IllegalStateException("Failed to queue S2 life PLC", e);
-                }
-            });
+            java.util.OptionalInt lifePlc = playerArtModeAuthority.initialLifePlc();
+            java.util.List<Sonic2PlcService.Operation> operations = new java.util.ArrayList<>();
+            operations.add(Sonic2PlcService.clearOperation());
+            if (primary != 0) operations.add(Sonic2PlcService.appendOperation(primary));
+            operations.add(Sonic2PlcService.appendOperation(Sonic2Constants.PLC_STD2));
+            lifePlc.ifPresent(id -> operations.add(Sonic2PlcService.appendOperation(id)));
+            Sonic2PlcService.Operation[] transaction = operations.toArray(Sonic2PlcService.Operation[]::new);
+            if (GameServices.module().getObjectArtProvider() instanceof Sonic2ObjectArtProvider artProvider
+                    && GameServices.levelOrNull() != null) {
+                Sonic2RuntimePlcPublisher.transact(artProvider, plcService,
+                        GameServices.levelOrNull()::refreshObjectArtPatterns, transaction);
+            } else {
+                plcService.transact(transaction);
+            }
         } catch (IOException failure) {
             throw new IllegalStateException("Failed to queue S2 initial PLCs", failure);
         }

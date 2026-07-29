@@ -314,16 +314,28 @@ public class Sonic1TitleCardManager implements TitleCardProvider {
         if (exitPlcsQueued) {
             return;
         }
-        exitPlcsQueued = true;
         try {
             Sonic1PlcService plcService = GameServices.module().getGameService(Sonic1PlcService.class);
             if (plcService != null) {
-                plcService.append(2);
-                plcService.append(21 + currentZone);
+                plcService.transact(Sonic1PlcService.appendOperation(2),
+                        Sonic1PlcService.appendOperation(21 + nativeZoneForTitleCard(currentZone)));
+                exitPlcsQueued = true;
             }
         } catch (Exception ignored) {
             // The presentation renderer also runs without a gameplay module in focused tests.
         }
+    }
+
+    private static int nativeZoneForTitleCard(int progressionZone) {
+        return switch (progressionZone) {
+            case 0 -> 0;
+            case 1 -> 2;
+            case 2 -> 4;
+            case 3 -> 1;
+            case 4 -> 3;
+            case 5 -> 5;
+            default -> 5;
+        };
     }
 
     @Override

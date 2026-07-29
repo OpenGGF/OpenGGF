@@ -94,21 +94,9 @@ public final class Sonic1SpecialStageProvider implements SpecialStageProvider {
     public void initializeStage(int stageIndex, SpecialStageStartupPolicy policy) throws IOException {
         Objects.requireNonNull(policy, "policy");
         manager.reset();
-        queueSpecialStagePlc();
         manager.initialize(stageIndex);
         if (policy == SpecialStageStartupPolicy.FAST) {
             manager.advanceToEntryPresentation();
-        }
-    }
-
-    private static void queueSpecialStagePlc() {
-        try {
-            Sonic1PlcService plcService = GameServices.module().getGameService(Sonic1PlcService.class);
-            if (plcService != null) {
-                plcService.replaceQueued(0);
-            }
-        } catch (Exception ignored) {
-            // The manager has standalone test construction paths.
         }
     }
 
@@ -117,8 +105,7 @@ public final class Sonic1SpecialStageProvider implements SpecialStageProvider {
         try {
             Sonic1PlcService plcService = GameServices.module().getGameService(Sonic1PlcService.class);
             if (plcService != null) {
-                plcService.replaceQueued(0);
-                plcService.append(27);
+                plcService.transact(Sonic1PlcService.replace(0), Sonic1PlcService.appendOperation(27));
             }
         } catch (Exception ignored) {
             // Results rendering also has standalone construction paths.

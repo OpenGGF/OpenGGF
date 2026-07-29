@@ -407,7 +407,7 @@ public class Sonic2SpecialStageIntro {
         try {
             Sonic2PlcService plcService = GameServices.module().getGameService(Sonic2PlcService.class);
             if (plcService != null) {
-                plcService.append(Sonic2Constants.PLC_SPECIAL_STAGE_BOMBS);
+                plcService.transact(Sonic2PlcService.appendOperation(Sonic2Constants.PLC_SPECIAL_STAGE_BOMBS));
             }
         } catch (Exception ignored) {
             // Focused presentation tests do not create a game-owned PLC service.

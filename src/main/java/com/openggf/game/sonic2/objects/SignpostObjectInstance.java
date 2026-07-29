@@ -376,8 +376,8 @@ public class SignpostObjectInstance extends BoxObjectInstance implements PostPla
             if (plc != null) {
                 Sonic2LevelEventManager events = services().gameModule()
                         .getGameService(Sonic2LevelEventManager.class);
-                plc.replaceQueued(events != null && events.getPlayerCharacter() == PlayerCharacter.TAILS_ALONE
-                        ? 66 : 38);
+                plc.transact(Sonic2PlcService.replaceOperation(events != null && events.getPlayerCharacter() == PlayerCharacter.TAILS_ALONE
+                        ? 66 : 38));
             }
         } catch (Exception ignored) { }
     }

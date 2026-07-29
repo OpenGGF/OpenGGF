@@ -2,6 +2,8 @@ package com.openggf.game.sonic2.titlecard;
 
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.resources.Sonic2PlcService;
+import com.openggf.game.sonic2.resources.Sonic2RuntimePlcPublisher;
+import com.openggf.game.sonic2.Sonic2ObjectArtProvider;
 import com.openggf.game.titlecard.TitleCardElement;
 import com.openggf.game.titlecard.TitleCardMappings;
 import com.openggf.game.GameServices;
@@ -706,12 +708,20 @@ public class TitleCardManager implements TitleCardProvider {
         if (exitPlcsQueued) {
             return;
         }
-        exitPlcsQueued = true;
         try {
             Sonic2PlcService plcService = GameServices.module().getGameService(Sonic2PlcService.class);
             if (plcService != null) {
-                plcService.append(Sonic2Constants.PLC_STD_WATER);
-                plcService.append(animalPlcForZone(currentZone));
+                Sonic2PlcService.Operation[] transaction = {
+                        Sonic2PlcService.appendOperation(Sonic2Constants.PLC_STD_WATER),
+                        Sonic2PlcService.appendOperation(animalPlcForZone(currentZone))};
+                if (GameServices.module().getObjectArtProvider() instanceof Sonic2ObjectArtProvider artProvider
+                        && GameServices.levelOrNull() != null) {
+                    Sonic2RuntimePlcPublisher.transact(artProvider, plcService,
+                            GameServices.levelOrNull()::refreshObjectArtPatterns, transaction);
+                } else {
+                    plcService.transact(transaction);
+                }
+                exitPlcsQueued = true;
             }
         } catch (Exception ignored) {
             // The presentation renderer also runs without a gameplay module in focused tests.

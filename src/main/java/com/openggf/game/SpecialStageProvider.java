@@ -126,6 +126,12 @@ public interface SpecialStageProvider extends MiniGameProvider {
     default void onEnterResults() {
     }
 
+    /** Resets the stage and publishes its game-owned results PLC producer. */
+    default void resetForResults() {
+        reset();
+        onEnterResults();
+    }
+
     /**
      * Gets the current stage index.
      *

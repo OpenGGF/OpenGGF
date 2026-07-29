@@ -291,17 +291,15 @@ public class Sonic1CreditsManager {
             if (plcService == null) {
                 return;
             }
-            plcService.clearQueued();
             int zone = creditsNum < Sonic1CreditsDemoData.DEMO_CREDITS
-                    ? Sonic1CreditsDemoData.DEMO_ZONE[creditsNum]
+                    ? new int[] {0, 2, 4, 1, 3, 5, 5, 0}[creditsNum]
                     // EndDemo_Levels[8] overreads the following EndDemo_LampVar bytes: $0101 (LZ1).
-                    : 3;
+                    : 1;
             int header = Sonic1Constants.LEVEL_HEADERS_ADDR + zone * 16;
             int primary = GameServices.rom().getRom().readByte(header) & 0xFF;
-            if (primary != 0) {
-                plcService.append(primary);
-            }
-            plcService.append(1);
+            plcService.transact(primary == 0
+                    ? new Sonic1PlcService.Operation[] {Sonic1PlcService.clear(), Sonic1PlcService.appendOperation(1)}
+                    : new Sonic1PlcService.Operation[] {Sonic1PlcService.clear(), Sonic1PlcService.appendOperation(primary), Sonic1PlcService.appendOperation(1)});
         } catch (Exception e) {
             LOGGER.fine("Credits PLC queue unavailable: " + e.getMessage());
         }

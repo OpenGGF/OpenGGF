@@ -8,6 +8,7 @@ import com.openggf.level.resources.NemesisPlcPatternCounts;
 import com.openggf.level.resources.NemesisPlcServiceQueue;
 import com.openggf.level.resources.PlcParser;
 import com.openggf.level.resources.PlcParser.PlcDefinition;
+import com.openggf.game.rewind.snapshot.NemesisPlcQueueSnapshot;
 
 import java.io.IOException;
 import java.util.List;
@@ -48,6 +49,40 @@ public final class Sonic1PlcService implements PlcLifecycleService {
         queue.clearQueued();
     }
 
+    /** Preflights and atomically commits an ordered native Clear/New/Add PLC sequence. */
+    public void transact(Operation... operations) throws IOException {
+        List<PreparedOperation> prepared = new java.util.ArrayList<>(operations.length);
+        int occupied = occupiedDescriptorCount();
+        boolean active = queue.capture().activeEntry() != null;
+        for (Operation operation : operations) {
+            Submission submission = operation.kind() == OperationKind.CLEAR ? null : readSubmission(operation.plcId());
+            switch (operation.kind()) {
+                case CLEAR -> {
+                    if (active) throw new IllegalStateException("cannot mutate queued PLC entries while the decoder is active");
+                    occupied = 0;
+                }
+                case REPLACE -> {
+                    if (active) throw new IllegalStateException("cannot mutate queued PLC entries while the decoder is active");
+                    occupied = submission.definition().entries().size();
+                }
+                case APPEND -> occupied += submission.definition().entries().size();
+            }
+            if (occupied > SAFE_QUEUE_CAPACITY) throw new IllegalStateException("Sonic 1 PLC queue cannot use the retail-retained sixteenth slot");
+            prepared.add(new PreparedOperation(operation.kind(), submission));
+        }
+        for (PreparedOperation operation : prepared) {
+            if (operation.kind() == OperationKind.CLEAR) queue.clearQueued();
+            else if (operation.kind() == OperationKind.REPLACE) queue.replaceQueued(operation.submission().definition(), operation.submission().patternCounts());
+            else queue.append(operation.submission().definition(), operation.submission().patternCounts());
+        }
+    }
+
+    public static Operation clear() { return new Operation(OperationKind.CLEAR, -1); }
+    public static Operation replace(int plcId) { return new Operation(OperationKind.REPLACE, plcId); }
+    public static Operation appendOperation(int plcId) { return new Operation(OperationKind.APPEND, plcId); }
+    public enum OperationKind { CLEAR, REPLACE, APPEND }
+    public record Operation(OperationKind kind, int plcId) { }
+
     /** Models S1 {@code RunPLC}, which arms only the current FIFO head. */
     public void prepare() {
         queue.prepareHead();
@@ -67,6 +102,9 @@ public final class Sonic1PlcService implements PlcLifecycleService {
     public boolean isBusy() {
         return queue.isBusy();
     }
+
+    /** Immutable logical FIFO state for producer-contract tests and rewind adapters. */
+    public NemesisPlcQueueSnapshot capture() { return queue.capture(); }
 
     @Override
     public void serviceVBlank(PlcLifecyclePhase phase) {
@@ -130,4 +168,5 @@ public final class Sonic1PlcService implements PlcLifecycleService {
 
     private record Submission(PlcDefinition definition, List<Integer> patternCounts) {
     }
+    private record PreparedOperation(OperationKind kind, Submission submission) { }
 }

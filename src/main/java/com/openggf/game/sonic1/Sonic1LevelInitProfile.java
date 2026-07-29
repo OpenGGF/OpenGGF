@@ -98,11 +98,9 @@ public class Sonic1LevelInitProfile extends AbstractLevelInitProfile {
         try {
             int header = Sonic1Constants.LEVEL_HEADERS_ADDR + ctx.getLevel().getZoneIndex() * 16;
             int primary = (GameServices.rom().getRom().read32BitAddr(header) >>> 24) & 0xFF;
-            plcService.clearQueued();
-            if (primary != 0) {
-                plcService.append(primary);
-            }
-            plcService.append(1);
+            plcService.transact(primary == 0
+                    ? new Sonic1PlcService.Operation[] {Sonic1PlcService.clear(), Sonic1PlcService.appendOperation(1)}
+                    : new Sonic1PlcService.Operation[] {Sonic1PlcService.clear(), Sonic1PlcService.appendOperation(primary), Sonic1PlcService.appendOperation(1)});
         } catch (IOException failure) {
             throw new IllegalStateException("Failed to queue S1 initial PLCs", failure);
         }

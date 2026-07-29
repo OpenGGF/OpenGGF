@@ -12,6 +12,7 @@ import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.SpecialStageStartupPolicy;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.resources.Sonic2PlcService;
+import com.openggf.game.sonic2.resources.Sonic2RuntimePlcPublisher;
 import com.openggf.game.sonic2.objects.SpecialStageResultsScreenObjectInstance;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageManager;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageRewindAdapter;
@@ -88,21 +89,9 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
     public void initializeStage(int stageIndex, SpecialStageStartupPolicy policy) throws IOException {
         Objects.requireNonNull(policy, "policy");
         manager.reset();
-        queueSpecialStagePlc();
         manager.initialize(stageIndex);
         if (policy == SpecialStageStartupPolicy.FAST) {
             manager.advanceToEntryPresentation();
-        }
-    }
-
-    private static void queueSpecialStagePlc() {
-        try {
-            Sonic2PlcService plcService = GameServices.module().getGameService(Sonic2PlcService.class);
-            if (plcService != null) {
-                plcService.replaceQueued(0);
-            }
-        } catch (Exception ignored) {
-            // The manager has standalone test construction paths.
         }
     }
 
@@ -111,7 +100,14 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
         try {
             Sonic2PlcService plcService = GameServices.module().getGameService(Sonic2PlcService.class);
             if (plcService != null) {
-                plcService.replaceQueued(0);
+                if (GameServices.module().getObjectArtProvider() instanceof Sonic2ObjectArtProvider artProvider
+                        && GameServices.levelOrNull() != null) {
+                    Sonic2RuntimePlcPublisher.transact(artProvider, plcService,
+                            GameServices.levelOrNull()::refreshObjectArtPatterns,
+                            Sonic2PlcService.replaceOperation(0));
+                } else {
+                    plcService.transact(Sonic2PlcService.replaceOperation(0));
+                }
             }
         } catch (Exception ignored) {
             // Results rendering also has standalone construction paths.

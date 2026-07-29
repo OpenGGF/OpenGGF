@@ -392,7 +392,7 @@ public class TitleScreenManager implements TitleScreenProvider {
         try {
             Sonic2PlcService plcService = GameServices.module().getGameService(Sonic2PlcService.class);
             if (plcService != null) {
-                plcService.replaceQueued(0);
+                plcService.transact(Sonic2PlcService.replaceOperation(0));
             }
         } catch (Exception ignored) {
             // The presentation renderer also runs without a gameplay module in focused tests.
