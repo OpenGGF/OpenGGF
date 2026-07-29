@@ -188,8 +188,10 @@ configuration fails at the explicit tool boundary and unknown metadata retains
 the `GameId.fromCode` error. Existing trace capture/benchmark and headless boot
 tests remain the integration gate.
 
-Every implementation task uses red-green-refactor TDD and receives independent
-specification and code-quality review.
+New behavior uses red-green-refactor TDD. Behavior-preserving migrations first
+characterize the existing behavior green, then run the identical tests after
+the refactor; the resolver task supplies the new-behavior RED. Every task
+receives independent specification and code-quality review.
 
 ## Deferred work
 
