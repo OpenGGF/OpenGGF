@@ -19,6 +19,7 @@ import com.openggf.sprites.render.PlayerSpriteRenderer;
 
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
+import com.openggf.level.Palette;
 import com.openggf.level.WaterSystem;
 
 import java.util.HashMap;
@@ -54,6 +55,16 @@ public class Sonic3kSuperStateController extends SuperStateController {
 
     /** Raw ROM palette data (60 bytes: 10 frames x 3 colors x 2 bytes). */
     private byte[] paletteData;
+    private byte[] hyperPaletteData;
+    private byte[] superTailsPaletteData;
+    private byte[] superKnucklesPaletteData;
+    private byte[] activePaletteData;
+    private int activeCycleStart = 0x24;
+    private int activeCycleEnd = 0x36;
+    private int activeCycleTimer = 6;
+    private int activeWrapCycleTimer = 6;
+    private byte[] savedNormalPalette;
+    private byte[] savedNormalUnderwaterPalette;
 
     /** Retained for lazy loads of the zone's underwater cycle table. */
     private RomByteReader romReader;
@@ -69,6 +80,9 @@ public class Sonic3kSuperStateController extends SuperStateController {
     private PlayerSpriteRenderer superRenderer;
     /** Normal sprite renderer (saved on activation, restored on revert). */
     private PlayerSpriteRenderer normalRenderer;
+
+    /** Form selected when transformation starts; never inferred during rendering. */
+    private S3kFormTier activeFormTier = S3kFormTier.NORMAL;
 
     /** Palette line index where Sonic's colors reside. */
     private static final int SONIC_PALETTE_INDEX = 0;
@@ -89,16 +103,31 @@ public class Sonic3kSuperStateController extends SuperStateController {
 
     @Override
     public void reset() {
+        if (activeFormTier != null && activeFormTier != S3kFormTier.NORMAL) {
+            restoreCharacterPresentationImmediately();
+        }
         super.reset();
         paletteState = 0;
         paletteFrame = 0;
         paletteTimer = 0;
         transformFramesRemaining = 0;
+        activeFormTier = S3kFormTier.NORMAL;
+    }
+
+    @Override
+    public void update() {
+        if (player.getDead() && isSuper()) {
+            debugDeactivate();
+            return;
+        }
+        super.update();
     }
 
     @Override
     public RewindState captureRewindState() {
-        return createRewindState(paletteState, paletteFrame, paletteTimer, transformFramesRemaining);
+        return createRewindState(paletteState, paletteFrame, paletteTimer, transformFramesRemaining,
+                activeFormTier.ordinal(), packPalette(savedNormalPalette),
+                packPalette(savedNormalUnderwaterPalette));
     }
 
     @Override
@@ -108,9 +137,13 @@ public class Sonic3kSuperStateController extends SuperStateController {
         }
         restoreCoreRewindState(rewindState);
         paletteState = rewindState.paletteState();
-        paletteFrame = rewindState.paletteFrame();
         paletteTimer = rewindState.paletteTimer();
         transformFramesRemaining = rewindState.transformFramesRemaining();
+        savedNormalPalette = unpackPalette(rewindState.savedNormalPalette());
+        savedNormalUnderwaterPalette = unpackPalette(rewindState.savedNormalUnderwaterPalette());
+        activeFormTier = formTierFromSnapshot(rewindState.presentationTier());
+        configurePaletteForActiveTier();
+        paletteFrame = rewindState.paletteFrame();
         reconcileRewindPresentation(rewindState.state());
     }
 
@@ -125,6 +158,16 @@ public class Sonic3kSuperStateController extends SuperStateController {
             return;
         }
         paletteData = reader.slice(addr, len);
+        hyperPaletteData = reader.slice(
+                Sonic3kConstants.PAL_CYCLE_HYPER_SONIC_ADDR,
+                Sonic3kConstants.PAL_CYCLE_HYPER_SONIC_FRAME_COUNT * BYTES_PER_FRAME);
+        superTailsPaletteData = reader.slice(
+                Sonic3kConstants.PAL_CYCLE_SUPER_TAILS_ADDR,
+                Sonic3kConstants.PAL_CYCLE_SUPER_TAILS_FRAME_COUNT * BYTES_PER_FRAME);
+        superKnucklesPaletteData = reader.slice(
+                Sonic3kConstants.PAL_CYCLE_SUPER_KNUCKLES_ADDR,
+                Sonic3kConstants.PAL_CYCLE_SUPER_KNUCKLES_FRAME_COUNT * BYTES_PER_FRAME);
+        activePaletteData = paletteData;
         romReader = reader;
         underwaterPaletteData.clear();
         LOGGER.fine("Loaded S3K Super Sonic palette data: " + len + " bytes from ROM 0x"
@@ -137,7 +180,7 @@ public class Sonic3kSuperStateController extends SuperStateController {
         }
 
         try {
-            SpriteArtSet superArtSet = playerArt.loadSuperSonicArtSet();
+            SpriteArtSet superArtSet = playerArt.loadFormArtSet("sonic", S3kFormTier.SUPER);
             if (superArtSet != null) {
                 superRenderer = new PlayerSpriteRenderer(superArtSet);
                 if (CrossGameFeatureProvider.isActive()) {
@@ -178,12 +221,40 @@ public class Sonic3kSuperStateController extends SuperStateController {
 
     @Override
     protected boolean hasTransformationEmeralds() {
+        return getEligibleFormTier() != S3kFormTier.NORMAL;
+    }
+
+    /**
+     * Selects the form permitted by current ROM progression state.
+     * This is consulted for activation only; active presentation uses
+     * {@link #getActiveFormTier()}.
+     */
+    public S3kFormTier getEligibleFormTier() {
         var gameState = player.currentGameState();
         if (player instanceof Tails) {
-            return gameState.hasAllSuperEmeralds();
+            if (!gameState.hasAllSuperEmeralds()) {
+                return S3kFormTier.NORMAL;
+            }
+            return GameServices.sprites().getMainPlayable() == player
+                    ? S3kFormTier.SUPER_TAILS
+                    : S3kFormTier.NORMAL;
         }
-        return gameState.hasAllSuperEmeralds()
-                || (gameState.hasAllEmeralds() && !gameState.isEmeraldsConverted());
+        if (gameState.hasAllSuperEmeralds()) {
+            return S3kFormTier.HYPER;
+        }
+        if (gameState.hasAllEmeralds() && !gameState.isEmeraldsConverted()) {
+            return S3kFormTier.SUPER;
+        }
+        return S3kFormTier.NORMAL;
+    }
+
+    public S3kFormTier getActiveFormTier() {
+        return activeFormTier;
+    }
+
+    @Override
+    public boolean isHyperFormActive() {
+        return isSuper() && activeFormTier == S3kFormTier.HYPER;
     }
 
     @Override
@@ -229,9 +300,12 @@ public class Sonic3kSuperStateController extends SuperStateController {
 
     @Override
     protected void onTransformationStarted() {
-        paletteState = 1;
+        activeFormTier = getEligibleFormTier();
+        captureNormalPalette();
+        configurePaletteForActiveTier();
+        paletteState = usesSonicFormPresentation() ? 1 : -1;
         paletteFrame = 0;
-        paletteTimer = 1;
+        paletteTimer = paletteState == 1 ? 1 : activeCycleTimer;
         transformFramesRemaining = 30;
         // Play transformation SFX
         try {
@@ -249,6 +323,11 @@ public class Sonic3kSuperStateController extends SuperStateController {
 
     @Override
     protected boolean updateTransformationAnimation() {
+        if (!usesSonicFormPresentation()) {
+            applyPaletteFrame(paletteFrame);
+            advanceActivePaletteFrame();
+            return true;
+        }
         updatePaletteFade();
         transformFramesRemaining--;
         return transformFramesRemaining <= 0;
@@ -257,7 +336,10 @@ public class Sonic3kSuperStateController extends SuperStateController {
     @Override
     protected void onSuperActivated() {
         paletteState = -1;
-        paletteTimer = 6;
+        paletteTimer = activeCycleTimer;
+        if (usesSonicFormPresentation()) {
+            paletteFrame = activeCycleStart;
+        }
         // Play invincibility music (S3K Super Sonic uses mus_Invincibility)
         try {
             if (CrossGameFeatureProvider.isActive()) {
@@ -271,14 +353,14 @@ public class Sonic3kSuperStateController extends SuperStateController {
             LOGGER.fine("Could not play Super Sonic music: " + e.getMessage());
         }
         player.setInvincibleFrames(0);
-        if (superAnimSet != null) {
+        if (usesSonicFormPresentation() && superAnimSet != null) {
             if (normalAnimSet == null) {
                 normalAnimSet = player.getAnimationSet();
             }
             player.setAnimationSet(superAnimSet);
         }
         // Swap to Super Sonic sprite renderer (different mappings/DPLCs)
-        if (superRenderer != null) {
+        if (usesSonicFormPresentation() && superRenderer != null) {
             if (normalRenderer == null) {
                 normalRenderer = player.getSpriteRenderer();
             }
@@ -299,21 +381,15 @@ public class Sonic3kSuperStateController extends SuperStateController {
         paletteTimer--;
         if (paletteTimer >= 0) return;
 
-        paletteTimer = 6;
-
         int frameOffset = paletteFrame;
-        paletteFrame += BYTES_PER_FRAME;
-
-        if (paletteFrame > CYCLE_WRAP_OFFSET) {
-            paletteFrame = FADE_COMPLETE_OFFSET;
-        }
-
         applyPaletteFrame(frameOffset);
+        paletteTimer = activeCycleTimer;
+        advanceActivePaletteFrame();
     }
 
     @Override
     protected void onRevertStarted() {
-        paletteState = 2;
+        paletteState = activeFormTier == S3kFormTier.SUPER && usesSonicFormPresentation() ? 2 : 0;
         paletteFrame = FADE_COMPLETE_OFFSET - BYTES_PER_FRAME;
         paletteTimer = 3;
         player.setInvincibleFrames(1);
@@ -323,6 +399,9 @@ public class Sonic3kSuperStateController extends SuperStateController {
         // Restore normal sprite renderer
         if (normalRenderer != null) {
             player.setSpriteRenderer(normalRenderer);
+        }
+        if (paletteState == 0) {
+            restoreNormalPalette();
         }
         player.setShieldVisible(true);
         // Revert to zone music
@@ -338,16 +417,17 @@ public class Sonic3kSuperStateController extends SuperStateController {
             LOGGER.fine("Could not revert Super Sonic music: " + e.getMessage());
         }
         LOGGER.info("Super Sonic deactivated (S3K)");
+        activeFormTier = S3kFormTier.NORMAL;
     }
 
     private void reconcileRewindPresentation(SuperState restoredState) {
         boolean activeSuper = restoredState == SuperState.SUPER;
         reconcileRewindPhysicsAndAnimationProfile(activeSuper);
         if (activeSuper) {
-            if (superAnimSet != null) {
+            if (usesSonicFormPresentation() && superAnimSet != null) {
                 player.setAnimationSet(superAnimSet);
             }
-            if (superRenderer != null) {
+            if (usesSonicFormPresentation() && superRenderer != null) {
                 player.setSpriteRenderer(superRenderer);
             }
             player.setShieldVisible(false);
@@ -360,6 +440,77 @@ public class Sonic3kSuperStateController extends SuperStateController {
             }
             player.setShieldVisible(true);
         }
+    }
+
+    private boolean usesSonicFormPresentation() {
+        return !(player instanceof Tails) && !(player instanceof Knuckles);
+    }
+
+    private void configurePaletteForActiveTier() {
+        switch (activeFormTier) {
+            case SUPER -> {
+                if (player instanceof Knuckles) {
+                    activePaletteData = superKnucklesPaletteData;
+                    activeCycleStart = 0;
+                    activeCycleEnd = Sonic3kConstants.PAL_CYCLE_SUPER_KNUCKLES_FRAME_COUNT
+                            * BYTES_PER_FRAME;
+                    activeCycleTimer = 2;
+                    activeWrapCycleTimer = 0xE;
+                } else {
+                    activePaletteData = paletteData;
+                    activeCycleStart = FADE_COMPLETE_OFFSET;
+                    activeCycleEnd = CYCLE_WRAP_OFFSET;
+                    activeCycleTimer = 6;
+                    activeWrapCycleTimer = 6;
+                }
+            }
+            case HYPER -> {
+                if (player instanceof Knuckles) {
+                    activePaletteData = superKnucklesPaletteData;
+                    activeCycleStart = 0;
+                    activeCycleEnd = Sonic3kConstants.PAL_CYCLE_SUPER_KNUCKLES_FRAME_COUNT
+                            * BYTES_PER_FRAME;
+                    activeCycleTimer = 2;
+                    activeWrapCycleTimer = 0xE;
+                } else {
+                    activePaletteData = hyperPaletteData;
+                    activeCycleStart = 0;
+                    activeCycleEnd = Sonic3kConstants.PAL_CYCLE_HYPER_SONIC_FRAME_COUNT
+                            * BYTES_PER_FRAME;
+                    activeCycleTimer = 4;
+                    activeWrapCycleTimer = 4;
+                }
+            }
+            case SUPER_TAILS -> {
+                activePaletteData = superTailsPaletteData;
+                activeCycleStart = 0;
+                activeCycleEnd = Sonic3kConstants.PAL_CYCLE_SUPER_TAILS_FRAME_COUNT
+                        * BYTES_PER_FRAME;
+                activeCycleTimer = 0xB;
+                activeWrapCycleTimer = 0xB;
+            }
+            case NORMAL -> {
+                activePaletteData = paletteData;
+                activeCycleStart = FADE_COMPLETE_OFFSET;
+                activeCycleEnd = CYCLE_WRAP_OFFSET;
+                activeCycleTimer = 6;
+                activeWrapCycleTimer = 6;
+            }
+        }
+        paletteFrame = activeCycleStart;
+    }
+
+    private void advanceActivePaletteFrame() {
+        paletteFrame += BYTES_PER_FRAME;
+        if (paletteFrame >= activeCycleEnd) {
+            paletteFrame = activeCycleStart;
+            paletteTimer = activeWrapCycleTimer;
+        }
+    }
+
+    private static S3kFormTier formTierFromSnapshot(int ordinal) {
+        S3kFormTier[] tiers = S3kFormTier.values();
+        return ordinal >= 0 && ordinal < tiers.length ? tiers[ordinal] : S3kFormTier.NORMAL;
     }
 
     /**
@@ -396,7 +547,7 @@ public class Sonic3kSuperStateController extends SuperStateController {
                 paletteState = -1;
             }
 
-            applyPaletteFrame(frameOffset);
+            applyPaletteFrame(frameOffset, true);
 
         } else if (paletteState == 2) {
             paletteTimer = 3;
@@ -413,8 +564,12 @@ public class Sonic3kSuperStateController extends SuperStateController {
     }
 
     private void applyPaletteFrame(int frameOffset) {
-        if (paletteData == null || paletteData.length == 0) return;
-        if (frameOffset < 0 || frameOffset + BYTES_PER_FRAME > paletteData.length) return;
+        applyPaletteFrame(frameOffset, false);
+    }
+
+    private void applyPaletteFrame(int frameOffset, boolean sonicFadeFrame) {
+        if (activePaletteData == null || activePaletteData.length == 0) return;
+        if (frameOffset < 0 || frameOffset + BYTES_PER_FRAME > activePaletteData.length) return;
 
         PaletteTarget target = resolvePaletteTarget(SONIC_PALETTE_INDEX);
         if (target == null) return;
@@ -422,20 +577,16 @@ public class Sonic3kSuperStateController extends SuperStateController {
         LevelManager levelManager = GameServices.levelOrNull();
         Level level = levelManager != null ? levelManager.getCurrentLevel() : null;
 
+        byte[] source = sonicFadeFrame
+                ? paletteData : activePaletteData;
+        if (source == null || frameOffset + BYTES_PER_FRAME > source.length) {
+            return;
+        }
         byte[] patch = new byte[BYTES_PER_FRAME];
-        System.arraycopy(paletteData, frameOffset, patch, 0, patch.length);
-        S3kPaletteWriteSupport.applyContiguousPatchToPalette(
-                GameServices.paletteOwnershipRegistryOrNull(),
-                level,
-                GameServices.graphics(),
-                target.palette(),
-                target.gpuLine(),
-                S3kPaletteOwners.SUPER_PALETTE,
-                S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE,
-                FIRST_COLOR_INDEX,
-                patch);
+        System.arraycopy(source, frameOffset, patch, 0, patch.length);
+        applySurfacePalettePatch(target, level, patch);
 
-        applyUnderwaterPaletteFrame(frameOffset, target.gpuLine(), levelManager, level);
+        applyUnderwaterPaletteFrame(frameOffset, target.gpuLine(), levelManager, level, sonicFadeFrame);
     }
 
     /**
@@ -447,7 +598,8 @@ public class Sonic3kSuperStateController extends SuperStateController {
      * whenever {@code Water_flag} is set.
      */
     private void applyUnderwaterPaletteFrame(int frameOffset, int gpuLine,
-                                             LevelManager levelManager, Level level) {
+                                             LevelManager levelManager, Level level,
+                                             boolean sonicFadeFrame) {
         // The donor palette in cross-game mode lives above the four level lines and
         // has no underwater counterpart.
         if (gpuLine != SONIC_PALETTE_INDEX || levelManager == null || level == null) {
@@ -462,28 +614,35 @@ public class Sonic3kSuperStateController extends SuperStateController {
         if (!water.hasWater(zone, act)) {
             return;
         }
-        byte[] underwaterData = underwaterPaletteTable(zone, act);
+        byte[] underwaterData = underwaterPaletteTable(zone, act, sonicFadeFrame);
         if (underwaterData == null || frameOffset + BYTES_PER_FRAME > underwaterData.length) {
             return;
         }
         byte[] patch = new byte[BYTES_PER_FRAME];
         System.arraycopy(underwaterData, frameOffset, patch, 0, patch.length);
-        S3kPaletteWriteSupport.applyUnderwaterContiguousPatch(
-                GameServices.paletteOwnershipRegistryOrNull(),
-                level,
-                GameServices.graphics(),
-                S3kPaletteOwners.SUPER_PALETTE,
-                S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE,
-                SONIC_PALETTE_INDEX,
-                FIRST_COLOR_INDEX,
-                patch);
+        int[] indices = activePaletteColorIndices();
+        for (int i = 0; i < indices.length; i++) {
+            byte[] word = {patch[i * 2], patch[i * 2 + 1]};
+            S3kPaletteWriteSupport.applyUnderwaterContiguousPatch(
+                    GameServices.paletteOwnershipRegistryOrNull(), level, GameServices.graphics(),
+                    S3kPaletteOwners.SUPER_PALETTE, S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE,
+                    SONIC_PALETTE_INDEX, indices[i], word);
+        }
     }
 
     /**
      * Returns the underwater cycle table for the zone/act, falling back to the
      * surface table when the zone declares no underwater variant.
      */
-    private byte[] underwaterPaletteTable(int zone, int act) {
+    private byte[] underwaterPaletteTable(int zone, int act, boolean sonicFadeFrame) {
+        if (sonicFadeFrame && usesSonicFormPresentation()) {
+            // Sonic and Hyper Sonic share the six-frame transformation fade.
+        } else if (activeFormTier == S3kFormTier.HYPER) {
+            return activePaletteData;
+        }
+        if (!usesSonicFormPresentation()) {
+            return activePaletteData;
+        }
         var waterData = GameServices.module().getWaterDataProvider();
         int addr = waterData != null
                 ? waterData.getUnderwaterSuperPaletteCycleAddress(zone, act)
@@ -501,5 +660,185 @@ public class Sonic3kSuperStateController extends SuperStateController {
             }
             return romReader.slice(address, len);
         });
+    }
+
+    private void applySurfacePalettePatch(PaletteTarget target, Level level, byte[] patch) {
+        int[] indices = activePaletteColorIndices();
+        for (int i = 0; i < indices.length; i++) {
+            byte[] word = {patch[i * 2], patch[i * 2 + 1]};
+            S3kPaletteWriteSupport.applyContiguousPatchToPalette(
+                    GameServices.paletteOwnershipRegistryOrNull(), level, GameServices.graphics(),
+                    target.palette(), target.gpuLine(), S3kPaletteOwners.SUPER_PALETTE,
+                    S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE, indices[i], word);
+        }
+    }
+
+    private int[] activePaletteColorIndices() {
+        return player instanceof Tails ? new int[] {8, 9, 11} : new int[] {2, 3, 4};
+    }
+
+    java.util.List<Integer> activePaletteColorIndicesForTest() {
+        return java.util.Arrays.stream(activePaletteColorIndices()).boxed().toList();
+    }
+
+    int activePaletteReloadForTest() {
+        return activeCycleTimer;
+    }
+
+    int activePaletteWrapReloadForTest() {
+        return activeWrapCycleTimer;
+    }
+
+    int activePaletteFrameCountForTest() {
+        return (activeCycleEnd - activeCycleStart) / BYTES_PER_FRAME;
+    }
+
+    private static long packPalette(byte[] palette) {
+        if (palette == null) {
+            return -1L;
+        }
+        long packed = 0;
+        for (byte value : palette) {
+            packed = (packed << 8) | (value & 0xFFL);
+        }
+        return packed;
+    }
+
+    private static byte[] unpackPalette(long packed) {
+        if (packed == -1L) {
+            return null;
+        }
+        byte[] palette = new byte[BYTES_PER_FRAME];
+        for (int i = palette.length - 1; i >= 0; i--) {
+            palette[i] = (byte) packed;
+            packed >>>= 8;
+        }
+        return palette;
+    }
+
+    private void captureNormalPalette() {
+        PaletteTarget target = resolvePaletteTarget(SONIC_PALETTE_INDEX);
+        if (target == null) {
+            return;
+        }
+        savedNormalPalette = new byte[BYTES_PER_FRAME];
+        int[] indices = activePaletteColorIndices();
+        for (int i = 0; i < indices.length; i++) {
+            int word = com.openggf.game.palette.PaletteWriteSupport.segaWordFromColor(
+                    target.palette().getColor(indices[i]));
+            savedNormalPalette[i * 2] = (byte) (word >>> 8);
+            savedNormalPalette[i * 2 + 1] = (byte) word;
+        }
+        captureNormalUnderwaterPalette(indices);
+    }
+
+    private void restoreNormalPalette() {
+        if (savedNormalPalette == null) {
+            return;
+        }
+        PaletteTarget target = resolvePaletteTarget(SONIC_PALETTE_INDEX);
+        if (target == null) {
+            return;
+        }
+        LevelManager levelManager = GameServices.levelOrNull();
+        Level level = levelManager != null ? levelManager.getCurrentLevel() : null;
+        int[] indices = activePaletteColorIndices();
+        for (int i = 0; i < indices.length; i++) {
+            byte[] word = {savedNormalPalette[i * 2], savedNormalPalette[i * 2 + 1]};
+            S3kPaletteWriteSupport.applyContiguousPatchToPalette(
+                    GameServices.paletteOwnershipRegistryOrNull(), level, GameServices.graphics(),
+                    target.palette(), target.gpuLine(), S3kPaletteOwners.SUPER_PALETTE,
+                    S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE, indices[i], word);
+        }
+        if (usesSonicFormPresentation()) {
+            restoreNormalUnderwaterSonicPalette(levelManager, level);
+        } else {
+            restoreSavedNormalUnderwaterPalette(levelManager, level, indices);
+        }
+    }
+
+    private void captureNormalUnderwaterPalette(int[] indices) {
+        LevelManager levelManager = GameServices.levelOrNull();
+        Level level = levelManager != null ? levelManager.getCurrentLevel() : null;
+        WaterSystem water = GameServices.waterOrNull();
+        if (level == null || water == null) {
+            return;
+        }
+        Palette[] palettes = water.getUnderwaterPalette(level.getZoneIndex(), levelManager.getCurrentAct());
+        if (palettes == null || palettes.length == 0 || palettes[0] == null) {
+            return;
+        }
+        savedNormalUnderwaterPalette = new byte[BYTES_PER_FRAME];
+        for (int i = 0; i < indices.length; i++) {
+            int word = com.openggf.game.palette.PaletteWriteSupport.segaWordFromColor(
+                    palettes[0].getColor(indices[i]));
+            savedNormalUnderwaterPalette[i * 2] = (byte) (word >>> 8);
+            savedNormalUnderwaterPalette[i * 2 + 1] = (byte) word;
+        }
+    }
+
+    private void restoreSavedNormalUnderwaterPalette(LevelManager levelManager, Level level, int[] indices) {
+        if (savedNormalUnderwaterPalette == null || levelManager == null || level == null) {
+            return;
+        }
+        for (int i = 0; i < indices.length; i++) {
+            byte[] word = {
+                    savedNormalUnderwaterPalette[i * 2],
+                    savedNormalUnderwaterPalette[i * 2 + 1]
+            };
+            S3kPaletteWriteSupport.applyUnderwaterContiguousPatch(
+                    GameServices.paletteOwnershipRegistryOrNull(), level, GameServices.graphics(),
+                    S3kPaletteOwners.SUPER_PALETTE, S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE,
+                    SONIC_PALETTE_INDEX, indices[i], word);
+        }
+    }
+
+    private void restoreNormalUnderwaterSonicPalette(LevelManager levelManager, Level level) {
+        if (!usesSonicFormPresentation() || levelManager == null || level == null || romReader == null) {
+            return;
+        }
+        WaterSystem water = GameServices.waterOrNull();
+        if (water == null || !water.hasWater(level.getZoneIndex(), levelManager.getCurrentAct())) {
+            return;
+        }
+        var waterData = GameServices.module().getWaterDataProvider();
+        int address = waterData != null
+                ? waterData.getUnderwaterSuperPaletteCycleAddress(
+                        level.getZoneIndex(), levelManager.getCurrentAct())
+                : 0;
+        byte[] patch = address > 0 && address + BYTES_PER_FRAME <= romReader.size()
+                ? romReader.slice(address, BYTES_PER_FRAME)
+                : paletteData != null ? java.util.Arrays.copyOf(paletteData, BYTES_PER_FRAME) : null;
+        if (patch != null) {
+            S3kPaletteWriteSupport.applyUnderwaterContiguousPatch(
+                    GameServices.paletteOwnershipRegistryOrNull(), level, GameServices.graphics(),
+                    S3kPaletteOwners.SUPER_PALETTE, S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE,
+                    SONIC_PALETTE_INDEX, FIRST_COLOR_INDEX, patch);
+        }
+    }
+
+    private void restoreCharacterPresentationImmediately() {
+        player.setSuperSonic(false);
+        com.openggf.sprites.playable.ObjectControlState.none().applyTo(player);
+        player.setForcedAnimationId(-1);
+        player.applyExternalPhysicsProfile(getNormalProfile());
+        if (normalAnimSet != null) {
+            player.setAnimationSet(normalAnimSet);
+        }
+        if (normalRenderer != null) {
+            player.setSpriteRenderer(normalRenderer);
+        }
+        player.setShieldVisible(true);
+        restoreNormalPalette();
+        try {
+            if (CrossGameFeatureProvider.isActive()) {
+                GameServices.audio().endDonorMusicOverride(
+                        GameServices.crossGameFeatures().getDonorGameId(), GameMusic.SUPER);
+            } else {
+                GameServices.audio().endMusicOverride(GameMusic.SUPER);
+            }
+        } catch (Exception e) {
+            LOGGER.fine("Could not clear Super music during lifecycle reset: " + e.getMessage());
+        }
     }
 }

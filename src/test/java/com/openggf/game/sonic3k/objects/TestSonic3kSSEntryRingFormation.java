@@ -6,6 +6,12 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
+import com.openggf.level.BigRingReturnState;
+import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageProvider;
+import com.openggf.game.rewind.identity.ObjectRefId;
+import com.openggf.camera.Camera;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
@@ -60,6 +66,7 @@ public class TestSonic3kSSEntryRingFormation {
 
     private GameStateManager gameState;
     private CapturingObjectServices services;
+    private Camera camera;
 
     @BeforeEach
     public void setUp() {
@@ -67,6 +74,8 @@ public class TestSonic3kSSEntryRingFormation {
         gameState = new GameStateManager();
         gameState.resetSession();
         services = new CapturingObjectServices().withGameState(gameState);
+        camera = mock(Camera.class);
+        services.withCamera(camera);
 
         // Ensure camera bounds include the ring position (default is 0,0,320,224)
         AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
@@ -266,33 +275,219 @@ public class TestSonic3kSSEntryRingFormation {
     }
 
     @Test
-    public void subtypeBitSevenDoesNotRequestUnregisteredHiddenPalace() {
-        Sonic3kSSEntryRingObjectInstance ring = createRing(0x80 | 3);
+    public void negativeSubtypeAlwaysUsesGlowingSuperEmeraldRingAndRoutesAfterFlash() {
+        CapturingRing ring = createCapturingRing(0x80 | 3);
         AbstractPlayableSprite player = createMockPlayerAt(RING_X, RING_Y);
 
         advanceToIdleAndTouch(ring, player);
 
-        assertTrue(ring.isDestroyed(), "HPZ-routed ring should be removed after touch");
-        assertEquals(-1, services.requestedZone, "HPZ is not registered as a loadable runtime zone yet");
-        assertEquals(-1, services.requestedAct);
-        assertFalse(services.deactivateLevelNow, "Unavailable HPZ route must not freeze level updates for a transition");
-        assertTrue(gameState.isSpecialRingCollected(3), "HPZ subtype flag must not pollute the collection bit index");
-        verify(player).addRings(50);
+        assertTrue(ring.isSuperEmeraldRing(),
+                "ROM negative subtypes set the rotating Super Emerald ring palette unconditionally");
+        assertFalse(ring.isDestroyed(), "collision starts the flash; it must not transition immediately");
+        assertNotNull(ring.flash);
+        assertNull(services.savedReturn, "Save_Level_Data2 runs at flash completion, not collision");
+        assertEquals(-1, services.requestedZone);
+
+        finishFlash(ring.flash, player);
+
+        assertEquals(Sonic3kZoneIds.ZONE_HPZ, services.requestedZone);
+        assertEquals(1, services.requestedAct);
+        assertTrue(services.deactivateLevelNow);
+        assertNotNull(services.savedReturn);
+        assertEquals(RING_X, services.savedReturn.playerX());
+        assertEquals(RING_Y, services.savedReturn.playerY());
+        assertTrue(gameState.isSpecialRingCollected(3),
+                "the negative subtype must still address the masked physical-ring bit");
+        verify(player, never()).addRings(anyInt());
+        assertEquals(1, services.enterSsSfxCount,
+                "SSEntryFlash_GoSS plays EnterSS once on the sanctuary route");
     }
 
     @Test
-    public void allChaosAndSuperEmeraldsAwardRingsUntilHiddenPalaceIsRegistered() {
+    public void positiveMhzRingWithAllChaosRoutesToSanctuaryAfterFlash() {
+        collectAllChaosEmeralds();
+        services.currentZone = Sonic3kZoneIds.ZONE_MHZ;
+        CapturingRing ring = createCapturingRing(4);
+        AbstractPlayableSprite player = createMockPlayerAt(RING_X, RING_Y);
+
+        advanceToIdleAndTouch(ring, player);
+
+        assertTrue(ring.isSuperEmeraldRing(),
+                "locked-on SK-side ring with seven Chaos Emeralds uses the rotating palette");
+        assertNotNull(ring.flash);
+        assertEquals(-1, services.requestedZone);
+
+        finishFlash(ring.flash, player);
+
+        assertEquals(Sonic3kZoneIds.ZONE_HPZ, services.requestedZone);
+        assertEquals(1, services.requestedAct);
+        verify(player, never()).addRings(anyInt());
+        assertEquals(1, services.enterSsSfxCount);
+    }
+
+    @Test
+    public void superEmeraldPaletteLeadInUsesRomDelayAndColors() {
+        Sonic3kSSEntryRingObjectInstance ring = createRing(0x80);
+
+        ring.update(1, null);
+        assertEquals(1, ring.getPaletteStepForTest());
+        assertArrayEquals(new int[] {0xECE, 0xA8A, 0x868},
+                ring.getLastAppliedPaletteWordsForTest());
+
+        for (int frame = 2; frame <= 4; frame++) {
+            ring.update(frame, null);
+        }
+        assertEquals(1, ring.getPaletteStepForTest(),
+                "palscriptdata 3 holds the first color for four object updates");
+
+        ring.update(5, null);
+        assertEquals(2, ring.getPaletteStepForTest());
+        assertArrayEquals(new int[] {0xAEE, 0x6EE, 0x0AA},
+                ring.getLastAppliedPaletteWordsForTest());
+    }
+
+    @Test
+    public void s3kProviderDoesNotDoublePlayFlashOwnedEnterSfx() {
+        assertEquals(-1, new Sonic3kSpecialStageProvider().getTransitionSfxId());
+    }
+
+    @Test
+    public void positiveMhzRingWithoutAllChaosStillRequestsOrdinarySpecialStage() {
+        services.currentZone = Sonic3kZoneIds.ZONE_MHZ;
+        CapturingRing ring = createCapturingRing(5);
+        AbstractPlayableSprite player = createMockPlayerAt(RING_X, RING_Y);
+
+        advanceToIdleAndTouch(ring, player);
+        assertFalse(ring.isSuperEmeraldRing());
+        finishFlash(ring.flash, player);
+
+        assertEquals(-1, services.requestedZone);
+        assertEquals(1, services.specialStageRequests);
+        assertEquals(1, services.enterSsSfxCount,
+                "ordinary entry must not defer a second EnterSS playback to GameLoop");
+    }
+
+    @Test
+    public void flashCompletionUsesLiveEmeraldAndSaved2StateRatherThanCollisionState() {
+        services.currentZone = Sonic3kZoneIds.ZONE_MHZ;
+        CapturingRing ring = createCapturingRing(5);
+        AbstractPlayableSprite player = createMockPlayerAt(RING_X, RING_Y);
+
+        advanceToIdleAndTouch(ring, player);
+        assertNotNull(ring.flash);
+        assertNull(services.savedReturn);
+
+        collectAllChaosEmeralds();
+        when(player.getCentreX()).thenReturn((short) 0x222);
+        when(player.getCentreY()).thenReturn((short) 0x333);
+        when(player.getRingCount()).thenReturn(77);
+        when(camera.getX()).thenReturn((short) 0x180);
+        when(camera.getY()).thenReturn((short) 0x90);
+
+        finishFlash(ring.flash, player);
+
+        assertEquals(Sonic3kZoneIds.ZONE_HPZ, services.requestedZone,
+                "GoSS must evaluate the live completion state, not collision-time emerald progress");
+        assertNotNull(services.savedReturn);
+        assertEquals(0x222, services.savedReturn.playerX());
+        assertEquals(0x333, services.savedReturn.playerY());
+        assertEquals(77, services.savedReturn.rings());
+        assertEquals(0x180, services.savedReturn.cameraX());
+        assertEquals(0x90, services.savedReturn.cameraY());
+    }
+
+    @Test
+    public void positiveFbzRingUsesSkSideRoutingPredicate() {
+        collectAllChaosEmeralds();
+        services.currentZone = Sonic3kZoneIds.ZONE_FBZ;
+        CapturingRing ring = createCapturingRing(6);
+        AbstractPlayableSprite player = createMockPlayerAt(RING_X, RING_Y);
+
+        advanceToIdleAndTouch(ring, player);
+        assertTrue(ring.isSuperEmeraldRing(), "FBZ is the ROM predicate's exceptional SK-side zone");
+        finishFlash(ring.flash, player);
+
+        assertEquals(Sonic3kZoneIds.ZONE_HPZ, services.requestedZone);
+    }
+
+    @Test
+    public void positiveLbzRingWithAllChaosAwardsFiftyBecauseItIsS3Side() {
+        collectAllChaosEmeralds();
+        services.currentZone = Sonic3kZoneIds.ZONE_LBZ;
+        Sonic3kSSEntryRingObjectInstance ring = createRing(7);
+        AbstractPlayableSprite player = createMockPlayerAt(RING_X, RING_Y);
+
+        advanceToIdleAndTouch(ring, player);
+
+        assertTrue(ring.isDestroyed());
+        assertFalse(ring.isSuperEmeraldRing());
+        verify(player).addRings(50);
+        assertEquals(2, services.bigRingSfxCount,
+                "ROM loc_61794 deliberately plays BigRing again for the 50-ring reward");
+    }
+
+    @Test
+    public void waitingFlashRewindCompletesAfterParentRingHasBeenDeleted() {
+        services.currentZone = Sonic3kZoneIds.ZONE_MHZ;
+        AbstractPlayableSprite player = createMockPlayerAt(RING_X, RING_Y);
+        Sonic3kSSEntryFlashObjectInstance source =
+                new Sonic3kSSEntryFlashObjectInstance(null, RING_X, RING_Y, 0x80 | 3);
+        source.setServices(services);
+
+        for (int frame = 1; frame <= 20; frame++) {
+            source.update(frame, player);
+        }
+        var snapshot = source.captureRewindState();
+
+        Sonic3kSSEntryFlashObjectInstance restored =
+                new Sonic3kSSEntryFlashObjectInstance(null, RING_X, RING_Y, 0x80 | 3);
+        restored.setServices(services);
+        restored.restoreRewindState(snapshot);
+        for (int frame = 21; frame <= 60 && services.requestedZone < 0; frame++) {
+            restored.update(frame, player);
+        }
+
+        assertEquals(Sonic3kZoneIds.ZONE_HPZ, services.requestedZone);
+        assertNotNull(services.savedReturn);
+        assertTrue(gameState.isSpecialRingCollected(3));
+        assertEquals(1, services.enterSsSfxCount);
+    }
+
+    @Test
+    public void flashSnapshotCarriesManagedParentIdentityWithoutCapturingJavaParent() {
+        ObjectRefId parentId = ObjectRefId.dynamic(4, 0, 1);
+        S3kBigRingTransitionIntent intent =
+                new S3kBigRingTransitionIntent(1, parentId);
+        Sonic3kSSEntryFlashObjectInstance source =
+                new Sonic3kSSEntryFlashObjectInstance(null, RING_X, RING_Y, intent);
+        source.setServices(services);
+        var snapshot = source.captureRewindState();
+
+        Sonic3kSSEntryFlashObjectInstance restored =
+                new Sonic3kSSEntryFlashObjectInstance(null, RING_X, RING_Y, 1);
+        restored.setServices(services);
+        restored.restoreRewindState(snapshot);
+
+        assertEquals(parentId, restored.transitionIntentForTest().parentRingId());
+        assertNull(restored.parentRingForTest(),
+                "Java parent references are never nearest-position reconstructed");
+    }
+
+    @Test
+    public void allSuperEmeraldsAwardFiftyOnSkSideInsteadOfEnteringSanctuary() {
         collectAllChaosAndSuperEmeralds();
+        services.currentZone = Sonic3kZoneIds.ZONE_MHZ;
         Sonic3kSSEntryRingObjectInstance ring = createRing(4);
         AbstractPlayableSprite player = createMockPlayerAt(RING_X, RING_Y);
 
         advanceToIdleAndTouch(ring, player);
 
-        assertTrue(ring.isDestroyed(), "Completed emerald state should remove the ring");
-        assertEquals(-1, services.requestedZone, "Completionist big-ring touch must not request unregistered HPZ");
+        assertTrue(ring.isDestroyed(), "completed emerald state should remove the ring");
         assertEquals(-1, services.requestedAct);
-        assertFalse(services.deactivateLevelNow);
         verify(player).addRings(50);
+        assertArrayEquals(new int[] {0xEE0, 0x088, 0x044},
+                ring.getLastAppliedPaletteWordsForTest(),
+                "ring deletion restores the three ROM palette words");
     }
 
     @Test
@@ -374,6 +569,26 @@ public class TestSonic3kSSEntryRingFormation {
         }
     }
 
+    private CapturingRing createCapturingRing(int subtype) {
+        setConstructionContext(services);
+        try {
+            CapturingRing ring = new CapturingRing(
+                    new ObjectSpawn(RING_X, RING_Y, 0x85, subtype, 0, false, 0));
+            ring.setServices(services);
+            return ring;
+        } finally {
+            clearConstructionContext();
+        }
+    }
+
+    private static void finishFlash(Sonic3kSSEntryFlashObjectInstance flash,
+            AbstractPlayableSprite player) {
+        assertNotNull(flash);
+        for (int frame = 1; frame <= 41; frame++) {
+            flash.update(frame, player);
+        }
+    }
+
     private static void advanceToIdleAndTouch(Sonic3kSSEntryRingObjectInstance ring, AbstractPlayableSprite player) {
         for (int frame = 1; frame <= FORMATION_TOTAL_FRAMES + 1; frame++) {
             ring.update(frame, player);
@@ -390,10 +605,36 @@ public class TestSonic3kSSEntryRingFormation {
         assertTrue(gameState.hasAllSuperEmeralds(), "Precondition: all super emeralds collected");
     }
 
+    private void collectAllChaosEmeralds() {
+        gameState.configureSpecialStageProgress(7, 7);
+        for (int i = 0; i < 7; i++) {
+            gameState.markEmeraldCollected(i);
+        }
+    }
+
+    private static final class CapturingRing extends Sonic3kSSEntryRingObjectInstance {
+        private Sonic3kSSEntryFlashObjectInstance flash;
+
+        private CapturingRing(ObjectSpawn spawn) {
+            super(spawn);
+        }
+
+        @Override
+        protected void spawnDynamicObject(AbstractObjectInstance object) {
+            flash = (Sonic3kSSEntryFlashObjectInstance) object;
+            flash.setServices(services());
+        }
+    }
+
     private static class CapturingObjectServices extends TestObjectServices {
         int requestedZone = -1;
         int requestedAct = -1;
         boolean deactivateLevelNow;
+        int currentZone;
+        int specialStageRequests;
+        BigRingReturnState savedReturn;
+        int bigRingSfxCount;
+        int enterSsSfxCount;
 
         @Override
         public CapturingObjectServices withGameState(GameStateManager gameState) {
@@ -406,6 +647,30 @@ public class TestSonic3kSSEntryRingFormation {
             this.requestedZone = zone;
             this.requestedAct = act;
             this.deactivateLevelNow = deactivateLevelNow;
+        }
+
+        @Override
+        public int romZoneId() {
+            return currentZone;
+        }
+
+        @Override
+        public void requestSpecialStageEntry() {
+            specialStageRequests++;
+        }
+
+        @Override
+        public void saveBigRingReturn(BigRingReturnState state) {
+            savedReturn = state;
+        }
+
+        @Override
+        public void playSfx(int soundId) {
+            if (soundId == Sonic3kSfx.BIG_RING.id) {
+                bigRingSfxCount++;
+            } else if (soundId == Sonic3kSfx.ENTER_SS.id) {
+                enterSsSfxCount++;
+            }
         }
     }
 

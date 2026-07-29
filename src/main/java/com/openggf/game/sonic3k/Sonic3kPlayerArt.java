@@ -56,6 +56,25 @@ public class Sonic3kPlayerArt {
         };
     }
 
+    /**
+     * Resolves the ROM-backed sprite resources for a character's active S3K
+     * form. Only Sonic changes mapping/DPLC tables; Tails and Knuckles retain
+     * their own character resources while their powered palettes/effects are
+     * handled by their owning presentation systems.
+     */
+    public SpriteArtSet loadFormArtSet(String characterCode, S3kFormTier tier) throws IOException {
+        if (characterCode == null || tier == null) {
+            return null;
+        }
+        String normalized = characterCode.trim().toLowerCase(Locale.ROOT);
+        return switch (normalized) {
+            case "sonic" -> tier == S3kFormTier.NORMAL ? loadSonic() : loadSuperSonicArtSet();
+            case "tails" -> loadTails();
+            case "knuckles" -> loadKnuckles();
+            default -> null;
+        };
+    }
+
     public SpriteArtSet loadSonic() throws IOException {
         if (cachedSonic != null) {
             return cachedSonic;

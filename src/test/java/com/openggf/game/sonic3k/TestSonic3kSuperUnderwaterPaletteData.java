@@ -27,6 +27,10 @@ class TestSonic3kSuperUnderwaterPaletteData {
     private static final int[] SURFACE_FIRST_FRAME = {0x0E66, 0x0C42, 0x0822};
     private static final int[] AIZ_ICZ_FIRST_FRAME = {0x0A82, 0x0860, 0x0640};
     private static final int[] HCZ_CNZ_LBZ_FIRST_FRAME = {0x0C66, 0x0A44, 0x0624};
+    private static final int[] HYPER_FIRST_FRAME = {0x0EEC, 0x0ECA, 0x0EA8};
+    private static final int[] SUPER_TAILS_FIRST_FRAME = {0x00AE, 0x008E, 0x046A};
+    private static final int[] SUPER_KNUCKLES_FIRST_FRAME = {0x0A6E, 0x064E, 0x0428};
+    private static final int[] KNUCKLES_REVERT_FRAME = {0x064E, 0x020C, 0x0206};
 
     @Test
     void underwaterCycleTableAddressesMatchRomData() throws IOException {
@@ -37,6 +41,18 @@ class TestSonic3kSuperUnderwaterPaletteData {
                 AIZ_ICZ_FIRST_FRAME);
         assertFirstFrame(rom, Sonic3kConstants.PAL_CYCLE_SUPER_SONIC_UNDERWATER_HCZ_CNZ_LBZ_ADDR,
                 HCZ_CNZ_LBZ_FIRST_FRAME);
+    }
+
+    @Test
+    void advancedCharacterCycleTableAddressesMatchRomData() throws IOException {
+        Rom rom = GameServices.rom().getRom();
+
+        assertFirstFrame(rom, Sonic3kConstants.PAL_CYCLE_HYPER_SONIC_ADDR, HYPER_FIRST_FRAME);
+        assertFirstFrame(rom, Sonic3kConstants.PAL_CYCLE_SUPER_TAILS_ADDR, SUPER_TAILS_FIRST_FRAME);
+        assertFirstFrame(rom, Sonic3kConstants.PAL_CYCLE_SUPER_KNUCKLES_ADDR, SUPER_KNUCKLES_FIRST_FRAME);
+        assertFirstFrame(rom, Sonic3kConstants.PAL_CYCLE_SUPER_KNUCKLES_REVERT_ADDR,
+                KNUCKLES_REVERT_FRAME);
+        assertEquals(10, Sonic3kConstants.PAL_CYCLE_SUPER_KNUCKLES_FRAME_COUNT);
     }
 
     @Test

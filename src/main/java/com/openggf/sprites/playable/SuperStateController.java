@@ -3,6 +3,7 @@ package com.openggf.sprites.playable;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.LevelState;
+import com.openggf.game.ModApi;
 import com.openggf.game.PhysicsProfile;
 import com.openggf.graphics.RenderContext;
 import com.openggf.level.Level;
@@ -12,7 +13,7 @@ import com.openggf.sprites.animation.SpriteAnimationProfile;
 
 import java.util.logging.Logger;
 
-@com.openggf.game.ModApi
+@ModApi
 public abstract class SuperStateController {
     private static final Logger LOGGER = Logger.getLogger(SuperStateController.class.getName());
 
@@ -47,6 +48,11 @@ public abstract class SuperStateController {
 
     public boolean isSuper() {
         return state == SuperState.SUPER || state == SuperState.TRANSFORMING;
+    }
+
+    /** Semantic capability query; game-specific controllers override when active. */
+    public boolean isHyperFormActive() {
+        return false;
     }
 
     public void debugActivate() {
@@ -123,7 +129,29 @@ public abstract class SuperStateController {
     protected final RewindState createRewindState(int paletteState, int paletteFrame,
                                                    int paletteTimer, int transformFramesRemaining) {
         return new RewindState(state, ringDrainCounter, paletteState, paletteFrame,
-                paletteTimer, transformFramesRemaining);
+                paletteTimer, transformFramesRemaining, -1, -1L, -1L);
+    }
+
+    /**
+     * Creates a snapshot with a game-owned presentation tier.
+     *
+     * <p>The generic controller treats the value as opaque. S3K uses it to keep
+     * Super/Hyper/Super-Tails presentation stable across rewind.
+     */
+    protected final RewindState createRewindState(int paletteState, int paletteFrame,
+                                                   int paletteTimer, int transformFramesRemaining,
+                                                   int presentationTier) {
+        return new RewindState(state, ringDrainCounter, paletteState, paletteFrame,
+                paletteTimer, transformFramesRemaining, presentationTier, -1L, -1L);
+    }
+
+    protected final RewindState createRewindState(int paletteState, int paletteFrame,
+                                                   int paletteTimer, int transformFramesRemaining,
+                                                   int presentationTier, long savedNormalPalette,
+                                                   long savedNormalUnderwaterPalette) {
+        return new RewindState(state, ringDrainCounter, paletteState, paletteFrame,
+                paletteTimer, transformFramesRemaining, presentationTier,
+                savedNormalPalette, savedNormalUnderwaterPalette);
     }
 
     protected final void restoreCoreRewindState(RewindState rewindState) {
@@ -344,6 +372,9 @@ public abstract class SuperStateController {
             int paletteState,
             int paletteFrame,
             int paletteTimer,
-            int transformFramesRemaining
+            int transformFramesRemaining,
+            int presentationTier,
+            long savedNormalPalette,
+            long savedNormalUnderwaterPalette
     ) {}
 }

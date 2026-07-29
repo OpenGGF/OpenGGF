@@ -615,8 +615,8 @@ final class DefaultObjectRewindPolicies {
             // Per-frame horizontal-spring collision scratch. update() clears it before
             // recomputing proactive spring hits, so it must never cross a rewind boundary.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kSpringObjectInstance", "proactiveTriggeredThisUpdate"), RewindFieldPolicy.TRANSIENT),
-            // SS-entry flash parent links are structural and can outlive a ring removed from
-            // ObjectManager while the flash finishes the transition. Restore relinks by position.
+            // The immutable transitionIntent carries an optional stable parent
+            // ObjectRefId. Unmanaged parents intentionally encode no id.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.Sonic3kSSEntryFlashObjectInstance", "parentRing"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.level.objects.AbstractBadnikInstance", "destructionConfig"), RewindFieldPolicy.TRANSIENT),
             Map.entry(new FieldKey("com.openggf.level.objects.AbstractMonitorObjectInstance", "effectTarget"), RewindFieldPolicy.TRANSIENT),

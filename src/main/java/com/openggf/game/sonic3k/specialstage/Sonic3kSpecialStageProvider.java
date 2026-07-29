@@ -9,7 +9,6 @@ import com.openggf.game.SpecialStageAccessType;
 import com.openggf.game.SpecialStageDebugProvider;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.rewind.RewindSnapshottable;
-import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -40,8 +39,9 @@ public class Sonic3kSpecialStageProvider implements SpecialStageProvider {
 
     @Override
     public int getTransitionSfxId() {
-        // ROM: sfx_EnterSS ($AF) — played by SSEntryFlash_GoSS before entering special stage
-        return Sonic3kSfx.ENTER_SS.id;
+        // Obj_SSEntryFlash plays sfx_EnterSS at SSEntryFlash_GoSS for both
+        // ordinary and sanctuary routes. Returning it here would double-play it.
+        return -1;
     }
 
     @Override

@@ -2,6 +2,7 @@ package com.openggf.level;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.LevelState;
+import com.openggf.game.ModApi;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /**
@@ -10,7 +11,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
  * Restored on return so the player resumes at the ring location with
  * correct collision path, camera boundaries, and water height.
  */
-@com.openggf.game.ModApi
+@ModApi
 public record BigRingReturnState(
         int playerX,
         int playerY,
@@ -21,8 +22,26 @@ public record BigRingReturnState(
         byte lrbSolidBit,
         int cameraMaxY,
         int dynamicResizeRoutine,
-        int meanWaterLevel
+        int meanWaterLevel,
+        int originZone,
+        int originAct,
+        int checkpointIndex,
+        int starPostActivationMark,
+        int checkpointX,
+        int checkpointY,
+        int checkpointCameraX,
+        int checkpointCameraY
 ) {
+    public BigRingReturnState(
+            int playerX, int playerY, int cameraX, int cameraY, int rings,
+            byte topSolidBit, byte lrbSolidBit, int cameraMaxY,
+            int dynamicResizeRoutine, int meanWaterLevel
+    ) {
+        this(playerX, playerY, cameraX, cameraY, rings, topSolidBit, lrbSolidBit,
+                cameraMaxY, dynamicResizeRoutine, meanWaterLevel,
+                -1, -1, -1, -1, 0, 0, 0, 0);
+    }
+
     public BigRingReturnState(
             int playerX,
             int playerY,
@@ -36,6 +55,16 @@ public record BigRingReturnState(
     ) {
         this(playerX, playerY, cameraX, cameraY, rings, topSolidBit, lrbSolidBit,
                 cameraMaxY, dynamicResizeRoutine, 0);
+    }
+
+    /** Restores the origin level's checkpoint/star-post state after leaving HPZ. */
+    public void restoreCheckpointState(com.openggf.game.RespawnState checkpointState) {
+        if (checkpointState == null) {
+            return;
+        }
+        checkpointState.restoreFromSaved(
+                checkpointX, checkpointY, checkpointCameraX, checkpointCameraY, checkpointIndex);
+        checkpointState.restoreStarPostActivationMark(starPostActivationMark);
     }
 
     /**

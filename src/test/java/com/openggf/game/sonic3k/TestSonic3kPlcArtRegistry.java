@@ -9,6 +9,7 @@ import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.level.resources.CompressionType;
+import com.openggf.level.resources.PlcParser;
 import com.openggf.tests.RomTestUtils;
 import org.junit.jupiter.api.Test;
 
@@ -43,6 +44,114 @@ public class TestSonic3kPlcArtRegistry {
             "provider:" + Sonic3kObjectArtKeys.MONITOR + ":buildMonitorAnimations"
     );
     private static final Set<String> HARDCODED_MAPPING_BUILDERS = Set.of();
+
+    @Test
+    public void hpzSanctuaryPlanUsesRomBackedEmeraldAndTeleporterAssets() {
+        Sonic3kPlcArtRegistry.ZoneArtPlan plan =
+                Sonic3kPlcArtRegistry.getPlan(Sonic3kZoneIds.ZONE_HPZ, 1);
+
+        Sonic3kPlcArtRegistry.LevelArtEntry master = levelEntry(
+                plan, Sonic3kObjectArtKeys.HPZ_MASTER_EMERALD);
+        assertEquals(Sonic3kConstants.MAP_HPZ_EMERALD_MISC_ADDR, master.mappingAddr());
+        assertEquals(Sonic3kConstants.ARTTILE_HPZ_EMERALD_MISC, master.artTileBase());
+        assertEquals(3, master.palette());
+        assertEquals(37, master.mappingFrameCount());
+
+        Sonic3kPlcArtRegistry.LevelArtEntry gray = levelEntry(
+                plan, Sonic3kObjectArtKeys.HPZ_GRAY_EMERALD);
+        assertEquals(Sonic3kConstants.MAP_HPZ_EMERALD_MISC_ADDR, gray.mappingAddr());
+        assertEquals(Sonic3kConstants.ARTTILE_HPZ_GRAY_EMERALD, gray.artTileBase());
+        assertEquals(37, gray.mappingFrameCount());
+        assertArrayEquals(new int[] {0x1E}, gray.frameFilter(),
+                "Gray sheet must compact only ROM mapping_frame $1E");
+
+        Sonic3kPlcArtRegistry.StandaloneArtEntry small = standaloneEntry(
+                plan, Sonic3kObjectArtKeys.HPZ_SMALL_EMERALDS);
+        assertEquals(Sonic3kConstants.ART_KOSM_HPZ_SMALL_EMERALDS_ADDR, small.artAddr());
+        assertEquals(Sonic3kConstants.MAP_HPZ_CHAOS_EMERALDS_ADDR, small.mappingAddr());
+        assertEquals(8, small.mappingFrameCount());
+
+        Sonic3kPlcArtRegistry.StandaloneArtEntry teleporter = standaloneEntry(
+                plan, Sonic3kObjectArtKeys.HPZ_ENTRY_TELEPORTER);
+        assertEquals(Sonic3kConstants.ART_KOSM_TELEPORTER_ADDR, teleporter.artAddr());
+        assertEquals(Sonic3kConstants.MAP_SSZ_HPZ_TELEPORTER_ADDR, teleporter.mappingAddr());
+        assertEquals(11, teleporter.mappingFrameCount());
+    }
+
+    @Test
+    public void hpzEmeraldMappingTablesMatchRomShape() throws IOException {
+        File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");
+
+        try (Rom rom = new Rom()) {
+            assumeTrue(rom.open(romFile.getPath()), "Failed to open Sonic 3K ROM");
+            RomByteReader reader = RomByteReader.fromRom(rom);
+
+            List<SpriteMappingFrame> misc = S3kSpriteDataLoader.loadMappingFrames(
+                    reader, Sonic3kConstants.MAP_HPZ_EMERALD_MISC_ADDR, 37);
+            assertEquals(37, misc.size());
+            assertEquals(List.of(5, 5, 5, 5, 5, 5, 5, 5, 26),
+                    misc.subList(0, 9).stream().map(frame -> frame.pieces().size()).toList());
+            assertEquals(0x6E, misc.get(8).pieces().getFirst().tileIndex());
+            assertEquals(0, misc.get(29).pieces().size());
+            assertEquals(4, misc.get(30).pieces().size());
+            List<SpriteMappingPiece> gray = misc.get(30).pieces();
+            assertPieceShape(gray.get(0), 3, 3, 0);
+            assertPieceShape(gray.get(1), 1, 1, 9);
+            assertPieceShape(gray.get(2), 3, 3, 0);
+            assertPieceShape(gray.get(3), 1, 1, 9);
+
+            List<SpriteMappingFrame> small = S3kSpriteDataLoader.loadMappingFrames(
+                    reader, Sonic3kConstants.MAP_HPZ_CHAOS_EMERALDS_ADDR, 8);
+            assertEquals(8, small.size());
+            assertTrue(small.stream().allMatch(frame -> frame.pieces().size() == 1));
+            assertEquals(List.of(6, 2, 5, 0, 7, 1, 3, 4),
+                    small.stream().map(frame -> frame.pieces().getFirst().tileIndex()).toList());
+
+            List<SpriteMappingFrame> teleporter = S3kSpriteDataLoader.loadMappingFrames(
+                    reader, Sonic3kConstants.MAP_SSZ_HPZ_TELEPORTER_ADDR, 11);
+            assertEquals(11, teleporter.size());
+            assertEquals(List.of(3, 1, 1, 8, 8, 8, 8, 8, 8, 8, 3),
+                    teleporter.stream().map(frame -> frame.pieces().size()).toList());
+            assertEquals(List.of(
+                            "3x3@9,3x3@9,3x3@0",
+                            "1x2@18",
+                            "1x4@18",
+                            repeatedShape(8, "1x4@22"),
+                            repeatedShape(8, "1x4@22"),
+                            repeatedShape(8, "2x4@22"),
+                            repeatedShape(8, "2x4@22"),
+                            repeatedShape(8, "3x4@22"),
+                            repeatedShape(8, "3x4@22"),
+                            repeatedShape(8, "1x4@18"),
+                            "3x3@9,3x3@9,3x3@0"),
+                    teleporter.stream().map(TestSonic3kPlcArtRegistry::shapeSignature).toList());
+        }
+    }
+
+    @Test
+    public void hpzPlc48PointsAtExactEmeraldNemesisSources() throws IOException {
+        File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");
+
+        try (Rom rom = new Rom()) {
+            assumeTrue(rom.open(romFile.getPath()), "Failed to open Sonic 3K ROM");
+            PlcParser.PlcDefinition plc =
+                    Sonic3kPlcLoader.parsePlc(rom, Sonic3kConstants.HPZ_LEVEL_PLC);
+
+            assertEquals(2, plc.entries().size());
+            assertEquals(
+                    new PlcParser.PlcEntry(
+                            Sonic3kConstants.ART_NEM_HPZ_EMERALD_MISC_ADDR,
+                            Sonic3kConstants.ARTTILE_HPZ_EMERALD_MISC),
+                    plc.entries().get(0));
+            assertEquals(
+                    new PlcParser.PlcEntry(
+                            Sonic3kConstants.ART_NEM_HPZ_GRAY_EMERALD_ADDR,
+                            Sonic3kConstants.ARTTILE_HPZ_GRAY_EMERALD),
+                    plc.entries().get(1));
+        }
+    }
 
     @Test
     public void cnzEndBossMappingsMatchRomShape() throws IOException {
@@ -1695,6 +1804,41 @@ public class TestSonic3kPlcArtRegistry {
                     "piece count for mapping 0x" + Integer.toHexString(mappingAddress)
                             + " frame " + frameIndex);
         }
+    }
+
+    private static Sonic3kPlcArtRegistry.StandaloneArtEntry standaloneEntry(
+            Sonic3kPlcArtRegistry.ZoneArtPlan plan, String key) {
+        return plan.standaloneArt().stream()
+                .filter(entry -> key.equals(entry.key()))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("Missing standalone art entry: " + key));
+    }
+
+    private static Sonic3kPlcArtRegistry.LevelArtEntry levelEntry(
+            Sonic3kPlcArtRegistry.ZoneArtPlan plan, String key) {
+        return plan.levelArt().stream()
+                .filter(entry -> key.equals(entry.key()))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("Missing level art entry: " + key));
+    }
+
+    private static void assertPieceShape(
+            SpriteMappingPiece piece, int widthTiles, int heightTiles, int tileIndex) {
+        assertEquals(widthTiles, piece.widthTiles());
+        assertEquals(heightTiles, piece.heightTiles());
+        assertEquals(tileIndex, piece.tileIndex());
+    }
+
+    private static String shapeSignature(SpriteMappingFrame frame) {
+        return frame.pieces().stream()
+                .map(piece -> piece.widthTiles() + "x" + piece.heightTiles() + "@" + piece.tileIndex())
+                .collect(java.util.stream.Collectors.joining(","));
+    }
+
+    private static String repeatedShape(int count, String shape) {
+        return java.util.stream.IntStream.range(0, count)
+                .mapToObj(ignored -> shape)
+                .collect(java.util.stream.Collectors.joining(","));
     }
 
     @Test

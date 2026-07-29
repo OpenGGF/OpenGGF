@@ -53,6 +53,21 @@ public class Sonic3kConstants {
     public static final int HPZ_MAIN_PALETTE_ADDR = 0x0669D2;
     public static final int HPZ_LEVEL_PLC = 0x48;
 
+    // HPZ Super Emerald sanctuary object assets (S&K half).
+    // PLC $48 supplies the two Nemesis archives. Obj_HPZSSEntryControl queues
+    // the Kosinski-moduled teleporter and small-emerald archives separately.
+    public static final int ART_NEM_HPZ_EMERALD_MISC_ADDR = 0x174B28;
+    public static final int ART_NEM_HPZ_GRAY_EMERALD_ADDR = 0x1757B4;
+    public static final int ART_KOSM_TELEPORTER_ADDR = 0x17588A;
+    public static final int ART_KOSM_HPZ_SMALL_EMERALDS_ADDR = 0x1759AC;
+    public static final int MAP_HPZ_EMERALD_MISC_ADDR = 0x091006;
+    public static final int MAP_HPZ_CHAOS_EMERALDS_ADDR = 0x09147E;
+    public static final int ARTTILE_HPZ_EMERALD_MISC = 0x03B5;
+    public static final int ARTTILE_HPZ_GRAY_EMERALD = 0x0477;
+    public static final int ARTTILE_HPZ_ENTRY_TELEPORTER = 0x0488;
+    public static final int ARTTILE_HPZ_SMALL_EMERALDS = 0x04AC;
+    public static final int ARTTILE_HPZ_TELEPORTER = 0x052E;
+
     // ===== Level sizes table =====
     // 8 bytes per act: dc.w xstart, xend, ystart, yend
     // Sequential: AIZ1, AIZ2, HCZ1, HCZ2, ...
@@ -568,6 +583,16 @@ public class Sonic3kConstants {
     // AIZ/ICZ table for those two zones and the HCZ/CNZ/LBZ table otherwise.
     public static final int PAL_CYCLE_SUPER_SONIC_UNDERWATER_AIZ_ICZ_ADDR = 0x0039CA;
     public static final int PAL_CYCLE_SUPER_SONIC_UNDERWATER_HCZ_CNZ_LBZ_ADDR = 0x003A06;
+    /** PalCycle_HyperSonic: 12 alternating color/white frames. */
+    public static final int PAL_CYCLE_HYPER_SONIC_ADDR = 0x003A42;
+    public static final int PAL_CYCLE_HYPER_SONIC_FRAME_COUNT = 12;
+    /** PalCycle_SuperTails: six character-color frames. */
+    public static final int PAL_CYCLE_SUPER_TAILS_ADDR = 0x003A8A;
+    public static final int PAL_CYCLE_SUPER_TAILS_FRAME_COUNT = 6;
+    /** PalCycle_SuperKnuckles: ROM powered-character palette table. */
+    public static final int PAL_CYCLE_SUPER_KNUCKLES_ADDR = 0x003AAE;
+    public static final int PAL_CYCLE_SUPER_KNUCKLES_FRAME_COUNT = 10;
+    public static final int PAL_CYCLE_SUPER_KNUCKLES_REVERT_ADDR = 0x003AEA;
 
     // --- VRAM art tile destinations ---
     // VDP tile indices where art is loaded in VRAM during the intro

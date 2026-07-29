@@ -32,6 +32,7 @@ import com.openggf.audio.GameSound;
 import com.openggf.level.objects.SkidDustObjectInstance;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
+import com.openggf.sprites.playable.SuperStateController;
 import com.openggf.game.PhysicsProfile;
 import com.openggf.game.ShieldType;
 import com.openggf.sprites.playable.SecondaryAbility;
@@ -1576,8 +1577,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	private boolean isHyperSonic() {
-		GameStateManager state = sprite.currentGameStateOrNull();
-		return state != null && state.hasAllSuperEmeralds();
+		SuperStateController controller = sprite.getSuperStateController();
+		return controller != null && controller.isHyperFormActive();
 	}
 
 	/** ROM: Sonic_HyperDash (sonic3k.asm:23482-23523) */

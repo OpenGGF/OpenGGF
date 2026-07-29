@@ -1427,6 +1427,7 @@ CONSTRUCTOR com.openggf.graphics.shaderlib.DisplayShaderPreset public  <init>(ja
 CONSTRUCTOR com.openggf.level.AbstractLevel protected  <init>(int)
 CONSTRUCTOR com.openggf.level.BigRingReturnState public  <init>(int,int,int,int,int,byte,byte,int,int)
 CONSTRUCTOR com.openggf.level.BigRingReturnState public  <init>(int,int,int,int,int,byte,byte,int,int,int)
+CONSTRUCTOR com.openggf.level.BigRingReturnState public  <init>(int,int,int,int,int,byte,byte,int,int,int,int,int,int,int,int,int,int,int)
 CONSTRUCTOR com.openggf.level.Block public  <init>()
 CONSTRUCTOR com.openggf.level.Block public  <init>(int)
 CONSTRUCTOR com.openggf.level.Chunk public  <init>()
@@ -1692,7 +1693,7 @@ CONSTRUCTOR com.openggf.sprites.playable.SidekickCpuController public  <init>(co
 CONSTRUCTOR com.openggf.sprites.playable.SidekickCpuController$NormalStepDiagnostics public  <init>(int,com.openggf.sprites.playable.SidekickCpuController$State,java.lang.String,int,int,short,short,short,short,short,byte,int,int,int,int,int,int,int,int,int,int,int,short,short,short,short,short,byte,int,boolean,int,int,short,short,short,short,short,byte,boolean,boolean)
 CONSTRUCTOR com.openggf.sprites.playable.SuperStateController protected  <init>(com.openggf.sprites.playable.AbstractPlayableSprite)
 CONSTRUCTOR com.openggf.sprites.playable.SuperStateController$PaletteTarget protected  <init>(com.openggf.level.Palette,int)
-CONSTRUCTOR com.openggf.sprites.playable.SuperStateController$RewindState public  <init>(com.openggf.sprites.playable.SuperState,int,int,int,int,int)
+CONSTRUCTOR com.openggf.sprites.playable.SuperStateController$RewindState public  <init>(com.openggf.sprites.playable.SuperState,int,int,int,int,int,int,long,long)
 CONSTRUCTOR com.openggf.sprites.playable.TailsCarryController public  <init>(com.openggf.sprites.playable.AbstractPlayableSprite)
 CONSTRUCTOR com.openggf.sprites.playable.TailsCarryController$Snapshot public  <init>(short,short,boolean,boolean,int,com.openggf.sprites.playable.TailsCarryController$CarryContext)
 CONSTRUCTOR com.openggf.sprites.render.PlayerSpriteRenderer public  <init>(com.openggf.sprites.art.SpriteArtSet)
@@ -7994,11 +7995,20 @@ METHOD com.openggf.level.BigRingReturnState public  byte topSolidBit()
 METHOD com.openggf.level.BigRingReturnState public  int cameraMaxY()
 METHOD com.openggf.level.BigRingReturnState public  int cameraX()
 METHOD com.openggf.level.BigRingReturnState public  int cameraY()
+METHOD com.openggf.level.BigRingReturnState public  int checkpointCameraX()
+METHOD com.openggf.level.BigRingReturnState public  int checkpointCameraY()
+METHOD com.openggf.level.BigRingReturnState public  int checkpointIndex()
+METHOD com.openggf.level.BigRingReturnState public  int checkpointX()
+METHOD com.openggf.level.BigRingReturnState public  int checkpointY()
 METHOD com.openggf.level.BigRingReturnState public  int dynamicResizeRoutine()
 METHOD com.openggf.level.BigRingReturnState public  int meanWaterLevel()
+METHOD com.openggf.level.BigRingReturnState public  int originAct()
+METHOD com.openggf.level.BigRingReturnState public  int originZone()
 METHOD com.openggf.level.BigRingReturnState public  int playerX()
 METHOD com.openggf.level.BigRingReturnState public  int playerY()
 METHOD com.openggf.level.BigRingReturnState public  int rings()
+METHOD com.openggf.level.BigRingReturnState public  int starPostActivationMark()
+METHOD com.openggf.level.BigRingReturnState public  void restoreCheckpointState(com.openggf.game.RespawnState)
 METHOD com.openggf.level.BigRingReturnState public  void restoreToPlayer(com.openggf.sprites.playable.AbstractPlayableSprite,com.openggf.camera.Camera,com.openggf.game.LevelState)
 METHOD com.openggf.level.BigRingReturnState public  void restoreToPlayer(com.openggf.sprites.playable.AbstractPlayableSprite,com.openggf.camera.Camera,com.openggf.game.LevelState,com.openggf.level.WaterSystem,int,int)
 METHOD com.openggf.level.BigRingReturnState public,final  boolean equals(java.lang.Object)
@@ -12038,10 +12048,13 @@ METHOD com.openggf.sprites.playable.SuperStateController protected,abstract  voi
 METHOD com.openggf.sprites.playable.SuperStateController protected,abstract  void onTransformationStarted()
 METHOD com.openggf.sprites.playable.SuperStateController protected,abstract  void updateSuperPalette()
 METHOD com.openggf.sprites.playable.SuperStateController protected,final  com.openggf.sprites.playable.SuperStateController$RewindState createRewindState(int,int,int,int)
+METHOD com.openggf.sprites.playable.SuperStateController protected,final  com.openggf.sprites.playable.SuperStateController$RewindState createRewindState(int,int,int,int,int)
+METHOD com.openggf.sprites.playable.SuperStateController protected,final  com.openggf.sprites.playable.SuperStateController$RewindState createRewindState(int,int,int,int,int,long,long)
 METHOD com.openggf.sprites.playable.SuperStateController protected,final  void reconcileRewindPhysicsAndAnimationProfile(boolean)
 METHOD com.openggf.sprites.playable.SuperStateController protected,final  void restoreCoreRewindState(com.openggf.sprites.playable.SuperStateController$RewindState)
 METHOD com.openggf.sprites.playable.SuperStateController public  boolean activateFromAirAbility()
 METHOD com.openggf.sprites.playable.SuperStateController public  boolean activateFromMonitor()
+METHOD com.openggf.sprites.playable.SuperStateController public  boolean isHyperFormActive()
 METHOD com.openggf.sprites.playable.SuperStateController public  boolean isRomDataPreLoaded()
 METHOD com.openggf.sprites.playable.SuperStateController public  boolean isSuper()
 METHOD com.openggf.sprites.playable.SuperStateController public  com.openggf.sprites.playable.SuperState getState()
@@ -12062,8 +12075,11 @@ METHOD com.openggf.sprites.playable.SuperStateController$RewindState public  com
 METHOD com.openggf.sprites.playable.SuperStateController$RewindState public  int paletteFrame()
 METHOD com.openggf.sprites.playable.SuperStateController$RewindState public  int paletteState()
 METHOD com.openggf.sprites.playable.SuperStateController$RewindState public  int paletteTimer()
+METHOD com.openggf.sprites.playable.SuperStateController$RewindState public  int presentationTier()
 METHOD com.openggf.sprites.playable.SuperStateController$RewindState public  int ringDrainCounter()
 METHOD com.openggf.sprites.playable.SuperStateController$RewindState public  int transformFramesRemaining()
+METHOD com.openggf.sprites.playable.SuperStateController$RewindState public  long savedNormalPalette()
+METHOD com.openggf.sprites.playable.SuperStateController$RewindState public  long savedNormalUnderwaterPalette()
 METHOD com.openggf.sprites.playable.SuperStateController$RewindState public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.sprites.playable.SuperStateController$RewindState public,final  int hashCode()
 METHOD com.openggf.sprites.playable.SuperStateController$RewindState public,final  java.lang.String toString()
@@ -14490,12 +14506,20 @@ RECORD-COMPONENT com.openggf.graphics.shaderlib.DisplayShaderPreset phase com.op
 RECORD-COMPONENT com.openggf.level.BigRingReturnState cameraMaxY int
 RECORD-COMPONENT com.openggf.level.BigRingReturnState cameraX int
 RECORD-COMPONENT com.openggf.level.BigRingReturnState cameraY int
+RECORD-COMPONENT com.openggf.level.BigRingReturnState checkpointCameraX int
+RECORD-COMPONENT com.openggf.level.BigRingReturnState checkpointCameraY int
+RECORD-COMPONENT com.openggf.level.BigRingReturnState checkpointIndex int
+RECORD-COMPONENT com.openggf.level.BigRingReturnState checkpointX int
+RECORD-COMPONENT com.openggf.level.BigRingReturnState checkpointY int
 RECORD-COMPONENT com.openggf.level.BigRingReturnState dynamicResizeRoutine int
 RECORD-COMPONENT com.openggf.level.BigRingReturnState lrbSolidBit byte
 RECORD-COMPONENT com.openggf.level.BigRingReturnState meanWaterLevel int
+RECORD-COMPONENT com.openggf.level.BigRingReturnState originAct int
+RECORD-COMPONENT com.openggf.level.BigRingReturnState originZone int
 RECORD-COMPONENT com.openggf.level.BigRingReturnState playerX int
 RECORD-COMPONENT com.openggf.level.BigRingReturnState playerY int
 RECORD-COMPONENT com.openggf.level.BigRingReturnState rings int
+RECORD-COMPONENT com.openggf.level.BigRingReturnState starPostActivationMark int
 RECORD-COMPONENT com.openggf.level.BigRingReturnState topSolidBit byte
 RECORD-COMPONENT com.openggf.level.LevelGeometry bgContiguousWidthPx int
 RECORD-COMPONENT com.openggf.level.LevelGeometry bgHeightPx int
@@ -15385,7 +15409,10 @@ RECORD-COMPONENT com.openggf.sprites.playable.SuperStateController$PaletteTarget
 RECORD-COMPONENT com.openggf.sprites.playable.SuperStateController$RewindState paletteFrame int
 RECORD-COMPONENT com.openggf.sprites.playable.SuperStateController$RewindState paletteState int
 RECORD-COMPONENT com.openggf.sprites.playable.SuperStateController$RewindState paletteTimer int
+RECORD-COMPONENT com.openggf.sprites.playable.SuperStateController$RewindState presentationTier int
 RECORD-COMPONENT com.openggf.sprites.playable.SuperStateController$RewindState ringDrainCounter int
+RECORD-COMPONENT com.openggf.sprites.playable.SuperStateController$RewindState savedNormalPalette long
+RECORD-COMPONENT com.openggf.sprites.playable.SuperStateController$RewindState savedNormalUnderwaterPalette long
 RECORD-COMPONENT com.openggf.sprites.playable.SuperStateController$RewindState state com.openggf.sprites.playable.SuperState
 RECORD-COMPONENT com.openggf.sprites.playable.SuperStateController$RewindState transformFramesRemaining int
 RECORD-COMPONENT com.openggf.sprites.playable.TailsCarryController$Snapshot carrying boolean

@@ -2,11 +2,10 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.ObjectInstance;
-import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -57,6 +56,7 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
 
     private enum State { ANIMATING, WAITING, DONE }
     private Sonic3kSSEntryRingObjectInstance parentRing;
+    private S3kBigRingTransitionIntent transitionIntent;
 
     private State state = State.ANIMATING;
     private int animIndex = 0;
@@ -71,54 +71,51 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
     public Sonic3kSSEntryFlashObjectInstance(
             Sonic3kSSEntryRingObjectInstance parentRing,
             int x, int y) {
-        super(new ObjectSpawn(x, y, 0, 0, 0, false, 0), "SSEntryFlash");
+        this(parentRing, x, y,
+                new S3kBigRingTransitionIntent(
+                        parentRing != null ? parentRing.rawSubtype() : 0,
+                        parentRing != null ? parentRing.parentRewindIdOrNull() : null));
+    }
+
+    Sonic3kSSEntryFlashObjectInstance(
+            Sonic3kSSEntryRingObjectInstance parentRing,
+            int x, int y, int ringSubtype) {
+        this(parentRing, x, y,
+                new S3kBigRingTransitionIntent(ringSubtype, null));
+    }
+
+    Sonic3kSSEntryFlashObjectInstance(
+            Sonic3kSSEntryRingObjectInstance parentRing,
+            int x, int y,
+            S3kBigRingTransitionIntent transitionIntent) {
+        super(new ObjectSpawn(x, y, 0, transitionIntent.rawSubtype(),
+                0, false, 0), "SSEntryFlash");
         this.parentRing = parentRing;
+        this.transitionIntent = transitionIntent;
     }
 
     @Override
     public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        Sonic3kSSEntryRingObjectInstance ring = nearestLiveParentRing(ctx);
-        if (ring == null || ctx.spawn() == null) {
+        if (ctx.spawn() == null) {
             return null;
         }
-        return new Sonic3kSSEntryFlashObjectInstance(ring, ctx.spawn().x(), ctx.spawn().y());
-    }
-
-    private static Sonic3kSSEntryRingObjectInstance nearestLiveParentRing(RewindRecreateContext ctx) {
-        if (ctx == null || ctx.objectServices() == null || ctx.objectServices().objectManager() == null
-                || ctx.spawn() == null) {
-            return null;
-        }
-        return nearestLiveParentRing(ctx.objectServices().objectManager(), ctx.spawn().x(), ctx.spawn().y());
-    }
-
-    private static Sonic3kSSEntryRingObjectInstance nearestLiveParentRing(
-            ObjectManager objectManager, int targetX, int targetY) {
-        Sonic3kSSEntryRingObjectInstance nearest = null;
-        long nearestDistance = Long.MAX_VALUE;
-        for (ObjectInstance instance : objectManager.getActiveObjects()) {
-            if (instance instanceof Sonic3kSSEntryRingObjectInstance ring && !ring.isDestroyed()) {
-                ObjectSpawn ringSpawn = ring.getSpawn();
-                long dx = (long) ringSpawn.x() - targetX;
-                long dy = (long) ringSpawn.y() - targetY;
-                long distance = dx * dx + dy * dy;
-                if (distance < nearestDistance) {
-                    nearest = ring;
-                    nearestDistance = distance;
-                }
-            }
-        }
-        return nearest;
+        return new Sonic3kSSEntryFlashObjectInstance(
+                null, ctx.spawn().x(), ctx.spawn().y(),
+                new S3kBigRingTransitionIntent(ctx.spawn().subtype(), null));
     }
 
     @Override
     protected void afterRewindRestoreSettled() {
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager == null || spawn == null) {
-            parentRing = null;
+        parentRing = null;
+        if (transitionIntent == null || transitionIntent.parentRingId() == null
+                || services().objectManager() == null) {
             return;
         }
-        parentRing = nearestLiveParentRing(objectManager, spawn.x(), spawn.y());
+        var identities = services().objectManager().captureIdentityContext().requireIdentityTable();
+        var resolved = identities.resolve(transitionIntent.parentRingId());
+        if (resolved instanceof Sonic3kSSEntryRingObjectInstance ring) {
+            parentRing = ring;
+        }
     }
 
     @Override
@@ -126,7 +123,7 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (state) {
             case ANIMATING -> updateAnimation();
-            case WAITING -> updateWait();
+            case WAITING -> updateWait(player);
             case DONE -> { }
         }
     }
@@ -149,16 +146,15 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
         }
     }
 
-    private void updateWait() {
+    private void updateWait(AbstractPlayableSprite player) {
         waitTimer--;
         if (waitTimer <= 0) {
-            // ROM: SSEntryFlash_GoSS — plays sfx_EnterSS then enters special stage.
-            // The SFX is played by GameLoop.enterSpecialStage() via
-            // Sonic3kSpecialStageProvider.getTransitionSfxId() (sfx_EnterSS = $AF),
-            // so we just trigger the request here.
+            // ROM SSEntryFlash_GoSS performs Save_Level_Data2 before deciding
+            // between the ordinary special stage and the HPZ sanctuary.
             state = State.DONE;
-            services().requestSpecialStageEntry();
-            LOGGER.fine("SSEntryFlash: triggering special stage entry");
+            services().playSfx(Sonic3kSfx.ENTER_SS.id);
+            transitionIntent.complete(services(), player);
+            LOGGER.fine("SSEntryFlash: completing big-ring transition");
             setDestroyed(true);
         }
     }
@@ -200,5 +196,17 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
     @Override
     public boolean shouldStayActiveWhenRemembered() {
         return true;
+    }
+
+    Sonic3kSSEntryRingObjectInstance parentRingForTest() {
+        return parentRing;
+    }
+
+    void settleParentForTest() {
+        afterRewindRestoreSettled();
+    }
+
+    S3kBigRingTransitionIntent transitionIntentForTest() {
+        return transitionIntent;
     }
 }

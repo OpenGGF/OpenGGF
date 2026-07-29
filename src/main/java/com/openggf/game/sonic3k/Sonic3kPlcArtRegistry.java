@@ -29,6 +29,7 @@ public final class Sonic3kPlcArtRegistry {
     private static final int[] DOOR_VERTICAL_HCZ_FRAMES = {0};
     private static final int[] DOOR_VERTICAL_CNZ_FRAMES = {1};
     private static final int[] DOOR_VERTICAL_DEZ_FRAMES = {2};
+    private static final int[] HPZ_GRAY_EMERALD_FRAMES = {0x1E};
 
     private Sonic3kPlcArtRegistry() {
     }
@@ -2526,6 +2527,52 @@ public final class Sonic3kPlcArtRegistry {
     private static void addHpzEntries(int actIndex,
                                       List<StandaloneArtEntry> standalone,
                                       List<LevelArtEntry> levelArt) {
+        // PLC $48: ArtNem_HPZEmeraldMisc at $3B5 and
+        // ArtNem_HPZGrayEmerald at $477. Both use Map_HPZEmeraldMisc's
+        // disassembly-verified 37-entry signed-relative pointer table.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.HPZ_MASTER_EMERALD,
+                Sonic3kConstants.MAP_HPZ_EMERALD_MISC_ADDR,
+                Sonic3kConstants.ARTTILE_HPZ_EMERALD_MISC,
+                3,
+                null,
+                37
+        ));
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.HPZ_GRAY_EMERALD,
+                Sonic3kConstants.MAP_HPZ_EMERALD_MISC_ADDR,
+                Sonic3kConstants.ARTTILE_HPZ_GRAY_EMERALD,
+                0,
+                null,
+                HPZ_GRAY_EMERALD_FRAMES,
+                S3kSpriteDataLoader.MappingFormat.STANDARD,
+                37
+        ));
+
+        // Obj_HPZSSEntryControl queues these Kosinski-moduled archives at
+        // $4AC and $488 respectively; standalone sheets preserve the same
+        // ROM bytes without depending on native module-queue timing.
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.HPZ_SMALL_EMERALDS,
+                Sonic3kConstants.ART_KOSM_HPZ_SMALL_EMERALDS_ADDR,
+                CompressionType.KOSINSKI_MODULED,
+                0,
+                Sonic3kConstants.MAP_HPZ_CHAOS_EMERALDS_ADDR,
+                1,
+                -1,
+                8
+        ));
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.HPZ_ENTRY_TELEPORTER,
+                Sonic3kConstants.ART_KOSM_TELEPORTER_ADDR,
+                CompressionType.KOSINSKI_MODULED,
+                0,
+                Sonic3kConstants.MAP_SSZ_HPZ_TELEPORTER_ADDR,
+                0,
+                -1,
+                11
+        ));
+
         // Collapsing Bridge (Object 0x0F): make_art_tile($001, 2, 0)
         levelArt.add(new LevelArtEntry(
                 Sonic3kObjectArtKeys.COLLAPSING_BRIDGE_HPZ,

@@ -8,6 +8,9 @@ import com.openggf.sprites.playable.Knuckles;
 import com.openggf.sprites.playable.Sonic;
 import com.openggf.sprites.playable.SuperState;
 import com.openggf.sprites.playable.SuperStateController;
+import com.openggf.sprites.playable.Tails;
+import com.openggf.sprites.animation.SpriteAnimationSet;
+import com.openggf.sprites.render.PlayerSpriteRenderer;
 import com.openggf.tests.FullReset;
 import com.openggf.tests.SingletonResetExtension;
 import com.openggf.tests.TestEnvironment;
@@ -18,6 +21,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.mockito.Mockito.mock;
 
 @ExtendWith(SingletonResetExtension.class)
 @FullReset
@@ -78,6 +83,159 @@ class TestSonic3kSuperStateRewind {
         assertEquals(SuperState.SUPER, controller.getState());
         assertEquals(PhysicsProfile.SONIC_3K_SUPER_SONIC, sonic.getPhysicsProfile());
         assertEquals(50, sonic.getRingCount());
+    }
+
+    @Test
+    void activeHyperTierRoundTripsWithoutReInferringFromEmeraldState() {
+        for (int i = 0; i < 7; i++) {
+            GameServices.gameState().markSuperEmeraldCollected(i);
+        }
+        assertTrue(controller.activateFromAirAbility());
+        assertEquals(S3kFormTier.HYPER, controller.getActiveFormTier());
+        assertTrue(controller.isHyperFormActive());
+        PerObjectRewindSnapshot snapshot = sonic.captureRewindState();
+
+        controller.debugDeactivate();
+        sonic.restoreRewindState(snapshot);
+
+        assertEquals(S3kFormTier.HYPER, controller.getActiveFormTier());
+        assertTrue(controller.isHyperFormActive());
+    }
+
+    @Test
+    void deathAndLifecycleResetClearTierAndSuperFlag() {
+        for (int i = 0; i < 7; i++) {
+            GameServices.gameState().markSuperEmeraldCollected(i);
+        }
+        assertTrue(controller.activateFromAirAbility());
+        sonic.setDead(true);
+
+        controller.update();
+
+        assertEquals(S3kFormTier.NORMAL, controller.getActiveFormTier());
+        assertEquals(SuperState.NORMAL, controller.getState());
+        assertTrue(!sonic.isSuperSonic());
+
+        sonic.setDead(false);
+        sonic.setInvincibleFrames(0);
+        assertTrue(controller.activateFromAirAbility());
+        controller.reset();
+        assertEquals(S3kFormTier.NORMAL, controller.getActiveFormTier());
+        assertTrue(!sonic.isSuperSonic());
+    }
+
+    @Test
+    void deathRestoresNormalRendererAndAnimationResources() throws Exception {
+        PlayerSpriteRenderer normalRenderer = mock(PlayerSpriteRenderer.class);
+        PlayerSpriteRenderer poweredRenderer = mock(PlayerSpriteRenderer.class);
+        SpriteAnimationSet normalAnimations = new SpriteAnimationSet();
+        SpriteAnimationSet poweredAnimations = new SpriteAnimationSet();
+        sonic.setSpriteRenderer(normalRenderer);
+        sonic.setAnimationSet(normalAnimations);
+        setControllerField("superRenderer", poweredRenderer);
+        setControllerField("superAnimSet", poweredAnimations);
+
+        assertTrue(controller.activateFromAirAbility());
+        for (int i = 0; i < 30; i++) {
+            controller.update();
+        }
+        assertSame(poweredRenderer, sonic.getSpriteRenderer());
+        assertSame(poweredAnimations, sonic.getAnimationSet());
+
+        sonic.setDead(true);
+        controller.update();
+
+        assertSame(normalRenderer, sonic.getSpriteRenderer());
+        assertSame(normalAnimations, sonic.getAnimationSet());
+    }
+
+    @Test
+    void hyperSonicStartsWithTheNormalSuperFadeBeforeItsHyperCycle() throws Exception {
+        for (int i = 0; i < 7; i++) {
+            GameServices.gameState().markSuperEmeraldCollected(i);
+        }
+        assertTrue(controller.activateFromAirAbility());
+
+        assertEquals(1, controller.captureRewindState().paletteState());
+        assertEquals(4, controller.activePaletteReloadForTest());
+        assertEquals(java.util.List.of(2, 3, 4), controller.activePaletteColorIndicesForTest());
+        assertPaletteWrap(controller, 11 * 6, 4);
+    }
+
+    @Test
+    void tailsAndKnucklesPublishPoweredPaletteOnFirstTransformationTick() {
+        for (int i = 0; i < 7; i++) {
+            GameServices.gameState().markSuperEmeraldCollected(i);
+        }
+
+        Tails tails = new Tails("tails", (short) 0, (short) 0);
+        GameServices.sprites().clearAllSprites();
+        GameServices.sprites().addSprite(tails, "tails");
+        tails.setRingCount(50);
+        Sonic3kSuperStateController tailsController = new Sonic3kSuperStateController(tails);
+        tails.setSuperStateController(tailsController);
+        assertTrue(tailsController.activateFromAirAbility());
+        tailsController.update();
+        assertEquals(SuperState.SUPER, tailsController.getState());
+        assertEquals(0xB, tailsController.activePaletteReloadForTest());
+        assertEquals(java.util.List.of(8, 9, 11), tailsController.activePaletteColorIndicesForTest());
+        assertPaletteWrap(tailsController, 5 * 6, 0xB);
+
+        Knuckles knuckles = new Knuckles("knuckles", (short) 0, (short) 0);
+        GameServices.sprites().clearAllSprites();
+        GameServices.sprites().addSprite(knuckles, "knuckles");
+        knuckles.setRingCount(50);
+        Sonic3kSuperStateController knucklesController = new Sonic3kSuperStateController(knuckles);
+        knuckles.setSuperStateController(knucklesController);
+        assertTrue(knucklesController.activateFromAirAbility());
+        knucklesController.update();
+        assertEquals(SuperState.SUPER, knucklesController.getState());
+        assertEquals(2, knucklesController.activePaletteReloadForTest());
+        assertEquals(0xE, knucklesController.activePaletteWrapReloadForTest());
+        assertEquals(10, knucklesController.activePaletteFrameCountForTest());
+        assertEquals(java.util.List.of(2, 3, 4), knucklesController.activePaletteColorIndicesForTest());
+        assertPaletteWrap(knucklesController, 9 * 6, 0xE);
+    }
+
+    @Test
+    void capturedBaseSurfaceAndWaterColorsRoundTripExplicitly() throws Exception {
+        byte[] surface = {0x02, 0x22, 0x04, 0x44, 0x06, 0x66};
+        byte[] underwater = {0x00, 0x02, 0x02, 0x24, 0x04, 0x46};
+        setControllerField("savedNormalPalette", surface.clone());
+        setControllerField("savedNormalUnderwaterPalette", underwater.clone());
+        SuperStateController.RewindState snapshot = controller.captureRewindState();
+
+        setControllerField("savedNormalPalette", new byte[6]);
+        setControllerField("savedNormalUnderwaterPalette", null);
+        controller.restoreRewindState(snapshot);
+
+        assertEquals(snapshot.savedNormalPalette(), controller.captureRewindState().savedNormalPalette());
+        assertEquals(snapshot.savedNormalUnderwaterPalette(),
+                controller.captureRewindState().savedNormalUnderwaterPalette());
+    }
+
+    private static void assertPaletteWrap(Sonic3kSuperStateController controller,
+                                          int finalFrameOffset, int expectedReload) {
+        try {
+            java.lang.reflect.Field frame =
+                    Sonic3kSuperStateController.class.getDeclaredField("paletteFrame");
+            frame.setAccessible(true);
+            frame.setInt(controller, finalFrameOffset);
+            java.lang.reflect.Method advance =
+                    Sonic3kSuperStateController.class.getDeclaredMethod("advanceActivePaletteFrame");
+            advance.setAccessible(true);
+            advance.invoke(controller);
+            assertEquals(0, controller.captureRewindState().paletteFrame());
+            assertEquals(expectedReload, controller.captureRewindState().paletteTimer());
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    private void setControllerField(String name, Object value) throws Exception {
+        java.lang.reflect.Field field = Sonic3kSuperStateController.class.getDeclaredField(name);
+        field.setAccessible(true);
+        field.set(controller, value);
     }
 
     @Test

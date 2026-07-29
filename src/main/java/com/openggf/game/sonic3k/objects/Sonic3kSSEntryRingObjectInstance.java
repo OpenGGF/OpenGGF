@@ -2,9 +2,10 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.S3kPaletteOwners;
+import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
-import com.openggf.game.sonic3k.runtime.S3kZoneRuntimeState;
-import com.openggf.level.BigRingReturnState;
+import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
@@ -88,6 +89,20 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
 
     // Ring award when all emeralds already collected
     private static final int RING_REWARD = 50;
+    private static final String PALETTE_OWNER = "s3k.ssEntryRing";
+    private static final int[] SUPER_RING_PALETTE_INDICES = {5, 6, 15};
+    private static final int[][] SUPER_RING_PALETTE_STEPS = {
+            {0xECE, 0xA8A, 0x868}, {0xAEE, 0x6EE, 0x0AA},
+            {0xECA, 0xA86, 0x864}, {0xAEE, 0x6EE, 0x0AA},
+            {0x8E8, 0x4C4, 0x2A2}, {0xAEE, 0x6EE, 0x0AA},
+            {0x6EC, 0x4CA, 0x4A8}, {0xAEE, 0x6EE, 0x0AA},
+            {0x6CE, 0x2AC, 0x28A}, {0xAEE, 0x6EE, 0x0AA},
+            {0x6EE, 0x0AA, 0x066}, {0x8EE, 0x0CC, 0x088},
+            {0xAEE, 0x6EE, 0x0AA}, {0xCEE, 0xAEE, 0x0CC},
+            {0xEEE, 0xEEE, 0x0EE}, {0xCEE, 0xAEE, 0x0CC},
+            {0xAEE, 0x6EE, 0x0AA}, {0x8EE, 0x0CC, 0x088}
+    };
+    private static final int[] NORMAL_RING_PALETTE_WORDS = {0xEE0, 0x088, 0x044};
 
     /** Object states matching ROM routine progression. */
     private enum State {
@@ -105,7 +120,11 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
 
     /** Subtype low bits are the bit index (0-31) into Collected_special_ring_array. */
     private int bitIndex;
-    private boolean hiddenPalaceRoute;
+    private boolean forcedSanctuaryRoute;
+    private boolean superEmeraldRing;
+    private int paletteStep;
+    private int paletteTimer;
+    private int[] lastAppliedPaletteWords;
 
     private State state;
     private boolean initialized;
@@ -130,7 +149,7 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
     public Sonic3kSSEntryRingObjectInstance(ObjectSpawn spawn) {
         super(spawn, "SSEntryRing");
         this.bitIndex = spawn.subtype() & 0x1F;
-        this.hiddenPalaceRoute = (spawn.subtype() & 0x80) != 0;
+        this.forcedSanctuaryRoute = (spawn.subtype() & 0x80) != 0;
 
         // Default to MAIN state; ensureInitialized will check collection status
         this.state = State.MAIN;
@@ -155,7 +174,13 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
         if (gameState.isSpecialRingCollected(bitIndex)) {
             setDestroyed(true);
             this.state = State.MARKED_DELETE;
+            return;
         }
+        // Obj_SSEntryRing loc_616C6: a negative subtype is always presented
+        // as a Super Emerald ring. In locked-on S3K, an ordinary ring also
+        // gets that presentation on the SK side once all Chaos Emeralds exist.
+        this.superEmeraldRing = forcedSanctuaryRoute
+                || (isSkSideZone(services().currentZone()) && gameState.hasAllEmeralds());
     }
 
     @Override
@@ -196,6 +221,7 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
         if (!isWithinRenderSpriteBounds(OFFSCREEN_HALF_EXTENT, OFFSCREEN_HALF_EXTENT)) {
             return;
         }
+        updateSuperEmeraldPalette();
 
         // ROM: jsr (Animate_Raw).l — advance animation using down-counter
         advanceAnimation();
@@ -316,19 +342,18 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
         // Play sfx_BigRing ($B3) — always plays on touch
         services().playSfx(Sonic3kSfx.BIG_RING.id);
 
-        if (shouldRouteToHiddenPalace(gameState) && hiddenPalaceRouteAvailable()) {
-            LOGGER.fine("SSEntryRing #" + bitIndex + " - routing to Hidden Palace");
-            gameState.markSpecialRingCollected(bitIndex);
-            setDestroyed(true);
-            services().requestZoneAndAct(Sonic3kZoneIds.ZONE_HPZ, 1, true);
-            return;
-        }
-
-        if (gameState.hasAllEmeralds() || shouldRouteToHiddenPalace(gameState)) {
-            // Path B: All emeralds collected — award 50 rings, instant delete
+        // loc_6170A: the immediate 50-ring reward is reached only with all
+        // Chaos Emeralds and either an S3-side level, SK-alone, or all seven
+        // Super Emeralds on the SK side. The supported locked-on ROM has
+        // SK_alone_flag clear.
+        if (gameState.hasAllEmeralds()
+                && (!isSkSideZone(services().currentZone()) || gameState.hasAllSuperEmeralds())) {
             LOGGER.fine("SSEntryRing #" + bitIndex + " — all emeralds, awarding 50 rings");
+            // loc_61794 plays sfx_BigRing a second time before AddRings.
+            services().playSfx(Sonic3kSfx.BIG_RING.id);
             gameState.markSpecialRingCollected(bitIndex);
             player.addRings(RING_REWARD);
+            restoreRingPalette();
             setDestroyed(true);
         } else {
             // Path A: Enter Special Stage — full flash sequence
@@ -338,15 +363,12 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
         }
     }
 
-    private boolean shouldRouteToHiddenPalace(com.openggf.game.GameStateManager gameState) {
-        return hiddenPalaceRoute || (gameState.hasAllEmeralds() && gameState.hasAllSuperEmeralds());
-    }
-
-    private boolean hiddenPalaceRouteAvailable() {
-        // ROM loc_618AC restarts into HPZ, but the engine's S3K zone registry
-        // currently indexes through zone 0x15. Requesting 0x16 would crash the
-        // fade callback before HPZ LevelData exists.
-        return false;
+    private static boolean isSkSideZone(int zone) {
+        // SSEntry_CheckLevel: zones >= MHZ and FBZ are the S&K side.
+        // OpenGGF's S3K module targets the locked-on ROM, where
+        // SK_alone_flag is always clear; the standalone S&K branch therefore
+        // is intentionally non-applicable rather than inferred from zone data.
+        return zone >= Sonic3kZoneIds.ZONE_MHZ || zone == Sonic3kZoneIds.ZONE_FBZ;
     }
 
     /**
@@ -362,42 +384,28 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
     private void enterSpecialStageSequence(AbstractPlayableSprite player) {
         state = State.ENTERED;
 
-        // ROM: Save_Level_Data2 — save player position and ring count for return from SS.
-        // This is separate from checkpoint state (ROM: Saved_ vs Saved2_).
-        // ROM line 52685-52701: saves position, rings, solid bits, camera,
-        // Dynamic_resize_routine, and Mean_water_level for the return.
-        var camera = services().camera();
-        var zoneRuntimeState = services().zoneRuntimeState();
-        int resizeRoutine = zoneRuntimeState instanceof S3kZoneRuntimeState s3kState
-                ? s3kState.getDynamicResizeRoutine()
-                : 0;
-        int meanWaterLevel = 0;
-        var waterSystem = services().waterSystem();
-        int featureZone = services().currentZone();
-        int featureAct = services().currentAct();
-        if (waterSystem != null && waterSystem.hasWater(featureZone, featureAct)) {
-            meanWaterLevel = waterSystem.getWaterLevelY(featureZone, featureAct);
-        }
-        services().saveBigRingReturn(new BigRingReturnState(
-                player.getCentreX(), player.getCentreY(),
-                camera.getX(), camera.getY(), player.getRingCount(),
-                player.getTopSolidBit(), player.getLrbSolidBit(),
-                camera.getMaxY(), resizeRoutine, meanWaterLevel));
-
-        // Lock player: hidden + object controlled
-        // ROM: move.b #$53,object_control(a2) — disables input
-        // ROM: move.b #-1,(Player_prev_frame).w — makes player invisible
+        // Save_Level_Data2 is deliberately deferred until SSEntryFlash_GoSS,
+        // after the existing flash animation and wait.
         player.setHidden(true);
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
+        services().camera().setFrozen(true);
 
-        // Freeze camera at player's last position
-        camera.setFrozen(true);
-
-        // Spawn flash child object
-        // ROM: direction bit is set on the ring (not flash) based on player approach,
-        // but has no visual effect since flash uses internal h-flip toggle.
+        S3kBigRingTransitionIntent intent =
+                new S3kBigRingTransitionIntent(spawn.subtype(), parentRewindIdOrNull());
         spawnDynamicObject(new Sonic3kSSEntryFlashObjectInstance(
-                this, spawn.x(), spawn.y()));
+                this, spawn.x(), spawn.y(), intent));
+    }
+
+    ObjectRefId parentRewindIdOrNull() {
+        var objectManager = services().objectManager();
+        if (objectManager == null) {
+            return null;
+        }
+        return objectManager.captureIdentityContext().requireIdentityTable().idFor(this);
+    }
+
+    int rawSubtype() {
+        return spawn.subtype();
     }
 
     /**
@@ -407,8 +415,44 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
      */
     public void markForDeletion() {
         state = State.MARKED_DELETE;
-        services().gameState().markSpecialRingCollected(bitIndex);
+        restoreRingPalette();
         LOGGER.fine("SSEntryRing #" + bitIndex + " marked for deletion by flash");
+    }
+
+    private void updateSuperEmeraldPalette() {
+        if (!superEmeraldRing) {
+            return;
+        }
+        if (paletteTimer-- > 0) {
+            return;
+        }
+        applyRingPalette(SUPER_RING_PALETTE_STEPS[paletteStep]);
+        // PalSPtr_SSEntry uses delay 3 for its lead-in and delay 2 for the
+        // repeating glow. Both scripts advance together.
+        paletteTimer = paletteStep < 10 ? 3 : 2;
+        paletteStep++;
+        if (paletteStep >= SUPER_RING_PALETTE_STEPS.length) {
+            paletteStep = 10;
+        }
+    }
+
+    private void restoreRingPalette() {
+        if (superEmeraldRing) {
+            applyRingPalette(NORMAL_RING_PALETTE_WORDS);
+        }
+    }
+
+    private void applyRingPalette(int[] segaWords) {
+        lastAppliedPaletteWords = segaWords.clone();
+        S3kPaletteWriteSupport.applyColors(
+                services().paletteOwnershipRegistryOrNull(),
+                services().currentLevel(),
+                services().graphicsManager(),
+                PALETTE_OWNER,
+                S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE,
+                1,
+                SUPER_RING_PALETTE_INDICES,
+                segaWords);
     }
 
     @Override
@@ -480,5 +524,19 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
     /** Returns true if the ring is in the main state (formation or idle). */
     boolean isMainState() {
         return state == State.MAIN;
+    }
+
+    /** ROM bit 6 at object offset $38: enables the Super Emerald palette script. */
+    boolean isSuperEmeraldRing() {
+        ensureInitialized();
+        return superEmeraldRing;
+    }
+
+    int getPaletteStepForTest() {
+        return paletteStep;
+    }
+
+    int[] getLastAppliedPaletteWordsForTest() {
+        return lastAppliedPaletteWords == null ? null : lastAppliedPaletteWords.clone();
     }
 }

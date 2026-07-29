@@ -30,6 +30,10 @@ public class TestSuperStateController {
         @Override protected void onSuperActivated() {}
         @Override protected void updateSuperPalette() {}
         @Override protected void onRevertStarted() {}
+
+        RewindState genericSnapshot() {
+            return createRewindState(1, 2, 3, 4);
+        }
     }
 
     private static SuperStateController controllerInState(SuperState state) throws Exception {
@@ -74,6 +78,15 @@ public class TestSuperStateController {
         assertEquals(SuperState.NORMAL, controller.getState(), "reset() returns to NORMAL");
         assertFalse(controller.isSuper(), "A freshly reset controller is not super");
     }
+
+    @Test
+    public void genericAndCrossGameControllersKeepOpaquePresentationTierUnset() {
+        assertEquals(-1, new TestableController().genericSnapshot().presentationTier(),
+                "the compatible factory must not assign an S3K presentation tier");
+    }
+
+    @Test
+    public void genericControllersDoNotExposeHyperCapability() {
+        assertFalse(new TestableController().isHyperFormActive());
+    }
 }
-
-

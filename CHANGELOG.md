@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Feature: Sonic 3 & Knuckles big rings now follow the locked-on ROM's
+  Super-Emerald routing rules, including the glowing forced Mushroom Hill ring,
+  completion-time Hidden Palace return snapshots, and rewind-safe flash
+  transitions. Sonic, Tails, and Knuckles also select their exact Super, Hyper,
+  or Super-Tails presentation tier at transformation time, with ROM-backed
+  surface and underwater palette cycles that survive rewind.
 - Feature: Sonic 3 & Knuckles now has the runtime foundations for ROM-accurate
   Super Emerald progression. Exact four-state emerald data survives save and
   rewind, Special Stage requests can select an explicit emerald and reward

@@ -715,7 +715,11 @@ public class TestPlayableSpriteMovement {
                 setGameRulesForTest(GameRules.SONIC_3K);
                 collectAllChaosEmeralds();
                 collectAllSuperEmeralds();
-                mockSprite.setSuperSonic(true);
+                installCurrentModuleLevelState();
+                mockSprite.setRingCount(50);
+                Sonic3kSuperStateController controller = new Sonic3kSuperStateController(mockSprite);
+                mockSprite.setSuperStateController(controller);
+                assertTrue(controller.activateFromAirAbility());
                 mockSprite.setAir(true);
                 mockSprite.setJumping(true);
                 mockSprite.setYSpeed((short) 0x120);
@@ -735,6 +739,23 @@ public class TestPlayableSpriteMovement {
                                 "Holding up should dash vertically upward");
                 assertEquals((short) 0x800, mockSprite.getGSpeed(),
                                 "Hyper Dash should seed ground velocity from the horizontal component");
+        }
+
+        @Test
+        public void superEmeraldInventoryAloneDoesNotExposeHyperDashCapability() throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                setGameRulesForTest(GameRules.SONIC_3K);
+                collectAllSuperEmeralds();
+                mockSprite.setSuperSonic(true);
+                mockSprite.setAir(true);
+                mockSprite.setJumping(true);
+                mockSprite.setXSpeed((short) 0);
+                mockSprite.setYSpeed((short) 0x120);
+                setInputState(false, true, false, true, true);
+
+                assertTrue(invokeTryShieldAbility());
+                assertEquals((short) 0, mockSprite.getXSpeed());
+                assertEquals((short) 0x120, mockSprite.getYSpeed());
         }
 
         @Test

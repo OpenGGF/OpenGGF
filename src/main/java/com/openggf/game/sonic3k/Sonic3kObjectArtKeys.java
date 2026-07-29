@@ -45,6 +45,10 @@ public final class Sonic3kObjectArtKeys {
     public static final String SURFACE_SPLASH = "surface_splash";
     public static final String SS_ENTRY_RING = "ss_entry_ring";
     public static final String SS_ENTRY_FLASH = "ss_entry_flash";
+    public static final String HPZ_MASTER_EMERALD = "hpz_master_emerald";
+    public static final String HPZ_GRAY_EMERALD = "hpz_gray_emerald";
+    public static final String HPZ_SMALL_EMERALDS = "hpz_small_emeralds";
+    public static final String HPZ_ENTRY_TELEPORTER = "hpz_entry_teleporter";
     public static final String END_SIGN = "EndSign";
     public static final String SIGNPOST_STUB = "SignpostStub";
 

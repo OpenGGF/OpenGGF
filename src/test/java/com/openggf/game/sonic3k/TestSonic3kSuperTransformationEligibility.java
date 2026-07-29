@@ -43,6 +43,31 @@ class TestSonic3kSuperTransformationEligibility {
     }
 
     @Test
+    void eligibilitySelectsExplicitCharacterFormTier() {
+        collectAllChaosEmeralds();
+
+        assertEquals(S3kFormTier.SUPER, eligibleTier(new Sonic("sonic", (short) 0, (short) 0)));
+        assertEquals(S3kFormTier.SUPER, eligibleTier(new Knuckles("knuckles", (short) 0, (short) 0)));
+        assertEquals(S3kFormTier.NORMAL, eligibleTier(new Tails("tails", (short) 0, (short) 0)));
+
+        GameServices.gameState().setEmeraldsConverted(true);
+        assertEquals(S3kFormTier.NORMAL, eligibleTier(new Sonic("sonic", (short) 0, (short) 0)));
+        assertEquals(S3kFormTier.NORMAL, eligibleTier(new Knuckles("knuckles", (short) 0, (short) 0)));
+
+        GameServices.gameState().markSuperEmeraldCollected(0);
+        assertEquals(S3kFormTier.NORMAL, eligibleTier(new Sonic("sonic", (short) 0, (short) 0)));
+        assertEquals(S3kFormTier.NORMAL, eligibleTier(new Knuckles("knuckles", (short) 0, (short) 0)));
+
+        collectAllSuperEmeralds();
+        assertEquals(S3kFormTier.HYPER, eligibleTier(new Sonic("sonic", (short) 0, (short) 0)));
+        assertEquals(S3kFormTier.HYPER, eligibleTier(new Knuckles("knuckles", (short) 0, (short) 0)));
+        assertEquals(S3kFormTier.SUPER_TAILS, eligibleTier(new Tails("tails", (short) 0, (short) 0)));
+        Tails sidekick = new Tails("tails_p2", (short) 0, (short) 0);
+        sidekick.setCpuControlled(true);
+        assertEquals(S3kFormTier.NORMAL, eligibleTier(sidekick));
+    }
+
+    @Test
     void allSuperEmeraldsTransformEveryMainCharacter() {
         collectAllChaosEmeralds();
         GameServices.gameState().setEmeraldsConverted(true);
@@ -151,6 +176,15 @@ class TestSonic3kSuperTransformationEligibility {
         GameServices.sprites().addSprite(player, player.getCode());
         player.setSuperStateController(new Sonic3kSuperStateController(player));
         return player.getSuperStateController().activateFromAirAbility();
+    }
+
+    private S3kFormTier eligibleTier(AbstractPlayableSprite player) {
+        player.setRingCount(50);
+        GameServices.sprites().clearAllSprites();
+        GameServices.sprites().addSprite(player, player.getCode());
+        Sonic3kSuperStateController controller = new Sonic3kSuperStateController(player);
+        player.setSuperStateController(controller);
+        return controller.getEligibleFormTier();
     }
 
     private void triggerSecondPress(AbstractPlayableSprite player) throws Exception {
