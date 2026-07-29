@@ -6,8 +6,11 @@ import com.openggf.game.LevelLoadContext;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic1.events.Sonic1LevelEventManager;
 import com.openggf.game.sonic1.objects.Sonic1StomperDoorObjectInstance;
+import com.openggf.game.sonic1.resources.Sonic1PlcService;
+import com.openggf.game.sonic1.constants.Sonic1Constants;
 
 import java.util.List;
+import java.io.IOException;
 
 /**
  * Sonic 1 level initialization profile.
@@ -67,6 +70,9 @@ public class Sonic1LevelInitProfile extends AbstractLevelInitProfile {
                         rng.setSeed(0L);
                     }
                 }));
+        steps.add(4, new InitStep("QueueInitialPlcs",
+                "S1 Level: ClearPLC, level-header primary AddPLC, AddPLC Main2",
+                () -> queueInitialPlcs(ctx)));
         // Post-load assembly: 6 steps (no SpawnSidekick — S1 has no Tails)
         if (ctx.isIncludePostLoadAssembly()) {
             steps.add(restoreCheckpointStep(ctx));
@@ -79,6 +85,27 @@ public class Sonic1LevelInitProfile extends AbstractLevelInitProfile {
             }
         }
         return List.copyOf(steps);
+    }
+
+    private void queueInitialPlcs(LevelLoadContext ctx) {
+        if (ctx.getLevel() == null) {
+            return;
+        }
+        Sonic1PlcService plcService = GameServices.module().getGameService(Sonic1PlcService.class);
+        if (plcService == null) {
+            return;
+        }
+        try {
+            int header = Sonic1Constants.LEVEL_HEADERS_ADDR + ctx.getLevel().getZoneIndex() * 16;
+            int primary = (GameServices.rom().getRom().read32BitAddr(header) >>> 24) & 0xFF;
+            plcService.clearQueued();
+            if (primary != 0) {
+                plcService.append(primary);
+            }
+            plcService.append(1);
+        } catch (IOException failure) {
+            throw new IllegalStateException("Failed to queue S1 initial PLCs", failure);
+        }
     }
 
     @Override

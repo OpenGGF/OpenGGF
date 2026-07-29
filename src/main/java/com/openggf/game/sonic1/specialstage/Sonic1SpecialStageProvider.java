@@ -6,8 +6,10 @@ import com.openggf.game.SpecialStageAccessType;
 import com.openggf.game.SpecialStageDebugProvider;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.SpecialStageStartupPolicy;
+import com.openggf.game.GameServices;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
+import com.openggf.game.sonic1.resources.Sonic1PlcService;
 
 import com.openggf.level.Palette;
 
@@ -92,9 +94,34 @@ public final class Sonic1SpecialStageProvider implements SpecialStageProvider {
     public void initializeStage(int stageIndex, SpecialStageStartupPolicy policy) throws IOException {
         Objects.requireNonNull(policy, "policy");
         manager.reset();
+        queueSpecialStagePlc();
         manager.initialize(stageIndex);
         if (policy == SpecialStageStartupPolicy.FAST) {
             manager.advanceToEntryPresentation();
+        }
+    }
+
+    private static void queueSpecialStagePlc() {
+        try {
+            Sonic1PlcService plcService = GameServices.module().getGameService(Sonic1PlcService.class);
+            if (plcService != null) {
+                plcService.replaceQueued(0);
+            }
+        } catch (Exception ignored) {
+            // The manager has standalone test construction paths.
+        }
+    }
+
+    @Override
+    public void onEnterResults() {
+        try {
+            Sonic1PlcService plcService = GameServices.module().getGameService(Sonic1PlcService.class);
+            if (plcService != null) {
+                plcService.replaceQueued(0);
+                plcService.append(27);
+            }
+        } catch (Exception ignored) {
+            // Results rendering also has standalone construction paths.
         }
     }
 

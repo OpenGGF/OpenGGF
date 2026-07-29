@@ -258,6 +258,7 @@ class Sonic1MZEvents extends Sonic1ZoneEvents {
 
         // ROM: bgm_Boss — play boss music
         audio().playMusic(Sonic1Music.BOSS.id);
+        requestSonic1Plc(17);
 
         // f_lockscreen = 1.
         // ROM: f_lockscreen limits Sonic's movement range (01 Sonic.asm:824-834) but

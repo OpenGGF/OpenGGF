@@ -1,6 +1,7 @@
 package com.openggf.game.sonic1.objects;
 
 import com.openggf.audio.GameMusic;
+import com.openggf.game.sonic1.resources.Sonic1PlcService;
 import com.openggf.camera.Camera;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.PlayableEntity;
@@ -387,6 +388,7 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
         }
         resultsTriggered = true;
         state = State.COMPLETE;
+        queueResultsPlc();
 
         LOGGER.info("S1 EggPrison: all animals gone, triggering GotThroughAct");
 
@@ -415,6 +417,13 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
         if (buttonObject != null) {
             buttonObject.detachFromParent();
         }
+    }
+
+    private void queueResultsPlc() {
+        try {
+            Sonic1PlcService plc = services().gameModule().getGameService(Sonic1PlcService.class);
+            if (plc != null) plc.replaceQueued(16);
+        } catch (Exception ignored) { }
     }
 
     // === SolidObjectProvider ===

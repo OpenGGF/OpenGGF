@@ -168,6 +168,7 @@ class Sonic1SBZEvents extends Sonic1ZoneEvents {
                 Sonic1ObjectIds.FALSE_FLOOR, 0, 0, false, 0);
         lm.getObjectManager().addDynamicObject(
                 new Sonic1FalseFloorInstance(floorSpawn));
+        requestSonic1Plc(30);
 
         // addq.b #2,(v_dle_routine).w
         eventRoutine += 2;
@@ -292,6 +293,7 @@ class Sonic1SBZEvents extends Sonic1ZoneEvents {
             // addq.b #2,(v_dle_routine).w
             eventRoutine += 2;
             fzPlcTiming.enqueueFzBossCue();
+            requestSonic1Plc(31);
         }
 
         // loc_72F4: bra.s loc_72C2 - lock left boundary

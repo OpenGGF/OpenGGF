@@ -2802,6 +2802,7 @@ public class GameLoop {
         // Reset special stage provider
         SpecialStageProvider ssProvider = getActiveSpecialStageProvider();
         ssProvider.reset();
+        ssProvider.onEnterResults();
 
         // Transition to results mode
         GameMode oldMode = changeGameModeForBoundary(GameMode.SPECIAL_STAGE_RESULTS);

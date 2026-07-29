@@ -61,6 +61,7 @@ public class Sonic2MCZEvents extends Sonic2ZoneEvents {
                     bossSpawnDelay = 0;
                     // ROM: Fade out music
                     audio().fadeOutMusic();
+                    requestSonic2Plc(Sonic2Constants.PLC_MCZ_BOSS);
                     // ROM: PalLoad_Now Pal_MCZ_B -> palette line 1 (s2.asm:21447-21448)
                     loadBossPalette(1, Sonic2Constants.PAL_MCZ_BOSS_ADDR);
                 }

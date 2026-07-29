@@ -1,5 +1,8 @@
 package com.openggf.game.sonic2.specialstage;
 
+import com.openggf.game.GameServices;
+import com.openggf.game.sonic2.constants.Sonic2Constants;
+import com.openggf.game.sonic2.resources.Sonic2PlcService;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
@@ -395,7 +398,19 @@ public class Sonic2SpecialStageIntro {
             // (s2.asm:9734-9746). Keep this latched through later checkpoint
             // message reuse of WAIT2.
             specialStageStarted = true;
+            queueBombPlc();
             LOGGER.fine("Intro: WAIT2 complete, entering MESSAGE_FLYOUT");
+        }
+    }
+
+    private void queueBombPlc() {
+        try {
+            Sonic2PlcService plcService = GameServices.module().getGameService(Sonic2PlcService.class);
+            if (plcService != null) {
+                plcService.append(Sonic2Constants.PLC_SPECIAL_STAGE_BOMBS);
+            }
+        } catch (Exception ignored) {
+            // Focused presentation tests do not create a game-owned PLC service.
         }
     }
 

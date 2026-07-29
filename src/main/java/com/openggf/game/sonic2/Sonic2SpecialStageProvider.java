@@ -3,6 +3,7 @@ package com.openggf.game.sonic2;
 
 import com.openggf.audio.GameMusic;
 import com.openggf.game.session.EngineServices;
+import com.openggf.game.GameServices;
 import com.openggf.game.ResultsScreen;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.SpecialStageAccessType;
@@ -10,6 +11,7 @@ import com.openggf.game.SpecialStageDebugProvider;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.SpecialStageStartupPolicy;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
+import com.openggf.game.sonic2.resources.Sonic2PlcService;
 import com.openggf.game.sonic2.objects.SpecialStageResultsScreenObjectInstance;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageManager;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageRewindAdapter;
@@ -86,9 +88,33 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
     public void initializeStage(int stageIndex, SpecialStageStartupPolicy policy) throws IOException {
         Objects.requireNonNull(policy, "policy");
         manager.reset();
+        queueSpecialStagePlc();
         manager.initialize(stageIndex);
         if (policy == SpecialStageStartupPolicy.FAST) {
             manager.advanceToEntryPresentation();
+        }
+    }
+
+    private static void queueSpecialStagePlc() {
+        try {
+            Sonic2PlcService plcService = GameServices.module().getGameService(Sonic2PlcService.class);
+            if (plcService != null) {
+                plcService.replaceQueued(0);
+            }
+        } catch (Exception ignored) {
+            // The manager has standalone test construction paths.
+        }
+    }
+
+    @Override
+    public void onEnterResults() {
+        try {
+            Sonic2PlcService plcService = GameServices.module().getGameService(Sonic2PlcService.class);
+            if (plcService != null) {
+                plcService.replaceQueued(0);
+            }
+        } catch (Exception ignored) {
+            // Results rendering also has standalone construction paths.
         }
     }
 

@@ -5,11 +5,13 @@ import com.openggf.audio.AudioManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.mutation.ZoneLayoutMutationPipeline;
+import com.openggf.game.sonic1.resources.Sonic1PlcService;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.function.Supplier;
+import java.io.IOException;
 
 /**
  * Base class for Sonic 1 per-zone dynamic level events.
@@ -48,6 +50,18 @@ abstract class Sonic1ZoneEvents {
 
     protected <T> T gameService(Class<T> type) {
         return GameServices.module().getGameService(type);
+    }
+
+    /** Submits an S1 {@code AddPLC} cue while preserving the eager object-art path. */
+    protected void requestSonic1Plc(int plcId) {
+        try {
+            Sonic1PlcService plcService = gameService(Sonic1PlcService.class);
+            if (plcService != null) {
+                plcService.append(plcId);
+            }
+        } catch (IOException | RuntimeException ignored) {
+            // The existing event transition remains non-fatal when a runtime PLC cannot be read.
+        }
     }
 
     static AbstractPlayableSprite focusedSpriteOrNull() {

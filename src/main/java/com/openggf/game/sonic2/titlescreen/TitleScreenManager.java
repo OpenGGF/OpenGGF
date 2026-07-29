@@ -23,6 +23,7 @@ import java.util.logging.Logger;
 
 import static org.lwjgl.opengl.GL11.glClearColor;
 import com.openggf.game.GameServices;
+import com.openggf.game.sonic2.resources.Sonic2PlcService;
 
 /**
  * Manages the Sonic 2 Title Screen with full intro animation.
@@ -311,6 +312,8 @@ public class TitleScreenManager implements TitleScreenProvider {
             dataLoader.loadData();
         }
 
+        queueTitlePlc();
+
         // Force palette re-upload on next draw
         dataLoader.resetCache();
 
@@ -383,6 +386,17 @@ public class TitleScreenManager implements TitleScreenProvider {
         logoTopSprite.y = 128 + 104;
 
         LOGGER.info("Title screen initialized, entering SEGA_LOGO state");
+    }
+
+    private void queueTitlePlc() {
+        try {
+            Sonic2PlcService plcService = GameServices.module().getGameService(Sonic2PlcService.class);
+            if (plcService != null) {
+                plcService.replaceQueued(0);
+            }
+        } catch (Exception ignored) {
+            // The presentation renderer also runs without a gameplay module in focused tests.
+        }
     }
 
     @Override

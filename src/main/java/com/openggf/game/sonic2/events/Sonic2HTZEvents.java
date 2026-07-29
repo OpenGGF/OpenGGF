@@ -3,6 +3,7 @@ package com.openggf.game.sonic2.events;
 import com.openggf.game.sonic2.audio.Sonic2Music;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
+import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.objects.bosses.Sonic2HTZBossInstance;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -453,6 +454,7 @@ public class Sonic2HTZEvents extends Sonic2ZoneEvents {
                     audio().fadeOutMusic();
                     // ROM: Set Current_Boss_ID to 3 (HTZ boss)
                     gameState().setCurrentBossId(3);
+                    requestSonic2Plc(Sonic2Constants.PLC_HTZ_BOSS);
                 }
             }
             case 16 -> {

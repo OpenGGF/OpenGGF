@@ -9,6 +9,8 @@ import com.openggf.game.GameStateManager;
 import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.mutation.ZoneLayoutMutationPipeline;
 import com.openggf.game.sonic2.Sonic2ObjectArtProvider;
+import com.openggf.game.sonic2.resources.Sonic2PlcService;
+import com.openggf.game.sonic2.resources.Sonic2RuntimePlcPublisher;
 import com.openggf.level.LevelManager;
 import com.openggf.level.ParallaxManager;
 import com.openggf.level.WaterSystem;
@@ -178,9 +180,10 @@ public abstract class Sonic2ZoneEvents {
             }
             ObjectArtProvider provider = GameServices.module().getObjectArtProvider();
             if (provider instanceof Sonic2ObjectArtProvider sonic2Provider) {
-                if (sonic2Provider.requestPlc(plcId)) {
-                    levelManager.refreshObjectArtPatterns();
-                }
+                Sonic2PlcService plcService = GameServices.module().getGameService(Sonic2PlcService.class);
+                if (plcService == null) return;
+                boolean publishedRenderer = Sonic2RuntimePlcPublisher.append(
+                        sonic2Provider, plcService, levelManager::refreshObjectArtPatterns, plcId);
             }
         } catch (RuntimeException | IOException e) {
             LOGGER.fine(() -> "S2 PLC request " + plcId + " deferred: " + e.getMessage());

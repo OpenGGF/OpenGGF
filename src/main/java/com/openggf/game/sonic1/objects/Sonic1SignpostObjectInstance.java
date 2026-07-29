@@ -1,6 +1,7 @@
 package com.openggf.game.sonic1.objects;
 import com.openggf.audio.GameMusic;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic1.resources.Sonic1PlcService;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
@@ -346,6 +347,7 @@ public class Sonic1SignpostObjectInstance extends AbstractObjectInstance
     private void triggerGotThroughAct(AbstractPlayableSprite player) {
         resultsSpawned = true;
         routineState = STATE_COMPLETE;
+        queueResultsPlc();
         LOGGER.info("S1 Player off-screen, triggering GotThroughAct");
 
         // ROM: clr.b (v_invinc).w - disable invincibility
@@ -368,6 +370,13 @@ public class Sonic1SignpostObjectInstance extends AbstractObjectInstance
                     elapsedSeconds, ringCount, actNumber));
             LOGGER.info("S1 Results screen spawned");
         }
+    }
+
+    private void queueResultsPlc() {
+        try {
+            Sonic1PlcService plc = services().gameModule().getGameService(Sonic1PlcService.class);
+            if (plc != null) plc.replaceQueued(16);
+        } catch (Exception ignored) { }
     }
 
     @Override

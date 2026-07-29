@@ -80,6 +80,8 @@ import static java.security.MessageDigest.getInstance;
 public class Sonic2GameModule implements GameModule {
     private final GameAudioProfile audioProfile = new Sonic2AudioProfile();
     private final Sonic2LevelEventManager levelEventManager = new Sonic2LevelEventManager();
+    private final Sonic2PlayerArtModeAuthority playerArtModeAuthority = () ->
+            Sonic2PlayerArtModeAuthority.onePlayer(levelEventManager.getPlayerCharacter()).initialLifePlc();
     private final Sonic2ZoneRegistry zoneRegistry = new Sonic2ZoneRegistry();
     private final com.openggf.game.sonic2.debug.Sonic2SpecialStageSpriteDebug specialStageSpriteDebug =
             new com.openggf.game.sonic2.debug.Sonic2SpecialStageSpriteDebug();
@@ -88,7 +90,8 @@ public class Sonic2GameModule implements GameModule {
     private final SpecialStageProvider specialStageProvider = new Sonic2SpecialStageProvider(specialStageManager);
     private final DebugModeProvider debugModeProvider =
             new Sonic2DebugModeProvider(specialStageManager, specialStageSpriteDebug);
-    private final LevelInitProfile levelInitProfile = new Sonic2LevelInitProfile(levelEventManager);
+    private final LevelInitProfile levelInitProfile = new Sonic2LevelInitProfile(
+            levelEventManager, playerArtModeAuthority);
     private final TitleCardManager titleCardProvider = new TitleCardManager();
     private final TitleScreenManager titleScreenProvider = new TitleScreenManager();
     private final LevelSelectManager levelSelectProvider = new LevelSelectManager();

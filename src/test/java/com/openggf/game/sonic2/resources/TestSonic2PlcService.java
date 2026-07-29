@@ -103,6 +103,23 @@ class TestSonic2PlcService {
     }
 
     @Test
+    void rejectedTwoCueBatchLeavesTheEntireLogicalQueueUnchanged() throws IOException {
+        NemesisPlcServiceQueue queue = new NemesisPlcServiceQueue();
+        Sonic2PlcService service = new Sonic2PlcService(rom, queue);
+        int oneEntryPlcId = firstSingleEntryPlc().plcId();
+        for (int slot = 0; slot < 14; slot++) {
+            service.append(oneEntryPlcId);
+        }
+        var before = queue.capture();
+
+        assertThrows(IllegalStateException.class,
+                () -> service.prepareAppendBatch(oneEntryPlcId, oneEntryPlcId));
+
+        assertEquals(before, queue.capture(),
+                "a rejected second cue must not publish the first cue from the batch");
+    }
+
+    @Test
     void rejectsOutOfRangeIdsBeforeMutatingQueuedState() throws IOException {
         NemesisPlcServiceQueue queue = new NemesisPlcServiceQueue();
         Sonic2PlcService service = new Sonic2PlcService(rom, queue);

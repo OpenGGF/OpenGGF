@@ -5,6 +5,8 @@ import com.openggf.game.sonic2.audio.Sonic2Music;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
+import com.openggf.game.sonic2.constants.Sonic2Constants;
+import com.openggf.game.sonic2.resources.Sonic2PlcRequests;
 import com.openggf.game.sonic2.events.Sonic2CNZEvents;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.graphics.GLCommand;
@@ -265,6 +267,7 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
 
     @Override
     protected void onDefeatStarted() {
+        Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE);
         bossCountdown = DEFEAT_TIMER_START;
         state.routine = ROUTINE_DEFEAT_EXPLODE;
     }
@@ -587,6 +590,8 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
             // Slow ascent
             state.yVel -= 8;
         } else if (bossCountdown == 0x18) {
+            Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_ANIMALS_CNZ,
+                    Sonic2Constants.PLC_EXPLOSION);
             state.yVel = 0;
             // Play level music and load animal PLCs
             services().playMusic(Sonic2Music.CASINO_NIGHT.id);

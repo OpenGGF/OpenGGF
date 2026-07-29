@@ -6,6 +6,8 @@ import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic2.audio.Sonic2Music;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
+import com.openggf.game.sonic2.constants.Sonic2Constants;
+import com.openggf.game.sonic2.resources.Sonic2PlcRequests;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectConstructionContext;
@@ -458,6 +460,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
      */
     private void applyPendingHitReactionAfterMove() {
         if (pendingDefeatReaction) {
+            Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE);
             // ROM Obj54_CheckHit killing-hit branch: Obj54_Defeated replaces the
             // AnimateFace break reaction entirely (the invulnerable-time == $3F
             // branch never runs because CheckHit branched out before setting it).
@@ -943,6 +946,8 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
         // flee frame so dependent level/capsule logic can react.
         if (!bossDefeatedFlag) {
             bossDefeatedFlag = true;
+            Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_ANIMALS_HTZ_MTZ_WFZ,
+                    Sonic2Constants.PLC_EXPLOSION);
             // KNOWN DISCREPANCY: the ROM also kicks off the animal-explosion PLC here
             // (LoadPLC_AnimalExplosion). No engine PLC hook is reachable from object
             // code in this file, so that art-load is omitted; gameplay state (the

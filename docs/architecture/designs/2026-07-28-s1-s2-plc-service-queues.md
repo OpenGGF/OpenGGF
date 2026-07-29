@@ -516,6 +516,44 @@ production submissions to make a phase test convenient.
   lifecycle, and special-stage native pause is not represented by the level
   pause admission path. Missing owners stay dormant; adding a fake mode solely
   to exercise a table row is outside Task 4.
+
+### S2 player-life authority boundary
+
+The current session exposes a semantic `PlayerCharacter`, which is sufficient
+to distinguish the represented Tails-alone one-player route from the default
+one-player route. It does not expose the retail two-player enable flag or the
+player-graphics sign bit consumed by `PlrList_Std1`. Task 5 therefore preserves
+the currently representable one-player branch: no life PLC unless the semantic
+character is Tails-alone, in which case it submits PLC `9`. It must not infer
+the missing 2P values from a renderer, trace, or config string. A future
+session-owned `Sonic2PlayerArtModeAuthority` supplies `{twoPlayer, playerMode,
+alternateGraphics}` at level setup and owns the complete `6`/`7`/`8`/`9`
+selection; until then, those unrepresented combinations remain outside the
+producer contract.
+
+The seam is injected into `Sonic2LevelInitProfile` by the game module/session
+bootstrap. Its default authority is
+`{twoPlayer=false, playerMode=PlayerCharacter, alternateGraphics=false}` and
+returns `OptionalInt.empty()` for Sonic and Sonic-and-Tails and `OptionalInt.of(9)`
+for Tails-alone. The retail combinations are deliberately not constructable
+from that default authority.
+
+### Transactional eager/logical publication
+
+S2 runtime requests use a two-phase game-owned boundary. Phase one parses the
+logical PLC and builds every not-yet-registered eager sprite sheet without
+changing provider registration or the queue. Phase two verifies queue capacity,
+commits the queue operation, and publishes the already-built sheets through a
+non-throwing registration operation. A preflight error exposes neither side;
+cache hits still submit the logical operation. S1's eager art owner has no
+per-request mutable renderer operation, so its corresponding prepared renderer
+payload is an explicit no-op and its queue submission remains game-owned.
+
+An animal/explosion pair is one transaction, not two adjacent transactions.
+The publisher preflights the full ordered batch against one queue snapshot and
+one renderer payload, commits the entire prepared queue batch, registers the
+prepared sheets, and then performs exactly one cache refresh. A failed
+preflight causes no queue change, no renderer registration, and no refresh.
 - The BK2 evidence corpus did not reach Game Over. That does not create another
   lifecycle phase: both games' Game Over consumers execute under the ordinary
   level handler and use the already-covered append/service/poll contract.

@@ -11,6 +11,7 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.events.Sonic2ZoneEvents;
 import com.openggf.game.sonic2.events.Sonic2WFZEvents;
+import com.openggf.game.sonic2.resources.Sonic2PlcService;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Level;
@@ -68,6 +69,7 @@ class TestSonic2RuntimePlcRendererRefresh {
     @BeforeEach
     void setUp() throws Exception {
         GraphicsManager.getInstance().initHeadless();
+        GameServices.module().createGame(TestEnvironment.currentRom());
         GameplayModeContext gameplay = TestEnvironment.activeGameplayMode();
         provider = (Sonic2ObjectArtProvider) GameServices.module().getObjectArtProvider();
         provider.loadArtForZone(Sonic2ZoneConstants.ROM_ZONE_WFZ);
@@ -110,6 +112,17 @@ class TestSonic2RuntimePlcRendererRefresh {
         assertTrue(renderer.getPatternBase() > preExistingPatternBase,
                 "the runtime PLC renderer should append after the initial WFZ allocation");
         verify(levelManager, times(1)).refreshObjectArtPatterns();
+    }
+
+    @Test
+    void runtimePlcAlsoAppendsTheRomLogicalQueueWhenEagerArtWasAlreadyAvailable() {
+        Sonic2PlcService plcService = GameServices.module().getGameService(Sonic2PlcService.class);
+        assertFalse(plcService.isBusy(), "the fixture begins with no logical PLC work");
+
+        events.requestForTest(Sonic2Constants.PLC_TORNADO);
+
+        assertTrue(plcService.isBusy(),
+                "an event PLC request must append ROM logical work even when eager renderer art is cached");
     }
 
     @Test
@@ -205,7 +218,7 @@ class TestSonic2RuntimePlcRendererRefresh {
     }
 
     @Test
-    void preflightFailureAfterRealWfzTriggerIsLoggedAndNeverRetried() throws Exception {
+    void preflightFailureLeavesBothRendererAndLogicalQueueUnpublished() throws Exception {
         OverflowingSonic2ObjectArtProvider overflowingProvider =
                 new OverflowingSonic2ObjectArtProvider();
         Sonic2RuntimeFixture fixture = installSonic2RuntimeWithProvider(overflowingProvider);
@@ -213,6 +226,7 @@ class TestSonic2RuntimePlcRendererRefresh {
         fixture.levelEvents().initLevel(Sonic2LevelEventManager.ZONE_WFZ, 0);
         wfz.setWfzSubRoutine(2);
         GameServices.camera().setY((short) 0x500);
+        Sonic2PlcService plcService = GameServices.module().getGameService(Sonic2PlcService.class);
         int epochBefore = overflowingProvider.capture().loadEpoch();
         int patternCountBefore = overflowingProvider.getRegularPatternCount();
         int rendererCountBefore = overflowingProvider.getRendererKeys().size();
@@ -232,32 +246,25 @@ class TestSonic2RuntimePlcRendererRefresh {
         PatternSpriteRenderer failedRenderer =
                 overflowingProvider.getRenderer(Sonic2ObjectArtKeys.TORNADO_THRUSTER);
         int epochAfterFailure = overflowingProvider.capture().loadEpoch();
-        int allocatedPatternCount = overflowingProvider.actualRegularPatternCount();
-        assertNotNull(failedRenderer, "successful PLC loading keeps its immutable renderer allocation");
-        assertFalse(failedRenderer.isReady(), "failed preflight must not publish the new renderer");
-        assertEquals(-1, failedRenderer.getPatternBase());
-        assertEquals(epochBefore + 1, epochAfterFailure);
-        assertTrue(allocatedPatternCount > patternCountBefore,
-                "successful PLC loading must retain the newly registered sheets");
+        assertNull(failedRenderer, "failed preflight must not publish renderer art");
+        assertFalse(plcService.isBusy(), "failed renderer preflight must not publish logical PLC work");
+        assertEquals(epochBefore, epochAfterFailure);
         int rendererCountAfterFailure = overflowingProvider.getRendererKeys().size();
-        assertTrue(rendererCountAfterFailure > rendererCountBefore,
-                "the failed publication must not roll back newly registered sheet keys");
+        assertEquals(rendererCountBefore, rendererCountAfterFailure);
         assertEquals(4, wfz.getWfzSubRoutine());
         assertTrue(logHandler.messages().stream().anyMatch(message ->
                         message.contains("S2 PLC request " + Sonic2Constants.PLC_TORNADO)
                                 && message.contains("Object patterns exceed reserved atlas range")),
                 "the event path should log the non-fatal preflight failure");
-        verify(fixture.levelManager(), times(1)).refreshObjectArtPatterns();
+        verify(fixture.levelManager(), never()).refreshObjectArtPatterns();
 
         assertDoesNotThrow(fixture.levelEvents()::update);
 
         assertEquals(4, wfz.getWfzSubRoutine(), "the one-shot must not retry after advancing");
-        assertEquals(epochAfterFailure, overflowingProvider.capture().loadEpoch());
-        assertSame(failedRenderer,
-                overflowingProvider.getRenderer(Sonic2ObjectArtKeys.TORNADO_THRUSTER));
-        assertEquals(allocatedPatternCount, overflowingProvider.actualRegularPatternCount());
+        assertEquals(epochBefore, overflowingProvider.capture().loadEpoch());
+        assertNull(overflowingProvider.getRenderer(Sonic2ObjectArtKeys.TORNADO_THRUSTER));
         assertEquals(rendererCountAfterFailure, overflowingProvider.getRendererKeys().size());
-        verify(fixture.levelManager(), times(1)).refreshObjectArtPatterns();
+        verify(fixture.levelManager(), never()).refreshObjectArtPatterns();
     }
 
     @Test
@@ -280,7 +287,7 @@ class TestSonic2RuntimePlcRendererRefresh {
     void ioFailureFromRuntimePlcRemainsNonFatal() throws Exception {
         Sonic2ObjectArtProvider failingProvider = new Sonic2ObjectArtProvider() {
             @Override
-            public boolean requestPlc(int plcId) throws IOException {
+            public PreparedPlc preparePlcs(int... plcIds) throws IOException {
                 throw new IOException("synthetic PLC read failure");
             }
         };

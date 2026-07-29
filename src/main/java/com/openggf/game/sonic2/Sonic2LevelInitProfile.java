@@ -3,8 +3,13 @@ package com.openggf.game.sonic2;
 import com.openggf.game.AbstractLevelInitProfile;
 import com.openggf.game.InitStep;
 import com.openggf.game.LevelLoadContext;
+import com.openggf.game.GameServices;
+import com.openggf.game.PlayerCharacter;
+import com.openggf.game.sonic2.resources.Sonic2PlcService;
+import com.openggf.game.sonic2.constants.Sonic2Constants;
 
 import java.util.List;
+import java.io.IOException;
 
 /**
  * Sonic 2 level initialization profile.
@@ -26,18 +31,61 @@ import java.util.List;
  */
 public class Sonic2LevelInitProfile extends AbstractLevelInitProfile {
     private final Sonic2LevelEventManager levelEventManager;
+    private final Sonic2PlayerArtModeAuthority playerArtModeAuthority;
 
     public Sonic2LevelInitProfile(Sonic2LevelEventManager levelEventManager) {
+        this(levelEventManager, () -> Sonic2PlayerArtModeAuthority.onePlayer(
+                levelEventManager.getPlayerCharacter()).initialLifePlc());
+    }
+
+    public Sonic2LevelInitProfile(Sonic2LevelEventManager levelEventManager,
+                                  Sonic2PlayerArtModeAuthority playerArtModeAuthority) {
         this.levelEventManager = levelEventManager;
+        this.playerArtModeAuthority = playerArtModeAuthority;
     }
 
     @Override
     public List<InitStep> levelLoadSteps(LevelLoadContext ctx) {
         List<InitStep> steps = buildCoreSteps(ctx);
+        steps.add(3, new InitStep("QueueInitialPlcs",
+                "S2 Level: ClearPLC, level-header primary LoadPLC, LoadPLC Std2",
+                () -> queueInitialPlcs(ctx)));
         if (ctx.isIncludePostLoadAssembly()) {
             steps.addAll(postLoadAssemblySteps(ctx));
         }
         return List.copyOf(steps);
+    }
+
+    private void queueInitialPlcs(LevelLoadContext ctx) {
+        if (ctx.getLevel() == null) {
+            return;
+        }
+        Sonic2PlcService plcService = GameServices.module().getGameService(Sonic2PlcService.class);
+        if (plcService == null) {
+            return;
+        }
+        try {
+            int zone = ctx.getLevel().getZoneIndex();
+            int offset = Sonic2Constants.LEVEL_DATA_DIR + zone * Sonic2Constants.LEVEL_DATA_DIR_ENTRY_SIZE;
+            int primary = GameServices.rom().getRom().readByte(offset) & 0xFF;
+            plcService.clearQueued();
+            if (primary != 0) {
+                plcService.append(primary);
+            }
+            plcService.append(Sonic2Constants.PLC_STD2);
+            // Retail 1P bypasses this load unless Player_mode == 2. OpenGGF
+            // currently has no separate two-player graphics flag owner, so the
+            // represented Tails-alone path selects the native Tails life cue.
+            playerArtModeAuthority.initialLifePlc().ifPresent(plcId -> {
+                try {
+                    plcService.append(plcId);
+                } catch (IOException e) {
+                    throw new IllegalStateException("Failed to queue S2 life PLC", e);
+                }
+            });
+        } catch (IOException failure) {
+            throw new IllegalStateException("Failed to queue S2 initial PLCs", failure);
+        }
     }
 
     @Override

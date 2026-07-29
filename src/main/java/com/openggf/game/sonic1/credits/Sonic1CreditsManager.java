@@ -5,6 +5,8 @@ import com.openggf.game.TitleScreenProvider;
 import com.openggf.game.sonic1.audio.Sonic1Music;
 import com.openggf.game.sonic1.titlescreen.Sonic1TitleScreenDataLoader;
 import com.openggf.game.sonic1.titlescreen.Sonic1TitleScreenManager;
+import com.openggf.game.sonic1.constants.Sonic1Constants;
+import com.openggf.game.sonic1.resources.Sonic1PlcService;
 import com.openggf.graphics.FadeManager;
 import com.openggf.game.resources.NativeFadeLifecycle;
 
@@ -94,6 +96,7 @@ public class Sonic1CreditsManager {
         requestDemoLoad = false;
         requestTextReturn = false;
         requestFinished = false;
+        queueNextDemoPlcs();
 
         // Initialize text renderer from title screen data.
         // Ensure data is loaded (it normally is from the title screen, but be safe).
@@ -265,6 +268,7 @@ public class Sonic1CreditsManager {
     public void onReturnToText() {
         demoInputPlayer = null;
         demoLoadDelay = 0;
+        queueNextDemoPlcs();
 
         // Zone loading during demo phase overwrites GPU patterns/palette
         textRenderer.markGpuDirty();
@@ -278,6 +282,29 @@ public class Sonic1CreditsManager {
         }));
 
         LOGGER.info("Showing credit text " + creditsNum);
+    }
+
+    /** Mirrors EndingDemoLoad's pre-text ClearPLC/AddPLC/AddPLC sequence. */
+    private void queueNextDemoPlcs() {
+        try {
+            Sonic1PlcService plcService = GameServices.module().getGameService(Sonic1PlcService.class);
+            if (plcService == null) {
+                return;
+            }
+            plcService.clearQueued();
+            int zone = creditsNum < Sonic1CreditsDemoData.DEMO_CREDITS
+                    ? Sonic1CreditsDemoData.DEMO_ZONE[creditsNum]
+                    // EndDemo_Levels[8] overreads the following EndDemo_LampVar bytes: $0101 (LZ1).
+                    : 3;
+            int header = Sonic1Constants.LEVEL_HEADERS_ADDR + zone * 16;
+            int primary = GameServices.rom().getRom().readByte(header) & 0xFF;
+            if (primary != 0) {
+                plcService.append(primary);
+            }
+            plcService.append(1);
+        } catch (Exception e) {
+            LOGGER.fine("Credits PLC queue unavailable: " + e.getMessage());
+        }
     }
 
     void beginDemoPlayingForLifecycleTest(int framesUntilFade) {

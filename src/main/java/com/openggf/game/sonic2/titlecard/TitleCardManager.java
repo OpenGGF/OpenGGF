@@ -1,6 +1,7 @@
 package com.openggf.game.sonic2.titlecard;
 
 import com.openggf.game.sonic2.constants.Sonic2Constants;
+import com.openggf.game.sonic2.resources.Sonic2PlcService;
 import com.openggf.game.titlecard.TitleCardElement;
 import com.openggf.game.titlecard.TitleCardMappings;
 import com.openggf.game.GameServices;
@@ -231,6 +232,7 @@ public class TitleCardManager implements TitleCardProvider {
 
     private boolean artLoaded = false;
     private boolean artCached = false;
+    private boolean exitPlcsQueued;
     private int lastLoadedZone = -1;  // Track which zone's letters we've loaded
 
     public TitleCardManager() {}
@@ -251,6 +253,7 @@ public class TitleCardManager implements TitleCardProvider {
     public void initialize(int zoneIndex, int actIndex) {
         this.currentZone = zoneIndex;
         this.currentAct = actIndex;
+        this.exitPlcsQueued = false;
         this.state = TitleCardState.SLIDE_IN;
         this.stateTimer = 0;
         this.frameCounter = 0;
@@ -687,12 +690,47 @@ public class TitleCardManager implements TitleCardProvider {
         boolean zoneTextExited = (zoneTextElement == null || zoneTextElement.hasExited());
         boolean actNumberExited = (actNumberElement == null || actNumberElement.hasExited());
 
+        if (zoneNameExited) {
+            queueExitPlcs();
+        }
+
         if (zoneNameExited && zoneTextExited && actNumberExited) {
             // Mark transition as pending - actual transition happens next frame
             // This ensures elements are drawn at their final positions first
             textExitTransitionPending = true;
             LOGGER.fine("Title card text exit complete, transition pending at frame " + frameCounter);
         }
+    }
+
+    private void queueExitPlcs() {
+        if (exitPlcsQueued) {
+            return;
+        }
+        exitPlcsQueued = true;
+        try {
+            Sonic2PlcService plcService = GameServices.module().getGameService(Sonic2PlcService.class);
+            if (plcService != null) {
+                plcService.append(Sonic2Constants.PLC_STD_WATER);
+                plcService.append(animalPlcForZone(currentZone));
+            }
+        } catch (Exception ignored) {
+            // The presentation renderer also runs without a gameplay module in focused tests.
+        }
+    }
+
+    private static int animalPlcForZone(int zone) {
+        return switch (zone) {
+            case 0 -> Sonic2Constants.PLC_ANIMALS_EHZ;
+            case 1 -> Sonic2Constants.PLC_ANIMALS_CPZ;
+            case 2 -> Sonic2Constants.PLC_ANIMALS_ARZ;
+            case 3 -> Sonic2Constants.PLC_ANIMALS_CNZ;
+            case 4, 7, 9 -> Sonic2Constants.PLC_ANIMALS_HTZ_MTZ_WFZ;
+            case 5 -> Sonic2Constants.PLC_ANIMALS_MCZ;
+            case 6 -> Sonic2Constants.PLC_ANIMALS_OOZ;
+            case 8 -> Sonic2Constants.PLC_ANIMALS_SCZ;
+            case 10 -> Sonic2Constants.PLC_ANIMALS_DEZ;
+            default -> Sonic2Constants.PLC_ANIMALS_EHZ;
+        };
     }
 
     /**
@@ -929,4 +967,3 @@ public class TitleCardManager implements TitleCardProvider {
         return currentAct;
     }
 }
-

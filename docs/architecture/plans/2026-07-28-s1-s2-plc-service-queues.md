@@ -1040,6 +1040,36 @@ fix(plc): route runtime S1 and S2 PLC requests
 
 Use `Changelog: updated`.
 
+#### Task 5 amendment: transactional publication and represented S2 player-life mode
+
+**Files:**
+- Modify: `Sonic2ObjectArtProvider`, `Sonic2PlcService`, `Sonic2ZoneEvents`, and
+  `Sonic2PlcRequests`; `Sonic2LevelInitProfile`; `Sonic2GameModule`
+- Create: `Sonic2PlayerArtModeAuthority`, `Sonic2RuntimePlcPublisher`
+- Test: `TestSonic2RuntimePlcRendererRefresh` and the S1/S2 producer coverage tests
+
+1. Add a provider preflight object that parses a PLC and builds all absent sheets
+   without registering them. Its commit only installs already-built sheets and
+   cannot perform ROM I/O.
+2. Add a prepared **ordered batch** to the logical queue. It parses and
+   capacity-checks every requested PLC against one snapshot, then commits all
+   prepared entries without further parsing. The publisher performs renderer
+   batch preflight, logical batch preflight, logical batch commit, non-throwing
+   renderer commit, then exactly one renderer-cache refresh. A preflight error
+   leaves both states unchanged and does not refresh.
+3. Route event and object owners through that publisher, including cache-hit
+   calls. Assert with real queue snapshots that every audit row submits exactly
+   the documented replace/append sequence and that invalid/capacity-rejected
+   work does not change either queue or renderer registration.
+4. Keep the S2 initial setup on the representable one-player contract: default
+   no-life path, Tails-alone PLC `9`. `Sonic2PlayerArtModeAuthority` is injected
+   by `Sonic2GameModule` into `Sonic2LevelInitProfile`; its default maps
+   `{twoPlayer=false, playerMode=PlayerCharacter, alternateGraphics=false}` to
+   `OptionalInt.empty()` for Sonic/Sonic+Tails and `OptionalInt.of(9)` for
+   Tails-alone. Do not synthesize or claim coverage for `6`/`7`/`8` until a
+   session-owned source supplies those inputs. Test the default contract and a
+   rejected two-item batch with zero queue/renderer/refresh effects.
+
 ---
 
 ### Task 6: Migrate gameplay consumers and retire the FZ counter

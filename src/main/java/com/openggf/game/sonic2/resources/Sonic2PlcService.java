@@ -43,6 +43,33 @@ public final class Sonic2PlcService implements PlcLifecycleService {
         queue.append(submission.definition(), submission.patternCounts());
     }
 
+    /** Parses and capacity-checks an append without mutating the native FIFO. */
+    public void preflightAppend(int plcId) throws IOException {
+        prepareAppendBatch(plcId);
+    }
+
+    /** Parses and capacity-checks one ordered append batch without FIFO mutation. */
+    public PreparedAppendBatch prepareAppendBatch(int... plcIds) throws IOException {
+        List<Submission> submissions = new java.util.ArrayList<>(plcIds.length);
+        int descriptorCount = occupiedDescriptorCount();
+        for (int plcId : plcIds) {
+            Submission submission = readSubmission(plcId);
+            descriptorCount += submission.definition().entries().size();
+            submissions.add(submission);
+        }
+        if (descriptorCount > SAFE_QUEUE_CAPACITY) {
+            throw new IllegalStateException("Sonic 2 PLC queue cannot use the retail-retained sixteenth slot");
+        }
+        return new PreparedAppendBatch(List.copyOf(submissions));
+    }
+
+    /** Commits a fully preflighted append batch without further parsing or capacity checks. */
+    public void appendPrepared(PreparedAppendBatch prepared) {
+        for (Submission submission : prepared.submissions()) {
+            queue.append(submission.definition(), submission.patternCounts());
+        }
+    }
+
     /** Models S2 {@code ClearPLC}; an active decoder is never interrupted. */
     public void clearQueued() {
         queue.clearQueued();
@@ -129,5 +156,8 @@ public final class Sonic2PlcService implements PlcLifecycleService {
     }
 
     private record Submission(PlcDefinition definition, List<Integer> patternCounts) {
+    }
+
+    public record PreparedAppendBatch(List<Submission> submissions) {
     }
 }

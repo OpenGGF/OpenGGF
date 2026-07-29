@@ -109,6 +109,23 @@ or a guessed update phase would produce a false timing event.
 
 ## Consequences for implementation and validation
 
+### Implementation constraint discovered after the decompression-queue merge
+
+The current S2 session model exposes `PlayerCharacter`, but it does not expose
+the retail two-player flag or the player-graphics sign bit used by the
+`PlrList_Std1` branch.  Consequently a producer may correctly select the
+represented Tails-alone one-player route (`9`), but it cannot honestly submit
+the distinct 2P Miles/Tails routes (`6`/`8`) or distinguish every retail
+`Player_mode` combination until that session-owned input exists.  Do not infer
+those flags from renderer residency.  This is an explicit remaining model
+gap, not a trace-recording exception.
+
+Likewise, the eager renderer and logical queue still need a single
+all-or-nothing publication boundary.  The currently wired calls establish the
+logical producer locations and queue order, but a follow-up must preflight
+both sides before publishing either side; a renderer failure must not leave a
+logical-only submission (or vice versa).
+
 1. The Task 5 request helpers must take the PLC service and a prepared eager
    renderer registration as a single transaction. They cannot use a renderer
    cache hit as a reason not to submit the queue operation.

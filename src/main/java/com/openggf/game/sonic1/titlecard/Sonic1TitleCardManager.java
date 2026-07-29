@@ -7,6 +7,7 @@ import com.openggf.game.TitleCardProvider;
 import com.openggf.game.titlecard.TitleCardElement;
 import com.openggf.game.titlecard.TitleCardMappings;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
+import com.openggf.game.sonic1.resources.Sonic1PlcService;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.PatternAtlasRange;
@@ -100,6 +101,7 @@ public class Sonic1TitleCardManager implements TitleCardProvider {
     private Pattern[] patterns;
     private boolean artLoaded = false;
     private boolean artCached = false;
+    private boolean exitPlcsQueued;
 
     public Sonic1TitleCardManager() {}
 
@@ -116,6 +118,7 @@ public class Sonic1TitleCardManager implements TitleCardProvider {
         this.currentAct = actIndex;
         this.state = Sonic1TitleCardState.SLIDE_IN;
         this.stateTimer = 0;
+        this.exitPlcsQueued = false;
 
         if (!artLoaded) {
             loadArt();
@@ -296,10 +299,30 @@ public class Sonic1TitleCardManager implements TitleCardProvider {
                 element.updateSlideOut();
             }
 
+            if (!elements.isEmpty() && elements.getFirst().hasExited()) {
+                queueExitPlcs();
+            }
+
             if (elements.stream().allMatch(TitleCardElement::hasExited)) {
                 state = Sonic1TitleCardState.COMPLETE;
                 stateTimer = 0;
             }
+        }
+    }
+
+    private void queueExitPlcs() {
+        if (exitPlcsQueued) {
+            return;
+        }
+        exitPlcsQueued = true;
+        try {
+            Sonic1PlcService plcService = GameServices.module().getGameService(Sonic1PlcService.class);
+            if (plcService != null) {
+                plcService.append(2);
+                plcService.append(21 + currentZone);
+            }
+        } catch (Exception ignored) {
+            // The presentation renderer also runs without a gameplay module in focused tests.
         }
     }
 

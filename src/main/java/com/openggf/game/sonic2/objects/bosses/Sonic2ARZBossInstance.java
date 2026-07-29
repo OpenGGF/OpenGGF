@@ -6,6 +6,8 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic2.Sonic2Rng;
+import com.openggf.game.sonic2.constants.Sonic2Constants;
+import com.openggf.game.sonic2.resources.Sonic2PlcRequests;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
@@ -193,6 +195,7 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance implements Rewin
 
     @Override
     protected void onDefeatStarted() {
+        Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE);
         bossCountdown = DEFEAT_TIMER_START;
         state.routine = MAIN_SUB8;
         bossAnim[2] = 0x05;
@@ -412,6 +415,8 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance implements Rewin
         } else if (bossCountdown < 0x18) {
             bossYVel -= 8;
         } else if (bossCountdown == 0x18) {
+            Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_ANIMALS_ARZ,
+                    Sonic2Constants.PLC_EXPLOSION);
             bossYVel = 0;
             int levelMusic = services().getCurrentLevelMusicId();
             if (levelMusic >= 0) {

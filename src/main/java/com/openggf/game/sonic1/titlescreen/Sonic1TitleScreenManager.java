@@ -7,6 +7,7 @@ import com.openggf.game.sonic1.audio.Sonic1Music;
 import com.openggf.game.GameServices;
 import com.openggf.game.TitleScreenProvider;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
+import com.openggf.game.sonic1.resources.Sonic1PlcService;
 import com.openggf.game.sonic1.scroll.SwScrlGhz;
 import com.openggf.game.titlescreen.SegaPaletteFade;
 import com.openggf.graphics.GLCommand;
@@ -212,6 +213,8 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
             return;
         }
 
+        queueTitlePlc();
+
         // Reset all state
         frameCounter = 0;
         fadeTimer = 0;
@@ -249,6 +252,17 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
         applyTitlePalette();
 
         LOGGER.info("Sonic 1 Title Screen initialized");
+    }
+
+    private void queueTitlePlc() {
+        try {
+            Sonic1PlcService plcService = GameServices.module().getGameService(Sonic1PlcService.class);
+            if (plcService != null) {
+                plcService.replaceQueued(0);
+            }
+        } catch (Exception ignored) {
+            // The presentation renderer also runs without a gameplay module in focused tests.
+        }
     }
 
     @Override

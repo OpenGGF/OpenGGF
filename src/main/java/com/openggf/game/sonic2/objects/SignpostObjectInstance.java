@@ -1,6 +1,9 @@
 package com.openggf.game.sonic2.objects;
 import com.openggf.audio.GameMusic;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic2.resources.Sonic2PlcService;
+import com.openggf.game.sonic2.Sonic2LevelEventManager;
+import com.openggf.game.PlayerCharacter;
 import com.openggf.level.objects.BoxObjectInstance;
 import com.openggf.level.objects.SignpostSparkleObjectInstance;
 
@@ -338,6 +341,7 @@ public class SignpostObjectInstance extends BoxObjectInstance implements PostPla
     private void spawnResultsScreen(AbstractPlayableSprite player) {
         resultsSpawned = true;
         routineState = STATE_DONE;
+        queueResultsPlc();
         LOGGER.info("Player off-screen, triggering end of act sequence");
 
         // ROM Obj0D_Main_State3 sets global Control_Locked and Ctrl_1_Logical
@@ -364,6 +368,18 @@ public class SignpostObjectInstance extends BoxObjectInstance implements PostPla
                     elapsedSeconds, ringCount, actNumber, allRingsCollected));
             LOGGER.info("Results screen spawned");
         }
+    }
+
+    private void queueResultsPlc() {
+        try {
+            Sonic2PlcService plc = services().gameModule().getGameService(Sonic2PlcService.class);
+            if (plc != null) {
+                Sonic2LevelEventManager events = services().gameModule()
+                        .getGameService(Sonic2LevelEventManager.class);
+                plc.replaceQueued(events != null && events.getPlayerCharacter() == PlayerCharacter.TAILS_ALONE
+                        ? 66 : 38);
+            }
+        } catch (Exception ignored) { }
     }
 
     @Override
