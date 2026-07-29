@@ -50,6 +50,7 @@ public class Sonic2EHZEvents extends Sonic2ZoneEvents {
             case 2 -> {
                 // Routine 1 (s2.asm:20396-20411): Wait for camera X >= $28F0
                 if (camera().getX() >= 0x28F0) {
+                    if (!requestSonic2Plc(Sonic2Constants.PLC_EHZ_BOSS)) return;
                     // ROM: Lock X boundaries immediately for boss arena (not eased)
                     camera().setMinX((short) 0x28F0);
                     camera().setMaxX((short) 0x2940);
@@ -61,7 +62,6 @@ public class Sonic2EHZEvents extends Sonic2ZoneEvents {
                     // ROM: Start music fade-out (s2.asm:20404)
                     // Fade runs during the 90-frame spawn delay
                     audio().fadeOutMusic();
-                    requestSonic2Plc(Sonic2Constants.PLC_EHZ_BOSS);
                 }
             }
             case 4 -> {

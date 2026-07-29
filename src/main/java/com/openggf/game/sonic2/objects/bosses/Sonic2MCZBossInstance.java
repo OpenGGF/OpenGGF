@@ -572,8 +572,8 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance
             // Accelerate upward
             state.yVel += SUBA_ACCEL_UP;
         } else if (countdown == 0x18) {
-            Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_ANIMALS_MCZ,
-                    Sonic2Constants.PLC_EXPLOSION);
+            if (!Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_ANIMALS_MCZ,
+                    Sonic2Constants.PLC_EXPLOSION)) return;
             // Play level music and load animal PLCs
             state.yVel = 0;
             services().playMusic(Sonic2Music.MYSTIC_CAVE.id);
@@ -921,7 +921,7 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance
 
     @Override
     protected void onDefeatStarted() {
-        Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE);
+        if (!Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE)) return;
         // ROM: Obj57_FinalDefeat (s2.asm:65715-65722)
         countdown = DEFEAT_COUNTDOWN;
         state.routineSecondary = SUB8_DEFEATED;

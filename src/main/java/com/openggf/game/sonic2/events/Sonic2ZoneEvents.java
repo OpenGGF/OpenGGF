@@ -169,24 +169,31 @@ public abstract class Sonic2ZoneEvents {
                 (int) cam.getMaxYTarget());
     }
 
-    protected void requestSonic2Plc(int plcId) {
+    /**
+     * Attempts the native logical/eager PLC publication. Callers that are at a
+     * one-shot boundary must not advance their routine until this returns true:
+     * a rejected preflight is retryable work, not a consumed ROM cue.
+     */
+    protected boolean requestSonic2Plc(int plcId) {
         try {
             if (!GameServices.hasRuntime()) {
-                return;
+                return true;
             }
             LevelManager levelManager = GameServices.levelOrNull();
             if (levelManager == null || levelManager.getCurrentLevel() == null) {
-                return;
+                return true;
             }
             ObjectArtProvider provider = GameServices.module().getObjectArtProvider();
             if (provider instanceof Sonic2ObjectArtProvider sonic2Provider) {
                 Sonic2PlcService plcService = GameServices.module().getGameService(Sonic2PlcService.class);
-                if (plcService == null) return;
-                boolean publishedRenderer = Sonic2RuntimePlcPublisher.append(
+                if (plcService == null) return true;
+                Sonic2RuntimePlcPublisher.append(
                         sonic2Provider, plcService, levelManager::refreshObjectArtPatterns, plcId);
             }
+            return true;
         } catch (RuntimeException | IOException e) {
             LOGGER.fine(() -> "S2 PLC request " + plcId + " deferred: " + e.getMessage());
+            return false;
         }
     }
 }

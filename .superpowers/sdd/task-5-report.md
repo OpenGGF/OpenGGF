@@ -139,3 +139,12 @@ failures: the GameLoop source-size ratchet, native-fade re-entry in
 `TestGameLoopSpecialStageRewindBoundary`, the logical-input admission assertion
 in `TestLiveRewindStepperAdmission`, and the pre-existing S3K slots hardware
 completion edge in `TestS3kSlotsBonusTraceReplay`.
+
+### Retry-safety corrective follow-up
+
+Runtime PLC publication now reports success to its S2 owners. WFZ keeps both
+boss and Tornado event gates armed until atomic eager/logical publication
+succeeds; the renderer test forces a rejected publication, verifies no FIFO or
+renderer effects, then verifies a successful retry advances exactly once.
+The special-stage Bombs handoff and ordinary-boss capsule/animal-explosion
+handoffs likewise retain their phase/latch until the request succeeds.

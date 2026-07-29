@@ -168,7 +168,7 @@ public class Sonic2CPZBossInstance extends AbstractBossInstance
 
     @Override
     protected void onDefeatStarted() {
-        Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE);
+        if (!Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE)) return;
         bossDefeated = true;
         state.routine = MAIN_EXPLODE;
         defeatTimer = DEFEAT_TIMER_START;
@@ -281,8 +281,8 @@ public class Sonic2CPZBossInstance extends AbstractBossInstance
             if (defeatTimer < 0x30) {
                 state.yVel -= 8;
             } else if (defeatTimer == 0x30) {
-                Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_ANIMALS_CPZ,
-                        Sonic2Constants.PLC_EXPLOSION);
+                if (!Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_ANIMALS_CPZ,
+                        Sonic2Constants.PLC_EXPLOSION)) return;
                 state.yVel = 0;
                 services().playMusic(Sonic2Music.CHEMICAL_PLANT.id);
             } else if (defeatTimer >= 0x38) {

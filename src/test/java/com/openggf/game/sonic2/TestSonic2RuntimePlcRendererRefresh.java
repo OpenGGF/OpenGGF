@@ -251,20 +251,25 @@ class TestSonic2RuntimePlcRendererRefresh {
         assertEquals(epochBefore, epochAfterFailure);
         int rendererCountAfterFailure = overflowingProvider.getRendererKeys().size();
         assertEquals(rendererCountBefore, rendererCountAfterFailure);
-        assertEquals(4, wfz.getWfzSubRoutine());
+        assertEquals(2, wfz.getWfzSubRoutine(),
+                "a rejected one-shot publication must leave its semantic gate armed");
         assertTrue(logHandler.messages().stream().anyMatch(message ->
                         message.contains("S2 PLC request " + Sonic2Constants.PLC_TORNADO)
                                 && message.contains("Object patterns exceed reserved atlas range")),
                 "the event path should log the non-fatal preflight failure");
         verify(fixture.levelManager(), never()).refreshObjectArtPatterns();
 
+        overflowingProvider.disableOverflow();
         assertDoesNotThrow(fixture.levelEvents()::update);
 
-        assertEquals(4, wfz.getWfzSubRoutine(), "the one-shot must not retry after advancing");
-        assertEquals(epochBefore, overflowingProvider.capture().loadEpoch());
-        assertNull(overflowingProvider.getRenderer(Sonic2ObjectArtKeys.TORNADO_THRUSTER));
-        assertEquals(rendererCountAfterFailure, overflowingProvider.getRendererKeys().size());
-        verify(fixture.levelManager(), never()).refreshObjectArtPatterns();
+        assertEquals(4, wfz.getWfzSubRoutine(), "the successful retry consumes the one-shot once");
+        assertTrue(plcService.isBusy());
+        assertNotNull(overflowingProvider.getRenderer(Sonic2ObjectArtKeys.TORNADO_THRUSTER));
+        verify(fixture.levelManager(), times(1)).refreshObjectArtPatterns();
+
+        assertDoesNotThrow(fixture.levelEvents()::update);
+        assertEquals(4, wfz.getWfzSubRoutine(), "a successful one-shot does not submit twice");
+        verify(fixture.levelManager(), times(1)).refreshObjectArtPatterns();
     }
 
     @Test
@@ -392,6 +397,10 @@ class TestSonic2RuntimePlcRendererRefresh {
 
         private void enableOverflow() {
             overflow = true;
+        }
+
+        private void disableOverflow() {
+            overflow = false;
         }
 
         private int actualRegularPatternCount() {

@@ -19,21 +19,24 @@ public final class Sonic2PlcRequests {
      * a submission, so this is a no-op; a live session always resolves the
      * game-owned service through injected object services.
      */
-    public static void append(ObjectServices services, int... plcIds) {
+    public static boolean append(ObjectServices services, int... plcIds) {
         if (services == null || services.gameModule() == null) {
-            return;
+            return true;
         }
         Sonic2PlcService plcService = services.gameModule().getGameService(Sonic2PlcService.class);
         ObjectArtProvider provider = services.gameModule().getObjectArtProvider();
         if (plcService == null || !(provider instanceof Sonic2ObjectArtProvider sonic2Provider)) {
-            return;
+            return true;
         }
         try {
-            if (services.levelManager() == null) return;
+            if (services.levelManager() == null) return true;
             Sonic2RuntimePlcPublisher.append(sonic2Provider, plcService,
                     services.levelManager()::refreshObjectArtPatterns, plcIds);
+            return true;
         } catch (IOException e) {
-            throw new IllegalStateException("Unable to submit Sonic 2 ROM PLC " + plcIds[0], e);
+            return false;
+        } catch (RuntimeException e) {
+            return false;
         }
     }
 }

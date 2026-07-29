@@ -253,8 +253,8 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
                 services.gameState().setCurrentBossId(0);
             }
             if (services != null) {
-                Sonic2PlcRequests.append(services, Sonic2Constants.PLC_ANIMALS_OOZ,
-                        Sonic2Constants.PLC_EXPLOSION);
+                if (!Sonic2PlcRequests.append(services, Sonic2Constants.PLC_ANIMALS_OOZ,
+                        Sonic2Constants.PLC_EXPLOSION)) return;
                 services.playMusic(Sonic2Music.OIL_OCEAN.id);
             }
             bossDefeatedFlagSet = true;
@@ -796,7 +796,7 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
 
     @Override
     protected void onDefeatStarted() {
-        Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE);
+        if (!Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE)) return;
         bossSubtype = SUB_MAIN;
         state.routineSecondary = MAIN_DEFEATED;
         bossCountdown = DEFEAT_TIMER_START;

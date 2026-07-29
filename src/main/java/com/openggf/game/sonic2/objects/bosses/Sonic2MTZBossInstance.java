@@ -460,7 +460,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
      */
     private void applyPendingHitReactionAfterMove() {
         if (pendingDefeatReaction) {
-            Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE);
+            if (!Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE)) return;
             // ROM Obj54_CheckHit killing-hit branch: Obj54_Defeated replaces the
             // AnimateFace break reaction entirely (the invulnerable-time == $3F
             // branch never runs because CheckHit branched out before setting it).
@@ -945,9 +945,9 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
         // (Obj3E) handles the prison. We only set the defeated flag on the first
         // flee frame so dependent level/capsule logic can react.
         if (!bossDefeatedFlag) {
+            if (!Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_ANIMALS_HTZ_MTZ_WFZ,
+                    Sonic2Constants.PLC_EXPLOSION)) return;
             bossDefeatedFlag = true;
-            Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_ANIMALS_HTZ_MTZ_WFZ,
-                    Sonic2Constants.PLC_EXPLOSION);
             // KNOWN DISCREPANCY: the ROM also kicks off the animal-explosion PLC here
             // (LoadPLC_AnimalExplosion). No engine PLC hook is reachable from object
             // code in this file, so that art-load is omitted; gameplay state (the

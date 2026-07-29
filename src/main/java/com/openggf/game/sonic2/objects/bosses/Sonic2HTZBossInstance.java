@@ -371,8 +371,8 @@ public class Sonic2HTZBossInstance extends AbstractBossInstance implements Rewin
             // Camera_Max_X_pos writes until the following object update.
             // Disasm: docs/s2disasm/s2.asm:64593-64605.
             if (!defeatFleeStarted) {
-                Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_ANIMALS_HTZ_MTZ_WFZ,
-                        Sonic2Constants.PLC_EXPLOSION);
+                if (!Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_ANIMALS_HTZ_MTZ_WFZ,
+                        Sonic2Constants.PLC_EXPLOSION)) return;
                 defeatFleeStarted = true;
                 services().gameState().setBossDefeatedFlag(true);
                 services().playMusic(Sonic2Music.HILL_TOP.id);
@@ -560,7 +560,7 @@ public class Sonic2HTZBossInstance extends AbstractBossInstance implements Rewin
 
     @Override
     protected void onDefeatStarted() {
-        Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE);
+        if (!Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE)) return;
         // ROM: s2.asm:64036-64043
         // Initialize defeat timer
         defeatTimer = DEFEAT_TIMER_START;

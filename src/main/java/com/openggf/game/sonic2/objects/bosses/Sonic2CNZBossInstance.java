@@ -267,7 +267,7 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
 
     @Override
     protected void onDefeatStarted() {
-        Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE);
+        if (!Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE)) return;
         bossCountdown = DEFEAT_TIMER_START;
         state.routine = ROUTINE_DEFEAT_EXPLODE;
     }
@@ -590,8 +590,8 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
             // Slow ascent
             state.yVel -= 8;
         } else if (bossCountdown == 0x18) {
-            Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_ANIMALS_CNZ,
-                    Sonic2Constants.PLC_EXPLOSION);
+            if (!Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_ANIMALS_CNZ,
+                    Sonic2Constants.PLC_EXPLOSION)) return;
             state.yVel = 0;
             // Play level music and load animal PLCs
             services().playMusic(Sonic2Music.CASINO_NIGHT.id);
