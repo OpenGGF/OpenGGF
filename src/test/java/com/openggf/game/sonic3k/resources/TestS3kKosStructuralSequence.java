@@ -211,6 +211,7 @@ class TestS3kKosStructuralSequence {
         assertLiteralJob(timing, 10, 0x3AF5D0, 0x500);
         assertLiteralJob(timing, 11, 0x3B15D2, 0x000);
         assertLiteralJob(timing, 12, 0x3B3784, 0x1FC);
+        assertAiz2FireTransitionDirectOrder(timing);
 
         assertCapturedSession(timing, List.of(
                 TITLE_RED,
@@ -603,6 +604,55 @@ class TestS3kKosStructuralSequence {
                 .filter(job -> job.kind()
                         == com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE)
                 .toList();
+    }
+
+    private static void assertAiz2FireTransitionDirectOrder(
+            HardwareTimingService timing) throws Exception {
+        var jobs = timing.capture().jobs().stream()
+                .filter(job -> job.kind()
+                        == com.openggf.game.timing.HardwareWorkKind.KOS_DECOMPRESSION_QUEUE)
+                .toList();
+        int transitionStart = java.util.stream.IntStream.range(0, jobs.size())
+                .filter(index -> jobs.get(index).handle().submissionFingerprint().equals(
+                        "sha256:1cea11e3ea8787a99e5ff28cc80e9766d7047dcc60bf1078513826406d326083"))
+                .findFirst()
+                .orElse(-1);
+        assertTrue(transitionStart >= 0,
+                "AIZ fire transition must submit three direct terrain jobs "
+                        + "before the first primary KosM child");
+
+        int entry = Sonic3kConstants.LEVEL_LOAD_BLOCK_ADDR
+                + Sonic3kConstants.LEVEL_LOAD_BLOCK_ENTRY_SIZE;
+        var rom = GameServices.rom().getRom();
+        assertDirectJob(jobs.get(transitionStart),
+                rom.read32BitAddr(entry + 16) & 0x00FF_FFFF,
+                S3kKosRamDestinations.RAM_START,
+                "sha256:1cea11e3ea8787a99e5ff28cc80e9766d7047dcc60bf1078513826406d326083");
+        assertDirectJob(jobs.get(transitionStart + 1),
+                rom.read32BitAddr(entry + 8) & 0x00FF_FFFF,
+                S3kKosRamDestinations.BLOCK_TABLE,
+                "sha256:6ab93e490c16f5e4ec937fc30ccfdc3f8c36542ae3e0012ec9b6ee12f977d491");
+        assertDirectJob(jobs.get(transitionStart + 2),
+                rom.read32BitAddr(entry + 12) & 0x00FF_FFFF,
+                S3kKosRamDestinations.blockTableOffset(0x0AB8),
+                "sha256:3b4e06b082fdfed67a97e1eac519e483b98e7d2049b5270385f1c41d266f586c");
+        assertEquals(
+                "sha256:086520e8ae25a3855e9227dad5d3cd367bd30f50b95e92f70dd173f3c2d1325a",
+                jobs.get(transitionStart + 3).handle().submissionFingerprint(),
+                "the primary KosM child must enter the physical FIFO after "
+                        + "the three ordinary Queue_Kos jobs");
+    }
+
+    private static void assertDirectJob(
+            com.openggf.game.timing.HardwareTimingJob.Snapshot job,
+            int source,
+            int destination,
+            String fingerprint) {
+        assertEquals(source, job.romSourceAddress());
+        assertEquals(destination, job.destinationAddress());
+        assertEquals(fingerprint, job.handle().submissionFingerprint());
+        assertTrue(job.claimed(),
+                "the AIZ transition owner must retire its direct payload");
     }
 
     private record Spec(

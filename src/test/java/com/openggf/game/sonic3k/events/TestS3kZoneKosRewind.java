@@ -189,6 +189,54 @@ class TestS3kZoneKosRewind {
     }
 
     @Test
+    void aizFireTransitionSidecarRebindsThreeDirectAndTwoModuleHandles()
+            throws Exception {
+        var timing = GameServices.hardwareTiming();
+        var directQueue = S3kRuntimeArtCoordinator.current().directQueue();
+        Sonic3kAIZEvents events =
+                new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
+        events.init(0);
+        invoke(events, "queueAct2KosArt");
+
+        List<HardwareWorkHandle> directHandles = timing.pendingHandles().stream()
+                .filter(handle -> handle.kind()
+                        == HardwareWorkKind.KOS_DECOMPRESSION_QUEUE)
+                .toList();
+        List<HardwareWorkHandle> moduleHandles = timing.pendingHandles().stream()
+                .filter(handle -> handle.kind()
+                        == HardwareWorkKind.KOS_MODULE_QUEUE)
+                .toList();
+        assertEquals(3, directHandles.size());
+        assertEquals(2, moduleHandles.size());
+
+        byte[] eventSnapshot = ZoneEventSchemaSidecar.capture(events);
+        HardwareTimingSnapshot timingSnapshot = timing.capture();
+        S3kKosDecompressionQueueSnapshot directSnapshot =
+                directQueue.capture();
+
+        events.init(0);
+        timing.restore(timingSnapshot);
+        directQueue.restore(directSnapshot);
+        ZoneEventSchemaSidecar.restore(events, eventSnapshot);
+        events.discardHardwareWorkFacadesAfterRewind();
+        events.rebindHardwareWorkAfterRewind();
+
+        assertEquals(directHandles.get(0), field(events, "act2BlockHandle"));
+        assertEquals(directHandles.get(1),
+                field(events, "act2PrimaryChunkHandle"));
+        assertEquals(directHandles.get(2),
+                field(events, "act2SecondaryChunkHandle"));
+        assertEquals(moduleHandles.get(0),
+                field(events, "act2PrimaryArtHandle"));
+        assertEquals(moduleHandles.get(1),
+                field(events, "act2SecondaryArtHandle"));
+        assertEquals(3L, nextOrdinal(
+                timing.capture(), HardwareWorkKind.KOS_DECOMPRESSION_QUEUE));
+        assertEquals(2L, nextOrdinal(
+                timing.capture(), HardwareWorkKind.KOS_MODULE_QUEUE));
+    }
+
+    @Test
     void iczSidecarRebindsTwoDirectHandlesAndTransferredModuleParent()
             throws Exception {
         var timing = GameServices.hardwareTiming();

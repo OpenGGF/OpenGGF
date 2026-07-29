@@ -51,6 +51,10 @@ public class TestZoneEventRewindSchemaGuard {
             "battleshipObjectArtHandle",
             "fireOverlayKosQueue",
             "fireOverlayKosHandle",
+            "act2TerrainKosQueue",
+            "act2BlockHandle",
+            "act2PrimaryChunkHandle",
+            "act2SecondaryChunkHandle",
             "act2ArtKosQueue",
             "act2PrimaryArtHandle",
             "act2SecondaryArtHandle");

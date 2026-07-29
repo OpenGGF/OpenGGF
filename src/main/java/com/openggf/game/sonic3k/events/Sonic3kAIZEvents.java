@@ -338,6 +338,17 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     private HardwareWorkHandle fireOverlayKosHandle;
     private long fireOverlayKosOrdinal = -1;
     @RewindTransient(reason = "queue facade is rebound to the restored session ledger by captured ordinals")
+    private S3kKosDecompressionQueue act2TerrainKosQueue;
+    @RewindTransient(reason = "handle is rebound to the restored session ledger by captured ordinal")
+    private HardwareWorkHandle act2BlockHandle;
+    @RewindTransient(reason = "handle is rebound to the restored session ledger by captured ordinal")
+    private HardwareWorkHandle act2PrimaryChunkHandle;
+    @RewindTransient(reason = "handle is rebound to the restored session ledger by captured ordinal")
+    private HardwareWorkHandle act2SecondaryChunkHandle;
+    private long act2BlockOrdinal = -1;
+    private long act2PrimaryChunkOrdinal = -1;
+    private long act2SecondaryChunkOrdinal = -1;
+    @RewindTransient(reason = "queue facade is rebound to the restored session ledger by captured ordinals")
     private S3kKosModuleQueue act2ArtKosQueue;
     @RewindTransient(reason = "handle is rebound to the restored session ledger by captured ordinal")
     private HardwareWorkHandle act2PrimaryArtHandle;
@@ -538,6 +549,13 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         fireOverlayKosQueue = null;
         fireOverlayKosHandle = null;
         fireOverlayKosOrdinal = -1;
+        act2TerrainKosQueue = null;
+        act2BlockHandle = null;
+        act2PrimaryChunkHandle = null;
+        act2SecondaryChunkHandle = null;
+        act2BlockOrdinal = -1;
+        act2PrimaryChunkOrdinal = -1;
+        act2SecondaryChunkOrdinal = -1;
         act2ArtKosQueue = null;
         act2PrimaryArtHandle = null;
         act2SecondaryArtHandle = null;
@@ -586,6 +604,10 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                 || (battleshipTerrainArtOrdinal >= 0 || battleshipObjectArtOrdinal >= 0)
                         && battleshipKosQueue == null
                 || (fireOverlayKosOrdinal >= 0 && fireOverlayKosQueue == null)
+                || ((act2BlockOrdinal >= 0
+                        || act2PrimaryChunkOrdinal >= 0
+                        || act2SecondaryChunkOrdinal >= 0)
+                        && act2TerrainKosQueue == null)
                 || ((act2PrimaryArtOrdinal >= 0 || act2SecondaryArtOrdinal >= 0)
                         && act2ArtKosQueue == null)) {
             rebindHardwareWorkAfterRewind();
@@ -2391,12 +2413,22 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                         throw new IllegalStateException(
                                 "AIZ2 transition art became ready without a live Sonic3kLevel");
                     }
+                    act2TerrainKosQueue.claim(act2BlockHandle);
+                    act2TerrainKosQueue.claim(act2PrimaryChunkHandle);
+                    act2TerrainKosQueue.claim(act2SecondaryChunkHandle);
                     byte[] primaryTiles8x8 =
                             act2ArtKosQueue.claim(act2PrimaryArtHandle);
                     byte[] secondaryTiles8x8 =
                             act2ArtKosQueue.claim(act2SecondaryArtHandle);
                     S3kSeamlessMutationExecutor.applyAiz1FireTransitionPreparedArt(
                             levelManager, primaryTiles8x8, secondaryTiles8x8);
+                    act2BlockHandle = null;
+                    act2PrimaryChunkHandle = null;
+                    act2SecondaryChunkHandle = null;
+                    act2BlockOrdinal = -1;
+                    act2PrimaryChunkOrdinal = -1;
+                    act2SecondaryChunkOrdinal = -1;
+                    act2TerrainKosQueue = null;
                     act2PrimaryArtHandle = null;
                     act2SecondaryArtHandle = null;
                     act2PrimaryArtOrdinal = -1;
@@ -2472,7 +2504,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     }
 
     private void queueAct2KosArt() {
-        if (act2PrimaryArtHandle != null) {
+        if (act2BlockHandle != null || act2PrimaryArtHandle != null) {
             return;
         }
         try {
@@ -2481,6 +2513,25 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                     + Sonic3kConstants.LEVEL_LOAD_BLOCK_ENTRY_SIZE;
             int primarySource = rom.read32BitAddr(entry) & 0x00FF_FFFF;
             int secondarySource = rom.read32BitAddr(entry + 4) & 0x00FF_FFFF;
+            int primaryChunkSource =
+                    rom.read32BitAddr(entry + 8) & 0x00FF_FFFF;
+            int secondaryChunkSource =
+                    rom.read32BitAddr(entry + 12) & 0x00FF_FFFF;
+            int blockSource =
+                    rom.read32BitAddr(entry + 16) & 0x00FF_FFFF;
+
+            act2TerrainKosQueue = directKosQueue();
+            act2BlockHandle = act2TerrainKosQueue.queueStandardKos(
+                    rom, blockSource, S3kKosRamDestinations.RAM_START);
+            act2BlockOrdinal = act2BlockHandle.ordinal();
+            act2PrimaryChunkHandle = act2TerrainKosQueue.queueStandardKos(
+                    rom, primaryChunkSource, S3kKosRamDestinations.BLOCK_TABLE);
+            act2PrimaryChunkOrdinal = act2PrimaryChunkHandle.ordinal();
+            act2SecondaryChunkHandle = act2TerrainKosQueue.queueStandardKos(
+                    rom, secondaryChunkSource,
+                    S3kKosRamDestinations.blockTableOffset(0x0AB8));
+            act2SecondaryChunkOrdinal = act2SecondaryChunkHandle.ordinal();
+
             act2ArtKosQueue =
                     moduleKosQueue();
             act2PrimaryArtHandle =
@@ -2496,8 +2547,14 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     }
 
     private boolean act2KosArtReady() {
-        return act2PrimaryArtHandle != null
+        return act2BlockHandle != null
+                && act2PrimaryChunkHandle != null
+                && act2SecondaryChunkHandle != null
+                && act2PrimaryArtHandle != null
                 && act2SecondaryArtHandle != null
+                && act2TerrainKosQueue.isReady(act2BlockHandle)
+                && act2TerrainKosQueue.isReady(act2PrimaryChunkHandle)
+                && act2TerrainKosQueue.isReady(act2SecondaryChunkHandle)
                 && act2ArtKosQueue.isReady(act2PrimaryArtHandle)
                 && act2ArtKosQueue.isReady(act2SecondaryArtHandle);
     }
@@ -2541,6 +2598,21 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                 ? moduleKosQueue()
                 : null;
 
+        act2BlockHandle = restoredKosHandle(
+                timing, HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
+                act2BlockOrdinal, "AIZ2 transition blocks");
+        act2PrimaryChunkHandle = restoredKosHandle(
+                timing, HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
+                act2PrimaryChunkOrdinal, "AIZ2 transition primary chunks");
+        act2SecondaryChunkHandle = restoredKosHandle(
+                timing, HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
+                act2SecondaryChunkOrdinal, "AIZ2 transition secondary chunks");
+        act2TerrainKosQueue = act2BlockHandle != null
+                || act2PrimaryChunkHandle != null
+                || act2SecondaryChunkHandle != null
+                        ? directKosQueue()
+                        : null;
+
         act2PrimaryArtHandle = restoredKosHandle(
                 timing, HardwareWorkKind.KOS_MODULE_QUEUE,
                 act2PrimaryArtOrdinal, "AIZ2 primary transition art");
@@ -2564,6 +2636,10 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         battleshipObjectArtHandle = null;
         fireOverlayKosQueue = null;
         fireOverlayKosHandle = null;
+        act2TerrainKosQueue = null;
+        act2BlockHandle = null;
+        act2PrimaryChunkHandle = null;
+        act2SecondaryChunkHandle = null;
         act2ArtKosQueue = null;
         act2PrimaryArtHandle = null;
         act2SecondaryArtHandle = null;

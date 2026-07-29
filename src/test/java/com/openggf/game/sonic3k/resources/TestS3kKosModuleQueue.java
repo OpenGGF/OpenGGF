@@ -103,6 +103,41 @@ class TestS3kKosModuleQueue {
     }
 
     @Test
+    void aizIntroPlaneChildUsesRomKosDecompBufferIdentity() throws Exception {
+        String configured = System.getProperty("s3k.rom.path");
+        Assumptions.assumeTrue(configured != null && !configured.isBlank());
+        try (Rom rom = new Rom()) {
+            assertTrue(rom.open(configured));
+            HardwareTimingService timing = new HardwareTimingService();
+            S3kKosDecompressionQueue direct =
+                    new S3kKosDecompressionQueue(timing);
+            S3kKosModuleQueue queue = new S3kKosModuleQueue(timing, direct);
+
+            queue.queue(
+                    rom,
+                    Sonic3kConstants.ART_KOSM_AIZ_INTRO_PLANE_ADDR,
+                    Sonic3kConstants.ARTTILE_AIZ_INTRO_PLANE);
+            queue.processModuleQueueAfterObjects();
+
+            var child = timing.capture().jobs().stream()
+                    .filter(job -> job.kind()
+                            == com.openggf.game.timing.HardwareWorkKind
+                            .KOS_DECOMPRESSION_QUEUE)
+                    .findFirst()
+                    .orElseThrow();
+            assertEquals(0x382626, child.romSourceAddress());
+            assertEquals(1894, child.compressedLength());
+            assertEquals(0xFFFFD000, child.destinationAddress());
+            assertEquals(4096, child.destinationLength());
+            assertEquals("kosinski", child.compressionVariant());
+            assertEquals(1, child.moduleCount());
+            assertEquals(
+                    "sha256:c381a8f75b41d3e2d1e52fb90ae8a5c269b1daeb88dd198bd8fb3d07d3703a7b",
+                    child.handle().submissionFingerprint());
+        }
+    }
+
+    @Test
     void schemaOneLiveChildrenPrepareParentBeforeRecordedAdmission()
             throws Exception {
         String configured = System.getProperty("s3k.rom.path");

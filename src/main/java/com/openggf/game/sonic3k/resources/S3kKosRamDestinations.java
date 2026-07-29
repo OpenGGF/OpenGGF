@@ -5,7 +5,7 @@ public final class S3kKosRamDestinations {
     public static final int RAM_START = 0xFFFF0000;
     public static final int CHUNK_TABLE = 0xFFFF0000;
     public static final int BLOCK_TABLE = 0xFFFF9000;
-    public static final int KOS_DECOMP_BUFFER = 0xFFFFD400;
+    public static final int KOS_DECOMP_BUFFER = 0xFFFFD000;
 
     private S3kKosRamDestinations() {
     }

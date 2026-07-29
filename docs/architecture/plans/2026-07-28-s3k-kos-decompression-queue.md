@@ -510,6 +510,290 @@ Without approval, do not modify `src/test/resources/traces/`, merge, push, or
 claim completion if the implementation introduces attributable fixture/gate
 failures.
 
+## Task 8.5: Resolve the exposed AIZ module-buffer identity blocker
+
+Do not change approved fixture bytes or recorder output.
+
+### Tests first
+
+Extend `TestS3kKosStructuralSequence` and/or
+`TestS3kKosDecompressionQueue` with the exact AIZ intro-plane first-child
+vector:
+
+- source `0x382626`;
+- compressed length `1894`;
+- destination `0xFFFFD000`;
+- decoded length `4096`;
+- variant `kosinski`;
+- module count `1`;
+- fingerprint
+  `sha256:c381a8f75b41d3e2d1e52fb90ae8a5c269b1daeb88dd198bd8fb3d07d3703a7b`.
+
+The test must fail against the current `0xFFFFD400` production constant and
+must obtain the handle through the real `S3kKosModuleQueue` child path, not by
+calling the fingerprint helper with a hand-built expected tuple.
+
+Extend native `HardwareTimingEventEngineTests` with an independently literal
+AIZ child tuple/fingerprint case. Keep the native scanner differential as the
+ROM-backed integration proof; the native unit need not be RED because its
+implementation already observes the correct RAM longword.
+
+### Implementation
+
+Change only `S3kKosRamDestinations.KOS_DECOMP_BUFFER` from `0xFFFFD400` to the
+ROM-owned `0xFFFFD000`. Audit callers to confirm the constant is used only as
+the shared module-child RAM destination. Do not add AIZ/ICZ branches, trace
+conditions, alternate fingerprints, or compatibility normalization.
+
+### Verification
+
+Run:
+
+```bash
+mvn "-Dtest=TestS3kKosDecompressionQueue,TestS3kKosModuleQueue,TestS3kKosStructuralSequence,TestS3kHardwareTimingReplay" \
+  "-Ds3k.rom.path=<verified-s3k-rom>" test
+mvn "-Dtest=TestS3kAizTraceReplay" "-Ds3k.rom.path=<verified-s3k-rom>" test
+mvn "-Dtest=TestS3kAizCompleteRunTraceReplay" "-Ds3k.rom.path=<verified-s3k-rom>" test
+BIZHAWK_HOME=<verified-bizhawk> S3K_ROM_PATH=<verified-s3k-rom> \
+  tools/bizhawk-headless/test.sh --filter \
+  "HardwareTimingEventEngine AIZ module child identity" --jobs 1
+BIZHAWK_HOME=<verified-bizhawk> S3K_ROM_PATH=<verified-s3k-rom> \
+  tools/bizhawk-headless/test.sh --filter \
+  "S3KTraceDifferential native capture matches canonical AIZ timing stream" --jobs 1
+mvn "-Dtest=TestS3kIczCompleteRunTraceReplay" "-Ds3k.rom.path=<verified-s3k-rom>" test
+```
+
+The AIZ replays must move beyond direct ordinal 8. Any later divergence is
+recorded as the new frontier rather than hidden by fixture edits.
+
+ICZ is diagnosed independently before this production edit. Its module
+ordinal 158 matches `9d76...`, but its child was native pre-segment work and
+has no ICZ-local direct edge; standalone replay recreates that child at direct
+ordinal 161 after boot. Leave this bootstrap gap unresolved in Task 8.5 and
+record its exact frontier. Any solution requires a separate reviewed
+structural-run/prefix design that preserves the hardware-authority isolation
+contract.
+
+## Task 8.6: Close the module-child recorder observability gap
+
+Do not overwrite the installed approved fixtures or update publication
+literals while implementing this task.
+
+### Tests first
+
+Extend `HardwareTimingEventEngineTests` with RED cases that invoke a new
+submission-only direct observation between ordinary frame-end samples:
+
+- a module child enqueued after a POST observation and retired at the next PRE
+  is mirrored before retirement and emits exactly one direct PRE event;
+- the equivalent VINT-enqueued child has the same identity and lifecycle;
+- a callback with an empty logical direct ledger, including after an empty
+  boot frame-end sample, mirrors all currently occupied entries in FIFO order,
+  emits/stages no retirement, and later PRE completions preserve those
+  bootstrap ordinals across gap/reset coverage;
+- submission observation itself writes no event, retires no prior entry, and
+  does not mutate the prior busy-state proof;
+- `[A] -> [C]` retains and stages `A` logically while the new child `C`
+  receives the next ordinal;
+- `[A,B] -> [B,C]` stages only `A`, verifies the retained `B` suffix/prefix
+  identity, and appends `C` at the physical tail;
+- an identical old-head/new-child replacement still stages the old ordinal
+  and allocates a distinct child ordinal;
+- loss of multiple prior heads or mutation of a retained tail fails closed;
+- the next frame-end PRE emits each staged completion once in canonical order
+  before reconciling the then-current physical snapshot, with no double
+  retirement or unexplained loss;
+- a callback-observed direct PRE edge sorts before a same-frame module POST
+  edge;
+- work observed and retired wholly while the writer is null fabricates no
+  represented event, while later ordinals remain canonical across the gap;
+- `Reset()` clears callback-observed direct/module ledgers and restarts both
+  ordinal bases without duplicating the host registration;
+- malformed count, mutation, or non-append physical state at the callback
+  fails loudly.
+
+Add capture-runner tests with a callback-capable fake host. Prove both standard
+and complete-run runners register one synchronous execute callback at ROM PC
+`0x001B46`, keep it active across unexported gaps, and dispose it at capture
+end. Add a pinned-runtime `GpgxHost` integration test that verifies the
+registered callback uses BizHawk scope `M68K BUS` and sees the direct FIFO
+count/entry after `Queue_Kos` returns.
+
+Run the focused native tests and record their RED output before implementation.
+
+### Implementation
+
+Expose an address-filtered execute-callback registration contract from
+`IGpgxHost`; implement it in `GpgxHost` with
+`IDebuggable.MemoryCallbacks`, `MemoryCallbackType.Execute`, scope
+`M68K BUS`, and deterministic disposal/removal.
+
+Separate the direct logical authority ledger from the latest physical FIFO
+snapshot. Add
+`HardwareTimingEventEngine.ObserveDirectSubmissions(IGpgxHost)` as an
+observation/staging operation. It reads
+`Kos_decomp_queue_count & 0x7FFF`, verifies capacity and every retained
+physical entry, and handles exactly one enqueue at the proven callback:
+
+- if the logical direct ledger is empty, mirror all currently occupied slots
+  in order and stage/emit no retirement, even if an earlier frame-end sample
+  established an empty physical snapshot;
+- when current count is prior count plus one, require the full prior physical
+  prefix and append the new child tail;
+- when current count equals prior count, require the prior suffix after one
+  head to match the current prefix, retain/stage that old logical head, and
+  append the new child tail. This admits `[A,B] -> [B,C]` and assigns a fresh
+  ordinal for identical `[A] -> [A]`;
+- reject loss of more than one prior head, retained-tail mutation, duplicate
+  staging, any other count delta, or any non-enqueue shape.
+
+The callback must not:
+
+- remove or complete a mirrored submission;
+- change `priorDirectBusy`;
+- write an authority event; or
+- inspect a trace row, writer, zone, or game-mode predicate.
+
+In both S3K capture runners, register that observer at exact S&K PC
+`0x001B46` before the first advance and dispose it only after capture
+finalization. Keep existing `ObserveFrameEnd` as the only direct retirement
+and event-emission path. It emits/removes staged PRE retirements in ordinal
+order before reconciling the current physical snapshot, and prevents that
+same logical entry from retiring twice. A PRE completion is legal only for a
+job already mirrored either by a prior frame-end sample or the execute
+callback.
+
+Do not hook the generic `Queue_Kos` return, the FIFO-count RAM write, or every
+direct submission. Do not add fixture-specific fingerprints, synthesize
+events from the module ledger, or weaken unexplained-loss failures.
+
+Amend both `tools/bizhawk-headless/AGENTS.md` and its mirrored `CLAUDE.md`
+section. Permit only the exact address-filtered `0x001B46` hardware-timing
+submission observer, with a strongly rooted delegate and deterministic
+unregistration. Keep the ban on diagnostic callback families, memory-write
+hooks, hook-derived sync/completion authority, and callback event emission.
+Stage both mirrored agent docs together and set the `Agent-Docs` trailer to
+`updated`.
+
+### Verification and renewed publication gate
+
+Run:
+
+```bash
+BIZHAWK_HOME=<verified-bizhawk> S3K_ROM_PATH=<verified-s3k-rom> \
+  tools/bizhawk-headless/test.sh --filter HardwareTimingEventEngine --jobs 1
+BIZHAWK_HOME=<verified-bizhawk> S3K_ROM_PATH=<verified-s3k-rom> \
+  tools/bizhawk-headless/test.sh --filter GpgxHost --jobs 1
+BIZHAWK_HOME=<verified-bizhawk> S3K_ROM_PATH=<verified-s3k-rom> \
+  tools/bizhawk-headless/test.sh --no-gates
+```
+
+Recapture the affected standard AIZ and complete-run candidates into new,
+uniquely named `.scratch/task8-candidates-observability-*` directories. Run
+the exact native differential gates against those isolated outputs. If the
+complete-run capture changes another segment's timing stream, include that
+segment in the candidate set; do not copy any new file into
+`src/test/resources/traces/`.
+
+Freeze and independently review:
+
+- all four file hashes and byte lengths per candidate;
+- recorder/trace/hardware schema versions;
+- direct/module event counts, ordinal and fingerprint ranges, boundaries, and
+  canonical same-frame order;
+- the new `4767...` child edge and its later PRE retirement;
+- every byte delta against the installed approved candidate, mechanically
+  classified as callback-observed direct authority or a resulting metadata
+  hash/version change;
+- replay frontiers when run from isolated candidate paths.
+
+If any corrected candidate differs from the installed approved bytes, keep it
+isolated. The committed fixture tree and publication literals remain at (or
+are restored exactly to) the currently installed, explicitly approved
+schema-2 baseline while the corrected candidates are reviewed in scratch.
+Present the exact corrected candidates and stop. Install no replacement bytes
+without renewed explicit user approval.
+
+## Task 8.7: Close corrected-candidate production-owner gaps
+
+Keep all corrected recorder outputs isolated. These are engine-only fixes and
+must not trigger another capture or fixture/publication edit.
+
+### Tests first
+
+Add a ROM-backed AIZ structural test that invokes the fire-transition queue
+owner and freezes the exact five-job order:
+
+1. direct AIZ2 blocks (level-load-block entry `+16`) to `RAM_START`;
+2. direct primary chunks (entry `+8`) to `BLOCK_TABLE`;
+3. direct secondary chunks (entry `+12`) to `BLOCK_TABLE + 0xAB8`;
+4. primary KosM art (entry `+0`) to tile `0x000`;
+5. secondary KosM art (entry `+4`) to tile `0x1FC`.
+
+Freeze the first three direct fingerprints as `1cea...`, `6ab93...`, and
+`3b4e...`, and prove the first module child remains `086520...` after them.
+Add lifecycle/rewind assertions for all three direct ordinals: reset to `-1`,
+rebind by direct kind/ordinal, derived facade discard, and claim before the
+existing module claims once the transition is ready.
+
+Add provider-profile tests that arm from `onTitleCardArtRetired()` and freeze
+the exact ROM order for:
+
+- MGZ1: Spiker `0x36E0C4`/`0x530`, MGZMiniboss
+  `0x36B02C`/`0x54F`, MGZEndBossDebris `0x36D572`/`0x570`;
+- MGZ2: Spiker `0x36E0C4`/`0x530`, Mantis
+  `0x36E2D6`/`0x54F`;
+- CNZ: Sparkle `0x3700CA`/`0x524`, Batbot
+  `0x3703EC`/`0x552`, ClamerShot `0x370058`/`0x570`,
+  CNZBalloon `0x37060E`/`0x574`.
+
+The tests must prove no submission occurs before title-card retirement and
+that existing provider capture/restore preserves pending entries, handle
+ordinals, and the armed flag. Record focused RED output before implementation.
+
+### Implementation
+
+In `Sonic3kAIZEvents`, add one transient direct queue facade, three transient
+direct handles, and three scalar ordinals. `queueAct2KosArt()` reads all five
+sources from the same AIZ2 level-load-block entry and queues the three direct
+jobs before the two existing module parents. Extend initialization,
+rewind-rebind, derived-facade discard, and ready-path claiming for the new
+state. Retain the existing mutation pipeline as the terrain consumer; do not
+write layout data from timing payloads.
+
+Add named S&K-half source/tile constants for the missing MGZ/CNZ enemy
+profiles. Extend only
+`Sonic3kObjectArtProvider.scheduleEnemyKosArt(zone, act)` with the ROM lists
+above. Reuse the existing title-retirement arm, queue facade, pending entries,
+claims, capture, and restore. Do not create work from a trace, arm early, or
+change shared timing behavior.
+
+Do not alter the correct module coordinator/POST observer order. Do not add
+timing exceptions for STANDARD AIZ StarPost, later HCZ Blastoid reload, or
+later ICZ StarPost; record those as separate gameplay-owner frontiers.
+
+### Verification
+
+Run the focused Java structural, rewind, AIZ event, provider, queue, timing
+authority, and architecture guards with the verified S3K ROM. Then run the
+corrected candidate overlay with the Surefire fork explicitly rooted at that
+overlay:
+
+```bash
+mvn -Dsurefire.argLine=-Duser.dir=<candidate-overlay> \
+  "-Ds3k.rom.path=<verified-s3k-rom>" \
+  "-Dtest=TestS3kAizCompleteRunTraceReplay,\
+TestS3kMgzCompleteRunTraceReplay,TestS3kCnzCompleteRunTraceReplay" test
+```
+
+Freeze the new first timing frontier for each replay. Success means AIZ
+advances through ordinary direct ordinals 26-28 and MGZ/CNZ admit their
+title-retired enemy-art groups; it does not require unrelated physics
+frontiers to become green. Rerun STANDARD AIZ, HCZ, and ICZ only to confirm
+their explicitly deferred gameplay-owner stops did not regress. Do not
+recapture: production-only changes cannot change the already captured native
+bytes.
+
 ## Task 9: Integration
 
 Following the root `AGENTS.md`:

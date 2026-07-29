@@ -538,6 +538,269 @@ evidence.
 - Newly regenerated schema-2 fixtures contain canonical event ordering and
   pass committed-fixture validation.
 
+## Post-publication blocker amendment (2026-07-29)
+
+Installing the approved schema-2 evidence exposed a production identity error
+that schema 1 could not observe. Both AIZ fixtures require direct completion
+ordinal 8 with fingerprint
+`sha256:c381a8f75b41d3e2d1e52fb90ae8a5c269b1daeb88dd198bd8fb3d07d3703a7b`.
+The native tuple is:
+
+- kind `KOS_DECOMPRESSION_QUEUE`;
+- ROM source `0x382626`;
+- compressed length `1894`;
+- destination `0xFFFFD000`;
+- decoded length `4096`;
+- variant `kosinski`;
+- module count `1`.
+
+The engine submits the same tuple with destination `0xFFFFD400`, producing
+`sha256:953838e00d2ae0f967fd6ef24be750cc56825ac2827b3c1a53421bc60f8a608f`.
+The wrong field comes from
+`S3kKosRamDestinations.KOS_DECOMP_BUFFER`; every module child receives that
+constant through `S3kKosModuleQueue`.
+
+The ROM owner is unambiguous. `Process_Kos_Module_Queue` passes
+`Kos_decomp_buffer` to `Queue_Kos` (`sonic3k.asm:2736-2740`), the native
+four-entry FIFO contains the sign-extended longword `0xFFFFD000`, and the RAM
+layout defines the `$1000`-byte buffer immediately before `H_scroll_buffer`
+(`sonic3k.constants.asm:328`). `0xFFFFD400` is not the module decompression
+buffer. Production must correct the shared constant to `0xFFFFD000`; recorder
+or fixture normalization is forbidden.
+
+Acceptance adds a cross-language regression for the exact AIZ module child.
+The Java ROM-backed queue test must freeze all seven canonical fields and the
+`c381...` fingerprint through the real module-child path. The native C#
+identity test independently freezes that literal tuple/fingerprint, while the
+ROM-backed AIZ differential gate proves the scanner observes it in production.
+Both AIZ schema-2 replays must then pass the first direct edge. The fix is one
+shared destination correction; no zone-specific branch, trace exception, or
+fixture edit is permitted.
+
+The approved ICZ fixture exposes a separate standalone-segment bootstrap gap,
+not a second destination error. Its first exported edge is matching module
+ordinal 158 (`9d76...`) at raw frame 35, but the engine parent still has an
+unreleased direct child at ordinal 161. In the native complete run that child
+was submitted and retired before the ICZ segment began, so its direct edge is
+not exported into the ICZ-local stream; a fresh standalone level boot
+resubmits it after segment start. Schema 2 correctly refuses to invent the
+missing pre-segment completion. This amendment does not hydrate or release
+that job from trace data. Standalone ICZ remains an explicitly measured
+bootstrap blocker pending a separately reviewed structural-run/prefix design.
+
+## Recorder observability amendment (2026-07-29)
+
+Moving both approved AIZ replays beyond direct ordinal 8 exposed a native
+recorder sampling gap, not another production queue identity error. The engine
+correctly prepares the second AIZ intro-plane child as:
+
+- direct ordinal `9`;
+- source `0x382D96` (the first archive source plus the aligned first-module
+  span);
+- destination `0xFFFFD000`;
+- compressed length `45`;
+- fingerprint
+  `sha256:4767ec1feea97155923dab11e07b8485826833eec442da46480bffb3d8a98d38`.
+
+The approved native streams contain no matching direct edge before module
+ordinal 2 (`4423...`) completes. Both native capture runners currently inspect
+the FIFO only after `GpgxHost.Advance` returns from a whole emulated frame.
+That sole frame-end sample can therefore miss a short-lived child:
+`Process_Kos_Module_Queue` enqueues it after the prior PRE observation at a
+VINT or post-objects service, and the next PRE service retires it before the
+next frame-end observation. The module parent remains visible and is emitted,
+leaving an authority stream that cannot prepare the engine's real child.
+
+The pinned S&K listing provides a narrower observation boundary than a generic
+RAM-write callback. `Process_Kos_Module_Queue` begins at ROM PC `0x001B28`;
+its child path calls `Queue_Kos` at `0x001B42`, and execution resumes at
+`0x001B46` after `Queue_Kos` has written source and destination into the
+four-entry direct FIFO and incremented `Kos_decomp_queue_count`. The pinned
+BizHawk 2.11 GPGX core exposes synchronous execute callbacks through
+`IDebuggable.MemoryCallbacks`, scope `M68K BUS`. The native host registers one
+address-filtered execute callback at `0x001B46` for the duration of each S3K
+capture.
+
+The recorder therefore separates its logical authority ledger from its latest
+physical FIFO snapshot. The callback performs observation and staging only:
+
+- it reads the count-derived occupied direct entries after the enqueue;
+- if the logical direct ledger is empty (including after an earlier empty
+  frame-end sample during unexported boot), it mirrors every currently
+  occupied slot in physical FIFO order. The exact callback proves the final
+  entry is the just-enqueued module child; earlier entries are already-pending
+  direct work submitted since the empty sample. This bootstrap emits/stages no
+  retirement and establishes the physical snapshot for later reconciliation;
+- it accepts exactly two count shapes implied by one proven enqueue: no
+  retirement (`current count = prior count + 1`) or one intervening PRE head
+  retirement (`current count = prior count`);
+- for no retirement, every prior physical entry must match the current prefix
+  and the child is the one new tail;
+- for one retirement, the prior physical suffix after the old head must match
+  the current prefix and the child is the one new tail. Thus `[A,B] -> [B,C]`
+  is valid. It retains `A` in the logical ledger, stages that previously
+  mirrored ordinal for later PRE retirement, and mirrors `C` with a fresh
+  ordinal. `[A] -> [A]` is an identical replacement, not an unchanged sample,
+  because this exact callback proves one enqueue occurred;
+- it rejects loss of more than one prior physical head, loss/mutation of a
+  retained tail, a count outside capacity, or any shape not explained by one
+  PRE retirement followed by this one exact enqueue;
+- it never removes or completes a logical entry, changes prior busy-state
+  evidence, writes an event, or assigns a completion boundary.
+
+Ordinary frame-end reconciliation remains the sole direct-completion owner.
+At an admitted PRE boundary it first emits and removes staged retirements in
+canonical ordinal order, then reconciles the current physical snapshot. Each
+completion may name only a job already present in the logical mirror,
+including a child observed by the execute callback. The staged head cannot be
+retired again by the subsequent physical reconciliation. An unmirrored
+disappearance, double retirement, or unexplained multi-head loss remains
+fatal; neither the callback nor a later module edge may fabricate a direct
+completion. The exact function-local hook also excludes unrelated callers of
+`Queue_Kos`, avoiding partial-state sampling at the FIFO-count RAM write.
+
+The host callback registration is an explicit capture dependency, is disposed
+when the capture ends, and remains installed across represented segment gaps.
+A standard-recorder discard/reset clears the engine's direct/module ledgers
+and ordinal bases but does not require re-registering the host callback.
+Submission observations during unexported gaps update the run-wide ledger
+without producing output. Segment writers and authority arming continue to
+govern only later completion export.
+
+Native tests must prove both VINT/post-objects short-lived-child sequences,
+zero output from submission observation itself, first-callback multi-entry
+bootstrap during an unexported gap, `[A] -> [C]` and
+`[A,B] -> [B,C]` staging, byte-identical `[A] -> [A]` replacement with
+distinct ordinals, fail-closed multi-head loss, exactly one subsequent
+canonical PRE event per staged/mirrored retirement, no double retirement,
+direct-PRE-before-module-POST canonical order, no event for wholly
+unrepresented work, preserved ordinals across gaps/handoffs, and atomic reset
+of callback-observed physical, logical, staged, and module ledgers. A GPGX
+integration test must prove the
+address-filtered `M68K BUS` callback fires at `0x001B46` with the incremented
+FIFO visible.
+
+This callback is hardware-timing submission observability, not a diagnostic
+hook or sync/completion authority. The scoped native-harness `AGENTS.md` and
+`CLAUDE.md` policy must be amended together to permit only this exact
+address-filtered lifecycle callback while continuing to prohibit the Lua
+diagnostic-hook families, hook-derived trace sync, and event emission from a
+callback.
+
+This correction changes recorder output, so the installed approved fixtures
+are not edited in place. Fresh AIZ standard, AIZ complete-run, and any other
+candidate whose timing stream changes are captured into new isolated scratch
+directories. Their four-file bytes, hashes, event inventories, and mechanical
+deltas receive independent review. Replacement of committed fixture bytes and
+publication literals requires renewed explicit user approval. The standalone
+ICZ structural-prefix blocker remains separate and is not normalized by this
+recorder fix.
+
+## Corrected-candidate replay amendment (2026-07-29)
+
+The first candidate replay attempt incorrectly left the Surefire fork rooted
+at the worktree and therefore measured the installed, superseded streams.
+Candidate replay must set the fork's `user.dir` to an isolated fixture overlay.
+With that correction, the newly observed AIZ intro children and module parent
+are internally consistent. Immediately before module ordinal 2 is admitted at
+raw frame 361, the engine parent has completed one of two modules, direct
+ordinal 10 (`4767...`) is active, prepared, and ready, and the physical direct
+FIFO is empty. The POST sequence runs generic timing, the runtime-art
+coordinator claims the child and prepares/captures the parent, then the
+recorded observer admits the module edge. No same-POST loop or boundary-order
+change is required.
+
+The corrected streams instead expose production-owner gaps:
+
+- STANDARD AIZ stops at direct ordinal 25 (`669610...`), raw frame 3879.
+  It is the sole child of StarPost Stars3 parent module ordinal 12
+  (`28a69...`): source `0x187C50`, compressed length 91, destination
+  `0xFFFFD000`, decoded length 96. ROM `sub_2D3C8` queues the parent at
+  `0x187C4E` to tile `0x5EC`. The engine already has the correct
+  `Sonic3kStarPostObjectInstance -> queueStarPostBonusArt` owner, but the
+  replay route never reaches its activation. This remains an upstream
+  object/gameplay divergence; timing code must not synthesize the job.
+- COMPLETE AIZ stops at direct ordinal 26 (`1cea...`), raw frame 6257,
+  because `AIZ1BGE_FireTransition` queues three ordinary `Queue_Kos` jobs
+  before its two `Queue_Kos_Module` parents, while
+  `Sonic3kAIZEvents.queueAct2KosArt()` currently queues only the two parents.
+  The engine therefore submits the primary KosM child (`086520...`) at
+  ordinal 26 three positions too early.
+- COMPLETE HCZ stops at repeated Blastoid child ordinal 80 (`82c973...`),
+  raw frame 1335, source `0x36A7C8`, compressed length 411, destination
+  `0xFFFFD000`, decoded length 640, followed by parent ordinal 48
+  (`f7d726...`). The initial HCZ enemy-art group already replays; the later
+  repetition is a level/reload gameplay-owner gap, not a segment bootstrap or
+  queue-coordinator defect.
+- COMPLETE MGZ and CNZ stop at their first direct children, ordinals 131
+  (`e045a5...`) at raw frame 35 and 197 (`c2b0be...`) at raw frame 36.
+  `Sonic3kObjectArtProvider.scheduleEnemyKosArt()` is the production
+  `Obj_TitleCardWait2 -> LoadEnemyArt` owner and already arms only from
+  `onTitleCardArtRetired()`, but its zone profile switch omits MGZ and CNZ.
+  These are ordinary missing production profiles, not trace-created bootstrap
+  work.
+- COMPLETE ICZ successfully admits initial Snowdust/StarPointer children
+  234/235 and parents 158/159. It later stops at direct ordinal 236
+  (`107442...`), raw frame 1629, paired with StarPost bonus-art parent ordinal
+  160 (`0fbb...`). This is the same upstream StarPost gameplay divergence,
+  not the earlier initial-segment bootstrap hypothesis.
+
+### AIZ fire-transition ownership
+
+`queueAct2KosArt()` remains the owning event boundary. It reads the AIZ2 level
+load block at index 1 and must submit these five jobs in ROM order:
+
+1. standard Kosinski source at entry `+16` to
+   `S3kKosRamDestinations.RAM_START`;
+2. standard Kosinski source at entry `+8` to
+   `S3kKosRamDestinations.BLOCK_TABLE`;
+3. standard Kosinski source at entry `+12` to
+   `S3kKosRamDestinations.blockTableOffset(0xAB8)`;
+4. KosM source at entry `+0` to tile `0x000`; and
+5. KosM source at entry `+4` to tile `0x1FC`.
+
+The three direct jobs must produce the frozen native fingerprints
+`1cea...`, `6ab93...`, and `3b4e...` before the first KosM child
+`086520...`. The event owner retains a direct queue facade, three transient
+handles, and three scalar ordinals alongside the existing module state.
+Rewind rebinds each direct handle by kind/ordinal, derived-facade discard
+clears only handles/facades, and initialization/reset returns every ordinal to
+`-1`. When both module parents are ready, native FIFO ordering already implies
+that the three earlier direct jobs are ready; the event owner claims the
+direct payloads before claiming the module payloads and requesting the
+transition. The current ROM-backed mutation pipeline remains the terrain-data
+consumer, so the timing payloads are lifecycle evidence rather than an
+alternate layout mutation path.
+
+### MGZ/CNZ LoadEnemyArt ownership
+
+Extend the existing provider profile, preserving ROM list order:
+
+- MGZ1: Spiker `0x36E0C4`/tile `0x530`, MGZMiniboss
+  `0x36B02C`/tile `0x54F`, MGZEndBossDebris
+  `0x36D572`/tile `0x570`;
+- MGZ2: Spiker `0x36E0C4`/tile `0x530`, Mantis
+  `0x36E2D6`/tile `0x54F`;
+- CNZ: Sparkle `0x3700CA`/tile `0x524`, Batbot
+  `0x3703EC`/tile `0x552`, ClamerShot
+  `0x370058`/tile `0x570`, CNZBalloon
+  `0x37060E`/tile `0x574`.
+
+The offsets are S&K-half addresses from `sonic3k.lst`; the destinations and
+ordering are `PLCKosM_MGZ1`, `PLCKosM_MGZ2`, and `PLCKosM_CNZ`. Add named
+constants rather than embedding literals in the provider. Existing provider
+rewind state already captures pending entries, submitted handle ordinals, and
+the title-retirement arm. Do not add a trace bootstrap, zone exception in
+shared timing code, early arming, or trace-derived submission.
+
+Candidate-overlay replay is the acceptance fence. AIZ complete must advance
+through direct ordinals 26-28 and first primary module children. MGZ and CNZ
+must admit their first direct/module groups from the ordinary title-retired
+provider path. STANDARD AIZ StarPost, later HCZ reload, and later ICZ
+StarPost frontiers are recorded but explicitly deferred to their gameplay
+owners. These are engine-only changes and do not authorize another native
+recapture or fixture replacement.
+
 ## Migration and rollback
 
 Implementation first lands schema-2 parsing and per-kind authority while
