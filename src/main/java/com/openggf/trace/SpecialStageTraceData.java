@@ -61,11 +61,11 @@ public final class SpecialStageTraceData {
                     + traceProfile + "' in " + metadataPath);
         }
 
-        Path physicsPath = TraceData.resolveTraceFile(traceDirectory, "physics.csv");
+        Path physicsPath = TraceFiles.resolve(traceDirectory, "physics.csv");
         if (physicsPath == null) {
             throw new NoSuchFileException(traceDirectory.resolve("physics.csv").toString());
         }
-        Path auxPath = TraceData.resolveTraceFile(traceDirectory, "aux_state.jsonl");
+        Path auxPath = TraceFiles.resolve(traceDirectory, "aux_state.jsonl");
 
         List<SpecialStageTraceFrame> frames = loadPhysicsCsv(physicsPath);
         Map<Integer, List<TraceEvent>> events = auxPath != null
@@ -179,7 +179,7 @@ public final class SpecialStageTraceData {
 
     private static List<SpecialStageTraceFrame> loadPhysicsCsv(Path csvPath) throws IOException {
         List<SpecialStageTraceFrame> frames = new ArrayList<>();
-        try (BufferedReader reader = TraceData.openTraceReader(csvPath)) {
+        try (BufferedReader reader = TraceFiles.openReader(csvPath)) {
             String line = reader.readLine(); // skip header
             if (line == null) return frames;
             while ((line = reader.readLine()) != null) {
