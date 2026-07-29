@@ -1,7 +1,7 @@
 # S1/S2 PLC producer and call-site audit
 
-**Date:** 2026-07-29  
-**Status:** implementation-plan input for Task 5  
+**Date:** 2026-07-29
+**Status:** implemented and validated
 **Scope:** the queued `NewPLC`/`AddPLC`/`LoadPLC`/`LoadPLC2` producers whose
 runtime trigger already has a concrete OpenGGF owner. This is not an inventory
 of synchronous `QuickPLC`, DPLC, or all eagerly decoded art.
@@ -159,7 +159,7 @@ or a guessed update phase would produce a false timing event.
 
 ## Consequences for implementation and validation
 
-### Implementation constraint discovered after the decompression-queue merge
+### Constraints retained after the decompression-queue merge
 
 The current S2 session model exposes `PlayerCharacter`, but it does not expose
 the retail two-player flag or the player-graphics sign bit used by the
@@ -170,25 +170,22 @@ the distinct 2P Miles/Tails routes (`6`/`8`) or distinguish every retail
 those flags from renderer residency.  This is an explicit remaining model
 gap, not a trace-recording exception.
 
-Likewise, the eager renderer and logical queue still need a single
-all-or-nothing publication boundary.  The currently wired calls establish the
-logical producer locations and queue order, but a follow-up must preflight
-both sides before publishing either side; a renderer failure must not leave a
-logical-only submission (or vice versa).
+The eager renderer and logical queue now share an all-or-nothing publication
+boundary. `Sonic2RuntimePlcPublisher` preflights both capacities before either
+side publishes, preserves logical submissions on renderer cache hits, and
+rejects the whole request when either side cannot accept it. S1 represented
+owners commit through `Sonic1PlcService` transactions; S1 has no corresponding
+mutable eager-renderer publication. Producer owners retain rejected work and
+retry it, so a temporary capacity failure cannot silently lose a native request.
 
-1. The Task 5 request helpers must take the PLC service and a prepared eager
-   renderer registration as a single transaction. They cannot use a renderer
-   cache hit as a reason not to submit the queue operation.
-2. S2's existing `requestSonic2Plc` is the common route for the event and
-   end-of-act rows above; it is not directly available to object owners. Task 5
-   must expose the same game-owned transaction to those owners without putting
-   queue policy in a shared object base. Its present art-only behavior is
-   insufficient. The commented “handled by art system” paths are omissions,
-   not an alternate queue model.
-3. S1 must gain a similarly game-owned request boundary used only by its
-   routing rows above. The FZ producer submits at its existing threshold, while
-   Task 6 removes the old frame-countdown consumer and reconnects the boss to
-   `Sonic1PlcService.isBusy()`.
+1. The request helpers treat PLC service admission and prepared eager renderer
+   registration as one transaction. A renderer cache hit does not suppress the
+   logical queue operation.
+2. S2 event, end-of-act, presentation, and object owners publish through the
+   game-owned boundary rather than placing queue policy in shared object bases.
+3. S1 represented owners publish through its corresponding game-owned
+   boundary. The FZ producer submits at its native threshold and its consumer
+   now observes `Sonic1PlcService.isBusy()` rather than a surrogate countdown.
 4. Coverage is exhaustive over all disassembly producers with a represented
    Java owner. A future producer owner must amend this audit and the Task 5
    coverage table before it submits a queue operation. Eager availability alone
