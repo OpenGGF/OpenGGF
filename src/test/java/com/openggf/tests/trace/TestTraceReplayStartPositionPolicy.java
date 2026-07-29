@@ -648,6 +648,8 @@ class TestTraceReplayStartPositionPolicy {
     }
 
     private static void copyTraceFile(Path source, Path target, String baseName) throws Exception {
+        // Preserve compressed fixture bytes when available so copied fixtures retain
+        // their canonical compressed representation.
         Path compressed = source.resolve(baseName + ".gz");
         Path input = Files.exists(compressed) ? compressed : source.resolve(baseName);
         Files.copy(input, target.resolve(input.getFileName()), StandardCopyOption.REPLACE_EXISTING);
