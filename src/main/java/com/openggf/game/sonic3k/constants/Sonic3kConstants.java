@@ -1398,6 +1398,14 @@ public class Sonic3kConstants {
     // Locked-on S3 data has no S&K-half duplicate; HCZ1BGE_Normal references
     // this archive through LockOn Data.asm.
     public static final int ART_KOSM_HCZ2_SECONDARY_ADDR = 0x3BFA6C;
+    public static final int KOS_HCZ2_SECONDARY_BLOCK_ADDR = 0x3BF17C;
+    public static final int KOS_HCZ2_SECONDARY_CHUNK_ADDR = 0x3C18EE;
+    public static final int KOS_MGZ2_SECONDARY_BLOCK_ADDR = 0x3C9CD2;
+    public static final int KOSM_MGZ2_SECONDARY_ART_ADDR = 0x3CA132;
+    public static final int KOS_MGZ2_SECONDARY_CHUNK_ADDR = 0x3CB1C4;
+    public static final int KOS_LBZ2_SECONDARY_BLOCK_ADDR = 0x3E5F70;
+    public static final int KOSM_LBZ2_SECONDARY_ART_ADDR = 0x3E77D0;
+    public static final int KOS_LBZ2_CHUNK_ADDR = 0x3EAF04;
     // ArtTile_HCZGeyser - VRAM tile base for geyser art (both variants)
     public static final int ARTTILE_HCZ_GEYSER = 0x0500;
 
