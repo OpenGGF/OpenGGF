@@ -99,16 +99,16 @@ public final class TraceCaptureTool {
             for (int i = 0; i < argv.length; i++) {
                 String arg = argv[i];
                 switch (arg) {
-                    case "--trace" -> trace = requireValue(argv, ++i, arg);
-                    case "--out-dir" -> outDir = requireValue(argv, ++i, arg);
-                    case "--scale" -> scale = Integer.parseInt(requireValue(argv, ++i, arg));
-                    case "--fps" -> fps = Integer.parseInt(requireValue(argv, ++i, arg));
-                    case "--codec" -> codec = requireValue(argv, ++i, arg);
+                    case "--trace" -> trace = CliArguments.requireValue(argv, ++i, arg);
+                    case "--out-dir" -> outDir = CliArguments.requireValue(argv, ++i, arg);
+                    case "--scale" -> scale = CliArguments.parseInt(CliArguments.requireValue(argv, ++i, arg));
+                    case "--fps" -> fps = CliArguments.parseInt(CliArguments.requireValue(argv, ++i, arg));
+                    case "--codec" -> codec = CliArguments.requireValue(argv, ++i, arg);
                     case "--no-ghosts" -> showGhosts = false;
                     case "--ghosts" -> showGhosts = true;
-                    case "--verify" -> verifyFrames = parseFrameList(requireValue(argv, ++i, arg));
-                    case "--clip" -> clip = requireValue(argv, ++i, arg);
-                    case "--tail-frames" -> tailFrames = Integer.parseInt(requireValue(argv, ++i, arg));
+                    case "--verify" -> verifyFrames = parseFrameList(CliArguments.requireValue(argv, ++i, arg));
+                    case "--clip" -> clip = CliArguments.requireValue(argv, ++i, arg);
+                    case "--tail-frames" -> tailFrames = CliArguments.parseInt(CliArguments.requireValue(argv, ++i, arg));
                     default -> throw new IllegalArgumentException("Unknown argument: " + arg);
                 }
             }
@@ -128,12 +128,6 @@ public final class TraceCaptureTool {
             return frames;
         }
 
-        private static String requireValue(String[] argv, int index, String flag) {
-            if (index >= argv.length) {
-                throw new IllegalArgumentException("Missing value for " + flag);
-            }
-            return argv[index];
-        }
     }
 
     public static void main(String[] argv) {

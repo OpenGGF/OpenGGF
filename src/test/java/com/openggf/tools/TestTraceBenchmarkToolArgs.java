@@ -91,6 +91,30 @@ class TestTraceBenchmarkToolArgs {
     }
 
     @Test
+    void valuesBelowTheMinimumRetainTheirCurrentMessages() {
+        IllegalArgumentException warmupError = assertThrows(IllegalArgumentException.class,
+                () -> TraceBenchmarkTool.Args.parse(
+                        new String[]{"--trace", "aiz1", "--warmup-frames", "-1"}));
+        assertEquals("--warmup-frames must be >= 0, got -1", warmupError.getMessage());
+
+        IllegalArgumentException measureError = assertThrows(IllegalArgumentException.class,
+                () -> TraceBenchmarkTool.Args.parse(
+                        new String[]{"--trace", "aiz1", "--measure-frames", "0"}));
+        assertEquals("--measure-frames must be >= 1, got 0", measureError.getMessage());
+    }
+
+    @Test
+    void missingAndMalformedValuesRetainTheirExistingExceptionContracts() {
+        IllegalArgumentException missingValue = assertThrows(IllegalArgumentException.class,
+                () -> TraceBenchmarkTool.Args.parse(new String[]{"--trace", "aiz1", "--iterations"}));
+        assertEquals("Missing value for --iterations", missingValue.getMessage());
+
+        assertThrows(NumberFormatException.class,
+                () -> TraceBenchmarkTool.Args.parse(
+                        new String[]{"--trace", "aiz1", "--iterations", "three"}));
+    }
+
+    @Test
     void unknownFlagsAreRejected() {
         assertThrows(IllegalArgumentException.class, () -> TraceBenchmarkTool.Args.parse(
                 new String[]{"--trace", "aiz1", "--fast"}));
