@@ -1,29 +1,137 @@
 package com.openggf.game.sonic2;
 
 import com.openggf.game.GameServices;
+import com.openggf.game.session.GameplayModeContext;
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.rewind.snapshot.NemesisPlcQueueSnapshot;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
+import com.openggf.game.sonic2.events.Sonic2ARZEvents;
+import com.openggf.game.sonic2.events.Sonic2CNZEvents;
+import com.openggf.game.sonic2.events.Sonic2CPZEvents;
+import com.openggf.game.sonic2.events.Sonic2DEZEvents;
+import com.openggf.game.sonic2.events.Sonic2EHZEvents;
+import com.openggf.game.sonic2.events.Sonic2HTZEvents;
+import com.openggf.game.sonic2.events.Sonic2MCZEvents;
+import com.openggf.game.sonic2.events.Sonic2MTZEvents;
+import com.openggf.game.sonic2.events.Sonic2OOZEvents;
+import com.openggf.game.sonic2.events.Sonic2WFZEvents;
+import com.openggf.game.sonic2.events.Sonic2ZoneEvents;
 import com.openggf.game.sonic2.resources.Sonic2PlcService;
+import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
+import com.openggf.graphics.GraphicsManager;
+import com.openggf.level.Level;
+import com.openggf.level.LevelManager;
+import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.resources.NemesisPlcPatternCounts;
 import com.openggf.level.resources.PlcParser;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import com.openggf.tests.SingletonResetExtension;
 import com.openggf.tests.TestEnvironment;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
+import org.junit.jupiter.api.parallel.Isolated;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /** Native FIFO descriptor coverage for every currently represented S2 producer cue. */
 @RequiresRom(SonicGame.SONIC_2)
+@Isolated
+@Execution(ExecutionMode.SAME_THREAD)
+@ExtendWith(SingletonResetExtension.class)
 class TestSonic2PlcProducerCoverage {
     @BeforeEach
     void createSonic2Services() {
         GameServices.module().createGame(TestEnvironment.currentRom());
+    }
+
+    @AfterEach
+    void closeGameplaySession() {
+        SessionManager.clear();
+    }
+
+    /**
+     * Runs each actual dynamic-event owner at the ROM threshold recorded in
+     * the audit.  These are deliberately not request-facade calls: each case
+     * advances the production state machine and observes the native FIFO that
+     * its own {@code requestSonic2Plc} publication leaves behind.
+     */
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("eventRoutes")
+    void dynamicEventOwnerPublishesAuditedCueAndLeavesEagerArtAvailable(EventRoute route)
+            throws Exception {
+        RuntimeFixture fixture = installRuntime(route.romZone());
+        Sonic2PlcService queue = GameServices.module().getGameService(Sonic2PlcService.class);
+        Sonic2ZoneEvents owner = route.owner().get();
+        owner.init(route.act());
+        owner.setEventRoutine(route.routine());
+        GameServices.camera().setX((short) route.cameraX());
+        GameServices.camera().setY((short) route.cameraY());
+
+        route.beforeUpdate().accept(owner);
+        owner.update(route.act(), 0);
+
+        assertEquals(expectedDescriptors(route.plcId()), queue.capture().queuedEntries(),
+                route.name() + " must submit its ROM LoadPLC descriptor through the native FIFO");
+        assertFalse(fixture.provider().preparePlcs(route.plcId()).sheets().isEmpty()
+                        && fixture.provider().getRendererKeys().isEmpty(),
+                route.name() + " must retain an eager renderer path after queue publication");
+        assertDoesNotThrow(() -> fixture.provider().preflightPreparedPlc(
+                        fixture.provider().preparePlcs(route.plcId())),
+                route.name() + " eager art must be immediately usable after its owner transition");
+    }
+
+    private static Stream<EventRoute> eventRoutes() {
+        return Stream.of(
+                route("EHZ boss arena", Sonic2ZoneConstants.ROM_ZONE_EHZ,
+                        Sonic2EHZEvents::new, 1, 2, 0x28F0, 0, Sonic2Constants.PLC_EHZ_BOSS),
+                route("MTZ boss arena", Sonic2ZoneConstants.ROM_ZONE_MTZ_3,
+                        Sonic2MTZEvents::new, 2, 4, 0x2A80, 0, Sonic2Constants.PLC_MTZ_BOSS),
+                route("HTZ boss arena", Sonic2ZoneConstants.ROM_ZONE_HTZ,
+                        Sonic2HTZEvents::new, 1, 14, 0x2EDF, 0, Sonic2Constants.PLC_HTZ_BOSS),
+                route("OOZ boss arena", Sonic2ZoneConstants.ROM_ZONE_OOZ,
+                        Sonic2OOZEvents::new, 1, 2, 0x2880, 0, Sonic2Constants.PLC_OOZ_BOSS),
+                route("MCZ boss arena", Sonic2ZoneConstants.ROM_ZONE_MCZ,
+                        Sonic2MCZEvents::new, 1, 2, 0x20F0, 0, Sonic2Constants.PLC_MCZ_BOSS),
+                route("CNZ boss arena", Sonic2ZoneConstants.ROM_ZONE_CNZ,
+                        Sonic2CNZEvents::new, 1, 2, 0x2890, 0, Sonic2Constants.PLC_CNZ_BOSS),
+                route("CPZ boss arena", Sonic2ZoneConstants.ROM_ZONE_CPZ,
+                        Sonic2CPZEvents::new, 1, 2, 0x2A20, 0, Sonic2Constants.PLC_CPZ_BOSS),
+                route("DEZ Mecha Sonic", Sonic2ZoneConstants.ROM_ZONE_DEZ,
+                        Sonic2DEZEvents::new, 0, 0, 0x140, 0, Sonic2Constants.PLC_FIERY_EXPLOSION),
+                route("DEZ boss", Sonic2ZoneConstants.ROM_ZONE_DEZ,
+                        Sonic2DEZEvents::new, 0, 4, 0x300, 0, Sonic2Constants.PLC_DEZ_BOSS),
+                route("ARZ boss arena", Sonic2ZoneConstants.ROM_ZONE_ARZ,
+                        Sonic2ARZEvents::new, 1, 0, 0x2810, 0, Sonic2Constants.PLC_ARZ_BOSS),
+                new EventRoute("WFZ boss PLC", Sonic2ZoneConstants.ROM_ZONE_WFZ,
+                        Sonic2WFZEvents::new, 0, 0, 0x2880, 0x400,
+                        Sonic2Constants.PLC_WFZ_BOSS,
+                        owner -> ((Sonic2WFZEvents) owner).setWfzSubRoutine(0)),
+                new EventRoute("WFZ Tornado PLC", Sonic2ZoneConstants.ROM_ZONE_WFZ,
+                        Sonic2WFZEvents::new, 0, 0, 0, 0x500,
+                        Sonic2Constants.PLC_TORNADO,
+                        owner -> ((Sonic2WFZEvents) owner).setWfzSubRoutine(2)));
+    }
+
+    private static EventRoute route(String name, int zone, Supplier<Sonic2ZoneEvents> owner,
+                                    int act, int routine, int x, int y, int plcId) {
+        return new EventRoute(name, zone, owner, act, routine, x, y, plcId, ignored -> { });
     }
 
     @Test
@@ -72,5 +180,46 @@ class TestSonic2PlcProducerCoverage {
             }
         }
         return result;
+    }
+
+    private static RuntimeFixture installRuntime(int romZone) throws Exception {
+        GraphicsManager.getInstance().initHeadless();
+        GameplayModeContext gameplay = TestEnvironment.activeGameplayMode();
+        Sonic2ObjectArtProvider provider =
+                (Sonic2ObjectArtProvider) GameServices.module().getObjectArtProvider();
+        provider.loadArtForZone(romZone);
+        LevelManager manager = gameplay.getLevelManager();
+        setObjectRenderManager(manager, new ObjectRenderManager(provider));
+        gameplay.attachLevelManagers(
+                gameplay.getWaterSystem(), gameplay.getParallaxManager(),
+                gameplay.getTerrainCollisionManager(), gameplay.getCollisionSystem(),
+                gameplay.getSpriteManager(), manager);
+        setCurrentLevel(manager, gameplay);
+        manager.refreshObjectArtPatterns();
+        return new RuntimeFixture(provider);
+    }
+
+    private static void setObjectRenderManager(LevelManager manager, ObjectRenderManager renderManager)
+            throws ReflectiveOperationException {
+        Field field = LevelManager.class.getDeclaredField("objectRenderManager");
+        field.setAccessible(true);
+        field.set(manager, renderManager);
+    }
+
+    private static void setCurrentLevel(LevelManager manager, GameplayModeContext gameplay)
+            throws ReflectiveOperationException {
+        Level level = org.mockito.Mockito.mock(Level.class);
+        Field field = LevelManager.class.getDeclaredField("level");
+        field.setAccessible(true);
+        field.set(manager, level);
+        gameplay.getWorldSession().setCurrentLevel(level);
+    }
+
+    private record EventRoute(String name, int romZone, Supplier<Sonic2ZoneEvents> owner,
+                              int act, int routine, int cameraX, int cameraY, int plcId,
+                              Consumer<Sonic2ZoneEvents> beforeUpdate) {
+    }
+
+    private record RuntimeFixture(Sonic2ObjectArtProvider provider) {
     }
 }

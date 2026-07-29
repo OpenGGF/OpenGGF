@@ -148,3 +148,24 @@ succeeds; the renderer test forces a rejected publication, verifies no FIFO or
 renderer effects, then verifies a successful retry advances exactly once.
 The special-stage Bombs handoff and ordinary-boss capsule/animal-explosion
 handoffs likewise retain their phase/latch until the request succeeds.
+
+### Live owner/threshold corrective coverage
+
+`TestSonic2PlcProducerCoverage` now boots a production gameplay session for
+each dynamic-event route, loads the route's real object-art provider, advances
+the concrete event owner at its audited camera/routine threshold, and compares
+the native FIFO descriptor snapshot with the ROM PLC. The same session checks
+the eager renderer preflight remains usable after the owner publication. The
+table covers EHZ, MTZ, WFZ boss/Tornado, HTZ, OOZ, MCZ, CNZ, CPZ, both DEZ
+transitions, and ARZ.
+
+`TestSonic1PlcProducerOwnerCoverage` similarly executes the concrete S1 DLE
+owners for GHZ, LZ, MZ, SLZ, SYZ, and the Final Zone art threshold, rather than
+calling a PLC façade with literal IDs.
+
+```bash
+mvn -Dmse=off -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen \
+  "-Dtest=TestSonic1PlcProducerOwnerCoverage,TestSonic2PlcProducerCoverage" test
+```
+
+Result: **20 tests passed**.
