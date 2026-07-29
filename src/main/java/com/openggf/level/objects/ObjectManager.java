@@ -537,6 +537,13 @@ public class ObjectManager {
     }
 
     /**
+     * Stable collision-response candidates captured before object updates for this frame.
+     */
+    public List<ObjectInstance> poweredAttackTargetReadView() {
+        return collisionResponseList.playerReadView();
+    }
+
+    /**
      * Runs the inline player-slot touch pass against the frame-start snapshot.
      * ROM order: player slots scan before later level-object slots update.
      */

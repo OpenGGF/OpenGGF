@@ -71,6 +71,7 @@ public class Sonic3kAudioProfile extends AbstractAudioProfile {
         map.put(GameSound.TAILS_FLYING, Sonic3kSfx.FLYING.id);
         map.put(GameSound.TAILS_FLY_TIRED, Sonic3kSfx.FLY_TIRED.id);
         map.put(GameSound.GRAB, Sonic3kSfx.GRAB.id);
+        map.put(GameSound.THUMP, Sonic3kSfx.THUMP.id);
         map.put(GameSound.GLIDE_LAND, Sonic3kSfx.GLIDE_LAND.id);
         SOUND_MAP = Collections.unmodifiableMap(map);
 

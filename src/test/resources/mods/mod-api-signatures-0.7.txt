@@ -1495,7 +1495,7 @@ CONSTRUCTOR com.openggf.level.objects.PerObjectRewindSnapshot$BuzzerRewindExtra 
 CONSTRUCTOR com.openggf.level.objects.PerObjectRewindSnapshot$CoconutsRewindExtra public  <init>(int,int,int,int,int,int)
 CONSTRUCTOR com.openggf.level.objects.PerObjectRewindSnapshot$MasherRewindExtra public  <init>(int,int,int,int,int,int,int)
 CONSTRUCTOR com.openggf.level.objects.PerObjectRewindSnapshot$MonitorRewindExtra public  <init>(java.lang.String)
-CONSTRUCTOR com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  <init>(short,short,short,short,int,int,com.openggf.physics.Direction,byte,com.openggf.game.GroundMode,short,short,short,short,short,short,byte,byte,boolean,byte,byte,boolean,byte,short,short,short,short,short,short,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int,int,boolean,boolean,boolean,boolean,boolean,int,boolean,int,short,int,int,boolean,int,boolean,boolean,int,boolean,int,int,boolean,boolean,int,boolean,short,boolean,boolean,short,int,byte,boolean,com.openggf.game.ShieldType,boolean,boolean,int,boolean,boolean,int,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int,boolean,boolean,boolean,int,int,boolean,boolean,boolean,int,boolean,boolean,boolean,boolean,boolean,boolean,int,int,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,short,boolean,boolean,byte,boolean,int,byte,byte,byte,byte,boolean,boolean,boolean,boolean,boolean,boolean,int,int,boolean,boolean,int,int,int,int,int,boolean,com.openggf.sprites.managers.PlayableSpriteMovement$RewindState,com.openggf.sprites.managers.SpindashDustController$RewindState,com.openggf.sprites.managers.PlayableSpriteAnimation$RewindState,com.openggf.sprites.playable.DrowningController$RewindState,com.openggf.sprites.playable.TailsCarryController$Snapshot,com.openggf.sprites.playable.SuperStateController$RewindState,com.openggf.level.objects.PerObjectRewindSnapshot$SidekickCpuRewindExtra,short[],short[],short[],byte[],byte[],com.openggf.level.objects.PerObjectRewindSnapshot$PlayableSubclassRewindExtra)
+CONSTRUCTOR com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  <init>(short,short,short,short,int,int,com.openggf.physics.Direction,byte,com.openggf.game.GroundMode,short,short,short,short,short,short,byte,byte,boolean,byte,byte,boolean,byte,short,short,short,short,short,short,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int,int,boolean,boolean,boolean,boolean,boolean,int,boolean,int,short,int,int,boolean,int,boolean,boolean,int,boolean,int,int,boolean,boolean,int,boolean,short,boolean,boolean,short,int,byte,boolean,com.openggf.game.ShieldType,boolean,boolean,int,boolean,boolean,int,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int,boolean,boolean,boolean,int,int,boolean,boolean,boolean,int,boolean,boolean,boolean,boolean,boolean,boolean,int,int,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,short,boolean,boolean,byte,boolean,int,byte,byte,byte,byte,boolean,boolean,boolean,boolean,boolean,boolean,int,int,boolean,boolean,int,int,int,int,int,boolean,com.openggf.sprites.managers.PlayableSpriteMovement$RewindState,com.openggf.sprites.managers.SpindashDustController$RewindState,com.openggf.sprites.managers.PlayableSpriteAnimation$RewindState,com.openggf.sprites.playable.DrowningController$RewindState,com.openggf.sprites.playable.TailsCarryController$Snapshot,com.openggf.sprites.playable.SuperStateController$RewindState,com.openggf.level.objects.PerObjectRewindSnapshot$SidekickCpuRewindExtra,short[],short[],short[],byte[],byte[],byte[],com.openggf.level.objects.PerObjectRewindSnapshot$PlayableSubclassRewindExtra)
 CONSTRUCTOR com.openggf.level.objects.PerObjectRewindSnapshot$SidekickCpuRewindExtra public  <init>(com.openggf.sprites.playable.SidekickCpuController$State,int,int,int,int,int,int,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int,int,int,int,int,boolean,boolean,int,int,int,int,int,boolean,boolean,boolean,int,int,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int,int,int,boolean,boolean,com.openggf.sprites.playable.SidekickCpuController$NormalStepDiagnostics,short,short,boolean,boolean,int,boolean,int,boolean,short,short,int,int,int)
 CONSTRUCTOR com.openggf.level.objects.PersistentRespawnState public  <init>(long[],long[])
 CONSTRUCTOR com.openggf.level.objects.PlaneSwitcherConfig public  <init>(byte,byte,byte,byte)
@@ -1826,6 +1826,7 @@ FIELD com.openggf.audio.GameSound public,static,final com.openggf.audio.GameSoun
 FIELD com.openggf.audio.GameSound public,static,final com.openggf.audio.GameSound SPRING
 FIELD com.openggf.audio.GameSound public,static,final com.openggf.audio.GameSound TAILS_FLYING
 FIELD com.openggf.audio.GameSound public,static,final com.openggf.audio.GameSound TAILS_FLY_TIRED
+FIELD com.openggf.audio.GameSound public,static,final com.openggf.audio.GameSound THUMP
 FIELD com.openggf.audio.GameSound public,static,final com.openggf.audio.GameSound WALL_SMASH
 FIELD com.openggf.audio.StreamedMusicPort public,static,final com.openggf.audio.StreamedMusicPort EMPTY
 FIELD com.openggf.audio.StreamedMusicPort public,static,final int KNOWN_PAUSE_MASK
@@ -3819,6 +3820,7 @@ METHOD com.openggf.camera.Camera public  com.openggf.sprites.playable.AbstractPl
 METHOD com.openggf.camera.Camera public  int getFastScrollCap()
 METHOD com.openggf.camera.Camera public  int getHorizScrollDelay()
 METHOD com.openggf.camera.Camera public  int getVerticalWrapRange()
+METHOD com.openggf.camera.Camera public  int screenYWrapValue()
 METHOD com.openggf.camera.Camera public  java.lang.String key()
 METHOD com.openggf.camera.Camera public  short getHeight()
 METHOD com.openggf.camera.Camera public  short getMaxX()
@@ -7346,6 +7348,7 @@ METHOD com.openggf.game.zone.ZoneRuntimeState public  boolean rightWallDeepProbe
 METHOD com.openggf.game.zone.ZoneRuntimeState public  boolean usesPersistentBackgroundVdpPlane()
 METHOD com.openggf.game.zone.ZoneRuntimeState public  byte[] captureBytes()
 METHOD com.openggf.game.zone.ZoneRuntimeState public  com.openggf.physics.BackgroundPlaneCollisionProvider$State backgroundPlaneCollisionStateOrNull()
+METHOD com.openggf.game.zone.ZoneRuntimeState public  int levelRepeatOffset()
 METHOD com.openggf.game.zone.ZoneRuntimeState public  void restoreBytes(byte[])
 METHOD com.openggf.game.zone.ZoneRuntimeState public,abstract  int actIndex()
 METHOD com.openggf.game.zone.ZoneRuntimeState public,abstract  int zoneIndex()
@@ -9116,6 +9119,7 @@ METHOD com.openggf.level.objects.ObjectManager public  java.util.Collection<com.
 METHOD com.openggf.level.objects.ObjectManager public  java.util.Collection<com.openggf.level.objects.ObjectSpawn> getActiveSpawns()
 METHOD com.openggf.level.objects.ObjectManager public  java.util.List<com.openggf.level.TransitionSstOccupant> snapshotAllLiveSstObjectsForTransition()
 METHOD com.openggf.level.objects.ObjectManager public  java.util.List<com.openggf.level.TransitionSstOccupant> snapshotPersistentTransitionOccupants()
+METHOD com.openggf.level.objects.ObjectManager public  java.util.List<com.openggf.level.objects.ObjectInstance> poweredAttackTargetReadView()
 METHOD com.openggf.level.objects.ObjectManager public  java.util.List<com.openggf.level.objects.ObjectSpawn> getAllSpawns()
 METHOD com.openggf.level.objects.ObjectManager public  java.util.Map<java.lang.Integer,java.lang.Integer> occupiedDynamicSlotIds()
 METHOD com.openggf.level.objects.ObjectManager public  short getPreContactXSpeed()
@@ -9652,6 +9656,7 @@ METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra publi
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  byte prePhysicsAngle()
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  byte statusTertiary()
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  byte topSolidBit()
+METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  byte[] artTileAttributeHistory()
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  byte[] jumpPressHistory()
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  byte[] statusHistory()
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra public  com.openggf.game.GroundMode runningMode()
@@ -11497,6 +11502,7 @@ METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  byte getDoubl
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  byte getLrbSolidBit()
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  byte getPrePhysicsAngle()
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  byte getTopSolidBit()
+METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  byte[] copyArtTileAttributeHistory()
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  byte[] copyStatusHistory()
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  com.openggf.game.CharacterKey characterKey()
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  com.openggf.game.GroundMode getGroundMode()
@@ -11792,6 +11798,7 @@ METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  void updateWa
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  void updateWaterStateObjectControlled(int)
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  void writeLogicalInputAndCurrentFollowerHistory(int,boolean)
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public,final  boolean getJumpPressHistory(int)
+METHOD com.openggf.sprites.playable.AbstractPlayableSprite public,final  byte getArtTileAttributeHistory(int)
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public,final  byte getStatusHistory(int)
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public,final  com.openggf.audio.AudioManager currentAudioManager()
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public,final  com.openggf.camera.Camera currentCamera()
@@ -12072,11 +12079,13 @@ METHOD com.openggf.sprites.playable.SuperStateController public  boolean activat
 METHOD com.openggf.sprites.playable.SuperStateController public  boolean isHyperFormActive()
 METHOD com.openggf.sprites.playable.SuperStateController public  boolean isRomDataPreLoaded()
 METHOD com.openggf.sprites.playable.SuperStateController public  boolean isSuper()
+METHOD com.openggf.sprites.playable.SuperStateController public  boolean triggerPoweredWallImpact(int)
 METHOD com.openggf.sprites.playable.SuperStateController public  com.openggf.sprites.playable.SuperState getState()
 METHOD com.openggf.sprites.playable.SuperStateController public  com.openggf.sprites.playable.SuperStateController$RewindState captureRewindState()
 METHOD com.openggf.sprites.playable.SuperStateController public  void debugActivate()
 METHOD com.openggf.sprites.playable.SuperStateController public  void debugDeactivate()
 METHOD com.openggf.sprites.playable.SuperStateController public  void loadRomData(com.openggf.data.RomByteReader)
+METHOD com.openggf.sprites.playable.SuperStateController public  void renderPoweredTrail()
 METHOD com.openggf.sprites.playable.SuperStateController public  void reset()
 METHOD com.openggf.sprites.playable.SuperStateController public  void restoreRewindState(com.openggf.sprites.playable.SuperStateController$RewindState)
 METHOD com.openggf.sprites.playable.SuperStateController public  void setRomDataPreLoaded(boolean)
@@ -14707,6 +14716,7 @@ RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindE
 RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra animationId int
 RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra animationState com.openggf.sprites.managers.PlayableSpriteAnimation$RewindState
 RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra animationTick int
+RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra artTileAttributeHistory byte[]
 RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra badnikChainCounter int
 RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra balanceState int
 RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra bubbleAnimId int

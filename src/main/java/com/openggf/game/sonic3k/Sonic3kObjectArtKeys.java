@@ -41,6 +41,8 @@ public final class Sonic3kObjectArtKeys {
     public static final String LIGHTNING_SPARK = "lightning_spark";
     public static final String BUBBLE_SHIELD = "bubble_shield";
     public static final String INSTA_SHIELD = "insta_shield";
+    public static final String HYPER_SONIC_STARS = "s3k_hyper_sonic_stars";
+    public static final String SUPER_TAILS_BIRDS = "s3k_super_tails_birds";
     /** Splash/drown effect (Obj_DashDust anim 4): LBZ1 surface emerge splash. */
     public static final String SURFACE_SPLASH = "surface_splash";
     public static final String SS_ENTRY_RING = "ss_entry_ring";

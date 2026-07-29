@@ -1284,6 +1284,11 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		return verticalWrapEnabled;
 	}
 
+	/** ROM {@code Screen_Y_wrap_value}; disabled wrapping uses the word mask {@code $FFFF}. */
+	public int screenYWrapValue() {
+		return verticalWrapEnabled ? verticalWrapMask : 0xFFFF;
+	}
+
 	/**
 	 * @return true if a vertical wrap occurred during the last updatePosition() call
 	 */

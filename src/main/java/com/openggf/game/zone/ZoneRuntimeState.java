@@ -47,6 +47,11 @@ public interface ZoneRuntimeState {
         return false;
     }
 
+    /** ROM per-frame world-wrap correction consumed by moving level objects. */
+    default int levelRepeatOffset() {
+        return 0;
+    }
+
     /**
      * Captures gameplay-relevant per-zone runtime state as a byte buffer for
      * rewind. Default returns an empty array (no state to capture).

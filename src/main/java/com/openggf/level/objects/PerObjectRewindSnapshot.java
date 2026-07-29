@@ -479,6 +479,7 @@ public record PerObjectRewindSnapshot(
             short[] xHistory, short[] yHistory,
             short[] inputHistory,
             byte[] jumpPressHistory, byte[] statusHistory,
+            byte[] artTileAttributeHistory,
             // Mod-character / playable-subclass state (nullable; only present for
             // playable sprite subclasses overriding captureSubclassRewindState()).
             PlayableSubclassRewindExtra subclassExtra
@@ -490,6 +491,8 @@ public record PerObjectRewindSnapshot(
             inputHistory = inputHistory == null ? null : inputHistory.clone();
             jumpPressHistory = jumpPressHistory == null ? null : jumpPressHistory.clone();
             statusHistory = statusHistory == null ? null : statusHistory.clone();
+            artTileAttributeHistory = artTileAttributeHistory == null
+                    ? null : artTileAttributeHistory.clone();
         }
 
         /** Reassembles the controller-owned rewind state. */

@@ -46,6 +46,29 @@ public class TestSonic3kPlcArtRegistry {
     private static final Set<String> HARDCODED_MAPPING_BUILDERS = Set.of();
 
     @Test
+    public void poweredFormEffectsUseExactRomBackedMappingContracts() {
+        Sonic3kPlcArtRegistry.StandaloneArtEntry stars =
+                Sonic3kPlcArtRegistry.poweredFormArtEntry(
+                        Sonic3kObjectArtKeys.HYPER_SONIC_STARS);
+        assertEquals(0x14C652, stars.artAddr());
+        assertEquals(0x01948C, stars.mappingAddr());
+        assertEquals(CompressionType.KOSINSKI_MODULED, stars.compression());
+        assertEquals(6, stars.mappingFrameCount());
+
+        Sonic3kPlcArtRegistry.StandaloneArtEntry birds =
+                Sonic3kPlcArtRegistry.poweredFormArtEntry(
+                        Sonic3kObjectArtKeys.SUPER_TAILS_BIRDS);
+        assertEquals(0x14C7D4, birds.artAddr());
+        assertEquals(0x01A464, birds.mappingAddr());
+        assertEquals(CompressionType.KOSINSKI_MODULED, birds.compression());
+        assertEquals(3, birds.mappingFrameCount());
+
+        assertTrue(Sonic3kPlcArtRegistry.getPlan(0, 0).standaloneArt().stream()
+                .noneMatch(entry -> entry.key().equals(Sonic3kObjectArtKeys.HYPER_SONIC_STARS)
+                        || entry.key().equals(Sonic3kObjectArtKeys.SUPER_TAILS_BIRDS)));
+    }
+
+    @Test
     public void hpzSanctuaryPlanUsesRomBackedEmeraldAndTeleporterAssets() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan =
                 Sonic3kPlcArtRegistry.getPlan(Sonic3kZoneIds.ZONE_HPZ, 1);

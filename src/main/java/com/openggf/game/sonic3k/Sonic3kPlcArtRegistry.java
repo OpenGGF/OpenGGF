@@ -258,6 +258,28 @@ public final class Sonic3kPlcArtRegistry {
             )
     );
 
+    private static final List<StandaloneArtEntry> POWERED_FORM_ART = List.of(
+            new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.HYPER_SONIC_STARS,
+                    Sonic3kConstants.ART_KOSM_HYPER_SONIC_STARS_ADDR,
+                    CompressionType.KOSINSKI_MODULED, 0,
+                    Sonic3kConstants.MAP_HYPER_SONIC_STARS_ADDR, 0, -1,
+                    Sonic3kConstants.MAP_HYPER_SONIC_STARS_FRAME_COUNT),
+            new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.SUPER_TAILS_BIRDS,
+                    Sonic3kConstants.ART_KOSM_SUPER_TAILS_BIRDS_ADDR,
+                    CompressionType.KOSINSKI_MODULED, 0,
+                    Sonic3kConstants.MAP_SUPER_TAILS_BIRDS_ADDR, 0, -1,
+                    Sonic3kConstants.MAP_SUPER_TAILS_BIRDS_FRAME_COUNT)
+    );
+
+    public static StandaloneArtEntry poweredFormArtEntry(String key) {
+        return POWERED_FORM_ART.stream()
+                .filter(entry -> entry.key().equals(key))
+                .findFirst()
+                .orElse(null);
+    }
+
     /**
      * Returns the art plan for the given zone and act.
      *

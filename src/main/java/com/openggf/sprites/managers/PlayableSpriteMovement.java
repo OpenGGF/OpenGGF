@@ -1611,6 +1611,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (camera != null && camera.getFocusedSprite() == sprite) {
 			camera.setHorizScrollDelay(32);
 		}
+		SuperStateController controller = sprite.getSuperStateController();
+		if (controller instanceof com.openggf.game.sonic3k.Sonic3kSuperStateController s3kController) {
+			var levelManager = sprite.currentLevelManagerIfAvailable();
+			s3kController.triggerHyperSonicDashEffects(
+					levelManager != null ? levelManager.getObjectManager() : null);
+		}
 		audioManager.playSfx(GameSound.SPINDASH_RELEASE);
 	}
 
@@ -2296,7 +2302,15 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// Face toward the wall (use saved direction since xSpeed is already zeroed)
 		sprite.setDirection(wasMovingRight ? Direction.RIGHT : Direction.LEFT);
 
-		audioManager.playSfx(GameSound.GRAB);
+		int preZeroGroundSpeed = sprite.getGSpeed();
+		SuperStateController superState = sprite.getSuperStateController();
+		boolean hyperWallImpact = superState != null
+				&& superState.triggerPoweredWallImpact(preZeroGroundSpeed);
+		if (hyperWallImpact) {
+			audioManager.playSfx(GameSound.THUMP);
+		} else {
+			audioManager.playSfx(GameSound.GRAB);
+		}
 
 		// Zero all velocities
 		sprite.setGSpeed((short) 0);

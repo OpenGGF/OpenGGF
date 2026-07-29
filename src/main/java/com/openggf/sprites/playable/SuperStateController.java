@@ -55,6 +55,15 @@ public abstract class SuperStateController {
         return false;
     }
 
+    /** Semantic powered-form hook evaluated only after a successful wall latch. */
+    public boolean triggerPoweredWallImpact(int preZeroGroundSpeed) {
+        return false;
+    }
+
+    /** Draws any game-owned powered-form trail before the live player frame. */
+    public void renderPoweredTrail() {
+    }
+
     public void debugActivate() {
         if (state != SuperState.NORMAL || !transformationSupported()) return;
         player.addRings(50);

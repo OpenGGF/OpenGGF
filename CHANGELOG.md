@@ -13,6 +13,10 @@ All notable changes to the OpenGGF project are documented in this file.
   badniks use the native destruction and escalating score path, bosses remain
   immune, reactive projectiles deflect, and property-special targets retain
   their character-specific response.
+- Feature: Sonic 3 & Knuckles powered-form presentation now includes Hyper
+  Sonic's staggered stars, dash sparks, VInt-timed palette flash, and delayed
+  trail; Hyper Knuckles' thresholded wall impact, trail, and copied-camera
+  quake; and Super Tails' four independently targeting, rewind-safe Flickies.
 - Feature: Sonic 3 & Knuckles big rings now follow the locked-on ROM's
   Super-Emerald routing rules, including the glowing forced Mushroom Hill ring,
   completion-time Hidden Palace return snapshots, and rewind-safe flash

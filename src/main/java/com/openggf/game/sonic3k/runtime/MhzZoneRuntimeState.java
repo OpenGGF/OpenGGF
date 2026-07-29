@@ -127,6 +127,7 @@ public final class MhzZoneRuntimeState implements S3kZoneRuntimeState {
         return events == null ? 0 : events.getEndBossWalkoffPrepEventFlag();
     }
 
+    @Override
     public int levelRepeatOffset() {
         return events == null ? 0 : events.getLevelRepeatOffset();
     }

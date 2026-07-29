@@ -4,9 +4,11 @@ import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
 import com.openggf.game.PhysicsProfile;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
+import com.openggf.level.Palette;
 import com.openggf.sprites.playable.Knuckles;
 import com.openggf.sprites.playable.Sonic;
 import com.openggf.sprites.playable.SuperState;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.sprites.playable.SuperStateController;
 import com.openggf.sprites.playable.Tails;
 import com.openggf.sprites.animation.SpriteAnimationSet;
@@ -18,15 +20,85 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.lang.reflect.Field;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.mockito.Mockito.mock;
 
 @ExtendWith(SingletonResetExtension.class)
 @FullReset
 class TestSonic3kSuperStateRewind {
+
+    @Test
+    void hyperFlashUploadNeverMutatesCyclingSoftwarePalette() {
+        Palette live = new Palette();
+        live.setColor(2, new Palette.Color((byte) 1, (byte) 2, (byte) 3));
+
+        Palette firstUpload = Sonic3kSuperStateController.buildHyperFlashUpload(live);
+        live.setColor(2, new Palette.Color((byte) 4, (byte) 5, (byte) 6));
+        Palette secondUpload = Sonic3kSuperStateController.buildHyperFlashUpload(live);
+
+        assertEquals(4, live.getColor(2).r);
+        assertEquals(5, live.getColor(2).g);
+        assertEquals(6, live.getColor(2).b);
+        assertEquals(255, firstUpload.getColor(2).r & 0xFF);
+        assertEquals(255, secondUpload.getColor(2).r & 0xFF);
+        assertEquals(0, secondUpload.getColor(0).r & 0xFF);
+    }
+
+    @Test
+    void constructionMayDispatchResetBeforeSubclassFieldsInitialize() {
+        assertDoesNotThrow(() -> new Sonic3kSuperStateController(
+                new Sonic("sonic", (short) 0, (short) 0)));
+    }
+
+    @Test
+    void hyperDashAppliesThePoweredScreenAttack() throws Exception {
+        Sonic sonic = new Sonic("sonic", (short) 0, (short) 0);
+        Sonic3kSuperStateController controller = new Sonic3kSuperStateController(sonic);
+        setField(controller, "activeFormTier", S3kFormTier.HYPER);
+        setField(SuperStateController.class, controller, "state", SuperState.SUPER);
+        ObjectManager objects = mock(ObjectManager.class);
+
+        controller.triggerHyperSonicDashEffects(objects);
+
+        verify(objects).applyPoweredScreenAttack(sonic);
+        assertEquals(4, getIntField(controller, "hyperFlashFrames"));
+        controller.update();
+        controller.update();
+        controller.update();
+        assertEquals(4, getIntField(controller, "hyperFlashFrames"),
+                "gameplay updates must not consume the VInt-owned flash timer");
+        for (int i = 0; i < 4; i++) {
+            controller.onPaletteUploadVInt();
+        }
+        assertEquals(0, getIntField(controller, "hyperFlashFrames"),
+                "ROM flash must restore after exactly four V-Int updates");
+        controller.onPaletteUploadVInt();
+        assertEquals(0, getIntField(controller, "hyperFlashFrames"));
+    }
+
+    private static void setField(Object target, String name, Object value) throws Exception {
+        setField(target.getClass(), target, name, value);
+    }
+
+    private static void setField(Class<?> owner, Object target, String name, Object value) throws Exception {
+        Field field = owner.getDeclaredField(name);
+        field.setAccessible(true);
+        field.set(target, value);
+    }
+
+    private static int getIntField(Object target, String name) throws Exception {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field.getInt(target);
+    }
+
     private Sonic sonic;
     private Sonic3kSuperStateController controller;
 

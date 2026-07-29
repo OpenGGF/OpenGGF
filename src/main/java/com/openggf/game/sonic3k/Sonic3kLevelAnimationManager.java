@@ -60,11 +60,24 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
     public void update() {
         patternAnimator.update();
         paletteCycler.update();
+        applyPoweredFormPaletteUploadVInt();
         // LevelLoop runs Process_Sprites before ChangeRingFrame
         // (sonic3k.asm:7888-7910). LevelFrameRuntimeUpdater calls this combined
         // manager after the object pass, so this is the runtime owner for the
         // independent AIZ_vine_angle word advanced at sonic3k.asm:9680-9694.
         globalAnimationState.advanceChangeRingFrame();
+    }
+
+    private static void applyPoweredFormPaletteUploadVInt() {
+        try {
+            var main = GameServices.sprites().getMainPlayable();
+            if (main != null
+                    && main.getSuperStateController() instanceof Sonic3kSuperStateController controller) {
+                controller.onPaletteUploadVInt();
+            }
+        } catch (RuntimeException ignored) {
+            // Headless/bootstrap animation managers may run without gameplay services.
+        }
     }
 
     /**

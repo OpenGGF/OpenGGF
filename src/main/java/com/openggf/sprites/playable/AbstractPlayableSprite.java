@@ -129,6 +129,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         private short[] inputHistory = new short[64];
         private byte[] jumpPressHistory = new byte[64];
         private byte[] statusHistory = new byte[64];
+        /** ROM Stat_table byte 3 consumed as the delayed art_tile high byte. */
+        private byte[] artTileAttributeHistory = new byte[64];
         private boolean followerHistoryRecordedThisTick;
         /** Current frame logical controller state (ROM: Ctrl_1_Logical). */
         private short logicalInputState = 0;
@@ -1010,6 +1012,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         includeFollowHistory ? inputHistory : null,
                         includeFollowHistory ? jumpPressHistory : null,
                         includeFollowHistory ? statusHistory : null,
+                        includeFollowHistory ? artTileAttributeHistory : null,
                         captureSubclassRewindState());
                 // Player snapshots use a stub PerObjectRewindSnapshot (no badnikExtra; playerExtra holds everything).
                 return new PerObjectRewindSnapshot(
@@ -1182,7 +1185,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.animationTick = extra.animationTick();
                 this.debugMode = extra.debugMode();
                 controller.restoreRewindState(extra, cpuController, xHistory, yHistory,
-                        inputHistory, jumpPressHistory, statusHistory);
+                        inputHistory, jumpPressHistory, statusHistory,
+                        artTileAttributeHistory);
                 // Sensor offsets are derived from restored radii plus air/angle/running mode.
                 // Recompute after direct field hydration so rewind does not keep offsets from
                 // the pre-restore sprite state.
@@ -3779,6 +3783,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         inputHistory[i] = 0;
                         jumpPressHistory[i] = 0;
                         statusHistory[i] = 0;
+                        artTileAttributeHistory[i] = 0;
                 }
                 // Always use PlayableSpriteController - it checks debugMode internally
                 controller = new PlayableSpriteController(this);
@@ -4202,6 +4207,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public byte[] copyStatusHistory() {
                 return statusHistory.clone();
+        }
+
+        public byte[] copyArtTileAttributeHistory() {
+                return artTileAttributeHistory.clone();
         }
 
         public int historyPos() {
@@ -4682,6 +4691,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         inputHistory[i] = 0;
                         jumpPressHistory[i] = 0;
                         statusHistory[i] = 0;
+                        artTileAttributeHistory[i] = 0;
                 }
                 historyPos = 0;
                 followerHistoryRecordedThisTick = false;
@@ -4802,6 +4812,15 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         desired += statusHistory.length;
                 }
                 return statusHistory[desired];
+        }
+
+        /** Delayed ROM Stat_table byte copied into art_tile's high byte. */
+        public final byte getArtTileAttributeHistory(int framesBehind) {
+                int desired = historyPos - framesBehind;
+                if (desired < 0) {
+                        desired += artTileAttributeHistory.length;
+                }
+                return artTileAttributeHistory[desired];
         }
 
         /**
@@ -4954,6 +4973,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 if (inWater) status |= STATUS_UNDERWATER;
                 if (preventTailsRespawn) status |= STATUS_PREVENT_TAILS_RESPAWN;
                 statusHistory[historyPos] = status;
+                artTileAttributeHistory[historyPos] =
+                        (byte) (isHighPriority() ? 0x80 : 0);
                 followerHistoryRecordedThisTick = true;
         }
 

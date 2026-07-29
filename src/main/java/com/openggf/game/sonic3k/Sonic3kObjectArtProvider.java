@@ -1984,6 +1984,9 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
             }
         }
         if (entry == null) {
+            entry = Sonic3kPlcArtRegistry.poweredFormArtEntry(key);
+        }
+        if (entry == null) {
             return false;
         }
 

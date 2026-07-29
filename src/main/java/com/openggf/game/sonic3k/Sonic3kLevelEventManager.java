@@ -508,6 +508,13 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         // foreground and background event handlers. Keep these as independent
         // words: transition/deform code can subsequently mutate the copies.
         camera().copyLivePositionToScreenEventWords();
+        com.openggf.game.PlayableEntity mainPlayer =
+                GameServices.sprites().getMainPlayable();
+        if (mainPlayer instanceof com.openggf.sprites.playable.AbstractPlayableSprite playable
+                && playable.getSuperStateController()
+                    instanceof Sonic3kSuperStateController superState) {
+            superState.applyHyperKnucklesWallQuake(camera());
+        }
         if (screenEventIdentity == ScreenEventIdentity.HPZ_SPECIAL_STAGE_HUB) {
             applyHpzsScreenEvent(camera());
         }

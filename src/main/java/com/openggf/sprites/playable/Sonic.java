@@ -42,6 +42,9 @@ public class Sonic extends AbstractPlayableSprite {
 			if (getSpindashDustController() != null) {
 				getSpindashDustController().draw();
 			}
+			if (getSuperStateController() != null) {
+				getSuperStateController().renderPoweredTrail();
+			}
 			getSpriteRenderer().drawFrame(
 					getMappingFrame(),
 					getRenderCentreX(),

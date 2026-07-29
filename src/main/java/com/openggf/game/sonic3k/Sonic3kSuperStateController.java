@@ -19,6 +19,9 @@ import com.openggf.sprites.render.PlayerSpriteRenderer;
 
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
+import com.openggf.level.objects.ObjectManager;
+import com.openggf.game.sonic3k.objects.HyperSonicStarsObjectInstance;
+import com.openggf.game.sonic3k.objects.SuperTailsFlickyFlockObjectInstance;
 import com.openggf.level.Palette;
 import com.openggf.level.WaterSystem;
 
@@ -83,6 +86,8 @@ public class Sonic3kSuperStateController extends SuperStateController {
 
     /** Form selected when transformation starts; never inferred during rendering. */
     private S3kFormTier activeFormTier = S3kFormTier.NORMAL;
+    private final HyperKnucklesWallQuake wallQuake = new HyperKnucklesWallQuake();
+    private int hyperFlashFrames;
 
     /** Palette line index where Sonic's colors reside. */
     private static final int SONIC_PALETTE_INDEX = 0;
@@ -112,6 +117,10 @@ public class Sonic3kSuperStateController extends SuperStateController {
         paletteTimer = 0;
         transformFramesRemaining = 0;
         activeFormTier = S3kFormTier.NORMAL;
+        if (wallQuake != null) {
+            wallQuake.restore(new HyperKnucklesWallQuake.Snapshot(0));
+        }
+        hyperFlashFrames = 0;
     }
 
     @Override
@@ -126,7 +135,10 @@ public class Sonic3kSuperStateController extends SuperStateController {
     @Override
     public RewindState captureRewindState() {
         return createRewindState(paletteState, paletteFrame, paletteTimer, transformFramesRemaining,
-                activeFormTier.ordinal(), packPalette(savedNormalPalette),
+                activeFormTier.ordinal()
+                        | (wallQuake.capture().framesRemaining() << 8)
+                        | (hyperFlashFrames << 16),
+                packPalette(savedNormalPalette),
                 packPalette(savedNormalUnderwaterPalette));
     }
 
@@ -141,7 +153,10 @@ public class Sonic3kSuperStateController extends SuperStateController {
         transformFramesRemaining = rewindState.transformFramesRemaining();
         savedNormalPalette = unpackPalette(rewindState.savedNormalPalette());
         savedNormalUnderwaterPalette = unpackPalette(rewindState.savedNormalUnderwaterPalette());
-        activeFormTier = formTierFromSnapshot(rewindState.presentationTier());
+        activeFormTier = formTierFromSnapshot(rewindState.presentationTier() & 0xFF);
+        wallQuake.restore(new HyperKnucklesWallQuake.Snapshot(
+                Math.max(0, (rewindState.presentationTier() >>> 8) & 0xFF)));
+        hyperFlashFrames = Math.max(0, (rewindState.presentationTier() >>> 16) & 0xFF);
         configurePaletteForActiveTier();
         paletteFrame = rewindState.paletteFrame();
         reconcileRewindPresentation(rewindState.state());
@@ -257,6 +272,95 @@ public class Sonic3kSuperStateController extends SuperStateController {
         return isSuper() && activeFormTier == S3kFormTier.HYPER;
     }
 
+    public void triggerHyperSonicDashEffects(ObjectManager objectManager) {
+        if (isHyperFormActive() && !(player instanceof Knuckles) && objectManager != null) {
+            objectManager.applyPoweredScreenAttack(player);
+            HyperSonicStarsObjectInstance stars = ensureHyperSonicStars(objectManager);
+            if (stars != null) {
+                stars.triggerDashSparks();
+            }
+            hyperFlashFrames = 4;
+        }
+    }
+
+    @Override
+    public boolean triggerPoweredWallImpact(int preZeroGroundSpeed) {
+        if (!isHyperFormActive() || !(player instanceof Knuckles)
+                || (preZeroGroundSpeed & 0xFFFF) < 0x480) {
+            return false;
+        }
+        LevelManager levelManager = player.currentLevelManagerIfAvailable();
+        ObjectManager objectManager = levelManager != null ? levelManager.getObjectManager() : null;
+        if (objectManager != null) {
+            objectManager.applyPoweredScreenAttack(player);
+        }
+        wallQuake.trigger();
+        return true;
+    }
+
+    public boolean triggerHyperKnucklesWallImpact(int preZeroGroundSpeed) {
+        return triggerPoweredWallImpact(preZeroGroundSpeed);
+    }
+
+    public void applyHyperKnucklesWallQuake(com.openggf.camera.Camera camera) {
+        wallQuake.updateCopiedCamera(camera);
+    }
+
+    public HyperFormTrailSample currentTrailSample(int levelFrameCounter) {
+        if (!isHyperFormActive() || player instanceof Tails) {
+            return null;
+        }
+        return HyperFormTrailSample.sample(player, levelFrameCounter);
+    }
+
+    private HyperSonicStarsObjectInstance ensureHyperSonicStars(ObjectManager objectManager) {
+        if (objectManager == null || player instanceof Knuckles || player instanceof Tails) {
+            return null;
+        }
+        for (var object : objectManager.getActiveObjects()) {
+            if (object instanceof HyperSonicStarsObjectInstance stars && stars.isBoundTo(player)
+                    && !stars.isDestroyed()) {
+                return stars;
+            }
+        }
+        return objectManager.createDynamicObject(() -> new HyperSonicStarsObjectInstance(player));
+    }
+
+    void onPaletteUploadVInt() {
+        if (hyperFlashFrames <= 0) {
+            return;
+        }
+        uploadHyperFlashPalette();
+        hyperFlashFrames--;
+    }
+
+    private void uploadHyperFlashPalette() {
+        LevelManager levelManager = GameServices.levelOrNull();
+        Level level = levelManager != null ? levelManager.getCurrentLevel() : null;
+        if (level == null) {
+            return;
+        }
+        for (int line = 0; line < level.getPaletteCount(); line++) {
+            Palette palette = buildHyperFlashUpload(level.getPalette(line));
+            GameServices.graphics().cachePaletteTexture(palette, line);
+        }
+    }
+
+    static Palette buildHyperFlashUpload(Palette livePalette) {
+        Palette upload = livePalette.deepCopy();
+        for (int color = 0; color < Palette.PALETTE_SIZE; color++) {
+            byte component = (byte) (color == 0 ? 0 : 0xFF);
+            upload.setColor(color, new Palette.Color(component, component, component));
+        }
+        return upload;
+    }
+
+
+    @Override
+    public void renderPoweredTrail() {
+        HyperFormTrailRenderer.draw(player, this);
+    }
+
     @Override
     protected boolean passesGameSpecificTransformGates() {
         if (player instanceof Tails) {
@@ -301,6 +405,15 @@ public class Sonic3kSuperStateController extends SuperStateController {
     @Override
     protected void onTransformationStarted() {
         activeFormTier = getEligibleFormTier();
+        if (activeFormTier == S3kFormTier.HYPER && !(player instanceof Knuckles)) {
+            LevelManager levelManager = player.currentLevelManagerIfAvailable();
+            ensureHyperSonicStars(levelManager != null ? levelManager.getObjectManager() : null);
+        }
+        if (activeFormTier == S3kFormTier.SUPER_TAILS && player instanceof Tails
+                && player.getPowerUpSpawner() != null) {
+            player.getPowerUpSpawner().registerObject(
+                    new SuperTailsFlickyFlockObjectInstance(player));
+        }
         captureNormalPalette();
         configurePaletteForActiveTier();
         paletteState = usesSonicFormPresentation() ? 1 : -1;

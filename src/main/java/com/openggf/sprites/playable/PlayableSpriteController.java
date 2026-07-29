@@ -118,7 +118,8 @@ public class PlayableSpriteController {
 
     void restoreRewindState(PlayerRewindExtra extra, SidekickCpuController cpuController,
             short[] xHistory, short[] yHistory, short[] inputHistory,
-            byte[] jumpPressHistory, byte[] statusHistory) {
+            byte[] jumpPressHistory, byte[] statusHistory,
+            byte[] artTileAttributeHistory) {
         boolean hasFullCarrySnapshot = extra.tailsCarryState() != null;
         if (hasFullCarrySnapshot) restoreRewindState(extra.controllerState());
         else restoreRewindStateWithoutCarry(extra.controllerState());
@@ -136,6 +137,7 @@ public class PlayableSpriteController {
         copyHistory(extra.inputHistory(), inputHistory);
         copyHistory(extra.jumpPressHistory(), jumpPressHistory);
         copyHistory(extra.statusHistory(), statusHistory);
+        copyHistory(extra.artTileAttributeHistory(), artTileAttributeHistory);
     }
 
     private static void copyHistory(short[] source, short[] target) {

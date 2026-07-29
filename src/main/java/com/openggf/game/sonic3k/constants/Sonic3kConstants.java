@@ -594,6 +594,15 @@ public class Sonic3kConstants {
     public static final int PAL_CYCLE_SUPER_KNUCKLES_FRAME_COUNT = 10;
     public static final int PAL_CYCLE_SUPER_KNUCKLES_REVERT_ADDR = 0x003AEA;
 
+    /** ArtKosM_HyperSonicStars and its exact six-frame mapping table. */
+    public static final int ART_KOSM_HYPER_SONIC_STARS_ADDR = 0x14C652;
+    public static final int MAP_HYPER_SONIC_STARS_ADDR = 0x01948C;
+    public static final int MAP_HYPER_SONIC_STARS_FRAME_COUNT = 6;
+    /** ArtKosM_SuperTailsBirds and its exact three-frame mapping table. */
+    public static final int ART_KOSM_SUPER_TAILS_BIRDS_ADDR = 0x14C7D4;
+    public static final int MAP_SUPER_TAILS_BIRDS_ADDR = 0x01A464;
+    public static final int MAP_SUPER_TAILS_BIRDS_FRAME_COUNT = 3;
+
     // --- VRAM art tile destinations ---
     // VDP tile indices where art is loaded in VRAM during the intro
     public static final int ARTTILE_AIZ_INTRO_SPRITES = 0x03D1;  // ArtTile_AIZIntroSprites

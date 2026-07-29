@@ -40,5 +40,6 @@ public enum GameSound {
     TAILS_FLYING,
     TAILS_FLY_TIRED,
     GRAB,       // SFX $4B - Knuckles wall grab (SndID_Grab)
+    THUMP,      // Powered wall impact
     GLIDE_LAND  // SFX $4C - Knuckles glide land/slide (SndID_GlideLand)
 }
