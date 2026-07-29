@@ -1,6 +1,7 @@
 package com.openggf.tests;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -19,9 +20,16 @@ import java.util.stream.Stream;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 class TestBuildToolingGuard {
+
+    private static final Path POLICY_SCRIPT = Path.of(".githooks/validate-policy.sh").toAbsolutePath();
+    private static final Path POST_CHECKOUT_HOOK = Path.of(".githooks/post-checkout").toAbsolutePath();
+    private static final Path PROJECT_GITIGNORE = Path.of(".gitignore").toAbsolutePath();
+    private static final String ALL_ZERO_OID = "0000000000000000000000000000000000000000";
 
     private static final List<String> TRACE_REPLAY_DIAGNOSTIC_EXCLUDES = List.of(
             "**/Debug*.java",
@@ -1349,6 +1357,356 @@ class TestBuildToolingGuard {
         assertEquals(List.of(
                 "sample/TraceReplayBootstrap.java:5 - if (firstFrame.sidekick().mappingFrame() == 0) {"),
                 signals);
+    }
+
+    @Test
+    void preCommitRejectsProtectedRelativeDisassemblyLink(@TempDir Path temporaryDirectory) throws Exception {
+        Path repository = newRepository(temporaryDirectory, "protected-relative-link");
+        stageSymlink(repository, "docs/skdisasm", "../../shared/skdisasm", true);
+
+        assertPolicyRejects(runPolicy(repository, "pre-commit"), "docs/skdisasm");
+    }
+
+    @Test
+    void preCommitRejectsUnprotectedAbsolutePosixWindowsAndUncLinks(@TempDir Path temporaryDirectory) throws Exception {
+        Path posixRepository = newRepository(temporaryDirectory, "absolute-posix-link");
+        String posixPath = "/" + "opt" + "/shared-resource";
+        stageSymlink(posixRepository, "docs/external-link", posixPath, false);
+        assertPolicyRejects(runPolicy(posixRepository, "pre-commit"), "docs/external-link");
+
+        Path posixHomeRepository = newRepository(temporaryDirectory, "absolute-posix-home-link");
+        String posixHomePath = "/" + "home" + "/" + "policy-user" + "/workspace";
+        stageSymlink(posixHomeRepository, "docs/home-link", posixHomePath, false);
+        assertPolicyRejects(runPolicy(posixHomeRepository, "pre-commit"), "docs/home-link");
+
+        Path windowsRepository = newRepository(temporaryDirectory, "absolute-windows-link");
+        String windowsHomePath = "C:" + "\\" + "Users" + "\\" + "policy-user" + "\\workspace";
+        stageSymlink(windowsRepository, "docs/windows-link", windowsHomePath, false);
+        assertPolicyRejects(runPolicy(windowsRepository, "pre-commit"), "docs/windows-link");
+
+        Path uncRepository = newRepository(temporaryDirectory, "absolute-unc-link");
+        String uncPath = "\\" + "\\" + "server" + "\\" + "shared-resource";
+        stageSymlink(uncRepository, "docs/unc-link", uncPath, false);
+        assertPolicyRejects(runPolicy(uncRepository, "pre-commit"), "docs/unc-link");
+    }
+
+    @Test
+    void preCommitAcceptsUnprotectedRelativeLink(@TempDir Path temporaryDirectory) throws Exception {
+        Path repository = newRepository(temporaryDirectory, "unprotected-relative-link");
+        stageSymlink(repository, "docs/portable-link", "../shared/portable-resource", false);
+
+        assertPolicyAccepts(runPolicy(repository, "pre-commit"));
+    }
+
+    @Test
+    void preCommitTreatsHomebrewTextAsOrdinaryText(@TempDir Path temporaryDirectory) throws Exception {
+        Path repository = newRepository(temporaryDirectory, "homebrew-text");
+        writeAndStage(repository, "docs/architecture/audits/homebrew.md", "/" + "homebrew" + "/example\n");
+
+        assertPolicyAccepts(runPolicy(repository, "pre-commit"));
+    }
+
+    @Test
+    void preCommitRejectsPosixAndWindowsUserHomePathsInAddedText(@TempDir Path temporaryDirectory) throws Exception {
+        Path posixRepository = newRepository(temporaryDirectory, "posix-home-text");
+        String posixHomePath = "/" + "home" + "/policy-user/workspace";
+        writeAndStage(posixRepository, "docs/architecture/audits/posix.md", "local checkout: " + posixHomePath + "\n");
+        assertPolicyRejects(runPolicy(posixRepository, "pre-commit"), "docs/architecture/audits/posix.md");
+
+        Path windowsRepository = newRepository(temporaryDirectory, "windows-home-text");
+        String windowsHomePath = "D:" + "\\" + "Users" + "\\policy-user\\workspace";
+        writeAndStage(windowsRepository, "docs/architecture/audits/windows.md", "local checkout: " + windowsHomePath + "\n");
+        assertPolicyRejects(runPolicy(windowsRepository, "pre-commit"), "docs/architecture/audits/windows.md");
+
+        Path varHomeRepository = newRepository(temporaryDirectory, "var-home-text");
+        String varHomePath = "/" + "var" + "/" + "home" + "/policy-user/workspace";
+        writeAndStage(varHomeRepository, "docs/architecture/audits/var-home.md", "local checkout: " + varHomePath + "\n");
+        assertPolicyRejects(runPolicy(varHomeRepository, "pre-commit"), "docs/architecture/audits/var-home.md");
+
+        Path macHomeRepository = newRepository(temporaryDirectory, "mac-home-text");
+        String macHomePath = "/" + "Users" + "/policy-user/workspace";
+        writeAndStage(macHomeRepository, "docs/architecture/audits/mac.md", "local checkout: " + macHomePath + "\n");
+        assertPolicyRejects(runPolicy(macHomeRepository, "pre-commit"), "docs/architecture/audits/mac.md");
+    }
+
+    @Test
+    void preCommitRejectsRootMergeAndHandoverScratchArtifacts(@TempDir Path temporaryDirectory) throws Exception {
+        Path mergeRepository = newRepository(temporaryDirectory, "merge-status-scratch");
+        writeAndStage(mergeRepository, "MERGE-STATUS-incident.md", "temporary status\n");
+        assertPolicyRejects(runPolicy(mergeRepository, "pre-commit"), "MERGE-STATUS-incident.md");
+
+        Path handoverRepository = newRepository(temporaryDirectory, "handover-scratch");
+        writeAndStage(handoverRepository, "HANDOVER-incident.md", "temporary handover\n");
+        assertPolicyRejects(runPolicy(handoverRepository, "pre-commit"), "HANDOVER-incident.md");
+    }
+
+    @Test
+    void preCommitAcceptsClassifiedArchitectureAudit(@TempDir Path temporaryDirectory) throws Exception {
+        Path repository = newRepository(temporaryDirectory, "classified-audit");
+        writeAndStage(repository, "docs/architecture/audits/HANDOVER-incident.md", "retained engineering audit\n");
+
+        assertPolicyAccepts(runPolicy(repository, "pre-commit"));
+    }
+
+    @Test
+    void everyDisassemblyPathIsIgnoredAsDirectoryAndSymlink(@TempDir Path temporaryDirectory) throws Exception {
+        Path repository = newRepository(temporaryDirectory, "disassembly-ignore");
+        installProjectIgnoreRules(repository);
+        for (String disassembly : disassemblyPaths()) {
+            Path directory = repository.resolve(disassembly);
+            Files.createDirectories(directory);
+            assertGitSucceeds(repository, "check-ignore", "-q", "--", disassembly);
+            Files.delete(directory);
+
+            Files.createSymbolicLink(directory, Path.of("../shared/" + directory.getFileName()));
+            assertGitSucceeds(repository, "check-ignore", "-q", "--", disassembly);
+            Files.delete(directory);
+        }
+    }
+
+    @Test
+    void mergeHooksRejectProtectedLinkStagedDuringConflictResolution(@TempDir Path temporaryDirectory) throws Exception {
+        Path repository = newRepository(temporaryDirectory, "merge-resolution-link");
+        prepareConflictedMerge(repository);
+        stageSymlink(repository, "docs/skdisasm", "../../shared/skdisasm", true);
+        writeAndStage(repository, "conflict.txt", "resolved\n");
+        Path message = repository.resolve("merge-message.txt");
+        Files.writeString(message, "Merge topic\n");
+
+        assertPolicyRejects(runPolicy(repository, "pre-commit"), "docs/skdisasm");
+        assertPolicyRejects(runPolicy(repository, "commit-msg", message.toString()), "docs/skdisasm");
+    }
+
+    @Test
+    void prePushRejectsExistingBranchUpdateContainingBadMerge(@TempDir Path temporaryDirectory) throws Exception {
+        Path remote = newBareRemote(temporaryDirectory, "existing-branch-remote");
+        Path repository = newRepository(temporaryDirectory, "existing-branch-local");
+        createInitialCommit(repository);
+        addRemoteAndPush(repository, remote, "main");
+        createBadMerge(repository);
+        String localOid = gitOutput(repository, "rev-parse", "HEAD").trim();
+        String remoteOid = gitOutput(repository, "rev-parse", "origin/main").trim();
+
+        assertPolicyRejects(runPolicyWithInput(repository, "refs/heads/main " + localOid
+                + " refs/heads/main " + remoteOid + "\n", "pre-push", "origin", remote.toString()), "docs/skdisasm");
+    }
+
+    @Test
+    void prePushAndCiPushRejectNewBranchWithEarlierUniqueBadCommit(@TempDir Path temporaryDirectory) throws Exception {
+        Path remote = newBareRemote(temporaryDirectory, "new-branch-remote");
+        Path repository = newRepository(temporaryDirectory, "new-branch-local");
+        createInitialCommit(repository);
+        addRemoteAndPush(repository, remote, "main");
+        git(repository, "switch", "-c", "feature/clean-tip");
+        stageSymlink(repository, "docs/skdisasm", "../../shared/skdisasm", true);
+        commit(repository, "bad link");
+        deleteAndStage(repository, "docs/skdisasm");
+        commit(repository, "remove generated link");
+        String localOid = gitOutput(repository, "rev-parse", "HEAD").trim();
+
+        assertPolicyRejects(runPolicyWithInput(repository, "refs/heads/feature/clean-tip " + localOid
+                + " refs/heads/feature/clean-tip " + ALL_ZERO_OID + "\n", "pre-push", "origin", remote.toString()), "docs/skdisasm");
+        assertPolicyRejects(runPolicy(repository, "ci-push", ALL_ZERO_OID, localOid, "feature/clean-tip"), "docs/skdisasm");
+    }
+
+    @Test
+    void newBranchFromRemediatedRemoteHistoryDoesNotRescanPublishedBadCommit(@TempDir Path temporaryDirectory) throws Exception {
+        Path remote = newBareRemote(temporaryDirectory, "remediated-remote");
+        Path repository = newRepository(temporaryDirectory, "remediated-local");
+        createInitialCommit(repository);
+        stageSymlink(repository, "docs/skdisasm", "../../shared/skdisasm", true);
+        commit(repository, "old bad link");
+        deleteAndStage(repository, "docs/skdisasm");
+        commit(repository, "remediate old link");
+        addRemoteAndPush(repository, remote, "main");
+        git(repository, "switch", "-c", "feature/clean-from-remediated", "origin/main");
+        writeAndStage(repository, "docs/architecture/audits/new-work.md", "clean unpublished work\n");
+        commit(repository, "clean feature work");
+        String localOid = gitOutput(repository, "rev-parse", "HEAD").trim();
+
+        assertPolicyAccepts(runPolicyWithInput(repository, "refs/heads/feature/clean-from-remediated " + localOid
+                + " refs/heads/feature/clean-from-remediated " + ALL_ZERO_OID + "\n", "pre-push", "origin", remote.toString()));
+        assertPolicyAccepts(runPolicy(repository, "ci-push", ALL_ZERO_OID, localOid, "feature/clean-from-remediated"));
+    }
+
+    @Test
+    void prePushAcceptsDeletedRef(@TempDir Path temporaryDirectory) throws Exception {
+        Path remote = newBareRemote(temporaryDirectory, "deleted-ref-remote");
+        Path repository = newRepository(temporaryDirectory, "deleted-ref-local");
+        createInitialCommit(repository);
+        addRemoteAndPush(repository, remote, "main");
+        String remoteOid = gitOutput(repository, "rev-parse", "origin/main").trim();
+
+        assertPolicyAccepts(runPolicyWithInput(repository, "(delete) " + ALL_ZERO_OID
+                + " refs/heads/obsolete " + remoteOid + "\n", "pre-push", "origin", remote.toString()));
+    }
+
+    @Test
+    void postCheckoutCreatesRelativeDisassemblyLinkToMainRepository(@TempDir Path temporaryDirectory) throws Exception {
+        Path mainRepository = newRepository(temporaryDirectory, "checkout-main");
+        createInitialCommit(mainRepository);
+        Files.createDirectories(mainRepository.resolve("docs/skdisasm"));
+        Files.writeString(mainRepository.resolve("docs/skdisasm/marker.txt"), "source\n");
+        Path linkedWorktree = temporaryDirectory.resolve("checkout-linked-worktree");
+        git(mainRepository, "worktree", "add", "-b", "feature/linked", linkedWorktree.toString());
+
+        ProcessResult result = run(linkedWorktree, List.of("bash", POST_CHECKOUT_HOOK.toString(), ALL_ZERO_OID, ALL_ZERO_OID, "1"), null);
+        assertEquals(0, result.exitCode(), () -> "post-checkout failed:\n" + result.output());
+        Path link = linkedWorktree.resolve("docs/skdisasm");
+        assertTrue(Files.isSymbolicLink(link), "post-checkout must create the missing disassembly link");
+        Path target = Files.readSymbolicLink(link);
+        assertFalse(target.isAbsolute(), "worktree link target must not contain an absolute machine path: " + target);
+        assertEquals(mainRepository.resolve("docs/skdisasm").toRealPath(), link.getParent().resolve(target).toRealPath());
+    }
+
+    private static Path newRepository(Path temporaryDirectory, String name) throws Exception {
+        Path repository = temporaryDirectory.resolve(name);
+        Files.createDirectories(repository);
+        git(repository, "init", "-b", "main");
+        git(repository, "config", "user.name", "Policy Test");
+        git(repository, "config", "user.email", "policy-test@example.invalid");
+        return repository;
+    }
+
+    private static Path newBareRemote(Path temporaryDirectory, String name) throws Exception {
+        Path remote = temporaryDirectory.resolve(name + ".git");
+        ProcessResult result = run(temporaryDirectory, List.of("git", "init", "--bare", remote.toString()), null);
+        assertEquals(0, result.exitCode(), () -> "could not create bare remote:\n" + result.output());
+        return remote;
+    }
+
+    private static void createInitialCommit(Path repository) throws Exception {
+        writeAndStage(repository, "README.md", "fixture\n");
+        commit(repository, "initial fixture");
+    }
+
+    private static void installProjectIgnoreRules(Path repository) throws Exception {
+        Files.copy(PROJECT_GITIGNORE, repository.resolve(".gitignore"));
+    }
+
+    private static void addRemoteAndPush(Path repository, Path remote, String branch) throws Exception {
+        git(repository, "remote", "add", "origin", remote.toString());
+        git(repository, "push", "-u", "origin", branch);
+    }
+
+    private static void prepareConflictedMerge(Path repository) throws Exception {
+        writeAndStage(repository, "conflict.txt", "base\n");
+        commit(repository, "base conflict file");
+        git(repository, "switch", "-c", "topic");
+        writeAndStage(repository, "conflict.txt", "topic\n");
+        commit(repository, "topic conflict");
+        git(repository, "switch", "main");
+        writeAndStage(repository, "conflict.txt", "main\n");
+        commit(repository, "main conflict");
+        ProcessResult merge = run(repository, List.of("git", "merge", "topic"), null);
+        assertTrue(merge.exitCode() != 0, "fixture must enter a conflicted merge");
+        assertTrue(Files.exists(repository.resolve(".git/MERGE_HEAD")), "fixture must retain MERGE_HEAD");
+    }
+
+    private static void createBadMerge(Path repository) throws Exception {
+        writeAndStage(repository, "conflict.txt", "base\n");
+        commit(repository, "base merge file");
+        git(repository, "switch", "-c", "topic");
+        writeAndStage(repository, "conflict.txt", "topic\n");
+        commit(repository, "topic merge change");
+        git(repository, "switch", "main");
+        writeAndStage(repository, "conflict.txt", "main\n");
+        commit(repository, "main merge change");
+        ProcessResult merge = run(repository, List.of("git", "merge", "topic"), null);
+        assertTrue(merge.exitCode() != 0, "fixture must enter a conflicted merge");
+        writeAndStage(repository, "conflict.txt", "resolved\n");
+        stageSymlink(repository, "docs/skdisasm", "../../shared/skdisasm", true);
+        commit(repository, "merge topic with generated link");
+    }
+
+    private static void writeAndStage(Path repository, String relativePath, String contents) throws Exception {
+        Path file = repository.resolve(relativePath);
+        Files.createDirectories(file.getParent());
+        Files.writeString(file, contents);
+        git(repository, "add", "--", relativePath);
+    }
+
+    private static void stageSymlink(Path repository, String relativePath, String target, boolean force) throws Exception {
+        Path link = repository.resolve(relativePath);
+        Files.createDirectories(link.getParent());
+        Files.deleteIfExists(link);
+        Files.createSymbolicLink(link, Path.of(target));
+        if (force) {
+            git(repository, "add", "-f", "--", relativePath);
+        } else {
+            git(repository, "add", "--", relativePath);
+        }
+        String indexEntry = gitOutput(repository, "ls-files", "--stage", "--", relativePath);
+        assertTrue(indexEntry.startsWith("120000 "), "staged symlink must retain mode 120000: " + indexEntry);
+    }
+
+    private static void deleteAndStage(Path repository, String relativePath) throws Exception {
+        Files.delete(repository.resolve(relativePath));
+        git(repository, "add", "-u", "--", relativePath);
+    }
+
+    private static void commit(Path repository, String subject) throws Exception {
+        git(repository, "commit", "-m", subject);
+    }
+
+    private static ProcessResult runPolicy(Path repository, String mode, String... arguments) throws Exception {
+        List<String> command = new ArrayList<>(List.of("sh", POLICY_SCRIPT.toString(), mode));
+        command.addAll(List.of(arguments));
+        return run(repository, command, null);
+    }
+
+    private static ProcessResult runPolicyWithInput(Path repository, String input, String mode, String... arguments) throws Exception {
+        List<String> command = new ArrayList<>(List.of("sh", POLICY_SCRIPT.toString(), mode));
+        command.addAll(List.of(arguments));
+        return run(repository, command, input);
+    }
+
+    private static ProcessResult run(Path repository, List<String> command, String input) throws Exception {
+        ProcessBuilder builder = new ProcessBuilder(command)
+                .directory(repository.toFile())
+                .redirectErrorStream(true);
+        Process process = builder.start();
+        if (input != null) {
+            process.getOutputStream().write(input.getBytes(StandardCharsets.UTF_8));
+        }
+        process.getOutputStream().close();
+        String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        return new ProcessResult(process.waitFor(), output);
+    }
+
+    private static void git(Path repository, String... arguments) throws Exception {
+        assertGitSucceeds(repository, arguments);
+    }
+
+    private static void assertGitSucceeds(Path repository, String... arguments) throws Exception {
+        List<String> command = new ArrayList<>(List.of("git"));
+        command.addAll(List.of(arguments));
+        ProcessResult result = run(repository, command, null);
+        assertEquals(0, result.exitCode(), () -> String.join(" ", command) + " failed:\n" + result.output());
+    }
+
+    private static String gitOutput(Path repository, String... arguments) throws Exception {
+        List<String> command = new ArrayList<>(List.of("git"));
+        command.addAll(List.of(arguments));
+        ProcessResult result = run(repository, command, null);
+        assertEquals(0, result.exitCode(), () -> String.join(" ", command) + " failed:\n" + result.output());
+        return result.output();
+    }
+
+    private static void assertPolicyRejects(ProcessResult result, String offendingPath) {
+        assertTrue(result.exitCode() != 0, () -> "policy unexpectedly accepted " + offendingPath + ":\n" + result.output());
+        assertTrue(result.output().contains(offendingPath), () -> "policy rejection must identify " + offendingPath + ":\n" + result.output());
+    }
+
+    private static void assertPolicyAccepts(ProcessResult result) {
+        assertEquals(0, result.exitCode(), () -> "policy unexpectedly rejected valid input:\n" + result.output());
+    }
+
+    private static List<String> disassemblyPaths() {
+        return List.of("docs/s1disasm", "docs/s2disasm", "docs/kis2disasm", "docs/scddisasm", "docs/skdisasm");
+    }
+
+    private record ProcessResult(int exitCode, String output) {
     }
 
     private static Document parsePom(String file) throws Exception {
