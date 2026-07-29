@@ -194,6 +194,9 @@ Resolver unit tests characterize:
 `RomManager` tests pin legacy string fallback, raw missing-path diagnostics,
 relative path opening after `user.dir` changes between resolutions,
 active/secondary behavior, and existing missing-ROM classification.
+Because those tests configure process-wide engine services, they use the
+approved full-reset singleton lifecycle fixture rather than an ambient manual
+bootstrap.
 
 Trace-tool tests pin strict game mapping and that missing/unopenable configured
 paths still reach the same `HeadlessGameBoot` failure boundary, while blank
@@ -205,6 +208,11 @@ New behavior uses red-green-refactor TDD. Behavior-preserving migrations first
 characterize the existing behavior green, then run the identical tests after
 the refactor; the resolver task supplies the new-behavior RED. Every task
 receives independent specification and code-quality review.
+
+The clean-suite comparison also guards against reused-fork ordering changes
+caused by adding test classes. Any registry test whose expected factory depends
+on the active S3K zone set must establish that state with the full-reset
+fixture, rather than inheriting a level from another class in the same fork.
 
 ## Deferred work
 

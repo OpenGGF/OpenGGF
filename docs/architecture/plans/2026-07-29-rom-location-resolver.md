@@ -384,6 +384,48 @@ documentation if policy requires it.
 - Create:
   `docs/architecture/validation/2026-07-29-rom-location-resolver.md`
 - Modify: `README.md`
+- Modify:
+  `src/test/java/com/openggf/data/TestRomManagerLocationResolution.java`
+- Modify: `src/test/java/com/openggf/tests/TestS3kPenguinatorBadnik.java`
+
+- [ ] **Step 0: Remove clean-suite lifecycle/order regressions**
+
+Use the already-red clean-suite evidence and focused reproductions:
+
+- `TestSingletonLifecycleGuard` names
+  `TestRomManagerLocationResolution#setUp` as a new ambient gameplay setup;
+- Penguinator passes alone, but fails after an MHZ/SKL-loading class because
+  its registry assertion inherits the active zone set; and
+- Task 2 and Penguinator ran in different full-suite forks, ruling out direct
+  production-state leakage from `RomManager`.
+
+Apply the approved `@FullReset` plus `SingletonResetExtension` fixture to the
+new RomManager test and the zone-set-dependent Penguinator registry test.
+The existing full-suite XML and focused investigations supply the pre-fix RED
+evidence. After the fix, run:
+
+```bash
+mvn -Dmse=off \
+  -Dtest=com.openggf.tests.TestSingletonLifecycleGuard#ambientGameplayModeSetupsDoNotGrowWithoutLifecycleTriage \
+  test
+
+mvn -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
+  -Ds3k.rom.path="$S3K_ROM" \
+  -Dtest=com.openggf.game.sonic3k.TestS3kMhzPatternAnimation,com.openggf.tests.TestS3kPenguinatorBadnik \
+  test
+
+mvn -Dmse=off \
+  -Dtest=com.openggf.data.TestRomLocationResolver,com.openggf.data.TestRomManagerLocationResolution,com.openggf.data.TestRomManagerMissingRomLogging,com.openggf.game.TestPowerUpGraphicsRegression \
+  test
+
+mvn -Dmse=off -Dtest=com.openggf.tests.TestS3kPenguinatorBadnik test
+```
+
+Before the fix, the first command names the new RomManager `setUp`, and the
+ordered second command returns a Penguinator placeholder after MHZ establishes
+SKL state. After the fixtures are applied, every command is green. Commit only
+these test-isolation fixes, then restart Steps 1 and 2 from scratch rather than
+using the earlier branch run as final evidence.
 
 - [ ] **Step 1: Run combined focused verification**
 
