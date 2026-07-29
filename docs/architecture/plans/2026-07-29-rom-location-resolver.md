@@ -9,7 +9,8 @@
 provenance while preserving `RomManager` compatibility and trace-tool failure
 semantics.
 
-**Architecture:** A filesystem-neutral `RomLocationResolver` maps `GameId` and
+**Architecture:** A filesystem-neutral `RomLocationResolver` maps a data-layer
+`RomGame` identity and
 configuration to an immutable location carrying exact configured text,
 normalized target, provenance, and a non-enforcing fingerprint policy.
 `RomManager` retains lifecycle/error ownership; a package-private trace-tool
@@ -40,21 +41,25 @@ adapter owns strict metadata and blank-configuration failures.
 **Files:**
 
 - Create: `src/main/java/com/openggf/data/RomLocation.java`
+- Create: `src/main/java/com/openggf/data/RomGame.java`
 - Create: `src/main/java/com/openggf/data/RomLocationSource.java`
 - Create: `src/main/java/com/openggf/data/RomFingerprintPolicy.java`
 - Create: `src/main/java/com/openggf/data/RomLocationResolver.java`
+- Modify: `src/main/java/com/openggf/game/GameId.java`
 - Create: `src/test/java/com/openggf/data/TestRomLocationResolver.java`
+- Create: `src/test/java/com/openggf/game/TestGameIdRomGame.java`
 
 **Interfaces:**
 
 - Produces:
-  `RomLocation(GameId, String, Path, RomLocationSource, RomFingerprintPolicy)`
+  `RomLocation(RomGame, String, Path, RomLocationSource, RomFingerprintPolicy)`
 - Produces:
   `RomLocationResolver(SonicConfigurationService, Path)`
 - Produces:
   `static RomLocationResolver forCurrentWorkingDirectory(SonicConfigurationService)`
-- Produces: `Optional<RomLocation> resolve(GameId)`
-- Produces: `RomLocation explicit(GameId, Path)`
+- Produces: `Optional<RomLocation> resolve(RomGame)`
+- Produces: `RomLocation explicit(RomGame, Path)`
+- Produces: `GameId.romGame()`
 
 - [ ] **Step 1: Write failing location-record tests**
 
@@ -63,7 +68,7 @@ filesystem access:
 
 ```java
 RomLocation location = new RomLocation(
-        GameId.S1,
+        RomGame.S1,
         "./missing/../sonic.gen",
         Path.of("/workspace/sonic.gen"),
         RomLocationSource.CONFIGURATION,
@@ -79,7 +84,9 @@ The mutation caught is losing exact configured text or performing eager I/O.
 Run:
 
 ```bash
-mvn -Dmse=off -Dtest=com.openggf.data.TestRomLocationResolver test
+mvn -Dmse=off \
+  -Dtest=com.openggf.data.TestRomLocationResolver,com.openggf.game.TestGameIdRomGame \
+  test
 ```
 
 Expected: test compilation fails because the new types do not exist.
@@ -108,17 +115,22 @@ and assert:
 - null inputs fail; and
 - changing `user.dir` after resolver construction does not alter that resolver.
 
+Also test that every `GameId` maps to its same-named `RomGame`, so the
+runtime-to-data conversion has one guarded owner.
+
 - [ ] **Step 5: Run resolver tests and verify RED**
 
 Run the Step 2 command. Expected: compilation fails because
-`RomLocationResolver` does not exist.
+`RomLocationResolver` and `GameId.romGame()` do not exist.
 
 - [ ] **Step 6: Implement minimal resolver**
 
-Use an exhaustive `GameId` switch to map to
+Use an exhaustive `RomGame` switch to map to
 `SonicConfiguration.SONIC_1_ROM`, `SONIC_2_ROM`, and `SONIC_3K_ROM`.
 Treat `null`, empty, and whitespace-only values as blank. Preserve the original
 nonblank String; normalize only `resolvedPath`.
+
+Add the sole exhaustive `GameId -> RomGame` conversion as `GameId.romGame()`.
 
 - [ ] **Step 7: Run resolver and architecture tests**
 
@@ -126,7 +138,7 @@ Run:
 
 ```bash
 mvn -Dmse=off \
-  -Dtest=com.openggf.data.TestRomLocationResolver,com.openggf.tests.TestArchUnitTestRules,com.openggf.tests.TestArchUnitRules \
+  -Dtest=com.openggf.data.TestRomLocationResolver,com.openggf.game.TestGameIdRomGame,com.openggf.tests.TestArchUnitTestRules,com.openggf.tests.TestArchUnitRules \
   test
 ```
 
@@ -237,11 +249,11 @@ record them green, then rerun the identical cases after Step 7.
 
 - [ ] **Step 7: Migrate secondary resolution and legacy forwarder**
 
-Use `GameId.fromCode` only after preserving the legacy fallback behavior at the
-String compatibility boundary. `getSecondaryRom(String)` must continue to treat
+Convert the legacy String to `RomGame` only after preserving fallback-to-S2 at
+that compatibility boundary. `getSecondaryRom(String)` must continue to treat
 unknown/null through the existing S2 path and retain the original String cache
-key. The deprecated `resolveRomForGame` delegates typed mapping but returns
-the exact `configuredValue`.
+key. The deprecated `resolveRomForGame` delegates the `RomGame` mapping but
+returns the exact `configuredValue`.
 
 - [ ] **Step 8: Run RomManager focused verification**
 
@@ -283,7 +295,8 @@ Use a justified behavior-neutral Changelog trailer.
 
 - Produces package-private:
   `TraceToolRomLocations.resolve(String gameId, SonicConfigurationService configuration, Path workingDirectory): Path`
-- Consumes `GameId.fromCode` and `RomLocationResolver`.
+- Consumes `GameId.fromCode`, `GameId.romGame()`, and
+  `RomLocationResolver`.
 
 - [ ] **Step 1: Add failing strict-adapter tests**
 
@@ -308,8 +321,9 @@ Expected: compilation fails because the adapter does not exist.
 
 - [ ] **Step 3: Implement the minimal adapter**
 
-Parse with `GameId.fromCode`, construct the injected resolver, return the
-location's `resolvedPath`, and throw the exact blank-configuration exception.
+Parse with `GameId.fromCode`, convert it through `GameId.romGame()`, construct
+the injected resolver, return the location's `resolvedPath`, and throw the
+exact blank-configuration exception.
 
 - [ ] **Step 4: Run adapter tests and verify GREEN**
 
@@ -374,7 +388,9 @@ documentation if policy requires it.
 - [ ] **Step 1: Run combined focused verification**
 
 Run all new resolver, RomManager, trace-tool, compatibility, and architecture
-tests with JDK 21. Include the actual discovered HeadlessGameBoot test class.
+tests with JDK 21, explicitly including
+`com.openggf.game.TestGameIdRomGame`. Include the actual discovered
+HeadlessGameBoot test class.
 Record exact command, counts, failures, errors, skips, ROM properties, and
 commit.
 

@@ -48,7 +48,7 @@ validation, UI, or test semantics.
 
 ### Mapping-only helper
 
-Move only the `GameId -> SonicConfiguration` switch.
+Move only the ROM-family-to-`SonicConfiguration` switch.
 
 This removes a few lines but leaves relative-path resolution, provenance, raw
 diagnostics, and future fingerprint policy duplicated. Rejected as too narrow.
@@ -61,7 +61,7 @@ Add an immutable public record in `com.openggf.data`:
 
 ```java
 public record RomLocation(
-        GameId gameId,
+        RomGame game,
         String configuredValue,
         Path resolvedPath,
         RomLocationSource source,
@@ -80,6 +80,13 @@ existence, readability, contents, or fingerprints.
 result ready for a separately designed identity-validation boundary without
 pretending this tranche validates a ROM.
 
+`RomGame` is the data-layer identity for the three ROM families: `S1`, `S2`,
+and `S3K`. It deliberately does not depend on the runtime-layer `GameId`.
+`GameId.romGame()` owns the sole exhaustive runtime-to-data conversion; tools
+and future runtime consumers call that method rather than repeating switches.
+This uses the permitted `game -> data` direction and avoids new `data -> game`
+dependencies, which the architecture ratchet forbids.
+
 ### `RomLocationResolver`
 
 Add a public final resolver in `com.openggf.data` with injected
@@ -90,18 +97,18 @@ public RomLocationResolver(
         SonicConfigurationService configuration,
         Path workingDirectory)
 
-public Optional<RomLocation> resolve(GameId gameId)
+public Optional<RomLocation> resolve(RomGame game)
 
-public RomLocation explicit(GameId gameId, Path path)
+public RomLocation explicit(RomGame game, Path path)
 ```
 
-`resolve` maps `GameId.S1`, `S2`, and `S3K` to their typed configuration keys.
+`resolve` maps `RomGame.S1`, `S2`, and `S3K` to their typed configuration keys.
 It selects the nonblank configured value without filesystem fallback. Blank
 configuration returns empty. Relative paths resolve against the captured
 working directory; absolute paths remain absolute after normalization.
 
 `explicit` applies the same path normalization but reports
-`EXPLICIT_OVERRIDE`. It rejects null game/path inputs and does no I/O.
+`EXPLICIT_OVERRIDE`. It rejects null ROM-family/path inputs and does no I/O.
 
 A named factory captures `System.getProperty("user.dir")` for production
 composition. If `user.dir` is unavailable or blank, it uses
@@ -131,10 +138,16 @@ forwarder. It preserves the exact legacy behavior:
 
 Do not normalize secondary cache keys in this tranche.
 
+The legacy compatibility parser remains deliberately separate because its
+null/unknown-to-S2 behavior differs from strict `GameId.fromCode`. A single
+private `RomManager` helper maps that legacy input to `RomGame`; it is not a
+second strict runtime identity conversion.
+
 ### Trace tools
 
 `TraceCaptureTool` and `TraceBenchmarkTool` resolve the catalog entry's strict
-`GameId` with `GameId.fromCode(entry.gameId())`, then pass `resolvedPath` to
+`GameId` with `GameId.fromCode(entry.gameId())`, convert it through the
+authoritative `GameId.romGame()`, then pass `resolvedPath` to
 `HeadlessGameBoot`. Unknown/malformed catalog game IDs are rejected by that
 typed boundary instead of silently selecting S2; tests pin the existing
 `Unknown game: <value>` message from `GameId`.
