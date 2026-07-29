@@ -4,6 +4,8 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.openggf.game.timing.HardwareServiceBoundary.POST_OBJECTS;
 import static com.openggf.game.timing.HardwareServiceBoundary.VINT_SERVICE;
@@ -14,6 +16,59 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestHardwareTimingService {
+
+    @Test
+    void liveReadinessWaitsForPreparationAndProfileCountdown() {
+        LoadTimeProfile profile = (submission, handle) -> new LoadTimeDecision(
+                2,
+                Set.of(POST_OBJECTS),
+                LoadTimeDecisionSource.MEASURED,
+                "test-v1");
+        HardwareTimingService service = new HardwareTimingService(
+                RomWorkBudgetScheduler.oneWorkUnitAt(POST_OBJECTS), profile);
+        HardwareWorkHandle handle = service.submit(submission(1, new byte[] {42}));
+
+        service.service(POST_OBJECTS);
+        assertFalse(service.isReady(handle));
+        service.service(POST_OBJECTS);
+        assertTrue(service.isReady(handle));
+    }
+
+    @Test
+    void readyButUnclaimedJobDoesNotBlockNextPhysicalHead() {
+        HardwareTimingService service = new HardwareTimingService(
+                RomWorkBudgetScheduler.oneWorkUnitAt(POST_OBJECTS),
+                LoadTimeProfile.IMMEDIATE);
+        HardwareWorkHandle first = service.submit(submission(1, new byte[] {43}));
+        HardwareWorkHandle second = service.submit(submission(1, new byte[] {44}));
+
+        service.service(POST_OBJECTS);
+        assertTrue(service.isReady(first));
+        service.service(POST_OBJECTS);
+
+        assertTrue(service.isReady(first));
+        assertTrue(service.isReady(second));
+    }
+
+    @Test
+    void recordedKindNeverConsultsNormalPlayProfile() {
+        AtomicInteger assignments = new AtomicInteger();
+        LoadTimeProfile profile = (submission, handle) -> {
+            assignments.incrementAndGet();
+            return LoadTimeProfile.IMMEDIATE.assign(submission, handle);
+        };
+        HardwareTimingService service = new HardwareTimingService(
+                RomWorkBudgetScheduler.oneWorkUnitAt(POST_OBJECTS), profile);
+        RecordedCompletionAuthority authority = service.beginRecordedAdmission();
+        HardwareWorkHandle handle = service.submit(submission(1, new byte[] {45}));
+
+        service.service(POST_OBJECTS);
+        assertEquals(0, assignments.get());
+        authority.admitRecordedCompletion(
+                POST_OBJECTS, handle.kind(), handle.ordinal(),
+                handle.submissionFingerprint());
+        assertTrue(service.isReady(handle));
+    }
 
     @Test
     void ordinalsAreMonotonicPerKind() {
