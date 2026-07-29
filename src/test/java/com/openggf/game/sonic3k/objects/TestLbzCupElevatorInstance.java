@@ -22,10 +22,12 @@ import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PlaceholderObjectInstance;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.Sonic;
+import com.openggf.sprites.playable.Tails;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
@@ -56,6 +58,31 @@ class TestLbzCupElevatorInstance {
         assertEquals("LBZCupElevator", elevator.getName());
         assertInstanceOf(SolidObjectProvider.class, elevator,
                 "Obj_LBZCupElevator calls SolidObjectFull2_1P while near upright");
+        assertEquals(SolidExecutionMode.MANUAL_CHECKPOINT,
+                ((LbzCupElevatorInstance) elevator).solidExecutionMode(),
+                "Obj18 must resolve SolidObjectFull before its same-slot player-control tail");
+        assertTrue(((LbzCupElevatorInstance) elevator).bypassesOffscreenSolidGate(),
+                "SolidObjectFull2_1P must run its P2 pass without the regular render-flag gate");
+    }
+
+    @Test
+    void activeCupUsesLiveCpuSidekickPositionAndInclusiveRightEdge() throws Exception {
+        LbzCupElevatorInstance elevator = new LbzCupElevatorInstance(new ObjectSpawn(
+                0x1800, 0x0600, Sonic3kObjectIds.LBZ_CUP_ELEVATOR, 0, 0, false, 0));
+        Tails sidekick = new Tails("tails", (short) 0x1800, (short) 0x0600);
+        sidekick.setCpuControlled(true);
+
+        assertEquals(0, elevator.getFullSolidPlayerPositionHistoryFrames(sidekick));
+        setPrivateInt(elevator, "activationFlag", 1);
+
+        assertEquals(0, elevator.getFullSolidPlayerPositionHistoryFrames(sidekick),
+                "Obj18's Full2 contact consumes Player 2's live position");
+        assertTrue(elevator.usesInclusiveRightEdge(),
+                "SolidObject_cont accepts the exact right-hand boundary via `bhi`");
+        assertTrue(elevator.usesInstanceSolidStateLatchKey(),
+                "the moving cup's native status bits belong to its live SST instance");
+        assertFalse(elevator.airborneStaleStandingBitReturnsNoContact(sidekick),
+                "a provisional engine P2 bit must not hide the active cup's live Full2 contact");
     }
 
     @Test
@@ -84,6 +111,17 @@ class TestLbzCupElevatorInstance {
         assertEquals(0x0600, elevator.getY());
         assertEquals(0x8080, elevator.getAngleForTest(),
                 "Right-facing init sets angle word to $8080");
+    }
+
+    @Test
+    void balanceUsesWidthPixelsWithoutSolidObjectSidePadding() {
+        LbzCupElevatorInstance elevator = new LbzCupElevatorInstance(new ObjectSpawn(
+                0x1800, 0x0600, Sonic3kObjectIds.LBZ_CUP_ELEVATOR, 0, 0, false, 0));
+
+        assertEquals(0x20, elevator.getBalanceWidthPixels(),
+                "Player_Move reads Obj18 width_pixels, not SolidObjectFull's d1=$20+$0B reach");
+        assertEquals(0x2B, elevator.getSolidParams().halfWidth(),
+                "the independent full-solid contact extension must remain intact");
     }
 
     @Test
@@ -206,6 +244,51 @@ class TestLbzCupElevatorInstance {
     }
 
     @Test
+    void flungCupOffscreenExitRemainsPlacementRespawnable() throws Exception {
+        LbzCupElevatorInstance elevator = new LbzCupElevatorInstance(new ObjectSpawn(
+                0x1800, 0x0600, Sonic3kObjectIds.LBZ_CUP_ELEVATOR, 0x83, 1, false, 0));
+        setPrivateInt(elevator, "x", 0x1800);
+        setPrivateInt(elevator, "y", 0x0600);
+        Field flicker = LbzCupElevatorInstance.class.getDeclaredField("flickerMode");
+        flicker.setAccessible(true);
+        flicker.setBoolean(elevator, true);
+
+        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        try {
+            elevator.update(1, null);
+        } finally {
+            AbstractObjectInstance.resetCameraBoundsForTests();
+        }
+
+        assertTrue(elevator.isDestroyed());
+        assertTrue(elevator.isDestroyedRespawnable(),
+                "Obj_LBZElevatorCupFlicker exits through Sprite_OnScreen_Test, which clears the respawn bit");
+    }
+
+    @Test
+    void flungCupPutsRidersInNativeHitRoutine() throws Exception {
+        LbzCupElevatorInstance elevator = new LbzCupElevatorInstance(new ObjectSpawn(
+                0x1800, 0x0600, Sonic3kObjectIds.LBZ_CUP_ELEVATOR, 0x83, 1, false, 0));
+        Sonic player = new Sonic("sonic", (short) 0x1800, (short) 0x0600);
+        Object state = getPrivateField(elevator, "p1");
+        setPlayerStateInside(state, true);
+
+        Class<?> stateClass = Class.forName(
+                "com.openggf.game.sonic3k.objects.LbzCupElevatorInstance$PlayerState");
+        Method flingPlayer = LbzCupElevatorInstance.class.getDeclaredMethod("flingPlayer",
+                stateClass, com.openggf.sprites.playable.AbstractPlayableSprite.class, int.class);
+        flingPlayer.setAccessible(true);
+        flingPlayer.invoke(elevator, state, player, -0x300);
+
+        assertTrue(player.isHurt(), "sub_26E08 writes player routine=4 before launching the rider");
+        assertEquals((short) -0x300, player.getYSpeed());
+        assertEquals((short) 0x200, player.getXSpeed());
+        assertEquals(com.openggf.physics.Direction.LEFT, player.getDirection(),
+                "the flipped branch negates x_vel and sets Status_Facing");
+        assertEquals(0x1A, player.getAnimationId());
+    }
+
+    @Test
     void attachChildUsesRomFrameAndPositionFormula() {
         int anchorX = 0x1800;
 
@@ -232,12 +315,30 @@ class TestLbzCupElevatorInstance {
                 "loc_32610 uses PlayerTwistFlip index 3 = no horizontal flip");
         assertTrue(player.isObjectMappingFrameControl(),
                 "object_control=3 suppresses normal player animation while the cup writes raw mapping frames");
+        assertFalse(player.isControlLocked(),
+                "Obj18 writes object_control=$03 but never writes the separate Ctrl_1_locked byte");
 
         Object p1State = getPrivateField(elevator, "p1");
         invokeReleasePlayer(elevator, player, p1State);
 
         assertFalse(player.isObjectMappingFrameControl(),
                 "raw mapping-frame control must reset when the player leaves the cup");
+    }
+
+    @Test
+    void heldPlayerTwistFlipDoesNotOverwriteGameplayFacing() throws Exception {
+        LbzCupElevatorInstance elevator = new LbzCupElevatorInstance(new ObjectSpawn(
+                0x1800, 0x0600, Sonic3kObjectIds.LBZ_CUP_ELEVATOR, 0, 0, false, 0));
+        setPrivateInt(elevator, "angleWord", 0x1600);
+        Sonic player = new Sonic("sonic", (short) 0x1800, (short) 0x0600);
+        player.setDirection(com.openggf.physics.Direction.LEFT);
+
+        invokeHoldPlayer(elevator, player);
+
+        assertTrue(player.getRenderHFlip(),
+                "angle $16 selects PlayerTwistFlip index 1 for the visual frame");
+        assertEquals(com.openggf.physics.Direction.LEFT, player.getDirection(),
+                "loc_32610 writes render_flags but must preserve Status_Facing");
     }
 
     @Test
@@ -262,6 +363,7 @@ class TestLbzCupElevatorInstance {
                 "The cup must keep owning the player during the Knuckles cutscene gate.");
         assertTrue(player.isObjectMappingFrameControl(),
                 "Pressed jump must not leak through as a normal jump animation while the cup owns mapping frames.");
+        int heldY = player.getCentreY();
 
         runtimeState.setLbz1KnucklesCutsceneControlLocked(false);
         player.setJumpInputPressed(true, true);
@@ -271,6 +373,10 @@ class TestLbzCupElevatorInstance {
         assertFalse((boolean) getPrivateField(p1State, "inside"),
                 "After Knuckles clears _unkFAA9, the same jump press should release the player from the cup.");
         assertFalse(player.isObjectControlled());
+        assertEquals(heldY, player.getCentreY(),
+                "Obj18 changes rolling radii/status on release without changing the native y_pos word");
+        assertFalse(elevator.isSolidFor(player),
+                "the per-player $12 release cooldown returns before SolidObjectFull can recollide with the rider");
         assertEquals(2, player.getAnimationId(),
                 "Allowed cup release uses the ROM jump animation, not the held twist frame.");
     }

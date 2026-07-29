@@ -156,6 +156,7 @@ class TestLbzLoweringGrappleObjectInstance {
         verify(player).setRollingJump(false);
         verify(player).setFlipAngle(0);
         verify(player).setAnimationId(Sonic3kAnimationIds.ROLL.id());
+        verify(player).suppressNextJumpPress();
     }
 
     @Test

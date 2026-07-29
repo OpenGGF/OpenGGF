@@ -1,15 +1,75 @@
 package com.openggf.debug;
 
 import com.openggf.graphics.PixelFont;
+import com.openggf.graphics.PixelFontTextRenderer;
+import com.openggf.graphics.GraphicsManager;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
 import java.nio.FloatBuffer;
+import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 class TestPerformancePanelRenderer {
+
+    @Test
+    void legendIncludesAudioWhenItRanksBelowSixth() {
+        ProfileSnapshot snapshot = snapshot(Map.of(
+                "render", 9_000_000L, "update", 8_000_000L,
+                "physics", 7_000_000L, "sprites", 6_000_000L,
+                "collision", 5_000_000L, "input", 4_000_000L,
+                "audio", 1_000_000L));
+
+        List<SectionStats> selected = renderer().legendSections(snapshot);
+
+        assertEquals(List.of("render", "update", "physics", "sprites", "collision", "audio"),
+                selected.stream().map(SectionStats::name).toList());
+    }
+
+    @Test
+    void legendDoesNotDuplicateAudioWhenAlreadyInTopSix() {
+        ProfileSnapshot snapshot = snapshot(Map.of(
+                "render", 9_000_000L, "audio", 8_000_000L,
+                "update", 7_000_000L, "physics", 6_000_000L,
+                "sprites", 5_000_000L, "input", 4_000_000L,
+                "collision", 3_000_000L));
+
+        List<SectionStats> selected = renderer().legendSections(snapshot);
+
+        assertEquals(List.of("render", "audio", "update", "physics", "sprites", "input"),
+                selected.stream().map(SectionStats::name).toList());
+    }
+
+    @Test
+    void legendKeepsOrdinaryTopSixWhenAudioIsAbsent() {
+        ProfileSnapshot snapshot = snapshot(Map.of(
+                "render", 9_000_000L, "update", 8_000_000L,
+                "physics", 7_000_000L, "sprites", 6_000_000L,
+                "collision", 5_000_000L, "input", 4_000_000L,
+                "timers", 3_000_000L));
+
+        List<SectionStats> selected = renderer().legendSections(snapshot);
+
+        assertEquals(List.of("render", "update", "physics", "sprites", "collision", "input"),
+                selected.stream().map(SectionStats::name).toList());
+    }
+
+    private static ProfileSnapshot snapshot(Map<String, Long> rollingSums) {
+        ProfileSnapshot snapshot = new ProfileSnapshot();
+        snapshot.populate(rollingSums, 1, new float[] { 16.67f }, 0, 1, 16_670_000L);
+        return snapshot;
+    }
+
+    private static PerformancePanelRenderer renderer() {
+        return new PerformancePanelRenderer(320, 224,
+                mock(PixelFontTextRenderer.class),
+                mock(GraphicsManager.class),
+                PerformanceProfiler.getInstance());
+    }
 
     @Test
     void performanceTextScale_isHalfSize() {

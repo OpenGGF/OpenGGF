@@ -184,6 +184,31 @@ class TestS3kPaletteWriteSupport {
         assertColorWord(level.getPalette(2), 10, 0x0222);
     }
 
+    @Test
+    void applyUnderwaterContiguousPatchSubmitsUnderwaterOwnershipClaims() {
+        StubLevel level = new StubLevel();
+        PaletteOwnershipRegistry registry = new PaletteOwnershipRegistry();
+        Palette[] underwater = new Palette[] {new Palette(), new Palette(), new Palette(), new Palette()};
+
+        S3kPaletteWriteSupport.applyUnderwaterContiguousPatch(
+                registry,
+                level,
+                null,
+                S3kPaletteOwners.SUPER_PALETTE,
+                S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE,
+                0,
+                2,
+                new byte[] {0x0A, (byte) 0x82, 0x08, 0x60, 0x06, 0x40});
+
+        registry.resolveInto(level.palettes(), underwater, null, null);
+
+        assertEquals(S3kPaletteOwners.SUPER_PALETTE, registry.ownerAt(PaletteSurface.UNDERWATER, 0, 2));
+        assertEquals(S3kPaletteOwners.SUPER_PALETTE, registry.ownerAt(PaletteSurface.UNDERWATER, 0, 4));
+        assertColorWord(underwater[0], 2, 0x0A82);
+        assertColorWord(underwater[0], 3, 0x0860);
+        assertColorWord(underwater[0], 4, 0x0640);
+    }
+
     private static void assertColorWord(Palette palette, int colorIndex, int segaWord) {
         byte highByte = (byte) ((segaWord >> 8) & 0xFF);
         byte lowByte = (byte) (segaWord & 0xFF);

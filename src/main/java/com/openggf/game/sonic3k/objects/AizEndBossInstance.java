@@ -1,8 +1,9 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
+
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
-import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -190,9 +191,7 @@ public class AizEndBossInstance extends AbstractBossInstance
     private AizEndBossShipChild shipChild;
     private AizEndBossArmChild leftArm;
     private AizEndBossArmChild rightArm;
-    @RewindTransient(reason = "queue facade is rebound to the restored session ledger by captured ordinal")
     private S3kKosModuleQueue bossArtQueue;
-    @RewindTransient(reason = "handle is rebound to the restored session ledger by captured ordinal")
     private HardwareWorkHandle bossArtHandle;
     private long bossArtOrdinal = -1;
 
@@ -360,7 +359,7 @@ public class AizEndBossInstance extends AbstractBossInstance
     private void serviceBossArtQueue() {
         try {
             if (bossArtQueue == null && bossArtOrdinal >= 0) {
-                bossArtQueue = new S3kKosModuleQueue(services().hardwareTiming());
+                bossArtQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
                 bossArtHandle = services().hardwareTiming().pendingHandle(
                                 HardwareWorkKind.KOS_MODULE_QUEUE,
                                 bossArtOrdinal)
@@ -369,7 +368,7 @@ public class AizEndBossInstance extends AbstractBossInstance
                                         + bossArtOrdinal));
             }
             if (bossArtHandle == null && bossArtQueue == null) {
-                bossArtQueue = new S3kKosModuleQueue(services().hardwareTiming());
+                bossArtQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
                 bossArtHandle = bossArtQueue.queue(
                         services().rom(),
                         Sonic3kConstants.ART_KOSM_AIZ_END_BOSS_ADDR,
@@ -763,7 +762,8 @@ public class AizEndBossInstance extends AbstractBossInstance
         defeatSignal = true;
         AizCollapsingLogBridgeObjectInstance.setDrawBridgeBurnActive(false);
 
-        // ROM: BossDefeated_StopTimer — timer stop handled by gameState
+        // ROM loc_69C36: jmp (BossDefeated_StopTimer).l (sonic3k.asm:139001).
+        stopLevelTimerOnBossDefeat();
 
         // ROM: The ship child (Obj_RobotnikShip) creates its own explosion controller
         // via Child6_CreateBossExplosion subtype 4 at loc_460DC. In the engine we keep

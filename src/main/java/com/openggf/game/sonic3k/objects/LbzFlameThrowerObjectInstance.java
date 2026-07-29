@@ -21,7 +21,7 @@ import java.util.List;
  * <p>ROM reference: {@code Obj_LBZFlameThrower} ({@code sonic3k.asm:52053-52104}).
  * The parent is a static full solid object and periodically allocates an
  * {@code Obj_AutoSpin460} flame child when
- * {@code (V_int_run_count+3 + subtype) & $7F == 0}.
+ * {@code (lowByte(V_int_run_count) + subtype) & $7F == 0}.
  */
 public final class LbzFlameThrowerObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SpawnRewindRecreatable {
@@ -46,7 +46,8 @@ public final class LbzFlameThrowerObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity player) {
-        if (((frameCounter + subtype) & SPAWN_PERIOD_MASK) != 0) {
+        int vIntRunCounter = services().vIntRunCounter(frameCounter);
+        if (((vIntRunCounter + subtype) & SPAWN_PERIOD_MASK) != 0) {
             return;
         }
 
@@ -77,6 +78,14 @@ public final class LbzFlameThrowerObjectInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         return SOLID_PARAMS;
+    }
+
+    @Override
+    public boolean usesInclusiveRightEdge() {
+        // Obj16 reaches SolidObject_cont through SolidObjectFull. Its unsigned
+        // broad-X gate uses `bhi`, so relX == d1*2 is a valid zero-distance
+        // side contact (sonic3k.asm:52098-52108, 41394-41401).
+        return true;
     }
 
     @Override

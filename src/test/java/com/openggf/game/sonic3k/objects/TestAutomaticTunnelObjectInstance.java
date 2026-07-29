@@ -7,6 +7,7 @@ import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
@@ -174,7 +175,7 @@ class TestAutomaticTunnelObjectInstance {
     }
 
     @Test
-    void captureUsesFullControlAndRouteReleaseClearsControlPolicy() {
+    void captureUsesFullObjectControlWithoutWritingSeparateControlLock() {
         AutomaticTunnelObjectInstance tunnel = new AutomaticTunnelObjectInstance(
                 new ObjectSpawn(0x0F60, 0x0578, 0x24, 0, 0, false, 0));
         tunnel.setServices(new TestObjectServices());
@@ -182,24 +183,17 @@ class TestAutomaticTunnelObjectInstance {
         TestPlayableSprite player = new TestPlayableSprite();
         player.setCentreX((short) 0x0F60);
         player.setCentreY((short) 0x0578);
-        player.setSubpixelRaw(0x5100, 0x8500);
         player.setControlLocked(false);
         player.setObjectControlled(false);
-        player.setRolling(false);
 
         tunnel.update(0, player);
 
         assertTrue(player.isObjectControlled());
-        assertFalse(player.getRolling(),
-                "Obj_AutoTunnelInit writes anim=2 without setting Status_Roll");
-        assertEquals(0x5100, player.getXSubpixelRaw(),
-                "ROM word writes to x_pos preserve the fractional word");
-        assertEquals(0x8500, player.getYSubpixelRaw(),
-                "ROM word writes to y_pos preserve the fractional word");
         assertFalse(player.isObjectControlAllowsCpu());
         assertTrue(player.isObjectControlSuppressesMovement());
         assertTrue(player.isTouchResponseSuppressedByObjectControl());
-        assertTrue(player.isControlLocked());
+        assertFalse(player.isControlLocked(),
+                "move.b #$81,object_control does not write the separate Ctrl_1_locked byte");
 
         for (int frame = 1; frame <= 80 && player.isObjectControlled(); frame++) {
             tunnel.update(frame, player);
@@ -210,6 +204,49 @@ class TestAutomaticTunnelObjectInstance {
         assertFalse(player.isObjectControlSuppressesMovement());
         assertFalse(player.isTouchResponseSuppressedByObjectControl());
         assertFalse(player.isControlLocked());
+    }
+
+    @Test
+    void captureWritesNativePositionWordsWithoutForcingRollingStatus() {
+        AutomaticTunnelObjectInstance tunnel = new AutomaticTunnelObjectInstance(
+                new ObjectSpawn(0x0D40, 0x0770, 0x24, 1, 0, false, 0));
+        tunnel.setServices(new TestObjectServices());
+
+        TestPlayableSprite player = new TestPlayableSprite();
+        player.setCentreX((short) 0x0D40);
+        player.setCentreY((short) 0x0770);
+        player.setSubpixelRaw(0x5100, 0x8500);
+        player.setRolling(false);
+
+        tunnel.update(0, player);
+
+        assertEquals(0x5100, player.getXSubpixelRaw());
+        assertEquals(0x8500, player.getYSubpixelRaw());
+        assertFalse(player.getRolling(), "move.b #2,anim does not set Status_Roll");
+        assertEquals(2, player.getAnimationId());
+        assertTrue(player.getAir());
+    }
+
+    @Test
+    void maintainedExitVelocityMovesPlayerOnFinalWaypointFrame() {
+        AutomaticTunnelObjectInstance tunnel = new AutomaticTunnelObjectInstance(
+                new ObjectSpawn(0x0D40, 0x0770, 0x24, 0x42, 0, false, 0));
+        tunnel.setServices(new TestObjectServices());
+
+        TestPlayableSprite player = new TestPlayableSprite();
+        player.setCentreX((short) 0x0D40);
+        player.setCentreY((short) 0x0770);
+        player.setSubpixelRaw(0x5100, 0x8500);
+
+        for (int frame = 0; frame <= 40; frame++) {
+            tunnel.update(frame, player);
+        }
+
+        assertEquals(0x0D70, player.getCentreX());
+        assertEquals(0x0678, player.getCentreY(),
+                "loc_2970A falls through to loc_29768 after snapping to y_pos $688");
+        assertEquals(0x5100, player.getXSubpixelRaw());
+        assertEquals(0x8500, player.getYSubpixelRaw());
     }
 
     @Test
@@ -232,8 +269,8 @@ class TestAutomaticTunnelObjectInstance {
         AbstractObjectInstance child = services.children.get(0);
         assertInstanceOf(TunnelExhaustControlObjectInstance.class, child);
         assertEquals(player.getCentreX(), child.getX());
-        assertEquals(player.getCentreY() + 0x10, child.getY(),
-                "ROM allocates the exhaust before loc_29768 applies the final upward path step");
+        assertEquals(0x0378, child.getY(),
+                "the exhaust is allocated at the final waypoint before loc_29768 applies retained exit velocity");
         assertEquals(0, intField(child, "subtype"),
                 "Obj_AutomaticTunnel exit spawn does not copy subtype; subtype 0 selects directional exhaust");
         assertEquals(0, intField(child, "xVel"));
@@ -261,6 +298,7 @@ class TestAutomaticTunnelObjectInstance {
     @Test
     void tunnelExhaustControlUsesRomVerticalWaterFrameForUpwardExit() {
         RecordingServices services = new RecordingServices();
+        services.act = 1; // the water exhaust is the act 2 branch of loc_298F4
         TunnelExhaustControlObjectInstance control = new TunnelExhaustControlObjectInstance(
                 new ObjectSpawn(0x1800, 0x0640, 0, 0, 0, false, 0),
                 0, 0, -0x1000);
@@ -281,6 +319,7 @@ class TestAutomaticTunnelObjectInstance {
     @Test
     void tunnelExhaustControlUsesRomHorizontalWaterFrameForSideExit() {
         RecordingServices services = new RecordingServices();
+        services.act = 1; // the water exhaust is the act 2 branch of loc_298F4
         TunnelExhaustControlObjectInstance control = new TunnelExhaustControlObjectInstance(
                 new ObjectSpawn(0x1800, 0x0640, 0, 0, 0, false, 0),
                 0, 0x1000, 0);
@@ -296,6 +335,92 @@ class TestAutomaticTunnelObjectInstance {
         assertEquals(0x0600, motionVelocity(child, "xVel") & 0xFFFF);
         assertEquals(0, motionVelocity(child, "yVel"));
         assertTrue(booleanField(child, "horizontal"));
+    }
+
+    @Test
+    void tunnelExhaustControlPuffsDissipatingSmokeInActOne() {
+        RecordingServices services = new RecordingServices();
+        TunnelExhaustControlObjectInstance control = new TunnelExhaustControlObjectInstance(
+                new ObjectSpawn(0x1800, 0x0640, 0, 0, 0, false, 0),
+                0, 0x0800, -0x0400);
+        control.setServices(services);
+
+        control.update(0, new TestPlayableSprite());
+
+        assertEquals(1, services.children.size(),
+                "loc_298F4 routes act 1 to Obj_TunnelExSmoke");
+        AbstractObjectInstance child = services.children.get(0);
+        assertInstanceOf(FireShieldDissipateInstance.class, child);
+        assertEquals(0x1800, child.getX());
+        assertEquals(0x0640, child.getY());
+        assertEquals(0x0800, motionVelocity(child, "xVel"),
+                "Obj_TunnelExSmoke copies the controller's x_vel");
+        assertEquals(0xFC00, motionVelocity(child, "yVel") & 0xFFFF,
+                "Obj_TunnelExSmoke copies the controller's y_vel");
+
+        // ROM gates on (Level_frame_counter & 3) == 0 — nothing on the next three frames.
+        for (int frame = 1; frame <= 3; frame++) {
+            control.update(frame, new TestPlayableSprite());
+        }
+        assertEquals(1, services.children.size());
+
+        control.update(4, new TestPlayableSprite());
+        assertEquals(2, services.children.size());
+    }
+
+    @Test
+    void actTwoTunnelExhaustControlStillSpraysWaterExhaust() {
+        RecordingServices services = new RecordingServices();
+        services.act = 1;
+        TunnelExhaustControlObjectInstance control = new TunnelExhaustControlObjectInstance(
+                new ObjectSpawn(0x1800, 0x0640, 0, 0, 0, false, 0),
+                0, 0, -0x1000);
+        control.setServices(services);
+
+        control.update(0, new TestPlayableSprite());
+
+        assertEquals(1, services.children.size());
+        assertInstanceOf(TunnelExhaustParticleInstance.class, services.children.get(0));
+    }
+
+    @Test
+    void dissipatingSmokeDriftsWithoutGravityAndExpiresAfterFourFrames() {
+        FireShieldDissipateInstance smoke = new FireShieldDissipateInstance(
+                new ObjectSpawn(0x1800, 0x0640, 0, 0, 0, false, 0), 0x0100, 0);
+        smoke.setServices(new TestObjectServices());
+
+        TestPlayableSprite player = new TestPlayableSprite();
+        smoke.update(0, player);
+
+        assertEquals(0x1801, smoke.getX(), "MoveSprite2 applies x_vel at one pixel per frame");
+        assertEquals(0x0640, smoke.getY(), "MoveSprite2 does not apply gravity");
+        assertEquals(1, intField(smoke, "mappingFrame"));
+
+        // Mapping frames 1..4 hold for four frames each; frame 5 deletes the sprite.
+        for (int frame = 1; frame < 4 * 4 - 1 && !smoke.isDestroyed(); frame++) {
+            smoke.update(frame, player);
+        }
+        assertEquals(4, intField(smoke, "mappingFrame"));
+        assertFalse(smoke.isDestroyed());
+
+        smoke.update(16, player);
+        assertTrue(smoke.isDestroyed(), "mapping_frame 5 hits Delete_Current_Sprite");
+    }
+
+    @Test
+    void dissipatingSmokeRendersExplosionArtFrame() {
+        PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
+        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        when(renderManager.getRenderer(ObjectArtKeys.EXPLOSION)).thenReturn(renderer);
+        when(renderer.isReady()).thenReturn(true);
+
+        FireShieldDissipateInstance smoke = new FireShieldDissipateInstance(
+                new ObjectSpawn(0x1800, 0x0640, 0, 0, 0, false, 0), 0, 0);
+        smoke.setServices(new RenderingServices(renderManager));
+
+        smoke.appendRenderCommands(new ArrayList<GLCommand>());
+
+        verify(renderer).drawFrameIndex(1, 0x1800, 0x0640, false, false);
     }
 
     private static int intField(Object instance, String name) {
@@ -334,6 +459,7 @@ class TestAutomaticTunnelObjectInstance {
     private static final class RecordingServices extends TestObjectServices {
         private final ObjectManager objectManager;
         private final List<AbstractObjectInstance> children = new ArrayList<>();
+        private int act;
 
         private RecordingServices() {
             objectManager = mock(ObjectManager.class);
@@ -341,6 +467,11 @@ class TestAutomaticTunnelObjectInstance {
                 children.add(invocation.getArgument(0));
                 return null;
             }).when(objectManager).addDynamicObjectAfterCurrent(any(AbstractObjectInstance.class));
+        }
+
+        @Override
+        public int currentAct() {
+            return act;
         }
 
         @Override

@@ -1712,6 +1712,25 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                     if (applyInitialObjectStep
                             && (logicalOverflow || appliesInitialObj37Step(slotIndex, firstReservedSlot))) {
                         ringObject.updateMovement();
+                        // This deferred materialization has already consumed the
+                        // same-pass Obj37_Main movement represented by its live
+                        // x_pos/y_pos. S3K's previous collision-response list
+                        // holds the SST pointer, so the following player pass must
+                        // read that post-movement position rather than the ordinary
+                        // pre-update snapshot used by an immediate spill.
+                        if (!forceDeferredOwnerRingClear) {
+                            ringObject.markTouchStateAlreadyPostMovement();
+                        }
+                    }
+                    // S3K's Obj37 chain is published through live SST pointers.
+                    // That remains true when an after-current owner lands behind
+                    // the Process_Sprites cursor and therefore skips the explicit
+                    // same-pass movement step above: the following player pass
+                    // must still read the ring's live x_pos/y_pos, not the
+                    // engine's older pre-update cache. The forced deferred-owner
+                    // path deliberately retains its previously published state.
+                    if (allocateRemainderAfterOwner && !forceDeferredOwnerRingClear) {
+                        ringObject.markTouchStateAlreadyPostMovement();
                     }
                     if (objectManager.hasInheritedRingCounterPhase()) {
                         ringObject.markTouchStateAlreadyPostMovement();

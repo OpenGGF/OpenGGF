@@ -951,6 +951,14 @@ readiness of a job only when the engine independently submitted and prepared
 the same job and its kind, ordinal, stable submission fingerprint, and service
 boundary match the recording.
 
+S3K hardware-timing schema 1 grants this authority only to
+`KOS_MODULE_QUEUE`; direct Kosinski jobs remain live production work. Schema
+2 grants it to both `KOS_MODULE_QUEUE` and `KOS_DECOMPRESSION_QUEUE`.
+Schema-2 direct edges can release only a prepared head that the shared
+four-entry production FIFO submitted, and only at `pre_main_loop`. KosM child
+streams are real direct submissions with their own direct ordinals; the trace
+cannot create or suppress them.
+
 This is a narrow external-timing input, analogous to replaying the time at
 which emulated hardware completed work. It is not permission to copy rings,
 positions, routines, object state, queue descriptors, archive addresses, or
@@ -965,6 +973,13 @@ and polls a completion gate. Host execution time cannot represent Mega Drive
 completion timing, while a fully cycle-accurate machine is outside the engine's
 scope. The dedicated stream supplies only that otherwise-external completion
 edge; the ROM-modeled consumer still owns every downstream mutation.
+
+Committed schema-1 AIZ intro and ICZ act-transition fixtures remain loadable,
+but they do not certify their direct queue-count boundary because those jobs
+use live timing in schema 1. Their exact inventory is checked by
+`TestCommittedHardwareTimingFixtures`. Replacing them with native schema-2
+output requires separate explicit publication approval; implementation work
+must not mutate their payloads.
 
 ### Guard and Removal Conditions
 

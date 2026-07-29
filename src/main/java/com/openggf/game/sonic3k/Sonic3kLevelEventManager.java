@@ -14,6 +14,7 @@ import com.openggf.game.sonic3k.events.AizObjectEventBridge;
 import com.openggf.game.sonic3k.events.AizPreparedTransitionArtBridge;
 import com.openggf.game.sonic3k.events.AizPreparedTransitionArtState;
 import com.openggf.game.sonic3k.events.CnzObjectEventBridge;
+import com.openggf.game.sonic3k.events.IczObjectEventBridge;
 import com.openggf.game.sonic3k.events.HczObjectEventBridge;
 import com.openggf.game.sonic3k.events.FbzObjectEventBridge;
 import com.openggf.game.sonic3k.objects.FbzBossEventRewindLinks;
@@ -37,6 +38,7 @@ import com.openggf.game.sonic3k.runtime.IczZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.MhzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.MgzZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.sonic3k.runtime.S3kZoneRuntimeState;
 import com.openggf.game.sonic3k.sidekick.Sonic3kSidekickFollowContext;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
@@ -535,6 +537,46 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
     }
 
+    @Override
+    public void updateAfterCameraBoundaryEasing() {
+        ZoneRuntimeRegistry registry = GameServices.zoneRuntimeRegistryOrNull();
+        LbzZoneRuntimeState state = registry != null
+                ? S3kRuntimeStates.currentLbz(registry).orElse(null)
+                : null;
+        if (state == null || !state.isLbz1KnucklesBoundaryPublishPending()) {
+            return;
+        }
+        Camera camera = GameServices.cameraOrNull();
+        if (camera == null) {
+            return;
+        }
+        boolean snapped = sidekickSpritesFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS).stream()
+                .map(AbstractPlayableSprite::getCpuController)
+                .filter(java.util.Objects::nonNull)
+                .anyMatch(cpu -> Math.abs((short) (camera.getMaxY()
+                        - cpu.getMaxYBound(camera.getMaxY()))) > 8);
+        if (snapped) {
+            syncSidekickBoundsToCamera();
+            state.clearLbz1KnucklesBoundaryPublishPending();
+        } else if (camera.getMaxY() == camera.getMaxYTarget()) {
+            state.clearLbz1KnucklesBoundaryPublishPending();
+        }
+    }
+
+    /**
+     * Requests publication of the post-easing camera globals to the sidekick
+     * controller mirror. ROM object routines can change a boundary target
+     * before the DynamicLevelEvents tail; the next Tails slot then reads the
+     * resulting live Camera_* values.
+     */
+    public void requestSidekickBoundsPublishAfterCameraEasing() {
+        ZoneRuntimeRegistry registry = GameServices.zoneRuntimeRegistryOrNull();
+        if (registry != null) {
+            S3kRuntimeStates.currentLbz(registry)
+                    .ifPresent(LbzZoneRuntimeState::requestLbz1KnucklesBoundaryPublish);
+        }
+    }
+
     /**
      * Keep CPU sidekick level bounds aligned with S3K's dynamic camera bounds.
      * Unlike S2, S3K currently has no zone-specific sidekick bound overrides, so
@@ -671,6 +713,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
      *
      * <p>Zones handled:
      * <ul>
+     *   <li>AIZ1 ($0000): Player 2 enters the dormant marker from the first
+     *       ordinary CPU-control dispatch while Obj_AIZPlaneIntro owns the opening pan</li>
      *   <li>HCZ1 ($0100): Sonic/Tails anim $1B (tumble), Knuckles anim $21 (glide drop)</li>
      *   <li>MGZ1 ($0200): anim $1B, airborne (loc_68A6)</li>
      *   <li>ICZ1 ($0500): Sonic player modes spawn Obj_LevelIntroICZ1 and
@@ -680,10 +724,6 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
      * </ul>
      */
     public void applyZonePlayerState() {
-        // AIZ deliberately has no Player_2 mutation here. SpawnLevelMainSprites
-        // leaves fresh Tails at Player_1-$20,+4; Tails_Init returns before the
-        // later ordinary Tails_Control/loc_13A10 dispatch writes the dormant
-        // marker (sonic3k.asm:8351-8369,26101-26156,26389-26397).
         if (currentZone == Sonic3kZoneIds.ZONE_HCZ && currentAct == 0) {
             applyHcz1IntroState();
         }
@@ -732,6 +772,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
 
     public void applyCompleteRunSegmentPlayerStateAfterTitleCard() {
         applyZonePlayerStateAfterTitleCard();
+        releaseCompleteRunSegmentStartupLatchesAfterTitleCard();
     }
 
     /**
@@ -994,6 +1035,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
         if (cnzEvents != null) {
             cnzEvents.triggerScreenShake(frames);
+        }
+        if (iczEvents != null) {
+            iczEvents.triggerScreenShake(frames);
         }
     }
 
@@ -1395,6 +1439,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     public void preparePreloadedActTitleCardCompletion() {
         if (iczEvents != null) {
             iczEvents.preparePostTitleAct2SizeChange();
+        }
+        if (lbzEvents != null) {
+            lbzEvents.preparePostTitleAct2SizeChange();
         }
     }
 
@@ -1857,15 +1904,19 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         //   1 byte    icz handler present flag
         //   4 bytes   icz schema payload length, when present
         //   N bytes   icz schema payload, when present
+        //   1 byte    lbz handler present flag
+        //   4 bytes   lbz schema payload length, when present
+        //   N bytes   lbz schema payload, when present
         //   28 bytes  fixed Breathing_bubbles/Breathing_bubbles_P2 sidecars
-        //   4 bytes   fixed-air owner zone
-        //   4 bytes   fixed-air owner act
+        //   4 bytes   fixed-air countdown owning zone
+        //   4 bytes   fixed-air countdown owning act
         byte[] aizBytes = aizEvents != null ? ZoneEventSchemaSidecar.capture(aizEvents) : null;
         byte[] hczBytes = hczEvents != null ? ZoneEventSchemaSidecar.capture(hczEvents) : null;
         byte[] cnzBytes = cnzEvents != null ? ZoneEventSchemaSidecar.capture(cnzEvents) : null;
         byte[] mgzBytes = mgzEvents != null ? ZoneEventSchemaSidecar.capture(mgzEvents) : null;
         byte[] mhzBytes = mhzEvents != null ? ZoneEventSchemaSidecar.capture(mhzEvents) : null;
         byte[] iczBytes = iczEvents != null ? ZoneEventSchemaSidecar.capture(iczEvents) : null;
+        byte[] lbzBytes = lbzEvents != null ? ZoneEventSchemaSidecar.capture(lbzEvents) : null;
         int size = EXTRA_MANAGER_BYTES;
         size += aizBytes != null ? 1 + Integer.BYTES + aizBytes.length : 1;
         size += hczBytes != null ? 1 + Integer.BYTES + hczBytes.length : 1;
@@ -1873,8 +1924,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         size += mgzBytes != null ? 1 + Integer.BYTES + mgzBytes.length : 1;
         size += mhzBytes != null ? 1 + Integer.BYTES + mhzBytes.length : 1;
         size += iczBytes != null ? 1 + Integer.BYTES + iczBytes.length : 1;
-        size += S3kFixedAirCountdownManager.REWIND_STATE_BYTES
-                + (2 * Integer.BYTES);
+        size += lbzBytes != null ? 1 + Integer.BYTES + lbzBytes.length : 1;
+        size += S3kFixedAirCountdownManager.REWIND_STATE_BYTES + 2 * Integer.BYTES;
         java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocate(size);
         // Manager-level
         buf.put((byte) bootstrap.mode().ordinal());
@@ -1934,6 +1985,14 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             buf.put((byte) 1);
             buf.putInt(iczBytes.length);
             buf.put(iczBytes);
+        } else {
+            buf.put((byte) 0);
+        }
+        // LBZ
+        if (lbzBytes != null) {
+            buf.put((byte) 1);
+            buf.putInt(lbzBytes.length);
+            buf.put(lbzBytes);
         } else {
             buf.put((byte) 0);
         }
@@ -2077,14 +2136,36 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                 }
             }
         }
+        // LBZ
+        if (buf.remaining() >= 1) {
+            boolean lbzPresent = buf.get() != 0;
+            if (lbzPresent) {
+                if (buf.remaining() < Integer.BYTES) {
+                    return;
+                }
+                int lbzLength = buf.getInt();
+                if (lbzLength < 0 || buf.remaining() < lbzLength) {
+                    return;
+                }
+                byte[] bytes = new byte[lbzLength];
+                buf.get(bytes);
+                if (lbzEvents != null) {
+                    restoreLbzSidecar(bytes);
+                }
+            }
+        }
         if (buf.remaining() >= S3kFixedAirCountdownManager.REWIND_STATE_BYTES) {
             fixedAirCountdownManager.readRewindState(buf);
         }
-        fixedAirCountdownZone = -1;
-        fixedAirCountdownAct = -1;
         if (buf.remaining() >= 2 * Integer.BYTES) {
             fixedAirCountdownZone = buf.getInt();
             fixedAirCountdownAct = buf.getInt();
+        } else {
+            // Older snapshots predate the owner metadata. Treat the restored
+            // countdown as unowned so a later init cannot mistake it for a
+            // seamless continuation in the wrong zone.
+            fixedAirCountdownZone = -1;
+            fixedAirCountdownAct = -1;
         }
     }
 
@@ -2118,6 +2199,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
         if (!skipLengthPrefixedSidecar(buf,
                 () -> expectedSidecarBytes(iczEvents, Sonic3kLevelEventManager::newIczFramingProbe))) {
+            return false;
+        }
+        if (!skipLengthPrefixedSidecar(buf,
+                () -> expectedSidecarBytes(lbzEvents, Sonic3kLevelEventManager::newLbzFramingProbe))) {
             return false;
         }
         return buf.remaining() == 0
@@ -2175,6 +2260,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
 
     private static Object newIczFramingProbe() {
         return new Sonic3kICZEvents();
+    }
+
+    private static Object newLbzFramingProbe() {
+        return new Sonic3kLBZEvents();
     }
 
     private static boolean skipVariableLengthSchemaSidecar(
@@ -2278,13 +2367,29 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         byte[] before = ZoneEventSchemaSidecar.capture(iczEvents);
         try {
             ZoneEventSchemaSidecar.restore(iczEvents, bytes);
+            iczEvents.discardHardwareWorkFacadesAfterRewind();
         } catch (RuntimeException e) {
             try {
                 ZoneEventSchemaSidecar.restore(iczEvents, before);
+                iczEvents.discardHardwareWorkFacadesAfterRewind();
             } catch (RuntimeException rollbackFailure) {
                 e.addSuppressed(rollbackFailure);
             }
             LOG.warning("Skipping malformed ICZ zone-event rewind sidecar: " + e.getMessage());
+        }
+    }
+
+    private void restoreLbzSidecar(byte[] bytes) {
+        byte[] before = ZoneEventSchemaSidecar.capture(lbzEvents);
+        try {
+            ZoneEventSchemaSidecar.restore(lbzEvents, bytes);
+        } catch (RuntimeException e) {
+            try {
+                ZoneEventSchemaSidecar.restore(lbzEvents, before);
+            } catch (RuntimeException rollbackFailure) {
+                e.addSuppressed(rollbackFailure);
+            }
+            LOG.warning("Skipping malformed LBZ zone-event rewind sidecar: " + e.getMessage());
         }
     }
 }

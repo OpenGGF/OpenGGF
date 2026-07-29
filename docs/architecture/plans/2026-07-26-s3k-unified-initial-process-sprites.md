@@ -17,7 +17,7 @@
 - No game-name or zone branch belongs in shared runtime code. `Sonic3kLevelInitProfile` may opt into the typed lifecycle; the coordinator consumes semantic lifecycle state without inspecting game or zone identity.
 - Player and sidekick state **is allowed and expected to mutate**. The ROM dispatches `Player_1` and `Player_2` before every other setup SST. Tests must discover and pin native mutations rather than preserving the prior engine state.
 - Setup input is neutral because the ROM has not entered `Demo_PlayRecord` and clears/locks control during level assembly. Do not sample live keyboard, controller, BK2, or trace input. Forced control already owned by runtime objects remains visible to the playable routine.
-- Preserve native setup order: `Load_Sprites` placement/materialization first, then the ascending SST walk—main player slot 0, sidekick/player 2 slot 1, `Reserved_object_3` slot 2, explicit dynamic slot 3, managed dynamic slots 4-92, then fixed `Level_object_RAM` slots. Do not place `Load_Sprites` inside the SST walk or treat the managed 89-slot window as all 90 dynamic slots.
+- Preserve native setup order: `Load_Sprites` placement/materialization first, then the ascending SST walk—main player slot 0, sidekick/player 2 slot 1, `Reserved_object_3` slot 2, explicit dynamic slot 3, managed dynamic slots 4-93, then post-dynamic fixed slots 94-109. Slot 93 aliases the first empty `Level_object_RAM` SST but remains inside the ROM's 90-probe managed window. Do not place `Load_Sprites` inside the SST walk.
 - The pass must not execute an ordinary `LevelFrameStep` or `LevelLoop`. In particular it must not run palette-frame drain, runtime art queue, dirty-region processing, pre/post-physics events, camera follow, screen events, water-height handling, ring loading/collection, oscillation, ring animation, animated tiles, rendering, audio, lag accounting, or rewind keyframe capture.
 - Do not increment `Level_frame_counter`, the production `LevelManager` frame counter, VBlank/VInt counters, lag counter, or global oscillation. A manager-private dispatch ordinal may advance only if it is the existing semantic input to routines dispatched by `Process_Sprites`; it must be tested independently from the gameplay counter.
 - Playable animation, follower history, CPU state, collision, touch, and status timers are not globally prohibited. Include the portions reached from the native player object routines in their SST slots; exclude engine post-frame work that is not part of those routines. Tests must distinguish these two categories.
@@ -59,7 +59,7 @@ The implementation must therefore extract a setup-specific playable SST envelope
 | `Player_2` | 1 | Sidekick/player-2 routine; CPU reads history already written by player 1 |
 | `Reserved_object_3` | 2 | `Obj_ResetCollisionResponseList`, clearing only the current collision-list build cursor after player touch has read the prior list |
 | `Dynamic_object_RAM` | 3-92 | 90 loadable object slots, including AIZ plane intro in dynamic index 2 / absolute SST slot 5 |
-| `Level_object_RAM` | 93-109 | The 17 named fixed slots mapped below |
+| `Level_object_RAM` | 93-109 | Slot 93 is the empty managed-window alias; named post-dynamic fixed slots begin at 94 |
 
 The order has concrete consequences:
 
@@ -75,7 +75,7 @@ The engine's dynamic allocator does not own all 90 native slots. `ObjectSlotLayo
 ```java
 void loadSprites();
 void processAbsoluteDynamicSlot3();
-void processManagedDynamicSlots4Through92();
+void processManagedDynamicSlots4Through93();
 ```
 
 Fresh `SpawnLevelMainSprites` writes player slots, reset slot 2, fixed power-up slots, and zone intro objects such as AIZ in `Dynamic_object_RAM+(object_size*2)` (absolute slot 5), but does not write absolute slot 3 (`sonic3k.asm:8111-8350`). Task 1's oracle must record the slot-3 function pointer as zero immediately before and after initial `Process_Sprites`. The production S3K adapter implements `processAbsoluteDynamicSlot3()` as an explicit evidence-backed empty operation for fresh level setup and fails its invariant test if a registered owner appears; the generic coordinator still emits a `DYNAMIC_SLOT_3` stage before `DYNAMIC_SLOTS_4_92`. Do not relabel the existing 89-slot manager loop as 90 slots.
@@ -206,8 +206,8 @@ record InitialProcessSpritesStages(
 3. Execute the main playable slot with neutral logical input.
 4. Execute active sidekick/player-2 slots in stable native slot order. For the normal team this means player 2 immediately after player 1; additional engine-only sidekicks require an explicit stable-slot policy and cannot interleave before player 2.
 5. Execute slot 2, clearing only the current collision-list build state.
-6. Visit explicit absolute dynamic slot 3, then execute the managed 89 slots 4-92 in ascending slot order, including child-spawn flushing at the audited native allocation seam.
-7. Execute fixed slots 93-109 through `InitialFixedSstDispatcher`.
+6. Visit explicit absolute dynamic slot 3, then execute the managed 90 slots 4-93 in ascending slot order, including child-spawn flushing at the audited native allocation seam.
+7. Execute post-dynamic fixed slots 94-109 through `InitialFixedSstDispatcher`.
 8. Capture the completed collision list for the following ordinary frame and close all scopes.
 
 Because the engine's managers do not mirror one physical SST array, each stage must expose a narrow semantic primitive; the coordinator is the only place allowed to reconstruct the cross-manager order. It must not call `LevelFrameStep.execute`, `SpriteManager.update`, `SpriteManager.updateWithoutInput`, `LevelManager.updateObjectPositions*`, or any title-card prelude loop.
@@ -504,7 +504,7 @@ git commit -m "refactor(sprites): expose initial playable SST dispatch"
 - Modify: `src/test/java/com/openggf/game/sonic3k/TestSonic3kZoneFeatureProvider.java`
 
 - [ ] Implement fakeable stage collaborators and explicit order `LOAD -> P1 -> P2 -> RESET -> DYNAMIC_SLOT_3 -> DYNAMIC_SLOTS_4_92 -> FIXED -> CAPTURE`, with scope close in `finally`.
-- [ ] Prove fresh absolute dynamic slot 3 is empty from the Task 1 oracle and visit it explicitly before the existing managed 4-92 scan; assert the adapter fails if a slot-3 owner unexpectedly appears.
+- [ ] Prove fresh absolute dynamic slot 3 is empty from the Task 1 oracle and visit it explicitly before the managed 4-93 scan; assert the adapter fails if a slot-3 owner unexpectedly appears.
 - [ ] Split the current `runInitialS3kLoadThenExecutePass` into semantic scoped primitives; remove the S3K-named public method after all callers migrate.
 - [ ] Keep two-axis placement, active-spawn synchronization, destroyed-object cleanup, child allocation, solid registry, and next-frame collision-response capture.
 - [ ] Implement the inventory's 17-slot S3K provider adapter. Every slot receives an explicit registered-owner dispatch or evidence-backed empty operation; preserve strict order.
@@ -757,7 +757,7 @@ rg -n "trace_profile|traceProfile|traceName|filename|zoneName|frameIndex|known f
 Every match in the new path must be a citation, diagnostic label, or existing unrelated code—not an execution selector.
 
 - [ ] Run counter audit: prove setup leaves level, VBlank/VInt, lag, oscillation, ring-frame, and input cursors unchanged while allowing native player/CPU/animation/history/object mutations.
-- [ ] Run slot audit: prove `LOAD -> P1 -> P2 -> RESET -> explicit slot 3 -> managed slots 4-92 -> fixed -> CAPTURE` and verify the AIZ intro occupies its native dynamic position without a named special case.
+- [ ] Run slot audit: prove `LOAD -> P1 -> P2 -> RESET -> explicit slot 3 -> managed slots 4-93 -> fixed 94-109 -> CAPTURE` and verify the AIZ intro occupies its native dynamic position without a named special case.
 - [ ] Run lifecycle audit across title, no-title, paused, bootstrap, failed load, teardown, preview, warm reuse, complete restoration, rewind-before, and rewind-after cases.
 - [ ] Request two independent reviews:
   1. ROM fidelity and slot/counter/input ownership.

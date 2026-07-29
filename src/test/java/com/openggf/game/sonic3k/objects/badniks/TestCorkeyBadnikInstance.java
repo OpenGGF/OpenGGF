@@ -57,7 +57,7 @@ class TestCorkeyBadnikInstance {
     }
 
     @Test
-    void firstVisibleFrameSpawnsNozzleAndNextFramePatrolsLeft() {
+    void renderedPlaceholderRestoresEntryBeforeInitializationAndPatrol() {
         AbstractObjectInstance.updateCameraBounds(0, 0, 1024, 1024, 0);
         CorkeyBadnikInstance corkey = create(0);
         ObjectServices services = servicesWithObjectManager();
@@ -65,6 +65,13 @@ class TestCorkeyBadnikInstance {
         corkey.setServices(services);
 
         corkey.update(0, null);
+        verify(objectManager, times(0)).addDynamicObjectAfterCurrent(org.mockito.ArgumentMatchers.any());
+
+        corkey.refreshPostCameraRenderState();
+        corkey.update(1, null);
+        verify(objectManager, times(0)).addDynamicObjectAfterCurrent(org.mockito.ArgumentMatchers.any());
+
+        corkey.update(2, null);
 
         assertEquals(-1, corkey.movementStepForTesting(),
                 "loc_8C746 stores -1 in $40 when render_flags bit 0 is clear");
@@ -77,7 +84,7 @@ class TestCorkeyBadnikInstance {
         assertEquals(0x0200, child.getX());
         assertEquals(0x010C, child.getY());
 
-        corkey.update(1, null);
+        corkey.update(3, null);
 
         assertEquals(0x01FF, corkey.getX());
     }
@@ -88,8 +95,8 @@ class TestCorkeyBadnikInstance {
         CorkeyBadnikInstance corkey = create(1);
         corkey.setServices(servicesWithObjectManager());
 
-        corkey.update(0, null);
-        corkey.update(1, null);
+        activate(corkey);
+        corkey.update(3, null);
 
         assertEquals(-1, corkey.movementStepForTesting(),
                 "subtype 0 leaves Obj_Wait's word countdown at zero, so it reverses after every patrol move");
@@ -102,10 +109,10 @@ class TestCorkeyBadnikInstance {
         CorkeyBadnikInstance corkey = createWithSubtype(2, 0);
         corkey.setServices(servicesWithObjectManager());
 
-        corkey.update(0, null);
-        corkey.update(1, null);
-        corkey.update(2, null);
+        activate(corkey);
         corkey.update(3, null);
+        corkey.update(4, null);
+        corkey.update(5, null);
 
         assertEquals(1, corkey.movementStepForTesting(),
                 "Obj_Wait calls loc_8C7BC after the subtype countdown expires, reversing $40");
@@ -120,7 +127,7 @@ class TestCorkeyBadnikInstance {
         ObjectServices services = servicesWithObjectManager();
         ObjectManager objectManager = services.objectManager();
         corkey.setServices(services);
-        corkey.update(0, null);
+        activate(corkey);
 
         ArgumentCaptor<ObjectInstance> childCaptor = ArgumentCaptor.forClass(ObjectInstance.class);
         verify(objectManager).addDynamicObjectAfterCurrent(childCaptor.capture());
@@ -169,6 +176,13 @@ class TestCorkeyBadnikInstance {
     private static CorkeyBadnikInstance createWithSubtype(int subtype, int renderFlags) {
         return new CorkeyBadnikInstance(
                 new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.CORKEY, subtype, renderFlags, false, 0));
+    }
+
+    private static void activate(CorkeyBadnikInstance corkey) {
+        corkey.update(0, null);
+        corkey.refreshPostCameraRenderState();
+        corkey.update(1, null);
+        corkey.update(2, null);
     }
 
     private static ObjectServices servicesWithObjectManager() {

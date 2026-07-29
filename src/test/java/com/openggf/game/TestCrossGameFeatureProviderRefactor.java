@@ -122,8 +122,8 @@ class TestCrossGameFeatureProviderRefactor {
         assertEquals(base.collision().sidekickClearsStalePushVelocityBeforeGroundMove(),
                 hybrid.collision().sidekickClearsStalePushVelocityBeforeGroundMove());
         assertEquals(base.sidekickCpu().sidekickCpuUsesLevelFrameCounter(), hybrid.sidekickCpu().sidekickCpuUsesLevelFrameCounter());
-        assertEquals(base.playerMovement().landingRollClearUsesCurrentYRadiusDelta(),
-                hybrid.playerMovement().landingRollClearUsesCurrentYRadiusDelta());
+        assertEquals(base.playerMovement().landing().landingRollClearUsesCurrentYRadiusDelta(),
+                hybrid.playerMovement().landing().landingRollClearUsesCurrentYRadiusDelta());
         assertEquals(base.playerMovement().levelBoundaryRightStrict(), hybrid.playerMovement().levelBoundaryRightStrict());
         assertEquals(base.playerMovement().levelBoundaryUsesCentreY(), hybrid.playerMovement().levelBoundaryUsesCentreY());
         assertEquals(base.collision().solidObjectTopBranchAlwaysLiftsOnUpwardVelocity(),

@@ -1,6 +1,8 @@
 package com.openggf.game.sonic3k.features;
 
 import com.openggf.camera.Camera;
+import com.openggf.configuration.SonicConfiguration;
+import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.Rom;
 import com.openggf.game.sonic3k.Sonic3kLoadBootstrap;
 import com.openggf.game.GameServices;
@@ -8,6 +10,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.events.FireCurtainRenderState;
 import com.openggf.game.sonic3k.events.FireCurtainStage;
 import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
+import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.level.LevelManager;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
@@ -19,6 +22,7 @@ import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -36,6 +40,7 @@ public class TestAizFireCurtainRendererRom {
     private static final Sonic3kLoadBootstrap FIRE_TRANSITION_BOOTSTRAP =
             new Sonic3kLoadBootstrap(Sonic3kLoadBootstrap.Mode.SKIP_INTRO, null);
     private static SharedLevel sharedLevel;
+    private static Object oldSkipIntros;
 
     private static Sonic3kAIZEvents newFireTransitionEvents() {
         AtomicInteger vblankCounter = new AtomicInteger();
@@ -44,6 +49,9 @@ public class TestAizFireCurtainRendererRom {
 
     @BeforeAll
     public static void loadLevel() throws Exception {
+        SonicConfigurationService config = SonicConfigurationService.getInstance();
+        oldSkipIntros = config.getConfigValue(SonicConfiguration.S3K_SKIP_INTROS);
+        config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, true);
         sharedLevel = SharedLevel.load(SonicGame.SONIC_3K, 0, 0);
     }
 
@@ -52,6 +60,18 @@ public class TestAizFireCurtainRendererRom {
         if (sharedLevel != null) {
             sharedLevel.dispose();
         }
+        SonicConfigurationService.getInstance().setConfigValue(
+                SonicConfiguration.S3K_SKIP_INTROS,
+                oldSkipIntros != null ? oldSkipIntros : false);
+    }
+
+    @BeforeEach
+    void restoreSkipIntroBootstrap() {
+        // The singleton-reset extension restores configuration defaults before
+        // each method. These tests reload AIZ1, so republish the same skip-intro
+        // bootstrap selected by the shared fixture before that reload.
+        SonicConfigurationService.getInstance().setConfigValue(
+                SonicConfiguration.S3K_SKIP_INTROS, true);
     }
 
     @Test
@@ -65,6 +85,7 @@ public class TestAizFireCurtainRendererRom {
 
         Sonic3kAIZEvents events = newFireTransitionEvents();
         events.init(0);
+        stageFireOverlay(events);
         events.setEventsFg5(true);
 
         AizFireCurtainRenderer renderer = new AizFireCurtainRenderer();
@@ -108,6 +129,7 @@ public class TestAizFireCurtainRendererRom {
 
         Sonic3kAIZEvents events = newFireTransitionEvents();
         events.init(0);
+        stageFireOverlay(events);
         events.setEventsFg5(true);
 
         int overlayTileBase = 0x500;
@@ -168,6 +190,7 @@ public class TestAizFireCurtainRendererRom {
 
         Sonic3kAIZEvents events = newFireTransitionEvents();
         events.init(0);
+        stageFireOverlay(events);
         events.setEventsFg5(true);
 
         int overlayTileBase = 0x500;
@@ -187,7 +210,7 @@ public class TestAizFireCurtainRendererRom {
             Sonic3kAIZEvents act2Events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
             act2Events.init(1);
             for (int frame = 0; frame < 240 && act2Events.getFireCurtainRenderState(224).active(); frame++) {
-                act2Events.update(1, frame);
+                updateWithHardware(act2Events, 1, frame);
                 FireCurtainRenderState state = act2Events.getFireCurtainRenderState(224);
                 collectStageStats(renderer, state, overlayTileBase, overlayTileEnd, statsByStage);
             }
@@ -228,10 +251,11 @@ public class TestAizFireCurtainRendererRom {
 
         Sonic3kAIZEvents act1Events = newFireTransitionEvents();
         act1Events.init(0);
+        stageFireOverlay(act1Events);
         act1Events.setEventsFg5(true);
 
         for (int frame = 0; frame < 360 && !act1Events.isAct2TransitionRequested(); frame++) {
-            act1Events.update(0, frame);
+            updateWithHardware(act1Events, 0, frame);
         }
 
         levelManager.loadZoneAndAct(0, 1);
@@ -315,5 +339,14 @@ public class TestAizFireCurtainRendererRom {
         timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
         events.update(act, frame);
         timing.service(HardwareServiceBoundary.POST_OBJECTS);
+    }
+    private static void stageFireOverlay(Sonic3kAIZEvents events) {
+        for (int frame = 0;
+                frame < 100_000 && !events.isFireOverlayTilesLoaded();
+                frame++) {
+            updateWithHardware(events, 0, frame);
+        }
+        assertTrue(events.isFireOverlayTilesLoaded(),
+                "AIZ1 loc_1C5C6 must finish staging flame art before the boss exit signal");
     }
 }

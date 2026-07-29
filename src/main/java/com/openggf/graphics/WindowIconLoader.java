@@ -4,6 +4,9 @@ import org.lwjgl.glfw.GLFWImage;
 import org.lwjgl.stb.STBImage;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
+import org.lwjgl.system.Platform;
+import org.lwjgl.system.SharedLibrary;
+import org.lwjgl.system.macosx.ObjCRuntime;
 
 import java.io.InputStream;
 import java.nio.ByteBuffer;
@@ -17,6 +20,13 @@ import static org.lwjgl.glfw.GLFW.GLFW_X11_CLASS_NAME;
 import static org.lwjgl.glfw.GLFW.GLFW_X11_INSTANCE_NAME;
 import static org.lwjgl.glfw.GLFW.glfwSetWindowIcon;
 import static org.lwjgl.glfw.GLFW.glfwWindowHintString;
+import static org.lwjgl.system.JNI.invokePPP;
+import static org.lwjgl.system.JNI.invokePPPP;
+import static org.lwjgl.system.JNI.invokePPPPP;
+import static org.lwjgl.system.JNI.invokePPPV;
+import static org.lwjgl.system.JNI.invokePPV;
+import static org.lwjgl.system.macosx.ObjCRuntime.objc_getClass;
+import static org.lwjgl.system.macosx.ObjCRuntime.sel_registerName;
 
 /**
  * Applies the application icon to a GLFW window.

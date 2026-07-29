@@ -406,6 +406,9 @@ public class Sonic3kConstants {
     public static final int ARTTILE_CNZ_PLATFORM = 0x0430;
     public static final int ARTTILE_ICZ_MISC2 = 0x0377;
     public static final int ARTTILE_ICZ_MISC1 = 0x03B6;
+    // ArtTile_ICZIntroSprites (sonic3k.constants.asm:1263) - loaded by PLC_1E_1F (ICZ1).
+    // Base for the breakable-wall break debris (ObjDat3_8A41E: make_art_tile(ArtTile_ICZIntroSprites,2,1)).
+    public static final int ARTTILE_ICZ_INTRO_SPRITES = 0x0347;
     public static final int ARTTILE_LRZ_TENSION_BRIDGE = 0x0113;
     public static final int ARTTILE_LBZ_MISC = 0x03C3;
     public static final int ARTTILE_FBZ_MISC = 0x0379;
@@ -545,6 +548,13 @@ public class Sonic3kConstants {
     public static final int PAL_CYCLE_SUPER_SONIC_ADDR = 0x00398E;
     public static final int PAL_CYCLE_SUPER_SONIC_ENTRY_COUNT = 10;
     public static final int PAL_CYCLE_SUPER_SONIC_ENTRY_SIZE = 6; // 3 words
+
+    // PalCycle_SuperSonicUnderwaterAIZICZ / PalCycle_SuperSonicUnderwaterHCZCNZLBZ
+    // (sonic3k.asm:4867 / 4879) - same layout as PalCycle_SuperSonic, written to the
+    // water palette while Water_flag is set. SuperHyper_PalCycle_SonicApply picks the
+    // AIZ/ICZ table for those two zones and the HCZ/CNZ/LBZ table otherwise.
+    public static final int PAL_CYCLE_SUPER_SONIC_UNDERWATER_AIZ_ICZ_ADDR = 0x0039CA;
+    public static final int PAL_CYCLE_SUPER_SONIC_UNDERWATER_HCZ_CNZ_LBZ_ADDR = 0x003A06;
 
     // --- VRAM art tile destinations ---
     // VDP tile indices where art is loaded in VRAM during the intro
@@ -1423,9 +1433,11 @@ public class Sonic3kConstants {
     public static final int ARTTILE_HCZ_GEYSER = 0x0500;
 
     // ===== MGZ Badnik Art =====
-    public static final int ART_KOSM_SPIKER_ADDR = 0x36E0C4;
+    public static final int ART_KOSM_MGZ_SPIKER_ADDR = 0x36E0C4;
+    public static final int ART_KOSM_SPIKER_ADDR = ART_KOSM_MGZ_SPIKER_ADDR;
     public static final int MAP_SPIKER_ADDR = 0x361CB8;
-    public static final int ART_KOSM_MANTIS_ADDR = 0x36E2D6;
+    public static final int ART_KOSM_MGZ_MANTIS_ADDR = 0x36E2D6;
+    public static final int ART_KOSM_MANTIS_ADDR = ART_KOSM_MGZ_MANTIS_ADDR;
     public static final int MAP_MANTIS_ADDR = 0x361D26;
     public static final int ART_UNC_BUBBLES_BADNIK_ADDR = 0x36D6A4;
     public static final int ART_UNC_BUBBLES_BADNIK_SIZE = 0x0A20;
@@ -1448,11 +1460,17 @@ public class Sonic3kConstants {
     public static final int PAL_MGZ_FADE_CNZ_ROWS = 16;
     public static final int ART_KOSM_MGZ_ENDBOSS_DEBRIS_ADDR = 0x36D572;
     public static final int MAP_MGZ_ENDBOSS_DEBRIS_ADDR = 0x3637D6;
+    public static final int ARTTILE_MGZ_SPIKER = 0x0530;
+    public static final int ARTTILE_MGZ_MINIBOSS = 0x054F;
+    public static final int ARTTILE_MGZ_MANTIS = 0x054F;
+    public static final int ARTTILE_MGZ_ENDBOSS_DEBRIS = 0x0570;
 
     // ===== CNZ Badnik Art =====
-    public static final int ART_KOSM_SPARKLE_ADDR = 0x3700CA;
+    public static final int ART_KOSM_CNZ_SPARKLE_ADDR = 0x3700CA;
+    public static final int ART_KOSM_SPARKLE_ADDR = ART_KOSM_CNZ_SPARKLE_ADDR;
     public static final int MAP_SPARKLE_ADDR = 0x361B34;
-    public static final int ART_KOSM_BATBOT_ADDR = 0x3703EC;
+    public static final int ART_KOSM_CNZ_BATBOT_ADDR = 0x3703EC;
+    public static final int ART_KOSM_BATBOT_ADDR = ART_KOSM_CNZ_BATBOT_ADDR;
     public static final int MAP_BATBOT_ADDR = 0x361BD0;
     public static final int ART_UNC_CLAMER_ADDR = 0x36EF18;
     public static final int ART_UNC_CLAMER_SIZE = 0x1140;
@@ -1460,6 +1478,9 @@ public class Sonic3kConstants {
     public static final int MAP_CLAMER_ADDR = 0x361ABC;
     public static final int ART_KOSM_CLAMER_SHOT_ADDR = 0x370058;
     public static final int ART_KOSM_CNZ_BALLOON_ADDR = 0x37060E;
+    public static final int ARTTILE_CNZ_SPARKLE = 0x0524;
+    public static final int ARTTILE_CNZ_BATBOT = 0x0552;
+    public static final int ARTTILE_CNZ_CLAMER_SHOT = 0x0570;
     // CNZ traversal object sheets live in the LockOn S3 half of the combined ROM.
     // Keep these addresses paired with the S3K disassembly labels; do not shift
     // them to raw Sonic 3 source offsets.
@@ -1546,8 +1567,10 @@ public class Sonic3kConstants {
 
     // ===== ICZ Badnik Art =====
     public static final int ART_KOSM_ICZ_SNOWDUST_ADDR = 0x375134;
+    public static final int ARTTILE_ICZ_SNOWDUST = 0x0558;
     public static final int MAP_ICZ_SNOWDUST_ADDR = 0x361F0E;
     public static final int ART_KOSM_ICZ_STAR_POINTER_ADDR = 0x3751C6;
+    public static final int ARTTILE_ICZ_STAR_POINTER = 0x0548;
     public static final int MAP_STAR_POINTER_ADDR = 0x361FAE;
     public static final int ART_UNC_ICZ_PENGUINATOR_ADDR = 0x374154;
     public static final int ART_UNC_ICZ_PENGUINATOR_SIZE = 4064;

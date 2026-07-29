@@ -121,9 +121,9 @@ public final class Lbz1GroundLaunchIntroInstance extends AbstractObjectInstance
                 ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(sprite);
                 primeHeldCpuMappingFromCurrentAnimation(sprite);
                 // Obj_LevelIntro_PlayerLaunchFromGround writes object_control=$03.
-                // Bit 1 skips Animate_Sonic/Animate_Tails while the player remains
-                // buried in the 30-frame hold. sonic3k.asm:77207-77250,
-                // 21992-22018, 26242-26262.
+                // Bit 1 skips Animate_Sonic/Animate_Tails, so the mapping frame
+                // remains object-owned throughout the buried 30-frame hold.
+                // sonic3k.asm:77245-77249, 22067-22076, 26257-26272.
                 sprite.setObjectMappingFrameControl(true);
             }
         }
@@ -136,9 +136,9 @@ public final class Lbz1GroundLaunchIntroInstance extends AbstractObjectInstance
             if (player instanceof AbstractPlayableSprite sprite) {
                 sprite.setJumping(false);
                 applySpringLaunchAnimation(sprite);
-                // sub_39AB4 replaces object_control=$03 with $01, so movement
-                // remains object-owned but animation resumes at the next native
-                // player-slot dispatch. sonic3k.asm:77252-77281.
+                // sub_39AB4 replaces $03 with object_control=$01: movement stays
+                // object-owned, but the ordinary animator resumes on the next
+                // player-slot dispatch. sonic3k.asm:77275-77281.
                 sprite.setObjectMappingFrameControl(false);
                 sprite.setControlLocked(true);
                 sprite.clearForcedInputMask();
@@ -155,10 +155,11 @@ public final class Lbz1GroundLaunchIntroInstance extends AbstractObjectInstance
     }
 
     private void primeHeldCpuMappingFromCurrentAnimation(AbstractPlayableSprite sprite) {
-        // A CPU follower can enter through the seamless ICZ handoff with a live
-        // animation byte whose mapping was published before this level instance
-        // existed. Publish that carried pose once before object_control bit 1
-        // freezes Animate_Tails; fresh players (animation 0) remain untouched.
+        // A CPU follower can enter LBZ through the seamless ICZ handoff with a
+        // live raw animation byte but no engine-side predecessor tick to publish
+        // its carried mapping. Reconstruct that native pre-existing mapping from
+        // the live animation script before object_control bit 1 freezes Animate.
+        // This consumes no trace state and leaves fresh players (anim 0) alone.
         if (!sprite.isCpuControlled() || sprite.getAnimationId() == 0
                 || sprite.getMappingFrame() != 0) {
             return;

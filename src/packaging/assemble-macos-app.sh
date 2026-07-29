@@ -77,9 +77,12 @@ elif [ -f "${CONFIG_DST}" ]; then
     echo "config.yaml already present in ${OUTPUT_DIR}/"
 fi
 
-# Copy icon if available
-if [ -f "${SCRIPT_DIR}/${APP_NAME}.icns" ]; then
-    cp "${SCRIPT_DIR}/${APP_NAME}.icns" "${APP_BUNDLE}/Contents/Resources/"
+# Build the bundle icon from the same packaged PNG used by direct JAR launches.
+# sips is supplied by macOS; no Java desktop APIs are involved.
+ICON_SOURCE="${SCRIPT_DIR}/../main/resources/icon/openggf-256.png"
+if [ -f "${ICON_SOURCE}" ]; then
+    sips -s format icns "${ICON_SOURCE}" \
+        --out "${APP_BUNDLE}/Contents/Resources/${APP_NAME}.icns" >/dev/null
 fi
 
 echo "Created ${APP_BUNDLE}"

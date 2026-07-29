@@ -12,6 +12,7 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
@@ -409,8 +410,7 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
         player.setControlLocked(true);
         state.controlGeneration = player.getObjectControlGeneration();
 
-        // ROM writes only anim(a1), not Status_Roll. The tunnel displays the
-        // rolling animation while retaining the player's existing roll status.
+        // ROM: move.b #2,anim(a1)
         player.setAnimationId(2);
 
         // ROM: clr.b jumping(a1)
@@ -557,8 +557,8 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
         if (state.pathRemaining <= 0) {
             // Path exhausted — transition to LAST_MOVE
             beginExit(player, state);
-            // loc_2970A falls through loc_29768, so the final path velocity is
-            // still applied on the transition frame.
+            // ROM: loc_2970A falls through to loc_29768, so the retained exit
+            // velocity is applied immediately after the final waypoint snap.
             moveCharacter(player);
             return;
         }

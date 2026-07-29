@@ -45,6 +45,17 @@ class TestLbzEndBossInstance {
         assertEquals(0x05F8, boss.getY(), "ROM y_pos maps to centre Y");
         assertEquals(Sonic3kObjectArtKeys.LBZ_END_BOSS, boss.getArtKeyForTests());
         assertEquals(2, boss.getOwnedChildrenForTests().size(), "init spawns cockpit and tower children");
+        LbzEndBossInstance.LbzEndBossTowerChild tower = boss.getOwnedChildrenForTests().stream()
+                .filter(LbzEndBossInstance.LbzEndBossTowerChild.class::isInstance)
+                .map(LbzEndBossInstance.LbzEndBossTowerChild.class::cast)
+                .findFirst()
+                .orElseThrow();
+        assertEquals(8, tower.getOnScreenHalfWidth(),
+                "ObjDat3_74110 width_pixels keeps the tower's SolidObjectFull gate live");
+        assertEquals(0x80, tower.getOnScreenHalfHeight(),
+                "ObjDat3_74110 height_pixels covers the full launcher tower");
+        assertTrue(tower.zeroXSpeedStopsOnLeftSideContact(),
+                "SolidObject_cont routes zero x_vel through the left-side stop path");
         assertEquals(0x77, boss.getRequestedPlcIdForTests(), "routine 0 requests PLC $77");
         assertTrue(boss.isLbzEndBossArtQueuedForTests(), "routine 0 queues/uses LBZ end-boss art");
         assertTrue(boss.isLbzEndBossPaletteLine1RequestedForTests(), "routine 0 requests Pal_LBZEndBoss line 1");
@@ -91,6 +102,12 @@ class TestLbzEndBossInstance {
         runFrames(boss, 121);
 
         assertEquals(4, boss.getPlatformChildrenForTests().size(), "gate callback spawns four bobbing platforms");
+        assertTrue(boss.getPlatformChildrenForTests().stream()
+                        .allMatch(platform -> platform.getBalanceWidthPixels() == 8),
+                "ObjDat3_74140 width_pixels drives edge balancing independently of the $12 collision span");
+        assertTrue(boss.getPlatformChildrenForTests().stream()
+                        .allMatch(LbzEndBossInstance.LbzEndBossPlatformChild::rejectsZeroDistanceTopSolidLanding),
+                "sub_73FCE's SolidObjectTop call excludes the exact-zero vertical boundary");
         assertTrue(boss.hasRunnerForTests(), "gate callback spawns Robotnik runner");
         assertEquals(4, boss.getState().routine, "gate callback enters routine $04 intro wait");
         assertEquals(0x3A20, camera.getMinX() & 0xFFFF);
@@ -110,12 +127,45 @@ class TestLbzEndBossInstance {
     }
 
     @Test
+    void runnerSeparatesAllocationAndInitializationFromFirstMovement() {
+        LbzEndBossInstance boss = constructBoss(new TestObjectServices().withCamera(cameraAt(0x3A20, 0x05A0)));
+
+        enterIntro(boss);
+        var runner = boss.getOwnedChildrenForTests().stream()
+                .filter(child -> "LBZEndBossRunner".equals(child.getName()))
+                .findFirst()
+                .orElseThrow();
+
+        assertEquals(0x3B70, runner.getX(), "ChildObjDat_7415A allocates the runner at boss X+$70");
+        runner.update(0x7000, null);
+        assertEquals(0x3B70, runner.getX(), "loc_73D8E initializes without applying x_vel");
+        runner.update(0x7001, null);
+        assertEquals(0x3B6E, runner.getX(), "loc_73DB6 begins movement on the following dispatch");
+    }
+
+    @Test
     void scrollLockClearsWhenBossStartsRising() {
         LbzEndBossInstance boss = constructBoss(new TestObjectServices().withCamera(cameraAt(0x3A20, 0x05A0)));
 
         enterFireCycle(boss);
 
         assertFalse(boss.isScrollLockActiveForTests(), "routine $08 clears Scroll_lock after camera pan completes");
+    }
+
+    @Test
+    void cameraPanStartsRisingOnTheClampToTargetFrame() {
+        Camera camera = cameraAt(0x3A20, 0x05A0);
+        LbzEndBossInstance boss = constructBoss(new TestObjectServices().withCamera(camera));
+        enterIntro(boss);
+        runFrames(boss, 0x1F + 0x29 + 4);
+        assertEquals(6, boss.getState().routine);
+
+        camera.setX((short) 0x39F2);
+        boss.update(0x7777, null);
+
+        assertEquals(0x39F0, camera.getX() & 0xFFFF);
+        assertEquals(8, boss.getState().routine,
+                "loc_7399E subtracts two before comparing, then falls through to loc_739B2");
     }
 
     @Test

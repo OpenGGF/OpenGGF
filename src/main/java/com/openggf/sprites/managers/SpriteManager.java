@@ -847,6 +847,29 @@ public class SpriteManager implements PlayableSstDispatcher {
 	}
 
 	/**
+	 * Advances the native playable-slot prefix exposed by an interrupted
+	 * {@code Process_Sprites} pass.
+	 *
+	 * <p>{@code Sonic_RecordPos} runs in the main player's slot before
+	 * {@code Animate_*}; a replay row that proves this prefix ran must advance
+	 * both the leader history ring and playable animations without running
+	 * later dynamic-object slots.
+	 */
+	public void advancePlayableSlotPrefix() {
+		AbstractPlayableSprite leader = getMainPlayable();
+		if (leader != null) {
+			leader.recordFollowerHistoryForTick();
+			leader.clearFollowerHistoryRecordedFlag();
+		}
+		int animationFrame = getFrameCounter();
+		for (Sprite candidate : getAllSprites()) {
+			if (candidate instanceof AbstractPlayableSprite playable) {
+				playable.getAnimationManager().update(animationFrame);
+			}
+		}
+	}
+
+	/**
 	 * Removes throwaway carry-in sidekicks (e.g. the CNZ1 solo-Sonic Tails)
 	 * once their CPU controller has flown off-screen and flagged itself for
 	 * despawn (ROM {@code loc_140AC}, sonic3k.asm:26963-26969). Run after the

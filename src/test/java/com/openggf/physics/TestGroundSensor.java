@@ -6,6 +6,8 @@ import com.openggf.game.session.EngineServices;
 import com.openggf.game.GameServices;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.ScrollHandlerProvider;
+import com.openggf.game.GameModuleRegistry;
+import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.level.scroll.ZoneScrollHandler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,6 +50,7 @@ public class TestGroundSensor {
 
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         SessionManager.clear();
+        GameModuleRegistry.setCurrent(new Sonic2GameModule());
         TestEnvironment.activeGameplayMode();
 
         mockLevelManager = mock(LevelManager.class);

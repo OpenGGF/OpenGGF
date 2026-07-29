@@ -9,8 +9,10 @@ import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.runtime.CnzZoneRuntimeState;
 import com.openggf.game.rules.GameRules;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -32,6 +34,14 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 class TestS3kSignpostInstance {
+
+    @Test
+    void shortNativeResultsTailUsesTwoChildRetireDispatches() {
+        assertEquals(2, S3kSignpostInstance.resultsChildRetireDispatches(false, false, true));
+        assertEquals(2, S3kSignpostInstance.resultsChildRetireDispatches(true, false, false));
+        assertEquals(2, S3kSignpostInstance.resultsChildRetireDispatches(false, true, false));
+        assertEquals(3, S3kSignpostInstance.resultsChildRetireDispatches(false, false, false));
+    }
 
     @Test
     void sparkleYOffsetConsumesRomRandomWord() {
@@ -150,6 +160,27 @@ class TestS3kSignpostInstance {
                 "a nonzero $20 cooldown decrements and returns even when it becomes zero "
                         + "(docs/skdisasm/sonic3k.asm:176347-176405)");
         assertTrue(S3kSignpostInstance.romBumpCheckAvailableAfterCooldownEntry(0));
+    }
+
+    @Test
+    void fallingDispatchSkipsExpiringCooldownThenAppliesBumpBeforeGravity() throws Exception {
+        TestablePlayableSprite player = eligibleBumpPlayer("sonic", 0x200, 0x100);
+        FallingDispatchServices services = new FallingDispatchServices(player);
+
+        S3kSignpostInstance coolingSignpost = fallingSignpost(services, 1);
+        coolingSignpost.update(1, player);
+
+        assertEquals(0, privateInt(coolingSignpost, "bumpCooldown"),
+                "EndSign_CheckPlayerHit returns after decrementing a nonzero entry cooldown");
+        assertEquals(0x0C, privateInt(coolingSignpost, "yVel"),
+                "the expiring cooldown must not admit a bump on the same dispatch");
+
+        S3kSignpostInstance readySignpost = fallingSignpost(services, 0);
+        readySignpost.update(1, player);
+
+        assertEquals(-0x1F4, privateInt(readySignpost, "yVel"),
+                "Obj_EndSignFall applies the player bump before its signed-word $0C gravity "
+                        + "(docs/skdisasm/sonic3k.asm:176149-176160,176347-176405)");
     }
 
     @Test
@@ -293,7 +324,7 @@ class TestS3kSignpostInstance {
         doAnswer(invocation -> {
             spawned.add(invocation.getArgument(0));
             return null;
-        }).when(objectManager).addDynamicObject(any());
+        }).when(objectManager).registerRewindReconstructionChild(any());
 
         ZoneRuntimeRegistry registry = new ZoneRuntimeRegistry();
         registry.install(new CnzZoneRuntimeState(0, PlayerCharacter.SONIC_AND_TAILS, new Sonic3kCNZEvents()));
@@ -302,7 +333,10 @@ class TestS3kSignpostInstance {
         signpost.setServices(new SignpostResultsServices(camera, objectManager, registry));
         setPrivateField(signpost, "state", enumConstant(signpost, "State", "RESULTS"));
 
-        signpost.update(0, null);
+        ObjectConstructionContext.withRewindActiveRestore(() -> {
+            signpost.update(0, null);
+            return null;
+        });
 
         assertEquals(Sonic3kAnimationIds.VICTORY.id(), player.getAnimationId(),
                 "Obj_EndSignResults calls Set_PlayerEndingPose in its routine-6 dispatch "
@@ -312,7 +346,7 @@ class TestS3kSignpostInstance {
                         + "player is only available through the runtime player query/camera focus; "
                         + "CNZ spawns the signpost from the event path after the boss "
                         + "(docs/skdisasm/sonic3k.asm:176208-176218)");
-        verify(objectManager).addDynamicObject(any(S3kResultsScreenObjectInstance.class));
+        verify(objectManager).registerRewindReconstructionChild(any(S3kResultsScreenObjectInstance.class));
         verify(objectManager, never()).addDynamicObjectAfterCurrent(any());
     }
 
@@ -323,6 +357,22 @@ class TestS3kSignpostInstance {
         player.setYSpeed((short) -0x100);
         player.setAnimationId(Sonic3kAnimationIds.ROLL);
         return player;
+    }
+
+    private static S3kSignpostInstance fallingSignpost(
+            TestObjectServices services, int cooldown) throws Exception {
+        S3kSignpostInstance signpost = new S3kSignpostInstance(0x200, 0);
+        signpost.setServices(services);
+        setPrivateField(signpost, "state", enumConstant(signpost, "State", "FALLING"));
+        setPrivateField(signpost, "worldY", 0x100);
+        setPrivateField(signpost, "bumpCooldown", cooldown);
+        return signpost;
+    }
+
+    private static int privateInt(Object instance, String fieldName) throws Exception {
+        Field field = instance.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.getInt(instance);
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
@@ -365,6 +415,31 @@ class TestS3kSignpostInstance {
         @Override
         public ZoneRuntimeRegistry zoneRuntimeRegistry() {
             return registry;
+        }
+    }
+
+    private static final class FallingDispatchServices extends TestObjectServices {
+        private final TestablePlayableSprite player;
+        private final Camera camera = new Camera();
+        private final GameStateManager gameState = new GameStateManager();
+
+        private FallingDispatchServices(TestablePlayableSprite player) {
+            this.player = player;
+        }
+
+        @Override
+        public ObjectPlayerQuery playerQuery() {
+            return new ObjectPlayerQuery(() -> player, List::of);
+        }
+
+        @Override
+        public Camera camera() {
+            return camera;
+        }
+
+        @Override
+        public GameStateManager gameState() {
+            return gameState;
         }
     }
 }

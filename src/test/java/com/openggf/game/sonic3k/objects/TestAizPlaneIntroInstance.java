@@ -1,6 +1,5 @@
 package com.openggf.game.sonic3k.objects;
 
-import com.openggf.game.session.SessionManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.openggf.camera.Camera;
@@ -25,8 +24,7 @@ public class TestAizPlaneIntroInstance {
 
     @BeforeEach
     public void setUp() {
-        TestEnvironment.resetAll();
-        SessionManager.clear();
+        TestEnvironment.resetPerTest();
         camera = TestEnvironment.activeGameplayMode().getCamera();
         camera.resetState();
         GameServices.hardwareTiming().resetForMissingSnapshot();

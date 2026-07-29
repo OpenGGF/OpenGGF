@@ -12,10 +12,12 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PlaceholderObjectInstance;
+import com.openggf.level.objects.SolidObjectParams;
+import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectProvider;
-import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.TestObjectServices;
+import com.openggf.sprites.managers.PlayableSpriteAnimation;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 
@@ -55,6 +57,8 @@ class TestLbzTubeElevatorInstance {
                 "object_control=$83 is ROM bit-7 full control, not CPU-assisted object control");
         assertTrue(player.isObjectControlSuppressesMovement());
         assertTrue(player.isTouchResponseSuppressedByObjectControl());
+        assertFalse(player.isControlLocked(),
+                "object_control=$83 does not write the separate Ctrl_1_locked byte");
         assertEquals(0x1200, player.getCentreX() & 0xFFFF);
         assertEquals(expectedY, player.getCentreY() & 0xFFFF,
                 "capture snaps y_pos to elevator y_pos+$18-y_radius");
@@ -66,18 +70,60 @@ class TestLbzTubeElevatorInstance {
     }
 
     @Test
-    void openWaitingElevatorUsesRomFullSolidOffsetRoutine() {
+    void freshSolidLandingIsCapturedInTheSameObjectSlot() {
+        LbzTubeElevatorInstance elevator = (LbzTubeElevatorInstance) elevator(0x1200, 0x0600, 0);
+        TestablePlayableSprite player = playerAt(0x1205, 0x0601);
+        player.setAir(false);
+        player.setOnObject(true);
+
+        elevator.onSolidContact(player, new SolidContact(true, false, false, true, false), 0);
+
+        assertTrue(player.isObjectControlled());
+        assertEquals(0x1200, player.getCentreX() & 0xFFFF,
+                "Action's SolidObjectFull_Offset landing is consumed by CheckPlayer in the same ROM slot");
+        assertEquals(0, player.getXSpeed());
+        assertEquals(0, player.getGSpeed());
+    }
+
+    @Test
+    void capturePreservesNativePreviousAnimationAndTimer() {
+        ObjectInstance elevator = elevator(0x1200, 0x0600, 0);
+        TestablePlayableSprite player = playerAt(0x1200, 0x0600);
+        player.setAnimationId(0);
+        player.setAnimationFrameIndex(3);
+        player.setAnimationTick(5);
+        player.getAnimationManager().restoreRewindState(new PlayableSpriteAnimation.RewindState(0, 0));
+
+        elevator.update(0, player);
+
+        assertEquals(0, player.getAnimationManager().captureRewindState().lastAnimationId(),
+                "move.b #0,anim does not alter prev_anim when it was already Walk");
+        assertTrue(player.isObjectMappingFrameControl(),
+                "object_control bit 1 suppresses the next Animate dispatch immediately after capture");
+        assertEquals(3, player.getAnimationFrameIndex());
+        assertEquals(5, player.getAnimationTick());
+    }
+
+    @Test
+    void firstPlayerInsideDoesNotCaptureAirborneSecondPlayerWithoutStandingBit() {
+        LbzTubeElevatorInstance elevator = (LbzTubeElevatorInstance) elevator(0x1200, 0x0600, 0);
+        TestablePlayableSprite tails = playerAt(0x1200, 0x0600);
+        tails.setAir(true);
+        elevator.setServices(new TestObjectServices().withSidekicks(List.of(tails)));
+
+        elevator.update(0, playerAt(0x1200, 0x0600));
+
+        assertFalse(tails.isObjectControlled(),
+                "P2 fast capture requires both P1 phase and this object's p2_standing_bit");
+    }
+
+    @Test
+    void openWaitingElevatorRetainsSolidObjectFullOffsetRoutineFamily() {
         ObjectInstance elevator = elevator(0x1200, 0x0600, 0);
         SolidObjectProvider solid = (SolidObjectProvider) elevator;
 
         assertFalse(solid.isTopSolidOnly(),
-                "WaitPlayer calls SolidObjectFull_Offset with d2=$08/d3=$20 before CheckPlayer");
-        assertEquals(8, solid.getSolidParams().airHalfHeight());
-        assertEquals(8, solid.getSolidParams().groundHalfHeight());
-        assertEquals(0x20, solid.getSolidParams().offsetY(),
-                "d3 is the SolidObjectFull_Offset anchor displacement, not a grounded half-height");
-        assertEquals(SolidExecutionMode.MANUAL_CHECKPOINT, solid.solidExecutionMode(),
-                "Action's solid call must publish before LBZTubeElevator_CheckPlayer");
+                "SolidObjectFull_Offset changes the vertical extents but retains full-solid classification");
     }
 
     @Test
@@ -86,6 +132,53 @@ class TestLbzTubeElevatorInstance {
 
         assertEquals(1, elevator.getPriorityBucket(),
                 "Obj_LBZTubeElevator parent writes priority=$80; the overlay child owns the $280 layer");
+    }
+
+    @Test
+    void bobPhaseStoresTheRomAdjustedAngleAcrossSkippedBand() throws Exception {
+        ObjectInstance elevator = elevator(0x1200, 0x0600, 0);
+        setField(elevator, "bobAngle", 0xAE);
+
+        elevator.update(0, playerAt(0x1300, 0x0600));
+
+        assertEquals(0xD0, field(elevator, "bobAngle").getInt(elevator),
+                "LBZTubeElevator writes the $B0+$20 adjustment back to 1(a4)");
+    }
+
+    @Test
+    void startSpinSamplesBobAngleBeforeIncrement() throws Exception {
+        ObjectInstance elevator = elevator(0x1200, 0x0600, 0);
+        setField(elevator, "state", 2);
+        setField(elevator, "bobAngle", 0x14);
+
+        elevator.update(0, playerAt(0x1300, 0x0600));
+
+        assertEquals(0x16, field(elevator, "bobAngle").getInt(elevator));
+        assertEquals(0x05FF, elevator.getY() & 0xFFFF,
+                "loc_29EE2 uses sine($14) before storing the next $16 phase");
+    }
+
+    @Test
+    void pathSetupRetainsOriginalBobAnchorForTransitionDispatch() throws Exception {
+        ObjectInstance elevator = elevator(0x0F60, 0x0578, 0x10);
+        setField(elevator, "state", 2);
+        setField(elevator, "spinSpeed", 0x180);
+
+        elevator.update(0, playerAt(0x1000, 0x0578));
+
+        assertEquals(0x0578, elevator.getY() & 0xFFFF,
+                "AutoTunnel_GetPath's temporary first waypoint is overwritten by loc_29EE2 using saved $46");
+    }
+
+    @Test
+    void bobWordWritePreservesObjectSubpixel() throws Exception {
+        ObjectInstance elevator = elevator(0x0F60, 0x0578, 0);
+        setField(elevator, "fixedY", ((long) 0x0578 << 16) | 0xABCDL);
+
+        elevator.update(0, playerAt(0x1000, 0x0578));
+
+        assertEquals(0xABCDL, field(elevator, "fixedY").getLong(elevator) & 0xFFFFL,
+                "move.w y_pos updates from the bob and path routines must retain the low subpixel word");
     }
 
     @Test
@@ -113,8 +206,13 @@ class TestLbzTubeElevatorInstance {
         elevator.update(0, player);
         elevator.update(0, player);
 
-        assertFalse(((SolidObjectProvider) elevator).isTopSolidOnly(),
-                "WaitExit remains a SolidObjectFull_Offset caller while it checks standing_mask");
+        SolidObjectParams params = ((SolidObjectProvider) elevator).getSolidParams();
+        assertEquals(8, params.airHalfHeight(),
+                "LBZTubeElevator_WaitExit retains SolidObjectFull_Offset's d2=$08 extent");
+        assertEquals(8, params.groundHalfHeight(),
+                "continued riding uses the same d2=$08 surface distance");
+        assertEquals(0x20, params.offsetY(),
+                "SolidObjectFull_Offset adds d3=$20 to the elevator anchor Y");
     }
 
     @Test
@@ -123,6 +221,7 @@ class TestLbzTubeElevatorInstance {
         TestablePlayableSprite player = playerAt(0x1200, 0x0600);
 
         setField(elevator, "state", 8);
+        setField(elevator, "angle", 8);
         Object p1State = field(elevator, "p1").get(elevator);
         setField(p1State, "phase", 2);
         player.setObjectMappingFrameControl(true);
@@ -132,6 +231,8 @@ class TestLbzTubeElevatorInstance {
         assertFalse(player.isObjectMappingFrameControl(),
                 "LBZTubeElevator_CheckPlayer clears object_control at WaitExit; "
                         + "the engine must also release object-owned player mapping frames");
+        assertEquals(0x57, player.getMappingFrame(),
+                "loc_2A1EC still publishes the current tube frame after releasing object_control");
     }
 
     @Test

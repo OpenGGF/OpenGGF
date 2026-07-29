@@ -1,12 +1,16 @@
 package com.openggf.game.sonic3k.titlecard;
 
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
+
 import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
 import com.openggf.game.TitleCardProvider;
+import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.sonic3k.events.S3kTransitionWriteSupport;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
 import com.openggf.game.timing.HardwareWorkHandle;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.titlecard.TitleCardMappings;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.graphics.GLCommand;
@@ -18,6 +22,7 @@ import com.openggf.level.Pattern;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.logging.Logger;
 
 /**
@@ -40,8 +45,11 @@ import java.util.logging.Logger;
  *   <tr><td>Act Number</td><td>(708,160)</td><td>(260,160)</td><td>Horizontal</td><td>7</td></tr>
  * </table>
  */
-public class Sonic3kTitleCardManager implements TitleCardProvider {
+public class Sonic3kTitleCardManager
+        implements TitleCardProvider,
+        RewindSnapshottable<Sonic3kTitleCardManager.Snapshot> {
     private static final Logger LOG = Logger.getLogger(Sonic3kTitleCardManager.class.getName());
+    public static final String REWIND_KEY = "s3k-title-card";
 
     // Animation speeds (pixels per frame, matching disasm $10 / $20)
     private static final int SLIDE_SPEED_IN = 16;
@@ -166,7 +174,182 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     private final List<Integer> artDestinations = new ArrayList<>();
     private boolean artLoading;
 
+    /**
+     * Immutable live-title snapshot. Array accessors clone their payload so a
+     * captured rewind frame cannot be mutated by the continuing live manager.
+     */
+    public record Snapshot(
+            Sonic3kTitleCardState state,
+            int stateTimer,
+            int phaseCounter,
+            boolean exitChildrenGone,
+            boolean inLevelMode,
+            boolean resetLevelGamestateOnInLevelDisplay,
+            int resetLevelGamestateCountdown,
+            boolean heldLevelCounterDispatchOwned,
+            boolean retainedResultsHeldLevelCounterOwned,
+            boolean inLevelPlayerControlLockOwned,
+            boolean inLevelGameplayOwnedExternally,
+            int inLevelExitDelayFrames,
+            boolean releasePreloadedActCameraOnComplete,
+            boolean preloadedActCompletionPrepared,
+            boolean bonusMode,
+            float bonusFadeProgress,
+            int currentZone,
+            int currentAct,
+            int[] elemX,
+            int[] elemY,
+            int[] elemFrame,
+            boolean[] elemAtTarget,
+            boolean[] elemExiting,
+            boolean[] elemOutsideViewport,
+            boolean[] elemExited,
+            boolean actNumberVisible,
+            Pattern[] combinedPatterns,
+            boolean artLoaded,
+            boolean artCached,
+            int lastLoadedZone,
+            int lastLoadedAct,
+            List<HardwareWorkHandle> artHandles,
+            List<Integer> artDestinations,
+            boolean artLoading) {
+        public Snapshot {
+            Objects.requireNonNull(state, "state");
+            elemX = elemX.clone();
+            elemY = elemY.clone();
+            elemFrame = elemFrame.clone();
+            elemAtTarget = elemAtTarget.clone();
+            elemExiting = elemExiting.clone();
+            elemOutsideViewport = elemOutsideViewport.clone();
+            elemExited = elemExited.clone();
+            combinedPatterns = combinedPatterns == null
+                    ? null : combinedPatterns.clone();
+            artHandles = List.copyOf(artHandles);
+            artDestinations = List.copyOf(artDestinations);
+        }
+
+        @Override public int[] elemX() { return elemX.clone(); }
+        @Override public int[] elemY() { return elemY.clone(); }
+        @Override public int[] elemFrame() { return elemFrame.clone(); }
+        @Override public boolean[] elemAtTarget() { return elemAtTarget.clone(); }
+        @Override public boolean[] elemExiting() { return elemExiting.clone(); }
+        @Override public boolean[] elemOutsideViewport() { return elemOutsideViewport.clone(); }
+        @Override public boolean[] elemExited() { return elemExited.clone(); }
+        @Override public Pattern[] combinedPatterns() {
+            return combinedPatterns == null ? null : combinedPatterns.clone();
+        }
+    }
+
     public Sonic3kTitleCardManager() {}
+
+    @Override
+    public String key() {
+        return REWIND_KEY;
+    }
+
+    @Override
+    public Snapshot capture() {
+        return new Snapshot(
+                state, stateTimer, phaseCounter, exitChildrenGone, inLevelMode,
+                resetLevelGamestateOnInLevelDisplay, resetLevelGamestateCountdown,
+                heldLevelCounterDispatchOwned, retainedResultsHeldLevelCounterOwned,
+                inLevelPlayerControlLockOwned, inLevelGameplayOwnedExternally,
+                inLevelExitDelayFrames, releasePreloadedActCameraOnComplete,
+                preloadedActCompletionPrepared, bonusMode, bonusFadeProgress,
+                currentZone, currentAct, elemX, elemY, elemFrame, elemAtTarget,
+                elemExiting, elemOutsideViewport, elemExited, actNumberVisible,
+                combinedPatterns, artLoaded, artCached, lastLoadedZone,
+                lastLoadedAct, artHandles, artDestinations, artLoading);
+    }
+
+    @Override
+    public void restore(Snapshot snapshot) {
+        Objects.requireNonNull(snapshot, "snapshot");
+        requireElementArrayLength(snapshot.elemX().length);
+        requireElementArrayLength(snapshot.elemY().length);
+        requireElementArrayLength(snapshot.elemFrame().length);
+        requireElementArrayLength(snapshot.elemAtTarget().length);
+        requireElementArrayLength(snapshot.elemExiting().length);
+        requireElementArrayLength(snapshot.elemOutsideViewport().length);
+        requireElementArrayLength(snapshot.elemExited().length);
+        if (snapshot.artHandles().size() != snapshot.artDestinations().size()) {
+            throw new IllegalStateException("title-card rewind handle/destination count mismatch");
+        }
+        state = snapshot.state();
+        stateTimer = snapshot.stateTimer();
+        phaseCounter = snapshot.phaseCounter();
+        exitChildrenGone = snapshot.exitChildrenGone();
+        inLevelMode = snapshot.inLevelMode();
+        resetLevelGamestateOnInLevelDisplay = snapshot.resetLevelGamestateOnInLevelDisplay();
+        resetLevelGamestateCountdown = snapshot.resetLevelGamestateCountdown();
+        heldLevelCounterDispatchOwned = snapshot.heldLevelCounterDispatchOwned();
+        retainedResultsHeldLevelCounterOwned = snapshot.retainedResultsHeldLevelCounterOwned();
+        inLevelPlayerControlLockOwned = snapshot.inLevelPlayerControlLockOwned();
+        inLevelGameplayOwnedExternally = snapshot.inLevelGameplayOwnedExternally();
+        inLevelExitDelayFrames = snapshot.inLevelExitDelayFrames();
+        releasePreloadedActCameraOnComplete = snapshot.releasePreloadedActCameraOnComplete();
+        preloadedActCompletionPrepared = snapshot.preloadedActCompletionPrepared();
+        bonusMode = snapshot.bonusMode();
+        bonusFadeProgress = snapshot.bonusFadeProgress();
+        currentZone = snapshot.currentZone();
+        currentAct = snapshot.currentAct();
+        copy(snapshot.elemX(), elemX);
+        copy(snapshot.elemY(), elemY);
+        copy(snapshot.elemFrame(), elemFrame);
+        copy(snapshot.elemAtTarget(), elemAtTarget);
+        copy(snapshot.elemExiting(), elemExiting);
+        copy(snapshot.elemOutsideViewport(), elemOutsideViewport);
+        copy(snapshot.elemExited(), elemExited);
+        actNumberVisible = snapshot.actNumberVisible();
+        combinedPatterns = snapshot.combinedPatterns();
+        artLoaded = snapshot.artLoaded();
+        artCached = snapshot.artCached();
+        lastLoadedZone = snapshot.lastLoadedZone();
+        lastLoadedAct = snapshot.lastLoadedAct();
+        artHandles.clear();
+        artDestinations.clear();
+        artLoading = snapshot.artLoading();
+        if (!snapshot.artHandles().isEmpty()) {
+            var timing = GameServices.hardwareTiming();
+            for (HardwareWorkHandle captured : snapshot.artHandles()) {
+                HardwareWorkHandle rebound = timing.pendingHandle(
+                                HardwareWorkKind.KOS_MODULE_QUEUE, captured.ordinal())
+                        .orElseThrow(() -> new IllegalStateException(
+                                "restored title owner cannot find " + captured.kind()
+                                        + " ordinal " + captured.ordinal()));
+                if (!captured.equals(rebound)) {
+                    throw new IllegalStateException(
+                            "restored title job identity mismatch: expected "
+                                    + captured + ", actual " + rebound);
+                }
+                artHandles.add(rebound);
+            }
+            artDestinations.addAll(snapshot.artDestinations());
+            artQueue = S3kRuntimeArtCoordinator.current().moduleQueue();
+        } else {
+            artQueue = null;
+        }
+    }
+
+    @Override
+    public void resetForMissingSnapshot() {
+        reset();
+    }
+
+    private static void requireElementArrayLength(int length) {
+        if (length != ELEMENT_COUNT) {
+            throw new IllegalStateException(
+                    "title-card rewind element count mismatch: " + length);
+        }
+    }
+
+    private static void copy(int[] source, int[] destination) {
+        System.arraycopy(source, 0, destination, 0, destination.length);
+    }
+
+    private static void copy(boolean[] source, boolean[] destination) {
+        System.arraycopy(source, 0, destination, 0, destination.length);
+    }
 
     /** Read-only evidence/debug view; title-card behavior remains owned by this manager. */
     public String getStateName() {
@@ -268,6 +451,12 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     @Override
     public boolean ownsRetainedResultsHeldLevelCounter() {
         return inLevelMode && retainedResultsHeldLevelCounterOwned;
+    }
+
+    @Override
+    public boolean projectsRetainedResultsSpriteCadence() {
+        return inLevelMode
+                && retainedResultsHeldLevelCounterOwned;
     }
 
     @Override
@@ -919,7 +1108,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     }
 
     private void beginArtQueue() {
-        artQueue = new S3kKosModuleQueue(GameServices.hardwareTiming());
+        artQueue = S3kRuntimeArtCoordinator.current().moduleQueue();
         artHandles.clear();
         artDestinations.clear();
     }

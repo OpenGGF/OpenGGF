@@ -84,6 +84,8 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
     private static final int KNUX_BOX_OPENED_DEST_WIDTH = 3;
     /** ROM LBZ1BGE_DoTransition: world shift applied to players/objects/camera. */
     private static final int LBZ2_TRANSITION_OFFSET_X = -0x3A00;
+    /** Three queued LBZ2 secondary Kos/KosM streams keep Kos_modules_left busy for this many polls. */
+    private static final int LBZ2_SECONDARY_KOS_DRAIN_FRAMES = 55;
     /** ROM LBZ2SE_FromTransition: LBZ2_LayoutMod applies once Player_1 x >= $60A. */
     private static final int LBZ2_ENTRY_CORRIDOR_GATE_X = 0x60A;
     /** ROM LBZ1 screen init: restart past $3B60 re-applies the ending layout. */
@@ -122,14 +124,26 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
 
     private boolean endingCollapseActive;
     private boolean endingCollapseFinished;
+    private boolean endingBarrierSpawnPending;
     private int endingCollapseGlobalFixed;
     private int endingCollapsePhase;
     private boolean eventsFg5;
+    private boolean lbz2TransitionArtQueued;
+    private int lbz2TransitionKosDrainFrames;
     private boolean restartInitChecked;
     private int[] lbz2CopiedWindowDescriptors;
     private int lbz2CopiedWindowScreenX;
     private int lbz2CopiedWindowScreenY;
     private boolean lbz2CopiedWindowActive;
+    private int activeAct;
+    private boolean postTitleAct2SizeChangeActive;
+    private int postTitleAct2TargetMaxX;
+    private int postTitleAct2TargetMinY;
+    private int postTitleAct2TargetMaxY;
+    private boolean postTitleAct2WorkersCreatedThisPass;
+    private int act2MaxXAccumulator;
+    private int act2MinYAccumulator;
+    private int act2MaxYAccumulator;
     private final PatternDesc lbz2CopiedWindowPatternDesc = new PatternDesc();
     private final int[] endingCollapseFixed = new int[ENDING_COLLAPSE_COLUMN_COUNT];
     private final int[] endingCollapseScroll = new int[ENDING_COLLAPSE_COLUMN_COUNT];
@@ -179,6 +193,20 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
     };
 
     @Override
+    public void init(int act) {
+        super.init(act);
+        activeAct = act;
+        postTitleAct2SizeChangeActive = false;
+        postTitleAct2TargetMaxX = 0;
+        postTitleAct2TargetMinY = 0;
+        postTitleAct2TargetMaxY = 0;
+        postTitleAct2WorkersCreatedThisPass = false;
+        act2MaxXAccumulator = 0;
+        act2MinYAccumulator = 0;
+        act2MaxYAccumulator = 0;
+    }
+
+    @Override
     public void update(int act, int frameCounter) {
         if (!hasRuntime()) {
             return;
@@ -226,6 +254,81 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
                 return;
             }
         }
+    }
+
+    /**
+     * ROM {@code Change_Act2Sizes}: publish LBZ2's loaded level bounds and
+     * retain the three gradual boundary workers created by the ending sign.
+     */
+    public void preparePostTitleAct2SizeChange() {
+        if (activeAct != 1 || postTitleAct2SizeChangeActive) {
+            return;
+        }
+        Level level = levelManager().getCurrentLevel();
+        if (level == null) {
+            return;
+        }
+        postTitleAct2TargetMaxX = level.getMaxX();
+        postTitleAct2TargetMinY = level.getMinY();
+        postTitleAct2TargetMaxY = level.getMaxY();
+        postTitleAct2SizeChangeActive = true;
+        postTitleAct2WorkersCreatedThisPass = true;
+        act2MaxXAccumulator = 0;
+        act2MinYAccumulator = 0;
+        act2MaxYAccumulator = 0;
+        camera().setMaxYTarget((short) postTitleAct2TargetMaxY);
+    }
+
+    /** Runs the retained {@code Child1_Act2LevelSize} slots before the camera step. */
+    public void updatePostTitleAct2SizeWorkers() {
+        if (!postTitleAct2SizeChangeActive) {
+            return;
+        }
+        if (postTitleAct2WorkersCreatedThisPass) {
+            postTitleAct2WorkersCreatedThisPass = false;
+            return;
+        }
+        boolean maxXDone = updateGradualMaxX();
+        boolean minYDone = updateGradualMinY();
+        boolean maxYDone = updateGradualMaxY();
+        postTitleAct2SizeChangeActive = !(maxXDone && minYDone && maxYDone);
+    }
+
+    private boolean updateGradualMaxX() {
+        int current = camera().getMaxX() & 0xFFFF;
+        act2MaxXAccumulator += 0x4000;
+        int next = current + (act2MaxXAccumulator >>> 16);
+        if (next >= postTitleAct2TargetMaxX) {
+            camera().setMaxX((short) postTitleAct2TargetMaxX);
+            return true;
+        }
+        camera().setMaxX((short) next);
+        return false;
+    }
+
+    private boolean updateGradualMinY() {
+        int current = camera().getMinY() & 0xFFFF;
+        act2MinYAccumulator += 0x4000;
+        int next = current - (act2MinYAccumulator >>> 16);
+        if (next <= postTitleAct2TargetMinY) {
+            camera().setMinY((short) postTitleAct2TargetMinY);
+            return true;
+        }
+        camera().setMinY((short) next);
+        return false;
+    }
+
+    private boolean updateGradualMaxY() {
+        int current = camera().getMaxY() & 0xFFFF;
+        act2MaxYAccumulator += 0x8000;
+        int next = current + (act2MaxYAccumulator >>> 16);
+        if (next > postTitleAct2TargetMaxY) {
+            camera().setMaxY((short) postTitleAct2TargetMaxY);
+            return true;
+        }
+        camera().setMaxY((short) next);
+        camera().setMaxYTarget((short) postTitleAct2TargetMaxY);
+        return false;
     }
 
     /**
@@ -286,10 +389,11 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         endingCollapsePhase = 0;
         Arrays.fill(endingCollapseFixed, 0);
         Arrays.fill(endingCollapseScroll, 0);
-        // ROM LBZ1_EventVScroll: the first armed frame allocates
-        // Obj_LBZ1InvisibleBarrier so the player cannot run ahead of the
-        // collapsing building.
-        spawnInvisibleBarrier();
+        // Robotnik writes Events_fg_4=-1 in his object slot. The following
+        // screen-event pass enters LBZ1_EventVScroll and allocates the barrier;
+        // it does not execute in Robotnik's already-active object pass.
+        endingBarrierSpawnPending = true;
+        currentLbzRuntimeState().ifPresent(state -> state.setLbz1KnucklesBombShakeActive(true));
     }
 
     public boolean isEndingCollapseActive() {
@@ -330,6 +434,10 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         if (!endingCollapseActive) {
             return;
         }
+        if (endingBarrierSpawnPending) {
+            endingBarrierSpawnPending = false;
+            spawnInvisibleBarrier();
+        }
 
         int globalFixedDelta = endingCollapseGlobalFixed;
         endingCollapseGlobalFixed += ENDING_COLLAPSE_GLOBAL_ACCEL;
@@ -350,7 +458,6 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
             endingCollapseScroll[i] = scroll;
         }
 
-        requestScreenShakeOffset(frameCounter);
         if (((frameCounter - 1) & ENDING_COLLAPSE_RUMBLE_MASK) == 0 && unfinishedColumns > 0) {
             audio().playSfx(Sonic3kSfx.BIG_RUMBLE.id);
         }
@@ -362,6 +469,7 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
     private void finishEndingCollapse() {
         endingCollapseActive = false;
         endingCollapseFinished = true;
+        endingBarrierSpawnPending = false;
         currentLbzRuntimeState().ifPresent(state -> state.setLbz1KnucklesBombShakeActive(false));
         Arrays.fill(endingCollapseScroll, 0);
         applyEndingLayout();
@@ -510,10 +618,23 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
      * @return true when the reload was performed this frame
      */
     private boolean handleSeamlessReloadStage() {
-        if (!eventsFg5) {
+        if (eventsFg5) {
+            // LBZ1BGE_Normal queues the secondary 128x128, 16x16 and 8x8
+            // streams, then advances Events_routine_bg. DoTransition is first
+            // polled on the following ScreenEvents pass.
+            eventsFg5 = false;
+            lbz2TransitionArtQueued = true;
+            lbz2TransitionKosDrainFrames = 0;
             return false;
         }
-        eventsFg5 = false;
+        if (!lbz2TransitionArtQueued) {
+            return false;
+        }
+        lbz2TransitionKosDrainFrames++;
+        if (lbz2TransitionKosDrainFrames < LBZ2_SECONDARY_KOS_DRAIN_FRAMES) {
+            return false;
+        }
+        lbz2TransitionArtQueued = false;
 
         Camera camera = camera();
         int postTransitionMinX = offsetCameraBoundWord(camera.getMinX(), LBZ2_TRANSITION_OFFSET_X);
@@ -528,6 +649,11 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
                 .deactivateLevelNow(false)
                 .preserveMusic(true)
                 .preserveLevelGamestate(true)
+                // Obj_LevelResults and Obj_EndSignControl survive
+                // LBZ1BGE_DoTransition's Load_Level. Level_end_flag therefore
+                // remains set until the carried results owner finishes, while
+                // End_of_level_flag is cleared for the later title-card edge.
+                .preserveEndOfLevelActive(true)
                 .showInLevelTitleCard(false)
                 .preserveOffsetCameraPosition(true)
                 .postTransitionMinX(postTransitionMinX)

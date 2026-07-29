@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
+import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.events.S3kAizEventWriteSupport;
 import com.openggf.graphics.GLCommand;
@@ -69,6 +70,7 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
     private int resultsWaitDurationAdjustment;
     private int resultsPostControlHandoffDelayEntries;
     private boolean preservesGroundedResultsDispatchBoundary;
+    private boolean usesShortResultsChildRetireTail;
     private boolean changeAct2SizesOnTitleComplete;
     private boolean initialized;
 
@@ -125,6 +127,7 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
         this.resultsWaitDurationAdjustment = Math.max(0, resultsWaitDurationAdjustment);
         this.resultsPostControlHandoffDelayEntries = Math.max(0, resultsPostControlHandoffDelayEntries);
         this.preservesGroundedResultsDispatchBoundary = preservesGroundedResultsDispatchBoundary;
+        this.usesShortResultsChildRetireTail = changeAct2SizesOnTitleComplete;
         this.changeAct2SizesOnTitleComplete = changeAct2SizesOnTitleComplete;
         this.phase = Phase.WAIT_FADE;
         this.timer = FADE_TIMER;
@@ -231,7 +234,8 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
         // Spawn signpost above camera
         S3kSignpostInstance signpost = new S3kSignpostInstance(
                 signpostX, apparentAct, signpostResultsTimerCatchUpEntries, resultsWaitDurationAdjustment,
-                resultsPostControlHandoffDelayEntries, preservesGroundedResultsDispatchBoundary);
+                resultsPostControlHandoffDelayEntries, preservesGroundedResultsDispatchBoundary,
+                usesShortResultsChildRetireTail);
         spawnDynamicObject(signpost);
         LOG.fine("S3K defeat flow spawned signpost at X=" + signpostX);
 
@@ -323,9 +327,10 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
     /**
      * ROM: {@code Obj_EndSignControlAwaitStart} calls
      * {@code Restore_PlayerControl} / {@code Restore_PlayerControl2} as soon
-     * as {@code _unkFAA8} clears. Those routines clear only
-     * {@code object_control} and {@code interact}; the title card's controller
-     * lock, ending animation, and velocities remain independently owned.
+     * as {@code _unkFAA8} clears. The routine leaves the title-card controller
+     * lock and velocities independently owned, while clearing object control,
+     * interaction and in-air state and publishing a fresh Wait animation
+     * (docs/skdisasm/sonic3k.asm:180361-180424).
      */
     static void restoreNativePlayerControl(AbstractPlayableSprite player) {
         if (player == null) {
@@ -333,6 +338,12 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
         }
         ObjectControlState.none().applyTo(player);
         player.setInteractSlotIndex(0);
+        player.clearAirForNativeControlRestore();
+        player.setAnimationId(Sonic3kAnimationIds.WAIT);
+        player.getAnimationManager().publishPreviousAnimationId(
+                Sonic3kAnimationIds.WAIT.id());
+        player.setAnimationFrameIndex(0);
+        player.setAnimationTick(0);
     }
 
     // =========================================================================

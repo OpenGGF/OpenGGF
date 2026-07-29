@@ -350,6 +350,9 @@ public final class LevelFrameStep {
                 && !bonusStageExitRequestedThisFrame
                 && !levelExitRequestedDuringObjects) {
             wrapper.wrap("camera-boundary", camera::updateBoundaryEasing);
+            if (levelEvents != null) {
+                levelEvents.updateAfterCameraBoundaryEasing();
+            }
         }
 
         if (levelManager.isLevelInactiveForTransition()) {
@@ -401,7 +404,13 @@ public final class LevelFrameStep {
             throw new NullPointerException("context");
         }
         context.hardwareTiming().service(boundary);
-        context.hardwareTimingBoundaryObserver().onBoundary(boundary);
+        if (boundary == HardwareServiceBoundary.PRE_MAIN_LOOP) {
+            context.hardwareTimingBoundaryObserver().onBoundary(boundary);
+        }
+        context.runtimeArtCoordinator().afterTimingService(boundary);
+        if (boundary != HardwareServiceBoundary.PRE_MAIN_LOOP) {
+            context.hardwareTimingBoundaryObserver().onBoundary(boundary);
+        }
     }
 
 }

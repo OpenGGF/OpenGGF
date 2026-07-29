@@ -7,6 +7,7 @@ import com.openggf.game.rewind.snapshot.PlcProgressSnapshot;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.FbzEndBossInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -220,5 +221,82 @@ class TestSonic3kPlcArtRewindSnapshot {
                 restoredSnapshot.pendingKosModules());
         assertEquals(List.of(), restoredSnapshot.pendingKosOrdinals());
         assertFalse(restoredSnapshot.kosSubmissionArmed());
+    }
+
+    @Test
+    void iczEnemyArtScheduleMatchesLoadEnemyArtTable() throws Exception {
+        Sonic3kObjectArtProvider provider = new Sonic3kObjectArtProvider();
+        Method schedule = Sonic3kObjectArtProvider.class.getDeclaredMethod(
+                "scheduleEnemyKosArt", int.class, int.class);
+        schedule.setAccessible(true);
+        schedule.invoke(provider, Sonic3kZoneIds.ZONE_ICZ, 0);
+
+        PlcProgressSnapshot scheduled = provider.capture();
+        assertEquals(List.of(
+                        new PlcProgressSnapshot.PendingKosModule(0x375134, 0x0558),
+                        new PlcProgressSnapshot.PendingKosModule(0x3751C6, 0x0548)),
+                scheduled.pendingKosModules(),
+                "PLCKosM_ICZ queues Snowdust then StarPointer "
+                        + "(sonic3k.asm:64392-64395)");
+        assertFalse(scheduled.kosSubmissionArmed());
+
+        provider.onTitleCardArtRetired();
+        assertTrue(provider.capture().kosSubmissionArmed(),
+                "LoadEnemyArt runs when the normal title-card owner retires "
+                        + "(sonic3k.asm:62287-62300)");
+    }
+
+    @Test
+    void mgzAndCnzEnemyArtSchedulesMatchLoadEnemyArtTable() throws Exception {
+        assertEnemyArtProfile(
+                Sonic3kZoneIds.ZONE_MGZ,
+                0,
+                List.of(
+                        new PlcProgressSnapshot.PendingKosModule(0x36E0C4, 0x0530),
+                        new PlcProgressSnapshot.PendingKosModule(0x36B02C, 0x054F),
+                        new PlcProgressSnapshot.PendingKosModule(0x36D572, 0x0570)));
+        assertEnemyArtProfile(
+                Sonic3kZoneIds.ZONE_MGZ,
+                1,
+                List.of(
+                        new PlcProgressSnapshot.PendingKosModule(0x36E0C4, 0x0530),
+                        new PlcProgressSnapshot.PendingKosModule(0x36E2D6, 0x054F)));
+        assertEnemyArtProfile(
+                Sonic3kZoneIds.ZONE_CNZ,
+                0,
+                List.of(
+                        new PlcProgressSnapshot.PendingKosModule(0x3700CA, 0x0524),
+                        new PlcProgressSnapshot.PendingKosModule(0x3703EC, 0x0552),
+                        new PlcProgressSnapshot.PendingKosModule(0x370058, 0x0570),
+                        new PlcProgressSnapshot.PendingKosModule(0x37060E, 0x0574)));
+    }
+
+    private static void assertEnemyArtProfile(
+            int zone, int act,
+            List<PlcProgressSnapshot.PendingKosModule> expected)
+            throws Exception {
+        Sonic3kObjectArtProvider provider = new Sonic3kObjectArtProvider();
+        Method schedule = Sonic3kObjectArtProvider.class.getDeclaredMethod(
+                "scheduleEnemyKosArt", int.class, int.class);
+        schedule.setAccessible(true);
+        schedule.invoke(provider, zone, act);
+
+        PlcProgressSnapshot beforeRetirement = provider.capture();
+        assertEquals(expected, beforeRetirement.pendingKosModules());
+        assertEquals(List.of(), beforeRetirement.pendingKosOrdinals(),
+                "LoadEnemyArt must not submit before title-card retirement");
+        assertFalse(beforeRetirement.kosSubmissionArmed());
+
+        provider.onTitleCardArtRetired();
+        PlcProgressSnapshot armed = provider.capture();
+        assertTrue(armed.kosSubmissionArmed());
+
+        Sonic3kObjectArtProvider restored = new Sonic3kObjectArtProvider();
+        restored.restore(armed);
+        assertEquals(armed.pendingKosModules(),
+                restored.capture().pendingKosModules());
+        assertEquals(armed.pendingKosOrdinals(),
+                restored.capture().pendingKosOrdinals());
+        assertTrue(restored.capture().kosSubmissionArmed());
     }
 }

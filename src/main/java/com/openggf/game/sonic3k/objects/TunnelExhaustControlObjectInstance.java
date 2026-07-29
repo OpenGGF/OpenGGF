@@ -16,8 +16,13 @@ import java.util.List;
  * LBZ tunnel exhaust controller.
  *
  * <p>ROM reference: {@code Obj_TunnelExhaustControl}
- * ({@code sonic3k.asm:57461-57572}). The control object emits a small exhaust
- * sprite every four frames for 60 frames, then moves itself off-screen.
+ * ({@code sonic3k.asm:57461-57572}). The control object emits a small sprite
+ * every four frames for 60 frames, then moves itself off-screen.
+ *
+ * <p>The emitted sprite depends on the act ({@code loc_298F4}): act 1 runs
+ * {@code Obj_TunnelExSmoke} and puffs {@code Obj_FireShield_Dissipate} smoke out
+ * of the tube exit, act 2 runs {@code Obj_TunnelExhaustControlMain} and sprays
+ * the directional water exhaust.
  */
 final class TunnelExhaustControlObjectInstance extends AbstractObjectInstance
         implements SpawnTrailingZeroIntsRewindRecreatable {
@@ -33,6 +38,8 @@ final class TunnelExhaustControlObjectInstance extends AbstractObjectInstance
     private int emitTimer;
     private int lifetime = LIFETIME;
     private int angle;
+    /** Latched {@code loc_298F4} act branch: -1 unresolved, 1 smoke (act 1), 0 water exhaust (act 2). */
+    private int smokeMode = -1;
 
     TunnelExhaustControlObjectInstance(ObjectSpawn spawn, int subtype, int xVel, int yVel) {
         super(spawn, "TunnelExhaustControl");
@@ -50,6 +57,11 @@ final class TunnelExhaustControlObjectInstance extends AbstractObjectInstance
             return;
         }
 
+        if (isSmokeMode()) {
+            updateSmoke(frameCounter);
+            return;
+        }
+
         emitTimer--;
         if (emitTimer < 0) {
             emitTimer = EMIT_PERIOD - 1;
@@ -63,11 +75,39 @@ final class TunnelExhaustControlObjectInstance extends AbstractObjectInstance
                     spec.horizontal(),
                     false));
         }
+        expireLifetime();
+        deleteIfNotInRange();
+    }
+
+    /**
+     * ROM {@code Obj_TunnelExSmoke} (act 1): puff a dissipating smoke sprite every
+     * four frames, carrying the exit velocity the tunnel handed this controller.
+     */
+    private void updateSmoke(int frameCounter) {
+        if ((frameCounter & 3) == 0) {
+            int smokeXVel = xVel;
+            int smokeYVel = yVel;
+            spawnChild(() -> new FireShieldDissipateInstance(
+                    buildSpawnAt(getX(), getY()), smokeXVel, smokeYVel));
+        }
+        expireLifetime();
+        deleteIfNotInRange();
+    }
+
+    /** ROM: {@code subq.w #1,$30(a0); bpl.s +; move.w #$7FF0,x_pos(a0)}. */
+    private void expireLifetime() {
         lifetime--;
         if (lifetime < 0) {
             updateDynamicSpawn(OFFSCREEN_X, getY());
         }
-        deleteIfNotInRange();
+    }
+
+    /** ROM {@code loc_298F4}: {@code tst.b (Current_act).w} — act 1 just makes smoke. */
+    private boolean isSmokeMode() {
+        if (smokeMode < 0) {
+            smokeMode = services().currentAct() == 0 ? 1 : 0;
+        }
+        return smokeMode == 1;
     }
 
     @Override
@@ -91,7 +131,9 @@ final class TunnelExhaustControlObjectInstance extends AbstractObjectInstance
     }
 
     private void maybeEmitTimedExhaust(int frameCounter) {
-        if (((frameCounter + 1) & 3) == 0) {
+        // ROM: move.b (Level_frame_counter+1).w,d0; andi.b #3,d0; bne.s skip
+        // (Level_frame_counter+1) addresses the counter's low byte, it is not +1.
+        if ((frameCounter & 3) == 0) {
             spawnChild(() -> new TunnelExhaustParticleInstance(buildSpawnAt(getX(), getY()), 0, 0x400, true));
         }
     }

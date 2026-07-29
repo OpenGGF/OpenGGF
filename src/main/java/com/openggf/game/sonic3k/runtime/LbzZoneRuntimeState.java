@@ -37,6 +37,7 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
     private static final int LAUNCH_FLAG_FALLING_ACCEL_ACTIVE = 1 << 13;
     private static final int LAUNCH_FLAG_LBZ1_KNUX_CONTROL_LOCKED = 1 << 14;
     private static final int LAUNCH_FLAG_LBZ1_KNUX_BOMB_SHAKE_ACTIVE = 1 << 15;
+    private static final int LAUNCH_FLAG_LBZ1_KNUX_BOUNDARY_PUBLISH_PENDING = 1 << 16;
 
     private final int actIndex;
     private final PlayerCharacter playerCharacter;
@@ -72,6 +73,7 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
     private boolean waterDisabled;
     private boolean lbz1KnucklesCutsceneControlLocked;
     private boolean lbz1KnucklesBombShakeActive;
+    private boolean lbz1KnucklesBoundaryPublishPending;
     private int launchRiderAnchorId;
     private int launchRiderDelta;
     private boolean launchFallingAccelActive;
@@ -92,6 +94,7 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
     @Override public PlayerCharacter playerCharacter() { return playerCharacter; }
     @Override public int getDynamicResizeRoutine() { return 0; }
     @Override public boolean isActTransitionFlagActive() { return false; }
+    @Override public boolean advancesOscillationOnSeamlessTransition() { return true; }
 
     public boolean isAlarmAnimationActive() {
         return alarmAnimationActive;
@@ -407,6 +410,18 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         return lbz2RideAnimatedTileGateActive;
     }
 
+    public void requestLbz1KnucklesBoundaryPublish() {
+        lbz1KnucklesBoundaryPublishPending = true;
+    }
+
+    public boolean isLbz1KnucklesBoundaryPublishPending() {
+        return lbz1KnucklesBoundaryPublishPending;
+    }
+
+    public void clearLbz1KnucklesBoundaryPublishPending() {
+        lbz1KnucklesBoundaryPublishPending = false;
+    }
+
     public void setLbz2RideAnimatedTileGateActive(boolean active) {
         lbz2RideAnimatedTileGateActive = active;
     }
@@ -622,6 +637,8 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
                 (flags & LAUNCH_FLAG_LBZ1_KNUX_CONTROL_LOCKED) != 0;
         lbz1KnucklesBombShakeActive =
                 (flags & LAUNCH_FLAG_LBZ1_KNUX_BOMB_SHAKE_ACTIVE) != 0;
+        lbz1KnucklesBoundaryPublishPending =
+                (flags & LAUNCH_FLAG_LBZ1_KNUX_BOUNDARY_PUBLISH_PENDING) != 0;
     }
 
     private void restoreLaunchInts(ByteBuffer buffer,
@@ -665,6 +682,7 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         waterDisabled = false;
         lbz1KnucklesCutsceneControlLocked = false;
         lbz1KnucklesBombShakeActive = false;
+        lbz1KnucklesBoundaryPublishPending = false;
         deathEggDeformWrapLatch = 0;
         launchRiderDelta = 0;
         launchFallingAccelActive = false;
@@ -724,6 +742,9 @@ public final class LbzZoneRuntimeState implements S3kZoneRuntimeState {
         }
         if (lbz1KnucklesBombShakeActive) {
             flags |= LAUNCH_FLAG_LBZ1_KNUX_BOMB_SHAKE_ACTIVE;
+        }
+        if (lbz1KnucklesBoundaryPublishPending) {
+            flags |= LAUNCH_FLAG_LBZ1_KNUX_BOUNDARY_PUBLISH_PENDING;
         }
         return flags;
     }

@@ -178,6 +178,69 @@ class TestS3kLbz1MinibossAndTransitionHeadless {
     }
 
     @Test
+    void minibossBodyTouchRegionRetainsPublishedParentSlotX() {
+        HeadlessTestFixture fixture = lbzFixture();
+        AbstractPlayableSprite player = fixture.sprite();
+        LbzMinibossInstance miniboss = spawnMiniboss();
+        miniboss.forceOpenForTest(ARENA_X, ARENA_Y);
+        player.setCentreX((short) (ARENA_X + 0x40));
+        player.setCentreY((short) (ARENA_Y + 0x38));
+
+        miniboss.update(0, player);
+
+        assertEquals(ARENA_X + 1, miniboss.getX(),
+                "The folded parent tracker advances after publishing its collision-list entry.");
+        TouchResponseProvider.TouchRegion[] regions = miniboss.getMultiTouchRegions();
+        assertNotNull(regions);
+        assertEquals(ARENA_X, regions[0].x(),
+                "The body region must retain the parent slot X published before tracker movement.");
+        assertEquals(0x06, regions[0].collisionFlags());
+    }
+
+    @Test
+    void minibossArmTouchPhaseFollowsNativeChildRoutineTail() {
+        HeadlessTestFixture fixture = lbzFixture();
+        AbstractPlayableSprite player = fixture.sprite();
+        LbzMinibossInstance miniboss = spawnMiniboss();
+        miniboss.forceOpenForTest(ARENA_X, ARENA_Y);
+        player.setCentreX((short) (ARENA_X + 0x40));
+        player.setCentreY((short) (ARENA_Y + 0x38));
+
+        miniboss.update(0, player);
+        assertNotEquals(miniboss.getPanelXForTest(0, false),
+                miniboss.getPanelTouchXForTest(0, false),
+                "Ordinary linked-child routines retain their slot-entry touch coordinate.");
+
+        int frame = 1;
+        while (miniboss.getPanelRoutineForTest(5, false) != 0x0A && frame < 0x800) {
+            miniboss.update(frame++, player);
+        }
+        assertEquals(0x0A, miniboss.getPanelRoutineForTest(5, false),
+                "The outer child must reach its native pause routine.");
+        assertEquals(miniboss.getPanelXForTest(5, false),
+                miniboss.getPanelTouchXForTest(5, false),
+                "Routine $0A publishes the coordinate from its MoveSprite_CircularSimple tail.");
+    }
+
+    @Test
+    void minibossEscapeArmTouchUsesInterleavedParentYPhase() {
+        HeadlessTestFixture fixture = lbzFixture();
+        AbstractPlayableSprite player = fixture.sprite();
+        LbzMinibossInstance miniboss = spawnMiniboss();
+        miniboss.forceOpenForTest(ARENA_X, ARENA_Y);
+        player.setCentreX((short) ARENA_X);
+        player.setCentreY((short) (ARENA_Y + 0x38));
+
+        miniboss.onPlayerAttack(player, enemyTouch());
+        miniboss.update(0, player);
+
+        assertEquals(
+                (miniboss.getPanelRetainedTouchYForTest(0, false) - 1) & 0xFFFF,
+                miniboss.getPanelTouchYForTest(0, false),
+                "Later child slots observe the parent between native two-pixel escape steps.");
+    }
+
+    @Test
     void boxOpenedChunkSwapWritesBossAreaChunk() {
         lbzFixture();
         Sonic3kLBZEvents events = lbzEvents();
@@ -201,10 +264,17 @@ class TestS3kLbz1MinibossAndTransitionHeadless {
         camera.setX((short) 0x3B40);
 
         events.startEndingCollapse();
+        assertNull(findActive(LbzInvisibleBarrierInstance.class),
+                "Robotnik only arms Events_fg_4 in his object slot.");
+        events.update(0, 1);
         LbzInvisibleBarrierInstance barrier = findActive(LbzInvisibleBarrierInstance.class);
         assertNotNull(barrier,
-                "LBZ1_EventVScroll allocates Obj_LBZ1InvisibleBarrier when the collapse arms.");
+                "The following LBZ1_EventVScroll pass allocates Obj_LBZ1InvisibleBarrier.");
         assertEquals(0x3BC0, barrier.getX());
+        assertTrue(barrier.usesInclusiveRightEdge(),
+                "SolidObjectFull2 keeps the exact +$4B right edge as a side contact.");
+        assertTrue(barrier.bypassesOffscreenSolidGate(),
+                "SolidObjectFull2_1P enters SolidObject_cont without a render_flags gate.");
 
         barrier.update(0, player);
         assertFalse(barrier.isDestroyed());
@@ -256,12 +326,26 @@ class TestS3kLbz1MinibossAndTransitionHeadless {
         camera.setY((short) 0x0100);
         camera.setMinX((short) 0x3DA0);
         camera.setMaxX((short) 0x3EA0);
+        GameServices.gameState().setEndOfLevelActive(true);
 
         lbzEvents().setEventsFg5(true);
         manager.update();
 
+        assertEquals(0, GameServices.level().getCurrentAct(),
+                "LBZ1BGE_Normal only queues the three secondary Kos/KosM streams.");
+        for (int frame = 1; frame < 55; frame++) {
+            manager.update();
+            assertEquals(0, GameServices.level().getCurrentAct(),
+                    "LBZ1BGE_DoTransition must poll while Kos_modules_left is nonzero.");
+        }
+        manager.update();
+
         assertEquals(1, GameServices.level().getCurrentAct(),
                 "LBZ1BGE_DoTransition writes Current_zone_and_act=$0601 before Load_Level.");
+        assertTrue(GameServices.gameState().isEndOfLevelActive(),
+                "LBZ Load_Level must retain Level_end_flag for the carried results/end-sign owners.");
+        assertFalse(GameServices.gameState().isEndOfLevelFlag(),
+                "LBZ Load_Level clears End_of_level_flag until the in-level title-card completes.");
         assertEquals((ARENA_X - 0x3A00) & 0xFFFF, player.getCentreX() & 0xFFFF,
                 "LBZ1BGE_DoTransition subtracts $3A00 from Player_1 x_pos.");
         assertEquals(0x0160, player.getCentreY() & 0xFFFF,

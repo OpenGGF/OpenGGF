@@ -80,8 +80,50 @@ class TestS3kFlybot767Badnik {
     }
 
     @Test
+    void restoredRoutineContinuesMovementDuringBriefViewportExit() {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 0x0140, 0x0300, 0);
+        AbstractObjectInstance flybot = createFlybotAt(0x0160, 0x0100);
+        AbstractPlayableSprite player = playerAt(0x0160, 0x0140);
+        setEnum(flybot, "state", "DIVE");
+        setInt(flybot, "xVelocity", 0x200);
+        setInt(flybot, "yVelocity", 0x200);
+        setInt(flybot, "waitTimer", 0x20);
+        setBoolean(flybot, "waitingForOnscreen", false);
+
+        flybot.update(0, player);
+
+        assertEquals(0x0162, flybot.getX(),
+                "Sprite_CheckDeleteTouchSlotted runs the restored routine before its deletion check");
+        assertEquals(0x0102, flybot.getY());
+        assertFalse(flybot.isDestroyed(),
+                "the native coarse-X window extends beyond the exact viewport");
+        assertTrue(flybot.publishesTouchResponseListEntryThisFrame());
+    }
+
+    @Test
+    void restoredRoutineDeletesAfterMovementOutsideNativeCoarseRange() {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 0x0140, 0x0300, 0);
+        AbstractObjectInstance flybot = createFlybotAt(0x0400, 0x0100);
+        AbstractPlayableSprite player = playerAt(0x0400, 0x0140);
+        setEnum(flybot, "state", "DIVE");
+        setInt(flybot, "xVelocity", 0x200);
+        setInt(flybot, "yVelocity", 0x200);
+        setInt(flybot, "waitTimer", 0x20);
+        setBoolean(flybot, "waitingForOnscreen", false);
+
+        flybot.update(0, player);
+
+        assertEquals(0x0402, flybot.getX(),
+                "Sprite_CheckDeleteTouchSlotted runs movement before its coarse-X check");
+        assertEquals(0x0102, flybot.getY());
+        assertTrue(flybot.isDestroyed());
+        assertTrue(flybot.isDestroyedRespawnable());
+        assertFalse(flybot.publishesTouchResponseListEntryThisFrame());
+    }
+
+    @Test
     void traceFrame410KeepsFlybotOnePixelColumnBeforeTouchOverlap() {
-        AbstractObjectInstance.updateCameraBounds(0, 0, 1024, 1024, 0);
+        AbstractObjectInstance.updateCameraBounds(0, 0x0500, 0x0400, 0x0700, 0);
         AbstractObjectInstance flybot = createFlybotAt(0x0406, 0x05CC);
         AbstractPlayableSprite player = playerAt(0x0346, 0x062C);
 
@@ -109,6 +151,90 @@ class TestS3kFlybot767Badnik {
                 "Obj_WaitOffscreen returns before Obj_Flybot767 dispatches its routine.");
         assertFalse(flybot.publishesTouchResponseListEntryThisFrame(),
                 "The wait helper returns before Sprite_CheckDeleteTouchSlotted can add Flybot to the S3K touch list.");
+        assertFalse(flybot.usesCurrentTouchResponseState(),
+                "an immediately visible alarm-spawned Flybot retains the frame-start touch phase");
+    }
+
+    @Test
+    void waitOffscreenRequiresPlaceholderToEnterVerticalRenderBounds() {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 0x0140, 0x00E0, 0);
+        AbstractObjectInstance flybot = createFlybotAt(0x0100, 0x0120);
+        AbstractPlayableSprite player = playerAt(0x0100, 0x0140);
+
+        flybot.update(0, player);
+        flybot.update(1, player);
+        flybot.update(2, player);
+
+        assertEquals("INIT", readEnumName(flybot, "state"));
+        assertFalse(flybot.publishesTouchResponseListEntryThisFrame(),
+                "Obj_WaitOffscreen tests Render_Sprites bit 7, including the placeholder's Y bounds");
+    }
+
+    @Test
+    void layoutPlacementPublishesLiveSstCoordinateAfterWaitOffscreenRestore() {
+        AbstractObjectInstance.updateCameraBounds(0x0700, 0, 0x0900, 0x0300, 0);
+        AbstractObjectInstance flybot = createPlacedFlybotAt(0x0800, 0x0100);
+        AbstractPlayableSprite player = playerAt(0x0800, 0x0140);
+
+        flybot.update(0, player);
+        flybot.refreshPostCameraRenderState();
+        flybot.update(1, player);
+        flybot.update(2, player);
+
+        assertTrue(flybot.usesCurrentTouchResponseState(),
+                "a layout slot exposes the live SST coordinate published after its object pass");
+        assertEquals("CHASE", readEnumName(flybot, "state"));
+        assertTrue(flybot.publishesTouchResponseListEntryThisFrame());
+    }
+
+    @Test
+    void layoutPlacementRestoresOnFirstVisibleDispatchAfterOffscreenWait() {
+        AbstractObjectInstance.updateCameraBounds(0x0700, 0, 0x0900, 0x00E0, 0);
+        AbstractObjectInstance flybot = createPlacedFlybotAt(0x0800, 0x0120);
+        AbstractPlayableSprite player = playerAt(0x0800, 0x0140);
+
+        flybot.update(0, player);
+        flybot.refreshPostCameraRenderState();
+        AbstractObjectInstance.updateCameraBounds(0x0700, 0x0100, 0x0900, 0x0300, 0);
+        flybot.update(1, player);
+        flybot.refreshPostCameraRenderState();
+        flybot.update(2, player);
+        assertEquals("INIT", readEnumName(flybot, "state"),
+                "Obj_WaitOffscreen restores the saved Flybot operation and returns");
+        flybot.update(3, player);
+
+        assertEquals("CHASE", readEnumName(flybot, "state"));
+        assertTrue(flybot.publishesTouchResponseListEntryThisFrame());
+    }
+
+    @Test
+    void layoutWaitReadsRenderFlagPublishedAfterHorizontalCameraStep() {
+        AbstractObjectInstance.updateCameraBounds(0x0700, 0x0100, 0x0900, 0x0300, 0);
+        AbstractObjectInstance flybot = createPlacedFlybotAt(0x0980, 0x0120);
+        AbstractPlayableSprite player = playerAt(0x0980, 0x0140);
+
+        flybot.update(0, player);
+        AbstractObjectInstance.updateCameraBounds(0x0800, 0x0100, 0x0A00, 0x0300, 0);
+        flybot.refreshPostCameraRenderState();
+        flybot.update(1, player);
+        assertEquals("INIT", readEnumName(flybot, "state"),
+                "loc_85AD2 restores Obj_Flybot767 from the prior post-camera render flag");
+        flybot.update(2, player);
+
+        assertEquals("CHASE", readEnumName(flybot, "state"));
+        assertTrue(flybot.publishesTouchResponseListEntryThisFrame());
+    }
+
+    @Test
+    void rewindRestoresWhetherWaitOffscreenUsesTheLayoutRenderFlag() {
+        AbstractObjectInstance placed = createPlacedFlybotAt(0x0800, 0x0120);
+        AbstractObjectInstance recreatedShell = createFlybotAt(0x0800, 0x0120);
+
+        assertFalse(readBoolean(recreatedShell, "layoutWaitUsesRetainedRenderFlag"));
+        recreatedShell.restoreRewindState(placed.captureRewindState());
+
+        assertTrue(readBoolean(recreatedShell, "layoutWaitUsesRetainedRenderFlag"),
+                "the layout-vs-dynamic wait contract is durable rewind state");
     }
 
     @Test
@@ -134,6 +260,14 @@ class TestS3kFlybot767Badnik {
     private static AbstractObjectInstance createFlybotAt(int x, int y) {
         ObjectInstance instance = new Sonic3kObjectRegistry().create(
                 new ObjectSpawn(x, y, Sonic3kObjectIds.FLYBOT_767, 0, 0, false, 0));
+        assertTrue(instance instanceof AbstractObjectInstance,
+                "Flybot767 registry entry should create an object instance");
+        return (AbstractObjectInstance) instance;
+    }
+
+    private static AbstractObjectInstance createPlacedFlybotAt(int x, int y) {
+        ObjectInstance instance = new Sonic3kObjectRegistry().create(
+                new ObjectSpawn(x, y, Sonic3kObjectIds.FLYBOT_767, 0, 0, false, 0, 123));
         assertTrue(instance instanceof AbstractObjectInstance,
                 "Flybot767 registry entry should create an object instance");
         return (AbstractObjectInstance) instance;
@@ -185,6 +319,16 @@ class TestS3kFlybot767Badnik {
             return field.getInt(target);
         } catch (IllegalAccessException e) {
             throw new AssertionError("Failed to read " + fieldName, e);
+        }
+    }
+
+    private static boolean readBoolean(Object target, String fieldName) {
+        try {
+            Field field = findField(target, fieldName);
+            field.setAccessible(true);
+            return field.getBoolean(target);
+        } catch (IllegalAccessException e) {
+            throw new AssertionError(e);
         }
     }
 

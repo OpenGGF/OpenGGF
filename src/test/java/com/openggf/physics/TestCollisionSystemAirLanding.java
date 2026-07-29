@@ -22,6 +22,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -98,6 +99,30 @@ class TestCollisionSystemAirLanding {
         assertTrue(landed.get(), "Negative floor distance should count as an air landing");
         assertFalse(sprite.getAir(), "Landing handler should have cleared airborne state");
         assertEquals((byte) 0x08, sprite.getAngle(), "Landing should preserve the slope angle");
+    }
+
+    @Test
+    void acceptedAirLandingPublishesTheProbePairThatProducedIt() throws Exception {
+        AbstractPlayableSprite sprite = newTestSprite();
+        sprite.setAir(true);
+        sprite.setYSpeed((short) 0x04D0);
+
+        CollisionSystem collisionSystem = new CollisionSystem(new TerrainCollisionManager());
+        SensorResult[] landingResults = negativeSurfaceContactResults();
+        AtomicReference<SensorResult[]> published = new AtomicReference<>();
+
+        Method method = CollisionSystem.class.getDeclaredMethod(
+                "doTerrainCollisionAir",
+                AbstractPlayableSprite.class,
+                SensorResult[].class,
+                Consumer.class,
+                Consumer.class);
+        method.setAccessible(true);
+        method.invoke(collisionSystem, sprite, landingResults,
+                landingHandler(new AtomicBoolean()), (Consumer<SensorResult[]>) published::set);
+
+        assertTrue(published.get() == landingResults,
+                "Player-tail state must consume the original landing probes, not a post-seat rescan");
     }
 
     @Test

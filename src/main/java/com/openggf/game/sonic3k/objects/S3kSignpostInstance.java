@@ -137,12 +137,14 @@ public class S3kSignpostInstance extends AbstractObjectInstance
     private int resultsPostControlHandoffDelayEntries;
     private int resultsRetireDispatches = RESULTS_CARRIED_RETIRE_DISPATCHES;
     private boolean resultsWaitedForPlayerLanding;
+    private boolean mainEndingPosePending;
     private boolean sidekickEndingPoseApplied;
     private boolean sidekickEndingPoseCheckArmed;
     private boolean landingSparklePending;
     private boolean preservesPostLandingSparkleGate;
     private boolean preservesPostObjectResultDispatchBoundary;
     private boolean preservesGroundedResultsDispatchBoundary;
+    private boolean usesShortResultsChildRetireTail;
 
     /**
      * Creates the signpost at the given X position.
@@ -175,6 +177,15 @@ public class S3kSignpostInstance extends AbstractObjectInstance
     S3kSignpostInstance(int spawnX, int apparentAct, int resultsTimerCatchUpEntries,
             int resultsWaitDurationAdjustment, int resultsPostControlHandoffDelayEntries,
             boolean preservesGroundedResultsDispatchBoundary) {
+        this(spawnX, apparentAct, resultsTimerCatchUpEntries, resultsWaitDurationAdjustment,
+                resultsPostControlHandoffDelayEntries,
+                preservesGroundedResultsDispatchBoundary, false);
+    }
+
+    S3kSignpostInstance(int spawnX, int apparentAct, int resultsTimerCatchUpEntries,
+            int resultsWaitDurationAdjustment, int resultsPostControlHandoffDelayEntries,
+            boolean preservesGroundedResultsDispatchBoundary,
+            boolean usesShortResultsChildRetireTail) {
         super(null, "S3kSignpost");
         this.worldX = spawnX;
         this.worldY = 0; // Set properly in INIT
@@ -183,6 +194,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance
         this.resultsWaitDurationAdjustment = Math.max(0, resultsWaitDurationAdjustment);
         this.resultsPostControlHandoffDelayEntries = Math.max(0, resultsPostControlHandoffDelayEntries);
         this.preservesGroundedResultsDispatchBoundary = preservesGroundedResultsDispatchBoundary;
+        this.usesShortResultsChildRetireTail = usesShortResultsChildRetireTail;
     }
 
     private S3kSignpostInstance() {
@@ -511,10 +523,20 @@ public class S3kSignpostInstance extends AbstractObjectInstance
         }
 
         boolean sidekickPoseWasAlreadyArmed = sidekickEndingPoseCheckArmed;
-        // Obj_EndSignResults owns Set_PlayerEndingPose in routine 6 regardless
-        // of whether its first entry had to wait for Player_1 to land.
-        applyMainPlayerEndingPose(player);
-        sidekickEndingPoseCheckArmed = true;
+        boolean preservesRoutineSixDispatch = resultsWaitedForPlayerLanding
+                || preservesPostObjectResultDispatchBoundary
+                || preservesGroundedResultsDispatchBoundary;
+        if (preservesRoutineSixDispatch) {
+            // Obj_EndSignResults has occupied its native routine-6 slot, either
+            // while waiting for the grounded player or through the preserved
+            // post-object boundary. Apply P1 now; P2 belongs to routine 8.
+            applyMainPlayerEndingPose(player);
+            sidekickEndingPoseCheckArmed = true;
+        } else {
+            // Preserve the engine's collapsed owner boundary for ordinary
+            // signposts whose routine 6 did not wait.
+            mainEndingPosePending = true;
+        }
 
         // ROM Obj_EndSignLanded writes only Ctrl_2_locked before this routine;
         // Obj_EndSignResults calls Set_PlayerEndingPose with a1=Player_1 only
@@ -540,20 +562,30 @@ public class S3kSignpostInstance extends AbstractObjectInstance
                 resultsWaitedForPlayerLanding,
                 preservesPostObjectResultDispatchBoundary,
                 preservesGroundedResultsDispatchBoundary);
-        int resultsChildCatchUpEntries = resultsChildTimingAdjustment.catchUpEntries();
         spawnFreeChild(() -> new S3kResultsScreenObjectInstance(
                 getPlayerCharacter(), apparentAct, resultsWaitDurationAdjustment,
                 resultsPostControlHandoffDelayEntries
                         + (preservesPostObjectResultDispatchBoundary ? 1 : 0),
-                resultsWaitedForPlayerLanding || preservesPostObjectResultDispatchBoundary
-                        ? RESULTS_WAITED_LANDING_RETIRE_DISPATCHES
-                        : RESULTS_CARRIED_RETIRE_DISPATCHES - resultsChildCatchUpEntries,
-                resultsChildTimingAdjustment));
+                resultsChildRetireDispatches(resultsWaitedForPlayerLanding,
+                        preservesPostObjectResultDispatchBoundary,
+                        usesShortResultsChildRetireTail),
+                resultsChildTimingAdjustment,
+                usesShortResultsChildRetireTail));
         LOG.fine("S3K Signpost RESULTS -> AFTER (results instance spawned)");
         state = State.AFTER;
         if (preservesPostObjectResultDispatchBoundary && sidekickPoseWasAlreadyArmed) {
             applyNativeSidekickEndingPose(player);
         }
+    }
+
+    static int resultsChildRetireDispatches(boolean waitedForPlayerLanding,
+            boolean preservesPostObjectResultDispatchBoundary,
+            boolean usesShortResultsChildRetireTail) {
+        return waitedForPlayerLanding
+                        || preservesPostObjectResultDispatchBoundary
+                        || usesShortResultsChildRetireTail
+                ? RESULTS_WAITED_LANDING_RETIRE_DISPATCHES
+                : RESULTS_CARRIED_RETIRE_DISPATCHES;
     }
 
     static ResultsChildTimingAdjustment resultsChildTimingAdjustment(boolean waitedForPlayerLanding,
@@ -626,6 +658,10 @@ public class S3kSignpostInstance extends AbstractObjectInstance
     // =========================================================================
 
     private void updateAfter(AbstractPlayableSprite player) {
+        if (mainEndingPosePending) {
+            mainEndingPosePending = false;
+            applyMainPlayerEndingPose(player);
+        }
         applyNativeSidekickEndingPose(player);
         if (isResultsScreenActive()) {
             return;

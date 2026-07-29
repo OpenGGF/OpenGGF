@@ -947,6 +947,9 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
                     services.gameState().addScore(1000);
                 }
                 services.fadeOutMusic();
+                // ROM loc_71926: jmp (BossDefeated_StopTimer).l
+                // (sonic3k.asm:150472).
+                stopLevelTimerOnBossDefeat();
             }
         } else {
             state.invulnerable = true;

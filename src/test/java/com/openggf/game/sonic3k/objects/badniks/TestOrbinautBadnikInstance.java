@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
+import com.openggf.camera.Camera;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.level.LevelData;
@@ -20,7 +21,9 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -129,6 +132,78 @@ class TestOrbinautBadnikInstance {
         assertFalse(readBoolean(orbinaut, "facingLeft"));
     }
 
+    @Test
+    void initializedBodyKeepsRunningWhenItBrieflyLeavesViewport() {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 1024, 1024, 0);
+        AbstractObjectInstance orbinaut = createInitializedOrbinaut();
+        AbstractObjectInstance.updateCameraBounds(0x1000, 0, 1024, 1024, 0);
+        AbstractPlayableSprite player = playerAt(0x0180, 0x0100, false, -0x100, 0);
+
+        orbinaut.update(1, player);
+        orbinaut.update(2, player);
+
+        assertEquals(0x01FF, orbinaut.getX(),
+                "Sprite_CheckDeleteTouch runs after the restored routine; Obj_WaitOffscreen is not re-entered");
+    }
+
+    @Test
+    void deferredChildGraphRestoresTheNativeCallbackPhase() {
+        AbstractObjectInstance shortWindowChild = createDeferredChild(3);
+        AbstractObjectInstance longWindowChild = createDeferredChild(4);
+
+        assertFalse(readBoolean(shortWindowChild, "initialized"),
+                "a short deferred window still owes the child setup callback");
+        assertTrue(readBoolean(longWindowChild, "initialized"),
+                "a longer deferred window resumes at the circular-movement callback");
+    }
+
+    @Test
+    void placeholderVisibilityCompletesRestoreBeforeMovementBegins() {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 1024, 224, 0);
+        AbstractObjectInstance orbinaut = (AbstractObjectInstance) new Sonic3kObjectRegistry().create(
+                new ObjectSpawn(0x0200, 0x0300, Sonic3kObjectIds.ORBINAUT, 0, 0, false, 0));
+        ObjectServices services = mock(ObjectServices.class);
+        when(services.objectManager()).thenReturn(mock(ObjectManager.class));
+        orbinaut.setServices(services);
+        AbstractPlayableSprite player = playerAt(0x0180, 0x0300, false, -0x100, 0);
+
+        orbinaut.update(0, player);
+        orbinaut.update(1, player);
+        assertEquals(0x0200, orbinaut.getX(), "X visibility creates the placeholder without moving the body");
+
+        AbstractObjectInstance.updateCameraBounds(0, 0x0200, 1024, 0x0400, 0);
+        orbinaut.update(2, player);
+        orbinaut.update(3, player);
+        assertEquals(0x0200, orbinaut.getX(), "the restored operation consumes two non-moving passes");
+
+        orbinaut.update(4, player);
+        orbinaut.update(5, player);
+        assertEquals(0x01FF, orbinaut.getX(), "the resumed routine keeps running after restoration");
+    }
+
+    @Test
+    void downwardPassLeavesAboveCameraPlaceholderWithoutChildSlots() {
+        AbstractObjectInstance.updateCameraBounds(0, 0x0200, 1024, 224, 0);
+        AbstractObjectInstance orbinaut = (AbstractObjectInstance) new Sonic3kObjectRegistry().create(
+                new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.ORBINAUT, 0, 0, false, 0));
+        ObjectServices services = mock(ObjectServices.class);
+        ObjectManager objectManager = mock(ObjectManager.class);
+        Camera camera = mock(Camera.class);
+        when(services.objectManager()).thenReturn(objectManager);
+        when(services.camera()).thenReturn(camera);
+        when(camera.getX()).thenReturn((short) 0);
+        when(camera.getY()).thenReturn((short) 0x0200);
+        orbinaut.setServices(services);
+        AbstractPlayableSprite player = playerAt(0x0180, 0x0280, true, 0, 0x0400);
+
+        orbinaut.update(0, player);
+        orbinaut.update(1, player);
+
+        verify(objectManager, never()).addDynamicObjectAfterCurrent(any());
+        assertFalse(readBoolean(orbinaut, "initialized"),
+                "Obj_WaitOffscreen must retain its placeholder when the camera has passed below it");
+    }
+
     private static AbstractObjectInstance createOrbinaut() {
         ObjectInstance instance = new Sonic3kObjectRegistry().create(
                 new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.ORBINAUT, 0, 0, false, 0));
@@ -144,6 +219,26 @@ class TestOrbinautBadnikInstance {
         orbinaut.setServices(services);
         orbinaut.update(0, playerAt(0x0180, 0x0100, false, 0, 0));
         return orbinaut;
+    }
+
+    private static AbstractObjectInstance createDeferredChild(int offscreenUpdates) {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 0x01F0, 0x0400, 0);
+        AbstractObjectInstance orbinaut = createOrbinaut();
+        ObjectServices services = mock(ObjectServices.class);
+        ObjectManager objectManager = mock(ObjectManager.class);
+        when(services.objectManager()).thenReturn(objectManager);
+        orbinaut.setServices(services);
+        AbstractPlayableSprite player = playerAt(0x0180, 0x0100, false, -0x100, 0);
+        for (int i = 0; i < offscreenUpdates; i++) {
+            orbinaut.update(i, player);
+        }
+
+        AbstractObjectInstance.updateCameraBounds(0, 0, 0x0400, 0x0400, 0);
+        orbinaut.update(offscreenUpdates, player);
+
+        ArgumentCaptor<ObjectInstance> childCaptor = ArgumentCaptor.forClass(ObjectInstance.class);
+        verify(objectManager, times(4)).addDynamicObjectAfterCurrent(childCaptor.capture());
+        return (AbstractObjectInstance) childCaptor.getAllValues().getFirst();
     }
 
     private static AbstractPlayableSprite playerAt(int x, int y, boolean air, int xSpeed, int ySpeed) {

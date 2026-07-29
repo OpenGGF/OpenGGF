@@ -259,6 +259,29 @@ public class TestPlayableSpriteAnimation {
     }
 
     @Test
+    public void s3kNegativeFlipTypeEntersTumbleBeforeAngleAdvances() {
+        TestablePlayableSprite sprite = createSprite(GameRules.SONIC_3K);
+        ((ScriptedVelocityAnimationProfile) sprite.getAnimationProfile())
+                .setTumbleFrameBase(0x31)
+                .setTumbleTypeFrameBases(0, 0x3D, 0x49, 0x49);
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(0, new SpriteAnimationScript(0xFF,
+                List.of(0x21), SpriteAnimationEndAction.LOOP, 0));
+        sprite.setAnimationSet(animations);
+        sprite.setAnimationId(0);
+        sprite.setMovementInputActive(true);
+        sprite.setFlipType(0x80);
+        sprite.setFlipAngle(0);
+
+        sprite.getAnimationManager().update(0);
+
+        assertEquals(0x37, sprite.getMappingFrame(),
+                "Signed flip_type selects Anim_Tumble before Obj31 advances flip_angle");
+        assertFalse(sprite.getRenderHFlip());
+        assertTrue(sprite.getRenderVFlip());
+    }
+
+    @Test
     public void s3kRunToWalkAnimationStepKeepsGroundPush() {
         TestablePlayableSprite sprite = createSprite(GameRules.SONIC_3K);
         sprite.setAnimationId(1);

@@ -102,6 +102,7 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
     private int hitReactionTimer;
     private int savedRoutine;
     private int homeX;
+    private int bodyTouchX;
     private int openingLoopCounter;
     private int bodyFrame;
     private int bodyAnimIndex;
@@ -118,6 +119,7 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
     private int defeatWaitTimer = -1;
     private boolean defeatFlowSpawned;
     private S3kBossExplosionController defeatExplosionController;
+    private boolean defeatExplosionCreationPending;
     private LbzMinibossBoxKnuxInstance knucklesFightParent;
 
     private enum WaitCallback {
@@ -130,6 +132,7 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
     public LbzMinibossInstance(ObjectSpawn spawn) {
         super(spawn, "LBZMiniboss");
         this.motion = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, 0, 0);
+        this.bodyTouchX = spawn.x();
     }
 
     /**
@@ -176,11 +179,17 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         List<TouchRegion> regions = new ArrayList<>();
         int bodyFlags = getCollisionFlags();
         if (bodyFlags != 0) {
-            regions.add(new TouchRegion(getX(), getY(), bodyFlags));
+            regions.add(new TouchRegion(bodyTouchX, getY(), bodyFlags));
         }
         for (PanelState panel : panels) {
             if (!panel.center && !panel.detached && !panel.deleted) {
-                regions.add(new TouchRegion(panel.x, panel.y, ARM_COLLISION_FLAGS));
+                boolean outerPause = panel.childRoutine == PanelState.ROUTINE_OUTER_PAUSE;
+                int touchX = outerPause ? panel.x : panel.touchX;
+                int touchY = outerPause ? panel.y : panel.touchY;
+                if (routine == ROUTINE_ESCAPE) {
+                    touchY = (touchY - 1) & 0xFFFF;
+                }
+                regions.add(new TouchRegion(touchX, touchY, ARM_COLLISION_FLAGS));
             }
         }
         return regions.isEmpty() ? null : regions.toArray(TouchRegion[]::new);
@@ -225,6 +234,12 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
             updateDynamicSpawn(getX(), getY());
             return;
         }
+        // The native Collision_response_list retains the parent slot's X from
+        // the execution pass that published it. The engine folds the parent's
+        // later-slot tracker into this aggregate object, so retain that
+        // published X separately from the position advanced below. Arm child
+        // regions already maintain their own independent slot phase.
+        bodyTouchX = getX();
         switch (routine) {
             case ROUTINE_INIT -> initialize();
             case ROUTINE_INIT_WAIT -> tickWait();
@@ -288,6 +303,35 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         return panels.size();
     }
 
+    public int getPanelRoutineForTest(int index, boolean secondRing) {
+        int offset = 1 + (secondRing ? PANEL_FRAMES.length : 0);
+        return panels.get(offset + index).childRoutine;
+    }
+
+    public int getPanelXForTest(int index, boolean secondRing) {
+        return panelForTest(index, secondRing).x;
+    }
+
+    public int getPanelTouchXForTest(int index, boolean secondRing) {
+        PanelState panel = panelForTest(index, secondRing);
+        return panel.childRoutine == PanelState.ROUTINE_OUTER_PAUSE ? panel.x : panel.touchX;
+    }
+
+    public int getPanelRetainedTouchYForTest(int index, boolean secondRing) {
+        return panelForTest(index, secondRing).touchY;
+    }
+
+    public int getPanelTouchYForTest(int index, boolean secondRing) {
+        PanelState panel = panelForTest(index, secondRing);
+        int touchY = panel.childRoutine == PanelState.ROUTINE_OUTER_PAUSE ? panel.y : panel.touchY;
+        return routine == ROUTINE_ESCAPE ? (touchY - 1) & 0xFFFF : touchY;
+    }
+
+    private PanelState panelForTest(int index, boolean secondRing) {
+        int offset = 1 + (secondRing ? PANEL_FRAMES.length : 0);
+        return panels.get(offset + index);
+    }
+
     public int getXVelocityForTest() {
         return motion.xVel;
     }
@@ -316,6 +360,7 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         motion.xVel = 0;
         motion.yVel = 0;
         homeX = x;
+        bodyTouchX = x;
         bodyFrame = 0;
         bodyAnimIndex = 0;
         bodyAnimTimer = OPENING_WAIT;
@@ -408,12 +453,21 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         if (isKnuckles()) {
             bossX += spawn.subtype() == 0 ? KNUCKLES_TARGET_X_OFFSET : -KNUCKLES_TARGET_X_OFFSET;
         }
-        int dx = signedDelta(player.getCentreX() & 0xFFFF, bossX);
+        int projectedPlayerX = projectNativePosition(
+                player.getCentreX(), player.getXSubpixelRaw(), player.getXSpeed());
+        int dx = signedDelta(projectedPlayerX & 0xFFFF, bossX);
         motion.xVel = Math.abs(dx) <= TARGET_DEADBAND ? 0 : (dx < 0 ? -TRACK_VEL : TRACK_VEL);
 
         int targetY = (player.getCentreY() + PLAYER_TARGET_Y_OFFSET) & 0xFFFF;
         int dy = signedDelta(targetY, getY());
         motion.yVel = Math.abs(dy) <= TARGET_DEADBAND ? 0 : (dy < 0 ? -TRACK_VEL : TRACK_VEL);
+    }
+
+    private int projectNativePosition(int position, int subpixel, int velocity) {
+        // The native tracker observes the player's complete 16:8 movement
+        // result. Preserve the high fractional byte when deciding which side
+        // of the four-pixel deadband the player reaches.
+        return ((position << 8) + ((subpixel >> 8) & 0xFF) + velocity) >> 8;
     }
 
     private boolean isKnuckles() {
@@ -522,6 +576,13 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         }
         defeatWaitTimer = DEFEAT_WAIT_FRAMES;
         defeatExplosionController = new S3kBossExplosionController(getX(), getY(), 0, services().rng());
+        // CreateChild1_Normal installs Obj_CreateBossExplosion after the live
+        // boss slot. Because that child slot is still ahead of the current
+        // Process_Sprites cursor, its zeroed Obj_Wait tail dispatches the first
+        // explosion in this same object pass. The following emission remains
+        // three complete child-slot turns later.
+        defeatExplosionController.dispatchCreation();
+        defeatExplosionCreationPending = true;
         // ROM Touch_Enemy sets status bit 7 on the final hit; loc_728C8/loc_72902
         // then unravel both arm chains one panel per frame.
         for (PanelState panel : panels) {
@@ -553,7 +614,11 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         if (defeatExplosionController == null || defeatExplosionController.isFinished()) {
             return;
         }
-        defeatExplosionController.tick();
+        if (defeatExplosionCreationPending) {
+            defeatExplosionCreationPending = false;
+        } else {
+            defeatExplosionController.tick();
+        }
         for (S3kBossExplosionController.PendingExplosion explosion
                 : defeatExplosionController.drainPendingExplosions()) {
             if (explosion.playSfx()) {
@@ -584,7 +649,8 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         // and loads Pal_MHZ2's first line during the results (original game bug).
         spawnChild(() -> new S3kBossDefeatSignpostFlow(
                 homeX, SIGNPOST_APPARENT_ACT,
-                S3kBossDefeatSignpostFlow.CleanupAction.LOAD_MHZ2_OBJECT_PALETTE));
+                S3kBossDefeatSignpostFlow.CleanupAction.LOAD_MHZ2_OBJECT_PALETTE,
+                0, 0, 0, 0, false, true));
     }
 
     private boolean allPanelsGone() {
@@ -607,7 +673,6 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         for (int i = 0; i < PANEL_FRAMES.length; i++) {
             panels.add(new PanelState(false, i, true));
         }
-        updatePanels();
     }
 
     private void updatePanels() {
@@ -651,6 +716,8 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         private final boolean secondRing;
         private int x;
         private int y;
+        private int touchX;
+        private int touchY;
         private int xSub;
         private int ySub;
         private int xVel;
@@ -661,6 +728,7 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         private int childRoutine = ROUTINE_INIT_WAIT;
         private int childWaitTimer = 0x100;
         private PanelWaitCallback waitCallback = PanelWaitCallback.START_ROTATE_IF_ARMED;
+        private boolean initialized;
         private boolean bit1;
         private boolean detached;
         private boolean markedForDetach;
@@ -691,6 +759,12 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
             if (deleted) {
                 return;
             }
+            if (initialized) {
+                // Each native child publishes its slot pointer before the
+                // folded aggregate advances that child's circular position.
+                touchX = x;
+                touchY = y;
+            }
             if (detached) {
                 SubpixelMotion.State state = new SubpixelMotion.State(x, y, xSub, ySub, xVel, yVel);
                 SubpixelMotion.moveSprite(state, SubpixelMotion.S3K_GRAVITY);
@@ -709,9 +783,22 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
             if (center) {
                 x = getX();
                 y = getY();
+                xSub = motion.xSub;
+                ySub = motion.ySub;
                 if (parentBit1) {
                     frame = centerChildFrame;
                 }
+                return;
+            }
+            if (!initialized) {
+                // loc_7261C falls through loc_727B0 to perform the initial
+                // circular placement, then returns without calling Obj_Wait.
+                // The $100 timer starts decrementing on the child's next SST
+                // dispatch.
+                initialized = true;
+                moveCircular();
+                touchX = x;
+                touchY = y;
                 return;
             }
             // ROM loc_728C8 (subtype 0) / loc_72902 (others): a marked panel
@@ -824,19 +911,27 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
 
         private void moveCircular() {
             int shift = index == 5 ? 4 : 5;
-            int xOffset = TrigLookupTable.sinHex(angle) >> shift;
-            int yOffset = TrigLookupTable.cosHex(angle) >> shift;
             PanelAnchor anchor = resolvePanelAnchor();
-            x = anchor.x() + xOffset;
-            y = anchor.y() + yOffset;
+            // MoveSprite_CircularSimple shifts the signed sine/cosine words as
+            // 16.16 longs, then adds them to the parent's complete x_pos/y_pos
+            // longs. Preserve each link's fractional remainder so it can carry
+            // into later links in the chain.
+            int xFixed = (anchor.x() << 16) | (anchor.xSub() & 0xFFFF);
+            int yFixed = (anchor.y() << 16) | (anchor.ySub() & 0xFFFF);
+            xFixed += TrigLookupTable.sinHex(angle) << (16 - shift);
+            yFixed += TrigLookupTable.cosHex(angle) << (16 - shift);
+            x = xFixed >> 16;
+            y = yFixed >> 16;
+            xSub = xFixed & 0xFFFF;
+            ySub = yFixed & 0xFFFF;
         }
 
         private PanelAnchor resolvePanelAnchor() {
             if (index == 0) {
-                return new PanelAnchor(getX(), getY());
+                return new PanelAnchor(getX(), getY(), motion.xSub, motion.ySub);
             }
             PanelState previous = linkedParent();
-            return new PanelAnchor(previous.x, previous.y);
+            return new PanelAnchor(previous.x, previous.y, previous.xSub, previous.ySub);
         }
 
         private PanelState linkedParent() {
@@ -860,6 +955,6 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         }
     }
 
-    private record PanelAnchor(int x, int y) {
+    private record PanelAnchor(int x, int y, int xSub, int ySub) {
     }
 }

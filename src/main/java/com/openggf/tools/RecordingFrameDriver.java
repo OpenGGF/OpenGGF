@@ -385,13 +385,7 @@ public final class RecordingFrameDriver {
     }
 
     public void advancePlayableAnimationsOnly() {
-        var sprites = GameServices.sprites();
-        int animationFrame = sprites.getFrameCounter();
-        for (var candidate : sprites.getAllSprites()) {
-            if (candidate instanceof AbstractPlayableSprite playable) {
-                playable.getAnimationManager().update(animationFrame);
-            }
-        }
+        GameServices.sprites().advancePlayableSlotPrefix();
     }
 
     public void suppressFirstSidekickAnimationOnce() {

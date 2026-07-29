@@ -6,6 +6,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PlaceholderObjectInstance;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -35,8 +36,14 @@ class TestLbzMovingPlatformInstance {
         assertFalse(platform instanceof PlaceholderObjectInstance,
                 "S3KL slot $11 is Obj_LBZMovingPlatform and must not remain a placeholder");
         assertEquals("LBZMovingPlatform", platform.getName());
-        assertInstanceOf(SolidObjectProvider.class, platform,
+        SolidObjectProvider solid = assertInstanceOf(SolidObjectProvider.class, platform,
                 "Obj_LBZMovingPlatform calls SolidObjectTop when visible");
+        assertTrue(solid.usesGroundHalfHeightForTopSolidContact(),
+                "loc_24F0E passes SolidObjectTop d3=9 independently of height_pixels=8");
+        assertFalse(solid.usesPlatformObjectLandingSnap(),
+                "SolidObjectTop keeps SolidObject_Landed's relative y_pos correction");
+        assertTrue(solid.rejectsZeroDistanceTopSolidLanding(),
+                "SolidObjectTop accepts only its unsigned negative overlap band");
     }
 
     @Test
@@ -65,6 +72,20 @@ class TestLbzMovingPlatformInstance {
                 "Platform_DiagonalLift does not move until standing_mask is set");
         assertEquals(0x20, assertInstanceOf(SolidObjectProvider.class, platform)
                 .getSolidParams().halfWidth());
+    }
+
+    @Test
+    void callerSkipsSolidObjectTopWhenPlatformRenderBoxIsOffscreen() {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_LBZ);
+        SolidObjectProvider visible = assertInstanceOf(SolidObjectProvider.class, registry.create(
+                new ObjectSpawn(0x0100, 0x00E0, 0x11, 0, 0, false, 0)));
+        SolidObjectProvider below = assertInstanceOf(SolidObjectProvider.class, registry.create(
+                new ObjectSpawn(0x0100, 0x0100, 0x11, 0, 0, false, 0)));
+
+        assertTrue(visible.isSolidFor(null));
+        assertFalse(below.isSolidFor(null),
+                "loc_24F02 observes the post-render bit before calling SolidObjectTop");
     }
 
     @Test

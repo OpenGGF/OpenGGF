@@ -268,10 +268,19 @@ class TestS3kIczPathFollowPlatformObject {
             platform.update(16, player);
         }
 
+        // loc_8A0AA spawns 6 break-debris pieces (ChildObjDat_8A42A) then the revealed spring.
         ArgumentCaptor<ObjectInstance> captor = ArgumentCaptor.forClass(ObjectInstance.class);
-        verify(objectManager).addDynamicObjectAfterCurrent(captor.capture());
-        Sonic3kSpringObjectInstance spring = assertInstanceOf(
-                Sonic3kSpringObjectInstance.class, captor.getValue());
+        verify(objectManager, org.mockito.Mockito.times(7)).addDynamicObjectAfterCurrent(captor.capture());
+        java.util.List<ObjectInstance> spawned = captor.getAllValues();
+        long debrisCount = spawned.stream()
+                .filter(o -> "IczPlatformBreakDebris".equals(o.getClass().getSimpleName()))
+                .count();
+        assertEquals(6, debrisCount, "platform shatters into 6 debris pieces");
+        Sonic3kSpringObjectInstance spring = spawned.stream()
+                .filter(o -> o instanceof Sonic3kSpringObjectInstance)
+                .map(o -> (Sonic3kSpringObjectInstance) o)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("Missing revealed spring"));
         assertEquals(0x5D5A, spring.getX());
         assertEquals(0x027A, spring.getY());
         assertEquals(0, spring.getSpawn().subtype());
@@ -416,6 +425,29 @@ class TestS3kIczPathFollowPlatformObject {
         platform.appendRenderCommands(new ArrayList<GLCommand>());
 
         verify(renderer).drawFrameIndex(0, 0x1200, 0x0700, false, false, 2);
+    }
+
+    @Test
+    void breakDebrisSpecsMatchChildObjDatAndVelocityIndex() {
+        // byte_8A200 offsets + Obj_VelocityIndex entries 2..7 (Set_IndexedVelocity d0=8),
+        // spawned at the platform's crash position (parent x/y).
+        int[][] specs = IczPathFollowPlatformObjectInstance.breakDebrisSpecsForTesting(0x1200, 0x0700);
+        int[][] expected = {
+                {0,  0x11EC, 0x06F7, -0x200, -0x200},
+                {2,  0x1214, 0x06F4,  0x200, -0x200},
+                {4,  0x1214, 0x0700, -0x300, -0x200},
+                {6,  0x120C, 0x070C,  0x300, -0x200},
+                {8,  0x11F8, 0x0709, -0x200, -0x200},
+                {10, 0x11FC, 0x06FA,  0x000, -0x200},
+        };
+        assertEquals(expected.length, specs.length);
+        for (int i = 0; i < expected.length; i++) {
+            assertEquals(expected[i][0], specs[i][0], "subtype " + i);
+            assertEquals(expected[i][1], specs[i][1], "x " + i);
+            assertEquals(expected[i][2], specs[i][2], "y " + i);
+            assertEquals((short) expected[i][3], (short) specs[i][3], "xVel " + i);
+            assertEquals((short) expected[i][4], (short) specs[i][4], "yVel " + i);
+        }
     }
 
     @Test

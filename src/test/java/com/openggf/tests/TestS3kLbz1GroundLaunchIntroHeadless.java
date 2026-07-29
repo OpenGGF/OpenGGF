@@ -54,6 +54,7 @@ class TestS3kLbz1GroundLaunchIntroHeadless {
                 .build();
         AbstractPlayableSprite sonic = fixture.sprite();
         int startY = sonic.getCentreY() & 0xFFFF;
+        consumeInitialProcessSpritesBeforeTitleCard();
         applyTitleCardHandoff();
 
         assertTrue(hasGroundLaunchIntro(), "LBZ1 should spawn Obj_LevelIntro_PlayerLaunchFromGround.");
@@ -66,7 +67,7 @@ class TestS3kLbz1GroundLaunchIntroHeadless {
         assertEquals(startY, sonic.getCentreY() & 0xFFFF,
                 "Arming the launch controller should not move Sonic before the launch timer expires.");
         assertEquals(0, sonic.getMappingFrame(),
-                "ROM object_control bit 1 should preserve the initialized mapping during the hold.");
+                "ROM object_control bit 1 should preserve the initialized null mapping during the hold.");
 
         for (int frame = 0; frame < 29; frame++) {
             fixture.stepFrame(false, false, false, false, false);
@@ -107,6 +108,7 @@ class TestS3kLbz1GroundLaunchIntroHeadless {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_LBZ, 0)
                 .build();
+        consumeInitialProcessSpritesBeforeTitleCard();
         applyTitleCardHandoff();
 
         assertTrue(hasGroundLaunchIntro(),
@@ -134,6 +136,7 @@ class TestS3kLbz1GroundLaunchIntroHeadless {
                 .build();
         AbstractPlayableSprite sonic = fixture.sprite();
         int startY = sonic.getCentreY() & 0xFFFF;
+        consumeInitialProcessSpritesBeforeTitleCard();
 
         for (int frame = 0; frame < 45; frame++) {
             GameServices.level().updateObjectPositions();
@@ -163,6 +166,7 @@ class TestS3kLbz1GroundLaunchIntroHeadless {
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_LBZ, 0)
                 .build();
         AbstractPlayableSprite sonic = fixture.sprite();
+        consumeInitialProcessSpritesBeforeTitleCard();
         applyTitleCardHandoff();
 
         for (int frame = 0; frame < 30; frame++) {
@@ -201,10 +205,11 @@ class TestS3kLbz1GroundLaunchIntroHeadless {
         tails.setAnimationId(5);
         tails.setMappingFrame(0);
 
+        consumeInitialProcessSpritesBeforeTitleCard();
         applyTitleCardHandoff();
 
         assertEquals(firstFrameOfAnimation(tails, 5), tails.getMappingFrame(),
-                "The hold should publish the established follower's live animation mapping before freezing it.");
+                "The hold should reconstruct and retain the established follower's live animation mapping.");
         fixture.stepIdleFrames(5);
         assertEquals(firstFrameOfAnimation(tails, 5), tails.getMappingFrame(),
                 "ROM object_control bit 1 keeps the sidekick animator from replacing the held mapping.");
@@ -216,6 +221,7 @@ class TestS3kLbz1GroundLaunchIntroHeadless {
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_LBZ, 0)
                 .build();
         AbstractPlayableSprite sonic = fixture.sprite();
+        consumeInitialProcessSpritesBeforeTitleCard();
         applyTitleCardHandoff();
 
         assertFalse(sonic.getSpindashDustController().isSurfaceSplashActive(),
@@ -239,10 +245,12 @@ class TestS3kLbz1GroundLaunchIntroHeadless {
                 .anyMatch("LBZ1GroundLaunchIntro"::equals);
     }
 
+    private void consumeInitialProcessSpritesBeforeTitleCard() {
+        assertTrue(GameServices.level().consumePendingInitialProcessSpritesPass(),
+                "ROM level assembly runs the initial Process_Sprites pass before the title-card handoff");
+    }
+
     private void applyTitleCardHandoff() {
-        // Production consumes the native Load_Sprites/Process_Sprites setup pass
-        // before releasing the title card and arming this controller.
-        GameServices.level().consumePendingInitialObjectSetupPass();
         ((Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider())
                 .applyZonePlayerStateAfterTitleCard();
     }

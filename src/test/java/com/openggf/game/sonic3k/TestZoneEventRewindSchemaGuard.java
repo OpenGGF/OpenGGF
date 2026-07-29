@@ -45,6 +45,8 @@ public class TestZoneEventRewindSchemaGuard {
             "vblankCounterSource",
             // Queue facades/handles are derived from the scalar ordinal codecs
             // after HardwareTimingService restores its session ledger.
+            "mainLevelBlockKosQueue",
+            "mainLevelBlockHandle",
             "mainLevelArtKosQueue",
             "mainLevelArtHandle",
             "battleshipKosQueue",
@@ -52,6 +54,10 @@ public class TestZoneEventRewindSchemaGuard {
             "battleshipObjectArtHandle",
             "fireOverlayKosQueue",
             "fireOverlayKosHandle",
+            "act2TerrainKosQueue",
+            "act2BlockHandle",
+            "act2PrimaryChunkHandle",
+            "act2SecondaryChunkHandle",
             "act2ArtKosQueue",
             "act2PrimaryArtHandle",
             "act2SecondaryArtHandle");
@@ -66,7 +72,13 @@ public class TestZoneEventRewindSchemaGuard {
             "cachedMgzQuakeChunkData",
             "collapseSolids");
     private static final Set<String> MHZ_ALLOWED_TRANSIENT_FIELDS = Set.of();
-    private static final Set<String> ICZ_ALLOWED_TRANSIENT_FIELDS = Set.of("snowboardIntro");
+    private static final Set<String> ICZ_ALLOWED_TRANSIENT_FIELDS = Set.of(
+            "snowboardIntro",
+            "act2TransitionDirectQueue",
+            "act2TransitionChunkHandle",
+            "act2TransitionBlockHandle",
+            "act2TransitionArtQueue",
+            "act2TransitionArtHandle");
 
     /**
      * FIELD names (not getter names) the legacy writeAizState byte layout serialized.
@@ -91,6 +103,8 @@ public class TestZoneEventRewindSchemaGuard {
             "fireTransitionMutationRequested",
             "postFireHazeActive",
             "fireOverlayTilesLoaded",
+            "mainLevelBlockOrdinal",
+            "mainLevelArtOrdinal",
             "act2WaitFireDrawActive",
             "appliedTreeRevealChunkCopiesMask",
             "aiz2ResizeRoutine",
@@ -290,6 +304,12 @@ public class TestZoneEventRewindSchemaGuard {
             "indoorPaletteCyclingActive",
             "bigSnowPileSpawned",
             "act2TransitionRequested",
+            "act2TransitionHandoffId",
+            "act2TransitionDirectPublished",
+            "act2TransitionArtPublished",
+            "act2TransitionChunkOrdinal",
+            "act2TransitionBlockOrdinal",
+            "act2TransitionArtOrdinal",
             "eventRoutine",
             "backgroundRoutine",
             "bigSnowOffset",

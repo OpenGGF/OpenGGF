@@ -222,12 +222,7 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
         if (sprites == null) {
             return;
         }
-        int animationFrame = sprites.getFrameCounter();
-        for (var candidate : sprites.getAllSprites()) {
-            if (candidate instanceof AbstractPlayableSprite playable) {
-                playable.getAnimationManager().update(animationFrame);
-            }
-        }
+        sprites.advancePlayableSlotPrefix();
     }
 
     private void absorbDivergentFields(FrameComparison result, int frameNumber) {

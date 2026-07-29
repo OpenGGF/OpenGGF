@@ -2,9 +2,15 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.RuntimeArtCoordinator;
+import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.game.timing.HardwareWorkKind;
+import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.TestObjectServices;
@@ -13,6 +19,8 @@ import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.TestablePlayableSprite;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
@@ -24,6 +32,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestHCZWaterWallObjectInstance {
+
+    @BeforeEach
+    void setUp() {
+        TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
+    }
+
+    @AfterEach
+    void resetSessionTimingFixture() {
+        SessionManager.clear();
+        TestEnvironment.activeGameplayMode();
+    }
 
     @Test
     void verticalGeyserLockAndReleaseUseFullObjectControlPolicyForPlayerAndSidekick() throws Exception {
@@ -77,8 +96,12 @@ class TestHCZWaterWallObjectInstance {
         sidekick.setForcedAnimationId(Sonic3kAnimationIds.FLOAT2);
         HCZWaterWallObjectInstance waterWall = new HCZWaterWallObjectInstance(
                 new ObjectSpawn(0x0200, 0x0200, 0x3B, 1, 0, false, 0));
-        HardwareTimingService timing = GameServices.hardwareTiming();
         Rom rom = TestEnvironment.currentRom();
+        HardwareTimingService inheritedSessionTiming = GameServices.hardwareTiming();
+        fillKosModuleFifo(inheritedSessionTiming, rom);
+        HardwareTimingService timing = new HardwareTimingService();
+        S3kRuntimeArtCoordinator coordinator =
+                new S3kRuntimeArtCoordinator(timing);
         TestObjectServices services = new TestObjectServices() {
             @Override
             public HardwareTimingService hardwareTiming() {
@@ -88,6 +111,11 @@ class TestHCZWaterWallObjectInstance {
             @Override
             public Rom rom() {
                 return rom;
+            }
+
+            @Override
+            public RuntimeArtCoordinator runtimeArtCoordinator() {
+                return coordinator;
             }
         };
         waterWall.setServices(services.withSidekicks(List.of(sidekick)));
@@ -103,7 +131,7 @@ class TestHCZWaterWallObjectInstance {
         int frame = 1;
         while (timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE) > 0
                 && frame < 10_000) {
-            timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            serviceBoundary(timing, coordinator, HardwareServiceBoundary.PRE_MAIN_LOOP);
             int incompleteBeforeObject = timing.incompleteCount(
                     HardwareWorkKind.KOS_MODULE_QUEUE);
             waterWall.update(frame, player);
@@ -115,7 +143,7 @@ class TestHCZWaterWallObjectInstance {
             assertEquals(incompleteBeforeObject,
                     timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE),
                     "object polling must not publish hardware readiness");
-            timing.service(HardwareServiceBoundary.POST_OBJECTS);
+            serviceBoundary(timing, coordinator, HardwareServiceBoundary.POST_OBJECTS);
             frame++;
         }
 
@@ -124,9 +152,9 @@ class TestHCZWaterWallObjectInstance {
         assertEquals(wallInitialY, waterWall.getY(),
                 "POST_OBJECTS publishes readiness but does not run the object consumer");
 
-        timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        serviceBoundary(timing, coordinator, HardwareServiceBoundary.PRE_MAIN_LOOP);
         waterWall.update(frame, player);
-        timing.service(HardwareServiceBoundary.POST_OBJECTS);
+        serviceBoundary(timing, coordinator, HardwareServiceBoundary.POST_OBJECTS);
 
         assertEquals(playerInitialY - ((pullUpdates + 1) * 8), player.getCentreY(),
                 "loc_302FA falls through into the first loc_30338 rise tick when the queue clears");
@@ -137,6 +165,8 @@ class TestHCZWaterWallObjectInstance {
                 "water-wall object control must supersede the prior tunnel override");
         assertEquals(Sonic3kAnimationIds.BLANK.id(), sidekick.getAnimationId());
         assertEquals(-1, sidekick.getForcedAnimationId());
+        assertEquals(4, inheritedSessionTiming.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE),
+                "the fixture must not consume unrelated work inherited from another test session");
     }
 
     private static void assertFullControl(TestablePlayableSprite player) {
@@ -146,7 +176,7 @@ class TestHCZWaterWallObjectInstance {
     }
 
     private static TestObjectServices timedServices() {
-        HardwareTimingService timing = new HardwareTimingService();
+        HardwareTimingService timing = GameServices.hardwareTiming();
         Rom rom = TestEnvironment.currentRom();
         return new TestObjectServices() {
             @Override
@@ -158,7 +188,34 @@ class TestHCZWaterWallObjectInstance {
             public Rom rom() {
                 return rom;
             }
+
+            @Override
+            public RuntimeArtCoordinator runtimeArtCoordinator() {
+                return GameServices.runtimeArtCoordinator();
+            }
         };
+    }
+
+    private static void fillKosModuleFifo(HardwareTimingService timing, Rom rom) {
+        S3kKosModuleQueue queue = S3kRuntimeArtCoordinator.current().moduleQueue();
+        try {
+            for (int slot = 0; slot < 4; slot++) {
+                queue.queue(
+                        rom,
+                        Sonic3kConstants.ART_KOSM_HCZ_GEYSER_VERT_ADDR,
+                        Sonic3kConstants.ARTTILE_HCZ_GEYSER + slot * 0x20);
+            }
+        } catch (Exception e) {
+            throw new AssertionError("unable to seed the inherited four-entry KosM FIFO", e);
+        }
+    }
+
+    private static void serviceBoundary(
+            HardwareTimingService timing,
+            RuntimeArtCoordinator coordinator,
+            HardwareServiceBoundary boundary) {
+        timing.service(boundary);
+        coordinator.afterTimingService(boundary);
     }
 
     private static void assertNoControl(TestablePlayableSprite player) {
@@ -178,7 +235,7 @@ class TestHCZWaterWallObjectInstance {
 
     private static final class QueryOnlyServices extends TestObjectServices {
         private final ObjectPlayerQuery playerQuery;
-        private final HardwareTimingService timing = new HardwareTimingService();
+        private final HardwareTimingService timing = GameServices.hardwareTiming();
         private final Rom rom = TestEnvironment.currentRom();
 
         QueryOnlyServices(TestablePlayableSprite main, List<TestablePlayableSprite> sidekicks) {
@@ -198,6 +255,11 @@ class TestHCZWaterWallObjectInstance {
         @Override
         public Rom rom() {
             return rom;
+        }
+
+        @Override
+        public RuntimeArtCoordinator runtimeArtCoordinator() {
+            return GameServices.runtimeArtCoordinator();
         }
 
         @Override

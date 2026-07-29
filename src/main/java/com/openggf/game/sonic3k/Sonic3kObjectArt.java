@@ -1094,12 +1094,65 @@ public class Sonic3kObjectArt {
         return new QueuedResultsArt(
                 queue,
                 handles,
-                new int[] {
-                        0,
-                        Sonic3kConstants.VRAM_RESULTS_NUMBERS
-                                - Sonic3kConstants.VRAM_RESULTS_BASE,
-                        charDestVram - Sonic3kConstants.VRAM_RESULTS_BASE
-                });
+                resultsArtDestinations(charDestVram));
+    }
+
+    /**
+     * Reassembles transient results-screen patterns from payloads retained by
+     * already-claimed hardware jobs after rewind.
+     */
+    public static Pattern[] assembleClaimedResultsArt(
+            List<byte[]> payloads, int act) {
+        int charDestVram = act == 0
+                ? Sonic3kConstants.VRAM_RESULTS_CHAR_NAME_ACT1
+                : Sonic3kConstants.VRAM_RESULTS_CHAR_NAME_ACT2;
+        return assembleResultsPatterns(
+                payloads, resultsArtDestinations(charDestVram));
+    }
+
+    private static int[] resultsArtDestinations(int charDestVram) {
+        return new int[] {
+                0,
+                Sonic3kConstants.VRAM_RESULTS_NUMBERS
+                        - Sonic3kConstants.VRAM_RESULTS_BASE,
+                charDestVram - Sonic3kConstants.VRAM_RESULTS_BASE
+        };
+    }
+
+    private static Pattern[] assembleResultsPatterns(
+            List<byte[]> payloads, int[] destinations) {
+        if (payloads.size() != 3 || destinations.length != 3) {
+            throw new IllegalArgumentException(
+                    "results art assembly requires exactly three payloads");
+        }
+        Pattern[] patterns =
+                new Pattern[Sonic3kConstants.VRAM_RESULTS_ARRAY_SIZE];
+        Pattern empty = new Pattern();
+        Arrays.fill(patterns, empty);
+        for (int i = 0; i < payloads.size(); i++) {
+            placePatterns(payloads.get(i), patterns, destinations[i]);
+        }
+        return patterns;
+    }
+
+    private static void placePatterns(
+            byte[] data,
+            Pattern[] patterns,
+            int destination) {
+        int tileCount = data.length / Pattern.PATTERN_SIZE_IN_ROM;
+        for (int tile = 0; tile < tileCount; tile++) {
+            int index = destination + tile;
+            if (index < 0 || index >= patterns.length) {
+                continue;
+            }
+            byte[] tileData = Arrays.copyOfRange(
+                    data,
+                    tile * Pattern.PATTERN_SIZE_IN_ROM,
+                    (tile + 1) * Pattern.PATTERN_SIZE_IN_ROM);
+            Pattern pattern = new Pattern();
+            pattern.fromSegaFormat(tileData);
+            patterns[index] = pattern;
+        }
     }
 
     public static final class QueuedResultsArt {
@@ -1143,35 +1196,11 @@ public class Sonic3kObjectArt {
             if (!isReady()) {
                 throw new IllegalStateException("results KosM art is not ready");
             }
-            Pattern[] patterns =
-                    new Pattern[Sonic3kConstants.VRAM_RESULTS_ARRAY_SIZE];
-            Pattern empty = new Pattern();
-            Arrays.fill(patterns, empty);
-            for (int i = 0; i < handles.size(); i++) {
-                placePatterns(queue.claim(handles.get(i)), patterns, destinations[i]);
-            }
-            return patterns;
+            return assembleResultsPatterns(
+                    handles.stream().map(queue::claim).toList(),
+                    destinations);
         }
 
-        private static void placePatterns(
-                byte[] data,
-                Pattern[] patterns,
-                int destination) {
-            int tileCount = data.length / Pattern.PATTERN_SIZE_IN_ROM;
-            for (int tile = 0; tile < tileCount; tile++) {
-                int index = destination + tile;
-                if (index < 0 || index >= patterns.length) {
-                    continue;
-                }
-                byte[] tileData = Arrays.copyOfRange(
-                        data,
-                        tile * Pattern.PATTERN_SIZE_IN_ROM,
-                        (tile + 1) * Pattern.PATTERN_SIZE_IN_ROM);
-                Pattern pattern = new Pattern();
-                pattern.fromSegaFormat(tileData);
-                patterns[index] = pattern;
-            }
-        }
     }
 
     /**

@@ -66,7 +66,10 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
     private static final int HORIZONTAL_CYCLE_COUNT = 4;    // ROM: move.b #4,$39(a0)
     private static final int INVULN_TIME = 0x20;
     private static final int FATAL_HIT_DEFEAT_DELAY = 13;
-    private static final int RESULTS_WAIT_DURATION_ADJUSTMENT = 2;
+    // Obj_LevelResultsWait2 owns its literal #90 counter. Entries displaced
+    // by the delayed boss handoff are already carried into
+    // Obj_EndSignControlWait and must not be repeated by the results owner.
+    private static final int RESULTS_WAIT_DURATION_ADJUSTMENT = 0;
     private static final int RESULTS_POST_CONTROL_HANDOFF_DELAY_ENTRIES = 13;
     private static final int DEFEAT_WAIT_FADE_TIMER = 0x3F;
     private static final int FLAG_PARENT_BITS = 0x38;
@@ -245,6 +248,9 @@ public class AizMinibossInstance extends AbstractBossInstance implements RewindR
         state.invulnerable = false;
         state.invulnerabilityTimer = 0;
         loadBossPalette(); // Restore clean boss palette colors on line 1
+
+        // ROM loc_68FE0: jmp (BossDefeated_StopTimer).l (sonic3k.asm:137858).
+        stopLevelTimerOnBossDefeat();
 
         // ROM: loc_46ED4 creates Child6_CreateBossExplosion (sub_52850, subtype 0).
         // CreateBossExp00: timer=$20 (33 explosions), xRange=$20, yRange=$20.

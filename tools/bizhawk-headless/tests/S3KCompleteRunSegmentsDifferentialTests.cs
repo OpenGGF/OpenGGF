@@ -28,8 +28,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
     /// Comparison strength, per fixture:
     /// - physics.csv and aux_state.jsonl by raw byte length AND sha256,
     ///   with ZERO normalization.
-    /// - metadata.json line for line at exact v6.37/schema-7/hardware-schema
-    ///   identity; recording_date values may differ.
+    /// - metadata.json line for line at exact
+    ///   v6.38/schema-7/hardware-schema-2 identity; recording_date values
+    ///   may differ. Later unapproved schema-one fixtures therefore remain
+    ///   an explicit publication-boundary failure.
     ///   No other key or line may move, and the absence of a <c>run_id</c>
     ///   key is asserted explicitly.
     ///
@@ -77,15 +79,15 @@ namespace OpenGGF.BizHawk.Headless.Tests
             "^  \"recording_date\": \"[0-9]{4}-[0-9]{2}-[0-9]{2}\",$");
 
         /// <summary>
-        /// Exact v6.37 fixture/current literals. No schema or version
+        /// Exact v6.38 fixture/current literals. No schema or version
         /// normalization is permitted.
         /// </summary>
         private const string CurrentLuaScriptVersionLine =
-            "  \"lua_script_version\": \"6.37-s3k-completerun\",";
+            "  \"lua_script_version\": \"6.38-s3k-completerun\",";
         private const string CurrentTraceSchemaLine =
             "  \"trace_schema\": 7,";
         private const string HardwareTimingSchemaLine =
-            "  \"hardware_timing_schema\": 1,\n";
+            "  \"hardware_timing_schema\": 2,\n";
 
         /// <summary>
         /// Identity (A) carries no run_id key at all. Identities (B) and
@@ -400,7 +402,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         }
 
         /// <summary>
-        /// Requires exact v6.37/schema-7/hardware-schema line equality apart
+        /// Requires exact v6.38/schema-7/hardware-schema-2 equality apart
         /// from recording_date. Both sides stay LF-only and carry no run_id.
         /// </summary>
         private static void AssertMetadataEqualExceptRecordingDate(

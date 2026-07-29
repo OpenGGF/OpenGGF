@@ -5,6 +5,7 @@ import com.openggf.game.GameModule;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.NoOpBonusStageProvider;
+import com.openggf.game.RuntimeArtCoordinator;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.session.GameplayModeContext;
@@ -26,7 +27,8 @@ public record LevelFrameContext(GameModule gameModule,
                                 PaletteOwnershipRegistry paletteOwnershipRegistry,
                                 KosinskiModuleQueue kosinskiModuleQueue,
                                 HardwareTimingService hardwareTiming,
-                                HardwareTimingBoundaryObserver hardwareTimingBoundaryObserver) {
+                                HardwareTimingBoundaryObserver hardwareTimingBoundaryObserver,
+                                RuntimeArtCoordinator runtimeArtCoordinator) {
 
     public LevelFrameContext {
         Objects.requireNonNull(gameModule, "gameModule");
@@ -37,6 +39,26 @@ public record LevelFrameContext(GameModule gameModule,
         hardwareTimingBoundaryObserver = hardwareTimingBoundaryObserver != null
                 ? hardwareTimingBoundaryObserver
                 : HardwareTimingBoundaryObserver.NO_OP;
+        runtimeArtCoordinator = runtimeArtCoordinator != null
+                ? runtimeArtCoordinator
+                : RuntimeArtCoordinator.NONE;
+    }
+
+    public LevelFrameContext(
+            GameModule gameModule,
+            GameRules gameRules,
+            LevelEventProvider levelEventProvider,
+            BonusStageProvider bonusStageProvider,
+            SpriteManager spriteManager,
+            GameStateManager gameStateManager,
+            TimerManager timerManager,
+            PaletteOwnershipRegistry paletteOwnershipRegistry,
+            KosinskiModuleQueue kosinskiModuleQueue,
+            HardwareTimingService hardwareTiming,
+            HardwareTimingBoundaryObserver hardwareTimingBoundaryObserver) {
+        this(gameModule, gameRules, levelEventProvider, bonusStageProvider, spriteManager,
+                gameStateManager, timerManager, paletteOwnershipRegistry, kosinskiModuleQueue,
+                hardwareTiming, hardwareTimingBoundaryObserver, RuntimeArtCoordinator.NONE);
     }
 
     public static LevelFrameContext from(GameplayModeContext context) {
@@ -53,6 +75,7 @@ public record LevelFrameContext(GameModule gameModule,
                 context.getPaletteOwnershipRegistry(),
                 context.getKosinskiModuleQueue(),
                 context.hardwareTiming(),
-                context.hardwareTimingBoundaryObserver());
+                context.hardwareTimingBoundaryObserver(),
+                context.runtimeArtCoordinator());
     }
 }

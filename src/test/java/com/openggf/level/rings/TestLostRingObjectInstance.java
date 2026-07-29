@@ -594,6 +594,8 @@ class TestLostRingObjectInstance {
         assertEquals(3, rings.size());
         assertEquals(23, rings.get(0).getSlotIndex(),
                 "S2 HurtCharacter preallocates the first Obj37 owner slot before Obj37_Init");
+        assertFalse(rings.get(0).usesCurrentTouchResponseState(),
+                "S2's plain object scan keeps the ordinary pre-update touch snapshot");
         assertTrue(rings.get(1).getSlotIndex() > rings.get(0).getSlotIndex(),
                 "with no lower holes, subsequent S2 lost rings occupy later slots");
     }
@@ -770,6 +772,29 @@ class TestLostRingObjectInstance {
         assertEquals(baselineYSub + baselineYVel, stepped.getYSubpixelForTest());
         assertEquals(baselineYVel + 0x18, stepped.getYVelForTest(),
                 "Obj37_Main applies gravity after the same-frame position update");
+        assertTrue(stepped.usesCurrentTouchResponseState(),
+                "a deferred Obj37 step publishes a live post-movement position to the next touch pass");
+    }
+
+    @Test
+    void forcedDeferredOwnerClearRetainsPreviousPublishedTouchPosition() throws Exception {
+        LevelManager levelManager = GameServices.level();
+        ObjectManager objectManager = new ObjectManager(List.of(),
+                new NoOpObjectRegistry(ObjectSlotLayout.SONIC_3K), 0, null, null);
+        setField(levelManager, "objectManager", objectManager);
+
+        RingManager ringManager = buildRingManagerWithLevelManager(levelManager);
+        setField(levelManager, "ringManager", ringManager);
+        SpawnTestPlayableSprite player = new SpawnTestPlayableSprite((short) 0x100, (short) 0x100);
+
+        ringManager.spawnLostRingsWithInitialObjectStep(
+                player, 1, 0, player.getCentreX(), player.getCentreY(),
+                new int[0], false, true);
+
+        LostRingObjectInstance ring =
+                objectManager.activeObjectsOfType(LostRingObjectInstance.class).get(0);
+        assertFalse(ring.usesCurrentTouchResponseState(),
+                "a behind-cursor deferred owner retains the prior published-position touch phase");
     }
 
     @Test

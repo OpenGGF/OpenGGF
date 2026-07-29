@@ -412,7 +412,9 @@ public class SidekickCpuController {
 
         if (controller2SignedLocked) {
             carryController().setParentagePending(false);
-            if (sidekick.isObjectControlled() && !sidekick.isObjectControlAllowsCpu()) {
+            if (nativeEndingPosePending
+                    && sidekick.isObjectControlled()
+                    && !sidekick.isObjectControlAllowsCpu()) {
                 mirrorRawController2LogicalForEndingPose();
             }
             beginNormalStepDiagnostics("ctrl2_signed_lock_skip");
@@ -2710,9 +2712,7 @@ public class SidekickCpuController {
                 // gameplay counter is held. Sonic_RecordPos runs immediately
                 // before the Player_2 CPU slot on each such dispatch, so its
                 // next-free ring index supplies the same low-six-bit phase
-                // observed by loc_13E7C/loc_13E9C. The engine records the leader
-                // after the sidekick controller, hence the two-slot projection
-                // from its latest-written entry.
+                // observed by loc_13E7C/loc_13E9C.
                 autoJumpFrameCounter = projectRetainedResultsSpriteCadence(
                         autoJumpFrameCounter, effectiveLeader);
             }
@@ -3287,16 +3287,25 @@ public class SidekickCpuController {
 
     private int projectRetainedResultsSpriteCadence(
             int monotonicCounter, AbstractPlayableSprite effectiveLeader) {
-        if (!titleCardOwnsRetainedResultsHeldLevelCounter() || effectiveLeader == null) {
+        GameModule module = sidekick.currentGameModule();
+        var titleCardProvider = module != null ? module.getTitleCardProvider() : null;
+        if (titleCardProvider == null) {
             return monotonicCounter;
         }
-        int nativeNextFreeHistorySlot =
-                (effectiveLeader.getHistorySlotIndex(0) + 2) & 0x3F;
+        if (!titleCardProvider.projectsRetainedResultsSpriteCadence()
+                || effectiveLeader == null) {
+            return monotonicCounter;
+        }
+        int nativeNextFreeHistorySlot = effectiveLeader.getHistorySlotIndex(0);
+        return projectCounterToLowSixBitPhase(monotonicCounter, nativeNextFreeHistorySlot);
+    }
+
+    private int projectCounterToLowSixBitPhase(int monotonicCounter, int phase) {
         // Project the monotonic engine counter onto the nearest value with the
         // native low-six-bit sprite-dispatch phase. This preserves later cycles
         // for one-shot guards and carries across byte boundaries ($40FF plus
         // phase 0 becomes $4100, rather than $40C0).
-        int phaseDelta = (nativeNextFreeHistorySlot - (monotonicCounter & 0x3F)) & 0x3F;
+        int phaseDelta = ((phase & 0x3F) - (monotonicCounter & 0x3F)) & 0x3F;
         if (phaseDelta > 0x1F) {
             phaseDelta -= 0x40;
         }

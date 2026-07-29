@@ -157,6 +157,7 @@ class TestObjectManagerInitialS3kSetupPass {
                         .withSolidExecutionRegistry(new RecordingSolidRegistry()));
         registry.manager = manager;
         manager.enableExecThenLoadPlacement();
+        manager.reserveAllButNFreeSlots(1);
         ProbeObject fixed = new ProbeObject(
                 new ObjectSpawn(0, 0, 0, 0, 0, false, 0), false);
         fixed.managerSupplier = () -> manager;
@@ -171,9 +172,12 @@ class TestObjectManagerInitialS3kSetupPass {
             manager.finishInitialProcessSprites(scope);
         }
 
-        assertEquals(List.of(registry.instances.get(dynamicSpawn), fixed),
+        ProbeObject dynamic = registry.instances.get(dynamicSpawn);
+        assertEquals(93, dynamic.getSlotIndex(),
+                "the final ROM-probed slot must participate in initial dynamic dispatch");
+        assertEquals(List.of(dynamic, fixed),
                 manager.getTouchResponseObjects(),
-                "the captured native list must retain dynamic 4-92 before fixed 93-109");
+                "the captured native list must retain dynamic 4-93 before fixed 94-109");
     }
 
     @Test

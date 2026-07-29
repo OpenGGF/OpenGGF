@@ -38,6 +38,8 @@ class TestS3kCnzEndBossHeadless {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 1)
                 .build();
+        assertTrue(GameServices.level().consumePendingInitialProcessSpritesPass(),
+                "consume the native load-time Process_Sprites pass before injecting a later boss object");
         fixture.camera().setX((short) 0x4660);
         fixture.camera().setY((short) 0x0240);
         fixture.camera().setMinX((short) 0x4660);

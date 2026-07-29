@@ -1823,7 +1823,6 @@ not the 3 a stale build reports; distrust any stale-build measurement in this tr
 
 STILL OPEN at seg2: the f192 `y` 1-pixel divergence and the seg2 exit boundary,
 unchanged by this work and untouched by the recapture.
-
 ### 2026-07-23 -- CNZ fresh-start lifecycle advances from f0 to f185
 
 The focused CNZ level-select replay previously failed at frame 0 because
@@ -2175,58 +2174,11 @@ whether the ROM's DJF is genuinely 1/3 there (landing-DJF root) or 0 (monitor-ro
 root) needs a BizHawk `double_jump_flag` read across f186-231 -- pending. The f186
 landing reset (radii/DJF) is otherwise already correct.
 
-RECORDER DEFECT (fixed in ONE of the two S3K recorders): `gameplay_frame_counter`
-(CSV col 6) + aux `level_frame_counter` were 0 across all segments (dead since the
-recorder's first commit -- ADDR_FRAMECOUNT sampled 0xFE08 = Debug_placement_mode
-instead of 0xFE04). Fixed on develop 6564667eb (0xFE08->0xFE04, matching the S1/S2
-recorders); the re-merge carries it. Existing recordings cannot be healed without
-recapture.
-
-> **SCOPE CORRECTION (2026-07-25, superseded 2026-07-26 -- see below).** The
-> sentence above overstates `6564667eb`, which changed exactly one file,
-> `s3k_complete_run_recorder.lua`. Its sibling `s3k_trace_recorder.lua` -- the
-> S3K **standard** recorder -- kept `ADDR_FRAMECOUNT = 0xFE08` and read it at
-> 10+ sites feeding both the CSV counter column and every aux `vfc` field, so
-> all three canonical standard fixtures (`aiz1_to_hcz_fullrun`, `cnz`, `mgz`)
-> carried a dead-zero counter column and the AIZ->HCZ / CNZ / MGZ replay
-> frontiers -- the primary release slice -- were being validated against a
-> constant the ROM never produces. Root cause of the miss: the six recorders
-> each carry their own copy of these constants, so a fix in one does not
-> propagate -- the duplication `tools/bizhawk/SHARED_MODULE_HANDOFF.md`
-> catalogues and `fd3a74291` only partially addressed (leaf helpers were
-> extracted; per-recorder ROM address constants deliberately were not).
->
-> **STATUS UPDATE (2026-07-26). The standard recorder IS fixed.** `95c36166c`
-> moved `s3k_trace_recorder.lua:381` to `ADDR_FRAMECOUNT = 0xFE04`
-> (`Level_frame_counter`, `sonic3k.constants.asm:782`) and bumped
-> `LUA_SCRIPT_VERSION` 6.30-s3k -> 6.31-s3k; `3eebb13bf` regenerated the three
-> canonical standard fixtures with it (user-approved, offsets and row counts
-> unchanged, everything outside the counter byte-identical); `ba882f967` flipped
-> the native C# port off the dead read, deleted the recorder-identity fork, and
-> retightened the differential gate. Both implementations now read
-> `Level_frame_counter` for S3K standard captures. What that recapture actually
-> cost on the release slice is measured in the 2026-07-26 entry at the top of
-> this file -- all three first-divergence frames held.
->
-> **REMAINING OPEN INSTANCE OF THE SAME CLASS: `ADDR_VBLA_WORD = 0xFE12`.**
-> Both S3K recorders (`s3k_trace_recorder.lua:389` and its complete-run sibling)
-> sample `0xFE12` for the `vblank_counter` column. `0xFE12` is `Life_count`
-> (`docs/skdisasm/sonic3k.constants.asm:794`), not a VBlank counter. The value
-> the column is supposed to carry is the low word of `V_int_run_count`, a
-> `ds.l 1` at `0xFE0C` (`sonic3k.constants.asm:790`, incremented by
-> `addq.l #1,(V_int_run_count).w` at `sonic3k.asm:543`), so the correct address
-> is **`0xFE0E`** -- exactly what the S1/S2 recorders already use.
-> Evidence from the freshly regenerated fixtures: `vblank_counter` takes 3, 4
-> and 2 distinct values across the *whole* of `aiz1_to_hcz_fullrun` (20,798
-> rows), `cnz` (42,253) and `mgz` (35,912) respectively, and every value has the
-> form `0xNN00` -- the life count in the high byte and the adjacent unused byte
-> at `0xFE13` in the low byte. It steps only when the player gains a life. This
-> matters because `TraceExecutionModel.deriveSonic3kPhase` and four
-> `TraceReplayBootstrap` row classifiers consume `vblankCounter()` as a lag/
-> frozen-frame discriminator; with a constant column those tests are vacuous in
-> exactly the way `gameplay_frame_counter` was. Fixing it is queued as its own
-> change so its frontier movement stays attributable, the same discipline the
-> frame-counter fix followed.
+RECORDER DEFECT (fixed): `gameplay_frame_counter` (CSV col 6) + aux
+`level_frame_counter` were 0 across all segments (dead since the recorder's first
+commit -- ADDR_FRAMECOUNT sampled 0xFE08 = Debug_placement_mode instead of 0xFE04).
+Fixed on develop 6564667eb (0xFE08->0xFE04, matching the S1/S2 recorders); the
+re-merge carries it. Existing recordings cannot be healed without recapture.
 
 ### 2026-07-21 -- S3K mega-run chain: Option B return-attach + seg2 (aiz_2) blocker classified as landing-fidelity, NOT exit-hold
 
@@ -33549,7 +33501,7 @@ Result:
 ## 2026-06-12 - Performance-optimization final acceptance sweep (Task 13)
 
 - Scope: closing acceptance sweep for the performance-optimization plan
-  (`docs/architecture/plans/2026-06-11-performance-optimization.md`), run at
+  (`docs/superpowers/plans/2026-06-11-performance-optimization.md`), run at
   the end of the branch after all 12 implementation tasks plus the final
   guard fixes (LevelManager block-grid extraction, lifecycle-fixture test
   setups). Compared against the 2026-06-11 pre-work baseline below.
@@ -33575,7 +33527,7 @@ Result:
 ## 2026-06-11 - Performance-optimization pre-work full sweep baseline
 
 - Scope: Task 0 of the performance-optimization plan
-  (`docs/architecture/plans/2026-06-11-performance-optimization.md`). Full
+  (`docs/superpowers/plans/2026-06-11-performance-optimization.md`). Full
   `*TraceReplay` sweep recorded as the pre-work frontier; no engine changes in
   this pass. Later perf phases compare against this list -- only a trace that
   passes here and fails after a phase is a perf regression.
@@ -33717,7 +33669,7 @@ Result:
   - Surefire summary before the fork failure: 89 tests run, 57 failures, 1
     error, 0 skipped.
   - Full parsed trace-class table is recorded in
-    `docs/architecture/validation/performance/2026-06-12-trace-baseline.md`.
+    `docs/performance/2026-06-12-trace-baseline.md`.
 - Release state: this is a partial-but-useful performance baseline, not a clean
   all-trace certification. The active S3K release frontiers remain HCZ frame
   9482 main-player `air`, ICZ frame 3323 main-player `rings`, MGZ complete-run
@@ -37589,7 +37541,7 @@ cnz1 carries an accepted documented regression (3906->3831) pending the ground-c
   - Unit: `TestSpeedShoesTimer`, `TestPhysicsProfile`,
     `TestHybridPhysicsFeatureSet` PASS.
 - Full analysis in
-  `docs/architecture/designs/2026-06-01-s3k-speed-shoes-byte-timer-design.md`.
+  `docs/superpowers/specs/2026-06-01-s3k-speed-shoes-byte-timer-design.md`.
 
 ## 2026-06-01 - S3K speed-shoes diagnosis: per-frame model is pickup-relative; byte timer blocked on frame-counter phase
 
@@ -37614,14 +37566,14 @@ cnz1 carries an accepted documented regression (3906->3831) pending the ground-c
 - Conclusion: byte timer remains blocked on frame-counter phase fidelity at the
   read point (not granularity). Diagnostic logging reverted; committed per-frame
   model retained (CNZ stays f17276). Full analysis + refined next steps in
-  `docs/architecture/designs/2026-06-01-s3k-speed-shoes-byte-timer-design.md`.
+  `docs/superpowers/specs/2026-06-01-s3k-speed-shoes-byte-timer-design.md`.
 
 ## 2026-06-01 - S3K speed-shoes byte-timer (every-8th-frame) attempt: regresses CNZ, reverted
 
 - Branch: `feature/ai-s2-mtz-parity`
 - Worktree: `.worktrees/feature-ai-s2-mtz-parity`
 - Implemented the design in
-  `docs/architecture/designs/2026-06-01-s3k-speed-shoes-byte-timer-design.md`:
+  `docs/superpowers/specs/2026-06-01-s3k-speed-shoes-byte-timer-design.md`:
   `PhysicsFeatureSet.speedShoesTimerDecimation` (S1/S2 `1`, S3K `8`),
   `SpeedShoesTimer` duration `ROM_DURATION_FRAMES/decimation` (150 for S3K) with
   the decrement gated on `(frameCounter + 1) & (decimation-1) == 0`. `ALIGN=1`
@@ -41240,7 +41192,7 @@ the override in the engine today:
 
 These are candidates for follow-up iters when their zone's trace frontier
 points at sidekick missed-landing or missed-side-collision behaviour. Not
-applied here per `docs/agent-workflow/prompts/trace-frontier-advancement.md` rule 7
+applied here per `docs/prompts/trace-frontier-advancement.md` rule 7
 (minimum-viable-change).
 
 ### MCZ2 frontier (f1079) -- still blocked, not advanced this iter
@@ -51768,6 +51720,314 @@ standalone CNZ remains at f0 in both scopes.
 - Validation: the focused complete-run replay reports zero physics or animation
   divergences through frame 25254 and the frozen transition tail.
 
+## 2026-07-22 - LBZ ground-launch animation ownership
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 0 to frame
+  1659.** Total release-blocking errors fell from 9312 to 9310; the first
+  remaining divergence is Sonic's mapping frame while running at frame 1659.
+- Root: `Obj_LevelIntro_PlayerLaunchFromGround` writes `object_control=$03`
+  during its 30-frame buried hold. Bit 1 bypasses `Animate_Sonic` and
+  `Animate_Tails`, so the engine must preserve the existing mapping even while
+  the raw animation byte changes. At launch, `sub_39AB4` writes Spring and
+  changes control to `$01`; the spring mapping is therefore published by the
+  next player-slot dispatch rather than eagerly by the later object slot.
+- Fix: the launch controller now owns mapping frames only while native control
+  bit 1 is set, releases that ownership at the `$03` to `$01` transition, and
+  initializes CPU Tails' carried mapping from its live animation script when a
+  seamless ICZ handoff has no predecessor engine tick to publish it. Focused
+  headless coverage checks the complete hold, launch-frame deferral, following
+  player dispatch, and established sidekick mapping.
+- Validation: `TestS3kLbz1GroundLaunchIntroHeadless` passes all six cases and
+  `TestS3kLbzCompleteRunTraceReplay` reaches frame 1659 in both-group mode. The
+  complete `*TraceReplay#replayMatchesTrace` sweep used the discovered S1, S2,
+  and locked-on S3K ROMs: 48 routes passed, 16 retained their documented red
+  frontiers, and two unsupported entries skipped. The known red routes include
+  S2 CNZ2 f1166, CPZ2 f1601, DEZ f0, MCZ2 f5445, OOZ1 f10220, SCZ f0, and WFZ
+  f0; S3K's existing AIZ input-alignment failure plus AIZ complete-run f9376,
+  CNZ standalone f0, CNZ complete-run f3035, MGZ standalone f5164, MGZ
+  complete-run f5550, MHZ combined-animation f218, and HCZ f29037. No
+  non-LBZ frontier moved.
+
+## 2026-07-22 - LBZ rolling-drum player-slot animation phase
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 1659 to
+  frame 2270.** Total release-blocking errors fell from 9310 to 9292; all
+  opening rolling-drum animation differences are gone and the next divergence
+  is CPU Tails' X position.
+- Root: Obj31 captures Sonic after his animation slot. Its `move.w #1,anim`
+  and negative `flip_type` prepare the following `Anim_Tumble` dispatch but do
+  not retroactively replace the capture row's rolling mapping. During an active
+  ride, Obj31 advances `flip_angle` after Animate and likewise does not publish
+  a mapping from that newer angle. The engine did both object-phase writes, and
+  its shared walk/run dispatcher also required non-zero `flip_angle` even
+  though native first tests signed `flip_type`.
+- Fix: rolling drums retain the earlier player-slot mapping and render flags on
+  capture and active-ride passes. The shared animator now enters tumble for
+  negative `flip_type` at angle zero and applies the native reverse tumble
+  transform for right-facing players. This is driven by the live flip state,
+  with no route, zone, or frame exception.
+- Validation: 19 rolling-drum tests and 37 shared playable-animation tests pass.
+  The complete `*TraceReplay#replayMatchesTrace` sweep again reports 48 passed,
+  the same 16 documented red routes, and two skips. Every non-LBZ frontier and
+  error total is unchanged, including S3K MHZ's early animation frontier, so
+  the shared animator correction introduces no S3K, S1, or S2 regression.
+
+## 2026-07-22 - LBZ smashing-pillar squash-edge push
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 2270 to
+  frame 2816.** Total release-blocking errors fell from 9292 to 9033; the next
+  divergence is Sonic's Y subpixel word.
+- Root: the descending Obj20 pillar overlapped grounded CPU Tails from below
+  with zero vertical velocity. Native `SolidObjectFull` routes the shallow
+  underside through `loc_1E126`; because `abs(d0)<$10`, it rejoins the ordinary
+  `loc_1E042` side tail and sets `Status_Push` even though Tails' X velocity
+  points away. The engine classified the contact but left Push clear, making
+  the following CPU slot reverse input and lose one pixel.
+- Fix: the shared MGZ/LBZ pillar opts into the existing grounded squash-edge
+  push result based on its live contact geometry. No trace state, route name,
+  zone id, or frame number participates in the behavior.
+- Validation: focused pillar coverage passes and LBZ reaches frame 2816. The
+  complete `*TraceReplay#replayMatchesTrace` sweep reports 48 passed, the same
+  16 documented red non-LBZ routes, and two skips. Both MGZ frontiers and error
+  totals remain exactly f5164/8072 and f5550/7898; every other S3K, S1, and S2
+  frontier is also unchanged.
+
+## 2026-07-22 - LBZ automatic-tunnel native exit and landing
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 2816 to
+  frame 2997.** The corrected route reshapes the remaining cascade from 9033
+  to 9748 errors; the next divergence is Sonic ground speed `$0116` versus
+  `$000C` as he leaves a sloped surface.
+- Root: Obj24 writes only the 16-bit `x_pos`/`y_pos` words on capture and at
+  each waypoint, and `move.b #2,anim` does not set `Status_Roll`. At the final
+  waypoint, `loc_2970A` falls through to `loc_29768`, applying the retained
+  subtype-bit-6 exit velocity on the same dispatch. The engine cleared both
+  subpixel words, synthesized rolling status, and returned before that final
+  movement. Later, S3K's angled-ceiling landing reached
+  `Player_TouchFloor_Check_Spindash`, whose explicit Walk write was incorrectly
+  disabled by the S3K animation rules.
+- Fix: automatic-tunnel native word writes now use `NativePositionOps`, capture
+  leaves rolling status untouched, and the final-waypoint transition performs
+  its fall-through movement. S3K's game-wide angled-landing animation rule now
+  publishes Walk, matching the live landing state rather than any LBZ-specific
+  condition.
+- Validation: focused automatic-tunnel, collision, and game-rule tests pass,
+  and the LBZ replay reaches frame 2997. The complete
+  `*TraceReplay#replayMatchesTrace` sweep reports 48 passed, the same 16
+  documented red routes, and two skips. All non-LBZ S3K, S1, and S2 frontiers
+  and error totals remain unchanged.
+
+## 2026-07-22 - LBZ tube-elevator entry and bob phase
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 2997 to
+  frame 3039.** Total release-blocking errors fell from 9748 to 6994; the next
+  divergence is CPU Tails' X speed (`$0018` expected versus `$0030` actual).
+- Root: Obj29 uses `SolidObjectFull_Offset` while open, with `d2=$08` as both
+  its surface distance and collision half-height and `d3=$20` as the anchor Y
+  offset. It remains a full-solid routine. Partner fast-capture additionally
+  requires this object's standing bit, and `loc_29EE2` samples the current bob
+  phase before incrementing it while the later routines increment first. The
+  shared representation had conflated the two vertical arguments, treated the
+  opening as top-only, captured an airborne partner from P1 phase alone, and
+  advanced the start-spin bob before sampling it.
+- Fix: the tube elevator now represents the native offset solid parameters,
+  preserves its captured player's object-managed standing state, gates partner
+  fast-capture on object-specific support, stores the ROM's `$B0-$CF` bob-phase
+  skip, and uses the distinct start-spin sample cadence. All behavior follows
+  live object/player state with no route, zone, or frame exception.
+- Validation: six focused tube-elevator cases pass and the LBZ replay reaches
+  frame 3039. The complete `*TraceReplay#replayMatchesTrace` sweep reports 48
+  passed routes, the same 16 documented red routes, and two skips. All non-LBZ
+  S3K, S1, and S2 frontiers and error totals remain unchanged.
+
+## 2026-07-22 - LBZ tube-elevator traversal and release
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 3039 to
+  frame 3647.** Total release-blocking errors fell from 6994 to 6664; the next
+  divergence is a missed ring (`1` expected versus `0` actual).
+- Root: Obj29's `object_control=$83` does not also write the separate
+  `Ctrl_1_locked` byte. `AutoTunnel_GetPath` temporarily publishes its first
+  waypoint before the transition tail restores `y_pos` from the saved bob
+  anchor, and its subsequent `move.w` position writes retain both subpixel
+  words. Finally, object-control bit 1 suppresses the next player animation
+  dispatch immediately after capture even though Obj29 publishes its first
+  tube mapping only on the following object pass. The engine conflated the
+  two control bytes, replaced the saved bob anchor, cleared subpixels on word
+  writes, and allowed an extra animation advance before tube mapping began.
+- Fix: the tube elevator now leaves the independent control-lock byte alone,
+  keeps its saved bob anchor through path setup, preserves native subpixel
+  words for path and bob writes, and enables object-owned mapping control at
+  capture while retaining the native previous-animation state and script
+  timer. The behavior is driven entirely by native object/player state.
+- Validation: the focused capture, transition, and subpixel cases pass. The
+  complete `*TraceReplay#replayMatchesTrace` sweep reports 48 passed routes,
+  the same 16 documented red routes, and two skips. Every non-LBZ S3K, S1,
+  and S2 frontier and error total remains unchanged.
+
+## 2026-07-22 - S3K delayed lost-ring publication phase
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 3647 to
+  frame 3804.** Total release-blocking errors fell from 6664 to 6661; the next
+  divergence is Sonic's status byte (`$09` expected versus `$08` actual).
+- Root: old S3K trace fixtures did not retain the low byte of the free-running
+  `V_int_run_count`, and the replay therefore started LBZ's eight-frame Obj37
+  floor-probe cadence on the wrong phase. After restoring that recorded phase,
+  the ordinary post-player spill still consumed its same-pass `Obj37_Main`
+  movement but touch response read the older pre-update coordinate. A distinct
+  forced behind-cursor owner (used by ICZ's invisible hurt path) must retain
+  that older published coordinate instead.
+- Fix: LBZ metadata records counter phase 6. Ordinary delayed Obj37 rings mark
+  their live position as already post-movement for the following previous-list
+  touch pass, while forced deferred-owner spills retain the established prior
+  position. This follows the native allocation path and collision-list pointer
+  state; no zone, route, or frame condition participates in engine behavior.
+- Validation: 33 lost-ring physics tests, 10 lost-ring touch-order tests, and
+  the green ICZ complete run pass. The full
+  `*TraceReplay#replayMatchesTrace` sweep reports the same 16 red routes with
+  no newly red route or earlier frontier across S1, S2, or S3K. CNZ's complete
+  run also advances from frame 3035 to frame 14658 through the shared Obj37
+  correction; all other non-LBZ frontier/error pairs remain unchanged.
+
+## 2026-07-22 - LBZ cup-elevator visual twist facing
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 3804 to
+  frame 3969.** Total release-blocking errors fell from 6661 to 6652; the next
+  divergence is Sonic X (`$11F5` expected versus `$11F9` actual).
+- Root: the shared `loc_32610` twist-frame routine masks and replaces only
+  `render_flags` bits 0-1. The LBZ cup elevator additionally copied that visual
+  flip into the player's independent `Status_Facing` bit, losing the direction
+  Sonic held when Obj18 captured him.
+- Fix: cup-owned twist mappings now update render flips without mutating
+  gameplay direction, matching the same native state separation already used
+  by the CNZ cylinder implementation.
+- Validation: all 13 focused cup-elevator tests pass and the LBZ replay reaches
+  frame 3969. The complete `*TraceReplay#replayMatchesTrace` sweep reports 61
+  tests, 45 green and the same 16 documented red routes. Every non-LBZ S3K,
+  S1, and S2 frontier and error total remains unchanged.
+
+## 2026-07-22 - S3K spike positive object-control contact
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 3969 to
+  frame 4057.** Total release-blocking errors fell from 6652 to 6649; the next
+  divergence is CPU Tails' X/ground speed (`$0085` expected versus `$006D`
+  actual).
+- Root: after the LBZ cup writes Sonic's position, a later Obj08 spike calls
+  `SolidObjectFull` and produces a one-frame side separation and push status.
+  Native `SolidObject_cont` rejects only signed/bit-7 `object_control`; the
+  engine incorrectly suppressed the spike for the cup's positive `$03` state.
+- Fix: S3K spikes opt into contacts during positive object control and retain
+  the helper's native bit-7 rejection for new contacts. The behavior follows
+  the shared solid routine's control byte, independent of zone or route.
+- Validation: all seven focused S3K spike tests pass and the LBZ replay reaches
+  frame 4057. The complete `*TraceReplay#replayMatchesTrace` sweep reports 61
+  tests, 45 green and the same 16 documented red routes. Every non-LBZ S3K,
+  S1, and S2 frontier and error total remains unchanged.
+
+## 2026-07-22 - LBZ cup logical-input history
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 4057 to
+  frame 4157.** Total release-blocking errors fell from 6649 to 6594; the next
+  divergence is Sonic Y (`$0518` expected versus `$0513` actual).
+- Root: Obj18 writes `object_control=$03` while it owns the player but never
+  writes the independent `Ctrl_1_locked` byte. The engine conflated those two
+  controls, latching a zero `Ctrl_1_logical` word and recording that stale word
+  into `Stat_table`; CPU Tails consequently missed Sonic's delayed RIGHT input
+  sixteen frames later.
+- Fix: cup capture, hold, release, and fling paths no longer set or clear the
+  independent control-lock state. Object control still suppresses player
+  movement and animation exactly as before, while logical pad history remains
+  live for the follower CPU.
+- Validation: all 13 focused cup-elevator tests pass and the LBZ replay reaches
+  frame 4157. The complete `*TraceReplay#replayMatchesTrace` sweep reports 61
+  tests, 45 green and the same 16 documented red routes. Every non-LBZ S3K,
+  S1, and S2 frontier and error total remains unchanged.
+
+## 2026-07-22 - LBZ cup jump-release contact cooldown
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 4157 to
+  frame 4431.** Total release-blocking errors fell from 6594 to 6289; the next
+  divergence is Sonic's horizontal speed (`-$0114` expected versus `$0114`
+  actual).
+- Root: Obj18's jump release changes the player's radii and rolling status
+  without changing centre-based native `y_pos`, then seeds a per-player `$12`
+  cooldown whose nonzero path returns before `SolidObjectFull`. The engine's
+  bounds-based rolling transition shifted the centre five pixels upward and
+  immediately treated the released player as a fresh cup contact on the next
+  frame.
+- Fix: cup release restores the unchanged native centre word after applying
+  rolling radii, preserving the existing subpixel fraction, and cup solidity
+  now observes the matching per-player cooldown before accepting a new
+  contact. Both decisions follow Obj18's player-local state without a zone,
+  route, or frame exception.
+- Validation: all 13 focused cup-elevator tests pass and the LBZ replay reaches
+  frame 4431. The complete `*TraceReplay#replayMatchesTrace` sweep reports 61
+  tests, 45 green and the same 16 documented red routes. Every non-LBZ S3K,
+  S1, and S2 frontier and error total remains unchanged.
+
+## 2026-07-22 - LBZ Snale Blaster activation and opening cadence
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 4431 to
+  frame 4723.** The later divergent path now reports 7267 release-blocking
+  errors; the next divergence is CPU Tails' Y (`$0469` expected versus `$0468`
+  actual).
+- Root: Obj_SnaleBlaster begins behind `Obj_WaitOffscreen`, whose `$20` square
+  placeholder is marked visible by `Render_Sprites`; the helper observes that
+  bit on the following object dispatch, restores the badnik operation, and
+  returns. After its closed wait, routine 4 runs all 43 frames of raw script
+  `byte_8C2B6` at a fixed `y_pos` before routine 6 starts the shell's two-pixel
+  steps. The engine activated from an early horizontal-only point test and
+  skipped the raw opening phase, placing the protected shell six pixels above
+  its native collision position.
+- Fix: Snale Blaster now retains post-camera placeholder visibility across the
+  native one-dispatch activation handoff, then runs the complete fixed-delay
+  opening mapping sequence before vertical motion. The restored contact reaches
+  the shared nonzero-`collision_property` S3K rebound, negating X, Y, and ground
+  velocity exactly as the ROM does.
+- Validation: all eight focused Snale Blaster tests pass and the LBZ replay
+  reaches frame 4723. The complete `*TraceReplay#replayMatchesTrace` sweep
+  reports 61 tests, 45 green and the same 16 documented red routes. Every
+  non-LBZ S3K, S1, and S2 frontier and error total remains unchanged.
+
+## 2026-07-22 - LBZ moving-platform SolidObjectTop landing
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 4723 to
+  frame 4805.** Total release-blocking errors fell from 7267 to 7238; the next
+  divergence is CPU Tails' ground speed (`0` expected versus `-$01DF` actual).
+- Root: Obj_LBZMovingPlatform calls `SolidObjectTop` with `d1=width_pixels`
+  and a literal `d3=9`, while its art height remains 8. That helper lands the
+  player through `SolidObject_Landed`'s relative `y_pos += d0 + 3` correction
+  and excludes exact zero overlap. The engine's generic top-solid profile
+  instead applied `PlatformObject_ChkYRange`'s absolute snap, placing Tails one
+  pixel above the native landing position.
+- Fix: the moving platform now builds its routine profile from its concrete
+  provider contract, uses the native ground half-height for top contact,
+  rejects zero-distance fresh landings, and retains the relative
+  `SolidObject_Landed` correction. These are properties of the ROM helper call,
+  independent of route, zone state, or frame.
+- Validation: all five focused moving-platform tests pass and the LBZ replay
+  reaches frame 4805. The complete `*TraceReplay#replayMatchesTrace` sweep
+  reports 61 tests, 45 green and the same 16 documented red routes. Every
+  non-LBZ S3K, S1, and S2 frontier and error total remains unchanged.
+
+## 2026-07-22 - LBZ moving-platform caller render gate
+
+- **`s3k_lbz1` combined physics and animation advanced from frame 4805 to
+  frame 5314.** Total release-blocking errors fell from 7238 to 6995; the next
+  divergence is the ring count (`1` expected versus `0` actual).
+- Root: Obj_LBZMovingPlatform tests its own `render_flags` sign bit before it
+  calls `SolidObjectTop`. At frame 4805 the lower platform's `$20` by `$08`
+  render box is wholly below the viewport, so native execution skips contact
+  and CPU Tails continues falling. The engine correctly knew that top-only
+  helpers have no internal off-screen gate, but failed to retain this separate
+  caller-owned test and falsely landed Tails.
+- Fix: the concrete LBZ moving platform now exposes its native render half-size
+  and requires the retained post-render on-screen state in `isSolidFor` before
+  entering the shared top-solid resolver. This models object/render state rather
+  than the route or trace frame.
+- Validation: all six focused moving-platform tests pass and the LBZ replay
+  reaches frame 5314. The complete `*TraceReplay#replayMatchesTrace` sweep
+  reports 61 tests, 45 green and the same 16 documented red routes. Every
+  non-LBZ S3K, S1, and S2 frontier and error total remains unchanged.
 ## 2026-07-23 - S3K universal CSV v7 fixture regeneration
 
 - Re-recorded the standalone AIZ/CNZ/MGZ movies, the complete-run route through
@@ -51844,7 +52104,7 @@ mvn -Dtest='com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestSoni
   passes.
 - The sole regression is
   `TestBuildToolingGuard.traceReplayBootstrapContractsShouldBeDocumentedAndNotLegacy`:
-  `docs/status/known-discrepancies.md` does not document the S3K sidekick seed-frame
+  `docs/KNOWN_DISCREPANCIES.md` does not document the S3K sidekick seed-frame
   trace bootstrap debt.
 
 S3K trace-fleet command:
@@ -52087,71 +52347,6 @@ The requested standalone AIZ and CNZ gates are input-aligned and now reach
 later, genuine parity frontiers. The fleet is not globally frame-zero clean:
 CNZ complete-run, ICZ, LBZ, and MHZ still begin at f0. The result therefore
 remains `DONE_WITH_CONCERNS`, not a green fleet baseline.
-
-## 2026-07-26 - S3K Obj37 previous-list live-coordinate parity
-
-Context: `bugfix/ai-trace-s3k-mgz-standard`, based on `25eea9e97`.
-
-S3K `Touch_Loop` walks pointers retained in `Collision_response_list` and reads
-their current `x_pos`/`y_pos` (`docs/skdisasm/sonic3k.asm:20645-20710`,
-`:20773-20797`). Obj37 moves before publishing itself to that list
-(`:35624-35668`). The engine's generic pre-update cache was one object pass
-older than the live Obj37 state represented by that retained pointer. The
-previous-list Obj37 path now dereferences its live coordinates; other object
-families and non-previous-list touch paths are unchanged.
-
-Focused touch verification:
-
-```bash
-mvn -q -Dtest='com.openggf.level.objects.TestLostRingTouchOrdering,com.openggf.level.objects.TestTouchResponseManager,com.openggf.level.rings.*LostRing*' test
-```
-
-- Exit 0; all selected tests passed.
-
-Standalone MGZ:
-
-```bash
-mvn -q -Dsurefire.argLine=-Xmx6g \
-  -Dtest=com.openggf.tests.trace.s3k.TestS3kMgzTraceReplay \
-  -Ds3k.rom.path=s3k.gen test
-```
-
-- Expected-red exit 1.
-- 8,032 → 8,030 errors.
-- Frontier f12486 → f13447 `camera_x` (ROM `0x2E01`, engine `0x2E00`).
-
-Complete-run MGZ:
-
-```bash
-mvn -q -Dsurefire.argLine=-Xmx6g \
-  -Dtest=com.openggf.tests.trace.s3k.TestS3kMgzCompleteRunTraceReplay \
-  -Ds3k.rom.path=s3k.gen test
-```
-
-- Expected-red exit 1.
-- 8,707 → 8,703 errors.
-- Frontier f9259 → f15520 `camera_x` (ROM `0x2E01`, engine `0x2E00`).
-
-Cross-route canaries held:
-
-- AIZ complete-run: 1,726 errors, first f9376 `rings`
-  (ROM `2`, engine `1`).
-- ICZ complete-run: 7,963 errors, first f0 `y`
-  (ROM `0x00F0`, engine `0x00F2`).
-
-Policy verification:
-
-```bash
-mvn -q \
-  -Dtest='com.openggf.tests.TestArchitecturalSourceGuard,com.openggf.tests.TestTraceReplayInvariantGuard,com.openggf.game.rewind.coverage.TestRewindCoverageGuard' test
-```
-
-- Trace-invariant and rewind-coverage guards passed.
-- `TestArchitecturalSourceGuard.objectManagerFacadeStaysWithinExtractedCollaboratorBudget`
-  remains red on the base: `ObjectManager.java` has 2,940 effective lines against
-  its 2,914-line budget. This fix changes only
-  `ObjectTouchResponseController.java`, the extracted touch collaborator, and
-  does not change `ObjectManager.java`.
 
 ## 2026-07-23 - ADVANCE_ONLY live and visual-rewind edge closure
 
@@ -53048,3 +53243,183 @@ com.openggf.trace.timing.TestCommittedHardwareTimingFixtures" test
   no green/red claim is made. Existing observed frontiers remain unchanged.
   LBZ was regenerated, strictly loaded, and guard-validated only; its replay
   frontier was neither inspected nor remediated.
+
+## 2026-07-28 - ICZ complete-run initial LoadEnemyArt timing f35 -> f12351
+
+- Worktree: `.worktrees/trace-s3k-icz-complete-run`, branch
+  `bugfix/ai-trace-s3k-icz-complete-run`, base `bd0f366ce`; measured with the
+  four source/test edits uncommitted during independent Sol verification.
+- ROM basis: `Obj_TitleCardWait2` calls `LoadEnemyArt` after the normal
+  title-card owner retires (`docs/skdisasm/sonic3k.asm:62287-62300`);
+  `LoadEnemyArt` appends every selected descriptor through
+  `Queue_Kos_Module` (`sonic3k.asm:2668-2685,64281-64313`); and
+  `PLCKosM_ICZ` queues Snowdust to tile `$0558` followed by StarPointer to
+  tile `$0548` (`sonic3k.asm:64392-64395`,
+  `sonic3k.constants.asm:1243-1244`). The verified locked-on ROM contains
+  the unique archives at `$375134` and `$3751C6`.
+- Fresh target command:
+
+```bash
+mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \
+  "-Ds3k.rom.path=/home/farrell/code/projects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dtest=com.openggf.tests.trace.s3k.TestS3kIczCompleteRunTraceReplay#replayMatchesTrace" test
+```
+
+- **Advanced:** the previous raw-frame-35 hardware-timing frontier is
+  admitted with the ROM's Snowdust fingerprint. The next target error is raw
+  frame **12351**, ordinal 162: the fixture expects
+  `sha256:d5dfb0ecd8614aa05ab8e73f90122374c8606443ec73e65d56dc8610a510c80c`
+  while the engine has rescheduled ICZ Snowdust
+  (`sha256:9d76abb5369bb27fca1574b28bf37d429af1904dbd45edabef04fd0ab1e0f594`).
+  Surefire reports 1 test, 0 assertion failures, and 1 hardware-authority
+  error; the next owner is the act-transition runtime-art schedule.
+- Focused, comparison-only, hardware-authority, S3K fallback, and special-stage
+  command:
+
+```bash
+mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \
+  "-Ds3k.rom.path=/home/farrell/code/projects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dtest=TestSonic3kPlcArtRewindSnapshot,TestS3kSpecialStageTraceReplay,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestTraceReplayInvariantGuard,TestTraceHydrateSwitchDefault,TestHardwareTimingAuthorityGuard" test
+```
+
+- Pass: 88 selected tests, 0 failures, 0 errors. This includes both
+  `TestSonic3kLevelLoading` classes, the focused ICZ queue-order assertion,
+  all four S3K fallback guards, the S3K special-stage replay, and the
+  comparison-only/hardware-authority guards.
+- Mandatory PLC corruption guard:
+
+```bash
+mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \
+  "-Ds3k.rom.path=/home/farrell/code/projects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dtest=TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits" test
+```
+
+- Pass: 1 test, 0 failures, 0 errors.
+- Cross-game shared-lifecycle sentinels:
+
+```bash
+mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \
+  "-Ds1.rom.path=/home/farrell/code/projects/OpenGGF/Sonic The Hedgehog (W) (REV01) [!].gen" \
+  "-Ds2.rom.path=/home/farrell/code/projects/OpenGGF/Sonic The Hedgehog 2 (W) (REV01) [!].gen" \
+  "-Dtest=TestS1Ghz1TraceReplay,TestS2Ehz1TraceReplay" test
+```
+
+- Pass: 2 tests, 0 failures, 0 errors. No green replay regression was
+  introduced. Trace inputs remain comparison-only; no fixture bytes changed,
+  and the shared level lifecycle calls only the game provider's semantic
+  post-title-card hook (a no-op for S1/S2).
+
+## 2026-07-28 - AIZ results/title ownership raw f8800 -> f8943
+
+- Worktree: `.worktrees/trace-s3k-aiz-f2696`, branch
+  `bugfix/ai-trace-s3k-aiz-f2696`; implementation remained uncommitted for
+  parent-lane verification.
+- ROM basis: `Obj_LevelResultsWait` writes the literal `#90` and falls into
+  `Obj_LevelResultsWait2`; `LevelResults_MoveElement` consumes the prior
+  `render_flags.on_screen` bit before moving by `$20`; `Render_Sprites`
+  recomputes that bit from `width_pixels`; the results SST then publishes
+  `_unkFAA8`, the independent `Obj_EndSignControlAwaitStart` owner runs
+  `Restore_PlayerControl`, and the mutated SST dispatches
+  `Obj_TitleCardInit` on its following entry
+  (`docs/skdisasm/sonic3k.asm:62108-62166,62627-62824,36336-36402,
+  180361-180424`).
+- Fix: results publication and title initialization are distinct captured
+  owner phases; the AIZ typed results wait no longer repeats the two sign
+  entries already carried by the boss/signpost bridge; embedded results
+  children use the preceding render-visibility latch and authored half-width;
+  the later sign-control owner performs every native animation/control/status
+  write; and the live title manager snapshots/rebinds its four existing
+  hardware handles through the gameplay rewind registry without submission.
+- Focused command:
+
+```bash
+mvn -Dmse=relaxed \
+  "-Dtest=com.openggf.game.sonic3k.objects.TestS3kResultsScreenObjectInstance,\
+com.openggf.game.sonic3k.objects.TestS3kBossDefeatSignpostFlow,\
+com.openggf.game.sonic3k.titlecard.TestSonic3kTitleCardManagerRewind" \
+  "-Ds3k.rom.path=/home/farrell/code/projects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  test
+```
+
+- Pass: 18 selected tests, 0 failures, 0 errors.
+- Required S3K bring-up guards
+  (`TestS3kAiz1SkipHeadless`, both `TestSonic3kLevelLoading` classes,
+  `TestSonic3kBootstrapResolver`, and `TestSonic3kDecodingUtils`) pass 52
+  selected tests with 0 failures and 0 errors. The focused signpost and
+  hardware-authority guards pass another 31 selected tests.
+- Target replay command:
+
+```bash
+mvn -Dmse=relaxed \
+  "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" \
+  "-Ds3k.rom.path=/home/farrell/code/projects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  test
+```
+
+- **Advanced:** title ordinals 23–26 are submitted through production and
+  admitted at raw frames 8800, 8802, 8804, and 8807. The replay's first
+  unconsumed hardware edge advances to raw frame **8943**, ordinal 27,
+  fingerprint
+  `sha256:65c8c371e1ca1f70acf3a74cc1fa689867dcffbe93617a8c968e3de9242f89b3`;
+  the engine has no pending job. Surefire reports 1 test, 0 assertion
+  failures, and 1 hardware-authority error. This is the later post-title AIZ
+  `LoadEnemyArt` owner: the first `PLCKosM_AIZ` request,
+  `ArtKosM_AIZ_MonkeyDude` at `ArtTile_MonkeyDude`
+  (`sonic3k.asm:62287-62300,64281-64352`), not a remaining
+  results/title-init cadence adjustment.
+- The complete `TestS3kAizTraceReplay` scenario class runs 16 tests: 11 pass,
+  four existing AIZ canaries remain red (fire-reveal camera 40/46,
+  reload-camera lock `$0010`/`$6000`, sidekick fallthrough auto-jump
+  true/false, and miniboss arena camera `$10E0`/`$0010`), and the target replay
+  reports the ordinal-27 authority error above.
+
+## 2026-07-29 - S3K v6.38 direct Kos queue fixture publication
+
+- Worktree: `.worktrees/ai-s3k-kos-decompression-queue`, branch
+  `bugfix/ai-s3k-kos-decompression-queue`, publication applied over
+  `bd8b08668`.
+- Published the reviewed corrected v5 four-file identity byte-for-byte for
+  `aiz1_to_hcz_fullrun`, `aiz_completerun`, `hcz_completerun`,
+  `mgz_completerun`, `cnz_completerun`, and `icz_completerun`.
+  `hardware-timing-publication.tsv` now freezes their schema-2 direct and
+  module ledgers. A post-validation `cmp`, byte-count, and SHA-256 sweep
+  matched all 24 reviewed source files.
+- Publication guards:
+
+```bash
+mvn -Dmse=off \
+  -Dtest=com.openggf.trace.timing.TestCommittedHardwareTimingFixtures test
+
+mvn -Dmse=off \
+  "-Dtest=TestHardwareSubmissionFingerprint,TestS3kKosDecompressionQueue,\
+TestHardwareTimingStreamLoader,TestHardwareTimingReplayPort,\
+TestS3kHardwareTimingReplay" test
+```
+
+- Pass: 2 committed-fixture tests and 58 expanded timing/replay tests, with
+  zero failures, errors, or skips. The native no-gates suite passes 387 tests
+  with zero failures and 30 missing-ROM skips. A temporary ROM-backed STANDARD
+  differential reproduces the installed AIZ timing stream byte-for-byte.
+- An intermediate temporary full complete-run segment differential was
+  stopped at the bounded cutoff after approximately 9 minutes 20 seconds
+  (`SIGINT`, exit 130). Independent review found that this intermediate gate
+  suppressed metadata/timing comparison after ICZ, so the attempt is rejected
+  as evidence. Exact comparison for all fixture-bearing segments is restored;
+  the later schema-1 publication boundary remains visible. The corrected full
+  gate was not run to a verdict, and no temporary output was installed.
+- Fresh ROM-backed frontier commands targeted only `replayMatchesTrace` with
+  the verified S3K ROM. Each method reports one error, zero assertion
+  failures, and zero skips. The first-error field is hardware timing:
+
+| Replay | First-error raw frame | Expected completion |
+|---|---:|---|
+| AIZ STANDARD | 3879 | direct `#25`, `66961069e564ef707173bbad733f75e3ab034e29e3f4833a02e2e26af452d8fd` |
+| AIZ complete | 6346 | direct `#35`, `c3e8ddd34bf587540ca7d131fc68d371538d1a746da64c4eee3ec01f524948b7` |
+| HCZ complete | 1335 | direct `#80`, `82c973d77d76a07873ede88ecf76104306b834aa6410710f0cfc10f95240331f` |
+| MGZ complete | 14631 | direct `#134`, `c2db2fda975f758607b601f686bc782c7ebe55e2413f540f23b193ba2b6f1741` |
+| CNZ complete | 5337 | direct `#201`, `66961069e564ef707173bbad733f75e3ab034e29e3f4833a02e2e26af452d8fd` |
+| ICZ complete | 1629 | direct `#236`, `107442b529cf8edafb0750d0198606ee2c4a667f4f99bb3c68065188177cf1e6` |
+
+- These are the same upstream StarPost, enemy-art, and reload lifecycle gaps
+  identified in the corrected-candidate review. No trace-derived submission,
+  timing exception, or upstream gameplay fix was added during publication.

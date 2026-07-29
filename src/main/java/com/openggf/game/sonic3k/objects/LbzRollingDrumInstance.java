@@ -12,7 +12,6 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
-import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -43,9 +42,6 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
     private static final int FLIP_TYPE_ACTIVE_FROM_REST = 0x81;
     private static final int FLIP_SPEED_RELEASE = 4;
     private static final int RIDE_ANGLE_STEP = 2;
-    private static final int TUMBLE_DIVISOR = 0x16;
-    private static final int TUMBLE_BASE = 0x31;
-    private static final int TUMBLE_FROM_REST_BASE = 0x3D;
     private static final int ANIMATION_ROLLING_DRUM = Sonic3kAnimationIds.WALK.id();
     // Obj_LBZRollingDrum installs loc_2C3CA in word 0 (sonic3k.asm:60585-60594).
     private static final int ROM_CODE_POINTER_HIGH_WORD = 0x0002;
@@ -59,6 +55,7 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
     private PlayableEntity player1Owner;
     private PlayableEntity player2Owner;
     private final Map<PlayableEntity, RiderState> extensionStates = new IdentityHashMap<>();
+    private int activationCameraX = Integer.MIN_VALUE;
 
     public LbzRollingDrumInstance(ObjectSpawn spawn) {
         super(spawn, "LBZRollingDrum");
@@ -216,15 +213,20 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
         applyRideObjectSetRide(player, nativePlayerIndex);
         player.setFlipType(FLIP_TYPE_ACTIVE);
         player.setAnimationId(ANIMATION_ROLLING_DRUM);
+        // loc_2C44E writes anim/prev_anim after the native player/CPU slot.
+        // Discard any engine-only forced CPU-flight animation so it cannot
+        // overwrite that object-owned write on the following held frame.
+        player.setForcedAnimationId(-1);
         player.forceAnimationRestart();
         if (player.getGSpeed() == 0) {
             player.setGSpeed((short) 1);
         }
-        // loc_2C44E runs in the drum's later SST slot. The player animation
-        // slot has already completed this pass, so only arm object-owned tumble
-        // animation here; mapping_frame remains the pose published by the
-        // player's earlier slot until the next Process_Sprites pass.
-        armRideAnimationState(player);
+        // Obj31 executes after the player slot. loc_2C44E writes anim/prev_anim
+        // and flip_type, but Animate_Sonic/Tails has already run, so the prior
+        // rolling mapping remains visible on the capture row. The following
+        // player dispatch enters Anim_Tumble; active ride updates may then
+        // republish the object-phase pose. sonic3k.asm:60657-60670.
+        player.setObjectMappingFrameControl(false);
     }
 
     private void updateActiveRide(AbstractPlayableSprite player, int nativePlayerIndex) {
@@ -235,7 +237,10 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
         int dx = signedWordDelta(player.getCentreX(), spawn.x());
         boolean insideHorizontalWindow = dx >= leftBound && dx < rightBound;
         if (player.getAir()) {
-            if (insideHorizontalWindow && !player.isJumping() && !player.isHurt()) {
+            if (nativePlayerIndex == 0
+                    && insideHorizontalWindow
+                    && !player.isJumping()
+                    && !player.isHurt()) {
                 player.setAir(false);
                 refreshRideLatch(player);
             } else {
@@ -249,6 +254,16 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
         }
 
         if (!insideHorizontalWindow) {
+            if (dx >= rightBound && canHandOffToRightDrum(player)) {
+                // The native right-hand drum can occupy an earlier SST slot
+                // than this drum. It therefore captures the player before the
+                // old drum gets a chance to release him. Engine placement slot
+                // reuse is not guaranteed to preserve that ordering, so keep
+                // the live ride bits through this spatially valid handoff; the
+                // receiving drum replaces the latch later in this object pass.
+                setRiding(nativePlayerIndex, false);
+                return;
+            }
             release(player, nativePlayerIndex);
             return;
         }
@@ -258,12 +273,6 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
             } else {
                 return;
             }
-        }
-
-        if (usesWalkTumbleScript(player)) {
-            applyRideAnimationState(player);
-        } else {
-            player.setObjectMappingFrameControl(false);
         }
 
         int angle = getAngle(nativePlayerIndex) & 0xFF;
@@ -303,10 +312,12 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
 
     private void applyRideObjectSetRide(AbstractPlayableSprite player, int nativePlayerIndex) {
         int savedDoubleJumpFlag = player.getDoubleJumpFlag();
-        boolean sameFrameRideTransfer = player.getOnObjectAtFrameStart()
-                && !player.isJumping()
-                && !player.isHurt();
-        boolean shouldTouchFloor = player.getAir() && !sameFrameRideTransfer;
+        // RideObject_SetRide tests and clears the live Status_InAir bit after
+        // installing the new ride, then calls Player_TouchFloor only when that
+        // bit was set (sonic3k.asm:42052-42070). An earlier drum can release the
+        // player in this same object pass, so the frame-start ride latch is not
+        // authoritative here.
+        boolean shouldTouchFloor = player.getAir();
         // ROM RideObject_SetRide (sonic3k.asm:42027): if the player is already
         // Status_OnObj, clear the PREVIOUS interact object's standing bit
         // (bclr d6,status(a3)) before re-latching. For a drum-to-drum handoff
@@ -350,6 +361,70 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
         player.setLatchedSolidObject(Sonic3kObjectIds.LBZ_ROLLING_DRUM, this);
     }
 
+    private boolean canHandOffToRightDrum(AbstractPlayableSprite player) {
+        try {
+            var objectManager = services().objectManager();
+            if (objectManager == null) {
+                return false;
+            }
+            for (var instance : objectManager.getActiveObjects()) {
+                if (instance instanceof LbzRollingDrumInstance candidate
+                        && candidate != this
+                        && receiverHasNativePrecedence(candidate)
+                        && signedWordDelta(candidate.spawn.x(), spawn.x()) > 0
+                        && candidate.canCaptureLivePlayer(player)) {
+                    return true;
+                }
+            }
+        } catch (IllegalStateException ignored) {
+            // Direct object tests can instantiate without ObjectServices.
+        }
+        return false;
+    }
+
+    private void captureActivationCameraX() {
+        if (activationCameraX != Integer.MIN_VALUE) {
+            return;
+        }
+        try {
+            if (services().camera() != null) {
+                activationCameraX = services().camera().getX() & 0xFFFF;
+            }
+        } catch (IllegalStateException ignored) {
+            // Direct object tests do not need placement-load history.
+        }
+    }
+
+    private boolean receiverHasNativePrecedence(LbzRollingDrumInstance receiver) {
+        if (activationCameraX != Integer.MIN_VALUE
+                && receiver.activationCameraX != Integer.MIN_VALUE) {
+            // S3K's backward placement pass can materialize a right-hand drum
+            // after its left neighbour while assigning the newly freed lower
+            // SST slot. The decreasing activation camera coordinate records
+            // that native reverse-load ordering; ordinary forward loads let
+            // the outgoing left drum release before the later receiver runs.
+            return receiver.activationCameraX < activationCameraX;
+        }
+        return receiver.getSlotIndex() >= 0
+                && getSlotIndex() >= 0
+                && receiver.getSlotIndex() < getSlotIndex();
+    }
+
+    private boolean canCaptureLivePlayer(AbstractPlayableSprite player) {
+        int dx = signedWordDelta(player.getCentreX(), spawn.x());
+        if (dx < leftBound || dx >= rightBound) {
+            return false;
+        }
+        int verticalDelta = signedWordDelta(player.getCentreY(), spawn.y()) + TOP_BOTTOM_Y_BIAS;
+        if (verticalDelta < 0 || verticalDelta >= VERTICAL_RANGE) {
+            return false;
+        }
+        if (verticalDelta < LOWER_HALF_Y && player.getYSpeed() < 0) {
+            return false;
+        }
+        return verticalDelta < LOWER_HALF_Y || player.getYSpeed() <= MAX_BOTTOM_ENTRY_Y_SPEED;
+    }
+
     /**
      * ROM {@code RideObject_SetRide} clears {@code d6,status(a3)} on the player's
      * previous interact object before installing the new ride. When that previous
@@ -375,50 +450,6 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
             if (state != null) state.riding = false;
             else setRiding(nativePlayerIndex, false);
         }
-    }
-
-    private void armRideAnimationState(AbstractPlayableSprite player) {
-        player.setAnimationId(ANIMATION_ROLLING_DRUM);
-        player.setForcedAnimationId(-1);
-        player.setObjectMappingFrameControl(true);
-    }
-
-    private boolean usesWalkTumbleScript(AbstractPlayableSprite player) {
-        var animationSet = player.getAnimationSet();
-        var script = animationSet != null ? animationSet.getScript(player.getAnimationId()) : null;
-        // Animate_Sonic sends only the $FF walk/run script through Anim_Tumble.
-        // $FE Roll and the other negative script controls keep their ordinary
-        // mappings (sonic3k.asm:24733-24811; Anim - Sonic.asm:AniSonic02).
-        return script == null || (script.delay() & 0xFF) == 0xFF;
-    }
-
-    private void applyRideAnimationState(AbstractPlayableSprite player) {
-        player.setForcedAnimationId(-1);
-        player.setObjectMappingFrameControl(true);
-        applyRideRenderFlags(player);
-        player.setMappingFrame(rollingDrumTumbleFrame(player.getFlipAngle(), player.getFlipType()));
-        player.setAnimationTick(0);
-    }
-
-    private void applyRideRenderFlags(AbstractPlayableSprite player) {
-        boolean facingLeft = Direction.LEFT.equals(player.getDirection());
-        int type = player.getFlipType() & 0x7F;
-        if (type == 1) {
-            // ROM loc_12872/loc_128A8: flip_type=$81 uses only Status_Facing.
-            player.setRenderFlips(facingLeft, false);
-            return;
-        }
-        // ROM Anim_Tumble negative flip_type path in LBZ:
-        // right-facing ORs render_flags bit 1; left-facing ORs bits 0 and 1.
-        player.setRenderFlips(facingLeft, true);
-    }
-
-    private static int rollingDrumTumbleFrame(int flipAngle, int flipType) {
-        int type = flipType & 0x7F;
-        if (type == 1) {
-            return (((flipAngle & 0xFF) - 8) & 0xFF) / TUMBLE_DIVISOR + TUMBLE_FROM_REST_BASE;
-        }
-        return ((0x8F - (flipAngle & 0xFF)) & 0xFF) / TUMBLE_DIVISOR + TUMBLE_BASE;
     }
 
     private static int signedWordDelta(int value, int origin) {

@@ -3,6 +3,7 @@ package com.openggf.level.resources;
 /**
  * Compression types used in Sonic 2 ROM data.
  */
+@com.openggf.game.ModApi
 public enum CompressionType {
     /**
      * Kosinski compression - used for level tiles, blocks, chunks, layouts.

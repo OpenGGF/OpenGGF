@@ -8,12 +8,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestMGZLBZSmashingPillarObjectInstance {
 
     @Test
-    void groundedSquashEdgeEscapeSetsNativePushBit() {
+    void shallowGroundedSquashEdgeRejoinsPushPath() {
         MGZLBZSmashingPillarObjectInstance pillar =
                 new MGZLBZSmashingPillarObjectInstance(
-                        new ObjectSpawn(0x04C4, 0x0700, 0x20, 0x0C, 0, false, 0));
+                        new ObjectSpawn(0x04C4, 0x0754, 0x20, 0x0C, 0, false, 0));
 
         assertTrue(pillar.groundedSquashEdgeSideContactSetsPush(),
-                "SolidObjectFull rejoins its push-setting side path after a grounded edge escape");
+                "SolidObjectFull loc_1E126 rejoins loc_1E042 when abs(d0) is below $10");
     }
 }

@@ -12,6 +12,15 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestLbzLaunchRuntimeState {
 
     @Test
+    void seamlessActReloadRetainsLevelLoopOscillationTail() {
+        LbzZoneRuntimeState state =
+                new LbzZoneRuntimeState(0, PlayerCharacter.SONIC_ALONE);
+
+        assertTrue(state.advancesOscillationOnSeamlessTransition(),
+                "LBZ1BGE_DoTransition returns to LevelLoop's OscillateNumDo tail");
+    }
+
+    @Test
     void legacyThreeByteRestoreStillRestoresRollingDrumAngles() {
         LbzZoneRuntimeState state = new LbzZoneRuntimeState(0, PlayerCharacter.SONIC_ALONE);
         state.setActiveInteriorLayoutMod(4);

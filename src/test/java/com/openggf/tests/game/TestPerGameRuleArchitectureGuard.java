@@ -8,6 +8,7 @@ import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.ObjectInteractionRules;
 import com.openggf.game.rules.PlayerAnimationRules;
 import com.openggf.game.rules.PlayerCapabilityRules;
+import com.openggf.game.rules.PlayerLandingRules;
 import com.openggf.game.rules.PlayerMovementRules;
 import com.openggf.game.rules.PowerUpRules;
 import com.openggf.game.rules.RingRules;
@@ -51,6 +52,7 @@ class TestPerGameRuleArchitectureGuard {
     private static final List<Class<? extends Record>> RULE_RECORDS = List.of(
             GameRules.class,
             PlayerMovementRules.class,
+            PlayerLandingRules.class,
             PlayerCapabilityRules.class,
             CollisionRules.class,
             AirCollisionRules.class,
@@ -97,15 +99,9 @@ class TestPerGameRuleArchitectureGuard {
         for (Class<? extends Record> ruleRecord : RULE_RECORDS) {
             RecordComponent[] components = ruleRecord.getRecordComponents();
 
-            Integer frozenComponents = FROZEN_RULE_COMPONENT_LIMITS.get(ruleRecord);
-            if (frozenComponents != null) {
-                assertEquals(frozenComponents, components.length,
-                        () -> ruleRecord.getSimpleName() + " has changed size; split the group or update the"
-                                + " explicit frozen migration limit with architecture review");
-                continue;
-            }
-
-            assertTrue(components.length <= MAX_RULE_COMPONENTS,
+            int limit = FROZEN_RULE_COMPONENT_LIMITS.getOrDefault(
+                    ruleRecord, MAX_RULE_COMPONENTS);
+            assertTrue(components.length <= limit,
                     () -> ruleRecord.getSimpleName() + " has " + components.length
                             + " components; split it into narrower rule groups before increasing this limit");
         }

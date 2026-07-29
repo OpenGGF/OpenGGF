@@ -60,7 +60,7 @@ class TestInitialProcessSpritesCoordinator {
 
             @Override public void loadSprites() {}
             @Override public void processAbsoluteDynamicSlot3() {}
-            @Override public void processManagedDynamicSlots4Through92() {}
+            @Override public void processManagedDynamicSlots4Through93() {}
         };
         InitialFixedSstDispatcher fixed = new InitialFixedSstDispatcher() {
             @Override
@@ -106,7 +106,7 @@ class TestInitialProcessSpritesCoordinator {
                 append(calls, failingStage, "DYNAMIC_SLOT_3");
             }
 
-            @Override public void processManagedDynamicSlots4Through92() {
+            @Override public void processManagedDynamicSlots4Through93() {
                 append(calls, failingStage, "DYNAMIC_SLOTS_4_92");
             }
         };

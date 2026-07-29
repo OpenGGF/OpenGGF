@@ -161,6 +161,12 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
             case ROUTINE_WAIT_FOR_COLLAPSE_CLEAR -> {
                 if (collapseEventFinished()) {
                     unlockPostCollapseCamera();
+                    // CreateChild6_Simple allocates Obj_IncLevEndXGradual after
+                    // Robotnik's slot, so Process_Sprites executes the new
+                    // child once on this same frame. Seed its first $4000
+                    // accumulator step here even though it has no integer
+                    // carry yet.
+                    updatePostCollapseCameraMax();
                     routine = ROUTINE_AFTER_COLLAPSE;
                 }
             }

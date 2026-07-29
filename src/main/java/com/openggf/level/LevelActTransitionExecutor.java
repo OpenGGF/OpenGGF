@@ -5,8 +5,10 @@ import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.OscillationManager;
+import com.openggf.level.animation.SeamlessTransitionAnimationClock;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
+import com.openggf.level.resources.DeferredLevelResourceTracker;
 
 import java.io.IOException;
 import java.util.List;
@@ -26,6 +28,16 @@ final class LevelActTransitionExecutor {
             return;
         }
 
+        SeamlessTransitionResourceHandoff handoff =
+                request.resourceHandoffId() != null
+                        ? GameServices.seamlessTransitionResourceHandoffs()
+                                .claim(request.resourceHandoffId())
+                        : null;
+        DeferredLevelResourceTracker deferredResources =
+                handoff != null
+                        ? handoff.deferredResources().newTracker()
+                        : DeferredLevelResourceTracker.none();
+
         Camera cam = levelManager.camera;
 
         GameStateManager gameState = GameServices.gameState();
@@ -39,9 +51,11 @@ final class LevelActTransitionExecutor {
             gameState.setEndOfLevelFlag(endOfLevelFlag);
         }
 
-        if (request.preserveMusic()) {
-            levelManager.setSuppressNextMusicChange(true);
-        }
+        // NOTE: preserveMusic() needs no action here. An in-place act transition
+        // never runs the level-init profile, so InitAudio — the only consumer of
+        // the suppress-next-music flag — never fires. Setting the flag here left
+        // it latched and silenced the *next* real level load instead (music then
+        // stayed off until a respawn or another load cleared it).
 
         if (GameServices.zoneRuntimeRegistry().current()
                 .advancesOscillationOnSeamlessTransition()) {
@@ -68,6 +82,9 @@ final class LevelActTransitionExecutor {
         }
 
         levelManager.initAnimatedContent();
+        if (levelManager.animatedPatternManager instanceof SeamlessTransitionAnimationClock clock) {
+            clock.advanceForSeamlessTransition();
+        }
 
         ObjectArtProvider artProvider = levelManager.gameModule != null
                 ? levelManager.gameModule.getObjectArtProvider()
@@ -114,6 +131,9 @@ final class LevelActTransitionExecutor {
 
         resetSidekickCpuBoundsAfterTransition(cam);
         levelManager.initLevelEventsForCurrentZoneAct();
+        if (handoff != null) {
+            handoff.transferAfterTargetInit();
+        }
 
         // loadLevelData only swaps immutable level data; the live object manager
         // and level-event owner are replaced later in this executor. Rebind the

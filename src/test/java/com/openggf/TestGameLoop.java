@@ -21,6 +21,7 @@ import com.openggf.game.BonusStageType;
 import com.openggf.game.GameMode;
 import com.openggf.game.BonusStageProvider;
 import com.openggf.game.GameModule;
+import com.openggf.game.RuntimeArtCoordinator;
 import com.openggf.game.MasterTitleScreen;
 import com.openggf.game.MasterTitleEntry;
 import com.openggf.game.BonusStageState;
@@ -49,8 +50,7 @@ import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.dataselect.S3kDataSelectManager;
 import com.openggf.graphics.FadeManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
-import com.openggf.game.recording.UserRecordingPlaybackOptions;
-import com.openggf.game.recording.UserRecordingPlaybackState;
+import com.openggf.game.recording.UserRecordingRuntimeControls;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.tests.TestEnvironment;
@@ -107,6 +107,12 @@ public class TestGameLoop {
         SessionManager.clear();
         SessionManager.clear();
         GameModuleRegistry.setCurrent(new Sonic2GameModule());
+    }
+
+    private static GameModule neutralGameModule() {
+        GameModule module = mock(GameModule.class);
+        when(module.createRuntimeArtCoordinator(any())).thenReturn(RuntimeArtCoordinator.NONE);
+        return module;
     }
 
     // ==================== Value Object Tests ====================
@@ -316,16 +322,33 @@ public class TestGameLoop {
 
     @Test
     public void userRecordingPlaybackPolicyRunsForLevelBoundaryReturns() throws Exception {
+        var playback = mock(com.openggf.debug.playback.PlaybackDebugManager.class);
+        var recordingControls = mock(UserRecordingRuntimeControls.class);
+        when(playback.getCursorFrame()).thenReturn(4);
+        when(playback.getMovieFrameCount()).thenReturn(8);
+        when(playback.isSessionPlaying()).thenReturn(true);
+        LevelIterationAdmissionController admission = new LevelIterationAdmissionController();
+
+        admission.finishPlaybackBoundary(true, playback, recordingControls);
+
+        var ordered = inOrder(playback, recordingControls);
+        ordered.verify(playback).getCursorFrame();
+        ordered.verify(playback).onLevelFrameAdvanced();
+        ordered.verify(recordingControls).afterPlaybackFrame(4, true, false);
+
+        admission.finishPlaybackBoundary(false, playback, recordingControls);
+        verify(recordingControls, times(2)).afterPlaybackFrame(4, true, false);
+
         String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
         // The boundary policy now lives in LevelIterationAdmissionController; GameLoop
         // only calls it. Assert the ordering where the logic actually is.
-        String admission = Files.readString(
+        String admissionSource = Files.readString(
                 Path.of("src/main/java/com/openggf/LevelIterationAdmissionController.java"));
-        int helperStart = admission.indexOf("void finishPlaybackBoundary(");
-        int helperEnd = admission.indexOf("void setLastAppliedPlaybackFrame(", helperStart);
+        int helperStart = admissionSource.indexOf("void finishPlaybackBoundary(");
+        int helperEnd = admissionSource.indexOf("void setLastAppliedPlaybackFrame(", helperStart);
         assertTrue(helperStart >= 0 && helperEnd > helperStart,
                 "Playback boundary handling must stay centralized in one helper");
-        String helperBody = admission.substring(helperStart, helperEnd);
+        String helperBody = admissionSource.substring(helperStart, helperEnd);
 
         int appliedFrame = helperBody.indexOf("appliedFrame = playback.getCursorFrame();");
         int rememberAppliedFrame = helperBody.indexOf(
@@ -361,37 +384,17 @@ public class TestGameLoop {
 
     @Test
     public void userRecordingBoundaryDoesNotClassifyCursorZeroBeforeAnyMovieFrameApplied() throws Exception {
-        com.openggf.debug.playback.PlaybackDebugManager playback =
+        var playback =
                 mock(com.openggf.debug.playback.PlaybackDebugManager.class);
+        var recordingControls = mock(UserRecordingRuntimeControls.class);
         when(playback.getCursorFrame()).thenReturn(0);
         when(playback.getMovieFrameCount()).thenReturn(2);
         when(playback.isSessionPlaying()).thenReturn(true);
-        GameLoop loop = new GameLoop(new EngineContext(
-                SonicConfigurationService.getInstance(),
-                mock(com.openggf.graphics.GraphicsManager.class),
-                mock(AudioManager.class),
-                mock(com.openggf.data.RomManager.class),
-                mock(com.openggf.debug.PerformanceProfiler.class),
-                mock(com.openggf.debug.DebugOverlayManager.class),
-                playback,
-                mock(com.openggf.game.RomDetectionService.class),
-                mock(com.openggf.game.CrossGameFeatureProvider.class)));
-        Object launcher = getPrivateField(loop, "userRecordingSessionLauncher");
-        setPrivateField(launcher, "activePlaybackOptions", new UserRecordingPlaybackOptions(0, true, false));
-        setPrivateField(launcher, "activePlaybackState", UserRecordingPlaybackState.PLAYING);
+        LevelIterationAdmissionController admission = new LevelIterationAdmissionController();
 
-        // The boundary helper now belongs to the admission controller.
-        Object admissionController = getPrivateField(loop, "levelIterationAdmission");
-        invokePrivateMethod(admissionController, "finishPlaybackBoundary",
-                new Class<?>[] {
-                        boolean.class,
-                        com.openggf.debug.playback.PlaybackDebugManager.class,
-                        com.openggf.game.recording.UserRecordingRuntimeControls.class },
-                false, playback, getPrivateField(loop, "userRecordingControls"));
+        admission.finishPlaybackBoundary(false, playback, recordingControls);
 
-        assertEquals(UserRecordingPlaybackState.PLAYING,
-                getPrivateField(launcher, "activePlaybackState"),
-                "A title-card/boundary return before frame 0 is simulated must not complete playback");
+        verifyNoInteractions(recordingControls);
         verify(playback, never()).onLevelFrameAdvanced();
     }
 
@@ -465,8 +468,10 @@ public class TestGameLoop {
         int admission = source.indexOf("private boolean prepareAdmittedIteration(", stepInternal);
         assertTrue(stepInternal >= 0 && admission > stepInternal, "stepInternal method must exist");
         String outerFrameBody = source.substring(stepInternal, admission);
+        int admissionEnd = source.indexOf("private void updateSpecialStageMode()", admission);
+        String admissionBody = source.substring(admission, admissionEnd);
 
-        assertTrue(outerFrameBody.contains("playbackDebugManager.isCurrentForcedStartPress()"),
+        assertTrue(admissionBody.contains("playbackDebugManager.isCurrentForcedStartPress()"),
                 "Recorded P1 Start must route to the same gameplay pause edge as live Start");
     }
 
@@ -1075,6 +1080,9 @@ public class TestGameLoop {
 
     @Test
     public void testResolveBonusStageBootstrapSpawnForPachinko() {
+        SessionManager.clear();
+        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+
         ObjectSpawn spawn = GameLoop.resolveBonusStageBootstrapSpawn(BonusStageType.GLOWING_SPHERE);
 
         assertNotNull(spawn);
@@ -1085,6 +1093,9 @@ public class TestGameLoop {
 
     @Test
     public void testResolveBonusStageBootstrapSpawnOnlyForPachinko() {
+        SessionManager.clear();
+        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+
         assertNull(GameLoop.resolveBonusStageBootstrapSpawn(BonusStageType.GUMBALL));
         assertNull(GameLoop.resolveBonusStageBootstrapSpawn(BonusStageType.SLOT_MACHINE));
         assertNull(GameLoop.resolveBonusStageBootstrapSpawn(BonusStageType.NONE));
@@ -1125,7 +1136,7 @@ public class TestGameLoop {
         StubDataSelectProvider provider = new StubDataSelectProvider(new DataSelectAction(
                 DataSelectActionType.NEW_SLOT_START, 2, 0, 0,
                 new SelectedTeam("sonic", List.of("tails"))));
-        GameModule module = mock(GameModule.class);
+        GameModule module = neutralGameModule();
         when(module.getDataSelectProvider()).thenReturn(provider);
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
 
@@ -1198,7 +1209,7 @@ public class TestGameLoop {
         StubDataSelectProvider provider = new StubDataSelectProvider(new DataSelectAction(
                 DataSelectActionType.LOAD_SLOT, 2, 3, 1,
                 new SelectedTeam("tails", List.of())));
-        GameModule module = mock(GameModule.class);
+        GameModule module = neutralGameModule();
         when(module.getDataSelectProvider()).thenReturn(provider);
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
 
@@ -1244,7 +1255,7 @@ public class TestGameLoop {
         StubDataSelectProvider provider = new StubDataSelectProvider(new DataSelectAction(
                 DataSelectActionType.LOAD_SLOT, 2, 3, 1,
                 new SelectedTeam("tails", List.of())));
-        GameModule module = mock(GameModule.class);
+        GameModule module = neutralGameModule();
         when(module.getDataSelectProvider()).thenReturn(provider);
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
 
@@ -1293,7 +1304,7 @@ public class TestGameLoop {
         StubDataSelectProvider provider = new StubDataSelectProvider(new DataSelectAction(
                 DataSelectActionType.LOAD_SLOT, 2, 3, 1,
                 new SelectedTeam("tails", List.of())));
-        GameModule module = mock(GameModule.class);
+        GameModule module = neutralGameModule();
         when(module.getDataSelectProvider()).thenReturn(provider);
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
 
@@ -1322,7 +1333,7 @@ public class TestGameLoop {
         Path saveDir = Path.of("saves").resolve(gameCode);
         deleteRecursively(saveDir);
 
-        GameModule module = mock(GameModule.class);
+        GameModule module = neutralGameModule();
         when(module.getSaveSnapshotProvider()).thenReturn((reason, ctx) -> Map.of("marker", "bonus"));
         when(module.getTitleCardProvider()).thenReturn(null);
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
@@ -1372,7 +1383,7 @@ public class TestGameLoop {
         Path saveDir = Path.of("saves").resolve(gameCode);
         deleteRecursively(saveDir);
 
-        GameModule module = mock(GameModule.class);
+        GameModule module = neutralGameModule();
         when(module.getSaveSnapshotProvider()).thenReturn((reason, ctx) -> Map.of("marker", "special"));
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
 
@@ -1417,7 +1428,7 @@ public class TestGameLoop {
         Path saveDir = Path.of("saves").resolve(gameCode);
         deleteRecursively(saveDir);
 
-        GameModule module = mock(GameModule.class);
+        GameModule module = neutralGameModule();
         when(module.getSaveSnapshotProvider()).thenReturn((reason, ctx) -> Map.of("marker", "seamless"));
         when(module.getTitleCardProvider()).thenReturn(null);
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
@@ -1456,7 +1467,7 @@ public class TestGameLoop {
         Path saveDir = Path.of("saves").resolve(gameCode);
         deleteRecursively(saveDir);
 
-        GameModule module = mock(GameModule.class);
+        GameModule module = neutralGameModule();
         EndingProvider endingProvider = mock(EndingProvider.class);
         when(module.getSaveSnapshotProvider()).thenReturn((reason, ctx) -> Map.of("marker", "credits"));
         when(module.getEndingProvider()).thenReturn(endingProvider);
@@ -1504,7 +1515,7 @@ public class TestGameLoop {
         EndingProvider endingProvider = mock(EndingProvider.class);
         when(endingProvider.getCurrentPhase()).thenReturn(EndingPhase.CUTSCENE);
 
-        GameModule module = mock(GameModule.class);
+        GameModule module = neutralGameModule();
         when(module.getEndingProvider()).thenReturn(endingProvider);
         when(module.getSaveSnapshotProvider()).thenReturn(
                 (reason, ctx) -> Map.of("clear", ctx.saveSessionContext().isClear(), "marker", "ending"));
@@ -1532,7 +1543,7 @@ public class TestGameLoop {
         EndingProvider endingProvider = mock(EndingProvider.class);
         when(endingProvider.getCurrentPhase()).thenReturn(EndingPhase.CUTSCENE);
 
-        GameModule module = mock(GameModule.class);
+        GameModule module = neutralGameModule();
         when(module.getEndingProvider()).thenReturn(endingProvider);
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
 
@@ -1565,7 +1576,7 @@ public class TestGameLoop {
         DataSelectPresentationProvider dataSelect = new DataSelectPresentationProvider(
                 nativeDelegate,
                 new DataSelectSessionController(new S3kDataSelectProfile()));
-        GameModule module = mock(GameModule.class);
+        GameModule module = neutralGameModule();
         when(module.getTitleScreenProvider()).thenReturn(titleScreen);
         when(module.getDataSelectProvider()).thenReturn(dataSelect);
         when(module.getGameId()).thenReturn(com.openggf.game.GameId.S3K);
@@ -1599,7 +1610,7 @@ public class TestGameLoop {
         DataSelectPresentationProvider dataSelect = new DataSelectPresentationProvider(
                 S3kDataSelectManager::new,
                 new DataSelectSessionController(new S3kDataSelectProfile()));
-        GameModule module = mock(GameModule.class);
+        GameModule module = neutralGameModule();
         when(module.getTitleScreenProvider()).thenReturn(titleScreen);
         when(module.getDataSelectProvider()).thenReturn(dataSelect);
         when(module.getGameId()).thenReturn(com.openggf.game.GameId.S1);
@@ -1631,7 +1642,7 @@ public class TestGameLoop {
         DataSelectPresentationProvider dataSelect = new DataSelectPresentationProvider(
                 S3kDataSelectManager::new,
                 new DataSelectSessionController(new S3kDataSelectProfile()));
-        GameModule module = mock(GameModule.class);
+        GameModule module = neutralGameModule();
         when(module.getTitleScreenProvider()).thenReturn(titleScreen);
         when(module.getDataSelectProvider()).thenReturn(dataSelect);
         when(module.getGameId()).thenReturn(com.openggf.game.GameId.S2);
@@ -1664,7 +1675,7 @@ public class TestGameLoop {
         DataSelectPresentationProvider dataSelect = new DataSelectPresentationProvider(
                 nativeDelegate,
                 new DataSelectSessionController(new S3kDataSelectProfile()));
-        GameModule module = mock(GameModule.class);
+        GameModule module = neutralGameModule();
         when(module.getTitleScreenProvider()).thenReturn(titleScreen);
         when(module.getDataSelectProvider()).thenReturn(dataSelect);
         when(module.getGameId()).thenReturn(com.openggf.game.GameId.S3K);
@@ -1692,7 +1703,7 @@ public class TestGameLoop {
 
         com.openggf.game.TitleScreenProvider titleScreen = mock(com.openggf.game.TitleScreenProvider.class);
         StubDataSelectProvider dataSelect = new StubDataSelectProvider(DataSelectAction.none());
-        GameModule module = mock(GameModule.class);
+        GameModule module = neutralGameModule();
         when(module.getTitleScreenProvider()).thenReturn(titleScreen);
         when(module.getDataSelectProvider()).thenReturn(dataSelect);
         when(module.getGameId()).thenReturn(com.openggf.game.GameId.S2);
@@ -1721,7 +1732,7 @@ public class TestGameLoop {
 
         com.openggf.game.TitleScreenProvider titleScreen = mock(com.openggf.game.TitleScreenProvider.class);
         StubDataSelectProvider dataSelect = new StubDataSelectProvider(DataSelectAction.none());
-        GameModule module = mock(GameModule.class);
+        GameModule module = neutralGameModule();
         when(module.getTitleScreenProvider()).thenReturn(titleScreen);
         when(module.getDataSelectProvider()).thenReturn(dataSelect);
         when(module.getGameId()).thenReturn(com.openggf.game.GameId.S2);
@@ -1752,7 +1763,7 @@ public class TestGameLoop {
 
         com.openggf.game.TitleScreenProvider titleScreen = mock(com.openggf.game.TitleScreenProvider.class);
         StubDataSelectProvider dataSelect = new StubDataSelectProvider(DataSelectAction.none());
-        GameModule module = mock(GameModule.class);
+        GameModule module = neutralGameModule();
         when(module.getTitleScreenProvider()).thenReturn(titleScreen);
         when(module.getDataSelectProvider()).thenReturn(dataSelect);
         when(module.getGameId()).thenReturn(com.openggf.game.GameId.S2);
@@ -1799,7 +1810,7 @@ public class TestGameLoop {
 
         StubTitleScreenProvider titleScreen = new StubTitleScreenProvider(TitleScreenProvider.TitleScreenAction.OPTIONS);
         StubDataSelectProvider dataSelect = new StubDataSelectProvider(DataSelectAction.none());
-        GameModule module = mock(GameModule.class);
+        GameModule module = neutralGameModule();
         when(module.getTitleScreenProvider()).thenReturn(titleScreen);
         when(module.getDataSelectProvider()).thenReturn(dataSelect);
         when(module.getGameId()).thenReturn(com.openggf.game.GameId.S3K);
@@ -1839,7 +1850,7 @@ public class TestGameLoop {
         DataSelectPresentationProvider dataSelect = new DataSelectPresentationProvider(
                 nativeDelegate,
                 new DataSelectSessionController(new S3kDataSelectProfile()));
-        GameModule module = mock(GameModule.class);
+        GameModule module = neutralGameModule();
         when(module.getTitleScreenProvider()).thenReturn(titleScreen);
         when(module.getDataSelectProvider()).thenReturn(dataSelect);
         when(module.getGameId()).thenReturn(com.openggf.game.GameId.S3K);
@@ -1885,7 +1896,7 @@ public class TestGameLoop {
 
         StubTitleScreenProvider titleScreen = new StubTitleScreenProvider(TitleScreenAction.ONE_PLAYER);
         StubDataSelectProvider dataSelect = new StubDataSelectProvider(DataSelectAction.none());
-        GameModule module = mock(GameModule.class);
+        GameModule module = neutralGameModule();
         when(module.getTitleScreenProvider()).thenReturn(titleScreen);
         when(module.getDataSelectProvider()).thenReturn(dataSelect);
         when(module.getGameId()).thenReturn(com.openggf.game.GameId.S1);
@@ -1932,7 +1943,7 @@ public class TestGameLoop {
 
         StubTitleScreenProvider titleScreen = new StubTitleScreenProvider(TitleScreenAction.OPTIONS);
         StubDataSelectProvider dataSelect = new StubDataSelectProvider(DataSelectAction.none());
-        GameModule module = mock(GameModule.class);
+        GameModule module = neutralGameModule();
         when(module.getTitleScreenProvider()).thenReturn(titleScreen);
         when(module.getDataSelectProvider()).thenReturn(dataSelect);
         when(module.getGameId()).thenReturn(com.openggf.game.GameId.S2);
@@ -1965,7 +1976,7 @@ public class TestGameLoop {
 
         StubTitleScreenProvider titleScreen = new StubTitleScreenProvider(TitleScreenAction.ONE_PLAYER);
         StubDataSelectProvider dataSelect = new StubDataSelectProvider(DataSelectAction.none());
-        GameModule module = mock(GameModule.class);
+        GameModule module = neutralGameModule();
         when(module.getTitleScreenProvider()).thenReturn(titleScreen);
         when(module.getDataSelectProvider()).thenReturn(dataSelect);
         when(module.getGameId()).thenReturn(com.openggf.game.GameId.S2);
@@ -2016,7 +2027,7 @@ public class TestGameLoop {
         DataSelectPresentationProvider dataSelect = new DataSelectPresentationProvider(
                 nativeDelegate,
                 new DataSelectSessionController(new S3kDataSelectProfile()));
-        GameModule module = mock(GameModule.class);
+        GameModule module = neutralGameModule();
         when(module.getTitleScreenProvider()).thenReturn(titleScreen);
         when(module.getDataSelectProvider()).thenReturn(dataSelect);
         when(module.getGameId()).thenReturn(com.openggf.game.GameId.S1);
@@ -2062,7 +2073,7 @@ public class TestGameLoop {
         DataSelectPresentationProvider dataSelect = new DataSelectPresentationProvider(
                 nativeDelegate,
                 new DataSelectSessionController(new S3kDataSelectProfile()));
-        GameModule module = mock(GameModule.class);
+        GameModule module = neutralGameModule();
         when(module.getTitleScreenProvider()).thenReturn(titleScreen);
         when(module.getDataSelectProvider()).thenReturn(dataSelect);
         when(module.getGameId()).thenReturn(com.openggf.game.GameId.S3K);
@@ -2111,7 +2122,7 @@ public class TestGameLoop {
                 new DataSelectSessionController(new S3kDataSelectProfile()));
         var warmupManager = mock(com.openggf.game.sonic2.dataselect.S2DataSelectImageCacheManager.class,
                 withSettings().extraInterfaces(Sonic2GameModule.S2DataSelectImageWarmup.class));
-        GameModule module = mock(GameModule.class);
+        GameModule module = neutralGameModule();
         when(module.getTitleScreenProvider()).thenReturn(titleScreen);
         when(module.getDataSelectProvider()).thenReturn(dataSelect);
         when(module.getGameId()).thenReturn(com.openggf.game.GameId.S2);
@@ -2164,7 +2175,7 @@ public class TestGameLoop {
         DataSelectPresentationProvider dataSelect = new DataSelectPresentationProvider(
                 nativeDelegate,
                 new DataSelectSessionController(new S3kDataSelectProfile()));
-        GameModule module = mock(GameModule.class);
+        GameModule module = neutralGameModule();
         when(module.getTitleScreenProvider()).thenReturn(titleScreen);
         when(module.getDataSelectProvider()).thenReturn(dataSelect);
         when(module.getGameId()).thenReturn(com.openggf.game.GameId.S3K);
@@ -2197,7 +2208,7 @@ public class TestGameLoop {
         DataSelectPresentationProvider dataSelect = new DataSelectPresentationProvider(
                 nativeDelegate,
                 new DataSelectSessionController(new S3kDataSelectProfile()));
-        GameModule module = mock(GameModule.class);
+        GameModule module = neutralGameModule();
         when(module.getTitleScreenProvider()).thenReturn(titleScreen);
         when(module.getDataSelectProvider()).thenReturn(dataSelect);
         when(module.getGameId()).thenReturn(com.openggf.game.GameId.S3K);
@@ -2242,7 +2253,7 @@ public class TestGameLoop {
 
         com.openggf.game.TitleScreenProvider titleScreen = mock(com.openggf.game.TitleScreenProvider.class);
         StubDataSelectProvider dataSelect = new StubDataSelectProvider(DataSelectAction.none());
-        GameModule module = mock(GameModule.class);
+        GameModule module = neutralGameModule();
         when(module.getTitleScreenProvider()).thenReturn(titleScreen);
         when(module.getDataSelectProvider()).thenReturn(dataSelect);
         when(module.getGameId()).thenReturn(com.openggf.game.GameId.S3K);
@@ -2270,7 +2281,7 @@ public class TestGameLoop {
 
         StubTitleScreenProvider titleScreen = new StubTitleScreenProvider(TitleScreenAction.ONE_PLAYER);
         titleScreen.supportsLevelSelectOverlay = true;
-        GameModule module = mock(GameModule.class);
+        GameModule module = neutralGameModule();
         com.openggf.game.LevelSelectProvider levelSelect = mock(com.openggf.game.LevelSelectProvider.class);
         when(module.getTitleScreenProvider()).thenReturn(titleScreen);
         when(module.getLevelSelectProvider()).thenReturn(levelSelect);

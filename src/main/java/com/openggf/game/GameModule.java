@@ -25,11 +25,18 @@ import com.openggf.sprites.art.SpriteArtSet;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SuperStateController;
 import com.openggf.sprites.managers.SpriteManager;
+import com.openggf.game.timing.HardwareTimingService;
 
 import java.util.Optional;
 
 @ModApi
 public interface GameModule {
+    /** Creates this game's session-owned runtime-art coordinator. */
+    default RuntimeArtCoordinator createRuntimeArtCoordinator(
+            com.openggf.game.timing.HardwareTimingService timing) {
+        return RuntimeArtCoordinator.NONE;
+    }
+
     ModZoneAdapter EMPTY_MOD_ZONE_ADAPTER = new ModZoneAdapter() {
         private ModZoneRegistrationException unsupported(String ownerModId) {
             return new ModZoneRegistrationException(ownerModId,

@@ -121,6 +121,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	// frame" so updateCrouchState falls back to the live g_speed.
 	private static final int NO_PRE_FRICTION_SNAPSHOT = Integer.MIN_VALUE;
 	private int preFrictionGroundSpeed = NO_PRE_FRICTION_SNAPSHOT;
+	// SonicKnux_Roll/Tails_Roll test inertia before the later SlopeRepel pass.
+	// Preserve that exact value for the low-speed moving Duck write evaluated
+	// after the engine's combined movement/collision pipeline has completed.
+	private int preRollGroundSpeed = NO_PRE_FRICTION_SNAPSHOT;
 	private boolean fixedSkidDustTickPending;
 	private boolean processingFixedSkidDustTick;
 	private boolean skidAnimationRefreshedThisFrame;
@@ -478,6 +482,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		slopeResistAppliedThisFrame = false;
 		directionalBrakeReachedZero = false;
 		skidAnimationRefreshedThisFrame = false;
+		preRollGroundSpeed = NO_PRE_FRICTION_SNAPSHOT;
 		sprite.getAnimationManager().clearGroundMovementAnimSpeed();
 		sprite.clearDeferredGroundWallVelocityResponse();
 		preMoveBalanceEvaluated = false;
@@ -793,6 +798,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// the facing flip even though doGroundMove subsequently applies it.
 		updatePushingOnDirectionChange(inputLeft, inputRight);
 		doGroundMove();
+		preRollGroundSpeed = sprite.getGSpeed();
 		doCheckStartRoll();
 		doLevelBoundary();
 		sprite.move(sprite.getXSpeed(), sprite.getYSpeed());
@@ -3459,14 +3465,16 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 
 		PlayerMovementRules movementRules = playerMovementRulesOrNull();
-		boolean preservePinballRoll = movementRules != null && movementRules.pinballLandingPreservesRoll();
-		boolean preservePinballMode = movementRules != null && movementRules.pinballLandingPreservesPinballMode();
+		boolean preservePinballRoll = movementRules != null
+				&& movementRules.landing().pinballLandingPreservesRoll();
+		boolean preservePinballMode = movementRules != null
+				&& movementRules.landing().pinballLandingPreservesPinballMode();
 		boolean preserveObjectLandingRoll = sprite.consumePreserveRollingOnNextLanding();
 		boolean skipLandingRollClear = sprite.getRolling()
 				&& ((sprite.getPinballMode() && preservePinballRoll) || preserveObjectLandingRoll);
 		boolean clearsRolling = sprite.getRolling() && !skipLandingRollClear;
 		if (clearsRolling) {
-			if (movementRules != null && movementRules.landingRollClearUsesCurrentYRadiusDelta()) {
+			if (movementRules != null && movementRules.landing().landingRollClearUsesCurrentYRadiusDelta()) {
 				int oldCentreY = sprite.getCentreY();
 				int oldYRadius = sprite.getYRadius();
 				sprite.setRolling(false);
@@ -3486,7 +3494,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// (01 Sonic.asm:1839-1864; SolidObject.asm:378-383).
 			setWalkAnimationAfterRollingLanding(sprite);
 		} else if (movementRules != null
-				&& movementRules.landingRollClearUsesCurrentYRadiusDelta()
+				&& movementRules.landing().landingRollClearUsesCurrentYRadiusDelta()
 				&& !skipLandingRollClear
 				&& (sprite.getYRadius() != sprite.getStandYRadius()
 				|| sprite.getXRadius() != sprite.getStandXRadius())) {
@@ -3750,6 +3758,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private boolean shouldTriggerGroundSkid(short adjustedGSpeed, boolean turningRight) {
 		int angleCheck = ((sprite.getAngle() & 0xFF) + ANGLE_SLOPE_OFFSET) & ANGLE_SLOPE_MASK;
 		if (angleCheck != 0) {
+			return false;
+		}
+		// Both S3K braking directions test signed flip_type after the speed
+		// threshold and return before writing Stop or changing facing when it is
+		// negative (sonic3k.asm:22840-22875, 22906-22941). Rolling drums use
+		// flip_type=$80 while the ordinary ground-movement slot still executes.
+		if ((sprite.getFlipType() & 0x80) != 0) {
 			return false;
 		}
 
@@ -4069,9 +4084,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		PlayerMovementRules movementRules = playerMovementRulesOrNull();
 		short movingThreshold = (movementRules != null) ? movementRules.movingCrouchThreshold() : 0;
 		boolean nativePlayerSlotOnObject = sprite.isOnObject() || sprite.getOnObjectAtFrameStart();
+		int movingCrouchSpeed = preRollGroundSpeed != NO_PRE_FRICTION_SNAPSHOT
+				? preRollGroundSpeed
+				: sprite.getGSpeed();
 		if (movingThreshold > 0 && inputDown && !inputLeft && !inputRight
 				&& !sprite.getAir() && !sprite.getRolling() && !sprite.getSpindash()
-				&& Math.abs(sprite.getGSpeed()) < movingThreshold) {
+				&& Math.abs(movingCrouchSpeed) < movingThreshold) {
 			// Sonic_Move branches past every animation write while move_lock is
 			// active. SonicKnux_Roll then tests the still-live Status_OnObj bit
 			// before writing Duck (sonic3k.asm:22459,23263-23265). The engine

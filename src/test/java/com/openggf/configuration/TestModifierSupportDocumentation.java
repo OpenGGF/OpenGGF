@@ -145,6 +145,29 @@ class TestModifierSupportDocumentation {
                         + hoisted);
     }
 
+    @Test
+    void mixedInlineCallsDoNotShareModifierClassification() throws IOException {
+        Path source = configDir.resolve("MixedInput.java");
+        Files.writeString(source, """
+                class MixedInput {
+                    boolean read(Input input, Config config) {
+                        return consume(input.isKeyPressedWithoutModifiers(
+                                config.getInt(SonicConfiguration.PLAYBACK_TOGGLE_KEY))
+                                || input.isKeyPressed(
+                                config.getInt(SonicConfiguration.REWIND_KEY)));
+                    }
+                }
+                """);
+
+        String noModifiers =
+                readSitesOf("PLAYBACK_TOGGLE_KEY", List.of(source)).getFirst();
+        String plain = readSitesOf("REWIND_KEY", List.of(source)).getFirst();
+
+        assertTrue(noModifiers.contains("isKeyPressedWithoutModifiers("));
+        assertFalse(plain.contains("isKeyPressedWithoutModifiers("));
+        assertTrue(plain.contains("isKeyPressed("));
+    }
+
     /**
      * DEBUG_MODE_KEY is the one binding in both states at once: GameLoop reads
      * it through the unmodified check, while SpriteManager (via the debugModeKey
@@ -292,9 +315,13 @@ class TestModifierSupportDocumentation {
      * which is precisely the method these sweeps exist to see into.
      */
     private static List<String> readSitesOf(String name) throws IOException {
+        return readSitesOf(name, mainSources());
+    }
+
+    private static List<String> readSitesOf(String name, List<Path> sources) throws IOException {
         Pattern reference = Pattern.compile("SonicConfiguration\\." + name + "(?![A-Z0-9_])");
         List<String> reads = new ArrayList<>();
-        for (Path file : mainSources()) {
+        for (Path file : sources) {
             String flattened = flatten(Files.readString(file));
             Matcher matcher = reference.matcher(flattened);
             while (matcher.find()) {
@@ -385,41 +412,50 @@ class TestModifierSupportDocumentation {
         return source.replaceAll("\\s+", " ");
     }
 
-    /** The enclosing statement: everything between the surrounding {@code ; { }}. */
     /**
-     * The innermost {@code someCall( ... )} enclosing {@code index}, or the whole
-     * statement when the reference is not inside a call.
+     * The immediate call outside the configuration getter enclosing {@code index},
+     * or the nearest call/whole statement when that nesting is absent.
      */
     private static String callAround(String flattened, int index, String fallback) {
-        String outermost = null;
-        int depth = 0;
-        for (int cursor = index; cursor > 0; cursor--) {
-            char current = flattened.charAt(cursor);
-            if (current == ')') {
-                depth++;
-            } else if (current == '(') {
-                if (depth == 0) {
-                    int nameEnd = cursor;
-                    int nameStart = nameEnd;
-                    while (nameStart > 0
-                            && (Character.isJavaIdentifierPart(flattened.charAt(nameStart - 1))
-                            || flattened.charAt(nameStart - 1) == '.')) {
-                        nameStart--;
-                    }
-                    int close = nameStart == nameEnd ? -1 : matchingClose(flattened, cursor);
-                    if (close >= 0) {
-                        // Keep widening: the modifier check is the outer call, and
-                        // the inner one is only the config lookup it wraps.
-                        outermost = flattened.substring(nameStart, close + 1).trim();
-                    }
-                    continue;
-                }
-                depth--;
-            } else if (";{}".indexOf(current) >= 0) {
+        int nearestClose = -1;
+        int nearestNameStart = -1;
+        boolean nearestIsConfigurationGetter = false;
+        for (int open = index; open >= 0; open--) {
+            char current = flattened.charAt(open);
+            if (";{}".indexOf(current) >= 0) {
                 break;
             }
+            if (current != '(') {
+                continue;
+            }
+            int close = matchingClose(flattened, open);
+            if (close < index) {
+                continue;
+            }
+            int nameStart = open;
+            while (nameStart > 0
+                    && (Character.isJavaIdentifierPart(flattened.charAt(nameStart - 1))
+                    || flattened.charAt(nameStart - 1) == '.')) {
+                nameStart--;
+            }
+            if (nameStart == open) {
+                continue;
+            }
+            String callName = flattened.substring(nameStart, open);
+            if (nearestNameStart < 0) {
+                nearestClose = close;
+                nearestNameStart = nameStart;
+                nearestIsConfigurationGetter = callName.endsWith(".getInt");
+                if (!nearestIsConfigurationGetter) {
+                    break;
+                }
+            } else if (nearestIsConfigurationGetter) {
+                return flattened.substring(nameStart, close + 1).trim();
+            }
         }
-        return outermost == null ? fallback : outermost;
+        return nearestNameStart < 0
+                ? fallback
+                : flattened.substring(nearestNameStart, nearestClose + 1).trim();
     }
 
     private static int matchingClose(String flattened, int open) {

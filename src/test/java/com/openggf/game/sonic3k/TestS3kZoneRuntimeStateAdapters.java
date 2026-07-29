@@ -234,6 +234,7 @@ class TestS3kZoneRuntimeStateAdapters {
         state.requestScreenShakeOffset(2);
         state.requestScreenShakeOffset(6);
         state.requestScreenShakeOffset(3);
+        state.requestLbz1KnucklesBoundaryPublish();
 
         ZoneRuntimeRegistry registry = new ZoneRuntimeRegistry();
         registry.install(state);
@@ -250,5 +251,13 @@ class TestS3kZoneRuntimeStateAdapters {
         assertEquals(0xFF, state.getRollingDrumAngle(1));
         assertEquals(6, state.consumeScreenShakeOffset());
         assertEquals(0, state.consumeScreenShakeOffset());
+        assertTrue(state.isLbz1KnucklesBoundaryPublishPending());
+
+        LbzZoneRuntimeState restored = new LbzZoneRuntimeState(0, PlayerCharacter.SONIC_ALONE);
+        restored.restoreBytes(state.captureBytes());
+        assertTrue(restored.isLbz1KnucklesBoundaryPublishPending(),
+                "The pending object-to-camera-tail publication must survive rewind");
+        restored.clearLbz1KnucklesBoundaryPublishPending();
+        assertFalse(restored.isLbz1KnucklesBoundaryPublishPending());
     }
 }

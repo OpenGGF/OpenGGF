@@ -44,6 +44,10 @@ class TestSonic3kSpikeObjectInstance {
                 "Obj_Spikes calls SolidObjectFull; SolidObject_cont rejects relX > width*2, not relX == width*2");
         assertTrue(spikes.groundedSquashEdgeSideContactSetsPush(),
                 "Obj_Spikes lower-half edge escape returns through loc_1E06E and sets grounded push");
+        assertTrue(spikes.allowsObjectControlledSolidContacts(),
+                "SolidObject_cont accepts positive object_control states such as the LBZ cup's $03");
+        assertTrue(spikes.rejectsBit7ObjectControlNewSolidContact(null),
+                "SolidObject_cont rejects signed object_control before classifying a new spike contact");
         assertEquals(0x0002, spikes.romObjectCodePointerHighWord());
     }
 

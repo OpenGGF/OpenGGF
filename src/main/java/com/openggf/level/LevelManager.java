@@ -31,6 +31,7 @@ import com.openggf.game.rewind.snapshot.LevelTilemapSnapshot;
 import com.openggf.game.render.AdvancedRenderModeController;
 import com.openggf.game.render.SpecialRenderEffectRegistry;
 import com.openggf.game.render.SpecialRenderEffectStage;
+import com.openggf.game.rewind.RewindBoundary;
 import com.openggf.game.rules.CameraRules;
 import com.openggf.game.rules.CollisionRules;
 import com.openggf.game.rules.GameRules;
@@ -69,6 +70,8 @@ import com.openggf.level.objects.PersistentRespawnState;
 import com.openggf.level.objects.TouchResponseTable;
 import com.openggf.level.rings.RingManager;
 import com.openggf.level.rings.RingSpriteSheet;
+import com.openggf.level.resources.DeferredLevelResourceTracker;
+import com.openggf.level.resources.DeferredLevelResourceLoader;
 import com.openggf.level.scroll.BgTilemapUpdateMode;
 import com.openggf.level.animation.AnimatedPaletteManager;
 import com.openggf.level.animation.AnimatedPatternManager;
@@ -433,14 +436,10 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             if (ctx.getLevel() != null) {
                 writeCurrentLevel(ctx.getLevel());
             }
-            LevelRewindBoundaryCoordinator.markLevelLoadBoundary();
+            resetRewindBufferAfterLevelBoundary();
             InitialProcessSpritesLifecycle requestedSetup =
                     ctx.requestedInitialProcessSpritesLifecycle();
             if (requestedSetup != InitialProcessSpritesLifecycle.NONE) {
-                // The profile grants this authority only after a successful
-                // FULL + post-load + fresh assembly. Reset the playable epoch
-                // at the same publication seam, before the pending native
-                // frame-zero pass can be observed or consumed.
                 spriteManager.setFrameCounter(0);
             }
             publishInitialProcessSpritesLifecycle(requestedSetup);
@@ -454,6 +453,11 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             }
             LOGGER.log(SEVERE, "Unexpected error while loading level " + levelIndex, e);
             throw new IOException("Failed to load level due to unexpected error.", e);
+        } finally {
+            // The suppress flag belongs to this load only. A load that fails before
+            // InitAudio — or a preview capture, which has no InitAudio step — must not
+            // leave it latched for the next level, which would start that level silent.
+            transitions.setSuppressNextMusicChange(false);
         }
     }
 
@@ -510,7 +514,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                         namespaced.owner(), namespaced.localName()));
             }
         }
-        transitions.setSuppressNextMusicChange(false);
     }
 
     /**
@@ -533,8 +536,40 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         activeModZoneRuntimeProfile = activeModZoneRuntimeContribution != null
                 ? activeModZoneRuntimeContribution.runtimeProfile() : null;
         activeCustomZonePaletteBridge = null;
-        Level loaded = gameModule.loadLevelOverride(levelIndex);
+        Level loaded = gameModule != null ? gameModule.loadLevelOverride(levelIndex) : null;
         if (loaded == null) loaded = game.loadLevel(levelIndex);
+        writeCurrentLevel(loaded);
+        installHudProfile();
+        rebuildLevelDerivedState();
+        return loaded;
+    }
+
+    public Level loadLevelData(
+            int levelIndex,
+            com.openggf.level.resources.DeferredLevelResourceTracker deferredResources)
+            throws IOException {
+        installGameplayInputFilter();
+        activeModZoneRuntimeContribution = gameModule == null ? null
+                : gameModule.getZoneRegistry().modZoneRuntimeContribution(levelIndex);
+        activeModZoneRuntimeProfile = activeModZoneRuntimeContribution != null
+                ? activeModZoneRuntimeContribution.runtimeProfile() : null;
+        activeCustomZonePaletteBridge = null;
+        var activeDeferredResources = deferredResources != null
+                ? deferredResources
+                : com.openggf.level.resources.DeferredLevelResourceTracker.none();
+        Level loaded = gameModule != null ? gameModule.loadLevelOverride(levelIndex) : null;
+        if (loaded == null) {
+            if (activeDeferredResources.hasExplicitPolicy()
+                    && game instanceof com.openggf.level.resources.DeferredLevelResourceLoader loader) {
+                loaded = loader.loadLevelWithDeferredResources(levelIndex, activeDeferredResources);
+            } else {
+                if (!activeDeferredResources.isEmpty()) {
+                    throw new IllegalStateException(
+                            game.getIdentifier() + " does not support deferred level resources");
+                }
+                loaded = game.loadLevel(levelIndex);
+            }
+        }
         writeCurrentLevel(loaded);
         installHudProfile();
         rebuildLevelDerivedState();
@@ -746,14 +781,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * the same lifecycle path as production gameplay.</p>
      */
     public void refreshPlayablePowerUpSpawners() {
-        DefaultPowerUpSpawner spawner = new DefaultPowerUpSpawner(objectManager);
-        Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
-        if (player instanceof AbstractPlayableSprite playable) {
-            playable.setPowerUpSpawner(spawner);
-        }
-        for (AbstractPlayableSprite sidekick : spriteManager.getSidekicks()) {
-            sidekick.setPowerUpSpawner(spawner);
-        }
+        LevelManagerInitializationSupport.rebindPowerUpSpawners(
+                objectManager, spriteManager, resolveMainCharacterCode());
     }
 
     /**
@@ -854,18 +883,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     void resetZoneScopedRegistriesForLevelLoad() {
-        PaletteOwnershipRegistry paletteOwnershipRegistry = GameServices.paletteOwnershipRegistryOrNull();
-        SpecialRenderEffectRegistry specialRenderEffectRegistry = GameServices.specialRenderEffectRegistryOrNull();
-        AdvancedRenderModeController advancedRenderModeController = GameServices.advancedRenderModeControllerOrNull();
-        if (paletteOwnershipRegistry != null) {
-            paletteOwnershipRegistry.clear();
-        }
-        if (specialRenderEffectRegistry != null) {
-            specialRenderEffectRegistry.clear();
-        }
-        if (advancedRenderModeController != null) {
-            advancedRenderModeController.clear();
-        }
+        LevelZoneScopedRegistryResetter.reset();
     }
 
     private void applyLevelLoadPaletteOverrides() {
@@ -3027,7 +3045,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             return;
         }
         for (AbstractPlayableSprite sidekick : spriteManager.getSidekicks()) {
-            // ROM x_pos/y_pos are player centres, not render bounds.
             sidekick.setCentreXPreserveSubpixel((short) (player.getCentreX() + xOffset));
             sidekick.setCentreYPreserveSubpixel((short) (player.getCentreY() + yOffset));
             sidekick.setXSpeed((short) 0);
@@ -3068,13 +3085,31 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     public void requestTitleCardIfNeeded(LevelLoadContext ctx) {
         boolean headlessWholeRunHandoff = graphicsManager.isHeadlessMode()
                 && GameServices.playbackDebug().hasScheduledLevelLoadSession();
-        if (ctx.isShowTitleCard()
-                && (!graphicsManager.isHeadlessMode() || headlessWholeRunHandoff)
-                && !(zoneFeatureProvider != null && zoneFeatureProvider.shouldSuppressInitialTitleCard(currentZone, currentAct))) {
+        if (!ctx.isShowTitleCard()) {
+            return;
+        }
+        boolean presentationSuppressed = zoneFeatureProvider != null
+                && zoneFeatureProvider.shouldSuppressInitialTitleCard(
+                        currentZone, currentAct);
+        if (presentationSuppressed) {
+            return;
+        }
+        if (!graphicsManager.isHeadlessMode() || headlessWholeRunHandoff) {
             // ROM: title card reads Apparent_act, not Current_act.
             // After AIZ's seamless fire transition, Current_act is 1 but
             // Apparent_act stays 0 until the results screen exits.
             requestTitleCard(currentZone, apparentAct);
+            return;
+        }
+
+        // A headless fresh load omits presentation, but it still begins at the
+        // post-title-card production boundary. Publish the same runtime-art
+        // admission that Obj_TitleCardWait2 opens via LoadEnemyArt; this only
+        // arms ROM-owned work, and the ordinary level frame submits it later.
+        // docs/skdisasm/sonic3k.asm:62287-62300, 64302-64309
+        var objectArtProvider = activeGameModule().getObjectArtProvider();
+        if (objectArtProvider != null) {
+            objectArtProvider.onTitleCardArtRetired();
         }
     }
 
@@ -3875,6 +3910,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * {@link com.openggf.game.session.WorldSession} level and zone metadata.
      */
     public void resetGameplayState() {
+        discardInitialProcessSpritesLifecycle();
         com.openggf.game.session.GameplayModeContext gameplayMode =
                 com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         if (gameplayMode != null && gameplayMode.getRewindRegistry() != null) {
@@ -3913,7 +3949,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         frameCounter = 0;
         sidekickRomVisibleReloadFrameCounterBridgeActive = false;
         sidekickRomVisibleReloadFrameCounterBridgePrimed = false;
-        discardInitialProcessSpritesLifecycle();
         transitions.resetState();
         verticalWrapEnabled = false;
         touchResponseTable = null;
@@ -4136,14 +4171,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         // that native post-ScreenEvents oscillator tick explicitly.
         frameRuntimeUpdater.advanceGlobalOscillation();
 
-        // ChangeRingFrame follows OscillateNumDo in the same remainder of
-        // LevelLoop. Its global words survive the per-act animation-manager
-        // rebuild and still advance on the transition-only frame.
-        if (animatedPatternManager instanceof
-                com.openggf.level.animation.SeamlessTransitionAnimationClock transitionClock) {
-            transitionClock.advanceForSeamlessTransition();
-        }
-
         // The pending seamless reload is consumed at frame top, so this row
         // returns before ObjectManager.update() can perform its normal V-int
         // clock increment. V_int_run_count is global work RAM and still ticks
@@ -4224,6 +4251,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     /** @see LevelTransitionCoordinator#setSuppressNextMusicChange(boolean) */
     public void setSuppressNextMusicChange(boolean suppress) { transitions.setSuppressNextMusicChange(suppress); }
 
+    /** @see LevelTransitionCoordinator#isSuppressNextMusicChange() */
+    public boolean isSuppressNextMusicChange() { return transitions.isSuppressNextMusicChange(); }
+
     /**
      * Finds the offset from a reference position to the first pattern within a tile index range.
      * Scans the level chunks around the reference position looking for patterns that use
@@ -4241,107 +4271,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      *         or null if no matching pattern found
      */
     public int[] findPatternOffset(int refX, int refY, int minTileIdx, int maxTileIdx, int searchRadius) {
-        if (level == null) {
-            return null;
-        }
-
-        Map map = level.getMap();
-        if (map == null) {
-            return null;
-        }
-
-        // Calculate search bounds in world coordinates
-        int startX = refX - searchRadius;
-        int startY = refY - searchRadius;
-        int endX = refX + searchRadius;
-        int endY = refY + searchRadius;
-
-        // Clamp to level bounds
-        startX = Math.max(startX, level.getMinX());
-        startY = Math.max(startY, level.getMinY());
-        endX = Math.min(endX, level.getMaxX());
-        endY = Math.min(endY, level.getMaxY());
-
-        // Scan through patterns (8x8 pixel grid)
-        for (int worldY = startY; worldY < endY; worldY += 8) {
-            for (int worldX = startX; worldX < endX; worldX += 8) {
-                int tileIdx = getPatternIndexAt(worldX, worldY, map);
-                if (tileIdx >= minTileIdx && tileIdx <= maxTileIdx) {
-                    // Found a matching pattern - snap to actual pattern boundary
-                    // Patterns are 8x8 and aligned to 8-pixel grid within the level
-                    int patternLeftX = worldX - (Math.floorMod(worldX, 8));
-                    int patternTopY = worldY - (Math.floorMod(worldY, 8));
-                    // Calculate offset from ref to pattern center
-                    int offsetX = (patternLeftX + 4) - refX;
-                    int offsetY = (patternTopY + 4) - refY;
-                    return new int[]{offsetX, offsetY};
-                }
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Gets the VRAM tile index for the pattern at the given world coordinates.
-     * Traverses the map -> block -> chunk -> pattern hierarchy.
-     *
-     * @param worldX World X coordinate
-     * @param worldY World Y coordinate
-     * @param map    The level map
-     * @return The pattern's VRAM tile index, or -1 if out of bounds
-     */
-    private int getPatternIndexAt(int worldX, int worldY, Map map) {
-        try {
-            // Block is 128x128 pixels
-            int blockX = worldX / blockPixelSize;
-            int blockY = worldY / blockPixelSize;
-
-            if (blockX < 0 || blockX >= map.getWidth() || blockY < 0 || blockY >= map.getHeight()) {
-                return -1;
-            }
-
-            // Get block index from map (layer 0 = foreground)
-            int blockIdx = map.getValue(0, blockX, blockY) & 0xFF;
-            if (blockIdx == 0 || blockIdx >= level.getBlockCount()) {
-                return -1;
-            }
-
-            Block block = level.getBlock(blockIdx);
-            if (block == null) {
-                return -1;
-            }
-
-            // Chunk within block (16x16 pixels each, 8x8 grid of chunks)
-            int chunkX = (worldX % blockPixelSize) / 16;
-            int chunkY = (worldY % blockPixelSize) / 16;
-            ChunkDesc chunkDesc = block.getChunkDesc(chunkX, chunkY);
-            if (chunkDesc == null) {
-                return -1;
-            }
-
-            int chunkIdx = chunkDesc.getChunkIndex();
-            if (chunkIdx == 0 || chunkIdx >= level.getChunkCount()) {
-                return -1;
-            }
-
-            Chunk chunk = level.getChunk(chunkIdx);
-            if (chunk == null) {
-                return -1;
-            }
-
-            // Pattern within chunk (8x8 pixels each, 2x2 grid)
-            int patternX = (worldX % 16) / 8;
-            int patternY = (worldY % 16) / 8;
-            PatternDesc patternDesc = chunk.getPatternDesc(patternX, patternY);
-            if (patternDesc == null) {
-                return -1;
-            }
-
-            return patternDesc.getPatternIndex();
-        } catch (Exception e) {
-            return -1;
-        }
+        return LevelPatternLocator.findPatternOffset(
+                level, blockPixelSize, refX, refY, minTileIdx, maxTileIdx, searchRadius);
     }
 
     /**

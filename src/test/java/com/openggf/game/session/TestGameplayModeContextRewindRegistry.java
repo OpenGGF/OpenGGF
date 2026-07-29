@@ -70,7 +70,7 @@ import static org.mockito.Mockito.when;
  * Unit tests for the {@link RewindRegistry} integration on
  * {@link GameplayModeContext}.
  *
- * <p>Tests verify that the eight always-available atomic adapters are
+ * <p>Tests verify that the nine always-available atomic adapters are
  * registered automatically when {@link GameplayModeContext#attachGameplayManagers}
  * is called, without requiring a full level load or ROM access.
  */
@@ -126,6 +126,7 @@ class TestGameplayModeContextRewindRegistry {
                 "fademanager",
                 "oscillation",
                 HardwareTimingService.REWIND_KEY,
+                ctx.seamlessTransitionResourceHandoffs().key(),
                 "solid-execution");
         assertTrue(snapshot.entries().keySet().containsAll(expectedKeys),
                 "Expected all atomic adapter keys to be present, got: " + snapshot.entries().keySet());

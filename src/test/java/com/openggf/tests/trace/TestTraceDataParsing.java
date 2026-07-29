@@ -1,16 +1,20 @@
 package com.openggf.tests.trace;
 import com.openggf.tests.TestTempFiles;
 import com.openggf.trace.*;
+import com.openggf.trace.timing.HardwareTimingSchedule;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.reflect.Constructor;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.AbstractList;
 import java.util.List;
+import java.util.Map;
 import java.util.zip.GZIPOutputStream;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -21,6 +25,26 @@ public class TestTraceDataParsing {
         Path.of("src/test/resources/traces/synthetic/basic_3frames");
     private static final Path SYNTHETIC_EXECUTION_V3 =
         Path.of("src/test/resources/traces/synthetic/execution_v3_2frames");
+
+    private static final List<String> ALL_ADVERTISED_AUX_SCHEMAS = List.of(
+            "cage_state_per_frame",
+            "cage_execution_per_frame",
+            "velocity_write_per_frame",
+            "position_write_per_frame",
+            "aiz_ship_loop_per_frame",
+            "sonic_record_pos_per_frame",
+            "cpu_state_per_frame",
+            "s1_obj64_state_per_frame",
+            "tails_cpu_normal_step_per_frame",
+            "sidekick_interact_object_per_frame",
+            "cnz_cylinder_state_per_frame",
+            "cnz_cylinder_execution_per_frame",
+            "cnz_event_ram_per_frame",
+            "air_countdown_state_per_frame",
+            "rng_call_per_frame",
+            "aiz_boundary_state_per_frame",
+            "aiz_transition_floor_solid_per_frame",
+            "aiz_handoff_terrain_state_per_frame");
 
     @Test
     public void testMetadataLoading() throws IOException {
@@ -34,6 +58,113 @@ public class TestTraceDataParsing {
         assertEquals(3, meta.traceFrameCount());
         assertEquals((short) 0x0050, meta.startX());
         assertEquals((short) 0x03B0, meta.startY());
+    }
+
+    @Test
+    void missingAdvertisedAuxSchemasRetainCompleteReportOrder() throws IOException {
+        TraceMetadata metadata = metadataAdvertising(ALL_ADVERTISED_AUX_SCHEMAS);
+        TraceData data = constructTraceData(metadata, Map.of());
+
+        assertEquals(ALL_ADVERTISED_AUX_SCHEMAS, data.missingAdvertisedAuxSchemas());
+    }
+
+    @Test
+    void duplicateFrameMultiTypeEventsAreIndexedOnceWithoutChangingEventOrder() throws Exception {
+        TraceMetadata metadata = metadataAdvertising(ALL_ADVERTISED_AUX_SCHEMAS);
+        TraceEvent.CageState first =
+                new TraceEvent.CageState(7, 3, (short) 0x120, (short) 0x240,
+                        1, 2, 3, 4, 5, 6);
+        TraceEvent.VelocityWrite middle =
+                new TraceEvent.VelocityWrite(7, "tails", List.of(), List.of());
+        TraceEvent.CageState duplicate =
+                new TraceEvent.CageState(7, 4, (short) 0x130, (short) 0x250,
+                        7, 8, 9, 10, 11, 12);
+        CountingEventList events = new CountingEventList(List.of(first, middle, duplicate));
+        TraceData data = constructTraceData(metadata, Map.of(7, events));
+        assertEquals(events.size(), events.eventReads(),
+                "construction must traverse each event exactly once");
+
+        List<String> expectedMissing = List.of(
+                "cage_execution_per_frame",
+                "position_write_per_frame",
+                "aiz_ship_loop_per_frame",
+                "sonic_record_pos_per_frame",
+                "cpu_state_per_frame",
+                "s1_obj64_state_per_frame",
+                "tails_cpu_normal_step_per_frame",
+                "sidekick_interact_object_per_frame",
+                "cnz_cylinder_state_per_frame",
+                "cnz_cylinder_execution_per_frame",
+                "cnz_event_ram_per_frame",
+                "air_countdown_state_per_frame",
+                "rng_call_per_frame",
+                "aiz_boundary_state_per_frame",
+                "aiz_transition_floor_solid_per_frame",
+                "aiz_handoff_terrain_state_per_frame");
+
+        assertEquals(List.of(first, middle, duplicate), data.getEventsForFrame(7));
+        int readsAfterEventOrderAssertion = events.eventReads();
+        assertEquals(expectedMissing, data.missingAdvertisedAuxSchemas());
+        assertEquals(expectedMissing, data.missingAdvertisedAuxSchemas());
+        assertEquals(readsAfterEventOrderAssertion, events.eventReads(),
+                "repeated schema queries must use the type index");
+    }
+
+    private static TraceMetadata metadataAdvertising(List<String> schemas) throws IOException {
+        String schemasJson = new ObjectMapper().writeValueAsString(schemas);
+        return new ObjectMapper().readValue("""
+                {
+                  "game": "s3k",
+                  "zone": "cnz",
+                  "zone_id": 3,
+                  "act": 1,
+                  "bk2_frame_offset": 0,
+                  "trace_frame_count": 0,
+                  "start_x": "0x0080",
+                  "start_y": "0x03A0",
+                  "trace_schema": 5,
+                  "csv_version": 5,
+                  "aux_schema_extras": %s
+                }
+                """.formatted(schemasJson), TraceMetadata.class);
+    }
+
+    private static TraceData constructTraceData(
+            TraceMetadata metadata,
+            Map<Integer, List<TraceEvent>> eventsByFrame) {
+        try {
+            Constructor<TraceData> constructor = TraceData.class.getDeclaredConstructor(
+                    TraceMetadata.class, List.class, Map.class, HardwareTimingSchedule.class);
+            constructor.setAccessible(true);
+            return constructor.newInstance(
+                    metadata, List.of(), eventsByFrame, HardwareTimingSchedule.empty());
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to construct instrumented TraceData", e);
+        }
+    }
+
+    private static final class CountingEventList extends AbstractList<TraceEvent> {
+        private final List<TraceEvent> delegate;
+        private int eventReads;
+
+        private CountingEventList(List<TraceEvent> delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public TraceEvent get(int index) {
+            eventReads++;
+            return delegate.get(index);
+        }
+
+        @Override
+        public int size() {
+            return delegate.size();
+        }
+
+        private int eventReads() {
+            return eventReads;
+        }
     }
 
     @Test
@@ -624,7 +755,7 @@ public class TestTraceDataParsing {
         TraceData data = TraceData.load(dir);
 
         assertEquals(0x0800, data.initialVblankCounter());
-        assertEquals(1, data.initialVIntRunCounterPhaseOffset());
+        assertEquals(3, data.initialVIntRunCounterPhaseOffset());
     }
 
     @Test

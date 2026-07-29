@@ -36,6 +36,7 @@ public final class CorkeyBadnikInstance extends AbstractS3kBadnikInstance implem
     private static final int COLLISION_SIZE_INDEX = 0x0B; // ObjDat_Corkey collision_flags.
     private static final int PRIORITY_BUCKET = 5;         // ObjDat_Corkey priority $280.
     private static final int NOZZLE_Y_OFFSET = 0x0C;      // ChildObjDat_8C90E.
+    private static final int WAIT_OFFSCREEN_HALF_SIZE = 0x20;
 
     private enum State {
         INIT,
@@ -49,6 +50,8 @@ public final class CorkeyBadnikInstance extends AbstractS3kBadnikInstance implem
     private int patrolTurnaroundTimer;
     private int patrolTurnaroundReset;
     private boolean firingLatch;
+    private boolean waitingForOnscreen = true;
+    private boolean placeholderRenderedOnscreen;
 
     public CorkeyBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Corkey", Sonic3kObjectArtKeys.CORKEY, COLLISION_SIZE_INDEX, PRIORITY_BUCKET);
@@ -57,7 +60,20 @@ public final class CorkeyBadnikInstance extends AbstractS3kBadnikInstance implem
 
     @Override
     protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
-        if (isDestroyed() || !isOnScreenX()) {
+        if (isDestroyed()) {
+            return;
+        }
+
+        // Obj_WaitOffscreen installs a $20-by-$20 placeholder. Render_Sprites
+        // publishes its sign bit after Process_Sprites; the next dispatch only
+        // restores Obj_Corkey and returns, so real initialization begins one
+        // object pass later.
+        if (waitingForOnscreen) {
+            if (!placeholderRenderedOnscreen) {
+                return;
+            }
+            waitingForOnscreen = false;
+            placeholderRenderedOnscreen = false;
             return;
         }
 
@@ -65,6 +81,14 @@ public final class CorkeyBadnikInstance extends AbstractS3kBadnikInstance implem
             case INIT -> initialize();
             case PATROL -> updatePatrol();
             case WAIT_FOR_NOZZLE -> updateWaitForNozzle();
+        }
+    }
+
+    @Override
+    public void refreshPostCameraRenderState() {
+        if (waitingForOnscreen) {
+            placeholderRenderedOnscreen = isWithinRenderSpriteBounds(
+                    WAIT_OFFSCREEN_HALF_SIZE, WAIT_OFFSCREEN_HALF_SIZE);
         }
     }
 
@@ -137,6 +161,14 @@ public final class CorkeyBadnikInstance extends AbstractS3kBadnikInstance implem
 
     boolean firingLatchForTesting() {
         return firingLatch;
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format("state=%s spawn=%04X step=%d move=%d turn=%d/%d fire=%s wait=%s/%s",
+                state, spawn.x() & 0xFFFF, movementStep, movementTimer,
+                patrolTurnaroundTimer, patrolTurnaroundReset, firingLatch,
+                waitingForOnscreen, placeholderRenderedOnscreen);
     }
 
     // Public so cross-package rewind recreate can name the nozzle type for

@@ -477,6 +477,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     + pressed.ToString().ToLowerInvariant() + ")");
             }
 
+            public IDisposable RegisterExecuteCallback(
+                uint address, Action callback)
+            {
+                return NoOpCallbackRegistration.Instance;
+            }
+
             public void Advance()
             {
                 Calls.Add("Advance");

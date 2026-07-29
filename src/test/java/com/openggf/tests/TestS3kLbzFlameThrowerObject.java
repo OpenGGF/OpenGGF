@@ -54,6 +54,8 @@ class TestS3kLbzFlameThrowerObject {
         assertEquals(0x1B, solid.halfWidth());
         assertEquals(0x10, solid.airHalfHeight());
         assertEquals(0x11, solid.groundHalfHeight());
+        assertTrue(flameThrower.usesInclusiveRightEdge(),
+                "SolidObjectFull's unsigned bhi gate accepts relX == d1*2");
         assertEquals(3, flameThrower.getPriorityBucket());
         assertEquals(Sonic3kObjectArtKeys.LBZ_FLAME_THROWER, flameThrower.getArtKeyForTesting());
     }
@@ -75,6 +77,17 @@ class TestS3kLbzFlameThrowerObject {
         assertEquals(0x0100, flame.getCentreY());
         assertEquals(0x9D, flame.getCollisionFlags());
         assertEquals(List.of(Sonic3kSfx.FIRE_ATTACK.id), services.playedSfx);
+    }
+
+    @Test
+    void parentUsesRomVIntPhaseInsteadOfRawObjectUpdateCounter() {
+        RecordingServices services = new RecordingServices(6);
+        LbzFlameThrowerObjectInstance flameThrower = createParent(services, 0x20, false);
+
+        flameThrower.update(0x5A, playerAt(0x0200, 0x0100));
+
+        assertEquals(1, services.children.size(),
+                "Obj16 reads the phased low byte of V_int_run_count");
     }
 
     @Test
@@ -147,8 +160,14 @@ class TestS3kLbzFlameThrowerObject {
         private final List<AbstractObjectInstance> children = new ArrayList<>();
         private final List<Integer> playedSfx = new ArrayList<>();
         private final List<PatternSpriteRenderer> renderers = new ArrayList<>();
+        private final int vIntPhase;
 
         private RecordingServices() {
+            this(0);
+        }
+
+        private RecordingServices(int vIntPhase) {
+            this.vIntPhase = vIntPhase;
             objectManager = mock(ObjectManager.class);
             doAnswer(invocation -> {
                 AbstractObjectInstance child = invocation.getArgument(0);
@@ -170,6 +189,11 @@ class TestS3kLbzFlameThrowerObject {
         @Override
         public ObjectRenderManager renderManager() {
             return renderManager;
+        }
+
+        @Override
+        public int vIntRunCounter(int objectUpdateCounter) {
+            return objectUpdateCounter + vIntPhase;
         }
 
         @Override

@@ -13,11 +13,14 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PlaceholderObjectInstance;
+import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.physics.Direction;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -36,6 +39,8 @@ class TestLbzRideGrappleInstance {
         assertFalse(grapple instanceof PlaceholderObjectInstance,
                 "S3KL slot $17 is Obj_LBZRideGrapple and must not remain a placeholder");
         assertEquals("LBZRideGrapple", grapple.getName());
+        assertEquals(1, grapple.getReservedChildSlotCount(),
+                "Obj_LBZRideGrapple owns one loc_2668E multisprite SST child");
     }
 
     @Test
@@ -53,7 +58,7 @@ class TestLbzRideGrappleInstance {
                 "object_control=3 suppresses normal movement while the grapple owns positioning");
         assertEquals(0x1800, player.getCentreX() & 0xFFFF);
         assertEquals(0x0624, player.getCentreY() & 0xFFFF,
-                "loc_2673E snaps player y_pos to handle y_pos+$24");
+                "loc_267B2 snaps the capture frame to the parent y_pos+$24");
         assertEquals(Sonic3kAnimationIds.HANG2.id(), player.getAnimationId(),
                 "loc_267F8 writes anim=$14 on capture");
         assertEquals(0x91, player.getMappingFrame(),
@@ -63,6 +68,39 @@ class TestLbzRideGrappleInstance {
         assertEquals(0, player.getXSpeed());
         assertEquals(0, player.getYSpeed());
         assertEquals(0, player.getGSpeed());
+    }
+
+    @Test
+    void captureFrameUsesParentPositionBeforeFollowingHandle() throws ReflectiveOperationException {
+        LbzRideGrappleInstance grapple = (LbzRideGrappleInstance) grapple(0x1800, 0x0600, 0x80);
+        writeInt(grapple, "chainExtension", 0x28);
+        writeInt(grapple, "angle", 0x1000);
+        invokeUpdateChainCoordinates(grapple);
+        assertTrue(readInt(grapple, "handleX") != 0x1800,
+                "test setup must place the swaying handle away from the parent");
+        TestablePlayableSprite player = playerAt(0x1800, 0x0620);
+
+        grapple.update(0, player);
+
+        assertEquals(0x1800, player.getCentreX() & 0xFFFF,
+                "loc_267B2 writes parent x_pos on the capture dispatch");
+        assertEquals(0x0624, player.getCentreY() & 0xFFFF,
+                "loc_267B2 writes parent y_pos+$24 before loc_2673E follows the handle next frame");
+    }
+
+    @Test
+    void emptyZeroLengthChainClearsIdleSwayEveryDispatch() throws ReflectiveOperationException {
+        LbzRideGrappleInstance grapple = (LbzRideGrappleInstance) grapple(0x1800, 0x0600, 0);
+        writeInt(grapple, "angle", 0x1000);
+        writeInt(grapple, "swayVelocity", 0x0200);
+        ((SubpixelMotion.State) readField(grapple, "motion")).xVel = 0x0100;
+
+        grapple.update(0, null);
+
+        assertEquals(0x40, readInt(grapple, "angle"),
+                "loc_2684C clears stale angle before the current dispatch applies its first sway step");
+        assertEquals(0x40, readInt(grapple, "swayVelocity"));
+        assertEquals(0, ((SubpixelMotion.State) readField(grapple, "motion")).xVel);
     }
 
     @Test
@@ -83,6 +121,34 @@ class TestLbzRideGrappleInstance {
             assertEquals(0x91, player.getMappingFrame(),
                     "byte_26794 should also use the high angle byte, not the rapidly changing low byte");
         }
+    }
+
+    @Test
+    void chainCoordinatesIncludeParentSubpixelCarry() throws ReflectiveOperationException {
+        LbzRideGrappleInstance grapple = (LbzRideGrappleInstance) grapple(0x1800, 0x0600, 0);
+        writeInt(grapple, "chainExtension", 0x28);
+        writeInt(grapple, "angle", 0x1000);
+        invokeUpdateChainCoordinates(grapple);
+        int wholePixelHandleX = readInt(grapple, "handleX");
+
+        SubpixelMotion.State motion = (SubpixelMotion.State) readField(grapple, "motion");
+        motion.xSub = 0xFF;
+        invokeUpdateChainCoordinates(grapple);
+
+        assertEquals(wholePixelHandleX + 1, readInt(grapple, "handleX"),
+                "sub_2682E adds the circular deltas to the complete 16.16 parent x_pos");
+    }
+
+    @Test
+    void movingGrappleDeletesOnlyAfterCurrentAndOriginalPositionsLeaveRange()
+            throws ReflectiveOperationException {
+        LbzRideGrappleInstance grapple = (LbzRideGrappleInstance) grapple(0x0E68, 0x0600, 9);
+        ((SubpixelMotion.State) readField(grapple, "motion")).x = 0x1398;
+
+        assertFalse(grapple.isCustomOutOfRange(0x0D00),
+                "loc_265A2 keeps the grapple alive while its saved original x_pos remains in range");
+        assertTrue(grapple.isCustomOutOfRange(0x1700),
+                "loc_265BC deletes only after both the moving and saved x_pos are out of range");
     }
 
     @Test
@@ -401,6 +467,31 @@ class TestLbzRideGrappleInstance {
         player.setYSpeed((short) 0x0200);
         player.setGSpeed((short) 0x0100);
         return player;
+    }
+
+    private static void invokeUpdateChainCoordinates(LbzRideGrappleInstance grapple)
+            throws ReflectiveOperationException {
+        Method method = LbzRideGrappleInstance.class.getDeclaredMethod("updateChainCoordinates");
+        method.setAccessible(true);
+        method.invoke(grapple);
+    }
+
+    private static Object readField(Object target, String name) throws ReflectiveOperationException {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field.get(target);
+    }
+
+    private static int readInt(Object target, String name) throws ReflectiveOperationException {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field.getInt(target);
+    }
+
+    private static void writeInt(Object target, String name, int value) throws ReflectiveOperationException {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        field.setInt(target, value);
     }
 
     private static final class ZoneForTestRegistry extends Sonic3kObjectRegistry {

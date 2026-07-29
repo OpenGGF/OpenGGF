@@ -8,11 +8,13 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.GravityDebrisChild;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidContact;
+import com.openggf.level.objects.SpawnTrailingZeroIntsRewindRecreatable;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -21,6 +23,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -309,10 +312,21 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
         xSub = 0;
         ySub = 0;
         if (rightWall && (spawn.subtype() & 0xFF) != 0) {
+            spawnBreakDebris();
             spawnRevealedSpring();
             displacePlayerOffObject(playerEntity);
             // loc_8A0AA jumps to loc_85088 after allocating the spring.
             setDestroyedByOffscreen();
+        }
+    }
+
+    /**
+     * loc_8A0AA: {@code CreateChild6_Simple(ChildObjDat_8A42A)} shatters the
+     * platform into 6 debris pieces (loc_8A1D4) at the platform's position.
+     */
+    private void spawnBreakDebris() {
+        for (IczPlatformBreakDebris.Spec spec : IczPlatformBreakDebris.buildSpecs(x, y)) {
+            spawnChild(() -> new IczPlatformBreakDebris(spec));
         }
     }
 
@@ -524,7 +538,117 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
         return ART_KEY;
     }
 
+    /** Break-debris specs as {subtype, x, y, xVel, yVel} rows (ChildObjDat_8A42A). */
+    public static int[][] breakDebrisSpecsForTesting(int x, int y) {
+        List<IczPlatformBreakDebris.Spec> specs = IczPlatformBreakDebris.buildSpecs(x, y);
+        int[][] rows = new int[specs.size()][];
+        for (int i = 0; i < specs.size(); i++) {
+            IczPlatformBreakDebris.Spec spec = specs.get(i);
+            rows[i] = new int[]{spec.subtype(), spec.x(), spec.y(), spec.xVel(), spec.yVel()};
+        }
+        return rows;
+    }
+
     private static int sign16(int value) {
         return (short) value;
+    }
+
+    /**
+     * loc_8A1D4: one of the 6 platform-break debris pieces. Renders via
+     * {@code ObjDat3_8A412} (Map_ICZPlatforms + ArtTile_ICZMisc1) with the raw
+     * animation {@code byte_8A43E} and falls with gravity, deleting once
+     * offscreen ({@code AnimateRaw_MoveChkDel} -> {@code Sprite_CheckDeleteXY}).
+     */
+    public static final class IczPlatformBreakDebris extends GravityDebrisChild
+            implements SpawnTrailingZeroIntsRewindRecreatable {
+        private static final String DEBRIS_ART_KEY = Sonic3kObjectArtKeys.ICZ_PLATFORMS;
+        private static final int GRAVITY = 0x70; // MoveSprite gravity.
+        private static final int INITIAL_MAPPING_FRAME = 0x23; // ObjDat3_8A412.
+        // byte_8A43E: timer, then frames $23,$13,$24,$14, restart ($FC).
+        private static final int[] RAW_ANIMATION = {2, 0x23, 0x13, 0x24, 0x14, 0xFC};
+
+        // byte_8A200: child_dx/child_dy per subtype (0,2,...,10).
+        private static final int[][] OFFSETS = {
+                {-0x14, -0x09},
+                { 0x14, -0x0C},
+                { 0x14,  0x00},
+                { 0x0C,  0x0C},
+                {-0x08,  0x09},
+                {-0x04, -0x06}
+        };
+        // Obj_VelocityIndex entries 2..7, selected by Set_IndexedVelocity(d0=8).
+        // Child render_flags start cleared, so no per-piece x_vel flip applies.
+        private static final int[][] VELOCITY_INDEX = {
+                {-0x200, -0x200},
+                { 0x200, -0x200},
+                {-0x300, -0x200},
+                { 0x300, -0x200},
+                {-0x200, -0x200},
+                {      0, -0x200}
+        };
+
+        private int mappingFrame = INITIAL_MAPPING_FRAME;
+        private int animFrame;
+        private int animFrameTimer;
+
+        private IczPlatformBreakDebris(Spec spec) {
+            super(new ObjectSpawn(spec.x(), spec.y(), Sonic3kObjectIds.ICZ_PATH_FOLLOW_PLATFORM,
+                    spec.subtype(), 0, false, spec.y()),
+                    "ICZPlatformBreakDebris", spec.xVel(), spec.yVel(), GRAVITY);
+        }
+
+        private IczPlatformBreakDebris(ObjectSpawn spawn, int ignored) {
+            super(spawn, "ICZPlatformBreakDebris", 0, 0, GRAVITY);
+        }
+
+        private static List<Spec> buildSpecs(int x, int y) {
+            List<Spec> specs = new ArrayList<>(OFFSETS.length);
+            for (int i = 0; i < OFFSETS.length; i++) {
+                int[] offset = OFFSETS[i];
+                int[] velocity = VELOCITY_INDEX[i];
+                specs.add(new Spec(i * 2, x + offset[0], y + offset[1], velocity[0], velocity[1]));
+            }
+            return specs;
+        }
+
+        @Override
+        public void update(int frameCounter, PlayableEntity player) {
+            animateRaw();
+            super.update(frameCounter, player);
+        }
+
+        private void animateRaw() {
+            animFrameTimer--;
+            if (animFrameTimer >= 0) {
+                return;
+            }
+            animFrame = (animFrame + 1) & 0xFF;
+            int scriptIndex = animFrame + 1;
+            int value = scriptIndex < RAW_ANIMATION.length ? RAW_ANIMATION[scriptIndex] : 0xFC;
+            if ((value & 0x80) != 0) {
+                mappingFrame = RAW_ANIMATION[1];
+                animFrameTimer = RAW_ANIMATION[0];
+                animFrame = 0;
+                return;
+            }
+            animFrameTimer = RAW_ANIMATION[0];
+            mappingFrame = value;
+        }
+
+        @Override
+        public int getPriorityBucket() {
+            return RenderPriority.clamp(1); // ObjDat3_8A412 priority $80.
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            PatternSpriteRenderer renderer = getRenderer(DEBRIS_ART_KEY);
+            if (renderer != null) {
+                renderer.drawFrameIndex(mappingFrame, getX(), getY(), false, false, PALETTE_LINE);
+            }
+        }
+
+        private record Spec(int subtype, int x, int y, int xVel, int yVel) {
+        }
     }
 }

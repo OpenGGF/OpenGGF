@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects.badniks;
 
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
+import com.openggf.game.session.SessionManager;
 import com.openggf.level.LevelData;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
@@ -11,6 +12,8 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tools.ObjectDiscoveryTool.LevelConfig;
 import com.openggf.tools.Sonic3kObjectProfile;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -26,6 +29,18 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class TestRibotBadnikInstance {
+    @BeforeEach
+    void resetRuntimeState() {
+        SessionManager.clear();
+        AbstractObjectInstance.resetCameraBoundsForTests();
+    }
+
+    @AfterEach
+    void clearRuntimeState() {
+        SessionManager.clear();
+        AbstractObjectInstance.resetCameraBoundsForTests();
+    }
+
     @Test
     void registryCreatesRibotAndProfileMarksS3klSlotOnly() {
         ObjectInstance instance = new Sonic3kObjectRegistry().create(
@@ -102,6 +117,8 @@ class TestRibotBadnikInstance {
         ribot.update(0, playerAt(0, 0));
         ObjectInstance headSphere = capturedChildren(objectManager, 1).get(0);
         assertTrue(headSphere instanceof AbstractObjectInstance);
+        assertFalse(headSphere.usesCurrentTouchResponseState(),
+                "the circular head retains its prior player-slot touch coordinate");
         installObjectManager((AbstractObjectInstance) headSphere);
 
         headSphere.update(1, playerAt(0, 0));
@@ -131,15 +148,19 @@ class TestRibotBadnikInstance {
         ribot.update(0, playerAt(0, 0));
         ObjectInstance rightSphere = capturedChildren(objectManager, 2).get(1);
         assertTrue(rightSphere instanceof AbstractObjectInstance);
+        assertTrue(rightSphere.usesCurrentTouchResponseState(),
+                "Ribot publishes its hurt sphere after movement, so touch uses the post-move coordinates");
         installObjectManager((AbstractObjectInstance) rightSphere);
 
         ribot.update(1, playerAt(0, 0));
         rightSphere.update(1, playerAt(0, 0));
         rightSphere.update(2, playerAt(0, 0));
         rightSphere.update(3, playerAt(0, 0));
+        rightSphere.update(4, playerAt(0, 0));
+        rightSphere.update(5, playerAt(0, 0));
 
-        assertTrue(rightSphere.getY() > 0x010C,
-                "loc_8C436 keeps the active hurt sphere extending before it returns");
+        assertEquals(0x010D, rightSphere.getY(),
+                "loc_8C436 uses MoveSprite's $38 gravity while the hurt sphere extends");
     }
 
     private static AbstractObjectInstance createRibot(int subtype) {
@@ -162,6 +183,10 @@ class TestRibotBadnikInstance {
         ObjectManager objectManager = mock(ObjectManager.class);
         when(services.objectManager()).thenReturn(objectManager);
         object.setServices(services);
+        if (object instanceof RibotBadnikInstance) {
+            object.refreshPostCameraRenderState();
+            object.update(-1, playerAt(0, 0));
+        }
         return objectManager;
     }
 

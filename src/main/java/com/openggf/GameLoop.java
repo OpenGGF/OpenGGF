@@ -36,9 +36,7 @@ import com.openggf.game.sonic1.dataselect.S1DataSelectImageGenerator;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic2.dataselect.S2DataSelectImageCacheManager;
 import com.openggf.debug.PerformanceProfiler;
-import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
-import com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance;
 import com.openggf.game.mode.BootScreenModeController;
 import com.openggf.game.launch.MasterTitleLaunchCoordinator;
 import com.openggf.game.launch.MasterTitleExitCoordinator;
@@ -553,7 +551,8 @@ public class GameLoop {
     }
 
     public void setUserRecordingPlaybackStarter(UserRecordingMenu.PlaybackStarter userRecordingPlaybackStarter) {
-        this.userRecordingPlaybackStarter = withPlaybackAppliedFrameReset(userRecordingPlaybackStarter);
+        this.userRecordingPlaybackStarter =
+                levelIterationAdmission.withAppliedPlaybackFrameReset(userRecordingPlaybackStarter);
         installUserRecordingPlaybackStarter(currentMasterTitleScreen());
     }
 
@@ -1981,9 +1980,7 @@ public class GameLoop {
             advanceGameplayAudioFrameForTick(doFrameStep);
             return;
         }
-        profiler.beginSection("audio");
         audioUpdatedThisStep = true;
-        profiler.endSection("audio");
     }
 
     private boolean shouldAdvanceGameplayAudioForCurrentMode() {
@@ -2001,9 +1998,7 @@ public class GameLoop {
         if (audioUpdatedThisStep) {
             return;
         }
-        profiler.beginSection("audio");
         audioUpdatedThisStep = true;
-        profiler.endSection("audio");
     }
 
     boolean handlePlaybackTakeoverBeforePlaybackInputBridge(InputHandler input) {
@@ -2168,11 +2163,8 @@ public class GameLoop {
     }
 
     public static ObjectSpawn resolveBonusStageBootstrapSpawn(BonusStageType type) {
-        if (type != BonusStageType.GLOWING_SPHERE) {
-            return null;
-        }
-        return new ObjectSpawn(0x78, 0x0F30, Sonic3kObjectIds.PACHINKO_ENERGY_TRAP,
-                0, 0, false, 0);
+        return BonusStageBootstrapInstaller.resolveSpawn(
+                GameServices.currentOrBootstrapGameModule().getBonusStageProvider(), type);
     }
 
     /**
@@ -2692,16 +2684,8 @@ public class GameLoop {
     }
 
     private void ensureBonusStageBootstrapObjectPresent(BonusStageType type) {
-        ObjectSpawn bootstrapSpawn = resolveBonusStageBootstrapSpawn(type);
-        if (bootstrapSpawn == null || levelManager.getObjectManager() == null) {
-            return;
-        }
-        boolean present = levelManager.getObjectManager().getActiveObjects().stream()
-                .anyMatch(PachinkoEnergyTrapObjectInstance.class::isInstance);
-        if (!present) {
-            levelManager.getObjectManager().addDynamicObject(
-                    new PachinkoEnergyTrapObjectInstance(bootstrapSpawn));
-        }
+        BonusStageBootstrapInstaller.ensurePresent(
+                activeBonusStageProvider, type, levelManager.getObjectManager());
     }
 
     private void restorePlayableStateForBonusTitleCard() {
@@ -4594,6 +4578,9 @@ public class GameLoop {
         }
         if (!scrollFrozen) {
             camera.updateBoundaryEasing();
+            if (levelEvents != null) {
+                levelEvents.updateAfterCameraBoundaryEasing();
+            }
             levelManager.postCameraObjectPlacementSync();
             levelManager.update();
             levelManager.refreshObjectPostCameraRenderState();

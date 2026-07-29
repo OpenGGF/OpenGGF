@@ -3306,13 +3306,15 @@ public final class ObjectSolidContactController {
         boolean inclusiveRightEdge = profile.inclusiveRightEdge();
         int playerCenterX = player.getCentreX();
         int playerCenterY = player.getCentreY();
-        if (topSolidOnly && instance instanceof SolidObjectProvider provider) {
+        if (instance instanceof SolidObjectProvider provider) {
             // Provider-specific ROM ports can request a different sampled
-            // player-position phase for top-solid helper geometry. S3K
-            // SolidObjectTop's new-landing check reads x_pos/y_pos/y_radius
-            // before RideObject_SetRide (sonic3k.asm:41982-42015).
-            int historyFrames = Math.max(0,
-                    provider.getTopSolidPlayerPositionHistoryFrames(player));
+            // player-position phase for top- or full-solid helper geometry.
+            // S3K SolidObjectTop's new-landing check reads x_pos/y_pos/y_radius
+            // before RideObject_SetRide (sonic3k.asm:41982-42015); full-solid
+            // callers can likewise model their concrete player-slot phase.
+            int historyFrames = Math.max(0, topSolidOnly
+                    ? provider.getTopSolidPlayerPositionHistoryFrames(player)
+                    : provider.getFullSolidPlayerPositionHistoryFrames(player));
             if (historyFrames > 0) {
                 playerCenterX = player.getCentreX(historyFrames);
                 playerCenterY = player.getCentreY(historyFrames);
@@ -4880,7 +4882,7 @@ public final class ObjectSolidContactController {
 
     private boolean usesCurrentYRadiusDeltaOnLanding(AbstractPlayableSprite sprite) {
         PlayerMovementRules rules = playerMovementRulesOrNull(sprite);
-        return rules != null && rules.landingRollClearUsesCurrentYRadiusDelta();
+        return rules != null && rules.landing().landingRollClearUsesCurrentYRadiusDelta();
     }
 
     private static CollisionRules collisionRulesOrNull(PlayableEntity player) {

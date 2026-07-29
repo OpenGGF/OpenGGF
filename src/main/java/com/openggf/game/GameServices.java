@@ -26,6 +26,7 @@ import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.LevelManager;
 import com.openggf.level.ParallaxManager;
+import com.openggf.level.SeamlessTransitionResourceHandoffRegistry;
 import com.openggf.level.WaterSystem;
 import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.BackgroundPlaneCollisionProvider;
@@ -189,6 +190,19 @@ public final class GameServices {
         return mode != null ? mode.hardwareTiming() : null;
     }
 
+    public static RuntimeArtCoordinator runtimeArtCoordinatorOrNull() {
+        GameplayModeContext mode = gameplayModeOrNull();
+        return mode != null ? mode.runtimeArtCoordinator() : null;
+    }
+
+    public static SeamlessTransitionResourceHandoffRegistry
+            seamlessTransitionResourceHandoffsOrNull() {
+        GameplayModeContext mode = gameplayModeOrNull();
+        return mode != null
+                ? mode.seamlessTransitionResourceHandoffs()
+                : null;
+    }
+
     // â”€â”€ Gameplay-scoped managers (resolve through SessionManager) â”€â”€â”€â”€â”€â”€â”€â”€
 
     /**
@@ -206,6 +220,18 @@ public final class GameServices {
     /** Session-owned hardware preparation/readiness service for non-object code. */
     public static HardwareTimingService hardwareTiming() {
         return requireGameplayMode("hardwareTiming").hardwareTiming();
+    }
+
+    /** Game-owned runtime-art coordinator for non-object facades. */
+    public static RuntimeArtCoordinator runtimeArtCoordinator() {
+        return requireGameplayMode("runtimeArtCoordinator")
+                .runtimeArtCoordinator();
+    }
+
+    public static SeamlessTransitionResourceHandoffRegistry
+            seamlessTransitionResourceHandoffs() {
+        return requireGameplayMode("seamlessTransitionResourceHandoffs")
+                .seamlessTransitionResourceHandoffs();
     }
 
     /**

@@ -1587,6 +1587,16 @@ public final class Sonic3kPlcArtRegistry {
                 null
         ));
 
+        // Obj_ICZBreakableWall break debris (ObjDat3_8A41E) reuses Map_ICZPlatforms
+        // with ArtTile_ICZIntroSprites (loaded by PLC_1E_1F for ICZ1).
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.ICZ_PLATFORMS_INTRO,
+                Sonic3kConstants.MAP_ICZ_PLATFORMS_ADDR,
+                Sonic3kConstants.ARTTILE_ICZ_INTRO_SPRITES,
+                2,
+                null
+        ));
+
         // ICZ Wall/Column objects: Obj_ICZSegmentColumn uses make_art_tile($001, 2, 0).
         levelArt.add(new LevelArtEntry(
                 Sonic3kObjectArtKeys.ICZ_WALL_AND_COLUMN,

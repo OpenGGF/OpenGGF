@@ -648,6 +648,8 @@ public class HczEndBossInstance extends AbstractBossInstance
         defeatExplosionController = new S3kBossExplosionController(state.x, state.y, 0);
         services().fadeOutMusic();
         services().gameState().setCurrentBossId(0);
+        // ROM loc_6BC1C: jmp (BossDefeated_StopTimer).l (sonic3k.asm:142098).
+        stopLevelTimerOnBossDefeat();
         // Wait DEFEAT_WAIT frames for explosions, then begin flee
         setWait(DEFEAT_WAIT, WaitCallback.BEGIN_FLEE_SEQUENCE);
     }

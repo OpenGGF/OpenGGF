@@ -16,8 +16,9 @@ import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidObjectParams;
+import com.openggf.level.objects.SolidContact;
+import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectProvider;
-import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
@@ -39,7 +40,7 @@ import java.util.Map;
  * {@link AutomaticTunnelObjectInstance#PATHS}.
  */
 public final class LbzTubeElevatorInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SolidObjectListener, SpawnRewindRecreatable {
     private static final int WIDTH_PIXELS = 0x18;
     private static final int HEIGHT_PIXELS = 0x30;
     private static final int SOLID_SIDE_PADDING = 0x0B;
@@ -152,14 +153,8 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
         } else {
             suppressClosedDestinationIfAnyPlayerIsEntering(playerEntity, participants);
             updateClosedBob();
-            checkpointAll();
         }
         updateDynamicSpawn(x, y);
-    }
-
-    @Override
-    public SolidExecutionMode solidExecutionMode() {
-        return SolidExecutionMode.MANUAL_CHECKPOINT;
     }
 
     @Override
@@ -179,10 +174,21 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
 
     @Override
     public boolean isTopSolidOnly() {
-        // WaitPlayer/WaitExit call SolidObjectFull_Offset with d2=$08 and
-        // d3=$20; they are not SolidObjectTop surfaces
-        // (sonic3k.asm:57970-57977,58139-58146).
+        // ROM uses SolidObjectFull_Offset while open and SolidObjectFull while
+        // spinning/closed. The offset changes d2/d3, not the routine family.
         return false;
+    }
+
+    @Override
+    public boolean preservesObjectManagedRideWhileNotSolidFor(PlayableEntity player) {
+        return player instanceof AbstractPlayableSprite sprite
+                && sprite.isObjectControlled()
+                && sprite.getLatchedSolidObjectInstance() == this;
+    }
+
+    @Override
+    public Integer getObjectManagedRideCentreY(PlayableEntity player, int objectY, SolidObjectParams params) {
+        return objectY + PLAYER_Y_OFFSET - player.getYRadius();
     }
 
     @Override
@@ -198,6 +204,20 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
     @Override
     public int getOnScreenHalfHeight() {
         return HEIGHT_PIXELS;
+    }
+
+    @Override
+    public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
+        if (!contact.standing() || !(playerEntity instanceof AbstractPlayableSprite player)) {
+            return;
+        }
+        PlayerTubeState tubeState = player == nativeP2OrNull() ? p2 : p1;
+        if (tubeState.phase == 0 && canCapture(player)) {
+            // ROM slot order is Action (including SolidObjectFull_Offset), then
+            // CheckPlayer. Consume a landing published by the shared solid pass
+            // in this same object slot so the capture snap is not one frame late.
+            capturePlayer(player, tubeState);
+        }
     }
 
     private void ensureOverlayChild() {
@@ -245,7 +265,7 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
             setupPath();
             requestFastVerticalScroll();
         }
-        applyBobFull();
+        applyStartSpinBob();
     }
 
     private void updateMovePath() {
@@ -264,10 +284,8 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
             return;
         }
 
-        x = path[pathIndex];
-        y = path[pathIndex + 1];
-        fixedX = (long) x << 16;
-        fixedY = (long) y << 16;
+        writeXWordPreserveSubpixel(path[pathIndex]);
+        writeYWordPreserveSubpixel(path[pathIndex + 1]);
         pathIndex += reversePath ? -2 : 2;
         pathRemaining -= 4;
         if (pathRemaining <= 0 || pathIndex < 0 || pathIndex + 1 >= path.length) {
@@ -417,7 +435,7 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
             return;
         }
         if (tubeState.phase == 0) {
-            if (canCapture(player) || otherPlayerInside) {
+            if (canCapture(player) || (otherPlayerInside && isStandingOnThisElevator(player))) {
                 capturePlayer(player, tubeState);
             }
             return;
@@ -428,13 +446,16 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
             if (state == STATE_WAIT_EXIT) {
                 player.setDirection(Direction.LEFT);
                 ObjectControlState.none().applyTo(player);
-                player.setControlLocked(false);
                 player.setObjectMappingFrameControl(false);
                 player.setLatchedSolidObjectId(0);
                 tubeState.phase = 4;
+                // loc_2A1EC follows the WaitExit release branch: native still
+                // publishes this slot's final tube mapping/DPLC after clearing
+                // object_control, but ordinary animation resumes next frame.
+                applyCapturedPlayerFrame(player, false);
                 return;
             }
-            applyCapturedPlayerFrame(player);
+            applyCapturedPlayerFrame(player, true);
         }
     }
 
@@ -469,12 +490,29 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
         return dy >= 0 && dy < PLAYER_Y_RANGE;
     }
 
+    private boolean isStandingOnThisElevator(AbstractPlayableSprite player) {
+        if (!player.isOnObject()) {
+            return false;
+        }
+        try {
+            ObjectManager objectManager = services().objectManager();
+            if (objectManager != null) {
+                return objectManager.getRidingObject(player) == this;
+            }
+        } catch (IllegalStateException ignored) {
+            // Direct object tests can use the native solid-object latch.
+        }
+        return player.getLatchedSolidObjectInstance() == this;
+    }
+
     private void capturePlayer(AbstractPlayableSprite player, PlayerTubeState tubeState) {
         tubeState.phase = 2;
         ObjectControlState.nativeBit7FullControl().applyTo(player);
-        player.setControlLocked(true);
         player.setAnimationId(0);
-        player.forceAnimationRestart();
+        // Capture runs after this frame's player slot. Native object_control
+        // bit 1 suppresses the next Animate dispatch immediately, although the
+        // elevator publishes its first mapping only on its next object pass.
+        player.setObjectMappingFrameControl(true);
         player.setJumping(false);
         player.setGSpeed((short) 0);
         player.setXSpeed((short) 0);
@@ -496,10 +534,10 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
         player.setLatchedSolidObject(spawn.objectId(), this);
     }
 
-    private void applyCapturedPlayerFrame(AbstractPlayableSprite player) {
+    private void applyCapturedPlayerFrame(AbstractPlayableSprite player, boolean retainMappingControl) {
         int index = Math.floorMod(angle, PLAYER_FRAMES.length);
         player.setMappingFrame(PLAYER_FRAMES[index]);
-        player.setObjectMappingFrameControl(true);
+        player.setObjectMappingFrameControl(retainMappingControl);
         player.setRenderFlips(PLAYER_H_FLIP[index], player.getRenderVFlip());
     }
 
@@ -538,19 +576,30 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
         applyBob();
     }
 
+    private void applyStartSpinBob() {
+        // ROM loc_29EE2 samples 1(a4) before incrementing it. The waiting,
+        // exit, and closed routines increment first and therefore use applyBob().
+        int sampleAngle = bobAngle;
+        bobAngle = (bobAngle + 2) & 0xFF;
+        int offset = TrigLookupTable.sinHex(sampleAngle) >> 6;
+        writeYWordPreserveSubpixel(baseY - offset);
+    }
+
     private void applyBob() {
         bobAngle = (bobAngle + 2) & 0xFF;
         int adjusted = bobAngle;
         if (adjusted >= 0xB0 && adjusted < 0xD0) {
             adjusted = (adjusted + 0x20) & 0xFF;
         }
+        // ROM writes the adjusted value back to 1(a4), skipping the entire
+        // $B0-$CF phase band rather than reapplying the correction each frame.
+        bobAngle = adjusted;
         int offset = TrigLookupTable.sinHex(adjusted);
         if (offset == 0x100) {
             offset--;
         }
         offset >>= 6;
-        y = baseY - offset;
-        fixedY = (long) y << 16;
+        writeYWordPreserveSubpixel(baseY - offset);
     }
 
     private void spinShell() {
@@ -572,20 +621,27 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
         pathRemaining = (waypointCount - 1) * 4;
         if (reversePath) {
             pathIndex = path.length - 2;
-            x = path[pathIndex];
-            y = path[pathIndex + 1];
+            writeXWordPreserveSubpixel(path[pathIndex]);
+            writeYWordPreserveSubpixel(path[pathIndex + 1]);
             pathIndex -= 2;
         } else {
-            x = path[0];
-            y = path[1];
+            writeXWordPreserveSubpixel(path[0]);
+            writeYWordPreserveSubpixel(path[1]);
             pathIndex = 2;
         }
-        fixedX = (long) x << 16;
-        fixedY = (long) y << 16;
-        baseY = y;
         if (pathIndex >= 0 && pathIndex + 1 < path.length) {
             calculateVelocity(path[pathIndex], path[pathIndex + 1]);
         }
+    }
+
+    private void writeXWordPreserveSubpixel(int value) {
+        x = value & 0xFFFF;
+        fixedX = ((long) x << 16) | (fixedX & 0xFFFFL);
+    }
+
+    private void writeYWordPreserveSubpixel(int value) {
+        y = value & 0xFFFF;
+        fixedY = ((long) y << 16) | (fixedY & 0xFFFFL);
     }
 
     private void calculateVelocity(int targetX, int targetY) {

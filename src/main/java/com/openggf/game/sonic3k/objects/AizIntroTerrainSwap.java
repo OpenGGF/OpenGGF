@@ -107,11 +107,11 @@ public final class AizIntroTerrainSwap {
         LOG.info("AIZ intro transition tilemaps pre-computed successfully");
     }
 
-    public static synchronized boolean applyMainLevelOverlays(
+    public static synchronized boolean applyMainLevelBlockOverlay(
             ObjectServices services,
-            byte[] preparedMainLevelTiles8x8) {
-        if (preparedMainLevelTiles8x8 == null) {
-            throw new IllegalArgumentException("preparedMainLevelTiles8x8");
+            byte[] preparedMainLevelBlocks16x16) {
+        if (preparedMainLevelBlocks16x16 == null) {
+            throw new IllegalArgumentException("preparedMainLevelBlocks16x16");
         }
         LevelManager levelManager = services.levelManager();
         if (levelManager == null) {
@@ -136,11 +136,48 @@ public final class AizIntroTerrainSwap {
         OverlayData overlayData = overlay;
         applyImmediateMutation(services, levelManager, level, context -> {
             sonic3kLevel.applyChunkOverlay(
-                    overlayData.mainLevelBlocks16x16(),
+                    preparedMainLevelBlocks16x16,
                     overlayData.chunkOverlayOffsetBytes());
+            return MutationEffects.NONE;
+        });
+
+        if (!levelManager.swapToPrebuiltTilemaps()) {
+            levelManager.invalidateAllTilemaps();
+        }
+        return true;
+    }
+
+    public static synchronized boolean applyMainLevelPatternOverlay(
+            ObjectServices services,
+            byte[] preparedMainLevelTiles8x8) {
+        if (preparedMainLevelTiles8x8 == null) {
+            throw new IllegalArgumentException("preparedMainLevelTiles8x8");
+        }
+        LevelManager levelManager = services.levelManager();
+        if (levelManager == null) {
+            return false;
+        }
+        Level level = levelManager.getCurrentLevel();
+        if (!(level instanceof Sonic3kLevel sonic3kLevel)) {
+            return false;
+        }
+
+        OverlayData overlay = cachedOverlayData;
+        if (overlay == null) {
+            try {
+                overlay = loadOverlayData(services.rom());
+                cachedOverlayData = overlay;
+            } catch (IOException e) {
+                LOG.warning("AIZ intro art swap failed to load overlay metadata: " + e.getMessage());
+                return false;
+            }
+        }
+
+        int patternOffsetBytes = overlay.patternOverlayOffsetBytes();
+        applyImmediateMutation(services, levelManager, level, context -> {
             sonic3kLevel.applyPatternOverlay(
                     preparedMainLevelTiles8x8,
-                    overlayData.patternOverlayOffsetBytes());
+                    patternOffsetBytes);
             return MutationEffects.NONE;
         });
 
@@ -153,10 +190,6 @@ public final class AizIntroTerrainSwap {
         // referenced by object sprite sheets), but the renderers' GPU textures are
         // stale. Use generic tile-range-based refresh to re-upload affected renderers.
         Sonic3kPlcLoader.refreshAffectedRenderers(modifiedRanges, levelManager);
-
-        if (!levelManager.swapToPrebuiltTilemaps()) {
-            levelManager.invalidateAllTilemaps();
-        }
         return true;
     }
 

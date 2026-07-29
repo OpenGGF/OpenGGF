@@ -182,10 +182,11 @@ public class MGZLBZSmashingPillarObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean groundedSquashEdgeSideContactSetsPush() {
-        // SolidObjectFull's grounded lower-half edge escape branches back to
-        // loc_1E042/loc_1E06E, which sets Status_Push even when the falling
-        // pillar is moving into a player who is moving away from its face
-        // (sonic3k.asm:41473-41495,41564-41568).
+        // A shallow underside overlap with zero y_vel enters loc_1E126. When
+        // abs(d0) < $10 it rejoins loc_1E042, whose grounded tail sets
+        // Status_Push even when x_vel points away from the pillar. This is the
+        // ordinary SolidObjectFull squash-edge result, driven by the live
+        // contact geometry. sonic3k.asm:41594-41616,41473-41505.
         return true;
     }
 

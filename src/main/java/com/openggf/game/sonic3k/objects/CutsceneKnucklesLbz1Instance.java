@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
@@ -56,12 +57,6 @@ public final class CutsceneKnucklesLbz1Instance extends AbstractObjectInstance
             {0x19, 0x13},
             {0x1A, 7},
             {0x1B, 0}
-    };
-    private static final byte[] SCREEN_SHAKE_CONTINUOUS = {
-            1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0,
-            2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3,
-            1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0,
-            2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3
     };
 
     private Routine routine = Routine.INIT;
@@ -210,19 +205,19 @@ public final class CutsceneKnucklesLbz1Instance extends AbstractObjectInstance
     }
 
     private void routineWaitBeforeCollapse(int frameCounter) {
-        applyCollapseShake(frameCounter);
+        applyCollapseShake();
         timer--;
         if (timer >= 0) {
             return;
         }
         spawnCollapseChildrenOnce();
-        applyCollapseShake(frameCounter);
+        applyCollapseShake();
         timer = COLLAPSE_WAIT;
         routine = Routine.COLLAPSE_WAIT;
     }
 
     private void routineCollapseWait(int frameCounter) {
-        applyCollapseShake(frameCounter);
+        applyCollapseShake();
         timer--;
         if (timer >= 0) {
             return;
@@ -234,7 +229,10 @@ public final class CutsceneKnucklesLbz1Instance extends AbstractObjectInstance
     }
 
     private void routineExitRight() {
-        if (isOnScreen(96)) {
+        // loc_62778 reads render_flags.on_screen before moving Knuckles.  The
+        // flag comes from the prior Render_Sprites pass rather than the wider
+        // placement lifetime margin used by ordinary tracked objects.
+        if (isPreUpdateWithinRenderSpriteBounds(0x0E, 0)) {
             currentX += EXIT_SPEED;
             animateRun();
             return;
@@ -319,11 +317,14 @@ public final class CutsceneKnucklesLbz1Instance extends AbstractObjectInstance
         if (services().spriteManager() != null) {
             for (com.openggf.sprites.Sprite sprite : services().spriteManager().getAllSprites()) {
                 if (sprite instanceof AbstractPlayableSprite player) {
-                    ObjectControlState.none().applyTo(player);
-                    player.setControlLocked(false);
-                    player.clearForcedInputMask();
-                    player.clearLogicalInputState();
+                    releasePlayer(player);
                 }
+            }
+            // Player 2 is maintained in the sidekick registry even during CPU
+            // suppression.  Clear the native fixed-slot counterpart explicitly,
+            // mirroring loc_6278A's Player_1/Player_2 object_control writes.
+            for (AbstractPlayableSprite sidekick : services().spriteManager().getRegisteredSidekicks()) {
+                releasePlayer(sidekick);
             }
         }
         LbzZoneRuntimeState state = S3kRuntimeStates.currentLbz(services().zoneRuntimeRegistry()).orElse(null);
@@ -333,13 +334,30 @@ public final class CutsceneKnucklesLbz1Instance extends AbstractObjectInstance
         services().camera().setMaxX((short) EXIT_CAMERA_MAX_X);
         services().camera().setMaxXTarget((short) EXIT_CAMERA_MAX_X);
         services().camera().setMaxYTarget((short) EXIT_CAMERA_MAX_Y_TARGET);
+        if (services().levelEventProvider() instanceof Sonic3kLevelEventManager manager) {
+            // loc_6278A writes Camera_target_max_Y_pos before the current
+            // DynamicLevelEvents tail. Publish that tail's resulting live
+            // Camera_max_Y_pos to the controller mirror used by next frame's
+            // Tails_Check_Screen_Boundaries.
+            manager.requestSidekickBoundsPublishAfterCameraEasing();
+        }
         Sonic3kZoneEvents.loadPaletteFromPalPointers(Sonic3kConstants.PAL_POINTERS_LBZ1_INDEX);
     }
 
-    private void applyCollapseShake(int frameCounter) {
+    private static void releasePlayer(AbstractPlayableSprite player) {
+        ObjectControlState.none().applyTo(player);
+        player.setControlLocked(false);
+        player.clearForcedInputMask();
+        player.clearLogicalInputState();
+    }
+
+    private void applyCollapseShake() {
         LbzZoneRuntimeState state = S3kRuntimeStates.currentLbz(services().zoneRuntimeRegistry()).orElse(null);
         if (state != null) {
-            state.requestScreenShakeOffset(SCREEN_SHAKE_CONTINUOUS[frameCounter & 0x3F]);
+            // The object writes Screen_shake_flag=-1; it does not sample
+            // ScreenShakeArray2 itself. The later ShakeScreen/scroll phase
+            // owns the Level_frame_counter-indexed offset.
+            state.setLbz1KnucklesBombShakeActive(true);
         }
     }
 

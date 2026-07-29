@@ -7,6 +7,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
@@ -30,6 +31,7 @@ import java.util.Map;
  * renders and supplies the held-player handle position.
  */
 public final class LbzRideGrappleInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+    private static final int ROM_CHILD_SLOT_COUNT = 1;
     private static final int[][] PATH_RANGES = {
             {0x0A08, 0x0C78},
             {0x1208, 0x14F8},
@@ -70,6 +72,7 @@ public final class LbzRideGrappleInstance extends AbstractObjectInstance impleme
     };
 
     private final SubpixelMotion.State motion;
+    private int originalX;
     private int pathLeft;
     private int pathRight;
     private boolean ejectAtPathEnd;
@@ -88,11 +91,13 @@ public final class LbzRideGrappleInstance extends AbstractObjectInstance impleme
     private int swayVelocity;
     private boolean swayReturning;
     private boolean moving;
+    private boolean childSlotReserved;
     private Direction facing = Direction.RIGHT;
 
     public LbzRideGrappleInstance(ObjectSpawn spawn) {
         super(spawn, "LBZRideGrapple");
         this.motion = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, 0, 0);
+        this.originalX = spawn.x();
         int pathIndex = Math.min(spawn.subtype() & 0x7F, PATH_RANGES.length - 1);
         this.pathLeft = PATH_RANGES[pathIndex][0];
         this.pathRight = PATH_RANGES[pathIndex][1];
@@ -103,6 +108,7 @@ public final class LbzRideGrappleInstance extends AbstractObjectInstance impleme
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
+        reserveRomChildSlot();
         AbstractPlayableSprite player1 = playerEntity instanceof AbstractPlayableSprite sprite ? sprite : null;
         AbstractPlayableSprite player2 = nativeP2OrNull();
         List<PlayableEntity> participants = allParticipantsOrNull();
@@ -143,6 +149,24 @@ public final class LbzRideGrappleInstance extends AbstractObjectInstance impleme
     @Override
     public int getOnScreenHalfHeight() {
         return 0x20;
+    }
+
+    @Override
+    public boolean usesCustomOutOfRangeCheck() {
+        return true;
+    }
+
+    @Override
+    public boolean isCustomOutOfRange(int cameraX) {
+        // loc_26588/loc_265A2 delete only when both the moving x_pos and the
+        // saved initial x_pos at $38 are outside the coarse $280 window.
+        return isOutsideCoarseRange(motion.x, cameraX)
+                && isOutsideCoarseRange(originalX, cameraX);
+    }
+
+    @Override
+    public int getReservedChildSlotCount() {
+        return ROM_CHILD_SLOT_COUNT;
     }
 
     public int getPathLeftForTest() {
@@ -196,9 +220,13 @@ public final class LbzRideGrappleInstance extends AbstractObjectInstance impleme
             if (chainExtension != CHAIN_EXTENSION_MAX) {
                 chainExtension++;
             }
-        } else if (chainExtension != 0) {
-            chainExtension--;
+        } else {
+            if (chainExtension != 0) {
+                chainExtension--;
+            }
             if (chainExtension == 0) {
+                // loc_2684C runs on every zero-length dispatch, not only the
+                // frame where a retracting chain reaches zero.
                 angle = 0;
                 swayReturning = false;
                 swayVelocity = 0;
@@ -247,8 +275,11 @@ public final class LbzRideGrappleInstance extends AbstractObjectInstance impleme
         int angleByte = angleAccumulatorByte();
         int sin = TrigLookupTable.sinHex(angleByte);
         int cos = TrigLookupTable.cosHex(angleByte);
-        int x = motion.x << 16;
-        int y = motion.y << 16;
+        // sub_2682E copies the parent's complete 16.16 x_pos/y_pos longs before
+        // accumulating the sine/cosine deltas. SubpixelMotion stores the same
+        // fraction as the high byte of the native low word.
+        int x = (motion.x << 16) | ((motion.xSub & 0xFF) << 8);
+        int y = (motion.y << 16) | ((motion.ySub & 0xFF) << 8);
         int dx = sin * linkLength;
         int dy = cos * linkLength;
         for (int i = 0; i < CHAIN_POINT_COUNT; i++) {
@@ -276,7 +307,13 @@ public final class LbzRideGrappleInstance extends AbstractObjectInstance impleme
     }
 
     private void updateHeldPlayer(PlayerState state, AbstractPlayableSprite player) {
-        if (player == null || player.getDead() || player.isHurt() || player.isDebugMode()) {
+        if (player == null
+                || player.getDead()
+                || player.isHurt()
+                || player.isDebugMode()
+                || (player.hasRenderFlagOnScreenState() && !player.isRenderFlagOnScreen())) {
+            // sub_266B0 tests render_flags bit 7 before input and immediately
+            // clears object_control/the grab byte when the player is offscreen.
             releaseWithoutLaunch(state, player, RELEASE_LONG_COOLDOWN);
             return;
         }
@@ -318,7 +355,10 @@ public final class LbzRideGrappleInstance extends AbstractObjectInstance impleme
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
-        snapHeldPlayer(player);
+        // loc_267B2 captures at the parent SST's x_pos/y_pos. Only the already
+        // grabbed path at loc_2673E follows the child multisprite handle.
+        NativePositionOps.writeXPosPreserveSubpixel(player, motion.x);
+        NativePositionOps.writeYPosPreserveSubpixel(player, motion.y + PLAYER_HANG_Y_OFFSET);
         player.setAnimationId(Sonic3kAnimationIds.HANG2);
         player.setSpindash(false);
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
@@ -488,6 +528,23 @@ public final class LbzRideGrappleInstance extends AbstractObjectInstance impleme
         }
     }
 
+    private void reserveRomChildSlot() {
+        if (childSlotReserved || getSlotIndex() < 0) {
+            return;
+        }
+        ObjectServices svc = tryServices();
+        if (svc == null || svc.objectManager() == null) {
+            return;
+        }
+        childSlotReserved = true;
+        // Obj_LBZRideGrapple allocates its loc_2668E multisprite helper with
+        // AllocateObjectAfterCurrent during initialization. Rendering remains
+        // parent-local here, but the helper's SST slot must stay occupied until
+        // the parent unloads so later allocations see the native slot pressure.
+        svc.objectManager().allocateChildSlotsAfter(
+                spawn, ROM_CHILD_SLOT_COUNT, getSlotIndex());
+    }
+
     private AbstractPlayableSprite nativeP2OrNull() {
         try {
             PlayableEntity nativeP2 = services().playerQuery().nativeP2OrNull();
@@ -507,6 +564,13 @@ public final class LbzRideGrappleInstance extends AbstractObjectInstance impleme
 
     private static int signWord(int value) {
         return (short) value;
+    }
+
+    private static boolean isOutsideCoarseRange(int x, int cameraX) {
+        int objectCoarse = x & 0xFF80;
+        int cameraCoarseBack = (cameraX - 0x80) & 0xFF80;
+        int distance = (objectCoarse - cameraCoarseBack) & 0xFFFF;
+        return distance > 0x280;
     }
 
     private int angleAccumulatorByte() {

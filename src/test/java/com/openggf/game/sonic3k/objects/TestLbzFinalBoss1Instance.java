@@ -1,10 +1,13 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.camera.Camera;
+import com.openggf.data.Rom;
 import com.openggf.game.GameRng;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.RuntimeArtCoordinator;
+import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -17,11 +20,16 @@ import com.openggf.game.zone.ZoneRuntimeState;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ResultsHardwareTimingFixture;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.TestablePlayableSprite;
+import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Constructor;
@@ -34,8 +42,14 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@RequiresRom(SonicGame.SONIC_3K)
 class TestLbzFinalBoss1Instance {
     private static final int OBJ_LBZ_FINAL_BOSS_1 = 0xCA;
+
+    @BeforeEach
+    void setUp() {
+        TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
+    }
 
     @AfterEach
     void resetObjectCameraBounds() {
@@ -51,6 +65,8 @@ class TestLbzFinalBoss1Instance {
 
         assertEquals(9, boss.getCollisionProperty(), "loc_729DE writes collision_property(a0)=9");
         assertEquals(0x0F, boss.getCollisionFlags(), "ObjDat_LBZFinalBoss1 collision_flags is raw $0F");
+        assertTrue(boss.usesCurrentTouchResponseState(),
+                "sub_734FA publishes the ship's post-move position to Collision_response_list");
         assertEquals(0x7F, boss.getActivationTimer(), "Sonic/Tails branch arms a $7F wait before activation");
         assertEquals(0x0C, boss.getMappingFrame(), "Robotnik ship body starts on frame $0C");
         assertEquals(Sonic3kObjectArtKeys.ROBOTNIK_SHIP, boss.getBodyArtKey());
@@ -58,6 +74,9 @@ class TestLbzFinalBoss1Instance {
         assertEquals(1, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.ROBOTNIK_HEAD).size());
         assertEquals(1, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.TOP_ATTACHMENT).size());
         assertEquals(3, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.TURRET_SEGMENT).size());
+        assertTrue(firstBossChild(boss, LbzFinalBoss1Instance.ChildKind.TURRET_SEGMENT)
+                        .usesCurrentTouchResponseState(),
+                "boss children publish their refreshed post-move coordinates");
         assertEquals(4, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.LASER_HEAD).size(),
                 "ChildObjDat_737BA is reached by both loc_7308E and loc_730F8, so top and middle segments each get a laser-head pair");
         assertEquals(1, boss.childrenOfKindForTest(LbzFinalBoss1Instance.ChildKind.ORBITING_POD).size());
@@ -99,7 +118,7 @@ class TestLbzFinalBoss1Instance {
 
         boss.forceHitCountForTest(2);
         boss.setCentreYForTest(services.cameraY() - 0xB0);
-        services.rng().setSeed(1); // Odd Random_Number bit: word_72AE8+$2 => camera.x+$30.
+        services.rng().setSeed(0x10001); // Odd post-swap bit: word_72AE8+$2 => camera.x+$30.
         boss.update(1, null);
         head.update(1, null);
 
@@ -109,7 +128,7 @@ class TestLbzFinalBoss1Instance {
                 "Robotnik head must inherit render_flags bit0 and face right/inward on the left side");
 
         boss.setCentreYForTest(services.cameraY() + 0x118);
-        services.rng().setSeed(2); // Even Random_Number bit: word_72AE8 => camera.x+$110.
+        services.rng().setSeed(1); // Even post-swap bit: word_72AE8 => camera.x+$110.
         boss.update(2, null);
         head.update(2, null);
 
@@ -180,7 +199,7 @@ class TestLbzFinalBoss1Instance {
         boss.activateForTest();
 
         boss.forceHitCountForTest(6);
-        boss.onPlayerAttack(null, null);
+        hitBoss(boss, null);
 
         assertEquals(5, boss.getCollisionProperty());
         assertTrue(boss.isDetachFlagSetForTest(0), "HP 5 sets $38 bit0 — the TOP segment detaches");
@@ -190,7 +209,7 @@ class TestLbzFinalBoss1Instance {
 
         boss.finishHitFlashForTest();
         boss.forceHitCountForTest(2);
-        boss.onPlayerAttack(null, null);
+        hitBoss(boss, null);
 
         assertEquals(1, boss.getCollisionProperty());
         assertTrue(boss.isDetachFlagSetForTest(1), "HP 1 sets $38 bit1 — the MID segment detaches");
@@ -215,7 +234,7 @@ class TestLbzFinalBoss1Instance {
         head.forceArcStepForTest(8);
         head.forceStepTimerExpiredForTest();
         boss.forceHitCountForTest(6);
-        boss.onPlayerAttack(null, null);
+        hitBoss(boss, null);
         topSegment.update(1, null);
 
         assertTrue(topSegment.isDestroyed(), "HP 5 detaches the top segment before its laser-head children update.");
@@ -240,7 +259,7 @@ class TestLbzFinalBoss1Instance {
         // In range: y_vel*2 within ±$800 is applied.
         boss.forceYVelocityForTest(0x0300);
         boss.forceHitCountForTest(7);
-        boss.onPlayerAttack(null, null);
+        hitBoss(boss, null);
 
         assertEquals(0x0600, boss.getYVelocity(),
                 "sub_734FA doubles y_vel when the doubled value stays within ±$800");
@@ -249,7 +268,7 @@ class TestLbzFinalBoss1Instance {
         boss.finishHitFlashForTest();
         boss.forceYVelocityForTest(0x0600);
         boss.forceHitCountForTest(7);
-        boss.onPlayerAttack(null, null);
+        hitBoss(boss, null);
 
         assertEquals(0x0600, boss.getYVelocity(),
                 "sub_734FA leaves y_vel unchanged when y_vel*2 exceeds +$800 (no clamping)");
@@ -257,7 +276,7 @@ class TestLbzFinalBoss1Instance {
         boss.finishHitFlashForTest();
         boss.forceYVelocityForTest(-0x0600);
         boss.forceHitCountForTest(7);
-        boss.onPlayerAttack(null, null);
+        hitBoss(boss, null);
 
         assertEquals(-0x0600, boss.getYVelocity(),
                 "sub_734FA leaves y_vel unchanged when y_vel*2 exceeds -$800 (no clamping)");
@@ -270,7 +289,7 @@ class TestLbzFinalBoss1Instance {
         boss.update(0, null);
         boss.activateForTest();
         boss.forceHitCountForTest(6);
-        boss.onPlayerAttack(null, null);
+        hitBoss(boss, null);
         int startY = boss.getCentreY();
 
         // ROM loc_72AEE: $40 = $F decrements to -1 — sixteen wait frames.
@@ -306,7 +325,7 @@ class TestLbzFinalBoss1Instance {
         boss.activateForTest();
 
         boss.forceHitCountForTest(1);
-        boss.onPlayerAttack(null, null);
+        hitBoss(boss, null);
         boss.setCentreYForTest(services.cameraY() + 0x140);
         boss.setPlayersReadyForResultsForTest(true);
         // Sink bottom reached: loc_72B34 arms the $3F wait + Ctrl_2 lock.
@@ -333,7 +352,7 @@ class TestLbzFinalBoss1Instance {
         boss.update(0, null);
         boss.activateForTest();
         boss.forceHitCountForTest(1);
-        boss.onPlayerAttack(player, null);
+        hitBoss(boss, player);
         boss.setCentreYForTest(services.cameraY() + 0x140);
 
         boss.update(10, player);
@@ -360,7 +379,7 @@ class TestLbzFinalBoss1Instance {
         boss.setCentreYForTest(services.cameraY() - 0x4E);
 
         boss.forceHitCountForTest(1);
-        boss.onPlayerAttack(null, null);
+        hitBoss(boss, null);
         boss.update(1, null);
 
         assertEquals(LbzFinalBoss1Instance.FinalePhase.KNUCKLES_HANDOFF, boss.getFinalePhase(),
@@ -475,29 +494,28 @@ class TestLbzFinalBoss1Instance {
 
         assertTrue(player.isObjectMappingFrameControl(),
                 "Animate_ExternalPlayerSprite writes mapping_frame directly under object control");
-        assertEquals(0xC4, player.getMappingFrame(),
-                "byte_7386A starts Sonic on mapping frame $C4 before the turn-away/look-up frames");
+        assertEquals(0x55, player.getMappingFrame(),
+                "Animate_ExternalPlayerSprite advances past byte_7386A's retained $C4 mapping "
+                        + "and emits $55 first");
         assertEquals(Direction.RIGHT, player.getDirection(),
-                "Animate_ExternalPlayerSprite leaves render_flags bit0 clear when the following delay byte is 0");
-        assertEquals(0xC4, sidekick.getMappingFrame(),
-                "byte_73874 starts P2 on the same $C4 frame as Sonic");
+                "Animate_ExternalPlayerSprite must not change Sonic's status-facing bit");
+        assertEquals(0x55, sidekick.getMappingFrame(),
+                "byte_73874 emits the same first external frame for P2");
         assertEquals(Direction.RIGHT, sidekick.getDirection(),
-                "P2 $C4 also sees a following delay byte of 0, so render_flags bit0 remains clear");
+                "P2's external render flip must not change its status-facing bit");
         assertEquals(LbzFinalBoss1Instance.FinalePhase.WAIT_LAUNCH_MILESTONE_B, boss.getFinalePhase());
 
         for (int i = 0; i < 6; i++) {
             boss.update(frame++, player);
         }
-        assertExternalFrame(player, 0x55, Direction.RIGHT, "byte_7386A second Sonic frame");
-        assertExternalFrame(sidekick, 0x55, Direction.RIGHT, "byte_73874 second P2 frame");
+        assertExternalFrame(player, 0x59, Direction.LEFT, "byte_7386A second Sonic frame");
+        assertExternalFrame(sidekick, 0x59, Direction.LEFT, "byte_73874 second P2 frame");
 
-        boss.update(frame++, player);
-        assertExternalFrame(player, 0x59, Direction.LEFT, "byte_7386A third Sonic frame");
-        assertExternalFrame(sidekick, 0x59, Direction.LEFT, "byte_73874 third P2 frame");
-
-        boss.update(frame++, player);
-        assertExternalFrame(player, 0x5A, Direction.LEFT, "byte_7386A fourth Sonic frame");
-        assertExternalFrame(sidekick, 0x5A, Direction.LEFT, "byte_73874 fourth P2 frame");
+        for (int i = 0; i < 6; i++) {
+            boss.update(frame++, player);
+        }
+        assertExternalFrame(player, 0x5A, Direction.LEFT, "byte_7386A third Sonic frame");
+        assertExternalFrame(sidekick, 0x5A, Direction.LEFT, "byte_73874 third P2 frame");
 
         for (int i = 0; i < 8; i++) {
             boss.update(frame++, player);
@@ -616,6 +634,11 @@ class TestLbzFinalBoss1Instance {
         return boss;
     }
 
+    private static void hitBoss(LbzFinalBoss1Instance boss, PlayableEntity player) {
+        boss.onPlayerAttack(player, null);
+        boss.update(0, player);
+    }
+
     private static AbstractObjectInstance newDeathEggExplosionDebrisForTest(
             LbzFinalBoss1Instance boss,
             int x,
@@ -677,10 +700,14 @@ class TestLbzFinalBoss1Instance {
             Direction direction,
             String message) {
         assertEquals(mappingFrame, sprite.getMappingFrame(), message + " mapping_frame");
-        assertEquals(direction, sprite.getDirection(), message + " render_flags bit0 direction");
+        assertEquals(direction == Direction.LEFT, sprite.getRenderHFlip(),
+                message + " render_flags bit0");
+        assertEquals(Direction.RIGHT, sprite.getDirection(),
+                message + " must preserve the status-facing bit");
     }
 
     private static final class HarnessServices extends StubObjectServices {
+        private final ResultsHardwareTimingFixture resultsTiming = new ResultsHardwareTimingFixture();
         private final Camera camera = new Camera();
         private final LbzZoneRuntimeState lbzState;
         private final GameStateManager gameState = new GameStateManager();
@@ -720,6 +747,25 @@ class TestLbzFinalBoss1Instance {
         }
 
         @Override
+        public com.openggf.game.timing.HardwareTimingService hardwareTiming() {
+            return resultsTiming.hardwareTiming();
+        }
+
+        @Override
+        public com.openggf.data.Rom rom() {
+            return TestEnvironment.currentRom();
+        }
+
+        @Override
+        public com.openggf.data.RomByteReader romReader() {
+            try {
+                return com.openggf.data.RomByteReader.fromRom(rom());
+            } catch (java.io.IOException e) {
+                throw new java.io.UncheckedIOException(e);
+            }
+        }
+
+        @Override
         public ZoneRuntimeState zoneRuntimeState() {
             return lbzState;
         }
@@ -727,6 +773,11 @@ class TestLbzFinalBoss1Instance {
         @Override
         public GameStateManager gameState() {
             return gameState;
+        }
+
+        @Override
+        public RuntimeArtCoordinator runtimeArtCoordinator() {
+            return TestEnvironment.activeGameplayMode().runtimeArtCoordinator();
         }
 
         @Override

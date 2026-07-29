@@ -106,13 +106,17 @@ class TestRewindRegistry {
     @Test
     void nullSnapshotsAreRejectedAtCapture() {
         RewindRegistry reg = new RewindRegistry();
-        reg.register(new RewindSnapshottable<>() {
+        RewindSnapshottable<Object> adapter = new RewindSnapshottable<>() {
             @Override public String key() { return "null"; }
             @Override public Object capture() { return null; }
             @Override public void restore(Object snapshot) { }
-        });
+        };
+        reg.register(adapter);
 
-        assertThrows(NullPointerException.class, reg::capture);
+        NullPointerException failure =
+                assertThrows(NullPointerException.class, reg::capture);
+        assertTrue(failure.getMessage().contains("key: null"));
+        assertTrue(failure.getMessage().contains(adapter.getClass().getName()));
     }
 
     @Test

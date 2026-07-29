@@ -1,6 +1,6 @@
 # Guidance for AI agents
 
-The same guidance is mirrored in [CLAUDE.md](CLAUDE.md); keep the two in sync (the
+This guidance is mirrored between `AGENTS.md` and `CLAUDE.md`; keep the two in sync (the
 `Agent-Docs` trailer requires both to be staged together).
 
 ## What this is
@@ -47,6 +47,12 @@ java -jar target/OpenGGF-0.6.prerelease-jar-with-dependencies.jar
 
 - Entry point is `com.openggf.Engine` (declared in the manifest): a GLFW window with a
   manual timing game loop.
+- **Build on JDK 21** — what CI and the release workflow use. Surefire forks inherit
+  *Maven's* JVM, not the `java` on `PATH`, so `mvn -v` is the check that matters; if it
+  reports anything but 21, `export JAVA_HOME=/path/to/jdk-21` first. A newer JDK makes the
+  suite report hundreds of phantom failures (Mockito stubbing errors leaking across
+  classes, ROM fixtures failing to load) that look like real regressions but aren't. The
+  build fails fast at `validate` if the JVM is wrong.
 - Maven Silent Extension is enabled by default (`-Dmse=relaxed` via `.mvn/maven.config`).
   Use `-Dmse=off` when you need full Maven logs.
 - In PowerShell, quote `-D...` properties (`mvn "-Dtest=com.openggf.pkg.TestClass" test`).
@@ -61,13 +67,15 @@ When a task needs a ROM, search the project root for `.gen` files and use the fi
 that's actually there. Identify the game from the filename and verify the hash when it
 matters. Do not assume a fixed filename, and do not rename, copy, delete, or symlink a ROM
 just to satisfy an example command. For ROM-backed tests, pass the discovered path through
-the relevant `-D<game>.rom.path=...` property.
+that game's property — note S3K's is **not** `sonic3k.rom.path`. A sweep that touches all
+three games needs all three; ROM-backed classes error out (they do not skip) when their
+ROM is missing.
 
-| ROM | CRC32 | SHA-1 |
-|---|---|---|
-| Sonic 1 World REV01 | `AFE05EEE` | `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B` |
-| Sonic 2 World REV01 | `7B905383` | `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9` |
-| Sonic 3&K locked-on | `63522553` | `CFBF98C36C776677290A872547AC47C53D2761D6` |
+| ROM | Test property | CRC32 | SHA-1 |
+|---|---|---|---|
+| Sonic 1 World REV01 | `-Dsonic1.rom.path=` | `AFE05EEE` | `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B` |
+| Sonic 2 World REV01 | `-Dsonic2.rom.path=` | `7B905383` | `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9` |
+| Sonic 3&K locked-on | `-Ds3k.rom.path=` | `63522553` | `CFBF98C36C776677290A872547AC47C53D2761D6` |
 
 Disassemblies live under `docs/s1disasm/`, `docs/s2disasm/`, `docs/skdisasm/` (untracked,
 available locally); SMPS audio reference under `docs/SMPS-rips/SMPSPlay/`.
@@ -103,6 +111,8 @@ file is guidance you can weigh against the situation in front of you.
    call gameplay owners, or create work the engine did not submit. Guard tests must keep
    this exception confined to the timing port. `TestHardwareTimingAuthorityGuard` enforces
    parser/authority isolation and forbids physics/aux/gameplay and reflective mutation paths.
+   S3K schema 1 records only module-queue readiness; schema 2 records module and direct
+   Kosinski readiness, while both schemas still require production-submitted ROM work.
 5. **Objects never call `getInstance()`.** Use the injected `services()`.
 6. **Gameplay tile edits route through `ZoneLayoutMutationPipeline` / a
    `LevelMutationSurface`** — never a direct `getMap().setValue(...)`. Editor commands and

@@ -50,6 +50,23 @@ class TestS3kAizMutationPipeline {
     }
 
     @Test
+    void aizIntroDirectAndModulePayloadsHaveSeparatePublicationFences()
+            throws IOException {
+        String content = Files.readString(INTRO_TERRAIN_SWAP);
+
+        assertContains(content, "applyMainLevelBlockOverlay(");
+        assertContains(content, "preparedMainLevelBlocks16x16");
+        assertContains(content, "sonic3kLevel.applyChunkOverlay(");
+        assertContains(content, "levelManager.swapToPrebuiltTilemaps()");
+
+        assertContains(content, "applyMainLevelPatternOverlay(");
+        assertContains(content, "preparedMainLevelTiles8x8");
+        assertContains(content, "sonic3kLevel.applyPatternOverlay(");
+        assertContains(content,
+                "Sonic3kPlcLoader.refreshAffectedRenderers(modifiedRanges, levelManager);");
+    }
+
+    @Test
     void aizIntroTerrainSwapCacheShouldResetAcrossGameBootstrap() throws IOException {
         String terrainSwap = Files.readString(INTRO_TERRAIN_SWAP);
         String module = Files.readString(Path.of("src/main/java/com/openggf/game/sonic3k/Sonic3kGameModule.java"));

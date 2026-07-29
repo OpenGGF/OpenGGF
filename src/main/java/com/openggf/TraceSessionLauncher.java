@@ -1189,12 +1189,7 @@ public final class TraceSessionLauncher {
                 if (phase == TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY) {
                     var sprites = GameServices.spritesOrNull();
                     if (sprites != null) {
-                        int animationFrame = sprites.getFrameCounter();
-                        for (var candidate : sprites.getAllSprites()) {
-                            if (candidate instanceof AbstractPlayableSprite playable) {
-                                playable.getAnimationManager().update(animationFrame);
-                            }
-                        }
+                        sprites.advancePlayableSlotPrefix();
                     }
                 }
                 return LevelFrameResult.GAMEPLAY_FRAME;
@@ -1396,13 +1391,7 @@ public final class TraceSessionLauncher {
 
         @Override
         public void advancePlayableAnimationsOnly() {
-            var sprites = GameServices.sprites();
-            int animationFrame = sprites.getFrameCounter();
-            for (var candidate : sprites.getAllSprites()) {
-                if (candidate instanceof AbstractPlayableSprite playable) {
-                    playable.getAnimationManager().update(animationFrame);
-                }
-            }
+            GameServices.sprites().advancePlayableSlotPrefix();
         }
 
         @Override

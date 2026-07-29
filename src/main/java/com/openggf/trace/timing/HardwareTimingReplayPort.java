@@ -7,7 +7,6 @@ import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.timing.PendingRecordedSubmission;
 import com.openggf.game.timing.RecordedCompletionAuthority;
 
-import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -26,12 +25,6 @@ import java.util.Set;
 public final class HardwareTimingReplayPort
         implements RewindSnapshottable<HardwareTimingReplaySnapshot> {
     public static final String REWIND_KEY = "hardware-timing-replay";
-
-    private static final Comparator<HardwareCompletionEdge> CANONICAL_ORDER =
-            Comparator.comparingInt(HardwareCompletionEdge::rawFrame)
-                    .thenComparingInt(edge -> edge.boundary().ordinal())
-                    .thenComparing(edge -> edge.kind().name())
-                    .thenComparingLong(HardwareCompletionEdge::ordinal);
 
     private final RecordedCompletionAuthority authority;
     private final Set<String> consumedIdentities = new LinkedHashSet<>();
@@ -70,6 +63,7 @@ public final class HardwareTimingReplayPort
         this.schedule = checked;
         edgeCursor = 0;
         consumedIdentities.clear();
+        authority.configureAdmissionPolicies(checked.admissionPolicies());
         authority.initializeOrdinalBases(initialOrdinalBases);
         rawFrameLatch = null;
         lastAppliedBoundary = null;
@@ -166,6 +160,10 @@ public final class HardwareTimingReplayPort
         requireActive();
         verifySegmentEdges();
         HardwareTimingSchedule checkedNext = validateSchedule(nextSchedule);
+        if (!checkedNext.admissionPolicies().equals(schedule.admissionPolicies())) {
+            throw new IllegalArgumentException(
+                    "hardware timing segment changes recorded admission policy");
+        }
         for (HardwareCompletionEdge edge : checkedNext.edges()) {
             if (consumedIdentities.contains(identity(edge))) {
                 throw new IllegalStateException(
@@ -309,6 +307,12 @@ public final class HardwareTimingReplayPort
             }
             Objects.requireNonNull(edge.boundary(), "hardware completion boundary");
             Objects.requireNonNull(edge.kind(), "hardware completion kind");
+            if (schedule.admissionPolicies().get(edge.kind())
+                    != com.openggf.game.timing.HardwareReadinessAdmissionPolicy.RECORDED) {
+                throw new IllegalArgumentException(
+                        "hardware completion edge kind is not recorded by schema "
+                                + schedule.schema() + ": " + edge.kind());
+            }
             Objects.requireNonNull(
                     edge.submissionFingerprint(), "hardware completion fingerprint");
             if (edge.ordinal() < 0) {
@@ -316,7 +320,8 @@ public final class HardwareTimingReplayPort
                         "hardware completion ordinal must be non-negative: "
                                 + edge.ordinal());
             }
-            if (previous != null && CANONICAL_ORDER.compare(previous, edge) > 0) {
+            if (previous != null
+                    && HardwareTimingSchedule.CANONICAL_ORDER.compare(previous, edge) > 0) {
                 throw new IllegalArgumentException(
                         "hardware completion edges are not in canonical order at "
                                 + describe(edge));

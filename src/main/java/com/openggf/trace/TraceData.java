@@ -14,10 +14,11 @@ import java.nio.file.Path;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Set;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 import java.util.zip.GZIPInputStream;
@@ -39,6 +40,7 @@ public class TraceData {
     private final HardwareTimingSchedule hardwareTimingSchedule;
     private final List<TraceFrame> frames;
     private final Map<Integer, List<TraceEvent>> eventsByFrame;
+    private final Set<Class<? extends TraceEvent>> observedEventTypes;
     private final List<Integer> checkpointFramesAscending;
     private final Map<Integer, TraceEvent.Checkpoint> checkpointsByFrame;
     private final List<Integer> zoneActStateFramesAscending;
@@ -57,7 +59,7 @@ public class TraceData {
         this.checkpointFramesAscending = new ArrayList<>();
         this.zoneActStatesByFrame = new HashMap<>();
         this.zoneActStateFramesAscending = new ArrayList<>();
-        buildLatestEventIndexes();
+        this.observedEventTypes = buildLatestEventIndexes();
     }
 
     public static TraceData load(Path traceDirectory) throws IOException {
@@ -144,24 +146,42 @@ public class TraceData {
      * {@code V_int_run_count}. S3K schema-v6 captures wrote the adjacent
      * life-count word (for example $0800/$0A00) into the CSV counter
      * column. A repeated value across changing gameplay rows identifies that
-     * recorder layout. BK2 advances once per hardware VBlank, so its low bit
-     * supplies the missing parity used by object routines while the recorded
-     * word retains the established higher-bit replay phase.
+     * recorder layout. Complete-run captures that carry an independently
+     * measured lost-ring floor-check phase expose the same low three bits of
+     * {@code V_int_run_count}; use those bits directly. Older fixtures fall
+     * back to BK2 parity while the recorded word retains the established
+     * higher-bit replay phase.
      */
     public int initialVIntRunCounterPhaseOffset() {
         int recorded = initialVblankCounter();
         if (!usesBk2VblankCounterFallback()) {
             return 0;
         }
+        Integer recordedCounterPhase = metadata.ringFloorCheckCounterPhase();
+        if (recordedCounterPhase != null) {
+            return recordedCounterPhase & 7;
+        }
         return (metadata.bk2FrameOffset() - recorded) & 1;
     }
 
     private boolean usesBk2VblankCounterFallback() {
-        return "s3k".equals(metadata.game())
-                && frames.size() > 1
-                && frames.get(0).vblankCounter() >= 0
-                && frames.get(0).vblankCounter() == frames.get(1).vblankCounter()
-                && !frames.get(0).stateEquals(frames.get(1));
+        if (!"s3k".equals(metadata.game()) || frames.size() < 2
+                || frames.get(0).vblankCounter() < 0) {
+            return false;
+        }
+        int recorded = frames.get(0).vblankCounter();
+        boolean gameplayChanged = false;
+        int sampleCount = Math.min(frames.size(), 1024);
+        for (int i = 1; i < sampleCount; i++) {
+            TraceFrame current = frames.get(i);
+            if (current.vblankCounter() != recorded) {
+                return false;
+            }
+            if (!current.stateEquals(frames.get(i - 1))) {
+                gameplayChanged = true;
+            }
+        }
+        return gameplayChanged;
     }
 
     public TraceFrame getFrame(int traceFrame) {
@@ -350,10 +370,12 @@ public class TraceData {
         return index >= 0 ? zoneActStatesByFrame.get(zoneActStateFramesAscending.get(index)) : null;
     }
 
-    private void buildLatestEventIndexes() {
+    private Set<Class<? extends TraceEvent>> buildLatestEventIndexes() {
+        Set<Class<? extends TraceEvent>> eventTypes = new HashSet<>();
         for (Map.Entry<Integer, List<TraceEvent>> entry : eventsByFrame.entrySet()) {
             int frame = entry.getKey();
             for (TraceEvent event : entry.getValue()) {
+                eventTypes.add(event.getClass());
                 if (event instanceof TraceEvent.Checkpoint checkpoint && !checkpointsByFrame.containsKey(frame)) {
                     checkpointsByFrame.put(frame, checkpoint);
                     checkpointFramesAscending.add(frame);
@@ -365,6 +387,7 @@ public class TraceData {
         }
         Collections.sort(checkpointFramesAscending);
         Collections.sort(zoneActStateFramesAscending);
+        return Set.copyOf(eventTypes);
     }
 
     private static int latestIndexedFrameAtOrBefore(List<Integer> sortedFrames, int frame) {
@@ -376,14 +399,7 @@ public class TraceData {
     }
 
     private boolean hasEventOfType(Class<? extends TraceEvent> eventType) {
-        for (List<TraceEvent> events : eventsByFrame.values()) {
-            for (TraceEvent event : events) {
-                if (eventType.isInstance(event)) {
-                    return true;
-                }
-            }
-        }
-        return false;
+        return observedEventTypes.contains(eventType);
     }
 
     /**

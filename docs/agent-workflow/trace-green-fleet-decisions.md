@@ -87,6 +87,42 @@ messages (per-fix ROM rationale).
     `develop` also requires a `README.md` release-log update per the branch
     documentation policy.
 
+## Model-routing decision — 2026-07-28
+
+16. **Terra-first, rather than universal Luna-first.** Discovery, ordinary
+    triage, and narrow object-local fixes begin on Terra at the route/effort in
+    the trace-fleet contract. `gpt-5.6-luna` remains future-only until it is an
+    explicitly supported, observable worker route; it is never substituted for
+    an available Terra or Sol route. Even in the disabled Luna benchmark policy,
+    Luna is limited to Discovery/mechanical collection; Triage and Fix remain
+    Terra-first until objective Sol escalation.
+17. **Sol owns shared/deep work and escalation.** Shared runtime surfaces,
+    cross-game semantics, disputed ROM evidence, and deep roots go directly to
+    Sol; a Terra stall gets one Sol final attempt after at most two unsuccessful
+    attempts. Verification likewise moves to Sol after Sol/shared/disputed/
+    escalated work, and Sol independently repeats a Terra-detected regression.
+18. **Measure accepted output first.** Primary measures are tokens per accepted
+    result and tokens per trace greened. Frontier movement is secondary and
+    within-trace only: it distinguishes an advanced red root from no change but
+    cannot compare remaining difficulty across traces or prove acceptance.
+    Missing runtime telemetry stays null rather than inferred.
+19. **Benchmark results are executed records, not route plans.** Final result
+    validation rejects pending stages and routes outside the selected enabled
+    policy, and cross-checks stage completion, attempts, regressions, and
+    frontiers. A blocked, error, or no-change run remains valid evidence even
+    with no owned source changes: it retains an empty patch with its SHA-256 and
+    a result tree equal to the pinned base tree. The lifecycle runs with strict
+    shell error handling, so a disabled-policy preflight or invalid final result
+    stops before allocation or cleanup respectively. Empty-patch/base-tree
+    results are reserved for blocked, error, or no-change outcomes; green and
+    advanced results require a source diff.
+20. **Benchmark evidence preserves fleet semantics.** Results retain
+    `advanced-with-regression` and `rejected-not-genuine` plus independent
+    acceptance, genuineness, and reviewer-rejection flags. Exact guard outcomes
+    and structured ROM citations make rejection, citation-completeness, token,
+    and regression metrics computable. Complete patch/tree capture compares
+    commits plus working edits and new owned files to the pinned base.
+
 ## Run record — 2026-06-03
 
 - Baseline failing set: S2 ×16 (arz1/arz2/cnz1/cnz2/cpz1/cpz2/dez1/htz1/htz2/

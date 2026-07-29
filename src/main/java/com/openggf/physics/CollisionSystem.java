@@ -853,6 +853,24 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
                                     AbstractPlayableSprite sprite,
                                     Consumer<AbstractPlayableSprite> landingHandler,
                                     boolean forceFloorCheck) {
+        resolveAirCollision(plan, sprite, landingHandler, null, forceFloorCheck);
+    }
+
+    /**
+     * Resolves airborne terrain collision and publishes the exact pair of floor
+     * probes when that pair produces a landing.
+     *
+     * <p>S3K copies the shared {@code Primary_Angle}/{@code Secondary_Angle}
+     * bytes into the player's {@code next_tilt}/{@code tilt} fields after the
+     * movement dispatch. Callers that model those bytes can consume the probe
+     * pair here; callers without that player-tail behavior use the legacy
+     * overload.
+     */
+    public void resolveAirCollision(FrameCollisionPlan plan,
+                                    AbstractPlayableSprite sprite,
+                                    Consumer<AbstractPlayableSprite> landingHandler,
+                                    Consumer<SensorResult[]> landingProbeHandler,
+                                    boolean forceFloorCheck) {
         requireTerrainOnlyPlan(plan, "resolveAirCollision");
         // SonicKnux_DoLevelCollision uses explicit world-space floor, ceiling,
         // and wall checks. The engine's sensor offsets otherwise rotate from a
@@ -988,6 +1006,13 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
     private void doTerrainCollisionAir(AbstractPlayableSprite sprite,
                                        SensorResult[] results,
                                        Consumer<AbstractPlayableSprite> landingHandler) {
+        doTerrainCollisionAir(sprite, results, landingHandler, null);
+    }
+
+    private void doTerrainCollisionAir(AbstractPlayableSprite sprite,
+                                       SensorResult[] results,
+                                       Consumer<AbstractPlayableSprite> landingHandler,
+                                       Consumer<SensorResult[]> landingProbeHandler) {
         if (sprite.getYSpeed() < 0) {
             return;
         }
@@ -1007,6 +1032,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
                 || (results[1] != null && results[1].distance() >= threshold);
 
         if (canLand) {
+            publishLandingProbes(results, landingProbeHandler);
             landOnFloor(sprite, lowestResult, landingHandler);
         }
     }
@@ -1025,6 +1051,14 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
                                               SensorResult[] results,
                                               Consumer<AbstractPlayableSprite> landingHandler,
                                               boolean forceFloorCheck) {
+        doTerrainCollisionAirDirect(sprite, results, landingHandler, null, forceFloorCheck);
+    }
+
+    private void doTerrainCollisionAirDirect(AbstractPlayableSprite sprite,
+                                              SensorResult[] results,
+                                              Consumer<AbstractPlayableSprite> landingHandler,
+                                              Consumer<SensorResult[]> landingProbeHandler,
+                                              boolean forceFloorCheck) {
         // ROM: tst.b (WindTunnel_flag).w / bne.s loc_12148
         //      tst.w y_vel(a0) / bmi.s locret_12170
         if (!forceFloorCheck && sprite.getYSpeed() < 0) {
@@ -1041,7 +1075,15 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
         }
 
         // No threshold check — land immediately if any floor found (d1 < 0).
+        publishLandingProbes(results, landingProbeHandler);
         landOnFloor(sprite, lowestResult, landingHandler);
+    }
+
+    private static void publishLandingProbes(SensorResult[] results,
+                                             Consumer<SensorResult[]> landingProbeHandler) {
+        if (landingProbeHandler != null) {
+            landingProbeHandler.accept(results);
+        }
     }
 
     private boolean shouldTreatZeroDistanceAsGround(AbstractPlayableSprite sprite, SensorResult support) {
@@ -1130,17 +1172,18 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
     }
 
     private void resetWallCeilingLandingState(AbstractPlayableSprite sprite, int angle) {
+        PlayerAnimationRules animationRules = playerAnimationRulesOrNull(sprite);
         if (sprite.isObjectControlled()) {
-            publishAngledLandingWalk(sprite);
+            publishWalkOnAcceptedLanding(sprite, animationRules);
             sprite.setAir(false);
             return;
         }
 
         PlayerMovementRules rules = playerMovementRulesOrNull(sprite);
-        boolean preservePinballRoll = rules != null && rules.pinballLandingPreservesRoll();
-        boolean preservePinballMode = rules != null && rules.pinballLandingPreservesPinballMode();
+        boolean preservePinballRoll = rules != null && rules.landing().pinballLandingPreservesRoll();
+        boolean preservePinballMode = rules != null && rules.landing().pinballLandingPreservesPinballMode();
         if (sprite.getRolling() && (!sprite.getPinballMode() || !preservePinballRoll)) {
-            if (rules != null && rules.landingRollClearUsesCurrentYRadiusDelta()) {
+            if (rules != null && rules.landing().landingRollClearUsesCurrentYRadiusDelta()) {
                 int oldYRadius = sprite.getYRadius();
                 int centreX = sprite.getCentreX();
                 int centreY = sprite.getCentreY();
@@ -1178,7 +1221,9 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
         if (!(sprite.getRolling() && sprite.getPinballMode() && preservePinballMode)) {
             sprite.setPinballMode(false);
         }
-        publishAngledLandingWalk(sprite);
+        if (!sprite.getPinballMode()) {
+            publishWalkOnAcceptedLanding(sprite, animationRules);
+        }
         sprite.setAir(false);
         sprite.setPushing(false);
         sprite.setRollingJump(false);
@@ -1190,27 +1235,20 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
         sprite.setLookDelayCounter((short) 0);
     }
 
-    private void publishAngledLandingWalk(AbstractPlayableSprite sprite) {
-        PlayerAnimationRules animationRules = playerAnimationRulesOrNull(sprite);
-        if (sprite.getPinballMode()
-                || animationRules == null
-                || (!animationRules.angledLandingPublishesWalk()
-                    && (sprite.getSpindash()
-                        || !animationRules.angledLandingPublishesWalkUnlessSpindashing()))) {
-            return;
-        }
-        // S2 Sonic_ResetOnFloor publishes Walk on accepted angled terrain
-        // landings (s2.asm:38049-38052,38123-38127). S3K's
-        // Player_TouchFloor_Check_Spindash performs the same write before
-        // Player_TouchFloor unless spin_dash_flag is live. When rolling,
-        // Player_TouchFloor publishes Walk again while clearing Status_Roll
-        // (sonic3k.asm:24325-24350,29123-29148). Publish before the
-        // object-control cleanup gate: collision acceptance owns this native
-        // animation byte even when an object's release is resolved later in
-        // the engine frame.
-        int walkAnimationId = sprite.resolveAnimationId(CanonicalAnimation.WALK);
-        if (walkAnimationId >= 0) {
-            sprite.setAnimationId(walkAnimationId);
+    private void publishWalkOnAcceptedLanding(
+            AbstractPlayableSprite sprite,
+            PlayerAnimationRules animationRules) {
+        if (!sprite.getSpindash()
+                && animationRules != null
+                && animationRules.angledLandingPublishesWalk()) {
+            // Player_TouchFloor_Check_Spindash publishes Walk before clearing
+            // the airborne state on every accepted S2/S3K terrain landing,
+            // including the angled ceiling/wall path (s2.asm:38049-38052,
+            // 38123-38127; sonic3k.asm:24258-24325). S1 can retain Spring.
+            int walkAnimationId = sprite.resolveAnimationId(CanonicalAnimation.WALK);
+            if (walkAnimationId >= 0) {
+                sprite.setAnimationId(walkAnimationId);
+            }
         }
     }
 

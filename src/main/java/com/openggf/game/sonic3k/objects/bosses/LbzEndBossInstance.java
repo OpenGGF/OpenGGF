@@ -72,6 +72,7 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
     private static final int PAN_TARGET_X = 0x39F0;
     private static final int POST_DEFEAT_CAMERA_MAX_X = 0x3AB8;
     private static final int DEFEAT_TIMER = 0x7F;
+    private static final int DEFEAT_EXPLOSION_EMISSIONS = 41;
     // loc_7403A: moveq #100 -> HUD_AddToScore works in tens, so 1000 points.
     private static final int DEFEAT_SCORE = 1000;
     // sub_73FE2 writes Normal_palette_line_2+$16: palette line 1 (0-based), color 11.
@@ -610,8 +611,11 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         if (camera != null) {
             int x = camera.getX() & 0xFFFF;
             if (x > PAN_TARGET_X) {
-                camera.setX((short) Math.max(PAN_TARGET_X, x - 2));
-                return;
+                int nextX = x - 2;
+                camera.setX((short) Math.max(PAN_TARGET_X, nextX));
+                if (nextX > PAN_TARGET_X) {
+                    return;
+                }
             }
         }
         startRising();
@@ -767,6 +771,9 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
             }
             svc.playMusic(Sonic3kMusic.LBZ2.id);
         }
+        if (deferredExplosionControllerChild != null) {
+            deferredExplosionControllerChild.finishParentWindow();
+        }
         ObjectLifetimeOps.deleteNoRespawn(this);
     }
 
@@ -921,6 +928,23 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         @Override
         public SolidObjectParams getSolidParams() {
             return shortened ? SHORT_PARAMS : FULL_PARAMS;
+        }
+
+        @Override
+        public int getOnScreenHalfWidth() {
+            return 8;
+        }
+
+        @Override
+        public int getOnScreenHalfHeight() {
+            return 0x80;
+        }
+
+        @Override
+        public boolean zeroXSpeedStopsOnLeftSideContact() {
+            // loc_1E042 treats x_vel=0 as entering from the player's left:
+            // only a negative velocity skips loc_1E056's speed reset.
+            return true;
         }
 
         @Override
@@ -1097,6 +1121,22 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         }
 
         @Override
+        public int getBalanceWidthPixels() {
+            // ObjDat3_74140 stores width_pixels=8 even though SolidObjectTop
+            // receives d1=$12 for the platform's collision span.
+            return 8;
+        }
+
+        @Override
+        public boolean rejectsZeroDistanceTopSolidLanding() {
+            // sub_73FCE calls SolidObjectTop with d3=7. At loc_1E45A the
+            // exact-zero surface distance is outside the accepted -$10..-$1
+            // window, preventing a later overlapping chain slot from stealing
+            // a ride established by the preceding slot.
+            return true;
+        }
+
+        @Override
         public void appendRenderCommands(List<GLCommand> commands) {
             PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.LBZ_END_BOSS);
             if (renderer != null && renderer.isReady()) {
@@ -1175,6 +1215,7 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         private int animIndex;
         private int animTimer;
         private int frame;
+        private int initialDispatchesRemaining;
 
         private LbzEndBossRunnerChild(LbzEndBossInstance parent) {
             super(parent, "LBZEndBossRunner", 5, 0xCB);
@@ -1185,6 +1226,7 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
             animIndex = 0;
             animTimer = 0;
             frame = 0;
+            initialDispatchesRemaining = 2;
             syncPositionWithParent();
             currentX += 0x70;
             currentY -= 0x18;
@@ -1201,6 +1243,16 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         @Override
         public void update(int frameCounter, PlayableEntity player) {
             if (!beginUpdate(frameCounter)) {
+                return;
+            }
+            // loc_73D8E only installs ObjDat3_740F8, velocity, animation data,
+            // and the first wait callback. The child is allocated after the
+            // parent slot, then receives its initialization dispatch on the
+            // next Process_Sprites pass; movement begins one dispatch later at
+            // loc_73DB6.
+            if (initialDispatchesRemaining > 0) {
+                initialDispatchesRemaining--;
+                updateDynamicSpawn();
                 return;
             }
             if (phase == 0) {
@@ -1677,11 +1729,14 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
 
         private LbzEndBossExplosionControllerChild(LbzEndBossInstance parent) {
             super(parent, "LBZEndBossExplosionController", 0, 0xCB);
-            controller = new S3kBossExplosionController(parent.getX(), parent.getY(), 4);
+            controller = new S3kBossExplosionController(
+                    parent.getX(), parent.getY(), 4, parent.services().rng());
+            controller.dispatchCreation();
         }
 
         @Override
         protected boolean destroyWhenParentDestroyed() {
+            // The child remains in its SST through the parent's delete dispatch.
             return false;
         }
 
@@ -1696,6 +1751,23 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
                 return;
             }
             controller.tick();
+            drainExplosions();
+            if (boss.sharedExplosionEmissionCount >= DEFEAT_EXPLOSION_EMISSIONS) {
+                ObjectLifetimeOps.expireDynamic(this);
+            }
+        }
+
+        private void finishParentWindow() {
+            LbzEndBossInstance boss = boss();
+            while (boss.sharedExplosionEmissionCount < DEFEAT_EXPLOSION_EMISSIONS
+                    && !controller.isFinished()) {
+                controller.dispatchCreation();
+                drainExplosions();
+            }
+        }
+
+        private void drainExplosions() {
+            LbzEndBossInstance boss = boss();
             for (S3kBossExplosionController.PendingExplosion pending : controller.drainPendingExplosions()) {
                 boss.noteSharedExplosionEmission();
                 if (pending.playSfx()) {

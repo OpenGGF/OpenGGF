@@ -5,6 +5,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
 import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
+import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.tests.HeadlessTestFixture;
@@ -318,12 +319,37 @@ public class SwScrlAizTest {
         Sonic3kAIZEvents act1Events = eventsManager.getAizEvents();
         assertNotNull(act1Events);
         AizPlaneIntroInstance.setMainLevelPhaseActive(true);
+        camera.setX((short) 0x2F10);
 
+        for (int i = 0; i < 100_000 && !act1Events.isFireOverlayTilesLoaded(); i++) {
+            GameServices.hardwareTiming().service(HardwareServiceBoundary.VINT_SERVICE);
+            GameServices.runtimeArtCoordinator()
+                    .afterTimingService(HardwareServiceBoundary.VINT_SERVICE);
+            GameServices.hardwareTiming().service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            GameServices.runtimeArtCoordinator()
+                    .afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            act1Events.update(0, i);
+            GameServices.hardwareTiming().service(HardwareServiceBoundary.POST_OBJECTS);
+            GameServices.runtimeArtCoordinator()
+                    .afterTimingService(HardwareServiceBoundary.POST_OBJECTS);
+        }
+        assertTrue(act1Events.isFireOverlayTilesLoaded(),
+                "AIZ1 loc_1C5C6 stages flame art before the boss exit signal");
         act1Events.setEventsFg5(true);
-        for (int i = 0; i < 320 && !act1Events.isAct2TransitionRequested(); i++) {
+        for (int i = 0; i < 100_000 && !act1Events.isAct2TransitionRequested(); i++) {
+            GameServices.hardwareTiming().service(HardwareServiceBoundary.VINT_SERVICE);
+            GameServices.runtimeArtCoordinator()
+                    .afterTimingService(HardwareServiceBoundary.VINT_SERVICE);
+            GameServices.hardwareTiming().service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            GameServices.runtimeArtCoordinator()
+                    .afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
             GameServices.level().getObjectManager().advanceVblaCounter();
             act1Events.update(0, i);
+            GameServices.hardwareTiming().service(HardwareServiceBoundary.POST_OBJECTS);
+            GameServices.runtimeArtCoordinator()
+                    .afterTimingService(HardwareServiceBoundary.POST_OBJECTS);
         }
+        assertTrue(act1Events.getFireOverlayTileCount() > 0);
 
         eventsManager.initLevel(0, 1);
         Sonic3kAIZEvents act2Events = eventsManager.getAizEvents();

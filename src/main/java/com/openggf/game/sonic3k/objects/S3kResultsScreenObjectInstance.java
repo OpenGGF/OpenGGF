@@ -1,10 +1,12 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
+
 import com.openggf.audio.GameMusic;
 import com.openggf.data.Rom;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
-import com.openggf.game.rewind.RewindTransient;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.timing.HardwareWorkHandle;
 import com.openggf.game.timing.HardwareWorkKind;
@@ -96,6 +98,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private int carriedResultsRetireDispatches = CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES;
     private S3kSignpostInstance.ResultsChildTimingAdjustment resultsChildTimingAdjustment =
             S3kSignpostInstance.ResultsChildTimingAdjustment.NONE;
+    private boolean usesShortResultsChildRetireTail;
     private boolean controlsReleasedAheadOfHandoff;
     private boolean carriedAcrossSeamlessTransition;
 
@@ -109,7 +112,6 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private List<SpriteMappingFrame> mappingFrames;
     private boolean artLoaded;
     private boolean artCached;
-    @RewindTransient(reason = "queue facade is rebound to the restored session ledger by captured ordinals")
     private Sonic3kObjectArt.QueuedResultsArt queuedResultsArt;
     private long resultsGeneralArtOrdinal = -1;
     private long resultsNumberArtOrdinal = -1;
@@ -138,10 +140,15 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private int carriedTitleWaitTimer;
     private int carriedResultsRenderRetireDispatches;
     private boolean exitRetireDispatchesInitialized;
+    private boolean exitPublicationComplete;
+    private boolean titleInitializationPending;
+    private boolean pendingPreloadedTitleHandoff;
+    private boolean pendingAizTitleHandoff;
+    private boolean pendingRetainedReloadTitleHandoff;
 
     public S3kResultsScreenObjectInstance(PlayerCharacter character, int act) {
         this(character, act, 0, 0, CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES,
-                S3kSignpostInstance.ResultsChildTimingAdjustment.NONE, true);
+                S3kSignpostInstance.ResultsChildTimingAdjustment.NONE, false, true);
     }
 
     /** Zero-arg probe/recreate entry point required by the generic rewind harness. */
@@ -153,28 +160,46 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     protected S3kResultsScreenObjectInstance(boolean rewindShell) {
         this(PlayerCharacter.SONIC_AND_TAILS, 0, 0, 0,
                 CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES,
-                S3kSignpostInstance.ResultsChildTimingAdjustment.NONE, !rewindShell);
+                S3kSignpostInstance.ResultsChildTimingAdjustment.NONE, false, !rewindShell);
     }
 
     S3kResultsScreenObjectInstance(PlayerCharacter character, int act, int waitDurationAdjustment,
             int postControlHandoffDelayEntries) {
         this(character, act, waitDurationAdjustment, postControlHandoffDelayEntries,
                 CARRIED_RESULTS_RENDER_RETIRE_DISPATCHES,
-                S3kSignpostInstance.ResultsChildTimingAdjustment.NONE, true);
+                S3kSignpostInstance.ResultsChildTimingAdjustment.NONE, false, true);
     }
 
     S3kResultsScreenObjectInstance(PlayerCharacter character, int act, int waitDurationAdjustment,
             int postControlHandoffDelayEntries, int carriedResultsRetireDispatches) {
         this(character, act, waitDurationAdjustment, postControlHandoffDelayEntries,
                 carriedResultsRetireDispatches,
-                S3kSignpostInstance.ResultsChildTimingAdjustment.NONE);
+                S3kSignpostInstance.ResultsChildTimingAdjustment.NONE, false, false);
     }
 
     S3kResultsScreenObjectInstance(PlayerCharacter character, int act, int waitDurationAdjustment,
             int postControlHandoffDelayEntries, int carriedResultsRetireDispatches,
             S3kSignpostInstance.ResultsChildTimingAdjustment resultsChildTimingAdjustment) {
         this(character, act, waitDurationAdjustment, postControlHandoffDelayEntries,
-                carriedResultsRetireDispatches, resultsChildTimingAdjustment, true);
+                carriedResultsRetireDispatches, resultsChildTimingAdjustment, false, true);
+    }
+
+    S3kResultsScreenObjectInstance(PlayerCharacter character, int act, int waitDurationAdjustment,
+            int postControlHandoffDelayEntries, int carriedResultsRetireDispatches,
+            boolean usesShortResultsChildRetireTail) {
+        this(character, act, waitDurationAdjustment, postControlHandoffDelayEntries,
+                carriedResultsRetireDispatches,
+                S3kSignpostInstance.ResultsChildTimingAdjustment.NONE,
+                usesShortResultsChildRetireTail, true);
+    }
+
+    S3kResultsScreenObjectInstance(PlayerCharacter character, int act, int waitDurationAdjustment,
+            int postControlHandoffDelayEntries, int carriedResultsRetireDispatches,
+            S3kSignpostInstance.ResultsChildTimingAdjustment resultsChildTimingAdjustment,
+            boolean usesShortResultsChildRetireTail) {
+        this(character, act, waitDurationAdjustment, postControlHandoffDelayEntries,
+                carriedResultsRetireDispatches, resultsChildTimingAdjustment,
+                usesShortResultsChildRetireTail, true);
     }
 
     /**
@@ -182,10 +207,11 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
      * generic rewind shell, which must not recalculate bonuses, fade music, or
      * load art before its captured scalars are restored.
      */
-    private S3kResultsScreenObjectInstance(PlayerCharacter character, int act,
+    S3kResultsScreenObjectInstance(PlayerCharacter character, int act,
             int waitDurationAdjustment, int postControlHandoffDelayEntries,
             int carriedResultsRetireDispatches,
-            S3kSignpostInstance.ResultsChildTimingAdjustment resultsChildTimingAdjustment,
+            S3kSignpostInstance.ResultsChildTimingAdjustment timingAdjustment,
+            boolean usesShortResultsChildRetireTail,
             boolean initializeRuntimeState) {
         super("S3kResults");
         setRomWorldPositioned(false);
@@ -194,7 +220,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         this.waitDurationAdjustment = Math.max(0, waitDurationAdjustment);
         this.postControlHandoffDelayEntries = Math.max(0, postControlHandoffDelayEntries);
         this.carriedResultsRetireDispatches = Math.max(0, carriedResultsRetireDispatches);
-        this.resultsChildTimingAdjustment = resultsChildTimingAdjustment;
+        this.resultsChildTimingAdjustment = timingAdjustment;
+        this.usesShortResultsChildRetireTail = usesShortResultsChildRetireTail;
 
         if (!initializeRuntimeState) {
             return;
@@ -220,6 +247,16 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     public AbstractResultsScreen recreateForRewind(RewindRecreateContext ctx) {
         return ObjectConstructionContext.construct(ctx.objectServices(),
                 () -> new S3kResultsScreenObjectInstance(true));
+    }
+
+    @Override
+    protected void afterGenericRewindStateRestored(RewindCaptureContext context) {
+        if (mappingFrames == null) {
+            loadDerivedMappingsFromRom();
+        }
+        if (artLoaded && renderer == null) {
+            restoreClaimedArtRenderOwner();
+        }
     }
 
     @Override
@@ -448,6 +485,10 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         return false;
     }
 
+    static boolean romResultsCreateGateReady(int framesAfterDecrement) {
+        return framesAfterDecrement <= 0;
+    }
+
     /**
      * ROM: Obj_LevelResultsWait2 after 90-frame wait (sonic3k.asm lines 62686-62690).
      * Increments exit queue counter each frame. Children start sliding out when
@@ -463,20 +504,6 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                 onAdditionalChildRetireDispatch(carriedResultsRenderRetireDispatches);
                 carriedResultsRenderRetireDispatches--;
                 return;
-            }
-            if (postControlHandoffDelayEntries > 0) {
-                if (!controlsReleasedAheadOfHandoff) {
-                    // Restore_PlayerControl and the later title-card handoff are
-                    // separate native owners. Preserve that ordering when the
-                    // retained results object is carrying elapsed owner state.
-                    releasePlayerControlsForExit();
-                    controlsReleasedAheadOfHandoff = true;
-                    return;
-                }
-                postControlHandoffDelayEntries--;
-                if (postControlHandoffDelayEntries > 0) {
-                    return;
-                }
             }
             onExitReady();
             complete = carriedTitlePhase == CarriedTitlePhase.RESULTS;
@@ -704,9 +731,6 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         // resets the player state after the layout reload, so they fall naturally.
         boolean lbzAct2PostBossHandoff = zone == 0x06 && act == 1;
         boolean preloadedNextActHandoff = isPreloadedNextActHandoff(act, services().currentAct());
-        if (!controlsReleasedAheadOfHandoff) {
-            releasePlayerControlsForExit();
-        }
         boolean aizAct1MinibossTitleHandoff = zone == 0x00 && act == 0;
 
         // Restore camera. AIZ Act 1 is excluded because ROM Obj_LevelResults
@@ -834,6 +858,44 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         LOG.fine(() -> String.format("S3K results exit: zone=%X act=%d isAct2OrSpecial=%b",
                 zone, act, isAct2OrSpecial));
         }
+    }
+
+    /**
+     * ROM {@code Obj_LevelResultsWait2} has already changed this retained SST
+     * into {@code Obj_TitleCard}; its next object dispatch performs
+     * {@code Obj_TitleCardInit} and queues the four ROM-backed KosM jobs
+     * (docs/skdisasm/sonic3k.asm:62108-62166, 62684-62725).
+     */
+    private void initializePublishedTitleCard() {
+        int zone = services().romZoneId();
+        var titleCardProvider = services().titleCardProvider();
+        titleCardProvider.initializeInLevel(zone, 1);
+        if (titleCardProvider instanceof Sonic3kTitleCardManager s3kTitleCard) {
+            if (pendingPreloadedTitleHandoff) {
+                s3kTitleCard.requestPreloadedActCameraReleaseOnComplete();
+            }
+            if (pendingAizTitleHandoff) {
+                s3kTitleCard.requestLevelGamestateResetAtInLevelDisplay();
+            } else if (pendingRetainedReloadTitleHandoff) {
+                // This Obj_LevelResults survived an earlier Load_Level and now
+                // dispatches as Obj_TitleCard. The title owner resets the
+                // counters after its native create dispatches.
+                s3kTitleCard.requestLevelGamestateResetAfterCreateDispatches(
+                        mutatedTitleCardResetDispatches(
+                                usesShortResultsChildRetireTail));
+            }
+        }
+        pendingPreloadedTitleHandoff = false;
+        pendingAizTitleHandoff = false;
+        pendingRetainedReloadTitleHandoff = false;
+    }
+
+    static int mutatedTitleCardResetDispatches(boolean usesShortResultsChildRetireTail) {
+        // A short child-retirement tail hands ownership to the mutated title
+        // card one frame earlier, before the native child/create phase has
+        // exposed its final two dispatches.
+        return MUTATED_TITLE_CARD_RESET_DISPATCHES
+                + (usesShortResultsChildRetireTail ? 2 : 0);
     }
 
     private void releasePlayerControlsForExit() {
@@ -996,19 +1058,12 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                     character,
                     act,
                     services().romZoneId(),
-                    new S3kKosModuleQueue(services().hardwareTiming()));
+                    S3kRuntimeArtCoordinator.from(services()).moduleQueue());
             List<HardwareWorkHandle> resultsHandles = queuedResultsArt.handles();
             resultsGeneralArtOrdinal = resultsHandles.get(0).ordinal();
             resultsNumberArtOrdinal = resultsHandles.get(1).ordinal();
             resultsCharacterArtOrdinal = resultsHandles.get(2).ordinal();
-            List<SpriteMappingFrame> rawMappings = objectArt.loadResultsMappings();
-            mappingFrames = Sonic3kObjectArt.adjustTileIndices(
-                    rawMappings, -Sonic3kConstants.VRAM_RESULTS_BASE);
-            if (act != 0) {
-                int charNameTileOffset = Sonic3kConstants.VRAM_RESULTS_CHAR_NAME_ACT2
-                        - Sonic3kConstants.VRAM_RESULTS_CHAR_NAME_ACT1;
-                adjustCharNameFrameTiles(charNameTileOffset);
-            }
+            loadDerivedMappings(objectArt);
             artLoaded = false;
 
             // Note: The level results screen uses the existing level palette.
@@ -1020,12 +1075,50 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         }
     }
 
+    private void loadDerivedMappingsFromRom() {
+        try {
+            loadDerivedMappings(new Sonic3kObjectArt(null, services().romReader()));
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException(
+                    "Unable to restore results-screen ROM mappings", e);
+        }
+    }
+
+    private void loadDerivedMappings(Sonic3kObjectArt objectArt) {
+        List<SpriteMappingFrame> rawMappings = objectArt.loadResultsMappings();
+        mappingFrames = Sonic3kObjectArt.adjustTileIndices(
+                rawMappings, -Sonic3kConstants.VRAM_RESULTS_BASE);
+        if (act != 0) {
+            int charNameTileOffset = Sonic3kConstants.VRAM_RESULTS_CHAR_NAME_ACT2
+                    - Sonic3kConstants.VRAM_RESULTS_CHAR_NAME_ACT1;
+            adjustCharNameFrameTiles(charNameTileOffset);
+        }
+    }
+
     private void finishQueuedArt() {
         combinedPatterns = queuedResultsArt.claim();
         queuedResultsArt = null;
-        resultsGeneralArtOrdinal = -1;
-        resultsNumberArtOrdinal = -1;
-        resultsCharacterArtOrdinal = -1;
+        rebuildArtRenderOwner();
+    }
+
+    private void restoreClaimedArtRenderOwner() {
+        var timing = services().hardwareTiming();
+        combinedPatterns = Sonic3kObjectArt.assembleClaimedResultsArt(
+                List.of(
+                        timing.claimedPayload(
+                                HardwareWorkKind.KOS_MODULE_QUEUE,
+                                resultsGeneralArtOrdinal),
+                        timing.claimedPayload(
+                                HardwareWorkKind.KOS_MODULE_QUEUE,
+                                resultsNumberArtOrdinal),
+                        timing.claimedPayload(
+                                HardwareWorkKind.KOS_MODULE_QUEUE,
+                                resultsCharacterArtOrdinal)),
+                act);
+        rebuildArtRenderOwner();
+    }
+
+    private void rebuildArtRenderOwner() {
         Rom rom;
         try {
             rom = services().rom();
@@ -1041,10 +1134,11 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         spriteSheet = new ObjectSpriteSheet(combinedPatterns, mappingFrames, 0, 1);
         renderer = new PatternSpriteRenderer(spriteSheet);
         artLoaded = true;
+        artCached = false;
     }
 
     private void rebindQueuedResultsArtAfterRestore() {
-        if (queuedResultsArt != null || resultsGeneralArtOrdinal < 0) {
+        if (artLoaded || queuedResultsArt != null || resultsGeneralArtOrdinal < 0) {
             return;
         }
         var timing = services().hardwareTiming();
@@ -1064,7 +1158,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                 ? Sonic3kConstants.VRAM_RESULTS_CHAR_NAME_ACT1
                 : Sonic3kConstants.VRAM_RESULTS_CHAR_NAME_ACT2;
         queuedResultsArt = Sonic3kObjectArt.QueuedResultsArt.restore(
-                new S3kKosModuleQueue(timing),
+                S3kRuntimeArtCoordinator.from(services()).moduleQueue(),
                 List.of(general, numbers, characterName),
                 new int[] {
                         0,

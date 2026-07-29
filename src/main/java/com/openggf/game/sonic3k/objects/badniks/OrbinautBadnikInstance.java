@@ -37,8 +37,18 @@ public final class OrbinautBadnikInstance extends AbstractS3kBadnikInstance impl
     private static final int PRIORITY_BUCKET = 5;         // ObjDat_Orbinaut priority $280.
     private static final int X_SPEED = 0x80;              // loc_8C662: move.w #-$80,d1.
     private static final int CHILD_COUNT = 4;
+    private static final int WAIT_OFFSCREEN_HALF_SIZE = 0x20;
+    private static final int ORBIT_ANGLE_STEP = 8;
+    private static final int WAIT_OFFSCREEN_RESTORE_PASSES = 2;
 
     private boolean initialized;
+    private boolean movementEnabled;
+    private int movementEnableDelay = -1;
+    private boolean deferredWaitOffscreenActive;
+    private boolean waitPlaceholderPassedAboveCamera;
+    private int deferredWaitOffscreenDelay = WAIT_OFFSCREEN_RESTORE_PASSES;
+    private int deferredMovementCount;
+    private int deferredOrbitAngle;
 
     public OrbinautBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Orbinaut",
@@ -48,28 +58,131 @@ public final class OrbinautBadnikInstance extends AbstractS3kBadnikInstance impl
 
     @Override
     protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
-        if (isDestroyed() || !isOnScreenX()) {
-            return;
-        }
-
-        if (!initialized) {
-            spawnOrbitingOrbs();
-            initialized = true;
+        if (isDestroyed()) {
             return;
         }
 
         AbstractPlayableSprite player = playerEntity instanceof AbstractPlayableSprite sprite
                 ? sprite : null;
+        if (!initialized && !deferredWaitOffscreenActive && isWaitPlaceholderOutsideCoarseRange()) {
+            // loc_85AD2 deletes a placeholder which never reached
+            // Render_Sprites once its coarse X falls outside the live window.
+            setDestroyedByOffscreen();
+            return;
+        }
+        if (!initialized) {
+            boolean placeholderRendered = isWithinRenderSpriteBounds(
+                    WAIT_OFFSCREEN_HALF_SIZE, WAIT_OFFSCREEN_HALF_SIZE);
+            if (waitPlaceholderPassedAboveCamera && !placeholderRendered) {
+                return;
+            }
+            if (placeholderRendered) {
+                waitPlaceholderPassedAboveCamera = false;
+            } else if (!deferredWaitOffscreenActive
+                    && isWaitPlaceholderAboveCamera()
+                    && (player == null || player.getYSpeed() >= 0)) {
+                // The engine materializes placements before the ROM
+                // placeholder's render pass. Once the player is travelling
+                // downward away from an already-above-camera placeholder, do
+                // not fabricate its child graph unless the camera later
+                // actually renders that placeholder.
+                waitPlaceholderPassedAboveCamera = true;
+                return;
+            }
+        }
+        if (!initialized && !isOnScreenX()) {
+            if (isWithinRenderSpriteBounds(WAIT_OFFSCREEN_HALF_SIZE, WAIT_OFFSCREEN_HALF_SIZE)) {
+                // Obj_WaitOffscreen has observed render_flags bit 7 and restored
+                // the saved callback. Keep advancing that ROM state while child
+                // slot allocation remains deferred to the engine's centre window.
+                deferredWaitOffscreenActive = true;
+                advanceDeferredWaitOffscreen(player);
+            }
+            return;
+        }
+
+        if (!initialized) {
+            // Reserve the native child graph as soon as the coarse placement
+            // window admits the parent. Obj_WaitOffscreen's saved continuation
+            // still keeps motion and orbit cadence dormant until its $20
+            // placeholder has actually reached Render_Sprites.
+            if (deferredWaitOffscreenActive) {
+                advanceDeferredWaitOffscreen(player);
+            }
+            spawnOrbitingOrbs();
+            initialized = true;
+            movementEnabled = isWithinRenderSpriteBounds(
+                    WAIT_OFFSCREEN_HALF_SIZE, WAIT_OFFSCREEN_HALF_SIZE);
+            return;
+        }
+
         updateFacingAndVelocity(player);
+        if (!movementEnabled) {
+            if (movementEnableDelay < 0) {
+                if (!isWithinRenderSpriteBounds(WAIT_OFFSCREEN_HALF_SIZE, WAIT_OFFSCREEN_HALF_SIZE)) {
+                    return;
+                }
+                movementEnableDelay = 2;
+            }
+            if (movementEnableDelay > 0) {
+                movementEnableDelay--;
+                return;
+            }
+            movementEnabled = true;
+        }
         if (canMoveThisFrame(player)) {
             moveWithVelocity();
         }
     }
 
+    private boolean isWaitPlaceholderOutsideCoarseRange() {
+        if (tryServices() == null || services().camera() == null) {
+            return false;
+        }
+        int objectCoarse = currentX & 0xFF80;
+        int cameraCoarseBack = (services().camera().getX() - 0x80) & 0xFF80;
+        boolean isBehindCamera = (short) (currentX - services().camera().getX()) < 0;
+        return isBehindCamera && ((objectCoarse - cameraCoarseBack) & 0xFFFF) > 0x280;
+    }
+
+    private boolean isWaitPlaceholderAboveCamera() {
+        if (tryServices() == null || services().camera() == null) {
+            return false;
+        }
+        return currentY + WAIT_OFFSCREEN_HALF_SIZE < services().camera().getY();
+    }
+
+    private void advanceDeferredWaitOffscreen(AbstractPlayableSprite player) {
+        // The restored callback and the parent's setup/child-creation callback
+        // each consume a pass without movement before loc_8C662 can run.
+        if (deferredWaitOffscreenDelay > 0) {
+            deferredWaitOffscreenDelay--;
+            return;
+        }
+        advanceDeferredOperation(player);
+    }
+
+    private void advanceDeferredOperation(AbstractPlayableSprite player) {
+        updateFacingAndVelocity(player);
+        if (!canMoveThisFrame(player)) {
+            return;
+        }
+        moveWithVelocity();
+        deferredMovementCount++;
+        int angleStep = isFacingRight() ? -ORBIT_ANGLE_STEP : ORBIT_ANGLE_STEP;
+        deferredOrbitAngle = (deferredOrbitAngle + angleStep) & 0xFF;
+    }
+
     private void spawnOrbitingOrbs() {
         for (int i = 0; i < CHILD_COUNT; i++) {
             final int index = i;
-            spawnChild(() -> new OrbinautOrbInstance(spawn, this, index));
+            // When the engine delays slot materialisation, reconstruct both the
+            // accumulated circular phase and whether loc_8C692's setup callback
+            // has already yielded to loc_8C6B0. This keeps the ROM lifecycle
+            // without reserving four live SST slots outside the centre window.
+            spawnChild(() -> new OrbinautOrbInstance(
+                    spawn, this, index, deferredOrbitAngle,
+                    deferredMovementCount > WAIT_OFFSCREEN_RESTORE_PASSES));
         }
     }
 
@@ -92,11 +205,19 @@ public final class OrbinautBadnikInstance extends AbstractS3kBadnikInstance impl
     }
 
     boolean shouldRotateOrbs(AbstractPlayableSprite player) {
-        return canMoveThisFrame(player);
+        return movementEnabled && canMoveThisFrame(player);
     }
 
     boolean isFacingRight() {
         return !facingLeft;
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format("init=%s move=%s delay=%d render=%s sub=%02X",
+                initialized, movementEnabled, movementEnableDelay,
+                isWithinRenderSpriteBounds(WAIT_OFFSCREEN_HALF_SIZE, WAIT_OFFSCREEN_HALF_SIZE),
+                xSubpixel & 0xFF);
     }
 
     static final class OrbinautOrbInstance extends AbstractObjectInstance
@@ -118,14 +239,17 @@ public final class OrbinautBadnikInstance extends AbstractS3kBadnikInstance impl
                 TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
 
         private final transient OrbinautBadnikInstance parent;
+        private boolean initialized;
         private int currentX;
         private int currentY;
         private int angle;
 
-        OrbinautOrbInstance(ObjectSpawn ownerSpawn, OrbinautBadnikInstance parent, int index) {
+        OrbinautOrbInstance(ObjectSpawn ownerSpawn, OrbinautBadnikInstance parent, int index,
+                int initialAngleOffset, boolean nativeRoutineActive) {
             super(ownerSpawn, "OrbinautOrb");
             this.parent = parent;
-            this.angle = (index * 0x40) & 0xFF; // ChildObjDat_8C704 cardinal offsets.
+            this.initialized = nativeRoutineActive;
+            this.angle = (index * 0x40 + initialAngleOffset) & 0xFF;
             updateOrbitPosition();
         }
 
@@ -139,7 +263,7 @@ public final class OrbinautBadnikInstance extends AbstractS3kBadnikInstance impl
             if (liveParent == null) {
                 return null;
             }
-            return new OrbinautOrbInstance(ctx.spawn(), liveParent, 0);
+            return new OrbinautOrbInstance(ctx.spawn(), liveParent, 0, 0, false);
         }
 
         private static OrbinautBadnikInstance findNearestLiveParentForRewind(
@@ -169,6 +293,12 @@ public final class OrbinautBadnikInstance extends AbstractS3kBadnikInstance impl
         public void update(int frameCounter, PlayableEntity playerEntity) {
             if (isDestroyed() || parent.isDestroyed()) {
                 setDestroyed(true);
+                return;
+            }
+
+            if (!initialized) {
+                initialized = true;
+                updateOrbitPosition();
                 return;
             }
 

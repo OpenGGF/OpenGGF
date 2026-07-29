@@ -179,6 +179,7 @@ import com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance;
 import com.openggf.game.sonic3k.objects.S3kHiddenMonitorInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kButtonObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.objects.Sonic3kPathSwapObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kPointsObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kSSEntryRingObjectInstance;
@@ -203,6 +204,7 @@ import com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossRobotnikShipFlameInstance;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Pattern;
+import com.openggf.data.RomByteReader;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.AnimalObjectInstance;
 import com.openggf.level.objects.DynamicObjectRecreateContext;
@@ -218,6 +220,7 @@ import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.PlaceholderObjectInstance;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.ResultsHardwareTimingFixture;
 import com.openggf.level.objects.SignpostSparkleObjectInstance;
 import com.openggf.level.objects.SkidDustObjectInstance;
 import com.openggf.level.objects.StubObjectServices;
@@ -6733,12 +6736,21 @@ public class TestScalarOnlyCodecDeletion {
     @Test
     void s3kResultsGenericRecreateRestoresCapturedRootStateAndRealTwelveChildGraph() {
         String fqn = BATCH44_DELETED_CODECS.getFirst().fqn();
+        ResultsHardwareTimingFixture resultsTiming = new ResultsHardwareTimingFixture();
         StubObjectServices stub = new StubObjectServices() {
             @Override public ObjectRenderManager renderManager() { return INERT_RENDER_MANAGER; }
             @Override public SonicConfigurationService configuration() { return DEFAULT_CONFIGURATION; }
+            @Override public com.openggf.game.timing.HardwareTimingService hardwareTiming() {
+                return resultsTiming.hardwareTiming();
+            }
+            @Override public RomByteReader romReader() {
+                return emptyResultsMappingReader();
+            }
         };
-        S3kResultsScreenObjectInstance source = ObjectConstructionContext.construct(stub,
-                () -> new S3kResultsScreenObjectInstance(PlayerCharacter.TAILS_ALONE, 1));
+        S3kResultsScreenObjectInstance source = newResultsRestoreShell(stub);
+        setObjectField(source, "character", PlayerCharacter.TAILS_ALONE);
+        setIntField(source, "act", 1);
+        invokeNoArgMethod(source, "createElements");
         setIntField(source, "timeBonus", 4321);
         setIntField(source, "ringBonus", 210);
         setIntField(source, "totalBonusCountUp", 1234);
@@ -12508,6 +12520,7 @@ public class TestScalarOnlyCodecDeletion {
             @Override public Camera camera() { return camera; }
             @Override public SonicConfigurationService configuration() { return DEFAULT_CONFIGURATION; }
             @Override public ObjectRenderManager renderManager() { return INERT_RENDER_MANAGER; }
+            @Override public RomByteReader romReader() { return emptyResultsMappingReader(); }
         };
         ObjectRegistry registry = switch (gameId) {
             case S1 -> new Sonic1ObjectRegistry();
@@ -12523,7 +12536,41 @@ public class TestScalarOnlyCodecDeletion {
         ObjectManagerSnapshot.DynamicObjectEntry entry =
                 new ObjectManagerSnapshot.DynamicObjectEntry(fqn, spawn, 0, state);
         DynamicObjectRecreateContext ctx = new DynamicObjectRecreateContext(om);
-        return ObjectRewindDynamicCodecs.genericRecreate(entry, ctx);
+        ObjectInstance recreated = ObjectRewindDynamicCodecs.genericRecreate(entry, ctx);
+        if (recreated instanceof AbstractObjectInstance object) {
+            object.setServices(stub);
+        }
+        return recreated;
+    }
+
+    private static S3kResultsScreenObjectInstance newResultsRestoreShell(StubObjectServices services) {
+        try {
+            var ctor = S3kResultsScreenObjectInstance.class.getDeclaredConstructor();
+            ctor.setAccessible(true);
+            return ObjectConstructionContext.construct(services, () -> {
+                try {
+                    return ctor.newInstance();
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalStateException(e);
+                }
+            });
+        } catch (NoSuchMethodException e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    private static void invokeNoArgMethod(Object target, String methodName) {
+        try {
+            var method = target.getClass().getDeclaredMethod(methodName);
+            method.setAccessible(true);
+            method.invoke(target);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    private static RomByteReader emptyResultsMappingReader() {
+        return new RomByteReader(new byte[Sonic3kConstants.MAP_RESULTS_ADDR + 2]);
     }
 
     private static ObjectRegistry cnzMinibossParentTestRegistry() {

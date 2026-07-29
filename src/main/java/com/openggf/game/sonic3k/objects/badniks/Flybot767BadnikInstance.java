@@ -62,21 +62,35 @@ public final class Flybot767BadnikInstance extends AbstractS3kBadnikInstance imp
     private int animTimer;
     private boolean inLoop;
     private boolean waitingForOnscreen = true;
+    private boolean layoutWaitUsesRetainedRenderFlag;
+    private boolean placeholderRenderedOnscreen;
     private boolean publishedTouchResponseListEntryThisFrame;
 
     public Flybot767BadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Flybot767",
                 Sonic3kObjectArtKeys.FLYBOT_767, COLLISION_SIZE_INDEX, PRIORITY_BUCKET);
+        layoutWaitUsesRetainedRenderFlag = spawn.layoutIndex() >= 0;
     }
 
     @Override
     protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
         publishedTouchResponseListEntryThisFrame = false;
-        if (isDestroyed() || !isOnScreenX(0x20)) {
+        if (isDestroyed()) {
             return;
         }
         if (waitingForOnscreen) {
-            if (!isOnScreenX(WAIT_OFFSCREEN_MARGIN)) {
+            if (layoutWaitUsesRetainedRenderFlag) {
+                if (!placeholderRenderedOnscreen) {
+                    return;
+                }
+                // loc_85AD2 observes the sign bit published by the preceding
+                // Render_Sprites pass, restores the saved continuation, and
+                // returns before Obj_Flybot767 dispatch resumes.
+                placeholderRenderedOnscreen = false;
+                waitingForOnscreen = false;
+                return;
+            }
+            if (!isOnScreen(WAIT_OFFSCREEN_MARGIN)) {
                 return;
             }
             // Obj_WaitOffscreen restores the saved operation pointer and
@@ -95,7 +109,23 @@ public final class Flybot767BadnikInstance extends AbstractS3kBadnikInstance imp
             case WAIT_RETURN -> updateChase(player1, true);
         }
         updateDynamicSpawn(currentX, currentY);
+        // Sprite_CheckDeleteTouchSlotted runs the object's restored routine
+        // before applying the native coarse-X deletion window. Objects outside
+        // that window are released as respawnable layout/alarm slots and never
+        // reach the touch-response list for this pass.
+        if (!isInRangeAt(currentX)) {
+            setDestroyedByOffscreen();
+            return;
+        }
         publishedTouchResponseListEntryThisFrame = true;
+    }
+
+    @Override
+    public void refreshPostCameraRenderState() {
+        if (waitingForOnscreen && layoutWaitUsesRetainedRenderFlag) {
+            placeholderRenderedOnscreen = isWithinRenderSpriteBounds(
+                    WAIT_OFFSCREEN_MARGIN, WAIT_OFFSCREEN_MARGIN);
+        }
     }
 
     private void initialize() {
@@ -327,6 +357,17 @@ public final class Flybot767BadnikInstance extends AbstractS3kBadnikInstance imp
         // Add_SpriteToCollisionResponseList (sonic3k.asm:179081-179090,
         // 191981-191989). The routine publishes on later passes only.
         return publishedTouchResponseListEntryThisFrame;
+    }
+
+    @Override
+    public boolean usesCurrentTouchResponseState() {
+        // A layout-loaded Flybot occupies a retained object slot while
+        // Map_Offscreen/Obj_WaitOffscreen schedules its operation pointer. Its
+        // Sprite_CheckDeleteTouchSlotted entry therefore exposes the live SST
+        // coordinate reached by that object pass. Obj_LBZAlarm allocates its
+        // Flybots dynamically (layout index -1), after the frame-start touch
+        // snapshot, so those keep the ordinary snapshot phase.
+        return getSpawn().layoutIndex() >= 0;
     }
 
     @Override

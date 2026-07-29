@@ -220,6 +220,7 @@ CF-ANNOTATION TYPE com.openggf.game.AbstractStandaloneGameModule visible @com.op
 CF-ANNOTATION TYPE com.openggf.game.AnimationId visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.BonusStageProvider visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.BonusStageProvider$BonusStageRewards visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.BonusStageProvider$BootstrapObject visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.BonusStageState visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.BonusStageType visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.CanonicalAnimation visible @com.openggf.game.ModApi
@@ -315,6 +316,7 @@ CF-ANNOTATION TYPE com.openggf.game.RomDetectionService visible @com.openggf.arc
 CF-ANNOTATION TYPE com.openggf.game.RomDetectionService visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.RomDetector visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.RomOffsetProvider visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.RuntimeArtCoordinator visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.ScrollHandlerProvider visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.ScrollHandlerProvider$ZoneConstants visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.ShieldType visible @com.openggf.game.ModApi
@@ -530,6 +532,7 @@ CF-ANNOTATION TYPE com.openggf.game.rules.GameRules visible @com.openggf.game.Mo
 CF-ANNOTATION TYPE com.openggf.game.rules.ObjectInteractionRules visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.rules.PlayerAnimationRules visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.rules.PlayerCapabilityRules visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.rules.PlayerLandingRules visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.rules.PlayerMovementRules visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.rules.PowerUpRules visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.rules.RingRules visible @com.openggf.game.ModApi
@@ -664,6 +667,10 @@ CF-ANNOTATION TYPE com.openggf.level.SeamlessLevelTransitionRequest$Builder visi
 CF-ANNOTATION TYPE com.openggf.level.SeamlessLevelTransitionRequest$ObjectOffsetPolicy visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.SeamlessLevelTransitionRequest$ObjectSurvivalPolicy visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.SeamlessLevelTransitionRequest$TransitionType visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.SeamlessTransitionResourceHandoff visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.SeamlessTransitionResourceHandoffId visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.SeamlessTransitionResourceHandoffRegistry visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.SeamlessTransitionResourceHandoffRegistry$Snapshot visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.SolidTile visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.TransitionSstOccupant visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.WaterSystem visible @com.openggf.game.ModApi
@@ -780,6 +787,11 @@ CF-ANNOTATION TYPE com.openggf.level.render.SpritePieceRenderer$FrameBounds visi
 CF-ANNOTATION TYPE com.openggf.level.render.SpritePieceRenderer$PreparedPiece visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.render.SpriteSheet visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.render.TileLoadRequest visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.resources.CompressionType visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.resources.DeferredLevelResourceDescriptor visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.resources.DeferredLevelResourceDescriptor$Kind visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.resources.DeferredLevelResourceManifest visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.resources.DeferredLevelResourceTracker visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.resources.KosinskiModuleQueue visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.resources.KosinskiModuleQueue$ArchiveState visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.resources.KosinskiModuleQueue$DmaChunk visible @com.openggf.game.ModApi
@@ -1122,6 +1134,7 @@ CONSTRUCTOR com.openggf.editor.render.EditorLibraryBrowserPane$Entry public  <in
 CONSTRUCTOR com.openggf.game.AbstractLevelInitProfile public  <init>()
 CONSTRUCTOR com.openggf.game.AbstractStandaloneGameModule public  <init>()
 CONSTRUCTOR com.openggf.game.BonusStageProvider$BonusStageRewards public  <init>(int,int,boolean,boolean,boolean,boolean)
+CONSTRUCTOR com.openggf.game.BonusStageProvider$BootstrapObject public  <init>(com.openggf.level.objects.ObjectSpawn,java.lang.Class<? extends com.openggf.level.objects.ObjectInstance>,java.util.function.Function<com.openggf.level.objects.ObjectSpawn,? extends com.openggf.level.objects.ObjectInstance>)
 CONSTRUCTOR com.openggf.game.BonusStageState public  <init>(int,int,int,int,int,int,int,int,int,int,int,int,byte,byte,int,long)
 CONSTRUCTOR com.openggf.game.BonusStageState public  <init>(int,int,int,int,int,int,int,int,int,int,int,int,byte,byte,int,long,int)
 CONSTRUCTOR com.openggf.game.CharacterDefinition public  <init>(com.openggf.game.CharacterKey,java.lang.String,com.openggf.game.CharacterDefinition$PlayableFactory,com.openggf.game.CharacterDefinition$RespawnStrategyFactory,com.openggf.game.PlayerCharacter,com.openggf.sprites.playable.SecondaryAbility,boolean,com.openggf.game.CharacterDefinition$ArtSupplier)
@@ -1328,7 +1341,8 @@ CONSTRUCTOR com.openggf.game.rules.GameRules public  <init>(com.openggf.game.rul
 CONSTRUCTOR com.openggf.game.rules.ObjectInteractionRules public  <init>(boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.PlayerAnimationRules public  <init>(boolean,boolean,boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.PlayerCapabilityRules public  <init>(boolean,short[],boolean,boolean,boolean,boolean,boolean,short[])
-CONSTRUCTOR com.openggf.game.rules.PlayerMovementRules public  <init>(boolean,boolean,boolean,short,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean)
+CONSTRUCTOR com.openggf.game.rules.PlayerLandingRules public  <init>(boolean,boolean,boolean,boolean)
+CONSTRUCTOR com.openggf.game.rules.PlayerMovementRules public  <init>(boolean,boolean,boolean,short,boolean,boolean,boolean,boolean,com.openggf.game.rules.PlayerLandingRules,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.PowerUpRules public  <init>(int,int,int,int,boolean,boolean,int,int)
 CONSTRUCTOR com.openggf.game.rules.RingRules public  <init>(int,int,boolean,int,int,int,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.SidekickCpuRules public  <init>(int,int,int,boolean,boolean,boolean,boolean,int,boolean,int,int,int,int,int,int,boolean,boolean,boolean,boolean,boolean)
@@ -1432,6 +1446,9 @@ CONSTRUCTOR com.openggf.level.ParallaxManager public  <init>()
 CONSTRUCTOR com.openggf.level.Pattern public  <init>()
 CONSTRUCTOR com.openggf.level.PatternDesc public  <init>()
 CONSTRUCTOR com.openggf.level.PatternDesc public  <init>(int)
+CONSTRUCTOR com.openggf.level.SeamlessTransitionResourceHandoffId public  <init>(long)
+CONSTRUCTOR com.openggf.level.SeamlessTransitionResourceHandoffRegistry public  <init>()
+CONSTRUCTOR com.openggf.level.SeamlessTransitionResourceHandoffRegistry$Snapshot public  <init>(long,java.util.Map<com.openggf.level.SeamlessTransitionResourceHandoffId,com.openggf.level.SeamlessTransitionResourceHandoff>)
 CONSTRUCTOR com.openggf.level.SolidTile public  <init>(int,byte[],byte[],byte)
 CONSTRUCTOR com.openggf.level.TransitionSstOccupant public  <init>(com.openggf.level.objects.ObjectInstance,int)
 CONSTRUCTOR com.openggf.level.WaterSystem public  <init>()
@@ -1520,6 +1537,8 @@ CONSTRUCTOR com.openggf.level.render.SpritePieceRenderer$PreparedPiece public  <
 CONSTRUCTOR com.openggf.level.render.SpritePieceRenderer$PreparedPiece public  <init>(int,int,int,int,int,int,int,boolean,boolean,boolean,boolean,int,int)
 CONSTRUCTOR com.openggf.level.render.TileLoadRequest public  <init>(int,int)
 CONSTRUCTOR com.openggf.level.render.TileLoadRequest public  <init>(int,int,int)
+CONSTRUCTOR com.openggf.level.resources.DeferredLevelResourceDescriptor public  <init>(com.openggf.level.resources.DeferredLevelResourceDescriptor$Kind,int,com.openggf.level.resources.CompressionType,int)
+CONSTRUCTOR com.openggf.level.resources.DeferredLevelResourceManifest public  <init>(java.util.List<com.openggf.level.resources.DeferredLevelResourceDescriptor>)
 CONSTRUCTOR com.openggf.level.resources.KosinskiModuleQueue public  <init>()
 CONSTRUCTOR com.openggf.level.resources.KosinskiModuleQueue$ArchiveState public  <init>(int,int,int,int,int,int,int,int,boolean)
 CONSTRUCTOR com.openggf.level.resources.KosinskiModuleQueue$DmaChunk public  <init>(int,byte[])
@@ -2352,6 +2371,7 @@ FIELD com.openggf.game.PlayerCharacter public,static,final com.openggf.game.Play
 FIELD com.openggf.game.PlayerCharacter public,static,final com.openggf.game.PlayerCharacter SONIC_ALONE
 FIELD com.openggf.game.PlayerCharacter public,static,final com.openggf.game.PlayerCharacter SONIC_AND_TAILS
 FIELD com.openggf.game.PlayerCharacter public,static,final com.openggf.game.PlayerCharacter TAILS_ALONE
+FIELD com.openggf.game.RuntimeArtCoordinator public,static,final com.openggf.game.RuntimeArtCoordinator NONE
 FIELD com.openggf.game.ShieldType public,static,final com.openggf.game.ShieldType BASIC
 FIELD com.openggf.game.ShieldType public,static,final com.openggf.game.ShieldType BUBBLE
 FIELD com.openggf.game.ShieldType public,static,final com.openggf.game.ShieldType FIRE
@@ -2729,6 +2749,14 @@ FIELD com.openggf.level.objects.TouchShieldDeflectCapability public,static,final
 FIELD com.openggf.level.objects.TouchShieldDeflectCapability public,static,final com.openggf.level.objects.TouchShieldDeflectCapability SHIELD_DEFLECT
 FIELD com.openggf.level.render.BackgroundRenderer public,static,final int SCREEN_HEIGHT
 FIELD com.openggf.level.render.BackgroundRenderer public,static,final int SCREEN_WIDTH
+FIELD com.openggf.level.resources.CompressionType public,static,final com.openggf.level.resources.CompressionType KOSINSKI
+FIELD com.openggf.level.resources.CompressionType public,static,final com.openggf.level.resources.CompressionType KOSINSKI_MODULED
+FIELD com.openggf.level.resources.CompressionType public,static,final com.openggf.level.resources.CompressionType NEMESIS
+FIELD com.openggf.level.resources.CompressionType public,static,final com.openggf.level.resources.CompressionType UNCOMPRESSED
+FIELD com.openggf.level.resources.DeferredLevelResourceDescriptor$Kind public,static,final com.openggf.level.resources.DeferredLevelResourceDescriptor$Kind BLOCKS_128X128
+FIELD com.openggf.level.resources.DeferredLevelResourceDescriptor$Kind public,static,final com.openggf.level.resources.DeferredLevelResourceDescriptor$Kind CHUNKS_16X16
+FIELD com.openggf.level.resources.DeferredLevelResourceDescriptor$Kind public,static,final com.openggf.level.resources.DeferredLevelResourceDescriptor$Kind PATTERNS_8X8
+FIELD com.openggf.level.resources.DeferredLevelResourceManifest public,static,final com.openggf.level.resources.DeferredLevelResourceManifest EMPTY
 FIELD com.openggf.level.resources.KosinskiModuleQueue public,static,final int CAPACITY
 FIELD com.openggf.level.resources.KosinskiModuleQueue$Phase public,static,final com.openggf.level.resources.KosinskiModuleQueue$Phase DECOMPRESSION_IN_PROGRESS
 FIELD com.openggf.level.resources.KosinskiModuleQueue$Phase public,static,final com.openggf.level.resources.KosinskiModuleQueue$Phase IDLE
@@ -3087,6 +3115,7 @@ INTERFACE com.openggf.level.AbstractLevel com.openggf.level.Level
 INTERFACE com.openggf.level.MutableLevel com.openggf.level.objects.RingObjectPlacementMapping
 INTERFACE com.openggf.level.Palette com.openggf.graphics.PaletteView
 INTERFACE com.openggf.level.ParallaxManager com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.ParallaxSnapshot>
+INTERFACE com.openggf.level.SeamlessTransitionResourceHandoffRegistry com.openggf.game.rewind.RewindSnapshottable<com.openggf.level.SeamlessTransitionResourceHandoffRegistry$Snapshot>
 INTERFACE com.openggf.level.WaterSystem com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.WaterSystemSnapshot>
 INTERFACE com.openggf.level.objects.AbstractBadnikInstance com.openggf.level.objects.TouchResponseAttackable
 INTERFACE com.openggf.level.objects.AbstractBadnikInstance com.openggf.level.objects.TouchResponseProvider
@@ -4455,6 +4484,7 @@ METHOD com.openggf.game.BonusStageProvider public  boolean hasCompletedExitFadeT
 METHOD com.openggf.game.BonusStageProvider public  boolean supportsRewind()
 METHOD com.openggf.game.BonusStageProvider public  boolean suppressesDefaultCameraStep()
 METHOD com.openggf.game.BonusStageProvider public  boolean updateDuringLevelFrame()
+METHOD com.openggf.game.BonusStageProvider public  com.openggf.game.BonusStageProvider$BootstrapObject bootstrapObject(com.openggf.game.BonusStageType)
 METHOD com.openggf.game.BonusStageProvider public  void addLife()
 METHOD com.openggf.game.BonusStageProvider public  void addRings(int)
 METHOD com.openggf.game.BonusStageProvider public  void onDeferredSetupComplete()
@@ -4480,6 +4510,14 @@ METHOD com.openggf.game.BonusStageProvider$BonusStageRewards public,final  boole
 METHOD com.openggf.game.BonusStageProvider$BonusStageRewards public,final  int hashCode()
 METHOD com.openggf.game.BonusStageProvider$BonusStageRewards public,final  java.lang.String toString()
 METHOD com.openggf.game.BonusStageProvider$BonusStageRewards public,static  com.openggf.game.BonusStageProvider$BonusStageRewards none()
+METHOD com.openggf.game.BonusStageProvider$BootstrapObject public  boolean matches(com.openggf.level.objects.ObjectInstance)
+METHOD com.openggf.game.BonusStageProvider$BootstrapObject public  com.openggf.level.objects.ObjectInstance create()
+METHOD com.openggf.game.BonusStageProvider$BootstrapObject public  com.openggf.level.objects.ObjectSpawn spawn()
+METHOD com.openggf.game.BonusStageProvider$BootstrapObject public  java.lang.Class<? extends com.openggf.level.objects.ObjectInstance> objectType()
+METHOD com.openggf.game.BonusStageProvider$BootstrapObject public  java.util.function.Function<com.openggf.level.objects.ObjectSpawn,? extends com.openggf.level.objects.ObjectInstance> factory()
+METHOD com.openggf.game.BonusStageProvider$BootstrapObject public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.BonusStageProvider$BootstrapObject public,final  int hashCode()
+METHOD com.openggf.game.BonusStageProvider$BootstrapObject public,final  java.lang.String toString()
 METHOD com.openggf.game.BonusStageState public  byte lrbSolidBit()
 METHOD com.openggf.game.BonusStageState public  byte topSolidBit()
 METHOD com.openggf.game.BonusStageState public  int cameraMaxY()
@@ -4721,6 +4759,7 @@ METHOD com.openggf.game.GameModule public  com.openggf.game.LevelSelectProvider 
 METHOD com.openggf.game.GameModule public  com.openggf.game.MusicReference getLevelMusicReference(int,int)
 METHOD com.openggf.game.GameModule public  com.openggf.game.PlayableCharacterRegistry getPlayableCharacterRegistry()
 METHOD com.openggf.game.GameModule public  com.openggf.game.RomOffsetProvider getRomOffsetProvider()
+METHOD com.openggf.game.GameModule public  com.openggf.game.RuntimeArtCoordinator createRuntimeArtCoordinator(com.openggf.game.timing.HardwareTimingService)
 METHOD com.openggf.game.GameModule public  com.openggf.game.SpecialStageProvider getSpecialStageProvider()
 METHOD com.openggf.game.GameModule public  com.openggf.game.TitleCardProvider getTitleCardProvider()
 METHOD com.openggf.game.GameModule public  com.openggf.game.TitleScreenProvider getTitleScreenProvider()
@@ -4902,6 +4941,7 @@ METHOD com.openggf.game.LevelEventProvider public  boolean usesSidekickRomVisibl
 METHOD com.openggf.game.LevelEventProvider public  void advanceVblankOnlyState()
 METHOD com.openggf.game.LevelEventProvider public  void onPlayableLandingAnimationWrite(com.openggf.sprites.playable.AbstractPlayableSprite)
 METHOD com.openggf.game.LevelEventProvider public  void restoreEventOwnedObjectsAfterPlacementReset()
+METHOD com.openggf.game.LevelEventProvider public  void updateAfterCameraBoundaryEasing()
 METHOD com.openggf.game.LevelEventProvider public  void updateFixedInLevelObjects()
 METHOD com.openggf.game.LevelEventProvider public  void updateFixedInLevelObjectsBeforeDynamicObjects()
 METHOD com.openggf.game.LevelEventProvider public  void updatePrePhysics()
@@ -5298,6 +5338,10 @@ METHOD com.openggf.game.RomOffsetProvider public  int getArtOffset(java.lang.Str
 METHOD com.openggf.game.RomOffsetProvider public  int getLevelOffset(java.lang.String)
 METHOD com.openggf.game.RomOffsetProvider public  int getPaletteOffset(java.lang.String)
 METHOD com.openggf.game.RomOffsetProvider public,abstract  int getOffset(java.lang.String,java.lang.String)
+METHOD com.openggf.game.RuntimeArtCoordinator public  void afterTimingService(com.openggf.game.timing.HardwareServiceBoundary)
+METHOD com.openggf.game.RuntimeArtCoordinator public  void deregisterRewindAdapters(com.openggf.game.rewind.RewindRegistry)
+METHOD com.openggf.game.RuntimeArtCoordinator public  void registerRewindAdapters(com.openggf.game.rewind.RewindRegistry)
+METHOD com.openggf.game.RuntimeArtCoordinator public  void resetForMissingSnapshot()
 METHOD com.openggf.game.ScrollHandlerProvider public  boolean updateForEnding(int[],int,int,int,short)
 METHOD com.openggf.game.ScrollHandlerProvider public  int getCameraBgXOffset()
 METHOD com.openggf.game.ScrollHandlerProvider public  int getTornadoVelocityX()
@@ -5379,6 +5423,7 @@ METHOD com.openggf.game.TitleCardProvider public  boolean advancesOnHeldLevelCou
 METHOD com.openggf.game.TitleCardProvider public  boolean ownsHeldLevelCounter()
 METHOD com.openggf.game.TitleCardProvider public  boolean ownsInLevelPlayerControlLock()
 METHOD com.openggf.game.TitleCardProvider public  boolean ownsRetainedResultsHeldLevelCounter()
+METHOD com.openggf.game.TitleCardProvider public  boolean projectsRetainedResultsSpriteCadence()
 METHOD com.openggf.game.TitleCardProvider public  boolean shouldAdvanceVblankClockDuringLockedPhase()
 METHOD com.openggf.game.TitleCardProvider public  boolean shouldLockPlayerControlForInLevelOverlay()
 METHOD com.openggf.game.TitleCardProvider public  boolean shouldRunLevelObjectsDuringLockedPhase()
@@ -5421,6 +5466,7 @@ METHOD com.openggf.game.TitleScreenProvider$TitleScreenAction public,static  com
 METHOD com.openggf.game.TitleScreenProvider$TitleScreenAction public,static  com.openggf.game.TitleScreenProvider$TitleScreenAction[] values()
 METHOD com.openggf.game.WaterDataProvider public  boolean hasWater(int,int,com.openggf.game.PlayerCharacter,boolean)
 METHOD com.openggf.game.WaterDataProvider public  int getGameplayWaterLevelOffset(int,int)
+METHOD com.openggf.game.WaterDataProvider public  int getUnderwaterSuperPaletteCycleAddress(int,int)
 METHOD com.openggf.game.WaterDataProvider public  int getVisualWaterLevelOffset(int,int)
 METHOD com.openggf.game.WaterDataProvider public  int getWaterSpeed(int,int)
 METHOD com.openggf.game.WaterDataProvider public,abstract  boolean hasWater(int,int,com.openggf.game.PlayerCharacter)
@@ -6806,8 +6852,8 @@ METHOD com.openggf.game.rules.ObjectInteractionRules public  boolean touchRespon
 METHOD com.openggf.game.rules.ObjectInteractionRules public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.game.rules.ObjectInteractionRules public,final  int hashCode()
 METHOD com.openggf.game.rules.ObjectInteractionRules public,final  java.lang.String toString()
+METHOD com.openggf.game.rules.PlayerAnimationRules public  boolean airLandingPublishesTiltAngles()
 METHOD com.openggf.game.rules.PlayerAnimationRules public  boolean angledLandingPublishesWalk()
-METHOD com.openggf.game.rules.PlayerAnimationRules public  boolean angledLandingPublishesWalkUnlessSpindashing()
 METHOD com.openggf.game.rules.PlayerAnimationRules public  boolean animationChangeClearsPush()
 METHOD com.openggf.game.rules.PlayerAnimationRules public  boolean extendedEdgeBalance()
 METHOD com.openggf.game.rules.PlayerAnimationRules public  boolean singleFacingBalanceAnimationSet()
@@ -6826,19 +6872,24 @@ METHOD com.openggf.game.rules.PlayerCapabilityRules public  int hashCode()
 METHOD com.openggf.game.rules.PlayerCapabilityRules public  java.lang.String toString()
 METHOD com.openggf.game.rules.PlayerCapabilityRules public  short[] spindashSpeedTable()
 METHOD com.openggf.game.rules.PlayerCapabilityRules public  short[] superSpindashSpeedTable()
+METHOD com.openggf.game.rules.PlayerLandingRules public  boolean landingRollClearUsesCurrentYRadiusDelta()
+METHOD com.openggf.game.rules.PlayerLandingRules public  boolean objectSolidHurtLandingRetainsRoutine()
+METHOD com.openggf.game.rules.PlayerLandingRules public  boolean pinballLandingPreservesPinballMode()
+METHOD com.openggf.game.rules.PlayerLandingRules public  boolean pinballLandingPreservesRoll()
+METHOD com.openggf.game.rules.PlayerLandingRules public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.rules.PlayerLandingRules public,final  int hashCode()
+METHOD com.openggf.game.rules.PlayerLandingRules public,final  java.lang.String toString()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean airSuperspeedPreserved()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean angleDiffCardinalSnap()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean controlLockLatchesLogicalInput()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean fixedAnglePosThreshold()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean hurtRoutineLatchesLogicalInput()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean inputAlwaysCapsGroundSpeed()
-METHOD com.openggf.game.rules.PlayerMovementRules public  boolean landingRollClearUsesCurrentYRadiusDelta()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean levelBoundaryLockUsesScreenLockFlag()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean levelBoundaryRightStrict()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean levelBoundaryUsesCentreY()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean levelBoundaryUsesPreEasedMaxXDuringBossLock()
-METHOD com.openggf.game.rules.PlayerMovementRules public  boolean pinballLandingPreservesPinballMode()
-METHOD com.openggf.game.rules.PlayerMovementRules public  boolean pinballLandingPreservesRoll()
+METHOD com.openggf.game.rules.PlayerMovementRules public  boolean objectSolidHurtLandingRetainsRoutine()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean rollControlledDecelUsesEffectiveDecelQuarter()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean rollStopsBelowMinimumSpeed()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean rollingJumpPinballGateRequiresSpindashFlag()
@@ -6847,6 +6898,7 @@ METHOD com.openggf.game.rules.PlayerMovementRules public  boolean slopeRepelUses
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean slopeResistAppliesAtZeroInertia()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean slopeResistStartsFromRest()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean waterExitBoostSkipsFastUpwardVelocity()
+METHOD com.openggf.game.rules.PlayerMovementRules public  com.openggf.game.rules.PlayerLandingRules landing()
 METHOD com.openggf.game.rules.PlayerMovementRules public  short movingCrouchThreshold()
 METHOD com.openggf.game.rules.PlayerMovementRules public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.game.rules.PlayerMovementRules public,final  int hashCode()
@@ -6971,6 +7023,7 @@ METHOD com.openggf.game.session.GameplayModeContext public  com.openggf.game.Bon
 METHOD com.openggf.game.session.GameplayModeContext public  com.openggf.game.GameMode getGameMode()
 METHOD com.openggf.game.session.GameplayModeContext public  com.openggf.game.GameRng getRng()
 METHOD com.openggf.game.session.GameplayModeContext public  com.openggf.game.GameStateManager getGameStateManager()
+METHOD com.openggf.game.session.GameplayModeContext public  com.openggf.game.RuntimeArtCoordinator runtimeArtCoordinator()
 METHOD com.openggf.game.session.GameplayModeContext public  com.openggf.game.animation.AnimatedTileChannelGraph getAnimatedTileChannelGraph()
 METHOD com.openggf.game.session.GameplayModeContext public  com.openggf.game.ghost.GhostRenderRegistry getGhostRenderRegistry()
 METHOD com.openggf.game.session.GameplayModeContext public  com.openggf.game.mutation.ZoneLayoutMutationPipeline getZoneLayoutMutationPipeline()
@@ -6990,6 +7043,7 @@ METHOD com.openggf.game.session.GameplayModeContext public  com.openggf.game.zon
 METHOD com.openggf.game.session.GameplayModeContext public  com.openggf.graphics.FadeManager getFadeManager()
 METHOD com.openggf.game.session.GameplayModeContext public  com.openggf.level.LevelManager getLevelManager()
 METHOD com.openggf.game.session.GameplayModeContext public  com.openggf.level.ParallaxManager getParallaxManager()
+METHOD com.openggf.game.session.GameplayModeContext public  com.openggf.level.SeamlessTransitionResourceHandoffRegistry seamlessTransitionResourceHandoffs()
 METHOD com.openggf.game.session.GameplayModeContext public  com.openggf.level.WaterSystem getWaterSystem()
 METHOD com.openggf.game.session.GameplayModeContext public  com.openggf.level.objects.ObjectManager getObjectManager()
 METHOD com.openggf.game.session.GameplayModeContext public  com.openggf.level.resources.KosinskiModuleQueue getKosinskiModuleQueue()
@@ -7002,6 +7056,7 @@ METHOD com.openggf.game.session.GameplayModeContext public  com.openggf.timer.Ti
 METHOD com.openggf.game.session.GameplayModeContext public  int getSpawnX()
 METHOD com.openggf.game.session.GameplayModeContext public  int getSpawnY()
 METHOD com.openggf.game.session.GameplayModeContext public  java.util.Optional<com.openggf.game.session.EditorPlaytestStash> getResumeStash()
+METHOD com.openggf.game.session.GameplayModeContext public  void afterHardwareTimingService(com.openggf.game.timing.HardwareServiceBoundary)
 METHOD com.openggf.game.session.GameplayModeContext public  void attachBackgroundPlaneCollisionProvider(com.openggf.physics.BackgroundPlaneCollisionProvider)
 METHOD com.openggf.game.session.GameplayModeContext public  void attachGameplayManagers(com.openggf.camera.Camera,com.openggf.timer.TimerManager,com.openggf.game.GameStateManager,com.openggf.graphics.FadeManager,com.openggf.game.GameRng,com.openggf.game.solid.SolidExecutionRegistry)
 METHOD com.openggf.game.session.GameplayModeContext public  void attachGameplayManagers(com.openggf.camera.Camera,com.openggf.timer.TimerManager,com.openggf.game.GameStateManager,com.openggf.graphics.FadeManager,com.openggf.game.GameRng,com.openggf.game.solid.SolidExecutionRegistry,com.openggf.debug.PerformanceProfiler)
@@ -8036,6 +8091,7 @@ METHOD com.openggf.level.LevelManager public  boolean isLevelInactiveForTransiti
 METHOD com.openggf.level.LevelManager public  boolean isRespawnRequestedForRewind()
 METHOD com.openggf.level.LevelManager public  boolean isSidekickRomVisibleReloadFrameCounterBridgeActive()
 METHOD com.openggf.level.LevelManager public  boolean isSidekickRomVisibleReloadResumeFrameCounterBridgeActive()
+METHOD com.openggf.level.LevelManager public  boolean isSuppressNextMusicChange()
 METHOD com.openggf.level.LevelManager public  boolean isTitleCardRequested()
 METHOD com.openggf.level.LevelManager public  boolean isTransitionRingInitializationPendingForRewind()
 METHOD com.openggf.level.LevelManager public  boolean isVerticalWrapEnabled()
@@ -8057,6 +8113,7 @@ METHOD com.openggf.level.LevelManager public  com.openggf.level.ChunkDesc getChu
 METHOD com.openggf.level.LevelManager public  com.openggf.level.ChunkDesc getChunkDescAt(byte,int,int,boolean)
 METHOD com.openggf.level.LevelManager public  com.openggf.level.Level getCurrentLevel()
 METHOD com.openggf.level.LevelManager public  com.openggf.level.Level loadLevelData(int) THROWS java.io.IOException
+METHOD com.openggf.level.LevelManager public  com.openggf.level.Level loadLevelData(int,com.openggf.level.resources.DeferredLevelResourceTracker) THROWS java.io.IOException
 METHOD com.openggf.level.LevelManager public  com.openggf.level.LevelTilemapManager getTilemapManager()
 METHOD com.openggf.level.LevelManager public  com.openggf.level.LevelTransitionCoordinator getTransitions()
 METHOD com.openggf.level.LevelManager public  com.openggf.level.SeamlessLevelTransitionRequest consumeSeamlessTransitionRequest()
@@ -8313,6 +8370,7 @@ METHOD com.openggf.level.LevelTransitionCoordinator public  boolean consumeNextZ
 METHOD com.openggf.level.LevelTransitionCoordinator public  boolean consumeRespawnRequest()
 METHOD com.openggf.level.LevelTransitionCoordinator public  boolean consumeSpecialStageRequest()
 METHOD com.openggf.level.LevelTransitionCoordinator public  boolean consumeSpecialStageReturnLevelReloadRequest()
+METHOD com.openggf.level.LevelTransitionCoordinator public  boolean consumeSuppressNextMusicChange()
 METHOD com.openggf.level.LevelTransitionCoordinator public  boolean consumeTimeAttackMenuReturnRequest()
 METHOD com.openggf.level.LevelTransitionCoordinator public  boolean consumeTitleCardRequest()
 METHOD com.openggf.level.LevelTransitionCoordinator public  boolean consumeZoneActRequest()
@@ -8531,6 +8589,7 @@ METHOD com.openggf.level.SeamlessLevelTransitionRequest public  com.openggf.leve
 METHOD com.openggf.level.SeamlessLevelTransitionRequest public  com.openggf.level.SeamlessLevelTransitionRequest$ObjectOffsetPolicy objectOffsetPolicy()
 METHOD com.openggf.level.SeamlessLevelTransitionRequest public  com.openggf.level.SeamlessLevelTransitionRequest$ObjectSurvivalPolicy objectSurvivalPolicy()
 METHOD com.openggf.level.SeamlessLevelTransitionRequest public  com.openggf.level.SeamlessLevelTransitionRequest$TransitionType type()
+METHOD com.openggf.level.SeamlessLevelTransitionRequest public  com.openggf.level.SeamlessTransitionResourceHandoffId resourceHandoffId()
 METHOD com.openggf.level.SeamlessLevelTransitionRequest public  int cameraOffsetX()
 METHOD com.openggf.level.SeamlessLevelTransitionRequest public  int cameraOffsetY()
 METHOD com.openggf.level.SeamlessLevelTransitionRequest public  int inLevelTitleCardExitAdditionalDispatches()
@@ -8592,6 +8651,7 @@ METHOD com.openggf.level.SeamlessLevelTransitionRequest$Builder public  com.open
 METHOD com.openggf.level.SeamlessLevelTransitionRequest$Builder public  com.openggf.level.SeamlessLevelTransitionRequest$Builder preserveMusic(boolean)
 METHOD com.openggf.level.SeamlessLevelTransitionRequest$Builder public  com.openggf.level.SeamlessLevelTransitionRequest$Builder preserveOffsetCameraPosition(boolean)
 METHOD com.openggf.level.SeamlessLevelTransitionRequest$Builder public  com.openggf.level.SeamlessLevelTransitionRequest$Builder resetLevelGamestateAtInLevelTitleCardDisplay(boolean)
+METHOD com.openggf.level.SeamlessLevelTransitionRequest$Builder public  com.openggf.level.SeamlessLevelTransitionRequest$Builder resourceHandoff(com.openggf.level.SeamlessTransitionResourceHandoffId)
 METHOD com.openggf.level.SeamlessLevelTransitionRequest$Builder public  com.openggf.level.SeamlessLevelTransitionRequest$Builder romWorldObjectOffsetRange(int,int)
 METHOD com.openggf.level.SeamlessLevelTransitionRequest$Builder public  com.openggf.level.SeamlessLevelTransitionRequest$Builder showInLevelTitleCard(boolean)
 METHOD com.openggf.level.SeamlessLevelTransitionRequest$Builder public  com.openggf.level.SeamlessLevelTransitionRequest$Builder suppressLevelLoadRewindBoundary(boolean)
@@ -8602,6 +8662,26 @@ METHOD com.openggf.level.SeamlessLevelTransitionRequest$ObjectSurvivalPolicy pub
 METHOD com.openggf.level.SeamlessLevelTransitionRequest$ObjectSurvivalPolicy public,static  com.openggf.level.SeamlessLevelTransitionRequest$ObjectSurvivalPolicy[] values()
 METHOD com.openggf.level.SeamlessLevelTransitionRequest$TransitionType public,static  com.openggf.level.SeamlessLevelTransitionRequest$TransitionType valueOf(java.lang.String)
 METHOD com.openggf.level.SeamlessLevelTransitionRequest$TransitionType public,static  com.openggf.level.SeamlessLevelTransitionRequest$TransitionType[] values()
+METHOD com.openggf.level.SeamlessTransitionResourceHandoff public,abstract  com.openggf.level.resources.DeferredLevelResourceManifest deferredResources()
+METHOD com.openggf.level.SeamlessTransitionResourceHandoff public,abstract  void transferAfterTargetInit()
+METHOD com.openggf.level.SeamlessTransitionResourceHandoffId public  long value()
+METHOD com.openggf.level.SeamlessTransitionResourceHandoffId public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.level.SeamlessTransitionResourceHandoffId public,final  int hashCode()
+METHOD com.openggf.level.SeamlessTransitionResourceHandoffId public,final  java.lang.String toString()
+METHOD com.openggf.level.SeamlessTransitionResourceHandoffRegistry public  com.openggf.level.SeamlessTransitionResourceHandoff claim(com.openggf.level.SeamlessTransitionResourceHandoffId)
+METHOD com.openggf.level.SeamlessTransitionResourceHandoffRegistry public  com.openggf.level.SeamlessTransitionResourceHandoff peek(com.openggf.level.SeamlessTransitionResourceHandoffId)
+METHOD com.openggf.level.SeamlessTransitionResourceHandoffRegistry public  com.openggf.level.SeamlessTransitionResourceHandoffId register(com.openggf.level.SeamlessTransitionResourceHandoff)
+METHOD com.openggf.level.SeamlessTransitionResourceHandoffRegistry public  com.openggf.level.SeamlessTransitionResourceHandoffRegistry$Snapshot capture()
+METHOD com.openggf.level.SeamlessTransitionResourceHandoffRegistry public  java.lang.String key()
+METHOD com.openggf.level.SeamlessTransitionResourceHandoffRegistry public  void resetForMissingSnapshot()
+METHOD com.openggf.level.SeamlessTransitionResourceHandoffRegistry public  void restore(com.openggf.level.SeamlessTransitionResourceHandoffRegistry$Snapshot)
+METHOD com.openggf.level.SeamlessTransitionResourceHandoffRegistry public,volatile  java.lang.Object capture()
+METHOD com.openggf.level.SeamlessTransitionResourceHandoffRegistry public,volatile  void restore(java.lang.Object)
+METHOD com.openggf.level.SeamlessTransitionResourceHandoffRegistry$Snapshot public  java.util.Map<com.openggf.level.SeamlessTransitionResourceHandoffId,com.openggf.level.SeamlessTransitionResourceHandoff> pending()
+METHOD com.openggf.level.SeamlessTransitionResourceHandoffRegistry$Snapshot public  long nextId()
+METHOD com.openggf.level.SeamlessTransitionResourceHandoffRegistry$Snapshot public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.level.SeamlessTransitionResourceHandoffRegistry$Snapshot public,final  int hashCode()
+METHOD com.openggf.level.SeamlessTransitionResourceHandoffRegistry$Snapshot public,final  java.lang.String toString()
 METHOD com.openggf.level.SolidTile public  byte getAngle()
 METHOD com.openggf.level.SolidTile public  byte getAngle(boolean,boolean)
 METHOD com.openggf.level.SolidTile public  byte getHeightAt(byte)
@@ -8710,6 +8790,7 @@ METHOD com.openggf.level.objects.AbstractObjectInstance protected  com.openggf.l
 METHOD com.openggf.level.objects.AbstractObjectInstance protected  com.openggf.level.render.PatternSpriteRenderer getRenderer(java.lang.String)
 METHOD com.openggf.level.objects.AbstractObjectInstance protected  int viewportHeight()
 METHOD com.openggf.level.objects.AbstractObjectInstance protected  int viewportWidth()
+METHOD com.openggf.level.objects.AbstractObjectInstance protected  void afterGenericRewindStateRestored(com.openggf.game.rewind.schema.RewindCaptureContext)
 METHOD com.openggf.level.objects.AbstractObjectInstance protected  void afterRewindRestoreSettled()
 METHOD com.openggf.level.objects.AbstractObjectInstance protected  void onDroppedAsUnmatchedRewindReconstructionChild()
 METHOD com.openggf.level.objects.AbstractObjectInstance protected  void onRecreatedForRewind()
@@ -9188,6 +9269,7 @@ METHOD com.openggf.level.objects.ObjectServices public  boolean playSfx(com.open
 METHOD com.openggf.level.objects.ObjectServices public  boolean useSecondaryTerrainCollisionPath()
 METHOD com.openggf.level.objects.ObjectServices public  com.openggf.game.BonusStageProvider bonusStageProviderOrNull()
 METHOD com.openggf.level.objects.ObjectServices public  com.openggf.game.LevelEventProvider levelEventProvider()
+METHOD com.openggf.level.objects.ObjectServices public  com.openggf.game.RuntimeArtCoordinator runtimeArtCoordinator()
 METHOD com.openggf.level.objects.ObjectServices public  com.openggf.game.TitleCardProvider titleCardProvider()
 METHOD com.openggf.level.objects.ObjectServices public  com.openggf.game.solid.ObjectSolidExecutionContext solidExecution()
 METHOD com.openggf.level.objects.ObjectServices public  com.openggf.game.timing.HardwareTimingService hardwareTiming()
@@ -10024,6 +10106,28 @@ METHOD com.openggf.level.render.TileLoadRequest public  int startTile()
 METHOD com.openggf.level.render.TileLoadRequest public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.level.render.TileLoadRequest public,final  int hashCode()
 METHOD com.openggf.level.render.TileLoadRequest public,final  java.lang.String toString()
+METHOD com.openggf.level.resources.CompressionType public,static  com.openggf.level.resources.CompressionType valueOf(java.lang.String)
+METHOD com.openggf.level.resources.CompressionType public,static  com.openggf.level.resources.CompressionType[] values()
+METHOD com.openggf.level.resources.DeferredLevelResourceDescriptor public  com.openggf.level.resources.CompressionType compressionType()
+METHOD com.openggf.level.resources.DeferredLevelResourceDescriptor public  com.openggf.level.resources.DeferredLevelResourceDescriptor$Kind kind()
+METHOD com.openggf.level.resources.DeferredLevelResourceDescriptor public  int destinationAddress()
+METHOD com.openggf.level.resources.DeferredLevelResourceDescriptor public  int romSourceAddress()
+METHOD com.openggf.level.resources.DeferredLevelResourceDescriptor public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.level.resources.DeferredLevelResourceDescriptor public,final  int hashCode()
+METHOD com.openggf.level.resources.DeferredLevelResourceDescriptor public,final  java.lang.String toString()
+METHOD com.openggf.level.resources.DeferredLevelResourceDescriptor$Kind public,static  com.openggf.level.resources.DeferredLevelResourceDescriptor$Kind valueOf(java.lang.String)
+METHOD com.openggf.level.resources.DeferredLevelResourceDescriptor$Kind public,static  com.openggf.level.resources.DeferredLevelResourceDescriptor$Kind[] values()
+METHOD com.openggf.level.resources.DeferredLevelResourceManifest public  com.openggf.level.resources.DeferredLevelResourceTracker newTracker()
+METHOD com.openggf.level.resources.DeferredLevelResourceManifest public  java.util.List<com.openggf.level.resources.DeferredLevelResourceDescriptor> descriptors()
+METHOD com.openggf.level.resources.DeferredLevelResourceManifest public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.level.resources.DeferredLevelResourceManifest public,final  int hashCode()
+METHOD com.openggf.level.resources.DeferredLevelResourceManifest public,final  java.lang.String toString()
+METHOD com.openggf.level.resources.DeferredLevelResourceTracker public  boolean hasExplicitPolicy()
+METHOD com.openggf.level.resources.DeferredLevelResourceTracker public  boolean isEmpty()
+METHOD com.openggf.level.resources.DeferredLevelResourceTracker public  boolean omitIfRequested(com.openggf.level.resources.DeferredLevelResourceDescriptor)
+METHOD com.openggf.level.resources.DeferredLevelResourceTracker public  void verifyExactRequest(com.openggf.level.resources.DeferredLevelResourceManifest)
+METHOD com.openggf.level.resources.DeferredLevelResourceTracker public  void verifyFullyConsumed()
+METHOD com.openggf.level.resources.DeferredLevelResourceTracker public,static  com.openggf.level.resources.DeferredLevelResourceTracker none()
 METHOD com.openggf.level.resources.KosinskiModuleQueue public  boolean applyImmediateDma(int,byte[])
 METHOD com.openggf.level.resources.KosinskiModuleQueue public  boolean enqueue(com.openggf.data.Rom,int,int) THROWS java.io.IOException
 METHOD com.openggf.level.resources.KosinskiModuleQueue public  boolean isIdle()
@@ -10905,6 +11009,7 @@ METHOD com.openggf.physics.CollisionSystem public  void resetForMissingSnapshot(
 METHOD com.openggf.physics.CollisionSystem public  void resetState()
 METHOD com.openggf.physics.CollisionSystem public  void resolveAirCollision(com.openggf.physics.FrameCollisionPlan,com.openggf.sprites.playable.AbstractPlayableSprite,java.util.function.Consumer<com.openggf.sprites.playable.AbstractPlayableSprite>)
 METHOD com.openggf.physics.CollisionSystem public  void resolveAirCollision(com.openggf.physics.FrameCollisionPlan,com.openggf.sprites.playable.AbstractPlayableSprite,java.util.function.Consumer<com.openggf.sprites.playable.AbstractPlayableSprite>,boolean)
+METHOD com.openggf.physics.CollisionSystem public  void resolveAirCollision(com.openggf.physics.FrameCollisionPlan,com.openggf.sprites.playable.AbstractPlayableSprite,java.util.function.Consumer<com.openggf.sprites.playable.AbstractPlayableSprite>,java.util.function.Consumer<com.openggf.physics.SensorResult[]>,boolean)
 METHOD com.openggf.physics.CollisionSystem public  void resolveAirCollision(com.openggf.sprites.playable.AbstractPlayableSprite,java.util.function.Consumer<com.openggf.sprites.playable.AbstractPlayableSprite>)
 METHOD com.openggf.physics.CollisionSystem public  void resolveAirCollision(com.openggf.sprites.playable.AbstractPlayableSprite,java.util.function.Consumer<com.openggf.sprites.playable.AbstractPlayableSprite>,boolean)
 METHOD com.openggf.physics.CollisionSystem public  void resolveGroundAttachment(com.openggf.physics.FrameCollisionPlan,com.openggf.sprites.playable.AbstractPlayableSprite,int,java.util.function.BooleanSupplier)
@@ -11176,6 +11281,7 @@ METHOD com.openggf.sprites.managers.SpriteManager public  void addSprite(com.ope
 METHOD com.openggf.sprites.managers.SpriteManager public  void addTemporarySidekick(com.openggf.sprites.playable.AbstractPlayableSprite,java.lang.String)
 METHOD com.openggf.sprites.managers.SpriteManager public  void addTemporarySidekick(com.openggf.sprites.playable.AbstractPlayableSprite,java.lang.String,java.util.function.Supplier<com.openggf.sprites.playable.AbstractPlayableSprite>)
 METHOD com.openggf.sprites.managers.SpriteManager public  void advanceFixedSkidDustAfterObjectExecution()
+METHOD com.openggf.sprites.managers.SpriteManager public  void advancePlayableSlotPrefix()
 METHOD com.openggf.sprites.managers.SpriteManager public  void clearAllSprites()
 METHOD com.openggf.sprites.managers.SpriteManager public  void deferCrossPlayableMutationUntilPostTick(com.openggf.sprites.playable.AbstractPlayableSprite,java.lang.Runnable)
 METHOD com.openggf.sprites.managers.SpriteManager public  void draw()
@@ -11459,6 +11565,7 @@ METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  void captureO
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  void capturePreCpuControlSnapshot()
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  void capturePrePhysicsSnapshot()
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  void capturePreZoneFeatureSnapshot()
+METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  void clearAirForNativeControlRestore()
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  void clearDeferredGroundWallVelocityResponse()
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  void clearDrowningDeathState()
 METHOD com.openggf.sprites.playable.AbstractPlayableSprite public  void clearFollowerHistoryRecordedFlag()
@@ -12982,6 +13089,7 @@ NESTED com.openggf.editor.render.EditorLibraryBrowserPane com.openggf.editor.ren
 NESTED com.openggf.editor.render.EditorLibraryBrowserPane com.openggf.editor.render.EditorLibraryBrowserPane$Kind
 NESTED com.openggf.game.AbstractLevelInitProfile com.openggf.game.AbstractLevelInitProfile$IORunnable
 NESTED com.openggf.game.BonusStageProvider com.openggf.game.BonusStageProvider$BonusStageRewards
+NESTED com.openggf.game.BonusStageProvider com.openggf.game.BonusStageProvider$BootstrapObject
 NESTED com.openggf.game.CharacterDefinition com.openggf.game.CharacterDefinition$ArtSupplier
 NESTED com.openggf.game.CharacterDefinition com.openggf.game.CharacterDefinition$PaletteSupplier
 NESTED com.openggf.game.CharacterDefinition com.openggf.game.CharacterDefinition$PlayableFactory
@@ -13092,6 +13200,7 @@ NESTED com.openggf.level.SeamlessLevelTransitionRequest com.openggf.level.Seamle
 NESTED com.openggf.level.SeamlessLevelTransitionRequest com.openggf.level.SeamlessLevelTransitionRequest$ObjectOffsetPolicy
 NESTED com.openggf.level.SeamlessLevelTransitionRequest com.openggf.level.SeamlessLevelTransitionRequest$ObjectSurvivalPolicy
 NESTED com.openggf.level.SeamlessLevelTransitionRequest com.openggf.level.SeamlessLevelTransitionRequest$TransitionType
+NESTED com.openggf.level.SeamlessTransitionResourceHandoffRegistry com.openggf.level.SeamlessTransitionResourceHandoffRegistry$Snapshot
 NESTED com.openggf.level.WaterSystem com.openggf.level.WaterSystem$DynamicWaterState
 NESTED com.openggf.level.WaterSystem com.openggf.level.WaterSystem$WaterConfig
 NESTED com.openggf.level.objects.BakedSheetReader com.openggf.level.objects.BakedSheetReader$BakedSheet
@@ -13131,6 +13240,7 @@ NESTED com.openggf.level.objects.SubpixelMotion com.openggf.level.objects.Subpix
 NESTED com.openggf.level.objects.TouchResponseProvider com.openggf.level.objects.TouchResponseProvider$TouchRegion
 NESTED com.openggf.level.objects.art.ObjectArtBundle com.openggf.level.objects.art.ObjectArtBundle$Builder
 NESTED com.openggf.level.render.PatternSpriteRenderer com.openggf.level.render.PatternSpriteRenderer$FrameBounds
+NESTED com.openggf.level.resources.DeferredLevelResourceDescriptor com.openggf.level.resources.DeferredLevelResourceDescriptor$Kind
 NESTED com.openggf.level.resources.KosinskiModuleQueue com.openggf.level.resources.KosinskiModuleQueue$ArchiveState
 NESTED com.openggf.level.resources.KosinskiModuleQueue com.openggf.level.resources.KosinskiModuleQueue$DmaChunk
 NESTED com.openggf.level.resources.KosinskiModuleQueue com.openggf.level.resources.KosinskiModuleQueue$DmaTarget
@@ -13564,6 +13674,9 @@ RECORD-COMPONENT com.openggf.game.BonusStageProvider$BonusStageRewards lightning
 RECORD-COMPONENT com.openggf.game.BonusStageProvider$BonusStageRewards lives int
 RECORD-COMPONENT com.openggf.game.BonusStageProvider$BonusStageRewards rings int
 RECORD-COMPONENT com.openggf.game.BonusStageProvider$BonusStageRewards shield boolean
+RECORD-COMPONENT com.openggf.game.BonusStageProvider$BootstrapObject factory java.util.function.Function<com.openggf.level.objects.ObjectSpawn,? extends com.openggf.level.objects.ObjectInstance>
+RECORD-COMPONENT com.openggf.game.BonusStageProvider$BootstrapObject objectType java.lang.Class<? extends com.openggf.level.objects.ObjectInstance>
+RECORD-COMPONENT com.openggf.game.BonusStageProvider$BootstrapObject spawn com.openggf.level.objects.ObjectSpawn
 RECORD-COMPONENT com.openggf.game.BonusStageState cameraMaxY int
 RECORD-COMPONENT com.openggf.game.BonusStageState cameraX int
 RECORD-COMPONENT com.openggf.game.BonusStageState cameraY int
@@ -14159,8 +14272,8 @@ RECORD-COMPONENT com.openggf.game.rules.ObjectInteractionRules solidPushReleaseS
 RECORD-COMPONENT com.openggf.game.rules.ObjectInteractionRules solidPushReleaseWritesWalkRunAnimationWord boolean
 RECORD-COMPONENT com.openggf.game.rules.ObjectInteractionRules touchResponseUsesPreviousCollisionResponseList boolean
 RECORD-COMPONENT com.openggf.game.rules.ObjectInteractionRules touchResponseUsesRenderFlagYGate boolean
+RECORD-COMPONENT com.openggf.game.rules.PlayerAnimationRules airLandingPublishesTiltAngles boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerAnimationRules angledLandingPublishesWalk boolean
-RECORD-COMPONENT com.openggf.game.rules.PlayerAnimationRules angledLandingPublishesWalkUnlessSpindashing boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerAnimationRules animationChangeClearsPush boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerAnimationRules extendedEdgeBalance boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerAnimationRules singleFacingBalanceAnimationSet boolean
@@ -14173,20 +14286,22 @@ RECORD-COMPONENT com.openggf.game.rules.PlayerCapabilityRules spindashEnabled bo
 RECORD-COMPONENT com.openggf.game.rules.PlayerCapabilityRules spindashSpeedTable short[]
 RECORD-COMPONENT com.openggf.game.rules.PlayerCapabilityRules superSpindashSpeedTable short[]
 RECORD-COMPONENT com.openggf.game.rules.PlayerCapabilityRules tailsFlightEnabled boolean
+RECORD-COMPONENT com.openggf.game.rules.PlayerLandingRules landingRollClearUsesCurrentYRadiusDelta boolean
+RECORD-COMPONENT com.openggf.game.rules.PlayerLandingRules objectSolidHurtLandingRetainsRoutine boolean
+RECORD-COMPONENT com.openggf.game.rules.PlayerLandingRules pinballLandingPreservesPinballMode boolean
+RECORD-COMPONENT com.openggf.game.rules.PlayerLandingRules pinballLandingPreservesRoll boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules airSuperspeedPreserved boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules angleDiffCardinalSnap boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules controlLockLatchesLogicalInput boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules fixedAnglePosThreshold boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules hurtRoutineLatchesLogicalInput boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules inputAlwaysCapsGroundSpeed boolean
-RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules landingRollClearUsesCurrentYRadiusDelta boolean
+RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules landing com.openggf.game.rules.PlayerLandingRules
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules levelBoundaryLockUsesScreenLockFlag boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules levelBoundaryRightStrict boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules levelBoundaryUsesCentreY boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules levelBoundaryUsesPreEasedMaxXDuringBossLock boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules movingCrouchThreshold short
-RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules pinballLandingPreservesPinballMode boolean
-RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules pinballLandingPreservesRoll boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules rollControlledDecelUsesEffectiveDecelQuarter boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules rollStopsBelowMinimumSpeed boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules rollingJumpPinballGateRequiresSpindashFlag boolean
@@ -14374,6 +14489,9 @@ RECORD-COMPONENT com.openggf.level.LevelManager$LevelRenderOptions includeWaterS
 RECORD-COMPONENT com.openggf.level.MutableLevel$ObjectBackedRingState mapping java.util.Map<com.openggf.level.objects.ObjectSpawn,java.util.List<com.openggf.level.rings.RingSpawn>>
 RECORD-COMPONENT com.openggf.level.MutableLevel$ObjectBackedRingState objects java.util.List<com.openggf.level.objects.ObjectSpawn>
 RECORD-COMPONENT com.openggf.level.MutableLevel$ObjectBackedRingState rings java.util.List<com.openggf.level.rings.RingSpawn>
+RECORD-COMPONENT com.openggf.level.SeamlessTransitionResourceHandoffId value long
+RECORD-COMPONENT com.openggf.level.SeamlessTransitionResourceHandoffRegistry$Snapshot nextId long
+RECORD-COMPONENT com.openggf.level.SeamlessTransitionResourceHandoffRegistry$Snapshot pending java.util.Map<com.openggf.level.SeamlessTransitionResourceHandoffId,com.openggf.level.SeamlessTransitionResourceHandoff>
 RECORD-COMPONENT com.openggf.level.TransitionSstOccupant identity com.openggf.level.objects.ObjectInstance
 RECORD-COMPONENT com.openggf.level.TransitionSstOccupant originalSlot int
 RECORD-COMPONENT com.openggf.level.objects.BakedSheetReader$BakedSheet frames java.util.List<com.openggf.level.objects.BakedSheetReader$Frame>
@@ -14849,6 +14967,11 @@ RECORD-COMPONENT com.openggf.level.render.SpritePieceRenderer$PreparedPiece y in
 RECORD-COMPONENT com.openggf.level.render.TileLoadRequest count int
 RECORD-COMPONENT com.openggf.level.render.TileLoadRequest destinationOffset int
 RECORD-COMPONENT com.openggf.level.render.TileLoadRequest startTile int
+RECORD-COMPONENT com.openggf.level.resources.DeferredLevelResourceDescriptor compressionType com.openggf.level.resources.CompressionType
+RECORD-COMPONENT com.openggf.level.resources.DeferredLevelResourceDescriptor destinationAddress int
+RECORD-COMPONENT com.openggf.level.resources.DeferredLevelResourceDescriptor kind com.openggf.level.resources.DeferredLevelResourceDescriptor$Kind
+RECORD-COMPONENT com.openggf.level.resources.DeferredLevelResourceDescriptor romSourceAddress int
+RECORD-COMPONENT com.openggf.level.resources.DeferredLevelResourceManifest descriptors java.util.List<com.openggf.level.resources.DeferredLevelResourceDescriptor>
 RECORD-COMPONENT com.openggf.level.resources.KosinskiModuleQueue$ArchiveState archiveAddress int
 RECORD-COMPONENT com.openggf.level.resources.KosinskiModuleQueue$ArchiveState decompressionEndAddress int
 RECORD-COMPONENT com.openggf.level.resources.KosinskiModuleQueue$ArchiveState destinationVramBytes int
@@ -15988,6 +16111,7 @@ TYPE class public,final com.openggf.io.ModInputLimits SUPER java.lang.Object
 TYPE class public,final com.openggf.level.ChunkDesc SUPER java.lang.Object
 TYPE class public,final com.openggf.level.PatternDesc SUPER java.lang.Object
 TYPE class public,final com.openggf.level.SeamlessLevelTransitionRequest SUPER java.lang.Object
+TYPE class public,final com.openggf.level.SeamlessTransitionResourceHandoffRegistry SUPER java.lang.Object
 TYPE class public,final com.openggf.level.objects.BakedSheetReader SUPER java.lang.Object
 TYPE class public,final com.openggf.level.objects.DestructionEffects SUPER java.lang.Object
 TYPE class public,final com.openggf.level.objects.ObjectLifetimeOps SUPER java.lang.Object
@@ -16000,6 +16124,7 @@ TYPE class public,final com.openggf.level.objects.PlayableSheetReader SUPER java
 TYPE class public,final com.openggf.level.objects.RomObjectSnapshot SUPER java.lang.Object
 TYPE class public,final com.openggf.level.objects.SpringBounceHelper SUPER java.lang.Object
 TYPE class public,final com.openggf.level.objects.SubpixelMotion SUPER java.lang.Object
+TYPE class public,final com.openggf.level.resources.DeferredLevelResourceTracker SUPER java.lang.Object
 TYPE class public,final com.openggf.level.resources.KosinskiModuleQueue SUPER java.lang.Object
 TYPE class public,final com.openggf.level.rings.SpillAnimationState SUPER java.lang.Object
 TYPE class public,final com.openggf.mods.code.ModContext SUPER java.lang.Object
@@ -16101,6 +16226,7 @@ TYPE enum public,final com.openggf.level.objects.TouchCategory SUPER java.lang.E
 TYPE enum public,final com.openggf.level.objects.TouchCategoryDecodeMode SUPER java.lang.Enum<com.openggf.level.objects.TouchCategoryDecodeMode>
 TYPE enum public,final com.openggf.level.objects.TouchOverlapStopPolicy SUPER java.lang.Enum<com.openggf.level.objects.TouchOverlapStopPolicy>
 TYPE enum public,final com.openggf.level.objects.TouchShieldDeflectCapability SUPER java.lang.Enum<com.openggf.level.objects.TouchShieldDeflectCapability>
+TYPE enum public,final com.openggf.level.resources.CompressionType SUPER java.lang.Enum<com.openggf.level.resources.CompressionType>
 TYPE enum public,final com.openggf.level.scroll.BgTilemapUpdateMode SUPER java.lang.Enum<com.openggf.level.scroll.BgTilemapUpdateMode>
 TYPE enum public,final com.openggf.mods.code.RomArtCompression SUPER java.lang.Enum<com.openggf.mods.code.RomArtCompression>
 TYPE enum public,final com.openggf.physics.Direction SUPER java.lang.Enum<com.openggf.physics.Direction>
@@ -16155,6 +16281,7 @@ TYPE enum public,static,final com.openggf.level.SeamlessLevelTransitionRequest$O
 TYPE enum public,static,final com.openggf.level.SeamlessLevelTransitionRequest$ObjectSurvivalPolicy SUPER java.lang.Enum<com.openggf.level.SeamlessLevelTransitionRequest$ObjectSurvivalPolicy>
 TYPE enum public,static,final com.openggf.level.SeamlessLevelTransitionRequest$TransitionType SUPER java.lang.Enum<com.openggf.level.SeamlessLevelTransitionRequest$TransitionType>
 TYPE enum public,static,final com.openggf.level.objects.ObjectRenderManager$SpringVariant SUPER java.lang.Enum<com.openggf.level.objects.ObjectRenderManager$SpringVariant>
+TYPE enum public,static,final com.openggf.level.resources.DeferredLevelResourceDescriptor$Kind SUPER java.lang.Enum<com.openggf.level.resources.DeferredLevelResourceDescriptor$Kind>
 TYPE enum public,static,final com.openggf.level.resources.KosinskiModuleQueue$Phase SUPER java.lang.Enum<com.openggf.level.resources.KosinskiModuleQueue$Phase>
 TYPE enum public,static,final com.openggf.net.client.ClientRaceSession$Phase SUPER java.lang.Enum<com.openggf.net.client.ClientRaceSession$Phase>
 TYPE enum public,static,final com.openggf.net.hub.HostRoundEngine$Phase SUPER java.lang.Enum<com.openggf.net.hub.HostRoundEngine$Phase>
@@ -16208,6 +16335,7 @@ TYPE interface public,abstract com.openggf.game.RespawnState SUPER <none>
 TYPE interface public,abstract com.openggf.game.ResultsScreen SUPER <none>
 TYPE interface public,abstract com.openggf.game.RomDetector SUPER <none>
 TYPE interface public,abstract com.openggf.game.RomOffsetProvider SUPER <none>
+TYPE interface public,abstract com.openggf.game.RuntimeArtCoordinator SUPER <none>
 TYPE interface public,abstract com.openggf.game.ScrollHandlerProvider SUPER <none>
 TYPE interface public,abstract com.openggf.game.SpecialStageDebugProvider SUPER <none>
 TYPE interface public,abstract com.openggf.game.SpecialStageProvider SUPER <none>
@@ -16247,6 +16375,7 @@ TYPE interface public,abstract com.openggf.graphics.PaletteView SUPER <none>
 TYPE interface public,abstract com.openggf.level.Level SUPER <none>
 TYPE interface public,abstract com.openggf.level.LevelDescriptor SUPER <none>
 TYPE interface public,abstract com.openggf.level.LevelExportStagingValidator SUPER <none>
+TYPE interface public,abstract com.openggf.level.SeamlessTransitionResourceHandoff SUPER <none>
 TYPE interface public,abstract com.openggf.level.animation.AnimatedPaletteManager SUPER <none>
 TYPE interface public,abstract com.openggf.level.animation.AnimatedPatternManager SUPER <none>
 TYPE interface public,abstract com.openggf.level.objects.ObjectFactory SUPER <none>
@@ -16411,6 +16540,7 @@ TYPE record public,final com.openggf.game.rules.GameRules SUPER java.lang.Record
 TYPE record public,final com.openggf.game.rules.ObjectInteractionRules SUPER java.lang.Record
 TYPE record public,final com.openggf.game.rules.PlayerAnimationRules SUPER java.lang.Record
 TYPE record public,final com.openggf.game.rules.PlayerCapabilityRules SUPER java.lang.Record
+TYPE record public,final com.openggf.game.rules.PlayerLandingRules SUPER java.lang.Record
 TYPE record public,final com.openggf.game.rules.PlayerMovementRules SUPER java.lang.Record
 TYPE record public,final com.openggf.game.rules.PowerUpRules SUPER java.lang.Record
 TYPE record public,final com.openggf.game.rules.RingRules SUPER java.lang.Record
@@ -16434,6 +16564,7 @@ TYPE record public,final com.openggf.graphics.shaderlib.DisplayShaderPass SUPER 
 TYPE record public,final com.openggf.graphics.shaderlib.DisplayShaderPreset SUPER java.lang.Record
 TYPE record public,final com.openggf.level.BigRingReturnState SUPER java.lang.Record
 TYPE record public,final com.openggf.level.LevelGeometry SUPER java.lang.Record
+TYPE record public,final com.openggf.level.SeamlessTransitionResourceHandoffId SUPER java.lang.Record
 TYPE record public,final com.openggf.level.TransitionSstOccupant SUPER java.lang.Record
 TYPE record public,final com.openggf.level.objects.HudProfile SUPER java.lang.Record
 TYPE record public,final com.openggf.level.objects.HudRow SUPER java.lang.Record
@@ -16452,6 +16583,8 @@ TYPE record public,final com.openggf.level.render.SpriteDplcFrame SUPER java.lan
 TYPE record public,final com.openggf.level.render.SpriteMappingFrame SUPER java.lang.Record
 TYPE record public,final com.openggf.level.render.SpriteMappingPiece SUPER java.lang.Record
 TYPE record public,final com.openggf.level.render.TileLoadRequest SUPER java.lang.Record
+TYPE record public,final com.openggf.level.resources.DeferredLevelResourceDescriptor SUPER java.lang.Record
+TYPE record public,final com.openggf.level.resources.DeferredLevelResourceManifest SUPER java.lang.Record
 TYPE record public,final com.openggf.level.rings.RingFrame SUPER java.lang.Record
 TYPE record public,final com.openggf.level.rings.RingFramePiece SUPER java.lang.Record
 TYPE record public,final com.openggf.level.rings.RingSpawn SUPER java.lang.Record
@@ -16511,6 +16644,7 @@ TYPE record public,static,final com.openggf.editor.persistence.FullLevelExporter
 TYPE record public,static,final com.openggf.editor.persistence.FullLevelExporter$ExportResult SUPER java.lang.Record
 TYPE record public,static,final com.openggf.editor.render.EditorLibraryBrowserPane$Entry SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.BonusStageProvider$BonusStageRewards SUPER java.lang.Record
+TYPE record public,static,final com.openggf.game.BonusStageProvider$BootstrapObject SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.CheckpointState$RewindState SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.DebugOverlayProvider$ArtViewerTarget SUPER java.lang.Record
 TYPE record public,static,final com.openggf.game.DebugOverlayProvider$ObjectDebugLabel SUPER java.lang.Record
@@ -16564,6 +16698,7 @@ TYPE record public,static,final com.openggf.graphics.PatternAtlas$PatternRange S
 TYPE record public,static,final com.openggf.graphics.TilemapGpuRenderer$BackgroundRenderState SUPER java.lang.Record
 TYPE record public,static,final com.openggf.level.LevelManager$LevelRenderOptions SUPER java.lang.Record
 TYPE record public,static,final com.openggf.level.MutableLevel$ObjectBackedRingState SUPER java.lang.Record
+TYPE record public,static,final com.openggf.level.SeamlessTransitionResourceHandoffRegistry$Snapshot SUPER java.lang.Record
 TYPE record public,static,final com.openggf.level.objects.BakedSheetReader$BakedSheet SUPER java.lang.Record
 TYPE record public,static,final com.openggf.level.objects.BakedSheetReader$Frame SUPER java.lang.Record
 TYPE record public,static,final com.openggf.level.objects.BakedSheetReader$Limits SUPER java.lang.Record
@@ -16856,6 +16991,7 @@ TYPE-ANNOTATION com.openggf.game.AbstractStandaloneGameModule @com.openggf.game.
 TYPE-ANNOTATION com.openggf.game.AnimationId @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.BonusStageProvider @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.BonusStageProvider$BonusStageRewards @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.BonusStageProvider$BootstrapObject @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.BonusStageState @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.BonusStageType @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.CanonicalAnimation @com.openggf.game.ModApi
@@ -16951,6 +17087,7 @@ TYPE-ANNOTATION com.openggf.game.RomDetectionService @com.openggf.architecture.C
 TYPE-ANNOTATION com.openggf.game.RomDetectionService @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.RomDetector @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.RomOffsetProvider @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.RuntimeArtCoordinator @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.ScrollHandlerProvider @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.ScrollHandlerProvider$ZoneConstants @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.ShieldType @com.openggf.game.ModApi
@@ -17166,6 +17303,7 @@ TYPE-ANNOTATION com.openggf.game.rules.GameRules @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.rules.ObjectInteractionRules @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.rules.PlayerAnimationRules @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.rules.PlayerCapabilityRules @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.rules.PlayerLandingRules @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.rules.PlayerMovementRules @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.rules.PowerUpRules @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.rules.RingRules @com.openggf.game.ModApi
@@ -17300,6 +17438,10 @@ TYPE-ANNOTATION com.openggf.level.SeamlessLevelTransitionRequest$Builder @com.op
 TYPE-ANNOTATION com.openggf.level.SeamlessLevelTransitionRequest$ObjectOffsetPolicy @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.SeamlessLevelTransitionRequest$ObjectSurvivalPolicy @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.SeamlessLevelTransitionRequest$TransitionType @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.SeamlessTransitionResourceHandoff @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.SeamlessTransitionResourceHandoffId @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.SeamlessTransitionResourceHandoffRegistry @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.SeamlessTransitionResourceHandoffRegistry$Snapshot @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.SolidTile @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.TransitionSstOccupant @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.WaterSystem @com.openggf.game.ModApi
@@ -17416,6 +17558,11 @@ TYPE-ANNOTATION com.openggf.level.render.SpritePieceRenderer$FrameBounds @com.op
 TYPE-ANNOTATION com.openggf.level.render.SpritePieceRenderer$PreparedPiece @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.render.SpriteSheet @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.render.TileLoadRequest @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.resources.CompressionType @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.resources.DeferredLevelResourceDescriptor @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.resources.DeferredLevelResourceDescriptor$Kind @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.resources.DeferredLevelResourceManifest @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.resources.DeferredLevelResourceTracker @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.resources.KosinskiModuleQueue @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.resources.KosinskiModuleQueue$ArchiveState @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.resources.KosinskiModuleQueue$DmaChunk @com.openggf.game.ModApi

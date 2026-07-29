@@ -97,10 +97,62 @@ class TestSonic3kIczRewindRoundTrip {
                 "captured bytes must be identical after a schema capture-restore-capture cycle");
     }
 
+    @Test
+    void roundTripPreservesSeamlessTransitionOrdinalsAndPublicationFences()
+            throws Exception {
+        Sonic3kICZEvents original = new Sonic3kICZEvents();
+        setLong(original, "act2TransitionChunkOrdinal", 3);
+        setLong(original, "act2TransitionBlockOrdinal", 4);
+        setLong(original, "act2TransitionArtOrdinal", 2);
+        setLong(original, "act2TransitionHandoffId", 9);
+        setBoolean(original, "act2TransitionDirectPublished", true);
+        setBoolean(original, "act2TransitionArtPublished", false);
+
+        Sonic3kICZEvents restored = new Sonic3kICZEvents();
+        ZoneEventSchemaSidecar.restore(
+                restored, ZoneEventSchemaSidecar.capture(original));
+
+        assertEquals(3L, longField(restored, "act2TransitionChunkOrdinal"));
+        assertEquals(4L, longField(restored, "act2TransitionBlockOrdinal"));
+        assertEquals(2L, longField(restored, "act2TransitionArtOrdinal"));
+        assertEquals(9L, longField(restored, "act2TransitionHandoffId"));
+        assertTrue(booleanField(restored, "act2TransitionDirectPublished"));
+        assertEquals(false,
+                booleanField(restored, "act2TransitionArtPublished"));
+    }
+
     private static void setSnowboardIntro(Sonic3kICZEvents events, IczSnowboardIntroInstance intro)
             throws ReflectiveOperationException {
         Field field = Sonic3kICZEvents.class.getDeclaredField("snowboardIntro");
         field.setAccessible(true);
         field.set(events, intro);
+    }
+
+    private static void setLong(Object target, String name, long value)
+            throws ReflectiveOperationException {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        field.setLong(target, value);
+    }
+
+    private static void setBoolean(Object target, String name, boolean value)
+            throws ReflectiveOperationException {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        field.setBoolean(target, value);
+    }
+
+    private static long longField(Object target, String name)
+            throws ReflectiveOperationException {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field.getLong(target);
+    }
+
+    private static boolean booleanField(Object target, String name)
+            throws ReflectiveOperationException {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field.getBoolean(target);
     }
 }

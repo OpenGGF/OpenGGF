@@ -17,6 +17,7 @@ import com.openggf.level.objects.RewindRecreateObjectLinks;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -96,6 +97,7 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
     private boolean flickerMode;
     private boolean flickerHidden;
     private boolean attachHidden;
+    private boolean cutsceneControlWasLocked;
     @RewindTransient(reason = "Structural child reference; the attachment child is spawned from parent state.")
     private AttachChild attachChild;
     @RewindTransient(reason = "Structural child reference; the base child is spawned from parent state.")
@@ -152,6 +154,14 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getBalanceWidthPixels() {
+        // Player_Move reads width_pixels(a1)=$20 for its object-edge balance
+        // calculation. Obj18's SolidObjectFull call separately extends d1 by
+        // $0B; that contact padding is not part of the SST width byte.
+        return WIDTH_PIXELS;
+    }
+
+    @Override
     public boolean usesCustomOutOfRangeCheck() {
         return true;
     }
@@ -178,7 +188,11 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
             // and parks itself far away once it leaves the screen (move.w #$7FFF,x_pos).
             flickerHidden = (frameCounter & 1) != 0;
             if (!isOnScreen(WIDTH_PIXELS)) {
-                setDestroyed(true);
+                // Obj_LBZElevatorCupFlicker exits through Sprite_OnScreen_Test,
+                // which clears this layout entry's respawn bit before deleting
+                // the SST slot. The cup must therefore be eligible for a fresh
+                // placement load when the camera later returns.
+                setDestroyedByOffscreen();
                 return;
             }
             updateDynamicSpawn(x, y);
@@ -194,6 +208,14 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
         applyOrbitalX();
         processPlayers(player1, player2, participants);
         updateDynamicSpawn(x, y);
+    }
+
+    @Override
+    public SolidExecutionMode solidExecutionMode() {
+        // Obj18 calls SolidObjectFull before LBZCupElevator_PlayerControl, so a
+        // player who lands in this SST dispatch is immediately eligible for
+        // capture by the same object routine.
+        return SolidExecutionMode.MANUAL_CHECKPOINT;
     }
 
     @Override
@@ -216,11 +238,41 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
     public boolean isSolidFor(PlayableEntity playerEntity) {
         return !isDestroyed()
                 && !isCapturedByThis(playerEntity)
+                && playerStateFor(playerEntity).cooldown == 0
                 && isSolidAngle();
     }
 
     @Override
     public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
+        // The engine can retain a provisional P2 standing bit while Player 2
+        // is still airborne below an already-active cup. Obj18's live P2 bit
+        // is clear in that slot ordering, so let the Full2 new-contact path
+        // re-evaluate the CPU sidekick against the sampled P2 position.
+        return activationFlag == 0
+                || !(player instanceof AbstractPlayableSprite sprite && sprite.isCpuControlled());
+    }
+
+    @Override
+    public boolean bypassesOffscreenSolidGate() {
+        // Obj18 calls SolidObjectFull2_1P for both players. Unlike the regular
+        // SolidObjectFull entry, that helper does not test Player 2's on-screen
+        // render flag before resolving the P2 standing bit.
+        return true;
+    }
+
+    @Override
+    public boolean usesInstanceSolidStateLatchKey() {
+        // Obj18 keeps its standing/pushing bits in the live SST status byte
+        // while x_pos changes on every orbit step. updateDynamicSpawn rebuilds
+        // the engine placement identity after each checkpoint, so the native
+        // bits must follow this instance rather than that moving spawn record.
+        return true;
+    }
+
+    @Override
+    public boolean usesInclusiveRightEdge() {
+        // SolidObject_cont rejects horizontal separation with `bhi`, so the
+        // exact x_pos == cup_x + d1 boundary remains a live side contact.
         return true;
     }
 
@@ -480,8 +532,8 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
             AbstractPlayableSprite player2,
             List<PlayableEntity> participants) {
         // Preserve the ROM's native Player_1 then Player_2 processing prefix.
-        processPlayer(player1, p1);
-        processPlayer(player2, p2);
+        processPlayer(player1, p1, false);
+        processPlayer(player2, p2, false);
         if (participants != null) {
             for (PlayableEntity participant : participants) {
                 if (participant == p1Owner || participant == p2Owner) {
@@ -490,7 +542,7 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
                 AbstractPlayableSprite player = mainSprite(participant);
                 if (player != null) {
                     processPlayer(player, extensionStates.computeIfAbsent(
-                            participant, ignored -> new PlayerState()));
+                            participant, ignored -> new PlayerState()), false);
                 }
             }
         }
@@ -498,7 +550,7 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
         // roster omission. Cooldowns remain identity-owned until they rejoin.
         for (Map.Entry<PlayableEntity, PlayerState> entry : extensionStates.entrySet()) {
             if (entry.getValue().inside && !containsIdentity(participants, entry.getKey())) {
-                processPlayer(mainSprite(entry.getKey()), entry.getValue());
+                processPlayer(mainSprite(entry.getKey()), entry.getValue(), false);
             }
         }
     }
@@ -554,9 +606,16 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
         return false;
     }
 
-    private void processPlayer(AbstractPlayableSprite player, PlayerState state) {
+    private void processPlayer(AbstractPlayableSprite player, PlayerState state, boolean cutsceneReleased) {
         if (player == null) {
             return;
+        }
+        if (cutsceneReleased && state.inside) {
+            // CutsceneKnux_LBZ1 clears object_control after Obj18's slot.  On
+            // the following cup dispatch, preserve the standing contact but
+            // retire the cup's movement-control write so it does not restore
+            // object_control=$03 over the cutscene handoff.
+            state.cutsceneReleased = true;
         }
         if (!state.inside) {
             if (state.cooldown > 0) {
@@ -571,6 +630,15 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
 
         if (!isPlayerValidForCapture(player)) {
             releasePlayer(player, state, OFFSCREEN_RELEASE_COOLDOWN, false);
+            return;
+        }
+        if (state.cutsceneReleased) {
+            if (player.isJumpJustPressed()) {
+                jumpReleasePlayer(player, state);
+                publishInitialJumpMapping(player);
+                return;
+            }
+            holdPlayerPosition(player);
             return;
         }
         if (player.isJumpJustPressed() && !isLbz1KnucklesCutsceneControlLocked()) {
@@ -596,19 +664,26 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
 
     private void capturePlayer(AbstractPlayableSprite player, PlayerState state) {
         state.inside = true;
+        state.cutsceneReleased = false;
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
-        player.setControlLocked(true);
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
         player.setAnimationId(0);
-        player.forceAnimationRestart();
+        // Native writes anim=$00 after the player's Animate dispatch, then
+        // object_control bit 1 suppresses later Animate calls while held. It
+        // does not clear prev_anim or the script cursor. Preserving both is
+        // observable when anim=$02 is restored on release: a prior Roll can
+        // resume instead of restarting at its first mapping.
         holdPlayer(player);
     }
 
     private void holdPlayer(AbstractPlayableSprite player) {
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
-        player.setControlLocked(true);
+        holdPlayerPosition(player);
+    }
+
+    private void holdPlayerPosition(AbstractPlayableSprite player) {
         NativePositionOps.writeXPosPreserveSubpixel(player, x);
         NativePositionOps.writeYPosPreserveSubpixel(player, y + PLAYER_Y_OFFSET);
         player.setPriorityBucket(isPlayerBehindCup() ? PLAYER_PRIORITY : PLAYER_CUP_PRIORITY);
@@ -622,7 +697,12 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
         player.setJumping(false);
         player.applyCustomRadii(7, 0x0E);
         player.setAnimationId(2);
+        short releaseY = player.getCentreY();
         player.setRolling(true);
+        // ROM changes y_radius/status without changing centre-based y_pos.
+        // setRolling changes the engine's visual bounds, so restore the same
+        // native centre word while preserving its subpixel fraction.
+        NativePositionOps.writeYPosPreserveSubpixel(player, releaseY);
         player.setRollingJump(false);
         if (player.isLeftPressed()) {
             player.setXSpeed((short) -0x200);
@@ -633,12 +713,29 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
         player.setYSpeed((short) -0x480);
     }
 
+    private static void publishInitialJumpMapping(AbstractPlayableSprite player) {
+        if (player.getAnimationSet() != null
+                && player.getAnimationSet().getScript(2) != null
+                && !player.getAnimationSet().getScript(2).frames().isEmpty()) {
+            // The native object write is visible in the same post-object
+            // snapshot as the release velocities. Publish the character's own
+            // first jump-script mapping rather than retaining the cup twist.
+            var script = player.getAnimationSet().getScript(2);
+            player.setMappingFrame(script.frames().getFirst());
+            player.setAnimationFrameIndex(1);
+            player.setAnimationTick(Math.max(0, 0x400 - Math.abs(player.getGSpeed())) >> 8);
+            if (player.getAnimationManager() != null) {
+                player.getAnimationManager().publishPreviousAnimationId(2);
+            }
+        }
+    }
+
     private void releasePlayer(AbstractPlayableSprite player, PlayerState state, int cooldown, boolean airborne) {
         state.inside = false;
+        state.cutsceneReleased = false;
         state.cooldown = cooldown;
         player.setPriorityBucket(PLAYER_PRIORITY);
         ObjectControlState.none().applyTo(player);
-        player.setControlLocked(false);
         player.setObjectMappingFrameControl(false);
         player.setLatchedSolidObjectId(0);
         player.setOnObject(false);
@@ -653,18 +750,24 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
             return;
         }
         state.inside = false;
+        state.cutsceneReleased = false;
         state.cooldown = RELEASE_COOLDOWN;
         ObjectControlState.none().applyTo(player);
-        player.setControlLocked(false);
         player.setObjectMappingFrameControl(false);
         player.setLatchedSolidObjectId(0);
         player.setOnObject(false);
         player.setPushing(false);
         player.setAir(true);
+        // sub_26E08 writes routine=4 directly. This is the player's Hit
+        // dispatcher even though the cup supplies bespoke launch velocities
+        // and does not run the ordinary ring-loss damage path.
+        player.setHurt(true);
         player.setYSpeed((short) yVelocity);
         player.setXSpeed((short) (hFlip ? 0x200 : -0x200));
         if (hFlip) {
-            player.setDirection(Direction.RIGHT);
+            // sub_26E08 negates x_vel and sets Status_Facing together when
+            // the cup's status bit 0 is set.
+            player.setDirection(Direction.LEFT);
         }
         player.setGSpeed((short) 0);
         player.setAnimationId(0x1A);
@@ -675,7 +778,11 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
     }
 
     private boolean isLbz1KnucklesCutsceneControlLocked() {
-        return S3kRuntimeStates.currentLbz(services().zoneRuntimeRegistry())
+        var objectServices = tryServices();
+        if (objectServices == null) {
+            return false;
+        }
+        return S3kRuntimeStates.currentLbz(objectServices.zoneRuntimeRegistry())
                 .map(com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState::isLbz1KnucklesCutsceneControlLocked)
                 .orElse(false);
     }
@@ -688,7 +795,9 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
         player.setObjectMappingFrameControl(true);
         player.setMappingFrame(PLAYER_TWIST_FRAMES[index]);
         boolean hFlip = PLAYER_TWIST_H_FLIPS[index];
-        player.setDirection(hFlip ? Direction.LEFT : Direction.RIGHT);
+        // loc_32610 masks and replaces only render_flags bits 0-1. It does not
+        // mutate Status_Facing, so the visual twist must remain independent of
+        // the player's gameplay-facing direction while the cup owns the frame.
         player.setRenderFlips(hFlip, false);
     }
 
@@ -711,10 +820,40 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
         return player.isOnObject() && player.getLatchedSolidObjectInstance() == this;
     }
 
+    @Override
+    public String traceDebugDetails() {
+        AbstractPlayableSprite player = mainSprite(p1Owner);
+        AbstractPlayableSprite sidekick = nativeP2OrNull();
+        return "routine=" + routine
+                + " angle=" + Integer.toHexString(angleByte())
+                + " activation=" + activationFlag
+                + " p1=" + p1.inside + "/" + p1.cooldown
+                + " p2=" + p2.inside + "/" + p2.cooldown
+                + " solid=" + (player != null && isSolidFor(player))
+                + " standing=" + (player != null && isPlayerStandingOnThis(player))
+                + " latchSelf=" + (player != null && player.getLatchedSolidObjectInstance() == this)
+                + " p2present=" + (sidekick != null)
+                + " p2solid=" + (sidekick != null && isSolidFor(sidekick))
+                + " p2standing=" + (sidekick != null && isPlayerStandingOnThis(sidekick))
+                + " p2latchSelf=" + (sidekick != null && sidekick.getLatchedSolidObjectInstance() == this)
+                + " p2prev=" + (sidekick != null
+                        ? Integer.toHexString(sidekick.getCentreX(1) & 0xFFFF) + ","
+                                + Integer.toHexString(sidekick.getCentreY(1) & 0xFFFF)
+                        : "none");
+    }
+
     private boolean isCapturedByThis(PlayableEntity playerEntity) {
         return playerEntity instanceof AbstractPlayableSprite player
                 && player.isObjectControlled()
                 && player.getLatchedSolidObjectInstance() == this;
+    }
+
+    private PlayerState playerStateFor(PlayableEntity playerEntity) {
+        if (playerEntity instanceof AbstractPlayableSprite player
+                && player == nativeP2OrNull()) {
+            return p2;
+        }
+        return p1;
     }
 
     private boolean isSolidAngle() {
@@ -787,6 +926,7 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
 
     private static final class PlayerState implements RewindStateful<PlayerState.Snapshot> {
         boolean inside;
+        boolean cutsceneReleased;
         int cooldown;
 
         void copyFrom(PlayerState other) {
@@ -801,16 +941,17 @@ public final class LbzCupElevatorInstance extends AbstractObjectInstance
 
         @Override
         public Snapshot captureRewindStateValue() {
-            return new Snapshot(inside, cooldown);
+            return new Snapshot(inside, cutsceneReleased, cooldown);
         }
 
         @Override
         public void restoreRewindStateValue(Snapshot state) {
             inside = state.inside();
+            cutsceneReleased = state.cutsceneReleased();
             cooldown = state.cooldown();
         }
 
-        private record Snapshot(boolean inside, int cooldown) {
+        private record Snapshot(boolean inside, boolean cutsceneReleased, int cooldown) {
         }
     }
 

@@ -12,6 +12,7 @@ import com.openggf.game.GameStateManager;
 import com.openggf.game.GameplayInputFilter;
 import com.openggf.game.NoOpBonusStageProvider;
 import com.openggf.game.SpecialStageProvider;
+import com.openggf.game.RuntimeArtCoordinator;
 import com.openggf.game.animation.AnimatedTileChannelGraph;
 import com.openggf.game.ghost.GhostRenderRegistry;
 import com.openggf.game.mutation.ZoneLayoutMutationPipeline;
@@ -35,8 +36,10 @@ import com.openggf.game.rewind.snapshot.OscillationStaticAdapter;
 import com.openggf.game.solid.DefaultSolidExecutionRegistry;
 import com.openggf.game.solid.SolidExecutionRegistry;
 import com.openggf.game.timing.HardwareTimingBoundaryObserver;
+import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.game.timing.HardwareTimingService;
+import com.openggf.level.SeamlessTransitionResourceHandoffRegistry;
 import com.openggf.game.timing.RecordedCompletionAuthority;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.graphics.FadeManager;
@@ -74,6 +77,9 @@ public final class GameplayModeContext implements ModeContext {
     private final int spawnY;
     private final EditorPlaytestStash resumeStash;
     private final HardwareTimingService hardwareTiming;
+    private final RuntimeArtCoordinator runtimeArtCoordinator;
+    private final SeamlessTransitionResourceHandoffRegistry
+            seamlessTransitionResourceHandoffs;
     private final RecordedCompletionAuthority recordedCompletionAuthority;
 
     private Camera camera;
@@ -151,6 +157,13 @@ public final class GameplayModeContext implements ModeContext {
         HardwareReadinessAdmissionPolicy checkedPolicy =
                 Objects.requireNonNull(admissionPolicy, "admissionPolicy");
         this.hardwareTiming = new HardwareTimingService();
+        RuntimeArtCoordinator coordinator = worldSession.getGameModule()
+                .createRuntimeArtCoordinator(hardwareTiming);
+        this.runtimeArtCoordinator = coordinator != null
+                ? coordinator
+                : RuntimeArtCoordinator.NONE;
+        this.seamlessTransitionResourceHandoffs =
+                new SeamlessTransitionResourceHandoffRegistry();
         this.recordedCompletionAuthority =
                 checkedPolicy == HardwareReadinessAdmissionPolicy.RECORDED
                         ? hardwareTiming.beginRecordedAdmission()
@@ -249,6 +262,8 @@ public final class GameplayModeContext implements ModeContext {
         this.rewindRegistry = new RewindRegistry(profiler);
         this.levelEventExtraRewindKeys.clear();
         this.rewindRegistry.register(hardwareTiming);
+        runtimeArtCoordinator.registerRewindAdapters(this.rewindRegistry);
+        this.rewindRegistry.register(seamlessTransitionResourceHandoffs);
         this.rewindRegistry.register(camera);
         this.rewindRegistry.register(gameStateManager);
         this.rewindRegistry.register(rng);
@@ -502,6 +517,21 @@ public final class GameplayModeContext implements ModeContext {
         return hardwareTiming;
     }
 
+    /** Game-owned runtime-art coordinator for this gameplay session. */
+    public RuntimeArtCoordinator runtimeArtCoordinator() {
+        return runtimeArtCoordinator;
+    }
+
+    public SeamlessTransitionResourceHandoffRegistry
+            seamlessTransitionResourceHandoffs() {
+        return seamlessTransitionResourceHandoffs;
+    }
+
+    /** Completes direct physical retirement after timing admission at the boundary. */
+    public void afterHardwareTimingService(HardwareServiceBoundary boundary) {
+        runtimeArtCoordinator.afterTimingService(boundary);
+    }
+
     public RecordedCompletionAuthority recordedCompletionAuthority() {
         if (recordedCompletionAuthority == null) {
             throw new IllegalStateException(
@@ -588,6 +618,13 @@ public final class GameplayModeContext implements ModeContext {
                     lep, levelManager.getCurrentZone());
             if (levelEventManager != null) {
                 rewindRegistry.register(levelEventManager);
+            }
+            rewindRegistry.deregister(
+                    com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager.REWIND_KEY);
+            if (levelManager.getGameModule().getTitleCardProvider()
+                    instanceof com.openggf.game.rewind.RewindSnapshottable<?> titleCard) {
+                rewindRegistry.deregister(titleCard.key());
+                rewindRegistry.register(titleCard);
             }
         }
         // Register game-specific extra adapters contributed by the level-event manager
@@ -820,8 +857,13 @@ public final class GameplayModeContext implements ModeContext {
         }
         if (rewindRegistry != null) {
             rewindRegistry.deregister(HardwareTimingService.REWIND_KEY);
+            runtimeArtCoordinator.deregisterRewindAdapters(rewindRegistry);
+            rewindRegistry.deregister(
+                    seamlessTransitionResourceHandoffs.key());
         }
         hardwareTiming.resetForMissingSnapshot();
+        runtimeArtCoordinator.resetForMissingSnapshot();
+        seamlessTransitionResourceHandoffs.resetForMissingSnapshot();
         hardwareTimingBoundaryObserver = HardwareTimingBoundaryObserver.NO_OP;
         if (zoneLayoutMutationPipeline != null) {
             zoneLayoutMutationPipeline.clear();

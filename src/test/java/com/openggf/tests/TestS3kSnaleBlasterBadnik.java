@@ -56,8 +56,16 @@ class TestS3kSnaleBlasterBadnik {
     @Test
     void firstUpdateSeedsClosedWaitAndCollisionFromRomSetup() throws Exception {
         AbstractObjectInstance snaleBlaster = createSnaleBlaster(new RecordingServices());
+        AbstractPlayableSprite player = playerAt(0x0300, 0x0100, 0);
 
-        snaleBlaster.update(0, playerAt(0x0300, 0x0100, 0));
+        snaleBlaster.update(0, player);
+        assertEquals("INIT", readEnumName(snaleBlaster, "state"),
+                "Obj_WaitOffscreen must not initialize before Render_Sprites marks its placeholder");
+        snaleBlaster.refreshPostCameraRenderState();
+        snaleBlaster.update(1, player);
+        assertEquals("INIT", readEnumName(snaleBlaster, "state"),
+                "the helper restores the saved operation and returns on its visible dispatch");
+        snaleBlaster.update(2, player);
 
         TouchResponseProvider touch = (TouchResponseProvider) snaleBlaster;
         assertEquals(0x1A, touch.getCollisionFlags());
@@ -68,9 +76,37 @@ class TestS3kSnaleBlasterBadnik {
     }
 
     @Test
+    void closedWaitRunsRawOpeningPrepBeforeVerticalMotion() throws Exception {
+        AbstractObjectInstance snaleBlaster = createSnaleBlaster(new RecordingServices());
+        activateSnaleBlaster(snaleBlaster, playerAt(0x0300, 0x0100, 0));
+        setInt(snaleBlaster, "waitTimer", 0);
+        int initialY = snaleBlaster.getY();
+
+        snaleBlaster.update(1, playerAt(0x0300, 0x0100, 0));
+        assertEquals("OPENING_PREP", readEnumName(snaleBlaster, "state"));
+
+        for (int frame = 2; frame <= 43; frame++) {
+            snaleBlaster.update(frame, playerAt(0x0300, 0x0100, 0));
+            assertEquals(initialY, snaleBlaster.getY(),
+                    "byte_8C2B6 changes mappings without moving native y_pos");
+        }
+        assertEquals("OPENING_PREP", readEnumName(snaleBlaster, "state"));
+
+        snaleBlaster.update(44, playerAt(0x0300, 0x0100, 0));
+        assertEquals("OPENING", readEnumName(snaleBlaster, "state"));
+        assertEquals(initialY, snaleBlaster.getY(),
+                "the raw-animation callback changes routine without running it in the same dispatch");
+
+        snaleBlaster.update(45, playerAt(0x0300, 0x0100, 0));
+        assertEquals(initialY - 2, snaleBlaster.getY(),
+                "the first vertical step runs on the dispatch after the raw callback");
+    }
+
+    @Test
     void rollingPlayerWithinFortyEightPixelsForcesEarlyClose() throws Exception {
         RecordingServices services = new RecordingServices();
         AbstractObjectInstance snaleBlaster = createSnaleBlaster(services);
+        activateSnaleBlaster(snaleBlaster, playerAt(0x0300, 0x0100, 0));
         setEnum(snaleBlaster, "state", "OPENING");
         setInt(snaleBlaster, "verticalStep", -2);
         setInt(snaleBlaster, "openCyclesRemaining", 2);
@@ -83,15 +119,58 @@ class TestS3kSnaleBlasterBadnik {
     }
 
     @Test
-    void shooterChildFiresSingleProjectileAtRomFrameFour() throws Exception {
+    void completedClosingPassUsesTheSharedOpenWaitAndReversesDirection() throws Exception {
+        AbstractObjectInstance snaleBlaster = createSnaleBlaster(new RecordingServices());
+        activateSnaleBlaster(snaleBlaster, playerAt(0x0300, 0x0100, 0));
+        int initialY = snaleBlaster.getY();
+        setEnum(snaleBlaster, "state", "CLOSING");
+        setInt(snaleBlaster, "verticalStep", 2);
+        setInt(snaleBlaster, "openCyclesRemaining", 0);
+        setInt(snaleBlaster, "verticalAnimTimer", 0);
+        setInt(snaleBlaster, "mappingFrame", 3);
+
+        snaleBlaster.update(0, playerAt(0x0300, 0x0100, 0));
+
+        assertEquals(initialY + 2, snaleBlaster.getY());
+        assertEquals("OPEN_WAIT", readEnumName(snaleBlaster, "state"),
+                "loc_8C08A returns both movement directions to routine 2");
+        assertEquals(0x90, readInt(snaleBlaster, "waitTimer"));
+        assertEquals(-2, readInt(snaleBlaster, "verticalStep"),
+                "loc_8C08A negates the shared vertical step for the next pass");
+        assertTrue(readBoolean(snaleBlaster, "firingWindow"),
+                "loc_8C08A sets parent bit 1 after a closing pass too");
+    }
+
+    @Test
+    void sharedWaitResumesVerticalScriptWithoutResettingItsCursor() throws Exception {
+        AbstractObjectInstance snaleBlaster = createSnaleBlaster(new RecordingServices());
+        activateSnaleBlaster(snaleBlaster, playerAt(0x0300, 0x0100, 0));
+        setEnum(snaleBlaster, "state", "OPEN_WAIT");
+        setInt(snaleBlaster, "waitTimer", 0);
+        setInt(snaleBlaster, "verticalStep", -2);
+        setInt(snaleBlaster, "verticalAnimTimer", 9);
+        setInt(snaleBlaster, "mappingFrame", 4);
+
+        snaleBlaster.update(0, playerAt(0x0300, 0x0100, 0));
+
+        assertEquals("OPENING", readEnumName(snaleBlaster, "state"));
+        assertEquals(9, readInt(snaleBlaster, "verticalAnimTimer"),
+                "loc_8C03E leaves anim_frame_timer untouched");
+        assertEquals(4, readInt(snaleBlaster, "mappingFrame"),
+                "loc_8C03E leaves mapping_frame untouched");
+        assertEquals(2, readInt(snaleBlaster, "openCyclesRemaining"));
+    }
+
+    @Test
+    void shooterChildFiresSingleProjectileAtRawAnimationOffsetFour() throws Exception {
         RecordingServices services = new RecordingServices();
         AbstractObjectInstance snaleBlaster = createSnaleBlaster(services);
-        snaleBlaster.update(0, playerAt(0x0300, 0x0100, 0));
+        activateSnaleBlaster(snaleBlaster, playerAt(0x0300, 0x0100, 0));
         Object shooter = readList(snaleBlaster, "shooters").get(0);
         services.spawnedObjects.clear();
 
         setEnum(shooter, "state", "FIRING");
-        setInt(shooter, "animIndex", 2);
+        setInt(shooter, "animIndex", 1);
         setInt(shooter, "mappingFrame", 7);
         setInt(shooter, "animTimer", 0);
 
@@ -106,17 +185,54 @@ class TestS3kSnaleBlasterBadnik {
     }
 
     @Test
+    void lowerShooterUsesItsNativeChildSubtypeIndependentOfParentSubtype() throws Exception {
+        RecordingServices services = new RecordingServices();
+        AbstractObjectInstance snaleBlaster = createSnaleBlaster(services);
+        activateSnaleBlaster(snaleBlaster, playerAt(0x0300, 0x0100, 0));
+        Object lowerShooter = readList(snaleBlaster, "shooters").get(1);
+        services.spawnedObjects.clear();
+
+        assertTrue(readBoolean(lowerShooter, "verticalFlipShot"),
+                "ChildObjDat_8C28A gives the lower shooter subtype 2 even when the parent subtype is zero");
+        setEnum(lowerShooter, "state", "FIRING");
+        setInt(lowerShooter, "animIndex", 1);
+        setInt(lowerShooter, "mappingFrame", 7);
+        setInt(lowerShooter, "animTimer", 0);
+        ((AbstractObjectInstance) lowerShooter).update(1, playerAt(0x0300, 0x0100, 0));
+
+        Object projectile = services.spawnedObjects.get(0);
+        assertEquals(0x100, readInt(projectile, "yVelocity"),
+                "loc_8C212 negates the lower shooter's projectile y_vel");
+    }
+
+    @Test
     void protectedCollisionPropertyReflectsAttackWithoutDestroying() throws Exception {
         AbstractObjectInstance snaleBlaster = createSnaleBlaster(new RecordingServices());
+        setBoolean(snaleBlaster, "collisionEnabled", true);
         setInt(snaleBlaster, "collisionProperty", 0x7F);
 
         ((TouchResponseAttackable) snaleBlaster).onPlayerAttack(
                 playerAt(0x0200, 0x0100, 2), enemyTouchResult());
 
-        assertEquals(0x7F, ((TouchResponseProvider) snaleBlaster).getCollisionProperty(),
-                "SnaleBlaster writes collision_property=$7F outside its open hit window");
+        assertEquals(0x7E, ((TouchResponseProvider) snaleBlaster).getCollisionProperty(),
+                "Touch_Enemy decrements the nonzero special-enemy hit byte");
+        assertEquals(0, ((TouchResponseProvider) snaleBlaster).getCollisionFlags(),
+                "Touch_Enemy clears collision_flags after the protected bounce");
         assertTrue(!snaleBlaster.isDestroyed(),
                 "S3K Touch_Enemy reflects nonzero collision_property instead of killing the object");
+    }
+
+    @Test
+    void earlyCloseWaitDoesNotRearmCollisionAfterProtectedHit() throws Exception {
+        AbstractObjectInstance snaleBlaster = createSnaleBlaster(new RecordingServices());
+        setEnum(snaleBlaster, "state", "EARLY_REOPEN_WAIT");
+        setInt(snaleBlaster, "waitTimer", 10);
+        setBoolean(snaleBlaster, "collisionEnabled", false);
+
+        snaleBlaster.update(0, playerAt(0x0300, 0x0100, 0));
+
+        assertEquals(0, ((TouchResponseProvider) snaleBlaster).getCollisionFlags(),
+                "routine $A writes collision_property only and retains Touch_Enemy's cleared collision_flags");
     }
 
     @Test
@@ -134,7 +250,7 @@ class TestS3kSnaleBlasterBadnik {
     @Test
     void coverAnimationCompletionRestoresProtectionDuringRemainingOpenWait() throws Exception {
         AbstractObjectInstance snaleBlaster = createSnaleBlaster(new RecordingServices());
-        snaleBlaster.update(0, playerAt(0x0300, 0x0100, 0));
+        activateSnaleBlaster(snaleBlaster, playerAt(0x0300, 0x0100, 0));
         Object cover = readField(snaleBlaster, "cover");
 
         setEnum(snaleBlaster, "state", "OPEN_WAIT");
@@ -165,6 +281,13 @@ class TestS3kSnaleBlasterBadnik {
         } finally {
             clearConstructionContext();
         }
+    }
+
+    private static void activateSnaleBlaster(AbstractObjectInstance snaleBlaster,
+            AbstractPlayableSprite player) {
+        snaleBlaster.refreshPostCameraRenderState();
+        snaleBlaster.update(-2, player);
+        snaleBlaster.update(-1, player);
     }
 
     private static AbstractPlayableSprite playerAt(int x, int y, int animationId) {
@@ -201,6 +324,10 @@ class TestS3kSnaleBlasterBadnik {
 
     private static int readInt(Object target, String fieldName) throws Exception {
         return findField(target, fieldName).getInt(target);
+    }
+
+    private static boolean readBoolean(Object target, String fieldName) throws Exception {
+        return findField(target, fieldName).getBoolean(target);
     }
 
     private static String readEnumName(Object target, String fieldName) throws Exception {

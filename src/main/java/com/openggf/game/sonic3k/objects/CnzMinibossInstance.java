@@ -934,6 +934,10 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
         // (updateAct1Bg -> handleAct1Entry -> BG_FG_REFRESH).
         S3kCnzEventWriteSupport.signalMinibossDefeatedForScrollControl(services());
 
+        // ROM CNZMiniboss_BossDefeated: jmp (BossDefeated_StopTimer).l
+        // (sonic3k.asm:145527).
+        stopLevelTimerOnBossDefeat();
+
         // ROM sonic3k.asm:145467 + 144988 — the combined BossDefeated /
         // Obj_CNZMinibossEnd chain installs Obj_CNZMinibossEndGo at $34(a0)
         // and relies on Wait_FadeToLevelMusic to consume the live $2E value.

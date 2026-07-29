@@ -63,6 +63,7 @@ public final class SeamlessLevelTransitionRequest {
     private final boolean omitSecondaryLevelPlc;
     private final boolean suppressLevelLoadRewindBoundary;
     private final boolean deferRingInitializationToLevelUpdate;
+    private final SeamlessTransitionResourceHandoffId resourceHandoffId;
 
     private SeamlessLevelTransitionRequest(Builder builder) {
         this.type = builder.type;
@@ -109,6 +110,7 @@ public final class SeamlessLevelTransitionRequest {
         this.omitSecondaryLevelPlc = builder.omitSecondaryLevelPlc;
         this.suppressLevelLoadRewindBoundary = builder.suppressLevelLoadRewindBoundary;
         this.deferRingInitializationToLevelUpdate = builder.deferRingInitializationToLevelUpdate;
+        this.resourceHandoffId = builder.resourceHandoffId;
     }
 
     public TransitionType type() {
@@ -247,6 +249,8 @@ public final class SeamlessLevelTransitionRequest {
 
     public boolean deferRingInitializationToLevelUpdate() { return deferRingInitializationToLevelUpdate; }
 
+    public SeamlessTransitionResourceHandoffId resourceHandoffId() { return resourceHandoffId; }
+
     public boolean shouldApplyRomWorldOffset(int slot, boolean objectCodeNonZero,
                                               boolean renderFlagsBit2) {
         return objectOffsetPolicy == ObjectOffsetPolicy.ROM_WORLD_OFFSET_RANGE
@@ -289,7 +293,8 @@ public final class SeamlessLevelTransitionRequest {
                 .preserveCheckpointUntilResults(preserveCheckpointUntilResults)
                 .omitSecondaryLevelPlc(omitSecondaryLevelPlc)
                 .suppressLevelLoadRewindBoundary(suppressLevelLoadRewindBoundary)
-                .deferRingInitializationToLevelUpdate(deferRingInitializationToLevelUpdate);
+                .deferRingInitializationToLevelUpdate(deferRingInitializationToLevelUpdate)
+                .resourceHandoff(resourceHandoffId);
         if (objectOffsetPolicy == ObjectOffsetPolicy.ROM_WORLD_OFFSET_RANGE) {
             adjusted.romWorldObjectOffsetRange(objectOffsetStartSlot, objectOffsetEndSlotExclusive);
         }
@@ -341,6 +346,7 @@ public final class SeamlessLevelTransitionRequest {
         private boolean omitSecondaryLevelPlc;
         private boolean suppressLevelLoadRewindBoundary;
         private boolean deferRingInitializationToLevelUpdate;
+        private SeamlessTransitionResourceHandoffId resourceHandoffId;
 
         private Builder(TransitionType type) {
             this.type = type;
@@ -563,6 +569,11 @@ public final class SeamlessLevelTransitionRequest {
 
         public Builder deferRingInitializationToLevelUpdate(boolean defer) {
             this.deferRingInitializationToLevelUpdate = defer;
+            return this;
+        }
+
+        public Builder resourceHandoff(SeamlessTransitionResourceHandoffId resourceHandoffId) {
+            this.resourceHandoffId = resourceHandoffId;
             return this;
         }
 

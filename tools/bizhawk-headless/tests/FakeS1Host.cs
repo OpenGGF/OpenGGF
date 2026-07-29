@@ -2,6 +2,20 @@ using System;
 
 namespace OpenGGF.BizHawk.Headless.Tests
 {
+    internal sealed class NoOpCallbackRegistration : IDisposable
+    {
+        public static readonly NoOpCallbackRegistration Instance =
+            new NoOpCallbackRegistration();
+
+        private NoOpCallbackRegistration()
+        {
+        }
+
+        public void Dispose()
+        {
+        }
+    }
+
     /// <summary>
     /// Fake S1 host whose Advance() stamps the completed frame into vfc
     /// (0xFE04), then runs the per-advance script with the host itself
@@ -13,6 +27,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
     internal sealed class FakeS1Host : IGpgxHost
     {
         private readonly Action<FakeS1Host, int> onAdvance;
+        private Action executeCallback;
 
         public FakeS1Host(Action<FakeS1Host, int> onAdvance)
         {
@@ -24,6 +39,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
         public int CompletedFrame { get; private set; }
         public bool IsLagged { get; set; }
         public int LagCount { get; set; }
+        public uint? ExecuteCallbackAddress { get; private set; }
+        public bool ExecuteCallbackDisposed { get; private set; }
 
         public void ClearButtons()
         {
@@ -31,6 +48,25 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
         public void SetButton(string name, bool pressed)
         {
+        }
+
+        public IDisposable RegisterExecuteCallback(
+            uint address, Action callback)
+        {
+            ExecuteCallbackAddress = address;
+            ExecuteCallbackDisposed = false;
+            executeCallback = callback;
+            return new CallbackRegistration(this);
+        }
+
+        public void FireExecuteCallback()
+        {
+            if (executeCallback == null)
+            {
+                throw new InvalidOperationException(
+                    "No execute callback is registered.");
+            }
+            executeCallback();
         }
 
         public void Advance()
@@ -64,6 +100,27 @@ namespace OpenGGF.BizHawk.Headless.Tests
             Ram[offset + 1] = (byte)(value >> 16);
             Ram[offset + 2] = (byte)(value >> 8);
             Ram[offset + 3] = (byte)value;
+        }
+
+        private sealed class CallbackRegistration : IDisposable
+        {
+            private FakeS1Host owner;
+
+            public CallbackRegistration(FakeS1Host owner)
+            {
+                this.owner = owner;
+            }
+
+            public void Dispose()
+            {
+                if (owner == null)
+                {
+                    return;
+                }
+                owner.executeCallback = null;
+                owner.ExecuteCallbackDisposed = true;
+                owner = null;
+            }
         }
     }
 }

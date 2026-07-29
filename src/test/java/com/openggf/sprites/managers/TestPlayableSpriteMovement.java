@@ -25,6 +25,7 @@ import com.openggf.physics.TrigLookupTable;
 import com.openggf.physics.TerrainCollisionManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
+import com.openggf.sprites.playable.Sonic;
 import com.openggf.sprites.playable.Tails;
 import com.openggf.sprites.playable.Sonic;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
@@ -54,6 +55,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -1531,6 +1533,65 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
+        public void s3kHurtAppliesNativeLiveRadiusDeltaSignForBothAngleHalvesAndGravityStates() {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                int[][] cases = {
+                        {0x00, 0, 1},
+                        {0x00, 1, -1},
+                        {0x40, 0, -1},
+                        {0x40, 1, 1}
+                };
+                try {
+                        for (int[] testCase : cases) {
+                                int angle = testCase[0];
+                                boolean reverseGravity = testCase[1] != 0;
+                                int expectedDeltaSign = testCase[2];
+                                GameServices.gameState().setReverseGravityActive(reverseGravity);
+                                Sonic sonic = new Sonic("sonic", (short) 0x200, (short) 0x300);
+                                sonic.setRolling(true);
+                                sonic.applyRollingRadii(false);
+                                sonic.setAngle((byte) angle);
+                                sonic.setCentreYPreserveSubpixel((short) 0x340);
+                                sonic.setSubpixelRaw(0x5A00, 0xA500);
+                                int centreYBeforeHurt = sonic.getCentreY();
+                                int radiusDelta = sonic.getYRadius() - sonic.getStandYRadius();
+                                String scenario = "angle=$%02X reverseGravity=%s"
+                                                .formatted(angle, reverseGravity);
+
+                                assertTrue(sonic.applyHurt(sonic.getCentreX() - 16), scenario);
+
+                                assertEquals(
+                                                centreYBeforeHurt + expectedDeltaSign * radiusDelta,
+                                                sonic.getCentreY(),
+                                                "Player_TouchFloor sign contract for " + scenario);
+                                assertEquals(0xA500, sonic.getYSubpixelRaw(),
+                                                "Player_TouchFloor add.w preserves fractional Y for " + scenario);
+                                assertFalse(sonic.getRolling(), scenario);
+                        }
+                } finally {
+                        GameServices.gameState().setReverseGravityActive(false);
+                }
+        }
+
+        @Test
+        public void s3kHurtUsesLiveRadiusDeltaWhenRollBitOutlivesRollingRadii() {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                Sonic sonic = new Sonic("sonic", (short) 0x200, (short) 0x300);
+                sonic.setRolling(true);
+                sonic.applyStandingRadii(false);
+                sonic.setCentreYPreserveSubpixel((short) 0x340);
+                int centreYBeforeHurt = sonic.getCentreY();
+
+                assertTrue(sonic.getRolling());
+                assertEquals(sonic.getStandYRadius(), sonic.getYRadius());
+                assertTrue(sonic.applyHurt(sonic.getCentreX() - 16));
+
+                assertEquals(centreYBeforeHurt, sonic.getCentreY(),
+                                "Player_TouchFloor adds the live y_radius-default_y_radius delta");
+                assertFalse(sonic.getRolling());
+        }
+
+        @Test
         public void s2SidekickHurtPreservesRadiiWhenRollStatusWasAlreadyCleared() {
                 Tails tails = new Tails("tails_p2", (short) 0x200, (short) 0x300);
                 tails.applyRollingRadii(false);
@@ -1831,6 +1892,28 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
+        public void negativeFlipTypeSuppressesGroundSkid() throws Exception {
+                mockSprite.setGSpeed((short) 0x1000);
+                mockSprite.setAngle((byte) 0x00);
+                mockSprite.setAir(false);
+                mockSprite.setRolling(false);
+                mockSprite.setDirection(Direction.RIGHT);
+                mockSprite.setFlipType(0x80);
+
+                setInputState(true, false, false, false, false);
+
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("doGroundMove");
+                method.setAccessible(true);
+                method.invoke(manager);
+
+                assertEquals((short) 0x0F80, mockSprite.getGSpeed());
+                assertFalse(mockSprite.getSkidding(),
+                        "S3K braking returns before Stop when signed flip_type is negative");
+                assertEquals(Direction.RIGHT, mockSprite.getDirection(),
+                        "The suppressed skid must not flip the player's facing bit");
+        }
+
+        @Test
         public void oppositeDirectionCrossingZeroDoesNotPublishWalk() throws Exception {
                 ScriptedVelocityAnimationProfile profile = new ScriptedVelocityAnimationProfile()
                                 .setIdleAnimId(5)
@@ -2001,6 +2084,38 @@ public class TestPlayableSpriteMovement {
                 assertTrue(mockSprite.getBalanceState() > 0,
                                 "Tails_InputAcceleration_Path reads width/x/status zero from a cleared interact SST");
                 assertEquals(Direction.RIGHT, mockSprite.getDirection());
+        }
+
+        @Test
+        public void mainPlayerLandingPublishesNativeTiltBytesWithoutSidekickRescan() throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                setGameRulesForTest(GameRules.SONIC_3K);
+                GameServices.sprites().addSprite(mockSprite, "sonic");
+
+                Method publisherMethod = PlayableSpriteMovement.class.getDeclaredMethod("landingTiltPublisher");
+                publisherMethod.setAccessible(true);
+                @SuppressWarnings("unchecked")
+                Consumer<SensorResult[]> publisher =
+                                (Consumer<SensorResult[]>) publisherMethod.invoke(manager);
+                assertNotNull(publisher, "The configured main player owns the native landing-angle copy");
+
+                SensorResult left = new SensorResult((byte) 0xFF, (byte) -7, 0, Direction.DOWN);
+                SensorResult right = new SensorResult((byte) 3, (byte) 25, 0, Direction.DOWN);
+                publisher.accept(new SensorResult[]{left, right});
+
+                Field nextTilt = PlayableSpriteMovement.class.getDeclaredField("latchedNextTilt");
+                Field tilt = PlayableSpriteMovement.class.getDeclaredField("latchedTilt");
+                nextTilt.setAccessible(true);
+                tilt.setAccessible(true);
+                assertEquals(3, nextTilt.getInt(manager));
+                assertEquals(0xFF, tilt.getInt(manager));
+
+                Tails sidekick = new Tails("tails_p2", (short) 0, (short) 0);
+                sidekick.setCpuControlled(true);
+                GameServices.sprites().addSprite(sidekick, "tails");
+                PlayableSpriteMovement sidekickMovement = new PlayableSpriteMovement(sidekick);
+                assertNull(publisherMethod.invoke(sidekickMovement),
+                                "CPU Tails retains its separate player-tail cadence");
         }
 
         @Test
@@ -2921,6 +3036,25 @@ public class TestPlayableSpriteMovement {
                                 "SonicKnux_Roll must see the player-slot Status_OnObj bit and skip Duck");
         }
 
+        @Test
+        public void s3kMovingCrouchUsesPreSlopeRepelGroundSpeed() throws Exception {
+                setGameRulesForTest(GameRules.SONIC_3K);
+                mockSprite.setAir(false);
+                mockSprite.setRolling(false);
+                mockSprite.setSpindash(false);
+                mockSprite.setGSpeed((short) 0x168);
+                mockSprite.setCrouching(false);
+                setMovementField("preRollGroundSpeed", 0x0D9);
+                setInputState(false, false, true, false, false);
+
+                Method crouchMethod = PlayableSpriteMovement.class.getDeclaredMethod("updateCrouchState");
+                crouchMethod.setAccessible(true);
+                crouchMethod.invoke(manager);
+
+                assertTrue(mockSprite.getCrouching(),
+                                "SonicKnux_Roll tests inertia below $100 before SlopeRepel raises it");
+        }
+
         /**
          * Test that releasing and re-pressing down unlocks rolling.
          */
@@ -3431,6 +3565,15 @@ public class TestPlayableSpriteMovement {
                 public void resolveAirCollision(FrameCollisionPlan plan,
                                                 AbstractPlayableSprite sprite,
                                                 Consumer<AbstractPlayableSprite> landingHandler,
+                                                boolean forceFloorCheck) {
+                        probe.accept(sprite, landingHandler, forceFloorCheck);
+                }
+
+                @Override
+                public void resolveAirCollision(FrameCollisionPlan plan,
+                                                AbstractPlayableSprite sprite,
+                                                Consumer<AbstractPlayableSprite> landingHandler,
+                                                Consumer<SensorResult[]> landingProbeHandler,
                                                 boolean forceFloorCheck) {
                         probe.accept(sprite, landingHandler, forceFloorCheck);
                 }
