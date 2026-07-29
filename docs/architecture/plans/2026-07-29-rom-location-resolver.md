@@ -406,7 +406,7 @@ evidence. After the fix, run:
 
 ```bash
 mvn -Dmse=off \
-  -Dtest=com.openggf.tests.TestSingletonLifecycleGuard#ambientGameplayModeSetupsDoNotGrowWithoutLifecycleTriage \
+  -Dtest=TestSingletonLifecycleGuard#ambientGameplayModeSetupsDoNotGrowWithoutLifecycleTriage \
   test
 
 mvn -Dmse=off -Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical \
