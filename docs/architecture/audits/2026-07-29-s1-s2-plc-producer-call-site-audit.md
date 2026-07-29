@@ -94,6 +94,54 @@ implemented final-boss sequences are therefore not rows in this table. A
 future producer added to either sequence must be audited by its ROM operation,
 rather than inheriting the ordinary-boss entries.
 
+## Stable route keys
+
+Every represented Route above has exactly one stable key. The executable
+producer guard compares this exact set with its test-case registry, not merely
+the row count; amend this table and the registry together.
+
+| Route key | Audited owner row |
+|---|---|
+| `S1_TITLE` | S1 `GM_Title` |
+| `S1_CREDITS` | S1 `GM_Credits` |
+| `S1_LEVEL` | S1 level setup |
+| `S1_GHZ_EVENT` | S1 `DLE_GHZ3_Boss` |
+| `S1_LZ_EVENT` | S1 `DLE_LZ3` |
+| `S1_MZ_EVENT` | S1 `DLE_MZ3_Boss` |
+| `S1_SLZ_EVENT` | S1 `DLE_SLZ3_Boss` |
+| `S1_SYZ_EVENT` | S1 `DLE_SYZ3_Boss` |
+| `S1_SBZ_EVENT` | S1 `DLE_SBZ2_Blocks` |
+| `S1_FZ_EVENT` | S1 `DLE_FZ_Main` |
+| `S1_RESULTS` | S1 `GotThroughAct` |
+| `S1_TITLE_CARD` | S1 `Card_ChangeArt` |
+| `S1_SPECIAL_RESULTS` | S1 special-stage result setup |
+| `S2_TITLE` | S2 title setup |
+| `S2_LEVEL` | S2 level setup |
+| `S2_EHZ_EVENT` | S2 EHZ event |
+| `S2_MTZ_EVENT` | S2 MTZ event |
+| `S2_WFZ_BOSS_EVENT` | S2 WFZ routine 0 |
+| `S2_WFZ_TORNADO_EVENT` | S2 WFZ routine 2 |
+| `S2_HTZ_EVENT` | S2 HTZ event |
+| `S2_OOZ_EVENT` | S2 OOZ event |
+| `S2_MCZ_EVENT` | S2 MCZ event |
+| `S2_CNZ_EVENT` | S2 CNZ event |
+| `S2_CPZ_EVENT` | S2 CPZ event |
+| `S2_DEZ_MECHA_EVENT` | S2 DEZ routine 1 |
+| `S2_DEZ_ROBOT_EVENT` | S2 DEZ routine 3 |
+| `S2_ARZ_EVENT` | S2 ARZ event |
+| `S2_RESULTS` | S2 `Load_EndOfAct` |
+| `S2_TITLE_CARD` | S2 title-card exit |
+| `S2_SPECIAL_RESULTS` | S2 special-stage result setup |
+| `S2_SPECIAL_HANDOFF` | S2 special-stage gameplay handoff |
+| `S2_EHZ_BOSS` | S2 EHZ ordinary boss defeat |
+| `S2_HTZ_BOSS` | S2 HTZ ordinary boss defeat |
+| `S2_ARZ_BOSS` | S2 ARZ ordinary boss defeat |
+| `S2_MCZ_BOSS` | S2 MCZ ordinary boss defeat |
+| `S2_CNZ_BOSS` | S2 CNZ ordinary boss defeat |
+| `S2_CPZ_BOSS` | S2 CPZ ordinary boss defeat |
+| `S2_MTZ_BOSS` | S2 MTZ ordinary boss defeat |
+| `S2_OOZ_BOSS` | S2 OOZ ordinary boss defeat |
+
 ## Deliberately excluded ROM producer families
 
 The following calls exist in the disassemblies but are not Task 5 routes. The

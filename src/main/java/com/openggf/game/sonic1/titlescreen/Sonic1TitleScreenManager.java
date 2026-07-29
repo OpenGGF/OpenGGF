@@ -170,6 +170,7 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
     // Palette cycling (water animation)
     private int palCycleTimer = 0;
     private int palCycleFrame = 0;
+    private boolean titlePlcPending;
     private static final int PAL_CYCLE_SPEED = 6; // Update every 6 frames (from disassembly)
     private static final int PAL_CYCLE_FRAMES = 4; // 4 cycle frames (32 bytes / 8 bytes per frame)
 
@@ -213,7 +214,7 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
             return;
         }
 
-        queueTitlePlc();
+        titlePlcPending = !queueTitlePlc();
 
         // Reset all state
         frameCounter = 0;
@@ -254,14 +255,16 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
         LOGGER.info("Sonic 1 Title Screen initialized");
     }
 
-    private void queueTitlePlc() {
+    private boolean queueTitlePlc() {
         try {
             Sonic1PlcService plcService = GameServices.module().getGameService(Sonic1PlcService.class);
             if (plcService != null) {
                 plcService.replaceQueued(0);
             }
+            return true;
         } catch (Exception ignored) {
             // The presentation renderer also runs without a gameplay module in focused tests.
+            return false;
         }
     }
 
@@ -269,6 +272,10 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
     public void update(InputHandler input) {
         if (state == State.INACTIVE) {
             return;
+        }
+        if (titlePlcPending) {
+            titlePlcPending = !queueTitlePlc();
+            if (titlePlcPending) return;
         }
 
         frameCounter++;

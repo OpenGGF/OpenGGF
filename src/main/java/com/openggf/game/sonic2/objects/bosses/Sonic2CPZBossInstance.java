@@ -96,6 +96,8 @@ public class Sonic2CPZBossInstance extends AbstractBossInstance
     private int status;
     private int status2;
     private boolean bossDefeated;
+    /** Publication latch; keeps an equality-timed animal/explosion request retryable. */
+    private boolean animalExplosionSubmitted;
 
     // Timing
     private int defeatTimer;
@@ -285,9 +287,10 @@ public class Sonic2CPZBossInstance extends AbstractBossInstance
         } else {
             if (defeatTimer < 0x30) {
                 state.yVel -= 8;
-            } else if (defeatTimer == 0x30) {
+            } else if (defeatTimer >= 0x30 && !animalExplosionSubmitted) {
                 if (!Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_ANIMALS_CPZ,
                         Sonic2Constants.PLC_EXPLOSION)) return;
+                animalExplosionSubmitted = true;
                 state.yVel = 0;
                 services().playMusic(Sonic2Music.CHEMICAL_PLANT.id);
             } else if (defeatTimer >= 0x38) {

@@ -154,6 +154,8 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance
 
     // Internal state
     private int countdown;
+    /** Publication latch; keeps an equality-timed animal/explosion request retryable. */
+    private boolean animalExplosionSubmitted;
     private boolean flipped; // render_flags.x_flip
     private boolean screenShaking; // ROM: Screen_Shaking_Flag
     private int sineCounter;
@@ -571,9 +573,10 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance
         } else if (countdown < 0x18) {
             // Accelerate upward
             state.yVel += SUBA_ACCEL_UP;
-        } else if (countdown == 0x18) {
+        } else if (countdown >= 0x18 && !animalExplosionSubmitted) {
             if (!Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_ANIMALS_MCZ,
                     Sonic2Constants.PLC_EXPLOSION)) return;
+            animalExplosionSubmitted = true;
             // Play level music and load animal PLCs
             state.yVel = 0;
             services().playMusic(Sonic2Music.MYSTIC_CAVE.id);

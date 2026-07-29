@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -20,13 +22,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestPlcProducerCoverageGuard {
     private static final Path AUDIT = Path.of("docs/architecture/audits/"
             + "2026-07-29-s1-s2-plc-producer-call-site-audit.md");
+    private static final Pattern ROUTE_KEY = Pattern.compile("^\\| `(S[12]_[A-Z0-9_]+)` \\|");
 
     @Test
     void auditRouteCardinalityAndRequiredExecutableSuitesRemainInLockstep() throws Exception {
         String audit = Files.readString(AUDIT);
-        long routeRows = audit.lines().filter(line -> line.contains("| Route")).count();
-        assertEquals(39, routeRows,
-                "a represented Route added or removed from the audit requires producer-test coverage");
         assertTrue(audit.contains("## Sonic 2 boss-defeat producers"));
         assertTrue(audit.contains("EndDemo_Levels[8]"));
         // The four suites jointly execute every audit row: S1 lifecycle and
@@ -43,6 +43,20 @@ class TestPlcProducerCoverageGuard {
         assertEquals(39, PlcProducerRouteRegistry.bindings().stream()
                         .map(PlcProducerRouteRegistry.Binding::key).collect(java.util.stream.Collectors.toSet()).size(),
                 "route keys must be unique; a duplicate cannot stand in for a missing owner case");
+    }
+
+    @Test
+    void auditRouteKeysExactlyMatchTheExecutableRegistry() throws IOException {
+        java.util.Set<String> auditKeys = new java.util.HashSet<>();
+        for (String line : Files.readAllLines(AUDIT)) {
+            Matcher matcher = ROUTE_KEY.matcher(line);
+            if (matcher.find()) auditKeys.add(matcher.group(1));
+        }
+        java.util.Set<String> executableKeys = PlcProducerRouteRegistry.bindings().stream()
+                .map(PlcProducerRouteRegistry.Binding::key)
+                .collect(java.util.stream.Collectors.toSet());
+        assertEquals(executableKeys, auditKeys,
+                "every audit route key needs exactly one executable production-owner case");
     }
 
     @Test

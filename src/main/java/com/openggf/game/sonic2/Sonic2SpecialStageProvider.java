@@ -36,6 +36,7 @@ import java.util.Optional;
  */
 public class Sonic2SpecialStageProvider implements SpecialStageProvider {
     private final Sonic2SpecialStageManager manager;
+    private boolean resultsPlcSubmitted;
 
     public Sonic2SpecialStageProvider() {
         this(new Sonic2SpecialStageManager());
@@ -97,6 +98,7 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
 
     @Override
     public void onEnterResults() {
+        if (resultsPlcSubmitted) return;
         try {
             Sonic2PlcService plcService = GameServices.module().getGameService(Sonic2PlcService.class);
             if (plcService != null) {
@@ -109,9 +111,17 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
                     plcService.transact(Sonic2PlcService.replaceOperation(0));
                 }
             }
+            resultsPlcSubmitted = true;
         } catch (Exception ignored) {
             // Results rendering also has standalone construction paths.
         }
+    }
+
+    @Override
+    public void resetForResults() {
+        reset();
+        resultsPlcSubmitted = false;
+        onEnterResults();
     }
 
     @Override

@@ -100,6 +100,8 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance implements Rewin
     private int bossCollisionRoutine;
     private boolean targetFlag;
     private boolean initialized;
+    /** Publication latch; keeps an equality-timed animal/explosion request retryable. */
+    private boolean animalExplosionSubmitted;
 
     // Multi-sprite data
     private int mainMapFrame;
@@ -419,9 +421,10 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance implements Rewin
             bossYVel += 0x18;
         } else if (bossCountdown < 0x18) {
             bossYVel -= 8;
-        } else if (bossCountdown == 0x18) {
+        } else if (bossCountdown >= 0x18 && !animalExplosionSubmitted) {
             if (!Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_ANIMALS_ARZ,
                     Sonic2Constants.PLC_EXPLOSION)) return;
+            animalExplosionSubmitted = true;
             bossYVel = 0;
             int levelMusic = services().getCurrentLevelMusicId();
             if (levelMusic >= 0) {

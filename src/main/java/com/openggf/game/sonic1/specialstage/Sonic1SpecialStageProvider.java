@@ -28,6 +28,7 @@ import java.util.Optional;
  */
 public final class Sonic1SpecialStageProvider implements SpecialStageProvider {
     private final Sonic1SpecialStageManager manager = new Sonic1SpecialStageManager();
+    private boolean resultsPlcSubmitted;
 
     @Override
     public int getTransitionSfxId() {
@@ -102,14 +103,23 @@ public final class Sonic1SpecialStageProvider implements SpecialStageProvider {
 
     @Override
     public void onEnterResults() {
+        if (resultsPlcSubmitted) return;
         try {
             Sonic1PlcService plcService = GameServices.module().getGameService(Sonic1PlcService.class);
             if (plcService != null) {
                 plcService.transact(Sonic1PlcService.replace(0), Sonic1PlcService.appendOperation(27));
             }
+            resultsPlcSubmitted = true;
         } catch (Exception ignored) {
             // Results rendering also has standalone construction paths.
         }
+    }
+
+    @Override
+    public void resetForResults() {
+        reset();
+        resultsPlcSubmitted = false;
+        onEnterResults();
     }
 
     // isEntryPresentationReady() intentionally keeps the SpecialStageProvider

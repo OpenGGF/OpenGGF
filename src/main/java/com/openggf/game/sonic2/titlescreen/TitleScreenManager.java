@@ -111,6 +111,7 @@ public class TitleScreenManager implements TitleScreenProvider {
     private PatternSpriteRenderer spriteRenderer;
     private List<SpriteMappingFrame> titleMappingFrames;
     private boolean spritesInitialized = false;
+    private boolean titlePlcPending;
 
     // --- Intro animation state ---
     private boolean introComplete = false;
@@ -312,7 +313,7 @@ public class TitleScreenManager implements TitleScreenProvider {
             dataLoader.loadData();
         }
 
-        queueTitlePlc();
+        titlePlcPending = !queueTitlePlc();
 
         // Force palette re-upload on next draw
         dataLoader.resetCache();
@@ -388,19 +389,25 @@ public class TitleScreenManager implements TitleScreenProvider {
         LOGGER.info("Title screen initialized, entering SEGA_LOGO state");
     }
 
-    private void queueTitlePlc() {
+    private boolean queueTitlePlc() {
         try {
             Sonic2PlcService plcService = GameServices.module().getGameService(Sonic2PlcService.class);
             if (plcService != null) {
                 plcService.transact(Sonic2PlcService.replaceOperation(0));
             }
+            return true;
         } catch (Exception ignored) {
             // The presentation renderer also runs without a gameplay module in focused tests.
+            return false;
         }
     }
 
     @Override
     public void update(InputHandler input) {
+        if (titlePlcPending) {
+            titlePlcPending = !queueTitlePlc();
+            if (titlePlcPending) return;
+        }
         switch (state) {
             case SEGA_LOGO -> updateSegaLogo(input);
             case INTRO_TEXT_FADE_IN -> updateIntroTextFadeIn(input);
