@@ -541,22 +541,106 @@ façades land in separate commits with one shared player-facing entry.
 
 ### Task 4: Integrate exact VBlank preparation and service ordering
 
+Commit `37beb532d` established the ordinary-level service seam and lag-row
+exclusion, but it is only a partial Task 4 result. It does not select the
+title/title-card/fade/results/credits/special/pause budgets or call
+`RunPLC` / `RunPLC_RAM` at the phase-owned preparation points. Complete the
+task through the semantic adapter below; do not stack another independent
+ordinary-level hook on top of the partial seam.
+
 **Files:**
+- Create: `src/main/java/com/openggf/game/resources/PlcLifecyclePhase.java`
+- Create: `src/main/java/com/openggf/game/resources/PlcLifecycleService.java`
+- Create: `src/main/java/com/openggf/game/resources/PlcFrameLifecycleCoordinator.java`
+- Create: `src/main/java/com/openggf/game/resources/NativeFadeLifecycle.java`
+- Create: `src/main/java/com/openggf/game/resources/NativeFadeLifecycleAware.java`
+- Remove or fold into the new port: `src/main/java/com/openggf/game/resources/PlcVBlankService.java`
+- Modify: `src/main/java/com/openggf/Engine.java`
 - Modify: `src/main/java/com/openggf/LevelFrameStep.java`
-- Modify: S1 title/fade/results/special-stage lifecycle owners identified in Task 1
-- Modify: S2 title/fade/results/special-stage lifecycle owners identified in Task 1
-- Modify: game module lifecycle/provider interfaces as required by the reviewed call-site table
+- Modify: `src/main/java/com/openggf/GameLoop.java`
+- Modify: `src/main/java/com/openggf/game/EndingProvider.java`
+- Modify: `src/main/java/com/openggf/game/SpecialStageEntryPresentationController.java`
+- Modify: `src/main/java/com/openggf/game/session/GameplayModeContext.java`
+- Modify: `src/main/java/com/openggf/level/objects/ObjectServices.java`
+- Modify: `src/main/java/com/openggf/level/objects/DefaultObjectServices.java`
+- Modify: `src/main/java/com/openggf/game/mode/MenuScreenModeController.java` only if a callback seam is needed to keep title/level-select service around its provider update
+- Modify: `src/main/java/com/openggf/tools/RecordingFrameDriver.java`
+- Modify: `src/main/java/com/openggf/TraceSessionLauncher.java`
+- Modify: `src/main/java/com/openggf/game/rewind/LiveRewindStepper.java`
+- Modify: `src/main/java/com/openggf/game/rewind/SpecialStageStepper.java`
+- Modify: `src/main/java/com/openggf/game/sonic1/resources/Sonic1PlcService.java`
+- Modify: `src/main/java/com/openggf/game/sonic2/resources/Sonic2PlcService.java`
+- Modify: `src/main/java/com/openggf/game/sonic1/Sonic1GameModule.java`
+- Modify: `src/main/java/com/openggf/game/sonic2/Sonic2GameModule.java`
+- Modify: `src/main/java/com/openggf/game/sonic1/credits/Sonic1CreditsManager.java`
+- Modify: `src/main/java/com/openggf/game/sonic1/credits/Sonic1EndingProvider.java`
+- Modify: `src/main/java/com/openggf/game/sonic2/credits/Sonic2EndingProvider.java`
+- Modify: `src/main/java/com/openggf/game/sonic1/objects/Sonic1ResultsScreenObjectInstance.java`
+- Modify: `src/main/java/com/openggf/game/sonic2/objects/ResultsScreenObjectInstance.java`
+- Audit/unmarked: `src/main/java/com/openggf/game/sonic1/specialstage/Sonic1SpecialStageManager.java`
+- Audit/unmarked: `src/main/java/com/openggf/game/sonic1/objects/Sonic1EndingSonicObjectInstance.java`
 - Test: `src/test/java/com/openggf/TestPlcVBlankOrdering.java`
+- Test: `src/test/java/com/openggf/game/resources/TestPlcFrameLifecycleCoordinator.java`
+- Test: `src/test/java/com/openggf/TestPlcLifecycleDriverParity.java`
+- Test: `src/test/java/com/openggf/game/resources/TestNativePlcFadeOwnerCoverage.java`
+- Test: `src/test/java/com/openggf/game/resources/TestPlcObjectOwnedFadeLifecycle.java`
+- Test: `src/test/java/com/openggf/game/resources/TestPlcProviderOwnedFadeLifecycle.java`
 - Test: `src/test/java/com/openggf/game/sonic1/resources/TestSonic1PlcLifecycle.java`
 - Test: `src/test/java/com/openggf/game/sonic2/resources/TestSonic2PlcLifecycle.java`
 
 **Interfaces:**
-- Consumes: `PlcVBlankService`, `Sonic1PlcService.prepare()`, `Sonic2PlcService.prepare()`.
-- Produces: exact lifecycle calls for three/six/nine-pattern service and head preparation.
+- Consumes: `PlcLifecyclePhase`, the active module's optional
+  `PlcLifecycleService`, and the existing S1/S2 queue façades.
+- Produces:
+
+```java
+public enum PlcLifecyclePhase {
+    LAG,
+    TITLE_SCREEN,
+    LEVEL_SELECT,
+    LEVEL_TITLE_CARD,
+    ORDINARY_LEVEL,
+    PALETTE_FADE,
+    SPECIAL_STAGE,
+    SPECIAL_STAGE_RESULTS,
+    TWO_PLAYER_RESULTS,
+    CREDITS_TEXT,
+    CREDITS_DEMO,
+    CREDITS_DEMO_FADE,
+    ENDING,
+    POST_CREDITS,
+    NORMAL_PAUSE,
+    SPECIAL_STAGE_PAUSE
+}
+
+public interface PlcLifecycleService {
+    void serviceVBlank(PlcLifecyclePhase phase);
+    boolean hasPreparationBoundary(PlcLifecyclePhase phase);
+    void prepareAfterLoop(PlcLifecyclePhase phase);
+}
+```
+
+`PlcVBlankService` must not remain as a second independently invoked service
+port. Either remove it or fold it into the semantic port and migrate every
+caller in the same task. S1/S2 expose exactly one adapter instance through
+their module service graph; S3K exposes none.
+
+`PlcFrameLifecycleCoordinator` owns one single-use frame token per represented
+VBlank. Its concrete contract is the one in the reviewed design:
+`latchBeforeFadeUpdate()`, an explicit native-blocking-fade marker, token
+`claim(phase)`, `prepareAfterLoop(phase)`, and `finish()`.
+
+It implements the game-neutral `NativeFadeLifecycle` marker port and is stored
+on `GameplayModeContext`. Objects receive that port only through
+`ObjectServices` / `DefaultObjectServices`. Provider fade code receives it
+through `NativeFadeLifecycleAware`, bound by `GameLoop` before provider
+initialization; `Sonic1EndingProvider` passes it into
+`Sonic1CreditsManager`. Do not add a `GameServices` accessor, call
+`SessionManager` from a provider, use `getInstance()`, or branch on game name.
 
 - [ ] **Step 1: Write ordering RED tests**
 
-Use a recording service to assert:
+Use a recording service to assert the ordinary level loop:
 
 ```java
 assertEquals(
@@ -564,18 +648,100 @@ assertEquals(
         observedCalls);
 ```
 
-This example is the ordinary level-loop case only; title, fade, title-card,
-results, and special-stage tests use their Task 1-pinned call order.
+Add a table-driven façade test for the reviewed phase matrix:
 
-Add separate cases for a lag/VBlank-only row, ordinary level frame, title-card
-frame, fade frame, special-stage results frame, and a completed-entry boundary.
-The completed-entry case must prove the next entry is not serviced until a
-later prepare/service pair.
+```text
+S1:
+  9 = title, level-select, title-card, fade, special-results,
+      credits-text, ending, post-credits
+  3 = ordinary-level, credits-demo, credits-demo-fade, normal-pause
+  0 = lag, special-stage, special-stage-pause
 
-Add an object-scan ordering test in which an earlier-slot producer submits a
-PLC and a later-slot consumer observes busy in the same scan. Reverse the slots
-and prove the earlier consumer's observation is unchanged. Repeat for the
-reviewed clear/replace semantics.
+S2:
+  6 = title, level-select, title-card, fade, two-player-results
+  3 = ordinary-level, special-stage, special-results, normal-pause
+  0 = lag, credits/ending/post-credits, special-stage-pause
+```
+
+Pin preparation independently from service:
+
+```text
+S1 prepare = title, level-select, title-card, ordinary-level, fade,
+             special-results, credits-text, credits-demo
+S2 prepare = title, title-card, ordinary-level, fade, special-stage,
+             special-results, two-player-results
+```
+
+S2's implemented level-select loop deliberately has no `RunPLC_RAM`; S1
+credits-demo-fade, ending/post-credits, and both pause loops deliberately have
+no preparation. `CREDITS_DEMO_FADE` is not applicable to S2.
+Assert every omitted phase is a no-op rather than relying only on positive
+cases.
+
+Add lifecycle-order cases for:
+
+- lag/VBlank-only rows: no PLC service and no preparation;
+- native normal pause: three-pattern service and no preparation;
+- special-stage pause: no service and no preparation;
+- ordinary level: service before events/objects, preparation after the full
+  producer/consumer scan;
+- locked title card: title-card budget before provider/object work and
+  preparation afterward, without the nested ordinary-level budget;
+- palette fade: exactly one fast/normal service and one preparation when the
+  transition explicitly owns a native fade loop;
+- native-fade completion: latch the fade token, let `FadeManager.update()`
+  invoke a callback that changes mode, then prove the outgoing fade receives
+  exactly one service/preparation pair and the incoming phase cannot claim
+  until the next token;
+- cosmetic overlay: advance the fade presentation without a native marker and
+  prove the admitted underlying phase remains the sole PLC owner;
+- multi-step presentation: execute two logical iterations inside one host
+  update and prove two separately latched tokens/fade advances rather than one
+  host-frame-scoped owner;
+- title and level select;
+- S1 credits text/demo and ending/post-credits;
+- S1 credits demo slow fade: all 60 `CREDITS_DEMO_FADE` iterations service
+  three and perform zero preparations, while ordinary `CREDITS_DEMO` still
+  services three and prepares;
+- S1/S2 special stage and special-stage results;
+- S2 two-player results if and only if the engine has a real owner for that
+  lifecycle; otherwise record it as dormant instead of manufacturing a mode;
+- a completed-entry boundary proving the successor is first serviced on a
+  later prepare/service pair; and
+- a test-only object scan in which an earlier callback invokes append, clear,
+  or replace directly on a recording/pre-seeded façade and a later callback
+  observes `isBusy()`, plus the reversed order. This pins synchronous slot
+  visibility without routing any real producer or rendering art; Task 5 repeats
+  it through production producer owners; and
+- an S3K module with no PLC adapter, proving the existing
+  `VINT_SERVICE -> PRE_MAIN_LOOP -> POST_OBJECTS` callbacks occur once and in
+  their prior order.
+
+Run paired live/headless cases for ordinary level, recorded lag, native pause,
+S2 locked title card, special stage, and special-stage results. Each pair must
+produce the same token claim, service, and preparation sequence.
+
+Add production-owner completion cases:
+
+- drive either results object through fade completion and assert its
+  level/mode callback plus callback-started reveal cannot claim the outgoing
+  `PALETTE_FADE` token; the reveal owns the next token;
+- drive a bound S1 credits/post-credits transition and an S2 ending/credits
+  transition through completion and assert the new provider phase first owns
+  the next token; and
+- repeat one object-owned and one provider-owned case through the headless
+  logical-iteration driver without `Engine.display()`, comparing its
+  claim/service/preparation events with the live driver.
+
+`TestNativePlcFadeOwnerCoverage` pins the design's audited inventory and fails
+when an S1/S2 production fade call lacks a marked/unmarked classification.
+In particular it pins S1 `SS_FinLoop`, credits `Level_FadeDemo`, and the ending
+emerald flash as unmarked concurrent work, and pins `Level_FadeDemo` to
+`CREDITS_DEMO_FADE` rather than ordinary `CREDITS_DEMO`.
+
+Do not add real queue submissions to title/results/fade production code in
+these tests. Pre-seed the façade queue or use a recording adapter. Task 5 owns
+producer/render composition and same-scan append/clear/replace tests.
 
 - [ ] **Step 2: Run RED**
 
@@ -583,41 +749,181 @@ Run:
 
 ```bash
 mvn -Dmse=off \
-  "-Dtest=TestPlcVBlankOrdering,TestSonic1PlcLifecycle,TestSonic2PlcLifecycle" test
+  "-Dtest=TestPlcVBlankOrdering,TestPlcFrameLifecycleCoordinator,TestPlcLifecycleDriverParity,TestSonic1PlcLifecycle,TestSonic2PlcLifecycle" test
 ```
 
-Expected: failures because the lifecycle does not call the services.
+Expected: failures because the ordinary-only port cannot express the phase
+matrix or preparation boundary.
 
-- [ ] **Step 3: Add the semantic VBlank hook**
+- [ ] **Step 3: Replace the partial port with the semantic adapter**
 
-Expose an optional `PlcVBlankService` through the game lifecycle/provider used
-by `LevelFrameStep`. Invoke it at the selected VBlank boundary before ordinary
-events/objects. Do not test game identity in `LevelFrameStep`.
+Add `PlcLifecyclePhase` and `PlcLifecycleService`. Make each S1/S2 façade map
+the table above to its existing `serviceLevelVBlank`,
+`serviceFastVBlank` / `serviceNormalVBlank`, and `prepare` methods. Keep those
+low-level methods package-private or otherwise prevent alternate lifecycle
+callers from bypassing the semantic table.
 
-- [ ] **Step 4: Add phase-owned fast service and preparation**
+Expose the same façade instance through the new interface. Remove the old
+ordinary-only lookup after migrating its callers. No shared class may inspect
+`GameId`, a game name, a zone, a trace, or a frame number.
 
-Connect title-card, fade, results, credits, and special-stage owners according
-to the Task 1 table. Call `prepare()` only where the ROM calls
-`RunPLC`/`RunPLC_RAM`; do not globally prepare every frame.
+- [ ] **Step 4: Implement the pre-fade lifecycle coordinator**
 
-- [ ] **Step 5: Run GREEN**
+Create the session-owned `PlcFrameLifecycleCoordinator` and single-use
+`PlcLifecycleFrame` contract from the design. A native transition call site
+must call `beginNativeBlockingFade()` immediately before starting its
+`FadeManager` operation and wrap even a no-op completion. Cosmetic overlays do
+not acquire the marker.
+
+For every logical iteration:
+
+```text
+frame = latchBeforeFadeUpdate()
+if native fade:
+    service PALETTE_FADE
+advance FadeManager once
+if native fade:
+    prepare PALETTE_FADE
+run/skip mode logic with the same token
+finish token
+```
+
+The completion wrapper ends the marker before invoking the mode-changing
+callback, but cannot change the already-latched token. Assert that the incoming
+mode cannot claim it and begins on the next represented VBlank.
+
+Migrate every marked owner named in the design audit. Objects acquire the port
+only from `services().nativeFadeLifecycle()`; ending providers use their bound
+port; `SpecialStageEntryPresentationController` receives it from `GameLoop`.
+Leave S1 `SS_FinLoop`, `Level_FadeDemo`, and ending emerald flash unmarked.
+Their underlying phases are `SPECIAL_STAGE`, `CREDITS_DEMO_FADE`, and
+`ENDING`, respectively. Add a neutral optional semantic-phase override to
+`EndingProvider`; `Sonic1EndingProvider` returns `CREDITS_DEMO_FADE` exactly
+while `Sonic1CreditsManager` reports `DEMO_FADING_OUT`. The shared lifecycle
+owner consults the override before mapping `EndingPhase`; it must not inspect
+game identity or provider class.
+
+Move active-session logical fade advancement out of the unconditional
+`Engine.display()` UI update and into the one-logical-iteration driver.
+`Engine` keeps the UI fade updater only when no gameplay coordinator owns the
+session fade. User-recording fast-forward/pumped steps each create a fresh
+token and advance the fade once. Headless drivers invoke the same coordinator
+with the session `FadeManager.update` callback; no OpenGL code owns PLC policy.
+
+- [ ] **Step 5: Replace `LevelFrameStep` with the canonical phase-aware API**
+
+Implement only these production entry shapes:
+
+```java
+execute(context, frame, phase, level, camera, spriteUpdate, wrapper)
+executeWithPause(context, frame, activePhase, pausePhase,
+                 level, camera, spriteUpdate, startEdge, wrapper)
+executeHardwareTimedObjectScan(context, frame, phase, objectScan)
+serviceVBlankOnly(context, frame, phase)
+```
+
+Remove the no-phase production overloads and migrate direct callers.
+`execute` claims before phase-owned work and prepares immediately after the
+object/event producer-consumer scan and existing `POST_OBJECTS` boundary,
+before any transition-request early return. Setup-only returns do not claim.
+Do not prepare from a generic `finally`.
+
+`executeWithPause` applies the Start edge once. A still-paused frame calls
+`serviceVBlankOnly(..., pausePhase)` and never prepares; an unpause press
+delegates to `execute(..., activePhase)` on that row. Ordinary level uses
+`ORDINARY_LEVEL` / `NORMAL_PAUSE`; represented special-stage pause uses
+`SPECIAL_STAGE` / `SPECIAL_STAGE_PAUSE`.
+
+Restrict `serviceVBlankOnly` to:
+
+```text
+native level pause                    -> NORMAL_PAUSE
+recorded level lag / held admission   -> LAG
+recorded special-stage lag            -> LAG
+native special-stage pause            -> SPECIAL_STAGE_PAUSE
+```
+
+S3K-only setup/bonus held rows use a hardware-boundary-only helper because
+they represent no S1/S2 PLC handler.
+
+- [ ] **Step 6: Migrate every live, trace, recording, and rewind caller**
+
+Wire the adapter at the smallest existing lifecycle owner:
+
+- `LevelFrameStep` owns `ORDINARY_LEVEL` service before events/objects and
+  preparation after their complete scan. Its VBlank-only entry point must
+  accept `LAG`, `NORMAL_PAUSE`, or `SPECIAL_STAGE_PAUSE` explicitly; it must
+  not infer all VBlank-only rows are lag.
+- `GameLoop.updateTitleCardMode` owns one `LEVEL_TITLE_CARD` pair around the
+  provider/native title-card scan. The S2 branch that delegates its body to
+  `LevelFrameStep` must not also invoke `ORDINARY_LEVEL`.
+- title and level-select owners wrap their provider update with their semantic
+  phase. A phase with no reviewed preparation remains service-only.
+- special-stage and special-results owners service before their object/results
+  update and prepare after it. A skipped trace lag row selects `LAG`, never the
+  nominal special-stage phase.
+- credits text/demo, ending, and post-credits owners use their explicit phases.
+  Preserve the table's service-without-prepare and no-service cases.
+- native normal pause selects `NORMAL_PAUSE`; unpause resumes the ordinary
+  level phase on the unpause press row, matching `GameStateManager`'s existing
+  admission contract.
+
+Audit and migrate `RecordingFrameDriver`,
+`TraceSessionLauncher.VisualTraceRewindStepper`, `LiveRewindStepper`,
+`SpecialStageStepper`, and every `executeWithPause`,
+`serviceVBlankOnly`, and `executeHardwareTimedObjectScan` call. A caller that
+cannot represent an S1/S2 PLC VBlank must use the named hardware-only helper,
+not an implicit ordinary phase.
+
+The S2 locked-title-card path passes its one token and
+`LEVEL_TITLE_CARD` directly into phase-aware `LevelFrameStep.execute`. It must
+not wrap that call in an external title-card service and must not call an
+ordinary overload. The S1 minimal title-card scan and S3K provider scan pass
+their token and semantic title-card phase to
+`executeHardwareTimedObjectScan`.
+
+Call `prepareAfterLoop` only at the represented call site. Do not prepare at
+frame start, in a generic `finally`, after lag/pause, or from
+`HardwareServiceBoundary`.
+
+- [ ] **Step 7: Protect S3K timing and Task 5 ownership**
+
+The semantic PLC call must be adjacent to, not embedded in, the S3K hardware
+timing dispatcher. It must not invoke `HardwareTimingService.service`,
+`RuntimeArtCoordinator.afterTimingService`, or either S3K Kos queue. Keep the
+existing hardware-boundary tests byte-for-byte in intent and add a no-adapter
+case if needed.
+
+Task 4 production code calls only `serviceVBlank` and
+`prepareAfterLoop`. It must not call `append`, `replaceQueued`, `clearQueued`,
+`PlcParser`, an eager art provider, or renderer registration. Same-object-scan
+visibility is tested here only through test-owned callbacks; Task 5 owns every
+real producer/render composition path.
+
+- [ ] **Step 8: Run GREEN**
 
 Run:
 
 ```bash
 mvn -Dmse=off \
-  "-Dtest=TestPlcVBlankOrdering,TestSonic1PlcLifecycle,TestSonic2PlcLifecycle,TestLevelFrameHardwareTimingBoundaries" test
+  "-Dtest=TestPlcVBlankOrdering,TestPlcFrameLifecycleCoordinator,TestPlcLifecycleDriverParity,TestSonic1PlcLifecycle,TestSonic2PlcLifecycle,TestNativePlcFadeOwnerCoverage,TestPlcObjectOwnedFadeLifecycle,TestPlcProviderOwnedFadeLifecycle,TestLevelFrameHardwareTimingBoundaries" test
 ```
 
-Expected: all tests pass, including the existing S3K hardware timing boundary
-test.
+Expected: all lifecycle tests pass, including the existing S3K hardware timing
+boundary test. Also run:
 
-- [ ] **Step 6: Commit lifecycle ordering**
+```bash
+mvn -Dmse=off \
+  "-Dtest=TestLevelIterationHardwareTimingAdmissionOrder,TestS3kKosDecompressionQueueLifecycle" test
+```
 
-Commit:
+- [ ] **Step 9: Commit the Task 4 completion**
+
+`37beb532d` already used the originally planned commit subject for the partial
+ordinary-level seam. Commit the reviewed completion as:
 
 ```text
-feat(plc): service queues at ROM lifecycle boundaries
+fix(plc): complete phase-owned PLC lifecycle
 ```
 
 Use `Changelog: updated`.
