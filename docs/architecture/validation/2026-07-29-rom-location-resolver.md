@@ -125,3 +125,37 @@ This tranche deliberately does not migrate:
 
 Fingerprint enforcement is also deferred; `NONE` remains the compatibility
 policy.
+
+## Updated `develop` reconciliation
+
+Before integration, `develop` advanced from `aa26f4494` to `91793401e` with
+the S3K seamless-transition Kosinski work. Merging that baseline into the
+feature produced one README conflict; both independent release bullets were
+preserved in merge commit `d04e4fc17`.
+
+The combined focused matrix was rerun at `d04e4fc17` and remained green:
+102 tests, 0 failures, 0 errors, and 0 skipped.
+
+A host-native clean same-ROM comparison was then run because sandboxed GLFW
+tests skip rather than exercise the same paths:
+
+| Revision | Tests | Failures | Errors | Skipped |
+|---|---:|---:|---:|---:|
+| Updated base `91793401e` | 13,561 | 1 | 3 | 13 |
+| Reconciled feature `d04e4fc17` | 13,592 | 2 | 3 | 13 |
+
+Both revisions have the original `TestGameLoop` failure/error and the same two
+`TestS3kCnzVisualCapture` initial-epoch errors. The additional feature failure
+was a nondeterministic
+`TestS3kSignpostInstance#fallingDispatchSkipsExpiringCooldownThenAppliesBumpBeforeGravity`
+result: it was absent from the preceding feature full-suite sample and passed
+on an immediate focused rerun. `TestRequiresRom` also passed focused after two
+separate clean samples exposed an intermittent four-fork LWJGL native
+extraction crash. These outliers are recorded rather than counted as resolver
+regressions: neither touches the changed production paths, both vary between
+unchanged feature samples, and both pass focused on the reconciled tree.
+
+The updated clean comparison therefore found no reproducible base-passing
+regression attributable to this branch. The focused resolver/manager/tool
+matrix is the deterministic integration gate; post-merge validation repeats
+that matrix and the full same-ROM suite on `develop`.
