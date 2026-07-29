@@ -40,6 +40,10 @@ public enum SonicConfiguration {
 	 * Frames per second to render. Will make the game faster/slower!
 	 */
 	FPS,
+	/**
+	 * Normal-play simulation policy for ROM-backed load queues.
+	 */
+	LOAD_TIME_SIMULATION,
 	/*
 	 * ALWAYS DEFINE BUTTONS IN THE ORDER: UP, DOWN, LEFT, RIGHT. NOT FOR ANY
 	 * TECHNICAL REASON, JUST BECAUSE LEVEL SELECT.
