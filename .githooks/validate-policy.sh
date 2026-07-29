@@ -5,7 +5,14 @@ set -eu
 GITHUB_FILE_SIZE_LIMIT_BYTES=100000000
 TRACE_COMPRESSION_THRESHOLD_BYTES=1048576
 RELEASE_TRAILER_CUTOVER_BASE=677447024a08db9e25f3461588d661c23ba26848
+RESOURCE_POLICY_CUTOVER=268fb374f77ec7b156e780d0cebb33b3e88e81ac
 ROM_LIKE_DENYLIST_EXTENSIONS=".gen .smd .bin .sms .gg .32x"
+EMPTY_TREE_OID=4b825dc642cb6eb9a060e54bf8d69288fbee4904
+ALL_ZERO_OID=0000000000000000000000000000000000000000
+POSIX_HOME_ROOT=/home
+VAR_HOME_ROOT=/var/home
+MACOS_HOME_ROOT=/Users
+WINDOWS_USERS_ROOT='[A-Za-z]:[\\/]+[Uu][Ss][Ee][Rr][Ss]'
 
 die() {
     echo "policy: $*" >&2
@@ -39,11 +46,34 @@ is_merge_from_master() {
 }
 
 staged_files() {
-    git diff --cached --name-only --diff-filter=ACMR
+    git diff --cached --name-only --diff-filter=ACMRT
+}
+
+staged_candidates() {
+    merge_oid=$(merge_head_oid)
+    if [ -n "$merge_oid" ]; then
+        git diff --cached --no-renames --name-only --diff-filter=AMT "$merge_oid"
+        return
+    fi
+    if git rev-parse -q --verify HEAD >/dev/null 2>&1; then
+        git diff --cached --no-renames --name-only --diff-filter=AMT HEAD
+    else
+        git diff --cached --no-renames --name-only --diff-filter=AMT
+    fi
 }
 
 commit_files() {
-    git diff-tree --root --no-commit-id --name-only --diff-filter=ACMR -r "$1"
+    git diff-tree --root --no-commit-id --name-only --diff-filter=ACMRT -r "$1"
+}
+
+commit_parent_or_empty_tree() {
+    git rev-parse -q --verify "$1^1" 2>/dev/null || printf '%s\n' "$EMPTY_TREE_OID"
+}
+
+commit_candidates() {
+    commit=$1
+    parent=$(commit_parent_or_empty_tree "$commit")
+    git diff --no-renames --name-only --diff-filter=AMT "$parent" "$commit"
 }
 
 staged_blob_size() {
@@ -52,6 +82,72 @@ staged_blob_size() {
 
 commit_blob_size() {
     git cat-file -s "$1:$2" 2>/dev/null || true
+}
+
+staged_entry_mode() {
+    git ls-files --stage -- ":(literal)$1" | awk '$3 == "0" { print $1; exit }'
+}
+
+commit_entry_mode() {
+    git ls-tree "$1" -- ":(literal)$2" | awk '{ print $1; exit }'
+}
+
+staged_blob() {
+    git cat-file blob ":$1"
+}
+
+commit_blob() {
+    git cat-file blob "$1:$2"
+}
+
+is_protected_resource_path() {
+    case "$1" in
+        config.yaml|*.gen|docs/s1disasm|docs/s2disasm|docs/kis2disasm|docs/scddisasm|docs/skdisasm)
+            return 0
+            ;;
+    esac
+    return 1
+}
+
+is_absolute_link_target() {
+    case "$1" in
+        /*|[A-Za-z]:[\\/]*|\\\\*)
+            return 0
+            ;;
+    esac
+    return 1
+}
+
+is_root_scratch_path() {
+    case "$1" in
+        */*)
+            return 1
+            ;;
+    esac
+    case "$1" in
+        MERGE-STATUS*.md|HANDOVER*.md)
+            return 0
+            ;;
+    esac
+    return 1
+}
+
+staged_blob_has_machine_local_home() {
+    git grep --cached -I -q -E \
+        -e "$POSIX_HOME_ROOT/"'[^/$<[:space:]][^/[:space:]]*/' \
+        -e "$VAR_HOME_ROOT/"'[^/$<[:space:]][^/[:space:]]*/' \
+        -e "$MACOS_HOME_ROOT/"'[^/$<[:space:]][^/[:space:]]*/' \
+        -e "$WINDOWS_USERS_ROOT"'[\\/]+[^\\/$<%[:space:]][^\\/[:space:]]*[\\/]' \
+        -- ":(literal)$1"
+}
+
+commit_blob_has_machine_local_home() {
+    git grep -I -q -E \
+        -e "$POSIX_HOME_ROOT/"'[^/$<[:space:]][^/[:space:]]*/' \
+        -e "$VAR_HOME_ROOT/"'[^/$<[:space:]][^/[:space:]]*/' \
+        -e "$MACOS_HOME_ROOT/"'[^/$<[:space:]][^/[:space:]]*/' \
+        -e "$WINDOWS_USERS_ROOT"'[\\/]+[^\\/$<%[:space:]][^\\/[:space:]]*[\\/]' \
+        "$1" -- ":(literal)$2"
 }
 
 is_rom_like_path() {
@@ -177,6 +273,86 @@ append_error() {
     else
         ERRORS="${ERRORS}
 - $1"
+    fi
+}
+
+validate_content_candidates() {
+    files=$1
+    source=$2
+    commit=${3:-}
+    old_ifs=$IFS
+    IFS='
+'
+    for path in $files; do
+        [ -n "$path" ] || continue
+
+        if is_root_scratch_path "$path"; then
+            append_error "\`$path\` is a root-level merge/handover scratch artifact. Classify retained engineering material under \`docs/architecture/\`."
+        fi
+
+        if [ "$source" = "commit" ]; then
+            mode=$(commit_entry_mode "$commit" "$path")
+        else
+            mode=$(staged_entry_mode "$path")
+        fi
+        if [ -z "$mode" ]; then
+            append_error "\`$path\` could not be read from the ${source} candidate set."
+            continue
+        fi
+
+        if [ "$mode" = "120000" ]; then
+            if is_protected_resource_path "$path"; then
+                append_error "\`$path\` is a generated worktree resource and must not be committed as a symlink."
+            fi
+
+            if [ "$source" = "commit" ]; then
+                if ! target=$(commit_blob "$commit" "$path" 2>/dev/null); then
+                    append_error "\`$path\` is a symlink whose committed target blob could not be read."
+                    continue
+                fi
+            else
+                if ! target=$(staged_blob "$path" 2>/dev/null); then
+                    append_error "\`$path\` is a symlink whose staged target blob could not be read."
+                    continue
+                fi
+            fi
+            if is_absolute_link_target "$target"; then
+                append_error "\`$path\` has an absolute symlink target. Use a repository-relative target or keep the link untracked."
+            fi
+        fi
+
+        if [ "$source" = "commit" ]; then
+            if commit_blob_has_machine_local_home "$commit" "$path"; then
+                append_error "\`$path\` contains a machine-local user-home path. Use a repository-relative path, environment variable, or neutral placeholder."
+            else
+                grep_status=$?
+                if [ "$grep_status" -gt 1 ]; then
+                    append_error "\`$path\` could not be inspected for machine-local paths."
+                fi
+            fi
+        else
+            if staged_blob_has_machine_local_home "$path"; then
+                append_error "\`$path\` contains a machine-local user-home path. Use a repository-relative path, environment variable, or neutral placeholder."
+            else
+                grep_status=$?
+                if [ "$grep_status" -gt 1 ]; then
+                    append_error "\`$path\` could not be inspected for machine-local paths."
+                fi
+            fi
+        fi
+    done
+    IFS=$old_ifs
+}
+
+validate_staged_content() {
+    files=$(staged_candidates)
+    ERRORS=""
+    validate_file_size_policy "$files" staged
+    validate_content_candidates "$files" staged
+    if [ -n "$ERRORS" ]; then
+        note "staged content violates the repository resource policy."
+        echo "$ERRORS" >&2
+        exit 1
     fi
 }
 
@@ -499,6 +675,8 @@ validate_commit_msg_hook() {
     msg_file=$1
     branch=$(current_branch)
 
+    validate_staged_content
+
     if [ "$branch" = "master" ]; then
         return 0
     fi
@@ -511,6 +689,133 @@ validate_commit_msg_hook() {
     message=$(cat "$msg_file")
     files=$(staged_files)
     validate_non_master_commit_message "$message" "$files"
+}
+
+validate_commit_content() {
+    commit=$1
+    files=$(commit_candidates "$commit")
+    ERRORS=""
+    validate_file_size_policy "$files" commit "$commit"
+    validate_content_candidates "$files" commit "$commit"
+    if [ -n "$ERRORS" ]; then
+        note "commit $commit violates the repository resource policy."
+        echo "$ERRORS" >&2
+        exit 1
+    fi
+}
+
+validate_tip_tree_links() {
+    tip=$1
+    if ! git cat-file -e "$tip^{commit}" 2>/dev/null; then
+        die "required pushed tip $tip is not available as a commit."
+    fi
+    if ! canonical_tip=$(git rev-parse "$tip^{commit}" 2>/dev/null); then
+        die "could not resolve delivered tip $tip to its full object id."
+    fi
+    expected_oid_length=${#canonical_tip}
+
+    if ! tree_entries=$(git ls-tree -r "$tip"); then
+        die "could not enumerate delivered tip tree $tip."
+    fi
+    ERRORS=""
+    old_ifs=$IFS
+    IFS='
+'
+    for entry in $tree_entries; do
+        [ -n "$entry" ] || continue
+        case "$entry" in
+            *"	"*)
+                metadata=${entry%%	*}
+                path=${entry#*	}
+                ;;
+            *)
+                die "delivered tip tree $tip contains a malformed entry: $entry"
+                ;;
+        esac
+        mode=${metadata%% *}
+        remaining_metadata=${metadata#* }
+        object_type=${remaining_metadata%% *}
+        object_oid=${remaining_metadata#* }
+        if [ "$mode" = "$metadata" ] ||
+            [ "$object_type" = "$remaining_metadata" ] ||
+            [ -z "$object_oid" ] ||
+            [ -z "$path" ]; then
+            die "delivered tip tree $tip contains malformed metadata for $path."
+        fi
+        case "$object_oid" in
+            *[!0-9a-f]*)
+                die "delivered tip tree $tip contains a malformed object id for $path."
+                ;;
+        esac
+        if [ "${#object_oid}" -ne "$expected_oid_length" ]; then
+            die "delivered tip tree $tip contains a truncated object id for $path."
+        fi
+        case "$mode:$object_type" in
+            100644:blob|100755:blob|160000:commit)
+                continue
+                ;;
+            120000:blob)
+                ;;
+            *)
+                die "delivered tip tree $tip contains unsupported metadata \`$metadata\` for $path."
+                ;;
+        esac
+
+        if is_protected_resource_path "$path"; then
+            append_error "\`$path\` is a generated worktree resource symlink in delivered tip $tip."
+        fi
+        if ! target=$(git cat-file blob "$object_oid" 2>/dev/null); then
+            append_error "\`$path\` is a symlink whose delivered target blob could not be read."
+            continue
+        fi
+        if is_absolute_link_target "$target"; then
+            append_error "\`$path\` has an absolute symlink target in delivered tip $tip."
+        fi
+    done
+    IFS=$old_ifs
+
+    if [ -n "$ERRORS" ]; then
+        note "delivered tip $tip violates the repository resource policy."
+        echo "$ERRORS" >&2
+        exit 1
+    fi
+}
+
+validate_content_commit_list() {
+    commits=$1
+    tip=$2
+    old_ifs=$IFS
+    IFS='
+'
+    for commit in $commits; do
+        [ -n "$commit" ] || continue
+        if ! git cat-file -e "$commit^{commit}" 2>/dev/null; then
+            die "required pushed commit $commit is not available."
+        fi
+        validate_commit_content "$commit"
+    done
+    IFS=$old_ifs
+    validate_tip_tree_links "$tip"
+}
+
+commits_in_range() {
+    base=$1
+    head=$2
+    if ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+        die "required range base $base is not available as a commit."
+    fi
+    if ! git cat-file -e "$head^{commit}" 2>/dev/null; then
+        die "required range head $head is not available as a commit."
+    fi
+    git rev-list --reverse "$base..$head" ||
+        die "could not enumerate commit range $base..$head."
+}
+
+validate_content_range() {
+    base=$1
+    head=$2
+    commits=$(commits_in_range "$base" "$head")
+    validate_content_commit_list "$commits" "$head"
 }
 
 validate_ci_pr() {
@@ -532,6 +837,7 @@ validate_ci_pr() {
         fi
 
         if [ "$head_ref" = "master" ]; then
+            validate_content_range "$effective_base" "$head_sha"
             return 0
         fi
     fi
@@ -543,12 +849,20 @@ validate_ci_commit_range() {
     effective_base=$1
     head_sha=$2
 
-    for commit in $(git rev-list --reverse --no-merges "$effective_base..$head_sha"); do
+    commits=$(commits_in_range "$effective_base" "$head_sha")
+    validate_content_commit_list "$commits" "$head_sha"
+
+    for commit in $commits; do
+        parent_line=$(git rev-list --parents -n 1 "$commit")
+        set -- $parent_line
+        if [ "$#" -gt 2 ]; then
+            continue
+        fi
+
         message=$(git show -s --format=%B "$commit")
-        files=$(commit_files "$commit")
+        files=$(commit_candidates "$commit")
         ERRORS=""
 
-        validate_file_size_policy "$files" commit "$commit"
         validate_exact_trailer "$message" "$files" "Changelog" "CHANGELOG.md" "CHANGELOG.md"
         validate_changelog_justification "$message" "$files"
         validate_prefix_trailer "$message" "$files" "Guide" "docs/guide/" "docs/guide/"
@@ -567,23 +881,65 @@ validate_ci_commit_range() {
     done
 }
 
+validate_pre_push() {
+    remote_name=${1:-}
+    if [ -z "$remote_name" ] || ! git remote get-url "$remote_name" >/dev/null 2>&1; then
+        die "pre-push could not resolve remote name \`${remote_name:-<empty>}\`; refusing to guess the published-history boundary."
+    fi
+
+    while IFS=' ' read -r local_ref local_oid remote_ref remote_oid; do
+        [ -n "${local_ref:-}" ] || continue
+        if [ "${local_oid:-}" = "$ALL_ZERO_OID" ]; then
+            continue
+        fi
+        if ! git cat-file -e "$local_oid^{commit}" 2>/dev/null; then
+            die "required local object $local_oid for $local_ref is not available as a commit."
+        fi
+
+        if [ "${remote_oid:-}" = "$ALL_ZERO_OID" ]; then
+            commits=$(git rev-list --reverse "$local_oid" --not --remotes="$remote_name") ||
+                die "could not enumerate unpublished commits for new ref $remote_ref."
+            validate_content_commit_list "$commits" "$local_oid"
+            continue
+        fi
+
+        if ! git cat-file -e "$remote_oid^{commit}" 2>/dev/null; then
+            die "required remote object $remote_oid for $remote_ref is not available as a commit."
+        fi
+        validate_content_range "$remote_oid" "$local_oid"
+    done
+}
+
+validate_ci_new_ref() {
+    after_sha=$1
+    if ! git cat-file -e "$RESOURCE_POLICY_CUTOVER^{commit}" 2>/dev/null; then
+        die "resource-policy cutover $RESOURCE_POLICY_CUTOVER is not available as a commit."
+    fi
+    if ! git cat-file -e "$after_sha^{commit}" 2>/dev/null; then
+        die "required pushed tip $after_sha is not available as a commit."
+    fi
+    if ! git merge-base --is-ancestor "$RESOURCE_POLICY_CUTOVER" "$after_sha"; then
+        die "resource-policy cutover $RESOURCE_POLICY_CUTOVER is not an ancestor of new-ref tip $after_sha."
+    fi
+    validate_content_range "$RESOURCE_POLICY_CUTOVER" "$after_sha"
+}
+
 validate_ci_push() {
     before_sha=$1
     after_sha=$2
     ref_name=$3
 
-    case "$before_sha" in
-        0000000000000000000000000000000000000000)
-            before_sha=$(git rev-parse "$after_sha^" 2>/dev/null || printf '%s\n' "$after_sha")
-            ;;
-    esac
+    if [ "$before_sha" = "$ALL_ZERO_OID" ]; then
+        validate_ci_new_ref "$after_sha"
+        return 0
+    fi
 
-    if [ "$ref_name" = "develop" ]; then
+    if [ "$ref_name" = "develop" ] || [ "$ref_name" = "master" ]; then
         validate_ci_commit_range "$before_sha" "$after_sha"
         return 0
     fi
 
-    validate_ci_pr "$before_sha" "$after_sha" "$ref_name" "$ref_name"
+    validate_content_range "$before_sha" "$after_sha"
 }
 
 mode=${1:-}
@@ -595,6 +951,12 @@ case "$mode" in
     commit-msg)
         validate_commit_msg_hook "$2"
         ;;
+    pre-commit)
+        validate_staged_content
+        ;;
+    pre-push)
+        validate_pre_push "${2:-}"
+        ;;
     pre-merge-commit)
         validate_merge_into_develop
         ;;
@@ -605,6 +967,6 @@ case "$mode" in
         validate_ci_push "$2" "$3" "$4"
         ;;
     *)
-        die "usage: $0 {prepare-commit-msg|commit-msg|pre-merge-commit|ci-pr|ci-push} ..."
+        die "usage: $0 {prepare-commit-msg|pre-commit|commit-msg|pre-merge-commit|pre-push|ci-pr|ci-push} ..."
         ;;
 esac
