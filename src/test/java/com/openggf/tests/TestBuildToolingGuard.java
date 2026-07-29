@@ -13,6 +13,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
@@ -1549,6 +1550,7 @@ class TestBuildToolingGuard {
         Files.writeString(mainRepository.resolve("docs/skdisasm/marker.txt"), "source\n");
         Path linkedWorktree = temporaryDirectory.resolve("checkout-linked-worktree");
         git(mainRepository, "worktree", "add", "-b", "feature/linked", linkedWorktree.toString());
+        Files.createDirectories(linkedWorktree.resolve("docs"));
 
         ProcessResult result = run(linkedWorktree, List.of("bash", POST_CHECKOUT_HOOK.toString(), ALL_ZERO_OID, ALL_ZERO_OID, "1"), null);
         assertEquals(0, result.exitCode(), () -> "post-checkout failed:\n" + result.output());
@@ -1557,6 +1559,64 @@ class TestBuildToolingGuard {
         Path target = Files.readSymbolicLink(link);
         assertFalse(target.isAbsolute(), "worktree link target must not contain an absolute machine path: " + target);
         assertEquals(mainRepository.resolve("docs/skdisasm").toRealPath(), link.getParent().resolve(target).toRealPath());
+    }
+
+    @Test
+    void postCheckoutCreatesRelativeDisassemblyLinkWhenDestinationParentIsMissing(@TempDir Path temporaryDirectory) throws Exception {
+        Path mainRepository = newRepository(temporaryDirectory, "missing-parent-main");
+        createInitialCommit(mainRepository);
+        Files.createDirectories(mainRepository.resolve("docs/skdisasm"));
+        Files.writeString(mainRepository.resolve("docs/skdisasm/marker.txt"), "source\n");
+        Path linkedWorktree = temporaryDirectory.resolve("missing-parent-worktree");
+        git(mainRepository, "worktree", "add", "-b", "feature/missing-parent", linkedWorktree.toString());
+        assertFalse(Files.exists(linkedWorktree.resolve("docs")), "fixture must start without the destination parent");
+
+        ProcessResult result = run(linkedWorktree, List.of("bash", POST_CHECKOUT_HOOK.toString(), ALL_ZERO_OID, ALL_ZERO_OID, "1"), null);
+        assertEquals(0, result.exitCode(), () -> "post-checkout failed:\n" + result.output());
+        Path link = linkedWorktree.resolve("docs/skdisasm");
+        assertTrue(Files.isSymbolicLink(link), "post-checkout must create the missing-parent disassembly link");
+        Path target = Files.readSymbolicLink(link);
+        assertFalse(target.isAbsolute(), "missing-parent worktree link target must remain relative: " + target);
+        assertEquals(mainRepository.resolve("docs/skdisasm").toRealPath(), link.getParent().resolve(target).toRealPath());
+    }
+
+    @Test
+    void postCheckoutFailsWithoutRemovingDestinationForUnsupportedCommonGitDirectory(@TempDir Path temporaryDirectory) throws Exception {
+        Path mainRepository = newRepository(temporaryDirectory, "unsupported-common-dir-main");
+        createInitialCommit(mainRepository);
+        Files.createDirectories(mainRepository.resolve("docs/skdisasm"));
+        Path linkedWorktree = temporaryDirectory.resolve("unsupported-common-dir-worktree");
+        git(mainRepository, "worktree", "add", "-b", "feature/unsupported-common-dir", linkedWorktree.toString());
+        Path destination = linkedWorktree.resolve("docs/skdisasm");
+        Files.createDirectories(destination);
+
+        Path fakeBin = temporaryDirectory.resolve("fake-bin");
+        Files.createDirectories(fakeBin);
+        Path fakeGit = fakeBin.resolve("git");
+        Files.writeString(fakeGit, """
+                #!/bin/sh
+                if [ \"$1\" = \"rev-parse\" ] && [ \"$2\" = \"--path-format=relative\" ] && [ \"$3\" = \"--git-common-dir\" ]; then
+                    echo unsupported-common-dir
+                    exit 0
+                fi
+                PATH=\"$ORIGINAL_PATH\"
+                export PATH
+                exec git \"$@\"
+                """);
+        assertTrue(fakeGit.toFile().setExecutable(true), "test git wrapper must be executable");
+        String originalPath = System.getenv("PATH");
+        String path = fakeBin + System.getProperty("path.separator") + originalPath;
+
+        ProcessResult result = run(linkedWorktree,
+                List.of("bash", POST_CHECKOUT_HOOK.toString(), ALL_ZERO_OID, ALL_ZERO_OID, "1"),
+                null,
+                Map.of("PATH", path, "ORIGINAL_PATH", originalPath));
+
+        assertTrue(result.exitCode() != 0, () -> "unsupported common Git directory must fail:\n" + result.output());
+        assertTrue(result.output().contains("Unsupported common Git directory"),
+                () -> "failure must explain the unsupported common Git directory:\n" + result.output());
+        assertTrue(Files.isDirectory(destination), "unsupported layout must not remove the empty destination directory");
+        assertFalse(Files.isSymbolicLink(destination), "unsupported layout must not create a destination link");
     }
 
     private static Path newRepository(Path temporaryDirectory, String name) throws Exception {
@@ -1662,9 +1722,14 @@ class TestBuildToolingGuard {
     }
 
     private static ProcessResult run(Path repository, List<String> command, String input) throws Exception {
+        return run(repository, command, input, Map.of());
+    }
+
+    private static ProcessResult run(Path repository, List<String> command, String input, Map<String, String> environment) throws Exception {
         ProcessBuilder builder = new ProcessBuilder(command)
                 .directory(repository.toFile())
                 .redirectErrorStream(true);
+        builder.environment().putAll(environment);
         Process process = builder.start();
         if (input != null) {
             process.getOutputStream().write(input.getBytes(StandardCharsets.UTF_8));
