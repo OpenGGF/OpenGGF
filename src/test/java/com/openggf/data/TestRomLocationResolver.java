@@ -155,6 +155,61 @@ class TestRomLocationResolver {
     }
 
     @Test
+    void factoryCapturesUserDirectoryAtConstruction() {
+        SonicConfigurationService configuration = configuration();
+        configuration.setConfigValue(SonicConfiguration.SONIC_1_ROM, "sonic.gen");
+        Path capturedWorkingDirectory = configDirectory.resolve("factory-working-directory").toAbsolutePath();
+        String originalUserDirectory = System.getProperty("user.dir");
+        try {
+            System.setProperty("user.dir", capturedWorkingDirectory.toString());
+            RomLocationResolver resolver = RomLocationResolver.forCurrentWorkingDirectory(configuration);
+            System.setProperty("user.dir", configDirectory.resolve("later-working-directory").toString());
+
+            RomLocation location = resolver.resolve(RomGame.S1).orElseThrow();
+
+            assertEquals(capturedWorkingDirectory.resolve("sonic.gen"), location.resolvedPath());
+        } finally {
+            restoreUserDirectory(originalUserDirectory);
+        }
+    }
+
+    @Test
+    void factoryFallsBackToProcessWorkingDirectoryWhenUserDirectoryIsUnavailable() {
+        SonicConfigurationService configuration = configuration();
+        configuration.setConfigValue(SonicConfiguration.SONIC_2_ROM, "sonic.gen");
+        Path expectedWorkingDirectory = Path.of("").toAbsolutePath().normalize();
+        String originalUserDirectory = System.getProperty("user.dir");
+        try {
+            System.clearProperty("user.dir");
+            RomLocation location = RomLocationResolver.forCurrentWorkingDirectory(configuration)
+                    .resolve(RomGame.S2)
+                    .orElseThrow();
+
+            assertEquals(expectedWorkingDirectory.resolve("sonic.gen"), location.resolvedPath());
+        } finally {
+            restoreUserDirectory(originalUserDirectory);
+        }
+    }
+
+    @Test
+    void factoryFallsBackToProcessWorkingDirectoryWhenUserDirectoryIsBlank() {
+        SonicConfigurationService configuration = configuration();
+        configuration.setConfigValue(SonicConfiguration.SONIC_3K_ROM, "sonic.gen");
+        Path expectedWorkingDirectory = Path.of("").toAbsolutePath().normalize();
+        String originalUserDirectory = System.getProperty("user.dir");
+        try {
+            System.setProperty("user.dir", " \t");
+            RomLocation location = RomLocationResolver.forCurrentWorkingDirectory(configuration)
+                    .resolve(RomGame.S3K)
+                    .orElseThrow();
+
+            assertEquals(expectedWorkingDirectory.resolve("sonic.gen"), location.resolvedPath());
+        } finally {
+            restoreUserDirectory(originalUserDirectory);
+        }
+    }
+
+    @Test
     void preservesCapturedWorkingDirectoryAfterUserDirectoryChanges() {
         SonicConfigurationService configuration = configuration();
         configuration.setConfigValue(SonicConfiguration.SONIC_1_ROM, "sonic.gen");
@@ -168,12 +223,20 @@ class TestRomLocationResolver {
 
             assertEquals(capturedWorkingDirectory.resolve("sonic.gen"), location.resolvedPath());
         } finally {
-            System.setProperty("user.dir", originalUserDirectory);
+            restoreUserDirectory(originalUserDirectory);
         }
     }
 
     private SonicConfigurationService configuration() {
         return SonicConfigurationService.createStandalone(configDirectory);
+    }
+
+    private static void restoreUserDirectory(String originalUserDirectory) {
+        if (originalUserDirectory == null) {
+            System.clearProperty("user.dir");
+        } else {
+            System.setProperty("user.dir", originalUserDirectory);
+        }
     }
 
     private static void assertLocation(RomLocation location, RomGame game, String configuredValue,
