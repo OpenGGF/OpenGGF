@@ -5,6 +5,7 @@ import com.openggf.game.BonusStageProvider;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
+import com.openggf.game.resources.PlcVBlankService;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.level.LevelManager;
 import com.openggf.sprites.managers.SpriteManager;
@@ -163,6 +164,7 @@ public final class LevelFrameStep {
             return LevelFrameResult.SETUP_ONLY;
         }
 
+        serviceOrdinaryLevelVBlank(context);
         serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
         serviceBoundary(context, HardwareServiceBoundary.PRE_MAIN_LOOP);
 
@@ -398,6 +400,18 @@ public final class LevelFrameStep {
         context.runtimeArtCoordinator().afterTimingService(boundary);
         if (boundary != HardwareServiceBoundary.PRE_MAIN_LOOP) {
             context.hardwareTimingBoundaryObserver().onBoundary(boundary);
+        }
+    }
+
+    /**
+     * Models the ordinary level VInt PLC service before the admitted main loop.
+     * VBlank-only rows deliberately use {@link #serviceVBlankOnly(LevelFrameContext)}
+     * instead: a lag VInt has no selected PLC service routine.
+     */
+    private static void serviceOrdinaryLevelVBlank(LevelFrameContext context) {
+        PlcVBlankService service = context.gameModule().getGameService(PlcVBlankService.class);
+        if (service != null) {
+            service.serviceLevelVBlank();
         }
     }
 

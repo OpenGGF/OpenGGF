@@ -8,6 +8,7 @@ import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.constants.Sonic2ObjectConstants;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.resources.Sonic2PlcService;
+import com.openggf.game.resources.PlcVBlankService;
 import com.openggf.game.sonic2.credits.Sonic2EndingProvider;
 import com.openggf.game.sonic2.dataselect.S2SaveSnapshotProvider;
 import com.openggf.game.sonic2.dataselect.S2DataSelectImageCacheManager;
@@ -258,6 +259,7 @@ public class Sonic2GameModule implements GameModule {
         if (type == com.openggf.game.sonic2.specialstage.Sonic2SpecialStageManager.class)
             return (T) specialStageManager;
         if (type == Sonic2PlcService.class) return (T) plcService;
+        if (type == PlcVBlankService.class) return (T) plcService;
         return null;
     }
 
