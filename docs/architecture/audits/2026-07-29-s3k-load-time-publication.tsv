@@ -1,11 +1,11 @@
 # rom_sha1	CFBF98C36C776677290A872547AC47C53D2761D6
 # measurement_schema	1
 # recorder_version	load-time-measurement-v1
-# recorder_commit	WORKTREE
+# recorder_commit	420ff09a6
 # generator	S3kLoadTimeProfileGenerator-v1
-# input_set_key	sha256:49cb3989712e333968420898e90d89aa4786d668c6dc2c77885a405151e5ee8e
+# input_set_key	sha256:cd6bb5db1efc67a6f0604cc43dec2e4528b53f752875b57845fb1174b2cd2c87
 # capture_command	BIZHAWK_HOME=<bizhawk> tools/bizhawk-headless/run.sh --mode load-time --rom <s3k-rom> --movie <movie-path> --output target/load-time-measurements/<fixture>
-# generation_command	mvn -q exec:java -Dexec.mainClass=com.openggf.tools.timing.S3kLoadTimeProfileGenerator -DloadTime.recorderCommit=WORKTREE -Dexec.args="src/main/resources/load-time-profiles/s3k-v1.json docs/architecture/audits/2026-07-29-s3k-load-time-profile-validation.md docs/architecture/audits/2026-07-29-s3k-load-time-publication.tsv target/load-time-measurements/aiz/load_time_measurements.jsonl target/load-time-measurements/cnz/load_time_measurements.jsonl target/load-time-measurements/mgz/load_time_measurements.jsonl target/load-time-measurements/knux/load_time_measurements.jsonl target/load-time-measurements/complete/load_time_measurements.jsonl"
+# generation_command	mvn -q exec:java -Dexec.mainClass=com.openggf.tools.timing.S3kLoadTimeProfileGenerator -DloadTime.recorderCommit=420ff09a6 -Dexec.args="src/main/resources/load-time-profiles/s3k-v1.json docs/architecture/audits/2026-07-29-s3k-load-time-profile-validation.md docs/architecture/audits/2026-07-29-s3k-load-time-publication.tsv target/load-time-measurements/aiz/load_time_measurements.jsonl target/load-time-measurements/cnz/load_time_measurements.jsonl target/load-time-measurements/mgz/load_time_measurements.jsonl target/load-time-measurements/knux/load_time_measurements.jsonl target/load-time-measurements/complete/load_time_measurements.jsonl"
 record	path	digest_algorithm	digest	bytes	observations
 movie	src/test/resources/traces/s3k/_movies/s3-knux-multibonus-ss.bk2	sha256	d7485e13f427d1b335cbbb3c405ff6136a77326239b79d3aed61e902078af45c	46216
 movie	src/test/resources/traces/s3k/_movies/s3k-complete-sonic-tails.bk2	sha256	82eabfbc65e33c160ce209baa1ca3f967cb677fe22350bc100625d8c41a8e1bf	192715
