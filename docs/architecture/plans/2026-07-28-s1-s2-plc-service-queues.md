@@ -935,10 +935,19 @@ Use `Changelog: updated`.
 **Files:**
 - Modify: `src/main/java/com/openggf/game/sonic1/Sonic1.java`
 - Modify: `src/main/java/com/openggf/game/sonic1/Sonic1ObjectArtProvider.java`
-- Modify: S1 producer owners from the Task 1 table
+- Modify: `GameLoop`, S1/S2 title-screen managers, S1/S2 level-init profiles,
+  and title-card managers at their audited title, setup, and title-card-retirement
+  producers
+- Modify: `src/main/java/com/openggf/game/sonic1/credits/Sonic1CreditsManager.java`
+  at the audited credits-text next-demo prequeue owners
+- Modify: S1 producer owners listed as `Route` in
+  [`2026-07-29-s1-s2-plc-producer-call-site-audit.md`](../audits/2026-07-29-s1-s2-plc-producer-call-site-audit.md)
 - Modify: `src/main/java/com/openggf/game/sonic2/Sonic2ObjectArtProvider.java`
 - Modify: `src/main/java/com/openggf/game/sonic2/events/Sonic2ZoneEvents.java`
-- Modify: S2 event/boss/result producer owners from the Task 1 table
+- Modify: `src/main/java/com/openggf/GameLoop.java`, the S1/S2 special-stage
+  providers, and `Sonic2SpecialStageIntro` at the audited special-stage routes
+- Modify: all S2 event and boss producer owners listed as `Route` in
+  [`2026-07-29-s1-s2-plc-producer-call-site-audit.md`](../audits/2026-07-29-s1-s2-plc-producer-call-site-audit.md)
 - Test: `src/test/java/com/openggf/game/sonic1/resources/TestSonic1PlcProducerCoverage.java`
 - Test: `src/test/java/com/openggf/game/sonic2/resources/TestSonic2PlcProducerCoverage.java`
 - Test: `src/test/java/com/openggf/game/sonic2/TestSonic2RuntimePlcRendererRefresh.java`
@@ -949,7 +958,9 @@ Use `Changelog: updated`.
 
 - [ ] **Step 1: Write producer-coverage RED tests**
 
-Create table-driven tests from the Task 1 audit. For each implemented producer,
+Create table-driven tests from the audited Task 5 routing table. The table is
+exhaustive for all disassembly producers with represented Java owners; for each
+`Route` producer,
 invoke its threshold or lifecycle action and assert:
 
 ```java
@@ -957,6 +968,15 @@ assertEquals(expectedPlcId, recordingPlcService.lastSubmission().plcId());
 assertEquals(expectedOperation, recordingPlcService.lastSubmission().operation());
 assertTrue(rendererOrSheetIsAvailable());
 ```
+
+For S1 credits, drive `Sonic1CreditsManager.initialize()` and every
+`onReturnToText()` entry. Assert the same ordered `clear/optional-primary/Main2`
+transaction before the first `CREDITS_TEXT` service row. The final text-only
+credit is not a no-op: reproduce the ROM's `EndDemo_Levels[8]` overread into
+the following `EndDemo_LampVar` bytes (`0x0101`) and assert its selected
+primary (if nonzero) plus `Main2`, despite no later demo being scheduled. Do
+not use `GameLoop.loadEndingDemoZone()` as the test trigger: that load occurs
+after the native prequeue boundary.
 
 Include repeated submission after the sheet is cached and assert that the
 logical submission count increments while renderer allocation remains stable.
@@ -986,8 +1006,16 @@ call site inside an object/event scan.
 - [ ] **Step 4: Route all implemented producers**
 
 Replace comments or direct art-only calls with the reviewed operation and PLC
-ID. Do not add zone checks to shared code. Leave nonexistent engine lifecycle
-owners explicitly documented in the audit rather than inventing submissions.
+ID. The audit, not an inferred lifecycle, is the exhaustiveness boundary: route
+every row marked `Route`, including both submissions from each
+`LoadPLC_AnimalExplosion` helper, title-screen `replace(0)` before the first
+`TITLE_SCREEN` service row, S1 credits-text `clear/primary/Main2` before the
+first `CREDITS_TEXT` service row on every text page (including its final
+`EndDemo_Levels[8]` overread, never deferred to the later demo level load), and
+the S2 one-player `Player_mode != 2` no-life submission branch; leave every
+excluded producer family
+documented until it has a concrete engine owner. Do not add zone checks to
+shared code.
 
 - [ ] **Step 5: Run GREEN**
 

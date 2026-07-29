@@ -236,6 +236,21 @@ the general queue produces the same timing.
 
 The shared kernel deliberately does not decide service cadence or call order.
 
+### Audited producer boundary (2026-07-29 amendment)
+
+Queue submission is owned by a concrete, already-implemented game transition,
+not by a renderer cache, level decoder, or a speculative lifecycle phase. The
+complete current routing scope and its ROM-to-Java evidence are maintained in
+[`2026-07-29-s1-s2-plc-producer-call-site-audit.md`](../audits/2026-07-29-s1-s2-plc-producer-call-site-audit.md).
+Task 5 routes every row marked `Route` there. The table is exhaustive for ROM
+producers whose Java transition is represented, including game-owned title-screen,
+credits-text next-demo prequeue, level-init, and title-card transitions; decoders and
+renderers supply data and eager art,
+but do not themselves create logical work. This boundary preserves eager
+rendering while preventing it from becoming an unearned logical queue event. A
+later implementation of an excluded ROM transition must first amend the audit
+and producer-coverage test table.
+
 `Sonic1PlcService` owns:
 
 - parsing S1 PLC IDs from `Sonic1Constants.ART_LOAD_CUES_ADDR`;
