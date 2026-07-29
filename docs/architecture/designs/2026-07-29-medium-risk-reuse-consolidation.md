@@ -9,7 +9,7 @@ Continue the code-reuse audit with three bounded consolidations whose behavior
 can be characterized independently:
 
 1. make ROM detector construction and bootstrap-module mutation single-owned;
-2. share only the exact CLI value and bounded-integer parsing duplicated by the
+2. share only the exact CLI value and raw-integer parsing duplicated by the
    trace capture and benchmark tools; and
 3. centralize test-only BK2 row-to-logical-input plumbing without introducing
    another cursor or changing any production playback cursor.
@@ -59,10 +59,13 @@ constructing three detectors. Test `RomCache` maps its test game enum to
 `GameId` and uses `forGame`.
 
 `GameModuleRegistry` remains the sole owner of bootstrap-module mutation and
-fallback logging. `RomDetectionService.detectAndSetModule` remains public as a
-deprecated compatibility forwarder to the registry. Detection, registration,
-priority ordering, stable ordering for equal priorities, exception isolation,
-and immutable detector snapshots remain owned by `RomDetectionService`.
+fallback logging through a package-private operation that accepts an already
+computed `Optional<GameModule>`. Both its public detection entry point and the
+deprecated public `RomDetectionService.detectAndSetModule` compatibility entry
+point detect through `RomDetectionService`, then delegate the result to that
+single mutation operation. Detection, registration, priority ordering, stable
+ordering for equal priorities, exception isolation, and immutable detector
+snapshots remain owned by `RomDetectionService`.
 
 The existing concrete Sonic detector classes and their declared, non-final
 `canHandle` methods remain unchanged.
@@ -83,8 +86,9 @@ failure contract differs.
 
 ### 3. Test-only recorded-input rows
 
-Add stateless `RecordedInputRows` under test support in
-`com.openggf.tests.trace`. An instance owns:
+Add public, stateless `RecordedInputRows` under test support in
+`com.openggf.tests.trace`; its consumers live in child packages, so its
+constructor and consumed methods are public. An instance owns:
 
 - a `Bk2Movie`;
 - an absolute base offset;
@@ -112,9 +116,12 @@ state would be unsafe.
 Migrate the exact repeated feeders in `S1SpecialStageReplayHarness`,
 `S2SpecialStageReplayHarness`, `S3kSpecialStageReplayHarness`,
 `TestS1GhzMazeRoundTripChain`, `TestS2EhzHalfpipeRoundTripChain`, and the two
-applicable paths in `AbstractRunChainTest`. All row counters and advancement
-remain at their current call sites. S2 completed-pass replay remains explicit
-because its current/previous row identities come from recorded binder data.
+named round-trip tests' local feeders. `AbstractRunChainTest` remains unchanged:
+its boundary-await paths deliberately rely on `Bk2Movie.getFrame` clamping
+beyond the recorded frame count, which differs from the strict row helper.
+All row counters and advancement remain at their current call sites. S2
+completed-pass replay remains explicit because its current/previous row
+identities come from recorded binder data.
 
 The helper accepts no `TraceData`, gameplay owner, or timing service. It cannot
 hydrate gameplay from trace comparison data and remains test-only.
