@@ -2,9 +2,7 @@ package com.openggf.tests.trace.runs;
 
 import com.openggf.GameLoop;
 import com.openggf.control.InputHandler;
-import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
-import com.openggf.debug.playback.RecordedInputSnapshots;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameMode;
 import com.openggf.game.sonic1.specialstage.Sonic1SpecialStageTraceData;
@@ -12,6 +10,7 @@ import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker.SegmentPlan;
+import com.openggf.tests.trace.RecordedInputRows;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -110,6 +109,7 @@ class TestS1GhzMazeRoundTripChain extends AbstractRunChainTest {
             throw new UncheckedIOException("Failed to load S1 special-stage lag trace: " + ssDir, e);
         }
         int bk2FrameOffset = interior.segment().bk2FrameOffset();
+        RecordedInputRows recordedInputs = new RecordedInputRows(movie, bk2FrameOffset);
         int recordedFrameCount = interior.segment().traceFrameCount();
         int[] traceRow = {0};
         return () -> {
@@ -136,16 +136,10 @@ class TestS1GhzMazeRoundTripChain extends AbstractRunChainTest {
                 traceRow[0]++;
                 return;
             }
-            int absoluteRow = bk2FrameOffset + traceRow[0];
             int beforeVblank = GameServices.level().getObjectManager().getVblaCounter();
-            Bk2FrameInput current = movie.getFrame(absoluteRow);
-            Bk2FrameInput previous = absoluteRow > 0 ? movie.getFrame(absoluteRow - 1) : null;
-            inputHandler.setLogicalOverride(RecordedInputSnapshots.fromBk2(current, previous));
-            try {
+            recordedInputs.withLogicalOverride(traceRow[0], inputHandler, () -> {
                 AbstractRunChainTest.stepEngineFrame(loop);
-            } finally {
-                inputHandler.clearLogicalOverride();
-            }
+            });
             var objectManager = GameServices.level().getObjectManager();
             if (objectManager.getVblaCounter() == beforeVblank) {
                 objectManager.advanceVblaCounter();

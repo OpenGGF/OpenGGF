@@ -7,16 +7,21 @@ import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic2.Sonic2RomDetector;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.Sonic3kRomDetector;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -24,6 +29,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class TestHeaderNameRomDetectors {
+
+    @AfterEach
+    void resetBootstrapModule() {
+        GameModuleRegistry.reset();
+    }
 
     @Test
     void domesticMatchShortCircuitsInternationalRead() throws Exception {
@@ -129,12 +139,53 @@ class TestHeaderNameRomDetectors {
         );
     }
 
+    @Test
+    void applyDetectedModuleInstallsTheDetectedBootstrapModule() {
+        GameModule detectedModule = new Sonic1GameModule();
+
+        assertTrue(GameModuleRegistry.applyDetectedModule(Optional.of(detectedModule)));
+
+        assertSame(detectedModule, GameModuleRegistry.getBootstrapDefault());
+    }
+
+    @Test
+    void applyDetectedModuleInstallsAFreshSonic2FallbackWhenDetectionIsEmpty() {
+        GameModule previousFallback = new Sonic2GameModule();
+        GameModuleRegistry.setCurrent(previousFallback);
+
+        assertFalse(GameModuleRegistry.applyDetectedModule(Optional.empty()));
+
+        assertInstanceOf(Sonic2GameModule.class, GameModuleRegistry.getBootstrapDefault());
+        assertNotSame(previousFallback, GameModuleRegistry.getBootstrapDefault());
+    }
+
+    @Test
+    void serviceAndRegistryDetectionShareSuccessAndFallbackResults() throws Exception {
+        assertEquivalentDetectionOutcome(openRom("SONIC THE HEDGEHOG", "unused"));
+        assertEquivalentDetectionOutcome(openRom("UNRECOGNIZED", "unused"));
+        assertEquivalentDetectionOutcome(null);
+        assertEquivalentDetectionOutcome(new Rom());
+    }
+
     private static void assertDeclaresPublicNonFinalCanHandle(Class<?> detectorClass) {
         assertFalse(Modifier.isFinal(detectorClass.getModifiers()));
         Method canHandle = assertDoesNotThrow(
                 () -> detectorClass.getDeclaredMethod("canHandle", Rom.class));
         assertTrue(Modifier.isPublic(canHandle.getModifiers()));
         assertFalse(Modifier.isFinal(canHandle.getModifiers()));
+    }
+
+    private static void assertEquivalentDetectionOutcome(Rom rom) {
+        GameModuleRegistry.reset();
+        boolean serviceDetected = RomDetectionService.getInstance().detectAndSetModule(rom);
+        Class<?> serviceModuleType = GameModuleRegistry.getBootstrapDefault().getClass();
+
+        GameModuleRegistry.reset();
+        boolean registryDetected = GameModuleRegistry.detectAndSetModule(rom);
+        Class<?> registryModuleType = GameModuleRegistry.getBootstrapDefault().getClass();
+
+        assertEquals(serviceDetected, registryDetected);
+        assertEquals(serviceModuleType, registryModuleType);
     }
 
     private static Rom openRom(String domestic, String international) throws IOException {

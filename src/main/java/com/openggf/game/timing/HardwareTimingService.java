@@ -17,6 +17,7 @@ public final class HardwareTimingService
     public static final String REWIND_KEY = "hardware-timing";
 
     private final RomWorkBudgetScheduler scheduler;
+    private final LoadTimeProfile loadTimeProfile;
     private final RecordedAuthority recordedAuthority = new RecordedAuthority();
     private final EnumMap<HardwareWorkKind, Long> nextOrdinals =
             new EnumMap<>(HardwareWorkKind.class);
@@ -34,7 +35,14 @@ public final class HardwareTimingService
     }
 
     public HardwareTimingService(RomWorkBudgetScheduler scheduler) {
+        this(scheduler, LoadTimeProfile.IMMEDIATE);
+    }
+
+    public HardwareTimingService(
+            RomWorkBudgetScheduler scheduler,
+            LoadTimeProfile loadTimeProfile) {
         this.scheduler = Objects.requireNonNull(scheduler, "scheduler");
+        this.loadTimeProfile = Objects.requireNonNull(loadTimeProfile, "loadTimeProfile");
     }
 
     public HardwareWorkHandle submit(HardwareWorkSubmission submission) {
@@ -57,6 +65,9 @@ public final class HardwareTimingService
     public void service(HardwareServiceBoundary boundary) {
         Objects.requireNonNull(boundary, "boundary");
         for (HardwareWorkKind kind : HardwareWorkKind.values()) {
+            if (admissionPolicyFor(kind) == HardwareReadinessAdmissionPolicy.LIVE) {
+                activateAndAdvanceHead(boundary, kind);
+            }
             serviceBoundaryDrivenHead(boundary, kind);
             scheduler.service(boundary, jobsOfKind(kind));
             if (admissionPolicyFor(kind) == HardwareReadinessAdmissionPolicy.LIVE) {
@@ -266,7 +277,29 @@ public final class HardwareTimingService
             if (!job.hasPreparedPayload()) {
                 return;
             }
+            if (!job.isProfileActive()) {
+                job.activateProfile(loadTimeProfile.assign(
+                        job.submission(), job.handle()));
+            }
+            if (!job.isProfileComplete()) {
+                return;
+            }
             job.admitReadiness();
+        }
+    }
+
+    private void activateAndAdvanceHead(
+            HardwareServiceBoundary boundary, HardwareWorkKind kind) {
+        for (HardwareTimingJob job : jobs) {
+            if (job.handle().kind() != kind || job.isPhysicallyRetired()) {
+                continue;
+            }
+            if (!job.isProfileActive()) {
+                job.activateProfile(loadTimeProfile.assign(
+                        job.submission(), job.handle()));
+            }
+            job.advanceProfile(boundary);
+            return;
         }
     }
 

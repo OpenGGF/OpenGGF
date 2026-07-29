@@ -29,7 +29,7 @@ target rather than walking back the assertion.
 | Rule | Baseline | Target | Trigger |
 |------|----------|--------|---------|
 | `low_level_layers_do_not_depend_on_runtime_layers` | 209 | <=150 | AudioManager/GraphicsManager runtime callbacks migrate off direct level/sprite imports |
-| `shared_layers_do_not_depend_on_game_specific_packages` | 20 | 0 | `DefaultPowerUpSpawner` visual object creation and master-title ROM preview mapping move behind provider contracts and bootstrap module construction becomes an explicit composition-root allowlist |
+| `shared_layers_do_not_depend_on_game_specific_packages` | 14 | 0 | `DefaultPowerUpSpawner` visual object creation and master-title ROM preview mapping move behind provider contracts |
 | `per_game_packages_do_not_cross_depend` | 37 | <=20 | Data-select preview loading, payload validation, and menu animation helpers extracted out of per-game packages |
 
 ## Source Ratchets
@@ -123,7 +123,7 @@ When a frozen baseline shrinks or grows intentionally, update the matching count
 in the same commit.
 
 - `low_level_layers_do_not_depend_on_runtime_layers`: 209
-- `shared_layers_do_not_depend_on_game_specific_packages`: 20
+- `shared_layers_do_not_depend_on_game_specific_packages`: 14
 - `per_game_packages_do_not_cross_depend`: 37
 
 ## Package Cycle Ratchets
@@ -176,16 +176,17 @@ Target direction:
 
 Rule: `shared level and game layers should not depend on game-specific packages`
 
-Frozen violations fall into these categories:
-
-- `GameModuleRegistry` and `RomDetectionService` construct built-in game modules
-  and detectors as bootstrap composition-root behavior.
-- `DefaultPowerUpSpawner` constructs Sonic 1 splash and S3K shield/insta-shield
-  visuals from shared object code.
+Frozen violations 1–9 are in `MasterTitleRomPreview`, which composes the
+cross-game master-title previews through concrete Sonic 1, Sonic 2, and Sonic
+3&K title-screen mappings. Violations 10–14 are in
+`DefaultPowerUpSpawner`, which constructs Sonic 1 splash and S3K
+shield/insta-shield visuals from shared object code. The frozen set remains 14
+entries under UUID `e0b8ef04-86e9-4001-b35e-c5de3ef4d940`.
 
 Target direction:
 
-- Move game-specific visual object creation behind providers.
+- Keep bootstrap assembly behind explicitly annotated composition roots, and move
+  game-specific visual object creation behind providers.
 
 ### Per-Game Packages Must Not Cross-Depend
 

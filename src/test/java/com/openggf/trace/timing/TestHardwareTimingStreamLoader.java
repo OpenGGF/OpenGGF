@@ -30,6 +30,19 @@ class TestHardwareTimingStreamLoader {
     }
 
     @Test
+    void toolingOnlyMeasurementArtifactIsRejectedFromTraceDirectory()
+            throws IOException {
+        Path fixture = writeFixture(6, null, null, 2);
+        Files.writeString(
+                fixture.resolve("load_time_measurements.jsonl"), "{}\n");
+
+        assertRejected(
+                fixture,
+                "load_time_measurements.jsonl",
+                "tooling-only");
+    }
+
+    @Test
     void versionOneRequiresHardwareTimingFile() throws IOException {
         Path fixture = writeFixture(7, 1, null, 2);
 

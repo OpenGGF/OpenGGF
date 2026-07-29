@@ -164,6 +164,10 @@ public final class S3kKosModuleQueue {
         return count;
     }
 
+    public boolean hasCapacity() {
+        return physicalQueueSize() < MAX_QUEUE_DEPTH;
+    }
+
     public boolean modulesLeft() {
         return timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE) != 0;
     }

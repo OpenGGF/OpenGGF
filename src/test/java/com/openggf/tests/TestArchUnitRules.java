@@ -711,12 +711,13 @@ class TestArchUnitRules {
                                     "com.openggf.game.sonic1..",
                                     "com.openggf.game.sonic2..",
                                     "com.openggf.game.sonic3k..")
+                            .and().areNotAnnotatedWith(CompositionRoot.class)
                             .should().dependOnClassesThat().resideInAnyPackage(
                                     "com.openggf.game.sonic1..",
                                     "com.openggf.game.sonic2..",
                                     "com.openggf.game.sonic3k..")
                     .as("shared level and game layers should not depend on game-specific packages"))
-                    .because("shared layers should depend on provider contracts or shared abstractions, not concrete game packages; frozen baseline: 20 violations");
+                    .because("shared layers should depend on provider contracts or shared abstractions, not concrete game packages; frozen baseline: 14 violations");
 
     @ArchTest
     static final ArchRule per_game_packages_do_not_cross_depend =

@@ -48,12 +48,22 @@ namespace OpenGGF.BizHawk.Headless
             public uint Source;
             public uint Destination;
             public string Fingerprint;
+            public StandardKosShape Shape;
+            public bool ExactCallback;
+            public bool UnclassifiedService;
+            public int ServiceOpportunities;
+            public int SubmissionRawFrame = int.MinValue;
+            public string ParentFingerprint;
         }
 
         private sealed class StandardKosShape
         {
             public int CompressedLength;
             public int DestinationLength;
+            public int LiteralCommands;
+            public int ShortCopyCommands;
+            public int LongCopyCommands;
+            public int CopiedOutputLength;
         }
 
         private readonly byte[] rom;
@@ -68,6 +78,13 @@ namespace OpenGGF.BizHawk.Headless
         private bool priorDirectBusy;
         private int stagedDirectRetirements;
         private readonly int hardwareTimingSchema;
+        private readonly TextWriter measurementWriter;
+        private readonly string measurementFixture;
+        private readonly string measurementMovieSha256;
+        private readonly string measurementRomSha1;
+        private int measurementEpoch;
+        private int priorMeasurementRawFrame = int.MinValue;
+        private int measurementSequenceInFrame;
 
         public HardwareTimingEventEngine(byte[] rom)
             : this(rom, CurrentSchema)
@@ -75,6 +92,39 @@ namespace OpenGGF.BizHawk.Headless
         }
 
         public HardwareTimingEventEngine(byte[] rom, int hardwareTimingSchema)
+            : this(rom, hardwareTimingSchema, null, null, null, null)
+        {
+        }
+
+        public HardwareTimingEventEngine(
+            byte[] rom,
+            TextWriter measurementWriter,
+            string measurementFixture)
+            : this(
+                rom, CurrentSchema, measurementWriter, measurementFixture,
+                new string('0', 64), new string('0', 40))
+        {
+        }
+
+        public HardwareTimingEventEngine(
+            byte[] rom,
+            TextWriter measurementWriter,
+            string measurementFixture,
+            string movieSha256,
+            string romSha1)
+            : this(
+                rom, CurrentSchema, measurementWriter, measurementFixture,
+                movieSha256, romSha1)
+        {
+        }
+
+        private HardwareTimingEventEngine(
+            byte[] rom,
+            int hardwareTimingSchema,
+            TextWriter measurementWriter,
+            string measurementFixture,
+            string movieSha256,
+            string romSha1)
         {
             if (rom == null)
             {
@@ -88,6 +138,10 @@ namespace OpenGGF.BizHawk.Headless
             }
             this.rom = rom;
             this.hardwareTimingSchema = hardwareTimingSchema;
+            this.measurementWriter = measurementWriter;
+            this.measurementFixture = measurementFixture;
+            this.measurementMovieSha256 = movieSha256;
+            this.measurementRomSha1 = romSha1;
         }
 
         public void Reset()
@@ -101,6 +155,10 @@ namespace OpenGGF.BizHawk.Headless
             titleCardLoadLoopActive = false;
             priorDirectBusy = false;
             stagedDirectRetirements = 0;
+            if (measurementWriter != null)
+            {
+                measurementEpoch++;
+            }
         }
 
         /// <summary>
@@ -110,6 +168,11 @@ namespace OpenGGF.BizHawk.Headless
         /// with the next frame-end reconciliation.
         /// </summary>
         public void ObserveDirectSubmissions(IGpgxHost host)
+        {
+            ObserveDirectSubmissions(int.MinValue, host);
+        }
+
+        public void ObserveDirectSubmissions(int rawFrame, IGpgxHost host)
         {
             if (host == null)
             {
@@ -138,7 +201,9 @@ namespace OpenGGF.BizHawk.Headless
             {
                 for (int index = 0; index < physicalCount; index++)
                 {
-                    directQueue.Add(CreateDirectSubmission(host, index));
+                    directQueue.Add(CreateDirectSubmission(
+                        host, index, index == physicalCount - 1,
+                        index == physicalCount - 1 ? rawFrame : int.MinValue));
                 }
                 return;
             }
@@ -153,7 +218,8 @@ namespace OpenGGF.BizHawk.Headless
                     0,
                     "at the module-child submission callback");
                 directQueue.Add(
-                    CreateDirectSubmission(host, physicalCount - 1));
+                    CreateDirectSubmission(
+                        host, physicalCount - 1, true, rawFrame));
                 return;
             }
 
@@ -169,7 +235,8 @@ namespace OpenGGF.BizHawk.Headless
                     + " module-child submission callback");
                 stagedDirectRetirements = 1;
                 directQueue.Add(
-                    CreateDirectSubmission(host, physicalCount - 1));
+                    CreateDirectSubmission(
+                        host, physicalCount - 1, true, rawFrame));
                 return;
             }
 
@@ -214,6 +281,8 @@ namespace OpenGGF.BizHawk.Headless
                     && !titleCardLoopAdmitted
                 ? "vint_service"
                 : "post_objects";
+            ObserveMeasurementService(
+                rawFrame, boundary != "vint_service");
             ushort directCountWord =
                 S3KRam.U16(host, S3KRam.KosDecompQueueCount);
             EmitStagedDirectRetirements(rawFrame, writer);
@@ -274,6 +343,7 @@ namespace OpenGGF.BizHawk.Headless
             // PRE retirement ends that evidence before current physical RAM
             // is reconciled.
             priorDirectBusy = false;
+            WriteMeasurement(completed, rawFrame, "pre_main_loop");
             if (hardwareTimingSchema == CurrentSchema && writer != null)
             {
                 WriteCompletion(
@@ -360,6 +430,7 @@ namespace OpenGGF.BizHawk.Headless
             {
                 DirectSubmission completed = directQueue[0];
                 directQueue.RemoveAt(0);
+                WriteMeasurement(completed, rawFrame, "pre_main_loop");
                 if (hardwareTimingSchema == CurrentSchema
                     && writer != null)
                 {
@@ -384,7 +455,8 @@ namespace OpenGGF.BizHawk.Headless
                 index < physicalCount;
                 index++)
             {
-                directQueue.Add(CreateDirectSubmission(host, index));
+                directQueue.Add(CreateDirectSubmission(
+                    host, index, false, int.MinValue));
             }
             priorDirectBusy = busy;
         }
@@ -458,7 +530,9 @@ namespace OpenGGF.BizHawk.Headless
 
         private DirectSubmission CreateDirectSubmission(
             IGpgxHost host,
-            int index)
+            int index,
+            bool exactCallback,
+            int submissionRawFrame)
         {
             int entry = S3KRam.KosDecompQueue
                 + index * S3KRam.KosDecompQueueEntrySize;
@@ -471,6 +545,11 @@ namespace OpenGGF.BizHawk.Headless
                 Ordinal = ordinal,
                 Source = source,
                 Destination = destination,
+                Shape = shape,
+                ExactCallback = exactCallback,
+                SubmissionRawFrame = submissionRawFrame,
+                ParentFingerprint = exactCallback
+                    ? ResolveActiveParentFingerprint(host) : null,
                 Fingerprint = ComputeSubmissionFingerprint(
                     DirectKindName,
                     checked((int)source),
@@ -482,6 +561,32 @@ namespace OpenGGF.BizHawk.Headless
             };
         }
 
+        private string ResolveActiveParentFingerprint(IGpgxHost host)
+        {
+            if (queue.Count != 0)
+            {
+                return queue[0].Fingerprint;
+            }
+            if (measurementWriter == null)
+            {
+                return null;
+            }
+
+            uint canonicalSource = CheckedActiveHeader(
+                S3KRam.U32(host, S3KRam.KosModuleSource));
+            ushort destination =
+                S3KRam.U16(host, S3KRam.KosModuleDestination);
+            KosModuleShape shape = InspectKosModule(canonicalSource);
+            return ComputeSubmissionFingerprint(
+                ModuleKindName,
+                checked((int)canonicalSource),
+                shape.CompressedLength,
+                destination,
+                shape.DestinationLength,
+                ModuleCompressionVariant,
+                shape.ModuleCount);
+        }
+
         private StandardKosShape InspectStandardKos(uint canonicalSource)
         {
             int start = checked((int)canonicalSource);
@@ -489,6 +594,10 @@ namespace OpenGGF.BizHawk.Headless
             int descriptor = 0;
             int descriptorBits = 0;
             int outputLength = 0;
+            int literals = 0;
+            int shortCopies = 0;
+            int longCopies = 0;
+            int copiedOutputLength = 0;
 
             while (true)
             {
@@ -499,6 +608,7 @@ namespace OpenGGF.BizHawk.Headless
                     RequireRomBytes(position, 1);
                     position++;
                     outputLength = CheckedOutputLength(outputLength, 1);
+                    literals++;
                     continue;
                 }
 
@@ -527,7 +637,11 @@ namespace OpenGGF.BizHawk.Headless
                             return new StandardKosShape
                             {
                                 CompressedLength = position - start,
-                                DestinationLength = outputLength
+                                DestinationLength = outputLength,
+                                LiteralCommands = literals,
+                                ShortCopyCommands = shortCopies,
+                                LongCopyCommands = longCopies,
+                                CopiedOutputLength = copiedOutputLength
                             };
                         }
                         if (count == 2)
@@ -556,6 +670,16 @@ namespace OpenGGF.BizHawk.Headless
                     distance &= 0xFF;
                 }
 
+                if (second != 0)
+                {
+                    longCopies++;
+                }
+                else
+                {
+                    shortCopies++;
+                }
+                copiedOutputLength = CheckedOutputLength(
+                    copiedOutputLength, count);
                 if (outputLength - distance < 0)
                 {
                     throw new InvalidDataException(
@@ -575,6 +699,145 @@ namespace OpenGGF.BizHawk.Headless
                     + " length.");
             }
             return outputLength + count;
+        }
+
+        private void ObserveMeasurementService(
+            int rawFrame, bool classified)
+        {
+            if (measurementWriter == null || directQueue.Count == 0)
+            {
+                return;
+            }
+            DirectSubmission head = directQueue[0];
+            if (head.ExactCallback
+                && head.SubmissionRawFrame == rawFrame)
+            {
+                return;
+            }
+            if (!classified)
+            {
+                head.UnclassifiedService = true;
+                return;
+            }
+            head.ServiceOpportunities++;
+        }
+
+        private void WriteMeasurement(
+            DirectSubmission submission,
+            int rawFrame,
+            string boundary)
+        {
+            if (measurementWriter == null)
+            {
+                return;
+            }
+            StandardKosShape shape = submission.Shape;
+            measurementWriter.Write("{\"measurement_schema\":1,");
+            measurementWriter.Write("\"recorder_version\":\"load-time-measurement-v1\",");
+            measurementWriter.Write("\"fixture\":\"");
+            WriteJsonString(measurementWriter, measurementFixture ?? "");
+            measurementWriter.Write("\",\"movie_sha256\":\"");
+            measurementWriter.Write(measurementMovieSha256);
+            measurementWriter.Write("\",\"rom_sha1\":\"");
+            measurementWriter.Write(measurementRomSha1);
+            measurementWriter.Write("\",\"service_model\":\"s3k-kos-v1\",");
+            measurementWriter.Write("\"epoch\":");
+            measurementWriter.Write(measurementEpoch);
+            measurementWriter.Write(",\"raw_frame\":");
+            measurementWriter.Write(rawFrame);
+            measurementWriter.Write(",\"sequence_in_frame\":");
+            measurementWriter.Write(NextMeasurementSequence(rawFrame));
+            measurementWriter.Write(",\"boundary\":\"");
+            measurementWriter.Write(boundary);
+            measurementWriter.Write("\",\"kind\":\"");
+            measurementWriter.Write(DirectKindName);
+            measurementWriter.Write("\",\"ordinal\":");
+            measurementWriter.Write(submission.Ordinal);
+            measurementWriter.Write(",\"fingerprint\":\"");
+            measurementWriter.Write(submission.Fingerprint);
+            measurementWriter.Write("\",\"parent_fingerprint\":");
+            if (submission.ParentFingerprint == null)
+            {
+                measurementWriter.Write("null");
+            }
+            else
+            {
+                measurementWriter.Write('"');
+                measurementWriter.Write(submission.ParentFingerprint);
+                measurementWriter.Write('"');
+            }
+            measurementWriter.Write(",\"observation_precision\":\"");
+            measurementWriter.Write(submission.ExactCallback
+                ? "exact_callback" : "frame_end_censored");
+            measurementWriter.Write("\",\"classified\":");
+            measurementWriter.Write(
+                submission.UnclassifiedService ? "false" : "true");
+            measurementWriter.Write(",\"service_opportunities\":");
+            measurementWriter.Write(submission.ServiceOpportunities);
+            measurementWriter.Write(",\"source\":");
+            measurementWriter.Write(submission.Source);
+            measurementWriter.Write(",\"destination\":");
+            measurementWriter.Write(submission.Destination);
+            measurementWriter.Write(",\"compressed_length\":");
+            measurementWriter.Write(shape.CompressedLength);
+            measurementWriter.Write(",\"decompressed_length\":");
+            measurementWriter.Write(shape.DestinationLength);
+            measurementWriter.Write(",\"literal_commands\":");
+            measurementWriter.Write(shape.LiteralCommands);
+            measurementWriter.Write(",\"short_copy_commands\":");
+            measurementWriter.Write(shape.ShortCopyCommands);
+            measurementWriter.Write(",\"long_copy_commands\":");
+            measurementWriter.Write(shape.LongCopyCommands);
+            measurementWriter.Write(",\"copied_output_length\":");
+            measurementWriter.Write(shape.CopiedOutputLength);
+            measurementWriter.Write("}\n");
+        }
+
+        private int NextMeasurementSequence(int rawFrame)
+        {
+            if (priorMeasurementRawFrame != rawFrame)
+            {
+                priorMeasurementRawFrame = rawFrame;
+                measurementSequenceInFrame = 0;
+                return 0;
+            }
+            return ++measurementSequenceInFrame;
+        }
+
+        private static void WriteJsonString(TextWriter writer, string value)
+        {
+            foreach (char character in value)
+            {
+                switch (character)
+                {
+                    case '\\':
+                        writer.Write("\\\\");
+                        break;
+                    case '"':
+                        writer.Write("\\\"");
+                        break;
+                    case '\n':
+                        writer.Write("\\n");
+                        break;
+                    case '\r':
+                        writer.Write("\\r");
+                        break;
+                    case '\t':
+                        writer.Write("\\t");
+                        break;
+                    default:
+                        if (character < 0x20)
+                        {
+                            writer.Write("\\u");
+                            writer.Write(((int)character).ToString("x4"));
+                        }
+                        else
+                        {
+                            writer.Write(character);
+                        }
+                        break;
+                }
+            }
         }
 
         private bool UpdateTitleCardLoadLoop(
@@ -922,6 +1185,72 @@ namespace OpenGGF.BizHawk.Headless
                 stream.WriteByte((byte)(value >> 16));
                 stream.WriteByte((byte)(value >> 8));
                 stream.WriteByte((byte)value);
+            }
+        }
+    }
+
+    /// <summary>Replays a whole S3K movie and writes only load-time diagnostics.</summary>
+    public static class LoadTimeMeasurementCaptureRunner
+    {
+        public static void Capture(
+            Bk2Movie movie,
+            IGpgxHost host,
+            byte[] rom,
+            string fixture,
+            string movieSha256,
+            string romSha1,
+            TextWriter output)
+        {
+            if (movie == null) throw new ArgumentNullException("movie");
+            if (host == null) throw new ArgumentNullException("host");
+            if (rom == null) throw new ArgumentNullException("rom");
+            if (output == null) throw new ArgumentNullException("output");
+
+            var engine = new HardwareTimingEventEngine(
+                rom, output, fixture, movieSha256, romSha1);
+            int rawFrame = 0;
+            using (IDisposable observer = host.RegisterExecuteCallback(
+                HardwareTimingEventEngine.ModuleChildSubmissionPc,
+                () => engine.ObserveDirectSubmissions(rawFrame, host)))
+            using (IEnumerator<Bk2Frame> frames =
+                movie.OpenFrameStream().GetEnumerator())
+            {
+                while (frames.MoveNext())
+                {
+                    Bk2Frame frame = frames.Current;
+                    if (frame.Power || frame.Reset)
+                    {
+                        engine.Reset();
+                    }
+                    ApplyFrame(frame, host);
+                    host.Advance();
+                    engine.ObserveFrameEnd(rawFrame, host, null);
+                    rawFrame++;
+                }
+            }
+        }
+
+        private static void ApplyFrame(Bk2Frame frame, IGpgxHost host)
+        {
+            host.ClearButtons();
+            Set(host, "Power", frame.Power);
+            Set(host, "Reset", frame.Reset);
+            Set(host, "P1 Up", frame.P1Up);
+            Set(host, "P1 Down", frame.P1Down);
+            Set(host, "P1 Left", frame.P1Left);
+            Set(host, "P1 Right", frame.P1Right);
+            Set(host, "P1 A", frame.P1A);
+            Set(host, "P1 B", frame.P1B);
+            Set(host, "P1 C", frame.P1C);
+            Set(host, "P1 Start", frame.P1Start);
+        }
+
+        private static void Set(
+            IGpgxHost host, string button, bool pressed)
+        {
+            if (pressed)
+            {
+                host.SetButton(button, true);
             }
         }
     }

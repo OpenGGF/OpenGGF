@@ -3,12 +3,16 @@ package com.openggf.game.session;
 import com.openggf.game.GameModule;
 import com.openggf.game.save.SaveSessionContext;
 import com.openggf.level.Level;
+import com.openggf.game.GameServices;
+import com.openggf.configuration.SonicConfiguration;
+import com.openggf.game.timing.LoadTimeSimulationMode;
 
 import java.util.Objects;
 
 public final class WorldSession {
     private final GameModule gameModule;
     private final SaveSessionContext saveSessionContext;
+    private LoadTimeSimulationMode loadTimeSimulationMode;
 
     // Loaded-level metadata. Owned by WorldSession because the loaded zone/act
     // identity must survive editor mode swaps (per
@@ -47,6 +51,20 @@ public final class WorldSession {
      */
     public SaveSessionContext getSaveSessionContext() {
         return saveSessionContext;
+    }
+
+    /**
+     * Resolves normal-play load timing once for this world session. Editor
+     * swaps and gameplay-context reconstruction therefore cannot silently
+     * change timing because configuration was reloaded mid-session.
+     */
+    public synchronized LoadTimeSimulationMode loadTimeSimulationMode() {
+        if (loadTimeSimulationMode == null) {
+            loadTimeSimulationMode = LoadTimeSimulationMode.parse(
+                    GameServices.configuration().getString(
+                            SonicConfiguration.LOAD_TIME_SIMULATION));
+        }
+        return loadTimeSimulationMode;
     }
 
     public int getCurrentZone() {
