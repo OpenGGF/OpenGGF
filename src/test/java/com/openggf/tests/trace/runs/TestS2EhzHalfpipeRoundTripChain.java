@@ -3,13 +3,12 @@ package com.openggf.tests.trace.runs;
 import com.openggf.GameLoop;
 import com.openggf.control.InputHandler;
 import com.openggf.game.GameMode;
-import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
-import com.openggf.debug.playback.RecordedInputSnapshots;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import com.openggf.trace.SpecialStageTraceData;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker.SegmentPlan;
+import com.openggf.tests.trace.RecordedInputRows;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -141,6 +140,7 @@ class TestS2EhzHalfpipeRoundTripChain extends AbstractRunChainTest {
             throw new UncheckedIOException("Failed to load S2 special-stage lag trace: " + ssDir, e);
         }
         int bk2FrameOffset = interior.segment().bk2FrameOffset();
+        RecordedInputRows recordedInputs = new RecordedInputRows(movie, bk2FrameOffset);
         int[] traceRow = {0};
         return () -> {
             // Once the engine has left the special stage itself (results screen,
@@ -168,15 +168,9 @@ class TestS2EhzHalfpipeRoundTripChain extends AbstractRunChainTest {
                 AbstractRunChainTest.stepEngineFrame(loop);
                 return;
             }
-            int absoluteRow = bk2FrameOffset + traceRow[0];
-            Bk2FrameInput current = movie.getFrame(absoluteRow);
-            Bk2FrameInput previous = absoluteRow > 0 ? movie.getFrame(absoluteRow - 1) : null;
-            inputHandler.setLogicalOverride(RecordedInputSnapshots.fromBk2(current, previous));
-            try {
+            recordedInputs.withLogicalOverride(traceRow[0], inputHandler, () -> {
                 AbstractRunChainTest.stepEngineFrame(loop);
-            } finally {
-                inputHandler.clearLogicalOverride();
-            }
+            });
             traceRow[0]++;
         };
     }

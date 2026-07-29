@@ -2,9 +2,6 @@ package com.openggf.game;
 
 import com.openggf.architecture.CompositionRoot;
 import com.openggf.data.Rom;
-import com.openggf.game.sonic1.Sonic1RomDetector;
-import com.openggf.game.sonic2.Sonic2RomDetector;
-import com.openggf.game.sonic3k.Sonic3kRomDetector;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -31,8 +28,11 @@ public class RomDetectionService {
     private final List<RomDetector> detectors = new ArrayList<>();
 
     private RomDetectionService() {
-        // Register built-in detectors
-        registerBuiltInDetectors();
+        this(BuiltInRomDetectors.all());
+    }
+
+    RomDetectionService(List<? extends RomDetector> initialDetectors) {
+        initialDetectors.forEach(this::registerDetector);
     }
 
     public static synchronized RomDetectionService getInstance() {
@@ -40,24 +40,6 @@ public class RomDetectionService {
             instance = new RomDetectionService();
         }
         return instance;
-    }
-
-    /**
-     * Registers the built-in game detectors.
-     * Called during initialization.
-     */
-    private void registerBuiltInDetectors() {
-        RomDetector sonic3kDetector = new Sonic3kRomDetector();
-        registerDetector(sonic3kDetector);
-        LOGGER.fine("Registered Sonic3kRomDetector");
-
-        RomDetector sonic1Detector = new Sonic1RomDetector();
-        registerDetector(sonic1Detector);
-        LOGGER.fine("Registered Sonic1RomDetector");
-
-        RomDetector sonic2Detector = new Sonic2RomDetector();
-        registerDetector(sonic2Detector);
-        LOGGER.fine("Registered Sonic2RomDetector");
     }
 
     /**
@@ -112,8 +94,9 @@ public class RomDetectionService {
     }
 
     /**
-     * Detects the game type from the ROM and updates the bootstrap module default
-     * through the {@link GameModuleRegistry} compatibility facade.
+     * Detects the game type from the ROM and forwards the result to the
+     * {@link GameModuleRegistry}, which owns bootstrap-module mutation and
+     * fallback behavior.
      *
      * <p>This method does not own active gameplay module state. Once a
      * {@code WorldSession} exists, {@link GameModuleRegistry#getCurrent()}
@@ -122,15 +105,12 @@ public class RomDetectionService {
      * @param rom the ROM to analyze
      * @return true if a module was detected, false if the bootstrap default was
      * reset to Sonic 2 fallback
+     * @deprecated use {@link GameModuleRegistry#detectAndSetModule(Rom)} for
+     * registry-owned bootstrap application
      */
+    @Deprecated
     public boolean detectAndSetModule(Rom rom) {
-        Optional<GameModule> module = detectAndCreateModule(rom);
-        if (module.isPresent()) {
-            GameModuleRegistry.setCurrent(module.get());
-            return true;
-        }
-        GameModuleRegistry.reset();
-        return false;
+        return GameModuleRegistry.applyDetectedModule(detectAndCreateModule(rom));
     }
 
     /**
