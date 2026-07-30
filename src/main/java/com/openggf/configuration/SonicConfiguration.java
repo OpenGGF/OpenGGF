@@ -1,5 +1,7 @@
 package com.openggf.configuration;
 
+import com.openggf.game.ModApi;
+
 /**
  * All configurable properties are put here. Eventually, these will be loaded
  * from a file. Use SonicConfigurationSerivce to retrieve the values for
@@ -11,7 +13,7 @@ package com.openggf.configuration;
  * @author james
  * 
  */
-@com.openggf.game.ModApi
+@ModApi
 public enum SonicConfiguration {
 	/**
 	 * Current Version number.
@@ -562,6 +564,16 @@ public enum SonicConfiguration {
 	 * Key to give all chaos emeralds (debug, default: E).
 	 */
 	GIVE_EMERALDS_KEY,
+
+	/**
+	 * Key to request the highest S3K transformation tier (debug, default: Shift+U).
+	 */
+	HYPER_FORM_DEBUG_KEY,
+
+	/**
+	 * Key to give all super emeralds (debug, default: Shift+E).
+	 */
+	GIVE_SUPER_EMERALDS_KEY,
 
 	/**
 	 * Whether to show the master title screen (game selection) on startup.

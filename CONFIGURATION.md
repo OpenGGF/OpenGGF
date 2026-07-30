@@ -767,6 +767,8 @@ The gamepad Back/Select/View button on the primary connected pad is a hardcoded 
 |-----|-----------|---------|----------|-------------|
 | `SUPER_SONIC_DEBUG_KEY` | `debug.keys.superSonic` | `85` | U | Toggle Super Sonic transformation (requires `DEBUG_VIEW_ENABLED` and all emeralds). |
 | `GIVE_EMERALDS_KEY` | `debug.keys.giveEmeralds` | `69` | E | Instantly award all Chaos Emeralds (debug shortcut). |
+| `HYPER_FORM_DEBUG_KEY` | `debug.keys.hyperForm` | `SHIFT+U` | Shift+U | Toggle the highest S3K form unlocked by Super Emeralds: Hyper Sonic, Super Tails, or Hyper Knuckles. |
+| `GIVE_SUPER_EMERALDS_KEY` | `debug.keys.giveSuperEmeralds` | `SHIFT+E` | Shift+E | Instantly award all Super Emeralds (debug shortcut). |
 
 ### Special Stage Debug
 
@@ -945,6 +947,8 @@ debug:
     levelSelect: F9   # Open the level select screen
     superSonic: U   # Toggle Super Sonic debug mode
     giveEmeralds: E   # Give all chaos emeralds
+    hyperForm: SHIFT+U   # Toggle Hyper Sonic, Super Tails, or Hyper Knuckles
+    giveSuperEmeralds: SHIFT+E   # Give all super emeralds
     specialStage: TAB   # Toggle special stage mode
     specialStageComplete: END   # Complete the special stage with an emerald
     specialStageFail: DELETE   # Fail the special stage

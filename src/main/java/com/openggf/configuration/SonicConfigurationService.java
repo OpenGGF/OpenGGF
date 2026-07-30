@@ -780,6 +780,8 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.DEFAULT_ROM, "s2");
 		putDefaultKey(SonicConfiguration.SUPER_SONIC_DEBUG_KEY, GLFW_KEY_U);
 		putDefaultKey(SonicConfiguration.GIVE_EMERALDS_KEY, GLFW_KEY_E);
+		putDefault(SonicConfiguration.HYPER_FORM_DEBUG_KEY, "SHIFT+U");
+		putDefault(SonicConfiguration.GIVE_SUPER_EMERALDS_KEY, "SHIFT+E");
 		putDefault(SonicConfiguration.MASTER_TITLE_SCREEN_ON_STARTUP, true);
 		putDefault(SonicConfiguration.SHOW_LEGAL_DISCLAIMER_ON_STARTUP, true);
 		putDefault(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);

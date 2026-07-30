@@ -23,6 +23,10 @@ public final class TimeAttackDebugInput {
                 || input.isKeyPressed(configuration.getInt(
                 SonicConfiguration.SUPER_SONIC_DEBUG_KEY))
                 || input.isKeyPressed(configuration.getInt(
-                SonicConfiguration.GIVE_EMERALDS_KEY));
+                SonicConfiguration.GIVE_EMERALDS_KEY))
+                || input.isKeyPressed(configuration.getInt(
+                SonicConfiguration.HYPER_FORM_DEBUG_KEY))
+                || input.isKeyPressed(configuration.getInt(
+                SonicConfiguration.GIVE_SUPER_EMERALDS_KEY));
     }
 }

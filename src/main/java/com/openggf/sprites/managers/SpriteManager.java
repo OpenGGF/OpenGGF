@@ -6,10 +6,11 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_CONTROL;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_SHIFT;
 
 import com.openggf.audio.GameMusic;
-import com.openggf.control.InputHandler;
-import com.openggf.control.PlayerInputState;
+import com.openggf.configuration.KeyChord;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.control.InputHandler;
+import com.openggf.control.PlayerInputState;
 import com.openggf.game.CollisionModel;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
@@ -97,8 +98,10 @@ public class SpriteManager implements PlayableSstDispatcher {
 
 	private int testKey;
 	private int debugModeKey;
-	private int superSonicDebugKey;
-	private int giveEmeraldsKey;
+	private final KeyChord superSonicDebugKey;
+	private final KeyChord giveEmeraldsKey;
+	private final KeyChord hyperFormDebugKey;
+	private final KeyChord giveSuperEmeraldsKey;
 	private int frameCounter;
 	private boolean inputSuppressed;
 	private boolean playbackInputSuppressed;
@@ -135,8 +138,10 @@ public class SpriteManager implements PlayableSstDispatcher {
 		}
 		testKey = configService.getInt(SonicConfiguration.TEST);
 		debugModeKey = configService.getInt(SonicConfiguration.DEBUG_MODE_KEY);
-		superSonicDebugKey = configService.getInt(SonicConfiguration.SUPER_SONIC_DEBUG_KEY);
-		giveEmeraldsKey = configService.getInt(SonicConfiguration.GIVE_EMERALDS_KEY);
+		superSonicDebugKey = configService.getKeyChord(SonicConfiguration.SUPER_SONIC_DEBUG_KEY);
+		giveEmeraldsKey = configService.getKeyChord(SonicConfiguration.GIVE_EMERALDS_KEY);
+		hyperFormDebugKey = configService.getKeyChord(SonicConfiguration.HYPER_FORM_DEBUG_KEY);
+		giveSuperEmeraldsKey = configService.getKeyChord(SonicConfiguration.GIVE_SUPER_EMERALDS_KEY);
 	}
 
 	/**
@@ -465,8 +470,13 @@ public class SpriteManager implements PlayableSstDispatcher {
 		boolean slowDown = isDebugSlowDownModifierDown(handler);
 		boolean debugShortcutsEnabled = configService.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED);
 		boolean debugModePressed = debugShortcutsEnabled && handler.isKeyPressed(debugModeKey);
-		boolean superSonicDebugPressed = debugShortcutsEnabled && handler.isKeyPressed(superSonicDebugKey);
-		boolean giveEmeraldsPressed = debugShortcutsEnabled && handler.isKeyPressed(giveEmeraldsKey);
+		boolean superSonicDebugPressed = debugShortcutsEnabled
+				&& (isChordPressed(handler, superSonicDebugKey)
+				|| isChordPressed(handler, hyperFormDebugKey));
+		boolean giveEmeraldsPressed = debugShortcutsEnabled
+				&& isChordPressed(handler, giveEmeraldsKey);
+		boolean giveSuperEmeraldsPressed = debugShortcutsEnabled
+				&& isChordPressed(handler, giveSuperEmeraldsKey);
 
 		// Give all chaos emeralds (debug)
 		if (giveEmeraldsPressed) {
@@ -474,6 +484,15 @@ public class SpriteManager implements PlayableSstDispatcher {
 			if (!gsm.hasAllEmeralds()) {
 				for (int i = 0; i < gsm.getChaosEmeraldCount(); i++) {
 					gsm.markEmeraldCollected(i);
+				}
+				GameServices.audio().playMusic(GameMusic.EMERALD);
+			}
+		}
+		if (giveSuperEmeraldsPressed) {
+			var gsm = currentGameStateManager();
+			if (!gsm.hasAllSuperEmeralds()) {
+				for (int i = 0; i < gsm.getChaosEmeraldCount(); i++) {
+					gsm.markSuperEmeraldCollected(i);
 				}
 				GameServices.audio().playMusic(GameMusic.EMERALD);
 			}
@@ -490,6 +509,13 @@ public class SpriteManager implements PlayableSstDispatcher {
 				slowDown,
 				debugModePressed,
 				superSonicDebugPressed));
+	}
+
+	private static boolean isChordPressed(InputHandler handler, KeyChord chord) {
+		return chord.isBound()
+				&& handler.isKeyPressed(chord.keyCode())
+				&& chord.matchesModifiers(handler.isShiftDown(), handler.isControlDown(),
+						handler.isAltDown(), handler.isSuperDown());
 	}
 
 	@Override

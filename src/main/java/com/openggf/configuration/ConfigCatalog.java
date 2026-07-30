@@ -311,6 +311,10 @@ public final class ConfigCatalog {
         put(LEVEL_SELECT_KEY, of("debug.keys", "levelSelect", KEY, "Open the level select screen"));
         put(SUPER_SONIC_DEBUG_KEY, of("debug.keys", "superSonic", KEY, "Toggle Super Sonic debug mode"));
         put(GIVE_EMERALDS_KEY, of("debug.keys", "giveEmeralds", KEY, "Give all chaos emeralds"));
+        put(HYPER_FORM_DEBUG_KEY, of("debug.keys", "hyperForm", KEY,
+                "Toggle the highest unlocked S3K form"));
+        put(GIVE_SUPER_EMERALDS_KEY, of("debug.keys", "giveSuperEmeralds", KEY,
+                "Give all super emeralds"));
         put(SPECIAL_STAGE_KEY, of("debug.keys", "specialStage", KEY, "Toggle special stage mode"));
         put(SPECIAL_STAGE_COMPLETE_KEY, of("debug.keys", "specialStageComplete", KEY,
                 "Complete the special stage with an emerald"));
