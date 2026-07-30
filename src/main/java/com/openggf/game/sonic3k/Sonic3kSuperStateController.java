@@ -631,6 +631,10 @@ public class Sonic3kSuperStateController extends SuperStateController {
         paletteState = sonicRevert ? 2 : 0;
         paletteFrame = FADE_COMPLETE_OFFSET - BYTES_PER_FRAME;
         paletteTimer = 3;
+        // ROM: move.b #1,invincibility_timer(a0). Besides the one-frame grace
+        // period, this is how SonicKnux_SuperHyper.revertToNormal restores the
+        // zone music: it plays none itself and lets Sonic_ChkInvin re-issue
+        // Current_music when the timer expires.
         player.setInvincibleFrames(1);
         if (normalAnimSet != null) {
             player.setAnimationSet(normalAnimSet);
@@ -646,18 +650,6 @@ public class Sonic3kSuperStateController extends SuperStateController {
             restoreNormalPalette();
         }
         player.setShieldVisible(true);
-        // Revert to zone music
-        try {
-            if (CrossGameFeatureProvider.isActive()) {
-                GameServices.audio().endDonorMusicOverride(
-                        GameServices.crossGameFeatures().getDonorGameId(),
-                        GameMusic.SUPER);
-            } else {
-                GameServices.audio().endMusicOverride(GameMusic.SUPER);
-            }
-        } catch (Exception e) {
-            LOGGER.fine("Could not revert Super Sonic music: " + e.getMessage());
-        }
         LOGGER.info("Super Sonic deactivated (S3K)");
         activeFormTier = S3kFormTier.NORMAL;
     }
@@ -1156,15 +1148,8 @@ public class Sonic3kSuperStateController extends SuperStateController {
             applyPaletteFrameData(paletteData, 0, new int[] {2, 3, 4}, true);
         }
         restoreNormalPalette();
-        try {
-            if (CrossGameFeatureProvider.isActive()) {
-                GameServices.audio().endDonorMusicOverride(
-                        GameServices.crossGameFeatures().getDonorGameId(), GameMusic.SUPER);
-            } else {
-                GameServices.audio().endMusicOverride(GameMusic.SUPER);
-            }
-        } catch (Exception e) {
-            LOGGER.fine("Could not clear Super music during lifecycle reset: " + e.getMessage());
-        }
+        // No music here: this is a presentation-only lifecycle reset (death,
+        // level restart), and the caller that reset the player owns what plays
+        // next. The ROM's own revert path plays no music either.
     }
 }
