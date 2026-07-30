@@ -3,6 +3,17 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Music no longer stops for the rest of an act after an extra life,
+  invincibility, or a Super transformation. The 1-up jingle, invincibility and
+  Super themes are override music that interrupts the zone music rather than
+  replacing it, but the audio profile's override classification was only read by
+  the retired legacy backend — so on the presentation path the interrupted song
+  was destroyed, and the driver's "fade in to previous song" (SMPS `E4`) and the
+  power-up timeouts found nothing to restore, leaving silence. `AudioManager`
+  now records the override flag on the music command itself, which also restores
+  the stacked cases: a 1-up during invincibility resumes invincibility and then
+  the zone music, and a form or power-up ending under the jingle drops only its
+  own saved entry.
 - Fix: Super Tails now reliably summons his four attacking Flickies. The debug
   form shortcut selects Super Tails for main-player Tails without changing
   emerald progression, the flock recovers after object-manager replacement,
