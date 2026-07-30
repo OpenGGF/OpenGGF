@@ -3,6 +3,13 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Sonic 3 & Knuckles Hidden Palace sanctuary pedestals are no longer culled
+  when the camera scrolls away from them. The leftmost pedestal sits far enough
+  behind the camera at the sanctuary's right edge to fall outside the shared
+  `out_of_range` window, and because the pedestals are controller-created
+  children with no respawn entry it was deleted for good — so that Super
+  Emerald's stage could never be entered, even with its Chaos Emerald already
+  collected.
 - Fix: Sonic 3 & Knuckles Hidden Palace sanctuary now uses its own ROM
   background scroll handler instead of the generic S3K fallback parallax. The
   sanctuary previously framed the wrong background rows, leaving the crystal wall
