@@ -3,6 +3,17 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Sonic 3 & Knuckles Special Stage results no longer promise Super Sonic after
+  a Super Emerald stage. `loc_2E512` hands a cleared Super Emerald run to the Hidden
+  Palace sanctuary reveal before the Chaos Emerald check at `loc_2E540` is reached, so
+  holding all seven Chaos Emeralds can no longer trigger the "NOW SONIC CAN / BE SUPER
+  SONIC" message there. The screen also follows `sub_2ECA8` and reads Super_emerald_count
+  instead of Chaos_emerald_count on a Super Emerald stage — naming the SUPER EMERALD and
+  pluralising only once the Super set is complete — and keeps its text off palette line 3
+  (`sub_2ECBC`), which the ROM repurposes for the sanctuary. A Chaos Emerald stage entered
+  from the Sonic & Knuckles side of the cart now shows the ROM's "SONIC CAN GO TO / HIDDEN
+  PALACE" message instead of the Super form promise, and the bonus labels use their
+  palette-line-3 frames on the Chaos path as the ROM does.
 - Fix: Sonic 3 & Knuckles Hidden Palace sanctuary pedestals are no longer culled
   when the camera scrolls away from them. The leftmost pedestal sits far enough
   behind the camera at the sanctuary's right edge to fall outside the shared

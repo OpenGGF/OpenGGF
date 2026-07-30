@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.specialstage;
 
 import com.openggf.audio.GameMusic;
+import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.EmeraldRewardKind;
 import com.openggf.game.PlayerCharacter;
@@ -9,6 +10,7 @@ import com.openggf.game.SpecialStageAccessType;
 import com.openggf.game.SpecialStageDebugProvider;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.rewind.RewindSnapshottable;
+import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -201,8 +203,14 @@ public class Sonic3kSpecialStageProvider implements SpecialStageProvider {
     @Override
     public ResultsScreen createResultsScreen(int ringsCollected, boolean gotEmerald,
                                              int stageIndex, int totalEmeraldCount) {
+        // ROM SpecialStage_Results copies Current_zone_and_act into
+        // Special_stage_zone_and_act, so the reveal branch at loc_2E540 tests the zone the
+        // Big Ring was collected in — still the loaded level at this point.
+        boolean skSideOrigin = GameServices.hasRuntime()
+                && Sonic3kZoneIds.isSkSideZone(GameServices.level().getCurrentZone());
         return new S3kSpecialStageResultsScreen(
-                ringsCollected, gotEmerald, stageIndex, totalEmeraldCount, manager.getPlayerCharacter());
+                ringsCollected, gotEmerald, stageIndex, totalEmeraldCount,
+                manager.getPlayerCharacter(), manager.isSuperEmeraldMode(), skSideOrigin);
     }
 
     // ==================== MiniGameProvider Methods ====================
