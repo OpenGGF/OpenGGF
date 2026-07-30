@@ -10,6 +10,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.physics.Direction;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -304,7 +305,9 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
                         : "knuckles".equalsIgnoreCase(code) ? 0x56 : 0xBA)
                         : ("tails".equalsIgnoreCase(code) ? 0xB0
                         : "knuckles".equalsIgnoreCase(code) ? 0xD6 : 0xC4);
-                sprite.setRenderFlips(flipAndVariant[0] != 0, false);
+                boolean facesLeft = flipAndVariant[0] != 0;
+                sprite.setDirection(facesLeft ? Direction.LEFT : Direction.RIGHT);
+                sprite.setRenderFlips(facesLeft, false);
                 sprite.setMappingFrame(base);
             }
         }
@@ -342,9 +345,9 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
         }
         NativePositionOps.writeXPosPreserveSubpixel(player, 0x1640);
         NativePositionOps.writeYPosPreserveSubpixel(player, 0x3A3);
-        // ROM writes $83: retain bit-7 ownership while enabling the low CPU
-        // permission bits used by the ceremony animation.
-        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
+        // ROM writes $83. Its sign bit makes Tails_CPU_Control skip the normal
+        // body, locking native P2 for the ceremony just like the main player.
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setObjectMappingFrameControl(true);
         player.setHighPriority(true);
         player.setMappingFrame(0);
