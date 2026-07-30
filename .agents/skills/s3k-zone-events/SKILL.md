@@ -28,6 +28,7 @@ When event logic reads player or object positions, use ROM centre-coordinate sem
 ### Class Hierarchy
 
 ```
+
 AbstractLevelEventManager (game/)
     |  - Shared state machine: eventRoutineFg, eventRoutineBg, frameCounter, timerFrames
     |  - Camera boundary helpers: lockCameraX(), lockCameraY(), setBottomBoundaryTarget()
@@ -56,6 +57,7 @@ Sonic3kZoneEvents (game/sonic3k/events/)
 Sonic3k{Zone}Events (game/sonic3k/events/)
     - Zone-specific implementation (e.g., Sonic3kAIZEvents)
 ```
+
 
 ### Base Class API (Sonic3kZoneEvents)
 
@@ -601,3 +603,11 @@ private void updateAct2(int frameCounter) {
     updateAct2BgEvents();
 }
 ```
+
+## Queue Diagnostics Routing
+
+Event-triggered art loads still belong to the PLC queue owner. Use
+`s3k-plc-system` for direct Kosinski/KosM timing and
+`trace-replay-bug-fixing` for `queue.*` or `dynamic_art.*` failures; use
+`trace-green-fleet` for multiple frontiers. These reports are zero-tolerance
+and comparison-only.

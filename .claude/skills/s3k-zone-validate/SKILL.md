@@ -451,3 +451,10 @@ void dynamicBoundaryExpandsAfterEvent() {
 7. **Comparing act 1 reference against act 2 engine (or vice versa).** Many zones have different parallax, palette, and event configurations per act. Always verify the act number matches.
 
 8. **Ignoring foreground differences.** Object placement and player position will differ between reference and engine. Focus comparison on the **background layers, colour cycling, and camera behaviour** -- not on Sonic's position or ring layout.
+
+## Queue Diagnostics Routing
+
+Visual validation cannot establish queue timing. For physical direct
+Kosinski/KosM state use `s3k-plc-system`; for `queue.*` and `dynamic_art.*`
+reports use `trace-replay-bug-fixing` and `trace-green-fleet`. These reports are
+zero-tolerance, comparison-only evidence.

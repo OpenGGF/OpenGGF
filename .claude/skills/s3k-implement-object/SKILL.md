@@ -88,7 +88,7 @@ The same ID can mean different objects depending on the zone set. For example, 0
 
 Delegate multiple agents to explore the disassembly. **Include this instruction in each agent prompt:**
 
-> Use the s3k-disasm-guide skill (`.claude/skills/s3k-disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, RomOffsetFinder commands, and object system patterns.
+> Use the s3k-disasm-guide skill (`.agents/skills/s3k-disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, RomOffsetFinder commands, and object system patterns.
 
 Agents should:
 
@@ -274,7 +274,7 @@ public class ObjectNameBadnikInstance extends AbstractBadnikInstance {
 ```
 
 ##### Pattern 3: Boss
-**Use the dedicated `/s3k-implement-boss` skill** (`.claude/skills/s3k-implement-boss/SKILL.md`) for boss implementations.
+**Use the dedicated `/s3k-implement-boss` skill** (`.agents/skills/s3k-implement-boss/SKILL.md`) for boss implementations.
 
 **Detect a boss when:**
 - Object label contains `Miniboss` or `EndBoss`
@@ -498,7 +498,7 @@ Ensure the implementation:
 
 Delegate to a review agent to cross-validate against the disassembly. **Include this instruction in the agent prompt:**
 
-> Use the s3k-disasm-guide skill (`.claude/skills/s3k-disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, and object system patterns.
+> Use the s3k-disasm-guide skill (`.agents/skills/s3k-disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, and object system patterns.
 
 ```
 Review the implementation of [ObjectName] against the Sonic 3&K disassembly.
@@ -576,8 +576,8 @@ Once cross-validation is confirmed bug-free:
 
 | Purpose | Location |
 |---------|----------|
-| **Disassembly guide** | `.claude/skills/s3k-disasm-guide/SKILL.md` |
-| **Boss skill** | `.claude/skills/s3k-implement-boss/SKILL.md` |
+| **Disassembly guide** | `.agents/skills/s3k-disasm-guide/SKILL.md` |
+| **Boss skill** | `.agents/skills/s3k-implement-boss/SKILL.md` |
 | Zone set enum | `src/.../game/sonic3k/constants/S3kZoneSet.java` |
 | Object IDs | `src/.../game/sonic3k/constants/Sonic3kObjectIds.java` |
 | ROM offsets | `src/.../game/sonic3k/constants/Sonic3kConstants.java` |
@@ -622,3 +622,10 @@ Butterdroid, Chainspike, Cluckoid, Dragonfly, Fireworm, Iwamodoki, Madmole, Mush
 | Object IDs file | `Sonic3kObjectIds.java` | `Sonic2ObjectIds.java` | `Sonic1ObjectIds.java` |
 | Registry | `Sonic3kObjectRegistry.java` | `Sonic2ObjectRegistry.java` | `Sonic1ObjectRegistry.java` |
 | Art infrastructure | Established (`Sonic3kObjectArt/Provider/Keys`) | Fully established | May need creating |
+
+## Queue Diagnostics Routing
+
+If object work reaches art-load timing, use `s3k-plc-system` for direct
+Kosinski/KosM ownership and `trace-replay-bug-fixing` for `queue.*` or
+`dynamic_art.*` reports. Use `trace-green-fleet` for multiple frontiers. The
+trace evidence is zero-tolerance and comparison-only.

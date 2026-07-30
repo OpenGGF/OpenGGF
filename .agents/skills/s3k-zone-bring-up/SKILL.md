@@ -273,3 +273,11 @@ Five files are touched by multiple feature agents. All changes are additive (new
 6. **Ignoring cross-cutting concerns from the analysis.** The analysis spec's "Cross-Cutting Concerns" section flags water systems, screen shake, character branching, and dynamic tilemap changes. These affect multiple features (e.g., water level changes in events affect parallax water-split logic). Review cross-cutting concerns before dispatch and include relevant notes in each agent's prompt.
 
 7. **Wrong merge order.** Events should merge first because event state variables (routine counters, boss flags) may be referenced by other features (animated tile gating, parallax mode switches). Merging parallax first and then events can create forward-reference errors if the parallax handler reads an event field that the events agent introduces.
+
+## Queue Diagnostics Routing
+
+When bring-up reaches runtime art-load timing, use `s3k-plc-system` for direct
+Kosinski/KosM ownership and hardware-timing schema 2. Use
+`trace-replay-bug-fixing` for `queue.*` and `dynamic_art.*` reports and
+`trace-green-fleet` for fleet frontiers. The evidence is zero-tolerance and
+comparison-only.

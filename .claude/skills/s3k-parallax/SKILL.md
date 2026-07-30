@@ -21,19 +21,20 @@ If a zone analysis spec exists at `docs/architecture/research/s3k-zones/{zone}-a
 
 This saves time on Phase 1 (finding the deform routine) but the disassembly remains the source of truth for implementation details.
 
-This spec is produced by the **s3k-zone-analysis** skill (`.claude/skills/s3k-zone-analysis/SKILL.md`).
+This spec is produced by the **s3k-zone-analysis** skill (`.agents/skills/s3k-zone-analysis/SKILL.md`).
 
 ## Related Skills
 
-- **s3k-disasm-guide** (`.claude/skills/s3k-disasm-guide/SKILL.md`) for disassembly navigation, label conventions, RomOffsetFinder commands, and zone abbreviations.
-- **s3k-plc-system** (`.claude/skills/s3k-plc-system/SKILL.md`) for PLC-driven art loading during act transitions and boss arenas (PLCs can trigger mid-level background art changes).
-- **s3k-zone-analysis** (`.claude/skills/s3k-zone-analysis/SKILL.md`) for producing a zone analysis spec that pre-identifies deform routine locations and band counts.
+- **s3k-disasm-guide** (`.agents/skills/s3k-disasm-guide/SKILL.md`) for disassembly navigation, label conventions, RomOffsetFinder commands, and zone abbreviations.
+- **s3k-plc-system** (`.agents/skills/s3k-plc-system/SKILL.md`) for PLC-driven art loading during act transitions and boss arenas (PLCs can trigger mid-level background art changes).
+- **s3k-zone-analysis** (`.agents/skills/s3k-zone-analysis/SKILL.md`) for producing a zone analysis spec that pre-identifies deform routine locations and band counts.
 
 ## Architecture Overview
 
 The modern parallax path has four layers:
 
 ```
+
 ScrollHandlerProvider (per-game, from GameModule)
     |
     v chooses
@@ -45,6 +46,7 @@ ScrollEffectComposer + DeformationPlan (+ ScatterFillPlan / WaterlineBlendCompos
     v exposes packed HScroll/VScroll state to
 LevelManager + ParallaxManager for the frame
 ```
+
 
 The GPU shader reads the 224-entry HScroll buffer (one value per visible scanline) and applies per-line horizontal scroll offsets to the background tilemap. This is how the Mega Drive's VDP HScroll works: each scanline can have an independent scroll position, creating the parallax effect.
 
@@ -1078,3 +1080,10 @@ Zones without explicit `_Deform` labels may have their scroll logic in `{ZONE}_B
 ```bash
 grep -n "{ZONE}" docs/skdisasm/sonic3k.asm | grep -i "scroll\|deform\|hscroll\|bg.*init\|bg.*event"
 ```
+
+## Queue Diagnostics Routing
+
+Parallax is downstream of art readiness. If trace evidence reaches `queue.*` or
+`dynamic_art.*`, use `s3k-plc-system` and `trace-replay-bug-fixing`; use
+`trace-green-fleet` for multiple frontiers. Those reports are zero-tolerance
+and comparison-only.
