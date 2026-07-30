@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Trace data: added Raiscan's 434,417-input Knuckles complete super-emerald
+  S3K run as 67 compressed level/bonus/special-stage segments with 48 typed
+  transitions. Native recorder 6.38 schema-2 timing evidence, the manifest,
+  and every payload are pinned by exact hashes, lengths, edge counts, and
+  reviewed terminal-tail arithmetic; the source BK2 is curated alongside the
+  existing S3K movies.
 - Feature: trace recordings can now opt into exact frame-level physical load-queue
   diagnostics for Sonic 1/2 Nemesis PLCs and Sonic 3 & Knuckles direct
   Kosinski/KosM queues. Replay reports queue lifecycle, remaining work, waiting
