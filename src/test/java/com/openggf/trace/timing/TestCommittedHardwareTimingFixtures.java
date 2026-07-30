@@ -37,6 +37,14 @@ class TestCommittedHardwareTimingFixtures {
     private static final Path PUBLICATION_MANIFEST =
             FIXTURE_ROOT.resolve("hardware-timing-publication.tsv");
     private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final Map<String, RunOwnership> EXPECTED_RUN_OWNERSHIP =
+            Map.of(
+                    "runs/s3-knux-multibonus-ss/",
+                    new RunOwnership("v637-knuckles-b",
+                            "s3-knux-multibonus-ss"),
+                    "runs/s3k-knuckles-complete-superemeralds/",
+                    new RunOwnership("v638-knuckles-superemeralds",
+                            "s3k-knuckles-complete-superemeralds"));
     private static final Map<String, Ownership> EXPECTED_STANDALONE_OWNERSHIP =
             Map.ofEntries(
                     Map.entry("aiz1_to_hcz_fullrun",
@@ -127,6 +135,73 @@ class TestCommittedHardwareTimingFixtures {
             "runs/s3-knux-multibonus-ss/ss",
             "runs/s3-knux-multibonus-ss/ss_2",
             "runs/s3-knux-multibonus-ss/ss_3",
+            "runs/s3k-knuckles-complete-superemeralds/aiz",
+            "runs/s3k-knuckles-complete-superemeralds/ss",
+            "runs/s3k-knuckles-complete-superemeralds/aiz_2",
+            "runs/s3k-knuckles-complete-superemeralds/ss_2",
+            "runs/s3k-knuckles-complete-superemeralds/aiz_3",
+            "runs/s3k-knuckles-complete-superemeralds/pachinko",
+            "runs/s3k-knuckles-complete-superemeralds/aiz_4",
+            "runs/s3k-knuckles-complete-superemeralds/pachinko_2",
+            "runs/s3k-knuckles-complete-superemeralds/aiz_5",
+            "runs/s3k-knuckles-complete-superemeralds/hcz",
+            "runs/s3k-knuckles-complete-superemeralds/pachinko_3",
+            "runs/s3k-knuckles-complete-superemeralds/hcz_2",
+            "runs/s3k-knuckles-complete-superemeralds/ss_3",
+            "runs/s3k-knuckles-complete-superemeralds/hcz_3",
+            "runs/s3k-knuckles-complete-superemeralds/gumball",
+            "runs/s3k-knuckles-complete-superemeralds/hcz_4",
+            "runs/s3k-knuckles-complete-superemeralds/ss_4",
+            "runs/s3k-knuckles-complete-superemeralds/hcz_5",
+            "runs/s3k-knuckles-complete-superemeralds/slots",
+            "runs/s3k-knuckles-complete-superemeralds/hcz_6",
+            "runs/s3k-knuckles-complete-superemeralds/ss_5",
+            "runs/s3k-knuckles-complete-superemeralds/hcz_7",
+            "runs/s3k-knuckles-complete-superemeralds/mgz",
+            "runs/s3k-knuckles-complete-superemeralds/ss_6",
+            "runs/s3k-knuckles-complete-superemeralds/mgz_2",
+            "runs/s3k-knuckles-complete-superemeralds/cnz",
+            "runs/s3k-knuckles-complete-superemeralds/ss_7",
+            "runs/s3k-knuckles-complete-superemeralds/cnz_2",
+            "runs/s3k-knuckles-complete-superemeralds/icz",
+            "runs/s3k-knuckles-complete-superemeralds/lbz",
+            "runs/s3k-knuckles-complete-superemeralds/gumball_2",
+            "runs/s3k-knuckles-complete-superemeralds/lbz_2",
+            "runs/s3k-knuckles-complete-superemeralds/mhz",
+            "runs/s3k-knuckles-complete-superemeralds/dez23",
+            "runs/s3k-knuckles-complete-superemeralds/ss_8",
+            "runs/s3k-knuckles-complete-superemeralds/mhz_2",
+            "runs/s3k-knuckles-complete-superemeralds/dez23_2",
+            "runs/s3k-knuckles-complete-superemeralds/ss_9",
+            "runs/s3k-knuckles-complete-superemeralds/mhz_3",
+            "runs/s3k-knuckles-complete-superemeralds/dez23_3",
+            "runs/s3k-knuckles-complete-superemeralds/ss_10",
+            "runs/s3k-knuckles-complete-superemeralds/mhz_4",
+            "runs/s3k-knuckles-complete-superemeralds/dez23_4",
+            "runs/s3k-knuckles-complete-superemeralds/ss_11",
+            "runs/s3k-knuckles-complete-superemeralds/mhz_5",
+            "runs/s3k-knuckles-complete-superemeralds/dez23_5",
+            "runs/s3k-knuckles-complete-superemeralds/ss_12",
+            "runs/s3k-knuckles-complete-superemeralds/mhz_6",
+            "runs/s3k-knuckles-complete-superemeralds/fbz",
+            "runs/s3k-knuckles-complete-superemeralds/dez23_6",
+            "runs/s3k-knuckles-complete-superemeralds/ss_13",
+            "runs/s3k-knuckles-complete-superemeralds/fbz_2",
+            "runs/s3k-knuckles-complete-superemeralds/gumball_3",
+            "runs/s3k-knuckles-complete-superemeralds/fbz_3",
+            "runs/s3k-knuckles-complete-superemeralds/dez23_7",
+            "runs/s3k-knuckles-complete-superemeralds/ss_14",
+            "runs/s3k-knuckles-complete-superemeralds/fbz_4",
+            "runs/s3k-knuckles-complete-superemeralds/soz",
+            "runs/s3k-knuckles-complete-superemeralds/pachinko_4",
+            "runs/s3k-knuckles-complete-superemeralds/soz_2",
+            "runs/s3k-knuckles-complete-superemeralds/lrz",
+            "runs/s3k-knuckles-complete-superemeralds/pachinko_5",
+            "runs/s3k-knuckles-complete-superemeralds/lrz_2",
+            "runs/s3k-knuckles-complete-superemeralds/slots_2",
+            "runs/s3k-knuckles-complete-superemeralds/lrz_3",
+            "runs/s3k-knuckles-complete-superemeralds/hpz22",
+            "runs/s3k-knuckles-complete-superemeralds/hpz",
             "soz_completerun",
             "special_stage",
             "ssz_completerun");
@@ -149,7 +224,13 @@ class TestCommittedHardwareTimingFixtures {
                     Map.entry("cnz_completerun",
                             "CNZ decompression consumer"),
                     Map.entry("icz_completerun",
-                            "ICZ1-to-ICZ2 act transition"));
+                            "ICZ1-to-ICZ2 act transition"),
+                    Map.entry(
+                            "runs/s3k-knuckles-complete-superemeralds/aiz",
+                            "AIZ intro"),
+                    Map.entry(
+                            "runs/s3k-knuckles-complete-superemeralds/icz",
+                            "ICZ act/zone transition"));
 
     @Test
     void approvedFleetMatchesFrozenPublicationEvidence() throws Exception {
@@ -177,8 +258,24 @@ class TestCommittedHardwareTimingFixtures {
         }
 
         assertEquals(EXPECTED_DESTINATIONS, observedDestinations);
-        assertEquals(1, runManifests.size());
-        assertRunManifest(runManifests.getFirst());
+        assertEquals(2, runManifests.size(),
+                "publication must contain each approved run manifest once");
+        assertEquals(Set.of(
+                        new RunManifestExpectation(
+                                "runs/s3-knux-multibonus-ss/run_manifest.json",
+                                "v637-knuckles-b", 8740,
+                                "16cc116a79b739ccba6c1dd8a607eb5478c151053b7cdc2962bd9e86bbbf39dc",
+                                25, 22),
+                        new RunManifestExpectation(
+                                "runs/s3k-knuckles-complete-superemeralds/"
+                                        + "run_manifest.json",
+                                "v638-knuckles-superemeralds", 20740,
+                                "01246e7e74f019382b2e210896c12668266fd3d3e11914da3a84428904fdc6a3",
+                                67, 48)),
+                new HashSet<>(runManifests));
+        for (RunManifestExpectation runManifest : runManifests) {
+            assertRunManifest(runManifest);
+        }
     }
 
     @Test
@@ -190,7 +287,9 @@ class TestCommittedHardwareTimingFixtures {
                         "hcz_completerun",
                         "mgz_completerun",
                         "cnz_completerun",
-                        "icz_completerun"),
+                        "icz_completerun",
+                        "runs/s3k-knuckles-complete-superemeralds/aiz",
+                        "runs/s3k-knuckles-complete-superemeralds/icz"),
                 SCHEMA_TWO_DIRECT_CONSUMER_FIXTURES.keySet());
 
         for (Map.Entry<String, String> inventory :
@@ -227,11 +326,13 @@ class TestCommittedHardwareTimingFixtures {
     private static void assertOwnership(ExpectedFixture expected) {
         Ownership ownership = EXPECTED_STANDALONE_OWNERSHIP.get(
                 expected.directory());
-        if (ownership == null && expected.directory().startsWith(
-                "runs/s3-knux-multibonus-ss/")) {
-            ownership = new Ownership(
-                    "v637-knuckles-b",
-                    Path.of(expected.directory()).getFileName().toString());
+        if (ownership == null) {
+            RunOwnership run = expectedRunOwnership(expected.directory());
+            if (run != null) {
+                ownership = new Ownership(
+                        run.owner(),
+                        Path.of(expected.directory()).getFileName().toString());
+            }
         }
         assertEquals(ownership,
                 new Ownership(expected.owner(), expected.sourceSegment()),
@@ -254,9 +355,10 @@ class TestCommittedHardwareTimingFixtures {
         assertEquals(expected.frameCount(),
                 metadataJson.path("trace_frame_count").intValue(),
                 expected.directory());
-        if ("v637-knuckles-b".equals(expected.owner())) {
-            assertEquals("s3-knux-multibonus-ss",
-                    metadataJson.path("run_id").textValue(), expected.directory());
+        RunOwnership run = expectedRunOwnership(expected.directory());
+        if (run != null) {
+            assertEquals(run.runId(), metadataJson.path("run_id").textValue(),
+                    expected.directory());
         } else if ("v637-knuckles-c".equals(expected.owner())) {
             assertEquals("s3k-multibonus",
                     metadataJson.path("run_id").textValue(), expected.directory());
@@ -308,14 +410,24 @@ class TestCommittedHardwareTimingFixtures {
 
     private static void assertRunManifest(RunManifestExpectation expected)
             throws Exception {
-        assertEquals("runs/s3-knux-multibonus-ss/run_manifest.json",
-                expected.path());
-        assertEquals("v637-knuckles-b", expected.owner());
         Path path = FIXTURE_ROOT.resolve(expected.path());
         assertFile(path, expected.hash(), expected.bytes());
         TraceRunManifest manifest = TraceRunManifest.load(path);
+        String prefix = expected.path().substring(
+                0, expected.path().length() - "run_manifest.json".length());
+        RunOwnership ownership = EXPECTED_RUN_OWNERSHIP.get(prefix);
+        assertEquals(expected.owner(), ownership.owner(), expected.path());
+        assertEquals(ownership.runId(), manifest.runId(), expected.path());
         assertEquals(expected.segmentCount(), manifest.segments().size());
         assertEquals(expected.transitionCount(), manifest.transitions().size());
+    }
+
+    private static RunOwnership expectedRunOwnership(String directory) {
+        return EXPECTED_RUN_OWNERSHIP.entrySet().stream()
+                .filter(entry -> directory.startsWith(entry.getKey()))
+                .map(Map.Entry::getValue)
+                .findFirst()
+                .orElse(null);
     }
 
     private static void assertEdge(HardwareCompletionEdge actual,
@@ -399,6 +511,9 @@ class TestCommittedHardwareTimingFixtures {
     }
 
     private record Ownership(String owner, String sourceSegment) {
+    }
+
+    private record RunOwnership(String owner, String runId) {
     }
 
     private record EdgeExpectation(
