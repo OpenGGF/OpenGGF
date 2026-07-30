@@ -1161,3 +1161,57 @@ comparator stops at the exit). `TestS3kMegaRunChain` clears the gumball round tr
 the chain's remaining seg2 (aiz_2) blocker is a separate landing/animation-state
 fidelity slip at f186/f192, tracked in docs/status/trace-frontier-log.md, not this
 divergence.
+
+---
+
+## HPZ Sanctuary Background: Screen Shake and Two-Band Plane Fill Not Modelled
+
+`SwScrlHpz` ports `HPZ_BackgroundInit` / `HPZ_BackgroundEvent` and their shared
+scroll math at `loc_5A33C` (sonic3k.asm:120069-120280). Two parts of the ROM
+routine are deliberately not carried over.
+
+### Original Implementation
+
+1. **`Screen_shake_offset` fold-in.** `sub_5A32C` / `sub_5A334` subtract
+   `Screen_shake_offset` from `Camera_Y_pos_copy` before scaling by 3/16 and add
+   it back to the result, and `loc_5A262` / `loc_5A2E4` tail-call
+   `ShakeScreen_Setup` (sonic3k.asm:104219) to advance the offset. The sanctuary's
+   only shake source is the falling-crystal ceremony, which writes a timed
+   `Screen_shake_flag` that indexes `ScreenShakeArray`.
+2. **Two-band plane fill.** `HPZ_BackgroundInit` copies `HScroll_table` word 0 to
+   word 1 and word 2 to word 3, masks both with `$FFF0`, and passes
+   `HPZ_BGDrawArray = {$200, $7FFF}` to `Refresh_PlaneTileDeform`, so the BG
+   nametable is filled from the layout at two different X positions split at BG
+   plane Y `$200`.
+
+### Our Implementation
+
+`SwScrlHpz.backgroundY` keeps the shake term as a single named local pinned to
+zero at both ROM points, and the handler builds one background X base rather than
+a banded plane fill. The 3/16 scroll rates, the `$EC0` seam offsets
+(`$348`/`$000` and `$E00`/`$700`), the `loc_5A388` 3/4-to-1/4 gradient, and
+`HPZ_BGDeformArray` are all modelled.
+
+### Rationale
+
+- **The shake has no amplitude to fold in yet.** `HPZSanctuaryFallingCrystalObjectInstance`
+  publishes `GameStateManager.setScreenShakeActive(boolean)`, not the ROM's
+  `Screen_shake_flag` countdown, so there is no per-frame offset for the handler to
+  read. HPZ produced no screen shake before this handler existed either; modelling
+  the counter is a separate change with its own owner, and the fold-in points are
+  documented in place so it lands in one edit.
+- **The plane-fill split is unobservable in the sanctuary.** `Sonic3kLevelResourceProfile`
+  pins the hub camera at `($15A0, $0320)`, which puts `Camera_Y_pos_BG_copy` at
+  `$01E6` — entirely inside band 0 of `HPZ_BGDrawArray`. The second band would only
+  be reachable if the engine ever framed HPZ below BG plane Y `$200`, which no
+  current route does.
+
+### Verification
+
+`SwScrlHpzTest` pins the provider route, both seam offset pairs,
+`Camera_Y_pos_BG_copy = $01E6` for the special-stage return framing, and the
+resulting deform bands (26 lines at `-$053E`, then `-$05B8` to the bottom of the
+display). Headless `HeadlessGameBoot` capture of zone `$16` act 1 shows the
+sanctuary crystal wall spanning the full display instead of surviving only in the
+leftmost columns, which was the visible symptom of the previous generic-fallback
+parallax.

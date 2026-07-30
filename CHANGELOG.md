@@ -3,6 +3,14 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Sonic 3 & Knuckles Hidden Palace sanctuary now uses its own ROM
+  background scroll handler instead of the generic S3K fallback parallax. The
+  sanctuary previously framed the wrong background rows, leaving the crystal wall
+  visible only in the leftmost columns of the display. `SwScrlHpz` ports
+  `HPZ_BackgroundInit` / `HPZ_BackgroundEvent`: the 3/16 background rates, the
+  `Player_1+x_pos` `$EC0` seam that selects the Master Emerald chamber or the
+  special-stage ring hall offsets, the `loc_5A388` 3/4-to-1/4 scroll gradient, and
+  the `HPZ_BGDeformArray` bands.
 - Fix: Sonic 3 & Knuckles Special Stage emeralds now draw from their ROM sprite
   mappings instead of a single rectangular block of tiles. The Super Emerald's
   frames are mirrored multi-piece sprites, so the cleared-stage emerald was
