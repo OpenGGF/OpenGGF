@@ -986,10 +986,10 @@ public class Sonic3kSpecialStageRenderer {
         int paletteIndex;
 
         switch (cellType) {
-            case CELL_BLUE:  patternBase = spherePatternBase; paletteIndex = 2; break;
-            case CELL_RED:
-            case CELL_TOUCHED:  // Touched spheres display as red
-                             patternBase = spherePatternBase; paletteIndex = 0; break;
+            case CELL_BLUE:
+            case CELL_TOUCHED:
+                             patternBase = spherePatternBase; paletteIndex = 2; break;
+            case CELL_RED:   patternBase = spherePatternBase; paletteIndex = 0; break;
             case CELL_BUMPER: patternBase = spherePatternBase; paletteIndex = 1; break;
             case CELL_RING:
                 patternBase = ringPatternBase; paletteIndex = 2; break;
@@ -1301,7 +1301,8 @@ public class Sonic3kSpecialStageRenderer {
     private static int cellTypeToPaletteIndex(int cellType) {
         switch (cellType) {
             case CELL_EMPTY: return -1;
-            case CELL_BLUE: return 2;
+            case CELL_BLUE:
+            case CELL_TOUCHED: return 2;
             case CELL_RED: return 0;
             case CELL_BUMPER: return 1;
             case CELL_RING: return 2;

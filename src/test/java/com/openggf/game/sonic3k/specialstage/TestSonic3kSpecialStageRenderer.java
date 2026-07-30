@@ -31,6 +31,18 @@ class TestSonic3kSpecialStageRenderer {
     }
 
     @Test
+    void touchedSphereRemainsBlueUntilItBecomesRed() {
+        RecordingGraphicsManager graphics = new RecordingGraphicsManager();
+        Sonic3kSpecialStageRenderer renderer = configuredGridRenderer(graphics);
+        Sonic3kSpecialStageManager manager = configuredGridManager();
+        manager.getGrid().setCellByIndex(0x2C8, Sonic3kSpecialStageConstants.CELL_TOUCHED);
+
+        renderer.render(manager);
+
+        assertEquals(List.of(new RenderCall(0x1000 + 0x74, 2)), graphics.calls);
+    }
+
+    @Test
     void spritePrimitiveBuffersGrowOnceThenReuseBackingArraysFor600Frames() {
         RecordingGraphicsManager graphics = new RecordingGraphicsManager();
         Sonic3kSpecialStageRenderer renderer = configuredGridRenderer(graphics);
