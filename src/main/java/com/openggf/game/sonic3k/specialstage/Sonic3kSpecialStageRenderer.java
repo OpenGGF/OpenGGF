@@ -80,6 +80,12 @@ public class Sonic3kSpecialStageRenderer {
     // Logical source bytes covered by bulk validation calls, not scalar comparison work.
     private int logicalContentValidationBytes;
 
+    /**
+     * Raw mapping data for the Chaos/Super Emerald sprite
+     * (Map_SStageChaosEmerald / Map_SStageSuperEmerald), 16 frames, no DPLC.
+     */
+    private byte[] emeraldMappingData;
+
     /** Raw mapping data for Sonic's SS sprite. */
     private byte[] sonicMappingData;
     /** Raw DPLC data for Sonic's SS sprite. */
@@ -105,13 +111,11 @@ public class Sonic3kSpecialStageRenderer {
     };
 
     private static final int[] HUD_TEMPLATE_BORDER_COLUMNS = {0, 7};
-    /** Flat triples of tile width, tile height, tile offset by size index. */
-    private static final int[] EMERALD_SIZE_MAP = {
-            4, 4, 0x00, 4, 4, 0x10,
-            3, 3, 0x20, 3, 3, 0x29, 3, 3, 0x32, 3, 3, 0x3B,
-            2, 2, 0x44, 2, 2, 0x48, 2, 2, 0x4C, 2, 2, 0x50,
-            1, 1, 0x54, 1, 1, 0x55, 1, 1, 0x56, 1, 1, 0x57
-    };
+    /** Emerald mappings hold 16 frames, one per perspective size index. */
+    private static final int EMERALD_MAPPING_FRAME_COUNT = 16;
+    /** Sanity bound on pieces per frame; the busiest ROM frame uses 4. */
+    private static final int EMERALD_MAX_PIECES = 8;
+
     private static final int[] RING_FRONT_SIZE_MAP = {
             3, 2, 0x00, 3, 2, 0x0C, 3, 3, 0x18, 3, 2, 0x27,
             2, 2, 0x33, 2, 2, 0x39, 2, 2, 0x3F, 2, 1, 0x45, 1, 1, 0x48
@@ -999,6 +1003,14 @@ public class Sonic3kSpecialStageRenderer {
             default: return;
         }
 
+        // Emeralds are drawn from their ROM mapping (MapPtr_A10A entries $0B / $0D):
+        // the Super Emerald frames are mirrored multi-piece sprites that no single
+        // rectangular block of tiles can describe.
+        if (cellType == CELL_CHAOS_EMERALD || cellType == CELL_SUPER_EMERALD) {
+            renderEmeraldSprite(screenX, screenY, sizeIndex, patternBase, paletteIndex);
+            return;
+        }
+
         // Size index → sprite dimensions and tile offset in sphere art
         int tilesW, tilesH, tileOffset;
         if (sizeIndex < 4) {
@@ -1013,17 +1025,6 @@ public class Sonic3kSpecialStageRenderer {
         } else {
             tilesW = 1; tilesH = 1;
             tileOffset = 0x74 + (sizeIndex - 12);
-        }
-
-        // Emerald art (Map_SStageChaosEmerald) has different frame layout from spheres.
-        // Frames 0-1: 4×4 (0x00, 0x10), Frames 2-5: 3×3 (0x20, 0x29, 0x32, 0x3B),
-        // Frames 6-9: 2×2 (0x44, 0x48, 0x4C, 0x50), Frames 10-13: 1×1 (0x54-0x57)
-        boolean isEmerald = (cellType == CELL_CHAOS_EMERALD || cellType == CELL_SUPER_EMERALD);
-        if (isEmerald) {
-            int offset = Math.min(sizeIndex, EMERALD_SIZE_MAP.length / 3 - 1) * 3;
-            tilesW = EMERALD_SIZE_MAP[offset];
-            tilesH = EMERALD_SIZE_MAP[offset + 1];
-            tileOffset = EMERALD_SIZE_MAP[offset + 2];
         }
 
         // Ring art has 3 rotation phases (from Map_SStageRing).
@@ -1094,6 +1095,61 @@ public class Sonic3kSpecialStageRenderer {
                 graphicsManager.renderPatternWithId(patternId, reusableDesc,
                         screenX + centerOffX + drawCol * TILE_SIZE,
                         screenY + centerOffY + row * TILE_SIZE);
+            }
+        }
+    }
+
+    /**
+     * Render the Chaos or Super Emerald from its ROM sprite mapping.
+     * <p>
+     * ROM: Draw_SSSprites resolves the perspective size field to a frame index
+     * (0-15) and walks the mapping frame's pieces. The Chaos Emerald frames are a
+     * single square piece each, but the Super Emerald frames are built from two or
+     * more pieces with the right half H-flipped, so both are driven from the
+     * mapping data rather than a rectangular block of tiles.
+     */
+    private void renderEmeraldSprite(int screenX, int screenY, int frame,
+                                     int patternBase, int paletteIndex) {
+        if (emeraldMappingData == null || frame < 0 || frame >= EMERALD_MAPPING_FRAME_COUNT) return;
+        if (frame * 2 + 1 >= emeraldMappingData.length) return;
+
+        int frameOff = readWord(emeraldMappingData, frame * 2);
+        if (frameOff + 1 >= emeraldMappingData.length) return;
+        int pieceCount = readWord(emeraldMappingData, frameOff);
+        if (pieceCount <= 0 || pieceCount > EMERALD_MAX_PIECES) return;
+
+        for (int p = 0; p < pieceCount; p++) {
+            int po = frameOff + 2 + p * 6;
+            if (po + 5 >= emeraldMappingData.length) break;
+
+            int yOff = (byte) emeraldMappingData[po];
+            int sizeByte = emeraldMappingData[po + 1] & 0xFF;
+            int patternWord = readWord(emeraldMappingData, po + 2);
+            int xOff = readSignedWord(emeraldMappingData, po + 4);
+
+            int tilesW = ((sizeByte >> 2) & 3) + 1;
+            int tilesH = (sizeByte & 3) + 1;
+            int tileBase = patternWord & 0x07FF;
+            boolean hFlip = (patternWord & 0x0800) != 0;
+            boolean vFlip = (patternWord & 0x1000) != 0;
+
+            // Column-major tile order; a flip mirrors which source tile lands in
+            // each screen column/row as well as flipping the tile itself.
+            for (int col = 0; col < tilesW; col++) {
+                for (int row = 0; row < tilesH; row++) {
+                    int srcCol = hFlip ? (tilesW - 1 - col) : col;
+                    int srcRow = vFlip ? (tilesH - 1 - row) : row;
+                    int patternId = patternBase + tileBase + srcCol * tilesH + srcRow;
+
+                    reusableDesc.set(0);
+                    reusableDesc.setPriority(true);
+                    reusableDesc.setPaletteIndex(paletteIndex);
+                    reusableDesc.setHFlip(hFlip);
+                    reusableDesc.setVFlip(vFlip);
+                    graphicsManager.renderPatternWithId(patternId, reusableDesc,
+                            screenX + xOff + col * TILE_SIZE,
+                            screenY + yOff + row * TILE_SIZE);
+                }
             }
         }
     }
@@ -1277,6 +1333,7 @@ public class Sonic3kSpecialStageRenderer {
     public void setIconsPatternBase(int base) { this.iconsPatternBase = base; }
     public void setPlayerPatternBase(int base) { this.playerPatternBase = base; }
     public void setEmeraldPatternBase(int base) { this.emeraldPatternBase = base; }
+    public void setEmeraldMappingData(byte[] mappingData) { this.emeraldMappingData = mappingData; }
     public void setTailsPatternBase(int base) { this.tailsPatternBase = base; }
     public void setTailsMappingData(byte[] mappingData, byte[] dplcData) {
         this.tailsMappingData = mappingData;

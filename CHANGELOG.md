@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Sonic 3 & Knuckles Special Stage emeralds now draw from their ROM sprite
+  mappings instead of a single rectangular block of tiles. The Super Emerald's
+  frames are mirrored multi-piece sprites, so the cleared-stage emerald was
+  rendered corrupted; the Chaos Emerald's smallest frames also now use their
+  own tiles.
 - Fix: Sonic 3 & Knuckles Super Emerald Special Stages now return the player to
   the zone the Big Ring was collected in, matching the ROM pedestal's
   `Special_bonus_entry_flag = 1` and `Load_Starpost_Settings`' Saved2 restore.

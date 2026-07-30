@@ -65,11 +65,57 @@ class TestSonic3kSpecialStageRenderer {
     }
 
     @Test
-    void hudEmeraldAndRingMappingsArePrivateStaticFinalFlatTables() {
+    void hudAndRingMappingsArePrivateStaticFinalFlatTables() {
         assertStableFlatTable("HUD_TEMPLATE_BORDER_COLUMNS");
-        assertStableFlatTable("EMERALD_SIZE_MAP");
         assertStableFlatTable("RING_FRONT_SIZE_MAP");
         assertStableFlatTable("RING_SIDE_SIZE_MAP");
+    }
+
+    /**
+     * Map_SStageSuperEmerald frame 12 (word_A832) is two 1x2 pieces: the left half
+     * at x=-8 and the same tiles H-flipped at x=0. Rendering it as a single square
+     * block of tiles - the Chaos Emerald shape - corrupts the sprite.
+     */
+    @Test
+    void superEmeraldRendersMirroredMappingPieces() {
+        RecordingGraphicsManager graphics = new RecordingGraphicsManager();
+        Sonic3kSpecialStageRenderer renderer = configuredGridRenderer(graphics);
+        renderer.setEmeraldPatternBase(0x3000);
+        renderer.setEmeraldMappingData(superEmeraldFrame12MappingData());
+        Sonic3kSpecialStageManager manager = configuredGridManager();
+        manager.getGrid().setCellByIndex(0x2C8, Sonic3kSpecialStageConstants.CELL_SUPER_EMERALD);
+
+        renderer.render(manager);
+
+        assertEquals(4, graphics.details.size());
+        DetailCall first = graphics.details.get(0);
+        assertEquals(List.of(
+                        new DetailCall(0x3000 + 0x4B, first.x(), first.y(), false),
+                        new DetailCall(0x3000 + 0x4C, first.x(), first.y() + 8, false),
+                        new DetailCall(0x3000 + 0x4B, first.x() + 8, first.y(), true),
+                        new DetailCall(0x3000 + 0x4C, first.x() + 8, first.y() + 8, true)),
+                graphics.details);
+    }
+
+    private static byte[] superEmeraldFrame12MappingData() {
+        int frameCount = 16;
+        int frameOff = frameCount * 2;
+        byte[] data = new byte[frameOff + 2 + 12];
+        for (int frame = 0; frame < frameCount; frame++) {
+            writeWord(data, frame * 2, frameOff);
+        }
+        writeWord(data, frameOff, 2);
+        // dc.b $F8, 1, $00, $4B, $FF, $F8
+        data[frameOff + 2] = (byte) 0xF8;
+        data[frameOff + 3] = 1;
+        writeWord(data, frameOff + 4, 0x004B);
+        writeWord(data, frameOff + 6, 0xFFF8);
+        // dc.b $F8, 1, $08, $4B, $00, $00
+        data[frameOff + 8] = (byte) 0xF8;
+        data[frameOff + 9] = 1;
+        writeWord(data, frameOff + 10, 0x084B);
+        writeWord(data, frameOff + 12, 0x0000);
+        return data;
     }
 
     @Test
@@ -206,8 +252,11 @@ class TestSonic3kSpecialStageRenderer {
 
     private record RenderCall(int patternId, int paletteIndex) {}
 
+    private record DetailCall(int patternId, int x, int y, boolean hFlip) {}
+
     private static final class RecordingGraphicsManager extends GraphicsManager {
         final List<RenderCall> calls = new ArrayList<>();
+        final List<DetailCall> details = new ArrayList<>();
 
         @Override
         public void beginPatternBatch() {
@@ -220,6 +269,7 @@ class TestSonic3kSpecialStageRenderer {
         @Override
         public void renderPatternWithId(int patternId, PatternDesc desc, int x, int y) {
             calls.add(new RenderCall(patternId, desc.getPaletteIndex()));
+            details.add(new DetailCall(patternId, x, y, desc.getHFlip()));
         }
     }
 }

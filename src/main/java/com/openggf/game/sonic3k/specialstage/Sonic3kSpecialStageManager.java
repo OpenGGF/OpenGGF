@@ -444,6 +444,13 @@ public class Sonic3kSpecialStageManager {
         }
         nextBase += emeraldPatterns.length;
 
+        // Emerald sprite mappings (MapPtr_A10A entries $0B / $0D). The Super Emerald
+        // frames are mirrored multi-piece sprites, so the pieces have to come from the
+        // ROM mapping rather than a single rectangular block.
+        renderer.setEmeraldMappingData(superEmeraldMode
+                ? dataLoader.getSuperEmeraldMap()
+                : dataLoader.getChaosEmeraldMap());
+
         // Load Tails sidekick body art (only for Sonic & Tails mode)
         if (tailsEnabled) {
             byte[] tailsArtData = dataLoader.getTailsArt();

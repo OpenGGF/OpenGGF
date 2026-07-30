@@ -69,6 +69,10 @@ public class Sonic3kSpecialStageDataLoader {
     private byte[] tailsArt;
     private byte[] tailsTailsArt;
 
+    // Emerald sprite maps (uncompressed)
+    private byte[] chaosEmeraldMap;
+    private byte[] superEmeraldMap;
+
     // HUD maps (uncompressed)
     private byte[] hudNumberMap;
     private byte[] hudDisplayMap;
@@ -400,6 +404,26 @@ public class Sonic3kSpecialStageDataLoader {
         return hudDisplayMap;
     }
 
+    // ==================== Emerald Maps (Uncompressed) ====================
+
+    public byte[] getChaosEmeraldMap() throws IOException {
+        if (chaosEmeraldMap == null) {
+            chaosEmeraldMap = rom.readBytes(
+                    Sonic3kSpecialStageRomOffsets.MAP_UNC_CHAOS_EMERALD,
+                    Sonic3kSpecialStageRomOffsets.MAP_UNC_CHAOS_EMERALD_SIZE);
+        }
+        return chaosEmeraldMap;
+    }
+
+    public byte[] getSuperEmeraldMap() throws IOException {
+        if (superEmeraldMap == null) {
+            superEmeraldMap = rom.readBytes(
+                    Sonic3kSpecialStageRomOffsets.MAP_UNC_SUPER_EMERALD,
+                    Sonic3kSpecialStageRomOffsets.MAP_UNC_SUPER_EMERALD_SIZE);
+        }
+        return superEmeraldMap;
+    }
+
     // ==================== Palette Helpers ====================
 
     /**
@@ -496,6 +520,8 @@ public class Sonic3kSpecialStageDataLoader {
         iconsArt = null;
         chaosEmeraldArt = null;
         superEmeraldArt = null;
+        chaosEmeraldMap = null;
+        superEmeraldMap = null;
         bgEnigmaMap = null;
         layoutEnigmaMap = null;
         perspectiveMaps = null;
