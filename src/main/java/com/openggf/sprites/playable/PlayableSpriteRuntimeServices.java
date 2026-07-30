@@ -8,7 +8,10 @@ import com.openggf.game.GameModule;
 import com.openggf.game.GameRng;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.LevelEventProvider;
 import com.openggf.game.LevelState;
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.session.WorldSession;
 import com.openggf.level.LevelManager;
 import com.openggf.level.WaterSystem;
 import com.openggf.physics.CollisionSystem;
@@ -24,6 +27,16 @@ final class PlayableSpriteRuntimeServices {
         static LevelManager levelOrNull() { return GameServices.levelOrNull(); }
         static GameModule currentOrBootstrapGameModule() { return GameServices.currentOrBootstrapGameModule(); }
         static CrossGameFeatureProvider crossGameFeatures() { return GameServices.crossGameFeatures(); }
+        /**
+         * Level events belong to the active world session — nothing outside one
+         * can have a boss fight running — so this deliberately does not fall
+         * back to the bootstrap module.
+         */
+        static LevelEventProvider levelEventsOrNull() {
+                WorldSession world = SessionManager.getCurrentWorldSession();
+                GameModule module = world != null ? world.getGameModule() : null;
+                return module != null ? module.getLevelEventProvider() : null;
+        }
         static LevelState levelState(LevelManager levelManager) {
                 return levelManager != null ? levelManager.getLevelGamestate() : null;
         }

@@ -79,10 +79,13 @@ class TestAudioCommandTimeline {
                 1.25f,
                 "s3k"),
                 entries.get(0).command());
+        // override=false: donor music replaces the foreground like any other
+        // song. Only the 1-up jingle is saved and restored, and it is never a
+        // donor track.
         assertEquals(new AudioCommand.PlayMusic(
                 0x21,
                 AudioCommand.MusicRoute.DONOR_SMPS,
-                true,
+                false,
                 "s3k"),
                 entries.get(1).command());
     }

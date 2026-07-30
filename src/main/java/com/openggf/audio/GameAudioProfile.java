@@ -55,10 +55,25 @@ public interface GameAudioProfile {
         return -1;
     }
 
+    /**
+     * Returns true if this music interrupts the current song and restores it
+     * when it ends, rather than replacing it.
+     *
+     * <p>The 1-up jingle is the only such music in every game. The sound driver
+     * owns a single save slot used exclusively by it: S1's
+     * {@code Sound_PlayBGM} backs up {@code v_1up_ram} and sets
+     * {@code f_1up_playing}, and S3K's {@code zPlayMusic} copies
+     * {@code zTracksStart} to {@code zTracksSaveStart} and sets
+     * {@code zFadeToPrevFlag}. The jingle's own {@code E4} coord flag
+     * ("fade in to previous song") is what restores it.
+     *
+     * <p>Invincibility and Super are <em>not</em> overrides. The ROM plays them
+     * as ordinary music and restores the level music by re-issuing it when the
+     * power-up ends — see {@code Sonic_ChkInvin}, which the Super revert defers
+     * to by setting {@code invincibility_timer} to 1.
+     */
     default boolean isMusicOverride(int musicId) {
-        return musicId == getInvincibilityMusicId()
-                || musicId == getExtraLifeMusicId()
-                || musicId == getSuperSonicMusicId();
+        return musicId == getExtraLifeMusicId();
     }
 
     /**

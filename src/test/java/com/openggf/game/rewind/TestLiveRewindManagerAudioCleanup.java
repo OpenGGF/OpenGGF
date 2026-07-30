@@ -243,29 +243,26 @@ class TestLiveRewindManagerAudioCleanup {
         audio.setBackend(realBackend);
         try {
             int zoneMusicId = 0x82;
-            int invincibilityMusicId = 0x2A;
+            int extraLifeMusicId = 0x2A;
             AudioTestFixtures.StubSmpsLoader loader =
                     new AudioTestFixtures.StubSmpsLoader();
             loader.musicResults.put(zoneMusicId, persistentSource(zoneMusicId));
-            AudioTestFixtures.StubSmpsLoader donorLoader =
-                    new AudioTestFixtures.StubSmpsLoader();
-            donorLoader.musicResults.put(
-                    invincibilityMusicId, persistentSource(invincibilityMusicId));
+            loader.musicResults.put(
+                    extraLifeMusicId, persistentSource(extraLifeMusicId));
             audio.setAudioProfile(new AudioTestFixtures.StubAudioProfile(loader) {
                 @Override public SmpsSequencerConfig getSequencerConfig() {
                     return smpsConfig();
                 }
-                @Override public int getInvincibilityMusicId() {
-                    return invincibilityMusicId;
+                @Override public int getExtraLifeMusicId() {
+                    return extraLifeMusicId;
                 }
             });
             audio.setRom(null);
-            audio.registerDonorLoader("s3k", donorLoader,
-                    AudioTestFixtures.EMPTY_DAC, smpsConfig());
             audio.playMusic(zoneMusicId);
-            // The override route is what saves the zone music underneath the
-            // still-active invincibility track.
-            audio.playDonorMusic("s3k", invincibilityMusicId);
+            // The 1-up jingle is the only music that saves the song underneath
+            // it, so it is the only way to hold a live save slot across a
+            // rewind release.
+            audio.playMusic(extraLifeMusicId);
             audio.presentFrame(PresentationMode.SILENT);
 
             TestEnvironment.activeGameplayMode();
@@ -282,11 +279,11 @@ class TestLiveRewindManagerAudioCleanup {
             assertFalse(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input));
 
             var after = audio.captureLogicalSnapshot().presentation();
-            assertEquals(invincibilityMusicId,
+            assertEquals(extraLifeMusicId,
                     after.activeMusic().sourceDescriptor().id(),
-                    "releasing a held rewind while still invincible must not end the invincibility override");
+                    "releasing a held rewind mid-jingle must not end the jingle early");
             assertFalse(after.overrideStack().isEmpty(),
-                    "the saved zone music must remain on the override stack while the override is still active");
+                    "the saved zone music must remain saved while the jingle is still playing");
             // A restore request only queues a deferred pop; the bug is issuing
             // it at all here, which this observes directly rather than
             // depending on when the next drain happens to run.
