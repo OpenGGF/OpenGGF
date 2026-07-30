@@ -429,6 +429,18 @@ public class DrowningController {
     }
 
     /**
+     * Returns true while the drowning countdown owns music playback, so a
+     * power-up ending must not replace it.
+     *
+     * <p>ROM: {@code cmpi.b #12,air_left(a0)} / {@code blo} in
+     * {@code Sonic_ChkInvin} — the same air level at which the countdown music
+     * starts.
+     */
+    boolean isCountdownOwningMusic() {
+        return remainingAir < DROWNING_MUSIC_LEVEL;
+    }
+
+    /**
      * A fixed level-event air-countdown object may own bubble allocation and
      * RNG cadence, but the air-left side effects are the shared ROM path:
      * warning ding at 25/20/15, drowning music at 12, then decrement air_left.

@@ -17,6 +17,7 @@ import com.openggf.game.PowerUpSpawner;
 import com.openggf.game.GroundMode;
 import com.openggf.game.ShieldType;
 import com.openggf.game.DamageCause;
+import com.openggf.game.AbstractLevelEventManager;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelState;
 import com.openggf.game.rules.GameRules;
@@ -2654,11 +2655,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                                 if (shieldObject != null) {
                                         shieldObject.setVisible(true);
                                 }
-                                AudioManager audioManager = currentAudioManager();
-                                GameAudioProfile audioProfile = audioManager.getAudioProfile();
-                                if (audioProfile != null) {
-                                        audioManager.endMusicOverride(audioProfile.getInvincibilityMusicId());
-                                }
+                                restoreLevelMusicAfterInvincibility();
                         }
                 }
                 if (springingFrames > 0) {
@@ -2683,6 +2680,44 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                                 instaShieldObject.update(0, this);
                         }
                 }
+        }
+
+        /**
+         * Resumes the level music when invincibility ends.
+         *
+         * <p>ROM: {@code Sonic_ChkInvin} re-issues {@code Current_music} rather
+         * than restoring a saved song — the sound driver's single save slot
+         * belongs to the 1-up jingle alone. It leaves the music alone during a
+         * boss fight, and while the drowning countdown owns playback
+         * ({@code air_left} below the countdown threshold). The Super revert
+         * reaches this path by setting {@code invincibility_timer} to 1 rather
+         * than playing music itself.
+         */
+        private void restoreLevelMusicAfterInvincibility() {
+                if (bossOwnsMusic() || drowningCountdownOwnsMusic()) {
+                        return;
+                }
+                LevelManager levelManager = currentLevelManagerIfAvailable();
+                if (levelManager == null) {
+                        return;
+                }
+                int musicId = levelManager.getCurrentLevelMusicId();
+                if (musicId >= 0) {
+                        currentAudioManager().playMusic(musicId);
+                }
+        }
+
+        /** ROM: {@code tst.b (Boss_flag).w} — a boss fight owns the music. */
+        private boolean bossOwnsMusic() {
+                return PlayableSpriteRuntimeServices.levelEventsOrNull()
+                                instanceof AbstractLevelEventManager events
+                                && events.isBossActive();
+        }
+
+        /** ROM: {@code cmpi.b #12,air_left(a0)} — the drowning countdown owns the music. */
+        private boolean drowningCountdownOwnsMusic() {
+                DrowningController drowning = getDrowningController();
+                return drowning != null && drowning.isCountdownOwningMusic();
         }
 
         public boolean applyHurt(int sourceX) {

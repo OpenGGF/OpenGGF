@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using System.Security.Cryptography;
 using BizHawk.Emulation.Cores.Consoles.Sega.gpgx;
 using OpenGGF.BizHawk.Headless;
 
@@ -11,7 +12,8 @@ namespace BizHawk.Headless.Gpgx
     internal enum CaptureMode
     {
         Smoke,
-        Trace
+        Trace,
+        LoadTime
     }
 
     internal sealed class CommandLineOptions
@@ -36,6 +38,7 @@ namespace BizHawk.Headless.Gpgx
         };
 
         internal const string RunManifestFileName = "run_manifest.json";
+        internal const string LoadTimeFileName = "load_time_measurements.jsonl";
 
         private CommandLineOptions(
             CaptureMode mode,
@@ -204,6 +207,11 @@ namespace BizHawk.Headless.Gpgx
                     moviePath,
                     outputDirectory);
             }
+            if (mode == CaptureMode.LoadTime)
+            {
+                return ParseLoadTime(
+                    values, romPath, moviePath, outputDirectory);
+            }
 
             RejectInSmokeMode(values, "--trace-profile");
             RejectInSmokeMode(values, "--gameplay-segment");
@@ -259,6 +267,46 @@ namespace BizHawk.Headless.Gpgx
                 null,
                 0,
                 false,
+                TracePayloadCompressor.DefaultThresholdBytes);
+        }
+
+        private static CommandLineOptions ParseLoadTime(
+            IDictionary<string, string> values,
+            string romPath,
+            string moviePath,
+            string outputDirectory)
+        {
+            string[] unsupported =
+            {
+                "--bk2-frame-offset", "--max-frames", "--trace-profile",
+                "--gameplay-segment", "--run-id",
+                "--effective-movie-length", "--compress",
+                "--no-compress", "--compress-threshold"
+            };
+            foreach (string name in unsupported)
+            {
+                if (values.ContainsKey(name))
+                {
+                    throw new ArgumentException(
+                        "Argument " + name
+                        + " is not supported in load-time mode.");
+                }
+            }
+            string fullOutputDirectory = Path.GetFullPath(outputDirectory);
+            string finalPath = Path.Combine(
+                fullOutputDirectory, LoadTimeFileName);
+            if (LinuxPathEntry.Exists(finalPath))
+            {
+                throw new IOException(
+                    "Final output already exists and will not be replaced: "
+                    + finalPath);
+            }
+            return new CommandLineOptions(
+                CaptureMode.LoadTime,
+                Path.GetFullPath(romPath),
+                Path.GetFullPath(moviePath),
+                fullOutputDirectory,
+                0, 0, null, null, null, 0, false,
                 TracePayloadCompressor.DefaultThresholdBytes);
         }
 
@@ -440,8 +488,13 @@ namespace BizHawk.Headless.Gpgx
             {
                 return CaptureMode.Trace;
             }
+            if (value == "load-time")
+            {
+                return CaptureMode.LoadTime;
+            }
             throw new ArgumentException(
-                "Argument --mode must be \"smoke\" or \"trace\".");
+                "Argument --mode must be \"smoke\", \"trace\","
+                + " or \"load-time\".");
         }
 
         private static void RejectInTraceMode(
@@ -597,7 +650,7 @@ namespace BizHawk.Headless.Gpgx
                 byte[] romBytes = File.ReadAllBytes(options.RomPath);
                 string romSha1;
                 string traceGame = null;
-                if (options.Mode == CaptureMode.Trace)
+                if (options.Mode != CaptureMode.Smoke)
                 {
                     // Trace mode auto-detects the recorder pipeline from
                     // the supplied ROM (s1 or s2); smoke mode below keeps
@@ -616,8 +669,26 @@ namespace BizHawk.Headless.Gpgx
                         options.MoviePath);
                 }
                 Bk2Movie movie = Bk2Reader.Read(options.MoviePath);
-                if (options.Mode == CaptureMode.Trace)
+                if (options.Mode != CaptureMode.Smoke)
                 {
+                    if (options.Mode == CaptureMode.LoadTime)
+                    {
+                        if (traceGame != "s3k")
+                        {
+                            throw new ArgumentException(
+                                "Load-time measurement requires the"
+                                + " Sonic 3&K locked-on ROM.");
+                        }
+                        return RunLoadTime(
+                            options,
+                            installation,
+                            romSha1,
+                            romBytes,
+                            movie,
+                            stdout,
+                            stderr,
+                            openHost);
+                    }
                     if (traceGame == "s1")
                     {
                         if (options.GameplaySegment.HasValue)
@@ -770,6 +841,54 @@ namespace BizHawk.Headless.Gpgx
             {
                 ReportFailure(stderr, exception);
                 return 1;
+            }
+        }
+
+        private static int RunLoadTime(
+            CommandLineOptions options,
+            BizHawkInstallation installation,
+            string romSha1,
+            byte[] rom,
+            Bk2Movie movie,
+            TextWriter stdout,
+            TextWriter stderr,
+            Func<string, GPGX.GPGXSyncSettings, IGpgxHost> openHost)
+        {
+            string outputPath = Path.Combine(
+                options.OutputDirectory,
+                CommandLineOptions.LoadTimeFileName);
+            string fixture = Path.GetFileName(options.MoviePath);
+            string movieSha256 = ComputeSha256(options.MoviePath);
+            return RunTraceCapture(
+                options.OutputDirectory,
+                stdout,
+                stderr,
+                () => new NativeStandardOutputSilencer(),
+                () => openHost(options.RomPath, movie.SyncSettings),
+                (host, writers) =>
+                {
+                    LoadTimeMeasurementCaptureRunner.Capture(
+                        movie, host, rom, fixture, movieSha256, romSha1,
+                        writers[0]);
+                    return movie;
+                },
+                ignored =>
+                    "BizHawk: " + installation.ManagedVersion + "\n"
+                    + "ROM SHA-1: " + romSha1 + "\n"
+                    + "Movie frames: " + movie.FrameCount.ToString(
+                        CultureInfo.InvariantCulture) + "\n"
+                    + "Measurements: " + outputPath + "\n",
+                new NoReplacePublisher(),
+                new[] { CommandLineOptions.LoadTimeFileName });
+        }
+
+        private static string ComputeSha256(string path)
+        {
+            using (SHA256 sha = SHA256.Create())
+            using (FileStream input = File.OpenRead(path))
+            {
+                return BitConverter.ToString(sha.ComputeHash(input))
+                    .Replace("-", "").ToLowerInvariant();
             }
         }
 

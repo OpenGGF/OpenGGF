@@ -2,7 +2,6 @@ package com.openggf.tests.trace.s1;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.control.InputHandler;
-import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.debug.playback.RecordedInputSnapshots;
@@ -11,10 +10,10 @@ import com.openggf.game.SpecialStageInputMapper;
 import com.openggf.game.SpecialStageStartupPolicy;
 import com.openggf.game.sonic1.specialstage.Sonic1SpecialStageComparisonState;
 import com.openggf.game.sonic1.specialstage.Sonic1SpecialStageProvider;
+import com.openggf.tests.trace.RecordedInputRows;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Objects;
 
 /**
@@ -81,21 +80,19 @@ import java.util.Objects;
  */
 final class S1SpecialStageReplayHarness {
 
-    private final Bk2Movie movie;
-    private final int bk2FrameOffset;
+    private final RecordedInputRows recordedInputs;
     private final InputHandler inputHandler;
     private final Sonic1SpecialStageProvider provider;
 
     S1SpecialStageReplayHarness(Path bk2, int bk2FrameOffset, int specialStageIndex)
             throws IOException {
-        this.bk2FrameOffset = bk2FrameOffset;
-
         // Recorded maze runs are captured solo (Sonic). Set the standard team
         // config before initializeStage() runs resolvePlayerCharacter().
         GameServices.configuration()
                 .setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
 
-        this.movie = new Bk2MovieLoader().load(Objects.requireNonNull(bk2, "bk2"));
+        Bk2Movie movie = new Bk2MovieLoader().load(Objects.requireNonNull(bk2, "bk2"));
+        this.recordedInputs = new RecordedInputRows(movie, bk2FrameOffset);
         this.inputHandler = new InputHandler();
         this.provider = new Sonic1SpecialStageProvider();
         // TRACE_ACCURATE leaves the ROM's 44-VBlank-tick pre-physics hold
@@ -106,21 +103,6 @@ final class S1SpecialStageReplayHarness {
         this.provider.initializeStage(specialStageIndex, SpecialStageStartupPolicy.TRACE_ACCURATE);
     }
 
-    /** Absolute BK2 input-log row backing trace frame {@code traceFrame}. */
-    private Bk2FrameInput rowAt(int traceFrame) {
-        int index = bk2FrameOffset + traceFrame;
-        return rowAtAbsolute(index);
-    }
-
-    private Bk2FrameInput rowAtAbsolute(int index) {
-        List<Bk2FrameInput> frames = movie.getFrames();
-        if (index < 0 || index >= frames.size()) {
-            throw new IndexOutOfBoundsException(
-                    "BK2 row " + index + " out of range [0, " + frames.size() + ")");
-        }
-        return frames.get(index);
-    }
-
     /**
      * Steps one special-stage logic frame using the BK2 row for
      * {@code traceFrame}, diffing against the previous physical BK2 row for
@@ -129,20 +111,12 @@ final class S1SpecialStageReplayHarness {
      * (consume the trace row without stepping) instead.
      */
     void stepFrame(int traceFrame) {
-        Bk2FrameInput current = rowAt(traceFrame);
-        int prevIndex = bk2FrameOffset + traceFrame - 1;
-        Bk2FrameInput previous = prevIndex >= 0 && prevIndex < movie.getFrames().size()
-                ? movie.getFrames().get(prevIndex)
-                : null; // fromBk2 synthesises a neutral prior row when null
-        inputHandler.setLogicalOverride(RecordedInputSnapshots.fromBk2(current, previous));
-        try {
+        recordedInputs.withLogicalOverride(traceFrame, inputHandler, () -> {
             SpecialStageInputMapper.MappedInput mapped =
                     SpecialStageInputMapper.map(inputHandler.logical());
             provider.handleInput(mapped.p1Held(), mapped.p1Pressed());
             provider.update();
-        } finally {
-            inputHandler.clearLogicalOverride();
-        }
+        });
     }
 
     /** Read-only comparison snapshot of the current engine SS state. */

@@ -26,8 +26,12 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SuperStateController;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.game.timing.HardwareTimingService;
+import com.openggf.game.timing.LoadTimeProfile;
+import com.openggf.game.timing.LoadTimeProfileFactory;
+import com.openggf.game.timing.LoadTimeSimulationMode;
 
 import java.util.Optional;
+import java.util.function.Consumer;
 
 @ModApi
 public interface GameModule {
@@ -100,6 +104,20 @@ public interface GameModule {
             com.openggf.level.Level level,
             ObjectArtProvider objectArtProvider) {
         return null;
+    }
+
+    /** Resolves a fresh session-owned normal-play load-time profile. */
+    default LoadTimeProfile createLoadTimeProfile(
+            LoadTimeSimulationMode mode,
+            LoadTimeProfile profiled,
+            Consumer<String> warningSink) {
+        return LoadTimeProfileFactory.resolve(mode, profiled, warningSink);
+    }
+
+    default LoadTimeProfile createLoadTimeProfile(
+            LoadTimeSimulationMode mode,
+            Consumer<String> warningSink) {
+        return createLoadTimeProfile(mode, LoadTimeProfile.IMMEDIATE, warningSink);
     }
 
     ObjectRegistry createObjectRegistry();

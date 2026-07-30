@@ -1414,11 +1414,18 @@ public class AudioManager implements MusicRestoreSink {
             }
         }
 
+        // The 1-up jingle, invincibility and Super themes interrupt the zone
+        // music instead of replacing it: the interrupted song is pushed so the
+        // driver's "fade in to previous" (E4) and the power-up timeouts can
+        // bring it back. Without this the interrupted song is destroyed and the
+        // restore finds an empty stack, leaving the level silent.
+        boolean override = audioProfile != null && audioProfile.isMusicOverride(musicId);
+
         if (smpsLoader != null) {
             AbstractSmpsData data = smpsLoader.loadMusic(musicId);
             if (data != null) {
                 recordTimelineCommand(new AudioCommand.PlayMusic(
-                        musicId, AudioCommand.MusicRoute.BASE_SMPS, false, null));
+                        musicId, AudioCommand.MusicRoute.BASE_SMPS, override, null));
                 if (sendLiveBackendCommands()) {
                     backend.playStreamedMusicOrElse(musicId, () -> {
                         backend.prepareLogicalMusicSource(AudioSourceDescriptor.baseMusic(musicId));
@@ -1429,7 +1436,7 @@ public class AudioManager implements MusicRestoreSink {
             }
         }
         recordTimelineCommand(new AudioCommand.PlayMusic(
-                musicId, AudioCommand.MusicRoute.FALLBACK_WAV, false, null));
+                musicId, AudioCommand.MusicRoute.FALLBACK_WAV, override, null));
         if (sendLiveBackendCommands()) {
             backend.playStreamedMusicOrElse(musicId, () -> {
                 backend.prepareLogicalMusicSource(AudioSourceDescriptor.fallbackMusic(musicId));
@@ -1673,15 +1680,16 @@ public class AudioManager implements MusicRestoreSink {
         if (loader != null && dData != null) {
             AbstractSmpsData data = loader.loadMusic(musicId);
             if (data != null) {
+                // Donor music replaces the foreground like any other song. Donor
+                // ids are only ever used for cross-game Super and data-select
+                // music, none of which the ROM saves and restores — only the
+                // 1-up jingle does that, and it is never a donor track.
                 recordTimelineCommand(new AudioCommand.PlayMusic(
-                        musicId, AudioCommand.MusicRoute.DONOR_SMPS, true, donorGameId));
+                        musicId, AudioCommand.MusicRoute.DONOR_SMPS, false, donorGameId));
                 SmpsSequencerConfig config = donorConfigs.get(donorGameId);
-                // forceOverride=true: the base game's audioProfile won't recognize
-                // donor music IDs, so force the override path to push zone music
-                // onto the stack for restoration when Super Sonic ends.
                 if (sendLiveBackendCommands()) {
                     backend.prepareLogicalMusicSource(AudioSourceDescriptor.donorMusic(donorGameId, musicId));
-                    backend.playSmps(data, dData, config, true);
+                    backend.playSmps(data, dData, config, false);
                 }
             }
         }

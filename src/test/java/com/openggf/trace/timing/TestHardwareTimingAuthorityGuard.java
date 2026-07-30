@@ -96,6 +96,35 @@ class TestHardwareTimingAuthorityGuard {
     }
 
     @Test
+    void measurementToolingCannotBecomeRuntimeOrReplayAuthority()
+            throws IOException {
+        try (Stream<Path> sources = Files.walk(SRC_MAIN)) {
+            List<String> violations = sources
+                    .filter(path -> path.toString().endsWith(".java"))
+                    .filter(path -> !path.startsWith(
+                            SRC_MAIN.resolve("com/openggf/tools/timing")))
+                    .filter(path -> !path.endsWith(
+                            Path.of("HardwareTimingStreamLoader.java")))
+                    .filter(path -> {
+                        try {
+                            String source = Files.readString(path);
+                            return source.contains("com.openggf.tools.timing")
+                                    || source.contains(
+                                    "\"load_time_measurements.jsonl\"");
+                        } catch (IOException exception) {
+                            throw new java.io.UncheckedIOException(exception);
+                        }
+                    })
+                    .map(SRC_MAIN::relativize)
+                    .map(Path::toString)
+                    .sorted()
+                    .toList();
+            assertEquals(List.of(), violations,
+                    "measurement tooling leaked into runtime/replay authority");
+        }
+    }
+
+    @Test
     void sourceCatalogueKeepsDifferentRootsIsolated() throws IOException {
         Path firstRoot = Path.of("first-production");
         Path secondRoot = Path.of("second-production");

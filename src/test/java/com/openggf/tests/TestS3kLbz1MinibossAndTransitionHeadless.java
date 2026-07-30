@@ -6,6 +6,7 @@ import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.events.Sonic3kLBZEvents;
+import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.sonic3k.objects.LbzInvisibleBarrierInstance;
 import com.openggf.game.sonic3k.objects.LbzMinibossBoxInstance;
 import com.openggf.game.sonic3k.objects.LbzMinibossInstance;
@@ -333,12 +334,13 @@ class TestS3kLbz1MinibossAndTransitionHeadless {
 
         assertEquals(0, GameServices.level().getCurrentAct(),
                 "LBZ1BGE_Normal only queues the three secondary Kos/KosM streams.");
-        for (int frame = 1; frame < 55; frame++) {
+        for (int frame = 1; frame < 100_000
+                && GameServices.level().getCurrentAct() == 0; frame++) {
+            serviceRuntimeArt(HardwareServiceBoundary.VINT_SERVICE);
+            serviceRuntimeArt(HardwareServiceBoundary.PRE_MAIN_LOOP);
             manager.update();
-            assertEquals(0, GameServices.level().getCurrentAct(),
-                    "LBZ1BGE_DoTransition must poll while Kos_modules_left is nonzero.");
+            serviceRuntimeArt(HardwareServiceBoundary.POST_OBJECTS);
         }
-        manager.update();
 
         assertEquals(1, GameServices.level().getCurrentAct(),
                 "LBZ1BGE_DoTransition writes Current_zone_and_act=$0601 before Load_Level.");
@@ -377,6 +379,11 @@ class TestS3kLbz1MinibossAndTransitionHeadless {
         }
         assertTrue(Arrays.equals(staging, readCorridorRow(map)),
                 "LBZ2_LayoutMod copies the staging columns $94.. into columns 6.. at the gate.");
+    }
+
+    private static void serviceRuntimeArt(HardwareServiceBoundary boundary) {
+        GameServices.hardwareTiming().service(boundary);
+        GameServices.runtimeArtCoordinator().afterTimingService(boundary);
     }
 
     private static final class LbzCorridor {

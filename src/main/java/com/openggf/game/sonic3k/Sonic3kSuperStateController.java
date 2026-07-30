@@ -316,6 +316,10 @@ public class Sonic3kSuperStateController extends SuperStateController {
         paletteState = 2;
         paletteFrame = FADE_COMPLETE_OFFSET - BYTES_PER_FRAME;
         paletteTimer = 3;
+        // ROM: move.b #1,invincibility_timer(a0). Besides the one-frame grace
+        // period, this is how SonicKnux_SuperHyper.revertToNormal restores the
+        // zone music: it plays none itself and lets Sonic_ChkInvin re-issue
+        // Current_music when the timer expires.
         player.setInvincibleFrames(1);
         if (normalAnimSet != null) {
             player.setAnimationSet(normalAnimSet);
@@ -325,18 +329,6 @@ public class Sonic3kSuperStateController extends SuperStateController {
             player.setSpriteRenderer(normalRenderer);
         }
         player.setShieldVisible(true);
-        // Revert to zone music
-        try {
-            if (CrossGameFeatureProvider.isActive()) {
-                GameServices.audio().endDonorMusicOverride(
-                        GameServices.crossGameFeatures().getDonorGameId(),
-                        GameMusic.SUPER);
-            } else {
-                GameServices.audio().endMusicOverride(GameMusic.SUPER);
-            }
-        } catch (Exception e) {
-            LOGGER.fine("Could not revert Super Sonic music: " + e.getMessage());
-        }
         LOGGER.info("Super Sonic deactivated (S3K)");
     }
 

@@ -39,6 +39,7 @@ import com.openggf.game.timing.HardwareTimingBoundaryObserver;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.game.timing.HardwareTimingService;
+import com.openggf.game.timing.LoadTimeProfile;
 import com.openggf.level.SeamlessTransitionResourceHandoffRegistry;
 import com.openggf.game.timing.RecordedCompletionAuthority;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
@@ -63,9 +64,12 @@ import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.logging.Logger;
 
 @com.openggf.game.ModApi
 public final class GameplayModeContext implements ModeContext {
+    private static final Logger LOG =
+            Logger.getLogger(GameplayModeContext.class.getName());
     private static final String PATTERN_ANIMATOR_REWIND_KEY = "pattern-animator";
     private static final String[] PLC_ART_REWIND_KEYS = {
             "s2-plc-art",
@@ -156,12 +160,22 @@ public final class GameplayModeContext implements ModeContext {
         this.resumeStash = resumeStash;
         HardwareReadinessAdmissionPolicy checkedPolicy =
                 Objects.requireNonNull(admissionPolicy, "admissionPolicy");
-        this.hardwareTiming = new HardwareTimingService();
-        RuntimeArtCoordinator coordinator = worldSession.getGameModule()
-                .createRuntimeArtCoordinator(hardwareTiming);
-        this.runtimeArtCoordinator = coordinator != null
-                ? coordinator
-                : RuntimeArtCoordinator.NONE;
+        LoadTimeProfile profile = checkedPolicy
+                == HardwareReadinessAdmissionPolicy.RECORDED
+                ? LoadTimeProfile.IMMEDIATE
+                : Objects.requireNonNullElse(
+                        worldSession.getGameModule().createLoadTimeProfile(
+                                worldSession.loadTimeSimulationMode(),
+                                LOG::warning),
+                        LoadTimeProfile.IMMEDIATE);
+        this.hardwareTiming = new HardwareTimingService(
+                com.openggf.game.timing.RomWorkBudgetScheduler.oneWorkUnitAt(
+                        HardwareServiceBoundary.POST_OBJECTS),
+                profile);
+        this.runtimeArtCoordinator = Objects.requireNonNull(
+                worldSession.getGameModule()
+                        .createRuntimeArtCoordinator(hardwareTiming),
+                "runtimeArtCoordinator");
         this.seamlessTransitionResourceHandoffs =
                 new SeamlessTransitionResourceHandoffRegistry();
         this.recordedCompletionAuthority =

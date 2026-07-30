@@ -39,6 +39,30 @@ class TraceCaptureToolArgsTest {
     }
 
     @Test
+    void acceptsNegativeIntegerValuesAsBefore() {
+        TraceCaptureTool.Args args = TraceCaptureTool.Args.parse(
+                new String[]{"--trace", "aiz1", "--scale", "-3", "--fps", "-30", "--tail-frames", "-1"});
+
+        assertEquals(-3, args.scale());
+        assertEquals(-30, args.fps());
+        assertEquals(-1, args.tailFrames());
+    }
+
+    @Test
+    void rejectsAMissingValueWithTheOriginalMessage() {
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> TraceCaptureTool.Args.parse(new String[]{"--trace", "aiz1", "--scale"}));
+
+        assertEquals("Missing value for --scale", error.getMessage());
+    }
+
+    @Test
+    void rejectsMalformedIntegerValuesWithNumberFormatException() {
+        assertThrows(NumberFormatException.class,
+                () -> TraceCaptureTool.Args.parse(new String[]{"--trace", "aiz1", "--fps", "thirty"}));
+    }
+
+    @Test
     void multiSegmentRunIsRejectedAsNotCapturable() {
         TraceRunManifest manifest = new TraceRunManifest(
                 TraceRunManifest.SUPPORTED_RUN_SCHEMA, "s3k", "run_aiz_gumball",

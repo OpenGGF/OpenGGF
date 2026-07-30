@@ -12,11 +12,28 @@ public record HardwareWorkSubmission(
         String compressionVariant,
         int moduleCount,
         boolean exportableAcrossSegment,
+        HardwareWorkFeatures features,
         HardwareWorkPreparation preparation) {
+
+    public HardwareWorkSubmission(
+            HardwareWorkKind kind,
+            int romSourceAddress,
+            int compressedLength,
+            int destinationAddress,
+            int destinationLength,
+            String compressionVariant,
+            int moduleCount,
+            boolean exportableAcrossSegment,
+            HardwareWorkPreparation preparation) {
+        this(kind, romSourceAddress, compressedLength, destinationAddress,
+                destinationLength, compressionVariant, moduleCount,
+                exportableAcrossSegment, HardwareWorkFeatures.EMPTY, preparation);
+    }
 
     public HardwareWorkSubmission {
         Objects.requireNonNull(kind, "kind");
         Objects.requireNonNull(compressionVariant, "compressionVariant");
+        Objects.requireNonNull(features, "features");
         Objects.requireNonNull(preparation, "preparation");
         if (compressedLength < 0) {
             throw new IllegalArgumentException("compressedLength must be non-negative");

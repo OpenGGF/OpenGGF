@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.events;
 
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.mutation.MutationEffects;
@@ -15,6 +16,12 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.LbzInvisibleBarrierInstance;
 import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
+import com.openggf.game.sonic3k.resources.S3kKosDecompressionQueue;
+import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
+import com.openggf.game.sonic3k.resources.S3kKosRamDestinations;
+import com.openggf.game.sonic3k.resources.S3kKosTransitionPreflight;
+import com.openggf.game.timing.HardwareWorkHandle;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.camera.Camera;
 import com.openggf.game.sonic3k.Sonic3kLevel;
 import com.openggf.level.AbstractLevel;
@@ -84,8 +91,6 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
     private static final int KNUX_BOX_OPENED_DEST_WIDTH = 3;
     /** ROM LBZ1BGE_DoTransition: world shift applied to players/objects/camera. */
     private static final int LBZ2_TRANSITION_OFFSET_X = -0x3A00;
-    /** Three queued LBZ2 secondary Kos/KosM streams keep Kos_modules_left busy for this many polls. */
-    private static final int LBZ2_SECONDARY_KOS_DRAIN_FRAMES = 55;
     /** ROM LBZ2SE_FromTransition: LBZ2_LayoutMod applies once Player_1 x >= $60A. */
     private static final int LBZ2_ENTRY_CORRIDOR_GATE_X = 0x60A;
     /** ROM LBZ1 screen init: restart past $3B60 re-applies the ending layout. */
@@ -129,7 +134,19 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
     private int endingCollapsePhase;
     private boolean eventsFg5;
     private boolean lbz2TransitionArtQueued;
-    private int lbz2TransitionKosDrainFrames;
+    @RewindTransient(reason = "queue facades are rebound from captured ordinals")
+    private S3kKosDecompressionQueue lbz2TransitionDirectQueue;
+    @RewindTransient(reason = "queue facades are rebound from captured ordinals")
+    private S3kKosModuleQueue lbz2TransitionModuleQueue;
+    @RewindTransient(reason = "handles are rebound from captured ordinals")
+    private HardwareWorkHandle lbz2TransitionChunkHandle;
+    @RewindTransient(reason = "handles are rebound from captured ordinals")
+    private HardwareWorkHandle lbz2TransitionBlockHandle;
+    @RewindTransient(reason = "handles are rebound from captured ordinals")
+    private HardwareWorkHandle lbz2TransitionArtHandle;
+    private long lbz2TransitionChunkOrdinal = -1;
+    private long lbz2TransitionBlockOrdinal = -1;
+    private long lbz2TransitionArtOrdinal = -1;
     private boolean restartInitChecked;
     private int[] lbz2CopiedWindowDescriptors;
     private int lbz2CopiedWindowScreenX;
@@ -204,6 +221,7 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         act2MaxXAccumulator = 0;
         act2MinYAccumulator = 0;
         act2MaxYAccumulator = 0;
+        clearTransitionKosOwnership();
     }
 
     @Override
@@ -624,16 +642,17 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
             // polled on the following ScreenEvents pass.
             eventsFg5 = false;
             lbz2TransitionArtQueued = true;
-            lbz2TransitionKosDrainFrames = 0;
+            queueLbz2TransitionResources();
             return false;
         }
         if (!lbz2TransitionArtQueued) {
             return false;
         }
-        lbz2TransitionKosDrainFrames++;
-        if (lbz2TransitionKosDrainFrames < LBZ2_SECONDARY_KOS_DRAIN_FRAMES) {
+        rebindTransitionKosAfterRewind();
+        if (lbz2TransitionModuleQueue.modulesLeft()) {
             return false;
         }
+        claimTransitionKos();
         lbz2TransitionArtQueued = false;
 
         Camera camera = camera();
@@ -685,6 +704,74 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
             state.setLbz2LayoutAdjustApplied(true);
         }
         return true;
+    }
+
+    private void queueLbz2TransitionResources() {
+        try {
+            lbz2TransitionDirectQueue = directKosQueue();
+            lbz2TransitionModuleQueue = moduleKosQueue();
+            S3kKosTransitionPreflight.validate(
+                    rom(), lbz2TransitionDirectQueue, lbz2TransitionModuleQueue,
+                    Sonic3kConstants.KOS_LBZ2_CHUNK_ADDR,
+                    Sonic3kConstants.KOS_LBZ2_SECONDARY_BLOCK_ADDR,
+                    Sonic3kConstants.KOSM_LBZ2_SECONDARY_ART_ADDR);
+            lbz2TransitionChunkHandle = lbz2TransitionDirectQueue.queueStandardKos(
+                    rom(), Sonic3kConstants.KOS_LBZ2_CHUNK_ADDR,
+                    S3kKosRamDestinations.RAM_START);
+            lbz2TransitionChunkOrdinal = lbz2TransitionChunkHandle.ordinal();
+            lbz2TransitionBlockHandle = lbz2TransitionDirectQueue.queueStandardKos(
+                    rom(), Sonic3kConstants.KOS_LBZ2_SECONDARY_BLOCK_ADDR,
+                    S3kKosRamDestinations.blockTableOffset(0x6B8));
+            lbz2TransitionBlockOrdinal = lbz2TransitionBlockHandle.ordinal();
+            lbz2TransitionArtHandle = lbz2TransitionModuleQueue.queue(
+                    rom(), Sonic3kConstants.KOSM_LBZ2_SECONDARY_ART_ADDR, 0x19D);
+            lbz2TransitionArtOrdinal = lbz2TransitionArtHandle.ordinal();
+        } catch (IOException e) {
+            throw new IllegalStateException("Unable to queue LBZ2 transition resources", e);
+        }
+    }
+
+    private void claimTransitionKos() {
+        if (!lbz2TransitionDirectQueue.isReady(lbz2TransitionChunkHandle)
+                || !lbz2TransitionDirectQueue.isReady(lbz2TransitionBlockHandle)
+                || !lbz2TransitionModuleQueue.isReady(lbz2TransitionArtHandle)) {
+            throw new IllegalStateException(
+                    "LBZ2 queue emptied before owned payloads were ready");
+        }
+        lbz2TransitionDirectQueue.claim(lbz2TransitionChunkHandle);
+        lbz2TransitionDirectQueue.claim(lbz2TransitionBlockHandle);
+        lbz2TransitionModuleQueue.claim(lbz2TransitionArtHandle);
+        clearTransitionKosOwnership();
+    }
+
+    private void rebindTransitionKosAfterRewind() {
+        if (lbz2TransitionArtOrdinal < 0 || lbz2TransitionModuleQueue != null) {
+            return;
+        }
+        var timing = hardwareTiming();
+        lbz2TransitionChunkHandle = timing.pendingHandle(
+                HardwareWorkKind.KOS_DECOMPRESSION_QUEUE, lbz2TransitionChunkOrdinal).orElseThrow();
+        lbz2TransitionBlockHandle = timing.pendingHandle(
+                HardwareWorkKind.KOS_DECOMPRESSION_QUEUE, lbz2TransitionBlockOrdinal).orElseThrow();
+        lbz2TransitionArtHandle = timing.pendingHandle(
+                HardwareWorkKind.KOS_MODULE_QUEUE, lbz2TransitionArtOrdinal).orElseThrow();
+        lbz2TransitionDirectQueue = directKosQueue();
+        lbz2TransitionModuleQueue = moduleKosQueue();
+    }
+
+    public void discardHardwareWorkFacadesAfterRewind() {
+        lbz2TransitionDirectQueue = null;
+        lbz2TransitionModuleQueue = null;
+        lbz2TransitionChunkHandle = null;
+        lbz2TransitionBlockHandle = null;
+        lbz2TransitionArtHandle = null;
+    }
+
+    private void clearTransitionKosOwnership() {
+        discardHardwareWorkFacadesAfterRewind();
+        lbz2TransitionChunkOrdinal = -1;
+        lbz2TransitionBlockOrdinal = -1;
+        lbz2TransitionArtOrdinal = -1;
     }
 
     /**

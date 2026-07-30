@@ -1963,6 +1963,16 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     AssertEx.Equal(
                         Path.GetFullPath(output),
                         trace.OutputDirectory);
+
+                    CommandLineOptions loadTime =
+                        CommandLineOptions.Parse(new[]
+                        {
+                            "--mode", "load-time",
+                            "--rom", "game.gen",
+                            "--movie", "movie.bk2",
+                            "--output", output
+                        });
+                    AssertEx.Equal(CaptureMode.LoadTime, loadTime.Mode);
                 });
         }
 

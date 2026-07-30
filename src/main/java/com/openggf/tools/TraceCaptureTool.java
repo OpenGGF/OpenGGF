@@ -14,7 +14,6 @@ import com.openggf.capture.FfmpegEncoder;
 import com.openggf.capture.GlReadPixelsGrabber;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
-import com.openggf.data.RomManager;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.game.GameServices;
@@ -31,7 +30,6 @@ import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -100,23 +98,23 @@ public final class TraceCaptureTool {
             for (int i = 0; i < argv.length; i++) {
                 String arg = argv[i];
                 switch (arg) {
-                    case "--trace" -> trace = requireValue(argv, ++i, arg);
-                    case "--out-dir" -> outDir = requireValue(argv, ++i, arg);
-                    case "--scale" -> scale = Integer.parseInt(requireValue(argv, ++i, arg));
-                    case "--fps" -> fps = Integer.parseInt(requireValue(argv, ++i, arg));
-                    case "--codec" -> codec = requireValue(argv, ++i, arg);
+                    case "--trace" -> trace = CliArguments.requireValue(argv, ++i, arg);
+                    case "--out-dir" -> outDir = CliArguments.requireValue(argv, ++i, arg);
+                    case "--scale" -> scale = CliArguments.parseInt(CliArguments.requireValue(argv, ++i, arg));
+                    case "--fps" -> fps = CliArguments.parseInt(CliArguments.requireValue(argv, ++i, arg));
+                    case "--codec" -> codec = CliArguments.requireValue(argv, ++i, arg);
                     case "--no-ghosts" -> showGhosts = false;
                     case "--ghosts" -> showGhosts = true;
-                    case "--verify" -> verifyFrames = parseFrameList(requireValue(argv, ++i, arg));
-                    case "--clip" -> clip = requireValue(argv, ++i, arg);
-                    case "--tail-frames" -> tailFrames = Integer.parseInt(requireValue(argv, ++i, arg));
+                    case "--verify" -> verifyFrames = parseFrameList(CliArguments.requireValue(argv, ++i, arg));
+                    case "--clip" -> clip = CliArguments.requireValue(argv, ++i, arg);
+                    case "--tail-frames" -> tailFrames = CliArguments.parseInt(CliArguments.requireValue(argv, ++i, arg));
                     default -> throw new IllegalArgumentException("Unknown argument: " + arg);
                 }
             }
             if (trace == null || trace.isBlank()) {
                 throw new IllegalArgumentException("--trace <id|name|dir> is required");
             }
-            return new Args(trace, Paths.get(outDir), scale, fps, codec, showGhosts,
+            return new Args(trace, Path.of(outDir), scale, fps, codec, showGhosts,
                     verifyFrames, clip, tailFrames);
         }
 
@@ -129,12 +127,6 @@ public final class TraceCaptureTool {
             return frames;
         }
 
-        private static String requireValue(String[] argv, int index, String flag) {
-            if (index >= argv.length) {
-                throw new IllegalArgumentException("Missing value for " + flag);
-            }
-            return argv[index];
-        }
     }
 
     public static void main(String[] argv) {
@@ -201,11 +193,12 @@ public final class TraceCaptureTool {
         TraceReplaySessionBootstrap.prepareConfiguration(trace, meta);
 
         // --- boot headless gameplay session -------------------------------
+        Path romPath = TraceToolRomLocations.resolve(
+                entry.gameId(), GameServices.configuration(), Path.of(""));
         HeadlessGameBoot boot = new HeadlessGameBoot(SCREEN_WIDTH, SCREEN_HEIGHT);
         try (BootOwnership<HeadlessGameBoot> ownership =
                 new BootOwnership<>(
                         boot, SessionManager::closeGameplaySession)) {
-        Path romPath = Paths.get(RomManager.resolveRomForGame(entry.gameId()));
         GameLoop loop = boot.boot(
                 romPath,
                 entry.zone(),
@@ -675,7 +668,7 @@ public final class TraceCaptureTool {
      * run's individual segments (each an ordinary trace) instead.
      */
     static TraceEntry resolveTrace(String spec) {
-        Path catalogDir = Paths.get(GameServices.configuration()
+        Path catalogDir = Path.of(GameServices.configuration()
                 .getString(SonicConfiguration.TRACE_CATALOG_DIR));
         List<TraceEntry> entries = TraceCatalog.scan(catalogDir);
 
@@ -697,7 +690,7 @@ public final class TraceCaptureTool {
         }
 
         // as a direct filesystem path to a trace dir
-        Path asPath = Paths.get(spec);
+        Path asPath = Path.of(spec);
         for (TraceEntry e : TraceCatalog.scan(asPath.getParent() != null
                 ? asPath.getParent() : asPath)) {
             if (e.dir().equals(asPath) || e.dir().toAbsolutePath().equals(asPath.toAbsolutePath())) {
