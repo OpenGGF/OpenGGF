@@ -150,6 +150,16 @@ public final class Sonic3kSpecialStageRomOffsets {
     public static final long MAP_UNC_HUD_DISPLAY = 0x8D2C;
     public static final int MAP_UNC_HUD_DISPLAY_SIZE = 48;
 
+    // ==================== Sprite Maps (Uncompressed) ====================
+
+    /** Map_SStageChaosEmerald - 16 frames, one piece each (144 bytes) */
+    public static final long MAP_UNC_CHAOS_EMERALD = 0xA6B2;
+    public static final int MAP_UNC_CHAOS_EMERALD_SIZE = 144;
+
+    /** Map_SStageSuperEmerald - 16 frames of mirrored multi-piece sprites (282 bytes) */
+    public static final long MAP_UNC_SUPER_EMERALD = 0xA742;
+    public static final int MAP_UNC_SUPER_EMERALD_SIZE = 282;
+
     // ==================== Results Screen Art ====================
 
     /** ArtKos_SSResultsGeneral */
