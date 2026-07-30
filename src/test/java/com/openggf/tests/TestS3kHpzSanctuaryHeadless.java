@@ -4,6 +4,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.HPZSSEntryControlObjectInstance;
 import com.openggf.game.sonic3k.objects.HPZSanctuaryFallingCrystalObjectInstance;
+import com.openggf.game.sonic3k.objects.HPZSuperEmeraldObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -103,5 +105,50 @@ public class TestS3kHpzSanctuaryHeadless {
         assertTrue(frameBounds.maxX() >= frameBounds.minX()
                         && frameBounds.maxY() >= frameBounds.minY(),
                 "the restored Sonic mapping/DPLC frame must contain drawable pieces");
+    }
+
+    @Test
+    void everyPedestalSurvivesAWalkAcrossTheSanctuaryAndBack() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_HPZ, 1)
+                .build();
+        GameServices.gameState().restoreS3kEmeraldProgress(
+                List.of(2, 2, 2, 2, 2, 2, 2), true);
+        ObjectManager objects = GameServices.level().getObjectManager();
+        fixture.stepIdleFrames(30);
+
+        assertEquals(List.of(0x1550, 0x15A0, 0x15E0, 0x1640, 0x16A0, 0x16E0, 0x1730),
+                pedestalPositions(objects),
+                "all seven gray Super Emerald pedestals must be placed");
+
+        for (int frame = 0; frame < 400; frame++) {
+            fixture.stepFrame(false, false, false, true, false);
+        }
+        assertEquals(0x1640, fixture.camera().getX() & 0xFFFF,
+                "walking right must reach the sanctuary's camera maximum");
+        for (int frame = 0; frame < 600; frame++) {
+            fixture.stepFrame(false, false, true, false, false);
+        }
+
+        // The $B4 pedestals are controller-created children with no respawn
+        // entry, so a single out_of_range unload removes them for good — the
+        // leftmost ($1550) sits more than $80 behind the camera at $1640.
+        assertEquals(List.of(0x1550, 0x15A0, 0x15E0, 0x1640, 0x16A0, 0x16E0, 0x1730),
+                pedestalPositions(objects),
+                "no pedestal may be culled by scrolling the sanctuary");
+        assertTrue(objects.getActiveObjects().stream()
+                        .filter(HPZSuperEmeraldObjectInstance.class::isInstance)
+                        .map(HPZSuperEmeraldObjectInstance.class::cast)
+                        .filter(pedestal -> pedestal.getX() == 0x1550)
+                        .allMatch(HPZSuperEmeraldObjectInstance::isSelectable),
+                "the leftmost pedestal must still offer its Super Emerald stage");
+    }
+
+    private static List<Integer> pedestalPositions(ObjectManager objects) {
+        return objects.getActiveObjects().stream()
+                .filter(HPZSuperEmeraldObjectInstance.class::isInstance)
+                .map(object -> ((HPZSuperEmeraldObjectInstance) object).getX())
+                .sorted()
+                .toList();
     }
 }

@@ -188,6 +188,21 @@ public final class HPZSuperEmeraldObjectInstance extends AbstractObjectInstance
                 ? 7 : display() == Display.COLORED ? subtype : 0x1E;
     }
 
+    /**
+     * The sanctuary pedestals are created by the {@code $B5} controller
+     * ({@code SingleObjLoad}), have no respawn-table entry, and carry no
+     * off-screen delete tail — the controller owns them for the whole scene.
+     * <p>
+     * Without this the shared {@code out_of_range} unload deletes a pedestal
+     * whose X falls more than $80 behind the camera and nothing can bring a
+     * dynamic child back: pedestal 5 ($1550, the leftmost) dies as soon as the
+     * camera reaches $1600 (which the conversion pan and any walk to the right
+     * side of the sanctuary both do), so its Super Emerald stage became
+     * permanently unreachable. Pedestal 6 ($1730) survives only because the
+     * window extends $C0 further ahead of the camera than behind it.
+     */
+    @Override public boolean isPersistent() { return true; }
+
     @Override public SolidObjectParams getSolidParams() { return SOLID; }
     @Override public boolean isTopSolidOnly() { return true; }
     @Override public boolean isSolidFor(PlayableEntity player) { return !isDestroyed(); }
