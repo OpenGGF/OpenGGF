@@ -66,6 +66,7 @@ Legend for the **Cross-game** column:
 | P17 | Child object `out_of_range` uses own X instead of parent anchor, causing chunk-boundary unload | S2, S3K | Yes (shared) | see entry |
 | P27 | `SolidObject_Always` objects must bypass offscreen full-solid gates | S2 | Yes (mechanism) | see entry |
 | P21 | Sonic 2 object streaming is X-window only (no `Camera_Y_pos` spawn eligibility) | S2 | Scoped (S2 placement path) | `<pending>` (trace frontier loop iter 13: CNZ f3830→f3906) |
+| P70 | Fixed-slot player-bound aggregate inherits ordinary manager culling | S3K | Yes (mechanism) | `<pending>` (Hyper Sonic stars) |
 
 ### Player and sidekick participation
 

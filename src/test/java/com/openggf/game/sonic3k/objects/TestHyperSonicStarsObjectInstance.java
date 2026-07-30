@@ -14,6 +14,7 @@ import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -34,6 +35,17 @@ class TestHyperSonicStarsObjectInstance {
                 "ROM anim flag is consumed on the star object's next update");
         stars.update(0, owner);
         assertEquals(4, stars.visibleSparkCount());
+    }
+
+    @Test
+    void exposesFixedInvincibilityStarsOwnershipToThePowerUpSpawner() {
+        AbstractPlayableSprite owner = hyperOwner();
+        HyperSonicStarsObjectInstance stars = new HyperSonicStarsObjectInstance(owner);
+
+        assertTrue(stars.isInvincibilityStars());
+        assertSame(owner, stars.boundPlayer());
+        assertTrue(stars.isPersistent(),
+                "fixed Hyper-star slots must not be retired by ordinary out-of-range culling");
     }
 
     @Test
@@ -99,6 +111,8 @@ class TestHyperSonicStarsObjectInstance {
                 field(stars, "xAcc0"));
         assertEquals(com.openggf.physics.TrigLookupTable.cosHex(0x10) << 3,
                 field(stars, "yAcc0"));
+        assertEquals((byte) (field(stars, "xAcc0") >> 8), field(stars, "x0"));
+        assertEquals((byte) (field(stars, "yAcc0") >> 8), field(stars, "y0"));
     }
 
     @Test

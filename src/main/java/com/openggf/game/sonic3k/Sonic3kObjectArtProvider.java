@@ -1999,7 +1999,15 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
             Sonic3kObjectArt art = new Sonic3kObjectArt(null, reader);
             registerSheet(key, art.loadStandaloneSheet(rom, entry));
             registerStandaloneAnimations(key);
-            return renderers.containsKey(key) && sheets.containsKey(key);
+            PatternSpriteRenderer renderer = renderers.get(key);
+            if (renderer == null || !sheets.containsKey(key)) {
+                return false;
+            }
+            // This path runs after the level-load cache pass. Re-publish the
+            // ordered object atlas so the new renderer receives a pattern base;
+            // an uncached renderer silently rejects every drawFrameIndex call.
+            ensurePatternsCached(GameServices.graphics(), PatternAtlasRange.OBJECTS.base());
+            return renderer.isReady();
         } catch (IOException e) {
             LOG.warning("Failed to ensure standalone art '" + key + "': " + e.getMessage());
             return false;
