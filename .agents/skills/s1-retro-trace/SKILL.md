@@ -239,7 +239,8 @@ stable-retro ships with savestates for every Sonic 1 zone/act:
 
 ## BizHawk vs stable-retro
 
-Both recorders produce byte-identical output format. The difference is the emulation platform:
+Both recorders produce the same legacy physics/aux output format. The
+difference is the emulation platform:
 
 | | BizHawk (Lua) | stable-retro (Python) |
 |---|---|---|
@@ -249,4 +250,14 @@ Both recorders produce byte-identical output format. The difference is the emula
 | **Input** | BK2 movie (native) | BK2 movie (native or BizHawk-parsed) |
 | **RAM writes** | `mainmemory.write_*()` | `env.data.set_value()` via extended data.json |
 
-Both use the same emulator core (Genesis Plus GX), so identical inputs should produce identical results. Traces from either platform can be used interchangeably with the Java test infrastructure.
+Both use the same emulator core (Genesis Plus GX), so identical inputs should
+produce identical legacy physics results. Stable-retro and the S1 credits
+recorder do **not** provide the native PLC/DPLC timing audit. Do not add
+`load_queue_state_per_frame` or
+`dynamic_art_transfer_state_per_frame_v1` to their metadata by hand.
+
+For queue/DPLC sync verification, regenerate an ordinary trace with the native
+BizHawk recorder and `--load-queue-state`, then confirm both capabilities in
+`metadata.json`. Interpret `queue.*` and `dynamic_art.*` through
+`trace-replay-bug-fixing`, and record the first frame/field/error count in
+`docs/status/trace-frontier-log.md`.

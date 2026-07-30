@@ -332,3 +332,9 @@ Export:  --game s1 export <type> [prefix] Generate Java constants
 - Files in `artnem/` are Nemesis regardless of `.bin` extension
 - Files in `artkos/` are Kosinski regardless of extension
 - Files in `artunc/` are raw uncompressed data
+
+## Queue Diagnostics Routing
+
+Use this skill to find ROM labels and routines, then use `plc-system` and
+`trace-replay-bug-fixing` for PLC/DPLC queue timing and `dynamic_art.*` report
+interpretation. Trace evidence is zero-tolerance and comparison-only.

@@ -28,7 +28,7 @@ $ARGUMENTS: Zone abbreviation (e.g., "AIZ", "HCZ", "MGZ", "CNZ", "FBZ", "ICZ", "
 
 ## Related Skills
 
-- **s3k-disasm-guide** (`.claude/skills/s3k-disasm-guide/SKILL.md`) for disassembly navigation, label conventions, directory structure, RomOffsetFinder commands, and the S&K vs S3 ROM half address selection rule.
+- **s3k-disasm-guide** (`.agents/skills/s3k-disasm-guide/SKILL.md`) for disassembly navigation, label conventions, directory structure, RomOffsetFinder commands, and the S&K vs S3 ROM half address selection rule.
 
 ## Zone Reference
 
@@ -513,3 +513,11 @@ Produce the zone analysis spec using the template below. Save it to `docs/archit
 8. **Only reading AniPLC script data, not the custom `Animated_Tiles_{ZONE}` routine:** Many zones have a custom wrapper around AniPLC that contains camera threshold checks, flag reads, and direct art loads. These custom routines straddle the events/tiles boundary — they read event state (`Dynamic_Resize_routine`, `Boss_flag`, `Level_trigger_array`) and load non-AniPLC art (e.g., AIZ2 FirstTree override). Always read the full `Animated_Tiles_{ZONE}` routine, not just the AniPLC script entries.
 
 9. **Skipping Phase 4 (Shared State Trace):** The most common source of implementation bugs is cross-category dependencies — events loading art to VRAM regions that AniPLC scripts also target, or events setting flags that animated tile routines check. Phase 4 exists specifically to catch these. Skipping it produces specs that look complete but miss critical gating conditions and art ownership conflicts.
+
+## Queue Diagnostics Routing
+
+When analysis finds runtime art-load dependencies, use `s3k-plc-system` for
+direct Kosinski/KosM timing and hardware-timing schema 2. Use
+`trace-replay-bug-fixing` for `queue.*` and `dynamic_art.*` reports and
+`trace-green-fleet` for multiple frontiers. The evidence is zero-tolerance and
+comparison-only.

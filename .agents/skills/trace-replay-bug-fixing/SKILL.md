@@ -1006,6 +1006,34 @@ When working through a trace bug you'll often pull these in:
 - **S3K specific:** `s3k-plc-system`, `s3k-zone-events`, `s3k-zone-validate`, `s3k-zone-analysis`, `s3k-zone-bring-up`, `s3k-palette-cycling`, `s3k-parallax`, `s3k-animated-tiles`.
 - **Generic engineering process:** `superpowers:systematic-debugging`, `superpowers:dispatching-parallel-agents`, `superpowers:writing-plans`, `superpowers:test-driven-development`, `superpowers:verification-before-completion`, `superpowers:requesting-code-review`.
 
+## Queue and Dynamic-Art Frontier Triage
+
+First verify the fixture's declared evidence. Audited native captures use
+`--load-queue-state` and advertise `load_queue_state_per_frame`;
+DPLC/player-art auditing additionally advertises
+`dynamic_art_transfer_state_per_frame_v1`.
+
+Interpret report families separately:
+
+- `queue.s1_nemesis_plc.*` and `queue.s2_nemesis_plc.*` compare physical
+  Nemesis PLC state.
+- `queue.s3k_kos_direct.*` compares physical direct Kosinski jobs.
+- `queue.s3k_kos_module.*` compares physical KosM parents.
+- `dynamic_art.frame`, `dynamic_art.edges`,
+  `dynamic_art.edge[N].request[N].*`, terminal forwarding, and
+  `dynamic_art.outstanding_transfer_ids` compare player-art lifecycle and
+  ordered ledger state, including schema-2 run-gap carry.
+
+All are zero-tolerance, comparison-only fields. Fix the earliest queue or
+dynamic-art cause before downstream symptoms. For S3K, distinguish an ordinary
+comparator mismatch from a hardware-timing admission error: schema 2 can only
+release a matching, prepared, production-submitted ROM job after kind,
+ordinal, fingerprint, and service-boundary checks; it cannot create work.
+
+Record the first frame, exact field/admission reason, and total error count in
+`docs/status/trace-frontier-log.md`. Never add missing capability names to
+legacy metadata or infer audited evidence from an old trace.
+
 ## Why This Matters
 
 The mission is faithful pixel-for-pixel reimplementation. Trace replay tests are the proof. If they're allowed to lean on synced trace data each frame, the proof is hollow — bugs hide behind the synchronisation and the test green-lights anyway. Honest tests force honest engine fixes. That's how progress compounds: every fix makes the next divergence visible instead of building on top of a masked one.

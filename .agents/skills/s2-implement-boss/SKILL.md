@@ -378,3 +378,9 @@ Study these implemented bosses for patterns:
 | `Sonic2CPZBossInstance` | 0x5D | Complex child hierarchy, gunk hazard, status bit flags |
 | `Sonic2ARZBossInstance` | 0x89 | Pillar spawning, hammer collision, multi-sprite rendering |
 | `Sonic2CNZBossInstance` | 0x51 | Electric balls, arena wall modification, palette swap |
+
+## Queue Diagnostics Routing
+
+If boss work reaches PLC/DPLC queue timing or `dynamic_art.*` reports, use
+`plc-system` and `trace-replay-bug-fixing`; use `trace-green-fleet` when moving
+multiple frontiers. These fields are zero-tolerance, comparison-only evidence.

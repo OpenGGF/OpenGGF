@@ -74,3 +74,18 @@ Headless capture installs `HeadlessSmpsAudioBackend` — a true **no-device** SM
 - **`ffmpeg` not found**: install it / put it on `PATH`; the encoder throws a clear error otherwise.
 - **Run never finishes / temp grows**: the capture loop is bounded (`trace.frameCount() + 600`); the driver uses a no-op desync-pause so a comparator mismatch does not freeze the run.
 - **Inspect a frame**: `ffmpeg -i <mkv> -vf "select=eq(n\,1500)" -vframes 1 out.png` to confirm ghosts/HUD after a desync.
+
+## Queue and Dynamic-Art Evidence
+
+This tool renders an existing replay; it does not add audit capabilities to a
+fixture. For queue/DPLC sync work, regenerate the fixture with the native
+BizHawk recorder's `--load-queue-state` option and verify
+`load_queue_state_per_frame` plus
+`dynamic_art_transfer_state_per_frame_v1` in `metadata.json`.
+
+The capture deliberately continues through desyncs, so a finished video is not
+evidence that queue timing matched. Inspect the replay JSON report:
+`queue.*` covers physical PLC/Kosinski state and `dynamic_art.*` covers ordered
+player-art submissions, completions, requests, outstanding IDs, and ledger
+carry. Use `trace-replay-bug-fixing` to interpret the first failure and
+`trace-green-fleet` to maintain the recorded frontier.

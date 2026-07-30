@@ -13,8 +13,8 @@ $ARGUMENTS: Boss name or zone (e.g., "EHZ boss", "Chemical Plant boss", "0x56")
 
 ## Related Skills
 
-- **s2disasm-guide** (`.claude/skills/s2disasm-guide/SKILL.md`) - Disassembly navigation, label conventions, RomOffsetFinder
-- **s2-implement-object** (`.claude/skills/s2-implement-object/SKILL.md`) - For non-boss Sonic 2 objects and badniks. **Section 2.4 lists all reusable engine utilities** — check it before writing movement, collision, or rendering code.
+- **s2disasm-guide** (`.agents/skills/s2disasm-guide/SKILL.md`) - Disassembly navigation, label conventions, RomOffsetFinder
+- **s2-implement-object** (`.agents/skills/s2-implement-object/SKILL.md`) - For non-boss Sonic 2 objects and badniks. **Section 2.4 lists all reusable engine utilities** — check it before writing movement, collision, or rendering code.
 
 ## Key Differences: Bosses vs Regular Objects
 
@@ -35,7 +35,7 @@ $ARGUMENTS: Boss name or zone (e.g., "EHZ boss", "Chemical Plant boss", "0x56")
 
 Delegate multiple agents to explore the disassembly. **Include this instruction in each agent prompt:**
 
-> Use the s2disasm-guide skill (`.claude/skills/s2disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, RomOffsetFinder commands, and object system patterns.
+> Use the s2disasm-guide skill (`.agents/skills/s2disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, RomOffsetFinder commands, and object system patterns.
 
 **Research checklist:**
 - [ ] Locate boss object in disassembly (e.g., `Obj56`, `Obj5D`, `Obj51`, `Obj89`)
@@ -349,7 +349,7 @@ Once cross-validation passes:
 
 | Purpose | Location |
 |---------|----------|
-| **Disassembly guide** | `.claude/skills/s2disasm-guide/SKILL.md` |
+| **Disassembly guide** | `.agents/skills/s2disasm-guide/SKILL.md` |
 | Base boss | `src/.../level/objects/boss/AbstractBossInstance.java` |
 | Boss state context | `src/.../level/objects/boss/BossStateContext.java` |
 | Boss child base | `src/.../level/objects/boss/AbstractBossChild.java` |
@@ -378,3 +378,9 @@ Study these implemented bosses for patterns:
 | `Sonic2CPZBossInstance` | 0x5D | Complex child hierarchy, gunk hazard, status bit flags |
 | `Sonic2ARZBossInstance` | 0x89 | Pillar spawning, hammer collision, multi-sprite rendering |
 | `Sonic2CNZBossInstance` | 0x51 | Electric balls, arena wall modification, palette swap |
+
+## Queue Diagnostics Routing
+
+If boss work reaches PLC/DPLC queue timing or `dynamic_art.*` reports, use
+`plc-system` and `trace-replay-bug-fixing`; use `trace-green-fleet` when moving
+multiple frontiers. These fields are zero-tolerance, comparison-only evidence.

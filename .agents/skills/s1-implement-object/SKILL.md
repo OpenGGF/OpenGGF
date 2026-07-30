@@ -436,3 +436,9 @@ Once cross-validation is confirmed bug-free:
 | SFX constants | `Sonic1AudioProfile.java` | `Sonic2AudioConstants.java` |
 | Registry | `Sonic1ObjectRegistry.java` | `Sonic2ObjectRegistry.java` |
 | Art infrastructure | Established (`Sonic1ObjectArt/Provider/Keys`) | Fully established |
+
+## Queue Diagnostics Routing
+
+If object work reaches PLC/DPLC queue timing or `dynamic_art.*` reports, use
+`plc-system` and `trace-replay-bug-fixing`; use `trace-green-fleet` when moving
+multiple frontiers. These fields are zero-tolerance, comparison-only evidence.

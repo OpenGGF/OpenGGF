@@ -567,3 +567,25 @@ Also summarize human-readable:
 - which worktrees remain for review,
 - any introduced regressions that need follow-up,
 - any blocked traces and why.
+
+## Queue and Dynamic-Art Frontiers
+
+Classify queue-aware traces before assigning fixes:
+
+- `queue.*` is a zero-tolerance physical-queue comparator frontier;
+- `dynamic_art.*` is a zero-tolerance DPLC/player-art lifecycle frontier;
+- a hardware-timing admission error means the schema-2 authority could not
+  match a production-submitted prepared S3K job, not that the comparator found
+  an ordinary field mismatch.
+
+For every affected trace preserve the first frame, exact field or admission
+reason, and total error count. Queue/DPLC failures take precedence over
+downstream physics, object, event, or audio symptoms. Do not promote a fixture
+to audited status unless native capture used `--load-queue-state` and metadata
+advertises `load_queue_state_per_frame`; DPLC/player-art evidence additionally
+requires `dynamic_art_transfer_state_per_frame_v1`.
+
+Update `docs/status/trace-frontier-log.md` whenever the first queue or
+`dynamic_art` frontier moves, a green regresses, or an admission error changes.
+The evidence is comparison-only: agents may fix production queue behavior but
+must never hydrate gameplay, submit work, or fabricate readiness from a trace.

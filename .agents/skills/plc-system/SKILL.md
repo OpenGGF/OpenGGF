@@ -143,3 +143,19 @@ S1/S2 recorder work, remember that `RunPLC` overwrites the active queue source
 with the Nemesis decoder cursor; preserve the original descriptor by observing
 the lifecycle before preparation rather than guessing it from an end-frame
 sample.
+
+## Dynamic-Art Reports and Routing
+
+Native audited fixture captures must use `--load-queue-state`. Confirm
+`metadata.json` advertises `load_queue_state_per_frame`; DPLC/player-art audits
+also require `dynamic_art_transfer_state_per_frame_v1`. The latter records each
+frame's ordered submissions and completions, request descriptors, outstanding
+transfer IDs, and the run-gap ledger carry (`dynamic_art_initial_ledger_*` and
+`dynamic_art_gap_transitions` in schema 2 manifests).
+
+Treat `queue.*` and `dynamic_art.*` report fields as zero-tolerance,
+comparison-only evidence. They may diagnose production ROM work but may never
+hydrate gameplay or create work. Preserve the first failing frame, field, and
+error count in `docs/status/trace-frontier-log.md`. Use
+`trace-replay-bug-fixing` for comparator triage and `trace-green-fleet` for
+multi-trace frontier work.

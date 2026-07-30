@@ -535,3 +535,10 @@ Report any discrepancies with specific line references.
 - Unique: Super Sonic only, flight chase format
 - No traditional arena (auto-scrolling)
 - Missile/projectile dodging during chase
+
+## Queue Diagnostics Routing
+
+If boss work reaches art-load timing, use `s3k-plc-system` for direct
+Kosinski/KosM ownership and `trace-replay-bug-fixing` for `queue.*` or
+`dynamic_art.*` reports. Use `trace-green-fleet` for multiple frontiers. The
+trace evidence is zero-tolerance and comparison-only.
