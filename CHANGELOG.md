@@ -3,6 +3,10 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Super Tails now reliably summons his four attacking Flickies. The debug
+  form shortcut selects Super Tails for main-player Tails without changing
+  emerald progression, the flock recovers after object-manager replacement,
+  and its ROM-backed art is prepared before the first render pass.
 - Fix: Hyper Sonic's four-frame dash flash now restores the live level
   palette on the following VInt instead of leaving untouched object palette
   lines white. His four orbiting stars now use the ROM's fixed invincibility

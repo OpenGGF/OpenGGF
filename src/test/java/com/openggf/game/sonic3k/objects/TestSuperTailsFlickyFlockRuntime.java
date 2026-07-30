@@ -8,6 +8,7 @@ import com.openggf.game.rewind.identity.PlayerRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.game.sonic3k.Sonic3kSuperStateController;
 import com.openggf.game.zone.ZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
@@ -57,6 +58,20 @@ class TestSuperTailsFlickyFlockRuntime {
         assertEquals(ownerY + 0x20 + (com.openggf.physics.TrigLookupTable.cosHex(angle) >> 4),
                 SuperTailsFlickyFlockObjectInstance.orbitDestinationYForTest(
                         ownerY, angle, true));
+    }
+
+    @Test
+    void updateRequestsRomArtBeforeTheFirstRenderPass() {
+        Fixture fixture = new Fixture(List.of(), null);
+        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        Sonic3kObjectArtProvider artProvider = mock(Sonic3kObjectArtProvider.class);
+        when(renderManager.getArtProvider()).thenReturn(artProvider);
+        fixture.services.withRenderManager(renderManager);
+
+        fixture.flock.update(0, fixture.owner);
+
+        verify(artProvider).ensureStandaloneArtLoaded(
+                Sonic3kObjectArtKeys.SUPER_TAILS_BIRDS);
     }
 
     @Test
