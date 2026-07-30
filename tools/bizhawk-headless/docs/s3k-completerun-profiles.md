@@ -336,7 +336,9 @@ file **is** opened (5155) and **is** committed, but it is a zero-byte file.
 
 Measured: `special_stage/aux_state.jsonl` = 0 lines, and all three of
 `runs/s3-knux-multibonus-ss/{ss,ss_2,ss_3}/aux_state.jsonl` = 0 lines. The
-`.gz` for `special_stage` is 20 bytes (empty-member gzip).
+Legacy `.gz` for `special_stage` is a 20-byte empty member. Audited 6.39
+captures with `--load-queue-state` instead contain one direct and one module
+physical queue record per stored row.
 
 ---
 

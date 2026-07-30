@@ -1,5 +1,8 @@
 package com.openggf.trace;
 
+import com.openggf.game.resources.DynamicArtDiagnosticsProvider;
+import com.openggf.game.resources.DynamicArtDiagnosticsSnapshot;
+import com.openggf.game.resources.DynamicArtLifecycleService;
 import com.openggf.game.timing.HardwareWorkKind;
 import org.junit.jupiter.api.Test;
 
@@ -13,6 +16,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -31,6 +35,20 @@ class TestS1S2PlcComparisonOnlyGuard {
             "(?m)^import\\s+(?:static\\s+)?com\\.openggf\\.game\\.sonic[12]\\.resources\\.Sonic[12]PlcService(?:\\.[\\w*]+)?\\s*;");
     private static final Pattern PLC_FQ_REFERENCE = Pattern.compile(
             "com\\.openggf\\.game\\.sonic[12]\\.resources\\.Sonic[12]PlcService");
+    private static final Pattern DYNAMIC_ART_MUTATOR_REFERENCE = Pattern.compile(
+            "(?:import\\s+com\\.openggf\\.game\\.resources\\."
+                    + "DynamicArtLifecycleService|"
+                    + "com\\.openggf\\.game\\.resources\\."
+                    + "DynamicArtLifecycleService)");
+    private static final Pattern DYNAMIC_ART_MUTATION_CALL = Pattern.compile(
+            "\\.\\s*(?:seedDynamicArtFromTrace|submitDynamicArtFromTrace|"
+                    + "submitRecordedTransfer|"
+                    + "beginRun|finishRun|openComparisonSegment|"
+                    + "closeComparisonSegment|serviceProductionVBlank|"
+                    + "finishProductionIteration|publishRow|publishTerminal|"
+                    + "observe(?:Player|Rom|Ram)?Dplc|"
+                    + "complete(?:PlayerDplc|Applied)|restore|"
+                    + "resetForMissingSnapshot)\\s*\\(");
 
     @Test
     void nativePlcServicesDoNotDependOnTracePackages() throws IOException {
@@ -85,6 +103,95 @@ class TestS1S2PlcComparisonOnlyGuard {
             }
         }
         assertNoViolations("trace replay/bootstrap must not reference native S1/S2 PLC services", violations);
+    }
+
+    @Test
+    void traceAndGhostSourcesCannotReachDynamicArtMutation() throws IOException {
+        List<String> violations = new ArrayList<>();
+        List<Path> roots = List.of(
+                MAIN.resolve("com/openggf/trace"),
+                MAIN.resolve("com/openggf/sprites/ghost"));
+        for (Path root : roots) {
+            for (Path source : javaFiles(root)) {
+                String text = Files.readString(source);
+                if (!isDynamicArtMutationFree(text)) {
+                    violations.add(MAIN.relativize(source).toString()
+                            .replace('\\', '/'));
+                }
+            }
+        }
+        assertNoViolations(
+                "trace and ghost production sources must use only read-only "
+                        + "dynamic-art diagnostics", violations);
+    }
+
+    @Test
+    void dynamicArtMutationGuardRejectsImportQualifiedAndCallBypasses() {
+        assertFalse(isDynamicArtMutationFree("""
+                import com.openggf.game.resources.DynamicArtLifecycleService;
+                class Comparator {}
+                """));
+        assertFalse(isDynamicArtMutationFree("""
+                class Comparator {
+                    com.openggf.game.resources.DynamicArtLifecycleService owner;
+                }
+                """));
+        assertFalse(isDynamicArtMutationFree("""
+                class Comparator {
+                    void compare(Object owner) {
+                        owner.openComparisonSegment();
+                    }
+                }
+                """));
+        assertFalse(isDynamicArtMutationFree("""
+                class Ghost {
+                    void draw(Object owner) {
+                        owner.completeApplied(null);
+                    }
+                }
+                """));
+        assertFalse(isDynamicArtMutationFree("""
+                class Comparator {
+                    void compare(Object owner) {
+                        owner.seedDynamicArtFromTrace(null);
+                    }
+                }
+                """));
+        assertFalse(isDynamicArtMutationFree("""
+                class Comparator {
+                    void compare(Object owner) {
+                        owner.submitRecordedTransfer(null);
+                    }
+                }
+                """));
+    }
+
+    @Test
+    void diagnosticsSurfaceHasNoCapableParametersOrTraceReturns() {
+        for (var method : DynamicArtDiagnosticsProvider.class
+                .getDeclaredMethods()) {
+            assertEquals(0, method.getParameterCount(),
+                    "diagnostics provider must not retain callbacks, expected "
+                            + "trace data, or production lifecycle owners");
+            assertFalse(method.getReturnType().getName()
+                    .startsWith("com.openggf.trace"),
+                    "diagnostics provider must not return trace authority");
+        }
+        for (var field : DynamicArtLifecycleService.class.getDeclaredFields()) {
+            assertFalse(field.getType().getName()
+                            .startsWith("java.util.function"),
+                    "lifecycle service must not retain a capable callback: "
+                            + field.getName());
+            assertFalse(field.getType().getName()
+                            .startsWith("com.openggf.trace"),
+                    "lifecycle service must not retain trace authority: "
+                            + field.getName());
+        }
+    }
+
+    private static boolean isDynamicArtMutationFree(String source) {
+        return !DYNAMIC_ART_MUTATOR_REFERENCE.matcher(source).find()
+                && !DYNAMIC_ART_MUTATION_CALL.matcher(source).find();
     }
 
     private static List<Path> javaFiles(Path root) throws IOException {

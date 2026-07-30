@@ -865,3 +865,38 @@ CSV fallback, `rom_zone_id 0x01/0x03/0x09` placeholder names (unreachable in
 practice but keep the `unknown_%02x` fallback), and every `run_id`-gated
 branch (§0). `OFF_ANIM_FRAME` (`+0x1B`) and `OFF_ANIM_TIMER` (`+0x1E`) ARE
 used — by `object_state_snapshot` aliases (unlike S1 where they are dead).
+# Standalone special-stage profile
+
+`--trace-profile s2_special_stage` selects the native port of
+`tools/bizhawk/s2_ss_trace_recorder.lua` for the dedicated level-select
+special-stage movie. This is not a run-mode detour:
+
+- recording starts on and includes the first completed frame whose
+  `Game_Mode` is `$10`;
+- CSV input uses the next BK2 row at `bk2_frame_offset + trace_frame`, matching
+  `movie.getinput`;
+- payloads and metadata retain the standalone recorder's CRLF byte contract;
+- the `$1156` callback accepts only `A0=$F608` with stack return PC `$088E` and
+  captures the physical input-sample identity;
+- the `$52B2` callback captures one completed recurring RunObjects pass after
+  `SpecialStage_Started`, enforcing one pass per accepted input sample;
+- completed passes queue to the next non-lag observation; the finish-causing
+  pass is flushed at the raw checkpoint observation before `stage_finished`;
+- callback exceptions propagate through `GpgxHost.Advance`.
+
+The ROM-backed differential gate replays
+`s2/special_stage/s2-lvl-select-special-stage.bk2` and requires byte-identical
+physics and aux payloads against the independently recorded `1.4-s2ss`
+fixture. Standalone metadata differs only by recording date and the native
+version stamp `1.4-s2ss-native`.
+
+# Named-run player-art boundary carry
+
+Standalone level and `s2_special_stage` captures still arm with an empty DPLC
+ledger. Continuous run mode may preserve only an exact native `run_gap`
+descriptor whose accepted DMA completion has not yet occurred. The next
+segment records the immutable initial descriptors and ledger fingerprint, and
+the matching completion retains its transfer id and `run_gap` origin.
+Manifest data validates this independently produced lifecycle; it never creates
+or retires emulator or engine work. Non-gap carry and all descriptor,
+fingerprint, or completion mismatches fail closed.

@@ -1,6 +1,8 @@
 package com.openggf.game.resources;
 
 import com.openggf.game.GameModule;
+import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.DynamicArtDmaServiceModel;
 
 import java.util.Objects;
 import java.util.function.Function;
@@ -11,19 +13,66 @@ import java.util.function.Supplier;
  */
 public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
     private final Supplier<PlcLifecycleService> serviceSupplier;
+    private final DynamicArtLifecycleService dynamicArtLifecycle;
+    private final DynamicArtDmaServiceModel dynamicArtDmaService;
     private NativeBlockingFadeImpl activeFade;
     private PlcLifecycleFrame activeFrame;
+    private boolean comparisonSegmentsExternallyManaged;
 
     public PlcFrameLifecycleCoordinator(GameModule module) {
-        this(() -> module.getGameService(PlcLifecycleService.class));
+        this(() -> module.getGameService(PlcLifecycleService.class), null,
+                resolveDynamicArtDmaService(module));
+    }
+
+    public PlcFrameLifecycleCoordinator(
+            GameModule module,
+            DynamicArtLifecycleService dynamicArtLifecycle) {
+        this(() -> module.getGameService(PlcLifecycleService.class),
+                dynamicArtLifecycle, resolveDynamicArtDmaService(module));
+    }
+
+    public PlcFrameLifecycleCoordinator(
+            GameModule module,
+            DynamicArtLifecycleService dynamicArtLifecycle,
+            DynamicArtDmaServiceModel dynamicArtDmaService) {
+        this(() -> module.getGameService(PlcLifecycleService.class),
+                dynamicArtLifecycle, dynamicArtDmaService);
     }
 
     public PlcFrameLifecycleCoordinator(PlcLifecycleService service) {
-        this(() -> service);
+        this(() -> service, null, DynamicArtDmaServiceModel.EVERY_CLAIM);
     }
 
-    private PlcFrameLifecycleCoordinator(Supplier<PlcLifecycleService> serviceSupplier) {
+    public PlcFrameLifecycleCoordinator(
+            PlcLifecycleService service,
+            DynamicArtLifecycleService dynamicArtLifecycle) {
+        this(() -> service, dynamicArtLifecycle,
+                DynamicArtDmaServiceModel.EVERY_CLAIM);
+    }
+
+    public PlcFrameLifecycleCoordinator(
+            PlcLifecycleService service,
+            DynamicArtLifecycleService dynamicArtLifecycle,
+            DynamicArtDmaServiceModel dynamicArtDmaService) {
+        this(() -> service, dynamicArtLifecycle, dynamicArtDmaService);
+    }
+
+    private PlcFrameLifecycleCoordinator(
+            Supplier<PlcLifecycleService> serviceSupplier,
+            DynamicArtLifecycleService dynamicArtLifecycle,
+            DynamicArtDmaServiceModel dynamicArtDmaService) {
         this.serviceSupplier = Objects.requireNonNull(serviceSupplier, "serviceSupplier");
+        this.dynamicArtLifecycle = dynamicArtLifecycle;
+        this.dynamicArtDmaService = Objects.requireNonNull(
+                dynamicArtDmaService, "dynamicArtDmaService");
+    }
+
+    private static DynamicArtDmaServiceModel resolveDynamicArtDmaService(
+            GameModule module) {
+        GameRules rules = Objects.requireNonNull(module, "module").getRules();
+        return rules != null
+                ? rules.dynamicArtDmaService()
+                : DynamicArtDmaServiceModel.EVERY_CLAIM;
     }
 
     public PlcLifecycleFrame latchBeforeFadeUpdate() {
@@ -88,6 +137,14 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
         }
     }
 
+    /**
+     * Run replay uses explicit structural segment boundaries. This switch does
+     * not accept expected events or any gameplay value.
+     */
+    public void setComparisonSegmentsExternallyManaged(boolean externallyManaged) {
+        comparisonSegmentsExternallyManaged = externallyManaged;
+    }
+
     public final class PlcLifecycleFrame {
         private final PlcLifecycleService service;
         private PlcLifecyclePhase owner;
@@ -107,6 +164,16 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
             owner = phase;
             if (service != null) {
                 service.serviceVBlank(phase);
+            }
+            if (dynamicArtLifecycle != null
+                    && dynamicArtLifecycle.isRunActive()) {
+                if (dynamicArtDmaService.services(phase)) {
+                    dynamicArtLifecycle.serviceProductionVBlank();
+                }
+                if (!comparisonSegmentsExternallyManaged
+                        && !dynamicArtLifecycle.isComparisonSegmentOpen()) {
+                    dynamicArtLifecycle.openComparisonSegment();
+                }
             }
             return true;
         }
@@ -134,6 +201,11 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
             if (service != null && owner != null
                     && service.hasPreparationBoundary(owner) && !prepared) {
                 throw new IllegalStateException("missing PLC preparation for " + owner);
+            }
+            if (dynamicArtLifecycle != null && owner != null
+                    && dynamicArtLifecycle.isRunActive()) {
+                dynamicArtLifecycle.finishProductionIteration(
+                        owner == PlcLifecyclePhase.LAG);
             }
             finished = true;
         }

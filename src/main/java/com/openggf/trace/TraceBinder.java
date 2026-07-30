@@ -1,5 +1,6 @@
 package com.openggf.trace;
 
+import com.openggf.game.resources.DynamicArtDiagnosticsSnapshot;
 import com.openggf.game.resources.QueueDiagnosticSnapshot;
 import com.openggf.game.resources.QueueServiceObservation;
 import com.openggf.level.objects.RomObjectSnapshot;
@@ -420,6 +421,30 @@ public class TraceBinder {
         }
         comparisonsByFrame.put(frame, new FrameComparison(
                 existing.frame(), fields, existing.romDiagnostics(), existing.engineDiagnostics()));
+    }
+
+    /**
+     * Merges exact player dynamic-art lifecycle fields into this row.
+     *
+     * <p>A DPLC heartbeat may be the only compared surface on lag and
+     * special-stage rows, so this method creates a comparison when ordinary
+     * gameplay comparison did not run.
+     */
+    public FrameComparison compareDynamicArt(
+            TraceEvent.DynamicArtTransferState expected,
+            DynamicArtDiagnosticsSnapshot actual) {
+        FrameComparison existing = comparisonsByFrame.get(expected.frame());
+        Map<String, FieldComparison> fields = existing != null
+                ? new LinkedHashMap<>(existing.fields())
+                : new LinkedHashMap<>();
+        fields.putAll(DynamicArtSpecialStageComparator.comparisonFields(
+                expected, actual));
+        FrameComparison result = new FrameComparison(
+                expected.frame(), fields,
+                existing != null ? existing.romDiagnostics() : "",
+                existing != null ? existing.engineDiagnostics() : "");
+        comparisonsByFrame.put(expected.frame(), result);
+        return result;
     }
 
     private static void putQueueField(

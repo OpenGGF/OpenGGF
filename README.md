@@ -218,6 +218,14 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **Native trace fleet queue-audit publication (2026-07-30):** all 152
+  reproducible S1, S2, and S3K trace destinations were regenerated with one
+  frozen headless BizHawk build and installed through an immutable,
+  deterministic-gzip inventory. S1/S2 captures expose exact PLC and DPLC
+  lifecycle timing; S3K captures expose both direct and moduled Kosinski queue
+  state under hardware-timing schema 2. The complete replay sweep and every
+  first-error frontier are published in the trace frontier log and validation
+  report.
 - **Portable worktree resource-link policy (2026-07-29):** linked-worktree
   checkout scaffolding now uses relative filesystem-only targets, while hooks
   and all-branch CI reject generated configuration/disassembly links,

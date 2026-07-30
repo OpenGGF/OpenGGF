@@ -9,6 +9,9 @@ import com.openggf.debug.playback.RecordedInputSnapshots;
 import com.openggf.game.GameServices;
 import com.openggf.game.SpecialStageInputMapper;
 import com.openggf.game.SpecialStageStartupPolicy;
+import com.openggf.game.resources.DynamicArtDiagnosticsSnapshot;
+import com.openggf.game.resources.PlcLifecyclePhase;
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2SpecialStageProvider;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageComparisonState;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageReplayTestBridge;
@@ -105,11 +108,17 @@ final class S2SpecialStageReplayHarness {
      * row advances nothing engine-side (the row is simply skipped).
      */
     void stepFrame(int traceFrame) {
+        runProductionRow(PlcLifecyclePhase.SPECIAL_STAGE,
+                () -> stepFrameBody(traceFrame));
+    }
+
+    private void stepFrameBody(int traceFrame) {
         recordedInputs.withLogicalOverride(traceFrame, inputHandler, () -> {
             SpecialStageInputMapper.MappedInput mapped =
                     SpecialStageInputMapper.map(inputHandler.logical());
             provider.handleInput(mapped.p1Held(), mapped.p1Pressed());
-            provider.handlePlayer2Input(mapped.p2Held(), mapped.p2Logical());
+            provider.handlePlayer2Input(
+                    mapped.p2Held(), mapped.p2Logical());
             provider.update();
         });
     }
@@ -121,6 +130,26 @@ final class S2SpecialStageReplayHarness {
      * are never used to drive the engine.
      */
     void stepPass(CompletedPass pass) {
+        runProductionRow(PlcLifecyclePhase.SPECIAL_STAGE,
+                () -> stepPassBody(pass));
+    }
+
+    void stepPasses(
+            List<CompletedPass> passes,
+            boolean completeTerminalPreStartPass,
+            boolean lagged) {
+        runProductionRow(
+                lagged ? PlcLifecyclePhase.LAG
+                        : PlcLifecyclePhase.SPECIAL_STAGE,
+                () -> {
+            if (completeTerminalPreStartPass) {
+                completeTerminalPreStartPassBody();
+            }
+            passes.forEach(this::stepPassBody);
+        });
+    }
+
+    private void stepPassBody(CompletedPass pass) {
         SpecialStageInputMapper.MappedInput mapped = mappedInputForPass(movie, pass);
         provider.handleInput(mapped.p1Held(), mapped.p1Pressed());
         provider.handlePlayer2Input(mapped.p2Held(), mapped.p2Logical());
@@ -135,8 +164,50 @@ final class S2SpecialStageReplayHarness {
 
     /** Publishes Obj5F's terminal pre-start object pass without a new VInt. */
     void completeTerminalPreStartPass() {
+        runProductionRow(PlcLifecyclePhase.SPECIAL_STAGE,
+                this::completeTerminalPreStartPassBody);
+    }
+
+    private void completeTerminalPreStartPassBody() {
         Sonic2SpecialStageReplayTestBridge.completeTerminalPreStartPassWithoutVint(
                 provider.getManager());
+    }
+
+    void stepLagRow() {
+        runProductionRow(PlcLifecyclePhase.LAG, () -> {
+        });
+    }
+
+    void stepIdleRow(boolean lagged) {
+        runProductionRow(
+                lagged ? PlcLifecyclePhase.LAG
+                        : PlcLifecyclePhase.SPECIAL_STAGE,
+                () -> {
+                });
+    }
+
+    DynamicArtDiagnosticsSnapshot captureDynamicArt() {
+        return GameServices.captureDynamicArtDiagnostics();
+    }
+
+    void finishDynamicArtSegment() {
+        var lifecycle =
+                SessionManager.getCurrentGameplayMode().dynamicArtLifecycle();
+        if (lifecycle.isComparisonSegmentOpen()) {
+            lifecycle.closeComparisonSegment();
+        }
+    }
+
+    private static void runProductionRow(
+            PlcLifecyclePhase phase, Runnable body) {
+        SessionManager.getCurrentGameplayMode().plcFrameLifecycle()
+                .runLogicalIteration(() -> {
+                }, frame -> {
+                    frame.claim(phase);
+                    body.run();
+                    frame.prepareAfterLoop(phase);
+                    return null;
+                });
     }
 
     void forceFinishedAfterPassForTest(int sequence) {

@@ -13,6 +13,8 @@ POSIX_HOME_ROOT=/home
 VAR_HOME_ROOT=/var/home
 MACOS_HOME_ROOT=/Users
 WINDOWS_USERS_ROOT='[A-Za-z]:[\\/]+[Uu][Ss][Ee][Rr][Ss]'
+POLICY_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+MACHINE_LOCAL_PATH_GRANDFATHER="$POLICY_DIR/machine-local-path-grandfather.sha256"
 
 die() {
     echo "policy: $*" >&2
@@ -154,6 +156,196 @@ commit_blob_has_machine_local_home() {
         "$1" -- ":(literal)$2"
 }
 
+staged_candidate_base() {
+    merge_oid=$(merge_head_oid)
+    if [ -n "$merge_oid" ]; then
+        printf '%s\n' "$merge_oid"
+        return
+    fi
+    git rev-parse -q --verify HEAD 2>/dev/null || printf '%s\n' "$EMPTY_TREE_OID"
+}
+
+baseline_has_path() {
+    git cat-file -e "$1:$2" 2>/dev/null
+}
+
+staged_introduced_lines() {
+    base=$1
+    path=$2
+    git diff --cached --no-ext-diff --unified=0 "$base" -- ":(literal)$path" |
+        sed -n '/^+++ /d; /^+/s/^+//p'
+}
+
+commit_introduced_lines() {
+    base=$1
+    commit=$2
+    path=$3
+    git diff --no-ext-diff --unified=0 "$base" "$commit" -- ":(literal)$path" |
+        sed -n '/^+++ /d; /^+/s/^+//p'
+}
+
+machine_local_home_lines() {
+    grep -I -E \
+        -e "$POSIX_HOME_ROOT/"'[^/$<[:space:]][^/[:space:]]*/' \
+        -e "$VAR_HOME_ROOT/"'[^/$<[:space:]][^/[:space:]]*/' \
+        -e "$MACOS_HOME_ROOT/"'[^/$<[:space:]][^/[:space:]]*/' \
+        -e "$WINDOWS_USERS_ROOT"'[\\/]+[^\\/$<%[:space:]][^\\/[:space:]]*[\\/]'
+}
+
+line_sha256() {
+    if command -v sha256sum >/dev/null 2>&1; then
+        printf '%s' "$1" | sha256sum | awk '{ print $1 }'
+        return
+    fi
+    if command -v shasum >/dev/null 2>&1; then
+        printf '%s' "$1" | shasum -a 256 | awk '{ print $1 }'
+        return
+    fi
+    return 2
+}
+
+stream_sha256() {
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum | awk '{ print $1 }'
+        return
+    fi
+    if command -v shasum >/dev/null 2>&1; then
+        shasum -a 256 | awk '{ print $1 }'
+        return
+    fi
+    return 2
+}
+
+grandfather_prefix_field() {
+    field=$1
+    path=$2
+    awk -F '	' -v field="$field" -v path="$path" '
+        $1 == "# baseline-prefix" && $4 == path { print $field }
+    ' "$MACHINE_LOCAL_PATH_GRANDFATHER"
+}
+
+grandfather_prefix_is_valid() {
+    source=$1
+    commit=$2
+    path=$3
+    [ -f "$MACHINE_LOCAL_PATH_GRANDFATHER" ] || return 1
+    length=$(grandfather_prefix_field 2 "$path")
+    expected_hash=$(grandfather_prefix_field 3 "$path")
+    case "$length" in
+        ''|*[!0-9]*|0)
+            return 1
+            ;;
+    esac
+    case "$expected_hash" in
+        *[!0-9a-f]*|'')
+            return 1
+            ;;
+    esac
+    [ "${#expected_hash}" -eq 64 ] || return 1
+
+    if [ "$source" = "commit" ]; then
+        size=$(commit_blob_size "$commit" "$path")
+        [ "$size" -ge "$length" ] || return 1
+        actual_hash=$(commit_blob "$commit" "$path" | head -c "$length" | stream_sha256)
+    else
+        size=$(staged_blob_size "$path")
+        [ "$size" -ge "$length" ] || return 1
+        actual_hash=$(staged_blob "$path" | head -c "$length" | stream_sha256)
+    fi
+    [ "$actual_hash" = "$expected_hash" ]
+}
+
+path_has_grandfather_prefix() {
+    awk -F '	' -v path="$1" '
+        $1 == "# baseline-prefix" && $4 == path { found = 1 }
+        END { exit(found ? 0 : 1) }
+    ' "$MACHINE_LOCAL_PATH_GRANDFATHER"
+}
+
+grandfather_allowance() {
+    hash=$1
+    path=$2
+    awk -F '	' -v hash="$hash" -v path="$path" '
+        $1 == hash && $3 == path { print $2 }
+    ' "$MACHINE_LOCAL_PATH_GRANDFATHER"
+}
+
+final_blob_occurrence_count() {
+    source=$1
+    commit=$2
+    path=$3
+    line=$4
+    if [ "$source" = "commit" ]; then
+        commit_blob "$commit" "$path"
+    else
+        staged_blob "$path"
+    fi |
+        grep -F -x -c -- "$line" || true
+}
+
+grandfather_allows_line() {
+    source=$1
+    commit=$2
+    path=$3
+    line=$4
+    [ -f "$MACHINE_LOCAL_PATH_GRANDFATHER" ] || return 1
+    hash=$(line_sha256 "$line") || return 1
+    allowance=$(grandfather_allowance "$hash" "$path")
+    case "$allowance" in
+        ''|*[!0-9]*|0)
+            return 1
+            ;;
+    esac
+    occurrences=$(final_blob_occurrence_count "$source" "$commit" "$path" "$line")
+    case "$occurrences" in
+        ''|*[!0-9]*)
+            return 1
+            ;;
+    esac
+    [ "$occurrences" -le "$allowance" ]
+}
+
+staged_introduced_lines_are_allowed() {
+    base=$1
+    path=$2
+    staged_introduced_lines "$base" "$path" |
+        machine_local_home_lines |
+        while IFS= read -r line; do
+            grandfather_allows_line staged "" "$path" "$line" || exit 1
+        done
+}
+
+commit_introduced_lines_are_allowed() {
+    base=$1
+    commit=$2
+    path=$3
+    commit_introduced_lines "$base" "$commit" "$path" |
+        machine_local_home_lines |
+        while IFS= read -r line; do
+            grandfather_allows_line commit "$commit" "$path" "$line" || exit 1
+        done
+}
+
+staged_introduced_lines_have_machine_local_home() {
+    staged_introduced_lines "$1" "$2" |
+        grep -I -E \
+            -e "$POSIX_HOME_ROOT/"'[^/$<[:space:]][^/[:space:]]*/' \
+            -e "$VAR_HOME_ROOT/"'[^/$<[:space:]][^/[:space:]]*/' \
+            -e "$MACOS_HOME_ROOT/"'[^/$<[:space:]][^/[:space:]]*/' \
+            -e "$WINDOWS_USERS_ROOT"'[\\/]+[^\\/$<%[:space:]][^\\/[:space:]]*[\\/]' \
+            >/dev/null
+}
+
+commit_introduced_lines_have_machine_local_home() {
+    commit_introduced_lines "$1" "$2" "$3" |
+        grep -I -E \
+            -e "$POSIX_HOME_ROOT/"'[^/$<[:space:]][^/[:space:]]*/' \
+            -e "$VAR_HOME_ROOT/"'[^/$<[:space:]][^/[:space:]]*/' \
+            -e "$MACOS_HOME_ROOT/"'[^/$<[:space:]][^/[:space:]]*/' \
+            -e "$WINDOWS_USERS_ROOT"'[\\/]+[^\\/$<%[:space:]][^\\/[:space:]]*[\\/]' \
+            >/dev/null
+}
+
 is_rom_like_path() {
     lower=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
     for extension in $ROM_LIKE_DENYLIST_EXTENSIONS; do
@@ -284,6 +476,11 @@ validate_content_candidates() {
     files=$1
     source=$2
     commit=${3:-}
+    if [ "$source" = "commit" ]; then
+        baseline=$(commit_parent_or_empty_tree "$commit")
+    else
+        baseline=$(staged_candidate_base)
+    fi
     old_ifs=$IFS
     IFS='
 '
@@ -325,23 +522,42 @@ validate_content_candidates() {
             fi
         fi
 
-        if [ "$source" = "commit" ]; then
-            if commit_blob_has_machine_local_home "$commit" "$path"; then
-                append_error "\`$path\` contains a machine-local user-home path. Use a repository-relative path, environment variable, or neutral placeholder."
+        if baseline_has_path "$baseline" "$path"; then
+            if path_has_grandfather_prefix "$path" &&
+                    ! grandfather_prefix_is_valid "$source" "$commit" "$path"; then
+                append_error "\`$path\` does not preserve its verified historic prefix byte-for-byte."
+                continue
+            fi
+            if [ "$source" = "commit" ]; then
+                introduced_allowed() {
+                    commit_introduced_lines_are_allowed "$baseline" "$commit" "$path"
+                }
             else
-                grep_status=$?
-                if [ "$grep_status" -gt 1 ]; then
-                    append_error "\`$path\` could not be inspected for machine-local paths."
-                fi
+                introduced_allowed() {
+                    staged_introduced_lines_are_allowed "$baseline" "$path"
+                }
+            fi
+            if ! introduced_allowed; then
+                append_error "\`$path\` contains a machine-local user-home path. Use a repository-relative path, environment variable, or neutral placeholder."
             fi
         else
-            if staged_blob_has_machine_local_home "$path"; then
-                append_error "\`$path\` contains a machine-local user-home path. Use a repository-relative path, environment variable, or neutral placeholder."
-            else
-                grep_status=$?
-                if [ "$grep_status" -gt 1 ]; then
-                    append_error "\`$path\` could not be inspected for machine-local paths."
+            if [ "$source" = "commit" ]; then
+                if commit_blob_has_machine_local_home "$commit" "$path"; then
+                    grep_status=0
+                else
+                    grep_status=$?
                 fi
+            else
+                if staged_blob_has_machine_local_home "$path"; then
+                    grep_status=0
+                else
+                    grep_status=$?
+                fi
+            fi
+            if [ "$grep_status" -eq 0 ]; then
+                append_error "\`$path\` contains a machine-local user-home path. Use a repository-relative path, environment variable, or neutral placeholder."
+            elif [ "$grep_status" -gt 1 ]; then
+                append_error "\`$path\` could not be inspected for machine-local paths."
             fi
         fi
     done

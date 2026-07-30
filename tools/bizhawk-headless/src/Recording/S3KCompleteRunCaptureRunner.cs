@@ -404,8 +404,8 @@ namespace OpenGGF.BizHawk.Headless
 
             // Per-segment: a fresh engine at every arm, so each segment
             // re-emits its own pre-trace snapshot and re-latches its own
-            // prev_* state. Null for a special-stage segment, which emits
-            // no aux events at all.
+            // prev_* state. Null for a special-stage segment, which has no
+            // profile aux engine but may still emit physical queue state.
             private S3KAuxEventEngine auxEngine;
 
             internal CaptureState(
@@ -444,8 +444,9 @@ namespace OpenGGF.BizHawk.Headless
             /// open_files (L1236) / start_ss_segment's file block (L5154):
             /// all three files are created at arm and the CSV header is written
             /// and flushed immediately. The two headers are different
-            /// schemas — 42 columns versus 20 — and an SS segment's aux file
-            /// stays byte-empty.
+            /// schemas — 42 columns versus 20. An SS segment has no profile
+            /// aux engine; physical queue state is written separately when
+            /// enabled.
             /// </summary>
             internal void OpenSegment(S3KSegmentArm opened)
             {
@@ -514,6 +515,14 @@ namespace OpenGGF.BizHawk.Headless
                 // write_ss_row at this boundary.
                 hardwareTimingEngine.ObserveFrameEnd(
                     rowIndex, host, hardwareTiming);
+                if (loadQueueState)
+                {
+                    foreach (string line in LoadQueueStateProjector.CaptureS3k(
+                        rowIndex, rom, host))
+                    {
+                        WriteLine(aux, line);
+                    }
+                }
                 WriteLine(physics, S3KSpecialStageCsvWriter.FormatRow(
                     rowIndex,
                     S3KSpecialStageCsvWriter.InputMask(inputRow),
@@ -557,7 +566,9 @@ namespace OpenGGF.BizHawk.Headless
                         sourceBk2,
                         recordingDate,
                         runId,
-                        playerMode)
+                        playerMode,
+                        HardwareTimingEventEngine.CurrentSchema,
+                        loadQueueState)
                     : S3KCompleteRunMetadataWriter.Format(
                         arm,
                         segment.TraceFrameCount,

@@ -88,6 +88,8 @@
     <Compile Include="src/Recording/S2RunCaptureRunner.cs" />
     <Compile Include="src/Recording/S2RunManifestWriter.cs" />
     <Compile Include="src/Recording/S2SpecialStageAuxEventEngine.cs" />
+    <Compile Include="src/Recording/S2SpecialStageCaptureRunner.cs" />
+    <Compile Include="src/Recording/S2SpecialStageRunObjectsObserver.cs" />
     <Compile Include="src/Recording/S2SpecialStageCsvWriter.cs" />
     <Compile Include="src/Recording/S2SpecialStageMetadataWriter.cs" />
     <Compile Include="src/Recording/S2TraceCaptureRunner.cs" />
@@ -96,6 +98,11 @@
     <Compile Include="src/Recording/S2Zones.cs" />
     <Compile Include="src/Recording/S3KAuxEventEngine.cs" />
     <Compile Include="src/Recording/HardwareTimingEventEngine.cs" />
+    <Compile Include="src/Recording/DynamicArtRomProfile.cs" />
+    <Compile Include="src/Recording/DynamicArtTransferState.cs" />
+    <Compile Include="src/Recording/DynamicArtCaptureRowBuffer.cs" />
+    <Compile Include="src/Recording/S1DynamicArtObserver.cs" />
+    <Compile Include="src/Recording/S2DynamicArtObserver.cs" />
     <Compile Include="src/Recording/LoadQueueStateEvent.cs" />
     <Compile Include="src/Recording/LoadQueueStateProjector.cs" />
     <Compile Include="src/Recording/S3KCompleteRunCaptureRunner.cs" />

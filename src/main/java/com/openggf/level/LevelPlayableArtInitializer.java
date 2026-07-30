@@ -11,6 +11,8 @@ import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.GameId;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
+import com.openggf.game.resources.DynamicArtDecisionOwner;
+import com.openggf.game.resources.DynamicArtLifecycleService;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.PowerUpRules;
 import com.openggf.graphics.GraphicsManager;
@@ -211,10 +213,12 @@ final class LevelPlayableArtInitializer {
         }
     }
 
-    private static void applyPlayableArt(AbstractPlayableSprite playable,
-                                         PlayerSpriteRenderer renderer,
-                                         SpriteArtSet artSet) {
+    private void applyPlayableArt(AbstractPlayableSprite playable,
+                                  PlayerSpriteRenderer renderer,
+                                  SpriteArtSet artSet) {
         playable.setSpriteRenderer(renderer);
+        playable.getAnimationManager().setDynamicArtDecisionOwner(
+                createDynamicArtOwner(playable.getCode(), renderer));
         playable.setMappingFrame(0);
         playable.setAnimationFrameCount(artSet.mappingFrames().size());
         playable.setAnimationProfile(artSet.animationProfile());
@@ -384,7 +388,30 @@ final class LevelPlayableArtInitializer {
             tailsRenderer.setRenderContext(crossGame.getDonorRenderContext());
         }
         tailsRenderer.ensureCached(graphicsManager);
-        playable.setTailsTailsController(new TailsTailsController(playable, tailsRenderer, isS3k));
+        playable.setTailsTailsController(new TailsTailsController(
+                playable, tailsRenderer, isS3k,
+                createDynamicArtOwner("tails-tails", tailsRenderer)));
+    }
+
+    private DynamicArtDecisionOwner createDynamicArtOwner(
+            String owner,
+            PlayerSpriteRenderer renderer) {
+        GameModule module = levelManager.gameModule;
+        DynamicArtLifecycleService lifecycle =
+                GameServices.dynamicArtLifecycleOrNull();
+        if (module == null || lifecycle == null || owner == null) {
+            return null;
+        }
+        String normalizedOwner = owner.toLowerCase(java.util.Locale.ROOT);
+        boolean supportedOwner = "sonic".equals(normalizedOwner)
+                || "tails".equals(normalizedOwner)
+                || "tails-tails".equals(normalizedOwner);
+        if (!supportedOwner || !module.getRules().dynamicArtDmaService()
+                .supportsPlayerDynamicArtAudit()) {
+            return null;
+        }
+        return new DynamicArtDecisionOwner(
+                lifecycle, module.getGameId(), normalizedOwner, renderer);
     }
 
     private void initSuperState(AbstractPlayableSprite playable) {

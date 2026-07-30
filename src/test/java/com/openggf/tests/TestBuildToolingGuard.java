@@ -11,11 +11,14 @@ import org.xml.sax.InputSource;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -31,10 +34,14 @@ class TestBuildToolingGuard {
     private static final Path POLICY_SCRIPT = Path.of(".githooks/validate-policy.sh").toAbsolutePath();
     private static final Path POWERSHELL_POLICY_SCRIPT =
             Path.of(".githooks/validate-policy.ps1").toAbsolutePath();
+    private static final Path MACHINE_LOCAL_PATH_GRANDFATHER =
+            Path.of(".githooks/machine-local-path-grandfather.sha256").toAbsolutePath();
     private static final Path POST_CHECKOUT_HOOK = Path.of(".githooks/post-checkout").toAbsolutePath();
     private static final Path PROJECT_GITIGNORE = Path.of(".gitignore").toAbsolutePath();
     private static final String ALL_ZERO_OID = "0000000000000000000000000000000000000000";
     private static final String RESOURCE_POLICY_CUTOVER = "ccdd33edf4f9cd4a7937791f1d4c2f37cbeeb5e0";
+    private static final String FRONTIER_GRANDFATHER_BASELINE = "53de63da2";
+    private static final String FRONTIER_LOG_PATH = "docs/status/trace-frontier-log.md";
 
     private static final List<String> TRACE_REPLAY_DIAGNOSTIC_EXCLUDES = List.of(
             "**/Debug*.java",
@@ -1661,6 +1668,194 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    void shellAndPowerShellInspectOnlyIntroducedMachineLocalPathsInExistingText(
+            @TempDir Path temporaryDirectory) throws Exception {
+        String grandfatheredHome = "/" + "home" + "/historic-user/checkout";
+        String introducedHome = "/" + "home" + "/new-user/checkout";
+        String powershell = availablePowerShell();
+
+        Path unchangedRepository = newRepository(temporaryDirectory, "grandfathered-existing-text");
+        String existingPath = "docs/architecture/audits/history.md";
+        writeAndStage(unchangedRepository, existingPath, "historic checkout: " + grandfatheredHome + "\n");
+        commit(unchangedRepository, "historic audit");
+        writeAndStage(unchangedRepository, existingPath,
+                "historic checkout: " + grandfatheredHome + "\nportable follow-up\n");
+        assertPolicyAccepts(runPolicy(unchangedRepository, "pre-commit"));
+        if (powershell != null) {
+            assertPolicyAccepts(runPowerShellPolicy(unchangedRepository, powershell, "pre-commit"));
+        }
+
+        Path modifiedRepository = newRepository(temporaryDirectory, "introduced-existing-text");
+        writeAndStage(modifiedRepository, existingPath, "historic checkout: " + grandfatheredHome + "\n");
+        commit(modifiedRepository, "historic audit");
+        writeAndStage(modifiedRepository, existingPath,
+                "historic checkout: " + grandfatheredHome + "\nnew checkout: " + introducedHome + "\n");
+        assertPolicyRejects(runPolicy(modifiedRepository, "pre-commit"), existingPath);
+        if (powershell != null) {
+            assertPolicyRejects(runPowerShellPolicy(modifiedRepository, powershell, "pre-commit"), existingPath);
+        }
+
+        Path addedRepository = newRepository(temporaryDirectory, "introduced-new-text");
+        String addedPath = "docs/architecture/audits/new.md";
+        writeAndStage(addedRepository, addedPath, "new checkout: " + introducedHome + "\n");
+        assertPolicyRejects(runPolicy(addedRepository, "pre-commit"), addedPath);
+        if (powershell != null) {
+            assertPolicyRejects(runPowerShellPolicy(addedRepository, powershell, "pre-commit"), addedPath);
+        }
+    }
+
+    @Test
+    void machineLocalPathGrandfatherExactlyMatchesVerifiedFrontierBaseline() throws Exception {
+        byte[] baselineBytes = gitOutput(
+                Path.of(".").toAbsolutePath(), "show",
+                FRONTIER_GRANDFATHER_BASELINE + ":" + FRONTIER_LOG_PATH)
+                .getBytes(StandardCharsets.UTF_8);
+        Map<String, Integer> expected = new TreeMap<>();
+        for (String line : new String(baselineBytes, StandardCharsets.UTF_8).split("\\R", -1)) {
+            if (containsMachineLocalHome(line)) {
+                expected.merge(sha256(line), 1, Integer::sum);
+            }
+        }
+
+        Map<String, Integer> actual = new TreeMap<>();
+        String expectedPrefix = "# baseline-prefix\t" + baselineBytes.length + "\t"
+                + sha256(baselineBytes) + "\t" + FRONTIER_LOG_PATH;
+        int prefixEntries = 0;
+        for (String line : Files.readAllLines(MACHINE_LOCAL_PATH_GRANDFATHER)) {
+            if (line.equals(expectedPrefix)) {
+                prefixEntries++;
+                continue;
+            }
+            if (line.isBlank() || line.startsWith("#")) {
+                continue;
+            }
+            String[] fields = line.split("\\t", -1);
+            assertEquals(3, fields.length, "grandfather entries must be hash<TAB>count<TAB>path");
+            assertEquals(FRONTIER_LOG_PATH, fields[2], "grandfather entries must remain path-scoped");
+            assertTrue(fields[0].matches("[0-9a-f]{64}"), "grandfather hash must be lowercase SHA-256");
+            assertTrue(Integer.parseInt(fields[1]) > 0, "grandfather occurrence count must be positive");
+            assertEquals(null, actual.put(fields[0], Integer.parseInt(fields[1])),
+                    "grandfather entries must not be duplicated");
+        }
+
+        assertEquals(1, prefixEntries, "grandfather manifest must pin one exact verified prefix");
+        assertEquals(expected, actual, "grandfather manifest must have no missing or extra baseline entries");
+
+        String baseline = new String(baselineBytes, StandardCharsets.UTF_8);
+        for (Map.Entry<String, Integer> entry : expected.entrySet()) {
+            if (entry.getValue() <= 1) {
+                continue;
+            }
+            String repeatedLine = baseline.lines()
+                    .filter(line -> {
+                        try {
+                            return sha256(line).equals(entry.getKey());
+                        } catch (Exception exception) {
+                            throw new IllegalStateException(exception);
+                        }
+                    })
+                    .findFirst()
+                    .orElseThrow();
+            String replayed = baseline.replaceFirst(Pattern.quote(repeatedLine + "\n"), "")
+                    + repeatedLine + "\n";
+            assertFalse(sha256(replayed.getBytes(StandardCharsets.UTF_8)).equals(sha256(baselineBytes)),
+                    "moving any multiplicity>1 occurrence must invalidate the prefix");
+        }
+    }
+
+    @Test
+    void shellAndPowerShellGrandfatherOnlyExactHistoricFrontierOccurrences(
+            @TempDir Path temporaryDirectory) throws Exception {
+        String baseline = gitOutput(
+                Path.of(".").toAbsolutePath(), "show",
+                FRONTIER_GRANDFATHER_BASELINE + ":" + FRONTIER_LOG_PATH);
+        String historicLine = baseline.lines()
+                .filter(TestBuildToolingGuard::containsMachineLocalHome)
+                .findFirst()
+                .orElseThrow();
+        String powershell = availablePowerShell();
+
+        Path exactRepository = newRepository(temporaryDirectory, "grandfather-exact");
+        writeAndStage(exactRepository, FRONTIER_LOG_PATH, "portable baseline\n");
+        commit(exactRepository, "neutralized frontier");
+        writeAndStage(exactRepository, FRONTIER_LOG_PATH, baseline + "portable append\n");
+        assertPolicyAccepts(runPolicy(exactRepository, "pre-commit"));
+        if (powershell != null) {
+            assertPolicyAccepts(runPowerShellPolicy(exactRepository, powershell, "pre-commit"));
+        }
+
+        Path alteredRepository = newRepository(temporaryDirectory, "grandfather-altered");
+        writeAndStage(alteredRepository, FRONTIER_LOG_PATH, "portable baseline\n");
+        commit(alteredRepository, "neutralized frontier");
+        writeAndStage(alteredRepository, FRONTIER_LOG_PATH,
+                baseline.replaceFirst(Pattern.quote(historicLine), historicLine + "-altered"));
+        assertPolicyRejects(runPolicy(alteredRepository, "pre-commit"), FRONTIER_LOG_PATH);
+        if (powershell != null) {
+            assertPolicyRejects(runPowerShellPolicy(alteredRepository, powershell, "pre-commit"), FRONTIER_LOG_PATH);
+        }
+
+        Path replayRepository = newRepository(temporaryDirectory, "grandfather-replay");
+        writeAndStage(replayRepository, FRONTIER_LOG_PATH, "portable baseline\n");
+        commit(replayRepository, "neutralized frontier");
+        writeAndStage(replayRepository, FRONTIER_LOG_PATH, baseline + historicLine + "\n");
+        assertPolicyRejects(runPolicy(replayRepository, "pre-commit"), FRONTIER_LOG_PATH);
+        if (powershell != null) {
+            assertPolicyRejects(runPowerShellPolicy(replayRepository, powershell, "pre-commit"), FRONTIER_LOG_PATH);
+        }
+
+        Path deletedRepository = newRepository(temporaryDirectory, "grandfather-deletion");
+        writeAndStage(deletedRepository, FRONTIER_LOG_PATH, baseline);
+        commit(deletedRepository, "historic frontier");
+        String deleted = baseline.replaceFirst(Pattern.quote(historicLine + "\n"), "");
+        writeAndStage(deletedRepository, FRONTIER_LOG_PATH, deleted);
+        assertPolicyRejects(runPolicy(deletedRepository, "pre-commit"), FRONTIER_LOG_PATH);
+        if (powershell != null) {
+            assertPolicyRejects(runPowerShellPolicy(deletedRepository, powershell, "pre-commit"), FRONTIER_LOG_PATH);
+        }
+
+        Path replayAfterDeletionRepository = newRepository(temporaryDirectory, "grandfather-replay-after-deletion");
+        writeAndStage(replayAfterDeletionRepository, FRONTIER_LOG_PATH, baseline);
+        commit(replayAfterDeletionRepository, "historic frontier");
+        writeAndStage(replayAfterDeletionRepository, FRONTIER_LOG_PATH, deleted + historicLine + "\n");
+        assertPolicyRejects(runPolicy(replayAfterDeletionRepository, "pre-commit"), FRONTIER_LOG_PATH);
+        if (powershell != null) {
+            assertPolicyRejects(runPowerShellPolicy(
+                    replayAfterDeletionRepository, powershell, "pre-commit"), FRONTIER_LOG_PATH);
+        }
+
+        int firstBreak = baseline.indexOf('\n');
+        int secondBreak = baseline.indexOf('\n', firstBreak + 1);
+        String reordered = baseline.substring(firstBreak + 1, secondBreak + 1)
+                + baseline.substring(0, firstBreak + 1)
+                + baseline.substring(secondBreak + 1);
+        Path reorderedRepository = newRepository(temporaryDirectory, "grandfather-reorder");
+        writeAndStage(reorderedRepository, FRONTIER_LOG_PATH, baseline);
+        commit(reorderedRepository, "historic frontier");
+        writeAndStage(reorderedRepository, FRONTIER_LOG_PATH, reordered);
+        assertPolicyRejects(runPolicy(reorderedRepository, "pre-commit"), FRONTIER_LOG_PATH);
+        if (powershell != null) {
+            assertPolicyRejects(runPowerShellPolicy(reorderedRepository, powershell, "pre-commit"), FRONTIER_LOG_PATH);
+        }
+
+        Path wrongPathRepository = newRepository(temporaryDirectory, "grandfather-wrong-path");
+        String wrongPath = "docs/architecture/audits/copied-history.md";
+        writeAndStage(wrongPathRepository, wrongPath, "portable baseline\n");
+        commit(wrongPathRepository, "portable audit");
+        writeAndStage(wrongPathRepository, wrongPath, historicLine + "\n");
+        assertPolicyRejects(runPolicy(wrongPathRepository, "pre-commit"), wrongPath);
+        if (powershell != null) {
+            assertPolicyRejects(runPowerShellPolicy(wrongPathRepository, powershell, "pre-commit"), wrongPath);
+        }
+
+        Path newFileRepository = newRepository(temporaryDirectory, "grandfather-new-file");
+        writeAndStage(newFileRepository, FRONTIER_LOG_PATH, historicLine + "\n");
+        assertPolicyRejects(runPolicy(newFileRepository, "pre-commit"), FRONTIER_LOG_PATH);
+        if (powershell != null) {
+            assertPolicyRejects(runPowerShellPolicy(newFileRepository, powershell, "pre-commit"), FRONTIER_LOG_PATH);
+        }
+    }
+
+    @Test
     void shellAndPowerShellRejectWindowsHomePathsWithPortableSeparatorForms(
             @TempDir Path temporaryDirectory) throws Exception {
         Map<String, String> forms = new LinkedHashMap<>();
@@ -2283,6 +2478,23 @@ class TestBuildToolingGuard {
 
     private static void assertPolicyAccepts(ProcessResult result) {
         assertEquals(0, result.exitCode(), () -> "policy unexpectedly rejected valid input:\n" + result.output());
+    }
+
+    private static boolean containsMachineLocalHome(String line) {
+        return Pattern.compile(
+                "(?:/home|/var/home|/Users)/[^/$<\\s][^/\\s]*/|"
+                        + "[A-Za-z]:[\\\\/]+[Uu][Ss][Ee][Rr][Ss][\\\\/]+"
+                        + "[^\\\\/$<%\\s][^\\\\/\\s]*[\\\\/]")
+                .matcher(line)
+                .find();
+    }
+
+    private static String sha256(String text) throws Exception {
+        return sha256(text.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static String sha256(byte[] bytes) throws Exception {
+        return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
     }
 
     private static List<String> disassemblyPaths() {

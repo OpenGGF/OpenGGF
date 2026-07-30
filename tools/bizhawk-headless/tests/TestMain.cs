@@ -158,6 +158,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
             };
             BootstrapTests.Register(tests);
             Bk2ReaderTests.Register(tests);
+            DynamicArtRomProfileTests.Register(tests);
+            DynamicArtTransferStateTests.Register(tests);
+            S1DynamicArtObserverTests.Register(tests);
+            S2DynamicArtObserverTests.Register(tests);
             GpgxHostTests.Register(tests);
             S1SmokeRecorderTests.Register(tests);
             S1TraceCsvWriterTests.Register(tests);
@@ -176,6 +180,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             S2TraceMetadataWriterTests.Register(tests);
             S2TraceCaptureRunnerTests.Register(tests);
             S2SpecialStageWriterTests.Register(tests);
+            S2SpecialStageCaptureRunnerTests.Register(tests);
             S2RunManifestWriterTests.Register(tests);
             S2RunCaptureRunnerTests.Register(tests);
             S3KAuxEventEngineTests.Register(tests);

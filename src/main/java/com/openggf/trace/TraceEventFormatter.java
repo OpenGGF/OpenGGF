@@ -323,6 +323,10 @@ public final class TraceEventFormatter {
                             queue.serviceObservations().stream()
                                     .map(value -> value.boundary() + ":" + value.budget())
                                     .collect(java.util.stream.Collectors.joining(",")));
+            case TraceEvent.DynamicArtTransferState state ->
+                    String.format("dynamicArt edges=%d pending=%s",
+                            state.edges().size(),
+                            state.outstandingTransferIds());
             default -> "";
         };
     }

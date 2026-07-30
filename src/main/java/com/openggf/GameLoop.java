@@ -821,16 +821,18 @@ public class GameLoop {
             stepInternalBody();
             return;
         }
-        lifecycleContext.plcFrameLifecycle().runLogicalIteration(
-                resolveFadeManager()::update, frame -> {
-                    activePlcLifecycleFrame = frame;
-                    try {
-                        stepInternalBody();
-                        return null;
-                    } finally {
-                        activePlcLifecycleFrame = null;
-                    }
-                });
+        Runnable productionIteration = () ->
+            lifecycleContext.plcFrameLifecycle().runLogicalIteration(
+                    resolveFadeManager()::update, frame -> {
+                        activePlcLifecycleFrame = frame;
+                        try {
+                            stepInternalBody();
+                            return null;
+                        } finally {
+                            activePlcLifecycleFrame = null;
+                        }
+                    });
+        TraceSessionLauncher.runProductionIterationIfActive(productionIteration);
     }
 
     private void stepInternalBody() {

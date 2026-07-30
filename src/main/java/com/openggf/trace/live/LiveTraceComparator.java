@@ -3,6 +3,7 @@ package com.openggf.trace.live;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.PlaybackDebugManager.PlaybackFrameObserver;
 import com.openggf.game.GameServices;
+import com.openggf.game.resources.DynamicArtDiagnosticsSnapshot;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
@@ -10,12 +11,14 @@ import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.trace.FieldComparison;
 import com.openggf.trace.EngineDiagnostics;
+import com.openggf.trace.DynamicArtSpecialStageComparator;
 import com.openggf.trace.FrameComparison;
 import com.openggf.trace.Severity;
 import com.openggf.trace.ToleranceConfig;
 import com.openggf.trace.TraceBinder;
 import com.openggf.trace.TraceCharacterState;
 import com.openggf.trace.TraceData;
+import com.openggf.trace.TraceEvent;
 import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.TraceFrame;
 import com.openggf.trace.TraceMetadata;
@@ -24,6 +27,7 @@ import com.openggf.trace.TraceReplayBootstrap;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -42,6 +46,7 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
     private final Supplier<AbstractPlayableSprite> spriteProvider;
     private final Runnable firstErrorCallback;
     private final Consumer<FrameComparison> perFrameObserver;
+    private final Supplier<DynamicArtDiagnosticsSnapshot> dynamicArtSnapshots;
 
     private int cursor;
     private int errorCount;
@@ -55,6 +60,7 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
     private boolean lastStartPressed;
     private boolean complete;
     private TraceFrame currentVisualFrame;
+    private TraceFrame deferredTerminalDynamicArtFrame;
 
     public LiveTraceComparator(TraceData trace,
                                ToleranceConfig tolerances,
@@ -77,12 +83,26 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
                                Supplier<AbstractPlayableSprite> spriteProvider,
                                Runnable firstErrorCallback,
                                Consumer<FrameComparison> perFrameObserver) {
+        this(trace, tolerances, initialCursor, spriteProvider,
+                firstErrorCallback, perFrameObserver,
+                GameServices::captureDynamicArtDiagnostics);
+    }
+
+    LiveTraceComparator(
+            TraceData trace,
+            ToleranceConfig tolerances,
+            int initialCursor,
+            Supplier<AbstractPlayableSprite> spriteProvider,
+            Runnable firstErrorCallback,
+            Consumer<FrameComparison> perFrameObserver,
+            Supplier<DynamicArtDiagnosticsSnapshot> dynamicArtSnapshots) {
         this.trace = trace;
         this.binder = new TraceBinder(tolerances);
         this.cursor = initialCursor;
         this.spriteProvider = spriteProvider;
         this.firstErrorCallback = firstErrorCallback;
         this.perFrameObserver = perFrameObserver;
+        this.dynamicArtSnapshots = dynamicArtSnapshots;
     }
 
     @Override
@@ -153,6 +173,7 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
                 if (skippedPhase != TraceExecutionPhase.ADVANCE_ONLY) {
                     laggedFrames++;
                 }
+                compareDynamicArtAndPublish(skipped);
                 cursor++;
                 checkComplete();
                 return;
@@ -168,12 +189,14 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
         TraceExecutionPhase phase =
                 TraceReplayBootstrap.phaseForReplay(trace, previous, expected);
         if (!TraceReplayBootstrap.shouldCompareGameplayStateForReplay(phase)) {
+            compareDynamicArtAndPublish(expected);
             cursor++;
             checkComplete();
             return;
         }
         AbstractPlayableSprite sprite = spriteProvider.get();
         if (sprite == null) {
+            compareDynamicArtAndPublish(expected);
             cursor++;
             checkComplete();
             return;
@@ -214,12 +237,92 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
                     GameServices.captureQueueDiagnostics());
             result = binder.comparisonForFrame(expected.frame());
         }
+        result = compareDynamicArtIfAdvertised(expected, result);
         if (perFrameObserver != null) {
             perFrameObserver.accept(result);
         }
         absorbDivergentFields(result, expected.frame());
         cursor++;
         checkComplete();
+    }
+
+    private FrameComparison compareDynamicArtIfAdvertised(
+            TraceFrame expected,
+            FrameComparison existing) {
+        if (!trace.metadata().hasPerFrameDynamicArtTransferState()) {
+            return existing;
+        }
+        if (expected.frame()
+                == trace.getFrame(trace.frameCount() - 1).frame()) {
+            deferredTerminalDynamicArtFrame = expected;
+            return existing;
+        }
+        TraceEvent.DynamicArtTransferState expectedDynamicArt =
+                trace.dynamicArtTransferStateForFrame(expected.frame());
+        DynamicArtDiagnosticsSnapshot actual =
+                dynamicArtSnapshots.get();
+        return binder.compareDynamicArt(expectedDynamicArt, actual);
+    }
+
+    private void compareDynamicArtAndPublish(TraceFrame expected) {
+        FrameComparison result = compareDynamicArtIfAdvertised(
+                expected, binder.comparisonForFrame(expected.frame()));
+        if (result == null) {
+            return;
+        }
+        if (perFrameObserver != null) {
+            perFrameObserver.accept(result);
+        }
+        absorbDivergentFields(result, expected.frame());
+    }
+
+    /**
+     * Compares the final advertised DPLC row after its structural owner has
+     * closed the production comparison segment and published terminal edges.
+     *
+     * <p>This remains read-only: lifecycle closure is deliberately outside the
+     * comparator. Repeated calls are no-ops, so terminal fields are counted and
+     * reported exactly once.
+     */
+    public FrameComparison finalizeTerminalDynamicArtComparison() {
+        TraceFrame expected = deferredTerminalDynamicArtFrame;
+        if (expected == null) {
+            return null;
+        }
+        TraceEvent.DynamicArtTransferState expectedDynamicArt =
+                trace.dynamicArtTransferStateForFrame(expected.frame());
+        DynamicArtDiagnosticsSnapshot actual = dynamicArtSnapshots.get();
+        FrameComparison dynamicOnly =
+                new DynamicArtSpecialStageComparator().compare(
+                        expectedDynamicArt, actual);
+        FrameComparison merged =
+                binder.compareDynamicArt(expectedDynamicArt, actual);
+        deferredTerminalDynamicArtFrame = null;
+        if (perFrameObserver != null) {
+            perFrameObserver.accept(merged);
+        }
+        absorbDivergentFields(dynamicOnly, expected.frame());
+        return merged;
+    }
+
+    public boolean hasDeferredTerminalDynamicArt() {
+        return deferredTerminalDynamicArtFrame != null;
+    }
+
+    /**
+     * Publishes a comparison produced by an external, gameplay-uncompared
+     * structural row through the same observer, counters, first-error callback,
+     * and HUD mismatch ring as ordinary live frame comparisons.
+     *
+     * <p>The result is immutable comparison output; this method owns no
+     * production lifecycle or expected trace data.
+     */
+    public void ingestExternalComparison(FrameComparison result) {
+        FrameComparison checked = Objects.requireNonNull(result, "result");
+        if (perFrameObserver != null) {
+            perFrameObserver.accept(checked);
+        }
+        absorbDivergentFields(checked, checked.frame());
     }
 
     private static void advancePlayableAnimationsOnly() {

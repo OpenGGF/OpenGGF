@@ -2,7 +2,9 @@ package com.openggf.game.sonic2.credits;
 
 import com.openggf.game.EndingPhase;
 import com.openggf.game.EndingProvider;
+import com.openggf.game.GameId;
 import com.openggf.game.GameServices;
+import com.openggf.game.resources.DynamicArtLifecycleService;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.sonic2.constants.Sonic2AudioConstants;
 import com.openggf.game.resources.NativeFadeLifecycle;
@@ -100,7 +102,14 @@ public class Sonic2EndingProvider implements EndingProvider, NativeFadeLifecycle
     @Override
     public void initialize() {
         try {
-            cutsceneManager = new Sonic2EndingCutsceneManager();
+            DynamicArtLifecycleService dynamicArt =
+                    GameServices.dynamicArtLifecycleOrNull();
+            Sonic2EndingDynamicArtDecisionSink decisionSink = dynamicArt == null
+                    ? Sonic2EndingDynamicArtDecisionSink.NONE
+                    : decision -> dynamicArt.observePlayerDplc(
+                            GameId.S2, decision.owner(), decision.mappingFrame(),
+                            decision.dplcFrame(), decision.kind());
+            cutsceneManager = new Sonic2EndingCutsceneManager(decisionSink);
             cutsceneManager.initialize(GameServices.rom().getRom());
         } catch (IOException e) {
             LOGGER.warning("Failed to get ROM for cutscene: " + e.getMessage());

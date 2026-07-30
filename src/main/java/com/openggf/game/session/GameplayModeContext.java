@@ -18,6 +18,8 @@ import com.openggf.game.palette.PaletteColorStateAdapter;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.render.AdvancedRenderModeController;
 import com.openggf.game.render.SpecialRenderEffectRegistry;
+import com.openggf.game.resources.DynamicArtDiagnosticsProvider;
+import com.openggf.game.resources.DynamicArtLifecycleService;
 import com.openggf.game.resources.PlcFrameLifecycleCoordinator;
 import com.openggf.game.resources.PlcLifecycleService;
 import com.openggf.game.resources.QueueDiagnosticSnapshot;
@@ -84,6 +86,7 @@ public final class GameplayModeContext implements ModeContext {
             seamlessTransitionResourceHandoffs;
     private final RecordedCompletionAuthority recordedCompletionAuthority;
     private final PlcFrameLifecycleCoordinator plcFrameLifecycle;
+    private final DynamicArtLifecycleService dynamicArtLifecycle;
 
     private Camera camera;
     private TimerManager timerManager;
@@ -172,8 +175,10 @@ public final class GameplayModeContext implements ModeContext {
                 "runtimeArtCoordinator");
         this.seamlessTransitionResourceHandoffs =
                 new SeamlessTransitionResourceHandoffRegistry();
+        this.dynamicArtLifecycle = new DynamicArtLifecycleService();
         this.plcFrameLifecycle =
-                new PlcFrameLifecycleCoordinator(worldSession.getGameModule());
+                new PlcFrameLifecycleCoordinator(
+                        worldSession.getGameModule(), dynamicArtLifecycle);
         this.recordedCompletionAuthority =
                 checkedPolicy == HardwareReadinessAdmissionPolicy.RECORDED
                         ? hardwareTiming.beginRecordedAdmission()
@@ -267,9 +272,13 @@ public final class GameplayModeContext implements ModeContext {
         this.solidExecutionRegistry = Objects.requireNonNull(solidExecutionRegistry, "solidExecutionRegistry");
         this.profiler = profiler;
         this.managersTornDown = false;
+        if (!dynamicArtLifecycle.isRunActive()) {
+            dynamicArtLifecycle.beginRun();
+        }
 
         this.rewindRegistry = new RewindRegistry(profiler);
         this.rewindRegistry.register(hardwareTiming);
+        this.rewindRegistry.register(dynamicArtLifecycle);
         runtimeArtCoordinator.registerRewindAdapters(this.rewindRegistry);
         this.rewindRegistry.register(seamlessTransitionResourceHandoffs);
         this.rewindRegistry.register(camera);
@@ -477,6 +486,26 @@ public final class GameplayModeContext implements ModeContext {
 
     public HardwareTimingService hardwareTiming() {
         return hardwareTiming;
+    }
+
+    /** Production-owned player DPLC lifecycle for this gameplay session. */
+    public DynamicArtLifecycleService dynamicArtLifecycle() {
+        return dynamicArtLifecycle;
+    }
+
+    /** Read-only player-DPLC diagnostics for observers outside the owner. */
+    public DynamicArtDiagnosticsProvider dynamicArtDiagnostics() {
+        return dynamicArtLifecycle;
+    }
+
+    /**
+     * Closes an open dynamic-art comparison window at a structural replay
+     * boundary. Expected trace values never cross this production-owned seam.
+     */
+    public void endDynamicArtComparisonSegment() {
+        if (dynamicArtLifecycle.isComparisonSegmentOpen()) {
+            dynamicArtLifecycle.closeComparisonSegment();
+        }
     }
 
     /** Game-owned runtime-art coordinator for this gameplay session. */
@@ -860,11 +889,16 @@ public final class GameplayModeContext implements ModeContext {
         }
         if (rewindRegistry != null) {
             rewindRegistry.deregister(HardwareTimingService.REWIND_KEY);
+            rewindRegistry.deregister(DynamicArtLifecycleService.REWIND_KEY);
             runtimeArtCoordinator.deregisterRewindAdapters(rewindRegistry);
             rewindRegistry.deregister(
                     seamlessTransitionResourceHandoffs.key());
         }
         hardwareTiming.resetForMissingSnapshot();
+        if (dynamicArtLifecycle.isRunActive()) {
+            dynamicArtLifecycle.finishRun();
+        }
+        dynamicArtLifecycle.resetForMissingSnapshot();
         runtimeArtCoordinator.resetForMissingSnapshot();
         plcFrameLifecycle.reset();
         seamlessTransitionResourceHandoffs.resetForMissingSnapshot();

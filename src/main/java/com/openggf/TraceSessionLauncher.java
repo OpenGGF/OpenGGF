@@ -15,6 +15,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.MasterTitleScreen;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.SpecialStageStartupPolicy;
+import com.openggf.game.resources.DynamicArtDiagnosticsSnapshot;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
@@ -28,6 +29,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.testmode.TraceCameraFocusController;
 import com.openggf.testmode.TraceHudOverlay;
 import com.openggf.trace.SpecialStageTraceData;
+import com.openggf.trace.FrameComparison;
 import com.openggf.trace.ToleranceConfig;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceExecutionPhase;
@@ -46,6 +48,7 @@ import com.openggf.trace.timing.HardwareTimingSchedule;
 import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.logging.Logger;
 
 /**
@@ -104,8 +107,14 @@ public final class TraceSessionLauncher {
     private List<TraceRunReplayWalker.SegmentPlan> runSegments;
     private RunSegmentAdvancer runAdvancer;
     private TraceRunReplayWalker.HardwareTimingCoordinator runHardwareTiming;
+    private TraceRunReplayWalker.DynamicArtSegmentController runDynamicArtSegments;
     private int runSpecialTimingSegment = -1;
     private int runSpecialTimingRow;
+    private int runSpecialDynamicArtPendingRow = -1;
+    private long runSpecialDynamicArtTargetGeneration = -1;
+    private TraceRunReplayWalker.DynamicArtSegmentComparison
+            runSpecialDynamicArtComparison;
+    private boolean runSpecialDynamicArtSegmentAnticipated;
     /**
      * Snapshot of the user's gameplay-altering config taken before
      * {@link TraceReplaySessionBootstrap#prepareConfiguration} ran.
@@ -132,6 +141,9 @@ public final class TraceSessionLauncher {
     private int completionHoldFrames;
     private boolean fadeStarted;
     private boolean teardownPending;
+    private boolean productionIterationInProgress;
+    private boolean runEndPending;
+    private long dynamicArtDeliverySerialBeforeIteration;
 
     private TraceSessionLauncher(TraceEntry entry, TraceData trace, Bk2Movie movie,
                                  TraceReplaySessionBootstrap.ConfigSnapshot configSnapshot) {
@@ -542,6 +554,7 @@ public final class TraceSessionLauncher {
         try {
             TraceData seg0Trace = runSegments.get(0).trace();
             this.fixture = new LiveFixture(playback, loop);
+            installRunDynamicArtSegments(fixture.gameplayMode());
             TraceReplayDriver driver = new TraceReplayDriver(
                     seg0Trace, movie, fixture, loop, loop::getMainPlayableSprite,
                     loop::toggleUserPause,
@@ -577,6 +590,7 @@ public final class TraceSessionLauncher {
             activeSession = this;
             TraceGhostHook.set(ghostHook);
         } catch (Exception e) {
+            closeRunDynamicArtSegments();
             playback.endSession();
             loop.setTraceCameraFocusController(null);
             this.cameraFocusController = null;
@@ -671,6 +685,8 @@ public final class TraceSessionLauncher {
         }
         if (comparator.isComplete() && !completionArmed) {
             if (fixture != null) {
+                fixture.closeDynamicArtComparisonSegment();
+                comparator.finalizeTerminalDynamicArtComparison();
                 fixture.closeHardwareTimingReplayRun();
             }
             completionArmed = true;
@@ -699,15 +715,173 @@ public final class TraceSessionLauncher {
         if (runAdvancer == null || fadeStarted) {
             return;
         }
+        int currentSegment = runAdvancer.currentSegmentIndex();
+        if (runSpecialDynamicArtComparison != null
+                && runSpecialTimingSegment == currentSegment
+                && mode != GameMode.SPECIAL_STAGE) {
+            requireNoPendingRunSpecialDynamicArtRow();
+            runSpecialDynamicArtComparison.verifyComplete();
+        }
+        if (runDynamicArtSegments != null
+                && mode != TraceRunReplayWalker.expectedMode(
+                        runSegments.get(runAdvancer.currentSegmentIndex())
+                                .segment())
+                && !(runSpecialDynamicArtSegmentAnticipated
+                        && mode == GameMode.SPECIAL_STAGE)) {
+            runDynamicArtSegments.enterGap();
+            if (comparator != null) {
+                comparator.finalizeTerminalDynamicArtComparison();
+            }
+        }
         RunSegmentAdvancer.Event event = runAdvancer.onFrame(mode, cursorFrame);
         if (event instanceof RunSegmentAdvancer.AdvanceAction action) {
             applyRunSegmentAdvance(action);
-        } else if (event instanceof RunSegmentAdvancer.EndOfRun) {
-            if (fixture != null) {
-                fixture.closeHardwareTimingReplayRun();
+            armRunSpecialDynamicArtComparison(action.nextSegmentIndex());
+            if (runDynamicArtSegments != null) {
+                if (runSpecialDynamicArtSegmentAnticipated
+                        && runSpecialTimingSegment
+                                == action.nextSegmentIndex()) {
+                    runSpecialDynamicArtSegmentAnticipated = false;
+                } else {
+                    runDynamicArtSegments.beginSegment();
+                    bindRunSpecialDynamicArtTargetGeneration();
+                }
             }
-            startFadeOut();
+        } else if (event instanceof RunSegmentAdvancer.EndOfRun) {
+            runEndPending = true;
+            if (!productionIterationInProgress) {
+                finishPendingRunEnd();
+            }
         }
+    }
+
+    void installRunDynamicArtSegments(GameplayModeContext gameplayMode) {
+        Objects.requireNonNull(gameplayMode, "gameplayMode");
+        gameplayMode.plcFrameLifecycle()
+                .setComparisonSegmentsExternallyManaged(true);
+        TraceRunReplayWalker.DynamicArtSegmentController controller =
+                new TraceRunReplayWalker.DynamicArtSegmentController(
+                        new TraceRunReplayWalker.DynamicArtSegmentWindow() {
+                            @Override
+                            public void open() {
+                                gameplayMode.dynamicArtLifecycle()
+                                        .openComparisonSegment();
+                            }
+
+                            @Override
+                            public void close() {
+                                gameplayMode.dynamicArtLifecycle()
+                                        .closeComparisonSegment();
+                            }
+                        });
+        runDynamicArtSegments = controller;
+        try {
+            controller.beginSegment();
+        } catch (RuntimeException | Error failure) {
+            runDynamicArtSegments = null;
+            throw failure;
+        }
+    }
+
+    private void closeRunDynamicArtSegments() {
+        try {
+            if (runDynamicArtSegments != null) {
+                runDynamicArtSegments.close();
+            }
+        } finally {
+            runDynamicArtSegments = null;
+        }
+    }
+
+    /**
+     * Marks the value-free production iteration boundary owned by
+     * {@link GameLoop}. This carries no trace or gameplay value into a
+     * production service; it only prevents terminal cleanup from running
+     * before the matching post-finish snapshot pull.
+     */
+    void beforeProductionIteration() {
+        productionIterationInProgress = true;
+        dynamicArtDeliverySerialBeforeIteration =
+                GameServices.captureDynamicArtDiagnostics().deliverySerial();
+    }
+
+    static void runProductionIterationIfActive(Runnable productionIteration) {
+        TraceSessionLauncher session = active();
+        if (session == null) {
+            productionIteration.run();
+            return;
+        }
+        Objects.requireNonNull(productionIteration, "productionIteration");
+        session.beforeProductionIteration();
+        Throwable primaryFailure = null;
+        try {
+            productionIteration.run();
+        } catch (RuntimeException | Error failure) {
+            primaryFailure = failure;
+            throw failure;
+        } finally {
+            try {
+                session.afterProductionIteration();
+            } catch (RuntimeException | Error hookFailure) {
+                if (primaryFailure != null) {
+                    primaryFailure.addSuppressed(hookFailure);
+                } else {
+                    throw hookFailure;
+                }
+            }
+        }
+    }
+
+    /**
+     * Pulls one immutable diagnostics snapshot after the production
+     * coordinator has finished publishing the logical iteration, then drains
+     * terminal actions requested by the iteration body.
+     */
+    void afterProductionIteration() {
+        if (!productionIterationInProgress) {
+            throw new IllegalStateException(
+                    "dynamic-art post-iteration hook has no active iteration");
+        }
+        productionIterationInProgress = false;
+        if (runSpecialDynamicArtPendingRow >= 0) {
+            DynamicArtDiagnosticsSnapshot snapshot =
+                    GameServices.captureDynamicArtDiagnostics();
+            if (snapshot.deliverySerial()
+                    <= dynamicArtDeliverySerialBeforeIteration) {
+                throw new IllegalStateException(
+                        "advertised visual special-stage DPLC row "
+                                + runSpecialDynamicArtPendingRow
+                                + " was admitted but production published no snapshot");
+            }
+            if (!snapshot.published()
+                    || snapshot.segmentGeneration()
+                            != runSpecialDynamicArtTargetGeneration
+                    || snapshot.frame() != runSpecialDynamicArtPendingRow) {
+                throw new IllegalStateException(
+                        "advertised visual special-stage DPLC row "
+                                + runSpecialDynamicArtPendingRow
+                                + " did not receive an atomic publication for "
+                                + "generation "
+                                + runSpecialDynamicArtTargetGeneration);
+            }
+            comparePublishedRunSpecialDynamicArtRow(snapshot);
+        }
+        if (runEndPending) {
+            finishPendingRunEnd();
+        }
+        retryPendingTeardown();
+    }
+
+    private void finishPendingRunEnd() {
+        runEndPending = false;
+        closeRunDynamicArtSegments();
+        if (comparator != null) {
+            comparator.finalizeTerminalDynamicArtComparison();
+        }
+        if (fixture != null) {
+            fixture.closeHardwareTimingReplayRun();
+        }
+        startFadeOut();
     }
 
     void installSpecialStageHardwareTiming(TraceReplayFixture replayFixture) {
@@ -781,6 +955,7 @@ public final class TraceSessionLauncher {
      * frame anticipates the immediately following structural segment.
      */
     private void prepareRunSpecialStageHardwareTimingRow() {
+        requireNoPendingRunSpecialDynamicArtRow();
         int segmentIndex = runAdvancer.currentSegmentIndex();
         if (!"special_stage".equals(
                 runSegments.get(segmentIndex).segment().kind())
@@ -795,17 +970,111 @@ public final class TraceSessionLauncher {
             return;
         }
         if (runSpecialTimingSegment != segmentIndex) {
-            runSpecialTimingSegment = segmentIndex;
-            runSpecialTimingRow = 0;
+            armRunSpecialDynamicArtComparison(segmentIndex);
+        }
+        if (runAdvancer.currentSegmentIndex() != segmentIndex
+                && runDynamicArtSegments != null
+                && !runSpecialDynamicArtSegmentAnticipated) {
+            runDynamicArtSegments.beginSegment();
+            bindRunSpecialDynamicArtTargetGeneration();
+            runSpecialDynamicArtSegmentAnticipated = true;
         }
         int rowCount =
                 runSegments.get(segmentIndex).segment().traceFrameCount();
         if (runSpecialTimingRow < rowCount) {
+            runSpecialDynamicArtPendingRow = runSpecialTimingRow;
             runHardwareTiming.beginSegmentRow(
                     segmentIndex, runSpecialTimingRow++);
         } else {
             fixture.enterHardwareTimingGap();
         }
+    }
+
+    private void armRunSpecialDynamicArtComparison(int segmentIndex) {
+        if (!"special_stage".equals(
+                runSegments.get(segmentIndex).segment().kind())) {
+            return;
+        }
+        if (runSpecialTimingSegment == segmentIndex
+                && runSpecialDynamicArtComparison != null) {
+            return;
+        }
+        requireNoPendingRunSpecialDynamicArtRow();
+        if (runSpecialDynamicArtComparison != null) {
+            runSpecialDynamicArtComparison.verifyComplete();
+        }
+        runSpecialTimingSegment = segmentIndex;
+        runSpecialTimingRow = 0;
+        runSpecialDynamicArtPendingRow = -1;
+        runSpecialDynamicArtTargetGeneration = -1;
+        runSpecialDynamicArtComparison =
+                new TraceRunReplayWalker.DynamicArtSegmentComparison(
+                        runSegments.get(segmentIndex).trace(),
+                        runSegments.get(segmentIndex).segment()
+                                .traceFrameCount());
+        if (runAdvancer.currentSegmentIndex() == segmentIndex
+                && runDynamicArtSegments != null) {
+            bindRunSpecialDynamicArtTargetGeneration();
+        }
+    }
+
+    private void bindRunSpecialDynamicArtTargetGeneration() {
+        if (runSpecialDynamicArtComparison != null) {
+            runSpecialDynamicArtTargetGeneration =
+                    GameServices.captureDynamicArtDiagnostics()
+                            .segmentGeneration();
+        }
+    }
+
+    /**
+     * Receives one immutable row only after the production lifecycle has
+     * published it. The run advancer already ran inside the logical iteration,
+     * so row zero reaches the comparator installed by that iteration's
+     * {@link RunSegmentAdvancer.AdvanceAction}.
+     */
+    private void comparePublishedRunSpecialDynamicArtRow(
+            DynamicArtDiagnosticsSnapshot published) {
+        if (runSpecialDynamicArtPendingRow < 0
+                || runSpecialDynamicArtComparison == null) {
+            return;
+        }
+        int row = runSpecialDynamicArtPendingRow;
+        int rowCount = runSegments.get(runSpecialTimingSegment)
+                .segment().traceFrameCount();
+        runSpecialDynamicArtPendingRow = -1;
+        DynamicArtDiagnosticsSnapshot actual = published;
+        if (row == rowCount - 1 && runDynamicArtSegments != null) {
+            runDynamicArtSegments.enterGap();
+            actual = GameServices.captureDynamicArtDiagnostics();
+        }
+        FrameComparison result = runSpecialDynamicArtComparison.compareRow(
+                row, actual);
+        if (row == rowCount - 1) {
+            runSpecialDynamicArtComparison.verifyComplete();
+        }
+        ingestRunSpecialDynamicArtComparison(result);
+    }
+
+    private void requireNoPendingRunSpecialDynamicArtRow() {
+        if (runSpecialDynamicArtPendingRow >= 0) {
+            throw new IllegalStateException(
+                    "advertised visual special-stage DPLC row "
+                            + runSpecialDynamicArtPendingRow
+                            + " was admitted but production published no snapshot");
+        }
+    }
+
+    private void ingestRunSpecialDynamicArtComparison(
+            FrameComparison result) {
+        if (result == null) {
+            return;
+        }
+        if (comparator == null) {
+            throw new IllegalStateException(
+                    "advertised visual special-stage DPLC row has no "
+                            + "live comparison report sink");
+        }
+        comparator.ingestExternalComparison(result);
     }
 
     /**
@@ -1105,6 +1374,9 @@ public final class TraceSessionLauncher {
         if (!teardownPending) {
             return false;
         }
+        if (productionIterationInProgress) {
+            return true;
+        }
         if (rewindController != null) {
             rewindController.commitDeferredAudioRestore();
             if (!GameServices.audio().afterRewindRestore(
@@ -1114,6 +1386,7 @@ public final class TraceSessionLauncher {
             }
         }
         activeSession = null;
+        closeRunDynamicArtSegments();
         TraceGhostHook.clear(ghostHook);
         GameServices.audio().setRewindHistoryArmed(false);
         GameServices.playbackDebug().endSession();

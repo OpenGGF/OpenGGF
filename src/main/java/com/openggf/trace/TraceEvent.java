@@ -7,12 +7,20 @@ import com.openggf.level.objects.RomObjectSnapshot;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * An event from the auxiliary trace file (aux_state.jsonl).
  * Events are frame-keyed and only written for notable moments.
  */
 public sealed interface TraceEvent {
+
+    Set<String> KNOWN_GENERIC_NATIVE_EVENTS = Set.of(
+            "state_snapshot",
+            "cursor_state",
+            "slot_dump",
+            "s2_tornado_state",
+            "cnz_slot_machine_state");
 
     int frame();
 
@@ -653,18 +661,44 @@ public sealed interface TraceEvent {
         public record ServiceObservation(String boundary, int budget) {}
     }
 
+    /** Mandatory per-stored-row player-art lifecycle heartbeat. */
+    record DynamicArtTransferState(
+            int frame,
+            List<DynamicArtTransfer.SegmentEdge> edges,
+            List<Long> outstandingTransferIds)
+            implements TraceEvent {
+        public DynamicArtTransferState {
+            edges = List.copyOf(edges);
+            outstandingTransferIds = List.copyOf(outstandingTransferIds);
+            Set<Long> ids = new java.util.HashSet<>();
+            for (long transferId : outstandingTransferIds) {
+                if (transferId < 0 || !ids.add(transferId)) {
+                    throw new IllegalArgumentException(
+                            "outstanding_transfer_ids has negative or duplicate transfer_id");
+                }
+            }
+        }
+    }
+
     /**
      * Parse a single JSONL line into the appropriate TraceEvent subtype.
      * Unknown event types are returned as StateSnapshot with all fields preserved.
      */
     static TraceEvent parseJsonLine(String jsonLine, ObjectMapper mapper) {
+        return parseJsonLine(jsonLine, mapper, false);
+    }
+
+    static TraceEvent parseJsonLine(
+            String jsonLine, ObjectMapper mapper, boolean failOnUnknownEvent) {
         try {
             JsonNode node = mapper.readTree(jsonLine);
-            int frame = node.get("frame").asInt();
+            int frame = DynamicArtTransfer.requiredInt(node, "frame");
             String event = node.has("event") ? node.get("event").asText() : "unknown";
 
             return switch (event) {
                 case "load_queue_state" -> parseLoadQueueState(frame, node);
+                case "dynamic_art_transfer_state" ->
+                        parseDynamicArtTransferState(frame, node);
                 case "object_appeared" -> new ObjectAppeared(
                     frame,
                     node.get("slot").asInt(),
@@ -1289,6 +1323,11 @@ public sealed interface TraceEvent {
                     parseHexInt(node, "solid_delta")
                 );
                 default -> {
+                    if (failOnUnknownEvent && node.has("event")
+                            && !KNOWN_GENERIC_NATIVE_EVENTS.contains(event)) {
+                        throw new IllegalArgumentException(
+                                "unknown advertised event type: " + event);
+                    }
                     // state_snapshot or unknown: preserve all fields as map
                     Map<String, Object> fields = new LinkedHashMap<>();
                     node.fields().forEachRemaining(
@@ -1300,6 +1339,24 @@ public sealed interface TraceEvent {
         } catch (Exception e) {
             throw new IllegalArgumentException("Failed to parse JSONL line: " + jsonLine, e);
         }
+    }
+
+    private static DynamicArtTransferState parseDynamicArtTransferState(
+            int frame, JsonNode node) {
+        List<DynamicArtTransfer.SegmentEdge> edges = new java.util.ArrayList<>();
+        for (JsonNode edge : DynamicArtTransfer.requiredArray(node, "edges")) {
+            edges.add(DynamicArtTransfer.parseSegmentEdge(edge));
+        }
+        List<Long> outstanding = new java.util.ArrayList<>();
+        for (JsonNode id : DynamicArtTransfer.requiredArray(
+                node, "outstanding_transfer_ids")) {
+            if (!id.isIntegralNumber() || !id.canConvertToLong()) {
+                throw new IllegalArgumentException(
+                        "invalid outstanding transfer id");
+            }
+            outstanding.add(id.asLong());
+        }
+        return new DynamicArtTransferState(frame, edges, outstanding);
     }
 
     private static LoadQueueState parseLoadQueueState(int frame, JsonNode node) {

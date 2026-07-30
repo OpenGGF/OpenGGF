@@ -12,7 +12,24 @@ public record GameRules(
         ObjectInteractionRules objectInteraction,
         SidekickCpuRules sidekickCpu,
         PowerUpRules powerUp,
-        DrowningBubbleRules drowningBubble) {
+        DrowningBubbleRules drowningBubble,
+        DynamicArtDmaServiceModel dynamicArtDmaService) {
+
+    public GameRules(
+            PlayerMovementRules playerMovement,
+            PlayerCapabilityRules playerCapability,
+            CollisionRules collision,
+            PlayerAnimationRules playerAnimation,
+            CameraRules camera,
+            RingRules ring,
+            ObjectInteractionRules objectInteraction,
+            SidekickCpuRules sidekickCpu,
+            PowerUpRules powerUp,
+            DrowningBubbleRules drowningBubble) {
+        this(playerMovement, playerCapability, collision, playerAnimation,
+                camera, ring, objectInteraction, sidekickCpu, powerUp,
+                drowningBubble, DynamicArtDmaServiceModel.EVERY_CLAIM);
+    }
 
     public static final GameRules SONIC_1 = new GameRules(
             new PlayerMovementRules(
@@ -147,7 +164,8 @@ public record GameRules(
                     0,
                     false,
                     -136
-            )
+            ),
+            DynamicArtDmaServiceModel.EVERY_CLAIM
     );
 
     public static final GameRules SONIC_2 = new GameRules(
@@ -283,7 +301,8 @@ public record GameRules(
                     8,
                     true,
                     -136
-            )
+            ),
+            DynamicArtDmaServiceModel.SONIC_2_PROCESS_DMA_QUEUE
     );
 
     public static final GameRules SONIC_3K = new GameRules(
@@ -419,6 +438,7 @@ public record GameRules(
                     8,
                     true,
                     -256
-            )
+            ),
+            DynamicArtDmaServiceModel.EVERY_CLAIM_WITHOUT_PLAYER_ART_AUDIT
     );
 }

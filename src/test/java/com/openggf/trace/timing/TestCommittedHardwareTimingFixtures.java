@@ -264,7 +264,7 @@ class TestCommittedHardwareTimingFixtures {
                         new RunManifestExpectation(
                                 "runs/s3-knux-multibonus-ss/run_manifest.json",
                                 "v637-knuckles-b", 8740,
-                                "16cc116a79b739ccba6c1dd8a607eb5478c151053b7cdc2962bd9e86bbbf39dc",
+                                "f2e3151b339c680277ad8121f24d6ebc14fb67a47cfabae7fd97f1da1ea97bbd",
                                 25, 22),
                         new RunManifestExpectation(
                                 "runs/s3k-knuckles-complete-superemeralds/"

@@ -54379,3 +54379,51 @@ TestS3kHardwareTimingReplay" test
 - These are the same upstream StarPost, enemy-art, and reload lifecycle gaps
   identified in the corrected-candidate review. No trace-derived submission,
   timing exception, or upstream gameplay fix was added during publication.
+
+## 2026-07-30 — S1/S2 PLC/DPLC timing-audit candidates (not installed)
+
+- Context: `feature/ai-trace-fleet-regeneration` at `461c76660`; candidates
+  remained under `.scratch/` and canonical fixtures were not changed.
+- Representative capture/replay frontiers:
+
+| Replay | Result | Error count | First error |
+|---|---|---:|---|
+| S1 GHZ | FAIL | 3460 | frame 9, `dynamic_art.outstanding_transfer_ids`, expected `[1]`, actual `[]` |
+| S1 special stage | FAIL | 5315 | frame 98, `dynamic_art.outstanding_transfer_ids`, expected `[1521]`, actual `[]` |
+| S2 ARZ | FAIL | 14858 | frame 0, `dynamic_art.outstanding_transfer_ids`, expected `[24]`, actual `[2]` |
+| S2 special stage | FAIL | 27595 | frame 136, `dynamic_art.edges`, expected ordinals `[40,41,42]`, actual `[]` |
+
+- Native observer proofs passed 13/13 S1 and 21/21 S2 tests. The latest S2
+  halfpipe proof carries transfer 8078 across the `ss_2` arm and completes it
+  at BK2 frame 12731 / segment row 126.
+- This is candidate evidence only. All-game ROM-backed regeneration,
+  differential qualification, frontier sweep, and canonical publication
+  remain pending.
+
+## 2026-07-30 — Native PLC/DPLC queue-audit fleet publication sweep
+
+- Context: branch `feature/ai-trace-fleet-regeneration`, worktree
+  `.worktrees/trace-fleet-regeneration`, commit `122ed4095` plus the reviewed
+  in-worktree fixture publication and validator correction. The eight passing
+  S1 credits fixtures are retained non-regenerable legacy traces and do not
+  claim PLC/DPLC audit coverage.
+- Command: each of the 64 concrete gameplay replay classes ran alone on JDK
+  21 using `mvn -q -Dmse=relaxed -Dsonic1.rom.path=<repo>/s1.gen
+  -Dsonic2.rom.path=<repo>/s2.gen -Ds3k.rom.path=<repo>/s3k.gen
+  -Dtest=<fully-qualified-class> test`; reports were preserved after every
+  class.
+- Result: 9 green, 42 comparator-red, 13 runtime-error, 0 not-executed; 108
+  Surefire tests, 46 failures, 40 errors, and 0 skips. S1 is 8/30 green, S2
+  0/20, and S3K 1/14.
+- The post-validator wildcard `-Dtest=*TraceReplay` selection produced the same
+  108-test aggregate (46 failures, 40 errors, 0 skips); its nonzero exit is
+  fully accounted for by the isolated classifications.
+- First frontiers: S2 level traces start at frame 0
+  `dynamic_art.outstanding_transfer_ids`; most S1 complete-run traces start at
+  frame 1 `dynamic_art.edges`, while GHZ1/MZ1 first reach
+  `queue.s1_nemesis_plc.queued_fingerprints` at frame 69. S3K retains 13
+  production queue/timing errors; special stage remains green.
+- Next target: fix the S2 segment-start outstanding-transfer ledger, then
+  align S1 callback/edge ordinals and frame-69 PLC fingerprints. Full
+  per-class totals and S3K runtime frontiers are recorded in
+  `docs/architecture/validation/trace/2026-07-30-native-trace-frontiers.md`.

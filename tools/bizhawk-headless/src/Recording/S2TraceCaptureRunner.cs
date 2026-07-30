@@ -76,7 +76,51 @@ namespace OpenGGF.BizHawk.Headless
             TextWriter physicsCsv,
             TextWriter auxStateJsonl,
             TextWriter metadataJson,
-            byte[] loadQueueRom = null)
+            byte[] requiredDynamicArtRom)
+        {
+            if (requiredDynamicArtRom == null)
+            {
+                throw new ArgumentNullException(
+                    "requiredDynamicArtRom",
+                    "Canonical trace publication requires native load audit.");
+            }
+            return CaptureCore(
+                movie, host, traceProfile, targetGameplaySegment, sourceBk2,
+                recordingDate, physicsCsv, auxStateJsonl, metadataJson,
+                requiredDynamicArtRom);
+        }
+
+        /// <summary>
+        /// Scratch-only compatibility capture. Output from this path lacks
+        /// mandatory native load audit and must never reach publication.
+        /// </summary>
+        public static S2TraceCaptureResult CaptureScratchLegacy(
+            Bk2Movie movie,
+            IGpgxHost host,
+            string traceProfile,
+            int targetGameplaySegment,
+            string sourceBk2,
+            string recordingDate,
+            TextWriter physicsCsv,
+            TextWriter auxStateJsonl,
+            TextWriter metadataJson)
+        {
+            return CaptureCore(
+                movie, host, traceProfile, targetGameplaySegment, sourceBk2,
+                recordingDate, physicsCsv, auxStateJsonl, metadataJson, null);
+        }
+
+        private static S2TraceCaptureResult CaptureCore(
+            Bk2Movie movie,
+            IGpgxHost host,
+            string traceProfile,
+            int targetGameplaySegment,
+            string sourceBk2,
+            string recordingDate,
+            TextWriter physicsCsv,
+            TextWriter auxStateJsonl,
+            TextWriter metadataJson,
+            byte[] loadQueueRom)
         {
             if (movie == null)
             {
@@ -153,10 +197,19 @@ namespace OpenGGF.BizHawk.Headless
             uint startRngSeed = 0;
             string startZoneName = "unknown";
             S2AuxEventEngine auxEngine = null;
+            int dynamicArtLogicalFrame = 0;
+            S2DynamicArtObserver dynamicArt = loadQueueRom == null
+                ? null
+                : new S2DynamicArtObserver(
+                    loadQueueRom, host, () => dynamicArtLogicalFrame);
+            DynamicArtCaptureRowBuffer rowBuffer = null;
+            bool dynamicArtArmed = false;
 
-            using (IEnumerator<Bk2Frame> frames =
-                movie.OpenFrameStream().GetEnumerator())
+            try
             {
+                using (IEnumerator<Bk2Frame> frames =
+                    movie.OpenFrameStream().GetEnumerator())
+                {
                 int rowsConsumed = 0;
                 while (true)
                 {
@@ -179,6 +232,9 @@ namespace OpenGGF.BizHawk.Headless
                                 : "."));
                     }
                     Bk2Frame frame = frames.Current;
+                    dynamicArtLogicalFrame = started
+                        ? traceFrame
+                        : rowsConsumed;
                     S1TraceCaptureRunner.ApplyFrame(frame, host);
                     host.Advance();
                     rowsConsumed++;
@@ -268,6 +324,17 @@ namespace OpenGGF.BizHawk.Headless
                                 {
                                     auxBuf.Append(line).Append('\n');
                                 }
+                                if (dynamicArt != null)
+                                {
+                                    dynamicArt.PublishGap();
+                                    dynamicArt.ArmSegment();
+                                    dynamicArtArmed = true;
+                                    rowBuffer =
+                                        new DynamicArtCaptureRowBuffer(
+                                            physicsBufWriter,
+                                            auxBufWriter,
+                                            "\n");
+                                }
                             }
                         }
                         continue;   // Detection frame is never recorded.
@@ -282,6 +349,13 @@ namespace OpenGGF.BizHawk.Headless
                             // Throw it away (buffers + tracker engine) and
                             // re-arm; segment bookkeeping and the sticky
                             // recorded_sidekick_present survive.
+                            if (dynamicArt != null)
+                            {
+                                FlushDynamicArtSegment(
+                                    dynamicArt, rowBuffer, traceFrame);
+                                dynamicArtArmed = false;
+                                rowBuffer = null;
+                            }
                             started = false;
                             traceFrame = 0;
                             offset = 0;
@@ -317,9 +391,25 @@ namespace OpenGGF.BizHawk.Headless
 
                     // Recorded row (§7 order): zone_act_state/checkpoint
                     // before the CSV row, then the frame-shared aux events.
-                    AppendRecordedRow(
-                        physicsBufWriter, auxBufWriter, auxEngine,
-                        traceFrame, frame, host, loadQueueRom);
+                    if (dynamicArt != null)
+                    {
+                        string physicsLine;
+                        IList<string> auxLines;
+                        BuildRecordedRow(
+                            auxEngine, traceFrame, frame, host, loadQueueRom,
+                            out physicsLine, out auxLines);
+                        rowBuffer.Queue(
+                            physicsLine,
+                            auxLines,
+                            dynamicArt.PublishRow(
+                                traceFrame, host.IsLagged));
+                    }
+                    else
+                    {
+                        AppendRecordedRow(
+                            physicsBufWriter, auxBufWriter, auxEngine,
+                            traceFrame, frame, host, loadQueueRom);
+                    }
                     if (S2Ram.U8(host, S2Ram.SidekickBase + S2Ram.OffId) != 0)
                     {
                         recordedSidekickPresent = true;
@@ -327,6 +417,12 @@ namespace OpenGGF.BizHawk.Headless
                     traceFrame++;
                 }
 
+                if (dynamicArtArmed)
+                {
+                    FlushDynamicArtSegment(
+                        dynamicArt, rowBuffer, traceFrame);
+                    dynamicArtArmed = false;
+                }
                 // Finalize: flush the buffered files and write the final
                 // metadata bytes. Sidekick presence is the recorder's rule:
                 // sticky recorded_sidekick_present OR a live id at 0xB040 at
@@ -351,6 +447,14 @@ namespace OpenGGF.BizHawk.Headless
                     loadQueueRom != null));
                 return new S2TraceCaptureResult(
                     offset, traceFrame, gameplaySegmentIndex);
+                }
+            }
+            finally
+            {
+                if (dynamicArt != null)
+                {
+                    dynamicArt.Dispose();
+                }
             }
         }
 
@@ -371,26 +475,58 @@ namespace OpenGGF.BizHawk.Headless
             IGpgxHost host,
             byte[] loadQueueRom = null)
         {
+            string physicsLine;
+            IList<string> auxLines;
+            BuildRecordedRow(
+                auxEngine, traceFrame, frame, host, loadQueueRom,
+                out physicsLine, out auxLines);
+            WriteLine(physicsCsv, physicsLine);
+            for (int index = 0; index < auxLines.Count; index++)
+            {
+                WriteLine(auxStateJsonl, auxLines[index]);
+            }
+        }
+
+        internal static void BuildRecordedRow(
+            S2AuxEventEngine auxEngine,
+            int traceFrame,
+            Bk2Frame frame,
+            IGpgxHost host,
+            byte[] loadQueueRom,
+            out string physicsLine,
+            out IList<string> auxLines)
+        {
+            var lines = new List<string>();
             foreach (string line in
                 auxEngine.ProcessFrameStart(traceFrame, host))
             {
-                WriteLine(auxStateJsonl, line);
+                lines.Add(line);
             }
-            WriteLine(
-                physicsCsv,
-                S2TraceCsvWriter.FormatRow(
-                    traceFrame,
-                    S1InputMask.FromFrame(frame),
-                    host));
+            physicsLine = S2TraceCsvWriter.FormatRow(
+                traceFrame, S1InputMask.FromFrame(frame), host);
             foreach (string line in auxEngine.ProcessFrame(traceFrame, host))
             {
-                WriteLine(auxStateJsonl, line);
+                lines.Add(line);
             }
             if (loadQueueRom != null)
             {
-                WriteLine(auxStateJsonl, LoadQueueStateProjector.CaptureS2(
+                lines.Add(LoadQueueStateProjector.CaptureS2(
                     traceFrame, loadQueueRom, host));
             }
+            auxLines = lines;
+        }
+
+        private static void FlushDynamicArtSegment(
+            S2DynamicArtObserver observer,
+            DynamicArtCaptureRowBuffer rowBuffer,
+            int traceFrameCount)
+        {
+            if (traceFrameCount > 0)
+            {
+                rowBuffer.FlushTerminal(
+                    observer.PublishTerminal(traceFrameCount - 1));
+            }
+            observer.EndSegment();
         }
 
         private static void WriteLine(TextWriter writer, string line)

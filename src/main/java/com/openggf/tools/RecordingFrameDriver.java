@@ -22,6 +22,7 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
+import com.openggf.trace.replay.runs.TraceRunReplayWalker.DynamicArtSegmentWindow;
 
 /**
  * Deterministic per-frame gameplay drive shared by headless trace tests and the
@@ -39,7 +40,7 @@ import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
  * trace-replay tests validate, rather than the live-playback {@code GameLoop}
  * path which omits P2/sidekick input plumbing and the explicit phase loop.
  */
-public final class RecordingFrameDriver {
+public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
 
     private final AbstractPlayableSprite sprite;
     private final LevelManager levelManager;
@@ -95,6 +96,35 @@ public final class RecordingFrameDriver {
 
     public void clearHardwareTimingReplayObserver() {
         hardwareTimingReplayObserver = null;
+    }
+
+    /** Selects structural run-replay segment ownership without accepting trace facts. */
+    public void useExternalDynamicArtComparisonSegments() {
+        SessionManager.getCurrentGameplayMode().plcFrameLifecycle()
+                .setComparisonSegmentsExternallyManaged(true);
+    }
+
+    public void openDynamicArtComparisonSegment() {
+        SessionManager.getCurrentGameplayMode().dynamicArtLifecycle()
+                .openComparisonSegment();
+    }
+
+    public void closeDynamicArtComparisonSegment() {
+        SessionManager.getCurrentGameplayMode().dynamicArtLifecycle()
+                .closeComparisonSegment();
+    }
+
+    @Override
+    public void open() {
+        useExternalDynamicArtComparisonSegments();
+        SessionManager.getCurrentGameplayMode().dynamicArtLifecycle()
+                .serviceProductionVBlank();
+        openDynamicArtComparisonSegment();
+    }
+
+    @Override
+    public void close() {
+        closeDynamicArtComparisonSegment();
     }
 
     public void beginTraceRow(int traceIndex, int rawFrame) {

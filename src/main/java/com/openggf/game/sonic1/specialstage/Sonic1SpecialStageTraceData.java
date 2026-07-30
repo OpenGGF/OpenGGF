@@ -4,6 +4,7 @@ import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceEvent;
 import com.openggf.trace.TraceFiles;
 import com.openggf.trace.TraceMetadata;
+import com.openggf.trace.StoredPhysicsFrameDomain;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -56,10 +57,18 @@ public final class Sonic1SpecialStageTraceData {
         }
         Path auxPath = TraceFiles.resolve(traceDirectory, "aux_state.jsonl");
 
+        StoredPhysicsFrameDomain frameDomain =
+                StoredPhysicsFrameDomain.scan(
+                        physicsPath,
+                        StoredPhysicsFrameDomain.FrameEncoding.DECIMAL);
         List<Sonic1SpecialStageTraceFrame> frames = loadPhysicsCsv(physicsPath);
         Map<Integer, List<TraceEvent>> events = auxPath != null
-            ? TraceData.loadAuxEvents(auxPath)
+            ? TraceData.loadAuxEvents(auxPath, metadata)
             : Collections.emptyMap();
+        if (metadata.hasPerFrameDynamicArtTransferState()) {
+            TraceData.validateDynamicArtTransferStates(
+                    metadata, frameDomain, events);
+        }
 
         return new Sonic1SpecialStageTraceData(metadata, frames, events);
     }
@@ -87,6 +96,12 @@ public final class Sonic1SpecialStageTraceData {
     /** Reuses {@link TraceEvent} + aux jsonl parsing shared with {@link TraceData}. */
     public List<TraceEvent> getEventsForFrame(int i) {
         return eventsByFrame.getOrDefault(i, Collections.emptyList());
+    }
+
+    public TraceEvent.DynamicArtTransferState dynamicArtTransferStateForFrame(
+            int frame) {
+        return TraceData.dynamicArtTransferStateForFrame(
+                metadata, eventsByFrame, frame);
     }
 
     /** Returns all events for this trace indexed by frame. */

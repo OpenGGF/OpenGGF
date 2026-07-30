@@ -2,6 +2,7 @@ package com.openggf.game.sonic2.specialstage;
 
 import com.openggf.game.SpecialStageDebugProvider;
 import com.openggf.game.GameServices;
+import com.openggf.game.resources.DynamicArtLifecycleService;
 
 import com.openggf.audio.GameSound;
 import com.openggf.configuration.SonicConfiguration;
@@ -1897,6 +1898,63 @@ public class Sonic2SpecialStageManager {
             tailsPlayer.setGlobalAnimFrameTimer(animTimer);
             tailsPlayer.update(capturedHeldButtons, capturedPressedButtons);
         }
+        publishPlayerDynamicArt();
+    }
+
+    private void publishPlayerDynamicArt() {
+        DynamicArtLifecycleService lifecycle =
+                GameServices.dynamicArtLifecycleOrNull();
+        if (lifecycle == null || !lifecycle.isRunActive()
+                || dataLoader == null) {
+            return;
+        }
+        Sonic2SpecialStageDataLoader.PlayerDplcPlans plans;
+        try {
+            plans = dataLoader.getPlayerDplcPlans();
+        } catch (IOException e) {
+            throw new IllegalStateException(
+                    "unable to load ROM-backed special-stage player DPLC plans", e);
+        }
+        if (sonicPlayer != null) {
+            publishSpecialStageOwner(
+                    lifecycle, "ss-sonic", sonicPlayer.getMappingFrame(),
+                    dplcRequests(plans.sonic(), sonicPlayer.getMappingFrame()),
+                    0x5CA0);
+        }
+        if (tailsPlayer != null) {
+            publishSpecialStageOwner(
+                    lifecycle, "ss-tails", tailsPlayer.getMappingFrame(),
+                    dplcRequests(plans.tails(), tailsPlayer.getMappingFrame()),
+                    0x6000);
+            if (tailsPlayer.shouldRenderTailsTails()) {
+                publishSpecialStageOwner(
+                        lifecycle, "ss-tails-tails",
+                        tailsPlayer.getTailsTailsMappingFrame(),
+                        dplcRequests(plans.tailsTails(),
+                                tailsPlayer.getTailsTailsMappingFrame()),
+                        0x62C0);
+            }
+        }
+    }
+
+    private static List<com.openggf.level.render.TileLoadRequest> dplcRequests(
+            List<com.openggf.level.render.SpriteDplcFrame> frames,
+            int mappingFrame) {
+        if (mappingFrame < 0 || mappingFrame >= frames.size()) {
+            return List.of();
+        }
+        return frames.get(mappingFrame).requests();
+    }
+
+    private static void publishSpecialStageOwner(
+            DynamicArtLifecycleService lifecycle,
+            String owner,
+            int mappingFrame,
+            List<com.openggf.level.render.TileLoadRequest> requests,
+            int vramDestination) {
+        lifecycle.observeRamDplc(
+                com.openggf.game.GameId.S2,
+                owner, mappingFrame, requests, 0xFF0000, vramDestination);
     }
 
     private void enterAlignmentTestMode() {

@@ -16,15 +16,22 @@ namespace OpenGGF.BizHawk.Headless
         public S2RunCaptureResult(
             IList<RunManifestSegment> segments,
             IList<RunManifestTransition> transitions,
+            IList<DynamicArtGapTransition> dynamicArtGapTransitions,
             string runManifestJson)
         {
             Segments = segments;
             Transitions = transitions;
+            DynamicArtGapTransitions = dynamicArtGapTransitions;
             RunManifestJson = runManifestJson;
         }
 
         public IList<RunManifestSegment> Segments { get; private set; }
         public IList<RunManifestTransition> Transitions { get; private set; }
+        public IList<DynamicArtGapTransition> DynamicArtGapTransitions
+        {
+            get;
+            private set;
+        }
         public string RunManifestJson { get; private set; }
     }
 
@@ -105,7 +112,46 @@ namespace OpenGGF.BizHawk.Headless
             string recordingDate,
             int effectiveMovieLength,
             IRunSegmentSink segmentSink,
-            byte[] loadQueueRom = null)
+            byte[] requiredDynamicArtRom)
+        {
+            if (requiredDynamicArtRom == null)
+            {
+                throw new ArgumentNullException(
+                    "requiredDynamicArtRom",
+                    "Canonical run publication requires native load audit.");
+            }
+            return CaptureCore(
+                movie, host, runId, sourceBk2, recordingDate,
+                effectiveMovieLength, segmentSink, requiredDynamicArtRom);
+        }
+
+        /// <summary>
+        /// Scratch-only compatibility capture. Its segments intentionally
+        /// omit mandatory native load audit and are not publishable.
+        /// </summary>
+        public static S2RunCaptureResult CaptureScratchLegacy(
+            Bk2Movie movie,
+            IGpgxHost host,
+            string runId,
+            string sourceBk2,
+            string recordingDate,
+            int effectiveMovieLength,
+            IRunSegmentSink segmentSink)
+        {
+            return CaptureCore(
+                movie, host, runId, sourceBk2, recordingDate,
+                effectiveMovieLength, segmentSink, null);
+        }
+
+        private static S2RunCaptureResult CaptureCore(
+            Bk2Movie movie,
+            IGpgxHost host,
+            string runId,
+            string sourceBk2,
+            string recordingDate,
+            int effectiveMovieLength,
+            IRunSegmentSink segmentSink,
+            byte[] loadQueueRom)
         {
             if (movie == null)
             {
@@ -138,17 +184,26 @@ namespace OpenGGF.BizHawk.Headless
                 throw new ArgumentNullException("segmentSink");
             }
 
-            var state = new RunState(
+            RunState state = null;
+            S2DynamicArtObserver dynamicArt = loadQueueRom == null
+                ? null
+                : new S2DynamicArtObserver(
+                    loadQueueRom, host,
+                    () => state.DynamicArtLogicalFrame);
+            state = new RunState(
                 runId, sourceBk2, recordingDate,
                 effectiveMovieLength == 0
                     ? movie.FrameCount
                     : effectiveMovieLength,
                 segmentSink,
-                loadQueueRom);
+                loadQueueRom,
+                dynamicArt);
 
-            using (IEnumerator<Bk2Frame> frames =
-                movie.OpenFrameStream().GetEnumerator())
+            try
             {
+                using (IEnumerator<Bk2Frame> frames =
+                    movie.OpenFrameStream().GetEnumerator())
+                {
                 int rowsConsumed = 0;
                 while (true)
                 {
@@ -161,6 +216,7 @@ namespace OpenGGF.BizHawk.Headless
                         break;
                     }
                     Bk2Frame frame = frames.Current;
+                    state.PrepareDynamicArtCursor(rowsConsumed);
                     S1TraceCaptureRunner.ApplyFrame(frame, host);
                     host.Advance();
                     rowsConsumed++;
@@ -268,6 +324,14 @@ namespace OpenGGF.BizHawk.Headless
 
                     state.AppendLevelRow(frame, host);
                 }
+                }
+            }
+            finally
+            {
+                if (dynamicArt != null)
+                {
+                    dynamicArt.Dispose();
+                }
             }
 
             return state.BuildResult();
@@ -288,6 +352,9 @@ namespace OpenGGF.BizHawk.Headless
                 new List<RunManifestSegment>();
             private readonly List<RunManifestTransition> transitions =
                 new List<RunManifestTransition>();
+            private readonly List<DynamicArtGapTransition>
+                dynamicArtGapTransitions =
+                    new List<DynamicArtGapTransition>();
 
             // Armed-segment state (shared between level and ss segments,
             // exactly one of which can be armed at a time). The two writers
@@ -298,6 +365,10 @@ namespace OpenGGF.BizHawk.Headless
             private int traceFrame;
             private int bk2FrameOffset;
             private string dirToken;
+            private DynamicArtCaptureRowBuffer rowBuffer;
+            private bool dynamicArtAdvanceMarked;
+            private IList<DynamicArtTransferDescriptor>
+                dynamicArtInitialLedger;
 
             // Level-segment arm context.
             private S2AuxEventEngine auxEngine;
@@ -335,6 +406,7 @@ namespace OpenGGF.BizHawk.Headless
             private bool manifestWritten;
             private string runManifestJson;
             private readonly byte[] loadQueueRom;
+            private readonly S2DynamicArtObserver dynamicArt;
 
             internal RunState(
                 string runId,
@@ -342,7 +414,8 @@ namespace OpenGGF.BizHawk.Headless
                 string recordingDate,
                 int effectiveMovieLength,
                 IRunSegmentSink segmentSink,
-                byte[] loadQueueRom)
+                byte[] loadQueueRom,
+                S2DynamicArtObserver dynamicArt)
             {
                 this.runId = runId;
                 this.sourceBk2 = sourceBk2;
@@ -350,11 +423,25 @@ namespace OpenGGF.BizHawk.Headless
                 this.segmentSink = segmentSink;
                 EffectiveMovieLength = effectiveMovieLength;
                 this.loadQueueRom = loadQueueRom;
+                this.dynamicArt = dynamicArt;
             }
 
             internal int EffectiveMovieLength { get; private set; }
             internal bool Started { get; private set; }
             internal bool DetourActive { get; set; }
+            internal int DynamicArtLogicalFrame { get; private set; }
+
+            internal void PrepareDynamicArtCursor(int movieLogicalFrame)
+            {
+                DynamicArtLogicalFrame = Started
+                    ? traceFrame
+                    : movieLogicalFrame;
+                if (dynamicArt != null && Started)
+                {
+                    dynamicArt.MarkAdvanceBoundary(movieLogicalFrame);
+                    dynamicArtAdvanceMarked = true;
+                }
+            }
 
             internal void ArmLevelSegment(int frameNow, IGpgxHost host)
             {
@@ -429,13 +516,31 @@ namespace OpenGGF.BizHawk.Headless
                 {
                     WriteLine(auxWriter, line);
                 }
+                ArmDynamicArtSegment();
             }
 
             internal void AppendLevelRow(Bk2Frame frame, IGpgxHost host)
             {
-                S2TraceCaptureRunner.AppendRecordedRow(
-                    physicsWriter, auxWriter, auxEngine, traceFrame, frame,
-                    host, loadQueueRom);
+                if (dynamicArt != null)
+                {
+                    string physicsLine;
+                    IList<string> auxLines;
+                    S2TraceCaptureRunner.BuildRecordedRow(
+                        auxEngine, traceFrame, frame, host, loadQueueRom,
+                        out physicsLine, out auxLines);
+                    rowBuffer.Queue(
+                        physicsLine,
+                        auxLines,
+                        dynamicArt.PublishRow(
+                            traceFrame, host.IsLagged));
+                    dynamicArtAdvanceMarked = false;
+                }
+                else
+                {
+                    S2TraceCaptureRunner.AppendRecordedRow(
+                        physicsWriter, auxWriter, auxEngine, traceFrame, frame,
+                        host, loadQueueRom);
+                }
                 if (S2Ram.U8(host, S2Ram.SidekickBase + S2Ram.OffId) != 0)
                 {
                     recordedSidekickPresent = true;
@@ -452,6 +557,7 @@ namespace OpenGGF.BizHawk.Headless
             /// </summary>
             internal void FinalizeLevelSegment(IGpgxHost host)
             {
+                FinalizeDynamicArtSegment();
                 bool sidekickPresent = recordedSidekickPresent
                     || S2Ram.U8(host, S2Ram.SidekickBase + S2Ram.OffId) != 0;
                 string metadata = S2TraceMetadataWriter.Format(
@@ -479,6 +585,7 @@ namespace OpenGGF.BizHawk.Headless
                     S2Zones.EngineZoneId(startRomZoneId),
                     S2Zones.ApparentAct(startRomZoneId, startAct) + 1,
                     null);
+                AttachDynamicArtInitialLedger(entry);
                 segments.Add(entry);
                 CloseSegmentStreams(entry, metadata);
                 Started = false;
@@ -568,26 +675,42 @@ namespace OpenGGF.BizHawk.Headless
                 ssAuxEngine = new S2SpecialStageAuxEventEngine(host);
                 WriteLine(
                     auxWriter, ssAuxEngine.FormatPretraceSnapshot(host));
+                ArmDynamicArtSegment();
             }
 
             internal void WriteSsRow(Bk2Frame frame, IGpgxHost host)
             {
                 bool lagged = host.IsLagged;
-                WriteLine(
-                    physicsWriter,
-                    S2SpecialStageCsvWriter.FormatRow(
-                        traceFrame,
-                        S2SpecialStageCsvWriter.InputMask(frame),
-                        0,
-                        lagged,
-                        host));
+                string physicsLine = S2SpecialStageCsvWriter.FormatRow(
+                    traceFrame,
+                    S2SpecialStageCsvWriter.InputMask(frame),
+                    0,
+                    lagged,
+                    host);
+                var auxLines = new List<string>();
                 // v9.13-s2 (§11.3): SS aux events after the physics row and
                 // before the trace_frame increment, in the standalone's
                 // record_frame order.
                 foreach (string line in ssAuxEngine.EmitRowEvents(
                     traceFrame, lagged, host))
                 {
-                    WriteLine(auxWriter, line);
+                    auxLines.Add(line);
+                }
+                if (dynamicArt != null)
+                {
+                    rowBuffer.Queue(
+                        physicsLine,
+                        auxLines,
+                        dynamicArt.PublishRow(traceFrame, lagged));
+                    dynamicArtAdvanceMarked = false;
+                }
+                else
+                {
+                    WriteLine(physicsWriter, physicsLine);
+                    for (int index = 0; index < auxLines.Count; index++)
+                    {
+                        WriteLine(auxWriter, auxLines[index]);
+                    }
                 }
                 traceFrame++;
             }
@@ -603,6 +726,7 @@ namespace OpenGGF.BizHawk.Headless
                 {
                     return;
                 }
+                FinalizeDynamicArtSegment();
                 string metadata = S2SpecialStageMetadataWriter.Format(
                     currentSsIndex,
                     bk2FrameOffset,
@@ -610,7 +734,8 @@ namespace OpenGGF.BizHawk.Headless
                     sourceBk2,
                     recordingDate,
                     runId,
-                    segments.Count);
+                    segments.Count,
+                    dynamicArt != null);
                 var entry = new RunManifestSegment(
                     dirToken,
                     RunManifestSegment.SpecialStageKind,
@@ -620,6 +745,7 @@ namespace OpenGGF.BizHawk.Headless
                     0,
                     0,
                     currentSsIndex);
+                AttachDynamicArtInitialLedger(entry);
                 segments.Add(entry);
                 CloseSegmentStreams(entry, metadata);
                 Started = false;
@@ -646,6 +772,7 @@ namespace OpenGGF.BizHawk.Headless
                 {
                     FinalizeLevelSegment(host);
                 }
+                PublishDynamicArtGap();
                 // A reload transition still pending at run end (the run
                 // terminated mid-reload, before the completing re-arm) is
                 // discarded, never emitted (§11.2): its to_segment index
@@ -654,7 +781,10 @@ namespace OpenGGF.BizHawk.Headless
                 if (!manifestWritten)
                 {
                     runManifestJson = S2RunManifestWriter.Format(
-                        runId, sourceBk2, segments, transitions);
+                        runId, sourceBk2, segments, transitions,
+                        dynamicArt == null
+                            ? null
+                            : dynamicArtGapTransitions);
                     manifestWritten = true;
                 }
             }
@@ -667,7 +797,78 @@ namespace OpenGGF.BizHawk.Headless
                         "Run capture ended without a run-end finalize.");
                 }
                 return new S2RunCaptureResult(
-                    segments, transitions, runManifestJson);
+                    segments, transitions, dynamicArtGapTransitions,
+                    runManifestJson);
+            }
+
+            private void ArmDynamicArtSegment()
+            {
+                if (dynamicArt == null)
+                {
+                    return;
+                }
+                PublishDynamicArtGap();
+                dynamicArtInitialLedger = dynamicArt.ArmRunSegment();
+                rowBuffer = new DynamicArtCaptureRowBuffer(
+                    physicsWriter, auxWriter, "\n");
+            }
+
+            private void AttachDynamicArtInitialLedger(
+                RunManifestSegment entry)
+            {
+                if (dynamicArtInitialLedger == null)
+                {
+                    return;
+                }
+                entry.DynamicArtInitialLedger = dynamicArtInitialLedger;
+                entry.DynamicArtInitialLedgerFingerprint =
+                    DynamicArtTransferState.ComputeLedgerHash(
+                        dynamicArtInitialLedger);
+                dynamicArtInitialLedger = null;
+            }
+
+            private void FinalizeDynamicArtSegment()
+            {
+                if (dynamicArt == null)
+                {
+                    return;
+                }
+                if (traceFrame > 0)
+                {
+                    DynamicArtTransferEnvelope terminal =
+                        dynamicArtAdvanceMarked
+                            ? dynamicArt.PublishBoundaryTerminal(
+                                traceFrame - 1)
+                            : dynamicArt.PublishTerminal(traceFrame - 1);
+                    rowBuffer.FlushTerminal(terminal);
+                }
+                else if (dynamicArtAdvanceMarked)
+                {
+                    DynamicArtTransferEnvelope empty =
+                        dynamicArt.PublishBoundaryTerminal(0);
+                    if (empty.Edges.Count != 0
+                        || empty.OutstandingTransferIds.Count != 0)
+                    {
+                        throw new InvalidOperationException(
+                            "zero-row segment cannot terminal-forward dynamic-art state");
+                    }
+                }
+                dynamicArt.EndSegment();
+                dynamicArtAdvanceMarked = false;
+                rowBuffer = null;
+            }
+
+            private void PublishDynamicArtGap()
+            {
+                if (dynamicArt == null)
+                {
+                    return;
+                }
+                foreach (DynamicArtGapTransition transition
+                    in dynamicArt.PublishGap())
+                {
+                    dynamicArtGapTransitions.Add(transition);
+                }
             }
 
             /// <summary>

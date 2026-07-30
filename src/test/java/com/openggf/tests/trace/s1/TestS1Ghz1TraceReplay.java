@@ -27,8 +27,9 @@ public class TestS1Ghz1TraceReplay extends AbstractTraceReplayTest {
 
     @Override
     protected Path traceDirectory() {
-        return Path.of("src/test/resources/traces/s1/ghz1_fullrun");
+        return Path.of(System.getProperty(
+                "openggf.trace.candidate.dir",
+                "src/test/resources/traces/s1/ghz1_fullrun"));
     }
 }
-
 

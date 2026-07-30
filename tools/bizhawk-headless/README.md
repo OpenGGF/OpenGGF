@@ -145,6 +145,15 @@ Output is published all-or-nothing: files are staged and only linked into
 `--output` once the whole capture succeeds, so a failed run never leaves a
 half-written trace behind.
 
+S1/S2 player-art audit is mandatory. Standalone captures arm with an empty
+submitted ledger. S1 may carry only an unpublished staging preparation; it
+receives no transfer id or manifest descriptor until a verified VBlank probe
+promotes the final replacement payload. S2 continuous named runs may carry
+accepted FIFO work submitted in the represented `run_gap`; the next manifest
+segment records the exact immutable initial descriptors and ledger
+fingerprint, and the matching completion keeps its id and `run_gap` origin.
+Manifest fields validate recorder continuity only and never seed engine state.
+
 The two payloads **stream** into their staging files as the capture produces
 them, for every run-mode capture (S1, S2 and S3K) — nothing holds a segment,
 let alone a run, in memory. Plain trace mode still buffers, because the

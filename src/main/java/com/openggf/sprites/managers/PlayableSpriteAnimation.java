@@ -1,6 +1,7 @@
 package com.openggf.sprites.managers;
 
 import com.openggf.game.ZoneFeatureProvider;
+import com.openggf.game.resources.DynamicArtDecisionOwner;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.PlayerAnimationRules;
 import com.openggf.physics.Direction;
@@ -25,6 +26,7 @@ public class PlayableSpriteAnimation {
     private int groundMovementAnimSpeedSnapshot = Integer.MIN_VALUE;
     private boolean groundMovementAnimationSuppressed;
     private boolean nextUpdateSuppressed;
+    private DynamicArtDecisionOwner dynamicArtDecisionOwner;
 
     /**
      * Holds one animation dispatch while the rest of the playable tick runs.
@@ -55,6 +57,15 @@ public class PlayableSpriteAnimation {
 
     public PlayableSpriteAnimation(AbstractPlayableSprite sprite) {
         this.sprite = sprite;
+    }
+
+    public void setDynamicArtDecisionOwner(
+            DynamicArtDecisionOwner dynamicArtDecisionOwner) {
+        this.dynamicArtDecisionOwner = dynamicArtDecisionOwner;
+    }
+
+    public boolean hasDynamicArtDecisionOwner() {
+        return dynamicArtDecisionOwner != null;
     }
 
     private PlayerAnimationRules playerAnimationRulesOrNull() {
@@ -119,6 +130,13 @@ public class PlayableSpriteAnimation {
     }
 
     public void update(int frameCounter) {
+        updateAnimation(frameCounter);
+        if (dynamicArtDecisionOwner != null) {
+            dynamicArtDecisionOwner.observe(sprite.getMappingFrame());
+        }
+    }
+
+    private void updateAnimation(int frameCounter) {
         if (sprite == null) {
             return;
         }

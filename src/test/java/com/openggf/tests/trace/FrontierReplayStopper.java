@@ -8,6 +8,7 @@ final class FrontierReplayStopper {
     private final int contextRadius;
     private final TraceVerificationScope verificationScope;
     private int firstErrorFrame = -1;
+    private boolean stopped;
 
     private FrontierReplayStopper(boolean enabled, int contextRadius,
             TraceVerificationScope verificationScope) {
@@ -51,6 +52,13 @@ final class FrontierReplayStopper {
     }
 
     boolean shouldStopAfterFrame(int frame) {
-        return enabled && firstErrorFrame >= 0 && frame >= firstErrorFrame + contextRadius;
+        stopped = stopped || enabled && firstErrorFrame >= 0
+                && frame >= firstErrorFrame + contextRadius;
+        return stopped;
     }
+
+    boolean stoppedEarly() {
+        return stopped;
+    }
+
 }

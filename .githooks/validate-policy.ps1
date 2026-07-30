@@ -19,6 +19,8 @@ $script:PosixHomeRoot = "/home"
 $script:VarHomeRoot = "/var/home"
 $script:MacosHomeRoot = "/Users"
 $script:WindowsUsersRoot = '[A-Za-z]:[\\/]+[Uu][Ss][Ee][Rr][Ss]'
+$script:MachineLocalPathGrandfather =
+        Join-Path $PSScriptRoot "machine-local-path-grandfather.sha256"
 
 function Fail([string]$Message) {
     [Console]::Error.WriteLine("policy: $Message")
@@ -245,6 +247,197 @@ function Test-CommitBlobHasMachineLocalHome([string]$Commit, [string]$Path) {
     return $result.ExitCode
 }
 
+function Get-StagedCandidateBase() {
+    $mergeOid = Get-MergeHeadOid
+    if (-not [string]::IsNullOrWhiteSpace($mergeOid)) {
+        return $mergeOid
+    }
+    $head = Invoke-GitText @("rev-parse", "-q", "--verify", "HEAD") -AllowFailure
+    if ([string]::IsNullOrWhiteSpace($head)) {
+        return $script:EmptyTreeOid
+    }
+    return $head
+}
+
+function Test-BaselineHasPath([string]$Baseline, [string]$Path) {
+    return Test-GitSuccess @("cat-file", "-e", "${Baseline}:$Path")
+}
+
+function Test-TextHasMachineLocalHome([string]$Text) {
+    $pattern = '(?:/home|/var/home|/Users)/[^/$<\s][^/\s]*/|' +
+            '[A-Za-z]:[\\/]+[Uu][Ss][Ee][Rr][Ss][\\/]+[^\\/$<%\s][^\\/\s]*[\\/]'
+    return $Text -cmatch $pattern
+}
+
+function Get-IntroducedLines(
+        [string]$Baseline,
+        [string]$Commit,
+        [string]$Path,
+        [string]$Source) {
+    $arguments = New-Object System.Collections.Generic.List[string]
+    $arguments.Add("diff") | Out-Null
+    if ($Source -eq "staged") {
+        $arguments.Add("--cached") | Out-Null
+    }
+    foreach ($argument in @("--no-ext-diff", "--unified=0", $Baseline)) {
+        $arguments.Add($argument) | Out-Null
+    }
+    if ($Source -eq "commit") {
+        $arguments.Add($Commit) | Out-Null
+    }
+    $arguments.Add("--") | Out-Null
+    $arguments.Add(":(literal)$Path") | Out-Null
+
+    $diff = Invoke-GitResult $arguments.ToArray()
+    if ($diff.ExitCode -ne 0) {
+        throw "could not inspect introduced lines for $Path"
+    }
+    return @($diff.Text -split "`r?`n" |
+            Where-Object { $_.StartsWith("+") -and -not $_.StartsWith("+++") } |
+            ForEach-Object { $_.Substring(1) })
+}
+
+function Get-LineSha256([string]$Line) {
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $bytes = [System.Text.Encoding]::UTF8.GetBytes($Line)
+        return [Convert]::ToHexString($sha.ComputeHash($bytes)).ToLowerInvariant()
+    } finally {
+        $sha.Dispose()
+    }
+}
+
+function Get-GitBlobBytes([string]$Source, [string]$Commit, [string]$Path) {
+    $spec = if ($Source -eq "commit") { "${Commit}:$Path" } else { ":$Path" }
+    $startInfo = New-Object System.Diagnostics.ProcessStartInfo
+    $startInfo.FileName = "git"
+    $startInfo.Arguments = "cat-file blob `"$spec`""
+    $startInfo.WorkingDirectory = (Get-Location).Path
+    $startInfo.UseShellExecute = $false
+    $startInfo.RedirectStandardOutput = $true
+    $startInfo.RedirectStandardError = $true
+    $process = New-Object System.Diagnostics.Process
+    $process.StartInfo = $startInfo
+    [void]$process.Start()
+    $memory = New-Object System.IO.MemoryStream
+    try {
+        $process.StandardOutput.BaseStream.CopyTo($memory)
+        $process.WaitForExit()
+        if ($process.ExitCode -ne 0) {
+            throw "could not read final blob bytes for $Path"
+        }
+        return $memory.ToArray()
+    } finally {
+        $memory.Dispose()
+        $process.Dispose()
+    }
+}
+
+function Get-GrandfatherPrefix([string]$Path) {
+    if (-not (Test-Path -LiteralPath $script:MachineLocalPathGrandfather -PathType Leaf)) {
+        return $null
+    }
+    foreach ($line in (Get-Content -LiteralPath $script:MachineLocalPathGrandfather)) {
+        $fields = $line -split "`t", -1
+        if ($fields.Count -eq 4 -and
+                $fields[0] -ceq "# baseline-prefix" -and
+                $fields[3] -ceq $Path) {
+            if ($fields[1] -cnotmatch '^[1-9][0-9]*$' -or
+                    $fields[2] -cnotmatch '^[0-9a-f]{64}$') {
+                throw "machine-local path grandfather contains malformed prefix metadata"
+            }
+            return [pscustomobject]@{
+                Length = [int64]$fields[1]
+                Hash = $fields[2]
+            }
+        }
+    }
+    return $null
+}
+
+function Test-GrandfatherPrefix([string]$Source, [string]$Commit, [string]$Path) {
+    $prefix = Get-GrandfatherPrefix $Path
+    if ($null -eq $prefix) {
+        return $true
+    }
+    [byte[]]$bytes = Get-GitBlobBytes $Source $Commit $Path
+    if ($bytes.Length -lt $prefix.Length) {
+        return $false
+    }
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $actual = [Convert]::ToHexString(
+                $sha.ComputeHash($bytes, 0, [int]$prefix.Length)).ToLowerInvariant()
+        return $actual -ceq $prefix.Hash
+    } finally {
+        $sha.Dispose()
+    }
+}
+
+function Get-GrandfatherEntries() {
+    $entries = @{}
+    if (-not (Test-Path -LiteralPath $script:MachineLocalPathGrandfather -PathType Leaf)) {
+        return $entries
+    }
+    foreach ($line in (Get-Content -LiteralPath $script:MachineLocalPathGrandfather)) {
+        if ([string]::IsNullOrWhiteSpace($line) -or $line.StartsWith("#")) {
+            continue
+        }
+        $fields = $line -split "`t", -1
+        if ($fields.Count -ne 3 -or
+                $fields[0] -cnotmatch '^[0-9a-f]{64}$' -or
+                $fields[1] -cnotmatch '^[1-9][0-9]*$') {
+            throw "machine-local path grandfather contains a malformed entry"
+        }
+        $key = $fields[2] + "`0" + $fields[0]
+        if ($entries.ContainsKey($key)) {
+            throw "machine-local path grandfather contains a duplicate entry"
+        }
+        $entries[$key] = [int]$fields[1]
+    }
+    return $entries
+}
+
+function Get-FinalBlobLines([string]$Source, [string]$Commit, [string]$Path) {
+    $blob = if ($Source -eq "commit") {
+        Get-CommitBlob $Commit $Path
+    } else {
+        Get-StagedBlob $Path
+    }
+    if ($blob.ExitCode -ne 0) {
+        throw "could not read final blob for $Path"
+    }
+    return @($blob.Text -split "`r?`n")
+}
+
+function Test-IntroducedLinesAreAllowed(
+        [string]$Baseline,
+        [string]$Commit,
+        [string]$Path,
+        [string]$Source) {
+    $offending = @(Get-IntroducedLines $Baseline $Commit $Path $Source |
+            Where-Object { Test-TextHasMachineLocalHome $_ })
+    if ($offending.Count -eq 0) {
+        return $true
+    }
+
+    $entries = Get-GrandfatherEntries
+    $finalLines = @(Get-FinalBlobLines $Source $Commit $Path)
+    foreach ($line in $offending) {
+        $key = $Path + "`0" + (Get-LineSha256 $line)
+        if (-not $entries.ContainsKey($key)) {
+            return $false
+        }
+        $occurrences = @($finalLines | Where-Object {
+            [string]::Equals($_, $line, [System.StringComparison]::Ordinal)
+        }).Count
+        if ($occurrences -gt $entries[$key]) {
+            return $false
+        }
+    }
+    return $true
+}
+
 function Test-HasExact([string[]]$Files, [string]$Needle) {
     return $Files -contains $Needle
 }
@@ -348,6 +541,11 @@ function Validate-FileSizePolicyForFiles([string[]]$Files, [scriptblock]$SizeRes
 }
 
 function Validate-ContentCandidates([string[]]$Files, [string]$Source, [string]$Commit) {
+    $baseline = if ($Source -eq "commit") {
+        Get-CommitParentOrEmptyTree $Commit
+    } else {
+        Get-StagedCandidateBase
+    }
     foreach ($path in $Files) {
         if ([string]::IsNullOrWhiteSpace($path)) {
             continue
@@ -388,6 +586,17 @@ function Validate-ContentCandidates([string[]]$Files, [string]$Source, [string]$
             if (Test-AbsoluteLinkTarget $blob.Text) {
                 Add-ValidationError "``$path`` has an absolute symlink target. Use a repository-relative target or keep the link untracked."
             }
+        }
+
+        if (Test-BaselineHasPath $baseline $path) {
+            if (-not (Test-GrandfatherPrefix $Source $Commit $path)) {
+                Add-ValidationError "``$path`` does not preserve its verified historic prefix byte-for-byte."
+                continue
+            }
+            if (-not (Test-IntroducedLinesAreAllowed $baseline $Commit $path $Source)) {
+                Add-ValidationError "``$path`` contains a machine-local user-home path. Use a repository-relative path, environment variable, or neutral placeholder."
+            }
+            continue
         }
 
         $grepStatus = if ($Source -eq "commit") {

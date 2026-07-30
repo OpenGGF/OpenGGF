@@ -1,6 +1,7 @@
 package com.openggf.sprites.render;
 
 import com.openggf.game.GameServices;
+import com.openggf.game.resources.DynamicArtLifecycleService;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.RenderContext;
 import com.openggf.level.PatternDesc;
@@ -122,6 +123,32 @@ public class PlayerSpriteRenderer {
                     graphicsManager.renderPatternWithId(patternIndex, reusableDesc, drawX, drawY);
                 }
         );
+    }
+
+    public SpriteDplcFrame dplcFrame(int frameIndex) {
+        if (frameIndex < 0 || frameIndex >= artSet.dplcFrames().size()) {
+            return null;
+        }
+        return artSet.dplcFrames().get(frameIndex);
+    }
+
+    /**
+     * Consumes a production-owned art decision. Duplicate suppression and
+     * diagnostic lifecycle identity have already been decided by the owner.
+     */
+    public void applyRuntimeArtUpdate(
+            int mappingFrame,
+            DynamicArtLifecycleService.ArtUpdate update) {
+        if (update == null || !update.mappingChanged()) {
+            return;
+        }
+        if (update.submitted()) {
+            patternBank.consumeRuntimeArtState(
+                    update.tileRequests(), artSet.artTiles());
+            lastFrame = mappingFrame;
+        } else if (lastFrame == -1 && forceInitialDplc()) {
+            lastFrame = mappingFrame;
+        }
     }
 
     public SpritePieceRenderer.FrameBounds getFrameBounds(int frameIndex, boolean hFlip, boolean vFlip) {

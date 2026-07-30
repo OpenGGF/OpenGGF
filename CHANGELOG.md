@@ -3,6 +3,28 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Tooling: the reproducible S1, S2, and S3K native trace fleet has been
+  regenerated with the frozen headless BizHawk build. S1/S2 fixtures now carry
+  frame-level PLC and DPLC lifecycle diagnostics, S3K fixtures carry schema-2
+  direct and moduled Kosinski queue state, and deterministic gzip publication
+  plus immutable manifests keep the installed payloads byte-auditable.
+- Fix: Sonic 1 dynamic-art trace validation now recognizes the four retail
+  DPLC submission callbacks while retaining the separate arming callback.
+  Newly audited traces therefore reach their real queue-comparison frontiers
+  instead of failing fixture validation before replay.
+- Fix: continuous Sonic 1/2 trace runs now preserve exact native player-art
+  work submitted in a represented run gap across the next segment arm.
+  Immutable initial-ledger descriptors validate the later matching completion
+  without seeding production state; standalone captures still require an empty
+  arm and all non-gap or mismatched carry fails closed. Structural segment
+  opens no longer drain S2 DMA: the production FIFO survives transition/fade
+  rows and retires only at the typed ProcessDMAQueue-equivalent claim.
+- Feature: Sonic 1 and Sonic 2 dynamic player art now publishes its
+  production-owned DPLC submission and completion lifecycle through a
+  session-owned, rewind-safe diagnostics service. Normal play and special
+  stages preserve exact ordered tile runs, duplicate/empty-frame behavior,
+  distinct Sonic/Tails/tail owners, and S1's RAM-staging transfer while trace
+  comparison remains read-only.
 - Trace data: added Raiscan's 434,417-input Knuckles complete super-emerald
   S3K run as 67 compressed level/bonus/special-stage segments with 48 typed
   transitions. Native recorder 6.38 schema-2 timing evidence, the manifest,
