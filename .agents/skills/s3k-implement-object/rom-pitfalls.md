@@ -2744,6 +2744,37 @@ by Player 2 at `docs/skdisasm/sonic3k.asm:145053-145103,145530-145578`.
 
 **Originating commit.** `<pending: CNZ miniboss P2 bounce milestone>`.
 
+---
+
+## P70 -- Fixed-slot player-bound aggregate inherits ordinary manager culling
+
+**Symptom.** A player-bound visual appears correctly, then disappears after
+the player has travelled for a few seconds. Repeating the action that creates
+the visual makes it reappear at the player's new location.
+
+**Root cause.** Direct object tests exercise `update()`, but `ObjectManager`
+can cull the aggregate before that method runs. The aggregate remains anchored
+at its creation position while its child render positions follow the player,
+so ordinary spawn-anchor `out_of_range` handling eventually deletes it. In the
+ROM, fixed power-up slots can deliberately omit an `out_of_range` tail and live
+until a semantic state flag clears.
+
+**Correct pattern.** Audit every lifetime owner: manager pre/post-update
+culling, remembered-placement unload, fixed-slot rules, `isPersistent()`, and
+the out-of-range reference. Treat the absence of ROM culling as behavior. Make
+a fixed-slot aggregate persistent when the ROM does, while retaining its
+explicit form/state deletion condition. If the ROM does cull it, update or
+override the reference anchor accurately instead. Add a manager-level test
+that moves the player and camera beyond the ordinary culling window and checks
+that the object remains registered, plus a test for its semantic deletion.
+
+**ROM citation.** `Obj_HyperSonic_Stars` is installed in the fixed
+`Invincibility_stars` slots during Hyper transformation. Its main and child
+routines draw without an `out_of_range` tail and delete only after
+`Super_Sonic_Knux_flag` clears at `loc_19486`.
+
+**Originating commit.** `<pending: Hyper Sonic fixed-slot lifetime fix>`.
+
 ## How to add a new entry
 When a trace-replay-bug-fixing iteration commits an object fix whose root
 cause is a class of bug (not a one-off):

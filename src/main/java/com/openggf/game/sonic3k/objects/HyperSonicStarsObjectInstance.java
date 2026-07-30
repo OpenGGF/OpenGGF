@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.PowerUpObject;
 import com.openggf.game.rewind.identity.PlayerRefId;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -22,7 +23,7 @@ import java.util.List;
 
 /** Exact aggregate owner for the four consecutive ROM Hyper-star slots. */
 public final class HyperSonicStarsObjectInstance extends AbstractObjectInstance
-        implements RewindRecreatable {
+        implements PowerUpObject, RewindRecreatable {
     private AbstractPlayableSprite owner;
 
     private record RewindExtra(PlayerRefId ownerId)
@@ -105,7 +106,10 @@ public final class HyperSonicStarsObjectInstance extends AbstractObjectInstance
             ObjectLifetimeOps.expireDynamic(this);
             return;
         }
-        boolean artReady = renderer(false) != null;
+        // Obj_HyperSonic_Stars queues its Kosinski module before its child
+        // slots begin waiting on Kos_modules_left. Request the ROM art from the
+        // update owner rather than depending on a render pass to initiate it.
+        boolean artReady = renderer(true) != null;
         for (int child = 0; child < 4; child++) updateChild(child, artReady);
         updateSparks();
     }
@@ -137,10 +141,12 @@ public final class HyperSonicStarsObjectInstance extends AbstractObjectInstance
         int yVelocity = TrigLookupTable.cosHex(angle) << 3;
         setXAcc(child, (short) (xAcc(child) + xVelocity));
         setYAcc(child, (short) (yAcc(child) + yVelocity));
-        int dx = (byte) xAcc(child);
+        // The 68000 stores the word accumulator big-endian, then move.b $30
+        // reads its high byte as the signed screen-space displacement.
+        int dx = (byte) (xAcc(child) >> 8);
         if (owner.getDirection() == Direction.LEFT) dx = -dx;
         setX(child, owner.getCentreX() + dx);
-        setY(child, owner.getCentreY() + (byte) yAcc(child));
+        setY(child, owner.getCentreY() + (byte) (yAcc(child) >> 8));
     }
 
     private void updateSparks() {
@@ -186,6 +192,13 @@ public final class HyperSonicStarsObjectInstance extends AbstractObjectInstance
 
     @Override public boolean isHighPriority() { return owner.isHighPriority(); }
     @Override public int getPriorityBucket() { return RenderPriority.clamp(owner.getPriorityBucket()); }
+    // Obj_HyperSonic_Stars occupies the fixed Invincibility_stars slots and has
+    // no out_of_range tail. Its explicit Hyper-flag check above owns expiry.
+    @Override public boolean isPersistent() { return true; }
+    @Override public void destroy() { setDestroyed(true); }
+    @Override public void setVisible(boolean visible) { }
+    @Override public boolean isInvincibilityStars() { return true; }
+    @Override public PlayableEntity boundPlayer() { return owner; }
     int orbitingStarCount() { return 4; }
     int visibleSparkCount() { return sparksActive ? 4 : 0; }
 

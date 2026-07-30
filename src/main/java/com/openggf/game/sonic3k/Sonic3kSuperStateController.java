@@ -92,6 +92,7 @@ public class Sonic3kSuperStateController extends SuperStateController {
     private S3kFormTier activeFormTier = S3kFormTier.NORMAL;
     private final HyperKnucklesWallQuake wallQuake = new HyperKnucklesWallQuake();
     private int hyperFlashFrames;
+    private boolean hyperFlashRestorePending;
 
     /** Palette line index where Sonic's colors reside. */
     private static final int SONIC_PALETTE_INDEX = 0;
@@ -127,6 +128,7 @@ public class Sonic3kSuperStateController extends SuperStateController {
             wallQuake.restore(new HyperKnucklesWallQuake.Snapshot(0));
         }
         hyperFlashFrames = 0;
+        hyperFlashRestorePending = false;
     }
 
     @Override
@@ -145,7 +147,7 @@ public class Sonic3kSuperStateController extends SuperStateController {
         return createRewindState(paletteState, paletteFrame, paletteTimer, transformFramesRemaining,
                 activeFormTier.ordinal()
                         | (wallQuake.capture().framesRemaining() << 8)
-                        | (hyperFlashFrames << 16)
+                        | ((hyperFlashFrames | (hyperFlashRestorePending ? 0x80 : 0)) << 16)
                         | (companionState << 24),
                 packPalette(savedNormalPalette),
                 packPalette(savedNormalUnderwaterPalette));
@@ -165,7 +167,9 @@ public class Sonic3kSuperStateController extends SuperStateController {
         activeFormTier = formTierFromSnapshot(rewindState.presentationTier() & 0xFF);
         wallQuake.restore(new HyperKnucklesWallQuake.Snapshot(
                 Math.max(0, (rewindState.presentationTier() >>> 8) & 0xFF)));
-        hyperFlashFrames = Math.max(0, (rewindState.presentationTier() >>> 16) & 0xFF);
+        int flashState = (rewindState.presentationTier() >>> 16) & 0xFF;
+        hyperFlashFrames = flashState & 0x7F;
+        hyperFlashRestorePending = (flashState & 0x80) != 0;
         int companionState = (rewindState.presentationTier() >>> 24) & 0xFF;
         superTailsCompanionPaletteFrame =
                 (companionState & 0xF) * BYTES_PER_FRAME;
@@ -302,6 +306,7 @@ public class Sonic3kSuperStateController extends SuperStateController {
                 stars.triggerDashSparks();
             }
             hyperFlashFrames = 4;
+            hyperFlashRestorePending = false;
         }
     }
 
@@ -345,15 +350,24 @@ public class Sonic3kSuperStateController extends SuperStateController {
                 return stars;
             }
         }
-        return objectManager.createDynamicObject(() -> new HyperSonicStarsObjectInstance(player));
+        HyperSonicStarsObjectInstance stars = new HyperSonicStarsObjectInstance(player);
+        if (player.getPowerUpSpawner() != null) {
+            player.getPowerUpSpawner().registerObject(stars);
+            return stars.isDestroyed() ? null : stars;
+        }
+        return objectManager.createDynamicObject(() -> stars);
     }
 
     void onPaletteUploadVInt() {
-        if (hyperFlashFrames <= 0) {
+        if (hyperFlashFrames > 0) {
+            uploadHyperFlashPalette();
+            hyperFlashFrames--;
+            hyperFlashRestorePending = hyperFlashFrames == 0;
             return;
         }
-        uploadHyperFlashPalette();
-        hyperFlashFrames--;
+        if (hyperFlashRestorePending && uploadCurrentPalette()) {
+            hyperFlashRestorePending = false;
+        }
     }
 
     private void uploadHyperFlashPalette() {
@@ -366,6 +380,18 @@ public class Sonic3kSuperStateController extends SuperStateController {
             Palette palette = buildHyperFlashUpload(level.getPalette(line), line);
             GameServices.graphics().cachePaletteTexture(palette, line);
         }
+    }
+
+    private boolean uploadCurrentPalette() {
+        LevelManager levelManager = GameServices.levelOrNull();
+        Level level = levelManager != null ? levelManager.getCurrentLevel() : null;
+        if (level == null) {
+            return false;
+        }
+        for (int line = 0; line < level.getPaletteCount(); line++) {
+            GameServices.graphics().cachePaletteTexture(level.getPalette(line), line);
+        }
+        return true;
     }
 
     static Palette buildHyperFlashUpload(Palette livePalette, int paletteLine) {

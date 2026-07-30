@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Hyper Sonic's four-frame dash flash now restores the live level
+  palette on the following VInt instead of leaving untouched object palette
+  lines white. His four orbiting stars now use the ROM's fixed invincibility
+  stars slot, request their ROM art from their update owner, and publish that
+  late-loaded sheet into the object pattern atlas, keeping them visible
+  throughout the Hyper form and preserving the diagonal dash sparks.
 - Feature: Debug shortcuts can now grant all Super Emeralds with `Shift+E`
   and transform with `Shift+U`, selecting Hyper Sonic, Super Tails, or Hyper
   Knuckles from the active S3K character. Both chords are configurable.

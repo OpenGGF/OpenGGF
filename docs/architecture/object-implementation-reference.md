@@ -47,6 +47,14 @@ ownership, parent/child lifecycle, and remembered-spawn stay on the shared lifet
 Direct `ObjectManager.addDynamicObject(...)` is reserved for manager/framework bridge code
 with focused tests.
 
+**Lifetime audit:** object-local `update()` tests do not cover `ObjectManager` culling that
+can run before or after the update. Check fixed-slot rules, remembered placements,
+`isPersistent()`, and the out-of-range reference against the ROM's complete routine. A
+player-bound aggregate whose children follow the player can still be culled from its stale
+spawn anchor. When the ROM fixed slot has no `out_of_range` tail, preserve it until its
+semantic owner clears, and cover movement beyond the normal culling window in a
+manager-level test.
+
 ## Behaviour contracts
 
 New object/boss/badnik/trace work should use the shared vocabulary rather than one-off

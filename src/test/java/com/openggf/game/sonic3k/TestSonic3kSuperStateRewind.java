@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
 import com.openggf.game.PhysicsProfile;
+import com.openggf.game.PowerUpSpawner;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.Palette;
 import com.openggf.sprites.playable.Knuckles;
@@ -24,6 +25,7 @@ import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -66,6 +68,8 @@ class TestSonic3kSuperStateRewind {
     @Test
     void hyperDashAppliesThePoweredScreenAttack() throws Exception {
         Sonic sonic = new Sonic("sonic", (short) 0, (short) 0);
+        PowerUpSpawner powerUps = mock(PowerUpSpawner.class);
+        sonic.setPowerUpSpawner(powerUps);
         Sonic3kSuperStateController controller = new Sonic3kSuperStateController(sonic);
         setField(controller, "activeFormTier", S3kFormTier.HYPER);
         setField(SuperStateController.class, controller, "state", SuperState.SUPER);
@@ -76,6 +80,8 @@ class TestSonic3kSuperStateRewind {
         controller.triggerPoweredAirDashEffects(objects);
 
         verify(poweredAttacks).apply(sonic);
+        verify(powerUps).registerObject(any(
+                com.openggf.game.sonic3k.objects.HyperSonicStarsObjectInstance.class));
         assertEquals(4, getIntField(controller, "hyperFlashFrames"));
         controller.update();
         controller.update();
@@ -86,8 +92,11 @@ class TestSonic3kSuperStateRewind {
             controller.onPaletteUploadVInt();
         }
         assertEquals(0, getIntField(controller, "hyperFlashFrames"),
-                "ROM flash must restore after exactly four V-Int updates");
+                "ROM flash must last exactly four V-Int updates");
+        assertTrue(getBooleanField(controller, "hyperFlashRestorePending"));
         controller.onPaletteUploadVInt();
+        assertTrue(getBooleanField(controller, "hyperFlashRestorePending"),
+                "a headless VInt with no level palette must retain the pending restore");
         assertEquals(0, getIntField(controller, "hyperFlashFrames"));
     }
 
@@ -105,6 +114,12 @@ class TestSonic3kSuperStateRewind {
         Field field = target.getClass().getDeclaredField(name);
         field.setAccessible(true);
         return field.getInt(target);
+    }
+
+    private static boolean getBooleanField(Object target, String name) throws Exception {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field.getBoolean(target);
     }
 
     private Sonic sonic;

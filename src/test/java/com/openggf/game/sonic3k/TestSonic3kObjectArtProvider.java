@@ -99,6 +99,24 @@ public class TestSonic3kObjectArtProvider {
     }
 
     @Test
+    public void lateLoadedHyperStarsReceiveAnObjectAtlasPatternBase() {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_AIZ, 0)
+                .build();
+
+        Sonic3kObjectArtProvider currentProvider =
+                (Sonic3kObjectArtProvider) GameModuleRegistry.getCurrent().getObjectArtProvider();
+        assertTrue(currentProvider.ensureStandaloneArtLoaded(
+                Sonic3kObjectArtKeys.HYPER_SONIC_STARS));
+
+        var renderer = currentProvider.getRenderer(Sonic3kObjectArtKeys.HYPER_SONIC_STARS);
+        assertNotNull(renderer);
+        assertTrue(renderer.isReady(),
+                "runtime Hyper-star registration must cache its patterns before drawing");
+        assertTrue(renderer.getPatternBase() >= 0);
+    }
+
+    @Test
     public void mgz2RegistersScaledEndBossCueAsGeneratedMapScaledArtBank() {
         HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_MGZ, 1)
