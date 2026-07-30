@@ -39,7 +39,7 @@ When delegating agents to explore the disassembly, instruct them to use the **s2
 
 Delegate multiple agents to explore the disassembly. **Include this instruction in each agent prompt:**
 
-> Use the s2disasm-guide skill (`.claude/skills/s2disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, RomOffsetFinder commands, and object system patterns.
+> Use the s2disasm-guide skill (`.agents/skills/s2disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, RomOffsetFinder commands, and object system patterns.
 
 Agents should:
 
@@ -261,7 +261,7 @@ public class ObjectNameBadnikInstance extends AbstractBadnikInstance {
 
 ##### Pattern 5: Boss (Zone Act 2 Boss Fights)
 
-**Use the dedicated `/s2-implement-boss` skill** (`.claude/skills/s2-implement-boss/SKILL.md`) for boss implementations.
+**Use the dedicated `/s2-implement-boss` skill** (`.agents/skills/s2-implement-boss/SKILL.md`) for boss implementations.
 
 Bosses differ significantly from regular objects:
 - Dynamic spawning via `Sonic2LevelEventManager` (not level layout)
@@ -458,7 +458,7 @@ Ensure the implementation:
 
 Delegate to a review agent to cross-validate against the disassembly. **Include this instruction in the agent prompt:**
 
-> Use the s2disasm-guide skill (`.claude/skills/s2disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, and object system patterns.
+> Use the s2disasm-guide skill (`.agents/skills/s2disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, and object system patterns.
 
 ```
 Review the implementation of [ObjectName] (0xXX) against the Sonic 2 disassembly.
@@ -512,8 +512,8 @@ Once cross-validation is confirmed bug-free:
 
 | Purpose | Location |
 |---------|----------|
-| **Disassembly guide** | `.claude/skills/s2disasm-guide/SKILL.md` |
-| **Boss skill** | `.claude/skills/s2-implement-boss/SKILL.md` |
+| **Disassembly guide** | `.agents/skills/s2disasm-guide/SKILL.md` |
+| **Boss skill** | `.agents/skills/s2-implement-boss/SKILL.md` |
 | Object IDs | `src/.../game/sonic2/constants/Sonic2ObjectIds.java` |
 | ROM offsets | `src/.../game/sonic2/constants/Sonic2Constants.java` |
 | Art keys | `src/.../game/sonic2/Sonic2ObjectArtKeys.java` |
@@ -548,3 +548,9 @@ Study these for patterns:
 - `BuzzerBadnikInstance.java` - Flying badnik with projectile spawning
 - `GrabberBadnikInstance.java` - Complex multi-state spider badnik with grabbing
 - `MasherBadnikInstance.java` - Simple jumping fish badnik
+
+## Queue Diagnostics Routing
+
+If object work reaches PLC/DPLC queue timing or `dynamic_art.*` reports, use
+`plc-system` and `trace-replay-bug-fixing`; use `trace-green-fleet` when moving
+multiple frontiers. These fields are zero-tolerance, comparison-only evidence.

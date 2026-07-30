@@ -13,9 +13,9 @@ $ARGUMENTS: Zone abbreviation (e.g., "HCZ", "MGZ", "CNZ1", "LBZ Act 2") and opti
 
 ## Related Skills
 
-- **s3k-disasm-guide** (`.claude/skills/s3k-disasm-guide/SKILL.md`) for disassembly navigation, label conventions, RomOffsetFinder commands, and zone abbreviations.
-- **s3k-zone-analysis** (`.claude/skills/s3k-zone-analysis/SKILL.md`) for generating the analysis spec that feeds into this skill's Phase 1.
-- **s3k-plc-system** (`.claude/skills/s3k-plc-system/SKILL.md`) for Pattern Load Cue operations triggered during boss spawns and act transitions.
+- **s3k-disasm-guide** (`.agents/skills/s3k-disasm-guide/SKILL.md`) for disassembly navigation, label conventions, RomOffsetFinder commands, and zone abbreviations.
+- **s3k-zone-analysis** (`.agents/skills/s3k-zone-analysis/SKILL.md`) for generating the analysis spec that feeds into this skill's Phase 1.
+- **s3k-plc-system** (`.agents/skills/s3k-plc-system/SKILL.md`) for Pattern Load Cue operations triggered during boss spawns and act transitions.
 
 ## Current Priority Context
 
@@ -28,6 +28,7 @@ When event logic reads player or object positions, use ROM centre-coordinate sem
 ### Class Hierarchy
 
 ```
+
 AbstractLevelEventManager (game/)
     |  - Shared state machine: eventRoutineFg, eventRoutineBg, frameCounter, timerFrames
     |  - Camera boundary helpers: lockCameraX(), lockCameraY(), setBottomBoundaryTarget()
@@ -56,6 +57,7 @@ Sonic3kZoneEvents (game/sonic3k/events/)
 Sonic3k{Zone}Events (game/sonic3k/events/)
     - Zone-specific implementation (e.g., Sonic3kAIZEvents)
 ```
+
 
 ### Base Class API (Sonic3kZoneEvents)
 
@@ -601,3 +603,11 @@ private void updateAct2(int frameCounter) {
     updateAct2BgEvents();
 }
 ```
+
+## Queue Diagnostics Routing
+
+Event-triggered art loads still belong to the PLC queue owner. Use
+`s3k-plc-system` for direct Kosinski/KosM timing and
+`trace-replay-bug-fixing` for `queue.*` or `dynamic_art.*` failures; use
+`trace-green-fleet` for multiple frontiers. These reports are zero-tolerance
+and comparison-only.

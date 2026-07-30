@@ -1,6 +1,5 @@
 package com.openggf.graphics;
 
-import com.openggf.game.rewind.snapshot.FadeManagerSnapshot;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

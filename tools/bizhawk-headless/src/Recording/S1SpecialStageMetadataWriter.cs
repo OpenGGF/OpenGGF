@@ -32,7 +32,8 @@ namespace OpenGGF.BizHawk.Headless
             string luaScriptVersion,
             string recordingDate,
             string runId,
-            int segmentIndex)
+            int segmentIndex,
+            bool dynamicArtAudit = false)
         {
             if (sourceBk2 == null)
             {
@@ -54,6 +55,11 @@ namespace OpenGGF.BizHawk.Headless
             json.Append("  \"special_stage_index\": ")
                 .Append(Dec(specialStageIndex)).Append(",\n");
             json.Append("  \"ss_csv_version\": 1,\n");
+            if (dynamicArtAudit)
+            {
+                json.Append("  \"aux_schema_extras\": "
+                    + "[\"dynamic_art_transfer_state_per_frame_v1\"],\n");
+            }
             json.Append("  \"characters\": [\"sonic\"],\n");
             json.Append("  \"main_character\": \"sonic\",\n");
             json.Append("  \"sidekicks\": [],\n");

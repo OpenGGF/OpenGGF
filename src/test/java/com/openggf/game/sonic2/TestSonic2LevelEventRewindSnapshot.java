@@ -66,6 +66,20 @@ class TestSonic2LevelEventRewindSnapshot {
     }
 
     @Test
+    void roundTripDeferredNativePlcWork() {
+        Sonic2LevelEventManager mgr = new Sonic2LevelEventManager();
+        mgr.initLevel(Sonic2LevelEventManager.ZONE_EHZ, 1);
+        mgr.getEhzEventsForTest().setPendingPlcIdForRewind(41);
+
+        LevelEventSnapshot snap = mgr.capture();
+        mgr.getEhzEventsForTest().setPendingPlcIdForRewind(-1);
+        mgr.restore(snap);
+
+        assertEquals(41, mgr.getEhzEventsForTest().getPendingPlcIdForRewind(),
+                "rewind must retain deferred PLC work instead of replaying the event owner");
+    }
+
+    @Test
     void roundTripHtzEarthquakeState() {
         Sonic2LevelEventManager mgr = new Sonic2LevelEventManager();
         mgr.initLevel(Sonic2LevelEventManager.ZONE_HTZ, 0);

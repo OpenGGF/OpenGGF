@@ -48,6 +48,21 @@ If a trace replay test passes only because engine state is snapped back to ROM-c
 
 ### What to do when the engine diverges from ROM
 
+- If the first divergent field starts with `queue.`, stop downstream triage.
+  Compare physical membership/order, active preparation, remaining work, and
+  queue-local lifecycle state against the disassembly. Version 1 reserves
+  `service_observations` as an empty array because sub-frame service is not
+  cross-observable at the shared end-frame boundary. The empty array is
+  mandatory schema padding, not evidence that service did not run; infer
+  service and retirement from membership, prepared, and remaining-work
+  transitions. Queue timing can
+  make later music, event, object, and physics symptoms appear early or late;
+  do not “fix” those symptoms while the queue frontier is red.
+- Per-frame queue events are enabled only by
+  `aux_schema_extras: ["load_queue_state_per_frame"]`. They are exact,
+  comparison-only evidence sampled at `END_OF_LOGICAL_FRAME`; legacy traces
+  without the capability remain unchanged. Never use a recorded queue event to
+  submit, complete, retire, or otherwise mutate an engine load job.
 - Find the engine code path that should have produced the ROM-correct value but didn't. Fix the engine.
 - If the engine has no equivalent path, port the ROM logic with disassembly citations and route any game-divergent behavior through the smallest accurate owner from `docs/architecture/per-game-rule-placement.md`.
 - If the trace lacks the diagnostic data needed to pinpoint the bug, extend the recorder. New fields are comparison context, not write-back targets.
@@ -990,6 +1005,34 @@ When working through a trace bug you'll often pull these in:
 - **Trace recording (game-specific):** `s1-trace-replay`, `s1-retro-trace`.
 - **S3K specific:** `s3k-plc-system`, `s3k-zone-events`, `s3k-zone-validate`, `s3k-zone-analysis`, `s3k-zone-bring-up`, `s3k-palette-cycling`, `s3k-parallax`, `s3k-animated-tiles`.
 - **Generic engineering process:** `superpowers:systematic-debugging`, `superpowers:dispatching-parallel-agents`, `superpowers:writing-plans`, `superpowers:test-driven-development`, `superpowers:verification-before-completion`, `superpowers:requesting-code-review`.
+
+## Queue and Dynamic-Art Frontier Triage
+
+First verify the fixture's declared evidence. Audited native captures use
+`--load-queue-state` and advertise `load_queue_state_per_frame`;
+DPLC/player-art auditing additionally advertises
+`dynamic_art_transfer_state_per_frame_v1`.
+
+Interpret report families separately:
+
+- `queue.s1_nemesis_plc.*` and `queue.s2_nemesis_plc.*` compare physical
+  Nemesis PLC state.
+- `queue.s3k_kos_direct.*` compares physical direct Kosinski jobs.
+- `queue.s3k_kos_module.*` compares physical KosM parents.
+- `dynamic_art.frame`, `dynamic_art.edges`,
+  `dynamic_art.edge[N].request[N].*`, terminal forwarding, and
+  `dynamic_art.outstanding_transfer_ids` compare player-art lifecycle and
+  ordered ledger state, including schema-2 run-gap carry.
+
+All are zero-tolerance, comparison-only fields. Fix the earliest queue or
+dynamic-art cause before downstream symptoms. For S3K, distinguish an ordinary
+comparator mismatch from a hardware-timing admission error: schema 2 can only
+release a matching, prepared, production-submitted ROM job after kind,
+ordinal, fingerprint, and service-boundary checks; it cannot create work.
+
+Record the first frame, exact field/admission reason, and total error count in
+`docs/status/trace-frontier-log.md`. Never add missing capability names to
+legacy metadata or infer audited evidence from an old trace.
 
 ## Why This Matters
 

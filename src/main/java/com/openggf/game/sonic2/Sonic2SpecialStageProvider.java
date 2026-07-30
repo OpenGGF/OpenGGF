@@ -3,6 +3,7 @@ package com.openggf.game.sonic2;
 
 import com.openggf.audio.GameMusic;
 import com.openggf.game.session.EngineServices;
+import com.openggf.game.GameServices;
 import com.openggf.game.ResultsScreen;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.SpecialStageAccessType;
@@ -10,6 +11,8 @@ import com.openggf.game.SpecialStageDebugProvider;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.SpecialStageStartupPolicy;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
+import com.openggf.game.sonic2.resources.Sonic2PlcService;
+import com.openggf.game.sonic2.resources.Sonic2RuntimePlcPublisher;
 import com.openggf.game.sonic2.objects.SpecialStageResultsScreenObjectInstance;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageManager;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageRewindAdapter;
@@ -33,6 +36,7 @@ import java.util.Optional;
  */
 public class Sonic2SpecialStageProvider implements SpecialStageProvider {
     private final Sonic2SpecialStageManager manager;
+    private boolean resultsPlcSubmitted;
 
     public Sonic2SpecialStageProvider() {
         this(new Sonic2SpecialStageManager());
@@ -69,7 +73,8 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
 
     @Override
     public Optional<RewindSnapshottable<?>> rewindAdapter() {
-        return Optional.of(new Sonic2SpecialStageRewindAdapter(manager));
+        return Optional.of(new Sonic2SpecialStageRewindAdapter(manager,
+                () -> resultsPlcSubmitted, submitted -> resultsPlcSubmitted = submitted));
     }
 
     @Override
@@ -90,6 +95,34 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
         if (policy == SpecialStageStartupPolicy.FAST) {
             manager.advanceToEntryPresentation();
         }
+    }
+
+    @Override
+    public void onEnterResults() {
+        if (resultsPlcSubmitted) return;
+        try {
+            Sonic2PlcService plcService = GameServices.module().getGameService(Sonic2PlcService.class);
+            if (plcService != null) {
+                if (GameServices.module().getObjectArtProvider() instanceof Sonic2ObjectArtProvider artProvider
+                        && GameServices.levelOrNull() != null) {
+                    Sonic2RuntimePlcPublisher.transact(artProvider, plcService,
+                            GameServices.levelOrNull()::refreshObjectArtPatterns,
+                            Sonic2PlcService.replaceOperation(0));
+                } else {
+                    plcService.transact(Sonic2PlcService.replaceOperation(0));
+                }
+            }
+            resultsPlcSubmitted = true;
+        } catch (Exception ignored) {
+            // Results rendering also has standalone construction paths.
+        }
+    }
+
+    @Override
+    public void resetForResults() {
+        reset();
+        resultsPlcSubmitted = false;
+        onEnterResults();
     }
 
     @Override
@@ -228,8 +261,10 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
         }
         DefaultObjectServices services = new DefaultObjectServices(
                 gameplayMode, EngineServices.current());
-        return ObjectConstructionContext.construct(services, () -> new SpecialStageResultsScreenObjectInstance(
-                ringsCollected, gotEmerald, stageIndex, totalEmeraldCount, services));
+        return ResultsScreen.withBeforeUpdate(ObjectConstructionContext.construct(services,
+                () -> new SpecialStageResultsScreenObjectInstance(
+                        ringsCollected, gotEmerald, stageIndex, totalEmeraldCount, services)),
+                this::onEnterResults);
     }
 
     // ==================== MiniGameProvider Methods ====================

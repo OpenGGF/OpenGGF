@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Reflection;
 using System.Security.Cryptography;
@@ -745,7 +746,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "ghz1_fullrun.bk2");
             string physicsPath = Path.Combine(
                 traceDirectory,
-                "physics.csv");
+                "physics.csv.gz");
             string metadataPath = Path.Combine(
                 traceDirectory,
                 "metadata.json");
@@ -755,7 +756,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 ComputeSha256(moviePath));
             AssertEx.Equal(
                 CanonicalPhysicsSha256,
-                ComputeSha256(physicsPath));
+                ComputeGzipPayloadSha256(physicsPath));
             int metadataOffset = ParseMetadataOffset(metadataPath);
             AssertEx.Equal(840, metadataOffset);
 
@@ -947,7 +948,22 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private static IDictionary<string, IDictionary<string, string>>
             ReadRowsByFrame(string path)
         {
-            string[] lines = File.ReadAllLines(path);
+            var lineList = new List<string>();
+            using (FileStream source = File.OpenRead(path))
+            using (Stream payload = path.EndsWith(
+                ".gz", StringComparison.Ordinal)
+                    ? (Stream)new GZipStream(
+                        source, CompressionMode.Decompress)
+                    : source)
+            using (var reader = new StreamReader(payload))
+            {
+                string line;
+                while ((line = reader.ReadLine()) != null)
+                {
+                    lineList.Add(line);
+                }
+            }
+            string[] lines = lineList.ToArray();
             string[] headers = lines[0].Split(',');
             AssertEx.Equal(
                 headers.Length,
@@ -1149,6 +1165,19 @@ namespace OpenGGF.BizHawk.Headless.Tests
             using (SHA256 sha256 = SHA256.Create())
             {
                 return BitConverter.ToString(sha256.ComputeHash(stream))
+                    .Replace("-", "")
+                    .ToLowerInvariant();
+            }
+        }
+
+        private static string ComputeGzipPayloadSha256(string path)
+        {
+            using (FileStream stream = File.OpenRead(path))
+            using (var gzip = new GZipStream(
+                stream, CompressionMode.Decompress))
+            using (SHA256 sha256 = SHA256.Create())
+            {
+                return BitConverter.ToString(sha256.ComputeHash(gzip))
                     .Replace("-", "")
                     .ToLowerInvariant();
             }

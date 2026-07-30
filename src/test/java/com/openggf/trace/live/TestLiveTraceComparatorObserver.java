@@ -2,10 +2,18 @@ package com.openggf.trace.live;
 
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.game.GroundMode;
+import com.openggf.game.resources.DynamicArtDiagnosticsSnapshot;
+import com.openggf.game.resources.DynamicArtLifecycleService;
+import com.openggf.game.resources.PlcFrameLifecycleCoordinator;
+import com.openggf.game.resources.PlcLifecyclePhase;
+import com.openggf.game.resources.PlcLifecycleService;
+import com.openggf.level.render.TileLoadRequest;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.trace.DynamicArtTransfer;
 import com.openggf.trace.FrameComparison;
 import com.openggf.trace.ToleranceConfig;
 import com.openggf.trace.TraceData;
+import com.openggf.trace.TraceEvent;
 import com.openggf.trace.TraceFixtures;
 import com.openggf.trace.TraceFrame;
 import com.openggf.tests.FullReset;
@@ -16,10 +24,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -127,5 +138,139 @@ class TestLiveTraceComparatorObserver {
         c.afterFrameAdvanced(empty, false);
 
         assertEquals(0, c.errorCount());
+    }
+
+    @Test
+    void advertisedDynamicArtIsComparedFromTheSuppliedImmutableSnapshot() {
+        AbstractPlayableSprite sprite = stubSprite();
+        TraceFrame frame = TraceFrame.of(0, 0,
+                (short) 10, (short) 0,
+                (short) 0, (short) 0, (short) 0,
+                (byte) 0, false, false, 0);
+        TraceData trace = TraceFixtures.trace(
+                TraceFixtures.metadataWithDynamicArt("s2", 0, 0, 2),
+                List.of(frame, TraceFrame.of(1, 0,
+                        (short) 10, (short) 0,
+                        (short) 0, (short) 0, (short) 0,
+                        (byte) 0, false, false, 0)),
+                Map.of(0, List.of(new com.openggf.trace.TraceEvent.DynamicArtTransferState(
+                        0, List.of(), List.of(9L)))));
+        List<FrameComparison> observed = new ArrayList<>();
+        LiveTraceComparator comparator = new LiveTraceComparator(
+                trace, ToleranceConfig.DEFAULT, 0, () -> sprite,
+                null, observed::add,
+                () -> new DynamicArtDiagnosticsSnapshot(
+                        0, List.of(), List.of()));
+
+        comparator.afterFrameAdvanced(
+                new Bk2FrameInput(0, 0, 0, false, "0"), false);
+
+        assertEquals(1, observed.size());
+        assertTrue(observed.getFirst().hasErrorInField(
+                "dynamic_art.outstanding_transfer_ids"));
+    }
+
+    @Test
+    void advertisedDynamicArtStillComparesOnSkippedLagRows() {
+        TraceFrame frame = TraceFrame.executionTestFrame(0, 10, 0x100, 0);
+        TraceData trace = TraceFixtures.trace(
+                TraceFixtures.metadataWithDynamicArt("s2", 0, 0, 2),
+                List.of(frame,
+                        TraceFrame.executionTestFrame(1, 10, 0x101, 1)),
+                Map.of(0, List.of(new com.openggf.trace.TraceEvent.DynamicArtTransferState(
+                        0, List.of(), List.of()))));
+        List<FrameComparison> observed = new ArrayList<>();
+        LiveTraceComparator comparator = new LiveTraceComparator(
+                trace, ToleranceConfig.DEFAULT, 0, () -> null,
+                null, observed::add,
+                () -> new DynamicArtDiagnosticsSnapshot(
+                        0, List.of(), List.of()));
+
+        comparator.afterFrameAdvanced(
+                new Bk2FrameInput(0, 0, 0, false, "0"), true);
+
+        assertEquals(1, observed.size());
+        assertFalse(observed.getFirst().hasDivergence());
+        assertEquals(1, comparator.laggedFrames());
+    }
+
+    @Test
+    void finalDynamicArtWaitsForProductionCloseAndComparesExactlyOnce() {
+        DynamicArtLifecycleService lifecycle =
+                new DynamicArtLifecycleService();
+        lifecycle.beginRun();
+        lifecycle.openComparisonSegment();
+        PlcFrameLifecycleCoordinator coordinator =
+                new PlcFrameLifecycleCoordinator(
+                        (PlcLifecycleService) null, lifecycle);
+        TraceEvent.DynamicArtTransferState expected =
+                new TraceEvent.DynamicArtTransferState(
+                        0,
+                        List.of(new DynamicArtTransfer.SegmentEdge(
+                                0, 0, "submitted", "sonic", "segment",
+                                4, 0, 0, 0, true, 0x1B848,
+                                List.of(new DynamicArtTransfer.Request(
+                                        0x22630, 1, -1, 0xF000, 0x20)))),
+                        List.of(0L));
+        TraceData trace = TraceFixtures.trace(
+                TraceFixtures.metadataWithDynamicArt("s2", 0, 0, 1),
+                List.of(TraceFrame.executionTestFrame(0, 10, 0x100, 0)),
+                Map.of(0, List.of(expected)));
+        List<FrameComparison> observed = new ArrayList<>();
+        LiveTraceComparator comparator = new LiveTraceComparator(
+                trace, ToleranceConfig.DEFAULT, 0, () -> null,
+                null, observed::add, lifecycle::latestSnapshot);
+
+        coordinator.runLogicalIteration(() -> {
+        }, row -> {
+            row.claim(PlcLifecyclePhase.LAG);
+            lifecycle.observeRomDplc(
+                    "sonic", 4, List.of(new TileLoadRequest(1, 1)),
+                    0x22610, 0xF000);
+            row.prepareAfterLoop(PlcLifecyclePhase.LAG);
+            comparator.afterFrameAdvanced(
+                    new Bk2FrameInput(0, 0, 0, false, "0"), true);
+            return null;
+        });
+
+        assertTrue(comparator.hasDeferredTerminalDynamicArt());
+        assertEquals(0, observed.size(),
+                "final DPLC must not compare before terminal publication");
+
+        lifecycle.closeComparisonSegment();
+        comparator.finalizeTerminalDynamicArtComparison();
+        comparator.finalizeTerminalDynamicArtComparison();
+
+        assertFalse(comparator.hasDeferredTerminalDynamicArt());
+        assertEquals(1, observed.size(),
+                "terminal DPLC must be published exactly once");
+        assertFalse(observed.getFirst().hasDivergence());
+        assertTrue(observed.getFirst().fields().containsKey(
+                "dynamic_art.edge[0].terminal_forwarded"));
+    }
+
+    @Test
+    void externalDynamicArtResultUsesNormalMismatchFrontierAndObserver() {
+        TraceData trace = TraceFixtures.trace(
+                TraceFixtures.metadataWithDynamicArt("s2", 0, 0, 1),
+                List.of(),
+                Map.of());
+        List<FrameComparison> observed = new ArrayList<>();
+        LiveTraceComparator comparator = new LiveTraceComparator(
+                trace, ToleranceConfig.DEFAULT, 0, () -> null,
+                null, observed::add);
+        FrameComparison result = new FrameComparison(
+                0, Map.of("dynamic_art.frame",
+                        new com.openggf.trace.FieldComparison(
+                                "dynamic_art.frame", "1", "0",
+                                com.openggf.trace.Severity.ERROR, 1)));
+
+        comparator.ingestExternalComparison(result);
+
+        assertEquals(1, comparator.errorCount());
+        assertTrue(comparator.hasRecordingDesync());
+        assertEquals(1, observed.size());
+        assertEquals("dynamic_art.frame",
+                comparator.recentMismatches().getFirst().field());
     }
 }

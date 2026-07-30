@@ -1,5 +1,6 @@
 package com.openggf.game.sonic1.objects;
 
+import com.openggf.game.GameModule;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
@@ -11,6 +12,7 @@ import java.lang.reflect.Field;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 class TestSonic1EggPrisonObjectInstance {
 
@@ -29,7 +31,13 @@ class TestSonic1EggPrisonObjectInstance {
     void endActChecksForAnimalsImmediatelyWithoutPrototypeDelay() throws Exception {
         Sonic1EggPrisonObjectInstance prison = new Sonic1EggPrisonObjectInstance(
                 new ObjectSpawn(0x100, 0x100, Sonic1ObjectIds.EGG_PRISON, 0, 0, false, 0));
-        prison.setServices(new StubObjectServices());
+        GameModule module = mock(GameModule.class);
+        prison.setServices(new StubObjectServices() {
+            @Override
+            public GameModule gameModule() {
+                return module;
+            }
+        });
 
         Field state = Sonic1EggPrisonObjectInstance.class.getDeclaredField("state");
         state.setAccessible(true);

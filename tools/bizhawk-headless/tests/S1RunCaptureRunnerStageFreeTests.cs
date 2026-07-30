@@ -546,7 +546,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
             out IList<RunSegmentOutput> segments)
         {
             var collector = new RunSegmentCollector();
-            S1RunCaptureResult result = S1RunCaptureRunner.Capture(
+            S1RunCaptureResult result =
+                S1RunCaptureRunner.CaptureScratchLegacy(
                 movie,
                 host,
                 null,

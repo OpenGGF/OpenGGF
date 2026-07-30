@@ -17,7 +17,7 @@ run_powershell() {
         if ! "$candidate" -NoLogo -NoProfile -Command "exit 0" >/dev/null 2>&1; then
             continue
         fi
-        exec "$candidate" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "$script_path" "$@"
+        exec "$candidate" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "$script_path" "$@" <&0
     done
 
     return 1

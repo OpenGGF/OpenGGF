@@ -6,6 +6,9 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic2.Sonic2Rng;
+import com.openggf.game.sonic2.constants.Sonic2Constants;
+import com.openggf.game.sonic2.resources.Sonic2PlcRequests;
+import com.openggf.game.sonic2.resources.Sonic2PlcService;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
@@ -98,6 +101,8 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance implements Rewin
     private int bossCollisionRoutine;
     private boolean targetFlag;
     private boolean initialized;
+    /** Publication latch; keeps an equality-timed animal/explosion request retryable. */
+    private boolean animalExplosionSubmitted;
 
     // Multi-sprite data
     private int mainMapFrame;
@@ -193,11 +198,17 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance implements Rewin
 
     @Override
     protected void onDefeatStarted() {
+        if (!isDefeatEntryPrepared() && !Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE)) return;
         bossCountdown = DEFEAT_TIMER_START;
         state.routine = MAIN_SUB8;
         bossAnim[2] = 0x05;
         bossAnim[3] = 0x00;
         sub2MapFrame = 5;
+    }
+
+    @Override
+    protected boolean prepareDefeatEntry() {
+        return Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE);
     }
 
     @Override
@@ -230,6 +241,10 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance implements Rewin
     }
 
     private boolean checkInitConditions(AbstractPlayableSprite player) {
+        Sonic2PlcService plcService = services().gameService(Sonic2PlcService.class);
+        if (plcService != null && plcService.isBusy()) {
+            return false;
+        }
         var participants = services().playerQuery().playersFor(
                 ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
         if (participants.size() <= 1) {
@@ -411,7 +426,10 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance implements Rewin
             bossYVel += 0x18;
         } else if (bossCountdown < 0x18) {
             bossYVel -= 8;
-        } else if (bossCountdown == 0x18) {
+        } else if (bossCountdown >= 0x18 && !animalExplosionSubmitted) {
+            if (!Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_ANIMALS_ARZ,
+                    Sonic2Constants.PLC_EXPLOSION)) return;
+            animalExplosionSubmitted = true;
             bossYVel = 0;
             int levelMusic = services().getCurrentLevelMusicId();
             if (levelMusic >= 0) {

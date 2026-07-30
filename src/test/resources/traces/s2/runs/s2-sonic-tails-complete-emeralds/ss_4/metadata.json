@@ -3,6 +3,7 @@
   "trace_profile": "s2_special_stage",
   "special_stage_index": 3,
   "ss_csv_version": 1,
+  "aux_schema_extras": ["dynamic_art_transfer_state_per_frame_v1"],
   "characters": ["sonic", "tails"],
   "main_character": "sonic",
   "sidekicks": ["tails"],
@@ -10,7 +11,7 @@
   "trace_frame_count": 7224,
   "source_bk2": "sonic-2-sonic-tails-complete-emeralds.bk2",
   "lua_script_version": "9.13-s2",
-  "recording_date": "2026-07-24",
+  "recording_date": "2026-07-30",
   "run_id": "s2-sonic-tails-complete-emeralds",
   "fresh_load": false,
   "segment_index": 8

@@ -44,12 +44,16 @@ public class Sonic2LevelEventManager extends AbstractLevelEventManager {
     public static final int ZONE_DEZ = 10;
 
     private static final Logger LOGGER = Logger.getLogger(Sonic2LevelEventManager.class.getName());
-    private static final int HANDLER_BYTES = 11 * 8;
+    private static final int LEGACY_HANDLER_BYTES = 11 * 8;
+    private static final int HANDLER_BYTES = 11 * 12;
     private static final int HTZ_EXTRA_BYTES = 22;
     private static final int CPZ_EXTRA_BYTES = 1;
     private static final int CNZ_EXTRA_BYTES = 16;
-    private static final int LEGACY_EXTRA_BYTES = HANDLER_BYTES + HTZ_EXTRA_BYTES + CPZ_EXTRA_BYTES + CNZ_EXTRA_BYTES;
+    private static final int LEGACY_EXTRA_BYTES = LEGACY_HANDLER_BYTES
+            + HTZ_EXTRA_BYTES + CPZ_EXTRA_BYTES + CNZ_EXTRA_BYTES;
+    private static final int PENDING_HANDLER_EXTRA_BYTES = HANDLER_BYTES - LEGACY_HANDLER_BYTES;
     private static final int EXTRA_BYTES = LEGACY_EXTRA_BYTES
+            + PENDING_HANDLER_EXTRA_BYTES
             + Sonic2WFZEvents.SNAPSHOT_BYTES
             + Sonic2FixedAirCountdownManager.REWIND_STATE_BYTES;
 
@@ -267,17 +271,21 @@ public class Sonic2LevelEventManager extends AbstractLevelEventManager {
     private static void writeHandler(ByteBuffer buf, Sonic2ZoneEvents h) {
         buf.putInt(h.getEventRoutine());
         buf.putInt(h.getBossSpawnDelay());
+        buf.putInt(h.getPendingPlcIdForRewind());
     }
 
     /** Helper: restore eventRoutine + bossSpawnDelay for one zone handler. */
-    private static void readHandler(ByteBuffer buf, Sonic2ZoneEvents h) {
+    private static void readHandler(ByteBuffer buf, Sonic2ZoneEvents h, boolean includesPendingPlc) {
         h.setEventRoutine(buf.getInt());
         h.setBossSpawnDelay(buf.getInt());
+        if (includesPendingPlc) {
+            h.setPendingPlcIdForRewind(buf.getInt());
+        }
     }
 
     @Override
     protected byte[] captureExtra() {
-        // 11 handlers x 8 bytes + HTZ (22) + CPZ (1) + CNZ (16) + WFZ (32)
+        // 11 handlers x 12 bytes + HTZ (22) + CPZ (1) + CNZ (16) + WFZ (32)
         // + fixed Sonic/Tails Obj0A air-countdown sidecars (28).
         ByteBuffer buf = ByteBuffer.allocate(EXTRA_BYTES);
         writeHandler(buf, ehzEvents);
@@ -318,17 +326,18 @@ public class Sonic2LevelEventManager extends AbstractLevelEventManager {
             return;
         }
         ByteBuffer buf = ByteBuffer.wrap(extra);
-        readHandler(buf, ehzEvents);
-        readHandler(buf, cpzEvents);
-        readHandler(buf, htzEvents);
-        readHandler(buf, mczEvents);
-        readHandler(buf, arzEvents);
-        readHandler(buf, cnzEvents);
-        readHandler(buf, oozEvents);
-        readHandler(buf, mtzEvents);
-        readHandler(buf, wfzEvents);
-        readHandler(buf, dezEvents);
-        readHandler(buf, sczEvents);
+        boolean includesPendingPlc = extra.length >= LEGACY_EXTRA_BYTES + PENDING_HANDLER_EXTRA_BYTES;
+        readHandler(buf, ehzEvents, includesPendingPlc);
+        readHandler(buf, cpzEvents, includesPendingPlc);
+        readHandler(buf, htzEvents, includesPendingPlc);
+        readHandler(buf, mczEvents, includesPendingPlc);
+        readHandler(buf, arzEvents, includesPendingPlc);
+        readHandler(buf, cnzEvents, includesPendingPlc);
+        readHandler(buf, oozEvents, includesPendingPlc);
+        readHandler(buf, mtzEvents, includesPendingPlc);
+        readHandler(buf, wfzEvents, includesPendingPlc);
+        readHandler(buf, dezEvents, includesPendingPlc);
+        readHandler(buf, sczEvents, includesPendingPlc);
         // HTZ extra
         htzEvents.setCameraBgYOffset(buf.getInt());
         htzEvents.setHtzTerrainSinking(buf.get() != 0);

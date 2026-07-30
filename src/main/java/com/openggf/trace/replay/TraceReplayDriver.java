@@ -125,7 +125,7 @@ public final class TraceReplayDriver {
         // Relies on TitleCardProvider.reset() being a simple state
         // wipe that can't throw — true for all three game modules
         // today (S1/S2/S3K TitleCardManager.reset are field resets).
-        GameServices.level().consumeTitleCardRequest();
+        GameServices.level().skipPendingInitialTitleCardPresentation();
         GameServices.level().consumeInLevelTitleCardRequest();
         TitleCardProvider titleCardProvider =
                 GameServices.module() != null

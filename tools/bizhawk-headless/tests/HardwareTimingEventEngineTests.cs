@@ -99,6 +99,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "HardwareTimingEventEngine callback stages shift and append",
                 CallbackStagesShiftAndAppend));
             tests.Add(new TestMain.TestCase(
+                "HardwareTimingEventEngine callbacks stage repeated same-frame shifts",
+                CallbackStagesRepeatedSameFrameShifts));
+            tests.Add(new TestMain.TestCase(
                 "HardwareTimingEventEngine callback distinguishes identical replacement",
                 CallbackDistinguishesIdenticalReplacement));
             tests.Add(new TestMain.TestCase(
@@ -975,6 +978,54 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(true, lines[1].Contains("\"ordinal\":1"));
         }
 
+        private static void CallbackStagesRepeatedSameFrameShifts()
+        {
+            byte[] rom = RomWithStandardStreams(0x100, 0x120, 0x140);
+            var host = NewHost();
+            var writer = new StringWriter();
+            var engine = new HardwareTimingEventEngine(rom);
+
+            SetLevelFrame(host, 0x1234);
+            StageDirectSources(host, new[] {0x100});
+            host.SetU16(S3KRam.KosDecompQueueCount, 1);
+            engine.ObserveFrameEnd(40, host, writer);
+
+            StageDirectSources(host, new[] {0x120});
+            engine.ObserveDirectSubmissions(41, host);
+            StageDirectSources(host, new[] {0x140});
+            engine.ObserveDirectSubmissions(41, host);
+            SetLevelFrame(host, 0x1235);
+            engine.ObserveFrameEnd(41, host, writer);
+
+            host.SetU16(S3KRam.KosDecompQueueCount, 0);
+            SetLevelFrame(host, 0x1236);
+            engine.ObserveFrameEnd(42, host, writer);
+
+            string[] lines = writer.ToString().Split(
+                new[] {'\n'}, StringSplitOptions.RemoveEmptyEntries);
+            AssertEx.Equal(3, lines.Length);
+            AssertEx.Equal(true, lines[0].Contains("\"ordinal\":0"));
+            AssertEx.Equal(true, lines[1].Contains("\"ordinal\":1"));
+            AssertEx.Equal(true, lines[2].Contains("\"ordinal\":2"));
+            string firstFingerprint = ExtractSubmissionFingerprint(lines[0]);
+            string secondFingerprint = ExtractSubmissionFingerprint(lines[1]);
+            string thirdFingerprint = ExtractSubmissionFingerprint(lines[2]);
+            AssertEx.Equal(false, firstFingerprint == secondFingerprint);
+            AssertEx.Equal(false, secondFingerprint == thirdFingerprint);
+            AssertEx.Equal(false, firstFingerprint == thirdFingerprint);
+        }
+
+        private static string ExtractSubmissionFingerprint(string eventJson)
+        {
+            const string prefix = "\"submission_fingerprint\":\"";
+            int start = eventJson.IndexOf(prefix, StringComparison.Ordinal);
+            AssertEx.Equal(true, start >= 0);
+            start += prefix.Length;
+            int end = eventJson.IndexOf('"', start);
+            AssertEx.Equal(true, end > start);
+            return eventJson.Substring(start, end - start);
+        }
+
         private static void CallbackRejectsMultiHeadLoss()
         {
             byte[] rom = RomWithStandardStreams(0x100, 0x120, 0x140);
@@ -1645,7 +1696,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "6.38-s3k",
                 S3KTraceMetadataWriter.LuaScriptVersion);
             AssertEx.Equal(
-                "6.38-s3k-completerun",
+                "6.39-s3k-completerun",
                 S3KCompleteRunMetadataWriter.LuaScriptVersion);
 
             string standard = File.ReadAllText(Path.Combine(

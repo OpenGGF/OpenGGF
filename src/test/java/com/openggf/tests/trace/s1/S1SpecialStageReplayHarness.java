@@ -8,6 +8,9 @@ import com.openggf.debug.playback.RecordedInputSnapshots;
 import com.openggf.game.GameServices;
 import com.openggf.game.SpecialStageInputMapper;
 import com.openggf.game.SpecialStageStartupPolicy;
+import com.openggf.game.resources.DynamicArtDiagnosticsSnapshot;
+import com.openggf.game.resources.PlcLifecyclePhase;
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic1.specialstage.Sonic1SpecialStageComparisonState;
 import com.openggf.game.sonic1.specialstage.Sonic1SpecialStageProvider;
 import com.openggf.tests.trace.RecordedInputRows;
@@ -111,12 +114,45 @@ final class S1SpecialStageReplayHarness {
      * (consume the trace row without stepping) instead.
      */
     void stepFrame(int traceFrame) {
-        recordedInputs.withLogicalOverride(traceFrame, inputHandler, () -> {
-            SpecialStageInputMapper.MappedInput mapped =
-                    SpecialStageInputMapper.map(inputHandler.logical());
-            provider.handleInput(mapped.p1Held(), mapped.p1Pressed());
-            provider.update();
+        runProductionRow(PlcLifecyclePhase.SPECIAL_STAGE,
+                () -> recordedInputs.withLogicalOverride(
+                        traceFrame, inputHandler, () -> {
+                            SpecialStageInputMapper.MappedInput mapped =
+                                    SpecialStageInputMapper.map(
+                                            inputHandler.logical());
+                            provider.handleInput(
+                                    mapped.p1Held(), mapped.p1Pressed());
+                            provider.update();
+                        }));
+    }
+
+    void stepLagRow() {
+        runProductionRow(PlcLifecyclePhase.LAG, () -> {
         });
+    }
+
+    DynamicArtDiagnosticsSnapshot captureDynamicArt() {
+        return GameServices.captureDynamicArtDiagnostics();
+    }
+
+    void finishDynamicArtSegment() {
+        var lifecycle =
+                SessionManager.getCurrentGameplayMode().dynamicArtLifecycle();
+        if (lifecycle.isComparisonSegmentOpen()) {
+            lifecycle.closeComparisonSegment();
+        }
+    }
+
+    private static void runProductionRow(
+            PlcLifecyclePhase phase, Runnable body) {
+        SessionManager.getCurrentGameplayMode().plcFrameLifecycle()
+                .runLogicalIteration(() -> {
+                }, frame -> {
+                    frame.claim(phase);
+                    body.run();
+                    frame.prepareAfterLoop(phase);
+                    return null;
+                });
     }
 
     /** Read-only comparison snapshot of the current engine SS state. */

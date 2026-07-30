@@ -40,6 +40,10 @@ abstract class AbstractS2LevelSelectTraceReplayTest extends AbstractTraceReplayT
 
     @Override
     protected Path traceDirectory() {
-        return Path.of("src/test/resources/traces/s2").resolve(route);
+        String candidate = System.getProperty(
+                "openggf.trace.candidate.dir");
+        return candidate != null
+                ? Path.of(candidate)
+                : Path.of("src/test/resources/traces/s2").resolve(route);
     }
 }

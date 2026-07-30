@@ -170,9 +170,8 @@ class TestBonusStagePlaybackBridge {
         }
 
         private void invokeUpdateBonusStageMode(GameLoop loop) throws Exception {
-            Method method = GameLoop.class.getDeclaredMethod("updateBonusStageMode", boolean.class);
-            method.setAccessible(true);
-            method.invoke(loop, false);
+            GameLoopTestStep.invoke(loop, "updateBonusStageMode",
+                    new Class<?>[] { boolean.class }, false);
         }
 
         private void invokeSyncPlaybackInputBridge(GameLoop loop) throws Exception {

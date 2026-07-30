@@ -933,6 +933,36 @@ runtime state.
 
 ---
 
+## Sonic 1/2 Native PLC Readiness
+
+**Location:** Session-owned `Sonic1PlcService` / `Sonic2PlcService` and their
+game-owned frame lifecycle and producer owners.
+**Scope:** Sonic 1/2 Pattern Load Cue completion timing.
+
+S1 and S2 PLC readiness is deterministic ROM-derived production state. The
+engine submits each represented ROM cue to its native-shape FIFO, services it
+at the owning VBlank lifecycle boundary, and lets results, Final Zone, ARZ, and
+other implemented consumers poll that queue. Runtime rendering remains eager
+so a submitted cue's prepared art can be displayed without tying host decode
+cost to Mega Drive timing.
+
+Skipped and visible initial title-card paths converge on the same idempotent
+production boundary. S1 drains its locked primary queue, publishes the
+ROM-header secondary cue, and performs the native fixed palette-fade service
+iterations; S2 drains its locked primary queue and then publishes the
+ROM-header secondary cue. A trace may select the ordinary production
+presentation-omitted transition, but it cannot submit, mutate, service, or
+release either queue.
+
+The hardware-timing replay exception below does not apply to S1/S2 PLCs.
+Physics and auxiliary trace data remain comparison-only, and no S1/S2
+recorded completion edge is accepted. Remove or amend this entry only if a
+future cycle-accuracy finding proves the modeled native service budget
+insufficient and the hardware-timing contract is deliberately expanded with
+its own guarded schema.
+
+---
+
 ## Hardware-Timing Replay Input Exception
 
 **Location:** Dedicated hardware-timing fixture stream and the bounded

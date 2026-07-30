@@ -51,6 +51,7 @@ namespace BizHawk.Headless.Gpgx
             int? gameplaySegment,
             string runId,
             int effectiveMovieLength,
+            bool loadQueueState,
             bool compress,
             long compressThresholdBytes)
         {
@@ -64,6 +65,7 @@ namespace BizHawk.Headless.Gpgx
             GameplaySegment = gameplaySegment;
             RunId = runId;
             EffectiveMovieLength = effectiveMovieLength;
+            LoadQueueState = loadQueueState;
             Compress = compress;
             CompressThresholdBytes = compressThresholdBytes;
         }
@@ -103,6 +105,11 @@ namespace BizHawk.Headless.Gpgx
         /// byte-identical reproduction must inject that session value.
         /// </summary>
         public int EffectiveMovieLength { get; private set; }
+        /// <summary>
+        /// Legacy S3K queue-audit switch. S1/S2 canonical trace publication
+        /// ignores this value because PLC and player-DPLC audit is mandatory.
+        /// </summary>
+        public bool LoadQueueState { get; private set; }
 
         /// <summary>
         /// Trace-mode payload compression, ON by default: physics.csv and
@@ -217,6 +224,7 @@ namespace BizHawk.Headless.Gpgx
             RejectInSmokeMode(values, "--gameplay-segment");
             RejectInSmokeMode(values, "--run-id");
             RejectInSmokeMode(values, "--effective-movie-length");
+            RejectInSmokeMode(values, "--load-queue-state");
             // Smoke mode publishes smoke.csv, which is not a trace payload,
             // so every compression argument would silently do nothing.
             RejectInSmokeMode(values, "--compress");
@@ -267,6 +275,7 @@ namespace BizHawk.Headless.Gpgx
                 null,
                 0,
                 false,
+                false,
                 TracePayloadCompressor.DefaultThresholdBytes);
         }
 
@@ -281,7 +290,8 @@ namespace BizHawk.Headless.Gpgx
                 "--bk2-frame-offset", "--max-frames", "--trace-profile",
                 "--gameplay-segment", "--run-id",
                 "--effective-movie-length", "--compress",
-                "--no-compress", "--compress-threshold"
+                "--no-compress", "--compress-threshold",
+                "--load-queue-state"
             };
             foreach (string name in unsupported)
             {
@@ -307,6 +317,7 @@ namespace BizHawk.Headless.Gpgx
                 Path.GetFullPath(moviePath),
                 fullOutputDirectory,
                 0, 0, null, null, null, 0, false,
+                false,
                 TracePayloadCompressor.DefaultThresholdBytes);
         }
 
@@ -468,6 +479,7 @@ namespace BizHawk.Headless.Gpgx
                 gameplaySegment,
                 runId,
                 effectiveMovieLength,
+                values.ContainsKey("--load-queue-state"),
                 compress,
                 compressThresholdBytes);
         }
@@ -531,6 +543,7 @@ namespace BizHawk.Headless.Gpgx
                 || name == "--gameplay-segment"
                 || name == "--run-id"
                 || name == "--effective-movie-length"
+                || name == "--load-queue-state"
                 || name == "--compress"
                 || name == "--no-compress"
                 || name == "--compress-threshold";
@@ -538,7 +551,8 @@ namespace BizHawk.Headless.Gpgx
 
         private static bool IsValuelessArgument(string name)
         {
-            return name == "--compress" || name == "--no-compress";
+            return name == "--compress" || name == "--no-compress"
+                || name == "--load-queue-state";
         }
 
         private static string Required(
@@ -782,6 +796,18 @@ namespace BizHawk.Headless.Gpgx
                             stderr,
                             openHost);
                     }
+                    if (options.TraceProfile
+                        == S2SpecialStageCaptureRunner.TraceProfile)
+                    {
+                        return RunS2SpecialStageTrace(
+                            options,
+                            installation,
+                            romSha1,
+                            movie,
+                            stdout,
+                            stderr,
+                            openHost);
+                    }
                     return RunS2Trace(
                         options,
                         installation,
@@ -926,7 +952,8 @@ namespace BizHawk.Headless.Gpgx
                         CultureInfo.InvariantCulture),
                     writers[0],
                     writers[1],
-                    writers[2]),
+                    writers[2],
+                    File.ReadAllBytes(options.RomPath)),
                 result =>
                     "BizHawk: " + installation.ManagedVersion + "\n"
                     + "ROM SHA-1: " + romSha1 + "\n"
@@ -1028,7 +1055,8 @@ namespace BizHawk.Headless.Gpgx
                             CultureInfo.InvariantCulture),
                         S1CompleteRunMetadataWriter.LuaScriptVersion,
                         0,
-                        sink);
+                        sink,
+                        File.ReadAllBytes(options.RomPath));
                 }
                 if (result.RunManifestJson != null)
                 {
@@ -1164,7 +1192,8 @@ namespace BizHawk.Headless.Gpgx
                         CultureInfo.InvariantCulture),
                     writers[0],
                     writers[1],
-                    writers[2]),
+                    writers[2],
+                    File.ReadAllBytes(options.RomPath)),
                 result =>
                     "BizHawk: " + installation.ManagedVersion + "\n"
                     + "ROM SHA-1: " + romSha1 + "\n"
@@ -1185,6 +1214,60 @@ namespace BizHawk.Headless.Gpgx
                     + result.TraceFrameCount.ToString(
                         CultureInfo.InvariantCulture)
                     + "\n"
+                    + "Physics CSV: " + physicsPath + "\n"
+                    + "Aux state JSONL: " + auxStatePath + "\n"
+                    + "Metadata JSON: " + metadataPath + "\n",
+                new NoReplacePublisher(options.CreateCompressor()));
+        }
+
+        private static int RunS2SpecialStageTrace(
+            CommandLineOptions options,
+            BizHawkInstallation installation,
+            string romSha1,
+            Bk2Movie movie,
+            TextWriter stdout,
+            TextWriter stderr,
+            Func<string, GPGX.GPGXSyncSettings, IGpgxHost> openHost)
+        {
+            string physicsPath = Path.Combine(
+                options.OutputDirectory,
+                CommandLineOptions.TraceOutputFileNames[0]);
+            string auxStatePath = Path.Combine(
+                options.OutputDirectory,
+                CommandLineOptions.TraceOutputFileNames[1]);
+            string metadataPath = Path.Combine(
+                options.OutputDirectory,
+                CommandLineOptions.TraceOutputFileNames[2]);
+            return RunTraceCapture(
+                options.OutputDirectory,
+                stdout,
+                stderr,
+                () => new NativeStandardOutputSilencer(),
+                () => openHost(options.RomPath, movie.SyncSettings),
+                (host, writers) => S2SpecialStageCaptureRunner.Capture(
+                    movie,
+                    host,
+                    Path.GetFileName(options.MoviePath),
+                    DateTime.Now.ToString(
+                        "yyyy-MM-dd",
+                        CultureInfo.InvariantCulture),
+                    writers[0],
+                    writers[1],
+                    writers[2],
+                    File.ReadAllBytes(options.RomPath)),
+                result =>
+                    "BizHawk: " + installation.ManagedVersion + "\n"
+                    + "ROM SHA-1: " + romSha1 + "\n"
+                    + "Movie frames: " + movie.FrameCount.ToString(
+                        CultureInfo.InvariantCulture) + "\n"
+                    + "Trace profile: "
+                    + S2SpecialStageCaptureRunner.TraceProfile + "\n"
+                    + "BK2 frame offset: "
+                    + result.Bk2FrameOffset.ToString(
+                        CultureInfo.InvariantCulture) + "\n"
+                    + "Trace frames: "
+                    + result.TraceFrameCount.ToString(
+                        CultureInfo.InvariantCulture) + "\n"
                     + "Physics CSV: " + physicsPath + "\n"
                     + "Aux state JSONL: " + auxStatePath + "\n"
                     + "Metadata JSON: " + metadataPath + "\n",
@@ -1577,7 +1660,8 @@ namespace BizHawk.Headless.Gpgx
                     writers[0],
                     writers[1],
                     writers[2],
-                    writers[3]),
+                    writers[3],
+                    options.LoadQueueState),
                 result =>
                     "BizHawk: " + installation.ManagedVersion + "\n"
                     + "ROM SHA-1: " + romSha1 + "\n"
@@ -1683,7 +1767,8 @@ namespace BizHawk.Headless.Gpgx
                             CultureInfo.InvariantCulture),
                         options.EffectiveMovieLength,
                         romBytes,
-                        sink);
+                        sink,
+                        options.LoadQueueState);
                 }
                 if (result.RunManifestJson != null)
                 {
@@ -1818,7 +1903,8 @@ namespace BizHawk.Headless.Gpgx
                             "yyyy-MM-dd",
                             CultureInfo.InvariantCulture),
                         options.EffectiveMovieLength,
-                        sink);
+                        sink,
+                        File.ReadAllBytes(options.RomPath));
                 }
                 session.StageFile(
                     CommandLineOptions.RunManifestFileName,

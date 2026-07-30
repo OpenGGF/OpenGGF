@@ -48,8 +48,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "dd0a03bfddefa9570d4b49ee2d4ea5e35e2b8141147e17ab482a3654d3"
                 + "11cb66",
             AuxStateSha256 =
-                "026794b175c7fea65491f57cbf5a83684f183b802c7fabaa15eb699e82"
-                + "184a86",
+                "d0aa928a346eb4f5c0917cac26aff11363f00b3b35b4402e82fddf8b40"
+                + "4925e3",
             Bk2FrameOffset = 840,
             TraceFrameCount = 3905,
             MovieFrameCount = 4806
@@ -64,8 +64,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "25f511e6470e60c5769897161755d0634f9c9f02b2df9c164dcbef7b6c"
                 + "1828f3",
             AuxStateSha256 =
-                "1c942da3a877950e78c1941f63aabee72ea434103ef154e276232bd74e"
-                + "d331e8",
+                "fc0e6c1f35e15af87b51215b66df5a05d782eda7a1d9462d0e6e032784"
+                + "ad071b",
             Bk2FrameOffset = 1075,
             TraceFrameCount = 7936,
             MovieFrameCount = 9012

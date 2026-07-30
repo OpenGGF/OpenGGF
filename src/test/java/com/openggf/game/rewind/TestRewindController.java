@@ -2,7 +2,7 @@ package com.openggf.game.rewind;
 
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.graphics.FadeManager;
-import com.openggf.game.rewind.snapshot.FadeManagerSnapshot;
+import com.openggf.graphics.FadeManagerSnapshot;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -520,6 +520,6 @@ class TestRewindController {
         return new FadeManagerSnapshot(
                 poisoned ? FadeManager.FadeState.FADING_TO_BLACK : FadeManager.FadeState.NONE,
                 frame, 0, 0, 0, 0, FadeManager.FadeType.BLACK,
-                0, 0, 1, 1, 1, poisoned);
+                0, 0, 1, 1, 1, false, poisoned);
     }
 }

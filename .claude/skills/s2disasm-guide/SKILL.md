@@ -317,3 +317,9 @@ Test:    test <offset> <type>  Test decompression
 Verify:  verify <label>        Check calculated offset
 Export:  export <type> [prefix] Generate Java constants
 ```
+
+## Queue Diagnostics Routing
+
+Use this skill to find ROM labels and routines, then use `plc-system` and
+`trace-replay-bug-fixing` for PLC/DPLC queue timing and `dynamic_art.*` report
+interpretation. Trace evidence is zero-tolerance and comparison-only.

@@ -8,7 +8,7 @@ namespace OpenGGF.BizHawk.Headless
     /// Native writer for the S3K complete-run recorder's THREE
     /// metadata.json shapes, derived from the frozen Lua layout
     /// (tools/bizhawk/s3k_complete_run_recorder.lua) and advanced to
-    /// v6.38-s3k-completerun: <c>write_metadata</c> for the level and
+    /// v6.39-s3k-completerun: <c>write_metadata</c> for the level and
     /// bonus shapes, <c>write_ss_metadata</c> L5103 for the special-stage
     /// shape; spec tools/bizhawk-headless/docs/s3k-run-publication.md §3).
     ///
@@ -32,7 +32,8 @@ namespace OpenGGF.BizHawk.Headless
     /// - SPECIAL STAGE (trace_profile "s3k_special_stage"): a DIFFERENT key
     ///   set and order, not a superset — no zone/zone_id/act, no
     ///   pre_trace_osc_frames, no start_x/start_y, no rng_seed, no
-    ///   csv_version, no capture_mode, no aux_schema_extras, no
+    ///   csv_version, no capture_mode, and no profile aux schema extras
+    ///   (the optional physical queue capability is still advertised); no
     ///   bonus_stage_type, no v_int_run_count, no notes; plus
     ///   trace_schema 7 / hardware_timing_schema 2,
     ///   ss_csv_version and a hardcoded fresh_load false.
@@ -65,7 +66,7 @@ namespace OpenGGF.BizHawk.Headless
         /// behavior). 6.32 -> 6.33 is the ADDR_VBLA_WORD fix: 0xFE12
         /// Life_count -> 0xFE0E, the V_int_run_count low word.
         /// </summary>
-        public const string LuaScriptVersion = "6.38-s3k-completerun";
+        public const string LuaScriptVersion = "6.39-s3k-completerun";
 
         /// <summary>
         /// The Lua's hardcoded S3K_ROM_CHECKSUM: the BizHawk movie-header
@@ -160,7 +161,8 @@ namespace OpenGGF.BizHawk.Headless
             string runId,
             int playerMode,
             int hardwareTimingSchema =
-                HardwareTimingEventEngine.CurrentSchema)
+                HardwareTimingEventEngine.CurrentSchema,
+            bool loadQueueState = false)
         {
             if (arm == null)
             {
@@ -220,6 +222,10 @@ namespace OpenGGF.BizHawk.Headless
                 }
                 json.Append(JsonQuote(AuxSchemaExtras[index]));
             }
+            if (loadQueueState)
+            {
+                json.Append(", \"load_queue_state_per_frame\"");
+            }
             json.Append("],\n");
             if (arm.BonusStageType != null)
             {
@@ -274,7 +280,8 @@ namespace OpenGGF.BizHawk.Headless
             string runId,
             int playerMode,
             int hardwareTimingSchema =
-                HardwareTimingEventEngine.CurrentSchema)
+                HardwareTimingEventEngine.CurrentSchema,
+            bool loadQueueState = false)
         {
             if (arm == null)
             {
@@ -322,6 +329,12 @@ namespace OpenGGF.BizHawk.Headless
             {
                 json.Append("  \"run_id\": \"").Append(runId)
                     .Append("\",\n");
+            }
+            if (loadQueueState)
+            {
+                json.Append(
+                    "  \"aux_schema_extras\":"
+                    + " [\"load_queue_state_per_frame\"],\n");
             }
             // Hardcoded: giant-ring entries are always mid-level. A future
             // fresh-boot SS capture path would have to set this true.

@@ -8,7 +8,7 @@ import com.openggf.audio.rewind.AudioReplayReason;
 import com.openggf.audio.rewind.AudioReplayScope;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.SectionProfiler;
-import com.openggf.game.rewind.snapshot.FadeManagerSnapshot;
+import com.openggf.graphics.FadeManagerSnapshot;
 
 import java.util.Objects;
 import java.util.logging.Logger;

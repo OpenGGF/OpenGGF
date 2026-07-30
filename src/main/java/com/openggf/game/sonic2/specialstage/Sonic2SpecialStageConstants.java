@@ -129,6 +129,23 @@ public final class Sonic2SpecialStageConstants {
     /** Ring requirement table - Solo mode (28 bytes: 7 stages x 4 quarters) */
     public static final long RING_REQ_SOLO_OFFSET = 0x007772;
 
+    // ========== Special-stage player dynamic art (raw ROM tables) ==========
+
+    /** Obj09_MapRUnc_345FA: 57-entry Sonic/Tails/tails-tail DPLC offset table. */
+    public static final int PLAYER_DPLC_TABLE_OFFSET = 0x0345FA;
+    public static final int SONIC_PLAYER_DPLC_FRAME_COUNT = 18;
+    public static final int TAILS_PLAYER_DPLC_FRAME_COUNT = 18;
+    public static final int TAILS_TAILS_DPLC_FRAME_COUNT = 21;
+
+    /** dword_33AA2: four Sonic special-stage decompressed-art source sections. */
+    public static final int SONIC_PLAYER_DPLC_SOURCE_TABLE_OFFSET = 0x033AA2;
+    /** dword_349B8: four Tails special-stage decompressed-art source sections. */
+    public static final int TAILS_PLAYER_DPLC_SOURCE_TABLE_OFFSET = 0x0349B8;
+    /** dword_34AA0: three Tails-tail decompressed-art source sections. */
+    public static final int TAILS_TAILS_DPLC_SOURCE_TABLE_OFFSET = 0x034AA0;
+    /** SSRAM_ArtNem_SpecialSonicAndTails, the shared decompressed source base. */
+    public static final int PLAYER_DPLC_RAM_BASE = 0xFF0000;
+
     // ========== Track frame offsets and sizes ==========
 
     /** Individual track frame ROM offsets */

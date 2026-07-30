@@ -628,3 +628,19 @@ occurrences, no BOM).
   (+0x1E), `OFF_STICK_CONVEX` (+0x38), `MOVIE_FRAME_SAFETY_MARGIN`, and the
   RAM-input fallback path (`rom_joypad_to_mask`) which never triggers when a
   movie is loaded.
+# Named-run player-art staging preparation
+
+All S1 arms require an empty submitted ledger. A changed `Sonic_LoadGfx`
+decision prepares the one RAM staging buffer but allocates no transfer id and
+emits no edge. Repeated decisions replace that unpublished preparation.
+Continuous run mode may retain the final preparation across an arm, but never
+serializes it into the manifest. The verified VBlank pre-transfer probe
+promotes that final payload; the post-clear callback completes the physical
+RAM-to-VRAM DMA.
+
+The retail proofs are exact. Movie frame 8048 prepares mapping 48, GHZ2 arms at
+8049 with no initial descriptor, and row 0 promotes then completes at `$1060`.
+At complete-run frame 136632, mapping `$01` replaces pending mapping `$09`
+before VBlank; only `$01` receives an id and reaches VRAM. Any submitted
+descriptor at an S1 arm or flagged VBlank probe without a preparation is
+invalid.

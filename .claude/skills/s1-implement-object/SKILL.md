@@ -42,7 +42,7 @@ Use these to bootstrap and de-risk the object task before/while implementing:
 
 Delegate multiple agents to explore the disassembly. **Include this instruction in each agent prompt:**
 
-> Use the s1disasm-guide skill (`.claude/skills/s1disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, RomOffsetFinder commands, and object system patterns.
+> Use the s1disasm-guide skill (`.agents/skills/s1disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, RomOffsetFinder commands, and object system patterns.
 
 Agents should:
 
@@ -170,7 +170,7 @@ public class ObjectNameBadnikInstance extends AbstractBadnikInstance {
 ```
 
 ##### Pattern 3: Boss
-**Use the dedicated `/s1-implement-boss` skill** (`.claude/skills/s1-implement-boss/SKILL.md`) for boss implementations.
+**Use the dedicated `/s1-implement-boss` skill** (`.agents/skills/s1-implement-boss/SKILL.md`) for boss implementations.
 
 **Detect a boss when:**
 - Object file is named `Boss - Zone Name.asm`
@@ -340,7 +340,7 @@ Ensure the implementation:
 
 Delegate to a review agent to cross-validate against the disassembly. **Include this instruction in the agent prompt:**
 
-> Use the s1disasm-guide skill (`.claude/skills/s1disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, and object system patterns.
+> Use the s1disasm-guide skill (`.agents/skills/s1disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, and object system patterns.
 
 ```
 Review the implementation of [ObjectName] (0xXX) against the Sonic 1 disassembly.
@@ -405,8 +405,8 @@ Once cross-validation is confirmed bug-free:
 
 | Purpose | Location |
 |---------|----------|
-| **Disassembly guide** | `.claude/skills/s1disasm-guide/SKILL.md` |
-| **Boss skill** | `.claude/skills/s1-implement-boss/SKILL.md` |
+| **Disassembly guide** | `.agents/skills/s1disasm-guide/SKILL.md` |
+| **Boss skill** | `.agents/skills/s1-implement-boss/SKILL.md` |
 | Object IDs | `src/.../game/sonic1/constants/Sonic1ObjectIds.java` |
 | ROM offsets | `src/.../game/sonic1/constants/Sonic1Constants.java` |
 | Registry | `src/.../game/sonic1/objects/Sonic1ObjectRegistry.java` |
@@ -436,3 +436,9 @@ Once cross-validation is confirmed bug-free:
 | SFX constants | `Sonic1AudioProfile.java` | `Sonic2AudioConstants.java` |
 | Registry | `Sonic1ObjectRegistry.java` | `Sonic2ObjectRegistry.java` |
 | Art infrastructure | Established (`Sonic1ObjectArt/Provider/Keys`) | Fully established |
+
+## Queue Diagnostics Routing
+
+If object work reaches PLC/DPLC queue timing or `dynamic_art.*` reports, use
+`plc-system` and `trace-replay-bug-fixing`; use `trace-green-fleet` when moving
+multiple frontiers. These fields are zero-tolerance, comparison-only evidence.

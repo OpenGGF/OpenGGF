@@ -135,6 +135,7 @@ The game is auto-detected from the ROM's SHA-1; there is no `--game` flag.
 | `--gameplay-segment <n>` | S2 only — selects one segment of a multi-segment movie |
 | `--run-id <id>` | Run mode: emits `run_manifest.json` and per-segment directories |
 | `--effective-movie-length <n>` | Run mode only — overrides the movie-length signal |
+| `--load-queue-state` | Trace mode only — records complete per-frame physical load-queue diagnostics and advertises `load_queue_state_per_frame`; off by default so legacy differential fixtures remain byte-identical |
 | `--no-compress` | Trace mode only: publish the payloads uncompressed (compression is the default) |
 | `--compress` | States the default explicitly; mutually exclusive with `--no-compress` |
 | `--compress-threshold <bytes>` | Size floor for compressing a payload (default 1048576) |
@@ -143,6 +144,15 @@ The game is auto-detected from the ROM's SHA-1; there is no `--game` flag.
 Output is published all-or-nothing: files are staged and only linked into
 `--output` once the whole capture succeeds, so a failed run never leaves a
 half-written trace behind.
+
+S1/S2 player-art audit is mandatory. Standalone captures arm with an empty
+submitted ledger. S1 may carry only an unpublished staging preparation; it
+receives no transfer id or manifest descriptor until a verified VBlank probe
+promotes the final replacement payload. S2 continuous named runs may carry
+accepted FIFO work submitted in the represented `run_gap`; the next manifest
+segment records the exact immutable initial descriptors and ledger
+fingerprint, and the matching completion keeps its id and `run_gap` origin.
+Manifest fields validate recorder continuity only and never seed engine state.
 
 The two payloads **stream** into their staging files as the capture produces
 them, for every run-mode capture (S1, S2 and S3K) — nothing holds a segment,

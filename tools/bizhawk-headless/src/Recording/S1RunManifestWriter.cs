@@ -37,7 +37,8 @@ namespace OpenGGF.BizHawk.Headless
             string luaScriptVersion,
             string expectedMovieEndMode,
             IList<RunManifestSegment> segments,
-            IList<RunManifestTransition> transitions)
+            IList<RunManifestTransition> transitions,
+            IList<DynamicArtGapTransition> dynamicArtGapTransitions = null)
         {
             return RunManifestWriter.Format(
                 "s1",
@@ -48,7 +49,8 @@ namespace OpenGGF.BizHawk.Headless
                 luaScriptVersion,
                 expectedMovieEndMode,
                 segments,
-                transitions);
+                transitions,
+                dynamicArtGapTransitions);
         }
     }
 }

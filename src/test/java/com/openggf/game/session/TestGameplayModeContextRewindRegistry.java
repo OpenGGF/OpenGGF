@@ -7,6 +7,7 @@ import com.openggf.game.BonusStageType;
 import com.openggf.game.GameRng;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.ObjectArtProvider;
+import com.openggf.game.RuntimeArtCoordinator;
 import com.openggf.game.animation.AnimatedTileCachePolicy;
 import com.openggf.game.animation.AnimatedTileChannel;
 import com.openggf.game.animation.AnimatedTileChannelGraph;
@@ -31,6 +32,7 @@ import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.timing.HardwareTimingBoundaryObserver;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.game.timing.HardwareTimingService;
+import com.openggf.game.resources.DynamicArtLifecycleService;
 import com.openggf.game.zone.NoOpZoneRuntimeState;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.game.zone.ZoneRuntimeState;
@@ -57,6 +59,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Unit tests for the {@link RewindRegistry} integration on
@@ -89,6 +92,20 @@ class TestGameplayModeContextRewindRegistry {
     }
 
     @Test
+    void contextAcceptsCompositionModuleWithoutTypedRules() {
+        com.openggf.game.GameModule module =
+                mock(com.openggf.game.GameModule.class);
+        when(module.createRuntimeArtCoordinator(
+                org.mockito.ArgumentMatchers.any()))
+                .thenReturn(RuntimeArtCoordinator.NONE);
+
+        GameplayModeContext context =
+                new GameplayModeContext(new WorldSession(module));
+
+        assertNotNull(context.plcFrameLifecycle());
+    }
+
+    @Test
     void registryIsNonNullAfterAttach() {
         GameplayModeContext ctx = buildAttachedContext();
         assertNotNull(ctx.getRewindRegistry());
@@ -109,6 +126,7 @@ class TestGameplayModeContextRewindRegistry {
                 "fademanager",
                 "oscillation",
                 HardwareTimingService.REWIND_KEY,
+                DynamicArtLifecycleService.REWIND_KEY,
                 ctx.seamlessTransitionResourceHandoffs().key(),
                 "solid-execution");
         assertTrue(snapshot.entries().keySet().containsAll(expectedKeys),
@@ -120,8 +138,8 @@ class TestGameplayModeContextRewindRegistry {
         GameplayModeContext ctx = buildAttachedContext();
         RewindRegistry registry = ctx.getRewindRegistry();
         CompositeSnapshot snapshot = registry.capture();
-        assertEquals(9, snapshot.entries().keySet().size(),
-                "Expected exactly 9 atomic adapters, got: " + snapshot.entries().keySet());
+        assertEquals(10, snapshot.entries().keySet().size(),
+                "Expected exactly 10 atomic adapters, got: " + snapshot.entries().keySet());
     }
 
     @Test
@@ -130,6 +148,22 @@ class TestGameplayModeContextRewindRegistry {
         GameplayModeContext ctx = new GameplayModeContext(world);
         assertNull(ctx.getRewindRegistry(),
                 "Registry should be null until attachGameplayManagers is called");
+    }
+
+    @Test
+    void contextAttachmentAndTeardownOwnDynamicArtRunLifetime() {
+        GameplayModeContext ctx = new GameplayModeContext(
+                new WorldSession(new Sonic2GameModule()));
+        assertFalse(ctx.dynamicArtLifecycle().isRunActive());
+
+        ctx.attachGameplayManagers(
+                new Camera(), new TimerManager(), new GameStateManager(),
+                new FadeManager(), new GameRng(GameRng.Flavour.S1_S2),
+                new DefaultSolidExecutionRegistry());
+        assertTrue(ctx.dynamicArtLifecycle().isRunActive());
+
+        ctx.tearDownManagers();
+        assertFalse(ctx.dynamicArtLifecycle().isRunActive());
     }
 
     @Test
@@ -174,8 +208,8 @@ class TestGameplayModeContextRewindRegistry {
         RewindRegistry second = ctx.getRewindRegistry();
         assertNotNull(second);
         assertNotSame(first, second, "Re-attach should produce a new RewindRegistry instance");
-        // New registry should have the same nine keys
-        assertEquals(9, second.capture().entries().keySet().size());
+        // New registry should have the same ten keys
+        assertEquals(10, second.capture().entries().keySet().size());
     }
 
     @Test

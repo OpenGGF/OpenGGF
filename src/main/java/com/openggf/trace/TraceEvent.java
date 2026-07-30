@@ -7,12 +7,20 @@ import com.openggf.level.objects.RomObjectSnapshot;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * An event from the auxiliary trace file (aux_state.jsonl).
  * Events are frame-keyed and only written for notable moments.
  */
 public sealed interface TraceEvent {
+
+    Set<String> KNOWN_GENERIC_NATIVE_EVENTS = Set.of(
+            "state_snapshot",
+            "cursor_state",
+            "slot_dump",
+            "s2_tornado_state",
+            "cnz_slot_machine_state");
 
     int frame();
 
@@ -637,17 +645,60 @@ public sealed interface TraceEvent {
             boolean solidVerticalSeen, int solidPreY, int solidSurfaceY, int solidDelta)
         implements TraceEvent {}
 
+    /** Comparison-only physical load queue state sampled at end of logical frame. */
+    record LoadQueueState(
+            int frame,
+            String kind,
+            boolean busy,
+            boolean prepared,
+            int activeSource,
+            int activeDestination,
+            int totalWork,
+            int remainingWork,
+            List<String> queuedFingerprints,
+            List<ServiceObservation> serviceObservations)
+            implements TraceEvent {
+        public record ServiceObservation(String boundary, int budget) {}
+    }
+
+    /** Mandatory per-stored-row player-art lifecycle heartbeat. */
+    record DynamicArtTransferState(
+            int frame,
+            List<DynamicArtTransfer.SegmentEdge> edges,
+            List<Long> outstandingTransferIds)
+            implements TraceEvent {
+        public DynamicArtTransferState {
+            edges = List.copyOf(edges);
+            outstandingTransferIds = List.copyOf(outstandingTransferIds);
+            Set<Long> ids = new java.util.HashSet<>();
+            for (long transferId : outstandingTransferIds) {
+                if (transferId < 0 || !ids.add(transferId)) {
+                    throw new IllegalArgumentException(
+                            "outstanding_transfer_ids has negative or duplicate transfer_id");
+                }
+            }
+        }
+    }
+
     /**
      * Parse a single JSONL line into the appropriate TraceEvent subtype.
      * Unknown event types are returned as StateSnapshot with all fields preserved.
      */
     static TraceEvent parseJsonLine(String jsonLine, ObjectMapper mapper) {
+        return parseJsonLine(jsonLine, mapper, false);
+    }
+
+    static TraceEvent parseJsonLine(
+            String jsonLine, ObjectMapper mapper, boolean failOnUnknownEvent) {
         try {
             JsonNode node = mapper.readTree(jsonLine);
-            int frame = node.get("frame").asInt();
+            int frame = DynamicArtTransfer.requiredInt(node, "frame");
             String event = node.has("event") ? node.get("event").asText() : "unknown";
 
             return switch (event) {
+                case "load_queue_state" -> parseLoadQueueState(frame, node);
+                case "dynamic_art_transfer_state" ->
+                        parseDynamicArtTransferState(frame, node);
                 case "object_appeared" -> new ObjectAppeared(
                     frame,
                     node.get("slot").asInt(),
@@ -1272,6 +1323,11 @@ public sealed interface TraceEvent {
                     parseHexInt(node, "solid_delta")
                 );
                 default -> {
+                    if (failOnUnknownEvent && node.has("event")
+                            && !KNOWN_GENERIC_NATIVE_EVENTS.contains(event)) {
+                        throw new IllegalArgumentException(
+                                "unknown advertised event type: " + event);
+                    }
                     // state_snapshot or unknown: preserve all fields as map
                     Map<String, Object> fields = new LinkedHashMap<>();
                     node.fields().forEachRemaining(
@@ -1283,6 +1339,87 @@ public sealed interface TraceEvent {
         } catch (Exception e) {
             throw new IllegalArgumentException("Failed to parse JSONL line: " + jsonLine, e);
         }
+    }
+
+    private static DynamicArtTransferState parseDynamicArtTransferState(
+            int frame, JsonNode node) {
+        List<DynamicArtTransfer.SegmentEdge> edges = new java.util.ArrayList<>();
+        for (JsonNode edge : DynamicArtTransfer.requiredArray(node, "edges")) {
+            edges.add(DynamicArtTransfer.parseSegmentEdge(edge));
+        }
+        List<Long> outstanding = new java.util.ArrayList<>();
+        for (JsonNode id : DynamicArtTransfer.requiredArray(
+                node, "outstanding_transfer_ids")) {
+            if (!id.isIntegralNumber() || !id.canConvertToLong()) {
+                throw new IllegalArgumentException(
+                        "invalid outstanding transfer id");
+            }
+            outstanding.add(id.asLong());
+        }
+        return new DynamicArtTransferState(frame, edges, outstanding);
+    }
+
+    private static LoadQueueState parseLoadQueueState(int frame, JsonNode node) {
+        String kind = requiredText(node, "kind");
+        boolean busy = requiredBoolean(node, "busy");
+        boolean prepared = requiredBoolean(node, "prepared");
+        int activeSource = requiredInt(node, "active_source");
+        int activeDestination = requiredInt(node, "active_destination");
+        int totalWork = requiredInt(node, "total_work");
+        int remainingWork = requiredInt(node, "remaining_work");
+        JsonNode queued = requiredArray(node, "queued_fingerprints");
+        java.util.ArrayList<String> fingerprints = new java.util.ArrayList<>();
+        for (JsonNode value : queued) {
+            if (!value.isTextual() || !value.asText().matches("[0-9a-f]{64}")) {
+                throw new IllegalArgumentException("invalid queued fingerprint");
+            }
+            fingerprints.add(value.asText());
+        }
+        JsonNode observationsNode = requiredArray(node, "service_observations");
+        if (!observationsNode.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "version 1 service observations must be empty");
+        }
+        if (!busy && (prepared || activeSource != -1 || activeDestination != -1
+                || totalWork != -1 || remainingWork != -1
+                || !fingerprints.isEmpty())) {
+            throw new IllegalArgumentException("idle load queue state is not canonical");
+        }
+        return new LoadQueueState(frame, kind, busy, prepared, activeSource,
+                activeDestination, totalWork, remainingWork,
+                List.copyOf(fingerprints), List.of());
+    }
+
+    private static JsonNode requiredArray(JsonNode node, String field) {
+        JsonNode value = node.get(field);
+        if (value == null || !value.isArray()) {
+            throw new IllegalArgumentException("missing or invalid array field: " + field);
+        }
+        return value;
+    }
+
+    private static String requiredText(JsonNode node, String field) {
+        JsonNode value = node.get(field);
+        if (value == null || !value.isTextual() || value.asText().isBlank()) {
+            throw new IllegalArgumentException("missing or invalid text field: " + field);
+        }
+        return value.asText();
+    }
+
+    private static boolean requiredBoolean(JsonNode node, String field) {
+        JsonNode value = node.get(field);
+        if (value == null || !value.isBoolean()) {
+            throw new IllegalArgumentException("missing or invalid boolean field: " + field);
+        }
+        return value.asBoolean();
+    }
+
+    private static int requiredInt(JsonNode node, String field) {
+        JsonNode value = node.get(field);
+        if (value == null || !value.isIntegralNumber() || !value.canConvertToInt()) {
+            throw new IllegalArgumentException("missing or invalid integer field: " + field);
+        }
+        return value.asInt();
     }
 
     private static short parseHexShort(JsonNode node, String... fields) {
@@ -1412,5 +1549,3 @@ public sealed interface TraceEvent {
         return out;
     }
 }
-
-

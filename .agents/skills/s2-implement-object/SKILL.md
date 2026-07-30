@@ -548,3 +548,9 @@ Study these for patterns:
 - `BuzzerBadnikInstance.java` - Flying badnik with projectile spawning
 - `GrabberBadnikInstance.java` - Complex multi-state spider badnik with grabbing
 - `MasherBadnikInstance.java` - Simple jumping fish badnik
+
+## Queue Diagnostics Routing
+
+If object work reaches PLC/DPLC queue timing or `dynamic_art.*` reports, use
+`plc-system` and `trace-replay-bug-fixing`; use `trace-green-fleet` when moving
+multiple frontiers. These fields are zero-tolerance, comparison-only evidence.

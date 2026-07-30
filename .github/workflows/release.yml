@@ -24,7 +24,7 @@ jobs:
         run: bash .githooks/validate-policy.sh ci-pr "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}" "${{ github.base_ref }}" "${{ github.head_ref }}"
 
       - name: Validate branch policy (push)
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && github.event.deleted == false
         run: bash .githooks/validate-policy.sh ci-push "${{ github.event.before }}" "${{ github.sha }}" "${{ github.ref_name }}"
 
   test:

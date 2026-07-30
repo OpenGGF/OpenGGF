@@ -16,10 +16,13 @@ import com.openggf.game.GameServices;
 import com.openggf.game.InLevelTitleCardCoordinator;
 import com.openggf.game.TitleCardProvider;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame;
+import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.level.LevelManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
+import com.openggf.trace.replay.runs.TraceRunReplayWalker.DynamicArtSegmentWindow;
 
 /**
  * Deterministic per-frame gameplay drive shared by headless trace tests and the
@@ -37,7 +40,7 @@ import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
  * trace-replay tests validate, rather than the live-playback {@code GameLoop}
  * path which omits P2/sidekick input plumbing and the explicit phase loop.
  */
-public final class RecordingFrameDriver {
+public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
 
     private final AbstractPlayableSprite sprite;
     private final LevelManager levelManager;
@@ -95,6 +98,35 @@ public final class RecordingFrameDriver {
         hardwareTimingReplayObserver = null;
     }
 
+    /** Selects structural run-replay segment ownership without accepting trace facts. */
+    public void useExternalDynamicArtComparisonSegments() {
+        SessionManager.getCurrentGameplayMode().plcFrameLifecycle()
+                .setComparisonSegmentsExternallyManaged(true);
+    }
+
+    public void openDynamicArtComparisonSegment() {
+        SessionManager.getCurrentGameplayMode().dynamicArtLifecycle()
+                .openComparisonSegment();
+    }
+
+    public void closeDynamicArtComparisonSegment() {
+        SessionManager.getCurrentGameplayMode().dynamicArtLifecycle()
+                .closeComparisonSegment();
+    }
+
+    @Override
+    public void open() {
+        useExternalDynamicArtComparisonSegments();
+        SessionManager.getCurrentGameplayMode().dynamicArtLifecycle()
+                .serviceProductionVBlank();
+        openDynamicArtComparisonSegment();
+    }
+
+    @Override
+    public void close() {
+        closeDynamicArtComparisonSegment();
+    }
+
     public void beginTraceRow(int traceIndex, int rawFrame) {
         if (traceIndex < 0) {
             throw new IllegalArgumentException(
@@ -146,6 +178,15 @@ public final class RecordingFrameDriver {
 
     private LevelFrameResult stepFrame(
             LogicalInputSnapshot snapshot, Runnable beforeGameplay) {
+        var gameplayMode = SessionManager.getCurrentGameplayMode();
+        return gameplayMode.plcFrameLifecycle().runLogicalIteration(
+                gameplayMode.getFadeManager()::update,
+                frame -> stepFrame(snapshot, beforeGameplay, frame));
+    }
+
+    private LevelFrameResult stepFrame(
+            LogicalInputSnapshot snapshot, Runnable beforeGameplay,
+            PlcLifecycleFrame lifecycleFrame) {
         updateActiveTitleCardOverlay();
         if (applyPendingSeamlessTransition()) {
             pendingSeamlessBoundaryCompletion = true;
@@ -162,14 +203,16 @@ public final class RecordingFrameDriver {
         }
         frameCounter++;
         if (lastFrameResult == LevelFrameResult.PAUSED) {
-            LevelFrameStep.serviceVBlankOnly(context);
+            LevelFrameStep.serviceVBlankOnly(
+                    context, lifecycleFrame, PlcLifecyclePhase.NORMAL_PAUSE);
             inputHandler.update();
             previousDriverSnapshot = snapshot;
             return lastFrameResult;
         }
         if (pendingSeamlessBoundaryCompletion) {
             pendingSeamlessBoundaryCompletion = false;
-            LevelFrameStep.serviceVBlankOnly(context);
+            LevelFrameStep.serviceVBlankOnly(
+                    context, lifecycleFrame, PlcLifecyclePhase.LAG);
             inputHandler.update();
             previousDriverSnapshot = snapshot;
             return lastFrameResult;
@@ -181,7 +224,8 @@ public final class RecordingFrameDriver {
                 inputHandler.setLogicalOverride(snapshot);
                 GameServices.sprites().publishHeldInputForLevelEvents(inputHandler);
                 lastFrameResult = LevelFrameStep.execute(
-                        context, levelManager, GameServices.camera(),
+                        context, lifecycleFrame, PlcLifecyclePhase.ORDINARY_LEVEL,
+                        levelManager, GameServices.camera(),
                         () -> GameServices.sprites().update(inputHandler),
                         stepWrapper);
                 lastFrameRanGameplay =
@@ -349,6 +393,13 @@ public final class RecordingFrameDriver {
     }
 
     public int skipFrameFromRecording() {
+        var gameplayMode = SessionManager.getCurrentGameplayMode();
+        return gameplayMode.plcFrameLifecycle().runLogicalIteration(
+                gameplayMode.getFadeManager()::update,
+                this::skipFrameFromRecording);
+    }
+
+    private int skipFrameFromRecording(PlcLifecycleFrame lifecycleFrame) {
         requireMovie();
         if (currentBk2Index >= bk2Movie.getFrameCount()) {
             throw new IllegalStateException(
@@ -370,8 +421,9 @@ public final class RecordingFrameDriver {
         // gameplay counter is held at zero. Such rows are VBlank-only to the
         // physics driver, but the title-card parent/children still dispatch.
         // Keep this overlay-only work moving without ticking player physics.
-        if (!updateHeldCounterTitleCardOverlay(context)) {
-            LevelFrameStep.serviceVBlankOnly(context);
+        if (!updateHeldCounterTitleCardOverlay(context, lifecycleFrame)) {
+            LevelFrameStep.serviceVBlankOnly(
+                    context, lifecycleFrame, PlcLifecyclePhase.LAG);
         }
         if (levelManager.hasPendingInLevelTitleCardHeldCounterDispatch()) {
             startPendingInLevelTitleCardIfRequested();
@@ -395,10 +447,12 @@ public final class RecordingFrameDriver {
         }
     }
 
-    private boolean updateHeldCounterTitleCardOverlay(LevelFrameContext context) {
+    private boolean updateHeldCounterTitleCardOverlay(
+            LevelFrameContext context, PlcLifecycleFrame lifecycleFrame) {
         TitleCardProvider titleCardProvider = GameServices.module().getTitleCardProvider();
         if (titleCardProvider != null && titleCardProvider.advancesOnHeldLevelCounter()) {
-            LevelFrameStep.executeHardwareTimedObjectScan(context, () -> {
+            LevelFrameStep.executeHardwareTimedObjectScan(
+                    context, lifecycleFrame, PlcLifecyclePhase.LEVEL_TITLE_CARD, () -> {
                 titleCardProvider.update();
                 if (titleCardProvider.ownsRetainedResultsHeldLevelCounter()) {
                     var levelEvents = GameServices.module().getLevelEventProvider();

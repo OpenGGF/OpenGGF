@@ -24,6 +24,41 @@ Seven `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote eac
 - [documentation-obligation-checklist.md](documentation-obligation-checklist.md) — trailers / TRACE_FRONTIER_LOG / changelog
 - [delegation-prompt-templates.md](delegation-prompt-templates.md) — research/impl/triage/art/review prompt templates
 
+## Worktree resource-link policy
+
+The `post-checkout` hook may create convenience links in a linked worktree for
+local ROMs, `config.yaml`, and reference-disassembly directories. Those links
+are **filesystem-only scaffolding**: their targets are relative to the
+worktree, so they remain portable on the same machine, but they must never
+enter a Git tree.
+
+Do not stage generated-resource entries. The policy rejects symlinks at
+`config.yaml`, any path ending in `.gen`, and `docs/s1disasm`,
+`docs/s2disasm`, `docs/kis2disasm`, `docs/scddisasm`, or `docs/skdisasm`.
+Separately, the repository-wide ROM-like asset rule rejects added or modified
+paths ending in `.gen`, `.smd`, `.bin`, `.sms`, `.gg`, or `.32x`. It also
+rejects absolute symlink targets anywhere in the repository. If a broad
+`git add` includes one, unstage it, keep or recreate the local link only in the
+filesystem, and inspect `git diff --cached` before committing. The ignore rules
+cover both a real reference directory and a hook-created link; use `git add -f`
+only for an intentional policy test fixture, never to commit local resources.
+
+The policy also rejects new textual machine-local user-home paths. Use a
+repository-relative path, `$HOME`, an environment variable, or a neutral
+placeholder such as `<user>` in documentation, commands, and reports. Put
+intentional architecture audits and handovers in their matching
+`docs/architecture/` category instead of committing root-level
+`MERGE-STATUS*.md` or `HANDOVER*.md` scratch files.
+
+`pre-commit` gives immediate staged-content feedback, and `commit-msg` repeats
+the check for merge resolutions before the normal merge-specific policy path
+can return. `pre-push` checks every non-deletion update: an existing branch is
+checked over its outgoing range, while a new branch is checked for commits
+unique to that remote as well as its tip. A clean tip does not make an earlier,
+newly published violation acceptable; remove the bad commit from unpublished
+history, then run the hook again. CI applies the same commit-range and
+delivered-tree checks on every branch push.
+
 ## Start here
 
 Run `AgentWorkflowTool` for a preflight, read the matching runbook, scaffold with

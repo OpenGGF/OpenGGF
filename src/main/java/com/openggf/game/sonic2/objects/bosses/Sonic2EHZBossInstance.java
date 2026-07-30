@@ -6,6 +6,8 @@ import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic2.audio.Sonic2Music;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
+import com.openggf.game.sonic2.constants.Sonic2Constants;
+import com.openggf.game.sonic2.resources.Sonic2PlcRequests;
 import com.openggf.game.sonic2.objects.EggPrisonObjectInstance;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectRenderManager;
@@ -282,6 +284,8 @@ public class Sonic2EHZBossInstance extends AbstractBossInstance
                 // ROM: s2.asm:63061 - subi_.w #1,objoff_2A(a0)
                 waitTimer--;
                 if (waitTimer < 0) {
+                    if (!Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_ANIMALS_EHZ,
+                            Sonic2Constants.PLC_EXPLOSION)) return;
                     state.routineTertiary = 4;
                     // ROM: s2.asm:63063 - bset #2,objoff_2D(a0)
                     setCustomFlag(OBJOFF_FLAGS, getCustomFlag(OBJOFF_FLAGS) | FLAG_FLYING_OFF);
@@ -375,6 +379,7 @@ public class Sonic2EHZBossInstance extends AbstractBossInstance
 
     @Override
     protected void onDefeatStarted() {
+        if (!isDefeatEntryPrepared() && !Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE)) return;
         // ROM: s2.asm:63149-63162 (loc_2F4EE - boss defeated)
         // ROM: s2.asm:63152 - move.b #6,routine_secondary(a0)
         state.routineSecondary = SUB6_DEFEATED_FALLING;
@@ -396,6 +401,11 @@ public class Sonic2EHZBossInstance extends AbstractBossInstance
                 break;
             }
         }
+    }
+
+    @Override
+    protected boolean prepareDefeatEntry() {
+        return Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE);
     }
 
     /**

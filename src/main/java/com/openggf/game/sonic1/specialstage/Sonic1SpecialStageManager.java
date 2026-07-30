@@ -5,6 +5,7 @@ import com.openggf.audio.GameSound;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.GameServices;
+import com.openggf.game.resources.DynamicArtLifecycleService;
 import com.openggf.game.sonic1.Sonic1PlayerArt;
 import com.openggf.game.sonic1.Sonic1RingArt;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
@@ -1568,6 +1569,7 @@ public final class Sonic1SpecialStageManager {
         sonicAnimFrameIndex = 0;
         sonicAnimFrameTimer = 0;
         sonicSpriteFrame = resolveSpecialStageSonicFrame(sonicArt);
+        publishSonicDynamicArt();
     }
 
     private int resolveSpecialStageSonicFrame(SpriteArtSet sonicArt) {
@@ -1614,7 +1616,26 @@ public final class Sonic1SpecialStageManager {
         }
 
         sonicSpriteFrame = activeScript.frames().get(sonicAnimFrameIndex);
+        publishSonicDynamicArt();
         advanceSonicFrameIndex(activeScript);
+    }
+
+    private void publishSonicDynamicArt() {
+        DynamicArtLifecycleService lifecycle =
+                GameServices.dynamicArtLifecycleOrNull();
+        if (lifecycle == null || !lifecycle.isRunActive()
+                || sonicSpriteRenderer == null) {
+            return;
+        }
+        DynamicArtLifecycleService.ArtUpdate update =
+                lifecycle.observePlayerDplc(
+                        com.openggf.game.GameId.S1,
+                        "sonic",
+                        sonicSpriteFrame,
+                        sonicSpriteRenderer.dplcFrame(sonicSpriteFrame));
+        sonicSpriteRenderer.applyRuntimeArtUpdate(sonicSpriteFrame, update);
+        lifecycle.completePlayerDplc(
+                com.openggf.game.GameId.S1, "sonic", update);
     }
 
     private void advanceSonicFrameIndex(SpriteAnimationScript script) {

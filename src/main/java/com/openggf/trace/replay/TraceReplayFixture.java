@@ -33,6 +33,14 @@ public interface TraceReplayFixture {
     /** Final-run verification, admission closure, observer removal, and deregistration. */
     void closeHardwareTimingReplayRun();
 
+    /**
+     * Closes the current production dynamic-art comparison segment at a
+     * structural replay boundary. This seam carries no expected trace value.
+     */
+    default void closeDynamicArtComparisonSegment() {
+        gameplayMode().endDynamicArtComparisonSegment();
+    }
+
     /** Run one gameplay tick using the next BK2 input. Returns the mask. */
     int stepFrameFromRecording();
 

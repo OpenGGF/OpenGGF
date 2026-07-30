@@ -47,6 +47,7 @@ class Sonic1LZEvents extends Sonic1ZoneEvents {
 
     @Override
     void update(int act) {
+        retryPendingPlc();
         switch (act) {
             case 0, 1 -> { /* DLE_LZ12: rts */ }
             case 2 -> updateAct3();
@@ -177,6 +178,7 @@ class Sonic1LZEvents extends Sonic1ZoneEvents {
 
         // ROM: QueueSound1 bgm_Boss — play boss music
         audio().playMusic(Sonic1Music.BOSS.id);
+        requestSonic1Plc(17);
 
         // ROM: f_lockscreen = 1 — gates the 64px right boundary extension in Sonic_LevelBound. Does NOT modify v_limitleft2 or v_limitright2. The LZ vertical chase relies on natural level boundaries; no explicit camera lock needed.
 
