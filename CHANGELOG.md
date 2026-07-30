@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Sonic 3 & Knuckles Hidden Palace sanctuary now locks Tails during the
+  first-visit emerald conversion ceremony and keeps Sonic facing toward each
+  activated emerald. The controller applies the ROM `$83` bit-7 control state
+  to native P2 and updates playable facing direction alongside the ceremony's
+  mapping flip.
 - Fix: Sonic 3 & Knuckles Special Stage results no longer promise Super Sonic after
   a Super Emerald stage. `loc_2E512` hands a cleared Super Emerald run to the Hidden
   Palace sanctuary reveal before the Chaos Emerald check at `loc_2E540` is reached, so

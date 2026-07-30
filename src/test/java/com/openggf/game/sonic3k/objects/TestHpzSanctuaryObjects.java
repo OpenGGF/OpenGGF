@@ -12,6 +12,7 @@ import com.openggf.level.Palette;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.camera.Camera;
+import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
@@ -332,6 +333,31 @@ class TestHpzSanctuaryObjects {
     }
 
     @Test
+    void conversionPlayerPosesPublishFacingDirectionForLeftAndRightPedestals()
+            throws Exception {
+        GameStateManager gsm = new GameStateManager();
+        S3kEmeraldProgression progression = S3kEmeraldProgression.restore(
+                gsm, List.of(1, 1, 1, 1, 1, 1, 1), false);
+        HPZSSEntryControlObjectInstance controller = controller(progression, false);
+        AbstractPlayableSprite sonic = mock(AbstractPlayableSprite.class);
+        when(sonic.getCode()).thenReturn("sonic");
+        ObjectServices services = mock(ObjectServices.class);
+        var players = mock(com.openggf.level.objects.ObjectPlayerQuery.class);
+        when(services.playerQuery()).thenReturn(players);
+        when(players.playersFor(any())).thenReturn(List.of(sonic));
+        controller.setServices(services);
+
+        var method = HPZSSEntryControlObjectInstance.class
+                .getDeclaredMethod("applyConversionPlayerMappings", int.class);
+        method.setAccessible(true);
+
+        method.invoke(controller, 1);
+        verify(sonic).setDirection(Direction.LEFT);
+        method.invoke(controller, 2);
+        verify(sonic).setDirection(Direction.RIGHT);
+    }
+
+    @Test
     void freshSanctuaryLockRevertsAnActivePoweredFormBeforeUsingNormalMappings() {
         GameStateManager gsm = new GameStateManager();
         S3kEmeraldProgression progression = S3kEmeraldProgression.restore(
@@ -532,7 +558,7 @@ class TestHpzSanctuaryObjects {
         verify(player).setCentreYPreserveSubpixel((short) 0x3A3);
         verify(player).applyObjectControlState(
                 com.openggf.sprites.playable.ObjectControlState
-                        .NATIVE_BITS_0_TO_6_CPU_ALLOWED_MOVEMENT_SUPPRESSED);
+                        .NATIVE_BIT_7_FULL_CONTROL);
         verify(player).setObjectMappingFrameControl(true);
         verify(player).setMappingFrame(0);
         verify(player).setAnimationId(0x1C);
