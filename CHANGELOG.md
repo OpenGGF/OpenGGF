@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Sonic 3 & Knuckles Super Emerald Special Stages now return the player to
+  the zone the Big Ring was collected in, matching the ROM pedestal's
+  `Special_bonus_entry_flag = 1` and `Load_Starpost_Settings`' Saved2 restore.
+  The Hidden Palace sanctuary is re-entered only through another Big Ring
+  instead of being reloaded on every Special Stage exit.
 - Fix: Sonic 3 & Knuckles Super Emerald sanctuary and powered-form behavior
   now follows the locked-on ROM through pedestal selection, conversion and
   ceremony presentation, exact-stage success/failure returns, Master Emerald
