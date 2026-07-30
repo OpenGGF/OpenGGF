@@ -130,6 +130,18 @@ function Get-CommitParentOrEmptyTree([string]$Commit) {
 }
 
 function Get-CommitCandidates([string]$Commit) {
+    if (Test-GitSuccess @("rev-parse", "-q", "--verify", "$Commit^2")) {
+        # A merge commit's own candidates are the paths whose content differs
+        # from every parent. Anything matching either side was already
+        # published on that side and is that branch's history, not content
+        # this merge introduces.
+        $first = Invoke-GitText @("rev-parse", "$Commit^1")
+        $second = Invoke-GitText @("rev-parse", "$Commit^2")
+        $firstFiles = @(Invoke-GitLines @("diff", "--no-renames", "--name-only", "--diff-filter=AMT", $first, $Commit))
+        $secondFiles = @(Invoke-GitLines @("diff", "--no-renames", "--name-only", "--diff-filter=AMT", $second, $Commit))
+        $secondSet = New-Object 'System.Collections.Generic.HashSet[string]' (,[string[]]$secondFiles)
+        return @($firstFiles | Where-Object { $secondSet.Contains($_) })
+    }
     $parent = Get-CommitParentOrEmptyTree $Commit
     return Invoke-GitLines @("diff", "--no-renames", "--name-only", "--diff-filter=AMT", $parent, $Commit)
 }
@@ -980,7 +992,24 @@ function Validate-CommitMsgHook([string]$MessageFile) {
     Validate-NonMasterCommitMessage $message (Get-StagedFiles)
 }
 
+$script:PublishedHistoryRefs = @("refs/remotes/origin/develop", "refs/remotes/origin/master")
+
+function Test-PublishedHistory([string]$Commit) {
+    foreach ($ref in $script:PublishedHistoryRefs) {
+        if (-not (Test-GitSuccess @("rev-parse", "-q", "--verify", $ref))) { continue }
+        if (Test-GitSuccess @("merge-base", "--is-ancestor", $Commit, $ref)) {
+            return $true
+        }
+    }
+    return $false
+}
+
 function Validate-CommitContent([string]$Commit) {
+    # Commits already published on a protected branch were accepted there.
+    # Merging that history forward must not re-litigate it.
+    if (Test-PublishedHistory $Commit) {
+        return
+    }
     $files = @(Get-CommitCandidates $Commit)
     Reset-ValidationErrors
     Validate-FileSizePolicyForFiles $files { param($path) Get-CommitBlobSize $Commit $path }

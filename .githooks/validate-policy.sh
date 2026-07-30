@@ -78,6 +78,23 @@ commit_parent_or_empty_tree() {
 
 commit_candidates() {
     commit=$1
+    if git rev-parse -q --verify "$commit^2" >/dev/null 2>&1; then
+        # A merge commit's own candidates are the paths whose content differs
+        # from every parent. Anything matching either side was already
+        # published on that side and is that branch's history, not content
+        # this merge introduces.
+        first=$(git rev-parse "$commit^1")
+        second=$(git rev-parse "$commit^2")
+        first_list=$(mktemp)
+        second_list=$(mktemp)
+        git diff --no-renames --name-only --diff-filter=AMT "$first" "$commit" |
+            sort >"$first_list"
+        git diff --no-renames --name-only --diff-filter=AMT "$second" "$commit" |
+            sort >"$second_list"
+        comm -12 "$first_list" "$second_list"
+        rm -f "$first_list" "$second_list"
+        return
+    fi
     parent=$(commit_parent_or_empty_tree "$commit")
     git diff --no-renames --name-only --diff-filter=AMT "$parent" "$commit"
 }
@@ -1056,8 +1073,32 @@ validate_commit_msg_hook() {
     validate_non_master_commit_message "$message" "$files"
 }
 
+PUBLISHED_HISTORY_REFS="refs/remotes/origin/develop
+refs/remotes/origin/master"
+
+is_published_history() {
+    published_history_ifs=$IFS
+    IFS='
+'
+    for ref in $PUBLISHED_HISTORY_REFS; do
+        [ -n "$ref" ] || continue
+        git rev-parse -q --verify "$ref" >/dev/null 2>&1 || continue
+        if git merge-base --is-ancestor "$1" "$ref" 2>/dev/null; then
+            IFS=$published_history_ifs
+            return 0
+        fi
+    done
+    IFS=$published_history_ifs
+    return 1
+}
+
 validate_commit_content() {
     commit=$1
+    # Commits already published on a protected branch were accepted there.
+    # Merging that history forward must not re-litigate it.
+    if is_published_history "$commit"; then
+        return 0
+    fi
     files=$(commit_candidates "$commit")
     ERRORS=""
     validate_file_size_policy "$files" commit "$commit"
