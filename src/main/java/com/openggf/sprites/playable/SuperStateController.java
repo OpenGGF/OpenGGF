@@ -8,6 +8,7 @@ import com.openggf.game.PhysicsProfile;
 import com.openggf.graphics.RenderContext;
 import com.openggf.level.Level;
 import com.openggf.level.Palette;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.sprites.animation.SpriteAnimationProfile;
 
@@ -55,9 +56,18 @@ public abstract class SuperStateController {
         return false;
     }
 
+    /** Semantic query for a live Super-Tails form and its auxiliary flock. */
+    public boolean isSuperTailsFormActive() {
+        return false;
+    }
+
     /** Semantic powered-form hook evaluated only after a successful wall latch. */
     public boolean triggerPoweredWallImpact(int preZeroGroundSpeed) {
         return false;
+    }
+
+    /** Semantic powered-form hook invoked after a successful airborne dash. */
+    public void triggerPoweredAirDashEffects(ObjectManager objectManager) {
     }
 
     /** Draws any game-owned powered-form trail before the live player frame. */
@@ -206,7 +216,9 @@ public abstract class SuperStateController {
                 }
             }
         }
-        Level level = player.currentLevelManager().getCurrentLevel();
+        var levelManager = player.currentLevelManager();
+        if (levelManager == null) return null;
+        Level level = levelManager.getCurrentLevel();
         if (level == null) return null;
         Palette p = level.getPalette(logicalLine);
         return p != null ? new PaletteTarget(p, logicalLine) : null;

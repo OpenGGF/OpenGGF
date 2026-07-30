@@ -8,6 +8,7 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
@@ -94,7 +95,7 @@ public final class HPZSanctuaryFallingCrystalObjectInstance extends AbstractObje
             } else {
                 published = true;
                 parentRef.onFallingCrystalAnimationComplete(subtype);
-                setDestroyed(true);
+                ObjectLifetimeOps.expireDynamic(this);
             }
             return;
         }

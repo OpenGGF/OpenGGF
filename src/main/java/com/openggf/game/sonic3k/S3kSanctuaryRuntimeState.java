@@ -18,6 +18,7 @@ public final class S3kSanctuaryRuntimeState {
         WAITING_FOR_INTRO_SIGNAL,
         CONVERTING,
         READY,
+        RETURN_TRANSFORM,
         SELECTING,
         LEAVING
     }
@@ -30,6 +31,12 @@ public final class S3kSanctuaryRuntimeState {
             int selectedStage,
             int selectionTimer,
             boolean reentry,
+            int returnStage,
+            boolean returnSucceeded,
+            boolean pedestalTransformActive,
+            boolean pedestalRevealPending,
+            int revealPendingSubtype,
+            int emeraldFlicker,
             int originZone,
             int originAct) {
         public Snapshot {
@@ -45,13 +52,29 @@ public final class S3kSanctuaryRuntimeState {
     private int selectedStage = -1;
     private int selectionTimer;
     private boolean reentry;
+    private int returnStage = -1;
+    private boolean returnSucceeded;
+    private boolean pedestalTransformActive;
+    private boolean pedestalRevealPending;
+    private int revealPendingSubtype = -1;
+    private int emeraldFlicker;
     private int originZone = -1;
     private int originAct = -1;
 
     public S3kSanctuaryRuntimeState(S3kEmeraldProgression progression, boolean reentry) {
+        this(progression, reentry, -1, false);
+    }
+
+    public S3kSanctuaryRuntimeState(
+            S3kEmeraldProgression progression, boolean reentry,
+            int returnStage, boolean returnSucceeded) {
         this.progression = Objects.requireNonNull(progression, "progression");
         this.reentry = reentry;
-        this.phase = reentry ? Phase.READY : Phase.INTRO_WAIT;
+        this.returnStage = returnStage;
+        this.returnSucceeded = returnSucceeded;
+        this.pedestalTransformActive = returnSucceeded;
+        this.phase = returnSucceeded ? Phase.RETURN_TRANSFORM
+                : reentry ? Phase.READY : Phase.INTRO_WAIT;
         this.introTimer = 0x1F;
     }
 
@@ -116,7 +139,8 @@ public final class S3kSanctuaryRuntimeState {
     }
 
     public boolean exitEligible() {
-        return progression.states().stream().noneMatch(value -> value == 1 || value == 2);
+        return phase != Phase.RETURN_TRANSFORM
+                && progression.states().stream().noneMatch(value -> value == 1 || value == 2);
     }
 
     public boolean beginPedestalSelection(int stageIndex) {
@@ -147,13 +171,63 @@ public final class S3kSanctuaryRuntimeState {
     }
 
     public void markSpecialStageResult(int stageIndex, boolean success) {
-        if (success) {
-            progression.awardSuper(stageIndex);
-        }
         selectedStage = stageIndex;
+        returnStage = stageIndex;
+        returnSucceeded = success;
+        pedestalTransformActive = success;
         selectionTimer = 0;
         reentry = true;
-        phase = Phase.READY;
+        phase = success ? Phase.RETURN_TRANSFORM : Phase.READY;
+    }
+
+    public int returnStage() {
+        return returnStage;
+    }
+
+    public boolean returnSucceeded() {
+        return returnSucceeded;
+    }
+
+    public boolean transformationActive() {
+        return phase == Phase.RETURN_TRANSFORM;
+    }
+
+    public boolean forceGrayPedestal(int subtype) {
+        return pedestalTransformActive && returnStage == subtype;
+    }
+
+    public void updateEmeraldFlicker() {
+        emeraldFlicker = (emeraldFlicker + 1) % 3;
+    }
+
+    public int emeraldFlicker() {
+        return emeraldFlicker;
+    }
+
+    public void completeReturnTransformation() {
+        if (phase == Phase.RETURN_TRANSFORM) {
+            phase = Phase.READY;
+        }
+    }
+
+    public void completePedestalTransformation() {
+        pedestalTransformActive = false;
+    }
+
+    public void beginPedestalReveal(int subtype) {
+        pedestalRevealPending = true;
+        revealPendingSubtype = subtype;
+    }
+
+    public boolean revealPending(int subtype) {
+        return pedestalRevealPending && revealPendingSubtype == subtype;
+    }
+
+    public void completePedestalReveal(int subtype) {
+        if (revealPending(subtype)) {
+            pedestalRevealPending = false;
+            revealPendingSubtype = -1;
+        }
     }
 
     public int selectedStage() {
@@ -183,7 +257,10 @@ public final class S3kSanctuaryRuntimeState {
 
     public Snapshot capture() {
         return new Snapshot(phase, introTimer, conversionOrder, conversionCursor,
-                selectedStage, selectionTimer, reentry, originZone, originAct);
+                selectedStage, selectionTimer, reentry, returnStage, returnSucceeded,
+                pedestalTransformActive, pedestalRevealPending,
+                revealPendingSubtype, emeraldFlicker,
+                originZone, originAct);
     }
 
     public void restore(Snapshot snapshot) {
@@ -195,6 +272,12 @@ public final class S3kSanctuaryRuntimeState {
         selectedStage = snapshot.selectedStage();
         selectionTimer = snapshot.selectionTimer();
         reentry = snapshot.reentry();
+        returnStage = snapshot.returnStage();
+        returnSucceeded = snapshot.returnSucceeded();
+        pedestalTransformActive = snapshot.pedestalTransformActive();
+        pedestalRevealPending = snapshot.pedestalRevealPending();
+        revealPendingSubtype = snapshot.revealPendingSubtype();
+        emeraldFlicker = snapshot.emeraldFlicker();
         originZone = snapshot.originZone();
         originAct = snapshot.originAct();
     }

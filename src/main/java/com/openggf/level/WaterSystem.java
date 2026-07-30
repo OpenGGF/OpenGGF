@@ -118,6 +118,7 @@ public class WaterSystem implements RewindSnapshottable<WaterSystemSnapshot> {
         private boolean enabled; // ROM Water_flag: level can disable water at runtime
         private boolean locked;    // ROM _unkFAA2: when true, dynamic handler is skipped (boss/cutscene)
         private int shakeTimer;    // Screen shake countdown frames (0 = inactive)
+        private boolean fullScreen; // ROM Water_full_screen_flag
 
         public DynamicWaterState(int initialLevel) {
             this.currentLevel = initialLevel;
@@ -129,6 +130,7 @@ public class WaterSystem implements RewindSnapshottable<WaterSystemSnapshot> {
             this.enabled = true;
             this.locked = false;
             this.shakeTimer = 0;
+            this.fullScreen = false;
         }
 
         public void setTarget(int targetY) {
@@ -162,6 +164,8 @@ public class WaterSystem implements RewindSnapshottable<WaterSystemSnapshot> {
         /** Screen shake countdown frames. 0 = inactive. */
         public int getShakeTimer() { return shakeTimer; }
         public void setShakeTimer(int timer) { this.shakeTimer = timer; }
+        private boolean isFullScreen() { return fullScreen; }
+        private void setFullScreen(boolean fullScreen) { this.fullScreen = fullScreen; }
 
         /** Move mean toward target by speed pixels. Returns true if still moving.
          *  ROM adds full speed in one step (add.w d1,(Mean_water_level).w at
@@ -312,6 +316,9 @@ public class WaterSystem implements RewindSnapshottable<WaterSystemSnapshot> {
                         () -> new ScreenShakeTimerSlotObjectInstance(duration));
             }
         }
+        // Handle_Onscreen_Water_Height clears Water_full_screen_flag before
+        // recomputing it from the current water/camera relation every pass.
+        state.setFullScreen(state.isEnabled() && state.getCurrentLevel() <= cameraY);
         // Note: state.update() (mean->target movement) is called by WaterSystem.update(),
         // not here, to avoid double-movement per frame.
 
@@ -760,6 +767,20 @@ public class WaterSystem implements RewindSnapshottable<WaterSystemSnapshot> {
         return state != null ? state.getShakeTimer() : 0;
     }
 
+    /** Captures ROM {@code Water_full_screen_flag} for Saved2. */
+    public boolean captureFullScreenFlag(int zoneId, int actId, int cameraY) {
+        DynamicWaterState state = dynamicWaterStates.get(makeKey(zoneId, actId));
+        return state != null && state.isFullScreen();
+    }
+
+    /** Restores ROM {@code Water_full_screen_flag} after a Saved2 level reload. */
+    public void setFullScreenFlag(int zoneId, int actId, boolean fullScreen) {
+        DynamicWaterState state = dynamicWaterStates.get(makeKey(zoneId, actId));
+        if (state != null) {
+            state.setFullScreen(fullScreen);
+        }
+    }
+
     // ── RewindSnapshottable ───────────────────────────────────────────────
 
     @Override
@@ -780,7 +801,8 @@ public class WaterSystem implements RewindSnapshottable<WaterSystemSnapshot> {
                     s.speed,
                     s.isEnabled(),
                     s.isLocked(),
-                    s.getShakeTimer()
+                    s.getShakeTimer(),
+                    s.isFullScreen()
             ));
         }
         return new WaterSystemSnapshot(waterEnteredCounter, entries);
@@ -804,6 +826,7 @@ public class WaterSystem implements RewindSnapshottable<WaterSystemSnapshot> {
             state.setEnabled(entry.enabled());
             state.setLocked(entry.locked());
             state.setShakeTimer(entry.shakeTimer());
+            state.setFullScreen(entry.fullScreen());
         }
     }
 }

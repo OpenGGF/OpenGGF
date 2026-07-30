@@ -1,15 +1,19 @@
 package com.openggf.game.sonic3k;
 
 import com.openggf.data.Rom;
+import com.openggf.data.RomByteReader;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.sprites.playable.Knuckles;
+import com.openggf.sprites.playable.Tails;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
@@ -53,6 +57,28 @@ class TestSonic3kSuperUnderwaterPaletteData {
         assertFirstFrame(rom, Sonic3kConstants.PAL_CYCLE_SUPER_KNUCKLES_REVERT_ADDR,
                 KNUCKLES_REVERT_FRAME);
         assertEquals(10, Sonic3kConstants.PAL_CYCLE_SUPER_KNUCKLES_FRAME_COUNT);
+    }
+
+    @Test
+    void nonSonicRevertSelectsTheExactRomFramesBeforeTerminalPaletteRestore()
+            throws IOException {
+        RomByteReader reader = RomByteReader.fromRom(GameServices.rom().getRom());
+        Sonic3kSuperStateController tails = new Sonic3kSuperStateController(
+                new Tails("tails", (short) 0, (short) 0));
+        tails.loadRomData(reader);
+        assertArrayEquals(new int[] {
+                        0x00AE, 0x008E, 0x046A,
+                        0x0E66, 0x0C42, 0x0822
+                },
+                tails.nonSonicRevertWordsForTest(),
+                "Tails applies PalCycle_SuperTails frame zero, then the Flicky palette");
+
+        Sonic3kSuperStateController knuckles = new Sonic3kSuperStateController(
+                new Knuckles("knuckles", (short) 0, (short) 0));
+        knuckles.loadRomData(reader);
+        assertArrayEquals(KNUCKLES_REVERT_FRAME,
+                knuckles.nonSonicRevertWordsForTest(),
+                "Knuckles applies PalCycle_SuperHyperKnucklesRevert");
     }
 
     @Test

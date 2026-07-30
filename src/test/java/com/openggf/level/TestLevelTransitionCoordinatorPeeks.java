@@ -6,7 +6,6 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestLevelTransitionCoordinatorPeeks {
-
     @Test
     void bonusPeekDoesNotConsume() {
         LevelTransitionCoordinator c = new LevelTransitionCoordinator();
@@ -40,6 +39,8 @@ class TestLevelTransitionCoordinatorPeeks {
 
         c.markSanctuaryReentry(5);
         assertEquals(5, c.sanctuaryReentryStage().orElseThrow());
+        assertTrue(c.sanctuaryReturnContext().isEmpty(),
+                "legacy overload retains progression-derived success semantics");
         assertSame(saved, c.getBigRingReturn());
 
         assertTrue(c.requestSanctuaryExit());
@@ -61,7 +62,7 @@ class TestLevelTransitionCoordinatorPeeks {
         BigRingReturnState saved = new BigRingReturnState(
                 1, 2, 3, 4, 5, (byte) 6, (byte) 7, 8, 9, 10);
         c.saveBigRingReturn(saved);
-        c.markSanctuaryReentry(2);
+        c.markSanctuaryReentry(2, true);
         LevelTransitionRewindAdapter adapter = new LevelTransitionRewindAdapter(c);
         LevelTransitionCoordinator.SanctuaryRewindState snapshot = adapter.capture();
 
@@ -70,6 +71,8 @@ class TestLevelTransitionCoordinatorPeeks {
         adapter.restore(snapshot);
 
         assertEquals(2, c.sanctuaryReentryStage().orElseThrow());
+        assertEquals(new SanctuaryReturnContext(2, true),
+                c.sanctuaryReturnContext().orElseThrow());
         assertSame(saved, c.getBigRingReturn());
         assertFalse(c.isSanctuaryOriginRestorePending(-1, -1));
         assertFalse(c.consumeZoneActRequest(),

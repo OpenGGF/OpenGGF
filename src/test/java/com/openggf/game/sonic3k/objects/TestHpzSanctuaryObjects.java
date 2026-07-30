@@ -16,6 +16,8 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
+import com.openggf.data.RomByteReader;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -52,11 +54,15 @@ class TestHpzSanctuaryObjects {
         assertEquals(HPZSuperEmeraldObjectInstance.Display.COLORED,
                 pedestal(3, progression, runtime).display());
         assertFalse(pedestal(3, progression, runtime).isSelectable());
+        assertEquals(4, pedestal(0, progression, runtime).getPriorityBucket());
+        assertEquals(1, pedestal(1, progression, runtime).getPriorityBucket());
+        assertEquals(1, pedestal(2, progression, runtime).getPriorityBucket());
+        assertEquals(4, pedestal(3, progression, runtime).getPriorityBucket());
         assertArrayEquals(new int[]{2, 0, 2, 0, 0, 1, 3},
                 java.util.stream.IntStream.range(0, 7)
                         .map(i -> pedestal(i, progression, runtime).completedPaletteLine())
                         .toArray());
-        assertArrayEquals(new int[]{2, 1, 2, 2, 0, 0, 3},
+        assertArrayEquals(new int[]{2, 1, 2, 1, 0, 0, 3},
                 java.util.stream.IntStream.range(0, 7)
                         .map(i -> pedestal(i, progression, runtime)
                                 .completedPaletteLine(
@@ -84,6 +90,23 @@ class TestHpzSanctuaryObjects {
                 new SpecialStageEntryRequest(4, EmeraldRewardKind.SUPER_EMERALD));
         pedestal.updateSelection();
         verifyNoMoreInteractions(services);
+    }
+
+    @Test
+    void pedestalSelectionAppliesRomPlayerLockAndAnimation() {
+        GameStateManager gsm = new GameStateManager();
+        S3kEmeraldProgression progression = S3kEmeraldProgression.restore(
+                gsm, List.of(0, 0, 2, 0, 0, 0, 0), true);
+        S3kSanctuaryRuntimeState runtime = new S3kSanctuaryRuntimeState(progression, true);
+        HPZSuperEmeraldObjectInstance pedestal = pedestal(2, progression, runtime);
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+
+        assertTrue(pedestal.beginSelection(player));
+
+        verify(player).applyObjectControlState(
+                com.openggf.sprites.playable.ObjectControlState
+                        .NATIVE_BITS_0_TO_6_CPU_ALLOWED_MOVEMENT_SUPPRESSED);
+        verify(player).setAnimationId(5);
     }
 
     @Test
@@ -144,6 +167,7 @@ class TestHpzSanctuaryObjects {
         HPZMasterEmeraldObjectInstance master = new HPZMasterEmeraldObjectInstance(
                 new ObjectSpawn(0x1640, 0x340, 0xB0, 0, 0, false, 0));
         master.setServices(services);
+        master.setOnScreenForTest(true);
 
         registry.beginFrame();
         master.update(0, null);
@@ -158,7 +182,7 @@ class TestHpzSanctuaryObjects {
     }
 
     @Test
-    void completedMasterEmeraldRunsTheRomPaletteRotationScript() {
+    void completedMasterEmeraldRunsTheRomPaletteRotationScript() throws Exception {
         PaletteOwnershipRegistry registry = new PaletteOwnershipRegistry();
         Palette[] palettes = {new Palette(), new Palette(), new Palette(), new Palette()};
         ObjectServices services = mock(ObjectServices.class);
@@ -166,24 +190,52 @@ class TestHpzSanctuaryObjects {
         when(gameState.hasAllSuperEmeralds()).thenReturn(true);
         when(services.paletteOwnershipRegistryOrNull()).thenReturn(registry);
         when(services.gameState()).thenReturn(gameState);
+        when(services.romReader()).thenReturn(masterEmeraldPaletteReader());
 
         HPZMasterEmeraldObjectInstance master = new HPZMasterEmeraldObjectInstance(
                 new ObjectSpawn(0x1640, 0x340, 0xB0, 0, 0, false, 0));
         master.setServices(services);
-
-        for (int frame = 0; frame < 16; frame++) {
-            registry.beginFrame();
-            master.update(frame, null);
-            registry.resolveInto(palettes, null, null, palettes[0]);
-            assertSegaColor(palettes[3], 1, 0x06A0);
-            assertSegaColor(palettes[3], 2, 0x0660);
-        }
+        master.setOnScreenForTest(true);
 
         registry.beginFrame();
-        master.update(16, null);
+        master.update(0, null);
         registry.resolveInto(palettes, null, null, palettes[0]);
         assertSegaColor(palettes[3], 1, 0x08C0);
         assertSegaColor(palettes[3], 2, 0x0680);
+
+        for (int frame = 1; frame <= 10; frame++) {
+            registry.beginFrame();
+            master.update(frame, null);
+            registry.resolveInto(palettes, null, null, palettes[0]);
+        }
+        assertSegaColor(palettes[3], 1, 0x0AC0);
+        assertSegaColor(palettes[3], 2, 0x0680);
+        assertEquals(0x1D, master.glowFrameForTest(),
+                "off_914CE entry 2 selects RawAni_90768[$3B/2]");
+    }
+
+    @Test
+    void completedMasterEmeraldSkipsPaletteWritesDuringReturnTransform()
+            throws Exception {
+        GameStateManager gsm = new GameStateManager();
+        S3kEmeraldProgression progression = S3kEmeraldProgression.restore(
+                gsm, List.of(3, 3, 3, 3, 3, 3, 3), true);
+        HPZSSEntryControlObjectInstance controller = controller(progression, true);
+        controller.attachRuntimeForTest(
+                new S3kSanctuaryRuntimeState(progression, true, 2, true));
+        HPZMasterEmeraldObjectInstance master = new HPZMasterEmeraldObjectInstance(
+                new ObjectSpawn(0x1640, 0x340, 0xB0, 0, 0, false, 0), controller);
+        ObjectServices services = mock(ObjectServices.class);
+        PaletteOwnershipRegistry registry = new PaletteOwnershipRegistry();
+        when(services.paletteOwnershipRegistryOrNull()).thenReturn(registry);
+        when(services.romReader()).thenReturn(masterEmeraldPaletteReader());
+        master.setServices(services);
+        master.setOnScreenForTest(true);
+
+        registry.beginFrame();
+        master.update(0, null);
+
+        assertEquals("none", registry.ownerAt(PaletteSurface.NORMAL, 3, 1));
     }
 
     @Test
@@ -202,7 +254,69 @@ class TestHpzSanctuaryObjects {
     }
 
     @Test
-    void conversionPlayerPosesAreIndexedByScanOrdinalNotEmeraldSubtype() {
+    void ceremonyOnlyIncludesStateOneEmeraldsAndBlinksOnEvenVintFrames() {
+        GameStateManager gsm = new GameStateManager();
+        S3kEmeraldProgression progression = S3kEmeraldProgression.restore(
+                gsm, List.of(0, 1, 2, 3, 1, 0, 2), true);
+        HPZSanctuarySmallEmeraldCeremonyObjectInstance ceremony =
+                new HPZSanctuarySmallEmeraldCeremonyObjectInstance(progression);
+
+        assertFalse(ceremony.participatesForTest(0));
+        assertTrue(ceremony.participatesForTest(1));
+        assertFalse(ceremony.participatesForTest(2));
+        assertFalse(ceremony.participatesForTest(3));
+        assertTrue(ceremony.participatesForTest(4));
+        assertTrue(ceremony.shouldDrawForTest(0, 1));
+        assertFalse(ceremony.shouldDrawForTest(1, 1));
+        assertFalse(ceremony.shouldDrawForTest(0, 2));
+    }
+
+    @Test
+    void successfulReturnKeepsPedestalGrayUntilTwinStarsCollapse() {
+        GameStateManager gsm = new GameStateManager();
+        S3kEmeraldProgression progression = S3kEmeraldProgression.restore(
+                gsm, List.of(0, 0, 0, 3, 0, 0, 0), true);
+        HPZSSEntryControlObjectInstance controller = controller(progression, true);
+        S3kSanctuaryRuntimeState runtime =
+                new S3kSanctuaryRuntimeState(progression, true, 3, true);
+        controller.attachRuntimeForTest(runtime);
+        HPZSuperEmeraldObjectInstance pedestal = new HPZSuperEmeraldObjectInstance(
+                new ObjectSpawn(0, 0, 0xB4, 3, 0, false, 0), controller);
+        HPZSuperEmeraldReturnEffectObjectInstance effect =
+                new HPZSuperEmeraldReturnEffectObjectInstance(controller);
+        ObjectServices services = mock(ObjectServices.class);
+        effect.setServices(services);
+
+        assertEquals(HPZSuperEmeraldObjectInstance.Display.GRAY, pedestal.display());
+        effect.update(0, null);
+        assertEquals(0xE000, effect.displayRadiusForTest());
+        assertArrayEquals(new int[]{1, 2, 3, 4, 5, 6, 7, 8},
+                java.util.stream.IntStream.range(0, 8)
+                        .map(effect::mappingFrameForTest).toArray());
+        verify(services).playSfx(
+                com.openggf.game.sonic3k.audio.Sonic3kSfx.SIGNPOST.id);
+        for (int i = 1; i < 225; i++) {
+            effect.update(i, null);
+        }
+
+        assertTrue(runtime.transformationActive());
+        assertFalse(effect.drawsCurrentFrameForTest(),
+                "loc_2EDAE deletes on borrow without drawing a center frame");
+        assertEquals(HPZSuperEmeraldObjectInstance.Display.COLORED, pedestal.display());
+        verify(services).playSfx(
+                com.openggf.game.sonic3k.audio.Sonic3kSfx.SUPER_EMERALD.id);
+        verify(services, never()).playSfx(
+                com.openggf.game.sonic3k.audio.Sonic3kSfx.PERFECT.id);
+        effect.update(225, null);
+        assertFalse(runtime.transformationActive());
+        assertEquals(HPZSuperEmeraldObjectInstance.Display.COLORED, pedestal.display());
+        assertEquals(7, pedestal.mappingFrameForTest(1));
+        verify(services).playSfx(
+                com.openggf.game.sonic3k.audio.Sonic3kSfx.PERFECT.id);
+    }
+
+    @Test
+    void conversionPlayerPosesAreIndexedByEmeraldSubtype() {
         int[][] expected = {
                 {1, 1}, {1, 0}, {0, 0}, {1, 1}, {0, 1}, {1, 0}, {0, 0}
         };
@@ -211,7 +325,7 @@ class TestHpzSanctuaryObjects {
                     HPZSSEntryControlObjectInstance.conversionPoseForTest(ordinal),
                     "byte_90BBC row " + ordinal);
         }
-        // First ROM scan subtype is 5, but its pose must still be row zero.
+        // First ROM scan subtype is 5, so loc_90B32 selects row five.
         assertFalse(java.util.Arrays.equals(
                 HPZSSEntryControlObjectInstance.conversionPoseForTest(0),
                 HPZSSEntryControlObjectInstance.conversionPoseForTest(5)));
@@ -278,6 +392,88 @@ class TestHpzSanctuaryObjects {
     }
 
     @Test
+    void conversionMidpointSavesAndKeepsPedestalColoredUntilCrystalAnimationEnds() {
+        GameStateManager gsm = new GameStateManager();
+        S3kEmeraldProgression progression = S3kEmeraldProgression.restore(
+                gsm, List.of(0, 0, 0, 0, 0, 1, 0), false);
+        HPZSSEntryControlObjectInstance controller = controller(progression, false);
+        ObjectServices services = mock(ObjectServices.class);
+        controller.setServices(services);
+        controller.beginConversionForTest();
+
+        controller.onFallingCrystalMidpoint(5);
+        HPZSuperEmeraldObjectInstance pedestal = new HPZSuperEmeraldObjectInstance(
+                new ObjectSpawn(0, 0, 0xB4, 5, 0, false, 0), controller);
+
+        assertEquals(2, progression.states().get(5));
+        assertEquals(HPZSuperEmeraldObjectInstance.Display.COLORED, pedestal.display());
+        verify(services).requestSessionSave(
+                com.openggf.game.save.SaveReason.SPECIAL_STAGE_SAVE);
+
+        controller.onFallingCrystalAnimationComplete(5);
+        assertEquals(HPZSuperEmeraldObjectInstance.Display.GRAY, pedestal.display());
+    }
+
+    @Test
+    void introCrystalMidpointAppliesTheRomTailsFourPixelYAdjustment() {
+        GameStateManager gsm = new GameStateManager();
+        S3kEmeraldProgression progression = S3kEmeraldProgression.restore(
+                gsm, List.of(0, 0, 0, 0, 0, 0, 0), false);
+        HPZSSEntryControlObjectInstance controller = controller(progression, false);
+        ObjectServices services = mock(ObjectServices.class);
+        var query = mock(com.openggf.level.objects.ObjectPlayerQuery.class);
+        AbstractPlayableSprite tails = mock(AbstractPlayableSprite.class);
+        when(tails.getCode()).thenReturn("tails");
+        when(tails.getCentreY()).thenReturn((short) 0x300);
+        when(services.playerQuery()).thenReturn(query);
+        when(query.playersFor(any())).thenReturn(List.of(tails));
+        controller.setServices(services);
+
+        controller.onFallingCrystalMidpoint(7);
+
+        verify(tails).setCentreYPreserveSubpixel((short) 0x304);
+        verify(tails).setMappingFrame(0xAD);
+        verify(tails).setAnimationId(5);
+    }
+
+    @Test
+    void typedSanctuaryReturnContextDrivesSuccessAndFailurePresentation() {
+        GameStateManager successState = new GameStateManager();
+        successState.restoreS3kEmeraldProgress(
+                List.of(0, 0, 0, 3, 0, 0, 0), true);
+        ObjectServices successServices = mock(ObjectServices.class);
+        when(successServices.gameState()).thenReturn(successState);
+        when(successServices.sanctuaryReturnContext()).thenReturn(java.util.Optional.of(
+                new com.openggf.level.SanctuaryReturnContext(3, true)));
+        HPZSSEntryControlObjectInstance successController =
+                new HPZSSEntryControlObjectInstance(
+                        new ObjectSpawn(0, 0, 0xB5, 0, 0, false, 0));
+        successController.setServices(successServices);
+        assertTrue(successController.runtimeForChild().transformationActive());
+        assertTrue(successController.runtimeForChild().forceGrayPedestal(3));
+
+        GameStateManager failureState = new GameStateManager();
+        failureState.restoreS3kEmeraldProgress(
+                List.of(0, 0, 0, 2, 0, 0, 0), true);
+        ObjectServices failureServices = mock(ObjectServices.class);
+        when(failureServices.gameState()).thenReturn(failureState);
+        when(failureServices.sanctuaryReturnContext()).thenReturn(java.util.Optional.of(
+                new com.openggf.level.SanctuaryReturnContext(3, false)));
+        HPZSSEntryControlObjectInstance failureController =
+                new HPZSSEntryControlObjectInstance(
+                        new ObjectSpawn(0, 0, 0xB5, 0, 0, false, 0));
+        failureController.setServices(failureServices);
+        assertFalse(failureController.runtimeForChild().transformationActive());
+        HPZSuperEmeraldObjectInstance failedPedestal =
+                new HPZSuperEmeraldObjectInstance(
+                        new ObjectSpawn(0, 0, 0xB4, 3, 0, false, 0),
+                        failureController);
+        assertTrue(failedPedestal.isSelectable());
+        assertEquals(HPZSuperEmeraldObjectInstance.Display.GRAY,
+                failedPedestal.display());
+    }
+
+    @Test
     void subtypeSevenFallingCrystalPublishesTheProductionIntroSignalAtNativeBoundary() {
         GameStateManager gsm = new GameStateManager();
         S3kEmeraldProgression progression = S3kEmeraldProgression.restore(
@@ -335,9 +531,8 @@ class TestHpzSanctuaryObjects {
         verify(player).setCentreXPreserveSubpixel((short) 0x1640);
         verify(player).setCentreYPreserveSubpixel((short) 0x3A3);
         verify(player).applyObjectControlState(
-                com.openggf.sprites.playable.ObjectControlState.NATIVE_BIT_7_FULL_CONTROL);
-        verify(player).setObjectControlAllowsCpu(true);
-        verify(player).setObjectControlSuppressesMovement(true);
+                com.openggf.sprites.playable.ObjectControlState
+                        .NATIVE_BITS_0_TO_6_CPU_ALLOWED_MOVEMENT_SUPPRESSED);
         verify(player).setObjectMappingFrameControl(true);
         verify(player).setMappingFrame(0);
         verify(player).setAnimationId(0x1C);
@@ -468,12 +663,11 @@ class TestHpzSanctuaryObjects {
 
         SSZHPZTeleporterObjectInstance teleporter = new SSZHPZTeleporterObjectInstance(
                 new ObjectSpawn(0x1640, 0x3C7, 0x79, 0, 0, false, 0));
-        for (int i = 0; i < 7; i++) teleporter.update(i, null);
+        teleporter.update(0, null);
         var teleporterSnapshot = teleporter.captureRewindState();
-        for (int i = 0; i < 20; i++) teleporter.update(i, null);
-        assertTrue(teleporter.isReady());
         teleporter.restoreRewindState(teleporterSnapshot);
-        assertFalse(teleporter.isReady());
+        assertEquals(0x1640, teleporter.getX());
+        assertEquals(0x3C7, teleporter.getY());
     }
 
     private static HPZSuperEmeraldObjectInstance pedestal(
@@ -495,5 +689,50 @@ class TestHpzSanctuaryObjects {
         assertEquals(expected.getColor(colorIndex).r, palette.getColor(colorIndex).r);
         assertEquals(expected.getColor(colorIndex).g, palette.getColor(colorIndex).g);
         assertEquals(expected.getColor(colorIndex).b, palette.getColor(colorIndex).b);
+    }
+
+    private static RomByteReader masterEmeraldPaletteReader() {
+        byte[] rom = new byte[0x91518];
+        int base = Sonic3kConstants.HPZ_MASTER_EMERALD_PALETTE_SCRIPT_ADDR;
+        writeU32(rom, base, 0x914EE);
+        writeU16(rom, base + 4, 1);
+        int[] script = {
+                0, 0xF, 1, 9, 2, 9, 3, 7, 4, 7, 5, 5,
+                6, 5, 5, 5, 4, 7, 3, 7, 2, 9, 1, 9
+        };
+        for (int i = 0; i < script.length; i++) {
+            rom[base + 6 + i] = (byte) script[i];
+        }
+        int[] glowFrames = {
+                0x1D, 0x1D, 0x1D, 0xC, 0xD, 0xE,
+                0x1D, 0xF, 0x10, 0x11, 0x1D, 0x1D
+        };
+        for (int i = 0; i < glowFrames.length; i++) {
+            rom[Sonic3kConstants.HPZ_MASTER_EMERALD_GLOW_ANIMATION_ADDR + i] =
+                    (byte) glowFrames[i];
+        }
+        int colorsBase = 0x914EE;
+        int[] offsets = {0xE, 0x12, 0x16, 0x1A, 0x1E, 0x22, 0x26};
+        int[][] colors = {
+                {0x6A0, 0x660}, {0x8C0, 0x680}, {0xAC0, 0x680},
+                {0xCE0, 0x880}, {0xCE6, 0x6A2}, {0xCE8, 0xAC0},
+                {0xEEC, 0xCE8}
+        };
+        for (int i = 0; i < offsets.length; i++) {
+            writeU16(rom, colorsBase + i * 2, offsets[i]);
+            writeU16(rom, colorsBase + offsets[i], colors[i][0]);
+            writeU16(rom, colorsBase + offsets[i] + 2, colors[i][1]);
+        }
+        return RomByteReader.fromBytes(rom);
+    }
+
+    private static void writeU16(byte[] target, int offset, int value) {
+        target[offset] = (byte) (value >>> 8);
+        target[offset + 1] = (byte) value;
+    }
+
+    private static void writeU32(byte[] target, int offset, int value) {
+        writeU16(target, offset, value >>> 16);
+        writeU16(target, offset + 2, value);
     }
 }

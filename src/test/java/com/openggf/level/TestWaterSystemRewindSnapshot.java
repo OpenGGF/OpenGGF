@@ -42,7 +42,8 @@ class TestWaterSystemRewindSnapshot {
         WaterSystem ws = new WaterSystem();
         // Restore a snapshot with an entry that doesn't exist in the current system
         Map<String, WaterSystemSnapshot.DynamicWaterEntry> entries = Map.of(
-                "99_0", new WaterSystemSnapshot.DynamicWaterEntry(100, 200, 150, true, 1, false, false, 0)
+                "99_0", new WaterSystemSnapshot.DynamicWaterEntry(
+                        100, 200, 150, true, 1, false, false, 0, true)
         );
         WaterSystemSnapshot snap = new WaterSystemSnapshot(5, entries);
         assertDoesNotThrow(() -> ws.restore(snap));
@@ -65,6 +66,44 @@ class TestWaterSystemRewindSnapshot {
         assertFalse(ws.hasWater(99, 0));
         assertEquals(0x618, ws.getWaterLevelY(99, 0),
                 "disabling Water_flag must retain the loaded water registers");
+    }
+
+    @Test
+    void roundTripPreservesFullScreenWaterFlag() {
+        WaterSystem ws = new WaterSystem();
+        ws.loadForLevelFromProvider(new TestWaterProvider(), null,
+                99, 0, PlayerCharacter.SONIC_ALONE);
+        ws.setFullScreenFlag(99, 0, true);
+
+        WaterSystemSnapshot snapshot = ws.capture();
+        ws.setFullScreenFlag(99, 0, false);
+        ws.restore(snapshot);
+
+        assertTrue(ws.captureFullScreenFlag(99, 0, 0));
+    }
+
+    @Test
+    void normalWaterHandlingClearsAStaleRestoredFullScreenFlag() {
+        WaterSystem ws = new WaterSystem();
+        ws.loadForLevelFromProvider(new TestWaterProvider(), null,
+                99, 0, PlayerCharacter.SONIC_ALONE);
+        ws.setFullScreenFlag(99, 0, true);
+
+        ws.updateDynamic(99, 0, 0, 0x100);
+
+        assertFalse(ws.captureFullScreenFlag(99, 0, 0x100),
+                "Water_full_screen_flag is cleared before each normal height recomputation");
+    }
+
+    @Test
+    void normalWaterHandlingSetsFullScreenFromCurrentWaterAndCamera() {
+        WaterSystem ws = new WaterSystem();
+        ws.loadForLevelFromProvider(new TestWaterProvider(), null,
+                99, 0, PlayerCharacter.SONIC_ALONE);
+
+        ws.updateDynamic(99, 0, 0, 0x700);
+
+        assertTrue(ws.captureFullScreenFlag(99, 0, 0x700));
     }
 
     private static final class TestWaterProvider implements WaterDataProvider {

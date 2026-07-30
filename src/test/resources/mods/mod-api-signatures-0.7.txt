@@ -664,6 +664,7 @@ CF-ANNOTATION TYPE com.openggf.level.Palette$Color visible @com.openggf.game.Mod
 CF-ANNOTATION TYPE com.openggf.level.ParallaxManager visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.Pattern visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.PatternDesc visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.SanctuaryReturnContext visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.SeamlessLevelTransitionRequest visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.SeamlessLevelTransitionRequest$Builder visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.SeamlessLevelTransitionRequest$ObjectOffsetPolicy visible @com.openggf.game.ModApi
@@ -751,6 +752,7 @@ CF-ANNOTATION TYPE com.openggf.level.objects.PlayableSheetReader$DplcRun visible
 CF-ANNOTATION TYPE com.openggf.level.objects.PlayableSheetReader$Frame visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.PlayableSheetReader$Meta visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.PlayableSheetReader$PlayableSheet visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.objects.PoweredAttackSurface visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.RewindClassResolver visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.RewindRecreatable visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.RewindRecreateContext visible @com.openggf.game.ModApi
@@ -1332,7 +1334,7 @@ CONSTRUCTOR com.openggf.game.rewind.snapshot.SpriteManagerSnapshot$SpriteEntry p
 CONSTRUCTOR com.openggf.game.rewind.snapshot.TimerManagerSnapshot public  <init>(java.util.Map<java.lang.String,com.openggf.game.rewind.snapshot.TimerManagerSnapshot$TimerState>)
 CONSTRUCTOR com.openggf.game.rewind.snapshot.TimerManagerSnapshot$TimerState public  <init>(java.lang.String,int)
 CONSTRUCTOR com.openggf.game.rewind.snapshot.WaterSystemSnapshot public  <init>(int,java.util.Map<java.lang.String,com.openggf.game.rewind.snapshot.WaterSystemSnapshot$DynamicWaterEntry>)
-CONSTRUCTOR com.openggf.game.rewind.snapshot.WaterSystemSnapshot$DynamicWaterEntry public  <init>(int,int,int,boolean,int,boolean,boolean,int)
+CONSTRUCTOR com.openggf.game.rewind.snapshot.WaterSystemSnapshot$DynamicWaterEntry public  <init>(int,int,int,boolean,int,boolean,boolean,int,boolean)
 CONSTRUCTOR com.openggf.game.rewind.snapshot.ZoneRuntimeSnapshot public  <init>(byte[])
 CONSTRUCTOR com.openggf.game.rewind.snapshot.ZoneRuntimeSnapshot public  <init>(java.lang.String,java.lang.String,int,int,byte[])
 CONSTRUCTOR com.openggf.game.rules.AirCollisionRules public  <init>(boolean,boolean,boolean,boolean,boolean)
@@ -1428,6 +1430,7 @@ CONSTRUCTOR com.openggf.level.AbstractLevel protected  <init>(int)
 CONSTRUCTOR com.openggf.level.BigRingReturnState public  <init>(int,int,int,int,int,byte,byte,int,int)
 CONSTRUCTOR com.openggf.level.BigRingReturnState public  <init>(int,int,int,int,int,byte,byte,int,int,int)
 CONSTRUCTOR com.openggf.level.BigRingReturnState public  <init>(int,int,int,int,int,byte,byte,int,int,int,int,int,int,int,int,int,int,int)
+CONSTRUCTOR com.openggf.level.BigRingReturnState public  <init>(int,int,int,int,int,byte,byte,int,int,int,long,int,int,int,boolean,int,int,int,int,int,int,int,int)
 CONSTRUCTOR com.openggf.level.Block public  <init>()
 CONSTRUCTOR com.openggf.level.Block public  <init>(int)
 CONSTRUCTOR com.openggf.level.Chunk public  <init>()
@@ -1450,6 +1453,7 @@ CONSTRUCTOR com.openggf.level.ParallaxManager public  <init>()
 CONSTRUCTOR com.openggf.level.Pattern public  <init>()
 CONSTRUCTOR com.openggf.level.PatternDesc public  <init>()
 CONSTRUCTOR com.openggf.level.PatternDesc public  <init>(int)
+CONSTRUCTOR com.openggf.level.SanctuaryReturnContext public  <init>(int,boolean)
 CONSTRUCTOR com.openggf.level.SeamlessTransitionResourceHandoffId public  <init>(long)
 CONSTRUCTOR com.openggf.level.SeamlessTransitionResourceHandoffRegistry public  <init>()
 CONSTRUCTOR com.openggf.level.SeamlessTransitionResourceHandoffRegistry$Snapshot public  <init>(long,java.util.Map<com.openggf.level.SeamlessTransitionResourceHandoffId,com.openggf.level.SeamlessTransitionResourceHandoff>)
@@ -6775,6 +6779,7 @@ METHOD com.openggf.game.rewind.snapshot.WaterSystemSnapshot public,final  boolea
 METHOD com.openggf.game.rewind.snapshot.WaterSystemSnapshot public,final  int hashCode()
 METHOD com.openggf.game.rewind.snapshot.WaterSystemSnapshot public,final  java.lang.String toString()
 METHOD com.openggf.game.rewind.snapshot.WaterSystemSnapshot$DynamicWaterEntry public  boolean enabled()
+METHOD com.openggf.game.rewind.snapshot.WaterSystemSnapshot$DynamicWaterEntry public  boolean fullScreen()
 METHOD com.openggf.game.rewind.snapshot.WaterSystemSnapshot$DynamicWaterEntry public  boolean locked()
 METHOD com.openggf.game.rewind.snapshot.WaterSystemSnapshot$DynamicWaterEntry public  boolean rising()
 METHOD com.openggf.game.rewind.snapshot.WaterSystemSnapshot$DynamicWaterEntry public  int currentLevel()
@@ -7993,8 +7998,10 @@ METHOD com.openggf.level.AbstractLevel public  void markAllDirty()
 METHOD com.openggf.level.AbstractLevel public  void replaceBlocks(com.openggf.level.Block[])
 METHOD com.openggf.level.AbstractLevel public  void replaceChunks(com.openggf.level.Chunk[])
 METHOD com.openggf.level.AbstractLevel public  void setPalette(int,com.openggf.level.Palette)
+METHOD com.openggf.level.BigRingReturnState public  boolean waterFullScreen()
 METHOD com.openggf.level.BigRingReturnState public  byte lrbSolidBit()
 METHOD com.openggf.level.BigRingReturnState public  byte topSolidBit()
+METHOD com.openggf.level.BigRingReturnState public  int apparentZoneAndAct()
 METHOD com.openggf.level.BigRingReturnState public  int cameraMaxY()
 METHOD com.openggf.level.BigRingReturnState public  int cameraX()
 METHOD com.openggf.level.BigRingReturnState public  int cameraY()
@@ -8004,6 +8011,7 @@ METHOD com.openggf.level.BigRingReturnState public  int checkpointIndex()
 METHOD com.openggf.level.BigRingReturnState public  int checkpointX()
 METHOD com.openggf.level.BigRingReturnState public  int checkpointY()
 METHOD com.openggf.level.BigRingReturnState public  int dynamicResizeRoutine()
+METHOD com.openggf.level.BigRingReturnState public  int extraLifeFlags()
 METHOD com.openggf.level.BigRingReturnState public  int meanWaterLevel()
 METHOD com.openggf.level.BigRingReturnState public  int originAct()
 METHOD com.openggf.level.BigRingReturnState public  int originZone()
@@ -8011,6 +8019,8 @@ METHOD com.openggf.level.BigRingReturnState public  int playerX()
 METHOD com.openggf.level.BigRingReturnState public  int playerY()
 METHOD com.openggf.level.BigRingReturnState public  int rings()
 METHOD com.openggf.level.BigRingReturnState public  int starPostActivationMark()
+METHOD com.openggf.level.BigRingReturnState public  int statusSecondary()
+METHOD com.openggf.level.BigRingReturnState public  long timerFrames()
 METHOD com.openggf.level.BigRingReturnState public  void restoreCheckpointState(com.openggf.game.RespawnState)
 METHOD com.openggf.level.BigRingReturnState public  void restoreToPlayer(com.openggf.sprites.playable.AbstractPlayableSprite,com.openggf.camera.Camera,com.openggf.game.LevelState)
 METHOD com.openggf.level.BigRingReturnState public  void restoreToPlayer(com.openggf.sprites.playable.AbstractPlayableSprite,com.openggf.camera.Camera,com.openggf.game.LevelState,com.openggf.level.WaterSystem,int,int)
@@ -8191,6 +8201,7 @@ METHOD com.openggf.level.LevelManager public  int refreshObjectArtPatterns()
 METHOD com.openggf.level.LevelManager public  int reserveSidekickPatternBank(int)
 METHOD com.openggf.level.LevelManager public  int[] findPatternOffset(int,int,int,int,int)
 METHOD com.openggf.level.LevelManager public  java.util.Collection<com.openggf.level.objects.ObjectSpawn> getActiveObjectSpawns()
+METHOD com.openggf.level.LevelManager public  java.util.Optional<com.openggf.level.SanctuaryReturnContext> sanctuaryReturnContext()
 METHOD com.openggf.level.LevelManager public  java.util.OptionalInt sanctuaryReentryStage()
 METHOD com.openggf.level.LevelManager public  void advanceDynamicWaterLevel()
 METHOD com.openggf.level.LevelManager public  void advanceTitleCardVblankOnly()
@@ -8243,6 +8254,7 @@ METHOD com.openggf.level.LevelManager public  void loadZone(int) THROWS java.io.
 METHOD com.openggf.level.LevelManager public  void loadZoneAndAct(int,int) THROWS java.io.IOException
 METHOD com.openggf.level.LevelManager public  void loadZoneAndAct(int,int,com.openggf.game.LevelLoadMode) THROWS java.io.IOException
 METHOD com.openggf.level.LevelManager public  void markSanctuaryReentry(int)
+METHOD com.openggf.level.LevelManager public  void markSanctuaryReentry(int,boolean)
 METHOD com.openggf.level.LevelManager public  void markSynchronousSeamlessTransitionBoundary()
 METHOD com.openggf.level.LevelManager public  void nextAct() THROWS java.io.IOException
 METHOD com.openggf.level.LevelManager public  void nextZone() THROWS java.io.IOException
@@ -8442,11 +8454,13 @@ METHOD com.openggf.level.LevelTransitionCoordinator public  int getRequestedMusi
 METHOD com.openggf.level.LevelTransitionCoordinator public  int getRequestedZone()
 METHOD com.openggf.level.LevelTransitionCoordinator public  int getTitleCardAct()
 METHOD com.openggf.level.LevelTransitionCoordinator public  int getTitleCardZone()
+METHOD com.openggf.level.LevelTransitionCoordinator public  java.util.Optional<com.openggf.level.SanctuaryReturnContext> sanctuaryReturnContext()
 METHOD com.openggf.level.LevelTransitionCoordinator public  java.util.OptionalInt sanctuaryReentryStage()
 METHOD com.openggf.level.LevelTransitionCoordinator public  void clearBigRingReturn()
 METHOD com.openggf.level.LevelTransitionCoordinator public  void clearBonusStageReturn()
 METHOD com.openggf.level.LevelTransitionCoordinator public  void completeSanctuaryOriginRestore()
 METHOD com.openggf.level.LevelTransitionCoordinator public  void markSanctuaryReentry(int)
+METHOD com.openggf.level.LevelTransitionCoordinator public  void markSanctuaryReentry(int,boolean)
 METHOD com.openggf.level.LevelTransitionCoordinator public  void requestBonusStageEntry(com.openggf.game.BonusStageType)
 METHOD com.openggf.level.LevelTransitionCoordinator public  void requestCreditsTransition()
 METHOD com.openggf.level.LevelTransitionCoordinator public  void requestInLevelTitleCard(int,int)
@@ -8616,6 +8630,11 @@ METHOD com.openggf.level.PatternDesc public  void setPatternIndex(int)
 METHOD com.openggf.level.PatternDesc public  void setPriority(boolean)
 METHOD com.openggf.level.PatternDesc public  void setVFlip(boolean)
 METHOD com.openggf.level.PatternDesc public,static  int getIndexSize()
+METHOD com.openggf.level.SanctuaryReturnContext public  boolean succeeded()
+METHOD com.openggf.level.SanctuaryReturnContext public  int stageIndex()
+METHOD com.openggf.level.SanctuaryReturnContext public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.level.SanctuaryReturnContext public,final  int hashCode()
+METHOD com.openggf.level.SanctuaryReturnContext public,final  java.lang.String toString()
 METHOD com.openggf.level.SeamlessLevelTransitionRequest public  boolean deactivateLevelNow()
 METHOD com.openggf.level.SeamlessLevelTransitionRequest public  boolean deferRingInitializationToLevelUpdate()
 METHOD com.openggf.level.SeamlessLevelTransitionRequest public  boolean forceAirOnStaleObjectSupportLoss()
@@ -8740,6 +8759,7 @@ METHOD com.openggf.level.TransitionSstOccupant public  int originalSlot()
 METHOD com.openggf.level.TransitionSstOccupant public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.level.TransitionSstOccupant public,final  int hashCode()
 METHOD com.openggf.level.TransitionSstOccupant public,final  java.lang.String toString()
+METHOD com.openggf.level.WaterSystem public  boolean captureFullScreenFlag(int,int,int)
 METHOD com.openggf.level.WaterSystem public  boolean hasWater(int,int)
 METHOD com.openggf.level.WaterSystem public  boolean isDynamicWaterLocked(int,int)
 METHOD com.openggf.level.WaterSystem public  boolean isWaterRising(int,int)
@@ -8762,6 +8782,7 @@ METHOD com.openggf.level.WaterSystem public  void loadForLevelFromProvider(com.o
 METHOD com.openggf.level.WaterSystem public  void reset()
 METHOD com.openggf.level.WaterSystem public  void restore(com.openggf.game.rewind.snapshot.WaterSystemSnapshot)
 METHOD com.openggf.level.WaterSystem public  void setDynamicWaterLocked(int,int,boolean)
+METHOD com.openggf.level.WaterSystem public  void setFullScreenFlag(int,int,boolean)
 METHOD com.openggf.level.WaterSystem public  void setWaterEnabled(int,int,boolean)
 METHOD com.openggf.level.WaterSystem public  void setWaterLevelDirect(int,int,int)
 METHOD com.openggf.level.WaterSystem public  void setWaterLevelTarget(int,int,int)
@@ -9086,6 +9107,7 @@ METHOD com.openggf.level.objects.ObjectManager public  com.openggf.level.objects
 METHOD com.openggf.level.objects.ObjectManager public  com.openggf.level.objects.ObjectRewindDynamicCodecs$ExactAdoptionSurface exactRewindAdoptionSurface()
 METHOD com.openggf.level.objects.ObjectManager public  com.openggf.level.objects.ObjectSolidContactController solidContacts()
 METHOD com.openggf.level.objects.ObjectManager public  com.openggf.level.objects.PersistentRespawnState capturePersistentRespawn()
+METHOD com.openggf.level.objects.ObjectManager public  com.openggf.level.objects.PoweredAttackSurface poweredAttacks()
 METHOD com.openggf.level.objects.ObjectManager public  com.openggf.level.objects.TouchResponseDebugState getTouchResponseDebugState()
 METHOD com.openggf.level.objects.ObjectManager public  int allocateDynamicSlot()
 METHOD com.openggf.level.objects.ObjectManager public  int allocateDynamicSlotAvoidingCurrentPassFrees()
@@ -9119,7 +9141,6 @@ METHOD com.openggf.level.objects.ObjectManager public  java.util.Collection<com.
 METHOD com.openggf.level.objects.ObjectManager public  java.util.Collection<com.openggf.level.objects.ObjectSpawn> getActiveSpawns()
 METHOD com.openggf.level.objects.ObjectManager public  java.util.List<com.openggf.level.TransitionSstOccupant> snapshotAllLiveSstObjectsForTransition()
 METHOD com.openggf.level.objects.ObjectManager public  java.util.List<com.openggf.level.TransitionSstOccupant> snapshotPersistentTransitionOccupants()
-METHOD com.openggf.level.objects.ObjectManager public  java.util.List<com.openggf.level.objects.ObjectInstance> poweredAttackTargetReadView()
 METHOD com.openggf.level.objects.ObjectManager public  java.util.List<com.openggf.level.objects.ObjectSpawn> getAllSpawns()
 METHOD com.openggf.level.objects.ObjectManager public  java.util.Map<java.lang.Integer,java.lang.Integer> occupiedDynamicSlotIds()
 METHOD com.openggf.level.objects.ObjectManager public  short getPreContactXSpeed()
@@ -9137,7 +9158,6 @@ METHOD com.openggf.level.objects.ObjectManager public  void advanceVblaCounter()
 METHOD com.openggf.level.objects.ObjectManager public  void applyInlinePlaneSwitcher(com.openggf.level.objects.ObjectSpawn,com.openggf.game.PlayableEntity)
 METHOD com.openggf.level.objects.ObjectManager public  void applyLevelRepeatOffsetToActiveObjects(int,int)
 METHOD com.openggf.level.objects.ObjectManager public  void applyPlaneSwitchers(com.openggf.game.PlayableEntity)
-METHOD com.openggf.level.objects.ObjectManager public  void applyPoweredScreenAttack(com.openggf.game.PlayableEntity)
 METHOD com.openggf.level.objects.ObjectManager public  void captureInitialCollisionResponseBuild()
 METHOD com.openggf.level.objects.ObjectManager public  void clearRemembered()
 METHOD com.openggf.level.objects.ObjectManager public  void clearRidingObject(com.openggf.game.PlayableEntity)
@@ -9329,6 +9349,7 @@ METHOD com.openggf.level.objects.ObjectServices public  com.openggf.physics.Back
 METHOD com.openggf.level.objects.ObjectServices public  int apparentAct()
 METHOD com.openggf.level.objects.ObjectServices public  int currentZone()
 METHOD com.openggf.level.objects.ObjectServices public  int vIntRunCounter(int)
+METHOD com.openggf.level.objects.ObjectServices public  java.util.Optional<com.openggf.level.SanctuaryReturnContext> sanctuaryReturnContext()
 METHOD com.openggf.level.objects.ObjectServices public  java.util.OptionalInt sanctuaryReentryStage()
 METHOD com.openggf.level.objects.ObjectServices public  void requestSanctuaryExit()
 METHOD com.openggf.level.objects.ObjectServices public  void requestSeamlessTransition(com.openggf.level.SeamlessLevelTransitionRequest)
@@ -9848,6 +9869,8 @@ METHOD com.openggf.level.objects.PlayableSheetReader$PlayableSheet public  java.
 METHOD com.openggf.level.objects.PlayableSheetReader$PlayableSheet public  java.util.Map<java.lang.String,com.openggf.level.objects.PlayableSheetReader$Animation> animations()
 METHOD com.openggf.level.objects.PlayableSheetReader$PlayableSheet public  java.util.Map<java.lang.String,java.util.List<java.lang.Integer>> appendages()
 METHOD com.openggf.level.objects.PlayableSheetReader$PlayableSheet public,final  java.lang.String toString()
+METHOD com.openggf.level.objects.PoweredAttackSurface public  java.util.List<com.openggf.level.objects.ObjectInstance> targetReadView()
+METHOD com.openggf.level.objects.PoweredAttackSurface public  void apply(com.openggf.game.PlayableEntity)
 METHOD com.openggf.level.objects.RewindClassResolver public,abstract  java.util.Optional<java.lang.Class<?>> resolve(java.lang.String,java.lang.String)
 METHOD com.openggf.level.objects.RewindClassResolver public,abstract  java.util.Optional<java.lang.String> ownerOf(java.lang.Class<?>)
 METHOD com.openggf.level.objects.RewindRecreatable public,abstract  com.openggf.level.objects.AbstractObjectInstance recreateForRewind(com.openggf.level.objects.RewindRecreateContext)
@@ -12079,6 +12102,7 @@ METHOD com.openggf.sprites.playable.SuperStateController public  boolean activat
 METHOD com.openggf.sprites.playable.SuperStateController public  boolean isHyperFormActive()
 METHOD com.openggf.sprites.playable.SuperStateController public  boolean isRomDataPreLoaded()
 METHOD com.openggf.sprites.playable.SuperStateController public  boolean isSuper()
+METHOD com.openggf.sprites.playable.SuperStateController public  boolean isSuperTailsFormActive()
 METHOD com.openggf.sprites.playable.SuperStateController public  boolean triggerPoweredWallImpact(int)
 METHOD com.openggf.sprites.playable.SuperStateController public  com.openggf.sprites.playable.SuperState getState()
 METHOD com.openggf.sprites.playable.SuperStateController public  com.openggf.sprites.playable.SuperStateController$RewindState captureRewindState()
@@ -12089,6 +12113,7 @@ METHOD com.openggf.sprites.playable.SuperStateController public  void renderPowe
 METHOD com.openggf.sprites.playable.SuperStateController public  void reset()
 METHOD com.openggf.sprites.playable.SuperStateController public  void restoreRewindState(com.openggf.sprites.playable.SuperStateController$RewindState)
 METHOD com.openggf.sprites.playable.SuperStateController public  void setRomDataPreLoaded(boolean)
+METHOD com.openggf.sprites.playable.SuperStateController public  void triggerPoweredAirDashEffects(com.openggf.level.objects.ObjectManager)
 METHOD com.openggf.sprites.playable.SuperStateController public  void update()
 METHOD com.openggf.sprites.playable.SuperStateController$PaletteTarget public  com.openggf.level.Palette palette()
 METHOD com.openggf.sprites.playable.SuperStateController$PaletteTarget public  int gpuLine()
@@ -14265,6 +14290,7 @@ RECORD-COMPONENT com.openggf.game.rewind.snapshot.WaterSystemSnapshot dynamicSta
 RECORD-COMPONENT com.openggf.game.rewind.snapshot.WaterSystemSnapshot waterEnteredCounter int
 RECORD-COMPONENT com.openggf.game.rewind.snapshot.WaterSystemSnapshot$DynamicWaterEntry currentLevel int
 RECORD-COMPONENT com.openggf.game.rewind.snapshot.WaterSystemSnapshot$DynamicWaterEntry enabled boolean
+RECORD-COMPONENT com.openggf.game.rewind.snapshot.WaterSystemSnapshot$DynamicWaterEntry fullScreen boolean
 RECORD-COMPONENT com.openggf.game.rewind.snapshot.WaterSystemSnapshot$DynamicWaterEntry locked boolean
 RECORD-COMPONENT com.openggf.game.rewind.snapshot.WaterSystemSnapshot$DynamicWaterEntry meanLevel int
 RECORD-COMPONENT com.openggf.game.rewind.snapshot.WaterSystemSnapshot$DynamicWaterEntry rising boolean
@@ -14527,6 +14553,7 @@ RECORD-COMPONENT com.openggf.graphics.shaderlib.DisplayShaderPass wrapMode com.o
 RECORD-COMPONENT com.openggf.graphics.shaderlib.DisplayShaderPreset label java.lang.String
 RECORD-COMPONENT com.openggf.graphics.shaderlib.DisplayShaderPreset passes java.util.List<com.openggf.graphics.shaderlib.DisplayShaderPass>
 RECORD-COMPONENT com.openggf.graphics.shaderlib.DisplayShaderPreset phase com.openggf.graphics.shaderlib.ShaderPhase
+RECORD-COMPONENT com.openggf.level.BigRingReturnState apparentZoneAndAct int
 RECORD-COMPONENT com.openggf.level.BigRingReturnState cameraMaxY int
 RECORD-COMPONENT com.openggf.level.BigRingReturnState cameraX int
 RECORD-COMPONENT com.openggf.level.BigRingReturnState cameraY int
@@ -14536,6 +14563,7 @@ RECORD-COMPONENT com.openggf.level.BigRingReturnState checkpointIndex int
 RECORD-COMPONENT com.openggf.level.BigRingReturnState checkpointX int
 RECORD-COMPONENT com.openggf.level.BigRingReturnState checkpointY int
 RECORD-COMPONENT com.openggf.level.BigRingReturnState dynamicResizeRoutine int
+RECORD-COMPONENT com.openggf.level.BigRingReturnState extraLifeFlags int
 RECORD-COMPONENT com.openggf.level.BigRingReturnState lrbSolidBit byte
 RECORD-COMPONENT com.openggf.level.BigRingReturnState meanWaterLevel int
 RECORD-COMPONENT com.openggf.level.BigRingReturnState originAct int
@@ -14544,7 +14572,10 @@ RECORD-COMPONENT com.openggf.level.BigRingReturnState playerX int
 RECORD-COMPONENT com.openggf.level.BigRingReturnState playerY int
 RECORD-COMPONENT com.openggf.level.BigRingReturnState rings int
 RECORD-COMPONENT com.openggf.level.BigRingReturnState starPostActivationMark int
+RECORD-COMPONENT com.openggf.level.BigRingReturnState statusSecondary int
+RECORD-COMPONENT com.openggf.level.BigRingReturnState timerFrames long
 RECORD-COMPONENT com.openggf.level.BigRingReturnState topSolidBit byte
+RECORD-COMPONENT com.openggf.level.BigRingReturnState waterFullScreen boolean
 RECORD-COMPONENT com.openggf.level.LevelGeometry bgContiguousWidthPx int
 RECORD-COMPONENT com.openggf.level.LevelGeometry bgHeightPx int
 RECORD-COMPONENT com.openggf.level.LevelGeometry bgWidthPx int
@@ -14563,6 +14594,8 @@ RECORD-COMPONENT com.openggf.level.LevelManager$LevelRenderOptions includeWaterS
 RECORD-COMPONENT com.openggf.level.MutableLevel$ObjectBackedRingState mapping java.util.Map<com.openggf.level.objects.ObjectSpawn,java.util.List<com.openggf.level.rings.RingSpawn>>
 RECORD-COMPONENT com.openggf.level.MutableLevel$ObjectBackedRingState objects java.util.List<com.openggf.level.objects.ObjectSpawn>
 RECORD-COMPONENT com.openggf.level.MutableLevel$ObjectBackedRingState rings java.util.List<com.openggf.level.rings.RingSpawn>
+RECORD-COMPONENT com.openggf.level.SanctuaryReturnContext stageIndex int
+RECORD-COMPONENT com.openggf.level.SanctuaryReturnContext succeeded boolean
 RECORD-COMPONENT com.openggf.level.SeamlessTransitionResourceHandoffId value long
 RECORD-COMPONENT com.openggf.level.SeamlessTransitionResourceHandoffRegistry$Snapshot nextId long
 RECORD-COMPONENT com.openggf.level.SeamlessTransitionResourceHandoffRegistry$Snapshot pending java.util.Map<com.openggf.level.SeamlessTransitionResourceHandoffId,com.openggf.level.SeamlessTransitionResourceHandoff>
@@ -16199,6 +16232,7 @@ TYPE class public,final com.openggf.level.objects.PlaneSwitcherConfig SUPER java
 TYPE class public,final com.openggf.level.objects.PlatformBobHelper SUPER java.lang.Object
 TYPE class public,final com.openggf.level.objects.PlayableSheetMaterializer SUPER java.lang.Object
 TYPE class public,final com.openggf.level.objects.PlayableSheetReader SUPER java.lang.Object
+TYPE class public,final com.openggf.level.objects.PoweredAttackSurface SUPER java.lang.Object
 TYPE class public,final com.openggf.level.objects.RomObjectSnapshot SUPER java.lang.Object
 TYPE class public,final com.openggf.level.objects.SpringBounceHelper SUPER java.lang.Object
 TYPE class public,final com.openggf.level.objects.SubpixelMotion SUPER java.lang.Object
@@ -16644,6 +16678,7 @@ TYPE record public,final com.openggf.graphics.shaderlib.DisplayShaderPass SUPER 
 TYPE record public,final com.openggf.graphics.shaderlib.DisplayShaderPreset SUPER java.lang.Record
 TYPE record public,final com.openggf.level.BigRingReturnState SUPER java.lang.Record
 TYPE record public,final com.openggf.level.LevelGeometry SUPER java.lang.Record
+TYPE record public,final com.openggf.level.SanctuaryReturnContext SUPER java.lang.Record
 TYPE record public,final com.openggf.level.SeamlessTransitionResourceHandoffId SUPER java.lang.Record
 TYPE record public,final com.openggf.level.TransitionSstOccupant SUPER java.lang.Record
 TYPE record public,final com.openggf.level.objects.HudProfile SUPER java.lang.Record
@@ -17515,6 +17550,7 @@ TYPE-ANNOTATION com.openggf.level.Palette$Color @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.ParallaxManager @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.Pattern @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.PatternDesc @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.SanctuaryReturnContext @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.SeamlessLevelTransitionRequest @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.SeamlessLevelTransitionRequest$Builder @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.SeamlessLevelTransitionRequest$ObjectOffsetPolicy @com.openggf.game.ModApi
@@ -17602,6 +17638,7 @@ TYPE-ANNOTATION com.openggf.level.objects.PlayableSheetReader$DplcRun @com.openg
 TYPE-ANNOTATION com.openggf.level.objects.PlayableSheetReader$Frame @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.PlayableSheetReader$Meta @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.PlayableSheetReader$PlayableSheet @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.objects.PoweredAttackSurface @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.RewindClassResolver @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.RewindRecreatable @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.RewindRecreateContext @com.openggf.game.ModApi

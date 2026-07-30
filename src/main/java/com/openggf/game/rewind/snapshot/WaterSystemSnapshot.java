@@ -33,6 +33,7 @@ public record WaterSystemSnapshot(
             int speed,
             boolean enabled,
             boolean locked,
-            int shakeTimer
+            int shakeTimer,
+            boolean fullScreen
     ) {}
 }

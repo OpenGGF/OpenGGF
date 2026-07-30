@@ -12,6 +12,15 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSonic3kNonlinearHpzProfile {
+    @Test
+    void resultsHubCameraUsesTheRomStageTable() {
+        int[] expected = {0x15A0, 0x1540, 0x1600, 0x1500, 0x1640, 0x14B0, 0x1690};
+        for (int stage = 0; stage < expected.length; stage++) {
+            assertEquals(expected[stage], Sonic3kLevelInitProfile.hpzReturnCameraX(stage));
+        }
+        assertThrows(IllegalArgumentException.class,
+                () -> Sonic3kLevelInitProfile.hpzReturnCameraX(7));
+    }
 
     @Test
     void sanctuaryDescriptorKeepsCanonicalIdentityButSelectsRom1701Resources() {
@@ -50,7 +59,8 @@ class TestSonic3kNonlinearHpzProfile {
         assertEquals(0x48, resources.primaryPlc());
         assertEquals(0x48, resources.secondaryPlc());
         assertEquals(0x15A0, resources.cameraX());
-        assertEquals(0x0240, resources.cameraY());
+        assertEquals(0x0240, resources.cameraY(),
+                "SpecialStage_Results writes Camera_Y_pos=$240 before j_LevelSetup");
         assertEquals(0x1500, resources.minX());
         assertEquals(0x1640, resources.maxX());
         assertEquals(0x0320, resources.minY());

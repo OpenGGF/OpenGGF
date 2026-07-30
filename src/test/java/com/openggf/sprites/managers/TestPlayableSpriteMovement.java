@@ -147,6 +147,12 @@ public class TestPlayableSpriteMovement {
                 return (Boolean) method.invoke(manager);
         }
 
+        private void invokeHyperDash() throws Exception {
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("hyperDash");
+                method.setAccessible(true);
+                method.invoke(manager);
+        }
+
         private void invokeDoJumpHeight() throws Exception {
                 Method method = PlayableSpriteMovement.class.getDeclaredMethod("doJumpHeight");
                 method.setAccessible(true);
@@ -739,6 +745,33 @@ public class TestPlayableSpriteMovement {
                                 "Holding up should dash vertically upward");
                 assertEquals((short) 0x800, mockSprite.getGSpeed(),
                                 "Hyper Dash should seed ground velocity from the horizontal component");
+        }
+
+        @Test
+        public void s3kHyperDashPreservesRomInvalidDirectionMaskSemantics() throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                setGameRulesForTest(GameRules.SONIC_3K);
+                collectAllChaosEmeralds();
+                collectAllSuperEmeralds();
+                installCurrentModuleLevelState();
+                mockSprite.setRingCount(50);
+                Sonic3kSuperStateController controller = new Sonic3kSuperStateController(mockSprite);
+                mockSprite.setSuperStateController(controller);
+                assertTrue(controller.activateFromAirAbility());
+
+                setInputState(false, false, true, true, false);
+                invokeHyperDash();
+                assertEquals((short) 0, mockSprite.getXSpeed(),
+                                "raw mask 3 (up+down) uses the ROM table's zero vector");
+                assertEquals((short) 0, mockSprite.getYSpeed());
+
+                mockSprite.setDirection(Direction.LEFT);
+                setInputState(false, true, true, true, false);
+                invokeHyperDash();
+                assertEquals((short) -0x800, mockSprite.getXSpeed(),
+                                "raw masks >= $B fall back to the facing direction");
+                assertEquals((short) 0, mockSprite.getYSpeed());
+                assertEquals((short) -0x800, mockSprite.getGSpeed());
         }
 
         @Test
@@ -2113,16 +2146,18 @@ public class TestPlayableSpriteMovement {
                 setGameRulesForTest(GameRules.SONIC_3K);
                 GameServices.sprites().addSprite(mockSprite, "sonic");
 
-                Method publisherMethod = PlayableSpriteMovement.class.getDeclaredMethod("landingTiltPublisher");
-                publisherMethod.setAccessible(true);
-                @SuppressWarnings("unchecked")
-                Consumer<SensorResult[]> publisher =
-                                (Consumer<SensorResult[]>) publisherMethod.invoke(manager);
-                assertNotNull(publisher, "The configured main player owns the native landing-angle copy");
-
-                SensorResult left = new SensorResult((byte) 0xFF, (byte) -7, 0, Direction.DOWN);
-                SensorResult right = new SensorResult((byte) 3, (byte) 25, 0, Direction.DOWN);
-                publisher.accept(new SensorResult[]{left, right});
+                SensorResult left = new SensorResult((byte) 0xFF, (byte) -7, 1, Direction.DOWN);
+                SensorResult right = new SensorResult((byte) 3, (byte) 25, 1, Direction.DOWN);
+                Method collisionSystemMethod =
+                                PlayableSpriteMovement.class.getDeclaredMethod("collisionSystem");
+                collisionSystemMethod.setAccessible(true);
+                CollisionSystem collisionSystem =
+                                (CollisionSystem) collisionSystemMethod.invoke(manager);
+                collisionSystem.publishGroundAngleOutputs(false, left, right);
+                Method capture = PlayableSpriteMovement.class.getDeclaredMethod(
+                                "captureTiltAnglesFromCollisionSystem", CollisionSystem.class);
+                capture.setAccessible(true);
+                capture.invoke(manager, collisionSystem);
 
                 Field nextTilt = PlayableSpriteMovement.class.getDeclaredField("latchedNextTilt");
                 Field tilt = PlayableSpriteMovement.class.getDeclaredField("latchedTilt");
@@ -2135,8 +2170,9 @@ public class TestPlayableSpriteMovement {
                 sidekick.setCpuControlled(true);
                 GameServices.sprites().addSprite(sidekick, "tails");
                 PlayableSpriteMovement sidekickMovement = new PlayableSpriteMovement(sidekick);
-                assertNull(publisherMethod.invoke(sidekickMovement),
-                                "CPU Tails retains its separate player-tail cadence");
+                assertEquals(0, nextTilt.getInt(sidekickMovement));
+                assertEquals(0, tilt.getInt(sidekickMovement),
+                                "CPU Tails retains its separate player-tail cadence until dispatched");
         }
 
         @Test

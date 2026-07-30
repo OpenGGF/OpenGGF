@@ -75,6 +75,19 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private static final short YSPEED_LANDING_CAP = (short) 0xFC0;
 	private static final int UPWARD_VELOCITY_CAP = -0xFC0;
 	private static final short HYPER_DASH_SPEED = (short) 0x800;
+	/** ROM {@code Sonic_HyperDash_Velocities}, indexed by raw D-pad mask minus one. */
+	private static final short[] HYPER_DASH_VELOCITIES = {
+			0, -0x800,
+			0, 0x800,
+			0, 0,
+			-0x800, 0,
+			-0x800, -0x800,
+			-0x800, 0x800,
+			0, 0,
+			0x800, 0,
+			0x800, -0x800,
+			0x800, 0x800
+	};
 
 	// Movement constants
 	private static final int MOVE_LOCK_FRAMES = 0x1E;
@@ -1583,26 +1596,20 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 	/** ROM: Sonic_HyperDash (sonic3k.asm:23482-23523) */
 	private void hyperDash() {
-		int horizontal = 0;
-		if (inputLeft && !inputRight) {
-			horizontal = -1;
-		} else if (inputRight && !inputLeft) {
-			horizontal = 1;
+		int dpad = (inputUp ? 1 : 0)
+				| (inputDown ? 2 : 0)
+				| (inputLeft ? 4 : 0)
+				| (inputRight ? 8 : 0);
+		short xVel;
+		short yVel;
+		if (dpad == 0 || dpad >= 0xB) {
+			xVel = sprite.getDirection() == Direction.RIGHT
+					? HYPER_DASH_SPEED : (short) -HYPER_DASH_SPEED;
+			yVel = 0;
+		} else {
+			xVel = HYPER_DASH_VELOCITIES[(dpad - 1) * 2];
+			yVel = HYPER_DASH_VELOCITIES[(dpad - 1) * 2 + 1];
 		}
-
-		int vertical = 0;
-		if (inputUp && !inputDown) {
-			vertical = -1;
-		} else if (inputDown && !inputUp) {
-			vertical = 1;
-		}
-
-		if (horizontal == 0 && vertical == 0) {
-			horizontal = sprite.getDirection() == Direction.RIGHT ? 1 : -1;
-		}
-
-		short xVel = (short) (horizontal * HYPER_DASH_SPEED);
-		short yVel = (short) (vertical * HYPER_DASH_SPEED);
 		sprite.setXSpeed(xVel);
 		sprite.setYSpeed(yVel);
 		sprite.setGSpeed(xVel);
@@ -1612,9 +1619,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			camera.setHorizScrollDelay(32);
 		}
 		SuperStateController controller = sprite.getSuperStateController();
-		if (controller instanceof com.openggf.game.sonic3k.Sonic3kSuperStateController s3kController) {
+		if (controller != null) {
 			var levelManager = sprite.currentLevelManagerIfAvailable();
-			s3kController.triggerHyperSonicDashEffects(
+			controller.triggerPoweredAirDashEffects(
 					levelManager != null ? levelManager.getObjectManager() : null);
 		}
 		audioManager.playSfx(GameSound.SPINDASH_RELEASE);

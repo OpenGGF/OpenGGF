@@ -14,6 +14,11 @@ public final class NativePositionOps {
         player.setCentreXPreserveSubpixel((short) x);
     }
 
+    public static void writeXPosPreserveSubpixel(PlayableEntity player, int x) {
+        int nativeDelta = (short) x - player.getCentreX();
+        player.shiftX(nativeDelta);
+    }
+
     public static void writeYPosPreserveSubpixel(AbstractPlayableSprite player, int y) {
         player.setCentreYPreserveSubpixel((short) y);
     }

@@ -3,6 +3,7 @@ package com.openggf.level;
 import com.openggf.camera.Camera;
 import com.openggf.game.LevelState;
 import com.openggf.game.ModApi;
+import com.openggf.game.ShieldType;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /**
@@ -23,6 +24,11 @@ public record BigRingReturnState(
         int cameraMaxY,
         int dynamicResizeRoutine,
         int meanWaterLevel,
+        long timerFrames,
+        int extraLifeFlags,
+        int statusSecondary,
+        int apparentZoneAndAct,
+        boolean waterFullScreen,
         int originZone,
         int originAct,
         int checkpointIndex,
@@ -35,10 +41,26 @@ public record BigRingReturnState(
     public BigRingReturnState(
             int playerX, int playerY, int cameraX, int cameraY, int rings,
             byte topSolidBit, byte lrbSolidBit, int cameraMaxY,
+            int dynamicResizeRoutine, int meanWaterLevel,
+            int originZone, int originAct, int checkpointIndex,
+            int starPostActivationMark, int checkpointX, int checkpointY,
+            int checkpointCameraX, int checkpointCameraY
+    ) {
+        this(playerX, playerY, cameraX, cameraY, rings, topSolidBit, lrbSolidBit,
+                cameraMaxY, dynamicResizeRoutine, meanWaterLevel,
+                0, 0, 0, -1, false,
+                originZone, originAct, checkpointIndex, starPostActivationMark,
+                checkpointX, checkpointY, checkpointCameraX, checkpointCameraY);
+    }
+
+    public BigRingReturnState(
+            int playerX, int playerY, int cameraX, int cameraY, int rings,
+            byte topSolidBit, byte lrbSolidBit, int cameraMaxY,
             int dynamicResizeRoutine, int meanWaterLevel
     ) {
         this(playerX, playerY, cameraX, cameraY, rings, topSolidBit, lrbSolidBit,
                 cameraMaxY, dynamicResizeRoutine, meanWaterLevel,
+                0, 0, 0, -1, false,
                 -1, -1, -1, -1, 0, 0, 0, 0);
     }
 
@@ -83,7 +105,10 @@ public record BigRingReturnState(
         camera.updatePosition(true);
         if (levelState != null) {
             levelState.setRings(rings);
+            levelState.setTimerFrames(timerFrames);
+            levelState.setRingExtraLifeFlags(extraLifeFlags);
         }
+        restoreShield(player);
         player.setTopSolidBit(topSolidBit);
         player.setLrbSolidBit(lrbSolidBit);
         camera.setMaxY((short) cameraMaxY);
@@ -95,6 +120,21 @@ public record BigRingReturnState(
         if (meanWaterLevel > 0 && waterSystem != null && waterSystem.hasWater(zoneId, actId)) {
             waterSystem.setWaterLevelDirect(zoneId, actId, meanWaterLevel);
             waterSystem.setWaterLevelTarget(zoneId, actId, meanWaterLevel);
+        }
+        if (waterSystem != null) {
+            waterSystem.setFullScreenFlag(zoneId, actId, waterFullScreen);
+        }
+    }
+
+    private void restoreShield(AbstractPlayableSprite player) {
+        player.removeShield();
+        int shieldBits = statusSecondary & 0x70;
+        if ((shieldBits & (1 << 4)) != 0) {
+            player.giveShield(ShieldType.FIRE);
+        } else if ((shieldBits & (1 << 5)) != 0) {
+            player.giveShield(ShieldType.LIGHTNING);
+        } else if ((shieldBits & (1 << 6)) != 0) {
+            player.giveShield(ShieldType.BUBBLE);
         }
     }
 }

@@ -2327,7 +2327,8 @@ public class GameLoop {
 
         // Publish only for providers that retain legacy GameLoop ownership.
         if (emeraldCollected) {
-            publishEmeraldRewardIfLoopOwned(getActiveSpecialStageProvider(), gameState,
+            SpecialStageTransitionSupport.publishRewardIfLoopOwned(
+                    getActiveSpecialStageProvider(), gameState,
                     ssStageIndex, activeSpecialStageRewardKind);
         }
 
@@ -2407,7 +2408,8 @@ public class GameLoop {
         audioManager.fadeOutMusic();
 
         // Determine which stage to enter
-        final int stageIndex = resolveSpecialStageIndex(request, ssProvider, gameState);
+        final int stageIndex = SpecialStageTransitionSupport.resolveStageIndex(
+                request, ssProvider, gameState);
         activeSpecialStageRewardKind = request.rewardKind();
 
         if (screenAlreadyFaded) {
@@ -2425,24 +2427,6 @@ public class GameLoop {
             });
             LOGGER.info("Starting fade-to-white for Special Stage " + (stageIndex + 1));
         }
-    }
-
-    static int resolveSpecialStageIndex(SpecialStageEntryRequest request,
-                                        SpecialStageProvider provider,
-                                        GameStateManager gameState) {
-        return request.forcedStageIndex() != null
-                ? request.forcedStageIndex()
-                : provider.consumeStageIndexForEntry(gameState);
-    }
-
-    static void publishEmeraldRewardIfLoopOwned(SpecialStageProvider provider,
-                                                GameStateManager gameState,
-                                                int stageIndex,
-                                                EmeraldRewardKind rewardKind) {
-        if (provider.ownsEmeraldReward()) {
-            return;
-        }
-        provider.publishEmeraldReward(gameState, stageIndex, rewardKind);
     }
 
     /**
@@ -2988,7 +2972,8 @@ public class GameLoop {
 
         // Mark emerald as collected now (so it shows in results screen)
         if (emeraldCollected) {
-            publishEmeraldRewardIfLoopOwned(ssProvider, gameState, ssStageIndex,
+            SpecialStageTransitionSupport.publishRewardIfLoopOwned(
+                    ssProvider, gameState, ssStageIndex,
                     activeSpecialStageRewardKind);
         }
 
@@ -3100,8 +3085,10 @@ public class GameLoop {
         // ROM HPZ results rebuild the sanctuary, set
         // HPZ_special_stage_completed, and retain Saved2 until the player
         // leaves through the teleporter.
-        if (activeSpecialStageRewardKind == EmeraldRewardKind.SUPER_EMERALD) {
-            levelManager.markSanctuaryReentry(ssStageIndex);
+        boolean sanctuaryReturn = SpecialStageTransitionSupport.returnsDirectlyToSanctuary(
+                activeSpecialStageRewardKind);
+        if (sanctuaryReturn) {
+            levelManager.markSanctuaryReentry(ssStageIndex, ssEmeraldCollected);
         }
 
         // ROM: returning from special stage always runs the full Level: function,
@@ -3116,6 +3103,23 @@ public class GameLoop {
         // Consume any pending title card request to prevent double title card
         // (we're manually entering the title card below)
         levelManager.consumeTitleCardRequest();
+
+        if (sanctuaryReturn) {
+            // ROM GameMode_SpecialStageResults installs the HPZ hub directly;
+            // there is no intervening HPZ title card. The controller consumes
+            // the typed return context and runs success choreography or exposes
+            // the failed pedestal immediately.
+            returningFromSpecialStage = false;
+            GameMode oldMode = changeGameModeForBoundary(GameMode.LEVEL);
+            if (gameModeChangeListener != null) {
+                gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
+            }
+            fadeManager.startFadeFromWhite(null);
+            requestSessionSave(SaveReason.SPECIAL_STAGE_SAVE);
+            LOGGER.info("Exited Results Screen directly into the HPZ sanctuary hub"
+                    + " (stage=" + ssStageIndex + ", success=" + ssEmeraldCollected + ")");
+            return;
+        }
 
         // Set flag so exitTitleCard knows to restore checkpoint state
         returningFromSpecialStage = true;
@@ -3221,25 +3225,9 @@ public class GameLoop {
         }
     }
 
-    private void restoreBigRingReturn(AbstractPlayableSprite playable,
-                                      boolean sanctuaryOriginRestore) {
-        BigRingReturnState br = levelManager.getBigRingReturn();
-        if (br == null) {
-            return;
-        }
-        br.restoreToPlayer(playable, camera, levelManager.getLevelGamestate(),
-                waterSystem, levelManager.getFeatureZoneId(), levelManager.getFeatureActId());
-        br.restoreCheckpointState(levelManager.getCheckpointState());
-        // ROM: restore Dynamic_resize_routine after level initialization reset it.
-        LevelEventProvider eventProvider = GameServices.module().getLevelEventProvider();
-        if (eventProvider instanceof AbstractLevelEventManager eventMgr) {
-            eventMgr.restoreEventRoutineState(br.dynamicResizeRoutine(), 0);
-        }
-        if (sanctuaryOriginRestore) {
-            levelManager.completeSanctuaryOriginRestore();
-        } else {
-            levelManager.clearBigRingReturn();
-        }
+    private void restoreBigRingReturn(AbstractPlayableSprite playable, boolean sanctuaryOriginRestore) {
+        SpecialStageTransitionSupport.restoreBigRingReturn(levelManager.getBigRingReturn(),
+                playable, camera, levelManager, waterSystem, sanctuaryOriginRestore);
     }
 
     /**

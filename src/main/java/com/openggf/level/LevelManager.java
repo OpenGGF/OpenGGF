@@ -3801,8 +3801,16 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         return transitions.sanctuaryReentryStage();
     }
 
+    public java.util.Optional<SanctuaryReturnContext> sanctuaryReturnContext() {
+        return transitions.sanctuaryReturnContext();
+    }
+
     public void markSanctuaryReentry(int stageIndex) {
         transitions.markSanctuaryReentry(stageIndex);
+    }
+
+    public void markSanctuaryReentry(int stageIndex, boolean succeeded) {
+        transitions.markSanctuaryReentry(stageIndex, succeeded);
     }
 
     public boolean requestSanctuaryExit() {

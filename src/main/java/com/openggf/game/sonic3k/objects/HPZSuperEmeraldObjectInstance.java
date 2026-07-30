@@ -9,6 +9,7 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
@@ -17,6 +18,8 @@ import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 
@@ -30,7 +33,7 @@ public final class HPZSuperEmeraldObjectInstance extends AbstractObjectInstance
     };
     private static final SolidObjectParams SOLID = new SolidObjectParams(0x1B, 0x10, 0x10);
     private static final int[] COMPLETED_PALETTE_LINES = {2, 0, 2, 0, 0, 1, 3};
-    private static final int[] KNUCKLES_COMPLETED_PALETTE_LINES = {2, 1, 2, 2, 0, 0, 3};
+    private static final int[] KNUCKLES_COMPLETED_PALETTE_LINES = {2, 1, 2, 1, 0, 0, 3};
 
     public enum Display { GRAY, COLORED }
     public enum SanctuaryPlayerMode { SONIC_TAILS, KNUCKLES }
@@ -40,10 +43,12 @@ public final class HPZSuperEmeraldObjectInstance extends AbstractObjectInstance
     private S3kEmeraldProgression progression;
     private S3kSanctuaryRuntimeState runtime;
     private boolean requestPublished;
+    private int lastFrameCounter;
 
     private record RewindExtra(
             S3kSanctuaryRuntimeState.Snapshot runtime,
             boolean requestPublished,
+            int lastFrameCounter,
             int subtype,
             ObjectRefId parentId)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
@@ -59,7 +64,7 @@ public final class HPZSuperEmeraldObjectInstance extends AbstractObjectInstance
         this.progression = progression;
         this.runtime = runtime;
         if (progression != null && progression.state(subtype) == S3kEmeraldProgression.EmeraldState.ABSENT) {
-            setDestroyed(true);
+            ObjectLifetimeOps.deleteNoRespawn(this);
         }
     }
 
@@ -86,12 +91,13 @@ public final class HPZSuperEmeraldObjectInstance extends AbstractObjectInstance
             runtime = new S3kSanctuaryRuntimeState(progression, true);
         }
         if (progression.state(subtype) == S3kEmeraldProgression.EmeraldState.ABSENT) {
-            setDestroyed(true);
+            ObjectLifetimeOps.deleteNoRespawn(this);
         }
     }
 
     @Override
     public void update(int frameCounter, PlayableEntity player) {
+        lastFrameCounter = frameCounter;
         ensureState();
         if (isDestroyed() || requestPublished) {
             return;
@@ -103,13 +109,24 @@ public final class HPZSuperEmeraldObjectInstance extends AbstractObjectInstance
         }
         if (isSelectable() && tryServices() != null && services().objectManager() != null
                 && services().objectManager().isRidingObject(player, this)) {
-            beginSelection();
+            beginSelection(player instanceof AbstractPlayableSprite sprite ? sprite : null);
         }
     }
 
     public boolean beginSelection() {
+        return beginSelection(null);
+    }
+
+    boolean beginSelection(AbstractPlayableSprite sprite) {
         ensureState();
-        return runtime.beginPedestalSelection(subtype);
+        if (!runtime.beginPedestalSelection(subtype)) {
+            return false;
+        }
+        if (sprite != null) {
+            ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(sprite);
+            sprite.setAnimationId(5);
+        }
+        return true;
     }
 
     public void updateSelection() {
@@ -128,7 +145,11 @@ public final class HPZSuperEmeraldObjectInstance extends AbstractObjectInstance
 
     public Display display() {
         ensureState();
-        return progression.state(subtype) == S3kEmeraldProgression.EmeraldState.SUPER
+        if (runtime.forceGrayPedestal(subtype)) {
+            return Display.GRAY;
+        }
+        return (progression.state(subtype) == S3kEmeraldProgression.EmeraldState.SUPER
+                || runtime.revealPending(subtype))
                 ? Display.COLORED : Display.GRAY;
     }
 
@@ -146,7 +167,8 @@ public final class HPZSuperEmeraldObjectInstance extends AbstractObjectInstance
         if (tryServices() != null) {
             for (PlayableEntity player : services().playerQuery().playersFor(
                     com.openggf.level.objects.ObjectPlayerParticipationPolicy.MAIN_ONLY_NATIVE)) {
-                if (player.getClass().getSimpleName().contains("Knuckles")) {
+                if (player instanceof AbstractPlayableSprite sprite
+                        && "knuckles".equalsIgnoreCase(sprite.getCode())) {
                     return SanctuaryPlayerMode.KNUCKLES;
                 }
             }
@@ -159,13 +181,24 @@ public final class HPZSuperEmeraldObjectInstance extends AbstractObjectInstance
         return parentRef == controller && runtime == controller.runtimeForChild();
     }
 
+    int mappingFrameForTest(int frameCounter) {
+        ensureState();
+        return progression.state(subtype) == S3kEmeraldProgression.EmeraldState.SUPER
+                && !runtime.forceGrayPedestal(subtype) && (frameCounter & 1) != 0
+                ? 7 : display() == Display.COLORED ? subtype : 0x1E;
+    }
+
     @Override public SolidObjectParams getSolidParams() { return SOLID; }
     @Override public boolean isTopSolidOnly() { return true; }
     @Override public boolean isSolidFor(PlayableEntity player) { return !isDestroyed(); }
     @Override public int getX() { return POSITIONS[subtype][0]; }
     @Override public int getY() { return POSITIONS[subtype][1]; }
     @Override public int getOutOfRangeReferenceX() { return getX(); }
-    @Override public int getPriorityBucket() { return subtype == 1 || subtype == 2 ? 1 : 4; }
+    @Override public int getPriorityBucket() {
+        ensureState();
+        int state = progression.state(subtype).romValue();
+        return state == 1 || state == 2 ? 1 : 4;
+    }
     @Override public boolean isHighPriority() { return true; }
 
     @Override
@@ -174,7 +207,8 @@ public final class HPZSuperEmeraldObjectInstance extends AbstractObjectInstance
         ObjectRefId parentId = context.identityTable()
                 .map(table -> table.encodeObject(parentRef)).orElse(null);
         return super.captureRewindState(context).withObjectSubclassExtra(
-                new RewindExtra(runtime.capture(), requestPublished, subtype, parentId));
+                new RewindExtra(runtime.capture(), requestPublished, lastFrameCounter,
+                        subtype, parentId));
     }
 
     @Override
@@ -189,6 +223,7 @@ public final class HPZSuperEmeraldObjectInstance extends AbstractObjectInstance
             ensureState();
             runtime.restore(extra.runtime());
             requestPublished = extra.requestPublished();
+            lastFrameCounter = extra.lastFrameCounter();
             subtype = extra.subtype();
         }
     }
@@ -196,14 +231,17 @@ public final class HPZSuperEmeraldObjectInstance extends AbstractObjectInstance
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         if (isDestroyed()) return;
-        String key = display() == Display.COLORED
+        boolean colored = display() == Display.COLORED;
+        boolean flicker = progression.state(subtype) == S3kEmeraldProgression.EmeraldState.SUPER
+                && !runtime.forceGrayPedestal(subtype) && (lastFrameCounter & 1) != 0;
+        String key = colored
                 ? Sonic3kObjectArtKeys.HPZ_MASTER_EMERALD
                 : Sonic3kObjectArtKeys.HPZ_GRAY_EMERALD;
         PatternSpriteRenderer renderer = getRenderer(key);
         if (renderer != null) {
-            renderer.drawFrameIndex(display() == Display.COLORED ? subtype : 0,
+            renderer.drawFrameIndex(flicker ? 7 : colored ? subtype : 0,
                     getX(), getY(), false, false,
-                    display() == Display.COLORED
+                    flicker ? 0 : colored
                             ? completedPaletteLine(sanctuaryPlayerMode()) : 0);
         }
     }

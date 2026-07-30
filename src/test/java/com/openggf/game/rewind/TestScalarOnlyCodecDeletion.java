@@ -1127,7 +1127,7 @@ public class TestScalarOnlyCodecDeletion {
                             "halfWidth"),
                     new MutableFieldCoverageCandidate(
                             "com.openggf.game.sonic3k.objects.Sonic3kSSEntryRingObjectInstance",
-                            "bitIndex", "hiddenPalaceRoute"),
+                            "bitIndex", "forcedSanctuaryRoute"),
                     new MutableFieldCoverageCandidate(
                             "com.openggf.game.sonic3k.objects.Sonic3kSpringObjectInstance",
                             "redSpring"),
@@ -6750,7 +6750,6 @@ public class TestScalarOnlyCodecDeletion {
         S3kResultsScreenObjectInstance source = newResultsRestoreShell(stub);
         setObjectField(source, "character", PlayerCharacter.TAILS_ALONE);
         setIntField(source, "act", 1);
-        invokeNoArgMethod(source, "createElements");
         setIntField(source, "timeBonus", 4321);
         setIntField(source, "ringBonus", 210);
         setIntField(source, "totalBonusCountUp", 1234);
@@ -6819,7 +6818,9 @@ public class TestScalarOnlyCodecDeletion {
         holder[0] = objectManager;
         objectManager.reset(0);
         S3kResultsScreenObjectInstance graphRoot = objectManager.createDynamicObject(
-                () -> new S3kResultsScreenObjectInstance(PlayerCharacter.TAILS_ALONE, 1));
+                () -> newResultsRestoreShell(graphServices));
+        setObjectField(graphRoot, "character", PlayerCharacter.TAILS_ALONE);
+        setIntField(graphRoot, "act", 1);
         invokeNoArg(graphRoot, "createResultChildSsts");
 
         List<S3kResultsElementObjectInstance> sourceChildren =

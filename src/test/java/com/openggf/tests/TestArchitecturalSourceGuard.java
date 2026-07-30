@@ -111,7 +111,11 @@ class TestArchitecturalSourceGuard {
             // 2026-07-28: develop's LevelIterationAdmissionController boundary and
             // vblank-hold gating merge with next's time-attack and multiplayer frame
             // hooks. Both sides remain delegating calls, not inlined logic.
-            GAME_LOOP_PATH, 3245
+            // 2026-07-29: exact special-stage reward requests and Saved2 restoration
+            // add boundary wiring while stage selection, reward publication, and
+            // Saved2 application move into SpecialStageTransitionSupport. Freeze the
+            // post-extraction facade size.
+            GAME_LOOP_PATH, 3276
     );
     private static final int ENGINE_MAX_LARGE_METHODS = 3;
     private static final int ENGINE_LARGE_METHOD_THRESHOLD = 100;

@@ -522,6 +522,12 @@ public class DefaultObjectServices implements ObjectServices {
     }
 
     @Override
+    public java.util.Optional<com.openggf.level.SanctuaryReturnContext>
+            sanctuaryReturnContext() {
+        return lm().sanctuaryReturnContext();
+    }
+
+    @Override
     public void requestSanctuaryExit() {
         lm().requestSanctuaryExit();
     }

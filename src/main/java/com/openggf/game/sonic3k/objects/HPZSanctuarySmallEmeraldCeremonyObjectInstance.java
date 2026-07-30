@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.S3kEmeraldProgression;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -9,6 +10,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 
@@ -31,8 +33,11 @@ public final class HPZSanctuarySmallEmeraldCeremonyObjectInstance
     private int radius;
     private final int[] angles = START_ANGLES.clone();
     private int arrivedMask;
+    private int participatingMask = 0x7F;
+    private int departedMask;
     private boolean completionSoundPlayed;
-    private int departureTimer = -1;
+    private boolean departing;
+    private int lastFrameCounter;
     private final int[] departureXFixed = new int[7];
     private final int[] departureYFixed = new int[7];
     private static final int[] DEPARTURE_X_VELOCITY =
@@ -43,7 +48,8 @@ public final class HPZSanctuarySmallEmeraldCeremonyObjectInstance
     private record RewindExtra(
             int centreX, int centreYFixed, int riseTimer, int radius,
             int[] angles, int arrivedMask, boolean completionSoundPlayed,
-            int departureTimer, int[] departureXFixed, int[] departureYFixed)
+            int participatingMask, int departedMask, boolean departing,
+            int lastFrameCounter, int[] departureXFixed, int[] departureYFixed)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {
         private RewindExtra {
             angles = angles.clone();
@@ -54,6 +60,20 @@ public final class HPZSanctuarySmallEmeraldCeremonyObjectInstance
 
     public HPZSanctuarySmallEmeraldCeremonyObjectInstance() {
         this(new ObjectSpawn(0x1640, 0x3AC, 0xB5, 0, 0, false, 0));
+    }
+
+    public HPZSanctuarySmallEmeraldCeremonyObjectInstance(
+            S3kEmeraldProgression progression) {
+        this(new ObjectSpawn(0x1640, 0x3AC, 0xB5, 0, 0, false, 0));
+        participatingMask = 0;
+        for (int i = 0; i < 7; i++) {
+            if (progression.state(i) == S3kEmeraldProgression.EmeraldState.CHAOS) {
+                participatingMask |= 1 << i;
+            } else {
+                arrivedMask |= 1 << i;
+                departedMask |= 1 << i;
+            }
+        }
     }
 
     private HPZSanctuarySmallEmeraldCeremonyObjectInstance(ObjectSpawn spawn) {
@@ -68,6 +88,7 @@ public final class HPZSanctuarySmallEmeraldCeremonyObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity player) {
+        lastFrameCounter = frameCounter;
         if (riseTimer == 0x7F && tryServices() != null) {
             services().playSfx(Sonic3kSfx.SIGNPOST.id);
         }
@@ -78,13 +99,20 @@ public final class HPZSanctuarySmallEmeraldCeremonyObjectInstance
                 applyRiseCompletePlayerMappings();
             }
         }
-        if (departureTimer >= 0) {
+        if (departing) {
             for (int i = 0; i < departureXFixed.length; i++) {
+                if ((participatingMask & (1 << i)) == 0
+                        || (departedMask & (1 << i)) != 0) {
+                    continue;
+                }
                 departureXFixed[i] += DEPARTURE_X_VELOCITY[i];
                 departureYFixed[i] += DEPARTURE_Y_VELOCITY[i];
+                if (isDepartureOffscreen(i)) {
+                    departedMask |= 1 << i;
+                }
             }
-            if (++departureTimer >= 0x100) {
-                setDestroyed(true);
+            if ((departedMask & participatingMask) == participatingMask) {
+                ObjectLifetimeOps.expireDynamic(this);
             }
             return;
         }
@@ -114,9 +142,9 @@ public final class HPZSanctuarySmallEmeraldCeremonyObjectInstance
         for (PlayableEntity entity : services().playerQuery().playersFor(
                 com.openggf.level.objects.ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
             if (entity instanceof com.openggf.sprites.playable.AbstractPlayableSprite sprite) {
-                String name = sprite.getClass().getSimpleName();
-                sprite.setMappingFrame(name.contains("Tails") ? 0xB0
-                        : name.contains("Knuckles") ? 0xD6 : 0xC4);
+                String code = sprite.getCode();
+                sprite.setMappingFrame("tails".equalsIgnoreCase(code) ? 0xB0
+                        : "knuckles".equalsIgnoreCase(code) ? 0xD6 : 0xC4);
             }
         }
     }
@@ -129,11 +157,33 @@ public final class HPZSanctuarySmallEmeraldCeremonyObjectInstance
             departureYFixed[i] = (getY()
                     + (TrigLookupTable.cosHex(angles[i]) * pixelRadius >> 8)) << 8;
         }
-        departureTimer = 0;
+        departing = true;
+    }
+
+    private boolean isDepartureOffscreen(int index) {
+        int x = departureXFixed[index] >> 8;
+        int y = departureYFixed[index] >> 8;
+        if (tryServices() == null) {
+            return y < -0x20 || x < -0x20 || x > 0x8000;
+        }
+        int cameraX = services().camera().getX() & 0xFFFF;
+        int cameraY = services().camera().getY() & 0xFFFF;
+        return x < cameraX - 0x20 || x > cameraX + 0x160
+                || y < cameraY - 0x20 || y > cameraY + 0x100;
     }
 
     private static int byteAngleDistance(int left, int right) {
         return Math.abs((byte) (left - right));
+    }
+
+    boolean participatesForTest(int subtype) {
+        return (participatingMask & (1 << subtype)) != 0;
+    }
+
+    boolean shouldDrawForTest(int frameCounter, int subtype) {
+        return (frameCounter & 1) == 0
+                && participatesForTest(subtype)
+                && (departedMask & (1 << subtype)) == 0;
     }
 
     @Override public int getX() { return centreX; }
@@ -148,16 +198,25 @@ public final class HPZSanctuarySmallEmeraldCeremonyObjectInstance
         if (renderer == null) {
             return;
         }
+        if ((lastFrameCounter & 1) != 0) {
+            return;
+        }
         boolean knuckles = services().playerQuery().playersFor(
                         com.openggf.level.objects.ObjectPlayerParticipationPolicy.MAIN_ONLY_NATIVE)
-                .stream().anyMatch(p -> p.getClass().getSimpleName().contains("Knuckles"));
+                .stream().anyMatch(p -> p instanceof
+                        com.openggf.sprites.playable.AbstractPlayableSprite sprite
+                        && "knuckles".equalsIgnoreCase(sprite.getCode()));
         int[] palettes = knuckles ? PALETTES_KNUCKLES : PALETTES_SONIC;
         int pixelRadius = radius >> 8;
         for (int i = 0; i < angles.length; i++) {
+            if ((participatingMask & (1 << i)) == 0
+                    || (departedMask & (1 << i)) != 0) {
+                continue;
+            }
             int angle = angles[i] & 0xFF;
-            int x = departureTimer >= 0 ? departureXFixed[i] >> 8
+            int x = departing ? departureXFixed[i] >> 8
                     : centreX + (TrigLookupTable.sinHex(angle) * pixelRadius >> 8);
-            int y = departureTimer >= 0 ? departureYFixed[i] >> 8
+            int y = departing ? departureYFixed[i] >> 8
                     : getY() + (TrigLookupTable.cosHex(angle) * pixelRadius >> 8);
             renderer.drawFrameIndex(i, x, y, false, false, palettes[i]);
         }
@@ -167,7 +226,8 @@ public final class HPZSanctuarySmallEmeraldCeremonyObjectInstance
     public PerObjectRewindSnapshot captureRewindState() {
         return super.captureRewindState().withObjectSubclassExtra(new RewindExtra(
                 centreX, centreYFixed, riseTimer, radius, angles, arrivedMask,
-                completionSoundPlayed, departureTimer, departureXFixed,
+                completionSoundPlayed, participatingMask, departedMask, departing,
+                lastFrameCounter, departureXFixed,
                 departureYFixed));
     }
 
@@ -182,7 +242,10 @@ public final class HPZSanctuarySmallEmeraldCeremonyObjectInstance
             System.arraycopy(extra.angles(), 0, angles, 0, angles.length);
             arrivedMask = extra.arrivedMask();
             completionSoundPlayed = extra.completionSoundPlayed();
-            departureTimer = extra.departureTimer();
+            participatingMask = extra.participatingMask();
+            departedMask = extra.departedMask();
+            departing = extra.departing();
+            lastFrameCounter = extra.lastFrameCounter();
             System.arraycopy(extra.departureXFixed(), 0, departureXFixed, 0,
                     departureXFixed.length);
             System.arraycopy(extra.departureYFixed(), 0, departureYFixed, 0,

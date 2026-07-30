@@ -3,6 +3,7 @@ package com.openggf.level;
 import com.openggf.game.BonusStageType;
 import com.openggf.game.SpecialStageEntryRequest;
 
+import java.util.Optional;
 import java.util.OptionalInt;
 
 /**
@@ -22,12 +23,14 @@ public class LevelTransitionCoordinator {
 
     // ── S3K big ring return (ROM: Saved2_* variables) ──────────
     private BigRingReturnState bigRingReturn;
-    private int sanctuaryReentryStage = -1;
+    private SanctuaryReturnContext sanctuaryReturnContext;
+    private boolean sanctuaryReturnContextExplicit;
     private boolean sanctuaryOriginRestorePending;
 
     record SanctuaryRewindState(
             BigRingReturnState bigRingReturn,
-            int sanctuaryReentryStage,
+            SanctuaryReturnContext sanctuaryReturnContext,
+            boolean sanctuaryReturnContextExplicit,
             boolean sanctuaryOriginRestorePending,
             boolean specificZoneActRequested,
             int requestedZone,
@@ -185,16 +188,25 @@ public class LevelTransitionCoordinator {
 
     /** Records the ROM HPZ_special_stage_completed re-entry context. */
     public void markSanctuaryReentry(int stageIndex) {
-        if (stageIndex < 0) {
-            throw new IllegalArgumentException("stageIndex");
-        }
-        sanctuaryReentryStage = stageIndex;
+        sanctuaryReturnContext = new SanctuaryReturnContext(stageIndex, false);
+        sanctuaryReturnContextExplicit = false;
+    }
+
+    /** Records the exact ROM HPZ results-hub stage and success state. */
+    public void markSanctuaryReentry(int stageIndex, boolean succeeded) {
+        sanctuaryReturnContext = new SanctuaryReturnContext(stageIndex, succeeded);
+        sanctuaryReturnContextExplicit = true;
+    }
+
+    public Optional<SanctuaryReturnContext> sanctuaryReturnContext() {
+        return sanctuaryReturnContextExplicit
+                ? Optional.of(sanctuaryReturnContext) : Optional.empty();
     }
 
     public OptionalInt sanctuaryReentryStage() {
-        return sanctuaryReentryStage >= 0
-                ? OptionalInt.of(sanctuaryReentryStage)
-                : OptionalInt.empty();
+        return sanctuaryReturnContext == null
+                ? OptionalInt.empty()
+                : OptionalInt.of(sanctuaryReturnContext.stageIndex());
     }
 
     /**
@@ -222,13 +234,15 @@ public class LevelTransitionCoordinator {
             return;
         }
         sanctuaryOriginRestorePending = false;
-        sanctuaryReentryStage = -1;
+        sanctuaryReturnContext = null;
+        sanctuaryReturnContextExplicit = false;
         bigRingReturn = null;
     }
 
     SanctuaryRewindState captureSanctuaryRewindState() {
         return new SanctuaryRewindState(
-                bigRingReturn, sanctuaryReentryStage, sanctuaryOriginRestorePending,
+                bigRingReturn, sanctuaryReturnContext, sanctuaryReturnContextExplicit,
+                sanctuaryOriginRestorePending,
                 specificZoneActRequested, requestedZone, requestedAct, requestedMusicId,
                 levelInactiveForTransition, suppressNextMusicChange);
     }
@@ -236,7 +250,8 @@ public class LevelTransitionCoordinator {
     void restoreSanctuaryRewindState(SanctuaryRewindState state) {
         java.util.Objects.requireNonNull(state, "state");
         bigRingReturn = state.bigRingReturn();
-        sanctuaryReentryStage = state.sanctuaryReentryStage();
+        sanctuaryReturnContext = state.sanctuaryReturnContext();
+        sanctuaryReturnContextExplicit = state.sanctuaryReturnContextExplicit();
         sanctuaryOriginRestorePending = state.sanctuaryOriginRestorePending();
         specificZoneActRequested = state.specificZoneActRequested();
         requestedZone = state.requestedZone();
@@ -803,7 +818,8 @@ public class LevelTransitionCoordinator {
         specialStageEntryRequest = null;
         specialStageReturnLevelReloadRequested = false;
         bigRingReturn = null;
-        sanctuaryReentryStage = -1;
+        sanctuaryReturnContext = null;
+        sanctuaryReturnContextExplicit = false;
         sanctuaryOriginRestorePending = false;
         bonusStageRequested = null;
         bonusStageReturnCheckpointIndex = -1;

@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -90,19 +91,7 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
     // Ring award when all emeralds already collected
     private static final int RING_REWARD = 50;
     private static final String PALETTE_OWNER = "s3k.ssEntryRing";
-    private static final int[] SUPER_RING_PALETTE_INDICES = {5, 6, 15};
-    private static final int[][] SUPER_RING_PALETTE_STEPS = {
-            {0xECE, 0xA8A, 0x868}, {0xAEE, 0x6EE, 0x0AA},
-            {0xECA, 0xA86, 0x864}, {0xAEE, 0x6EE, 0x0AA},
-            {0x8E8, 0x4C4, 0x2A2}, {0xAEE, 0x6EE, 0x0AA},
-            {0x6EC, 0x4CA, 0x4A8}, {0xAEE, 0x6EE, 0x0AA},
-            {0x6CE, 0x2AC, 0x28A}, {0xAEE, 0x6EE, 0x0AA},
-            {0x6EE, 0x0AA, 0x066}, {0x8EE, 0x0CC, 0x088},
-            {0xAEE, 0x6EE, 0x0AA}, {0xCEE, 0xAEE, 0x0CC},
-            {0xEEE, 0xEEE, 0x0EE}, {0xCEE, 0xAEE, 0x0CC},
-            {0xAEE, 0x6EE, 0x0AA}, {0x8EE, 0x0CC, 0x088}
-    };
-    private static final int[] NORMAL_RING_PALETTE_WORDS = {0xEE0, 0x088, 0x044};
+    private static final int NORMAL_PALETTE_RAM_BASE = 0xFC00;
 
     /** Object states matching ROM routine progression. */
     private enum State {
@@ -124,6 +113,19 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
     private boolean superEmeraldRing;
     private int paletteStep;
     private int paletteTimer;
+    private int paletteDataAddress;
+    private int paletteCursor;
+    private int paletteLine;
+    private int paletteStartColor;
+    private int paletteColorCount;
+    private int palette2Timer;
+    private int palette2DataAddress;
+    private int palette2Cursor;
+    private int palette2Line;
+    private int palette2StartColor;
+    private int palette2ColorCount;
+    private boolean paletteScriptsLoaded;
+    private boolean paletteScriptsUnavailable;
     private int[] lastAppliedPaletteWords;
 
     private State state;
@@ -420,39 +422,156 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
     }
 
     private void updateSuperEmeraldPalette() {
-        if (!superEmeraldRing) {
+        if (!superEmeraldRing || !ensurePaletteScriptsLoaded()) {
             return;
         }
-        if (paletteTimer-- > 0) {
-            return;
+        int[] first = advancePaletteScript(false);
+        int[] second = advancePaletteScript(true);
+        if (first != null) {
+            applyRingPalette(paletteLine, paletteStartColor, first);
+            paletteStep++;
         }
-        applyRingPalette(SUPER_RING_PALETTE_STEPS[paletteStep]);
-        // PalSPtr_SSEntry uses delay 3 for its lead-in and delay 2 for the
-        // repeating glow. Both scripts advance together.
-        paletteTimer = paletteStep < 10 ? 3 : 2;
-        paletteStep++;
-        if (paletteStep >= SUPER_RING_PALETTE_STEPS.length) {
-            paletteStep = 10;
+        if (second != null) {
+            applyRingPalette(palette2Line, palette2StartColor, second);
+        }
+        if (first != null || second != null) {
+            if (lastAppliedPaletteWords == null) {
+                lastAppliedPaletteWords = new int[3];
+            }
+            if (first != null) {
+                System.arraycopy(first, 0, lastAppliedPaletteWords, 0, Math.min(2, first.length));
+            }
+            if (second != null && second.length > 0) {
+                lastAppliedPaletteWords[2] = second[0];
+            }
         }
     }
 
     private void restoreRingPalette() {
-        if (superEmeraldRing) {
-            applyRingPalette(NORMAL_RING_PALETTE_WORDS);
+        if (!superEmeraldRing) {
+            return;
+        }
+        try {
+            int pair = services().rom().read32BitAddr(
+                    Sonic3kConstants.PAL_SS_ENTRY_NORMAL_PAIR_ADDR);
+            int[] normalWords = {
+                    (pair >>> 16) & 0xFFFF,
+                    pair & 0xFFFF,
+                    services().rom().read16BitAddr(
+                            Sonic3kConstants.PAL_SS_ENTRY_NORMAL_FINAL_ADDR)
+            };
+            applyRingPalette(1, 5,
+                    new int[] {normalWords[0], normalWords[1]});
+            applyRingPalette(1, 15, new int[] {normalWords[2]});
+            lastAppliedPaletteWords = normalWords;
+        } catch (java.io.IOException e) {
+            paletteScriptsUnavailable = true;
+            LOGGER.warning("Unable to restore SS-entry palette from ROM: " + e.getMessage());
         }
     }
 
-    private void applyRingPalette(int[] segaWords) {
-        lastAppliedPaletteWords = segaWords.clone();
-        S3kPaletteWriteSupport.applyColors(
+    private boolean ensurePaletteScriptsLoaded() {
+        if (paletteScriptsLoaded) {
+            return true;
+        }
+        if (paletteScriptsUnavailable) {
+            return false;
+        }
+        try {
+            loadPaletteScript(Sonic3kConstants.PAL_SCRIPT_SS_ENTRY_ADDR, false);
+            loadPaletteScript(Sonic3kConstants.PAL_SCRIPT_SS_ENTRY_2_ADDR, true);
+            paletteScriptsLoaded = true;
+            return true;
+        } catch (java.io.IOException | RuntimeException e) {
+            paletteScriptsUnavailable = true;
+            LOGGER.warning("Unable to load SS-entry palette scripts from ROM: " + e.getMessage());
+            return false;
+        }
+    }
+
+    private void loadPaletteScript(int pointerAddress, boolean second) throws java.io.IOException {
+        var rom = services().rom();
+        int displacement = rom.read16BitAddr(pointerAddress);
+        int header = rom.read32BitAddr(pointerAddress + 4) & 0x00FF_FFFF;
+        int destination = rom.read16BitAddr(header);
+        int colorCount = Byte.toUnsignedInt(rom.readByte(header + 2)) + 1;
+        int line = ((destination - NORMAL_PALETTE_RAM_BASE) >>> 5) & 3;
+        int startColor = ((destination - NORMAL_PALETTE_RAM_BASE) & 0x1F) >>> 1;
+        if (second) {
+            palette2DataAddress = header + displacement;
+            palette2Cursor = palette2DataAddress;
+            palette2Line = line;
+            palette2StartColor = startColor;
+            palette2ColorCount = colorCount;
+        } else {
+            paletteDataAddress = header + displacement;
+            paletteCursor = paletteDataAddress;
+            paletteLine = line;
+            paletteStartColor = startColor;
+            paletteColorCount = colorCount;
+        }
+    }
+
+    private int[] advancePaletteScript(boolean second) {
+        int timer = second ? palette2Timer : paletteTimer;
+        timer--;
+        if (second) {
+            palette2Timer = timer;
+        } else {
+            paletteTimer = timer;
+        }
+        if (timer >= 0) {
+            return null;
+        }
+        try {
+            var rom = services().rom();
+            int cursor = second ? palette2Cursor : paletteCursor;
+            int dataAddress = second ? palette2DataAddress : paletteDataAddress;
+            int colorCount = second ? palette2ColorCount : paletteColorCount;
+            int command = rom.read16BitAddr(cursor);
+            if ((command & 0x8000) != 0) {
+                if (command != 0xFFFC) {
+                    throw new IllegalStateException(
+                            String.format("Unsupported palette script command 0x%04X", command));
+                }
+                cursor = dataAddress;
+            }
+            int[] colors = new int[colorCount];
+            for (int i = 0; i < colors.length; i++) {
+                colors[i] = rom.read16BitAddr(cursor);
+                cursor += 2;
+            }
+            int delay = rom.read16BitAddr(cursor) & 0xFF;
+            cursor += 2;
+            if (second) {
+                palette2Cursor = cursor;
+                palette2Timer = delay;
+            } else {
+                paletteCursor = cursor;
+                paletteTimer = delay;
+            }
+            return colors;
+        } catch (java.io.IOException e) {
+            paletteScriptsUnavailable = true;
+            return null;
+        }
+    }
+
+    private void applyRingPalette(int line, int startColor, int[] segaWords) {
+        byte[] bytes = new byte[segaWords.length * 2];
+        for (int i = 0; i < segaWords.length; i++) {
+            bytes[i * 2] = (byte) (segaWords[i] >>> 8);
+            bytes[i * 2 + 1] = (byte) segaWords[i];
+        }
+        S3kPaletteWriteSupport.applyContiguousPatch(
                 services().paletteOwnershipRegistryOrNull(),
                 services().currentLevel(),
                 services().graphicsManager(),
                 PALETTE_OWNER,
                 S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE,
-                1,
-                SUPER_RING_PALETTE_INDICES,
-                segaWords);
+                line,
+                startColor,
+                bytes);
     }
 
     @Override
@@ -539,4 +658,5 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
     int[] getLastAppliedPaletteWordsForTest() {
         return lastAppliedPaletteWords == null ? null : lastAppliedPaletteWords.clone();
     }
+
 }
