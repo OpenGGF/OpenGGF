@@ -22,12 +22,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -317,6 +320,88 @@ class TestSonic3kSuperStateRewind {
         knucklesController.debugDeactivate();
         assertEquals(0, knucklesController.captureRewindState().paletteState(),
                 "Knuckles uses the dedicated one-frame ROM revert palette");
+    }
+
+    @Test
+    void superTailsTransformationRegistersExactlyOneFlickyFlock() {
+        for (int i = 0; i < 7; i++) {
+            GameServices.gameState().markSuperEmeraldCollected(i);
+        }
+        Tails tails = new Tails("tails", (short) 0, (short) 0);
+        PowerUpSpawner powerUps = mock(PowerUpSpawner.class);
+        tails.setPowerUpSpawner(powerUps);
+        GameServices.sprites().clearAllSprites();
+        GameServices.sprites().addSprite(tails, "tails");
+        tails.setRingCount(50);
+        Sonic3kSuperStateController tailsController = new Sonic3kSuperStateController(tails);
+        tails.setSuperStateController(tailsController);
+
+        assertTrue(tailsController.activateFromAirAbility());
+
+        assertEquals(S3kFormTier.SUPER_TAILS, tailsController.getActiveFormTier());
+        verify(powerUps, times(1)).registerObject(any(
+                com.openggf.game.sonic3k.objects.SuperTailsFlickyFlockObjectInstance.class));
+    }
+
+    @Test
+    void debugActivationSelectsSuperTailsAndRegistersItsFlockWithoutProgression() {
+        Tails tails = new Tails("tails", (short) 0, (short) 0);
+        PowerUpSpawner powerUps = mock(PowerUpSpawner.class);
+        tails.setPowerUpSpawner(powerUps);
+        GameServices.sprites().clearAllSprites();
+        GameServices.sprites().addSprite(tails, "tails");
+        Sonic3kSuperStateController tailsController = new Sonic3kSuperStateController(tails);
+        tails.setSuperStateController(tailsController);
+
+        tailsController.debugActivate();
+
+        assertEquals(S3kFormTier.SUPER_TAILS, tailsController.getActiveFormTier());
+        verify(powerUps).registerObject(any(
+                com.openggf.game.sonic3k.objects.SuperTailsFlickyFlockObjectInstance.class));
+    }
+
+    @Test
+    void debugActivationDoesNotGiveSecondaryTailsASuperTailsFlock() {
+        Tails main = new Tails("tails", (short) 0, (short) 0);
+        Tails secondary = new Tails("tails_p2", (short) 0, (short) 0);
+        PowerUpSpawner powerUps = mock(PowerUpSpawner.class);
+        secondary.setPowerUpSpawner(powerUps);
+        GameServices.sprites().clearAllSprites();
+        GameServices.sprites().addSprite(main, "tails");
+        Sonic3kSuperStateController secondaryController =
+                new Sonic3kSuperStateController(secondary);
+        secondary.setSuperStateController(secondaryController);
+
+        secondaryController.debugActivate();
+
+        assertEquals(S3kFormTier.NORMAL, secondaryController.getActiveFormTier());
+        verify(powerUps, never()).registerObject(any(
+                com.openggf.game.sonic3k.objects.SuperTailsFlickyFlockObjectInstance.class));
+    }
+
+    @Test
+    void activeSuperTailsFlockReconciliationCreatesOnceAndThenDeduplicates() {
+        Tails tails = new Tails("tails", (short) 0, (short) 0);
+        GameServices.sprites().clearAllSprites();
+        GameServices.sprites().addSprite(tails, "tails");
+        Sonic3kSuperStateController tailsController = new Sonic3kSuperStateController(tails);
+        ObjectManager objects = mock(ObjectManager.class);
+        var active = new ArrayList<com.openggf.level.objects.ObjectInstance>();
+        when(objects.getActiveObjects()).thenReturn(active);
+        when(objects.createDynamicObject(any())).thenAnswer(invocation -> {
+            @SuppressWarnings("unchecked")
+            java.util.function.Supplier<com.openggf.level.objects.ObjectInstance> factory =
+                    invocation.getArgument(0);
+            var created = factory.get();
+            active.add(created);
+            return created;
+        });
+
+        var first = tailsController.ensureSuperTailsFlickies(objects);
+        var second = tailsController.ensureSuperTailsFlickies(objects);
+
+        assertSame(first, second);
+        verify(objects, times(1)).createDynamicObject(any());
     }
 
     @Test

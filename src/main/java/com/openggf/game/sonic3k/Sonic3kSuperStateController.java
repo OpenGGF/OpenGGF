@@ -90,6 +90,8 @@ public class Sonic3kSuperStateController extends SuperStateController {
 
     /** Form selected when transformation starts; never inferred during rendering. */
     private S3kFormTier activeFormTier = S3kFormTier.NORMAL;
+    /** Debug activation selects the character's strongest form without changing progression. */
+    private boolean debugFormActivation;
     private final HyperKnucklesWallQuake wallQuake = new HyperKnucklesWallQuake();
     private int hyperFlashFrames;
     private boolean hyperFlashRestorePending;
@@ -138,6 +140,21 @@ public class Sonic3kSuperStateController extends SuperStateController {
             return;
         }
         super.update();
+        if (isSuperTailsFormActive() && player instanceof Tails) {
+            LevelManager levelManager = player.currentLevelManagerIfAvailable();
+            ensureSuperTailsFlickies(
+                    levelManager != null ? levelManager.getObjectManager() : null);
+        }
+    }
+
+    @Override
+    public void debugActivate() {
+        debugFormActivation = true;
+        try {
+            super.debugActivate();
+        } finally {
+            debugFormActivation = false;
+        }
     }
 
     @Override
@@ -454,15 +471,21 @@ public class Sonic3kSuperStateController extends SuperStateController {
 
     @Override
     protected void onTransformationStarted() {
-        activeFormTier = getEligibleFormTier();
+        activeFormTier = debugFormActivation ? getDebugFormTier() : getEligibleFormTier();
         if (activeFormTier == S3kFormTier.HYPER && !(player instanceof Knuckles)) {
             LevelManager levelManager = player.currentLevelManagerIfAvailable();
             ensureHyperSonicStars(levelManager != null ? levelManager.getObjectManager() : null);
         }
-        if (activeFormTier == S3kFormTier.SUPER_TAILS && player instanceof Tails
-                && player.getPowerUpSpawner() != null) {
-            player.getPowerUpSpawner().registerObject(
-                    new SuperTailsFlickyFlockObjectInstance(player));
+        if (activeFormTier == S3kFormTier.SUPER_TAILS && player instanceof Tails) {
+            LevelManager levelManager = player.currentLevelManagerIfAvailable();
+            ObjectManager objectManager =
+                    levelManager != null ? levelManager.getObjectManager() : null;
+            if (objectManager != null) {
+                ensureSuperTailsFlickies(objectManager);
+            } else if (player.getPowerUpSpawner() != null) {
+                player.getPowerUpSpawner().registerObject(
+                        new SuperTailsFlickyFlockObjectInstance(player));
+            }
         }
         captureNormalPalette();
         configurePaletteForActiveTier();
@@ -486,6 +509,33 @@ public class Sonic3kSuperStateController extends SuperStateController {
         } catch (Exception e) {
             LOGGER.fine("Could not play transformation SFX: " + e.getMessage());
         }
+    }
+
+    private S3kFormTier getDebugFormTier() {
+        if (player instanceof Tails) {
+            return isMainPlayerTails() ? S3kFormTier.SUPER_TAILS : S3kFormTier.NORMAL;
+        }
+        return S3kFormTier.HYPER;
+    }
+
+    SuperTailsFlickyFlockObjectInstance ensureSuperTailsFlickies(
+            ObjectManager objectManager) {
+        if (objectManager == null || !isMainPlayerTails()) {
+            return null;
+        }
+        for (var object : objectManager.getActiveObjects()) {
+            if (object instanceof SuperTailsFlickyFlockObjectInstance flickies
+                    && flickies.isBoundTo(player) && !flickies.isDestroyed()) {
+                return flickies;
+            }
+        }
+        return objectManager.createDynamicObject(
+                () -> new SuperTailsFlickyFlockObjectInstance(player));
+    }
+
+    private boolean isMainPlayerTails() {
+        return player instanceof Tails
+                && GameServices.sprites().getMainPlayable() == player;
     }
 
     @Override

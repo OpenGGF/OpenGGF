@@ -74,6 +74,10 @@ public final class SuperTailsFlickyFlockObjectInstance extends AbstractObjectIns
         return new SuperTailsFlickyFlockObjectInstance(context.spawn(), null);
     }
 
+    public boolean isBoundTo(AbstractPlayableSprite player) {
+        return owner == player;
+    }
+
     @Override
     public void update(int frameCounter, PlayableEntity ignored) {
         if (owner == null) {
@@ -85,6 +89,7 @@ public final class SuperTailsFlickyFlockObjectInstance extends AbstractObjectIns
             flyingAway = true;
         }
 
+        ensureRomArtLoaded();
         ObjectManager manager = services().objectManager();
         var identities = manager.captureIdentityContext().requireIdentityTable();
         List<ObjectInstance> frozen = manager.poweredAttacks().targetReadView();
@@ -319,10 +324,7 @@ public final class SuperTailsFlickyFlockObjectInstance extends AbstractObjectIns
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         if (!visible) return;
-        if (getRenderManager() != null
-                && getRenderManager().getArtProvider() instanceof Sonic3kObjectArtProvider provider) {
-            provider.ensureStandaloneArtLoaded(Sonic3kObjectArtKeys.SUPER_TAILS_BIRDS);
-        }
+        ensureRomArtLoaded();
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.SUPER_TAILS_BIRDS);
         if (renderer == null) return;
         boolean reverseGravity = services().gameState() != null
@@ -335,6 +337,13 @@ public final class SuperTailsFlickyFlockObjectInstance extends AbstractObjectIns
     @Override public void destroy() { ObjectLifetimeOps.expireDynamic(this); }
     @Override public void setVisible(boolean visible) { this.visible = visible; }
     @Override public PlayableEntity boundPlayer() { return owner; }
+
+    private void ensureRomArtLoaded() {
+        if (getRenderManager() != null
+                && getRenderManager().getArtProvider() instanceof Sonic3kObjectArtProvider provider) {
+            provider.ensureStandaloneArtLoaded(Sonic3kObjectArtKeys.SUPER_TAILS_BIRDS);
+        }
+    }
 
     /** Package-visible deterministic state used by focused ROM-order tests. */
     record BirdRuntimeState(int x, int y, int xVelocity, int yVelocity,
