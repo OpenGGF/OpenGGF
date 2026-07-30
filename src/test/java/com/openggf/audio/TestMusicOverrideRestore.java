@@ -17,15 +17,20 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
- * Override music (1-up jingle, invincibility, Super) interrupts the zone music
- * rather than replacing it, and the interrupted song must come back.
+ * The 1-up jingle is the only music that interrupts the current song and
+ * restores it, and the sound driver saves exactly one song for it.
+ *
+ * <p>The ROM owns a single save slot: S1's {@code Sound_PlayBGM} backs up
+ * {@code v_1up_ram} and sets {@code f_1up_playing}; S3K's {@code zPlayMusic}
+ * copies {@code zTracksStart} to {@code zTracksSaveStart} and sets
+ * {@code zFadeToPrevFlag}. Any other music request abandons that save — S1 by
+ * {@code clr.b f_1up_playing}, S3K by {@code zStopAllSound} zeroing the whole
+ * backup area. Invincibility and Super are ordinary music that restore the
+ * level music by re-issuing it, not by unwinding a saved song.
  *
  * <p>The claims are made against the presentation registry the mixer actually
- * renders: {@code activeMusic} is the voice being heard and
- * {@code overrideStack} holds the interrupted songs. A regression that destroys
- * the zone music instead of pushing it shows up here as a never-restored
- * {@code activeMusic}, which is what it sounds like in game once the jingle's
- * own voice completes — silence for the rest of the act.
+ * renders: {@code activeMusic} is the voice being heard and the override stack
+ * degenerates to that single save slot.
  */
 class TestMusicOverrideRestore {
 
@@ -70,76 +75,107 @@ class TestMusicOverrideRestore {
     @Test
     void extraLifeJingleRestoresZoneMusic() {
         play(LEVEL_MUSIC);
-        assertOverrideStack();
+        assertNothingSaved();
 
         play(EXTRA_LIFE_MUSIC);
         assertEquals(EXTRA_LIFE_MUSIC, activeMusicId());
-        assertOverrideStack(LEVEL_MUSIC);
+        assertSaved(LEVEL_MUSIC);
 
         restore();
         assertEquals(LEVEL_MUSIC, activeMusicId());
-        assertOverrideStack();
+        assertNothingSaved();
     }
 
-    /** A 1-up during invincibility resumes invincibility, then the zone. */
+    /**
+     * Invincibility and Super are ordinary music, not overrides. The ROM plays
+     * them through the same {@code zPlayMusic_DoFade} path as any other song
+     * and restores the level music by re-issuing it when the power-up ends
+     * ({@code Sonic_ChkInvin}), so nothing is saved here.
+     */
     @Test
-    void extraLifeDuringInvincibilityResumesInvincibilityThenZoneMusic() {
+    void invincibilityAndSuperReplaceTheZoneMusicWithoutSavingIt() {
         play(LEVEL_MUSIC);
+
+        play(INVINCIBILITY_MUSIC);
+        assertEquals(INVINCIBILITY_MUSIC, activeMusicId());
+        assertNothingSaved();
+
+        play(SUPER_MUSIC);
+        assertEquals(SUPER_MUSIC, activeMusicId());
+        assertNothingSaved();
+    }
+
+    /**
+     * Any other music arriving while the jingle plays abandons the save.
+     *
+     * <p>ROM: a non-1-up request reaches {@code zPlayMusic_DoFade ->
+     * zStopAllSound}, which zeroes {@code zFadeToPrevFlag} and the whole
+     * {@code zTracksSaveStart} backup (S1 clears {@code f_1up_playing} the same
+     * way). A later E4 must therefore leave the new song alone rather than
+     * reinstating a jingle that no longer exists — the frozen, exhausted voice
+     * that used to be reinstated here is what fell silent.
+     */
+    @Test
+    void musicStartedDuringTheJingleDiscardsTheSavedSong() {
+        play(LEVEL_MUSIC);
+        play(EXTRA_LIFE_MUSIC);
+        assertSaved(LEVEL_MUSIC);
+
+        play(SUPER_MUSIC);
+        assertEquals(SUPER_MUSIC, activeMusicId());
+        assertNothingSaved();
+
+        // The jingle is gone, so its E4 can never arrive; if one does, Super
+        // music keeps playing rather than the act falling silent.
+        restore();
+        assertEquals(SUPER_MUSIC, activeMusicId());
+    }
+
+    /**
+     * Re-collecting a 1-up while the jingle plays reloads it without saving a
+     * second time, so the zone music underneath survives.
+     *
+     * <p>ROM: {@code zPlayMusic} jumps straight to {@code zBGMLoad} when
+     * {@code zFadeToPrevFlag} already holds the 1-up id.
+     */
+    @Test
+    void retriggeredJingleKeepsTheOriginalSavedSong() {
+        play(LEVEL_MUSIC);
+        play(EXTRA_LIFE_MUSIC);
+        play(EXTRA_LIFE_MUSIC);
+        assertSaved(LEVEL_MUSIC);
+
+        restore();
+        assertEquals(LEVEL_MUSIC, activeMusicId());
+    }
+
+    /**
+     * The save is a single slot, never a stack: whatever the sequence, at most
+     * one song is ever waiting to be restored.
+     */
+    @Test
+    void theSaveSlotNeverHoldsMoreThanOneSong() {
+        play(LEVEL_MUSIC);
+        play(EXTRA_LIFE_MUSIC);
+        play(SUPER_MUSIC);
+        play(EXTRA_LIFE_MUSIC);
         play(INVINCIBILITY_MUSIC);
         play(EXTRA_LIFE_MUSIC);
-        assertOverrideStack(LEVEL_MUSIC, INVINCIBILITY_MUSIC);
+        assertSaved(INVINCIBILITY_MUSIC);
 
         restore();
         assertEquals(INVINCIBILITY_MUSIC, activeMusicId());
-
-        endOverride(INVINCIBILITY_MUSIC);
-        assertEquals(LEVEL_MUSIC, activeMusicId());
-        assertOverrideStack();
+        assertNothingSaved();
     }
 
-    /**
-     * Re-collecting invincibility while it is already playing restarts the
-     * theme without stacking a second copy of itself over the zone music.
-     */
-    @Test
-    void retriggeredInvincibilityDoesNotStackOverItself() {
-        play(LEVEL_MUSIC);
-        play(INVINCIBILITY_MUSIC);
-        play(INVINCIBILITY_MUSIC);
-        assertOverrideStack(LEVEL_MUSIC);
-
-        endOverride(INVINCIBILITY_MUSIC);
-        assertEquals(LEVEL_MUSIC, activeMusicId());
-    }
-
-    /**
-     * Super running out during the 1-up jingle drops the saved Super theme from
-     * under the jingle; the jingle still ends on the zone music.
-     */
-    @Test
-    void superEndingDuringExtraLifeJingleStillRestoresZoneMusic() {
-        play(LEVEL_MUSIC);
-        play(SUPER_MUSIC);
-        play(EXTRA_LIFE_MUSIC);
-        assertOverrideStack(LEVEL_MUSIC, SUPER_MUSIC);
-
-        endOverride(SUPER_MUSIC);
-        assertEquals(EXTRA_LIFE_MUSIC, activeMusicId());
-        assertOverrideStack(LEVEL_MUSIC);
-
-        restore();
-        assertEquals(LEVEL_MUSIC, activeMusicId());
-        assertOverrideStack();
-    }
-
-    /** Ordinary music replaces the foreground and drops any saved overrides. */
+    /** Ordinary music replaces the foreground and drops any saved song. */
     @Test
     void ordinaryMusicReplacesTheForegroundInsteadOfStacking() {
         play(LEVEL_MUSIC);
-        play(INVINCIBILITY_MUSIC);
+        play(EXTRA_LIFE_MUSIC);
         play(LEVEL_MUSIC);
         assertEquals(LEVEL_MUSIC, activeMusicId());
-        assertOverrideStack();
+        assertNothingSaved();
     }
 
     private void play(int musicId) {
@@ -152,11 +188,6 @@ class TestMusicOverrideRestore {
         audio.presentFrame(PresentationMode.SILENT);
     }
 
-    private void endOverride(int musicId) {
-        audio.endMusicOverride(musicId);
-        audio.presentFrame(PresentationMode.SILENT);
-    }
-
     private int activeMusicId() {
         AudioPresentationSnapshot.MusicSlotSnapshot active =
                 snapshot().activeMusic();
@@ -164,13 +195,21 @@ class TestMusicOverrideRestore {
         return active.musicId();
     }
 
-    /** Asserts the interrupted songs waiting to be restored, outermost first. */
-    private void assertOverrideStack(int... musicIds) {
+    /** Asserts the single song the 1-up jingle saved for restoration. */
+    private void assertSaved(int musicId) {
+        assertSavedSongs(musicId);
+    }
+
+    private void assertNothingSaved() {
+        assertSavedSongs();
+    }
+
+    private void assertSavedSongs(int... musicIds) {
         int[] actual = snapshot().overrideStack().stream()
                 .mapToInt(AudioPresentationSnapshot.MusicSlotSnapshot::musicId)
                 .toArray();
         assertEquals(Arrays.toString(musicIds), Arrays.toString(actual),
-                "interrupted music waiting to be restored");
+                "song saved for the 1-up jingle to restore");
     }
 
     private AudioPresentationSnapshot snapshot() {

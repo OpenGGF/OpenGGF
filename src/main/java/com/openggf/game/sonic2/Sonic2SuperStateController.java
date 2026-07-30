@@ -218,7 +218,10 @@ public class Sonic2SuperStateController extends SuperStateController {
         // ROM: move.w #$28,(Palette_frame).w on revert
         paletteFrame = 0x28;
         paletteTimer = 3;
-        // 1-frame invincibility grace period to prevent instant damage on revert
+        // ROM: move.w #1,invincibility_time(a0). Besides the one-frame grace
+        // period, this is how Sonic_RevertToNormal restores the zone music: it
+        // plays none itself and lets Obj01_ChkInvin re-issue Level_Music when
+        // the timer expires on the next tick.
         player.setInvincibleFrames(1);
         // Restore normal animation set
         if (normalAnimSet != null) {
@@ -231,18 +234,6 @@ public class Sonic2SuperStateController extends SuperStateController {
         if (starsObject != null) {
             starsObject.destroy();
             starsObject = null;
-        }
-        // Revert to zone music
-        try {
-            if (CrossGameFeatureProvider.isActive()) {
-                GameServices.audio().endDonorMusicOverride(
-                        GameServices.crossGameFeatures().getDonorGameId(),
-                        GameMusic.SUPER);
-            } else {
-                GameServices.audio().endMusicOverride(GameMusic.SUPER);
-            }
-        } catch (Exception e) {
-            LOGGER.fine("Could not revert Super Sonic music: " + e.getMessage());
         }
         LOGGER.info("Super Sonic deactivated (S2)");
     }

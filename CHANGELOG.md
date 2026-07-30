@@ -10,10 +10,19 @@ All notable changes to the OpenGGF project are documented in this file.
   the retired legacy backend — so on the presentation path the interrupted song
   was destroyed, and the driver's "fade in to previous song" (SMPS `E4`) and the
   power-up timeouts found nothing to restore, leaving silence. `AudioManager`
-  now records the override flag on the music command itself, which also restores
-  the stacked cases: a 1-up during invincibility resumes invincibility and then
-  the zone music, and a form or power-up ending under the jingle drops only its
-  own saved entry.
+  now records the override flag on the music command itself.
+- Fix: Music no longer stops after a sequence of extra lives and Super
+  transformations. Interrupted songs were kept on a stack, but the sound driver
+  has a single save slot that belongs to the 1-up jingle alone: any other music
+  request abandons it (S1 clears `f_1up_playing`, S3K's `zStopAllSound` zeroes
+  `zFadeToPrevFlag` and the whole `zTracksSaveStart` backup). A transformation
+  during the jingle therefore parked a frozen jingle voice on the stack that a
+  later restore could make active again, playing nothing. Invincibility and
+  Super are now ordinary music, as in the ROM, and the level music is restored
+  by re-issuing it from `Sonic_ChkInvin` — including that routine's gates, so
+  the boss and drowning-countdown themes survive a power-up expiring. The Super
+  revert no longer plays music itself; like `SonicKnux_SuperHyper` it sets the
+  invincibility timer to 1 and lets that path run a tick later.
 - Fix: Super Tails now reliably summons his four attacking Flickies. The debug
   form shortcut selects Super Tails for main-player Tails without changing
   emerald progression, the flock recovers after object-manager replacement,

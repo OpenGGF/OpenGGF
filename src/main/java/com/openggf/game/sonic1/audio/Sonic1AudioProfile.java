@@ -107,11 +107,6 @@ public class Sonic1AudioProfile extends AbstractAudioProfile {
     }
 
     @Override
-    public boolean isMusicOverride(int musicId) {
-        return musicId == Sonic1Music.INVINCIBILITY.id || musicId == Sonic1Music.EXTRA_LIFE.id;
-    }
-
-    @Override
     protected int getFadeOutCommandId() {
         return Sonic1SmpsConstants.CMD_FADE_OUT;
     }

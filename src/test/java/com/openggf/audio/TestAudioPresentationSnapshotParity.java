@@ -613,6 +613,11 @@ class TestAudioPresentationSnapshotParity {
                 } else if (frame == 63) {
                     assertTrue(audio.captureLogicalSnapshot().ringLeft());
                     audio.playSfx(GameSound.RING);
+                } else if (frame == 71) {
+                    // Re-issued after the last music change: replacing the
+                    // foreground stops the SMPS SFX riding on the old music
+                    // driver, as zStopAllSound does in the ROM.
+                    audio.playSfx(0xA0);
                 }
                 audio.presentFrame(PresentationMode.FORWARD);
                 long producerTotal = audio.releaseStateForTesting()
@@ -633,7 +638,7 @@ class TestAudioPresentationSnapshotParity {
                                     "s3k", 0x82),
                             audio.captureLogicalSnapshot().presentation()
                                     .activeMusic().sourceDescriptor(),
-                            "S3K donor override must survive its first "
+                            "S3K donor music must survive its first "
                                     + "production packet");
                 }
             }
@@ -665,11 +670,11 @@ class TestAudioPresentationSnapshotParity {
                             "s3k", 0x82),
                     boundary.presentation().activeMusic()
                             .sourceDescriptor());
-            assertEquals(1,
-                    boundary.presentation().overrideStack().size());
-            assertEquals(AudioSourceDescriptor.baseMusic(0x81),
-                    boundary.presentation().overrideStack().getFirst()
-                            .sourceDescriptor());
+            // Donor music replaces the foreground rather than saving it: only
+            // the 1-up jingle owns the driver's save slot, and it is never a
+            // donor track. A non-empty save slot round-trips through a snapshot
+            // in TestAudioVoiceRegistry.
+            assertTrue(boundary.presentation().overrideStack().isEmpty());
             assertNotNull(boundary.presentation().rawPcmVoiceId());
             assertTrue(boundary.presentation().voices().stream()
                     .filter(PresentationVoiceSnapshot.Smps.class::isInstance)
