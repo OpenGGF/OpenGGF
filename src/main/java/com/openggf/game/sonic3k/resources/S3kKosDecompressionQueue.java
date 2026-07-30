@@ -5,6 +5,7 @@ import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.game.timing.HardwareWorkHandle;
+import com.openggf.game.timing.HardwareWorkFeatures;
 import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.timing.HardwareWorkPreparation;
 import com.openggf.game.timing.HardwareWorkPreparationSnapshot;
@@ -61,7 +62,7 @@ public final class S3kKosDecompressionQueue
         byte[] compressed = info.compressedLength() == inspection.length
                 ? inspection : rom.readBytes(sourceAddress, info.compressedLength());
         return queueInspected(
-                compressed, sourceAddress, destinationAddress, info);
+                compressed, sourceAddress, destinationAddress, info, 0);
     }
 
     HardwareWorkHandle queueModuleChild(
@@ -75,7 +76,7 @@ public final class S3kKosDecompressionQueue
         byte[] compressed = java.util.Arrays.copyOfRange(
                 archive, archiveOffset, archiveOffset + info.compressedLength());
         return queueInspected(
-                compressed, sourceAddress, destinationAddress, info);
+                compressed, sourceAddress, destinationAddress, info, 1);
     }
 
     public boolean hasCapacity() {
@@ -90,18 +91,21 @@ public final class S3kKosDecompressionQueue
             byte[] compressed,
             int sourceAddress,
             int destinationAddress,
-            KosinskiReader.StandardArchiveInfo info) {
+            KosinskiReader.StandardArchiveInfo info,
+            int coordinationCount) throws IOException {
         if (!hasCapacity()) {
             throw new IllegalStateException("S3K Kosinski decompression FIFO is full");
         }
         S3kKosDecompressionDescriptor descriptor = new S3kKosDecompressionDescriptor(
                 sourceAddress, info.compressedLength(), destinationAddress,
                 info.decompressedLength());
+        HardwareWorkFeatures features = S3kKosinskiWorkFeatureExtractor.inspect(
+                compressed, 0, 1, coordinationCount);
         HardwareWorkHandle handle = timing.submit(new HardwareWorkSubmission(
                 HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
                 descriptor.sourceAddress(), descriptor.compressedLength(),
                 descriptor.destinationAddress(), descriptor.destinationLength(),
-                COMPRESSION_VARIANT, 1, false,
+                COMPRESSION_VARIANT, 1, false, features,
                 new DirectPreparation(descriptor, compressed)));
         physicalEntries.addLast(handle);
         descriptors.put(handle, descriptor);

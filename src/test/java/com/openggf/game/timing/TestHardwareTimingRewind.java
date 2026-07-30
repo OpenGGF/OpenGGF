@@ -101,6 +101,39 @@ class TestHardwareTimingRewind {
     }
 
     @Test
+    void preActivationRewindRepeatsFeatureBasedEstimatedSelection() {
+        LoadTimeProfile estimator = (submission, handle) ->
+                new LoadTimeDecision(
+                        (submission.features().shortCopyCommands() + 3) / 4,
+                        java.util.Set.of(POST_OBJECTS),
+                        LoadTimeDecisionSource.ESTIMATED,
+                        "test-estimator");
+        HardwareTimingService service = new HardwareTimingService(
+                RomWorkBudgetScheduler.oneWorkUnitAt(POST_OBJECTS), estimator);
+        HardwareWorkSubmission submission = new HardwareWorkSubmission(
+                HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
+                0x2000, 8, 0x5000, 1, "kosinski", 1, false,
+                new HardwareWorkFeatures(1, 9, 0, 0, 8, 1, 1, 1, 0),
+                new TestPreparation(1, new byte[] {42}));
+        service.submit(submission);
+        HardwareTimingSnapshot beforeActivation = service.capture();
+
+        service.service(POST_OBJECTS);
+        HardwareTimingJob.Snapshot first = service.capture().jobs().getFirst();
+
+        service.restore(beforeActivation);
+        service.service(POST_OBJECTS);
+        HardwareTimingJob.Snapshot repeated =
+                service.capture().jobs().getFirst();
+
+        assertEquals(3, first.assignedServiceFrames());
+        assertEquals(first.assignedServiceFrames(),
+                repeated.assignedServiceFrames());
+        assertEquals(first.decisionSource(), repeated.decisionSource());
+        assertEquals(first.features(), repeated.features());
+    }
+
+    @Test
     void restoreOnCompletionRepeatsExactlyOneClaimAndOrdinalAllocation() {
         HardwareTimingService service = new HardwareTimingService();
         HardwareWorkHandle first = service.submit(submission(1, 14));

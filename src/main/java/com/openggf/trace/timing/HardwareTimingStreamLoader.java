@@ -28,6 +28,8 @@ import java.util.regex.Pattern;
 public final class HardwareTimingStreamLoader {
 
     private static final String FILE_NAME = "hardware_timing.jsonl";
+    private static final String MEASUREMENT_FILE_NAME =
+            "load_time_measurements.jsonl";
     private static final String EVENT_NAME = "hardware_work_completed";
     private static final Set<String> EVENT_FIELDS = Set.of(
             "event", "raw_frame", "boundary", "kind", "ordinal", "submission_fingerprint");
@@ -40,6 +42,12 @@ public final class HardwareTimingStreamLoader {
 
     public static HardwareTimingSchedule load(Path traceDirectory, TraceMetadata metadata)
             throws IOException {
+        Path measurementPath = traceDirectory.resolve(MEASUREMENT_FILE_NAME);
+        if (Files.exists(measurementPath)) {
+            throw rejected(
+                    measurementPath,
+                    "load-time measurements are tooling-only and cannot be loaded as trace data");
+        }
         Path metadataPath = traceDirectory.resolve("metadata.json");
         Path timingPath = traceDirectory.resolve(FILE_NAME);
         boolean hasFile = Files.isRegularFile(timingPath);
