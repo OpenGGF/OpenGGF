@@ -25,11 +25,17 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * S3K special stage results screen (Chaos Emerald path).
+ * S3K special stage results screen.
  * <p>
- * Displayed after completing a Blue Sphere special stage entered via giant rings.
- * Shows ring bonus, time bonus (if perfect), collected emerald indicators with
- * flicker animation, and "GOT A CHAOS EMERALD" message if earned.
+ * Displayed after completing a Blue Sphere special stage entered via a giant ring or an
+ * HPZ sanctuary pedestal. Shows ring bonus, time bonus (if perfect), collected emerald
+ * indicators with flicker animation, and "GOT A CHAOS EMERALD" / "GOT A SUPER EMERALD"
+ * if earned.
+ * <p>
+ * A Super Emerald run reads Super_emerald_count rather than Chaos_emerald_count throughout
+ * ({@code sub_2ECA8}), keeps its text off palette line 3 because that line holds the HPZ
+ * sanctuary colours ({@code sub_2ECBC}), and never reaches the Chaos Emerald reveal message,
+ * because {@code loc_2E512} hands it to the sanctuary reveal first.
  * <p>
  * ROM: {@code Obj_SpecialStage_Results} (sonic3k.asm lines 63296-64164).
  * Implements 6-state machine matching ROM routines 0, 2, 4, 6, 8, A.
@@ -88,8 +94,6 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
     // Char name frame ($13) refs $578+, art at $4F1. ROM art_tile=-$87 ($4F1-$578)
     private static final int CHAR_NAME_TILE_OFFSET = -(0x578 - 0x4F1); // -135
     private static final int PAL3_ADDITION = 3;
-    private static final int TEXT_PALETTE_INDEX = 1;
-    private static final int GREEN_PALETTE_INDEX = 3;
     private static final int SCORE_DIGITS_VRAM_START = 0x6E4;
     private static final int SCORE_DIGIT_COUNT = 7;
     private static final int SCORE_DIGIT_TILE_COUNT = SCORE_DIGIT_COUNT * 2;
@@ -101,6 +105,14 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
     private final boolean gotEmerald;
     private final int totalEmeraldCount;
     private final PlayerCharacter character;
+    /** ROM {@code SK_special_stage_flag}: this run awarded a Super Emerald. */
+    private final boolean superEmeraldStage;
+    /** ROM {@code loc_2E540}: the Big Ring's zone is FBZ or MHZ onwards. */
+    private final boolean skSideOrigin;
+    /** ROM {@code sub_2ECA8}: Super_emerald_count on a Super Emerald stage, else Chaos_emerald_count. */
+    private final int rewardEmeraldCount;
+    /** Which reveal message the ROM would spawn, once one is due. */
+    private RevealVariant revealVariant = RevealVariant.SUPER_FORM;
 
     // ---- Tally ----
     private int ringBonus;
@@ -142,10 +154,24 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
     public S3kSpecialStageResultsScreen(int ringsCollected, boolean gotEmerald,
                                          int stageIndex, int totalEmeraldCount,
                                          PlayerCharacter character) {
+        this(ringsCollected, gotEmerald, stageIndex, totalEmeraldCount, character, false, false);
+    }
+
+    public S3kSpecialStageResultsScreen(int ringsCollected, boolean gotEmerald,
+                                         int stageIndex, int totalEmeraldCount,
+                                         PlayerCharacter character,
+                                         boolean superEmeraldStage, boolean skSideOrigin) {
         this.ringsCollected = ringsCollected;
         this.gotEmerald = gotEmerald;
         this.totalEmeraldCount = totalEmeraldCount;
         this.character = character;
+        this.superEmeraldStage = superEmeraldStage;
+        this.skSideOrigin = skSideOrigin;
+        // ROM sub_2ECA8: every "has the set been completed?" test on this screen reads
+        // Super_emerald_count instead of Chaos_emerald_count on a Super Emerald stage.
+        this.rewardEmeraldCount = superEmeraldStage
+                ? GameServices.gameState().getCollectedSuperEmeraldIndices().size()
+                : totalEmeraldCount;
 
         // ROM lines 63320-63327: bonus calculation
         this.ringBonus = ringsCollected * 10;
@@ -280,14 +306,7 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
             return;
         }
 
-        // ROM: Only Sonic/Knuckles can trigger the emerald reveal (Tails excluded in S3)
-        // For Chaos Emerald path: if failed or not all 7 emeralds → exit immediately
-        boolean canReveal = gotEmerald && totalEmeraldCount >= 7
-                && (character == PlayerCharacter.SONIC_AND_TAILS
-                    || character == PlayerCharacter.SONIC_ALONE
-                    || character == PlayerCharacter.KNUCKLES);
-
-        if (!canReveal) {
+        if (!revealDue()) {
             // ROM line 63483/54041: move.b #$C,(Game_mode).w
             complete = true;
             return;
@@ -318,6 +337,40 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
             stateTimer = 0;
             createPhase2Elements();
         }
+    }
+
+    /**
+     * ROM {@code loc_2E512}/{@code loc_2E540}: decides whether a reveal message follows the
+     * bonus tally, and which one.
+     *
+     * <p>A completed Super Emerald stage is handed to routine $E — the HPZ sanctuary reveal —
+     * before the Chaos Emerald check at {@code loc_2E540} is reached, so the Chaos Emerald
+     * message never runs for it. Otherwise the reveal needs the stage cleared with the full
+     * Chaos Emerald set; a Big Ring taken on the S&amp;K side ({@code cmpi.b #4} / {@code #7})
+     * routes to routine $A and the "CAN GO TO HIDDEN PALACE" message instead of the Super
+     * form promise, and Tails alone gets no message at all on the Sonic 3 side.
+     */
+    private boolean revealDue() {
+        if (superEmeraldStage) {
+            return false;
+        }
+        if (!gotEmerald || totalEmeraldCount < 7) {
+            return false;
+        }
+        if (skSideOrigin) {
+            revealVariant = RevealVariant.HIDDEN_PALACE;
+            return true;
+        }
+        revealVariant = RevealVariant.SUPER_FORM;
+        return character != PlayerCharacter.TAILS_ALONE;
+    }
+
+    /**
+     * ROM {@code loc_2EAF6}/{@code loc_2E9F6}: Knuckles' name and the SUPER/HYPER word move
+     * to palette line 1 only on a Super Emerald stage, where line 3 is the HPZ palette.
+     */
+    private int charNamePaletteAdd() {
+        return (superEmeraldStage && character == PlayerCharacter.KNUCKLES) ? 1 : 0;
     }
 
     /**
@@ -384,9 +437,22 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
         return phase1ElementVisible(CHAR_NAME_INDEX);
     }
 
-    /** Whether the "SUPER SONIC" label is visible (emerald earned + all 7). */
+    /** Whether the trailing plural "S" is visible (emerald earned + the reward set complete). */
     boolean superTextVisibleForTest() {
         return phase1ElementVisible(SUPER_TEXT_INDEX);
+    }
+
+    /** Phase-1 element index of the CHAOS/SUPER EMERALD word (loc_2EB64 element 16). */
+    private static final int EMERALD_WORD_INDEX = 16;
+
+    /** Mapping frame of the emerald-type word: $24 "CHAOS EMERALD" or $30 "SUPER EMERALD". */
+    int emeraldWordFrameForTest() {
+        return phase1Elements.get(EMERALD_WORD_INDEX).mappingFrame;
+    }
+
+    /** Mapping frames of whichever reveal message is currently on screen, in ROM order. */
+    List<Integer> revealFramesForTest() {
+        return phase2Elements.stream().map(elem -> elem.mappingFrame).toList();
     }
 
     private boolean phase1ElementVisible(int index) {
@@ -405,25 +471,30 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
         int charXOffset = getCharXOffset();
         int charFrameAdj = getCharFrameAdj();
 
-        // SS results uses +$1A frame adjustment for label elements (ROM: loc_2EA1E).
-        // Knuckles adds an additional +5 (ROM lines 63954-63956).
-        int labelFrameAdj = 0x1A;
-        if (character == PlayerCharacter.KNUCKLES) labelFrameAdj += 5;
+        // ROM loc_2EA1E / loc_2EA7C: the +$1A (a further +5 for Knuckles) bump from the
+        // palette-line-3 label frames ($17-$1A) to their palette-line-1 twins ($31-$34)
+        // happens only on a Super Emerald stage, where palette line 3 carries the HPZ
+        // sanctuary colours instead of the results text ramp.
+        int labelFrameAdj = 0;
+        if (superEmeraldStage) {
+            labelFrameAdj = 0x1A;
+            if (character == PlayerCharacter.KNUCKLES) labelFrameAdj += 5;
+        }
 
         // All-7-emeralds shifts for character name (ROM lines 63954-63956)
-        int all7Shift = (totalEmeraldCount >= 7 && gotEmerald) ? -0x10 : 0;
+        int all7Shift = (rewardEmeraldCount >= 7 && gotEmerald) ? -0x10 : 0;
+        // ROM sub_2ECBC: the palette-line-3 art_tile override is skipped on a Super
+        // Emerald stage, leaving these frames on the palette baked into their mappings.
+        int textPalAdd = superEmeraldStage ? 0 : PAL3_ADDITION;
 
         // --- Elements 0-5: Score, bonuses, continue ---
         phase1Elements.add(new ResultsElement(ElemType.SCORE_ROW, 0x120, 0x4E0, 0x100,
                 0x17 + labelFrameAdj, 0x60));
-        phase1Elements.add(labelWithPaletteRemap(0xC0, 0x4C0, 0x118, 0x18 + labelFrameAdj, 0x58,
-                TEXT_PALETTE_INDEX, GREEN_PALETTE_INDEX));
+        phase1Elements.add(label(0xC0, 0x4C0, 0x118, 0x18 + labelFrameAdj, 0x58));
         phase1Elements.add(new ResultsElement(ElemType.RING_BONUS, 0x178, 0x578, 0x118, 1, 0x40));
-        phase1Elements.add(labelWithPaletteRemap(0xC0, 0x500, 0x128, 0x19 + labelFrameAdj, 0x40,
-                TEXT_PALETTE_INDEX, GREEN_PALETTE_INDEX));
+        phase1Elements.add(label(0xC0, 0x500, 0x128, 0x19 + labelFrameAdj, 0x40));
         phase1Elements.add(new ResultsElement(ElemType.TIME_BONUS, 0x178, 0x5B8, 0x128, 1, 0x40));
-        ResultsElement continueElem = labelWithPaletteRemap(0xC0, 0x540, 0x138, 0x1A + labelFrameAdj, 0x48,
-                TEXT_PALETTE_INDEX, GREEN_PALETTE_INDEX);
+        ResultsElement continueElem = label(0xC0, 0x540, 0x138, 0x1A + labelFrameAdj, 0x48);
         continueElem.visible = (ringsCollected >= CONTINUE_RING_THRESHOLD);
         phase1Elements.add(continueElem);
 
@@ -438,7 +509,7 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
 
         // --- Element 13: Failure message (loc_2EAC8) ---
         ResultsElement failMsg = new ResultsElement(ElemType.LABEL,
-                0x120, 0x460, 0xA0, 0x22, 0x60, PAL3_ADDITION);
+                0x120, 0x460, 0xA0, 0x22, 0x60, textPalAdd);
         failMsg.visible = !gotEmerald;
         phase1Elements.add(failMsg);
 
@@ -449,35 +520,39 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
         // Char name uses palette 0 (orange) — art_tile -$87 wraps palette back to 0.
         ResultsElement charName = new ResultsElement(ElemType.LABEL,
                 charNameTargetX, charNameStartX, 0x98, 0x13 + charFrameAdj, 0x48,
-                character == PlayerCharacter.KNUCKLES ? 1 : 0);
+                charNamePaletteAdd());
         charName.visible = gotEmerald;
         phase1Elements.add(charName);
 
-        // --- Element 15: "GOT THEM ALL" (loc_2EB30) ---
+        // --- Element 15: "GOT A" (loc_2EB30) ---
         int gotAllTargetX = 0x124 - charXOffset + all7Shift;
         int gotAllStartX = 0x3E4 - charXOffset + all7Shift;
         ResultsElement gotAll = new ResultsElement(ElemType.LABEL,
-                gotAllTargetX, gotAllStartX, 0x98, 0x23, 0x48, PAL3_ADDITION);
+                gotAllTargetX, gotAllStartX, 0x98, 0x23, 0x48, textPalAdd);
         gotAll.visible = gotEmerald;
         phase1Elements.add(gotAll);
 
         // --- Element 16: Emerald type label (loc_2EB64) ---
-        int chaosEmShift = (totalEmeraldCount >= 7 && gotEmerald) ? -8 : 0;
+        // ROM loc_2EB88: a Super Emerald stage swaps frame $24 "CHAOS EMERALD" for frame
+        // $30 "SUPER EMERALD", and gates the pluralising shift on Super_emerald_count.
+        int emeraldWordFrame = superEmeraldStage ? 0x30 : 0x24;
+        int chaosEmShift = (rewardEmeraldCount >= 7 && gotEmerald) ? -8 : 0;
         ResultsElement chaosEm = new ResultsElement(ElemType.LABEL,
-                0x120 + chaosEmShift, 0x460 + chaosEmShift, 0xB0, 0x24, 0x64, PAL3_ADDITION);
+                0x120 + chaosEmShift, 0x460 + chaosEmShift, 0xB0, emeraldWordFrame, 0x64,
+                textPalAdd);
         chaosEm.visible = gotEmerald;
         phase1Elements.add(chaosEm);
 
-        // --- Element 17: "NOW" (loc_2EBA4) ---
+        // --- Element 17: "LL" completing "GOT ALL" (loc_2EBA4) ---
         ResultsElement nowText = new ResultsElement(ElemType.LABEL,
-                0x114 - charXOffset, 0x3D4 - charXOffset, 0x98, 0x25, 0x20, PAL3_ADDITION);
-        nowText.visible = gotEmerald && totalEmeraldCount >= 7;
+                0x114 - charXOffset, 0x3D4 - charXOffset, 0x98, 0x25, 0x20, textPalAdd);
+        nowText.visible = gotEmerald && rewardEmeraldCount >= 7;
         phase1Elements.add(nowText);
 
-        // --- Element 18: "SUPER SONIC" (loc_2EBCC) ---
+        // --- Element 18: trailing "S" pluralising the emerald word (loc_2EBCC) ---
         ResultsElement superText = new ResultsElement(ElemType.LABEL,
-                0x118, 0x458, 0xB0, 0x26, 0x10, PAL3_ADDITION);
-        superText.visible = gotEmerald && totalEmeraldCount >= 7;
+                0x118, 0x458, 0xB0, 0x26, 0x10, textPalAdd);
+        superText.visible = gotEmerald && rewardEmeraldCount >= 7;
         phase1Elements.add(superText);
     }
 
@@ -488,27 +563,42 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
     }
 
     /**
-     * Creates 6 emerald reveal text elements from ObjDat2_2E918 (ROM lines 63789-63807).
+     * Creates the reveal text: the six "NOW &lt;name&gt; CAN / BE SUPER &lt;name&gt;" elements from
+     * ObjDat2_2E918 (ROM lines 63789-63807), or the three "&lt;name&gt; CAN GO TO / HIDDEN PALACE"
+     * elements from ObjDat2_2E960 (ROM lines 63808-63817) when the Big Ring was taken on the
+     * S&amp;K side, where Chaos Emeralds no longer grant a Super form.
      */
     private void createPhase2Elements() {
         int charXOffset = getCharXOffset();
         int charFrameAdj = getCharFrameAdj();
+        int charNamePalAdd = charNamePaletteAdd();
 
         // Phase 2 reveal elements use the mapping palettes in the combined-cart path.
+        if (revealVariant == RevealVariant.HIDDEN_PALACE) {
+            phase2Elements.add(new ResultsElement(ElemType.LABEL, // char name = orange
+                    0xB8 + charXOffset, 0x3B8 + charXOffset, 0x98, 0x13 + charFrameAdj, 0x48,
+                    charNamePalAdd));
+            phase2Elements.add(new ResultsElement(ElemType.LABEL, // "CAN GO TO"
+                    0x148 - charXOffset, 0x448 - charXOffset, 0x98, 0x2E, 0x40));
+            phase2Elements.add(new ResultsElement(ElemType.LABEL, // "HIDDEN PALACE"
+                    0x120, 0x4A0, 0xB0, 0x2F, 0x60));
+            return;
+        }
+
         phase2Elements.add(new ResultsElement(ElemType.LABEL,
                 0xC0 + charXOffset, 0x3C0 + charXOffset, 0x98, 0x27, 0x38));
         phase2Elements.add(new ResultsElement(ElemType.LABEL, // char name = orange
                 0x100 + charXOffset, 0x400 + charXOffset, 0x98, 0x13 + charFrameAdj, 0x48,
-                character == PlayerCharacter.KNUCKLES ? 1 : 0));
+                charNamePalAdd));
         phase2Elements.add(new ResultsElement(ElemType.LABEL,
                 0x150 - charXOffset, 0x450 - charXOffset, 0x98, 0x3A, 0x30));
         phase2Elements.add(new ResultsElement(ElemType.LABEL,
                 0xC0 + charXOffset, 0x440 + charXOffset, 0xB0, 0x28, 0x20));
         phase2Elements.add(new ResultsElement(ElemType.LABEL,
-                0xE8, 0x468, 0xB0, 0x12, 0x50, character == PlayerCharacter.KNUCKLES ? 1 : 0));
+                0xE8, 0x468, 0xB0, 0x12, 0x50, charNamePalAdd));
         phase2Elements.add(new ResultsElement(ElemType.LABEL, // char name = orange
                 0x138 + charXOffset, 0x4B8 + charXOffset, 0xB0, 0x13 + charFrameAdj, 0x48,
-                character == PlayerCharacter.KNUCKLES ? 1 : 0));
+                charNamePalAdd));
     }
 
     /**
@@ -540,12 +630,6 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
 
     private ResultsElement label(int targetX, int startX, int y, int frame, int width) {
         return new ResultsElement(ElemType.LABEL, targetX, startX, y, frame, width);
-    }
-
-    private ResultsElement labelWithPaletteRemap(int targetX, int startX, int y, int frame, int width,
-                                                 int fromPalette, int toPalette) {
-        return new ResultsElement(ElemType.LABEL, targetX, startX, y, frame, width,
-                0, fromPalette, toPalette);
     }
 
     private void slideElements(List<ResultsElement> elements) {
@@ -627,10 +711,7 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
             case EMERALD -> renderEmerald(elem);
             default -> {
                 int tileOffset = isCharNameFrame(elem.mappingFrame) ? CHAR_NAME_TILE_OFFSET : 0;
-                if (elem.paletteRemapFrom >= 0) {
-                    renderMappingFrameWithPaletteRemap(elem.mappingFrame, elem.screenX(), elem.screenY(),
-                            tileOffset, elem.paletteRemapFrom, elem.paletteRemapTo);
-                } else if (elem.paletteAdd != 0) {
+                if (elem.paletteAdd != 0) {
                     renderMappingFrameWithPalAdd(elem.mappingFrame, elem.screenX(), elem.screenY(),
                             tileOffset, elem.paletteAdd);
                 } else {
@@ -651,14 +732,10 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
         }
         var pieces = frame.pieces();
         for (int i = 0; i < pieces.size(); i++) {
-            int paletteOverride = -1;
-            int pieceWorldX = elem.screenX();
-            if (i <= 1 && pieces.get(i).paletteIndex() == TEXT_PALETTE_INDEX) {
-                paletteOverride = GREEN_PALETTE_INDEX;
-            } else if (i == 2 || i == 3) {
-                pieceWorldX += SCORE_VALUE_X_ADJUST;
-            }
-            renderMappingPiece(pieces.get(i), pieceWorldX, elem.screenY(), 0, paletteOverride);
+            // Pieces 2/3 are the live score digits, drawn 8px left of the label run.
+            int pieceWorldX = elem.screenX()
+                    + ((i == 2 || i == 3) ? SCORE_VALUE_X_ADJUST : 0);
+            renderMappingPiece(pieces.get(i), pieceWorldX, elem.screenY(), 0, -1);
         }
     }
 
@@ -770,43 +847,6 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
             boolean pieceHFlip = piece.hFlip();
             boolean pieceVFlip = piece.vFlip();
             int palIdx = (piece.paletteIndex() + palAdd) & 0x3;
-
-            for (int col = 0; col < widthTiles; col++) {
-                for (int row = 0; row < heightTiles; row++) {
-                    int tileIdx = piece.tileIndex() + tileOffset + (col * heightTiles + row);
-                    int patternId = PATTERN_BASE + tileIdx;
-                    int drawX = worldX + piece.xOffset()
-                            + (pieceHFlip ? (widthTiles - 1 - col) : col) * 8;
-                    int drawY = worldY + piece.yOffset()
-                            + (pieceVFlip ? (heightTiles - 1 - row) : row) * 8;
-
-                    int descIndex = patternId & 0x7FF;
-                    if (piece.priority()) descIndex |= 0x8000;
-                    if (pieceHFlip) descIndex |= 0x800;
-                    if (pieceVFlip) descIndex |= 0x1000;
-                    descIndex |= (palIdx & 0x3) << 13;
-
-                    com.openggf.level.PatternDesc desc = configureReusablePatternDesc(descIndex);
-                    gm.renderPatternWithId(patternId, desc, drawX, drawY);
-                }
-            }
-        }
-    }
-
-    private void renderMappingFrameWithPaletteRemap(int frameIndex, int worldX, int worldY,
-                                                     int tileOffset, int fromPalette, int toPalette) {
-        if (frameIndex < 0 || frameIndex >= spriteSheet.getFrameCount()) return;
-        var frame = spriteSheet.getFrame(frameIndex);
-        if (frame == null) return;
-        var gm = GameServices.graphics();
-        if (gm == null) return;
-
-        for (var piece : frame.pieces()) {
-            int widthTiles = piece.widthTiles();
-            int heightTiles = piece.heightTiles();
-            boolean pieceHFlip = piece.hFlip();
-            boolean pieceVFlip = piece.vFlip();
-            int palIdx = piece.paletteIndex() == fromPalette ? toPalette : piece.paletteIndex();
 
             for (int col = 0; col < widthTiles; col++) {
                 for (int row = 0; row < heightTiles; row++) {
@@ -1023,6 +1063,9 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
 
     private enum ElemType { LABEL, SCORE_ROW, RING_BONUS, TIME_BONUS, EMERALD }
 
+    /** Which post-tally reveal message the ROM spawns (ObjDat2_2E918 vs ObjDat2_2E960). */
+    private enum RevealVariant { SUPER_FORM, HIDDEN_PALACE }
+
     private static class ResultsElement {
         final ElemType type;
         final int targetX;
@@ -1031,25 +1074,17 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
         final int mappingFrame;
         final int widthPixels;
         final int paletteAdd;
-        final int paletteRemapFrom;
-        final int paletteRemapTo;
         int currentX;
         boolean visible = true;
         boolean sliding_out;
 
         ResultsElement(ElemType type, int targetX, int startX, int y,
                        int mappingFrame, int widthPixels) {
-            this(type, targetX, startX, y, mappingFrame, widthPixels, 0, -1, -1);
+            this(type, targetX, startX, y, mappingFrame, widthPixels, 0);
         }
 
         ResultsElement(ElemType type, int targetX, int startX, int y,
                        int mappingFrame, int widthPixels, int paletteAdd) {
-            this(type, targetX, startX, y, mappingFrame, widthPixels, paletteAdd, -1, -1);
-        }
-
-        ResultsElement(ElemType type, int targetX, int startX, int y,
-                       int mappingFrame, int widthPixels, int paletteAdd,
-                       int paletteRemapFrom, int paletteRemapTo) {
             this.type = type;
             this.targetX = targetX;
             this.startX = startX;
@@ -1057,8 +1092,6 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
             this.mappingFrame = mappingFrame;
             this.widthPixels = widthPixels;
             this.paletteAdd = paletteAdd;
-            this.paletteRemapFrom = paletteRemapFrom;
-            this.paletteRemapTo = paletteRemapTo;
             this.currentX = startX;
         }
 

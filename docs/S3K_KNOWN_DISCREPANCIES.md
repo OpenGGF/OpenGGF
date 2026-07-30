@@ -30,6 +30,7 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 17. [MHZ Swing Vine / Vertical Swing Bar Forced Camera Scroll (Resolved)](#mhz-swing-vine--vertical-swing-bar-forced-camera-scroll-resolved)
 18. [MHZ2 End-Boss Background Vertical Deform (`sub_554B8`)](#mhz2-end-boss-background-vertical-deform-sub_554b8)
 19. [MHZ Deferred Items: Out-of-Scope Divergences Confirmed During the Parity-Fix Wave](#mhz-deferred-items-out-of-scope-divergences-confirmed-during-the-parity-fix-wave)
+20. [Super Emerald Special Stage Results: Sanctuary Reveal Replaced by an Immediate Exit](#super-emerald-special-stage-results-sanctuary-reveal-replaced-by-an-immediate-exit)
 
 ---
 
@@ -1215,3 +1216,44 @@ display). Headless `HeadlessGameBoot` capture of zone `$16` act 1 shows the
 sanctuary crystal wall spanning the full display instead of surviving only in the
 leftmost columns, which was the visible symptom of the previous generic-fallback
 parallax.
+
+---
+
+## Super Emerald Special Stage Results: Sanctuary Reveal Replaced by an Immediate Exit
+
+### Original Implementation
+
+`Obj_SpecialStage_Results` routine 6 (`loc_2E512`, sonic3k.asm) sees a cleared Super
+Emerald stage — S3 locked on, `SK_special_stage_flag` set, `Special_stage_spheres_left`
+zero — and jumps to routine `$E` (`loc_2E616`) instead of falling through to the Chaos
+Emerald check at `loc_2E540`. `SpecialStage_Results` has already rebuilt HPZ as the
+backdrop for that routine (Layout_HPZ, `HPZ_128x128_*`, `PLCID_48`, camera at the shrine),
+so routine `$E` pans `Camera_Y_pos` down to `$320` to reveal the shrine, spawns the Super
+Emerald pedestal sprites and the invincibility-star orbit, and — once
+`Super_emerald_count` reaches 7 — pans across and spawns ObjDat2_2E984,
+"NOW &lt;name&gt; CAN / BE HYPER &lt;name&gt;". The seven small Chaos Emerald indicators at
+`loc_2EAA6` test `cmpi.b #1` against `Collected_emeralds_array`, so on this screen — where
+every collected emerald is state 2 or 3 — none of them draw.
+
+### Our Implementation
+
+The engine's Super Emerald results screen keeps the `Pal_Results` backdrop, so it has no
+shrine to pan to. The Chaos Emerald reveal is correctly suppressed and the screen exits
+after the bonus tally; the sanctuary itself is then entered through the ordinary Big Ring
+route. The small emerald indicators remain gated on "collected at all" rather than the
+ROM's exact `state == 1`, so they stay visible on the Super Emerald screen.
+
+### Rationale
+
+The shrine reveal needs the results screen to host a live HPZ level render, which is a
+separate piece of work from the message-selection fix; suppressing the wrong message does
+not depend on it. Tightening the indicator gate to `state == 1` in the meantime would leave
+the Super Emerald results screen with no emeralds shown at all — worse than the current
+approximation, because the big shrine emeralds that replace them are not drawn yet. Both
+halves land together when the shrine backdrop does.
+
+### Verification
+
+`TestS3kSpecialStageResultsReveal` pins the suppressed reveal, the Super_emerald_count
+sourcing (`sub_2ECA8`), the SUPER EMERALD word (`loc_2EB88`), and the S3-side versus
+S&K-side reveal selection at `loc_2E540`.

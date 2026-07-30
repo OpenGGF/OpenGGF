@@ -56,8 +56,7 @@ record S3kBigRingTransitionIntent(int rawSubtype, ObjectRefId parentRingId) {
         services.gameState().markSpecialRingCollected(ringBit());
 
         boolean forced = (rawSubtype & 0x80) != 0;
-        boolean skSide = originZone >= Sonic3kZoneIds.ZONE_MHZ
-                || originZone == Sonic3kZoneIds.ZONE_FBZ;
+        boolean skSide = Sonic3kZoneIds.isSkSideZone(originZone);
         boolean sanctuary = forced || (skSide && services.gameState().hasAllEmeralds());
         if (!sanctuary) {
             services.requestSpecialStageEntry();

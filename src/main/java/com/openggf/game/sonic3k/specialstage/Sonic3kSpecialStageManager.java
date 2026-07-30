@@ -1178,6 +1178,16 @@ public class Sonic3kSpecialStageManager {
                 emeraldCollected);
     }
 
+    /**
+     * ROM {@code SK_special_stage_flag}: set by the Big Ring / HPZ pedestal that launched
+     * the stage and left standing afterwards, so the Special Stage results screen can tell
+     * a Super Emerald run from a Chaos Emerald one. {@link #reset()} deliberately leaves it
+     * alone for the same reason — every entry re-sets it from the reward kind.
+     */
+    public boolean isSuperEmeraldMode() {
+        return superEmeraldMode;
+    }
+
     public void reset() {
         if (renderer != null) {
             renderer.resetStageGeometryCache();
@@ -1185,7 +1195,6 @@ public class Sonic3kSpecialStageManager {
         initialized = false;
         finished = false;
         emeraldCollected = false;
-        superEmeraldMode = false;
         ringsCollected = 0;
         spheresLeft = 0;
         currentStage = 0;

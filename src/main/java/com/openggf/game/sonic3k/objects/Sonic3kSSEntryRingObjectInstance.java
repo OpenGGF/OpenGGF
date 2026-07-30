@@ -182,7 +182,7 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
         // as a Super Emerald ring. In locked-on S3K, an ordinary ring also
         // gets that presentation on the SK side once all Chaos Emeralds exist.
         this.superEmeraldRing = forcedSanctuaryRoute
-                || (isSkSideZone(services().currentZone()) && gameState.hasAllEmeralds());
+                || (Sonic3kZoneIds.isSkSideZone(services().currentZone()) && gameState.hasAllEmeralds());
     }
 
     @Override
@@ -349,7 +349,7 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
         // Super Emeralds on the SK side. The supported locked-on ROM has
         // SK_alone_flag clear.
         if (gameState.hasAllEmeralds()
-                && (!isSkSideZone(services().currentZone()) || gameState.hasAllSuperEmeralds())) {
+                && (!Sonic3kZoneIds.isSkSideZone(services().currentZone()) || gameState.hasAllSuperEmeralds())) {
             LOGGER.fine("SSEntryRing #" + bitIndex + " — all emeralds, awarding 50 rings");
             // loc_61794 plays sfx_BigRing a second time before AddRings.
             services().playSfx(Sonic3kSfx.BIG_RING.id);
@@ -363,14 +363,6 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
             LOGGER.fine("SSEntryRing #" + bitIndex + " — entering Special Stage sequence");
             enterSpecialStageSequence(player);
         }
-    }
-
-    private static boolean isSkSideZone(int zone) {
-        // SSEntry_CheckLevel: zones >= MHZ and FBZ are the S&K side.
-        // OpenGGF's S3K module targets the locked-on ROM, where
-        // SK_alone_flag is always clear; the standalone S&K branch therefore
-        // is intentionally non-applicable rather than inferred from zone data.
-        return zone >= Sonic3kZoneIds.ZONE_MHZ || zone == Sonic3kZoneIds.ZONE_FBZ;
     }
 
     /**

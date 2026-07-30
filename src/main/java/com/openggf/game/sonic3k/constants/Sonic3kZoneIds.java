@@ -37,6 +37,20 @@ public class Sonic3kZoneIds {
     public static final int ZONE_GLOWING_SPHERE = 0x14;  // Glowing Spheres (Pachinko)
     public static final int ZONE_SLOT_MACHINE   = 0x15;  // Slot Machine
 
+    /**
+     * True for the zones that belong to Sonic &amp; Knuckles' own act list rather than
+     * Sonic 3's — FBZ plus everything from MHZ onwards.
+     *
+     * <p>ROM: the {@code cmpi.b #4} / {@code cmpi.b #7} pair that {@code SSEntry_CheckLevel}
+     * and the Special Stage results screen ({@code loc_2E540}) both run against the current
+     * zone id. OpenGGF's S3K module targets the locked-on ROM, where {@code SK_alone_flag}
+     * is always clear, so the standalone S&amp;K branch is intentionally non-applicable
+     * rather than inferred from zone data.
+     */
+    public static boolean isSkSideZone(int zone) {
+        return zone >= ZONE_MHZ || zone == ZONE_FBZ;
+    }
+
     public static final int MAIN_ZONE_COUNT = 13; // AIZ through DDZ
     public static final int TOTAL_ZONE_COUNT = 23; // AIZ(0) through canonical HPZ(22), including gaps
 }
