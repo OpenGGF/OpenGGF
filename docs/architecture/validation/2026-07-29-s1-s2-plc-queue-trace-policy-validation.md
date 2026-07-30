@@ -43,8 +43,8 @@ production reset/isolation boundaries between sequential replay classes.
 
 ```text
 mvn -Dmse=off -Dsurefire.forkCount=1 \
-  -Dsonic1.rom.path=/home/farrell/code/projects/OpenGGF/s1.gen \
-  -Dsonic2.rom.path=/home/farrell/code/projects/OpenGGF/s2.gen \
+  -Dsonic1.rom.path=<repo>/s1.gen \
+  -Dsonic2.rom.path=<repo>/s2.gen \
   "-Dtest=<the preserved 50-class baseline list>" test
 
 Tests run: 51, Failures: 0, Errors: 0, Skipped: 0

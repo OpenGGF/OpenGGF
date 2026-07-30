@@ -96,7 +96,7 @@ selected VInt identity and the HBlank classification.
 The native headless harness was exercised successfully with the S1 GHZ movie:
 
 ```bash
-BIZHAWK_HOME=/home/farrell/code/projects/OpenGGF/docs/BizHawk-2.11-linux-x64 \
+BIZHAWK_HOME=<repo>/docs/BizHawk-2.11-linux-x64 \
 tools/bizhawk-headless/run.sh --mode trace --rom s1.gen \
   --movie src/test/resources/traces/s1/ghz1_fullrun/ghz1_fullrun.bk2 \
   --output /tmp/<scratch>
@@ -118,7 +118,7 @@ Each ordinary route used this command shape:
 ```bash
 export OGGF_PLC_PROBE_OUTPUT=/tmp/<route>/<game>.jsonl
 source tools/bizhawk/diagnostics/<game>_plc_timing_probe.env.sh
-BIZHAWK_HOME=/home/farrell/code/projects/OpenGGF/docs/BizHawk-2.11-linux-x64 \
+BIZHAWK_HOME=<repo>/docs/BizHawk-2.11-linux-x64 \
   tools/bizhawk/run_bizhawk_lua.sh \
   tools/bizhawk/diagnostics/<game>_plc_timing_probe.lua <movie.bk2> <game>.gen
 mvn exec:java \

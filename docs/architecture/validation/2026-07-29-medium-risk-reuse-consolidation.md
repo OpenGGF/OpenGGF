@@ -10,9 +10,9 @@
 Validation used Maven 3.9.16 on OpenJDK 21.0.11 (`mvn -v`) with the
 discovered ROMs:
 
-- Sonic 1: `/home/farrell/code/projects/OpenGGF/s1.gen`
-- Sonic 2: `/home/farrell/code/projects/OpenGGF/s2.gen`
-- Sonic 3 & Knuckles: `/home/farrell/code/projects/OpenGGF/s3k.gen`
+- Sonic 1: `<repo>/s1.gen`
+- Sonic 2: `<repo>/s2.gen`
+- Sonic 3 & Knuckles: `<repo>/s3k.gen`
 
 Every Maven command supplied those paths through `sonic1.rom.path`,
 `sonic2.rom.path`, and `s3k.rom.path`.
@@ -23,9 +23,9 @@ The exact reviewed head ran the prescribed focused command:
 
 ```bash
 mvn -Dmse=off \
-  -Dsonic1.rom.path=/home/farrell/code/projects/OpenGGF/s1.gen \
-  -Dsonic2.rom.path=/home/farrell/code/projects/OpenGGF/s2.gen \
-  -Ds3k.rom.path=/home/farrell/code/projects/OpenGGF/s3k.gen \
+  -Dsonic1.rom.path=<repo>/s1.gen \
+  -Dsonic2.rom.path=<repo>/s2.gen \
+  -Ds3k.rom.path=<repo>/s3k.gen \
   -Dtest=com.openggf.game.TestBuiltInRomDetectors,com.openggf.game.TestRomDetectionService,com.openggf.game.TestHeaderNameRomDetectors,com.openggf.tests.rules.TestRomCacheAvailability,com.openggf.tools.TestCliArguments,com.openggf.tools.TraceCaptureToolArgsTest,com.openggf.tools.TestTraceBenchmarkToolArgs,com.openggf.tests.trace.TestRecordedInputRows,com.openggf.game.TestSpecialStageInputMapper,com.openggf.game.rewind.TestLiveRewindLogicalInput,com.openggf.tests.trace.s1.TestS1SpecialStageTraceReplay,com.openggf.tests.trace.s2.TestS2SpecialStageTraceReplay,com.openggf.tests.trace.s2.S2SpecialStageReplayDeterminismTest,com.openggf.tests.trace.s3k.TestS3kSpecialStageTraceReplay,com.openggf.tests.trace.runs.TestS1GhzMazeRoundTripChain,com.openggf.tests.trace.runs.TestS2EhzHalfpipeRoundTripChain,com.openggf.tests.TestArchUnitTestRules,com.openggf.tests.TestArchUnitRules \
   test
 ```
@@ -152,9 +152,9 @@ The exact reviewed head reran that green side of the regression:
 
 ```bash
 mvn -Dmse=off \
-  -Dsonic1.rom.path=/home/farrell/code/projects/OpenGGF/s1.gen \
-  -Dsonic2.rom.path=/home/farrell/code/projects/OpenGGF/s2.gen \
-  -Ds3k.rom.path=/home/farrell/code/projects/OpenGGF/s3k.gen \
+  -Dsonic1.rom.path=<repo>/s1.gen \
+  -Dsonic2.rom.path=<repo>/s2.gen \
+  -Ds3k.rom.path=<repo>/s3k.gen \
   -Dtest=com.openggf.tests.TestPlayableSpriteRollSpeed,com.openggf.trace.live.TestLiveTraceComparatorObserver \
   test
 ```
@@ -178,9 +178,9 @@ exactly 14 lines. The exception guide now correctly identifies entries 1–9 as
 
 ```bash
 mvn -Dmse=off \
-  -Dsonic1.rom.path=/home/farrell/code/projects/OpenGGF/s1.gen \
-  -Dsonic2.rom.path=/home/farrell/code/projects/OpenGGF/s2.gen \
-  -Ds3k.rom.path=/home/farrell/code/projects/OpenGGF/s3k.gen \
+  -Dsonic1.rom.path=<repo>/s1.gen \
+  -Dsonic2.rom.path=<repo>/s2.gen \
+  -Ds3k.rom.path=<repo>/s3k.gen \
   -Dtest=com.openggf.tests.TestArchUnitRules,com.openggf.tests.TestArchUnitTestRules \
   test
 ```
@@ -196,9 +196,9 @@ command:
 
 ```bash
 mvn -Dmse=off \
-  -Dsonic1.rom.path=/home/farrell/code/projects/OpenGGF/s1.gen \
-  -Dsonic2.rom.path=/home/farrell/code/projects/OpenGGF/s2.gen \
-  -Ds3k.rom.path=/home/farrell/code/projects/OpenGGF/s3k.gen \
+  -Dsonic1.rom.path=<repo>/s1.gen \
+  -Dsonic2.rom.path=<repo>/s2.gen \
+  -Ds3k.rom.path=<repo>/s3k.gen \
   clean test
 ```
 

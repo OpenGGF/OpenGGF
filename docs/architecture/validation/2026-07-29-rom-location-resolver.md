@@ -24,9 +24,9 @@ results; they do not claim a normal Maven exit.
 
 | Game | ROM property and selected file | SHA-1 |
 |---|---|---|
-| Sonic 1 World REV01 | `sonic1.rom.path=/home/farrell/code/projects/OpenGGF/Sonic The Hedgehog (W) (REV01) [!].gen` | `69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b` |
-| Sonic 2 World REV01 | `sonic2.rom.path=/home/farrell/code/projects/OpenGGF/Sonic The Hedgehog 2 (W) (REV01) [!].gen` | `8bca5dcef1af3e00098666fd892dc1c2a76333f9` |
-| Sonic 3&K locked-on | `s3k.rom.path=/home/farrell/code/projects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen` | `cfbf98c36c776677290a872547ac47c53d2761d6` |
+| Sonic 1 World REV01 | `sonic1.rom.path=<repo>/Sonic The Hedgehog (W) (REV01) [!].gen` | `69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b` |
+| Sonic 2 World REV01 | `sonic2.rom.path=<repo>/Sonic The Hedgehog 2 (W) (REV01) [!].gen` | `8bca5dcef1af3e00098666fd892dc1c2a76333f9` |
+| Sonic 3&K locked-on | `s3k.rom.path=<repo>/Sonic and Knuckles & Sonic 3 (W) [!].gen` | `cfbf98c36c776677290a872547ac47c53d2761d6` |
 
 ## Focused verification
 
@@ -34,9 +34,9 @@ The exact JDK 21 command at feature commit `8af4208a2` was:
 
 ```bash
 mvn -Dmse=off \
-  '-Dsonic1.rom.path=/home/farrell/code/projects/OpenGGF/Sonic The Hedgehog (W) (REV01) [!].gen' \
-  '-Dsonic2.rom.path=/home/farrell/code/projects/OpenGGF/Sonic The Hedgehog 2 (W) (REV01) [!].gen' \
-  '-Ds3k.rom.path=/home/farrell/code/projects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen' \
+  '-Dsonic1.rom.path=<repo>/Sonic The Hedgehog (W) (REV01) [!].gen' \
+  '-Dsonic2.rom.path=<repo>/Sonic The Hedgehog 2 (W) (REV01) [!].gen' \
+  '-Ds3k.rom.path=<repo>/Sonic and Knuckles & Sonic 3 (W) [!].gen' \
   '-Dtest=com.openggf.data.TestRomLocationResolver,com.openggf.game.TestGameIdRomGame,com.openggf.data.TestRomManagerLocationResolution,com.openggf.data.TestRomManagerMissingRomLogging,com.openggf.game.TestPowerUpGraphicsRegression,com.openggf.tools.TestTraceToolRomLocations,com.openggf.tools.TraceCaptureToolArgsTest,com.openggf.tools.TestTraceBenchmarkToolArgs,com.openggf.tools.TraceCaptureSessionTest,com.openggf.tools.TestTraceCaptureUnifiedAudio,com.openggf.tests.TestArchUnitTestRules,com.openggf.tests.TestArchUnitRules' \
   test
 ```
@@ -55,9 +55,9 @@ The detached base and feature worktrees each ran:
 
 ```bash
 mvn -Dmse=off \
-  '-Dsonic1.rom.path=/home/farrell/code/projects/OpenGGF/Sonic The Hedgehog (W) (REV01) [!].gen' \
-  '-Dsonic2.rom.path=/home/farrell/code/projects/OpenGGF/Sonic The Hedgehog 2 (W) (REV01) [!].gen' \
-  '-Ds3k.rom.path=/home/farrell/code/projects/OpenGGF/Sonic and Knuckles & Sonic 3 (W) [!].gen' \
+  '-Dsonic1.rom.path=<repo>/Sonic The Hedgehog (W) (REV01) [!].gen' \
+  '-Dsonic2.rom.path=<repo>/Sonic The Hedgehog 2 (W) (REV01) [!].gen' \
+  '-Ds3k.rom.path=<repo>/Sonic and Knuckles & Sonic 3 (W) [!].gen' \
   clean test
 ```
 
