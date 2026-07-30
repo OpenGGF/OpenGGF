@@ -8,6 +8,7 @@ import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.trace.TraceReportWriter;
 import com.openggf.trace.DivergenceReport;
+import com.openggf.trace.DynamicArtSpecialStageComparator;
 import com.openggf.trace.FieldComparison;
 import com.openggf.trace.FrameComparison;
 import com.openggf.trace.Severity;
@@ -198,6 +199,7 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
         Set<Integer> ringsToGoRefreshFrames = ringsToGoRefreshFrames(trace);
 
         List<FrameComparison> comparisons = new ArrayList<>();
+        boolean[] dynamicArtCompared = new boolean[trace.frameCount()];
         int firstEngineFinished = -1;
         SpecialStageRunObjectsPassBinder passBinder =
                 new SpecialStageRunObjectsPassBinder(
@@ -219,21 +221,22 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
             List<CompletedPass> completedPasses = passBinder.passesForObservation(f);
             if (f < passPacingStart) {
                 if (tf.lag()) {
+                    harness.stepLagRow();
+                    addDynamicArtComparison(
+                            comparisons, trace, harness, f,
+                            new LinkedHashMap<>(), dynamicArtCompared);
                     continue;
                 }
                 harness.stepFrame(f);
             } else {
-                if (isTerminalPreStartPassFrame(trace, f)) {
-                    // Obj5F sets SpecialStage_Started from the terminal pass
-                    // whose VInt sample still belonged to the pre-start loop.
-                    // Recorder pass sequence 0 begins with the following VInt;
-                    // publish this boundary pass once through the native path.
-                    harness.completeTerminalPreStartPass();
-                }
-                for (CompletedPass pass : completedPasses) {
-                    harness.stepPass(pass);
-                }
+                harness.stepPasses(
+                        completedPasses,
+                        isTerminalPreStartPassFrame(trace, f),
+                        tf.lag());
                 if (tf.lag()) {
+                    addDynamicArtComparison(
+                            comparisons, trace, harness, f,
+                            new LinkedHashMap<>(), dynamicArtCompared);
                     continue;
                 }
             }
@@ -257,7 +260,9 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
                     expected.hasRunObjectsEnd());
             addPlayerFields(fields, "tails", expected.tails(), state.tails(),
                     expected.hasRunObjectsEnd());
-            comparisons.add(new FrameComparison(f, fields));
+            addDynamicArtComparison(
+                    comparisons, trace, harness, f, fields,
+                    dynamicArtCompared);
         }
 
         // Tier-1 finish transition: step the recorded finish frame so we can
@@ -268,12 +273,19 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
             if (sf >= 0 && sf < trace.frameCount()) {
                 List<CompletedPass> completedPasses = passBinder.passesForObservation(sf);
                 if (sf < passPacingStart) {
-                    if (!trace.getFrame(sf).lag()) {
+                    if (trace.getFrame(sf).lag()) {
+                        harness.stepLagRow();
+                    } else {
                         harness.stepFrame(sf);
                     }
                 } else {
-                    completedPasses.forEach(harness::stepPass);
+                    harness.stepPasses(
+                            completedPasses, false,
+                            trace.getFrame(sf).lag());
                 }
+                addDynamicArtComparison(
+                        comparisons, trace, harness, sf,
+                        new LinkedHashMap<>(), dynamicArtCompared);
             }
             // The recorder labels finish with the last logical non-lag frame,
             // while publishing the finish-causing pass at the following raw lag
@@ -289,6 +301,12 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
                         "stage finish must have one later raw observation; logical="
                                 + sf + " observed=" + observed);
             }
+            for (int frame = sf + 1; frame < observed; frame++) {
+                harness.stepIdleRow(trace.getFrame(frame).lag());
+                addDynamicArtComparison(
+                        comparisons, trace, harness, frame,
+                        new LinkedHashMap<>(), dynamicArtCompared);
+            }
             List<CompletedPass> finishPasses = passBinder.passesForObservation(observed);
             if (finishPasses.size() != 1) {
                 throw new IllegalStateException(
@@ -296,7 +314,9 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
                                 + finishPasses.size());
             }
             CompletedPass terminalPass = finishPasses.get(0);
-            harness.stepPass(terminalPass);
+            harness.stepPasses(
+                    List.of(terminalPass), false,
+                    trace.getFrame(observed).lag());
             Sonic2SpecialStageComparisonState terminalState = harness.capture();
             if (!finishedBeforeTerminal && harness.isFinished()) {
                 finishTransitionActual = String.valueOf(sf);
@@ -316,10 +336,44 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
                     trace.getFrame(observed), List.of(terminalPass.snapshot()));
             Map<String, FieldComparison> terminalFields = new LinkedHashMap<>();
             addRingsToGoField(terminalFields, terminalExpected, terminalState);
-            comparisons.add(new FrameComparison(observed, terminalFields));
+            addDynamicArtComparison(
+                    comparisons, trace, harness, observed, terminalFields,
+                    dynamicArtCompared);
         }
 
+        if (trace.metadata().hasPerFrameDynamicArtTransferState()) {
+            for (int frame = 0; frame < trace.frameCount(); frame++) {
+                if (dynamicArtCompared[frame]) {
+                    continue;
+                }
+                harness.stepIdleRow(trace.getFrame(frame).lag());
+                addDynamicArtComparison(
+                        comparisons, trace, harness, frame,
+                        new LinkedHashMap<>(), dynamicArtCompared);
+            }
+        }
         return new DivergenceReport(comparisons);
+    }
+
+    private static void addDynamicArtComparison(
+            List<FrameComparison> comparisons,
+            SpecialStageTraceData trace,
+            S2SpecialStageReplayHarness harness,
+            int frame,
+            Map<String, FieldComparison> fields,
+            boolean[] compared) {
+        if (trace.metadata().hasPerFrameDynamicArtTransferState()) {
+            if (frame == trace.frameCount() - 1) {
+                harness.finishDynamicArtSegment();
+            }
+            fields.putAll(new DynamicArtSpecialStageComparator().compare(
+                    trace.dynamicArtTransferStateForFrame(frame),
+                    harness.captureDynamicArt()).fields());
+            compared[frame] = true;
+        }
+        if (!fields.isEmpty()) {
+            comparisons.add(new FrameComparison(frame, fields));
+        }
     }
 
     private static void addManagerFields(Map<String, FieldComparison> fields,

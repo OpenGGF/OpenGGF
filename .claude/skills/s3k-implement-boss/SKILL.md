@@ -13,8 +13,8 @@ $ARGUMENTS: Boss name or zone (e.g., "AIZ mini-boss", "Angel Island end boss", "
 
 ## Related Skills
 
-- **s3k-disasm-guide** (`.claude/skills/s3k-disasm-guide/SKILL.md`) - Disassembly navigation, label conventions, RomOffsetFinder
-- **s3k-implement-object** (`.claude/skills/s3k-implement-object/SKILL.md`) - For non-boss Sonic 3&K objects and badniks. **Section 2.4 lists all reusable engine utilities** — check it before writing movement, collision, or rendering code.
+- **s3k-disasm-guide** (`.agents/skills/s3k-disasm-guide/SKILL.md`) - Disassembly navigation, label conventions, RomOffsetFinder
+- **s3k-implement-object** (`.agents/skills/s3k-implement-object/SKILL.md`) - For non-boss Sonic 3&K objects and badniks. **Section 2.4 lists all reusable engine utilities** — check it before writing movement, collision, or rendering code.
 
 ## Zone-Set-Aware Boss IDs
 
@@ -111,7 +111,7 @@ If the boss or child sprite has a known mapping shape from the disassembly, add 
 
 Delegate multiple agents to explore the disassembly. **Include this instruction in each agent prompt:**
 
-> Use the s3k-disasm-guide skill (`.claude/skills/s3k-disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, RomOffsetFinder commands, and object system patterns.
+> Use the s3k-disasm-guide skill (`.agents/skills/s3k-disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, RomOffsetFinder commands, and object system patterns.
 
 **Research checklist:**
 - [ ] Locate boss object in `docs/skdisasm/sonic3k.asm` (search for `Obj_ZONEMiniboss` or `Obj_ZONEEndBoss`)
@@ -496,8 +496,8 @@ Report any discrepancies with specific line references.
 
 | Purpose | Location |
 |---------|----------|
-| **Disassembly guide** | `.claude/skills/s3k-disasm-guide/SKILL.md` |
-| **Object skill** | `.claude/skills/s3k-implement-object/SKILL.md` |
+| **Disassembly guide** | `.agents/skills/s3k-disasm-guide/SKILL.md` |
+| **Object skill** | `.agents/skills/s3k-implement-object/SKILL.md` |
 | Base boss | `src/.../level/objects/boss/AbstractBossInstance.java` |
 | Boss state context | `src/.../level/objects/boss/BossStateContext.java` |
 | Boss child base | `src/.../level/objects/boss/AbstractBossChild.java` |
@@ -548,3 +548,10 @@ Report any discrepancies with specific line references.
 - Unique: Super Sonic only, flight chase format
 - No traditional arena (auto-scrolling)
 - Missile/projectile dodging during chase
+
+## Queue Diagnostics Routing
+
+If boss work reaches art-load timing, use `s3k-plc-system` for direct
+Kosinski/KosM ownership and `trace-replay-bug-fixing` for `queue.*` or
+`dynamic_art.*` reports. Use `trace-green-fleet` for multiple frontiers. The
+trace evidence is zero-tolerance and comparison-only.

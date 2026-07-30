@@ -79,10 +79,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 4957,
                 3091,
                 "s1-ghz-maze-roundtrip.bk2",
-                "3.15",
-                "2026-07-19",
+                "3.18",
+                "2026-07-30",
                 "s1-ghz-maze-roundtrip",
-                1);
+                1,
+                true);
 
             string runsDir = Path.Combine(
                 EndToEndTests.RepositoryRoot,

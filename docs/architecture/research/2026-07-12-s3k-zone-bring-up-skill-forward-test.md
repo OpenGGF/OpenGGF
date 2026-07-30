@@ -315,8 +315,8 @@ Reproduce structural validation from the repository root with UTF-8 mode explici
 
 ```powershell
 $env:PYTHONUTF8='1'
-python C:\Users\farre\.codex\skills\.system\skill-creator\scripts\quick_validate.py .agents\skills\s3k-zone-bring-up
-python C:\Users\farre\.codex\skills\.system\skill-creator\scripts\quick_validate.py .claude\skills\s3k-zone-bring-up
+python <user-config>\.codex\skills\.system\skill-creator\scripts\quick_validate.py .agents\skills\s3k-zone-bring-up
+python <user-config>\.codex\skills\.system\skill-creator\scripts\quick_validate.py .claude\skills\s3k-zone-bring-up
 ```
 
 ## Supersession Note

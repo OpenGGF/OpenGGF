@@ -421,3 +421,10 @@ Like S1, addresses derived from skdisasm labels may not always match the compile
 - `ArtNem_` prefix indicates Nemesis compression
 - `ArtKos_` prefix indicates regular Kosinski compression
 - When the file extension is `.bin`, the tool infers compression from the label
+
+## Queue Diagnostics Routing
+
+Use this skill to find ROM labels and routines, then use `s3k-plc-system` for
+direct Kosinski, KosM, and hardware-timing schema 2. Use
+`trace-replay-bug-fixing` for `queue.*` and `dynamic_art.*` report triage;
+trace evidence is zero-tolerance and comparison-only.

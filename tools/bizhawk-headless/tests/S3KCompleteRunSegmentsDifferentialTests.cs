@@ -79,15 +79,27 @@ namespace OpenGGF.BizHawk.Headless.Tests
             "^  \"recording_date\": \"[0-9]{4}-[0-9]{2}-[0-9]{2}\",$");
 
         /// <summary>
-        /// Exact v6.38 fixture/current literals. No schema or version
-        /// normalization is permitted.
+        /// Exact published and current literals. Only this reviewed
+        /// schema-one to schema-two migration is normalized.
         /// </summary>
+        private const string PublishedLuaScriptVersionLine =
+            "  \"lua_script_version\": \"6.39-s3k-completerun\",";
+        private const string PublishedDirectLuaScriptVersionLine =
+            "  \"lua_script_version\": \"6.39-s3k-completerun\",";
         private const string CurrentLuaScriptVersionLine =
-            "  \"lua_script_version\": \"6.38-s3k-completerun\",";
+            "  \"lua_script_version\": \"6.39-s3k-completerun\",";
         private const string CurrentTraceSchemaLine =
             "  \"trace_schema\": 7,";
-        private const string HardwareTimingSchemaLine =
+        private const string CurrentHardwareTimingSchemaLine =
             "  \"hardware_timing_schema\": 2,\n";
+        private const string PublishedHardwareTimingSchemaLine =
+            "  \"hardware_timing_schema\": 2,\n";
+        private static readonly HashSet<string> DirectPredecessorSegments =
+            new HashSet<string>(StringComparer.Ordinal)
+            {
+                "ddz", "dez", "ending", "fbz", "hpz", "lbz", "lrz",
+                "mhz", "soz", "ssz"
+            };
 
         /// <summary>
         /// Identity (A) carries no run_id key at all. Identities (B) and
@@ -109,125 +121,129 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 4249570,
                 "2f8d3d0c2f5a4b3f30b7784ed28fa37071951f6d8d538f08573b4631"
                 + "fa33f872",
-                172380688,
-                "d55efb44c7fadc022591c56054964e002c8ade868867a8965a0efbe8"
-                + "20f2d210"),
+                184288496,
+                "48d01a1d3cee368ac5be20a55cae94cbfc8f46ad9caf353adc4c6816"
+                + "ab5d1d23"),
             new SegmentCase(
                 "hcz", "hcz_completerun", 27170, 31482,
                 5100718,
                 "5d829f35729bb9254f272283dd078d3c6b259c771ca3d57eea3fb249"
                 + "d7ed73c7",
-                210920712,
-                "9fa13b138dd4e22749bdf0cfb66c71cd28e0e72568372b683efbc025"
-                + "5208077f"),
+                225206246,
+                "d476cfca26294d7e8170f24e6b611a4566edb154d68b197c7f655eea"
+                + "d43dfb9e"),
             new SegmentCase(
                 "mgz", "mgz_completerun", 58653, 39398,
                 6383110,
                 "ddfcc9851a6c6b100e9366ebe9fccfecd9a99745639a8192f0f93e24"
                 + "1879ae52",
-                208896738,
-                "1b3faa5204d83883a8877c0c3873ba7831aefde4a07abff942e119dc"
-                + "3a8038eb"),
+                226795845,
+                "cf447cbd6dca54ce25b993e19f32e91c279468b1c29353a1ab86ca82"
+                + "80059ca6"),
             new SegmentCase(
                 "cnz", "cnz_completerun", 98052, 40064,
                 6491002,
                 "2d1ba19a27d614c25ceb8962f7506552cc8b038cc3a36a00b08f4337"
                 + "d329d404",
-                211836043,
-                "1134664398b8b911f0ed0024376c71d1aa546598785cd3008e04ed91"
-                + "ffbd3406"),
+                230008602,
+                "6a6c744975c1c040219d80e66e2634b962d9e49cf78e7969619b5991"
+                + "76a60b8c"),
             new SegmentCase(
                 "icz", "icz_completerun", 138117, 25393,
                 4114300,
                 "386cf6e8e62b61c8cd03c252668db47d3511fc1fd6c43399830e6655"
                 + "086d0c99",
-                173735703,
-                "0e21af4b895ab47ceca79ea74301208bd8ab1a44899cab921c566d75"
-                + "608efaa9"),
+                185249490,
+                "dbe441b24c35673e61531111ff24ec45eb88e7ed65f6a9eadb1fad30"
+                + "271e593b"),
             new SegmentCase(
                 "lbz", "lbz_completerun", 163511, 46244,
                 7492162,
                 "dba472735a28d1bb3235a4fe79ab6734202456f97bca6ca00cac2f5d"
                 + "64c8a139",
-                266307785,
-                "d89419f674e653686a80482954eb6cb309dfbf17016c6962e9f53f83"
-                + "0ed1b8b5"),
+                287296733,
+                "c0d14b642e22b1b7f3d4b358ec9c1dcc48d01f39e6cc1c23e3c886c9"
+                + "317a5b42"),
             new SegmentCase(
                 "mhz", "mhz_completerun", 209756, 28156,
                 4561906,
                 "d502ee1305f363c448d5507aae54b732d851433713f809fdd79ce8cc"
                 + "c21c9c03",
-                184254918,
-                "0260219e935d5ec5b0873d8f59422fabe1ad8a6be8b8d2d9f505428e"
-                + "220764d6"),
+                197021051,
+                "325138abc35130b5bab5e170fef4cd8bf7f263a79c3f68a126854099"
+                + "b30fa7e2"),
             new SegmentCase(
                 "fbz", "fbz_completerun", 237913, 44281,
                 7174156,
                 "337f7619d3b516cfb5c475aed978d023ba370e8fddb3473939c4b65f"
                 + "d2fdd4ca",
-                271508474,
-                "fdab8d3db8f65ff6ee94aad44a4fca1fac74017199ed0709293127cf"
-                + "9909a2ce"),
+                291595676,
+                "15307f0d833156b9da8d2c3bb4b665ba7577fe7587aed05baceaf5bc"
+                + "481288c1"),
             new SegmentCase(
                 "soz", "soz_completerun", 282195, 59507,
                 9640768,
                 "d67337f964240e3ad06854b31e68eb723cc29174d490db15be27669b5"
                 + "3f236bc",
-                336004823,
-                "3f52f3d726039cde16b8832017b6a6f0f8e16f0d0f5c91491e3a821"
-                + "d770c51ef"),
+                363005107,
+                "1d1e1de21fe43ce81a259768b2e9500145a704e49a42cc5b63243a7"
+                + "3848ec6fb"),
             new SegmentCase(
                 "lrz", "lrz_completerun", 341703, 38755,
                 6278944,
                 "9c464a019b6fbdfb8086b3adcc47c5ee52d14ca13281b09cea5b648c"
                 + "cf4a4fac",
-                230367757,
-                "1d546a1087fd8639f62f45bd70619055675ec8abb4965542b63ab31c"
-                + "548c650c"),
+                247949217,
+                "02150b12577c5ccd14687fa34eade9b1aa252fdeda164df14fcda0f8"
+                + "17c333c6"),
             new SegmentCase(
                 "hpz22", "hpz_completerun", 380459, 16260,
                 2634754,
                 "a61cad6c194fc87393d4186a55bbb7d6d47465314f913a75f855d9b9"
                 + "1c671f1b",
-                102697213,
-                "de812500263331a5d151f9c83a5f5ff5a680c8cbdb28b92fdea5940d"
-                + "992a9512"),
+                110061568,
+                "29c3cdf8e8d606a4e96d2db095633a00a6409705193b439936daff30"
+                + "d738f925"),
             new SegmentCase(
                 "hpz", "ssz_completerun", 396720, 18641,
                 3020476,
                 "cb7b1b368810000d8ef9e6927ebc721588ec446af0748429e0573e63"
                 + "6789e6dc",
-                103750451,
-                "4401079f44fe1201fa574062701833e14d4560983b108525108133a26"
-                + "cb13d38"),
+                112195352,
+                "b2ca3b45f4d3b93e67d48e24a315ca77dfabf2ff3484a0daf5877e356"
+                + "a21efa0"),
             new SegmentCase(
                 "ssz", "dez_completerun", 415362, 44147,
                 7152448,
                 "16aa55471d830106abe26bec42c16cf0bc356f290de5e77a7ec9437d3"
                 + "dbb42c2",
-                248691762,
-                "d9b0a39af0dce2226a8dd157c9840523f3fba8189a15580f0fcdadfc"
-                + "b7b8b238"),
+                268713958,
+                "b38e3e0e97b313cf4628e972b9bdb6aaaf758930b293bb7008f1273d"
+                + "8846509f"),
             new SegmentCase(
                 "dez23", "ddz_completerun", 459510, 6103,
                 989320,
                 "697c5be5a6a52c395d10845625626f10d61a539582012d846cc88f98"
                 + "319da150",
-                37529403,
-                "5f045996346e8e444f009a7398edd8e904a3d99c6b9eff5828e32725"
-                + "87bbf312"),
+                40285969,
+                "6d9a65e2b18ba52eba761efb56f3e70bc22e041cf42d4f7753718fd8"
+                + "15fac357"),
             new SegmentCase(
                 "ddz", "ending_completerun", 465614, 719,
                 117112,
                 "18233e2ca65529b4b34ba7c917689100fba0f57a8fba00b56858f757"
                 + "e3830fff",
-                2267476,
-                "d0369c3d638d9a42b3dbe79b00662a62bbf077cb2c66ecd3a9a94889"
-                + "ce16650d")
+                2591747,
+                "389edfd9460787f24344ca08736842524fac629d5dadf224d547ec84"
+                + "6bbf3f1b")
         };
 
         public static void Register(ICollection<TestMain.TestCase> tests)
         {
+            tests.Add(new TestMain.TestCase(
+                "S3KCompleteRunSegmentsDifferential schema migration shapes"
+                + " fail closed",
+                MetadataMigrationShapesFailClosed));
             tests.Add(new TestMain.TestCase(
                 "S3KCompleteRunSegmentsDifferential native capture matches"
                 + " all fifteen canonical completerun segments",
@@ -413,14 +429,24 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertMetadataShape(
                 context + " (fixture)", fixtureText);
             AssertMetadataShape(context, producedText);
+            RequireExactMetadataMigrationShapes(
+                context, fixtureText, producedText);
+            bool directPredecessor =
+                DirectPredecessorSegments.Contains(context);
             AssertEx.Equal(
                 1,
                 CountOccurrences(
-                    producedText, CurrentLuaScriptVersionLine));
+                    producedText,
+                    directPredecessor
+                        ? PublishedDirectLuaScriptVersionLine
+                        : PublishedLuaScriptVersionLine));
             AssertEx.Equal(
                 1,
                 CountOccurrences(
-                    producedText, HardwareTimingSchemaLine));
+                    producedText,
+                    directPredecessor
+                        ? PublishedHardwareTimingSchemaLine
+                        : CurrentHardwareTimingSchemaLine));
             AssertEx.Equal(
                 1,
                 CountOccurrences(
@@ -455,7 +481,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                     continue;
                 }
-                if (fixtureLines[index] == CurrentLuaScriptVersionLine)
+                if (fixtureLines[index]
+                    == (directPredecessor
+                        ? PublishedDirectLuaScriptVersionLine
+                        : PublishedLuaScriptVersionLine))
                 {
                     versionLines++;
                 }
@@ -470,6 +499,80 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
             AssertEx.Equal(1, recordingDateLines);
             AssertEx.Equal(1, versionLines);
+        }
+
+        private static void MetadataMigrationShapesFailClosed()
+        {
+            string published = PublishedLuaScriptVersionLine + "\n"
+                + CurrentTraceSchemaLine + "\n"
+                + CurrentHardwareTimingSchemaLine;
+            string current = CurrentLuaScriptVersionLine + "\n"
+                + CurrentTraceSchemaLine + "\n"
+                + CurrentHardwareTimingSchemaLine;
+            string direct = PublishedDirectLuaScriptVersionLine + "\n"
+                + CurrentTraceSchemaLine + "\n"
+                + PublishedHardwareTimingSchemaLine;
+            RequireExactMetadataMigrationShapes(
+                "valid", published, current);
+            RequireExactMetadataMigrationShapes(
+                "valid direct", direct, current);
+            AssertEx.Throws<InvalidOperationException>(
+                () => RequireExactMetadataMigrationShapes(
+                    "wrong fixture version",
+                    published.Replace("6.39", "6.38"), current),
+                "fixture");
+            AssertEx.Throws<InvalidOperationException>(
+                () => RequireExactMetadataMigrationShapes(
+                    "mixed", published + CurrentVersionLineForTest(),
+                    current),
+                "fixture");
+            AssertEx.Throws<InvalidOperationException>(
+                () => RequireExactMetadataMigrationShapes(
+                    "duplicate", published,
+                    current + CurrentLuaScriptVersionLine + "\n"),
+                "produced");
+            AssertEx.Throws<InvalidOperationException>(
+                () => RequireExactMetadataMigrationShapes(
+                    "wrong schema",
+                    published.Replace(
+                        CurrentTraceSchemaLine,
+                        "  \"trace_schema\": 6,"),
+                    current),
+                "fixture");
+        }
+
+        private static string CurrentVersionLineForTest()
+        {
+            return CurrentLuaScriptVersionLine + "\n";
+        }
+
+        private static void RequireExactMetadataMigrationShapes(
+            string context, string fixtureText, string producedText)
+        {
+            RequireLiteralCount(context + " fixture", fixtureText,
+                CurrentLuaScriptVersionLine, 1);
+            RequireLiteralCount(context + " fixture", fixtureText,
+                CurrentTraceSchemaLine, 1);
+            RequireLiteralCount(context + " fixture", fixtureText,
+                CurrentHardwareTimingSchemaLine, 1);
+            RequireLiteralCount(context + " produced", producedText,
+                CurrentLuaScriptVersionLine, 1);
+            RequireLiteralCount(context + " produced", producedText,
+                CurrentTraceSchemaLine, 1);
+            RequireLiteralCount(context + " produced", producedText,
+                CurrentHardwareTimingSchemaLine, 1);
+        }
+
+        private static void RequireLiteralCount(
+            string context, string text, string literal, int expected)
+        {
+            int actual = CountOccurrences(text, literal);
+            if (actual != expected)
+            {
+                throw new InvalidOperationException(
+                    context + " contains " + actual + " copies of <"
+                    + literal.TrimEnd('\n') + ">; expected " + expected + ".");
+            }
         }
 
         private static int CountOccurrences(
@@ -653,6 +756,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         EndToEndTests.ToolDirectory, "run.sh"))
                     + " --mode trace"
                     + EndToEndTests.NoCompressArgument
+                    + " --load-queue-state"
                     + " --rom " + EndToEndTests.Quote(romPath)
                     + " --movie " + EndToEndTests.Quote(moviePath)
                     + " --output " + EndToEndTests.Quote(output)

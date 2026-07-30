@@ -74,3 +74,18 @@ or object scan continues:
 | Synchronous codecs and Z80/VDP waits | Not an event-kind candidate. | They would first need a persistent readiness lifecycle distinct from return/admission lag; none is present here. |
 
 No Sonic 2 mechanism adds an authoritative hardware-timing kind in schema version 1.
+
+## 2026-07-28 PLC evidence status
+
+The Task 1 probe records `LoadPLC`/`LoadPLC2`, retail `RunPLC_RAM`
+preparation, six- and three-pattern service, and the queue shift with execute
+hooks. The head is `0xFFF680`, destination `0xFFF684`, `PatternsLeft`
+`0xFFF6F8`, and the per-service counter `0xFFF6FA`; the retail buffer has
+sixteen six-byte slots and no overflow protection. `Do_Updates_in_H_int`
+identifies the HInt deferral path. As in S1, retail publishes `PatternsLeft`
+before `NemDecPrepare`, so evidence must resolve the race rather than assume
+the `fixBugs` build ordering.
+
+The present disposition remains `NATIVE_SERVICE_QUEUE_PENDING_REVIEW`; the
+capture gate is recorded as `EVIDENCE_INCOMPLETE` in
+[`2026-07-28-s1-s2-plc-readiness-evidence.md`](../research/trace/2026-07-28-s1-s2-plc-readiness-evidence.md).

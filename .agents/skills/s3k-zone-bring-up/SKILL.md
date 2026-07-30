@@ -551,3 +551,11 @@ wire cage is the canonical case: a changed non-empty P1 DPLC turns d6
 `$03->$00100000->$00100001`, selecting object bit 1 instead of P2 standing bit
 4; an unchanged frame returns early and selects bit 4 normally. See
 `s3k-implement-object/rom-pitfalls.md` P65.
+
+## Queue Diagnostics Routing
+
+When bring-up reaches runtime art-load timing, use `s3k-plc-system` for direct
+Kosinski/KosM ownership and hardware-timing schema 2. Use
+`trace-replay-bug-fixing` for `queue.*` and `dynamic_art.*` reports and
+`trace-green-fleet` for fleet frontiers. The evidence is zero-tolerance and
+comparison-only.

@@ -15,6 +15,7 @@ enum PostTitleCardDestination {
     LevelFrameResult completeRelease(LevelManager levelManager, Runnable exitTitleCard) {
         boolean setupOnly = false;
         if (this == LEVEL) {
+            levelManager.completeInitialTitleCardPresentation();
             setupOnly = levelManager.consumePendingInitialProcessSpritesPass();
         }
         exitTitleCard.run();

@@ -76,7 +76,8 @@ namespace OpenGGF.BizHawk.Headless
         private ushort? priorLevelFrameCounter;
         private bool titleCardLoadLoopActive;
         private bool priorDirectBusy;
-        private int stagedDirectRetirements;
+        private readonly List<DirectSubmission> stagedDirectRetirements =
+            new List<DirectSubmission>();
         private readonly int hardwareTimingSchema;
         private readonly TextWriter measurementWriter;
         private readonly string measurementFixture;
@@ -154,7 +155,7 @@ namespace OpenGGF.BizHawk.Headless
             priorLevelFrameCounter = null;
             titleCardLoadLoopActive = false;
             priorDirectBusy = false;
-            stagedDirectRetirements = 0;
+            stagedDirectRetirements.Clear();
             if (measurementWriter != null)
             {
                 measurementEpoch++;
@@ -178,14 +179,6 @@ namespace OpenGGF.BizHawk.Headless
             {
                 throw new ArgumentNullException("host");
             }
-            if (stagedDirectRetirements != 0)
-            {
-                throw new InvalidDataException(
-                    "Kosinski decompression FIFO received another module"
-                    + " submission callback before its staged PRE retirement"
-                    + " reached frame-end reconciliation.");
-            }
-
             int physicalCount =
                 S3KRam.U16(host, S3KRam.KosDecompQueueCount) & 0x7FFF;
             if (physicalCount < 1
@@ -233,7 +226,8 @@ namespace OpenGGF.BizHawk.Headless
                     1,
                     "after one PRE head retirement at the"
                     + " module-child submission callback");
-                stagedDirectRetirements = 1;
+                stagedDirectRetirements.Add(directQueue[0]);
+                directQueue.RemoveAt(0);
                 directQueue.Add(
                     CreateDirectSubmission(
                         host, physicalCount - 1, true, rawFrame));
@@ -324,36 +318,30 @@ namespace OpenGGF.BizHawk.Headless
         private void EmitStagedDirectRetirements(
             int rawFrame, TextWriter writer)
         {
-            if (stagedDirectRetirements == 0)
+            if (stagedDirectRetirements.Count == 0)
             {
                 return;
             }
-            if (stagedDirectRetirements != 1 || directQueue.Count == 0)
-            {
-                throw new InvalidDataException(
-                    "Kosinski decompression FIFO staged an inconsistent PRE"
-                    + " retirement.");
-            }
-
-            DirectSubmission completed = directQueue[0];
-            directQueue.RemoveAt(0);
-            stagedDirectRetirements = 0;
 
             // The staged head owned the prior busy-state sample. Its proven
             // PRE retirement ends that evidence before current physical RAM
             // is reconciled.
             priorDirectBusy = false;
-            WriteMeasurement(completed, rawFrame, "pre_main_loop");
-            if (hardwareTimingSchema == CurrentSchema && writer != null)
+            foreach (DirectSubmission completed in stagedDirectRetirements)
             {
-                WriteCompletion(
-                    writer,
-                    rawFrame,
-                    "pre_main_loop",
-                    DirectEventKind,
-                    completed.Ordinal,
-                    completed.Fingerprint);
+                WriteMeasurement(completed, rawFrame, "pre_main_loop");
+                if (hardwareTimingSchema == CurrentSchema && writer != null)
+                {
+                    WriteCompletion(
+                        writer,
+                        rawFrame,
+                        "pre_main_loop",
+                        DirectEventKind,
+                        completed.Ordinal,
+                        completed.Fingerprint);
+                }
             }
+            stagedDirectRetirements.Clear();
         }
 
         private void ObserveDirectQueue(

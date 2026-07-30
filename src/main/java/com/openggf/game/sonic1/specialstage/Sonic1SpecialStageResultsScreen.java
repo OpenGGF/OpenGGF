@@ -10,6 +10,7 @@ import com.openggf.game.sonic1.S1SpriteDataLoader;
 import com.openggf.game.sonic1.Sonic1ResultsMappingLoader;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
+import com.openggf.game.sonic1.resources.Sonic1PlcService;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.PatternAtlasRange;
@@ -126,6 +127,8 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
     private int stateTimer;
     private int totalFrames;
     private boolean complete;
+    /** True once SSR_ChkPLC has completed its routine-0 readiness poll. */
+    private boolean plcReadinessPassed;
     private int frameCounter;
 
     private int textX;
@@ -172,6 +175,14 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
         this.frameCounter = Math.max(this.frameCounter, frameCounter);
         if (complete) {
             return;
+        }
+
+        if (!plcReadinessPassed) {
+            Sonic1PlcService plcService = GameServices.module().getGameService(Sonic1PlcService.class);
+            if (plcService != null && plcService.isBusy()) {
+                return;
+            }
+            plcReadinessPassed = true;
         }
 
         totalFrames++;
@@ -231,7 +242,11 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
 
     @Override
     public boolean isComplete() {
-        return complete;
+        // The special-stage mode loop exits only once Obj7E has completed and
+        // the final PLC poll sees an empty FIFO. This is deliberately separate
+        // from SSR_ChkPLC: later work must not freeze the running card.
+        Sonic1PlcService plcService = GameServices.module().getGameService(Sonic1PlcService.class);
+        return complete && (plcService == null || !plcService.isBusy());
     }
 
     @Override

@@ -4,15 +4,28 @@ import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.PlaybackDebugManager;
 import com.openggf.game.BonusStageType;
 import com.openggf.game.GameMode;
+import com.openggf.game.resources.DynamicArtLifecycleService;
+import com.openggf.game.resources.PlcFrameLifecycleCoordinator;
+import com.openggf.game.resources.PlcLifecyclePhase;
+import com.openggf.game.resources.PlcLifecycleService;
+import com.openggf.level.render.TileLoadRequest;
+import com.openggf.trace.DynamicArtTransfer;
+import com.openggf.trace.FrameComparison;
+import com.openggf.trace.TraceData;
+import com.openggf.trace.TraceEvent;
+import com.openggf.trace.TraceFixtures;
 import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker.BoundaryEntryMode;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker.BoundaryPairing;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker.ReturnAssertionMode;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -31,6 +44,129 @@ class TestTraceRunReplayWalkerControlFlow {
     private static final int NO_CAP = 100_000;
 
     @Test
+    void dynamicArtSegmentsTranslateStructuralSegmentAndGapBoundaries() {
+        RecordingSegmentWindow window = new RecordingSegmentWindow();
+        var controller =
+                new TraceRunReplayWalker.DynamicArtSegmentController(window);
+
+        controller.beginSegment();
+        assertEquals(List.of("open"), window.transitions);
+
+        controller.enterGap();
+        assertEquals(List.of("open", "close"), window.transitions);
+
+        controller.beginSegment();
+        controller.endSegment();
+        assertEquals(List.of("open", "close", "open", "close"),
+                window.transitions);
+
+        controller.beginSegment();
+        controller.close();
+        assertEquals(List.of("open", "close", "open", "close", "open", "close"),
+                window.transitions,
+                "terminal controller close must balance the final segment");
+    }
+
+    @Test
+    void dynamicArtSegmentBodyClosesAfterExceptionalExit() {
+        RecordingSegmentWindow window = new RecordingSegmentWindow();
+        var controller =
+                new TraceRunReplayWalker.DynamicArtSegmentController(window);
+        RuntimeException failure = new RuntimeException("segment failed");
+
+        RuntimeException thrown = assertThrows(RuntimeException.class,
+                () -> controller.runSegment(() -> {
+                    assertEquals(List.of("open"), window.transitions);
+                    throw failure;
+                }));
+
+        assertSame(failure, thrown);
+        assertEquals(List.of("open", "close"), window.transitions,
+                "exceptional segment exit must still close the comparison window");
+    }
+
+    @Test
+    void advertisedRunSpecialStageRowsUseProductionCoordinatorSnapshots() {
+        DynamicArtLifecycleService lifecycle =
+                new DynamicArtLifecycleService();
+        lifecycle.beginRun();
+        lifecycle.openComparisonSegment();
+        PlcFrameLifecycleCoordinator coordinator =
+                new PlcFrameLifecycleCoordinator(
+                        (PlcLifecycleService) null, lifecycle);
+        TraceData trace = TraceFixtures.trace(
+                TraceFixtures.metadataWithDynamicArt("s2", 0, 0, 2),
+                List.of(),
+                Map.of(
+                        0, List.of(new TraceEvent.DynamicArtTransferState(
+                                0, List.of(), List.of())),
+                        1, List.of(new TraceEvent.DynamicArtTransferState(
+                                1,
+                                List.of(new DynamicArtTransfer.SegmentEdge(
+                                        0, 0, "submitted", "ss-sonic",
+                                        "segment", 3, 1, 0, 1, true,
+                                        0x33ADA,
+                                        List.of(new DynamicArtTransfer.Request(
+                                                -1, -1, 0xFF0020,
+                                                0x5CA0, 0x20)))),
+                                List.of(0L)))));
+        var comparisons =
+                new TraceRunReplayWalker.DynamicArtSegmentComparison(
+                        trace, 2);
+
+        coordinator.runLogicalIteration(() -> {
+        }, row -> {
+            row.claim(PlcLifecyclePhase.SPECIAL_STAGE);
+            row.prepareAfterLoop(PlcLifecyclePhase.SPECIAL_STAGE);
+            return null;
+        });
+        comparisons.compareRow(0, lifecycle.latestSnapshot());
+
+        coordinator.runLogicalIteration(() -> {
+        }, row -> {
+            row.claim(PlcLifecyclePhase.LAG);
+            lifecycle.observeRamDplc(
+                    "ss-sonic", 3, List.of(new TileLoadRequest(1, 1)),
+                    0xFF0000, 0x5CA0);
+            row.prepareAfterLoop(PlcLifecyclePhase.LAG);
+            return null;
+        });
+        lifecycle.closeComparisonSegment();
+        comparisons.compareRow(1, lifecycle.latestSnapshot());
+        comparisons.verifyComplete();
+
+        assertEquals(2, comparisons.comparisons().size());
+        assertTrue(comparisons.comparisons().stream()
+                .noneMatch(FrameComparison::hasDivergence));
+        assertEquals("true", comparisons.comparisons().get(1).fields()
+                .get("dynamic_art.edge[0].terminal_forwarded").actual());
+    }
+
+    @Test
+    void advertisedRunSpecialStageCannotSilentlyOmitARow() {
+        TraceData trace = TraceFixtures.trace(
+                TraceFixtures.metadataWithDynamicArt("s2", 0, 0, 2),
+                List.of(),
+                Map.of(
+                        0, List.of(new TraceEvent.DynamicArtTransferState(
+                                0, List.of(), List.of())),
+                        1, List.of(new TraceEvent.DynamicArtTransferState(
+                                1, List.of(), List.of()))));
+        var comparisons =
+                new TraceRunReplayWalker.DynamicArtSegmentComparison(
+                        trace, 2);
+        comparisons.compareRow(
+                0, new com.openggf.game.resources.DynamicArtDiagnosticsSnapshot(
+                        0, List.of(), List.of()));
+
+        IllegalStateException error = assertThrows(
+                IllegalStateException.class, comparisons::verifyComplete);
+
+        assertTrue(error.getMessage().contains("expected 2 rows"),
+                error.getMessage());
+    }
+
+    @Test
     void plansSegmentsWithExplicitTransitionPairing() throws Exception {
         TraceRunManifest run = TraceRunManifest.load(RUN_DIR.resolve("run_manifest.json"));
         List<TraceRunReplayWalker.SegmentPlan> plans = TraceRunReplayWalker.plan(run, RUN_DIR);
@@ -41,6 +177,37 @@ class TestTraceRunReplayWalkerControlFlow {
         assertEquals("stage_exit", plans.get(1).exitBoundary().entryKind());
         assertEquals("stage_exit", plans.get(2).entryBoundary().entryKind());
         assertNull(plans.get(2).exitBoundary());
+    }
+
+    @Test
+    void metadataOnlySpecialStagePlanRejectsNonContiguousStoredRows(
+            @TempDir Path runDir) throws Exception {
+        Path segment = runDir.resolve("ss");
+        Files.createDirectories(segment);
+        Files.writeString(segment.resolve("metadata.json"), """
+                {"game":"s2","zone":"special_stage","act":1,
+                 "bk2_frame_offset":0,"trace_frame_count":2,
+                 "trace_schema":6,"trace_profile":"s2_special_stage",
+                 "start_x":"0000","start_y":"0000"}
+                """);
+        Files.writeString(segment.resolve("physics.csv"),
+                "frame,anything\n0,a\n2,c\n");
+        Files.writeString(runDir.resolve("run_manifest.json"), """
+                {"run_schema":1,"game":"s2","run_id":"gap",
+                 "source_bk2":"gap.bk2","rom_checksum":"x",
+                 "lua_script_version":"legacy",
+                 "segments":[{"dir":"ss","kind":"special_stage",
+                   "trace_profile":"s2_special_stage","bk2_frame_offset":0,
+                   "trace_frame_count":2,"special_stage_index":1}],
+                 "transitions":[]}
+                """);
+
+        TraceRunManifest manifest = TraceRunManifest.load(
+                runDir.resolve("run_manifest.json"));
+        IllegalArgumentException error = assertThrows(
+                IllegalArgumentException.class,
+                () -> TraceRunReplayWalker.plan(manifest, runDir));
+        assertTrue(error.getMessage().contains("contiguous"), error.getMessage());
     }
 
     /**
@@ -491,6 +658,21 @@ class TestTraceRunReplayWalkerControlFlow {
         @Override
         public void afterFrameAdvanced(Bk2FrameInput frame, boolean wasSkipped) {
             // Unused by this test.
+        }
+    }
+
+    private static final class RecordingSegmentWindow
+            implements TraceRunReplayWalker.DynamicArtSegmentWindow {
+        private final List<String> transitions = new java.util.ArrayList<>();
+
+        @Override
+        public void open() {
+            transitions.add("open");
+        }
+
+        @Override
+        public void close() {
+            transitions.add("close");
         }
     }
 }

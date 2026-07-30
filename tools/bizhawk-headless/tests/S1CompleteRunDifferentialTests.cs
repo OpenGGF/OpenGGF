@@ -46,7 +46,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private static readonly Regex RecordingDateLine = new Regex(
             "^  \"recording_date\": \"[0-9]{4}-[0-9]{2}-[0-9]{2}\",$");
         private const string FixtureLuaScriptVersionLine =
-            "  \"lua_script_version\": \"3.14\",";
+            "  \"lua_script_version\": \"3.18\",";
         private const string ProducedLuaScriptVersionLine =
             "  \"lua_script_version\": \"3.18\",";
 
@@ -63,119 +63,119 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "ghz1", "ghz1_completerun", 788, 5598,
                 "40d2e2ac75a539dc941224ddd3f5655a0db78350694ca223a2124e8a"
                 + "a844db9d",
-                "b067795b2b72c6e673d757fa78db1923d191150dd7428fec30f79b6a"
-                + "f3f50800"),
+                "0ba6542eeff84203627364bfbe51877690d45a89ed61142108d88397"
+                + "2a603541"),
             new S1CompleteRunSegmentCase(
                 "ghz2", "ghz2_completerun", 6622, 4028,
                 "79149ba8dd59b8e5fb53db79397aef768ed0bbfa9ae97d3c859af145"
                 + "31cadc3c",
-                "310a20e78c8020059c7e67c55d1c0ed7be154345ae8be1d552df9830"
-                + "a8ca931e"),
+                "1f66d9430cc24f16408c980919839a36971ed136ff1c01dd679045be"
+                + "22308b2e"),
             new S1CompleteRunSegmentCase(
                 "ghz3", "ghz3_completerun", 10885, 9678,
                 "345f4fc7a098da1917fea4f5d0ae0fdfb37b93e24818c1e625d2b580"
                 + "9f89251c",
-                "6ec28edb106b5d5229829726aed6f0929909f7bdec13a0979ca90bdc"
-                + "b4660d1f"),
+                "66aed6de83a529a112716eac992ed9b764a7d90bb9be1650b82a16ef"
+                + "9f221746"),
             new S1CompleteRunSegmentCase(
                 "mz1", "mz1_completerun", 20791, 8060,
                 "f9e0d8966bb163296ad701cfbdaab8282a08fbce004e0c507b259703"
                 + "6dfac190",
-                "7597389a6bd7a59400bb046bc049ae8cf9dd9a87a0936ab725cd3d7a"
-                + "ec784169"),
+                "27823d2f1bade8574afd707bce5f887ce2c851b476c778767c89c7cd"
+                + "7a499483"),
             new S1CompleteRunSegmentCase(
                 "mz2", "mz2_completerun", 29079, 14136,
                 "e01cd86ac397900878691b4d252a85c324170609fc3a5f03fec669f2"
                 + "87e52513",
-                "02a792171f5a818725638a8a3764e2472b95b57a99c80e73365e898f"
-                + "9cf6f7d6"),
+                "1cc631b03626d938a5a64b815489592872232293a6caebc7487f555d"
+                + "11818cc9"),
             new S1CompleteRunSegmentCase(
                 "mz3", "mz3_completerun", 43443, 17875,
                 "d88401a2078bd2d1676840035aa805a44baa9179cd81542158e721eb"
                 + "d057b9e7",
-                "708e82beabb05269c1e1e56e33fcdb4cdc109702e4fedff97ce73ed8"
-                + "042614f0"),
+                "8aed295ff3efb95c24376f0728a63b0c3ec5f5e9c0cda2594358e16f"
+                + "490102cf"),
             new S1CompleteRunSegmentCase(
                 "syz1", "syz1_completerun", 61548, 9729,
                 "4dbc064b999e77120f525b0dc35b39ee7ee8d44aa41d8a5204b8fbb1"
                 + "f5718410",
-                "d50c7867474657fe4a7d25e919176614dbb4ea2727bfa113f84a6c61"
-                + "68b14e01"),
+                "f59b929658d80977b4c73d9ae09ae039d7361dd1fb9fb53c21c2e114"
+                + "fd63a467"),
             new S1CompleteRunSegmentCase(
                 "syz2", "syz2_completerun", 71507, 7994,
                 "f9d2bf0a61d41252343c01f7aa0dc246478c0cdccaaaaaa6005a378f"
                 + "42f48e37",
-                "300b7e76bb1e63033e3df37e5407f303e0efede269aa3fcc4f5eb3eb"
-                + "8359cfd6"),
+                "a4a24215cfcd643219cc82998f0fa952b541f2d83721fcab2ee8eb0b"
+                + "1076d831"),
             new S1CompleteRunSegmentCase(
                 "syz3", "syz3_completerun", 79731, 13710,
                 "943399846809a71e78b3bc2a0877d7598e5d765086a58b2396985ca1"
                 + "d7260c4e",
-                "5b3ddca8ed1fcbe97add1be09c6966221f40725b4f5874a355225c1a"
-                + "4bb25fea"),
+                "8292ac8df3f3a9514c239cceac3c56448c2244b0f6a7a1f36681ab0c"
+                + "1f61c186"),
             new S1CompleteRunSegmentCase(
                 "lz1", "lz1_completerun", 93657, 13070,
                 "9d3629f712303bdd6acb1c68ba950c808f448e53b9e6569de2259876"
                 + "6b07ce69",
-                "d4df1b7a34061c145203d8a296b8db4dd812f4a42ad5edd834eeec74"
-                + "321c3e89"),
+                "ad1e0e11fafb30134389fcb4feb830426cb9cebedd40456db64148b7"
+                + "2d5cf86f"),
             new S1CompleteRunSegmentCase(
                 "lz2", "lz2_completerun", 106944, 10173,
                 "4bfd9803eaf04d547dc2acdbaa3fb4d700aa569fab514d848dcf1431"
                 + "db83437f",
-                "c45fb9128dc6b91aab3e75ca9841e2518eee00fb7074ab842deebe5a"
-                + "9da0b965"),
+                "5e68bb59235ace7ee11e4b29cc52ed8a32ea48e09f1ea2492985d6d7"
+                + "69f18aa1"),
             new S1CompleteRunSegmentCase(
                 "lz3", "lz3_completerun", 117333, 19107,
                 "d213718029dfb62bbdc34dafe682bf4aba85e2cef1f6689a9f53e5af"
                 + "bd39631b",
-                "9acb3924955f41e4b7fce1f7ec20bedd65c63cb1b98727b469f59811"
-                + "cbf0cb71"),
+                "c4d8f0e949116f5eabde5e943c6256c388ffcbede0a9e262134984d0"
+                + "a3e3725d"),
             new S1CompleteRunSegmentCase(
                 "slz1", "slz1_completerun", 136660, 6411,
                 "2ba66f8646d405d339f8c3c7991d7e1736df9e85d2f030164717ef9e"
                 + "127be27e",
-                "87b09592aa9f9a808b89ae5db84703919576d8f1f7eb333ffb0a737c"
-                + "7fa107cb"),
+                "cc1415296fa4027b712b4bc41b35668fe5774b00497f795761e6c151"
+                + "0c116b0b"),
             new S1CompleteRunSegmentCase(
                 "slz2", "slz2_completerun", 143290, 5894,
                 "36ee97714a0e7fe006cc38b5068d2169e74730bdfac5a2bf92280aac"
                 + "548a8fc1",
-                "bcb44fedba19a27e2c91b72bc1e61e208e43b08e3844c1a25dcdeac5"
-                + "90bb5072"),
+                "49b75242b4d7f02727c6d704b6c2fd4f72bc0f2c1d47abf553157ad1"
+                + "9c5b0824"),
             new S1CompleteRunSegmentCase(
                 "slz3", "slz3_completerun", 149403, 13732,
                 "06352e938f19dccd3146cc003ca44fc6f8484cab94424605be049138"
                 + "d09780db",
-                "bb89b8798b83f4818567860df6c047177ad494acceda4bc36026e6cd"
-                + "24ee981b"),
+                "d3c67e9276d49fcd884d88dd627f0af79b750dc0b6ac5b14ebfb08d2"
+                + "33106751"),
             new S1CompleteRunSegmentCase(
                 "sbz1", "sbz1_completerun", 163354, 7619,
                 "1f19c437badaa7f2d486be81aa7a035c7284855f6f07a71e9991ae32"
                 + "904fcdaf",
-                "3b94ef4dde4ac5d30456cb33894b51d736fb8d96c8d34f56ce7d0cd8"
-                + "415274c1"),
+                "4b08ee428c8397f4125562df91378a87232e1292a595d8be2632fc9b"
+                + "f7ab587a"),
             new S1CompleteRunSegmentCase(
                 "sbz2", "sbz2_completerun", 171193, 9594,
                 "65d0e950638d5763306a9fc1ce4cf7589dd51ec654fee9a11c8c15a3"
                 + "5a75d0b3",
-                "afa671026e5531ea1cd3cf7708e4ceca5eabb921c302e58777e9d68c"
-                + "b2622bc0"),
+                "65f55d668398e34addc72e22885a074d4ac96e6c8e78eb0dd3a2afb8"
+                + "d8711765"),
             // SBZ3 is ROM-encoded as LZ act 4: the recorder writes lz4/.
             new S1CompleteRunSegmentCase(
                 "lz4", "sbz3_completerun", 181004, 8354,
                 "de974fffac8682fd26863360dd1dde28c8e27a3497adfb042991e6b3"
                 + "55916ea7",
-                "c67523bd4c3fd5986b44dab721ce176a0ea2961f1dca4e99aeaec936"
-                + "8f04c3d3"),
+                "41fdbfdbd646a6d949ce39e734ce988b576abf13414a081e89eb636a"
+                + "ba2347d4"),
             // Final Zone is ROM-encoded as SBZ act 3: the recorder writes
             // sbz3/.
             new S1CompleteRunSegmentCase(
                 "sbz3", "fz_completerun", 189578, 4457,
                 "e314dd4a948a10adc3caaa16518fff9a66a2b3ff5bf76f4bcfdb1a3c"
                 + "35815c09",
-                "f2abe8a84d60559a4c069630901428a6e518b04d9aa6afd5fa4e38a8"
-                + "e48f5640")
+                "e3a1b45e68a315733389ae88f44c9eb8c80f88170ecb6970e2dc4797"
+                + "5953e69d")
         };
 
         public static void Register(ICollection<TestMain.TestCase> tests)
@@ -288,7 +288,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     output);
 
                 AssertEx.Equal(
-                    ExpectedStdout(installation),
+                    ExpectedStdout(installation, output),
                     stdout);
                 foreach (S1CompleteRunSegmentCase segment in SegmentCases)
                 {
@@ -329,18 +329,18 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
         /// <summary>
         /// The stage-free pass must publish exactly the 19 segment
-        /// directories (three files each) and nothing else: no
-        /// run_manifest.json, no credits or endz directories, no stray
-        /// files at the root.
+        /// directories (three files each) plus the mandatory audit
+        /// run_manifest.json, with no credits/endz directories or other
+        /// stray root files.
         /// </summary>
         private static void AssertOutputLayoutIsExactlyTheSegments(
             string output)
         {
             AssertEx.Equal(
-                false,
+                true,
                 File.Exists(Path.Combine(output, "run_manifest.json")));
             AssertEx.Equal(
-                0,
+                1,
                 Directory.GetFiles(output).Length);
 
             var expectedDirectories = new List<string>();
@@ -439,7 +439,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
         }
 
         private static string ExpectedStdout(
-            BizHawkInstallation installation)
+            BizHawkInstallation installation,
+            string output)
         {
             var expected = new StringBuilder();
             expected.Append("BizHawk: ")
@@ -462,6 +463,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     .Append(segment.TraceFrameCount)
                     .Append('\n');
             }
+            expected.Append("Run manifest: ")
+                .Append(Path.Combine(output, "run_manifest.json"))
+                .Append('\n');
             return expected.ToString();
         }
 

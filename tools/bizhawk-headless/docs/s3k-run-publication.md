@@ -302,7 +302,7 @@ port the order literally.
 |---|---|---|---|---|
 | `level` (`trace_profile: complete_run`) | 42-column CSV v7 header + one row/frame | full poll-driven event stream | §3.1 shape | |
 | `bonus_stage` (`trace_profile: s3k_bonus_stage`) | identical 42-column CSV v7 schema | identical full stream | §3.2 shape | Only the metadata differs from a level segment |
-| `special_stage` (`trace_profile: s3k_special_stage`) | dedicated **20-column** SS schema (`ss_csv_version 1`) | **created and left empty (0 bytes)** | §3.3 shape | |
+| `special_stage` (`trace_profile: s3k_special_stage`) | dedicated **20-column** SS schema (`ss_csv_version 1`) | no profile aux events; with `--load-queue-state`, exactly one direct and one module physical queue record per stored row | §3.3 shape plus optional `load_queue_state_per_frame` capability | |
 
 ### 2.1 Level/bonus file creation
 
@@ -830,10 +830,10 @@ lines below.
 |---|---|---|
 | (A) `aiz_completerun`, `hcz_completerun`, `mgz_completerun`, `cnz_completerun`, `icz_completerun`, `lbz_completerun`, `mhz_completerun` | `recording_date` value **only** | byte-identical; no manifest emitted |
 | (C) `bonus_gumball`, `bonus_pachinko`, `bonus_slots` | `recording_date` value **only** (capture must set `--run-id s3k-multibonus`) | byte-identical |
-| (C) `special_stage` | `recording_date` value **only** (same `--run-id`); note this shape has no `capture_mode` and no `v_int_run_count` by construction | `physics.csv` byte-identical; `aux_state.jsonl` byte-identical **and empty** |
+| (C) `special_stage` | legacy fixture comparison also accounts for the 6.39 version/capability migration; this shape still has no `capture_mode` or `v_int_run_count` | `physics.csv` byte-identical; audited captures replace the legacy empty aux file with per-row direct/module queue state |
 | (B) `runs/s3-knux-multibonus-ss/` — 14 level segments (`aiz`..`aiz_5`, `hcz`..`hcz_6`, `mgz`..`mgz_3`) | `recording_date` value **only** (capture must set `--run-id s3-knux-multibonus-ss`) | byte-identical |
 | (B) 8 bonus segments (`gumball`, `gumball_2`, `slots`..`slots_5`, `pachinko`) | `recording_date` value **only** (same `--run-id`) | byte-identical |
-| (B) 3 ss segments (`ss`, `ss_2`, `ss_3`) | `recording_date` value **only** (same `--run-id`); this shape has no `capture_mode`, no `pre_trace_osc_frames` and no `v_int_run_count` by construction | `physics.csv` byte-identical; `aux_state.jsonl` byte-identical **and empty** |
+| (B) 3 ss segments (`ss`, `ss_2`, `ss_3`) | legacy fixture comparison also accounts for the 6.39 version/capability migration; this shape has no `capture_mode`, `pre_trace_osc_frames`, or `v_int_run_count` | `physics.csv` byte-identical; audited captures replace each legacy empty aux file with per-row direct/module queue state |
 | (B) `run_manifest.json` | n/a — the manifest carries no `recording_date` | byte-identical, **zero** free fields |
 
 **Gate policy.** All three identities are byte-differential targets:
@@ -969,7 +969,7 @@ COMMON to all seven (A) dirs and all three (C) bonus dirs:
   + cnz_completerun only:  cage_state (8030), cnz_cylinder_state (23),
                            collision_response_list_end_of_frame (7),
                            object_state_snapshot (4)
-  + (C) special_stage:     (file is empty — no vocabulary at all)
+  + (C) special_stage:     load_queue_state (direct then module per stored row)
 ```
 
 An absence gate must therefore treat `sidekick_interact_object` as

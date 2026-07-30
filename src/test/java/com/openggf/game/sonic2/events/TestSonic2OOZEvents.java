@@ -100,8 +100,9 @@ class TestSonic2OOZEvents {
         }
 
         @Override
-        protected void requestSonic2Plc(int plcId) {
+        protected boolean requestSonic2Plc(int plcId) {
             requestedPlcs.add(plcId);
+            return true;
         }
 
         @Override

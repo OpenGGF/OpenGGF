@@ -4,7 +4,7 @@ import com.openggf.game.OscillationSnapshot;
 import com.openggf.game.rewind.snapshot.AdvancedRenderModeSnapshot;
 import com.openggf.game.rewind.snapshot.AnimatedTileChannelSnapshot;
 import com.openggf.game.rewind.snapshot.CameraSnapshot;
-import com.openggf.game.rewind.snapshot.FadeManagerSnapshot;
+import com.openggf.graphics.FadeManagerSnapshot;
 import com.openggf.game.rewind.snapshot.GameRngSnapshot;
 import com.openggf.game.rewind.snapshot.GameStateSnapshot;
 import com.openggf.game.rewind.snapshot.LevelEventSnapshot;

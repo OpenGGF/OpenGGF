@@ -71,6 +71,27 @@ public final class TraceFixtures {
                 base.bonusStageType(), base.freshLoad(), base.vIntRunCount(), 1);
     }
 
+    public static TraceMetadata metadataWithDynamicArt(
+            String gameId, int zoneId, int act, int traceFrameCount) {
+        TraceMetadata base = metadata(gameId, zoneId, act);
+        return new TraceMetadata(
+                base.game(), base.zone(), base.zoneId(), base.act(),
+                base.bk2FrameOffset(), base.ringFloorCheckCounterPhase(),
+                traceFrameCount, base.startXHex(), base.startYHex(),
+                base.recordingDate(), base.luaScriptVersion(), base.traceSchema(),
+                base.csvVersion(), base.traceProfile(), base.bizhawkVersion(),
+                base.genesisCore(),
+                List.of("dynamic_art_transfer_state_per_frame_v1"),
+                base.romZoneId(), base.route(), base.sourceBk2(),
+                base.romChecksum(), base.notes(), base.characters(),
+                base.mainCharacter(), base.sidekicks(),
+                base.preTraceOscFrames(), base.rngSeedHex(), base.traceType(),
+                base.inputSource(), base.creditsDemoIndex(),
+                base.creditsDemoSlug(), base.specialStageIndex(), base.runId(),
+                base.segmentIndex(), base.bonusStageType(), base.freshLoad(),
+                base.vIntRunCount(), base.hardwareTimingSchema());
+    }
+
     private static TraceMetadata metadata(String gameId, int zoneId, int act, String rngSeedHex) {
         return new TraceMetadata(
                 gameId,

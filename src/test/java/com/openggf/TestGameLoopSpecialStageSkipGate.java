@@ -119,9 +119,7 @@ class TestGameLoopSpecialStageSkipGate {
     }
 
     private void invokeUpdateSpecialStageMode() throws Exception {
-        Method method = GameLoop.class.getDeclaredMethod("updateSpecialStageMode");
-        method.setAccessible(true);
-        method.invoke(loop);
+        GameLoopTestStep.invoke(loop, "updateSpecialStageMode", new Class<?>[0]);
     }
 
     private static void setStaticActiveSession(TraceSessionLauncher value) {

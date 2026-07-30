@@ -5,7 +5,7 @@ description: Use when driving multiple failing Sonic-engine *TraceReplay tests t
 
 # Trace Green Fleet
 
-Coordinate failing `*TraceReplay` tests through isolated worktrees and strict trace-parity gates. If a `trace-green-fleet` Workflow script is available in this session (an untracked `.claude/workflows/trace-green-fleet.js` exists on some machines), prefer invoking that. Otherwise this skill is the executable contract: run it from a Claude Code session using the `Agent` tool to fan out one subagent per trace stage. The phase order, tunables (Constants), and structured JSON handoffs below are authoritative — follow them directly.
+Coordinate failing `*TraceReplay` tests through isolated worktrees and strict trace-parity gates. This is the Codex facsimile of `.claude/workflows/trace-green-fleet.js`: the workflow is native Codex skill guidance, not a standalone JavaScript runner.
 
 ## Inputs
 
@@ -83,14 +83,14 @@ Always use `trace-replay-bug-fixing` for actual trace investigation or fixes.
   the report afterward. Repeat the exclusion ledger in every worker prompt and final
   validation checklist.
 
-## Orchestration Contract
+## Codex Orchestration Contract
 
-This skill is a conductor workflow. Do not collapse it into "main session does each phase in a loop" when the user explicitly asks for a fleet, parallel agents, subagents, one agent per trace, or worktree threads.
+This skill is a conductor workflow. Do not collapse it into "main agent does each phase in a loop" when the user explicitly asks for a fleet, parallel agents, subagents, one agent per trace, or worktree threads.
 
 Two layers:
 
-- **Conductor:** the current Claude Code session. Owns discovery, queueing, worker prompts, stage handoffs, result validation, final summary, and any later integration into `develop`. The conductor never edits a trace worktree while a worker owns it.
-- **Workers:** bounded subagents launched with the `Agent` tool (`subagent_type: "general-purpose"`), one per trace stage. They do the noisy trace-specific work and return a structured JSON summary as their final message. Each worker owns exactly one trace stage and one worktree.
+- **Conductor:** the current Codex thread. Owns discovery, queueing, worker prompts, stage handoffs, result validation, final summary, and any later integration into `develop`. The conductor never edits a trace worktree while a worker owns it.
+- **Workers:** bounded Codex worker agents or worktree threads. They do the noisy trace-specific work and return structured summaries. Each worker owns exactly one trace stage and one worktree.
 
 Control flow is the point. The conductor must preserve this structure:
 
@@ -100,7 +100,7 @@ Discover -> [ Triage -> Fix -> Verify ] per failing trace, max 4 active trace pi
 
 ### Authorization
 
-Use subagents only when explicitly authorized by the prompt. Explicit authorization includes the user asking for a fleet, parallel run, subagents, workers, one agent per trace, or invoking this skill specifically to run the fleet. If not authorized, run the same controller serially in the main session and say that parallel workers were not used.
+Use subagents only when explicitly authorized by the prompt. Explicit authorization includes the user asking for a fleet, parallel run, subagents, workers, one agent per trace, or invoking this skill specifically to run the fleet. If not authorized, run the same controller serially and say that parallel workers were not used.
 
 ### Slot Scheduler
 
@@ -112,15 +112,18 @@ Maintain a queue of failing trace items and at most 4 active trace pipelines.
 4. When a verify worker returns, free that trace's pipeline slot and start triage for the next queued trace.
 5. Continue until every trace has a verify result or a recorded stage failure.
 
-Traces flow independently: one trace may be in Fix while another is still in Triage. Do not insert a global barrier unless a shared-machine failure requires backing off.
+This simulates the Claude `pipeline(group, stageTriage, stageFix, stageVerify)` behavior: traces flow independently, so one trace may be in Fix while another is still in Triage. Do not insert a global barrier unless a shared-machine failure requires backing off.
 
-With the `Agent` tool, use this pattern:
+With Codex subagent tools, use this pattern:
 
-- Launch one `Agent` (`subagent_type: "general-purpose"`) per stage task. Subagents run in the background by default, so the conductor keeps control while they work; you are notified as each completes. Do not pass broad context — hand the worker only the failing/triage/fix JSON plus the rules.
-- Because each trace needs a persistent named worktree that survives across all three stages and is later integrated, create the worktree explicitly with `git worktree add` (see Phase 1) and tell each worker its absolute worktree path. Do not use the `Agent` tool's `isolation: "worktree"` here — that creates a throwaway worktree that is auto-cleaned and cannot be handed to the next stage.
-- Keep a conductor-side table keyed by `<game>/<zone>` with `stage`, agent name/id, `worktreePath`, `branch`, and prior stage output.
-- When a worker completes, validate its JSON, update the table, and immediately launch the next stage for that trace if eligible. Use `SendMessage` to a still-running worker only to steer it; a new stage always starts as a fresh `Agent`.
+- `spawn_agent` a fresh worker for Discovery and each execution stage. Use
+  `fork_turns="none"` whenever a model override is supplied; pass the
+  failing/triage/fix JSON and the rules explicitly instead of forking conductor
+  context.
+- Keep a conductor-side table keyed by `<game>/<zone>` with `stage`, `agentId`, `worktreePath`, `branch`, and prior stage output.
+- `wait_agent` on the active agent IDs as a set. When one completes, validate its JSON, update the table, and immediately spawn the next stage for that trace if eligible.
 - While workers run, the conductor should do non-overlapping work: classify discovery output, prepare the next prompts, inspect summaries, or update the result table. Do not duplicate a worker's trace investigation locally.
+- Close completed workers once their output has been consumed and recorded.
 
 ### Worker Rules
 
@@ -128,10 +131,11 @@ Every worker prompt must include:
 
 - the relevant input object from the prior stage,
 - the Non-Negotiable Rules section,
-- the absolute worktree path the worker must operate in,
 - "You are not alone in the codebase; do not revert others' edits. Stage only specific files you changed. Never use `git add -A` or `git stash`.",
-- "Return exactly the requested JSON object as your final message, followed by a short human-readable note if needed.",
+- "Return exactly the requested JSON object, followed by a short human-readable note if needed.",
 - "Do not touch other trace worktrees."
+
+Use `worker` agents for stage work when the subagent tool is available. Use local worktree threads only when that is the available orchestration surface.
 
 ### Structured Handoff
 
@@ -139,7 +143,7 @@ Stage output is the contract between workers. The conductor must reject or rerun
 
 ### Model Routing Contract
 
-The active conductor cannot reroute itself. Start a fleet on Sol at medium effort when practical, but that is a launch recommendation, not an in-session override. The conductor selects every worker tier before launch and must use the same current routing policy:
+The active conductor cannot reroute itself. Start a fleet on Sol at medium effort when practical, but that is a launch recommendation, not an in-session override. The conductor selects every child route before spawn and must use only `gpt-5.6-terra` and `gpt-5.6-sol`:
 
 | Stage | Exact route |
 | --- | --- |
@@ -150,7 +154,7 @@ The active conductor cannot reroute itself. Start a fleet on Sol at medium effor
 | Ordinary Verify | `gpt-5.6-terra/medium` |
 | Shared, Sol-fixed, disputed, or escalated Verify | `gpt-5.6-sol/high` |
 
-Apply the equivalent Terra/Sol tier intent when the Claude `Agent` API cannot express model and effort overrides; do not claim that it enforced unsupported overrides. Every Discovery, Triage, Fix, and Verify result embeds this conductor-owned routing object alongside its stage fields. Discovery, Triage, and Verify set `attemptCount` to `0`; the field counts only Fix edit/test attempts, remains cumulative across replacement Fix workers, and is the sole input to `totalAttemptCount`. Discovery sets `complexity` to `mechanical`. `modelRoute` is authored and preserved by the conductor; workers must not invent or amend it. Runtime telemetry is nullable and recorded only when exposed, never estimated.
+Every Discovery, Triage, Fix, and Verify result embeds this conductor-owned routing object alongside its stage fields. Discovery, Triage, and Verify set `attemptCount` to `0`; the field counts only Fix edit/test attempts, remains cumulative across replacement Fix workers, and is the sole input to `totalAttemptCount`. Discovery sets `complexity` to `mechanical`. `modelRoute` is authored and preserved by the conductor; workers must not invent or amend it. Runtime telemetry is nullable and recorded only when exposed, never estimated.
 
 For a route plan, report each category's default route even when earlier execution-stage fields are not yet known. A `modelRoute` lists the initial route and only a replacement route on an actual model escalation; do not duplicate a route merely because separate scenario branches use the same stage. Thus ordinary Verify is Terra-medium, shared/Sol-fixed/disputed/escalated Verify is Sol-high, a narrow stalled Fix is `[terra-medium, sol-high]`, and an accepted shared Fix is `[sol-high]`.
 
@@ -183,7 +187,7 @@ For a route plan, report each category's default route even when earlier executi
 
 Allowed `complexity`: `mechanical`, `narrow`, `shared`, `deep`. Allowed `confidence`: `high`, `medium`, `low`. Allowed `escalationReasons`: `no-frontier-advance`, `multiple-owners`, `missing-rom-basis`, `low-confidence`, `unresolved-ownership`, `reasoning-insufficient`, `shared-surface-discovered`, `cross-game-semantics`, `regression`, `context-contradiction`, `recorder-evidence-required`, `causal-thread-lost`.
 
-Before launching, the conductor validates required routing fields, enums, and the requested route. It may request one schema-only repair from a completed worker; if unavailable, it may rerun once. A second malformed result is a stage error. `attemptCount` remains cumulative across replacement Fix workers and is always zero for Discovery, Triage, and Verify. Aggregate usage or duration only when every contributing value is exposed; otherwise use `null`.
+Before spawning, the conductor validates required routing fields, enums, and the requested route. It may request one schema-only repair from a completed worker; if unavailable, it may rerun once. A second malformed result is a stage error. `attemptCount` remains cumulative across replacement Fix workers and is always zero for Discovery, Triage, and Verify. Aggregate usage or duration only when every contributing value is exposed; otherwise use `null`.
 
 #### Deterministic routing and ownership
 
@@ -191,21 +195,27 @@ Before launching, the conductor validates required routing fields, enums, and th
 - Object-local collision/profile changes remain narrow. Route directly to Sol Fix for shared runtime physics, collision, sidekick, camera, oscillation, bootstrap, object lifecycle, recorder/publication contracts, or cross-game semantics.
 - A Terra Fix stops after two unsuccessful attempts and escalates once to Sol Fix for one final attempt (three total). Escalate also for no frontier advance, context contradiction, a newly discovered shared surface/cross-game semantics, recorder evidence required, causal-thread loss, or insufficient reasoning. Never change effort in place.
 - Route Verify directly to Sol after any Sol Fix, shared edit, disputed ROM evidence, or prior escalation. A Terra Verify that detects a regression returns an escalation handoff; Sol independently repeats Verify before acceptance.
-- Workers own a worktree sequentially, never concurrently. On Terra-to-Sol Fix handoff, Terra returns attempt history and dirty-worktree state; retain edits only when each is ROM-backed and listed in `filesTouched`, otherwise restore only its own edits. The conductor ends Terra ownership before launching Sol. Sol first reviews the retained diff, may restore only predecessor-listed files, then performs at most one edit/test attempt.
+- Workers own a worktree sequentially, never concurrently. On Terra-to-Sol Fix handoff, Terra returns attempt history and dirty-worktree state; retain edits only when each is ROM-backed and listed in `filesTouched`, otherwise restore only its own edits. The conductor ends Terra ownership before spawning Sol. Sol first reviews the retained diff, may restore only predecessor-listed files, then performs at most one edit/test attempt.
 
 | Condition before/after a stage | Conductor decision |
 | --- | --- |
-| Unsupported model ID | Reject before launch. |
+| Unsupported model ID | Reject before spawn. |
 | Required Sol unavailable | Block the escalated stage; never silently fall back. |
 | A stage already escalated once | Return a blocker; never escalate twice. |
 | Sol Triage still lacks ROM basis | Block Fix with `missing-rom-basis`. |
 | Sol worker fails | Return a blocker. |
-| Terra Triage has multiple owners, low confidence, unresolved ownership, or no ROM basis | Launch one Sol Triage. |
-| Accepted shared/deep Triage or listed shared/cross-game owner | Launch Sol Fix directly. |
+| Terra Triage has multiple owners, low confidence, unresolved ownership, or no ROM basis | Spawn one Sol Triage. |
+| Accepted shared/deep Triage or listed shared/cross-game owner | Spawn Sol Fix directly. |
 | Object-local collision/profile owner | Keep Narrow Fix on Terra. |
-| Terra Fix has the listed escalation evidence | Stop after at most two unsuccessful attempts and launch one Sol final attempt. |
-| Sol Fix, shared edit, disputed ROM evidence, or escalated handoff | Launch Sol Verify directly. |
-| Terra Verify newly detects regression | Launch one Sol Verify. |
+| Terra Fix has the listed escalation evidence | Stop after at most two unsuccessful attempts and spawn one Sol final attempt. |
+| Sol Fix, shared edit, disputed ROM evidence, or escalated handoff | Spawn Sol Verify directly. |
+| Terra Verify newly detects regression | Spawn one Sol Verify. |
+
+For Codex, a model override requires an un-forked or explicitly bounded context.
+Use `spawn_agent(fork_turns="none", model="gpt-5.6-terra",
+reasoning_effort="low"|"medium", ...)` and
+`spawn_agent(fork_turns="none", model="gpt-5.6-sol",
+reasoning_effort="high", ...)`.
 
 Required stage objects (each also embeds the Model Routing Contract above, including `beforeFrame`, `afterFrame`, `status`, cumulative `attemptCount`, and `regressionCount`):
 
@@ -294,11 +304,10 @@ Rerun the targeted trace and same-game green guard. Apply the genuineness gate. 
 ## Phase 0: Discover
 
 If the caller supplied `failing`, use it. Otherwise Discovery is real worker work:
-launch one fresh Discovery `Agent` with a self-contained prompt and Terra/low tier
-intent, then have that child run one sweep from the repo root and return the
-Discovery object. Record the requested route, but do not claim Claude enforced a
-model/effort override it cannot express. The conductor validates and schedules the
-result; it must not perform fleet discovery itself.
+spawn one fresh `gpt-5.6-terra`/low child with `fork_turns="none"` and a
+self-contained prompt, then have that child run one sweep from the repo root and
+return the Discovery object. The conductor validates and schedules its result; it
+must not perform fleet discovery itself.
 
 ```bash
 mvn -q -Dmse=relaxed "-Ds1.rom.path=$S1_ROM" "-Ds2.rom.path=$S2_ROM" "-Ds3k.rom.path=$S3K_ROM" "-Dtest=*TraceReplay" test
@@ -558,3 +567,25 @@ Also summarize human-readable:
 - which worktrees remain for review,
 - any introduced regressions that need follow-up,
 - any blocked traces and why.
+
+## Queue and Dynamic-Art Frontiers
+
+Classify queue-aware traces before assigning fixes:
+
+- `queue.*` is a zero-tolerance physical-queue comparator frontier;
+- `dynamic_art.*` is a zero-tolerance DPLC/player-art lifecycle frontier;
+- a hardware-timing admission error means the schema-2 authority could not
+  match a production-submitted prepared S3K job, not that the comparator found
+  an ordinary field mismatch.
+
+For every affected trace preserve the first frame, exact field or admission
+reason, and total error count. Queue/DPLC failures take precedence over
+downstream physics, object, event, or audio symptoms. Do not promote a fixture
+to audited status unless native capture used `--load-queue-state` and metadata
+advertises `load_queue_state_per_frame`; DPLC/player-art evidence additionally
+requires `dynamic_art_transfer_state_per_frame_v1`.
+
+Update `docs/status/trace-frontier-log.md` whenever the first queue or
+`dynamic_art` frontier moves, a green regresses, or an admission error changes.
+The evidence is comparison-only: agents may fix production queue behavior but
+must never hydrate gameplay, submit work, or fabricate readiness from a trace.

@@ -4,6 +4,7 @@ import com.openggf.GameLoop;
 import com.openggf.LevelFrameContext;
 import com.openggf.LevelFrameResult;
 import com.openggf.LevelFrameStep;
+import com.openggf.LevelFrameTestStep;
 import com.openggf.control.InputHandler;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameModule;
@@ -69,7 +70,7 @@ class TestS3kInitialObjectSetupLifecycle {
             int levelBefore = manager.getFrameCounter();
             int p2ControlBefore = nativeObjectControl(p2);
 
-            LevelFrameResult setup = LevelFrameStep.executeWithPause(
+            LevelFrameResult setup = LevelFrameTestStep.executeWithPause(
                     LevelFrameContext.from(TestEnvironment.activeGameplayMode()),
                     manager, GameServices.camera(), () -> {
                         throw new AssertionError("SETUP_ONLY must not enter ordinary physics");
@@ -84,7 +85,7 @@ class TestS3kInitialObjectSetupLifecycle {
             assertEquals(0x53, nativeObjectControl(p1));
             assertEquals(p2ControlBefore, nativeObjectControl(p2));
 
-            LevelFrameResult gameplay = LevelFrameStep.executeWithPause(
+            LevelFrameResult gameplay = LevelFrameTestStep.executeWithPause(
                     LevelFrameContext.from(TestEnvironment.activeGameplayMode()),
                     manager, GameServices.camera(), () -> {
                     }, false, LevelFrameStep.DIRECT_WRAPPER);
@@ -112,7 +113,7 @@ class TestS3kInitialObjectSetupLifecycle {
             LevelManager manager = GameServices.level();
             int objectBefore = manager.getObjectManager().getFrameCounter();
 
-            LevelFrameResult result = LevelFrameStep.executeWithPause(
+            LevelFrameResult result = LevelFrameTestStep.executeWithPause(
                     LevelFrameContext.from(TestEnvironment.activeGameplayMode()),
                     manager, GameServices.camera(), () -> {
                         throw new AssertionError("PAUSED must not enter ordinary physics");
@@ -261,8 +262,7 @@ class TestS3kInitialObjectSetupLifecycle {
             int before = manager.getObjectManager().getFrameCounter();
             GameLoop loop = releasingTitleCardLoop("BONUS_STAGE");
 
-            assertTrue((boolean) invoke(loop, "updateTitleCardMode",
-                    new Class<?>[] { boolean.class }, false));
+            assertTrue(releaseTitleCardInLogicalIteration(loop));
 
             assertEquals(GameMode.BONUS_STAGE, loop.getCurrentGameMode());
             assertTrue(manager.hasPendingInitialProcessSpritesPass());
@@ -282,7 +282,6 @@ class TestS3kInitialObjectSetupLifecycle {
             loop.setGameplayMode(TestEnvironment.activeGameplayMode());
             SpecialStageProvider provider = GameServices.module().getSpecialStageProvider();
 
-            loop.enterSpecialStage();
             assertTrue(manager.hasPendingInitialProcessSpritesPass());
             assertEquals(before, manager.getObjectManager().getFrameCounter());
 
@@ -305,6 +304,7 @@ class TestS3kInitialObjectSetupLifecycle {
                     "a paused special-stage tick must not dispatch level objects");
             loop.resume();
             assertFalse(loop.isPaused());
+            advanceActiveFade(loop);
 
             invoke(loop, "doEnterResultsScreen", new Class<?>[0]);
             loop.step();
@@ -336,8 +336,7 @@ class TestS3kInitialObjectSetupLifecycle {
                     "the genuine return load publishes one fresh setup token");
             int beforeRelease = manager.getObjectManager().getFrameCounter();
             installReleasingTitleProvider(loop);
-            assertTrue((boolean) invoke(loop, "updateTitleCardMode",
-                    new Class<?>[] { boolean.class }, false));
+            assertTrue(releaseTitleCardInLogicalIteration(loop));
 
             assertEquals(GameMode.LEVEL, loop.getCurrentGameMode());
             assertFalse(manager.hasPendingInitialProcessSpritesPass());
@@ -365,8 +364,7 @@ class TestS3kInitialObjectSetupLifecycle {
             manager.discardPendingInitialProcessSpritesForStateRestoration();
             int beforeRelease = manager.getObjectManager().getFrameCounter();
             installReleasingTitleProvider(loop);
-            assertTrue((boolean) invoke(loop, "updateTitleCardMode",
-                    new Class<?>[] { boolean.class }, false));
+            assertTrue(releaseTitleCardInLogicalIteration(loop));
 
             assertEquals(GameMode.LEVEL, loop.getCurrentGameMode());
             assertFalse(manager.hasPendingInitialProcessSpritesPass());
@@ -384,7 +382,7 @@ class TestS3kInitialObjectSetupLifecycle {
             LevelManager manager = GameServices.level();
             int before = manager.getObjectManager().getFrameCounter();
 
-            LevelFrameResult paused = LevelFrameStep.executeWithPause(
+            LevelFrameResult paused = LevelFrameTestStep.executeWithPause(
                     LevelFrameContext.from(TestEnvironment.activeGameplayMode()),
                     manager, GameServices.camera(), () -> {
                     }, true, LevelFrameStep.DIRECT_WRAPPER);
@@ -393,7 +391,7 @@ class TestS3kInitialObjectSetupLifecycle {
             assertTrue(manager.hasPendingInitialProcessSpritesPass());
             assertEquals(before, manager.getObjectManager().getFrameCounter());
 
-            LevelFrameResult resumed = LevelFrameStep.executeWithPause(
+            LevelFrameResult resumed = LevelFrameTestStep.executeWithPause(
                     LevelFrameContext.from(TestEnvironment.activeGameplayMode()),
                     manager, GameServices.camera(), () -> {
                     }, true, LevelFrameStep.DIRECT_WRAPPER);
@@ -587,11 +585,10 @@ class TestS3kInitialObjectSetupLifecycle {
             LevelManager manager = GameServices.level();
             OscillatorState before = captureOscillator();
             GameLoop loop = releasingTitleCardLoop("LEVEL");
-            assertTrue((boolean) invoke(loop, "updateTitleCardMode",
-                    new Class<?>[] { boolean.class }, false));
+            assertTrue(releaseTitleCardInLogicalIteration(loop));
             assertFalse(manager.hasPendingInitialProcessSpritesPass());
             assertEquals(LevelFrameResult.GAMEPLAY_FRAME,
-                    LevelFrameStep.execute(
+                    LevelFrameTestStep.execute(
                             LevelFrameContext.from(TestEnvironment.activeGameplayMode()),
                             manager, GameServices.camera(), () -> {
                             }));
@@ -608,12 +605,12 @@ class TestS3kInitialObjectSetupLifecycle {
             LevelManager manager = GameServices.level();
             OscillatorState before = captureOscillator();
             assertEquals(LevelFrameResult.SETUP_ONLY,
-                    LevelFrameStep.execute(
+                    LevelFrameTestStep.execute(
                             LevelFrameContext.from(TestEnvironment.activeGameplayMode()),
                             manager, GameServices.camera(), () -> {
                             }));
             assertEquals(LevelFrameResult.GAMEPLAY_FRAME,
-                    LevelFrameStep.execute(
+                    LevelFrameTestStep.execute(
                             LevelFrameContext.from(TestEnvironment.activeGameplayMode()),
                             manager, GameServices.camera(), () -> {
                             }));
@@ -643,6 +640,26 @@ class TestS3kInitialObjectSetupLifecycle {
                 destination);
         setField(loop, "postTitleCardDestination", target);
         return loop;
+    }
+
+    private static boolean releaseTitleCardInLogicalIteration(GameLoop loop) throws Exception {
+        var frame = TestEnvironment.activeGameplayMode().plcFrameLifecycle()
+                .latchBeforeFadeUpdate();
+        setField(loop, "activePlcLifecycleFrame", frame);
+        try {
+            return (boolean) invoke(loop, "updateTitleCardMode",
+                    new Class<?>[] { boolean.class }, false);
+        } finally {
+            setField(loop, "activePlcLifecycleFrame", null);
+            frame.finish();
+        }
+    }
+
+    private static void advanceActiveFade(GameLoop loop) {
+        for (int frame = 0; frame < 64 && GameServices.fade().isActive(); frame++) {
+            loop.step();
+        }
+        assertFalse(GameServices.fade().isActive(), "the entry reveal must complete first");
     }
 
     private static void installReleasingTitleProvider(GameLoop loop) throws Exception {

@@ -47,6 +47,7 @@ public final class CrossGameRuleComposer {
                 host.objectInteraction(),
                 host.sidekickCpu(),
                 host.powerUp(),
-                host.drowningBubble());
+                host.drowningBubble(),
+                host.dynamicArtDmaService());
     }
 }

@@ -12,6 +12,11 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class TestTraceRunManifest {
 
+    private static final String EMPTY_LEDGER_HASH =
+            "sha256:42f87419ea3765ece5e0a63ffa9f9ebe5e60d91c115090adf9133c0bd0aca3c9";
+    private static final String GAP_DESCRIPTOR_FINGERPRINT =
+            "sha256:ff64bf72b7cc56fbd3c31656213363d447e149e3f4cc6c3f35f4f6a6a294cd63";
+
     private static final String VALID_MANIFEST = """
         {
           "run_schema": 1,
@@ -165,5 +170,148 @@ class TestTraceRunManifest {
         IllegalStateException ex =
             assertThrows(IllegalStateException.class, () -> run.validate(dir));
         assertTrue(ex.getMessage().contains("to_segment"), ex.getMessage());
+    }
+
+    @Test
+    void acceptsLegacySchemaOneOmissionAndRequiresSchemaTwoGapArray(
+            @TempDir Path dir) throws IOException {
+        TraceRunManifest legacy = TraceRunManifest.load(writeRun(
+                dir.resolve("legacy"), VALID_MANIFEST,
+                "seg00_aiz", "seg01_gumball", "seg02_aiz"));
+        legacy.validate(dir.resolve("legacy"));
+        assertTrue(legacy.dynamicArtGapTransitions().isEmpty());
+
+        String schemaTwo = VALID_MANIFEST
+                .replace("\"run_schema\": 1", "\"run_schema\": 2")
+                .replace("\n}", ",\n  \"dynamic_art_gap_transitions\": []\n}");
+        TraceRunManifest current = TraceRunManifest.load(writeRun(
+                dir.resolve("current"), schemaTwo,
+                "seg00_aiz", "seg01_gumball", "seg02_aiz"));
+        current.validate(dir.resolve("current"));
+        assertTrue(current.dynamicArtGapTransitions().isEmpty());
+
+        String omitted = VALID_MANIFEST.replace("\"run_schema\": 1", "\"run_schema\": 2");
+        assertThrows(IOException.class, () -> TraceRunManifest.load(writeRun(
+                dir.resolve("omitted"), omitted,
+                "seg00_aiz", "seg01_gumball", "seg02_aiz")));
+    }
+
+    @Test
+    void validatesCompleteOrderedGapLifecycleAndHashes(@TempDir Path dir)
+            throws IOException {
+        String descriptor = descriptorJson();
+        String submission = gapTransitionJson(
+                gapEdgeJson(3, 9, "submitted", "run_gap", 18, 0, 5290),
+                EMPTY_LEDGER_HASH, "[" + descriptor + "]");
+        String pendingHash = com.openggf.trace.DynamicArtTransfer.ledgerHash(
+                java.util.List.of(com.openggf.trace.DynamicArtTransfer.parseDescriptor(
+                        new com.fasterxml.jackson.databind.ObjectMapper().readTree(descriptor))));
+        String completion = gapTransitionJson(
+                gapEdgeJson(4, 9, "completed", "run_gap", 19, 0, 5292),
+                pendingHash, "[]");
+        String schemaTwo = VALID_MANIFEST
+                .replace("\"run_schema\": 1", "\"run_schema\": 2")
+                .replace("\"game\": \"s3k\"", "\"game\": \"s2\"")
+                .replace("\n}", ",\n  \"dynamic_art_gap_transitions\": ["
+                        + submission + "," + completion + "]\n}");
+
+        TraceRunManifest manifest = TraceRunManifest.load(writeRun(
+                dir, schemaTwo, "seg00_aiz", "seg01_gumball", "seg02_aiz"));
+        manifest.validate(dir);
+        manifest.validateDynamicArtGaps(java.util.List.of(), true);
+
+        assertEquals(GAP_DESCRIPTOR_FINGERPRINT,
+                manifest.dynamicArtGapTransitions().getFirst()
+                        .afterLedgerDescriptors().getFirst().fingerprint());
+    }
+
+    @Test
+    void rejectsBadGapOrderHashDescriptorAndNonemptyPostGap(@TempDir Path dir)
+            throws IOException {
+        String descriptor = descriptorJson();
+        String submission = gapTransitionJson(
+                gapEdgeJson(3, 9, "submitted", "run_gap", 18, 0, 5290),
+                EMPTY_LEDGER_HASH, "[" + descriptor + "]");
+        String schemaTwo = VALID_MANIFEST
+                .replace("\"run_schema\": 1", "\"run_schema\": 2")
+                .replace("\"game\": \"s3k\"", "\"game\": \"s2\"")
+                .replace("\n}", ",\n  \"dynamic_art_gap_transitions\": ["
+                        + submission + "]\n}");
+        TraceRunManifest pending = TraceRunManifest.load(writeRun(
+                dir.resolve("pending"), schemaTwo,
+                "seg00_aiz", "seg01_gumball", "seg02_aiz"));
+        assertThrows(IllegalStateException.class,
+                () -> pending.validateDynamicArtGaps(java.util.List.of(), true));
+
+        String badHash = schemaTwo.replace(EMPTY_LEDGER_HASH,
+                "sha256:0000000000000000000000000000000000000000000000000000000000000000");
+        TraceRunManifest hash = TraceRunManifest.load(writeRun(
+                dir.resolve("hash"), badHash,
+                "seg00_aiz", "seg01_gumball", "seg02_aiz"));
+        assertThrows(IllegalStateException.class,
+                () -> hash.validateDynamicArtGaps(java.util.List.of(), false));
+
+        String badDescriptor = schemaTwo.replace(GAP_DESCRIPTOR_FINGERPRINT,
+                "sha256:0000000000000000000000000000000000000000000000000000000000000000");
+        assertThrows(IOException.class, () -> TraceRunManifest.load(writeRun(
+                dir.resolve("descriptor"), badDescriptor,
+                "seg00_aiz", "seg01_gumball", "seg02_aiz")));
+
+        String duplicated = schemaTwo.replace("[" + submission + "]",
+                "[" + submission + "," + submission + "]");
+        TraceRunManifest order = TraceRunManifest.load(writeRun(
+                dir.resolve("order"), duplicated,
+                "seg00_aiz", "seg01_gumball", "seg02_aiz"));
+        assertThrows(IllegalStateException.class,
+                () -> order.validateDynamicArtGaps(java.util.List.of(), false));
+    }
+
+    @Test
+    void rejectsOverlappingSegmentRangesAndDuplicateTransitionAdjacency(
+            @TempDir Path dir) throws IOException {
+        String overlap = VALID_MANIFEST.replace(
+                "\"bk2_frame_offset\": 1900", "\"bk2_frame_offset\": 1600");
+        TraceRunManifest overlapping = TraceRunManifest.load(writeRun(
+                dir.resolve("overlap"), overlap,
+                "seg00_aiz", "seg01_gumball", "seg02_aiz"));
+        assertThrows(IllegalStateException.class,
+                () -> overlapping.validate(dir.resolve("overlap")));
+
+        String duplicate = VALID_MANIFEST.replace(
+                "{\"from_segment\": 1, \"to_segment\": 2",
+                "{\"from_segment\": 0, \"to_segment\": 1");
+        TraceRunManifest duplicateAdjacency = TraceRunManifest.load(writeRun(
+                dir.resolve("duplicate"), duplicate,
+                "seg00_aiz", "seg01_gumball", "seg02_aiz"));
+        assertThrows(IllegalStateException.class,
+                () -> duplicateAdjacency.validate(dir.resolve("duplicate")));
+    }
+
+    private static String descriptorJson() {
+        return "{\"transfer_id\":9,\"owner\":\"tails\",\"mapping_frame\":4,"
+                + "\"submission_origin\":\"run_gap\",\"requests\":[{"
+                + "\"rom_source_address\":410400,\"source_tile_index\":1,"
+                + "\"ram_source_address\":-1,\"vram_destination\":62464,"
+                + "\"byte_length\":32}],\"fingerprint\":\""
+                + GAP_DESCRIPTOR_FINGERPRINT + "\"}";
+    }
+
+    private static String gapEdgeJson(long ordinal, long transferId, String phase,
+            String origin, int movieFrame, int edgeIndex, int callbackPc) {
+        return "{\"edge_ordinal\":" + ordinal + ",\"transfer_id\":" + transferId
+                + ",\"phase\":\"" + phase + "\",\"owner\":\"tails\","
+                + "\"submission_origin\":\"" + origin + "\",\"mapping_frame\":4,"
+                + "\"movie_logical_frame\":" + movieFrame + ",\"gap_edge_index\":"
+                + edgeIndex + ",\"rom_callback_pc\":" + callbackPc
+                + ",\"requests\":[{\"rom_source_address\":410400,"
+                + "\"source_tile_index\":1,\"ram_source_address\":-1,"
+                + "\"vram_destination\":62464,\"byte_length\":32}]}";
+    }
+
+    private static String gapTransitionJson(
+            String edge, String beforeHash, String afterDescriptors) {
+        return "{\"dynamic_art_gap_edge\":" + edge
+                + ",\"before_ledger_hash\":\"" + beforeHash
+                + "\",\"after_ledger_descriptors\":" + afterDescriptors + "}";
     }
 }

@@ -634,3 +634,10 @@ Butterdroid, Chainspike, Cluckoid, Dragonfly, Fireworm, Iwamodoki, Madmole, Mush
 | Object IDs file | `Sonic3kObjectIds.java` | `Sonic2ObjectIds.java` | `Sonic1ObjectIds.java` |
 | Registry | `Sonic3kObjectRegistry.java` | `Sonic2ObjectRegistry.java` | `Sonic1ObjectRegistry.java` |
 | Art infrastructure | Established (`Sonic3kObjectArt/Provider/Keys`) | Fully established | May need creating |
+
+## Queue Diagnostics Routing
+
+If object work reaches art-load timing, use `s3k-plc-system` for direct
+Kosinski/KosM ownership and `trace-replay-bug-fixing` for `queue.*` or
+`dynamic_art.*` reports. Use `trace-green-fleet` for multiple frontiers. The
+trace evidence is zero-tolerance and comparison-only.

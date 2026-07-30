@@ -595,7 +595,10 @@ final bytes — `finalize_ss_segment` rewrites the metadata with the final
 if it asserts on partial output.
 
 **SS segments emit no aux events at all.** `write_ss_row` writes only
-CSV. `aux_state.jsonl` is opened and closed empty — the committed
+CSV. No profile aux engine runs for this segment. Legacy captures opened and
+closed `aux_state.jsonl` empty; 6.39 audited captures with
+`--load-queue-state` write direct then module physical queue state for every
+stored row. The committed
 `ss`, `ss_2`, `ss_3` and `special_stage` aux fixtures are all 0 bytes
 uncompressed.
 

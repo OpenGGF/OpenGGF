@@ -105,9 +105,7 @@ class TestPlaybackAdvanceOnlyInputBridge {
     }
 
     private static void invokeUpdateLevelMode(GameLoop loop) throws Exception {
-        Method method = GameLoop.class.getDeclaredMethod("updateLevelMode", boolean.class);
-        method.setAccessible(true);
-        method.invoke(loop, false);
+        GameLoopTestStep.invoke(loop, "updateLevelMode", new Class<?>[] { boolean.class }, false);
     }
 
     private static final class FirstRowAdvanceOnlyObserver

@@ -68,7 +68,7 @@ class TestLevelIterationHardwareTimingAdmissionOrder {
                 harness.observer()::enterUnrepresentedGap);
         assertEquals(LevelFrameResult.PAUSED, admission);
 
-        LevelFrameStep.serviceVBlankOnly(
+        LevelFrameTestStep.serviceVBlankOnly(
                 LevelFrameContext.from(harness.context()));
 
         assertTrue(harness.context().hardwareTiming().isReady(harness.handle()));
@@ -97,7 +97,7 @@ class TestLevelIterationHardwareTimingAdmissionOrder {
                 () -> { },
                 () -> harness.observer().beginRawFrame(1),
                 harness.observer()::enterUnrepresentedGap);
-        LevelFrameStep.serviceVBlankOnly(
+        LevelFrameTestStep.serviceVBlankOnly(
                 LevelFrameContext.from(harness.context()));
 
         assertFalse(harness.context().hardwareTiming().isReady(harness.handle()));
@@ -113,7 +113,7 @@ class TestLevelIterationHardwareTimingAdmissionOrder {
         controller.admit(
                 GameMode.TITLE_CARD,
                 () -> {
-                    LevelFrameStep.executeHardwareTimedObjectScan(
+                    LevelFrameTestStep.executeHardwareTimedObjectScan(
                             LevelFrameContext.from(harness.context()),
                             () -> { });
                     return false;

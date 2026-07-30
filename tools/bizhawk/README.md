@@ -483,7 +483,25 @@ tools/bizhawk-headless/run.sh \
   --movie "$PWD/src/test/resources/traces/s3k/_movies/s3-knux-multibonus-ss.bk2" \
   --output "$PWD/target/bizhawk-headless-s3k-run-b" \
   --run-id s3-knux-multibonus-ss
+
+# Knuckles complete super-emerald run: immutable 67-segment publication
+BIZHAWK_HOME=/abs/path/to/docs/BizHawk-2.11-linux-x64 \
+tools/bizhawk-headless/run.sh \
+  --mode trace \
+  --rom "$S3K_ROM_PATH" \
+  --movie "$PWD/src/test/resources/traces/s3k/_movies/s3k-knuckles-complete-superemeralds.bk2" \
+  --output "$PWD/tools/bizhawk-headless/.scratch/s3k-knuckles-complete-superemeralds" \
+  --run-id s3k-knuckles-complete-superemeralds
 ```
+
+The super-emerald movie has 434,417 input rows and SHA-256
+`aa892856df22b7bb1fe5accb48db10b90dc26845d1dccee90352da30349f53cc`.
+The schema-2 native capture publishes 67 segments and 48 transitions at
+`src/test/resources/traces/s3k/runs/s3k-knuckles-complete-superemeralds/`.
+Its exact file lengths, hashes, timing edges, and manifest are frozen in
+`src/test/resources/traces/s3k/hardware-timing-publication.tsv`; the reviewed
+inventory and terminal-tail arithmetic are recorded in
+`docs/architecture/validation/2026-07-30-s3k-knuckles-superemerald-trace-publication.md`.
 
 **Schema-1 fixture parity and schema-2 publication boundary:** committed
 complete-run/run fixtures are `6.37-s3k-completerun`, trace schema 7,

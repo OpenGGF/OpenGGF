@@ -13,6 +13,17 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestFrontierReplayStopper {
+    @Test
+    void reportsEarlyStopOnlyAfterContextBoundaryWasActuallyReached() {
+        FrontierReplayStopper stopper = FrontierReplayStopper.enabled(2);
+        stopper.observe(errorFrame(10));
+
+        assertFalse(stopper.shouldStopAfterFrame(11));
+        assertFalse(stopper.stoppedEarly());
+        assertTrue(stopper.shouldStopAfterFrame(12));
+        assertTrue(stopper.stoppedEarly());
+    }
+
 
     @Test
     void disabledStopperNeverStopsAfterErrors() {

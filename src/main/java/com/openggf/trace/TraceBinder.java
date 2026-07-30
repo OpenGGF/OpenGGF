@@ -1,5 +1,8 @@
 package com.openggf.trace;
 
+import com.openggf.game.resources.DynamicArtDiagnosticsSnapshot;
+import com.openggf.game.resources.QueueDiagnosticSnapshot;
+import com.openggf.game.resources.QueueServiceObservation;
 import com.openggf.level.objects.RomObjectSnapshot;
 
 import java.util.ArrayList;
@@ -357,6 +360,111 @@ public class TraceBinder {
 
         comparisonsByFrame.put(frame, new FrameComparison(
                 existing.frame(), fields, existing.romDiagnostics(), existing.engineDiagnostics()));
+    }
+
+    /**
+     * Merges exact, comparison-only physical load queue fields into a captured frame.
+     */
+    public void compareLoadQueues(
+            int frame,
+            List<TraceEvent.LoadQueueState> expectedStates,
+            List<QueueDiagnosticSnapshot> actualStates) {
+        FrameComparison existing = comparisonsByFrame.get(frame);
+        if (existing == null) {
+            return;
+        }
+        Map<String, TraceEvent.LoadQueueState> expectedByKind = new LinkedHashMap<>();
+        for (TraceEvent.LoadQueueState state :
+                expectedStates != null ? expectedStates : List.<TraceEvent.LoadQueueState>of()) {
+            if (expectedByKind.put(state.kind(), state) != null) {
+                throw new IllegalArgumentException(
+                        "duplicate expected load queue kind: " + state.kind());
+            }
+        }
+        Map<String, QueueDiagnosticSnapshot> actualByKind = new LinkedHashMap<>();
+        for (QueueDiagnosticSnapshot state :
+                actualStates != null ? actualStates : List.<QueueDiagnosticSnapshot>of()) {
+            String kind = state.kind().wireName();
+            if (actualByKind.put(kind, state) != null) {
+                throw new IllegalArgumentException("duplicate actual load queue kind: " + kind);
+            }
+        }
+        java.util.TreeSet<String> kinds = new java.util.TreeSet<>(expectedByKind.keySet());
+        kinds.addAll(actualByKind.keySet());
+        Map<String, FieldComparison> fields = new LinkedHashMap<>(existing.fields());
+        for (String kind : kinds) {
+            TraceEvent.LoadQueueState expected = expectedByKind.get(kind);
+            QueueDiagnosticSnapshot actual = actualByKind.get(kind);
+            String prefix = "queue." + kind + ".";
+            fields.put(prefix + "present", compareObjectField(
+                    prefix + "present", Boolean.toString(expected != null),
+                    Boolean.toString(actual != null)));
+            if (expected == null || actual == null) {
+                continue;
+            }
+            putQueueField(fields, prefix + "busy", expected.busy(), actual.busy());
+            putQueueField(fields, prefix + "prepared", expected.prepared(), actual.prepared());
+            putQueueField(fields, prefix + "active_source",
+                    expected.activeSource(), actual.activeSource());
+            putQueueField(fields, prefix + "active_destination",
+                    expected.activeDestination(), actual.activeDestination());
+            putQueueField(fields, prefix + "total_work",
+                    expected.totalWork(), actual.activeTotalWork());
+            putQueueField(fields, prefix + "remaining_work",
+                    expected.remainingWork(), actual.activeRemainingWork());
+            putQueueField(fields, prefix + "queued_fingerprints",
+                    String.join(",", expected.queuedFingerprints()),
+                    String.join(",", actual.queuedFingerprints()));
+            putQueueField(fields, prefix + "service_observations",
+                    formatExpectedObservations(expected.serviceObservations()),
+                    formatActualObservations(actual.serviceObservations()));
+        }
+        comparisonsByFrame.put(frame, new FrameComparison(
+                existing.frame(), fields, existing.romDiagnostics(), existing.engineDiagnostics()));
+    }
+
+    /**
+     * Merges exact player dynamic-art lifecycle fields into this row.
+     *
+     * <p>A DPLC heartbeat may be the only compared surface on lag and
+     * special-stage rows, so this method creates a comparison when ordinary
+     * gameplay comparison did not run.
+     */
+    public FrameComparison compareDynamicArt(
+            TraceEvent.DynamicArtTransferState expected,
+            DynamicArtDiagnosticsSnapshot actual) {
+        FrameComparison existing = comparisonsByFrame.get(expected.frame());
+        Map<String, FieldComparison> fields = existing != null
+                ? new LinkedHashMap<>(existing.fields())
+                : new LinkedHashMap<>();
+        fields.putAll(DynamicArtSpecialStageComparator.comparisonFields(
+                expected, actual));
+        FrameComparison result = new FrameComparison(
+                expected.frame(), fields,
+                existing != null ? existing.romDiagnostics() : "",
+                existing != null ? existing.engineDiagnostics() : "");
+        comparisonsByFrame.put(expected.frame(), result);
+        return result;
+    }
+
+    private static void putQueueField(
+            Map<String, FieldComparison> fields, String name, Object expected, Object actual) {
+        fields.put(name, compareObjectField(
+                name, String.valueOf(expected), String.valueOf(actual)));
+    }
+
+    private static String formatExpectedObservations(
+            List<TraceEvent.LoadQueueState.ServiceObservation> observations) {
+        return observations.stream()
+                .map(value -> value.boundary() + ":" + value.budget())
+                .collect(java.util.stream.Collectors.joining(","));
+    }
+
+    private static String formatActualObservations(
+            List<QueueServiceObservation> observations) {
+        return observations.stream()
+                .map(value -> value.boundary() + ":" + value.budget())
+                .collect(java.util.stream.Collectors.joining(","));
     }
 
     private static EngineNearbyObject findSemanticObjectMatch(

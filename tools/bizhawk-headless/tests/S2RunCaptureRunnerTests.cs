@@ -60,6 +60,182 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "S2RunCaptureRunner emits the special-stage aux event stream",
                 EmitsSpecialStageAuxEventStream));
+            tests.Add(new TestMain.TestCase(
+                "S2RunCaptureRunner publishes mandatory audit manifest and"
+                + " empty gap ledger",
+                PublishesMandatoryAuditManifest));
+            tests.Add(new TestMain.TestCase(
+                "S2RunCaptureRunner attributes callbacks on the terminal"
+                + " mode advance to the run gap",
+                AttributesTerminalBoundaryCallbacksToGap));
+            tests.Add(new TestMain.TestCase(
+                "S2RunCaptureRunner publishes a trailing reload gap without"
+                + " a later arm",
+                PublishesTrailingReloadGap));
+            tests.Add(new TestMain.TestCase(
+                "S2RunCaptureRunner publication rejects scratch legacy"
+                + " audit omission",
+                PublicationRejectsScratchLegacyAuditOmission));
+        }
+
+        private static void PublicationRejectsScratchLegacyAuditOmission()
+        {
+            WithMovie(Rows(1), movie =>
+            {
+                AssertEx.Throws<ArgumentNullException>(
+                    () => S2RunCaptureRunner.Capture(
+                        movie,
+                        new FakeRunHost(null),
+                        "audit-run",
+                        "synthetic.bk2",
+                        "2026-07-30",
+                        0,
+                        new RunSegmentCollector(),
+                        null),
+                    "requires native load audit");
+            });
+        }
+
+        private static void AttributesTerminalBoundaryCallbacksToGap()
+        {
+            byte[] rom = S2DynamicArtObserverTests.CreateRom();
+            S2DynamicArtObserverTests.DefineLevelDplc(
+                rom, 4, new[] { 0x0000 });
+            WithMovie(Rows(6), movie =>
+            {
+                var host = new FakeRunHost((h, frame) =>
+                {
+                    if (frame == 2)
+                    {
+                        h.Ram[0xF600] = 0x0C;
+                    }
+                    if (frame == 4)
+                    {
+                        SubmitAndCompleteS2(h, 4);
+                        h.Ram[0xF600] = 0x20;
+                    }
+                });
+                CollectedRunCapture result = CollectedRunCapture.CaptureS2(
+                    movie, host, "boundary-gap", "synthetic.bk2",
+                    "2026-07-30", 0, rom);
+
+                AssertEx.Equal(1, result.Segments.Count);
+                AssertEx.Equal(
+                    0,
+                    Count(result.Segments[0].AuxStateJsonl,
+                        "\"phase\":\"submitted\""));
+                AssertEx.Equal(2, result.DynamicArtGapTransitions.Count);
+                string submitted =
+                    result.DynamicArtGapTransitions[0].Format();
+                AssertContains(submitted, "\"phase\":\"submitted\"");
+                AssertContains(
+                    submitted,
+                    "\"submission_origin\":\"run_gap\"");
+                AssertContains(
+                    submitted, "\"movie_logical_frame\":3");
+                AssertContains(
+                    result.DynamicArtGapTransitions[1].Format(),
+                    "\"phase\":\"completed\"");
+            });
+        }
+
+        private static void PublishesTrailingReloadGap()
+        {
+            byte[] rom = S2DynamicArtObserverTests.CreateRom();
+            S2DynamicArtObserverTests.DefineLevelDplc(
+                rom, 4, new[] { 0x0000 });
+            WithMovie(Rows(7), movie =>
+            {
+                var host = new FakeRunHost((h, frame) =>
+                {
+                    if (frame == 2)
+                    {
+                        h.Ram[0xF600] = 0x0C;
+                    }
+                    if (frame == 4)
+                    {
+                        h.Ram[0xF600] = 0x8C;
+                    }
+                    if (frame == 5)
+                    {
+                        SubmitAndCompleteS2(h, 4);
+                    }
+                });
+                CollectedRunCapture result = CollectedRunCapture.CaptureS2(
+                    movie, host, "trailing-gap", "synthetic.bk2",
+                    "2026-07-30", 0, rom);
+
+                AssertEx.Equal(1, result.Segments.Count);
+                AssertEx.Equal(2, result.DynamicArtGapTransitions.Count);
+                AssertContains(
+                    result.RunManifestJson,
+                    "\"dynamic_art_gap_transitions\": [");
+            });
+        }
+
+        private static void SubmitAndCompleteS2(
+            FakeRunHost host, int mappingFrame)
+        {
+            host.SetCpuRegister("M68K A0", S2Ram.PlayerBase);
+            host.Ram[S2Ram.PlayerBase + S2Ram.OffMappingFrame] =
+                (byte)mappingFrame;
+            host.Ram[0xF766] = 0;
+            host.FireExecuteCallback(0x1B848);
+
+            host.SetCpuRegister("M68K D1", 0x50000);
+            host.SetCpuRegister("M68K D2", 0xF000);
+            host.SetCpuRegister("M68K D3", 0x10);
+            host.SetU32(0xDCFC, 0xFFF000);
+            host.FireExecuteCallback(0x144E);
+            host.SetU32(0xDCFC, 0xFFF00E);
+            host.FireExecuteCallback(0x14AA);
+            host.FireExecuteCallback(0x1B89A);
+            host.FireExecuteCallback(0x14AC);
+        }
+
+        private static void PublishesMandatoryAuditManifest()
+        {
+            WithMovie(Rows(8), movie =>
+            {
+                var host = new FakeRunHost((h, frame) =>
+                {
+                    if (frame >= 2)
+                    {
+                        h.Ram[0xF600] = 0x0C;
+                    }
+                });
+                CollectedRunCapture result = CollectedRunCapture.CaptureS2(
+                    movie,
+                    host,
+                    "audit-run",
+                    "synthetic.bk2",
+                    "2026-07-30",
+                    0,
+                    S2DynamicArtObserverTests.CreateRom());
+
+                AssertEx.Equal(1, result.Segments.Count);
+                AssertEx.Equal(
+                    result.Segments[0].ManifestEntry.TraceFrameCount,
+                    Count(result.Segments[0].AuxStateJsonl,
+                        "\"event\":\"load_queue_state\""));
+                AssertEx.Equal(
+                    result.Segments[0].ManifestEntry.TraceFrameCount,
+                    Count(result.Segments[0].AuxStateJsonl,
+                        "\"event\":\"dynamic_art_transfer_state\""));
+                AssertContains(
+                    result.Segments[0].MetadataJson,
+                    "\"dynamic_art_transfer_state_per_frame_v1\"");
+                AssertContains(result.RunManifestJson, "\"run_schema\": 2");
+                AssertContains(
+                    result.RunManifestJson,
+                    "\"dynamic_art_gap_transitions\": [");
+                AssertEx.Equal(0, result.DynamicArtGapTransitions.Count);
+                AssertContains(
+                    S2SpecialStageMetadataWriter.Format(
+                        0, 1, 1, "synthetic.bk2", "2026-07-30",
+                        "audit-run", 1, true),
+                    "\"dynamic_art_transfer_state_per_frame_v1\"");
+            });
         }
 
         /// <summary>
@@ -819,6 +995,19 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
         }
 
+        private static int Count(string value, string needle)
+        {
+            int count = 0;
+            int index = 0;
+            while ((index = value.IndexOf(
+                needle, index, StringComparison.Ordinal)) >= 0)
+            {
+                count++;
+                index += needle.Length;
+            }
+            return count;
+        }
+
         private static string[] Rows(int count)
         {
             var rows = new string[count];
@@ -900,9 +1089,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// script with the host itself so scripts can drive RAM and the
         /// lag flag by completed-frame number.
         /// </summary>
-        internal sealed class FakeRunHost : IGpgxHost
+        internal sealed class FakeRunHost : IGpgxHost, ICpuRegisterReader
         {
             private readonly Action<FakeRunHost, int> onAdvance;
+            private readonly Dictionary<uint, Action> executeCallbacks =
+                new Dictionary<uint, Action>();
+            private readonly Dictionary<string, uint> registers =
+                new Dictionary<string, uint>(StringComparer.Ordinal);
 
             public FakeRunHost(Action<FakeRunHost, int> onAdvance)
             {
@@ -926,7 +1119,20 @@ namespace OpenGGF.BizHawk.Headless.Tests
             public IDisposable RegisterExecuteCallback(
                 uint address, Action callback)
             {
+                executeCallbacks[address] = callback;
                 return NoOpCallbackRegistration.Instance;
+            }
+
+            public void FireExecuteCallback(uint address)
+            {
+                Action callback;
+                if (!executeCallbacks.TryGetValue(address, out callback))
+                {
+                    throw new InvalidOperationException(
+                        "No execute callback is registered at 0x"
+                        + address.ToString("X") + ".");
+                }
+                callback();
             }
 
             public void Advance()
@@ -944,6 +1150,17 @@ namespace OpenGGF.BizHawk.Headless.Tests
             public byte ReadMainRamByte(int offset)
             {
                 return Ram[offset];
+            }
+
+            public uint ReadCpuRegister(string name)
+            {
+                uint value;
+                return registers.TryGetValue(name, out value) ? value : 0;
+            }
+
+            public void SetCpuRegister(string name, uint value)
+            {
+                registers[name] = value;
             }
 
             public void Dispose()

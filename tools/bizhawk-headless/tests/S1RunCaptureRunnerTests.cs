@@ -63,6 +63,257 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S1RunCaptureRunner gives a same-frame hard stop precedence"
                 + " over movie completion",
                 GivesSameFrameHardStopPrecedenceOverMovieCompletion));
+            tests.Add(new TestMain.TestCase(
+                "S1RunCaptureRunner publishes mandatory audit manifest and"
+                + " empty gap ledger",
+                PublishesMandatoryAuditManifest));
+            tests.Add(new TestMain.TestCase(
+                "S1RunCaptureRunner reconciles run-gap dynamic art before"
+                + " the next arm",
+                ReconcilesRunGapDynamicArt));
+            tests.Add(new TestMain.TestCase(
+                "S1RunCaptureRunner keeps final-advance submission and"
+                + " completion together in the run gap",
+                SplitsBoundaryCompletionFromFinalRow));
+            tests.Add(new TestMain.TestCase(
+                "S1RunCaptureRunner publishes a trailing dynamic-art gap"
+                + " without a later arm",
+                PublishesTrailingDynamicArtGap));
+            tests.Add(new TestMain.TestCase(
+                "S1RunCaptureRunner publication rejects scratch legacy"
+                + " audit omission",
+                PublicationRejectsScratchLegacyAuditOmission));
+        }
+
+        private static void PublicationRejectsScratchLegacyAuditOmission()
+        {
+            WithMovie(Rows(1), movie =>
+            {
+                AssertEx.Throws<ArgumentNullException>(
+                    () => S1RunCaptureRunner.Capture(
+                        movie,
+                        new FakeS1Host(null),
+                        null,
+                        "synthetic.bk2",
+                        "2026-07-30",
+                        S1CompleteRunMetadataWriter.LuaScriptVersion,
+                        0,
+                        new RunSegmentCollector(),
+                        null),
+                    "requires native load audit");
+            });
+        }
+
+        private static void SplitsBoundaryCompletionFromFinalRow()
+        {
+            byte[] rom = S1DynamicArtObserverTests.CreateRom();
+            S1DynamicArtObserverTests.DefineDplc(
+                rom, 4, new[] { 0x0000 });
+            WithMovie(Rows(6), movie =>
+            {
+                var host = new FakeS1Host((h, frame) =>
+                {
+                    if (frame == 2)
+                    {
+                        h.Ram[0xF600] = 0x0C;
+                    }
+                    if (frame == 3)
+                    {
+                        h.IsLagged = true;
+                        SubmitS1(h, 4);
+                    }
+                    if (frame == 4)
+                    {
+                        h.IsLagged = false;
+                        CompleteS1(h);
+                        h.Ram[0xF600] = 0x04;
+                    }
+                });
+                IList<RunSegmentOutput> outputs;
+                S1RunCaptureResult result = Capture(
+                    movie, host, null, 0, out outputs, rom);
+
+                AssertEx.Equal(1, outputs.Count);
+                AssertEx.Equal(1, outputs[0].ManifestEntry.TraceFrameCount);
+                AssertEx.Equal(
+                    0,
+                    Count(outputs[0].AuxStateJsonl,
+                        "\"phase\":\"submitted\""));
+                AssertEx.Equal(
+                    0,
+                    Count(outputs[0].AuxStateJsonl,
+                        "\"phase\":\"completed\""));
+                AssertEx.Equal(2, result.DynamicArtGapTransitions.Count);
+                string submission =
+                    result.DynamicArtGapTransitions[0].Format();
+                string completion =
+                    result.DynamicArtGapTransitions[1].Format();
+                AssertContains(submission, "\"phase\":\"submitted\"");
+                AssertContains(
+                    submission,
+                    "\"submission_origin\":\"run_gap\"");
+                AssertContains(completion, "\"phase\":\"completed\"");
+                AssertContains(
+                    completion,
+                    "\"submission_origin\":\"run_gap\"");
+                AssertContains(
+                    completion, "\"movie_logical_frame\":3");
+                AssertContains(
+                    result.RunManifestJson,
+                    "\"dynamic_art_gap_transitions\": [");
+            });
+        }
+
+        private static void PublishesTrailingDynamicArtGap()
+        {
+            byte[] rom = S1DynamicArtObserverTests.CreateRom();
+            S1DynamicArtObserverTests.DefineDplc(
+                rom, 4, new[] { 0x0000 });
+            WithMovie(Rows(7), movie =>
+            {
+                var host = new FakeS1Host((h, frame) =>
+                {
+                    if (frame == 2)
+                    {
+                        h.Ram[0xF600] = 0x0C;
+                    }
+                    if (frame == 4)
+                    {
+                        h.Ram[0xF600] = 0x04;
+                    }
+                    if (frame == 5)
+                    {
+                        SubmitS1(h, 4);
+                        CompleteS1(h);
+                    }
+                });
+                IList<RunSegmentOutput> outputs;
+                S1RunCaptureResult result = Capture(
+                    movie, host, "trailing-gap", 0, out outputs, rom);
+
+                AssertEx.Equal(1, outputs.Count);
+                AssertEx.Equal(2, result.DynamicArtGapTransitions.Count);
+                AssertContains(
+                    result.DynamicArtGapTransitions[0].Format(),
+                    "\"phase\":\"submitted\"");
+                AssertContains(
+                    result.DynamicArtGapTransitions[1].Format(),
+                    "\"phase\":\"completed\"");
+                AssertContains(
+                    result.RunManifestJson,
+                    "\"dynamic_art_gap_transitions\": [");
+            });
+        }
+
+        private static void SubmitS1(FakeS1Host host, int mappingFrame)
+        {
+            host.SetCpuRegister("M68K A0", 0xD000);
+            host.Ram[0xD000 + S1Ram.OffMappingFrame] =
+                (byte)mappingFrame;
+            host.Ram[0xF766] = 0xFF;
+            host.FireExecuteCallback(0x14312);
+            host.Ram[0xF767] = 1;
+            host.FireExecuteCallback(0x1436A);
+        }
+
+        private static void CompleteS1(FakeS1Host host)
+        {
+            host.FireExecuteCallback(0x0D20);
+            host.Ram[0xF767] = 0;
+            host.FireExecuteCallback(0x0D50);
+        }
+
+        private static void ReconcilesRunGapDynamicArt()
+        {
+            byte[] rom = S1DynamicArtObserverTests.CreateRom();
+            S1DynamicArtObserverTests.DefineDplc(
+                rom, 4, new[] { 0x0000 });
+            WithMovie(Rows(11), movie =>
+            {
+                var host = new FakeS1Host((h, frame) =>
+                {
+                    if (frame == 2)
+                    {
+                        h.Ram[0xF600] = 0x0C;
+                    }
+                    if (frame == 5)
+                    {
+                        h.Ram[0xF600] = 0x04;
+                    }
+                    if (frame == 6)
+                    {
+                        h.SetCpuRegister("M68K A0", 0xD000);
+                        h.Ram[0xD000 + S1Ram.OffMappingFrame] = 4;
+                        h.Ram[0xF766] = 0xFF;
+                        h.FireExecuteCallback(0x14312);
+                        h.Ram[0xF767] = 1;
+                        h.FireExecuteCallback(0x1436A);
+                        h.FireExecuteCallback(0x0D20);
+                        h.Ram[0xF767] = 0;
+                        h.FireExecuteCallback(0x0D50);
+                    }
+                    if (frame == 7)
+                    {
+                        h.Ram[0xF600] = 0x0C;
+                    }
+                });
+                IList<RunSegmentOutput> outputs;
+                S1RunCaptureResult result = Capture(
+                    movie, host, "gap-run", 0, out outputs, rom);
+
+                AssertEx.Equal(2, outputs.Count);
+                AssertEx.Equal(2, result.DynamicArtGapTransitions.Count);
+                AssertContains(
+                    result.DynamicArtGapTransitions[0].Format(),
+                    "\"phase\":\"submitted\"");
+                AssertContains(
+                    result.DynamicArtGapTransitions[1].Format(),
+                    "\"phase\":\"completed\"");
+                AssertContains(
+                    result.RunManifestJson,
+                    "\"dynamic_art_gap_transitions\": [");
+            });
+        }
+
+        private static void PublishesMandatoryAuditManifest()
+        {
+            WithMovie(Rows(8), movie =>
+            {
+                var host = new FakeS1Host((h, frame) =>
+                {
+                    if (frame >= 2)
+                    {
+                        h.Ram[0xF600] = 0x0C;
+                    }
+                });
+                IList<RunSegmentOutput> outputs;
+                S1RunCaptureResult result = Capture(
+                    movie, host, "audit-run", 0, out outputs,
+                    S1DynamicArtObserverTests.CreateRom());
+
+                AssertEx.Equal(1, outputs.Count);
+                AssertEx.Equal(
+                    outputs[0].ManifestEntry.TraceFrameCount,
+                    Count(outputs[0].AuxStateJsonl,
+                        "\"event\":\"load_queue_state\""));
+                AssertEx.Equal(
+                    outputs[0].ManifestEntry.TraceFrameCount,
+                    Count(outputs[0].AuxStateJsonl,
+                        "\"event\":\"dynamic_art_transfer_state\""));
+                AssertContains(
+                    outputs[0].MetadataJson,
+                    "\"dynamic_art_transfer_state_per_frame_v1\"");
+                AssertContains(result.RunManifestJson, "\"run_schema\": 2");
+                AssertContains(
+                    result.RunManifestJson,
+                    "\"dynamic_art_gap_transitions\": [");
+                AssertEx.Equal(0, result.DynamicArtGapTransitions.Count);
+                AssertContains(
+                    S1SpecialStageMetadataWriter.Format(
+                        0, 1, 1, "synthetic.bk2", "3.18",
+                        "2026-07-30", "audit-run", 1, true),
+                    "\"dynamic_art_transfer_state_per_frame_v1\"");
+            });
         }
 
         /// <summary>
@@ -655,18 +906,30 @@ namespace OpenGGF.BizHawk.Headless.Tests
             IGpgxHost host,
             string runId,
             int stopAtFrame,
-            out IList<RunSegmentOutput> outputs)
+            out IList<RunSegmentOutput> outputs,
+            byte[] dynamicArtRom = null)
         {
             var collector = new RunSegmentCollector();
-            S1RunCaptureResult result = S1RunCaptureRunner.Capture(
-                movie,
-                host,
-                runId,
-                "synthetic.bk2",
-                "2026-07-24",
-                S1CompleteRunMetadataWriter.LuaScriptVersion,
-                stopAtFrame,
-                collector);
+            S1RunCaptureResult result = dynamicArtRom == null
+                ? S1RunCaptureRunner.CaptureScratchLegacy(
+                    movie,
+                    host,
+                    runId,
+                    "synthetic.bk2",
+                    "2026-07-24",
+                    S1CompleteRunMetadataWriter.LuaScriptVersion,
+                    stopAtFrame,
+                    collector)
+                : S1RunCaptureRunner.Capture(
+                    movie,
+                    host,
+                    runId,
+                    "synthetic.bk2",
+                    "2026-07-24",
+                    S1CompleteRunMetadataWriter.LuaScriptVersion,
+                    stopAtFrame,
+                    collector,
+                    dynamicArtRom);
             outputs = collector.Segments;
             return result;
         }
@@ -680,6 +943,19 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 throw new InvalidOperationException(
                     "Expected text to contain <" + expectedFragment + ">.");
             }
+        }
+
+        private static int Count(string value, string needle)
+        {
+            int count = 0;
+            int index = 0;
+            while ((index = value.IndexOf(
+                needle, index, StringComparison.Ordinal)) >= 0)
+            {
+                count++;
+                index += needle.Length;
+            }
+            return count;
         }
 
         private static string[] Rows(int count)

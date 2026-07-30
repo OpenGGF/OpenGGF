@@ -65,3 +65,18 @@ Submission alone is insufficient completion authority.
 | Synchronous decoders, VDP waits, and Z80 bus waits | Not an event-kind candidate. | A future proposal would first need an explicit persistent ROM readiness poll while the ordinary loop remains admitted; none is present here. |
 
 No Sonic 1 mechanism adds an authoritative hardware-timing kind in schema version 1.
+
+## 2026-07-28 PLC evidence status
+
+The Task 1 probe records `AddPLC`/`NewPLC`, retail `RunPLC` preparation,
+three- and nine-pattern service, and the queue shift with execute hooks. The
+head is `0xFFF680`, destination `0xFFF684`, `PatternsLeft` `0xFFF6F8`, and
+the per-service counter `0xFFF6FA`; the retail buffer has sixteen six-byte
+slots and no overflow protection. `f_doupdatesinhblank` controls the
+water-split deferral path. The retail source deliberately publishes
+`PatternsLeft` before `NemDec_BuildCodeTable`, so this remains a race that
+must be observed rather than normalized to the `FixBugs` ordering.
+
+The present disposition remains `NATIVE_SERVICE_QUEUE_PENDING_REVIEW`; the
+capture gate is recorded as `EVIDENCE_INCOMPLETE` in
+[`2026-07-28-s1-s2-plc-readiness-evidence.md`](../research/trace/2026-07-28-s1-s2-plc-readiness-evidence.md).

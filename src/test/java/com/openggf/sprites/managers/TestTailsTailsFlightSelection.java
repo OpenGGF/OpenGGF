@@ -60,6 +60,33 @@ class TestTailsTailsFlightSelection {
     }
 
     @Test
+    void rewindStateRestoresTheNextDynamicArtAnimationDecision() {
+        TestablePlayableSprite tails =
+                new TestablePlayableSprite(
+                        "tails", (short) 0x100, (short) 0x200);
+        TailsTailsController controller =
+                new TailsTailsController(tails, null, false);
+        tails.setAnimationId(5);
+        controller.update();
+        controller.update();
+        TailsTailsController.RewindState saved =
+                controller.captureRewindState();
+
+        controller.update();
+        TailsTailsController.RewindState expectedNext =
+                controller.captureRewindState();
+        controller.update();
+        controller.update();
+
+        controller.restoreRewindState(saved);
+        controller.update();
+
+        assertEquals(expectedNext, controller.captureRewindState(),
+                "rewind must restore the Obj05 animation cursor that selects "
+                        + "the next tails-tails DPLC mapping frame");
+    }
+
+    @Test
     void romFlightAndSwimScriptsResolveToMappingAndDplcFrames() throws Exception {
         SpriteArtSet tails = new Sonic3kPlayerArt(
                 RomByteReader.fromRom(TestEnvironment.currentRom())).loadTails();

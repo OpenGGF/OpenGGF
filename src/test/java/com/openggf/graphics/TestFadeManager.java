@@ -62,4 +62,22 @@ public class TestFadeManager {
 
         assertEquals(FadeManager.FadeState.NONE, fadeManager.getState());
     }
+
+    @Test
+    public void customDurationFadeToBlackCompletesOnExactFrameAndHoldsBlack() {
+        FadeManager fadeManager = GameServices.fade();
+        fadeManager.resetState();
+        int[] completions = {0};
+
+        fadeManager.startFadeToBlack(() -> completions[0]++, 0, 60);
+        for (int i = 0; i < 59; i++) {
+            fadeManager.update();
+        }
+        assertEquals(0, completions[0]);
+
+        fadeManager.update();
+
+        assertEquals(1, completions[0]);
+        assertEquals(FadeManager.FadeState.HOLD_BLACK, fadeManager.getState());
+    }
 }

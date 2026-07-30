@@ -7,7 +7,9 @@ import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 
 import java.io.IOException;
+import java.util.List;
 import com.openggf.level.Pattern;
+import com.openggf.level.render.TileLoadRequest;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static com.openggf.game.sonic2.specialstage.Sonic2SpecialStageConstants.*;
@@ -160,5 +162,29 @@ public class Sonic2SpecialStageDataLoaderTest {
         int firstOffset = ((data[0] & 0xFF) << 8) | (data[1] & 0xFF);
         assertTrue(firstOffset < data.length, "First offset should point within data");
     }
-}
 
+    @Test
+    public void decodesCachedSpecialStagePlayerDplcPlansFromTheSuppliedRom()
+            throws IOException {
+        Sonic2SpecialStageDataLoader.PlayerDplcPlans plans =
+                loader.getPlayerDplcPlans();
+
+        assertEquals(18, plans.sonic().size());
+        assertEquals(18, plans.tails().size());
+        assertEquals(21, plans.tailsTails().size());
+        assertEquals(List.of(
+                        new TileLoadRequest(0x000, 16),
+                        new TileLoadRequest(0x010, 9),
+                        new TileLoadRequest(0x019, 2)),
+                plans.sonic().getFirst().requests());
+        assertEquals(List.of(
+                        new TileLoadRequest(0x183, 9),
+                        new TileLoadRequest(0x18C, 6),
+                        new TileLoadRequest(0x192, 1)),
+                plans.tails().getFirst().requests());
+        assertEquals(List.of(new TileLoadRequest(0x2E3, 9)),
+                plans.tailsTails().get(7).requests());
+        assertSame(plans, loader.getPlayerDplcPlans(),
+                "ROM-decoded plans should be cached for the special-stage lifetime");
+    }
+}

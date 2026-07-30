@@ -1,5 +1,8 @@
 package com.openggf.game.sonic2.specialstage;
 
+import com.openggf.game.GameServices;
+import com.openggf.game.sonic2.constants.Sonic2Constants;
+import com.openggf.game.sonic2.resources.Sonic2PlcService;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
@@ -386,6 +389,12 @@ public class Sonic2SpecialStageIntro {
         // allocated later-slot children already moved once. The following 30
         // parent passes publish 1..30; pass 31 is the matching terminal dispatch.
         if (phaseTimer >= INTRO_WAIT2_FRAMES) {
+            // The Bombs AddPLC is part of this one-shot handoff. A rejected
+            // preflight must leave WAIT2 armed so the same owner retries next
+            // pass instead of permanently losing the native cue.
+            if (!queueBombPlc()) {
+                return;
+            }
             currentPhase = Phase.MESSAGE_FLYOUT;
             phaseTimer = 0;
             bannerVisible = false;
@@ -396,6 +405,19 @@ public class Sonic2SpecialStageIntro {
             // message reuse of WAIT2.
             specialStageStarted = true;
             LOGGER.fine("Intro: WAIT2 complete, entering MESSAGE_FLYOUT");
+        }
+    }
+
+    private boolean queueBombPlc() {
+        try {
+            Sonic2PlcService plcService = GameServices.module().getGameService(Sonic2PlcService.class);
+            if (plcService != null) {
+                plcService.transact(Sonic2PlcService.appendOperation(Sonic2Constants.PLC_SPECIAL_STAGE_BOMBS));
+            }
+            return true;
+        } catch (Exception ignored) {
+            // Focused presentation tests do not create a game-owned PLC service.
+            return GameServices.module().getGameService(Sonic2PlcService.class) == null;
         }
     }
 

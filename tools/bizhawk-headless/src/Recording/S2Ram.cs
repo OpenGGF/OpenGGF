@@ -26,6 +26,10 @@ namespace OpenGGF.BizHawk.Headless
         public const int RngSeed = 0xF636;               // u32be RNG_seed
         public const int FrameCount = 0xFE04;            // u16be Level_frame_counter
         public const int VblankWord = 0xFE0E;            // u16be VBlank word (NOT the 0xFE0C longword)
+        public const int PlcBuffer = 0xF680;             // 16 source:u32be,destination:u16be slots
+        public const int PlcPatternsLeft = 0xF6F8;       // u16be prepared Nemesis patterns remaining
+        public const int PlcEntrySize = 6;
+        public const int PlcCapacity = 16;
 
         // Sonic history buffers (Tails CPU delayed input).
         public const int SonicStatRecordBuf = 0xE400;    // 64 x 4-byte entries: input u16be, status u8, pad

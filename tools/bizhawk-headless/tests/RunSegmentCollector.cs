@@ -122,10 +122,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
         internal CollectedRunCapture(
             IList<RunSegmentOutput> segments,
             IList<RunManifestTransition> transitions,
+            IList<DynamicArtGapTransition> dynamicArtGapTransitions,
             string runManifestJson)
         {
             Segments = segments;
             Transitions = transitions;
+            DynamicArtGapTransitions = dynamicArtGapTransitions;
             RunManifestJson = runManifestJson;
         }
 
@@ -133,6 +135,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
         internal IList<RunManifestTransition> Transitions
         {
             get; private set;
+        }
+
+        internal IList<DynamicArtGapTransition> DynamicArtGapTransitions
+        {
+            get;
+            private set;
         }
 
         internal string RunManifestJson { get; private set; }
@@ -148,21 +156,33 @@ namespace OpenGGF.BizHawk.Headless.Tests
             string runId,
             string sourceBk2,
             string recordingDate,
-            int effectiveMovieLength)
+            int effectiveMovieLength,
+            byte[] dynamicArtRom = null)
         {
             var collector = new RunSegmentCollector();
-            S2RunCaptureResult result = S2RunCaptureRunner.Capture(
-                movie,
-                host,
-                runId,
-                sourceBk2,
-                recordingDate,
-                effectiveMovieLength,
-                collector);
+            S2RunCaptureResult result = dynamicArtRom == null
+                ? S2RunCaptureRunner.CaptureScratchLegacy(
+                    movie,
+                    host,
+                    runId,
+                    sourceBk2,
+                    recordingDate,
+                    effectiveMovieLength,
+                    collector)
+                : S2RunCaptureRunner.Capture(
+                    movie,
+                    host,
+                    runId,
+                    sourceBk2,
+                    recordingDate,
+                    effectiveMovieLength,
+                    collector,
+                    dynamicArtRom);
             AssertEx.Equal(result.Segments.Count, collector.Segments.Count);
             return new CollectedRunCapture(
                 collector.Segments,
                 result.Transitions,
+                result.DynamicArtGapTransitions,
                 result.RunManifestJson);
         }
     }

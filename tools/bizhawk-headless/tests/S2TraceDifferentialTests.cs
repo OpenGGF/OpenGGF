@@ -43,13 +43,16 @@ namespace OpenGGF.BizHawk.Headless.Tests
     /// </summary>
     internal static class S2TraceDifferentialTests
     {
+        private static Func<ProcessStartInfo, int, EndToEndTests.ProcessResult>
+            runCaptureChild = EndToEndTests.RunProcess;
         private const int CaptureTimeoutMilliseconds = 600000;
+        private const int CompleteEmeraldsCaptureTimeoutMilliseconds = 2400000;
         private const string RecordingDateLinePrefix =
             "  \"recording_date\": \"";
         private static readonly Regex RecordingDateLine = new Regex(
             "^  \"recording_date\": \"[0-9]{4}-[0-9]{2}-[0-9]{2}\",$");
         private const string FixtureLuaScriptVersionLine =
-            "  \"lua_script_version\": \"9.11-s2\",";
+            "  \"lua_script_version\": \"9.13-s2\",";
         // Run fixtures were regenerated from a verified native 9.13-s2
         // capture (SS-aux enrichment, §11.3), so fixture and produced
         // version lines coincide.
@@ -71,8 +74,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 6778,
                 "efeb90112d36f897317f688881140c042792a2b640cf8313470216db"
                 + "91f57a83",
-                "5522e70caa8134570eb5acdcfc3c188655d929b2e777101ae7078516"
-                + "8e122dc2");
+                "baad7f87f5830f6cbe693bdeab23592196421c94788dce190aee9ea7"
+                + "39d6d3a7");
 
         // Both ARZ segment cases replay the same level-select movie
         // (checked in under traces/s2/arz/); only --gameplay-segment
@@ -90,8 +93,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 15853,
                 "72c0a49ca19e26248889aee82e68b3cd7a2f503965c1ae80eb1be16e"
                 + "a01578ec",
-                "390dc8862377ffb8c77c72d75938acbe1a06bf72cf94392b2ffdd2dd"
-                + "6929d772");
+                "937fe943e550d06038668d59cb7ac697cc458365f4fe80f0c511da37"
+                + "4111c380");
 
         private static readonly S2DifferentialCase ArzSegment1Case =
             new S2DifferentialCase(
@@ -106,8 +109,24 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 15853,
                 "83056cfcb9b059165fdd8710d7d510c9db249700a57d287610ce02d5"
                 + "2ac35451",
-                "bae3b1654a7356dbbc6729e56767c0e0718e842163ecc236f1c60c51"
-                + "21b9c1e8");
+                "46b83d0997aa45b0053f67241a8aa979427d1c333e04e1ce22026db3"
+                + "3dc6b16c");
+
+        private static readonly S2DifferentialCase SpecialStageCase =
+            new S2DifferentialCase(
+                "special_stage",
+                "s2-lvl-select-special-stage.bk2",
+                "s2_special_stage",
+                null,
+                "s2_special_stage",
+                0,
+                2754,
+                5299,
+                8053,
+                "418033a193690be9ddd8bd7ca5ebaeea48efce08c13b807883a318d6"
+                + "e415777b",
+                "d86ad76fbac0c6e7dcd79458595a0682edec29e0e520d42c57233f96"
+                + "26e13a98");
 
         // Run-mode gate: one native --run-id capture of the canonical EHZ
         // halfpipe round-trip movie (level -> ss -> level -> ss -> level)
@@ -144,8 +163,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 2969,
                 "19f1712ccd56f95724c50256efefb49e3b65531bea864cada32a3178"
                 + "d4da7320",
-                "bfb475c238449f8844aec22612b25f6ac5c131db25aec98244bf6de4"
-                + "5f2c3d55"),
+                "57e8781af9e222713e21bffdd710c9db3049e8d98d165b6ee151d9a5"
+                + "edd504b2"),
             new S2RunSegmentCase(
                 "ss",
                 "special_stage",
@@ -153,8 +172,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 5733,
                 "9c2ed10bf732f76398b20e1763ddfbb5ed3df0b66394e68a78f8ec53"
                 + "00129d1b",
-                "c095cf82185c326404a735b7c97b515c74cc1e6f1efd98c8be823629"
-                + "ed1e906c"),
+                "f82abe1075ac9365fa1c04016b90450acbb687ecb96d2ee471458f97"
+                + "a6a0e4b0"),
             new S2RunSegmentCase(
                 "seg2_ehz1",
                 "level",
@@ -162,8 +181,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 2903,
                 "6e373f9cb786391813f8d50dff5bfbd57575cf525c5f272e2aca510a"
                 + "70725c45",
-                "307aa3380304204e02576b85b6c6886fda9b772f1b1d39a2ee90d8cf"
-                + "f734d05b"),
+                "62761383367433f14507325fc4abc07cd6d1844f293a6f20bace551c"
+                + "81a193ca"),
             new S2RunSegmentCase(
                 "ss_2",
                 "special_stage",
@@ -171,8 +190,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 6381,
                 "13c6ea30eae9361bfb9e7c03b2cfb50bb3193d2a7a5809df780d8cd3"
                 + "e5bd84ab",
-                "f1451857d9102382ccfe2ea5dedd177eb5659d38cc249c7d91ecf91f"
-                + "70cfe89a"),
+                "d245e105227a6e832f9ec3ca3472979f4e89890f7bed6790a67d65a5"
+                + "2ccbe601"),
             new S2RunSegmentCase(
                 "seg3_ehz1",
                 "level",
@@ -180,8 +199,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 3452,
                 "7632445f5ef5cdc1c429db3b375f95c4c34198c2abd2a86f81a49b69"
                 + "3a50aea6",
-                "6538660383c358770246b1a628ba89bd83969a61bca7059077a855e0"
-                + "f5cd5259")
+                "4379aec94f3ba4ed414944b9c9d48b153803f25f002dd6bd89dc0da1"
+                + "560b9e54")
         };
 
         private static readonly S2RunDifferentialCase HalfpipeRunCase =
@@ -190,8 +209,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "s2-ehz-halfpipe-roundtrip.bk2",
                 22819,
                 HalfpipeRunEffectiveMovieLength,
-                "8981a13f893d0d31ce51145c4e1aff5aa51c4c59c924d75e5e7f750c38"
-                + "036cd3",
+                "b643c2c60ff953e24c3f36afcf72925010a4f6ec17770de5c5e50e98a3"
+                + "711032",
                 HalfpipeRunSegmentCases);
 
         private static readonly S2RunSegmentCase[]
@@ -204,8 +223,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 3710,
                 "fc6848831f153721d75c5c3451645649cdb10e0cc080bd64ab578df5"
                 + "afb19d7f",
-                "ddd24a35651d50697c97a4bfbe96b1d994565909ad393cbff51309d2"
-                + "6367f34c"),
+                "7f1fe6e6fccaa0cc3499d0d75bd18a90e65adcca8d90246cb02997ee"
+                + "b10850da"),
             new S2RunSegmentCase(
                 "ss",
                 "special_stage",
@@ -213,8 +232,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 5681,
                 "ac316a4639c16e181ea540dc5e456c9e9a2620600bcddfd7b56f5de0"
                 + "d3a2fdff",
-                "2747b9d2ec32fff2b99fe00a10b72940015c39c2f90a046da6f4b121"
-                + "09244040"),
+                "f7429894c6cb2ff22bb96e53fd28093801c319f0c046c8af294d2141"
+                + "201d1824"),
             new S2RunSegmentCase(
                 "seg2_ehz1",
                 "level",
@@ -222,8 +241,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 3377,
                 "b4f2e319152c7904b7a4c3a262947cc77ecdbad1142875e25643f75a"
                 + "b730c3e9",
-                "e5b80a5be36ea6cef24132ab821aa1b89ed6174788f468716503681e"
-                + "515bd272"),
+                "4b0e8b9412d17b27df9040bfbc6d943075751f78f2253561c05bc943"
+                + "efe6e1ad"),
             new S2RunSegmentCase(
                 "ss_2",
                 "special_stage",
@@ -231,8 +250,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 6361,
                 "5034e3c3aa2234db2503745d512b1ec536f7f60bb9d409e09308f679"
                 + "21aafcc2",
-                "c46937bcdc3924903d8dbac8994dd190c51165fae2feb12fe430e15e"
-                + "f4bdb2c5"),
+                "d99da064ba8a774088b2a2cab1a310379b2dcc2409ece3faf47a62db"
+                + "a71b393e"),
             new S2RunSegmentCase(
                 "seg3_ehz1",
                 "level",
@@ -240,8 +259,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 3960,
                 "aa5305a1276336a3fe48ade227634ffb267ef6da5e04cd731ae63605"
                 + "2e2ca729",
-                "87abf88d0e005fdf0be12a8c7f445f7087ea911b3612d6a2f2c3e103"
-                + "bab7c290"),
+                "5ffde6abd1d6b825916c40a8d04ebbcd10f83bbf31d9b15b7f283a86"
+                + "3266896e"),
             new S2RunSegmentCase(
                 "ss_3",
                 "special_stage",
@@ -249,8 +268,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 7092,
                 "d8b99752b2394019649b654c3966b6020fbca6269a06d412c480baf3"
                 + "c3f3ff04",
-                "c5670b0fb0c09087441d493706fe6bac8972c33c278983cff72c7102"
-                + "676b8b4b"),
+                "5ebd69e0f63aa12dd12e175da0931045d33c041058da9ff0ebfba1dc"
+                + "af209f13"),
             new S2RunSegmentCase(
                 "seg4_ehz1",
                 "level",
@@ -258,8 +277,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 1288,
                 "15f00ce23a0d44c884d169cbc812689e57a6b733ed03d61ba82e3b61"
                 + "ed5d48fe",
-                "6f4a0e4dad1c635791483f22c55659291c9326e1f5f29429b858ce49"
-                + "0f42b07f"),
+                "0afeb04e4416babb504a489bc66af092b864ac6333cf253fdd3bb687"
+                + "746bb7ae"),
             new S2RunSegmentCase(
                 "seg5_ehz2",
                 "level",
@@ -267,8 +286,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 6046,
                 "7d40bcc30a221dec6139f5c03b3eb959061b780ab3abb2a62e4480f8"
                 + "37927720",
-                "212f55fddebf60651ee5b5e7f6db0a19c6245948c658b2978116ff46"
-                + "df951565"),
+                "bf7030c0b57811c673800bba2ebba0e8955c3fda621de5eb7ca98a80"
+                + "bb710cfe"),
             new S2RunSegmentCase(
                 "ss_4",
                 "special_stage",
@@ -276,8 +295,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 7224,
                 "d60abc7560f5cb43885ea432f38d109cb81349c8d7cda7feed0cf182"
                 + "3a3d6845",
-                "c2770559f83a66c12cfd3dff25a45de9011970f3b24cd5eb093a04ba"
-                + "c240dd1b"),
+                "5ea11107186482f6f3642f9925ae808738ff367922cd72bebf11b284"
+                + "3dbce37a"),
             new S2RunSegmentCase(
                 "seg6_ehz2",
                 "level",
@@ -285,8 +304,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 3794,
                 "10f69aeb6e8a0af5f585db8d90af33c47c4d7420f19f08a880c0e15f"
                 + "06e44949",
-                "69ff4a1363f7db58612489d5ca29666fe4517cffc19c0aaad505908b"
-                + "b73f5712"),
+                "f864953865e22b34b9547b42c7b722b634d2b54601f73f3bffb31c94"
+                + "f6227dfa"),
             new S2RunSegmentCase(
                 "ss_5",
                 "special_stage",
@@ -294,8 +313,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 6690,
                 "4ab2ff898bf8c65ffcd68568383585605f30c4c1503871172d9fb2a5"
                 + "e5b3431c",
-                "33f18eedf72b2f53156ec2c5c8f773ba7c3ec9d6ec0cb3e717c46fe2"
-                + "be051c00"),
+                "8c6991dd605c1dae78c92fb8ff4dfbc7ef4dff6ac7bef2822bf502fa"
+                + "4df396de"),
             new S2RunSegmentCase(
                 "seg7_ehz2",
                 "level",
@@ -303,8 +322,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 3997,
                 "fa7f237f71d15ca6e735673bb67e9a70f7038ca24688f3a5accb00af"
                 + "932fccda",
-                "6c89cc4525dbf3fea945148ffd0c223d42f2d1281e4bbc8edcd5fffa"
-                + "53fa9514"),
+                "9fa05a91b436f9bee10ceb67a659ae7f856d5cab4d8e6e4350459929"
+                + "1c54e372"),
             new S2RunSegmentCase(
                 "seg8_cpz1",
                 "level",
@@ -312,8 +331,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 6613,
                 "15a8226ea4b31b2d607b7a30fd8d9968250f51b46bc5f2bbad9041af"
                 + "af93626e",
-                "256f1334c0db01dbd585cc8077e061c16deb3bd36ea5a8fe9a688301"
-                + "8d8158f1"),
+                "54c2605c72dd013eeca5b68660f99282a351f488ac7bbeecb7610eca"
+                + "7f97867b"),
             new S2RunSegmentCase(
                 "seg9_cpz2",
                 "level",
@@ -321,8 +340,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 5837,
                 "f0e42d35839a5864f2e1b3c60c289c1e3ca5f95383b5f055bcacc015"
                 + "6b1c4a52",
-                "33d65ab85d2962890e76f26dce521d35acd8a8a51ed8bb6503eafa60"
-                + "57ba3669"),
+                "ea059fbb09d38017b7439c555666a7cbcf76d3c81a74206f715236ff"
+                + "2777c579"),
             new S2RunSegmentCase(
                 "ss_6",
                 "special_stage",
@@ -330,8 +349,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 8310,
                 "7e6fd61427c34bd1cff8e5576438064ac9ca404807a7f7c38464434e"
                 + "5985fe84",
-                "550ab42db3ba5f3ad8db9e1a9164f8bafcb0e4cd07f2ec42e05d6496"
-                + "ae9cdd76"),
+                "8f2701dc44ecb0a8cd157fea6226908ec12c72578f5540398bb325e2"
+                + "8e561045"),
             new S2RunSegmentCase(
                 "seg10_cpz2",
                 "level",
@@ -339,8 +358,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 7088,
                 "0065caecaf599f0980cec0f0e91a0e890e4fc180c941f573606c8232"
                 + "04fd7e4b",
-                "b37ef9c7251069bb7e10b9b353a564d6725a586f2706a408be0c33c8"
-                + "8e612797"),
+                "7b139e832ec4b23901d0169eaf31baa7f95fc8ee2acad6e987a6d346"
+                + "e26c45f3"),
             new S2RunSegmentCase(
                 "seg11_arz1",
                 "level",
@@ -348,8 +367,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 3420,
                 "11e32a45d98b7454b4849077b933bcb43fd7e582b37f4e6851dea510"
                 + "8ed66239",
-                "8c06b55df18b0dbcd3ec7c4386c954695e6b7125015fb8f8d15e857f"
-                + "4af774a6"),
+                "9877b753c365ffb8485ebfd25847c65fd794b91ff71de95a9618e52d"
+                + "2518f930"),
             new S2RunSegmentCase(
                 "ss_7",
                 "special_stage",
@@ -357,8 +376,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 8498,
                 "1326ec2956eff47736b9d34b266e8918f2f75a57942815d4bc9830ef"
                 + "ec57f6ba",
-                "d5a336e5586beb032cf4c75af4e8533a3eeee6dfbdb1a703a9b7ff00"
-                + "8b5ef6f9"),
+                "213a82c5bab5c6cc453dbbfc92101ae33c1ff53856fee7a5ada9e014"
+                + "ba847f7c"),
             new S2RunSegmentCase(
                 "seg12_arz1",
                 "level",
@@ -366,8 +385,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 4889,
                 "937dc7bd1a68d471df96cbb83e7b090c205ab5aee995c933917efd3f"
                 + "3c301d42",
-                "6a221914ddde74a6b89da9aab86e5262c8307a513e7d93c561409336"
-                + "f143cce1"),
+                "ea12d6fb42eac5bbe2a9368705bfef442cbfd3bb006806f8848a9c3d"
+                + "ea535a98"),
             new S2RunSegmentCase(
                 "seg13_arz2",
                 "level",
@@ -375,8 +394,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 6409,
                 "fcb606e2c8ca60430e7dc040f4a75dea98c7dd2b33c6566c6f793462"
                 + "c5a18e59",
-                "082b5c9f9d16988daec69f7e38b160d6faead49082e698c350e0f3be"
-                + "3d565d8e"),
+                "3c058768861e96a7dacffee51ac66d4296ccd4112172b6312133d244"
+                + "2a1a1e51"),
             new S2RunSegmentCase(
                 "seg14_cnz1",
                 "level",
@@ -384,8 +403,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 12145,
                 "7cbfc23d57af5fb262db4948de8a2c667f232c03c1335904bac35884"
                 + "e70e80a7",
-                "666cddefc19d37ccf5e3bda8c3988a8817993402df588dd10f8704d4"
-                + "9649184a"),
+                "2ee1617080157449704fd3135130086af05143a81f8a979f765ba77d"
+                + "35b2a63c"),
             new S2RunSegmentCase(
                 "seg15_cnz2",
                 "level",
@@ -393,8 +412,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 13045,
                 "87d022ecf827f0c841336517c140f2772bf84ce655a58ce3095c55e9"
                 + "2a8125c2",
-                "ea8a894e93e24a6c4288359deeedb53f578a77ca077a009752125d7f"
-                + "2d3c9586"),
+                "230ca9ef038e05697cccf532d0aa63db18ecbc6a533bc4bcd26ac856"
+                + "d4a31627"),
             new S2RunSegmentCase(
                 "seg16_htz1",
                 "level",
@@ -402,8 +421,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 7535,
                 "9f209ebc87aab1f6d6acc71c980d7fb3dc5005f022af85b6874b18bf"
                 + "e7fcf467",
-                "41d495b74832ed9373bf5aa004a8fa17199c7a85e672dbf616bff5d3"
-                + "623ccab3"),
+                "08d81cac234d8f44ddef25b2bc8423e6347e0c3f809042927eab7812"
+                + "a907e8db"),
             new S2RunSegmentCase(
                 "seg17_htz2",
                 "level",
@@ -411,8 +430,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 8460,
                 "9be54e3e3b042e7301a5c1157da037dc1b41fddf239c042c2d03a189"
                 + "e8447b25",
-                "3624cfee1006dbfa330b73e03ce6a23a8dbfe4663fda29f94a3df0e0"
-                + "cbed241c"),
+                "9bedcf72f40da0c2cb7104e28b5c94f6a5b0e5f746d5591f39850fd7"
+                + "35e88297"),
             new S2RunSegmentCase(
                 "seg18_mcz1",
                 "level",
@@ -420,8 +439,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 6213,
                 "5889ef280e6adcbcdc6221af768a71aa3cede2d03a7fa5a1de6384aa"
                 + "c6a3cf2d",
-                "b2dc44087045d440e06652a73ba1131317db6fe49b4c4b31eb883766"
-                + "23277b40"),
+                "d180ea4a629d521bedbf9009921e35daa49d47091edea39223396649"
+                + "84482f5a"),
             new S2RunSegmentCase(
                 "seg19_mcz2",
                 "level",
@@ -429,8 +448,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 8610,
                 "3e84cd412028465552738aae878bd64769c1ea47cc893d25e1d6ae86"
                 + "4655dd2c",
-                "c6deffe4f380e732a1d969b1b5241866749f3b654df336efe63b92af"
-                + "5e527ad8"),
+                "a1e04c485c93a764bb2d47e09713b43f8d504715ceebc844e9c0d513"
+                + "c33c557f"),
             new S2RunSegmentCase(
                 "seg20_ooz1",
                 "level",
@@ -438,8 +457,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 11557,
                 "7a5a292d98ed57dc4759d85302c0652bf9678ea2aad466cd89f39186"
                 + "6734583b",
-                "7f8b0bc8a8f151020b51d480040d45ada8ab6f9f2fe8ae49795ec29a"
-                + "bedc3526"),
+                "c2e3dbc68e098afe5eedd71887d9e20031b5e65cfa8de30e54732ea1"
+                + "d86b97b1"),
             new S2RunSegmentCase(
                 "seg21_ooz2",
                 "level",
@@ -447,8 +466,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 8591,
                 "28fec87d297619ab962ffe9844b81e03831fc36a3fbbf8a790a78c45"
                 + "14b83883",
-                "46dfdc622986129f494b26bc5904c6a59a36defde20b7e9229b68aaa"
-                + "73db9abc"),
+                "6725fc2608b899eb17fd3f804b022d9d2a3cd900ebcc4b5b3a38bebd"
+                + "2637176b"),
             new S2RunSegmentCase(
                 "seg22_mtz1",
                 "level",
@@ -456,8 +475,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 7590,
                 "9b31dae348a28e1113c25e51ab81a6a865741b0a3dfda30f91ed5b98"
                 + "f8c16194",
-                "3a0df1404aab0df9ee1cb0b92141233e78d4c8fe52223d0260fed3b2"
-                + "19a82cd7"),
+                "56a6e419d206f5bcc5a3bdde81afb7f2f0ca323735ea26382489d175"
+                + "2ff5f579"),
             new S2RunSegmentCase(
                 "seg23_mtz2",
                 "level",
@@ -465,8 +484,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 6542,
                 "ea63f203ee211aded75ae6ccf423a7727980864b31162ef1848763a5"
                 + "2f8d59b5",
-                "d8178dc4bfd5095621fea57d790ed0bf982d6b852950071ee9aa21df"
-                + "503fc507"),
+                "f648ceefc429e9d40d65e986f9a9bf5dabe7e821ba8dd19ba695f076"
+                + "8deb7f3a"),
             new S2RunSegmentCase(
                 "seg24_mtz3",
                 "level",
@@ -474,8 +493,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 11341,
                 "91ea91a0ea90c273f57b1444e11301e50074ef3bcad2dc3c874ff886"
                 + "992382e8",
-                "3dd0b6f3e159069b54ec2dac06202ac41d7e7ddec3662de513d798c2"
-                + "28f05f42"),
+                "205a4170f16ecc57eabd5822de7fb807df2e3998425f10d7d3a7fc65"
+                + "90ab13c5"),
             new S2RunSegmentCase(
                 "seg25_scz1",
                 "level",
@@ -483,8 +502,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 4707,
                 "05f40470d1b066637c0036f2c30bce7a90837b6b22d2b1ab1e58a9d4"
                 + "f328ce88",
-                "1796f46e52ab4b637d06d239eb19f57612c4946280c2ef89c7a51070"
-                + "9f5a0725"),
+                "34d4e0429a74bc57d656bf53fe99d168d707a50b85014c16a9a8d57b"
+                + "f5932d6a"),
             new S2RunSegmentCase(
                 "seg26_scz1",
                 "level",
@@ -492,8 +511,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 7611,
                 "4f3f1a32fa1dd95ca7154f2cc68c155ada4cff183f3bad7464a0687b"
                 + "a39348ff",
-                "9b779c72cfdd6d2d04bd6bf1de890397a9e730d979c15dffd81d0a82"
-                + "9edeb5f9"),
+                "f60ce08ede27c96b6ef440017b4fd6991afc1552012be67167b155c7"
+                + "9c1bf34d"),
             new S2RunSegmentCase(
                 "seg27_wfz1",
                 "level",
@@ -501,8 +520,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 9667,
                 "517c4b8e65d1c791a790d01cca21c289864be3ab95e8258dfa92eb66"
                 + "a2308070",
-                "248ac1bf06826cc92ab416b38833800044492b14c72eded0fc4ee441"
-                + "fe96badf"),
+                "0cdd4ce1b3886e24c8f7ac23a2324cd0693e20dd13a75e61b8ded141"
+                + "ebab0ac8"),
             new S2RunSegmentCase(
                 "seg28_dez1",
                 "level",
@@ -510,8 +529,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 5578,
                 "73cd33d8bd6525695dfa085d04cc8a05e9dd15f00462c0a7798b55c8"
                 + "5f2de8d5",
-                "a404258707b9d3b08db96e63592cf3e7d7217c24629f6b363b815996"
-                + "34ab5286")
+                "54af0c14bc457eed33bc36ec976a434c835d9de6dd19307e4ddba952"
+                + "4a95a809")
         };
 
         // Full-run gate: one native --run-id capture of the canonical
@@ -531,12 +550,19 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "sonic-2-sonic-tails-complete-emeralds.bk2",
                 259590,
                 null,
-                "5d21531926cdbdc4ffe0adfe5e7edb6c914f7b06bb1b99b2bceff839"
-                + "04032412",
+                "627aeec524f497304db89365a384c59203cad2d480f84972af0c8a48"
+                + "263b6cc7",
                 CompleteEmeraldsRunSegmentCases);
 
         public static void Register(ICollection<TestMain.TestCase> tests)
         {
+            tests.Add(new TestMain.TestCase(
+                "S2TraceDifferential selects the measured complete-emeralds timeout only for that route",
+                SelectsRouteSpecificTimeout));
+            tests.Add(new TestMain.TestCase(
+                "S2TraceDifferential timeout cannot promote partial staged output",
+                TimeoutCannotPromotePartialStaging,
+                serial: true));
             tests.Add(new TestMain.TestCase(
                 "S2TraceDifferential native capture matches canonical EHZ1"
                 + " trace",
@@ -561,6 +587,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 movie: "s2-lvl-select-ARZ",
                 kind: TestKind.Gate,
                 estimatedSeconds: 6.0));
+            tests.Add(new TestMain.TestCase(
+                "S2TraceDifferential native standalone special-stage capture"
+                + " matches canonical trace",
+                () => NativeCaptureMatchesCanonicalTrace(SpecialStageCase),
+                game: "s2",
+                movie: "s2-lvl-select-special-stage",
+                kind: TestKind.Gate,
+                estimatedSeconds: 8.0));
             tests.Add(new TestMain.TestCase(
                 "S2TraceDifferential native run mode capture matches"
                 + " canonical halfpipe round trip",
@@ -875,9 +909,19 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     differentialCase.AuxStateSha256,
                     EndToEndTests.ComputeSha256(
                         Path.Combine(output, "aux_state.jsonl")));
-                AssertNormalizedMetadataEquality(
-                    Path.Combine(traceDirectory, "metadata.json"),
-                    Path.Combine(output, "metadata.json"));
+                if (differentialCase.ExpectedTraceProfile
+                    == S2SpecialStageCaptureRunner.TraceProfile)
+                {
+                    AssertNormalizedStandaloneSpecialStageMetadataEquality(
+                        Path.Combine(traceDirectory, "metadata.json"),
+                        Path.Combine(output, "metadata.json"));
+                }
+                else
+                {
+                    AssertNormalizedMetadataEquality(
+                        Path.Combine(traceDirectory, "metadata.json"),
+                        Path.Combine(output, "metadata.json"));
+                }
             }
             finally
             {
@@ -1015,6 +1059,58 @@ namespace OpenGGF.BizHawk.Headless.Tests
             return result.StandardOutput;
         }
 
+        private static int CaptureTimeoutFor(S2RunDifferentialCase runCase)
+        {
+            return Object.ReferenceEquals(runCase, CompleteEmeraldsRunCase)
+                ? CompleteEmeraldsCaptureTimeoutMilliseconds
+                : CaptureTimeoutMilliseconds;
+        }
+
+        private static void SelectsRouteSpecificTimeout()
+        {
+            AssertEx.Equal(CompleteEmeraldsCaptureTimeoutMilliseconds,
+                CaptureTimeoutFor(CompleteEmeraldsRunCase));
+            AssertEx.Equal(CaptureTimeoutMilliseconds,
+                CaptureTimeoutFor(HalfpipeRunCase));
+        }
+
+        private static void TimeoutCannotPromotePartialStaging()
+        {
+            string root = TestScratch.CreateRootPath(
+                "openggf-s2-timeout-staging");
+            Directory.CreateDirectory(root);
+            string staged = Path.Combine(root, "run_manifest.json.tmp");
+            string final = Path.Combine(root, "run_manifest.json");
+            var original = runCaptureChild;
+            bool productionBoundaryReached = false;
+            runCaptureChild = (start, timeout) =>
+            {
+                productionBoundaryReached =
+                    start.FileName == "/bin/bash"
+                    && start.Arguments.Contains("--mode trace")
+                    && start.Arguments.Contains("--run-id "
+                        + HalfpipeRunCase.FixtureDirectoryName);
+                File.WriteAllText(staged, "{\"partial\":true}");
+                throw new TimeoutException(
+                    "Trace capture exceeded " + timeout + " ms and was killed");
+            };
+            try
+            {
+                AssertEx.Throws<TimeoutException>(
+                    () => RunRunModeCapture(
+                        "stub-rom", "stub-bizhawk", "stub-movie",
+                        root, HalfpipeRunCase),
+                    "was killed");
+                AssertEx.Equal(true, productionBoundaryReached);
+                AssertEx.Equal(true, File.Exists(staged));
+                AssertEx.Equal(false, File.Exists(final));
+            }
+            finally
+            {
+                runCaptureChild = original;
+            }
+        }
+
         private static string RunRunModeCapture(
             string romPath,
             string bizHawkHome,
@@ -1046,9 +1142,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
             };
             start.EnvironmentVariables["BIZHAWK_HOME"] = bizHawkHome;
             start.EnvironmentVariables["DISPLAY"] = ":99";
-            EndToEndTests.ProcessResult result = EndToEndTests.RunProcess(
+            EndToEndTests.ProcessResult result = runCaptureChild(
                 start,
-                CaptureTimeoutMilliseconds);
+                CaptureTimeoutFor(runCase));
             if (result.ExitCode != 0)
             {
                 throw new InvalidOperationException(
@@ -1071,8 +1167,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 + differentialCase.MovieFrameCount + "\n"
                 + "Trace profile: "
                 + differentialCase.ExpectedTraceProfile + "\n"
-                + "Gameplay segment: "
-                + differentialCase.ExpectedGameplaySegment + "\n"
+                + (differentialCase.ExpectedTraceProfile
+                    == S2SpecialStageCaptureRunner.TraceProfile
+                    ? string.Empty
+                    : "Gameplay segment: "
+                        + differentialCase.ExpectedGameplaySegment + "\n")
                 + "BK2 frame offset: "
                 + differentialCase.Bk2FrameOffset + "\n"
                 + "Trace frames: "
@@ -1241,6 +1340,42 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
             AssertEx.Equal(1, recordingDateLines);
             AssertEx.Equal(1, luaScriptVersionLines);
+        }
+
+        private static void
+            AssertNormalizedStandaloneSpecialStageMetadataEquality(
+                string fixturePath,
+                string producedPath)
+        {
+            string[] fixtureLines = File.ReadAllText(fixturePath)
+                .Replace("\r\n", "\n").Split('\n');
+            string[] producedLines = File.ReadAllText(producedPath)
+                .Replace("\r\n", "\n").Split('\n');
+            AssertEx.Equal(fixtureLines.Length, producedLines.Length);
+            for (var index = 0; index < fixtureLines.Length; index++)
+            {
+                if (fixtureLines[index].StartsWith(
+                    RecordingDateLinePrefix,
+                    StringComparison.Ordinal))
+                {
+                    if (!RecordingDateLine.IsMatch(producedLines[index]))
+                    {
+                        throw new InvalidOperationException(
+                            "Produced recording_date line is malformed.");
+                    }
+                }
+                else if (fixtureLines[index]
+                    == "  \"lua_script_version\": \"1.4-s2ss\",")
+                {
+                    AssertEx.Equal(
+                        "  \"lua_script_version\": \"1.4-s2ss-native\",",
+                        producedLines[index]);
+                }
+                else
+                {
+                    AssertEx.Equal(fixtureLines[index], producedLines[index]);
+                }
+            }
         }
 
         /// <summary>

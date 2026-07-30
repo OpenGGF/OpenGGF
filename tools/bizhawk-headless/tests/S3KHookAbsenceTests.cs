@@ -123,9 +123,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
         /// <summary>
         /// A complete-run (A)/(C) fixture: hooks off, byte-exact target.
-        /// <see cref="AuxIsEmpty"/> distinguishes the s3k_special_stage
-        /// segment, which emits NO aux events at all and whose separate
-        /// metadata writer emits neither capture_mode nor v_int_run_count.
+        /// <see cref="QueueOnlyAux"/> distinguishes the s3k_special_stage
+        /// segment, which emits only physical queue-state audit events and
+        /// whose separate metadata writer emits neither capture_mode nor
+        /// v_int_run_count.
         /// </summary>
         private sealed class CompleteRunFixture
         {
@@ -133,7 +134,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             public string FixtureDirectoryName;
             public int TraceFrameCount;
             public int AizHandoffSkeletonCount;
-            public bool AuxIsEmpty;
+            public bool QueueOnlyAux;
             public string PhysicsHeader;
         }
 
@@ -149,7 +150,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 FixtureDirectoryName = directoryName,
                 TraceFrameCount = rows,
                 AizHandoffSkeletonCount = aizHandoff,
-                AuxIsEmpty = false,
+                QueueOnlyAux = false,
                 PhysicsHeader = S3KTraceCsvWriter.Header
             };
         }
@@ -195,7 +196,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 FixtureDirectoryName = "special_stage",
                 TraceFrameCount = 4630,
                 AizHandoffSkeletonCount = 0,
-                AuxIsEmpty = true,
+                QueueOnlyAux = true,
                 PhysicsHeader = S3KSpecialStageCsvWriter.Header
             }
         };
@@ -342,18 +343,17 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 ReadFirstGzipLine(
                     Path.Combine(fixtureDirectory, "physics.csv.gz")));
 
-            if (fixture.AuxIsEmpty)
+            if (fixture.QueueOnlyAux)
             {
-                // The s3k_special_stage writer emits no aux events at all
-                // and its metadata writer emits neither capture_mode nor
-                // v_int_run_count (spec §4.4 / §7.2). Asserting the
-                // lightweight capture_mode line here would be wrong, so
-                // the invariant asserted instead is the empty stream — a
-                // regenerated hooks-on capture could not produce it
-                // either, since the SS branch returns before every hook
-                // flush.
+                // Special-stage rows now carry the physical direct/module
+                // queue audit, but still never flush hook-driven families.
+                var queueCounts =
+                    new Dictionary<string, long>(StringComparer.Ordinal);
+                CountAuxLines(
+                    fixtureDirectory, queueCounts, fixture.CaseName);
                 AssertEx.Equal(
-                    0L, CountAuxLines(fixtureDirectory, null, null));
+                    2L * fixture.TraceFrameCount,
+                    CountOf(queueCounts, "load_queue_state"));
                 return;
             }
 

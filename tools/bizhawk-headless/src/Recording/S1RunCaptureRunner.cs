@@ -18,15 +18,22 @@ namespace OpenGGF.BizHawk.Headless
         public S1RunCaptureResult(
             IList<RunManifestSegment> segments,
             IList<RunManifestTransition> transitions,
+            IList<DynamicArtGapTransition> dynamicArtGapTransitions,
             string runManifestJson)
         {
             Segments = segments;
             Transitions = transitions;
+            DynamicArtGapTransitions = dynamicArtGapTransitions;
             RunManifestJson = runManifestJson;
         }
 
         public IList<RunManifestSegment> Segments { get; private set; }
         public IList<RunManifestTransition> Transitions { get; private set; }
+        public IList<DynamicArtGapTransition> DynamicArtGapTransitions
+        {
+            get;
+            private set;
+        }
         public string RunManifestJson { get; private set; }
     }
 
@@ -101,7 +108,50 @@ namespace OpenGGF.BizHawk.Headless
             string recordingDate,
             string luaScriptVersion,
             int stopAtFrame,
+            IRunSegmentSink segmentSink,
+            byte[] requiredDynamicArtRom)
+        {
+            if (requiredDynamicArtRom == null)
+            {
+                throw new ArgumentNullException(
+                    "requiredDynamicArtRom",
+                    "Canonical run publication requires native load audit.");
+            }
+            return CaptureCore(
+                movie, host, runId, sourceBk2, recordingDate,
+                luaScriptVersion, stopAtFrame, segmentSink,
+                requiredDynamicArtRom);
+        }
+
+        /// <summary>
+        /// Scratch-only compatibility capture. Its segments intentionally
+        /// omit mandatory native load audit and are not publishable.
+        /// </summary>
+        public static S1RunCaptureResult CaptureScratchLegacy(
+            Bk2Movie movie,
+            IGpgxHost host,
+            string runId,
+            string sourceBk2,
+            string recordingDate,
+            string luaScriptVersion,
+            int stopAtFrame,
             IRunSegmentSink segmentSink)
+        {
+            return CaptureCore(
+                movie, host, runId, sourceBk2, recordingDate,
+                luaScriptVersion, stopAtFrame, segmentSink, null);
+        }
+
+        private static S1RunCaptureResult CaptureCore(
+            Bk2Movie movie,
+            IGpgxHost host,
+            string runId,
+            string sourceBk2,
+            string recordingDate,
+            string luaScriptVersion,
+            int stopAtFrame,
+            IRunSegmentSink segmentSink,
+            byte[] loadQueueRom)
         {
             if (movie == null)
             {
@@ -134,13 +184,21 @@ namespace OpenGGF.BizHawk.Headless
                 throw new ArgumentNullException("segmentSink");
             }
 
-            var state = new RunState(
+            RunState state = null;
+            S1DynamicArtObserver dynamicArt = loadQueueRom == null
+                ? null
+                : new S1DynamicArtObserver(
+                    loadQueueRom, host,
+                    () => state.DynamicArtLogicalFrame);
+            state = new RunState(
                 runId, sourceBk2, recordingDate, luaScriptVersion,
-                segmentSink);
+                segmentSink, loadQueueRom, dynamicArt);
 
-            using (IEnumerator<Bk2Frame> frames =
-                movie.OpenFrameStream().GetEnumerator())
+            try
             {
+                using (IEnumerator<Bk2Frame> frames =
+                    movie.OpenFrameStream().GetEnumerator())
+                {
                 int rowsConsumed = 0;
                 while (true)
                 {
@@ -154,6 +212,7 @@ namespace OpenGGF.BizHawk.Headless
                         break;
                     }
                     Bk2Frame frame = frames.Current;
+                    state.PrepareDynamicArtCursor(rowsConsumed);
                     S1TraceCaptureRunner.ApplyFrame(frame, host);
                     host.Advance();
                     rowsConsumed++;
@@ -245,6 +304,14 @@ namespace OpenGGF.BizHawk.Headless
 
                     state.AppendLevelRow(frame, host);
                 }
+                }
+            }
+            finally
+            {
+                if (dynamicArt != null)
+                {
+                    dynamicArt.Dispose();
+                }
             }
 
             return state.BuildResult();
@@ -280,11 +347,16 @@ namespace OpenGGF.BizHawk.Headless
             private readonly string recordingDate;
             private readonly string luaScriptVersion;
             private readonly IRunSegmentSink segmentSink;
+            private readonly byte[] loadQueueRom;
+            private readonly S1DynamicArtObserver dynamicArt;
 
             private readonly List<RunManifestSegment> segments =
                 new List<RunManifestSegment>();
             private readonly List<RunManifestTransition> transitions =
                 new List<RunManifestTransition>();
+            private readonly List<DynamicArtGapTransition>
+                dynamicArtGapTransitions =
+                    new List<DynamicArtGapTransition>();
 
             // Whole-pass carry-over (spec §8): one aux engine for every
             // level segment, and the per-base-token arm counts driving the
@@ -309,6 +381,8 @@ namespace OpenGGF.BizHawk.Headless
             private int traceFrame;
             private int bk2FrameOffset;
             private string dirToken;
+            private DynamicArtCaptureRowBuffer rowBuffer;
+            private bool dynamicArtAdvanceMarked;
 
             // Level-segment arm context.
             private int startZoneId;
@@ -329,17 +403,34 @@ namespace OpenGGF.BizHawk.Headless
                 string sourceBk2,
                 string recordingDate,
                 string luaScriptVersion,
-                IRunSegmentSink segmentSink)
+                IRunSegmentSink segmentSink,
+                byte[] loadQueueRom,
+                S1DynamicArtObserver dynamicArt)
             {
                 this.runId = runId;
                 this.sourceBk2 = sourceBk2;
                 this.recordingDate = recordingDate;
                 this.luaScriptVersion = luaScriptVersion;
                 this.segmentSink = segmentSink;
+                this.loadQueueRom = loadQueueRom;
+                this.dynamicArt = dynamicArt;
             }
 
             internal bool Started { get; private set; }
             internal bool DetourActive { get; set; }
+            internal int DynamicArtLogicalFrame { get; private set; }
+
+            internal void PrepareDynamicArtCursor(int movieLogicalFrame)
+            {
+                DynamicArtLogicalFrame = Started
+                    ? traceFrame
+                    : movieLogicalFrame;
+                if (dynamicArt != null && Started)
+                {
+                    dynamicArt.MarkAdvanceBoundary(movieLogicalFrame);
+                    dynamicArtAdvanceMarked = true;
+                }
+            }
 
             internal void ArmLevelSegment(int frameNow, IGpgxHost host)
             {
@@ -377,20 +468,40 @@ namespace OpenGGF.BizHawk.Headless
 
                 OpenSegmentStreams();
                 WriteLine(physicsWriter, S1TraceCsvWriter.Header);
+                ArmDynamicArtSegment();
             }
 
             internal void AppendLevelRow(Bk2Frame frame, IGpgxHost host)
             {
-                WriteLine(
-                    physicsWriter,
-                    S1TraceCsvWriter.FormatRow(
-                        traceFrame,
-                        S1InputMask.FromFrame(frame),
-                        host));
+                string physicsLine = S1TraceCsvWriter.FormatRow(
+                    traceFrame, S1InputMask.FromFrame(frame), host);
+                var auxLines = new List<string>();
                 foreach (string line in auxEngine.ProcessFrame(
                     traceFrame, host, host.IsLagged, host.LagCount))
                 {
-                    WriteLine(auxWriter, line);
+                    auxLines.Add(line);
+                }
+                if (loadQueueRom != null)
+                {
+                    auxLines.Add(LoadQueueStateProjector.CaptureS1(
+                        traceFrame, loadQueueRom, host));
+                }
+                if (dynamicArt != null)
+                {
+                    rowBuffer.Queue(
+                        physicsLine,
+                        auxLines,
+                        dynamicArt.PublishRow(
+                            traceFrame, host.IsLagged));
+                    dynamicArtAdvanceMarked = false;
+                }
+                else
+                {
+                    WriteLine(physicsWriter, physicsLine);
+                    for (int index = 0; index < auxLines.Count; index++)
+                    {
+                        WriteLine(auxWriter, auxLines[index]);
+                    }
                 }
                 traceFrame++;
             }
@@ -403,6 +514,7 @@ namespace OpenGGF.BizHawk.Headless
             /// </summary>
             internal void FinalizeLevelSegment()
             {
+                FinalizeDynamicArtSegment();
                 string metadata = S1CompleteRunMetadataWriter.Format(
                     startZoneId,
                     startActRaw,
@@ -413,7 +525,8 @@ namespace OpenGGF.BizHawk.Headless
                     startRngSeed,
                     recordingDate,
                     sourceBk2,
-                    luaScriptVersion);
+                    luaScriptVersion,
+                    loadQueueRom != null);
                 var entry = new RunManifestSegment(
                     dirToken,
                     RunManifestSegment.LevelKind,
@@ -465,17 +578,29 @@ namespace OpenGGF.BizHawk.Headless
                 // aux file stays byte-empty and must still be published.
                 OpenSegmentStreams();
                 WriteLine(physicsWriter, S1SpecialStageCsvWriter.Header);
+                ArmDynamicArtSegment();
             }
 
             internal void WriteSsRow(Bk2Frame frame, IGpgxHost host)
             {
-                WriteLine(
-                    physicsWriter,
-                    S1SpecialStageCsvWriter.FormatRow(
-                        traceFrame,
-                        S1InputMask.FromFrame(frame),
-                        host.IsLagged,
-                        host));
+                string physicsLine = S1SpecialStageCsvWriter.FormatRow(
+                    traceFrame,
+                    S1InputMask.FromFrame(frame),
+                    host.IsLagged,
+                    host);
+                if (dynamicArt != null)
+                {
+                    rowBuffer.Queue(
+                        physicsLine,
+                        new List<string>(),
+                        dynamicArt.PublishRow(
+                            traceFrame, host.IsLagged));
+                    dynamicArtAdvanceMarked = false;
+                }
+                else
+                {
+                    WriteLine(physicsWriter, physicsLine);
+                }
                 traceFrame++;
             }
 
@@ -492,6 +617,7 @@ namespace OpenGGF.BizHawk.Headless
                 {
                     return;
                 }
+                FinalizeDynamicArtSegment();
                 string metadata = S1SpecialStageMetadataWriter.Format(
                     currentSsIndex,
                     bk2FrameOffset,
@@ -500,7 +626,8 @@ namespace OpenGGF.BizHawk.Headless
                     luaScriptVersion,
                     recordingDate,
                     runId,
-                    segments.Count);
+                    segments.Count,
+                    dynamicArt != null);
                 var entry = new RunManifestSegment(
                     dirToken,
                     RunManifestSegment.SpecialStageKind,
@@ -540,9 +667,11 @@ namespace OpenGGF.BizHawk.Headless
                 {
                     FinalizeLevelSegment();
                 }
+                PublishDynamicArtGap();
                 if (!manifestWritten)
                 {
-                    if (transitions.Count > 0 || runId != null)
+                    if (transitions.Count > 0 || runId != null
+                        || dynamicArtGapTransitions.Count > 0)
                     {
                         runManifestJson = S1RunManifestWriter.Format(
                             runId,
@@ -550,7 +679,10 @@ namespace OpenGGF.BizHawk.Headless
                             luaScriptVersion,
                             expectedMovieEndMode,
                             segments,
-                            transitions);
+                            transitions,
+                            dynamicArt == null
+                                ? null
+                                : dynamicArtGapTransitions);
                     }
                     manifestWritten = true;
                 }
@@ -564,7 +696,64 @@ namespace OpenGGF.BizHawk.Headless
                         "Run capture ended without a run-end finalize.");
                 }
                 return new S1RunCaptureResult(
-                    segments, transitions, runManifestJson);
+                    segments, transitions, dynamicArtGapTransitions,
+                    runManifestJson);
+            }
+
+            private void ArmDynamicArtSegment()
+            {
+                if (dynamicArt == null)
+                {
+                    return;
+                }
+                PublishDynamicArtGap();
+                dynamicArt.ArmSegment();
+                rowBuffer = new DynamicArtCaptureRowBuffer(
+                    physicsWriter, auxWriter, "\n");
+            }
+
+            private void FinalizeDynamicArtSegment()
+            {
+                if (dynamicArt == null)
+                {
+                    return;
+                }
+                if (traceFrame > 0)
+                {
+                    DynamicArtTransferEnvelope terminal =
+                        dynamicArtAdvanceMarked
+                            ? dynamicArt.PublishBoundaryTerminal(
+                                traceFrame - 1)
+                            : dynamicArt.PublishTerminal(traceFrame - 1);
+                    rowBuffer.FlushTerminal(terminal);
+                }
+                else if (dynamicArtAdvanceMarked)
+                {
+                    DynamicArtTransferEnvelope empty =
+                        dynamicArt.PublishBoundaryTerminal(0);
+                    if (empty.Edges.Count != 0
+                        || empty.OutstandingTransferIds.Count != 0)
+                    {
+                        throw new InvalidOperationException(
+                            "zero-row segment cannot terminal-forward dynamic-art state");
+                    }
+                }
+                dynamicArt.EndSegment();
+                dynamicArtAdvanceMarked = false;
+                rowBuffer = null;
+            }
+
+            private void PublishDynamicArtGap()
+            {
+                if (dynamicArt == null)
+                {
+                    return;
+                }
+                foreach (DynamicArtGapTransition transition
+                    in dynamicArt.PublishGap())
+                {
+                    dynamicArtGapTransitions.Add(transition);
+                }
             }
 
             /// <summary>

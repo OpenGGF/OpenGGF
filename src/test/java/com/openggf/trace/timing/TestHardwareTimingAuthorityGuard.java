@@ -378,6 +378,47 @@ class TestHardwareTimingAuthorityGuard {
     }
 
     @Test
+    void dynamicArtParsersAndComparatorsCannotBecomeHardwareAuthority()
+            throws IOException {
+        List<String> violations = new ArrayList<>();
+        for (SourceFile source : productionSources()) {
+            boolean comparisonSource =
+                    source.relativePath().startsWith("com/openggf/trace/")
+                    || source.relativePath().equals(
+                            "com/openggf/game/sonic1/specialstage/"
+                                    + "Sonic1SpecialStageTraceData.java");
+            if (!comparisonSource
+                    || (!source.content().contains("DynamicArtDiagnosticsSnapshot")
+                    && !source.content().contains(
+                            "dynamic_art_transfer_state_per_frame_v1"))) {
+                continue;
+            }
+            violations.addAll(scanForbiddenTimingServiceAccess(
+                    source.relativePath(), source.content()));
+            violations.addAll(scanReplayPortApply(
+                    source.relativePath(), source.content()));
+            violations.addAll(scanUnauthorizedTimingFilenameConstruction(
+                    source.packageName(), source.fileName(), source.content()));
+        }
+        assertNoViolations(
+                "dynamic-art evidence must remain outside hardware timing authority",
+                violations);
+    }
+
+    @Test
+    void dynamicArtAuthorityGuardRejectsReplayPortAdmission() {
+        assertDetected(scanReplayPortApply(
+                "com/openggf/trace/DynamicArtComparator.java", """
+                class DynamicArtComparator {
+                    HardwareTimingReplayPort port;
+                    void compare(Object edge) {
+                        port.apply(edge);
+                    }
+                }
+                """));
+    }
+
+    @Test
     void onlyTheDedicatedTimingPackageMayParseTheHardwareTimingFile() throws IOException {
         List<String> violations = new ArrayList<>();
         for (SourceFile source : productionSources()) {

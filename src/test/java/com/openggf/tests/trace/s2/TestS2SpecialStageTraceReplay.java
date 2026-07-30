@@ -24,7 +24,9 @@ class TestS2SpecialStageTraceReplay extends AbstractS2SpecialStageTraceReplayTes
 
     @Override
     protected Path traceDirectory() {
-        return TRACE_DIRECTORY;
+        return Path.of(System.getProperty(
+                "openggf.trace.candidate.dir",
+                TRACE_DIRECTORY.toString()));
     }
 
     @Test

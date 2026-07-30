@@ -34,6 +34,7 @@ This spec is produced by the **s3k-zone-analysis** skill (`.agents/skills/s3k-zo
 The modern parallax path has four layers:
 
 ```
+
 ScrollHandlerProvider (per-game, from GameModule)
     |
     v chooses
@@ -45,6 +46,7 @@ ScrollEffectComposer + DeformationPlan (+ ScatterFillPlan / WaterlineBlendCompos
     v exposes packed HScroll/VScroll state to
 LevelManager + ParallaxManager for the frame
 ```
+
 
 The GPU shader reads the 224-entry HScroll buffer (one value per visible scanline) and applies per-line horizontal scroll offsets to the background tilemap. This is how the Mega Drive's VDP HScroll works: each scanline can have an independent scroll position, creating the parallax effect.
 
@@ -1078,3 +1080,10 @@ Zones without explicit `_Deform` labels may have their scroll logic in `{ZONE}_B
 ```bash
 grep -n "{ZONE}" docs/skdisasm/sonic3k.asm | grep -i "scroll\|deform\|hscroll\|bg.*init\|bg.*event"
 ```
+
+## Queue Diagnostics Routing
+
+Parallax is downstream of art readiness. If trace evidence reaches `queue.*` or
+`dynamic_art.*`, use `s3k-plc-system` and `trace-replay-bug-fixing`; use
+`trace-green-fleet` for multiple frontiers. Those reports are zero-tolerance
+and comparison-only.

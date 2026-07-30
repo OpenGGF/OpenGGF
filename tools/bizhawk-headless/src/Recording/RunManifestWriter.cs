@@ -106,6 +106,12 @@ namespace OpenGGF.BizHawk.Headless
         /// as <see cref="SpecialStageIndex"/>.
         /// </summary>
         public string BonusStageType { get; private set; }
+        public IList<DynamicArtTransferDescriptor> DynamicArtInitialLedger
+        {
+            get;
+            set;
+        }
+        public string DynamicArtInitialLedgerFingerprint { get; set; }
     }
 
     /// <summary>
@@ -198,6 +204,24 @@ namespace OpenGGF.BizHawk.Headless
             IList<RunManifestSegment> segments,
             IList<RunManifestTransition> transitions)
         {
+            return Format(
+                game, runId, sourceBk2, sourceBk2LuaQuoted, romChecksum,
+                luaScriptVersion, expectedMovieEndMode, segments, transitions,
+                null);
+        }
+
+        public static string Format(
+            string game,
+            string runId,
+            string sourceBk2,
+            bool sourceBk2LuaQuoted,
+            string romChecksum,
+            string luaScriptVersion,
+            string expectedMovieEndMode,
+            IList<RunManifestSegment> segments,
+            IList<RunManifestTransition> transitions,
+            IList<DynamicArtGapTransition> dynamicArtGapTransitions)
+        {
             if (game == null)
             {
                 throw new ArgumentNullException("game");
@@ -225,7 +249,9 @@ namespace OpenGGF.BizHawk.Headless
 
             var json = new StringBuilder(1024);
             json.Append("{\n");
-            json.Append("  \"run_schema\": 1,\n");
+            json.Append("  \"run_schema\": ")
+                .Append(dynamicArtGapTransitions == null ? "1" : "2")
+                .Append(",\n");
             json.Append("  \"game\": \"").Append(game).Append("\",\n");
             if (runId != null)
             {
@@ -279,6 +305,21 @@ namespace OpenGGF.BizHawk.Headless
                     json.Append(", \"special_stage_index\": ")
                         .Append(Dec(segment.SpecialStageIndex ?? 0));
                 }
+                if (segment.DynamicArtInitialLedger != null)
+                {
+                    json.Append(", \"dynamic_art_initial_ledger_descriptors\": [");
+                    for (int descriptorIndex = 0;
+                        descriptorIndex < segment.DynamicArtInitialLedger.Count;
+                        descriptorIndex++)
+                    {
+                        if (descriptorIndex != 0) json.Append(',');
+                        segment.DynamicArtInitialLedger[descriptorIndex]
+                            .AppendJson(json);
+                    }
+                    json.Append("], \"dynamic_art_initial_ledger_fingerprint\": \"")
+                        .Append(segment.DynamicArtInitialLedgerFingerprint)
+                        .Append('"');
+                }
                 json.Append('}');
                 if (index < segments.Count - 1)
                 {
@@ -313,7 +354,25 @@ namespace OpenGGF.BizHawk.Headless
                 }
                 json.Append('\n');
             }
-            json.Append("  ]\n}\n");
+            json.Append("  ]");
+            if (dynamicArtGapTransitions != null)
+            {
+                json.Append(",\n  \"dynamic_art_gap_transitions\": [\n");
+                for (int index = 0;
+                    index < dynamicArtGapTransitions.Count;
+                    index++)
+                {
+                    json.Append("    ")
+                        .Append(dynamicArtGapTransitions[index].Format());
+                    if (index < dynamicArtGapTransitions.Count - 1)
+                    {
+                        json.Append(',');
+                    }
+                    json.Append('\n');
+                }
+                json.Append("  ]");
+            }
+            json.Append("\n}\n");
             return json.ToString();
         }
 
