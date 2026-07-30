@@ -49,7 +49,8 @@ Approved for implementation on `feature/ai-s3k-super-emeralds`, based on local
    `Emeralds_converted_flag` becomes true before the first `1 -> 2` animation.
    Starting MHZ or merely loading HPZ does not set it.
 4. Selecting pedestal `N` launches Special Stage `N`. Success changes only
-   pedestal `N` from 2 to 3; failure leaves it at 2. Both return to HPZ.
+   pedestal `N` from 2 to 3; failure leaves it at 2. Both return to the Saved2
+   Big Ring origin level, not to HPZ (corrected 2026-07-30 — see step 6 below).
 5. The sanctuary exit restores the saved originating level, player, camera,
    ring, solidity, resize, water, starpost, and physical giant-ring state.
 6. Chaos-only Sonic and Knuckles cannot transform after conversion. Seven
@@ -169,8 +170,14 @@ consumes the descriptor without a zone check.
    before preparing the next camera target.
 5. Standing on a state-2 pedestal locks the primary player for the native delay,
    then publishes an exact-stage Super Emerald request.
-6. Success awards state `2 -> 3`; failure does not mutate progression. Results
-   return to the sanctuary and set its completion/re-entry context.
+6. Success awards state `2 -> 3`; failure does not mutate progression. The
+   pedestal sets `Special_bonus_entry_flag = 1` (`loc_90926`), so
+   `Load_Starpost_Settings` takes `loc_2D2C2` and the results screen returns the
+   player to the Saved2 originating level — not to the sanctuary. The ROM
+   rebuilds HPZ during `GameMode_SpecialStageResults` only as the backdrop for
+   the conversion presentation; the sanctuary itself is re-entered through
+   another Big Ring. (Corrected 2026-07-30; the original step routed the results
+   exit back into the playable sanctuary hub.)
 7. When no state-1 or state-2 emerald remains, the centre teleporter restores
    the originating level snapshot.
 

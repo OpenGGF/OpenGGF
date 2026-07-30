@@ -3082,23 +3082,21 @@ public class GameLoop {
             return;
         }
 
-        // ROM HPZ results rebuild the sanctuary, set
-        // HPZ_special_stage_completed, and retain Saved2 until the player
-        // leaves through the teleporter.
-        boolean sanctuaryReturn = SpecialStageTransitionSupport.returnsDirectlyToSanctuary(
-                activeSpecialStageRewardKind);
-        if (sanctuaryReturn) {
-            levelManager.markSanctuaryReentry(ssStageIndex, ssEmeraldCollected);
-        }
-
-        // ROM: returning from special stage always runs the full Level: function,
+        // ROM HPZ results rebuild the sanctuary as the results-screen backdrop only.
+        // The pedestal that launched the stage (loc_90926) sets
+        // Special_bonus_entry_flag = 1, so Load_Starpost_Settings takes loc_2D2C2 and
+        // restores Saved2_* — the player resumes in the zone the Big Ring was collected
+        // in, not in the sanctuary. The sanctuary is re-entered only through another
+        // Big Ring.
+        //
+        // Otherwise (and for every other game) the ROM runs the full Level: function,
         // which clears all object RAM (bridges/stateful objects reset to initial state)
-        // and reloads level data. This applies to all games:
+        // and reloads level data:
         // - S1: zone/act may have been advanced before SS entry
         // - S2: same zone/act, objects reset, rings cleared (Obj79_LoadData clr.w Ring_count)
         // - S3K: same zone/act, objects reset, rings restored from Saved2_ring_count
-        levelManager.consumeSpecialStageReturnLevelReloadRequest();
-        levelManager.loadCurrentLevel();
+        boolean sanctuaryReturn = SpecialStageTransitionSupport.loadSpecialStageReturnLevel(
+                levelManager, activeSpecialStageRewardKind, ssStageIndex, ssEmeraldCollected);
 
         // Consume any pending title card request to prevent double title card
         // (we're manually entering the title card below)
@@ -3154,9 +3152,10 @@ public class GameLoop {
             RespawnState checkpointState = levelManager.getCheckpointState();
 
             if (levelManager.hasBigRingReturn()
-                    && levelManager.sanctuaryReentryStage().isEmpty()) {
+                    && (levelManager.isSanctuaryOriginRestorePending(zoneIndex, actIndex)
+                        || levelManager.sanctuaryReentryStage().isEmpty())) {
                 // S3K big ring path: restore all Saved2_* state
-                restoreBigRingReturn(playable, false);
+                restoreBigRingReturn(playable);
             } else if (checkpointState != null && checkpointState.isActive()) {
                 // S2 checkpoint star path: restore to checkpoint (ROM: Saved_* variables)
                 checkpointState.restoreToPlayer(playable, camera);
@@ -3225,9 +3224,9 @@ public class GameLoop {
         }
     }
 
-    private void restoreBigRingReturn(AbstractPlayableSprite playable, boolean sanctuaryOriginRestore) {
+    private void restoreBigRingReturn(AbstractPlayableSprite playable) {
         SpecialStageTransitionSupport.restoreBigRingReturn(levelManager.getBigRingReturn(),
-                playable, camera, levelManager, waterSystem, sanctuaryOriginRestore);
+                playable, camera, levelManager, waterSystem);
     }
 
     /**
@@ -4318,7 +4317,7 @@ public class GameLoop {
             if (restoreSanctuaryOrigin) {
                 var sprite = spriteManager.getSprite(resolveMainCharacterCode());
                 if (sprite instanceof AbstractPlayableSprite playable) {
-                    restoreBigRingReturn(playable, true);
+                    restoreBigRingReturn(playable);
                 }
             }
         } catch (IOException e) {
