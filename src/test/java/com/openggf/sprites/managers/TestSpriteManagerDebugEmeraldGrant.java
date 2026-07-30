@@ -1,6 +1,8 @@
 package com.openggf.sprites.managers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import com.openggf.audio.AudioManager;
@@ -108,6 +110,57 @@ class TestSpriteManagerDebugEmeraldGrant {
 
         assertEquals(0, GameServices.gameState().getEmeraldCount());
         assertEquals(0, musicCommands().size());
+    }
+
+    @Test
+    void shiftedEmeraldKeyGrantsOnlySuperEmeralds() {
+        EngineServices.current().configuration().setConfigValue(SonicConfiguration.DEBUG_VIEW_ENABLED, true);
+        InputHandler input = new InputHandler();
+        input.handleKeyEvent(GLFW.GLFW_KEY_LEFT_SHIFT, GLFW.GLFW_PRESS);
+        input.handleKeyEvent(GLFW.GLFW_KEY_E, GLFW.GLFW_PRESS);
+
+        GameServices.sprites().update(input);
+
+        assertTrue(GameServices.gameState().hasAllSuperEmeralds());
+        assertTrue(GameServices.gameState().isEmeraldsConverted());
+        assertEquals(7, GameServices.gameState().getEmeraldCount());
+        assertEquals(1, musicCommands().size());
+    }
+
+    @Test
+    void plainEmeraldKeyDoesNotGrantSuperEmeralds() {
+        EngineServices.current().configuration().setConfigValue(SonicConfiguration.DEBUG_VIEW_ENABLED, true);
+        InputHandler input = new InputHandler();
+        input.handleKeyEvent(GLFW.GLFW_KEY_E, GLFW.GLFW_PRESS);
+
+        GameServices.sprites().update(input);
+
+        assertTrue(GameServices.gameState().hasAllEmeralds());
+        assertFalse(GameServices.gameState().hasAllSuperEmeralds());
+        assertFalse(GameServices.gameState().isEmeraldsConverted());
+    }
+
+    @Test
+    void superEmeraldChordIsConfigurable() {
+        var configuration = EngineServices.current().configuration();
+        configuration.setConfigValue(SonicConfiguration.DEBUG_VIEW_ENABLED, true);
+        configuration.setConfigValue(SonicConfiguration.GIVE_SUPER_EMERALDS_KEY, "CTRL+K");
+        SpriteManager reboundManager = new SpriteManager(configuration);
+        TerrainCollisionManager terrain = mock(TerrainCollisionManager.class);
+        TestEnvironment.activeGameplayMode().attachLevelManagers(
+                new WaterSystem(),
+                new ParallaxManager(),
+                terrain,
+                new CollisionSystem(terrain),
+                reboundManager,
+                mock(LevelManager.class));
+        InputHandler input = new InputHandler();
+        input.handleKeyEvent(GLFW.GLFW_KEY_LEFT_CONTROL, GLFW.GLFW_PRESS);
+        input.handleKeyEvent(GLFW.GLFW_KEY_K, GLFW.GLFW_PRESS);
+
+        reboundManager.update(input);
+
+        assertTrue(GameServices.gameState().hasAllSuperEmeralds());
     }
 
     private static java.util.List<AudioCommand.PlayMusic> musicCommands() {

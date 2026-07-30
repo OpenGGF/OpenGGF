@@ -207,6 +207,8 @@ debug:
     levelSelect: F9   # Open the level select screen
     superSonic: U   # Toggle Super Sonic debug mode
     giveEmeralds: E   # Give all chaos emeralds
+    hyperForm: SHIFT+U   # Toggle Hyper Sonic, Super Tails, or Hyper Knuckles
+    giveSuperEmeralds: SHIFT+E   # Give all super emeralds
     specialStage: TAB   # Toggle special stage mode
     specialStageComplete: END   # Complete the special stage with an emerald
     specialStageFail: DELETE   # Fail the special stage

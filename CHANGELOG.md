@@ -3,6 +3,9 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Feature: Debug shortcuts can now grant all Super Emeralds with `Shift+E`
+  and transform with `Shift+U`, selecting Hyper Sonic, Super Tails, or Hyper
+  Knuckles from the active S3K character. Both chords are configurable.
 - Fix: Sonic 3 & Knuckles Hidden Palace sanctuary now locks Tails during the
   first-visit emerald conversion ceremony and keeps Sonic facing toward each
   activated emerald. The controller applies the ROM `$83` bit-7 control state
