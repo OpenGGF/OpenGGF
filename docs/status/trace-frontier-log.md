@@ -54985,3 +54985,50 @@ largest remaining item, and the next target.
 
 **MHZ progress this session:** 1888 -> 601 non-queue groups; queue/admission
 frontier raw frame 36 -> 7218.
+
+### 2026-07-31 — MHZ route divergence traced to the pollen spawner never executing
+
+Chased the frame-3152 Madmole miss from the previous entry to its actual root.
+Each link is instrumented evidence, all instrumentation reverted.
+
+1. **The hit is real and the hitbox is right.** At row 3151 both sides put the
+   player at `(0x103E, ~0x0726)` and the Madmole side child on top of it —
+   engine child `(0x1047, 0x72a)` vs ROM `(0x1046, 0x0724)`. Collision flags
+   match (`0xD8`), and the engine's response is a faithful port of
+   `sub_8D8E6`: `x_vel*2`, `y_vel=-0x200`, `anim $1A`, spindash cleared
+   (sonic3k.asm:193430-193450).
+
+2. **The child is in the wrong phase.** ROM's slot-20 routine is `0x02`, the
+   straight phase whose `y` stays flat at `0x724`; the engine's child is
+   arcing, its `y` falling `726 -> 728 -> 72a -> 72c -> 72f`. The engine's
+   `onTouchResponse` records a capture candidate while arcing instead of
+   launching, so the hit is silently swallowed.
+
+3. **The phase comes from a coin flip.** `loc_8D89E` calls `Random_Number`
+   and takes the arc branch on `tst.b d0` being negative — bit 7 of the low
+   byte (sonic3k.asm:193570-193580). The engine reads the same bit. Same test,
+   different value: the RNG streams have parted.
+
+4. **The RNG streams diverge at frame 74.** Comparing the engine's seed against
+   the fixture's per-frame `rng_seed` (carried on `air_countdown_state`): both
+   hold `6E37EB8B` through row 73; from row 74 ROM advances every frame
+   (`6037B943`, `14A7ABBB`, `CFCD80F3`, ...) while the engine's **never changes
+   for the entire run**.
+
+5. **Because the pollen spawner never executes.** ROM's
+   `Obj_MHZ_Pollen_Spawner` calls `Random_Number` once per grounded player per
+   frame, gated only on `top_solid_bit == $C` and not-in-air
+   (`sub_3DA24`, sonic3k.asm:81633-81643) — that is the per-frame consumer.
+   `Sonic3kLevelEventManager.installFixedDynamicObjects` does create the engine
+   object (logged creating three times across bootstrap, `already=false` each
+   time), but `MhzPollenSpawnerInstance.update` is **never called once** in the
+   replay. The object is `isPersistent()` and spawns at `(0, 0)`.
+
+So one unexecuted fixed object desynchronises the RNG from frame 74, which
+flips the Madmole's arc coin at ~3150, which costs the route and ~4,000 rows
+across twelve fields. Finding why a persistent dynamic object at the origin is
+created but never executed in the replay path is the next step; `Sonic3kLevelEventManager`
+already has an `updateFixedInLevelObjects()` hook that may be the correct owner
+for it, matching ROM's fixed-slot execution.
+
+**MHZ this session:** 1888 -> 601 non-queue groups; queue frontier raw 36 -> 7218.
