@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.events;
 
+import com.openggf.LevelFrameTestStep;
 import com.openggf.LevelFrameStep;
 import com.openggf.LevelFrameContext;
 import com.openggf.game.PlayerCharacter;
@@ -32,7 +33,7 @@ class TestFbzFramePhaseOrdering {
         doAnswer(i -> { log.add("placement"); return null; }).when(level).postCameraObjectPlacementSync();
         doAnswer(i -> { log.add("level"); return null; }).when(level).update();
 
-        LevelFrameStep.execute(context(events), level, camera, () -> { });
+        LevelFrameTestStep.execute(context(events), level, camera, () -> { });
 
         assertEquals(List.of("anpal-fixed-pre", "objects", "camera", "event", "flush", "boundary", "placement", "level"), log);
     }
@@ -51,7 +52,7 @@ class TestFbzFramePhaseOrdering {
         doAnswer(i -> { observed.add(workspace.getMagneticPolarity()); return null; })
                 .when(level).updateObjectPositionsWithoutTouches();
 
-        LevelFrameStep.execute(context(provider), level, camera, () -> { });
+        LevelFrameTestStep.execute(context(provider), level, camera, () -> { });
 
         assertEquals(List.of(Sonic3kFBZEvents.MagneticPolarity.ACTIVE), observed);
     }
@@ -71,9 +72,9 @@ class TestFbzFramePhaseOrdering {
         }).when(provider).update();
         List<Boolean> collisionPasses = new ArrayList<>();
 
-        LevelFrameStep.execute(context(provider), level, camera,
+        LevelFrameTestStep.execute(context(provider), level, camera,
                 () -> collisionPasses.add(state.backgroundPlaneCollisionStateOrNull().active()));
-        LevelFrameStep.execute(context(provider), level, camera,
+        LevelFrameTestStep.execute(context(provider), level, camera,
                 () -> collisionPasses.add(state.backgroundPlaneCollisionStateOrNull().active()));
 
         assertEquals(List.of(false, true), collisionPasses);

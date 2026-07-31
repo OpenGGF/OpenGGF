@@ -2,7 +2,9 @@ package com.openggf.game.sonic1.specialstage;
 
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceEvent;
+import com.openggf.trace.TraceFiles;
 import com.openggf.trace.TraceMetadata;
+import com.openggf.trace.StoredPhysicsFrameDomain;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -49,16 +51,24 @@ public final class Sonic1SpecialStageTraceData {
                     + traceProfile + "' in " + metadataPath);
         }
 
-        Path physicsPath = TraceData.resolveTraceFile(traceDirectory, "physics.csv");
+        Path physicsPath = TraceFiles.resolve(traceDirectory, "physics.csv");
         if (physicsPath == null) {
             throw new NoSuchFileException(traceDirectory.resolve("physics.csv").toString());
         }
-        Path auxPath = TraceData.resolveTraceFile(traceDirectory, "aux_state.jsonl");
+        Path auxPath = TraceFiles.resolve(traceDirectory, "aux_state.jsonl");
 
+        StoredPhysicsFrameDomain frameDomain =
+                StoredPhysicsFrameDomain.scan(
+                        physicsPath,
+                        StoredPhysicsFrameDomain.FrameEncoding.DECIMAL);
         List<Sonic1SpecialStageTraceFrame> frames = loadPhysicsCsv(physicsPath);
         Map<Integer, List<TraceEvent>> events = auxPath != null
-            ? TraceData.loadAuxEvents(auxPath)
+            ? TraceData.loadAuxEvents(auxPath, metadata)
             : Collections.emptyMap();
+        if (metadata.hasPerFrameDynamicArtTransferState()) {
+            TraceData.validateDynamicArtTransferStates(
+                    metadata, frameDomain, events);
+        }
 
         return new Sonic1SpecialStageTraceData(metadata, frames, events);
     }
@@ -88,6 +98,12 @@ public final class Sonic1SpecialStageTraceData {
         return eventsByFrame.getOrDefault(i, Collections.emptyList());
     }
 
+    public TraceEvent.DynamicArtTransferState dynamicArtTransferStateForFrame(
+            int frame) {
+        return TraceData.dynamicArtTransferStateForFrame(
+                metadata, eventsByFrame, frame);
+    }
+
     /** Returns all events for this trace indexed by frame. */
     public Map<Integer, List<TraceEvent>> eventsByFrame() {
         return eventsByFrame;
@@ -95,7 +111,7 @@ public final class Sonic1SpecialStageTraceData {
 
     private static List<Sonic1SpecialStageTraceFrame> loadPhysicsCsv(Path csvPath) throws IOException {
         List<Sonic1SpecialStageTraceFrame> frames = new ArrayList<>();
-        try (BufferedReader reader = com.openggf.trace.TraceDataInternalAccess.openTraceReader(csvPath)) {
+        try (BufferedReader reader = TraceFiles.openReader(csvPath)) {
             String line = reader.readLine(); // skip header
             if (line == null) return frames;
             while ((line = reader.readLine()) != null) {

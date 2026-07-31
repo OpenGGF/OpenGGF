@@ -39,6 +39,10 @@
     <Compile Include="tests/AssertEx.cs" />
     <Compile Include="tests/Bk2ReaderTests.cs" />
     <Compile Include="tests/BootstrapTests.cs" />
+    <Compile Include="tests/DynamicArtRomProfileTests.cs" />
+    <Compile Include="tests/DynamicArtTransferStateTests.cs" />
+    <Compile Include="tests/S1DynamicArtObserverTests.cs" />
+    <Compile Include="tests/S2DynamicArtObserverTests.cs" />
     <Compile Include="tests/GpgxHostTests.cs" />
     <Compile Include="tests/NoReplacePublisherTests.cs" />
     <Compile Include="tests/EndToEndTests.cs" />
@@ -62,6 +66,7 @@
     <Compile Include="tests/S2RunCaptureRunnerTests.cs" />
     <Compile Include="tests/S2RunManifestWriterTests.cs" />
     <Compile Include="tests/S2SpecialStageWriterTests.cs" />
+    <Compile Include="tests/S2SpecialStageCaptureRunnerTests.cs" />
     <Compile Include="tests/S2TraceCaptureRunnerTests.cs" />
     <Compile Include="tests/S2TraceDifferentialTests.cs" />
     <Compile Include="tests/S2TraceCsvWriterTests.cs" />
@@ -88,6 +93,7 @@
     <Compile Include="tests/TestTimings.cs" />
     <Compile Include="tests/TracePayloadCompressorTests.cs" />
     <Compile Include="tests/TraceCliTests.cs" />
+    <Compile Include="tests/LoadQueueStateEventTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="fixtures/*.txt">

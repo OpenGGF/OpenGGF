@@ -54,6 +54,7 @@ public class Sonic2CNZEvents extends Sonic2ZoneEvents {
 
     @Override
     public void update(int act, int frameCounter) {
+        retryPendingPlc();
         if (act == 0) {
             // Act 1: No dynamic events (ROM: LevEvents_CNZ just calls SlotMachine and returns)
             return;
@@ -87,6 +88,7 @@ public class Sonic2CNZEvents extends Sonic2ZoneEvents {
                     audio().fadeOutMusic();
                     // ROM: Set Current_Boss_ID to 6 (CNZ boss ID in BossCollision_Index)
                     gameState().setCurrentBossId(6);
+                    requestSonic2Plc(Sonic2Constants.PLC_CNZ_BOSS);
 
                     // ROM: Load CNZ boss palette (Pal_CNZ_B to palette line 1)
                     // This palette contains the electricity effect colors

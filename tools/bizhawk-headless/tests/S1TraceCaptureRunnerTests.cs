@@ -35,6 +35,72 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "S1TraceCaptureRunner fails clearly when detection never fires",
                 FailsClearlyWhenDetectionNeverFires));
+            tests.Add(new TestMain.TestCase(
+                "S1TraceCaptureRunner emits mandatory PLC and DPLC audit heartbeats",
+                EmitsMandatoryAuditHeartbeats));
+            tests.Add(new TestMain.TestCase(
+                "S1TraceCaptureRunner publication rejects scratch legacy"
+                + " audit omission",
+                PublicationRejectsScratchLegacyAuditOmission));
+        }
+
+        private static void PublicationRejectsScratchLegacyAuditOmission()
+        {
+            WithMovie(Rows(1), movie =>
+            {
+                AssertEx.Throws<ArgumentNullException>(
+                    () => S1TraceCaptureRunner.Capture(
+                        movie,
+                        new ScriptedHost(null),
+                        "2026-07-30",
+                        new StringWriter(),
+                        new StringWriter(),
+                        new StringWriter(),
+                        null),
+                    "requires native load audit");
+            });
+        }
+
+        private static void EmitsMandatoryAuditHeartbeats()
+        {
+            WithMovie(
+                Rows(7),
+                movie =>
+                {
+                    var host = new ScriptedHost((ram, completedFrame) =>
+                    {
+                        if (completedFrame >= 2)
+                        {
+                            ram.SetByte(0xF600, 0x0C);
+                        }
+                    });
+                    var aux = new StringWriter();
+                    var metadata = new StringWriter();
+
+                    S1TraceCaptureResult result = S1TraceCaptureRunner.Capture(
+                        movie,
+                        host,
+                        "2026-07-30",
+                        new StringWriter(),
+                        aux,
+                        metadata,
+                        S1DynamicArtObserverTests.CreateRom());
+
+                    AssertEx.Equal(
+                        result.TraceFrameCount,
+                        Count(aux.ToString(),
+                            "\"event\":\"load_queue_state\""));
+                    AssertEx.Equal(
+                        result.TraceFrameCount,
+                        Count(aux.ToString(),
+                            "\"event\":\"dynamic_art_transfer_state\""));
+                    AssertContains(
+                        metadata.ToString(),
+                        "\"load_queue_state_per_frame\"");
+                    AssertContains(
+                        metadata.ToString(),
+                        "\"dynamic_art_transfer_state_per_frame_v1\"");
+                });
         }
 
         private static void DetectsOffsetAndCapturesByteExactFiles()
@@ -75,7 +141,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     var physics = new StringWriter();
                     var aux = new StringWriter();
                     var metadata = new StringWriter();
-                    S1TraceCaptureResult result = S1TraceCaptureRunner.Capture(
+                    S1TraceCaptureResult result = S1TraceCaptureRunner.CaptureScratchLegacy(
                         movie,
                         host,
                         "2026-07-13",
@@ -162,7 +228,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     var physics = new StringWriter();
                     var aux = new StringWriter();
                     var metadata = new StringWriter();
-                    S1TraceCaptureResult result = S1TraceCaptureRunner.Capture(
+                    S1TraceCaptureResult result = S1TraceCaptureRunner.CaptureScratchLegacy(
                         movie,
                         host,
                         "2026-07-13",
@@ -209,7 +275,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
                     var physics = new StringWriter();
                     var metadata = new StringWriter();
-                    S1TraceCaptureResult result = S1TraceCaptureRunner.Capture(
+                    S1TraceCaptureResult result = S1TraceCaptureRunner.CaptureScratchLegacy(
                         movie,
                         host,
                         "2026-07-13",
@@ -256,7 +322,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     host.Ram.SetU16(0xD03E, 2);
 
                     var metadata = new StringWriter();
-                    S1TraceCaptureResult result = S1TraceCaptureRunner.Capture(
+                    S1TraceCaptureResult result = S1TraceCaptureRunner.CaptureScratchLegacy(
                         movie,
                         host,
                         "2026-07-13",
@@ -298,7 +364,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         }
                     });
 
-                    S1TraceCaptureRunner.Capture(
+                    S1TraceCaptureRunner.CaptureScratchLegacy(
                         movie,
                         host,
                         "2026-07-13",
@@ -342,7 +408,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     var aux = new StringWriter();
                     var metadata = new StringWriter();
                     AssertEx.Throws<InvalidDataException>(
-                        () => S1TraceCaptureRunner.Capture(
+                        () => S1TraceCaptureRunner.CaptureScratchLegacy(
                             movie,
                             host,
                             "2026-07-13",
@@ -439,7 +505,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// per-advance script. Button/advance calls are logged; RAM reads
         /// are not.
         /// </summary>
-        private sealed class ScriptedHost : IGpgxHost
+        private sealed class ScriptedHost : IGpgxHost, ICpuRegisterReader
         {
             private readonly Action<RamAccess, int> onAdvance;
 
@@ -502,8 +568,36 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 return Ram.GetByte(offset);
             }
 
+            public uint ReadCpuRegister(string name)
+            {
+                return 0;
+            }
+
             public void Dispose()
             {
+            }
+        }
+
+        private static int Count(string value, string needle)
+        {
+            int count = 0;
+            int index = 0;
+            while ((index = value.IndexOf(
+                needle, index, StringComparison.Ordinal)) >= 0)
+            {
+                count++;
+                index += needle.Length;
+            }
+            return count;
+        }
+
+        private static void AssertContains(string value, string needle)
+        {
+            if (value.IndexOf(needle, StringComparison.Ordinal) < 0)
+            {
+                throw new Exception(
+                    "Expected value to contain <" + needle + ">.\n"
+                    + value);
             }
         }
 

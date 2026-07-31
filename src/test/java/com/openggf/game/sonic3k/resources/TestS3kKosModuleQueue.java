@@ -7,6 +7,7 @@ import com.openggf.game.timing.HardwareTimingSnapshot;
 import com.openggf.game.timing.HardwareWorkHandle;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.tools.KosinskiReader;
+import com.openggf.game.resources.QueueDiagnosticSnapshot;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -41,6 +42,64 @@ class TestS3kKosModuleQueue {
     Path tempDir;
 
     @Test
+    void transitionPreflightRejectsInvalidBatchBeforeSubmittingAnyWork() throws Exception {
+        byte[] fixture = {
+                0x17, 0x00, 'A', 'B', 'C', 0x00, 0x00, 0x00,
+                0x17, 0x00, 'D', 'E', 'F', 0x00, 0x00, 0x00
+        };
+        Path romPath = tempDir.resolve("invalid-transition.gen");
+        Files.write(romPath, fixture);
+        try (Rom rom = new Rom()) {
+            assertTrue(rom.open(romPath.toString()));
+            HardwareTimingService timing = new HardwareTimingService();
+            S3kKosDecompressionQueue direct = new S3kKosDecompressionQueue(timing);
+            S3kKosModuleQueue modules = new S3kKosModuleQueue(timing, direct);
+
+            assertThrows(java.io.IOException.class,
+                    () -> S3kKosTransitionPreflight.validate(
+                            rom, direct, modules, 0, 8, fixture.length));
+
+            assertEquals(0, timing.pendingHandles().size());
+            assertFalse(direct.decompressionsPending());
+            assertFalse(modules.modulesLeft());
+        }
+    }
+
+    @Test
+    void modulesLeftRemainsGlobalAfterEarlierParentIsReady() throws Exception {
+        byte[] fixture = new byte[ABC_KOSM.length * 2];
+        System.arraycopy(ABC_KOSM, 0, fixture, 0, ABC_KOSM.length);
+        System.arraycopy(ABC_KOSM, 0, fixture, ABC_KOSM.length, ABC_KOSM.length);
+        Path romPath = tempDir.resolve("overlap.gen");
+        Files.write(romPath, fixture);
+        try (Rom rom = new Rom()) {
+            assertTrue(rom.open(romPath.toString()));
+            HardwareTimingService timing = new HardwareTimingService();
+            S3kKosDecompressionQueue direct = new S3kKosDecompressionQueue(timing);
+            S3kKosModuleQueue modules = new S3kKosModuleQueue(timing, direct);
+            HardwareWorkHandle first = modules.queue(rom, 0, 0x500);
+            HardwareWorkHandle later = modules.queue(
+                    rom, ABC_KOSM.length, 0x510);
+
+            for (int frame = 0; frame < 32 && !modules.isReady(first); frame++) {
+                modules.prepareQueuedModuleBeforeVSync();
+                modules.processModuleQueueAfterObjects();
+            }
+
+            assertTrue(modules.isReady(first));
+            assertFalse(modules.isReady(later));
+            assertTrue(modules.modulesLeft(),
+                    "Kos_modules_left remains nonzero for a later parent");
+
+            while (modules.modulesLeft()) {
+                modules.prepareQueuedModuleBeforeVSync();
+                modules.processModuleQueueAfterObjects();
+            }
+            assertTrue(modules.isReady(later));
+        }
+    }
+
+    @Test
     void submitsCanonicalArchiveSpanAndPublishesAfterPostObjects() throws Exception {
         Path romPath = tempDir.resolve("fixture.gen");
         Files.write(romPath, ABC_KOSM);
@@ -69,6 +128,36 @@ class TestS3kKosModuleQueue {
             assertTrue(queue.isReady(handle));
             assertFalse(queue.modulesLeft());
             assertArrayEquals(new byte[] {'A', 'B', 'C'}, queue.claim(handle));
+        }
+    }
+
+    @Test
+    void diagnosticsKeepModuleParentsSeparateFromDirectChildren()
+            throws Exception {
+        Path romPath = tempDir.resolve("diagnostics.gen");
+        Files.write(romPath, TWO_MODULE_KOSM);
+        try (Rom rom = new Rom()) {
+            assertTrue(rom.open(romPath.toString()));
+            HardwareTimingService timing = new HardwareTimingService();
+            S3kKosDecompressionQueue direct =
+                    new S3kKosDecompressionQueue(timing);
+            S3kKosModuleQueue modules =
+                    new S3kKosModuleQueue(timing, direct);
+            modules.queue(rom, 0, 0x500);
+            modules.processModuleQueueAfterObjects();
+
+            QueueDiagnosticSnapshot snapshot = modules.captureDiagnostics(
+                    java.util.List.of());
+            assertEquals(QueueDiagnosticSnapshot.Kind.S3K_KOS_MODULE,
+                    snapshot.kind());
+            assertEquals(-1, snapshot.activeSource());
+            assertEquals(-1, snapshot.activeTotalWork());
+            assertEquals(2, snapshot.activeRemainingWork());
+            assertEquals(-1, snapshot.activeDestination());
+            assertEquals(1, direct.physicalQueueSize(),
+                    "active child belongs only to the direct queue");
+            assertFalse(direct.captureDiagnostics(java.util.List.of()).prepared(),
+                    "a KosM child queued at POST_OBJECTS is not armed until PRE_MAIN_LOOP");
         }
     }
 

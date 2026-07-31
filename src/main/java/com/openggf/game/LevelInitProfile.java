@@ -65,6 +65,18 @@ public interface LevelInitProfile {
     }
 
     /**
+     * Advances the ROM-owned PLC lifecycle between the locked initial
+     * presentation and ordinary gameplay.
+     *
+     * <p>The active game profile derives the sequence from production level
+     * state and ROM data. Replay rows, fixture identity, and recorded readiness
+     * are not inputs to this boundary.
+     */
+    default void completeInitialPresentationPlcs() {
+        // Games without an S1/S2-style initial PLC presentation have no work.
+    }
+
+    /**
      * Ordered steps for entering a level (title card through control unlock).
      * <p>
      * Maps to the game's {@code Level:} routine: S1 has 44 steps (phases A-L),

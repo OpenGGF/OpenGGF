@@ -13,8 +13,8 @@ $ARGUMENTS: Boss name or zone (e.g., "GHZ boss", "Green Hill boss", "0x3D", "Fin
 
 ## Related Skills
 
-- **s1disasm-guide** (`.claude/skills/s1disasm-guide/SKILL.md`) - Disassembly navigation, label conventions, RomOffsetFinder
-- **s1-implement-object** (`.claude/skills/s1-implement-object/SKILL.md`) - For non-boss Sonic 1 objects and badniks. **Section 2.4 lists all reusable engine utilities** — check it before writing movement, collision, or rendering code.
+- **s1disasm-guide** (`.agents/skills/s1disasm-guide/SKILL.md`) - Disassembly navigation, label conventions, RomOffsetFinder
+- **s1-implement-object** (`.agents/skills/s1-implement-object/SKILL.md`) - For non-boss Sonic 1 objects and badniks. **Section 2.4 lists all reusable engine utilities** — check it before writing movement, collision, or rendering code.
 
 ## Sonic 1 Boss List
 
@@ -52,7 +52,7 @@ $ARGUMENTS: Boss name or zone (e.g., "GHZ boss", "Green Hill boss", "0x3D", "Fin
 
 Delegate multiple agents to explore the disassembly. **Include this instruction in each agent prompt:**
 
-> Use the s1disasm-guide skill (`.claude/skills/s1disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, RomOffsetFinder commands, and object system patterns.
+> Use the s1disasm-guide skill (`.agents/skills/s1disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, RomOffsetFinder commands, and object system patterns.
 
 **Research checklist:**
 - [ ] Locate boss object file in `docs/s1disasm/_incObj/` (may have multiple parts)
@@ -390,8 +390,8 @@ Report any discrepancies with specific line references.
 
 | Purpose | Location |
 |---------|----------|
-| **Disassembly guide** | `.claude/skills/s1disasm-guide/SKILL.md` |
-| **Object skill** | `.claude/skills/s1-implement-object/SKILL.md` |
+| **Disassembly guide** | `.agents/skills/s1disasm-guide/SKILL.md` |
+| **Object skill** | `.agents/skills/s1-implement-object/SKILL.md` |
 | Base boss | `src/.../level/objects/boss/AbstractBossInstance.java` |
 | Boss state context | `src/.../level/objects/boss/BossStateContext.java` |
 | Boss child base | `src/.../level/objects/boss/AbstractBossChild.java` |
@@ -446,3 +446,9 @@ Report any discrepancies with specific line references.
 - Energy ball projectiles
 - No rings available
 - Most complex S1 boss
+
+## Queue Diagnostics Routing
+
+If boss work reaches PLC/DPLC queue timing or `dynamic_art.*` reports, use
+`plc-system` and `trace-replay-bug-fixing`; use `trace-green-fleet` when moving
+multiple frontiers. These fields are zero-tolerance, comparison-only evidence.

@@ -168,7 +168,7 @@ Expected: the engine artifacts and `mods/sample-flappy-mod.jar` are freshly rebu
 
 **Files:**
 - Verify all modified files above.
-- Merge into: `C:/Users/farre/IdeaProjects/sonic-engine` (`next` worktree).
+- Merge into: `<repo>` (`next` worktree).
 
 - [ ] **Step 1: Run the feature-branch completion gate**
 
@@ -188,7 +188,7 @@ trailers for the remaining policy categories.
 
 - [ ] **Step 3: Merge from the clean next worktree**
 
-In `C:/Users/farre/IdeaProjects/sonic-engine`, confirm `next` is clean, then run:
+In `<repo>`, confirm `next` is clean, then run:
 
 ```powershell
 git merge --no-ff feature/ai-native-tails-flappy

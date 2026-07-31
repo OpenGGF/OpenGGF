@@ -20,6 +20,42 @@ namespace OpenGGF.BizHawk.Headless
     /// </summary>
     public static class S2SpecialStageMetadataWriter
     {
+        public static string FormatStandalone(
+            int bk2FrameOffset,
+            int traceFrameCount,
+            string sourceBk2,
+            string recordingDate,
+            bool dynamicArtAudit = false)
+        {
+            var json = new StringBuilder(512);
+            json.Append("{\n");
+            json.Append("  \"game\": \"s2\",\n");
+            json.Append("  \"trace_profile\": \"s2_special_stage\",\n");
+            json.Append("  \"special_stage_index\": 0,\n");
+            json.Append("  \"ss_csv_version\": 1,\n");
+            if (dynamicArtAudit)
+            {
+                json.Append("  \"aux_schema_extras\": "
+                    + "[\"dynamic_art_transfer_state_per_frame_v1\"],\n");
+            }
+            json.Append("  \"characters\": [\"sonic\", \"tails\"],\n");
+            json.Append("  \"main_character\": \"sonic\",\n");
+            json.Append("  \"sidekicks\": [\"tails\"],\n");
+            json.Append("  \"bk2_frame_offset\": ").Append(Dec(bk2FrameOffset))
+                .Append(",\n");
+            json.Append("  \"trace_frame_count\": ").Append(Dec(traceFrameCount))
+                .Append(",\n");
+            json.Append("  \"source_bk2\": \"").Append(JsonEscape(sourceBk2))
+                .Append("\",\n");
+            json.Append("  \"lua_script_version\": \"1.4-s2ss-native\",\n");
+            json.Append("  \"recording_date\": \"").Append(recordingDate)
+                .Append("\",\n");
+            json.Append("  \"bizhawk_version\": \"2.11\",\n");
+            json.Append("  \"genesis_core\": \"Genplus-gx\"\n");
+            json.Append("}\n");
+            return json.ToString();
+        }
+
         public static string Format(
             int specialStageIndex,
             int bk2FrameOffset,
@@ -27,7 +63,8 @@ namespace OpenGGF.BizHawk.Headless
             string sourceBk2,
             string recordingDate,
             string runId,
-            int segmentIndex)
+            int segmentIndex,
+            bool dynamicArtAudit = false)
         {
             if (sourceBk2 == null)
             {
@@ -45,6 +82,11 @@ namespace OpenGGF.BizHawk.Headless
             json.Append("  \"special_stage_index\": ")
                 .Append(Dec(specialStageIndex)).Append(",\n");
             json.Append("  \"ss_csv_version\": 1,\n");
+            if (dynamicArtAudit)
+            {
+                json.Append("  \"aux_schema_extras\": "
+                    + "[\"dynamic_art_transfer_state_per_frame_v1\"],\n");
+            }
             json.Append("  \"characters\": [\"sonic\", \"tails\"],\n");
             json.Append("  \"main_character\": \"sonic\",\n");
             json.Append("  \"sidekicks\": [\"tails\"],\n");

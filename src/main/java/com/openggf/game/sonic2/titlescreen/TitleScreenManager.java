@@ -23,6 +23,7 @@ import java.util.logging.Logger;
 
 import static org.lwjgl.opengl.GL11.glClearColor;
 import com.openggf.game.GameServices;
+import com.openggf.game.sonic2.resources.Sonic2PlcService;
 
 /**
  * Manages the Sonic 2 Title Screen with full intro animation.
@@ -110,6 +111,7 @@ public class TitleScreenManager implements TitleScreenProvider {
     private PatternSpriteRenderer spriteRenderer;
     private List<SpriteMappingFrame> titleMappingFrames;
     private boolean spritesInitialized = false;
+    private boolean titlePlcPending;
 
     // --- Intro animation state ---
     private boolean introComplete = false;
@@ -311,6 +313,8 @@ public class TitleScreenManager implements TitleScreenProvider {
             dataLoader.loadData();
         }
 
+        titlePlcPending = !queueTitlePlc();
+
         // Force palette re-upload on next draw
         dataLoader.resetCache();
 
@@ -385,8 +389,25 @@ public class TitleScreenManager implements TitleScreenProvider {
         LOGGER.info("Title screen initialized, entering SEGA_LOGO state");
     }
 
+    private boolean queueTitlePlc() {
+        try {
+            Sonic2PlcService plcService = GameServices.module().getGameService(Sonic2PlcService.class);
+            if (plcService != null) {
+                plcService.transact(Sonic2PlcService.replaceOperation(0));
+            }
+            return true;
+        } catch (Exception ignored) {
+            // The presentation renderer also runs without a gameplay module in focused tests.
+            return false;
+        }
+    }
+
     @Override
     public void update(InputHandler input) {
+        if (titlePlcPending) {
+            titlePlcPending = !queueTitlePlc();
+            if (titlePlcPending) return;
+        }
         switch (state) {
             case SEGA_LOGO -> updateSegaLogo(input);
             case INTRO_TEXT_FADE_IN -> updateIntroTextFadeIn(input);

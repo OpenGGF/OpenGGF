@@ -13,7 +13,7 @@ $ARGUMENTS: Zone abbreviation (e.g., "AIZ", "HCZ", "CNZ", "LRZ1") + mode: `imple
 
 ## Related Skills
 
-- **s3k-disasm-guide** (`.claude/skills/s3k-disasm-guide/SKILL.md`) -- disassembly navigation, label conventions, RomOffsetFinder commands, S&K vs S3 address selection.
+- **s3k-disasm-guide** (`.agents/skills/s3k-disasm-guide/SKILL.md`) -- disassembly navigation, label conventions, RomOffsetFinder commands, S&K vs S3 address selection.
 - **s3k-zone-analysis** -- zone-level analysis spec generation (the palette cycling section of a zone analysis spec feeds directly into this skill).
 
 ## Architecture
@@ -468,3 +468,10 @@ Examples:
 | S3K disassembly | `docs/skdisasm/sonic3k.asm` (S&K half) |
 | S3 disassembly | `docs/skdisasm/s3.asm` (S3 half, some zones) |
 | AGENTS_S3K reference | `AGENTS_S3K.md` (palette animation section) |
+
+## Queue Diagnostics Routing
+
+Palette cycling is separate from physical art queues. If trace evidence reaches
+`queue.*` or `dynamic_art.*`, use `s3k-plc-system` and
+`trace-replay-bug-fixing`; use `trace-green-fleet` for multiple frontiers.
+Those reports are zero-tolerance and comparison-only.

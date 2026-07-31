@@ -218,10 +218,20 @@ Recorder schemas have advanced since this table was written (the S1 complete-run
 
 For a full re-record and test cycle:
 
-1. Record zone (BizHawk headless, ~10-30 seconds)
-2. Verify metadata.json has correct date/zone/csv_version
+1. Record zone with BizHawk headless and `--load-queue-state` (~10-30 seconds)
+2. Verify `metadata.json` has the correct date/zone/csv_version and advertises
+   `load_queue_state_per_frame` plus
+   `dynamic_art_transfer_state_per_frame_v1`
 3. Copy 3 files to test resources
 4. Repeat for second zone if doing both
 5. Run `mvn test -Dtest="*TraceReplay"`
 6. Compare error count against the current baseline in `docs/status/trace-frontier-log.md` (GHZ1 should stay 0)
 7. If errors changed: read report JSON and cross-reference aux events at first error frame
+
+Queue and player-art fields are zero-tolerance, comparison-only frontiers.
+`queue.s1_nemesis_plc.*` reports physical Nemesis PLC state.
+`dynamic_art.*` reports ordered DPLC submissions, completions, request
+descriptors, outstanding transfer IDs, terminal forwarding, and schema-2
+run-gap ledger carry. Preserve the first failing frame, exact field, and error
+count in `docs/status/trace-frontier-log.md`; triage with
+`trace-replay-bug-fixing` before investigating downstream physics or objects.

@@ -468,3 +468,10 @@ Examples:
 | S3K disassembly | `docs/skdisasm/sonic3k.asm` (S&K half) |
 | S3 disassembly | `docs/skdisasm/s3.asm` (S3 half, some zones) |
 | AGENTS_S3K reference | `AGENTS_S3K.md` (palette animation section) |
+
+## Queue Diagnostics Routing
+
+Palette cycling is separate from physical art queues. If trace evidence reaches
+`queue.*` or `dynamic_art.*`, use `s3k-plc-system` and
+`trace-replay-bug-fixing`; use `trace-green-fleet` for multiple frontiers.
+Those reports are zero-tolerance and comparison-only.

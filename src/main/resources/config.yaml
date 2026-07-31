@@ -16,6 +16,10 @@ display:
   colorProfileToggleKey: V   # Runtime key to cycle the display color profile
   fps: 60   # Frames per second to render (changes game speed)
 
+# ── Gameplay ──
+gameplay:
+  loadTimeSimulation: "NONE"   # NONE, PROFILED, FAST (currently NONE), or REALISTIC (currently PROFILED)
+
 # ── Input ──
 input:
   pause: ENTER   # Toggle pause; the gamepad Start button also toggles it

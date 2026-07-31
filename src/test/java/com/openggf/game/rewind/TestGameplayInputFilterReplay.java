@@ -1,5 +1,6 @@
 package com.openggf.game.rewind;
 
+import com.openggf.LevelFrameTestStep;
 import com.openggf.LevelFrameContext;
 import com.openggf.LevelFrameStep;
 import com.openggf.camera.Camera;
@@ -91,7 +92,7 @@ class TestGameplayInputFilterReplay {
         RewindController controller = new RewindController(
                 gameplay.getRewindRegistry(), new InMemoryKeyframeStore(), recorded,
                 new LiveRewindStepper(recorded, () -> input,
-                        () -> LevelFrameContext.from(gameplay)),
+                        () -> LevelFrameContext.from(gameplay), () -> gameplay),
                 10);
 
         driveLiveFrame(input);
@@ -116,7 +117,7 @@ class TestGameplayInputFilterReplay {
 
     private void driveLiveFrame(InputHandler input) {
         sprites.publishHeldInputForLevelEvents(input);
-        LevelFrameStep.execute(LevelFrameContext.from(gameplay), level, gameplay.getCamera(),
+        LevelFrameTestStep.execute(LevelFrameContext.from(gameplay), level, gameplay.getCamera(),
                 () -> sprites.update(input));
     }
 

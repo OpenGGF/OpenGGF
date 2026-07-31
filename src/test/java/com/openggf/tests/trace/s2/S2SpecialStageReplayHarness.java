@@ -9,10 +9,14 @@ import com.openggf.debug.playback.RecordedInputSnapshots;
 import com.openggf.game.GameServices;
 import com.openggf.game.SpecialStageInputMapper;
 import com.openggf.game.SpecialStageStartupPolicy;
+import com.openggf.game.resources.DynamicArtDiagnosticsSnapshot;
+import com.openggf.game.resources.PlcLifecyclePhase;
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2SpecialStageProvider;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageComparisonState;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageReplayTestBridge;
 import com.openggf.trace.SpecialStageRunObjectsPassBinder.CompletedPass;
+import com.openggf.tests.trace.RecordedInputRows;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -72,7 +76,7 @@ import java.util.Objects;
 final class S2SpecialStageReplayHarness {
 
     private final Bk2Movie movie;
-    private final int bk2FrameOffset;
+    private final RecordedInputRows recordedInputs;
     private final InputHandler inputHandler;
     private final Sonic2SpecialStageProvider provider;
     private final List<Integer> steppedPassSequences = new ArrayList<>();
@@ -80,8 +84,6 @@ final class S2SpecialStageReplayHarness {
 
     S2SpecialStageReplayHarness(Path bk2, int bk2FrameOffset, int specialStageIndex)
             throws IOException {
-        this.bk2FrameOffset = bk2FrameOffset;
-
         // Recorded team: the SS trace was captured with Sonic + Tails. Set the
         // standard two-key config before initializeStage() runs setupPlayers().
         GameServices.configuration()
@@ -90,27 +92,13 @@ final class S2SpecialStageReplayHarness {
                 .setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
 
         this.movie = new Bk2MovieLoader().load(Objects.requireNonNull(bk2, "bk2"));
+        this.recordedInputs = new RecordedInputRows(movie, bk2FrameOffset);
         this.inputHandler = new InputHandler();
         this.provider = new Sonic2SpecialStageProvider();
         this.provider.initializeStage(
                 specialStageIndex, SpecialStageStartupPolicy.TRACE_ACCURATE);
         // Trace-paced replay: disable the runtime's own lag compensation.
         this.provider.setLagCompensation(0);
-    }
-
-    /** Absolute BK2 input-log row backing trace frame {@code traceFrame}. */
-    private Bk2FrameInput rowAt(int traceFrame) {
-        int index = bk2FrameOffset + traceFrame;
-        return rowAtAbsolute(index);
-    }
-
-    private Bk2FrameInput rowAtAbsolute(int index) {
-        List<Bk2FrameInput> frames = movie.getFrames();
-        if (index < 0 || index >= frames.size()) {
-            throw new IndexOutOfBoundsException(
-                    "BK2 row " + index + " out of range [0, " + frames.size() + ")");
-        }
-        return frames.get(index);
     }
 
     /**
@@ -120,21 +108,19 @@ final class S2SpecialStageReplayHarness {
      * row advances nothing engine-side (the row is simply skipped).
      */
     void stepFrame(int traceFrame) {
-        Bk2FrameInput current = rowAt(traceFrame);
-        int prevIndex = bk2FrameOffset + traceFrame - 1;
-        Bk2FrameInput previous = prevIndex >= 0 && prevIndex < movie.getFrames().size()
-                ? movie.getFrames().get(prevIndex)
-                : null; // fromBk2 synthesises a neutral prior row when null
-        inputHandler.setLogicalOverride(RecordedInputSnapshots.fromBk2(current, previous));
-        try {
+        runProductionRow(PlcLifecyclePhase.SPECIAL_STAGE,
+                () -> stepFrameBody(traceFrame));
+    }
+
+    private void stepFrameBody(int traceFrame) {
+        recordedInputs.withLogicalOverride(traceFrame, inputHandler, () -> {
             SpecialStageInputMapper.MappedInput mapped =
                     SpecialStageInputMapper.map(inputHandler.logical());
             provider.handleInput(mapped.p1Held(), mapped.p1Pressed());
-            provider.handlePlayer2Input(mapped.p2Held(), mapped.p2Logical());
+            provider.handlePlayer2Input(
+                    mapped.p2Held(), mapped.p2Logical());
             provider.update();
-        } finally {
-            inputHandler.clearLogicalOverride();
-        }
+        });
     }
 
     /**
@@ -144,6 +130,26 @@ final class S2SpecialStageReplayHarness {
      * are never used to drive the engine.
      */
     void stepPass(CompletedPass pass) {
+        runProductionRow(PlcLifecyclePhase.SPECIAL_STAGE,
+                () -> stepPassBody(pass));
+    }
+
+    void stepPasses(
+            List<CompletedPass> passes,
+            boolean completeTerminalPreStartPass,
+            boolean lagged) {
+        runProductionRow(
+                lagged ? PlcLifecyclePhase.LAG
+                        : PlcLifecyclePhase.SPECIAL_STAGE,
+                () -> {
+            if (completeTerminalPreStartPass) {
+                completeTerminalPreStartPassBody();
+            }
+            passes.forEach(this::stepPassBody);
+        });
+    }
+
+    private void stepPassBody(CompletedPass pass) {
         SpecialStageInputMapper.MappedInput mapped = mappedInputForPass(movie, pass);
         provider.handleInput(mapped.p1Held(), mapped.p1Pressed());
         provider.handlePlayer2Input(mapped.p2Held(), mapped.p2Logical());
@@ -158,8 +164,50 @@ final class S2SpecialStageReplayHarness {
 
     /** Publishes Obj5F's terminal pre-start object pass without a new VInt. */
     void completeTerminalPreStartPass() {
+        runProductionRow(PlcLifecyclePhase.SPECIAL_STAGE,
+                this::completeTerminalPreStartPassBody);
+    }
+
+    private void completeTerminalPreStartPassBody() {
         Sonic2SpecialStageReplayTestBridge.completeTerminalPreStartPassWithoutVint(
                 provider.getManager());
+    }
+
+    void stepLagRow() {
+        runProductionRow(PlcLifecyclePhase.LAG, () -> {
+        });
+    }
+
+    void stepIdleRow(boolean lagged) {
+        runProductionRow(
+                lagged ? PlcLifecyclePhase.LAG
+                        : PlcLifecyclePhase.SPECIAL_STAGE,
+                () -> {
+                });
+    }
+
+    DynamicArtDiagnosticsSnapshot captureDynamicArt() {
+        return GameServices.captureDynamicArtDiagnostics();
+    }
+
+    void finishDynamicArtSegment() {
+        var lifecycle =
+                SessionManager.getCurrentGameplayMode().dynamicArtLifecycle();
+        if (lifecycle.isComparisonSegmentOpen()) {
+            lifecycle.closeComparisonSegment();
+        }
+    }
+
+    private static void runProductionRow(
+            PlcLifecyclePhase phase, Runnable body) {
+        SessionManager.getCurrentGameplayMode().plcFrameLifecycle()
+                .runLogicalIteration(() -> {
+                }, frame -> {
+                    frame.claim(phase);
+                    body.run();
+                    frame.prepareAfterLoop(phase);
+                    return null;
+                });
     }
 
     void forceFinishedAfterPassForTest(int sequence) {

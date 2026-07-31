@@ -394,6 +394,12 @@ public abstract class AbstractTraceReplayTest {
                             i, bk2Input, expected.input()));
                     }
                     if (!TraceReplayBootstrap.shouldCompareGameplayStateForReplay(phase)) {
+                        compareDynamicArtIfAdvertised(
+                                trace, binder, expected.frame());
+                        if (observeFrontierAndShouldStop(
+                                frontierStopper, binder, expected.frame())) {
+                            break;
+                        }
                         continue;
                     }
                     TraceFrame comparisonExpected =
@@ -436,6 +442,10 @@ public abstract class AbstractTraceReplayTest {
                                 engineDiag.animationId(), engineDiag.mappingFrame(), engineDiagText),
                         secondaryCharacterLabel, actualSidekick,
                         expectedSidekickCpu, actualSidekickCpu, expectedSidekickNormalStep);
+                    compareLoadQueuesIfAdvertised(
+                            trace, binder, comparisonExpected.frame());
+                    compareDynamicArtIfAdvertised(
+                            trace, binder, expected.frame());
                     if (compareObjectNearEvents()) {
                         binder.compareObjectNear(
                                 comparisonExpected.frame(),
@@ -450,6 +460,9 @@ public abstract class AbstractTraceReplayTest {
                 }
             }
 
+            finishDynamicArtComparison(
+                    trace, binder, fixture,
+                    !frontierStopper.stoppedEarly());
             fixture.closeHardwareTimingReplayRun();
             hardwareTimingReplayClosed = true;
 
@@ -599,6 +612,8 @@ public abstract class AbstractTraceReplayTest {
                     expectedSidekickCpu,
                     actualSidekickCpu,
                     expectedSidekickNormalStep);
+            compareDynamicArtIfAdvertised(
+                    trace, binder, seededFrame.frame());
             observeFrontierAndShouldStop(frontierStopper, binder, seededFrame.frame());
 
             for (int frame = 0; frame <= replayStart.seededTraceIndex(); frame++) {
@@ -742,7 +757,17 @@ public abstract class AbstractTraceReplayTest {
                         expectedSidekickCpu,
                         actualSidekickCpu,
                         expectedSidekickNormalStep);
+                compareLoadQueuesIfAdvertised(trace, binder, driveFrame.frame());
+                compareDynamicArtIfAdvertised(
+                        trace, binder, driveFrame.frame());
                 if (observeFrontierAndShouldStop(frontierStopper, binder, driveFrame.frame())) {
+                    break;
+                }
+            } else {
+                compareDynamicArtIfAdvertised(
+                        trace, binder, driveFrame.frame());
+                if (observeFrontierAndShouldStop(
+                        frontierStopper, binder, driveFrame.frame())) {
                     break;
                 }
             }
@@ -763,6 +788,45 @@ public abstract class AbstractTraceReplayTest {
             driveTraceIndex++;
             previousDriveFrame = driveFrame;
         }
+    }
+
+    private static void compareLoadQueuesIfAdvertised(
+            TraceData trace, TraceBinder binder, int frame) {
+        if (trace.metadata().hasPerFrameLoadQueueState()) {
+            binder.compareLoadQueues(frame, trace.loadQueueStatesForFrame(frame),
+                    GameServices.captureQueueDiagnostics());
+        }
+    }
+
+    private static void compareDynamicArtIfAdvertised(
+            TraceData trace, TraceBinder binder, int frame) {
+        if (trace.metadata().hasPerFrameDynamicArtTransferState()) {
+            List<TraceEvent.DynamicArtTransferState> states =
+                    trace.dynamicArtTransferStates();
+            if (!states.isEmpty() && frame == states.getLast().frame()) {
+                return;
+            }
+            binder.compareDynamicArt(
+                    trace.dynamicArtTransferStateForFrame(frame),
+                    GameServices.captureDynamicArtDiagnostics());
+        }
+    }
+
+    private static void finishDynamicArtComparison(
+            TraceData trace,
+            TraceBinder binder,
+            com.openggf.trace.replay.TraceReplayFixture fixture,
+            boolean replayCompleted) {
+        fixture.closeDynamicArtComparisonSegment();
+        if (!replayCompleted
+                || !trace.metadata()
+                        .hasPerFrameDynamicArtTransferState()) {
+            return;
+        }
+        TraceEvent.DynamicArtTransferState expected =
+                trace.dynamicArtTransferStates().getLast();
+        var actual = GameServices.captureDynamicArtDiagnostics();
+        binder.compareDynamicArt(expected, actual);
     }
 
     private boolean observeFrontierAndShouldStop(

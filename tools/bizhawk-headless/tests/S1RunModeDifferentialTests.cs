@@ -55,14 +55,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private static readonly Regex RecordingDateLine = new Regex(
             "^  \"recording_date\": \"[0-9]{4}-[0-9]{2}-[0-9]{2}\",$");
         private const string FixtureLuaScriptVersionLine =
-            "  \"lua_script_version\": \"3.15\",";
+            "  \"lua_script_version\": \"3.18\",";
         private const string ProducedLuaScriptVersionLine =
             "  \"lua_script_version\": \"3.18\",";
 
         // The recorder-regenerated fixture manifest's CRLF bytes.
         private const string RunManifestSha256 =
-            "d986d4b6a095582034a1ecf965b269673e73234f1af2b0c023b4d87c7"
-            + "10e5623";
+            "84e992d69b02485d81d006499e868294aea605f2fa146f0352b6dad91"
+            + "571b20c";
 
         private static readonly S1RunSegmentCase[] RunSegmentCases =
         {
@@ -73,8 +73,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 4182,
                 "ba92b77976ef3541c1bf15ac8e789159ec93e6c2cc031c3a31da1a85"
                 + "5595b239",
-                "24745e5d1c33bdcb55c8cf36def0a42c2a02c0927377531a525310db"
-                + "092441ab"),
+                "7098beb9a25afba1cfb71b86479a479fe16fa509653b5a171d6ec580"
+                + "8a50d592"),
             new S1RunSegmentCase(
                 "ss",
                 "special_stage",
@@ -82,8 +82,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 3091,
                 "45b58e1a9705397084698a53e121971cc4923545621454888"
                 + "2c8b4687f1bd55e",
-                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b"
-                + "7852b855"),
+                "91faeaeea00a2c8fc4e7d26f83726a87deb981f876bf81bac71e9256"
+                + "695bd17f"),
             new S1RunSegmentCase(
                 "ghz2",
                 "level",
@@ -91,8 +91,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 812,
                 "4614be0f39c0310ccaffbb9a0ac9f610fac58e13705dac8baa6c2570"
                 + "4cbfb6e3",
-                "07a84197ee0d1e44cb0d6ac74a0d22cb79af7742bf13636e336891de"
-                + "cbac4eee")
+                "4d29b3dee5a22edd1ae168b285f9fa2c063dd72c28948da493d6a8ef"
+                + "3adf123d")
         };
 
         public static void Register(ICollection<TestMain.TestCase> tests)
@@ -227,7 +227,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     Path.Combine(runDirectory, "run_manifest.json"),
                     Path.Combine(output, "run_manifest.json"),
                     0,
-                    0);
+                    1);
                 AssertOutputLayoutIsExactlyTheRun(output);
             }
             finally

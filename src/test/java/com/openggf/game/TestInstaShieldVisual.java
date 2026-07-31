@@ -7,6 +7,7 @@ import com.openggf.game.session.EngineContext;
 import com.openggf.Engine;
 import com.openggf.LevelFrameContext;
 import com.openggf.LevelFrameStep;
+import com.openggf.LevelFrameTestStep;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -287,7 +288,7 @@ public class TestInstaShieldVisual {
 
         LevelManager lm = GameServices.level();
 
-        LevelFrameStep.execute(LevelFrameContext.from(SessionManager.getCurrentGameplayMode()),
+        LevelFrameTestStep.execute(LevelFrameContext.from(SessionManager.getCurrentGameplayMode()),
                 lm, GameServices.camera(), () -> {
             boolean controlLocked = player.isControlLocked();
             boolean forcedRight = player.isForcedInputActive(AbstractPlayableSprite.INPUT_RIGHT)
@@ -343,5 +344,4 @@ public class TestInstaShieldVisual {
         return count;
     }
 }
-
 

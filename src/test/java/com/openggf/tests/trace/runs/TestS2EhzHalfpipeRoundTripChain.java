@@ -3,18 +3,20 @@ package com.openggf.tests.trace.runs;
 import com.openggf.GameLoop;
 import com.openggf.control.InputHandler;
 import com.openggf.game.GameMode;
-import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
-import com.openggf.debug.playback.RecordedInputSnapshots;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import com.openggf.trace.SpecialStageTraceData;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker.SegmentPlan;
+import com.openggf.tests.trace.RecordedInputRows;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
+import java.util.function.IntConsumer;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Chain integration test for the committed {@code s2-ehz-halfpipe-roundtrip}
@@ -110,7 +112,30 @@ class TestS2EhzHalfpipeRoundTripChain extends AbstractRunChainTest {
 
     @Test
     void ehzHalfpipeRoundTrip() throws Exception {
-        assertChainReplay(RUN_DIR);
+        DynamicArtGapJournalEvidence evidence = assertChainReplay(RUN_DIR);
+        DynamicArtStructuralGapEvidence returnGap =
+                evidence.structuralGap("ss_2", "seg3_ehz1");
+        assertTrue(returnGap.transitionCountAfterNextArm()
+                        > evidence.transitionCountAfterFirstArm(),
+                "the real S2 represented-segment -> named-run gap -> next-segment "
+                        + "boundary must grow the journal beyond first-arm bootstrap");
+        assertTrue(returnGap.transitionCountAfterNextArm()
+                        > returnGap.transitionCountAtGapStart(),
+                "the real S2 ss_2 -> seg3_ehz1 structural gap must append production art");
+        assertTrue(returnGap.lastEdgeOrdinalAfterNextArm()
+                        > evidence.lastEdgeOrdinalAfterFirstArm(),
+                "the real S2 named-run gap must append a later production edge ordinal");
+        assertTrue(returnGap.lastEdgeOrdinalAfterNextArm()
+                        > returnGap.lastEdgeOrdinalAtGapStart(),
+                "the real S2 ss_2 -> seg3_ehz1 structural gap must advance the edge ordinal");
+        assertTrue(returnGap.transitionsAddedAcrossBoundary().stream()
+                        .map(transition -> transition.edge())
+                        .anyMatch(edge -> edge.movieLogicalFrame()
+                                >= returnGap.gapStartMovieLogicalFrame()
+                                && edge.movieLogicalFrame()
+                                <= returnGap.nextSegmentArmMovieLogicalFrame()),
+                "the real S2 named-run boundary must add a production art edge "
+                        + "inside its structural gap");
     }
 
     /**
@@ -131,7 +156,7 @@ class TestS2EhzHalfpipeRoundTripChain extends AbstractRunChainTest {
      * skips lag rows without stepping the engine.
      */
     @Override
-    protected Runnable uncomparedInteriorStep(
+    protected IntConsumer uncomparedInteriorStep(
             GameLoop loop, InputHandler inputHandler, Bk2Movie movie, SegmentPlan interior) {
         Path ssDir = RUN_DIR.resolve(interior.segment().dir());
         SpecialStageTraceData trace;
@@ -141,8 +166,8 @@ class TestS2EhzHalfpipeRoundTripChain extends AbstractRunChainTest {
             throw new UncheckedIOException("Failed to load S2 special-stage lag trace: " + ssDir, e);
         }
         int bk2FrameOffset = interior.segment().bk2FrameOffset();
-        int[] traceRow = {0};
-        return () -> {
+        RecordedInputRows recordedInputs = new RecordedInputRows(movie, bk2FrameOffset);
+        return traceRow -> {
             // Once the engine has left the special stage itself (results screen,
             // fade, and the special-stage-return title card), stop feeding the
             // special-stage trace as a logical-input override. The recorded SS
@@ -154,30 +179,25 @@ class TestS2EhzHalfpipeRoundTripChain extends AbstractRunChainTest {
             // cursor (pre-seeked by runChain to the return segment's offset) drives
             // the fall-through frame.
             if (loop.getCurrentGameMode() != GameMode.SPECIAL_STAGE) {
-                AbstractRunChainTest.stepEngineFrame(loop);
+                if (trace.metadata()
+                        .hasPerFrameDynamicArtTransferState()) {
+                    stepUncomparedInteriorLifecycleRow(
+                            traceRow < trace.frameCount()
+                                    && trace.getFrame(traceRow).lag());
+                }
                 return;
             }
-            while (traceRow[0] < trace.frameCount() && trace.getFrame(traceRow[0]).lag()) {
-                traceRow[0]++;
-            }
-            if (traceRow[0] >= trace.frameCount()) {
-                // Trace exhausted before stage_exit latched -- fall back to a
-                // plain engine step so the boundary await can still detect a
-                // late mode flip or trip its step cap instead of looping on
-                // an out-of-range trace read.
-                AbstractRunChainTest.stepEngineFrame(loop);
+            if (traceRow < trace.frameCount()
+                    && trace.getFrame(traceRow).lag()) {
+                if (trace.metadata()
+                        .hasPerFrameDynamicArtTransferState()) {
+                    stepUncomparedInteriorLifecycleRow(true);
+                }
                 return;
             }
-            int absoluteRow = bk2FrameOffset + traceRow[0];
-            Bk2FrameInput current = movie.getFrame(absoluteRow);
-            Bk2FrameInput previous = absoluteRow > 0 ? movie.getFrame(absoluteRow - 1) : null;
-            inputHandler.setLogicalOverride(RecordedInputSnapshots.fromBk2(current, previous));
-            try {
+            recordedInputs.withLogicalOverride(traceRow, inputHandler, () -> {
                 AbstractRunChainTest.stepEngineFrame(loop);
-            } finally {
-                inputHandler.clearLogicalOverride();
-            }
-            traceRow[0]++;
+            });
         };
     }
 }

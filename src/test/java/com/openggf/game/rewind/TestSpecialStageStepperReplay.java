@@ -6,6 +6,15 @@ import com.openggf.game.ResultsScreen;
 import com.openggf.game.SpecialStageAccessType;
 import com.openggf.game.SpecialStageDebugProvider;
 import com.openggf.game.SpecialStageProvider;
+import com.openggf.game.resources.PlcFrameLifecycleCoordinator;
+import com.openggf.game.resources.PlcLifecyclePhase;
+import com.openggf.game.resources.PlcLifecycleService;
+import com.openggf.game.session.GameplayModeContext;
+import com.openggf.game.session.WorldSession;
+import com.openggf.game.GameModule;
+import com.openggf.game.RuntimeArtCoordinator;
+import com.openggf.game.timing.HardwareTimingService;
+import com.openggf.graphics.FadeManager;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -17,6 +26,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class TestSpecialStageStepperReplay {
 
@@ -25,7 +36,7 @@ class TestSpecialStageStepperReplay {
         LiveRewindInputSource inputs = new LiveRewindInputSource();
         InputHandler input = new InputHandler();
         FakeSpecialStageProvider provider = new FakeSpecialStageProvider();
-        SpecialStageStepper stepper = new SpecialStageStepper(inputs, () -> input, () -> provider);
+        SpecialStageStepper stepper = stepper(inputs, input, () -> provider);
 
         stepper.step(new Bk2FrameInput(1, 0x0C, 0x03, true, 0x01, 0x04, false, "row"));
 
@@ -43,7 +54,7 @@ class TestSpecialStageStepperReplay {
         FakeSpecialStageProvider provider = new FakeSpecialStageProvider();
         RuntimeException expected = new RuntimeException("update failed");
         provider.updateFailure = expected;
-        SpecialStageStepper stepper = new SpecialStageStepper(inputs, () -> input, () -> provider);
+        SpecialStageStepper stepper = stepper(inputs, input, () -> provider);
 
         RuntimeException actual = assertThrows(RuntimeException.class,
                 () -> stepper.step(new Bk2FrameInput(1, 0x0C, 0x03, true, 0x01, 0x04, false, "row")));
@@ -60,10 +71,10 @@ class TestSpecialStageStepperReplay {
         FakeSpecialStageProvider second = new FakeSpecialStageProvider();
         AtomicInteger supplierCalls = new AtomicInteger();
         SpecialStageProvider[] providers = { first, second };
-        SpecialStageStepper stepper = new SpecialStageStepper(
-                inputs,
-                () -> input,
-                () -> providers[Math.min(supplierCalls.getAndIncrement(), providers.length - 1)]);
+        SpecialStageStepper stepper = stepper(
+                inputs, input,
+                () -> providers[Math.min(
+                        supplierCalls.getAndIncrement(), providers.length - 1)]);
 
         Bk2FrameInput row = new Bk2FrameInput(1, 0x0C, 0x03, true, 0x01, 0x04, false, "row");
         stepper.step(row);
@@ -81,7 +92,7 @@ class TestSpecialStageStepperReplay {
         InputHandler input = new InputHandler();
         FakeSpecialStageProvider provider = new FakeSpecialStageProvider();
         provider.finishDuringUpdate = true;
-        SpecialStageStepper stepper = new SpecialStageStepper(inputs, () -> input, () -> provider);
+        SpecialStageStepper stepper = stepper(inputs, input, () -> provider);
 
         stepper.step(new Bk2FrameInput(1, 0x0C, 0x03, true, 0x01, 0x04, false, "row"));
 
@@ -92,7 +103,71 @@ class TestSpecialStageStepperReplay {
         assertEquals(0, provider.resultScreenCreations);
     }
 
-    private static final class FakeSpecialStageProvider implements SpecialStageProvider {
+    @Test
+    void productionStepperOwnsSpecialStageServiceScanAndPreparation() {
+        List<String> lifecycle = new ArrayList<>();
+        PlcLifecycleService service = new PlcLifecycleService() {
+            @Override
+            public void serviceVBlank(PlcLifecyclePhase phase) {
+                lifecycle.add("service-three:" + phase);
+            }
+
+            @Override
+            public boolean hasPreparationBoundary(PlcLifecyclePhase phase) {
+                return phase == PlcLifecyclePhase.SPECIAL_STAGE;
+            }
+
+            @Override
+            public void prepareAfterLoop(PlcLifecyclePhase phase) {
+                lifecycle.add("prepare:" + phase);
+            }
+        };
+        LiveRewindInputSource inputs = new LiveRewindInputSource();
+        InputHandler input = new InputHandler();
+        FakeSpecialStageProvider provider = new FakeSpecialStageProvider() {
+            @Override
+            public void update() {
+                lifecycle.add("provider");
+                super.update();
+            }
+        };
+        GameplayModeContext gameplayMode = gameplayMode(service);
+        SpecialStageStepper stepper = new SpecialStageStepper(
+                inputs, () -> input, () -> provider, () -> gameplayMode);
+
+        stepper.step(new Bk2FrameInput(
+                1, 0, 0, false, 0, 0, false, "row"));
+
+        assertEquals(List.of(
+                "service-three:SPECIAL_STAGE",
+                "provider",
+                "prepare:SPECIAL_STAGE"), lifecycle);
+    }
+
+    private static SpecialStageStepper stepper(
+            LiveRewindInputSource inputs,
+            InputHandler input,
+            java.util.function.Supplier<SpecialStageProvider> provider) {
+        GameplayModeContext gameplayMode = gameplayMode(null);
+        return new SpecialStageStepper(
+                inputs, () -> input, provider, () -> gameplayMode);
+    }
+
+    private static GameplayModeContext gameplayMode(PlcLifecycleService service) {
+        GameplayModeContext gameplayMode = mock(GameplayModeContext.class);
+        GameModule module = mock(GameModule.class);
+        WorldSession world = mock(WorldSession.class);
+        when(world.getGameModule()).thenReturn(module);
+        when(gameplayMode.getWorldSession()).thenReturn(world);
+        when(gameplayMode.plcFrameLifecycle()).thenReturn(
+                new PlcFrameLifecycleCoordinator(service));
+        when(gameplayMode.getFadeManager()).thenReturn(mock(FadeManager.class));
+        when(gameplayMode.hardwareTiming()).thenReturn(new HardwareTimingService());
+        when(gameplayMode.runtimeArtCoordinator()).thenReturn(RuntimeArtCoordinator.NONE);
+        return gameplayMode;
+    }
+
+    private static class FakeSpecialStageProvider implements SpecialStageProvider {
         private final List<String> calls = new ArrayList<>();
         private RuntimeException updateFailure;
         private boolean finishDuringUpdate;

@@ -11,7 +11,16 @@ $ErrorActionPreference = "Stop"
 $script:GithubFileSizeLimitBytes = 100000000
 $script:TraceCompressionThresholdBytes = 1048576
 $script:ReleaseTrailerCutoverBase = "677447024a08db9e25f3461588d661c23ba26848"
+$script:ResourcePolicyCutover = "ccdd33edf4f9cd4a7937791f1d4c2f37cbeeb5e0"
 $script:RomLikeDenylistExtensions = @(".gen", ".smd", ".bin", ".sms", ".gg", ".32x")
+$script:EmptyTreeOid = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
+$script:AllZeroOid = "0000000000000000000000000000000000000000"
+$script:PosixHomeRoot = "/home"
+$script:VarHomeRoot = "/var/home"
+$script:MacosHomeRoot = "/Users"
+$script:WindowsUsersRoot = '[A-Za-z]:[\\/]+[Uu][Ss][Ee][Rr][Ss]'
+$script:MachineLocalPathGrandfather =
+        Join-Path $PSScriptRoot "machine-local-path-grandfather.sha256"
 
 function Fail([string]$Message) {
     [Console]::Error.WriteLine("policy: $Message")
@@ -22,18 +31,29 @@ function Note([string]$Message) {
     [Console]::Error.WriteLine("policy: $Message")
 }
 
-function Invoke-GitText([string[]]$Arguments, [switch]$AllowFailure) {
+function Invoke-GitResult([string[]]$Arguments) {
     $output = & git @Arguments 2>$null
-    if (-not $AllowFailure -and $LASTEXITCODE -ne 0) {
-        throw "git $($Arguments -join ' ') failed with exit code $LASTEXITCODE"
+    $exitCode = $LASTEXITCODE
+    $text = if ($null -eq $output) {
+        ""
+    } else {
+        ($output -join "`n").TrimEnd("`r", "`n")
     }
-    if ($LASTEXITCODE -ne 0) {
+    return [pscustomobject]@{
+        ExitCode = $exitCode
+        Text = $text
+    }
+}
+
+function Invoke-GitText([string[]]$Arguments, [switch]$AllowFailure) {
+    $result = Invoke-GitResult $Arguments
+    if (-not $AllowFailure -and $result.ExitCode -ne 0) {
+        throw "git $($Arguments -join ' ') failed with exit code $($result.ExitCode)"
+    }
+    if ($result.ExitCode -ne 0) {
         return ""
     }
-    if ($null -eq $output) {
-        return ""
-    }
-    return ($output -join "`n").TrimEnd("`r", "`n")
+    return $result.Text
 }
 
 function Invoke-GitLines([string[]]$Arguments, [switch]$AllowFailure) {
@@ -73,15 +93,57 @@ function Get-MasterTipOid() {
 function Test-MergeFromMaster() {
     $mergeOid = Get-MergeHeadOid
     $masterOid = Get-MasterTipOid
-    return (-not [string]::IsNullOrWhiteSpace($mergeOid) -and -not [string]::IsNullOrWhiteSpace($masterOid) -and $mergeOid -eq $masterOid)
+    return (-not [string]::IsNullOrWhiteSpace($mergeOid) -and
+        -not [string]::IsNullOrWhiteSpace($masterOid) -and
+        $mergeOid -ceq $masterOid)
 }
 
 function Get-StagedFiles() {
-    return Invoke-GitLines @("diff", "--cached", "--name-only", "--diff-filter=ACMRD")
+    return Invoke-GitLines @("diff", "--cached", "--name-only", "--diff-filter=ACMRT")
+}
+
+function Get-StagedCandidates() {
+    $mergeOid = Get-MergeHeadOid
+    if (-not [string]::IsNullOrWhiteSpace($mergeOid)) {
+        return Invoke-GitLines @("diff", "--cached", "--no-renames", "--name-only", "--diff-filter=AMT", $mergeOid)
+    }
+    if (Test-GitSuccess @("rev-parse", "-q", "--verify", "HEAD")) {
+        return Invoke-GitLines @("diff", "--cached", "--no-renames", "--name-only", "--diff-filter=AMT", "HEAD")
+    }
+    return Invoke-GitLines @("diff", "--cached", "--no-renames", "--name-only", "--diff-filter=AMT")
 }
 
 function Get-CommitFiles([string]$Commit) {
-    return Invoke-GitLines @("diff-tree", "--root", "--no-commit-id", "--name-only", "--diff-filter=ACMRD", "-r", $Commit)
+    return Invoke-GitLines @("diff-tree", "--root", "--no-commit-id", "--name-only", "--diff-filter=ACMRT", "-r", $Commit)
+}
+
+function Get-CommitParentOrEmptyTree([string]$Commit) {
+    $mergeParent = Invoke-GitText @("rev-parse", "-q", "--verify", "$Commit^2") -AllowFailure
+    if (-not [string]::IsNullOrWhiteSpace($mergeParent)) {
+        return $mergeParent
+    }
+    $parent = Invoke-GitText @("rev-parse", "-q", "--verify", "$Commit^1") -AllowFailure
+    if ([string]::IsNullOrWhiteSpace($parent)) {
+        return $script:EmptyTreeOid
+    }
+    return $parent
+}
+
+function Get-CommitCandidates([string]$Commit) {
+    if (Test-GitSuccess @("rev-parse", "-q", "--verify", "$Commit^2")) {
+        # A merge commit's own candidates are the paths whose content differs
+        # from every parent. Anything matching either side was already
+        # published on that side and is that branch's history, not content
+        # this merge introduces.
+        $first = Invoke-GitText @("rev-parse", "$Commit^1")
+        $second = Invoke-GitText @("rev-parse", "$Commit^2")
+        $firstFiles = @(Invoke-GitLines @("diff", "--no-renames", "--name-only", "--diff-filter=AMT", $first, $Commit))
+        $secondFiles = @(Invoke-GitLines @("diff", "--no-renames", "--name-only", "--diff-filter=AMT", $second, $Commit))
+        $secondSet = New-Object 'System.Collections.Generic.HashSet[string]' (,[string[]]$secondFiles)
+        return @($firstFiles | Where-Object { $secondSet.Contains($_) })
+    }
+    $parent = Get-CommitParentOrEmptyTree $Commit
+    return Invoke-GitLines @("diff", "--no-renames", "--name-only", "--diff-filter=AMT", $parent, $Commit)
 }
 
 $script:ModApiDescriptor = "mod-api-release-policy.properties"
@@ -208,6 +270,293 @@ function Get-CommitBlobSize([string]$Commit, [string]$Path) {
     return [long]$size
 }
 
+function Get-StagedEntryMode([string]$Path) {
+    foreach ($entry in (Invoke-GitLines @("ls-files", "--stage", "--", ":(literal)$Path"))) {
+        if ($entry -match '^([0-9]{6})\s+[0-9a-f]+\s+0\t') {
+            return $Matches[1]
+        }
+    }
+    return ""
+}
+
+function Get-CommitEntryMode([string]$Commit, [string]$Path) {
+    foreach ($entry in (Invoke-GitLines @("ls-tree", $Commit, "--", ":(literal)$Path"))) {
+        if ($entry -match '^([0-9]{6})\s+') {
+            return $Matches[1]
+        }
+    }
+    return ""
+}
+
+function Get-StagedBlob([string]$Path) {
+    return Invoke-GitResult @("cat-file", "blob", ":$Path")
+}
+
+function Get-CommitBlob([string]$Commit, [string]$Path) {
+    return Invoke-GitResult @("cat-file", "blob", "${Commit}:$Path")
+}
+
+function Test-ProtectedResourcePath([string]$Path) {
+    if ($Path -ceq "config.yaml" -or $Path.EndsWith(".gen", [System.StringComparison]::Ordinal)) {
+        return $true
+    }
+    foreach ($protectedPath in @(
+            "docs/s1disasm",
+            "docs/s2disasm",
+            "docs/kis2disasm",
+            "docs/scddisasm",
+            "docs/skdisasm"
+        )) {
+        if ([string]::Equals($Path, $protectedPath, [System.StringComparison]::Ordinal)) {
+            return $true
+        }
+    }
+    return $false
+}
+
+function Test-AbsoluteLinkTarget([string]$Target) {
+    return $Target.StartsWith("/", [System.StringComparison]::Ordinal) `
+        -or $Target -match '^[A-Za-z]:[\\/]' `
+        -or $Target.StartsWith("\\", [System.StringComparison]::Ordinal)
+}
+
+function Test-RootScratchPath([string]$Path) {
+    if ($Path.Contains("/")) {
+        return $false
+    }
+    return $Path -cmatch '^(MERGE-STATUS.*|HANDOVER.*)\.md$'
+}
+
+function Get-MachineLocalHomeGrepArguments([string]$Path, [string]$Commit) {
+    $arguments = New-Object System.Collections.Generic.List[string]
+    $arguments.Add("grep") | Out-Null
+    if ([string]::IsNullOrWhiteSpace($Commit)) {
+        $arguments.Add("--cached") | Out-Null
+    }
+    foreach ($argument in @(
+        "-I",
+        "-q",
+        "-E",
+        "-e",
+        ($script:PosixHomeRoot + '/[^/$<[:space:]][^/[:space:]]*/'),
+        "-e",
+        ($script:VarHomeRoot + '/[^/$<[:space:]][^/[:space:]]*/'),
+        "-e",
+        ($script:MacosHomeRoot + '/[^/$<[:space:]][^/[:space:]]*/'),
+        "-e",
+        ($script:WindowsUsersRoot + '[\\/]+[^\\/$<%[:space:]][^\\/[:space:]]*[\\/]')
+    )) {
+        $arguments.Add($argument) | Out-Null
+    }
+    if (-not [string]::IsNullOrWhiteSpace($Commit)) {
+        $arguments.Add($Commit) | Out-Null
+    }
+    $arguments.Add("--") | Out-Null
+    $arguments.Add(":(literal)$Path") | Out-Null
+    return $arguments.ToArray()
+}
+
+function Test-StagedBlobHasMachineLocalHome([string]$Path) {
+    $result = Invoke-GitResult (Get-MachineLocalHomeGrepArguments $Path "")
+    return $result.ExitCode
+}
+
+function Test-CommitBlobHasMachineLocalHome([string]$Commit, [string]$Path) {
+    $result = Invoke-GitResult (Get-MachineLocalHomeGrepArguments $Path $Commit)
+    return $result.ExitCode
+}
+
+function Get-StagedCandidateBase() {
+    $mergeOid = Get-MergeHeadOid
+    if (-not [string]::IsNullOrWhiteSpace($mergeOid)) {
+        return $mergeOid
+    }
+    $head = Invoke-GitText @("rev-parse", "-q", "--verify", "HEAD") -AllowFailure
+    if ([string]::IsNullOrWhiteSpace($head)) {
+        return $script:EmptyTreeOid
+    }
+    return $head
+}
+
+function Test-BaselineHasPath([string]$Baseline, [string]$Path) {
+    return Test-GitSuccess @("cat-file", "-e", "${Baseline}:$Path")
+}
+
+function Test-TextHasMachineLocalHome([string]$Text) {
+    $pattern = '(?:/home|/var/home|/Users)/[^/$<\s][^/\s]*/|' +
+            '[A-Za-z]:[\\/]+[Uu][Ss][Ee][Rr][Ss][\\/]+[^\\/$<%\s][^\\/\s]*[\\/]'
+    return $Text -cmatch $pattern
+}
+
+function Get-IntroducedLines(
+        [string]$Baseline,
+        [string]$Commit,
+        [string]$Path,
+        [string]$Source) {
+    $arguments = New-Object System.Collections.Generic.List[string]
+    $arguments.Add("diff") | Out-Null
+    if ($Source -eq "staged") {
+        $arguments.Add("--cached") | Out-Null
+    }
+    foreach ($argument in @("--no-ext-diff", "--unified=0", $Baseline)) {
+        $arguments.Add($argument) | Out-Null
+    }
+    if ($Source -eq "commit") {
+        $arguments.Add($Commit) | Out-Null
+    }
+    $arguments.Add("--") | Out-Null
+    $arguments.Add(":(literal)$Path") | Out-Null
+
+    $diff = Invoke-GitResult $arguments.ToArray()
+    if ($diff.ExitCode -ne 0) {
+        throw "could not inspect introduced lines for $Path"
+    }
+    return @($diff.Text -split "`r?`n" |
+            Where-Object { $_.StartsWith("+") -and -not $_.StartsWith("+++") } |
+            ForEach-Object { $_.Substring(1) })
+}
+
+function Get-LineSha256([string]$Line) {
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $bytes = [System.Text.Encoding]::UTF8.GetBytes($Line)
+        return [Convert]::ToHexString($sha.ComputeHash($bytes)).ToLowerInvariant()
+    } finally {
+        $sha.Dispose()
+    }
+}
+
+function Get-GitBlobBytes([string]$Source, [string]$Commit, [string]$Path) {
+    $spec = if ($Source -eq "commit") { "${Commit}:$Path" } else { ":$Path" }
+    $startInfo = New-Object System.Diagnostics.ProcessStartInfo
+    $startInfo.FileName = "git"
+    $startInfo.Arguments = "cat-file blob `"$spec`""
+    $startInfo.WorkingDirectory = (Get-Location).Path
+    $startInfo.UseShellExecute = $false
+    $startInfo.RedirectStandardOutput = $true
+    $startInfo.RedirectStandardError = $true
+    $process = New-Object System.Diagnostics.Process
+    $process.StartInfo = $startInfo
+    [void]$process.Start()
+    $memory = New-Object System.IO.MemoryStream
+    try {
+        $process.StandardOutput.BaseStream.CopyTo($memory)
+        $process.WaitForExit()
+        if ($process.ExitCode -ne 0) {
+            throw "could not read final blob bytes for $Path"
+        }
+        return $memory.ToArray()
+    } finally {
+        $memory.Dispose()
+        $process.Dispose()
+    }
+}
+
+function Get-GrandfatherPrefix([string]$Path) {
+    if (-not (Test-Path -LiteralPath $script:MachineLocalPathGrandfather -PathType Leaf)) {
+        return $null
+    }
+    foreach ($line in (Get-Content -LiteralPath $script:MachineLocalPathGrandfather)) {
+        $fields = $line -split "`t", -1
+        if ($fields.Count -eq 4 -and
+                $fields[0] -ceq "# baseline-prefix" -and
+                $fields[3] -ceq $Path) {
+            if ($fields[1] -cnotmatch '^[1-9][0-9]*$' -or
+                    $fields[2] -cnotmatch '^[0-9a-f]{64}$') {
+                throw "machine-local path grandfather contains malformed prefix metadata"
+            }
+            return [pscustomobject]@{
+                Length = [int64]$fields[1]
+                Hash = $fields[2]
+            }
+        }
+    }
+    return $null
+}
+
+function Test-GrandfatherPrefix([string]$Source, [string]$Commit, [string]$Path) {
+    $prefix = Get-GrandfatherPrefix $Path
+    if ($null -eq $prefix) {
+        return $true
+    }
+    [byte[]]$bytes = Get-GitBlobBytes $Source $Commit $Path
+    if ($bytes.Length -lt $prefix.Length) {
+        return $false
+    }
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $actual = [Convert]::ToHexString(
+                $sha.ComputeHash($bytes, 0, [int]$prefix.Length)).ToLowerInvariant()
+        return $actual -ceq $prefix.Hash
+    } finally {
+        $sha.Dispose()
+    }
+}
+
+function Get-GrandfatherEntries() {
+    $entries = @{}
+    if (-not (Test-Path -LiteralPath $script:MachineLocalPathGrandfather -PathType Leaf)) {
+        return $entries
+    }
+    foreach ($line in (Get-Content -LiteralPath $script:MachineLocalPathGrandfather)) {
+        if ([string]::IsNullOrWhiteSpace($line) -or $line.StartsWith("#")) {
+            continue
+        }
+        $fields = $line -split "`t", -1
+        if ($fields.Count -ne 3 -or
+                $fields[0] -cnotmatch '^[0-9a-f]{64}$' -or
+                $fields[1] -cnotmatch '^[1-9][0-9]*$') {
+            throw "machine-local path grandfather contains a malformed entry"
+        }
+        $key = $fields[2] + "`0" + $fields[0]
+        if ($entries.ContainsKey($key)) {
+            throw "machine-local path grandfather contains a duplicate entry"
+        }
+        $entries[$key] = [int]$fields[1]
+    }
+    return $entries
+}
+
+function Get-FinalBlobLines([string]$Source, [string]$Commit, [string]$Path) {
+    $blob = if ($Source -eq "commit") {
+        Get-CommitBlob $Commit $Path
+    } else {
+        Get-StagedBlob $Path
+    }
+    if ($blob.ExitCode -ne 0) {
+        throw "could not read final blob for $Path"
+    }
+    return @($blob.Text -split "`r?`n")
+}
+
+function Test-IntroducedLinesAreAllowed(
+        [string]$Baseline,
+        [string]$Commit,
+        [string]$Path,
+        [string]$Source) {
+    $offending = @(Get-IntroducedLines $Baseline $Commit $Path $Source |
+            Where-Object { Test-TextHasMachineLocalHome $_ })
+    if ($offending.Count -eq 0) {
+        return $true
+    }
+
+    $entries = Get-GrandfatherEntries
+    $finalLines = @(Get-FinalBlobLines $Source $Commit $Path)
+    foreach ($line in $offending) {
+        $key = $Path + "`0" + (Get-LineSha256 $line)
+        if (-not $entries.ContainsKey($key)) {
+            return $false
+        }
+        $occurrences = @($finalLines | Where-Object {
+            [string]::Equals($_, $line, [System.StringComparison]::Ordinal)
+        }).Count
+        if ($occurrences -gt $entries[$key]) {
+            return $false
+        }
+    }
+    return $true
+}
+
 function Test-HasExact([string[]]$Files, [string]$Needle) {
     return $Files -contains $Needle
 }
@@ -307,6 +656,96 @@ function Validate-FileSizePolicyForFiles([string[]]$Files, [scriptblock]$SizeRes
                     $size, $script:GithubFileSizeLimitBytes
             Add-ValidationError $message
         }
+    }
+}
+
+function Validate-ContentCandidates([string[]]$Files, [string]$Source, [string]$Commit) {
+    $baseline = if ($Source -eq "commit") {
+        Get-CommitParentOrEmptyTree $Commit
+    } else {
+        Get-StagedCandidateBase
+    }
+    foreach ($path in $Files) {
+        if ([string]::IsNullOrWhiteSpace($path)) {
+            continue
+        }
+
+        if (Test-RootScratchPath $path) {
+            Add-ValidationError "``$path`` is a root-level merge/handover scratch artifact. Classify retained engineering material under ``docs/architecture/``."
+        }
+
+        $mode = if ($Source -eq "commit") {
+            Get-CommitEntryMode $Commit $path
+        } else {
+            Get-StagedEntryMode $path
+        }
+        if ([string]::IsNullOrWhiteSpace($mode)) {
+            Add-ValidationError "``$path`` could not be read from the $Source candidate set."
+            continue
+        }
+
+        if ($mode -eq "120000") {
+            if (Test-ProtectedResourcePath $path) {
+                Add-ValidationError "``$path`` is a generated worktree resource and must not be committed as a symlink."
+            }
+
+            $blob = if ($Source -eq "commit") {
+                Get-CommitBlob $Commit $path
+            } else {
+                Get-StagedBlob $path
+            }
+            if ($blob.ExitCode -ne 0) {
+                if ($Source -ceq "commit") {
+                    Add-ValidationError "``$path`` is a symlink whose committed target blob could not be read."
+                } else {
+                    Add-ValidationError "``$path`` is a symlink whose staged target blob could not be read."
+                }
+                continue
+            }
+            if (Test-AbsoluteLinkTarget $blob.Text) {
+                Add-ValidationError "``$path`` has an absolute symlink target. Use a repository-relative target or keep the link untracked."
+            }
+        }
+
+        if (Test-BaselineHasPath $baseline $path) {
+            if (-not (Test-GrandfatherPrefix $Source $Commit $path)) {
+                Add-ValidationError "``$path`` does not preserve its verified historic prefix byte-for-byte."
+                continue
+            }
+            if (-not (Test-IntroducedLinesAreAllowed $baseline $Commit $path $Source)) {
+                Add-ValidationError "``$path`` contains a machine-local user-home path. Use a repository-relative path, environment variable, or neutral placeholder."
+            }
+            continue
+        }
+
+        $grepStatus = if ($Source -eq "commit") {
+            Test-CommitBlobHasMachineLocalHome $Commit $path
+        } else {
+            Test-StagedBlobHasMachineLocalHome $path
+        }
+        if ($grepStatus -eq 0) {
+            Add-ValidationError "``$path`` contains a machine-local user-home path. Use a repository-relative path, environment variable, or neutral placeholder."
+        } elseif ($grepStatus -gt 1) {
+            Add-ValidationError "``$path`` could not be inspected for machine-local paths."
+        }
+    }
+}
+
+function Write-ValidationErrors() {
+    foreach ($entry in $script:Errors) {
+        [Console]::Error.WriteLine($entry)
+    }
+}
+
+function Validate-StagedContent() {
+    $files = @(Get-StagedCandidates)
+    Reset-ValidationErrors
+    Validate-FileSizePolicyForFiles $files { param($path) Get-StagedBlobSize $path }
+    Validate-ContentCandidates $files "staged" ""
+    if ($script:Errors.Count -gt 0) {
+        Note "staged content violates the repository resource policy."
+        Write-ValidationErrors
+        exit 1
     }
 }
 
@@ -483,7 +922,7 @@ function Validate-NonMasterCommitMessage([string]$Message, [string[]]$Files) {
 }
 
 function Validate-MergeIntoDevelop() {
-    if ((Get-CurrentBranch) -ne "develop") {
+    if ((Get-CurrentBranch) -cne "develop") {
         return
     }
 
@@ -501,7 +940,7 @@ function Validate-MergeIntoDevelop() {
 }
 
 function Prepare-CommitMessage([string]$MessageFile, [string]$Source) {
-    if ((Get-CurrentBranch) -eq "master") {
+    if ((Get-CurrentBranch) -ceq "master") {
         return
     }
 
@@ -538,7 +977,9 @@ function Prepare-CommitMessage([string]$MessageFile, [string]$Source) {
 }
 
 function Validate-CommitMsgHook([string]$MessageFile) {
-    if ((Get-CurrentBranch) -eq "master") {
+    Validate-StagedContent
+
+    if ((Get-CurrentBranch) -ceq "master") {
         return
     }
 
@@ -551,20 +992,150 @@ function Validate-CommitMsgHook([string]$MessageFile) {
     Validate-NonMasterCommitMessage $message (Get-StagedFiles)
 }
 
+$script:PublishedHistoryRefs = @("refs/remotes/origin/develop", "refs/remotes/origin/master")
+
+function Test-PublishedHistory([string]$Commit) {
+    foreach ($ref in $script:PublishedHistoryRefs) {
+        if (-not (Test-GitSuccess @("rev-parse", "-q", "--verify", $ref))) { continue }
+        if (Test-GitSuccess @("merge-base", "--is-ancestor", $Commit, $ref)) {
+            return $true
+        }
+    }
+    return $false
+}
+
+function Validate-CommitContent([string]$Commit) {
+    # Commits already published on a protected branch were accepted there.
+    # Merging that history forward must not re-litigate it.
+    if (Test-PublishedHistory $Commit) {
+        return
+    }
+    $files = @(Get-CommitCandidates $Commit)
+    Reset-ValidationErrors
+    Validate-FileSizePolicyForFiles $files { param($path) Get-CommitBlobSize $Commit $path }
+    Validate-ContentCandidates $files "commit" $Commit
+    if ($script:Errors.Count -gt 0) {
+        Note "commit $Commit violates the repository resource policy."
+        Write-ValidationErrors
+        exit 1
+    }
+}
+
+function Validate-TipTreeLinks([string]$Tip) {
+    if (-not (Test-GitSuccess @("cat-file", "-e", "$Tip^{commit}"))) {
+        Fail "required pushed tip $Tip is not available as a commit."
+    }
+    $canonicalTip = Invoke-GitText @("rev-parse", "$Tip^{commit}") -AllowFailure
+    if ([string]::IsNullOrWhiteSpace($canonicalTip)) {
+        Fail "could not resolve delivered tip $Tip to its full object id."
+    }
+    $expectedOidLength = $canonicalTip.Length
+
+    try {
+        $treeEntries = @(Invoke-GitLines @("ls-tree", "-r", $Tip))
+    } catch {
+        Fail "could not enumerate delivered tip tree $Tip."
+    }
+    Reset-ValidationErrors
+    foreach ($entry in $treeEntries) {
+        if ([string]::IsNullOrWhiteSpace($entry)) {
+            continue
+        }
+        if ($entry -notmatch '^([^\t]*)\t(.*)$') {
+            Fail "delivered tip tree $Tip contains a malformed entry: $entry"
+        }
+        $metadata = $Matches[1]
+        $path = $Matches[2]
+        if ($metadata -notmatch '^([^ ]+) ([^ ]+) ([^ ]+)$' -or
+                [string]::IsNullOrEmpty($path)) {
+            Fail "delivered tip tree $Tip contains malformed metadata for $path."
+        }
+        $mode = $Matches[1]
+        $objectType = $Matches[2]
+        $objectOid = $Matches[3]
+
+        if ($objectOid -cnotmatch '^[0-9a-f]+$') {
+            Fail "delivered tip tree $Tip contains a malformed object id for $path."
+        }
+        if ($objectOid.Length -ne $expectedOidLength) {
+            Fail "delivered tip tree $Tip contains a truncated object id for $path."
+        }
+
+        $entryKind = "${mode}:${objectType}"
+        if ($entryKind -cin @("100644:blob", "100755:blob", "160000:commit")) {
+            continue
+        }
+        if ($entryKind -cne "120000:blob") {
+            Fail "delivered tip tree $Tip contains unsupported metadata ``$metadata`` for $path."
+        }
+
+        if (Test-ProtectedResourcePath $path) {
+            Add-ValidationError "``$path`` is a generated worktree resource symlink in delivered tip $Tip."
+        }
+        $blob = Invoke-GitResult @("cat-file", "blob", $objectOid)
+        if ($blob.ExitCode -ne 0) {
+            Add-ValidationError "``$path`` is a symlink whose delivered target blob could not be read."
+            continue
+        }
+        if (Test-AbsoluteLinkTarget $blob.Text) {
+            Add-ValidationError "``$path`` has an absolute symlink target in delivered tip $Tip."
+        }
+    }
+
+    if ($script:Errors.Count -gt 0) {
+        Note "delivered tip $Tip violates the repository resource policy."
+        Write-ValidationErrors
+        exit 1
+    }
+}
+
+function Validate-ContentCommitList([string[]]$Commits, [string]$Tip) {
+    foreach ($commit in $Commits) {
+        if ([string]::IsNullOrWhiteSpace($commit)) {
+            continue
+        }
+        if (-not (Test-GitSuccess @("cat-file", "-e", "$commit^{commit}"))) {
+            Fail "required pushed commit $commit is not available."
+        }
+        Validate-CommitContent $commit
+    }
+    Validate-TipTreeLinks $Tip
+}
+
+function Get-CommitsInRange([string]$Base, [string]$Head) {
+    if (-not (Test-GitSuccess @("cat-file", "-e", "$Base^{commit}"))) {
+        Fail "required range base $Base is not available as a commit."
+    }
+    if (-not (Test-GitSuccess @("cat-file", "-e", "$Head^{commit}"))) {
+        Fail "required range head $Head is not available as a commit."
+    }
+    try {
+        return Invoke-GitLines @("rev-list", "--reverse", "$Base..$Head")
+    } catch {
+        Fail "could not enumerate commit range $Base..$Head."
+    }
+}
+
+function Validate-ContentRange([string]$Base, [string]$Head) {
+    $commits = @(Get-CommitsInRange $Base $Head)
+    Validate-ContentCommitList $commits $Head
+}
+
 function Validate-CiPr([string]$BaseSha, [string]$HeadSha, [string]$BaseRef, [string]$HeadRef) {
-    if ($BaseRef -ne "next" -and $BaseRef -ne "develop" -and $BaseRef -ne "master") {
+    if ($BaseRef -cne "next" -and $BaseRef -cne "develop" -and $BaseRef -cne "master") {
         return
     }
 
     $effectiveBaseSha = Get-EffectiveBaseForCiPr $BaseSha $HeadSha $BaseRef $HeadRef
     $rangeFiles = Invoke-GitLines @("diff", "--name-only", "--diff-filter=ACMRD", "$effectiveBaseSha...$HeadSha")
 
-    if ($BaseRef -eq "develop") {
-        if ($HeadRef -ne "master" -and -not (Test-HasExact $rangeFiles "README.md")) {
+    if ($BaseRef -ceq "develop") {
+        if ($HeadRef -cne "master" -and -not (Test-HasExact $rangeFiles "README.md")) {
             Fail "PRs from non-master branches into develop must update README.md with a brief branch summary."
         }
 
-        if ($HeadRef -eq "master") {
+        if ($HeadRef -ceq "master") {
+            Validate-ContentRange $effectiveBaseSha $HeadSha
             return
         }
     }
@@ -573,12 +1144,19 @@ function Validate-CiPr([string]$BaseSha, [string]$HeadSha, [string]$BaseRef, [st
 }
 
 function Validate-CiCommitRange([string]$EffectiveBaseSha, [string]$HeadSha) {
-    $commits = Invoke-GitLines @("rev-list", "--reverse", "--no-merges", "$EffectiveBaseSha..$HeadSha")
+    $commits = @(Get-CommitsInRange $EffectiveBaseSha $HeadSha)
+    Validate-ContentCommitList $commits $HeadSha
+
     foreach ($commit in $commits) {
+        $parentLine = Invoke-GitText @("rev-list", "--parents", "-n", "1", $commit)
+        $parentFields = @($parentLine -split '\s+')
+        if ($parentFields.Count -gt 2) {
+            continue
+        }
+
         $message = Invoke-GitText @("show", "-s", "--format=%B", $commit)
-        $files = Get-CommitFiles $commit
+        $files = @(Get-CommitCandidates $commit)
         Reset-ValidationErrors
-        Validate-FileSizePolicyForFiles $files { param($path) Get-CommitBlobSize $commit $path }
         Validate-ExactTrailer $message $files "Changelog" "CHANGELOG.md" "CHANGELOG.md"
         Validate-ChangelogJustification $message $files
         Validate-PrefixTrailer $message $files "Guide" "docs/guide/" "docs/guide/"
@@ -590,38 +1168,100 @@ function Validate-CiCommitRange([string]$EffectiveBaseSha, [string]$HeadSha) {
         $parent = Invoke-GitText @("rev-parse", "$commit^")
         Validate-ModApiCoupling $parent $commit @($parent, $commit)
         if ($script:Errors.Count -gt 0) {
-            Note "commit $commit violates the non-master branch documentation/artifact policy."
-            foreach ($entry in $script:Errors) {
-                [Console]::Error.WriteLine($entry)
-            }
+            Note "commit $commit violates the non-master branch documentation policy."
+            Write-ValidationErrors
             Print-CommitTemplate
             exit 1
         }
-        if ($LASTEXITCODE -ne 0) {
-            Note "commit $commit violates the non-master branch documentation policy."
-            exit $LASTEXITCODE
-        }
     }
 }
 
-function Validate-CiPush([string]$BeforeSha, [string]$AfterSha, [string]$RefName) {
-    if ($BeforeSha -eq "0000000000000000000000000000000000000000") {
-        $parent = Invoke-GitText @("rev-parse", "$AfterSha^") -AllowFailure
-        if (-not [string]::IsNullOrWhiteSpace($parent)) {
-            $BeforeSha = $parent
-        } else {
-            $BeforeSha = $AfterSha
-        }
+function Validate-PrePush([string]$RemoteName) {
+    if ([string]::IsNullOrWhiteSpace($RemoteName) -or
+            -not (Test-GitSuccess @("remote", "get-url", $RemoteName))) {
+        $displayName = if ([string]::IsNullOrWhiteSpace($RemoteName)) { "<empty>" } else { $RemoteName }
+        Fail "pre-push could not resolve remote name ``$displayName``; refusing to guess the published-history boundary."
     }
-    if ($RefName -eq "develop") {
+
+    while ($null -ne ($line = [Console]::In.ReadLine())) {
+        if ([string]::IsNullOrWhiteSpace($line)) {
+            continue
+        }
+        $fields = @($line.Trim() -split '\s+')
+        if ($fields.Count -lt 4) {
+            Fail "pre-push received a malformed ref update: $line"
+        }
+        $localRef = $fields[0]
+        $localOid = $fields[1]
+        $remoteRef = $fields[2]
+        $remoteOid = $fields[3]
+
+        if ($localOid -ceq $script:AllZeroOid) {
+            continue
+        }
+        if (-not (Test-GitSuccess @("cat-file", "-e", "$localOid^{commit}"))) {
+            Fail "required local object $localOid for $localRef is not available as a commit."
+        }
+
+        if ($remoteOid -ceq $script:AllZeroOid) {
+            try {
+                $commits = @(Invoke-GitLines @(
+                    "rev-list",
+                    "--reverse",
+                    $localOid,
+                    "--not",
+                    "--remotes=$RemoteName"
+                ))
+            } catch {
+                Fail "could not enumerate unpublished commits for new ref $remoteRef."
+            }
+            Validate-ContentCommitList $commits $localOid
+            continue
+        }
+
+        if (-not (Test-GitSuccess @("cat-file", "-e", "$remoteOid^{commit}"))) {
+            Fail "required remote object $remoteOid for $remoteRef is not available as a commit."
+        }
+        Validate-ContentRange $remoteOid $localOid
+    }
+}
+
+function Validate-CiNewRef([string]$AfterSha) {
+    if (-not (Test-GitSuccess @("cat-file", "-e", "$script:ResourcePolicyCutover^{commit}"))) {
+        Fail "resource-policy cutover $script:ResourcePolicyCutover is not available as a commit."
+    }
+    if (-not (Test-GitSuccess @("cat-file", "-e", "$AfterSha^{commit}"))) {
+        Fail "required pushed tip $AfterSha is not available as a commit."
+    }
+    if (-not (Test-GitSuccess @(
+            "merge-base",
+            "--is-ancestor",
+            $script:ResourcePolicyCutover,
+            $AfterSha
+        ))) {
+        Fail "resource-policy cutover $script:ResourcePolicyCutover is not an ancestor of new-ref tip $AfterSha."
+    }
+    Validate-ContentRange $script:ResourcePolicyCutover $AfterSha
+}
+
+function Validate-CiPush(
+        [string]$BeforeSha,
+        [string]$AfterSha,
+        [string]$RefName) {
+    if ($BeforeSha -ceq $script:AllZeroOid) {
+        Validate-CiNewRef $AfterSha
+        return
+    }
+
+    if ($RefName -ceq "next" -or $RefName -ceq "develop" -or $RefName -ceq "master") {
         Validate-CiCommitRange $BeforeSha $AfterSha
         return
     }
-    Validate-CiPr $BeforeSha $AfterSha $RefName $RefName
+    Validate-ContentRange $BeforeSha $AfterSha
 }
 
 function Get-EffectiveBaseForCiPr([string]$BaseSha, [string]$HeadSha, [string]$BaseRef, [string]$HeadRef) {
-    if ($BaseRef -ne "master") {
+    if ($BaseRef -cne "master") {
         return $BaseSha
     }
     if ([string]::IsNullOrWhiteSpace($script:ReleaseTrailerCutoverBase)) {
@@ -636,7 +1276,7 @@ function Get-EffectiveBaseForCiPr([string]$BaseSha, [string]$HeadSha, [string]$B
     return $BaseSha
 }
 
-switch ($Mode) {
+switch -CaseSensitive ($Mode) {
     "prepare-commit-msg" {
         if ($RemainingArgs.Count -lt 1) {
             Fail "usage: validate-policy.ps1 prepare-commit-msg <message-file> [source]"
@@ -649,6 +1289,13 @@ switch ($Mode) {
             Fail "usage: validate-policy.ps1 commit-msg <message-file>"
         }
         Validate-CommitMsgHook $RemainingArgs[0]
+    }
+    "pre-commit" {
+        Validate-StagedContent
+    }
+    "pre-push" {
+        $remoteName = if ($RemainingArgs.Count -ge 1) { $RemainingArgs[0] } else { "" }
+        Validate-PrePush $remoteName
     }
     "pre-merge-commit" {
         Validate-MergeIntoDevelop
@@ -666,6 +1313,6 @@ switch ($Mode) {
         Validate-CiPush $RemainingArgs[0] $RemainingArgs[1] $RemainingArgs[2]
     }
     default {
-        Fail "usage: validate-policy.ps1 {prepare-commit-msg|commit-msg|pre-merge-commit|ci-pr|ci-push} ..."
+        Fail "usage: validate-policy.ps1 {prepare-commit-msg|pre-commit|commit-msg|pre-merge-commit|pre-push|ci-pr|ci-push} ..."
     }
 }

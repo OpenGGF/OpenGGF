@@ -5,6 +5,8 @@ import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.game.timing.HardwareWorkHandle;
+import com.openggf.game.timing.HardwareWorkFeatures;
+import com.openggf.game.resources.QueueDiagnosticSnapshot;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -27,6 +29,40 @@ class TestS3kKosDecompressionQueue {
 
     @TempDir
     Path tempDir;
+
+    @Test
+    void extractsDeterministicWorkFeaturesFromStandardKosCommands() throws Exception {
+        HardwareWorkFeatures features =
+                S3kKosinskiWorkFeatureExtractor.inspect(ABC_STREAM, 0, 1, 0);
+
+        assertEquals(new HardwareWorkFeatures(
+                3, 0, 0, 0, 8, 3, 1, 3, 0), features);
+    }
+
+    @Test
+    void workFeaturesDistinguishShortLongAndNoOutputCommands()
+            throws Exception {
+        byte[] shortMatch = {0x41, 0, 'A', (byte) 0xFF, 0, 0, 0};
+        byte[] longMatch = {
+                0x15, 0, 'A', (byte) 0xFF, (byte) 0xF9, 0, 0, 0
+        };
+        byte[] noOutput = {
+                0x15, 0, 'A', (byte) 0xFF, 0, 1, 0, 0, 0
+        };
+
+        assertEquals(new HardwareWorkFeatures(
+                        1, 1, 0, 2, 7, 3, 1, 3, 0),
+                S3kKosinskiWorkFeatureExtractor.inspect(
+                        shortMatch, 0, 1, 0));
+        assertEquals(new HardwareWorkFeatures(
+                        1, 0, 1, 3, 8, 4, 1, 4, 0),
+                S3kKosinskiWorkFeatureExtractor.inspect(
+                        longMatch, 0, 1, 0));
+        assertEquals(new HardwareWorkFeatures(
+                        1, 0, 0, 0, 9, 1, 1, 1, 0),
+                S3kKosinskiWorkFeatureExtractor.inspect(
+                        noOutput, 0, 1, 0));
+    }
 
     @Test
     void standardKosStartsAtDescriptorAndPublishesOnlyAtPreMainLoop() throws Exception {
@@ -77,6 +113,31 @@ class TestS3kKosDecompressionQueue {
     }
 
     @Test
+    void diagnosticsContainOnlyPhysicalEntries() throws Exception {
+        try (Rom rom = romWith(ABC_STREAM)) {
+            HardwareTimingService timing = new HardwareTimingService();
+            S3kKosDecompressionQueue queue =
+                    new S3kKosDecompressionQueue(timing);
+            HardwareWorkHandle retired = queue.queueStandardKos(
+                    rom, 0, S3kKosRamDestinations.BLOCK_TABLE);
+            serviceUntilReady(timing, queue, retired);
+            queue.queueStandardKos(
+                    rom, 0, S3kKosRamDestinations.BLOCK_TABLE);
+
+            QueueDiagnosticSnapshot snapshot = queue.captureDiagnostics(
+                    java.util.List.of());
+            assertEquals(QueueDiagnosticSnapshot.Kind.S3K_KOS_DIRECT,
+                    snapshot.kind());
+            assertEquals(1, queue.physicalQueueSize());
+            assertEquals(0, snapshot.activeSource());
+            assertEquals(-1, snapshot.activeTotalWork());
+            assertFalse(snapshot.prepared(),
+                    "a newly queued retail descriptor is armed at PRE_MAIN_LOOP");
+            assertEquals(java.util.List.of(), snapshot.serviceObservations());
+        }
+    }
+
+    @Test
     void recordedDirectJobWaitsForItsExactPreMainLoopEdge() throws Exception {
         try (Rom rom = romWith(ABC_STREAM)) {
             HardwareTimingService timing = new HardwareTimingService();
@@ -88,11 +149,13 @@ class TestS3kKosDecompressionQueue {
             S3kKosDecompressionQueue queue = new S3kKosDecompressionQueue(timing);
             HardwareWorkHandle handle = queue.queueStandardKos(rom, 0,
                     S3kKosRamDestinations.BLOCK_TABLE);
+            assertFalse(queue.captureDiagnostics(java.util.List.of()).prepared());
 
             for (int frame = 0; frame < 4; frame++) {
                 timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
                 queue.afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
             }
+            assertTrue(queue.captureDiagnostics(java.util.List.of()).prepared());
             assertFalse(queue.isReady(handle));
             assertTrue(queue.decompressionsPending());
 
@@ -137,6 +200,10 @@ class TestS3kKosDecompressionQueue {
                     S3kKosRamDestinations.BLOCK_TABLE);
             var timingSnapshot = timing.capture();
             var queueSnapshot = queue.capture();
+            assertEquals(3,
+                    timingSnapshot.jobs().getFirst().features().literalCommands());
+            assertEquals(8,
+                    timingSnapshot.jobs().getFirst().features().compressedLength());
 
             serviceUntilReady(timing, queue, handle);
             assertTrue(queue.isReady(handle));

@@ -2,9 +2,7 @@ package com.openggf.tests.trace.runs;
 
 import com.openggf.GameLoop;
 import com.openggf.control.InputHandler;
-import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
-import com.openggf.debug.playback.RecordedInputSnapshots;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameMode;
 import com.openggf.game.sonic1.specialstage.Sonic1SpecialStageTraceData;
@@ -12,13 +10,16 @@ import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker.SegmentPlan;
+import com.openggf.tests.trace.RecordedInputRows;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
+import java.util.function.IntConsumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Chain integration test for the committed {@code s1-ghz-maze-roundtrip} run
@@ -43,7 +44,30 @@ class TestS1GhzMazeRoundTripChain extends AbstractRunChainTest {
         activeRunDir = configuredRunDir == null || configuredRunDir.isBlank()
                 ? DEFAULT_RUN_DIR
                 : Path.of(configuredRunDir).toAbsolutePath().normalize();
-        assertChainReplay(activeRunDir);
+        DynamicArtGapJournalEvidence evidence = assertChainReplay(activeRunDir);
+        DynamicArtStructuralGapEvidence returnGap =
+                evidence.structuralGap("ss", "ghz2");
+        assertTrue(returnGap.transitionCountAfterNextArm()
+                        > evidence.transitionCountAfterFirstArm(),
+                "the real S1 represented-segment -> named-run gap -> next-segment "
+                        + "boundary must grow the journal beyond first-arm bootstrap");
+        assertTrue(returnGap.transitionCountAfterNextArm()
+                        > returnGap.transitionCountAtGapStart(),
+                "the real S1 ss -> ghz2 structural gap must append production art");
+        assertTrue(returnGap.lastEdgeOrdinalAfterNextArm()
+                        > evidence.lastEdgeOrdinalAfterFirstArm(),
+                "the real S1 named-run gap must append a later production edge ordinal");
+        assertTrue(returnGap.lastEdgeOrdinalAfterNextArm()
+                        > returnGap.lastEdgeOrdinalAtGapStart(),
+                "the real S1 ss -> ghz2 structural gap must advance the edge ordinal");
+        assertTrue(returnGap.transitionsAddedAcrossBoundary().stream()
+                        .map(transition -> transition.edge())
+                        .anyMatch(edge -> edge.movieLogicalFrame()
+                                >= returnGap.gapStartMovieLogicalFrame()
+                                && edge.movieLogicalFrame()
+                                <= returnGap.nextSegmentArmMovieLogicalFrame()),
+                "the real S1 named-run boundary must add a production art edge "
+                        + "inside its structural gap");
     }
 
     /**
@@ -100,7 +124,7 @@ class TestS1GhzMazeRoundTripChain extends AbstractRunChainTest {
      * {@code if (tf.lag()) continue;}.
      */
     @Override
-    protected Runnable uncomparedInteriorStep(
+    protected IntConsumer uncomparedInteriorStep(
             GameLoop loop, InputHandler inputHandler, Bk2Movie movie, SegmentPlan interior) {
         Path ssDir = activeRunDir.resolve(interior.segment().dir());
         Sonic1SpecialStageTraceData trace;
@@ -110,58 +134,26 @@ class TestS1GhzMazeRoundTripChain extends AbstractRunChainTest {
             throw new UncheckedIOException("Failed to load S1 special-stage lag trace: " + ssDir, e);
         }
         int bk2FrameOffset = interior.segment().bk2FrameOffset();
-        int recordedFrameCount = interior.segment().traceFrameCount();
-        int[] traceRow = {0};
-        return () -> {
-            while (traceRow[0] < trace.frameCount() && trace.getFrame(traceRow[0]).lag()) {
-                // A lag row suppresses special-stage game logic, but is still a
-                // recorded console VBlank. The S1 lane consumes it without a
-                // GameLoop step, so advance the preserved global object clock
-                // explicitly once for that row.
-                GameServices.level().getObjectManager().advanceVblaCounter();
-                traceRow[0]++;
-            }
-            if (traceRow[0] >= trace.frameCount()) {
-                // Trace exhausted before stage_exit latched -- fall back to a
-                // plain engine step so the boundary await can still detect a
-                // late mode flip or trip its step cap instead of looping on
-                // an out-of-range trace read.
-                int beforeVblank = GameServices.level().getObjectManager().getVblaCounter();
-                AbstractRunChainTest.stepEngineFrame(loop);
-                var objectManager = GameServices.level().getObjectManager();
-                if (traceRow[0] < recordedFrameCount
-                        && objectManager.getVblaCounter() == beforeVblank) {
-                    objectManager.advanceVblaCounter();
+        RecordedInputRows recordedInputs = new RecordedInputRows(movie, bk2FrameOffset);
+        return traceRow -> {
+            boolean lagged = traceRow < trace.frameCount()
+                    && trace.getFrame(traceRow).lag();
+            if (lagged || loop.getCurrentGameMode()
+                    != GameMode.SPECIAL_STAGE) {
+                if (trace.metadata()
+                        .hasPerFrameDynamicArtTransferState()) {
+                    stepUncomparedInteriorLifecycleRow(lagged);
                 }
-                traceRow[0]++;
+                GameServices.level().getObjectManager().advanceVblaCounter();
                 return;
             }
-            int absoluteRow = bk2FrameOffset + traceRow[0];
             int beforeVblank = GameServices.level().getObjectManager().getVblaCounter();
-            Bk2FrameInput current = movie.getFrame(absoluteRow);
-            Bk2FrameInput previous = absoluteRow > 0 ? movie.getFrame(absoluteRow - 1) : null;
-            inputHandler.setLogicalOverride(RecordedInputSnapshots.fromBk2(current, previous));
-            try {
+            recordedInputs.withLogicalOverride(traceRow, inputHandler, () -> {
                 AbstractRunChainTest.stepEngineFrame(loop);
-            } finally {
-                inputHandler.clearLogicalOverride();
-            }
+            });
             var objectManager = GameServices.level().getObjectManager();
             if (objectManager.getVblaCounter() == beforeVblank) {
                 objectManager.advanceVblaCounter();
-            }
-            traceRow[0]++;
-            if (loop.getCurrentGameMode() == GameMode.LEVEL
-                    && traceRow[0] < recordedFrameCount) {
-                // The advance-uncompared engine can complete its simplified SS
-                // choreography before the recorded interior segment ends. Those
-                // remaining BK2 rows are still elapsed VBlanks, so account for
-                // the unexecuted tail before the returned LEVEL comparator binds.
-                int remainingVblanks = recordedFrameCount - traceRow[0];
-                for (int frame = 0; frame < remainingVblanks; frame++) {
-                    objectManager.advanceVblaCounter();
-                }
-                traceRow[0] = recordedFrameCount;
             }
         };
     }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace OpenGGF.BizHawk.Headless.Tests
 {
@@ -24,10 +25,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
     /// (never auto-stamped) so aux expectations stay byte-exact. Shared
     /// by the S1 run/complete-run runner tests and the CLI tests.
     /// </summary>
-    internal sealed class FakeS1Host : IGpgxHost
+    internal sealed class FakeS1Host : IGpgxHost, ICpuRegisterReader
     {
         private readonly Action<FakeS1Host, int> onAdvance;
-        private Action executeCallback;
+        private readonly Dictionary<uint, Action> executeCallbacks =
+            new Dictionary<uint, Action>();
+        private readonly Dictionary<string, uint> registers =
+            new Dictionary<string, uint>(StringComparer.Ordinal);
 
         public FakeS1Host(Action<FakeS1Host, int> onAdvance)
         {
@@ -55,18 +59,30 @@ namespace OpenGGF.BizHawk.Headless.Tests
         {
             ExecuteCallbackAddress = address;
             ExecuteCallbackDisposed = false;
-            executeCallback = callback;
-            return new CallbackRegistration(this);
+            executeCallbacks[address] = callback;
+            return new CallbackRegistration(this, address, callback);
         }
 
         public void FireExecuteCallback()
         {
-            if (executeCallback == null)
+            if (!ExecuteCallbackAddress.HasValue)
             {
                 throw new InvalidOperationException(
                     "No execute callback is registered.");
             }
-            executeCallback();
+            FireExecuteCallback(ExecuteCallbackAddress.Value);
+        }
+
+        public void FireExecuteCallback(uint address)
+        {
+            Action callback;
+            if (!executeCallbacks.TryGetValue(address, out callback))
+            {
+                throw new InvalidOperationException(
+                    "No execute callback is registered at 0x"
+                    + address.ToString("X") + ".");
+            }
+            callback();
         }
 
         public void Advance()
@@ -82,6 +98,17 @@ namespace OpenGGF.BizHawk.Headless.Tests
         public byte ReadMainRamByte(int offset)
         {
             return Ram[offset];
+        }
+
+        public uint ReadCpuRegister(string name)
+        {
+            uint value;
+            return registers.TryGetValue(name, out value) ? value : 0;
+        }
+
+        public void SetCpuRegister(string name, uint value)
+        {
+            registers[name] = value;
         }
 
         public void Dispose()
@@ -105,10 +132,15 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private sealed class CallbackRegistration : IDisposable
         {
             private FakeS1Host owner;
+            private readonly uint address;
+            private readonly Action callback;
 
-            public CallbackRegistration(FakeS1Host owner)
+            public CallbackRegistration(
+                FakeS1Host owner, uint address, Action callback)
             {
                 this.owner = owner;
+                this.address = address;
+                this.callback = callback;
             }
 
             public void Dispose()
@@ -117,7 +149,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 {
                     return;
                 }
-                owner.executeCallback = null;
+                Action registered;
+                if (owner.executeCallbacks.TryGetValue(
+                    address, out registered)
+                    && registered == callback)
+                {
+                    owner.executeCallbacks.Remove(address);
+                }
                 owner.ExecuteCallbackDisposed = true;
                 owner = null;
             }

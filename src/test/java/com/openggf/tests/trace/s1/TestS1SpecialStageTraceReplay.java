@@ -11,6 +11,8 @@ import java.nio.file.Path;
 class TestS1SpecialStageTraceReplay extends AbstractS1SpecialStageTraceReplayTest {
     @Override
     protected Path traceDirectory() {
-        return TRACE_DIRECTORY;
+        return Path.of(System.getProperty(
+                "openggf.trace.candidate.dir",
+                TRACE_DIRECTORY.toString()));
     }
 }

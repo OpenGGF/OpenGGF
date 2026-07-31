@@ -97,7 +97,8 @@ public class PlayableSpriteController {
                 animation != null ? animation.captureRewindState() : null,
                 drowning != null ? drowning.captureRewindState() : null,
                 tailsCarry != null ? tailsCarry.capture() : null,
-                superState != null ? superState.captureRewindState() : null);
+                superState != null ? superState.captureRewindState() : null,
+                tailsTails != null ? tailsTails.captureRewindState() : null);
     }
 
     public void restoreRewindState(RewindState state) {
@@ -154,6 +155,8 @@ public class PlayableSpriteController {
         PlayableSpriteAnimation.RewindState animationState = state != null ? state.animationState() : null;
         DrowningController.RewindState drowningState = state != null ? state.drowningState() : null;
         SuperStateController.RewindState superStateState = state != null ? state.superStateState() : null;
+        TailsTailsController.RewindState tailsTailsState =
+                state != null ? state.tailsTailsState() : null;
         if (movement != null) {
             movement.restoreRewindState(movementState);
         }
@@ -168,6 +171,9 @@ public class PlayableSpriteController {
         }
         if (superState != null && superStateState != null) {
             superState.restoreRewindState(superStateState);
+        }
+        if (tailsTails != null) {
+            tailsTails.restoreRewindState(tailsTailsState);
         }
     }
 
@@ -324,6 +330,7 @@ public class PlayableSpriteController {
             PlayableSpriteAnimation.RewindState animationState,
             DrowningController.RewindState drowningState,
             TailsCarryController.Snapshot tailsCarryState,
-            SuperStateController.RewindState superStateState
+            SuperStateController.RewindState superStateState,
+            TailsTailsController.RewindState tailsTailsState
     ) {}
 }

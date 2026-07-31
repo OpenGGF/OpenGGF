@@ -20,6 +20,11 @@ import com.openggf.game.palette.PaletteColorStateAdapter;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.render.AdvancedRenderModeController;
 import com.openggf.game.render.SpecialRenderEffectRegistry;
+import com.openggf.game.resources.DynamicArtDiagnosticsProvider;
+import com.openggf.game.resources.DynamicArtLifecycleService;
+import com.openggf.game.resources.PlcFrameLifecycleCoordinator;
+import com.openggf.game.resources.PlcLifecycleService;
+import com.openggf.game.resources.QueueDiagnosticSnapshot;
 import com.openggf.game.rewind.EngineStepper;
 import com.openggf.game.rewind.InMemoryKeyframeStore;
 import com.openggf.game.rewind.InputSource;
@@ -40,6 +45,7 @@ import com.openggf.game.timing.HardwareTimingBoundaryObserver;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.game.timing.HardwareTimingService;
+import com.openggf.game.timing.LoadTimeProfile;
 import com.openggf.level.SeamlessTransitionResourceHandoffRegistry;
 import com.openggf.game.timing.RecordedCompletionAuthority;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
@@ -60,13 +66,20 @@ import com.openggf.physics.TerrainCollisionManager;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.timer.TimerManager;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.logging.Logger;
 
 @com.openggf.game.ModApi
 public final class GameplayModeContext implements ModeContext {
+    private static final Logger LOG =
+            Logger.getLogger(GameplayModeContext.class.getName());
     private static final String PATTERN_ANIMATOR_REWIND_KEY = "pattern-animator";
     private static final String[] PLC_ART_REWIND_KEYS = {
             "s2-plc-art",
@@ -82,6 +95,8 @@ public final class GameplayModeContext implements ModeContext {
     private final SeamlessTransitionResourceHandoffRegistry
             seamlessTransitionResourceHandoffs;
     private final RecordedCompletionAuthority recordedCompletionAuthority;
+    private final PlcFrameLifecycleCoordinator plcFrameLifecycle;
+    private final DynamicArtLifecycleService dynamicArtLifecycle;
 
     private Camera camera;
     private TimerManager timerManager;
@@ -157,14 +172,28 @@ public final class GameplayModeContext implements ModeContext {
         this.resumeStash = resumeStash;
         HardwareReadinessAdmissionPolicy checkedPolicy =
                 Objects.requireNonNull(admissionPolicy, "admissionPolicy");
-        this.hardwareTiming = new HardwareTimingService();
-        RuntimeArtCoordinator coordinator = worldSession.getGameModule()
-                .createRuntimeArtCoordinator(hardwareTiming);
-        this.runtimeArtCoordinator = coordinator != null
-                ? coordinator
-                : RuntimeArtCoordinator.NONE;
+        LoadTimeProfile profile = checkedPolicy
+                == HardwareReadinessAdmissionPolicy.RECORDED
+                ? LoadTimeProfile.IMMEDIATE
+                : Objects.requireNonNullElse(
+                        worldSession.getGameModule().createLoadTimeProfile(
+                                worldSession.loadTimeSimulationMode(),
+                                LOG::warning),
+                        LoadTimeProfile.IMMEDIATE);
+        this.hardwareTiming = new HardwareTimingService(
+                com.openggf.game.timing.RomWorkBudgetScheduler.oneWorkUnitAt(
+                        HardwareServiceBoundary.POST_OBJECTS),
+                profile);
+        this.runtimeArtCoordinator = Objects.requireNonNull(
+                worldSession.getGameModule()
+                        .createRuntimeArtCoordinator(hardwareTiming),
+                "runtimeArtCoordinator");
         this.seamlessTransitionResourceHandoffs =
                 new SeamlessTransitionResourceHandoffRegistry();
+        this.dynamicArtLifecycle = new DynamicArtLifecycleService();
+        this.plcFrameLifecycle =
+                new PlcFrameLifecycleCoordinator(
+                        worldSession.getGameModule(), dynamicArtLifecycle);
         this.recordedCompletionAuthority =
                 checkedPolicy == HardwareReadinessAdmissionPolicy.RECORDED
                         ? hardwareTiming.beginRecordedAdmission()
@@ -259,10 +288,14 @@ public final class GameplayModeContext implements ModeContext {
         this.solidExecutionRegistry = Objects.requireNonNull(solidExecutionRegistry, "solidExecutionRegistry");
         this.profiler = profiler;
         this.managersTornDown = false;
+        if (!dynamicArtLifecycle.isRunActive()) {
+            dynamicArtLifecycle.beginRun();
+        }
 
         this.rewindRegistry = new RewindRegistry(profiler);
         this.levelEventExtraRewindKeys.clear();
         this.rewindRegistry.register(hardwareTiming);
+        this.rewindRegistry.register(dynamicArtLifecycle);
         runtimeArtCoordinator.registerRewindAdapters(this.rewindRegistry);
         this.rewindRegistry.register(seamlessTransitionResourceHandoffs);
         this.rewindRegistry.register(camera);
@@ -272,6 +305,7 @@ public final class GameplayModeContext implements ModeContext {
         this.rewindRegistry.register(fadeManager);
         this.rewindRegistry.register(new OscillationStaticAdapter());
         this.rewindRegistry.register(kosinskiModuleQueue);
+        registerGameModuleRewindAdapters();
         // Register solid-execution adapter (no-op if not DefaultSolidExecutionRegistry)
         if (solidExecutionRegistry instanceof DefaultSolidExecutionRegistry dser) {
             this.rewindRegistry.register(dser);
@@ -433,6 +467,10 @@ public final class GameplayModeContext implements ModeContext {
         return fadeManager;
     }
 
+    public PlcFrameLifecycleCoordinator plcFrameLifecycle() {
+        return plcFrameLifecycle;
+    }
+
     public GameRng getRng() {
         return rng;
     }
@@ -518,9 +556,49 @@ public final class GameplayModeContext implements ModeContext {
         return hardwareTiming;
     }
 
+    /** Production-owned player DPLC lifecycle for this gameplay session. */
+    public DynamicArtLifecycleService dynamicArtLifecycle() {
+        return dynamicArtLifecycle;
+    }
+
+    /** Read-only player-DPLC diagnostics for observers outside the owner. */
+    public DynamicArtDiagnosticsProvider dynamicArtDiagnostics() {
+        return dynamicArtLifecycle;
+    }
+
+    /**
+     * Closes an open dynamic-art comparison window at a structural replay
+     * boundary. Expected trace values never cross this production-owned seam.
+     */
+    public void endDynamicArtComparisonSegment() {
+        if (dynamicArtLifecycle.isComparisonSegmentOpen()) {
+            dynamicArtLifecycle.closeComparisonSegment();
+        }
+    }
+
     /** Game-owned runtime-art coordinator for this gameplay session. */
     public RuntimeArtCoordinator runtimeArtCoordinator() {
         return runtimeArtCoordinator;
+    }
+
+    /** Captures comparison-only physical queue state at the logical frame boundary. */
+    public List<QueueDiagnosticSnapshot> captureQueueDiagnostics() {
+        List<QueueDiagnosticSnapshot> snapshots = new ArrayList<>();
+        PlcLifecycleService plc = worldSession.getGameModule()
+                .getGameService(PlcLifecycleService.class);
+        if (plc != null) {
+            snapshots.addAll(plc.captureQueueDiagnostics());
+        }
+        snapshots.addAll(runtimeArtCoordinator.captureQueueDiagnostics());
+        snapshots.sort(Comparator.comparing(QueueDiagnosticSnapshot::kind));
+        HashSet<QueueDiagnosticSnapshot.Kind> kinds = new HashSet<>();
+        for (QueueDiagnosticSnapshot snapshot : snapshots) {
+            if (!kinds.add(snapshot.kind())) {
+                throw new IllegalStateException(
+                        "duplicate queue diagnostic kind: " + snapshot.kind().wireName());
+            }
+        }
+        return List.copyOf(snapshots);
     }
 
     public SeamlessTransitionResourceHandoffRegistry
@@ -593,6 +671,18 @@ public final class GameplayModeContext implements ModeContext {
         if (rewindRegistry == null) {
             return;
         }
+        // Game modules create ROM-bound services during LevelManager.initGameModule().
+        // Register again at the post-createGame level boundary so the façade
+        // instance captured by rewind is the live service, not the empty
+        // pre-ROM module graph seen when the gameplay session was attached.
+        registerGameModuleRewindAdapters();
+        // A production level load calls this after its tilemap owner exists.
+        // Retaining the game-service registration here also makes the lifecycle
+        // safe for an early caller: it must not install a level-tilemap adapter
+        // around a not-yet-created manager.
+        if (levelManager.getTilemapManager() == null) {
+            return;
+        }
         rewindRegistry.deregister("level");
         rewindRegistry.deregister("level-transition");
         rewindRegistry.deregister("level-tilemap");
@@ -662,6 +752,22 @@ public final class GameplayModeContext implements ModeContext {
                 tilemapManager.resetTilemapsForRewindRestore();
             }
         });
+    }
+
+    /**
+     * Registers the current session module's rewindable services idempotently.
+     * This is deliberately separate from the core-manager attachment because
+     * ROM-bound game services are created later by the level lifecycle.
+     */
+    public void registerGameModuleRewindAdapters() {
+        if (rewindRegistry == null) {
+            return;
+        }
+        for (com.openggf.game.rewind.RewindSnapshottable<?> adapter
+                : worldSession.getGameModule().rewindAdapters()) {
+            rewindRegistry.deregister(adapter.key());
+            rewindRegistry.register(adapter);
+        }
     }
 
     /**
@@ -864,12 +970,18 @@ public final class GameplayModeContext implements ModeContext {
         }
         if (rewindRegistry != null) {
             rewindRegistry.deregister(HardwareTimingService.REWIND_KEY);
+            rewindRegistry.deregister(DynamicArtLifecycleService.REWIND_KEY);
             runtimeArtCoordinator.deregisterRewindAdapters(rewindRegistry);
             rewindRegistry.deregister(
                     seamlessTransitionResourceHandoffs.key());
         }
         hardwareTiming.resetForMissingSnapshot();
+        if (dynamicArtLifecycle.isRunActive()) {
+            dynamicArtLifecycle.finishRun();
+        }
+        dynamicArtLifecycle.resetForMissingSnapshot();
         runtimeArtCoordinator.resetForMissingSnapshot();
+        plcFrameLifecycle.reset();
         seamlessTransitionResourceHandoffs.resetForMissingSnapshot();
         hardwareTimingBoundaryObserver = HardwareTimingBoundaryObserver.NO_OP;
         if (zoneLayoutMutationPipeline != null) {

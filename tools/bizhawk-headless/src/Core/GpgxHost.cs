@@ -7,12 +7,13 @@ using BizHawk.Emulation.Cores.Consoles.Sega.gpgx;
 
 namespace OpenGGF.BizHawk.Headless
 {
-    public sealed class GpgxHost : IGpgxHost
+    public sealed class GpgxHost : IGpgxHost, ICpuRegisterReader
     {
         private readonly GPGX core;
         private readonly MutableController controller;
         private readonly MemoryDomain mainRam;
         private readonly IMemoryCallbackSystem memoryCallbacks;
+        private readonly IDebuggable debugger;
         private readonly List<ExecuteCallbackRegistration>
             executeCallbackRegistrations =
                 new List<ExecuteCallbackRegistration>();
@@ -44,7 +45,7 @@ namespace OpenGGF.BizHawk.Headless
                     "GPGX memory domain '" + mainRam.Name + "' has size "
                     + mainRam.Size + "; expected exactly 65536 bytes.");
             }
-            IDebuggable debugger =
+            debugger =
                 core.ServiceProvider.GetService<IDebuggable>();
             if (debugger == null
                 || !debugger.MemoryCallbacks.ExecuteCallbacksAvailable)
@@ -239,6 +240,19 @@ namespace OpenGGF.BizHawk.Headless
         public byte ReadMainRamByte(int offset)
         {
             return mainRam.PeekByte(offset);
+        }
+
+        public uint ReadCpuRegister(string name)
+        {
+            IDictionary<string, RegisterValue> registers =
+                debugger.GetCpuFlagsAndRegisters();
+            RegisterValue value;
+            if (!registers.TryGetValue(name, out value))
+            {
+                throw new InvalidOperationException(
+                    "GPGX did not expose CPU register '" + name + "'.");
+            }
+            return (uint)value.Value;
         }
 
         public void Dispose()

@@ -82,11 +82,11 @@ public class TestSonic2LevelInitProfile {
     }
 
     @Test
-    public void levelLoadStepsContains12WithoutPostLoad() {
+    public void levelLoadStepsContainsInitialPlcStepWithoutPostLoad() {
         List<InitStep> steps = profile.levelLoadSteps(new com.openggf.game.LevelLoadContext());
-        assertEquals(12, steps.size());
+        assertEquals(13, steps.size());
         assertEquals("InitGameModule", steps.get(0).name());
-        assertEquals("InitBackgroundRenderer", steps.get(11).name());
+        assertEquals("InitBackgroundRenderer", steps.get(12).name());
     }
 
     @Test
@@ -95,31 +95,34 @@ public class TestSonic2LevelInitProfile {
         ctx.setIncludePostLoadAssembly(true);
         List<InitStep> steps = profile.levelLoadSteps(ctx);
 
-        assertEquals(19, steps.size());
+        assertEquals(20, steps.size());
 
         // Original 12 ROM-aligned resource loading steps
         // (InitObjectManager + InitCameraBounds merged into InitObjectSystem)
         assertEquals("InitGameModule", steps.get(0).name());
         assertEquals("InitAudio", steps.get(1).name());
         assertEquals("LoadLevelData", steps.get(2).name());
-        assertEquals("InitAnimatedContent", steps.get(3).name());
-        assertEquals("InitObjectSystem", steps.get(4).name());
-        assertEquals("InitGameplayState", steps.get(5).name());
-        assertEquals("InitRings", steps.get(6).name());
-        assertEquals("InitZoneFeatures", steps.get(7).name());
-        assertEquals("InitArt", steps.get(8).name());
-        assertEquals("InitPlayerAndCheckpoint", steps.get(9).name());
-        assertEquals("InitWater", steps.get(10).name());
-        assertEquals("InitBackgroundRenderer", steps.get(11).name());
+        assertEquals("QueueInitialPlcs", steps.get(3).name());
+        assertTrue(steps.stream().anyMatch(s -> s.name().equals("QueueInitialPlcs")),
+                "S2 Level must queue its ROM primary, Std2, and selected life PLC before title-card admission");
+        assertEquals("InitAnimatedContent", steps.get(4).name());
+        assertEquals("InitObjectSystem", steps.get(5).name());
+        assertEquals("InitGameplayState", steps.get(6).name());
+        assertEquals("InitRings", steps.get(7).name());
+        assertEquals("InitZoneFeatures", steps.get(8).name());
+        assertEquals("InitArt", steps.get(9).name());
+        assertEquals("InitPlayerAndCheckpoint", steps.get(10).name());
+        assertEquals("InitWater", steps.get(11).name());
+        assertEquals("InitBackgroundRenderer", steps.get(12).name());
 
-        // 7 post-load assembly steps (12-18)
-        assertEquals("RestoreCheckpoint", steps.get(12).name());
-        assertEquals("SpawnPlayer", steps.get(13).name());
-        assertEquals("ResetPlayerState", steps.get(14).name());
-        assertEquals("InitCamera", steps.get(15).name());
-        assertEquals("InitLevelEvents", steps.get(16).name());
-        assertEquals("SpawnSidekick", steps.get(17).name());
-        assertEquals("RequestTitleCard", steps.get(18).name());
+        // 7 post-load assembly steps (13-19)
+        assertEquals("RestoreCheckpoint", steps.get(13).name());
+        assertEquals("SpawnPlayer", steps.get(14).name());
+        assertEquals("ResetPlayerState", steps.get(15).name());
+        assertEquals("InitCamera", steps.get(16).name());
+        assertEquals("InitLevelEvents", steps.get(17).name());
+        assertEquals("SpawnSidekick", steps.get(18).name());
+        assertEquals("RequestTitleCard", steps.get(19).name());
     }
 
     @Test
@@ -144,5 +147,3 @@ public class TestSonic2LevelInitProfile {
         }
     }
 }
-
-

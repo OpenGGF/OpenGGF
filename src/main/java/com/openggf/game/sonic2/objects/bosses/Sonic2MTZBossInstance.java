@@ -6,6 +6,8 @@ import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic2.audio.Sonic2Music;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
+import com.openggf.game.sonic2.constants.Sonic2Constants;
+import com.openggf.game.sonic2.resources.Sonic2PlcRequests;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectConstructionContext;
@@ -942,6 +944,8 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
         // (Obj3E) handles the prison. We only set the defeated flag on the first
         // flee frame so dependent level/capsule logic can react.
         if (!bossDefeatedFlag) {
+            if (!Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_ANIMALS_HTZ_MTZ_WFZ,
+                    Sonic2Constants.PLC_EXPLOSION)) return;
             bossDefeatedFlag = true;
             // KNOWN DISCREPANCY: the ROM also kicks off the animal-explosion PLC here
             // (LoadPLC_AnimalExplosion). No engine PLC hook is reachable from object
@@ -1009,12 +1013,18 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
 
     @Override
     protected void onDefeatStarted() {
+        if (!isDefeatEntryPrepared() && !Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE)) return;
         // ROM: Obj54_Defeated (s2.asm:67258-67265) runs from Obj54_CheckHit,
         // after this frame's old-routine movement. Latch and apply post-move in
         // applyPendingHitReactionAfterMove(); dispatching Sub10 on the killing
         // touch frame starts the defeat countdown (and later the Sub12 flee
         // camera opening) one frame ahead of ROM.
         pendingDefeatReaction = true;
+    }
+
+    @Override
+    protected boolean prepareDefeatEntry() {
+        return Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE);
     }
 
     @Override

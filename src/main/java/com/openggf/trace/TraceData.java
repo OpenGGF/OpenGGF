@@ -6,12 +6,8 @@ import com.openggf.trace.timing.HardwareTimingStreamLoader;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -21,7 +17,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
-import java.util.zip.GZIPInputStream;
 
 /**
  * Reads and holds the contents of a trace directory:
@@ -30,7 +25,6 @@ import java.util.zip.GZIPInputStream;
  * The primary CSV is loaded entirely into memory (small: ~100 bytes/frame).
  * Auxiliary events are lazy-loaded and indexed by frame number.
  */
-@com.openggf.game.ModApi
 public class TraceData {
 
     private static final Logger LOGGER = Logger.getLogger(TraceData.class.getName());
@@ -45,6 +39,7 @@ public class TraceData {
     private final Map<Integer, TraceEvent.Checkpoint> checkpointsByFrame;
     private final List<Integer> zoneActStateFramesAscending;
     private final Map<Integer, TraceEvent.ZoneActState> zoneActStatesByFrame;
+    private List<DynamicArtTransfer.Descriptor> terminalDynamicArtLedger = List.of();
 
     // Package-private so same-package test fixtures in src/test can
     // construct in-memory instances without going through disk I/O.
@@ -64,8 +59,8 @@ public class TraceData {
 
     public static TraceData load(Path traceDirectory) throws IOException {
         Path metadataPath = traceDirectory.resolve("metadata.json");
-        Path physicsPath = resolveTraceFile(traceDirectory, "physics.csv");
-        Path auxPath = resolveTraceFile(traceDirectory, "aux_state.jsonl");
+        Path physicsPath = TraceFiles.resolve(traceDirectory, "physics.csv");
+        Path auxPath = TraceFiles.resolve(traceDirectory, "aux_state.jsonl");
 
         TraceMetadata metadata = TraceMetadata.load(metadataPath);
         if (physicsPath == null) {
@@ -73,13 +68,17 @@ public class TraceData {
         }
         List<TraceFrame> frames = loadPhysicsCsv(physicsPath, metadata);
         Map<Integer, List<TraceEvent>> events = auxPath != null
-            ? loadAuxEvents(auxPath)
+            ? loadAuxEvents(auxPath, metadata)
             : Collections.emptyMap();
         HardwareTimingSchedule hardwareTimingSchedule = HardwareTimingStreamLoader.load(traceDirectory, metadata);
 
         warnIfLegacyExecutionCounters(traceDirectory, metadata, frames);
 
-        return new TraceData(metadata, frames, events, hardwareTimingSchedule);
+        TraceData trace = new TraceData(metadata, frames, events, hardwareTimingSchedule);
+        trace.validateAdvertisedLoadQueueStates();
+        trace.validateAdvertisedDynamicArtTransferStates(
+                StoredPhysicsFrameDomain.fromTraceFrames(frames));
+        return trace;
     }
 
     /**
@@ -100,15 +99,29 @@ public class TraceData {
      */
     public static TraceData loadMetadataOnly(Path traceDirectory) throws IOException {
         Path metadataPath = traceDirectory.resolve("metadata.json");
-        Path auxPath = resolveTraceFile(traceDirectory, "aux_state.jsonl");
+        Path auxPath = TraceFiles.resolve(traceDirectory, "aux_state.jsonl");
 
         TraceMetadata metadata = TraceMetadata.load(metadataPath);
         Map<Integer, List<TraceEvent>> events = auxPath != null
-            ? loadAuxEvents(auxPath)
+            ? loadAuxEvents(auxPath, metadata)
             : Collections.emptyMap();
         HardwareTimingSchedule hardwareTimingSchedule = HardwareTimingStreamLoader.load(traceDirectory, metadata);
 
-        return new TraceData(metadata, Collections.emptyList(), events, hardwareTimingSchedule);
+        TraceData trace = new TraceData(
+                metadata, Collections.emptyList(), events, hardwareTimingSchedule);
+        Path physicsPath = TraceFiles.resolve(traceDirectory, "physics.csv");
+        StoredPhysicsFrameDomain frameDomain = physicsPath == null
+                ? null
+                : StoredPhysicsFrameDomain.scan(physicsPath);
+        if (metadata.hasPerFrameDynamicArtTransferState()) {
+            if (frameDomain == null) {
+                throw new NoSuchFileException(
+                        traceDirectory.resolve("physics.csv").toString());
+            }
+            trace.validateAdvertisedDynamicArtTransferStates(
+                    frameDomain);
+        }
+        return trace;
     }
 
     public TraceMetadata metadata() { return metadata; }
@@ -216,6 +229,231 @@ public class TraceData {
 
     public List<TraceEvent> getEventsForFrame(int traceFrame) {
         return eventsByFrame.getOrDefault(traceFrame, Collections.emptyList());
+    }
+
+    public List<TraceEvent.LoadQueueState> loadQueueStatesForFrame(int frame) {
+        List<TraceEvent.LoadQueueState> states = new ArrayList<>();
+        for (TraceEvent event : eventsByFrame.getOrDefault(frame, Collections.emptyList())) {
+            if (event instanceof TraceEvent.LoadQueueState state) {
+                states.add(state);
+            }
+        }
+        return List.copyOf(states);
+    }
+
+    public List<TraceEvent.DynamicArtTransferState>
+            dynamicArtTransferStatesForFrame(int frame) {
+        List<TraceEvent.DynamicArtTransferState> states = new ArrayList<>();
+        for (TraceEvent event : eventsByFrame.getOrDefault(
+                frame, Collections.emptyList())) {
+            if (event instanceof TraceEvent.DynamicArtTransferState state) {
+                states.add(state);
+            }
+        }
+        return List.copyOf(states);
+    }
+
+    public TraceEvent.DynamicArtTransferState dynamicArtTransferStateForFrame(
+            int frame) {
+        return dynamicArtTransferStateForFrame(metadata, eventsByFrame, frame);
+    }
+
+    public static TraceEvent.DynamicArtTransferState
+            dynamicArtTransferStateForFrame(
+                    TraceMetadata metadata,
+                    Map<Integer, List<TraceEvent>> eventsByFrame,
+                    int frame) {
+        if (!metadata.hasPerFrameDynamicArtTransferState()) {
+            return null;
+        }
+        List<TraceEvent.DynamicArtTransferState> states =
+                eventsByFrame.getOrDefault(frame, Collections.emptyList())
+                        .stream()
+                        .filter(TraceEvent.DynamicArtTransferState.class::isInstance)
+                        .map(TraceEvent.DynamicArtTransferState.class::cast)
+                        .toList();
+        if (states.size() != 1) {
+            throw new IllegalArgumentException(
+                    "expected exactly one dynamic-art state at frame "
+                            + frame + " but found " + states.size());
+        }
+        return states.getFirst();
+    }
+
+    /**
+     * Enforces one typed heartbeat for every stored row and replays the
+     * comparison-only lifecycle from an independently empty segment arm.
+     */
+    public void validateAdvertisedDynamicArtTransferStates(
+            StoredPhysicsFrameDomain frameDomain) {
+        if (!metadata.hasPerFrameDynamicArtTransferState()) {
+            terminalDynamicArtLedger = List.of();
+            return;
+        }
+        terminalDynamicArtLedger = validateDynamicArtTransferStates(
+                metadata, frameDomain, eventsByFrame);
+    }
+
+    public static List<DynamicArtTransfer.Descriptor>
+            validateDynamicArtTransferStates(
+                    TraceMetadata metadata,
+                    StoredPhysicsFrameDomain frameDomain,
+                    Map<Integer, List<TraceEvent>> eventsByFrame) {
+        Set<Integer> domain = new HashSet<>(frameDomain.frames());
+        List<TraceEvent.DynamicArtTransferState> ordered =
+                new ArrayList<>(frameDomain.frames().size());
+        for (Map.Entry<Integer, List<TraceEvent>> entry : eventsByFrame.entrySet()) {
+            for (TraceEvent event : entry.getValue()) {
+                if (event instanceof TraceEvent.DynamicArtTransferState state
+                        && !domain.contains(state.frame())) {
+                    throw new IllegalArgumentException(
+                            "dynamic-art event outside physics frame domain: "
+                                    + state.frame());
+                }
+            }
+        }
+        for (int frame : frameDomain.frames()) {
+            List<TraceEvent.DynamicArtTransferState> states =
+                    eventsByFrame.getOrDefault(frame, Collections.emptyList())
+                            .stream()
+                            .filter(TraceEvent.DynamicArtTransferState.class::isInstance)
+                            .map(TraceEvent.DynamicArtTransferState.class::cast)
+                            .toList();
+            if (states.size() != 1) {
+                throw new IllegalArgumentException(
+                        "expected exactly one dynamic-art state at frame "
+                                + frame + " but found " + states.size());
+            }
+            ordered.add(states.getFirst());
+        }
+        return DynamicArtTransfer.validateSegment(
+                ordered, frameDomain, metadata.game(),
+                new DynamicArtTransfer.LifecycleIdentity());
+    }
+
+    public List<DynamicArtTransfer.Descriptor> terminalDynamicArtLedger() {
+        return terminalDynamicArtLedger;
+    }
+
+    public List<Long> terminalDynamicArtTransferIds() {
+        return terminalDynamicArtLedger.stream()
+                .map(DynamicArtTransfer.Descriptor::transferId)
+                .toList();
+    }
+
+    public List<TraceEvent.DynamicArtTransferState> dynamicArtTransferStates() {
+        return eventsByFrame.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .flatMap(entry -> entry.getValue().stream())
+                .filter(TraceEvent.DynamicArtTransferState.class::isInstance)
+                .map(TraceEvent.DynamicArtTransferState.class::cast)
+                .toList();
+    }
+
+    List<DynamicArtTransfer.Descriptor> validateDynamicArtLifecycle(
+            DynamicArtTransfer.LifecycleIdentity identity) {
+        return validateDynamicArtLifecycle(identity, List.of());
+    }
+
+    List<DynamicArtTransfer.Descriptor> validateDynamicArtLifecycle(
+            DynamicArtTransfer.LifecycleIdentity identity,
+            List<DynamicArtTransfer.Descriptor> openingLedger) {
+        List<TraceEvent.DynamicArtTransferState> states =
+                dynamicArtTransferStates();
+        StoredPhysicsFrameDomain domain = new StoredPhysicsFrameDomain(
+                states.stream()
+                        .map(TraceEvent.DynamicArtTransferState::frame)
+                        .toList());
+        return DynamicArtTransfer.validateSegment(
+                states, domain, metadata.game(), identity, openingLedger);
+    }
+
+    public void validateAdvertisedLoadQueueStates() {
+        if (!metadata.hasPerFrameLoadQueueState()) {
+            return;
+        }
+        Set<String> expectedKinds = switch (metadata.game()) {
+            case "s1" -> Set.of("s1_nemesis_plc");
+            case "s2" -> Set.of("s2_nemesis_plc");
+            case "s3k" -> Set.of("s3k_kos_direct", "s3k_kos_module");
+            default -> throw new IllegalArgumentException(
+                    "load queue capability is unsupported for game: " + metadata.game());
+        };
+        Set<Integer> frameDomain = new HashSet<>();
+        for (TraceFrame frame : frames) {
+            frameDomain.add(frame.frame());
+        }
+        for (Map.Entry<Integer, List<TraceEvent>> entry : eventsByFrame.entrySet()) {
+            for (TraceEvent event : entry.getValue()) {
+                if (event instanceof TraceEvent.LoadQueueState state) {
+                    if (!frameDomain.contains(state.frame())) {
+                        throw new IllegalArgumentException(
+                                "load queue event outside physics frame domain: " + state.frame());
+                    }
+                    if (!expectedKinds.contains(state.kind())) {
+                        throw new IllegalArgumentException(
+                                "unexpected load queue kind: " + state.kind());
+                    }
+                    validateLoadQueueShape(state);
+                }
+            }
+        }
+        for (int frame : frameDomain) {
+            List<TraceEvent.LoadQueueState> states = loadQueueStatesForFrame(frame);
+            Set<String> found = new HashSet<>();
+            for (TraceEvent.LoadQueueState state : states) {
+                if (!found.add(state.kind())) {
+                    throw new IllegalArgumentException(
+                            "duplicate load queue kind at frame " + frame + ": " + state.kind());
+                }
+            }
+            if (!found.equals(expectedKinds)) {
+                throw new IllegalArgumentException(
+                        "incomplete load queue state at frame " + frame
+                                + ": expected " + expectedKinds + " but found " + found);
+            }
+        }
+    }
+
+    private static void validateLoadQueueShape(TraceEvent.LoadQueueState state) {
+        boolean maskedIdentity = state.activeSource() == -1
+                && state.activeDestination() == -1
+                && state.totalWork() == -1;
+        switch (state.kind()) {
+            case "s1_nemesis_plc", "s2_nemesis_plc", "s3k_kos_module" -> {
+                if (!state.busy()) {
+                    return;
+                }
+                if (!maskedIdentity) {
+                    throw new IllegalArgumentException(
+                            "mutable prepared queue identity must be masked: " + state.kind());
+                }
+                if (state.prepared()) {
+                    if (state.remainingWork() <= 0) {
+                        throw new IllegalArgumentException(
+                                "prepared queue requires positive remaining work: "
+                                        + state.kind());
+                    }
+                } else if (state.remainingWork() != -1
+                        || state.queuedFingerprints().isEmpty()) {
+                    throw new IllegalArgumentException(
+                            "unprepared queue requires only waiting fingerprints: "
+                                    + state.kind());
+                }
+            }
+            case "s3k_kos_direct" -> {
+                if (state.busy() && (state.activeSource() < 0
+                        || state.activeDestination() < -65536
+                        || state.activeDestination() >= -1
+                        || state.totalWork() != -1
+                        || state.remainingWork() != -1)) {
+                    throw new IllegalArgumentException(
+                            "invalid direct Kosinski active projection");
+                }
+            }
+            default -> throw new IllegalArgumentException(
+                    "unknown load queue kind: " + state.kind());
+        }
     }
 
     public List<TraceEvent> getEventsInRange(int startFrame, int endFrame) {
@@ -834,7 +1072,7 @@ public class TraceData {
     private static List<TraceFrame> loadPhysicsCsv(Path csvPath, TraceMetadata metadata)
             throws IOException {
         List<TraceFrame> frames = new ArrayList<>();
-        try (BufferedReader reader = openTraceReader(csvPath)) {
+        try (BufferedReader reader = TraceFiles.openReader(csvPath)) {
             String line = reader.readLine(); // skip header
             if (line == null) return frames;
             while ((line = reader.readLine()) != null) {
@@ -855,14 +1093,23 @@ public class TraceData {
     // reuse the aux jsonl parsing without duplicating it.
     public static Map<Integer, List<TraceEvent>> loadAuxEvents(Path auxPath)
             throws IOException {
+        return loadAuxEvents(auxPath, null);
+    }
+
+    public static Map<Integer, List<TraceEvent>> loadAuxEvents(
+            Path auxPath, TraceMetadata metadata)
+            throws IOException {
         Map<Integer, List<TraceEvent>> map = new HashMap<>();
         ObjectMapper mapper = new ObjectMapper();
-        try (BufferedReader reader = openTraceReader(auxPath)) {
+        boolean strictAdvertisedEvents = metadata != null
+                && metadata.hasPerFrameDynamicArtTransferState();
+        try (BufferedReader reader = TraceFiles.openReader(auxPath)) {
             String line;
             while ((line = reader.readLine()) != null) {
                 String trimmed = line.trim();
                 if (!trimmed.isEmpty()) {
-                    TraceEvent event = TraceEvent.parseJsonLine(trimmed, mapper);
+                    TraceEvent event = TraceEvent.parseJsonLine(
+                            trimmed, mapper, strictAdvertisedEvents);
                     map.computeIfAbsent(event.frame(), k -> new ArrayList<>()).add(event);
                 }
             }
@@ -870,33 +1117,20 @@ public class TraceData {
         return map;
     }
 
-    // Public so other trace-profile loaders (e.g. SpecialStageTraceData,
-    // com.openggf.game.sonic3k.specialstage.S3kSpecialStageTraceData) can
-    // reuse the gzip-or-plain file resolution without duplicating it.
+    /**
+     * @deprecated Use {@link TraceFiles#resolve(Path, String)} directly.
+     */
+    @Deprecated(forRemoval = false)
     public static Path resolveTraceFile(Path traceDirectory, String fileName) {
-        Path plainPath = traceDirectory.resolve(fileName);
-        if (Files.exists(plainPath)) {
-            return plainPath;
-        }
-        Path gzipPath = traceDirectory.resolve(fileName + ".gz");
-        return Files.exists(gzipPath) ? gzipPath : null;
+        return TraceFiles.resolve(traceDirectory, fileName);
     }
 
-    // Public so other trace-profile loaders (e.g. SpecialStageTraceData,
-    // com.openggf.game.sonic3k.specialstage.S3kSpecialStageTraceData) can
-    // reuse gzip-or-plain reader opening without duplicating it.
-    static BufferedReader openTraceReader(Path path) throws IOException {
-        if (path.getFileName().toString().endsWith(".gz")) {
-            InputStream input = Files.newInputStream(path);
-            try {
-                return new BufferedReader(new InputStreamReader(
-                        new GZIPInputStream(input), StandardCharsets.UTF_8));
-            } catch (IOException e) {
-                input.close();
-                throw e;
-            }
-        }
-        return Files.newBufferedReader(path);
+    /**
+     * @deprecated Use {@link TraceFiles#openReader(Path)} directly.
+     */
+    @Deprecated(forRemoval = false)
+    public static BufferedReader openTraceReader(Path path) throws IOException {
+        return TraceFiles.openReader(path);
     }
 
     private static void warnIfLegacyExecutionCounters(Path traceDirectory,

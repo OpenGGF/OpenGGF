@@ -34,6 +34,7 @@ import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.game.zone.ZoneRuntimeState;
 import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.game.RuntimeArtCoordinator;
+import com.openggf.game.resources.NativeFadeLifecycle;
 import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.BigRingReturnState;
@@ -181,6 +182,11 @@ public interface ObjectServices {
     default RuntimeArtCoordinator runtimeArtCoordinator() {
         throw new IllegalStateException(
                 "runtime-art coordination is unavailable in these object services");
+    }
+
+    default NativeFadeLifecycle nativeFadeLifecycle() {
+        throw new IllegalStateException(
+                "native fade lifecycle is unavailable in these object services");
     }
 
     // Player/sidekick access

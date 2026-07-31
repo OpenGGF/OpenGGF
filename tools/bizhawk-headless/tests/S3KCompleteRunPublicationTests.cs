@@ -73,8 +73,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
             "  \"lua_script_version\": \"6.35-s3k-completerun\",";
         private const string PublishedDirectPredecessorVersionLine =
             "  \"lua_script_version\": \"6.37-s3k-completerun\",";
-        private const string CurrentVersionLine =
+        private const string PublishedQueuePredecessorVersionLine =
             "  \"lua_script_version\": \"6.38-s3k-completerun\",";
+        private const string CurrentVersionLine =
+            "  \"lua_script_version\": \"6.39-s3k-completerun\",";
         private const string FixtureTraceSchemaLine =
             "  \"trace_schema\": 6,";
         private const string CurrentTraceSchemaLine =
@@ -119,6 +121,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 + "-ss-level round trip",
                 CapturesRoundTrip));
             tests.Add(new TestMain.TestCase(
+                "S3KCompleteRunCaptureRunner records direct then module"
+                + " queue state for every special-stage row",
+                CapturesSpecialStageQueueStatePerStoredRow));
+            tests.Add(new TestMain.TestCase(
                 "S3KCompleteRunCaptureRunner reconciles unexported"
                 + " special-stage results work across native and Lua",
                 CapturesSpecialStageResultsHardwareTiming));
@@ -146,6 +152,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S3KStagedSegmentSink discards a capture that fails"
                 + " mid-segment",
                 DiscardsFailedCapture));
+            tests.Add(new TestMain.TestCase(
+                "S3KStagedSegmentSink discards every final path when"
+                + " special-stage queue projection fails",
+                DiscardsFailedSpecialStageQueueProjection));
         }
 
         // ------------------------------------------------------------------
@@ -210,7 +220,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 PlayerMode = 0,
                 SourceBk2 = CompleteRunSourceBk2,
                 RunId = null,
-                RecordingDate = "2026-07-29"
+                RecordingDate = "2026-07-30"
             },
             new MetadataFixture
             {
@@ -228,7 +238,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 PlayerMode = 0,
                 SourceBk2 = CompleteRunSourceBk2,
                 RunId = null,
-                RecordingDate = "2026-07-29"
+                RecordingDate = "2026-07-30"
             },
             new MetadataFixture
             {
@@ -248,7 +258,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 PlayerMode = 3,
                 SourceBk2 = MultiBonusSourceBk2,
                 RunId = MultiBonusRunId,
-                RecordingDate = "2026-07-27"
+                RecordingDate = "2026-07-30"
             },
             new MetadataFixture
             {
@@ -268,7 +278,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 PlayerMode = 3,
                 SourceBk2 = MultiBonusSourceBk2,
                 RunId = MultiBonusRunId,
-                RecordingDate = "2026-07-27"
+                RecordingDate = "2026-07-30"
             },
             new MetadataFixture
             {
@@ -288,7 +298,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 PlayerMode = 3,
                 SourceBk2 = MultiBonusSourceBk2,
                 RunId = MultiBonusRunId,
-                RecordingDate = "2026-07-27"
+                RecordingDate = "2026-07-30"
             },
             new MetadataFixture
             {
@@ -301,7 +311,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 PlayerMode = 3,
                 SourceBk2 = MultiBonusSourceBk2,
                 RunId = MultiBonusRunId,
-                RecordingDate = "2026-07-27"
+                RecordingDate = "2026-07-30"
             }
         };
 
@@ -349,6 +359,16 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 true))
             {
                 return producedText;
+            }
+            if (HasMetadataShape(
+                fixtureText,
+                PublishedQueuePredecessorVersionLine,
+                CurrentTraceSchemaLine,
+                true))
+            {
+                return producedText.Replace(
+                    CurrentVersionLine,
+                    PublishedQueuePredecessorVersionLine);
             }
             if (HasMetadataShape(
                 fixtureText,
@@ -513,7 +533,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
             AssertContains(
                 current,
-                "\"lua_script_version\": \"6.38-s3k-completerun\"");
+                "\"lua_script_version\": \"6.39-s3k-completerun\"");
             AssertContains(current, "\"hardware_timing_schema\": 2");
             AssertContains(legacy, "\"hardware_timing_schema\": 1");
         }
@@ -528,14 +548,18 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     fixture.SourceBk2,
                     fixture.RecordingDate,
                     fixture.RunId,
-                    fixture.PlayerMode)
+                    fixture.PlayerMode,
+                    HardwareTimingEventEngine.CurrentSchema,
+                    true)
                 : S3KCompleteRunMetadataWriter.Format(
                     arm,
                     fixture.TraceFrameCount,
                     fixture.SourceBk2,
                     fixture.RecordingDate,
                     fixture.RunId,
-                    fixture.PlayerMode);
+                    fixture.PlayerMode,
+                    HardwareTimingEventEngine.CurrentSchema,
+                    true);
         }
 
         private static S3KSegmentArm ArmFor(MetadataFixture fixture)
@@ -808,7 +832,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     + " modes (docs/s3k-run-publication.md section 6).");
             }
             const string FixtureManifestVersionLine =
-                "  \"lua_script_version\": \"6.37-s3k-completerun\",\n";
+                "  \"lua_script_version\": \"6.39-s3k-completerun\",\n";
             AssertContains(expected, FixtureManifestVersionLine);
 
             var transitions = new List<RunManifestTransition>();
@@ -833,7 +857,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     SetBSegments,
                     transitions);
             const string CurrentManifestVersionLine =
-                "  \"lua_script_version\": \"6.38-s3k-completerun\",\n";
+                "  \"lua_script_version\": \"6.39-s3k-completerun\",\n";
             AssertEx.Equal(
                 1,
                 CountOccurrences(actual, CurrentManifestVersionLine));
@@ -991,7 +1015,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
             };
         }
 
-        private static FakeS1Host RoundTripHost()
+        private static FakeS1Host RoundTripHost(
+            bool failSpecialStageQueueProjection = false)
         {
             return new FakeS1Host((host, frame) =>
             {
@@ -1031,6 +1056,60 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 host.SetU16(S3KRam.SavedXPos, (ushort)(frame + 100));
                 host.SetU16(S3KRam.SavedYPos, (ushort)(frame + 200));
                 host.Ram[S3KRam.LastStarPostHit] = (byte)(frame % 5);
+                host.IsLagged = frame == 23;
+                if (failSpecialStageQueueProjection
+                    && active != null
+                    && active.GameMode == S3KRam.GameModeSpecialStage
+                    && frame >= 21)
+                {
+                    host.Ram[S3KRam.KosModulesLeft] = 0x81;
+                    host.SetU32(
+                        S3KRam.KosModuleQueue
+                            + S3KRam.KosModuleQueueEntrySize,
+                        0x100);
+                }
+            });
+        }
+
+        private static void CapturesSpecialStageQueueStatePerStoredRow()
+        {
+            WithMovie(MaskRows(40), movie =>
+            {
+                var sink = new RecordingSink();
+                S3KCompleteRunCaptureRunner.Capture(
+                    movie,
+                    RoundTripHost(),
+                    MultiBonusRunId,
+                    "synthetic.bk2",
+                    "2026-07-24",
+                    0,
+                    new byte[0],
+                    sink,
+                    true);
+
+                string[] lines = sink.Aux[3].Split(
+                    new[] { '\n' },
+                    StringSplitOptions.RemoveEmptyEntries);
+                AssertEx.Equal(8, lines.Length);
+                for (var row = 0; row < 4; row++)
+                {
+                    AssertContains(
+                        lines[row * 2],
+                        "\"frame\":" + row
+                        + ",\"event\":\"load_queue_state\","
+                        + "\"kind\":\"s3k_kos_direct\"");
+                    AssertContains(
+                        lines[row * 2 + 1],
+                        "\"frame\":" + row
+                        + ",\"event\":\"load_queue_state\","
+                        + "\"kind\":\"s3k_kos_module\"");
+                }
+                AssertContains(
+                    sink.Physics[3].Split('\n')[3],
+                    ",1,");
+                AssertContains(
+                    sink.Metadata[3],
+                    "\"aux_schema_extras\": [\"load_queue_state_per_frame\"]");
             });
         }
 
@@ -1087,8 +1166,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 AssertHeaderAndRows(
                     sink.Physics[4], S3KTraceCsvWriter.Header, 14);
 
-                // A special-stage segment emits no aux at all — the file is
-                // opened and left byte-empty, and must still be published.
+                // With load-queue capture disabled, a special-stage segment
+                // has no profile aux events; the opened empty file is still
+                // published.
                 AssertEx.Equal(string.Empty, sink.Aux[3]);
                 AssertEx.Equal(true, sink.Aux[0].Length > 0);
 
@@ -1646,7 +1726,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 {
                     result = S3KCompleteRunCaptureRunner.Capture(
                         movie, RoundTripHost(), MultiBonusRunId,
-                        "synthetic.bk2", "2026-07-24", 0, sink);
+                        "synthetic.bk2", "2026-07-24", 0,
+                        new byte[0], sink, true);
                     if (result.RunManifestJson != null)
                     {
                         session.StageFile(
@@ -1673,12 +1754,16 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     AssertFilePublished(
                         Path.Combine(dir, "metadata.json"));
                 }
-                // The special-stage aux file is published EMPTY, not
-                // omitted.
+                // Physical queue state and its capability metadata cross
+                // the same staged publication boundary as the CSV.
                 AssertEx.Equal(
-                    0L,
+                    true,
                     new FileInfo(Path.Combine(
-                        output, "ss", "aux_state.jsonl")).Length);
+                        output, "ss", "aux_state.jsonl")).Length > 0);
+                AssertContains(
+                    ReadAllBytesAsText(Path.Combine(
+                        output, "ss", "metadata.json")),
+                    "load_queue_state_per_frame");
                 AssertFilePublished(
                     Path.Combine(output, "run_manifest.json"));
 
@@ -1740,6 +1825,47 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     {
                         threw = exception.Message.IndexOf(
                             "synthetic capture failure",
+                            StringComparison.Ordinal) >= 0;
+                    }
+                }
+                AssertEx.Equal(true, threw);
+                if (Directory.Exists(output))
+                {
+                    AssertEx.Equal(
+                        0,
+                        Directory.GetFiles(
+                            output, "*", SearchOption.AllDirectories).Length);
+                }
+            }));
+        }
+
+        private static void DiscardsFailedSpecialStageQueueProjection()
+        {
+            WithMovie(MaskRows(40), movie => WithOutputDirectory(output =>
+            {
+                var publisher = new NoReplacePublisher();
+                var threw = false;
+                using (NoReplacePublisher.IncrementalStagingSession session =
+                    publisher.OpenSession(output))
+                using (var sink = new S3KStagedSegmentSink(session))
+                {
+                    try
+                    {
+                        S3KCompleteRunCaptureRunner.Capture(
+                            movie,
+                            RoundTripHost(true),
+                            MultiBonusRunId,
+                            "synthetic.bk2",
+                            "2026-07-24",
+                            0,
+                            new byte[0],
+                            sink,
+                            true);
+                    }
+                    catch (InvalidDataException exception)
+                    {
+                        threw = exception.Message.IndexOf(
+                            "outside the supplied ROM",
                             StringComparison.Ordinal) >= 0;
                     }
                 }

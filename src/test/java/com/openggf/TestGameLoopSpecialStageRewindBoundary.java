@@ -11,7 +11,7 @@ import com.openggf.game.SpecialStageAccessType;
 import com.openggf.game.SpecialStageDebugProvider;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.rewind.snapshot.CameraSnapshot;
-import com.openggf.game.rewind.snapshot.FadeManagerSnapshot;
+import com.openggf.graphics.FadeManagerSnapshot;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.KeyframeStore;
 import com.openggf.game.rewind.LiveRewindManager;
@@ -136,6 +136,7 @@ class TestGameLoopSpecialStageRewindBoundary {
         setField(loop, "levelManager", levelManager);
 
         doExitResultsScreen();
+        completeActiveFade();
         doExitResultsScreen();
 
         assertFalse(context.getRewindRegistry().capture().containsKey(SpecialStageProvider.SPECIAL_STAGE_REWIND_KEY));
@@ -160,6 +161,13 @@ class TestGameLoopSpecialStageRewindBoundary {
         Method method = GameLoop.class.getDeclaredMethod("doExitResultsScreen");
         method.setAccessible(true);
         method.invoke(loop);
+    }
+
+    private void completeActiveFade() {
+        for (int frame = 0; frame < 64 && context.getFadeManager().isActive(); frame++) {
+            context.getFadeManager().update();
+        }
+        assertFalse(context.getFadeManager().isActive(), "test must release the first native exit fade");
     }
 
     private CompositeSnapshot frameZeroSnapshot() throws Exception {

@@ -1,5 +1,6 @@
 package com.openggf.sprites.managers;
 
+import com.openggf.game.resources.DynamicArtDecisionOwner;
 import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -150,24 +151,41 @@ public class TailsTailsController {
     private final AbstractPlayableSprite sprite;
     private final PlayerSpriteRenderer renderer;
     private final boolean isS3k;
+    private final DynamicArtDecisionOwner dynamicArtDecisionOwner;
 
     private int currentAnim = ANIM_BLANK;
     private int lastParentAnim = -1;
     private int frameIndex;
     private int frameTick;
 
+    public record RewindState(
+            int currentAnim,
+            int lastParentAnim,
+            int frameIndex,
+            int frameTick) {
+    }
+
     public PlayerSpriteRenderer getRenderer() {
         return renderer;
     }
 
     public TailsTailsController(AbstractPlayableSprite sprite, PlayerSpriteRenderer renderer) {
-        this(sprite, renderer, false);
+        this(sprite, renderer, false, null);
     }
 
     public TailsTailsController(AbstractPlayableSprite sprite, PlayerSpriteRenderer renderer, boolean isS3k) {
+        this(sprite, renderer, isS3k, null);
+    }
+
+    public TailsTailsController(
+            AbstractPlayableSprite sprite,
+            PlayerSpriteRenderer renderer,
+            boolean isS3k,
+            DynamicArtDecisionOwner dynamicArtDecisionOwner) {
         this.sprite = sprite;
         this.renderer = renderer;
         this.isS3k = isS3k;
+        this.dynamicArtDecisionOwner = dynamicArtDecisionOwner;
     }
 
     public void update() {
@@ -216,6 +234,24 @@ public class TailsTailsController {
                 }
             }
         }
+        publishDynamicArtDecision();
+    }
+
+    private void publishDynamicArtDecision() {
+        if (isS3k || renderer == null || currentAnim == ANIM_BLANK) {
+            return;
+        }
+        int[] frames = getFrames(currentAnim);
+        if (frames == null || frameIndex < 0 || frameIndex >= frames.length) {
+            return;
+        }
+        int mappingFrame = frames[frameIndex];
+        if (currentAnim == ANIM_DIRECTIONAL) {
+            mappingFrame += computeDirectionalOffset();
+        }
+        if (dynamicArtDecisionOwner != null) {
+            dynamicArtDecisionOwner.observe(mappingFrame);
+        }
     }
 
     public void draw() {
@@ -248,6 +284,25 @@ public class TailsTailsController {
         int originX = sprite.getRenderCentreX();
         int originY = sprite.getRenderCentreY();
         renderer.drawFrame(mappingFrame, originX, originY, hFlip, vFlip);
+    }
+
+    public RewindState captureRewindState() {
+        return new RewindState(
+                currentAnim, lastParentAnim, frameIndex, frameTick);
+    }
+
+    public void restoreRewindState(RewindState state) {
+        if (state == null) {
+            currentAnim = ANIM_BLANK;
+            lastParentAnim = -1;
+            frameIndex = 0;
+            frameTick = 0;
+            return;
+        }
+        currentAnim = state.currentAnim();
+        lastParentAnim = state.lastParentAnim();
+        frameIndex = state.frameIndex();
+        frameTick = state.frameTick();
     }
 
     private int resolveObj05Animation(int parentAnimId) {

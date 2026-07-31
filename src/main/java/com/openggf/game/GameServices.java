@@ -14,6 +14,9 @@ import com.openggf.game.ghost.GhostRenderRegistry;
 import com.openggf.game.mutation.ZoneLayoutMutationPipeline;
 import com.openggf.game.render.AdvancedRenderModeController;
 import com.openggf.game.render.SpecialRenderEffectRegistry;
+import com.openggf.game.resources.DynamicArtDiagnosticsSnapshot;
+import com.openggf.game.resources.DynamicArtLifecycleService;
+import com.openggf.game.resources.QueueDiagnosticSnapshot;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.WorldSession;
@@ -33,6 +36,8 @@ import com.openggf.physics.BackgroundPlaneCollisionProvider;
 import com.openggf.physics.TerrainCollisionManager;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.timer.TimerManager;
+
+import java.util.List;
 
 /**
  * Thin service locator for non-object code.
@@ -195,6 +200,11 @@ public final class GameServices {
         return mode != null ? mode.runtimeArtCoordinator() : null;
     }
 
+    public static DynamicArtLifecycleService dynamicArtLifecycleOrNull() {
+        GameplayModeContext mode = gameplayModeOrNull();
+        return mode != null ? mode.dynamicArtLifecycle() : null;
+    }
+
     public static SeamlessTransitionResourceHandoffRegistry
             seamlessTransitionResourceHandoffsOrNull() {
         GameplayModeContext mode = gameplayModeOrNull();
@@ -226,6 +236,11 @@ public final class GameServices {
     public static RuntimeArtCoordinator runtimeArtCoordinator() {
         return requireGameplayMode("runtimeArtCoordinator")
                 .runtimeArtCoordinator();
+    }
+
+    public static DynamicArtLifecycleService dynamicArtLifecycle() {
+        return requireGameplayMode("dynamicArtLifecycle")
+                .dynamicArtLifecycle();
     }
 
     public static SeamlessTransitionResourceHandoffRegistry
@@ -332,6 +347,19 @@ public final class GameServices {
 
     public static ZoneRuntimeState zoneRuntimeState() {
         return zoneRuntimeRegistry().current();
+    }
+
+    public static List<QueueDiagnosticSnapshot> captureQueueDiagnostics() {
+        GameplayModeContext mode = gameplayModeOrNull();
+        return mode != null ? mode.captureQueueDiagnostics() : List.of();
+    }
+
+    /** Captures the immutable production player-DPLC diagnostics for this row. */
+    public static DynamicArtDiagnosticsSnapshot captureDynamicArtDiagnostics() {
+        GameplayModeContext mode = gameplayModeOrNull();
+        return mode != null
+                ? mode.dynamicArtLifecycle().latestSnapshot()
+                : DynamicArtDiagnosticsSnapshot.empty();
     }
 
     public static PaletteOwnershipRegistry paletteOwnershipRegistry() {

@@ -301,6 +301,19 @@ public record TraceMetadata(
                 && auxSchemaExtras.contains("camera_boundary_per_frame");
     }
 
+    /** Whether every comparable frame carries the complete physical queue set. */
+    public boolean hasPerFrameLoadQueueState() {
+        return auxSchemaExtras != null
+                && auxSchemaExtras.contains("load_queue_state_per_frame");
+    }
+
+    /** Whether every stored row must carry a player-art transfer heartbeat. */
+    public boolean hasPerFrameDynamicArtTransferState() {
+        return auxSchemaExtras != null
+                && auxSchemaExtras.contains(
+                        "dynamic_art_transfer_state_per_frame_v1");
+    }
+
     /**
      * Whether the trace's physics.csv carries the player sub-pixel fraction
      * columns ({@code x_sub}/{@code y_sub}). These have been present since the

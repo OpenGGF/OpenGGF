@@ -1,6 +1,7 @@
 package com.openggf.tests;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -10,18 +11,37 @@ import org.xml.sax.InputSource;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 class TestBuildToolingGuard {
+
+    private static final Path POLICY_SCRIPT = Path.of(".githooks/validate-policy.sh").toAbsolutePath();
+    private static final Path POWERSHELL_POLICY_SCRIPT =
+            Path.of(".githooks/validate-policy.ps1").toAbsolutePath();
+    private static final Path MACHINE_LOCAL_PATH_GRANDFATHER =
+            Path.of(".githooks/machine-local-path-grandfather.sha256").toAbsolutePath();
+    private static final Path POST_CHECKOUT_HOOK = Path.of(".githooks/post-checkout").toAbsolutePath();
+    private static final Path PROJECT_GITIGNORE = Path.of(".gitignore").toAbsolutePath();
+    private static final String ALL_ZERO_OID = "0000000000000000000000000000000000000000";
+    private static final String RESOURCE_POLICY_CUTOVER = "ccdd33edf4f9cd4a7937791f1d4c2f37cbeeb5e0";
+    private static final String FRONTIER_GRANDFATHER_BASELINE = "53de63da2";
+    private static final String FRONTIER_LOG_PATH = "docs/status/trace-frontier-log.md";
 
     private static final List<String> TRACE_REPLAY_DIAGNOSTIC_EXCLUDES = List.of(
             "**/Debug*.java",
@@ -271,6 +291,12 @@ class TestBuildToolingGuard {
         if (!workflow.contains(".githooks/validate-policy.sh ci-push")) {
             violations.add(".github/workflows/release.yml does not run validate-policy.sh ci-push for direct master pushes");
         }
+        if (!workflow.contains("fetch-depth: 0")) {
+            violations.add(".github/workflows/release.yml push validation does not fetch full cutover history");
+        }
+        if (workflow.contains("\"refs/remotes/origin/${{ github.ref_name }}\"")) {
+            violations.add(".github/workflows/release.yml still supplies a peer-influenced pushed remote ref");
+        }
 
         if (!violations.isEmpty()) {
             fail("release PRs into master must not bypass branch policy validation:\n  "
@@ -284,11 +310,13 @@ class TestBuildToolingGuard {
         String release = normalizeLineEndings(Files.readString(Path.of(".github/workflows/release.yml")));
         List<String> violations = new ArrayList<>();
 
-        if (!ci.contains("pull_request:\n    branches: [next, develop]")) {
+        if (!ci.contains("pull_request:\n    branches:\n      - next\n      - develop")) {
             violations.add(".github/workflows/ci.yml must validate pull requests targeting next and develop");
         }
-        if (!ci.contains("push:\n    branches: [next, develop]")) {
-            violations.add(".github/workflows/ci.yml must validate pushes to next and develop");
+        // Pushes are policy-validated on every branch; the lightweight all-branch
+        // push trigger still reaches next and develop.
+        if (!ci.contains("push:\n    branches:\n      - '**'")) {
+            violations.add(".github/workflows/ci.yml must validate pushes on every branch");
         }
         if (!release.contains("pull_request:\n    branches: [master]")) {
             violations.add(".github/workflows/release.yml must retain pull-request ownership for master only");
@@ -557,6 +585,10 @@ class TestBuildToolingGuard {
 
     @Test
     void candidateCiShouldProtectPullRequestsAndPushes() throws Exception {
+        // 2026-07-02: the full Maven suite on direct develop pushes was
+        // deliberately removed by f18d4d9be ("fix: stop develop push CI").
+        // The lightweight all-branch push policy is a separate backstop; this
+        // guard still covers the PR path and scheduled develop trace replay.
         String ci = Files.readString(Path.of(".github/workflows/ci.yml"));
         String shellPolicy = Files.readString(Path.of(".githooks/validate-policy.sh"));
         String powershellPolicy = Files.readString(Path.of(".githooks/validate-policy.ps1"));
@@ -788,7 +820,7 @@ class TestBuildToolingGuard {
         if (!shellPolicy.contains("if [ \"$base_ref\" != \"next\" ] && [ \"$base_ref\" != \"develop\" ] && [ \"$base_ref\" != \"master\" ]; then")) {
             violations.add(".githooks/validate-policy.sh ci-pr mode must continue for next, develop, and master");
         }
-        if (!powershellPolicy.contains("if ($BaseRef -ne \"next\" -and $BaseRef -ne \"develop\" -and $BaseRef -ne \"master\") {")) {
+        if (!powershellPolicy.contains("if ($BaseRef -cne \"next\" -and $BaseRef -cne \"develop\" -and $BaseRef -cne \"master\") {")) {
             violations.add(".githooks/validate-policy.ps1 ci-pr mode must continue for next, develop, and master");
         }
 
@@ -846,6 +878,227 @@ class TestBuildToolingGuard {
 
         if (!violations.isEmpty()) {
             fail("Windows hook dispatch must not stop at a broken pwsh shim before trying powershell.exe:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void resourcePolicyImplementationsShouldKeepConstantsAndControlFlowInParity() throws Exception {
+        String shellPolicy = Files.readString(Path.of(".githooks/validate-policy.sh"));
+        String powershellPolicy = Files.readString(Path.of(".githooks/validate-policy.ps1"));
+        List<String> violations = new ArrayList<>();
+
+        Map<String, String> expectedConstants = Map.ofEntries(
+                Map.entry("GITHUB_FILE_SIZE_LIMIT_BYTES", "100000000"),
+                Map.entry("TRACE_COMPRESSION_THRESHOLD_BYTES", "1048576"),
+                Map.entry("RELEASE_TRAILER_CUTOVER_BASE", "677447024a08db9e25f3461588d661c23ba26848"),
+                Map.entry("RESOURCE_POLICY_CUTOVER", RESOURCE_POLICY_CUTOVER),
+                Map.entry("EMPTY_TREE_OID", "4b825dc642cb6eb9a060e54bf8d69288fbee4904"),
+                Map.entry("ALL_ZERO_OID", ALL_ZERO_OID),
+                Map.entry("POSIX_HOME_ROOT", "/home"),
+                Map.entry("VAR_HOME_ROOT", "/var/home"),
+                Map.entry("MACOS_HOME_ROOT", "/Users"),
+                Map.entry("WINDOWS_USERS_ROOT", "[A-Za-z]:[\\\\/]+[Uu][Ss][Ee][Rr][Ss]"));
+        Map<String, String> powershellNames = Map.ofEntries(
+                Map.entry("GITHUB_FILE_SIZE_LIMIT_BYTES", "GithubFileSizeLimitBytes"),
+                Map.entry("TRACE_COMPRESSION_THRESHOLD_BYTES", "TraceCompressionThresholdBytes"),
+                Map.entry("RELEASE_TRAILER_CUTOVER_BASE", "ReleaseTrailerCutoverBase"),
+                Map.entry("RESOURCE_POLICY_CUTOVER", "ResourcePolicyCutover"),
+                Map.entry("EMPTY_TREE_OID", "EmptyTreeOid"),
+                Map.entry("ALL_ZERO_OID", "AllZeroOid"),
+                Map.entry("POSIX_HOME_ROOT", "PosixHomeRoot"),
+                Map.entry("VAR_HOME_ROOT", "VarHomeRoot"),
+                Map.entry("MACOS_HOME_ROOT", "MacosHomeRoot"),
+                Map.entry("WINDOWS_USERS_ROOT", "WindowsUsersRoot"));
+        expectedConstants.forEach((shellName, expectedValue) -> {
+            String shellValue = policyAssignment(shellPolicy, shellName);
+            String powershellValue = policyAssignment(powershellPolicy, "script:" + powershellNames.get(shellName));
+            if (!expectedValue.equals(shellValue)) {
+                violations.add(".githooks/validate-policy.sh assigns " + shellName + "=" + shellValue
+                        + " instead of " + expectedValue);
+            }
+            if (!expectedValue.equals(powershellValue)) {
+                violations.add(".githooks/validate-policy.ps1 assigns " + powershellNames.get(shellName)
+                        + "=" + powershellValue + " instead of " + expectedValue);
+            }
+        });
+
+        String shellStagedCandidates = scriptFunction(shellPolicy, "staged_candidates() {");
+        String powershellStagedCandidates = scriptFunction(powershellPolicy, "function Get-StagedCandidates()");
+        String shellCommitCandidates = scriptFunction(shellPolicy, "commit_candidates() {");
+        String powershellCommitCandidates = scriptFunction(powershellPolicy, "function Get-CommitCandidates(");
+        for (String commandArgument : List.of("--no-renames", "--diff-filter=AMT")) {
+            if (!shellStagedCandidates.contains(commandArgument)
+                    || !powershellStagedCandidates.contains(commandArgument)) {
+                violations.add("staged candidate implementations do not both use " + commandArgument);
+            }
+            if (!shellCommitCandidates.contains(commandArgument)
+                    || !powershellCommitCandidates.contains(commandArgument)) {
+                violations.add("commit candidate implementations do not both use " + commandArgument);
+            }
+        }
+
+        String shellCommitMsg = scriptFunction(shellPolicy, "validate_commit_msg_hook() {");
+        String powershellCommitMsg = scriptFunction(powershellPolicy, "function Validate-CommitMsgHook(");
+        int shellStagedValidation = shellCommitMsg.indexOf("validate_staged_content");
+        int shellMergeReturn = shellCommitMsg.indexOf("is_merge_in_progress");
+        if (shellStagedValidation < 0 || shellMergeReturn < 0 || shellStagedValidation > shellMergeReturn) {
+            violations.add(".githooks/validate-policy.sh commit-msg validates staged content after its merge return");
+        }
+        int powershellStagedValidation = powershellCommitMsg.indexOf("Validate-StagedContent");
+        int powershellMergeReturn = powershellCommitMsg.indexOf("Test-MergeInProgress");
+        if (powershellStagedValidation < 0
+                || powershellMergeReturn < 0
+                || powershellStagedValidation > powershellMergeReturn) {
+            violations.add(".githooks/validate-policy.ps1 commit-msg validates staged content after its merge return");
+        }
+
+        String shellCiRange = scriptFunction(shellPolicy, "validate_ci_commit_range() {");
+        String powershellCiRange = scriptFunction(powershellPolicy, "function Validate-CiCommitRange(");
+        if (!shellCiRange.contains("validate_content_commit_list \"$commits\" \"$head_sha\"")
+                || !powershellCiRange.contains("Validate-ContentCommitList $commits $HeadSha")) {
+            violations.add("CI commit-range implementations do not validate all commit content and the delivered tip");
+        }
+        if (!shellCiRange.contains("if [ \"$#\" -gt 2 ]; then")
+                || !powershellCiRange.contains("if ($parentFields.Count -gt 2)")) {
+            violations.add("CI commit-range implementations do not both limit trailer checks to non-merge commits");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("shell and PowerShell must share policy values, Git candidate commands, and validation order:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void powershellResourcePolicyShouldUseFixedCutoverAndCaseSensitiveBranchIdentity() throws Exception {
+        String powershellPolicy = Files.readString(POWERSHELL_POLICY_SCRIPT);
+        String ciPush = scriptFunction(powershellPolicy, "function Validate-CiPush(");
+        String ciNewRef = scriptFunction(powershellPolicy, "function Validate-CiNewRef(");
+        List<String> violations = new ArrayList<>();
+
+        if (!ciPush.contains("Validate-CiNewRef $AfterSha")
+                || !ciNewRef.contains("$script:ResourcePolicyCutover")
+                || !ciNewRef.contains("\"merge-base\"")
+                || !ciNewRef.contains("\"--is-ancestor\"")) {
+            violations.add("Validate-CiPush does not gate new refs on the fixed resource-policy cutover");
+        }
+        if (powershellPolicy.contains("function Resolve-PushedRemoteRef(")
+                || powershellPolicy.contains("function Get-CiNewRefCommits(")) {
+            violations.add("PowerShell still derives new-ref history from mutable peer refs");
+        }
+        if (!ciPush.contains("$RefName -ceq \"develop\"") || !ciPush.contains("$RefName -ceq \"master\"")) {
+            violations.add("Validate-CiPush routes branch names with case-insensitive comparisons");
+        }
+        if (!violations.isEmpty()) {
+            fail("PowerShell CI must use the fixed cutover and preserve case-sensitive Git branch identity:\n  "
+                    + String.join("\n  ", violations));
+        }
+    }
+
+    @Test
+    void powershellResourcePolicyShouldMatchFailClosedShellDiagnostics() throws Exception {
+        String shellPolicy = Files.readString(POLICY_SCRIPT);
+        String powershellPolicy = Files.readString(POWERSHELL_POLICY_SCRIPT);
+        List<String> violations = new ArrayList<>();
+
+        List<String> shellDiagnostics = List.of(
+                "\\`$path\\` is a symlink whose committed target blob could not be read.",
+                "delivered tip tree $tip contains a malformed object id for $path.",
+                "delivered tip tree $tip contains a truncated object id for $path.");
+        List<String> powershellDiagnostics = List.of(
+                "``$path`` is a symlink whose committed target blob could not be read.",
+                "delivered tip tree $Tip contains a malformed object id for $path.",
+                "delivered tip tree $Tip contains a truncated object id for $path.");
+        for (int i = 0; i < shellDiagnostics.size(); i++) {
+            if (!shellPolicy.contains(shellDiagnostics.get(i))) {
+                violations.add(".githooks/validate-policy.sh is missing expected diagnostic "
+                        + shellDiagnostics.get(i));
+            }
+            if (!powershellPolicy.contains(powershellDiagnostics.get(i))) {
+                violations.add(".githooks/validate-policy.ps1 is missing matching diagnostic "
+                        + powershellDiagnostics.get(i));
+            }
+        }
+
+        if (!violations.isEmpty()) {
+            fail("fail-closed PowerShell diagnostics must communicate the same reason as shell:\n  "
+                    + String.join("\n  ", violations));
+        }
+    }
+
+    @Test
+    void resourcePolicyHookDispatchersShouldBeTrackedExecutable() throws Exception {
+        String runPolicy = Files.readString(Path.of(".githooks/run-policy"));
+        List<String> violations = new ArrayList<>();
+
+        for (String hook : List.of("pre-commit", "commit-msg", "pre-push")) {
+            String path = ".githooks/" + hook;
+            String indexEntry = gitOutput(Path.of("."), "ls-files", "--stage", "--", path);
+            if (!indexEntry.startsWith("100755 ")) {
+                violations.add(path + " must be tracked executable");
+            }
+            String dispatcher = Files.readString(Path.of(path));
+            if (!dispatcher.contains("\"$HOOK_DIR/run-policy\" " + hook)) {
+                violations.add(path + " must dispatch " + hook + " through .githooks/run-policy");
+            }
+        }
+        if (!runPolicy.contains("exec \"$HOOK_DIR/validate-policy.sh\" \"$@\"")) {
+            violations.add(".githooks/run-policy must preserve the shell fallback and its arguments");
+        }
+        if (!runPolicy.contains("\"$@\" <&0")) {
+            violations.add(".githooks/run-policy must preserve Git hook standard input for PowerShell pre-push");
+        }
+
+        if (!violations.isEmpty()) {
+            fail("resource policy hook entry points must be executable portable dispatchers:\n  "
+                    + String.join("\n  ", new TreeSet<>(violations)));
+        }
+    }
+
+    @Test
+    void allBranchPushPolicyShouldRemainLightweight() throws Exception {
+        String workflow = normalizeLineEndings(Files.readString(Path.of(".github/workflows/ci.yml")));
+        List<String> violations = new ArrayList<>();
+
+        String pushTrigger = yamlIndentedBlock(workflow, "  push:", 2);
+        if (!pushTrigger.contains("branches:\n") || !pushTrigger.contains("- '**'")) {
+            violations.add(".github/workflows/ci.yml push trigger is not explicitly limited to all branches");
+        }
+        if (pushTrigger.contains("tags:")) {
+            violations.add(".github/workflows/ci.yml branch policy push trigger also declares tag reachability");
+        }
+        String policyJob = yamlIndentedBlock(workflow, "  policy:", 2);
+        if (!policyJob.contains("if: github.event_name == 'pull_request' || github.event_name == 'push'")) {
+            violations.add(".github/workflows/ci.yml policy job is not limited to PR and push events");
+        }
+        if (!policyJob.contains("fetch-depth: 0")) {
+            violations.add(".github/workflows/ci.yml policy checkout does not fetch full cutover history");
+        }
+        if (!policyJob.contains("Validate pushed branch resource policy")) {
+            violations.add(".github/workflows/ci.yml does not define a push-range policy step");
+        }
+        if (!policyJob.contains(".githooks/validate-policy.sh ci-push")) {
+            violations.add(".github/workflows/ci.yml does not invoke ci-push policy");
+        }
+        if (policyJob.contains("\"refs/remotes/origin/${{ github.ref_name }}\"")
+                || policyJob.contains("+refs/heads/*:refs/remotes/origin/*")) {
+            violations.add(".github/workflows/ci.yml still lets fetched peer refs influence new-branch selection");
+        }
+
+        for (Map.Entry<String, String> job : yamlJobBlocks(workflow).entrySet()) {
+            if (!job.getValue().contains("mvn ")) {
+                continue;
+            }
+            String jobCondition = yamlJobCondition(job.getValue());
+            if (!conditionExcludesPush(jobCondition)) {
+                violations.add(".github/workflows/ci.yml Maven-bearing job " + job.getKey()
+                        + " is reachable from a branch push");
+            }
+        }
+
+        if (!violations.isEmpty()) {
+            fail("all-branch pushes need a lightweight policy-only CI path with fetched remote context:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
     }
@@ -1390,6 +1643,913 @@ class TestBuildToolingGuard {
                 signals);
     }
 
+    @Test
+    void preCommitRejectsProtectedRelativeDisassemblyLink(@TempDir Path temporaryDirectory) throws Exception {
+        Path repository = newRepository(temporaryDirectory, "protected-relative-link");
+        stageSymlink(repository, "docs/skdisasm", "../../shared/skdisasm", true);
+
+        assertPolicyRejects(runPolicy(repository, "pre-commit"), "docs/skdisasm");
+    }
+
+    @Test
+    void preCommitRejectsUnprotectedAbsolutePosixWindowsAndUncLinks(@TempDir Path temporaryDirectory) throws Exception {
+        Path posixRepository = newRepository(temporaryDirectory, "absolute-posix-link");
+        String posixPath = "/" + "opt" + "/shared-resource";
+        stageSymlink(posixRepository, "docs/external-link", posixPath, false);
+        assertPolicyRejects(runPolicy(posixRepository, "pre-commit"), "docs/external-link");
+
+        Path posixHomeRepository = newRepository(temporaryDirectory, "absolute-posix-home-link");
+        String posixHomePath = "/" + "home" + "/" + "policy-user" + "/workspace";
+        stageSymlink(posixHomeRepository, "docs/home-link", posixHomePath, false);
+        assertPolicyRejects(runPolicy(posixHomeRepository, "pre-commit"), "docs/home-link");
+
+        Path windowsRepository = newRepository(temporaryDirectory, "absolute-windows-link");
+        String windowsHomePath = "C:" + "\\" + "Users" + "\\" + "policy-user" + "\\workspace";
+        stageSymlink(windowsRepository, "docs/windows-link", windowsHomePath, false);
+        assertPolicyRejects(runPolicy(windowsRepository, "pre-commit"), "docs/windows-link");
+
+        Path uncRepository = newRepository(temporaryDirectory, "absolute-unc-link");
+        String uncPath = "\\" + "\\" + "server" + "\\" + "shared-resource";
+        stageSymlink(uncRepository, "docs/unc-link", uncPath, false);
+        assertPolicyRejects(runPolicy(uncRepository, "pre-commit"), "docs/unc-link");
+    }
+
+    @Test
+    void preCommitAcceptsUnprotectedRelativeLink(@TempDir Path temporaryDirectory) throws Exception {
+        Path repository = newRepository(temporaryDirectory, "unprotected-relative-link");
+        stageSymlink(repository, "docs/portable-link", "../shared/portable-resource", false);
+
+        assertPolicyAccepts(runPolicy(repository, "pre-commit"));
+    }
+
+    @Test
+    void preCommitTreatsHomebrewTextAsOrdinaryText(@TempDir Path temporaryDirectory) throws Exception {
+        Path repository = newRepository(temporaryDirectory, "homebrew-text");
+        writeAndStage(repository, "docs/architecture/audits/homebrew.md", "/" + "homebrew" + "/example\n");
+
+        assertPolicyAccepts(runPolicy(repository, "pre-commit"));
+    }
+
+    @Test
+    void preCommitRejectsPosixAndWindowsUserHomePathsInAddedText(@TempDir Path temporaryDirectory) throws Exception {
+        Path posixRepository = newRepository(temporaryDirectory, "posix-home-text");
+        String posixHomePath = "/" + "home" + "/policy-user/workspace";
+        writeAndStage(posixRepository, "docs/architecture/audits/posix.md", "local checkout: " + posixHomePath + "\n");
+        assertPolicyRejects(runPolicy(posixRepository, "pre-commit"), "docs/architecture/audits/posix.md");
+
+        Path windowsRepository = newRepository(temporaryDirectory, "windows-home-text");
+        String windowsHomePath = "D:" + "\\" + "Users" + "\\policy-user\\workspace";
+        writeAndStage(windowsRepository, "docs/architecture/audits/windows.md", "local checkout: " + windowsHomePath + "\n");
+        assertPolicyRejects(runPolicy(windowsRepository, "pre-commit"), "docs/architecture/audits/windows.md");
+
+        Path varHomeRepository = newRepository(temporaryDirectory, "var-home-text");
+        String varHomePath = "/" + "var" + "/" + "home" + "/policy-user/workspace";
+        writeAndStage(varHomeRepository, "docs/architecture/audits/var-home.md", "local checkout: " + varHomePath + "\n");
+        assertPolicyRejects(runPolicy(varHomeRepository, "pre-commit"), "docs/architecture/audits/var-home.md");
+
+        Path macHomeRepository = newRepository(temporaryDirectory, "mac-home-text");
+        String macHomePath = "/" + "Users" + "/policy-user/workspace";
+        writeAndStage(macHomeRepository, "docs/architecture/audits/mac.md", "local checkout: " + macHomePath + "\n");
+        assertPolicyRejects(runPolicy(macHomeRepository, "pre-commit"), "docs/architecture/audits/mac.md");
+    }
+
+    @Test
+    void shellAndPowerShellInspectOnlyIntroducedMachineLocalPathsInExistingText(
+            @TempDir Path temporaryDirectory) throws Exception {
+        String grandfatheredHome = "/" + "home" + "/historic-user/checkout";
+        String introducedHome = "/" + "home" + "/new-user/checkout";
+        String powershell = availablePowerShell();
+
+        Path unchangedRepository = newRepository(temporaryDirectory, "grandfathered-existing-text");
+        String existingPath = "docs/architecture/audits/history.md";
+        writeAndStage(unchangedRepository, existingPath, "historic checkout: " + grandfatheredHome + "\n");
+        commit(unchangedRepository, "historic audit");
+        writeAndStage(unchangedRepository, existingPath,
+                "historic checkout: " + grandfatheredHome + "\nportable follow-up\n");
+        assertPolicyAccepts(runPolicy(unchangedRepository, "pre-commit"));
+        if (powershell != null) {
+            assertPolicyAccepts(runPowerShellPolicy(unchangedRepository, powershell, "pre-commit"));
+        }
+
+        Path modifiedRepository = newRepository(temporaryDirectory, "introduced-existing-text");
+        writeAndStage(modifiedRepository, existingPath, "historic checkout: " + grandfatheredHome + "\n");
+        commit(modifiedRepository, "historic audit");
+        writeAndStage(modifiedRepository, existingPath,
+                "historic checkout: " + grandfatheredHome + "\nnew checkout: " + introducedHome + "\n");
+        assertPolicyRejects(runPolicy(modifiedRepository, "pre-commit"), existingPath);
+        if (powershell != null) {
+            assertPolicyRejects(runPowerShellPolicy(modifiedRepository, powershell, "pre-commit"), existingPath);
+        }
+
+        Path addedRepository = newRepository(temporaryDirectory, "introduced-new-text");
+        String addedPath = "docs/architecture/audits/new.md";
+        writeAndStage(addedRepository, addedPath, "new checkout: " + introducedHome + "\n");
+        assertPolicyRejects(runPolicy(addedRepository, "pre-commit"), addedPath);
+        if (powershell != null) {
+            assertPolicyRejects(runPowerShellPolicy(addedRepository, powershell, "pre-commit"), addedPath);
+        }
+    }
+
+    @Test
+    void machineLocalPathGrandfatherExactlyMatchesVerifiedFrontierBaseline() throws Exception {
+        byte[] baselineBytes = gitOutput(
+                Path.of(".").toAbsolutePath(), "show",
+                FRONTIER_GRANDFATHER_BASELINE + ":" + FRONTIER_LOG_PATH)
+                .getBytes(StandardCharsets.UTF_8);
+        Map<String, Integer> expected = new TreeMap<>();
+        for (String line : new String(baselineBytes, StandardCharsets.UTF_8).split("\\R", -1)) {
+            if (containsMachineLocalHome(line)) {
+                expected.merge(sha256(line), 1, Integer::sum);
+            }
+        }
+
+        Map<String, Integer> actual = new TreeMap<>();
+        String expectedPrefix = "# baseline-prefix\t" + baselineBytes.length + "\t"
+                + sha256(baselineBytes) + "\t" + FRONTIER_LOG_PATH;
+        int prefixEntries = 0;
+        for (String line : Files.readAllLines(MACHINE_LOCAL_PATH_GRANDFATHER)) {
+            if (line.equals(expectedPrefix)) {
+                prefixEntries++;
+                continue;
+            }
+            if (line.isBlank() || line.startsWith("#")) {
+                continue;
+            }
+            String[] fields = line.split("\\t", -1);
+            assertEquals(3, fields.length, "grandfather entries must be hash<TAB>count<TAB>path");
+            assertEquals(FRONTIER_LOG_PATH, fields[2], "grandfather entries must remain path-scoped");
+            assertTrue(fields[0].matches("[0-9a-f]{64}"), "grandfather hash must be lowercase SHA-256");
+            assertTrue(Integer.parseInt(fields[1]) > 0, "grandfather occurrence count must be positive");
+            assertEquals(null, actual.put(fields[0], Integer.parseInt(fields[1])),
+                    "grandfather entries must not be duplicated");
+        }
+
+        assertEquals(1, prefixEntries, "grandfather manifest must pin one exact verified prefix");
+        assertEquals(expected, actual, "grandfather manifest must have no missing or extra baseline entries");
+
+        String baseline = new String(baselineBytes, StandardCharsets.UTF_8);
+        for (Map.Entry<String, Integer> entry : expected.entrySet()) {
+            if (entry.getValue() <= 1) {
+                continue;
+            }
+            String repeatedLine = baseline.lines()
+                    .filter(line -> {
+                        try {
+                            return sha256(line).equals(entry.getKey());
+                        } catch (Exception exception) {
+                            throw new IllegalStateException(exception);
+                        }
+                    })
+                    .findFirst()
+                    .orElseThrow();
+            String replayed = baseline.replaceFirst(Pattern.quote(repeatedLine + "\n"), "")
+                    + repeatedLine + "\n";
+            assertFalse(sha256(replayed.getBytes(StandardCharsets.UTF_8)).equals(sha256(baselineBytes)),
+                    "moving any multiplicity>1 occurrence must invalidate the prefix");
+        }
+    }
+
+    @Test
+    void shellAndPowerShellGrandfatherOnlyExactHistoricFrontierOccurrences(
+            @TempDir Path temporaryDirectory) throws Exception {
+        String baseline = gitOutput(
+                Path.of(".").toAbsolutePath(), "show",
+                FRONTIER_GRANDFATHER_BASELINE + ":" + FRONTIER_LOG_PATH);
+        String historicLine = baseline.lines()
+                .filter(TestBuildToolingGuard::containsMachineLocalHome)
+                .findFirst()
+                .orElseThrow();
+        String powershell = availablePowerShell();
+
+        Path exactRepository = newRepository(temporaryDirectory, "grandfather-exact");
+        writeAndStage(exactRepository, FRONTIER_LOG_PATH, "portable baseline\n");
+        commit(exactRepository, "neutralized frontier");
+        writeAndStage(exactRepository, FRONTIER_LOG_PATH, baseline + "portable append\n");
+        assertPolicyAccepts(runPolicy(exactRepository, "pre-commit"));
+        if (powershell != null) {
+            assertPolicyAccepts(runPowerShellPolicy(exactRepository, powershell, "pre-commit"));
+        }
+
+        Path alteredRepository = newRepository(temporaryDirectory, "grandfather-altered");
+        writeAndStage(alteredRepository, FRONTIER_LOG_PATH, "portable baseline\n");
+        commit(alteredRepository, "neutralized frontier");
+        writeAndStage(alteredRepository, FRONTIER_LOG_PATH,
+                baseline.replaceFirst(Pattern.quote(historicLine), historicLine + "-altered"));
+        assertPolicyRejects(runPolicy(alteredRepository, "pre-commit"), FRONTIER_LOG_PATH);
+        if (powershell != null) {
+            assertPolicyRejects(runPowerShellPolicy(alteredRepository, powershell, "pre-commit"), FRONTIER_LOG_PATH);
+        }
+
+        Path replayRepository = newRepository(temporaryDirectory, "grandfather-replay");
+        writeAndStage(replayRepository, FRONTIER_LOG_PATH, "portable baseline\n");
+        commit(replayRepository, "neutralized frontier");
+        writeAndStage(replayRepository, FRONTIER_LOG_PATH, baseline + historicLine + "\n");
+        assertPolicyRejects(runPolicy(replayRepository, "pre-commit"), FRONTIER_LOG_PATH);
+        if (powershell != null) {
+            assertPolicyRejects(runPowerShellPolicy(replayRepository, powershell, "pre-commit"), FRONTIER_LOG_PATH);
+        }
+
+        Path deletedRepository = newRepository(temporaryDirectory, "grandfather-deletion");
+        writeAndStage(deletedRepository, FRONTIER_LOG_PATH, baseline);
+        commit(deletedRepository, "historic frontier");
+        String deleted = baseline.replaceFirst(Pattern.quote(historicLine + "\n"), "");
+        writeAndStage(deletedRepository, FRONTIER_LOG_PATH, deleted);
+        assertPolicyRejects(runPolicy(deletedRepository, "pre-commit"), FRONTIER_LOG_PATH);
+        if (powershell != null) {
+            assertPolicyRejects(runPowerShellPolicy(deletedRepository, powershell, "pre-commit"), FRONTIER_LOG_PATH);
+        }
+
+        Path replayAfterDeletionRepository = newRepository(temporaryDirectory, "grandfather-replay-after-deletion");
+        writeAndStage(replayAfterDeletionRepository, FRONTIER_LOG_PATH, baseline);
+        commit(replayAfterDeletionRepository, "historic frontier");
+        writeAndStage(replayAfterDeletionRepository, FRONTIER_LOG_PATH, deleted + historicLine + "\n");
+        assertPolicyRejects(runPolicy(replayAfterDeletionRepository, "pre-commit"), FRONTIER_LOG_PATH);
+        if (powershell != null) {
+            assertPolicyRejects(runPowerShellPolicy(
+                    replayAfterDeletionRepository, powershell, "pre-commit"), FRONTIER_LOG_PATH);
+        }
+
+        int firstBreak = baseline.indexOf('\n');
+        int secondBreak = baseline.indexOf('\n', firstBreak + 1);
+        String reordered = baseline.substring(firstBreak + 1, secondBreak + 1)
+                + baseline.substring(0, firstBreak + 1)
+                + baseline.substring(secondBreak + 1);
+        Path reorderedRepository = newRepository(temporaryDirectory, "grandfather-reorder");
+        writeAndStage(reorderedRepository, FRONTIER_LOG_PATH, baseline);
+        commit(reorderedRepository, "historic frontier");
+        writeAndStage(reorderedRepository, FRONTIER_LOG_PATH, reordered);
+        assertPolicyRejects(runPolicy(reorderedRepository, "pre-commit"), FRONTIER_LOG_PATH);
+        if (powershell != null) {
+            assertPolicyRejects(runPowerShellPolicy(reorderedRepository, powershell, "pre-commit"), FRONTIER_LOG_PATH);
+        }
+
+        Path wrongPathRepository = newRepository(temporaryDirectory, "grandfather-wrong-path");
+        String wrongPath = "docs/architecture/audits/copied-history.md";
+        writeAndStage(wrongPathRepository, wrongPath, "portable baseline\n");
+        commit(wrongPathRepository, "portable audit");
+        writeAndStage(wrongPathRepository, wrongPath, historicLine + "\n");
+        assertPolicyRejects(runPolicy(wrongPathRepository, "pre-commit"), wrongPath);
+        if (powershell != null) {
+            assertPolicyRejects(runPowerShellPolicy(wrongPathRepository, powershell, "pre-commit"), wrongPath);
+        }
+
+        Path newFileRepository = newRepository(temporaryDirectory, "grandfather-new-file");
+        writeAndStage(newFileRepository, FRONTIER_LOG_PATH, historicLine + "\n");
+        assertPolicyRejects(runPolicy(newFileRepository, "pre-commit"), FRONTIER_LOG_PATH);
+        if (powershell != null) {
+            assertPolicyRejects(runPowerShellPolicy(newFileRepository, powershell, "pre-commit"), FRONTIER_LOG_PATH);
+        }
+    }
+
+    @Test
+    void shellAndPowerShellRejectWindowsHomePathsWithPortableSeparatorForms(
+            @TempDir Path temporaryDirectory) throws Exception {
+        Map<String, String> forms = new LinkedHashMap<>();
+        forms.put("forward", "C:" + "/" + "Users" + "/policy-user/workspace");
+        forms.put("backward", "D:" + "\\" + "Users" + "\\policy-user\\workspace");
+        forms.put("mixed", "E:" + "\\" + "Users" + "/policy-user\\workspace");
+        forms.put("doubled", "F:" + "\\\\" + "Users" + "\\\\policy-user\\\\workspace");
+        String powershell = availablePowerShell();
+
+        for (Map.Entry<String, String> form : forms.entrySet()) {
+            Path repository = newRepository(temporaryDirectory, "windows-home-" + form.getKey());
+            String relativePath = "docs/architecture/audits/" + form.getKey() + ".md";
+            writeAndStage(repository, relativePath, "local checkout: " + form.getValue() + "\n");
+
+            assertPolicyRejects(runPolicy(repository, "pre-commit"), relativePath);
+            if (powershell != null) {
+                assertPolicyRejects(runPowerShellPolicy(repository, powershell, "pre-commit"), relativePath);
+            }
+        }
+    }
+
+    @Test
+    void preCommitRejectsRootMergeAndHandoverScratchArtifacts(@TempDir Path temporaryDirectory) throws Exception {
+        Path mergeRepository = newRepository(temporaryDirectory, "merge-status-scratch");
+        writeAndStage(mergeRepository, "MERGE-STATUS-incident.md", "temporary status\n");
+        assertPolicyRejects(runPolicy(mergeRepository, "pre-commit"), "MERGE-STATUS-incident.md");
+
+        Path handoverRepository = newRepository(temporaryDirectory, "handover-scratch");
+        writeAndStage(handoverRepository, "HANDOVER-incident.md", "temporary handover\n");
+        assertPolicyRejects(runPolicy(handoverRepository, "pre-commit"), "HANDOVER-incident.md");
+    }
+
+    @Test
+    void preCommitAcceptsClassifiedArchitectureAudit(@TempDir Path temporaryDirectory) throws Exception {
+        Path repository = newRepository(temporaryDirectory, "classified-audit");
+        writeAndStage(repository, "docs/architecture/audits/HANDOVER-incident.md", "retained engineering audit\n");
+
+        assertPolicyAccepts(runPolicy(repository, "pre-commit"));
+    }
+
+    @Test
+    void preCommitAcceptsNestedPathBelowHandoverNamedDirectory(@TempDir Path temporaryDirectory) throws Exception {
+        Path repository = newRepository(temporaryDirectory, "nested-handover-guide");
+        writeAndStage(repository, "HANDOVER-guides/summary.md", "retained contributor guide\n");
+
+        assertPolicyAccepts(runPolicy(repository, "pre-commit"));
+    }
+
+    @Test
+    void stagedAndPublishedTypeChangesCannotHideAbsoluteSymlinkHistory(@TempDir Path temporaryDirectory) throws Exception {
+        Path remote = newBareRemote(temporaryDirectory, "type-change-remote");
+        Path repository = newRepository(temporaryDirectory, "type-change-local");
+        writeAndStage(repository, "docs/portable-resource", "regular base\n");
+        commit(repository, "initial regular resource");
+        addRemoteAndPush(repository, remote, "main");
+        git(repository, "switch", "-c", "feature/type-change");
+
+        Files.delete(repository.resolve("docs/portable-resource"));
+        stageSymlink(repository, "docs/portable-resource", "/" + "opt" + "/machine-resource", false);
+        assertPolicyRejects(runPolicy(repository, "pre-commit"), "docs/portable-resource");
+        commit(repository, "replace regular resource with absolute link");
+
+        Files.delete(repository.resolve("docs/portable-resource"));
+        writeAndStage(repository, "docs/portable-resource", "regular restored\n");
+        commit(repository, "restore regular resource");
+        String localOid = gitOutput(repository, "rev-parse", "HEAD").trim();
+
+        assertPolicyRejects(runPolicyWithInput(repository, "refs/heads/feature/type-change " + localOid
+                + " refs/heads/feature/type-change " + ALL_ZERO_OID + "\n",
+                "pre-push", "origin", remote.toString()), "docs/portable-resource");
+
+        Path ciRepository = newCutoverRepository(
+                temporaryDirectory, "type-change-ci", "feature/type-change-ci");
+        writeAndStage(ciRepository, "docs/portable-resource", "regular base\n");
+        commit(ciRepository, "add regular resource");
+        Files.delete(ciRepository.resolve("docs/portable-resource"));
+        stageSymlink(ciRepository, "docs/portable-resource", "/" + "opt" + "/machine-resource", false);
+        commit(ciRepository, "replace regular resource with absolute link");
+        Files.delete(ciRepository.resolve("docs/portable-resource"));
+        writeAndStage(ciRepository, "docs/portable-resource", "regular restored\n");
+        commit(ciRepository, "restore regular resource");
+        String ciTip = gitOutput(ciRepository, "rev-parse", "HEAD").trim();
+        assertPolicyRejects(runPolicy(
+                ciRepository, "ci-push", ALL_ZERO_OID, ciTip, "feature/type-change-ci"),
+                "docs/portable-resource");
+    }
+
+    @Test
+    void everyDisassemblyPathIsIgnoredAsDirectoryAndSymlink(@TempDir Path temporaryDirectory) throws Exception {
+        Path repository = newRepository(temporaryDirectory, "disassembly-ignore");
+        installProjectIgnoreRules(repository);
+        for (String disassembly : disassemblyPaths()) {
+            Path directory = repository.resolve(disassembly);
+            Files.createDirectories(directory);
+            assertGitSucceeds(repository, "check-ignore", "-q", "--", disassembly);
+            Files.delete(directory);
+
+            Files.createSymbolicLink(directory, Path.of("../shared/" + directory.getFileName()));
+            assertGitSucceeds(repository, "check-ignore", "-q", "--", disassembly);
+            Files.delete(directory);
+        }
+    }
+
+    @Test
+    void mergeHooksRejectProtectedLinkStagedDuringConflictResolution(@TempDir Path temporaryDirectory) throws Exception {
+        Path repository = newRepository(temporaryDirectory, "merge-resolution-link");
+        prepareConflictedMerge(repository);
+        stageSymlink(repository, "docs/skdisasm", "../../shared/skdisasm", true);
+        writeAndStage(repository, "conflict.txt", "resolved\n");
+        Path message = repository.resolve("merge-message.txt");
+        Files.writeString(message, "Merge topic\n");
+
+        assertPolicyRejects(runPolicy(repository, "pre-commit"), "docs/skdisasm");
+        assertPolicyRejects(runPolicy(repository, "commit-msg", message.toString()), "docs/skdisasm");
+    }
+
+    @Test
+    void prePushRejectsExistingBranchUpdateContainingBadMerge(@TempDir Path temporaryDirectory) throws Exception {
+        Path remote = newBareRemote(temporaryDirectory, "existing-branch-remote");
+        Path repository = newRepository(temporaryDirectory, "existing-branch-local");
+        createInitialCommit(repository);
+        addRemoteAndPush(repository, remote, "main");
+        createBadMerge(repository);
+        String localOid = gitOutput(repository, "rev-parse", "HEAD").trim();
+        String remoteOid = gitOutput(repository, "rev-parse", "origin/main").trim();
+
+        assertPolicyRejects(runPolicyWithInput(repository, "refs/heads/main " + localOid
+                + " refs/heads/main " + remoteOid + "\n", "pre-push", "origin", remote.toString()), "docs/skdisasm");
+    }
+
+    @Test
+    void existingCiRangeAcceptsCommitThatRemovesBaseViolation(@TempDir Path temporaryDirectory) throws Exception {
+        Path repository = newRepository(temporaryDirectory, "existing-range-removal");
+        createInitialCommit(repository);
+        stageSymlink(repository, "docs/skdisasm", "../../shared/skdisasm", true);
+        commit(repository, "base contains old generated link");
+        String baseOid = gitOutput(repository, "rev-parse", "HEAD").trim();
+        deleteAndStage(repository, "docs/skdisasm");
+        commit(repository, "remove old generated link");
+        String cleanTipOid = gitOutput(repository, "rev-parse", "HEAD").trim();
+
+        assertPolicyAccepts(runPolicy(
+                repository, "ci-push", baseOid, cleanTipOid, "feature/removal-only"));
+    }
+
+    @Test
+    void prePushAndCiPushRejectNewBranchWithEarlierUniqueBadCommit(@TempDir Path temporaryDirectory) throws Exception {
+        Path remote = newBareRemote(temporaryDirectory, "new-branch-remote");
+        Path repository = newRepository(temporaryDirectory, "new-branch-local");
+        createInitialCommit(repository);
+        addRemoteAndPush(repository, remote, "main");
+        git(repository, "switch", "-c", "feature/clean-tip");
+        stageSymlink(repository, "docs/skdisasm", "../../shared/skdisasm", true);
+        commit(repository, "bad link");
+        deleteAndStage(repository, "docs/skdisasm");
+        commit(repository, "remove generated link");
+        String localOid = gitOutput(repository, "rev-parse", "HEAD").trim();
+
+        assertPolicyRejects(runPolicyWithInput(repository, "refs/heads/feature/clean-tip " + localOid
+                + " refs/heads/feature/clean-tip " + ALL_ZERO_OID + "\n", "pre-push", "origin", remote.toString()), "docs/skdisasm");
+
+        Path ciRepository = newCutoverRepository(
+                temporaryDirectory, "new-branch-ci", "feature/clean-tip-ci");
+        stageSymlink(ciRepository, "docs/skdisasm", "../../shared/skdisasm", true);
+        commit(ciRepository, "bad post-cutover link");
+        deleteAndStage(ciRepository, "docs/skdisasm");
+        commit(ciRepository, "remove post-cutover link");
+        String ciTip = gitOutput(ciRepository, "rev-parse", "HEAD").trim();
+        assertPolicyRejects(runPolicy(
+                ciRepository, "ci-push", ALL_ZERO_OID, ciTip, "feature/clean-tip-ci"), "docs/skdisasm");
+    }
+
+    @Test
+    void newBranchFromRemediatedRemoteHistoryDoesNotRescanPublishedBadCommit(@TempDir Path temporaryDirectory) throws Exception {
+        Path remote = newBareRemote(temporaryDirectory, "remediated-remote");
+        Path repository = newRepository(temporaryDirectory, "remediated-local");
+        createInitialCommit(repository);
+        stageSymlink(repository, "docs/skdisasm", "../../shared/skdisasm", true);
+        commit(repository, "old bad link");
+        deleteAndStage(repository, "docs/skdisasm");
+        commit(repository, "remediate old link");
+        addRemoteAndPush(repository, remote, "main");
+        git(repository, "switch", "-c", "feature/clean-from-remediated", "origin/main");
+        writeAndStage(repository, "docs/architecture/audits/new-work.md", "clean unpublished work\n");
+        commit(repository, "clean feature work");
+        String localOid = gitOutput(repository, "rev-parse", "HEAD").trim();
+
+        assertPolicyAccepts(runPolicyWithInput(repository, "refs/heads/feature/clean-from-remediated " + localOid
+                + " refs/heads/feature/clean-from-remediated " + ALL_ZERO_OID + "\n", "pre-push", "origin", remote.toString()));
+
+        Path ciRepository = newCutoverRepository(
+                temporaryDirectory, "remediated-ci", "feature/clean-from-cutover");
+        writeAndStage(ciRepository, "docs/architecture/audits/new-work.md", "clean post-cutover work\n");
+        commit(ciRepository, "clean post-cutover work");
+        String ciTip = gitOutput(ciRepository, "rev-parse", "HEAD").trim();
+        assertPolicyAccepts(runPolicy(
+                ciRepository, "ci-push", ALL_ZERO_OID, ciTip, "feature/clean-from-cutover"));
+    }
+
+    @Test
+    void ciNewBranchesRejectSharedBadHistoryRegardlessOfPeerRefs(@TempDir Path temporaryDirectory)
+            throws Exception {
+        Path repository = newCutoverRepository(
+                temporaryDirectory, "peer-new-refs", "feature/peer-a");
+        stageSymlink(repository, "docs/skdisasm", "../../shared/skdisasm", true);
+        commit(repository, "shared bad post-cutover link");
+        deleteAndStage(repository, "docs/skdisasm");
+        commit(repository, "shared clean removal");
+        String localOid = gitOutput(repository, "rev-parse", "HEAD").trim();
+        git(repository, "update-ref", "refs/remotes/origin/feature/peer-a", localOid);
+        git(repository, "update-ref", "refs/remotes/origin/feature/peer-b", localOid);
+
+        assertPolicyRejects(runPolicy(
+                repository, "ci-push", ALL_ZERO_OID, localOid, "feature/peer-a"), "docs/skdisasm");
+        assertPolicyRejects(runPolicy(
+                repository, "ci-push", ALL_ZERO_OID, localOid, "feature/peer-b"), "docs/skdisasm");
+    }
+
+    @Test
+    void ciNewBranchFailsClosedWhenCutoverIsMissingOrUnreachable(@TempDir Path temporaryDirectory)
+            throws Exception {
+        Path missingRepository = newRepository(temporaryDirectory, "missing-cutover");
+        createInitialCommit(missingRepository);
+        String missingTip = gitOutput(missingRepository, "rev-parse", "HEAD").trim();
+        ProcessResult missingResult = runPolicy(
+                missingRepository, "ci-push", ALL_ZERO_OID, missingTip, "feature/missing-cutover");
+        assertTrue(missingResult.exitCode() != 0,
+                () -> "missing cutover object must reject new-ref CI:\n" + missingResult.output());
+        assertTrue(missingResult.output().contains(RESOURCE_POLICY_CUTOVER),
+                () -> "missing-cutover rejection must identify the fixed boundary:\n" + missingResult.output());
+
+        Path unrelatedRepository = newRepository(temporaryDirectory, "unreachable-cutover");
+        createInitialCommit(unrelatedRepository);
+        String unrelatedTip = gitOutput(unrelatedRepository, "rev-parse", "HEAD").trim();
+        git(unrelatedRepository, "fetch", "--no-tags",
+                Path.of(".").toAbsolutePath().normalize().toString(), RESOURCE_POLICY_CUTOVER);
+        ProcessResult unrelatedResult = runPolicy(
+                unrelatedRepository, "ci-push", ALL_ZERO_OID, unrelatedTip, "feature/unreachable-cutover");
+        assertTrue(unrelatedResult.exitCode() != 0,
+                () -> "unreachable cutover must reject new-ref CI:\n" + unrelatedResult.output());
+        assertTrue(unrelatedResult.output().contains("ancestor"),
+                () -> "unreachable-cutover rejection must explain ancestry:\n" + unrelatedResult.output());
+    }
+
+    @Test
+    void ciPushFailsClosedWhenTipTreeEnumerationIsMalformed(@TempDir Path temporaryDirectory) throws Exception {
+        Path repository = newRepository(temporaryDirectory, "tip-tree-failure");
+        createInitialCommit(repository);
+        String baseOid = gitOutput(repository, "rev-parse", "HEAD").trim();
+        writeAndStage(repository, "clean.txt", "clean tip\n");
+        commit(repository, "clean tip");
+        String localOid = gitOutput(repository, "rev-parse", "HEAD").trim();
+
+        Path fakeBin = temporaryDirectory.resolve("tip-tree-fake-bin");
+        Files.createDirectories(fakeBin);
+        Path fakeGit = fakeBin.resolve("git");
+        Files.writeString(fakeGit, """
+                #!/bin/sh
+                if [ "$1" = "ls-tree" ] && [ "$2" = "-r" ]; then
+                    printf '100644 blob not-an-object-id\tclean.txt\n'
+                    exit 0
+                fi
+                PATH="$ORIGINAL_PATH"
+                export PATH
+                exec git "$@"
+                """);
+        assertTrue(fakeGit.toFile().setExecutable(true), "test git wrapper must be executable");
+        String originalPath = System.getenv("PATH");
+        String path = fakeBin + System.getProperty("path.separator") + originalPath;
+
+        ProcessResult result = runPolicy(repository,
+                Map.of("PATH", path, "ORIGINAL_PATH", originalPath),
+                "ci-push", baseOid, localOid, "feature/tree-failure");
+
+        assertTrue(result.exitCode() != 0, () -> "malformed tree enumeration must reject the push:\n" + result.output());
+        assertTrue(result.output().contains("delivered tip tree"),
+                () -> "failure must identify malformed delivered tip tree data:\n" + result.output());
+    }
+
+    @Test
+    void prePushAcceptsDeletedRef(@TempDir Path temporaryDirectory) throws Exception {
+        Path remote = newBareRemote(temporaryDirectory, "deleted-ref-remote");
+        Path repository = newRepository(temporaryDirectory, "deleted-ref-local");
+        createInitialCommit(repository);
+        addRemoteAndPush(repository, remote, "main");
+        String remoteOid = gitOutput(repository, "rev-parse", "origin/main").trim();
+
+        assertPolicyAccepts(runPolicyWithInput(repository, "(delete) " + ALL_ZERO_OID
+                + " refs/heads/obsolete " + remoteOid + "\n", "pre-push", "origin", remote.toString()));
+    }
+
+    @Test
+    void postCheckoutCreatesRelativeDisassemblyLinkToMainRepository(@TempDir Path temporaryDirectory) throws Exception {
+        Path mainRepository = newRepository(temporaryDirectory, "checkout-main");
+        createInitialCommit(mainRepository);
+        Files.createDirectories(mainRepository.resolve("docs/skdisasm"));
+        Files.writeString(mainRepository.resolve("docs/skdisasm/marker.txt"), "source\n");
+        Path linkedWorktree = temporaryDirectory.resolve("checkout-linked-worktree");
+        git(mainRepository, "worktree", "add", "-b", "feature/linked", linkedWorktree.toString());
+        Files.createDirectories(linkedWorktree.resolve("docs"));
+
+        ProcessResult result = run(linkedWorktree, List.of("bash", POST_CHECKOUT_HOOK.toString(), ALL_ZERO_OID, ALL_ZERO_OID, "1"), null);
+        assertEquals(0, result.exitCode(), () -> "post-checkout failed:\n" + result.output());
+        Path link = linkedWorktree.resolve("docs/skdisasm");
+        assertTrue(Files.isSymbolicLink(link), "post-checkout must create the missing disassembly link");
+        Path target = Files.readSymbolicLink(link);
+        assertFalse(target.isAbsolute(), "worktree link target must not contain an absolute machine path: " + target);
+        assertEquals(mainRepository.resolve("docs/skdisasm").toRealPath(), link.getParent().resolve(target).toRealPath());
+    }
+
+    @Test
+    void postCheckoutMigratesLegacyAbsoluteLinkToExpectedMainResource(@TempDir Path temporaryDirectory)
+            throws Exception {
+        Path mainRepository = newRepository(temporaryDirectory, "legacy-link-main");
+        createInitialCommit(mainRepository);
+        Path source = mainRepository.resolve("docs/skdisasm");
+        Files.createDirectories(source);
+        Files.writeString(source.resolve("marker.txt"), "source\n");
+        Path linkedWorktree = temporaryDirectory.resolve("legacy-link-worktree");
+        git(mainRepository, "worktree", "add", "-b", "feature/legacy-link", linkedWorktree.toString());
+        Path link = linkedWorktree.resolve("docs/skdisasm");
+        Files.createDirectories(link.getParent());
+        Files.createSymbolicLink(link, source.toAbsolutePath());
+
+        ProcessResult result = run(linkedWorktree,
+                List.of("bash", POST_CHECKOUT_HOOK.toString(), ALL_ZERO_OID, ALL_ZERO_OID, "1"), null);
+
+        assertEquals(0, result.exitCode(), () -> "post-checkout failed:\n" + result.output());
+        Path target = Files.readSymbolicLink(link);
+        assertFalse(target.isAbsolute(), "legacy absolute link must be replaced with a relative target: " + target);
+        assertEquals(source.toRealPath(), link.getParent().resolve(target).toRealPath());
+    }
+
+    @Test
+    void postCheckoutPreservesUnknownAbsoluteSymlink(@TempDir Path temporaryDirectory) throws Exception {
+        Path mainRepository = newRepository(temporaryDirectory, "unknown-link-main");
+        createInitialCommit(mainRepository);
+        Files.createDirectories(mainRepository.resolve("docs/skdisasm"));
+        Path unknownSource = temporaryDirectory.resolve("user-owned-skdisasm");
+        Files.createDirectories(unknownSource);
+        Path linkedWorktree = temporaryDirectory.resolve("unknown-link-worktree");
+        git(mainRepository, "worktree", "add", "-b", "feature/unknown-link", linkedWorktree.toString());
+        Path link = linkedWorktree.resolve("docs/skdisasm");
+        Files.createDirectories(link.getParent());
+        Path originalTarget = unknownSource.toAbsolutePath();
+        Files.createSymbolicLink(link, originalTarget);
+
+        ProcessResult result = run(linkedWorktree,
+                List.of("bash", POST_CHECKOUT_HOOK.toString(), ALL_ZERO_OID, ALL_ZERO_OID, "1"), null);
+
+        assertEquals(0, result.exitCode(), () -> "post-checkout failed:\n" + result.output());
+        assertEquals(originalTarget, Files.readSymbolicLink(link),
+                "unknown user-authored symlink must remain untouched");
+        assertEquals(unknownSource.toRealPath(), link.toRealPath());
+    }
+
+    @Test
+    void postCheckoutCreatesRelativeDisassemblyLinkWhenDestinationParentIsMissing(@TempDir Path temporaryDirectory) throws Exception {
+        Path mainRepository = newRepository(temporaryDirectory, "missing-parent-main");
+        createInitialCommit(mainRepository);
+        Files.createDirectories(mainRepository.resolve("docs/skdisasm"));
+        Files.writeString(mainRepository.resolve("docs/skdisasm/marker.txt"), "source\n");
+        Path linkedWorktree = temporaryDirectory.resolve("missing-parent-worktree");
+        git(mainRepository, "worktree", "add", "-b", "feature/missing-parent", linkedWorktree.toString());
+        assertFalse(Files.exists(linkedWorktree.resolve("docs")), "fixture must start without the destination parent");
+
+        ProcessResult result = run(linkedWorktree, List.of("bash", POST_CHECKOUT_HOOK.toString(), ALL_ZERO_OID, ALL_ZERO_OID, "1"), null);
+        assertEquals(0, result.exitCode(), () -> "post-checkout failed:\n" + result.output());
+        Path link = linkedWorktree.resolve("docs/skdisasm");
+        assertTrue(Files.isSymbolicLink(link), "post-checkout must create the missing-parent disassembly link");
+        Path target = Files.readSymbolicLink(link);
+        assertFalse(target.isAbsolute(), "missing-parent worktree link target must remain relative: " + target);
+        assertEquals(mainRepository.resolve("docs/skdisasm").toRealPath(), link.getParent().resolve(target).toRealPath());
+    }
+
+    @Test
+    void postCheckoutFailsWithoutRemovingDestinationForUnsupportedCommonGitDirectory(@TempDir Path temporaryDirectory) throws Exception {
+        Path mainRepository = newRepository(temporaryDirectory, "unsupported-common-dir-main");
+        createInitialCommit(mainRepository);
+        Files.createDirectories(mainRepository.resolve("docs/skdisasm"));
+        Path linkedWorktree = temporaryDirectory.resolve("unsupported-common-dir-worktree");
+        git(mainRepository, "worktree", "add", "-b", "feature/unsupported-common-dir", linkedWorktree.toString());
+        Path destination = linkedWorktree.resolve("docs/skdisasm");
+        Files.createDirectories(destination);
+
+        Path fakeBin = temporaryDirectory.resolve("fake-bin");
+        Files.createDirectories(fakeBin);
+        Path fakeGit = fakeBin.resolve("git");
+        Files.writeString(fakeGit, """
+                #!/bin/sh
+                if [ \"$1\" = \"rev-parse\" ] && [ \"$2\" = \"--path-format=relative\" ] && [ \"$3\" = \"--git-common-dir\" ]; then
+                    echo unsupported-common-dir
+                    exit 0
+                fi
+                PATH=\"$ORIGINAL_PATH\"
+                export PATH
+                exec git \"$@\"
+                """);
+        assertTrue(fakeGit.toFile().setExecutable(true), "test git wrapper must be executable");
+        String originalPath = System.getenv("PATH");
+        String path = fakeBin + System.getProperty("path.separator") + originalPath;
+
+        ProcessResult result = run(linkedWorktree,
+                List.of("bash", POST_CHECKOUT_HOOK.toString(), ALL_ZERO_OID, ALL_ZERO_OID, "1"),
+                null,
+                Map.of("PATH", path, "ORIGINAL_PATH", originalPath));
+
+        assertTrue(result.exitCode() != 0, () -> "unsupported common Git directory must fail:\n" + result.output());
+        assertTrue(result.output().contains("Unsupported common Git directory"),
+                () -> "failure must explain the unsupported common Git directory:\n" + result.output());
+        assertTrue(Files.isDirectory(destination), "unsupported layout must not remove the empty destination directory");
+        assertFalse(Files.isSymbolicLink(destination), "unsupported layout must not create a destination link");
+    }
+
+    private static Path newRepository(Path temporaryDirectory, String name) throws Exception {
+        Path repository = temporaryDirectory.resolve(name);
+        Files.createDirectories(repository);
+        git(repository, "init", "-b", "main");
+        git(repository, "config", "user.name", "Policy Test");
+        git(repository, "config", "user.email", "policy-test@example.invalid");
+        git(repository, "config", "gc.auto", "0");
+        git(repository, "config", "maintenance.auto", "false");
+        return repository;
+    }
+
+    private static Path newCutoverRepository(Path temporaryDirectory, String name, String branch) throws Exception {
+        Path repository = temporaryDirectory.resolve(name);
+        Path sourceRepository = Path.of(".").toAbsolutePath().normalize();
+        ProcessResult clone = run(temporaryDirectory,
+                List.of("git", "clone", "--shared", "--no-checkout",
+                        sourceRepository.toString(), repository.toString()),
+                null);
+        assertEquals(0, clone.exitCode(), () -> "could not create shared cutover fixture:\n" + clone.output());
+        git(repository, "config", "user.name", "Policy Test");
+        git(repository, "config", "user.email", "policy-test@example.invalid");
+        git(repository, "config", "gc.auto", "0");
+        git(repository, "config", "maintenance.auto", "false");
+        git(repository, "switch", "-c", branch, RESOURCE_POLICY_CUTOVER);
+        return repository;
+    }
+
+    private static Path newBareRemote(Path temporaryDirectory, String name) throws Exception {
+        Path remote = temporaryDirectory.resolve(name + ".git");
+        ProcessResult result = run(temporaryDirectory, List.of("git", "init", "--bare", remote.toString()), null);
+        assertEquals(0, result.exitCode(), () -> "could not create bare remote:\n" + result.output());
+        return remote;
+    }
+
+    private static void createInitialCommit(Path repository) throws Exception {
+        writeAndStage(repository, "README.md", "fixture\n");
+        commit(repository, "initial fixture");
+    }
+
+    private static void installProjectIgnoreRules(Path repository) throws Exception {
+        Files.copy(PROJECT_GITIGNORE, repository.resolve(".gitignore"));
+    }
+
+    private static void addRemoteAndPush(Path repository, Path remote, String branch) throws Exception {
+        git(repository, "remote", "add", "origin", remote.toString());
+        git(repository, "push", "-u", "origin", branch);
+    }
+
+    private static void prepareConflictedMerge(Path repository) throws Exception {
+        writeAndStage(repository, "conflict.txt", "base\n");
+        commit(repository, "base conflict file");
+        git(repository, "switch", "-c", "topic");
+        writeAndStage(repository, "conflict.txt", "topic\n");
+        commit(repository, "topic conflict");
+        git(repository, "switch", "main");
+        writeAndStage(repository, "conflict.txt", "main\n");
+        commit(repository, "main conflict");
+        ProcessResult merge = run(repository, List.of("git", "merge", "topic"), null);
+        assertTrue(merge.exitCode() != 0, "fixture must enter a conflicted merge");
+        assertTrue(Files.exists(repository.resolve(".git/MERGE_HEAD")), "fixture must retain MERGE_HEAD");
+    }
+
+    private static void createBadMerge(Path repository) throws Exception {
+        writeAndStage(repository, "conflict.txt", "base\n");
+        commit(repository, "base merge file");
+        git(repository, "switch", "-c", "topic");
+        writeAndStage(repository, "conflict.txt", "topic\n");
+        commit(repository, "topic merge change");
+        git(repository, "switch", "main");
+        writeAndStage(repository, "conflict.txt", "main\n");
+        commit(repository, "main merge change");
+        ProcessResult merge = run(repository, List.of("git", "merge", "topic"), null);
+        assertTrue(merge.exitCode() != 0, "fixture must enter a conflicted merge");
+        writeAndStage(repository, "conflict.txt", "resolved\n");
+        stageSymlink(repository, "docs/skdisasm", "../../shared/skdisasm", true);
+        commit(repository, "merge topic with generated link");
+    }
+
+    private static void writeAndStage(Path repository, String relativePath, String contents) throws Exception {
+        Path file = repository.resolve(relativePath);
+        Files.createDirectories(file.getParent());
+        Files.writeString(file, contents);
+        git(repository, "add", "--", relativePath);
+    }
+
+    private static void stageSymlink(Path repository, String relativePath, String target, boolean force) throws Exception {
+        Path link = repository.resolve(relativePath);
+        Files.createDirectories(link.getParent());
+        Files.deleteIfExists(link);
+        Files.createSymbolicLink(link, Path.of(target));
+        if (force) {
+            git(repository, "add", "-f", "--", relativePath);
+        } else {
+            git(repository, "add", "--", relativePath);
+        }
+        String indexEntry = gitOutput(repository, "ls-files", "--stage", "--", relativePath);
+        assertTrue(indexEntry.startsWith("120000 "), "staged symlink must retain mode 120000: " + indexEntry);
+    }
+
+    private static void deleteAndStage(Path repository, String relativePath) throws Exception {
+        Files.delete(repository.resolve(relativePath));
+        git(repository, "add", "-u", "--", relativePath);
+    }
+
+    private static void commit(Path repository, String subject) throws Exception {
+        git(repository, "commit", "-m", subject);
+    }
+
+    private static ProcessResult runPolicy(Path repository, String mode, String... arguments) throws Exception {
+        return runPolicy(repository, Map.of(), mode, arguments);
+    }
+
+    private static ProcessResult runPolicy(
+            Path repository,
+            Map<String, String> environment,
+            String mode,
+            String... arguments) throws Exception {
+        List<String> command = new ArrayList<>(List.of("sh", POLICY_SCRIPT.toString(), mode));
+        command.addAll(List.of(arguments));
+        return run(repository, command, null, environment);
+    }
+
+    private static ProcessResult runPolicyWithInput(Path repository, String input, String mode, String... arguments) throws Exception {
+        List<String> command = new ArrayList<>(List.of("sh", POLICY_SCRIPT.toString(), mode));
+        command.addAll(List.of(arguments));
+        return run(repository, command, input);
+    }
+
+    private static String availablePowerShell() throws Exception {
+        for (String candidate : List.of("pwsh", "powershell.exe")) {
+            try {
+                ProcessResult result = run(
+                        Path.of("."),
+                        List.of(candidate, "-NoLogo", "-NoProfile", "-Command", "exit 0"),
+                        null);
+                if (result.exitCode() == 0) {
+                    return candidate;
+                }
+            } catch (java.io.IOException ignored) {
+                // The static semantic assertions still run when PowerShell is
+                // unavailable in the current build environment.
+            }
+        }
+        return null;
+    }
+
+    private static ProcessResult runPowerShellPolicy(
+            Path repository,
+            String powershell,
+            String mode,
+            String... arguments) throws Exception {
+        List<String> command = new ArrayList<>(List.of(
+                powershell,
+                "-NoLogo",
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                POWERSHELL_POLICY_SCRIPT.toString(),
+                mode));
+        command.addAll(List.of(arguments));
+        return run(repository, command, null);
+    }
+
+    private static ProcessResult run(Path repository, List<String> command, String input) throws Exception {
+        return run(repository, command, input, Map.of());
+    }
+
+    private static ProcessResult run(Path repository, List<String> command, String input, Map<String, String> environment) throws Exception {
+        ProcessBuilder builder = new ProcessBuilder(command)
+                .directory(repository.toFile())
+                .redirectErrorStream(true);
+        builder.environment().putAll(environment);
+        Process process = builder.start();
+        if (input != null) {
+            process.getOutputStream().write(input.getBytes(StandardCharsets.UTF_8));
+        }
+        process.getOutputStream().close();
+        String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        return new ProcessResult(process.waitFor(), output);
+    }
+
+    private static void git(Path repository, String... arguments) throws Exception {
+        assertGitSucceeds(repository, arguments);
+    }
+
+    private static void assertGitSucceeds(Path repository, String... arguments) throws Exception {
+        List<String> command = new ArrayList<>(List.of("git"));
+        command.addAll(List.of(arguments));
+        ProcessResult result = run(repository, command, null);
+        assertEquals(0, result.exitCode(), () -> String.join(" ", command) + " failed:\n" + result.output());
+    }
+
+    private static String gitOutput(Path repository, String... arguments) throws Exception {
+        List<String> command = new ArrayList<>(List.of("git"));
+        command.addAll(List.of(arguments));
+        ProcessResult result = run(repository, command, null);
+        assertEquals(0, result.exitCode(), () -> String.join(" ", command) + " failed:\n" + result.output());
+        return result.output();
+    }
+
+    private static void assertPolicyRejects(ProcessResult result, String offendingPath) {
+        assertTrue(result.exitCode() != 0, () -> "policy unexpectedly accepted " + offendingPath + ":\n" + result.output());
+        assertTrue(result.output().contains(offendingPath), () -> "policy rejection must identify " + offendingPath + ":\n" + result.output());
+    }
+
+    private static void assertPolicyAccepts(ProcessResult result) {
+        assertEquals(0, result.exitCode(), () -> "policy unexpectedly rejected valid input:\n" + result.output());
+    }
+
+    private static boolean containsMachineLocalHome(String line) {
+        return Pattern.compile(
+                "(?:/home|/var/home|/Users)/[^/$<\\s][^/\\s]*/|"
+                        + "[A-Za-z]:[\\\\/]+[Uu][Ss][Ee][Rr][Ss][\\\\/]+"
+                        + "[^\\\\/$<%\\s][^\\\\/\\s]*[\\\\/]")
+                .matcher(line)
+                .find();
+    }
+
+    private static String sha256(String text) throws Exception {
+        return sha256(text.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static String sha256(byte[] bytes) throws Exception {
+        return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
+    }
+
+    private static List<String> disassemblyPaths() {
+        return List.of("docs/s1disasm", "docs/s2disasm", "docs/kis2disasm", "docs/scddisasm", "docs/skdisasm");
+    }
+
+    private record ProcessResult(int exitCode, String output) {
+    }
+
     private static Document parsePom(String file) throws Exception {
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         factory.setNamespaceAware(false);
@@ -1399,6 +2559,105 @@ class TestBuildToolingGuard {
 
     private static String normalizeLineEndings(String text) {
         return text.replace("\r\n", "\n").replace('\r', '\n');
+    }
+
+    private static String policyAssignment(String source, String variableName) {
+        Pattern assignment = Pattern.compile(
+                "(?m)^\\$?" + Pattern.quote(variableName)
+                        + "\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)'|([^\\r\\n]+))$");
+        var matcher = assignment.matcher(source);
+        if (!matcher.find()) {
+            return null;
+        }
+        for (int group = 1; group <= 3; group++) {
+            if (matcher.group(group) != null) {
+                return matcher.group(group).trim();
+            }
+        }
+        return null;
+    }
+
+    private static String scriptFunction(String source, String declaration) {
+        int start = source.indexOf(declaration);
+        if (start < 0) {
+            fail("missing script function declaration: " + declaration);
+        }
+        int end = source.indexOf("\n}\n", start);
+        if (end < 0) {
+            fail("unterminated script function declaration: " + declaration);
+        }
+        return source.substring(start, end + 2);
+    }
+
+    private static String yamlIndentedBlock(String source, String declaration, int indentation) {
+        int start = source.indexOf(declaration);
+        if (start < 0) {
+            return "";
+        }
+        int cursor = source.indexOf('\n', start);
+        if (cursor < 0) {
+            return source.substring(start);
+        }
+        cursor++;
+        while (cursor < source.length()) {
+            int lineEnd = source.indexOf('\n', cursor);
+            if (lineEnd < 0) {
+                lineEnd = source.length();
+            }
+            String line = source.substring(cursor, lineEnd);
+            if (!line.isBlank()) {
+                int leadingSpaces = 0;
+                while (leadingSpaces < line.length() && line.charAt(leadingSpaces) == ' ') {
+                    leadingSpaces++;
+                }
+                if (leadingSpaces <= indentation) {
+                    return source.substring(start, cursor);
+                }
+            }
+            cursor = lineEnd + 1;
+        }
+        return source.substring(start);
+    }
+
+    private static Map<String, String> yamlJobBlocks(String workflow) {
+        int jobsStart = workflow.indexOf("\njobs:\n");
+        if (jobsStart < 0) {
+            return Map.of();
+        }
+        String jobs = workflow.substring(jobsStart + 1);
+        var matcher = Pattern.compile("(?m)^  ([A-Za-z0-9_-]+):\\n").matcher(jobs);
+        List<String> names = new ArrayList<>();
+        List<Integer> starts = new ArrayList<>();
+        while (matcher.find()) {
+            names.add(matcher.group(1));
+            starts.add(matcher.start());
+        }
+        Map<String, String> blocks = new LinkedHashMap<>();
+        for (int i = 0; i < names.size(); i++) {
+            int end = i + 1 < starts.size() ? starts.get(i + 1) : jobs.length();
+            blocks.put(names.get(i), jobs.substring(starts.get(i), end));
+        }
+        return blocks;
+    }
+
+    private static String yamlJobCondition(String jobBlock) {
+        var matcher = Pattern.compile("(?m)^    if:\\s*(.+)$").matcher(jobBlock);
+        return matcher.find() ? matcher.group(1).trim() : "";
+    }
+
+    private static boolean conditionExcludesPush(String condition) {
+        if (condition.contains("github.event_name != 'push'")) {
+            return true;
+        }
+        var eventMatches = Pattern.compile("github\\.event_name == '([^']+)'").matcher(condition);
+        boolean constrainsEvent = false;
+        while (eventMatches.find()) {
+            constrainsEvent = true;
+            if ("push".equals(eventMatches.group(1))) {
+                return false;
+            }
+        }
+        return constrainsEvent;
     }
 
     private static Set<String> trackedFiles(String pathspec) throws Exception {

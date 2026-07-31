@@ -26,8 +26,14 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SuperStateController;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.game.timing.HardwareTimingService;
+import com.openggf.game.rewind.RewindSnapshottable;
+import com.openggf.game.timing.LoadTimeProfile;
+import com.openggf.game.timing.LoadTimeProfileFactory;
+import com.openggf.game.timing.LoadTimeSimulationMode;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 @ModApi
 public interface GameModule {
@@ -100,6 +106,30 @@ public interface GameModule {
             com.openggf.level.Level level,
             ObjectArtProvider objectArtProvider) {
         return null;
+    }
+
+    /**
+     * Returns session-owned game services whose mutable state participates in
+     * a gameplay rewind. The composition root registers these adapters once
+     * per {@link com.openggf.game.session.WorldSession}; games without such
+     * services remain empty.
+     */
+    default List<RewindSnapshottable<?>> rewindAdapters() {
+        return List.of();
+    }
+
+    /** Resolves a fresh session-owned normal-play load-time profile. */
+    default LoadTimeProfile createLoadTimeProfile(
+            LoadTimeSimulationMode mode,
+            LoadTimeProfile profiled,
+            Consumer<String> warningSink) {
+        return LoadTimeProfileFactory.resolve(mode, profiled, warningSink);
+    }
+
+    default LoadTimeProfile createLoadTimeProfile(
+            LoadTimeSimulationMode mode,
+            Consumer<String> warningSink) {
+        return createLoadTimeProfile(mode, LoadTimeProfile.IMMEDIATE, warningSink);
     }
 
     ObjectRegistry createObjectRegistry();

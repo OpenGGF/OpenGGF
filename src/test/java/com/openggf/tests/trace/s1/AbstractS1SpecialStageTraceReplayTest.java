@@ -9,6 +9,7 @@ import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.trace.TraceReportWriter;
 import com.openggf.trace.DivergenceReport;
+import com.openggf.trace.DynamicArtSpecialStageComparator;
 import com.openggf.trace.FieldComparison;
 import com.openggf.trace.FrameComparison;
 import com.openggf.trace.Severity;
@@ -247,6 +248,9 @@ public abstract class AbstractS1SpecialStageTraceReplayTest {
         for (int f = 0; f < compareEnd; f++) {
             Sonic1SpecialStageTraceFrame tf = trace.getFrame(f);
             if (tf.lag()) {
+                harness.stepLagRow();
+                addDynamicArtComparison(
+                        comparisons, trace, harness, f, new LinkedHashMap<>());
                 continue;
             }
             harness.stepFrame(f);
@@ -266,12 +270,14 @@ public abstract class AbstractS1SpecialStageTraceReplayTest {
             // the next compared row), but a verified-torn row is omitted from
             // the report rather than scored against a whole engine frame.
             if (isTornLagBoundaryRow(trace, f, compareEnd)) {
+                addDynamicArtComparison(
+                        comparisons, trace, harness, f, new LinkedHashMap<>());
                 continue;
             }
 
             Map<String, FieldComparison> fields = new LinkedHashMap<>();
             addFields(fields, tf, state, baselineEmeralds);
-            comparisons.add(new FrameComparison(f, fields));
+            addDynamicArtComparison(comparisons, trace, harness, f, fields);
         }
 
         if (lastState != null) {
@@ -283,6 +289,25 @@ public abstract class AbstractS1SpecialStageTraceReplayTest {
         }
 
         return new DivergenceReport(comparisons);
+    }
+
+    private static void addDynamicArtComparison(
+            List<FrameComparison> comparisons,
+            Sonic1SpecialStageTraceData trace,
+            S1SpecialStageReplayHarness harness,
+            int frame,
+            Map<String, FieldComparison> fields) {
+        if (trace.metadata().hasPerFrameDynamicArtTransferState()) {
+            if (frame == trace.frameCount() - 1) {
+                harness.finishDynamicArtSegment();
+            }
+            fields.putAll(new DynamicArtSpecialStageComparator().compare(
+                    trace.dynamicArtTransferStateForFrame(frame),
+                    harness.captureDynamicArt()).fields());
+        }
+        if (!fields.isEmpty()) {
+            comparisons.add(new FrameComparison(frame, fields));
+        }
     }
 
     /**

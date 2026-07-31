@@ -81,6 +81,7 @@ class TestWfzTornadoThrusterRendering {
         Sonic2GameModule module = new Sonic2GameModule();
         GameModuleRegistry.setCurrent(module);
         SessionManager.clear();
+        module.createGame(TestEnvironment.currentRom());
         GameplayModeContext gameplay = SessionManager.openGameplaySession(module);
         TestEnvironment.activeGameplayMode();
 

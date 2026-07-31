@@ -75,6 +75,11 @@ public final class ConfigCatalog {
                 "Runtime key to cycle the display color profile"));
         put(FPS, of("display", "fps", INT, "Frames per second to render (changes game speed)"));
 
+        // gameplay
+        put(LOAD_TIME_SIMULATION, ofEnum("gameplay", "loadTimeSimulation",
+                "Normal-play simulation policy for ROM-backed load queues",
+                Set.of("NONE", "PROFILED", "FAST", "REALISTIC")));
+
         // input (player-agnostic leaf first, then per-player subsections)
         put(PAUSE_KEY, of("input", "pause", KEY,
                 "Toggle pause; the gamepad Start button also toggles it"));

@@ -470,6 +470,7 @@ public record PerObjectRewindSnapshot(
             com.openggf.sprites.playable.DrowningController.RewindState drowningState,
             com.openggf.sprites.playable.TailsCarryController.Snapshot tailsCarryState,
             com.openggf.sprites.playable.SuperStateController.RewindState superStateState,
+            com.openggf.sprites.managers.TailsTailsController.RewindState tailsTailsState,
             SidekickCpuRewindExtra sidekickCpuExtra,
             // Sidekick follow-history circular buffers (read by SidekickCpuController
             // each frame to position the follower; the leader writes new entries every
@@ -499,7 +500,7 @@ public record PerObjectRewindSnapshot(
         public com.openggf.sprites.playable.PlayableSpriteController.RewindState controllerState() {
             return new com.openggf.sprites.playable.PlayableSpriteController.RewindState(
                     movementState, spindashDustState, animationState, drowningState,
-                    tailsCarryState, superStateState);
+                    tailsCarryState, superStateState, tailsTailsState);
         }
     }
 

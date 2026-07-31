@@ -6,8 +6,10 @@ import com.openggf.game.SpecialStageAccessType;
 import com.openggf.game.SpecialStageDebugProvider;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.SpecialStageStartupPolicy;
+import com.openggf.game.GameServices;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
+import com.openggf.game.sonic1.resources.Sonic1PlcService;
 
 import com.openggf.level.Palette;
 
@@ -26,6 +28,7 @@ import java.util.Optional;
  */
 public final class Sonic1SpecialStageProvider implements SpecialStageProvider {
     private final Sonic1SpecialStageManager manager = new Sonic1SpecialStageManager();
+    private boolean resultsPlcSubmitted;
 
     @Override
     public int getTransitionSfxId() {
@@ -54,7 +57,8 @@ public final class Sonic1SpecialStageProvider implements SpecialStageProvider {
 
     @Override
     public Optional<RewindSnapshottable<?>> rewindAdapter() {
-        return Optional.of(new Sonic1SpecialStageRewindAdapter(manager));
+        return Optional.of(new Sonic1SpecialStageRewindAdapter(manager,
+                () -> resultsPlcSubmitted, submitted -> resultsPlcSubmitted = submitted));
     }
 
     @Override
@@ -96,6 +100,27 @@ public final class Sonic1SpecialStageProvider implements SpecialStageProvider {
         if (policy == SpecialStageStartupPolicy.FAST) {
             manager.advanceToEntryPresentation();
         }
+    }
+
+    @Override
+    public void onEnterResults() {
+        if (resultsPlcSubmitted) return;
+        try {
+            Sonic1PlcService plcService = GameServices.module().getGameService(Sonic1PlcService.class);
+            if (plcService != null) {
+                plcService.transact(Sonic1PlcService.replace(0), Sonic1PlcService.appendOperation(27));
+            }
+            resultsPlcSubmitted = true;
+        } catch (Exception ignored) {
+            // Results rendering also has standalone construction paths.
+        }
+    }
+
+    @Override
+    public void resetForResults() {
+        reset();
+        resultsPlcSubmitted = false;
+        onEnterResults();
     }
 
     // isEntryPresentationReady() intentionally keeps the SpecialStageProvider
@@ -208,8 +233,8 @@ public final class Sonic1SpecialStageProvider implements SpecialStageProvider {
     @Override
     public ResultsScreen createResultsScreen(int ringsCollected, boolean gotEmerald,
             int stageIndex, int totalEmeraldCount) {
-        return new Sonic1SpecialStageResultsScreen(
-                ringsCollected, gotEmerald, stageIndex, totalEmeraldCount);
+        return ResultsScreen.withBeforeUpdate(new Sonic1SpecialStageResultsScreen(
+                ringsCollected, gotEmerald, stageIndex, totalEmeraldCount), this::onEnterResults);
     }
 
     @Override

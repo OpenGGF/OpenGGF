@@ -2801,7 +2801,8 @@ public class Engine {
 		// that callbacks (e.g. credits transition flags) are available to step()
 		// in the same frame, preventing 1-frame gaps where the overlay would drop.
 		var uiPipeline = graphicsManager.getUiRenderPipeline();
-		if (uiPipeline != null) {
+		if (uiPipeline != null
+				&& (gameLoop == null || !gameLoop.ownsGameplayFadeLifecycle())) {
 			uiPipeline.updateFade();
 		}
 

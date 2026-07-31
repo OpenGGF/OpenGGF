@@ -96,6 +96,35 @@ class TestHardwareTimingAuthorityGuard {
     }
 
     @Test
+    void measurementToolingCannotBecomeRuntimeOrReplayAuthority()
+            throws IOException {
+        try (Stream<Path> sources = Files.walk(SRC_MAIN)) {
+            List<String> violations = sources
+                    .filter(path -> path.toString().endsWith(".java"))
+                    .filter(path -> !path.startsWith(
+                            SRC_MAIN.resolve("com/openggf/tools/timing")))
+                    .filter(path -> !path.endsWith(
+                            Path.of("HardwareTimingStreamLoader.java")))
+                    .filter(path -> {
+                        try {
+                            String source = Files.readString(path);
+                            return source.contains("com.openggf.tools.timing")
+                                    || source.contains(
+                                    "\"load_time_measurements.jsonl\"");
+                        } catch (IOException exception) {
+                            throw new java.io.UncheckedIOException(exception);
+                        }
+                    })
+                    .map(SRC_MAIN::relativize)
+                    .map(Path::toString)
+                    .sorted()
+                    .toList();
+            assertEquals(List.of(), violations,
+                    "measurement tooling leaked into runtime/replay authority");
+        }
+    }
+
+    @Test
     void sourceCatalogueKeepsDifferentRootsIsolated() throws IOException {
         Path firstRoot = Path.of("first-production");
         Path secondRoot = Path.of("second-production");
@@ -346,6 +375,47 @@ class TestHardwareTimingAuthorityGuard {
         }
 
         assertNoViolations("comparison and aux parsers must not control gameplay timing", violations);
+    }
+
+    @Test
+    void dynamicArtParsersAndComparatorsCannotBecomeHardwareAuthority()
+            throws IOException {
+        List<String> violations = new ArrayList<>();
+        for (SourceFile source : productionSources()) {
+            boolean comparisonSource =
+                    source.relativePath().startsWith("com/openggf/trace/")
+                    || source.relativePath().equals(
+                            "com/openggf/game/sonic1/specialstage/"
+                                    + "Sonic1SpecialStageTraceData.java");
+            if (!comparisonSource
+                    || (!source.content().contains("DynamicArtDiagnosticsSnapshot")
+                    && !source.content().contains(
+                            "dynamic_art_transfer_state_per_frame_v1"))) {
+                continue;
+            }
+            violations.addAll(scanForbiddenTimingServiceAccess(
+                    source.relativePath(), source.content()));
+            violations.addAll(scanReplayPortApply(
+                    source.relativePath(), source.content()));
+            violations.addAll(scanUnauthorizedTimingFilenameConstruction(
+                    source.packageName(), source.fileName(), source.content()));
+        }
+        assertNoViolations(
+                "dynamic-art evidence must remain outside hardware timing authority",
+                violations);
+    }
+
+    @Test
+    void dynamicArtAuthorityGuardRejectsReplayPortAdmission() {
+        assertDetected(scanReplayPortApply(
+                "com/openggf/trace/DynamicArtComparator.java", """
+                class DynamicArtComparator {
+                    HardwareTimingReplayPort port;
+                    void compare(Object edge) {
+                        port.apply(edge);
+                    }
+                }
+                """));
     }
 
     @Test

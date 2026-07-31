@@ -61,16 +61,24 @@ public final class SpecialStageTraceData {
                     + traceProfile + "' in " + metadataPath);
         }
 
-        Path physicsPath = TraceData.resolveTraceFile(traceDirectory, "physics.csv");
+        Path physicsPath = TraceFiles.resolve(traceDirectory, "physics.csv");
         if (physicsPath == null) {
             throw new NoSuchFileException(traceDirectory.resolve("physics.csv").toString());
         }
-        Path auxPath = TraceData.resolveTraceFile(traceDirectory, "aux_state.jsonl");
+        Path auxPath = TraceFiles.resolve(traceDirectory, "aux_state.jsonl");
 
+        StoredPhysicsFrameDomain frameDomain =
+                StoredPhysicsFrameDomain.scan(
+                        physicsPath,
+                        StoredPhysicsFrameDomain.FrameEncoding.DECIMAL);
         List<SpecialStageTraceFrame> frames = loadPhysicsCsv(physicsPath);
         Map<Integer, List<TraceEvent>> events = auxPath != null
-            ? TraceData.loadAuxEvents(auxPath)
+            ? TraceData.loadAuxEvents(auxPath, metadata)
             : Collections.emptyMap();
+        if (metadata.hasPerFrameDynamicArtTransferState()) {
+            TraceData.validateDynamicArtTransferStates(
+                    metadata, frameDomain, events);
+        }
         HardwareTimingSchedule hardwareTimingSchedule =
                 HardwareTimingStreamLoader.load(traceDirectory, metadata);
 
@@ -101,6 +109,12 @@ public final class SpecialStageTraceData {
     /** Reuses {@link TraceEvent} + aux jsonl parsing shared with {@link TraceData}. */
     public List<TraceEvent> getEventsForFrame(int i) {
         return eventsByFrame.getOrDefault(i, Collections.emptyList());
+    }
+
+    public TraceEvent.DynamicArtTransferState dynamicArtTransferStateForFrame(
+            int frame) {
+        return TraceData.dynamicArtTransferStateForFrame(
+                metadata, eventsByFrame, frame);
     }
 
     /** Atomic object-pass snapshots; the validated binder owns execution ordering. */
@@ -179,7 +193,7 @@ public final class SpecialStageTraceData {
 
     private static List<SpecialStageTraceFrame> loadPhysicsCsv(Path csvPath) throws IOException {
         List<SpecialStageTraceFrame> frames = new ArrayList<>();
-        try (BufferedReader reader = TraceData.openTraceReader(csvPath)) {
+        try (BufferedReader reader = TraceFiles.openReader(csvPath)) {
             String line = reader.readLine(); // skip header
             if (line == null) return frames;
             while ((line = reader.readLine()) != null) {

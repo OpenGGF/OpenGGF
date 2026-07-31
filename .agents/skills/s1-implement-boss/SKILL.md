@@ -446,3 +446,9 @@ Report any discrepancies with specific line references.
 - Energy ball projectiles
 - No rings available
 - Most complex S1 boss
+
+## Queue Diagnostics Routing
+
+If boss work reaches PLC/DPLC queue timing or `dynamic_art.*` reports, use
+`plc-system` and `trace-replay-bug-fixing`; use `trace-green-fleet` when moving
+multiple frontiers. These fields are zero-tolerance, comparison-only evidence.

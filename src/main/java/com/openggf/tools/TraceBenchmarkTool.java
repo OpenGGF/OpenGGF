@@ -10,7 +10,6 @@ import com.openggf.bench.SectionTiming;
 import com.openggf.bench.SteadyStateDetector;
 import com.openggf.bench.TrajectoryDigest;
 import com.openggf.camera.Camera;
-import com.openggf.data.RomManager;
 import com.openggf.debug.PerformanceProfiler;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
@@ -29,7 +28,6 @@ import com.openggf.trace.catalog.TraceEntry;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -110,14 +108,14 @@ public final class TraceBenchmarkTool {
             for (int i = 0; i < argv.length; i++) {
                 String arg = argv[i];
                 switch (arg) {
-                    case "--trace" -> trace = requireValue(argv, ++i, arg);
-                    case "--mode" -> mode = requireValue(argv, ++i, arg);
+                    case "--trace" -> trace = CliArguments.requireValue(argv, ++i, arg);
+                    case "--mode" -> mode = CliArguments.requireValue(argv, ++i, arg);
                     case "--warmup-frames" -> warmupFrames = parseCount(argv, ++i, arg, 0);
                     case "--measure-frames" -> measureFrames = parseCount(argv, ++i, arg, 1);
                     case "--iterations" -> iterations = parseCount(argv, ++i, arg, 1);
-                    case "--json" -> json = Paths.get(requireValue(argv, ++i, arg));
-                    case "--markdown" -> markdown = Paths.get(requireValue(argv, ++i, arg));
-                    case "--label" -> label = requireValue(argv, ++i, arg);
+                    case "--json" -> json = Path.of(CliArguments.requireValue(argv, ++i, arg));
+                    case "--markdown" -> markdown = Path.of(CliArguments.requireValue(argv, ++i, arg));
+                    case "--label" -> label = CliArguments.requireValue(argv, ++i, arg);
                     case "--track-allocations" -> trackAllocations = true;
                     case "--no-audio" -> audio = false;
                     default -> throw new IllegalArgumentException("Unknown argument: " + arg);
@@ -135,19 +133,13 @@ public final class TraceBenchmarkTool {
         }
 
         private static int parseCount(String[] argv, int index, String flag, int minimum) {
-            int value = Integer.parseInt(requireValue(argv, index, flag));
+            int value = CliArguments.parseInt(CliArguments.requireValue(argv, index, flag));
             if (value < minimum) {
                 throw new IllegalArgumentException(flag + " must be >= " + minimum + ", got " + value);
             }
             return value;
         }
 
-        private static String requireValue(String[] argv, int index, String flag) {
-            if (index >= argv.length) {
-                throw new IllegalArgumentException("Missing value for " + flag);
-            }
-            return argv[index];
-        }
     }
 
     public static void main(String[] argv) {
@@ -195,8 +187,9 @@ public final class TraceBenchmarkTool {
         warnAboutSuspectFlags(environment);
 
         TraceReplaySessionBootstrap.prepareConfiguration(trace, meta);
+        Path romPath = TraceToolRomLocations.resolve(
+                entry.gameId(), GameServices.configuration(), Path.of(""));
         HeadlessGameBoot boot = new HeadlessGameBoot(SCREEN_WIDTH, SCREEN_HEIGHT);
-        Path romPath = Paths.get(RomManager.resolveRomForGame(entry.gameId()));
         HardwareReadinessAdmissionPolicy admissionPolicy =
                 admissionPolicyFor(meta);
         boot.boot(romPath, entry.zone(), entry.act(), admissionPolicy);

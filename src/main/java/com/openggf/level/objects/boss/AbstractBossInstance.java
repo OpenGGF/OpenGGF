@@ -74,6 +74,9 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
      * Camera_Max_X_pos (loc_39BA4, docs/s2disasm/s2.asm:77856-77857) one frame early.
      */
     private boolean deferDefeatRoutineDispatch;
+    /** A rejected hardware-art preflight must not consume the killing hit. */
+    private boolean defeatEntryPending;
+    private boolean defeatEntryPrepared;
 
     public AbstractBossInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
@@ -114,6 +117,10 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity player) {
+        if (defeatEntryPending && prepareDefeatEntry()) {
+            defeatEntryPending = false;
+            hitHandler.commitDefeat();
+        }
         if (!state.defeated && usesBaseHitHandler()) {
             hitHandler.update();
             // Note: paletteFlasher.update() is now called inside hitHandler.update()
@@ -162,7 +169,7 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
     }
 
     public int getCollisionFlags() {
-        if (state.invulnerable || state.defeated) {
+        if (state.invulnerable || state.defeated || defeatEntryPending) {
             return 0; // No collision during invulnerability or defeat
         }
         return 0xC0 | (getCollisionSizeIndex() & 0x3F); // Category BOSS (0xC0)
@@ -376,6 +383,15 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
         }
 
         private void triggerDefeat() {
+            if (!prepareDefeatEntry()) {
+                defeatEntryPending = true;
+                return;
+            }
+            commitDefeat();
+        }
+
+        private void commitDefeat() {
+            defeatEntryPrepared = true;
             // ROM: s2.asm:63149 - loc_2F4EE (boss defeated)
             state.defeated = true;
             if (usesDefeatSequencer()) {
@@ -622,6 +638,20 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
      */
     protected void onDefeatStarted() {
         // Default: no additional behavior
+    }
+
+    /**
+     * Publishes defeat-entry hardware work before defeat state becomes
+     * irreversible. Subclasses with a capsule PLC return false on rejected
+     * eager/logical preflight; the base update then retries without replaying
+     * the killing hit or any defeat side effects.
+     */
+    protected boolean prepareDefeatEntry() {
+        return true;
+    }
+
+    protected boolean isDefeatEntryPrepared() {
+        return defeatEntryPrepared;
     }
 
     /**

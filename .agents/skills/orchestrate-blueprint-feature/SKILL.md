@@ -190,3 +190,11 @@ Do not edit files.
 | Parallelizing dependent edits | Split by ownership; keep sequencing explicit. |
 | Treating self-review as a summary | Require pass/fail criteria and loop until green. |
 | Merging after agent review only | Stop for explicit human confirmation before merging to `develop`. |
+
+## Queue Diagnostics Routing
+
+If this work encounters PLC/Kosinski queue timing or `dynamic_art.*` reports,
+route capture/replay interpretation to `plc-system`,
+`trace-replay-bug-fixing`, and `trace-green-fleet`; use `s3k-plc-system` for
+S3K direct-vs-KosM and hardware-timing schema 2. The trace evidence is
+zero-tolerance and comparison-only.

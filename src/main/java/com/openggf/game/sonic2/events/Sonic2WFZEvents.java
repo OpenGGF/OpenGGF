@@ -431,11 +431,13 @@ public class Sonic2WFZEvents extends Sonic2ZoneEvents {
             return;
         }
 
+        // ROM: moveq #PLCID_WfzBoss,d0 / jsrto JmpTo2_LoadPLC
+        if (!requestPlc(Sonic2Constants.PLC_WFZ_BOSS)) {
+            return;
+        }
+
         // ROM: addq.w #2,(WFZ_LevEvent_Subrout).w
         wfzSubRoutine += 2;
-
-        // ROM: moveq #PLCID_WfzBoss,d0 / jsrto JmpTo2_LoadPLC
-        requestPlc(Sonic2Constants.PLC_WFZ_BOSS);
 
         // ROM: move.w #$2880,(Camera_Min_X_pos).w
         camera().setMinX((short) BOSS_PLC_TRIGGER_X);
@@ -453,12 +455,14 @@ public class Sonic2WFZEvents extends Sonic2ZoneEvents {
             return;
         }
 
+        // ROM: st.b (Control_Locked).w + moveq #PLCID_Tornado,d0 / jsrto JmpTo2_LoadPLC
+        if (!requestPlc(Sonic2Constants.PLC_TORNADO)) {
+            return;
+        }
+        lockPlayerInputWithCurrentLogicalState();
+
         // ROM: addq.w #2,(WFZ_LevEvent_Subrout).w
         wfzSubRoutine += 2;
-
-        // ROM: st.b (Control_Locked).w + moveq #PLCID_Tornado,d0 / jsrto JmpTo2_LoadPLC
-        lockPlayerInputWithCurrentLogicalState();
-        requestPlc(Sonic2Constants.PLC_TORNADO);
     }
 
     private void lockPlayerInputWithCurrentLogicalState() {
@@ -480,9 +484,12 @@ public class Sonic2WFZEvents extends Sonic2ZoneEvents {
                 () -> sidekicks);
     }
 
-    private void requestPlc(int plcId) {
+    private boolean requestPlc(int plcId) {
+        if (!requestSonic2Plc(plcId)) {
+            return false;
+        }
         lastRequestedPlcId = plcId;
         plcRequestCount++;
-        requestSonic2Plc(plcId);
+        return true;
     }
 }

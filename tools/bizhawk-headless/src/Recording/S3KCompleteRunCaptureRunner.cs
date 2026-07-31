@@ -208,7 +208,8 @@ namespace OpenGGF.BizHawk.Headless
             string recordingDate,
             int effectiveMovieLength,
             byte[] rom,
-            IS3KCompleteRunSegmentSink sink)
+            IS3KCompleteRunSegmentSink sink,
+            bool loadQueueState = false)
         {
             if (movie == null)
             {
@@ -245,7 +246,8 @@ namespace OpenGGF.BizHawk.Headless
                 ? movie.FrameCount
                 : effectiveMovieLength;
             var state = new CaptureState(
-                host, sink, runId, sourceBk2, recordingDate, rom);
+                host, sink, runId, sourceBk2, recordingDate, rom,
+                loadQueueState);
             var segmenter = new S3KCompleteRunSegmenter(
                 true, movieLength, 0, 0);
             segmenter.SegmentOpened = state.OpenSegment;
@@ -397,11 +399,13 @@ namespace OpenGGF.BizHawk.Headless
             private TextWriter aux;
             private TextWriter hardwareTiming;
             private readonly HardwareTimingEventEngine hardwareTimingEngine;
+            private readonly byte[] rom;
+            private readonly bool loadQueueState;
 
             // Per-segment: a fresh engine at every arm, so each segment
             // re-emits its own pre-trace snapshot and re-latches its own
-            // prev_* state. Null for a special-stage segment, which emits
-            // no aux events at all.
+            // prev_* state. Null for a special-stage segment, which has no
+            // profile aux engine but may still emit physical queue state.
             private S3KAuxEventEngine auxEngine;
 
             internal CaptureState(
@@ -410,13 +414,16 @@ namespace OpenGGF.BizHawk.Headless
                 string runId,
                 string sourceBk2,
                 string recordingDate,
-                byte[] rom)
+                byte[] rom,
+                bool loadQueueState)
             {
                 this.host = host;
                 this.sink = sink;
                 this.runId = runId;
                 this.sourceBk2 = sourceBk2;
                 this.recordingDate = recordingDate;
+                this.rom = rom;
+                this.loadQueueState = loadQueueState;
                 hardwareTimingEngine =
                     new HardwareTimingEventEngine(rom);
                 ManifestSegments = new List<RunManifestSegment>();
@@ -437,8 +444,9 @@ namespace OpenGGF.BizHawk.Headless
             /// open_files (L1236) / start_ss_segment's file block (L5154):
             /// all three files are created at arm and the CSV header is written
             /// and flushed immediately. The two headers are different
-            /// schemas — 42 columns versus 20 — and an SS segment's aux file
-            /// stays byte-empty.
+            /// schemas — 42 columns versus 20. An SS segment has no profile
+            /// aux engine; physical queue state is written separately when
+            /// enabled.
             /// </summary>
             internal void OpenSegment(S3KSegmentArm opened)
             {
@@ -480,6 +488,14 @@ namespace OpenGGF.BizHawk.Headless
                 }
                 hardwareTimingEngine.ObserveFrameEnd(
                     rowIndex, host, hardwareTiming);
+                if (loadQueueState)
+                {
+                    foreach (string line in LoadQueueStateProjector.CaptureS3k(
+                        rowIndex, rom, host))
+                    {
+                        WriteLine(aux, line);
+                    }
+                }
             }
 
             /// <summary>
@@ -499,6 +515,14 @@ namespace OpenGGF.BizHawk.Headless
                 // write_ss_row at this boundary.
                 hardwareTimingEngine.ObserveFrameEnd(
                     rowIndex, host, hardwareTiming);
+                if (loadQueueState)
+                {
+                    foreach (string line in LoadQueueStateProjector.CaptureS3k(
+                        rowIndex, rom, host))
+                    {
+                        WriteLine(aux, line);
+                    }
+                }
                 WriteLine(physics, S3KSpecialStageCsvWriter.FormatRow(
                     rowIndex,
                     S3KSpecialStageCsvWriter.InputMask(inputRow),
@@ -542,14 +566,18 @@ namespace OpenGGF.BizHawk.Headless
                         sourceBk2,
                         recordingDate,
                         runId,
-                        playerMode)
+                        playerMode,
+                        HardwareTimingEventEngine.CurrentSchema,
+                        loadQueueState)
                     : S3KCompleteRunMetadataWriter.Format(
                         arm,
                         segment.TraceFrameCount,
                         sourceBk2,
                         recordingDate,
                         runId,
-                        playerMode);
+                        playerMode,
+                        HardwareTimingEventEngine.CurrentSchema,
+                        loadQueueState);
                 var entry = new RunManifestSegment(
                     segment.Dir,
                     segment.Kind,

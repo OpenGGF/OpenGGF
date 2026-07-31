@@ -9,6 +9,8 @@ import com.openggf.game.GameStateManager;
 import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.mutation.ZoneLayoutMutationPipeline;
 import com.openggf.game.sonic2.Sonic2ObjectArtProvider;
+import com.openggf.game.sonic2.resources.Sonic2PlcService;
+import com.openggf.game.sonic2.resources.Sonic2RuntimePlcPublisher;
 import com.openggf.level.LevelManager;
 import com.openggf.level.ParallaxManager;
 import com.openggf.level.WaterSystem;
@@ -33,6 +35,8 @@ public abstract class Sonic2ZoneEvents {
 
     protected int eventRoutine;
     protected int bossSpawnDelay;
+    /** Deferred logical/eager cue after a transition has performed its one-shot effects. */
+    private Integer pendingPlcId;
 
     protected Sonic2ZoneEvents() {
     }
@@ -81,6 +85,7 @@ public abstract class Sonic2ZoneEvents {
     public void init(int act) {
         eventRoutine = 0;
         bossSpawnDelay = 0;
+        pendingPlcId = null;
     }
 
     /** Run per-frame event logic for the given act. */
@@ -110,6 +115,16 @@ public abstract class Sonic2ZoneEvents {
 
     public void setBossSpawnDelay(int delay) {
         this.bossSpawnDelay = delay;
+    }
+
+    /** Rewind sidecar for deferred native PLC publication. */
+    public final int getPendingPlcIdForRewind() {
+        return pendingPlcId == null ? -1 : pendingPlcId;
+    }
+
+    /** Restores deferred native PLC publication without replaying owner effects. */
+    public final void setPendingPlcIdForRewind(int plcId) {
+        pendingPlcId = plcId < 0 ? null : plcId;
     }
 
     /** Spawn a dynamic object into the level. */
@@ -167,23 +182,51 @@ public abstract class Sonic2ZoneEvents {
                 (int) cam.getMaxYTarget());
     }
 
-    protected void requestSonic2Plc(int plcId) {
+    /** Retries a deferred one-shot cue without consuming the current DLE frame. */
+    protected void retryPendingPlc() {
+        if (pendingPlcId == null) {
+            return;
+        }
+        if (publishSonic2Plc(pendingPlcId)) {
+            pendingPlcId = null;
+        }
+    }
+
+    protected boolean requestSonic2Plc(int plcId) {
+        if (pendingPlcId != null) {
+            if (pendingPlcId == plcId && publishSonic2Plc(plcId)) {
+                pendingPlcId = null;
+                return true;
+            }
+            return false;
+        }
+        if (publishSonic2Plc(plcId)) {
+            return true;
+        }
+        pendingPlcId = plcId;
+        return false;
+    }
+
+    private boolean publishSonic2Plc(int plcId) {
         try {
             if (!GameServices.hasRuntime()) {
-                return;
+                return true;
             }
             LevelManager levelManager = GameServices.levelOrNull();
             if (levelManager == null || levelManager.getCurrentLevel() == null) {
-                return;
+                return true;
             }
             ObjectArtProvider provider = GameServices.module().getObjectArtProvider();
             if (provider instanceof Sonic2ObjectArtProvider sonic2Provider) {
-                if (sonic2Provider.requestPlc(plcId)) {
-                    levelManager.refreshObjectArtPatterns();
-                }
+                Sonic2PlcService plcService = GameServices.module().getGameService(Sonic2PlcService.class);
+                if (plcService == null) return true;
+                Sonic2RuntimePlcPublisher.append(
+                        sonic2Provider, plcService, levelManager::refreshObjectArtPatterns, plcId);
             }
+            return true;
         } catch (RuntimeException | IOException e) {
             LOGGER.fine(() -> "S2 PLC request " + plcId + " deferred: " + e.getMessage());
+            return false;
         }
     }
 }

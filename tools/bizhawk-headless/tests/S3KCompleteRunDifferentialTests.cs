@@ -10,7 +10,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
     /// <summary>
     /// ROM-backed differential gate for the native S3K COMPLETE-RUN
     /// recorder (tools/bizhawk/s3k_complete_run_recorder.lua
-    /// v6.38-s3k-completerun; spec
+    /// v6.39-s3k-completerun; spec
     /// tools/bizhawk-headless/docs/s3k-run-publication.md). It runs the
     /// real CLI end-to-end through run.sh over the canonical Knuckles
     /// multi-bonus movie and asserts that the published bonus segment is
@@ -64,8 +64,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
             "  \"lua_script_version\": \"6.33-s3k-completerun\",";
         private const string PublishedHardwareLuaScriptVersionLine =
             "  \"lua_script_version\": \"6.35-s3k-completerun\",";
-        private const string CurrentLuaScriptVersionLine =
+        private const string PublishedRunLuaScriptVersionLine =
+            "  \"lua_script_version\": \"6.37-s3k-completerun\",";
+        private const string PublishedQueueLuaScriptVersionLine =
             "  \"lua_script_version\": \"6.38-s3k-completerun\",";
+        private const string CurrentLuaScriptVersionLine =
+            "  \"lua_script_version\": \"6.39-s3k-completerun\",";
         private const string FixtureTraceSchemaLine =
             "  \"trace_schema\": 6,";
         private const string CurrentTraceSchemaLine =
@@ -87,8 +91,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
             "8d6e3e3004e811a124c516ac224fe9e9dd5476cce1d6c3097b3b7c65c2"
             + "526dd6";
         private const string GumballAuxSha256 =
-            "842fbad87a91effb9749bcd7b95f61d558d1cb9929e35cf5ca9ac32874"
-            + "3460e7";
+            "7efd3b263a0194239ad712d94a8fa4f75b405cf5dbda1da326fec116da"
+            + "50843e";
 
         public static void Register(ICollection<TestMain.TestCase> tests)
         {
@@ -151,7 +155,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     EndToEndTests.ComputeSha256(
                         Path.Combine(aiz, "physics.csv")));
                 AssertEx.Equal(
-                    "d55efb44c7fadc022591c56054964e002c8ade868867a8965a0efbe820f2d210",
+                    "48d01a1d3cee368ac5be20a55cae94cbfc8f46ad9caf353adc4c6816ab5d1d23",
                     EndToEndTests.ComputeSha256(
                         Path.Combine(aiz, "aux_state.jsonl")));
                 string timing =
@@ -202,7 +206,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     EndToEndTests.ComputeSha256(
                         Path.Combine(hcz, "physics.csv")));
                 AssertEx.Equal(
-                    "9fa13b138dd4e22749bdf0cfb66c71cd28e0e72568372b683efbc0255208077f",
+                    "d476cfca26294d7e8170f24e6b611a4566edb154d68b197c7f655eead43dfb9e",
                     EndToEndTests.ComputeSha256(
                         Path.Combine(hcz, "aux_state.jsonl")));
                 string timing =
@@ -418,6 +422,18 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
             if (HasMetadataShape(
                 fixtureText,
+                PublishedQueueLuaScriptVersionLine,
+                CurrentTraceSchemaLine,
+                CurrentHardwareTimingSchemaLine))
+            {
+                return new MetadataNormalization(
+                    producedText.Replace(
+                        CurrentLuaScriptVersionLine,
+                        PublishedQueueLuaScriptVersionLine),
+                    PublishedQueueLuaScriptVersionLine);
+            }
+            if (HasMetadataShape(
+                fixtureText,
                 PublishedHardwareLuaScriptVersionLine,
                 CurrentTraceSchemaLine,
                 PublishedHardwareTimingSchemaLine))
@@ -429,6 +445,20 @@ namespace OpenGGF.BizHawk.Headless.Tests
                             CurrentHardwareTimingSchemaLine,
                             PublishedHardwareTimingSchemaLine),
                     PublishedHardwareLuaScriptVersionLine);
+            }
+            if (HasMetadataShape(
+                fixtureText,
+                PublishedRunLuaScriptVersionLine,
+                CurrentTraceSchemaLine,
+                PublishedHardwareTimingSchemaLine))
+            {
+                return new MetadataNormalization(
+                    producedText.Replace(
+                        CurrentLuaScriptVersionLine,
+                        PublishedRunLuaScriptVersionLine).Replace(
+                            CurrentHardwareTimingSchemaLine,
+                            PublishedHardwareTimingSchemaLine),
+                    PublishedRunLuaScriptVersionLine);
             }
             if (HasMetadataShape(
                 fixtureText,
@@ -497,6 +527,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
             string published = PublishedHardwareLuaScriptVersionLine + "\n"
                 + CurrentTraceSchemaLine + "\n"
                 + PublishedHardwareTimingSchemaLine + "\n";
+            string publishedRun = PublishedRunLuaScriptVersionLine + "\n"
+                + CurrentTraceSchemaLine + "\n"
+                + PublishedHardwareTimingSchemaLine + "\n";
+            string publishedQueue =
+                PublishedQueueLuaScriptVersionLine + "\n"
+                + CurrentTraceSchemaLine + "\n"
+                + CurrentHardwareTimingSchemaLine + "\n";
             string legacy = LegacyLuaScriptVersionLine + "\n"
                 + FixtureTraceSchemaLine + "\n";
 
@@ -508,6 +545,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 published,
                 NormalizeCurrentMetadataForFixture(
                     published, current).Text);
+            AssertEx.Equal(
+                publishedRun,
+                NormalizeCurrentMetadataForFixture(
+                    publishedRun, current).Text);
+            AssertEx.Equal(
+                publishedQueue,
+                NormalizeCurrentMetadataForFixture(
+                    publishedQueue, current).Text);
             AssertEx.Equal(
                 legacy,
                 NormalizeCurrentMetadataForFixture(
@@ -579,6 +624,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         Path.Combine(EndToEndTests.ToolDirectory, "run.sh"))
                     + " --mode trace"
                     + EndToEndTests.NoCompressArgument
+                    + " --load-queue-state"
                     + " --rom " + EndToEndTests.Quote(romPath)
                     + " --movie " + EndToEndTests.Quote(moviePath)
                     + " --output " + EndToEndTests.Quote(output)

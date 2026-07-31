@@ -6,6 +6,8 @@ import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic2.audio.Sonic2Music;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
+import com.openggf.game.sonic2.constants.Sonic2Constants;
+import com.openggf.game.sonic2.resources.Sonic2PlcRequests;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectServices;
@@ -251,6 +253,8 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
                 services.gameState().setCurrentBossId(0);
             }
             if (services != null) {
+                if (!Sonic2PlcRequests.append(services, Sonic2Constants.PLC_ANIMALS_OOZ,
+                        Sonic2Constants.PLC_EXPLOSION)) return;
                 services.playMusic(Sonic2Music.OIL_OCEAN.id);
             }
             bossDefeatedFlagSet = true;
@@ -792,6 +796,7 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
 
     @Override
     protected void onDefeatStarted() {
+        if (!isDefeatEntryPrepared() && !Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE)) return;
         bossSubtype = SUB_MAIN;
         state.routineSecondary = MAIN_DEFEATED;
         bossCountdown = DEFEAT_TIMER_START;
@@ -799,6 +804,11 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
         childSpriteCount = 1;
         alignMainVehicleChild();
         collisionFlags = 0;
+    }
+
+    @Override
+    protected boolean prepareDefeatEntry() {
+        return Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE);
     }
 
     @Override

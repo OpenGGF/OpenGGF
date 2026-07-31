@@ -9,6 +9,7 @@ import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Level;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.HudStaticArt;
@@ -269,12 +270,63 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider,
      * @return {@code true} when the request registered at least one new sprite sheet
      */
     public boolean requestPlc(int plcId) throws IOException {
+        return publishPreparedPlc(preparePlc(plcId));
+    }
+
+    /** Builds a runtime PLC's absent sheets without changing renderer registration. */
+    public PreparedPlc preparePlc(int plcId) throws IOException {
+        return preparePlcs(plcId);
+    }
+
+    /** Builds every absent sheet for an ordered PLC batch without registration. */
+    public PreparedPlc preparePlcs(int... plcIds) throws IOException {
         ensureArtLoader();
         Rom rom = GameServices.rom().getRom();
+        List<PreparedSheet> preparedSheets = new ArrayList<>();
+        java.util.Set<String> preparedKeys = new java.util.HashSet<>();
+        for (int plcId : plcIds) {
+            var plc = Sonic2PlcLoader.parsePlc(rom, plcId);
+            for (var entry : plc.entries()) {
+                var registration = Sonic2PlcArtRegistry.lookup(entry.romAddr());
+                if (registration != null && !sheets.containsKey(registration.key())
+                        && preparedKeys.add(registration.key())) {
+                    ObjectSpriteSheet sheet = registration.builder().build(artLoader);
+                    if (sheet != null) {
+                        preparedSheets.add(new PreparedSheet(registration.key(), sheet));
+                    }
+                }
+            }
+        }
+        return new PreparedPlc(List.copyOf(preparedSheets));
+    }
+
+    /** Validates that committing a prepared PLC remains inside the object atlas range. */
+    public void preflightPreparedPlc(PreparedPlc prepared) {
+        long prospectiveCount = getRegularPatternCount();
+        for (PreparedSheet sheet : prepared.sheets()) {
+            prospectiveCount += sheet.sheet().getPatterns().length;
+        }
+        if (prospectiveCount > PatternAtlasRange.OBJECTS.size()) {
+            throw new IllegalStateException("Object patterns exceed reserved atlas range: " + prospectiveCount);
+        }
+    }
+
+    /** Publishes already-built sheets. Registration does not perform ROM or GPU I/O. */
+    public boolean publishPreparedPlc(PreparedPlc prepared) {
         int sheetCountBefore = sheetOrder.size();
-        loadPlcEntries(rom, plcId);
+        for (PreparedSheet preparedSheet : prepared.sheets()) {
+            if (!sheets.containsKey(preparedSheet.key())) {
+                registerSheet(preparedSheet.key(), preparedSheet.sheet());
+            }
+        }
         loadEpoch++;
         return sheetOrder.size() > sheetCountBefore;
+    }
+
+    public record PreparedPlc(List<PreparedSheet> sheets) {
+    }
+
+    public record PreparedSheet(String key, ObjectSpriteSheet sheet) {
     }
 
     /**

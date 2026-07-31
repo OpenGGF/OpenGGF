@@ -31,7 +31,7 @@ per line.
 | producer/data | version | trace schema | hardware-timing schema | timing kinds |
 |---|---|---:|---:|---|
 | Current native STANDARD writer | `6.38-s3k` | 7 | 2 | module and direct |
-| Current native complete-run writer | `6.38-s3k-completerun` | 7 | 2 | module and direct |
+| Current native complete-run writer | `6.39-s3k-completerun` | 7 | 2 | module and direct |
 | Committed S3K fixtures | `6.37-s3k` / `6.37-s3k-completerun` | 7 | 1 | module only |
 | Frozen Lua recorders | `6.37-s3k` / `6.37-s3k-completerun` | 7 | 1 | module only |
 
@@ -85,7 +85,7 @@ default; schema 1 is accepted only for explicit compatibility tests.
 
 The recording date is the only nondeterministic value. Standard native
 captures use `6.38-s3k`; complete-run, bonus, and special-stage metadata use
-`6.38-s3k-completerun` and their complete-run-owned key set. The committed
+`6.39-s3k-completerun` and their complete-run-owned key set. The committed
 fixtures intentionally retain their published 6.37/schema-1 metadata and
 must not be rewritten merely to match this template.
 
@@ -667,3 +667,12 @@ no fixture bytes changed):
   buffers) and flushing the remaining buffered case in fixed-size `CopyTo`
   blocks instead of `ToString()`. No physics.csv/aux_state.jsonl byte
   changed; see `s3k-profiles-and-hooks.md` §5 for the implementation split.
+## Same-frame direct Kosinski submissions
+
+The post-`Queue_Kos` callback may run more than once between frame-end
+reconciliations. Each callback can prove that the prior direct FIFO head retired
+PRE and that a new child was appended. The native observer therefore removes
+each proven retired head from its live ledger immediately, retains the retired
+submission in callback order, and emits all retained completions at the next
+frame-end reconciliation with `pre_main_loop` ownership. FIFO overlap and
+submission fingerprints remain mandatory at every callback.

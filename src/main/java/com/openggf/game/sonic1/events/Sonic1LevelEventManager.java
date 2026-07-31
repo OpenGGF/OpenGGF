@@ -160,13 +160,13 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
      *   <li>1 byte: endingEvents.bootstrapApplied</li>
      *   <li>1 byte: endingEvents.endingSonicSpawned</li>
      *   <li>14 bytes: fixed v_sonicbubbles countdown sidecar</li>
-     *   <li>4 bytes + 1 byte: logical FZ PLC frames and initialized flag</li>
+     *   <li>7 × 4 bytes: pending S1 PLC work for each handler</li>
      * </ol>
      */
     @Override
     protected byte[] captureExtra() {
         ByteBuffer buf = ByteBuffer.allocate(1 + 7 * 4 + 3
-                + Sonic1FixedAirCountdownManager.REWIND_STATE_BYTES + 5);
+                + Sonic1FixedAirCountdownManager.REWIND_STATE_BYTES + 7 * 4);
         buf.put((byte) (sbz3TransitionRequested ? 1 : 0));
         buf.putInt(ghzEvents.eventRoutine);
         buf.putInt(lzEvents.eventRoutine);
@@ -179,8 +179,13 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
         buf.put((byte) (endingEvents.isBootstrapApplied() ? 1 : 0));
         buf.put((byte) (endingEvents.isEndingSonicSpawned() ? 1 : 0));
         fixedAirCountdownManager.writeRewindState(buf);
-        buf.putInt(sbzEvents.getFzPlcFramesRemaining());
-        buf.put((byte) (sbzEvents.isFzPlcTimingInitialized() ? 1 : 0));
+        buf.putInt(ghzEvents.getPendingPlcIdForRewind());
+        buf.putInt(lzEvents.getPendingPlcIdForRewind());
+        buf.putInt(mzEvents.getPendingPlcIdForRewind());
+        buf.putInt(slzEvents.getPendingPlcIdForRewind());
+        buf.putInt(syzEvents.getPendingPlcIdForRewind());
+        buf.putInt(sbzEvents.getPendingPlcIdForRewind());
+        buf.putInt(endingEvents.getPendingPlcIdForRewind());
         return buf.array();
     }
 
@@ -205,11 +210,14 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
         if (buf.remaining() >= Sonic1FixedAirCountdownManager.REWIND_STATE_BYTES) {
             fixedAirCountdownManager.readRewindState(buf);
         }
-        // Appended for backward compatibility with snapshots captured before
-        // logical S1 PLC timing participated in rewind.
-        if (buf.remaining() >= 5) {
-            sbzEvents.setFzPlcFramesRemaining(buf.getInt());
-            sbzEvents.setFzPlcTimingInitialized(buf.get() != 0);
+        if (buf.remaining() >= 7 * 4) {
+            ghzEvents.setPendingPlcIdForRewind(buf.getInt());
+            lzEvents.setPendingPlcIdForRewind(buf.getInt());
+            mzEvents.setPendingPlcIdForRewind(buf.getInt());
+            slzEvents.setPendingPlcIdForRewind(buf.getInt());
+            syzEvents.setPendingPlcIdForRewind(buf.getInt());
+            sbzEvents.setPendingPlcIdForRewind(buf.getInt());
+            endingEvents.setPendingPlcIdForRewind(buf.getInt());
         }
     }
 

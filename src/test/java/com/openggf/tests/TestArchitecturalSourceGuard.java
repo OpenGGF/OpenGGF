@@ -830,8 +830,11 @@ class TestArchitecturalSourceGuard {
 
         assertTrue(!levelManager.contains("suppressGlobalOscillationForTitleCardPass"),
                 "Title-card oscillator suppression belongs to OscillationManager");
-        assertTrue(gameLoop.contains("OscillationManager.suppressNextFrames(1)"),
-                "GameLoop should arm the oscillator-owned one-shot suppression directly");
+        String titleCardLifecycle = stripCommentsAndStrings(Files.readString(
+                SRC_MAIN.resolve("com/openggf/GameLoopTitleCardLifecycle.java")));
+        assertTrue(gameLoop.contains("OscillationManager.suppressNextFrames(1)")
+                        || titleCardLifecycle.contains("OscillationManager.suppressNextFrames(1)"),
+                "The GameLoop title-card path should arm the oscillator-owned one-shot suppression directly");
         String frameUpdater = stripCommentsAndStrings(Files.readString(
                 SRC_MAIN.resolve("com/openggf/level/LevelFrameRuntimeUpdater.java")));
         assertTrue(frameUpdater.indexOf("consumeSuppressedUpdate(")

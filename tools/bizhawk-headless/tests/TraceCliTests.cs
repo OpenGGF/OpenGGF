@@ -1231,14 +1231,16 @@ namespace OpenGGF.BizHawk.Headless.Tests
                             + "ss/physics.csv",
                             string.Join(",", files));
 
-                        // The ss aux file exists and is byte-empty; CRLF
-                        // expansion of empty content stays empty.
+                        string ssAux = File.ReadAllText(Path.Combine(
+                            fullOutput, "ss", "aux_state.jsonl"));
                         AssertEx.Equal(
-                            0L,
-                            new FileInfo(Path.Combine(
-                                fullOutput,
-                                "ss",
-                                "aux_state.jsonl")).Length);
+                            2,
+                            CountOccurrences(
+                                ssAux,
+                                "\"event\":\"dynamic_art_transfer_state\""));
+                        AssertEx.Equal(
+                            false,
+                            ssAux.Replace("\r\n", "").Contains("\n"));
                         // Run-mode files carry the canonical capture's
                         // Windows text-mode CRLF line endings
                         // (docs/s1-run-mode-behavior.md section 9).
@@ -1725,9 +1727,27 @@ namespace OpenGGF.BizHawk.Headless.Tests
                                 S2TraceCsvWriter.Header + "\n0000,"));
                         string metadata = File.ReadAllText(
                             Path.Combine(fullOutput, "metadata.json"));
+                        string auxState = File.ReadAllText(
+                            Path.Combine(fullOutput, "aux_state.jsonl"));
+                        AssertEx.Equal(
+                            3,
+                            CountOccurrences(
+                                auxState,
+                                "\"event\":\"load_queue_state\""));
+                        AssertEx.Equal(
+                            3,
+                            CountOccurrences(
+                                auxState,
+                                "\"event\":\"dynamic_art_transfer_state\""));
                         AssertContains(
                             metadata,
                             "  \"trace_profile\": \"gameplay_unlock\",\n");
+                        AssertContains(
+                            metadata,
+                            "\"load_queue_state_per_frame\"");
+                        AssertContains(
+                            metadata,
+                            "\"dynamic_art_transfer_state_per_frame_v1\"");
                         AssertContains(
                             metadata,
                             "  \"source_bk2\": \"synthetic.bk2\",\n"
@@ -1824,7 +1844,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
                             + "\"initial_speed_factor\":\"0x0000\","
                             + "\"perfect_rings_left\":\"0x0000\"}\r\n"
                             + "{\"frame\":0,\"type\":\"control_state\","
-                            + "\"started\":0}\r\n",
+                            + "\"started\":0}\r\n"
+                            + "{\"frame\":0,\"event\":"
+                            + "\"dynamic_art_transfer_state\",\"edges\":[],"
+                            + "\"outstanding_transfer_ids\":[]}\r\n"
+                            + "{\"frame\":1,\"event\":"
+                            + "\"dynamic_art_transfer_state\",\"edges\":[],"
+                            + "\"outstanding_transfer_ids\":[]}\r\n",
                             File.ReadAllText(Path.Combine(
                                 fullOutput,
                                 "ss",
@@ -1963,6 +1989,16 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     AssertEx.Equal(
                         Path.GetFullPath(output),
                         trace.OutputDirectory);
+
+                    CommandLineOptions loadTime =
+                        CommandLineOptions.Parse(new[]
+                        {
+                            "--mode", "load-time",
+                            "--rom", "game.gen",
+                            "--movie", "movie.bk2",
+                            "--output", output
+                        });
+                    AssertEx.Equal(CaptureMode.LoadTime, loadTime.Mode);
                 });
         }
 
@@ -2288,6 +2324,16 @@ namespace OpenGGF.BizHawk.Headless.Tests
                             auxState.StartsWith(
                                 "{\"frame\":0,\"vfc\":4,"
                                 + "\"event\":\"state_snapshot\","));
+                        AssertEx.Equal(
+                            3,
+                            CountOccurrences(
+                                auxState,
+                                "\"event\":\"load_queue_state\""));
+                        AssertEx.Equal(
+                            3,
+                            CountOccurrences(
+                                auxState,
+                                "\"event\":\"dynamic_art_transfer_state\""));
                         AssertEx.Equal(true, auxState.EndsWith("\n"));
 
                         string metadata = File.ReadAllText(metadataPath);
@@ -2297,6 +2343,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         AssertContains(
                             metadata,
                             "  \"trace_frame_count\": 3,\n");
+                        AssertContains(
+                            metadata,
+                            "\"load_queue_state_per_frame\"");
+                        AssertContains(
+                            metadata,
+                            "\"dynamic_art_transfer_state_per_frame_v1\"");
                         AssertContains(
                             metadata,
                             "  \"start_x\": \"0x0103\",\n");
@@ -2560,6 +2612,19 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
         }
 
+        private static int CountOccurrences(string value, string needle)
+        {
+            int count = 0;
+            int index = 0;
+            while ((index = value.IndexOf(
+                needle, index, StringComparison.Ordinal)) >= 0)
+            {
+                count++;
+                index += needle.Length;
+            }
+            return count;
+        }
+
         private sealed class TraceCliDependencies
         {
             public TraceCliDependencies(
@@ -2580,7 +2645,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// 0x0100 + frame / 0x0300 + frame). Game mode 0xF600 becomes 0x0C
         /// once <c>startFrame</c> frames have completed (never for -1).
         /// </summary>
-        private sealed class ScriptedTraceHost : IGpgxHost
+        private sealed class ScriptedTraceHost : IGpgxHost, ICpuRegisterReader
         {
             private readonly int startFrame;
             private readonly byte[] ram = new byte[0x10000];
@@ -2631,6 +2696,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
             public byte ReadMainRamByte(int offset)
             {
                 return ram[offset];
+            }
+
+            public uint ReadCpuRegister(string name)
+            {
+                return 0;
             }
 
             public void Dispose()

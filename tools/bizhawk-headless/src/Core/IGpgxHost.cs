@@ -28,4 +28,9 @@ namespace OpenGGF.BizHawk.Headless
         void Advance();
         byte ReadMainRamByte(int offset);
     }
+
+    public interface ICpuRegisterReader
+    {
+        uint ReadCpuRegister(string name);
+    }
 }

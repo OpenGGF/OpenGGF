@@ -1,6 +1,7 @@
 package com.openggf.game.sonic2.events;
 
 import com.openggf.game.sonic2.audio.Sonic2Music;
+import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.objects.bosses.Sonic2MTZBossInstance;
 import com.openggf.game.GameServices;
@@ -31,6 +32,7 @@ public class Sonic2MTZEvents extends Sonic2ZoneEvents {
 
     @Override
     public void update(int act, int frameCounter) {
+        retryPendingPlc();
         if (act < 2) {
             // Acts 1 & 2 (act 0, 1): No dynamic events
             // ROM: LevEvents_MTZ just rts
@@ -81,7 +83,7 @@ public class Sonic2MTZEvents extends Sonic2ZoneEvents {
                     // ROM: move.b #7,(Current_Boss_ID).w
                     gameState().setCurrentBossId(MTZ_BOSS_ID);
                     // ROM: moveq #PLCID_MtzBoss,d0 / jsr (LoadPLC).l
-                    // PLC loading handled by art system
+                    requestSonic2Plc(Sonic2Constants.PLC_MTZ_BOSS);
                 }
             }
             case 6 -> {

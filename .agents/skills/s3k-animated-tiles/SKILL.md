@@ -398,3 +398,10 @@ private void updateZoneN() {
 7. **Capacity not ensured for dynamic art.** `AniPlcParser.ensurePatternCapacity()` handles the AniPLC scripts automatically, but if your zone has dynamic art overrides (like AIZ2 FirstTree), you must call `level.ensurePatternCapacity()` separately for the override destination tiles. See the AIZ2 block in the constructor.
 
 8. **Custom tile logic zones.** Some zones (HCZ2, CNZ, ICZ, LBZ, LRZ, DPZ) compute art offsets dynamically from scroll/event values rather than using AniPLC frame sequences. These require manual implementation of the ROM DMA math, not just wiring up `runAllScripts()`. Check whether the zone `AnimateTiles_{ZONE}` ever calls `AnimateTiles_DoAniPLC` -- if not, it is entirely custom.
+
+## Queue Diagnostics Routing
+
+For physical Kosinski/KosM timing use `s3k-plc-system`; for `queue.*` or
+`dynamic_art.*` replay failures use `trace-replay-bug-fixing` and
+`trace-green-fleet`. These reports are zero-tolerance, comparison-only
+evidence, distinct from the animator's visual output.

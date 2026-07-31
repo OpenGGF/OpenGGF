@@ -321,3 +321,26 @@ After PLC application, object renderer GPU textures must be re-uploaded for any 
 | `AizIntroTerrainSwap.java` | Runtime PLC application example (PLC 0x0B) |
 | `Sonic3k.java` | Level-load PLC application via `appendPlcPatternOps()` |
 | `level/resources/PlcParser.java` | Shared PLC format parser (game-agnostic) |
+
+## Queue Timing and Trace Reports
+
+Capture audited native traces with `--load-queue-state` and require
+`load_queue_state_per_frame` in `metadata.json`. In comparator reports,
+`queue.s3k_kos_direct.*` describes physical direct Kosinski jobs and
+`queue.s3k_kos_module.*` describes physical KosM parents; a module's direct
+child is not another module parent.
+
+Hardware-timing schema 2 covers readiness for both direct and module domains.
+It may release only a matching, prepared, production-submitted ROM job after
+kind, ordinal, stable submission fingerprint, and service boundary match. It
+must never create queue work or carry asset/gameplay payloads. Separate a
+hardware-timing admission error from a `queue.*` comparator mismatch before
+changing PLC code.
+
+If player-art DPLC evidence is present,
+`dynamic_art_transfer_state_per_frame_v1` records ordered submissions,
+completions, requests, outstanding transfer IDs, and run-gap ledger carry.
+Treat both `queue.*` and `dynamic_art.*` as zero-tolerance, comparison-only
+frontiers. Record first frame, field, and error count in
+`docs/status/trace-frontier-log.md`; use `trace-replay-bug-fixing` for triage
+and `trace-green-fleet` for fleet work.

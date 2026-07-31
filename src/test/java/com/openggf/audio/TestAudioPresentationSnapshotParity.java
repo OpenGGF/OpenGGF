@@ -110,9 +110,6 @@ class TestAudioPresentationSnapshotParity {
 
     @Test
     void rewindReleaseRestoresAudibleFmAndPsgMasksAndNextToggleState() {
-        audio.setBackend(new LWJGLAudioBackend(
-                SonicConfigurationService.createStandalone()));
-
         audio.toggleMute(ChannelType.FM, 2);
         audio.toggleSolo(ChannelType.PSG, 1);
         audio.presentFrame(PresentationMode.SILENT);
@@ -479,9 +476,6 @@ class TestAudioPresentationSnapshotParity {
 
     @Test
     void snapshotRestoresTheSolePresentationCoordFlagCounter() {
-        LWJGLAudioBackend backend =
-                new LWJGLAudioBackend(SonicConfigurationService.getInstance());
-        audio.setBackend(backend);
         audio.captureLogicalSnapshot();
         audio.presentationCoordFlagHandlersForTesting().state()
                 .setSpindashRevCounter(7);

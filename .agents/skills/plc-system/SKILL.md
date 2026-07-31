@@ -110,3 +110,52 @@ S2 ArtLoadCues are parsed via `Sonic2PlcLoader.java`, which uses `PlcParser.pars
 | `game/sonic3k/Sonic3kPlcLoader.java` | S3K-specific PLC application, GPU refresh |
 | `game/sonic1/Sonic1.java` | S1 PLC parsing via `PlcParser` |
 | `game/sonic1/Sonic1Level.java` | S1 pattern loading from PLC entries |
+
+## Frame-Level Queue Diagnostics
+
+Trace fixtures that advertise `load_queue_state_per_frame` compare physical load
+queues at `END_OF_LOGICAL_FRAME`. Treat these fields as ordinary zero-tolerance
+frontier fields:
+
+- `s1_nemesis_plc` and `s2_nemesis_plc` cover the native six-byte PLC queue;
+- `s3k_kos_direct` covers only physical direct Kosinski entries;
+- `s3k_kos_module` covers physical KosM parents, never their direct children.
+
+Use `GameplayModeContext.captureQueueDiagnostics()` for engine-side state. Keep
+diagnostics read-only: snapshots must never accept trace data or release timing
+jobs. A ready-but-unclaimed S3K timing job is no longer physically queued and
+must not appear busy. Ordered fingerprints are part of the exact comparison
+contract. In schema version 1, `service_observations` is reserved and must be an
+empty array. This is mandatory schema padding, not evidence that service did
+not run. Do not infer a consumed sub-frame boundary from end-frame state;
+diagnose service and retirement from membership, prepared, and remaining-work
+transitions.
+
+For S3K, do not conflate submission with preparation. A direct Kos descriptor
+queued at `POST_OBJECTS` is busy but unprepared until `PRE_MAIN_LOOP` sets the
+retail queue-count sign bit. A KosM parent is prepared when the low seven bits
+of `Kos_modules_left` are nonzero; bit 7 means its direct child is in progress,
+not that the parent was initialized.
+
+When a trace first diverges under `queue.<kind>.*`, investigate the owning queue
+lifecycle before changing downstream audio, objects, events, or physics. For
+S1/S2 recorder work, remember that `RunPLC` overwrites the active queue source
+with the Nemesis decoder cursor; preserve the original descriptor by observing
+the lifecycle before preparation rather than guessing it from an end-frame
+sample.
+
+## Dynamic-Art Reports and Routing
+
+Native audited fixture captures must use `--load-queue-state`. Confirm
+`metadata.json` advertises `load_queue_state_per_frame`; DPLC/player-art audits
+also require `dynamic_art_transfer_state_per_frame_v1`. The latter records each
+frame's ordered submissions and completions, request descriptors, outstanding
+transfer IDs, and the run-gap ledger carry (`dynamic_art_initial_ledger_*` and
+`dynamic_art_gap_transitions` in schema 2 manifests).
+
+Treat `queue.*` and `dynamic_art.*` report fields as zero-tolerance,
+comparison-only evidence. They may diagnose production ROM work but may never
+hydrate gameplay or create work. Preserve the first failing frame, field, and
+error count in `docs/status/trace-frontier-log.md`. Use
+`trace-replay-bug-fixing` for comparator triage and `trace-green-fleet` for
+multi-trace frontier work.

@@ -50,7 +50,8 @@ namespace OpenGGF.BizHawk.Headless
             int startX,
             int startY,
             uint rngSeed,
-            string recordingDate)
+            string recordingDate,
+            bool loadQueueState = false)
         {
             if (recordingDate == null)
             {
@@ -80,10 +81,17 @@ namespace OpenGGF.BizHawk.Headless
             json.Append("  \"recording_date\": \"")
                 .Append(recordingDate).Append("\",\n");
             json.Append("  \"lua_script_version\": \"3.5\",\n");
-            json.Append("  \"trace_schema\": 4,\n");
+            json.Append("  \"trace_schema\": ")
+                .Append(loadQueueState ? "5" : "4").Append(",\n");
             json.Append("  \"csv_version\": 7,\n");
-            json.Append(
-                "  \"aux_schema_extras\": [\"s1_obj64_state_per_frame\"],\n");
+            json.Append("  \"aux_schema_extras\": [\"s1_obj64_state_per_frame\"");
+            if (loadQueueState)
+            {
+                json.Append(", \"load_queue_state_per_frame\"");
+                json.Append(
+                    ", \"dynamic_art_transfer_state_per_frame_v1\"");
+            }
+            json.Append("],\n");
             json.Append("  \"rom_checksum\": \"\",\n");
             json.Append("  \"notes\": \"\"\n");
             json.Append("}\n");

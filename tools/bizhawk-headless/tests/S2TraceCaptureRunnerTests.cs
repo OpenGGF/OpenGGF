@@ -59,6 +59,78 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "S2TraceCaptureRunner does not arm on the movie's final frame",
                 DoesNotArmOnMoviesFinalFrame));
+            tests.Add(new TestMain.TestCase(
+                "S2TraceCaptureRunner emits mandatory PLC and DPLC audit heartbeats",
+                EmitsMandatoryAuditHeartbeats));
+            tests.Add(new TestMain.TestCase(
+                "S2TraceCaptureRunner publication rejects scratch legacy"
+                + " audit omission",
+                PublicationRejectsScratchLegacyAuditOmission));
+        }
+
+        private static void PublicationRejectsScratchLegacyAuditOmission()
+        {
+            WithMovie(Rows(1), movie =>
+            {
+                AssertEx.Throws<ArgumentNullException>(
+                    () => S2TraceCaptureRunner.Capture(
+                        movie,
+                        new ScriptedHost(null),
+                        S2TraceCaptureRunner.GameplayUnlockProfile,
+                        0,
+                        "synthetic.bk2",
+                        "2026-07-30",
+                        new StringWriter(),
+                        new StringWriter(),
+                        new StringWriter(),
+                        null),
+                    "requires native load audit");
+            });
+        }
+
+        private static void EmitsMandatoryAuditHeartbeats()
+        {
+            WithMovie(
+                Rows(7),
+                movie =>
+                {
+                    var host = new ScriptedHost((ram, completedFrame) =>
+                    {
+                        if (completedFrame >= 2)
+                        {
+                            ram.SetByte(0xF600, 0x0C);
+                        }
+                    });
+                    var aux = new StringWriter();
+                    var metadata = new StringWriter();
+
+                    S2TraceCaptureResult result = S2TraceCaptureRunner.Capture(
+                        movie,
+                        host,
+                        S2TraceCaptureRunner.GameplayUnlockProfile,
+                        0,
+                        "synthetic.bk2",
+                        "2026-07-30",
+                        new StringWriter(),
+                        aux,
+                        metadata,
+                        S2DynamicArtObserverTests.CreateRom());
+
+                    AssertEx.Equal(
+                        result.TraceFrameCount,
+                        Count(aux.ToString(),
+                            "\"event\":\"load_queue_state\""));
+                    AssertEx.Equal(
+                        result.TraceFrameCount,
+                        Count(aux.ToString(),
+                            "\"event\":\"dynamic_art_transfer_state\""));
+                    AssertContains(
+                        metadata.ToString(),
+                        "\"load_queue_state_per_frame\"");
+                    AssertContains(
+                        metadata.ToString(),
+                        "\"dynamic_art_transfer_state_per_frame_v1\"");
+                });
         }
 
         private static void CapturesByteExactGameplayUnlockOutput()
@@ -97,7 +169,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     var physics = new StringWriter();
                     var aux = new StringWriter();
                     var metadata = new StringWriter();
-                    S2TraceCaptureResult result = S2TraceCaptureRunner.Capture(
+                    S2TraceCaptureResult result = S2TraceCaptureRunner.CaptureScratchLegacy(
                         movie,
                         host,
                         "gameplay_unlock",
@@ -219,7 +291,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     host.Ram.SetU16(0xB02E, 2);
 
                     var metadata = new StringWriter();
-                    S2TraceCaptureResult result = S2TraceCaptureRunner.Capture(
+                    S2TraceCaptureResult result = S2TraceCaptureRunner.CaptureScratchLegacy(
                         movie,
                         host,
                         "gameplay_unlock",
@@ -259,7 +331,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
                     var physics = new StringWriter();
                     var metadata = new StringWriter();
-                    S2TraceCaptureResult result = S2TraceCaptureRunner.Capture(
+                    S2TraceCaptureResult result = S2TraceCaptureRunner.CaptureScratchLegacy(
                         movie,
                         host,
                         "gameplay_unlock",
@@ -325,7 +397,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     var physics = new StringWriter();
                     var aux = new StringWriter();
                     var metadata = new StringWriter();
-                    S2TraceCaptureResult result = S2TraceCaptureRunner.Capture(
+                    S2TraceCaptureResult result = S2TraceCaptureRunner.CaptureScratchLegacy(
                         movie,
                         host,
                         "level_gated_reset_aware",
@@ -390,7 +462,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     var host = new ScriptedHost(SegmentScript);
 
                     var metadata = new StringWriter();
-                    S2TraceCaptureResult result = S2TraceCaptureRunner.Capture(
+                    S2TraceCaptureResult result = S2TraceCaptureRunner.CaptureScratchLegacy(
                         movie,
                         host,
                         "level_gated_reset_aware",
@@ -425,7 +497,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     var host = new ScriptedHost(SegmentScript);
 
                     var metadata = new StringWriter();
-                    S2TraceCaptureResult result = S2TraceCaptureRunner.Capture(
+                    S2TraceCaptureResult result = S2TraceCaptureRunner.CaptureScratchLegacy(
                         movie,
                         host,
                         "gameplay_unlock",
@@ -505,7 +577,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     var aux = new StringWriter();
                     var metadata = new StringWriter();
                     AssertEx.Throws<InvalidDataException>(
-                        () => S2TraceCaptureRunner.Capture(
+                        () => S2TraceCaptureRunner.CaptureScratchLegacy(
                             movie,
                             host,
                             "level_gated_reset_aware",
@@ -540,7 +612,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
                     var aux = new StringWriter();
                     var metadata = new StringWriter();
-                    S2TraceCaptureResult result = S2TraceCaptureRunner.Capture(
+                    S2TraceCaptureResult result = S2TraceCaptureRunner.CaptureScratchLegacy(
                         movie,
                         host,
                         "gameplay_unlock",
@@ -606,7 +678,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     var aux = new StringWriter();
                     var metadata = new StringWriter();
                     AssertEx.Throws<InvalidDataException>(
-                        () => S2TraceCaptureRunner.Capture(
+                        () => S2TraceCaptureRunner.CaptureScratchLegacy(
                             movie,
                             host,
                             "level_gated_reset_aware",
@@ -652,7 +724,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     });
 
                     var metadata = new StringWriter();
-                    S2TraceCaptureResult result = S2TraceCaptureRunner.Capture(
+                    S2TraceCaptureResult result = S2TraceCaptureRunner.CaptureScratchLegacy(
                         movie,
                         host,
                         "gameplay_unlock",
@@ -701,7 +773,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     var physics = new StringWriter();
                     var metadata = new StringWriter();
                     AssertEx.Throws<InvalidDataException>(
-                        () => S2TraceCaptureRunner.Capture(
+                        () => S2TraceCaptureRunner.CaptureScratchLegacy(
                             movie,
                             host,
                             "gameplay_unlock",
@@ -851,7 +923,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// 0xB00C become 0x0100 + frame / 0x0300 + frame), then runs the
         /// per-advance script.
         /// </summary>
-        private sealed class ScriptedHost : IGpgxHost
+        private sealed class ScriptedHost : IGpgxHost, ICpuRegisterReader
         {
             private readonly Action<RamAccess, int> onAdvance;
 
@@ -907,6 +979,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 return Ram.GetByte(offset);
             }
 
+            public uint ReadCpuRegister(string name)
+            {
+                return 0;
+            }
+
             public void Dispose()
             {
             }
@@ -938,6 +1015,29 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 ram[offset + 1] = (byte)(value >> 16);
                 ram[offset + 2] = (byte)(value >> 8);
                 ram[offset + 3] = (byte)value;
+            }
+        }
+
+        private static int Count(string value, string needle)
+        {
+            int count = 0;
+            int index = 0;
+            while ((index = value.IndexOf(
+                needle, index, StringComparison.Ordinal)) >= 0)
+            {
+                count++;
+                index += needle.Length;
+            }
+            return count;
+        }
+
+        private static void AssertContains(string value, string needle)
+        {
+            if (value.IndexOf(needle, StringComparison.Ordinal) < 0)
+            {
+                throw new Exception(
+                    "Expected value to contain <" + needle + ">.\n"
+                    + value);
             }
         }
     }

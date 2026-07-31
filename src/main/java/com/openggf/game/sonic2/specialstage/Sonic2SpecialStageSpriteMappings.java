@@ -64,11 +64,9 @@ public final class Sonic2SpecialStageSpriteMappings {
     // Art section offsets - each animation type has its own section in the art data
     // From s2.asm: SSPlayer_DPLCPtrs
     // The DPLC source offsets are RELATIVE to each section's start
-    private static final int ART_OFFSET_UPRIGHT = 0x00;     // tiles_to_bytes($000) - 0x58 tiles
     private static final int ART_OFFSET_DIAGONAL = 0x58;    // tiles_to_bytes($058) - 0xCC tiles
     private static final int ART_OFFSET_HORIZONTAL = 0x124; // tiles_to_bytes($124) - 0x4D tiles
     private static final int ART_OFFSET_BALL = 0x171;       // tiles_to_bytes($171) - 0x12 tiles
-
     /**
      * Sonic special stage sprite mappings.
      * 18 frames total, ported from obj09.asm with tile indices converted using DPLC data.

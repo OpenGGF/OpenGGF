@@ -64,13 +64,13 @@ class TestLevelFrameHardwareTimingBoundaries {
             return null;
         }).when(camera).updatePosition();
 
-        LevelFrameResult firstResult = LevelFrameStep.execute(
+        LevelFrameResult firstResult = LevelFrameTestStep.execute(
                 context,
                 level,
                 camera,
                 () -> events.add("physics"),
                 LevelFrameStep.DIRECT_WRAPPER);
-        LevelFrameResult secondResult = LevelFrameStep.execute(
+        LevelFrameResult secondResult = LevelFrameTestStep.execute(
                 context,
                 level,
                 camera,
@@ -130,7 +130,7 @@ class TestLevelFrameHardwareTimingBoundaries {
             return null;
         }).when(camera).updatePosition();
 
-        LevelFrameResult result = LevelFrameStep.execute(
+        LevelFrameResult result = LevelFrameTestStep.execute(
                 context,
                 level,
                 camera,
@@ -171,7 +171,7 @@ class TestLevelFrameHardwareTimingBoundaries {
         LevelFrameContext context = context(timing,
                 new TraceHardwareTimingBoundaryObserver(port));
 
-        LevelFrameStep.execute(context, mock(LevelManager.class), mock(Camera.class), () -> { },
+        LevelFrameTestStep.execute(context, mock(LevelManager.class), mock(Camera.class), () -> { },
                 (name, step) -> {
                     if ("objects".equals(name)) {
                         assertTrue(timing.isReady(direct));
@@ -186,7 +186,7 @@ class TestLevelFrameHardwareTimingBoundaries {
         HardwareTimingService timing = new HardwareTimingService();
         LevelFrameContext context = context(timing, boundaries::add);
 
-        LevelFrameStep.serviceVBlankOnly(context);
+        LevelFrameTestStep.serviceVBlankOnly(context);
 
         assertEquals(List.of(HardwareServiceBoundary.VINT_SERVICE), boundaries);
     }
@@ -199,7 +199,7 @@ class TestLevelFrameHardwareTimingBoundaries {
         LevelManager level = mock(LevelManager.class);
         when(level.consumePendingInitialProcessSpritesPass()).thenReturn(true);
 
-        LevelFrameResult result = LevelFrameStep.execute(
+        LevelFrameResult result = LevelFrameTestStep.execute(
                 context, level, mock(Camera.class), () -> {
                 });
 
@@ -215,7 +215,7 @@ class TestLevelFrameHardwareTimingBoundaries {
         when(gameState.applyPauseToggle(true)).thenReturn(true);
         LevelFrameContext context = context(timing, boundaries::add, gameState);
 
-        LevelFrameResult result = LevelFrameStep.executeWithPause(
+        LevelFrameResult result = LevelFrameTestStep.executeWithPause(
                 context,
                 mock(LevelManager.class),
                 mock(Camera.class),

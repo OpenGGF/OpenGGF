@@ -23,7 +23,8 @@ namespace OpenGGF.BizHawk.Headless
             string runId,
             string sourceBk2,
             IList<RunManifestSegment> segments,
-            IList<RunManifestTransition> transitions)
+            IList<RunManifestTransition> transitions,
+            IList<DynamicArtGapTransition> dynamicArtGapTransitions = null)
         {
             if (runId == null)
             {
@@ -38,7 +39,8 @@ namespace OpenGGF.BizHawk.Headless
                 "9.13-s2",
                 null,
                 segments,
-                transitions);
+                transitions,
+                dynamicArtGapTransitions);
         }
     }
 }

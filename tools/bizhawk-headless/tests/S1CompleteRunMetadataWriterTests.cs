@@ -16,7 +16,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
     internal static class S1CompleteRunMetadataWriterTests
     {
         private const string FixtureVersionLine =
-            "  \"lua_script_version\": \"3.14\",";
+            "  \"lua_script_version\": \"3.18\",";
         private const string ProducedVersionLine =
             "  \"lua_script_version\": \"3.18\",";
 
@@ -53,7 +53,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "ghz1_completerun",
                 S1CompleteRunMetadataWriter.Format(
                     0, 0, 788, 5598, 0x0050, 0x03B0, 0u,
-                    "2026-07-13", "s1-complete-run.bk2"));
+                    "2026-07-30", "s1-complete-run.bk2", "3.18", true));
         }
 
         /// <summary>
@@ -67,7 +67,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "fz_completerun",
                 S1CompleteRunMetadataWriter.Format(
                     5, 2, 189578, 4457, 0x2140, 0x05AC, 0u,
-                    "2026-07-13", "s1-complete-run.bk2"));
+                    "2026-07-30", "s1-complete-run.bk2", "3.18", true));
         }
 
         /// <summary>

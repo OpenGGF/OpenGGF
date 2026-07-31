@@ -103,8 +103,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 21309,
                 "3c219725d85d64762b514f973263edced337a37cd16fb8bf50f2b0ac"
                 + "3b5a2a39",
-                "9d90d669de5b9fc0c00666ad2023a164d1d110d441b9bcc8403280d1"
-                + "a5d74b47");
+                "0accbf521b770881d04e6a2a8e7891245b4f1d0979bfe91af3cd59a9"
+                + "2326e5de");
 
         private static readonly S3KDifferentialCase CnzLevelGatedCase =
             new S3KDifferentialCase(
@@ -116,8 +116,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 45597,
                 "195de5a64bd879f6d920ffe9a487931beb4f6366516587d23268b105"
                 + "9a7b46e2",
-                "17ddb988b74e8718d6e3d73a7aaefff56d077e6e5d015c7ab875a4674"
-                + "a94052e");
+                "2056e8c42126c4142c48a089b81859c50e5d406f09d820a0b44dd7f78"
+                + "fd8e5b5");
 
         private static readonly S3KDifferentialCase MgzLevelGatedCase =
             new S3KDifferentialCase(
@@ -129,8 +129,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 38818,
                 "16bff6712e4228494b8aeac587006edeee9f6befc62aa7b9078a465d"
                 + "b4e2d611",
-                "4ce8ee02e8e6dc1664659a494578427da0c6111e5a4c0fb88b71026b2"
-                + "b2c2035");
+                "30c6381beea0fd32fccf304bf81aa3c2a20237810bb762bb44935587b"
+                + "f07fac7");
 
         public static void Register(ICollection<TestMain.TestCase> tests)
         {
@@ -397,6 +397,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         Path.Combine(EndToEndTests.ToolDirectory, "run.sh"))
                     + " --mode trace"
                     + EndToEndTests.NoCompressArgument
+                    + " --load-queue-state"
                     + " --rom " + EndToEndTests.Quote(romPath)
                     + " --movie " + EndToEndTests.Quote(moviePath)
                     + " --output " + EndToEndTests.Quote(output)

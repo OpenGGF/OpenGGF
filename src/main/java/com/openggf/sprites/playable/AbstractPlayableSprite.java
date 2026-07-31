@@ -1007,6 +1007,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         controllerState.drowningState(),
                         controllerState.tailsCarryState(),
                         controllerState.superStateState(),
+                        controllerState.tailsTailsState(),
                         sidekickCpuExtra,
                         includeFollowHistory ? xHistory : null,
                         includeFollowHistory ? yHistory : null,
