@@ -55465,3 +55465,57 @@ MHZ stays at **601**; nothing landed this round.
   the `frameCounter + 2` offset in
   `LevelManager.getRomLevelFrameCounterDuringObjectPass()` on
   `bugfix/ai-fleet-s3k-cnz-carryintro` stays correctly calibrated.
+
+## 2026-07-31 - S3K level-load Kos work must not enter the recorded ledger
+
+- Main checkout, branch `bugfix/ai-s3k-mhz-queue-frontier`, over `00bffdca4`.
+- Command: `mvn -Dtest=TestS3kMhzCompleteRunTraceReplay -Ds3k.rom.path=s3k.gen
+  test`. Result unchanged at 1923 errors over the full 7218 frames; first error
+  frame 0 `y_speed` (expected 0x0000, actual 0x0038). No code landed.
+- Frontier characterised, not moved. MHZ1 frame 0 records both Kos queues idle
+  (`busy=false`, `remaining_work=-1`, `queued_fingerprints=""`) while the engine
+  holds a direct job at source 0x165CC4 plus two queued module fingerprints and
+  stays busy for 34 frames.
+- ROM grounding for the idle row 0. `LoadEnemyArt`
+  (docs/skdisasm/sonic3k.asm:64281-64313) is called from the title-card teardown
+  (docs/skdisasm/sonic3k.asm:62298) and submits the zone's badnik modules
+  through `Queue_Kos_Module`. `LoadLevelLoadBlock`
+  (docs/skdisasm/sonic3k.asm:9701-9745) then submits its own two modules and
+  spins `Process_Kos_Queue` / `Process_Kos_Module_Queue` at `loc_7870`
+  (docs/skdisasm/sonic3k.asm:9740-9745) until the shared `Kos_modules_left`
+  counter reaches zero, so it retires the enemy modules as well as its own.
+  `LoadLevelLoadBlock2` (docs/skdisasm/sonic3k.asm:38674-38741) then performs
+  its four decompressions through inline blocking `jsr (Kos_Decomp).l`
+  (docs/skdisasm/sonic3k.asm:38699, 38705, 38714, 38720), leaving nothing in the
+  direct FIFO. Both routines are called at docs/skdisasm/sonic3k.asm:7761-7762,
+  ahead of `LevelLoop` (docs/skdisasm/sonic3k.asm:7885). All of this level-load
+  Kos work is therefore complete before recorded row 0.
+- Engine model that diverges. `Sonic3kObjectArtProvider.onTitleCardArtRetired`
+  only *arms* the enemy modules, and
+  `Sonic3kObjectArtProvider.processEnemyKosArt` submits them from
+  `processRuntimeArtQueue` during `LevelFrameStep`, i.e. inside compared frames.
+  Instrumentation confirmed exactly three such submissions for MHZ1
+  (0x165F02 Mad Mole, 0x166234, 0x166386), all from `LevelFrameStep.execute`.
+- Why the obvious fix does not work. Draining these queues during level load
+  (submit, then pump `prepareQueuedModuleBeforeVSync` /
+  `processModuleQueueAfterObjects` until retirement) never terminates: readiness
+  is gated by `HardwareTimingService`'s recorded-completion authority, and the
+  recording legitimately holds no completions for pre-`LevelLoop` work. The
+  candidate aborted the MHZ level load outright and was withdrawn.
+- Consequent root cause. Level-load Kos work should not be submitted to the
+  recorded hardware ledger at all; the ROM completes it synchronously before the
+  first recorded row. Because the engine does submit it, every later recorded
+  ordinal is shifted.
+- This single cause also explains MGZ. MGZ aborts on
+  `KOS_DECOMPRESSION_QUEUE#134` with matching kind and ordinal but expected
+  sha256 `c2db2fda...` against engine `3c96d8b9...`, while MHZ aborts on
+  `KOS_DECOMPRESSION_QUEUE#335` expecting sha256 `3c96d8b9...` with nothing
+  pending. The same archive appears at two very different ordinals across the
+  two segments, which is an admission-phase skew rather than two separate bugs.
+- Next target: move S3K level-load Kos decompression off the recorded ledger
+  onto a synchronous level-load path, then re-measure all seven complete-run
+  segments together, since the change shifts ordinals for every one of them.
+- Guards re-run at baseline after the revert: `TestS3kAiz1SkipHeadless` 8/0/0,
+  `TestSonic3kLevelLoading` 30/0/0, `TestSonic3kBootstrapResolver` 5/0/0,
+  `TestSonic3kDecodingUtils` 3/0/0, `TestS3kAizTraceReplay` unchanged at 4
+  failures plus 1 error.
