@@ -1578,6 +1578,7 @@ public final class TraceSessionLauncher {
             TraceFrame previous = traceIndex > 0 ? trace.getFrame(traceIndex - 1) : null;
             TraceExecutionPhase phase =
                     TraceReplayBootstrap.phaseForReplay(trace, previous, current);
+            TraceReplayBootstrap.markVblankStarvedIterationForReplay(previous, current);
             return phase;
         }
     }
