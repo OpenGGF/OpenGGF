@@ -56614,3 +56614,63 @@ Disassembly citations re-verified against `docs/s2disasm/s2.asm` at exact line n
 change is confined to `Sonic2CNZBossInstance` overriding the pre-existing per-boss
 `AbstractBossInstance.defeatDeferralAppliesToThisBoss()` hook and calling the existing
 `Camera.setMaxX(...)`. No zone, route, frame or game-name branch is involved.
+
+## 2026-08-01 — S1/S2 PLC/DPLC re-green campaign: final state and open frontier
+
+Campaign result: **39 of 42 originally-failing S1/S2 trace-replay tests are green.**
+Verified by conductor clean build on `bugfix/ai-trace-s1-titlecard-plc-integration`:
+163 tests passing, 3 failing; 43 of 46 classes green; all trace/rewind/PLC guards and
+S3K cross-game parity green.
+
+### Remaining open frontier — three traces, one field
+
+| Trace | Frame | Errors | Polarity |
+|---|---|---|---|
+| `TestS1Ghz3CompleteRunTraceReplay` | 9183 | 5 | `queue.s1_nemesis_plc.busy` expected=false actual=true (held too long) |
+| `TestS2Mtz3LevelSelectTraceReplay` | 15258 | 9 | `queue.s2_nemesis_plc.busy` expected=false actual=true (held too long) |
+| `TestS2Cpz2LevelSelectTraceReplay` | 11491 | 8 | `queue.s2_nemesis_plc.busy` expected=**true** actual=**false** (missing/early) |
+
+CPZ2's inverted polarity is a discriminator: it expects a busy window the engine never
+enters, which reads as a **missing submission** rather than a mistimed one. The other two
+are start-of-window skews. The busy-window **length** is already correct on all three.
+
+### Ruled out empirically — do not re-attempt without new evidence
+
+Each of these was implemented and measured; all were behavioural no-ops on the three
+targets, and none introduced regressions.
+
+1. **V-blank clock drift / phase.** `ObjectManager.getVblaCounter()` matches the recorded
+   `TraceFrame.vblankCounter()` EXACTLY, every frame, all three traces (MTZ3 f15258:
+   trace 41069 / engine 41069). There is no drift and no phase error. Do not relocate the
+   `vblaCounter` increment and do not add a phase offset. An apparent off-by-one appears
+   only if the probe reads before the frame is driven — that is a probe artifact.
+2. **Capsule spawn-gate clock.** The gates genuinely read the wrong counter
+   (`frameCounter & 7`, object-update calls) where the ROM reads `Vint_runcount`
+   (`docs/s2disasm/s2.asm:84935-84942`; S1 `v_vbla_byte`); at MTZ3 f15258 these differ
+   (41069&7=5 vs 15202&7=2). Pointing `EggPrisonObjectInstance:406` and
+   `Sonic1EggPrisonObjectInstance:218,248` at the correct counter and removing the
+   `skipRandomAnimalSpawnThisFrame` compensator was an EXACT no-op. The inferred chain
+   "spawn cadence -> last-animal despawn -> `Load_EndOfAct` submission frame" is therefore
+   **wrong**. (The gate clock bug is real and worth fixing on its own merits — it is just
+   not the cause of these three failures.)
+3. **Per-submission decompression-duration accounting.** Busy-window length already matches
+   the ROM; `NemesisPlcServiceQueue`, `Sonic1PlcService`, `Sonic2PlcService` and
+   `PlcFrameLifecycleCoordinator` measure as correct.
+4. **Egg Prison allocate-before-RNG ordering** (`_incObj/3E Prison Capsule.asm:174-175`,
+   `s2.asm:84976-84977`). Correct ROM modelling, proven inert — object RAM is never full at
+   these points so the guard never fires.
+5. **Global `vIntRunCounter` phase offset.** Helps the two "too long" traces, worsens CPZ2.
+6. **`ObjectServices#vIntRunCounter`** is the IDENTITY function in normal gameplay
+   (`objectUpdateCounter + phaseOffset`, offset zero). Routing anything through it cannot
+   change behaviour.
+
+### Recommended next step
+
+Work backward from the busy flag itself, not from an inferred upstream chain. Instrument
+the engine-side publisher of `TraceEvent.LoadQueueState` for kind `s1_nemesis_plc` /
+`s2_nemesis_plc` (see `TraceBinder`, `LiveTraceComparator`, shape validated in
+`TraceData:418-445`) with a `-D`-gated probe logging every busy/prepared/remaining_work
+transition and the frame on which the end-of-act / results PLC is actually submitted, for
+frames around 9183 / 11491 / 15258. Identify the submission event, then fix at the
+narrowest owner. Six rounds of fixes derived from inferred causal chains were all inert;
+two direct measurements killed two hypotheses immediately.
