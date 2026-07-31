@@ -56250,3 +56250,78 @@ Frame 34 `queue.s3k_kos_module.queued_fingerprints` (known `LoadQueueStateProjec
 recorder defect, unfixable engine-side) and 7 groups at frames 1067-1068, all
 `queue.s3k_kos_*`, which are the previously-logged `Obj_HCZLargeFan` art-queue timing
 lead (`sonic3k.asm:65588-65608`). **No physics or animation divergence remains.**
+
+## 2026-07-31 — ICZ1 complete run: 82 → 1 (frontier cleared)
+
+Command: `mvn "-Dtest=TestS3kIczCompleteRunTraceReplay" "-Ds3k.rom.path=<s3k.gen>" test`,
+worktree `.worktrees/icz-1232`, branch `bugfix/ai-s3k-icz-1232` off
+`bugfix/ai-s3k-mhz-queue-frontier`. Before: 82 groups / 1629 frames, first physics
+divergence frame 1232. After: **1 group** — frame 34
+`queue.s3k_kos_module.queued_fingerprints`, the known `LoadQueueStateProjector` recorder
+defect. **No physics, animation, camera or sidekick divergence remains.**
+
+### Characterisation
+
+All 81 non-queue groups were one cascade from a single seed at frame 1232: the engine
+performed a `Sonic_Jump` the ROM refuses. Every marker of that routine was present in
+the deltas — `y_speed` `0` → `-$680` (`sonic3k.asm:23310`), `status` `$00` → `$06`
+(InAir|Roll), `y` +5 from the `y_radius` 19 → 14 compensation (`sonic3k.asm:23356-23366`),
+and `g_speed` `-$C9` vs `-$D5`, exactly the `$C` of ground friction the engine skipped by
+leaving the floor. The report's `cascading` flags were unreliable as usual: the three
+groups marked `cascading=false` (`player_animation_id`, `player_mapping_frame`) are pure
+consequences of the same jump.
+
+### Root cause — `Ctrl_1_locked` was never armed after the snowboard wall crash
+
+Instrumenting `doJump` showed only **three** ground jump attempts in the whole 1629-frame
+run, and the engine never even attempted the ROM's real jump at frame 1314. Reading the
+recorded input column against ROM state gave the full chain:
+
+1. **Frame 1112** — `loc_39BEE` (`sonic3k.asm:77359-77376`): once `Player_1.x_pos >= $38F0`
+   the snowboard overlay flings the rider (`x_vel = -$200`, `y_vel = -$400`, `anim = $19`),
+   writes `Ctrl_1_locked = 0` and `Screen_shake_flag = #$14`, then deletes itself. The
+   engine already modelled this frame exactly.
+2. **Frame 1113** — `ICZ1SE_Init` (`sonic3k.asm:110095-110101`): shake live and
+   `Ctrl_1_locked` clear ⇒ `st (Ctrl_1_locked)` + `clr.w (Ctrl_1_logical)`,
+   *"If shaking due to hitting the wall, remove player control temporarily"*.
+3. **Frames 1113-1313** — `Obj_Sonic` `loc_10BF0` (`sonic3k.asm:21968-21971`) stops
+   refreshing `Ctrl_1_logical` from `Ctrl_1`, so `Sonic_Jump`'s
+   `Ctrl_1_pressed_logical` test can never fire. The recording contains **six** press
+   edges in this window (1200, 1210, 1222, 1232, 1250, 1264) and the ROM ignores all six.
+4. **Frame 1314** — `Obj_ICZ1BigSnowPile` / `loc_53A4C` (`sonic3k.asm:110464-110480`):
+   pile settled at `y_pos == $70E`, player grounded, raw jump press ⇒ `clr.b
+   (Ctrl_1_locked)` and a *manual* jump with `y_vel = -$600` and **no** `y_radius`
+   position adjustment. That is why the recorded frame 1314 shows `y_speed = $FA00` with
+   `y` unchanged — not a `Sonic_Jump` at all.
+
+Confirmed against the recorded aux: `control_lock_state` transitions `1 → 255` at frame
+1113 and `255 → 0` at frame 1314, bracketing the window precisely.
+
+The engine's `Sonic3kICZEvents.updateAct1ScreenEvent` already modelled `ICZ1SE_Init`, but
+tested the shared `GameStateManager.isScreenShakeActive()` — the unrelated S2
+`Screen_Shaking_Flag` — instead of ICZ's own `screenShakeFlag`, the field that
+`triggerScreenShake` writes and `tickScreenShake` counts down. That predicate is never
+true in ICZ, so the lock never armed. `IczBigSnowPileInstance` had been compensating by
+setting the lock itself when the player landed on the pile, but the pile only starts
+descending at frame **1271** — 39 frames too late to suppress the 1232 press.
+
+### Fix
+
+`updateAct1ScreenEvent` now tests ICZ's `screenShakeFlag != 0`, matching ROM
+`tst.w (Screen_shake_flag)`. `IczBigSnowPileInstance` now only *consumes* the lock, as
+`loc_53A4C` does (`tst.b (Ctrl_1_locked) / beq`); its non-ROM self-lock and the
+write-only `escapeTriggered` field are gone. A route reaching a settled pile without the
+crash quake (checkpoint restart) now correctly never arms the scripted escape.
+
+### Blast radius
+
+Two ICZ-local files; no shared physics, collision or sidekick code touched, so S1/S2 are
+unreachable from this change. Re-measured all seven complete runs: aiz 8/64, hcz 8/1320,
+mgz 1/14629, cnz 1/5336, **icz 82 → 1**/1629, lbz 8/35, mhz 912/7218 — six unchanged.
+`TestS3kAizTraceReplay` holds at 4 failures + 1 error. `TestS3kAiz1SkipHeadless`,
+`TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`,
+`TestRewindCoverageGuard`, `TestStaticStateRewindCoverageGuard`,
+`TestRewindFixS3KIczBigSnowPileCodec`, `TestS3kIcz1SnowboardIntroHeadless`,
+`TestS3kIczPaletteCycling`, `TestS3kRuntimeStateReadGuard` and `TestIczSnowboardArtLoader`
+all green. `TestRewindFieldDispositionGuard` and `TestS3kIczAct1TransitionHeadless` fail
+identically on the base commit — verified pre-existing, not caused here.

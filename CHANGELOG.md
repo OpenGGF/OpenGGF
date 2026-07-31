@@ -3,6 +3,25 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: S3K IceCap Act 1 now locks controller 1 when the snowboard wall-crash
+  quake starts, so the ~200 frames between the crash and the big snow pile's
+  scripted jump-out ignore player input as the ROM does. `ICZ1SE_Init`
+  (sonic3k.asm:110095-110101) sets `Ctrl_1_locked` and clears `Ctrl_1_logical`
+  whenever `Screen_shake_flag` is live and the lock is clear, which stops
+  `Obj_Sonic` `loc_10BF0` (sonic3k.asm:21968-21971) refreshing the logical pad
+  and so makes `Sonic_Jump` unreachable until `Obj_ICZ1BigSnowPile`
+  (`loc_53A4C`, sonic3k.asm:110464-110480) releases it with its own manual
+  `-$600` jump. `Sonic3kICZEvents` modelled that screen event but tested the
+  shared `GameStateManager` screen-shake boolean — the unrelated S2
+  `Screen_Shaking_Flag` — rather than ICZ's own `Screen_shake_flag` countdown,
+  so the lock never armed and a jump press 120 frames after the crash produced a
+  real jump the ROM refuses. `IczBigSnowPileInstance` had been compensating with
+  a self-lock applied on landing, which arrives after the pile starts descending
+  and so was always too late; it now only tests the lock, matching `loc_53A4C`,
+  and a route reaching a settled pile without the crash quake correctly never
+  arms the escape. ICZ complete-run trace replay drops from 82 divergence groups
+  to 1 (the known `LoadQueueStateProjector` recorder defect), with no physics,
+  animation, camera or sidekick divergence remaining.
 - Fix: S3K complete-run trace replay no longer seeds the leader's position and
   subpixel from trace row 0. Row 0 is a recorded `LevelLoop` iteration-1 row — a
   *post*-frame sample — so copying it in as pre-frame state handed the engine
