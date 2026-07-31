@@ -3,6 +3,18 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Sonic 2 no longer retires queued dynamic-art DMA transfers on lag frames.
+  `V_Int` branches to `Vint_Lag` while `Vint_routine` is 0
+  (`docs/s2disasm/s2.asm:483-484`), and neither `Vint_Lag`
+  (`docs/s2disasm/s2.asm:529-584`) nor `Vint0_noWater`
+  (`docs/s2disasm/s2.asm:586-641`) calls `ProcessDMAQueue`
+  (`docs/s2disasm/s2.asm:1770`) -- only the real per-mode V-int handlers do
+  (`docs/s2disasm/s2.asm:781, 899, 1000, 1046, 1083, 1138`). A queued transfer
+  therefore survives a lag frame and retires on the next real V-int, matching
+  the S1 model, which already excludes lag frames. Greens
+  `TestS2SczLevelSelectTraceReplay` (was frame 2574,
+  `dynamic_art.edge[0].logical_frame`) and reduces
+  `TestS2ArzLevelSelectTraceReplay` from 627 to 606 errors.
 - Fix: the Sonic 2 SCZ Tornado ride-start lead-in now ticks
   `ObjB2_Animate_Pilot` on the title-card iterations it stands in for. The ROM's
   title-card loop body is `jsr (RunObjects).l`

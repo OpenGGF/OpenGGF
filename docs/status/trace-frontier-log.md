@@ -55444,3 +55444,81 @@ is the unmodelled `btst #status.player.pushing,status(a2) / moveq #4,d0`
 override in `Obj05_Main` (`s2.asm:41746-41750`), whose S3K counterpart narrows
 the same gate further (`sonic3k.asm:30043-30052`) — a per-game divergence that
 needs an owner rather than the existing `isS3k` flag.
+
+## 2026-07-31 — S2 SCZ dynamic-art edge logical_frame off-by-one (lag-frame DMA retirement)
+
+Branch `bugfix/ai-s2-scz-logical-frame-offbyone` off
+`bugfix/ai-trace-s1-titlecard-plc-integration`, worktree
+`.worktrees/s2-scz-logical-frame-offbyone`.
+
+| Trace | Before | After |
+|---|---|---|
+| `TestS2SczLevelSelectTraceReplay` | frame 2574 — `dynamic_art.edge[0].logical_frame` (2 errors) | green (Tests run: 1, Failures: 0) |
+| `TestS2DezEndingLevelSelectTraceReplay` | green | green |
+| `TestS2WfzLevelSelectTraceReplay` | frame 10287 — `dynamic_art.outstanding_transfer_ids` | unchanged: frame 10287 — `dynamic_art.outstanding_transfer_ids` (5825 errors) |
+
+Fix: `DynamicArtDmaServiceModel.SONIC_2_PROCESS_DMA_QUEUE` no longer services
+`PlcLifecyclePhase.LAG`. `V_Int` branches to `Vint_Lag` while `Vint_routine` is 0
+(`s2.asm:483-484`); neither `Vint_Lag` (`s2.asm:529-584`) nor `Vint0_noWater`
+(`s2.asm:586-641`) calls `ProcessDMAQueue` (`s2.asm:1770`) — only the real
+per-mode handlers do (`s2.asm:781, 899, 1000, 1046, 1083, 1138`). A queued
+transfer therefore survives the lag frame and retires on the next real V-int,
+matching the S1 model, which already excludes `LAG` because `VBlank_Lag`
+(`sonic.asm:709-745`) leaves `f_sonframechg` set.
+
+Commands:
+
+```
+mvn -q -Dmse=relaxed "-Ds2.rom.path=<s2 rev01 rom>" \
+  -DfailIfNoSpecifiedTests=false \
+  "-Dtest=TestS2SczLevelSelectTraceReplay" test
+
+mvn -q -Dmse=relaxed "-Ds1.rom.path=<s1 rev01 rom>" \
+  "-Ds2.rom.path=<s2 rev01 rom>" "-Ds3k.rom.path=<s3k locked-on rom>" \
+  -DfailIfNoSpecifiedTests=false \
+  "-Dtest=TestS2DezEndingLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay,TestDynamicArtDiagnosticsComparator,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils" test
+```
+
+Follow-up: S3K uses `EVERY_CLAIM`, which does service `LAG` even though
+`VInt_0` (`sonic3k.asm:600-647`) never calls `Process_DMA_Queue`
+(`sonic3k.asm:1748`) — a likely latent parity gap, left alone here to avoid
+destabilising the S3K fleet.
+
+### 2026-07-31 — independent verification sweep (same branch/worktree)
+
+Re-measured after `mvn -q -Dmse=relaxed clean` + `rm -rf target/surefire-reports`,
+once with the change reverted (before) and once with it applied (after).
+
+```
+mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \
+  "-Ds2.rom.path=<s2 rev01 rom>" \
+  "-Dtest=TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2ArzLevelSelectTraceReplay" test
+```
+
+| Trace | Before | After |
+|---|---|---|
+| `TestS2SczLevelSelectTraceReplay` | frame 2574 — `dynamic_art.edge[0].logical_frame` (expected=2574, actual=2573), 2 errors | green |
+| `TestS2DezEndingLevelSelectTraceReplay` | green | green |
+| `TestS2ArzLevelSelectTraceReplay` | frame 1078 — `dynamic_art.edge[2].present` (expected=true, actual=false), 627 errors | frame 1078 — same field, 627 → 606 errors (frontier unmoved) |
+| `TestS2WfzLevelSelectTraceReplay` | frame 10287 — `dynamic_art.outstanding_transfer_ids` (expected=[], actual=[3364]), 5825 errors | unchanged |
+
+Aggregate: before `Tests run: 4, Failures: 3`; after `Tests run: 4, Failures: 2`.
+
+Regression guard (`Tests run: 53, Failures: 0`):
+
+```
+mvn -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \
+  "-Ds1.rom.path=<s1 rev01 rom>" "-Ds2.rom.path=<s2 rev01 rom>" \
+  "-Dtest=TestS2DezEndingLevelSelectTraceReplay,TestS1Ghz1TraceReplay,TestS1Mz1TraceReplay,TestS1Ghz1CompleteRunTraceReplay,TestS1Ghz2CompleteRunTraceReplay,TestS1Mz1CompleteRunTraceReplay,TestS1Credits00Ghz1TraceReplay,TestS1Credits07Ghz1bTraceReplay,TestTraceReplayInvariantGuard,TestTraceReplayReferenceClosureGuard,TestRewindCoverageGuard,TestStaticStateRewindCoverageGuard,TestPlcProducerCoverageGuard,TestDynamicArtDiagnosticsComparator" test
+```
+
+Cross-game parity (`Tests run: 52, Failures: 0`):
+
+```
+mvn -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \
+  "-Ds1.rom.path=<s1 rev01 rom>" "-Ds2.rom.path=<s2 rev01 rom>" \
+  "-Ds3k.rom.path=<s3k locked-on rom>" \
+  "-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils" test
+```
+
+No regressions introduced.
