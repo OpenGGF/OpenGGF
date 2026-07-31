@@ -54631,3 +54631,114 @@ TestS3kHardwareTimingReplay" test
   that still blocks MZ1/GHZ2/GHZ3 complete-run before any other check runs, and
   (b) the residual single-row `logical_frame` skew at GHZ1 frame 2823 / MZ1
   frame 2134.
+
+## 2026-07-31 - Dynamic-art delivery-id segment epoch (comparator)
+
+- Worktree `<repo>/.worktrees/dynamic-art-transfer-id-space`, branch
+  `bugfix/ai-dynamic-art-transfer-id-space`, based on `2cf497c97`
+  (`bugfix/ai-trace-s1-titlecard-plc-integration`). Uncommitted at measurement
+  time; the only change is the comparator epoch normalisation described below.
+- Change: `dynamic_art` `transfer_id` / `edge_ordinal` are recorder delivery
+  identities allocated from emulator power-on, not ROM state - S2
+  `QueueDMATransfer` keeps only the per-frame-rewound `VDP_Command_Buffer_Slot`
+  (`docs/s2disasm/s2.asm:1713`, drained and zeroed by `ProcessDMAQueue` at
+  `docs/s2disasm/s2.asm:1769`), S1 V-blank writes VRAM unconditionally with no
+  queue (`docs/s1disasm/sonic.asm:831`), and S3K matches S2 with
+  `Add_To_DMA_Queue` keeping only `DMA_queue_slot`
+  (`docs/skdisasm/s3.asm:1831`) and `Process_DMA_Queue` rewinding it every
+  drain (`docs/skdisasm/s3.asm:1881`).
+  `DynamicArtSpecialStageComparator` now rebases those four id-valued
+  fields onto each side's own independently-anchored segment origin
+  (`DynamicArtIdEpoch`); everything else - list cardinality, phase, owner,
+  submission_origin, mapping_frame, logical_frame, logical_edge_index,
+  publication_frame, terminal_forwarded and all `requests[]` fields - stays
+  absolute-compared.
+- Command: `mvn -q test
+  "-Dtest=TestS1Ghz2CompleteRunTraceReplay,TestS1Mz1CompleteRunTraceReplay,TestS1Ghz1CompleteRunTraceReplay,TestS1Ghz1TraceReplay,TestS1Mz1TraceReplay,TestS2SczLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay"
+  -DfailIfNoTests=false -DfailIfNoSpecifiedTests=false
+  "-Ds1.rom.path=<repo>/s1.gen" "-Ds2.rom.path=<repo>/s2.gen"` -
+  before 3/7 pass, after 5/7 pass.
+- Frontier movement (before -> after):
+  - `TestS1Ghz2CompleteRunTraceReplay`: fail -> **PASS**, GREENED. Frame 1
+    `dynamic_art.edges` (3900 errors) -> no divergence.
+  - `TestS1Mz1CompleteRunTraceReplay`: fail -> **PASS**, GREENED. Frame 1
+    `dynamic_art.edges` (7085 errors) -> no divergence.
+  - `TestS2CnzLevelSelectTraceReplay`: fail -> fail, ADVANCED (24834 -> 24828
+    errors). Frame 0 `dynamic_art.outstanding_transfer_ids` -> frame 0
+    `queue.s2_nemesis_plc.queued_fingerprints`.
+  - `TestS2SczLevelSelectTraceReplay`: fail -> fail, UNMOVED field (6806 ->
+    6801 errors). Frame 0 `dynamic_art.outstanding_transfer_ids` expected `[]`
+    actual `[0]` - a size-0-vs-size-1 ledger CARDINALITY mismatch, which no
+    order-preserving renumbering can or should hide. Separate production
+    defect in the S2 submit/drain path.
+  - Controls held green: `TestS1Ghz1CompleteRunTraceReplay` (coincident-epoch
+    control), `TestS1Ghz1TraceReplay`, `TestS1Mz1TraceReplay`.
+- No `REGRESSION INTRODUCED:` lines.
+- Next targets: (a) S2 frame-0 outstanding-ledger occupancy (scz `[]` vs `[0]`,
+  mcz `[]` vs `[2]`), modelled from whether `VDP_Command_Buffer` has pending
+  entries at the segment's first frame; (b) the S2 drifting-delta dynamic-art
+  content divergence (edge.present / owner / mapping_frame / request address
+  and length) now visible with the epoch noise removed.
+- Wider S1 sweep on the same change (command: `mvn -q test
+  "-Dtest=TestS1*CompleteRunTraceReplay,TestS1SpecialStageTraceReplay,S2SpecialStage*,TestTraceRunReplayWalkerControlFlow,TestTraceRunHardwareTimingCoordinator,TestDynamicArtDiagnosticsComparator"
+  -DfailIfNoTests=false -DfailIfNoSpecifiedTests=false
+  "-Ds1.rom.path=<repo>/s1.gen" "-Ds2.rom.path=<repo>/s2.gen"`), 92/102 pass:
+  - `TestS1Ghz3CompleteRunTraceReplay`: 8925 errors @ frame 1
+    `dynamic_art.edges` -> 5 errors @ frame 9182 `queue.s1_nemesis_plc.busy`.
+  - `TestS1Mz3CompleteRunTraceReplay`: 14735 errors @ frame 1
+    `dynamic_art.edges` -> 5 errors @ frame 17398 `queue.s1_nemesis_plc.busy`.
+  - `TestS1Lz3CompleteRunTraceReplay` / `TestS1Slz3CompleteRunTraceReplay` /
+    `TestS1Syz3CompleteRunTraceReplay`: now 5-6 errors, all first at
+    `queue.s1_nemesis_plc.busy`.
+  - `TestS1SpecialStageTraceReplay`: 3843 -> 2307 errors, frame 99
+    `dynamic_art.edges` now `[0, 1]` vs `[]` - the epoch noise is gone and a
+    genuine missing-edge cardinality divergence is exposed underneath.
+  - `TestS1FzCompleteRunTraceReplay` errors with `cannot mutate queued PLC
+    entries while the decoder is active` both before and after - pre-existing,
+    unrelated.
+
+## 2026-07-31 - Independent verification of the dynamic-art delivery-id epoch
+
+- Verified against a detached baseline worktree at `2cf497c97`
+  (`bugfix/ai-trace-s1-titlecard-plc-integration`), same commands both sides,
+  `target/surefire-reports` cleared before every measurement. JDK 21.
+- S1 family (`-Ds1.rom.path=<repo>/s1.gen`, `-Dtest=`
+  `TestS1Ghz2CompleteRunTraceReplay,TestS1Ghz3CompleteRunTraceReplay,`
+  `TestS1Mz1CompleteRunTraceReplay,TestS1Ghz1TraceReplay,TestS1Mz1TraceReplay,`
+  `TestS1Ghz1CompleteRunTraceReplay`): before 3 passed / 3 failed, after
+  5 passed / 1 failed.
+  - `TestS1Ghz2CompleteRunTraceReplay`: 3900 errors @ frame 1
+    `dynamic_art.edges` (expected `[3688, 3689]`, actual `[2, 3]`) -> **PASS**.
+  - `TestS1Mz1CompleteRunTraceReplay`: 7085 errors @ frame 1
+    `dynamic_art.edges` (expected `[13050, 13051]`, actual `[2, 3]`) ->
+    **PASS**.
+  - `TestS1Ghz3CompleteRunTraceReplay`: ADVANCED, 8925 errors @ frame 1
+    `dynamic_art.edges` (expected `[6230, 6231]`, actual `[2, 3]`) -> 5 errors
+    @ frame 9182 `queue.s1_nemesis_plc.busy`.
+  - Controls `TestS1Ghz1CompleteRunTraceReplay`, `TestS1Ghz1TraceReplay`,
+    `TestS1Mz1TraceReplay` green before and after.
+  - The pure constant offset between the two sides at frame 1 is the direct
+    evidence that the recorded ids carry a power-on epoch and no ROM meaning.
+- S2 family (19 level-select/EHZ classes, `-Ds2.rom.path=<repo>/s2.gen`):
+  0 passed / 19 failed before AND after - no regression, no greening. Several
+  advanced their first-error field off `dynamic_art.outstanding_transfer_ids`
+  onto `queue.s2_nemesis_plc.queued_fingerprints` (cnz 24834 -> 24828, ehz1
+  16725 -> 16719, arz 14350 -> 14344). `TestS2SczLevelSelectTraceReplay`
+  stays on `dynamic_art.outstanding_transfer_ids` with expected `[]` vs actual
+  `[0]`, confirming ledger cardinality divergence still fails after rebasing.
+- Guards, all green: `TestS1Credits00Ghz1TraceReplay` ..
+  `TestS1Credits07Ghz1bTraceReplay`, `TestTraceReplayInvariantGuard`,
+  `TestTraceReplayReferenceClosureGuard`, `TestRewindCoverageGuard`,
+  `TestStaticStateRewindCoverageGuard`, `TestSonic1PlcProducerCoverage`,
+  `TestPlcProducerCoverageGuard`, `TestDynamicArtDiagnosticsComparator`,
+  `TestDynamicArtDmaServiceModel`.
+- Cross-game shared surface, all green: `TestS3kAiz1SkipHeadless`,
+  `TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver`,
+  `TestSonic3kDecodingUtils`.
+- No `REGRESSION INTRODUCED:` lines.
+- Correction applied during verification: the original note claimed
+  `docs/skdisasm` has no DMA-queue routine. It does - `Add_To_DMA_Queue`
+  (`docs/skdisasm/s3.asm:1831`) and `Process_DMA_Queue`
+  (`docs/skdisasm/s3.asm:1881`) - but it is the same per-frame-rewound
+  `DMA_queue_slot` pointer as S2, so the conclusion is unchanged and the
+  citations in code and log were corrected to say so.

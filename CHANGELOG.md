@@ -3,6 +3,22 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: dynamic-art trace comparison no longer scores the recorder's absolute
+  delivery identities. `transfer_id` and `edge_ordinal` are recorder
+  bookkeeping counters allocated from emulator power-on, not ROM state: Sonic
+  2's `QueueDMATransfer` keeps only `VDP_Command_Buffer_Slot`, a pointer
+  `ProcessDMAQueue` drains and rewinds every frame; Sonic 3&K's
+  `Add_To_DMA_Queue` / `Process_DMA_Queue` rewind `DMA_queue_slot` the same
+  way; and Sonic 1 does not queue at all, writing VRAM unconditionally from
+  VBlank. No ROM carries a cumulative transfer identity, so only the relative
+  structure of those ids is meaningful. A segment cut later in a movie
+  therefore inherits a large recorder origin while the engine's lifecycle
+  service necessarily allocates from zero. The comparator now rebases each
+  side onto its own independently-anchored segment origin — an
+  order-preserving bijection that leaves submitted/completed pairing, strict
+  monotonicity, edge-to-transfer association, ledger membership and ledger
+  cardinality fully scored, so genuine divergences still fail. Trace data
+  stays read-only: the expected origin is never copied onto the actual side.
 - Fix: Sonic 1's staged player DPLC transfer is no longer dispatched on a ROM
   lag frame. S1 writes Sonic's buffered art only from the `f_sonframechg`-gated
   `writeVRAM v_sgfx_buffer,ArtTile_Sonic*tile_size` that lives inside each

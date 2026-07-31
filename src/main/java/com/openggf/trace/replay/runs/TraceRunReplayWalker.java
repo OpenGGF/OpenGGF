@@ -437,12 +437,30 @@ public final class TraceRunReplayWalker {
             TraceData trace,
             int frame,
             DynamicArtDiagnosticsSnapshot actual) {
+        return compareDynamicArtRow(
+                trace, frame, actual, new DynamicArtSpecialStageComparator());
+    }
+
+    /**
+     * Compares one advertised DPLC heartbeat row through a caller-owned
+     * comparator.
+     *
+     * <p>The comparator carries the segment's dynamic-art delivery-id origin
+     * (see {@link com.openggf.trace.DynamicArtIdEpoch}), so a segment must pass
+     * the same instance for every one of its rows.
+     */
+    public static FrameComparison compareDynamicArtRow(
+            TraceData trace,
+            int frame,
+            DynamicArtDiagnosticsSnapshot actual,
+            DynamicArtSpecialStageComparator comparator) {
         Objects.requireNonNull(trace, "trace");
         Objects.requireNonNull(actual, "actual");
+        Objects.requireNonNull(comparator, "comparator");
         if (!trace.metadata().hasPerFrameDynamicArtTransferState()) {
             return null;
         }
-        return new DynamicArtSpecialStageComparator().compare(
+        return comparator.compare(
                 trace.dynamicArtTransferStateForFrame(frame), actual);
     }
 
@@ -457,6 +475,10 @@ public final class TraceRunReplayWalker {
         private final TraceData trace;
         private final int expectedRows;
         private final List<FrameComparison> comparisons = new ArrayList<>();
+        // One accumulator represents one run segment, so it owns that
+        // segment's dynamic-art delivery-id origin.
+        private final DynamicArtSpecialStageComparator comparator =
+                new DynamicArtSpecialStageComparator();
         private int nextRow;
 
         public DynamicArtSegmentComparison(
@@ -490,7 +512,7 @@ public final class TraceRunReplayWalker {
             }
             FrameComparison comparison =
                     TraceRunReplayWalker.compareDynamicArtRow(
-                            trace, row, actual);
+                            trace, row, actual, comparator);
             comparisons.add(comparison);
             return comparison;
         }

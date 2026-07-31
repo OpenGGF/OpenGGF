@@ -11,7 +11,6 @@ import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.trace.FieldComparison;
 import com.openggf.trace.EngineDiagnostics;
-import com.openggf.trace.DynamicArtSpecialStageComparator;
 import com.openggf.trace.FrameComparison;
 import com.openggf.trace.Severity;
 import com.openggf.trace.ToleranceConfig;
@@ -292,11 +291,21 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
         TraceEvent.DynamicArtTransferState expectedDynamicArt =
                 trace.dynamicArtTransferStateForFrame(expected.frame());
         DynamicArtDiagnosticsSnapshot actual = dynamicArtSnapshots.get();
-        FrameComparison dynamicOnly =
-                new DynamicArtSpecialStageComparator().compare(
-                        expectedDynamicArt, actual);
         FrameComparison merged =
                 binder.compareDynamicArt(expectedDynamicArt, actual);
+        // Project the dynamic-art subset out of the binder's own comparison
+        // rather than recomparing: a second comparator would carry a second
+        // delivery-id origin (see DynamicArtIdEpoch) anchored on this terminal
+        // row alone.
+        java.util.Map<String, FieldComparison> dynamicFields =
+                new java.util.LinkedHashMap<>();
+        merged.fields().forEach((name, field) -> {
+            if (name.startsWith("dynamic_art.")) {
+                dynamicFields.put(name, field);
+            }
+        });
+        FrameComparison dynamicOnly =
+                new FrameComparison(expectedDynamicArt.frame(), dynamicFields);
         deferredTerminalDynamicArtFrame = null;
         if (perFrameObserver != null) {
             perFrameObserver.accept(merged);
