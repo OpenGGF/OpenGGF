@@ -55888,3 +55888,120 @@ No REGRESSION INTRODUCED lines. Disassembly citations at s2.asm:481-484, 512,
 529-580, 781/899/1000/1046/1083/1138, 1705, 1770 and sonic.asm:709-730 were
 read directly and corroborated. The S2 MTZ/ARZ/EHZ and S3K *TraceReplay
 totals quoted in the entry above were not re-measured by this verification.
+
+## 2026-07-31 -- S2 OOZ oil surface executed after Obj05 (Tails' tails)
+
+Branch `bugfix/ai-s2-ooz-wfz-stuck` off
+`bugfix/ai-trace-s1-titlecard-plc-integration`. JDK 21.
+
+Command (per measurement, after `rm -rf target/surefire-reports target/trace-reports`):
+
+```
+mvn -Dmse=relaxed "-Ds2.rom.path=<s2 rom>" -Dsurefire.failIfNoSpecifiedTests=false \
+  "-Dtest=TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay,\
+TestS2WfzLevelSelectTraceReplay" test
+```
+
+BEFORE:
+
+- `TestS2OozLevelSelectTraceReplay` FAIL -- Totals: 7960 errors, 0 warnings.
+  First error: frame 346 -- `dynamic_art.edge[2].present` (expected=false, actual=true)
+- `TestS2Ooz2LevelSelectTraceReplay` FAIL -- Totals: 2355 errors, 0 warnings.
+  First error: frame 10684 -- `dynamic_art.edge[2].present` (expected=false, actual=true)
+- `TestS2WfzLevelSelectTraceReplay` FAIL -- Totals: 5804 errors, 0 warnings.
+  First error: frame 10447 -- `dynamic_art.edge[1].present` (expected=false, actual=true)
+
+AFTER:
+
+- `TestS2OozLevelSelectTraceReplay` FAIL -- Totals: 4 errors, 0 warnings.
+  First error: frame 11018 -- `dynamic_art.edges` (expected=[19789, 19790, 19791], actual=[19789])
+- `TestS2Ooz2LevelSelectTraceReplay` FAIL -- Totals: 3 errors, 0 warnings.
+  First error: frame 13316 -- `dynamic_art.edges` (expected=[21918], actual=[])
+- `TestS2WfzLevelSelectTraceReplay` FAIL -- Totals: 5804 errors, 0 warnings.
+  First error: frame 10447 -- `dynamic_art.edge[1].present` (expected=false, actual=true)
+  (unchanged; WFZ has no oil surface and is a different owner)
+
+Cause, established by a throwaway per-frame dump of the Obj05 controller state
+and a stack trace on the sidekick's landing animation write: OOZ's oil surface
+(Obj07) was being run from the post-camera level-event pass, i.e. AFTER
+`SpriteManager.advanceTailsTailsAfterObjectExecution()`. ROM puts the oil
+surface in the RESERVED object-RAM band (`Oil`, aliased with `WaterSurface1`)
+between the player object slots and `Dynamic_Object_RAM`
+(docs/s2disasm/s2.constants.asm:1131-1137), while `Tails_Tails` (Obj05) lives
+much later in `LevelOnly_Object_RAM` (docs/s2disasm/s2.constants.asm:1144-1152).
+Obj05 reads `anim(a2)` at its own late execution point
+(docs/s2disasm/s2.asm:41735), so ROM sees the Walk animation the oil landing
+wrote via `Sonic_ResetOnFloor_Part2` (docs/s2disasm/s2.asm:37780-37786) on the
+landing frame and selects `Obj05Ani_Blank` (docs/s2disasm/s2.asm:41770-41776,
+:41813), whose DPLC frame 0 is empty (docs/s2disasm/mappings/spriteDPLC/Tails.asm:142-143)
+-- no transfer. The engine's Obj05 still read the stale Roll anim, wrapped
+`Obj05Ani_Directional` and minted one extra DPLC edge whose ordinal/transfer-id
+skew then cascaded to the end of the run.
+
+Fix: `Sonic2ZoneEvents.updateReservedObjectSlots(...)` dispatched from
+`Sonic2LevelEventManager.updateFixedInLevelObjectsBeforeDynamicObjects()`;
+`Sonic2OOZEvents` moves only its oil-surface pass there. Zone handlers that do
+not occupy a reserved slot keep the default no-op, so no other S2 zone and no
+other game changes behaviour.
+
+Residual OOZ1/OOZ2 errors are all on the very LAST frame of each trace
+(11018 of 11019; 13316 of 13317) -- missing edges, the same class as the
+pre-existing `TestS2MtzLevelSelectTraceReplay` frontier (frame 10133,
+`dynamic_art.edges` expected=[16607, 16608] actual=[16607]), which was measured
+unchanged in the same run. Separate owner, separate frontier.
+
+### Independent verification (2026-07-31)
+
+Re-measured from scratch on branch `bugfix/ai-s2-ooz-wfz-stuck` in its own
+worktree, JDK 21 (`mvn -v` reports 21.0.11). BEFORE was measured in a detached
+worktree at the branch tip commit `a0379da56` (fix unapplied); AFTER in the
+working tree with the fix applied. Both preceded by `mvn -q -Dmse=relaxed clean`
+and `rm -rf target/surefire-reports`.
+
+Full affected family:
+
+```
+mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \
+  "-Ds2.rom.path=<s2 rom>" \
+  "-Dtest=TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay,\
+TestS2WfzLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,\
+TestS2DezEndingLevelSelectTraceReplay" test
+```
+
+| Trace | before frame -- field (errors) | after frame -- field (errors) | verdict |
+|---|---|---|---|
+| `TestS2OozLevelSelectTraceReplay` | 346 -- `dynamic_art.edge[2].present` (7960) | 11018 -- `dynamic_art.edges` (4) | advanced |
+| `TestS2Ooz2LevelSelectTraceReplay` | 10684 -- `dynamic_art.edge[2].present` (2355) | 13316 -- `dynamic_art.edges` (3) | advanced |
+| `TestS2WfzLevelSelectTraceReplay` | 10447 -- `dynamic_art.edge[1].present` (5804) | 10447 -- `dynamic_art.edge[1].present` (5804) | unmoved |
+| `TestS2SczLevelSelectTraceReplay` | PASS | PASS | unmoved (green) |
+| `TestS2DezEndingLevelSelectTraceReplay` | PASS | PASS | unmoved (green) |
+
+Both runs reported `Tests run: 5, Failures: 3, Errors: 0, Skipped: 0`. WFZ is
+byte-identical before and after: the shared root cause re-greens neither WFZ nor
+the OOZ pair outright, but it removes >99.9% of the OOZ error mass and moves
+both OOZ frontiers to the final frame of their traces.
+
+Regression guard (19 classes: S2 DEZ/SCZ/EHZ1/MCZ/MTZ2, S1 GHZ1/MZ1 plus the
+three complete-run and two credits traces, and the trace-invariant,
+reference-closure, hardware-timing-authority, rewind-coverage,
+static-state-rewind-coverage, PLC-producer-coverage and dynamic-art-comparator
+guards): `MSE:OK modules=1 passed=77 failed=0 errors=0 skipped=0`.
+
+Cross-game parity (`TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
+`TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`, all three ROMs
+supplied): `MSE:OK modules=1 passed=52 failed=0 errors=0 skipped=0`.
+
+No REGRESSION INTRODUCED lines.
+
+Citations corroborated directly against the local disassembly: the reserved
+object-RAM band with `Oil` aliased onto `WaterSurface1` ahead of
+`Dynamic_Object_RAM`, and `Tails_Tails` in `LevelOnly_Object_RAM`
+(`docs/s2disasm/s2.constants.asm`, lines as cited); `Obj05` reading `anim(a2)`;
+and `Obj05AniSelection` mapping Walk/Run to `Obj05Ani_Blank` versus Roll to
+`Obj05Ani_Directional`, with `Obj05Ani_Blank` frame 0 resolving to an empty
+`dplcHeader` in `docs/s2disasm/mappings/spriteDPLC/Tails.asm`. Caveat: the
+`s2.asm` line numbers quoted for `Obj07_Main` and `Sonic_ResetOnFloor_Part2`
+resolve about 350 and 40 lines earlier than those labels in the local
+disassembly checkout. That skew is pre-existing and consistent with line numbers
+in already-committed entries of this log, so it was left alone rather than
+churned here; the labels themselves are correct.

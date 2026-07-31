@@ -186,6 +186,18 @@ public class Sonic2LevelEventManager extends AbstractLevelEventManager {
     }
 
     @Override
+    public void updateFixedInLevelObjectsBeforeDynamicObjects() {
+        // ROM's reserved object-RAM band (CPZPylon / WaterSurface1 aliased with
+        // Oil / WaterSurface2) sits between the player object slots and
+        // Dynamic_Object_RAM (docs/s2disasm/s2.constants.asm:1128-1137), so it
+        // runs after player physics and before every dynamic level object.
+        Sonic2ZoneEvents handler = getActiveHandler();
+        if (handler != null) {
+            handler.updateReservedObjectSlots(currentAct, frameCounter);
+        }
+    }
+
+    @Override
     public void updateFixedInLevelObjects() {
         fixedAirCountdownManager.update();
     }

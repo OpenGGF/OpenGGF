@@ -3,6 +3,22 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Sonic 2's OOZ oil surface (Obj07) now executes in the reserved
+  object-RAM band, after the player object slots and before every dynamic level
+  object. ROM aliases `Oil` onto `WaterSurface1` between the player slots and
+  `Dynamic_Object_RAM` (`docs/s2disasm/s2.constants.asm:1131-1137`), whereas
+  `Tails_Tails` (Obj05) lives far later in `LevelOnly_Object_RAM`
+  (`docs/s2disasm/s2.constants.asm:1144-1152`) and reads `anim(a2)` at its own
+  late execution point (`docs/s2disasm/s2.asm:41735`). Running the oil surface
+  in the post-camera level-event pass left Obj05 reading the stale Roll anim on
+  the frame Tails lands in oil, so it wrapped `Obj05Ani_Directional` and minted
+  a Tails-tails DPLC transfer the ROM never queues (ROM selects
+  `Obj05Ani_Blank`, whose DPLC frame 0 is empty --
+  `docs/s2disasm/s2.asm:41770-41776,41813`;
+  `docs/s2disasm/mappings/spriteDPLC/Tails.asm:142-143`). Takes
+  `TestS2OozLevelSelectTraceReplay` from 7960 errors at frame 346 to 4 at frame
+  11018, and `TestS2Ooz2LevelSelectTraceReplay` from 2355 at frame 10684 to 3 at
+  frame 13316.
 - Fix: Sonic 2 now runs `CheckLoadSignpostArt` from the level-loop tail. The S2
   `updateAtLevelLoopTail()` slot was unimplemented, so the engine never locked
   `Camera_Min_X_pos` to `Camera_Max_X_pos - $100` and never submitted
