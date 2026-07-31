@@ -55134,3 +55134,84 @@ No `REGRESSION INTRODUCED:` lines. Guard run (117 tests, 0 failures):
 `TestRewindCoverageGuard`, `TestStaticStateRewindCoverageGuard`,
 `TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
 `TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`, `*TitleCard*`.
+
+## 2026-07-31 -- S2 SCZ/WFZ Tornado pilot DPLC producer (ObjB2_Animate_Pilot)
+
+Branch `bugfix/ai-s2-sidekick-suppressed-bootstrap`, worktree
+`.worktrees/s2-sidekick-suppressed-bootstrap`, base `3119bba27`.
+
+Root cause: the engine never implemented `ObjB2_Animate_Pilot`
+(docs/s2disasm/s2.asm:79538-79565), the Tornado pilot's DPLC submitter. In
+SCZ/WFZ/DEZ `InitPlayers` omits Obj02 (docs/s2disasm/s2.asm:5177-5198), so the
+pilot is the only submitter into the Tails art bank there; with no producer the
+whole ordered dynamic-art ledger skewed from frame 2 onward. Ported into
+`TornadoObjectInstance` as the first statement of the SCZ-main, WFZ-start and
+WFZ-end routine bodies (docs/s2disasm/s2.asm:78815-78816, 78879-78880,
+78951-78952) -- gated on the object's own routine value, no zone predicate. It
+submits through the character bank's single shared `DynamicArtDecisionOwner` so
+the `Sonic_LastLoadedDPLC` / `Tails_LastLoadedDPLC` dedupe word stays global
+(docs/s2disasm/s2.asm:26039-26041, 38829-38862, 41659-41697).
+
+```
+mvn -Dsonic2.rom.path=<s2 rev01 rom> \
+  "-Dtest=TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay" \
+  -DfailIfNoSpecifiedTests=false test
+```
+
+| Trace | Before | After |
+|---|---|---|
+| `TestS2WfzLevelSelectTraceReplay` | frame 2 `dynamic_art.outstanding_transfer_ids`, 12491 errors | frame 10287 `dynamic_art.outstanding_transfer_ids`, 5825 errors |
+| `TestS2SczLevelSelectTraceReplay` | frame 2 `dynamic_art.outstanding_transfer_ids`, 6798 errors | frame 2 (unmoved), 6419 errors |
+
+WFZ advanced 2 -> 10287. SCZ did not move: instrumentation confirmed the pilot
+cadence is exactly the ROM's (cursor 1-3 = `$10`, deduped; cursor 4 = `$01`,
+first real submission), but the SCZ Tornado's first update happens ~25 frames
+later in the engine than in the ROM, so the first submission lands near engine
+frame 27 instead of trace frame 2. That is a separate SCZ Tornado
+activation-phase defect and is deliberately not papered over with a phase nudge.
+
+Regression sweep, same clean build: full `com.openggf.tests.trace.s2.*TraceReplay`
+plus `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard` --
+`total=23 passed=4 failed=19`. Both rewind guards pass and the shared-dedupe
+canary `TestS2DezEndingLevelSelectTraceReplay` passes. The other 17 S2 traces
+hold their pre-existing first-error frames; no regression introduced.
+
+## 2026-07-31 -- Independent verification: S2 Tornado pilot DPLC producer
+
+Branch `bugfix/ai-s2-sidekick-suppressed-bootstrap`, worktree
+`.worktrees/s2-sidekick-suppressed-bootstrap`, base `3119bba27`. Baseline
+measured in a separate detached worktree at `3119bba27`; both builds preceded by
+`mvn -q -Dmse=relaxed clean` and `rm -rf target/surefire-reports`.
+
+Family run (identical command on baseline and fix):
+
+```
+mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \
+  "-Ds2.rom.path=<s2 rev01 rom>" \
+  "-Dtest=TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay" test
+```
+
+| Trace | Before | After | Verdict |
+|---|---|---|---|
+| `TestS2WfzLevelSelectTraceReplay` | frame 2 `dynamic_art.outstanding_transfer_ids` (12491 errors) | frame 10287 `dynamic_art.outstanding_transfer_ids` (5825 errors) | advanced |
+| `TestS2SczLevelSelectTraceReplay` | frame 2 `dynamic_art.outstanding_transfer_ids` (6798 errors) | frame 2 `dynamic_art.outstanding_transfer_ids` (6419 errors) | unmoved |
+| `TestS2Ooz2LevelSelectTraceReplay` | frame 106 `dynamic_art.outstanding_transfer_ids` (13637 errors) | frame 106 `dynamic_art.outstanding_transfer_ids` (13637 errors) | unmoved |
+| `TestS2DezEndingLevelSelectTraceReplay` | pass | pass | held green |
+
+No `REGRESSION INTRODUCED:` lines.
+
+Green regression guard (all pass):
+
+```
+mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \
+  "-Ds1.rom.path=<s1 rev01 rom>" "-Ds2.rom.path=<s2 rev01 rom>" \
+  "-Dtest=TestS2DezEndingLevelSelectTraceReplay,TestS1Ghz1TraceReplay,TestS1Mz1TraceReplay,TestS1Ghz1CompleteRunTraceReplay,TestS1Ghz2CompleteRunTraceReplay,TestS1Mz1CompleteRunTraceReplay,TestS1Credits00Ghz1TraceReplay,TestS1Credits07Ghz1bTraceReplay,TestTraceReplayInvariantGuard,TestTraceReplayReferenceClosureGuard,TestRewindCoverageGuard,TestStaticStateRewindCoverageGuard,TestPlcProducerCoverageGuard,TestDynamicArtDiagnosticsComparator" test
+```
+
+Cross-game parity for the shared DPLC owner surface (all pass):
+
+```
+mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \
+  "-Ds1.rom.path=<s1 rev01 rom>" "-Ds2.rom.path=<s2 rev01 rom>" "-Ds3k.rom.path=<s3k locked-on rom>" \
+  "-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils" test
+```

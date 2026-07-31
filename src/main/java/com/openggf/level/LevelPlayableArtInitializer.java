@@ -64,6 +64,7 @@ final class LevelPlayableArtInitializer {
 
     void initialize() {
         RenderContext.clearSidekickContexts();
+        levelManager.clearPlayerArtDplcOwners();
         dustBankCount = 0;
         tailsTailBankCount = 0;
         sidekickPatternBankCursor = 0;
@@ -86,6 +87,49 @@ final class LevelPlayableArtInitializer {
         initializeMainPlayable(playable, artProvider, crossGame);
         initializeSidekicks(artProvider, crossGame);
         RenderContext.uploadDonorPalettes(graphicsManager);
+    }
+
+    /**
+     * Mints the DPLC owner for a character art bank that has no playable sprite
+     * in this level.
+     *
+     * <p>The ROM's player art banks are permanently allocated VRAM regions
+     * ({@code ArtTile_ArtUnc_Sonic} / {@code ArtTile_ArtUnc_Tails}) with their
+     * own {@code Sonic_LastLoadedDPLC} / {@code Tails_LastLoadedDPLC} dedupe
+     * word, and {@code LoadSonicDynPLC_Part2} / {@code LoadTailsDynPLC_Part2}
+     * are shared entry points object code jumps into
+     * (docs/s2disasm/s2.asm:38829-38862, 41659-41697). A bank therefore stays
+     * submittable even where {@code InitPlayers} omits that character's object
+     * (docs/s2disasm/s2.asm:5177-5198) — the Tornado pilot
+     * ({@code ObjB2_Animate_Pilot}, docs/s2disasm/s2.asm:79538-79565) is the
+     * only submitter into the Tails bank in SCZ/WFZ/DEZ.
+     *
+     * <p>Created on demand so levels that never submit into an absent
+     * character's bank allocate nothing and keep their existing pattern-bank
+     * layout unchanged.
+     */
+    DynamicArtDecisionOwner createAbsentCharacterBankOwner(String character) {
+        PlayerSpriteArtProvider artProvider;
+        Game game = levelManager.game;
+        if (CrossGameFeatureProvider.isActive()) {
+            artProvider = crossGameFeatures;
+        } else if (game instanceof PlayerSpriteArtProvider p) {
+            artProvider = p;
+        } else {
+            return null;
+        }
+        try {
+            SpriteArtSet artSet = artProvider.loadPlayerSpriteArt(character);
+            if (artSet == null || artSet.bankSize() <= 0
+                    || artSet.dplcFrames().isEmpty()) {
+                return null;
+            }
+            return createDynamicArtOwner(character, new PlayerSpriteRenderer(artSet));
+        } catch (IOException e) {
+            LOGGER.log(SEVERE, "Failed to load art bank for absent character: "
+                    + character, e);
+            return null;
+        }
     }
 
     int reserveSidekickPatternBank(int bankSize) {
@@ -218,11 +262,18 @@ final class LevelPlayableArtInitializer {
                                   SpriteArtSet artSet,
                                   boolean sidekick) {
         playable.setSpriteRenderer(renderer);
+        String identity = characterIdentity(playable.getCode());
+        DynamicArtDecisionOwner bankOwner = createDynamicArtOwner(identity, renderer);
+        // The character's art bank always has exactly one dedupe state
+        // (Sonic_LastLoadedDPLC / Tails_LastLoadedDPLC, docs/s2disasm/s2.asm:26039-26041),
+        // shared by every jump into LoadSonicDynPLC_Part2 / LoadTailsDynPLC_Part2.
+        // Register it for object submitters (ObjB2_Animate_Pilot) even where
+        // InitPlayers omits the sidekick object itself (s2.asm:5177-5198), so the
+        // pilot in SCZ/WFZ/DEZ submits through the same owner rather than a
+        // second, private one.
+        levelManager.registerPlayerArtDplcOwner(identity, bankOwner);
         playable.getAnimationManager().setDynamicArtDecisionOwner(
-                sidekick && isSidekickSuppressed()
-                        ? null
-                        : createDynamicArtOwner(
-                                characterIdentity(playable.getCode()), renderer));
+                sidekick && isSidekickSuppressed() ? null : bankOwner);
         playable.setMappingFrame(0);
         playable.setAnimationFrameCount(artSet.mappingFrames().size());
         playable.setAnimationProfile(artSet.animationProfile());

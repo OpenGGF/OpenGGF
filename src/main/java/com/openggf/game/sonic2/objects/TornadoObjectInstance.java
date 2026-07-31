@@ -199,6 +199,11 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     private short lastWfzDockPlayerXSpeed;
     private short lastWfzDockPlayerYSpeed;
 
+    // ObjB2_Animate_Pilot state (s2.asm:79538-79556):
+    // objoff_37 = 9-frame countdown, objoff_36 = pilot-frame table cursor.
+    private int pilotTimer;
+    private int pilotTableCursor;
+
     // Render/solid flags for current frame.
     private boolean renderThisFrame;
     private boolean solidActive;
@@ -370,6 +375,71 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         }
     }
 
+    // ------------------------------------------------------------------------
+    // ObjB2_Animate_Pilot (docs/s2disasm/s2.asm:79536-79599)
+    // ------------------------------------------------------------------------
+
+    /**
+     * Pilot DPLC frame tables, {@code Sonic_pilot_frames} (4 entries) and
+     * {@code Tails_pilot_frames} (24 entries), docs/s2disasm/s2.asm:79566-79599.
+     * The table byte is a DPLC frame index handed straight to
+     * {@code LoadSonicDynPLC_Part2} / {@code LoadTailsDynPLC_Part2}.
+     */
+    private static final int[] SONIC_PILOT_FRAMES = {0x2D, 0x2E, 0x2F, 0x30};
+    private static final int[] TAILS_PILOT_FRAMES = {
+            0x10, 0x10, 0x10, 0x10, 0x01, 0x02, 0x03, 0x02,
+            0x01, 0x01, 0x10, 0x10, 0x10, 0x10, 0x01, 0x02,
+            0x03, 0x02, 0x01, 0x01, 0x04, 0x04, 0x01, 0x01
+    };
+
+    /**
+     * {@code ObjB2_Animate_Pilot} (docs/s2disasm/s2.asm:79536-79565). Runs as the
+     * first instruction of {@code ObjB2_Main_SCZ} (s2.asm:78815-78816),
+     * {@code ObjB2_Main_WFZ_Start} (s2.asm:78879-78880) and
+     * {@code ObjB2_Main_WFZ_End} (s2.asm:78951-78952) — this is the object's own
+     * routine value gating it, exactly as the ROM does.
+     *
+     * <p>Every ninth frame it advances {@code objoff_36} through the pilot frame
+     * table and tail-jumps into the character bank's {@code *_Part2} DPLC entry
+     * point with the table byte in d0. That entry point dedupes against the
+     * bank's single {@code Sonic_LastLoadedDPLC} / {@code Tails_LastLoadedDPLC}
+     * word (s2.asm:41659-41697, 38829-38862, 26039-26041), which is why the
+     * submission goes through the playable bank's shared owner and not a
+     * pilot-private one — the Tornado and a live Tails coexist on the WFZ->DEZ
+     * handoff and must not double-submit.
+     *
+     * <p>In SCZ/WFZ/DEZ {@code InitPlayers} omits Obj02 entirely
+     * (s2.asm:5177-5198), so the pilot is the only submitter into the Tails bank
+     * there. That is a consequence of ROM object placement, not a zone rule.
+     */
+    private void animatePilot() {
+        pilotTimer--;
+        if (pilotTimer >= 0) {
+            return;
+        }
+        pilotTimer = 8;
+
+        // cmpi.w #2,(Player_mode).w — Player_mode 2 is the Tails-alone team,
+        // where the Tornado's pilot is Sonic and uses the Sonic art bank
+        // (s2.asm:79549-79552, 79561-79565).
+        boolean tailsAlone = com.openggf.game.session.ActiveGameplayTeamResolver
+                .resolvePlayerCharacter(services().configuration())
+                == com.openggf.game.PlayerCharacter.TAILS_ALONE;
+        int[] table = tailsAlone ? SONIC_PILOT_FRAMES : TAILS_PILOT_FRAMES;
+
+        int cursor = pilotTableCursor + 1;
+        if (cursor >= table.length) {
+            cursor = 0;
+        }
+        pilotTableCursor = cursor;
+
+        var owner = services().levelManager()
+                .playerArtDplcOwner(tailsAlone ? "sonic" : "tails");
+        if (owner != null) {
+            owner.observe(table[cursor]);
+        }
+    }
+
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
@@ -378,12 +448,21 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         highPriority = false;
 
         switch (routine) {
-            case ROUTINE_SCZ_MAIN -> updateSczMain(player);
+            // ObjB2_Animate_Pilot is the first instruction of each of these three
+            // routine bodies (s2.asm:78815-78816, 78879-78880, 78951-78952).
+            case ROUTINE_SCZ_MAIN -> {
+                animatePilot();
+                updateSczMain(player);
+            }
             case ROUTINE_WFZ_START -> {
+                animatePilot();
                 updateWfzStart(frameCounter, player);
                 applyDeleteOffScreenCulling();
             }
-            case ROUTINE_WFZ_END -> updateWfzEnd(player);
+            case ROUTINE_WFZ_END -> {
+                animatePilot();
+                updateWfzEnd(player);
+            }
             case ROUTINE_INVISIBLE_GRABBER -> updateInvisibleGrabber(player);
             case ROUTINE_BLINKER -> updateBlinker();
             case ROUTINE_UNUSED_MOVER -> updateUnusedMover();

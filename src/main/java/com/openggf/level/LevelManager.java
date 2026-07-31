@@ -21,6 +21,7 @@ import com.openggf.debug.playback.PlaybackDebugManager;
 import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.mutation.MutationEffects;
+import com.openggf.game.resources.DynamicArtDecisionOwner;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.snapshot.LevelSnapshot;
 import com.openggf.game.rewind.snapshot.LevelTilemapSnapshot;
@@ -233,6 +234,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     private final LevelRenderer levelRenderer = new LevelRenderer(this);
     final LevelFrameRuntimeUpdater frameRuntimeUpdater = new LevelFrameRuntimeUpdater(this);
     private final LevelPlayableArtInitializer playableArtInitializer;
+    /** Character identity -> that art bank's single authoritative DPLC owner. */
+    private final java.util.Map<String, DynamicArtDecisionOwner> playerArtDplcOwners =
+            new java.util.HashMap<>();
     private final LevelDirtyRegionDispatcher dirtyRegionDispatcher;
     final LevelWaterCoordinator waterCoordinator;
     final LevelCheckpointCoordinator checkpointCoordinator;
@@ -1235,6 +1239,48 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      */
     public void refreshPlayableSpriteArt() {
         playableArtInitializer.initialize();
+    }
+
+    /**
+     * ROM player-art DPLC banks are keyed by the character that owns the bank,
+     * not by who submits into it. {@code LoadSonicDynPLC_Part2} /
+     * {@code LoadTailsDynPLC_Part2} are shared entry points that any code may
+     * jump into with a DPLC frame index in d0
+     * (docs/s2disasm/s2.asm:38829-38862, 41659-41697), and they dedupe against
+     * the single {@code Sonic_LastLoadedDPLC} / {@code Tails_LastLoadedDPLC}
+     * word (docs/s2disasm/s2.asm:26039-26041). Object code that submits into a
+     * character bank — the Tornado pilot, {@code ObjB2_Animate_Pilot}
+     * (docs/s2disasm/s2.asm:79538-79565) — must therefore share the same owner
+     * as the playable, so this registry hands out the bank's one authoritative
+     * owner rather than minting a second dedupe state.
+     */
+    public DynamicArtDecisionOwner playerArtDplcOwner(String character) {
+        if (character == null) {
+            return null;
+        }
+        String key = character.toLowerCase(java.util.Locale.ROOT);
+        DynamicArtDecisionOwner owner = playerArtDplcOwners.get(key);
+        if (owner == null && !playerArtDplcOwners.containsKey(key)) {
+            owner = playableArtInitializer.createAbsentCharacterBankOwner(key);
+            playerArtDplcOwners.put(key, owner);
+        }
+        return owner;
+    }
+
+    void registerPlayerArtDplcOwner(String character, DynamicArtDecisionOwner owner) {
+        if (character == null) {
+            return;
+        }
+        String key = character.toLowerCase(java.util.Locale.ROOT);
+        if (owner == null) {
+            playerArtDplcOwners.remove(key);
+        } else {
+            playerArtDplcOwners.put(key, owner);
+        }
+    }
+
+    void clearPlayerArtDplcOwners() {
+        playerArtDplcOwners.clear();
     }
 
     /**
