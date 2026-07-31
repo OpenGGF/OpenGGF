@@ -54682,3 +54682,68 @@ MHZ now matches ICZ/MGZ/HCZ exactly here — all four submit enemy art at frame 
 while ROM submits around frame 34 — so it is shared pre-existing behaviour that
 MHZ has simply joined, not a regression from the enemy-art fix. AIZ is clean
 because its fixture carries a pre-level prefix.
+
+### 2026-07-31 — MHZ frame-0 root cause found: the level setup pass is discarded after it is published
+
+Follow-up to the entry above, which left the frame-0 gravity as "probably
+`Sonic_Init`". That is now proven, and the mechanism is located exactly.
+
+**ROM.** `Obj_Sonic` dispatches on `routine(a0)` through `Sonic_Index`;
+routine 0 is `Sonic_Init`, which does `addq.b #2,routine(a0)`, sets radii,
+mappings, priority, `Max_speed`/`Acceleration`/`Deceleration`, seeds the
+position-record array, and `rts` — **no movement and no gravity**
+(sonic3k.asm:21852-21943). The level's one `Load_Sprites`/`Process_Sprites`
+walk at `Level`'s `loc_6468` (sonic3k.asm:7849-7860) is the frame that runs it,
+and for MHZ/CNZ complete-run that walk is recorded row 0.
+
+**Engine.** The equivalent is
+`SpriteManager.initializeInitialAssemblyPlayableSlot`, reached from
+`InitialProcessSpritesCoordinator.execute` →
+`processInitialPlayableSlots`. That dispatch is gated by a one-shot token:
+`LevelInitProfile.initialProcessSpritesLifecycle()` returns
+`LOAD_THEN_PROCESS_ONCE` for S3K, `loadLevel` publishes it, and
+`LevelFrameStep.admit`/`execute` consume it by returning `SETUP_ONLY` — a frame
+that runs the setup walk and no physics. That is a faithful model of the ROM
+frame.
+
+**The defect.** In trace replay the token is destroyed before any frame can
+consume it. Instrumented order (reverted):
+
+```
+5  discard[lifecycle]  LevelManager.loadLevel:334          (start of load)
+6  PUBLISH=LOAD_THEN_PROCESS_ONCE                          (end of load)
+7  discard[lifecycle]  LevelManager.resetGameplayState:3487
+```
+
+`resetGameplayState` is called from `GameplayModeContext.tearDownManagers`, and
+the replay harness tears the managers down *after* the load. Every
+`consumePendingInitialProcessSpritesPass()` call in the run — bootstrap and
+both `LevelFrameStep` sites — was logged returning `false`, confirming the walk
+never executes. So `Sonic_Init` never runs, the first driven frame executes
+`Sonic_Control`, and the engine applies a frame of gravity the ROM does not:
+`y_speed 0x0038` at frame 0 and a permanent `y_sub 0x3800` offset for the next
+~1100-1260 frames, which produces the 1px `y` / 2-unit `angle` drift and
+compounds into the route divergence.
+
+**Attempts that did not work** (all reverted, recorded so they are not retried):
+
+1. Skipping the S3K-complete-run `discardPendingInitialProcessSpritesForStateRestoration`
+   at `TraceReplaySessionBootstrap:258` — no effect; the token was already gone.
+2. Also skipping the bootstrap's own `consumePendingInitialProcessSpritesPass`
+   at `:407` — no effect, same reason.
+3. Re-arming via `restorePendingInitialProcessSpritesLifecycleForRewind` at the
+   end of `applyBootstrap` — no effect, so the teardown discard happens after
+   `applyBootstrap` too.
+
+A gate predicate `segmentBeginsAtLevelSetupPass` was written for these attempts
+and verified to fire correctly (`zone=7 act=0 leader=d8,500 intro=true`); it
+derives from ROM state (`loc_13A32`/`loc_13A8E` only run on the level's first
+`Tails_CPU_Control` dispatch) rather than trace data, so it is reusable.
+
+**Blocker.** The fix is a harness lifecycle ordering correction — tear the
+managers down *before* the load, or stop `resetGameplayState` from discarding a
+token published by the current level — in code shared by every trace in all
+three games. S1/S2 are currently red under separate work, so half the
+validation surface is unavailable, and landing a shared-lifecycle reorder that
+cannot be regression-checked across the fleet is not defensible. Handing this
+off with the mechanism fully pinned rather than guessing at the reorder.
