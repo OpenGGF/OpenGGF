@@ -56092,3 +56092,95 @@ worktree shows `TestS2Scz/Wfz/Cpz LevelSelect`, `TestS2Ehz1`, `TestS3kMgzTraceRe
 `TestS3kCnzTraceReplay` byte-identical before and after (the MGZ/CNZ standard errors are
 pre-existing fixture/hardware-timing failures). Rewind, hardware-timing-authority and
 trace-fixture-compression guards green.
+
+## 2026-07-31 — s3k_mhz1 f3246 re-measured on `3b9667485`: SECOND CORRECT NEGATIVE, contradiction narrowed to the collision-plane / layout inputs of `FindFloor`
+
+Command: `mvn "-Dtest=TestS3kMhzCompleteRunTraceReplay" "-Ds3k.rom.path=<s3k.gen>" test`
+Worktree `.worktrees/mhz-3246b`, branch `bugfix/ai-s3k-mhz-3246b` off
+`bugfix/ai-s3k-mhz-queue-frontier`. JDK 21. **No source change was made** — nothing to
+re-measure beyond the baseline.
+
+**Baseline re-confirmed on the current base** (post `3b9667485`, the surplus
+pre-`Initial_ProcessSprites` dispatch removal): `s3k_mhz1` **912 errors / 7218 frames**,
+earliest non-queue group still **f3246**, `air` exp `1` act `0` (and `camera_y` exp
+`0x0719` act `0x0717`, which follows from the same air flag — the S3K camera y-band
+differs on ground vs air). The divergence has not changed shape.
+
+### New evidence: the engine's collision heights here are validated *against the ROM*, not against itself
+
+The prior entry established terrain stability with an engine-vs-engine two-pass dump. That
+only proves the engine does not mutate. This pass derived the ROM's own surface profile
+from the ROM trace's grounded trajectory over the same crest (f2694–f2711, `g_speed 0x600`),
+using the convergence identity `y_pos = S(x + x_radius) - 20` (verified by the flat landing
+at f3255–f3261, `y_pos 0x076C` over a full-height chunk row at `0x0780`):
+
+| ROM frame | `x_pos` | right sensor | ROM `S` | tile/col | ROM height | engine height |
+|---|---|---|---|---|---|---|
+| f2700 | `0x0FA7` | `0x0FB0` | `0x078B` | `0x0FB0` col 0 | 5 | 5 |
+| f2701 | `0x0FAC` | `0x0FB5` | `0x078A` | `0x0FB0` col 5 | 6 | 6 |
+| f2702 | `0x0FB2` | `0x0FBB` | `0x0788` | `0x0FB0` col 11 | 8 | 8 |
+
+The engine's `[5,5,5,5,6,6,6,7,7,7,7,8,8,8,8,9]` for chunk `(0x0FB0,0x0780)` is therefore
+**the ROM's own data**, confirmed by ROM behaviour at three independent columns. At f3246
+the right sensor is `(0x0FB1, 0x078A)` — col 1, height 5, `S = 0x078B` — floor distance 0.
+
+### `Player_AnglePos` provably cannot detach at f3246
+
+`Player_Angle` (`docs/skdisasm/sonic3k.asm:18845-18857`) is called with `d0` = right
+(Primary) distance and `d1` = left (Secondary) distance; `cmp.w d0,d1 / ble.s loc_ED5E`
+leaves **`d1` = min(left, right)** on both paths (the angle taken is the *closer* sensor's).
+`loc_ED14`'s detach test (`sonic3k.asm:18817-18843`) therefore sees min = 0, takes
+`beq.s locret_ED12` at `sonic3k.asm:18809`, and never reaches `loc_ED38`
+(`sonic3k.asm:18840`). Quadrant is the floor handler for both the entry angle `F6` and the
+exit angle `F8` (`loc_EC7C`, `sonic3k.asm:18759-18770`: `(F6+1+$1F)&$C0 = 0`), so the
+`Player_WalkVertL/Ceiling/VertR` detaches (`sonic3k.asm:18965`, `19037`, `19109`) are not
+reachable either.
+
+### No other ROM path sets `Status_InAir` here
+
+All 214 `bset #Status_InAir` sites were enumerated. The player-`a0` ones are: the four
+`Player_AnglePos` quadrant handlers (above); `Player_SlopeRepel` `loc_11E4E`
+(`sonic3k.asm:23929`, already ruled out — `angle+$18 = 0x10 < 0x30`);
+`HurtCharacter` `loc_102E0` (`sonic3k.asm:21093`) and `Kill_Character` `loc_1036E`
+(`sonic3k.asm:21148`), which set `routine` 4/6 and overwrite `y_vel`/`x_vel`/`ground_vel`;
+`Sonic_Jump` `loc_1182E` (`23328`), `BubbleShield_Bounce` (`24415`), `Tails_Jump` (`28554`),
+`Knux_Jump` (`32470`), all of which set `jumping`, add a `GetSineCosine` impulse and clear
+`stick_to_convex`; `AirCountdown_ReduceAir` (`33554`); `Knuckles_Wall_Climb` (`31423`).
+The trace excludes every one: at f3246 `routine` stays `0x02`, `ground_vel` is preserved
+at `0x077A` and stays frozen through f3247–f3254, and `y_vel` runs `FE30, FE68, FEA0, FED8,
+FF10` — a clean `+0x38` gravity chain with **no impulse added**. The `a1`/object sites all
+require the player to be the collision target of a solid/spring object; an aux sweep of
+`object_state` for x `0x0F60..0x0FF0`, y `0x0740..0x07C0` over f3240–f3252 shows only Tails
+(slot 1), the player's own dust object (`0x0001952A`), and `Obj_StillSprite` decorations
+(`loc_2B962`, `sonic3k.asm:60221`), with `stand_on_obj = 0` and `on_object = false`.
+
+### The recorder's radii are *not* defective
+
+`S3KRam.OffRadiusY = 0x1E` / `OffRadiusX = 0x1F` match `y_radius`/`x_radius` in
+`docs/skdisasm/sonic3k.constants.asm:23-24`. More importantly the f3246 `state_snapshot`
+is emitted **by the air `mode_change` itself** (`S3KAuxEventEngine.FormatStateSnapshot`,
+"after an air mode_change" trigger), so `y_radius 19` / `x_radius 9` are the values at the
+transition, not a later resample. The prior entry's "recorder samples after a restore"
+hypothesis is **refused**. (Contrast: the `LoadQueueStateProjector` VRAM-address defect
+found the same day was real; this one is not.)
+
+### What is left, and what would settle it
+
+Every input to `FindFloor` that the trace records has now been matched to the ROM. The only
+unrecorded inputs remain:
+
+1. **`Collision_addr`** — `Player_AnglePos` swaps to `Secondary_collision_addr` when
+   `top_solid_bit(a0) != $C` (`sonic3k.asm:18729-18732`). Primary and secondary are two
+   distinct *chunk→collision-block index arrays*, not merely two solidity bits, so the same
+   chunk can resolve to a completely different height array. The prior entry compared the
+   secondary *tiles* rather than the secondary *index array*, and the two passes over this
+   crest differ in history: at f2687–f2692 the ROM crosses x `0x0F5A..0x0F78` **airborne**,
+   whereas at f3238 it crosses the same x **grounded** — a plausible way for a path swapper
+   to leave the two passes on different planes.
+2. **A ROM-side layout mutation** between f2700 and f3246 that the engine does not model.
+
+Neither `top_solid_bit` ($46), `lrb_solid_bit` ($47), `stick_to_convex` ($3C), nor
+`Primary_/Secondary_collision_addr` is captured by `S3KAuxEventEngine`. **Adding those four
+to the `state_snapshot` is the single instrumentation change that would decide f3246**, and
+is recommended before any further engine-side hypothesis. Until then, do not fit a constant:
+with the recorded state the ROM's own code cannot leave the ground at f3246.
