@@ -3,6 +3,21 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: a dynamic-art row sampled mid-V-int now publishes its own row and
+  services the DMA queue; only its successor is carried. The real per-mode V-int
+  handler (`Vint_Level`, `docs/s2disasm/s2.asm:698`) calls `ProcessDMAQueue`
+  (`docs/s2disasm/s2.asm:781`, routine at `docs/s2disasm/s2.asm:1770`) well
+  before `VintRet` bumps `Vint_runcount`
+  (`docs/s2disasm/s2.asm:507-508`), so a sample with neither the gameplay nor
+  the V-blank counter advanced still sits after the queue was drained: only the
+  gameplay iteration is mid-flight. `PlcFrameLifecycleCoordinator` previously
+  suppressed both that row and its successor. A genuine `Vint_Lag` row
+  (`Vint_routine` still 0, `docs/s2disasm/s2.asm:483-484`, body at
+  `docs/s2disasm/s2.asm:529-580`; S1's `VBlank_Lag`,
+  `docs/s1disasm/sonic.asm:709-730`) keeps publishing an empty lagged row and
+  still skips `ProcessDMAQueue`. Moves `TestS2Cnz2LevelSelectTraceReplay` from
+  41 errors (frame 10935 `dynamic_art.edges`) to 8 (frame 10976
+  `queue.s2_nemesis_plc.busy`).
 - Fix: the trace-replay terminal main-loop iteration now also runs the fixed
   in-level Tails' tails slot (Obj05), not just the Obj01/Obj02 playable prefix.
   ROM `RunObjects` executes the fixed in-level slots that follow the dynamic

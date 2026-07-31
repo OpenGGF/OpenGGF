@@ -264,7 +264,7 @@ class TestPlcFrameLifecycleCoordinator {
     /**
      * A represented iteration on which no V-blank elapsed at all is a different
      * ROM shape from a lag V-blank. {@code Vint_runcount} is bumped once per
-     * V-blank at {@code VintRet} (docs/s2disasm/s2.asm:512) whichever handler
+     * V-blank at {@code VintRet} (docs/s2disasm/s2.asm:507-508) whichever handler
      * ran, so a row with no V-blank tick means the main loop iteration overran
      * its V-blank: the following iteration is still mid-flight at the sample
      * boundary and its queue-add (s2.asm:1705) publishes on the boundary after
@@ -321,6 +321,80 @@ class TestPlcFrameLifecycleCoordinator {
         for (DynamicArtDiagnosticsSnapshot.Edge edge : published.edges()) {
             assertEquals(published.frame(), edge.publicationFrame());
         }
+    }
+
+    /**
+     * The mid-V-int sample is itself a dynamic-art publication boundary: the
+     * real per-mode handler calls {@code ProcessDMAQueue} (docs/s2disasm/
+     * s2.asm:781, routine at s2.asm:1770) before {@code VintRet} bumps
+     * {@code Vint_runcount} (s2.asm:507-508). Only the successor -- the
+     * iteration that overran -- is withheld.
+     */
+    @Test
+    void aVblankStarvedRowPublishesItsOwnRowAndOnlyItsSuccessorIsCarried() {
+        DynamicArtLifecycleService dynamicArt =
+                new DynamicArtLifecycleService();
+        dynamicArt.beginRun();
+        dynamicArt.openComparisonSegment();
+        PlcFrameLifecycleCoordinator coordinator =
+                new PlcFrameLifecycleCoordinator(
+                        recording(new ArrayList<>()), dynamicArt,
+                        DynamicArtDmaServiceModel.SONIC_2_PROCESS_DMA_QUEUE);
+
+        coordinator.markRepresentedIterationWithoutVblank();
+        coordinator.runLogicalIteration(() -> { }, frame -> {
+            frame.claim(PlcLifecyclePhase.LAG);
+            observeSonicDplc(dynamicArt, 0x0F);
+            return null;
+        });
+        assertFalse(dynamicArt.latestSnapshot().edges().isEmpty(),
+                "the mid-V-int row already ran ProcessDMAQueue, so it publishes");
+
+        coordinator.runLogicalIteration(() -> { }, frame -> {
+            frame.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
+            frame.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+            observeSonicDplc(dynamicArt, 0x10);
+            return null;
+        });
+        assertTrue(dynamicArt.latestSnapshot().edges().isEmpty(),
+                "only the overrunning successor is withheld");
+    }
+
+    /**
+     * Back-to-back mid-V-int samples: each ran its own {@code ProcessDMAQueue}
+     * (s2.asm:781), so neither is carried. The guard is the row's own shape,
+     * not a one-shot carry.
+     */
+    @Test
+    void consecutiveVblankStarvedRowsEachPublishTheirOwnRow() {
+        DynamicArtLifecycleService dynamicArt =
+                new DynamicArtLifecycleService();
+        dynamicArt.beginRun();
+        dynamicArt.openComparisonSegment();
+        PlcFrameLifecycleCoordinator coordinator =
+                new PlcFrameLifecycleCoordinator(
+                        recording(new ArrayList<>()), dynamicArt,
+                        DynamicArtDmaServiceModel.SONIC_2_PROCESS_DMA_QUEUE);
+
+        for (int index = 0; index < 2; index++) {
+            final int mappingFrame = 0x20 + index;
+            coordinator.markRepresentedIterationWithoutVblank();
+            coordinator.runLogicalIteration(() -> { }, frame -> {
+                frame.claim(PlcLifecyclePhase.LAG);
+                observeSonicDplc(dynamicArt, mappingFrame);
+                return null;
+            });
+            assertFalse(dynamicArt.latestSnapshot().edges().isEmpty(),
+                    "starved row " + index + " publishes its own row");
+        }
+    }
+
+    private static void observeSonicDplc(
+            DynamicArtLifecycleService dynamicArt, int mappingFrame) {
+        dynamicArt.observePlayerDplc(
+                com.openggf.game.GameId.S2, "sonic", mappingFrame,
+                new com.openggf.level.render.SpriteDplcFrame(List.of(
+                        new com.openggf.level.render.TileLoadRequest(0, 12))));
     }
 
     private static PlcLifecycleService recording(List<String> events) {
