@@ -56184,3 +56184,69 @@ Neither `top_solid_bit` ($46), `lrb_solid_bit` ($47), `stick_to_convex` ($3C), n
 to the `state_snapshot` is the single instrumentation change that would decide f3246**, and
 is recommended before any further engine-side hypothesis. Until then, do not fit a constant:
 with the recorded state the ROM's own code cannot leave the ground at f3246.
+
+## 2026-07-31 — HCZ complete-run: 175 → 8 groups (row-0 position seeding removed)
+
+Command: `mvn "-Dtest=TestS3kHczCompleteRunTraceReplay#replayMatchesTrace"
+"-Ds3k.rom.path=<root>/s3k.gen" test`, worktree `.worktrees/hcz-frontier`, branch
+`bugfix/ai-s3k-hcz-frontier` off `bugfix/ai-s3k-mhz-queue-frontier`.
+
+**Before:** 175 error groups / 1320 frames. First error frame 0 `camera_x`
+(exp `0x01E0`, act `0x01DF`).
+**After:** 8 groups / 1320 frames. First error frame 34
+`queue.s3k_kos_module.queued_fingerprints` — the known recorder defect.
+
+### Characterisation
+
+171 of 175 groups were `physics`, 4 `animation`. By field the mass was
+`tails_x` (32), `x` (31), `camera_x` (20), `x_sub` (17), `tails_x_sub` (17) — i.e.
+**almost every group was a 1-pixel horizontal offset or its cascade**, spread evenly
+across the whole run (14 groups in f0-99, 33 in f1100-1199). Only 9 groups were
+`queue.*`. The report's `cascading` flags again over-attributed: the three genuine
+frame-0 seeds were all marked non-cascading, but so were 22 others that cleared
+with them.
+
+### Root cause
+
+`TraceReplaySessionBootstrap.seedSegmentEntryVelocity` seeded the leader's
+**position and subpixel** from trace row 0 (`setCentreX/setCentreY/setSubpixelRaw`),
+directly contradicting its own comment — which correctly argues that row 0 is a
+recorded LevelLoop iteration-1 row, a *post*-frame sample, and must not be handed to
+the engine as pre-frame state (which is why velocity and `Status_InAir` were already
+excluded). The caller had already applied the metadata start centre two lines earlier;
+the row-0 seed overwrote it.
+
+The player's spawn position is owned by `SpawnLevelMainSprites`
+(`docs/skdisasm/sonic3k.asm:8111-8205`), which takes `x_pos`/`y_pos` from the level
+start position and leaves velocity and the subpixel fraction zero.
+
+HCZ1 spawns falling with left held, so its row 0 is `$027F.E800` rather than the
+`$0280.0000` spawn — one frame of `-$1800` air-control movement already integrated.
+The engine was seeded there and then ran frame 0's own `-$1800` step on top, giving a
+**permanent one-frame x offset** that pixel-flickered `x` and `camera_x` for the whole
+run. It also cost a 1px sidekick placement error, because
+`SpawnLevelMainSprites_SpawnPlayers` derives `Player_2`'s `x_pos` from `Player_1`'s
+(`sonic3k.asm:8363-8366`): Tails was placed at `$027F-$20 = $025F` instead of `$0260`.
+`y` never diverged because HCZ1's row-0 `y` equals its spawn `y` (no vertical movement
+on frame 0) — which is why the defect stayed invisible for so long.
+
+### Blast radius: measured, not assumed
+
+Comparing row 0 against `start_x`/`start_y` for all 15 complete-run segments, **HCZ is
+the only one of the seven with a replay test whose delta is nonzero**; aiz, cnz, icz,
+lbz, mgz and mhz are all exactly `(0,0)`, so the change is a provable no-op for them.
+(`ddz`, `dez`, `hpz`, `ssz` also have nonzero deltas but no `*TraceReplay` class.)
+Re-measured after the fix and confirmed unchanged: aiz 8/64, cnz 1/5336, icz 82/1629,
+lbz 8/35, mgz 1/14629, mhz 912/7218.
+
+`seedSegmentEntryVelocity` is gated on `isS3kCompleteRunSegment`, so S1/S2 cannot reach
+it; `TestS1Ghz1TraceReplay` measured 588 groups both with and without the change.
+`TestTraceReplayStartPositionPolicy`'s 2 failures / 24 errors are byte-identical before
+and after — pre-existing, not caused here.
+
+### Remaining HCZ frontier (8 groups)
+
+Frame 34 `queue.s3k_kos_module.queued_fingerprints` (known `LoadQueueStateProjector`
+recorder defect, unfixable engine-side) and 7 groups at frames 1067-1068, all
+`queue.s3k_kos_*`, which are the previously-logged `Obj_HCZLargeFan` art-queue timing
+lead (`sonic3k.asm:65588-65608`). **No physics or animation divergence remains.**

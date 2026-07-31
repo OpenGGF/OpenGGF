@@ -464,19 +464,28 @@ public final class TraceReplaySessionBootstrap {
             return;
         }
         var entry = trace.getFrame(0);
-        sprite.setCentreX(entry.x());
-        sprite.setCentreY(entry.y());
         sprite.setAngle(entry.angle());
-        // Velocity and Status_InAir are NOT seeded from row 0. Row 0 is a
-        // recorded LevelLoop iteration-1 row -- a POST-frame sample -- so
-        // copying it in as pre-frame state hands the engine frame 0's own
-        // result before frame 0 runs. The player's spawn state is owned by
-        // SpawnLevelMainSprites (sonic3k.asm:8132-8177), which sets
-        // Status_InAir only via the explicit per-zone bsets and leaves
-        // velocity zero; MHZ1 $700 and CNZ1 $300 fall through to loc_68D8
-        // (8178-8197) and spawn grounded, so their frame-0 floor check is
-        // what sets Status_InAir, as the frame's outcome.
-        sprite.setSubpixelRaw(entry.xSub(), entry.ySub());
+        // Position, subpixel, velocity and Status_InAir are NOT seeded from row
+        // 0. Row 0 is a recorded LevelLoop iteration-1 row -- a POST-frame
+        // sample -- so copying it in as pre-frame state hands the engine frame
+        // 0's own result before frame 0 runs. The player's spawn state is owned
+        // by SpawnLevelMainSprites (sonic3k.asm:8111-8205), which takes x_pos /
+        // y_pos from the level start position and sets Status_InAir only via
+        // the explicit per-zone bsets, leaving velocity and the subpixel
+        // fraction zero (the object RAM is cleared before the spawn writes);
+        // MHZ1 $700 and CNZ1 $300 fall through to loc_68D8 (8178-8197) and
+        // spawn grounded, so their frame-0 floor check is what sets
+        // Status_InAir, as the frame's outcome. The caller has already applied
+        // the metadata start centre, which is that spawn position.
+        //
+        // Seeding position here silently handed the engine one frame of
+        // recorded movement for any segment whose row-0 sample had already
+        // moved off the spawn coordinate: HCZ1 spawns falling with left held,
+        // so its row 0 is $027F.E800 rather than the $0280.0000 spawn, and the
+        // engine then ran frame 0's own -$1800 air-control step on top of it --
+        // a permanent one-frame x offset, plus a 1px sidekick placement error
+        // because SpawnLevelMainSprites_SpawnPlayers derives Player_2's x_pos
+        // from Player_1's (sonic3k.asm:8363-8366).
         // anim/prev_anim and mapping_frame survive the load the same way: ROM
         // writes them as a word at spawn for the zones that need one
         // (sonic3k.asm:8155-8190) and Sonic_Init never touches them, so row 0

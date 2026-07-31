@@ -3,6 +3,23 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: S3K complete-run trace replay no longer seeds the leader's position and
+  subpixel from trace row 0. Row 0 is a recorded `LevelLoop` iteration-1 row — a
+  *post*-frame sample — so copying it in as pre-frame state handed the engine
+  frame 0's own result before frame 0 ran; velocity and `Status_InAir` were
+  already excluded for exactly that reason, but position was not, and it
+  overwrote the metadata start centre applied two lines earlier. The spawn
+  position is owned by `SpawnLevelMainSprites` (sonic3k.asm:8111-8205), which
+  takes `x_pos`/`y_pos` from the level start position and leaves the subpixel
+  fraction zero. HCZ1 spawns falling with left held, so its row 0 already
+  carried one `-$1800` air-control step: the engine started there and applied
+  frame 0's step again, leaving a permanent one-frame horizontal offset that
+  pixel-flickered the player and camera for the whole run, plus a 1px sidekick
+  placement error via `SpawnLevelMainSprites_SpawnPlayers`' `Player_2` derivation
+  (sonic3k.asm:8363-8366). HCZ complete-run drops from 175 divergence groups to
+  8, with no physics or animation divergence remaining; the six other
+  complete-run segments with replay tests have a zero row-0 delta and are
+  unchanged.
 - Fix: S3K level-load-resident objects are dispatched once before the first
   `LevelLoop` frame, matching the ROM, instead of twice. The complete-run
   trace bootstrap reinstalled the main-sprite-spawn objects before the
