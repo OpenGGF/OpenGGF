@@ -179,6 +179,23 @@ public final class LevelFrameStep {
 
         frame.claim(phase);
         serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
+
+        // Runtime art queues are consumed once per active gameplay frame. S3K
+        // uses this for Queue_Kos_Module workloads whose object routines poll
+        // Kos_modules_left on later frames.
+        //
+        // This runs ahead of the PRE_MAIN_LOOP boundary because ROM LevelLoop
+        // reaches its producers (ExecuteObjects, docs/skdisasm/sonic3k.asm:
+        // 7900-7906) before the Process_Kos_Module_Queue state step in the loop
+        // tail (7908). Queue_Kos_Module inits an archive into an empty queue
+        // synchronously (2669-2671, 2694-2713) and that same iteration's tail
+        // call then hands its first module to the direct FIFO (2735-2741), so a
+        // freshly enqueued archive and its first child become observable on the
+        // same frame.
+        if (context.gameModule().getObjectArtProvider() != null) {
+            context.gameModule().getObjectArtProvider().processRuntimeArtQueue();
+        }
+
         serviceBoundary(context, HardwareServiceBoundary.PRE_MAIN_LOOP);
 
         // 0a. Drain the per-frame palette-write accumulator at frame top, before
@@ -194,13 +211,6 @@ public final class LevelFrameStep {
         PaletteOwnershipRegistry paletteRegistry = context.paletteOwnershipRegistry();
         if (paletteRegistry != null) {
             paletteRegistry.beginFrame();
-        }
-
-        // Runtime art queues are consumed once per active gameplay frame. S3K
-        // uses this for Queue_Kos_Module workloads whose object routines poll
-        // Kos_modules_left on later frames.
-        if (context.gameModule().getObjectArtProvider() != null) {
-            context.gameModule().getObjectArtProvider().processRuntimeArtQueue();
         }
 
         // 0. Process dirty regions from MutableLevel (editor mutations).

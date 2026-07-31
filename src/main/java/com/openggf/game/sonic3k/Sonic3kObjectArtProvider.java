@@ -1567,15 +1567,31 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
                 new com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardTeardownModel();
     }
 
-    /** Runs one level frame of the modelled title-card owner. */
+    /**
+     * Runs one level frame of the modelled title-card owner.
+     *
+     * <p>{@code Obj_TitleCard} creates its card elements through
+     * {@code CreateNewSprite4}, which scans forward from the creator's own slot
+     * ({@code docs/skdisasm/sonic3k.asm:37894-37919}), so every element lives in
+     * a higher {@code Dynamic_object_RAM} slot and {@code ExecuteObjects} runs
+     * the owner before its children. On the frame an element renders off-screen
+     * and decrements {@code objoff_30}
+     * ({@code docs/skdisasm/sonic3k.asm:62362-62363}), the owner has already
+     * tested {@code objoff_30} that frame and taken the
+     * {@code addq.w #1,objoff_32} branch ({@code 62256-62261}). It first
+     * observes the drained counter — and so first reaches {@code loc_2D8CA}'s
+     * {@code LoadEnemyArt} ({@code 62295-62301}) — on the following frame.
+     */
     private void advanceTitleCardTeardown() {
         if (titleCardTeardown == null) {
             return;
         }
-        if (titleCardTeardown.tick()) {
+        if (titleCardTeardown.isComplete()) {
             enemyKosSubmissionArmed = true;
             titleCardTeardown = null;
+            return;
         }
+        titleCardTeardown.tick();
     }
 
     /**
