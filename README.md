@@ -218,6 +218,14 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **HCZ vertical geyser visibility, trigger and priority (2026-07-31):** the
+  Hydrocity geyser no longer stands visible in the level before it fires. The
+  ROM only draws the column from its eruption and falling routines, so it is
+  absent from the sprite table while it waits, loads art and rises. Its trigger
+  is also a pair of narrow unsigned windows rather than the symmetric box the
+  engine used, which had it erupting about half a screen early, and every piece
+  of the object — column, debris, spray and splash — now renders in its native
+  priority bucket instead of in front of the scenery.
 - **S3K underwater breathing bubbles and drowning digits (2026-07-31):** the
   small bubbles the player exhales underwater are drawn again, along with the
   countdown digits that replace them below twelve air. The fixed
