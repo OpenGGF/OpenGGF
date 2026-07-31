@@ -179,6 +179,25 @@ public interface LevelEventProvider {
     }
 
     /**
+     * Runs the ROM {@code Level_MainLoop} tail slot, immediately after
+     * {@code SynchroAnimate} and before the next frame's sprite build
+     * (docs/s1disasm/sonic.asm:3032).
+     * <p>
+     * S1 uses this slot for {@code SignpostArtLoad}
+     * (docs/s1disasm/sonic.asm:3183-3204), which lazily queues the end-of-act
+     * signpost PLC and locks the left camera boundary. Because the slot runs
+     * <em>after</em> {@code RunPLC} in the same frame, anything queued here is
+     * only serviced from the following frame.
+     * <p>
+     * S2's analogue is {@code CheckLoadSignpostArt}; it has additional gates
+     * ({@code Level_Has_Signpost}, {@code Two_player_mode}) and is not wired up
+     * here. S3K has no equivalent routine. Default is therefore a no-op.
+     */
+    default void updateAtLevelLoopTail() {
+        // Default no-op
+    }
+
+    /**
      * Called when a player falls below the bottom boundary.
      * If this returns true, the pit death is intercepted (e.g. zone transition).
      * <p>

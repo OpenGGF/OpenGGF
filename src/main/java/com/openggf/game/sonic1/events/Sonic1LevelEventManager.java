@@ -1,12 +1,15 @@
 package com.openggf.game.sonic1.events;
 
 import com.openggf.game.AbstractLevelEventManager;
+import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic1.Sonic1LoopManager;
+import com.openggf.game.sonic1.resources.Sonic1PlcService;
 import com.openggf.game.sonic1.scroll.Sonic1ZoneConstants;
 import com.openggf.level.LevelManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /**
@@ -123,6 +126,83 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
         // element's Card_Wait/Card_MoveOut tail re-queues the explosion and
         // animal art (docs/s1disasm/_incObj/34 Title Cards.asm:122-168).
         fixedTitleCardManager.update();
+    }
+
+    /** ROM {@code act3} (docs/s1disasm/sonic.asm:3186); acts are 0-based here. */
+    private static final int ACT_3 = 2;
+
+    /**
+     * ROM {@code plcid_Signpost}: index 18 into {@code ArtLoadCues}
+     * (docs/s1disasm/_inc/Pattern Load Cues.asm:28-50). The list holds exactly
+     * three entries — Nem_SignPost, Nem_Bonus, Nem_BigFlash
+     * (docs/s1disasm/_inc/Pattern Load Cues.asm:295-299).
+     */
+    private static final int PLC_ID_SIGNPOST = 18;
+
+    /** ROM {@code subi.w #$100,d1}: trigger $100px before the right boundary. */
+    private static final int SIGNPOST_ART_PRELOAD_DISTANCE = 0x100;
+
+    /**
+     * ROM {@code SignpostArtLoad} (docs/s1disasm/sonic.asm:3183-3201), called
+     * from the {@code Level_MainLoop} tail after {@code SynchroAnimate}
+     * (docs/s1disasm/sonic.asm:3032).
+     * <p>
+     * Once the camera comes within $100px of the right level boundary the ROM
+     * locks the left boundary to that value and submits {@code plcid_Signpost}
+     * through {@code NewPLC} — ClearPLC-then-copy, i.e.
+     * {@link Sonic1PlcService#replaceQueued(int)}
+     * (docs/s1disasm/sonic.asm:1332-1352). {@code ProcessPLC_3Tiles} then drains
+     * it at three tiles per frame (docs/s1disasm/sonic.asm:1439-1460).
+     * <p>
+     * The locked left boundary is the ROM's own re-fire latch, so no extra
+     * engine "already fired" flag exists (or is needed). The eager
+     * {@code Sonic1ObjectArtProvider.loadSignpostArt} path is deliberately left
+     * alone: this makes the runtime PLC queue ROM-faithful without changing
+     * which art is resident.
+     */
+    @Override
+    public void updateAtLevelLoopTail() {
+        // tst.w (v_debuguse).w / bne.w .return
+        AbstractPlayableSprite player = Sonic1ZoneEvents.focusedSpriteOrNull();
+        if (player != null && player.isDebugMode()) {
+            return;
+        }
+        // cmpi.b #act3,(v_act).w / beq.s .return -- boss fight owns act 3's art.
+        if (currentAct == ACT_3) {
+            return;
+        }
+        var camera = GameServices.cameraOrNull();
+        if (camera == null) {
+            return;
+        }
+        // move.w (v_limitright2).w,d1 / subi.w #$100,d1 / cmp.w d1,d0 / blt.s .return
+        int threshold = (camera.getMaxX() & 0xFFFF) - SIGNPOST_ART_PRELOAD_DISTANCE;
+        if ((camera.getX() & 0xFFFF) < threshold) {
+            return;
+        }
+        // tst.b (f_timecount).w / beq.s .return -- signpost already touched.
+        LevelManager level = levelManager();
+        var gamestate = level != null ? level.getLevelGamestate() : null;
+        if (gamestate == null || gamestate.isTimerPaused()) {
+            return;
+        }
+        // cmp.w (v_limitleft2).w,d1 / beq.s .return -- already locked.
+        if ((camera.getMinX() & 0xFFFF) == threshold) {
+            return;
+        }
+        // move.w d1,(v_limitleft2).w -- ROM writes the boundary word directly,
+        // so this is setMinX (immediate), not the eased setMinXTarget.
+        camera.setMinX((short) threshold);
+        // moveq #plcid_Signpost,d0 / bra.w NewPLC
+        Sonic1PlcService plcService = GameServices.module().getGameService(Sonic1PlcService.class);
+        if (plcService != null) {
+            try {
+                plcService.replaceQueued(PLC_ID_SIGNPOST);
+            } catch (IOException ignored) {
+                // A ROM read failure leaves the boundary locked, matching the
+                // ROM's single-shot latch; the eager art path keeps rendering.
+            }
+        }
     }
 
     /**
