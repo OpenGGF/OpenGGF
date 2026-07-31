@@ -55106,3 +55106,46 @@ live-gate variant is correct and its 982 groups are a downstream problem to
 decode separately rather than evidence against it.
 
 MHZ stays at **601** on `develop`; nothing from this round was landed.
+
+### 2026-07-31 — MHZ RNG phase: BLOCKED pending a Random_Number PC-execute probe
+
+Settled the sampling question the previous entry left open, then exhausted the
+code-level hypotheses it enabled.
+
+**The recorder samples at the ROM end-of-frame instant** —
+`tools/bizhawk-headless/docs/s3k-aux-events.md`: *"Reads happen in
+`on_frame_end` after `emu.frameadvance()`, i.e. state is the ROM end-of-frame
+instant for the recorded row."* So the comparison was never misaligned: ROM
+genuinely consumed **no** `Random_Number` during frame 73 — the frame its player
+lands on the mushroom cap — and consumed during frame 74. The engine consumes on
+73.
+
+**Four placements measured, all rejected:**
+
+| Placement / gate | MHZ non-queue | Verdict |
+|---|---:|---|
+| Spawner never executes (current `develop`) | **601** | RNG frozen all run |
+| Post-dynamic hook, live gate | 982 | one frame early |
+| Post-dynamic hook, per-player one-frame latch | 578 | best number, but breaks six `TestMhzPollenObjects` cases asserting `sub_3DA24`'s live read — rejected as gaming the metric |
+| Pre-dynamic hook (after players, before dynamic objects), live gate | 1055 | worse still |
+
+The pre-dynamic placement was the strongest hypothesis — ROM's spawner appearing
+to observe the player before the mushroom cap's `SolidObjectTop` pass grounds
+them — and it measured worst. So the ordering theory is wrong too, and no
+placement available to me reproduces ROM's phase with a live gate.
+
+**Blocker.** Every code-level hypothesis I can form has been measured and
+rejected; what is missing is evidence, not implementation. Settling this needs a
+BizHawk PC-execute probe hooking `Random_Number` across MHZ rows 70-80 to
+capture which call sites fire on which frames and in what order — the tool the
+`trace-replay-bug-fixing` skill prescribes for exactly this case, and which
+requires a seek to BK2 frame 209756. That is a separate piece of work from the
+engine changes in this branch, and guessing further placements without it is
+how the `setForcedAnimationId` and wrong-counter errors earlier in this session
+happened.
+
+MHZ stays at **601** non-queue groups. Nothing from this round was landed.
+
+**Session totals:** MHZ 1888 -> 601 non-queue groups; queue/admission frontier
+raw frame 36 -> 7218; MGZ recovered 3964 -> 128; ICZ 95 -> 81, better than its
+pre-session baseline.
