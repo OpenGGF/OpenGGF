@@ -159,13 +159,28 @@ public class TailsTailsController {
     private int frameTick;
     /** ROM mapping_frame: the frame resolved by the last script read (s2.asm:41302). */
     private int mappingFrame = -1;
+    /**
+     * ROM render_flags x_flip/y_flip for the directional tail. TAnim_GetTailFrame
+     * calls CalcAngle on the parent's velocity, writes render_flags(a0) and adds the
+     * direction bank into mapping_frame(a0) (s2.asm:41485-41516), but it is reached
+     * only past TAnim_WalkRunZoom's {@code subq.b #1,anim_frame_duration(a0) /
+     * bpl.s TAnim_Delay} early-out (s2.asm:41338-41339). During the countdown frames
+     * neither CalcAngle nor the bank/flip write runs, so both are stored state rather
+     * than values derived from the parent's current velocity. S3K's
+     * Animate_Tails_Part2 gates the identical directional path the same way
+     * (sonic3k.asm:29375-29376 and :29592-29604), so this is a universal correction.
+     */
+    private boolean dirHFlip;
+    private boolean dirVFlip;
 
     public record RewindState(
             int currentAnim,
             int lastParentAnim,
             int frameIndex,
             int frameTick,
-            int mappingFrame) {
+            int mappingFrame,
+            boolean dirHFlip,
+            boolean dirVFlip) {
     }
 
     public PlayerSpriteRenderer getRenderer() {
@@ -206,6 +221,8 @@ public class TailsTailsController {
                 frameIndex = 0;
                 frameTick = 0;
                 mappingFrame = -1;
+                dirHFlip = false;
+                dirVFlip = false;
             }
         }
 
@@ -255,6 +272,19 @@ public class TailsTailsController {
         // correction rather than a per-game rule.
         mappingFrame = frames[frameIndex];
         frameIndex++;
+        if (currentAnim == ANIM_DIRECTIONAL) {
+            // ROM TAnim_GetTailFrame: CalcAngle on the parent's (x_vel,y_vel),
+            // `lsr.b #3,d0 / andi.b #$C,d0` -> direction bank d3, then
+            // `add.b d3,mapping_frame(a0)` plus the render_flags x_flip/y_flip write
+            // (s2.asm:41485-41516). This runs only past the anim_frame_duration
+            // early-out (s2.asm:41338-41339), so the bank and the flips are latched
+            // here and held frozen over the countdown frames - matching
+            // sonic3k.asm:29592-29604 behind :29375-29376.
+            mappingFrame += computeDirectionalOffset();
+            boolean[] flips = computeDirectionalFlips();
+            dirHFlip = flips[0];
+            dirVFlip = flips[1];
+        }
         publishDynamicArtDecision();
     }
 
@@ -262,12 +292,11 @@ public class TailsTailsController {
         if (isS3k || renderer == null || currentAnim == ANIM_BLANK || mappingFrame < 0) {
             return;
         }
-        int resolved = mappingFrame;
-        if (currentAnim == ANIM_DIRECTIONAL) {
-            resolved += computeDirectionalOffset();
-        }
+        // ROM LoadTailsTailsDynPLC reads the STORED mapping_frame(a0) and dedupes it
+        // against TailsTails_LastLoadedDPLC (s2.asm:41631-41638). It runs every frame,
+        // but on a countdown frame mapping_frame is unchanged, so it queues nothing.
         if (dynamicArtDecisionOwner != null) {
-            dynamicArtDecisionOwner.observe(resolved);
+            dynamicArtDecisionOwner.observe(mappingFrame);
         }
     }
 
@@ -287,12 +316,12 @@ public class TailsTailsController {
         boolean vFlip;
 
         if (currentAnim == ANIM_DIRECTIONAL) {
-            // ROM: TAnim_GetTailFrame - compute directional offset and flip from velocity angle
-            int dirOffset = computeDirectionalOffset();
-            mappingFrame += dirOffset;
-            boolean[] flips = computeDirectionalFlips();
-            hFlip = flips[0];
-            vFlip = flips[1];
+            // ROM Obj05_Main runs DisplaySprite after the animation routine, so the
+            // drawn frame is the stored mapping_frame(a0) / render_flags(a0)
+            // (s2.asm:41756-41763). The direction bank is already folded into
+            // mapping_frame at its single write point.
+            hFlip = dirHFlip;
+            vFlip = dirVFlip;
         } else {
             // Standard animations: flip matches parent's facing direction
             hFlip = Direction.LEFT.equals(sprite.getDirection());
@@ -306,7 +335,8 @@ public class TailsTailsController {
 
     public RewindState captureRewindState() {
         return new RewindState(
-                currentAnim, lastParentAnim, frameIndex, frameTick, mappingFrame);
+                currentAnim, lastParentAnim, frameIndex, frameTick, mappingFrame,
+                dirHFlip, dirVFlip);
     }
 
     public void restoreRewindState(RewindState state) {
@@ -316,6 +346,8 @@ public class TailsTailsController {
             frameIndex = 0;
             frameTick = 0;
             mappingFrame = -1;
+            dirHFlip = false;
+            dirVFlip = false;
             return;
         }
         currentAnim = state.currentAnim();
@@ -323,6 +355,8 @@ public class TailsTailsController {
         frameIndex = state.frameIndex();
         frameTick = state.frameTick();
         mappingFrame = state.mappingFrame();
+        dirHFlip = state.dirHFlip();
+        dirVFlip = state.dirVFlip();
     }
 
     private int resolveObj05Animation(int parentAnimId) {

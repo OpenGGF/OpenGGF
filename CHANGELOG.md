@@ -3,6 +3,24 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Tails' tails (Obj05) directional animation now latches its DPLC
+  mapping-frame bank and `render_flags` x/y flips at the single ROM write point
+  instead of recomputing them from the parent's current velocity every frame.
+  `TAnim_GetTailFrame` runs `CalcAngle`, writes `render_flags(a0)` and applies
+  `add.b d3,mapping_frame(a0)` (`docs/s2disasm/s2.asm:41484-41513`), but it is
+  reached only past `TAnim_WalkRunZoom`'s
+  `subq.b #1,anim_frame_duration(a0) / bpl.s TAnim_Delay` early-out
+  (`docs/s2disasm/s2.asm:41337-41339`, entered at
+  `docs/s2disasm/s2.asm:41443`), so on countdown frames both stay frozen and
+  `LoadTailsTailsDynPLC`'s dedupe against `TailsTails_LastLoadedDPLC`
+  (`docs/s2disasm/s2.asm:41636-41640`) queues nothing. The live recompute minted
+  spurious DPLC submissions whenever the velocity angle crossed a bucket
+  boundary mid-countdown, skewing every downstream transfer id and dynamic-art
+  edge ordinal. S3K gates the identical directional path the same way
+  (`docs/skdisasm/sonic3k.asm:29375-29376`, `:29592-29604`), so this is a
+  universal correction; S1 has no Tails. Advances the first-error frame on all
+  16 failing S2 level-select/EHZ trace replays (e.g. MTZ2 39 -> 293, MCZ
+  46 -> 1929, HTZ 47 -> 343).
 - Fix: Tails' tails (Obj05) now tracks the ROM's `anim_frame` /
   `mapping_frame` split instead of conflating them. `Tails_Animate_Part2`
   reads the script byte at the current `anim_frame` into `mapping_frame` and

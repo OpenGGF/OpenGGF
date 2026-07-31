@@ -55134,3 +55134,102 @@ No `REGRESSION INTRODUCED:` lines. Guard run (117 tests, 0 failures):
 `TestRewindCoverageGuard`, `TestStaticStateRewindCoverageGuard`,
 `TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
 `TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`, `*TitleCard*`.
+
+## 2026-07-31 - S2 tails-tails directional DPLC bank frozen during anim countdown
+
+Branch `bugfix/ai-s2-edge-lifecycle-deep` (worktree `.worktrees/s2-edge-lifecycle-deep`,
+based on `bugfix/ai-trace-s1-titlecard-plc-integration` @ 3119bba27), JDK 21.
+
+Command (per trace):
+`mvn -Dmse=relaxed -DfailIfNoSpecifiedTests=false -Dsonic2.rom.path=<s2 rom> "-Dtest=<class>" test`
+
+`TailsTailsController` recomputed Obj05's directional mapping-frame bank (and the
+render_flags flips) from the parent's *current* velocity every frame. ROM writes both only
+inside `TAnim_GetTailFrame` (s2.asm:41485-41516), which is reached only past
+`TAnim_WalkRunZoom`'s `subq.b #1,anim_frame_duration / bpl.s TAnim_Delay` early-out
+(s2.asm:41338-41339); on countdown frames `mapping_frame` is frozen, so
+`LoadTailsTailsDynPLC`'s dedupe against `TailsTails_LastLoadedDPLC` (s2.asm:41631-41638)
+queues nothing. The live recompute minted spurious DPLC submissions whenever the velocity
+angle crossed a bucket boundary mid-countdown, skewing every downstream transfer id and
+edge ordinal by one. Universal correction (S3K gates the same path at
+sonic3k.asm:29375-29376 / :29592-29604); S1 has no Tails.
+
+| Trace | Before | After |
+|---|---|---|
+| `TestS2Mtz2LevelSelectTraceReplay` | frame 39 `dynamic_art.edge[3].present` (14311 errors) | frame 293 `dynamic_art.edge[0].logical_frame` (11993 errors) |
+| `TestS2MczLevelSelectTraceReplay` | frame 46 `dynamic_art.edge[3].present` (6431 errors) | frame 1929 `dynamic_art.edge[1].mapping_frame` (3485 errors) |
+| `TestS2HtzLevelSelectTraceReplay` | frame 47 `dynamic_art.edge[3].present` (10570 errors) | frame 343 `dynamic_art.outstanding_transfer_ids` (8982 errors) |
+
+All three still fail, at much later frontiers. No regressions: `TestRewindCoverageGuard`,
+`TestStaticStateRewindCoverageGuard`, `TestTailsTailsFlightSelection`,
+`TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading` all green, and
+`TestS3kAizTraceReplay` reports an identical `Tests run: 16, Failures: 4, Errors: 1`
+before and after.
+
+## 2026-07-31 - Independent verification: S2 tails-tails directional DPLC freeze (full family)
+
+Branch `bugfix/ai-s2-edge-lifecycle-deep`, worktree `.worktrees/s2-edge-lifecycle-deep`,
+based on `bugfix/ai-trace-s1-titlecard-plc-integration` @ 3119bba27. JDK 21
+(`mvn -v` -> 21.0.11). Both measurement runs preceded by
+`mvn -q -Dmse=relaxed clean` and `rm -rf target/surefire-reports`; the "before" run is the
+identical tree with `TailsTailsController.java` reverted via `git checkout --`.
+
+Family command (single invocation, both runs):
+
+```
+mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \
+  "-Ds2.rom.path=<s2 rom>" \
+  "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2Arz2LevelSelectTraceReplay,\
+TestS2CnzLevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,\
+TestS2CpzLevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,\
+TestS2DezEndingLevelSelectTraceReplay,TestS2HtzLevelSelectTraceReplay,\
+TestS2Htz2LevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,\
+TestS2Mcz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,\
+TestS2Mtz2LevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,\
+TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay,\
+TestS2Ehz1TraceReplay" test
+```
+
+Result: 1 passed / 16 failed both before and after. Nothing greened; all 16 failing
+traces advanced their first-error frame. Per-trace `First error: frame N -- <field>`:
+
+| Trace | Before | After |
+|---|---|---|
+| `TestS2ArzLevelSelectTraceReplay` | 134 `dynamic_art.edge[3].present` | 272 `dynamic_art.edge[2].mapping_frame` |
+| `TestS2Arz2LevelSelectTraceReplay` | 94 `dynamic_art.edge[3].present` | 488 `dynamic_art.edge[2].present` |
+| `TestS2CnzLevelSelectTraceReplay` | 126 `dynamic_art.edge[4].present` | 201 `dynamic_art.edge[4].present` |
+| `TestS2Cnz2LevelSelectTraceReplay` | 58 `dynamic_art.edge[1].present` | 767 `dynamic_art.edge[2].mapping_frame` |
+| `TestS2CpzLevelSelectTraceReplay` | 135 `dynamic_art.edge[3].present` | 154 `dynamic_art.edge[2].present` |
+| `TestS2Cpz2LevelSelectTraceReplay` | 59 `dynamic_art.edge[3].present` | 561 `dynamic_art.edge[0].logical_frame` |
+| `TestS2DezEndingLevelSelectTraceReplay` | PASS | PASS |
+| `TestS2HtzLevelSelectTraceReplay` | 47 `dynamic_art.edge[3].present` | 343 `dynamic_art.outstanding_transfer_ids` |
+| `TestS2Htz2LevelSelectTraceReplay` | 69 `dynamic_art.edge[1].present` | 188 `dynamic_art.edge[5].mapping_frame` |
+| `TestS2MczLevelSelectTraceReplay` | 46 `dynamic_art.edge[3].present` | 1929 `dynamic_art.edge[1].mapping_frame` |
+| `TestS2Mcz2LevelSelectTraceReplay` | 93 `dynamic_art.edge[2].present` | 213 `dynamic_art.edge[1].mapping_frame` |
+| `TestS2MtzLevelSelectTraceReplay` | 65 `dynamic_art.edge[3].present` | 292 `dynamic_art.edge[1].present` |
+| `TestS2Mtz2LevelSelectTraceReplay` | 39 `dynamic_art.edge[3].present` | 293 `dynamic_art.edge[0].logical_frame` |
+| `TestS2Mtz3LevelSelectTraceReplay` | 167 `dynamic_art.edge[3].present` | 348 `dynamic_art.edge[1].present` |
+| `TestS2OozLevelSelectTraceReplay` | 98 `dynamic_art.edge[2].present` | 346 `dynamic_art.edge[2].present` |
+| `TestS2Ooz2LevelSelectTraceReplay` | 106 `dynamic_art.outstanding_transfer_ids` | 830 `dynamic_art.edge[0].present` |
+
+Guard + cross-game parity run (all green, no `REGRESSION INTRODUCED:` lines):
+
+```
+mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \
+  "-Ds1.rom.path=<s1 rom>" "-Ds2.rom.path=<s2 rom>" "-Ds3k.rom.path=<s3k rom>" \
+  "-Dtest=TestS2DezEndingLevelSelectTraceReplay,TestS1Ghz1TraceReplay,\
+TestS1Mz1TraceReplay,TestS1Ghz1CompleteRunTraceReplay,TestS1Ghz2CompleteRunTraceReplay,\
+TestS1Mz1CompleteRunTraceReplay,TestS1Credits00Ghz1TraceReplay,\
+TestS1Credits07Ghz1bTraceReplay,TestTraceReplayInvariantGuard,\
+TestTraceReplayReferenceClosureGuard,TestRewindCoverageGuard,\
+TestStaticStateRewindCoverageGuard,TestPlcProducerCoverageGuard,\
+TestDynamicArtDiagnosticsComparator,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,\
+TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils" test
+```
+
+Disassembly basis re-verified independently: `TAnim_WalkRunZoom` early-out at
+s2.asm:41337-41339, branch into `TAnim_GetTailFrame` at s2.asm:41443, the
+`render_flags`/`add.b d3,mapping_frame(a0)` writes at s2.asm:41484-41513,
+`LoadTailsTailsDynPLC`'s stored-`mapping_frame` dedupe at s2.asm:41636-41640, and
+`Obj05_Main`'s `Tails_Animate_Part2 -> LoadTailsTailsDynPLC -> DisplaySprite` order at
+s2.asm:41760-41763. S3K parity path: sonic3k.asm:29375-29376 and :29592-29604.
