@@ -199,6 +199,18 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
         lastFrameResult = admission.result();
         lastFrameRanGameplay = false;
         if (lastFrameResult == LevelFrameResult.SETUP_ONLY) {
+            // ROM LevelLoop increments Level_frame_counter before
+            // Process_Sprites (sonic3k.asm:7888-7894), and the setup pass owns
+            // the first recorded row, whose gameplay_frame_counter already
+            // reads 1. Advance the sprite counter here or every
+            // counter-keyed CPU gate runs a frame late for the whole segment —
+            // the carry body's 32-frame Right pulse at loc_13FFA
+            // (sonic3k.asm:26918) is the visible one.
+            frameCounter++;
+            if (GameServices.spritesOrNull() != null) {
+                GameServices.spritesOrNull().setFrameCounter(
+                        GameServices.spritesOrNull().getFrameCounter() + 1);
+            }
             return lastFrameResult;
         }
         frameCounter++;

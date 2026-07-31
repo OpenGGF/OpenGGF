@@ -54901,3 +54901,50 @@ diverge, rather than guessing at another counter seed.
 `anim_frame_timer` is not in the fixture. That makes MGZ a recorder-coverage
 gap rather than an engine gap, and it is the largest single item outstanding
 from this work.
+
+### 2026-07-31 — setup frame now advances the sprite counter: fleet-wide recovery
+
+The previous entry named "instrument `romVisibleLevelFrameCounter()` against the
+recorded rows" as the next step. Done, and it found the off-by-one.
+
+Logging the carry body's gate showed the 32-frame Right pulse *does* fire — at
+`romVis=32`, on the engine's 32nd carry frame. But the setup pass owns recorded
+row 0 while running no sprite frame, so every later row sat one behind: at row
+31, where ROM's `(Level_frame_counter+1).b` is `$20` and `loc_13FFA`
+(sonic3k.asm:26918) holds Right, the engine's visible counter was `31` and the
+gate stayed shut. Tails never took the acceleration, so `tails_x_speed` and the
+carried `x_speed` held `0x0100` where ROM reached `0x0118`, and `tails_x_sub`
+diverged for 920 rows.
+
+Fix: `RecordingFrameDriver` advances the sprite frame counter on the
+`SETUP_ONLY` frame, matching ROM's `LevelLoop`, which increments
+`Level_frame_counter` before `Process_Sprites` (sonic3k.asm:7888-7894) — and
+consistent with row 0 already reading `gameplay_frame_counter 1`.
+
+This is the same idea as the two attempts recorded as having no effect in the
+previous entry; the difference is *which* counter. Those touched
+`RecordingFrameDriver.frameCounter` and the `alignFrameCountersForReplayStart`
+seed; the gate reads the **SpriteManager** counter, which neither advanced.
+
+**Non-queue groups, against the pre-work baseline:**
+
+| Segment | Baseline | Previous entry | Now |
+|---|---:|---:|---:|
+| MHZ | 1888 | 1037 | **602** |
+| MGZ | ~17 | 3964 | **128** |
+| ICZ | 95 | 92 | **81** |
+| CNZ | ~1640 | 1746 | **1665** |
+| HCZ | ~30 | 374 | 507 |
+| AIZ complete / LBZ | 0 | 0 | 0 |
+
+MGZ's animation-phase regression is essentially resolved — it was the same
+counter offset, not the missing `anim_frame_timer` I had assumed, so retract
+that reading. ICZ is now better than it has ever been. HCZ is the one segment
+that moved the wrong way and is the next target.
+
+MHZ's first divergence moves frame 31 -> **175** (`tails_y` off by one), then
+`tails_animation_id 0x0000` vs `0x0008` across rows 218-849.
+
+`TestS3kAizTraceReplay` improves 13 -> 11 failures but is still above its
+baseline of 4; its cause is unchanged (the sidekick's unconditional control
+pass on initial assembly).
