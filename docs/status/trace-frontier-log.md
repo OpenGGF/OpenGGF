@@ -55063,3 +55063,46 @@ should close.
 Note the ordering constraint: the spawner must be driven from the post-dynamic
 fixed-object phase (`LevelFrameStep` "fixed-objects"), not the pre-dynamic one,
 to match ROM's fixed-slot position.
+
+### 2026-07-31 — pollen-spawner phase: three variants measured, none landed
+
+Continued from the previous entry. The spawner must execute — ROM consumes
+`Random_Number` there once per grounded player per frame — but the *phase* is
+unresolved, and every variant tried either regresses MHZ or contradicts the
+ROM contract the unit tests encode.
+
+| Variant | MHZ non-queue | Verdict |
+|---|---:|---|
+| Spawner never executes (current `develop`) | **601** | RNG frozen all run |
+| Spawner runs, live grounded gate | 982 | regression |
+| Spawner runs, one-frame-delayed gate (shared latch) | 733 | regression, and the latch was wrong |
+| Spawner runs, one-frame-delayed gate (per-player) | **578** | best number, but rejected |
+
+The 578 variant was rejected despite being the best trace number: it breaks six
+`TestMhzPollenObjects` cases which assert ROM's actual contract — a grounded
+player spawns pollen on that same call (`sub_3DA24` reads the live state, there
+is no latch). Landing it would trade a real ROM behaviour for a trace metric,
+which is exactly the trap the mission rules warn about.
+
+**What is actually established:**
+
+- The engine's produced RNG values match ROM's one for one once the spawner
+  runs, so the consumer and `GameRng` are both faithful.
+- The engine's first call lands on the frame the player lands (`y=0x51A`,
+  recorded row 73), and the engine's landing frame already matches ROM — there
+  is no divergence in `air`/`status_byte` over rows 68-78.
+- ROM's recorded seed nevertheless first advances at row **74**.
+
+So either ROM's spawner observes a pre-update player state, or — more likely,
+since ROM's fixed slots execute after the players just as the engine's do — the
+recorder samples `rng_seed` earlier in the frame than the fixed-slot phase, and
+the engine's row-73 consumption is correct while the comparison is misaligned
+by the sampling point.
+
+**Resolving that is the next step, and it is a fixture question, not an engine
+one:** determine where in the ROM frame the recorder samples `rng_seed` (it
+rides on `air_countdown_state`). If it samples before the fixed-slot phase, the
+live-gate variant is correct and its 982 groups are a downstream problem to
+decode separately rather than evidence against it.
+
+MHZ stays at **601** on `develop`; nothing from this round was landed.
