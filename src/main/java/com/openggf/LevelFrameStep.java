@@ -253,7 +253,7 @@ public final class LevelFrameStep {
             // 3. Object execution after player physics, with inline solid checkpoints
             //    so later objects see earlier contact adjustments.
             Runnable afterExecBeforePlacement = spriteManager != null
-                    ? spriteManager::advanceFixedSkidDustAfterObjectExecution
+                    ? spriteManager::advancePlayableFixedSlotsAfterObjectExecution
                     : null;
             wrapper.wrap("objects",
                     () -> levelManager.updateObjectPositionsPostPhysicsWithoutTouches(
@@ -337,7 +337,7 @@ public final class LevelFrameStep {
             wrapper.wrap("fixed-objects", levelEvents::updateFixedInLevelObjects);
         }
         if (spriteManager != null && !inlineSolidResolution) {
-            wrapper.wrap("fixed-dust", spriteManager::advanceFixedSkidDustAfterObjectExecution);
+            wrapper.wrap("fixed-dust", spriteManager::advancePlayableFixedSlotsAfterObjectExecution);
         }
         if (levelEvents != null) {
             levelEvents.update();

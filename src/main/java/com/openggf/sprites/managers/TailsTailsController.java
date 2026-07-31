@@ -118,6 +118,20 @@ public class TailsTailsController {
         0,     // 0x28 Swim tired -> Blank (tails included in parent mapping)
     };
 
+    /**
+     * Obj05Ani_Blank / AniTails_Tail00: {@code dc.b $20, 0, $FF} - a REAL script
+     * that writes mapping_frame 0 with duration $20, not a "do nothing" state
+     * (docs/s2disasm/s2.asm:41813, docs/skdisasm/General/Sprites/Tails/Anim - Tails
+     * Tail.asm:15). Obj05_Main still runs LoadTailsTailsDynPLC for it
+     * (docs/s2disasm/s2.asm:41756-41763), which writes
+     * TailsTails_LastLoadedDPLC = 0 (docs/s2disasm/s2.asm:41642) before bailing on
+     * the empty DPLC frame 0 (docs/s2disasm/s2.asm:41647-41648;
+     * docs/s2disasm/mappings/spriteDPLC/Tails.asm:142-143). Skipping it left the
+     * dedupe latch frozen at the previous directional frame.
+     */
+    private static final int[] BLANK_FRAMES = { 0 };
+    private static final int BLANK_DELAY = 0x20;
+
     // --- S2 frame data (mapping frame indices from MapUnc_Tails) ---
     private static final int[] SWISH_FRAMES_S2 = { 0x09, 0x0A, 0x0B, 0x0C, 0x0D };
     private static final int[] FLICK_FRAMES_S2 = { 0x09, 0x0A, 0x0B, 0x0C, 0x0D };
@@ -226,10 +240,6 @@ public class TailsTailsController {
             }
         }
 
-        if (currentAnim == ANIM_BLANK) {
-            return;
-        }
-
         int[] frames = getFrames(currentAnim);
         if (frames == null) {
             return;
@@ -289,7 +299,7 @@ public class TailsTailsController {
     }
 
     private void publishDynamicArtDecision() {
-        if (isS3k || renderer == null || currentAnim == ANIM_BLANK || mappingFrame < 0) {
+        if (isS3k || renderer == null || mappingFrame < 0) {
             return;
         }
         // ROM LoadTailsTailsDynPLC reads the STORED mapping_frame(a0) and dedupes it
@@ -378,6 +388,7 @@ public class TailsTailsController {
                 case ANIM_PUSHING -> PUSH_FRAMES_S3K;
                 case ANIM_HANGING -> HANG_FRAMES_S3K;
                 case ANIM_FLY1, ANIM_FLY2 -> FLY_FRAMES_S3K;
+                case ANIM_BLANK -> BLANK_FRAMES;
                 default -> null;
             };
         }
@@ -387,12 +398,14 @@ public class TailsTailsController {
             case ANIM_DIRECTIONAL -> DIRECTIONAL_FRAMES_S2;
             case ANIM_SPINDASH, ANIM_HANGING -> SPINDASH_FRAMES_S2;
             case ANIM_SKIDDING, ANIM_PUSHING -> SKID_PUSH_FRAMES_S2;
+            case ANIM_BLANK -> BLANK_FRAMES;
             default -> null;
         };
     }
 
     private int getDelay(int anim) {
         return switch (anim) {
+            case ANIM_BLANK -> BLANK_DELAY;
             case ANIM_SWISH -> SWISH_DELAY;
             case ANIM_FLICK -> FLICK_DELAY;
             case ANIM_DIRECTIONAL -> DIRECTIONAL_DELAY;
@@ -413,11 +426,14 @@ public class TailsTailsController {
      * giving offsets 0, 4, 8, or 12.
      */
     private int computeDirectionalOffset() {
+        // ROM TAnim_GetTailFrame calls CalcAngle UNCONDITIONALLY
+        // (docs/s2disasm/s2.asm:41484-41487); there is no zero-velocity
+        // short-circuit. CalcAngle_Zero itself returns $40
+        // (docs/s2disasm/s2.asm:4039-4040,4076-4078), which then banks to 8 for a
+        // right-facing Tails, not 0. S3K's GetArcTan has the same zero return
+        // (docs/skdisasm/sonic3k.asm:3043), so this is a universal correction.
         short xVel = sprite.getXSpeed();
         short yVel = sprite.getYSpeed();
-        if (xVel == 0 && yVel == 0) {
-            return 0;
-        }
 
         // ROM: TAnim_GetTailFrame (s2.asm:41478-41481) calls CalcAngle
         // (s2.asm:4037-4081, Angle_Data table); S3K's tail routine calls the
@@ -445,12 +461,9 @@ public class TailsTailsController {
      * Returns [hFlip, vFlip].
      */
     private boolean[] computeDirectionalFlips() {
+        // No zero-velocity short-circuit: see computeDirectionalOffset.
         short xVel = sprite.getXSpeed();
         short yVel = sprite.getYSpeed();
-        if (xVel == 0 && yVel == 0) {
-            boolean facingLeft = Direction.LEFT.equals(sprite.getDirection());
-            return new boolean[]{ facingLeft, false };
-        }
 
         // ROM: CalcAngle (s2.asm:4037-4081) / GetArcTan (sonic3k.asm:3043)
         int d0 = TrigLookupTable.calcAngle(xVel, yVel);

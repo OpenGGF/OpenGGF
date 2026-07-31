@@ -135,18 +135,13 @@ public class PlayableSpriteAnimation {
         if (dynamicArtDecisionOwner != null) {
             dynamicArtDecisionOwner.observe(sprite.getMappingFrame());
         }
-        // ROM object order: Obj02 (Tails) runs Tails_Animate then LoadTailsDynPLC
-        // to completion (s2.asm:41256, 41659-41690); only afterwards does Obj05
-        // (Tails' tails) run Tails_Animate_Part2 -> LoadTailsTailsDynPLC
-        // (s2.asm:41760-41763). S3K uses the same after-the-parent ordering via
-        // Obj_Tails_Tail_Main -> Animate_Tails_Part2 -> Tails_Tail_Load_PLC
-        // (sonic3k.asm:30055-30071). The tails-tails DPLC edge must therefore be
-        // published after the sidekick's own.
-        if (!animationUpdateSuppressedThisFrame
-                && sprite != null
-                && sprite.getTailsTailsController() != null) {
-            sprite.getTailsTailsController().update();
-        }
+        // Obj05 (Tails' tails) is NOT dispatched here. Its SST lives in
+        // LevelOnly_Object_RAM, which starts after Object_RAM_End /
+        // Dynamic_Object_RAM_End (docs/s2disasm/s2.constants.asm:1144-1152), so
+        // ROM executes it after EVERY dynamic level object, not immediately after
+        // Obj02. S3K places Tails_tails identically in Level_object_RAM after
+        // Dynamic_object_RAM_end (docs/skdisasm/sonic3k.constants.asm:307-315).
+        // SpriteManager.advanceTailsTailsAfterObjectExecution() owns that slot.
     }
 
     private void updateAnimation(int frameCounter) {

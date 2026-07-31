@@ -55313,3 +55313,81 @@ mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \
   "-Ds1.rom.path=<s1 rev01 rom>" "-Ds2.rom.path=<s2 rev01 rom>" "-Ds3k.rom.path=<s3k locked-on rom>" \
   "-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils" test
 ```
+
+## 2026-07-31 — S2 dynamic-art edge divergence, third layer (Obj05 dispatch slot)
+
+Branch `bugfix/ai-s2-edge-lifecycle-third-layer`, worktree
+`.worktrees/s2-edge-lifecycle-third-layer`, based on
+`bugfix/ai-trace-s1-titlecard-plc-integration` (`f3083f7c4`). Uncommitted at
+measurement time; baseline measured in a throwaway detached worktree at the same
+base commit. Clean build + `rm -rf target/surefire-reports` before each run.
+
+```
+mvn -q -Dmse=relaxed "-Ds2.rom.path=<s2 rev01 rom>" -DfailIfNoSpecifiedTests=false \
+  "-Dtest=TestS2*TraceReplay" test
+```
+
+Root cause: Obj05 (Tails' tails) was dispatched inside the sidekick's own
+animation pass. Its SST lives in `LevelOnly_Object_RAM`, after `Object_RAM_End`
+/ `Dynamic_Object_RAM_End` (`s2.constants.asm:1144-1152`), so ROM executes it
+after every dynamic level object and `Obj05_Main`'s `move.b anim(a2),d0`
+(`s2.asm:41735`) reads a later parent anim than the engine did. Two further
+ROM-backed corrections: `Obj05Ani_Blank` is a real script `$20,0,$FF`
+(`s2.asm:41813`) whose `LoadTailsTailsDynPLC` pass still writes
+`TailsTails_LastLoadedDPLC` (`s2.asm:41642`), and `TAnim_GetTailFrame` calls
+`CalcAngle` unconditionally (`s2.asm:41484-41487`), so zero velocity banks to 8
+via `CalcAngle_Zero` (`s2.asm:4076-4078`) rather than 0.
+
+| Trace | Before (frame — field, errors) | After (frame — field, errors) | Status |
+|---|---|---|---|
+| `TestS2Arz2LevelSelectTraceReplay` | 488 `edge[2].present` (6204) | 689 `edge[0].logical_frame` (3984) | advanced |
+| `TestS2ArzLevelSelectTraceReplay` | 272 `edge[2].mapping_frame` (3838) | 1078 `edge[2].present` (627) | advanced |
+| `TestS2Cnz2LevelSelectTraceReplay` | 767 `edge[2].mapping_frame` (13438) | 1906 `outstanding_transfer_ids` (8718) | advanced |
+| `TestS2CnzLevelSelectTraceReplay` | 201 `edge[4].present` (9355) | 201 `edge[4].mapping_frame` (9697) | unmoved (field changed) |
+| `TestS2Cpz2LevelSelectTraceReplay` | 561 `edge[0].logical_frame` (10996) | 561 `edge[0].logical_frame` (9058) | unmoved |
+| `TestS2CpzLevelSelectTraceReplay` | 154 `edge[2].present` (5939) | 725 `edge[1].present` (3928) | advanced |
+| `TestS2Ehz1TraceReplay` | 365 `edge[1].present` (4609) | 1549 `outstanding_transfer_ids` (3438) | advanced |
+| `TestS2Htz2LevelSelectTraceReplay` | 188 `edge[5].mapping_frame` (12707) | 361 `outstanding_transfer_ids` (8973) | advanced |
+| `TestS2HtzLevelSelectTraceReplay` | 343 `outstanding_transfer_ids` (8982) | 979 `edge[2].present` (7559) | advanced |
+| `TestS2Mcz2LevelSelectTraceReplay` | 213 `edge[1].mapping_frame` (10781) | 1805 `edge[0].present` (7636) | advanced |
+| `TestS2MczLevelSelectTraceReplay` | 1929 `edge[1].mapping_frame` (3485) | 3006 `edge[1].present` (2410) | advanced |
+| `TestS2Mtz2LevelSelectTraceReplay` | 293 `edge[0].logical_frame` (11993) | 293 `edge[0].logical_frame` (10762) | unmoved |
+| `TestS2Mtz3LevelSelectTraceReplay` | 348 `edge[1].present` (14270) | 1689 `outstanding_transfer_ids` (13919) | advanced |
+| `TestS2MtzLevelSelectTraceReplay` | 292 `edge[1].present` (9968) | 292 `edge[1].present` (8704) | unmoved |
+| `TestS2Ooz2LevelSelectTraceReplay` | 830 `edge[0].present` (11798) | 830 `edge[0].present` (10470) | unmoved |
+| `TestS2OozLevelSelectTraceReplay` | 346 `edge[2].present` (9065) | 346 `edge[2].present` (8968) | unmoved |
+| `TestS2SczLevelSelectTraceReplay` | 2 `outstanding_transfer_ids` (6419) | 2 `outstanding_transfer_ids` (6419) | unmoved |
+| `TestS2SpecialStageTraceReplay` | 136 `dynamic_art.edges` (21451) | 136 `dynamic_art.edges` (21451) | unmoved |
+| `TestS2WfzLevelSelectTraceReplay` | 10287 `outstanding_transfer_ids` (5825) | 10287 `outstanding_transfer_ids` (5825) | unmoved |
+
+10 of 19 advanced, 0 regressed, none greened.
+
+Independent verification (2026-07-31), clean build plus
+`rm -rf target/surefire-reports` before each run, before-measurement taken in a
+detached worktree at the same base commit `f3083f7c4`:
+
+```
+mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \
+  "-Ds2.rom.path=<s2 rev01 rom>" \
+  "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2Arz2LevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay,TestS2Ehz1TraceReplay" test
+
+mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \
+  "-Ds1.rom.path=<s1 rev01 rom>" "-Ds2.rom.path=<s2 rev01 rom>" \
+  "-Dtest=TestS2DezEndingLevelSelectTraceReplay,TestS1Ghz1TraceReplay,TestS1Mz1TraceReplay,TestS1Ghz1CompleteRunTraceReplay,TestS1Ghz2CompleteRunTraceReplay,TestS1Mz1CompleteRunTraceReplay,TestS1Credits00Ghz1TraceReplay,TestS1Credits07Ghz1bTraceReplay,TestTraceReplayInvariantGuard,TestTraceReplayReferenceClosureGuard,TestRewindCoverageGuard,TestStaticStateRewindCoverageGuard,TestPlcProducerCoverageGuard,TestDynamicArtDiagnosticsComparator" test
+
+mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \
+  "-Ds1.rom.path=<s1 rev01 rom>" "-Ds2.rom.path=<s2 rev01 rom>" "-Ds3k.rom.path=<s3k locked-on rom>" \
+  "-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils" test
+```
+
+Every before/after frame and field in the table above reproduced exactly on that
+clean pair of runs (the 17-class family run; SCZ, special stage and WFZ rows are
+carried from the fix run and were not re-measured). `TestS2DezEndingLevelSelect
+TraceReplay` stayed green (Tests run: 1, Failures: 0). All 14 guard/S1 classes
+green, and all four S3K classes green — no regressions introduced.
+
+Remaining CNZ frontier (frame 201, expected mapping frame `$87`, actual `$49`)
+is the unmodelled `btst #status.player.pushing,status(a2) / moveq #4,d0`
+override in `Obj05_Main` (`s2.asm:41746-41750`), whose S3K counterpart narrows
+the same gate further (`sonic3k.asm:30043-30052`) — a per-game divergence that
+needs an owner rather than the existing `isS3k` flag.
