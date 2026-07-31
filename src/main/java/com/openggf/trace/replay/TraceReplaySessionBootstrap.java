@@ -456,11 +456,16 @@ public final class TraceReplaySessionBootstrap {
         var entry = trace.getFrame(0);
         sprite.setCentreX(entry.x());
         sprite.setCentreY(entry.y());
-        sprite.setXSpeed(entry.xSpeed());
-        sprite.setYSpeed(entry.ySpeed());
-        sprite.setGSpeed(entry.gSpeed());
         sprite.setAngle(entry.angle());
-        sprite.setAir(entry.air());
+        // Velocity and Status_InAir are NOT seeded from row 0. Row 0 is a
+        // recorded LevelLoop iteration-1 row -- a POST-frame sample -- so
+        // copying it in as pre-frame state hands the engine frame 0's own
+        // result before frame 0 runs. The player's spawn state is owned by
+        // SpawnLevelMainSprites (sonic3k.asm:8132-8177), which sets
+        // Status_InAir only via the explicit per-zone bsets and leaves
+        // velocity zero; MHZ1 $700 and CNZ1 $300 fall through to loc_68D8
+        // (8178-8197) and spawn grounded, so their frame-0 floor check is
+        // what sets Status_InAir, as the frame's outcome.
         sprite.setSubpixelRaw(entry.xSub(), entry.ySub());
         // anim/prev_anim and mapping_frame survive the load the same way: ROM
         // writes them as a word at spawn for the zones that need one
