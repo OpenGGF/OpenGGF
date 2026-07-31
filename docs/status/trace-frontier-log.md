@@ -56396,3 +56396,40 @@ Citation check performed against the local `docs/s2disasm/s2.asm`:
 The fix agent's original comment cited `Tails_Animate_Part2`/`LoadTailsTailsDynPLC` as
 `:41761-41762` and `DisplaySprite` as `:41763`; the actual lines are `:41762-41763` and
 `:41764` (one-line skew). Corrected in the committed comments before landing.
+
+## 2026-07-31 — S2 CNZ2 mid-V-int dynamic-art row (`bugfix/ai-s2-cnz2-outstanding`)
+
+Worktree branched from `bugfix/ai-trace-s1-titlecard-plc-integration`. Command shape:
+`mvn -Dmse=relaxed -Dsurefire.failIfNoSpecifiedTests=false "-Dtest=<class>"
+-Ds1.rom.path=<s1> -Ds2.rom.path=<s2> -Ds3k.rom.path=<s3k> test`, with
+`rm -rf target/surefire-reports` before every measurement.
+
+| Trace | Before | After |
+|---|---|---|
+| `TestS2Cnz2LevelSelectTraceReplay` | 41 errors, first at frame 10935 `dynamic_art.edges` | 8 errors, first at frame 10976 `queue.s2_nemesis_plc.busy` |
+
+Raw lines — before: `Totals: 41 errors, 0 warnings. First error: frame 10935 --
+dynamic_art.edges mismatch (expected=[20946, 20947], actual=[])`; after: `Totals: 8
+errors, 0 warnings. First error: frame 10976 -- queue.s2_nemesis_plc.busy mismatch
+(expected=false, actual=true)`.
+
+Fix: a recorder row sampled inside `V_Int` — after the real per-mode handler called
+`ProcessDMAQueue` (`docs/s2disasm/s2.asm:781` inside `Vint_Level` at `:698`, routine at
+`:1770`) but before `VintRet` bumped `Vint_runcount` (`:507-508`) — is a dynamic-art
+publication boundary. `PlcFrameLifecycleCoordinator` had been suppressing both that row
+and its successor; now the starved row services the DMA queue and publishes its own row
+and only the successor is carried. Genuine `Vint_Lag` rows (`:483-484`, body `:529-580`;
+S1 `docs/s1disasm/sonic.asm:709-730`) are unchanged.
+
+Full cross-game `-Dtest=*TraceReplay` sweep (all three ROMs, 96 classes): no regression.
+`TestS1SpecialStageTraceReplay` (2307 errors, frame 99), `TestS2SpecialStageTraceReplay`
+(20482 errors, frame 136), `TestS1Ghz3CompleteRunTraceReplay` (5 errors, frame 9183),
+`TestS2Mtz3LevelSelectTraceReplay` (9 errors, frame 15258), `TestS2Cpz2LevelSelectTraceReplay`
+(8 errors, frame 11491) and the remaining `*_nemesis_plc.busy` cluster were re-measured at
+the base commit and are byte-identical there. Note these classes are fork-order sensitive:
+`TestS1Ghz3CompleteRunTraceReplay` and `TestS2Mtz3LevelSelectTraceReplay` reported PASS in
+one five-class base run and their normal failure when run isolated at the same base commit,
+so only isolated re-measurements were treated as authoritative.
+
+Residual on CNZ2: the `f10976-11012` Nemesis PLC one-frame-early cluster (8 errors) is a
+separate defect, not addressed here.
