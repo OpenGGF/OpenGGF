@@ -218,6 +218,16 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **S3K underwater breathing bubbles and drowning digits (2026-07-31):** the
+  small bubbles the player exhales underwater are drawn again, along with the
+  countdown digits that replace them below twelve air. The fixed
+  `Breathing_bubbles` controllers were already producing children with native
+  cadence, but they rendered nothing: bubble frames now come from the shared
+  `Map_Bubbler` art the HCZ bubbler uses, and the ten digit frames — which in
+  the ROM select art by DMA into a shared VRAM window rather than by mapping —
+  are rebuilt from the ROM geometry against `ArtUnc_AirCountdown`. The object
+  also runs its real animation script table and the remaining routines, so a
+  digit parks in screen space, flashes, and clears once its owner recovers air.
 - **Level music restoration after temporary themes (2026-07-30):** the extra-life jingle now uses the ROM's single music-save slot, while ordinary invincibility and Super themes replace music normally; when their ROM-timed expiry allows it, level music is reissued without silencing the act after chained 1-ups or transformations.
 - **Native trace fleet queue-audit publication (2026-07-30):** all 152
   reproducible S1, S2, and S3K trace destinations were regenerated with one
