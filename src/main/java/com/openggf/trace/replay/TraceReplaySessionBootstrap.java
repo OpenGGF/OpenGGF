@@ -318,12 +318,6 @@ public final class TraceReplaySessionBootstrap {
             // object ticks, so prelude state comes from object code rather
             // than recorded SST data.
             objectManager.reset(cameraX);
-            if (representedS3kCompleteRun) {
-                var levelEventProvider = GameServices.module().getLevelEventProvider();
-                if (levelEventProvider instanceof Sonic3kLevelEventManager s3kLem) {
-                    s3kLem.restoreCompleteRunSegmentObjectsAfterPreludeReset();
-                }
-            }
             AbstractPlayableSprite player = fixture != null ? fixture.sprite() : null;
             List<AbstractPlayableSprite> sidekicks = gameplayMode.getSpriteManager() != null
                     ? gameplayMode.getSpriteManager().getSidekicks()
@@ -413,6 +407,22 @@ public final class TraceReplaySessionBootstrap {
         // about this decision reads the fixture, its metadata, the zone, or the
         // frame index.
         if (gameplayMode != null && gameplayMode.getLevelManager() != null) {
+            // Objects the ROM creates from SpawnLevelMainSprites (loc_690A /
+            // loc_6926, sonic3k.asm:8205-8216) are written into
+            // Dynamic_object_RAM at main-sprite spawn -- which happens as part
+            // of this same setup pass, after the title card. They are therefore
+            // not resident for any earlier Level_MainLoop tick, and the pass
+            // below is their first and only dispatch before LevelLoop. Install
+            // them here rather than before the prelude loop above: that loop
+            // models title-card-era ticks, when no SpawnLevelMainSprites object
+            // exists yet, so dispatching them there gave every such object two
+            // executions before recorded row 0 where the ROM gives one.
+            if (representedS3kCompleteRun && objectDispatchFrames > 0) {
+                var levelEventProvider = GameServices.module().getLevelEventProvider();
+                if (levelEventProvider instanceof Sonic3kLevelEventManager s3kLem) {
+                    s3kLem.restoreCompleteRunSegmentObjectsAfterPreludeReset();
+                }
+            }
             gameplayMode.getLevelManager().consumePendingInitialProcessSpritesPass();
         }
         applyInitialRngSeedForReplay(trace.metadata());

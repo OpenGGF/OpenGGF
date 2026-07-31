@@ -3,6 +3,16 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: S3K level-load-resident objects are dispatched once before the first
+  `LevelLoop` frame, matching the ROM, instead of twice. The complete-run
+  trace bootstrap reinstalled the main-sprite-spawn objects before the
+  title-card object prelude loop, so each took a prelude tick *and* the
+  `Initial_ProcessSprites` pass. `SpawnLevelMainSprites` (`loc_690A`/`loc_6926`,
+  sonic3k.asm:8205-8216) writes those objects into `Dynamic_object_RAM` at
+  main-sprite spawn — part of the post-title-card setup pass — so they are not
+  resident for any earlier `Level_MainLoop` tick. Objects holding frame-counted
+  locks (ICZ's `Obj_LevelIntroICZ1` `anim_frame_timer`, sonic3k.asm:76984) no
+  longer release a frame early.
 - Fix: S3K's level-load enemy Kosinski art is queued on the ROM's frame, not one
   frame early. `Obj_TitleCard` creates its card elements through
   `CreateNewSprite4`, which scans forward from the creator's own slot

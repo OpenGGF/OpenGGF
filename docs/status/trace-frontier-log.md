@@ -56052,3 +56052,43 @@ that produces that combination (spindash/roll set `y_radius=7` *and* `x_radius=3
 which yields angle `F6`, not `F8`), and the recorded `state_snapshot` says 19/9.
 Either the recorder's `y_radius` is sampled after a restore, or the detach comes
 from a code path not yet identified. Do not fit a constant to close this.
+
+## 2026-07-31 — surplus pre-`Initial_ProcessSprites` object dispatch removed
+
+Worktree `.worktrees/bootstrap-prelude`, branch `bugfix/ai-s3k-bootstrap-prelude` off
+`bugfix/ai-s3k-mhz-queue-frontier`. ROM `-Ds3k.rom.path=.../s3k.gen`, JDK 21.
+
+**Defect.** Every level-load-resident S3K complete-run object was dispatched TWICE before
+recorded row 0 where the ROM gives exactly ONE. `TraceReplaySessionBootstrap` reinstalled
+the main-sprite-spawn objects (`restoreCompleteRunSegmentObjectsAfterPreludeReset`) *before*
+the `objectDispatchFrames` prelude loop, so they took a prelude tick and then the
+`Initial_ProcessSprites` pass.
+
+**Fix.** Moved the reinstall to immediately before `consumePendingInitialProcessSpritesPass`.
+`SpawnLevelMainSprites` (`loc_690A`/`loc_6926`, sonic3k.asm:8205-8216) writes these objects
+into `Dynamic_object_RAM` at main-sprite spawn, part of the post-title-card setup pass — so
+they are not resident for any earlier `Level_MainLoop` tick, and that pass is their first and
+only dispatch before `LevelLoop`. No fitted constant; gating (`representedS3kCompleteRun`)
+unchanged, so S2 preludes are untouched.
+
+| segment | before | after |
+|---|---|---|
+| aiz1 | 8 | 8 |
+| hcz1 | 175/1320 | 175/1320 |
+| mgz1 | 1/14629 | 1/14629 |
+| cnz1 | 1/5336 | 1/5336 |
+| icz1 | 274/1629 | **82/1629** |
+| lbz1 | 24/35 | **8/35** |
+| mhz1 | 962/7218 | **912/7218** |
+
+ICZ first *physics* divergence moved frame 28 -> **1232** (`x`, expected `0x386E` actual
+`0x386F`); its first remaining error is the known recorder-side
+`queue.s3k_kos_module.queued_fingerprints` defect at frame 34. Matches the predicted target
+(the rejected `STARTUP_OBJECT_CONTROL_FRAMES` 30->31 probe reached 85; removing the surplus
+dispatch reaches 82).
+
+`TestS3kAizTraceReplay` holds at 4 failures + 1 error. A/B against an untouched baseline
+worktree shows `TestS2Scz/Wfz/Cpz LevelSelect`, `TestS2Ehz1`, `TestS3kMgzTraceReplay` and
+`TestS3kCnzTraceReplay` byte-identical before and after (the MGZ/CNZ standard errors are
+pre-existing fixture/hardware-timing failures). Rewind, hardware-timing-authority and
+trace-fixture-compression guards green.
