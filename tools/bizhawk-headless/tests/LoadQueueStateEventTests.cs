@@ -148,8 +148,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     "Installed KosM parent was mistaken for an unprepared slot: "
                     + module);
             }
+            // The queued word IS the VRAM byte address (Queue_Kos_Module
+            // stores tiles_to_bytes(toVRAMaddr) verbatim), so 0x0600 carries
+            // through unscaled; it previously read 0xC000 = 0x0600 * 32.
             string waiting = LoadQueueStateEvent.Fingerprint(
-                4, 0x3000, 0xC000, 2);
+                4, 0x3000, 0x0600, 2);
             if (module.IndexOf(waiting, StringComparison.Ordinal) < 0)
             {
                 throw new InvalidOperationException(

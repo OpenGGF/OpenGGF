@@ -78,7 +78,10 @@ namespace OpenGGF.BizHawk.Headless
                 uint source = S3KRam.U32(host, entry) & 0x00FFFFFFU;
                 if (source == 0) break;
                 int total = KosModuleCount(rom, source);
-                uint destination = (uint)S3KRam.U16(host, entry + 4) * 32U;
+                // Queue_Kos_Module stores an already-byte VRAM address here
+                // (sonic3k.asm:2683), and plreq emits tiles_to_bytes(toVRAMaddr)
+                // (sonic3k.macros.asm:195-198), so this must not be scaled again.
+                uint destination = (uint)S3KRam.U16(host, entry + 4);
                 waiting.Add(LoadQueueStateEvent.Fingerprint(
                     4, source, destination, total));
             }
