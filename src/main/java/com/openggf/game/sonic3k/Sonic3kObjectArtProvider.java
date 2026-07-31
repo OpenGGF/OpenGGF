@@ -1316,6 +1316,38 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         }
     }
 
+    /**
+     * Mirrors {@code SSEntryRing_Display}'s {@code loc_6196A} tail, which
+     * re-queues {@code ArtKosM_BadnikExplosion} to {@code ArtTile_Explosion}
+     * when a special-stage entry ring retires (sonic3k.asm:128448-128490).
+     *
+     * <p>The ring is deleted on the same frame and never polls the job, so —
+     * exactly as for the StarPost bonus stars above — the ROM's global module
+     * FIFO stays the owner and this session-owned provider retains and claims
+     * the handle.
+     */
+    public void queueBadnikExplosionArt() {
+        try {
+            Rom rom = GameServices.rom().getRom();
+            if (enemyKosQueue == null) {
+                enemyKosQueue =
+                        S3kRuntimeArtCoordinator.current().moduleQueue();
+            }
+            for (EnemyKosEntry entry : pendingEnemyKosEntries) {
+                enemyKosHandles.add(enemyKosQueue.queue(
+                        rom, entry.source(), entry.destinationTile()));
+            }
+            pendingEnemyKosEntries = List.of();
+            enemyKosHandles.add(enemyKosQueue.queue(
+                    rom,
+                    Sonic3kConstants.ART_KOSM_BADNIK_EXPLOSION_ADDR,
+                    Sonic3kConstants.ARTTILE_EXPLOSION));
+        } catch (IOException e) {
+            throw new IllegalStateException(
+                    "Unable to queue S3K badnik explosion art", e);
+        }
+    }
+
     @Override
     public void processRuntimeArtQueue() {
         boolean registeredRuntimeSheet = false;

@@ -998,6 +998,14 @@ public class Sonic3kConstants {
     // ArtTile_MHZKnuxPeer (sonic3k.asm:130077-130081;
     // sonic3k.constants.asm:1272).
     public static final int ARTTILE_MHZ_KNUX_PEER = 0x0500;
+
+    // Shared badnik-explosion art. Obj_SSEntryRing draws over ArtTile_Explosion
+    // through its own DPLC, so SSEntryRing_Display re-queues this archive when
+    // the ring retires (sonic3k.asm:128448-128490;
+    // sonic3k.constants.asm:1404). Offset verified with RomOffsetFinder:
+    // ArtKosM_BadnikExplosion -> 0xDB406, 2176 decompressed bytes.
+    public static final int ART_KOSM_BADNIK_EXPLOSION_ADDR = 0x0DB406;
+    public static final int ARTTILE_EXPLOSION = 0x05A0;
     public static final int MAP_MHZ_KNUX_DOOR_ADDR = 0x066A9C;
     public static final int MAP_MHZ_KNUX_PULL_SWITCH_ADDR = 0x066AD0;
     public static final int DPLC_MHZ_KNUX_PRESS_ADDR = 0x066B10;

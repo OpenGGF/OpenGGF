@@ -3,6 +3,10 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the special-stage entry ring now retires the way the ROM does. It
+  restores the shared badnik-explosion art it drew over and deletes itself
+  once it leaves the ROM's coarse retirement bands, instead of lingering until
+  the object manager culled it.
 - Fix: Mushroom Hill now submits its ROM enemy art and the Act 1 cutscene
   Knuckles peer art as real hardware work, and the Sonic+Tails carry intro
   shared by MHZ1/CNZ1 no longer runs its first CPU tick a frame early. The

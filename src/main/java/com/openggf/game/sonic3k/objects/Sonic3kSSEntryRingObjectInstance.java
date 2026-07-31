@@ -2,7 +2,9 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.camera.Camera;
 import com.openggf.game.sonic3k.runtime.S3kZoneRuntimeState;
 import com.openggf.level.BigRingReturnState;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -126,6 +128,8 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
 
     /** Which animation is active: formation (false) or idle (true). */
     private boolean inIdleAnim;
+    /** ROM: Obj_WaitOffscreen has released the ring into its own routine. */
+    private boolean displayReleased;
 
     public Sonic3kSSEntryRingObjectInstance(ObjectSpawn spawn) {
         super(spawn, "SSEntryRing");
@@ -165,12 +169,65 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
         switch (state) {
             case MAIN -> updateMain(player);
             case ENTERED -> { /* Ring continues displaying; flash controls deletion */ }
-            case MARKED_DELETE -> {
-                // ROM restores palette + reloads ArtKosM_BadnikExplosion here because
-                // the ring's DPLC overwrites shared VRAM at ArtTile_Explosion. Our engine
-                // uses standalone Pattern[] arrays so no restoration is needed.
-                setDestroyed(true);
-            }
+            case MARKED_DELETE -> retireRing();
+        }
+        checkDisplayOffscreenRetire();
+    }
+
+    /**
+     * ROM {@code loc_6196A}: the retirement tail shared by the flash-driven
+     * {@code btst #5,$38} branch and the off-screen branch of
+     * {@code SSEntryRing_Display} (sonic3k.asm:128448-128490). It restores the
+     * two palette longs the ring overwrote and re-queues
+     * {@code ArtKosM_BadnikExplosion} to {@code ArtTile_Explosion} before
+     * {@code Go_Delete_SpriteSlotted}.
+     *
+     * <p>The engine renders the ring from a standalone {@code Pattern[]}, so it
+     * never corrupts the shared explosion tiles and does not need the
+     * decompressed payload. The ROM still performs the decompression, and the
+     * hardware-timing ledger compares it, so the submission itself must exist.
+     */
+    private void retireRing() {
+        queueBadnikExplosionArt();
+        setDestroyed(true);
+    }
+
+    /**
+     * ROM {@code loc_61928}: once {@code Obj_WaitOffscreen} has released the
+     * ring, a frame in which it is not drawn tests the coarse horizontal band
+     * ({@code (x & $FF80) - Camera_X_pos_coarse_back > $280}) and the vertical
+     * band ({@code y - Camera_Y_pos + $80 > $200}), both unsigned. Either one
+     * retires the ring through {@code loc_6196A}.
+     */
+    private void checkDisplayOffscreenRetire() {
+        if (isDestroyed() || !displayReleased) {
+            return;
+        }
+        if (isWithinRenderSpriteBounds(OFFSCREEN_HALF_EXTENT, OFFSCREEN_HALF_EXTENT)) {
+            return;
+        }
+        Camera camera = services().camera();
+        if (camera == null) {
+            return;
+        }
+        int coarseBack = (camera.getX() - 0x80) & 0xFF80;
+        int bandX = ((getX() & 0xFF80) - coarseBack) & 0xFFFF;
+        if (bandX > OFFSCREEN_BAND_X) {
+            retireRing();
+            return;
+        }
+        int bandY = ((getY() - camera.getY()) + 0x80) & 0xFFFF;
+        if (bandY > OFFSCREEN_BAND_Y) {
+            retireRing();
+        }
+    }
+
+    private void queueBadnikExplosionArt() {
+        ObjectRenderManager renderManager = services().renderManager();
+        if (renderManager != null
+                && renderManager.getArtProvider()
+                instanceof Sonic3kObjectArtProvider provider) {
+            provider.queueBadnikExplosionArt();
         }
     }
 
@@ -193,8 +250,11 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
         // restore the normal object routine until Render_Sprites sets bit 7.
         // The ring therefore starts forming only when that box overlaps the
         // viewport, rather than at the wider placement/spawn boundary.
-        if (!isWithinRenderSpriteBounds(OFFSCREEN_HALF_EXTENT, OFFSCREEN_HALF_EXTENT)) {
-            return;
+        if (!displayReleased) {
+            if (!isWithinRenderSpriteBounds(OFFSCREEN_HALF_EXTENT, OFFSCREEN_HALF_EXTENT)) {
+                return;
+            }
+            displayReleased = true;
         }
 
         // ROM: jsr (Animate_Raw).l — advance animation using down-counter
@@ -220,6 +280,10 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
 
     /** ROM Obj_WaitOffscreen width_pixels/height_pixels values. */
     private static final int OFFSCREEN_HALF_EXTENT = 0x20;
+    /** ROM loc_61928 coarse horizontal retirement band. */
+    private static final int OFFSCREEN_BAND_X = 0x280;
+    /** ROM loc_61928 vertical retirement band. */
+    private static final int OFFSCREEN_BAND_Y = 0x200;
 
     /**
      * Advances animation matching ROM's Animate_Raw down-counter pattern.

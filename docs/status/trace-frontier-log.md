@@ -54568,3 +54568,58 @@ cutscene load.
 - Still open, unrelated to this path: the residual `f0 y_speed 0x0000/0x0038`
   bootstrap value, and 1-unit slope divergences (`y` ±1, `angle` ±2) on the
   MHZ1 descent from frame ~62.
+
+### 2026-07-31 — MHZ complete-run frontier MOVED: raw frame 1670 -> 7218
+
+- Context: branch `bugfix/ai-s3k-mhz-queue-frontier` rebased onto
+  `origin/develop` at `b18aab55e`, S3K ROM as above.
+- `#334` identified from the fixture rather than guessed: direct
+  `active_source 0xdb408` at aux frames 1668-1669 implies KosM parent
+  `0xDB406`, which `RomOffsetFinder` confirms is **`ArtKosM_BadnikExplosion`**
+  (2176 decompressed bytes).
+- Owner is `SSEntryRing_Display` (sonic3k.asm:128448-128490). The special-stage
+  entry ring draws over `ArtTile_Explosion` (`$05A0`,
+  sonic3k.constants.asm:1404) through its own DPLC, so `loc_6196A` restores two
+  palette longs and re-queues the archive before `Go_Delete_SpriteSlotted`.
+  That tail is reached from the flash-driven `btst #5,$38` branch and from the
+  off-screen branch `loc_61928`, which tests the coarse horizontal band
+  (`(x & $FF80) - Camera_X_pos_coarse_back > $280`) and the vertical band
+  (`y - Camera_Y_pos + $80 > $200`), both unsigned.
+- The engine had neither: `Sonic3kSSEntryRingObjectInstance` carried a comment
+  saying restoration was unnecessary because the ring renders from a standalone
+  `Pattern[]`. True for rendering, but the ROM still performs the decompression
+  and the timing ledger compares it. It also had no off-screen retire branch at
+  all — it stopped updating outside the render box and left the object manager
+  to cull it.
+- Fix: ported `loc_61928`/`loc_6196A`. The submission goes through
+  `Sonic3kObjectArtProvider.queueBadnikExplosionArt()`, alongside the existing
+  StarPost bonus-art path and for the same documented reason — the ring is
+  deleted the same frame and never polls the job, so the session-owned provider
+  retains and claims the handle while the shared FIFO stays observable. An
+  earlier attempt that held the handle on the ring left a completed-but-
+  unclaimed module at the head of the queue and blocked the next submission.
+- Frontier: `KOS_DECOMPRESSION_QUEUE#334` at raw 1670 ->
+  `KOS_DECOMPRESSION_QUEUE#335` at raw **7218**. Report grows 369 groups / 1670
+  rows -> 1926 groups / 7218 rows.
+- Regression check: `com.openggf.tests.trace.s3k.*TraceReplay` run against the
+  stashed clean tree and after the fix — all 14 classes report identical
+  run/failure/error counts, timings aside.
+
+**Next cause, already decoded.** `#335` is the same archive from the next ring.
+MHZ act 1 places five SS entry rings:
+
+| Layout idx | x | y | subtype |
+|---:|---|---|---|
+| 5 | `0x01C0` | `0x0680` | `0x81` |
+| 31 | `0x04C0` | `0x0A00` | `0x82` |
+| 329 | `0x2240` | `0x0440` | `0x03` |
+| 409 | `0x2D40` | `0x06C0` | `0x04` |
+| 528 | `0x38C0` | `0x0740` | `0x05` |
+
+Instrumented construction (reverted) shows the engine only ever constructs the
+`0x01C0` ring; the other four are never created, even though the player passes
+`0x2240` at frame 7218 (`x=0x23AD`) and `0x2D40` at 7982 (`x=0x2EA8`), and the
+segment stays in act 1 throughout (one `zone_act_state` event, frame 0). So the
+next frontier is an **object-placement gap, not a ring-behaviour gap** — those
+layout entries never reach the spawn cursor. Investigate the S3K placement
+cursor before touching the ring again.
