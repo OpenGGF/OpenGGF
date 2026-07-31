@@ -473,6 +473,13 @@ public final class TraceReplaySessionBootstrap {
         sprite.setAngle(entry.angle());
         sprite.setAir(entry.air());
         sprite.setSubpixelRaw(entry.xSub(), entry.ySub());
+        // anim/prev_anim and mapping_frame survive the load the same way: ROM
+        // writes them as a word at spawn for the zones that need one
+        // (sonic3k.asm:8155-8190) and Sonic_Init never touches them, so row 0
+        // carries whatever the previous segment left behind.
+        sprite.setAnimationId(entry.animationId());
+        sprite.getAnimationManager().publishPreviousAnimationId(entry.animationId());
+        sprite.setMappingFrame(entry.mappingFrame());
     }
 
     public static void installHardwareTimingReplay(

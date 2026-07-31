@@ -54858,3 +54858,46 @@ should also recover most of HCZ.
 The AIZ-standard regression has its own cause, recorded in the previous entry:
 the sidekick takes a control pass on initial assembly unconditionally, whereas
 ROM only does so when `Player_2`'s routine survived the load.
+
+### 2026-07-31 — entry animation seeded; MHZ first divergence decoded to the carry Right pulse
+
+- `anim`/`prev_anim` and `mapping_frame` join the seeded entry state. ROM writes
+  them as a word at spawn for the zones that need one
+  (`SpawnLevelMainSprites`, sonic3k.asm:8155-8190) and `Sonic_Init` never
+  touches them, so row 0 carries whatever the previous segment left. Seeding via
+  `setAnimationId` + `publishPreviousAnimationId` + `setMappingFrame` clears the
+  frame-0 `player_animation_id`/`player_mapping_frame` groups on every segment
+  (each -2 groups, no collateral). An earlier attempt using
+  `setForcedAnimationId` was wrong — it pins the animation for the whole run and
+  cost LBZ 8 -> 10 and ICZ 106 -> 107.
+- Fleet after this: AIZ 0, LBZ 0, ICZ 92, HCZ 374, MHZ **1037**, CNZ 1746,
+  MGZ 3964 (non-queue groups).
+
+**MHZ's first divergence is now frame 31, and decoded.** ROM's carry body
+`loc_13FFA` clears `Ctrl_2_logical` then, when
+`(Level_frame_counter+1).b & $1F == 0`, holds Right for that frame
+(sonic3k.asm:26918). The fixture shows the pulse at rows 31 and 63
+(`tails_cpu_ctrl2_held 0x0008`); the engine holds nothing, so Tails never gets
+the acceleration and both `tails_x_speed` and the carried `x_speed` stay at
+`0x0100` where ROM reaches `0x0118`. `tails_x_sub` then diverges for 920 rows.
+
+The engine *does* implement this (`carryTrigger.carryInputInjectMask()`, "CNZ
+pulses Right every 32 frames"), so the gate is firing on the wrong row rather
+than being absent. Two counter-alignment theories were tested and **both had
+zero effect**, so neither is the cause — recorded so they are not retried:
+
+1. Advancing `RecordingFrameDriver.frameCounter` on the SETUP_ONLY frame.
+2. Adding a setup-frame increment to the sprite counter in
+   `alignFrameCountersForReplayStart`.
+
+Next step is to instrument `romVisibleLevelFrameCounter()` against the trace's
+`gameplay_frame_counter` column across rows 28-34 and find where the two
+diverge, rather than guessing at another counter seed.
+
+**MGZ regression, now characterised.** Its 3964 groups are dominated by
+`player_mapping_frame` (716) alternating `0x8C`/`0x8D` every 10 rows from frame
+10 — an animation-tick phase offset, not a value error. Seeding
+`mapping_frame` fixes row 0 but not the phase, because the carried
+`anim_frame_timer` is not in the fixture. That makes MGZ a recorder-coverage
+gap rather than an engine gap, and it is the largest single item outstanding
+from this work.
