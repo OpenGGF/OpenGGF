@@ -55655,3 +55655,92 @@ MHZ's new first non-queue divergence is frame 2920, `tails_animation_id
 0x0006 -> 0x0005` with `tails_mapping_frame 0x009A -> 0x00AD` — a sidekick
 frontier, not a player one. The frame-0 `queue.*` entries are unchanged and
 remain owned separately.
+
+## 2026-07-31 — S3K complete-run fleet: 9808 -> 1181 divergence groups
+
+Measured one class per `mvn` invocation (all seven in one surefire fork crashes
+it, exit 134). `total_frames` is identical before and after on every segment, so
+no count fell because a segment aborted earlier.
+
+| segment | before | after | frames |
+|---|---|---|---|
+| AIZ | 8 | 8 | 63 |
+| HCZ | 868 | 197 | 1320 |
+| MGZ | 5040 | 17 | 14629 |
+| CNZ | 1658 | 20 | 5336 |
+| ICZ | 287 | 287 | 1629 |
+| LBZ | 24 | 24 | 35 |
+| MHZ | 1923 | 628 | 7218 |
+
+`TestS3kAizTraceReplay` holds at its documented 4 failures + 1 error throughout.
+
+### What produced it
+
+- `5aee8e6d0` — frame-0 `Status_InAir` now derives from ROM spawn. Two writers
+  were clobbering a spawn model the engine already had correct
+  (`resetPlayerForLevelStart` leaves MHZ grounded; `applySimpleFallingIntro`
+  supplies MGZ1's `bset`). `HeadlessTestFixture.Builder.build()` step 12 ran an
+  unconditional `resolveGroundAttachment` that detached the correctly-grounded
+  player before frame 0, and `seedSegmentEntryVelocity` seeded velocity/air from
+  row 0 — a recorded POST-frame row — handing the engine frame 0's own result
+  before frame 0 ran. Suppressing either alone did nothing; the other became the
+  writer. Discriminator: MHZ frame-0 `y_speed` 0x0038 -> 0x0000 while MGZ goes
+  0x0070 -> 0x0038, by one ROM-derived rule (`SpawnLevelMainSprites` per-zone
+  `bset`s, sonic3k.asm:8132-8177; MHZ1 `$700` falls through `loc_68D8`,
+  8178-8197, and spawns grounded). Also retires a trace-hydration site.
+- `3c8c1ae11` — SS entry ring Path B now retires through the ROM tail. ROM
+  `loc_61794` (sonic3k.asm:128325-128333) marks the ring collected, sets bit 5 of
+  `$38` and awards 50 rings *without* deleting; `SSEntryRing_Display` then retires
+  it via `loc_6196A`. The engine called `setDestroyed(true)` and bypassed the
+  tail. Measured neutral on this route (the ring is correctly never touched) but
+  ROM-correct.
+- `ea24cd193` — MHZ horizontal swing bar publishes `prev_anim = 0` on upward
+  auto-release. ROM `loc_3EE7A` (sonic3k.asm:83389-83394) is a WORD write landing
+  `anim=$10` and `prev_anim=$00` together, and `Animate_Sonic` (24739-24749)
+  restarts a script only on an `anim`/`prev_anim` mismatch. The engine's tracker
+  went stale, so a second identical `$10` release produced no restart and the
+  mapping frame froze on `$64` for 70 frames.
+
+### Rejected, and why
+
+A `TITLE_CARD_TEARDOWN_LEVEL_FRAMES = 34` delay was proposed for the frame-0
+enemy-art submission. Its *diagnosis* is correct and retained: skipping the
+title-card presentation does not shorten the title-card owner's ROM lifetime
+(`Obj_TitleCardWait`/`Obj_TitleCardWait2`, sonic3k.asm:62220-62253; `loc_2D8CA`
+calls `LoadEnemyArt` then `Delete_Current_Sprite`, 62295-62301). The constant is
+not: `objoff_2E` is `$16` = 22, not 34, and the value was calibrated — at 35, ICZ
+collapses from 287/1629 to 5/34. Its own analysis says a single delay cannot
+satisfy both MHZ and ICZ because the engine's per-chunk Kos module streaming rate
+differs from ROM. That is the real defect; the delay compensates for it.
+
+### Open frontier
+
+- MHZ frame 2920 — `tails_animation_id` 0x06 -> 0x05, `tails_mapping_frame`
+  0x9A -> 0xAD, both non-cascading. Nearly all ~596 remaining non-queue groups
+  are Tails chained off this seed, including the ~3000 and ~5000+ clusters.
+- Kosinski queue-service cadence — `s3k_kos_direct.prepared` latches one frame
+  late (its own `busy`/`active_source` are correct at row 1668) and
+  `s3k_kos_module` drains one frame early (recording busy 1668-1670, engine idle
+  at 1670). Likely the mechanism behind the streaming-rate gap above.
+- MHZ raw_frame 7221 `KOS_DECOMPRESSION_QUEUE#335` — act 1 -> act 2 boundary, so
+  the `0xdb408` submission there is the MHZ2 level-load PLC, not `loc_6196A`.
+- MGZ raw_frame 14631 `#134` — distinct engine-early defect on `c2db2fda`.
+- ICZ 287/1629 — untouched by today's work.
+
+### Unfixed gaps noted in passing (route does not currently exercise them)
+
+- `MhzSwingBarHorizontalObjectInstance.advancePhase` does nothing in the
+  slow-entry case; ROM `sub_3EFBA` (sonic3k.asm:83493-83510) steps the phase 6
+  toward zero.
+- The swing bar's downward auto-release models `move.w #0,anim(a1)`
+  (`loc_3EEC2`, sonic3k.asm:83483), where `prev_anim` equals `anim` so ROM does
+  NOT restart; the engine may restart spuriously from a stale tracker.
+
+### Measurement notes
+
+`error_count` counts divergence GROUPS, not per-frame errors — judge progress by
+whether the frontier moves. Report frame numbers are DECIMAL; the `physics.csv`
+frame column is HEX. `player_stand_on_obj` is an SST slot index, not an object id
+(`TraceFrame.java:13`). Recorded queue occupancy lives in `aux_state.jsonl.gz` as
+`load_queue_state` events, not in `physics.csv`. Clear both `target/trace-reports`
+and `target/surefire-reports` between runs or MSE totals read a stale union.
