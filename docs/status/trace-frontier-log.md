@@ -55924,6 +55924,74 @@ Note for later: any remaining S3K RNG-driven divergence should be checked the sa
 way — reconstruct the ROM seed chain from `rng_seed` and compare draw counts per
 frame, rather than assuming an object's own logic is wrong.
 
+## 2026-07-31 — S3K KosM module fingerprints: a RECORDER defect, not an engine one
+
+`queue.s3k_kos_module.queued_fingerprints` divergences **cannot be closed
+engine-side under the current fixtures**. Matching them in the engine would be
+modelling the trace and must not be attempted.
+
+`tools/bizhawk-headless/src/Recording/LoadQueueStateProjector.cs`
+(`CaptureS3kModule`) reads the queue slot's u16 destination and scales it:
+
+```csharp
+uint destination = (uint)S3KRam.U16(host, entry + 4) * 32U;
+```
+
+But that word is already a VRAM **byte** address. ROM `Queue_Kos_Module` stores
+it as one — sonic3k.asm:2683, `move.w d2,(a2)+ ; store destination VRAM address` —
+and the `plreq` macro supplies `dc.w tiles_to_bytes(toVRAMaddr)`
+(sonic3k.macros.asm:195-198). The recorder therefore multiplies an
+already-byte address by 32 a second time.
+
+Verified arithmetically rather than inferred. With `ArtTile_MGZMiniboss = $054F`
+(sonic3k.constants.asm:1220) and the ROM-derived module count:
+
+- `fingerprint(4, $36B02C, $054F*32, n)` = `106e1fe3...` — what the ENGINE emits
+- `fingerprint(4, $36B02C, $054F*32*32, n)` = `34704ede...` — what the RECORDING holds
+
+The same holds for `ArtKosM_MGZEndBossDebris` and all three HCZ waiting entries.
+The ROM source lines and the macro were re-read independently to confirm.
+
+**Consequence.** MGZ and CNZ sit at 1 divergence group each and cannot reach 0.
+The fingerprint groups inside the HCZ, ICZ and MHZ counts are permanent noise
+under the present fixtures. Closing this needs a recorder fix AND a re-record —
+a fixture-invalidating change requiring user approval, full delta
+categorisation, and frontier re-measurement across every affected capture.
+
+Do not "fix" this in the engine, and do not weaken the `queue.*` comparison —
+it is zero-tolerance by contract.
+
+### Also recorded
+
+- `CreateNewSprite4` / `AllocateObject` scan FORWARD from the creator's slot
+  (sonic3k.asm:37894-37919), so title-card elements occupy higher
+  `Dynamic_object_RAM` slots and `ExecuteObjects` runs the owner BEFORE its
+  children. The owner therefore first observes the drained `objoff_30` on the
+  FOLLOWING frame. This settles the ordering question
+  `Sonic3kTitleCardTeardownModel`'s javadoc records as "the one ordering detail
+  the disassembly alone does not settle" — and settles it the other way.
+- ROM reaches its producers (`ExecuteObjects`, sonic3k.asm:7900-7906) BEFORE the
+  `Process_Kos_Module_Queue` state step in the loop tail (7908). `Queue_Kos_Module`
+  inits an archive into an empty queue synchronously (2669-2671 -> 2694-2713) and
+  the same iteration's tail hands its first module to the direct FIFO (2735-2741),
+  so a freshly enqueued archive AND its first direct child are observable together.
+- HCZ frame 1067 is NOT a producer defect. `Obj_HCZLargeFan` (sonic3k.asm:65588-65608)
+  queues its art on a Player_1 proximity test, and the leader's x matches the
+  recording either side of 1067, so the predicate is not drifting — the lateness is
+  in when the object first runs. Two leads: the recorded direct `active_source` is
+  `$390904` = `ART_KOSM_HCZ_LARGE_FAN_ADDR + 4` where every other archive's child is
+  `+2` (Blastoid `$36A7C6`->`$36A7C8`, TurboSpiker `$36A968`->`$36A96A`, Pointdexter
+  `$36AD8A`->`$36AD8C`), so `$390900` is worth re-verifying; and ROM
+  `HCZLargeFan_QueueArt` falls THROUGH into `HCZLargeFan_WaitArt` in the same frame,
+  where `HCZLargeFanObjectInstance.update` returns immediately after queueing.
+
+### Pre-existing failures on this branch (not introduced by today's work)
+
+- `TestRewindFieldDispositionGuard` — `Mhz1CutsceneButtonInstance#knuxPeerArtQueue`
+- `TestS3kKosStructuralSequence` — 7/7, verified on the untouched base
+- `TestS3kHardwareTimingReplay#standaloneAizCompleteRunConsumesFirstEdgeThroughProductionFrameDriver`
+  — `KosM module FIFO is full` from `AizPlaneIntroInstance:700`
+
 ## 2026-07-31 — s3k_mhz1 f3246 (earliest non-queue group): CORRECT NEGATIVE, no fix
 
 Command: `mvn "-Dtest=TestS3kMhzCompleteRunTraceReplay" "-Ds3k.rom.path=<s3k.gen>" test`
