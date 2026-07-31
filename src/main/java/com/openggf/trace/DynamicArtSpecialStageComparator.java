@@ -13,32 +13,49 @@ import java.util.Objects;
  * <p>The comparator accepts one validated expected envelope and one immutable
  * production snapshot. It owns no engine step, lifecycle, submission, or
  * completion surface.
+ *
+ * <p>One instance represents one comparison segment: it carries the
+ * {@link DynamicArtIdEpoch} that rebases recorder delivery identities onto each
+ * side's own segment origin. Reuse the same instance for every row of a
+ * segment, and take a fresh one when a new segment opens.
  */
 public final class DynamicArtSpecialStageComparator {
+
+    private final DynamicArtIdEpoch epoch = new DynamicArtIdEpoch();
 
     public FrameComparison compare(
             TraceEvent.DynamicArtTransferState expected,
             DynamicArtDiagnosticsSnapshot actual) {
         Objects.requireNonNull(expected, "expected");
         Objects.requireNonNull(actual, "actual");
-        return new FrameComparison(expected.frame(), comparisonFields(expected, actual));
+        return new FrameComparison(
+                expected.frame(), comparisonFields(expected, actual, epoch));
     }
 
     static Map<String, FieldComparison> comparisonFields(
             TraceEvent.DynamicArtTransferState expected,
-            DynamicArtDiagnosticsSnapshot actual) {
+            DynamicArtDiagnosticsSnapshot actual,
+            DynamicArtIdEpoch epoch) {
         Map<String, FieldComparison> fields = new LinkedHashMap<>();
         put(fields, "dynamic_art.frame", expected.frame(), actual.frame());
+        // transfer_id / edge_ordinal are recorder delivery identities allocated
+        // from emulator power-on, not ROM state: S2 QueueDMATransfer keeps only
+        // the per-frame-rewound VDP_Command_Buffer_Slot
+        // (docs/s2disasm/s2.asm:1713, drained by ProcessDMAQueue at
+        // docs/s2disasm/s2.asm:1769), S1 V-blank writes VRAM unconditionally
+        // with no queue (docs/s1disasm/sonic.asm:831), and S3K's DMA_queue_slot
+        // is rewound the same way (docs/skdisasm/s3.asm:1831 and :1881).
+        // Compare their relative structure, per segment origin.
         put(fields, "dynamic_art.edges",
                 expected.edges().stream()
-                        .map(DynamicArtTransfer.SegmentEdge::edgeOrdinal)
+                        .map(edge -> epoch.expectedEdgeOrdinal(edge.edgeOrdinal()))
                         .toList(),
                 actual.edges().stream()
-                        .map(DynamicArtDiagnosticsSnapshot.Edge::edgeOrdinal)
+                        .map(edge -> epoch.actualEdgeOrdinal(edge.edgeOrdinal()))
                         .toList());
         put(fields, "dynamic_art.outstanding_transfer_ids",
-                expected.outstandingTransferIds(),
-                actual.outstandingTransferIds());
+                epoch.expectedTransferIds(expected.outstandingTransferIds()),
+                epoch.actualTransferIds(actual.outstandingTransferIds()));
 
         int edgeCount = Math.max(expected.edges().size(), actual.edges().size());
         for (int edgeIndex = 0; edgeIndex < edgeCount; edgeIndex++) {
@@ -57,9 +74,11 @@ public final class DynamicArtSpecialStageComparator {
                 continue;
             }
             put(fields, prefix + "edge_ordinal",
-                    expectedEdge.edgeOrdinal(), actualEdge.edgeOrdinal());
+                    epoch.expectedEdgeOrdinal(expectedEdge.edgeOrdinal()),
+                    epoch.actualEdgeOrdinal(actualEdge.edgeOrdinal()));
             put(fields, prefix + "transfer_id",
-                    expectedEdge.transferId(), actualEdge.transferId());
+                    epoch.expectedTransferId(expectedEdge.transferId()),
+                    epoch.actualTransferId(actualEdge.transferId()));
             put(fields, prefix + "phase",
                     expectedEdge.phase(), actualEdge.phase());
             put(fields, prefix + "owner",

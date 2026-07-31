@@ -21,6 +21,7 @@ import com.openggf.debug.playback.PlaybackDebugManager;
 import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.mutation.MutationEffects;
+import com.openggf.game.resources.DynamicArtDecisionOwner;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.snapshot.LevelSnapshot;
 import com.openggf.game.rewind.snapshot.LevelTilemapSnapshot;
@@ -233,6 +234,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     private final LevelRenderer levelRenderer = new LevelRenderer(this);
     final LevelFrameRuntimeUpdater frameRuntimeUpdater = new LevelFrameRuntimeUpdater(this);
     private final LevelPlayableArtInitializer playableArtInitializer;
+    /** Character identity -> that art bank's single authoritative DPLC owner. */
+    private final java.util.Map<String, DynamicArtDecisionOwner> playerArtDplcOwners =
+            new java.util.HashMap<>();
     private final LevelDirtyRegionDispatcher dirtyRegionDispatcher;
     final LevelWaterCoordinator waterCoordinator;
     final LevelCheckpointCoordinator checkpointCoordinator;
@@ -1235,6 +1239,48 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      */
     public void refreshPlayableSpriteArt() {
         playableArtInitializer.initialize();
+    }
+
+    /**
+     * ROM player-art DPLC banks are keyed by the character that owns the bank,
+     * not by who submits into it. {@code LoadSonicDynPLC_Part2} /
+     * {@code LoadTailsDynPLC_Part2} are shared entry points that any code may
+     * jump into with a DPLC frame index in d0
+     * (docs/s2disasm/s2.asm:38829-38862, 41659-41697), and they dedupe against
+     * the single {@code Sonic_LastLoadedDPLC} / {@code Tails_LastLoadedDPLC}
+     * word (docs/s2disasm/s2.asm:26039-26041). Object code that submits into a
+     * character bank — the Tornado pilot, {@code ObjB2_Animate_Pilot}
+     * (docs/s2disasm/s2.asm:79538-79565) — must therefore share the same owner
+     * as the playable, so this registry hands out the bank's one authoritative
+     * owner rather than minting a second dedupe state.
+     */
+    public DynamicArtDecisionOwner playerArtDplcOwner(String character) {
+        if (character == null) {
+            return null;
+        }
+        String key = character.toLowerCase(java.util.Locale.ROOT);
+        DynamicArtDecisionOwner owner = playerArtDplcOwners.get(key);
+        if (owner == null && !playerArtDplcOwners.containsKey(key)) {
+            owner = playableArtInitializer.createAbsentCharacterBankOwner(key);
+            playerArtDplcOwners.put(key, owner);
+        }
+        return owner;
+    }
+
+    void registerPlayerArtDplcOwner(String character, DynamicArtDecisionOwner owner) {
+        if (character == null) {
+            return;
+        }
+        String key = character.toLowerCase(java.util.Locale.ROOT);
+        if (owner == null) {
+            playerArtDplcOwners.remove(key);
+        } else {
+            playerArtDplcOwners.put(key, owner);
+        }
+    }
+
+    void clearPlayerArtDplcOwners() {
+        playerArtDplcOwners.clear();
     }
 
     /**
@@ -2812,6 +2858,16 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         if (objectArtProvider != null) {
             objectArtProvider.onTitleCardArtRetired();
         }
+        // Omitting the presentation does not end the title card's object
+        // lifetime. Sonic 2's pieces survive the locked loop and run
+        // Obj34_WaitAndGoAway on ordinary gameplay frames, loading the
+        // standard-water and per-zone animal art on the frame the zone-name
+        // piece leaves the screen.
+        // docs/s2disasm/s2.asm:4914-4925, 5066-5080, 27605-27637
+        var titleCardProvider = activeGameModule().getTitleCardProvider();
+        if (titleCardProvider != null) {
+            titleCardProvider.beginOmittedPresentationExitTail(currentZone, apparentAct);
+        }
     }
 
     /**
@@ -2822,9 +2878,57 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         if (initialPresentationPlcsCompleted) {
             return;
         }
-        activeGameModule().getLevelInitProfile()
-                .completeInitialPresentationPlcs();
+        var profile = activeGameModule().getLevelInitProfile();
+        profile.completeInitialPresentationPlcs();
+        replaySkippedPresentationPlayerAnimation(
+                profile.skippedPresentationPlayableFrames());
         initialPresentationPlcsCompleted = true;
+    }
+
+    /**
+     * Establishes the ROM's persistent last-loaded-DPLC residency before the
+     * first ordinary level iteration.
+     *
+     * <p>{@code InitPlayers} creates the player objects at
+     * docs/s2disasm/s2.asm:4945, i.e. before the title-card leave loop at
+     * docs/s2disasm/s2.asm:5060-5066 (WaitForVint / RunObjects / BuildSprites /
+     * RunPLC_RAM). That loop therefore runs {@code Sonic_Animate} and
+     * {@code LoadSonicDynPLC} with the players loaded, so
+     * {@code Sonic_LastLoadedDPLC} (docs/s2disasm/s2.asm:38829-38840) and
+     * {@code Tails_LastLoadedDPLC} (docs/s2disasm/s2.asm:41659-41690) already
+     * hold the displayed mapping frame when {@code Level_MainLoop} starts; they
+     * are cleared to -1 only on a character swap (docs/s2disasm/s2.asm:26039-26041).
+     * A headless load omits that presentation, so the first gameplay animation
+     * tick saw "no previous frame" and submitted a DMA transfer the ROM had
+     * already retired. Replaying the loop's own animation ticks, at the ROM's
+     * VBlank-then-RunObjects order (queue at s2.asm:1713, drain at s2.asm:1769),
+     * makes gameplay frame 0 submit exactly when the mapping frame really
+     * changed across the loop. S1 (docs/s1disasm/_incObj/01 Sonic.asm:2391-2398)
+     * and S3K (docs/skdisasm/sonic3k.asm:25216-25218) use the same predicate;
+     * they contribute no iterations unless their own init profile declares one.
+     */
+    private void replaySkippedPresentationPlayerAnimation(int iterations) {
+        if (iterations <= 0 || spriteManager == null) {
+            return;
+        }
+        List<AbstractPlayableSprite> playables = new ArrayList<>();
+        AbstractPlayableSprite main = spriteManager.getMainPlayable();
+        if (main != null) {
+            playables.add(main);
+        }
+        playables.addAll(spriteManager.getSidekicks());
+        if (playables.isEmpty()) {
+            return;
+        }
+        var dynamicArt = GameServices.dynamicArtLifecycleOrNull();
+        for (int frame = 0; frame < iterations; frame++) {
+            if (dynamicArt != null && dynamicArt.isRunActive()) {
+                dynamicArt.serviceProductionVBlank();
+            }
+            for (AbstractPlayableSprite playable : playables) {
+                playable.getAnimationManager().update(frame);
+            }
+        }
     }
 
     /**

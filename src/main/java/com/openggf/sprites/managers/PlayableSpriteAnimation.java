@@ -26,6 +26,7 @@ public class PlayableSpriteAnimation {
     private int groundMovementAnimSpeedSnapshot = Integer.MIN_VALUE;
     private boolean groundMovementAnimationSuppressed;
     private boolean nextUpdateSuppressed;
+    private boolean animationUpdateSuppressedThisFrame;
     private DynamicArtDecisionOwner dynamicArtDecisionOwner;
 
     /**
@@ -134,21 +135,27 @@ public class PlayableSpriteAnimation {
         if (dynamicArtDecisionOwner != null) {
             dynamicArtDecisionOwner.observe(sprite.getMappingFrame());
         }
+        // Obj05 (Tails' tails) is NOT dispatched here. Its SST lives in
+        // LevelOnly_Object_RAM, which starts after Object_RAM_End /
+        // Dynamic_Object_RAM_End (docs/s2disasm/s2.constants.asm:1144-1152), so
+        // ROM executes it after EVERY dynamic level object, not immediately after
+        // Obj02. S3K places Tails_tails identically in Level_object_RAM after
+        // Dynamic_object_RAM_end (docs/skdisasm/sonic3k.constants.asm:307-315).
+        // SpriteManager.advanceTailsTailsAfterObjectExecution() owns that slot.
     }
 
     private void updateAnimation(int frameCounter) {
+        animationUpdateSuppressedThisFrame = false;
         if (sprite == null) {
             return;
         }
         if (nextUpdateSuppressed) {
             nextUpdateSuppressed = false;
+            animationUpdateSuppressedThisFrame = true;
             return;
         }
         if (sprite.getSpindashDustController() != null) {
             sprite.getSpindashDustController().update();
-        }
-        if (sprite.getTailsTailsController() != null) {
-            sprite.getTailsTailsController().update();
         }
 
         SpriteAnimationProfile profile = sprite.getAnimationProfile();

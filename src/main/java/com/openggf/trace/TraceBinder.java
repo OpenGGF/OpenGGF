@@ -43,6 +43,9 @@ public class TraceBinder {
     // entry instead of accumulating duplicates. Memory bounded by trace length.
     private final TreeMap<Integer, FrameComparison> comparisonsByFrame = new TreeMap<>();
     private List<BootstrapDivergence> lastBootstrapDivergences = List.of();
+    // One binder compares one replay segment, so it owns that segment's
+    // dynamic-art delivery-id origin. See DynamicArtIdEpoch.
+    private final DynamicArtIdEpoch dynamicArtIdEpoch = new DynamicArtIdEpoch();
 
     public TraceBinder(ToleranceConfig tolerances) {
         this.tolerances = tolerances;
@@ -438,7 +441,7 @@ public class TraceBinder {
                 ? new LinkedHashMap<>(existing.fields())
                 : new LinkedHashMap<>();
         fields.putAll(DynamicArtSpecialStageComparator.comparisonFields(
-                expected, actual));
+                expected, actual, dynamicArtIdEpoch));
         FrameComparison result = new FrameComparison(
                 expected.frame(), fields,
                 existing != null ? existing.romDiagnostics() : "",

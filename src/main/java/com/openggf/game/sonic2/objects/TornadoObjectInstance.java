@@ -168,6 +168,8 @@ public class TornadoObjectInstance extends AbstractObjectInstance
 
     private int routine;
     private int routineSecondary;
+    /** ROM {@code routine == 0}: {@code ObjB2_Init} has not executed yet. */
+    private boolean initRoutinePending;
 
     private int currentX;
     private int currentY;
@@ -199,6 +201,11 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     private short lastWfzDockPlayerXSpeed;
     private short lastWfzDockPlayerYSpeed;
 
+    // ObjB2_Animate_Pilot state (s2.asm:79538-79556):
+    // objoff_37 = 9-frame countdown, objoff_36 = pilot-frame table cursor.
+    private int pilotTimer;
+    private int pilotTableCursor;
+
     // Render/solid flags for current frame.
     private boolean renderThisFrame;
     private boolean solidActive;
@@ -227,7 +234,13 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         this.currentY = spawn.y();
         syncFixedFromPosition();
 
-        // ROM init: routine = subtype - $4E
+        // ROM init: routine = subtype - $4E (ObjB2_Init, docs/s2disasm/s2.asm:78799-78813).
+        // A freshly allocated SST slot has routine 0, so ROM spends the object's
+        // first executed frame in ObjB2_Init and only reaches the main routine on
+        // the next frame. This flag is that routine-0 state; the derived routine is
+        // stored up front so lifecycle classification (persistence, priority) sees
+        // the object's real kind from the moment it is created.
+        this.initRoutinePending = true;
         this.routine = Math.max(0, subtype - 0x4E);
         this.routineSecondary = 0;
         this.mappingFrame = 0;
@@ -351,15 +364,13 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * Compensates for the engine collapsing ROM's two-frame ObjB2 init
-     * (outer {@code ObjB2_Init} + inner {@code ObjB2_Main_WFZ_Start_init}, both
-     * no-move; s2.asm:78271-78284 and 78368-78372) into a single engine init
-     * frame. During the 26-frame S2 title-card object prelude, ROM consumes
-     * two of those frames on init and runs 24 main-routine moves; the engine
-     * runs 25 main moves, leaving {@link #scriptTimer} one less than the ROM's
-     * frame-(-1) snapshot value. This method restores parity by incrementing
-     * the timer back by one, so the WFZ_Start_main transition fires on the
-     * same trace frame as ROM (s2.asm:78375-78394).
+     * Compensates for the engine collapsing the inner
+     * {@code ObjB2_Main_WFZ_Start} {@code routine_secondary} init step
+     * (s2.asm:78879-78893, 78896-78902) into a single engine init frame. During
+     * the S2 title-card object prelude ROM runs one fewer main-routine move than
+     * the engine, leaving {@link #scriptTimer} one less than the ROM's
+     * frame-(-1) snapshot value. This restores parity so the WFZ_Start_main
+     * transition fires on the same trace frame as ROM (s2.asm:78903-78924).
      *
      * <p>Only relevant for the WFZ_START routine; SCZ_MAIN does not use a
      * {@code routine_secondary} init step and has no timer to compensate.
@@ -370,6 +381,133 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         }
     }
 
+    /**
+     * {@code ObjB2_Init} (docs/s2disasm/s2.asm:78799-78813). The object's first
+     * executed frame runs the routine-0 entry only: it derives
+     * {@code routine = subtype - $4E}, applies the {@code Player_mode == 2}
+     * mapping/animation patch, then tail-jumps to {@code DisplaySprite}. No main
+     * routine body — and therefore no {@code ObjB2_Animate_Pilot} tick — runs on
+     * that frame, so the pilot's 9-frame DPLC cadence starts one frame after the
+     * object appears.
+     *
+     * @return {@code true} when this frame was consumed by the init routine.
+     */
+    private boolean runPendingInitRoutine() {
+        if (!initRoutinePending) {
+            return false;
+        }
+        initRoutinePending = false;
+
+        // cmpi.w #2,(Player_mode).w / cmpi.b #8,d0 / bhs — the mapping patch
+        // applies only to the visible plane routines below $8 (s2.asm:78805-78811).
+        if (routine < ROUTINE_INVISIBLE_GRABBER
+                && com.openggf.game.session.ActiveGameplayTeamResolver
+                        .resolvePlayerCharacter(services().configuration())
+                        == com.openggf.game.PlayerCharacter.TAILS_ALONE) {
+            mappingFrame = 4;
+            animId = 1;
+        }
+        // jmpto JmpTo45_DisplaySprite (s2.asm:78812-78813).
+        renderThisFrame = true;
+        return true;
+    }
+
+    // ------------------------------------------------------------------------
+    // ObjB2_Animate_Pilot (docs/s2disasm/s2.asm:79536-79599)
+    // ------------------------------------------------------------------------
+
+    /**
+     * Pilot DPLC frame tables, {@code Sonic_pilot_frames} (4 entries) and
+     * {@code Tails_pilot_frames} (24 entries), docs/s2disasm/s2.asm:79566-79599.
+     * The table byte is a DPLC frame index handed straight to
+     * {@code LoadSonicDynPLC_Part2} / {@code LoadTailsDynPLC_Part2}.
+     */
+    private static final int[] SONIC_PILOT_FRAMES = {0x2D, 0x2E, 0x2F, 0x30};
+    private static final int[] TAILS_PILOT_FRAMES = {
+            0x10, 0x10, 0x10, 0x10, 0x01, 0x02, 0x03, 0x02,
+            0x01, 0x01, 0x10, 0x10, 0x10, 0x10, 0x01, 0x02,
+            0x03, 0x02, 0x01, 0x01, 0x04, 0x04, 0x01, 0x01
+    };
+
+    /**
+     * {@code ObjB2_Animate_Pilot} (docs/s2disasm/s2.asm:79536-79565). Runs as the
+     * first instruction of {@code ObjB2_Main_SCZ} (s2.asm:78815-78816),
+     * {@code ObjB2_Main_WFZ_Start} (s2.asm:78879-78880) and
+     * {@code ObjB2_Main_WFZ_End} (s2.asm:78951-78952) — this is the object's own
+     * routine value gating it, exactly as the ROM does.
+     *
+     * <p>Every ninth frame it advances {@code objoff_36} through the pilot frame
+     * table and tail-jumps into the character bank's {@code *_Part2} DPLC entry
+     * point with the table byte in d0. That entry point dedupes against the
+     * bank's single {@code Sonic_LastLoadedDPLC} / {@code Tails_LastLoadedDPLC}
+     * word (s2.asm:41659-41697, 38829-38862, 26039-26041), which is why the
+     * submission goes through the playable bank's shared owner and not a
+     * pilot-private one — the Tornado and a live Tails coexist on the WFZ->DEZ
+     * handoff and must not double-submit.
+     *
+     * <p>In SCZ/WFZ/DEZ {@code InitPlayers} omits Obj02 entirely
+     * (s2.asm:5177-5198), so the pilot is the only submitter into the Tails bank
+     * there. That is a consequence of ROM object placement, not a zone rule.
+     */
+    private void animatePilot() {
+        pilotTimer--;
+        if (pilotTimer >= 0) {
+            return;
+        }
+        pilotTimer = 8;
+
+        // cmpi.w #2,(Player_mode).w — Player_mode 2 is the Tails-alone team,
+        // where the Tornado's pilot is Sonic and uses the Sonic art bank
+        // (s2.asm:79549-79552, 79561-79565).
+        boolean tailsAlone = com.openggf.game.session.ActiveGameplayTeamResolver
+                .resolvePlayerCharacter(services().configuration())
+                == com.openggf.game.PlayerCharacter.TAILS_ALONE;
+        int[] table = tailsAlone ? SONIC_PILOT_FRAMES : TAILS_PILOT_FRAMES;
+
+        int cursor = pilotTableCursor + 1;
+        if (cursor >= table.length) {
+            cursor = 0;
+        }
+        pilotTableCursor = cursor;
+
+        var owner = services().levelManager()
+                .playerArtDplcOwner(tailsAlone ? "sonic" : "tails");
+        if (owner != null) {
+            owner.observe(table[cursor]);
+        }
+    }
+
+    /**
+     * Advances the pilot animation for one title-card iteration the engine
+     * replays without a full object pass.
+     *
+     * <p>The ROM's title-card loop body is {@code jsr (RunObjects).l}
+     * (docs/s2disasm/s2.asm:5060-5066), so every iteration executes
+     * {@code ObjB2_Main_SCZ}, whose first instruction is
+     * {@code ObjB2_Animate_Pilot} (docs/s2disasm/s2.asm:78815-78816,
+     * 79536-79556). An iteration that reproduces only the player-side effects
+     * still owes the pilot its tick, or the whole 9-frame cadence -- and the
+     * dynamic-art submissions it drives -- stays that many frames late.
+     *
+     */
+    public void advanceOmittedPresentationPilotFrame() {
+        animatePilot();
+    }
+
+    /**
+     * Consumes the object's routine-0 frame ({@code ObjB2_Init},
+     * docs/s2disasm/s2.asm:78799-78813) for a level-load-present Tornado whose
+     * first execution happened during the title-card object prelude, before the
+     * first replayed object pass. The init frame reaches no main routine and so
+     * owes no {@code ObjB2_Animate_Pilot} tick; without this the first replayed
+     * pass would spend itself on init and start the pilot cadence a frame late.
+     * A Tornado spawned mid-level by the object-position loader keeps its init
+     * frame and runs it on its own first pass.
+     */
+    public void consumePendingInitRoutine() {
+        initRoutinePending = false;
+    }
+
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
@@ -377,13 +515,26 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         solidActive = false;
         highPriority = false;
 
+        if (runPendingInitRoutine()) {
+            return;
+        }
+
         switch (routine) {
-            case ROUTINE_SCZ_MAIN -> updateSczMain(player);
+            // ObjB2_Animate_Pilot is the first instruction of each of these three
+            // routine bodies (s2.asm:78815-78816, 78879-78880, 78951-78952).
+            case ROUTINE_SCZ_MAIN -> {
+                animatePilot();
+                updateSczMain(player);
+            }
             case ROUTINE_WFZ_START -> {
+                animatePilot();
                 updateWfzStart(frameCounter, player);
                 applyDeleteOffScreenCulling();
             }
-            case ROUTINE_WFZ_END -> updateWfzEnd(player);
+            case ROUTINE_WFZ_END -> {
+                animatePilot();
+                updateWfzEnd(player);
+            }
             case ROUTINE_INVISIBLE_GRABBER -> updateInvisibleGrabber(player);
             case ROUTINE_BLINKER -> updateBlinker();
             case ROUTINE_UNUSED_MOVER -> updateUnusedMover();

@@ -101,6 +101,23 @@ public abstract class Sonic2ZoneEvents {
         // Default no-op
     }
 
+    /**
+     * Run the zone's RESERVED object-RAM slots, after the player object slots
+     * and before the dynamic level objects.
+     * <p>
+     * ROM keeps a small band of fixed slots between the player objects and
+     * {@code Dynamic_Object_RAM} - {@code Oil} (the OOZ oil surface, Obj07)
+     * shares the {@code WaterSurface1} slot there
+     * (docs/s2disasm/s2.constants.asm:1131-1137). Those slots therefore execute
+     * before every dynamic object AND before {@code Tails_Tails} (Obj05), which
+     * lives further on in {@code LevelOnly_Object_RAM}
+     * (docs/s2disasm/s2.constants.asm:1144-1152). Default is a no-op; only OOZ
+     * currently occupies a reserved slot.
+     */
+    public void updateReservedObjectSlots(int act, int frameCounter) {
+        // Default no-op
+    }
+
     public int getEventRoutine() {
         return eventRoutine;
     }

@@ -1688,6 +1688,14 @@ abstract class AbstractRunChainTest {
         }
 
         @Override
+        public void advancePlayableFixedSlotsOnly() {
+            // Live action, honored identically to the canonical fixtures: run the
+            // fixed in-level Tails' tails slot ROM RunObjects executes after the
+            // dynamic objects (docs/s2disasm/s2.asm:41760-41764).
+            GameServices.sprites().advanceTailsTailsAfterObjectExecution();
+        }
+
+        @Override
         public void suppressFirstSidekickAnimationOnce() {
             // Live action, honored identically to the canonical fixtures: hold the
             // first CPU sidekick's next Animate dispatch. No-op for solo runs

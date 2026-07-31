@@ -365,18 +365,18 @@ public class Sonic2HTZBossInstance extends AbstractBossInstance implements Rewin
         // Check if time to flee
         // ROM: cmpi.w #-$3C,(Boss_Countdown).w
         if (defeatTimer <= DEFEAT_FLEE_TIME) {
-            // ROM trace parity: Obj52_Mobile_Flee sets Boss_defeated_flag before
-            // the visible flee movement, but the handoff row still has Camera_X
-            // clamped at $2F5E and Obj52 at its pre-flee y_pos. Stage the y_pos /
-            // Camera_Max_X_pos writes until the following object update.
-            // Disasm: docs/s2disasm/s2.asm:64593-64605.
+            // ROM: Obj52_Mobile_Flee (docs/s2disasm/s2.asm:64598-64606) plays the level
+            // music, queues the animal/explosion PLC and sets Boss_defeated_flag, then
+            // falls straight through to loc_30170 (s2.asm:64608-64612) in the SAME frame.
+            // No staging here: the previously observed one-frame handoff skew came from
+            // the missing routine-read-once defeat deferral, now modelled by
+            // defeatDeferralAppliesToThisBoss().
             if (!defeatFleeStarted) {
                 if (!Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_ANIMALS_HTZ_MTZ_WFZ,
                         Sonic2Constants.PLC_EXPLOSION)) return;
                 defeatFleeStarted = true;
                 services().gameState().setBossDefeatedFlag(true);
                 services().playMusic(Sonic2Music.HILL_TOP.id);
-                return;
             }
 
             // Flee - sink into lava
@@ -556,6 +556,20 @@ public class Sonic2HTZBossInstance extends AbstractBossInstance implements Rewin
     @Override
     protected boolean usesDefeatSequencer() {
         return false;  // HTZ boss has custom defeat logic
+    }
+
+    @Override
+    protected boolean defeatDeferralAppliesToThisBoss() {
+        // Obj52_Mobile reads boss_routine(a0) ONCE at the top of the object's update and
+        // jumps through off_2FD0E (docs/s2disasm/s2.asm:64194-64206). The hit handler
+        // loc_300A4 runs from inside the already-selected routine
+        // (docs/s2disasm/s2.asm:64528-64533), and Obj52_Defeat sets Boss_Countdown=$B3 /
+        // boss_routine=8 and returns (docs/s2disasm/s2.asm:64559-64566) — so
+        // Obj52_Mobile_Defeated's first `subi_.w #1,(Boss_Countdown).w`
+        // (docs/s2disasm/s2.asm:64570-64572) lands on the NEXT frame. The engine runs
+        // touch responses before this object's own update(), so defer the first defeat
+        // dispatch by one frame to restore that offset.
+        return true;
     }
 
     @Override

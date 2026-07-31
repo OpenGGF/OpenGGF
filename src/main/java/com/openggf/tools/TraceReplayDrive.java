@@ -238,6 +238,11 @@ final class TraceReplayDrive {
         }
 
         @Override
+        public void advancePlayableFixedSlotsOnly() {
+            driver.advancePlayableFixedSlotsOnly();
+        }
+
+        @Override
         public void suppressFirstSidekickAnimationOnce() {
             driver.suppressFirstSidekickAnimationOnce();
         }

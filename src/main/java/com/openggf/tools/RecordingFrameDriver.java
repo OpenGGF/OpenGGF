@@ -440,6 +440,10 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
         GameServices.sprites().advancePlayableSlotPrefix();
     }
 
+    public void advancePlayableFixedSlotsOnly() {
+        GameServices.sprites().advanceTailsTailsAfterObjectExecution();
+    }
+
     public void suppressFirstSidekickAnimationOnce() {
         var sprites = GameServices.sprites();
         if (!sprites.getSidekicks().isEmpty()) {

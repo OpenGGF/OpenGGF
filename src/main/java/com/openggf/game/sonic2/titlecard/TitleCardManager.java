@@ -65,6 +65,30 @@ public class TitleCardManager implements TitleCardProvider {
      */
     private static final int TEXT_WAIT_DURATION = 0x2D;  // 45 frames
 
+    /**
+     * X position the zone-name piece holds while the locked title-card loop is
+     * still running: {@code spriteScreenPositionXCentered(0)} = 128 + 320/2.
+     * docs/s2disasm/s2.asm:27369, docs/s2disasm/s2.macros.asm:276-280
+     */
+    private static final int EXIT_TAIL_ZONE_NAME_X_TARGET = 0x120;
+
+    /**
+     * X position the zone-name piece returns to on the way out:
+     * {@code spriteScreenPositionX(screen_width+128)} = 128 + 320 + 128.
+     * docs/s2disasm/s2.asm:27369
+     */
+    private static final int EXIT_TAIL_ZONE_NAME_X_SOURCE = 0x240;
+
+    /** Obj34_WaitAndGoAway slide speed: {@code moveq #$20,d0}. s2.asm:27615 */
+    private static final int EXIT_TAIL_SLIDE_SPEED = 0x20;
+
+    /**
+     * Far-off-screen cut-off: Obj34_WaitAndGoAway stops trying to display a
+     * piece past {@code #$200} and goes straight to the art load + delete.
+     * docs/s2disasm/s2.asm:27622-27625
+     */
+    private static final int EXIT_TAIL_OFFSCREEN_LIMIT = 0x200;
+
     /** Native game width (320-pixel frame everything is authored for). */
     private static final int SCREEN_WIDTH = 320;
     private static final int SCREEN_HEIGHT = 224;
@@ -237,6 +261,13 @@ public class TitleCardManager implements TitleCardProvider {
     private boolean exitPlcsQueued;
     private int lastLoadedZone = -1;  // Track which zone's letters we've loaded
 
+    /** Whether the gameplay-phase Obj34_WaitAndGoAway tail is running. */
+    private boolean exitTailActive;
+    /** anim_frame_duration of the zone-name piece during that tail. */
+    private int exitTailWaitFrames;
+    /** x_pixel of the zone-name piece during that tail. */
+    private int exitTailZoneNameX;
+
     public TitleCardManager() {}
 
     public static synchronized TitleCardManager getInstance() {
@@ -256,6 +287,7 @@ public class TitleCardManager implements TitleCardProvider {
         this.currentZone = zoneIndex;
         this.currentAct = actIndex;
         this.exitPlcsQueued = false;
+        this.exitTailActive = false;
         this.state = TitleCardState.SLIDE_IN;
         this.stateTimer = 0;
         this.frameCounter = 0;
@@ -486,6 +518,11 @@ public class TitleCardManager implements TitleCardProvider {
         frameCounter++;
         stateTimer++;
 
+        if (exitTailActive) {
+            updateOmittedPresentationExitTail();
+            return;
+        }
+
         switch (state) {
             case SLIDE_IN -> updateSlideIn();
             case DISPLAY -> updateDisplay();
@@ -704,6 +741,83 @@ public class TitleCardManager implements TitleCardProvider {
         }
     }
 
+    /**
+     * Arms the gameplay-phase title-card tail for a presentation that was
+     * omitted.
+     *
+     * <p>{@code Level_TtlCard} leaves its locked loop as soon as the zone-name
+     * piece has reached {@code titlecard_x_target} and {@code Plc_Buffer} is
+     * empty (s2.asm:4914-4925), but the pieces themselves are still live: just
+     * before the main level loop the game rewrites their routine to {@code $16}
+     * with {@code anim_frame_duration = $2D} (s2.asm:5066-5080), so
+     * {@code Obj34_WaitAndGoAway} runs on ordinary gameplay frames. Omitting the
+     * presentation must still run that tail, because the frame the zone-name
+     * piece leaves is where the game loads the standard-water and per-zone
+     * animal art (s2.asm:27605-27637).
+     *
+     * <p>Only the zone-name piece is modelled: {@code
+     * Obj34_LoadStandardWaterAndAnimalArt} gates the two {@code LoadPLC} calls
+     * on {@code cmpa.w #TitleCard_ZoneName,a0} (s2.asm:27630), so the other
+     * pieces only delete themselves.
+     */
+    @Override
+    public void beginOmittedPresentationExitTail(int zoneIndex, int actIndex) {
+        // Animal_PLCTable is indexed by Current_Zone (s2.asm:27633-27636), so
+        // the tail needs the zone the omitted card would have shown.
+        currentZone = zoneIndex;
+        currentAct = actIndex;
+        exitTailActive = true;
+        exitPlcsQueued = false;
+        exitTailWaitFrames = TEXT_WAIT_DURATION;
+        exitTailZoneNameX = EXIT_TAIL_ZONE_NAME_X_TARGET;
+        // The presentation is omitted, so no piece may render; the tail is an
+        // object lifetime, not an overlay.
+        elements.clear();
+        zoneNameElement = null;
+        zoneTextElement = null;
+        actNumberElement = null;
+        bottomBarElement = null;
+        leftSwooshElement = null;
+        blueBackgroundElement = null;
+        textExitTransitionPending = false;
+        stateTimer = 0;
+        // TEXT_WAIT is the phase the native game is in here: control released,
+        // title-card game-mode bit cleared, pieces still alive. It also keeps
+        // the level loop dispatching update() each frame.
+        state = TitleCardState.TEXT_WAIT;
+    }
+
+    /**
+     * One gameplay frame of {@code Obj34_WaitAndGoAway} for the zone-name piece.
+     * docs/s2disasm/s2.asm:27605-27637
+     */
+    private void updateOmittedPresentationExitTail() {
+        // tst.w anim_frame_duration(a0) / subq.w #1 / bra DisplaySprite
+        if (exitTailWaitFrames > 0) {
+            exitTailWaitFrames--;
+            return;
+        }
+        // cmp.w titlecard_x_source(a0),d1 / beq Obj34_LoadStandardWaterAndAnimalArt
+        if (exitTailZoneNameX == EXIT_TAIL_ZONE_NAME_X_SOURCE) {
+            finishOmittedPresentationExitTail();
+            return;
+        }
+        // sub.w d0,x_pixel(a0) with d0 negated while below the source position
+        exitTailZoneNameX += EXIT_TAIL_SLIDE_SPEED;
+        // cmpi.w #$200,x_pixel(a0) / bhi Obj34_LoadStandardWaterAndAnimalArt
+        if (exitTailZoneNameX == EXIT_TAIL_ZONE_NAME_X_SOURCE
+                || exitTailZoneNameX > EXIT_TAIL_OFFSCREEN_LIMIT) {
+            finishOmittedPresentationExitTail();
+        }
+    }
+
+    private void finishOmittedPresentationExitTail() {
+        queueExitPlcs();
+        exitTailActive = false;
+        state = TitleCardState.COMPLETE;
+        stateTimer = 0;
+    }
+
     private void queueExitPlcs() {
         if (exitPlcsQueued) {
             return;
@@ -723,8 +837,9 @@ public class TitleCardManager implements TitleCardProvider {
                 }
                 exitPlcsQueued = true;
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
             // The presentation renderer also runs without a gameplay module in focused tests.
+            LOGGER.log(Level.FINE, "Title card exit PLCs not queued", e);
         }
     }
 
@@ -960,6 +1075,7 @@ public class TitleCardManager implements TitleCardProvider {
         stateTimer = 0;
         frameCounter = 0;
         textExitTransitionPending = false;
+        exitTailActive = false;
         elements.clear();
     }
 

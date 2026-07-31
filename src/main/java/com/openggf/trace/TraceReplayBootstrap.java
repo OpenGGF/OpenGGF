@@ -563,6 +563,25 @@ public final class TraceReplayBootstrap {
         return ReplayPrimaryState.fromSprite(sprite);
     }
 
+    /**
+     * Forwards the hardware-timing classification of the row about to be driven
+     * to the PLC frame-closure boundary when no V-blank elapsed for it. Same
+     * category of input as {@link #phaseForReplay} itself: recorder counters
+     * only, no gameplay value and no queue readiness.
+     *
+     * @see TraceExecutionModel#isVblankStarvedRow
+     */
+    public static void markVblankStarvedIterationForReplay(
+            TraceFrame previous, TraceFrame current) {
+        if (!TraceExecutionModel.isVblankStarvedRow(previous, current)) {
+            return;
+        }
+        var gameplayMode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        if (gameplayMode != null && gameplayMode.plcFrameLifecycle() != null) {
+            gameplayMode.plcFrameLifecycle().markRepresentedIterationWithoutVblank();
+        }
+    }
+
     public static TraceExecutionPhase phaseForReplay(TraceData trace,
                                                      TraceFrame previous,
                                                      TraceFrame current) {

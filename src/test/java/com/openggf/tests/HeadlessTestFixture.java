@@ -86,6 +86,11 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
     }
 
     @Override
+    public void advancePlayableFixedSlotsOnly() {
+        runner.advancePlayableFixedSlotsOnly();
+    }
+
+    @Override
     public void suppressFirstSidekickAnimationOnce() {
         runner.suppressFirstSidekickAnimationOnce();
     }

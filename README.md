@@ -218,6 +218,39 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **S1/S2 trace-replay suites re-greened after the PLC/DPLC queue landed
+  (2026-08-01):** the Pattern Load Cue and DPLC queue work left the Sonic 1 and
+  Sonic 2 trace-replay fleets failing 42 tests; 39 are green again from 26
+  disassembly-cited engine fixes, with all trace, rewind and PLC guards and S3K
+  cross-game parity holding throughout. The defects clustered into one recurring
+  class — a ROM routine or init frame the engine never ran at the right point —
+  and the fixes read as a tour of it: the title-card `Card_ChangeArt` PLC pair
+  hung off a presentation predicate a headless load never executes; the player
+  DPLC ledger dropped a logical row on every ROM lag frame; the engine had no
+  equivalent of the `Level_MainLoop` tail, so `SignpostArtLoad` never queued
+  `plcid_Signpost`; S2's `CheckLoadSignpostArt` was implemented but never wired;
+  the Tornado skipped its `ObjB2_Init` routine-0 frame, so the only Tails-bank
+  DPLC submitter in Wing Fortress ran a frame early; Obj05 executed outside its
+  `LevelOnly_Object_RAM` dispatch slot and recomputed latched directional state
+  every frame; the Oil Ocean surface never ran in its reserved object-RAM band;
+  and the replay boundary skipped the extra `Level_MainLoop` iteration the ROM
+  performs after the recorder's last sampled frame, which alone closed seven
+  traces. One comparator defect sat underneath the rest: `transfer_id` and
+  `edge_ordinal` are the native recorder's own run-scoped counters, epoched at
+  emulator power-on, so every fixture cut later in a movie opened at a large
+  non-zero origin while an engine replay necessarily opens at zero — no ROM in
+  the fleet carries a cumulative transfer identity, so absolute-equality on those
+  ids was never meaningful and the comparison is now epoch-normalised per segment
+  with list cardinality and every content field still compared absolutely.
+  Three traces remain open (`Ghz3CompleteRun`, `Mtz3LevelSelect`,
+  `Cpz2LevelSelect`), all on `queue.*_nemesis_plc.busy`; the busy-window length
+  is already correct and Cpz2's inverted polarity reads as a missing submission
+  rather than a mistimed one. `docs/status/trace-frontier-log.md` records the
+  remaining frontier together with six hypotheses ruled out by direct
+  measurement, including two that were implemented and proved inert — the
+  V-blank clock is measurably exact and must not be relocated, and the capsule
+  spawn gates do read the wrong counter but correcting them changes nothing.
+
 - **Special Stage exit crash (2026-07-31):** leaving a Special Stage no longer
   aborts with "a native blocking fade is already active". A finished stage
   re-raises the results transition every frame, and the exit fade-to-white

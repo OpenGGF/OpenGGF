@@ -101,8 +101,86 @@ class TestDynamicArtDiagnosticsComparator {
         FrameComparison result = comparator.compare(
                 expected, snapshot(7, List.of(), List.of(71L, 70L)));
 
+        // Ids are rebased onto each side's own segment origin, so ledger
+        // ORDER divergence still fails loudly while the absolute recorder
+        // epoch is discarded.
         assertError(result, "dynamic_art.outstanding_transfer_ids",
-                "[70, 71]", "[71, 70]");
+                "[0, 1]", "[0, -1]");
+    }
+
+    @Test
+    void segmentOriginOffsetDoesNotDivergeWhenStructureMatches() {
+        // The recorder allocates transfer_id/edge_ordinal from emulator
+        // power-on, so a segment cut later in a movie opens at a large origin
+        // while the engine necessarily opens at zero. No ROM carries a
+        // cumulative transfer identity (docs/s2disasm/s2.asm:1713 and :1769,
+        // docs/s1disasm/sonic.asm:831), so only relative structure compares.
+        FrameComparison first = comparator.compare(
+                state(1, List.of(expectedSubmitted(3688, 1844, false,
+                        List.of(romRequest(0x50000, 2, 0xF000, 64)))),
+                        List.of(1844L)),
+                snapshot(1, List.of(actualSubmitted(2, 1, false,
+                        List.of(actualRomRequest(0x50000, 2, 0xF000, 64)))),
+                        List.of(1L)));
+        FrameComparison second = comparator.compare(
+                state(2, List.of(expectedSubmitted(3690, 1845, false,
+                        List.of(romRequest(0x50100, 3, 0xF040, 32)))),
+                        List.of(1844L, 1845L)),
+                snapshot(2, List.of(actualSubmitted(4, 2, false,
+                        List.of(actualRomRequest(0x50100, 3, 0xF040, 32)))),
+                        List.of(1L, 2L)));
+
+        assertFalse(first.hasDivergence());
+        assertFalse(second.hasDivergence());
+    }
+
+    @Test
+    void rebasedLedgerStillFailsOnCardinality() {
+        // The S2 scz/mcz frame-0 shape: ROM holds nothing outstanding while the
+        // engine holds one transfer. A size mismatch survives normalisation.
+        FrameComparison result = comparator.compare(
+                state(0, List.of(), List.of()),
+                snapshot(0, List.of(), List.of(0L)));
+
+        assertError(result, "dynamic_art.outstanding_transfer_ids",
+                "[]", "[0]");
+    }
+
+    @Test
+    void rebasedEdgeStillFailsOnContent() {
+        FrameComparison result = comparator.compare(
+                state(1, List.of(expectedSubmitted(3688, 1844, false,
+                        List.of(romRequest(0x50000, 2, 0xF000, 64)))),
+                        List.of(1844L)),
+                snapshot(1, List.of(actualSubmitted(2, 1, false,
+                        List.of(actualRomRequest(0x50000, 2, 0xF000, 32)))),
+                        List.of(1L)));
+
+        assertError(result, "dynamic_art.edge[0].request[0].byte_length",
+                "64", "32");
+    }
+
+    @Test
+    void rebasedEdgeStillFailsOnRelativeOrdinalGap() {
+        // A skipped transfer changes the RELATIVE structure and must fail even
+        // though both sides anchor on their own origin.
+        comparator.compare(
+                state(1, List.of(expectedSubmitted(3688, 1844, false,
+                        List.of(romRequest(0x50000, 2, 0xF000, 64)))),
+                        List.of(1844L)),
+                snapshot(1, List.of(actualSubmitted(2, 1, false,
+                        List.of(actualRomRequest(0x50000, 2, 0xF000, 64)))),
+                        List.of(1L)));
+
+        FrameComparison result = comparator.compare(
+                state(2, List.of(expectedSubmitted(3690, 1845, false,
+                        List.of(romRequest(0x50100, 3, 0xF040, 32)))),
+                        List.of(1844L, 1845L)),
+                snapshot(2, List.of(actualSubmitted(6, 3, false,
+                        List.of(actualRomRequest(0x50100, 3, 0xF040, 32)))),
+                        List.of(1L, 3L)));
+
+        assertError(result, "dynamic_art.edges", "[2]", "[4]");
     }
 
     @Test

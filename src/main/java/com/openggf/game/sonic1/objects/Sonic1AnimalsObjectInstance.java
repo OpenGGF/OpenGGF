@@ -121,17 +121,34 @@ public class Sonic1AnimalsObjectInstance extends AbstractObjectInstance implemen
     private boolean romRenderOnScreen = true;
 
     private boolean initialized;
+    private int prisonDelay;
+    private boolean fromPrison;
 
     public Sonic1AnimalsObjectInstance(ObjectSpawn spawn) {
         this(spawn, 100);
     }
 
     public Sonic1AnimalsObjectInstance(ObjectSpawn spawn, int pointsValue) {
+        this(spawn, pointsValue, 0);
+    }
+
+    /**
+     * Capsule-spawned animal. The prison capsule writes {@code animal_prisondelay}
+     * into the freshly allocated animal slot and sets {@code v_bossstatus} to 2, so
+     * the animal's own init takes the {@code .fromPrison} branch and waits that many
+     * frames before hopping out
+     * (docs/s1disasm/_incObj/3E Prison Capsule.asm:133,152-160,180-181;
+     * docs/s1disasm/_incObj/28, 29 Animals and Points.asm:190-192,311-324).
+     * A non-zero delay is exactly the ROM state that marks a capsule animal.
+     */
+    public Sonic1AnimalsObjectInstance(ObjectSpawn spawn, int pointsValue, int prisonDelay) {
         super(spawn, "Animals");
         this.currentX = spawn.x();
         this.currentY = spawn.y();
         this.subtype = spawn.subtype() & 0xFF;
         this.pointsValue = pointsValue;
+        this.prisonDelay = prisonDelay;
+        this.fromPrison = prisonDelay > 0;
     }
 
     private void ensureInitialized() {
@@ -181,9 +198,9 @@ public class Sonic1AnimalsObjectInstance extends AbstractObjectInstance implemen
         this.xVelocity = 0;
         this.yVelocity = INITIAL_POP_Y_VELOCITY;
 
-        if (services().gameState().isBossFightActive()) {
+        if (fromPrison || services().gameState().isBossFightActive()) {
             this.routine = ROUTINE_PRISON_WAIT;
-            this.prisonWaitTimer = PRISON_WAIT_FRAMES;
+            this.prisonWaitTimer = prisonDelay > 0 ? prisonDelay : PRISON_WAIT_FRAMES;
             this.xVelocity = 0;
             return;
         }
@@ -250,7 +267,8 @@ public class Sonic1AnimalsObjectInstance extends AbstractObjectInstance implemen
             animFrame = 1;
             routine = (fromEnemyVariantIndex << 1) + 4;
 
-            if (services().gameState().isBossFightActive() && (frameCounter & 0x10) != 0) {
+            if ((fromPrison || services().gameState().isBossFightActive())
+                    && (frameCounter & 0x10) != 0) {
                 xVelocity = -xVelocity;
                 hFlip = !hFlip;
             }
