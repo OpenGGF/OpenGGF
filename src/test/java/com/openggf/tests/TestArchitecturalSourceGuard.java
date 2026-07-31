@@ -79,7 +79,9 @@ class TestArchitecturalSourceGuard {
             // 2026-07-28: adds develop's InitialProcessSprites base, title-card VBlank
             // advance, and oscillation gating on top of next's seamless-transition and
             // rewind-boundary ownership.
-            "com/openggf/level/LevelManager.java", 2904,
+            // 2026-07-31: merging next into the S3K super-emerald branch combines both
+            // sides' independent one-line growth; freeze the merged shape.
+            "com/openggf/level/LevelManager.java", 2917,
             // 2026-07-02: 2888 -> 2890 for the live-rewind VHS effect envelope tick
             // (RewindEffectEnvelope wiring + intensity/speed accessors).
             // 2026-07-04: 2890 -> 2962. The solo-ghost-racing phase-1 tasks (time
@@ -115,7 +117,9 @@ class TestArchitecturalSourceGuard {
             // add boundary wiring while stage selection, reward publication, and
             // Saved2 application move into SpecialStageTransitionSupport. Freeze the
             // post-extraction facade size.
-            GAME_LOOP_PATH, 3276
+            // 2026-07-31: merging next into the S3K super-emerald branch combines both
+            // sides' independent one-line growth; freeze the merged shape.
+            GAME_LOOP_PATH, 3277
     );
     private static final int ENGINE_MAX_LARGE_METHODS = 3;
     private static final int ENGINE_LARGE_METHOD_THRESHOLD = 100;
