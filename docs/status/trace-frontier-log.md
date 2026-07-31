@@ -55196,46 +55196,58 @@ alone still regresses MHZ, so nothing was landed.
 MHZ stays at **601**. The probe is committed and re-runnable, so the next
 session starts from ROM ground truth rather than hypotheses.
 
-### 2026-07-31 — MHZ RNG alignment is blocked by the S3K inline solid-resolution model
 
-Final classification for this branch, from the probe evidence above.
+### 2026-07-31 — RETRACTION: the inline solid-resolution "blocker" was wrong; it is object slot order
 
-**ROM's frame order for the event:**
+An earlier draft of this entry classified the MHZ RNG alignment as blocked by
+S3K's `objectsExecuteAfterPlayerPhysics = true` inline solid-resolution model,
+on the reasoning that the engine grounds the player inside the physics step
+while ROM grounds it during the mushroom cap's own execution. **That was
+inferred, not measured, and it is wrong.** The claim has been removed rather
+than left standing.
 
-```
-Player_1 (slot 0) -> ... -> Obj_MHZ_Pollen_Spawner (slot 4) -> Obj_MHZMushroomCap (slot 5)
-                                     ^ reads player               ^ SolidObjectTop grounds player
-```
+**Measured instead.** Logging the engine's Player_1 state at the pre-physics
+point against the probe's ROM values at `Process_Sprites` entry gives an exact
+match, frame for frame (engine index k maps to recorded row k+1, because the
+setup pass owns row 0):
 
-The spawner therefore observes a player that this frame's *later* object will
-ground. That is why row 73 takes no `Random_Number` and row 74 does.
+| Recorded row | ROM (probe) | Engine (pre-physics) |
+|---|---|---|
+| 71-73 | `y=0527/0528 air=1` | `y=527/528 air=1` |
+| 74 | `y=051A air=0` | `y=51a air=0` |
+| 75+ | `y=0525 air=0` | `y=525 air=0` |
 
-**The engine cannot express that.** `GameRules.SONIC_3K` sets
-`ObjectInteractionRules.objectsExecuteAfterPlayerPhysics = true`, so
-`LevelFrameStep` runs an inline solid-resolution frame:
+So the engine's player physics, its landing frame and the inline model are all
+ROM-correct here. No architecture change is required, and none should be made
+on the strength of that retracted reasoning.
 
-```
-physics (player move AND its solid-object contact, fused) -> pre-dynamic sidecars -> dynamic objects -> fixed sidecars
-```
+**The real cause is object slot order.** The probe puts
+`Obj_MHZ_Pollen_Spawner` at object **slot 4**, ahead of `Obj_MHZMushroomCap` at
+slot 5. The engine's `ObjectManager` executes in slot order too, so the model
+matches — but the spawner is created by `installFixedDynamicObjects` at level
+init, a later bootstrap step clears dynamic objects, and any re-install then
+lands it in a high free slot, behind the layout objects it must precede. Driven
+from the object walk it therefore consumes `Random_Number` a frame after ROM
+does.
 
-Player-versus-solid-object grounding happens inside `physics`, before any
-object executes. So every scheduling point available to the spawner — before
-physics, after physics, pre-dynamic, post-dynamic — sees the player already
-grounded on the frame ROM still sees airborne. All five were measured (601 /
-733 / 982 / 1055 / 578-rejected) and none reproduces ROM's phase, which is the
-expected result once the model constraint is stated.
+Also established this round, correcting two earlier readings:
 
-**Blocker.** Closing this needs the player's object-solid contact to resolve
-during the owning object's execution rather than inside the player's physics
-step — either flipping S3K off the inline model or splitting solid resolution
-out of `physics`. That is an engine-architecture change touching every S3K
-object interaction (springs, platforms, vines, boss arenas, the carry system),
-with fleet-wide regression risk, and it is far outside a trace-frontier branch.
-It should be designed deliberately, not landed as a side effect of MHZ work.
+- **No double-consumption for Player_2.** Instrumenting which player each call
+  serves shows P1 only, matching ROM's one-call-per-frame. The earlier
+  "engine consumes for both players" reading was an artefact of the spawner
+  being invoked twice per frame — once by the pre-physics hook and once by the
+  object manager (logged with two distinct frame counters, `fc=1,2,3...` and
+  `fc=13097,13098...`).
+- **Measured placements:** spawner absent **601**; manager-driven from the
+  object walk 982; manager plus pre-physics hook (double-invoked) 733;
+  post-dynamic 982; pre-dynamic 1055; per-player latch 578 (rejected, breaks
+  `TestMhzPollenObjects`).
 
-Everything needed to resume is captured: the probe
-(`tools/bizhawk/probes/mhz_rng_ownership_probe.lua`) is committed and
-re-runnable, its output is archived, and the five measured placements are
-tabulated so none is retried.
+**Next step is concrete and bounded:** guarantee the spawner occupies an early
+object slot — `ObjectManager` already exposes
+`createDynamicObjectWithReservedSlot` and `addDynamicObjectAfterSlot` — so it
+executes ahead of the layout objects, and make that survive the replay
+bootstrap's dynamic-object clear. That is an object-lifetime fix in the same
+class as the others in this branch, not an architecture change.
 
-**MHZ final state this session: 601 non-queue groups, down from 1888.**
+MHZ stays at **601** non-queue groups; nothing was landed this round.
