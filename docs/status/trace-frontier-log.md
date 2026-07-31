@@ -55306,3 +55306,56 @@ level objects — and install the S3K level-init objects through it at the point
 spawner and for the HCZ splash objects written by the same ROM block.
 
 MHZ stays at **601** non-queue groups; nothing landed this round.
+
+### 2026-07-31 — MHZ object slots are one lower than ROM; the primitive exists, the timing does not
+
+Retraction first: the previous entry said the engine lacks an absolute-slot
+placement primitive. **It has one** —
+`ObjectManager.createDynamicObjectAtSlot(factory, slotIndex)`, already used by
+`Sonic3kAIZEvents` with `AIZ_PLANE_INTRO_SST_SLOT = 5` for ROM's
+`Dynamic_object_RAM+(object_size*2)`. Nothing needs building.
+
+**The slot number is settled.** `sonic3k.constants.asm:303-307` gives
+`Player_1`=0, `Player_2`=1, `Reserved_object_3`=2, `Dynamic_object_RAM`=3, so
+`Dynamic_object_RAM+object_size` is absolute slot **4** — matching both the
+`Random_Number` probe (`A0_slot=4` on every call) and the AIZ precedent's
+arithmetic.
+
+**The real defect, measured.** Logging the occupants at install time:
+
+```
+install slot4 placed=false occupants=4:MhzMushroomCapObjectInstance
+                                     5:Sonic3kSSEntryRingObjectInstance
+                                     6:MhzMushroomCapObjectInstance
+                                     7:MhzMushroomCapObjectInstance
+```
+
+Slot 4 is held by `Obj_MHZMushroomCap` — the very object the spawner must
+precede. In ROM the spawner reserves slot 4 during `Level` init, so `ObjPosLoad`
+allocates the layout from slot 5 onward and the cap lands at 5, exactly as the
+probe recorded. The engine places the layout first, so **every MHZ layout object
+sits one slot lower than ROM**. That shifts execution order for the whole act
+and any `FindFreeObj`/d7-derived timing keyed off it — a defect well beyond the
+pollen spawner itself.
+
+**Install points tried, all measured `placed=false` (601 = spawner absent):**
+
+| Install point | Result |
+|---|---|
+| `onInitLevel` (step 18) via `createDynamicObject` | slot 11 |
+| `onInitLevel` via `createDynamicObjectAtSlot(4)` | `placed=false` |
+| Pre-dynamic hook, per frame | slot 11 |
+| New `installAbsoluteSlotLevelObjects` at `executeInitialProcessSprites` | `placed=false` |
+| Same hook from `LevelManager.initGameplayState` (earliest post-load step) | still absent |
+
+Layout placement therefore happens earlier than any of these — inside the load
+phase, before the post-load assembly steps. **The next step is to find where the
+object spawns are first instantiated and reserve the absolute slots immediately
+before it**, which is where ROM's `loc_63A4` sits relative to `ObjPosLoad`.
+Note the provider's `currentZone` is unset that early, so the zone must come
+from `LevelManager.getCurrentZone()`.
+
+Fixing it should be done for the S3K absolute-slot set as a whole — the same ROM
+block writes `Obj_HCZWaveSplash` and `Obj_HCZWaterSplash` — not for MHZ alone.
+
+MHZ stays at **601**; nothing landed this round.
