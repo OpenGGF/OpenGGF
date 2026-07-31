@@ -3,6 +3,14 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Sonic 1 now runs the ROM's `Level_MainLoop` tail slot, so the end-of-act
+  signpost Pattern Load Cue is actually submitted to the runtime nemesis PLC
+  queue. `SignpostArtLoad` locks the left camera boundary and queues
+  `plcid_Signpost` (signpost, hidden points, giant-ring flash) once the camera
+  comes within `$100` px of the right level boundary; the engine only had the
+  eager art-provider path, which made the art resident without ever going
+  through the queue. Level-event providers gain a `updateAtLevelLoopTail()` hook
+  that defaults to a no-op, so Sonic 2 and Sonic 3&K are unchanged.
 - Fix: the shared player dynamic-art ledger no longer loses a logical row on a
   ROM lag frame. `DynamicArtLifecycleService#publishRow` returned early on the
   lag heartbeat without advancing its logical row cursor, so every lag frame in

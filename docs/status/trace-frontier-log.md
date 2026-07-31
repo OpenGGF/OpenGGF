@@ -54515,3 +54515,64 @@ TestS3kHardwareTimingReplay" test
   segment-boundary source), and (b) the frame-1 `dynamic_art.edges` transfer-id
   base mismatch that blocks the three complete-run traces before any lag frame
   is reached.
+
+## 2026-07-31 - S1 `SignpostArtLoad` restores the end-of-act nemesis PLC submission
+
+- Worktree: `<repo>/.worktrees/s1-completerun-nemesis-plc`,
+  branch `bugfix/ai-s1-completerun-nemesis-plc` (from `develop` @ `a50b3f497`).
+- Root cause: the engine never ran the ROM `Level_MainLoop` tail slot. S1 calls
+  `SignpostArtLoad` there, immediately after `SynchroAnimate`
+  (docs/s1disasm/sonic.asm:3032). Once the camera comes within `$100` px of the
+  right level boundary that routine locks `v_limitleft2` and submits
+  `plcid_Signpost` through `NewPLC`
+  (docs/s1disasm/sonic.asm:3183-3204). `plcid_Signpost` is index 18 into
+  `ArtLoadCues` and expands to Nem_SignPost / Nem_Bonus / Nem_BigFlash
+  (docs/s1disasm/_inc/Pattern Load Cues.asm:28-50, 293-300). Without that slot
+  the runtime nemesis PLC queue stayed empty at the end of act 1/2, which is
+  exactly what `queue.s1_nemesis_plc.queued_fingerprints` reported. The eager
+  `Sonic1ObjectArtProvider.loadSignpostArt` path made the art resident but never
+  went through the queue, so the queue trace diverged while rendering looked
+  fine.
+- Fix shape: new `LevelEventProvider#updateAtLevelLoopTail()` default no-op,
+  invoked from `LevelFrameStep` step 6b for all games (after `RunPLC`, so work
+  queued in the slot is only serviced from the next frame, matching the ROM
+  ordering). Only `Sonic1LevelEventManager` overrides it. S2's analogue
+  `CheckLoadSignpostArt` (docs/s2disasm/s2.asm:6154-6189) has extra gates and is
+  deliberately not wired; S3K has no equivalent routine. No `gameId` branch, no
+  zone/route/frame carve-out - the act-3 skip is the ROM's own
+  `cmpi.b #act3,(v_act).w` gate, and the locked left boundary is the ROM's own
+  single-shot latch.
+- Family command: `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true
+  "-Ds1.rom.path=<repo>/s1.gen"
+  "-Dtest=TestS1Ghz1CompleteRunTraceReplay,TestS1Mz1CompleteRunTraceReplay,TestS1Ghz2CompleteRunTraceReplay,TestS1Ghz3CompleteRunTraceReplay,TestS1Ghz1TraceReplay,TestS1Mz1TraceReplay"
+  test`
+- Guard command: `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true
+  "-Ds1.rom.path=<repo>/s1.gen"
+  "-Dtest=TestS1Credits00Ghz1TraceReplay,TestS1Credits01Mz2TraceReplay,TestS1Credits02Syz3TraceReplay,TestS1Credits03Lz3TraceReplay,TestS1Credits04Slz3TraceReplay,TestS1Credits05Sbz1TraceReplay,TestS1Credits06Sbz2TraceReplay,TestS1Credits07Ghz1bTraceReplay,TestTraceReplayInvariantGuard,TestTraceReplayReferenceClosureGuard,TestRewindCoverageGuard,TestStaticStateRewindCoverageGuard,TestSonic1PlcProducerCoverage,TestPlcProducerCoverageGuard"
+  test` - 54/54 pass, no regressions.
+- Cross-game command: `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1
+  -DreuseForks=true "-Ds1.rom.path=<repo>/s1.gen" "-Ds2.rom.path=<repo>/s2.gen"
+  "-Ds3k.rom.path=<repo>/s3k.gen"
+  "-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils"
+  test` - 106/106 pass. S2 and S3K parity held (both take the default no-op).
+- Family frontier movement (before -> after):
+  - `TestS1Ghz1CompleteRunTraceReplay`: fail -> **PASS**, GREENED. Frame 4830
+    `queue.s1_nemesis_plc.queued_fingerprints` -> no divergence.
+  - `TestS1Ghz1TraceReplay`: fail -> fail, ADVANCED (error count 12 -> 8).
+    Frame 2823 `dynamic_art.edge[0].logical_frame` -> frame 2823
+    `dynamic_art.edge[0].logical_frame`.
+  - `TestS1Mz1TraceReplay`: fail -> fail, ADVANCED (error count 6 -> 2).
+    Frame 2134 `dynamic_art.edge[0].logical_frame` -> frame 2134
+    `dynamic_art.edge[0].logical_frame`.
+  - `TestS1Mz1CompleteRunTraceReplay`: fail -> fail, UNMOVED. Frame 1
+    `dynamic_art.edges` -> frame 1 `dynamic_art.edges` (7089 errors).
+  - `TestS1Ghz2CompleteRunTraceReplay`: fail -> fail, UNMOVED. Frame 1
+    `dynamic_art.edges` -> frame 1 `dynamic_art.edges` (3910 errors).
+  - `TestS1Ghz3CompleteRunTraceReplay`: fail -> fail, UNMOVED. Frame 1
+    `dynamic_art.edges` -> frame 1 `dynamic_art.edges` (8959 errors).
+- No `REGRESSION INTRODUCED:` lines - nothing that passed before this change
+  fails after it.
+- Next targets: (a) the frame-1 `dynamic_art.edges` transfer-id base mismatch
+  that still blocks MZ1/GHZ2/GHZ3 complete-run before any other check runs, and
+  (b) the residual single-row `logical_frame` skew at GHZ1 frame 2823 / MZ1
+  frame 2134.
