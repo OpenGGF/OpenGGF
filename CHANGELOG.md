@@ -3,6 +3,19 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Sonic 2's CNZ boss (Obj51) now carries the ROM's routine-read-once defeat
+  offset and opens `Camera_Max_X_pos` immediately while fleeing. `Obj51` reads
+  `boss_routine(a0)` once at the top of its update (`docs/s2disasm/s2.asm:66554-66566`)
+  and `loc_31D42` only writes `Boss_Countdown` = `$B3` / `boss_routine` = 6 before
+  returning (`docs/s2disasm/s2.asm:66818-66826`), so `loc_31D5C`'s first countdown
+  decrement lands the following frame (`docs/s2disasm/s2.asm:66828-66830`); the boss now
+  opts into the existing per-boss
+  `AbstractBossInstance.defeatDeferralAppliesToThisBoss()` hook. `loc_31E2A` writes
+  `Camera_Max_X_pos` directly (`addq.w #2,(Camera_Max_X_pos).w`,
+  `docs/s2disasm/s2.asm:66919-66925`), so the flee handler now calls `Camera.setMaxX`
+  instead of the one-frame-eased `setMaxXTarget`. Greens
+  `TestS2Cnz2LevelSelectTraceReplay` (was 8 errors at frame 10976
+  `queue.s2_nemesis_plc.busy`).
 - Fix: a dynamic-art row sampled mid-V-int now publishes its own row and
   services the DMA queue; only its successor is carried. The real per-mode V-int
   handler (`Vint_Level`, `docs/s2disasm/s2.asm:698`) calls `ProcessDMAQueue`

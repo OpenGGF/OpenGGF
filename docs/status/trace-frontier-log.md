@@ -56484,3 +56484,133 @@ called" queue-add comment, `:1770` `ProcessDMAQueue`, and `sonic.asm:709` `VBlan
 all exact, no skew. The change keys on the recorded V-blank-starved row shape, not on a
 zone, frame, route or game name, and only defers or releases servicing of work the engine
 had already submitted.
+
+## 2026-07-31 — CNZ2 boss defeat routine-read-once + immediate Camera_Max_X open
+
+Worktree `.worktrees/nemesis-plc-decompression-duration`, branch
+`bugfix/ai-nemesis-plc-decompression-duration`, off
+`bugfix/ai-trace-s1-titlecard-plc-integration`. JDK 21 (`mvn -v` reports 21.0.11).
+`rm -rf target/surefire-reports` before every measurement run.
+
+Command:
+
+```
+mvn -Dmse=off -Ds1.rom.path=<s1 rom> -Ds2.rom.path=<s2 rom> -DfailIfNoSpecifiedTests=false \
+  "-Dtest=TestS2Mtz3LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,\
+TestS2Cnz2LevelSelectTraceReplay,TestS1Ghz3CompleteRunTraceReplay" test
+```
+
+| Trace | BEFORE | AFTER |
+|---|---|---|
+| `TestS2Cnz2LevelSelectTraceReplay` | 8 errors, frame 10976 `queue.s2_nemesis_plc.busy` (expected=false, actual=true) | PASS |
+| `TestS2Cpz2LevelSelectTraceReplay` | 8 errors, frame 11491 `queue.s2_nemesis_plc.busy` (expected=true, actual=false) | unchanged |
+| `TestS2Mtz3LevelSelectTraceReplay` | 9 errors, frame 15258 `queue.s2_nemesis_plc.busy` (expected=false, actual=true) | unchanged |
+| `TestS1Ghz3CompleteRunTraceReplay` | 5 errors, frame 9183 `queue.s1_nemesis_plc.busy` (expected=false, actual=true) | unchanged |
+
+Cause (two coupled one-frame skews that had been cancelling each other):
+
+1. `Obj51` reads `boss_routine(a0)` once at the top of its update and jumps through
+   `off_31A2A` (`docs/s2disasm/s2.asm:66554-66566`). The hit bookkeeping lives in
+   `loc_31CDC` (`docs/s2disasm/s2.asm:66781-66792`), called from the tail of the
+   already-selected routine, and `loc_31D42` only awards points and writes
+   `Boss_Countdown` = `$B3` / `boss_routine` = 6 before returning
+   (`docs/s2disasm/s2.asm:66818-66826`). `loc_31D5C`'s first
+   `subq.w #1,(Boss_Countdown).w` therefore lands the NEXT frame
+   (`docs/s2disasm/s2.asm:66828-66830`). The engine applies touch responses before the
+   object's own `update()`, so the boss now opts into the existing per-boss
+   `AbstractBossInstance.defeatDeferralAppliesToThisBoss()` hook (as HTZ/MCZ already do).
+   That alone aligns the whole `Boss_Countdown` chain, including the
+   `loc_31E02` animal+explosion PLC submission at `Boss_Countdown` == `$18`
+   (`docs/s2disasm/s2.asm:66884`, `66896-66899`) — the busy window becomes
+   `[10977, 11012]` exactly.
+2. Applying (1) alone then exposed a compensating skew the other way: `loc_31E2A` writes
+   `Camera_Max_X_pos` directly with `addq.w #2,(Camera_Max_X_pos).w`
+   (`docs/s2disasm/s2.asm:66919-66925`), but the flee handler was calling
+   `Camera.setMaxXTarget(...)`, whose easing pass only applies the new bound on the
+   following frame. With the defeat chain one frame early those cancelled; with the chain
+   correct, `camera_x` fell 2px behind from frame 10986 (1915 cascading errors). Writing
+   the bound directly with `setMaxX(...)` matches the ROM and removes the compensator.
+
+Ruled out, measured, not guessed:
+
+- The per-submission Nemesis decompression-duration hypothesis is closed. The busy
+  window LENGTH already matched the ROM byte-for-byte on all four traces before any
+  change; `NemesisPlcServiceQueue` / `Sonic1PlcService` / `Sonic2PlcService` were not
+  touched.
+- Swapping `EggPrisonObjectInstance`'s animal-spawn gate from the object-update counter to
+  `services().vIntRunCounter(...)` (`loc_3F3A8`, `docs/s2disasm/s2.asm:84970-84975`)
+  measured as an exact NO-OP: `TestS2Mtz3LevelSelectTraceReplay` stayed at 9 errors /
+  frame 15258 and `TestS2Cpz2LevelSelectTraceReplay` at 8 errors / frame 11491. That
+  hypothesis for MTZ3 / CPZ2 / GHZ3 is disproved and was reverted.
+
+Green regression guard (same flags plus all three ROM properties):
+`TestS2DezEndingLevelSelectTraceReplay`, `TestS2SczLevelSelectTraceReplay`,
+`TestS2Htz2LevelSelectTraceReplay`, `TestS2Mcz2LevelSelectTraceReplay`,
+`TestS2Ehz1TraceReplay`, `TestS2MczLevelSelectTraceReplay`,
+`TestS2Mtz2LevelSelectTraceReplay`, `TestS1Ghz1TraceReplay`, `TestS1Mz1TraceReplay`,
+`TestTraceReplayInvariantGuard`, `TestTraceReplayReferenceClosureGuard`,
+`TestHardwareTimingAuthorityGuard`, `TestRewindCoverageGuard`,
+`TestStaticStateRewindCoverageGuard`, `TestPlcProducerCoverageGuard`,
+`TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver`,
+`TestSonic3kDecodingUtils` — 111 tests run, 0 failures, 0 errors.
+
+## 2026-07-31 — Independent verification of the CNZ2 boss defeat/camera fix
+
+Worktree `.worktrees/nemesis-plc-decompression-duration`, branch
+`bugfix/ai-nemesis-plc-decompression-duration`, base commit `7265e848f`. JDK 21
+(`mvn -v` reports 21.0.11). BEFORE measured in a throwaway detached worktree at
+`7265e848f`; `rm -rf target/surefire-reports` before every run.
+
+Family command (both runs identical apart from the worktree):
+
+```
+mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \
+  -Ds1.rom.path=<s1 rom> -Ds2.rom.path=<s2 rom> \
+  "-Dtest=TestS1Ghz3CompleteRunTraceReplay,TestS2Cpz2LevelSelectTraceReplay,\
+TestS2Mtz3LevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,\
+TestS2Htz2LevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,\
+TestS2CpzLevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,\
+TestS2CnzLevelSelectTraceReplay,TestS1Ghz1CompleteRunTraceReplay,\
+TestS1Mz1CompleteRunTraceReplay,TestS1Ghz2CompleteRunTraceReplay" test
+```
+
+Aggregate: BEFORE `Tests run: 12, Failures: 4`; AFTER `Tests run: 12, Failures: 3`.
+
+| Trace | BEFORE | AFTER |
+|---|---|---|
+| `TestS2Cnz2LevelSelectTraceReplay` | 8 errors, frame 10976 `queue.s2_nemesis_plc.busy` (expected=false, actual=true) | PASS (greened) |
+| `TestS2Cpz2LevelSelectTraceReplay` | 8 errors, frame 11491 `queue.s2_nemesis_plc.busy` (expected=true, actual=false) | 8 errors, frame 11491 `queue.s2_nemesis_plc.busy` (unmoved) |
+| `TestS2Mtz3LevelSelectTraceReplay` | 9 errors, frame 15258 `queue.s2_nemesis_plc.busy` (expected=false, actual=true) | 9 errors, frame 15258 `queue.s2_nemesis_plc.busy` (unmoved) |
+| `TestS1Ghz3CompleteRunTraceReplay` | 5 errors, frame 9183 `queue.s1_nemesis_plc.busy` (expected=false, actual=true) | 5 errors, frame 9183 `queue.s1_nemesis_plc.busy` (unmoved) |
+| `TestS2Htz2LevelSelectTraceReplay` | PASS | PASS |
+| `TestS2Mcz2LevelSelectTraceReplay` | PASS | PASS |
+| `TestS2CpzLevelSelectTraceReplay` | PASS | PASS |
+| `TestS2MtzLevelSelectTraceReplay` | PASS | PASS |
+| `TestS2CnzLevelSelectTraceReplay` | PASS | PASS |
+| `TestS1Ghz1CompleteRunTraceReplay` | PASS | PASS |
+| `TestS1Mz1CompleteRunTraceReplay` | PASS | PASS |
+| `TestS1Ghz2CompleteRunTraceReplay` | PASS | PASS |
+
+No REGRESSION INTRODUCED lines: no trace moved backwards and no frontier frame retreated.
+
+Green regression guard (31 classes: the S1/S2 passing trace fleet plus
+`TestTraceReplayInvariantGuard`, `TestTraceReplayReferenceClosureGuard`,
+`TestHardwareTimingAuthorityGuard`, `TestRewindCoverageGuard`,
+`TestStaticStateRewindCoverageGuard`, `TestSonic1PlcProducerCoverage`,
+`TestSonic2PlcProducerCoverage`, `TestPlcProducerCoverageGuard`,
+`TestDynamicArtDiagnosticsComparator`, `TestPlcFrameLifecycleCoordinator`) —
+`Tests run: 138, Failures: 0, Errors: 0, Skipped: 0`, BUILD SUCCESS.
+
+Cross-game parity (`TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
+`TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`, all three ROM properties) —
+`Tests run: 52, Failures: 0, Errors: 0, Skipped: 0`, BUILD SUCCESS.
+
+Disassembly citations re-verified against `docs/s2disasm/s2.asm` at exact line numbers:
+`loc_31A1C` boss_routine read-once at `:66554`, `off_31A2A` dispatch table at `:66560`,
+`loc_31CDC` hit bookkeeping at `:66781`, `loc_31D42` (`Boss_Countdown` = `$B3`,
+`boss_routine` = 6, `PLCID_Capsule`) at `:66818`, `loc_31D5C` first
+`subq.w #1,(Boss_Countdown).w` at `:66828`, `loc_31E2A`
+`addq.w #2,(Camera_Max_X_pos).w` at `:66919`. No shared PLC surface was modified: the
+change is confined to `Sonic2CNZBossInstance` overriding the pre-existing per-boss
+`AbstractBossInstance.defeatDeferralAppliesToThisBoss()` hook and calling the existing
+`Camera.setMaxX(...)`. No zone, route, frame or game-name branch is involved.

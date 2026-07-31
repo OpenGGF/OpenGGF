@@ -280,6 +280,21 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
     }
 
     @Override
+    protected boolean defeatDeferralAppliesToThisBoss() {
+        // ObjA7/Obj51 reads boss_routine(a0) once at the top of its update and jumps
+        // through off_31A2A (docs/s2disasm/s2.asm:66554-66566). The hit bookkeeping runs
+        // in loc_31CDC (docs/s2disasm/s2.asm:66781-66792), called from the tail of the
+        // already-selected routine, and loc_31D42 only awards points, sets
+        // Boss_Countdown = $B3 and boss_routine = 6 before returning
+        // (docs/s2disasm/s2.asm:66818-66826). So the defeat routine loc_31D5C's first
+        // `subq.w #1,(Boss_Countdown).w` lands on the NEXT frame
+        // (docs/s2disasm/s2.asm:66828-66830). The engine applies touch responses before
+        // this object's own update(), so opt into the existing per-boss routine-read-once
+        // deferral to restore that one-frame offset.
+        return true;
+    }
+
+    @Override
     protected void updateBossLogic(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         lastFrameCounter = frameCounter;
@@ -619,7 +634,10 @@ public class Sonic2CNZBossInstance extends AbstractBossInstance implements Spawn
 
         Camera camera = services().camera();
         if (camera.getMaxX() < CAMERA_MAX_X_TARGET) {
-            camera.setMaxXTarget((short) (camera.getMaxX() + 2));
+            // ROM loc_31E2A writes Camera_Max_X_pos directly on the same frame
+            // (`addq.w #2,(Camera_Max_X_pos).w`, docs/s2disasm/s2.asm:66919-66925), so the
+            // bound opens immediately rather than being eased in on the following frame.
+            camera.setMaxX((short) (camera.getMaxX() + 2));
         } else if (!isOnScreen()) {
             // Clear boss ID so palette cycling stops
             services().gameState().setCurrentBossId(0);
