@@ -55359,3 +55359,34 @@ Fixing it should be done for the S3K absolute-slot set as a whole — the same R
 block writes `Obj_HCZWaveSplash` and `Obj_HCZWaterSplash` — not for MHZ alone.
 
 MHZ stays at **601**; nothing landed this round.
+## 2026-07-31 - Correction: the S3K setup pass is not a recorded frame
+
+- Main checkout, branch `bugfix/ai-s3k-mhz-queue-frontier`, over `79f1d5ecf`.
+- The behavioural halves of `c16efb3b0` ("run the level setup pass as the
+  recorded frame it is") and `5612e8d3e` ("advance the sprite frame counter on
+  the setup frame") are reverted. Their documentation is retained below.
+- Evidence they were wrong, not a fix. `Level_frame_counter` is incremented by
+  `addq.w #1,(Level_frame_counter).w` **inside** `LevelLoop`, after
+  `Wait_VSync` (sonic3k.asm:7888-7894). Recorded row 0 of every S3K
+  complete-run segment reads `Level_frame_counter == 1`, so row 0 is the first
+  `LevelLoop` frame, never the `Load_Sprites`/`Process_Sprites` pass at
+  sonic3k.asm:7849-7860 — that pass precedes `LevelLoop` entirely and therefore
+  runs no `Wait_VSync`, no `Read_Joypads`, and no counter increment. Second
+  independent check: `Tails_CPU_routine` at row 0 is one of {6, $0A, $0C},
+  while `Tails_Init` forces it to 0 and `Tails_CPU_Control` cannot dispatch on
+  the setup pass.
+- The two changes therefore made the setup pass consume both a BK2 row and a
+  frame-counter tick, neither of which the ROM spends. A four-state
+  measurement showed them interacting non-additively — each is worse alone,
+  and the 40x MGZ improvement appears only when both are present. That is the
+  signature of accidental frame-phase alignment, not fidelity. They also moved
+  `TestS3kAizTraceReplay` from 4 failures to 11.
+- **This is a regression in raw counts and is recorded as such.** MGZ
+  non-queue divergence groups go from 128 back to the ROM-consistent 5141, and
+  MHZ from 601 back to a number measured below. The previously logged 2982 and
+  the MGZ 3964 -> 128 improvement were products of the misalignment and should
+  not be treated as a frontier that was lost.
+- `TestS3kAizTraceReplay` after the revert: 16 tests, 4 failures, 1 error —
+  back to its documented baseline. Command:
+  `mvn -Ptrace-replay -Dmse=off -Dtest=TestS3kAizTraceReplay -Ds3k.rom.path=s3k.gen test`.
+

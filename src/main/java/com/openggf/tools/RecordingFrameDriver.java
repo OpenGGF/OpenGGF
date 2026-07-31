@@ -199,18 +199,6 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
         lastFrameResult = admission.result();
         lastFrameRanGameplay = false;
         if (lastFrameResult == LevelFrameResult.SETUP_ONLY) {
-            // ROM LevelLoop increments Level_frame_counter before
-            // Process_Sprites (sonic3k.asm:7888-7894), and the setup pass owns
-            // the first recorded row, whose gameplay_frame_counter already
-            // reads 1. Advance the sprite counter here or every
-            // counter-keyed CPU gate runs a frame late for the whole segment —
-            // the carry body's 32-frame Right pulse at loc_13FFA
-            // (sonic3k.asm:26918) is the visible one.
-            frameCounter++;
-            if (GameServices.spritesOrNull() != null) {
-                GameServices.spritesOrNull().setFrameCounter(
-                        GameServices.spritesOrNull().getFrameCounter() + 1);
-            }
             return lastFrameResult;
         }
         frameCounter++;
@@ -344,10 +332,9 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
                     applyP1ActionPressEdge(currentBk2Index);
                     beforeGameplay.run();
                 });
-        // ROM's Load_Sprites/Process_Sprites pass runs inside the same frame
-        // cadence as LevelLoop (Level loc_6468, sonic3k.asm:7849-7860), so it
-        // consumes a BK2 row like any other frame.
-        currentBk2Index++;
+        if (result != LevelFrameResult.SETUP_ONLY) {
+            currentBk2Index++;
+        }
 
         return mask;
     }
@@ -377,8 +364,9 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
                     applyP1ActionPressEdge(currentBk2Index - 1);
                     beforeGameplay.run();
                 });
-        // See stepFrameFromRecording: the setup pass consumes a BK2 row.
-        currentBk2Index++;
+        if (result != LevelFrameResult.SETUP_ONLY) {
+            currentBk2Index++;
+        }
 
         return validationMask;
     }

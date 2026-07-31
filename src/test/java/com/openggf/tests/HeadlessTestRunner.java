@@ -151,9 +151,10 @@ public class HeadlessTestRunner {
      * @return The raw input mask used (for trace input validation)
      */
     public int stepFrameFromRecording() {
-        // The setup pass is a recorded frame of its own; skipping over it
-        // compares its row against the following gameplay frame.
-        int input = driver.stepFrameFromRecording();
+        int input;
+        do {
+            input = driver.stepFrameFromRecording();
+        } while (driver.getLastFrameResult() == LevelFrameResult.SETUP_ONLY);
         presentIfAdmitted(driver.getLastFrameResult());
         return input;
     }
@@ -163,7 +164,10 @@ public class HeadlessTestRunner {
      * previous BK2 row.
      */
     public int stepFrameFromRecordingUsingPreviousInput() {
-        int input = driver.stepFrameFromRecordingUsingPreviousInput();
+        int input;
+        do {
+            input = driver.stepFrameFromRecordingUsingPreviousInput();
+        } while (driver.getLastFrameResult() == LevelFrameResult.SETUP_ONLY);
         presentIfAdmitted(driver.getLastFrameResult());
         return input;
     }

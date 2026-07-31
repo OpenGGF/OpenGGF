@@ -556,14 +556,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 						}
 					}
 
-					if (context.initialAssemblySlot() && !playable.isCpuControlled()) {
-						// ROM re-inits Player_1 on this pass: Sonic_Init does
-						// routine += 2 then rts, so the leader neither moves nor
-						// takes gravity (sonic3k.asm:21902-21943). Player_2's
-						// routine persists across the load, so the sidekick keeps
-						// running Tails_Control below — which is why the recorded
-						// setup row already shows Tails placed by loc_13A8E at
-						// CPU routine $0C with a frame of gravity applied.
+					if (context.initialAssemblySlot()) {
 						publishInitialAssemblyInput(playable, input);
 						continue;
 					}

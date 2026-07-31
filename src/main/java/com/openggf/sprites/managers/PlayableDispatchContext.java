@@ -21,7 +21,7 @@ record PlayableDispatchContext(
             ProcessSpritesEpoch epoch,
             InitialPlayableInput input) {
         return new PlayableDispatchContext(
-                epoch, input, true, true, true,
+                epoch, input, true, false, true,
                 false, false, false, false, false, false);
     }
 

@@ -3,12 +3,14 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
-- Fix: trace replay now executes the level's own Load_Sprites/Process_Sprites
-  setup pass as the recorded frame it is, instead of discarding the pass and
-  starting one frame of physics early. The player no longer takes a frame of
-  gravity the ROM never applies at a zone handoff, which removed a permanent
-  sub-pixel offset that had been dragging Mushroom Hill and Carnival Night
-  off the recorded route.
+- Fix: trace replay no longer treats the level's own Load_Sprites/Process_Sprites
+  setup pass as a recorded frame. That pass runs before `LevelLoop`
+  (sonic3k.asm:7849-7860), so it performs no `Wait_VSync`, no `Read_Joypads`, and
+  no `Level_frame_counter` increment; a recorded row 0 is always the first
+  `LevelLoop` frame. Making the setup pass consume a controller row and tick the
+  sprite frame counter shifted every later row by one and produced accidental
+  frame-phase alignment on some segments while regressing others, so both
+  behaviours are withdrawn.
 - Fix: the special-stage entry ring now retires the way the ROM does. It
   restores the shared badnik-explosion art it drew over and deletes itself
   once it leaves the ROM's coarse retirement bands, instead of lingering until

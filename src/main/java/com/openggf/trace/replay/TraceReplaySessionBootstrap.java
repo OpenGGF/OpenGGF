@@ -253,8 +253,7 @@ public final class TraceReplaySessionBootstrap {
                 TraceReplayBootstrap.isS3kCompleteRunSegment(trace);
         if (representedS3kCompleteRun
                 && gameplayMode != null
-                && gameplayMode.getLevelManager() != null
-                && !segmentBeginsAtLevelSetupPass(trace)) {
+                && gameplayMode.getLevelManager() != null) {
             gameplayMode.getLevelManager()
                     .discardPendingInitialProcessSpritesForStateRestoration();
         }
@@ -404,8 +403,7 @@ public final class TraceReplaySessionBootstrap {
                     fixture != null ? fixture.sprite() : null);
         }
         primeLeaderJumpEdgeFromBk2Prelude(fixture);
-        if (gameplayMode != null && gameplayMode.getLevelManager() != null
-                && !segmentBeginsAtLevelSetupPass(trace)) {
+        if (gameplayMode != null && gameplayMode.getLevelManager() != null) {
             gameplayMode.getLevelManager().consumePendingInitialProcessSpritesPass();
         }
         applyInitialRngSeedForReplay(trace.metadata());
@@ -414,24 +412,6 @@ public final class TraceReplaySessionBootstrap {
         TraceReplayBootstrap.ReplayStartState replayStart =
                 TraceReplayBootstrap.applyReplayStartStateForTraceReplay(trace, fixture);
         return new BootstrapResult(snapshotReport, replayStart);
-    }
-
-
-    /**
-     * Whether this complete-run segment's first recorded row is the level's own
-     * {@code Load_Sprites}/{@code Process_Sprites} setup pass.
-     *
-     * <p>Every S3K complete-run segment does: each one records a
-     * {@code routine 0x00 -> 0x02} change for {@code Player_1} on frame 0
-     * (verified across AIZ, HCZ, MGZ, CNZ, ICZ, LBZ and MHZ), which is
-     * {@code Sonic_Init} running. Keeping the authority pending lets the first
-     * driven frame execute the walk, which is what gives
-     * {@code Obj_Sonic} its routine-0 {@code Sonic_Init} frame — {@code routine
-     * += 2} then {@code rts}, no movement and no gravity
-     * (sonic3k.asm:21852-21943).
-     */
-    private static boolean segmentBeginsAtLevelSetupPass(TraceData trace) {
-        return TraceReplayBootstrap.isS3kCompleteRunSegment(trace);
     }
 
 
