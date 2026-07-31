@@ -820,6 +820,9 @@ public abstract class AbstractTraceReplayTest {
             TraceBinder binder,
             com.openggf.trace.replay.TraceReplayFixture fixture,
             boolean replayCompleted) {
+        if (replayCompleted) {
+            fixture.runTerminalDynamicArtIteration();
+        }
         fixture.closeDynamicArtComparisonSegment();
         if (!replayCompleted
                 || !trace.metadata()

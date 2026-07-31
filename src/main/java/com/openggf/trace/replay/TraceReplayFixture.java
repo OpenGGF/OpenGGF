@@ -41,6 +41,27 @@ public interface TraceReplayFixture {
         gameplayMode().endDynamicArtComparisonSegment();
     }
 
+    /**
+     * Runs the one main-loop iteration the ROM executes after the last
+     * sampled frame, in {@code Level_MainLoop} order
+     * (docs/s2disasm/s2.asm:5088): the V-int art boundary first
+     * (docs/s2disasm/s2.asm:5091 WaitForVint with VintID_Level, reaching
+     * ProcessDMAQueue at docs/s2disasm/s2.asm:1769), then the object pass
+     * and its player display DPLC submissions (docs/s2disasm/s2.asm:5095
+     * RunObjects, reaching LoadSonicDynPLC at docs/s2disasm/s2.asm:38828 and
+     * LoadTailsDynPLC at docs/s2disasm/s2.asm:41658).
+     *
+     * <p>No row is published, so the work this iteration produces is
+     * forwarded onto the last published row when the segment closes. Reads
+     * nothing from the trace: the content is decided entirely by the engine's
+     * own pending transfers and its native animation advance. Must only run
+     * when the replay reached the end of the trace.
+     */
+    default void runTerminalDynamicArtIteration() {
+        gameplayMode().serviceTerminalDynamicArtVBlank();
+        advancePlayableAnimationsOnly();
+    }
+
     /** Run one gameplay tick using the next BK2 input. Returns the mask. */
     int stepFrameFromRecording();
 

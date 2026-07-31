@@ -685,6 +685,7 @@ public final class TraceSessionLauncher {
         }
         if (comparator.isComplete() && !completionArmed) {
             if (fixture != null) {
+                fixture.runTerminalDynamicArtIteration();
                 fixture.closeDynamicArtComparisonSegment();
                 comparator.finalizeTerminalDynamicArtComparison();
                 fixture.closeHardwareTimingReplayRun();

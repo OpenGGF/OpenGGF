@@ -508,6 +508,23 @@ public final class GameplayModeContext implements ModeContext {
         }
     }
 
+    /**
+     * Runs the production V-blank art boundary once more at the end of a
+     * replay, without publishing a comparison row. The ROM's main loop
+     * services its V-int before running objects within one iteration
+     * (docs/s2disasm/s2.asm:5088 Level_MainLoop, :5091 WaitForVint with
+     * VintID_Level, which reaches ProcessDMAQueue at
+     * docs/s2disasm/s2.asm:1769), so the iteration that follows the last
+     * sampled frame still retires the transfers submitted on it. Carries no
+     * expected trace value.
+     */
+    public void serviceTerminalDynamicArtVBlank() {
+        if (dynamicArtLifecycle.isRunActive()
+                && dynamicArtLifecycle.isComparisonSegmentOpen()) {
+            dynamicArtLifecycle.serviceTerminalProductionVBlank();
+        }
+    }
+
     /** Game-owned runtime-art coordinator for this gameplay session. */
     public RuntimeArtCoordinator runtimeArtCoordinator() {
         return runtimeArtCoordinator;
