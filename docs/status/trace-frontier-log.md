@@ -55444,3 +55444,113 @@ is the unmodelled `btst #status.player.pushing,status(a2) / moveq #4,d0`
 override in `Obj05_Main` (`s2.asm:41746-41750`), whose S3K counterpart narrows
 the same gate further (`sonic3k.asm:30043-30052`) — a per-game divergence that
 needs an owner rather than the existing `isS3k` flag.
+
+## 2026-07-31 — S2 Obj05 pushing-override selection index (ARZ near-green)
+
+Worktree `.worktrees/s2-arz-near-green`, branch `bugfix/ai-s2-arz-near-green`
+off `bugfix/ai-trace-s1-titlecard-plc-integration`. JDK 21 (Maven reports
+21.0.11). Uncommitted at measurement time; the only edit is
+`src/main/java/com/openggf/sprites/managers/TailsTailsController.java`.
+
+Command (both runs, `rm -rf target/surefire-reports` + `mvn -q -Dmse=relaxed`
+before each):
+
+```
+mvn -Dtest='TestS2*TraceReplay,TestTailsTails*,TestRewindCoverageGuard,\
+TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,\
+TestSonic3kDecodingUtils' -DfailIfNoSpecifiedTests=false test
+```
+
+Fix: model ROM `Obj05_Main`'s derived selection index — `d0 = anim(a2)` then
+`btst #status.player.pushing,status(a2) / moveq #4,d0` (`s2.asm:41734-41751`,
+shipped REV01 branch because `fixBugs = 0`, `s2.asm:27`) — and latch the
+DERIVED index in `Obj05_parent_prev_anim` rather than the raw parent anim
+(`s2.asm:41755-41758`; S3K counterpart `sonic3k.asm:30054-30058`). The S3K
+narrowed gate (`sonic3k.asm:30043-30052`, WindTunnel + `$A9..$AC` mapping-frame
+window) is deliberately NOT ported yet, so S3K selection is unchanged.
+
+Both runs: `Tests run: 80, Failures: 19` — identical failing set, no
+regressions, no new red.
+
+| Trace | Before (frame — field, errors) | After |
+|---|---|---|
+| ARZ | 1078 — dynamic_art.edge[2].present, 627 | 2048 — dynamic_art.edge[0].logical_frame, 28 |
+| ARZ2 | 689 — dynamic_art.edge[0].logical_frame, 3984 | 689 — same field, 204 |
+| CNZ | 201 — dynamic_art.edge[4].mapping_frame, 9697 | 8590 — queue.s2_nemesis_plc.queued_fingerprints, 8 |
+| CNZ2 | 1906 — dynamic_art.outstanding_transfer_ids, 8718 | 8405 — dynamic_art.edge[0].logical_frame, 30 |
+| CPZ | 725 — dynamic_art.edge[1].present, 3928 | 2782 — dynamic_art.edge[0].logical_frame, 17 |
+| CPZ2 | 561 — dynamic_art.edge[0].logical_frame, 9058 | 561 — same field, 131 |
+| EHZ1 | 1549 — dynamic_art.outstanding_transfer_ids, 3438 | 4836 — queue.s2_nemesis_plc.queued_fingerprints, 4 |
+| HTZ | 979 — dynamic_art.edge[2].present, 7559 | 3679 — dynamic_art.edge[0].logical_frame, 21 |
+| HTZ2 | 361 — dynamic_art.outstanding_transfer_ids, 8973 | 1461 — dynamic_art.edge[0].logical_frame, 12 |
+| MCZ | 3006 — dynamic_art.edge[1].present, 2410 | 5412 — queue.s2_nemesis_plc.queued_fingerprints, 4 |
+| MCZ2 | 1805 — dynamic_art.edge[0].present, 7636 | 6126 — dynamic_art.edge[0].logical_frame, 21 |
+| MTZ | 292 — dynamic_art.edge[1].present, 8704 | 6708 — dynamic_art.edge[0].logical_frame, 11 |
+| MTZ2 | 293 — dynamic_art.edge[0].logical_frame, 10762 | 293 — same field, 121 |
+| MTZ3 | 1689 — dynamic_art.outstanding_transfer_ids, 13919 | 2566 — dynamic_art.edge[0].logical_frame, 104 |
+| OOZ | 346 — dynamic_art.edge[2].present, 8968 | 346 — same field, 7971 |
+| OOZ2 | 830 — dynamic_art.edge[0].present, 10470 | 10684 — dynamic_art.edge[2].present, 2355 |
+| SCZ | 2574 — dynamic_art.edge[0].logical_frame, 2 | unchanged |
+| WFZ | 10287 — dynamic_art.outstanding_transfer_ids, 5825 | unchanged |
+| Special stage | 136 — dynamic_art.edges, 21451 | unchanged |
+
+Nothing greened. The dominant residual family across S2 is now the
+`dynamic_art.edge[0].logical_frame expected N actual N-1` lag-frame DMA-drain
+divergence (ARZ2 f689, CPZ2 f561, MTZ2 f293), which is independent of this fix.
+
+## 2026-07-31 — Independent verification of the Obj05 selection-index fix
+
+Worktree `.worktrees/s2-arz-near-green`, branch `bugfix/ai-s2-arz-near-green`.
+JDK 21 (Maven reports 21.0.11). Measured by a separate verifier, `mvn -q
+-Dmse=relaxed clean` + `rm -rf target/surefire-reports` before every run.
+Baseline was taken by reverting only
+`src/main/java/com/openggf/sprites/managers/TailsTailsController.java`.
+
+Family command:
+
+```
+mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \
+  -Ds2.rom.path=<s2 rom> \
+  -Dtest=TestS2ArzLevelSelectTraceReplay,TestS2Arz2LevelSelectTraceReplay,\
+TestS2DezEndingLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,\
+TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay test
+```
+
+Both runs: `Tests run: 6, Failures: 5, Errors: 0, Skipped: 0`.
+
+| Trace | Before | After | Verdict |
+|---|---|---|---|
+| ARZ | f1078 `dynamic_art.edge[2].present`, 627 errors | f2048 `dynamic_art.edge[0].logical_frame`, 28 errors | advanced |
+| ARZ2 | f689 `dynamic_art.edge[0].logical_frame`, 3984 errors | f689 same field, 204 errors | advanced (errors only) |
+| EHZ1 | f1549 `dynamic_art.outstanding_transfer_ids`, 3438 errors | f4836 `queue.s2_nemesis_plc.queued_fingerprints`, 4 errors | advanced |
+| MCZ | f3006 `dynamic_art.edge[1].present`, 2410 errors | f5412 `queue.s2_nemesis_plc.queued_fingerprints`, 4 errors | advanced |
+| SCZ | f2574 `dynamic_art.edge[0].logical_frame`, 2 errors | unchanged | unmoved |
+| DEZ ending | green | green | green, held |
+
+Nothing newly greened. No `REGRESSION INTRODUCED:` lines.
+
+Green guard sweep (all pass, 0 failures/errors):
+`TestS2DezEndingLevelSelectTraceReplay`, `TestS1Ghz1TraceReplay`,
+`TestS1Mz1TraceReplay`, `TestS1Ghz1CompleteRunTraceReplay`,
+`TestS1Ghz2CompleteRunTraceReplay`, `TestS1Mz1CompleteRunTraceReplay`,
+`TestS1Credits00Ghz1TraceReplay`, `TestS1Credits07Ghz1bTraceReplay`,
+`TestTraceReplayInvariantGuard`, `TestTraceReplayReferenceClosureGuard`,
+`TestRewindCoverageGuard`, `TestStaticStateRewindCoverageGuard`,
+`TestPlcProducerCoverageGuard`, `TestDynamicArtDiagnosticsComparator`.
+
+Cross-game parity sweep (52 tests, 0 failures): `TestS3kAiz1SkipHeadless`,
+`TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver`,
+`TestSonic3kDecodingUtils`.
+
+Disassembly corroborated independently: `s2.asm:27` (`fixBugs = 0`),
+`s2.asm:41734-41751` (`moveq #0,d0 / move.b anim(a2),d0` then the shipped
+`btst #status.player.pushing,status(a2) / beq.s + / moveq #4,d0`),
+`s2.asm:41753-41758` (`cmp.b Obj05_parent_prev_anim(a0),d0` — the latch holds
+the DERIVED index), `Obj05AniSelection` entry 4 = `9` (Pushing), and
+`sonic3k.asm:30042-30058` (the same latch against `objoff_34`, with S3K's
+narrower `WindTunnel_flag_P2` + `$A9..$AC` mapping-frame gate).
+
+Outstanding debt: the S3K half of the pushing override is not modelled, and the
+skip is currently expressed with this controller's pre-existing `isS3k` flag
+rather than a narrowest-owner predicate. Porting the S3K gate should retire that
+branch.
