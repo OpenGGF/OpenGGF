@@ -55251,3 +55251,58 @@ bootstrap's dynamic-object clear. That is an object-lifetime fix in the same
 class as the others in this branch, not an architecture change.
 
 MHZ stays at **601** non-queue groups; nothing was landed this round.
+
+### 2026-07-31 — MHZ pollen spawner: the missing primitive is absolute-slot placement
+
+Grounded the install point in ROM rather than picking one, which named the gap.
+
+**ROM (sonic3k.asm:7789-7792, `Level` init):**
+
+```
+loc_63A4:
+        cmpi.b  #7,(Current_zone).w                                    ; MHZ
+        bne.s   loc_63B4
+        move.l  #Obj_MHZ_Pollen_Spawner,(Dynamic_object_RAM+object_size).w
+```
+
+This is a **direct write to an absolute SST slot**, not a `FindFreeObj`
+allocation. `Dynamic_object_RAM` is absolute dynamic slot 3, so
+`+object_size` is slot **4** — exactly what the `Random_Number` probe measured
+(`A0_slot=4` on every call). The same block writes `Obj_HCZWaveSplash` and
+`Obj_HCZWaterSplash` to absolute slots the same way, so this is a general ROM
+level-init pattern, not an MHZ quirk.
+
+It matters because slot order is execution order: the spawner at slot 4 must run
+before `Obj_MHZMushroomCap` at slot 5, since it reads the player *before* the
+cap's `SolidObjectTop` pass grounds them. That is the entire reason ROM takes no
+`Random_Number` on row 73 and one on row 74.
+
+**The engine has no equivalent primitive.** `ObjectManager` offers
+`createDynamicObject` (lowest free slot), `createDynamicObjectWithReservedSlot`
+and `addDynamicObjectAfterSlot(parentSlot)` — all *allocations*, none a write to
+a named absolute slot. Measured outcome: the spawner lands at slot **11** from
+every install point tried (`onInitLevel`, the pre-dynamic hook, and a new
+`installAbsoluteSlotLevelObjects` provider hook called at ROM's Level-init point
+inside `executeInitialProcessSprites`, with the stale instance retired first).
+By the time any of those run, slots 4-10 are already held, so the spawner
+executes after the layout objects it must precede and consumes `Random_Number`
+a frame early. All variants measured 982 non-queue groups against 601 with the
+spawner absent.
+
+**Also confirmed this round, correcting earlier readings:**
+
+- The engine's player physics and landing frame are ROM-correct — pre-physics
+  Player_1 state matches the probe's `Process_Sprites` values frame for frame.
+  The inline solid-resolution "blocker" claim is retracted (see previous entry).
+- Consumption is Player_1 only, matching ROM's one call per frame. The earlier
+  "both players" reading was the spawner being invoked twice per frame by two
+  callers.
+
+**Next step, bounded and ROM-grounded:** add an absolute-slot placement path to
+`ObjectManager` — the engine already models absolute dynamic slot 3 via
+`processAbsoluteDynamicSlot3`, so the concept exists but is not reachable for
+level objects — and install the S3K level-init objects through it at the point
+`Level` does, before `Load_Sprites`. That fixes the ordering for the pollen
+spawner and for the HCZ splash objects written by the same ROM block.
+
+MHZ stays at **601** non-queue groups; nothing landed this round.
