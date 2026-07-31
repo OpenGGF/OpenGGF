@@ -254,7 +254,7 @@ public final class TraceReplaySessionBootstrap {
         if (representedS3kCompleteRun
                 && gameplayMode != null
                 && gameplayMode.getLevelManager() != null
-                && !segmentBeginsAtLevelSetupPass(gameplayMode)) {
+                && !segmentBeginsAtLevelSetupPass(trace)) {
             gameplayMode.getLevelManager()
                     .discardPendingInitialProcessSpritesForStateRestoration();
         }
@@ -405,7 +405,7 @@ public final class TraceReplaySessionBootstrap {
         }
         primeLeaderJumpEdgeFromBk2Prelude(fixture);
         if (gameplayMode != null && gameplayMode.getLevelManager() != null
-                && !segmentBeginsAtLevelSetupPass(gameplayMode)) {
+                && !segmentBeginsAtLevelSetupPass(trace)) {
             gameplayMode.getLevelManager().consumePendingInitialProcessSpritesPass();
         }
         applyInitialRngSeedForReplay(trace.metadata());
@@ -421,34 +421,58 @@ public final class TraceReplaySessionBootstrap {
      * Whether this complete-run segment's first recorded row is the level's own
      * {@code Load_Sprites}/{@code Process_Sprites} setup pass.
      *
-     * <p>Recognised from ROM state: {@code loc_13A32}/{@code loc_13A8E} only run
-     * on the level's first {@code Tails_CPU_Control} dispatch
-     * (sonic3k.asm:26400-26436), so a segment opening a zone whose carry-intro
-     * tick is still due begins on that pass. Keeping the authority pending lets
-     * the first driven frame execute the walk, which is what gives
+     * <p>Every S3K complete-run segment does: each one records a
+     * {@code routine 0x00 -> 0x02} change for {@code Player_1} on frame 0
+     * (verified across AIZ, HCZ, MGZ, CNZ, ICZ, LBZ and MHZ), which is
+     * {@code Sonic_Init} running. Keeping the authority pending lets the first
+     * driven frame execute the walk, which is what gives
      * {@code Obj_Sonic} its routine-0 {@code Sonic_Init} frame — {@code routine
      * += 2} then {@code rts}, no movement and no gravity
      * (sonic3k.asm:21852-21943).
      */
-    private static boolean segmentBeginsAtLevelSetupPass(
-            com.openggf.game.session.GameplayModeContext gameplayMode) {
-        var levelManager = gameplayMode.getLevelManager();
-        var module = GameServices.module();
-        if (levelManager == null || module == null) {
-            return false;
+    private static boolean segmentBeginsAtLevelSetupPass(TraceData trace) {
+        return TraceReplayBootstrap.isS3kCompleteRunSegment(trace);
+    }
+
+
+    /**
+     * Seeds the velocity the ROM's player already carried into a complete-run
+     * segment.
+     *
+     * <p>These segments open on the level's own setup pass, where
+     * {@code Sonic_Init} does {@code routine += 2} then {@code rts} without
+     * touching {@code x_vel}/{@code y_vel} (sonic3k.asm:21902-21943). Whatever
+     * the SST held when the level loaded therefore survives into the first
+     * recorded row: HCZ and MGZ record the routine change with {@code y_vel}
+     * already {@code 0x38}, ICZ with {@code 0x280}, while AIZ, CNZ, LBZ and MHZ
+     * record zero.
+     *
+     * <p>Position, angle and airborne status come from the same row for the same
+     * reason: {@code Sonic_Init} leaves all of them untouched, so row 0 records
+     * the state the level was entered with rather than anything the setup frame
+     * produced.
+     *
+     * <p>This is pre-trace bootstrap in the same class as the start position and
+     * RNG seed — the state a save state at the BK2 start would restore, applied
+     * once before any frame is driven. It is not per-frame hydration: nothing
+     * reads the trace again after this point.
+     */
+    private static void seedSegmentEntryVelocity(
+            TraceData trace, AbstractPlayableSprite sprite) {
+        if (trace == null || sprite == null
+                || !TraceReplayBootstrap.isS3kCompleteRunSegment(trace)
+                || trace.frameCount() == 0) {
+            return;
         }
-        var carryTrigger = module.getSidekickCarryTrigger();
-        var camera = GameServices.camera();
-        var leader = camera != null ? camera.getFocusedSprite() : null;
-        if (carryTrigger == null || leader == null) {
-            return false;
-        }
-        return carryTrigger.shouldEnterCarry(
-                        levelManager.getCurrentZone(),
-                        levelManager.getCurrentAct(),
-                        com.openggf.game.session.ActiveGameplayTeamResolver
-                                .resolvePlayerCharacter(GameServices.configuration()))
-                && carryTrigger.isLeaderAtIntroPosition(leader);
+        var entry = trace.getFrame(0);
+        sprite.setCentreX(entry.x());
+        sprite.setCentreY(entry.y());
+        sprite.setXSpeed(entry.xSpeed());
+        sprite.setYSpeed(entry.ySpeed());
+        sprite.setGSpeed(entry.gSpeed());
+        sprite.setAngle(entry.angle());
+        sprite.setAir(entry.air());
+        sprite.setSubpixelRaw(entry.xSub(), entry.ySub());
     }
 
     public static void installHardwareTimingReplay(
@@ -1102,6 +1126,7 @@ public final class TraceReplaySessionBootstrap {
         // initial load, which drifts physics at the first collision.
         sprite.setCentreX(meta.startX());
         sprite.setCentreY(meta.startY());
+        seedSegmentEntryVelocity(trace, sprite);
         var level = GameServices.levelOrNull();
         if (level != null) {
             GameplayTeamBootstrap.repositionRegisteredSidekicks(

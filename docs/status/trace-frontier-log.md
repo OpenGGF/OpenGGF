@@ -54803,3 +54803,58 @@ the MHZ/rewind suites pass (135 tests, 0 failures).
 **Still open on MHZ:** the late route divergence (`x` at frame 3381 ROM
 `0x10CC` vs engine `0x0D28`) survives untouched, so it has a separate cause
 from the frame-0 offset.
+
+### 2026-07-31 — setup-pass fix refined: entry state seeded; MGZ regression open
+
+Refines the previous entry after measuring the whole S3K complete-run fleet.
+
+**Predicate simplified and generalised.** The `routine_change` aux proves row 0
+is the level setup pass for *every* S3K complete-run segment, not just the
+carry-intro ones — AIZ, HCZ, MGZ, CNZ, ICZ, LBZ and MHZ all record
+`routine 0x00 -> 0x02` for `Player_1` on frame 0, which is `Sonic_Init`.
+`segmentBeginsAtLevelSetupPass` is therefore just
+`isS3kCompleteRunSegment(trace)`; the carry-intro coupling is gone.
+
+**Entry state seeded.** `Sonic_Init` touches neither position, velocity, angle,
+airborne status nor sub-pixel, so row 0 records the state the level was
+*entered* with. HCZ and MGZ record `y_vel` already `0x38` at the routine change,
+ICZ `0x280`; HCZ also records `x_sub 0xE800`. The bootstrap now seeds position,
+velocity, ground speed, angle, air and sub-pixel from row 0 — one-shot
+pre-trace bootstrap in the same class as the start position and RNG seed, not
+per-frame hydration. Nothing reads the trace again after it.
+
+Seeding progression on HCZ non-queue groups: 1162 (nothing seeded) -> 879
+(velocity) -> 883 (+position/angle/air) -> **376** (+sub-pixel). Sub-pixel was
+by far the largest single contributor.
+
+Animation-id seeding was tried and reverted: no effect on MGZ or HCZ, and it
+cost LBZ 8 -> 10 and ICZ 106 -> 107.
+
+**Fleet position against the pre-fix baseline (non-queue groups):**
+
+| Segment | Before | After | |
+|---|---:|---:|---|
+| MHZ | 1888 | **1039** | improved |
+| ICZ | 95 | **92** | improved |
+| AIZ complete | 0 | 0 | unchanged |
+| LBZ | 0 | 0 | unchanged |
+| CNZ | ~1640 | 1748 | slightly worse |
+| HCZ | ~30 | 376 | worse |
+| MGZ | ~17 | 3966 | **much worse** |
+
+`TestS3kAizTraceReplay` (standard, not complete-run) also goes 4 -> 13 failures.
+No replay class changed pass/fail status other than that one.
+
+**Open, and the named next target: MGZ.** Its 3966 groups are almost entirely
+`player_animation_id` / `player_mapping_frame`, starting with
+`anim 0x001B` vs `0x0000` at frame 0. ROM sets that at spawn —
+`SpawnLevelMainSprites` writes `move.b #$1B,anim(a1)` for the zones that start
+airborne (`loc_6834` for `$100`, `loc_68A6` for `$200`/`$900`/`$1600`,
+sonic3k.asm:8155-8190) — and `Sonic_Init` leaves it alone, so the engine needs
+to reproduce that spawn write rather than seed it from the row. Doing it
+properly in `SpawnLevelMainSprites`' engine equivalent is the next step and
+should also recover most of HCZ.
+
+The AIZ-standard regression has its own cause, recorded in the previous entry:
+the sidekick takes a control pass on initial assembly unconditionally, whereas
+ROM only does so when `Player_2`'s routine survived the load.
