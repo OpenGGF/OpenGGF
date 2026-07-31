@@ -54948,3 +54948,40 @@ MHZ's first divergence moves frame 31 -> **175** (`tails_y` off by one), then
 `TestS3kAizTraceReplay` improves 13 -> 11 failures but is still above its
 baseline of 4; its cause is unchanged (the sidekick's unconditional control
 pass on initial assembly).
+
+### 2026-07-31 — MHZ down to 601 groups; remaining bulk is one missed Madmole hit
+
+- MHZ1 cutscene Player_2 duck-pose comparison fixed (inverted `bhi` port,
+  `loc_62DDC`, sonic3k.asm:130020-130030). Removes the 632-row
+  `tails_animation_id` group; MHZ 602 -> 601 non-queue groups.
+
+**The remaining bulk is a single event.** Ranking the surviving groups by frames
+covered rather than by first occurrence shows twelve fields each spanning
+~4,000 of the 7,218 rows — `tails_y` 4231, `tails_x` 4158, `x`/`camera_x` 4065,
+`y` 4064, `player_mapping_frame` 4021 and so on. They are all one route
+divergence, and it starts at **frame 3152**:
+
+| Row | ROM | Engine |
+|---|---|---|
+| 3151 | `x=0x103E y=0x0726 ys=0x0450` falling | matches |
+| 3152 | `ys` flips to `-0x0200`, `anim 0x1A`, x moves left | keeps falling |
+| 3165 | `status 0x09`, lands on slot `0x0C`, `ys=0` | airborne, rolling |
+
+`anim 0x1A` is HURT (`Player_Hurt`, sonic3k.asm:21109) and the ring count holds
+at `0x2C` across the event, which is the shielded-hit signature: knockback and
+hurt pose without scattering. The `object_near` aux at row 3151 puts three
+`Obj_Madmole` parts around the player — slots 17/19/20 at code pointers
+`0x0008D586`, `0x0008D602`, `0x0008D6E6`, all inside `Obj_Madmole`
+(sonic3k.asm:193075, dispatcher at `loc_8D6E6` 193218) — with slot 20 at
+`(0x1046, 0x0724)` against the player's `(0x103E, 0x072A)`.
+
+Both sides agree on position right up to row 3151 (the first `x` group starts at
+3153), so this is not drift: the ROM's player is struck by the Madmole and the
+engine's is not. `MadmoleBadnikInstance` exists, so the gap is in its touch
+response or hitbox rather than a missing object.
+
+That single miss is worth roughly 4,000 rows across a dozen fields — by far the
+largest remaining item, and the next target.
+
+**MHZ progress this session:** 1888 -> 601 non-queue groups; queue/admission
+frontier raw frame 36 -> 7218.
