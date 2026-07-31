@@ -30,6 +30,7 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 17. [MHZ Swing Vine / Vertical Swing Bar Forced Camera Scroll (Resolved)](#mhz-swing-vine--vertical-swing-bar-forced-camera-scroll-resolved)
 18. [MHZ2 End-Boss Background Vertical Deform (`sub_554B8`)](#mhz2-end-boss-background-vertical-deform-sub_554b8)
 19. [MHZ Deferred Items: Out-of-Scope Divergences Confirmed During the Parity-Fix Wave](#mhz-deferred-items-out-of-scope-divergences-confirmed-during-the-parity-fix-wave)
+20. [Air Countdown Digits: Rebuilt Mapping Frames Instead of VRAM DMA](#air-countdown-digits-rebuilt-mapping-frames-instead-of-vram-dma)
 
 ---
 
@@ -1167,3 +1168,50 @@ comparator stops at the exit). `TestS3kMegaRunChain` clears the gumball round tr
 the chain's remaining seg2 (aiz_2) blocker is a separate landing/animation-state
 fidelity slip at f186/f192, tracked in docs/status/trace-frontier-log.md, not this
 divergence.
+
+---
+
+## Air Countdown Digits: Rebuilt Mapping Frames Instead of VRAM DMA
+
+**Location:** `Sonic3kObjectArtProvider.loadAirCountdownDigitArt()`, `S3kAirCountdownObjectInstance.java`
+**ROM Reference:** `sonic3k.asm:33320-33327` (`AirCountdown_Init`), `sonic3k.asm:33489-33516` (`AirCountdown_Load_Art`)
+
+### Original Implementation
+
+`Obj_AirCountdown` points at a single mapping table for its whole life:
+
+```asm
+        move.l  #Map_Bubbler,mappings(a0)
+        tst.b   parent+1(a0)
+        beq.s   loc_1819E
+        move.l  #Map_Bubbler2,mappings(a0)
+loc_1819E:
+        move.w  #make_art_tile(ArtTile_Bubbles,0,0),art_tile(a0)
+```
+
+Mapping frames `$00`-`$08` are bubbles drawn from `ArtNem_Bubbles`. Frames
+`$09`-`$12` all resolve to the *same* one-piece frame (`word_2FD7A`) whose 2x3
+piece sits at tile `$384` past `ArtTile_Bubbles` — i.e. `ArtTile_DashDust`.
+The frame therefore selects nothing on its own; `AirCountdown_Load_Art` DMAs six
+tiles from `ArtUnc_AirCountdown + (frame - 9) * 6` into that fixed VRAM window
+every time the mapping frame changes. P2 uses `Map_Bubbler2` and
+`ArtTile_DashDust_P2` so the two players don't overwrite each other's digit.
+
+### Our Implementation
+
+We have no VRAM window to overwrite, so the provider builds a separate
+`AIR_COUNTDOWN_DIGITS` sheet: the ten ROM mapping frames are re-emitted with the
+ROM's own geometry (offsets, size, flip, palette, priority) and each frame's tile
+index moved onto its own six-tile slice of `ArtUnc_AirCountdown`. The object
+picks that sheet for frames `>= $09` and the shared `BUBBLER` sheet below it.
+
+### Why This Is Acceptable
+
+The mapping geometry and every art byte still come from the ROM through the
+normal ROM-loading pipeline; only the indirection changes — a per-frame tile
+base replaces a per-frame DMA into a shared window. The rendered result is
+identical, and because both players read from the same immutable source art
+rather than a mutable VRAM window, the P1/P2 `Map_Bubbler`/`Map_Bubbler2` split
+collapses to a single shared sheet with no visible difference. Emulating the DMA
+would mean modelling `ArtTile_DashDust` as mutable VRAM shared with the dash
+dust, which buys nothing the tile rebase doesn't already give us.
