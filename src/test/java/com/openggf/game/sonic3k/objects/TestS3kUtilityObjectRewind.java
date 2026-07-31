@@ -7,6 +7,7 @@ import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.game.sonic3k.objects.badniks.Flybot767BadnikInstance;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
@@ -139,6 +140,33 @@ class TestS3kUtilityObjectRewind {
                 "Sonic3kSSEntryRingObjectInstance must not keep an explicit S3K dynamic codec");
     }
 
+    @Test
+    void flybotRetainedRenderWaitStateSurvivesFreshRecreation() {
+        Harness harness = Harness.create();
+        ObjectManager objectManager = harness.objectManager();
+        objectManager.setRewindInPlaceRestoreEnabledForTest(false);
+        ObjectSpawn spawn = new ObjectSpawn(
+                0x300, 0x180, Sonic3kObjectIds.FLYBOT_767, 0, 0, false, 91);
+        Flybot767BadnikInstance source = objectManager.createDynamicObject(
+                () -> new Flybot767BadnikInstance(spawn));
+        setBooleanField(source, "waitingForOnscreen", true);
+        setBooleanField(source, "layoutWaitUsesRetainedRenderFlag", true);
+        setBooleanField(source, "placeholderRenderedOnscreen", true);
+        ObjectRefId sourceId = objectId(objectManager, source);
+        RewindRegistry registry = registryFor(objectManager);
+        CompositeSnapshot snapshot = registry.capture();
+
+        objectManager.removeDynamicObject(source);
+        registry.restore(snapshot);
+
+        Flybot767BadnikInstance restored =
+                objectById(objectManager, Flybot767BadnikInstance.class, sourceId);
+        assertNotSame(source, restored);
+        assertTrue(readBooleanField(restored, "waitingForOnscreen"));
+        assertTrue(readBooleanField(restored, "layoutWaitUsesRetainedRenderFlag"));
+        assertTrue(readBooleanField(restored, "placeholderRenderedOnscreen"));
+    }
+
     private record Harness(ObjectManager objectManager) {
         static Harness create() {
             ObjectManager[] holder = new ObjectManager[1];
@@ -195,8 +223,8 @@ class TestS3kUtilityObjectRewind {
     private static void assertSsEntryRingState(Sonic3kSSEntryRingObjectInstance ring) {
         assertEquals(SS_ENTRY_RING_SPAWN.subtype() & 0x1F, readIntField(ring, "bitIndex"),
                 "SS-entry ring bit index must rebuild from subtype");
-        assertTrue(readBooleanField(ring, "hiddenPalaceRoute"),
-                "SS-entry ring hidden-palace route flag must rebuild from subtype bit 7");
+        assertTrue(readBooleanField(ring, "forcedSanctuaryRoute"),
+                "SS-entry ring forced-sanctuary route flag must rebuild from subtype bit 7");
         assertTrue(readBooleanField(ring, "initialized"),
                 "SS-entry ring initialized flag must restore exactly");
         assertEquals(5, readIntField(ring, "animTimer"),

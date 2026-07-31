@@ -7,6 +7,7 @@ import com.openggf.game.sonic2.objects.badniks.GrabberBadnikInstance;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.MhzMushroomParachuteObjectInstance;
 import com.openggf.game.sonic3k.objects.MhzStickyVineObjectInstance;
+import com.openggf.game.sonic3k.objects.HyperSonicStarsObjectInstance;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
@@ -139,6 +140,30 @@ class TestPlayerReferenceGraphRewind {
                 "spindash release state must restore with the player ref");
         assertEquals(9, readIntField(restored, "spindashReleaseTimer"),
                 "spindash release timer must restore with the player ref");
+    }
+
+    @Test
+    void hyperSonicStarsOwnerRestoresToCurrentLiveMainPlayerIdentity() {
+        TestablePlayableSprite capturedPlayer = player("old-sonic");
+        Harness harness = Harness.create(capturedPlayer, List.of());
+        ObjectManager objectManager = harness.objectManager();
+        objectManager.setRewindInPlaceRestoreEnabledForTest(false);
+        HyperSonicStarsObjectInstance source = objectManager.createDynamicObject(
+                () -> new HyperSonicStarsObjectInstance(capturedPlayer));
+        RewindRegistry rewindRegistry = registryFor(objectManager);
+        CompositeSnapshot snapshot = rewindRegistry.capture();
+
+        TestablePlayableSprite restoredPlayer = player("new-sonic");
+        harness.setPlayers(restoredPlayer, List.of());
+        rewindRegistry.restore(snapshot);
+
+        HyperSonicStarsObjectInstance restored =
+                onlyLive(objectManager, HyperSonicStarsObjectInstance.class);
+        assertNotSame(source, restored, "restore must recreate the Hyper Sonic stars");
+        assertTrue(restored.isBoundTo(restoredPlayer),
+                "owner must resolve through the current main-player identity");
+        assertFalse(restored.isBoundTo(capturedPlayer),
+                "owner must not retain the pre-restore player reference");
     }
 
     @Test

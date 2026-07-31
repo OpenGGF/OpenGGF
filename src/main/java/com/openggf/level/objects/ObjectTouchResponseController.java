@@ -24,6 +24,7 @@ import com.openggf.physics.TerrainCheckResult;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.DamageCause;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.Knuckles;
 import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.sprites.playable.Tails;
@@ -167,10 +168,9 @@ final class ObjectTouchResponseController {
                     if (player instanceof Knuckles) {
                         int targetX = objectCallbacks.call(instance, instance::getX);
                         int targetY = objectCallbacks.call(instance, instance::getY);
-                        nativeP2.setCentreX((short) targetX);
-                        nativeP2.setCentreYPreserveSubpixel((short) targetY);
+                        NativePositionOps.writeXPosPreserveSubpixel(nativeP2, targetX);
+                        NativePositionOps.writeYPosPreserveSubpixel(nativeP2, targetY);
                     }
-                    nativeP2.setRolling(true);
                     nativeP2.setAir(true);
                     if (nativeP2 instanceof AbstractPlayableSprite sprite) {
                         sprite.setAnimationId(2);

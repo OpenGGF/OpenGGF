@@ -6,6 +6,7 @@ import com.openggf.game.sonic3k.runtime.S3kZoneRuntimeState;
 import com.openggf.level.BigRingReturnState;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.game.ShieldType;
 
 /**
  * Immutable identity copied from Obj_SSEntryRing into Obj_SSEntryFlash.
@@ -33,11 +34,17 @@ record S3kBigRingTransitionIntent(int rawSubtype, ObjectRefId parentRingId) {
             meanWaterLevel = water.getWaterLevelY(originZone, originAct);
         }
         var checkpoint = services.checkpointState();
+        var levelState = services.levelGamestate();
         BigRingReturnState returnState = new BigRingReturnState(
                 player.getCentreX(), player.getCentreY(),
                 camera.getX(), camera.getY(), player.getRingCount(),
                 player.getTopSolidBit(), player.getLrbSolidBit(),
                 camera.getMaxY(), resizeRoutine, meanWaterLevel,
+                levelState != null ? levelState.getTimerFrames() : 0,
+                levelState != null ? levelState.getRingExtraLifeFlags() : 0,
+                encodeStatusSecondary(player),
+                (originZone << 8) | (services.apparentAct() & 0xFF),
+                water != null && water.captureFullScreenFlag(originZone, originAct, camera.getY()),
                 originZone, originAct,
                 checkpoint != null ? checkpoint.getLastCheckpointIndex() : -1,
                 checkpoint != null ? checkpoint.getStarPostActivationMark() : -1,
@@ -57,12 +64,24 @@ record S3kBigRingTransitionIntent(int rawSubtype, ObjectRefId parentRingId) {
             return;
         }
         if (checkpoint != null) {
-            int activationMark = checkpoint.getStarPostActivationMark();
-            checkpoint.restoreFromSaved(
-                    checkpoint.getSavedX(), checkpoint.getSavedY(),
-                    checkpoint.getSavedCameraX(), checkpoint.getSavedCameraY(), 0);
-            checkpoint.restoreStarPostActivationMark(activationMark);
+            checkpoint.clear();
         }
         services.requestZoneAndAct(Sonic3kZoneIds.ZONE_HPZ, 1, true);
+    }
+
+    private static int encodeStatusSecondary(AbstractPlayableSprite player) {
+        if (!player.hasShield()) {
+            return 0;
+        }
+        ShieldType type = player.getShieldType();
+        if (type == null) {
+            return 0;
+        }
+        return switch (type) {
+            case FIRE -> 1 << 4;
+            case LIGHTNING -> 1 << 5;
+            case BUBBLE -> 1 << 6;
+            default -> 0;
+        };
     }
 }

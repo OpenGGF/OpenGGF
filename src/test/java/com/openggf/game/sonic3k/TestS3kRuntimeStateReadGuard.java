@@ -53,15 +53,15 @@ class TestS3kRuntimeStateReadGuard {
 
     @Test
     void ssEntryRing_shouldSaveResizeRoutineFromZoneRuntimeState() throws IOException {
-        String file = "src/main/java/com/openggf/game/sonic3k/objects/Sonic3kSSEntryRingObjectInstance.java";
+        String file = "src/main/java/com/openggf/game/sonic3k/objects/S3kBigRingTransitionIntent.java";
         String content = Files.readString(Path.of(file));
         List<String> violations = new ArrayList<>();
 
         if (content.contains("Sonic3kLevelEventManager")) {
             violations.add(file + " still references Sonic3kLevelEventManager directly");
         }
-        if (!content.contains("services().zoneRuntimeState()")) {
-            violations.add(file + " does not read the resize routine from services().zoneRuntimeState()");
+        if (!content.contains("services.zoneRuntimeState()")) {
+            violations.add(file + " does not read the resize routine from services.zoneRuntimeState()");
         }
 
         if (!violations.isEmpty()) {

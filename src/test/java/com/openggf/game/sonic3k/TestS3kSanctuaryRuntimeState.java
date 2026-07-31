@@ -70,8 +70,11 @@ class TestS3kSanctuaryRuntimeState {
         assertFalse(incomplete.exitEligible());
         incomplete.markSpecialStageResult(1, false);
         assertEquals(2, progression.states().get(1));
+        progression.awardSuper(1);
         incomplete.markSpecialStageResult(1, true);
         assertEquals(3, progression.states().get(1));
+        assertFalse(incomplete.exitEligible(), "return transform blocks the exit");
+        incomplete.completeReturnTransformation();
         assertTrue(incomplete.exitEligible());
         assertTrue(incomplete.isReentry());
     }
@@ -84,6 +87,7 @@ class TestS3kSanctuaryRuntimeState {
         state.markSpecialStageResult(1, true);
         state.markSpecialStageResult(3, true);
         assertEquals(List.of(0, 1, 2, 3, 2, 0, 0), progression.states());
+        progression.awardSuper(4);
         state.markSpecialStageResult(4, true);
         assertEquals(List.of(0, 1, 2, 3, 3, 0, 0), progression.states());
     }

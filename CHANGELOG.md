@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Sonic 3 & Knuckles Super Emerald sanctuary and powered-form behavior
+  now follows the locked-on ROM through pedestal selection, conversion and
+  ceremony presentation, exact-stage success/failure returns, Master Emerald
+  gating, Saved2 restoration, entry-ring palette scripts, Hyper effects, and
+  Super Tails Flickies. The complete object graph and transition state are
+  rewind-safe.
 - Feature: Sonic 3 & Knuckles now implements the Hidden Palace Super Emerald
   sanctuary flow. Its ROM-backed controller, pedestals, Master Emerald,
   sloped teleporter, immediate seven-Emerald orbit and falling-crystal

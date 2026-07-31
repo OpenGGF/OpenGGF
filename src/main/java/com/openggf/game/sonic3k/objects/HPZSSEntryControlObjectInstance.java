@@ -13,6 +13,7 @@ import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
+import com.openggf.game.save.SaveReason;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,7 +39,6 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
     private int conversionTimer = -1;
     private int conversionSpawnCursor;
     private int cameraTargetX = -1;
-    private int teleporterReadyTimer = 0x10;
     private boolean playersLocked;
     private boolean freshLockApplied;
     private boolean finalPanStarted;
@@ -55,7 +55,6 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
             int conversionTimer,
             int conversionSpawnCursor,
             int cameraTargetX,
-            int teleporterReadyTimer,
             boolean playersLocked,
             boolean freshLockApplied,
             boolean finalPanStarted,
@@ -84,10 +83,22 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
     private void ensureState() {
         if (progression == null) {
             progression = S3kEmeraldProgression.from(services().gameState());
-            reentry = services().sanctuaryReentryStage().isPresent();
+            reentry = services().sanctuaryReturnContext().isPresent()
+                    || services().sanctuaryReentryStage().isPresent();
         }
         if (runtime == null) {
-            runtime = new S3kSanctuaryRuntimeState(progression, reentry);
+            var returnContext = services().sanctuaryReturnContext();
+            var returnStage = services().sanctuaryReentryStage();
+            runtime = returnContext.isPresent()
+                    ? new S3kSanctuaryRuntimeState(progression, true,
+                    returnContext.orElseThrow().stageIndex(),
+                    returnContext.orElseThrow().succeeded())
+                    : returnStage.isPresent()
+                    ? new S3kSanctuaryRuntimeState(progression, true,
+                    returnStage.getAsInt(),
+                    progression.state(returnStage.getAsInt())
+                            == S3kEmeraldProgression.EmeraldState.SUPER)
+                    : new S3kSanctuaryRuntimeState(progression, reentry);
         }
     }
 
@@ -115,7 +126,8 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
             if (runtime.phase() == S3kSanctuaryRuntimeState.Phase.CONVERTING) {
                 conversionTimer = 0x21F;
                 conversionSequenceStarted = true;
-                spawnChild(HPZSanctuarySmallEmeraldCeremonyObjectInstance::new);
+                spawnChild(() -> new HPZSanctuarySmallEmeraldCeremonyObjectInstance(
+                        progression));
             }
         } else if (conversionSequenceStarted && playersLocked) {
             updateConversionChoreography();
@@ -130,7 +142,6 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
             }
         }
 
-        --teleporterReadyTimer;
         boolean standingOnTeleporter = services().objectManager() != null
                 && services().objectManager().activeObjectsOfType(
                         SSZHPZTeleporterObjectInstance.class).stream()
@@ -152,14 +163,20 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
                 && runtime.conversionOrder().stream().skip(
                         runtime.capture().conversionCursor()).findFirst().orElse(-1) == subtype) {
             runtime.convertNext();
+            runtime.beginPedestalReveal(subtype);
             spawnChild(() -> new HPZSuperEmeraldObjectInstance(
                     dynamicSpawn(0, 0, 0xB4, subtype), this));
+            if (tryServices() != null) {
+                services().requestSessionSave(SaveReason.SPECIAL_STAGE_SAVE);
+            }
         }
     }
 
     void onFallingCrystalAnimationComplete(int subtype) {
         if (subtype == 7) {
             introSignal = true;
+        } else if (runtime != null) {
+            runtime.completePedestalReveal(subtype);
         }
     }
 
@@ -168,9 +185,13 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
         for (PlayableEntity entity : services().playerQuery().playersFor(
                 com.openggf.level.objects.ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
             if (entity instanceof AbstractPlayableSprite sprite) {
-                String name = sprite.getClass().getSimpleName();
-                int mapping = name.contains("Tails") ? 0xAD
-                        : name.contains("Knuckles") ? 0x56 : 0xBA;
+                String code = sprite.getCode();
+                int mapping = "tails".equalsIgnoreCase(code) ? 0xAD
+                        : "knuckles".equalsIgnoreCase(code) ? 0x56 : 0xBA;
+                if ("tails".equalsIgnoreCase(code)) {
+                    NativePositionOps.writeYPosPreserveSubpixel(
+                            sprite, (sprite.getCentreY() & 0xFFFF) + 4);
+                }
                 sprite.setMappingFrame(mapping);
                 sprite.setAnimationId(5);
             }
@@ -182,10 +203,10 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
         for (PlayableEntity entity : services().playerQuery().playersFor(
                 com.openggf.level.objects.ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
             if (entity instanceof AbstractPlayableSprite sprite) {
-                String name = sprite.getClass().getSimpleName();
+                String code = sprite.getCode();
                 sprite.setRenderFlips(false, false);
-                sprite.setMappingFrame(name.contains("Tails") ? 0xAD
-                        : name.contains("Knuckles") ? 0x56 : 0xBA);
+                sprite.setMappingFrame("tails".equalsIgnoreCase(code) ? 0xAD
+                        : "knuckles".equalsIgnoreCase(code) ? 0x56 : 0xBA);
             }
         }
     }
@@ -232,7 +253,7 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
             } else {
                 int subtype = runtime.conversionOrder().get(conversionSpawnCursor);
                 cameraTargetX = conversionCameraTarget(subtype);
-                applyConversionPlayerMappings(conversionSpawnCursor);
+                applyConversionPlayerMappings(subtype);
             }
         }
         if (!panCameraForTest(services().camera(), cameraTargetX)) {
@@ -272,25 +293,25 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
         };
     }
 
-    private void applyConversionPlayerMappings(int conversionOrdinal) {
-        int[] flipAndVariant = conversionPoseForTest(conversionOrdinal);
+    private void applyConversionPlayerMappings(int subtype) {
+        int[] flipAndVariant = conversionPoseForTest(subtype);
         for (PlayableEntity entity : services().playerQuery().playersFor(
                 com.openggf.level.objects.ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
             if (entity instanceof AbstractPlayableSprite sprite) {
-                String name = sprite.getClass().getSimpleName();
+                String code = sprite.getCode();
                 int base = flipAndVariant[1] == 0
-                        ? (name.contains("Tails") ? 0xAD
-                        : name.contains("Knuckles") ? 0x56 : 0xBA)
-                        : (name.contains("Tails") ? 0xB0
-                        : name.contains("Knuckles") ? 0xD6 : 0xC4);
+                        ? ("tails".equalsIgnoreCase(code) ? 0xAD
+                        : "knuckles".equalsIgnoreCase(code) ? 0x56 : 0xBA)
+                        : ("tails".equalsIgnoreCase(code) ? 0xB0
+                        : "knuckles".equalsIgnoreCase(code) ? 0xD6 : 0xC4);
                 sprite.setRenderFlips(flipAndVariant[0] != 0, false);
                 sprite.setMappingFrame(base);
             }
         }
     }
 
-    static int[] conversionPoseForTest(int conversionOrdinal) {
-        return switch (conversionOrdinal) {
+    static int[] conversionPoseForTest(int subtype) {
+        return switch (subtype) {
             case 0 -> new int[]{1, 1};
             case 1 -> new int[]{1, 0};
             case 2 -> new int[]{0, 0};
@@ -321,11 +342,9 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
         }
         NativePositionOps.writeXPosPreserveSubpixel(player, 0x1640);
         NativePositionOps.writeYPosPreserveSubpixel(player, 0x3A3);
-        ObjectControlState.nativeBit7FullControl().applyTo(player);
         // ROM writes $83: retain bit-7 ownership while enabling the low CPU
         // permission bits used by the ceremony animation.
-        player.setObjectControlAllowsCpu(true);
-        player.setObjectControlSuppressesMovement(true);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
         player.setObjectMappingFrameControl(true);
         player.setHighPriority(true);
         player.setMappingFrame(0);
@@ -362,13 +381,16 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
     private void spawnInitialChildren() {
         childrenSpawned = true;
         spawnChild(() -> new HPZMasterEmeraldObjectInstance(
-                dynamicSpawn(0x1640, 0x340, 0xB0, 0)));
+                dynamicSpawn(0x1640, 0x340, 0xB0, 0), this));
         spawnChild(() -> new SSZHPZTeleporterObjectInstance(
                 dynamicSpawn(0x1640, 0x3C7, 0x79, 0)));
         for (int subtype : initialPedestalSubtypes()) {
             final int index = subtype;
             spawnChild(() -> new HPZSuperEmeraldObjectInstance(
                     dynamicSpawn(0, 0, 0xB4, index), this));
+        }
+        if (runtime.transformationActive()) {
+            spawnChild(() -> new HPZSuperEmeraldReturnEffectObjectInstance(this));
         }
     }
 
@@ -460,7 +482,7 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
                 new RewindExtra(runtime.capture(), reentry, childrenSpawned,
                         exitBandArmed, exitRequested, introSignal, introCrystalSpawned,
                         conversionTimer, conversionSpawnCursor, cameraTargetX,
-                        teleporterReadyTimer, playersLocked, freshLockApplied, finalPanStarted,
+                        playersLocked, freshLockApplied, finalPanStarted,
                         conversionSequenceStarted));
     }
 
@@ -479,7 +501,6 @@ public final class HPZSSEntryControlObjectInstance extends AbstractObjectInstanc
             conversionTimer = extra.conversionTimer();
             conversionSpawnCursor = extra.conversionSpawnCursor();
             cameraTargetX = extra.cameraTargetX();
-            teleporterReadyTimer = extra.teleporterReadyTimer();
             playersLocked = extra.playersLocked();
             freshLockApplied = extra.freshLockApplied();
             finalPanStarted = extra.finalPanStarted();

@@ -513,9 +513,7 @@ public class ObjectManager {
         }
     }
 
-    public void update(int cameraX, PlayableEntity player, List<? extends PlayableEntity> sidekicks, int touchFrameCounter) {
-        update(cameraX, player, sidekicks, touchFrameCounter, true);
-    }
+    public void update(int cameraX, PlayableEntity player, List<? extends PlayableEntity> sidekicks, int touchFrameCounter) { update(cameraX, player, sidekicks, touchFrameCounter, true); }
 
     /**
      * Run touch responses for a single player outside the main update loop.
@@ -526,22 +524,7 @@ public class ObjectManager {
         runTouchResponsesForPlayer(player, touchFrameCounter, false);
     }
 
-    /**
-     * Applies a ROM-style powered full-screen attack to the current
-     * collision-response read view.
-     */
-    public void applyPoweredScreenAttack(PlayableEntity player) {
-        if (touchResponses != null) {
-            touchResponses.applyPoweredScreenAttack(player);
-        }
-    }
-
-    /**
-     * Stable collision-response candidates captured before object updates for this frame.
-     */
-    public List<ObjectInstance> poweredAttackTargetReadView() {
-        return collisionResponseList.playerReadView();
-    }
+    public PoweredAttackSurface poweredAttacks() { return new PoweredAttackSurface(touchResponses, collisionResponseList); }
 
     /**
      * Runs the inline player-slot touch pass against the frame-start snapshot.

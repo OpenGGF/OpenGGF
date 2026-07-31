@@ -3,14 +3,13 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PowerUpObject;
 import com.openggf.game.rewind.identity.ObjectRefId;
-import com.openggf.game.sonic3k.S3kFormTier;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
-import com.openggf.game.sonic3k.Sonic3kSuperStateController;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PoweredScreenAttackSpecial;
 import com.openggf.level.objects.PoweredScreenAttackable;
@@ -22,6 +21,7 @@ import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -45,8 +45,8 @@ public final class SuperTailsFlickyFlockObjectInstance extends AbstractObjectIns
     private AbstractPlayableSprite owner;
     private boolean visible = true;
     private boolean flyingAway;
-    /** ROM {@code _unkF66C} advances one address word before each first scan. */
-    private int targetCursor = 1;
+    /** ROM {@code _unkF66C}, stored here as a collision-list entry index. */
+    private int targetCursor;
 
     private int x0, y0, xv0, yv0, angle0, delay0, anim0, animTimer0 = 1;
     private int x1, y1, xv1, yv1, angle1 = 0x40, delay1, anim1, animTimer1 = 1;
@@ -55,7 +55,7 @@ public final class SuperTailsFlickyFlockObjectInstance extends AbstractObjectIns
     private ObjectRefId target0, target1, target2, target3;
 
     public SuperTailsFlickyFlockObjectInstance(AbstractPlayableSprite owner) {
-        this(new ObjectSpawn(owner == null ? 0 : owner.getCentreX(),
+        this(new ObjectSpawn(owner == null ? 0 : owner.getCentreX() - 0xC0,
                 owner == null ? 0 : owner.getCentreY() - 0xC0,
                 0, 0, 0, false, 0), owner);
     }
@@ -77,7 +77,7 @@ public final class SuperTailsFlickyFlockObjectInstance extends AbstractObjectIns
     @Override
     public void update(int frameCounter, PlayableEntity ignored) {
         if (owner == null) {
-            setDestroyed(true);
+            ObjectLifetimeOps.expireDynamic(this);
             return;
         }
         if (!flyingAway && !isSuperTailsActive()) {
@@ -87,7 +87,7 @@ public final class SuperTailsFlickyFlockObjectInstance extends AbstractObjectIns
 
         ObjectManager manager = services().objectManager();
         var identities = manager.captureIdentityContext().requireIdentityTable();
-        List<ObjectInstance> frozen = manager.poweredAttackTargetReadView();
+        List<ObjectInstance> frozen = manager.poweredAttacks().targetReadView();
         boolean reverseGravity = services().gameState() != null
                 && services().gameState().isReverseGravityActive();
 
@@ -109,7 +109,7 @@ public final class SuperTailsFlickyFlockObjectInstance extends AbstractObjectIns
             int destinationX;
             int destinationY;
             if (flyingAway) {
-                destinationX = owner.getCentreX();
+                destinationX = flyAwayDestinationXForTest(owner);
                 destinationY = owner.getCentreY() - 0xC0;
             } else if (target != null) {
                 destinationX = target.getX();
@@ -117,9 +117,8 @@ public final class SuperTailsFlickyFlockObjectInstance extends AbstractObjectIns
             } else {
                 int angle = angle(bird);
                 destinationX = owner.getCentreX() + (TrigLookupTable.sinHex(angle) >> 3);
-                int yOffset = TrigLookupTable.cosHex(angle) >> 4;
-                destinationY = owner.getCentreY()
-                        + (reverseGravity ? 0x20 - yOffset : -0x20 + yOffset);
+                destinationY = orbitDestinationYForTest(
+                        owner.getCentreY(), angle, reverseGravity);
             }
 
             moveToward(bird, destinationX, destinationY);
@@ -134,29 +133,30 @@ public final class SuperTailsFlickyFlockObjectInstance extends AbstractObjectIns
             anyOnScreen |= birdIsOnScreen(bird);
         }
         if (flyingAway && !anyOnScreen) {
-            setDestroyed(true);
+            ObjectLifetimeOps.expireDynamic(this);
         }
     }
 
     private boolean isSuperTailsActive() {
-        return owner.getSuperStateController() instanceof Sonic3kSuperStateController controller
-                && controller.getActiveFormTier() == S3kFormTier.SUPER_TAILS;
+        return owner.getSuperStateController() != null
+                && owner.getSuperStateController().isSuperTailsFormActive();
     }
 
     private ObjectInstance reserveNextTarget(int bird, List<ObjectInstance> frozen,
             com.openggf.game.rewind.identity.RewindIdentityTable identities) {
         if (frozen == null || frozen.isEmpty()) return null;
-        for (int checked = 0; checked < frozen.size(); checked++) {
-            int index = Math.floorMod(targetCursor + checked, frozen.size());
+        targetCursor++;
+        if (targetCursor >= frozen.size()) {
+            targetCursor = 0;
+        }
+        for (int index = targetCursor; index < frozen.size(); index++) {
             ObjectInstance candidate = frozen.get(index);
             ObjectRefId id = identities.encodeObject(candidate);
             if (id != null && isTargetEligible(candidate) && !isReserved(id)) {
                 setTarget(bird, id);
-                targetCursor = (index + 1) % frozen.size();
                 return candidate;
             }
         }
-        targetCursor = (targetCursor + 1) % frozen.size();
         return null;
     }
 
@@ -205,9 +205,8 @@ public final class SuperTailsFlickyFlockObjectInstance extends AbstractObjectIns
         }
 
         if (p2 != null) {
-            p2.setCentreX((short) x(bird));
-            p2.setCentreYPreserveSubpixel((short) y(bird));
-            p2.setRolling(true);
+            NativePositionOps.writeXPosPreserveSubpixel(p2, x(bird));
+            NativePositionOps.writeYPosPreserveSubpixel(p2, y(bird));
             p2.setAir(true);
             if (p2 instanceof AbstractPlayableSprite sprite) sprite.setAnimationId(2);
         }
@@ -263,6 +262,15 @@ public final class SuperTailsFlickyFlockObjectInstance extends AbstractObjectIns
             return -0x20;
         }
         return velocity < 0 ? 0x80 : 0x20;
+    }
+
+    static int orbitDestinationYForTest(int ownerY, int angle, boolean reverseGravity) {
+        int yOffset = TrigLookupTable.cosHex(angle) >> 4;
+        return ownerY + (reverseGravity ? 0x20 : -0x20) + yOffset;
+    }
+
+    static int flyAwayDestinationXForTest(AbstractPlayableSprite owner) {
+        return owner.getCentreX() - 0xC0;
     }
 
     private void tickAnimation(int bird) {
@@ -324,7 +332,7 @@ public final class SuperTailsFlickyFlockObjectInstance extends AbstractObjectIns
         }
     }
 
-    @Override public void destroy() { setDestroyed(true); }
+    @Override public void destroy() { ObjectLifetimeOps.expireDynamic(this); }
     @Override public void setVisible(boolean visible) { this.visible = visible; }
     @Override public PlayableEntity boundPlayer() { return owner; }
 

@@ -45,7 +45,7 @@ class TestPoweredScreenAttack {
         when(player.getXSpeed()).thenReturn((short) 0x320);
         when(player.getYSpeed()).thenReturn((short) -0x180);
 
-        objectManager.applyPoweredScreenAttack(player);
+        objectManager.poweredAttacks().apply(player);
 
         verify((PoweredScreenAttackable) ordinary).onPoweredScreenAttack(player);
         verify((PoweredScreenAttackable) boss, never()).onPoweredScreenAttack(any());
@@ -62,7 +62,7 @@ class TestPoweredScreenAttack {
         boss.snapshotPreUpdatePosition();
         objectManager.initialCollisionResponseList().captureCompletedBuild(List.of(boss));
 
-        objectManager.applyPoweredScreenAttack(player);
+        objectManager.poweredAttacks().apply(player);
 
         assertEquals(3, boss.getCollisionProperty());
         assertEquals(0, boss.attackCount);
@@ -75,7 +75,7 @@ class TestPoweredScreenAttack {
         ObjectInstance ordinary = responder(0x08, 0, PoweredScreenAttackable.class);
         objectManager.initialCollisionResponseList().captureCompletedBuild(List.of(ordinary));
 
-        objectManager.applyPoweredScreenAttack(player);
+        objectManager.poweredAttacks().apply(player);
 
         verify((PoweredScreenAttackable) ordinary).onPoweredScreenAttack(player);
         verify((TouchResponseAttackable) ordinary, never()).onPlayerAttack(any(), any());
@@ -106,7 +106,7 @@ class TestPoweredScreenAttack {
         objectManager.initialCollisionResponseList().resetCurrentBuild();
         objectManager.initialCollisionResponseList().addToCurrentBuild(current);
 
-        objectManager.applyPoweredScreenAttack(player);
+        objectManager.poweredAttacks().apply(player);
 
         verify((PoweredScreenAttackable) frozen).onPoweredScreenAttack(player);
         verify((PoweredScreenAttackable) current, never()).onPoweredScreenAttack(any());
@@ -121,24 +121,24 @@ class TestPoweredScreenAttack {
         objectManager.initialCollisionResponseList()
                 .captureCompletedBuild(List.of(reactive, inert));
 
-        objectManager.applyPoweredScreenAttack(player);
+        objectManager.poweredAttacks().apply(player);
 
         verify((TouchResponseProvider) reactive).onShieldDeflect(player);
         verify((TouchResponseProvider) inert, never()).onShieldDeflect(any());
     }
 
     @Test
-    void specialResponseOrsPropertyAndPutsNativeP2IntoAirborneRoll() {
+    void specialResponseOrsPropertyAndPutsNativeP2IntoAirborneAnimation() {
         ObjectInstance special = specialResponder(0xC8, 1);
         AbstractPlayableSprite sidekick = mock(AbstractPlayableSprite.class);
         ((TestObjectServices) objectManager.services()).withSidekicks(List.of(sidekick));
         objectManager.initialCollisionResponseList()
                 .captureCompletedBuild(List.of(special));
 
-        objectManager.applyPoweredScreenAttack(player);
+        objectManager.poweredAttacks().apply(player);
 
         verify((PoweredScreenAttackSpecial) special).orCollisionProperty(3);
-        verify(sidekick).setRolling(true);
+        verify(sidekick, never()).setRolling(anyBoolean());
         verify(sidekick).setAir(true);
         verify(sidekick).setAnimationId(2);
     }
@@ -163,12 +163,12 @@ class TestPoweredScreenAttack {
         ((TestObjectServices) objectManager.services()).withSidekicks(List.of(sidekick));
         objectManager.initialCollisionResponseList().captureCompletedBuild(List.of(special));
 
-        objectManager.applyPoweredScreenAttack(knuckles);
+        objectManager.poweredAttacks().apply(knuckles);
 
-        verify(sidekick).setCentreX((short) 0x456);
+        verify(sidekick).shiftX(0x456);
         verify(sidekick).setCentreYPreserveSubpixel((short) 0x789);
         verify(sidekick).setAnimationId(2);
-        verify(sidekick).setRolling(true);
+        verify(sidekick, never()).setRolling(anyBoolean());
         verify(sidekick).setAir(true);
     }
 

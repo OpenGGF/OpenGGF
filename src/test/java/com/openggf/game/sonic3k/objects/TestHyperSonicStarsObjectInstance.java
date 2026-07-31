@@ -2,10 +2,11 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SuperStateController;
-import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.sprites.managers.SpriteManager;
+import com.openggf.game.rewind.identity.PlayerRefId;
+import com.openggf.game.rewind.identity.RewindIdentityTable;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
@@ -83,6 +84,24 @@ class TestHyperSonicStarsObjectInstance {
     }
 
     @Test
+    void orbitUsesRomSineForXAndCosineForY() throws Exception {
+        HyperSonicStarsObjectInstance stars = new HyperSonicStarsObjectInstance(hyperOwner());
+        Method updateChild = HyperSonicStarsObjectInstance.class
+                .getDeclaredMethod("updateChild", int.class, boolean.class);
+        updateChild.setAccessible(true);
+        Field angle = HyperSonicStarsObjectInstance.class.getDeclaredField("angle0");
+        angle.setAccessible(true);
+        angle.setInt(stars, 0x10);
+
+        updateChild.invoke(stars, 0, true);
+
+        assertEquals(com.openggf.physics.TrigLookupTable.sinHex(0x10) << 3,
+                field(stars, "xAcc0"));
+        assertEquals(com.openggf.physics.TrigLookupTable.cosHex(0x10) << 3,
+                field(stars, "yAcc0"));
+    }
+
+    @Test
     void rewindRoundTripPreservesMidOrbitAndMidSparkStateAndRebindsOwner() throws Exception {
         AbstractPlayableSprite owner = hyperOwner();
         HyperSonicStarsObjectInstance stars = new HyperSonicStarsObjectInstance(owner);
@@ -97,24 +116,27 @@ class TestHyperSonicStarsObjectInstance {
         int expectedAngle = field(stars, "angle0");
         int expectedSparkX = field(stars, "sx0");
         int expectedSparkFrame = field(stars, "sparkFrame");
-        PerObjectRewindSnapshot snapshot = stars.captureRewindState();
+        RewindIdentityTable identities = new RewindIdentityTable();
+        identities.registerPlayer(owner, PlayerRefId.mainPlayer());
+        RewindCaptureContext identityContext =
+                RewindCaptureContext.withIdentityTable(identities);
+        PerObjectRewindSnapshot snapshot = stars.captureRewindState(identityContext);
 
         updateChild.invoke(stars, 0, true);
         for (int i = 0; i < 4; i++) updateSparks.invoke(stars);
-        stars.restoreRewindState(snapshot);
+        stars.restoreRewindState(snapshot, identityContext);
 
         assertEquals(expectedAngle, field(stars, "angle0"));
         assertEquals(expectedSparkX, field(stars, "sx0"));
         assertEquals(expectedSparkFrame, field(stars, "sparkFrame"));
 
+        PerObjectRewindSnapshot identitySnapshot =
+                stars.captureRewindState(identityContext);
         RewindRecreateContext context = mock(RewindRecreateContext.class);
-        ObjectServices services = mock(ObjectServices.class);
-        SpriteManager sprites = mock(SpriteManager.class);
-        when(context.objectServices()).thenReturn(services);
-        when(services.spriteManager()).thenReturn(sprites);
-        when(sprites.getMainPlayable()).thenReturn(owner);
+        when(context.spawn()).thenReturn(stars.getSpawn());
         HyperSonicStarsObjectInstance recreated =
                 (HyperSonicStarsObjectInstance) stars.recreateForRewind(context);
+        recreated.restoreRewindState(identitySnapshot, identityContext);
         assertTrue(recreated.isBoundTo(owner));
     }
 

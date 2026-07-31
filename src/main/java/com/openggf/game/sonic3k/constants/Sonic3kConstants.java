@@ -62,6 +62,10 @@ public class Sonic3kConstants {
     public static final int ART_KOSM_HPZ_SMALL_EMERALDS_ADDR = 0x1759AC;
     public static final int MAP_HPZ_EMERALD_MISC_ADDR = 0x091006;
     public static final int MAP_HPZ_CHAOS_EMERALDS_ADDR = 0x09147E;
+    /** {@code off_914CE}: completed Master Emerald palette rotation script. */
+    public static final int HPZ_MASTER_EMERALD_PALETTE_SCRIPT_ADDR = 0x0914CE;
+    /** {@code RawAni_90768}: completed Master Emerald glow frames. */
+    public static final int HPZ_MASTER_EMERALD_GLOW_ANIMATION_ADDR = 0x090768;
     public static final int ARTTILE_HPZ_EMERALD_MISC = 0x03B5;
     public static final int ARTTILE_HPZ_GRAY_EMERALD = 0x0477;
     public static final int ARTTILE_HPZ_ENTRY_TELEPORTER = 0x0488;
@@ -2186,6 +2190,14 @@ public class Sonic3kConstants {
     public static final int MAP_SS_ENTRY_FLASH_ADDR = 0x061B28;
     // DPLC_SSEntryFlash - 4 DPLC frames
     public static final int DPLC_SS_ENTRY_FLASH_ADDR = 0x061BFA;
+    /** PalSPtr_SSEntry: two-color Run_PalRotationScript entry for line 2 colors 5-6. */
+    public static final int PAL_SCRIPT_SS_ENTRY_ADDR = 0x061C28;
+    /** PalSPtr_SSEntry2: one-color Run_PalRotationScript entry for line 2 color 15. */
+    public static final int PAL_SCRIPT_SS_ENTRY_2_ADDR = 0x061CA4;
+    /** loc_61928: immediate pair restored to normal-palette line 2 colors 5-6. */
+    public static final int PAL_SS_ENTRY_NORMAL_PAIR_ADDR = 0x061958;
+    /** loc_61928: immediate word restored to normal-palette line 2 color 15. */
+    public static final int PAL_SS_ENTRY_NORMAL_FINAL_ADDR = 0x061960;
 
     // ===== Pal_AIZ - Main AIZ palette (for AfterBoss_Cleanup) =====
     public static final int PAL_AIZ_ADDR = 0x0A8B7C;

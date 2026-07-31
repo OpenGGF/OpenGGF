@@ -1,12 +1,17 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.GameStateManager;
+import com.openggf.game.LevelState;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.RespawnState;
+import com.openggf.game.ShieldType;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.BigRingReturnState;
+import com.openggf.level.Level;
+import com.openggf.level.Palette;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageProvider;
@@ -334,13 +339,13 @@ public class TestSonic3kSSEntryRingFormation {
         assertArrayEquals(new int[] {0xECE, 0xA8A, 0x868},
                 ring.getLastAppliedPaletteWordsForTest());
 
-        for (int frame = 2; frame <= 4; frame++) {
+        for (int frame = 2; frame <= 3; frame++) {
             ring.update(frame, null);
         }
         assertEquals(1, ring.getPaletteStepForTest(),
-                "palscriptdata 3 holds the first color for four object updates");
+                "palscriptdata 3 holds the first color for three object updates");
 
-        ring.update(5, null);
+        ring.update(4, null);
         assertEquals(2, ring.getPaletteStepForTest());
         assertArrayEquals(new int[] {0xAEE, 0x6EE, 0x0AA},
                 ring.getLastAppliedPaletteWordsForTest());
@@ -370,6 +375,14 @@ public class TestSonic3kSSEntryRingFormation {
     @Test
     public void flashCompletionUsesLiveEmeraldAndSaved2StateRatherThanCollisionState() {
         services.currentZone = Sonic3kZoneIds.ZONE_MHZ;
+        services.currentAct = 1;
+        services.apparentAct = 0;
+        services.checkpoint = mock(RespawnState.class);
+        services.levelState = mock(LevelState.class);
+        when(services.levelState.getTimerFrames()).thenReturn(12_345L);
+        when(services.levelState.getRingExtraLifeFlags()).thenReturn(0x06);
+        when(services.water.captureFullScreenFlag(
+                Sonic3kZoneIds.ZONE_MHZ, 1, 0x90)).thenReturn(true);
         CapturingRing ring = createCapturingRing(5);
         AbstractPlayableSprite player = createMockPlayerAt(RING_X, RING_Y);
 
@@ -381,6 +394,8 @@ public class TestSonic3kSSEntryRingFormation {
         when(player.getCentreX()).thenReturn((short) 0x222);
         when(player.getCentreY()).thenReturn((short) 0x333);
         when(player.getRingCount()).thenReturn(77);
+        when(player.hasShield()).thenReturn(true);
+        when(player.getShieldType()).thenReturn(ShieldType.LIGHTNING);
         when(camera.getX()).thenReturn((short) 0x180);
         when(camera.getY()).thenReturn((short) 0x90);
 
@@ -394,6 +409,12 @@ public class TestSonic3kSSEntryRingFormation {
         assertEquals(77, services.savedReturn.rings());
         assertEquals(0x180, services.savedReturn.cameraX());
         assertEquals(0x90, services.savedReturn.cameraY());
+        assertEquals(12_345L, services.savedReturn.timerFrames());
+        assertEquals(0x06, services.savedReturn.extraLifeFlags());
+        assertEquals(1 << 5, services.savedReturn.statusSecondary());
+        assertEquals((Sonic3kZoneIds.ZONE_MHZ << 8), services.savedReturn.apparentZoneAndAct());
+        assertTrue(services.savedReturn.waterFullScreen());
+        verify(services.checkpoint).clear();
     }
 
     @Test
@@ -477,6 +498,13 @@ public class TestSonic3kSSEntryRingFormation {
     public void allSuperEmeraldsAwardFiftyOnSkSideInsteadOfEnteringSanctuary() {
         collectAllChaosAndSuperEmeralds();
         services.currentZone = Sonic3kZoneIds.ZONE_MHZ;
+        services.level = mock(Level.class);
+        Palette normalLineTwo = new Palette();
+        setPaletteWord(normalLineTwo, 5, 0x246);
+        setPaletteWord(normalLineTwo, 6, 0x68A);
+        setPaletteWord(normalLineTwo, 15, 0xACE);
+        when(services.level.getPaletteCount()).thenReturn(2);
+        when(services.level.getPalette(1)).thenReturn(normalLineTwo);
         Sonic3kSSEntryRingObjectInstance ring = createRing(4);
         AbstractPlayableSprite player = createMockPlayerAt(RING_X, RING_Y);
 
@@ -485,9 +513,9 @@ public class TestSonic3kSSEntryRingFormation {
         assertTrue(ring.isDestroyed(), "completed emerald state should remove the ring");
         assertEquals(-1, services.requestedAct);
         verify(player).addRings(50);
-        assertArrayEquals(new int[] {0xEE0, 0x088, 0x044},
+        assertArrayEquals(new int[] {0x0EE, 0x088, 0x044},
                 ring.getLastAppliedPaletteWordsForTest(),
-                "ring deletion restores the three ROM palette words");
+                "loc_6196A restores the instruction-immediate normal ring colors");
     }
 
     @Test
@@ -631,10 +659,16 @@ public class TestSonic3kSSEntryRingFormation {
         int requestedAct = -1;
         boolean deactivateLevelNow;
         int currentZone;
+        int currentAct;
+        int apparentAct;
         int specialStageRequests;
         BigRingReturnState savedReturn;
         int bigRingSfxCount;
         int enterSsSfxCount;
+        RespawnState checkpoint;
+        LevelState levelState;
+        com.openggf.level.WaterSystem water = mock(com.openggf.level.WaterSystem.class);
+        Level level;
 
         @Override
         public CapturingObjectServices withGameState(GameStateManager gameState) {
@@ -655,6 +689,36 @@ public class TestSonic3kSSEntryRingFormation {
         }
 
         @Override
+        public int currentAct() {
+            return currentAct;
+        }
+
+        @Override
+        public int apparentAct() {
+            return apparentAct;
+        }
+
+        @Override
+        public RespawnState checkpointState() {
+            return checkpoint;
+        }
+
+        @Override
+        public LevelState levelGamestate() {
+            return levelState;
+        }
+
+        @Override
+        public com.openggf.level.WaterSystem waterSystem() {
+            return water;
+        }
+
+        @Override
+        public Level currentLevel() {
+            return level;
+        }
+
+        @Override
         public void requestSpecialStageEntry() {
             specialStageRequests++;
         }
@@ -672,6 +736,12 @@ public class TestSonic3kSSEntryRingFormation {
                 enterSsSfxCount++;
             }
         }
+    }
+
+    private static void setPaletteWord(Palette palette, int colorIndex, int segaWord) {
+        palette.getColor(colorIndex).fromSegaFormat(new byte[] {
+                (byte) (segaWord >>> 8), (byte) segaWord
+        }, 0);
     }
 
     @SuppressWarnings("unchecked")

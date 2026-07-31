@@ -126,6 +126,18 @@ final class DefaultObjectRewindPolicies {
             // from coordinates or neighbouring slots after restore.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzEggPrisonButtonInstance", "parentRef"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzEndEggCapsuleButtonInstance", "parentRef"), RewindFieldPolicy.CAPTURED),
+            // HPZ controller/master child links and Hyper stars use typed
+            // ObjectRefId/PlayerRefId sidecars and are relinked through the
+            // restore identity table.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HPZMasterEmeraldGlowObjectInstance", "parentRef"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HPZMasterEmeraldObjectInstance", "parentRef"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HPZMasterEmeraldObjectInstance", "paletteScript"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HPZMasterEmeraldObjectInstance", "progression"), RewindFieldPolicy.DEFERRED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HPZMasterEmeraldObjectInstance", "runtime"), RewindFieldPolicy.DEFERRED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HPZSuperEmeraldReturnEffectObjectInstance", "parentRef"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HPZSuperEmeraldObjectInstance", "progression"), RewindFieldPolicy.DEFERRED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HPZSuperEmeraldObjectInstance", "runtime"), RewindFieldPolicy.DEFERRED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HyperSonicStarsObjectInstance", "owner"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzExitHallInstance", "hallRecord"), RewindFieldPolicy.TRANSIENT),
             // Boss childComponents is an identity-bearing live graph. The compact collection
             // codec retains its exact managed children and their roles for restore/relink.

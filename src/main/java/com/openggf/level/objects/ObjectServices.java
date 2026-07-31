@@ -273,6 +273,12 @@ public interface ObjectServices {
         return levelManager().sanctuaryReentryStage();
     }
 
+    /** Exact HPZ results-hub stage and success context. */
+    default java.util.Optional<com.openggf.level.SanctuaryReturnContext>
+            sanctuaryReturnContext() {
+        return levelManager().sanctuaryReturnContext();
+    }
+
     /** Requests the idempotent HPZ teleporter return to the saved origin. */
     default void requestSanctuaryExit() {
         levelManager().requestSanctuaryExit();

@@ -1,13 +1,16 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.RewindTransient;
+import com.openggf.game.rewind.identity.PlayerRefId;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -20,8 +23,10 @@ import java.util.List;
 /** Exact aggregate owner for the four consecutive ROM Hyper-star slots. */
 public final class HyperSonicStarsObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable {
-    @RewindTransient(reason = "Relinked to the main playable on recreate")
-    private final AbstractPlayableSprite owner;
+    private AbstractPlayableSprite owner;
+
+    private record RewindExtra(PlayerRefId ownerId)
+            implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
 
     // Each child retains the ROM angle, init delay/frame timer, mapping frame and
     // $30/$34 word accumulators independently.
@@ -49,11 +54,32 @@ public final class HyperSonicStarsObjectInstance extends AbstractObjectInstance
         this.owner = owner;
     }
 
+    private HyperSonicStarsObjectInstance(ObjectSpawn spawn) {
+        super(spawn, "HyperSonicStars");
+    }
+
     @Override
     public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
-        if (context == null || context.objectServices() == null) return null;
-        AbstractPlayableSprite main = context.objectServices().spriteManager().getMainPlayable();
-        return main == null ? null : new HyperSonicStarsObjectInstance(main);
+        return context == null ? null : new HyperSonicStarsObjectInstance(context.spawn());
+    }
+
+    @Override
+    public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
+        PlayerRefId ownerId = context.identityTable()
+                .map(table -> table.encodePlayer(owner)).orElse(null);
+        return super.captureRewindState(context).withObjectSubclassExtra(
+                new RewindExtra(ownerId));
+    }
+
+    @Override
+    public void restoreRewindState(
+            PerObjectRewindSnapshot snapshot, RewindCaptureContext context) {
+        super.restoreRewindState(snapshot, context);
+        if (snapshot.objectSubclassExtra() instanceof RewindExtra extra
+                && extra.ownerId() != null) {
+            owner = (AbstractPlayableSprite) context.requireIdentityTable()
+                    .resolvePlayer(extra.ownerId(), true);
+        }
     }
 
     public void triggerDashSparks() {
@@ -76,7 +102,7 @@ public final class HyperSonicStarsObjectInstance extends AbstractObjectInstance
     public void update(int frameCounter, PlayableEntity ignored) {
         if (owner.getSuperStateController() == null
                 || !owner.getSuperStateController().isHyperFormActive()) {
-            setDestroyed(true);
+            ObjectLifetimeOps.expireDynamic(this);
             return;
         }
         boolean artReady = renderer(false) != null;
@@ -105,8 +131,10 @@ public final class HyperSonicStarsObjectInstance extends AbstractObjectInstance
         }
         int angle = angle(child);
         setAngle(child, (angle - 0x10) & 0xFF);
-        int xVelocity = TrigLookupTable.cosHex(angle) << 3;
-        int yVelocity = TrigLookupTable.sinHex(angle) << 3;
+        // GetSineCosine returns d0=sine and d1=cosine. loc_1941C writes
+        // those values to x_vel and y_vel respectively.
+        int xVelocity = TrigLookupTable.sinHex(angle) << 3;
+        int yVelocity = TrigLookupTable.cosHex(angle) << 3;
         setXAcc(child, (short) (xAcc(child) + xVelocity));
         setYAcc(child, (short) (yAcc(child) + yVelocity));
         int dx = (byte) xAcc(child);

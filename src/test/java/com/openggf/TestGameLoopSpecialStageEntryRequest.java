@@ -49,7 +49,7 @@ class TestGameLoopSpecialStageEntryRequest {
         SpecialStageProvider provider = mock(SpecialStageProvider.class, CALLS_REAL_METHODS);
         GameStateManager gameState = new GameStateManager();
 
-        assertEquals(4, GameLoop.resolveSpecialStageIndex(
+        assertEquals(4, SpecialStageTransitionSupport.resolveStageIndex(
                 new SpecialStageEntryRequest(4, EmeraldRewardKind.SUPER_EMERALD),
                 provider, gameState));
 
@@ -62,7 +62,7 @@ class TestGameLoopSpecialStageEntryRequest {
         GameStateManager gameState = new GameStateManager();
         when(provider.consumeStageIndexForEntry(gameState)).thenReturn(3);
 
-        assertEquals(3, GameLoop.resolveSpecialStageIndex(
+        assertEquals(3, SpecialStageTransitionSupport.resolveStageIndex(
                 SpecialStageEntryRequest.ordinary(), provider, gameState));
 
         verify(provider).consumeStageIndexForEntry(gameState);
@@ -73,7 +73,7 @@ class TestGameLoopSpecialStageEntryRequest {
         SpecialStageProvider provider = mock(SpecialStageProvider.class, CALLS_REAL_METHODS);
         GameStateManager gameState = mock(GameStateManager.class);
 
-        GameLoop.publishEmeraldRewardIfLoopOwned(
+        SpecialStageTransitionSupport.publishRewardIfLoopOwned(
                 provider, gameState, 2, EmeraldRewardKind.CHAOS_EMERALD);
 
         verify(gameState, times(1)).markEmeraldCollected(2);
@@ -86,7 +86,7 @@ class TestGameLoopSpecialStageEntryRequest {
         GameStateManager gameState = mock(GameStateManager.class);
         when(provider.ownsEmeraldReward()).thenReturn(true);
 
-        GameLoop.publishEmeraldRewardIfLoopOwned(
+        SpecialStageTransitionSupport.publishRewardIfLoopOwned(
                 provider, gameState, 2, EmeraldRewardKind.SUPER_EMERALD);
 
         verify(gameState, never()).markEmeraldCollected(2);
@@ -98,10 +98,19 @@ class TestGameLoopSpecialStageEntryRequest {
         SpecialStageProvider provider = mock(SpecialStageProvider.class, CALLS_REAL_METHODS);
         GameStateManager gameState = mock(GameStateManager.class);
 
-        GameLoop.publishEmeraldRewardIfLoopOwned(
+        SpecialStageTransitionSupport.publishRewardIfLoopOwned(
                 provider, gameState, 4, EmeraldRewardKind.SUPER_EMERALD);
 
         verify(gameState, times(1)).markSuperEmeraldCollected(4);
         verify(gameState, never()).markEmeraldCollected(4);
+    }
+
+    @Test
+    void superEmeraldResultsReturnDirectlyToSanctuaryWithoutTitleCard() {
+        assertTrue(SpecialStageTransitionSupport.returnsDirectlyToSanctuary(
+                EmeraldRewardKind.SUPER_EMERALD));
+        assertFalse(SpecialStageTransitionSupport.returnsDirectlyToSanctuary(
+                EmeraldRewardKind.CHAOS_EMERALD));
+        assertFalse(SpecialStageTransitionSupport.returnsDirectlyToSanctuary(null));
     }
 }

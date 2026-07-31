@@ -23,6 +23,9 @@ import com.openggf.game.GameServices;
  * </ul>
  */
 public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile {
+    private static final int[] HPZ_RETURN_CAMERA_X = {
+            0x15A0, 0x1540, 0x1600, 0x1500, 0x1640, 0x14B0, 0x1690
+    };
     private final Sonic3kLevelEventManager levelEventManager;
 
     public Sonic3kLevelInitProfile(Sonic3kLevelEventManager levelEventManager) {
@@ -78,11 +81,22 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile {
                     Sonic3kLevelResourceProfile.CustomLevelResources resources =
                             profile.requireCustomResources();
                     var camera = GameServices.camera();
-                    camera.setX((short) resources.cameraX());
+                    int cameraX = GameServices.level().sanctuaryReentryStage().isPresent()
+                            ? hpzReturnCameraX(GameServices.level()
+                            .sanctuaryReentryStage().getAsInt())
+                            : resources.cameraX();
+                    camera.setX((short) cameraX);
                     camera.setY((short) resources.cameraY());
-                    camera.setXCopy((short) resources.cameraX());
+                    camera.setXCopy((short) cameraX);
                     camera.setYCopy((short) resources.cameraY());
                 });
+    }
+
+    static int hpzReturnCameraX(int stageIndex) {
+        if (stageIndex < 0 || stageIndex >= HPZ_RETURN_CAMERA_X.length) {
+            throw new IllegalArgumentException("stageIndex");
+        }
+        return HPZ_RETURN_CAMERA_X[stageIndex];
     }
 
     @Override

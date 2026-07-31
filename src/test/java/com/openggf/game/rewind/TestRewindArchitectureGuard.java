@@ -62,7 +62,27 @@ class TestRewindArchitectureGuard {
             // Obj08 skid dust has transient animation/delete/DPLC-preload state
             // that is not reconstructible from placement data alone.
             Map.entry("src/main/java/com/openggf/level/objects/SkidDustObjectInstance.java#captureRewindState", 1),
-            Map.entry("src/main/java/com/openggf/level/objects/SkidDustObjectInstance.java#restoreRewindState", 1)
+            Map.entry("src/main/java/com/openggf/level/objects/SkidDustObjectInstance.java#restoreRewindState", 1),
+            // HPZ uses typed sidecars for its shared controller/runtime graph;
+            // TestS3kHpzGraphRewind proves fresh recreation and exact relinking.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZMasterEmeraldGlowObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZMasterEmeraldGlowObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZMasterEmeraldObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZMasterEmeraldObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZSSEntryControlObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZSSEntryControlObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZSanctuaryFallingCrystalObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZSanctuaryFallingCrystalObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZSanctuarySmallEmeraldCeremonyObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZSanctuarySmallEmeraldCeremonyObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZSuperEmeraldObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZSuperEmeraldObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZSuperEmeraldReturnEffectObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZSuperEmeraldReturnEffectObjectInstance.java#restoreRewindState", 1),
+            // Hyper stars keep player identity in a typed sidecar; the focused
+            // player-reference graph test swaps the live main player on restore.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HyperSonicStarsObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HyperSonicStarsObjectInstance.java#restoreRewindState", 1)
     );
 
     private static final Map<String, Integer> OBJECT_REWIND_ANNOTATION_BASELINE = Map.ofEntries(
@@ -70,12 +90,6 @@ class TestRewindArchitectureGuard {
             // hardware work handles, cutscene/render scratch, and the queued
             // results-art handle — rebuilt from its owner or the timing ledger on
             // restore, matching the triage precedent of the entries below.
-            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/AizEndBossInstance.java#@RewindTransient", 2),
-            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/AizPlaneIntroInstance.java#@RewindTransient", 3),
-            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HCZLargeFanObjectInstance.java#@RewindTransient", 2),
-            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HCZWaterWallObjectInstance.java#@RewindTransient", 2),
-            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kResultsScreenObjectInstance.java#@RewindTransient", 1),
-            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/HczEndBossGeyserCutscene.java#@RewindTransient", 2),
             Map.entry("src/main/java/com/openggf/level/objects/ShieldObjectInstance.java#@RewindTransient", 3),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesAiz1Instance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/StarPointerBadnikInstance.java#@RewindTransient", 1),

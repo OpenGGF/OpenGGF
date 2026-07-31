@@ -1232,7 +1232,7 @@ public class Sonic3kSpecialStageManager {
                     != com.openggf.game.sonic3k.S3kEmeraldProgression.EmeraldState.GRAY_SUPER) {
                 return false;
             }
-            progression.awardSuper(stageIndex);
+            gameState.markSuperEmeraldCollected(stageIndex);
         } else {
             gameState.markEmeraldCollected(stageIndex);
         }

@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -39,16 +40,21 @@ class TestSonic3kSuperStateRewind {
         Palette live = new Palette();
         live.setColor(2, new Palette.Color((byte) 1, (byte) 2, (byte) 3));
 
-        Palette firstUpload = Sonic3kSuperStateController.buildHyperFlashUpload(live);
+        Palette firstUpload = Sonic3kSuperStateController.buildHyperFlashUpload(live, 0);
         live.setColor(2, new Palette.Color((byte) 4, (byte) 5, (byte) 6));
-        Palette secondUpload = Sonic3kSuperStateController.buildHyperFlashUpload(live);
+        Palette secondUpload = Sonic3kSuperStateController.buildHyperFlashUpload(live, 2);
 
         assertEquals(4, live.getColor(2).r);
         assertEquals(5, live.getColor(2).g);
         assertEquals(6, live.getColor(2).b);
         assertEquals(255, firstUpload.getColor(2).r & 0xFF);
         assertEquals(255, secondUpload.getColor(2).r & 0xFF);
-        assertEquals(0, secondUpload.getColor(0).r & 0xFF);
+        assertEquals(255, firstUpload.getColor(0).r & 0xFF,
+                "line 0 backdrop is white during the Hyper flash");
+        assertEquals(0, secondUpload.getColor(0).r & 0xFF,
+                "only line 2 color 0 remains black");
+        assertEquals(255, Sonic3kSuperStateController.buildHyperFlashUpload(live, 3)
+                .getColor(0).r & 0xFF);
     }
 
     @Test
@@ -64,10 +70,12 @@ class TestSonic3kSuperStateRewind {
         setField(controller, "activeFormTier", S3kFormTier.HYPER);
         setField(SuperStateController.class, controller, "state", SuperState.SUPER);
         ObjectManager objects = mock(ObjectManager.class);
+        var poweredAttacks = mock(com.openggf.level.objects.PoweredAttackSurface.class);
+        when(objects.poweredAttacks()).thenReturn(poweredAttacks);
 
-        controller.triggerHyperSonicDashEffects(objects);
+        controller.triggerPoweredAirDashEffects(objects);
 
-        verify(objects).applyPoweredScreenAttack(sonic);
+        verify(poweredAttacks).apply(sonic);
         assertEquals(4, getIntField(controller, "hyperFlashFrames"));
         controller.update();
         controller.update();
@@ -235,6 +243,20 @@ class TestSonic3kSuperStateRewind {
     }
 
     @Test
+    void hyperSonicUsesTheTimedSonicReverseFade() throws Exception {
+        for (int i = 0; i < 7; i++) {
+            GameServices.gameState().markSuperEmeraldCollected(i);
+        }
+        assertTrue(controller.activateFromAirAbility());
+
+        controller.debugDeactivate();
+
+        assertEquals(2, controller.captureRewindState().paletteState(),
+                "Hyper Sonic follows SuperHyper_PalCycle_Revert's Sonic branch");
+        assertEquals(0x1E, controller.captureRewindState().paletteFrame());
+    }
+
+    @Test
     void tailsAndKnucklesPublishPoweredPaletteOnFirstTransformationTick() {
         for (int i = 0; i < 7; i++) {
             GameServices.gameState().markSuperEmeraldCollected(i);
@@ -252,6 +274,16 @@ class TestSonic3kSuperStateRewind {
         assertEquals(0xB, tailsController.activePaletteReloadForTest());
         assertEquals(java.util.List.of(8, 9, 11), tailsController.activePaletteColorIndicesForTest());
         assertPaletteWrap(tailsController, 5 * 6, 0xB);
+        assertEquals(0, tailsController.superTailsCompanionPaletteFrameForTest());
+        assertEquals(1, tailsController.superTailsCompanionPaletteTimerForTest());
+        tailsController.update();
+        tailsController.update();
+        assertEquals(6, tailsController.superTailsCompanionPaletteFrameForTest(),
+                "Super Tails also advances the shared Super-Sonic/Flicky palette");
+        assertEquals(6, tailsController.superTailsCompanionPaletteTimerForTest());
+        tailsController.debugDeactivate();
+        assertEquals(0, tailsController.captureRewindState().paletteState(),
+                "Tails uses the ROM one-step revert branch");
 
         Knuckles knuckles = new Knuckles("knuckles", (short) 0, (short) 0);
         GameServices.sprites().clearAllSprites();
@@ -267,6 +299,35 @@ class TestSonic3kSuperStateRewind {
         assertEquals(10, knucklesController.activePaletteFrameCountForTest());
         assertEquals(java.util.List.of(2, 3, 4), knucklesController.activePaletteColorIndicesForTest());
         assertPaletteWrap(knucklesController, 9 * 6, 0xE);
+        knucklesController.debugDeactivate();
+        assertEquals(0, knucklesController.captureRewindState().paletteState(),
+                "Knuckles uses the dedicated one-frame ROM revert palette");
+    }
+
+    @Test
+    void superTailsCompanionPaletteTimingRoundTripsThroughRewind() throws Exception {
+        for (int i = 0; i < 7; i++) {
+            GameServices.gameState().markSuperEmeraldCollected(i);
+        }
+        Tails tails = new Tails("tails", (short) 0, (short) 0);
+        GameServices.sprites().clearAllSprites();
+        GameServices.sprites().addSprite(tails, "tails");
+        tails.setRingCount(50);
+        Sonic3kSuperStateController tailsController = new Sonic3kSuperStateController(tails);
+        tails.setSuperStateController(tailsController);
+        assertTrue(tailsController.activateFromAirAbility());
+        tailsController.update();
+        tailsController.update();
+        tailsController.update();
+        PerObjectRewindSnapshot snapshot = tails.captureRewindState();
+        int expectedFrame = tailsController.superTailsCompanionPaletteFrameForTest();
+        int expectedTimer = tailsController.superTailsCompanionPaletteTimerForTest();
+
+        for (int i = 0; i < 5; i++) tailsController.update();
+        tails.restoreRewindState(snapshot);
+
+        assertEquals(expectedFrame, tailsController.superTailsCompanionPaletteFrameForTest());
+        assertEquals(expectedTimer, tailsController.superTailsCompanionPaletteTimerForTest());
     }
 
     @Test
