@@ -56325,3 +56325,92 @@ mgz 1/14629, cnz 1/5336, **icz 82 → 1**/1629, lbz 8/35, mhz 912/7218 — six u
 `TestS3kIczPaletteCycling`, `TestS3kRuntimeStateReadGuard` and `TestIczSnowboardArtLoader`
 all green. `TestRewindFieldDispositionGuard` and `TestS3kIczAct1TransitionHeadless` fail
 identically on the base commit — verified pre-existing, not caused here.
+
+## 2026-07-31 — S3K complete-run: six of seven segments now physics-clean
+
+Measured one class per `mvn` invocation on `bugfix/ai-s3k-mhz-queue-frontier`.
+`TestS3kAizTraceReplay` holds at its documented 4 failures + 1 error throughout.
+
+| segment | start of day | now | non-queue | frames |
+|---|---|---|---|---|
+| AIZ | 8 | 8 | **0** | 64 |
+| HCZ | 868 | 8 | **0** | 1320 |
+| MGZ | 5040 | 1 | **0** | 14629 |
+| CNZ | 1658 | 1 | **0** | 5336 |
+| ICZ | 287 | 1 | **0** | 1629 |
+| LBZ | 24 | 8 | **0** | 35 |
+| MHZ | 1923 | 912 | 896 | 7218 |
+
+Every remaining group outside MHZ is `queue.*`. MHZ is the only segment with
+physics divergence left, and its 896 non-queue groups are one blocked seed plus
+its consequences (see the f3246 entries above).
+
+### Fixes that produced it
+
+- `5aee8e6d0` frame-0 `Status_InAir` from ROM spawn (`SpawnLevelMainSprites`
+  per-zone `bset`s, sonic3k.asm:8132-8177). Two writers were clobbering a spawn
+  model the engine already had right.
+- `3c8c1ae11` SS entry ring retires through the ROM tail (`loc_61794`
+  128325-128333 marks collected without deleting; `loc_6196A` retires).
+- `ea24cd193` MHZ swing bar publishes `prev_anim = 0` on upward auto-release —
+  ROM `loc_3EE7A` (83389-83394) is a WORD write and `Animate_Sonic`
+  (24739-24749) restarts only on an `anim`/`prev_anim` mismatch.
+- `bd434d6cb` title-card teardown DERIVED, not fitted: 22 frames `objoff_2E`
+  plus a 12-frame element drain, each element stepping `$20`/frame and culled by
+  the ROM's own `Render_Sprites` bounds test (36440-36468).
+- `7c91a2db9` sidekick air-landing tilt publish — ROM's `next_tilt`/`tilt` copy
+  is in the character control tail and runs for BOTH characters
+  (`Tails_Control` 26243-26244, `Sonic_Control` 25718-25719).
+- `cfa7fc4f9` Madmole carry: `byte_8D9E7` (193520) ends `$FC`
+  (`AnimateRaw_Restart`), NOT `$F4`, so it never invokes `$34(a0)`; those hooks
+  come from `ObjHitFloor_DoRoutine` (177964-177981).
+- `8005289a1` / `97991fa45` Madmole coarse offscreen release (`loc_8D6E6`
+  193218-193232) and object-controlled landing on the mushroom cap —
+  `SolidObjectTop`'s new-contact path uses a SIGNED `object_control` test
+  (42014), so only bit-7 states skip landing.
+- `8c90be2c0` MHZ pollen spawner installed where it survives level load. It was
+  created from `init(zone, act)` before the object manager existed, silently
+  discarded, and never ticked — leaving the engine ~3000 `Random_Number` draws
+  behind by frame 3149 and making a Madmole draw the wrong arm variant.
+- `fb8c68f1f` Kos module state step at its ROM frame phase (`LevelLoop`
+  7887/7888/7908) via a new `beforeTimingService` hook.
+- `60cfe76c0` level-load enemy KosM art queued on the ROM's frame:
+  `CreateNewSprite4` scans FORWARD (37894-37919) so the owner runs before its
+  children and observes the drained `objoff_30` a frame later.
+- `3b9667485` surplus pre-`Initial_ProcessSprites` object dispatch removed —
+  every level-load-resident object was executed twice before row 0. ICZ
+  274 -> 82, LBZ 24 -> 8, MHZ 962 -> 912.
+- `70147fa3f` `seedSegmentEntryVelocity` no longer seeds position or subpixel
+  from trace row 0. Row 0 is a recorded POST-frame sample; HCZ1 spawns falling
+  with left held, so its row 0 already carries one `-$1800` air-control step.
+  HCZ 175 -> 8. Blast radius measured across all 15 complete-run segments: HCZ
+  is the only one with a nonzero row-0/start delta.
+- `7d5f2289c` ICZ1 quake control lock armed from ICZ's own screen-shake flag.
+  `loc_39BEE` (77359-77376) sets `Screen_shake_flag`; `ICZ1SE_Init`
+  (110095-110101) does `st (Ctrl_1_locked)`; `loc_10BF0` (21968-21971) then stops
+  refreshing `Ctrl_1_logical` for 200 frames, so ROM ignores six recorded press
+  edges. The engine tested the shared S2 `Screen_Shaking_Flag`, never written in
+  ICZ. `Obj_ICZ1BigSnowPile loc_53A4C` (110464-110480) only CONSUMES the lock and
+  jumps manually with `y_vel=-$600` and no `y_radius` adjustment. ICZ 82 -> 1.
+
+### Open
+
+- MHZ f3246 — blocked pending the collision-plane fields being added to the
+  recorder; two independent agents exhausted the engine-side hypotheses.
+- AIZ and LBZ frame-34 queue occupancy diverges in OPPOSITE directions (AIZ
+  engine-busy where ROM is idle; LBZ ROM-busy where the engine is idle) on 64-
+  and 35-frame segments.
+- HCZ frames 1067-1068 — `Obj_HCZLargeFan` (65588-65608) art-queue timing; the
+  leader's x matches either side, so it is the object's first-run window.
+- ICZ accuracy items with no trace evidence on this route:
+  `IczSnowboardIntroInstance:453` gates the dust count on its own
+  `currentMappingFrame` where ROM `loc_39916` reads the RIDER's via
+  `movea.w $30(a0),a3` (77146); and `updateAct1BackgroundIntro` calls
+  `lockFocusedPlayerForIntroQuake` unconditionally, the background event doing
+  the screen event's job.
+
+### Newly identified pre-existing failures
+
+`TestS3kIczAct1TransitionHeadless` ("test setup must reach ICZ2 KosM parent
+retirement") and `TestS3kKosStructuralSequence` (7/7), both verified on the
+untouched base.
