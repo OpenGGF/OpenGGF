@@ -68,6 +68,14 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     private S3kKosModuleQueue enemyKosQueue;
     private boolean enemyKosSubmissionArmed;
 
+    /**
+     * Residual ROM lifetime of the title-card owner when its presentation was
+     * skipped. Non-null only while the owner is still running toward
+     * {@code loc_2D8CA}'s {@code LoadEnemyArt}.
+     */
+    private com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardTeardownModel
+            titleCardTeardown;
+
     private record EnemyKosEntry(int source, int destinationTile) {
     }
 
@@ -1351,6 +1359,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     @Override
     public void processRuntimeArtQueue() {
         boolean registeredRuntimeSheet = false;
+        advanceTitleCardTeardown();
         processEnemyKosArt();
         if (cnzTeleporterArtState == RuntimeArtState.PENDING) {
             loadCnzTeleporterArt();
@@ -1384,6 +1393,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         enemyKosHandles.clear();
         enemyKosQueue = null;
         enemyKosSubmissionArmed = false;
+        titleCardTeardown = null;
         pendingEnemyKosEntries = switch (zoneIndex) {
             case Sonic3kZoneIds.ZONE_AIZ -> List.of(
                     new EnemyKosEntry(
@@ -1536,7 +1546,36 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
      */
     @Override
     public void onTitleCardArtRetired() {
+        titleCardTeardown = null;
         enemyKosSubmissionArmed = true;
+    }
+
+    /**
+     * Begins modelling the title-card owner's remaining ROM lifetime instead of
+     * retiring its art immediately.
+     *
+     * <p>A skipped presentation removes only the locked display loop. The owner
+     * object still runs {@code Obj_TitleCardWait2}'s {@code objoff_2E} countdown
+     * and then drains its card elements before {@code loc_2D8CA} reaches
+     * {@code LoadEnemyArt} ({@code docs/skdisasm/sonic3k.asm:62249-62261},
+     * {@code 62295-62301}).
+     */
+    @Override
+    public void onTitleCardPresentationSkipped() {
+        enemyKosSubmissionArmed = false;
+        titleCardTeardown =
+                new com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardTeardownModel();
+    }
+
+    /** Runs one level frame of the modelled title-card owner. */
+    private void advanceTitleCardTeardown() {
+        if (titleCardTeardown == null) {
+            return;
+        }
+        if (titleCardTeardown.tick()) {
+            enemyKosSubmissionArmed = true;
+            titleCardTeardown = null;
+        }
     }
 
     /**
@@ -2176,7 +2215,8 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
                         | (cnzEndBossArtState.ordinal() << 2),
                 pendingModules,
                 enemyKosHandles.stream().map(HardwareWorkHandle::ordinal).toList(),
-                enemyKosSubmissionArmed);
+                enemyKosSubmissionArmed,
+                titleCardTeardown == null ? -1 : titleCardTeardown.ticksElapsed());
     }
 
     /**
@@ -2194,6 +2234,13 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
                         entry.sourceAddress(), entry.destinationTile()))
                 .toList();
         enemyKosSubmissionArmed = snap.kosSubmissionArmed();
+        if (snap.titleCardTeardownTicks() < 0) {
+            titleCardTeardown = null;
+        } else {
+            titleCardTeardown =
+                    new com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardTeardownModel();
+            titleCardTeardown.restoreTicks(snap.titleCardTeardownTicks());
+        }
         enemyKosHandles.clear();
         enemyKosQueue = null;
         if (!snap.pendingKosOrdinals().isEmpty()) {

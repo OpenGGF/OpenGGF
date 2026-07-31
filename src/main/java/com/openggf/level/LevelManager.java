@@ -2803,14 +2803,16 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     private void completeSkippedInitialTitleCardPresentation() {
         completeInitialTitleCardPresentation();
-        // A headless fresh load omits presentation, but it still begins at the
-        // post-title-card production boundary. Publish the same runtime-art
-        // admission that Obj_TitleCardWait2 opens via LoadEnemyArt; this only
-        // arms ROM-owned work, and the ordinary level frame submits it later.
-        // docs/skdisasm/sonic3k.asm:62287-62300, 64302-64309
+        // A headless fresh load omits presentation, but the title-card owner
+        // object is not deleted with it: it keeps running through
+        // Obj_TitleCardWait2 and only opens runtime-art admission via
+        // LoadEnemyArt once its own counter and element drain finish. Tell the
+        // provider the presentation was skipped and let it model that lifetime
+        // rather than retiring the art on the first level frame.
+        // docs/skdisasm/sonic3k.asm:62249-62261, 62295-62301, 64302-64309
         var objectArtProvider = activeGameModule().getObjectArtProvider();
         if (objectArtProvider != null) {
-            objectArtProvider.onTitleCardArtRetired();
+            objectArtProvider.onTitleCardPresentationSkipped();
         }
     }
 

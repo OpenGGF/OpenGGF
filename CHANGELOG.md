@@ -3,14 +3,28 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
-- Fix: releasing the Mushroom Hill horizontal swing bar at the top of its arc now
-  restarts the spring-jump animation. The ROM's release writes `anim` and
-  `prev_anim` as one word (`move.w #$10<<8,anim(a1)`, sonic3k.asm:83389-83390)
-  while the grab writes the `anim` byte alone, so `Animate_Sonic` always re-enters
-  `AniSonic10`. The engine left its previous-animation tracker stale, so a player
-  who spring-jumped off one bar straight into the next kept the expired script
-  state and stayed stuck on the last hang mapping frame instead of publishing
-  `$8E`.
+- Fix: the S3K special-stage entry ring's 50-ring award no longer deletes the
+  ring outright. ROM `loc_61794` (sonic3k.asm:128325-128333) marks the ring
+  collected, sets the retirement bit and adds the rings without deleting; the
+  following display pass sees `btst #5,$38` and retires through `loc_6196A`
+  (128485-128490), which re-queues `ArtKosM_BadnikExplosion`. Deleting on touch
+  lost that submission on every ring taken with the emeralds already collected.
+- Fix: S3K enemy Kosinski art is no longer submitted at the first level frame
+  when the initial title-card presentation is omitted. Skipping the
+  presentation does not shorten the title-card owner's ROM lifetime: it keeps
+  running as an ordinary object through `Obj_TitleCardWait` and
+  `Obj_TitleCardWait2` (sonic3k.asm:62220-62253, hold `objoff_2E` = `$16` set
+  at 7878) and drains its staggered element exit before `loc_2D8CA` calls
+  `LoadEnemyArt` and `Delete_Current_Sprite` retires it (62295-62301). The art
+  provider now defers admission for that lifetime, so both Kosinski queues are
+  idle across the frames the ROM leaves idle instead of holding enemy art from
+  frame 0. The delay is not a tuned constant: `Sonic3kTitleCardTeardownModel`
+  steps the actual `ObjArray_TtlCard` elements (62450-62478) through
+  `Obj_TitleCardElement` / `Obj_TitleCardRedBanner` (62303-62378) and retires
+  each one with the `Render_Sprites` bounds test for a `render_flags` `$40`
+  sprite (36444-36468). Draining `objoff_2E` (22 frames) and then the elements
+  puts `LoadEnemyArt` on level frame 34, which is where the recording shows
+  every non-AIZ zone first becoming Kos-queue busy.
 - Fix: trace replay no longer treats the level's own Load_Sprites/Process_Sprites
   setup pass as a recorded frame. That pass runs before `LevelLoop`
   (sonic3k.asm:7849-7860), so it performs no `Wait_VSync`, no `Read_Joypads`, and
