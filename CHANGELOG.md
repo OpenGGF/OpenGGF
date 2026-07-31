@@ -17,6 +17,27 @@ All notable changes to the OpenGGF project are documented in this file.
   `docs/s2disasm/s2.asm:4945`) while ObjB2 is placed by the loop's own
   `ObjPosLoad` pass. Advances `TestS2SczLevelSelectTraceReplay` from frame 2
   (6419 errors) to frame 2574 (2 errors).
+- Fix: Tails' tails (Obj05) now runs in the post-dynamic-object fixed-slot pass
+  instead of inside the sidekick's own animation update. Its SST lives in
+  `LevelOnly_Object_RAM`, which begins after `Object_RAM_End` /
+  `Dynamic_Object_RAM_End` (`docs/s2disasm/s2.constants.asm:1144-1152`), so ROM
+  executes it after every dynamic level object; `Obj05_Main`'s
+  `move.b anim(a2),d0` (`docs/s2disasm/s2.asm:41735`) therefore samples a later
+  parent animation than the engine did, and the early dispatch minted DPLC edges
+  the ROM never queues. S3K places `Tails_tails` identically after
+  `Dynamic_object_RAM_end` (`docs/skdisasm/sonic3k.constants.asm:307-315`), and
+  the fixed dust follows the tails in both, so the ordering is universal; S1 has
+  no Tails. Two further ROM-backed corrections ride along: `Obj05Ani_Blank` is a
+  real animation script `dc.b $20,0,$FF` (`docs/s2disasm/s2.asm:41813`) whose
+  `LoadTailsTailsDynPLC` pass still writes `TailsTails_LastLoadedDPLC`
+  (`docs/s2disasm/s2.asm:41642`) before bailing on the empty DPLC frame 0, so it
+  is no longer skipped; and `TAnim_GetTailFrame` calls `CalcAngle`
+  unconditionally (`docs/s2disasm/s2.asm:41484-41487`), whose zero-velocity
+  return is `$40` (`docs/s2disasm/s2.asm:4076-4078`, matching
+  `GetArcTan`/`docs/skdisasm/sonic3k.asm:3043`), so the engine's zero-velocity
+  short-circuit to bank 0 is removed. Advances the first-error frame on 10 of
+  the failing S2 trace replays (e.g. ARZ 272 -> 1078, MCZ2 213 -> 1805, CPZ
+  154 -> 725).
 - Fix: Tails' tails (Obj05) directional animation now latches its DPLC
   mapping-frame bank and `render_flags` x/y flips at the single ROM write point
   instead of recomputing them from the parent's current velocity every frame.

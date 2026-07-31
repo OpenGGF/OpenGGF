@@ -765,6 +765,40 @@ public class SpriteManager implements PlayableSstDispatcher {
 		return objects != null ? objects.getFrameCounter() : 0;
 	}
 
+	/**
+	 * Post-dynamic-object fixed-slot playable pass, in ROM SST order.
+	 *
+	 * <p>ROM places Tails' tails (Obj05) and the skid/spindash dust in the
+	 * fixed-in-level object RAM that begins AFTER the dynamic object RAM:
+	 * S2 {@code LevelOnly_Object_RAM: Tails_Tails} follows {@code Object_RAM_End}
+	 * / {@code Dynamic_Object_RAM_End} (docs/s2disasm/s2.constants.asm:1144-1152),
+	 * and S3K {@code Level_object_RAM: Tails_tails} then {@code Dust} follow
+	 * {@code Dynamic_object_RAM_end} (docs/skdisasm/sonic3k.constants.asm:307-317).
+	 * Both therefore execute after every dynamic level object, and Tails' tails
+	 * executes before the dust.
+	 */
+	public void advancePlayableFixedSlotsAfterObjectExecution() {
+		advanceTailsTailsAfterObjectExecution();
+		advanceFixedSkidDustAfterObjectExecution();
+	}
+
+	/**
+	 * ROM Obj05_Main: reads {@code anim(a2)} from its parent at ITS OWN (late)
+	 * execution point (docs/s2disasm/s2.asm:41735), then unconditionally runs
+	 * {@code Tails_Animate_Part2} and {@code LoadTailsTailsDynPLC}
+	 * (docs/s2disasm/s2.asm:41756-41763). S3K's Obj_Tails_Tail_Main is the same
+	 * shape (docs/skdisasm/sonic3k.asm:30055-30071). Running this inside the
+	 * sidekick's own animation pass read the parent anim one dispatch too early
+	 * and minted DPLC edges the ROM never queues.
+	 */
+	public void advanceTailsTailsAfterObjectExecution() {
+		for (AbstractPlayableSprite sidekick : sidekicks) {
+			if (sidekick != null && sidekick.getTailsTailsController() != null) {
+				sidekick.getTailsTailsController().update();
+			}
+		}
+	}
+
 	public void advanceFixedSkidDustAfterObjectExecution() {
 		Collection<Sprite> sprites = getAllSprites();
 		List<AbstractPlayableSprite> playables = buildPlayableUpdateOrderInto(
