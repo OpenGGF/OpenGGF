@@ -3,6 +3,23 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the dynamic-art replay boundary now runs the one `Level_MainLoop`
+  iteration the ROM executes after the last sampled frame, in ROM order --
+  the V-int art boundary first (`docs/s2disasm/s2.asm:5088` `Level_MainLoop`,
+  `:5091` `WaitForVint` with `VintID_Level`, reaching `ProcessDMAQueue` at
+  `docs/s2disasm/s2.asm:1770`), then the object pass and its player display
+  DPLC submissions (`docs/s2disasm/s2.asm:5095` `RunObjects`, reaching
+  `LoadSonicDynPLC` at `docs/s2disasm/s2.asm:38828` and `LoadTailsDynPLC` at
+  `docs/s2disasm/s2.asm:41658`). The recorder forwards that iteration's edges
+  onto the final published row, so the engine published one dynamic-art edge
+  too few at the end of every affected trace. The terminal forward now extends
+  the last published row instead of replacing it, and staged-only art stays
+  unsubmitted (`docs/s1disasm/_incObj/01 Sonic.asm:2392` `Sonic_LoadGfx` writes
+  `v_sgfx_buffer` and sets `f_sonframechg`; the V-int issues the transfer at
+  `docs/s1disasm/sonic.asm:831`). Re-greens `TestS2Arz`, `TestS2Cnz`,
+  `TestS2Cpz`, `TestS2Htz`, `TestS2Mtz`, `TestS2Ooz` and `TestS2Ooz2`
+  `LevelSelectTraceReplay`, and takes `TestS2Arz2LevelSelectTraceReplay` from
+  4 errors to 3 at frame 7808.
 - Fix: Sonic 2's OOZ oil surface (Obj07) now executes in the reserved
   object-RAM band, after the player object slots and before every dynamic level
   object. ROM aliases `Oil` onto `WaterSurface1` between the player slots and

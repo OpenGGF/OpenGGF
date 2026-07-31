@@ -201,7 +201,16 @@ public final class DynamicArtLifecycleService
                         "cannot forward dynamic-art edges without a production row");
             }
             int terminalFrame = nextPublicationFrame - 1;
-            latest = publishBuffered(terminalFrame, true);
+            // The forwarded edges land on a row that was already published,
+            // so they extend that row rather than replacing it: the recorder
+            // reports one row per publication frame carrying both its own
+            // edges and anything the following main-loop iteration forwarded
+            // back onto it.
+            List<DynamicArtDiagnosticsSnapshot.Edge> alreadyPublished =
+                    latest.published() && latest.frame() == terminalFrame
+                            ? latest.edges()
+                            : List.of();
+            latest = publishBuffered(terminalFrame, true, alreadyPublished);
         }
         comparisonSegmentOpen = false;
     }
@@ -429,6 +438,26 @@ public final class DynamicArtLifecycleService
                             PLAYER_PROFILES.get(GameId.S1).get("sonic")
                                     .stagingByteLength())));
         }
+        retireSubmittedTransfers();
+    }
+
+    /**
+     * Retires already-submitted transfers at the V-blank of the main-loop
+     * iteration that follows the last sampled frame
+     * (docs/s2disasm/s2.asm:5091 WaitForVint reaching ProcessDMAQueue at
+     * docs/s2disasm/s2.asm:1769). It deliberately does not flush art that a
+     * display pass has only staged into a RAM buffer: that art is not queued
+     * work yet (docs/s1disasm/_incObj/01 Sonic.asm:2392 Sonic_LoadGfx copies
+     * tiles into v_sgfx_buffer and merely sets f_sonframechg; the transfer
+     * itself is issued by the V-int at docs/s1disasm/sonic.asm:831), and the
+     * boundary this models ends before that issue.
+     */
+    public void serviceTerminalProductionVBlank() {
+        requireRunActive();
+        retireSubmittedTransfers();
+    }
+
+    private void retireSubmittedTransfers() {
         List<Long> retiring = List.copyOf(pendingS2TransferIds);
         pendingS2TransferIds.clear();
         for (long transferId : retiring) {
@@ -480,8 +509,16 @@ public final class DynamicArtLifecycleService
     private DynamicArtDiagnosticsSnapshot publishBuffered(
             int publicationFrame,
             boolean terminalForwarded) {
+        return publishBuffered(publicationFrame, terminalForwarded, List.of());
+    }
+
+    private DynamicArtDiagnosticsSnapshot publishBuffered(
+            int publicationFrame,
+            boolean terminalForwarded,
+            List<DynamicArtDiagnosticsSnapshot.Edge> alreadyPublished) {
         List<DynamicArtDiagnosticsSnapshot.Edge> edges =
-                new ArrayList<>(bufferedEdges.size());
+                new ArrayList<>(alreadyPublished.size() + bufferedEdges.size());
+        edges.addAll(alreadyPublished);
         for (BufferedEdge edge : bufferedEdges) {
             edges.add(new DynamicArtDiagnosticsSnapshot.Edge(
                     edge.edgeOrdinal(), edge.transferId(), edge.phase(),

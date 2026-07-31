@@ -56005,3 +56005,117 @@ resolve about 350 and 40 lines earlier than those labels in the local
 disassembly checkout. That skew is pre-existing and consistent with line numbers
 in already-committed entries of this log, so it was left alone rather than
 churned here; the labels themselves are correct.
+
+## 2026-07-31 — S2 terminal dynamic-art iteration (`bugfix/ai-s2-missing-edge-eight`)
+
+Worktree `.worktrees/s2-missing-edge-eight`, branched from
+`bugfix/ai-trace-s1-titlecard-plc-integration` (165c1e481).
+
+Command (S1+S2 sweep, run identically on the base commit for comparison):
+
+```
+mvn -q -Dmse=relaxed -Dmaven.test.failure.ignore=true -DfailIfNoSpecifiedTests=false \
+  -Ds1.rom.path=<s1.gen> -Ds2.rom.path=<s2.gen> \
+  "-Dtest=com.openggf.tests.trace.s1.*TraceReplay,com.openggf.tests.trace.s2.*TraceReplay" test
+```
+
+Cause: the ROM runs one more `Level_MainLoop` iteration after the last sampled
+frame (`docs/s2disasm/s2.asm:5088`, `:5091` WaitForVint → ProcessDMAQueue at
+`docs/s2disasm/s2.asm:1769`, `:5095` RunObjects → `LoadSonicDynPLC`
+`docs/s2disasm/s2.asm:38828` / `LoadTailsDynPLC` `docs/s2disasm/s2.asm:41658`).
+The recorder forwards that iteration's edges onto the final published row; the
+engine never ran it, so each affected trace published one edge too few. The
+replay boundary now runs that trailing iteration (V-blank retirement first, then
+the player display pass) before closing the comparison segment, and the terminal
+forward extends the last published row instead of replacing it.
+
+Frontier movement (pass/fail, error count, first-error frame/field):
+
+| Trace | Before | After |
+|---|---|---|
+| `TestS2ArzLevelSelectTraceReplay` | fail, 3 errors, frame 5072 `dynamic_art.edges` | PASS |
+| `TestS2CpzLevelSelectTraceReplay` | fail, 3 errors, frame 5743 `dynamic_art.edges` | PASS |
+| `TestS2CnzLevelSelectTraceReplay` | fail, 4 errors, frame 9468 `dynamic_art.edges` | PASS |
+| `TestS2OozLevelSelectTraceReplay` | fail, 4 errors, frame 11018 `dynamic_art.edges` | PASS |
+| `TestS2HtzLevelSelectTraceReplay` | fail, 3 errors, frame 8860 `dynamic_art.edges` | PASS |
+| `TestS2MtzLevelSelectTraceReplay` | fail, 3 errors, frame 10133 `dynamic_art.edges` | PASS |
+| `TestS2Ooz2LevelSelectTraceReplay` | fail, 3 errors, frame 13316 `dynamic_art.edges` | PASS |
+| `TestS2Arz2LevelSelectTraceReplay` | fail, 4 errors, frame 7808 `dynamic_art.edges` | fail, 3 errors, same frame/field |
+| `TestS2Cnz2LevelSelectTraceReplay` | fail, 46 errors, frame 10935 `dynamic_art.edges` | fail, 44 errors, same frame/field |
+| `TestS2WfzLevelSelectTraceReplay` | fail, 5804 errors, frame 10447 `dynamic_art.edge[1].present` | fail, 5803 errors, same frame/field |
+
+Every other S1 and S2 trace class reported byte-identical results before and
+after, including all S1 complete-run and both special-stage traces. The S3K
+sweep plus `TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
+`TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`,
+`TestHardwareTimingAuthorityGuard`, `TestTraceSessionLauncherRunBranch`,
+`TestLiveTraceComparatorObserver` and both rewind coverage guards were also
+identical between the base commit and this branch.
+
+Remaining on `TestS2Arz2LevelSelectTraceReplay`: the trailing display pass does
+not produce the second (submission) edge the recorder forwarded, so one edge is
+still missing at frame 7808. `TestS2Cnz2` and `TestS2Wfz` remain on their
+pre-existing, unrelated divergences.
+
+Caveat on citations: `ProcessDMAQueue`, `LoadSonicDynPLC` and `LoadTailsDynPLC`
+sit one line earlier in the local checkout than the line numbers quoted in the
+originating investigation (1769/38828/41658 rather than 1770/38829/41659); the
+labels themselves are correct and the numbers above were read directly from the
+local disassembly.
+
+### Independent verification (2026-07-31, clean rebuild)
+
+Worktree `.worktrees/s2-missing-edge-eight`, branch
+`bugfix/ai-s2-missing-edge-eight`, base `165c1e481`. `mvn -q -Dmse=relaxed
+clean` and `rm -rf target/surefire-reports` before every run below.
+
+Family run:
+
+```
+mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \
+  -Ds2.rom.path=<s2.gen> \
+  "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2Arz2LevelSelectTraceReplay,\
+TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,\
+TestS2HtzLevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,\
+TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay,\
+TestS2DezEndingLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,\
+TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,\
+TestS2Mtz2LevelSelectTraceReplay" test
+```
+
+| Trace | Before | After (measured) |
+|---|---|---|
+| `TestS2ArzLevelSelectTraceReplay` | fail, 3 errors, frame 5072 `dynamic_art.edges` | PASS (`Tests run: 1, Failures: 0, Errors: 0`) |
+| `TestS2CpzLevelSelectTraceReplay` | fail, 3 errors, frame 5743 `dynamic_art.edges` | PASS |
+| `TestS2CnzLevelSelectTraceReplay` | fail, 4 errors, frame 9468 `dynamic_art.edges` | PASS |
+| `TestS2OozLevelSelectTraceReplay` | fail, 4 errors, frame 11018 `dynamic_art.edges` | PASS |
+| `TestS2HtzLevelSelectTraceReplay` | fail, 3 errors, frame 8860 `dynamic_art.edges` | PASS |
+| `TestS2MtzLevelSelectTraceReplay` | fail, 3 errors, frame 10133 `dynamic_art.edges` | PASS |
+| `TestS2Ooz2LevelSelectTraceReplay` | fail, 3 errors, frame 13316 `dynamic_art.edges` | PASS |
+| `TestS2Arz2LevelSelectTraceReplay` | fail, 4 errors, frame 7808 `dynamic_art.edges` | fail, `Totals: 3 errors, 0 warnings. First error: frame 7808 -- dynamic_art.edges mismatch (expected=[11580, 11581], actual=[11580])` |
+| `TestS2DezEndingLevelSelectTraceReplay` | PASS | PASS |
+| `TestS2SczLevelSelectTraceReplay` | PASS | PASS |
+| `TestS2Ehz1TraceReplay` | PASS | PASS |
+| `TestS2MczLevelSelectTraceReplay` | PASS | PASS |
+| `TestS2Mtz2LevelSelectTraceReplay` | PASS | PASS |
+
+Green regression guard (19 classes: the five already-green S2 traces, six S1
+traces including all three complete runs and both credits traces,
+`TestTraceReplayInvariantGuard`, `TestTraceReplayReferenceClosureGuard`,
+`TestHardwareTimingAuthorityGuard`, `TestRewindCoverageGuard`,
+`TestStaticStateRewindCoverageGuard`, `TestPlcProducerCoverageGuard`,
+`TestDynamicArtDiagnosticsComparator`) — all green, zero failures, zero errors.
+
+Cross-game parity (`TestS3kAiz1SkipHeadless` 8, `TestSonic3kLevelLoading` 30+6,
+`TestSonic3kBootstrapResolver` 5, `TestSonic3kDecodingUtils` 3) — all green.
+
+No REGRESSION INTRODUCED.
+
+Citation check: `Level_MainLoop` `docs/s2disasm/s2.asm:5088`, `WaitForVint`
+`:5091`, `RunObjects` `:5095`, `LoadSonicDynPLC`
+`docs/s2disasm/s2.asm:38828`, `LoadTailsDynPLC` `docs/s2disasm/s2.asm:41658`,
+`Sonic_LoadGfx` `docs/s1disasm/_incObj/01 Sonic.asm:2392` and the
+`v_sgfx_buffer` V-int transfer `docs/s1disasm/sonic.asm:831` all land exactly on
+their labels in the local checkout. The one exception is `ProcessDMAQueue`,
+which is at `docs/s2disasm/s2.asm:1770`; line 1769 is the alias-comment line
+directly above it.
