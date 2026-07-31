@@ -2812,6 +2812,16 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         if (objectArtProvider != null) {
             objectArtProvider.onTitleCardArtRetired();
         }
+        // Omitting the presentation does not end the title card's object
+        // lifetime. Sonic 2's pieces survive the locked loop and run
+        // Obj34_WaitAndGoAway on ordinary gameplay frames, loading the
+        // standard-water and per-zone animal art on the frame the zone-name
+        // piece leaves the screen.
+        // docs/s2disasm/s2.asm:4914-4925, 5066-5080, 27605-27637
+        var titleCardProvider = activeGameModule().getTitleCardProvider();
+        if (titleCardProvider != null) {
+            titleCardProvider.beginOmittedPresentationExitTail(currentZone, apparentAct);
+        }
     }
 
     /**

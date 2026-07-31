@@ -21,6 +21,18 @@ All notable changes to the OpenGGF project are documented in this file.
   and a suppressed sidekick gets no tails-tails DPLC owner at all, since
   `InitPlayers` spawns Obj05 only alongside Obj02
   (`docs/s2disasm/s2.asm:38945-38946`, `5177-5198`).
+- Fix: omitting the initial title-card presentation no longer skips Sonic 2's
+  gameplay-phase title-card exit tail. The ROM's title-card pieces outlive the
+  locked `Level_TtlCard` loop (`docs/s2disasm/s2.asm:4914-4925`): just before
+  the main level loop the game hands them routine `$16` with
+  `anim_frame_duration = $2D` (`docs/s2disasm/s2.asm:5066-5080`), so
+  `Obj34_WaitAndGoAway` runs on ordinary gameplay frames and, on the frame the
+  zone-name piece leaves the screen, appends `PLCID_StdWtr` and the
+  `Animal_PLCTable` entry for the current zone
+  (`docs/s2disasm/s2.asm:27605-27637`) -- gameplay frame 52. `TitleCardProvider`
+  gains a default no-op `beginOmittedPresentationExitTail(zone, act)` that only
+  Sonic 2 implements, and the trace replay driver no longer wipes the
+  provider's post-slide-in phase.
 - Fix: the player DPLC decision owner is now keyed by character rather than by
   team slot, and the omitted S2 title-card presentation now advances player
   animation the way the ROM's own loop does. `LoadSonicDynPLC` compares the

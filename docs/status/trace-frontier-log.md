@@ -55054,3 +55054,83 @@ Cross-game shared surface, all green (run 3, 52 tests, 0 failures):
 `TestSonic3kBootstrapResolver` (5), `TestSonic3kDecodingUtils` (3).
 
 No `REGRESSION INTRODUCED:` lines.
+## 2026-07-31 - S2 title-card exit tail restores the frame-52 nemesis PLC append
+
+- Worktree: `.worktrees/s2-frame52-nemesis-plc`, branch
+  `bugfix/ai-s2-frame52-nemesis-plc`, uncommitted candidate over
+  `bugfix/ai-trace-s1-titlecard-plc-integration`.
+- Root cause: omitting the initial title-card presentation also deleted the
+  card's gameplay-phase object lifetime. In the ROM the pieces survive
+  `Level_TtlCard` (s2.asm:4914-4925), are handed routine `$16` with
+  `anim_frame_duration = $2D` immediately before the main level loop
+  (s2.asm:5066-5080), and run `Obj34_WaitAndGoAway` on ordinary gameplay
+  frames; on the frame the zone-name piece passes `#$200` it runs
+  `Obj34_LoadStandardWaterAndAnimalArt`, appending `PLCID_StdWtr` plus the
+  `Animal_PLCTable` entry for the current zone (s2.asm:27605-27637). That
+  lands on gameplay frame 52: 45 wait frames, then eight `$20`-pixel steps
+  from `spriteScreenPositionXCentered(0)` = `$120` past `$200`.
+  `TitleCardManager.queueExitPlcs` already modelled the append correctly but
+  was unreachable, because `LevelManager
+  .completeSkippedInitialTitleCardPresentation()` terminated the card at frame
+  0 and `TraceReplayDriver` additionally reset the provider.
+- Fix: new `TitleCardProvider.beginOmittedPresentationExitTail(zone, act)`
+  (default no-op, so S1/S3K keep their eager `onTitleCardArtRetired()`
+  boundary bit-for-bit), implemented by the S2 `TitleCardManager` as a
+  non-rendering `Obj34_WaitAndGoAway` model; `TraceReplayDriver` no longer
+  wipes the post-slide-in phase.
+- Command (both sweeps): `mvn -Dmse=relaxed -Dtest='*TraceReplay'
+  -DfailIfNoSpecifiedTests=false` with all three ROM properties.
+  Before (detached worktree at the base branch):
+  `passed=37 failed=30 errors=41`. After: `passed=38 failed=29 errors=41`.
+  The 14 erroring classes are identical in both sweeps (pre-existing on the
+  base branch, e.g. `TestS1FzCompleteRunTraceReplay`'s
+  "cannot mutate queued PLC entries while the decoder is active").
+
+GREENED (1): `TestS2DezEndingLevelSelectTraceReplay` (was 4 errors, first at
+frame 52).
+
+ADVANCED (7):
+
+| Trace | Before | After |
+|---|---|---|
+| `TestS2ArzLevelSelectTraceReplay` | 52 -- `queue.s2_nemesis_plc.queued_fingerprints` | 117 -- `dynamic_art.edge[3].owner` |
+| `TestS2Arz2LevelSelectTraceReplay` | 52 -- `queue.s2_nemesis_plc.queued_fingerprints` | 80 -- `dynamic_art.edge[3].owner` |
+| `TestS2CnzLevelSelectTraceReplay` | 52 -- `queue.s2_nemesis_plc.queued_fingerprints` | 124 -- `dynamic_art.edge[3].present` |
+| `TestS2CpzLevelSelectTraceReplay` | 52 -- `queue.s2_nemesis_plc.queued_fingerprints` | 106 -- `dynamic_art.edge[1].owner` |
+| `TestS2Cpz2LevelSelectTraceReplay` | 52 -- `queue.s2_nemesis_plc.queued_fingerprints` | 54 -- `dynamic_art.edge[2].owner` |
+| `TestS2Ehz1TraceReplay` | 52 -- `queue.s2_nemesis_plc.queued_fingerprints` | 91 -- `dynamic_art.edge[3].owner` |
+| `TestS2Htz2LevelSelectTraceReplay` | 52 -- `queue.s2_nemesis_plc.queued_fingerprints` | 62 -- `dynamic_art.edge[2].owner` |
+
+UNMOVED: every other class in the 64-class sweep reported the identical
+first-error frame and field before and after.
+
+Independent verification (2026-07-31, same worktree/branch, after
+`mvn -q -Dmse=relaxed clean`; base measured in a detached worktree at
+`1c328d6be`):
+
+```
+mvn -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \
+  -Ds2.rom.path=<repo>/s2.gen \
+  -Dtest=TestS2DezEndingLevelSelectTraceReplay,TestS2ArzLevelSelectTraceReplay,\
+TestS2Arz2LevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,\
+TestS2CpzLevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,\
+TestS2Ehz1TraceReplay,TestS2Htz2LevelSelectTraceReplay test
+```
+
+Base: `Tests run: 8, Failures: 8` -- all eight first-error at frame 52 on
+`queue.s2_nemesis_plc.queued_fingerprints`. Candidate: `Tests run: 8,
+Failures: 7` -- `TestS2DezEndingLevelSelectTraceReplay` passes, the other
+seven advance exactly as tabulated above. Green-guard sweep
+(`TestS1Ghz1TraceReplay`, `TestS1Mz1TraceReplay`, the three S1 complete-run
+traces, both S1 credits traces, `TestTraceReplayInvariantGuard`,
+`TestTraceReplayReferenceClosureGuard`, `TestRewindCoverageGuard`,
+`TestStaticStateRewindCoverageGuard`, `TestPlcProducerCoverageGuard`,
+`TestDynamicArtDiagnosticsComparator`) and the cross-game S3K sweep
+(`TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
+`TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`, 52 tests) both
+finished with `failed=0 errors=0`.
+
+No `REGRESSION INTRODUCED:` lines. Guard run (117 tests, 0 failures):
+`TestRewindCoverageGuard`, `TestStaticStateRewindCoverageGuard`,
+`TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
+`TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`, `*TitleCard*`.
