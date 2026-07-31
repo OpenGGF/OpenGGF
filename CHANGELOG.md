@@ -34,6 +34,25 @@ All notable changes to the OpenGGF project are documented in this file.
   4836 (4 errors), `TestS2MczLevelSelectTraceReplay` from frame 3006 (2410
   errors) to frame 5412 (4 errors), and cuts `TestS2Arz2LevelSelectTraceReplay`
   from 3984 to 204 errors.
+- Fix: Tails' tails (Obj05 / Obj_Tails_Tail) now models `Obj05_Main`'s parent
+  pushing override. The ROM forces the parent-animation input `d0` to 4
+  (`TailsAni_Push`) *before* both the change test against
+  `Obj05_parent_prev_anim` and the `Obj05AniSelection` lookup, and latches the
+  overridden value (`docs/s2disasm/s2.asm:41744-41758`). The engine compared and
+  latched the raw parent animation id, so every push left Obj05 on the wrong
+  animation script and desynced its DPLC submissions for the rest of the run.
+  The per-game detection gate is a typed
+  `PlayerAnimationRules.tailsTailPushDetection`: Sonic 2 REV01 ships
+  `FixBugs = 0` and tests only the pushing status bit
+  (`docs/s2disasm/s2.asm:41748-41751`), while Sonic 3 & Knuckles additionally
+  requires the parent's `mapping_frame` to lie in `$A9..$AC`
+  (`docs/skdisasm/sonic3k.asm:30043-30051`); Sonic 1 has no such object.
+  Advances 12 of the 17 S2 level-select traces (e.g.
+  `TestS2MtzLevelSelectTraceReplay` frame 292 -> 6708,
+  `TestS2CnzLevelSelectTraceReplay` frame 201 -> 8590,
+  `TestS2Ooz2LevelSelectTraceReplay` frame 830 -> 10684) and cuts the error
+  count on the four whose first-error frame is unchanged (e.g.
+  `TestS2Mtz2LevelSelectTraceReplay` 10762 -> 121 errors).
 - Fix: the Sonic 2 SCZ Tornado ride-start lead-in now ticks
   `ObjB2_Animate_Pilot` on the title-card iterations it stands in for. The ROM's
   title-card loop body is `jsr (RunObjects).l`
