@@ -21,6 +21,22 @@ All notable changes to the OpenGGF project are documented in this file.
   universal correction; S1 has no Tails. Advances the first-error frame on all
   16 failing S2 level-select/EHZ trace replays (e.g. MTZ2 39 -> 293, MCZ
   46 -> 1929, HTZ 47 -> 343).
+- Fix: the Sonic 2 Tornado now runs `ObjB2_Animate_Pilot`, the pilot's dynamic
+  art producer (`docs/s2disasm/s2.asm:79538-79565`). Every ninth frame the ROM
+  advances `objoff_36` through `Sonic_pilot_frames` / `Tails_pilot_frames`
+  (`docs/s2disasm/s2.asm:79566-79599`) and tail-jumps into
+  `LoadSonicDynPLC_Part2` / `LoadTailsDynPLC_Part2`
+  (`docs/s2disasm/s2.asm:38829-38862`, `41659-41697`); the routine is the first
+  instruction of `ObjB2_Main_SCZ`, `ObjB2_Main_WFZ_Start` and
+  `ObjB2_Main_WFZ_End` (`docs/s2disasm/s2.asm:78815-78816`, `78879-78880`,
+  `78951-78952`). Because `InitPlayers` omits Obj02 in SCZ/WFZ/DEZ
+  (`docs/s2disasm/s2.asm:5177-5198`), the pilot is the only submitter into the
+  Tails art bank there, and with no producer the ordered dynamic-art ledger
+  skewed from frame 2 onward. A character art bank keeps exactly one dedupe
+  state (`Sonic_LastLoadedDPLC` / `Tails_LastLoadedDPLC`,
+  `docs/s2disasm/s2.asm:26039-26041`), so `LevelManager` now exposes that bank's
+  single authoritative `DynamicArtDecisionOwner` by character identity instead
+  of only through the playable that happens to own it.
 - Fix: Tails' tails (Obj05) now tracks the ROM's `anim_frame` /
   `mapping_frame` split instead of conflating them. `Tails_Animate_Part2`
   reads the script byte at the current `anim_frame` into `mapping_frame` and
