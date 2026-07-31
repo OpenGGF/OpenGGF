@@ -167,7 +167,12 @@ public class TailsTailsController {
     private final DynamicArtDecisionOwner dynamicArtDecisionOwner;
 
     private int currentAnim = ANIM_BLANK;
-    private int lastParentAnim = -1;
+    /**
+     * ROM Obj05_parent_prev_anim / objoff_34: the DERIVED selection index the last
+     * Obj05 animation choice was made from, not the parent's raw anim byte
+     * (s2.asm:41755-41758; sonic3k.asm:30054-30058).
+     */
+    private int lastSelectionIndex = -1;
     /** ROM anim_frame: the index of the NEXT script byte to read (s2.asm:41303). */
     private int frameIndex;
     private int frameTick;
@@ -189,7 +194,7 @@ public class TailsTailsController {
 
     public record RewindState(
             int currentAnim,
-            int lastParentAnim,
+            int lastSelectionIndex,
             int frameIndex,
             int frameTick,
             int mappingFrame,
@@ -221,13 +226,14 @@ public class TailsTailsController {
     }
 
     public void update() {
-        int parentAnimId = sprite.getAnimationId();
+        int selectionIndex = resolveSelectionIndex();
 
-        // ROM: Only update Obj05 animation when parent's animation changes
+        // ROM: Only update Obj05 animation when the DERIVED selection index changes
         // This allows Flick -> Swish transition without being overridden
-        if (parentAnimId != lastParentAnim) {
-            lastParentAnim = parentAnimId;
-            int obj05Anim = resolveObj05Animation(parentAnimId);
+        // (s2.asm:41755-41758; sonic3k.asm:30054-30058).
+        if (selectionIndex != lastSelectionIndex) {
+            lastSelectionIndex = selectionIndex;
+            int obj05Anim = resolveObj05Animation(selectionIndex);
             if (obj05Anim != currentAnim) {
                 // ROM: anim_frame = 0, anim_frame_duration = 0 on animation
                 // change (s2.asm:41276-41278; sonic3k.asm:36163-36166).
@@ -345,14 +351,14 @@ public class TailsTailsController {
 
     public RewindState captureRewindState() {
         return new RewindState(
-                currentAnim, lastParentAnim, frameIndex, frameTick, mappingFrame,
+                currentAnim, lastSelectionIndex, frameIndex, frameTick, mappingFrame,
                 dirHFlip, dirVFlip);
     }
 
     public void restoreRewindState(RewindState state) {
         if (state == null) {
             currentAnim = ANIM_BLANK;
-            lastParentAnim = -1;
+            lastSelectionIndex = -1;
             frameIndex = 0;
             frameTick = 0;
             mappingFrame = -1;
@@ -361,12 +367,32 @@ public class TailsTailsController {
             return;
         }
         currentAnim = state.currentAnim();
-        lastParentAnim = state.lastParentAnim();
+        lastSelectionIndex = state.lastSelectionIndex();
         frameIndex = state.frameIndex();
         frameTick = state.frameTick();
         mappingFrame = state.mappingFrame();
         dirHFlip = state.dirHFlip();
         dirVFlip = state.dirVFlip();
+    }
+
+    /**
+     * ROM Obj05_Main's selection index: {@code moveq #0,d0 / move.b anim(a2),d0},
+     * then {@code btst #status.player.pushing,status(a2) / moveq #4,d0} forces the
+     * TailsAni_Push entry whenever the parent's pushing status bit is set
+     * (s2.asm:41734-41751). REV01 ships {@code fixBugs = 0} (s2.asm:27), so the
+     * shipped path is the bare status-bit test, not the $63-$66 mapping_frame window
+     * — Tails' tails animate as pushing whenever Tails stands next to a solid.
+     *
+     * <p>S3K narrows the same override with WindTunnel_flag_P2 and a $A9..$AC
+     * mapping_frame window (sonic3k.asm:30043-30052); that half is not modelled here
+     * yet, so S3K keeps its current raw-anim selection.
+     */
+    private int resolveSelectionIndex() {
+        int parentAnimId = sprite.getAnimationId();
+        if (!isS3k && sprite.getPushing()) {
+            return 4; // TailsAni_Push -> Obj05 anim 9 (Pushing), s2.asm:41775-41781
+        }
+        return parentAnimId;
     }
 
     private int resolveObj05Animation(int parentAnimId) {

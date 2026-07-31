@@ -15,6 +15,25 @@ All notable changes to the OpenGGF project are documented in this file.
   `TestS2SczLevelSelectTraceReplay` (was frame 2574,
   `dynamic_art.edge[0].logical_frame`) and reduces
   `TestS2ArzLevelSelectTraceReplay` from 627 to 606 errors.
+- Fix: Tails' tails (Obj05) now selects its animation from the ROM's DERIVED
+  selection index and latches that derived index, instead of the sidekick's raw
+  animation byte. `Obj05_Main` computes `moveq #0,d0 / move.b anim(a2),d0` and
+  then, on the shipped REV01 build (`fixBugs = 0`, `docs/s2disasm/s2.asm:27`),
+  forces `moveq #4,d0` — the `TailsAni_Push` entry, which `Obj05AniSelection`
+  maps to Obj05 anim 9 (Pushing) — whenever the parent's
+  `status.player.pushing` bit is set (`docs/s2disasm/s2.asm:41734-41751`). The
+  change-detection latch then compares and stores that same `d0`, not the raw
+  anim (`docs/s2disasm/s2.asm:41753-41758`; S3K latches `objoff_34` identically
+  at `docs/skdisasm/sonic3k.asm:30052-30058`). Modelling the raw anim made Obj05
+  miss and mint tails DPLC edges the ROM does not queue. S3K's counterpart
+  narrows the override with `WindTunnel_flag_P2` and an `$A9..$AC` mapping-frame
+  window (`docs/skdisasm/sonic3k.asm:30043-30052`); that half is not modelled
+  yet, so S3K selection is deliberately unchanged. Advances
+  `TestS2ArzLevelSelectTraceReplay` from frame 1078 (627 errors) to frame 2048
+  (28 errors), `TestS2Ehz1TraceReplay` from frame 1549 (3438 errors) to frame
+  4836 (4 errors), `TestS2MczLevelSelectTraceReplay` from frame 3006 (2410
+  errors) to frame 5412 (4 errors), and cuts `TestS2Arz2LevelSelectTraceReplay`
+  from 3984 to 204 errors.
 - Fix: the Sonic 2 SCZ Tornado ride-start lead-in now ticks
   `ObjB2_Animate_Pilot` on the title-card iterations it stands in for. The ROM's
   title-card loop body is `jsr (RunObjects).l`
