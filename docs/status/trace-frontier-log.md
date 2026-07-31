@@ -55519,3 +55519,80 @@ MHZ stays at **601**; nothing landed this round.
   `TestSonic3kLevelLoading` 30/0/0, `TestSonic3kBootstrapResolver` 5/0/0,
   `TestSonic3kDecodingUtils` 3/0/0, `TestS3kAizTraceReplay` unchanged at 4
   failures plus 1 error.
+
+## 2026-07-31 — S3K complete-run: the level-load Kos diagnosis is retracted
+
+The entry immediately above is **wrong on both of its load-bearing claims**. Two
+experiments falsified it and a fixture audit explained why. Recorded here so the
+next reader does not re-derive it.
+
+### Retraction 1 — level-load Kos work is not on the ledger, and was never the fault
+
+`LoadLevelLoadBlock` / `LoadLevelLoadBlock2` genuinely do complete before
+`LevelLoop`, but they never produce a ledger ordinal in the first place:
+`loc_7870` (sonic3k.asm:9736-9744) drains only `Kos_modules_left` and its exit
+test is module-only — it neither drains nor tests the direct FIFO — and
+`LoadLevelLoadBlock2`'s four `jsr (Kos_Decomp).l` (sonic3k.asm:38699-38720) are
+blocking direct calls, not queue submissions.
+
+The in-window decompressions at rows 34-44 (68-73 for AIZ) are different work:
+`LoadEnemyArt`'s `Queue_Kos_Module` calls (sonic3k.asm:64281-64313), issued from
+the title-card teardown object at `loc_2D8CA` (sonic3k.asm:62298, ending in
+`Delete_Current_Sprite` at 62301), which runs as an ordinary object **during**
+`LevelLoop`, tens of frames after row 0 (title-card timer `$16`, sonic3k.asm:7879).
+Their module-created Kosinski children are real direct submissions with their own
+direct ordinals (`s3k-trace-recorder-behavior.md` §6.3), which is why removing 3
+module archives removed exactly 5 direct ordinals.
+
+Keeping these submissions inside the compared window is therefore ROM-faithful.
+Decompressing them synchronously off-ledger was tried and was catastrophic —
+every segment aborted (aiz 186/1239, hcz 20/35, mgz 13/35, cnz 10/36, icz 5/34,
+lbz 24/35, mhz 10/36). Do not retry it.
+
+Submitting at the ROM-faithful moment is also impossible as the architecture
+stands: `HardwareTimingReplayPort` installs after level load, so an earlier
+submission raises `recorded hardware admission policy must be configured before
+the first submission` (`HardwareTimingService$RecordedAuthority`
+`configureAdmissionPolicies`).
+
+### Retraction 2 — MGZ and MHZ are not one admission-phase skew
+
+Neither abort is at level load. MGZ `#134` is at raw_frame 14631 and MHZ `#335`
+at raw_frame 7221 — both mid-level. `3c96d8b9` is an on-demand
+`PLCLoad_AnimalsAndExplosion` reload (sonic3k.asm:7752-7754), not a load-time
+archive; it recurs in MHZ at rows 1670, 7221 and 7986 and appears in 11 of the
+fixtures at scattered mid-level rows. MGZ is engine-EARLY and MHZ is engine-LATE,
+which cannot be a single offset. They are independent submission-trigger defects.
+
+### Fixture audit — the recordings are consistent, and assert nothing at row 0
+
+All seven complete-run fixtures: recorder `6.39-s3k-completerun`, `trace_schema`
+7, `hardware_timing_schema` 2, `pre_trace_osc_frames` 1. The schema-split
+hypothesis is dead. Ordinal chains are gapless and non-overlapping across all
+seven segments in both queues (decomp 9..380, module 2..260); nothing is lost or
+double-counted at a segment seam. No fixture mis-capture.
+
+All 631 hardware-timing events across the seven are `hardware_work_completed`;
+there are zero pending or occupancy assertions. The earliest event is row 34
+(ICZ), 35-36 (most), 68 (AIZ — its longer act-1 intro, not a phase difference).
+**There is no row-0 queue expectation to violate.**
+
+`Level_frame_counter` is cleared at sonic3k.asm:7538 and incremented only at
+7889; `Ctrl_1_locked` is set at 7773 and cleared at 7856-7857 immediately before
+`LevelLoop`, which is what lets the complete-run arm gate fire at `LevelLoop`
+entry. Row 0 is `LevelLoop` entry, uniformly, in all seven segments.
+
+### Open frontier
+
+- MHZ frame 0: engine submits enemy art ~36 frames early. It should fire from
+  the engine's title-card teardown lifecycle, matching `loc_2D8CA` — driven by
+  the engine's own lifecycle, never by a frame number or trace data.
+- MHZ raw_frame 7221: a once-only load latch prevents re-submitting the shared
+  `3c96d8b9` archive that ROM reloads per trigger.
+- MGZ raw_frame 14631: distinct engine-early defect on `c2db2fda`. Triage
+  separately; do not assume the MHZ fix covers it.
+
+Baseline at this point (error_count / total_frames, one class per `mvn`
+invocation — all seven in one surefire fork crashes it with exit 134):
+aiz 8/63, hcz 868/1320, mgz 5040/14629, cnz 1658/5336, icz 287/1629, lbz 24/35,
+mhz 1923/7218.
