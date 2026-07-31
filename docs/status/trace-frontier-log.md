@@ -54623,3 +54623,62 @@ segment stays in act 1 throughout (one `zone_act_state` event, frame 0). So the
 next frontier is an **object-placement gap, not a ring-behaviour gap** — those
 layout entries never reach the spawn cursor. Investigate the S3K placement
 cursor before touching the ring again.
+
+### 2026-07-31 — MHZ: queue frontier overtakes physics; real blocker decoded
+
+After the SS-entry-ring fix the MHZ replay reaches raw frame 7218, but the
+`queue.*`/admission frontier is now **ahead of a much earlier physics
+divergence**, so "how far the replay gets" has stopped being the useful
+measure. Full report state at that point: 1926 groups over 7218 rows.
+
+**The replay is no longer following the ROM's route.** `camera_x`/`x` diverge
+progressively — by frame 3381 ROM `x=0x10CC` vs engine `0x0D21`, and by frame
+6877 ROM `x=0x2023` vs engine `0x12F9`, with engine `y` going negative. That
+also explains the object-placement observation in the previous entry: the
+engine's placement cursor stops near `x=0x1750` simply because the engine's
+camera never gets further, not because the cursor stalls. The four unspawned
+SS entry rings are a *symptom*, not a cause — retract that reading.
+
+**Shared root, and it is not MHZ-specific.** MHZ and CNZ complete-run report
+identical leading signatures:
+
+| Frame | Field | ROM | Engine |
+|---|---|---|---|
+| 0 | `y_speed` | `0x0000` | `0x0038` |
+| 0 | `player_animation_id` | `0x0005` | `0x0000` |
+| 0 | `player_mapping_frame` | `0x00BA` | `0x0007` |
+| 1-1260 (MHZ) / 1-1074 (CNZ) | `y_sub` | `0x0000` | `0x3800` |
+
+The engine applies one frame of gravity (`+0x38`) to the player on segment
+frame 0. ROM does not, so the engine carries a permanent `0x3800` sub-pixel
+offset for the next ~1100-1260 frames; that is what produces the 1px `y` and
+2-unit `angle` drift from frame 53 (CNZ) / 62 (MHZ) onward, which then
+compounds into the route divergence above.
+
+**Why ROM does not move the player on that frame.** The `interact_state` aux
+records Sonic's `object_control` as `0x00` at frame 0 and `0x03` from frame 1,
+so the suppression is *not* object control. Tails moves on the same frame
+(`y_speed 0x0038` at row 0), so it is not a global freeze. The remaining
+ROM-consistent explanation is that frame 0 is `Obj_Sonic`'s routine-0 frame:
+`Sonic_Init` sets routine 2 and returns without moving, and the recorder's
+end-of-frame sample already shows `routine 0x02`. That is the same
+"ROM init consumes the object's first execution frame" pattern already fixed
+for the Tails CPU tick in this branch — here applied to the player object.
+
+HCZ/MGZ/ICZ/LBZ segments show `y_speed 0x0038` at row 0, i.e. their player
+*does* move on frame 0, because those segments continue seamlessly rather than
+starting at a level load. Only the two carry-intro zones start fresh.
+
+**Blocker.** Closing this needs a one-shot "consume the ROM init frame" for the
+player at complete-run segment handoffs, gated on a *segment begins at a level
+load* predicate that does not exist yet (the existing hooks key off carry-intro
+or seamless-handoff, neither of which is the right owner), plus validation
+across all seven S3K complete-run segments. Beyond it sits the long tail of
+1888 non-queue groups. This is past a bounded fix and is where the session
+stops.
+
+**Also still open:** `queue.s3k_kos_direct.busy` false/true over frames 0-33.
+MHZ now matches ICZ/MGZ/HCZ exactly here — all four submit enemy art at frame 0
+while ROM submits around frame 34 — so it is shared pre-existing behaviour that
+MHZ has simply joined, not a regression from the enemy-art fix. AIZ is clean
+because its fixture carries a pre-level prefix.
