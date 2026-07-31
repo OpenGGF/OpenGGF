@@ -56094,6 +56094,88 @@ No REGRESSION INTRODUCED lines.
 
 Green regression guard — all 19 classes `Failures: 0, Errors: 0`
 (`TestS2DezEndingLevelSelectTraceReplay`, `TestS2SczLevelSelectTraceReplay`,
+## 2026-07-31 — S2 boss defeat routine-read-once deferral (HTZ2, MCZ2)
+
+Branch `bugfix/ai-s2-nemesis-busy-second`, off
+`bugfix/ai-trace-s1-titlecard-plc-integration`. JDK 21.
+
+Command (per measurement, after `rm -rf target/surefire-reports`):
+`mvn -Dmse=off -Ds2.rom.path=<s2 rom> -DfailIfNoSpecifiedTests=false
+"-Dtest=TestS2Htz2LevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay" test`
+
+BEFORE:
+- `TestS2Htz2LevelSelectTraceReplay` FAIL — Totals: 8 errors. First error: frame
+  9150 -- `queue.s2_nemesis_plc.busy` (expected=false, actual=true)
+- `TestS2Mcz2LevelSelectTraceReplay` FAIL — Totals: 17 errors. First error: frame
+  9950 -- `queue.s2_nemesis_plc.busy` (expected=false, actual=true)
+- `TestS2Cpz2LevelSelectTraceReplay` FAIL — Totals: 8 errors. First error: frame
+  11491 -- `queue.s2_nemesis_plc.busy` (expected=true, actual=false)
+
+AFTER:
+- `TestS2Htz2LevelSelectTraceReplay` PASS
+- `TestS2Mcz2LevelSelectTraceReplay` PASS
+- `TestS2Cpz2LevelSelectTraceReplay` FAIL — unchanged, frame 11491
+  `queue.s2_nemesis_plc.busy` (expected=true, actual=false)
+
+Cause: `Obj52_Mobile` and `Obj57_Main` read `boss_routine(a0)` once at the top of
+the object update and jump through their offset tables
+(`docs/s2disasm/s2.asm:64194-64206`, `docs/s2disasm/s2.asm:65876-65890`). The hit
+handlers run from inside the already-selected routine
+(`docs/s2disasm/s2.asm:64528-64533`, `docs/s2disasm/s2.asm:66223-66226`) and the
+defeat entries only set `Boss_Countdown` / `boss_routine` and return
+(`docs/s2disasm/s2.asm:64559-64566`, `docs/s2disasm/s2.asm:66246-66253`), so the
+defeat routine's first countdown decrement lands the NEXT frame
+(`docs/s2disasm/s2.asm:64570-64572`, `docs/s2disasm/s2.asm:66256-66260`). The
+engine runs touch responses before the boss's own `update()`, so both bosses now
+opt into the existing `AbstractBossInstance` routine-read-once deferral. The HTZ
+flee handler's compensating one-frame staging of the `y_pos` /
+`Camera_Max_X_pos` writes was removed at the same time: ROM
+`Obj52_Mobile_Flee` (`docs/s2disasm/s2.asm:64598-64606`) falls through to
+`loc_30170` (`docs/s2disasm/s2.asm:64608-64612`) in the same frame.
+
+S2 sweep (`-Dtest=com.openggf.tests.trace.s2.*TraceReplay`): 21 run, 13 failures,
+all remaining failures on `dynamic_art.edges` / `dynamic_art.edge[N].present`
+fields unrelated to this change. No REGRESSION INTRODUCED lines. CPZ2 and CNZ2
+remain a separate owner (Animal object lifetime feeding the end-of-act gate,
+`docs/s2disasm/s2.asm:85002-85013`) and are NOT addressed here. MTZ3 (frame 15258)
+was inspected and deliberately left alone: `Sonic2MTZBossInstance` already models
+the same offset via its post-move `pendingDefeatReaction` latch.
+
+## 2026-07-31 — Independent verification: S2 boss routine-read-once defeat deferral
+
+Worktree `.worktrees/s2-nemesis-busy-second`, branch
+`bugfix/ai-s2-nemesis-busy-second`. Baseline measured in a detached worktree at
+the branch HEAD commit `165c1e481` (fix applied only in the branch worktree).
+JDK 21 (`mvn -v` reports 21.0.11). `mvn -q -Dmse=relaxed clean` and
+`rm -rf target/surefire-reports` before each measurement.
+
+Family command (run identically for BEFORE and AFTER):
+
+```
+mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \
+  "-Ds1.rom.path=<s1 rom>" "-Ds2.rom.path=<s2 rom>" \
+  "-Dtest=TestS2Cpz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,\
+TestS2Mtz3LevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,\
+TestS2Cnz2LevelSelectTraceReplay,TestS1Ghz3CompleteRunTraceReplay,\
+TestS2DezEndingLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay" test
+```
+
+| Trace | BEFORE | AFTER | Verdict |
+|---|---|---|---|
+| `TestS2Htz2LevelSelectTraceReplay` | 8 errors, frame 9150 `queue.s2_nemesis_plc.busy` (expected=false, actual=true) | PASS | greened |
+| `TestS2Mcz2LevelSelectTraceReplay` | 17 errors, frame 9950 `queue.s2_nemesis_plc.busy` (expected=false, actual=true) | PASS | greened |
+| `TestS2Cpz2LevelSelectTraceReplay` | 8 errors, frame 11491 `queue.s2_nemesis_plc.busy` (expected=true, actual=false) | 8 errors, frame 11491 `queue.s2_nemesis_plc.busy` | unmoved |
+| `TestS2Mtz3LevelSelectTraceReplay` | 9 errors, frame 15258 `queue.s2_nemesis_plc.busy` (expected=false, actual=true) | 9 errors, frame 15258 `queue.s2_nemesis_plc.busy` | unmoved |
+| `TestS2Cnz2LevelSelectTraceReplay` | 46 errors, frame 10935 `dynamic_art.edges` (expected=[20946, 20947], actual=[]) | 46 errors, frame 10935 `dynamic_art.edges` | unmoved |
+| `TestS1Ghz3CompleteRunTraceReplay` | 5 errors, frame 9183 `queue.s1_nemesis_plc.busy` (expected=false, actual=true) | 5 errors, frame 9183 `queue.s1_nemesis_plc.busy` | unmoved |
+| `TestS2DezEndingLevelSelectTraceReplay` | PASS | PASS | held |
+| `TestS2SczLevelSelectTraceReplay` | PASS | PASS | held |
+
+No REGRESSION INTRODUCED lines: every unmoved trace kept the identical error
+count and first-error frame/field, and both already-passing family traces held.
+
+Green regression guard (same flags, plus `TestHTZBossTouchResponse`):
+`TestS2DezEndingLevelSelectTraceReplay`, `TestS2SczLevelSelectTraceReplay`,
 `TestS2Ehz1TraceReplay`, `TestS2MczLevelSelectTraceReplay`,
 `TestS2Mtz2LevelSelectTraceReplay`, `TestS1Ghz1TraceReplay`,
 `TestS1Mz1TraceReplay`, `TestS1Ghz1CompleteRunTraceReplay`,
@@ -56122,3 +56204,18 @@ number against the local `docs/s2disasm/s2.asm` and all are exact —
 `compensateForCollapsedWfzInit` (78271-78284 / 78368-78372 / 78375-78394 pointed
 at ObjB0 Sega-screen scaling code) were corrected to 78879-78893 / 78896-78902 /
 78903-78924 during verification.
+`TestDynamicArtDiagnosticsComparator`, `TestHTZBossTouchResponse` —
+83 passed, 0 failed, 0 errors.
+
+Cross-game parity (`TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
+`TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils` with all three ROM
+properties): 52 passed, 0 failed, 0 errors.
+
+Disassembly citations were re-read line by line and all corroborate: the
+`Obj52_Mobile` / `Obj57_Main` dispatch reads, the `loc_300A4` /
+`Obj57_HandleHits_Main` hit handlers, the `Obj52_Defeat` / `Obj57_FinalDefeat`
+routine writes, the `Obj52_Mobile_Defeated` / `Obj57_Main_Sub8` first-frame
+bodies, and the `Obj52_Mobile_Flee` fall-through to `loc_30170`. The change
+carries no zone/route/frame/game-name branch — it is the existing per-boss
+`defeatDeferralAppliesToThisBoss()` hook, overridden on the two boss objects
+that own the behaviour; `AbstractBossInstance` itself was not modified.

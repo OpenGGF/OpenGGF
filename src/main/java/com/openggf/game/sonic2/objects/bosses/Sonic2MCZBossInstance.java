@@ -923,6 +923,18 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance
     }
 
     @Override
+    protected boolean defeatDeferralAppliesToThisBoss() {
+        // Obj57_Main reads boss_routine(a0) ONCE at the top of the object's update and
+        // jumps through Obj57_Main_Index (docs/s2disasm/s2.asm:65876-65890). The hit
+        // handler Obj57_HandleHits_Main runs from inside the already-selected routine
+        // (docs/s2disasm/s2.asm:66223-66226), and Obj57_FinalDefeat sets
+        // Boss_Countdown=$B3 / boss_routine=8 (docs/s2disasm/s2.asm:66249-66254), so
+        // Obj57_Main_Sub8 first runs on the NEXT frame. The engine runs touch responses
+        // before this object's own update(), so defer the first defeat dispatch a frame.
+        return true;
+    }
+
+    @Override
     protected void onDefeatStarted() {
         if (!isDefeatEntryPrepared() && !Sonic2PlcRequests.append(services(), Sonic2Constants.PLC_CAPSULE)) return;
         // ROM: Obj57_FinalDefeat (s2.asm:65715-65722)
