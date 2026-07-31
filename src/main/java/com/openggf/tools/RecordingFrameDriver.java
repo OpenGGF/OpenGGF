@@ -332,9 +332,10 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
                     applyP1ActionPressEdge(currentBk2Index);
                     beforeGameplay.run();
                 });
-        if (result != LevelFrameResult.SETUP_ONLY) {
-            currentBk2Index++;
-        }
+        // ROM's Load_Sprites/Process_Sprites pass runs inside the same frame
+        // cadence as LevelLoop (Level loc_6468, sonic3k.asm:7849-7860), so it
+        // consumes a BK2 row like any other frame.
+        currentBk2Index++;
 
         return mask;
     }
@@ -364,9 +365,8 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
                     applyP1ActionPressEdge(currentBk2Index - 1);
                     beforeGameplay.run();
                 });
-        if (result != LevelFrameResult.SETUP_ONLY) {
-            currentBk2Index++;
-        }
+        // See stepFrameFromRecording: the setup pass consumes a BK2 row.
+        currentBk2Index++;
 
         return validationMask;
     }

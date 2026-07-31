@@ -253,7 +253,8 @@ public final class TraceReplaySessionBootstrap {
                 TraceReplayBootstrap.isS3kCompleteRunSegment(trace);
         if (representedS3kCompleteRun
                 && gameplayMode != null
-                && gameplayMode.getLevelManager() != null) {
+                && gameplayMode.getLevelManager() != null
+                && !segmentBeginsAtLevelSetupPass(gameplayMode)) {
             gameplayMode.getLevelManager()
                     .discardPendingInitialProcessSpritesForStateRestoration();
         }
@@ -403,7 +404,8 @@ public final class TraceReplaySessionBootstrap {
                     fixture != null ? fixture.sprite() : null);
         }
         primeLeaderJumpEdgeFromBk2Prelude(fixture);
-        if (gameplayMode != null && gameplayMode.getLevelManager() != null) {
+        if (gameplayMode != null && gameplayMode.getLevelManager() != null
+                && !segmentBeginsAtLevelSetupPass(gameplayMode)) {
             gameplayMode.getLevelManager().consumePendingInitialProcessSpritesPass();
         }
         applyInitialRngSeedForReplay(trace.metadata());
@@ -412,6 +414,41 @@ public final class TraceReplaySessionBootstrap {
         TraceReplayBootstrap.ReplayStartState replayStart =
                 TraceReplayBootstrap.applyReplayStartStateForTraceReplay(trace, fixture);
         return new BootstrapResult(snapshotReport, replayStart);
+    }
+
+
+    /**
+     * Whether this complete-run segment's first recorded row is the level's own
+     * {@code Load_Sprites}/{@code Process_Sprites} setup pass.
+     *
+     * <p>Recognised from ROM state: {@code loc_13A32}/{@code loc_13A8E} only run
+     * on the level's first {@code Tails_CPU_Control} dispatch
+     * (sonic3k.asm:26400-26436), so a segment opening a zone whose carry-intro
+     * tick is still due begins on that pass. Keeping the authority pending lets
+     * the first driven frame execute the walk, which is what gives
+     * {@code Obj_Sonic} its routine-0 {@code Sonic_Init} frame — {@code routine
+     * += 2} then {@code rts}, no movement and no gravity
+     * (sonic3k.asm:21852-21943).
+     */
+    private static boolean segmentBeginsAtLevelSetupPass(
+            com.openggf.game.session.GameplayModeContext gameplayMode) {
+        var levelManager = gameplayMode.getLevelManager();
+        var module = GameServices.module();
+        if (levelManager == null || module == null) {
+            return false;
+        }
+        var carryTrigger = module.getSidekickCarryTrigger();
+        var camera = GameServices.camera();
+        var leader = camera != null ? camera.getFocusedSprite() : null;
+        if (carryTrigger == null || leader == null) {
+            return false;
+        }
+        return carryTrigger.shouldEnterCarry(
+                        levelManager.getCurrentZone(),
+                        levelManager.getCurrentAct(),
+                        com.openggf.game.session.ActiveGameplayTeamResolver
+                                .resolvePlayerCharacter(GameServices.configuration()))
+                && carryTrigger.isLeaderAtIntroPosition(leader);
     }
 
     public static void installHardwareTimingReplay(

@@ -54747,3 +54747,59 @@ three games. S1/S2 are currently red under separate work, so half the
 validation surface is unavailable, and landing a shared-lifecycle reorder that
 cannot be regression-checked across the fleet is not defensible. Handing this
 off with the mechanism fully pinned rather than guessing at the reorder.
+
+### 2026-07-31 — MHZ/CNZ frame-0 FIXED: the setup pass now owns its recorded row
+
+Lands the fix for the blocker recorded above, accepting the AIZ regression it
+exposes (explicitly authorised).
+
+**Chain, all four links proven by instrumentation (reverted):**
+
+1. `loadLevel` publishes `LOAD_THEN_PROCESS_ONCE`.
+2. `TraceReplaySessionBootstrap.applyBootstrap:258` discards it for S3K
+   complete-run segments (`pending=true` before the call).
+3. With it gone, `LevelFrameStep` never returns `SETUP_ONLY`, so the engine's
+   `Sonic_Init` equivalent (`initializeInitialAssemblyPlayableSlot`) never runs.
+4. Even with the token kept, `HeadlessTestRunner.stepFrameFromRecording` ran a
+   `do { } while (result == SETUP_ONLY)` loop that stepped past the setup frame,
+   so its recorded row was compared against the following gameplay frame.
+
+**Fix.** `segmentBeginsAtLevelSetupPass` (derived from ROM state: `loc_13A32`/
+`loc_13A8E` only run on the level's first `Tails_CPU_Control` dispatch) keeps
+the authority pending for segments whose row 0 is that pass. The setup frame
+now consumes a BK2 row like any other frame, and the skip loop is gone.
+
+On the setup frame ROM re-inits Player_1 only — `Sonic_Init` does
+`routine += 2` then `rts`, no movement and no gravity
+(sonic3k.asm:21902-21943) — while Player_2's routine persists across the load,
+so the sidekick keeps running `Tails_Control`. That is why the recorded row
+shows Tails already placed by `loc_13A8E` at CPU routine `$0C` with a frame of
+gravity applied. The initial-assembly walk now models exactly that split.
+
+**MHZ result:**
+
+| | Before | After |
+|---|---:|---:|
+| Non-queue divergence groups | 1888 | **1039** |
+| `x` groups | 143 | **5** |
+| `camera_x` groups | 130 | **4** |
+| `y` groups | 174 | **5** |
+| First physics divergence | frame 0 (`y_speed`) | frame 31 (`x_speed`) |
+
+Frame 0 now carries only `player_animation_id` / `player_mapping_frame`
+(`0x05`/`0xBA` vs `0x00`); all frame-0 physics matches, and the permanent
+`y_sub 0x3800` offset is gone.
+
+**Accepted regression.** `TestS3kAizTraceReplay` goes 4 -> 13 failures. All nine
+are frame-alignment and Tails-CPU-cadence assertions (hollow-tree capture frame,
+giant-ride-vine handoff, reload catch-up gates, intro marker transition). Cause:
+the sidekick now runs its control path on the initial pass unconditionally,
+whereas ROM runs it only when Player_2's routine survived the load. The engine
+does not yet model whether a load reset Player_2, so AIZ — which re-inits — gets
+a control pass it should not. That predicate is the next piece of work. Every
+other S3K replay class is unchanged; the four S3K must-keep-green classes and
+the MHZ/rewind suites pass (135 tests, 0 failures).
+
+**Still open on MHZ:** the late route divergence (`x` at frame 3381 ROM
+`0x10CC` vs engine `0x0D28`) survives untouched, so it has a separate cause
+from the frame-0 offset.
