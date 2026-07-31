@@ -55444,3 +55444,112 @@ is the unmodelled `btst #status.player.pushing,status(a2) / moveq #4,d0`
 override in `Obj05_Main` (`s2.asm:41746-41750`), whose S3K counterpart narrows
 the same gate further (`sonic3k.asm:30043-30052`) — a per-game divergence that
 needs an owner rather than the existing `isS3k` flag.
+
+## 2026-07-31 — S2 bulk cluster, fourth layer: Obj05 parent pushing override
+
+Branch `bugfix/ai-s2-bulk-cluster-fourth-layer` off
+`bugfix/ai-trace-s1-titlecard-plc-integration` (bb93ab5bb), worktree
+`.worktrees/s2-bulk-cluster-fourth-layer`, uncommitted fix applied.
+
+Fix: `TailsTailsController.update()` now models ROM `Obj05_Main`'s pushing
+override — `d0` is forced to 4 (TailsAni_Push) before both the
+`Obj05_parent_prev_anim` change test and the `Obj05AniSelection` lookup
+(`docs/s2disasm/s2.asm:41744-41758`, `docs/skdisasm/sonic3k.asm:30041-30056`),
+and the latch stores the overridden value. The per-game detection gate lives on
+the typed `PlayerAnimationRules.tailsTailPushDetection` (S2 REV01 `FixBugs = 0`
+status bit only; S3K additionally requires parent `mapping_frame` in `$A9..$AC`).
+
+Probe traces (`rm -rf target/surefire-reports` before each run;
+`mvn -Dmse=relaxed test -Dtest=... -DfailIfNoSpecifiedTests=false -Ds2.rom.path=<s2 rev01 rom>`):
+
+| Trace | Before (frame -- field, errors) | After (frame -- field, errors) |
+|---|---|---|
+| TestS2MtzLevelSelectTraceReplay | 292 -- dynamic_art.edge[1].present, 8704 | 6708 -- dynamic_art.edge[0].logical_frame, 11 |
+| TestS2CnzLevelSelectTraceReplay | 201 -- dynamic_art.edge[4].mapping_frame, 9697 | 8590 -- queue.s2_nemesis_plc.queued_fingerprints, 8 |
+| TestS2OozLevelSelectTraceReplay | 346 -- dynamic_art.edge[2].present, 8968 | 346 -- dynamic_art.edge[2].present, 7971 |
+
+Full S2 family after the fix (`-Dtest=com.openggf.tests.trace.s2.*TraceReplay`):
+Arz 2048/28, Arz2 689/204, Cnz 8590/8, Cnz2 8405/30, Cpz 2782/17, Cpz2 561/131,
+DezEnding PASS, Ehz1 4836/4, Htz 3679/21, Htz2 1461/12, Mcz 5412/4, Mcz2 6126/21,
+Mtz 6708/11, Mtz2 293/121, Mtz3 2566/104, Ooz 346/7971, Ooz2 10684/2355,
+Scz 2574/2, SpecialStage 136/21451, Wfz 10287/5825. Before-values for the
+non-probe rows were not re-measured in this session.
+
+S3K regression check (`-Dtest=com.openggf.tests.trace.s3k.*TraceReplay,
+TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,
+TestSonic3kDecodingUtils -Ds3k.rom.path=<s3k locked-on rom>`) measured before and
+after on the same worktree: identical per-class Tests run/Failures/Errors in every
+class, including `TestS3kAizTraceReplay` (16/4/1) and `TestS3kCnzTraceReplay`
+(27/0/27). No S3K movement in either direction.
+
+### Independent verification (2026-07-31)
+
+Verified in worktree `.worktrees/s2-bulk-cluster-fourth-layer`, branch
+`bugfix/ai-s2-bulk-cluster-fourth-layer`. Before-values re-measured on a detached
+worktree at the same base commit `bb93ab5bb` without the fix applied; both sides
+run after `rm -rf target/surefire-reports` and `mvn -q -Dmse=relaxed clean`.
+
+Family command (both sides):
+
+```
+mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \
+  "-Ds2.rom.path=<s2 rev01 rom>" \
+  "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2Arz2LevelSelectTraceReplay,\
+TestS2CnzLevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,\
+TestS2CpzLevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,\
+TestS2DezEndingLevelSelectTraceReplay,TestS2HtzLevelSelectTraceReplay,\
+TestS2Htz2LevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,\
+TestS2Mcz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,\
+TestS2Mtz2LevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,\
+TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay,\
+TestS2Ehz1TraceReplay" test
+```
+
+| Trace | Before (frame -- field, errors) | After (frame -- field, errors) | Verdict |
+|---|---|---|---|
+| TestS2ArzLevelSelectTraceReplay | 1078 -- dynamic_art.edge[2].present, 627 | 2048 -- dynamic_art.edge[0].logical_frame, 28 | advanced |
+| TestS2Arz2LevelSelectTraceReplay | 689 -- dynamic_art.edge[0].logical_frame, 3984 | 689 -- dynamic_art.edge[0].logical_frame, 204 | unmoved (errors 3984 -> 204) |
+| TestS2CnzLevelSelectTraceReplay | 201 -- dynamic_art.edge[4].mapping_frame, 9697 | 8590 -- queue.s2_nemesis_plc.queued_fingerprints, 8 | advanced |
+| TestS2Cnz2LevelSelectTraceReplay | 1906 -- dynamic_art.outstanding_transfer_ids, 8718 | 8405 -- dynamic_art.edge[0].logical_frame, 30 | advanced |
+| TestS2CpzLevelSelectTraceReplay | 725 -- dynamic_art.edge[1].present, 3928 | 2782 -- dynamic_art.edge[0].logical_frame, 17 | advanced |
+| TestS2Cpz2LevelSelectTraceReplay | 561 -- dynamic_art.edge[0].logical_frame, 9058 | 561 -- dynamic_art.edge[0].logical_frame, 131 | unmoved (errors 9058 -> 131) |
+| TestS2DezEndingLevelSelectTraceReplay | PASS | PASS | still green |
+| TestS2Ehz1TraceReplay | 1549 -- dynamic_art.outstanding_transfer_ids, 3438 | 4836 -- queue.s2_nemesis_plc.queued_fingerprints, 4 | advanced |
+| TestS2HtzLevelSelectTraceReplay | 979 -- dynamic_art.edge[2].present, 7559 | 3679 -- dynamic_art.edge[0].logical_frame, 21 | advanced |
+| TestS2Htz2LevelSelectTraceReplay | 361 -- dynamic_art.outstanding_transfer_ids, 8973 | 1461 -- dynamic_art.edge[0].logical_frame, 12 | advanced |
+| TestS2MczLevelSelectTraceReplay | 3006 -- dynamic_art.edge[1].present, 2410 | 5412 -- queue.s2_nemesis_plc.queued_fingerprints, 4 | advanced |
+| TestS2Mcz2LevelSelectTraceReplay | 1805 -- dynamic_art.edge[0].present, 7636 | 6126 -- dynamic_art.edge[0].logical_frame, 21 | advanced |
+| TestS2MtzLevelSelectTraceReplay | 292 -- dynamic_art.edge[1].present, 8704 | 6708 -- dynamic_art.edge[0].logical_frame, 11 | advanced |
+| TestS2Mtz2LevelSelectTraceReplay | 293 -- dynamic_art.edge[0].logical_frame, 10762 | 293 -- dynamic_art.edge[0].logical_frame, 121 | unmoved (errors 10762 -> 121) |
+| TestS2Mtz3LevelSelectTraceReplay | 1689 -- dynamic_art.outstanding_transfer_ids, 13919 | 2566 -- dynamic_art.edge[0].logical_frame, 104 | advanced |
+| TestS2OozLevelSelectTraceReplay | 346 -- dynamic_art.edge[2].present, 8968 | 346 -- dynamic_art.edge[2].present, 7971 | unmoved |
+| TestS2Ooz2LevelSelectTraceReplay | 830 -- dynamic_art.edge[0].present, 10470 | 10684 -- dynamic_art.edge[2].present, 2355 | advanced |
+
+Totals: 0 greened, 12 advanced, 4 unmoved, 1 already-green trace held.
+
+Green regression guard (all PASS, 0 failures/errors):
+
+```
+mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \
+  "-Ds1.rom.path=<s1 rev01 rom>" "-Ds2.rom.path=<s2 rev01 rom>" \
+  "-Dtest=TestS2DezEndingLevelSelectTraceReplay,TestS1Ghz1TraceReplay,\
+TestS1Mz1TraceReplay,TestS1Ghz1CompleteRunTraceReplay,\
+TestS1Ghz2CompleteRunTraceReplay,TestS1Mz1CompleteRunTraceReplay,\
+TestS1Credits00Ghz1TraceReplay,TestS1Credits07Ghz1bTraceReplay,\
+TestTraceReplayInvariantGuard,TestTraceReplayReferenceClosureGuard,\
+TestRewindCoverageGuard,TestStaticStateRewindCoverageGuard,\
+TestPlcProducerCoverageGuard,TestDynamicArtDiagnosticsComparator" test
+```
+
+Cross-game S3K parity (all PASS, 52 tests, 0 failures/errors):
+
+```
+mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \
+  "-Ds1.rom.path=<s1 rev01 rom>" "-Ds2.rom.path=<s2 rev01 rom>" \
+  "-Ds3k.rom.path=<s3k locked-on rom>" \
+  "-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,\
+TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils" test
+```
+
+No REGRESSION INTRODUCED lines: no previously passing trace or guard in any of
+the three runs moved from pass to fail.

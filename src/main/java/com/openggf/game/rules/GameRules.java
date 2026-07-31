@@ -90,7 +90,8 @@ public record GameRules(
                     false,
                     true,
                     false,
-                    false
+                    false,
+                    TailsTailPushDetection.UNSUPPORTED
             ),
             new CameraRules(
                     (short) 0,
@@ -227,7 +228,8 @@ public record GameRules(
                     true,
                     false,
                     true,
-                    false
+                    false,
+                    TailsTailPushDetection.STATUS_BIT_ONLY
             ),
             new CameraRules(
                     (short) 120,
@@ -364,7 +366,8 @@ public record GameRules(
                     true,
                     false,
                     true,
-                    true
+                    true,
+                    TailsTailPushDetection.STATUS_BIT_AND_PUSH_MAPPING_FRAMES
             ),
             new CameraRules(
                     (short) 120,

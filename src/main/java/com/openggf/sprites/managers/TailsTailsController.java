@@ -1,6 +1,9 @@
 package com.openggf.sprites.managers;
 
 import com.openggf.game.resources.DynamicArtDecisionOwner;
+import com.openggf.game.rules.GameRules;
+import com.openggf.game.rules.PlayerAnimationRules;
+import com.openggf.game.rules.TailsTailPushDetection;
 import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -20,6 +23,8 @@ import com.openggf.sprites.render.PlayerSpriteRenderer;
 public class TailsTailsController {
     // Obj05 animation indices
     private static final int ANIM_BLANK = 0;
+    /** TailsAni_Push: the parent-animation index ROM forces into d0 while pushing. */
+    private static final int PARENT_ANIM_PUSH = 4;
     private static final int ANIM_SWISH = 1;
     private static final int ANIM_FLICK = 2;
     private static final int ANIM_DIRECTIONAL = 3;
@@ -223,8 +228,20 @@ public class TailsTailsController {
     public void update() {
         int parentAnimId = sprite.getAnimationId();
 
+        // ROM Obj05_Main: moveq #0,d0 / move.b anim(a2),d0, then the pushing
+        // override forces d0 = 4 (TailsAni_Push) before both the change test and
+        // the Obj05AniSelection lookup (docs/s2disasm/s2.asm:41744-41751;
+        // docs/skdisasm/sonic3k.asm:30041-30051). Obj05AniSelection[4] = 9 =
+        // Obj05Ani_Pushing (docs/s2disasm/s2.asm:41770-41776).
+        if (parentPushOverrideApplies()) {
+            parentAnimId = PARENT_ANIM_PUSH;
+        }
+
         // ROM: Only update Obj05 animation when parent's animation changes
-        // This allows Flick -> Swish transition without being overridden
+        // This allows Flick -> Swish transition without being overridden.
+        // The value compared against and stored in Obj05_parent_prev_anim /
+        // objoff_34 is the OVERRIDDEN d0 (docs/s2disasm/s2.asm:41755-41758;
+        // docs/skdisasm/sonic3k.asm:30053-30056).
         if (parentAnimId != lastParentAnim) {
             lastParentAnim = parentAnimId;
             int obj05Anim = resolveObj05Animation(parentAnimId);
@@ -367,6 +384,43 @@ public class TailsTailsController {
         mappingFrame = state.mappingFrame();
         dirHFlip = state.dirHFlip();
         dirVFlip = state.dirVFlip();
+    }
+
+    /**
+     * ROM Obj05_Main's pushing override predicate. S2 REV01 ships FixBugs = 0, so
+     * the test is the bare pushing status bit (docs/s2disasm/s2.asm:41748-41751);
+     * the FixBugs = 1 mapping_frame $63..$66 form (docs/s2disasm/s2.asm:41743-41746)
+     * is not the recorded behaviour. S3K additionally requires the parent's
+     * mapping_frame to lie in $A9..$AC (docs/skdisasm/sonic3k.asm:30046-30051).
+     * S3K's {@code tst.b (WindTunnel_flag_P2).w} gate (sonic3k.asm:30045) has no
+     * engine-side state yet; the mapping-frame range is the narrow gate that keeps
+     * the override from firing outside the parent's pushing frames.
+     */
+    private boolean parentPushOverrideApplies() {
+        TailsTailPushDetection detection = pushDetectionOrNull();
+        if (detection == null || !detection.supported()) {
+            return false;
+        }
+        if (!sprite.getPushing()) {
+            return false;
+        }
+        if (detection.requiresPushMappingFrameRange()) {
+            int parentMappingFrame = sprite.getMappingFrame();
+            if (parentMappingFrame < detection.pushMappingFrameLow()
+                    || parentMappingFrame > detection.pushMappingFrameHigh()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private TailsTailPushDetection pushDetectionOrNull() {
+        GameRules rules = sprite.getGameRules();
+        if (rules == null) {
+            return null;
+        }
+        PlayerAnimationRules animationRules = rules.playerAnimation();
+        return animationRules == null ? null : animationRules.tailsTailPushDetection();
     }
 
     private int resolveObj05Animation(int parentAnimId) {
