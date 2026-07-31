@@ -165,7 +165,7 @@ public record GameRules(
                     false,
                     -136
             ),
-            DynamicArtDmaServiceModel.EVERY_CLAIM
+            DynamicArtDmaServiceModel.SONIC_1_VBLANK_SONIC_GFX
     );
 
     public static final GameRules SONIC_2 = new GameRules(

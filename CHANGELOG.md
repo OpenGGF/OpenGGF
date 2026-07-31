@@ -3,6 +3,17 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Sonic 1's staged player DPLC transfer is no longer dispatched on a ROM
+  lag frame. S1 writes Sonic's buffered art only from the `f_sonframechg`-gated
+  `writeVRAM v_sgfx_buffer,ArtTile_Sonic*tile_size` that lives inside each
+  per-mode VBlank handler (`sonic.asm` VBlank_Levels, VBlank_SpecialStage,
+  VBlank_TitleCards, VBlank_Paused), and VBlank branches to VBlank_Lag before
+  reaching any of them — VBlank_Lag only advances the sound driver. The flag
+  therefore survives the lag frame and the transfer lands on the next real
+  VBlank, so the published edges carry that row's logical frame instead of the
+  lag row's. Sonic 1 now selects a typed `DynamicArtDmaServiceModel` describing
+  that VBlank service boundary; Sonic 2 and Sonic 3&K keep their existing
+  models byte-unchanged.
 - Fix: the shared player dynamic-art ledger no longer loses a logical row on a
   ROM lag frame. `DynamicArtLifecycleService#publishRow` returned early on the
   lag heartbeat without advancing its logical row cursor, so every lag frame in

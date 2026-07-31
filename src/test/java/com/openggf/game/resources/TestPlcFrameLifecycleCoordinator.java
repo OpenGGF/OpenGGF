@@ -215,6 +215,52 @@ class TestPlcFrameLifecycleCoordinator {
                 .contains("missing PLC preparation for ORDINARY_LEVEL"));
     }
 
+    /**
+     * S1's staged Sonic gfx transfer is dispatched only by the
+     * f_sonframechg-gated {@code writeVRAM v_sgfx_buffer,...} inside the
+     * per-mode VBlank handlers (docs/s1disasm/sonic.asm:829-833). A lag frame
+     * branches to VBlank_Lag before any of them (sonic.asm:652-655), which runs
+     * the sound driver only (sonic.asm:709-715, 678-684), so the preparation
+     * survives to the next real VBlank and its edges carry that row's logical
+     * frame -- not the lag row's.
+     */
+    @Test
+    void sonic1LagClaimDefersTheStagedSonicGfxTransfer() {
+        DynamicArtLifecycleService dynamicArt =
+                new DynamicArtLifecycleService();
+        dynamicArt.beginRun();
+        dynamicArt.observePlayerDplc(
+                com.openggf.game.GameId.S1, "sonic", 0x32,
+                new com.openggf.level.render.SpriteDplcFrame(List.of(
+                        new com.openggf.level.render.TileLoadRequest(0, 12))));
+        dynamicArt.openComparisonSegment();
+        PlcFrameLifecycleCoordinator coordinator =
+                new PlcFrameLifecycleCoordinator(
+                        recording(new ArrayList<>()), dynamicArt,
+                        DynamicArtDmaServiceModel.SONIC_1_VBLANK_SONIC_GFX);
+
+        coordinator.runLogicalIteration(() -> { }, frame -> {
+            frame.claim(PlcLifecyclePhase.LAG);
+            return null;
+        });
+
+        assertTrue(dynamicArt.latestSnapshot().edges().isEmpty(),
+                "VBlank_Lag dispatches no Sonic gfx transfer");
+
+        coordinator.runLogicalIteration(() -> { }, frame -> {
+            frame.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
+            frame.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+            return null;
+        });
+
+        DynamicArtDiagnosticsSnapshot published = dynamicArt.latestSnapshot();
+        assertEquals(2, published.edges().size());
+        for (DynamicArtDiagnosticsSnapshot.Edge edge : published.edges()) {
+            assertEquals(published.frame(), edge.logicalFrame());
+            assertEquals(published.frame(), edge.publicationFrame());
+        }
+    }
+
     private static PlcLifecycleService recording(List<String> events) {
         return new PlcLifecycleService() {
             @Override

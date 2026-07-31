@@ -54515,3 +54515,59 @@ TestS3kHardwareTimingReplay" test
   segment-boundary source), and (b) the frame-1 `dynamic_art.edges` transfer-id
   base mismatch that blocks the three complete-run traces before any lag frame
   is reached.
+
+## 2026-07-31 - S1 residual player-DPLC logical_frame row skew (second source)
+
+- Worktree: `.worktrees/s1-dplc-residual-row-skew`,
+  branch `bugfix/ai-s1-dplc-residual-row-skew`, over `12be49ed9`.
+- Root cause: S1's staged Sonic gfx transfer is dispatched only by the
+  `f_sonframechg`-gated `writeVRAM v_sgfx_buffer,ArtTile_Sonic*tile_size`
+  inside each per-mode VBlank handler (`docs/s1disasm/sonic.asm:829-833`
+  VBlank_Levels, `890-894` VBlank_SpecialStage, `927-931` VBlank_TitleCards,
+  `985-989` VBlank_Paused). VBlank branches to VBlank_Lag before reaching any
+  of them (`sonic.asm:652-655`), and VBlank_Lag only runs the sound driver
+  (`sonic.asm:709-715` -> VBlank_Music, `sonic.asm:678-684`), so the flag
+  survives the lag frame and the transfer lands on the next real VBlank. S1 now
+  selects a typed `DynamicArtDmaServiceModel.SONIC_1_VBLANK_SONIC_GFX`; S2/S3K
+  models are unchanged. No zone, route, frame, or game-name branch.
+- Family command (from the worktree):
+  `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true
+  "-Ds1.rom.path=<repo>/s1.gen"
+  "-Dtest=TestS1Ghz1TraceReplay,TestS1Mz1TraceReplay,TestS1Ghz1CompleteRunTraceReplay,TestS1Mz1CompleteRunTraceReplay" test`
+  The identical command was run in a detached baseline worktree at `12be49ed9`
+  to measure the before column.
+  - `TestS1Ghz1TraceReplay`: frame 2823 `dynamic_art.edge[0].logical_frame`
+    (12 errors) -> frame 3194 `queue.s1_nemesis_plc.queued_fingerprints`
+    (4 errors). ADVANCED.
+  - `TestS1Mz1TraceReplay`: frame 2134 `dynamic_art.edge[0].logical_frame`
+    (6 errors) -> frame 7343 `queue.s1_nemesis_plc.queued_fingerprints`
+    (4 errors). ADVANCED.
+  - `TestS1Ghz1CompleteRunTraceReplay`: frame 4830
+    `queue.s1_nemesis_plc.queued_fingerprints` (4 errors) -> unchanged.
+    UNMOVED.
+  - `TestS1Mz1CompleteRunTraceReplay`: frame 1 `dynamic_art.edges` -> frame 1
+    `dynamic_art.edges`; errors 7093 -> 7089. UNMOVED (frontier), no
+    regression.
+- Regression guard command:
+  `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true
+  "-Ds1.rom.path=.../s1.gen" "-Dtest=TestS1Credits00Ghz1TraceReplay,
+  TestS1Credits01Mz2TraceReplay,TestS1Credits02Syz3TraceReplay,
+  TestS1Credits03Lz3TraceReplay,TestS1Credits04Slz3TraceReplay,
+  TestS1Credits05Sbz1TraceReplay,TestS1Credits06Sbz2TraceReplay,
+  TestS1Credits07Ghz1bTraceReplay,TestTraceReplayInvariantGuard,
+  TestTraceReplayReferenceClosureGuard,TestRewindCoverageGuard,
+  TestStaticStateRewindCoverageGuard,TestSonic1PlcProducerCoverage,
+  TestPlcProducerCoverageGuard" test` — all green.
+- Cross-game parity command:
+  `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true` with all
+  three ROM properties and
+  `"-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,
+  TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,
+  TestDynamicArtDmaServiceModel,TestPlcFrameLifecycleCoordinator,
+  TestS2Ehz1TraceReplay" test` — 67 tests, 1 failure. That failure is
+  `TestS2Ehz1TraceReplay` at frame 0 `dynamic_art.outstanding_transfer_ids`
+  with 16725 errors, byte-identical to the same class run in the `12be49ed9`
+  baseline worktree. Pre-existing, not introduced here.
+- No REGRESSION INTRODUCED lines. Trace data stayed comparison-only: nothing
+  was hydrated from a fixture and no queue readiness or transfer id was
+  fabricated.

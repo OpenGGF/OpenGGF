@@ -13,6 +13,24 @@ public enum DynamicArtDmaServiceModel {
             return phase != null;
         }
     },
+    /**
+     * S1 writes Sonic's staged DPLC art from the {@code f_sonframechg}-gated
+     * {@code writeVRAM v_sgfx_buffer,ArtTile_Sonic*tile_size} that lives inside
+     * each per-mode VBlank handler (docs/s1disasm/sonic.asm:829-833
+     * VBlank_Levels, 890-894 VBlank_SpecialStage, 927-931 VBlank_TitleCards,
+     * 985-989 VBlank_Paused -- so NORMAL_PAUSE stays a service boundary).
+     * VBlank branches to VBlank_Lag before reaching any of them
+     * (sonic.asm:652-655) and VBlank_Lag only runs the sound driver
+     * (sonic.asm:709-715 -> VBlank_Music, sonic.asm:678-684), so
+     * {@code f_sonframechg} stays set across a lag frame and the transfer lands
+     * on the next real VBlank.
+     */
+    SONIC_1_VBLANK_SONIC_GFX(true) {
+        @Override
+        public boolean services(PlcLifecyclePhase phase) {
+            return phase != null && phase != PlcLifecyclePhase.LAG;
+        }
+    },
     SONIC_2_PROCESS_DMA_QUEUE(true) {
         @Override
         public boolean services(PlcLifecyclePhase phase) {
