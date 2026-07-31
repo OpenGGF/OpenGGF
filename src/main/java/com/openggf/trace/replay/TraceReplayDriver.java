@@ -5,7 +5,6 @@ import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.PlaybackDebugManager;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
-import com.openggf.game.TitleCardProvider;
 import com.openggf.game.session.GameplayTeamBootstrap;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.trace.ToleranceConfig;
@@ -122,18 +121,15 @@ public final class TraceReplayDriver {
         // in-level variant. Headless trace tests bypass both via
         // the headless graphics mode; we do it explicitly.
         //
-        // Relies on TitleCardProvider.reset() being a simple state
-        // wipe that can't throw — true for all three game modules
-        // today (S1/S2/S3K TitleCardManager.reset are field resets).
+        // Swallowing the requests is enough: nothing here may wipe the
+        // provider's post-slide-in phase. The native game's title-card pieces
+        // outlive the locked loop and run Obj34_WaitAndGoAway on ordinary
+        // gameplay frames, loading the standard-water and per-zone animal art
+        // as they leave (docs/s2disasm/s2.asm:4914-4925, 5066-5080,
+        // 27605-27637); resetting the provider here deleted that tail and the
+        // PLC queue never saw the append.
         GameServices.level().skipPendingInitialTitleCardPresentation();
         GameServices.level().consumeInLevelTitleCardRequest();
-        TitleCardProvider titleCardProvider =
-                GameServices.module() != null
-                        ? GameServices.module().getTitleCardProvider()
-                        : null;
-        if (titleCardProvider != null && titleCardProvider.isOverlayActive()) {
-            titleCardProvider.reset();
-        }
 
         int startIndex = TraceReplayBootstrap
                 .recordingStartFrameForTraceReplay(trace);
