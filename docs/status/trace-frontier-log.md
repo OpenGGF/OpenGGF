@@ -54742,3 +54742,91 @@ TestS3kHardwareTimingReplay" test
   (`docs/skdisasm/s3.asm:1881`) - but it is the same per-frame-rewound
   `DMA_queue_slot` pointer as S2, so the conclusion is unchanged and the
   citations in code and log were corrected to say so.
+
+## 2026-07-31 - S2 title-card leave-loop PLC service (frame-0 nemesis PLC frontier)
+
+Worktree `<repo>/.worktrees/s2-nemesis-plc-bootstrap`,
+branch `bugfix/ai-s2-nemesis-plc-bootstrap`, baseline commit `0e937a6e3`.
+
+Root cause: `Sonic2LevelInitProfile` appended the level header secondary PLC and
+then entered the level with it untouched. In ROM the append happens inside the
+title-card sequence (`docs/s2disasm/s2.asm:4939` -> `loadZoneBlockMaps`,
+`s2.asm:20103-20110`), and the 25-frame title-card leave loop
+(`s2.asm:5060-5066`) services it with `RunPLC_RAM` before `Level_MainLoop`
+(`s2.asm:5082-5087`). The 25-frame length is derived from the Obj34 leave
+routines plus title-card RAM slot order (`s2.constants.asm:1116-1120`):
+Left 5 frames (`s2.asm:27518-27540`) + Bottom 11 frames (`s2.asm:27542-27551`)
++ Background 9 frames (`s2.asm:27587-27604`).
+
+Commands (both run from the worktree; baseline re-run from a detached worktree
+at `0e937a6e3`):
+
+```
+mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \
+  "-Ds2.rom.path=<repo>/s2.gen" \
+  "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2Arz2LevelSelectTraceReplay,\
+TestS2CnzLevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,\
+TestS2CpzLevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,\
+TestS2DezEndingLevelSelectTraceReplay,TestS2HtzLevelSelectTraceReplay,\
+TestS2Htz2LevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,\
+TestS2Mcz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,\
+TestS2Mtz2LevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,\
+TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay,\
+TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay,\
+TestS2Ehz1TraceReplay" test
+```
+
+S2 family: **before 0 passed / 19 failed, after 9 passed / 10 failed.** Every
+trace failed at frame 0 before the fix.
+
+GREENED (9), all `frame 0` -> **PASS**:
+
+| Trace | Before (frame -- field) |
+|---|---|
+| `TestS2ArzLevelSelectTraceReplay` | 0 -- `queue.s2_nemesis_plc.queued_fingerprints` |
+| `TestS2Arz2LevelSelectTraceReplay` | 0 -- `queue.s2_nemesis_plc.queued_fingerprints` |
+| `TestS2Cnz2LevelSelectTraceReplay` | 0 -- `dynamic_art.outstanding_transfer_ids` |
+| `TestS2Cpz2LevelSelectTraceReplay` | 0 -- `queue.s2_nemesis_plc.queued_fingerprints` |
+| `TestS2Htz2LevelSelectTraceReplay` | 0 -- `queue.s2_nemesis_plc.queued_fingerprints` |
+| `TestS2Mtz3LevelSelectTraceReplay` | 0 -- `dynamic_art.outstanding_transfer_ids` |
+| `TestS2Ooz2LevelSelectTraceReplay` | 0 -- `dynamic_art.outstanding_transfer_ids` |
+| `TestS2SczLevelSelectTraceReplay` | 0 -- `dynamic_art.outstanding_transfer_ids` |
+| `TestS2WfzLevelSelectTraceReplay` | 0 -- `dynamic_art.outstanding_transfer_ids` |
+
+ADVANCED (6):
+
+| Trace | Before | After |
+|---|---|---|
+| `TestS2CnzLevelSelectTraceReplay` | 0 -- `queue.s2_nemesis_plc.queued_fingerprints` | 6 -- `dynamic_art.outstanding_transfer_ids` (24824 errors) |
+| `TestS2CpzLevelSelectTraceReplay` | 0 -- `queue.s2_nemesis_plc.queued_fingerprints` | 6 -- `dynamic_art.outstanding_transfer_ids` |
+| `TestS2HtzLevelSelectTraceReplay` | 0 -- `queue.s2_nemesis_plc.queued_fingerprints` | 6 -- `dynamic_art.outstanding_transfer_ids` (23619 errors) |
+| `TestS2Mtz2LevelSelectTraceReplay` | 0 -- `queue.s2_nemesis_plc.queued_fingerprints` | 6 -- `dynamic_art.outstanding_transfer_ids` (37628 errors) |
+| `TestS2Ehz1TraceReplay` | 0 -- `queue.s2_nemesis_plc.queued_fingerprints` | 6 -- `dynamic_art.outstanding_transfer_ids` (16715 errors) |
+| `TestS2DezEndingLevelSelectTraceReplay` | 0 -- `queue.s2_nemesis_plc.remaining_work` | 52 -- `queue.s2_nemesis_plc.queued_fingerprints` (4 errors) |
+
+UNMOVED (4), unchanged at `frame 0 -- dynamic_art.outstanding_transfer_ids`
+(expected `[]`, actual `[0]`): `TestS2MczLevelSelectTraceReplay`,
+`TestS2Mcz2LevelSelectTraceReplay`, `TestS2MtzLevelSelectTraceReplay`,
+`TestS2OozLevelSelectTraceReplay`. These are a separate ledger-cardinality
+defect, not a consequence of this change.
+
+Guards, all green: `TestS1Ghz1TraceReplay`, `TestS1Mz1TraceReplay`,
+`TestS1Ghz1CompleteRunTraceReplay`, `TestS1Ghz2CompleteRunTraceReplay`,
+`TestS1Mz1CompleteRunTraceReplay`, `TestTraceReplayInvariantGuard`,
+`TestTraceReplayReferenceClosureGuard`, `TestRewindCoverageGuard`,
+`TestStaticStateRewindCoverageGuard`, `TestPlcProducerCoverageGuard`,
+`TestDynamicArtDiagnosticsComparator`, `TestSonic2PlcProducerCoverage`,
+`TestSonic2SkippedPresentationPlcLifecycle`.
+
+Cross-game shared surface, all green (52 tests): `TestS3kAiz1SkipHeadless`,
+`TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver`,
+`TestSonic3kDecodingUtils`. `SkippedPresentationPlcLifecycle` was called, not
+modified; the per-game frame count lives in each game's own
+`*LevelInitProfile`, so there is no shared-code game branch.
+
+No `REGRESSION INTRODUCED:` lines.
+
+Correction applied during verification: `PlcProducerRouteRegistry` still named
+the pre-rename `S2_LEVEL_SECONDARY` owner case, which failed
+`TestPlcProducerCoverageGuard`; the registry entry was updated to the new
+method name.

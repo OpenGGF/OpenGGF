@@ -3,6 +3,30 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Sonic 2's level header secondary PLC is now serviced across the
+  title-card leave loop instead of being left fully queued at level start.
+  `Level:` calls `loadZoneBlockMaps` (`docs/s2disasm/s2.asm:20103-20110`) at
+  `s2.asm:4939`, while the game is still inside the title-card sequence, so the
+  header secondary enters `Plc_Buffer` *before* the leave loop rather than
+  after it. That loop (`s2.asm:5060-5066`) then runs `VintID_TitleCard`,
+  `RunObjects`, `BuildSprites` and `RunPLC_RAM` every frame until
+  `TitleCard_Background` unloads, and only then falls through to
+  `Level_StartGame` / `Level_MainLoop` (`s2.asm:5082-5087`). The loop is a
+  fixed 25 frames, determined entirely by the Obj34 leave routines and the
+  title-card RAM slot order (`s2.constants.asm:1116-1120`, Background < Bottom
+  < Left): `TitleCard_Left` runs `Obj34_LeftPartOut` for 5 frames from
+  `titlecard_location` $A (`s2.asm:5058`, `27518-27540`) before handing
+  `TitleCard_Bottom` routine $10; Bottom runs `Obj34_BottomPartOut` for 11
+  frames, stepping by 4 until it reaches $28 (`s2.asm:27542-27551`); Background
+  sits earlier in slot order, so it first sees routine $12 the following frame
+  and runs `Obj34_BackgroundOutInit`/`Out` for 9 frames, $F0 stepping by -$20
+  to -$30 (`s2.asm:27587-27604`), deleting itself on frame 25. A headless load
+  omits that presentation entirely, so `Sonic2LevelInitProfile` now replays
+  exactly those 25 production PLC boundaries through the existing shared
+  `SkippedPresentationPlcLifecycle`, mirroring the equivalent S1 path. This is
+  a fixed count of real `RunPLC_RAM` service, not a drain to empty: small
+  zones such as EHZ retire their secondary completely, while larger ones such
+  as ARZ correctly enter `Level_MainLoop` with an unserviced tail still queued.
 - Fix: dynamic-art trace comparison no longer scores the recorder's absolute
   delivery identities. `transfer_id` and `edge_ordinal` are recorder
   bookkeeping counters allocated from emulator power-on, not ROM state: Sonic

@@ -129,6 +129,24 @@ public class Sonic2LevelInitProfile extends AbstractLevelInitProfile {
             throw new IllegalStateException(
                     "Failed to append S2 post-title secondary PLC", failure);
         }
+        // The secondary PLC enters the queue from loadZoneBlockMaps
+        // (docs/s2disasm/s2.asm:20103-20110), which Level: calls at s2.asm:4939 --
+        // still inside the title-card sequence. The title-card leave loop
+        // (s2.asm:5060-5066) then runs VintID_TitleCard + RunPLC_RAM every frame
+        // until TitleCard_Background unloads, before Level_StartGame /
+        // Level_MainLoop (s2.asm:5082-5087). That loop is exactly 25 frames long,
+        // fixed by the Obj34 leave routines and their RAM slot order
+        // (s2.asm:27368-27374): TitleCard_Left runs Obj34_LeftPartOut for 5 frames
+        // from titlecard_location $A (s2.asm:5058, 27518-27540: $A -> 6 -> 2 -> 0
+        // -> -4 -> delete) and hands TitleCard_Bottom routine $10; Bottom runs
+        // Obj34_BottomPartOut for frames 6..16, stepping titlecard_location by 4
+        // until it reaches $28 (s2.asm:27542-27551); Background sits earlier in
+        // slot order so it first sees routine $12 on frame 17 and runs
+        // Obj34_BackgroundOutInit/Out for 9 frames, $F0 stepping by -$20 to -$30
+        // (s2.asm:27587-27604), deleting itself on frame 25. A headless load omits
+        // that presentation, so replay its PLC service here.
+        SkippedPresentationPlcLifecycle.runIterations(
+                plcService, PlcLifecyclePhase.LEVEL_TITLE_CARD, 25);
     }
 
     @Override
