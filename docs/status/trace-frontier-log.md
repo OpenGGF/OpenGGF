@@ -54427,3 +54427,144 @@ TestS3kHardwareTimingReplay" test
   align S1 callback/edge ordinals and frame-69 PLC fingerprints. Full
   per-class totals and S3K runtime frontiers are recorded in
   `docs/architecture/validation/trace/2026-07-30-native-trace-frontiers.md`.
+
+## 2026-07-31 — MHZ complete-run frontier MOVED: enemy KosM art (`PLCKosM_MHZ`) implemented
+
+- Context: branch `develop` at `a50b3f497`, primary working tree, S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`.
+- Cause: `Sonic3kObjectArtProvider.scheduleEnemyKosArt` had no
+  `ZONE_MHZ` case, so MHZ fell through to `default -> List.of()` and the
+  engine never submitted the `LoadEnemyArt` module-queue work the ROM
+  performs (`sonic3k.asm:64331-64332,64404-64415`). Act 1 queues Madmole,
+  Mushmeanie, Dragonfly; act 2 leads with the Cluckoid arrow at
+  `ArtTile_Cluckoid+$22` before the same three.
+- Fix: added the MHZ act-split entry list plus the four `ArtTile_*`
+  destination constants (`sonic3k.constants.asm:1270,1276-1278`). All four
+  `ArtKosM_*` source offsets re-verified with
+  `RomOffsetFinder --game s3k find` (`0x165F02`, `0x166234`, `0x166386`,
+  `0x1664C8`), matching the existing constants.
+- Frontier movement for `TestS3kMhzCompleteRunTraceReplay.replayMatchesTrace`:
+
+| | Before | After |
+|---|---|---|
+| First error | `KOS_MODULE_QUEUE#221` sha256:`1d7237fa…`, engine pending `<none>` | `KOS_DECOMPRESSION_QUEUE#333` sha256:`889451af…`, engine pending `<none>` |
+| Errors | 1 | 1 |
+
+  The module-queue admission now matches; the remaining red is a downstream
+  direct-Kosinski submission gap, the same StarPost / enemy-art / reload
+  lifecycle class already noted in the 2026-07-29 publication entry. This
+  also supersedes the older comparison frontier recorded for MHZ
+  (f2920 `tails_status_byte`, 2,452 errors), which the run no longer
+  reaches.
+- Command and result:
+
+```bash
+mvn -Dmse=off '-Dtest=*Mhz*,*MHZ*,TestSonic3kPlcArtRegistry,TestPatternSpriteRendererCorruptionGuard' \
+  -DfailIfNoTests=false '-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen' test
+```
+
+  531 tests run, 0 failures, 1 error (the trace replay above), 0 skips. The
+  mandatory art guards `TestSonic3kPlcArtRegistry` (66) and
+  `TestPatternSpriteRendererCorruptionGuard` (2) both pass.
+- Note: LBZ has the same missing `scheduleEnemyKosArt` case and is expected
+  to show an equivalent module-queue admission error.
+
+### 2026-07-31 — MHZ complete-run frontier MOVED again: raw frame 301 -> 1670
+
+Two further fixes on the same branch/tree/ROM, taken in causal order.
+
+**Fix 1 — the carry-intro handoff ran one CPU tick early.**
+
+`Sonic3kLevelEventManager.armCarryIntroHandoffAfterTitleCard` pre-armed
+`SidekickCpuController.State.CARRY_INIT` (`Tails_CPU_routine = $0C`) during
+replay bootstrap, on the stated assumption that a complete-run handoff begins
+after ROM's first Tails CPU init tick. The fixtures say the opposite:
+
+- MHZ complete-run row 0 records `cpu_routine 0x0C` with Sonic still
+  un-grabbed at the raw start location `(0xD8, 0x500)` and `anim 0x05`.
+- CNZ complete-run row 0 records the same shape at `(0x18, 0x600)`.
+
+Row 0 *is* the init tick. ROM `Tails_CPU_Control` dispatches routine 0 to
+`loc_13A32` / `loc_13A8E` → `loc_13A5A`, which places Tails and writes
+`Tails_CPU_routine = $0C` before `rts` (sonic3k.asm:26400-26436). Routine
+`$0C`'s body — `loc_13FC2`: `x_vel=$100`, `sub_1459E` pickup (`y_pos + $1C`,
+`anim $22`), then fall-through to `$0E` — runs on the *next* frame. Pre-arming
+ran that body a frame early, which is why the carried player's x was one pixel
+off for the whole carry. The method now only binds the carry trigger; the
+placement, airborne status and zeroed velocities belong to the controller's own
+INIT handler, which already models them.
+
+Effect on `TestS3kMhzCompleteRunTraceReplay` over its first 301 rows:
+
+| | Before | After |
+|---|---:|---:|
+| Divergence groups | 229 | 60 |
+| `tails_cpu_routine` groups | 1 (`f0`, `0x0C`/`0x0E`) | 0 |
+| `x` groups | 4, incl. `f104-218` 1px lag | 0 |
+| `y` first group | `f0`, `0x0500`/`0x051C` | `f62` (1px slope) |
+
+With the player's x matching ROM the `x=0x389` clamp lands on ROM's row 218,
+so the whole MHZ1 cutscene chain (routine 4/6/8, the 32-frame wait, the 50
+scroll steps) now runs on the ROM rows.
+
+**Fix 2 — the MHZ1 cutscene peer art submission.**
+
+With the cadence corrected, `MHZ1CutsceneButton_LoadKnucklesPeer`'s
+`Queue_Kos_Module` of `ArtKosM_MHZKnuxPeer` to `ArtTile_MHZKnuxPeer`
+(sonic3k.asm:130077-130081; `sonic3k.constants.asm:1272`) is now landed in
+`Mhz1CutsceneButtonInstance`, submitted immediately before the child spawn and
+without waiting for readiness, matching the ROM. The six button tests that
+reach that path moved into a `@Nested @RequiresRom(SONIC_3K)`
+`KnucklesPeerArtSubmission` class, since a real KosM archive is required; the
+other 76 tests in the class stay ROM-free.
+
+**Frontier movement.**
+
+Baseline measured by stashing all three fixes and re-running on the clean tree,
+not quoted from an earlier entry:
+
+| | Clean `develop` | After enemy art | After all three |
+|---|---|---|---|
+| First error | `KOS_DECOMPRESSION_QUEUE#330` | `KOS_DECOMPRESSION_QUEUE#333` | `KOS_DECOMPRESSION_QUEUE#334` |
+| Raw frame | 36 | 301 | 1670 |
+| Report groups / rows | 43 / 36 | 229 / 301 | 369 / 1670 |
+
+(The clean-tree first error is `#330`, the direct child of the first
+`PLCKosM_MHZ1` module, one ordinal ahead of the `KOS_MODULE_QUEUE#221` parent
+quoted in the enemy-art entry above; both describe the same missing
+`LoadEnemyArt` submission.)
+
+**Regression sweep.**
+
+`-Dtest=com.openggf.tests.trace.s3k.*TraceReplay` run on the clean tree and on
+the fixed tree, one fork, 4 GiB heap. All 14 S3K replay classes report
+**identical** run/failure/error counts on both sides:
+
+`AizCompleteRun 1/0/1`, `AizTrace 16/4/1`, `CnzCompleteRun 1/0/1`,
+`CnzTrace 27/0/27`, `Gumball 1/0/1`, `HczCompleteRun 2/0/2`,
+`IczCompleteRun 1/0/1`, `LbzCompleteRun 1/0/1`, `MgzCompleteRun 1/0/1`,
+`MgzTrace 1/0/1`, `MhzCompleteRun 1/0/1`, `Pachinko 1/0/1`, `Slots 1/0/1`,
+`SpecialStage 2/0/0`. MHZ's count is unchanged because the run still ends on
+one admission error; only its position moved (raw 36 -> 1670).
+
+A wider `-Dtest=*TraceReplay` sweep over all three games reported 108 tests,
+46 failures, 40 errors. That is **pre-existing `develop` state**, not branch
+damage: the S1/S2 reds are the `dynamic_art.*` frontiers recorded in the
+2026-07-30 entries, the S3K complete-run errors are the hardware-timing
+admissions recorded on 2026-07-29, and none of the three fixes touch a file
+reachable from S1 or S2. The per-class S3K comparison above is the controlled
+evidence; the fleet total is not.
+
+Note: the local tree was 4 commits behind `origin/develop` when these numbers
+were taken.
+
+`#334` is direct source `0xdb408` (aux frames 1668-1669), which recurs at
+frames 7218 and 7982 — a repeated common-art submission, not another one-shot
+cutscene load.
+
+- Local test state: 591 tests over the MHZ suite, the PLC/sprite/rewind guards
+  and the four S3K must-keep-green classes — 0 failures, 1 error (the trace
+  replay above), 0 skips.
+- Still open, unrelated to this path: the residual `f0 y_speed 0x0000/0x0038`
+  bootstrap value, and 1-unit slope divergences (`y` ±1, `angle` ±2) on the
+  MHZ1 descent from frame ~62.

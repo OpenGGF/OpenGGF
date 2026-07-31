@@ -1431,6 +1431,33 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
                     new EnemyKosEntry(
                             Sonic3kConstants.ART_KOSM_ICZ_STAR_POINTER_ADDR,
                             Sonic3kConstants.ARTTILE_ICZ_STAR_POINTER));
+            // ROM PLCKosM_MHZ1 / PLCKosM_MHZ2 queue these entries in this
+            // order from LoadEnemyArt; act 2 leads with the Cluckoid arrow.
+            // docs/skdisasm/sonic3k.asm:64331-64332, 64404-64415
+            case Sonic3kZoneIds.ZONE_MHZ -> actIndex == 0
+                    ? List.of(
+                            new EnemyKosEntry(
+                                    Sonic3kConstants.ART_KOSM_MADMOLE_ADDR,
+                                    Sonic3kConstants.ARTTILE_MADMOLE),
+                            new EnemyKosEntry(
+                                    Sonic3kConstants.ART_KOSM_MUSHMEANIE_ADDR,
+                                    Sonic3kConstants.ARTTILE_MUSHMEANIE),
+                            new EnemyKosEntry(
+                                    Sonic3kConstants.ART_KOSM_DRAGONFLY_ADDR,
+                                    Sonic3kConstants.ARTTILE_DRAGONFLY))
+                    : List.of(
+                            new EnemyKosEntry(
+                                    Sonic3kConstants.ART_KOSM_CLUCKOID_ARROW_ADDR,
+                                    Sonic3kConstants.ARTTILE_CLUCKOID_ARROW),
+                            new EnemyKosEntry(
+                                    Sonic3kConstants.ART_KOSM_MADMOLE_ADDR,
+                                    Sonic3kConstants.ARTTILE_MADMOLE),
+                            new EnemyKosEntry(
+                                    Sonic3kConstants.ART_KOSM_MUSHMEANIE_ADDR,
+                                    Sonic3kConstants.ARTTILE_MUSHMEANIE),
+                            new EnemyKosEntry(
+                                    Sonic3kConstants.ART_KOSM_DRAGONFLY_ADDR,
+                                    Sonic3kConstants.ARTTILE_DRAGONFLY));
             default -> List.of();
         };
     }

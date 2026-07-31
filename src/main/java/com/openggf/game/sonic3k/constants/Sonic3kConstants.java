@@ -994,6 +994,10 @@ public class Sonic3kConstants {
     public static final int MAP_MHZ_MINIBOSS_TREE_ADDR = 0x186A88;
     public static final int MAP_MHZ_MINIBOSS_LOG_ADDR = 0x186B18;
     public static final int MAP_MHZ_KNUX_PEER_ADDR = 0x066A52;
+    // MHZ1CutsceneButton_LoadKnucklesPeer queues ArtKosM_MHZKnuxPeer to
+    // ArtTile_MHZKnuxPeer (sonic3k.asm:130077-130081;
+    // sonic3k.constants.asm:1272).
+    public static final int ARTTILE_MHZ_KNUX_PEER = 0x0500;
     public static final int MAP_MHZ_KNUX_DOOR_ADDR = 0x066A9C;
     public static final int MAP_MHZ_KNUX_PULL_SWITCH_ADDR = 0x066AD0;
     public static final int DPLC_MHZ_KNUX_PRESS_ADDR = 0x066B10;
@@ -1560,6 +1564,15 @@ public class Sonic3kConstants {
     public static final int MAP_CLUCKOID_ARROW_ADDR = 0x08E536;
     public static final int MAP_CLUCKOID_ADDR = 0x08E546;
     public static final int DPLC_CLUCKOID_ADDR = 0x08E4B8;
+
+    // LoadEnemyArt destinations for PLCKosM_MHZ1 / PLCKosM_MHZ2
+    // (sonic3k.constants.asm:1270,1276-1278; sonic3k.asm:64404-64415).
+    public static final int ARTTILE_CLUCKOID = 0x0500;
+    public static final int ARTTILE_CLUCKOID_ARROW = ARTTILE_CLUCKOID + 0x22;
+    public static final int ARTTILE_DRAGONFLY = 0x0538;
+    public static final int ARTTILE_MADMOLE = 0x0545;
+    public static final int ARTTILE_MUSHMEANIE = 0x056D;
+
     public static final int MAP_MHZ_PULLEY_LIFT_ADDR = 0x03E720;
     public static final int MAP_MHZ_CURLED_VINE_ADDR = 0x03EA4C;
     public static final int MAP_MHZ_STICKY_VINE_ADDR = 0x03ED10;

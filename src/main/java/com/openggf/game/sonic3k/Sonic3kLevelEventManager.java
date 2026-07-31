@@ -690,10 +690,30 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     /**
-     * Complete-run trace handoffs begin after ROM has already run the first
-     * Tails CPU init tick for carry-intro zones (loc_13A32/loc_13A8E ->
-     * loc_13A5A), but before routine $0C's body runs. Pre-arm that native
-     * state so the next driven frame executes $0C and falls through to $0E.
+     * Binds the carry trigger for complete-run handoffs into a carry-intro
+     * zone (CNZ1 / MHZ1) without pre-running any Tails CPU tick.
+     *
+     * <p>The ROM's first gameplay frame of these segments is the CPU
+     * <em>init</em> tick: {@code Tails_CPU_Control} dispatches routine 0 to
+     * {@code loc_13A32} / {@code loc_13A8E}, which place Tails at the zone's
+     * pickup coordinates and write {@code Tails_CPU_routine = $0C} before
+     * {@code rts} (sonic3k.asm:26400-26436). Routine {@code $0C}'s body
+     * ({@code loc_13FC2}: {@code x_vel=$100}, {@code sub_1459E} pickup, then
+     * fall-through to {@code $0E}) only runs on the frame after that.
+     *
+     * <p>This previously pre-armed {@code $0C} on the assumption that the
+     * recorded handoff began after ROM's init tick. The fixtures say
+     * otherwise: MHZ complete-run row 0 records {@code cpu_routine 0x0C} with
+     * Sonic still un-grabbed at the raw start location {@code (0xD8, 0x500)}
+     * and {@code anim 0x05}, and CNZ complete-run row 0 records the same shape
+     * at {@code (0x18, 0x600)}. Row 0 is therefore the init tick itself, and
+     * pre-arming ran the {@code $0C} body a frame early — which offset the
+     * carried player's x by one pixel for the rest of the carry and delayed
+     * every downstream trigger that reads it.
+     *
+     * <p>Placement, the airborne status and the zeroed velocities all belong
+     * to that init tick and are applied by {@code SidekickCpuController}'s own
+     * INIT handler, so this only has to make sure the trigger is bound.
      */
     public void armCarryIntroHandoffAfterTitleCard() {
         AbstractPlayableSprite player = GameServices.camera().getFocusedSprite();
@@ -709,13 +729,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                     || !carryTrigger.isLeaderAtIntroPosition(player)) {
                 continue;
             }
-            carryTrigger.applyInitialPlacement(sidekick, player);
-            sidekick.setAir(true);
-            sidekick.setXSpeed((short) 0);
-            sidekick.setYSpeed(Sonic3kConstants.CARRY_INIT_PREROLLED_TAILS_Y_VEL);
-            sidekick.setGSpeed((short) 0);
             controller.setCarryTrigger(carryTrigger);
-            controller.setInitialState(SidekickCpuController.State.CARRY_INIT);
         }
     }
 
