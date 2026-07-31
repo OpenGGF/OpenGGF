@@ -79,6 +79,43 @@ For traces recorded at `lua_script_version >= 9.2-s2`, `TraceBinder.compareBoots
 
 Do not commit trace-to-engine hydration switches or writeback binders. If a bootstrap divergence needs A/B isolation, use a local throwaway patch or a debugger to reseed state, then remove it before committing. The committed replay path must remain comparison-only: it may report pre-trace snapshots and compare bootstrap frame 0, but it must not copy recorded `player_history_snapshot`, `cpu_state_snapshot`, or `object_state_snapshot` data into engine runtime state.
 
+#### The hardware-timing exception — what it does and does not cover
+
+There is one narrow, sanctioned exception to comparison-only, and it is easy to
+apply too broadly *and* easy to refuse too broadly. Both mistakes cost a round.
+
+**Permitted.** Recorded hardware timing may drive a **delay** in the art-loading
+pipelines of all three games:
+
+| Game | Pipeline whose delay hardware timing may drive |
+|---|---|
+| S1 | PLC |
+| S2 | DPLC |
+| S3K | Kosinski queues (schema 1 module-queue readiness; schema 2 module + direct) |
+
+"Drive a delay" means exactly that: defer or release *when* already-submitted,
+production-created work becomes ready. A V-blank-count-derived latch that defers
+one publication boundary is inside the exception, even though its input is a
+recorded counter and its effect is on engine behaviour.
+
+**Not permitted — and this is the whole of the rest.** The exception may not:
+
+- carry gameplay values of any kind across the boundary,
+- create work the engine did not submit, or fabricate readiness for work that
+  does not exist,
+- use physics or aux **comparison** data as the signal,
+- seed, reseed or sync engine state (see the reseeding policy above),
+- key on a frame index, zone, route, game name, or a known-failing trace.
+
+The distinguishing question is *"does this only change WHEN real, engine-created
+work becomes ready?"* If yes, it is in scope. If it supplies a value, conjures a
+job, or decides *what* happens rather than *when*, it is out of scope regardless
+of how well the ROM behaviour is cited.
+
+`TestHardwareTimingAuthorityGuard` enforces parser/authority isolation and
+forbids physics/aux/gameplay and reflective mutation paths — keep the exception
+confined to the timing port and keep that guard green.
+
 ### Diagnostic hooks — investigation only, never sync drivers
 
 The S3K Lua recorders carry ~61 `event.onmemoryexecute` / `onmemorywrite` registrations
