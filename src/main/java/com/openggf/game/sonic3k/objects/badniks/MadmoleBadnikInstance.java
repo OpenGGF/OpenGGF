@@ -70,6 +70,9 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
     private static final int SIDE_CHILD_ARC_RELEASE_PLAYER_Y_VELOCITY = -0x300;
     private static final int SIDE_CHILD_ARC_RELEASE_DRILL_Y_VELOCITY = -0x200;
     private static final int SIDE_CHILD_CAPTURE_WALL_SENSOR_OFFSET = 0x18;
+    // ROM loc_8D6E6 offscreen bands (sonic3k.asm:193223-193232).
+    private static final int SIDE_CHILD_OFFSCREEN_BAND_X = 0x280;
+    private static final int SIDE_CHILD_OFFSCREEN_BAND_Y = 0x200;
     // ROM loc_8D746 sets y_radius(a0) = 8 for the side drill; ObjCheckFloorDist
     // probes from (x_pos, y_pos + y_radius).
     private static final int SIDE_CHILD_Y_RADIUS = 0x08;
@@ -713,8 +716,22 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
             return true;
         }
 
+        /**
+         * ROM {@code loc_8D6E6} (sonic3k.asm:193218-193243): after the routine
+         * dispatch, the arm tests a coarse horizontal band
+         * ({@code (x_pos & $FF80) - Camera_X_pos_coarse_back > $280}) and a
+         * vertical band ({@code y_pos - Camera_Y_pos + $80 > $200}), both
+         * unsigned. Either one falls through to {@code loc_8D724}, which sets
+         * {@code Status_InAir} and clears {@code object_control} on the carried
+         * player — leaving its velocities untouched — and deletes the arm.
+         */
         private void checkDeleteAndReleaseCapturedPlayer() {
-            if (isOnScreenX(0x180)) {
+            int cameraX = cameraLeft();
+            int cameraY = cameraTop();
+            int coarseBack = ((cameraX & 0xFFFF) - 0x80) & 0xFF80;
+            int bandX = ((currentX & 0xFF80) - coarseBack) & 0xFFFF;
+            int bandY = ((currentY - cameraY) + 0x80) & 0xFFFF;
+            if (bandX <= SIDE_CHILD_OFFSCREEN_BAND_X && bandY <= SIDE_CHILD_OFFSCREEN_BAND_Y) {
                 return;
             }
 

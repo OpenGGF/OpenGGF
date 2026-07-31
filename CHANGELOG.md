@@ -3,6 +3,15 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the S3K Madmole's arcing side drill now releases a carried player when it
+  goes offscreen, using the ROM's coarse band test. `loc_8D6E6`
+  (sonic3k.asm:193218-193232) compares
+  `(x_pos & $FF80) - Camera_X_pos_coarse_back > $280` and
+  `y_pos - Camera_Y_pos + $80 > $200`, falling through to `loc_8D724`
+  (193237-193243), which sets `Status_InAir`, clears `object_control` and
+  deletes the arm without touching the player's velocities. The engine used a
+  plain camera-bounds test with neither the coarse mask nor the vertical band,
+  so the arm kept carrying the player well past the ROM's release frame.
 - Fix: the S3K Madmole's arcing side drill now bounces and releases its captured
   player on a floor impact instead of on an animation-script wrap. ROM
   `loc_8D778` and `loc_8D7A8` (sonic3k.asm:193270-193331) call
