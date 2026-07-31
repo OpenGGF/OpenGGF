@@ -55447,7 +55447,21 @@ MHZ stays at **601**; nothing landed this round.
   `TestHardwareTimingAuthorityGuard`, `TestLevelFrameHardwareTimingBoundaries`,
   `TestRecordingFrameDriverHardwareTiming` — 52 tests, 0 failures.
 - Open: the frame-0 `y_speed 0x0038` / `y_sub 0x3800` divergence on MGZ, CNZ
-  and MHZ persists. The bootstrap setup pass still applies a frame of gravity
-  that `Sonic_Init` (sonic3k.asm:21902-21943, `routine += 2` then `rts`) does
-  not. That is an engine-side modelling gap in the initial-assembly dispatch,
-  not an anchoring question, and is the next thing to fix.
+  and MHZ persists. It is confined to row 0 — MHZ row 1 reads the expected
+  `0x0008` — so it is a row-0 sampling/ordering artifact rather than an
+  ongoing physics error. The cause is not yet pinned. It is not simply the
+  setup pass applying gravity that `Sonic_Init` does not
+  (sonic3k.asm:21902-21943, `routine += 2` then `rts`): `applyBootstrap` runs
+  `consumePendingInitialProcessSpritesPass` before
+  `applyReplayStartStateForTraceReplay`, so the row-0 entry seed would
+  overwrite any velocity that pass produced. Nor is `0x0038` one gravity tick;
+  it is seven. Next step is to determine which write between the seed and the
+  first compared sample produces it.
+- Counter-phase check: this change does not move the engine's level frame
+  counter relative to the object pass. `executeInitialProcessSprites` reads
+  `LevelManager.frameCounter` but never increments it, and no driven frame's
+  cadence changed (complete-run segments produced no `SETUP_ONLY` driven frame
+  before this change either — the pass was discarded rather than deferred). So
+  the `frameCounter + 2` offset in
+  `LevelManager.getRomLevelFrameCounterDuringObjectPass()` on
+  `bugfix/ai-fleet-s3k-cnz-carryintro` stays correctly calibrated.
