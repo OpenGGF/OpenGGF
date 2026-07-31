@@ -55596,3 +55596,62 @@ Baseline at this point (error_count / total_frames, one class per `mvn`
 invocation — all seven in one surefire fork crashes it with exit 134):
 aiz 8/63, hcz 868/1320, mgz 5040/14629, cnz 1658/5336, icz 287/1629, lbz 24/35,
 mhz 1923/7218.
+
+## 2026-07-31 — MHZ frame 2018: the swing bar released without restarting the animation
+
+`TestS3kMhzCompleteRunTraceReplay` first non-queue divergence was
+`player_mapping_frame 0x8E -> 0x64` at frame 2018, span 70, non-cascading, with
+`player_animation_id 0x0010 -> 0x0000` at 2051 and the Tails pair at 2067
+cascading off it.
+
+The object is `Obj_MHZSwingBarHorizontal` (SKL `$0B`, `sub_3ED6E`,
+sonic3k.asm:83313). The hang phase and auto-release timing were already exact:
+instrumentation showed the engine grabbing with the same stored `y_vel` (`$F948`),
+walking the same `$C`-per-frame phase chain through `RawAni_3F01A`, and firing the
+upward auto-release at phase `$28` with the same amplified velocity `$F5EC`
+(`1.5 x` stored, sonic3k.asm:83390-83394). What differed was `prev_anim`.
+
+ROM `loc_3EE7A` (sonic3k.asm:83389-83390) releases with
+`move.w #$10<<8,anim(a1)` — a **word** write that lands `anim = $10` and
+`prev_anim = $00` together. The grab path (sonic3k.asm:83451) writes
+`move.b #0,anim(a1)`, a byte write that leaves `prev_anim` untouched.
+`Animate_Sonic` (sonic3k.asm:24739-24749) restarts the script only when
+`anim != prev_anim`, so the word write is what makes `AniSonic10` re-enter and
+publish mapping frame `$8E`.
+
+The engine set the animation id but left its `prev_anim` equivalent
+(`PlayableSpriteAnimation.lastAnimationId`) stale. On this route the player
+spring-jumps off one bar into the next, so `lastAnimationId` was already `$10`
+when the second bar released with `$10`; the script never restarted, kept the
+expired state from the first launch, and the mapping frame stayed at the last
+object-controlled hang frame `$64` for 70 frames. The first bar's release was
+correct precisely because the player arrived rolling (`anim 2`).
+
+Fix: `MhzSwingBarHorizontalObjectInstance` publishes `prev_anim = 0` on the
+upward auto-release, modelling the word write. No shared animation or physics
+code changed, so cross-game parity is untouched.
+
+Command (one class per `mvn` invocation; all seven in one surefire fork crashes
+it with exit 134), worktree `.worktrees/mhz-anim` on `bugfix/ai-s3k-mhz-anim`
+off `bugfix/ai-s3k-mhz-queue-frontier`:
+
+```
+mvn "-Dtest=TestS3kMhzCompleteRunTraceReplay" "-Ds3k.rom.path=<s3k.gen>" test
+```
+
+Per-segment `error_count / total_frames`, before -> after:
+
+| segment | before | after |
+|---|---|---|
+| aiz | 8/63 | 8/63 |
+| hcz | 197/1320 | 197/1320 |
+| mgz | 17/14629 | 17/14629 |
+| cnz | 20/5336 | 20/5336 |
+| icz | 287/1629 | 287/1629 |
+| lbz | 24/35 | 24/35 |
+| mhz | 632/7218 | **628/7218** |
+
+MHZ's new first non-queue divergence is frame 2920, `tails_animation_id
+0x0006 -> 0x0005` with `tails_mapping_frame 0x009A -> 0x00AD` — a sidekick
+frontier, not a player one. The frame-0 `queue.*` entries are unchanged and
+remain owned separately.
