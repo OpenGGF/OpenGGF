@@ -72,6 +72,10 @@ namespace OpenGGF.BizHawk.Headless
         public const int OscTable = 0xFE6E;              // Oscillating_table: control word + 16 (value,delta) pairs
         public const int OscTableSize = 0x42;            // 66 bytes total
         public const int PosTableIndex = 0xEE26;         // u16be Pos_table_index
+        // The two distinct chunk->collision-block index arrays that
+        // Player_AnglePos selects between on top_solid_bit (sonic3k.asm:18729-18732).
+        public const int PrimaryCollisionAddr = 0xF7B4;   // u32be Primary_collision_addr (sonic3k.constants.asm:676)
+        public const int SecondaryCollisionAddr = 0xF7B8; // u32be Secondary_collision_addr (sonic3k.constants.asm:677)
 
         // Collision response list (count word = payload BYTE count, then
         // word OST addresses from 0xE382).
@@ -163,6 +167,7 @@ namespace OpenGGF.BizHawk.Headless
         public const int OffSubtype = 0x2C;              // u8 subtype (objects) / air_left (players)
         public const int OffObjectControl = 0x2E;        // u8 object_control
         public const int OffMoveLock = 0x32;             // u16be move_lock (CNZ balloon reuses as base_y)
+        public const int OffStickToConvex = 0x3C;        // u8 stick_to_convex (sonic3k.constants.asm:70)
         public const int OffInvulnerabilityTimer = 0x34; // u8
         public const int OffParentPtr = 0x40;            // u32be parent/owner pointer
         public const int OffInteract = 0x42;             // u16be interact: RAM addr of stood-on object

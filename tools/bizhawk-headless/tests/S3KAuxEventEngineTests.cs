@@ -415,7 +415,15 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 + "\"status_byte\":\"0x02\",\"routine\":\"0x02\","
                 + "\"y_radius\":19,\"x_radius\":9,\"on_object\":false,"
                 + "\"pushing\":false,\"underwater\":false,"
-                + "\"roll_jumping\":false}";
+                + "\"roll_jumping\":false,"
+                // Collision-plane diagnostic context. StageCnzFrame0 stages
+                // only the fields this case asserts, so the five new sources
+                // read zero from the synthetic host; ROM-plausibility of the
+                // real values is covered by the ROM-backed gates.
+                + "\"top_solid_bit\":\"0x00\",\"lrb_solid_bit\":\"0x00\","
+                + "\"stick_to_convex\":\"0x00\","
+                + "\"primary_collision_addr\":\"0x00000000\","
+                + "\"secondary_collision_addr\":\"0x00000000\"}";
             AssertEx.Equal(expectedSnapshot, snapshots[0]);
             AssertEx.Equal(expectedSnapshot, snapshots[1]);
 
