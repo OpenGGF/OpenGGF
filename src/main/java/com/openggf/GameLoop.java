@@ -2589,8 +2589,14 @@ public class GameLoop {
         FadeManager fadeManager = this.fadeManager;
         boolean fadeAlreadyWhite = (fadeManager.getState() == FadeManager.FadeState.HOLD_WHITE);
 
-        if (!fadeAlreadyWhite && fadeManager.isActive()) {
-            return; // Different fade in progress, wait
+        // The pre-started S1 fade carries no completion, so the screen is simply held
+        // white and this call owns the transition. The fade-to-white started below also
+        // parks in HOLD_WHITE for one frame before FadeManager runs its completion, and
+        // a finished stage re-raises this transition every frame -- so that window must
+        // keep waiting. Taking it over would enter the results screen twice and open a
+        // second native blocking fade while the pending completion still owns the first.
+        if (fadeManager.isActive() && (!fadeAlreadyWhite || fadeManager.hasPendingCompletion())) {
+            return; // Different fade in progress, or our own completion still pending
         }
 
         SpecialStageProvider ssProvider = getActiveSpecialStageProvider();
