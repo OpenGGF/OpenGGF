@@ -3,6 +3,13 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the S3K MHZ mushroom cap now accepts a landing from a player under
+  positive `object_control`. `Obj_MHZMushroomCap_Main` lands players through
+  `SolidObjectTop` (sonic3k.asm:82182), whose new-contact path rejects
+  `object_control` with a *signed* test (`tst.b` / `bmi`,
+  sonic3k.asm:42014) — only bit-7 warp/respawn states are skipped. A player
+  carried by the Madmole side drill (`object_control = 1`, `sub_8D94A`,
+  193465-193487) therefore still stands on the cap in the ROM.
 - Fix: the S3K Madmole's arcing side drill now releases a carried player when it
   goes offscreen, using the ROM's coarse band test. `loc_8D6E6`
   (sonic3k.asm:193218-193232) compares
