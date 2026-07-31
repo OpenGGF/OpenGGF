@@ -55713,8 +55713,74 @@ collapses from 287/1629 to 5/34. Its own analysis says a single delay cannot
 satisfy both MHZ and ICZ because the engine's per-chunk Kos module streaming rate
 differs from ROM. That is the real defect; the delay compensates for it.
 
+## 2026-07-31 — MHZ frame 2986: Madmole side-drill floor impact
+
+Command (worktree `.worktrees/mhz-descent`, branch `bugfix/ai-s3k-mhz-descent`,
+base `c64cd401a`):
+
+```
+mvn "-Ds3k.rom.path=<repo>/s3k.gen" "-Dtest=TestS3kMhzCompleteRunTraceReplay" test
+```
+
+Read `error_count` / `total_frames` from `target/trace-reports/s3k_mhz1_report.json`;
+the test still throws from `admitRecordedCompletion` at segment end.
+
+### Diagnosis
+
+Frames 2966-3059 are not a Tails catch-up flight. Tails is captured and carried
+by the Madmole's arcing side drill: aux `interact_state` shows
+`tails_object_control` flip to `0x01` and `anim` to `$1A` at 2966 — exactly what
+ROM `sub_8D94A` writes (sonic3k.asm:193465-193487) — and object slot 20 (code
+`0x0008D6E6`) advances routine 4 -> 8 on the same frame and then tracks Tails.
+Tails' `x_vel`/`y_vel` stay zero throughout because `loc_8D7A8` writes his
+position directly from the arm.
+
+The engine's descent turned around at 2986, ~3 frames early and ~0x10 shallow,
+because the arm's bounce was driven by the raw-animation loop wrapping. ROM
+`loc_8D778` and `loc_8D7A8` (193264-193331) instead call `ObjHitFloor_DoRoutine`
+(177964-177981) whenever the arm is moving downward: that snaps the arm onto the
+surface (`add.w d1,y_pos`) and jumps to `$34(a0)` — `loc_8D794` while the arc is
+free-flying, `loc_8D846` (193353-193367) once `sub_8D94A` has installed it on the
+capture frame. The raw script `byte_8D9E7` (193520) ends with `$FC`
+(`AnimateRaw_Restart`), not `$F4` (`AnimateRaw_CustomCode`), so it never invokes
+`$34(a0)` at all — the two uses of that field had been conflated.
+
+This is **not** the frame-2920 class of defect: nothing here was leader-gated.
+
+### Result
+
+Per-segment `error_count / total_frames`, before -> after:
+
+| segment | before | after |
+|---|---|---|
+| aiz | 8/63 | 8/63 |
+| hcz | 196/1320 | 196/1320 |
+| mgz | 16/14629 | 16/14629 |
+| cnz | 19/5336 | 19/5336 |
+| icz | 286/1629 | 286/1629 |
+| lbz | 24/35 | 24/35 |
+| mhz | 622/7218 | 919/7218 |
+
+The Madmole is SKL-only, and the other six segments are byte-identical.
+
+MHZ's frontier moved 2986 -> **3013** (`tails_air 0 -> 1`,
+`tails_status_byte 0x0009 -> 0x0003`): the carried arc now tracks the recording
+to within 1px through frame 3059. The group count rose because the corrected
+trajectory re-sequences the downstream cascade into more, shorter groups; an A/B
+run with only the routine-4 hunk removed measured 920 vs 919, so the rise is not
+attributable to the free-flying arc bounce.
+
 ### Open frontier
 
+- MHZ frame 3060 — ROM releases Tails with zero velocity and `status 0x02`, then
+  he free-falls under gravity `$38` with air acceleration `$18`; the engine keeps
+  carrying him. ROM `loc_8D724` (193237-193243) deletes the arm on a *coarse* x
+  test (`x_pos & $FF80` against `Camera_X_pos_coarse_back`, `> $280`) plus a y
+  test, releasing the player with `bset Status_InAir` / `clr.b object_control`.
+  `SideDrillChild.checkDeleteAndReleaseCapturedPlayer` uses `isOnScreenX(0x180)`
+  with neither the coarse mask nor the y test. Most likely next fix.
+- MHZ frame 3013 — ROM sets `Status_OnObj` on Tails for exactly two frames while
+  he is still carried; the engine does not.
 - MHZ frame 2920 — `tails_animation_id` 0x06 -> 0x05, `tails_mapping_frame`
   0x9A -> 0xAD, both non-cascading. Nearly all ~596 remaining non-queue groups
   are Tails chained off this seed, including the ~3000 and ~5000+ clusters.

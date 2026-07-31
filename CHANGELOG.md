@@ -3,6 +3,16 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the S3K Madmole's arcing side drill now bounces and releases its captured
+  player on a floor impact instead of on an animation-script wrap. ROM
+  `loc_8D778` and `loc_8D7A8` (sonic3k.asm:193270-193331) call
+  `ObjHitFloor_DoRoutine` (177964-177981) once the arm is moving downward, which
+  snaps the arm onto the surface and jumps to `$34(a0)` — `loc_8D794` for the
+  free-flying arc and `loc_8D846` (193353-193367) for the carrying arm. The raw
+  animation script `byte_8D9E7` (193520) terminates with `$FC`
+  (`AnimateRaw_Restart`), so it never invokes `$34(a0)` at all. Driving the
+  bounce off the animation loop turned the carried player's descent around
+  early and skipped the floor snap.
 - Fix: the S3K special-stage entry ring's 50-ring award no longer deletes the
   ring outright. ROM `loc_61794` (sonic3k.asm:128325-128333) marks the ring
   collected, sets the retirement bit and adds the rings without deleting; the

@@ -579,6 +579,8 @@ class TestMadmoleBadnikInstance {
                     .thenReturn(TerrainCheckResult.noCollision());
             terrain.when(() -> ObjectTerrainUtils.checkRightWallDist(anyInt(), anyInt()))
                     .thenReturn(TerrainCheckResult.noCollision());
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(anyInt(), anyInt(), anyInt()))
+                    .thenReturn(new TerrainCheckResult(0, (byte) 0, 0));
 
             child.update(0x4A, player); // loc_8D7A8 carry: move.w to x_pos/y_pos only
         }
@@ -614,7 +616,7 @@ class TestMadmoleBadnikInstance {
     }
 
     @Test
-    void arcingSideDrillRawCallbackReboundsWhileBelowRomReleaseVelocity() {
+    void arcingSideDrillFloorImpactReboundsWhileBelowRomReleaseVelocity() {
         GameRng rng = new GameRng(GameRng.Flavour.S3K, 4);
         CapturingServices services = new CapturingServices(mock(ObjectManager.class));
         services.withRng(rng);
@@ -632,22 +634,24 @@ class TestMadmoleBadnikInstance {
                     .thenReturn(TerrainCheckResult.noCollision());
             terrain.when(() -> ObjectTerrainUtils.checkRightWallDist(anyInt(), anyInt()))
                     .thenReturn(TerrainCheckResult.noCollision());
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(anyInt(), anyInt(), anyInt()))
+                    .thenReturn(new TerrainCheckResult(0, (byte) 0, 0));
 
-            // Run the arc until byte_8D9E7 loops to its $FC callback (loc_8D846).
+            // Run the arc until ObjHitFloor_DoRoutine invokes $34(a0) = loc_8D846.
             for (int frame = 0x4A; frame < 0x4A + 40 && services.soundIds.isEmpty(); frame++) {
                 child.update(frame, player);
             }
         }
 
         assertEquals(-0x500, sideChildIntField(child, "yVelocity"),
-                "byte_8D9E7's $FC callback loc_8D846 resets y_vel to -$500 while y_vel<$A00");
+                "ObjHitFloor_DoRoutine's $34(a0) hook loc_8D846 resets y_vel to -$500 while y_vel<$A00");
         assertEquals(List.of(Sonic3kSfx.FLIPPER.id), services.soundIds);
         assertEquals(true, player.isObjectControlled(),
                 "loc_8D846's below-threshold branch rebounds the drill without releasing the captured player");
     }
 
     @Test
-    void arcingSideDrillRawCallbackReleasesPlayerAtRomThresholdVelocity() {
+    void arcingSideDrillFloorImpactReleasesPlayerAtRomThresholdVelocity() {
         GameRng rng = new GameRng(GameRng.Flavour.S3K, 4);
         CapturingServices services = new CapturingServices(mock(ObjectManager.class));
         services.withRng(rng);
@@ -656,17 +660,20 @@ class TestMadmoleBadnikInstance {
         child.update(0x48, player);
         TouchResponseListener listener = assertInstanceOf(TouchResponseListener.class, child);
         listener.onTouchResponse(player, new TouchResponseResult(0x18, 0x18, 0x08, TouchCategory.ENEMY), 0x49);
-        setSideChildIntField(child, "yVelocity", 0xA00);
-        setSideChildIntField(child, "animFrame", 7);
-        setSideChildIntField(child, "animTimer", 0);
 
         try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
             terrain.when(() -> ObjectTerrainUtils.checkLeftWallDist(anyInt(), anyInt()))
                     .thenReturn(TerrainCheckResult.noCollision());
             terrain.when(() -> ObjectTerrainUtils.checkRightWallDist(anyInt(), anyInt()))
                     .thenReturn(TerrainCheckResult.noCollision());
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(anyInt(), anyInt(), anyInt()))
+                    .thenReturn(new TerrainCheckResult(0, (byte) 0, 0));
 
+            // ROM routine 4 (loc_8D778) still owns the capture frame; the carrying
+            // routine loc_8D7A8 with its $34(a0) = loc_8D846 hook runs the frame after.
             child.update(0x49, player);
+            setSideChildIntField(child, "yVelocity", 0xA00);
+            child.update(0x4A, player);
         }
 
         assertEquals(false, player.isObjectControlled(),
@@ -686,19 +693,20 @@ class TestMadmoleBadnikInstance {
         child.update(0x48, player);
         TouchResponseListener listener = assertInstanceOf(TouchResponseListener.class, child);
         listener.onTouchResponse(player, new TouchResponseResult(0x18, 0x18, 0x08, TouchCategory.ENEMY), 0x49);
-        setSideChildIntField(child, "yVelocity", 0xA00);
-        setSideChildIntField(child, "animFrame", 7);
-        setSideChildIntField(child, "animTimer", 0);
 
         try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
             terrain.when(() -> ObjectTerrainUtils.checkLeftWallDist(anyInt(), anyInt()))
                     .thenReturn(TerrainCheckResult.noCollision());
             terrain.when(() -> ObjectTerrainUtils.checkRightWallDist(anyInt(), anyInt()))
                     .thenReturn(TerrainCheckResult.noCollision());
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(anyInt(), anyInt(), anyInt()))
+                    .thenReturn(new TerrainCheckResult(0, (byte) 0, 0));
 
             child.update(0x49, player);
-            listener.onTouchResponse(player, new TouchResponseResult(0x18, 0x18, 0x08, TouchCategory.ENEMY), 0x4A);
+            setSideChildIntField(child, "yVelocity", 0xA00);
             child.update(0x4A, player);
+            listener.onTouchResponse(player, new TouchResponseResult(0x18, 0x18, 0x08, TouchCategory.ENEMY), 0x4B);
+            child.update(0x4B, player);
         }
 
         assertEquals(false, player.isObjectControlled(),
