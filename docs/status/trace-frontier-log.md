@@ -55867,3 +55867,59 @@ After: the carried arc tracks the recording to within 1px through frame 3059.
 
 `ObjectTerrainUtils.checkFloorDist` returns null in headless unit tests without a
 level manager — hence the null guard in `objHitFloorDoRoutine`.
+
+## 2026-07-31 — S3K MHZ complete-run: frame 3152 → 3246 (MHZ pollen spawner / RNG desync)
+
+Command: `mvn -Ds3k.rom.path=/…/s3k.gen "-Dtest=TestS3kMhzCompleteRunTraceReplay" test`
+Worktree `.worktrees/mhz-3152`, branch `bugfix/ai-s3k-mhz-3152` off
+`bugfix/ai-s3k-mhz-queue-frontier`. Read `error_count`/`total_frames` from
+`target/trace-reports/s3k_mhz1_report.json` (the test throws at segment end).
+
+- Before: `error_count` 977 / 7218 frames, 946 non-queue, earliest non-queue
+  frame **3152** (`player_animation_id 0x001A -> 0x0002`, then `x_speed`/`g_speed`
+  `-0C00 -> 0`, `y_speed` `-0200 -> 0x0488`).
+- After: `error_count` 927 / 7218 frames, 896 non-queue, earliest non-queue
+  frame **3246** (`camera_y 0x0719 -> 0x0717`, `air 1 -> 0`,
+  `status_byte 0x0002 -> 0x0000`).
+
+Diagnosis. The 3152 seed is the Madmole side drill's straight-flight kick,
+`sub_8D8E6` (sonic3k.asm:193404-193440): `x_vel(a2) = ground_vel(a2) = 2 *
+x_vel(a0)`, `y_vel(a2) = -$200`, `Status_InAir`, `anim = $1A`, spin-dash cleared —
+and the arm's own `routine` steps 2 → 6, which the recording shows exactly
+(slot 20, object `0x0008D6E6`, spawned frame 3149 at `x = 0x1052`, `y` pinned at
+`0x0724`, moving 6px/frame left, i.e. `word_8D8DE[0] = (-$600, 0)`; doubled that
+is the recorded `-$0C00`). That kick was already implemented correctly.
+
+The real defect was upstream: the engine's arm drew the *arc* variant at
+`loc_8D89E` (sonic3k.asm:193422-193438) instead of the straight one, because the
+global S3K RNG stream was desynchronised. Reconstructing the ROM seed sequence
+from the recorded `air_countdown_state.rng_seed` shows the ROM draws
+`Random_Number` roughly once per frame across this stretch (twice while both
+characters are grounded), whereas the engine had performed **two** draws in the
+entire run by frame 3149 — its three Madmole arm draws landed at ROM stream
+positions 0, 1 and 2.
+
+The missing consumer is `Obj_MHZ_Pollen_Spawner` → `sub_3DA24`
+(sonic3k.asm:81634-81680), which calls `Random_Number` once per grounded player
+per frame as its spawn gate. ROM level init installs it into
+`Dynamic_object_RAM+object_size` (sonic3k.asm:7793 — dynamic slot 1, absolute SST
+slot 4) and it runs unconditionally from the object loop. `MhzPollenSpawnerInstance`
+existed and modelled the draws faithfully, but `Sonic3kLevelEventManager` created
+it from `init(zone, act)`, which runs before the level's object manager is
+populated: the instance was discarded and `update()` never ran once in 7218
+frames — so no pollen, and no RNG draws.
+
+Fix: install it from `updateFixedInLevelObjects()` (idempotent, re-establishes it
+after a level load) at SST slot 4.
+
+Regression set: aiz 8/63, hcz 196/1320, mgz 16/14629, cnz 19/5336, icz 286/1629,
+lbz 24/35 — all unchanged. `TestS3kAizTraceReplay` holds at 4 failures + 1 error.
+`TestMadmoleBadnikInstance`, `TestMhzMushroomCapObjectInstance`,
+`TestMhzPollenObjects`, `TestMhzPollenLevelInit`,
+`TestS3kStandaloneControllerRewind` and the rewind/S3K guards pass, except the
+pre-existing `TestRewindFieldDispositionGuard` failure on
+`Mhz1CutsceneButtonInstance#knuxPeerArtQueue`, which reproduces on the base branch.
+
+Note for later: any remaining S3K RNG-driven divergence should be checked the same
+way — reconstruct the ROM seed chain from `rng_seed` and compare draw counts per
+frame, rather than assuming an object's own logic is wrong.

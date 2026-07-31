@@ -3,24 +3,42 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
-- Fix: the S3K Kosinski module queue no longer runs a frame ahead of the ROM.
-  `LevelLoop` calls `Process_Kos_Module_Queue` in the loop tail
-  (sonic3k.asm:7908) and `Process_Kos_Queue` at the head of the next iteration,
-  before `Wait_VSync` (7887-7888), so a module state step is separated from the
-  direct FIFO entry it submits — and from the frame that first observes it — by
-  the intervening V-int. `Process_Kos_Queue` is not byte-rate-limited: it takes
-  one direct entry to completion per call (2840-2954) and `EndReached` clears
-  the in-progress bit, decrements the count, shifts the remaining entries up and
-  returns without starting the next entry (2938-2952). `Process_Kos_Module_Queue`
-  likewise performs exactly one state step per call — submit the current module
-  via `Queue_Kos`, or DMA the buffer once the direct count reaches zero
-  (2726-2790). The engine collapsed the retire and the following submission into
-  one frame, so every KosM child submission, module retirement and direct busy
-  span was published one frame early. The module step now runs at the top of the
-  frame, ahead of the timing ledger's own service, which is where the ROM's
-  previous loop iteration left it; readiness is still captured at `POST_OBJECTS`,
-  the boundary the archive parent's completion is recorded at. No frame constant
-  or trace-fitted delay is involved.
+- Fix: the S3K MHZ pollen spawner now actually runs. ROM level init installs
+  `Obj_MHZ_Pollen_Spawner` into `Dynamic_object_RAM+object_size`
+  (sonic3k.asm:7793) and its `sub_3DA24` draws `Random_Number` once per grounded
+  player every frame as a spawn gate (sonic3k.asm:81639). The engine created the
+  object from `Sonic3kLevelEventManager.init`, which runs before the level's
+  object manager is populated, so the instance was discarded and never updated —
+  no pollen, and the global S3K RNG stream ran thousands of draws behind the ROM,
+  turning every downstream RNG branch (such as the Madmole side drill's
+  arc/straight selection in `loc_8D89E`) into a coin flip. It is now installed
+  from `updateFixedInLevelObjects()` at the ROM's dynamic slot 1 (SST slot 4).
+- Fix: the S3K MHZ mushroom cap now accepts a landing from a player under
+  positive `object_control`. `Obj_MHZMushroomCap_Main` lands players through
+  `SolidObjectTop` (sonic3k.asm:82182), whose new-contact path rejects
+  `object_control` with a *signed* test (`tst.b` / `bmi`,
+  sonic3k.asm:42014) — only bit-7 warp/respawn states are skipped. A player
+  carried by the Madmole side drill (`object_control = 1`, `sub_8D94A`,
+  193465-193487) therefore still stands on the cap in the ROM.
+- Fix: the S3K Madmole's arcing side drill now releases a carried player when it
+  goes offscreen, using the ROM's coarse band test. `loc_8D6E6`
+  (sonic3k.asm:193218-193232) compares
+  `(x_pos & $FF80) - Camera_X_pos_coarse_back > $280` and
+  `y_pos - Camera_Y_pos + $80 > $200`, falling through to `loc_8D724`
+  (193237-193243), which sets `Status_InAir`, clears `object_control` and
+  deletes the arm without touching the player's velocities. The engine used a
+  plain camera-bounds test with neither the coarse mask nor the vertical band,
+  so the arm kept carrying the player well past the ROM's release frame.
+- Fix: the S3K Madmole's arcing side drill now bounces and releases its captured
+  player on a floor impact instead of on an animation-script wrap. ROM
+  `loc_8D778` and `loc_8D7A8` (sonic3k.asm:193270-193331) call
+  `ObjHitFloor_DoRoutine` (177964-177981) once the arm is moving downward, which
+  snaps the arm onto the surface and jumps to `$34(a0)` — `loc_8D794` for the
+  free-flying arc and `loc_8D846` (193353-193367) for the carrying arm. The raw
+  animation script `byte_8D9E7` (193520) terminates with `$FC`
+  (`AnimateRaw_Restart`), so it never invokes `$34(a0)` at all. Driving the
+  bounce off the animation loop turned the carried player's descent around
+  early and skipped the floor snap.
 - Fix: the S3K special-stage entry ring's 50-ring award no longer deletes the
   ring outright. ROM `loc_61794` (sonic3k.asm:128325-128333) marks the ring
   collected, sets the retirement bit and adds the rings without deleting; the
