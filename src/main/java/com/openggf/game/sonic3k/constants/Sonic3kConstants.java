@@ -494,6 +494,18 @@ public class Sonic3kConstants {
     public static final int MAP_EXPLOSION_ADDR = 0x01E758; // Map_Explosion (5 frames, S&K side)
     public static final int ART_NEM_BUBBLES_ADDR = 0x191B46;
     public static final int MAP_BUBBLER_ADDR = 0x02FCB2; // Map_Bubbler (23 frames, S&K side)
+    // ArtUnc_AirCountdown (S&K side): the drowning countdown digits, 60 tiles.
+    // Obj_AirCountdown DMAs six tiles per mapping frame $09-$12 into
+    // ArtTile_DashDust (sonic3k.asm:33489-33516).
+    public static final int ART_UNC_AIR_COUNTDOWN_ADDR = 0x0A9DFC;
+    public static final int ART_UNC_AIR_COUNTDOWN_SIZE = 0x780;
+    /** {@code ArtTile_DashDust - ArtTile_Bubbles}: digit tile index inside Map_Bubbler. */
+    public static final int AIR_COUNTDOWN_DIGIT_TILE_OFFSET = 0x0384;
+    /** {@code $60} words per {@code Add_To_DMA_Queue} transfer = six tiles per digit frame. */
+    public static final int AIR_COUNTDOWN_TILES_PER_DIGIT = 6;
+    /** First and last {@code Map_Bubbler} frame that draws a countdown digit. */
+    public static final int AIR_COUNTDOWN_FIRST_DIGIT_FRAME = 0x09;
+    public static final int AIR_COUNTDOWN_DIGIT_FRAME_COUNT = 10;
     public static final int ART_NEM_RING_HUD_TEXT_ADDR = 0x192AEE;
     public static final int ART_NEM_ENEMY_PTS_STARPOST_ADDR = 0x192D2A;
     public static final int ART_NEM_STARPOST_ADDR = 0x35D8A2; // Dedicated StarPost art (20 tiles)

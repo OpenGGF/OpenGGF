@@ -167,6 +167,9 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         // Load shield art (DPLC-driven, same for all zones)
         loadShieldArt();
 
+        // Drowning countdown digits (any zone can carry water)
+        loadAirCountdownDigitArt();
+
         // Load invincibility star art (non-DPLC, same for all zones)
         loadInvincibilityStarArt();
 
@@ -684,6 +687,71 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         ObjectSpriteSheet sheet = new ObjectSpriteSheet(patterns, frames, 0, 1);
         registerSheet(ObjectArtKeys.POINTS, sheet);
         LOG.info("Loaded S3K enemy score art: " + patterns.length + " patterns, " + frames.size() + " frames");
+    }
+
+    /**
+     * Loads the drowning countdown digits used by {@code Obj_AirCountdown}.
+     *
+     * <p>The object's mappings are {@code Map_Bubbler} with
+     * {@code make_art_tile(ArtTile_Bubbles,0,0)}, so its bubble frames come out
+     * of {@code ArtNem_Bubbles} (the shared {@code BUBBLER} sheet). Frames
+     * {@code $09}-{@code $12} instead point one 2x3 piece at tile
+     * {@code $384} past {@code ArtTile_Bubbles}, which lands on
+     * {@code ArtTile_DashDust} — a VRAM window {@code AirCountdown_Load_Art}
+     * refills by DMA with six tiles from {@code ArtUnc_AirCountdown} per
+     * mapping frame (sonic3k.asm:33489-33516).
+     *
+     * <p>We can't express "same mapping, different source tiles" with a flat
+     * tile offset, so this rebuilds those ten frames from the ROM mapping
+     * geometry with each frame's tile index moved onto its own six-tile slice
+     * of the digit art — the engine-side equivalent of that DMA. P2 differs
+     * only in which VRAM window it targets ({@code Map_Bubbler2} /
+     * {@code ArtTile_DashDust_P2}), so both players share this sheet.
+     */
+    private void loadAirCountdownDigitArt() {
+        try {
+            Rom rom = GameServices.rom().getRom();
+            if (rom == null) {
+                return;
+            }
+            RomByteReader reader = RomByteReader.fromRom(rom);
+            Pattern[] tiles = S3kSpriteDataLoader.loadArtTiles(reader,
+                    Sonic3kConstants.ART_UNC_AIR_COUNTDOWN_ADDR,
+                    Sonic3kConstants.ART_UNC_AIR_COUNTDOWN_SIZE);
+
+            int firstFrame = Sonic3kConstants.AIR_COUNTDOWN_FIRST_DIGIT_FRAME;
+            int frameCount = Sonic3kConstants.AIR_COUNTDOWN_DIGIT_FRAME_COUNT;
+            List<SpriteMappingFrame> bubblerFrames = S3kSpriteDataLoader.loadMappingFrames(
+                    reader, Sonic3kConstants.MAP_BUBBLER_ADDR, firstFrame + frameCount);
+
+            List<SpriteMappingFrame> digitFrames = new ArrayList<>(frameCount);
+            for (int i = 0; i < frameCount; i++) {
+                int sourceTile = i * Sonic3kConstants.AIR_COUNTDOWN_TILES_PER_DIGIT;
+                List<SpriteMappingPiece> pieces = new ArrayList<>();
+                for (SpriteMappingPiece piece : bubblerFrames.get(firstFrame + i).pieces()) {
+                    pieces.add(new SpriteMappingPiece(
+                            piece.xOffset(),
+                            piece.yOffset(),
+                            piece.widthTiles(),
+                            piece.heightTiles(),
+                            piece.tileIndex()
+                                    - Sonic3kConstants.AIR_COUNTDOWN_DIGIT_TILE_OFFSET
+                                    + sourceTile,
+                            piece.hFlip(),
+                            piece.vFlip(),
+                            piece.paletteIndex(),
+                            piece.priority()));
+                }
+                digitFrames.add(new SpriteMappingFrame(pieces));
+            }
+
+            registerSheet(Sonic3kObjectArtKeys.AIR_COUNTDOWN_DIGITS,
+                    new ObjectSpriteSheet(tiles, digitFrames, 0, 1));
+            LOG.info("Loaded S3K air countdown digits: " + tiles.length + " tiles, "
+                    + digitFrames.size() + " frames");
+        } catch (IOException e) {
+            LOG.warning("Failed to load air countdown digit art: " + e.getMessage());
+        }
     }
 
     /**

@@ -171,6 +171,10 @@ public final class Sonic3kObjectArtKeys {
     // HCZ Bubbles (ArtNem_Bubbles) — used by 25% of water wall spray particles
     public static final String HCZ_BUBBLES = "hcz_bubbles";
 
+    // Drowning countdown digits (ArtUnc_AirCountdown), DMA'd per mapping frame
+    // by AirCountdown_Load_Art. Shared by both players' Obj_AirCountdown.
+    public static final String AIR_COUNTDOWN_DIGITS = "air_countdown_digits";
+
     // HCZ badniks
     public static final String HCZ_BUGGERNAUT = "hcz_buggernaut";
     public static final String HCZ_BLASTOID = "hcz_blastoid";
