@@ -232,7 +232,8 @@ final class S3kFixedAirCountdownManager {
                         owner.getCentreY(),
                         countdownChild.subtype(),
                         angle,
-                        countdownChild.displayTimer());
+                        countdownChild.displayTimer(),
+                        isPrimaryPlayer(owner));
                 objectManager.addDynamicObject(child);
             }
 
