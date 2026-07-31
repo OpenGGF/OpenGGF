@@ -218,6 +218,13 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **Special Stage exit crash (2026-07-31):** leaving a Special Stage no longer
+  aborts with "a native blocking fade is already active". A finished stage
+  re-raises the results transition every frame, and the exit fade-to-white
+  parks at full white for one frame before its completion runs — so that frame
+  looked like Sonic 1's pre-started hold, entered the results screen a second
+  time and opened a second native blocking fade while the first was still
+  owned by the pending completion.
 - **HCZ vertical geyser visibility, trigger and priority (2026-07-31):** the
   Hydrocity geyser no longer stands visible in the level before it fires. The
   ROM only draws the column from its eruption and falling routines, so it is
