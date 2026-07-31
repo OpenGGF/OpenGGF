@@ -357,7 +357,14 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance
                 lockSidekick(sidekick);
                 locked = true;
             }
-            if (owner.workspaceRoutine < ROUTINE_WAIT_LANDING || sidekickX > SIDEKICK_CLAMP_X) {
+            // ROM loc_62DDC: move.w #$371,d0 / cmp.w x_pos(a1),d0 / bhi.s
+            // locret_62E18 returns while $371 is still HIGHER than Tails's
+            // x_pos, so the duck pose and Stop_Object only apply once Tails has
+            // reached the marker (sonic3k.asm:130020-130030). The comparison was
+            // inverted here, which held Tails in the duck animation for the
+            // whole approach — MHZ complete-run rows 218-849 record anim 0
+            // against the engine's 8.
+            if (owner.workspaceRoutine < ROUTINE_WAIT_LANDING || sidekickX < SIDEKICK_CLAMP_X) {
                 return;
             }
             sidekick.setAnimationId(Sonic3kAnimationIds.DUCK);
