@@ -3,6 +3,25 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Sonic 2's HTZ (Obj52) and MCZ (Obj57) bosses now carry the ROM's
+  routine-read-once defeat offset. Both objects read `boss_routine(a0)` once at
+  the top of their update and jump through their offset table
+  (`docs/s2disasm/s2.asm:64194-64206`, `docs/s2disasm/s2.asm:65876-65890`); the
+  hit handlers run from inside the already-selected routine
+  (`docs/s2disasm/s2.asm:64528-64533`, `docs/s2disasm/s2.asm:66223-66226`) and
+  `Obj52_Defeat` / `Obj57_FinalDefeat` only set `Boss_Countdown` = `$B3` and
+  `boss_routine` = 8 before returning (`docs/s2disasm/s2.asm:64559-64566`,
+  `docs/s2disasm/s2.asm:66246-66253`), so the defeat routine's first countdown
+  decrement lands on the following frame (`docs/s2disasm/s2.asm:64570-64572`,
+  `docs/s2disasm/s2.asm:66256-66260`). Both bosses now opt into the existing
+  per-boss `AbstractBossInstance.defeatDeferralAppliesToThisBoss()` hook. The
+  HTZ flee handler's compensating one-frame staging of the `y_pos` /
+  `Camera_Max_X_pos` writes was removed at the same time, since
+  `Obj52_Mobile_Flee` (`docs/s2disasm/s2.asm:64598-64606`) falls through to
+  `loc_30170` (`docs/s2disasm/s2.asm:64608-64612`) in the same frame it sets
+  `Boss_defeated_flag`. Greens `TestS2Htz2LevelSelectTraceReplay` (was 8 errors
+  at frame 9150 `queue.s2_nemesis_plc.busy`) and
+  `TestS2Mcz2LevelSelectTraceReplay` (was 17 errors at frame 9950).
 - Fix: Sonic 2's OOZ oil surface (Obj07) now executes in the reserved
   object-RAM band, after the player object slots and before every dynamic level
   object. ROM aliases `Oil` onto `WaterSurface1` between the player slots and
