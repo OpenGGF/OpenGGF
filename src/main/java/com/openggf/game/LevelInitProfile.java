@@ -76,6 +76,18 @@ public interface LevelInitProfile {
     }
 
     /**
+     * Number of omitted presentation iterations that ran the ROM's object loop
+     * with the player objects already created, and so advanced player
+     * animation and the persistent last-loaded-DPLC byte before gameplay.
+     *
+     * <p>Zero for a game whose omitted presentation carries no player object
+     * loop.
+     */
+    default int skippedPresentationPlayableFrames() {
+        return 0;
+    }
+
+    /**
      * Ordered steps for entering a level (title card through control unlock).
      * <p>
      * Maps to the game's {@code Level:} routine: S1 has 44 steps (phases A-L),

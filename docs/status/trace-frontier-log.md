@@ -54850,3 +54850,78 @@ Correction applied during verification: `PlcProducerRouteRegistry` still named
 the pre-rename `S2_LEVEL_SECONDARY` owner case, which failed
 `TestPlcProducerCoverageGuard`; the registry entry was updated to the new
 method name.
+## 2026-07-31 - S2 level-select bootstrap DPLC submission schedule
+
+- Worktree: `.worktrees/s2-bootstrap-submission-schedule`, branch
+  `bugfix/ai-s2-bootstrap-submission-schedule`, over `0a35d0b49`.
+- Root cause (two halves of one bug, both in the omitted title-card
+  presentation): the sidekick's DPLC decision owner was keyed by the engine's
+  `<character>_pN` team-slot code instead of the ROM's per-character
+  `Sonic_LastLoadedDPLC` / `Tails_LastLoadedDPLC` bytes
+  (`docs/s2disasm/s2.asm:38829-38840`, `41659-41690`, cleared only at
+  `26039-26041`), so the sidekick ran with no owner; and `InitPlayers`
+  (`docs/s2disasm/s2.asm:4945`) precedes the 25-frame title-card leave loop
+  (`docs/s2disasm/s2.asm:5060-5066`), so that loop's animation ticks were never
+  replayed headlessly and gameplay frame 0 re-submitted an already-retired
+  transfer. WFZ/DEZ omit Obj02 entirely (`docs/s2disasm/s2.asm:5177-5198`), so
+  no Tails owner is attached there. Per-game divergence sits on a new
+  `LevelInitProfile.skippedPresentationPlayableFrames()` defaulting to 0.
+- Family command (run identically before and after, each on a fresh
+  `mvn -q -Dmse=relaxed clean`):
+  `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true
+  "-Ds2.rom.path=<repo>/s2.gen" "-Dtest=TestS2ArzLevelSelectTraceReplay,
+  TestS2Arz2LevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,
+  TestS2Cnz2LevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,
+  TestS2Cpz2LevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,
+  TestS2HtzLevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,
+  TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,
+  TestS2MtzLevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,
+  TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,
+  TestS2Ooz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,
+  TestS2WfzLevelSelectTraceReplay,TestS2Ehz1TraceReplay" test`
+- Result: 19 tests, 19 failures before and 19 failures after. Nothing greened;
+  18 of 19 advanced. Per-trace first error, before -> after:
+
+  | Trace | Before | After |
+  |---|---|---|
+  | TestS2ArzLevelSelectTraceReplay | frame 6 `dynamic_art.outstanding_transfer_ids` (14342 err) | frame 52 `queue.s2_nemesis_plc.queued_fingerprints` (10369 err) |
+  | TestS2Arz2LevelSelectTraceReplay | frame 6 `dynamic_art.outstanding_transfer_ids` (21986 err) | frame 52 `queue.s2_nemesis_plc.queued_fingerprints` (19343 err) |
+  | TestS2CnzLevelSelectTraceReplay | frame 6 `dynamic_art.outstanding_transfer_ids` (24824 err) | frame 52 `queue.s2_nemesis_plc.queued_fingerprints` (12331 err) |
+  | TestS2Cnz2LevelSelectTraceReplay | frame 0 `dynamic_art.outstanding_transfer_ids` (35544 err) | frame 18 `dynamic_art.edge[1].present` (31753 err) |
+  | TestS2CpzLevelSelectTraceReplay | frame 6 `dynamic_art.outstanding_transfer_ids` (15108 err) | frame 52 `queue.s2_nemesis_plc.queued_fingerprints` (12537 err) |
+  | TestS2Cpz2LevelSelectTraceReplay | frame 6 `dynamic_art.outstanding_transfer_ids` (33931 err) | frame 52 `queue.s2_nemesis_plc.queued_fingerprints` (24067 err) |
+  | TestS2DezEndingLevelSelectTraceReplay | frame 52 `queue.s2_nemesis_plc.queued_fingerprints` (4 err) | frame 52 `queue.s2_nemesis_plc.queued_fingerprints` (4 err) - unmoved |
+  | TestS2HtzLevelSelectTraceReplay | frame 6 `dynamic_art.outstanding_transfer_ids` (23619 err) | frame 38 `dynamic_art.edge[2].owner` (19167 err) |
+  | TestS2Htz2LevelSelectTraceReplay | frame 6 `dynamic_art.outstanding_transfer_ids` (29040 err) | frame 52 `queue.s2_nemesis_plc.queued_fingerprints` (24201 err) |
+  | TestS2MczLevelSelectTraceReplay | frame 0 `dynamic_art.outstanding_transfer_ids` (17494 err) | frame 18 `dynamic_art.edge[2].present` (11891 err) |
+  | TestS2Mcz2LevelSelectTraceReplay | frame 0 `dynamic_art.outstanding_transfer_ids` (26732 err) | frame 18 `dynamic_art.edge[1].present` (18143 err) |
+  | TestS2MtzLevelSelectTraceReplay | frame 0 `dynamic_art.outstanding_transfer_ids` (31480 err) | frame 18 `dynamic_art.edge[1].present` (20681 err) |
+  | TestS2Mtz2LevelSelectTraceReplay | frame 6 `dynamic_art.outstanding_transfer_ids` (37628 err) | frame 30 `dynamic_art.edge[1].owner` (25808 err) |
+  | TestS2Mtz3LevelSelectTraceReplay | frame 0 `dynamic_art.outstanding_transfer_ids` (43362 err) | frame 18 `dynamic_art.edge[1].present` (29544 err) |
+  | TestS2OozLevelSelectTraceReplay | frame 0 `dynamic_art.outstanding_transfer_ids` (33071 err) | frame 18 `dynamic_art.edge[1].present` (19748 err) |
+  | TestS2Ooz2LevelSelectTraceReplay | frame 0 `dynamic_art.outstanding_transfer_ids` (36123 err) | frame 18 `dynamic_art.edge[1].present` (22044 err) |
+  | TestS2SczLevelSelectTraceReplay | frame 0 `dynamic_art.outstanding_transfer_ids` (6798 err) | frame 2 `dynamic_art.outstanding_transfer_ids` (6802 err) |
+  | TestS2WfzLevelSelectTraceReplay | frame 0 `dynamic_art.outstanding_transfer_ids` (12496 err) | frame 2 `dynamic_art.outstanding_transfer_ids` (12495 err) |
+  | TestS2Ehz1TraceReplay | frame 6 `dynamic_art.outstanding_transfer_ids` (16715 err) | frame 52 `queue.s2_nemesis_plc.queued_fingerprints` (11728 err) |
+
+- Green regression guard command:
+  `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true
+  "-Ds1.rom.path=<repo>/s1.gen" "-Ds2.rom.path=<repo>/s2.gen"
+  "-Dtest=TestS1Ghz1TraceReplay,TestS1Mz1TraceReplay,
+  TestS1Ghz1CompleteRunTraceReplay,TestS1Ghz2CompleteRunTraceReplay,
+  TestS1Mz1CompleteRunTraceReplay,TestS1Credits00Ghz1TraceReplay,
+  TestS1Credits07Ghz1bTraceReplay,TestTraceReplayInvariantGuard,
+  TestTraceReplayReferenceClosureGuard,TestRewindCoverageGuard,
+  TestStaticStateRewindCoverageGuard,TestPlcProducerCoverageGuard,
+  TestDynamicArtDiagnosticsComparator" test`
+  Result: 52 tests, 0 failures, 0 errors, 0 skips.
+- Cross-game parity command:
+  `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true
+  "-Ds1.rom.path=<repo>/s1.gen" "-Ds2.rom.path=<repo>/s2.gen"
+  "-Ds3k.rom.path=<repo>/s3k.gen" "-Dtest=TestS3kAiz1SkipHeadless,
+  TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,
+  TestSonic3kDecodingUtils" test`
+  Result: 104 tests, 0 failures, 0 errors, 0 skips.
+- No REGRESSION INTRODUCED. Next frontier for the family is the
+  `queue.s2_nemesis_plc.queued_fingerprints` gap at frame 52 and the
+  `dynamic_art.edge[N]` residency gap at frame 18.

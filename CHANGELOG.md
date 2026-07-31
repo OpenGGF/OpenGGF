@@ -3,6 +3,30 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the player DPLC decision owner is now keyed by character rather than by
+  team slot, and the omitted S2 title-card presentation now advances player
+  animation the way the ROM's own loop does. `LoadSonicDynPLC` compares the
+  mapping frame against `Sonic_LastLoadedDPLC` (`docs/s2disasm/s2.asm:38829-38840`)
+  and `LoadTailsDynPLC` against `Tails_LastLoadedDPLC`
+  (`docs/s2disasm/s2.asm:41659-41690`); both bytes are per-character and are
+  reset to -1 only on a character swap (`docs/s2disasm/s2.asm:26039-26041`).
+  The engine names a CPU team slot `<character>_pN`, so the sidekick's raw
+  sprite code never matched the character-keyed owner set and the sidekick ran
+  with no DPLC owner at all; the slot suffix is now normalised away while art
+  bank and VRAM base stay with the renderer, matching the ROM's own
+  `Adjust2PArtPointer` split. Where `InitPlayers` deliberately omits Obj02
+  (`docs/s2disasm/s2.asm:5177-5198`, WFZ and DEZ), no Tails DPLC owner is
+  attached at all, via the existing game-module sidekick-suppression predicate.
+  Separately, `InitPlayers` runs at `docs/s2disasm/s2.asm:4945`, before the
+  title-card leave loop at `docs/s2disasm/s2.asm:5060-5066`, so that loop
+  animates the players and leaves both last-loaded-DPLC bytes holding the
+  displayed mapping frame when `Level_MainLoop` starts. A headless load omits
+  the presentation, so gameplay frame 0 saw "no previous frame" and submitted a
+  DMA transfer the ROM had already retired. `LevelManager` now replays the
+  loop's own animation ticks at the ROM's VBlank-then-RunObjects order
+  (`s2.asm:1713`, `s2.asm:1769`), driven by a new
+  `LevelInitProfile.skippedPresentationPlayableFrames()` that defaults to zero,
+  so S1 and S3K are unchanged.
 - Fix: Sonic 2's level header secondary PLC is now serviced across the
   title-card leave loop instead of being left fully queued at level start.
   `Level:` calls `loadZoneBlockMaps` (`docs/s2disasm/s2.asm:20103-20110`) at

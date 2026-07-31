@@ -2822,9 +2822,57 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         if (initialPresentationPlcsCompleted) {
             return;
         }
-        activeGameModule().getLevelInitProfile()
-                .completeInitialPresentationPlcs();
+        var profile = activeGameModule().getLevelInitProfile();
+        profile.completeInitialPresentationPlcs();
+        replaySkippedPresentationPlayerAnimation(
+                profile.skippedPresentationPlayableFrames());
         initialPresentationPlcsCompleted = true;
+    }
+
+    /**
+     * Establishes the ROM's persistent last-loaded-DPLC residency before the
+     * first ordinary level iteration.
+     *
+     * <p>{@code InitPlayers} creates the player objects at
+     * docs/s2disasm/s2.asm:4945, i.e. before the title-card leave loop at
+     * docs/s2disasm/s2.asm:5060-5066 (WaitForVint / RunObjects / BuildSprites /
+     * RunPLC_RAM). That loop therefore runs {@code Sonic_Animate} and
+     * {@code LoadSonicDynPLC} with the players loaded, so
+     * {@code Sonic_LastLoadedDPLC} (docs/s2disasm/s2.asm:38829-38840) and
+     * {@code Tails_LastLoadedDPLC} (docs/s2disasm/s2.asm:41659-41690) already
+     * hold the displayed mapping frame when {@code Level_MainLoop} starts; they
+     * are cleared to -1 only on a character swap (docs/s2disasm/s2.asm:26039-26041).
+     * A headless load omits that presentation, so the first gameplay animation
+     * tick saw "no previous frame" and submitted a DMA transfer the ROM had
+     * already retired. Replaying the loop's own animation ticks, at the ROM's
+     * VBlank-then-RunObjects order (queue at s2.asm:1713, drain at s2.asm:1769),
+     * makes gameplay frame 0 submit exactly when the mapping frame really
+     * changed across the loop. S1 (docs/s1disasm/_incObj/01 Sonic.asm:2391-2398)
+     * and S3K (docs/skdisasm/sonic3k.asm:25216-25218) use the same predicate;
+     * they contribute no iterations unless their own init profile declares one.
+     */
+    private void replaySkippedPresentationPlayerAnimation(int iterations) {
+        if (iterations <= 0 || spriteManager == null) {
+            return;
+        }
+        List<AbstractPlayableSprite> playables = new ArrayList<>();
+        AbstractPlayableSprite main = spriteManager.getMainPlayable();
+        if (main != null) {
+            playables.add(main);
+        }
+        playables.addAll(spriteManager.getSidekicks());
+        if (playables.isEmpty()) {
+            return;
+        }
+        var dynamicArt = GameServices.dynamicArtLifecycleOrNull();
+        for (int frame = 0; frame < iterations; frame++) {
+            if (dynamicArt != null && dynamicArt.isRunActive()) {
+                dynamicArt.serviceProductionVBlank();
+            }
+            for (AbstractPlayableSprite playable : playables) {
+                playable.getAnimationManager().update(frame);
+            }
+        }
     }
 
     /**

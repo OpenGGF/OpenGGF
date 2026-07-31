@@ -34,6 +34,9 @@ import java.io.IOException;
  *      Design doc: Sonic 2 Level Init Profile (57 steps)</a>
  */
 public class Sonic2LevelInitProfile extends AbstractLevelInitProfile {
+    /** Fixed length of the s2.asm:5060-5066 title-card leave loop. */
+    private static final int TITLE_CARD_LEAVE_LOOP_FRAMES = 25;
+
     private final Sonic2LevelEventManager levelEventManager;
     private final Sonic2PlayerArtModeAuthority playerArtModeAuthority;
 
@@ -146,7 +149,18 @@ public class Sonic2LevelInitProfile extends AbstractLevelInitProfile {
         // (s2.asm:27587-27604), deleting itself on frame 25. A headless load omits
         // that presentation, so replay its PLC service here.
         SkippedPresentationPlcLifecycle.runIterations(
-                plcService, PlcLifecyclePhase.LEVEL_TITLE_CARD, 25);
+                plcService, PlcLifecyclePhase.LEVEL_TITLE_CARD,
+                TITLE_CARD_LEAVE_LOOP_FRAMES);
+    }
+
+    /**
+     * The 25-frame title-card leave loop (s2.asm:5060-5066) runs after
+     * InitPlayers (s2.asm:4945), so it is exactly the omitted presentation
+     * window in which the player objects animate and load their DPLCs.
+     */
+    @Override
+    public int skippedPresentationPlayableFrames() {
+        return TITLE_CARD_LEAVE_LOOP_FRAMES;
     }
 
     @Override

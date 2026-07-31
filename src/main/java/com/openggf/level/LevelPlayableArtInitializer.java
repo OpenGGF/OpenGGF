@@ -120,7 +120,7 @@ final class LevelPlayableArtInitializer {
                 renderer.setRenderContext(crossGame.getDonorRenderContext());
             }
             renderer.ensureCached(graphicsManager);
-            applyPlayableArt(playable, renderer, artSet);
+            applyPlayableArt(playable, renderer, artSet, false);
             initSpindashDust(playable);
             initTailsTails(playable, artSet);
             initSuperState(playable);
@@ -201,7 +201,7 @@ final class LevelPlayableArtInitializer {
                 sidekickRenderer.setRenderContext(crossGame.getDonorRenderContext());
             }
             sidekickRenderer.ensureCached(graphicsManager);
-            applyPlayableArt(sidekick, sidekickRenderer, sidekickArt);
+            applyPlayableArt(sidekick, sidekickRenderer, sidekickArt, true);
             initSpindashDust(sidekick);
             initTailsTails(sidekick, sidekickArt);
             if (sidekickPaletteCtx != null) {
@@ -215,10 +215,14 @@ final class LevelPlayableArtInitializer {
 
     private void applyPlayableArt(AbstractPlayableSprite playable,
                                   PlayerSpriteRenderer renderer,
-                                  SpriteArtSet artSet) {
+                                  SpriteArtSet artSet,
+                                  boolean sidekick) {
         playable.setSpriteRenderer(renderer);
         playable.getAnimationManager().setDynamicArtDecisionOwner(
-                createDynamicArtOwner(playable.getCode(), renderer));
+                sidekick && isSidekickSuppressed()
+                        ? null
+                        : createDynamicArtOwner(
+                                characterIdentity(playable.getCode()), renderer));
         playable.setMappingFrame(0);
         playable.setAnimationFrameCount(artSet.mappingFrames().size());
         playable.setAnimationProfile(artSet.animationProfile());
@@ -391,6 +395,52 @@ final class LevelPlayableArtInitializer {
         playable.setTailsTailsController(new TailsTailsController(
                 playable, tailsRenderer, isS3k,
                 createDynamicArtOwner("tails-tails", tailsRenderer)));
+    }
+
+    /**
+     * The ROM's player DPLC routines are keyed by the character whose art bank
+     * they own, not by a team slot: {@code LoadSonicDynPLC} stores through
+     * {@code Sonic_LastLoadedDPLC} into ArtTile_ArtUnc_Sonic
+     * (docs/s2disasm/s2.asm:38829-38840) and {@code LoadTailsDynPLC} through
+     * {@code Tails_LastLoadedDPLC} into ArtTile_ArtUnc_Tails
+     * (docs/s2disasm/s2.asm:41659-41690). S1 (docs/s1disasm/_incObj/01 Sonic.asm:2391-2398)
+     * and S3K (docs/skdisasm/sonic3k.asm:25216-25218) use the same
+     * changed-frame predicate against a per-character byte.
+     * <p>
+     * The engine names a CPU team slot {@code <character>_pN}, so the raw
+     * sprite code never matched the character-keyed owner set and the sidekick
+     * silently ran with no DPLC owner at all. Normalize the slot suffix away
+     * here only — art bank and VRAM base selection stay with the renderer, as
+     * the ROM's own 2P path retargets those via {@code Adjust2PArtPointer}.
+     */
+    private static String characterIdentity(String spriteCode) {
+        if (spriteCode == null) {
+            return null;
+        }
+        int slot = spriteCode.lastIndexOf("_p");
+        if (slot <= 0 || slot + 2 >= spriteCode.length()) {
+            return spriteCode;
+        }
+        for (int i = slot + 2; i < spriteCode.length(); i++) {
+            if (!Character.isDigit(spriteCode.charAt(i))) {
+                return spriteCode;
+            }
+        }
+        return spriteCode.substring(0, slot);
+    }
+
+    /**
+     * {@code InitPlayers} creates the sidekick object only where the ROM loads
+     * it (docs/s2disasm/s2.asm:5177-5198): zones that skip Obj02 never run
+     * {@code LoadTailsDynPLC} and so never queue a Tails DMA transfer. The
+     * engine still spawns a sidekick sprite for presentation, so ask the
+     * owning game module's existing sidekick-suppression predicate rather than
+     * attaching a DPLC owner that would submit art the ROM never submits.
+     */
+    private boolean isSidekickSuppressed() {
+        GameModule module = levelManager.gameModule;
+        return module != null
+                && module.isSidekickSuppressedForZone(levelManager.getCurrentZone());
     }
 
     private DynamicArtDecisionOwner createDynamicArtOwner(
