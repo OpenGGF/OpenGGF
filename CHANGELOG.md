@@ -3,6 +3,17 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Sonic 1's egg prison capsule now releases S1's own animal object
+  instead of the shared cross-game capsule animal, and no longer draws an extra
+  random number per released animal. `Pri_SpawnAnimals` writes only
+  `obX`/`obY`/`animal_prisondelay` into each freed slot and sets `v_bossstatus`
+  to 2 (`docs/s1disasm/_incObj/3E Prison Capsule.asm:141-166`); the animal's own
+  init then takes the `.fromPrison` branch and waits that many frames before
+  hopping out (`docs/s1disasm/_incObj/28, 29 Animals and Points.asm:181-200`,
+  `Anml_FromPrison` at :311-324). Since S1's animal object is the one that
+  requests animal art, the substitution skewed the S1 nemesis PLC busy window.
+  A non-zero `animal_prisondelay` is the ROM state that marks a capsule animal;
+  Sonic 2 and Sonic 3&K capsules keep the shared animal unchanged.
 - Fix: Sonic 2's level header secondary PLC is now serviced across the
   title-card leave loop instead of being left fully queued at level start.
   `Level:` calls `loadZoneBlockMaps` (`docs/s2disasm/s2.asm:20103-20110`) at

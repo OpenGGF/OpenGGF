@@ -54850,3 +54850,59 @@ Correction applied during verification: `PlcProducerRouteRegistry` still named
 the pre-rename `S2_LEVEL_SECONDARY` owner case, which failed
 `TestPlcProducerCoverageGuard`; the registry entry was updated to the new
 method name.
+
+## 2026-07-31 -- S1 egg-prison animals spawn the S1 animal object (GHZ3 nemesis-PLC busy)
+
+Worktree `<repo>/.worktrees/s1-ghz3-nemesis-busy-deep`,
+branch `bugfix/ai-s1-ghz3-nemesis-busy-deep`, on top of `0a35d0b49`.
+
+Root cause: `Sonic1EggPrisonObjectInstance` spawned the shared
+`EggPrisonAnimalInstance` (the S2/S3K capsule animal) instead of S1's own
+`Sonic1AnimalsObjectInstance`, and drew an extra RNG word per animal that the
+ROM never draws. `Pri_SpawnAnimals` only writes `obX`/`obY`/
+`animal_prisondelay` into the freed slot and sets `v_bossstatus` to 2
+(`docs/s1disasm/_incObj/3E Prison Capsule.asm:141-166`); the animal's own
+`Anml_FromEnemy` init then takes the `.fromPrison` branch off `v_bossstatus`
+and advances to `Anml_FromPrison` routine $12
+(`docs/s1disasm/_incObj/28, 29 Animals and Points.asm:181-200`,
+`Anml_FromPrison` at :311-324). Because S1's animal object is the one that
+requests animal art, using the shared class skewed the S1 nemesis PLC busy
+window by a frame. A non-zero `animal_prisondelay` is now the ROM state that
+marks a capsule animal -- no zone, route, frame or game-name branch, and
+`EggPrisonAnimalInstance` itself is untouched, so S2 and S3K capsules are
+unaffected.
+
+Commands (all with `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1
+-DreuseForks=true "-Ds1.rom.path=.../s1.gen"`, after `mvn -q -Dmse=relaxed clean`):
+
+1. `-Dtest=TestS1Ghz3CompleteRunTraceReplay,TestS1Ghz1TraceReplay,TestS1Mz1TraceReplay,TestS1Ghz1CompleteRunTraceReplay,TestS1Ghz2CompleteRunTraceReplay,TestS1Mz1CompleteRunTraceReplay`
+2. `-Dtest=TestS1Credits00Ghz1TraceReplay,...,TestS1Credits07Ghz1bTraceReplay,TestTraceReplayInvariantGuard,TestTraceReplayReferenceClosureGuard,TestRewindCoverageGuard,TestStaticStateRewindCoverageGuard,TestSonic1PlcProducerCoverage,TestPlcProducerCoverageGuard,TestDynamicArtDiagnosticsComparator`
+3. `-Ds2.rom.path=.../s2.gen -Ds3k.rom.path=.../s3k.gen -Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`
+
+GREENED (0).
+
+ADVANCED (1):
+
+| Trace | Before | After |
+|---|---|---|
+| `TestS1Ghz3CompleteRunTraceReplay` | 9182 -- `queue.s1_nemesis_plc.busy` (5 errors) | 9183 -- `queue.s1_nemesis_plc.busy` (5 errors) |
+
+The before frame was measured on a detached baseline worktree at `0a35d0b49`
+with the same command, not taken from a fix report.
+
+UNMOVED (0 failing). Already green and still green in run 1:
+`TestS1Ghz1TraceReplay`, `TestS1Mz1TraceReplay`,
+`TestS1Ghz1CompleteRunTraceReplay`, `TestS1Ghz2CompleteRunTraceReplay`,
+`TestS1Mz1CompleteRunTraceReplay`.
+
+Guards and credits traces, all green (run 2): the eight
+`TestS1Credits0*TraceReplay` classes, `TestTraceReplayInvariantGuard` (10),
+`TestTraceReplayReferenceClosureGuard` (14), `TestRewindCoverageGuard`,
+`TestStaticStateRewindCoverageGuard`, `TestSonic1PlcProducerCoverage` (16),
+`TestPlcProducerCoverageGuard` (4), `TestDynamicArtDiagnosticsComparator` (15).
+
+Cross-game shared surface, all green (run 3, 52 tests):
+`TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
+`TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`.
+
+No `REGRESSION INTRODUCED:` lines.

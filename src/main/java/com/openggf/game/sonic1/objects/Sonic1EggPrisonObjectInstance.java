@@ -6,7 +6,6 @@ import com.openggf.camera.Camera;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
-import com.openggf.level.objects.EggPrisonAnimalInstance;
 import com.openggf.level.objects.ExplosionObjectInstance;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
@@ -311,12 +310,15 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
         for (int i = 0; i < INITIAL_ANIMAL_COUNT; i++) {
             final int fXOffset = xOffset;
             final int fDelay = delay;
+            // Pri_SpawnAnimals only writes obX/obY/animal_prisondelay into the new
+            // slot; it draws no random number. The animal's OWN Anml_FromEnemy init
+            // calls RandomNumber on its first execution frame
+            // (3E Prison Capsule.asm:152-160; 28, 29 Animals and Points.asm:171-176).
             spawnFreeChild(() -> {
                 ObjectSpawn animalSpawn = new ObjectSpawn(
                         baseX + fXOffset, baseY,
                         0x28, 0, 0, false, 0);
-                return new EggPrisonAnimalInstance(
-                        animalSpawn, fDelay, services().rng().nextBits(1));
+                return new Sonic1AnimalsObjectInstance(animalSpawn, 0, fDelay);
             });
 
             xOffset += INITIAL_ANIMAL_X_OFFSET_STEP;
@@ -337,6 +339,8 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
         final int baseY = spawn.y();
 
         // ROM: jsr (RandomNumber).l / andi.w #$1F,d0 / subq.w #6,d0
+        // Exactly one RandomNumber call here; the animal's own init draws again
+        // (3E Prison Capsule.asm:174-181).
         int random = services().rng().nextWord();
         int randomOffset = (random & 0x1F) - 6;
         // ROM: tst.w d1 / bpl.s + / neg.w d0
@@ -349,13 +353,12 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
             ObjectSpawn animalSpawn = new ObjectSpawn(
                     baseX + fOffset, baseY,
                     0x28, 0, 0, false, 0);
-            return new EggPrisonAnimalInstance(
-                    animalSpawn, SPAWN_ANIMAL_DELAY, services().rng().nextBits(1));
+            return new Sonic1AnimalsObjectInstance(animalSpawn, 0, SPAWN_ANIMAL_DELAY);
         });
     }
 
     /**
-     * Checks if any EggPrisonAnimalInstance objects remain active.
+     * Checks if any Sonic1AnimalsObjectInstance objects remain active.
      * ROM: Pri_EndAct loop through object RAM for id_Animals.
      */
     private boolean areAnimalsPresent() {
@@ -365,7 +368,7 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
         }
 
         for (var obj : objectManager.getActiveObjects()) {
-            if (obj instanceof EggPrisonAnimalInstance animal
+            if (obj instanceof Sonic1AnimalsObjectInstance animal
                     && !obj.isDestroyed()
                     && releasedEndActScansSlot(animal.getSlotIndex())) {
                 return true;
