@@ -168,6 +168,8 @@ public class TornadoObjectInstance extends AbstractObjectInstance
 
     private int routine;
     private int routineSecondary;
+    /** ROM {@code routine == 0}: {@code ObjB2_Init} has not executed yet. */
+    private boolean initRoutinePending;
 
     private int currentX;
     private int currentY;
@@ -232,7 +234,13 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         this.currentY = spawn.y();
         syncFixedFromPosition();
 
-        // ROM init: routine = subtype - $4E
+        // ROM init: routine = subtype - $4E (ObjB2_Init, docs/s2disasm/s2.asm:78799-78813).
+        // A freshly allocated SST slot has routine 0, so ROM spends the object's
+        // first executed frame in ObjB2_Init and only reaches the main routine on
+        // the next frame. This flag is that routine-0 state; the derived routine is
+        // stored up front so lifecycle classification (persistence, priority) sees
+        // the object's real kind from the moment it is created.
+        this.initRoutinePending = true;
         this.routine = Math.max(0, subtype - 0x4E);
         this.routineSecondary = 0;
         this.mappingFrame = 0;
@@ -356,15 +364,13 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * Compensates for the engine collapsing ROM's two-frame ObjB2 init
-     * (outer {@code ObjB2_Init} + inner {@code ObjB2_Main_WFZ_Start_init}, both
-     * no-move; s2.asm:78271-78284 and 78368-78372) into a single engine init
-     * frame. During the 26-frame S2 title-card object prelude, ROM consumes
-     * two of those frames on init and runs 24 main-routine moves; the engine
-     * runs 25 main moves, leaving {@link #scriptTimer} one less than the ROM's
-     * frame-(-1) snapshot value. This method restores parity by incrementing
-     * the timer back by one, so the WFZ_Start_main transition fires on the
-     * same trace frame as ROM (s2.asm:78375-78394).
+     * Compensates for the engine collapsing the inner
+     * {@code ObjB2_Main_WFZ_Start} {@code routine_secondary} init step
+     * (s2.asm:78879-78893, 78896-78902) into a single engine init frame. During
+     * the S2 title-card object prelude ROM runs one fewer main-routine move than
+     * the engine, leaving {@link #scriptTimer} one less than the ROM's
+     * frame-(-1) snapshot value. This restores parity so the WFZ_Start_main
+     * transition fires on the same trace frame as ROM (s2.asm:78903-78924).
      *
      * <p>Only relevant for the WFZ_START routine; SCZ_MAIN does not use a
      * {@code routine_secondary} init step and has no timer to compensate.
@@ -373,6 +379,37 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         if (routine == ROUTINE_WFZ_START && routineSecondary == 2) {
             scriptTimer++;
         }
+    }
+
+    /**
+     * {@code ObjB2_Init} (docs/s2disasm/s2.asm:78799-78813). The object's first
+     * executed frame runs the routine-0 entry only: it derives
+     * {@code routine = subtype - $4E}, applies the {@code Player_mode == 2}
+     * mapping/animation patch, then tail-jumps to {@code DisplaySprite}. No main
+     * routine body — and therefore no {@code ObjB2_Animate_Pilot} tick — runs on
+     * that frame, so the pilot's 9-frame DPLC cadence starts one frame after the
+     * object appears.
+     *
+     * @return {@code true} when this frame was consumed by the init routine.
+     */
+    private boolean runPendingInitRoutine() {
+        if (!initRoutinePending) {
+            return false;
+        }
+        initRoutinePending = false;
+
+        // cmpi.w #2,(Player_mode).w / cmpi.b #8,d0 / bhs — the mapping patch
+        // applies only to the visible plane routines below $8 (s2.asm:78805-78811).
+        if (routine < ROUTINE_INVISIBLE_GRABBER
+                && com.openggf.game.session.ActiveGameplayTeamResolver
+                        .resolvePlayerCharacter(services().configuration())
+                        == com.openggf.game.PlayerCharacter.TAILS_ALONE) {
+            mappingFrame = 4;
+            animId = 1;
+        }
+        // jmpto JmpTo45_DisplaySprite (s2.asm:78812-78813).
+        renderThisFrame = true;
+        return true;
     }
 
     // ------------------------------------------------------------------------
@@ -451,9 +488,24 @@ public class TornadoObjectInstance extends AbstractObjectInstance
      * 79536-79556). An iteration that reproduces only the player-side effects
      * still owes the pilot its tick, or the whole 9-frame cadence -- and the
      * dynamic-art submissions it drives -- stays that many frames late.
+     *
      */
     public void advanceOmittedPresentationPilotFrame() {
         animatePilot();
+    }
+
+    /**
+     * Consumes the object's routine-0 frame ({@code ObjB2_Init},
+     * docs/s2disasm/s2.asm:78799-78813) for a level-load-present Tornado whose
+     * first execution happened during the title-card object prelude, before the
+     * first replayed object pass. The init frame reaches no main routine and so
+     * owes no {@code ObjB2_Animate_Pilot} tick; without this the first replayed
+     * pass would spend itself on init and start the pilot cadence a frame late.
+     * A Tornado spawned mid-level by the object-position loader keeps its init
+     * frame and runs it on its own first pass.
+     */
+    public void consumePendingInitRoutine() {
+        initRoutinePending = false;
     }
 
     @Override
@@ -462,6 +514,10 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         renderThisFrame = false;
         solidActive = false;
         highPriority = false;
+
+        if (runPendingInitRoutine()) {
+            return;
+        }
 
         switch (routine) {
             // ObjB2_Animate_Pilot is the first instruction of each of these three

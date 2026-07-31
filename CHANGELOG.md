@@ -3,6 +3,19 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Sonic 2's Tornado (ObjB2) now spends its first executed frame in the ROM
+  routine-0 entry. A freshly allocated SST slot has `routine == 0`, so ROM runs
+  `ObjB2_Init` (`docs/s2disasm/s2.asm:78799-78813`) — `LoadSubObject`,
+  `routine = subtype - $4E`, the `Player_mode == 2` mapping/anim patch, then
+  `jmpto JmpTo45_DisplaySprite` — and reaches no main routine on that frame. The
+  engine derived the routine in the constructor instead, so the WFZ finale
+  Tornado (`ObjB2_Main_WFZ_End`, `docs/s2disasm/s2.asm:78951-78952`) reached
+  `ObjB2_Animate_Pilot` (`docs/s2disasm/s2.asm:79537-79564`) a frame early and
+  every Tails-bank DPLC submission the pilot drives landed a frame early for the
+  rest of the run — the pilot being the only Tails-bank submitter in WFZ, since
+  `InitPlayers` omits Obj02 there (`docs/s2disasm/s2.asm:5177-5198`). Takes
+  `TestS2WfzLevelSelectTraceReplay` from 5804 errors at frame 10447 to 3 at
+  frame 16426.
 - Fix: Sonic 2's OOZ oil surface (Obj07) now executes in the reserved
   object-RAM band, after the player object slots and before every dynamic level
   object. ROM aliases `Oil` onto `WaterSurface1` between the player slots and

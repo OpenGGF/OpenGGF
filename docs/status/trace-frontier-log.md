@@ -56005,3 +56005,120 @@ resolve about 350 and 40 lines earlier than those labels in the local
 disassembly checkout. That skew is pre-existing and consistent with line numbers
 in already-committed entries of this log, so it was left alone rather than
 churned here; the labels themselves are correct.
+
+## 2026-07-31 — S2 WFZ: the Tornado's ObjB2_Init frame
+
+Branch `bugfix/ai-s2-wfz-last-straggler` (worktree `.worktrees/s2-wfz-last-straggler`),
+off `bugfix/ai-trace-s1-titlecard-plc-integration`. JDK 21.
+
+Command (`mvn -q -Dmse=relaxed clean` and `rm -rf target/surefire-reports`
+before each measurement):
+
+```
+mvn -Dmse=off -DfailIfNoSpecifiedTests=false -Ds2.rom.path=<s2 rom> \
+  -Dtest='TestS2WfzLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2Ehz1TraceReplay' test
+```
+
+BEFORE:
+
+- `TestS2WfzLevelSelectTraceReplay` — FAIL. `Totals: 5804 errors, 0 warnings.
+  First error: frame 10447 -- dynamic_art.edge[1].present mismatch
+  (expected=false, actual=true)`
+- `TestS2SczLevelSelectTraceReplay` — PASS (`Tests run: 1, Failures: 0, Errors: 0`)
+- `TestS2DezEndingLevelSelectTraceReplay` — PASS (`Tests run: 1, Failures: 0, Errors: 0`)
+
+AFTER:
+
+- `TestS2WfzLevelSelectTraceReplay` — FAIL. `Totals: 3 errors, 0 warnings.
+  First error: frame 16426 -- dynamic_art.edges mismatch
+  (expected=[10693, 10694], actual=[10693])`. All three residual errors are the
+  same single missing edge on the trace's final frame 16426
+  (`dynamic_art.edges`, `dynamic_art.outstanding_transfer_ids`,
+  `dynamic_art.edge[1].present`) — a distinct end-of-trace defect.
+- `TestS2SczLevelSelectTraceReplay` — PASS (`Tests run: 1, Failures: 0, Errors: 0`)
+- `TestS2DezEndingLevelSelectTraceReplay` — PASS (`Tests run: 1, Failures: 0, Errors: 0`)
+- `TestS2Ehz1TraceReplay` — PASS (`Tests run: 1, Failures: 0, Errors: 0`)
+
+Cause: `ObjB2` (the Tornado) never consumed its ROM routine-0 frame. A freshly
+allocated SST slot has `routine == 0`, so ROM spends the object's first executed
+frame in `ObjB2_Init` (`docs/s2disasm/s2.asm:78799-78813` — `LoadSubObject`,
+`routine = subtype - $4E`, the `Player_mode == 2` mapping/anim patch, then
+`jmpto JmpTo45_DisplaySprite`), reaching no main routine. The engine derived the
+routine in the constructor, so the WFZ finale Tornado (subtype $54,
+`ObjB2_Main_WFZ_End`, `docs/s2disasm/s2.asm:78951-78952`) reached
+`ObjB2_Animate_Pilot` (`docs/s2disasm/s2.asm:79537-79564`) one frame early and
+every Tails-bank DPLC submission it drives landed one frame early for the rest
+of the run. The pilot is the only Tails-bank submitter in WFZ because
+`InitPlayers` omits Obj02 there (`docs/s2disasm/s2.asm:5177-5198`).
+
+Fix: `TornadoObjectInstance` models the routine-0 frame explicitly and consumes
+it on the object's first `update()`. Tornados already present at level load have
+that frame inside the title-card object prelude the trace bootstrap replays, so
+the prelude consumes it there instead.
+
+No REGRESSION INTRODUCED lines. Unrelated pre-existing failures left alone:
+`TestS2ArzLevelSelectTraceReplay` (3 errors, first error frame 5072) and
+`TestS2Cnz2LevelSelectTraceReplay` (46 errors, first error frame 10935) — same
+end-of-run missing-edge shape, neither zone has a Tornado.
+`TestTornadoObjectInstance` and `TestWfzTornadoThrusterRendering` report the same
+6 pre-existing `ActiveGameplayTeamResolver` NPE errors before and after
+(measured on a reverted tree).
+
+Citations corroborated against the local `docs/s2disasm/s2.asm`: `ObjB2_Index`
+78788, `ObjB2_Init` 78799, `ObjB2_Main_SCZ` 78815, `ObjB2_Main_WFZ_Start` 78879,
+`ObjB2_Main_WFZ_End` 78951, `ObjB2_Animate_Pilot` 79537, `Tails_pilot_frames`
+79575 — all verified by label line number, not just by label.
+
+### 2026-07-31 — independent verification of the ObjB2_Init frame fix
+
+Re-measured on branch `bugfix/ai-s2-wfz-last-straggler` (worktree
+`.worktrees/s2-wfz-last-straggler`), with the BEFORE run taken in a detached
+worktree at the branch's parent commit. JDK 21 (`mvn -v` reports 21.0.11).
+`mvn -q -Dmse=relaxed clean` and `rm -rf target/surefire-reports` before each run.
+
+Family command:
+
+```
+mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true -Ds2.rom.path=<s2 rom> \
+  -Dtest=TestS2WfzLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay test
+```
+
+| Trace | Before | After | Verdict |
+|---|---|---|---|
+| `TestS2WfzLevelSelectTraceReplay` | `Totals: 5804 errors, 0 warnings. First error: frame 10447 -- dynamic_art.edge[1].present mismatch (expected=false, actual=true)` | `Totals: 3 errors, 0 warnings. First error: frame 16426 -- dynamic_art.edges mismatch (expected=[10693, 10694], actual=[10693])` | advanced |
+| `TestS2SczLevelSelectTraceReplay` | `Tests run: 1, Failures: 0, Errors: 0` | `Tests run: 1, Failures: 0, Errors: 0` | unmoved (already green) |
+| `TestS2DezEndingLevelSelectTraceReplay` | `Tests run: 1, Failures: 0, Errors: 0` | `Tests run: 1, Failures: 0, Errors: 0` | unmoved (already green) |
+| `TestS2OozLevelSelectTraceReplay` | `Totals: 4 errors, 0 warnings. First error: frame 11018 -- dynamic_art.edges mismatch (expected=[19789, 19790, 19791], actual=[19789])` | identical | unmoved (pre-existing, unrelated) |
+
+No REGRESSION INTRODUCED lines.
+
+Green regression guard — all 19 classes `Failures: 0, Errors: 0`
+(`TestS2DezEndingLevelSelectTraceReplay`, `TestS2SczLevelSelectTraceReplay`,
+`TestS2Ehz1TraceReplay`, `TestS2MczLevelSelectTraceReplay`,
+`TestS2Mtz2LevelSelectTraceReplay`, `TestS1Ghz1TraceReplay`,
+`TestS1Mz1TraceReplay`, `TestS1Ghz1CompleteRunTraceReplay`,
+`TestS1Ghz2CompleteRunTraceReplay`, `TestS1Mz1CompleteRunTraceReplay`,
+`TestS1Credits00Ghz1TraceReplay`, `TestS1Credits07Ghz1bTraceReplay`,
+`TestTraceReplayInvariantGuard`, `TestTraceReplayReferenceClosureGuard`,
+`TestHardwareTimingAuthorityGuard`, `TestRewindCoverageGuard`,
+`TestStaticStateRewindCoverageGuard`, `TestPlcProducerCoverageGuard`,
+`TestDynamicArtDiagnosticsComparator`).
+
+Cross-game parity (shared DPLC surface) — all green: `TestS3kAiz1SkipHeadless`
+(8), `TestSonic3kLevelLoading` (6 + 30), `TestSonic3kBootstrapResolver` (5),
+`TestSonic3kDecodingUtils` (3).
+
+`TestTornadoObjectInstance` reports `Tests run: 28, Failures: 0, Errors: 5`
+identically before and after — pre-existing `ActiveGameplayTeamResolver` NPEs
+from a mocked configuration service, not a regression.
+
+Citation audit: every disassembly line cited by the fix was re-checked by line
+number against the local `docs/s2disasm/s2.asm` and all are exact —
+`InitPlayers` 5177, `ObjB2_Index` 78788, `ObjB2_Init` 78799 (body 78800-78813,
+`Player_mode` patch 78805-78811), `ObjB2_Main_SCZ` 78815, `ObjB2_Main_WFZ_Start`
+78879, `ObjB2_Main_WFZ_Start_init` 78896, `ObjB2_Main_WFZ_Start_main` 78903,
+`ObjB2_Main_WFZ_End` 78951, `ObjB2_Animate_Pilot` 79537, `Tails_pilot_frames`
+79575. Two stale ranges carried over from an older comment on
+`compensateForCollapsedWfzInit` (78271-78284 / 78368-78372 / 78375-78394 pointed
+at ObjB0 Sega-screen scaling code) were corrected to 78879-78893 / 78896-78902 /
+78903-78924 during verification.

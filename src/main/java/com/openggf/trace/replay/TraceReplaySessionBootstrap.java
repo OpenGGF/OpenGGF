@@ -699,12 +699,21 @@ public final class TraceReplaySessionBootstrap {
                 // prelude length is one frame longer.
                 if (i > 0) {
                     tornado.advanceOmittedPresentationPilotFrame();
+                } else {
+                    // The skipped first iteration is ObjB2's routine-0 frame
+                    // (ObjB2_Init, docs/s2disasm/s2.asm:78799-78813), which
+                    // reaches no main routine and so ticks no pilot.
+                    tornado.consumePendingInitRoutine();
                 }
             }
             player.setCentreY((short) (startY + 4));
             return yOffsets.length;
         }
         if (tornado.isWfzStartRideStartPreludeObject()) {
+            // This lead-in stands in for object-prelude iterations the ROM ran,
+            // the first of which is ObjB2's routine-0 frame (ObjB2_Init,
+            // docs/s2disasm/s2.asm:78799-78813).
+            tornado.consumePendingInitRoutine();
             for (int i = 0; i < 2; i++) {
                 player.setAir(true);
                 player.setOnObject(false);
