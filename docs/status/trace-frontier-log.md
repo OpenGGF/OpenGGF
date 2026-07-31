@@ -56433,3 +56433,54 @@ so only isolated re-measurements were treated as authoritative.
 
 Residual on CNZ2: the `f10976-11012` Nemesis PLC one-frame-early cluster (8 errors) is a
 separate defect, not addressed here.
+
+### Independent verification — S2 CNZ2 mid-V-int dynamic-art row
+
+Verified on branch `bugfix/ai-s2-cnz2-outstanding` at commit `9647d4f0`, with the base
+measured in a throwaway detached worktree at the parent commit `0ee591e7`. Every run was
+preceded by `mvn -Dmse=relaxed clean` and `rm -rf target/surefire-reports`.
+
+Affected-family command (both base and fix):
+
+```
+mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=<s2>" \
+  "-Dtest=TestS2Cnz2LevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,\
+TestS2Mcz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,\
+TestS2SczLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay" test
+```
+
+| Trace | Before | After |
+|---|---|---|
+| `TestS2Cnz2LevelSelectTraceReplay` | 41 errors, frame 10935 `dynamic_art.edges` | 8 errors, frame 10976 `queue.s2_nemesis_plc.busy` (advanced) |
+| `TestS2CnzLevelSelectTraceReplay` | pass | pass (unmoved, already green) |
+| `TestS2Mcz2LevelSelectTraceReplay` | pass | pass (unmoved, already green) |
+| `TestS2Htz2LevelSelectTraceReplay` | pass | pass (unmoved, already green) |
+| `TestS2SczLevelSelectTraceReplay` | pass | pass (unmoved, already green) |
+| `TestS2DezEndingLevelSelectTraceReplay` | pass | pass (unmoved, already green) |
+
+Raw surefire lines — base: `Tests run: 6, Failures: 1, Errors: 0, Skipped: 0` /
+`Totals: 41 errors, 0 warnings. First error: frame 10935 -- dynamic_art.edges mismatch
+(expected=[20946, 20947], actual=[])`. Fix: `Tests run: 6, Failures: 1, Errors: 0,
+Skipped: 0` / `Totals: 8 errors, 0 warnings. First error: frame 10976 --
+queue.s2_nemesis_plc.busy mismatch (expected=false, actual=true)`.
+
+Green regression guard (26 classes: the S2 ARZ/ARZ2/CPZ/EHZ1/HTZ/MCZ/MTZ/MTZ2/OOZ/OOZ2/WFZ
+traces, the S1 GHZ1/MZ1/complete-run/credits traces, and the trace-invariant,
+reference-closure, hardware-timing-authority, rewind-coverage, static-state-rewind,
+PLC-producer-coverage, dynamic-art-comparator and PLC-lifecycle-coordinator guards):
+`Tests run: 95, Failures: 0, Errors: 0`.
+
+Cross-game parity (shared PLC/DPLC surface), all three ROMs supplied:
+`TestS3kAiz1SkipHeadless` 8/0/0, `TestSonic3kLevelLoading` 30/0/0 and 6/0/0,
+`TestSonic3kBootstrapResolver` 5/0/0, `TestSonic3kDecodingUtils` 3/0/0.
+
+No REGRESSION INTRODUCED.
+
+Disassembly line numbers re-checked against the local trees rather than trusting the
+labels: `s2.asm:483-484` (`tst.b (Vint_routine).w` / `beq.w Vint_Lag`), `:507` `VintRet`
+with the `addq.l #1,(Vint_runcount).w` on `:508`, `:529` `Vint_Lag`, `:698` `Vint_Level`,
+`:781` `bsr.w ProcessDMAQueue`, `:1705` the "to be issued the next time ProcessDMAQueue is
+called" queue-add comment, `:1770` `ProcessDMAQueue`, and `sonic.asm:709` `VBlank_Lag` —
+all exact, no skew. The change keys on the recorded V-blank-starved row shape, not on a
+zone, frame, route or game name, and only defers or releases servicing of work the engine
+had already submitted.
