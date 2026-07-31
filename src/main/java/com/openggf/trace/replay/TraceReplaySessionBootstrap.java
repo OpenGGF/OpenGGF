@@ -246,17 +246,19 @@ public final class TraceReplaySessionBootstrap {
         int zoneFeaturePreludeFrames =
                 TraceReplayBootstrap.zoneFeatureTitleCardPreludeFramesForTraceReplay(trace);
         var gameplayMode = fixture.gameplayMode();
-        // Complete-run segments restore state that already represents the
-        // production setup pass. Their reset/restore/dispatch envelope is not
-        // a replay prelude knob and must not consume fresh-load authority.
         boolean representedS3kCompleteRun =
                 TraceReplayBootstrap.isS3kCompleteRunSegment(trace);
-        if (representedS3kCompleteRun
-                && gameplayMode != null
-                && gameplayMode.getLevelManager() != null) {
-            gameplayMode.getLevelManager()
-                    .discardPendingInitialProcessSpritesForStateRestoration();
-        }
+        // The level's own Load_Sprites/Process_Sprites setup pass
+        // (Level loc_6468, sonic3k.asm:7849-7860) is NOT discarded here for any
+        // trace. It runs below, in bootstrap, before the first driven frame --
+        // see the consumePendingInitialProcessSpritesPass call at the end of
+        // this method. That placement is the whole model: the pass precedes
+        // LevelLoop, so it performs no Wait_VSync, no Read_Joypads and no
+        // addq.w #1,(Level_frame_counter).w (that increment lives inside
+        // LevelLoop at sonic3k.asm:7888-7894). It must therefore spend neither
+        // a recorded controller row nor a frame-counter tick, and recorded row
+        // 0 -- which reads Level_frame_counter == 1 on every segment -- anchors
+        // to the first LevelLoop frame, the first frame the driver steps.
         if (gameplayMode != null
                 && gameplayMode.getLevelManager() != null
                 && gameplayMode.getLevelManager().getObjectManager() != null) {
@@ -403,6 +405,13 @@ public final class TraceReplaySessionBootstrap {
                     fixture != null ? fixture.sprite() : null);
         }
         primeLeaderJumpEdgeFromBk2Prelude(fixture);
+        // Execute the level setup pass (Sonic_Init/Tails_Init dispatch) here,
+        // uniformly for every trace, and here only. Running it in bootstrap
+        // rather than as a driven frame is what keeps it off the BK2 row and
+        // frame-counter budget; the first frame the driver then steps is the
+        // ROM's first LevelLoop iteration, which is recorded row 0. Nothing
+        // about this decision reads the fixture, its metadata, the zone, or the
+        // frame index.
         if (gameplayMode != null && gameplayMode.getLevelManager() != null) {
             gameplayMode.getLevelManager().consumePendingInitialProcessSpritesPass();
         }

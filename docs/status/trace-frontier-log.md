@@ -55390,3 +55390,64 @@ MHZ stays at **601**; nothing landed this round.
   back to its documented baseline. Command:
   `mvn -Ptrace-replay -Dmse=off -Dtest=TestS3kAizTraceReplay -Ds3k.rom.path=s3k.gen test`.
 
+
+## 2026-07-31 - S3K setup pass modelled as a pre-LevelLoop bootstrap step
+
+- Main checkout, branch `bugfix/ai-s3k-mhz-queue-frontier`, over the revert
+  commit from the previous entry.
+- Model: the level's `Load_Sprites`/`Process_Sprites` pass (Level loc_6468,
+  sonic3k.asm:7849-7860) executes once during `applyBootstrap`, before any
+  frame is driven, for **every** trace. It therefore spends no BK2 controller
+  row and no frame-counter tick, matching a pass that precedes `LevelLoop` and
+  so runs no `Wait_VSync`, no `Read_Joypads`, and no
+  `addq.w #1,(Level_frame_counter).w` (sonic3k.asm:7888-7894). The first frame
+  the driver steps is the ROM's first `LevelLoop` iteration, which is recorded
+  row 0 — consistent with row 0 reading `Level_frame_counter == 1` on every
+  segment.
+- The change is the removal of the S3K-complete-run-only
+  `discardPendingInitialProcessSpritesForStateRestoration()` call in
+  `TraceReplaySessionBootstrap.applyBootstrap`. The remaining
+  `consumePendingInitialProcessSpritesPass()` call was already unconditional,
+  so the rule is now uniform and derived from engine-owned lifecycle state
+  alone: no fixture field, metadata capability, zone id, frame index, or
+  per-segment property is consulted. The bonus-stage discard at
+  `applyBonusStageEntry` is unrelated and unchanged — it reconstructs a
+  represented pass rather than choosing an anchor.
+- Command (all seven, ROM `s3k.gen`):
+  `mvn -Ptrace-replay -Dmse=off -Dtest='TestS3k{Aiz,Cnz,Hcz,Icz,Lbz,Mgz,Mhz}CompleteRunTraceReplay' -Ds3k.rom.path=s3k.gen test`.
+  All seven still abort on the recorded Kos-decompression-queue completion
+  assertion, so every count below is a partial segment.
+
+| Segment | frames now | non-queue now | frames (state A) | non-queue (state A) | non-queue (state D) |
+|---|---|---|---|---|---|
+| AIZ | 63 | 0 | 64 | 0 | 0 |
+| HCZ | 1320 | 838 | 1320 | 507 | 999 |
+| MGZ | 14629 | 5002 | 14629 | 128 | 5141 |
+| CNZ | 5336 | 1638 | 5336 | 1665 | 1544 |
+| ICZ | 1629 | 273 | 1629 | 81 | 273 |
+| LBZ | 35 | 16 | 35 | 0 | 16 |
+| MHZ | 7218 | 1885 | 7218 | 601 | n/a (D reached 301) |
+
+- State A is the two-hack lineage at `79f1d5ecf`, re-measured here rather than
+  quoted, and it reproduced exactly. Frame counts are identical to state A on
+  six of seven segments; AIZ drives 63 instead of 64. **No count below
+  improved because a segment aborted earlier.**
+- Against the ROM-consistent state D this model improves HCZ 999 -> 838 and
+  MGZ 5141 -> 5002, regresses CNZ 1544 -> 1638, leaves AIZ/ICZ/LBZ unchanged,
+  and takes MHZ from 301 driven frames to the full 7218 with 1885 non-queue
+  divergences.
+- Against state A the raw counts are worse on five segments. That is expected
+  and is not a lost frontier: state A's MGZ 128 and MHZ 601 were products of
+  the frame-phase misalignment removed in the previous entry.
+- `TestS3kAizTraceReplay`: 16 tests, 4 failures, 1 error — unchanged from the
+  documented baseline, as expected for a non-complete-run trace.
+- Guards green: `TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading` (both
+  classes), `TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils` — 52
+  tests, 0 failures. Also green: `TestS3kInitialObjectSetupLifecycle`,
+  `TestHardwareTimingAuthorityGuard`, `TestLevelFrameHardwareTimingBoundaries`,
+  `TestRecordingFrameDriverHardwareTiming` — 52 tests, 0 failures.
+- Open: the frame-0 `y_speed 0x0038` / `y_sub 0x3800` divergence on MGZ, CNZ
+  and MHZ persists. The bootstrap setup pass still applies a frame of gravity
+  that `Sonic_Init` (sonic3k.asm:21902-21943, `routine += 2` then `rts`) does
+  not. That is an engine-side modelling gap in the initial-assembly dispatch,
+  not an anchoring question, and is the next thing to fix.
