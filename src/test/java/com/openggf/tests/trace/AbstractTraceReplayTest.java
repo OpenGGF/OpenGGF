@@ -362,6 +362,7 @@ public abstract class AbstractTraceReplayTest {
                     TraceFrame previous = i > 0 ? trace.getFrame(i - 1) : null;
                     TraceExecutionPhase phase =
                         TraceReplayBootstrap.phaseForReplay(trace, previous, expected);
+                    TraceReplayBootstrap.markVblankStarvedIterationForReplay(previous, expected);
                     int validationTraceIndex = i;
                     bk2Input = TraceReplayFrameClosureDriver.driveGeneral(
                             phase,
@@ -671,6 +672,8 @@ public abstract class AbstractTraceReplayTest {
             fixture.beginTraceRow(driveTraceIndex, driveFrame.frame());
             TraceExecutionPhase phase =
                     TraceReplayBootstrap.phaseForReplay(trace, previousDriveFrame, driveFrame);
+            TraceReplayBootstrap.markVblankStarvedIterationForReplay(
+                    previousDriveFrame, driveFrame);
             int validationTraceIndex = driveTraceIndex;
             int bk2Input = TraceReplayFrameClosureDriver.driveS3k(
                     phase,
