@@ -55032,3 +55032,34 @@ already has an `updateFixedInLevelObjects()` hook that may be the correct owner
 for it, matching ROM's fixed-slot execution.
 
 **MHZ this session:** 1888 -> 601 non-queue groups; queue frontier raw 36 -> 7218.
+
+### 2026-07-31 — pollen-spawner RNG fix validated but 1-2 frames early; not landed
+
+Acting on the previous entry: re-asserting `installFixedDynamicObjects` from
+`updateFixedInLevelObjects()` (where the existing `alreadyInstalled` guard makes
+it a no-op once present) does make `MhzPollenSpawnerInstance` execute, and the
+engine's RNG stream comes alive.
+
+**The sequence is exactly right.** Comparing the engine seed against the
+fixture's per-frame `rng_seed`, the produced values match ROM's one for one —
+`6037B943`, `14A7ABBB`, `CFCD80F3`, ... — confirming both the consumer
+(`sub_3DA24`'s per-grounded-player `Random_Number`, sonic3k.asm:81633-81643)
+and the engine's own `GameRng` advance are faithful.
+
+**But it starts 1-2 frames early**, so the whole stream is phase-shifted rather
+than aligned: only 221 of 3301 frames match, and MHZ regresses **601 -> 982**
+non-queue groups. A shifted stream is worse here than the frozen one, so the
+change was reverted rather than landed; MHZ is back at 601.
+
+The residual is the gate edge, not the consumer: ROM takes its first
+`Random_Number` on the frame the player is first grounded with
+`top_solid_bit == $C` and not in air, and the engine reaches that state one to
+two frames sooner. Next step is to compare the engine's grounded/`top_solid_bit`
+transition against the recorded `status_byte`/`air` columns across rows 68-78
+and correct the edge, then re-land the spawner fix — at which point the Madmole
+arc coin at ~3150 should flip the right way and the ~4,000-row route divergence
+should close.
+
+Note the ordering constraint: the spawner must be driven from the post-dynamic
+fixed-object phase (`LevelFrameStep` "fixed-objects"), not the pre-dynamic one,
+to match ROM's fixed-slot position.
