@@ -378,11 +378,15 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
         }
 
         if (gameState.hasAllEmeralds() || shouldRouteToHiddenPalace(gameState)) {
-            // Path B: All emeralds collected — award 50 rings, instant delete
+            // Path B: ROM loc_61794 (sonic3k.asm:128325-128333) marks the ring
+            // collected, sets the retirement bit and awards 50 rings. It does
+            // not delete here — the following display pass sees
+            // btst #5,$38 and retires through loc_6196A, which re-queues
+            // ArtKosM_BadnikExplosion. Deleting outright loses that submission.
             LOGGER.fine("SSEntryRing #" + bitIndex + " — all emeralds, awarding 50 rings");
             gameState.markSpecialRingCollected(bitIndex);
             player.addRings(RING_REWARD);
-            setDestroyed(true);
+            state = State.MARKED_DELETE;
         } else {
             // Path A: Enter Special Stage — full flash sequence
             // ROM: loc_61774 — lock player, spawn flash
