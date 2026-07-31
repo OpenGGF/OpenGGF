@@ -26,6 +26,7 @@ public class PlayableSpriteAnimation {
     private int groundMovementAnimSpeedSnapshot = Integer.MIN_VALUE;
     private boolean groundMovementAnimationSuppressed;
     private boolean nextUpdateSuppressed;
+    private boolean animationUpdateSuppressedThisFrame;
     private DynamicArtDecisionOwner dynamicArtDecisionOwner;
 
     /**
@@ -134,21 +135,32 @@ public class PlayableSpriteAnimation {
         if (dynamicArtDecisionOwner != null) {
             dynamicArtDecisionOwner.observe(sprite.getMappingFrame());
         }
+        // ROM object order: Obj02 (Tails) runs Tails_Animate then LoadTailsDynPLC
+        // to completion (s2.asm:41256, 41659-41690); only afterwards does Obj05
+        // (Tails' tails) run Tails_Animate_Part2 -> LoadTailsTailsDynPLC
+        // (s2.asm:41760-41763). S3K uses the same after-the-parent ordering via
+        // Obj_Tails_Tail_Main -> Animate_Tails_Part2 -> Tails_Tail_Load_PLC
+        // (sonic3k.asm:30055-30071). The tails-tails DPLC edge must therefore be
+        // published after the sidekick's own.
+        if (!animationUpdateSuppressedThisFrame
+                && sprite != null
+                && sprite.getTailsTailsController() != null) {
+            sprite.getTailsTailsController().update();
+        }
     }
 
     private void updateAnimation(int frameCounter) {
+        animationUpdateSuppressedThisFrame = false;
         if (sprite == null) {
             return;
         }
         if (nextUpdateSuppressed) {
             nextUpdateSuppressed = false;
+            animationUpdateSuppressedThisFrame = true;
             return;
         }
         if (sprite.getSpindashDustController() != null) {
             sprite.getSpindashDustController().update();
-        }
-        if (sprite.getTailsTailsController() != null) {
-            sprite.getTailsTailsController().update();
         }
 
         SpriteAnimationProfile profile = sprite.getAnimationProfile();

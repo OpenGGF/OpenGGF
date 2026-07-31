@@ -54981,3 +54981,76 @@ Cross-game shared surface, all green (run 3, 52 tests):
 `TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`.
 
 No `REGRESSION INTRODUCED:` lines.
+
+## 2026-07-31 - S2 tails-tails DPLC edge lifecycle (Obj05 anim_frame/mapping_frame)
+
+- Worktree: `.worktrees/s2-dplc-edge-lifecycle`, branch
+  `bugfix/ai-s2-dplc-edge-lifecycle`, over base commit `1c328d6be`.
+- Baseline measured independently on a detached worktree
+  (`.worktrees/verify-s2-dplc-base`) at `1c328d6be` with the identical command,
+  not taken from the fix report. Both sides ran after `mvn -q -Dmse=relaxed clean`.
+
+Root cause: `TailsTailsController` conflated ROM `anim_frame` (the index of the
+*next* script byte) with `mapping_frame` (the frame resolved by the *last* read).
+`Tails_Animate_Part2` reads `1(a1,d1.w)` into `mapping_frame` and only afterwards
+does `addq.b #1,anim_frame` (`docs/s2disasm/s2.asm:41295-41303`), and the
+end-of-script flags are resolved *before* the mapping frame is written
+(`docs/s2disasm/s2.asm:41306-41320`). S3K's shared `Animate_Sprite` uses the same
+read-then-increment convention (`docs/skdisasm/sonic3k.asm:36171-36183`), so this
+is a universal correction, not a per-game rule. Two consequences also fixed:
+`LoadTailsTailsDynPLC` still runs while the frame duration has time remaining and
+dedupes against `TailsTails_LastLoadedDPLC` (`docs/s2disasm/s2.asm:41631-41651`),
+so the edge must be published every frame; and Obj05 runs its animation and PLC
+load *after* Obj02 has completed `LoadTailsDynPLC`
+(`docs/s2disasm/s2.asm:41756-41763`; S3K `docs/skdisasm/sonic3k.asm:30060-30070`),
+so the `tails-tails` edge is now observed after the sidekick's own. Finally,
+`InitPlayers` spawns Obj05 only alongside Obj02 (`docs/s2disasm/s2.asm:38945-38946`)
+and omits Obj02 entirely in the suppressed zones (`docs/s2disasm/s2.asm:5177-5198`),
+so a suppressed sidekick now gets no tails-tails DPLC owner at all -- routed
+through the existing game-module sidekick-suppression predicate, not a zone or
+game-name branch.
+
+Commands (all with `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true`):
+
+1. `"-Ds2.rom.path=.../s2.gen" -Dtest=TestS2Cnz2LevelSelectTraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay`
+2. `"-Ds1.rom.path=.../s1.gen" "-Ds2.rom.path=.../s2.gen" -Dtest=TestS1Ghz1TraceReplay,TestS1Mz1TraceReplay,TestS1Ghz1CompleteRunTraceReplay,TestS1Ghz2CompleteRunTraceReplay,TestS1Mz1CompleteRunTraceReplay,TestS1Credits00Ghz1TraceReplay,TestS1Credits07Ghz1bTraceReplay,TestTraceReplayInvariantGuard,TestTraceReplayReferenceClosureGuard,TestRewindCoverageGuard,TestStaticStateRewindCoverageGuard,TestPlcProducerCoverageGuard,TestDynamicArtDiagnosticsComparator`
+3. `"-Ds1..." "-Ds2..." "-Ds3k.rom.path=.../s3k.gen" -Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`
+
+GREENED (0).
+
+ADVANCED (9 of 11; run 1, `Tests run: 11, Failures: 11`):
+
+| Trace | Before (frame -- field, errors) | After (frame -- field, errors) |
+|---|---|---|
+| `TestS2MtzLevelSelectTraceReplay` | 18 -- `dynamic_art.edge[1].present` (20681) | 52 -- `queue.s2_nemesis_plc.queued_fingerprints` (11484) |
+| `TestS2Mtz3LevelSelectTraceReplay` | 18 -- `dynamic_art.edge[1].present` (29544) | 52 -- `queue.s2_nemesis_plc.queued_fingerprints` (16413) |
+| `TestS2Cnz2LevelSelectTraceReplay` | 18 -- `dynamic_art.edge[1].present` (31753) | 52 -- `queue.s2_nemesis_plc.queued_fingerprints` (14951) |
+| `TestS2Mcz2LevelSelectTraceReplay` | 18 -- `dynamic_art.edge[1].present` (18143) | 52 -- `queue.s2_nemesis_plc.queued_fingerprints` (11977) |
+| `TestS2OozLevelSelectTraceReplay` | 18 -- `dynamic_art.edge[1].present` (19748) | 52 -- `queue.s2_nemesis_plc.queued_fingerprints` (11031) |
+| `TestS2Ooz2LevelSelectTraceReplay` | 18 -- `dynamic_art.edge[1].present` (22044) | 52 -- `queue.s2_nemesis_plc.queued_fingerprints` (13641) |
+| `TestS2MczLevelSelectTraceReplay` | 18 -- `dynamic_art.edge[2].present` (11891) | 46 -- `dynamic_art.edge[3].present` (6435) |
+| `TestS2HtzLevelSelectTraceReplay` | 38 -- `dynamic_art.edge[2].owner` (19167) | 47 -- `dynamic_art.edge[3].present` (10574) |
+| `TestS2Mtz2LevelSelectTraceReplay` | 30 -- `dynamic_art.edge[1].owner` (25808) | 39 -- `dynamic_art.edge[3].present` (14315) |
+
+UNMOVED (2). Both are sidekick-suppressed zones whose first divergence is the
+separate frame-2 bootstrap transfer-id skew, untouched by this fix:
+
+| Trace | Before | After |
+|---|---|---|
+| `TestS2SczLevelSelectTraceReplay` | 2 -- `dynamic_art.outstanding_transfer_ids` (6802) | 2 -- `dynamic_art.outstanding_transfer_ids` (6802) |
+| `TestS2WfzLevelSelectTraceReplay` | 2 -- `dynamic_art.outstanding_transfer_ids` (12495) | 2 -- `dynamic_art.outstanding_transfer_ids` (12495) |
+
+Guards and S1 traces, all green (run 2, 52 tests, 0 failures):
+`TestS1Ghz1TraceReplay`, `TestS1Mz1TraceReplay`,
+`TestS1Ghz1CompleteRunTraceReplay`, `TestS1Ghz2CompleteRunTraceReplay`,
+`TestS1Mz1CompleteRunTraceReplay`, `TestS1Credits00Ghz1TraceReplay`,
+`TestS1Credits07Ghz1bTraceReplay`, `TestTraceReplayInvariantGuard` (10),
+`TestTraceReplayReferenceClosureGuard` (14), `TestRewindCoverageGuard`,
+`TestStaticStateRewindCoverageGuard`, `TestPlcProducerCoverageGuard` (4),
+`TestDynamicArtDiagnosticsComparator` (15).
+
+Cross-game shared surface, all green (run 3, 52 tests, 0 failures):
+`TestS3kAiz1SkipHeadless` (8), `TestSonic3kLevelLoading` (6 + 30),
+`TestSonic3kBootstrapResolver` (5), `TestSonic3kDecodingUtils` (3).
+
+No `REGRESSION INTRODUCED:` lines.

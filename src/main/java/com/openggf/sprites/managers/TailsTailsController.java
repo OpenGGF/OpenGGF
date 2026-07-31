@@ -154,14 +154,18 @@ public class TailsTailsController {
 
     private int currentAnim = ANIM_BLANK;
     private int lastParentAnim = -1;
+    /** ROM anim_frame: the index of the NEXT script byte to read (s2.asm:41303). */
     private int frameIndex;
     private int frameTick;
+    /** ROM mapping_frame: the frame resolved by the last script read (s2.asm:41302). */
+    private int mappingFrame = -1;
 
     public record RewindState(
             int currentAnim,
             int lastParentAnim,
             int frameIndex,
-            int frameTick) {
+            int frameTick,
+            int mappingFrame) {
     }
 
     public PlayerSpriteRenderer getRenderer() {
@@ -196,9 +200,12 @@ public class TailsTailsController {
             lastParentAnim = parentAnimId;
             int obj05Anim = resolveObj05Animation(parentAnimId);
             if (obj05Anim != currentAnim) {
+                // ROM: anim_frame = 0, anim_frame_duration = 0 on animation
+                // change (s2.asm:41276-41278; sonic3k.asm:36163-36166).
                 currentAnim = obj05Anim;
                 frameIndex = 0;
                 frameTick = 0;
+                mappingFrame = -1;
             }
         }
 
@@ -211,45 +218,56 @@ public class TailsTailsController {
             return;
         }
 
-        // Advance animation timer
-        int duration = frameTick - 1;
-        boolean advance = duration < 0;
-        if (advance) {
-            duration = getDelay(currentAnim);
+        // ROM: subq.b #1,anim_frame_duration / bpl TAnim_Delay (s2.asm:41291-41292).
+        // While time remains the mapping frame is unchanged, but Obj05's routine
+        // tail still runs LoadTailsTailsDynPLC, which dedupes the unchanged
+        // mapping frame against TailsTails_LastLoadedDPLC (s2.asm:41631-41651).
+        int remaining = frameTick - 1;
+        if (remaining >= 0) {
+            frameTick = remaining;
+            publishDynamicArtDecision();
+            return;
         }
-        frameTick = duration;
+        // ROM: move.b d0,anim_frame_duration - reload the script's duration byte
+        // (s2.asm:41293).
+        frameTick = getDelay(currentAnim);
 
-        if (advance) {
-            frameIndex++;
-            if (frameIndex >= frames.length) {
-                if (currentAnim == ANIM_FLICK) {
-                    // ROM: $FD, 1 -> switch to Swish after Flick completes
-                    currentAnim = ANIM_SWISH;
-                    frameIndex = 0;
-                    frameTick = 0;
-                } else {
-                    // ROM: $FF -> loop
-                    frameIndex = 0;
-                }
+        // ROM: the end-of-script flag is handled in TAnim_End_FF / TAnim_End_FD
+        // BEFORE the mapping frame is written (s2.asm:41306-41320).
+        if (frameIndex >= frames.length) {
+            if (currentAnim == ANIM_FLICK) {
+                // Obj05Ani_Flick ends `$FD,1` -> run Obj05Ani_Swish (s2.asm:41817).
+                currentAnim = ANIM_SWISH;
+                frames = getFrames(currentAnim);
+                frameTick = getDelay(currentAnim);
+                frameIndex = 0;
+            } else {
+                // ROM: $FF -> restart the animation (s2.asm:41831).
+                frameIndex = 0;
             }
         }
+
+        // ROM TAnim_Do2 / TAnim_Next: read the script byte at the CURRENT
+        // anim_frame, store it in mapping_frame, and only afterwards
+        // addq.b #1,anim_frame (s2.asm:41295-41303). The identical
+        // read-then-increment convention is used by S3K's shared
+        // Animate_Sprite (sonic3k.asm:36171-36183), so this is a universal
+        // correction rather than a per-game rule.
+        mappingFrame = frames[frameIndex];
+        frameIndex++;
         publishDynamicArtDecision();
     }
 
     private void publishDynamicArtDecision() {
-        if (isS3k || renderer == null || currentAnim == ANIM_BLANK) {
+        if (isS3k || renderer == null || currentAnim == ANIM_BLANK || mappingFrame < 0) {
             return;
         }
-        int[] frames = getFrames(currentAnim);
-        if (frames == null || frameIndex < 0 || frameIndex >= frames.length) {
-            return;
-        }
-        int mappingFrame = frames[frameIndex];
+        int resolved = mappingFrame;
         if (currentAnim == ANIM_DIRECTIONAL) {
-            mappingFrame += computeDirectionalOffset();
+            resolved += computeDirectionalOffset();
         }
         if (dynamicArtDecisionOwner != null) {
-            dynamicArtDecisionOwner.observe(mappingFrame);
+            dynamicArtDecisionOwner.observe(resolved);
         }
     }
 
@@ -258,12 +276,13 @@ public class TailsTailsController {
             return;
         }
 
-        int[] frames = getFrames(currentAnim);
-        if (frames == null || frameIndex >= frames.length) {
+        // ROM: rendering consumes mapping_frame, the value resolved by the last
+        // script read - not the already-incremented anim_frame (s2.asm:41302-41303).
+        if (mappingFrame < 0) {
             return;
         }
 
-        int mappingFrame = frames[frameIndex];
+        int mappingFrame = this.mappingFrame;
         boolean hFlip;
         boolean vFlip;
 
@@ -287,7 +306,7 @@ public class TailsTailsController {
 
     public RewindState captureRewindState() {
         return new RewindState(
-                currentAnim, lastParentAnim, frameIndex, frameTick);
+                currentAnim, lastParentAnim, frameIndex, frameTick, mappingFrame);
     }
 
     public void restoreRewindState(RewindState state) {
@@ -296,12 +315,14 @@ public class TailsTailsController {
             lastParentAnim = -1;
             frameIndex = 0;
             frameTick = 0;
+            mappingFrame = -1;
             return;
         }
         currentAnim = state.currentAnim();
         lastParentAnim = state.lastParentAnim();
         frameIndex = state.frameIndex();
         frameTick = state.frameTick();
+        mappingFrame = state.mappingFrame();
     }
 
     private int resolveObj05Animation(int parentAnimId) {

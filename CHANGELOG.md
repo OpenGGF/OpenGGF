@@ -3,6 +3,24 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Tails' tails (Obj05) now tracks the ROM's `anim_frame` /
+  `mapping_frame` split instead of conflating them. `Tails_Animate_Part2`
+  reads the script byte at the current `anim_frame` into `mapping_frame` and
+  only then increments `anim_frame` (`docs/s2disasm/s2.asm:41295-41303`), with
+  the end-of-script flags resolved before that write
+  (`docs/s2disasm/s2.asm:41306-41320`); S3K's shared `Animate_Sprite` uses the
+  same read-then-increment convention
+  (`docs/skdisasm/sonic3k.asm:36171-36183`). The engine rendered and published
+  the already-incremented index, so the tails-tails DPLC edge carried the wrong
+  frame and disappeared whenever the frame duration still had time remaining —
+  the ROM keeps running `LoadTailsTailsDynPLC` every frame and dedupes against
+  `TailsTails_LastLoadedDPLC` (`docs/s2disasm/s2.asm:41631-41651`). The edge is
+  also now published after the sidekick's own, matching Obj05 running its
+  animation and PLC load after Obj02 completes `LoadTailsDynPLC`
+  (`docs/s2disasm/s2.asm:41756-41763`; `docs/skdisasm/sonic3k.asm:30060-30070`),
+  and a suppressed sidekick gets no tails-tails DPLC owner at all, since
+  `InitPlayers` spawns Obj05 only alongside Obj02
+  (`docs/s2disasm/s2.asm:38945-38946`, `5177-5198`).
 - Fix: the player DPLC decision owner is now keyed by character rather than by
   team slot, and the omitted S2 title-card presentation now advances player
   animation the way the ROM's own loop does. `LoadSonicDynPLC` compares the

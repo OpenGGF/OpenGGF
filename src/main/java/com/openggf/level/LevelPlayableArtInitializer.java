@@ -392,9 +392,16 @@ final class LevelPlayableArtInitializer {
             tailsRenderer.setRenderContext(crossGame.getDonorRenderContext());
         }
         tailsRenderer.ensureCached(graphicsManager);
+        // ROM: Obj05 exists exactly when Obj02 does - Tails' init spawns
+        // ObjID_TailsTails and sets its parent (s2.asm:38945-38946), and
+        // InitPlayers omits Obj02 entirely in WFZ/DEZ/SCZ (s2.asm:5177-5198).
+        // A suppressed sidekick therefore has no tails-tails DPLC owner, matching
+        // applyPlayableArt's gate above.
         playable.setTailsTailsController(new TailsTailsController(
                 playable, tailsRenderer, isS3k,
-                createDynamicArtOwner("tails-tails", tailsRenderer)));
+                isSidekickSuppressed()
+                        ? null
+                        : createDynamicArtOwner("tails-tails", tailsRenderer)));
     }
 
     /**
