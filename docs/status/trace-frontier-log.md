@@ -54459,3 +54459,59 @@ TestS3kHardwareTimingReplay" test
   regressions. Note: under `-Dmse=relaxed` reused forks the S1 trace classes
   cross-contaminate and report a phantom frame-69 failure; judge each class from
   an isolated run.
+
+## 2026-07-31 - S1 player DPLC lag-frame logical_frame skew (independent verification)
+
+- Worktree: `<repo>/.worktrees/s1-dplc-edge-logical-frame`,
+  branch `bugfix/ai-s1-dplc-edge-logical-frame`.
+- Root cause: `DynamicArtLifecycleService#publishRow` returned early on a lag
+  publication without incrementing `logicalFrame`, so the shared player-DPLC
+  ledger under-counted rows by one per lag frame. A ROM lag frame still enters
+  VBlank and runs its lag handler (docs/s1disasm/sonic.asm:651-655
+  `tst.b (v_vblank_routine).w` / `beq.s VBlank_Lag`, :709 `VBlank_Lag`;
+  docs/s2disasm/s2.asm:483-484 `tst.b (Vint_routine).w` / `beq.w Vint_Lag`,
+  :513 `Vint_Lag_ptr`, :529 `Vint_Lag`); only the main-loop iteration and the
+  `addq.w #1,(v_framecount).w` bump are skipped
+  (docs/s1disasm/sonic.asm:2995-2999 `Level_MainLoop`). The logical frame is the
+  publication row index, not a count of non-lag iterations. Shared surface, no
+  per-game branch.
+- Family command: `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true
+  -Ds1.rom.path=<repo>/s1.gen
+  -Dtest=TestS1Ghz1TraceReplay,TestS1Ghz1CompleteRunTraceReplay,TestS1Mz1TraceReplay,TestS1Mz1CompleteRunTraceReplay,TestS1Ghz2CompleteRunTraceReplay,TestS1Ghz3CompleteRunTraceReplay
+  -DfailIfNoSpecifiedTests=false test` (run A/B against a clean-`HEAD` revert of
+  the single changed file, with `target/surefire-reports` cleared between runs).
+- Guard command: `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true
+  -Ds1.rom.path=<repo>/s1.gen
+  -Dtest=TestS1Credits00Ghz1TraceReplay,TestS1Credits01Mz2TraceReplay,TestS1Credits02Syz3TraceReplay,TestS1Credits03Lz3TraceReplay,TestS1Credits04Slz3TraceReplay,TestS1Credits05Sbz1TraceReplay,TestS1Credits06Sbz2TraceReplay,TestS1Credits07Ghz1bTraceReplay,TestTraceReplayInvariantGuard,TestTraceReplayReferenceClosureGuard,TestRewindCoverageGuard,TestStaticStateRewindCoverageGuard,TestSonic1PlcProducerCoverage,TestPlcProducerCoverageGuard
+  -DfailIfNoSpecifiedTests=false test` - 54/54 pass, no regressions.
+- Cross-game command: `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1
+  -DreuseForks=true -Ds1.rom.path=<repo>/s1.gen -Ds2.rom.path=<repo>/s2.gen
+  -Ds3k.rom.path=<repo>/s3k.gen
+  -Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+  -DfailIfNoSpecifiedTests=false test` - 52/52 pass. S2 parity held; the S2
+  level-select trace failures observed in a full-suite sweep are pre-existing,
+  reproduce identically on clean `HEAD`, and sit at frame 0 on
+  `dynamic_art.outstanding_transfer_ids`, a field this change does not touch.
+- Family frontier movement (before -> after):
+  - `TestS1Ghz1TraceReplay`: fail -> fail, ADVANCED. Frame 2116
+    `dynamic_art.edge[0].logical_frame` -> frame 2823
+    `dynamic_art.edge[0].logical_frame` (12 errors remaining).
+  - `TestS1Ghz1CompleteRunTraceReplay`: fail -> fail, ADVANCED. Frame 2805
+    `dynamic_art.edge[0].logical_frame` -> frame 4830
+    `queue.s1_nemesis_plc.queued_fingerprints` (4 errors remaining).
+  - `TestS1Mz1TraceReplay`: fail -> fail, ADVANCED. Frame 1927
+    `dynamic_art.edge[0].logical_frame` -> frame 2134
+    `dynamic_art.edge[0].logical_frame` (6 errors remaining).
+  - `TestS1Mz1CompleteRunTraceReplay`: fail -> fail, UNMOVED. Frame 1
+    `dynamic_art.edges` -> frame 1 `dynamic_art.edges`.
+  - `TestS1Ghz2CompleteRunTraceReplay`: fail -> fail, UNMOVED. Frame 1
+    `dynamic_art.edges` -> frame 1 `dynamic_art.edges`.
+  - `TestS1Ghz3CompleteRunTraceReplay`: fail -> fail, UNMOVED. Frame 1
+    `dynamic_art.edges` -> frame 1 `dynamic_art.edges`.
+- No `REGRESSION INTRODUCED:` lines - nothing that passed before this change
+  fails after it.
+- Next targets: (a) the residual single-row `logical_frame` skew that now
+  surfaces at GHZ1 frame 2823 / MZ1 frame 2134 (a second, distinct lag or
+  segment-boundary source), and (b) the frame-1 `dynamic_art.edges` transfer-id
+  base mismatch that blocks the three complete-run traces before any lag frame
+  is reached.

@@ -3,6 +3,15 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the shared player dynamic-art ledger no longer loses a logical row on a
+  ROM lag frame. `DynamicArtLifecycleService#publishRow` returned early on the
+  lag heartbeat without advancing its logical row cursor, so every lag frame in
+  a run shifted `dynamic_art.edge[*].logical_frame` one behind the trace for the
+  rest of the segment. A lag frame still dispatches VBlank through its lag
+  handler and still publishes a row; only the main-loop iteration and
+  `v_framecount` are skipped, so the logical frame is the publication row index,
+  not a count of non-lag iterations. The correction is shared by all three
+  games' DPLC ledgers.
 - Fix: Music no longer stops for the rest of an act after an extra life, invincibility, or a Super transformation. Two faults compounded. The audio profile's override classification was only read by the retired legacy backend, so the presentation path recorded every song as a plain foreground replacement: the 1-up jingle destroyed the zone music instead of saving it, and the driver's "fade in to previous song" (SMPS `E4`) found nothing to restore. Interrupted songs were then held on a stack, but the ROM has no stack — the sound driver owns a single save slot belonging to the 1-up jingle alone (`Sound_PlayBGM` backs up `v_1up_ram` and sets `f_1up_playing`; `zPlayMusic` copies `zTracksStart` to `zTracksSaveStart` and sets `zFadeToPrevFlag`), and any other music request abandons it, S1 by `clr.b f_1up_playing` and S3K by `zStopAllSound` zeroing the whole backup area. Transforming during the jingle therefore parked a frozen jingle voice on the stack that a later restore could make active, playing nothing. `AudioManager` now records the override flag on the music command itself and restricts it to the extra-life id; invincibility and Super are ordinary music as in the ROM, and the level music is restored by re-issuing it from `Sonic_ChkInvin` — including that routine's gates, so the boss and drowning-countdown themes survive a power-up expiring. The Super revert no longer plays music itself: like `SonicKnux_SuperHyper` and `Sonic_RevertToNormal` it sets the invincibility timer to 1 and lets that path run a tick later.
 - Fix: Sonic 1 title-card `Card_ChangeArt` now re-queues the explosion and
   per-zone animal art from the fixed title-card object slot instead of the

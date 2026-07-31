@@ -443,13 +443,19 @@ public final class DynamicArtLifecycleService
             boolean lagged) {
         requireComparisonSegmentOpen();
         requirePublicationFrame(publicationFrame);
-        if (lagged) {
-            latest = new DynamicArtDiagnosticsSnapshot(
-                    publicationFrame, List.of(), publishedOutstanding,
-                    ++deliverySerial, segmentGeneration, true);
-            return latest;
-        }
-        latest = publishBuffered(publicationFrame, false);
+        // A ROM lag frame publishes a heartbeat with no edges, but the logical
+        // row cursor still advances: VBlank still ran and dispatched its lag
+        // handler (docs/s1disasm/sonic.asm:651-655 tst.b v_vblank_routine /
+        // beq.s VBlank_Lag, :709 VBlank_Lag; docs/s2disasm/s2.asm:484,513,529
+        // Vint_Lag) even though the main loop did not complete an iteration and
+        // v_framecount was not bumped (docs/s1disasm/sonic.asm:2995-2999). The
+        // logical frame is therefore the publication row index, not a count of
+        // non-lag iterations.
+        latest = lagged
+                ? new DynamicArtDiagnosticsSnapshot(
+                        publicationFrame, List.of(), publishedOutstanding,
+                        ++deliverySerial, segmentGeneration, true)
+                : publishBuffered(publicationFrame, false);
         logicalFrame++;
         nextLogicalEdgeIndex = 0;
         return latest;
