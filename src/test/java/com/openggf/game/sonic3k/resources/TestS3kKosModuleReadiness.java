@@ -37,7 +37,10 @@ class TestS3kKosModuleReadiness {
             S3kKosModuleQueue queue = new S3kKosModuleQueue(timing, direct);
             HardwareWorkHandle handle = queue.queue(rom, 0, 0x500);
 
-            queue.processModuleQueueAfterObjects();
+            // The module state step is the previous LevelLoop iteration's tail
+            // call (sonic3k.asm:7908), so the child is submitted at the frame
+            // top, ahead of Process_Kos_Queue (7887).
+            queue.prepareQueuedModuleBeforeVSync();
             HardwareWorkHandle child = ((S3kKosModuleSnapshot) timing.capture()
                     .jobs().getFirst().preparationSnapshot()).activeChild();
             while (!direct.isReady(child)) {
