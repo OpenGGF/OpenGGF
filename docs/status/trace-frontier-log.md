@@ -55149,3 +55149,49 @@ MHZ stays at **601** non-queue groups. Nothing from this round was landed.
 **Session totals:** MHZ 1888 -> 601 non-queue groups; queue/admission frontier
 raw frame 36 -> 7218; MGZ recovered 3964 -> 128; ICZ 95 -> 81, better than its
 pre-session baseline.
+
+### 2026-07-31 — BizHawk PC-execute probe on Random_Number: ROM ownership captured
+
+Ran the probe the previous entry called for.
+`tools/bizhawk/probes/mhz_rng_ownership_probe.lua` (new, follows the
+`probe_runtime.lua` stage-and-hooks contract) hooks `Random_Number` entry
+(`0x001D24`) and RTS (`0x001D4A`) across MHZ act 1, logging caller PC, A0/A1
+object context and the Player_1 gate fields. Raw output archived at
+`docs/architecture/validation/trace/2026-07-31-mhz-rng-ownership-probe.txt`
+(128 lines). Launched with the repo launcher at BK2 offset 209756; the probe
+self-exited.
+
+**What ROM actually does:**
+
+- Every call in the window comes from caller PC `03DA3C` — inside `sub_3DA24`,
+  the pollen spawner — with `A0_slot=4`, `A0_code=0003DA00`. So the spawner is
+  object **slot 4**, ahead of the mushroom cap at slot 5 whose
+  `SolidObjectTop` pass is what grounds the player.
+- **Exactly one call per frame**, ordinals 1-6 on rows 74-79. Player_2's
+  `sub_3DA24` never reaches the RNG in this window.
+- The first call is on row **74**, reading `p1_y=051A p1_status=08 p1_air=0` —
+  the position and grounded state the *previous* frame's cap contact left.
+  At row 73's `Process_Sprites` entry the player is still `p1_y=0528
+  p1_status=06 p1_air=1`.
+
+**Two engine bugs this names precisely:**
+
+1. **Double consumption.** The engine calls the spawner for Player_1 *and*
+   Player_2; ROM reaches the RNG for Player_1 only here. Measured: the engine
+   advances the seed two `predict()` steps within one frame where ROM advances
+   one.
+2. **Grounded two frames early.** With the spawner driven pre-physics — the
+   placement the probe implies — the engine still consumes from row 72, so its
+   player reads grounded at the end of row 71 where ROM's is airborne through
+   row 73. This does not show as an `air` divergence in the comparator, so the
+   engine's end-of-frame air matches while its mid-frame view does not.
+
+**Placements measured (MHZ non-queue groups):** never executes **601**;
+post-dynamic live gate 982; post-dynamic per-player latch 578 (rejected, breaks
+`TestMhzPollenObjects`); pre-dynamic 1055; pre-physics via the existing
+`onUpdatePrePhysics` hook **733**. Pre-physics is the best faithful placement
+and is where this belongs once the two bugs above are fixed, but landing it
+alone still regresses MHZ, so nothing was landed.
+
+MHZ stays at **601**. The probe is committed and re-runnable, so the next
+session starts from ROM ground truth rather than hypotheses.
