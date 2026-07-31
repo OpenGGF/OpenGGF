@@ -261,68 +261,6 @@ class TestPlcFrameLifecycleCoordinator {
         }
     }
 
-    /**
-     * A represented iteration on which no V-blank elapsed at all is a different
-     * ROM shape from a lag V-blank. {@code Vint_runcount} is bumped once per
-     * V-blank at {@code VintRet} (docs/s2disasm/s2.asm:512) whichever handler
-     * ran, so a row with no V-blank tick means the main loop iteration overran
-     * its V-blank: the following iteration is still mid-flight at the sample
-     * boundary and its queue-add (s2.asm:1705) publishes on the boundary after
-     * it. {@code ProcessDMAQueue} (s2.asm:1770) is reached only from the real
-     * V-int handlers (s2.asm:781, 899, 1000, 1046, 1083, 1138), never from
-     * {@code Vint_Lag} (s2.asm:529-580).
-     */
-    @Test
-    void aRepresentedIterationWithoutAVblankDefersTheNextRowsPublication() {
-        DynamicArtLifecycleService dynamicArt =
-                new DynamicArtLifecycleService();
-        dynamicArt.beginRun();
-        dynamicArt.openComparisonSegment();
-        PlcFrameLifecycleCoordinator coordinator =
-                new PlcFrameLifecycleCoordinator(
-                        recording(new ArrayList<>()), dynamicArt,
-                        DynamicArtDmaServiceModel.SONIC_2_PROCESS_DMA_QUEUE);
-
-        // Row N: no V-blank elapsed for this iteration.
-        coordinator.markRepresentedIterationWithoutVblank();
-        coordinator.runLogicalIteration(() -> { }, frame -> {
-            frame.claim(PlcLifecyclePhase.LAG);
-            return null;
-        });
-        assertTrue(dynamicArt.latestSnapshot().edges().isEmpty());
-
-        // Row N+1: the overrunning iteration completes and queues a DPLC. Its
-        // publication rolls into row N+2 with the ledger still empty here.
-        coordinator.runLogicalIteration(() -> { }, frame -> {
-            frame.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
-            frame.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
-            dynamicArt.observePlayerDplc(
-                    com.openggf.game.GameId.S2, "sonic", 0x0F,
-                    new com.openggf.level.render.SpriteDplcFrame(List.of(
-                            new com.openggf.level.render.TileLoadRequest(0, 12))));
-            return null;
-        });
-        assertTrue(dynamicArt.latestSnapshot().edges().isEmpty(),
-                "the overrunning iteration reached no publication boundary");
-
-        // Row N+2: the carry is a one-shot -- this ordinary row publishes.
-        coordinator.runLogicalIteration(() -> { }, frame -> {
-            frame.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
-            frame.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
-            return null;
-        });
-        DynamicArtDiagnosticsSnapshot published = dynamicArt.latestSnapshot();
-        assertFalse(published.edges().isEmpty());
-        // The publication boundary is what this test pins down. The buffered
-        // edge's logical-frame attribution is owned by
-        // DynamicArtLifecycleService's movie clock, which does not tick on a
-        // boundary the iteration never reached, so it is deliberately not
-        // asserted here.
-        for (DynamicArtDiagnosticsSnapshot.Edge edge : published.edges()) {
-            assertEquals(published.frame(), edge.publicationFrame());
-        }
-    }
-
     private static PlcLifecycleService recording(List<String> events) {
         return new PlcLifecycleService() {
             @Override

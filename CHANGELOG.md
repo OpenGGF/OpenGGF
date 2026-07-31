@@ -15,22 +15,6 @@ All notable changes to the OpenGGF project are documented in this file.
   `TestS2Mtz2LevelSelectTraceReplay`, and advances the ARZ1, CPZ1, HTZ1, CNZ1 and
   MTZ1 level-select traces past their `queue.s2_nemesis_plc.queued_fingerprints`
   frontier.
-- Fix: a main-loop iteration that overruns its V-blank now publishes its
-  dynamic-art edges on the following V-blank boundary instead of its own.
-  `Vint_runcount` is bumped once per V-blank at `VintRet`
-  (`docs/s2disasm/s2.asm:512`) whichever handler ran, so a represented
-  iteration for which no V-blank elapsed at all is a different hardware shape
-  from a lag V-blank (`Vint_Lag`, `docs/s2disasm/s2.asm:529-580`; S1's
-  `VBlank_Lag`, `docs/s1disasm/sonic.asm:709-730`). Either way the iteration
-  reaches no `ProcessDMAQueue` (`docs/s2disasm/s2.asm:1770`, called only from
-  the real per-mode V-int handlers at `docs/s2disasm/s2.asm:781, 899, 1000,
-  1046, 1083, 1138`), so its queue-add "is issued the next time
-  ProcessDMAQueue is called" (`docs/s2disasm/s2.asm:1705`). The carry is a
-  one-shot at the PLC frame-closure boundary, keyed on the row's V-blank
-  count and never on a frame index, zone or game. Advances
-  `TestS2WfzLevelSelectTraceReplay` from frame 10287
-  (`dynamic_art.outstanding_transfer_ids`, 5825 errors) to frame 10447
-  (`dynamic_art.edge[1].present`, 5804 errors).
 - Fix: Sonic 2 no longer retires queued dynamic-art DMA transfers on lag frames.
   `V_Int` branches to `Vint_Lag` while `Vint_routine` is 0
   (`docs/s2disasm/s2.asm:483-484`), and neither `Vint_Lag`

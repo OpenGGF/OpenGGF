@@ -18,8 +18,6 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
     private NativeBlockingFadeImpl activeFade;
     private PlcLifecycleFrame activeFrame;
     private boolean comparisonSegmentsExternallyManaged;
-    private boolean representedIterationWithoutVblank;
-    private boolean vblankOverrunCarry;
 
     public PlcFrameLifecycleCoordinator(GameModule module) {
         this(() -> module.getGameService(PlcLifecycleService.class), null,
@@ -131,31 +129,8 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
         return activeFade;
     }
 
-    /**
-     * Declares that the iteration about to run is represented without any
-     * V-blank having elapsed for it. Live play never sets this: every live
-     * iteration is closed by a real V-blank. It is a hardware-timing
-     * classification only -- no gameplay value, queue readiness or transfer
-     * identity crosses this call.
-     *
-     * <p>ROM basis: {@code Vint_runcount} is bumped once per V-blank at
-     * {@code VintRet} (docs/s2disasm/s2.asm:512) regardless of which handler
-     * ran, and {@code ProcessDMAQueue} is reached only from the real per-mode
-     * V-int handlers (s2.asm:781, 899, 1000, 1046, 1083, 1138), never from
-     * {@code Vint_Lag} (s2.asm:529-580) -- S1's {@code VBlank_Lag}
-     * (docs/s1disasm/sonic.asm:709-730) has the same shape. An iteration for
-     * which no V-blank ran therefore reached no dynamic-art publication
-     * boundary, and the iteration that overran its V-blank publishes on the
-     * following boundary instead of its own.
-     */
-    public void markRepresentedIterationWithoutVblank() {
-        representedIterationWithoutVblank = true;
-    }
-
     public void reset() {
         activeFrame = null;
-        representedIterationWithoutVblank = false;
-        vblankOverrunCarry = false;
         if (activeFade != null) {
             activeFade.closed = true;
             activeFade = null;
@@ -227,26 +202,10 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
                     && service.hasPreparationBoundary(owner) && !prepared) {
                 throw new IllegalStateException("missing PLC preparation for " + owner);
             }
-            // A dynamic-art edge publishes on the V-blank that closes the
-            // iteration which produced it. Two shapes reach no such boundary:
-            //   * a lag V-blank -- V_Int branched to Vint_Lag because
-            //     Vint_routine was still 0 (docs/s2disasm/s2.asm:483-484, 529;
-            //     docs/s1disasm/sonic.asm:709 VBlank_Lag), and Vint_Lag never
-            //     calls ProcessDMAQueue (only the real handlers do:
-            //     s2.asm:781, 899, 1000, 1046, 1083, 1138); and
-            //   * the iteration that overran its V-blank. Its predecessor was
-            //     represented with no V-blank at all, so this iteration is
-            //     still mid-flight at the boundary and its queue-add
-            //     (s2.asm:1705 "to be issued the next time ProcessDMAQueue is
-            //     called") lands after it. The carry is a one-shot consumed by
-            //     the very next closure, never a frame number or route.
-            boolean withoutVblank = representedIterationWithoutVblank;
-            representedIterationWithoutVblank = false;
-            boolean carried = owner == PlcLifecyclePhase.LAG || vblankOverrunCarry;
-            vblankOverrunCarry = withoutVblank;
             if (dynamicArtLifecycle != null && owner != null
                     && dynamicArtLifecycle.isRunActive()) {
-                dynamicArtLifecycle.finishProductionIteration(carried);
+                dynamicArtLifecycle.finishProductionIteration(
+                        owner == PlcLifecyclePhase.LAG);
             }
             finished = true;
         }

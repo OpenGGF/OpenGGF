@@ -5,37 +5,6 @@ public interface TraceExecutionModel {
 
     TraceExecutionPhase phaseFor(TraceFrame previous, TraceFrame current);
 
-    /**
-     * True when the recorder row it describes was sampled without any V-blank
-     * having elapsed since the previous row: neither the gameplay frame counter
-     * nor the V-blank counter advanced.
-     *
-     * <p>This is a refinement of the same hardware-timing classification
-     * {@link #phaseFor} already performs, and separates the two shapes that
-     * both classify as {@link TraceExecutionPhase#VBLANK_ONLY}:
-     * <ul>
-     *   <li>a real lag V-blank -- {@code Vint_routine} was still 0 so
-     *       {@code V_Int} branched to {@code Vint_Lag}
-     *       (docs/s2disasm/s2.asm:481-484, 529; docs/s1disasm/sonic.asm:709
-     *       {@code VBlank_Lag}). {@code Vint_runcount} is still bumped at
-     *       {@code VintRet} (s2.asm:512), so the V-blank counter advances; and</li>
-     *   <li>a row on which <em>no</em> V-blank ran at all. The main loop
-     *       iteration overran its V-blank, so the very next row consumes two
-     *       V-blank counter ticks for one gameplay tick.</li>
-     * </ul>
-     * Only the first shape is a publication boundary for dynamic art; the
-     * second means the iteration that follows is still mid-flight at the
-     * sample instant.
-     */
-    static boolean isVblankStarvedRow(TraceFrame previous, TraceFrame current) {
-        return previous != null
-                && current != null
-                && hasAuthoritativeVblankCounter(previous)
-                && hasAuthoritativeVblankCounter(current)
-                && !gameplayCounterAdvanced(previous, current)
-                && !vblankCounterAdvanced(previous, current);
-    }
-
     static TraceExecutionModel forGame(String game) {
         if (game == null) {
             throw new IllegalArgumentException("Unsupported trace game: null");
