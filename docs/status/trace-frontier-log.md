@@ -55313,3 +55313,65 @@ mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \
   "-Ds1.rom.path=<s1 rev01 rom>" "-Ds2.rom.path=<s2 rev01 rom>" "-Ds3k.rom.path=<s3k locked-on rom>" \
   "-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils" test
 ```
+
+## 2026-07-31 — S2 SCZ Tornado pilot DPLC phase (bugfix/ai-s2-scz-tornado-bootstrap)
+
+Worktree `.worktrees/s2-scz-tornado-bootstrap`, branched off
+`bugfix/ai-trace-s1-titlecard-plc-integration` (f3083f7c4).
+
+```
+rm -rf target/surefire-reports
+mvn -Dmse=relaxed -Dtest=TestS2SczLevelSelectTraceReplay -DfailIfNoSpecifiedTests=false \
+  "-Ds2.rom.path=<s2 rev01 rom>" test
+```
+
+| Trace | Before | After | Movement |
+|---|---|---|---|
+| `TestS2SczLevelSelectTraceReplay` | frame 2 `dynamic_art.outstanding_transfer_ids` (6419 errors) | frame 2574 `dynamic_art.edge[0].logical_frame` (2 errors) | advanced |
+| `TestS2WfzLevelSelectTraceReplay` | frame 10287 `dynamic_art.outstanding_transfer_ids` (5825 errors) | frame 10287 `dynamic_art.outstanding_transfer_ids` (5825 errors) | unmoved |
+| `TestS2DezEndingLevelSelectTraceReplay` | pass | pass | held green |
+
+Cause: the SCZ ride-start lead-in reproduced only the player-side effects of five
+title-card iterations, but the ROM's loop body is `jsr (RunObjects).l`
+(docs/s2disasm/s2.asm:5060-5066), so ObjB2 ran too and `ObjB2_Animate_Pilot`
+(docs/s2disasm/s2.asm:78815-78816, 79536-79556) advanced its 9-frame cadence.
+The pilot therefore reaches gameplay frame 0 at `objoff_36`=3 / `objoff_37`=2 and
+first submits on frame 2. The full S2 `*TraceReplay` fleet was re-run on the same
+build; no other trace's first-error frame or error count changed.
+
+### Independent verification (2026-07-31)
+
+Worktree `.worktrees/s2-scz-tornado-bootstrap`, branch
+`bugfix/ai-s2-scz-tornado-bootstrap`, baseline `f3083f7c4` measured in a separate
+detached worktree. Each run preceded by `mvn -q -Dmse=relaxed clean` and
+`rm -rf target/surefire-reports`.
+
+```
+mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \
+  "-Ds2.rom.path=<s2 rev01 rom>" \
+  "-Dtest=TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay" test
+```
+
+| Trace | Before (f3083f7c4) | After | Movement |
+|---|---|---|---|
+| `TestS2SczLevelSelectTraceReplay` | frame 2 `dynamic_art.outstanding_transfer_ids` (6419 errors) | frame 2574 `dynamic_art.edge[0].logical_frame` (2 errors) | advanced |
+| `TestS2WfzLevelSelectTraceReplay` | frame 10287 `dynamic_art.outstanding_transfer_ids` (5825 errors) | frame 10287 `dynamic_art.outstanding_transfer_ids` (5825 errors) | unmoved |
+| `TestS2DezEndingLevelSelectTraceReplay` | pass | pass | held green |
+
+Regression guard (14 classes, 53 tests, 0 failures):
+
+```
+mvn -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \
+  "-Ds1.rom.path=<s1 rev01 rom>" "-Ds2.rom.path=<s2 rev01 rom>" \
+  "-Dtest=TestS2DezEndingLevelSelectTraceReplay,TestS1Ghz1TraceReplay,TestS1Mz1TraceReplay,TestS1Ghz1CompleteRunTraceReplay,TestS1Ghz2CompleteRunTraceReplay,TestS1Mz1CompleteRunTraceReplay,TestS1Credits00Ghz1TraceReplay,TestS1Credits07Ghz1bTraceReplay,TestTraceReplayInvariantGuard,TestTraceReplayReferenceClosureGuard,TestRewindCoverageGuard,TestStaticStateRewindCoverageGuard,TestPlcProducerCoverageGuard,TestDynamicArtDiagnosticsComparator" test
+```
+
+Cross-game parity (52 tests, 0 failures):
+
+```
+mvn -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \
+  "-Ds1.rom.path=<s1 rev01 rom>" "-Ds2.rom.path=<s2 rev01 rom>" "-Ds3k.rom.path=<s3k locked-on rom>" \
+  "-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils" test
+```
+
+No regressions introduced.

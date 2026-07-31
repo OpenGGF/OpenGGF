@@ -440,6 +440,22 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         }
     }
 
+    /**
+     * Advances the pilot animation for one title-card iteration the engine
+     * replays without a full object pass.
+     *
+     * <p>The ROM's title-card loop body is {@code jsr (RunObjects).l}
+     * (docs/s2disasm/s2.asm:5060-5066), so every iteration executes
+     * {@code ObjB2_Main_SCZ}, whose first instruction is
+     * {@code ObjB2_Animate_Pilot} (docs/s2disasm/s2.asm:78815-78816,
+     * 79536-79556). An iteration that reproduces only the player-side effects
+     * still owes the pilot its tick, or the whole 9-frame cadence -- and the
+     * dynamic-art submissions it drives -- stays that many frames late.
+     */
+    public void advanceOmittedPresentationPilotFrame() {
+        animatePilot();
+    }
+
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;

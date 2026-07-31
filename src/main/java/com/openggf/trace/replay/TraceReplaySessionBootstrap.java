@@ -674,12 +674,32 @@ public final class TraceReplaySessionBootstrap {
             int startX = player.getCentreX();
             int startY = player.getCentreY();
             int[] yOffsets = {0, 0, 0, 0, 1};
-            for (int offset : yOffsets) {
+            for (int i = 0; i < yOffsets.length; i++) {
                 player.setCentreX((short) startX);
-                player.setCentreY((short) (startY + offset));
+                player.setCentreY((short) (startY + yOffsets[i]));
                 player.setAir(true);
                 player.setOnObject(false);
                 recordLeaderHistoryForPrelude(player);
+                // These lead-in frames stand in for title-card iterations the
+                // ROM ran through `jsr (RunObjects).l` (docs/s2disasm/s2.asm:
+                // 5060-5066), so ObjB2 executed on them too. ObjB2_Animate_Pilot
+                // is the first instruction of ObjB2_Main_SCZ
+                // (docs/s2disasm/s2.asm:78815-78816, 79536-79556) and its
+                // 9-frame cadence drives the pilot's dynamic-art submissions
+                // through the character bank's *_Part2 entry point
+                // (s2.asm:41659-41697); reproducing only the player-side
+                // effects left that cadence permanently late.
+                //
+                // The first iteration is skipped: the players already exist when
+                // the loop starts (InitPlayers, docs/s2disasm/s2.asm:4945),
+                // whereas ObjB2 is placed by the loop's own ObjPosLoad pass and
+                // therefore first executes on the following iteration. That is
+                // why the pilot sees the leave loop's 25 iterations
+                // (docs/s2disasm/s2.asm:27518-27604) while the player-derived
+                // prelude length is one frame longer.
+                if (i > 0) {
+                    tornado.advanceOmittedPresentationPilotFrame();
+                }
             }
             player.setCentreY((short) (startY + 4));
             return yOffsets.length;

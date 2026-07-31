@@ -3,6 +3,20 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the Sonic 2 SCZ Tornado ride-start lead-in now ticks
+  `ObjB2_Animate_Pilot` on the title-card iterations it stands in for. The ROM's
+  title-card loop body is `jsr (RunObjects).l`
+  (`docs/s2disasm/s2.asm:5060-5066`), so ObjB2 executed on every iteration and
+  `ObjB2_Main_SCZ` begins with `bsr.w ObjB2_Animate_Pilot`
+  (`docs/s2disasm/s2.asm:78815-78816`, `:79536-79556`), whose 9-frame cadence
+  drives the pilot's DPLC submissions through `LoadTailsDynPLC_Part2`
+  (`docs/s2disasm/s2.asm:41659-41697`). Reproducing only the player-side effects
+  of those iterations left the cadence permanently late, so the very first
+  gameplay frame's outstanding transfer set was empty. The first iteration is
+  skipped because the players already exist when the loop starts (`InitPlayers`,
+  `docs/s2disasm/s2.asm:4945`) while ObjB2 is placed by the loop's own
+  `ObjPosLoad` pass. Advances `TestS2SczLevelSelectTraceReplay` from frame 2
+  (6419 errors) to frame 2574 (2 errors).
 - Fix: Tails' tails (Obj05) directional animation now latches its DPLC
   mapping-frame bank and `render_flags` x/y flips at the single ROM write point
   instead of recomputing them from the parent's current velocity every frame.
