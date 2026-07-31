@@ -3,6 +3,20 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the trace-replay terminal main-loop iteration now also runs the fixed
+  in-level Tails' tails slot (Obj05), not just the Obj01/Obj02 playable prefix.
+  ROM `RunObjects` executes the fixed in-level slots that follow the dynamic
+  object RAM, and `Obj05_Main` (`docs/s2disasm/s2.asm:41723`) reaches
+  `.display` (`docs/s2disasm/s2.asm:41760`) and unconditionally runs
+  `Tails_Animate_Part2` then `LoadTailsTailsDynPLC`
+  (`docs/s2disasm/s2.asm:41762-41763`, subroutine at
+  `docs/s2disasm/s2.asm:41637`) before `DisplaySprite`
+  (`docs/s2disasm/s2.asm:41764`). Without it the capture boundary dropped
+  Obj05's trailing DPLC submission. `TraceReplayFixture` gains
+  `advancePlayableFixedSlotsOnly()`, delegating to the existing production
+  owner `SpriteManager#advanceTailsTailsAfterObjectExecution`. Greens
+  `TestS2Arz2LevelSelectTraceReplay` (was 3 errors, first at frame 7808
+  `dynamic_art.edges`).
 - Fix: Sonic 2's Tornado (ObjB2) now spends its first executed frame in the ROM
   routine-0 entry. A freshly allocated SST slot has `routine == 0`, so ROM runs
   `ObjB2_Init` (`docs/s2disasm/s2.asm:78799-78813`) — `LoadSubObject`,

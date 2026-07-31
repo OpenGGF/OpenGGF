@@ -56332,3 +56332,67 @@ Citation check: `Level_MainLoop` `docs/s2disasm/s2.asm:5088`, `WaitForVint`
 their labels in the local checkout. The one exception is `ProcessDMAQueue`,
 which is at `docs/s2disasm/s2.asm:1770`; line 1769 is the alias-comment line
 directly above it.
+
+## 2026-07-31 — S2 ARZ2 trailing Obj05 (Tails' tails) DPLC at the capture boundary
+
+Worktree `.worktrees/s2-arz2-trailing-edge`, branch `bugfix/ai-s2-arz2-trailing-edge`
+(base `aa680e386`). Independent verification run.
+
+Root cause: `TraceReplayFixture#runTerminalDynamicArtIteration` replayed only the
+Obj01/Obj02 playable prefix of the ROM's trailing `RunObjects` pass. ROM `RunObjects`
+also executes the fixed in-level slots after the dynamic object RAM, and `Obj05_Main`
+(`docs/s2disasm/s2.asm:41723`) reaches `.display` (`docs/s2disasm/s2.asm:41760`) and
+unconditionally runs `Tails_Animate_Part2` then `LoadTailsTailsDynPLC`
+(`docs/s2disasm/s2.asm:41762-41763`, subroutine at `docs/s2disasm/s2.asm:41637`) before
+`DisplaySprite` (`docs/s2disasm/s2.asm:41764`). The boundary therefore dropped the final
+Obj05 DPLC submission. Fix: new `TraceReplayFixture#advancePlayableFixedSlotsOnly()`,
+run after the prefix, delegating to the existing production owner
+`SpriteManager#advanceTailsTailsAfterObjectExecution`.
+
+Commands (each preceded by `mvn -q -Dmse=relaxed clean` and `rm -rf target/surefire-reports`):
+
+```
+mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=<s2.gen>" \
+  "-Dtest=TestS2Arz2LevelSelectTraceReplay,TestS2ArzLevelSelectTraceReplay,TestS2CnzLevelSelectTraceReplay,TestS2CpzLevelSelectTraceReplay,TestS2HtzLevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,TestS2OozLevelSelectTraceReplay,TestS2Ooz2LevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay,TestS2SczLevelSelectTraceReplay,TestS2DezEndingLevelSelectTraceReplay" test
+
+mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds1.rom.path=<s1.gen>" "-Ds2.rom.path=<s2.gen>" \
+  "-Dtest=TestS2Ehz1TraceReplay,TestS2MczLevelSelectTraceReplay,TestS2Mtz2LevelSelectTraceReplay,TestS2Htz2LevelSelectTraceReplay,TestS2Mcz2LevelSelectTraceReplay,TestS1Ghz1TraceReplay,TestS1Mz1TraceReplay,TestS1Ghz1CompleteRunTraceReplay,TestS1Ghz2CompleteRunTraceReplay,TestS1Mz1CompleteRunTraceReplay,TestS1Credits00Ghz1TraceReplay,TestS1Credits07Ghz1bTraceReplay,TestTraceReplayInvariantGuard,TestTraceReplayReferenceClosureGuard,TestHardwareTimingAuthorityGuard,TestRewindCoverageGuard,TestStaticStateRewindCoverageGuard,TestPlcProducerCoverageGuard,TestDynamicArtDiagnosticsComparator" test
+
+mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds1.rom.path=<s1.gen>" "-Ds2.rom.path=<s2.gen>" "-Ds3k.rom.path=<s3k.gen>" \
+  "-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils" test
+```
+
+Family frontiers, measured before (fix reverted) and after (fix applied):
+
+| Trace | Before | After |
+|---|---|---|
+| `TestS2Arz2LevelSelectTraceReplay` | fail, `Totals: 3 errors, 0 warnings. First error: frame 7808 -- dynamic_art.edges mismatch (expected=[11580, 11581], actual=[11580])` | PASS |
+| `TestS2ArzLevelSelectTraceReplay` | PASS | PASS |
+| `TestS2CnzLevelSelectTraceReplay` | PASS | PASS |
+| `TestS2CpzLevelSelectTraceReplay` | PASS | PASS |
+| `TestS2HtzLevelSelectTraceReplay` | PASS | PASS |
+| `TestS2MtzLevelSelectTraceReplay` | PASS | PASS |
+| `TestS2OozLevelSelectTraceReplay` | PASS | PASS |
+| `TestS2Ooz2LevelSelectTraceReplay` | PASS | PASS |
+| `TestS2WfzLevelSelectTraceReplay` | PASS | PASS |
+| `TestS2SczLevelSelectTraceReplay` | PASS | PASS |
+| `TestS2DezEndingLevelSelectTraceReplay` | PASS | PASS |
+
+Raw surefire lines — before: `Tests run: 11, Failures: 1, Errors: 0, Skipped: 0`
+(`MSE:TESTS total=11 passed=10 failed=1`); after: `MSE:OK modules=1 passed=11 failed=0
+errors=0 skipped=0 time=173s`. Isolated re-check with the final sources:
+`Tests run: 1, Failures: 0, Errors: 0, Skipped: 0 -- in
+com.openggf.tests.trace.s2.TestS2Arz2LevelSelectTraceReplay`.
+
+Green regression guard (19 classes) — `MSE:OK modules=1 passed=77 failed=0 errors=0
+skipped=0`. Cross-game parity (`TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
+`TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`) — `MSE:OK modules=1
+passed=52 failed=0 errors=0 skipped=0`.
+
+No REGRESSION INTRODUCED.
+
+Citation check performed against the local `docs/s2disasm/s2.asm`:
+`LoadTailsTailsDynPLC` `:41637` ✓, `Obj05_Main` `:41723` ✓, `.display` `:41760` ✓.
+The fix agent's original comment cited `Tails_Animate_Part2`/`LoadTailsTailsDynPLC` as
+`:41761-41762` and `DisplaySprite` as `:41763`; the actual lines are `:41762-41763` and
+`:41764` (one-line skew). Corrected in the committed comments before landing.

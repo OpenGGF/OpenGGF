@@ -313,6 +313,10 @@ class TestSpecialStageHardwareTimingLifecycle {
         }
 
         @Override
+        public void advancePlayableFixedSlotsOnly() {
+        }
+
+        @Override
         public void suppressFirstSidekickAnimationOnce() {
         }
 

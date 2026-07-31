@@ -402,6 +402,10 @@ class TestTraceRunHardwareTimingCoordinator {
         }
 
         @Override
+        public void advancePlayableFixedSlotsOnly() {
+        }
+
+        @Override
         public void suppressFirstSidekickAnimationOnce() {
         }
 
@@ -475,6 +479,10 @@ class TestTraceRunHardwareTimingCoordinator {
 
         @Override
         public void advancePlayableAnimationsOnly() {
+        }
+
+        @Override
+        public void advancePlayableFixedSlotsOnly() {
         }
 
         @Override

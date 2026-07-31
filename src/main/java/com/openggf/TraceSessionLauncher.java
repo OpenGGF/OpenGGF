@@ -1706,6 +1706,11 @@ public final class TraceSessionLauncher {
         }
 
         @Override
+        public void advancePlayableFixedSlotsOnly() {
+            GameServices.sprites().advanceTailsTailsAfterObjectExecution();
+        }
+
+        @Override
         public void suppressFirstSidekickAnimationOnce() {
             var sprites = GameServices.spritesOrNull();
             if (sprites != null && !sprites.getSidekicks().isEmpty()) {
