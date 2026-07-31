@@ -56250,3 +56250,57 @@ Frame 34 `queue.s3k_kos_module.queued_fingerprints` (known `LoadQueueStateProjec
 recorder defect, unfixable engine-side) and 7 groups at frames 1067-1068, all
 `queue.s3k_kos_*`, which are the previously-logged `Obj_HCZLargeFan` art-queue timing
 lead (`sonic3k.asm:65588-65608`). **No physics or animation divergence remains.**
+
+## 2026-07-31 — S3K KosM queue destination double-scale (recorder defect, fixed)
+
+Worktree `.worktrees/recorder-fix`, branch `bugfix/ai-s3k-recorder-fix` off
+`bugfix/ai-s3k-mhz-queue-frontier`.
+
+`LoadQueueStateProjector.CaptureS3kModule` scaled the queued module destination by 32 a
+second time. The word is already a VRAM **byte** address: `Queue_Kos_Module` stores it
+with `move.w d2,(a2)+ ; store destination VRAM address` (`sonic3k.asm:2683`), and the
+`plreq` macro emits `dc.w tiles_to_bytes(toVRAMaddr)` (`sonic3k.macros.asm:195-198`).
+The engine agrees — `S3kKosModuleQueue.captureDiagnostics` fingerprints
+`descriptor.destinationAddress()`, a byte address. Fixed to read the word unscaled.
+
+Audited every other scaling in the projector: `CaptureS3kDirect` is correct and was left
+alone, because `Queue_Kos` stores a longword RAM destination (`sonic3k.asm:2808`) that is
+never tile-scaled; `CapturePlc`'s `/ 32` is a deliberate byte-to-tile conversion for the
+S1/S2 Nemesis fingerprints. `HardwareTimingEventEngine` already read the module
+destination unscaled, so the timing port needed no change.
+
+This defect is the known cause of the HCZ frame-34
+`queue.s3k_kos_module.queued_fingerprints` group and of the single remaining MGZ and CNZ
+groups. **Those groups cannot clear until the affected fixtures are regenerated** — the
+committed fixtures still hold the double-scaled values.
+
+### Collision-plane capture added
+
+`S3KAuxEventEngine`'s `state_snapshot` now also records `top_solid_bit` (`$46`),
+`lrb_solid_bit` (`$47`), `stick_to_convex` (`$3C`), `primary_collision_addr` and
+`secondary_collision_addr`. `Player_AnglePos` swaps to the secondary array when
+`top_solid_bit != $C` (`sonic3k.asm:18729-18732`), and the two are distinct
+chunk-to-collision-block index arrays rather than solidity bits, so the MHZ frame-3246
+question could not be settled from the trace alone. Comparison-only diagnostic context;
+no comparator assertion, no engine input.
+
+Verified live rather than assumed: a 4058-frame AIZ probe capture reports
+`top_solid_bit=0x0C`, `lrb_solid_bit=0x0D`, `primary=0x00274761`,
+`secondary=0x00274D61`. The pair differ by exactly `$600`, matching `LoadSolids`'
+`addi.l #$600,d0` (`sonic3k.asm:9553`) — so these are not dead addresses.
+
+### Fixture status: NOT regenerated
+
+Native suite after the change: **514 passed, 11 failed, 0 skipped** (full tier), and
+**500 passed, 0 failed** on `--no-gates`. All 11 failures are S3K byte gates whose
+pinned aux `sha256`/length moved as intended. Measured example: `aiz_completerun`
+`aux_state.jsonl` 184,407,249 bytes vs the pinned 184,288,496 (+118,753).
+
+The regeneration surface is wider than the complete-run set: `S3KTraceDifferential`
+(standard CNZ, MGZ), `S3KCompleteRunDifferential` (HCZ timing stream),
+`S3KRunModeDifferential` (the `s3-knux-multibonus-ss` run and the identity-(C)
+segments) and `S3KCompleteRunSegmentsDifferential` (all fifteen segments) all pin aux
+bytes. Regeneration was therefore **not performed** in this commit and remains a
+pending, separately approved decision. Per-zone counts are unchanged from the
+`bugfix/ai-s3k-mhz-queue-frontier` baseline (aiz 8/64, hcz 8/1320, mgz 1/14629,
+cnz 1/5336, icz 82/1629, lbz 8/35, mhz 912/7218), because no fixture moved.
