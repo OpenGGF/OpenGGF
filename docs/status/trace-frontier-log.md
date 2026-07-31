@@ -54427,3 +54427,35 @@ TestS3kHardwareTimingReplay" test
   align S1 callback/edge ordinals and frame-69 PLC fingerprints. Full
   per-class totals and S3K runtime frontiers are recorded in
   `docs/architecture/validation/trace/2026-07-30-native-trace-frontiers.md`.
+
+## 2026-07-31 — S1 title-card `Card_ChangeArt` PLC pair now submitted headless
+
+- Context: branch `bugfix/ai-trace-s1-ghz1`, worktree `.worktrees/trace-s1-ghz1`
+  on `a50b3f497` plus the uncommitted fix below (JDK 21.0.11, Maven 3.9.16).
+- Change: `Card_ChangeArt`'s `AddPLC plcid_Explode` + `AddPLC plcid_GHZAnimals +
+  v_zone` pair moved off the title-card renderer's slide-out predicate onto a
+  fixed-slot object sidecar (`Sonic1FixedTitleCardManager`) armed at the ROM
+  `Level_StartGame` release boundary and ticked in the fixed in-level object
+  pass (docs/s1disasm/sonic.asm:2969-2995,
+  docs/s1disasm/_incObj/34 Title Cards.asm:114-168). A headless load omits the
+  presentation, so the pair was previously never submitted at all.
+- Command: `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true
+  -Ds1.rom.path=<repo>/s1.gen -Dtest=<class>#replayMatchesTrace test`.
+- `TestS1Ghz1CompleteRunTraceReplay`: fail, 982 -> 978 errors; first error frame
+  69 `queue.s1_nemesis_plc.queued_fingerprints` -> frame 2805
+  `dynamic_art.edge[0].logical_frame`.
+- `TestS1Ghz1TraceReplay`: fail, 588 -> 584 errors; first error frame 69 (same
+  queue field) -> frame 2116 `dynamic_art.edge[0].logical_frame`.
+- `TestS1Mz1TraceReplay`: fail, 2050 -> 2046 errors; first error frame 69 (same
+  queue field) -> frame 1927 `dynamic_art.edge[0].logical_frame`.
+- Next target: the S1 player dynamic-art ledger `logical_frame` skew that is now
+  the first frontier on all three traces.
+- Independent verification (same worktree/branch): clean-`HEAD` A/B confirms all
+  three classes previously stopped at frame 69 on the same queue field; the
+  eight `TestS1Credits0*TraceReplay` classes stay green (8/8), as do
+  `TestTraceReplayInvariantGuard`, `TestTraceReplayReferenceClosureGuard`,
+  `TestRewindCoverageGuard`, `TestStaticStateRewindCoverageGuard`,
+  `TestSonic1PlcProducerCoverage`, and `TestPlcProducerCoverageGuard`. No
+  regressions. Note: under `-Dmse=relaxed` reused forks the S1 trace classes
+  cross-contaminate and report a phantom frame-69 failure; judge each class from
+  an isolated run.

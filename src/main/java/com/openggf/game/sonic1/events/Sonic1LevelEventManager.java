@@ -36,6 +36,8 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
     private final Sonic1EndingEvents endingEvents;
     private final Sonic1FixedAirCountdownManager fixedAirCountdownManager =
             new Sonic1FixedAirCountdownManager(Sonic1ZoneEvents::focusedSpriteOrNull);
+    private final Sonic1FixedTitleCardManager fixedTitleCardManager =
+            new Sonic1FixedTitleCardManager();
 
     // Loop/plane switching manager
     private final Sonic1LoopManager loopManager = new Sonic1LoopManager();
@@ -116,6 +118,26 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
     @Override
     public void updateFixedInLevelObjectsBeforeDynamicObjects() {
         fixedAirCountdownManager.update();
+        // ExecuteObjects keeps running the fixed title-card slots after
+        // Level_StartGame (docs/s1disasm/sonic.asm:2969-2995); the level-name
+        // element's Card_Wait/Card_MoveOut tail re-queues the explosion and
+        // animal art (docs/s1disasm/_incObj/34 Title Cards.asm:122-168).
+        fixedTitleCardManager.update();
+    }
+
+    /**
+     * Arms the fixed title-card object tail at the ROM's {@code Level_StartGame}
+     * boundary (docs/s1disasm/sonic.asm:2969-2972), whether or not the engine
+     * presented the sliding card sprites.
+     */
+    public void armTitleCardArtReloadAtLevelStart(
+            int progressionZone, int progressionAct, int romZoneId) {
+        fixedTitleCardManager.armAtLevelStart(progressionZone, progressionAct, romZoneId);
+    }
+
+    /** Whether the fixed level-name title-card element is still executing. */
+    public boolean isTitleCardArtReloadPending() {
+        return fixedTitleCardManager.isLive();
     }
 
     @Override
@@ -161,12 +183,14 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
      *   <li>1 byte: endingEvents.endingSonicSpawned</li>
      *   <li>14 bytes: fixed v_sonicbubbles countdown sidecar</li>
      *   <li>7 × 4 bytes: pending S1 PLC work for each handler</li>
+     *   <li>9 bytes: fixed title-card object tail (routine, timer, X, final X, v_zone)</li>
      * </ol>
      */
     @Override
     protected byte[] captureExtra() {
         ByteBuffer buf = ByteBuffer.allocate(1 + 7 * 4 + 3
-                + Sonic1FixedAirCountdownManager.REWIND_STATE_BYTES + 7 * 4);
+                + Sonic1FixedAirCountdownManager.REWIND_STATE_BYTES + 7 * 4
+                + Sonic1FixedTitleCardManager.REWIND_STATE_BYTES);
         buf.put((byte) (sbz3TransitionRequested ? 1 : 0));
         buf.putInt(ghzEvents.eventRoutine);
         buf.putInt(lzEvents.eventRoutine);
@@ -186,6 +210,7 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
         buf.putInt(syzEvents.getPendingPlcIdForRewind());
         buf.putInt(sbzEvents.getPendingPlcIdForRewind());
         buf.putInt(endingEvents.getPendingPlcIdForRewind());
+        fixedTitleCardManager.writeRewindState(buf);
         return buf.array();
     }
 
@@ -218,6 +243,9 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
             syzEvents.setPendingPlcIdForRewind(buf.getInt());
             sbzEvents.setPendingPlcIdForRewind(buf.getInt());
             endingEvents.setPendingPlcIdForRewind(buf.getInt());
+        }
+        if (buf.remaining() >= Sonic1FixedTitleCardManager.REWIND_STATE_BYTES) {
+            fixedTitleCardManager.readRewindState(buf);
         }
     }
 

@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
 - Fix: Music no longer stops for the rest of an act after an extra life, invincibility, or a Super transformation. Two faults compounded. The audio profile's override classification was only read by the retired legacy backend, so the presentation path recorded every song as a plain foreground replacement: the 1-up jingle destroyed the zone music instead of saving it, and the driver's "fade in to previous song" (SMPS `E4`) found nothing to restore. Interrupted songs were then held on a stack, but the ROM has no stack — the sound driver owns a single save slot belonging to the 1-up jingle alone (`Sound_PlayBGM` backs up `v_1up_ram` and sets `f_1up_playing`; `zPlayMusic` copies `zTracksStart` to `zTracksSaveStart` and sets `zFadeToPrevFlag`), and any other music request abandons it, S1 by `clr.b f_1up_playing` and S3K by `zStopAllSound` zeroing the whole backup area. Transforming during the jingle therefore parked a frozen jingle voice on the stack that a later restore could make active, playing nothing. `AudioManager` now records the override flag on the music command itself and restricts it to the extra-life id; invincibility and Super are ordinary music as in the ROM, and the level music is restored by re-issuing it from `Sonic_ChkInvin` — including that routine's gates, so the boss and drowning-countdown themes survive a power-up expiring. The Super revert no longer plays music itself: like `SonicKnux_SuperHyper` and `Sonic_RevertToNormal` it sets the invincibility timer to 1 and lets that path run a tick later.
+- Fix: Sonic 1 title-card `Card_ChangeArt` now re-queues the explosion and
+  per-zone animal art from the fixed title-card object slot instead of the
+  title-card renderer's slide-out predicate. `Level_StartGame` releases the
+  cards into `Card_Wait`/`Card_MoveOut` and they finish as ordinary in-level
+  objects, so the pair is submitted on the same logical frame whether or not
+  the sliding sprites were presented; a headless level load previously never
+  submitted it at all.
 - Tooling: the reproducible S1, S2, and S3K native trace fleet has been
   regenerated with the frozen headless BizHawk build. S1/S2 fixtures now carry
   frame-level PLC and DPLC lifecycle diagnostics, S3K fixtures carry schema-2
