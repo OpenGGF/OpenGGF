@@ -55195,3 +55195,47 @@ alone still regresses MHZ, so nothing was landed.
 
 MHZ stays at **601**. The probe is committed and re-runnable, so the next
 session starts from ROM ground truth rather than hypotheses.
+
+### 2026-07-31 — MHZ RNG alignment is blocked by the S3K inline solid-resolution model
+
+Final classification for this branch, from the probe evidence above.
+
+**ROM's frame order for the event:**
+
+```
+Player_1 (slot 0) -> ... -> Obj_MHZ_Pollen_Spawner (slot 4) -> Obj_MHZMushroomCap (slot 5)
+                                     ^ reads player               ^ SolidObjectTop grounds player
+```
+
+The spawner therefore observes a player that this frame's *later* object will
+ground. That is why row 73 takes no `Random_Number` and row 74 does.
+
+**The engine cannot express that.** `GameRules.SONIC_3K` sets
+`ObjectInteractionRules.objectsExecuteAfterPlayerPhysics = true`, so
+`LevelFrameStep` runs an inline solid-resolution frame:
+
+```
+physics (player move AND its solid-object contact, fused) -> pre-dynamic sidecars -> dynamic objects -> fixed sidecars
+```
+
+Player-versus-solid-object grounding happens inside `physics`, before any
+object executes. So every scheduling point available to the spawner — before
+physics, after physics, pre-dynamic, post-dynamic — sees the player already
+grounded on the frame ROM still sees airborne. All five were measured (601 /
+733 / 982 / 1055 / 578-rejected) and none reproduces ROM's phase, which is the
+expected result once the model constraint is stated.
+
+**Blocker.** Closing this needs the player's object-solid contact to resolve
+during the owning object's execution rather than inside the player's physics
+step — either flipping S3K off the inline model or splitting solid resolution
+out of `physics`. That is an engine-architecture change touching every S3K
+object interaction (springs, platforms, vines, boss arenas, the carry system),
+with fleet-wide regression risk, and it is far outside a trace-frontier branch.
+It should be designed deliberately, not landed as a side effect of MHZ work.
+
+Everything needed to resume is captured: the probe
+(`tools/bizhawk/probes/mhz_rng_ownership_probe.lua`) is committed and
+re-runnable, its output is archived, and the five measured placements are
+tabulated so none is retried.
+
+**MHZ final state this session: 601 non-queue groups, down from 1888.**
