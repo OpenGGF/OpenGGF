@@ -55810,3 +55810,60 @@ frame column is HEX. `player_stand_on_obj` is an SST slot index, not an object i
 (`TraceFrame.java:13`). Recorded queue occupancy lives in `aux_state.jsonl.gz` as
 `load_queue_state` events, not in `physics.csv`. Clear both `target/trace-reports`
 and `target/surefire-reports` between runs or MSE totals read a stale union.
+
+## 2026-07-31 — MHZ: read the frontier, not the group count
+
+MHZ's `error_count` ROSE 622 -> 919 while its frontier ADVANCED 2986 -> 3013, and
+the commit that did it (`cfa7fc4f9`) was kept deliberately. Recording why, because
+the raw number invites the wrong conclusion.
+
+`error_count` counts divergence GROUPS, not per-frame errors. A corrected
+trajectory re-sequences one long cascade into more, shorter groups: the pre-fix
+report had single groups spanning 2986-3332, and after the fix every non-queue
+group starts at frame >= 3013. Verified independently in the main checkout —
+earliest non-queue frame 3013, so frames 0-3012 are clean. The author also
+A/B-tested its own suspicion that the routine-4 hunk caused the rise: removing it
+measured 920 against 919, so it did not.
+
+**The report's `cascading` flags OVER-ATTRIBUTE.** Two separate agents were misled
+by them today. The report marked ~596 groups as chained off frame 2920; fixing
+2920 cleared 5. Verify parentage empirically; never assume a seed owns everything
+downstream, and never size a task from a cluster count.
+
+### What `cfa7fc4f9` actually fixed
+
+MHZ frames 2966-3059 are not sidekick AI. Tails is captured and carried by the
+Madmole's arcing side drill: `sub_8D94A` (sonic3k.asm:193465-193487) sets routine
+8, `$34 = loc_8D846`, `object_control = 1`, `anim = $1A`, and `loc_8D7A8`
+(193291-193331) writes Tails' position directly from the arm, which is why his
+velocities stay zero.
+
+The engine drove the arm's rebound and its captured-player release off the raw
+animation loop wrapping. But `byte_8D9E7` (sonic3k.asm:193520) terminates with
+`$FC` (`AnimateRaw_Restart`), NOT `$F4` (`AnimateRaw_CustomCode`), so it never
+invokes `$34(a0)` at all. The `$34` hooks — `loc_8D794` for the free-flying arc
+(193281-193284) and `loc_8D846` while carrying (193353-193367) — are invoked by
+`ObjHitFloor_DoRoutine` (177964-177981), which `loc_8D778` and `loc_8D7A8` call
+whenever the arm is moving downward. Two distinct uses of `$34(a0)` had been
+conflated. See `Animate_RawNoSST` / `off_84434` (177355-177385) for the `$FC` vs
+`$F4` distinction; do not re-conflate them.
+
+Symptom before the fix: turnaround ~3 frames early, ~`$10` shallow, no floor snap.
+After: the carried arc tracks the recording to within 1px through frame 3059.
+
+### Open leads on this object
+
+- Frame 3060: ROM releases Tails with ZERO velocity and status `0x02`, then he
+  free-falls under gravity `$38` with air acceleration `$18` — the signature of
+  `loc_8D724` (sonic3k.asm:193237-193243), the arm going offscreen and deleting
+  with `bset Status_InAir` / `clr.b object_control` and no velocity write. ROM's
+  test is coarse: `(x_pos & $FF80) - Camera_X_pos_coarse_back > $280`, plus
+  `y_pos - Camera_Y_pos + $80 > $200`. The engine's
+  `SideDrillChild.checkDeleteAndReleaseCapturedPlayer` uses `isOnScreenX(0x180)`
+  with neither the coarse mask nor the y test.
+- Frame 3013: ROM sets `Status_OnObj` on Tails for exactly two frames while still
+  carried, and `tails_cpu_interact` goes `0x03 -> 0x06`; the engine leaves status
+  at `0x03`.
+
+`ObjectTerrainUtils.checkFloorDist` returns null in headless unit tests without a
+level manager — hence the null guard in `objHitFloorDoRoutine`.
