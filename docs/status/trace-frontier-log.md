@@ -55735,3 +55735,63 @@ TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils" test
 
 No REGRESSION INTRODUCED lines: no previously passing trace or guard in any of
 the three runs moved from pass to fail.
+
+## 2026-07-31 — S2 CheckLoadSignpostArt (`bugfix/ai-s2-near-green-cluster`)
+
+Worktree `.worktrees/s2-near-green-cluster`, branch `bugfix/ai-s2-near-green-cluster`,
+base `bugfix/ai-trace-s1-titlecard-plc-integration` (a76dbb3e7). Ported
+`SetLevelEndType` / `CheckLoadSignpostArt` (`docs/s2disasm/s2.asm:6127-6172`) into
+the previously unimplemented S2 `updateAtLevelLoopTail()` slot: the engine never
+submitted `PLCID_Signpost` (`ArtLoadCues` index 39,
+`docs/s2disasm/s2.asm:89194-89262`; `PlrList_Signpost`,
+`docs/s2disasm/s2.asm:89658-89660`) and never locked `Camera_Min_X_pos`.
+
+Commands (verify agent, clean rebuild before each run):
+
+```
+mvn -q -Dmse=relaxed clean && rm -rf target/surefire-reports
+mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \
+  "-Ds2.rom.path=<s2 world rev01 rom>" \
+  "-Dtest=TestS2ArzLevelSelectTraceReplay,TestS2Arz2LevelSelectTraceReplay,\
+TestS2CnzLevelSelectTraceReplay,TestS2Cnz2LevelSelectTraceReplay,\
+TestS2CpzLevelSelectTraceReplay,TestS2Cpz2LevelSelectTraceReplay,\
+TestS2DezEndingLevelSelectTraceReplay,TestS2HtzLevelSelectTraceReplay,\
+TestS2Htz2LevelSelectTraceReplay,TestS2MczLevelSelectTraceReplay,\
+TestS2Mcz2LevelSelectTraceReplay,TestS2MtzLevelSelectTraceReplay,\
+TestS2Mtz2LevelSelectTraceReplay,TestS2Mtz3LevelSelectTraceReplay,\
+TestS2SczLevelSelectTraceReplay,TestS2Ehz1TraceReplay" test
+```
+
+Family totals: before `passed=2 failed=14`, after `passed=5 failed=11`.
+
+| Trace | Before | After |
+|---|---|---|
+| TestS2Ehz1TraceReplay | 4 errors, f4836 `queue.s2_nemesis_plc.queued_fingerprints` | PASS |
+| TestS2MczLevelSelectTraceReplay | 4 errors, f5412 `queue.s2_nemesis_plc.queued_fingerprints` | PASS |
+| TestS2Mtz2LevelSelectTraceReplay | 4 errors, f12184 `queue.s2_nemesis_plc.queued_fingerprints` | PASS |
+| TestS2ArzLevelSelectTraceReplay | 7 errors, f4255 `queue.s2_nemesis_plc.queued_fingerprints` | 3 errors, f5072 `dynamic_art.edges` |
+| TestS2CpzLevelSelectTraceReplay | 7 errors, f4970 `queue.s2_nemesis_plc.queued_fingerprints` | 3 errors, f5743 `dynamic_art.edges` |
+| TestS2HtzLevelSelectTraceReplay | 7 errors, f7983 `queue.s2_nemesis_plc.queued_fingerprints` | 3 errors, f8860 `dynamic_art.edges` |
+| TestS2CnzLevelSelectTraceReplay | 8 errors, f8590 `queue.s2_nemesis_plc.queued_fingerprints` | 4 errors, f9468 `dynamic_art.edges` |
+| TestS2MtzLevelSelectTraceReplay | 7 errors, f9198 `queue.s2_nemesis_plc.queued_fingerprints` | 3 errors, f10133 `dynamic_art.edges` |
+| TestS2Arz2LevelSelectTraceReplay | 4 errors, f7808 `dynamic_art.edges` | unchanged |
+| TestS2Cnz2LevelSelectTraceReplay | 28 errors, f10935 `dynamic_art.outstanding_transfer_ids` | unchanged |
+| TestS2Cpz2LevelSelectTraceReplay | 8 errors, f11491 `queue.s2_nemesis_plc.busy` | unchanged |
+| TestS2Htz2LevelSelectTraceReplay | 8 errors, f9150 `queue.s2_nemesis_plc.busy` | unchanged |
+| TestS2Mcz2LevelSelectTraceReplay | 17 errors, f9950 `queue.s2_nemesis_plc.busy` | unchanged |
+| TestS2Mtz3LevelSelectTraceReplay | 9 errors, f15258 `queue.s2_nemesis_plc.busy` | unchanged |
+| TestS2DezEndingLevelSelectTraceReplay | PASS | PASS |
+| TestS2SczLevelSelectTraceReplay | PASS | PASS |
+
+Regression guard run (`TestS2DezEnding…`, `TestS2Scz…`, `TestS1Ghz1`, `TestS1Mz1`,
+`TestS1Ghz1CompleteRun`, `TestS1Ghz2CompleteRun`, `TestS1Mz1CompleteRun`,
+`TestS1Credits00Ghz1`, `TestS1Credits07Ghz1b`, `TestTraceReplayInvariantGuard`,
+`TestTraceReplayReferenceClosureGuard`, `TestRewindCoverageGuard`,
+`TestStaticStateRewindCoverageGuard`, `TestPlcProducerCoverageGuard`,
+`TestDynamicArtDiagnosticsComparator`): all suites `failures=0 errors=0`.
+
+Cross-game parity run (`TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
+`TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`): `passed=52 failed=0`.
+
+No REGRESSION INTRODUCED lines: the two previously green family traces and every
+guard/cross-game suite stayed green.

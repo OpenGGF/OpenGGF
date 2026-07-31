@@ -3,6 +3,18 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: Sonic 2 now runs `CheckLoadSignpostArt` from the level-loop tail. The S2
+  `updateAtLevelLoopTail()` slot was unimplemented, so the engine never locked
+  `Camera_Min_X_pos` to `Camera_Max_X_pos - $100` and never submitted
+  `PLCID_Signpost` when the camera reached the end of a signpost act
+  (`docs/s2disasm/s2.asm:6152-6172`). The non-signpost act table is transcribed
+  from `SetLevelEndType` (`docs/s2disasm/s2.asm:6127-6146`), and the PLC is a
+  `LoadPLC2` replace, not an append (`docs/s2disasm/s2.asm:2103-2124`), loading
+  `PlrList_Signpost` (`docs/s2disasm/s2.asm:89658-89660`). Greens
+  `TestS2Ehz1TraceReplay`, `TestS2MczLevelSelectTraceReplay` and
+  `TestS2Mtz2LevelSelectTraceReplay`, and advances the ARZ1, CPZ1, HTZ1, CNZ1 and
+  MTZ1 level-select traces past their `queue.s2_nemesis_plc.queued_fingerprints`
+  frontier.
 - Fix: Sonic 2 no longer retires queued dynamic-art DMA transfers on lag frames.
   `V_Int` branches to `Vint_Lag` while `Vint_routine` is 0
   (`docs/s2disasm/s2.asm:483-484`), and neither `Vint_Lag`
