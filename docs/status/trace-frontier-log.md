@@ -57330,3 +57330,40 @@ early — likely the other geyser's exit-edge model still imprecise; (b) frame 9
 `player_animation_id` 0x13 vs 0x09 plus an engine-only KosM submission (direct source
 879204 = `$D6A64`); (c) terminator at 10334: recording expects
 `KOS_DECOMPRESSION_QUEUE#104` (fingerprint fbfc78d4…) with engine pending empty.
+
+## 2026-08-01 — trace replay heap exhaustion fixed; LBZ "green" was OOM truncation
+
+Worktree `.worktrees/trace-heap` (`bugfix/ai-s3k-trace-heap` off
+`bugfix/ai-s3k-mhz-queue-frontier` @ 514d08503). Command per segment:
+`mvn -Ptrace-replay -Dtest=TestS3k<Zone>CompleteRunTraceReplay -Ds3k.rom.path=… test`,
+clearing `target/trace-reports` and `target/surefire-reports` between runs.
+
+Diagnosis: complete-run segments recorded 2026-08-01 grew to 26k-59k rows; the LBZ
+`aux_state.jsonl` is 287 MB uncompressed (~1.34M events). `TraceData.loadAuxEvents`
+retained **643 MB measured** (dominant: one `LinkedHashMap<String,Object>` per generic
+`object_state`-class event plus a fresh string per hex value), so the `-Xmx1g`
+trace-replay fork OOMed intermittently mid-replay — with a truncated report (or none)
+that read as a passing prefix. Fixes: pooled array-backed `CompactFieldMap` + interned
+strings for generic aux events, interned `object_near` text fields, and `TraceBinder`
+now drops ROM/engine diagnostics strings for frames finalized clean (reports never
+render diagnostics for non-divergent frames). LBZ aux retention 643 MB -> 171 MB
+measured; GC-log peak during LBZ replay 927 MB at `-Xmx1g`, no OOM. `-Xmx` left at
+1g — measured fit, no ceiling raise.
+
+Consequence: the "lbz 0/12647" baseline was an OOM-truncated prefix. LBZ is actually
+46,244 rows and **deterministically fails at frame 17599** —
+`queue.s3k_kos_direct.busy expected=true actual=false` (7 errors), then
+`IllegalStateException: expected completion: KOS_DECOMPRESSION_QUEUE#279` admission
+abort. Reproduced identically on stock 514d08503 at `-Xmx4g`, so pre-existing, not
+introduced by the memory work. LBZ 5/5 consecutive runs: `7/17596`, report written
+every time.
+
+Sweep (this commit): aiz 57/6344, hcz 119/10334, mgz 23/17949, cnz 7/9711,
+icz 10/12375, lbz 7/17596 (frontier re-characterised from 0/12647), mhz 838/7218 —
+all non-LBZ identical to baseline. `TestS3kAizTraceReplay` holds 4F+1E. Guard batch
+(S3K keep-green four + `TestHardwareTimingAuthorityGuard`) green. Pre-existing on the
+branch, unchanged by this work: `TestDivergenceReport` 3E ("physics frame domain must
+be contiguous"), `TestTraceDataParsing#parsesRecordedRingFloorCheckCounterPhase` 1F.
+
+Next LBZ target: frame 17599 kos_direct busy/queue parity leading into the
+`KOS_DECOMPRESSION_QUEUE#279` (sha256 04cd9b0a…) admission abort.
