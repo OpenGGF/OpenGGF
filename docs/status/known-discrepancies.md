@@ -1391,3 +1391,35 @@ those construction children must never gain a codec.
   transient, re-emitted by parent; accepted as drop)
 - All WFZ boss children (`WFZFloatingPlatform`, `WFZLaserWall`, `WFZPlatformHurt`) — spawned
   from `updateSpawnChildren()` (update routine `ROUTINE_SPAWN_CHILDREN`, not construction)
+
+## V-Int Run Counter Does Not Tick On Pause Or Seamless-Boundary Lag Rows
+
+The engine's `ObjectManager.vblaCounter` models the ROM V-int run counter --
+`Vint_runcount` (`docs/s2disasm/s2.asm:508`), `v_vblank_count`
+(`docs/s1disasm/sonic.asm:682`) and `V_int_run_count`
+(`docs/skdisasm/sonic3k.asm:543`) -- which the ROM increments once at V-int
+exit regardless of which V-int routine the mode jump table dispatched.
+
+The engine holds the invariant **exactly one tick per serviced V-blank**: the
+gameplay row ticks inside `ObjectManager.update(...)`, and every row where the
+level loop did not run but the V-int was still serviced (lag skip, bonus-stage
+lag, bonus-exit fade hold, title-card overlay, seamless-reload transition,
+trace `VBLANK_ONLY` / `PLAYABLE_ANIMATION_ONLY`) calls
+`ObjectManager.advanceVblaCounter()` exactly once. `TestVblaCounterVBlankInvariant`
+pins the single mutation statement and the per-row tick counts.
+
+Two row kinds deliberately diverge and **must not be "fixed" casually**:
+
+- **PAUSE rows.** The ROM's pause loop still runs the V-int, so the ROM counter
+  advances while paused; the engine's does not.
+- **Seamless-boundary LAG rows.** These service `LevelFrameStep.serviceVBlankOnly`
+  without ticking the counter.
+
+Both are unobservable against the currently recorded traces -- the engine's
+counter matches the recorded ROM value every frame on the probed traces.
+Closing either divergence is a phase change, not a refactor: the counter is the
+`vblaCounter` argument handed to every object instance each frame, so a one-tick
+shift moves spilled-ring floor-probe cadence in all three games, the S3K slot
+bonus-stage RNG seed, LBZ/MGZ/ICZ object phasing, and every rewind snapshot's
+stored scalar. Any such change needs a full S1/S2/S3K trace fleet plus rewind
+determinism measurement of its own.

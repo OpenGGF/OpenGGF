@@ -1038,6 +1038,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     /** Advances the native VBlank clock while S3K dispatches title-card SSTs. */
     public void advanceTitleCardVblankOnly() {
         if (objectManager != null) {
+            // V-blank-only row: see the exactly-one-tick-per-serviced-V-blank invariant on ObjectManager.vblaCounter.
             objectManager.advanceVblaCounter();
         }
     }
@@ -3826,6 +3827,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         // clock increment. V_int_run_count is global work RAM and still ticks
         // in the ROM on that transition-only VBlank.
         if (objectManager != null) {
+            // V-blank-only row: see the exactly-one-tick-per-serviced-V-blank invariant on ObjectManager.vblaCounter.
             objectManager.advanceVblaCounter();
         }
 

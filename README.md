@@ -218,6 +218,30 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **V-blank counter clarity (2026-08-01):** two clock-related pieces of the
+  engine were documented as doing something other than what they do, and the
+  discrepancy cost real investigation time during the S1/S2 trace re-green.
+  `ObjectServices#vIntRunCounter` advertised resolving S3K's `V_int_run_count`
+  "from the object-update clock", implying a conversion; it actually returned its
+  argument plus a phase offset that is zero in normal gameplay — the identity
+  function — and three separate investigations proposed routing a fix through it
+  before that was noticed. It is now `resolveVIntRunCount`, documented as
+  performing no conversion, because the value callers pass is already the V-blank
+  counter: `ObjectExecutionController` dispatches
+  `instance.update(objects.vblaCounter(), …)`, so every object receives
+  `V_int_run_count` under a parameter merely *named* `frameCounter`. Separately
+  the counter itself was advanced from nine scattered sites with its contract
+  written down nowhere; it is measurably correct — probed against the recorded ROM
+  value it matches exactly, every frame — so rather than relocate anything, the
+  inline increment now routes through the single `advanceVblaCounter()` mutation
+  point and the field states the invariant it satisfies (exactly one tick per
+  serviced V-blank, matching the ROM's V-int-exit increment whichever routine the
+  mode jump table dispatched), names the consumers a de-phasing would silently
+  break, and records the two deliberate divergences in
+  `docs/status/known-discrepancies.md`. Both changes are behaviour-identical and
+  verified against the full S1/S2 trace fleet, the trace/rewind/PLC guards and
+  S3K parity.
+
 - **S1/S2 trace-replay suites re-greened after the PLC/DPLC queue landed
   (2026-08-01):** the Pattern Load Cue and DPLC queue work left the Sonic 1 and
   Sonic 2 trace-replay fleets failing 42 tests; 39 are green again from 26

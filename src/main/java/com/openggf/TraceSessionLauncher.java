@@ -1484,6 +1484,7 @@ public final class TraceSessionLauncher {
                         lifecycleFrame,
                         com.openggf.game.resources.PlcLifecyclePhase.LAG);
                 if (level != null && level.getObjectManager() != null) {
+                    // V-blank-only row: see the exactly-one-tick-per-serviced-V-blank invariant on ObjectManager.vblaCounter.
                     level.getObjectManager().advanceVblaCounter();
                 }
                 if (phase == TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY) {

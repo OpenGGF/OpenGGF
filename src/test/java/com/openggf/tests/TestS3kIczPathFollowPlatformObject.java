@@ -108,8 +108,8 @@ class TestS3kIczPathFollowPlatformObject {
         IczPathFollowPlatformObjectInstance platform = create(0);
         platform.setServices(new StubObjectServices() {
             @Override
-            public int vIntRunCounter(int objectUpdateCounter) {
-                return objectUpdateCounter;
+            public int resolveVIntRunCount(int vIntRunCountAtObservation) {
+                return vIntRunCountAtObservation;
             }
         });
         PlayableEntity player = mock(PlayableEntity.class);
@@ -127,8 +127,8 @@ class TestS3kIczPathFollowPlatformObject {
         IczPathFollowPlatformObjectInstance platform = create(0);
         platform.setServices(new StubObjectServices() {
             @Override
-            public int vIntRunCounter(int objectUpdateCounter) {
-                return objectUpdateCounter + 1;
+            public int resolveVIntRunCount(int vIntRunCountAtObservation) {
+                return vIntRunCountAtObservation + 1;
             }
         });
         PlayableEntity player = mock(PlayableEntity.class);

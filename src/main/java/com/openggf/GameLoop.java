@@ -1416,6 +1416,7 @@ public class GameLoop {
                 for (int tick = 0; tick < vblankTicks; tick++) {
                     LevelFrameStep.serviceVBlankOnly(LevelFrameContext.from(gameplayMode),
                             activePlcLifecycleFrame, PlcLifecyclePhase.LAG);
+                    // V-blank-only row: see the exactly-one-tick-per-serviced-V-blank invariant on ObjectManager.vblaCounter.
                     levelManager.getObjectManager().advanceVblaCounter();
                 }
             }
@@ -1587,6 +1588,7 @@ public class GameLoop {
                 for (int tick = 0; tick < vblankTicks; tick++) {
                     LevelFrameStep.serviceHardwareVBlankOnly(
                             LevelFrameContext.from(gameplayMode));
+                    // V-blank-only row: see the exactly-one-tick-per-serviced-V-blank invariant on ObjectManager.vblaCounter.
                     levelManager.getObjectManager().advanceVblaCounter();
                 }
             }
@@ -1613,6 +1615,7 @@ public class GameLoop {
             if (levelManager.getObjectManager() != null) {
                 LevelFrameStep.serviceHardwareVBlankOnly(
                         LevelFrameContext.from(gameplayMode));
+                // V-blank-only row: see the exactly-one-tick-per-serviced-V-blank invariant on ObjectManager.vblaCounter.
                 levelManager.getObjectManager().advanceVblaCounter();
             }
             playbackDebugManager.onLevelFrameAdvanced();

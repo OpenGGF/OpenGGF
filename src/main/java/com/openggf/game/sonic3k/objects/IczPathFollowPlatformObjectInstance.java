@@ -191,7 +191,7 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
         // ObjectManager supplies its VBlank clock; the service resolves the
         // independent low-bit phase retained for legacy S3K replay starts.
         ObjectServices svc = tryServices();
-        int vIntLowByte = svc != null ? svc.vIntRunCounter(frameCounter) : frameCounter;
+        int vIntLowByte = svc != null ? svc.resolveVIntRunCount(frameCounter) : frameCounter;
         x += (vIntLowByte & 1) == 0 ? 1 : -1;
         if (waitTimer-- <= 0) {
             phase = Phase.FALLING;

@@ -432,6 +432,7 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
         if (levelEvents != null) {
             levelEvents.advanceVblankOnlyState();
         }
+        // V-blank-only row: see the exactly-one-tick-per-serviced-V-blank invariant on ObjectManager.vblaCounter.
         levelManager.getObjectManager().advanceVblaCounter();
         return mask;
     }
