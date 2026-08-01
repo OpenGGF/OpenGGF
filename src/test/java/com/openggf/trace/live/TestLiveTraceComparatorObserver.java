@@ -14,8 +14,10 @@ import com.openggf.trace.FrameComparison;
 import com.openggf.trace.ToleranceConfig;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceEvent;
+import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.TraceFixtures;
 import com.openggf.trace.TraceFrame;
+import com.openggf.trace.TraceReplayBootstrap;
 import com.openggf.tests.FullReset;
 import com.openggf.tests.RuntimeStateContaminationExtension;
 import com.openggf.tests.SingletonResetExtension;
@@ -25,6 +27,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.nio.file.Path;
 import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -32,6 +35,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @FullReset
@@ -165,6 +171,13 @@ class TestLiveTraceComparatorObserver {
         comparator.afterFrameAdvanced(
                 new Bk2FrameInput(0, 0, 0, false, "0"), false);
 
+        assertEquals(0, observed.size(),
+                "dynamic art must wait for the outer lifecycle publication");
+        comparator.publishPendingDynamicArtComparison(
+                DynamicArtDiagnosticsSnapshot.unpublished(0, 0),
+                new DynamicArtDiagnosticsSnapshot(
+                        0, List.of(), List.of(), 1, 0, true));
+
         assertEquals(1, observed.size());
         assertTrue(observed.getFirst().hasErrorInField(
                 "dynamic_art.outstanding_transfer_ids"));
@@ -189,9 +202,51 @@ class TestLiveTraceComparatorObserver {
         comparator.afterFrameAdvanced(
                 new Bk2FrameInput(0, 0, 0, false, "0"), true);
 
+        assertEquals(0, observed.size());
+        comparator.publishPendingDynamicArtComparison(
+                DynamicArtDiagnosticsSnapshot.unpublished(0, 0),
+                new DynamicArtDiagnosticsSnapshot(
+                        0, List.of(), List.of(), 1, 0, true));
+
         assertEquals(1, observed.size());
         assertFalse(observed.getFirst().hasDivergence());
         assertEquals(1, comparator.laggedFrames());
+    }
+
+    @Test
+    void playableAnimationOnlyComparisonWaitsForPostProductionPrefix()
+            throws Exception {
+        TraceData source = TraceData.load(Path.of(
+                "src/test/resources/traces/s3k/lbz_completerun"));
+        TraceFrame previous = TraceFrame.executionTestFrame(0, 10, 0x100, 0);
+        TraceFrame current = TraceFrame.executionTestFrame(1, 11, 0x100, 0);
+        TraceData trace = TraceFixtures.trace(
+                source.metadata(),
+                List.of(previous, current),
+                Map.of(
+                        0, List.of(cpuState(0, 0)),
+                        1, List.of(cpuState(1, 4))));
+        assertEquals(TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY,
+                TraceReplayBootstrap.phaseForReplay(trace, previous, current));
+        AbstractPlayableSprite sprite = stubSprite();
+        LiveTraceComparator comparator = new LiveTraceComparator(
+                trace, ToleranceConfig.DEFAULT, 1, () -> sprite);
+
+        comparator.afterFrameAdvanced(
+                new Bk2FrameInput(1, 0, 0, false, "playable prefix"), true);
+
+        verify(sprite, never()).getCentreX();
+        assertTrue(comparator.consumePostProductionPlayableAnimationAction(),
+                "gameplay diagnostics must not sample before the playable prefix");
+        verify(sprite, atLeastOnce()).getCentreX();
+    }
+
+    private static TraceEvent.CpuState cpuState(int frame, int posTableIndex) {
+        return new TraceEvent.CpuState(
+                frame, "tails", 0, 0, 0, 6,
+                (short) 0, (short) 0, 0, 0,
+                0, 0, 0, 0, posTableIndex, 0,
+                (short) 0, (short) 0, 0, 0, 0, 0, 0);
     }
 
     @Test

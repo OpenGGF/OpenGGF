@@ -203,6 +203,7 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
      * it with the expected "unconsumed edge" consequence of an interrupted
      * run.
      */
+    @Override
     public void abortHardwareTimingReplayRun() {
         if (hardwareTimingReplayClosed || hardwareTimingReplayPort == null) {
             return;

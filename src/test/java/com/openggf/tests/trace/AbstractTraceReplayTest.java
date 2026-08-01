@@ -48,6 +48,7 @@ import com.openggf.trace.TraceMetadata;
 import com.openggf.trace.TraceReplayBootstrap;
 import com.openggf.trace.TraceVerificationScope;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
+import com.openggf.trace.replay.TraceReplayEngineSnapshot;
 import com.openggf.tests.trace.s3k.S3kRequiredCheckpointGuard;
 import com.openggf.tests.trace.s3k.S3kReplayCheckpointDetector;
 import com.openggf.physics.Sensor;
@@ -541,20 +542,8 @@ public abstract class AbstractTraceReplayTest {
      * left null/empty (the comparator emits WARNING entries for those).
      */
     private EngineSnapshot captureEngineSnapshot(HeadlessTestFixture fixture) {
-        AbstractPlayableSprite sprite = fixture != null ? comparedSprite(fixture) : null;
-        short[] xHistory = sprite != null ? sprite.copyXHistory() : null;
-        short[] yHistory = sprite != null ? sprite.copyYHistory() : null;
-        short[] inputHistory = sprite != null ? sprite.copyInputHistory() : null;
-        byte[] statusHistory = sprite != null ? sprite.copyStatusHistory() : null;
-        int historyPos = sprite != null ? sprite.historyPos() : 0;
-
-        EngineSnapshot.SidekickCpuView tailsCpu = captureFirstSidekickCpuSnapshot();
-
-        // Per-slot SST snapshots are still left empty; they require a stable
-        // ObjectManager slot extraction path. Sidekick CPU state is now captured
-        // read-only so bootstrap reports can flag native-prelude CPU drift.
-        return EngineSnapshot.capture(xHistory, yHistory, inputHistory, statusHistory,
-                historyPos, tailsCpu, java.util.Map.of());
+        return TraceReplayEngineSnapshot.capture(
+                fixture != null ? comparedSprite(fixture) : null);
     }
 
     /**
@@ -954,25 +943,6 @@ public abstract class AbstractTraceReplayTest {
             return null;
         }
         return captureCharacterState(spriteManager.getSidekicks().getFirst());
-    }
-
-    private EngineSnapshot.SidekickCpuView captureFirstSidekickCpuSnapshot() {
-        SpriteManager spriteManager = GameServices.sprites();
-        if (spriteManager == null || spriteManager.getSidekicks().isEmpty()) {
-            return null;
-        }
-        SidekickCpuController controller = spriteManager.getSidekicks().getFirst().getCpuController();
-        if (controller == null) {
-            return null;
-        }
-        return new EngineSnapshot.SidekickCpuView(
-                controller.getDiagnosticControlCounter(),
-                controller.getDiagnosticRespawnCounter(),
-                controller.getDiagnosticRomCpuRoutine(),
-                (short) controller.targetX(),
-                (short) controller.targetY(),
-                controller.getDiagnosticInteractId(),
-                controller.getDiagnosticJumpingFlag() != 0);
     }
 
     private EngineSidekickCpuState captureFirstSidekickCpuState() {

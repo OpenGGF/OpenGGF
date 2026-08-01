@@ -3,6 +3,18 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the master-title visual trace player now admits the same represented
+  row as headless replay. S3K native-prefix rows validate current BK2 input
+  while applying the previous gameplay row; suppressed rows share the
+  headless one-row/one-VBlank title-card closure; bootstrap and input-alignment
+  mismatches reach the live HUD; physical PLC/Kos queues remain sampled after
+  native service, while S1/S2 player-DPLC diagnostics are deferred until the
+  outer PLC lifecycle publishes the row. Incomplete launch, Esc, and
+  production failures now detach recorded timing authority without demanding
+  strict consumption of an unfinished schedule, restore user configuration,
+  destroy the failed gameplay context, and return directly to the master
+  title.
+
 - Fix: the CPZ boss pump runs a single pass per pipe cycle, matching the
   ROM's actual control flow. `Obj5D_Pipe_Pump_4`'s would-be repeat branch
   (`Obj5D_timer3 = 2`) writes its restart state but has no `rts` — it falls

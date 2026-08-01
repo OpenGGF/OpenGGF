@@ -40,6 +40,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -158,10 +160,8 @@ class TestSpecialStageHardwareTimingLifecycle {
 
         session.finishSpecialStageLaunch(loop);
 
-        assertEquals(1, primary.getSuppressed().length);
-        assertTrue(primary.getSuppressed()[0].getMessage()
-                        .contains("unconsumed hardware completion edge"),
-                () -> primary.getSuppressed()[0].getMessage());
+        assertEquals(0, primary.getSuppressed().length,
+                "incomplete launch abort must not perform strict edge verification");
         assertEquals(configSnapshot.mainCharacterCode(),
                 config.getConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE));
         assertNull(TraceSessionLauncher.active());
@@ -178,6 +178,40 @@ class TestSpecialStageHardwareTimingLifecycle {
                 nextContext.hardwareTiming().admissionPolicy());
         assertFalse(nextContext.getRewindRegistry().capture().entries()
                 .containsKey(HardwareTimingReplayPort.REWIND_KEY));
+    }
+
+    @Test
+    void fatalInitializationErrorAbortsPartialTimingInstallThenRethrows(
+            @TempDir Path dir) throws Exception {
+        writeTrace(dir, true);
+        SpecialStageTraceData trace = SpecialStageTraceData.load(dir);
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TraceSessionLauncher.armSpecialStageAdmissionPolicy(trace);
+        GameplayModeContext failedContext =
+                SessionManager.openGameplaySession(new Sonic2GameModule());
+        attachCoreManagers(failedContext);
+        var failedRegistry = failedContext.getRewindRegistry();
+        TraceSessionLauncher session = session(
+                dir, trace, TraceReplaySessionBootstrap.snapshotGameplayConfig());
+        GameLoop loop = mock(GameLoop.class);
+        AssertionError primary = new AssertionError("fatal special-stage bootstrap");
+        doThrow(primary).when(loop).doEnterSpecialStage(
+                any(SpecialStageProvider.class),
+                anyInt(),
+                anyBoolean(),
+                any(SpecialStageStartupPolicy.class));
+
+        AssertionError thrown = assertThrows(AssertionError.class,
+                () -> session.finishSpecialStageLaunch(loop));
+
+        assertSame(primary, thrown);
+        assertNull(TraceSessionLauncher.active());
+        assertFalse(failedContext.isGameplayRuntimeReady());
+        assertEquals(HardwareReadinessAdmissionPolicy.LIVE,
+                failedContext.hardwareTiming().admissionPolicy());
+        assertFalse(failedRegistry.capture().entries()
+                .containsKey(HardwareTimingReplayPort.REWIND_KEY));
+        verify(loop).returnToMasterTitle();
     }
 
     private static TraceSessionLauncher session(
@@ -279,6 +313,13 @@ class TestSpecialStageHardwareTimingLifecycle {
         @Override
         public void closeHardwareTimingReplayRun() {
             port.verifyRunComplete();
+            context.setHardwareTimingBoundaryObserver(null);
+            context.getRewindRegistry().deregister(
+                    HardwareTimingReplayPort.REWIND_KEY);
+        }
+
+        @Override
+        public void abortHardwareTimingReplayRun() {
             context.setHardwareTimingBoundaryObserver(null);
             context.getRewindRegistry().deregister(
                     HardwareTimingReplayPort.REWIND_KEY);

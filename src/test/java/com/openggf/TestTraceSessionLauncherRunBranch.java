@@ -378,11 +378,12 @@ class TestTraceSessionLauncherRunBranch {
                     0xFF0000, 0x5CA0);
             row.prepareAfterLoop(PlcLifecyclePhase.SPECIAL_STAGE);
             session.runAdvanceTickIfActive(GameMode.SPECIAL_STAGE, 800);
-            LiveTraceComparator rebound =
+            LiveTraceComparator beforeFinish =
                     (LiveTraceComparator) getField(session, "comparator");
-            assertNotSame(levelComparator, rebound);
-            assertEquals(0, rebound.errorCount());
-            assertTrue(rebound.recentMismatches().isEmpty());
+            assertSame(levelComparator, beforeFinish,
+                    "segment rebind must wait for the old production row to publish");
+            assertEquals(0, beforeFinish.errorCount());
+            assertTrue(beforeFinish.recentMismatches().isEmpty());
             return null;
         });
         session.afterProductionIteration();
@@ -662,6 +663,10 @@ class TestTraceSessionLauncherRunBranch {
 
         @Override
         public void closeHardwareTimingReplayRun() {
+        }
+
+        @Override
+        public void abortHardwareTimingReplayRun() {
         }
 
         @Override

@@ -293,7 +293,7 @@ public class TestGameLoop {
     }
 
     @Test
-    public void traceRealtimeRewindRunsBeforePlaybackInputBridge() throws Exception {
+    public void traceRealtimeRewindRunsBeforePreparedPlaybackAdmission() throws Exception {
         String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
         int rewind = source.indexOf("TraceSessionLauncher.active().handleRealtimeRewindInput(");
         int admission = source.indexOf("LevelFrameResult admission = levelIterationAdmission.admit");
@@ -302,8 +302,24 @@ public class TestGameLoop {
         assertTrue(bridge >= 0, "GameLoop must bridge playback input");
         assertTrue(rewind < bridge,
                 "Rewind release must seek/play the playback timeline before forced input is sampled");
-        assertTrue(admission >= 0 && admission < bridge,
-                "playback forced input must not be published before setup admission");
+        assertTrue(admission > bridge,
+                "prepared playback Start and held input must be published before ROM admission");
+    }
+
+    @Test
+    public void levelAndBonusTraceSuppressionIsClassifiedBeforeGenericTimers()
+            throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/GameLoop.java"));
+        int classification = source.indexOf(
+                "playbackDebugManager.shouldSkipCurrentGameplayTick();");
+        int timers = source.indexOf("timerManager.update();", classification);
+        String prefix = source.substring(Math.max(0, classification - 180), classification);
+
+        assertTrue(prefix.contains("currentGameMode == GameMode.LEVEL"));
+        assertTrue(prefix.contains("currentGameMode == GameMode.BONUS_STAGE"),
+                "bonus-stage trace rows must classify suppression before generic timers");
+        assertTrue(classification >= 0 && timers > classification,
+                "trace suppression must be known before TimerManager advances");
     }
 
     @Test
