@@ -3,6 +3,24 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the S2 special stage's pre-start object passes complete within their
+  own observation, matching the recorder's end-of-frame rows. Before
+  `SpecialStage_Started`, each wait-loop `RunObjects` iteration finishes
+  inside the frame whose `WaitForVint` started it (s2.asm:6674-6688); only
+  the slow first post-fade iteration overruns into the following (lag) row.
+  The engine deferred every pre-start pass to the next observation, running
+  the whole pass stream one non-lag row late and shifting every player DPLC
+  edge from the first animation advance (frame 165) onward.
+- Fix: the special-stage tails' tails animation ticks once on the startup
+  RunObjects pass. ROM Obj88 is a separate object with no routine gate — its
+  body, including the generic `AnimateSprite` on `Ani_obj88`, runs on the
+  same startup pass that created it (s2.asm:70394, 70549-70563) — unlike
+  Obj09/Obj10, whose init returns via `LoadSS*DynPLC` before
+  `SSPlayer_Animate`. Skipping that tick left the engine's tails' tails one
+  pass behind for the entire stage. Together these move
+  `TestS2SpecialStageTraceReplay` from 20468 errors (first at frame 165) to
+  18230 (first at frame 181); the remaining divergence class is sub-pass
+  frame-boundary submission spills recorded on lag rows (see frontier log).
 - Fix: the CPZ boss pump runs a single pass per pipe cycle, matching the
   ROM's actual control flow. `Obj5D_Pipe_Pump_4`'s would-be repeat branch
   (`Obj5D_timer3 = 2`) writes its restart state but has no `rts` — it falls

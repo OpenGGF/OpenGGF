@@ -170,6 +170,7 @@ public class Sonic2SpecialStageManager {
     private int p2HeldButtons = 0;
     private int p2LogicalButtons = 0;
     private boolean recurringMainPassPending;
+    private boolean introFirstRecurringPassDeferred;
     private int pendingMainHeldButtons;
     private int pendingMainPressedButtons;
     private int pendingMainP2HeldButtons;
@@ -1239,6 +1240,11 @@ public class Sonic2SpecialStageManager {
             // of the special-stage object RAM, so the bootstrap pass is where
             // the players' first art transfer is queued -- not the first
             // recurring V-int pass.
+            if (tailsPlayer != null) {
+                // ROM Obj88 (tails' tails) animates on this same startup pass
+                // (s2.asm:70549-70563); see tickTailsTailsStartupAnimation.
+                tailsPlayer.tickTailsTailsStartupAnimation();
+            }
             publishPlayerDynamicArt();
             // The startup sequence then waits on a DMA-queue-only V-int
             // (s2.asm:6665-6668 -> Vint_CtrlDMA, s2.asm:998-1001), so that
@@ -1250,6 +1256,7 @@ public class Sonic2SpecialStageManager {
                 plcFrameLifecycle.markNextVblankServicesDmaQueue();
             }
             executeActiveSpecialStageObjects();
+            introFirstRecurringPassDeferred = true;
             intro.beginFadeFromWhite();
         } else if (recurringVintTick) {
             // The recurring loop completes current SSTrack_Draw, perspective,
@@ -1257,6 +1264,28 @@ public class Sonic2SpecialStageManager {
             // publication is deferred to the next observation
             // (s2.asm:6679-6688,7026-7091).
             scheduleRecurringMainPass(currentTrackFrameChanged);
+            if (introFirstRecurringPassDeferred) {
+                // The first post-fade wait-loop iteration is the slow one: its
+                // full track redraw overruns the frame (the recorder's first
+                // post-fade row is a lag row) and its results only become
+                // visible at the following observation, like the engine's
+                // scheduled-pass pipeline already models. Every later
+                // pre-start iteration completes within its own frame.
+                introFirstRecurringPassDeferred = false;
+            } else if (!intro.isSpecialStageStarted() && !intro.isTerminalPreStartPassPending()) {
+                // Before SpecialStage_Started, the wait loop's RunObjects pass
+                // completes within the same displayed frame as the WaitForVint
+                // return that started it (s2.asm:6674-6688): the recorder's
+                // end-of-frame rows show each pass's results on the row that
+                // scheduled it (stage-1 fixture rows 160-178, where only the
+                // slow first post-fade iteration lands a row later — invisible
+                // here because its mapping frame 0 art is already loaded).
+                // Deferring to the next observation ran every pre-start pass
+                // one non-lag row late and shifted all player DPLC edges. The
+                // Obj5F terminal pass stays deferred: its completion boundary
+                // is owned by completeTerminalPreStartPassWithoutVint.
+                executePendingRecurringMainPass();
+            }
         }
 
         if (!runtimeFrozen) {
@@ -1884,6 +1913,7 @@ public class Sonic2SpecialStageManager {
                 break;
         }
     }
+
 
     private void updatePlayers(
             int capturedHeldButtons,
