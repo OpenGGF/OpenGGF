@@ -6,6 +6,7 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.DrowningController;
+import com.openggf.sprites.playable.SidekickCpuController;
 
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -173,6 +174,7 @@ final class Sonic2FixedAirCountdownManager {
             }
             if (!owner.isInWater()
                     || owner.getDead()
+                    || isInDeadRoutine(owner)
                     || owner.isDrowningPreDeath()
                     || owner.getShieldType() == ShieldType.BUBBLE) {
                 return;
@@ -258,6 +260,21 @@ final class Sonic2FixedAirCountdownManager {
         private int currentAir(AbstractPlayableSprite owner) {
             DrowningController drowning = owner.getDrowningController();
             return drowning != null ? drowning.getRemainingAir() : 30;
+        }
+
+        /**
+         * ROM Obj0A_Countdown returns before decrementing obj0a_timer while the
+         * bound player's routine is >= 6 (cmpi.b #6,routine(a2) / bhs.w return,
+         * docs/s2disasm/s2.asm:42095-42096). The CPU sidekick's death keeps the
+         * engine dead flag clear and models routine 6 as DEAD_FALLING, so the
+         * countdown must honour that state too or it consumes RandomNumber
+         * draws the ROM never makes while Tails is dead underwater.
+         */
+        private boolean isInDeadRoutine(AbstractPlayableSprite owner) {
+            SidekickCpuController cpu = owner.getCpuController();
+            return owner.isCpuControlled()
+                    && cpu != null
+                    && cpu.getState() == SidekickCpuController.State.DEAD_FALLING;
         }
 
         private boolean isPrimaryPlayer(AbstractPlayableSprite owner) {

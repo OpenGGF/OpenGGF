@@ -11,8 +11,10 @@ import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.objects.boss.AbstractBossInstance;
+import com.openggf.level.objects.boss.BossExplosionObjectInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -54,6 +56,13 @@ public class GHZBossWreckingBall extends AbstractBossChild
     // Collision: obColType = $81 (enemy category $80, size index 1)
     private static final int BALL_COLLISION_FLAGS = 0x81;
 
+    // GBall_Ball defeat countdown: BGHZ_BossGenericTimer holds the ball's
+    // chain-extension target (GBall_PosData last entry, $60) when the swing is
+    // fully deployed; GBall_Vanish decrements it once per frame after Eggman's
+    // defeated flag is set (3D, 48 Boss - GHZ Main and Wrecking Ball.asm:484,
+    // 578-596).
+    private static final int DEFEAT_EXPLOSION_TIMER = 0x60;
+
 
     // Swing state
     private int angle;          // obAngle — swing angle (byte)
@@ -79,6 +88,7 @@ public class GHZBossWreckingBall extends AbstractBossChild
     private int ballFrame; // 0 or 1 (toggles between check1 and shiny)
 
     private boolean parentDefeated;
+    private int defeatTimer;
 
     public GHZBossWreckingBall(AbstractBossInstance parent) {
         super(parent, "GHZBall", 5, Sonic1ObjectIds.BOSS_BALL);
@@ -100,6 +110,39 @@ public class GHZBossWreckingBall extends AbstractBossChild
 
         this.ballFrame = 1; // Start on check1 frame (frame 1 in Map_GBall)
         this.parentDefeated = false;
+    }
+
+    /**
+     * ROM: sub BossDefeated & BossMove.asm:6-36 — explosion at the ball's
+     * position plus a random offset; X uses (rand&$FF)>>2 - $20, Y uses the
+     * high byte >>3 with no left shift (the ROM's downward bias).
+     */
+    private void spawnBallDefeatExplosion() {
+        final ObjectRenderManager renderManager = services().renderManager();
+        if (renderManager == null || services().objectManager() == null) {
+            return;
+        }
+        int random = services().rng().nextWord();
+        final int xOff = ((random & 0xFF) >> 2) - 0x20;
+        final int yOff = ((random >>> 8) & 0xFF) >> 3;
+        services().objectManager().addDynamicObject(new BossExplosionObjectInstance(
+                currentX + xOff, currentY + yOff,
+                Sonic1ObjectIds.EXPLOSION, Sonic1Sfx.BOSS_EXPLOSION.id));
+    }
+
+    /**
+     * ROM: GBall_Vanish timer underflow — the ball object itself is replaced
+     * by an id_Explosion in place (3D, 48 Boss - GHZ Main and Wrecking
+     * Ball.asm:592-596).
+     */
+    private void spawnBallConversionExplosion() {
+        final ObjectRenderManager renderManager = services().renderManager();
+        if (renderManager == null || services().objectManager() == null) {
+            return;
+        }
+        services().objectManager().addDynamicObject(new BossExplosionObjectInstance(
+                currentX, currentY,
+                Sonic1ObjectIds.EXPLOSION, Sonic1Sfx.BOSS_EXPLOSION.id));
     }
 
     @Override
@@ -134,9 +177,26 @@ public class GHZBossWreckingBall extends AbstractBossChild
 
         // Check if parent boss is defeated
         if (parent.getState().defeated || (parent.getState().renderFlags & 0x80) != 0) {
-            // ROM: sub_17C2A checks obStatus(a1) bit 7 — if set, convert to explosion
-            parentDefeated = true;
-            setDestroyed(true);
+            // ROM GBall_Ball (routine 8): once Eggman's defeated flag is set the
+            // ball disables collision, runs BossDefeated every frame (which
+            // spawns an explosion and draws RandomNumber only on
+            // v_vblank_byte&7 == 0 frames), and counts BGHZ_BossGenericTimer
+            // down from its chain target; when it underflows the ball turns
+            // itself into an explosion (3D, 48 Boss - GHZ Main and Wrecking
+            // Ball.asm:6-36 [sub BossDefeated], 578-596). The base and links
+            // become explosions immediately (GBall_UpdateBase/GBall_Link).
+            if (!parentDefeated) {
+                parentDefeated = true;
+                defeatTimer = DEFEAT_EXPLOSION_TIMER;
+            }
+            if ((frameCounter & 7) == 0) {
+                spawnBallDefeatExplosion();
+            }
+            defeatTimer--;
+            if (defeatTimer < 0) {
+                spawnBallConversionExplosion();
+                setDestroyed(true);
+            }
             return;
         }
 

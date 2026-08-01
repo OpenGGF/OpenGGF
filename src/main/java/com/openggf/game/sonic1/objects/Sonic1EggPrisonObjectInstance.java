@@ -343,8 +343,11 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
         // (3E Prison Capsule.asm:174-181).
         int random = services().rng().nextWord();
         int randomOffset = (random & 0x1F) - 6;
-        // ROM: tst.w d1 / bpl.s + / neg.w d0
-        if ((random & 0x8000) != 0) {
+        // ROM: tst.w d1 / bpl.s .setX / neg.w d0 — d1 holds the NEW seed after
+        // RandomNumber, so the sign test reads bit 15 of the updated seed's low
+        // word, not of the returned d0 (3E Prison Capsule.asm:180-185;
+        // _incObj/sub RandomNumber.asm).
+        if ((services().rng().getSeed() & 0x8000) != 0) {
             randomOffset = -randomOffset;
         }
         final int fOffset = randomOffset;
