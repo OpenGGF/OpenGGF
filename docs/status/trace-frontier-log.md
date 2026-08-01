@@ -56680,3 +56680,90 @@ transition and the frame on which the end-of-act / results PLC is actually submi
 frames around 9183 / 11491 / 15258. Identify the submission event, then fix at the
 narrowest owner. Six rounds of fixes derived from inferred causal chains were all inert;
 two direct measurements killed two hypotheses immediately.
+
+## 2026-08-01 — Nemesis PLC busy frontier: measured diagnosis and handover
+
+The last three failing S1/S2 traces (`TestS1Ghz3CompleteRunTraceReplay` f9183,
+`TestS2Mtz3LevelSelectTraceReplay` f15258, `TestS2Cpz2LevelSelectTraceReplay` f11491,
+all on `queue.*_nemesis_plc.busy`) were worked for nine rounds. One trace greened
+(CNZ2, commit 199d12bec). The rest is recorded here so the next attempt starts from
+measurement rather than repeating the search.
+
+### The PLC queue is NOT the defect — measured, not argued
+
+Direct instrumentation of the busy publisher and the submission sites showed that in
+all three traces the engine submits the **identical** PLC — same fingerprints, same
+entry count, same per-entry pattern totals — and drains it at the **identical** rate
+(3 patterns/frame). The entire divergence is a pure time shift of the whole busy
+episode:
+
+| Trace | Engine vs ROM | Evidence |
+|---|---|---|
+| CPZ2 | **5 frames late** | ROM busy 11491–11554, engine 11496–11559; same 64-frame duration, same 94/68/12 entry sequence; `actRem(f) == expRem(f-5)` |
+| MTZ3 | **1 frame early** | `actRem(f) == expRem(f+1)` |
+| GHZ3 | **3 frames early** | `actRem(f) == expRem(f+3)` |
+
+**Three offsets with two different signs.** A defect in the queue would produce a
+consistent systematic skew. `NemesisPlcServiceQueue`, `Sonic1PlcService`,
+`Sonic2PlcService`, `PlcFrameLifecycleCoordinator`, the fingerprint scheme, the
+prepare/service boundary and the 3-pattern budget are all exonerated by this.
+**Two separate verify agents subsequently recommended returning to these classes
+on the basis of the field name alone; do not.**
+
+### The trigger frame is the defect
+
+Captured submission stack:
+`EggPrisonObjectInstance#queueResultsPlc:661 <- #triggerEndOfAct:616 <- #updateBrokenPiece:425`.
+The busy flag faithfully mirrors *when the capsule decides the act is over*. Per
+`docs/s2disasm/s2.asm:85002-85013` (`loc_3F406`) that decision is: scan for
+`ObjID_Animal`; when none remain, `Load_EndOfAct`.
+
+### ROM ground truth, extracted from the fixtures
+
+From `aux_state.jsonl.gz` `object_appeared` / `object_removed` events.
+`0x28` = animal, `0x3E` = capsule, `0x3A` = results/signpost.
+
+```
+GHZ3  (s1/ghz3_completerun)
+  9170 remove slot42 0x28 | 9183 remove slot41 0x28 | 9185 remove slot39 0x28  <- LAST animal
+  9186 remove slot34 0x3E + appear slot23 0x3A                                  <- capsule deletes
+  Engine triggers 9183 — two frames before the ROM's last animal even dies.
+
+MTZ3  (s2/mtz3)
+  15245 remove slot30 + slot31 0x28 | 15258 remove slot32 0x28                  <- LAST animal
+  15259 remove slot19 0x3E + appear slot18 0x3A
+  Engine triggers 15258 — the removal frame itself; the ROM takes one more frame.
+
+CPZ2  (s2/cpz2)
+  11477 slot25 | 11480 slot18 + slot29 | 11483 slot32 | 11490 slot31
+  11491 remove slot17 0x28 (LAST) + remove slot30 0x3E + appear slot16 0x3A     <- all one frame
+  Engine triggers 11496 — five frames after the ROM has already deleted the capsule.
+```
+
+The sign and magnitude of each offset match that trace's animal-lifetime error:
+GHZ3 animals die early, CPZ2 animals outlive the ROM, MTZ3 is a one-frame scan/gate
+phase difference consistent with the `.chkDelay` `obTimeFrame` gate at
+`docs/s1disasm/_incObj/3E Prison Capsule.asm:188-191` guarding `Pri_EndAct` (:203-224).
+
+### The missing measurement
+
+Nobody has produced the **engine-side** spawn/despawn table for these animals to diff
+against the ROM tables above. Three separate rounds were asked for it and none
+delivered. That single comparison is the next step.
+
+### Ruled out empirically — each implemented and measured, all inert
+
+1. V-blank clock drift/phase — `getVblaCounter()` matches recorded
+   `TraceFrame.vblankCounter()` exactly, every frame (MTZ3 f15258: 41069 == 41069).
+   Do not relocate the increment. Probing *before* the frame is driven shows a
+   spurious off-by-one; that is a probe artifact.
+2. Capsule spawn gates reading the wrong counter — they do not.
+   `ObjectExecutionController:54` dispatches `instance.update(objects.vblaCounter(), ...)`,
+   so objects already receive `Vint_runcount` under a parameter merely *named*
+   `frameCounter`.
+3. Per-submission decompression-duration accounting — busy-window length already exact.
+4. Egg Prison allocate-before-RNG ordering — correct ROM modelling, proven inert
+   (object RAM is never full at these points).
+5. Global `vIntRunCounter` phase offset — helps the two early traces, worsens CPZ2.
+6. Act-end free-slot scan probe (`ObjectManager#hasFreeDynamicSlot`) — explored, no
+   measurable change.
