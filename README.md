@@ -290,8 +290,14 @@ Development since `v0.5.20260411` is the active 0.6 prerelease line. The release
   the fleet carries a cumulative transfer identity, so absolute-equality on those
   ids was never meaningful and the comparison is now epoch-normalised per segment
   with list cardinality and every content field still compared absolutely.
-  Three traces remain open (`Ghz3CompleteRun`, `Mtz3LevelSelect`,
-  `Cpz2LevelSelect`), all on `queue.*_nemesis_plc.busy`; the busy-window length
+  **Correction (2026-08-01): the "39 of 42" figure below overstated the result by
+  five.** It counted only the 46-class verification set used during the campaign,
+  which was chosen early and never re-examined; five originally-failing S1
+  complete-run traces sat outside it throughout. Measured on the full 57-class
+  fleet the true figure is **34 of 42 green**, with 8 remaining — see
+  `docs/status/trace-frontier-log.md`. Three traces were open at the time of
+  writing (`Ghz3CompleteRun`, `Mtz3LevelSelect`, `Cpz2LevelSelect`), all on
+  `queue.*_nemesis_plc.busy`; the first two have since greened. The busy-window length
   is already correct and Cpz2's inverted polarity reads as a missing submission
   rather than a mistimed one. `docs/status/trace-frontier-log.md` records the
   remaining frontier together with six hypotheses ruled out by direct

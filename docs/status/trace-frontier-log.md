@@ -56814,3 +56814,53 @@ byte-identical there (same totals, same first-error frames): pre-existing, not
 regressions. The four S1 act-3 `queue.s1_nemesis_plc.busy` stragglers are the same
 defect family — suspect each zone's boss-defeat RNG cadence (LZ/MZ/SLZ/SYZ
 equivalents of the GHZ wrecking-ball stream) as the next targets.
+
+
+## 2026-08-01 — CORRECTION to the campaign result, and the true fleet count
+
+An earlier entry and the README release log both stated **"39 of 42"** originally-failing
+S1/S2 trace-replay tests were green. **That figure was wrong and overstated the result by
+five.** It counted only the 46 classes in the verification set used during the campaign,
+which was chosen early and never re-examined. Five originally-failing traces sat outside
+it the whole time — `TestS1Lz3CompleteRunTraceReplay`, `TestS1Mz3CompleteRunTraceReplay`,
+`TestS1Slz3CompleteRunTraceReplay`, `TestS1Syz3CompleteRunTraceReplay` and
+`TestS1FzCompleteRunTraceReplay` — and were never re-verified after round 1 deferred them.
+
+**True state, measured on the full 57-class S1/S2 trace fleet (49 pass / 8 fail):**
+of the 42 originally failing, **34 are green** and 8 remain:
+
+| Trace | First error | Errors | Owner |
+|---|---|---|---|
+| `TestS1FzCompleteRunTraceReplay` | crash before replay | — | regression from `d5f4a60be`, see below |
+| `TestS1Lz3CompleteRunTraceReplay` | f18584 | 6 | boss-defeat RNG family |
+| `TestS1Mz3CompleteRunTraceReplay` | f17398 | 5 | boss-defeat RNG family |
+| `TestS1Slz3CompleteRunTraceReplay` | f13237 | 5 | boss-defeat RNG family |
+| `TestS1Syz3CompleteRunTraceReplay` | f13222 | 5 | boss-defeat RNG family |
+| `TestS2Cpz2LevelSelectTraceReplay` | f11491 | 7 | second pipe-docking cycle, diagnosed |
+| `TestS1SpecialStageTraceReplay` | f99 | 2307 | long-standing, out of campaign scope |
+| `TestS2SpecialStageTraceReplay` | f136 | 20482 | long-standing, out of campaign scope |
+
+### `TestS1FzCompleteRunTraceReplay` — caused by this campaign
+
+```
+IllegalStateException: cannot mutate queued PLC entries while the decoder is active
+  at NemesisPlcServiceQueue.requireIdleDecoder:150
+  at Sonic1PlcService.replaceQueued:41
+  at Sonic1LevelEventManager.updateAtLevelLoopTail:200
+```
+
+`updateAtLevelLoopTail` was added by commit `d5f4a60be` (wiring the ROM `Level_MainLoop`
+tail so `SignpostArtLoad` queues `plcid_Signpost`). It submits unconditionally; in Final
+Zone that lands while the Nemesis decoder is mid-run and throws. The ROM's own submission
+path is gated and this one is not.
+
+### Method note worth keeping
+
+The overstatement did not come from careless verification — every number reported during
+the campaign was measured on a clean build. It came from **never re-examining the scope of
+the verification set**. Depth of verification does not compensate for a stale scope. A
+related trap appeared alongside it: a second agent correctly reported these five as
+"pre-existing, not regressions" by baselining against `develop` — but `develop` already
+contained the commit that broke `FZ`, so the comparison could not distinguish "always
+broken" from "broken by this campaign". **"Pre-existing" is only meaningful against a
+stated baseline commit.**
