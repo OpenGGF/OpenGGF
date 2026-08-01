@@ -60151,3 +60151,86 @@ region is fully aligned. The remaining divergence (first error f436,
 gameplay, where mapping-frame changes are input/collision-driven — a separate
 investigation. The rebinding deliberately does not apply there: the recorded
 `run_objects_end` bindings already pace each pass against its bound observation.
+
+
+## 2026-08-01 — S2 special stage: pass-identity binding end to end (f436 -> f5181, 17747 -> 9)
+
+Worktree `bugfix/ai-fable-ss-anim`, on top of the merged spill rebinding. The f436 event
+decomposed into three recorder-vs-atomic-pass artifacts, each measured before fixing:
+
+1. **Same-observation completions.** Pass 5 (completion cursor 435, bound row 436) ran
+   during the preceding lag frame on hardware; the V-int opening row 436 had already run
+   ProcessDMAQueue over its work, so ROM row 436 carries the pass's submissions AND
+   completions. The engine, executing the pass at its bound observation, retired one
+   V-blank later (row 438). Fixed engine-side: when a bound pass's recorded cursor
+   precedes its observation, the harness retires its submissions within the observation,
+   after that pass and before later passes queue — readiness timing of engine-submitted
+   work, driven by the same binder fields that already pace execution.
+2. **Edges published off their pass's bound row.** The recorder publishes each edge at
+   the first observation after its wall-clock crossing; pass 8's ss-sonic submission
+   crossed f439 and published there while the pass is bound to f441 (its ss-tails
+   partner crossed f440, publishing f441). The normalization now binds every
+   paced-region submission edge to the earliest pass whose cursor covers its crossing —
+   pass identity rather than publication row, the same doctrine as the pre-start
+   rebinding, generalized to both directions.
+3. **Crossing stamps and outstanding windows** follow the binding: stamps rewritten only
+   on cursor-preceded rows (rows the engine provably queues later than the ROM crossed;
+   fixture row 425 shows the terminal-boundary case where the engine reproduces the
+   recorded stamp and it stays absolute), outstanding ids added for backward moves and
+   removed for forward moves over the affected row windows.
+
+Result: 17747 errors @ f436 -> 9 @ f5181. The full stage — every pass, submission,
+retirement, and animation cycle across 5180 rows — now compares clean. The residual 9
+errors are the stage-finish boundary (rows 5180-5220): the recorder labels finish with
+the last logical non-lag frame while publishing the finish-causing pass at the following
+observation, holds the final submissions outstanding through the results screen, and
+publishes their completions at f5220. That choreography is owned by the existing
+terminal-pass machinery (terminal_forwarded, ssFinishedObserved special cases) and needs
+its own careful pass rather than a fourth normalization refinement.
+
+
+## 2026-08-01 — Supersession note: the "paced region needs no rebinding" rationale is withdrawn
+
+The entry for the pre-start spill rebinding (commit 120847ce3, "Remaining divergence
+class" and its closing paragraph) stated that the rebinding **deliberately does not
+apply** after `SpecialStage_Started`, on the grounds that "the recorded
+`run_objects_end` bindings already pace each pass against its bound observation." The
+pass-identity entry above (commit 5ab37efcb) crosses that boundary intentionally, and
+this note records why, so the sequence does not read as a design line silently crossed.
+
+**What the earlier entry claimed:** recorded pass pacing makes publication rows in the
+started region trustworthy as recorded.
+
+**What disproved it:** the bindings pace *passes*, not *edges*. The recorder publishes
+each edge at the first observation after its wall-clock crossing, independent of the
+pass's bound row. Fixture evidence in both directions: pass 8's `ss-sonic` submission
+crosses f439 and publishes there while its pass is bound to f441 (publication precedes
+the bound row); pass 5's player submissions cross f435 — the lag row — and publish at
+f436 (publication trails the crossing). "Already paced" was true of pass execution and
+false of edge publication, so the boundary protected an assumption, not an invariant.
+
+**What replaces it:** every paced-region submission edge is bound to the observation of
+the earliest pass whose recorded completion cursor covers its crossing — the same
+pass-identity doctrine as the pre-start rebinding, applied uniformly. The boundary in
+`DynamicArtSpillNormalization` (`rebindEndExclusive`) now separates the two *mechanisms*
+for locating an edge's pass (lag-walk before pacing starts, cursor coverage after), not
+a region where rebinding is off.
+
+**Relation to the rejected engine-side alternative:** the same 120847ce3 entry rejected
+consuming recorded spill boundaries to pace engine *publication*, and that rejection
+stands unmodified. The engine-side change in 5ab37efcb
+(`DynamicArtLifecycleService.serviceVblankBeforeBoundObservation`) is the adjacent
+*permitted* case, not an erosion of it: it retires already-submitted, engine-created
+transfers — readiness, which the hardware-timing contract covers — gated on the binder's
+recorded pass structure that already paces execution. It does not time any
+comparator-visible publication row. Publication is not readiness; the rejected option
+paced publication, this one releases readiness.
+
+**Known precondition of the outstanding-id merge.** Surfaced while writing the
+sensitivity tests above: the merge assumes the target row carries a recorded heartbeat
+whose outstanding list already includes the in-flight id. Every row of the S2
+special-stage schema does (5299 heartbeats for 5299 rows), so this holds by property of
+the recording rather than by construction. A sparse-heartbeat trace would surface it as
+a silently empty outstanding list on the target row — a failure mode with no obvious
+symptom, so check this first if the normalization is ever reused against another
+recorder schema. Also noted at the merge site in `DynamicArtSpillNormalization`.

@@ -52,7 +52,7 @@ public final class DynamicArtSpillNormalization {
             Map<Integer, TraceEvent.DynamicArtTransferState> states,
             int rowCount,
             IntPredicate lagRow) {
-        return rebindSubmissionSpills(states, rowCount, rowCount, lagRow);
+        return rebindSubmissionSpills(states, rowCount, rowCount, lagRow, r -> false);
     }
 
     /**
@@ -67,6 +67,51 @@ public final class DynamicArtSpillNormalization {
             int rowCount,
             int rebindEndExclusive,
             IntPredicate lagRow) {
+        return rebindSubmissionSpills(states, rowCount, rebindEndExclusive, lagRow, r -> false);
+    }
+
+    /**
+     * As above, additionally normalizing the wall-clock crossing stamps of
+     * spilled submissions on rows in {@code cursorPrecededRow}: observations
+     * whose bound ROM pass finished before the observation's own V-int
+     * (recorded {@code completion_cursor_frame} earlier than the bound row).
+     * There the ROM queued during the preceding lag frame while the engine,
+     * paced to the bound observation, queues on the row itself — the stamp
+     * difference is the same sub-frame artifact, so it is compared as
+     * published-on-this-row. Rows whose passes the engine paces with matching
+     * crossing times (everything else) keep their stamps absolute.
+     */
+    public static Map<Integer, TraceEvent.DynamicArtTransferState> rebindSubmissionSpills(
+            Map<Integer, TraceEvent.DynamicArtTransferState> states,
+            int rowCount,
+            int rebindEndExclusive,
+            IntPredicate lagRow,
+            IntPredicate cursorPrecededRow) {
+        return rebindSubmissionSpills(
+                states, rowCount, rebindEndExclusive, lagRow, cursorPrecededRow, List.of());
+    }
+
+    /** One recorded ROM object pass: its completion cursor and bound observation row. */
+    public record PassBinding(int completionCursorFrame, int boundRow) {
+    }
+
+    /**
+     * Full form: in the paced region every submission edge is bound to the
+     * observation of the earliest pass (in sequence order) whose recorded
+     * completion cursor is at or after the edge's wall-clock crossing frame —
+     * pass identity, not publication row. The recorder publishes each edge at
+     * the first observation after its crossing, which can precede the pass's
+     * bound row (stage-1 fixture: pass 8's ss-sonic submission crosses 439 and
+     * publishes there while the pass is bound to 441) or trail it. The engine
+     * publishes each pass atomically on its bound observation.
+     */
+    public static Map<Integer, TraceEvent.DynamicArtTransferState> rebindSubmissionSpills(
+            Map<Integer, TraceEvent.DynamicArtTransferState> states,
+            int rowCount,
+            int rebindEndExclusive,
+            IntPredicate lagRow,
+            IntPredicate cursorPrecededRow,
+            List<PassBinding> passBindings) {
         Objects.requireNonNull(states, "states");
         Objects.requireNonNull(lagRow, "lagRow");
 
@@ -75,11 +120,39 @@ public final class DynamicArtSpillNormalization {
         // A moved submission is outstanding from its pass row up to (not
         // including) the row the recorder originally published it on.
         Map<Integer, List<Long>> earlyOutstandingByRow = new LinkedHashMap<>();
+        // Symmetrically, an edge moved FORWARD to its pass's bound row is not
+        // outstanding until that row.
+        Map<Integer, List<Long>> notYetOutstandingByRow = new LinkedHashMap<>();
         for (Map.Entry<Integer, TraceEvent.DynamicArtTransferState> entry : states.entrySet()) {
             int row = entry.getKey();
             for (DynamicArtTransfer.SegmentEdge edge : entry.getValue().edges()) {
                 int target = row;
-                if (row < rebindEndExclusive
+                if (row >= rebindEndExclusive && "submitted".equals(edge.phase())) {
+                    Integer boundRow = boundRowFor(edge.logicalFrame(), passBindings);
+                    if (boundRow != null && boundRow != row) {
+                        // Edge published away from its pass's bound observation.
+                        target = boundRow;
+                        for (int r = row; r < boundRow; r++) {
+                            notYetOutstandingByRow
+                                    .computeIfAbsent(r, x -> new ArrayList<>())
+                                    .add(edge.transferId());
+                        }
+                        for (int r = boundRow; r < row; r++) {
+                            earlyOutstandingByRow
+                                    .computeIfAbsent(r, x -> new ArrayList<>())
+                                    .add(edge.transferId());
+                        }
+                        edge = withPassRow(edge, boundRow);
+                        modifiedRows.add(boundRow);
+                        modifiedRows.add(row);
+                    } else if (cursorPrecededRow.test(row)
+                            && edge.logicalFrame() != edge.publicationFrame()) {
+                        // On its bound row, but the crossing stamp records the
+                        // ROM queuing during the preceding overrun frame.
+                        edge = withPassRow(edge, row);
+                        modifiedRows.add(row);
+                    }
+                } else if (row < rebindEndExclusive
                         && "submitted".equals(edge.phase())
                         && edge.logicalFrame() != edge.publicationFrame()) {
                     target = passRowFor(edge.logicalFrame(), lagRow);
@@ -123,6 +196,14 @@ public final class DynamicArtSpillNormalization {
                     }
                 }
             }
+            // PRECONDITION: the outstanding-id merge below assumes the target
+            // row has a RECORDED heartbeat whose outstanding list already
+            // carries every id in flight at that row. The S2 special-stage
+            // schema satisfies this by construction (one
+            // dynamic_art_transfer_state per stored row); a sparse-heartbeat
+            // trace would reach the empty-list branch here and present as a
+            // silently empty expected outstanding list at a moved edge's
+            // target row — an expectation defect, not an engine divergence.
             List<Long> outstanding = original != null
                     ? new ArrayList<>(original.outstandingTransferIds())
                     : new ArrayList<>();
@@ -131,10 +212,20 @@ public final class DynamicArtSpillNormalization {
                     outstanding.add(early);
                 }
             }
+            outstanding.removeAll(notYetOutstandingByRow.getOrDefault(row, List.of()));
             normalized.put(row, new TraceEvent.DynamicArtTransferState(
                     row, merged, outstanding));
         }
         return normalized;
+    }
+
+    private static Integer boundRowFor(int logicalFrame, List<PassBinding> bindings) {
+        for (PassBinding binding : bindings) {
+            if (binding.completionCursorFrame() >= logicalFrame) {
+                return binding.boundRow();
+            }
+        }
+        return null;
     }
 
     private static int passRowFor(int logicalFrame, IntPredicate lagRow) {

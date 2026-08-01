@@ -218,6 +218,22 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **S2 special stage compares DPLC work by pass identity end to end
+  (2026-08-01):** `TestS2SpecialStageTraceReplay` drops from 17747 errors (first
+  at frame 436) to 9 (first at frame 5181) — every pass, submission, retirement,
+  and animation cycle across the stage's 5180 gameplay rows now compares clean.
+  Three pieces, all driven by the recorded `run_objects_end` bindings the replay
+  already consumes: a pass whose completion cursor precedes its bound
+  observation now retires its submissions within that observation (on hardware
+  the V-blank had already run `ProcessDMAQueue` over its queued work); paced
+  submission edges bind to the earliest pass whose cursor covers their
+  wall-clock crossing, in both directions, since the recorder can publish an
+  edge before its pass's bound row as readily as after; and crossing stamps and
+  outstanding-id windows follow that binding. This removes the post-start scope
+  boundary the previous entry set, which held for passes but not for individual
+  edges. The 9 residual errors are the stage-finish terminal-pass choreography
+  (rows 5180-5220), left as a scoped follow-up.
+
 - **Special-stage submission spills compared by pass, not publication row
   (2026-08-01):** the S2 special-stage intro is now byte-aligned through frame
   423, taking the frontier from 181 to 436. The remaining intro divergence was
