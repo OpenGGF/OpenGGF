@@ -15,6 +15,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
+import com.openggf.tests.HardwareBoundaryPump;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.TestablePlayableSprite;
 import com.openggf.tests.rules.RequiresRom;
@@ -222,9 +223,7 @@ class TestHCZWaterWallObjectInstance {
         // frame top, ahead of the ledger service, modelling LevelLoop's tail call to
         // Process_Kos_Module_Queue (sonic3k.asm:7908) reaching the next iteration's
         // Process_Kos_Queue (7887) across Wait_VSync (7888).
-        coordinator.beforeTimingService(boundary);
-        timing.service(boundary);
-        coordinator.afterTimingService(boundary);
+        HardwareBoundaryPump.service(timing, coordinator, boundary);
     }
 
     private static void assertNoControl(TestablePlayableSprite player) {

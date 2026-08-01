@@ -12,6 +12,7 @@ import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.tests.HardwareBoundaryPump;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -149,11 +150,9 @@ class TestS3kObjectKosOwnerRewind {
                         && timing.incompleteCount(
                         HardwareWorkKind.KOS_MODULE_QUEUE) > 0;
                 frame++) {
-            timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
-            context.runtimeArtCoordinator().afterTimingService(
+            HardwareBoundaryPump.service(timing, context.runtimeArtCoordinator(),
                     HardwareServiceBoundary.PRE_MAIN_LOOP);
-            timing.service(HardwareServiceBoundary.POST_OBJECTS);
-            context.runtimeArtCoordinator().afterTimingService(
+            HardwareBoundaryPump.service(timing, context.runtimeArtCoordinator(),
                     HardwareServiceBoundary.POST_OBJECTS);
         }
         assertEquals(0,

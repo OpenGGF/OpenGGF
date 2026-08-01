@@ -151,15 +151,9 @@ class TestLevelIterationHardwareTimingAdmissionOrder {
             for (int frame = 0;
                     frame < 16 && !hasPreparedPayload(context, handle);
                     frame++) {
-                context.beforeHardwareTimingService(
+                context.serviceHardwareTimingBoundary(
                         com.openggf.game.timing.HardwareServiceBoundary.PRE_MAIN_LOOP);
-                context.hardwareTiming().service(
-                        com.openggf.game.timing.HardwareServiceBoundary.PRE_MAIN_LOOP);
-                context.afterHardwareTimingService(
-                        com.openggf.game.timing.HardwareServiceBoundary.PRE_MAIN_LOOP);
-                context.beforeHardwareTimingService(POST_OBJECTS);
-                context.hardwareTiming().service(POST_OBJECTS);
-                context.afterHardwareTimingService(POST_OBJECTS);
+                context.serviceHardwareTimingBoundary(POST_OBJECTS);
             }
         }
         assertTrue(hasPreparedPayload(context, handle),

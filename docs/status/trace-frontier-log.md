@@ -56485,3 +56485,62 @@ read for `error_count`/`total_frames`) — all identical to baseline:
 mhz 912/7218`. `TestS3kAizTraceReplay` holds at exactly 4 failures + 1 error.
 S1/S2 unchanged: `s1_ghz1 588/3905`, `s2_ehz1 16725/5852`,
 `s2_cpz1 15622/5744`.
+## 2026-08-01 — Kos boundary seam: twelve test-side models re-joined to production
+
+Worktree `.worktrees/boundary-seam`, branch `bugfix/ai-s3k-boundary-seam` off
+`bugfix/ai-s3k-mhz-queue-frontier`.
+
+`1d93e3134` moved the Kos module state step into
+`RuntimeArtCoordinator.beforeTimingService(PRE_MAIN_LOOP)` and updated four of
+the sixteen hand-rolled test models of `LevelFrameStep.serviceBoundary`;
+`519c2afed` caught two more. The remaining twelve still called only the `after`
+hook, so no module retired. `TestSonic3kAIZEvents`
+`act1ResizeOwnerQueuesMainLevelKosmAndAppliesItsPreparedPayload` spun forever on
+`do { ... } while (!parent.ready())` instead of failing, which kept an AIZ —
+primary release slice — regression invisible to suite runs.
+
+Rather than a thirteenth copy, the sequence now has one owner:
+`HardwareBoundaryDispatch.serviceBoundary`. `LevelFrameStep.serviceBoundary` and
+`GameplayModeContext.serviceHardwareTimingBoundary` delegate to it; tests route
+through `HardwareBoundaryPump` (gameplay-mode form, or an explicit
+timing/coordinator form for hand-wired unit contexts). The AIZ loop is now
+bounded so a future regression fails fast.
+
+Six loops had encoded `develop`'s pre-`1d93e3134` phase — "PRE_MAIN_LOOP must
+not publish KosM readiness", a fixed extra object pass before
+`Obj_HCZLargeFan` drops, and `publicationFrame + 1` for the HCZ transition.
+They are re-derived from ROM state, not re-pinned:
+`Process_Kos_Module_Queue` (2726-2790) does one state step per `LevelLoop`
+iteration, decrementing `Kos_modules_left` at 2750-2752, and is called from the
+loop tail at 7908 — reached at the frame top, ahead of the next iteration's
+`Process_Kos_Queue` at 7887. So retirement surfaces at `PRE_MAIN_LOOP`;
+`VINT_SERVICE` never advances it; and the object pass (`Process_Sprites`, 7889)
+that follows in the same frame is the first poll to observe zero and the only
+dispatch permitted to publish art. Two loops (`TestSonic3kAIZEvents`,
+`TestS3kIczAct1TransitionHeadless`) were additionally asserting "intermediate
+scan" invariants against a parent snapshot taken before the frame-top step; they
+now re-read the parent and break on the owning publication scan.
+
+Classes green: `TestSonic3kAIZEvents`, `TestS3kKosStructuralSequence`,
+`TestS3kIczAct1TransitionHeadless`, `TestS3kZoneKosRewind`,
+`TestSonic3kHCZEvents`, `TestAizFireCurtainRendererRom`,
+`TestHczLargeFanCoordinateParity`, `TestS3kObjectKosOwnerRewind`,
+`TestS3kResultsKosQueueRewind`, `SwScrlAizTest`,
+`TestSonic3kTitleCardKosQueue`, `TestS3kLbz1MinibossAndTransitionHeadless`,
+plus `TestHCZWaterWallObjectInstance`, `TestS3kHcz1WaterTunnelUpwardPipe`,
+`TestLevelIterationHardwareTimingAdmissionOrder`, `TestS3kKosModuleQueue`,
+`TestS3kKosDecompressionQueue` — 138 tests, 0 failures.
+
+Non-trace suite: 13947 tests, 7 failures + 2 errors, all reproduced identically
+at the branch point in a detached baseline worktree —
+`TestRewindFieldDispositionGuard`, `TestRewindFieldAudit`,
+`TestSonic3kSSEntryRingFormation` (x3), `TestS3kCnzVisualCapture` (x2),
+`TestPlayableSpriteMovement`. `TestMGZSwingingPlatformObjectInstance` failed
+only in the shared fork and passes in isolation.
+
+Trace measurements, one class per invocation under `-Ptrace-replay`, reading
+`error_count`/`total_frames` from `target/trace-reports` — identical to
+baseline: `aiz 8/64, hcz 8/1320, mgz 1/14629, cnz 1/5336, icz 1/1629,
+lbz 8/35, mhz 912/7218`. `TestS3kAizTraceReplay` holds at exactly 4 failures +
+1 error.
+

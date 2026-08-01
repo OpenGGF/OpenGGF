@@ -121,8 +121,7 @@ public class TestS3kHcz1WaterTunnelUpwardPipe {
     }
 
     private static void serviceArtBoundary(HardwareServiceBoundary boundary) {
-        GameServices.hardwareTiming().service(boundary);
-        GameServices.runtimeArtCoordinator().afterTimingService(boundary);
+        HardwareBoundaryPump.service(boundary);
     }
 
     /**

@@ -10,6 +10,7 @@ import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
+import com.openggf.tests.HardwareBoundaryPump;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.TestablePlayableSprite;
 import com.openggf.tests.rules.RequiresRom;
@@ -62,27 +63,36 @@ class TestHczLargeFanCoordinateParity {
         fan.update(1, player);
         assertEquals(fanY, fan.getY(),
                 "Obj_HCZLargeFan queues Kosinski art on trigger before the first drop tick");
+        // Kos_modules_left is decremented by Process_Kos_Module_Queue
+        // (docs/skdisasm/sonic3k.asm:2750-2752), which LevelLoop calls in its tail
+        // (7908) — reached at the frame top ahead of Process_Kos_Queue (7887). The
+        // object pass (Process_Sprites, 7889) that follows in the same frame is the
+        // first poll to observe zero, so the fan drops on that pass rather than a later
+        // one. Deriving the frame this way instead of pinning a pass count keeps the
+        // test honest about which dispatch actually retires the archive.
         int frame = 2;
-        while (timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE) > 0
-                && frame < 10_000) {
+        boolean artReady = false;
+        while (!artReady && frame < 10_000) {
             serviceBoundary(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            artReady = timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE) == 0;
+            assertEquals(fanY, fan.getY(),
+                    "Obj_HCZLargeFan waits for queued art before initializing the falling fan");
             fan.update(frame++, player);
+            if (artReady) {
+                break;
+            }
+            assertEquals(fanY, fan.getY(),
+                    "an object pass polling a still-pending archive must not drop the fan");
             serviceBoundary(HardwareServiceBoundary.POST_OBJECTS);
         }
         assertEquals(0, timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE));
-        assertEquals(fanY, fan.getY(),
-                "Obj_HCZLargeFan waits for queued art before initializing the falling fan");
-        serviceBoundary(HardwareServiceBoundary.PRE_MAIN_LOOP);
-        fan.update(frame, player);
-        serviceBoundary(HardwareServiceBoundary.POST_OBJECTS);
 
         assertEquals(fanY + 8, fan.getY(),
                 "Obj_HCZLargeFan compares ROM x_pos/y_pos, which map to player centre coordinates");
     }
 
     private static void serviceBoundary(HardwareServiceBoundary boundary) {
-        GameServices.hardwareTiming().service(boundary);
-        GameServices.runtimeArtCoordinator().afterTimingService(boundary);
+        HardwareBoundaryPump.service(boundary);
     }
 
     private static TestablePlayableSprite standingPlayer() {
