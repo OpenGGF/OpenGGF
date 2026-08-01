@@ -56814,3 +56814,47 @@ byte-identical there (same totals, same first-error frames): pre-existing, not
 regressions. The four S1 act-3 `queue.s1_nemesis_plc.busy` stragglers are the same
 defect family — suspect each zone's boss-defeat RNG cadence (LZ/MZ/SLZ/SYZ
 equivalents of the GHZ wrecking-ball stream) as the next targets.
+
+## 2026-08-01 — S1 act-3 capsule stragglers greened (SYZ3/SLZ3/MZ3/LZ3); slot-lifetime defect found
+
+Worktree `bugfix/ai-fable-capsule-lifetime` (on 3bb149a55). Command per trace:
+`mvn -Dmse=relaxed -Dsurefire.forkCount=1 "-Ds1.rom.path=<s1>" "-Dtest=<class>" test`.
+
+Three root causes, all found by the engine-vs-ROM lifetime/RNG-stream diff method from the
+previous entry (probes removed before commit):
+
+1. **Capsule trigger-frame skew (SYZ3, SLZ3, and MZ3 residual).** ROM `Pri_Switch` writes
+   routine=$A/obTimeFrame=60 and returns; the first `Pri_Explosion` pass is always the
+   frame AFTER the button trigger (3E Prison Capsule.asm:88-115). The engine ran the
+   explosion phase on the capsule BODY, so when the layout places the body's SST slot
+   after the button's (SYZ3/SLZ3/MZ3 — not GHZ3/LZ3), the body ticked the timer once on
+   the trigger frame. One-frame window shift = ±1 random-animal spawn and, in SLZ3, one
+   missing capsule-explosion RandomNumber draw (engine 7 vs ROM 8) that desynced every
+   later species/offset draw (its -43-frame trigger skew). Fixed by capturing the trigger
+   frame and skipping the body's EXPLODING tick on it. **SYZ3 PASS** (was 5 @ f13222),
+   **SLZ3 PASS** (was 5 @ f13237).
+2. **MZ lava countdown seeded with the wrong bits.** `BMZ_ShipStart` stores the RAW low
+   byte of a per-frame RandomNumber as the countdown (73, 74 Boss - MZ Main and
+   Fire.asm:107-109); the engine stored 0x40+(d&0x1F) and also drew once at init. Draw
+   count matched (which hid it); the value shifted the first combat lava spawn, changing
+   the number of two-draw spawns before defeat. With fix 1: **MZ3 PASS** (was 5 @ f17398).
+3. **LZ conveyor wheels never despawned (LZ3).** `LCon_Wheel` ends in `bra.w
+   RememberState` (63 LZ Conveyor.asm:213-215) — delete out of range, remember respawn
+   flag, free the slot. The engine treated RememberState as always-persistent; by act end
+   nine live wheels pinned dynamic slots 41-88, pushing the capsule's last animals into
+   slots 64-66 where the modelled released-game `Pri_EndAct` scan (slots 1-63) cannot see
+   them, so the engine raised the results sequence while three animals were alive.
+   **LZ3 PASS** (was 6 @ f18584).
+
+### Engine defect note: remembered-object slot lifetimes are load-bearing
+
+Finding 3 generalises. Object-RAM occupancy is gameplay-visible through every ROM
+FindFreeObj-order dependency and through the Pri_EndAct 1-63 scan ceiling, and a single
+"persistent when the ROM deletes" misclassification held SST slots from mid-level to act
+end (allocation trail, vbla-stamped: slots 41/42 f51868, 49 f57497, 50 f57024, 52 f56231,
+57 f59087, 58 f60238, plus 87/88 — all `Sonic1LZConveyorObjectInstance` wheels at the
+capsule dump, none present in the ROM's slot_dump, which shows a clean 32-59 block).
+Any other object class modelling a ROM RememberState/DeleteObject tail as engine
+persistence will reproduce this bug wherever slot pressure or slot-ordering matters.
+A sweep of `isPersistent()`/`shouldStayActiveWhenRemembered()` overrides against their
+cited ROM tails is the follow-up; this entry is the evidence baseline.
