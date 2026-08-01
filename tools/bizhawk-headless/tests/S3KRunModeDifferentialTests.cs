@@ -120,14 +120,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
             "^  \"recording_date\": \"[0-9]{4}-[0-9]{2}-[0-9]{2}\",$");
 
         /// <summary>
-        /// Exact v6.39 stamps shared by the freshly published fixture and
+        /// Exact v6.40 stamps shared by the freshly published fixture and
         /// the current native capture. No schema/version normalization is
         /// permitted.
         /// </summary>
         private const string PublishedVersionLine =
-            "  \"lua_script_version\": \"6.39-s3k-completerun\",";
+            "  \"lua_script_version\": \"6.40-s3k-completerun\",";
         private const string CurrentVersionLine =
-            "  \"lua_script_version\": \"6.39-s3k-completerun\",";
+            "  \"lua_script_version\": \"6.40-s3k-completerun\",";
         private const string CurrentTraceSchemaLine =
             "  \"trace_schema\": 7,";
         private const string PublishedHardwareTimingSchemaLine =
@@ -154,25 +154,25 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 232294,
                 "8d6e3e3004e811a124c516ac224fe9e9dd5476cce1d6c3097b3b7c65"
                 + "c2526dd6",
-                9054068,
-                "7efd3b263a0194239ad712d94a8fa4f75b405cf5dbda1da326fec116"
-                + "da50843e"),
+                9057942,
+                "612914268da742c0da96896b938aa0c531b2446562243b9537f93344"
+                + "fb68c416"),
             new SetCCase(
                 "slots", "bonus_slots",
                 195034,
                 "7fe7de5bb8dd97bf98ef595e46899097bb0b9e01a999aeff0d9953e6"
                 + "3504809b",
-                2902997,
-                "2e8b07ef99a742216966629f9986a552618759f5528147f548ff8b03"
-                + "4d86321e"),
+                2909404,
+                "ebc012ecbdeb2aaea94527ce7aa7718a438047d5242e707f660b0c74"
+                + "4b0262c2"),
             new SetCCase(
                 "pachinko", "bonus_pachinko",
                 494896,
                 "86c2c655d41153bde45ab762d2f382c51b59d1b7063b2e8b1c7b42a2"
                 + "cc13308b",
-                12112266,
-                "028bf33936293554ac56fc8993fd38f4f0fe9ddad663dd1927293a99"
-                + "31409844"),
+                12122249,
+                "cb647ebc3f94a5d7f43302eeb5f4edd7960d92546b6189ae9314d8f6"
+                + "fb789537"),
             new SetCCase(
                 "ss", "special_stage",
                 272711,
@@ -200,8 +200,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private const long ManifestLength = 8740;
 
         private const string ManifestSha256 =
-            "f2e3151b339c680277ad8121f24d6ebc14fb67a47cfabae7fd97f1da1ea97"
-            + "bbd";
+            "be3f3940abd8932559dd556913be792f6968edbd39310c70ebb32c9d5b08"
+            + "d550";
 
         /// <summary>
         /// The 25 published segments in recorder emission order, with the
@@ -228,97 +228,97 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 754582,
                 "28cff717d9be01526ba5085a30e7365ac99f39b4cba195d1e155619c"
                 + "2e3310ce",
-                20125995,
-                "00d5945ea3fa3a2218c378c96805c474a4a612855ddcd3877fe7554b"
-                + "eac599ee"),
+                20148941,
+                "61ceefb3466d0049a14436e5c58f499f492e20dedd6560d811329dff"
+                + "c4ab43aa"),
             new SetBCase(
                 "gumball", Bonus, 5570, 1430,
                 232294,
                 "8d6e3e3004e811a124c516ac224fe9e9dd5476cce1d6c3097b3b7c65"
                 + "c2526dd6",
-                9054068,
-                "7efd3b263a0194239ad712d94a8fa4f75b405cf5dbda1da326fec116"
-                + "da50843e"),
+                9057942,
+                "612914268da742c0da96896b938aa0c531b2446562243b9537f93344"
+                + "fb68c416"),
             new SetBCase(
                 "aiz_2", Level, 7001, 2140,
                 347314,
                 "12fafead29b8fc5a19dbf1ff4c7593c83094660c6ed541bb2996c6be"
                 + "5c4f5258",
-                9898457,
-                "274b83748af88d3242583ef5d6e6257765053ae578e7c29728848aed"
-                + "e893c9f2"),
+                9908887,
+                "cecce89c0341aa7a3ee3d45d21e93cbda1d609345fc71f7877249c1a"
+                + "a4dcca77"),
             new SetBCase(
                 "slots", Bonus, 9142, 1200,
                 195034,
                 "7fe7de5bb8dd97bf98ef595e46899097bb0b9e01a999aeff0d9953e6"
                 + "3504809b",
-                2902997,
-                "2e8b07ef99a742216966629f9986a552618759f5528147f548ff8b03"
-                + "4d86321e"),
+                2909404,
+                "ebc012ecbdeb2aaea94527ce7aa7718a438047d5242e707f660b0c74"
+                + "4b0262c2"),
             new SetBCase(
                 "aiz_3", Level, 10343, 7568,
                 1226650,
                 "80ed52afd35943599df7ec33865d72b313ef8b0735a9c81980c58fc0"
                 + "21ac927d",
-                40384841,
-                "adc814194b950808083061416c26c7929f3e6545f8c67c0836403633"
-                + "84f1a220"),
+                40422240,
+                "b772d481389e0c5cd33fe80b5538ca0a3a1b37221f3cd9d61d790e97"
+                + "f665c743"),
             new SetBCase(
                 "slots_2", Bonus, 17912, 1278,
                 207670,
                 "d73a419cd5df1aa5a096a6c15cc4bc3f0e8b3745c570c84f8c11536d"
                 + "29f7d62c",
-                2913419,
-                "807af626e02be49ac681f607c209c0990084aa3f57070a9b0a3e3bf9"
-                + "56f310bc"),
+                2920720,
+                "362f061712bae35dceabf1dbc042ef4255f8c0ccf97472b56dda3300"
+                + "d0607c77"),
             new SetBCase(
                 "aiz_4", Level, 19191, 3210,
                 520654,
                 "2509a49506a2dc85ed76738958d48e369c00e8ca671d0138c30c606e"
                 + "25a9dd82",
-                15395392,
-                "5e5c2e9bcaf6aef31f204f9982be4e7fec5dd954dec0247b588eec34"
-                + "9d0440a5"),
+                15409994,
+                "4451ba3b322c28dea77a8dedd069d26b06347b87f56c9c40a8fba868"
+                + "11c9c577"),
             new SetBCase(
                 "gumball_2", Bonus, 22402, 1648,
                 267610,
                 "8d0e6f4225232c868da5c605104f284a36f86dcbc4dbbd6a876e6d46"
                 + "bba9f813",
-                9493146,
-                "999210db6779a35a12423c0e8cf1f127ed837e19d8ac1a2da7fae5ae"
-                + "2ded80ce"),
+                9497616,
+                "2c83a18ee9bdfa6012228b3d4993075b5ca9a03bbfa1881c5dbef1b2"
+                + "dc53234c"),
             new SetBCase(
                 "aiz_5", Level, 24051, 3631,
                 588856,
                 "74550e535b7e8616d3a5b7b01022d000f1dfb0e7f68540833914038a"
                 + "cbbca9d5",
-                22341435,
-                "86de4614a223c80b55d7aad403c5288155a791f82987dbb1db6f6c5e"
-                + "09b37757"),
+                22358123,
+                "bedc19f955feddd8a004ba41dd79301a778d1fd0e02d8454aba56ab4"
+                + "75192079"),
             new SetBCase(
                 "hcz", Level, 27683, 3176,
                 515146,
                 "3cbe8e16420257f39f2975cab0321c4a801526208e0888cbe390d453"
                 + "e8736c54",
-                9479905,
-                "76139e3a740562da1bb077ded1ff5ef42e3379fca40ca51fa60e59b1"
-                + "046aef41"),
+                9492272,
+                "a03eaa0103ada47a75d2a71219325964449bed385c95ce22b8484e76"
+                + "9086b83e"),
             new SetBCase(
                 "slots_3", Bonus, 30860, 5379,
                 872032,
                 "4dbb1771ea0a51f9c0f322dc48d9440d3eed531dbf9daa3042dd6bf7"
                 + "25c32ee8",
-                15024054,
-                "9512a32aff7f75b47bed2ab10f52cc6ee4a546915077f3dc1f460e2c"
-                + "dff1e40a"),
+                15051619,
+                "50daeb325780d87a38f263906e5b3b0fd514b8f6bdd861f3de63a2f4"
+                + "9a1f4356"),
             new SetBCase(
                 "hcz_2", Level, 36240, 11933,
                 1933780,
                 "326e64b5370622d8ee2ea2ae8d22703febeea3aaea8e2fea78cfb812"
                 + "0143f023",
-                64698581,
-                "e1c83fbb2406a102917af9ffd2281f84ee69994b902e696d372e1b07"
-                + "0377c754"),
+                64745218,
+                "164daf64d9f53a1c35add0dfd1ab74fda68ac16e3cb0f524ba390de0"
+                + "815194d5"),
             new SetBCase(
                 "ss", Ss, 48174, 4630,
                 272711,
@@ -332,25 +332,25 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 640372,
                 "ef0ae48f3b5b76c5a6c86b01a4efbc503d3b6f363e115351dfd692ee"
                 + "f74c9ec8",
-                18205461,
-                "e6a0d5e8937c1149b1281bf29272df74cd1736ce1eb7a7cc5d77ded6"
-                + "ff4af789"),
+                18224831,
+                "9f2dd1b714dcd4cdc45f5085a7e58a965926ee58bdc2a41dd95d4352"
+                + "c53775e4"),
             new SetBCase(
                 "slots_4", Bonus, 58224, 1603,
                 260320,
                 "e9e6b054d0f3aea9a639ee4bfb726b6434102212581e0b3b704cc8cd"
                 + "5a2986fb",
-                3736985,
-                "30c11daaa451fe0fbc6f876e5fbf37015eccaecbd7d995a618478fd3"
-                + "95b661c1"),
+                3748905,
+                "fc199eb6f612baf1209119572543f72a64d1bd414683139d605b231e"
+                + "9d1a84c7"),
             new SetBCase(
                 "hcz_4", Level, 59828, 2097,
                 340348,
                 "6d4bde24a8af3674c59e16688342f6275e8e18240293f6d78a9e23f0"
                 + "660e4156",
-                7959767,
-                "e9acfefed332a531a19b8b7f582fc5925fb68d986aaf639277614700"
-                + "386f7ab8"),
+                7969005,
+                "89984b9b0b0c30f0611b339e7162933f205d51a318c423f9dd7ba777"
+                + "99e8342c"),
             new SetBCase(
                 "ss_2", Ss, 61926, 7194,
                 429484,
@@ -364,49 +364,49 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 557104,
                 "8055565bfb24d87fc131acb06dd0460b4b96d82bca1a4ff39a7678d0"
                 + "bc5edb3e",
-                11788535,
-                "ef780c4c8a2dbdfbaa41926543f1b3c96758f826d643e0d949571166"
-                + "faeea15d"),
+                11803435,
+                "ec69071af5c4ec9a85b7c5cb5f8b26efdcabb518cf83b33a31f358a5"
+                + "6fd3e507"),
             new SetBCase(
                 "slots_5", Bonus, 74026, 1791,
                 290776,
                 "97b17ee7c44f34be21b3281c45436359323538cbad4238f1a9d7229f"
                 + "dd53c669",
-                5131987,
-                "0a7236e739b4c89f044b7408d664853a99afd0f80f46c40ce17282cc"
-                + "baaa55a2"),
+                5143758,
+                "21b9d8439f91fcc9ed8ce3ab5b1c084a6e21ba971b5870ed797e82fb"
+                + "a302e613"),
             new SetBCase(
                 "hcz_6", Level, 75818, 8422,
                 1364998,
                 "09d7c5877287f497ac4f8efb9035375a1e1b61ffc6c4a9ef9b2172ad"
                 + "2d4605cb",
-                54776923,
-                "29bdac13707337c298fe57f5a5ac181d76136148f54cfae8d63771f2"
-                + "f59b18a2"),
+                54810001,
+                "8be1e0b6ce9fb37ca8cc417b7d504881f476a15ee808bd57fae1aeab"
+                + "aff19a45"),
             new SetBCase(
                 "mgz", Level, 84241, 8721,
                 1413436,
                 "d9bfd06a2a94dbeb89799a10bc9b4ed729107e645008289697091a04"
                 + "b56dcf32",
-                33100661,
-                "da542c5018ee0087b32b994275584dbee930cb3da9f21536140c48cb"
-                + "d147e072"),
+                33142083,
+                "526b091e887d57d8fa5e3e21fef6b2c82da61435fda6e53437f31c07"
+                + "3eefb2ad"),
             new SetBCase(
                 "pachinko", Bonus, 92963, 3051,
                 494896,
                 "86c2c655d41153bde45ab762d2f382c51b59d1b7063b2e8b1c7b42a2"
                 + "cc13308b",
-                12112266,
-                "028bf33936293554ac56fc8993fd38f4f0fe9ddad663dd1927293a99"
-                + "31409844"),
+                12122249,
+                "cb647ebc3f94a5d7f43302eeb5f4edd7960d92546b6189ae9314d8f6"
+                + "fb789537"),
             new SetBCase(
                 "mgz_2", Level, 96015, 2076,
                 336946,
                 "c877cc8b8ae72f2c0ee687a9443399c33cdc743156480d887d833045"
                 + "ead7a85c",
-                7731149,
-                "a4903fcbfa7bb36cbfb62033701fa3b5b3a0a557ca8ae6318e699cc9"
-                + "73ba1982"),
+                7742175,
+                "565ee0891ed4ba28737c603ae9a06d4df7b19369ecd957954c02bdb9"
+                + "408cf6fd"),
             new SetBCase(
                 "ss_3", Ss, 98092, 6537,
                 387486,
@@ -420,9 +420,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 1380388,
                 "6752c5d444bf653ee8a1d45c1feda14c5d91040b5b6d2ed0ea83b4eb"
                 + "1951162b",
-                35869991,
-                "61a5cc496f703bc9297177f837684c075bf44edd078531cd53825125"
-                + "6cad0486")
+                35911562,
+                "c865a4a7f4cdb13aeec3508c3526052890c9452c380b9be6fb5f3e71"
+                + "bb562755")
         };
 
         public static void Register(ICollection<TestMain.TestCase> tests)
@@ -753,7 +753,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Throws<InvalidOperationException>(
                 () => RequireExactMetadataMigrationShapes(
                     "wrong fixture version",
-                    published.Replace("6.39", "6.38"), current),
+                    published.Replace("6.40", "6.39"), current),
                 "fixture");
             AssertEx.Throws<InvalidOperationException>(
                 () => RequireExactMetadataMigrationShapes(
@@ -781,7 +781,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Throws<InvalidOperationException>(
                 () => RequireExactManifestMigrationShapes(
                     "wrong fixture manifest",
-                    PublishedVersionLine.Replace("6.39", "6.38") + "\n",
+                    PublishedVersionLine.Replace("6.40", "6.39") + "\n",
                     CurrentVersionLine + "\n"),
                 "fixture");
             AssertEx.Throws<InvalidOperationException>(
