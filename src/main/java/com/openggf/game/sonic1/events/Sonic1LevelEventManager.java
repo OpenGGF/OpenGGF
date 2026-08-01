@@ -168,7 +168,14 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
             return;
         }
         // cmpi.b #act3,(v_act).w / beq.s .return -- boss fight owns act 3's art.
-        if (currentAct == ACT_3) {
+        // Read the ROM-effective act, not the engine's logical act: the ROM has
+        // no separate Final Zone level, it is SBZ act 3 (v_zone=5, v_act=act3),
+        // whereas the engine models FZ as its own logical zone with act 0. Using
+        // the raw act let FZ fall through this gate and submit plcid_Signpost
+        // into an active Nemesis decoder, which throws.
+        LevelManager actLevel = levelManager();
+        int romAct = actLevel != null ? actLevel.getFeatureActId() : currentAct;
+        if (romAct == ACT_3) {
             return;
         }
         var camera = GameServices.cameraOrNull();
