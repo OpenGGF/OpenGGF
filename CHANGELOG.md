@@ -3,6 +3,18 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the S1 special stage no longer publishes Sonic's dynamic-art transfer
+  while loading the stage. `GM_Special` (docs/s1disasm/sonic.asm:3222-3292)
+  never runs `Sonic_LoadGfx` during setup, and it clears `v_levelvariables`
+  (sonic.asm:3245), which contains `v_sonframenum`
+  (docs/s1disasm/_Variables.asm:174, 225, 296) — the "frame already in VRAM"
+  latch `Sonic_LoadGfx` compares against
+  (docs/s1disasm/_incObj/01 Sonic.asm:2394-2398). The SS Sonic object's first
+  main-loop pass therefore always sees a changed frame and sets
+  `f_sonframechg` for `VBlank_SpecialStage` to DMA (sonic.asm:890-894).
+  Publishing at load consumed that first change, so the engine emitted 811 of
+  the ROM's 812 dynamic-art edge rows and never published the first one.
+  Greens `TestS1SpecialStageTraceReplay` (was 2307 errors from f99).
 - Fix: the S1 prison capsule's explosion phase no longer starts on the button
   trigger frame. ROM `Pri_Switch` only writes routine=$A/obTimeFrame=60 and
   returns, so the first `Pri_Explosion` pass is always the frame AFTER the
