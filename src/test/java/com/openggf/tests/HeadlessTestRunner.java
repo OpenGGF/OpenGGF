@@ -34,6 +34,13 @@ import com.openggf.audio.presentation.PresentationMode;
  */
 public class HeadlessTestRunner {
 
+    /**
+     * Upper bound on consecutive SETUP_ONLY rows before a step is treated as divergent.
+     * A structural boundary only ever costs a handful of rows; an unbounded retry turns a
+     * frame-driver admission regression into a hung fork rather than a failing test.
+     */
+    private static final int SETUP_ONLY_RETRY_LIMIT = 4096;
+
     private final RecordingFrameDriver driver;
 
     /**
@@ -152,7 +159,14 @@ public class HeadlessTestRunner {
      */
     public int stepFrameFromRecording() {
         int input;
+        int setupRetries = 0;
         do {
+            if (setupRetries++ >= SETUP_ONLY_RETRY_LIMIT) {
+                throw new IllegalStateException(
+                        "stepFrameFromRecording kept returning SETUP_ONLY for "
+                                + SETUP_ONLY_RETRY_LIMIT + " retries; the frame driver"
+                                + " is no longer admitting a gameplay row");
+            }
             input = driver.stepFrameFromRecording();
         } while (driver.getLastFrameResult() == LevelFrameResult.SETUP_ONLY);
         presentIfAdmitted(driver.getLastFrameResult());
@@ -165,7 +179,14 @@ public class HeadlessTestRunner {
      */
     public int stepFrameFromRecordingUsingPreviousInput() {
         int input;
+        int setupRetries = 0;
         do {
+            if (setupRetries++ >= SETUP_ONLY_RETRY_LIMIT) {
+                throw new IllegalStateException(
+                        "stepFrameFromRecordingUsingPreviousInput kept returning SETUP_ONLY for "
+                                + SETUP_ONLY_RETRY_LIMIT + " retries; the frame driver"
+                                + " is no longer admitting a gameplay row");
+            }
             input = driver.stepFrameFromRecordingUsingPreviousInput();
         } while (driver.getLastFrameResult() == LevelFrameResult.SETUP_ONLY);
         presentIfAdmitted(driver.getLastFrameResult());
@@ -182,7 +203,14 @@ public class HeadlessTestRunner {
     private LevelFrameResult retrySetupOnly(
             java.util.function.Supplier<LevelFrameResult> step) {
         LevelFrameResult result;
+        int setupRetries = 0;
         do {
+            if (setupRetries++ >= SETUP_ONLY_RETRY_LIMIT) {
+                throw new IllegalStateException(
+                        "a stepped frame kept returning SETUP_ONLY for "
+                                + SETUP_ONLY_RETRY_LIMIT + " retries; the frame driver"
+                                + " is no longer admitting a gameplay row");
+            }
             result = step.get();
         } while (result == LevelFrameResult.SETUP_ONLY);
         return presentIfAdmitted(result);

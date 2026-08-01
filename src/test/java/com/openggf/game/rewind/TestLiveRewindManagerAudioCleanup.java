@@ -223,8 +223,10 @@ class TestLiveRewindManagerAudioCleanup {
         assertTrue(audio.isReverseAudioPresentationActive(),
                 "release should keep reverse presentation active while coast still has rewind steps");
 
+        int coastSteps = 0;
         while (manager.handleRealtimeRewindInput(GameMode.LEVEL, false, input)) {
-            // drain coast
+            assertTrue(coastSteps++ < 4096,
+                    "the rewind coast must drain within a bounded number of steps");
         }
         assertFalse(audio.isReverseAudioPresentationActive(),
                 "transient cleanup should run after the coast has fully ended");

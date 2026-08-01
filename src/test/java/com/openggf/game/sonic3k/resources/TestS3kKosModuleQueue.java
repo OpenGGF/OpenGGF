@@ -248,7 +248,11 @@ class TestS3kKosModuleQueue {
             for (int module = 1; module <= 5; module++) {
                 S3kKosModuleSnapshot submitted = preparation(timing.capture());
                 assertNotNull(submitted.activeChild());
+                int preparations = 0;
                 while (!direct.isReady(submitted.activeChild())) {
+                    assertTrue(preparations++ < 4096,
+                            "module " + module + "'s direct child must finish decompressing"
+                                    + " within a bounded number of preparation steps");
                     queue.prepareQueuedModuleBeforeVSync();
                 }
                 S3kKosModuleSnapshot beforeRetirement = preparation(timing.capture());
@@ -302,7 +306,11 @@ class TestS3kKosModuleQueue {
             assertNotNull(submittedFirst.activeChild());
             assertEquals(1, direct.physicalQueueSize());
 
+            int firstPreparations = 0;
             while (!direct.isReady(submittedFirst.activeChild())) {
+                assertTrue(firstPreparations++ < 4096,
+                        "the first module's direct child must finish decompressing"
+                                + " within a bounded number of preparation steps");
                 queue.prepareQueuedModuleBeforeVSync();
             }
             romFrameModuleStep(queue);
@@ -358,14 +366,22 @@ class TestS3kKosModuleQueue {
             HardwareWorkHandle ordinary = direct.queueStandardKos(
                     rom, 2, S3kKosRamDestinations.BLOCK_TABLE);
 
+            int childPreparations = 0;
             while (!direct.isReady(child)) {
+                assertTrue(childPreparations++ < 4096,
+                        "the module child must finish decompressing within a bounded"
+                                + " number of preparation steps");
                 queue.prepareQueuedModuleBeforeVSync();
             }
             romFrameModuleStep(queue);
             assertEquals(0, preparation(timing.capture()).completedModules());
             assertFalse(queue.isReady(parent));
 
+            int ordinaryPreparations = 0;
             while (!direct.isReady(ordinary)) {
+                assertTrue(ordinaryPreparations++ < 4096,
+                        "the ordinary direct entry behind the module child must finish"
+                                + " decompressing within a bounded number of preparation steps");
                 queue.prepareQueuedModuleBeforeVSync();
             }
             romFrameModuleStep(queue);
@@ -476,7 +492,11 @@ class TestS3kKosModuleQueue {
             assertEquals(4, direct.physicalQueueSize(),
                     "the module child must join behind three ordinary entries");
 
+            int queuedChildPreparations = 0;
             while (!direct.isReady(child)) {
+                assertTrue(queuedChildPreparations++ < 4096,
+                        "the module child queued behind three ordinary entries must finish"
+                                + " decompressing within a bounded number of preparation steps");
                 queue.prepareQueuedModuleBeforeVSync();
                 if (!direct.isReady(child)) {
                     romFrameModuleStep(queue);
