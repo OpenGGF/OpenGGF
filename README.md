@@ -218,6 +218,29 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **Special-stage submission spills compared by pass, not publication row
+  (2026-08-01):** the S2 special-stage intro is now byte-aligned through frame
+  423, taking the frontier from 181 to 436. The remaining intro divergence was
+  not an engine defect: when a `RunObjects` pass overruns its frame, the later
+  objects' submissions carry the *lag* row as their `logical_frame` and surface a
+  row later, and which objects spill depends on sub-frame 68K execution time
+  inside a single pass — recorder row 176 shows three submissions with no spill
+  despite a following lag row, so it is not predictable from lag adjacency. The
+  engine publishes each pass atomically and cannot derive that split point. This
+  is the same class as the recorder power-on epoch normalisation already applied
+  to `transfer_id`/`edge_ordinal`: an observation artifact being compared as
+  though it were ROM state. `DynamicArtSpillNormalization` rebinds only
+  *submission* edges whose recorded `logical_frame` differs from their
+  `publication_frame`, only before the recorded `SpecialStage_Started` transition
+  (after which recorded pass bindings already pace each pass), moving them to the
+  latest non-lag row at or before their logical frame. Cardinality, in-pass
+  ordinal order, owner, phase, mapping frame and every `requests[]` field stay
+  absolute, and dedicated tests assert that a missing submission, an extra
+  submission and a wrong-owner attribution all still fail. The engine-side
+  alternative — consuming the recorded spill boundaries under the hardware-timing
+  contract — was rejected: that contract governs when engine-created work becomes
+  *ready*, and pacing the publication of diagnostic rows is not readiness.
+
 - **S2 special-stage intro pass pipeline and Obj88 startup tick (2026-08-01):**
   two more ROM-cited corrections to the special stage's early frames, taking it
   from 20468 errors at frame 165 to 18230 at frame 181. Before

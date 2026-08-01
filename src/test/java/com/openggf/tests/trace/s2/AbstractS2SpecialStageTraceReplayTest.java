@@ -9,6 +9,7 @@ import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.trace.TraceReportWriter;
 import com.openggf.trace.DivergenceReport;
 import com.openggf.trace.DynamicArtSpecialStageComparator;
+import com.openggf.trace.DynamicArtSpillNormalization;
 import com.openggf.trace.FieldComparison;
 import com.openggf.trace.FrameComparison;
 import com.openggf.trace.Severity;
@@ -202,6 +203,11 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
         // One replay owns one dynamic-art delivery-id origin.
         DynamicArtSpecialStageComparator dynamicArt =
                 new DynamicArtSpecialStageComparator();
+        // Rebind recorder submission edges that spilled past a frame boundary
+        // (lag rows) back to the pass that produced them; the engine publishes
+        // each RunObjects pass atomically. See DynamicArtSpillNormalization.
+        Map<Integer, TraceEvent.DynamicArtTransferState> expectedDynamicArtRows =
+                normalizedDynamicArtRows(trace);
         boolean[] dynamicArtCompared = new boolean[trace.frameCount()];
         int firstEngineFinished = -1;
         SpecialStageRunObjectsPassBinder passBinder =
@@ -226,7 +232,7 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
                 if (tf.lag()) {
                     harness.stepLagRow();
                     addDynamicArtComparison(
-                            comparisons, trace, harness, f,
+                            comparisons, trace, expectedDynamicArtRows, harness, f,
                             new LinkedHashMap<>(), dynamicArtCompared, dynamicArt);
                     continue;
                 }
@@ -238,7 +244,7 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
                         tf.lag());
                 if (tf.lag()) {
                     addDynamicArtComparison(
-                            comparisons, trace, harness, f,
+                            comparisons, trace, expectedDynamicArtRows, harness, f,
                             new LinkedHashMap<>(), dynamicArtCompared, dynamicArt);
                     continue;
                 }
@@ -264,7 +270,7 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
             addPlayerFields(fields, "tails", expected.tails(), state.tails(),
                     expected.hasRunObjectsEnd());
             addDynamicArtComparison(
-                    comparisons, trace, harness, f, fields,
+                    comparisons, trace, expectedDynamicArtRows, harness, f, fields,
                     dynamicArtCompared, dynamicArt);
         }
 
@@ -287,7 +293,7 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
                             trace.getFrame(sf).lag());
                 }
                 addDynamicArtComparison(
-                        comparisons, trace, harness, sf,
+                        comparisons, trace, expectedDynamicArtRows, harness, sf,
                         new LinkedHashMap<>(), dynamicArtCompared, dynamicArt);
             }
             // The recorder labels finish with the last logical non-lag frame,
@@ -307,7 +313,7 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
             for (int frame = sf + 1; frame < observed; frame++) {
                 harness.stepIdleRow(trace.getFrame(frame).lag());
                 addDynamicArtComparison(
-                        comparisons, trace, harness, frame,
+                        comparisons, trace, expectedDynamicArtRows, harness, frame,
                         new LinkedHashMap<>(), dynamicArtCompared, dynamicArt);
             }
             List<CompletedPass> finishPasses = passBinder.passesForObservation(observed);
@@ -340,7 +346,7 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
             Map<String, FieldComparison> terminalFields = new LinkedHashMap<>();
             addRingsToGoField(terminalFields, terminalExpected, terminalState);
             addDynamicArtComparison(
-                    comparisons, trace, harness, observed, terminalFields,
+                    comparisons, trace, expectedDynamicArtRows, harness, observed, terminalFields,
                     dynamicArtCompared, dynamicArt);
         }
 
@@ -351,16 +357,40 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
                 }
                 harness.stepIdleRow(trace.getFrame(frame).lag());
                 addDynamicArtComparison(
-                        comparisons, trace, harness, frame,
+                        comparisons, trace, expectedDynamicArtRows, harness, frame,
                         new LinkedHashMap<>(), dynamicArtCompared, dynamicArt);
             }
         }
         return new DivergenceReport(comparisons);
     }
 
+    private static Map<Integer, TraceEvent.DynamicArtTransferState> normalizedDynamicArtRows(
+            SpecialStageTraceData trace) {
+        if (!trace.metadata().hasPerFrameDynamicArtTransferState()) {
+            return Map.of();
+        }
+        Map<Integer, TraceEvent.DynamicArtTransferState> states = new LinkedHashMap<>();
+        for (int f = 0; f < trace.frameCount(); f++) {
+            TraceEvent.DynamicArtTransferState state =
+                    trace.dynamicArtTransferStateForFrame(f);
+            if (state != null) {
+                states.put(f, state);
+            }
+        }
+        int pacingStart = trace.controlStateTransitions().stream()
+                .filter(SpecialStageTraceData.ControlStateTransition::started)
+                .mapToInt(SpecialStageTraceData.ControlStateTransition::frame)
+                .findFirst()
+                .orElse(trace.frameCount());
+        return DynamicArtSpillNormalization.rebindSubmissionSpills(
+                states, trace.frameCount(), pacingStart,
+                f -> trace.getFrame(f).lag());
+    }
+
     private static void addDynamicArtComparison(
             List<FrameComparison> comparisons,
             SpecialStageTraceData trace,
+            Map<Integer, TraceEvent.DynamicArtTransferState> expectedDynamicArt,
             S2SpecialStageReplayHarness harness,
             int frame,
             Map<String, FieldComparison> fields,
@@ -371,7 +401,8 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
                 harness.finishDynamicArtSegment();
             }
             fields.putAll(dynamicArt.compare(
-                    trace.dynamicArtTransferStateForFrame(frame),
+                    expectedDynamicArt.getOrDefault(frame,
+                            trace.dynamicArtTransferStateForFrame(frame)),
                     harness.captureDynamicArt()).fields());
             compared[frame] = true;
         }

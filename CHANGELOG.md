@@ -15,6 +15,25 @@ All notable changes to the OpenGGF project are documented in this file.
   destroy the failed gameplay context, and return directly to the master
   title.
 
+- Test: the S2 special-stage replay rebinds recorder DPLC submission edges
+  that spilled past a frame boundary back to the object pass that produced
+  them (`DynamicArtSpillNormalization`), for rows before the recorded
+  `SpecialStage_Started` pass pacing takes over. One ROM `RunObjects` pass
+  submits every changed player DPLC in one burst, but the recorder
+  timestamps each submission with the frame it actually crossed: when the
+  pass overruns (a lag row), later objects' submissions carry the lag row as
+  `logical_frame` and surface on the next observation (stage-1 fixture row
+  181: `ss-sonic` logical 181; `ss-tails`/`ss-tails-tails` from the same
+  pass logical 182 — the lag row — published 183). The split point is
+  sub-frame 68K execution time with no ROM-semantic meaning, and the engine
+  publishes passes atomically, so — like the power-on-epoch delivery ids —
+  the spilled edges' frame stamps are compared per pass. Everything else
+  stays absolute (cardinality, in-pass order, owner, phase, mapping frame,
+  every request field); `TestDynamicArtSpillNormalization` proves missing,
+  extra, and wrong-owner submissions still fail. Moves
+  `TestS2SpecialStageTraceReplay`'s frontier from f181 to f436 (the intro
+  region is now fully aligned; the remaining divergence is post-start
+  gameplay animation edges).
 - Fix: the S2 special stage's pre-start object passes complete within their
   own observation, matching the recorder's end-of-frame rows. Before
   `SpecialStage_Started`, each wait-loop `RunObjects` iteration finishes
