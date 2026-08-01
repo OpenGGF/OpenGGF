@@ -20,6 +20,20 @@ All notable changes to the OpenGGF project are documented in this file.
   zero-distance `d0 == d1*2` side contact. Existing overrides keep their
   behaviour; only default-reliant full-solid objects change, monotonically
   toward ROM.
+- Fix: trace replay heap exhaustion on complete-run segments. `TraceData` retained
+  643 MB for the 46,244-row LBZ aux stream (one `LinkedHashMap` plus fresh strings
+  per generic event, ~1.34M events) against the 1 GB trace-replay fork ceiling, so
+  long segments died with `Java heap space` and truncated or missing reports.
+  Generic aux events (`object_state` etc.) now use a pooled array-backed
+  `CompactFieldMap` with interned strings, `object_near` text fields are interned,
+  and `TraceBinder` releases per-frame ROM/engine diagnostics strings once a frame
+  is finalized clean (reports only render diagnostics for divergent frames).
+  LBZ aux retention drops 643 MB -> 171 MB; all seven S3K complete-run segments
+  now replay deterministically at `-Xmx1g`. This exposed that the earlier
+  "LBZ 0 errors / 12,647 frames" pass was an OOM-truncated prefix: the segment
+  is 46,244 rows and deterministically diverges at frame 17599
+  (`queue.s3k_kos_direct.busy`, then a `KOS_DECOMPRESSION_QUEUE#279` admission
+  abort) on stock code as well.
 - Fix: HCZ water wall (`Obj_HCZWaterWall`) hardware-queue parity, clearing the
   HCZ complete-run frame-1067 `queue.*` groups and moving the segment frontier
   from 1320 to 10334 frames. Three ROM behaviours were missing: (1)
