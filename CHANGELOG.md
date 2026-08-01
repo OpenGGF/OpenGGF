@@ -3,6 +3,18 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the Madmole's solid body (`sub_8D876`, `d1 = $1F`) now uses the ROM's
+  inclusive right-edge X window. `SolidObject_cont` rejects with `bhi`
+  (sonic3k.asm:41393-41399), so a grounded player resting exactly at
+  `obj_x + d1` (`d0 == d1 * 2`) is a zero-distance side contact whose
+  `loc_1E042` d0==0 branch re-sets `Status_Push` every frame
+  (sonic3k.asm:41470-41500). The engine's exclusive bound dropped the contact
+  once Tails came to rest at the clamp boundary, so `Status_Push` never
+  persisted and the Tails-CPU push-bypass auto-jump
+  (`loc_13DD0` → `loc_13E9C`, sonic3k.asm:26702-26705, 26775-26782) never
+  fired — MHZ complete-run f3457's `y_vel = -$680` jump was missing and the
+  whole f3457-3486 sidekick cascade followed. MHZ first physics divergence
+  moves f3431 → f3536.
 - Fix: swept every S3K `SolidObjectFull` call site for landing-gate width
   mismatches after the Madmole find. ROM `Solid_Landed` / `loc_1E154`
   (sonic3k.asm:41611-41621) re-reads `width_pixels(a0)` for the new-landing X
