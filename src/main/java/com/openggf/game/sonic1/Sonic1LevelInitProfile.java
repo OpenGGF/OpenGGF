@@ -123,6 +123,15 @@ public class Sonic1LevelInitProfile extends AbstractLevelInitProfile {
                     GameServices.rom().getRom(),
                     plcService,
                     levelManager.getCurrentLevel().getZoneIndex());
+            // Level_StartGame bumps the fixed title-card elements out of their
+            // move-in routine and enters Level_MainLoop with them still alive
+            // (docs/s1disasm/sonic.asm:2969-2995). Their post-release tail
+            // re-queues the explosion/animal art 69 ordinary level frames later
+            // (docs/s1disasm/_incObj/34 Title Cards.asm:122-168), so arm it here
+            // rather than from the card renderer, which a headless run omits.
+            levelEventManager.armTitleCardArtReloadAtLevelStart(
+                    levelManager.getCurrentZone(), levelManager.getCurrentAct(),
+                    levelManager.getCurrentLevel().getZoneIndex());
         } catch (IOException failure) {
             throw new IllegalStateException(
                     "Failed to access S1 ROM for initial presentation PLCs",

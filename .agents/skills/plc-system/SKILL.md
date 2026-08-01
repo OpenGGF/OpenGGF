@@ -155,7 +155,17 @@ transfer IDs, and the run-gap ledger carry (`dynamic_art_initial_ledger_*` and
 
 Treat `queue.*` and `dynamic_art.*` report fields as zero-tolerance,
 comparison-only evidence. They may diagnose production ROM work but may never
-hydrate gameplay or create work. Preserve the first failing frame, field, and
+hydrate gameplay or create work.
+
+One narrow exception: recorded **hardware timing** may drive a **delay** in the
+art-loading pipelines of all three games — S1 PLC, S2 DPLC, and S3K Kosinski
+queues. It may defer or release *when* already-submitted, engine-created work
+becomes ready, and nothing else. It must not carry gameplay values, create work
+the engine did not submit, fabricate readiness, use physics/aux comparison data
+as its signal, or key on a frame index, zone, route or game name. If a proposed
+change decides *what* happens rather than *when*, it is outside the exception no
+matter how well the ROM behaviour is cited. See `trace-replay-bug-fixing` for the
+full contract; `TestHardwareTimingAuthorityGuard` enforces it. Preserve the first failing frame, field, and
 error count in `docs/status/trace-frontier-log.md`. Use
 `trace-replay-bug-fixing` for comparator triage and `trace-green-fleet` for
 multi-trace frontier work.

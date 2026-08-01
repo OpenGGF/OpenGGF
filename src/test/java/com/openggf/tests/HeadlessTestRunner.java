@@ -237,6 +237,10 @@ public class HeadlessTestRunner {
         driver.advancePlayableAnimationsOnly();
     }
 
+    public void advancePlayableFixedSlotsOnly() {
+        driver.advancePlayableFixedSlotsOnly();
+    }
+
     public void suppressFirstSidekickAnimationOnce() {
         driver.suppressFirstSidekickAnimationOnce();
     }

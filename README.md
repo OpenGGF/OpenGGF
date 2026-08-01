@@ -218,6 +218,137 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **Final Zone stopped crashing on the signpost PLC gate (2026-08-01):** the
+  `Level_MainLoop` tail wired earlier in this line reproduced `SignpostArtLoad`'s
+  six ROM gates faithfully — including `cmpi.b #act3,(v_act).w` — but compared
+  the ROM's `act3` constant against the *engine's* logical act. The ROM has no
+  separate Final Zone level: FZ is SBZ act 3, so `v_act` reads act3 there and the
+  routine returns before `NewPLC` ever runs. The engine models FZ as its own
+  logical zone whose act index restarts at 0 (probed at the hook: zone 6, act 0,
+  against the level's own ROM zone index of 5), so the gate never fired and the
+  submission landed while the Nemesis decoder was mid-run, throwing
+  `cannot mutate queued PLC entries while the decoder is active` before replay
+  could start. The S1 module's feature-act remap — which already carried the
+  sibling case of SBZ act 3 being loaded from the LZ zone slot — now reports act 3
+  for Final Zone, and the gate reads the ROM-effective act, so the divergence is
+  modelled at the per-game boundary rather than by testing a zone id for
+  behaviour. Final Zone returns to being an ordinary comparator frontier instead
+  of a crash.
+
+- **Boss-defeat RNG stream desync greened the GHZ3 and MTZ3 capsules
+  (2026-08-01):** the last `queue.*_nemesis_plc.busy` frontiers turned out not to
+  be a PLC defect at all. Instrumenting the queue showed all three traces
+  submitting an identical PLC and draining it at an identical rate, with the whole
+  busy episode merely time-shifted — and by different amounts in different
+  directions, which no queue defect can produce. The busy flag was faithfully
+  mirroring when the egg-prison capsule decided the act was over, and that
+  decision (scan for `ObjID_Animal`; when none remain, `Load_EndOfAct`) was
+  landing on the wrong frame because the RandomNumber stream had desynced
+  *upstream*, in boss-defeat code. The capsule machinery itself measured exact —
+  spawn cadence, slot assignment, burst positions and despawn scan all match the
+  ROM frame for frame; only the random spawn offsets and species differed, which
+  is a stream-position signature. GHZ's wrecking ball runs `BossDefeated` for
+  `$60` frames after Eggman's defeat and then converts itself into an explosion
+  (12 draws the engine never made, since it destroyed the ball instantly), and the
+  S1 capsule's offset negation tested bit 15 of the returned value where ROM
+  `tst.w d1` tests the *new* seed. MTZ's boss spawned a defeat explosion every
+  frame of its defeat window — 179 draws — where `Boss_LoadExplosion` gates on
+  `(Vint_runcount+3)&7` before allocating, giving the 23 draws the recording
+  actually contains. CPZ2 improved but still carries one extra draw: the ROM runs a
+  second pipe-docking cycle before defeat that the engine never runs, so its
+  waiting pipe activates at defeat and draws once. Verified across the full 57-class
+  S1/S2 fleet at 49 passing.
+
+- **V-blank counter clarity (2026-08-01):** two clock-related pieces of the
+  engine were documented as doing something other than what they do, and the
+  discrepancy cost real investigation time during the S1/S2 trace re-green.
+  `ObjectServices#vIntRunCounter` advertised resolving S3K's `V_int_run_count`
+  "from the object-update clock", implying a conversion; it actually returned its
+  argument plus a phase offset that is zero in normal gameplay — the identity
+  function — and three separate investigations proposed routing a fix through it
+  before that was noticed. It is now `resolveVIntRunCount`, documented as
+  performing no conversion, because the value callers pass is already the V-blank
+  counter: `ObjectExecutionController` dispatches
+  `instance.update(objects.vblaCounter(), …)`, so every object receives
+  `V_int_run_count` under a parameter merely *named* `frameCounter`. Separately
+  the counter itself was advanced from nine scattered sites with its contract
+  written down nowhere; it is measurably correct — probed against the recorded ROM
+  value it matches exactly, every frame — so rather than relocate anything, the
+  inline increment now routes through the single `advanceVblaCounter()` mutation
+  point and the field states the invariant it satisfies (exactly one tick per
+  serviced V-blank, matching the ROM's V-int-exit increment whichever routine the
+  mode jump table dispatched), names the consumers a de-phasing would silently
+  break, and records the two deliberate divergences in
+  `docs/status/known-discrepancies.md`. Both changes are behaviour-identical and
+  verified against the full S1/S2 trace fleet, the trace/rewind/PLC guards and
+  S3K parity.
+
+- **S1/S2 trace-replay suites re-greened after the PLC/DPLC queue landed
+  (2026-08-01):** the Pattern Load Cue and DPLC queue work left the Sonic 1 and
+  Sonic 2 trace-replay fleets failing 42 tests; 39 are green again from 26
+  disassembly-cited engine fixes, with all trace, rewind and PLC guards and S3K
+  cross-game parity holding throughout. The defects clustered into one recurring
+  class — a ROM routine or init frame the engine never ran at the right point —
+  and the fixes read as a tour of it: the title-card `Card_ChangeArt` PLC pair
+  hung off a presentation predicate a headless load never executes; the player
+  DPLC ledger dropped a logical row on every ROM lag frame; the engine had no
+  equivalent of the `Level_MainLoop` tail, so `SignpostArtLoad` never queued
+  `plcid_Signpost`; S2's `CheckLoadSignpostArt` was implemented but never wired;
+  the Tornado skipped its `ObjB2_Init` routine-0 frame, so the only Tails-bank
+  DPLC submitter in Wing Fortress ran a frame early; Obj05 executed outside its
+  `LevelOnly_Object_RAM` dispatch slot and recomputed latched directional state
+  every frame; the Oil Ocean surface never ran in its reserved object-RAM band;
+  and the replay boundary skipped the extra `Level_MainLoop` iteration the ROM
+  performs after the recorder's last sampled frame, which alone closed seven
+  traces. One comparator defect sat underneath the rest: `transfer_id` and
+  `edge_ordinal` are the native recorder's own run-scoped counters, epoched at
+  emulator power-on, so every fixture cut later in a movie opened at a large
+  non-zero origin while an engine replay necessarily opens at zero — no ROM in
+  the fleet carries a cumulative transfer identity, so absolute-equality on those
+  ids was never meaningful and the comparison is now epoch-normalised per segment
+  with list cardinality and every content field still compared absolutely.
+  **Correction (2026-08-01): the "39 of 42" figure below overstated the result by
+  five.** It counted only the 46-class verification set used during the campaign,
+  which was chosen early and never re-examined; five originally-failing S1
+  complete-run traces sat outside it throughout. Measured on the full 57-class
+  fleet the true figure is **34 of 42 green**, with 8 remaining — see
+  `docs/status/trace-frontier-log.md`. Three traces were open at the time of
+  writing (`Ghz3CompleteRun`, `Mtz3LevelSelect`, `Cpz2LevelSelect`), all on
+  `queue.*_nemesis_plc.busy`; the first two have since greened. The busy-window length
+  is already correct and Cpz2's inverted polarity reads as a missing submission
+  rather than a mistimed one. `docs/status/trace-frontier-log.md` records the
+  remaining frontier together with six hypotheses ruled out by direct
+  measurement, including two that were implemented and proved inert — the
+  V-blank clock is measurably exact and must not be relocated, and the capsule
+  spawn gates turned out to be reading the correct counter already (objects are
+  dispatched with the V-blank counter under a parameter merely *named*
+  `frameCounter`), so the substitution resolved to the value already in use.
+
+- **Special Stage exit crash (2026-07-31):** leaving a Special Stage no longer
+  aborts with "a native blocking fade is already active". A finished stage
+  re-raises the results transition every frame, and the exit fade-to-white
+  parks at full white for one frame before its completion runs — so that frame
+  looked like Sonic 1's pre-started hold, entered the results screen a second
+  time and opened a second native blocking fade while the first was still
+  owned by the pending completion.
+- **HCZ vertical geyser visibility, trigger and priority (2026-07-31):** the
+  Hydrocity geyser no longer stands visible in the level before it fires. The
+  ROM only draws the column from its eruption and falling routines, so it is
+  absent from the sprite table while it waits, loads art and rises. Its trigger
+  is also a pair of narrow unsigned windows rather than the symmetric box the
+  engine used, which had it erupting about half a screen early, and every piece
+  of the object — column, debris, spray and splash — now renders in its native
+  priority bucket instead of in front of the scenery.
+- **S3K underwater breathing bubbles and drowning digits (2026-07-31):** the
+  small bubbles the player exhales underwater are drawn again, along with the
+  countdown digits that replace them below twelve air. The fixed
+  `Breathing_bubbles` controllers were already producing children with native
+  cadence, but they rendered nothing: bubble frames now come from the shared
+  `Map_Bubbler` art the HCZ bubbler uses, and the ten digit frames — which in
+  the ROM select art by DMA into a shared VRAM window rather than by mapping —
+  are rebuilt from the ROM geometry against `ArtUnc_AirCountdown`. The object
+  also runs its real animation script table and the remaining routines, so a
+  digit parks in screen space, flashes, and clears once its owner recovers air.
 - **Level music restoration after temporary themes (2026-07-30):** the extra-life jingle now uses the ROM's single music-save slot, while ordinary invincibility and Super themes replace music normally; when their ROM-timed expiry allows it, level music is reissued without silencing the act after chained 1-ups or transformations.
 - **Native trace fleet queue-audit publication (2026-07-30):** all 152
   reproducible S1, S2, and S3K trace destinations were regenerated with one

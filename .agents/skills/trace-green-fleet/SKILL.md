@@ -574,9 +574,17 @@ Classify queue-aware traces before assigning fixes:
 
 - `queue.*` is a zero-tolerance physical-queue comparator frontier;
 - `dynamic_art.*` is a zero-tolerance DPLC/player-art lifecycle frontier;
-- a hardware-timing admission error means the schema-2 authority could not
-  match a production-submitted prepared S3K job, not that the comparator found
+- a hardware-timing admission error means the timing authority could not
+  match a production-submitted prepared job, not that the comparator found
   an ordinary field mismatch.
+
+Recorded hardware timing may drive a **delay** in S1 PLC, S2 DPLC and S3K
+Kosinski queue readiness — deferring or releasing *when* already-submitted,
+engine-created work becomes ready. That is the whole of the exception. It must
+never carry gameplay values, create work the engine did not submit, fabricate
+readiness, use physics/aux comparison data as the signal, or key on a frame
+index, zone, route or game name. Do not reject a delay-only timing latch as
+hydration, and do not stretch the exception past *when*.
 
 For every affected trace preserve the first frame, exact field or admission
 reason, and total error count. Queue/DPLC failures take precedence over

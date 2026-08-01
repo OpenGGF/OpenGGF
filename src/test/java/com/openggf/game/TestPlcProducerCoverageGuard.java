@@ -98,7 +98,7 @@ class TestPlcProducerCoverageGuard {
             new OwnerSubmission("com/openggf/game/sonic1/events/Sonic1SBZEvents.java", "requestSonic1Plc(31)"),
             new OwnerSubmission("com/openggf/game/sonic1/objects/Sonic1SignpostObjectInstance.java", "replaceQueued(16)"),
             new OwnerSubmission("com/openggf/game/sonic1/objects/Sonic1EggPrisonObjectInstance.java", "replaceQueued(16)"),
-            new OwnerSubmission("com/openggf/game/sonic1/titlecard/Sonic1TitleCardManager.java", "Sonic1PlcService.appendOperation(2)"),
+            new OwnerSubmission("com/openggf/game/sonic1/events/Sonic1FixedTitleCardManager.java", "PLC_EXPLODE = 2"),
             new OwnerSubmission("com/openggf/game/sonic1/specialstage/Sonic1SpecialStageProvider.java", "Sonic1PlcService.appendOperation(27)"),
             new OwnerSubmission("com/openggf/game/sonic2/titlescreen/TitleScreenManager.java", "Sonic2PlcService.replaceOperation(0)"),
             new OwnerSubmission("com/openggf/game/sonic2/Sonic2LevelInitProfile.java", "Sonic2PlcService.clearOperation()"),

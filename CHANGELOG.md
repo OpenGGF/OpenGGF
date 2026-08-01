@@ -311,7 +311,444 @@ All notable changes to the OpenGGF project are documented in this file.
   shared by MHZ1/CNZ1 no longer runs its first CPU tick a frame early. The
   carried player's position tracks the ROM exactly from the first frame, so
   the MHZ complete-run replay reaches frame 1670 instead of 36.
+- Fix: the GHZ boss wrecking ball now runs the ROM's defeat sequence instead of
+  vanishing instantly. `GBall_Ball` (routine 8) calls `BossDefeated` every frame
+  once Eggman's defeated flag is set — spawning an explosion and drawing
+  `RandomNumber` only on `v_vblank_byte&7 == 0` frames — while
+  `BGHZ_BossGenericTimer` counts down from the ball's chain target
+  (`GBall_PosData` last entry, `$60`), then the ball converts itself into an
+  explosion (`docs/s1disasm/_incObj/3D, 48 Boss - GHZ Main and Wrecking
+  Ball.asm:484,578-596`; `docs/s1disasm/_incObj/sub BossDefeated &
+  BossMove.asm:6-36`). The missing second explosion stream left the engine's
+  RNG stream 12 draws behind the ROM's by the prison capsule, changing every
+  capsule animal's species/X offset and shifting the end-of-act trigger.
+- Fix: the S1 prison capsule's random animal X offset now negates on the sign
+  of the *new* RNG seed. `tst.w d1 / bpl.s .setX / neg.w d0` tests d1 — the
+  seed value RandomNumber just wrote — not the returned d0
+  (`docs/s1disasm/_incObj/3E Prison Capsule.asm:180-185`). Together with the
+  wrecking-ball fix this greens `TestS1Ghz3CompleteRunTraceReplay`
+  (was 5 errors from frame 9183, `queue.s1_nemesis_plc.busy`).
+- Fix: the MTZ boss defeat explosions now respect `Boss_LoadExplosion`'s
+  internal `(Vint_runcount+3)&7` gate (`docs/s2disasm/s2.asm:61419-61424`);
+  `Obj54_MainSub10` calls it every frame but it only allocates and draws
+  `RandomNumber` on every 8th V-blank. The engine drew (and spawned) every
+  frame — 179 draws where the ROM makes 23 — desynchronising the RNG stream
+  ahead of the prison capsule. Greens `TestS2Mtz3LevelSelectTraceReplay`
+  (was 9 errors from frame 15258, `queue.s2_nemesis_plc.busy`).
+- Fix: the S2 fixed air countdown (Obj0A port) now stops ticking while its
+  bound player is in the dead routine. `Obj0A_Countdown` returns before
+  decrementing `obj0a_timer` when `routine(a2) >= 6`
+  (`docs/s2disasm/s2.asm:42095-42096`); the CPU sidekick's death keeps the
+  engine `dead` flag clear and models routine 6 as
+  `SidekickCpuController.State.DEAD_FALLING`, so the countdown kept consuming
+  `RandomNumber` draws while Tails lay dead underwater. Aligns all 26 CPZ2
+  air ticks and 41 bubbles with the ROM; moves
+  `TestS2Cpz2LevelSelectTraceReplay` from 8 to 7 errors (remaining divergence
+  is a CPZ boss pipe-cycle cadence gap, one RNG draw at defeat).
+- Fix: Sonic 2's CNZ boss (Obj51) now carries the ROM's routine-read-once defeat
+  offset and opens `Camera_Max_X_pos` immediately while fleeing. `Obj51` reads
+  `boss_routine(a0)` once at the top of its update (`docs/s2disasm/s2.asm:66554-66566`)
+  and `loc_31D42` only writes `Boss_Countdown` = `$B3` / `boss_routine` = 6 before
+  returning (`docs/s2disasm/s2.asm:66818-66826`), so `loc_31D5C`'s first countdown
+  decrement lands the following frame (`docs/s2disasm/s2.asm:66828-66830`); the boss now
+  opts into the existing per-boss
+  `AbstractBossInstance.defeatDeferralAppliesToThisBoss()` hook. `loc_31E2A` writes
+  `Camera_Max_X_pos` directly (`addq.w #2,(Camera_Max_X_pos).w`,
+  `docs/s2disasm/s2.asm:66919-66925`), so the flee handler now calls `Camera.setMaxX`
+  instead of the one-frame-eased `setMaxXTarget`. Greens
+  `TestS2Cnz2LevelSelectTraceReplay` (was 8 errors at frame 10976
+  `queue.s2_nemesis_plc.busy`).
+- Fix: a dynamic-art row sampled mid-V-int now publishes its own row and
+  services the DMA queue; only its successor is carried. The real per-mode V-int
+  handler (`Vint_Level`, `docs/s2disasm/s2.asm:698`) calls `ProcessDMAQueue`
+  (`docs/s2disasm/s2.asm:781`, routine at `docs/s2disasm/s2.asm:1770`) well
+  before `VintRet` bumps `Vint_runcount`
+  (`docs/s2disasm/s2.asm:507-508`), so a sample with neither the gameplay nor
+  the V-blank counter advanced still sits after the queue was drained: only the
+  gameplay iteration is mid-flight. `PlcFrameLifecycleCoordinator` previously
+  suppressed both that row and its successor. A genuine `Vint_Lag` row
+  (`Vint_routine` still 0, `docs/s2disasm/s2.asm:483-484`, body at
+  `docs/s2disasm/s2.asm:529-580`; S1's `VBlank_Lag`,
+  `docs/s1disasm/sonic.asm:709-730`) keeps publishing an empty lagged row and
+  still skips `ProcessDMAQueue`. Moves `TestS2Cnz2LevelSelectTraceReplay` from
+  41 errors (frame 10935 `dynamic_art.edges`) to 8 (frame 10976
+  `queue.s2_nemesis_plc.busy`).
+- Fix: the trace-replay terminal main-loop iteration now also runs the fixed
+  in-level Tails' tails slot (Obj05), not just the Obj01/Obj02 playable prefix.
+  ROM `RunObjects` executes the fixed in-level slots that follow the dynamic
+  object RAM, and `Obj05_Main` (`docs/s2disasm/s2.asm:41723`) reaches
+  `.display` (`docs/s2disasm/s2.asm:41760`) and unconditionally runs
+  `Tails_Animate_Part2` then `LoadTailsTailsDynPLC`
+  (`docs/s2disasm/s2.asm:41762-41763`, subroutine at
+  `docs/s2disasm/s2.asm:41637`) before `DisplaySprite`
+  (`docs/s2disasm/s2.asm:41764`). Without it the capture boundary dropped
+  Obj05's trailing DPLC submission. `TraceReplayFixture` gains
+  `advancePlayableFixedSlotsOnly()`, delegating to the existing production
+  owner `SpriteManager#advanceTailsTailsAfterObjectExecution`. Greens
+  `TestS2Arz2LevelSelectTraceReplay` (was 3 errors, first at frame 7808
+  `dynamic_art.edges`).
+- Fix: Sonic 2's Tornado (ObjB2) now spends its first executed frame in the ROM
+  routine-0 entry. A freshly allocated SST slot has `routine == 0`, so ROM runs
+  `ObjB2_Init` (`docs/s2disasm/s2.asm:78799-78813`) — `LoadSubObject`,
+  `routine = subtype - $4E`, the `Player_mode == 2` mapping/anim patch, then
+  `jmpto JmpTo45_DisplaySprite` — and reaches no main routine on that frame. The
+  engine derived the routine in the constructor instead, so the WFZ finale
+  Tornado (`ObjB2_Main_WFZ_End`, `docs/s2disasm/s2.asm:78951-78952`) reached
+  `ObjB2_Animate_Pilot` (`docs/s2disasm/s2.asm:79537-79564`) a frame early and
+  every Tails-bank DPLC submission the pilot drives landed a frame early for the
+  rest of the run — the pilot being the only Tails-bank submitter in WFZ, since
+  `InitPlayers` omits Obj02 there (`docs/s2disasm/s2.asm:5177-5198`). Takes
+  `TestS2WfzLevelSelectTraceReplay` from 5804 errors at frame 10447 to 3 at
+  frame 16426.
+- Fix: Sonic 2's HTZ (Obj52) and MCZ (Obj57) bosses now carry the ROM's
+  routine-read-once defeat offset. Both objects read `boss_routine(a0)` once at
+  the top of their update and jump through their offset table
+  (`docs/s2disasm/s2.asm:64194-64206`, `docs/s2disasm/s2.asm:65876-65890`); the
+  hit handlers run from inside the already-selected routine
+  (`docs/s2disasm/s2.asm:64528-64533`, `docs/s2disasm/s2.asm:66223-66226`) and
+  `Obj52_Defeat` / `Obj57_FinalDefeat` only set `Boss_Countdown` = `$B3` and
+  `boss_routine` = 8 before returning (`docs/s2disasm/s2.asm:64559-64566`,
+  `docs/s2disasm/s2.asm:66246-66253`), so the defeat routine's first countdown
+  decrement lands on the following frame (`docs/s2disasm/s2.asm:64570-64572`,
+  `docs/s2disasm/s2.asm:66256-66260`). Both bosses now opt into the existing
+  per-boss `AbstractBossInstance.defeatDeferralAppliesToThisBoss()` hook. The
+  HTZ flee handler's compensating one-frame staging of the `y_pos` /
+  `Camera_Max_X_pos` writes was removed at the same time, since
+  `Obj52_Mobile_Flee` (`docs/s2disasm/s2.asm:64598-64606`) falls through to
+  `loc_30170` (`docs/s2disasm/s2.asm:64608-64612`) in the same frame it sets
+  `Boss_defeated_flag`. Greens `TestS2Htz2LevelSelectTraceReplay` (was 8 errors
+  at frame 9150 `queue.s2_nemesis_plc.busy`) and
+  `TestS2Mcz2LevelSelectTraceReplay` (was 17 errors at frame 9950).
+- Fix: the dynamic-art replay boundary now runs the one `Level_MainLoop`
+  iteration the ROM executes after the last sampled frame, in ROM order --
+  the V-int art boundary first (`docs/s2disasm/s2.asm:5088` `Level_MainLoop`,
+  `:5091` `WaitForVint` with `VintID_Level`, reaching `ProcessDMAQueue` at
+  `docs/s2disasm/s2.asm:1770`), then the object pass and its player display
+  DPLC submissions (`docs/s2disasm/s2.asm:5095` `RunObjects`, reaching
+  `LoadSonicDynPLC` at `docs/s2disasm/s2.asm:38828` and `LoadTailsDynPLC` at
+  `docs/s2disasm/s2.asm:41658`). The recorder forwards that iteration's edges
+  onto the final published row, so the engine published one dynamic-art edge
+  too few at the end of every affected trace. The terminal forward now extends
+  the last published row instead of replacing it, and staged-only art stays
+  unsubmitted (`docs/s1disasm/_incObj/01 Sonic.asm:2392` `Sonic_LoadGfx` writes
+  `v_sgfx_buffer` and sets `f_sonframechg`; the V-int issues the transfer at
+  `docs/s1disasm/sonic.asm:831`). Re-greens `TestS2Arz`, `TestS2Cnz`,
+  `TestS2Cpz`, `TestS2Htz`, `TestS2Mtz`, `TestS2Ooz` and `TestS2Ooz2`
+  `LevelSelectTraceReplay`, and takes `TestS2Arz2LevelSelectTraceReplay` from
+  4 errors to 3 at frame 7808.
+- Fix: Sonic 2's OOZ oil surface (Obj07) now executes in the reserved
+  object-RAM band, after the player object slots and before every dynamic level
+  object. ROM aliases `Oil` onto `WaterSurface1` between the player slots and
+  `Dynamic_Object_RAM` (`docs/s2disasm/s2.constants.asm:1131-1137`), whereas
+  `Tails_Tails` (Obj05) lives far later in `LevelOnly_Object_RAM`
+  (`docs/s2disasm/s2.constants.asm:1144-1152`) and reads `anim(a2)` at its own
+  late execution point (`docs/s2disasm/s2.asm:41735`). Running the oil surface
+  in the post-camera level-event pass left Obj05 reading the stale Roll anim on
+  the frame Tails lands in oil, so it wrapped `Obj05Ani_Directional` and minted
+  a Tails-tails DPLC transfer the ROM never queues (ROM selects
+  `Obj05Ani_Blank`, whose DPLC frame 0 is empty --
+  `docs/s2disasm/s2.asm:41770-41776,41813`;
+  `docs/s2disasm/mappings/spriteDPLC/Tails.asm:142-143`). Takes
+  `TestS2OozLevelSelectTraceReplay` from 7960 errors at frame 346 to 4 at frame
+  11018, and `TestS2Ooz2LevelSelectTraceReplay` from 2355 at frame 10684 to 3 at
+  frame 13316.
+- Fix: Sonic 2 now runs `CheckLoadSignpostArt` from the level-loop tail. The S2
+  `updateAtLevelLoopTail()` slot was unimplemented, so the engine never locked
+  `Camera_Min_X_pos` to `Camera_Max_X_pos - $100` and never submitted
+  `PLCID_Signpost` when the camera reached the end of a signpost act
+  (`docs/s2disasm/s2.asm:6152-6172`). The non-signpost act table is transcribed
+  from `SetLevelEndType` (`docs/s2disasm/s2.asm:6127-6146`), and the PLC is a
+  `LoadPLC2` replace, not an append (`docs/s2disasm/s2.asm:2103-2124`), loading
+  `PlrList_Signpost` (`docs/s2disasm/s2.asm:89658-89660`). Greens
+  `TestS2Ehz1TraceReplay`, `TestS2MczLevelSelectTraceReplay` and
+  `TestS2Mtz2LevelSelectTraceReplay`, and advances the ARZ1, CPZ1, HTZ1, CNZ1 and
+  MTZ1 level-select traces past their `queue.s2_nemesis_plc.queued_fingerprints`
+  frontier.
+- Fix: a main-loop iteration that overruns its V-blank now publishes its
+  dynamic-art edges on the following V-blank boundary instead of its own.
+  `Vint_runcount` is bumped once per V-blank at `VintRet`
+  (`docs/s2disasm/s2.asm:512`) whichever handler ran, so a represented
+  iteration for which no V-blank elapsed at all is a different hardware shape
+  from a lag V-blank (`Vint_Lag`, `docs/s2disasm/s2.asm:529-580`; S1's
+  `VBlank_Lag`, `docs/s1disasm/sonic.asm:709-730`). Either way the iteration
+  reaches no `ProcessDMAQueue` (`docs/s2disasm/s2.asm:1770`, called only from
+  the real per-mode V-int handlers at `docs/s2disasm/s2.asm:781, 899, 1000,
+  1046, 1083, 1138`), so its queue-add "is issued the next time
+  ProcessDMAQueue is called" (`docs/s2disasm/s2.asm:1705`). The carry is a
+  one-shot at the PLC frame-closure boundary, keyed on the row's V-blank
+  count and never on a frame index, zone or game. Advances
+  `TestS2WfzLevelSelectTraceReplay` from frame 10287
+  (`dynamic_art.outstanding_transfer_ids`, 5825 errors) to frame 10447
+  (`dynamic_art.edge[1].present`, 5804 errors).
+- Fix: Sonic 2 no longer retires queued dynamic-art DMA transfers on lag frames.
+  `V_Int` branches to `Vint_Lag` while `Vint_routine` is 0
+  (`docs/s2disasm/s2.asm:483-484`), and neither `Vint_Lag`
+  (`docs/s2disasm/s2.asm:529-584`) nor `Vint0_noWater`
+  (`docs/s2disasm/s2.asm:586-641`) calls `ProcessDMAQueue`
+  (`docs/s2disasm/s2.asm:1770`) -- only the real per-mode V-int handlers do
+  (`docs/s2disasm/s2.asm:781, 899, 1000, 1046, 1083, 1138`). A queued transfer
+  therefore survives a lag frame and retires on the next real V-int, matching
+  the S1 model, which already excludes lag frames. Greens
+  `TestS2SczLevelSelectTraceReplay` (was frame 2574,
+  `dynamic_art.edge[0].logical_frame`) and reduces
+  `TestS2ArzLevelSelectTraceReplay` from 627 to 606 errors.
+- Fix: Tails' tails (Obj05) now selects its animation from the ROM's DERIVED
+  selection index and latches that derived index, instead of the sidekick's raw
+  animation byte. `Obj05_Main` computes `moveq #0,d0 / move.b anim(a2),d0` and
+  then, on the shipped REV01 build (`fixBugs = 0`, `docs/s2disasm/s2.asm:27`),
+  forces `moveq #4,d0` — the `TailsAni_Push` entry, which `Obj05AniSelection`
+  maps to Obj05 anim 9 (Pushing) — whenever the parent's
+  `status.player.pushing` bit is set (`docs/s2disasm/s2.asm:41734-41751`). The
+  change-detection latch then compares and stores that same `d0`, not the raw
+  anim (`docs/s2disasm/s2.asm:41753-41758`; S3K latches `objoff_34` identically
+  at `docs/skdisasm/sonic3k.asm:30052-30058`). Modelling the raw anim made Obj05
+  miss and mint tails DPLC edges the ROM does not queue. S3K's counterpart
+  narrows the override with `WindTunnel_flag_P2` and an `$A9..$AC` mapping-frame
+  window (`docs/skdisasm/sonic3k.asm:30043-30052`); that half is not modelled
+  yet, so S3K selection is deliberately unchanged. Advances
+  `TestS2ArzLevelSelectTraceReplay` from frame 1078 (627 errors) to frame 2048
+  (28 errors), `TestS2Ehz1TraceReplay` from frame 1549 (3438 errors) to frame
+  4836 (4 errors), `TestS2MczLevelSelectTraceReplay` from frame 3006 (2410
+  errors) to frame 5412 (4 errors), and cuts `TestS2Arz2LevelSelectTraceReplay`
+  from 3984 to 204 errors.
+- Fix: Tails' tails (Obj05 / Obj_Tails_Tail) now models `Obj05_Main`'s parent
+  pushing override. The ROM forces the parent-animation input `d0` to 4
+  (`TailsAni_Push`) *before* both the change test against
+  `Obj05_parent_prev_anim` and the `Obj05AniSelection` lookup, and latches the
+  overridden value (`docs/s2disasm/s2.asm:41744-41758`). The engine compared and
+  latched the raw parent animation id, so every push left Obj05 on the wrong
+  animation script and desynced its DPLC submissions for the rest of the run.
+  The per-game detection gate is a typed
+  `PlayerAnimationRules.tailsTailPushDetection`: Sonic 2 REV01 ships
+  `FixBugs = 0` and tests only the pushing status bit
+  (`docs/s2disasm/s2.asm:41748-41751`), while Sonic 3 & Knuckles additionally
+  requires the parent's `mapping_frame` to lie in `$A9..$AC`
+  (`docs/skdisasm/sonic3k.asm:30043-30051`); Sonic 1 has no such object.
+  Advances 12 of the 17 S2 level-select traces (e.g.
+  `TestS2MtzLevelSelectTraceReplay` frame 292 -> 6708,
+  `TestS2CnzLevelSelectTraceReplay` frame 201 -> 8590,
+  `TestS2Ooz2LevelSelectTraceReplay` frame 830 -> 10684) and cuts the error
+  count on the four whose first-error frame is unchanged (e.g.
+  `TestS2Mtz2LevelSelectTraceReplay` 10762 -> 121 errors).
+- Fix: the Sonic 2 SCZ Tornado ride-start lead-in now ticks
+  `ObjB2_Animate_Pilot` on the title-card iterations it stands in for. The ROM's
+  title-card loop body is `jsr (RunObjects).l`
+  (`docs/s2disasm/s2.asm:5060-5066`), so ObjB2 executed on every iteration and
+  `ObjB2_Main_SCZ` begins with `bsr.w ObjB2_Animate_Pilot`
+  (`docs/s2disasm/s2.asm:78815-78816`, `:79536-79556`), whose 9-frame cadence
+  drives the pilot's DPLC submissions through `LoadTailsDynPLC_Part2`
+  (`docs/s2disasm/s2.asm:41659-41697`). Reproducing only the player-side effects
+  of those iterations left the cadence permanently late, so the very first
+  gameplay frame's outstanding transfer set was empty. The first iteration is
+  skipped because the players already exist when the loop starts (`InitPlayers`,
+  `docs/s2disasm/s2.asm:4945`) while ObjB2 is placed by the loop's own
+  `ObjPosLoad` pass. Advances `TestS2SczLevelSelectTraceReplay` from frame 2
+  (6419 errors) to frame 2574 (2 errors).
+- Fix: Tails' tails (Obj05) now runs in the post-dynamic-object fixed-slot pass
+  instead of inside the sidekick's own animation update. Its SST lives in
+  `LevelOnly_Object_RAM`, which begins after `Object_RAM_End` /
+  `Dynamic_Object_RAM_End` (`docs/s2disasm/s2.constants.asm:1144-1152`), so ROM
+  executes it after every dynamic level object; `Obj05_Main`'s
+  `move.b anim(a2),d0` (`docs/s2disasm/s2.asm:41735`) therefore samples a later
+  parent animation than the engine did, and the early dispatch minted DPLC edges
+  the ROM never queues. S3K places `Tails_tails` identically after
+  `Dynamic_object_RAM_end` (`docs/skdisasm/sonic3k.constants.asm:307-315`), and
+  the fixed dust follows the tails in both, so the ordering is universal; S1 has
+  no Tails. Two further ROM-backed corrections ride along: `Obj05Ani_Blank` is a
+  real animation script `dc.b $20,0,$FF` (`docs/s2disasm/s2.asm:41813`) whose
+  `LoadTailsTailsDynPLC` pass still writes `TailsTails_LastLoadedDPLC`
+  (`docs/s2disasm/s2.asm:41642`) before bailing on the empty DPLC frame 0, so it
+  is no longer skipped; and `TAnim_GetTailFrame` calls `CalcAngle`
+  unconditionally (`docs/s2disasm/s2.asm:41484-41487`), whose zero-velocity
+  return is `$40` (`docs/s2disasm/s2.asm:4076-4078`, matching
+  `GetArcTan`/`docs/skdisasm/sonic3k.asm:3043`), so the engine's zero-velocity
+  short-circuit to bank 0 is removed. Advances the first-error frame on 10 of
+  the failing S2 trace replays (e.g. ARZ 272 -> 1078, MCZ2 213 -> 1805, CPZ
+  154 -> 725).
+- Fix: Tails' tails (Obj05) directional animation now latches its DPLC
+  mapping-frame bank and `render_flags` x/y flips at the single ROM write point
+  instead of recomputing them from the parent's current velocity every frame.
+  `TAnim_GetTailFrame` runs `CalcAngle`, writes `render_flags(a0)` and applies
+  `add.b d3,mapping_frame(a0)` (`docs/s2disasm/s2.asm:41484-41513`), but it is
+  reached only past `TAnim_WalkRunZoom`'s
+  `subq.b #1,anim_frame_duration(a0) / bpl.s TAnim_Delay` early-out
+  (`docs/s2disasm/s2.asm:41337-41339`, entered at
+  `docs/s2disasm/s2.asm:41443`), so on countdown frames both stay frozen and
+  `LoadTailsTailsDynPLC`'s dedupe against `TailsTails_LastLoadedDPLC`
+  (`docs/s2disasm/s2.asm:41636-41640`) queues nothing. The live recompute minted
+  spurious DPLC submissions whenever the velocity angle crossed a bucket
+  boundary mid-countdown, skewing every downstream transfer id and dynamic-art
+  edge ordinal. S3K gates the identical directional path the same way
+  (`docs/skdisasm/sonic3k.asm:29375-29376`, `:29592-29604`), so this is a
+  universal correction; S1 has no Tails. Advances the first-error frame on all
+  16 failing S2 level-select/EHZ trace replays (e.g. MTZ2 39 -> 293, MCZ
+  46 -> 1929, HTZ 47 -> 343).
+- Fix: the Sonic 2 Tornado now runs `ObjB2_Animate_Pilot`, the pilot's dynamic
+  art producer (`docs/s2disasm/s2.asm:79538-79565`). Every ninth frame the ROM
+  advances `objoff_36` through `Sonic_pilot_frames` / `Tails_pilot_frames`
+  (`docs/s2disasm/s2.asm:79566-79599`) and tail-jumps into
+  `LoadSonicDynPLC_Part2` / `LoadTailsDynPLC_Part2`
+  (`docs/s2disasm/s2.asm:38829-38862`, `41659-41697`); the routine is the first
+  instruction of `ObjB2_Main_SCZ`, `ObjB2_Main_WFZ_Start` and
+  `ObjB2_Main_WFZ_End` (`docs/s2disasm/s2.asm:78815-78816`, `78879-78880`,
+  `78951-78952`). Because `InitPlayers` omits Obj02 in SCZ/WFZ/DEZ
+  (`docs/s2disasm/s2.asm:5177-5198`), the pilot is the only submitter into the
+  Tails art bank there, and with no producer the ordered dynamic-art ledger
+  skewed from frame 2 onward. A character art bank keeps exactly one dedupe
+  state (`Sonic_LastLoadedDPLC` / `Tails_LastLoadedDPLC`,
+  `docs/s2disasm/s2.asm:26039-26041`), so `LevelManager` now exposes that bank's
+  single authoritative `DynamicArtDecisionOwner` by character identity instead
+  of only through the playable that happens to own it.
+- Fix: Tails' tails (Obj05) now tracks the ROM's `anim_frame` /
+  `mapping_frame` split instead of conflating them. `Tails_Animate_Part2`
+  reads the script byte at the current `anim_frame` into `mapping_frame` and
+  only then increments `anim_frame` (`docs/s2disasm/s2.asm:41295-41303`), with
+  the end-of-script flags resolved before that write
+  (`docs/s2disasm/s2.asm:41306-41320`); S3K's shared `Animate_Sprite` uses the
+  same read-then-increment convention
+  (`docs/skdisasm/sonic3k.asm:36171-36183`). The engine rendered and published
+  the already-incremented index, so the tails-tails DPLC edge carried the wrong
+  frame and disappeared whenever the frame duration still had time remaining —
+  the ROM keeps running `LoadTailsTailsDynPLC` every frame and dedupes against
+  `TailsTails_LastLoadedDPLC` (`docs/s2disasm/s2.asm:41631-41651`). The edge is
+  also now published after the sidekick's own, matching Obj05 running its
+  animation and PLC load after Obj02 completes `LoadTailsDynPLC`
+  (`docs/s2disasm/s2.asm:41756-41763`; `docs/skdisasm/sonic3k.asm:30060-30070`),
+  and a suppressed sidekick gets no tails-tails DPLC owner at all, since
+  `InitPlayers` spawns Obj05 only alongside Obj02
+  (`docs/s2disasm/s2.asm:38945-38946`, `5177-5198`).
+- Fix: omitting the initial title-card presentation no longer skips Sonic 2's
+  gameplay-phase title-card exit tail. The ROM's title-card pieces outlive the
+  locked `Level_TtlCard` loop (`docs/s2disasm/s2.asm:4914-4925`): just before
+  the main level loop the game hands them routine `$16` with
+  `anim_frame_duration = $2D` (`docs/s2disasm/s2.asm:5066-5080`), so
+  `Obj34_WaitAndGoAway` runs on ordinary gameplay frames and, on the frame the
+  zone-name piece leaves the screen, appends `PLCID_StdWtr` and the
+  `Animal_PLCTable` entry for the current zone
+  (`docs/s2disasm/s2.asm:27605-27637`) -- gameplay frame 52. `TitleCardProvider`
+  gains a default no-op `beginOmittedPresentationExitTail(zone, act)` that only
+  Sonic 2 implements, and the trace replay driver no longer wipes the
+  provider's post-slide-in phase.
+- Fix: the player DPLC decision owner is now keyed by character rather than by
+  team slot, and the omitted S2 title-card presentation now advances player
+  animation the way the ROM's own loop does. `LoadSonicDynPLC` compares the
+  mapping frame against `Sonic_LastLoadedDPLC` (`docs/s2disasm/s2.asm:38829-38840`)
+  and `LoadTailsDynPLC` against `Tails_LastLoadedDPLC`
+  (`docs/s2disasm/s2.asm:41659-41690`); both bytes are per-character and are
+  reset to -1 only on a character swap (`docs/s2disasm/s2.asm:26039-26041`).
+  The engine names a CPU team slot `<character>_pN`, so the sidekick's raw
+  sprite code never matched the character-keyed owner set and the sidekick ran
+  with no DPLC owner at all; the slot suffix is now normalised away while art
+  bank and VRAM base stay with the renderer, matching the ROM's own
+  `Adjust2PArtPointer` split. Where `InitPlayers` deliberately omits Obj02
+  (`docs/s2disasm/s2.asm:5177-5198`, WFZ and DEZ), no Tails DPLC owner is
+  attached at all, via the existing game-module sidekick-suppression predicate.
+  Separately, `InitPlayers` runs at `docs/s2disasm/s2.asm:4945`, before the
+  title-card leave loop at `docs/s2disasm/s2.asm:5060-5066`, so that loop
+  animates the players and leaves both last-loaded-DPLC bytes holding the
+  displayed mapping frame when `Level_MainLoop` starts. A headless load omits
+  the presentation, so gameplay frame 0 saw "no previous frame" and submitted a
+  DMA transfer the ROM had already retired. `LevelManager` now replays the
+  loop's own animation ticks at the ROM's VBlank-then-RunObjects order
+  (`s2.asm:1713`, `s2.asm:1769`), driven by a new
+  `LevelInitProfile.skippedPresentationPlayableFrames()` that defaults to zero,
+  so S1 and S3K are unchanged.
+- Fix: Sonic 1's egg prison capsule now releases S1's own animal object
+  instead of the shared cross-game capsule animal, and no longer draws an extra
+  random number per released animal. `Pri_SpawnAnimals` writes only
+  `obX`/`obY`/`animal_prisondelay` into each freed slot and sets `v_bossstatus`
+  to 2 (`docs/s1disasm/_incObj/3E Prison Capsule.asm:141-166`); the animal's own
+  init then takes the `.fromPrison` branch and waits that many frames before
+  hopping out (`docs/s1disasm/_incObj/28, 29 Animals and Points.asm:181-200`,
+  `Anml_FromPrison` at :311-324). Since S1's animal object is the one that
+  requests animal art, the substitution skewed the S1 nemesis PLC busy window.
+  A non-zero `animal_prisondelay` is the ROM state that marks a capsule animal;
+  Sonic 2 and Sonic 3&K capsules keep the shared animal unchanged.
+- Fix: Sonic 2's level header secondary PLC is now serviced across the
+  title-card leave loop instead of being left fully queued at level start.
+  `Level:` calls `loadZoneBlockMaps` (`docs/s2disasm/s2.asm:20103-20110`) at
+  `s2.asm:4939`, while the game is still inside the title-card sequence, so the
+  header secondary enters `Plc_Buffer` *before* the leave loop rather than
+  after it. That loop (`s2.asm:5060-5066`) then runs `VintID_TitleCard`,
+  `RunObjects`, `BuildSprites` and `RunPLC_RAM` every frame until
+  `TitleCard_Background` unloads, and only then falls through to
+  `Level_StartGame` / `Level_MainLoop` (`s2.asm:5082-5087`). The loop is a
+  fixed 25 frames, determined entirely by the Obj34 leave routines and the
+  title-card RAM slot order (`s2.constants.asm:1116-1120`, Background < Bottom
+  < Left): `TitleCard_Left` runs `Obj34_LeftPartOut` for 5 frames from
+  `titlecard_location` $A (`s2.asm:5058`, `27518-27540`) before handing
+  `TitleCard_Bottom` routine $10; Bottom runs `Obj34_BottomPartOut` for 11
+  frames, stepping by 4 until it reaches $28 (`s2.asm:27542-27551`); Background
+  sits earlier in slot order, so it first sees routine $12 the following frame
+  and runs `Obj34_BackgroundOutInit`/`Out` for 9 frames, $F0 stepping by -$20
+  to -$30 (`s2.asm:27587-27604`), deleting itself on frame 25. A headless load
+  omits that presentation entirely, so `Sonic2LevelInitProfile` now replays
+  exactly those 25 production PLC boundaries through the existing shared
+  `SkippedPresentationPlcLifecycle`, mirroring the equivalent S1 path. This is
+  a fixed count of real `RunPLC_RAM` service, not a drain to empty: small
+  zones such as EHZ retire their secondary completely, while larger ones such
+  as ARZ correctly enter `Level_MainLoop` with an unserviced tail still queued.
+- Fix: dynamic-art trace comparison no longer scores the recorder's absolute
+  delivery identities. `transfer_id` and `edge_ordinal` are recorder
+  bookkeeping counters allocated from emulator power-on, not ROM state: Sonic
+  2's `QueueDMATransfer` keeps only `VDP_Command_Buffer_Slot`, a pointer
+  `ProcessDMAQueue` drains and rewinds every frame; Sonic 3&K's
+  `Add_To_DMA_Queue` / `Process_DMA_Queue` rewind `DMA_queue_slot` the same
+  way; and Sonic 1 does not queue at all, writing VRAM unconditionally from
+  VBlank. No ROM carries a cumulative transfer identity, so only the relative
+  structure of those ids is meaningful. A segment cut later in a movie
+  therefore inherits a large recorder origin while the engine's lifecycle
+  service necessarily allocates from zero. The comparator now rebases each
+  side onto its own independently-anchored segment origin — an
+  order-preserving bijection that leaves submitted/completed pairing, strict
+  monotonicity, edge-to-transfer association, ledger membership and ledger
+  cardinality fully scored, so genuine divergences still fail. Trace data
+  stays read-only: the expected origin is never copied onto the actual side.
+- Fix: Sonic 1's staged player DPLC transfer is no longer dispatched on a ROM
+  lag frame. S1 writes Sonic's buffered art only from the `f_sonframechg`-gated
+  `writeVRAM v_sgfx_buffer,ArtTile_Sonic*tile_size` that lives inside each
+  per-mode VBlank handler (`sonic.asm` VBlank_Levels, VBlank_SpecialStage,
+  VBlank_TitleCards, VBlank_Paused), and VBlank branches to VBlank_Lag before
+  reaching any of them — VBlank_Lag only advances the sound driver. The flag
+  therefore survives the lag frame and the transfer lands on the next real
+  VBlank, so the published edges carry that row's logical frame instead of the
+  lag row's. Sonic 1 now selects a typed `DynamicArtDmaServiceModel` describing
+  that VBlank service boundary; Sonic 2 and Sonic 3&K keep their existing
+  models byte-unchanged.
+- Fix: Sonic 1 now runs the ROM's `Level_MainLoop` tail slot, so the end-of-act
+  signpost Pattern Load Cue is actually submitted to the runtime nemesis PLC
+  queue. `SignpostArtLoad` locks the left camera boundary and queues
+  `plcid_Signpost` (signpost, hidden points, giant-ring flash) once the camera
+  comes within `$100` px of the right level boundary; the engine only had the
+  eager art-provider path, which made the art resident without ever going
+  through the queue. Level-event providers gain a `updateAtLevelLoopTail()` hook
+  that defaults to a no-op, so Sonic 2 and Sonic 3&K are unchanged.
+- Fix: the shared player dynamic-art ledger no longer loses a logical row on a
+  ROM lag frame. `DynamicArtLifecycleService#publishRow` returned early on the
+  lag heartbeat without advancing its logical row cursor, so every lag frame in
+  a run shifted `dynamic_art.edge[*].logical_frame` one behind the trace for the
+  rest of the segment. A lag frame still dispatches VBlank through its lag
+  handler and still publishes a row; only the main-loop iteration and
+  `v_framecount` are skipped, so the logical frame is the publication row index,
+  not a count of non-lag iterations. The correction is shared by all three
+  games' DPLC ledgers.
+- Fix: Leaving a Special Stage no longer crashes with "a native blocking fade is
+  already active". A finished stage re-raises the results transition on every
+  frame, and the exit fade-to-white parks at full white for one frame before its
+  completion runs — so that frame was mistaken for Sonic 1's pre-started hold and
+  entered the results screen a second time, opening a second native blocking fade
+  while the pending completion still owned the first. The takeover now applies
+  only to a white hold with no completion pending.
+- Fix: the Hydrocity vertical geyser (`Obj_HCZWaterWall` subtype 1) no longer stands visible in the level before it fires, and no longer erupts while the player is still approaching it. Two faults compounded. The engine drew the column on every frame of the object's life, but the ROM only reaches `Draw_Sprite` from the eruption and falling routines (`loc_3041A`, `loc_3052A`); the proximity wait, the queued-art wait and the rise all end in `rts` or `Delete_Sprite_If_Not_In_Range`, so the water is invisible until it actually bursts. The trigger test was also modelled as symmetric signed ranges, where `loc_30294` compares two 16-bit *unsigned* windows — `(Player_1+x_pos - x_pos + $30) u< $60` and `(Player_1+y_pos - y_pos + $40) u< $10` — admitting the player only within `-$30..+$2F` horizontally and `-$40..-$31` vertically instead of a doubled `+/-$60` box. Neither piece had a render priority, so every part of the object landed in the frontmost bucket and covered scenery; parent (`$300`), debris (`$380` horizontal, `$280` vertical), spray (`$380`) and splash (`$200`) now use their native buckets. The eruption additionally re-arms `y_vel` to `-$A00` each frame as the ROM does, so the accumulated `$48` gravity no longer slows the rising column, and the release clears the `jumping` byte so the `-$C00` launch is not capped by the jump-height latch. Spray children are back on the ROM's single `Random_Number` draw per spawn — one word supplies the offset, the animation, and the bubble-art selection that the animation itself decides — the vertical pair is mirrored about the column at `x +/- $10, y - $50` with `x_vel = +/-((rand & $F) << 6)`, and the horizontal wall keeps spraying until it scrolls off screen rather than stopping when its move timer expires.
+- Feature: Sonic 3 & Knuckles players now visibly exhale small bubbles while underwater, and the drowning countdown digits appear again. The fixed `Breathing_bubbles` controller already allocated `Obj_AirCountdown` children with native subtype, timer, and RNG cadence, but the child never drew anything. `AirCountdown_Init` points the object at `Map_Bubbler` with `make_art_tile(ArtTile_Bubbles,0,0)` (`docs/skdisasm/sonic3k.asm:33320-33327`) — the same mappings and `ArtNem_Bubbles` art the HCZ bubbler uses — so bubbles now render out of the shared art set at ROM priority `$80`. Mapping frames `$09`-`$12` are the digits: they all point one 2x3 piece at `ArtTile_DashDust`, a VRAM window `AirCountdown_Load_Art` refills by DMA with six tiles of `ArtUnc_AirCountdown` per frame (`sonic3k.asm:33489-33516`), so those ten frames are now rebuilt from the ROM geometry against their own slice of the digit art (see `docs/S3K_KNOWN_DISCREPANCIES.md`). Animation is driven by the real `Ani_AirCountdown` script table instead of a hand-rolled breathing-bubble special case, and the object implements the rest of its routine table — the surface pop hands over to `AirCountdown_Display`, and `AirCountdown_ShowNumber` parks the digit in screen space (clearing `render_flags` bit 2, `sonic3k.asm:36374`) for `$F` frames before `AirCountdown_AirLeft` switches to the flashing animation, with both number routines deleting the child once its owner is back above 12 air.
 - Fix: Music no longer stops for the rest of an act after an extra life, invincibility, or a Super transformation. Two faults compounded. The audio profile's override classification was only read by the retired legacy backend, so the presentation path recorded every song as a plain foreground replacement: the 1-up jingle destroyed the zone music instead of saving it, and the driver's "fade in to previous song" (SMPS `E4`) found nothing to restore. Interrupted songs were then held on a stack, but the ROM has no stack — the sound driver owns a single save slot belonging to the 1-up jingle alone (`Sound_PlayBGM` backs up `v_1up_ram` and sets `f_1up_playing`; `zPlayMusic` copies `zTracksStart` to `zTracksSaveStart` and sets `zFadeToPrevFlag`), and any other music request abandons it, S1 by `clr.b f_1up_playing` and S3K by `zStopAllSound` zeroing the whole backup area. Transforming during the jingle therefore parked a frozen jingle voice on the stack that a later restore could make active, playing nothing. `AudioManager` now records the override flag on the music command itself and restricts it to the extra-life id; invincibility and Super are ordinary music as in the ROM, and the level music is restored by re-issuing it from `Sonic_ChkInvin` — including that routine's gates, so the boss and drowning-countdown themes survive a power-up expiring. The Super revert no longer plays music itself: like `SonicKnux_SuperHyper` and `Sonic_RevertToNormal` it sets the invincibility timer to 1 and lets that path run a tick later.
+- Fix: Sonic 1 title-card `Card_ChangeArt` now re-queues the explosion and
+  per-zone animal art from the fixed title-card object slot instead of the
+  title-card renderer's slide-out predicate. `Level_StartGame` releases the
+  cards into `Card_Wait`/`Card_MoveOut` and they finish as ordinary in-level
+  objects, so the pair is submitted on the same logical frame whether or not
+  the sliding sprites were presented; a headless level load previously never
+  submitted it at all.
 - Tooling: the reproducible S1, S2, and S3K native trace fleet has been
   regenerated with the frozen headless BizHawk build. S1/S2 fixtures now carry
   frame-level PLC and DPLC lifecycle diagnostics, S3K fixtures carry schema-2

@@ -685,6 +685,7 @@ public final class TraceSessionLauncher {
         }
         if (comparator.isComplete() && !completionArmed) {
             if (fixture != null) {
+                fixture.runTerminalDynamicArtIteration();
                 fixture.closeDynamicArtComparisonSegment();
                 comparator.finalizeTerminalDynamicArtComparison();
                 fixture.closeHardwareTimingReplayRun();
@@ -1483,6 +1484,7 @@ public final class TraceSessionLauncher {
                         lifecycleFrame,
                         com.openggf.game.resources.PlcLifecyclePhase.LAG);
                 if (level != null && level.getObjectManager() != null) {
+                    // V-blank-only row: see the exactly-one-tick-per-serviced-V-blank invariant on ObjectManager.vblaCounter.
                     level.getObjectManager().advanceVblaCounter();
                 }
                 if (phase == TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY) {
@@ -1578,6 +1580,7 @@ public final class TraceSessionLauncher {
             TraceFrame previous = traceIndex > 0 ? trace.getFrame(traceIndex - 1) : null;
             TraceExecutionPhase phase =
                     TraceReplayBootstrap.phaseForReplay(trace, previous, current);
+            TraceReplayBootstrap.markVblankStarvedIterationForReplay(previous, current);
             return phase;
         }
     }
@@ -1701,6 +1704,11 @@ public final class TraceSessionLauncher {
         @Override
         public void advancePlayableAnimationsOnly() {
             GameServices.sprites().advancePlayableSlotPrefix();
+        }
+
+        @Override
+        public void advancePlayableFixedSlotsOnly() {
+            GameServices.sprites().advanceTailsTailsAfterObjectExecution();
         }
 
         @Override

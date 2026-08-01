@@ -679,6 +679,10 @@ class TestTraceSessionLauncherRunBranch {
         }
 
         @Override
+        public void advancePlayableFixedSlotsOnly() {
+        }
+
+        @Override
         public void suppressFirstSidekickAnimationOnce() {
         }
 

@@ -5,10 +5,9 @@ import com.openggf.game.LevelLoadContext;
 import com.openggf.game.rewind.snapshot.NemesisPlcQueueSnapshot;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.game.sonic1.credits.Sonic1CreditsManager;
+import com.openggf.game.sonic1.events.Sonic1LevelEventManager;
 import com.openggf.game.sonic1.resources.Sonic1PlcService;
 import com.openggf.game.sonic1.titlescreen.Sonic1TitleScreenManager;
-import com.openggf.game.sonic1.titlecard.Sonic1TitleCardManager;
-import com.openggf.game.sonic1.titlecard.Sonic1TitleCardState;
 import com.openggf.game.sonic1.objects.Sonic1EggPrisonObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1ResultsScreenObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1SignpostObjectInstance;
@@ -86,22 +85,28 @@ class TestSonic1PlcProducerCoverage {
     @MethodSource("titleCardZones")
     void titleCardOwnerPublishesExplodeThenNativeZoneAnimalAtExitEdge(int progressionZone, int animalPlc)
             throws Exception {
-        Sonic1TitleCardManager card = new Sonic1TitleCardManager();
-        card.initialize(progressionZone, 0);
-        Field state = Sonic1TitleCardManager.class.getDeclaredField("state");
-        state.setAccessible(true);
-        state.set(card, Sonic1TitleCardState.SLIDE_OUT);
-        Field timer = Sonic1TitleCardManager.class.getDeclaredField("stateTimer");
-        timer.setAccessible(true);
-        timer.setInt(card, 21);
-
-        for (int frame = 0; frame < 20; frame++) {
-            card.update();
-        }
+        // Card_ChangeArt runs from the fixed title-card slot under
+        // ExecuteObjects, 60 Card_Wait frames plus 9 Card_MoveOut frames after
+        // Level_StartGame arms the level-name element
+        // (docs/s1disasm/_incObj/34 Title Cards.asm:122-168,
+        // docs/s1disasm/sonic.asm:2984-2995).
+        Sonic1LevelEventManager events = new Sonic1LevelEventManager();
+        events.armTitleCardArtReloadAtLevelStart(
+                progressionZone, 0, CREDITS_NATIVE_ZONES[progressionZone]);
 
         Sonic1PlcService queue = GameServices.module().getGameService(Sonic1PlcService.class);
+        for (int frame = 0; frame < 69; frame++) {
+            events.updateFixedInLevelObjectsBeforeDynamicObjects();
+            assertEquals(List.of(), queue.capture().queuedEntries(),
+                    "Card_ChangeArt must not publish before the level-name element reaches card_finalX");
+        }
+        events.updateFixedInLevelObjectsBeforeDynamicObjects();
+
         assertEquals(expectedDescriptors(2, animalPlc), queue.capture().queuedEntries(),
                 "Card_ChangeArt must publish explode then its native-zone animal PLC at text exit");
+        events.updateFixedInLevelObjectsBeforeDynamicObjects();
+        assertEquals(expectedDescriptors(2, animalPlc), queue.capture().queuedEntries(),
+                "the deleted card element must not publish twice");
     }
 
     private static Stream<org.junit.jupiter.params.provider.Arguments> titleCardZones() {

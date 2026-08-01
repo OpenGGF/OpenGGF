@@ -160,6 +160,55 @@ class TestDynamicArtLifecycleService {
     }
 
     @Test
+    void terminalVblankCompletionExtendsTheLastPublishedRow() {
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        startOpen(service);
+        DynamicArtLifecycleService.ArtUpdate pending =
+                service.observePlayerDplc(GameId.S2, "sonic", 1,
+                        new SpriteDplcFrame(List.of(new TileLoadRequest(0, 1))));
+        service.finishProductionIteration(false);
+
+        // The main-loop iteration after the last sampled frame still services
+        // its V-int (docs/s2disasm/s2.asm:5091 WaitForVint ->
+        // docs/s2disasm/s2.asm:1769 ProcessDMAQueue), retiring the transfer
+        // submitted on that frame.
+        service.serviceTerminalProductionVBlank();
+        service.closeComparisonSegment();
+
+        DynamicArtDiagnosticsSnapshot terminal = service.latestSnapshot();
+        assertEquals(0, terminal.frame());
+        assertEquals(List.of("submitted", "completed"),
+                terminal.edges().stream()
+                        .map(DynamicArtDiagnosticsSnapshot.Edge::phase).toList());
+        assertFalse(terminal.edges().getFirst().terminalForwarded());
+        assertTrue(terminal.edges().getLast().terminalForwarded());
+        assertEquals(0, terminal.edges().getLast().publicationFrame());
+        assertEquals(1, terminal.edges().getLast().logicalFrame());
+        assertEquals(pending.transferId(),
+                terminal.edges().getLast().transferId());
+        assertTrue(terminal.outstandingTransferIds().isEmpty());
+    }
+
+    @Test
+    void terminalVblankLeavesStagedArtUnsubmitted() {
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        startOpen(service);
+        service.observePlayerDplc(GameId.S1, "sonic", 1,
+                new SpriteDplcFrame(List.of(new TileLoadRequest(0, 1))));
+        service.finishProductionIteration(false);
+
+        // Staged-only art is not queued work
+        // (docs/s1disasm/_incObj/01 Sonic.asm:2392 Sonic_LoadGfx writes
+        // v_sgfx_buffer and sets f_sonframechg; the V-int issues the transfer
+        // at docs/s1disasm/sonic.asm:831), so the terminal boundary emits none.
+        service.serviceTerminalProductionVBlank();
+        service.closeComparisonSegment();
+
+        assertTrue(service.latestSnapshot().edges().isEmpty());
+        assertTrue(service.latestSnapshot().outstandingTransferIds().isEmpty());
+    }
+
+    @Test
     void closingCannotInventATerminalRowBeforeAnyProductionIteration() {
         DynamicArtLifecycleService service = new DynamicArtLifecycleService();
         startOpen(service);

@@ -41,6 +41,39 @@ public interface TraceReplayFixture {
         gameplayMode().endDynamicArtComparisonSegment();
     }
 
+    /**
+     * Runs the one main-loop iteration the ROM executes after the last
+     * sampled frame, in {@code Level_MainLoop} order
+     * (docs/s2disasm/s2.asm:5088): the V-int art boundary first
+     * (docs/s2disasm/s2.asm:5091 WaitForVint with VintID_Level, reaching
+     * ProcessDMAQueue at docs/s2disasm/s2.asm:1769), then the object pass
+     * and its player display DPLC submissions (docs/s2disasm/s2.asm:5095
+     * RunObjects, reaching LoadSonicDynPLC at docs/s2disasm/s2.asm:38828 and
+     * LoadTailsDynPLC at docs/s2disasm/s2.asm:41658).
+     *
+     * <p>No row is published, so the work this iteration produces is
+     * forwarded onto the last published row when the segment closes. Reads
+     * nothing from the trace: the content is decided entirely by the engine's
+     * own pending transfers and its native animation advance. Must only run
+     * when the replay reached the end of the trace.
+     */
+    default void runTerminalDynamicArtIteration() {
+        gameplayMode().serviceTerminalDynamicArtVBlank();
+        advancePlayableAnimationsOnly();
+        // RunObjects also executes the fixed in-level slots that follow the
+        // dynamic object RAM, so the trailing iteration must run Tails' tails
+        // (Obj05) too: Obj05_Main (docs/s2disasm/s2.asm:41723) reaches
+        // .display (docs/s2disasm/s2.asm:41760) and unconditionally runs
+        // Tails_Animate_Part2 then LoadTailsTailsDynPLC
+        // (docs/s2disasm/s2.asm:41762-41763, subroutine at
+        // docs/s2disasm/s2.asm:41637) before DisplaySprite
+        // (docs/s2disasm/s2.asm:41764). The playable prefix only covers
+        // Obj01/Obj02, so without this the boundary drops Obj05's DPLC
+        // submission. Must run AFTER the prefix: Obj05 reads its parent's
+        // anim at its own late execution point.
+        advancePlayableFixedSlotsOnly();
+    }
+
     /** Run one gameplay tick using the next BK2 input. Returns the mask. */
     int stepFrameFromRecording();
 
@@ -49,6 +82,14 @@ public interface TraceReplayFixture {
 
     /** Advance only the playable animation slice proven by a native mid-loop trace hook. */
     void advancePlayableAnimationsOnly();
+
+    /**
+     * Advance the playable FIXED in-level object slots that ROM
+     * {@code RunObjects} executes after every dynamic object — Tails' tails
+     * (Obj05), whose routine tail submits its own DPLC
+     * (docs/s2disasm/s2.asm:41760-41764).
+     */
+    void advancePlayableFixedSlotsOnly();
 
     /** Hold the first CPU sidekick's next Animate dispatch while running the full tick. */
     void suppressFirstSidekickAnimationOnce();

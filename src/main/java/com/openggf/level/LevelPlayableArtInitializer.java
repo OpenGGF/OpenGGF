@@ -64,6 +64,7 @@ final class LevelPlayableArtInitializer {
 
     void initialize() {
         RenderContext.clearSidekickContexts();
+        levelManager.clearPlayerArtDplcOwners();
         dustBankCount = 0;
         tailsTailBankCount = 0;
         sidekickPatternBankCursor = 0;
@@ -86,6 +87,49 @@ final class LevelPlayableArtInitializer {
         initializeMainPlayable(playable, artProvider, crossGame);
         initializeSidekicks(artProvider, crossGame);
         RenderContext.uploadDonorPalettes(graphicsManager);
+    }
+
+    /**
+     * Mints the DPLC owner for a character art bank that has no playable sprite
+     * in this level.
+     *
+     * <p>The ROM's player art banks are permanently allocated VRAM regions
+     * ({@code ArtTile_ArtUnc_Sonic} / {@code ArtTile_ArtUnc_Tails}) with their
+     * own {@code Sonic_LastLoadedDPLC} / {@code Tails_LastLoadedDPLC} dedupe
+     * word, and {@code LoadSonicDynPLC_Part2} / {@code LoadTailsDynPLC_Part2}
+     * are shared entry points object code jumps into
+     * (docs/s2disasm/s2.asm:38829-38862, 41659-41697). A bank therefore stays
+     * submittable even where {@code InitPlayers} omits that character's object
+     * (docs/s2disasm/s2.asm:5177-5198) — the Tornado pilot
+     * ({@code ObjB2_Animate_Pilot}, docs/s2disasm/s2.asm:79538-79565) is the
+     * only submitter into the Tails bank in SCZ/WFZ/DEZ.
+     *
+     * <p>Created on demand so levels that never submit into an absent
+     * character's bank allocate nothing and keep their existing pattern-bank
+     * layout unchanged.
+     */
+    DynamicArtDecisionOwner createAbsentCharacterBankOwner(String character) {
+        PlayerSpriteArtProvider artProvider;
+        Game game = levelManager.game;
+        if (CrossGameFeatureProvider.isActive()) {
+            artProvider = crossGameFeatures;
+        } else if (game instanceof PlayerSpriteArtProvider p) {
+            artProvider = p;
+        } else {
+            return null;
+        }
+        try {
+            SpriteArtSet artSet = artProvider.loadPlayerSpriteArt(character);
+            if (artSet == null || artSet.bankSize() <= 0
+                    || artSet.dplcFrames().isEmpty()) {
+                return null;
+            }
+            return createDynamicArtOwner(character, new PlayerSpriteRenderer(artSet));
+        } catch (IOException e) {
+            LOGGER.log(SEVERE, "Failed to load art bank for absent character: "
+                    + character, e);
+            return null;
+        }
     }
 
     int reserveSidekickPatternBank(int bankSize) {
@@ -120,7 +164,7 @@ final class LevelPlayableArtInitializer {
                 renderer.setRenderContext(crossGame.getDonorRenderContext());
             }
             renderer.ensureCached(graphicsManager);
-            applyPlayableArt(playable, renderer, artSet);
+            applyPlayableArt(playable, renderer, artSet, false);
             initSpindashDust(playable);
             initTailsTails(playable, artSet);
             initSuperState(playable);
@@ -201,7 +245,7 @@ final class LevelPlayableArtInitializer {
                 sidekickRenderer.setRenderContext(crossGame.getDonorRenderContext());
             }
             sidekickRenderer.ensureCached(graphicsManager);
-            applyPlayableArt(sidekick, sidekickRenderer, sidekickArt);
+            applyPlayableArt(sidekick, sidekickRenderer, sidekickArt, true);
             initSpindashDust(sidekick);
             initTailsTails(sidekick, sidekickArt);
             if (sidekickPaletteCtx != null) {
@@ -215,10 +259,21 @@ final class LevelPlayableArtInitializer {
 
     private void applyPlayableArt(AbstractPlayableSprite playable,
                                   PlayerSpriteRenderer renderer,
-                                  SpriteArtSet artSet) {
+                                  SpriteArtSet artSet,
+                                  boolean sidekick) {
         playable.setSpriteRenderer(renderer);
+        String identity = characterIdentity(playable.getCode());
+        DynamicArtDecisionOwner bankOwner = createDynamicArtOwner(identity, renderer);
+        // The character's art bank always has exactly one dedupe state
+        // (Sonic_LastLoadedDPLC / Tails_LastLoadedDPLC, docs/s2disasm/s2.asm:26039-26041),
+        // shared by every jump into LoadSonicDynPLC_Part2 / LoadTailsDynPLC_Part2.
+        // Register it for object submitters (ObjB2_Animate_Pilot) even where
+        // InitPlayers omits the sidekick object itself (s2.asm:5177-5198), so the
+        // pilot in SCZ/WFZ/DEZ submits through the same owner rather than a
+        // second, private one.
+        levelManager.registerPlayerArtDplcOwner(identity, bankOwner);
         playable.getAnimationManager().setDynamicArtDecisionOwner(
-                createDynamicArtOwner(playable.getCode(), renderer));
+                sidekick && isSidekickSuppressed() ? null : bankOwner);
         playable.setMappingFrame(0);
         playable.setAnimationFrameCount(artSet.mappingFrames().size());
         playable.setAnimationProfile(artSet.animationProfile());
@@ -388,9 +443,62 @@ final class LevelPlayableArtInitializer {
             tailsRenderer.setRenderContext(crossGame.getDonorRenderContext());
         }
         tailsRenderer.ensureCached(graphicsManager);
+        // ROM: Obj05 exists exactly when Obj02 does - Tails' init spawns
+        // ObjID_TailsTails and sets its parent (s2.asm:38945-38946), and
+        // InitPlayers omits Obj02 entirely in WFZ/DEZ/SCZ (s2.asm:5177-5198).
+        // A suppressed sidekick therefore has no tails-tails DPLC owner, matching
+        // applyPlayableArt's gate above.
         playable.setTailsTailsController(new TailsTailsController(
                 playable, tailsRenderer, isS3k,
-                createDynamicArtOwner("tails-tails", tailsRenderer)));
+                isSidekickSuppressed()
+                        ? null
+                        : createDynamicArtOwner("tails-tails", tailsRenderer)));
+    }
+
+    /**
+     * The ROM's player DPLC routines are keyed by the character whose art bank
+     * they own, not by a team slot: {@code LoadSonicDynPLC} stores through
+     * {@code Sonic_LastLoadedDPLC} into ArtTile_ArtUnc_Sonic
+     * (docs/s2disasm/s2.asm:38829-38840) and {@code LoadTailsDynPLC} through
+     * {@code Tails_LastLoadedDPLC} into ArtTile_ArtUnc_Tails
+     * (docs/s2disasm/s2.asm:41659-41690). S1 (docs/s1disasm/_incObj/01 Sonic.asm:2391-2398)
+     * and S3K (docs/skdisasm/sonic3k.asm:25216-25218) use the same
+     * changed-frame predicate against a per-character byte.
+     * <p>
+     * The engine names a CPU team slot {@code <character>_pN}, so the raw
+     * sprite code never matched the character-keyed owner set and the sidekick
+     * silently ran with no DPLC owner at all. Normalize the slot suffix away
+     * here only — art bank and VRAM base selection stay with the renderer, as
+     * the ROM's own 2P path retargets those via {@code Adjust2PArtPointer}.
+     */
+    private static String characterIdentity(String spriteCode) {
+        if (spriteCode == null) {
+            return null;
+        }
+        int slot = spriteCode.lastIndexOf("_p");
+        if (slot <= 0 || slot + 2 >= spriteCode.length()) {
+            return spriteCode;
+        }
+        for (int i = slot + 2; i < spriteCode.length(); i++) {
+            if (!Character.isDigit(spriteCode.charAt(i))) {
+                return spriteCode;
+            }
+        }
+        return spriteCode.substring(0, slot);
+    }
+
+    /**
+     * {@code InitPlayers} creates the sidekick object only where the ROM loads
+     * it (docs/s2disasm/s2.asm:5177-5198): zones that skip Obj02 never run
+     * {@code LoadTailsDynPLC} and so never queue a Tails DMA transfer. The
+     * engine still spawns a sidekick sprite for presentation, so ask the
+     * owning game module's existing sidekick-suppression predicate rather than
+     * attaching a DPLC owner that would submit art the ROM never submits.
+     */
+    private boolean isSidekickSuppressed() {
+        GameModule module = levelManager.gameModule;
+        return module != null
+                && module.isSidekickSuppressedForZone(levelManager.getCurrentZone());
     }
 
     private DynamicArtDecisionOwner createDynamicArtOwner(

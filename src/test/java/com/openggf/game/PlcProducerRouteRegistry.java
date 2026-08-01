@@ -31,7 +31,7 @@ final class PlcProducerRouteRegistry {
                 b("S2_TITLE", S2, "titleScreenOwnerPublishesStd1BeforePresentationBegins"),
                 b("S2_LEVEL", S2, "levelInitOwnerClearsThenPublishesHeaderPrimaryStd2AndTailsLifeArt"),
                 b("S2_LEVEL_SECONDARY", S2,
-                        "initialPresentationOwnerPublishesHeaderSecondaryAfterLockedTitleDrain"),
+                        "initialPresentationOwnerServicesHeaderSecondaryAcrossTheTitleCardLeaveLoop"),
                 b("S2_EHZ_EVENT", S2, "EHZ boss arena"), b("S2_MTZ_EVENT", S2, "MTZ boss arena"),
                 b("S2_WFZ_BOSS_EVENT", S2, "WFZ boss PLC"), b("S2_WFZ_TORNADO_EVENT", S2, "WFZ Tornado PLC"),
                 b("S2_HTZ_EVENT", S2, "HTZ boss arena"), b("S2_OOZ_EVENT", S2, "OOZ boss arena"),

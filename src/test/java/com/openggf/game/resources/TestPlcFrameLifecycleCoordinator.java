@@ -215,6 +215,188 @@ class TestPlcFrameLifecycleCoordinator {
                 .contains("missing PLC preparation for ORDINARY_LEVEL"));
     }
 
+    /**
+     * S1's staged Sonic gfx transfer is dispatched only by the
+     * f_sonframechg-gated {@code writeVRAM v_sgfx_buffer,...} inside the
+     * per-mode VBlank handlers (docs/s1disasm/sonic.asm:829-833). A lag frame
+     * branches to VBlank_Lag before any of them (sonic.asm:652-655), which runs
+     * the sound driver only (sonic.asm:709-715, 678-684), so the preparation
+     * survives to the next real VBlank and its edges carry that row's logical
+     * frame -- not the lag row's.
+     */
+    @Test
+    void sonic1LagClaimDefersTheStagedSonicGfxTransfer() {
+        DynamicArtLifecycleService dynamicArt =
+                new DynamicArtLifecycleService();
+        dynamicArt.beginRun();
+        dynamicArt.observePlayerDplc(
+                com.openggf.game.GameId.S1, "sonic", 0x32,
+                new com.openggf.level.render.SpriteDplcFrame(List.of(
+                        new com.openggf.level.render.TileLoadRequest(0, 12))));
+        dynamicArt.openComparisonSegment();
+        PlcFrameLifecycleCoordinator coordinator =
+                new PlcFrameLifecycleCoordinator(
+                        recording(new ArrayList<>()), dynamicArt,
+                        DynamicArtDmaServiceModel.SONIC_1_VBLANK_SONIC_GFX);
+
+        coordinator.runLogicalIteration(() -> { }, frame -> {
+            frame.claim(PlcLifecyclePhase.LAG);
+            return null;
+        });
+
+        assertTrue(dynamicArt.latestSnapshot().edges().isEmpty(),
+                "VBlank_Lag dispatches no Sonic gfx transfer");
+
+        coordinator.runLogicalIteration(() -> { }, frame -> {
+            frame.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
+            frame.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+            return null;
+        });
+
+        DynamicArtDiagnosticsSnapshot published = dynamicArt.latestSnapshot();
+        assertEquals(2, published.edges().size());
+        for (DynamicArtDiagnosticsSnapshot.Edge edge : published.edges()) {
+            assertEquals(published.frame(), edge.logicalFrame());
+            assertEquals(published.frame(), edge.publicationFrame());
+        }
+    }
+
+    /**
+     * A represented iteration on which no V-blank elapsed at all is a different
+     * ROM shape from a lag V-blank. {@code Vint_runcount} is bumped once per
+     * V-blank at {@code VintRet} (docs/s2disasm/s2.asm:507-508) whichever handler
+     * ran, so a row with no V-blank tick means the main loop iteration overran
+     * its V-blank: the following iteration is still mid-flight at the sample
+     * boundary and its queue-add (s2.asm:1705) publishes on the boundary after
+     * it. {@code ProcessDMAQueue} (s2.asm:1770) is reached only from the real
+     * V-int handlers (s2.asm:781, 899, 1000, 1046, 1083, 1138), never from
+     * {@code Vint_Lag} (s2.asm:529-580).
+     */
+    @Test
+    void aRepresentedIterationWithoutAVblankDefersTheNextRowsPublication() {
+        DynamicArtLifecycleService dynamicArt =
+                new DynamicArtLifecycleService();
+        dynamicArt.beginRun();
+        dynamicArt.openComparisonSegment();
+        PlcFrameLifecycleCoordinator coordinator =
+                new PlcFrameLifecycleCoordinator(
+                        recording(new ArrayList<>()), dynamicArt,
+                        DynamicArtDmaServiceModel.SONIC_2_PROCESS_DMA_QUEUE);
+
+        // Row N: no V-blank elapsed for this iteration.
+        coordinator.markRepresentedIterationWithoutVblank();
+        coordinator.runLogicalIteration(() -> { }, frame -> {
+            frame.claim(PlcLifecyclePhase.LAG);
+            return null;
+        });
+        assertTrue(dynamicArt.latestSnapshot().edges().isEmpty());
+
+        // Row N+1: the overrunning iteration completes and queues a DPLC. Its
+        // publication rolls into row N+2 with the ledger still empty here.
+        coordinator.runLogicalIteration(() -> { }, frame -> {
+            frame.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
+            frame.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+            dynamicArt.observePlayerDplc(
+                    com.openggf.game.GameId.S2, "sonic", 0x0F,
+                    new com.openggf.level.render.SpriteDplcFrame(List.of(
+                            new com.openggf.level.render.TileLoadRequest(0, 12))));
+            return null;
+        });
+        assertTrue(dynamicArt.latestSnapshot().edges().isEmpty(),
+                "the overrunning iteration reached no publication boundary");
+
+        // Row N+2: the carry is a one-shot -- this ordinary row publishes.
+        coordinator.runLogicalIteration(() -> { }, frame -> {
+            frame.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
+            frame.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+            return null;
+        });
+        DynamicArtDiagnosticsSnapshot published = dynamicArt.latestSnapshot();
+        assertFalse(published.edges().isEmpty());
+        // The publication boundary is what this test pins down. The buffered
+        // edge's logical-frame attribution is owned by
+        // DynamicArtLifecycleService's movie clock, which does not tick on a
+        // boundary the iteration never reached, so it is deliberately not
+        // asserted here.
+        for (DynamicArtDiagnosticsSnapshot.Edge edge : published.edges()) {
+            assertEquals(published.frame(), edge.publicationFrame());
+        }
+    }
+
+    /**
+     * The mid-V-int sample is itself a dynamic-art publication boundary: the
+     * real per-mode handler calls {@code ProcessDMAQueue} (docs/s2disasm/
+     * s2.asm:781, routine at s2.asm:1770) before {@code VintRet} bumps
+     * {@code Vint_runcount} (s2.asm:507-508). Only the successor -- the
+     * iteration that overran -- is withheld.
+     */
+    @Test
+    void aVblankStarvedRowPublishesItsOwnRowAndOnlyItsSuccessorIsCarried() {
+        DynamicArtLifecycleService dynamicArt =
+                new DynamicArtLifecycleService();
+        dynamicArt.beginRun();
+        dynamicArt.openComparisonSegment();
+        PlcFrameLifecycleCoordinator coordinator =
+                new PlcFrameLifecycleCoordinator(
+                        recording(new ArrayList<>()), dynamicArt,
+                        DynamicArtDmaServiceModel.SONIC_2_PROCESS_DMA_QUEUE);
+
+        coordinator.markRepresentedIterationWithoutVblank();
+        coordinator.runLogicalIteration(() -> { }, frame -> {
+            frame.claim(PlcLifecyclePhase.LAG);
+            observeSonicDplc(dynamicArt, 0x0F);
+            return null;
+        });
+        assertFalse(dynamicArt.latestSnapshot().edges().isEmpty(),
+                "the mid-V-int row already ran ProcessDMAQueue, so it publishes");
+
+        coordinator.runLogicalIteration(() -> { }, frame -> {
+            frame.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
+            frame.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+            observeSonicDplc(dynamicArt, 0x10);
+            return null;
+        });
+        assertTrue(dynamicArt.latestSnapshot().edges().isEmpty(),
+                "only the overrunning successor is withheld");
+    }
+
+    /**
+     * Back-to-back mid-V-int samples: each ran its own {@code ProcessDMAQueue}
+     * (s2.asm:781), so neither is carried. The guard is the row's own shape,
+     * not a one-shot carry.
+     */
+    @Test
+    void consecutiveVblankStarvedRowsEachPublishTheirOwnRow() {
+        DynamicArtLifecycleService dynamicArt =
+                new DynamicArtLifecycleService();
+        dynamicArt.beginRun();
+        dynamicArt.openComparisonSegment();
+        PlcFrameLifecycleCoordinator coordinator =
+                new PlcFrameLifecycleCoordinator(
+                        recording(new ArrayList<>()), dynamicArt,
+                        DynamicArtDmaServiceModel.SONIC_2_PROCESS_DMA_QUEUE);
+
+        for (int index = 0; index < 2; index++) {
+            final int mappingFrame = 0x20 + index;
+            coordinator.markRepresentedIterationWithoutVblank();
+            coordinator.runLogicalIteration(() -> { }, frame -> {
+                frame.claim(PlcLifecyclePhase.LAG);
+                observeSonicDplc(dynamicArt, mappingFrame);
+                return null;
+            });
+            assertFalse(dynamicArt.latestSnapshot().edges().isEmpty(),
+                    "starved row " + index + " publishes its own row");
+        }
+    }
+
+    private static void observeSonicDplc(
+            DynamicArtLifecycleService dynamicArt, int mappingFrame) {
+        dynamicArt.observePlayerDplc(
+                com.openggf.game.GameId.S2, "sonic", mappingFrame,
+                new com.openggf.level.render.SpriteDplcFrame(List.of(
+                        new com.openggf.level.render.TileLoadRequest(0, 12))));
+    }
+
     private static PlcLifecycleService recording(List<String> events) {
         return new PlcLifecycleService() {
             @Override
