@@ -56414,3 +56414,44 @@ its consequences (see the f3246 entries above).
 `TestS3kIczAct1TransitionHeadless` ("test setup must reach ICZ2 KosM parent
 retirement") and `TestS3kKosStructuralSequence` (7/7), both verified on the
 untouched base.
+
+## HCZ water wall — Kos module boundary regression from `1d93e3134`
+
+Reported as a 16-bit sign-extension defect in player `x_vel`
+(`expected: <-32776> but was: <32760>`). It is not. `getCentreY()` returns
+`short`, and `32760` is that value truncated after the test's wait loop ran
+~4154 iterations because the seeded Kos module queue never drained. The two
+numbers share their low 16 bits only because one is the test's own `int`
+arithmetic and the other a signed `short`.
+
+Root cause: `1d93e3134` moved the module state step out of
+`afterTimingService` into a new `RuntimeArtCoordinator.beforeTimingService`
+hook (ROM `LevelLoop`: `Process_Kos_Queue` 7887, `Wait_VSync` 7888,
+`Process_Kos_Module_Queue` 7908). Production services boundaries through
+`LevelFrameStep.serviceBoundary`, which calls both hooks. Two *test-side*
+models of that sequence still called only the `after` hook, so
+`Process_Kos_Module_Queue` never ran and no module ever retired:
+
+- `TestHCZWaterWallObjectInstance.serviceBoundary`
+- `GameplayModeContext.afterHardwareTimingService`, via
+  `TestLevelIterationHardwareTimingAdmissionOrder` — a second regression from
+  the same commit, 3/3 failing on the branch and 3/3 green on `origin/develop`,
+  not previously on the known-failure list.
+
+Adding the missing hook exposed a real behavioural delta the commit intended:
+the seeded archive now clears in **3** object passes where `origin/develop`
+took **4**. ROM `Process_Kos_Module_Queue` performs one state step per
+`LevelLoop` iteration — submit to the decompression queue (2741), then DMA and
+`subq.b #1,(Kos_modules_left)` (2750-2752) — from the loop tail at 7908, after
+`Process_Sprites` at 7889, so a polling object such as
+`HCZWaterWall_Horizontal_WaitArt` (`tst.b (Kos_modules_left)`, 64861) first
+observes zero on the following iteration's object pass. The unit test's
+loop/tail structure had hardcoded `develop`'s 4-pass phase; it now asserts the
+ROM invariants instead (pull every pending pass, no `loc_30338` rise while
+pending, rise on the first pass observing zero, object polling never publishes
+readiness). The complete-run measurements are the stronger ROM evidence here
+and are unchanged.
+
+Complete-run segments, after the fix — identical to baseline:
+`aiz 8/64, hcz 8/1320, mgz 1/14629, cnz 1/5336, icz 1/1629, lbz 8/35,
+mhz 912/7218`. `TestS3kAizTraceReplay` holds at 4 failures + 1 error.
