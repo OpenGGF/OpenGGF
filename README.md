@@ -249,7 +249,9 @@ Development since `v0.5.20260411` is the active 0.6 prerelease line. The release
   matched and the only observable trace was the pipe control surviving to defeat
   and drawing one extra `RandomNumber`. Fixing the pump alone collapsed the fight
   (5140 errors), which is what confirmed the coupling. Every trace in the
-  capsule/PLC-busy family — GHZ3, MTZ3, CPZ2, SYZ3, SLZ3, MZ3, LZ3 — now passes.
+  capsule/PLC-busy family — GHZ3, MTZ3, CPZ2, SYZ3, SLZ3, MZ3, LZ3 — now passes,
+  and with this the entire Sonic 2 level trace fleet is green: the only remaining
+  S2 red is the special stage, which is a separate long-standing frontier.
 
 - **All four S1 act-3 capsule stragglers greened (2026-08-01):** SYZ3, SLZ3, MZ3
   and LZ3 closed on three ROM-cited fixes, none of which lived where the failing
