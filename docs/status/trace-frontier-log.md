@@ -60234,3 +60234,70 @@ the recording rather than by construction. A sparse-heartbeat trace would surfac
 a silently empty outstanding list on the target row — a failure mode with no obvious
 symptom, so check this first if the normalization is ever reused against another
 recorder schema. Also noted at the merge site in `DynamicArtSpillNormalization`.
+
+
+## 2026-08-01 — S2 special stage GREEN: the finish boundary was two mis-phased observations
+
+Worktree `.worktrees/ss-finish`, branch `bugfix/ai-ss-finish-boundary`, on `5ec5badb7`.
+Command: `mvn -Dmse=relaxed -Dsurefire.forkCount=1 "-Ds2.rom.path=<s2>"
+"-Dtest=TestS2SpecialStageTraceReplay" test`. **9 errors @ f5181 -> PASS.**
+
+No fourth normalization refinement, and no engine change. Measuring the fixture rows
+5170-5225 against the ROM showed the residual errors were not a comparison-semantics
+problem at all: the replay harness was stepping two kinds of observation in the wrong
+`PlcLifecyclePhase`, so the S2 `ProcessDMAQueue` model
+(`DynamicArtDmaServiceModel.SONIC_2_PROCESS_DMA_QUEUE`) drew the wrong V-int for them.
+
+**1. The finish observation is not a lag V-blank.** f5181 is recorded `lag=1`, and the
+harness passed that bit straight through to `stepPasses`, so the terminal pass ran under
+`LAG` — publication carried to f5182 and the two player submissions the ROM makes at
+f5181 appeared a row late (the reported `dynamic_art.edges expected=[5912, 5913],
+actual=[]`). But f5181 owns a recorded `run_objects_end` pass, and the special-stage loop
+sets `VintID_S2SS` and waits on it immediately before `RunObjects`
+(docs/s2disasm/s2.asm:6694-6706); `V_Int` reaches `Vint_Lag` only while `Vint_routine` is
+still 0 (s2.asm:483-484). An observation that ran a pass therefore cannot have been a lag
+V-blank. `S2SpecialStageReplayHarness.observationPhase` now derives the phase from that
+fact instead of the raw lag bit — the same predicate the pass binder already applies, so
+the binder's `ssFinishedObserved` special case stops being contradicted by the harness
+rather than being joined by a second one. Measured uniformity: across all 5299 recorded
+rows exactly one pass-owning observation is a lag row, and it is the finish.
+
+**2. The 39-row outstanding window is `Pal_FadeToWhite` plus the results setup.** With
+`SS_Check_Rings_flag` set, `RunObjects` returns into `Pal_FadeToWhite` (s2.asm:6725-6745),
+which runs `d4 = $15` + 1 = 22 `VintID_Fade` V-blanks (s2.asm:3570-3581); then the
+interrupts-disabled results-screen setup (`move #$2700,sr`, ClearScreen, PalLoad_Now,
+LoadPLC2, NemDec, clearRAM); then the results loop's first `VintID_Level` wait
+(s2.asm:6800-6806). `ProcessDMAQueue` (s2.asm:1770) is reached from none of those until
+the last. The fixture matches exactly: rows 5182-5203 are 22 consecutive non-lag rows,
+5204-5219 are 16 lag rows (the blocking setup), `results_started` fires at 5219, and the
+recorder retires both transfers at 5220. The harness was stepping the fade rows as
+`SPECIAL_STAGE`, which services the queue, retiring them at 5182. Post-finish rows now
+step the ROM sequence: `PALETTE_FADE` for the fade's ROM-constant 22 iterations, then
+`SPECIAL_STAGE_RESULTS`. The 22 is the ROM's `$15`, not a recorded duration.
+
+Neither change reads a trace value into engine state, and neither keys on a frame index:
+one keys on "this observation executed a ROM object pass", the other on a ROM loop count.
+
+### Sensitivity coverage
+
+New `S2SpecialStageFinishBoundaryPhaseTest` (11 assertions across 8 tests) pins the phase
+policy, the fixture uniformity above, the fade/results DMA-service asymmetry, and the
+recorded outstanding window; and re-proves the finish row still rejects genuine defects —
+a missing, extra, wrongly-attributed, or early-retired terminal transfer all still error
+through `DynamicArtSpecialStageComparator`, while the faithful atomic publication scores
+zero. Mutation-tested: `$15+1` -> `$15` fails both the new test and the replay;
+`observationPhase` ignoring the pass fails both; the fade window using
+`SPECIAL_STAGE_RESULTS` fails the replay.
+
+### Regression sweep
+
+`TestS2*TraceReplay`, `TestS1SpecialStageTraceReplay`, `S2SpecialStage*`,
+`TestDynamicArtSpillNormalization`, `TestPlcFrameLifecycleCoordinator`,
+`TestHardwareTimingAuthorityGuard`: 101 tests, 100 pass. The one failure,
+`S2SpecialStageRecorderContractTest#committedArtifactHasControlTransitionsAndLogicalPassEndCoverage`
+(`expected: <1.4-s2ss> but was: <1.4-s2ss-native>`), is the pre-existing recorder-schema
+string mismatch already recorded against baseline in the 2026-08-01 f136 -> f165 entry —
+untouched by this branch. `S2SpecialStageFinishBoundaryMappingTest`, which asserted the
+old divergence report, now passes.
+
+**The S1/S2 trace fleet is green.**

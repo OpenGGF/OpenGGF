@@ -134,15 +134,25 @@ final class S2SpecialStageReplayHarness {
                 () -> stepPassBody(pass));
     }
 
+    /**
+     * Steps one observation's completed ROM object passes.
+     *
+     * <p>An observation that executes a {@code RunObjects} pass is never a lag
+     * V-blank whatever the recorder's lag heuristic reports: the ROM's special
+     * stage loop sets {@code VintID_S2SS} and waits on it immediately before
+     * the pass (docs/s2disasm/s2.asm:6694-6706), so {@code V_Int} cannot have
+     * branched to {@code Vint_Lag} — that branch is taken only while
+     * {@code Vint_routine} is still 0 (s2.asm:483-484). The pass binder already
+     * treats such an observation as logical; the phase handed to the lifecycle
+     * follows the same fact rather than the raw lag bit, so the terminal
+     * finish observation needs no special case of its own.
+     */
     void stepPasses(
             List<CompletedPass> passes,
             boolean completeTerminalPreStartPass,
             boolean lagged,
             int observationFrame) {
-        runProductionRow(
-                lagged ? PlcLifecyclePhase.LAG
-                        : PlcLifecyclePhase.SPECIAL_STAGE,
-                () -> {
+        runProductionRow(observationPhase(lagged, !passes.isEmpty()), () -> {
             if (completeTerminalPreStartPass) {
                 completeTerminalPreStartPassBody();
             }
@@ -162,6 +172,14 @@ final class S2SpecialStageReplayHarness {
                 }
             }
         });
+    }
+
+    /** Phase for one special-stage observation. See {@link #stepPasses}. */
+    static PlcLifecyclePhase observationPhase(
+            boolean lagged, boolean ownsCompletedPass) {
+        return lagged && !ownsCompletedPass
+                ? PlcLifecyclePhase.LAG
+                : PlcLifecyclePhase.SPECIAL_STAGE;
     }
 
     private void stepPassBody(CompletedPass pass) {
@@ -194,11 +212,16 @@ final class S2SpecialStageReplayHarness {
     }
 
     void stepIdleRow(boolean lagged) {
-        runProductionRow(
-                lagged ? PlcLifecyclePhase.LAG
-                        : PlcLifecyclePhase.SPECIAL_STAGE,
-                () -> {
-                });
+        stepIdleRow(lagged, PlcLifecyclePhase.SPECIAL_STAGE);
+    }
+
+    /**
+     * Steps one observation that runs no engine work, in {@code activePhase}
+     * when the recorder did not read the row as a lag V-blank.
+     */
+    void stepIdleRow(boolean lagged, PlcLifecyclePhase activePhase) {
+        runProductionRow(lagged ? PlcLifecyclePhase.LAG : activePhase, () -> {
+        });
     }
 
     DynamicArtDiagnosticsSnapshot captureDynamicArt() {
