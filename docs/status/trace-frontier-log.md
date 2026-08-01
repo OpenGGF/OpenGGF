@@ -57385,3 +57385,39 @@ lbz 0/12647 all unchanged; MHZ tail `KOS_DECOMPRESSION_QUEUE#335` throw unchange
 pre-existing). S3K guards, rewind guards, and TestMadmoleBadnikInstance green. Shared
 sidekick code untouched (final diff is MadmoleBadnikInstance only), so the S2 trace
 classes were not re-run.
+
+## 2026-08-01 — Solid-object right-edge inclusivity: shared routine-family default landed
+
+Follow-up to the Madmole inclusive-right-edge fix: swept the shared default instead of
+adding more per-object hooks. ROM evidence — inclusivity is a property of the routine
+family, not the object. Full-solid X gates reject with `bhi` (inclusive) in all three
+games: S1 `_incObj/sub SolidObject.asm:122-123,167-168`, S2 `SolidObject_cont`
+(s2.asm:35344+) and `SlopedSolid_cont` (s2.asm:35263-35271), S3K `SolidObject_cont`
+(sonic3k.asm:41393-41399). Top-solid platform gates reject with `bhs`/`blo` (exclusive):
+S1 `sub PlatformObject & SlopeObject.asm:34-35`, S2 `PlatformObject_cont`
+(s2.asm:35960), S3K `SolidObjectTop_1P` (sonic3k.asm:41808) and `loc_1E42E`
+(sonic3k.asm:41995-41996). S2 monitors branch into `SolidObject_cont`
+(s2.asm:25621-25636), so monitor solidity is inclusive too. Quantified: 58 of 172
+`SolidObjectProvider` implementors overrode `usesInclusiveRightEdge()` — every one
+returning true, none false; 18 plain full-solid S3K providers were silently
+exclusive-right against ROM. Fix: default `usesInclusiveRightEdge()` ->
+`!isTopSolidOnly()`; one-arg `SolidRoutineProfile.fullSolid(sticky)` now builds an
+inclusive profile. Existing overrides keep their behaviour, so only default-reliant
+full-solid objects change, monotonically toward ROM.
+
+Measurements (worktree `.worktrees/solid-edge`, branch `bugfix/ai-s3k-solid-edge`, one
+class per `mvn -Ptrace-replay` run, reports cleared between): aiz 57/6344, hcz
+119/10334, mgz 23/17949, cnz 7/9711, icz 10/12375, lbz 0/12647, mhz 865/7218 — all
+error counts and total frames identical to baseline; LBZ stays fully green (its first
+batch run died to the known `Java heap space` fork crash without a report and was
+re-run solo per policy; the solo run wrote a full-length 0-error report before the same
+teardown crash). `TestS1Ghz1TraceReplay` 588/3905, `TestS2Ehz1TraceReplay` 16725/5852,
+`TestS2CpzLevelSelectTraceReplay` 15622/5744 — baseline-exact (note S1 runs
+`CollisionModel.UNIFIED`; its count moving neither way is consistent with solid-bit
+setters no-opping there, and the S1 result matches baseline rather than "too clean").
+`TestS3kAizTraceReplay` standard suite exactly 4 failures + 1 error (release-slice
+gate). Guards green: `TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
+`TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`, `TestRewindCoverageGuard`,
+`TestStaticStateRewindCoverageGuard`, `TestMadmoleBadnikInstance`,
+`TestSolidRoutineProfiles` (default-profile assertion updated to inclusive),
+`TestSolidObjectManager`.

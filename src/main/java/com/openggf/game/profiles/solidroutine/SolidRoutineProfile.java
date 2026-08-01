@@ -94,7 +94,10 @@ public record SolidRoutineProfile(
     }
 
     public static SolidRoutineProfile fullSolid(boolean stickyContactBuffer) {
-        return fullSolid(stickyContactBuffer, false, false);
+        // ROM full-solid X gates reject with bhi (S1 SolidObject.asm:122-123,
+        // s2.asm:35344+, sonic3k.asm:41393-41399), so the right edge is
+        // inclusive for the whole routine family.
+        return fullSolid(stickyContactBuffer, true, false);
     }
 
     public static SolidRoutineProfile fullSolid(

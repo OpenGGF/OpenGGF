@@ -3,6 +3,23 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the shared solid-object right-edge default now follows the ROM routine
+  family instead of a per-object opt-in. Every full-solid X gate in all three
+  games rejects with `bhi` — inclusive right edge (S1
+  `_incObj/sub SolidObject.asm:122-123,167-168`; S2 `SolidObject_cont`
+  s2.asm:35344+ and `SlopedSolid_cont` s2.asm:35263-35271; S3K
+  `SolidObject_cont` sonic3k.asm:41393-41399) — while top-solid platform gates
+  reject with `bhs`/`blo` — exclusive (S1
+  `sub PlatformObject & SlopeObject.asm:34-35`; S2 `PlatformObject_cont`
+  s2.asm:35960; S3K `SolidObjectTop_1P` sonic3k.asm:41808 and `loc_1E42E`
+  sonic3k.asm:41995-41996). `SolidObjectProvider.usesInclusiveRightEdge()` now
+  defaults to `!isTopSolidOnly()` and the one-arg
+  `SolidRoutineProfile.fullSolid(sticky)` factory builds an inclusive profile.
+  Before this, 58 of 172 providers overrode the hook — all returning true, none
+  false — and 18 S3K full-solid objects silently dropped the ROM's
+  zero-distance `d0 == d1*2` side contact. Existing overrides keep their
+  behaviour; only default-reliant full-solid objects change, monotonically
+  toward ROM.
 - Fix: HCZ water wall (`Obj_HCZWaterWall`) hardware-queue parity, clearing the
   HCZ complete-run frame-1067 `queue.*` groups and moving the segment frontier
   from 1320 to 10334 frames. Three ROM behaviours were missing: (1)
