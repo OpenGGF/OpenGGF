@@ -218,6 +218,31 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **S3K complete-run trace parity: 9,808 divergence groups down to 997, verified
+  frames up from ~30k to ~74k (2026-08-01):** a sustained pass over all seven S3K
+  complete-run segments. The largest single gain was frame-0 `Status_InAir`:
+  the engine already modelled `SpawnLevelMainSprites`' per-zone `bset`s
+  correctly, but a premature ground probe in the test fixture and a bootstrap
+  seed that copied a recorded *post*-frame row in as *pre*-frame state were both
+  clobbering it, so every segment spent a surplus gravity tick before frame 0.
+  Removing both took the fleet from 9,808 groups to 1,185 in one change. Further
+  fixes modelled ROM behaviours the engine had approximated: the title-card
+  teardown window derived from `objoff_2E` plus the element cull rather than a
+  calibrated constant; the Kosinski module state step moved to its ROM frame
+  phase in the `LevelLoop` tail; the MHZ pollen spawner installed where it
+  survives level load, restoring ~3,000 missing `Random_Number` draws; and
+  same-frame fall-through modelled for the SS entry ring, the Madmole arm and the
+  HCZ water wall. Right-edge inclusivity now defaults per ROM routine family
+  (`bhi` for full-solid, `bhs`/`blo` for top-solid, consistent across all three
+  disassemblies), fixing 18 silently-wrong providers with no per-object patches.
+  A recorder defect was also found and fixed — `LoadQueueStateProjector` scaled an
+  already-byte VRAM address by 32 a second time — and the S3K fixture corpus was
+  regenerated and revalidated across 115 segments with physics bytes unchanged.
+  Sixteen test regressions introduced along the way were found and closed,
+  including two that *hung* rather than failed, and the trace comparator's heap
+  retention was cut from 643 MB to 171 MB after truncated runs were found masking
+  real failures as passes.
+
 - **Final Zone stopped crashing on the signpost PLC gate (2026-08-01):** the
   `Level_MainLoop` tail wired earlier in this line reproduced `SignpostArtLoad`'s
   six ROM gates faithfully — including `cmpi.b #act3,(v_act).w` — but compared
