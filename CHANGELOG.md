@@ -3,6 +3,17 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the S3K AIZ and LBZ frame-34 queue windows. LBZ (and every zone whose
+  `LoadEnemyArt` table entry was missing) now submits its `PLCKosM_LBZ` enemy
+  KosM modules — SnaleBlaster, Orbinaut, Ribot, Corkey
+  (sonic3k.asm:64397-64402) — at title-card teardown like the other zones.
+  AIZ's spurious frame-34 enemy-art submission is gone: ROM Level init skips
+  the `Obj_TitleCard` install entirely for a fresh AIZ1 Sonic/Tails game
+  (sonic3k.asm:7702-7709 branch past 7728-7735), so a suppressed initial
+  presentation no longer starts the skipped-presentation teardown model —
+  there is no owner object to tear down, and the intro installs the title
+  card itself much later (sonic3k.asm:114393-114396). AIZ complete-run
+  frontier f34 -> f1096, LBZ f34 -> clean (0 errors, 12643 frames).
 - Fix: the S3K Madmole's side-drill arm now models ROM `$44(a0)`, the player
   back-reference it keeps after knocking a player away. `sub_8D8E6`
   (sonic3k.asm:193439) and `sub_8D94A` (193477) write it and nothing ever clears

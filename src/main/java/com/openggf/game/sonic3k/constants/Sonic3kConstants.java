@@ -1548,6 +1548,12 @@ public class Sonic3kConstants {
     public static final int MAP_RIBOT_ADDR = 0x3604B8;
     public static final int ART_KOSM_CORKEY_ADDR = 0x377DFC;
     public static final int MAP_CORKEY_ADDR = 0x3605C2;
+    // PLCKosM_LBZ destination tiles (sonic3k.asm:64397-64402,
+    // sonic3k.constants.asm:1259-1262)
+    public static final int ARTTILE_SNALE_BLASTER = 0x0524;
+    public static final int ARTTILE_ORBINAUT = 0x056E;
+    public static final int ARTTILE_RIBOT = 0x0547;
+    public static final int ARTTILE_CORKEY = 0x0558;
     // Obj_Flybot767 (sonic3k.asm:191981), LockOn data include.
     // Map, DPLC, and ArtUnc_Flybot767 verified by S&K-side ROM byte search.
     public static final int ART_UNC_FLYBOT_767_ADDR = 0x377EBE;

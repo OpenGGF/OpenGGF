@@ -56936,3 +56936,36 @@ mgz 18/16510, cnz 7/9711, icz 10/12375, lbz 8/35. `TestS3kAizTraceReplay` holds 
 `TestSonic3kBootstrapResolver` (5), `TestSonic3kDecodingUtils` (3).
 
 Full write-up: [docs/architecture/validation/trace/2026-08-01-mhz-f3246-findfloor-probe.md](../architecture/validation/trace/2026-08-01-mhz-f3246-findfloor-probe.md).
+
+## 2026-08-01 — AIZ and LBZ frame-34 queue windows resolved (bugfix/ai-s3k-aizlbz-f34)
+
+Command (per segment, worktree `.worktrees/aizlbz-f34`):
+`mvn -Ptrace-replay -Dtest=TestS3k<Zone>CompleteRunTraceReplay -Ds3k.rom.path=… test`
+
+Both segments diverged at frame 34 on the eight `queue.s3k_kos_*` fields, in opposite
+directions. Root causes (both title-card teardown `LoadEnemyArt`, sonic3k.asm:62295-62301,
+64281-64313):
+
+- **LBZ** (ROM busy, engine idle): `Sonic3kObjectArtProvider.scheduleEnemyKosArt` had no
+  `ZONE_LBZ` case, so the engine never submitted `PLCKosM_LBZ` (SnaleBlaster, Orbinaut,
+  Ribot, Corkey — sonic3k.asm:64397-64402; recorded direct child source 3635608 =
+  `ArtKosM_SnaleBlaster` 0x377996 + 2-byte KosM header). Added the case.
+  **LBZ complete run: 8 errors/35 frames -> 0 errors/12643 frames.**
+- **AIZ** (engine busy, ROM idle): ROM Level init never installs `Obj_TitleCard` for a
+  fresh AIZ1 Sonic/Tails game (`Current_zone_and_act==0 && Player_mode<2 &&
+  !Last_star_post_hit`, sonic3k.asm:7702-7709 branching past the 7728-7735 install), so
+  there is no teardown and no `LoadEnemyArt` at frame 34; the recording's first busy frame
+  (64, direct source 3679782 = `ArtKosM_AIZIntroPlane` 0x382624 + 2) is the plane intro
+  child queueing its own art (sonic3k.asm:135736-135741). `LevelManager`'s
+  suppressed-presentation path no longer starts the skipped-presentation teardown model.
+  **AIZ complete run: 8 errors/64 frames (aborting at 63) -> 65 errors/6344 frames.**
+
+New AIZ frontier: frame 1096, `queue.s3k_kos_direct.busy` — the engine queues the four
+title-card KosM modules (first child `ArtKosM_TitleCardRedAct` 0x0D6F28+2 = 880426) one
+frame before the recording (1097). ROM installs the intro's in-level title card only on an
+odd `Level_frame_counter` frame (`btst #0,(Level_frame_counter+1)`,
+sonic3k.asm:114389-114396); the engine's intro handoff has no such parity gate. Later
+groups (1106-1237 etc.) are downstream one-frame skew of the same submission.
+
+Regression sweep: hcz 7/1320 (baseline), remaining segments recorded below by the sweep
+run in this entry's commit.
