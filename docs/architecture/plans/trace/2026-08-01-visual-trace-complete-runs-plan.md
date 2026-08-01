@@ -302,7 +302,7 @@ mvn -q -Dmse=off -Dsonic1.rom.path=<s1> -Dsonic2.rom.path=<s2> -Ds3k.rom.path=<s
 - [x] Every design acceptance criterion has a focused test/result.
 - [x] No inter-segment trace-derived gameplay write was introduced.
 - [x] Independent implementation review reports no blocking issue.
-- [ ] Full JDK 21 suite is compared with a freshly updated `develop` baseline.
-- [ ] Required docs and policy trailers are committed.
+- [x] Full JDK 21 suite is compared with a freshly updated `develop` baseline.
+- [x] Required docs and policy trailers are committed.
 - [ ] Work is merged into the main-workspace `develop` without switching it,
       pushed, and the clean worktree/local feature branch are removed.

@@ -105,5 +105,16 @@ rewind-torture, S2 special-stage cadence, architecture-ratchet, S3K object,
 fixture-version, and Tornado test groups. The feature and merged-tree runs are
 compared against this exact method-level baseline during final integration.
 
-The post-merge full-suite result, commit IDs, and push outcome are recorded
-here during final integration.
+After merging that baseline into the feature, the identical command ran
+14,054 tests: 26 failures, 8 errors, and 31 skips. The 38 additional tests are
+the feature's new non-ROM contracts. There is no failure/error present only in
+the feature result; 12 pre-existing S3K failures passed in this run. The broad
+visual/headless parity, hardware-authority, S1/S2 comparison-only, rewind, and
+static-state rewind batch also passed after reconciliation.
+
+Upstream's S2 special-stage pass-identity/spill-normalization work was retained
+alongside the new immutable lifecycle descriptor provenance. `CHANGELOG.md`,
+`README.md`, and the append-only trace frontier keep both histories.
+
+The post-merge commit IDs and push outcome are recorded here during final
+integration.
