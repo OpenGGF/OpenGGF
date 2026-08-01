@@ -249,7 +249,9 @@ Development since `v0.5.20260411` is the active 0.6 prerelease line. The release
   remaining frontier together with six hypotheses ruled out by direct
   measurement, including two that were implemented and proved inert — the
   V-blank clock is measurably exact and must not be relocated, and the capsule
-  spawn gates do read the wrong counter but correcting them changes nothing.
+  spawn gates turned out to be reading the correct counter already (objects are
+  dispatched with the V-blank counter under a parameter merely *named*
+  `frameCounter`), so the substitution resolved to the value already in use.
 
 - **Special Stage exit crash (2026-07-31):** leaving a Special Stage no longer
   aborts with "a native blocking fade is already active". A finished stage

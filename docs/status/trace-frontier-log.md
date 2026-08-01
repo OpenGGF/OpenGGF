@@ -56644,15 +56644,21 @@ targets, and none introduced regressions.
    trace 41069 / engine 41069). There is no drift and no phase error. Do not relocate the
    `vblaCounter` increment and do not add a phase offset. An apparent off-by-one appears
    only if the probe reads before the frame is driven — that is a probe artifact.
-2. **Capsule spawn-gate clock.** The gates genuinely read the wrong counter
-   (`frameCounter & 7`, object-update calls) where the ROM reads `Vint_runcount`
-   (`docs/s2disasm/s2.asm:84935-84942`; S1 `v_vbla_byte`); at MTZ3 f15258 these differ
-   (41069&7=5 vs 15202&7=2). Pointing `EggPrisonObjectInstance:406` and
-   `Sonic1EggPrisonObjectInstance:218,248` at the correct counter and removing the
-   `skipRandomAnimalSpawnThisFrame` compensator was an EXACT no-op. The inferred chain
-   "spawn cadence -> last-animal despawn -> `Load_EndOfAct` submission frame" is therefore
-   **wrong**. (The gate clock bug is real and worth fixing on its own merits — it is just
-   not the cause of these three failures.)
+2. **Capsule spawn-gate clock — CORRECTED 2026-08-01.** An earlier revision of this
+   entry claimed the gates read the wrong counter. **That was wrong.**
+   `ObjectExecutionController:54` dispatches `instance.update(objects.vblaCounter(), ...)`,
+   so the parameter every object receives — misleadingly *named* `frameCounter` in the
+   object classes — already carries ROM `Vint_runcount`. The capsule gates at
+   `EggPrisonObjectInstance:406` and `Sonic1EggPrisonObjectInstance:218,248` were therefore
+   already correct, and both attempted substitutions (via `vIntRunCounter(frameCounter)`
+   and via `objectManager().getVblaCounter()`) were no-ops precisely because they resolved
+   to the value the gate already had. The misreading came from comparing
+   `ObjectManager.getFrameCounter()` (15202 at MTZ3 f15258) with `getVblaCounter()` (41069)
+   and assuming the gates were fed the former. What is real here is a NAMING defect: the
+   `frameCounter` parameter name across object `update(...)` signatures actively misleads.
+   The inferred chain "spawn cadence -> last-animal despawn -> `Load_EndOfAct` submission
+   frame" remains **unsupported** — the substitutions were inert, so they neither confirm
+   nor refute it.
 3. **Per-submission decompression-duration accounting.** Busy-window length already matches
    the ROM; `NemesisPlcServiceQueue`, `Sonic1PlcService`, `Sonic2PlcService` and
    `PlcFrameLifecycleCoordinator` measure as correct.
