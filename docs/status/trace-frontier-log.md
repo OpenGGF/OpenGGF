@@ -56455,3 +56455,33 @@ and are unchanged.
 Complete-run segments, after the fix — identical to baseline:
 `aiz 8/64, hcz 8/1320, mgz 1/14629, cnz 1/5336, icz 1/1629, lbz 8/35,
 mhz 912/7218`. `TestS3kAizTraceReplay` holds at 4 failures + 1 error.
+
+## 2026-08-01 — regression tail: rewind disposition, SS entry ring, Tails tilt cadence
+
+Worktree `.worktrees/regression-tail`, branch `bugfix/ai-s3k-regression-tail` off
+`bugfix/ai-s3k-mhz-queue-frontier`. Closed the four non-boundary-seam regressions:
+
+- `629c56417` — `Mhz1CutsceneButtonInstance#knuxPeerArtQueue` had no rewind
+  disposition. Central `TRANSIENT` policy entry (the field is rebound from the
+  captured `knuxPeerArtOrdinal` in `retireKnucklesPeerArt()`), matching the
+  sibling hardware queue facades. Not a baseline entry.
+- `c45b8fd3f` — `TestSonic3kSSEntryRingFormation` (3 tests). ROM
+  `Obj_SSEntryRing` falls through `bra.w SSEntryRing_Display` in the SAME frame
+  (sonic3k.asm:128229-128230), and `loc_61794` ends `jmp (AddRings)` whose `rts`
+  lands on that `bra`, so `SSEntryRing_Display`'s `btst #5,$38` (128449-128450)
+  retires via `loc_6196A` (128480-128490) on the touch frame. The engine had
+  deferred retirement one frame. Display pass now runs in-frame after the
+  routine; the `ArtKosM_BadnikExplosion` re-queue is preserved.
+- `c64cd401a` — `TestPlayableSpriteMovement` encoded leader-only tilt
+  publishing. `Tails_Control` (sonic3k.asm:26243-26244) copies
+  `Primary_Angle`/`Secondary_Angle` into the sidekick's own `next_tilt`/`tilt`
+  unconditionally, as `Sonic_Control` does (25718-25719). The sidekick owns a
+  separate instance-bound publisher; assertion re-derived to check independence
+  rather than absence.
+
+Trace verification (one class per `mvn -Ptrace-replay` invocation, report JSON
+read for `error_count`/`total_frames`) — all identical to baseline:
+`aiz 8/64, hcz 8/1320, mgz 1/14629, cnz 1/5336, icz 1/1629, lbz 8/35,
+mhz 912/7218`. `TestS3kAizTraceReplay` holds at exactly 4 failures + 1 error.
+S1/S2 unchanged: `s1_ghz1 588/3905`, `s2_ehz1 16725/5852`,
+`s2_cpz1 15622/5744`.

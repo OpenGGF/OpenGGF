@@ -3,6 +3,17 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: S3K special-stage entry rings now retire on the same frame they are
+  touched in the all-emeralds / Hidden-Palace-route path. ROM `Obj_SSEntryRing`
+  runs the routine and falls through `bra.w SSEntryRing_Display`
+  (sonic3k.asm:128229-128230) in one frame, and `loc_61794` ends with
+  `jmp (AddRings)` whose `rts` returns onto that `bra`, so the `btst #5,$38`
+  at the head of `SSEntryRing_Display` (128449-128450) sees the retirement bit
+  set that same frame and deletes through `loc_6196A` (128480-128490). The
+  engine had deferred the retirement to the following `update()`, leaving the
+  ring collidable and drawn for one extra frame. The display pass now runs
+  in-frame after the routine; the `ArtKosM_BadnikExplosion` re-queue that
+  `loc_6196A` performs is preserved.
 - Fix: S3K IceCap Act 1 now locks controller 1 when the snowboard wall-crash
   quake starts, so the ~200 frames between the crash and the big snow pile's
   scripted jump-out ignore player input as the ROM does. `ICZ1SE_Init`

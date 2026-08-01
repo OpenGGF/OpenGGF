@@ -169,7 +169,27 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
         switch (state) {
             case MAIN -> updateMain(player);
             case ENTERED -> { /* Ring continues displaying; flash controls deletion */ }
-            case MARKED_DELETE -> retireRing();
+            case MARKED_DELETE -> { /* Retired by the display pass below, as in ROM */ }
+        }
+        // ROM Obj_SSEntryRing runs the routine then falls through to
+        // SSEntryRing_Display in the SAME frame (sonic3k.asm:128229-128230);
+        // loc_61794 ends `jmp (AddRings)`, whose rts lands on that bra. So a
+        // touch that sets bit 5 of $38 is seen by the display pass immediately.
+        runDisplayPass();
+    }
+
+    /**
+     * ROM {@code SSEntryRing_Display} (sonic3k.asm:128449-128451): the
+     * retirement bit is tested first and jumps straight to {@code loc_6196A};
+     * otherwise the off-screen bands at {@code loc_61928} decide.
+     */
+    private void runDisplayPass() {
+        if (isDestroyed()) {
+            return;
+        }
+        if (state == State.MARKED_DELETE) {
+            retireRing();
+            return;
         }
         checkDisplayOffscreenRetire();
     }
