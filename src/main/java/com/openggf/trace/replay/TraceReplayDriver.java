@@ -203,6 +203,8 @@ public final class TraceReplayDriver {
                 initialCursor,
                 spriteSupplier::get,
                 onComparatorPause);
+        comparator.compareBootstrap(
+                TraceReplayEngineSnapshot.capture(spriteSupplier.get()));
         playback.setFrameObserver(comparator);
     }
 

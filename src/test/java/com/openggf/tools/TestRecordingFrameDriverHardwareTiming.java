@@ -205,9 +205,9 @@ class TestRecordingFrameDriverHardwareTiming {
 
         assertEquals(List.of(
                 "VINT_SERVICE",
-                "PRE_MAIN_LOOP",
                 "TITLE_CARD_SCAN",
-                "POST_OBJECTS"), events);
+                "POST_OBJECTS",
+                "PRE_MAIN_LOOP"), events);
     }
 
     private static List<String> observe(GameplayModeContext context) {

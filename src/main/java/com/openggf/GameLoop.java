@@ -71,6 +71,7 @@ import com.openggf.game.recording.UserRecordingPlaybackState;
 import com.openggf.game.recording.UserRecordingVerificationResult;
 import com.openggf.game.recording.menu.UserRecordingMenu;
 import com.openggf.testmode.TraceCameraFocusController;
+import com.openggf.trace.replay.TraceSuppressedRowClosure;
 
 import java.io.IOException;
 import java.util.Comparator;
@@ -943,8 +944,7 @@ public class GameLoop {
         if (!playbackTakeoverConsumedPausePress
                 && userPauseInputAllowedForCurrentMode()
                 && (inputHandler.isKeyPressed(pauseKey)
-                || inputHandler.logical().player1().startPressed()
-                || playbackDebugManager.isCurrentForcedStartPress())) {
+                || inputHandler.logical().player1().startPressed())) {
             if (userPaused && userRecordingControls.handlePlaybackTakeoverRequest()) {
                 userPaused = false;
                 updateAudioPauseState();
@@ -965,6 +965,11 @@ public class GameLoop {
             return;
         }
 
+        if (currentGameMode == GameMode.LEVEL
+                || currentGameMode == GameMode.BONUS_STAGE) {
+            playbackDebugManager.shouldSkipCurrentGameplayTick();
+        }
+
         boolean deferAudioUntilGameplayTick =
                 currentGameMode == GameMode.LEVEL
                         || currentGameMode == GameMode.BONUS_STAGE
@@ -973,9 +978,11 @@ public class GameLoop {
             updateNonGameplayAudio(doFrameStep);
         }
 
-        profiler.beginSection("timers");
-        timerManager.update();
-        profiler.endSection("timers");
+        if (!playbackDebugManager.isCurrentGameplayTickSuppressed()) {
+            profiler.beginSection("timers");
+            timerManager.update();
+            profiler.endSection("timers");
+        }
 
         profiler.beginSection("input");
         boolean debugShortcutsEnabled = debugShortcutsEnabled();
@@ -1055,6 +1062,10 @@ public class GameLoop {
     }
 
     private boolean prepareAdmittedIteration(boolean doFrameStep) {
+        // Prepare/apply the observer-selected BK2 row before ROM pause
+        // admission consumes its Start edge. Repeated syncs for one cursor are
+        // idempotent, including title-card release fall-through.
+        syncPlaybackInputBridge();
         LevelFrameResult admission = levelIterationAdmission.admit(
                 currentGameMode, () -> updateTitleCardMode(doFrameStep),
                 () -> titleReleaseResult, levelManager, gameplayMode,
@@ -1066,6 +1077,10 @@ public class GameLoop {
                 LevelIterationAdmissionController
                         ::deactivateTraceHardwareTimingForAdmission);
         if (admission == LevelFrameResult.PAUSED) {
+            TraceSessionLauncher traceSession = TraceSessionLauncher.active();
+            if (traceSession != null) {
+                traceSession.activateProductionMarkerForPausedBoundary();
+            }
             LevelFrameStep.serviceVBlankOnly(LevelFrameContext.from(gameplayMode),
                     activePlcLifecycleFrame, PlcLifecyclePhase.NORMAL_PAUSE);
             inputHandler.update();
@@ -1074,7 +1089,6 @@ public class GameLoop {
         if (admission == LevelFrameResult.SETUP_ONLY) {
             return false;
         }
-        syncPlaybackInputBridge();
         if (levelIterationAdmission.completePendingBoundary(
                 doFrameStep, this::updateNonGameplayAudio,
                 () -> levelIterationAdmission.finishPlaybackBoundary(
@@ -1289,15 +1303,11 @@ public class GameLoop {
         // (TEXT_WAIT and TEXT_EXIT phases where player can move but text is still
         // visible)
         TitleCardProvider tcp = getTitleCardProviderLazy();
-        if (tcp != null && tcp.isOverlayActive()) {
-            tcp.update();
-            if (tcp.ownsInLevelPlayerControlLock()) {
-                applyTitleCardControlLock(tcp.shouldLockPlayerControlForInLevelOverlay());
-            }
-        }
-
-        // Trigger transparent in-level title card overlays (no mode switch).
-        startPendingInLevelTitleCard();
+        boolean suppressedTraceRow =
+                playbackDebugManager.isCurrentGameplayTickSuppressed();
+        TraceSuppressedRowClosure.executeUnownedTitleCardWork(
+                suppressedTraceRow, tcp, this::startPendingInLevelTitleCard,
+                this::applyTitleCardControlLock);
 
         // Check if a title card was requested (new level loaded)
         if (levelManager.consumeTitleCardRequest()) {
@@ -1364,7 +1374,12 @@ public class GameLoop {
             // us to skip the gameplay tick on ROM lag frames so the
             // engine and trace stay aligned. Cursor advance still runs
             // via onLevelFrameAdvanced below.
-            boolean skipGameplay = playbackDebugManager.shouldSkipCurrentGameplayTick();
+            // The step-top query owns timer/overlay gating. Repeating the
+            // query here is intentionally idempotent: it reuses the prepared
+            // result in production and keeps focused level-mode drivers from
+            // accidentally bypassing replay suppression.
+            boolean skipGameplay =
+                    playbackDebugManager.shouldSkipCurrentGameplayTick();
             boolean holdVblankForPendingLoad =
                     playbackDebugManager.shouldHoldVblankForPendingLevelLoad();
             if (!skipGameplay) {
@@ -1412,13 +1427,11 @@ public class GameLoop {
                 // this in HeadlessTestRunner.skipFrameFromRecording();
                 // live visual trace mode must do the same or object timing
                 // gates enter gameplay hundreds of VBlanks behind.
-                int vblankTicks = playbackDebugManager.currentSkippedTickVblankAdvanceCount();
-                for (int tick = 0; tick < vblankTicks; tick++) {
-                    LevelFrameStep.serviceVBlankOnly(LevelFrameContext.from(gameplayMode),
-                            activePlcLifecycleFrame, PlcLifecyclePhase.LAG);
-                    // V-blank-only row: see the exactly-one-tick-per-serviced-V-blank invariant on ObjectManager.vblaCounter.
-                    levelManager.getObjectManager().advanceVblaCounter();
-                }
+                TraceSuppressedRowClosure.executeRepresented(
+                        playbackDebugManager.currentSkippedTickVblankAdvanceCount(),
+                        LevelFrameContext.from(gameplayMode), activePlcLifecycleFrame,
+                        levelManager, this::startPendingInLevelTitleCard,
+                        this::applyTitleCardControlLock);
             }
             advanceGameplayAudioFrameForTick(doFrameStep);
             // Fire the BK2-advance callback either way — on both real
@@ -2897,7 +2910,7 @@ public class GameLoop {
         LOGGER.info("Entered Title Card for zone " + zoneIndex + " act " + actIndex);
     }
 
-    private void startPendingInLevelTitleCard() {
+    void startPendingInLevelTitleCard() {
         InLevelTitleCardCoordinator.startIfRequested(
                 levelManager, getTitleCardProviderLazy(),
                 GameServices.gameState().isEndOfLevelActive(), this::applyTitleCardControlLock);
@@ -2923,7 +2936,7 @@ public class GameLoop {
      * canonical {@code LevelFrameStep} sprite update path reads no input
      * while the title card is on screen.
      */
-    private void applyTitleCardControlLock(boolean locked) {
+    void applyTitleCardControlLock(boolean locked) {
         if (spriteManager == null) {
             return;
         }

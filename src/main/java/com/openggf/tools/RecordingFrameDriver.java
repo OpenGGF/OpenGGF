@@ -21,8 +21,9 @@ import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.level.LevelManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
+import com.openggf.trace.replay.TraceSuppressedRowClosure;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker.DynamicArtSegmentWindow;
+import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
 
 /**
  * Deterministic per-frame gameplay drive shared by headless trace tests and the
@@ -425,23 +426,12 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
         currentBk2Index++;
         LevelFrameContext context =
                 LevelFrameContext.from(SessionManager.getCurrentGameplayMode());
-        // S3K's in-level title-card wait runs Process_Sprites while the level
-        // gameplay counter is held at zero. Such rows are VBlank-only to the
-        // physics driver, but the title-card parent/children still dispatch.
-        // Keep this overlay-only work moving without ticking player physics.
-        if (!updateHeldCounterTitleCardOverlay(context, lifecycleFrame)) {
-            LevelFrameStep.serviceVBlankOnly(
-                    context, lifecycleFrame, PlcLifecyclePhase.LAG);
-        }
-        if (levelManager.hasPendingInLevelTitleCardHeldCounterDispatch()) {
-            startPendingInLevelTitleCardIfRequested();
-        }
-        var levelEvents = GameServices.module().getLevelEventProvider();
-        if (levelEvents != null) {
-            levelEvents.advanceVblankOnlyState();
-        }
-        // V-blank-only row: see the exactly-one-tick-per-serviced-V-blank invariant on ObjectManager.vblaCounter.
-        levelManager.getObjectManager().advanceVblaCounter();
+        TraceSuppressedRowClosure.execute(
+                context,
+                lifecycleFrame,
+                levelManager,
+                this::startPendingInLevelTitleCardIfRequested,
+                this::applyInLevelTitleCardControlLock);
         return mask;
     }
 
@@ -458,31 +448,6 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
         if (!sprites.getSidekicks().isEmpty()) {
             sprites.getSidekicks().getFirst().getAnimationManager().suppressNextUpdate();
         }
-    }
-
-    private boolean updateHeldCounterTitleCardOverlay(
-            LevelFrameContext context, PlcLifecycleFrame lifecycleFrame) {
-        TitleCardProvider titleCardProvider = GameServices.module().getTitleCardProvider();
-        if (titleCardProvider != null && titleCardProvider.advancesOnHeldLevelCounter()) {
-            LevelFrameStep.executeHardwareTimedObjectScan(
-                    context, lifecycleFrame, PlcLifecyclePhase.LEVEL_TITLE_CARD, () -> {
-                titleCardProvider.update();
-                if (titleCardProvider.ownsRetainedResultsHeldLevelCounter()) {
-                    var levelEvents = GameServices.module().getLevelEventProvider();
-                    if (levelEvents != null) {
-                        // The retained Obj_LevelResults -> Obj_TitleCard path still
-                        // runs fixed SST entries while Level_frame_counter is held.
-                        levelEvents.updateFixedInLevelObjects();
-                    }
-                }
-            });
-            if (titleCardProvider.ownsInLevelPlayerControlLock()) {
-                applyInLevelTitleCardControlLock(
-                        titleCardProvider.shouldLockPlayerControlForInLevelOverlay());
-            }
-            return true;
-        }
-        return false;
     }
 
     private static int inputMask(Bk2FrameInput frameInput) {

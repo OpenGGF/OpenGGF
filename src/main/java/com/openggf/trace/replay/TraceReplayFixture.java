@@ -34,6 +34,12 @@ public interface TraceReplayFixture {
     void closeHardwareTimingReplayRun();
 
     /**
+     * Detaches an incomplete replay without verifying unconsumed edges.
+     * The owning gameplay context must be destroyed immediately afterward.
+     */
+    void abortHardwareTimingReplayRun();
+
+    /**
      * Closes the current production dynamic-art comparison segment at a
      * structural replay boundary. This seam carries no expected trace value.
      */

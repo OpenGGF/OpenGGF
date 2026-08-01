@@ -1674,6 +1674,19 @@ abstract class AbstractRunChainTest {
         }
 
         @Override
+        public void abortHardwareTimingReplayRun() {
+            if (hardwareTimingReplayClosed) {
+                return;
+            }
+            hardwareTimingReplayClosed = true;
+            gameplayMode().setHardwareTimingBoundaryObserver(null);
+            gameplayMode().getRewindRegistry()
+                    .deregister(HardwareTimingReplayPort.REWIND_KEY);
+            gameplayMode().clearHardwareTimingReplayCloseHook();
+            hardwareTimingObserver = null;
+        }
+
+        @Override
         public void advancePlayableAnimationsOnly() {
             // Live action, honored identically to the canonical fixtures:
             // advance every playable sprite's animation manager one step at the

@@ -829,6 +829,8 @@ public final class TraceRunReplayWalker {
         private TraceRunManifest.Transition armed;
         private BoundaryObservation latchedObservation;
         private int pendingSpecialStageRequestFrame = -1;
+        private Bk2FrameInput preparedFrame;
+        private boolean framePrepared;
         private Consumer<Bk2FrameInput> beforeFrameObserver = frame -> {
         };
 
@@ -839,6 +841,8 @@ public final class TraceRunReplayWalker {
         /** Attaches (or, with {@code null}, detaches) the delegate observer. */
         public void setDelegate(PlaybackDebugManager.PlaybackFrameObserver delegate) {
             this.delegate = delegate;
+            preparedFrame = null;
+            framePrepared = false;
         }
 
         /**
@@ -893,8 +897,27 @@ public final class TraceRunReplayWalker {
         }
 
         @Override
-        public boolean shouldSkipGameplayTick(Bk2FrameInput frame) {
+        public void prepareFrame(Bk2FrameInput frame) {
+            if (framePrepared && Objects.equals(preparedFrame, frame)) {
+                return;
+            }
+            preparedFrame = frame;
+            framePrepared = true;
             beforeFrameObserver.accept(frame);
+            if (delegate != null) {
+                delegate.prepareFrame(frame);
+            }
+        }
+
+        @Override
+        public int appliedInputOffset(Bk2FrameInput frame) {
+            prepareFrame(frame);
+            return delegate != null ? delegate.appliedInputOffset(frame) : 0;
+        }
+
+        @Override
+        public boolean shouldSkipGameplayTick(Bk2FrameInput frame) {
+            prepareFrame(frame);
             return delegate != null && delegate.shouldSkipGameplayTick(frame);
         }
 
@@ -913,6 +936,8 @@ public final class TraceRunReplayWalker {
             if (delegate != null) {
                 delegate.afterFrameAdvanced(frame, wasSkipped);
             }
+            preparedFrame = null;
+            framePrepared = false;
             if (armed == null || latchedObservation != null) {
                 return;
             }

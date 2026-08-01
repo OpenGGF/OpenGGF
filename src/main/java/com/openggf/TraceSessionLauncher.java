@@ -42,6 +42,7 @@ import com.openggf.trace.replay.TraceReplayDriver;
 import com.openggf.trace.replay.TraceGhostHook;
 import com.openggf.trace.replay.TraceReplayFixture;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
+import com.openggf.trace.replay.TraceReplayRowPolicy;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker;
 import com.openggf.trace.timing.HardwareTimingReplayPort;
 import com.openggf.trace.timing.HardwareTimingSchedule;
@@ -143,7 +144,13 @@ public final class TraceSessionLauncher {
     private boolean teardownPending;
     private boolean productionIterationInProgress;
     private boolean runEndPending;
+    private boolean runGapEntryPending;
+    private boolean runSpecialVerificationPending;
+    private RunSegmentAdvancer.AdvanceAction runAdvancePending;
+    private boolean completionStartPending;
     private long dynamicArtDeliverySerialBeforeIteration;
+    private DynamicArtDiagnosticsSnapshot dynamicArtSnapshotBeforeIteration;
+    private LiveTraceComparator productionIterationComparator;
 
     private TraceSessionLauncher(TraceEntry entry, TraceData trace, Bk2Movie movie,
                                  TraceReplaySessionBootstrap.ConfigSnapshot configSnapshot) {
@@ -405,15 +412,17 @@ public final class TraceSessionLauncher {
     private void finishSpecialStageLaunch() {
         GameLoop loop = Engine.currentGameLoop();
         if (loop == null) {
-            LOGGER.severe("SS trace launch callback fired after engine teardown; "
-                    + "aborting for " + entry.dir());
+            abortLaunchFailure(
+                    null,
+                    "special-stage trace callback followed engine teardown",
+                    null,
+                    "Failed to abort SS trace after engine teardown");
             return;
         }
         finishSpecialStageLaunch(loop);
     }
 
     void finishSpecialStageLaunch(GameLoop loop) {
-        GameplayModeContext failedContext = SessionManager.getCurrentGameplayMode();
         try {
             this.fixture = new LiveFixture(GameServices.playbackDebug(), loop);
             installSpecialStageHardwareTiming(fixture);
@@ -423,38 +432,12 @@ public final class TraceSessionLauncher {
             SpecialStageProvider provider = GameServices.module().getSpecialStageProvider();
             Integer index = ssTrace.metadata().specialStageIndex();
             enterSpecialStageTrace(loop, provider, index != null ? index : 0);
-        } catch (Exception e) {
-            activeSession = null;
-            try {
-                if (fixture != null) {
-                    fixture.closeHardwareTimingReplayRun();
-                }
-            } catch (RuntimeException closeFailure) {
-                e.addSuppressed(closeFailure);
-            } finally {
-                try {
-                    TraceReplaySessionBootstrap.restoreGameplayConfig(
-                            configSnapshot);
-                } catch (RuntimeException restoreFailure) {
-                    e.addSuppressed(restoreFailure);
-                } finally {
-                    try {
-                        if (failedContext != null) {
-                            failedContext.destroy();
-                        }
-                    } catch (RuntimeException contextFailure) {
-                        e.addSuppressed(contextFailure);
-                    } finally {
-                        try {
-                            loop.returnToMasterTitle();
-                        } catch (RuntimeException returnFailure) {
-                            e.addSuppressed(returnFailure);
-                        }
-                    }
-                }
-            }
-            LOGGER.log(java.util.logging.Level.SEVERE,
-                    "Failed to finish SS trace launch for " + entry.dir(), e);
+        } catch (Throwable launchFailure) {
+            abortLaunchFailure(
+                    launchFailure,
+                    "special-stage visual trace launch failed",
+                    loop,
+                    "Failed to finish SS trace launch for " + entry.dir());
         }
     }
 
@@ -469,8 +452,11 @@ public final class TraceSessionLauncher {
     private void finishLaunchAfterGameBootstrap() {
         GameLoop loop = Engine.currentGameLoop();
         if (loop == null) {
-            LOGGER.severe("Trace launch callback fired after engine teardown; "
-                    + "aborting for " + entry.dir());
+            abortLaunchFailure(
+                    null,
+                    "visual trace callback followed engine teardown",
+                    null,
+                    "Failed to abort trace after engine teardown");
             return;
         }
         PlaybackDebugManager playback = GameServices.playbackDebug();
@@ -511,23 +497,12 @@ public final class TraceSessionLauncher {
             installTraceRewindController(loop, startIndex, initialCursor);
             activeSession = this;
             TraceGhostHook.set(ghostHook);
-        } catch (Exception e) {
-            // Partial bootstrap: detach playback, restore the user's
-            // gameplay config (we already mutated it in launch()), and
-            // route back to the picker so the engine doesn't end up
-            // orphaned in LEVEL mode with no session.
-            playback.endSession();
-            loop.setTraceCameraFocusController(null);
-            this.cameraFocusController = null;
-            activeSession = null;
-            GameServices.audio().setRewindHistoryArmed(false);
-            TraceGhostHook.clear(ghostHook);
-            TraceReplaySessionBootstrap.restoreGameplayConfig(configSnapshot);
-            LOGGER.log(java.util.logging.Level.SEVERE,
-                    "Failed to finish trace launch for " + entry.dir(), e);
-            // loop is guaranteed non-null here — we early-returned at the
-            // top of the method when it was null.
-            loop.returnToMasterTitle();
+        } catch (Throwable launchFailure) {
+            abortLaunchFailure(
+                    launchFailure,
+                    "visual trace launch failed",
+                    loop,
+                    "Failed to finish trace launch for " + entry.dir());
         }
     }
 
@@ -546,8 +521,11 @@ public final class TraceSessionLauncher {
     private void finishRunLaunch() {
         GameLoop loop = Engine.currentGameLoop();
         if (loop == null) {
-            LOGGER.severe("Trace run launch callback fired after engine teardown; "
-                    + "aborting for " + entry.dir());
+            abortLaunchFailure(
+                    null,
+                    "visual trace-run callback followed engine teardown",
+                    null,
+                    "Failed to abort trace run after engine teardown");
             return;
         }
         PlaybackDebugManager playback = GameServices.playbackDebug();
@@ -589,18 +567,26 @@ public final class TraceSessionLauncher {
             this.runAdvancer = new RunSegmentAdvancer(runSegments);
             activeSession = this;
             TraceGhostHook.set(ghostHook);
-        } catch (Exception e) {
-            closeRunDynamicArtSegments();
-            playback.endSession();
-            loop.setTraceCameraFocusController(null);
-            this.cameraFocusController = null;
-            activeSession = null;
-            GameServices.audio().setRewindHistoryArmed(false);
-            TraceGhostHook.clear(ghostHook);
-            TraceReplaySessionBootstrap.restoreGameplayConfig(configSnapshot);
-            LOGGER.log(java.util.logging.Level.SEVERE,
-                    "Failed to finish trace run launch for " + entry.dir(), e);
-            loop.returnToMasterTitle();
+        } catch (Throwable launchFailure) {
+            abortLaunchFailure(
+                    launchFailure,
+                    "visual trace run launch failed",
+                    loop,
+                    "Failed to finish trace run launch for " + entry.dir());
+        }
+    }
+
+    private void abortLaunchFailure(
+            Throwable primary,
+            String reason,
+            GameLoop fallbackLoop,
+            String logMessage) {
+        Throwable failure = abortIncompleteSession(primary, reason, fallbackLoop);
+        if (failure instanceof Error fatal) {
+            throw fatal;
+        }
+        if (failure != null) {
+            LOGGER.log(java.util.logging.Level.SEVERE, logMessage, failure);
         }
     }
 
@@ -684,14 +670,10 @@ public final class TraceSessionLauncher {
             return;
         }
         if (comparator.isComplete() && !completionArmed) {
-            if (fixture != null) {
-                fixture.runTerminalDynamicArtIteration();
-                fixture.closeDynamicArtComparisonSegment();
-                comparator.finalizeTerminalDynamicArtComparison();
-                fixture.closeHardwareTimingReplayRun();
+            completionStartPending = true;
+            if (!productionIterationInProgress) {
+                finishPendingCompletionStart();
             }
-            completionArmed = true;
-            completionHoldFrames = (int) Math.round(COMPLETION_HOLD_SECONDS * 60.0);
         }
         if (completionArmed) {
             if (completionHoldFrames > 0) {
@@ -720,8 +702,11 @@ public final class TraceSessionLauncher {
         if (runSpecialDynamicArtComparison != null
                 && runSpecialTimingSegment == currentSegment
                 && mode != GameMode.SPECIAL_STAGE) {
-            requireNoPendingRunSpecialDynamicArtRow();
-            runSpecialDynamicArtComparison.verifyComplete();
+            if (productionIterationInProgress) {
+                runSpecialVerificationPending = true;
+            } else {
+                verifyRunSpecialDynamicArtComplete();
+            }
         }
         if (runDynamicArtSegments != null
                 && mode != TraceRunReplayWalker.expectedMode(
@@ -729,24 +714,18 @@ public final class TraceSessionLauncher {
                                 .segment())
                 && !(runSpecialDynamicArtSegmentAnticipated
                         && mode == GameMode.SPECIAL_STAGE)) {
-            runDynamicArtSegments.enterGap();
-            if (comparator != null) {
-                comparator.finalizeTerminalDynamicArtComparison();
+            if (productionIterationInProgress) {
+                runGapEntryPending = true;
+            } else {
+                enterRunDynamicArtGap();
             }
         }
         RunSegmentAdvancer.Event event = runAdvancer.onFrame(mode, cursorFrame);
         if (event instanceof RunSegmentAdvancer.AdvanceAction action) {
-            applyRunSegmentAdvance(action);
-            armRunSpecialDynamicArtComparison(action.nextSegmentIndex());
-            if (runDynamicArtSegments != null) {
-                if (runSpecialDynamicArtSegmentAnticipated
-                        && runSpecialTimingSegment
-                                == action.nextSegmentIndex()) {
-                    runSpecialDynamicArtSegmentAnticipated = false;
-                } else {
-                    runDynamicArtSegments.beginSegment();
-                    bindRunSpecialDynamicArtTargetGeneration();
-                }
+            if (productionIterationInProgress) {
+                runAdvancePending = action;
+            } else {
+                applyRunAdvanceAfterProduction(action);
             }
         } else if (event instanceof RunSegmentAdvancer.EndOfRun) {
             runEndPending = true;
@@ -802,8 +781,11 @@ public final class TraceSessionLauncher {
      */
     void beforeProductionIteration() {
         productionIterationInProgress = true;
+        productionIterationComparator = comparator;
+        dynamicArtSnapshotBeforeIteration =
+                GameServices.captureDynamicArtDiagnostics();
         dynamicArtDeliverySerialBeforeIteration =
-                GameServices.captureDynamicArtDiagnostics().deliverySerial();
+                dynamicArtSnapshotBeforeIteration.deliverySerial();
     }
 
     static void runProductionIterationIfActive(Runnable productionIteration) {
@@ -819,18 +801,26 @@ public final class TraceSessionLauncher {
             productionIteration.run();
         } catch (RuntimeException | Error failure) {
             primaryFailure = failure;
-            throw failure;
-        } finally {
-            try {
-                session.afterProductionIteration();
-            } catch (RuntimeException | Error hookFailure) {
-                if (primaryFailure != null) {
-                    primaryFailure.addSuppressed(hookFailure);
-                } else {
-                    throw hookFailure;
-                }
+        }
+        try {
+            session.afterProductionIteration();
+        } catch (RuntimeException | Error hookFailure) {
+            if (primaryFailure != null) {
+                primaryFailure.addSuppressed(hookFailure);
+            } else {
+                primaryFailure = hookFailure;
             }
         }
+        if (primaryFailure == null) {
+            return;
+        }
+        Throwable contained = session.abortIncompleteSession(
+                primaryFailure, "visual trace production iteration failed", null);
+        if (contained instanceof Error fatal) {
+            throw fatal;
+        }
+        LOGGER.log(java.util.logging.Level.SEVERE,
+                "Visual trace session aborted after a replay failure", contained);
     }
 
     /**
@@ -844,6 +834,16 @@ public final class TraceSessionLauncher {
                     "dynamic-art post-iteration hook has no active iteration");
         }
         productionIterationInProgress = false;
+        LiveTraceComparator iterationComparator = productionIterationComparator;
+        DynamicArtDiagnosticsSnapshot before = dynamicArtSnapshotBeforeIteration;
+        productionIterationComparator = null;
+        dynamicArtSnapshotBeforeIteration = null;
+        if (iterationComparator != null && before != null) {
+            iterationComparator.consumePostProductionPlayableAnimationAction();
+            iterationComparator.publishPendingDynamicArtComparison(
+                    before, GameServices.captureDynamicArtDiagnostics());
+        }
+        drainPendingRunBoundaryActions();
         if (runSpecialDynamicArtPendingRow >= 0) {
             DynamicArtDiagnosticsSnapshot snapshot =
                     GameServices.captureDynamicArtDiagnostics();
@@ -870,7 +870,67 @@ public final class TraceSessionLauncher {
         if (runEndPending) {
             finishPendingRunEnd();
         }
+        if (completionStartPending) {
+            finishPendingCompletionStart();
+        }
         retryPendingTeardown();
+    }
+
+    private void drainPendingRunBoundaryActions() {
+        if (runSpecialVerificationPending) {
+            runSpecialVerificationPending = false;
+            verifyRunSpecialDynamicArtComplete();
+        }
+        if (runGapEntryPending) {
+            runGapEntryPending = false;
+            enterRunDynamicArtGap();
+        }
+        RunSegmentAdvancer.AdvanceAction advance = runAdvancePending;
+        runAdvancePending = null;
+        if (advance != null) {
+            applyRunAdvanceAfterProduction(advance);
+        }
+    }
+
+    private void verifyRunSpecialDynamicArtComplete() {
+        requireNoPendingRunSpecialDynamicArtRow();
+        runSpecialDynamicArtComparison.verifyComplete();
+    }
+
+    private void enterRunDynamicArtGap() {
+        runDynamicArtSegments.enterGap();
+        if (comparator != null) {
+            comparator.finalizeTerminalDynamicArtComparison();
+        }
+    }
+
+    private void applyRunAdvanceAfterProduction(
+            RunSegmentAdvancer.AdvanceAction action) {
+        applyRunSegmentAdvance(action);
+        armRunSpecialDynamicArtComparison(action.nextSegmentIndex());
+        if (runDynamicArtSegments == null) {
+            return;
+        }
+        if (runSpecialDynamicArtSegmentAnticipated
+                && runSpecialTimingSegment == action.nextSegmentIndex()) {
+            runSpecialDynamicArtSegmentAnticipated = false;
+            return;
+        }
+        runDynamicArtSegments.beginSegment();
+        bindRunSpecialDynamicArtTargetGeneration();
+    }
+
+    private void finishPendingCompletionStart() {
+        completionStartPending = false;
+        if (fixture != null) {
+            fixture.runTerminalDynamicArtIteration();
+            fixture.closeDynamicArtComparisonSegment();
+            comparator.finalizeTerminalDynamicArtComparison();
+            fixture.closeHardwareTimingReplayRun();
+        }
+        completionArmed = true;
+        completionHoldFrames =
+                (int) Math.round(COMPLETION_HOLD_SECONDS * 60.0);
     }
 
     private void finishPendingRunEnd() {
@@ -906,6 +966,10 @@ public final class TraceSessionLauncher {
         if (fadeStarted) {
             fixture.enterHardwareTimingGap();
             return;
+        }
+        if (comparator != null
+                && (mode == GameMode.LEVEL || mode == GameMode.BONUS_STAGE)) {
+            comparator.activatePreparedRow();
         }
         if (runAdvancer != null && runHardwareTiming != null) {
             if (mode == GameMode.LEVEL
@@ -947,6 +1011,13 @@ public final class TraceSessionLauncher {
     public void deactivateHardwareTimingForAdmission() {
         if (fixture != null) {
             fixture.enterHardwareTimingGap();
+        }
+    }
+
+    /** Commits replay production classification for an admitted pause VBlank. */
+    void activateProductionMarkerForPausedBoundary() {
+        if (comparator != null) {
+            comparator.activatePreparedProductionMarker();
         }
     }
 
@@ -1224,7 +1295,71 @@ public final class TraceSessionLauncher {
         if (comparator == null || fadeStarted) {
             return;
         }
-        startFadeOut();
+        Throwable failure = abortIncompleteSession(
+                null, "visual trace session exited by user", null);
+        if (failure != null) {
+            LOGGER.log(java.util.logging.Level.SEVERE,
+                    "Visual trace session cleanup failed during early exit", failure);
+        }
+    }
+
+    private Throwable abortIncompleteSession(
+            Throwable primary, String reason, GameLoop fallbackLoop) {
+        Throwable failure = primary;
+        activeSession = null;
+        teardownPending = false;
+        completionStartPending = false;
+        runEndPending = false;
+        runAdvancePending = null;
+        runGapEntryPending = false;
+        runSpecialVerificationPending = false;
+        SessionManager.clearNextGameplayAdmissionPolicy();
+        if (fixture != null) {
+            failure = cleanupFailure(failure,
+                    fixture::abortHardwareTimingReplayRun);
+        }
+        runDynamicArtSegments = null;
+        failure = cleanupFailure(failure, () -> TraceGhostHook.clear(ghostHook));
+        failure = cleanupFailure(failure,
+                () -> GameServices.audio().setRewindHistoryArmed(false));
+        failure = cleanupFailure(failure,
+                () -> GameServices.playbackDebug().endSession());
+        failure = cleanupFailure(failure,
+                () -> TraceReplaySessionBootstrap.restoreGameplayConfig(configSnapshot));
+        GameLoop currentLoop = Engine.currentGameLoop();
+        GameLoop cleanupLoop = currentLoop != null ? currentLoop : fallbackLoop;
+        if (cleanupLoop != null) {
+            failure = cleanupFailure(failure,
+                    () -> cleanupLoop.setTraceCameraFocusController(null));
+        }
+        GameplayModeContext failedContext =
+                SessionManager.getCurrentGameplayMode();
+        if (failedContext != null) {
+            failure = cleanupFailure(failure, failedContext::destroy);
+        }
+        if (cleanupLoop != null) {
+            failure = cleanupFailure(failure, cleanupLoop::returnToMasterTitle);
+        }
+        comparator = null;
+        overlay = null;
+        cameraFocusController = null;
+        fixture = null;
+        LOGGER.info(reason);
+        return failure;
+    }
+
+    private static Throwable cleanupFailure(
+            Throwable primary, Runnable cleanup) {
+        try {
+            cleanup.run();
+            return primary;
+        } catch (RuntimeException | Error cleanupFailure) {
+            if (primary != null) {
+                primary.addSuppressed(cleanupFailure);
+                return primary;
+            }
+            return cleanupFailure;
+        }
     }
 
     public void render(PixelFontTextRenderer textRenderer) {
@@ -1435,6 +1570,8 @@ public final class TraceSessionLauncher {
         private final int movieBaseFrame;
         private final int traceBaseFrame;
         private boolean pendingForcedJumpPress;
+        private boolean pendingPlayableAnimationAfterClosure;
+        private boolean pendingVblankStarvedProductionMarker;
 
         private VisualTraceRewindStepper(
                 GameLoop loop,
@@ -1454,44 +1591,55 @@ public final class TraceSessionLauncher {
         @Override
         public LevelFrameResult step(Bk2FrameInput inputs) {
             var gameplayMode = SessionManager.getCurrentGameplayMode();
-            return gameplayMode.plcFrameLifecycle().runLogicalIteration(
+            LevelFrameResult result = gameplayMode.plcFrameLifecycle().runLogicalIteration(
                     gameplayMode.getFadeManager()::update,
                     frame -> step(inputs, frame));
+            if (pendingPlayableAnimationAfterClosure) {
+                pendingPlayableAnimationAfterClosure = false;
+                var sprites = GameServices.spritesOrNull();
+                if (sprites != null) {
+                    sprites.advancePlayableSlotPrefix();
+                }
+            }
+            return result;
         }
 
         private LevelFrameResult step(
                 Bk2FrameInput inputs,
                 com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame
                         lifecycleFrame) {
-            int relative = Math.max(0, inputs.frameIndex() - movieBaseFrame + 1);
-            int traceIndex = traceBaseFrame + relative - 1;
+            int traceIndex = traceIndexForInput(inputs);
+            TraceReplayRowPolicy rowPolicy = rowPolicy(traceIndex, inputs.frameIndex());
+            Bk2FrameInput appliedInput = rowPolicy != null
+                    ? movie.getFrame(rowPolicy.appliedBk2Index()) : inputs;
             if (traceIndex >= 0 && traceIndex < trace.frameCount()) {
                 fixture.beginTraceRow(
                         traceIndex, trace.getFrame(traceIndex).frame());
             } else {
                 fixture.enterHardwareTimingGap();
             }
-            TraceExecutionPhase phase = executionPhase(traceIndex);
+            TraceExecutionPhase phase = rowPolicy != null
+                    ? rowPolicy.phase() : TraceExecutionPhase.FULL_LEVEL_FRAME;
             if (phase == TraceExecutionPhase.ADVANCE_ONLY) {
-                publishPlaybackInput(inputs);
+                activateProductionMarker(rowPolicy);
+                publishPlaybackInput(appliedInput);
                 return LevelFrameResult.GAMEPLAY_FRAME;
             }
             if (phase == TraceExecutionPhase.VBLANK_ONLY
                     || phase == TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY) {
                 var level = GameServices.levelOrNull();
-                LevelFrameStep.serviceVBlankOnly(
-                        LevelFrameContext.from(SessionManager.getCurrentGameplayMode()),
-                        lifecycleFrame,
-                        com.openggf.game.resources.PlcLifecyclePhase.LAG);
                 if (level != null && level.getObjectManager() != null) {
-                    // V-blank-only row: see the exactly-one-tick-per-serviced-V-blank invariant on ObjectManager.vblaCounter.
-                    level.getObjectManager().advanceVblaCounter();
+                    activateProductionMarker(rowPolicy);
+                    com.openggf.trace.replay.TraceSuppressedRowClosure.execute(
+                            LevelFrameContext.from(
+                                    SessionManager.getCurrentGameplayMode()),
+                            lifecycleFrame,
+                            level,
+                            loop::startPendingInLevelTitleCard,
+                            loop::applyTitleCardControlLock);
                 }
                 if (phase == TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY) {
-                    var sprites = GameServices.spritesOrNull();
-                    if (sprites != null) {
-                        sprites.advancePlayableSlotPrefix();
-                    }
+                    pendingPlayableAnimationAfterClosure = true;
                 }
                 return LevelFrameResult.GAMEPLAY_FRAME;
             }
@@ -1514,8 +1662,9 @@ public final class TraceSessionLauncher {
             FrameAdmission admission = LevelFrameStep.admit(
                     LevelFrameContext.from(SessionManager.getCurrentGameplayMode()),
                     level,
-                    inputs.p1StartPressed());
+                    isAppliedStartPressEdge(rowPolicy, appliedInput));
             if (admission.result() == LevelFrameResult.PAUSED) {
+                activateProductionMarker(rowPolicy);
                 LevelFrameStep.serviceVBlankOnly(
                         LevelFrameContext.from(SessionManager.getCurrentGameplayMode()),
                         lifecycleFrame,
@@ -1525,7 +1674,8 @@ public final class TraceSessionLauncher {
             if (admission.result() == LevelFrameResult.SETUP_ONLY) {
                 return admission.result();
             }
-            publishPlaybackInput(inputs);
+            activateProductionMarker(rowPolicy);
+            publishPlaybackInput(appliedInput);
             sprites.setPlaybackInputSuppressed(true);
             sprites.publishHeldInputForLevelEvents(loop.getInputHandler());
             LevelFrameResult result = LevelFrameStep.execute(
@@ -1549,6 +1699,9 @@ public final class TraceSessionLauncher {
             } else {
                 pendingForcedJumpPress = false;
             }
+            int traceIndex = traceIndexForInput(inputAtFrame);
+            pendingVblankStarvedProductionMarker =
+                    restorePendingProductionMarker(traceIndex);
         }
 
         private void publishPlaybackInput(Bk2FrameInput inputs) {
@@ -1572,16 +1725,69 @@ public final class TraceSessionLauncher {
             }
         }
 
-        private TraceExecutionPhase executionPhase(int traceIndex) {
+        private boolean isAppliedStartPressEdge(
+                TraceReplayRowPolicy rowPolicy,
+                Bk2FrameInput appliedInput) {
+            int predecessorIndex = rowPolicy != null
+                    ? rowPolicy.appliedPredecessorBk2Index()
+                    : appliedInput.frameIndex() - 1;
+            boolean predecessorHeld = predecessorIndex >= 0
+                    && movie.getFrame(predecessorIndex).p1StartPressed();
+            return appliedInput.p1StartPressed() && !predecessorHeld;
+        }
+
+        private TraceReplayRowPolicy rowPolicy(
+                int traceIndex, int validationBk2Index) {
             if (traceIndex < 0 || traceIndex >= trace.frameCount()) {
-                return TraceExecutionPhase.FULL_LEVEL_FRAME;
+                return null;
             }
+            return TraceReplayRowPolicy.resolve(
+                    trace, traceIndex, validationBk2Index);
+        }
+
+        private void activateProductionMarker(TraceReplayRowPolicy rowPolicy) {
+            if (rowPolicy == null) {
+                return;
+            }
+            boolean vblankStarved = isVblankStarved(rowPolicy.traceIndex());
+            if (!rowPolicy.productionPublicationClaim()) {
+                pendingVblankStarvedProductionMarker |= vblankStarved;
+                return;
+            }
+            if (pendingVblankStarvedProductionMarker || vblankStarved) {
+                TraceReplayBootstrap.markReplayProductionIterationWithoutVblank();
+            }
+            pendingVblankStarvedProductionMarker = false;
+        }
+
+        private boolean isVblankStarved(int traceIndex) {
             TraceFrame current = trace.getFrame(traceIndex);
             TraceFrame previous = traceIndex > 0 ? trace.getFrame(traceIndex - 1) : null;
-            TraceExecutionPhase phase =
-                    TraceReplayBootstrap.phaseForReplay(trace, previous, current);
-            TraceReplayBootstrap.markVblankStarvedIterationForReplay(previous, current);
-            return phase;
+            return TraceReplayBootstrap.isVblankStarvedIterationForReplay(
+                    previous, current);
+        }
+
+        private boolean restorePendingProductionMarker(int restoredTraceIndex) {
+            boolean pending = false;
+            for (int index = restoredTraceIndex;
+                    index >= 0 && index < trace.frameCount(); index--) {
+                TraceReplayRowPolicy policy = TraceReplayRowPolicy.resolve(
+                        trace, index, 0);
+                if (policy.productionPublicationClaim()) {
+                    break;
+                }
+                pending |= isVblankStarved(index);
+            }
+            return pending;
+        }
+
+        private int traceIndexForInput(Bk2FrameInput input) {
+            if (input == null) {
+                return -1;
+            }
+            int relative = Math.max(
+                    0, input.frameIndex() - movieBaseFrame + 1);
+            return traceBaseFrame + relative - 1;
         }
     }
 
@@ -1686,6 +1892,24 @@ public final class TraceSessionLauncher {
         }
 
         @Override
+        public void abortHardwareTimingReplayRun() {
+            if (hardwareTimingReplayClosed) {
+                return;
+            }
+            hardwareTimingReplayClosed = true;
+            if (hardwareTimingGameplayMode != null) {
+                hardwareTimingGameplayMode.setHardwareTimingBoundaryObserver(null);
+                if (hardwareTimingGameplayMode.getRewindRegistry() != null) {
+                    hardwareTimingGameplayMode.getRewindRegistry()
+                            .deregister(HardwareTimingReplayPort.REWIND_KEY);
+                }
+                hardwareTimingGameplayMode.clearHardwareTimingReplayCloseHook();
+            }
+            hardwareTimingObserver = null;
+            hardwareTimingGameplayMode = null;
+        }
+
+        @Override
         public int stepFrameFromRecording() {
             Bk2FrameInput frame = playback.currentFrameOrThrow();
             int mask = toReplayValidationMask(frame);
@@ -1732,6 +1956,11 @@ public final class TraceSessionLauncher {
             for (int i = 0; i < frameCount; i++) {
                 playback.advanceCurrentFrameWithoutGameplay();
             }
+        }
+
+        @Override
+        public int peekRecordingInputAt(int offset) {
+            return playback.peekInputMaskAt(offset);
         }
 
         private static int toReplayValidationMask(Bk2FrameInput frame) {

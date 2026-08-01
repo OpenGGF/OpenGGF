@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -17,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import com.openggf.level.objects.RomObjectSnapshot;
+import com.openggf.trace.live.LiveTraceComparator;
 
 /**
  * Frame-0 bootstrap comparator. Verifies engine state at frame 0 already
@@ -69,6 +71,42 @@ class TestBootstrapComparator {
 
         assertTrue(divergences.isEmpty(),
                 () -> "Expected no bootstrap divergences but found: " + divergences);
+    }
+
+    @Test
+    void liveComparatorPublishesBootstrapMismatchWithoutAdvancingCursor() {
+        TraceData trace = traceWithSnapshots(
+                0x34,
+                shorts(64, 0x0500),
+                shorts(64, 0x0300),
+                shorts(64, 0x0000),
+                bytes(64, (byte) 0x00),
+                null,
+                List.of());
+        EngineSnapshot snapshot = new EngineSnapshot(
+                shorts(64, 0x0500),
+                shorts(64, 0x0300),
+                shorts(64, 0x0000),
+                bytes(64, (byte) 0x00),
+                13,
+                null,
+                Map.of());
+        AtomicInteger firstError = new AtomicInteger();
+        LiveTraceComparator comparator = new LiveTraceComparator(
+                trace, ToleranceConfig.DEFAULT, 0, () -> null,
+                firstError::incrementAndGet);
+
+        List<BootstrapDivergence> divergences =
+                comparator.compareBootstrap(snapshot);
+
+        assertEquals(1, divergences.size());
+        assertEquals(1, comparator.errorCount());
+        assertEquals(0, comparator.warningCount());
+        assertEquals(1, firstError.get());
+        assertEquals(0, comparator.cursor());
+        assertEquals("player_history.pos",
+                comparator.recentMismatches().getFirst().field());
+        assertEquals(divergences, comparator.bootstrapDivergences());
     }
 
     /**

@@ -218,6 +218,18 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **Visual trace playback now follows the headless replay contract
+  (2026-08-01):** traces launched from the master title prepare their applied
+  BK2 row before ROM pause admission, including S3K's current-row validation /
+  previous-row gameplay split. Forward play and visual rewind share the same
+  one-row/one-VBlank suppressed closure, including the held title-card
+  `VINT_SERVICE -> POST_OBJECTS -> PRE_MAIN_LOOP` scan. PLC and Kosinski queue
+  state stays comparison-only at its native post-service point, while player
+  DPLC state is sampled only after the outer lifecycle publishes the row.
+  Bootstrap/input alignment errors now appear in the live comparator, and an
+  incomplete launch, Esc, or production failure removes recorded timing
+  authority and returns cleanly to the master title without strict-closing an
+  unfinished hardware schedule.
 - **All four S1 act-3 capsule stragglers greened (2026-08-01):** SYZ3, SLZ3, MZ3
   and LZ3 closed on three ROM-cited fixes, none of which lived where the failing
   comparator field pointed. The busy flag was mirroring *when the egg-prison

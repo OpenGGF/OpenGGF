@@ -378,6 +378,12 @@ class TestTraceRunHardwareTimingCoordinator {
         }
 
         @Override
+        public void abortHardwareTimingReplayRun() {
+            closed = true;
+            observer = null;
+        }
+
+        @Override
         public AbstractPlayableSprite sprite() {
             return null;
         }
@@ -465,6 +471,13 @@ class TestTraceRunHardwareTimingCoordinator {
 
         @Override
         public void closeHardwareTimingReplayRun() {
+        }
+
+        @Override
+        public void abortHardwareTimingReplayRun() {
+            context.setHardwareTimingBoundaryObserver(null);
+            context.getRewindRegistry().deregister(
+                    HardwareTimingReplayPort.REWIND_KEY);
         }
 
         @Override

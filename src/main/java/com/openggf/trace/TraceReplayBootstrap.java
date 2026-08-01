@@ -573,13 +573,24 @@ public final class TraceReplayBootstrap {
      */
     public static void markVblankStarvedIterationForReplay(
             TraceFrame previous, TraceFrame current) {
-        if (!TraceExecutionModel.isVblankStarvedRow(previous, current)) {
+        if (!isVblankStarvedIterationForReplay(previous, current)) {
             return;
         }
+        markReplayProductionIterationWithoutVblank();
+    }
+
+    /** Marks the next represented production closure as having no VBlank. */
+    public static void markReplayProductionIterationWithoutVblank() {
         var gameplayMode = com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         if (gameplayMode != null && gameplayMode.plcFrameLifecycle() != null) {
             gameplayMode.plcFrameLifecycle().markRepresentedIterationWithoutVblank();
         }
+    }
+
+    /** Returns the structural no-VBlank classification used by replay closure. */
+    public static boolean isVblankStarvedIterationForReplay(
+            TraceFrame previous, TraceFrame current) {
+        return TraceExecutionModel.isVblankStarvedRow(previous, current);
     }
 
     public static TraceExecutionPhase phaseForReplay(TraceData trace,

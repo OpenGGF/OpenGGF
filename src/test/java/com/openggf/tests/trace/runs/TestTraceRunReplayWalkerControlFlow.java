@@ -458,6 +458,28 @@ class TestTraceRunReplayWalkerControlFlow {
     }
 
     @Test
+    void probeForwardsPurePreparationAndAppliedOffsetOnlyWhileAttached() {
+        var hooks = new StubHooks();
+        var probe = new TraceRunReplayWalker.BoundaryProbe(hooks);
+        var delegate = new PreparedOffsetDelegate();
+        Bk2FrameInput frame = new Bk2FrameInput(
+                23, 0, 0, false, "row");
+        probe.setDelegate(delegate);
+
+        probe.prepareFrame(frame);
+        assertEquals(-1, probe.appliedInputOffset(frame));
+        assertEquals(1, delegate.prepareCalls);
+        assertEquals(1, delegate.offsetCalls);
+
+        probe.setDelegate(null);
+        probe.prepareFrame(frame);
+        assertEquals(0, probe.appliedInputOffset(frame),
+                "a structural run gap must retain ordinary current-row input");
+        assertEquals(1, delegate.prepareCalls);
+        assertEquals(1, delegate.offsetCalls);
+    }
+
+    @Test
     void remainingSegmentFramesSubtractsAlreadyConsumedFallthroughRows() {
         assertEquals(799, TraceRunReplayWalker.remainingSegmentFrames(800, 1));
         assertEquals(800, TraceRunReplayWalker.remainingSegmentFrames(800, 0));
@@ -658,6 +680,32 @@ class TestTraceRunReplayWalkerControlFlow {
         @Override
         public void afterFrameAdvanced(Bk2FrameInput frame, boolean wasSkipped) {
             // Unused by this test.
+        }
+    }
+
+    private static final class PreparedOffsetDelegate
+            implements PlaybackDebugManager.PlaybackFrameObserver {
+        private int prepareCalls;
+        private int offsetCalls;
+
+        @Override
+        public void prepareFrame(Bk2FrameInput frame) {
+            prepareCalls++;
+        }
+
+        @Override
+        public int appliedInputOffset(Bk2FrameInput frame) {
+            offsetCalls++;
+            return -1;
+        }
+
+        @Override
+        public boolean shouldSkipGameplayTick(Bk2FrameInput frame) {
+            return false;
+        }
+
+        @Override
+        public void afterFrameAdvanced(Bk2FrameInput frame, boolean wasSkipped) {
         }
     }
 

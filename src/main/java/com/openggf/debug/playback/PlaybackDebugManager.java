@@ -41,6 +41,13 @@ public final class PlaybackDebugManager {
     private int periodicLogCounter;
     private PlaybackFrameObserver frameObserver;
     private boolean currentTickSuppressed;
+    private int preparedCursor = -1;
+    private Bk2FrameInput preparedValidationFrame;
+    private Bk2FrameInput preparedAppliedFrame;
+    private Bk2FrameInput preparedAppliedPredecessor;
+    private boolean preparedInputApplied;
+    private boolean preparedSkipEvaluated;
+    private int preparedVblankAdvanceCount;
     private Bk2Movie pendingLevelLoadMovie;
     private int pendingLevelLoadOffset = -1;
 
@@ -51,6 +58,18 @@ public final class PlaybackDebugManager {
      * playback).
      */
     public interface PlaybackFrameObserver {
+        /**
+         * Purely prepares structural policy for {@code frame}. Implementations
+         * must not mutate gameplay, PLC, or hardware timing state.
+         */
+        default void prepareFrame(Bk2FrameInput frame) {
+        }
+
+        /** Relative movie row to apply while {@code frame} remains validation authority. */
+        default int appliedInputOffset(Bk2FrameInput frame) {
+            return 0;
+        }
+
         boolean shouldSkipGameplayTick(Bk2FrameInput frame);
 
         /** Whether a suppressed gameplay row still executed the ROM VBlank clock tick. */
@@ -79,6 +98,7 @@ public final class PlaybackDebugManager {
 
     public synchronized void setFrameObserver(PlaybackFrameObserver observer) {
         this.frameObserver = observer;
+        clearPreparedFrame();
     }
 
     /** Publishes a non-consuming special-stage request edge to trace tooling. */
@@ -183,20 +203,78 @@ public final class PlaybackDebugManager {
             currentForcedStartPress = false;
             return 0;
         }
-        Bk2FrameInput frame = movie.getFrame(timeline.getCursorFrame());
-        lastAppliedMask = frame.p1InputMask();
-        lastAppliedStart = frame.p1StartPressed();
+        prepareCurrentFrame();
+        if (preparedInputApplied) {
+            return lastAppliedMask;
+        }
+        lastAppliedMask = preparedAppliedFrame.p1InputMask();
+        lastAppliedStart = preparedAppliedFrame.p1StartPressed();
+        preparedInputApplied = true;
 
-        int actionMask = frame.p1ActionMask();
-        int pressed = (actionMask ^ previousActionMask) & actionMask;
+        return lastAppliedMask;
+    }
+
+    /**
+     * Purely prepares the current validation row and its selected applied row.
+     * Repeated calls for one cursor are idempotent and never advance playback.
+     */
+    public synchronized void prepareCurrentFrame() {
+        if (!enabled || movie == null || timeline == null || !timeline.isPlaying()) {
+            return;
+        }
+        int cursor = timeline.getCursorFrame();
+        if (preparedValidationFrame != null && preparedCursor == cursor) {
+            return;
+        }
+        clearPreparedFrame();
+        Bk2FrameInput validation = movie.getFrame(cursor);
+        if (frameObserver != null) {
+            frameObserver.prepareFrame(validation);
+        }
+        int appliedOffset = frameObserver != null
+                ? frameObserver.appliedInputOffset(validation)
+                : 0;
+        int appliedIndex = cursor + appliedOffset;
+        if (appliedIndex < 0 || appliedIndex >= movie.getFrameCount()) {
+            throw new IllegalStateException(
+                    "applied BK2 row " + appliedIndex + " outside movie 0.."
+                            + (movie.getFrameCount() - 1)
+                            + " for validation row " + cursor);
+        }
+        Bk2FrameInput applied = movie.getFrame(appliedIndex);
+        Bk2FrameInput predecessor = appliedIndex > 0
+                ? movie.getFrame(appliedIndex - 1)
+                : null;
+        preparedCursor = cursor;
+        preparedValidationFrame = validation;
+        preparedAppliedFrame = applied;
+        preparedAppliedPredecessor = predecessor;
+
+        int previousAction = predecessor != null ? predecessor.p1ActionMask() : 0;
+        int pressed = applied.p1ActionMask() & ~previousAction;
         if (pressed != 0) {
             currentForcedJumpPress = true;
         }
-        previousActionMask = actionMask;
-        currentForcedStartPress = frame.p1StartPressed() && !previousStartPressed;
-        previousStartPressed = frame.p1StartPressed();
+        boolean previousStart = predecessor != null && predecessor.p1StartPressed();
+        currentForcedStartPress = applied.p1StartPressed() && !previousStart;
+        previousActionMask = applied.p1ActionMask();
+        previousStartPressed = applied.p1StartPressed();
+    }
 
-        return lastAppliedMask;
+    /**
+     * Reads the replay-validation input mask relative to the current cursor.
+     * Returns {@code -1} when no active movie or when the requested row is out
+     * of range, matching the fixture peek contract.
+     */
+    public synchronized int peekInputMaskAt(int offset) {
+        if (!enabled || movie == null || timeline == null) {
+            return -1;
+        }
+        int index = timeline.getCursorFrame() + offset;
+        if (index < 0 || index >= movie.getFrameCount()) {
+            return -1;
+        }
+        return validationInputMask(movie.getFrame(index));
     }
 
     public synchronized boolean isCurrentForcedJumpPress() {
@@ -229,6 +307,7 @@ public final class PlaybackDebugManager {
         if (frameObserver != null) {
             frameObserver.afterFrameAdvanced(beforeFrame, wasSuppressed);
         }
+        clearPreparedFrame();
         if (timeline.isPlaying()) {
             periodicLogCounter++;
             if (periodicLogCounter >= PERIODIC_LOG_INTERVAL_FRAMES) {
@@ -254,25 +333,37 @@ public final class PlaybackDebugManager {
             currentTickSuppressed = false;
             return false;
         }
-        Bk2FrameInput frame = movie.getFrame(timeline.getCursorFrame());
-        currentTickSuppressed = frameObserver.shouldSkipGameplayTick(frame);
+        prepareCurrentFrame();
+        if (preparedSkipEvaluated) {
+            return currentTickSuppressed;
+        }
+        currentTickSuppressed =
+                frameObserver.shouldSkipGameplayTick(preparedValidationFrame);
+        preparedVblankAdvanceCount = currentTickSuppressed
+                ? Math.max(0, frameObserver.vblankAdvanceCountOnSkippedTick(
+                        preparedValidationFrame))
+                : 0;
+        preparedSkipEvaluated = true;
         return currentTickSuppressed;
+    }
+
+    /** Cached suppression result for the prepared current cursor. */
+    public synchronized boolean isCurrentGameplayTickSuppressed() {
+        return preparedSkipEvaluated && currentTickSuppressed;
     }
 
     public synchronized boolean shouldAdvanceVblankOnCurrentSkippedTick() {
         if (!currentTickSuppressed || movie == null || timeline == null || frameObserver == null) {
             return false;
         }
-        return frameObserver.shouldAdvanceVblankOnSkippedTick(
-                movie.getFrame(timeline.getCursorFrame()));
+        return preparedSkipEvaluated && preparedVblankAdvanceCount > 0;
     }
 
     public synchronized int currentSkippedTickVblankAdvanceCount() {
         if (!currentTickSuppressed || movie == null || timeline == null || frameObserver == null) {
             return 0;
         }
-        return frameObserver.vblankAdvanceCountOnSkippedTick(
-                movie.getFrame(timeline.getCursorFrame()));
+        return preparedSkipEvaluated ? preparedVblankAdvanceCount : 0;
     }
 
     /**
@@ -288,6 +379,7 @@ public final class PlaybackDebugManager {
         this.enabled = true;
         this.timeline.setPlaying(true);
         clearLastAppliedState();
+        clearPreparedFrame();
         setStatus("Session started (" + movie.getFrameCount() + " frames)", true);
     }
 
@@ -351,6 +443,7 @@ public final class PlaybackDebugManager {
         this.currentTickSuppressed = false;
         this.pendingLevelLoadMovie = null;
         this.pendingLevelLoadOffset = -1;
+        clearPreparedFrame();
         clearLastAppliedState();
         setStatus("Session ended", true);
     }
@@ -370,6 +463,7 @@ public final class PlaybackDebugManager {
         }
         currentTickSuppressed = false;
         timeline.advanceIfPlaying();
+        clearPreparedFrame();
     }
 
     /**
@@ -390,6 +484,7 @@ public final class PlaybackDebugManager {
         currentForcedJumpPress = false;
         currentForcedStartPress = false;
         currentTickSuppressed = false;
+        clearPreparedFrame();
     }
 
     public synchronized void clearLastAppliedState() {
@@ -399,6 +494,26 @@ public final class PlaybackDebugManager {
         currentForcedStartPress = false;
         previousActionMask = 0;
         previousStartPressed = false;
+    }
+
+    private void clearPreparedFrame() {
+        preparedCursor = -1;
+        preparedValidationFrame = null;
+        preparedAppliedFrame = null;
+        preparedAppliedPredecessor = null;
+        preparedInputApplied = false;
+        preparedSkipEvaluated = false;
+        preparedVblankAdvanceCount = 0;
+        currentTickSuppressed = false;
+        currentForcedStartPress = false;
+    }
+
+    private static int validationInputMask(Bk2FrameInput frame) {
+        int mask = frame.p1InputMask();
+        if (frame.p1ActionMask() != 0) {
+            mask |= AbstractPlayableSprite.INPUT_JUMP;
+        }
+        return mask;
     }
 
 
