@@ -7,7 +7,7 @@ namespace OpenGGF.BizHawk.Headless
     /// <summary>
     /// Native S3K metadata.json writer, derived from the frozen Lua
     /// recorder's layout (tools/bizhawk/s3k_trace_recorder.lua
-    /// write_metadata) and advanced to v6.38-s3k for
+    /// write_metadata) and advanced to v6.39-s3k for
     /// trace_schema 7 / hardware_timing_schema 2; spec
     /// tools/bizhawk-headless/docs/s3k-trace-recorder-behavior.md §6):
     /// 2-space indent, fixed key order, LF line endings, and a trailing
@@ -40,7 +40,12 @@ namespace OpenGGF.BizHawk.Headless
     /// </summary>
     public static class S3KTraceMetadataWriter
     {
-        public const string LuaScriptVersion = "6.38-s3k";
+        /// <summary>
+        /// 6.38 -> 6.39: the KosM queue destination double-scale fix and
+        /// the five collision-plane state_snapshot fields. Both move
+        /// aux_state.jsonl only; physics.csv is byte-identical across it.
+        /// </summary>
+        public const string LuaScriptVersion = "6.39-s3k";
 
         /// <summary>
         /// The Lua's hardcoded S3K_ROM_CHECKSUM constant: the BizHawk

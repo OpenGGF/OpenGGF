@@ -65,8 +65,12 @@ namespace OpenGGF.BizHawk.Headless
         /// (B) fixture tree was a hand-edit artifact, not recorder
         /// behavior). 6.32 -> 6.33 is the ADDR_VBLA_WORD fix: 0xFE12
         /// Life_count -> 0xFE0E, the V_int_run_count low word.
+        /// 6.39 -> 6.40 is the KosM queue destination double-scale fix
+        /// (the queued word is already a VRAM byte address) plus the five
+        /// collision-plane fields added to state_snapshot; both change
+        /// aux_state.jsonl bytes and neither touches physics.csv.
         /// </summary>
-        public const string LuaScriptVersion = "6.39-s3k-completerun";
+        public const string LuaScriptVersion = "6.40-s3k-completerun";
 
         /// <summary>
         /// The Lua's hardcoded S3K_ROM_CHECKSUM: the BizHawk movie-header

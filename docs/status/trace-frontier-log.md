@@ -56544,3 +56544,128 @@ baseline: `aiz 8/64, hcz 8/1320, mgz 1/14629, cnz 1/5336, icz 1/1629,
 lbz 8/35, mhz 912/7218`. `TestS3kAizTraceReplay` holds at exactly 4 failures +
 1 error.
 
+## 2026-07-31 — S3K KosM queue destination double-scale (recorder defect, fixed)
+
+Worktree `.worktrees/recorder-fix`, branch `bugfix/ai-s3k-recorder-fix` off
+`bugfix/ai-s3k-mhz-queue-frontier`.
+
+`LoadQueueStateProjector.CaptureS3kModule` scaled the queued module destination by 32 a
+second time. The word is already a VRAM **byte** address: `Queue_Kos_Module` stores it
+with `move.w d2,(a2)+ ; store destination VRAM address` (`sonic3k.asm:2683`), and the
+`plreq` macro emits `dc.w tiles_to_bytes(toVRAMaddr)` (`sonic3k.macros.asm:195-198`).
+The engine agrees — `S3kKosModuleQueue.captureDiagnostics` fingerprints
+`descriptor.destinationAddress()`, a byte address. Fixed to read the word unscaled.
+
+Audited every other scaling in the projector: `CaptureS3kDirect` is correct and was left
+alone, because `Queue_Kos` stores a longword RAM destination (`sonic3k.asm:2808`) that is
+never tile-scaled; `CapturePlc`'s `/ 32` is a deliberate byte-to-tile conversion for the
+S1/S2 Nemesis fingerprints. `HardwareTimingEventEngine` already read the module
+destination unscaled, so the timing port needed no change.
+
+This defect is the known cause of the HCZ frame-34
+`queue.s3k_kos_module.queued_fingerprints` group and of the single remaining MGZ and CNZ
+groups. **Those groups cannot clear until the affected fixtures are regenerated** — the
+committed fixtures still hold the double-scaled values.
+
+### Collision-plane capture added
+
+`S3KAuxEventEngine`'s `state_snapshot` now also records `top_solid_bit` (`$46`),
+`lrb_solid_bit` (`$47`), `stick_to_convex` (`$3C`), `primary_collision_addr` and
+`secondary_collision_addr`. `Player_AnglePos` swaps to the secondary array when
+`top_solid_bit != $C` (`sonic3k.asm:18729-18732`), and the two are distinct
+chunk-to-collision-block index arrays rather than solidity bits, so the MHZ frame-3246
+question could not be settled from the trace alone. Comparison-only diagnostic context;
+no comparator assertion, no engine input.
+
+Verified live rather than assumed: a 4058-frame AIZ probe capture reports
+`top_solid_bit=0x0C`, `lrb_solid_bit=0x0D`, `primary=0x00274761`,
+`secondary=0x00274D61`. The pair differ by exactly `$600`, matching `LoadSolids`'
+`addi.l #$600,d0` (`sonic3k.asm:9553`) — so these are not dead addresses.
+
+### Fixture status: regenerated (see the 2026-08-01 entry below)
+
+Native suite after the change: **514 passed, 11 failed, 0 skipped** (full tier), and
+**500 passed, 0 failed** on `--no-gates`. All 11 failures are S3K byte gates whose
+pinned aux `sha256`/length moved as intended. Measured example: `aiz_completerun`
+`aux_state.jsonl` 184,407,249 bytes vs the pinned 184,288,496 (+118,753).
+
+The regeneration surface is wider than the complete-run set: `S3KTraceDifferential`
+(standard CNZ, MGZ), `S3KCompleteRunDifferential` (HCZ timing stream),
+`S3KRunModeDifferential` (the `s3-knux-multibonus-ss` run and the identity-(C)
+segments) and `S3KCompleteRunSegmentsDifferential` (all fifteen segments) all pin aux
+bytes. Regeneration was therefore **not performed** in this commit and remains a
+pending, separately approved decision. Per-zone counts are unchanged from the
+`bugfix/ai-s3k-mhz-queue-frontier` baseline (aiz 8/64, hcz 8/1320, mgz 1/14629,
+cnz 1/5336, icz 82/1629, lbz 8/35, mhz 912/7218), because no fixture moved.
+
+## 2026-08-01 — S3K fixture regeneration for the KosM/collision-plane recorder change
+
+Worktree `.worktrees/recorder-fix`, branch `bugfix/ai-s3k-recorder-fix`. User-approved,
+fixture-invalidating regeneration of **every** affected S3K capture — the surface is wider
+than the complete-run set because both recorder changes move `aux_state.jsonl` for any S3K
+capture.
+
+### Scope: seven capture identities, 115 segments
+
+| Identity | Invocation | Fixtures |
+|---|---|---|
+| complete run | `s3k-complete-sonic-tails.bk2`, `--trace-profile complete_run --load-queue-state` | 15 `*_completerun` |
+| AIZ end-to-end | `s3-aiz1-2-sonictails.bk2`, `aiz_end_to_end` | `aiz1_to_hcz_fullrun` |
+| CNZ | `s3k-cnz-sonic-tails.bk2`, `level_gated_reset_aware` | `cnz` |
+| MGZ | `s3k-mgz-sonic-tails.bk2`, `level_gated_reset_aware` | `mgz` |
+| identity (C) | `s3-knux-multibonus-ss.bk2`, `--run-id s3k-multibonus` | `bonus_gumball`, `bonus_slots`, `bonus_pachinko`, `special_stage` |
+| identity (B) | `s3-knux-multibonus-ss.bk2`, `--run-id s3-knux-multibonus-ss` | `runs/s3-knux-multibonus-ss/`, 25 segments |
+| Knuckles super-emeralds | `s3k-knuckles-complete-superemeralds.bk2`, `--run-id s3k-knuckles-complete-superemeralds` | `runs/s3k-knuckles-complete-superemeralds/`, 68 segments |
+
+Nothing was left stale. The super-emeralds run has no native gate but its aux is equally
+affected, so it was regenerated too; it is also the only S3K fixture that does **not**
+carry `load_queue_state_per_frame`, and it was previously stamped `6.38-s3k-completerun`
+while the rest carried `6.39` — the corpus was already version-inconsistent.
+
+### Every delta categorised mechanically, whole-file
+
+`physics.csv` is **byte-identical in all 115 segments**, each reproducing its pinned
+sha256, and `hardware_timing.jsonl` is byte-identical everywhere — which independently
+confirms the timing port already read the module destination unscaled. Aux was compared by
+normalising away only the two permitted changes (the five-field `state_snapshot` tail and
+`queued_fingerprints` values on `s3k_kos_module` lines) and requiring the remainder to be
+byte-equal; every set reported all deltas explained. The count of kos_module lines carrying
+fingerprints is unchanged on both sides in every segment (complete-run mgz 244/244, lbz
+122/122, aiz 151/151), so the fix moved fingerprint **values**, not which lines carry them.
+
+Only genuinely-changed files were installed: 96 `aux_state.jsonl.gz`, 114 `metadata.json`,
+2 `run_manifest.json`. `physics.csv.gz` was deliberately **not** rewritten. The sub-1 MiB
+originals had been gzipped at level 9 while a threshold-0 native capture emits the default
+level, so reinstalling them would have produced a 77-file binary diff that falsely signals
+a physics change. The 14 special-stage aux files whose content did not move were likewise
+left alone.
+
+Recorder version bumped: `6.39` → **`6.40-s3k-completerun`**, `6.38-s3k` → **`6.39-s3k`**.
+
+### Frontier movement, measured before/after
+
+| Segment | Before | After |
+|---|---|---|
+| aiz (standard) | 8 / 64 | 8 / 64 (class holds at 4 failures + 1 error) |
+| aiz (complete run) | 8 / 64 | 8 / 64 |
+| hcz | 8 / 1320 | **7 / 1320** — frame-34 group cleared, first error now frame 1067 |
+| icz | 82 / 1629 | **81 / 1629** |
+| lbz | 8 / 35 | 8 / 35 |
+| mhz | 912 / 7218 | **911 / 7218** |
+| mgz | 1 / 14629 | no report emitted (see below) |
+| cnz | 1 / 5336 | no report emitted (see below) |
+
+HCZ moved exactly as predicted. **MGZ and CNZ did not demonstrably reach 0**, and this is
+recorded as an open question rather than a success: both now abort in
+`HardwareTimingService$RecordedAuthority.admitRecordedCompletion` with
+`expected completion: KOS_DECOMPRESSION_QUEUE#134 … engine pending: <none>` (CNZ: `#201`)
+*before* a trace report is written.
+
+That exception is **pre-existing, not caused by the regeneration** — it reproduces
+identically, same ordinal and same submission fingerprint, when the old committed
+`mgz_completerun/aux_state.jsonl.gz` is restored under the new metadata; the difference is
+only that the old fixture still got far enough to emit a 14,629-frame report. A plausible
+reading, not yet proven, is that the corrected module fingerprints change which readiness
+the schema-2 timing port releases, exposing a direct-queue submission-ordering bug earlier.
+Chasing that is engine-side work and out of scope here. Native suite and all seven guards
+are green regardless.

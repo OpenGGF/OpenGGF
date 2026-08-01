@@ -83,11 +83,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// schema-one to schema-two migration is normalized.
         /// </summary>
         private const string PublishedLuaScriptVersionLine =
-            "  \"lua_script_version\": \"6.39-s3k-completerun\",";
+            "  \"lua_script_version\": \"6.40-s3k-completerun\",";
         private const string PublishedDirectLuaScriptVersionLine =
-            "  \"lua_script_version\": \"6.39-s3k-completerun\",";
+            "  \"lua_script_version\": \"6.40-s3k-completerun\",";
         private const string CurrentLuaScriptVersionLine =
-            "  \"lua_script_version\": \"6.39-s3k-completerun\",";
+            "  \"lua_script_version\": \"6.40-s3k-completerun\",";
         private const string CurrentTraceSchemaLine =
             "  \"trace_schema\": 7,";
         private const string CurrentHardwareTimingSchemaLine =
@@ -121,121 +121,121 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 4249570,
                 "2f8d3d0c2f5a4b3f30b7784ed28fa37071951f6d8d538f08573b4631"
                 + "fa33f872",
-                184288496,
-                "48d01a1d3cee368ac5be20a55cae94cbfc8f46ad9caf353adc4c6816"
-                + "ab5d1d23"),
+                184407249,
+                "7ea46ac823cb29e59fa17203fa221c04f5fb9125fb52e9adb7d4d289"
+                + "077c4f13"),
             new SegmentCase(
                 "hcz", "hcz_completerun", 27170, 31482,
                 5100718,
                 "5d829f35729bb9254f272283dd078d3c6b259c771ca3d57eea3fb249"
                 + "d7ed73c7",
-                225206246,
-                "d476cfca26294d7e8170f24e6b611a4566edb154d68b197c7f655eea"
-                + "d43dfb9e"),
+                225332151,
+                "05345f60c609b5d30f1381aa93fe7ed1f6cddfce72c59e0073c43025"
+                + "72719bc0"),
             new SegmentCase(
                 "mgz", "mgz_completerun", 58653, 39398,
                 6383110,
                 "ddfcc9851a6c6b100e9366ebe9fccfecd9a99745639a8192f0f93e24"
                 + "1879ae52",
-                226795845,
-                "cf447cbd6dca54ce25b993e19f32e91c279468b1c29353a1ab86ca82"
-                + "80059ca6"),
+                226981797,
+                "512dc7d936178c4231c53e33dc8f3d99d518866e81fbf95e7bc8aba9"
+                + "736a300f"),
             new SegmentCase(
                 "cnz", "cnz_completerun", 98052, 40064,
                 6491002,
                 "2d1ba19a27d614c25ceb8962f7506552cc8b038cc3a36a00b08f4337"
                 + "d329d404",
-                230008602,
-                "6a6c744975c1c040219d80e66e2634b962d9e49cf78e7969619b5991"
-                + "76a60b8c"),
+                230193511,
+                "8938b4d72a93fe8bec414010c3fa91323ec7af5e48940d8f96844cde"
+                + "6b23c886"),
             new SegmentCase(
                 "icz", "icz_completerun", 138117, 25393,
                 4114300,
                 "386cf6e8e62b61c8cd03c252668db47d3511fc1fd6c43399830e6655"
                 + "086d0c99",
-                185249490,
-                "dbe441b24c35673e61531111ff24ec45eb88e7ed65f6a9eadb1fad30"
-                + "271e593b"),
+                185371521,
+                "66af2062d484908a6866805a51a62ba72661e3f56ab3a6228af3fe10"
+                + "f0d2312f"),
             new SegmentCase(
                 "lbz", "lbz_completerun", 163511, 46244,
                 7492162,
                 "dba472735a28d1bb3235a4fe79ab6734202456f97bca6ca00cac2f5d"
                 + "64c8a139",
-                287296733,
-                "c0d14b642e22b1b7f3d4b358ec9c1dcc48d01f39e6cc1c23e3c886c9"
-                + "317a5b42"),
+                287511442,
+                "527f999afb68e83a6bc615dff39c3d24c2a35c988b472e8fda38ced9"
+                + "8152130b"),
             new SegmentCase(
                 "mhz", "mhz_completerun", 209756, 28156,
                 4561906,
                 "d502ee1305f363c448d5507aae54b732d851433713f809fdd79ce8cc"
                 + "c21c9c03",
-                197021051,
-                "325138abc35130b5bab5e170fef4cd8bf7f263a79c3f68a126854099"
-                + "b30fa7e2"),
+                197144721,
+                "e2423b57d5716984444ae9de86e7ce3372fd46ac70b830dc82e8a7d2"
+                + "7a0e088f"),
             new SegmentCase(
                 "fbz", "fbz_completerun", 237913, 44281,
                 7174156,
                 "337f7619d3b516cfb5c475aed978d023ba370e8fddb3473939c4b65f"
                 + "d2fdd4ca",
-                291595676,
-                "15307f0d833156b9da8d2c3bb4b665ba7577fe7587aed05baceaf5bc"
-                + "481288c1"),
+                291797422,
+                "276df58fc9ebe612a1063d3fe294fa3b55a579be5687273220aa55f7"
+                + "7d99eda7"),
             new SegmentCase(
                 "soz", "soz_completerun", 282195, 59507,
                 9640768,
                 "d67337f964240e3ad06854b31e68eb723cc29174d490db15be27669b5"
                 + "3f236bc",
-                363005107,
-                "1d1e1de21fe43ce81a259768b2e9500145a704e49a42cc5b63243a7"
-                + "3848ec6fb"),
+                363276436,
+                "f8f889d9e9e812259b85673f44010a2c07fc01a57326ebbf092a540"
+                + "915017338"),
             new SegmentCase(
                 "lrz", "lrz_completerun", 341703, 38755,
                 6278944,
                 "9c464a019b6fbdfb8086b3adcc47c5ee52d14ca13281b09cea5b648c"
                 + "cf4a4fac",
-                247949217,
-                "02150b12577c5ccd14687fa34eade9b1aa252fdeda164df14fcda0f8"
-                + "17c333c6"),
+                248156625,
+                "79e830901e685e622c041913fe0e1bf8412048954775a188ce95dc3e"
+                + "b526cf42"),
             new SegmentCase(
                 "hpz22", "hpz_completerun", 380459, 16260,
                 2634754,
                 "a61cad6c194fc87393d4186a55bbb7d6d47465314f913a75f855d9b9"
                 + "1c671f1b",
-                110061568,
-                "29c3cdf8e8d606a4e96d2db095633a00a6409705193b439936daff30"
-                + "d738f925"),
+                110140240,
+                "b618fdd238ff2e53bbf8d4b90a11f410dbbe092b81738d4d1b1daff5"
+                + "0085f5dd"),
             new SegmentCase(
                 "hpz", "ssz_completerun", 396720, 18641,
                 3020476,
                 "cb7b1b368810000d8ef9e6927ebc721588ec446af0748429e0573e63"
                 + "6789e6dc",
-                112195352,
-                "b2ca3b45f4d3b93e67d48e24a315ca77dfabf2ff3484a0daf5877e356"
-                + "a21efa0"),
+                112284007,
+                "1d464737895ea06a8f6cc3c8780ac7ce1f2ce4c5651f4f30f54913424"
+                + "1b2567a"),
             new SegmentCase(
                 "ssz", "dez_completerun", 415362, 44147,
                 7152448,
                 "16aa55471d830106abe26bec42c16cf0bc356f290de5e77a7ec9437d3"
                 + "dbb42c2",
-                268713958,
-                "b38e3e0e97b313cf4628e972b9bdb6aaaf758930b293bb7008f1273d"
-                + "8846509f"),
+                268918088,
+                "189a643833be9d87c2d9b9b913b2b82f4c9e2ce988eac97c1b893b32"
+                + "3d8483f4"),
             new SegmentCase(
                 "dez23", "ddz_completerun", 459510, 6103,
                 989320,
                 "697c5be5a6a52c395d10845625626f10d61a539582012d846cc88f98"
                 + "319da150",
-                40285969,
-                "6d9a65e2b18ba52eba761efb56f3e70bc22e041cf42d4f7753718fd8"
-                + "15fac357"),
+                40311448,
+                "544b131e50e16aa66eb6429ff044a093a87b65d10af306404fc2c4d7"
+                + "38666fe7"),
             new SegmentCase(
                 "ddz", "ending_completerun", 465614, 719,
                 117112,
                 "18233e2ca65529b4b34ba7c917689100fba0f57a8fba00b56858f757"
                 + "e3830fff",
-                2591747,
-                "389edfd9460787f24344ca08736842524fac629d5dadf224d547ec84"
-                + "6bbf3f1b")
+                2593535,
+                "774fd617b1323049d4a56019bc326772771253523d90b13fe5c16914"
+                + "0c8f7c43")
         };
 
         public static void Register(ICollection<TestMain.TestCase> tests)
@@ -519,7 +519,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Throws<InvalidOperationException>(
                 () => RequireExactMetadataMigrationShapes(
                     "wrong fixture version",
-                    published.Replace("6.39", "6.38"), current),
+                    published.Replace("6.40", "6.39"), current),
                 "fixture");
             AssertEx.Throws<InvalidOperationException>(
                 () => RequireExactMetadataMigrationShapes(

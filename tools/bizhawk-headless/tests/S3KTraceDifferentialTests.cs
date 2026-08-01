@@ -24,7 +24,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
     ///   src/test/resources/traces/ are never written to.
     /// - metadata.json line-for-line equality apart from the
     ///   nondeterministic recording_date, only when both sides use the
-    ///   current 6.38-s3k / trace-schema-7 / hardware-schema-2 contract;
+    ///   current 6.39-s3k / trace-schema-7 / hardware-schema-2 contract;
     /// - hardware_timing.jsonl has the exact schema-2 event shape and
     ///   contains independently increasing kos_decompression_queue and
     ///   kos_module_queue ledgers at their permitted boundaries.
@@ -77,7 +77,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private const string CommittedLuaScriptVersionLine =
             "  \"lua_script_version\": \"6.37-s3k\",";
         private const string CurrentLuaScriptVersionLine =
-            "  \"lua_script_version\": \"6.38-s3k\",";
+            "  \"lua_script_version\": \"6.39-s3k\",";
         private const string CurrentTraceSchemaLine =
             "  \"trace_schema\": 7,";
         private const string CommittedHardwareTimingSchemaLine =
@@ -103,8 +103,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 21309,
                 "3c219725d85d64762b514f973263edced337a37cd16fb8bf50f2b0ac"
                 + "3b5a2a39",
-                "0accbf521b770881d04e6a2a8e7891245b4f1d0979bfe91af3cd59a9"
-                + "2326e5de");
+                "f4917d40244d6d4ca11928946ad89bdd7623f5b6c48d06cf2f68ed48"
+                + "5bc225c0");
 
         private static readonly S3KDifferentialCase CnzLevelGatedCase =
             new S3KDifferentialCase(
@@ -116,8 +116,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 45597,
                 "195de5a64bd879f6d920ffe9a487931beb4f6366516587d23268b105"
                 + "9a7b46e2",
-                "2056e8c42126c4142c48a089b81859c50e5d406f09d820a0b44dd7f78"
-                + "fd8e5b5");
+                "55eb4ed6e954f86a292c29a44bcb625762ba488ef8bd2fdcfbca76083"
+                + "4479519");
 
         private static readonly S3KDifferentialCase MgzLevelGatedCase =
             new S3KDifferentialCase(
@@ -129,8 +129,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 38818,
                 "16bff6712e4228494b8aeac587006edeee9f6befc62aa7b9078a465d"
                 + "b4e2d611",
-                "30c6381beea0fd32fccf304bf81aa3c2a20237810bb762bb44935587b"
-                + "f07fac7");
+                "ef0126031172703777cb9b2709d7978014bf0c71ee519b3497121ac69"
+                + "d8149fd");
 
         public static void Register(ICollection<TestMain.TestCase> tests)
         {
@@ -609,7 +609,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private static void MetadataCompatibilityShapesAreExact()
         {
             const string currentVersion =
-                "  \"lua_script_version\": \"6.38-s3k\",";
+                "  \"lua_script_version\": \"6.39-s3k\",";
             const string committedVersion =
                 "  \"lua_script_version\": \"6.37-s3k\",";
             const string currentHardwareSchema =

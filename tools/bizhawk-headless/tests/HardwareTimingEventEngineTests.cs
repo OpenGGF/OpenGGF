@@ -1693,10 +1693,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private static void LagBoundaryHasNewRecorderVersion()
         {
             AssertEx.Equal(
-                "6.38-s3k",
+                "6.39-s3k",
                 S3KTraceMetadataWriter.LuaScriptVersion);
             AssertEx.Equal(
-                "6.39-s3k-completerun",
+                "6.40-s3k-completerun",
                 S3KCompleteRunMetadataWriter.LuaScriptVersion);
 
             string standard = File.ReadAllText(Path.Combine(
