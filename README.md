@@ -230,6 +230,54 @@ Development since `v0.5.20260411` is the active 0.6 prerelease line. The release
   incomplete launch, Esc, or production failure removes recorded timing
   authority and returns cleanly to the master title without strict-closing an
   unfinished hardware schedule.
+
+- **Special-stage dynamic art starts publishing (2026-08-01):** both special-stage
+  traces diverged early with the engine publishing *no* dynamic-art edges at all
+  where the ROM publishes its first few. The players' art was only submitted from
+  the first recurring V-int pass, but `LoadSSSonicDynPLC` / `LoadSSTailsDynPLC` /
+  `LoadSSTailsTailsDynPLC` run inside the startup `RunObjects` pass, and the
+  startup sequence then waits on `VintID_CtrlDMA` — a handler that is nothing but
+  `ProcessDMAQueue` — so that V-blank retires the queued transfers even though the
+  surrounding `Pal_FadeFromWhite` loop never polls the joypad and reads as a lag
+  frame. The S1 side was separately pre-consuming its first Sonic DPLC change.
+  Both frontiers move; the special stages are not yet green and the residual is
+  recorded as a recurring-pass attribution gap.
+
+- **Final Zone stopped running underwater; ROM `v_act` split from the feature act
+  (2026-08-01):** an earlier fix in this line answered a `v_act` question through
+  `getRemappedFeatureAct`, which also keys water and palette lookups where SBZ3 is
+  deliberately reported as the synthetic pair (SBZ, act 2). Reporting act 2 for
+  Final Zone so the ported `SignpostArtLoad` gate could see `act3` collided FZ
+  with SBZ3's water entry, and Final Zone ran the entire level underwater —
+  `runAcceleration` halves the base `$0C` to `$06` under water physics, which is
+  exactly the frame-0 `x_speed` divergence the trace reported. The two identities
+  are genuinely distinct in the ROM: `id_LZ_act4 = $0103` is SBZ3 and
+  `id_FZ = $0502`, water is enabled for the `id_LZ` slot only, so the ROM never
+  reaches water through `id_SBZ` at all. `GameModule.getRomAct` and
+  `LevelManager.getRomActId` now provide the `v_act` partner to the existing
+  `getRomZoneId`, so the signpost gate asks a `v_act` question through a `v_act`
+  channel and water keeps its own; SBZ3 correctly stops skipping the gate, its
+  `v_act` being act4. The routing test that should have caught this was asking the
+  water system about the logical act rather than the pair it is keyed by.
+
+- **CPZ2 green — two cancelling engine defects (2026-08-01):** the last S2 level
+  trace closed on a pair of bugs that had been hiding each other. The ROM's CPZ
+  boss pump is single-pass: `Obj5D_Pipe_Pump_4`'s repeat branch writes its restart
+  state but has no `rts` and falls through into the tail that switches to
+  `Obj5D_Pipe_Retract` and deletes the pump head unconditionally, so the repeat
+  timer is dead code on hardware — the engine honoured it and ran ~430-frame
+  two-pass pumps. Separately the ROM's dripper is pipe-independent, parented to
+  the main vehicle and deleted only on the defeat bit or after its own twelve fill
+  cycles, where the engine anchored it to the pipe control. These cancelled
+  exactly: the over-long pump kept the pipe alive just long enough for the
+  pipe-coupled dripper to finish its twelve pulses, so every player-visible timing
+  matched and the only observable trace was the pipe control surviving to defeat
+  and drawing one extra `RandomNumber`. Fixing the pump alone collapsed the fight
+  (5140 errors), which is what confirmed the coupling. Every trace in the
+  capsule/PLC-busy family — GHZ3, MTZ3, CPZ2, SYZ3, SLZ3, MZ3, LZ3 — now passes,
+  and with this the entire Sonic 2 level trace fleet is green: the only remaining
+  S2 red is the special stage, which is a separate long-standing frontier.
+
 - **All four S1 act-3 capsule stragglers greened (2026-08-01):** SYZ3, SLZ3, MZ3
   and LZ3 closed on three ROM-cited fixes, none of which lived where the failing
   comparator field pointed. The busy flag was mirroring *when the egg-prison

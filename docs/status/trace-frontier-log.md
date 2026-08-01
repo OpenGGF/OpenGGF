@@ -59937,3 +59937,136 @@ Any other object class modelling a ROM RememberState/DeleteObject tail as engine
 persistence will reproduce this bug wherever slot pressure or slot-ordering matters.
 A sweep of `isPersistent()`/`shouldStayActiveWhenRemembered()` overrides against their
 cited ROM tails is the follow-up; this entry is the evidence baseline.
+
+## 2026-08-01 — S1 Final Zone complete run greened (ROM v_act split from the feature act)
+
+Worktree `.worktrees/fz-bootstrap`, branch `bugfix/ai-fz-bootstrap`, on develop `66e680da2`.
+Command: `mvn -Dmse=relaxed -Dtest=<class> -Ds1.rom.path=s1.gen test`.
+
+**`s1_fz_completerun` went from a frame-0 divergence with 2908 errors to a clean
+4457-frame pass.** Before: `Tests run: 1, Failures: 1` /
+`First error: frame 0 -- x_speed mismatch (expected=0x000C, actual=0x0006)` /
+`Totals: 2908 errors, 0 warnings`. After: `Tests run: 1, Failures: 0, Errors: 0`.
+
+Measured, not inferred. A stack-traced probe on `Sonic1WaterDataProvider.hasWater`
+reported `hasWater(zoneId=5, actId=2)` for Final Zone, reached through
+`WaterSystem.loadForLevelFromProvider` ← `LevelWaterCoordinator.initialize` ←
+`LevelManager.initWater`. `PlayablePhysicsValueResolver.runAcceleration` halves the base
+`$0C` run acceleration to `$06` when water physics are active — exactly the
+recorded/actual pair. The trace independently confirms `$0C` is the dry ground
+acceleration: with right held from frame 0, `x_speed` steps `000C, 0018, 0024, 0030, …`
+and `x_sub` advances by `x_speed << 8` per frame. Final Zone was running underwater for
+its whole length; the 2908 errors were that one wrong initial value cascading.
+
+Root: `4c20ee4ec` answered a `v_act` question through the feature-act channel.
+`Sonic1GameModule.getRemappedFeatureAct` reported act 2 for `ZONE_FZ` so the ported
+`SignpostArtLoad` gate could see the ROM's act3, but that method also keys water and
+palette lookups, where SBZ3 is deliberately reported as the *synthetic* pair (SBZ, act 2).
+Final Zone then collided with SBZ3's water entry.
+
+The two are genuinely different identities, and the disassembly separates them:
+
+- `_Constants.asm:112-113` — `id_LZ_act4: equ (id_LZ<<8)+act4 ; $0103 (SBZ3)` and
+  `id_FZ: equ (id_SBZ<<8)+act3 ; $0502`. Line 111 even flags `id_SBZ_act3` as ambiguous.
+- `_Constants.asm:86-87` — `act3: equ 2`, `act4: equ 3 ; only used for SBZ3/LZ4`.
+- `sonic.asm:2755-2768` — water is enabled only under `cmpi.b #id_LZ,(v_zone).w`. The ROM
+  never reaches water through `id_SBZ` at all, so Final Zone is dry however `v_act` reads.
+- `sonic.asm:2779` — `cmpi.b #act4,(v_act).w` picks the SBZ3 underwater palette *within*
+  the `id_LZ` slot.
+- `sonic.asm:3186-3187` — the signpost gate, `cmpi.b #act3,(v_act).w / beq.s .return`.
+
+Fix: added `GameModule.getRomAct` / `LevelManager.getRomActId`, the `v_act` partner to the
+existing `getRomZoneId`. Sonic 1 reports act4 for SBZ3 and act3 for Final Zone; the
+signpost gate reads it, and `getRemappedFeatureAct` is back to feature identity only. SBZ3
+correctly stops skipping the signpost gate (its `v_act` is act4, not act3) with no effect
+on its trace. Nothing branches on a zone, route or frame, and no trace value is consumed.
+
+Validation over FZ, SBZ1-3 and LZ1-3 — the water and signpost neighbours the change can
+reach: 7 tests, 0 failures, 0 errors, 0 skips. Focused unit run
+(`TestSonic1SbzFinalZoneRouting`, `WaterSystemTest`, `WaterPhysicsTest`): 37 tests,
+0 failures, 0 errors.
+
+### Test-gap note
+
+`TestSonic1SbzFinalZoneRouting.testLevelManagerLoadsFinalZoneWithoutUnderwaterState`
+existed and passed throughout, because it asked the water system about the *logical* act
+(`hasWater(ZONE_SBZ, 0)`) rather than the feature act the level manager actually reports.
+It now queries `getFeatureZoneId()`/`getFeatureActId()` and pins both `v_act` values, so a
+future act remap that collides FZ with SBZ3 cannot slip through the same way.
+
+## 2026-08-01 — CPZ2 greened: two cancelling CPZ boss defects (one-pass pump + dripper lifetime)
+
+Worktree `bugfix/ai-fable-capsule-lifetime` (on 55e4224ea). Command:
+`mvn -Dmse=relaxed -Dsurefire.forkCount=1 "-Ds2.rom.path=<s2>" "-Dtest=TestS2Cpz2LevelSelectTraceReplay" test`.
+
+The residual +1 RandomNumber draw at the CPZ boss defeat was the engine's pipe control
+surviving to the defeat frame. Transition probes (removed before commit) showed the
+engine's cycle timeline matching the ROM at every observable — extension vfc 10287,
+pump start 10300, gunk landing 10214, re-dock 10272 — except pipe-control lifetime:
+
+1. **The ROM pump is single-pass.** `Obj5D_Pipe_Pump_4`'s repeat branch falls through
+   (no rts) into the retract-and-delete tail (s2.asm:62199-62218); `Obj5D_timer3 = 2`
+   is dead code. Ground truth from the fixture: cycle-1 chain deleted vfc 10069-10081,
+   cycle-2 at 10515-10527 — both single-pass durations. The engine honoured the repeat,
+   running ~430-frame pumps.
+2. **The ROM dripper is pipe-independent.** Its parent is the main vehicle
+   (s2.asm:62166-62168) and it dies only on the defeat bit or after 12 cycles
+   (s2.asm:62244-62252). The engine anchored it to the pipe control and killed it on
+   pipe death.
+
+The two engine defects cancelled: the over-long pump kept the pipe alive exactly long
+enough for the pipe-coupled dripper to finish the 12 fill pulses, reproducing every
+ROM-visible fight timing while leaving the pipe control alive at defeat (+1 draw).
+Fixing only the pump broke the fight (5140 errors — dripper died mid-fill); fixing both
+matches the ROM decomposition. **CPZ2 PASS** (was 7 errors, first at f11491).
+
+Full `TestS2*TraceReplay` sweep after the fix: 19 classes pass; only
+`TestS2SpecialStageTraceReplay` (20482 @ f136 `dynamic_art.edges`, long-standing,
+owned by the special-stage effort) remains, byte-identical to baseline.
+## 2026-08-01 - S1 special stage green; S2 special stage frontier f136 -> f165
+
+- Worktree `.worktrees/specialstage-dynamic-art`, branch
+  `bugfix/ai-specialstage-dynamic-art`, over `66e680da2`.
+- Command: `mvn -Dmse=relaxed -Ds1.rom.path=s1.gen -Ds2.rom.path=s2.gen
+  -Dtest=TestS1SpecialStageTraceReplay,TestS2SpecialStageTraceReplay test`.
+- `TestS1SpecialStageTraceReplay`: was 2307 errors, first error frame 99 --
+  `dynamic_art.edges` (expected `[0, 1]`, actual `[]`). Now green. Cause:
+  `Sonic1SpecialStageManager.loadSonicSprite()` published Sonic's initial
+  mapping frame at stage load, latching it as already-transferred. `GM_Special`
+  (docs/s1disasm/sonic.asm:3222-3292) runs no `Sonic_LoadGfx` during setup and
+  clears `v_levelvariables` (sonic.asm:3245), which holds `v_sonframenum`
+  (docs/s1disasm/_Variables.asm:174, 225, 296), so the SS Sonic object's first
+  main-loop `Sonic_LoadGfx` always sees a changed frame
+  (docs/s1disasm/_incObj/01 Sonic.asm:2394-2408). The engine emitted 811 of the
+  ROM's 812 edge rows.
+- `TestS2SpecialStageTraceReplay`: was 20482 errors, first error frame 136 --
+  `dynamic_art.edges` (expected `[0, 1, 2]`, actual `[]`). Now 20468 errors,
+  first error frame 165 -- `dynamic_art.edge[0].present`. Rows 136 and 138 are
+  correct: the players' first art transfer is queued from the startup
+  `RunObjects` pass (docs/s2disasm/s2.asm:6662) and retired by the
+  `VintID_CtrlDMA` V-blank the startup sequence then waits on (s2.asm:6665-6668,
+  `Vint_CtrlDMA` at s2.asm:998-1001 -> `ProcessDMAQueue` at s2.asm:1770), even
+  though `Pal_FadeFromWhite` (s2.asm:3460-3482) makes BizHawk read that row as
+  lag.
+- Remaining S2 frontier (measured, not fixed): every recurring-pass player DPLC
+  submission publishes exactly one engine row late (engine 166/171/174/179/183
+  vs ROM 165/169/173/178/181). The ROM's `RunObjects` (s2.asm:6685) runs inside
+  the same main-loop iteration the row samples, but the engine defers the
+  RunObjects-phase pass to the next observation so that the row's gameplay
+  sample excludes it (`Sonic2SpecialStageManager.scheduleRecurringMainPass` /
+  `executePendingRecurringMainPass`). Gameplay comparison needs the deferral;
+  the dynamic-art edge needs the pass's own row. All 20468 remaining errors are
+  `dynamic_art.*` -- no other field diverges. Closing this needs the player pass
+  to run at its ROM row with its comparison snapshot double-buffered, not a
+  change to the dynamic-art lifecycle.
+- Regression check on the same worktree: `TestS1SpecialStageTraceReplay`,
+  `TestPlcFrameLifecycleCoordinator`, `S2SpecialStageReplayDeterminismTest`,
+  `S2SpecialStageExpectedComparisonTest`,
+  `S2SpecialStageTrackDurationMappingTest`, `TestS1Ghz1TraceReplay`,
+  `TestS1Ghz1CompleteRunTraceReplay`, `TestS2Ehz1TraceReplay` all green.
+  `S2SpecialStageFinishBoundaryMappingTest` and
+  `S2SpecialStageRecorderContractTest` fail on `develop` before this branch too
+  (verified in a detached baseline worktree): the former asserts the same S2
+  special-stage divergence report (20482/20483 errors at f136 on baseline,
+  20468/20469 at f165 here), the latter an unrelated recorder-schema string
+  (`1.4-s2ss` vs `1.4-s2ss-native`).

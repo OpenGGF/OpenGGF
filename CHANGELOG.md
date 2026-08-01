@@ -14,6 +14,53 @@ All notable changes to the OpenGGF project are documented in this file.
   strict consumption of an unfinished schedule, restore user configuration,
   destroy the failed gameplay context, and return directly to the master
   title.
+
+- Fix: the CPZ boss pump runs a single pass per pipe cycle, matching the
+  ROM's actual control flow. `Obj5D_Pipe_Pump_4`'s would-be repeat branch
+  (`Obj5D_timer3 = 2`) writes its restart state but has no `rts` — it falls
+  through into the code that switches the control object to
+  `Obj5D_Pipe_Retract` and deletes the pump head unconditionally
+  (docs/s2disasm/s2.asm:62199-62218), confirmed by the recorded run's chain
+  deletions (cycle 1 at vfc 10069-10081, cycle 2 at 10515-10527). The
+  engine's two-pass pump kept the pipe control alive through the boss
+  defeat, where its `Obj5D_PipeSegment_End` conversion drew a RandomNumber
+  the ROM never draws, desynchronising every capsule animal species/offset.
+- Fix: the CPZ boss dripper is independent of the pipe control, as in the
+  ROM: its parent is the MAIN VEHICLE (`Obj5D_Pipe_Pump_0`,
+  docs/s2disasm/s2.asm:62166-62168), it tracks the vehicle's position, and
+  it deletes only on the defeat bit or after its own 12 cycles
+  (`Obj5D_Dripper_4`, docs/s2disasm/s2.asm:62244-62252). The engine tied its
+  lifetime and anchor to the pipe control, which only worked because the
+  two-pass pump kept that control alive long enough — the two errors
+  cancelled for every player-visible timing. Together these green
+  `TestS2Cpz2LevelSelectTraceReplay` (was 7 errors from frame 11491,
+  `queue.s2_nemesis_plc.busy`), the last non-special-stage S2 failure.
+- Fix: the S2 special stage now queues the players' first art transfer from its
+  one-off startup `RunObjects` pass (docs/s2disasm/s2.asm:6662), where
+  `LoadSSSonicDynPLC` / `LoadSSTailsDynPLC` / `LoadSSTailsTailsDynPLC`
+  (s2.asm:69194, 70493, 70575) actually run, instead of waiting for the first
+  recurring V-int pass. The startup sequence then explicitly asks for
+  `VintID_CtrlDMA` before waiting (s2.asm:6665-6668), and `Vint_CtrlDMA`
+  (s2.asm:998-1001) is nothing but `ProcessDMAQueue` (s2.asm:1770), so that
+  V-blank retires the queued transfers even though the surrounding
+  `Pal_FadeFromWhite` loop (s2.asm:3460-3482) never polls the joypad and reads
+  as a lag frame; `PlcFrameLifecycleCoordinator.markNextVblankServicesDmaQueue`
+  models that one-shot. `TestS2SpecialStageTraceReplay` moves from 20482 errors
+  first diverging at f136 to 20468 first diverging at f165; the remainder is a
+  separate recurring-pass attribution gap (see
+  docs/status/trace-frontier-log.md).
+- Fix: the S1 special stage no longer publishes Sonic's dynamic-art transfer
+  while loading the stage. `GM_Special` (docs/s1disasm/sonic.asm:3222-3292)
+  never runs `Sonic_LoadGfx` during setup, and it clears `v_levelvariables`
+  (sonic.asm:3245), which contains `v_sonframenum`
+  (docs/s1disasm/_Variables.asm:174, 225, 296) — the "frame already in VRAM"
+  latch `Sonic_LoadGfx` compares against
+  (docs/s1disasm/_incObj/01 Sonic.asm:2394-2398). The SS Sonic object's first
+  main-loop pass therefore always sees a changed frame and sets
+  `f_sonframechg` for `VBlank_SpecialStage` to DMA (sonic.asm:890-894).
+  Publishing at load consumed that first change, so the engine emitted 811 of
+  the ROM's 812 dynamic-art edge rows and never published the first one.
+  Greens `TestS1SpecialStageTraceReplay` (was 2307 errors from f99).
 - Fix: the S1 prison capsule's explosion phase no longer starts on the button
   trigger frame. ROM `Pri_Switch` only writes routine=$A/obTimeFrame=60 and
   returns, so the first `Pri_Explosion` pass is always the frame AFTER the
