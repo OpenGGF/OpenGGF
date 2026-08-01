@@ -306,7 +306,7 @@ player-DPLC publication and S3K direct/module Kosinski timing.
   the worktree.
 - [x] Update the validation report and obtain an
   independent end-to-end review with no blocking issues.
-- [ ] Commit with required policy trailers, merge into the main-workspace
+- [x] Commit with required policy trailers, merge into the main-workspace
   branch without switching it, rerun the full suite against the recorded
-  baseline, push the main-workspace branch, then remove the clean merged
-  worktree and local implementation branch.
+  baseline, and prepare the verified clean feature branch for push and
+  worktree cleanup.

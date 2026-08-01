@@ -100,7 +100,24 @@ only the pre-existing `LevelManager` overage.
 The post-reconciliation visual/headless parity batch completed successfully,
 including the rewind marker restore chain, held Start, playable-prefix ordering,
 PLC/Kos queue lifecycle, fatal launch cleanup, run handoff, bootstrap, and
-timing-authority guards. Post-merge verification remains pending.
+timing-authority guards.
+
+The completed feature was merged into `develop` as `1d5a106b2`. The first
+post-merge full-suite run executed 14,007 tests and reported 19 failures plus 7
+errors; a clean repeat executed the same 14,007 tests and reported 20 failures
+plus 7 errors. Both remain at or below the refreshed baseline's 20 failures
+and 7 errors. The repeat exchanged two baseline intermittent failures for the
+MHZ parachute grab and Sonic 1 special-stage results assertions. Those two
+exact methods pass together in a focused rerun, and neither touches the trace,
+PLC, queue, launcher, or comparator changes. The baseline hardware-boundary,
+rewind-torture, object-policy, fixture-publication, and Tornado error methods
+remain unchanged; no failure attributable to the delivered work was added or
+worsened.
+
+The complete focused visual/headless parity batch also passed after upstream
+reconciliation. The post-merge generated rewind probe report was restored to
+its committed content, leaving only the user's pre-existing untracked main
+workspace files outside the delivery.
 
 ## End-to-end review
 
