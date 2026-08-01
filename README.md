@@ -218,6 +218,27 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **All four S1 act-3 capsule stragglers greened (2026-08-01):** SYZ3, SLZ3, MZ3
+  and LZ3 closed on three ROM-cited fixes, none of which lived where the failing
+  comparator field pointed. The busy flag was mirroring *when the egg-prison
+  capsule decided the act was over*, and that decision was landing on the wrong
+  frame for three unrelated reasons. ROM `Pri_Switch` writes the routine and
+  timer then returns, so the first explosion pass is always the frame *after* the
+  button trigger; the engine ran the explosion phase on the body object, so
+  wherever the level layout ordered the body's slot after the button's, the body
+  ticked the 60-frame timer once too early — which is precisely why GHZ3, whose
+  layout orders them the other way, was immune. MZ's boss stored the lava
+  countdown as `$40+(d&$1F)` where `BMZ_ShipStart` stores the raw low byte, and
+  drew once at init where the ROM draws not at all. And LZ's conveyor wheels were
+  immortal: `LCon_Wheel` ends in `bra.w RememberState`, which deletes out of range
+  and frees the slot, but the engine modelled `RememberState` as always
+  persistent, so nine wheels pinned slots 41-88 through act end and pushed the
+  last animals past the `Pri_EndAct` slot-63 scan ceiling. That last one is
+  recorded as its own defect class rather than an LZ3 quirk, with a follow-up to
+  audit every `isPersistent()` override against its cited ROM `RememberState` /
+  `DeleteObject` tail — the same misclassification will reproduce anywhere slot
+  pressure or `FindFreeObj` ordering matters.
+
 - **Final Zone stopped crashing on the signpost PLC gate (2026-08-01):** the
   `Level_MainLoop` tail wired earlier in this line reproduced `SignpostArtLoad`'s
   six ROM gates faithfully — including `cmpi.b #act3,(v_act).w` — but compared

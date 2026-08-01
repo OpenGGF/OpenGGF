@@ -3,6 +3,41 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the S1 prison capsule's explosion phase no longer starts on the button
+  trigger frame. ROM `Pri_Switch` only writes routine=$A/obTimeFrame=60 and
+  returns, so the first `Pri_Explosion` pass is always the frame AFTER the
+  trigger regardless of object RAM order
+  (docs/s1disasm/_incObj/3E Prison Capsule.asm:88-115). The engine runs the
+  phase on the capsule body, so wherever the level layout places the body's
+  SST slot after the button's, the body ticked the 60-frame timer once on the
+  trigger frame — ending the phase a frame early, shifting the 150-frame
+  animal window, and (depending on V-blank phase) adding or dropping one
+  random-animal spawn and one capsule-explosion RandomNumber draw. Greens
+  `TestS1Syz3CompleteRunTraceReplay` (was 5 errors from f13222) and
+  `TestS1Slz3CompleteRunTraceReplay` (was 5 errors from f13237), and — with
+  the lava-countdown fix below — `TestS1Mz3CompleteRunTraceReplay` (was 5
+  errors from f17398). GHZ3/LZ3 order the body before the button and were
+  never affected.
+- Fix: the MZ boss seeds its lava-drop countdown with the RAW low byte of the
+  per-frame descent RandomNumber (`move.b d0,BossMarble_ParentObj`,
+  docs/s1disasm/_incObj/73, 74 Boss - MZ Main and Fire.asm:107-109; range
+  0-255), not the $40-$5F reroll used after each spawn (.generateTimer,
+  :227-231), and no longer draws RandomNumber at object init (the ROM's first
+  draw is the first descent frame). The wrong countdown value shifted the
+  first combat lava spawn by up to ~190 frames, changing how many two-draw
+  lava spawns preceded the defeat and desynchronising the RNG stream at the
+  prison capsule.
+- Fix: LZ conveyor wheels (Obj63 subtype $7F) despawn out of range like the
+  ROM. `LCon_Wheel` ends with `bra.w RememberState`
+  (docs/s1disasm/_incObj/63 LZ Conveyor.asm:213-215), which deletes the sprite
+  outside the out_of_range window and only preserves the placement respawn
+  flag — freeing the SST slot. The engine treated RememberState as
+  always-persistent, keeping every wheel (nine by act end in LZ3) alive and
+  pinning their dynamic slots, which pushed the capsule's last animals above
+  slot 63 where the modelled released-game `Pri_EndAct` scan
+  (slots 1-63) cannot see them — triggering the results sequence while they
+  were still alive. Greens `TestS1Lz3CompleteRunTraceReplay` (was 6 errors
+  from f18584).
 - Fix: the GHZ boss wrecking ball now runs the ROM's defeat sequence instead of
   vanishing instantly. `GBall_Ball` (routine 8) calls `BossDefeated` every frame
   once Eggman's defeated flag is set — spawning an explosion and drawing

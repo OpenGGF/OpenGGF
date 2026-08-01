@@ -100,6 +100,7 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
 
     private State state = State.IDLE;
     private int timer;
+    private int buttonTriggerFrame = -1;
     private int currentFrame = FRAME_CAPSULE;
     private boolean buttonTriggered;
     private boolean resultsTriggered;
@@ -131,6 +132,16 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
             return;
         }
         buttonTriggered = true;
+        // ROM Pri_Switch only writes routine=$A/obTimeFrame=60 and returns; the
+        // first Pri_Explosion pass is always the FRAME AFTER the trigger,
+        // regardless of where the body sits in object RAM
+        // (docs/s1disasm/_incObj/3E Prison Capsule.asm:88-115). The engine runs
+        // the explosion phase on the body object, so when the body's slot
+        // executes after the button's in the same frame it would otherwise
+        // tick the 60-frame timer once on the trigger frame, ending the phase
+        // a frame early and shifting the whole animal window.
+        ObjectManager triggerObjectManager = services().objectManager();
+        buttonTriggerFrame = triggerObjectManager != null ? triggerObjectManager.getVblaCounter() : -1;
 
         LOGGER.info("S1 EggPrison triggered at X=" + spawn.x());
 
@@ -187,7 +198,11 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
 
         switch (state) {
             case IDLE -> updateIdle();
-            case EXPLODING -> updateExploding(frameCounter);
+            case EXPLODING -> {
+                if (frameCounter != buttonTriggerFrame) {
+                    updateExploding(frameCounter);
+                }
+            }
             case ANIMAL_SPAWN -> updateAnimalSpawn(frameCounter);
             case END_ACT -> updateEndAct(player);
             case COMPLETE -> { /* Nothing — results screen active */ }

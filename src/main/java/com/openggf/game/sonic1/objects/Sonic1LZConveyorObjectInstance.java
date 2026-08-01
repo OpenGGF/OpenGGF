@@ -420,8 +420,15 @@ public class Sonic1LZConveyorObjectInstance extends AbstractObjectInstance
             return false;
         }
         if (mode == Mode.WHEEL) {
-            // Wheel uses RememberState: always persistent
-            return true;
+            // ROM LCon_Wheel ends with bra.w RememberState
+            // (docs/s1disasm/_incObj/63 LZ Conveyor.asm:213-215). RememberState
+            // still DELETES the sprite once it leaves the out_of_range window and
+            // only preserves the placement's respawn flag — the SST slot frees.
+            // Treating it as always-persistent kept every wheel alive (and its
+            // dynamic slot pinned) through the end of the act, pushing the LZ3
+            // capsule animals above the released-game Pri_EndAct slot-63 scan
+            // ceiling. Fall through to the standard remembered-object culling.
+            return false;
         }
         if (mode == Mode.SPAWNER) {
             // Spawner is transient - only needs one frame to spawn children
