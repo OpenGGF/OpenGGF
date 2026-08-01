@@ -46,7 +46,7 @@ public final class LbzFlameThrowerObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity player) {
-        int vIntRunCounter = services().vIntRunCounter(frameCounter);
+        int vIntRunCounter = services().resolveVIntRunCount(frameCounter);
         if (((vIntRunCounter + subtype) & SPAWN_PERIOD_MASK) != 0) {
             return;
         }

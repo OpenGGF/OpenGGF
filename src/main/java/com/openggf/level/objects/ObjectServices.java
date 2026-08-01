@@ -95,14 +95,19 @@ public interface ObjectServices {
     void spawnLostRings(PlayableEntity player, int frameCounter);
 
     /**
-     * Resolves S3K's {@code V_int_run_count} from the object-update clock.
-     * The phase offset is zero in normal gameplay, while trace replay may
-     * initialize an independent low-bit phase on the object manager.
+     * Returns S3K's {@code V_int_run_count} as observed at a given object-execution
+     * instant. Callers pass the counter value the object manager handed them —
+     * {@code ObjectExecutionController} dispatches {@code instance.update(vblaCounter, ...)},
+     * and that value already equals ROM {@code V_int_run_count}. This method performs no
+     * conversion between two clocks; it only re-applies the low-bit phase offset that old
+     * S3K trace schemas need because they captured the adjacent V-int word rather than the
+     * run counter itself. The offset is zero in all normal gameplay, so this is then a
+     * pass-through.
      */
-    default int vIntRunCounter(int objectUpdateCounter) {
+    default int resolveVIntRunCount(int vIntRunCountAtObservation) {
         ObjectManager manager = objectManager();
         int phaseOffset = manager != null ? manager.getVIntRunCounterPhaseOffset() : 0;
-        return objectUpdateCounter + phaseOffset;
+        return vIntRunCountAtObservation + phaseOffset;
     }
 
     default void spawnLostRingsAfterCurrentFrame(PlayableEntity player, int frameCounter) {
