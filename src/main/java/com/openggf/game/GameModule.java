@@ -423,6 +423,26 @@ public interface GameModule {
     }
 
     /**
+     * Returns the ROM's {@code v_act} for the current level, or -1 when the
+     * logical act index already is it.
+     * <p>
+     * This is the ROM level identity, not the feature identity: it pairs with
+     * {@link com.openggf.level.LevelManager#getRomZoneId()} to give the
+     * ({@code v_zone}, {@code v_act}) word that ROM routines compare against.
+     * Games whose logical zone/act numbering differs from the ROM's level table
+     * override this; {@link #getRemappedFeatureAct} answers a different
+     * question and must not be reused for it.
+     *
+     * @param logicalZone the zone the game considers the player to be in
+     * @param act the logical act index
+     * @param levelZoneIndex the zone index stored in the level data
+     * @return the ROM act index, or -1 when it equals {@code act}
+     */
+    default int getRomAct(int logicalZone, int act, int levelZoneIndex) {
+        return -1;
+    }
+
+    /**
      * Returns whether this game supports separate Tails tail art (Obj05 with
      * independent art/mapping/DPLC). S3K uses a completely separate set;
      * S2 reuses the main Tails art at a different VRAM base.

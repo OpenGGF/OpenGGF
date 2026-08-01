@@ -339,10 +339,22 @@ public class Sonic1GameModule implements GameModule {
                 && levelZoneIndex == Sonic1Constants.ZONE_LZ) {
             return 2;
         }
+        return -1;
+    }
+
+    @Override
+    public int getRomAct(int logicalZone, int act, int levelZoneIndex) {
+        // Scrap Brain act 3 is the LZ slot's act 4: v_zone=id_LZ, v_act=act4.
+        // sonic.asm:2755-2768 enables water for the whole id_LZ slot, and
+        // sonic.asm:2779 then picks the SBZ3 underwater palette off act4.
+        if (logicalZone == Sonic1ZoneConstants.ZONE_SBZ
+                && act == 2
+                && levelZoneIndex == Sonic1Constants.ZONE_LZ) {
+            return 3;
+        }
         // The ROM has no separate Final Zone level id: FZ is SBZ act 3, so
-        // v_act reads act3 there (the level id is id_SBZ act 3). The engine
-        // models FZ as its own logical zone whose act index restarts at 0, so
-        // report the ROM's act for anything keyed on v_act.
+        // v_zone=id_SBZ and v_act reads act3 there. The engine models FZ as its
+        // own logical zone whose act index restarts at 0.
         if (logicalZone == Sonic1ZoneConstants.ZONE_FZ) {
             return 2;
         }

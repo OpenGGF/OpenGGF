@@ -218,6 +218,39 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **Final Zone stopped running underwater; ROM `v_act` split from the feature act
+  (2026-08-01):** an earlier fix in this line answered a `v_act` question through
+  `getRemappedFeatureAct`, which also keys water and palette lookups where SBZ3 is
+  deliberately reported as the synthetic pair (SBZ, act 2). Reporting act 2 for
+  Final Zone so the ported `SignpostArtLoad` gate could see `act3` collided FZ
+  with SBZ3's water entry, and Final Zone ran the entire level underwater —
+  `runAcceleration` halves the base `$0C` to `$06` under water physics, which is
+  exactly the frame-0 `x_speed` divergence the trace reported. The two identities
+  are genuinely distinct in the ROM: `id_LZ_act4 = $0103` is SBZ3 and
+  `id_FZ = $0502`, water is enabled for the `id_LZ` slot only, so the ROM never
+  reaches water through `id_SBZ` at all. `GameModule.getRomAct` and
+  `LevelManager.getRomActId` now provide the `v_act` partner to the existing
+  `getRomZoneId`, so the signpost gate asks a `v_act` question through a `v_act`
+  channel and water keeps its own; SBZ3 correctly stops skipping the gate, its
+  `v_act` being act4. The routing test that should have caught this was asking the
+  water system about the logical act rather than the pair it is keyed by.
+
+- **CPZ2 green — two cancelling engine defects (2026-08-01):** the last S2 level
+  trace closed on a pair of bugs that had been hiding each other. The ROM's CPZ
+  boss pump is single-pass: `Obj5D_Pipe_Pump_4`'s repeat branch writes its restart
+  state but has no `rts` and falls through into the tail that switches to
+  `Obj5D_Pipe_Retract` and deletes the pump head unconditionally, so the repeat
+  timer is dead code on hardware — the engine honoured it and ran ~430-frame
+  two-pass pumps. Separately the ROM's dripper is pipe-independent, parented to
+  the main vehicle and deleted only on the defeat bit or after its own twelve fill
+  cycles, where the engine anchored it to the pipe control. These cancelled
+  exactly: the over-long pump kept the pipe alive just long enough for the
+  pipe-coupled dripper to finish its twelve pulses, so every player-visible timing
+  matched and the only observable trace was the pipe control surviving to defeat
+  and drawing one extra `RandomNumber`. Fixing the pump alone collapsed the fight
+  (5140 errors), which is what confirmed the coupling. Every trace in the
+  capsule/PLC-busy family — GHZ3, MTZ3, CPZ2, SYZ3, SLZ3, MZ3, LZ3 — now passes.
+
 - **All four S1 act-3 capsule stragglers greened (2026-08-01):** SYZ3, SLZ3, MZ3
   and LZ3 closed on three ROM-cited fixes, none of which lived where the failing
   comparator field pointed. The busy flag was mirroring *when the egg-prison
