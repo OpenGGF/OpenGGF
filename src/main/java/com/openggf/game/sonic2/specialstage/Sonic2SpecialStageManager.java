@@ -3,6 +3,7 @@ package com.openggf.game.sonic2.specialstage;
 import com.openggf.game.SpecialStageDebugProvider;
 import com.openggf.game.GameServices;
 import com.openggf.game.resources.DynamicArtLifecycleService;
+import com.openggf.game.resources.PlcFrameLifecycleCoordinator;
 
 import com.openggf.audio.GameSound;
 import com.openggf.configuration.SonicConfiguration;
@@ -1231,6 +1232,23 @@ public class Sonic2SpecialStageManager {
             // (s2.asm:29805-29846, 6651-6663). Apply player scalar init first,
             // then execute/project/collide active special-stage objects once.
             completePlayerScalarInitializationBootstrap();
+            // That first player-slot scan runs Obj09/Obj10's display code,
+            // which ends in LoadSSSonicDynPLC / LoadSSTailsDynPLC /
+            // LoadSSTailsTailsDynPLC (docs/s2disasm/s2.asm:69194, 70493,
+            // 70575). Their "already loaded" latch was cleared with the rest
+            // of the special-stage object RAM, so the bootstrap pass is where
+            // the players' first art transfer is queued -- not the first
+            // recurring V-int pass.
+            publishPlayerDynamicArt();
+            // The startup sequence then waits on a DMA-queue-only V-int
+            // (s2.asm:6665-6668 -> Vint_CtrlDMA, s2.asm:998-1001), so that
+            // V-blank retires what the pass just queued even though the
+            // Pal_FadeFromWhite loop around it never polls the joypad.
+            PlcFrameLifecycleCoordinator plcFrameLifecycle =
+                    GameServices.plcFrameLifecycleOrNull();
+            if (plcFrameLifecycle != null) {
+                plcFrameLifecycle.markNextVblankServicesDmaQueue();
+            }
             executeActiveSpecialStageObjects();
             intro.beginFadeFromWhite();
         } else if (recurringVintTick) {

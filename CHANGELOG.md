@@ -3,6 +3,20 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the S2 special stage now queues the players' first art transfer from its
+  one-off startup `RunObjects` pass (docs/s2disasm/s2.asm:6662), where
+  `LoadSSSonicDynPLC` / `LoadSSTailsDynPLC` / `LoadSSTailsTailsDynPLC`
+  (s2.asm:69194, 70493, 70575) actually run, instead of waiting for the first
+  recurring V-int pass. The startup sequence then explicitly asks for
+  `VintID_CtrlDMA` before waiting (s2.asm:6665-6668), and `Vint_CtrlDMA`
+  (s2.asm:998-1001) is nothing but `ProcessDMAQueue` (s2.asm:1770), so that
+  V-blank retires the queued transfers even though the surrounding
+  `Pal_FadeFromWhite` loop (s2.asm:3460-3482) never polls the joypad and reads
+  as a lag frame; `PlcFrameLifecycleCoordinator.markNextVblankServicesDmaQueue`
+  models that one-shot. `TestS2SpecialStageTraceReplay` moves from 20482 errors
+  first diverging at f136 to 20468 first diverging at f165; the remainder is a
+  separate recurring-pass attribution gap (see
+  docs/status/trace-frontier-log.md).
 - Fix: the S1 special stage no longer publishes Sonic's dynamic-art transfer
   while loading the stage. `GM_Special` (docs/s1disasm/sonic.asm:3222-3292)
   never runs `Sonic_LoadGfx` during setup, and it clears `v_levelvariables`
