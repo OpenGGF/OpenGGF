@@ -1598,6 +1598,24 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
      * observes the drained counter — and so first reaches {@code loc_2D8CA}'s
      * {@code LoadEnemyArt} ({@code 62295-62301}) — on the following frame.
      */
+    /**
+     * Re-queues the current zone/act's enemy KosM archives, matching a
+     * mid-level ROM {@code jsr (LoadEnemyArt).l}
+     * ({@code docs/skdisasm/sonic3k.asm:64281-64313}): the caller's object runs
+     * {@code Queue_Kos_Module} for every {@code PLCKosM_*} entry during its own
+     * execution frame, so the submissions happen immediately rather than
+     * waiting for the next {@link #processRuntimeArtQueue()} pump.
+     *
+     * <p>Used by {@code HCZGeyser_ReloadEnemyArtAndDelete}
+     * ({@code docs/skdisasm/sonic3k.asm:65002-65004}), which restores the
+     * badnik art the horizontal geyser sheet overwrote before deleting itself.
+     */
+    public void reloadEnemyKosArt() {
+        scheduleEnemyKosArt(currentZoneIndex, currentActIndex);
+        enemyKosSubmissionArmed = true;
+        processEnemyKosArt();
+    }
+
     private void advanceTitleCardTeardown() {
         if (titleCardTeardown == null) {
             return;

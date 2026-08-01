@@ -57294,3 +57294,39 @@ the existing camera-snap-triggered submission should land on the recorded frame 
 released by the recorded completions. Gating `serviceAiz1MainLevelArt` differently, or
 touching the Kos queues/timing port, is NOT the right lever and risks LBZ (0/12647).
 Pass/fail: TestS3kAizTraceReplay held at the release-slice gate (4 failures + 1 error).
+
+## 2026-08-01 — HCZ complete-run: frame-1067 queue groups cleared, frontier 1320 -> 10334
+
+Command: `mvn -Ptrace-replay -Dtest=TestS3kHczCompleteRunTraceReplay -Ds3k.rom.path=<rom> test`
+Context: worktree `.worktrees/hcz-1067`, branch `bugfix/ai-s3k-hcz-1067` (from
+`bugfix/ai-s3k-mhz-queue-frontier` @ a3926493c). Result: FAIL (frontier terminator),
+119 errors / 10334 frames; first error `queue.s3k_kos_direct.busy` at frame 3230.
+
+The "HCZ large fan" lead resolved to the HCZ water wall: the recorded frame-1067 direct
+child `3738628` is `$390C04 = ArtKosM_HCZGeyserHorz+2` (previously misread as `$390904`;
+`ART_KOSM_HCZ_LARGE_FAN_ADDR=0x390900` verified byte-for-byte against ROM, and the fan
+never runs on this route — `Obj_HCZLargeFan` = ROM `$308FA`, absent from slot dumps).
+Three `Obj_HCZWaterWall` fixes (all object-local, plus
+`Sonic3kObjectArtProvider.reloadEnemyKosArt()`):
+1. `HCZWaterWall_Horizontal_CheckPlayerY` -> `_QueueArt` same-frame fall-through
+   (sonic3k.asm:64847-64859), and `_Init` -> `_WaitPlayer` (64866-64887).
+2. `HCZGeyser_ReloadEnemyArtAndDelete` (65002-65004) runs `LoadEnemyArt`
+   (64281-64313) at cleanup expiry for BOTH geyser subtypes, re-queueing the act's
+   `PLCKosM_HCZ1` enemy archives (recorded direct completions 1335-1344 and 3261+).
+3. Erupt/fall phases exit on ROM `render_flags` bit 7 — `Render_Sprites` world cull
+   (loc_1AEA2) with `width_pixels`/`height_pixels` ($80/$20 horz, $20/$60 vert),
+   observed one frame stale; horizontal erupt keeps spawning one spray child
+   (+`Random_Number`) per frame until then (64946-64976).
+
+Sweep (this commit): aiz 57/6344, hcz 119/10334 (was 7/1320), mgz 23/17949, cnz 7/9711,
+icz 10/12375, lbz 0/12647, mhz 838/7218 — all non-HCZ at baseline. `TestS3kAizTraceReplay`
+holds 4F+1E. Guard batch (S3K keep-green four, `TestHardwareTimingAuthorityGuard`,
+`TestHczLargeFanCoordinateParity`, `TestS3kKosModuleQueue`/`DecompressionQueue`/
+`ModuleReadiness`) 98/98 green.
+
+Next HCZ targets: (a) frames 3230-3260 — second `LoadEnemyArt` reload fires 31 frames
+early; recorded reload at 3261 (`KOS_DECOMPRESSION_QUEUE#86`), engine cleanup-start too
+early — likely the other geyser's exit-edge model still imprecise; (b) frame 9761 —
+`player_animation_id` 0x13 vs 0x09 plus an engine-only KosM submission (direct source
+879204 = `$D6A64`); (c) terminator at 10334: recording expects
+`KOS_DECOMPRESSION_QUEUE#104` (fingerprint fbfc78d4…) with engine pending empty.
