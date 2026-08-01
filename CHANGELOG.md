@@ -3,6 +3,28 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: HCZ water wall (`Obj_HCZWaterWall`) hardware-queue parity, clearing the
+  HCZ complete-run frame-1067 `queue.*` groups and moving the segment frontier
+  from 1320 to 10334 frames. Three ROM behaviours were missing: (1)
+  `HCZWaterWall_Horizontal_CheckPlayerY` falls through into
+  `HCZWaterWall_Horizontal_QueueArt` (sonic3k.asm:64847-64859), so the geyser
+  queues `ArtKosM_HCZGeyserHorz` on its spawn frame — the engine deferred both
+  the queue and the `Horizontal_Init` -> `Horizontal_WaitPlayer` fall-through
+  (64866-64887) by one update; (2) `HCZGeyser_ReloadEnemyArtAndDelete`
+  (65002-65004) runs `LoadEnemyArt` (64281-64313) when either geyser's cleanup
+  delay expires, re-queueing the act's `PLCKosM_*` enemy KosM archives the
+  geyser sheet overwrote — the engine deleted the object without any reload
+  (new `Sonic3kObjectArtProvider.reloadEnemyKosArt()`); (3) the erupt/fall
+  phases leave via ROM `render_flags` bit 7 — `Render_Sprites`' world
+  coordinate cull with `width_pixels`/`height_pixels` ($80/$20 horizontal,
+  $20/$60 vertical, sonic3k.asm loc_1AEA2), observed one frame stale — not via
+  a move-timer or a symmetric on-screen margin. The horizontal erupt phase also
+  keeps spawning one spray child (and consuming `Random_Number`) every frame
+  until then (64946-64976). Investigated as the "HCZ large fan" queue lead: the
+  recorded direct child source is `ArtKosM_HCZGeyserHorz+2` ($390C04, misread
+  as $390904 in the prior session); `ART_KOSM_HCZ_LARGE_FAN_ADDR = 0x390900`
+  verified byte-for-byte against the ROM, and the fan object is never the
+  producer on this route.
 - Fix: swept every S3K `SolidObjectFull` call site for landing-gate width
   mismatches after the Madmole find. ROM `Solid_Landed` / `loc_1E154`
   (sonic3k.asm:41611-41621) re-reads `width_pixels(a0)` for the new-landing X
