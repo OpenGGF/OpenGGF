@@ -241,7 +241,8 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
                 harness.stepPasses(
                         completedPasses,
                         isTerminalPreStartPassFrame(trace, f),
-                        tf.lag());
+                        tf.lag(),
+                        f);
                 if (tf.lag()) {
                     addDynamicArtComparison(
                             comparisons, trace, expectedDynamicArtRows, harness, f,
@@ -290,7 +291,8 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
                 } else {
                     harness.stepPasses(
                             completedPasses, false,
-                            trace.getFrame(sf).lag());
+                            trace.getFrame(sf).lag(),
+                            sf);
                 }
                 addDynamicArtComparison(
                         comparisons, trace, expectedDynamicArtRows, harness, sf,
@@ -325,7 +327,8 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
             CompletedPass terminalPass = finishPasses.get(0);
             harness.stepPasses(
                     List.of(terminalPass), false,
-                    trace.getFrame(observed).lag());
+                    trace.getFrame(observed).lag(),
+                    observed);
             Sonic2SpecialStageComparisonState terminalState = harness.capture();
             if (!finishedBeforeTerminal && harness.isFinished()) {
                 finishTransitionActual = String.valueOf(sf);
@@ -382,9 +385,26 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
                 .mapToInt(SpecialStageTraceData.ControlStateTransition::frame)
                 .findFirst()
                 .orElse(trace.frameCount());
+        java.util.Set<Integer> cursorPrecededRows = new java.util.HashSet<>();
+        List<DynamicArtSpillNormalization.PassBinding> passBindings = new ArrayList<>();
+        for (TraceEvent.StateSnapshot snapshot : trace.runObjectsEndSnapshots()) {
+            int boundRow = snapshot.frame();
+            Object cursor = snapshot.fields().get("completion_cursor_frame");
+            if (cursor == null) {
+                continue;
+            }
+            int cursorFrame = Integer.parseInt(String.valueOf(cursor));
+            passBindings.add(new DynamicArtSpillNormalization.PassBinding(
+                    cursorFrame, boundRow));
+            if (cursorFrame < boundRow) {
+                cursorPrecededRows.add(boundRow);
+            }
+        }
         return DynamicArtSpillNormalization.rebindSubmissionSpills(
                 states, trace.frameCount(), pacingStart,
-                f -> trace.getFrame(f).lag());
+                f -> trace.getFrame(f).lag(),
+                cursorPrecededRows::contains,
+                passBindings);
     }
 
     private static void addDynamicArtComparison(

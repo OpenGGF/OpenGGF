@@ -60151,3 +60151,39 @@ region is fully aligned. The remaining divergence (first error f436,
 gameplay, where mapping-frame changes are input/collision-driven — a separate
 investigation. The rebinding deliberately does not apply there: the recorded
 `run_objects_end` bindings already pace each pass against its bound observation.
+
+
+## 2026-08-01 — S2 special stage: pass-identity binding end to end (f436 -> f5181, 17747 -> 9)
+
+Worktree `bugfix/ai-fable-ss-anim`, on top of the merged spill rebinding. The f436 event
+decomposed into three recorder-vs-atomic-pass artifacts, each measured before fixing:
+
+1. **Same-observation completions.** Pass 5 (completion cursor 435, bound row 436) ran
+   during the preceding lag frame on hardware; the V-int opening row 436 had already run
+   ProcessDMAQueue over its work, so ROM row 436 carries the pass's submissions AND
+   completions. The engine, executing the pass at its bound observation, retired one
+   V-blank later (row 438). Fixed engine-side: when a bound pass's recorded cursor
+   precedes its observation, the harness retires its submissions within the observation,
+   after that pass and before later passes queue — readiness timing of engine-submitted
+   work, driven by the same binder fields that already pace execution.
+2. **Edges published off their pass's bound row.** The recorder publishes each edge at
+   the first observation after its wall-clock crossing; pass 8's ss-sonic submission
+   crossed f439 and published there while the pass is bound to f441 (its ss-tails
+   partner crossed f440, publishing f441). The normalization now binds every
+   paced-region submission edge to the earliest pass whose cursor covers its crossing —
+   pass identity rather than publication row, the same doctrine as the pre-start
+   rebinding, generalized to both directions.
+3. **Crossing stamps and outstanding windows** follow the binding: stamps rewritten only
+   on cursor-preceded rows (rows the engine provably queues later than the ROM crossed;
+   fixture row 425 shows the terminal-boundary case where the engine reproduces the
+   recorded stamp and it stays absolute), outstanding ids added for backward moves and
+   removed for forward moves over the affected row windows.
+
+Result: 17747 errors @ f436 -> 9 @ f5181. The full stage — every pass, submission,
+retirement, and animation cycle across 5180 rows — now compares clean. The residual 9
+errors are the stage-finish boundary (rows 5180-5220): the recorder labels finish with
+the last logical non-lag frame while publishing the finish-causing pass at the following
+observation, holds the final submissions outstanding through the results screen, and
+publishes their completions at f5220. That choreography is owned by the existing
+terminal-pass machinery (terminal_forwarded, ssFinishedObserved special cases) and needs
+its own careful pass rather than a fourth normalization refinement.
