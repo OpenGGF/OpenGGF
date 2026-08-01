@@ -863,6 +863,16 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getTopLandingHalfWidth(PlayableEntity player, int collisionHalfWidth) {
+        // ROM Solid_Landed / loc_1E154 (sonic3k.asm:41611-41621) re-reads
+        // width_pixels(a0) for the landing X gate. ObjDat3_CNZMinibossTop sets
+        // width_pixels = $18 (sonic3k.asm:145662-145664) while
+        // Obj_CNZMinibossTopMain passes d1 = $13 (sonic3k.asm:145064-145068),
+        // so the default d1 - $B = $8 heuristic is $10px too narrow.
+        return 0x18;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity player) {
         return routine == ROUTINE_MAIN && !isDestroyed();
     }

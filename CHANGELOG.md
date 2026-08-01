@@ -3,6 +3,23 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: swept every S3K `SolidObjectFull` call site for landing-gate width
+  mismatches after the Madmole find. ROM `Solid_Landed` / `loc_1E154`
+  (sonic3k.asm:41611-41621) re-reads `width_pixels(a0)` for the new-landing X
+  gate, so the engine's generic `collisionHalfWidth - $B` derivation is only
+  correct where the caller passed `d1 = width_pixels + $B`. Three implemented
+  objects on measured routes violate that relation and now override
+  `getTopLandingHalfWidth`: the AIZ disappearing-floor border child (spawned
+  with `width_pixels = $28`, sonic3k.asm:58390, solid call `d1 = $2B`,
+  58413-58418 — gate was 8px too narrow), the CNZ miniboss top
+  (`ObjDat3_CNZMinibossTop` `width_pixels = $18`, sonic3k.asm:145662-145664,
+  call `d1 = $13`, 145064-145068 — 16px too narrow), and the ICZ end boss
+  solid bottom (`ObjDat3_72324` `width_pixels = $10`, sonic3k.asm:151287-151291,
+  call `d1 = $23`, 150882-150886 — 8px too wide, accepting landings the ROM
+  rejects). All other S3K `SolidObjectFull` callers audited clean or already
+  overridden; unmeasured-route mismatches (FBZ miniboss capsule, FBZ end-boss
+  stand, SOZ end-boss children, LRZ miniboss, ICZ Knuckles-intro teleporter,
+  2P button/spikes) are logged in the trace frontier log, not patched.
 - Fix: the S3K results screen's create gate now mirrors ROM
   `Obj_LevelResultsCreate`, which gates child creation and the `Events_fg_5`
   act-transition signal on `Kos_modules_left` alone (sonic3k.asm:62596-62598).

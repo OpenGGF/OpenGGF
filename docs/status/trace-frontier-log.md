@@ -57069,3 +57069,69 @@ frame carve-out.
 Counts: aiz 8, hcz 7, mgz 18, cnz 7, icz 10, lbz 8 — all baseline; mhz 934 -> 838,
 first error f3326 -> f3420 (`rings`). MHZ tail `KOS_DECOMPRESSION_QUEUE#335` throw
 unchanged (known pre-existing; report still covers all 7218 frames).
+
+## 2026-08-01 — S3K SolidObjectFull landing-width sweep (bugfix/ai-s3k-landing-width)
+
+Systematic audit of all 118 `SolidObjectFull` call sites in sonic3k.asm following the
+Madmole fix (`0e5fbf189`). ROM `Solid_Landed` / `loc_1E154` (sonic3k.asm:41611-41621)
+re-reads `width_pixels(a0)` for the new-landing X gate; the engine's generic
+`collisionHalfWidth - $B` heuristic is correct only where the caller passed
+`d1 = width_pixels + $B`. `SolidObjectTop_1P` (sonic3k.asm:41798-41825) uses `d1`
+directly, so top-profile objects are unaffected. S1 `Solid_Landed`
+(s1disasm `_incObj/sub SolidObject.asm:318-336`, `obActWid`) and S2
+`SolidObject_Landed` (s2.asm:35588+) re-read the width field identically — the
+heuristic is a cross-game compensation for the engine not modelling `width_pixels`
+as a first-class solid-provider field (design note below).
+
+### Mismatches fixed (measured routes, object-local `getTopLandingHalfWidth` overrides)
+
+- AIZ disappearing-floor border child: spawn `width_pixels = $28` (58390), call
+  `d1 = $2B` (58413-58418) → gate was $20, ROM $28 (8px narrow).
+- CNZ miniboss top: `ObjDat3_CNZMinibossTop` `width_pixels = $18` (145662-145664),
+  call `d1 = $13` (145064-145068) → gate was $8, ROM $18 (16px narrow).
+- ICZ end boss solid bottom: `ObjDat3_72324` `width_pixels = $10` (151287-151291),
+  call `d1 = $23` at loc_71F30 (150882-150886) → gate was $18, ROM $10 (8px WIDE —
+  engine accepted landings the ROM rejects).
+
+### Audited clean (relation holds or override/profile already present)
+
+All `addi.w #$B,d1` sites (consistent by construction); LBZ pipe plug ($1B/$10);
+Obj_Button main ($1B/$10); CNZ cylinder ($2B/$20); HCZ spinning column ($1B/$10);
+ICZ path platform, breakable wall, crushing column, segment column, swinging
+platform, stalagtite, ice spikes, ice cube ($23/$18, override kept); Iwamodoki
+($17/$C); MHZ ObjDat3_6653C platform ($1B/$10); egg capsule body ($2B/$20) and
+button (word_86B3E `width_pixels = $10` vs `d1 = $1B` — consistent); LBZ end boss
+ship ($13/$8); FBZ egg prison via sub_89D9C ($2B/$20); FBZ spring plunger
+($1B/$10); LRZ3 platform loc_79D08 ($2B/$20); MHZ Rockn ($23/$18); main-game
+spikes (+$B sites).
+
+### Mismatches on unmeasured routes (logged, not patched)
+
+FBZ miniboss capsule via sub_6F786 (`d1 = $23` vs FBZEggPrison `$20`); FBZ end-boss
+Robotnik stand loc_70152 (`d1 = $13` vs ObjDat3_703BC `$20`); SOZ end-boss children
+loc_77B16/77B9A/77C32 (`$1F/$18`, `$1B/$14`, `$2B/$28`); LRZ miniboss locret_786A0
+(`$33` vs `$30`); ICZ Knuckles-intro teleporter (`d1 = $23`, 110547, vs
+`width_pixels = $20`, 110492 — object not implemented in engine); competition 2P
+button (`$13` vs `$C`) and 2P spikes (`width_pixels + 7` callers).
+
+### Design note
+
+Per-object overrides are compensation for the shared heuristic. The accurate model
+is a `width_pixels`-equivalent field on solid providers consumed by
+`ObjectSolidContactController`'s landing gate in all three games. Blast radius:
+every solid object in S1/S2/S3K — not landed here; requires a full S1+S2+S3K trace
+sweep if attempted.
+
+### Regression sweep (all seven segments + gates)
+
+`mvn -Ptrace-replay -Dtest=TestS3k<Zone>CompleteRunTraceReplay test`, one class per
+invocation: aiz 65/6344, hcz 7/1320, mgz 23/17949, cnz 7/9711, icz 10/12375,
+lbz 0/12647, mhz 838/7218 — all exactly baseline (LBZ first run reported 12643
+frames due to a surefire-fork heap OOM in teardown; re-run reproduced the full
+0/12647 with "All frames match trace"). `TestS3kAizTraceReplay` holds at exactly
+4 failures + 1 error. S3K guards (`TestS3kAiz1SkipHeadless`,
+`TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver`,
+`TestSonic3kDecodingUtils`) and rewind guards (`TestRewindCoverageGuard`,
+`TestStaticStateRewindCoverageGuard`) green. Trace deltas are neutral: the current
+routes do not land on the affected outer bands, so these overrides are
+disassembly-derived corrections, not trace-fitted.
