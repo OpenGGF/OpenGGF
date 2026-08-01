@@ -3,6 +3,26 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the CPZ boss pump runs a single pass per pipe cycle, matching the
+  ROM's actual control flow. `Obj5D_Pipe_Pump_4`'s would-be repeat branch
+  (`Obj5D_timer3 = 2`) writes its restart state but has no `rts` — it falls
+  through into the code that switches the control object to
+  `Obj5D_Pipe_Retract` and deletes the pump head unconditionally
+  (docs/s2disasm/s2.asm:62199-62218), confirmed by the recorded run's chain
+  deletions (cycle 1 at vfc 10069-10081, cycle 2 at 10515-10527). The
+  engine's two-pass pump kept the pipe control alive through the boss
+  defeat, where its `Obj5D_PipeSegment_End` conversion drew a RandomNumber
+  the ROM never draws, desynchronising every capsule animal species/offset.
+- Fix: the CPZ boss dripper is independent of the pipe control, as in the
+  ROM: its parent is the MAIN VEHICLE (`Obj5D_Pipe_Pump_0`,
+  docs/s2disasm/s2.asm:62166-62168), it tracks the vehicle's position, and
+  it deletes only on the defeat bit or after its own 12 cycles
+  (`Obj5D_Dripper_4`, docs/s2disasm/s2.asm:62244-62252). The engine tied its
+  lifetime and anchor to the pipe control, which only worked because the
+  two-pass pump kept that control alive long enough — the two errors
+  cancelled for every player-visible timing. Together these green
+  `TestS2Cpz2LevelSelectTraceReplay` (was 7 errors from frame 11491,
+  `queue.s2_nemesis_plc.busy`), the last non-special-stage S2 failure.
 - Fix: the S1 prison capsule's explosion phase no longer starts on the button
   trigger frame. ROM `Pri_Switch` only writes routine=$A/obTimeFrame=60 and
   returns, so the first `Pri_Explosion` pass is always the frame AFTER the

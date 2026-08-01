@@ -56858,3 +56858,34 @@ Any other object class modelling a ROM RememberState/DeleteObject tail as engine
 persistence will reproduce this bug wherever slot pressure or slot-ordering matters.
 A sweep of `isPersistent()`/`shouldStayActiveWhenRemembered()` overrides against their
 cited ROM tails is the follow-up; this entry is the evidence baseline.
+
+
+## 2026-08-01 — CPZ2 greened: two cancelling CPZ boss defects (one-pass pump + dripper lifetime)
+
+Worktree `bugfix/ai-fable-capsule-lifetime` (on 55e4224ea). Command:
+`mvn -Dmse=relaxed -Dsurefire.forkCount=1 "-Ds2.rom.path=<s2>" "-Dtest=TestS2Cpz2LevelSelectTraceReplay" test`.
+
+The residual +1 RandomNumber draw at the CPZ boss defeat was the engine's pipe control
+surviving to the defeat frame. Transition probes (removed before commit) showed the
+engine's cycle timeline matching the ROM at every observable — extension vfc 10287,
+pump start 10300, gunk landing 10214, re-dock 10272 — except pipe-control lifetime:
+
+1. **The ROM pump is single-pass.** `Obj5D_Pipe_Pump_4`'s repeat branch falls through
+   (no rts) into the retract-and-delete tail (s2.asm:62199-62218); `Obj5D_timer3 = 2`
+   is dead code. Ground truth from the fixture: cycle-1 chain deleted vfc 10069-10081,
+   cycle-2 at 10515-10527 — both single-pass durations. The engine honoured the repeat,
+   running ~430-frame pumps.
+2. **The ROM dripper is pipe-independent.** Its parent is the main vehicle
+   (s2.asm:62166-62168) and it dies only on the defeat bit or after 12 cycles
+   (s2.asm:62244-62252). The engine anchored it to the pipe control and killed it on
+   pipe death.
+
+The two engine defects cancelled: the over-long pump kept the pipe alive exactly long
+enough for the pipe-coupled dripper to finish the 12 fill pulses, reproducing every
+ROM-visible fight timing while leaving the pipe control alive at defeat (+1 draw).
+Fixing only the pump broke the fight (5140 errors — dripper died mid-fill); fixing both
+matches the ROM decomposition. **CPZ2 PASS** (was 7 errors, first at f11491).
+
+Full `TestS2*TraceReplay` sweep after the fix: 19 classes pass; only
+`TestS2SpecialStageTraceReplay` (20482 @ f136 `dynamic_art.edges`, long-standing,
+owned by the special-stage effort) remains, byte-identical to baseline.

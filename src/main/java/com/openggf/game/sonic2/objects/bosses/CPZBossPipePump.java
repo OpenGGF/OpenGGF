@@ -119,16 +119,18 @@ public class CPZBossPipePump extends AbstractObjectInstance implements RewindRec
             return;
         }
 
+        // ROM Obj5D_Pipe_Pump_4 (docs/s2disasm/s2.asm:62199-62218): after
+        // `subq.b #1,Obj5D_timer3 / beq.s +`, the would-be repeat branch writes
+        // anim/timer/routine_secondary/y_offset but has NO rts — it FALLS
+        // THROUGH to `+`, which switches the control object to
+        // Obj5D_Pipe_Retract and `jmpto DeleteObject`s the pump head
+        // unconditionally. The two-pass pump that `timer3 = 2` implies never
+        // happens on hardware: every pump cycle is a single pass, and the
+        // repeat writes are dead stores into an object that deletes itself the
+        // same frame. Honouring the repeat kept the pipe control alive through
+        // the boss defeat, where its Obj5D_PipeSegment_End conversion drew a
+        // RandomNumber the ROM never draws (CPZ2 capsule stream desync).
         timer3--;
-        if (timer3 != 0) {
-            anim = 2;
-            timer = 0x12;
-            routineSecondary = SUB_ANIMATE;
-            yOffset = 0x58;
-            animate();  // Sync mappingFrame with new anim before returning
-            return;
-        }
-
         parentPipe.beginRetractFromPump();
         setDestroyed(true);
     }
