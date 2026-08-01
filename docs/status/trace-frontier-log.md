@@ -56852,3 +56852,87 @@ order changed, and each looked like a separate pre-existing failure. Resolved by
 the sequence one owner, the `HardwareBoundaryDispatch` seam (`6e4444921`), so a boundary
 change lands in one place. Prefer the seam over a local re-implementation whenever a test
 needs to drive the production frame order.
+## 2026-08-01 — s3k_mhz1 f3246 SOLVED: Madmole arm's `$44` back-reference detaches the player on off-camera despawn
+
+Command: `mvn -Ptrace-replay "-Dtest=TestS3kMhzCompleteRunTraceReplay" "-Ds3k.rom.path=<root>/s3k.gen" test`.
+Worktree `.worktrees/f3246-probe`, branch `bugfix/ai-s3k-f3246-probe` off
+`bugfix/ai-s3k-mhz-queue-frontier`. JDK 21.
+
+**Before:** 903 errors / 7218 frames, first (and earliest non-queue) error f3246
+`camera_y` exp `0x0719` act `0x0717`, `air` exp 1 act 0.
+**After:** 934 / 7218, first error **f3326** `y_speed` exp `0x0000` act `0x03C8`.
+Frontier advanced 80 frames onto a new seed; the count rises because that new seed
+cascades further inside the captured window.
+
+### The three prior negatives were correct — and `sub_F264` was never the culprit
+
+A BizHawk probe of `sub_F264`'s own inputs and outputs, per `Player_AnglePos` sensor, per
+frame (`tools/bizhawk/probes/mhz_f3246_findfloor_probe.lua`, capture under
+`docs/architecture/validation/trace/2026-08-01-mhz-f3246-captures/`) shows the ROM at
+f3246 matching every value the engine computes:
+
+- right/primary sensor `(0x0FB1, 0x078A)`, chunk word `F276`, block `38`,
+  `AngleArray` byte `F8`, normal exit, **`d1 = 0`**
+- left/secondary sensor `(0x0F9F, 0x078A)`, `loc_F274` tile-below exit, `d1 = 6`,
+  angle `F4`
+- `Collision_addr = 0x000987C0` (Primary), `top_solid_bit=0C`, `stick_to_convex=0`,
+  `Background_collision_flag=0`
+- `Player_Angle` leaves `d1 = min = 0`, so `Player_AnglePos` takes `beq.s locret_ED12`
+  (`sonic3k.asm:18809`) and **does not detach**. `loc_ED38` is never reached anywhere in
+  f3200-f3260. The recorded exit angle `F8` is written by the grounded path.
+
+Two incidental corrections to the earlier static reasoning: `sub_F30C`'s `loc_F32A` *does*
+write the tile-below `AngleArray` byte (hence the left sensor's `F4`), and `loc_F31C`
+writes no angle at all — so the "both escape hatches force angle 0" step was wrong,
+though it did not change the conclusion.
+
+f3247-f3255 contain no `Player_AnglePos` call at all (already airborne, `Sonic_MdAir`), so
+the transition happens after `Player_AnglePos` inside f3246.
+
+### Root cause: `loc_8D724`, the Madmole arm's off-camera despawn release
+
+A write hook on Player_1's `status` byte (`tools/bizhawk/probes/mhz_f3246_status_write_probe.lua`)
+puts the `Status_InAir` write at ROM `$08D72C` — `bset #Status_InAir,status(a1)` in
+`loc_8D724` (`sonic3k.asm:193222-193228`), the off-camera despawn tail of `loc_8D6E6`, the
+Madmole's side-drill arm child (`ChildObjDat_8D9C8`/`ChildObjDat_8D9D0`,
+`sonic3k.asm:193508-193514`). A third probe confirms the released `a1` is Player_1:
+
+```
+f=3246 RELEASE released_is_player1=yes child_slot=20 child_code=0008D6E6 child_rtn=06
+       child_x=0E0C child_y=0724 child_objctl=00 child_p44=B000
+       released_ptr=B000 released_x=0FA8 released_y=0777 released_status=00 released_objctl=00
+```
+
+**`$44(a0)` is written once and never cleared.** The straight drill's touch response
+`sub_8D8E6` writes it (`move.w a2,$44(a0)`, `sonic3k.asm:193439`) and the arc grab
+`sub_8D94A` writes it (`sonic3k.asm:193477`); the wall/floor release paths (`loc_8D820`
+and `loc_8D85E` into `loc_8D834`, `sonic3k.asm:193337-193346` and `193363-193367`) only
+set `Status_InAir`, clear `object_control` and drop the arm to routine 6. So an arm at
+routine 6 that already knocked a player away still detaches that same player when it later
+leaves the camera band — even though the player is running normally 500px away with
+`object_control = 0`. The signature matches the trace exactly: `ground_vel` preserved at
+`0x077A` and frozen f3247-f3254, no impulse, `routine` unchanged `0x02`, `move_lock` 0,
+clean `+0x38` gravity chain `FE30, FE68, FEA0, FED8, FF10`.
+
+### Fix
+
+`MadmoleBadnikInstance$SideDrillChild` kept only `capturedPlayer`, nulled at release by
+`enterPostCaptureDrift`, and gated `checkDeleteAndReleaseCapturedPlayer` on it; the
+straight touch path recorded no player at all. Instrumenting the class showed the engine's
+arm tracking the ROM's trajectory byte-for-byte through f3240-f3246 (`x=0E36 … 0E0C`,
+`y=0724`) and despawning on the same frame with nothing to release. Added
+`releaseTargetPlayer` modelling ROM `$44(a0)` — written by both `sub_8D8E6` and
+`sub_8D94A`, never cleared at release, consumed by the `loc_8D724` despawn path — and
+registered it `CAPTURED` in `DefaultObjectRewindPolicies`. No fitted constant, no zone or
+frame carve-out.
+
+### Regression sweep
+
+Other six S3K complete-run segments byte-identical to baseline: aiz 8/64, hcz 7/1320,
+mgz 18/16510, cnz 7/9711, icz 10/12375, lbz 8/35. `TestS3kAizTraceReplay` holds at exactly
+4 failures + 1 error. Units pass: `TestRewindCoverageGuard`,
+`TestStaticStateRewindCoverageGuard`, `TestMadmoleBadnikInstance` (31),
+`TestS3kAiz1SkipHeadless` (8), `TestSonic3kLevelLoading` (36),
+`TestSonic3kBootstrapResolver` (5), `TestSonic3kDecodingUtils` (3).
+
+Full write-up: [docs/architecture/validation/trace/2026-08-01-mhz-f3246-findfloor-probe.md](../architecture/validation/trace/2026-08-01-mhz-f3246-findfloor-probe.md).

@@ -3,6 +3,18 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the S3K Madmole's side-drill arm now models ROM `$44(a0)`, the player
+  back-reference it keeps after knocking a player away. `sub_8D8E6`
+  (sonic3k.asm:193439) and `sub_8D94A` (193477) write it and nothing ever clears
+  it — the wall and floor release paths (`loc_8D834`, 193337-193346 and
+  193363-193367) only set `Status_InAir`, clear `object_control` and drop the arm
+  to routine 6 — so when the arm later scrolls out of its camera band its despawn
+  tail `loc_8D724` (193222-193228) detaches that same player again. The engine had
+  dropped the reference at release, so the despawn was a no-op. Confirmed on
+  hardware with a BizHawk probe at MHZ complete-run frame 3246, where the arm
+  detaches a Sonic who is running normally 500px away; `Player_AnglePos` itself
+  returns him grounded (`d1 = 0`, `locret_ED12`) on that frame. MHZ frontier
+  f3246 -> f3326.
 - Fix: S3K special-stage entry rings now retire on the same frame they are
   touched in the all-emeralds / Hidden-Palace-route path. ROM `Obj_SSEntryRing`
   runs the routine and falls through `bra.w SSEntryRing_Display`
