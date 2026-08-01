@@ -110,21 +110,32 @@ public class TestSonic3kAIZEvents {
         int frames = 0;
         int incomplete = timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE);
         while (incomplete > 0 && frames++ < HARDWARE_DRAIN_FRAME_LIMIT) {
-            // Kos_modules_left is decremented only by Process_Kos_Module_Queue
-            // (docs/skdisasm/sonic3k.asm:2750-2752), which LevelLoop calls in its tail
-            // (7908) — reached at the frame top, ahead of Process_Kos_Queue (7887). So
-            // an archive retires across PRE_MAIN_LOOP and the object pass that follows
-            // is the first to observe it.
+            // Kos_modules_left is decremented at exactly one site in the ROM:
+            // Process_Kos_Module_Queue (docs/skdisasm/sonic3k.asm:2750-2752). LevelLoop
+            // reaches it at 7908, immediately after the object pass (ExecuteObjects,
+            // 7900-7906) — that is the POST_OBJECTS boundary. Process_Kos_Queue (7887)
+            // services the *decompression* queue and cannot reach 2750, so PRE_MAIN_LOOP
+            // must never retire a module archive.
             serviceFireTransitionBoundary(HardwareServiceBoundary.PRE_MAIN_LOOP);
-            int afterPre = timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE);
-            assertTrue(afterPre <= incomplete,
-                    "KosM readiness must never regress across a frame top");
-            serviceFireTransitionBoundary(HardwareServiceBoundary.POST_OBJECTS);
-            assertEquals(afterPre,
+            assertEquals(incomplete,
                     timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE),
-                    "the object pass must not itself publish KosM readiness — only the "
-                            + "loop-tail state step decrements Kos_modules_left");
-            incomplete = afterPre;
+                    "Process_Kos_Queue (sonic3k.asm:7887) must not publish KosM "
+                            + "readiness — only Process_Kos_Module_Queue decrements "
+                            + "Kos_modules_left (2750-2752)");
+            serviceFireTransitionBoundary(HardwareServiceBoundary.POST_OBJECTS);
+            int afterPost = timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE);
+            assertTrue(afterPost <= incomplete,
+                    "KosM readiness must never regress across a LevelLoop iteration");
+            // One call to Process_Kos_Module_Queue per iteration, and each call takes at
+            // most one of its two mutually exclusive branches: submit (2741, which only
+            // sets bit 7) or DMA-and-decrement (2750-2752). The shift-out tail
+            // (2778-2788) re-enters Process_Kos_Module_Queue_Init for the *next* archive
+            // (2694-2713), which reloads Kos_modules_left rather than retiring another.
+            assertTrue(incomplete - afterPost <= 1,
+                    "at most one KosM archive may retire per LevelLoop iteration — "
+                            + "Process_Kos_Module_Queue runs once at 7908 and decrements "
+                            + "Kos_modules_left at most once per call");
+            incomplete = afterPost;
         }
         assertEquals(0, incomplete,
                 "the KosM queue must drain through its loop-tail state step");
@@ -451,10 +462,11 @@ public class TestSonic3kAIZEvents {
                 break;
             }
 
-            // Process_Kos_Module_Queue (docs/skdisasm/sonic3k.asm:7908) is the LevelLoop
-            // tail step, reached at the frame top ahead of Process_Kos_Queue (7887), so
-            // the last module can retire across this boundary. Readiness is still not
-            // art: the object pass that follows is the first scan allowed to publish it.
+            // Process_Kos_Module_Queue (docs/skdisasm/sonic3k.asm:7908) runs immediately
+            // after the object pass, so the last module retires across POST_OBJECTS
+            // above; Process_Kos_Queue (7887) follows it in the same loop tail and only
+            // advances decompression. Readiness is still not art either way: neither
+            // boundary may publish patterns, only a later consumer scan.
             serviceHardware(HardwareServiceBoundary.PRE_MAIN_LOOP);
             assert2dArrayEquals(
                     chunksAfterPublication,

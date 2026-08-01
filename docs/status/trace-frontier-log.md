@@ -56739,3 +56739,57 @@ StarPost and the MGZ act1→act2 transition. MGZ's next frontier is
 green. `TestS3kKosStructuralSequence` (7/7), `TestS3kKosModuleReadiness` (7/8) and
 `TestSonic3kTitleCardKosQueue` (11/12) fail identically on the base commit — their
 boundary models omit the `before` hook (the known `1d93e3134` test-side regressions).
+
+## 2026-08-01 — re-derive the Kos module publication invariant at its ROM boundary
+
+Worktree `.worktrees/aiz-invariant` on `bugfix/ai-s3k-aiz-invariant`, from `c42532b0e`.
+Test-side only; no `src/main/` change.
+
+`TestSonic3kAIZEvents#fireTransitionPublishesClaimedAct2ArtOnlyAfterPostReadiness` failed
+with `the object pass must not itself publish KosM readiness ==> expected: <2> but was:
+<1>`. The assertion was re-derived by `6e4444921` while the module state step ran at the
+frame top; `ddaf8e152` then moved it to `POST_OBJECTS`, so the invariant named the wrong
+boundary. Neither change is at fault and neither is reverted — only the assertion moved.
+
+`Kos_modules_left` is decremented at exactly one site: `subq.b #1,(Kos_modules_left)` in
+`Process_Kos_Module_Queue` (`docs/skdisasm/sonic3k.asm:2752`), on the
+decompression-complete branch (2745-2750). `LevelLoop` reaches that routine at 7908,
+immediately after `ExecuteObjects` (7900-7906) — that is `POST_OBJECTS`.
+`Process_Kos_Queue` (7887) follows in the same loop tail and services only the
+decompression queue, with no path to 2752, so `PRE_MAIN_LOOP` can never retire an archive.
+
+The drain invariant is now three ROM-derived parts rather than a pass count:
+`PRE_MAIN_LOOP` must not change the incomplete count; `POST_OBJECTS` is the sole
+publication point and readiness never regresses; and at most one archive retires per
+iteration, because 7908 calls the routine once and each call takes one of two mutually
+exclusive branches — submit (2741, `ori.b #$80` only) or DMA-and-decrement (2750-2752) —
+while the shift-out tail (2778-2788) re-enters `Process_Kos_Module_Queue_Init` (2694-2713),
+which reloads `Kos_modules_left` for the next archive rather than retiring a second one.
+
+Three siblings carried the same stale premise. `TestSonic3kHCZEvents` also asserted
+`publicationFrame == transitionFrame`; since 7908 runs after `ScreenEvents` (7898), the
+retiring iteration's own dispatch cannot observe the retirement, so it is now
+`publicationFrame + 1`. `TestS3kKosModuleReadiness` did not fail but **hung**: its
+unbounded `while (!direct.isReady(child))` drove only `prepareQueuedModuleBeforeVSync()`,
+which no longer submits a module, so the child never existed. It now submits at
+`POST_OBJECTS` first and is bounded at 16 iterations so a regression fails fast.
+
+### Result (error_count / total_frames)
+
+| segment | base | after |
+|---|---|---|
+| aiz | 8 / 64 | 8 / 64 |
+| hcz | 7 / 1320 | 7 / 1320 |
+| mgz | 18 / 16510 | 18 / 16510 |
+| cnz | 7 / 9711 | 7 / 9711 |
+| icz | 10 / 12375 | 10 / 12375 |
+| lbz | 8 / 35 | 8 / 35 |
+| mhz | 903 / 7218 | 903 / 7218 |
+
+Every segment holds at its baseline count and frame span. `TestS3kAizTraceReplay` holds at
+4 failures + 1 error. `TestSonic3kAIZEvents` 45/45; `TestSonic3kHCZEvents` 6/6,
+`TestSonic3kTitleCardKosQueue` 4/4, `TestS3kResultsKosQueueRewind` 2/2,
+`TestS3kKosModuleReadiness` 1/1 (previously hanging), `TestS3kKosStructuralSequence` 7/7,
+`TestS3kZoneKosRewind` 8/8, `TestHCZWaterWallObjectInstance` 3/3,
+`TestLevelIterationHardwareTimingAdmissionOrder` 3/3, `TestS3kKosModuleQueue` 14/14,
+`TestS3kKosDecompressionQueue` 10/10.

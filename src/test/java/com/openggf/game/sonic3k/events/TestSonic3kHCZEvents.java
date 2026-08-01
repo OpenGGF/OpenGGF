@@ -104,37 +104,43 @@ class TestSonic3kHCZEvents {
         for (int frame = 1;
                 frame < 100_000 && !events.isTransitionRequested();
                 frame++) {
-            // Process_Kos_Module_Queue (docs/skdisasm/sonic3k.asm:2750-2752) runs from
-            // LevelLoop's tail (7908), reached at the frame top ahead of
-            // Process_Kos_Queue (7887). VINT_SERVICE never advances it.
+            // Kos_modules_left is decremented only by Process_Kos_Module_Queue
+            // (docs/skdisasm/sonic3k.asm:2750-2752), which LevelLoop reaches at 7908 --
+            // after ScreenEvents (7898) and the object pass (7900-7906). Neither
+            // VINT_SERVICE nor Process_Kos_Queue (7887, decompression queue only) can
+            // advance it.
             int beforeFrame = timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE);
             serviceBoundary(HardwareServiceBoundary.VINT_SERVICE);
             assertEquals(beforeFrame,
                     timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE),
                     "VINT_SERVICE does not run the module state step");
             serviceBoundary(HardwareServiceBoundary.PRE_MAIN_LOOP);
-            int afterFrameTop =
-                    timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE);
-            if (beforeFrame > 0 && afterFrameTop == 0) {
-                assertFalse(events.isTransitionRequested(),
-                        "retirement alone cannot request the transition — only the "
-                                + "ScreenEvents dispatch that observes it may");
-                publicationFrame = frame;
-            }
+            assertEquals(beforeFrame,
+                    timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE),
+                    "Process_Kos_Queue (7887) advances only the decompression queue and "
+                            + "must not retire an HCZ2 secondary art archive");
             events.update(0, frame);
             if (publicationFrame >= 0 && events.isTransitionRequested()) {
                 transitionFrame = frame;
             }
             serviceBoundary(HardwareServiceBoundary.POST_OBJECTS);
-            assertEquals(afterFrameTop,
-                    timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE),
-                    "the object pass must not itself publish HCZ2 secondary art readiness");
+            int afterState = timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE);
+            assertTrue(afterState <= beforeFrame,
+                    "module readiness must never regress across a LevelLoop iteration");
+            if (beforeFrame > 0 && afterState == 0) {
+                assertFalse(events.isTransitionRequested(),
+                        "retirement alone cannot request the transition — only the "
+                                + "ScreenEvents dispatch that observes it may");
+                publicationFrame = frame;
+            }
         }
 
         assertEquals(0, timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE));
         assertTrue(events.isTransitionRequested());
-        assertEquals(publicationFrame, transitionFrame,
-                "the ScreenEvents dispatch following the loop-tail retirement consumes it");
+        assertEquals(publicationFrame + 1, transitionFrame,
+                "Process_Kos_Module_Queue (sonic3k.asm:7908) runs after ScreenEvents "
+                        + "(7898), so the retiring iteration's own dispatch cannot see "
+                        + "the retirement — the next one is the first that may consume it");
         assertTrue(Files.exists(saveDir.resolve("slot1.json")));
     }
 

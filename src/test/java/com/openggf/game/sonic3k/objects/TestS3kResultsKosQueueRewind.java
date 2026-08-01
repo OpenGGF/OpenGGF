@@ -156,22 +156,25 @@ class TestS3kResultsKosQueueRewind {
                 return;
             }
 
-            // Process_Kos_Module_Queue (docs/skdisasm/sonic3k.asm:2750-2752) runs from
-            // LevelLoop's tail (7908), reached at the frame top ahead of
-            // Process_Kos_Queue (7887). Retirement therefore lands on PRE_MAIN_LOOP; the
-            // object pass (Process_Sprites, 7889) that follows only polls it.
+            // Kos_modules_left is decremented only by Process_Kos_Module_Queue
+            // (docs/skdisasm/sonic3k.asm:2750-2752), which LevelLoop reaches at 7908,
+            // immediately after the object pass (7900-7906). Retirement therefore lands
+            // on POST_OBJECTS; Process_Kos_Queue (7887) follows in the same loop tail and
+            // services only the decompression queue.
             HardwareBoundaryPump.service(HardwareServiceBoundary.VINT_SERVICE);
             assertEquals(readyBefore, readyHandles(timing, submitted),
                     "VINT_SERVICE does not run the module state step");
 
-            HardwareBoundaryPump.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
-            List<HardwareWorkHandle> readyAfterFrameTop = readyHandles(timing, submitted);
-            assertEquals(submitted.subList(0, readyAfterFrameTop.size()), readyAfterFrameTop,
-                    "the frame-top state step may expose only the next FIFO results-art handle");
-
             HardwareBoundaryPump.service(HardwareServiceBoundary.POST_OBJECTS);
-            assertEquals(readyAfterFrameTop, readyHandles(timing, submitted),
-                    "the object pass must not itself publish results-art readiness");
+            List<HardwareWorkHandle> readyAfterState = readyHandles(timing, submitted);
+            assertEquals(submitted.subList(0, readyAfterState.size()), readyAfterState,
+                    "the module state step may expose only the next FIFO results-art handle");
+            assertTrue(readyAfterState.size() - readyBefore.size() <= 1,
+                    "at most one results-art archive may retire per LevelLoop iteration");
+
+            HardwareBoundaryPump.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            assertEquals(readyAfterState, readyHandles(timing, submitted),
+                    "Process_Kos_Queue (7887) must not itself publish results-art readiness");
         }
         throw new AssertionError("results art did not become ready within the bounded hardware service loop");
     }
