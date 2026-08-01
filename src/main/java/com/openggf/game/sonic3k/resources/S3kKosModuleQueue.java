@@ -117,12 +117,12 @@ public final class S3kKosModuleQueue {
     }
 
     public void prepareQueuedModuleBeforeVSync() {
-        beforeTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
         timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
         directQueue.afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
     }
 
     public void processModuleQueueAfterObjects() {
+        beforeTimingService(HardwareServiceBoundary.POST_OBJECTS);
         timing.service(HardwareServiceBoundary.POST_OBJECTS);
         afterTimingService(HardwareServiceBoundary.POST_OBJECTS);
     }
@@ -131,23 +131,24 @@ public final class S3kKosModuleQueue {
      * Runs the frame's module state step, before the timing ledger is serviced.
      *
      * <p>ROM {@code LevelLoop} calls {@code Process_Kos_Module_Queue} in the loop
-     * tail (sonic3k.asm:7908) and {@code Process_Kos_Queue} at the head of the
-     * next iteration, before {@code Wait_VSync} (7887-7888). A module state step
-     * is therefore separated from the direct FIFO entry it submits — and from the
-     * frame that first observes it — by the intervening V-int. Stepping the head
-     * archive at the frame top, ahead of the direct FIFO's own service, keeps
-     * that ordering: this step models the previous iteration's tail call, so its
-     * child submission and its module retirement first become observable one
-     * frame after the direct completion that released them, exactly as the ROM's
-     * busy -> idle -> module step cycle does.
+     * tail (sonic3k.asm:7908), after {@code ScreenEvents} (7898) and before
+     * {@code Process_Kos_Queue} (7887) — which reads as the head of the next
+     * iteration but runs ahead of {@code Wait_VSync} (7888) and its
+     * {@code addq.w #1,(Level_frame_counter)} (7889), so both calls belong to the
+     * tail of the frame whose objects just ran. The step therefore sits at
+     * {@code POST_OBJECTS}, immediately ahead of the direct FIFO's own
+     * {@code PRE_MAIN_LOOP} service: an archive queued by an object this frame
+     * hands its first module to the direct FIFO and sees that child decompressed
+     * on the same frame, while an archive whose child is still outstanding is
+     * only retired by the next frame's step.
      *
-     * <p>Readiness is still captured at {@code POST_OBJECTS}: the archive parent's
-     * completion edge is recorded at that boundary, and
+     * <p>Readiness is captured at the same boundary: the archive parent's
+     * completion edge is recorded at {@code POST_OBJECTS}, and
      * {@link HardwareTimingService#captureCoordinatorPreparation} requires the
      * capture to name the boundary production last serviced.
      */
     public void beforeTimingService(HardwareServiceBoundary boundary) {
-        if (boundary == HardwareServiceBoundary.PRE_MAIN_LOOP) {
+        if (boundary == HardwareServiceBoundary.POST_OBJECTS) {
             stepHeadArchive();
         }
     }

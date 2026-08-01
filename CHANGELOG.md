@@ -47,6 +47,29 @@ All notable changes to the OpenGGF project are documented in this file.
   arms the escape. ICZ complete-run trace replay drops from 82 divergence groups
   to 1 (the known `LoadQueueStateProjector` recorder defect), with no physics,
   animation, camera or sidekick divergence remaining.
+- Fix: S3K's direct Kosinski FIFO is serviced at the ROM's loop-tail phase, so art
+  queued by an object during a frame is decompressed on that same frame. ROM
+  `LevelLoop` reads as if `Process_Kos_Queue` (sonic3k.asm:7887) opens the loop
+  body, but it runs ahead of `Wait_VSync` (7888) and the
+  `addq.w #1,(Level_frame_counter)` that follows it (7889), so it shares the
+  frame-counter value of the iteration whose `Process_Sprites` (7893),
+  `ScreenEvents` (7898) and `Process_Kos_Module_Queue` (7908) already ran — both
+  queue services are tail work for that frame, after its objects. The engine
+  serviced the `PRE_MAIN_LOOP` boundary at the frame top instead, which no
+  object-driven `Queue_Kos_Module` producer could reach in time: the MGZ and CNZ
+  complete-run replays aborted outright when a StarPost's bonus-star art
+  (`sub_2D3C8`, sonic3k.asm:61828-61877) was expected on the frame the StarPost
+  activated. `PRE_MAIN_LOOP` now follows `POST_OBJECTS`, the KosM state step runs
+  at `POST_OBJECTS` immediately ahead of it, and the runtime art queue is drained
+  with the object pass. MGZ becomes measurable again and runs to frame 16510 (18
+  divergence groups) instead of aborting at 14631; CNZ runs to 9711 (7 groups)
+  instead of aborting at 5337; MHZ drops from 911 groups to 903; AIZ, HCZ, ICZ
+  and LBZ are unchanged.
+- Fix: a trace replay that aborts mid-run with a clean comparison so far now still
+  writes its `*_report.json`. The report was written only when it had errors or
+  warnings, so a run that threw before diverging left no report at all —
+  indistinguishable from a run that never started, and hiding the `total_frames`
+  that says how far the replay actually reached.
 - Fix: S3K complete-run trace replay no longer seeds the leader's position and
   subpixel from trace row 0. Row 0 is a recorded `LevelLoop` iteration-1 row — a
   *post*-frame sample — so copying it in as pre-frame state handed the engine

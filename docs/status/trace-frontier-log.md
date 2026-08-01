@@ -56669,3 +56669,73 @@ reading, not yet proven, is that the corrected module fingerprints change which 
 the schema-2 timing port releases, exposing a direct-queue submission-ordering bug earlier.
 Chasing that is engine-side work and out of scope here. Native suite and all seven guards
 are green regardless.
+
+## 2026-08-01 — S3K MGZ/CNZ timing abort: `Process_Kos_Queue` frame phase
+
+Worktree `.worktrees/timing-abort`, branch `bugfix/ai-s3k-timing-abort`, base
+`8a6313bb3` (`bugfix/ai-s3k-recorder-fix`). ROM `-Ds3k.rom.path=…/s3k.gen`, JDK 21.
+Command per segment: `mvn -Ptrace-replay -Ds3k.rom.path=… -Dtest=TestS3k<Zone>CompleteRunTraceReplay test`.
+
+### The abort never moved earlier
+
+The previous entry's "no report emitted" was a **reporting** gap, not an earlier abort.
+`AbstractTraceReplayTest` only wrote `*_report.json` when the report had errors or
+warnings; the regeneration reduced MGZ and CNZ to **zero** divergences up to the abort, so
+nothing was written. Both abort at the same raw frame as before (MGZ 14631, CNZ 5337).
+The report write in the `finally` block is now unconditional, so an aborted-but-clean run
+still records `total_frames`. With that alone: `mgz 0 / 14629`, `cnz 0 / 5336`.
+
+### Root cause
+
+Both aborts are the **StarPost bonus-star art load**, not a queue-ordering defect.
+Resolving the recorded submission fingerprints against the ROM identifies MGZ
+`KOS_DECOMPRESSION_QUEUE#134` / `KOS_MODULE_QUEUE#91` as `ArtKosM_StarPostStars2`
+(`0x187BEC` → `ArtTile_StarPost+8` = tile `0x5EC`) and CNZ `#201` / `#130` as
+`ArtKosM_StarPostStars3` (`0x187C4E`, same tile) — exactly what
+`Sonic3kObjectArtProvider.queueStarPostBonusArt` submits from `sub_2D3C8`
+(sonic3k.asm:61828-61877). The trace's `object_state` aux confirms the ROM StarPost
+(slot 15, `Obj_StarPost`) steps `routine` `0x02` → `0x04` during frame 14631's object
+pass, with the player at `y_pos 0x0E35` (`dy = -61`, inside `dy + 0x40 < 0x68`,
+sonic3k.asm:61616-61620); at 14630 `dy = -69` and neither ROM nor engine activates.
+
+The engine could not represent that. `PRE_MAIN_LOOP` was serviced at the **top** of the
+frame, before objects, so a `Queue_Kos_Module` issued by an object during frame N could
+not reach the direct FIFO until N+1 — and the port aborted at N with
+`engine pending: <none>`. ROM `LevelLoop` reads as if `Process_Kos_Queue` (7887) opens the
+loop body, but it runs ahead of `Wait_VSync` (7888) and the
+`addq.w #1,(Level_frame_counter)` that follows (7889), so it shares the frame-counter
+value of the iteration whose `Process_Sprites` (7893), `ScreenEvents` (7898) and
+`Process_Kos_Module_Queue` (7908) already ran. Both queue services are **loop-tail work for
+that same frame**, after its objects.
+
+### Change
+
+`HardwareServiceBoundary` reordered to `VINT_SERVICE, POST_OBJECTS, PRE_MAIN_LOOP`;
+`LevelFrameStep` services `PRE_MAIN_LOOP` after `POST_OBJECTS` and runs
+`processRuntimeArtQueue()` with the object pass (`ExecuteObjects`, 7900-7906) instead of
+hoisting it above the old frame-top boundary; `S3kKosModuleQueue.beforeTimingService`
+steps the head archive at `POST_OBJECTS` (`Process_Kos_Module_Queue`, 7908) immediately
+ahead of the direct FIFO's `PRE_MAIN_LOOP` service. No fixture, tolerance or port change.
+
+### Result (error_count / total_frames)
+
+| segment | base | after |
+|---|---|---|
+| aiz | 8 / 64 | 8 / 64 |
+| hcz | 7 / 1320 | 7 / 1320 |
+| mgz | no report (abort 14631) | **18 / 16510** |
+| cnz | no report (abort 5337) | **7 / 9711** |
+| icz | 81 / 1629 | 81 / 1629 |
+| lbz | 8 / 35 | 8 / 35 |
+| mhz | 911 / 7218 | **903 / 7218** |
+
+MGZ and CNZ are measurable again and now run 1881 and 4375 frames further, past the
+StarPost and the MGZ act1→act2 transition. MGZ's next frontier is
+`KOS_DECOMPRESSION_QUEUE#143` at raw frame 16513. `TestS3kAizTraceReplay` holds at exactly
+4 failures + 1 error (8 / 64). `TestHardwareTimingAuthorityGuard` 20/20,
+`TestRewindCoverageGuard`, `TestStaticStateRewindCoverageGuard`,
+`TestS3kKosDecompressionQueue`, `TestS3kKosModuleQueue`, `TestS3kAiz1SkipHeadless`,
+`TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils` all
+green. `TestS3kKosStructuralSequence` (7/7), `TestS3kKosModuleReadiness` (7/8) and
+`TestSonic3kTitleCardKosQueue` (11/12) fail identically on the base commit — their
+boundary models omit the `before` hook (the known `1d93e3134` test-side regressions).
