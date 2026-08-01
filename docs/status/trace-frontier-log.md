@@ -57175,3 +57175,57 @@ modelled Kos queues at 1106.
 
 Segment sweep (this commit): aiz 57/6344 (was 65/6344), hcz 7/1320, mgz 23/17949,
 cnz 7/9711, icz 10/12375, lbz 0/12647, mhz 934/7218 — non-AIZ segments at baseline.
+
+## 2026-08-01 — AIZ 1106-1237 engine-only Kos submission: root-cause investigation (no fix landed)
+
+Command: `mvn -Ptrace-replay -Dtest=TestS3kAizTraceReplay -Ds3k.rom.path=<root>/s3k.gen test`
+Context: worktree `.worktrees/aiz-1106`, branch `bugfix/ai-s3k-aiz-1106` off
+`bugfix/ai-s3k-mhz-queue-frontier` (a3926493c). No code change committed; instrumented
+runs only (instrumentation reverted).
+
+Findings, established against the fixture streams directly (physics.csv.gz frame labels
+are hex-encoded sequential indices; aux_state.jsonl and the csv share one 0..26227 frame
+space — both streams end at frame 26227):
+
+1. The recording is NOT idle-only around the window. It runs the main-level pair
+   (direct Kos source 0x367F0E + module fingerprints e6f7dd…/1a182ba…, dest $0BE) with
+   queues busy at trace frames 1238-1246 (ledger completions: direct ordinals 16-18,
+   module 8-10, frames 1239-1246). The engine submits the identical pair (fingerprints
+   match exactly) but its busy window lands ~130-160 compared frames later
+   (this run: 1396-1527), producing the engine-busy/recording-idle error window.
+2. The recorded end-of-frame camera never reaches TERRAIN_SWAP_X ($1400) near the
+   submission: it peaks at $13FA (frame 1208) and reads $13E6 on the queue frame 1238;
+   the visible crossing is only at ~frame 1460+. The only static producers of this pair
+   are camera-$1400-gated: `loc_1C4D0` (sonic3k.asm:38912-38930), s3.asm `loc_1A96C`
+   (s3.asm:32138-32156), and the ending's `loc_5AC12` (sonic3k.asm:120990-121010, gated
+   on 7 super emeralds / $D01 — not this run). Therefore ROM's stage-1 queue fires on a
+   TRANSIENT mid-frame Camera_X_pos ≥ $1400 during the intro→gameplay handoff snap
+   (`loc_61F22` sets Level_started_flag=$91, sonic3k.asm:128743-128756; the next frames'
+   forced-scroll/snap path in DeformBgLayer, sonic3k.asm:38290-38330, momentarily runs
+   the camera past $1400 before player tracking settles it back to $13E6) — a state the
+   end-of-frame trace sample never shows.
+3. The engine models the same semantic: `CutsceneKnucklesAiz1Instance.completeIntroExitHandoff`
+   calls `camera().updatePosition(true)`, the snapped camera reads 0x1403, and
+   `serviceAiz1MainLevelArt` fires on the very next AIZ events pass (instrumented:
+   single submission, cameraX=0x1403, Level_frame_counter 1248; block claimed +22
+   frames, art claimed +56). The WHAT is right; the WHEN is off because the engine's
+   intro-exit handoff completes ~130-160 compared frames after ROM's, i.e. the residual
+   gap is cutscene/handoff pacing (Knuckles exit + inserted in-level title-card frames),
+   not the queue model, and not a missing off-ledger level-load producer.
+4. Related occurrences: the same pair re-fires in the recording at 6345-6351 (the AIZ2
+   seamless reload re-runs the same producer) and the act-2 LLB batch (source 0x3B51E8,
+   module b335a79…, remaining_work 4) is busy at 6216-6288; the engine's counterparts
+   land at 5498-5542 / miss at 5414 in this run's report — all downstream of the
+   0x2F00 seamless-reload physics cascade (this run: first physics error at 5496),
+   sharing the same "handoff pacing" character, not independent queue bugs.
+5. Run-to-run drift observed: this baseline run reported 59 errors / 5253 frames with
+   the window at 1396-1527, where the previous session recorded 57/6344 with the window
+   at 1106-1237 — same commit, same fixture. The engine-only window's position moves
+   with the inserted title-card/handoff frames, corroborating (3).
+
+Conclusion: a correct fix must align the engine's AIZ intro-exit handoff frame (Knuckles
+exit render-boundary timing plus the title-card insertion) with the ROM's, after which
+the existing camera-snap-triggered submission should land on the recorded frame and be
+released by the recorded completions. Gating `serviceAiz1MainLevelArt` differently, or
+touching the Kos queues/timing port, is NOT the right lever and risks LBZ (0/12647).
+Pass/fail: TestS3kAizTraceReplay held at the release-slice gate (4 failures + 1 error).
