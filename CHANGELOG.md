@@ -3,6 +3,20 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: hardware service boundaries now have a single definition,
+  `HardwareBoundaryDispatch.serviceBoundary`. `LevelFrameStep.serviceBoundary`
+  and the new `GameplayModeContext.serviceHardwareTimingBoundary` both delegate
+  to it, and tests reach it through `HardwareBoundaryPump`. Sixteen hand-rolled
+  models of the sequence had each dropped
+  `RuntimeArtCoordinator.beforeTimingService` — the module state step modelling
+  `Process_Kos_Module_Queue` (sonic3k.asm:2750-2752) called from the `LevelLoop`
+  tail (7908) — so no Kos module ever retired and readiness starved. Twelve
+  classes were still broken, and `TestSonic3kAIZEvents` hung on an unbounded
+  readiness loop rather than failing, hiding an AIZ regression from every suite
+  run. Test loops that had pinned the old four-pass phase now derive it from ROM
+  invariants: retirement lands at the frame top, `VINT_SERVICE` never advances
+  the state step, and the object pass (`Process_Sprites`, 7889) that follows only
+  polls readiness and never publishes it.
 - Fix: S3K IceCap Act 1 now locks controller 1 when the snowboard wall-crash
   quake starts, so the ~200 frames between the crash and the big snow pile's
   scripted jump-out ignore player input as the ROM does. `ICZ1SE_Init`

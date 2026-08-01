@@ -13,6 +13,7 @@ import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.sonic3k.resources.S3kKosDecompressionQueueSnapshot;
 import com.openggf.game.sonic3k.resources.S3kKosRamDestinations;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.tests.HardwareBoundaryPump;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -48,8 +49,8 @@ class TestS3kZoneKosRewind {
         byte[] eventSnapshot = ZoneEventSchemaSidecar.capture(events);
         HardwareTimingSnapshot timingSnapshot = timing.capture();
 
-        timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
-        timing.service(HardwareServiceBoundary.POST_OBJECTS);
+        HardwareBoundaryPump.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        HardwareBoundaryPump.service(HardwareServiceBoundary.POST_OBJECTS);
         events.init(1);
 
         timing.restore(timingSnapshot);
@@ -93,8 +94,7 @@ class TestS3kZoneKosRewind {
         S3kKosDecompressionQueueSnapshot directSnapshot =
                 directQueue.capture();
 
-        timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
-        directQueue.afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        HardwareBoundaryPump.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
         events.init(0);
 
         timing.restore(timingSnapshot);
@@ -143,14 +143,8 @@ class TestS3kZoneKosRewind {
                 .findFirst().orElseThrow();
         int boundaries = 0;
         while (!timing.isReady(moduleHandle) && boundaries++ < 100_000) {
-            timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
-            directQueue.afterTimingService(
-                    HardwareServiceBoundary.PRE_MAIN_LOOP);
-            timing.service(HardwareServiceBoundary.POST_OBJECTS);
-            directQueue.afterTimingService(
-                    HardwareServiceBoundary.POST_OBJECTS);
-            moduleQueue.afterTimingService(
-                    HardwareServiceBoundary.POST_OBJECTS);
+            HardwareBoundaryPump.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            HardwareBoundaryPump.service(HardwareServiceBoundary.POST_OBJECTS);
         }
         assertTrue(timing.isReady(directHandle),
                 "ordinary stream must be ready after its decisive PRE boundary");
@@ -263,8 +257,7 @@ class TestS3kZoneKosRewind {
         S3kKosDecompressionQueueSnapshot directSnapshot =
                 directQueue.capture();
 
-        timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
-        directQueue.afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        HardwareBoundaryPump.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
         events.init(0);
 
         timing.restore(timingSnapshot);
@@ -291,7 +284,7 @@ class TestS3kZoneKosRewind {
         Sonic3kHCZEvents events = new Sonic3kHCZEvents(() -> 0);
         events.init(0);
         events.setEventsFg5(true);
-        timing.service(HardwareServiceBoundary.POST_OBJECTS);
+        HardwareBoundaryPump.service(HardwareServiceBoundary.POST_OBJECTS);
         events.update(0, 0);
 
         List<HardwareWorkHandle> originalHandles = timing.pendingHandles();
@@ -300,8 +293,8 @@ class TestS3kZoneKosRewind {
         byte[] eventSnapshot = ZoneEventSchemaSidecar.capture(events);
         HardwareTimingSnapshot timingSnapshot = timing.capture();
 
-        timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
-        timing.service(HardwareServiceBoundary.POST_OBJECTS);
+        HardwareBoundaryPump.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        HardwareBoundaryPump.service(HardwareServiceBoundary.POST_OBJECTS);
         events.init(0);
 
         timing.restore(timingSnapshot);

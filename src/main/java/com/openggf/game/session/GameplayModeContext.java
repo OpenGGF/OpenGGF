@@ -9,6 +9,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameRng;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.HardwareBoundaryDispatch;
 import com.openggf.game.NoOpBonusStageProvider;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.RuntimeArtCoordinator;
@@ -552,6 +553,20 @@ public final class GameplayModeContext implements ModeContext {
     /** Completes direct physical retirement after timing admission at the boundary. */
     public void afterHardwareTimingService(HardwareServiceBoundary boundary) {
         runtimeArtCoordinator.afterTimingService(boundary);
+    }
+
+    /**
+     * Traverses a hardware service boundary exactly as the production frame does.
+     *
+     * <p>Callers outside {@code LevelFrameStep} that need to advance hardware timing
+     * — alternate loops and tests modelling a frame — use this rather than composing
+     * {@link #beforeHardwareTimingService}, {@code hardwareTiming().service} and
+     * {@link #afterHardwareTimingService} by hand, so the sequence has one definition.
+     */
+    public void serviceHardwareTimingBoundary(HardwareServiceBoundary boundary) {
+        HardwareBoundaryDispatch.serviceBoundary(
+                boundary, runtimeArtCoordinator, hardwareTiming,
+                hardwareTimingBoundaryObserver);
     }
 
     public RecordedCompletionAuthority recordedCompletionAuthority() {

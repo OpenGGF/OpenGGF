@@ -232,9 +232,7 @@ class TestS3kIczAct1TransitionHeadless {
         int moduleFrames = 0;
         do {
             service(HardwareServiceBoundary.POST_OBJECTS);
-            parent = GameServices.hardwareTiming().capture().jobs().stream()
-                    .filter(job -> job.kind() == HardwareWorkKind.KOS_MODULE_QUEUE)
-                    .findFirst().orElseThrow();
+            parent = kosModuleParent();
             assertFalse(parent.claimed(),
                     "POST module work remains invisible to the gameplay consumer in the same frame");
             assert2dArrayEquals(
@@ -251,6 +249,11 @@ class TestS3kIczAct1TransitionHeadless {
                             icz2Level, patternStart, patternCount),
                     "POST must not publish any pattern prefix before the owning scan");
             if (!parent.ready()) {
+                // Process_Kos_Module_Queue (docs/skdisasm/sonic3k.asm:2750-2752) runs
+                // from LevelLoop's tail (7908), reached at the frame top ahead of
+                // Process_Kos_Queue (7887), so the parent can retire across this
+                // boundary. Re-read it: the object pass that follows a retirement is
+                // the owning publication scan, not an intermediate one.
                 service(HardwareServiceBoundary.PRE_MAIN_LOOP);
                 assert2dArrayEquals(
                         blocksBeforePublication,
@@ -267,6 +270,10 @@ class TestS3kIczAct1TransitionHeadless {
                         snapshotPatternRange(
                                 icz2Level, patternStart, patternCount),
                         "PRE must preserve every deferred pattern byte");
+                parent = kosModuleParent();
+                if (parent.ready()) {
+                    break;
+                }
                 manager.update();
                 assert2dArrayEquals(
                         blocksBeforePublication,
@@ -352,10 +359,14 @@ class TestS3kIczAct1TransitionHeadless {
                 "a later ordinary ICZ2 load must synchronously load its KosM art");
     }
 
+    private static HardwareTimingJob.Snapshot kosModuleParent() {
+        return GameServices.hardwareTiming().capture().jobs().stream()
+                .filter(job -> job.kind() == HardwareWorkKind.KOS_MODULE_QUEUE)
+                .findFirst().orElseThrow();
+    }
+
     private static void service(HardwareServiceBoundary boundary) {
-        GameServices.hardwareTiming().service(boundary);
-        S3kRuntimeArtCoordinator.current().directQueue().afterTimingService(boundary);
-        S3kRuntimeArtCoordinator.current().moduleQueue().afterTimingService(boundary);
+        HardwareBoundaryPump.service(boundary);
     }
 
     private static int[][] applyBlockPayload(

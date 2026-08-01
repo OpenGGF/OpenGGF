@@ -3,6 +3,7 @@ package com.openggf;
 import com.openggf.camera.Camera;
 import com.openggf.game.BonusStageProvider;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.HardwareBoundaryDispatch;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame;
@@ -419,15 +420,11 @@ public final class LevelFrameStep {
         if (context == null) {
             throw new NullPointerException("context");
         }
-        context.runtimeArtCoordinator().beforeTimingService(boundary);
-        context.hardwareTiming().service(boundary);
-        if (boundary == HardwareServiceBoundary.PRE_MAIN_LOOP) {
-            context.hardwareTimingBoundaryObserver().onBoundary(boundary);
-        }
-        context.runtimeArtCoordinator().afterTimingService(boundary);
-        if (boundary != HardwareServiceBoundary.PRE_MAIN_LOOP) {
-            context.hardwareTimingBoundaryObserver().onBoundary(boundary);
-        }
+        HardwareBoundaryDispatch.serviceBoundary(
+                boundary,
+                context.runtimeArtCoordinator(),
+                context.hardwareTiming(),
+                context.hardwareTimingBoundaryObserver());
     }
 
 }

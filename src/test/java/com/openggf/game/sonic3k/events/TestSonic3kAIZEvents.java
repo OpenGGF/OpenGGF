@@ -39,6 +39,7 @@ import com.openggf.level.objects.TestObjectServices;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.sprites.playable.Tails;
+import com.openggf.tests.HardwareBoundaryPump;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.LogCaptureHandler;
 import com.openggf.tests.rules.RequiresRom;
@@ -96,9 +97,7 @@ public class TestSonic3kAIZEvents {
 
     private static void serviceFireTransitionBoundary(
             HardwareServiceBoundary boundary) {
-        GameServices.hardwareTiming().service(boundary);
-        S3kRuntimeArtCoordinator.current().directQueue().afterTimingService(boundary);
-        S3kRuntimeArtCoordinator.current().moduleQueue().afterTimingService(boundary);
+        HardwareBoundaryPump.service(boundary);
     }
 
     private static boolean hasActiveObject(Class<?> type) {
@@ -109,17 +108,26 @@ public class TestSonic3kAIZEvents {
     private static void drainKosModuleHardware() {
         var timing = GameServices.hardwareTiming();
         int frames = 0;
-        while (timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE) > 0
-                && frames++ < HARDWARE_DRAIN_FRAME_LIMIT) {
-            int beforePre = timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE);
+        int incomplete = timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE);
+        while (incomplete > 0 && frames++ < HARDWARE_DRAIN_FRAME_LIMIT) {
+            // Kos_modules_left is decremented only by Process_Kos_Module_Queue
+            // (docs/skdisasm/sonic3k.asm:2750-2752), which LevelLoop calls in its tail
+            // (7908) — reached at the frame top, ahead of Process_Kos_Queue (7887). So
+            // an archive retires across PRE_MAIN_LOOP and the object pass that follows
+            // is the first to observe it.
             serviceFireTransitionBoundary(HardwareServiceBoundary.PRE_MAIN_LOOP);
-            assertEquals(beforePre,
-                    timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE),
-                    "PRE_MAIN_LOOP must not publish newly completed KosM work");
+            int afterPre = timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE);
+            assertTrue(afterPre <= incomplete,
+                    "KosM readiness must never regress across a frame top");
             serviceFireTransitionBoundary(HardwareServiceBoundary.POST_OBJECTS);
+            assertEquals(afterPre,
+                    timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE),
+                    "the object pass must not itself publish KosM readiness — only the "
+                            + "loop-tail state step decrements Kos_modules_left");
+            incomplete = afterPre;
         }
-        assertEquals(0, timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE),
-                "final KosM readiness must publish at POST_OBJECTS");
+        assertEquals(0, incomplete,
+                "the KosM queue must drain through its loop-tail state step");
     }
 
     @BeforeEach
@@ -351,7 +359,7 @@ public class TestSonic3kAIZEvents {
                         .incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE),
                 "repeated scans must not resubmit the AIZ KosM parent");
 
-        serviceHardware(GameServices.hardwareTiming(), HardwareServiceBoundary.POST_OBJECTS);
+        serviceHardware(HardwareServiceBoundary.POST_OBJECTS);
         assert2dArrayEquals(
                 chunksBeforePublication,
                 snapshotChunkRange(level, chunkStart, chunkCount),
@@ -362,7 +370,7 @@ public class TestSonic3kAIZEvents {
         int frame = 2;
         while (S3kRuntimeArtCoordinator.current().directQueue().decompressionsPending()
                 && frame < HARDWARE_DRAIN_FRAME_LIMIT) {
-            serviceHardware(GameServices.hardwareTiming(), HardwareServiceBoundary.PRE_MAIN_LOOP);
+            serviceHardware(HardwareServiceBoundary.PRE_MAIN_LOOP);
             assert2dArrayEquals(
                     chunksBeforePublication,
                     snapshotChunkRange(level, chunkStart, chunkCount),
@@ -379,7 +387,7 @@ public class TestSonic3kAIZEvents {
                 assertPatternRangeEquals(
                         patternsBeforePublication, level, 0x00BE,
                         "intermediate direct consumer scans must preserve every deferred pattern byte");
-                serviceHardware(GameServices.hardwareTiming(), HardwareServiceBoundary.POST_OBJECTS);
+                serviceHardware(HardwareServiceBoundary.POST_OBJECTS);
                 assert2dArrayEquals(
                         chunksBeforePublication,
                         snapshotChunkRange(level, chunkStart, chunkCount),
@@ -422,9 +430,15 @@ public class TestSonic3kAIZEvents {
                 patternsBeforePublication, level, 0x00BE,
                 "KosM patterns must not publish during the direct-empty scan");
 
-        HardwareTimingJob.Snapshot parent;
-        do {
-            serviceHardware(GameServices.hardwareTiming(), HardwareServiceBoundary.POST_OBJECTS);
+        // Bounded so a boundary model that stops advancing the module state step fails
+        // fast instead of spinning forever. The AIZ1 archive retires in a handful of
+        // frames; the limit only has to be far above that.
+        int moduleFrames = 0;
+        HardwareTimingJob.Snapshot parent = kosModuleParent();
+        while (!parent.ready()) {
+            assertTrue(moduleFrames++ < 4096,
+                    "the AIZ1 KosM parent must retire within a bounded number of frames");
+            serviceHardware(HardwareServiceBoundary.POST_OBJECTS);
             assert2dArrayEquals(
                     chunksAfterPublication,
                     snapshotChunkRange(level, chunkStart, chunkCount),
@@ -432,28 +446,37 @@ public class TestSonic3kAIZEvents {
             assertPatternRangeEquals(
                     patternsBeforePublication, level, 0x00BE,
                     "POST module work cannot become consumer-visible in the same frame");
-            parent = GameServices.hardwareTiming().capture().jobs().stream()
-                    .filter(job -> job.kind() == HardwareWorkKind.KOS_MODULE_QUEUE)
-                    .findFirst().orElseThrow();
-            if (!parent.ready()) {
-                serviceHardware(GameServices.hardwareTiming(), HardwareServiceBoundary.PRE_MAIN_LOOP);
-                assert2dArrayEquals(
-                        chunksAfterPublication,
-                        snapshotChunkRange(level, chunkStart, chunkCount),
-                        "module PRE scans must preserve the published direct range");
-                assertPatternRangeEquals(
-                        patternsBeforePublication, level, 0x00BE,
-                        "module PRE scans must not publish any pattern prefix");
-                events.update(0, frame++);
-                assert2dArrayEquals(
-                        chunksAfterPublication,
-                        snapshotChunkRange(level, chunkStart, chunkCount),
-                        "intermediate module consumer scans must preserve the direct range");
-                assertPatternRangeEquals(
-                        patternsBeforePublication, level, 0x00BE,
-                        "intermediate KosM children must not publish partial pattern art");
+            parent = kosModuleParent();
+            if (parent.ready()) {
+                break;
             }
-        } while (!parent.ready());
+
+            // Process_Kos_Module_Queue (docs/skdisasm/sonic3k.asm:7908) is the LevelLoop
+            // tail step, reached at the frame top ahead of Process_Kos_Queue (7887), so
+            // the last module can retire across this boundary. Readiness is still not
+            // art: the object pass that follows is the first scan allowed to publish it.
+            serviceHardware(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            assert2dArrayEquals(
+                    chunksAfterPublication,
+                    snapshotChunkRange(level, chunkStart, chunkCount),
+                    "module PRE scans must preserve the published direct range");
+            assertPatternRangeEquals(
+                    patternsBeforePublication, level, 0x00BE,
+                    "module PRE scans must not publish any pattern prefix");
+            parent = kosModuleParent();
+            if (parent.ready()) {
+                break;
+            }
+
+            events.update(0, frame++);
+            assert2dArrayEquals(
+                    chunksAfterPublication,
+                    snapshotChunkRange(level, chunkStart, chunkCount),
+                    "intermediate module consumer scans must preserve the direct range");
+            assertPatternRangeEquals(
+                    patternsBeforePublication, level, 0x00BE,
+                    "intermediate KosM children must not publish partial pattern art");
+        }
         assertFalse(parent.claimed(),
                 "the retired KosM payload must remain owned until the following event scan");
         events.update(0, frame);
@@ -470,12 +493,14 @@ public class TestSonic3kAIZEvents {
                 "the KosM publication scan must expose every prepared pattern byte");
     }
 
-    private static void serviceHardware(
-            com.openggf.game.timing.HardwareTimingService timing,
-            HardwareServiceBoundary boundary) {
-        timing.service(boundary);
-        S3kRuntimeArtCoordinator.current().directQueue().afterTimingService(boundary);
-        S3kRuntimeArtCoordinator.current().moduleQueue().afterTimingService(boundary);
+    private static HardwareTimingJob.Snapshot kosModuleParent() {
+        return GameServices.hardwareTiming().capture().jobs().stream()
+                .filter(job -> job.kind() == HardwareWorkKind.KOS_MODULE_QUEUE)
+                .findFirst().orElseThrow();
+    }
+
+    private static void serviceHardware(HardwareServiceBoundary boundary) {
+        HardwareBoundaryPump.service(boundary);
     }
 
     @Test

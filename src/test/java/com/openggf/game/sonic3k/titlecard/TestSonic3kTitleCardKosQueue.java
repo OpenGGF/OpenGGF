@@ -14,6 +14,7 @@ import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.game.timing.HardwareTimingSnapshot;
 import com.openggf.game.timing.HardwareWorkHandle;
+import com.openggf.tests.HardwareBoundaryPump;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -199,29 +200,38 @@ class TestSonic3kTitleCardKosQueue {
     }
 
     private void drainThroughPostObjects(List<HardwareWorkHandle> handles) throws Exception {
-        boolean sawPostObjectsPublication = false;
+        // Process_Kos_Module_Queue (docs/skdisasm/sonic3k.asm:2750-2752) runs from
+        // LevelLoop's tail (7908), reached at the frame top ahead of Process_Kos_Queue
+        // (7887): an archive retires across PRE_MAIN_LOOP, and the object pass
+        // (Process_Sprites, 7889) that follows is the first consumer poll to see it.
+        boolean sawFrameTopPublication = false;
         for (int frame = 0; frame < 4096 && readyCount(handles) < handles.size(); frame++) {
             int readyBefore = readyCount(handles);
             service(HardwareServiceBoundary.PRE_MAIN_LOOP);
-            assertEquals(readyBefore, readyCount(handles),
-                    "PRE_MAIN_LOOP must not publish newly completed KosM work");
+            int readyAfterFrameTop = readyCount(handles);
+            assertTrue(readyAfterFrameTop >= readyBefore,
+                    "module readiness must never regress across a frame top");
+            if (readyAfterFrameTop > readyBefore) {
+                sawFrameTopPublication = true;
+            }
+            if (readyAfterFrameTop == handles.size()) {
+                break;
+            }
 
             manager.update();
             assertTrue(isArtLoading(manager),
                     "the title-card consumer must keep polling until every archive is ready");
 
             service(HardwareServiceBoundary.POST_OBJECTS);
-            int readyAfter = readyCount(handles);
-            if (readyAfter > readyBefore) {
-                sawPostObjectsPublication = true;
-            }
+            assertEquals(readyAfterFrameTop, readyCount(handles),
+                    "the object pass must not itself publish newly completed KosM work");
         }
 
         assertEquals(handles.size(), readyCount(handles));
-        assertTrue(sawPostObjectsPublication,
-                "at least one archive must publish readiness at POST_OBJECTS");
+        assertTrue(sawFrameTopPublication,
+                "at least one archive must publish readiness at the frame top");
         assertTrue(isArtLoading(manager),
-                "final POST_OBJECTS publishes readiness without running the consumer");
+                "the frame top publishes readiness without running the consumer");
 
         manager.update();
 
@@ -241,9 +251,8 @@ class TestSonic3kTitleCardKosQueue {
     }
 
     private void service(HardwareServiceBoundary boundary) {
-        timing.service(boundary);
-        directQueue().afterTimingService(boundary);
-        S3kRuntimeArtCoordinator.current().moduleQueue().afterTimingService(boundary);
+        HardwareBoundaryPump.service(
+                timing, S3kRuntimeArtCoordinator.current(), boundary);
     }
 
     private S3kKosDecompressionQueue directQueue() {
