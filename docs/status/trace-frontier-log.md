@@ -57069,3 +57069,68 @@ frame carve-out.
 Counts: aiz 8, hcz 7, mgz 18, cnz 7, icz 10, lbz 8 — all baseline; mhz 934 -> 838,
 first error f3326 -> f3420 (`rings`). MHZ tail `KOS_DECOMPRESSION_QUEUE#335` throw
 unchanged (known pre-existing; report still covers all 7218 frames).
+## 2026-08-01 — MHZ f3420: rings seed traced to SST slot-occupancy drift (correct negative, no code change)
+
+Worktree `.worktrees/mhz-3420`, branch `bugfix/ai-s3k-mhz-3420` off
+`bugfix/ai-s3k-mhz-queue-frontier` (67ae3bddf). Command:
+`mvn -Ptrace-replay "-Dtest=TestS3kMhzCompleteRunTraceReplay" test -Ds3k.rom.path=<s3k.gen>`.
+Run confirmed baseline: mhz 838 errors / 7218 frames, first non-queue error f3420 (`rings`,
+expected 3 / actual 4, span 3420-3425). Queue/physics split 7/831; error mass by 500-frame
+bucket: 3000s:16, 3500s:85, 4000s:61, 4500s:66, 5000s:133, 5500s:141, 6000s:135, 6500s:134,
+7000s:67.
+
+### Characterisation
+
+The player was hit at ~f3331 and 32 rings spill (two 16-ring circles, ROM `loc_1A67A`,
+sonic3k.asm:35548-35577). Re-collection is timer-bound first: the invulnerability gate
+(`Touch_ChkValue` reads the MAIN character's `invulnerability_timer`, >= 90 blocks,
+sonic3k.asm:20786-20794) opens at f3410 in both engine and ROM — the +2 at f3411 and +1 at
+f3415 match exactly, so the invuln timer, gate threshold, and static ring pickup are all
+synchronized. The f3420 divergence is the 4th spilled ring, overlap-bound: the engine's
+Tails touches it at f3419 (ring at 0x1090,0x71E vs Tails 0x1087,0x730), ROM's only at
+f3425.
+
+The trace's `object_near` aux events record ROM's bouncing rings (`Obj_Bouncing_Ring`
+0x1A64A). Direct comparison: ROM's counterpart ring (slot 58) bounces off the floor ~2
+frames later than the engine's (ROM y reaches 0x73E before the probe fires vs engine
+0x738), so ROM rebounds harder and its apex is ~3px higher (0x717 vs 0x71B) — exactly
+enough that the engine ring clips Tails's touch box (box top = y - (y_radius-3),
+sonic3k.asm:20643-20655; ring Touch_Sizes entry $07 = 6x6, 20712-20719) six frames early.
+
+### Root cause (upstream, systemic)
+
+The spilled-ring floor probe runs on the `(V_int_run_count + d7) & 7` cadence
+(sonic3k.asm:35625-35629), where `d7` is the ExecuteObjects slot countdown — i.e. probe
+phase is a pure function of SST slot index. ROM allocates the spill via
+`AllocateObjectAfterCurrent` (sonic3k.asm:35576) into the free-slot map at f3332:
+circle 1 into 7,20,29,35,36,43,47-56, circle 2 contiguously into 57-72. The engine's
+free-slot map at the same moment differs (engine circle 1: 4,9,10,27,41,42,43,46,47-54;
+circle 2: 55-70) — the second circle lands 2 slots low, shifting every circle-2 ring's
+probe phase by 2 and moving one bounce.
+
+The occupancy drift is dominated by MHZ pollen churn: pollen particles
+(`Obj_MHZ_Pollen`/`loc_3DC18`, spawned via `AllocateObjectAfterCurrent` with
+`Random_Number` velocities, sonic3k.asm:81660-81725) occupy ROM slots 8-19/26-46 at spill
+time while the engine's pollen sits at 23-40, and level-placed statics (StillSprite 0x2F,
+Madmole at ROM slot 17 vs engine 19, etc.) sit at shifted slots. Slot-exact parity here
+requires RNG-sequence and placement-slot parity for decorative churn — not fixable
+object-locally and out of scope for this cycle. No fitted alternative exists: the probe
+phase is genuinely slot-derived ROM state.
+
+### Secondary seed (open)
+
+The f3457-3486 block (ROM CPU Tails presses the auto-jump while pushing, engine does not)
+may be independent: both sides agree on `tails_status_byte` 0x21 (Status_Push) from f3428
+through f3456 and on the delayed-leader status, so ROM's push-bypass route
+(`loc_13DD0` btst Status_Push / btst #5,d4 → `loc_13E9C`, sonic3k.asm:26702-26705,
+26787-26793) should be open to the engine's modelled gate as well; the engine never
+generates the press on the $3F cadence frame. Worth a dedicated instrumented pass at the
+`SidekickCpuController` auto-jump gate (call index 3459 = trace frame 3457) before
+attributing it to the ring skew.
+
+### Regression state
+
+No code changed (instrumentation reverted); counts remain the baseline recorded above and
+in the f3326 entry: aiz 65/6344, hcz 7/1320, mgz 23/17949, cnz 7/9711, icz 10/12375,
+lbz 0/12647, mhz 838/7218. MHZ tail `KOS_DECOMPRESSION_QUEUE#335` throw unchanged (known
+pre-existing).
