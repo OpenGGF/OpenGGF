@@ -56793,3 +56793,62 @@ Every segment holds at its baseline count and frame span. `TestS3kAizTraceReplay
 `TestS3kZoneKosRewind` 8/8, `TestHCZWaterWallObjectInstance` 3/3,
 `TestLevelIterationHardwareTimingAdmissionOrder` 3/3, `TestS3kKosModuleQueue` 14/14,
 `TestS3kKosDecompressionQueue` 10/10.
+
+## 2026-08-01 — reconciliation: entries above that later work has overtaken
+
+Worktree `.worktrees/hardening`, branch `bugfix/ai-s3k-hardening`, from
+`ef38aa661`. This section supersedes the specific claims below. Earlier entries are
+kept byte-for-byte as the historic record; where one of them says something no longer
+true, the correction is here. **Read this section before acting on any entry above it.**
+
+### Superseded claims
+
+| Earlier entry said | Actually true now | Changed by |
+|---|---|---|
+| `TestS3kKosModuleReadiness` fails 7/8 — a "pre-existing" boundary-model failure | The class holds **1 test** and is **green**. It never had 8. It did not fail on that run — it **hung**, on an unbounded `while (!direct.isReady(child))` whose child was never submitted; surefire reported the stale shape of the fork | `519c2afed`, bound in `ef38aa661` |
+| `TestSonic3kTitleCardKosQueue` fails 11/12 — "pre-existing" | The class holds **4 tests** and is **green** | `519c2afed` |
+| A list of "known pre-existing failures" carried over several entries | **16 of them were branch-introduced regressions**, not pre-existing. Culprits: `1d93e3134` (Kos module queue frame phase), `629c56417` (MHZ ROM art / carry-intro first tick), `c45b8fd3f` (SS entry ring retirement tail), `c64cd401a` (sidekick air-landing tilt). All 16 are fixed | `519c2afed`, `9c92a6623` |
+| MGZ and CNZ "sit at 1 divergence group each and **cannot reach 0**"; "no report emitted" | That was a **reporting** gap, not an earlier abort: `AbstractTraceReplayTest` only wrote `*_report.json` when the report carried errors or warnings, so a clean-to-abort run wrote nothing. The write in the `finally` block is now unconditional. Both segments are measurable and both now run substantially further — mgz `18 / 16510`, cnz `7 / 9711` | the timing-abort entry dated 2026-08-01 above |
+| `TestS3kHardwareTimingReplay` fails with `KosM module FIFO is full` from `AizPlaneIntroInstance:700` | The message is wrong. It throws **`Unable to queue AIZ intro sprite KosM art`**, at the same site `AizPlaneIntroInstance:700`. Still genuinely pre-existing on `#standaloneAizCompleteRunConsumesFirstEdgeThroughProductionFrameDriver` — do not chase it, but do not grep for the old string either | — |
+
+### Current state (error_count / total_frames)
+
+| segment | current |
+|---|---|
+| aiz | 8 / 64 |
+| hcz | 7 / 1320 |
+| mgz | 18 / 16510 |
+| cnz | 7 / 9711 |
+| icz | 10 / 12375 |
+| lbz | 8 / 35 |
+| mhz | 903 / 7218 |
+
+`TestS3kAizTraceReplay` holds at 4 failures + 1 error (the release-slice gate).
+
+**MHZ frame 3246 is the only remaining meaningful physics frontier.** It has three
+recorded correct negatives (see the 2026-07-31 entries above) and a live BizHawk probe
+in flight. Every other segment's residual count is queue-fingerprint noise or a
+recorded-fixture artefact, not a physics divergence.
+
+Genuinely pre-existing, do not chase:
+`TestS3kHardwareTimingReplay#standaloneAizCompleteRunConsumesFirstEdgeThroughProductionFrameDriver`,
+`TestTraceReplayStartPositionPolicy`.
+
+### Two hazard classes worth carrying forward
+
+**1. Tests that hang instead of failing.** A convergent drain loop becomes divergent when
+the phase it pumps moves. `stepHeadArchive()` now runs at `POST_OBJECTS`, not
+`PRE_MAIN_LOOP` (`ddaf8e152`), and two loops that pumped a single boundary — in
+`TestSonic3kAIZEvents` and `TestS3kKosModuleReadiness` — silently consumed a whole
+surefire fork each. The symptom is a *slow build*, not a red test, which is why it cost
+so much to find. Every drain loop whose exit depends on queue readiness, decompression
+completion, module retirement, hardware-timing admission, or PLC progress must carry an
+explicit bound with an assertion message naming what failed to converge. The remaining
+instances were swept and bounded in `05d10e26a`.
+
+**2. Hand-rolled models of a production sequence drift from it.** Sixteen test-side copies
+of the hardware boundary order each had to be corrected independently when the production
+order changed, and each looked like a separate pre-existing failure. Resolved by giving
+the sequence one owner, the `HardwareBoundaryDispatch` seam (`6e4444921`), so a boundary
+change lands in one place. Prefer the seam over a local re-implementation whenever a test
+needs to drive the production frame order.
