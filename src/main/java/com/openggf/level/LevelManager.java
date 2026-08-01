@@ -2772,7 +2772,16 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 && zoneFeatureProvider.shouldSuppressInitialTitleCard(
                         currentZone, currentAct);
         if (presentationSuppressed) {
-            completeSkippedInitialTitleCardPresentation();
+            // A suppressed presentation models a load where ROM never creates
+            // the title-card owner at all (S3K Level init skips the
+            // Obj_TitleCard install for a fresh AIZ1 Sonic/Tails game:
+            // docs/skdisasm/sonic3k.asm:7702-7709 branch past 7728-7735).
+            // With no owner object there is no Obj_TitleCardWait2 teardown and
+            // no LoadEnemyArt submission — the intro installs the title card
+            // itself much later (sonic3k.asm:114393-114396). Reach the PLC
+            // boundary without starting the skipped-presentation teardown
+            // model.
+            completeInitialTitleCardPresentation();
             return;
         }
         if (!graphicsManager.isHeadlessMode() || headlessWholeRunHandoff) {

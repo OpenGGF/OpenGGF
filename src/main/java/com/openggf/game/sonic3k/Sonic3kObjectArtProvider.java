@@ -1473,6 +1473,22 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
                     new EnemyKosEntry(
                             Sonic3kConstants.ART_KOSM_ICZ_STAR_POINTER_ADDR,
                             Sonic3kConstants.ARTTILE_ICZ_STAR_POINTER));
+            // ROM PLCKosM_LBZ queues these entries in this order from
+            // LoadEnemyArt after the title-card owner retires.
+            // docs/skdisasm/sonic3k.asm:62287-62300, 64397-64402
+            case Sonic3kZoneIds.ZONE_LBZ -> List.of(
+                    new EnemyKosEntry(
+                            Sonic3kConstants.ART_KOSM_SNALE_BLASTER_ADDR,
+                            Sonic3kConstants.ARTTILE_SNALE_BLASTER),
+                    new EnemyKosEntry(
+                            Sonic3kConstants.ART_KOSM_ORBINAUT_ADDR,
+                            Sonic3kConstants.ARTTILE_ORBINAUT),
+                    new EnemyKosEntry(
+                            Sonic3kConstants.ART_KOSM_RIBOT_ADDR,
+                            Sonic3kConstants.ARTTILE_RIBOT),
+                    new EnemyKosEntry(
+                            Sonic3kConstants.ART_KOSM_CORKEY_ADDR,
+                            Sonic3kConstants.ARTTILE_CORKEY));
             // ROM PLCKosM_MHZ1 / PLCKosM_MHZ2 queue these entries in this
             // order from LoadEnemyArt; act 2 leads with the Cluckoid arrow.
             // docs/skdisasm/sonic3k.asm:64331-64332, 64404-64415
