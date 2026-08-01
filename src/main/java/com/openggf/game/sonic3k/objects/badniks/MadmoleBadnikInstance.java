@@ -407,6 +407,16 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
         // carry by one frame accordingly.
         private boolean awaitingCarryRoutine;
         private AbstractPlayableSprite capturedPlayer;
+        // ROM $44(a0). Written by the straight drill's touch response sub_8D8E6
+        // (move.w a2,$44(a0), sonic3k.asm:193439) and by the arc grab sub_8D94A
+        // (sonic3k.asm:193477), and never cleared afterwards: the wall and floor
+        // release paths (loc_8D820/loc_8D85E into loc_8D834,
+        // sonic3k.asm:193337-193346 and 193363-193367) only set Status_InAir,
+        // clear object_control and drop the arm to routine 6. The stale
+        // back-reference is what loc_8D724 (sonic3k.asm:193222-193228) re-uses
+        // when the arm later scrolls off-camera, so it must outlive
+        // capturedPlayer rather than be nulled at release.
+        private AbstractPlayableSprite releaseTargetPlayer;
         // Player recorded by this frame's TouchResponse pass (the engine equivalent
         // of collision_property). Applied during the arm's own update, so only the
         // last player to overlap is grabbed and any earlier overlapping player
@@ -586,6 +596,11 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
             player.setYSpeed((short) -0x200);
             player.setAir(true);
             if (player instanceof AbstractPlayableSprite sprite) {
+                // ROM sub_8D8E6 move.w a2,$44(a0) (sonic3k.asm:193439), the same
+                // back-reference the arc grab writes. The straight knock-back does
+                // not carry the player, so this is the only record the arm keeps of
+                // whom to detach when loc_8D724 despawns it off-camera.
+                releaseTargetPlayer = sprite;
                 sprite.setAnimationId(0x1A);
                 sprite.setSpindash(false);
             }
@@ -609,6 +624,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
             }
 
             capturedPlayer = sprite;
+            releaseTargetPlayer = sprite;
             // ROM sub_8D94A sets routine 8, but loc_8D778 (routine 4) still runs
             // to completion this frame without carrying; the carry (loc_8D7A8)
             // starts next frame.
@@ -722,8 +738,18 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
          * ({@code (x_pos & $FF80) - Camera_X_pos_coarse_back > $280}) and a
          * vertical band ({@code y_pos - Camera_Y_pos + $80 > $200}), both
          * unsigned. Either one falls through to {@code loc_8D724}, which sets
-         * {@code Status_InAir} and clears {@code object_control} on the carried
-         * player — leaving its velocities untouched — and deletes the arm.
+         * {@code Status_InAir} and clears {@code object_control} on the player in
+         * {@code $44(a0)} — leaving its velocities untouched — and deletes the arm.
+         *
+         * <p>{@code loc_8D724} tests {@code $44(a0)} itself, not whether the arm is
+         * still carrying. Because nothing ever clears {@code $44}, an arm that
+         * already released its player (routine 6 drift) still detaches that player
+         * when it finally scrolls off-camera. Measured on hardware at MHZ
+         * complete-run frame 3246: slot 20 (code {@code $0008D6E6}, routine 6,
+         * {@code $44 = $B000}) despawns and sets {@code Status_InAir} on a Sonic
+         * who is running normally with {@code object_control = 0}, immediately
+         * after {@code Player_AnglePos} returned him grounded. See
+         * docs/architecture/validation/trace/2026-08-01-mhz-f3246-findfloor-probe.md.
          */
         private void checkDeleteAndReleaseCapturedPlayer() {
             int cameraX = cameraLeft();
@@ -735,10 +761,11 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
                 return;
             }
 
-            if (capturedPlayer != null) {
-                capturedPlayer.setAir(true);
-                ObjectControlState.none().applyTo(capturedPlayer);
+            if (releaseTargetPlayer != null) {
+                releaseTargetPlayer.setAir(true);
+                ObjectControlState.none().applyTo(releaseTargetPlayer);
                 capturedPlayer = null;
+                releaseTargetPlayer = null;
             }
             setDestroyedByOffscreen();
         }
