@@ -218,6 +218,23 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **Final Zone stopped crashing on the signpost PLC gate (2026-08-01):** the
+  `Level_MainLoop` tail wired earlier in this line reproduced `SignpostArtLoad`'s
+  six ROM gates faithfully — including `cmpi.b #act3,(v_act).w` — but compared
+  the ROM's `act3` constant against the *engine's* logical act. The ROM has no
+  separate Final Zone level: FZ is SBZ act 3, so `v_act` reads act3 there and the
+  routine returns before `NewPLC` ever runs. The engine models FZ as its own
+  logical zone whose act index restarts at 0 (probed at the hook: zone 6, act 0,
+  against the level's own ROM zone index of 5), so the gate never fired and the
+  submission landed while the Nemesis decoder was mid-run, throwing
+  `cannot mutate queued PLC entries while the decoder is active` before replay
+  could start. The S1 module's feature-act remap — which already carried the
+  sibling case of SBZ act 3 being loaded from the LZ zone slot — now reports act 3
+  for Final Zone, and the gate reads the ROM-effective act, so the divergence is
+  modelled at the per-game boundary rather than by testing a zone id for
+  behaviour. Final Zone returns to being an ordinary comparator frontier instead
+  of a crash.
+
 - **Boss-defeat RNG stream desync greened the GHZ3 and MTZ3 capsules
   (2026-08-01):** the last `queue.*_nemesis_plc.busy` frontiers turned out not to
   be a PLC defect at all. Instrumenting the queue showed all three traces

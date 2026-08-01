@@ -339,6 +339,13 @@ public class Sonic1GameModule implements GameModule {
                 && levelZoneIndex == Sonic1Constants.ZONE_LZ) {
             return 2;
         }
+        // The ROM has no separate Final Zone level id: FZ is SBZ act 3, so
+        // v_act reads act3 there (the level id is id_SBZ act 3). The engine
+        // models FZ as its own logical zone whose act index restarts at 0, so
+        // report the ROM's act for anything keyed on v_act.
+        if (logicalZone == Sonic1ZoneConstants.ZONE_FZ) {
+            return 2;
+        }
         return -1;
     }
 
