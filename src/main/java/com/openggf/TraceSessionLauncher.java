@@ -1015,9 +1015,9 @@ public final class TraceSessionLauncher {
     }
 
     /** Commits replay production classification for an admitted pause VBlank. */
-    void activateProductionMarkerForPausedBoundary() {
-        if (comparator != null) {
-            comparator.activatePreparedProductionMarker();
+    static void activateProductionMarkerForPausedBoundaryIfActive() {
+        if (activeSession != null && activeSession.comparator != null) {
+            activeSession.comparator.activatePreparedProductionMarker();
         }
     }
 

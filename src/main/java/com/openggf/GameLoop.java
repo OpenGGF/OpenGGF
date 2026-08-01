@@ -965,8 +965,7 @@ public class GameLoop {
             return;
         }
 
-        if (currentGameMode == GameMode.LEVEL
-                || currentGameMode == GameMode.BONUS_STAGE) {
+        if (currentGameMode == GameMode.LEVEL || currentGameMode == GameMode.BONUS_STAGE) {
             playbackDebugManager.shouldSkipCurrentGameplayTick();
         }
 
@@ -1077,10 +1076,7 @@ public class GameLoop {
                 LevelIterationAdmissionController
                         ::deactivateTraceHardwareTimingForAdmission);
         if (admission == LevelFrameResult.PAUSED) {
-            TraceSessionLauncher traceSession = TraceSessionLauncher.active();
-            if (traceSession != null) {
-                traceSession.activateProductionMarkerForPausedBoundary();
-            }
+            TraceSessionLauncher.activateProductionMarkerForPausedBoundaryIfActive();
             LevelFrameStep.serviceVBlankOnly(LevelFrameContext.from(gameplayMode),
                     activePlcLifecycleFrame, PlcLifecyclePhase.NORMAL_PAUSE);
             inputHandler.update();

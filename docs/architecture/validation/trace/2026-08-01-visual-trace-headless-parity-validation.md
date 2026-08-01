@@ -82,7 +82,25 @@ the updated feature and post-merge runs.
 
 ## Integration report
 
-Pending refreshed `develop` baseline comparison and post-merge verification.
+`develop` (`fa3900494`) was merged into the feature worktree. The only merge
+conflicts were the Unreleased entries in `CHANGELOG.md` and `README.md`; both
+the upstream special-stage/CPZ notes and this visual-trace note were retained.
+All upstream runtime and test changes merged without conflict.
+
+The reconciled full worktree suite executed 14,007 tests and reported 18
+failures plus 7 errors, compared with the refreshed baseline's 13,980 tests,
+20 failures, and 7 errors. The feature introduced no new failing method. Its
+failure set was the baseline set minus the now-correct held-title recording
+boundary assertion and one unrelated intermittent signpost assertion; all
+seven error methods were unchanged. The first run also reported `GameLoop`
+four effective lines above its size ratchet. The pause-marker call was compacted
+without changing behavior, and the focused source-ratchet rerun now reports
+only the pre-existing `LevelManager` overage.
+
+The post-reconciliation visual/headless parity batch completed successfully,
+including the rewind marker restore chain, held Start, playable-prefix ordering,
+PLC/Kos queue lifecycle, fatal launch cleanup, run handoff, bootstrap, and
+timing-authority guards. Post-merge verification remains pending.
 
 ## End-to-end review
 
@@ -90,5 +108,5 @@ An independent implementation review found and drove fixes for lifecycle-marker
 deferral, playable-prefix comparison order, held Start edge detection, fatal
 partial-launch cleanup, bonus timer suppression, rewind restore reconstruction,
 and pause-versus-setup closure ownership. The final pre-integration review
-reported no blocking issues. A short confirmation review remains after upstream
-reconciliation.
+reported no blocking issues. The post-reconciliation review also reported no
+blocking integration issue.

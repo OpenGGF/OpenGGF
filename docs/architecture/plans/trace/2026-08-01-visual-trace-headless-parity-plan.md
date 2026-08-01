@@ -302,9 +302,9 @@ player-DPLC publication and S3K direct/module Kosinski timing.
 - [x] Fetch and fast-forward the potentially dirty main workspace's checked-out integration
   branch without overwriting user changes.
 - [x] Record the exact full-suite result on the updated integration baseline.
-- [ ] Reconcile upstream, then rerun the full suite and focused parity tests in
+- [x] Reconcile upstream, then rerun the full suite and focused parity tests in
   the worktree.
-- [ ] Update the validation report and obtain an
+- [x] Update the validation report and obtain an
   independent end-to-end review with no blocking issues.
 - [ ] Commit with required policy trailers, merge into the main-workspace
   branch without switching it, rerun the full suite against the recorded
