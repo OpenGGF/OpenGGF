@@ -1,6 +1,7 @@
 package com.openggf.tests.trace.s2;
 
 import com.openggf.data.Rom;
+import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageComparisonState;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageComparisonState.PlayerState;
 import com.openggf.graphics.GraphicsManager;
@@ -128,6 +129,23 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
 
     private static final String ABSENT = "absent";
     private static final int CONTEXT_RADIUS = 8;
+
+    /**
+     * Iterations of {@code Pal_FadeToWhite}, the ROM's first act once the
+     * special stage's {@code SS_Check_Rings_flag} breaks the main loop
+     * (docs/s2disasm/s2.asm:6725-6745). The routine loads {@code d4} with
+     * {@code $15} and runs one {@code VintID_Fade} V-blank per {@code dbf}
+     * iteration (s2.asm:3570-3581) — {@code $15 + 1} of them. {@code Vint_Fade}
+     * never reaches {@code ProcessDMAQueue} (only the real per-mode handlers do:
+     * s2.asm:781, 899, 1000, 1046, 1083, 1138), so the terminal pass's queued
+     * player art survives the whole fade, and then the interrupts-disabled
+     * results-screen setup that follows (s2.asm:3546-3600 region: {@code move
+     * #$2700,sr}, ClearScreen, PalLoad_Now, LoadPLC2, NemDec, clearRAM), until
+     * the results loop asks for {@code VintID_Level} and waits on it
+     * (s2.asm:6800-6806). That first {@code Vint_Level} is the retirement
+     * V-blank.
+     */
+    static final int PAL_FADE_TO_WHITE_FRAMES = 0x15 + 1;
 
     /** Directory of the trace to replay. */
     protected abstract Path traceDirectory();
@@ -354,11 +372,17 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
         }
 
         if (trace.metadata().hasPerFrameDynamicArtTransferState()) {
+            int fadeRowsLeft = ssFinished.isPresent() ? PAL_FADE_TO_WHITE_FRAMES : 0;
             for (int frame = 0; frame < trace.frameCount(); frame++) {
                 if (dynamicArtCompared[frame]) {
                     continue;
                 }
-                harness.stepIdleRow(trace.getFrame(frame).lag());
+                PlcLifecyclePhase phase = PlcLifecyclePhase.SPECIAL_STAGE_RESULTS;
+                if (fadeRowsLeft > 0 && !trace.getFrame(frame).lag()) {
+                    phase = PlcLifecyclePhase.PALETTE_FADE;
+                    fadeRowsLeft--;
+                }
+                harness.stepIdleRow(trace.getFrame(frame).lag(), phase);
                 addDynamicArtComparison(
                         comparisons, trace, expectedDynamicArtRows, harness, frame,
                         new LinkedHashMap<>(), dynamicArtCompared, dynamicArt);
@@ -367,7 +391,7 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
         return new DivergenceReport(comparisons);
     }
 
-    private static Map<Integer, TraceEvent.DynamicArtTransferState> normalizedDynamicArtRows(
+    static Map<Integer, TraceEvent.DynamicArtTransferState> normalizedDynamicArtRows(
             SpecialStageTraceData trace) {
         if (!trace.metadata().hasPerFrameDynamicArtTransferState()) {
             return Map.of();
