@@ -174,7 +174,7 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
         // the raw act let FZ fall through this gate and submit plcid_Signpost
         // into an active Nemesis decoder, which throws.
         LevelManager actLevel = levelManager();
-        int romAct = actLevel != null ? actLevel.getFeatureActId() : currentAct;
+        int romAct = actLevel != null ? actLevel.getRomActId() : currentAct;
         if (romAct == ACT_3) {
             return;
         }

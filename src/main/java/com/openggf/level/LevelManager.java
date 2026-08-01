@@ -2031,6 +2031,24 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     /**
+     * Returns the ROM's {@code v_act} for the current level.
+     *
+     * <p>Pairs with {@link #getRomZoneId()}: together they are the
+     * ({@code v_zone}, {@code v_act}) word ROM routines compare against. Sonic 1
+     * needs both remapped — SBZ act 3 is the LZ slot's act 4, and Final Zone is
+     * SBZ act 3 — so gates ported from the disassembly read this rather than the
+     * logical act. This is distinct from {@link #getFeatureActId()}, which
+     * answers which zone/act a feature system (water, palettes) is keyed by.
+     */
+    public int getRomActId() {
+        if (level == null || gameModule == null) {
+            return currentAct;
+        }
+        int romAct = gameModule.getRomAct(currentZone, currentAct, level.getZoneIndex());
+        return romAct >= 0 ? romAct : currentAct;
+    }
+
+    /**
      * Returns the effective zone ID for zone features/water logic.
      *
      * <p>Sonic 1 SBZ3 uses the LZ zone slot ({@code id_LZ act 3}) for map/art data,

@@ -59937,3 +59937,59 @@ Any other object class modelling a ROM RememberState/DeleteObject tail as engine
 persistence will reproduce this bug wherever slot pressure or slot-ordering matters.
 A sweep of `isPersistent()`/`shouldStayActiveWhenRemembered()` overrides against their
 cited ROM tails is the follow-up; this entry is the evidence baseline.
+
+## 2026-08-01 — S1 Final Zone complete run greened (ROM v_act split from the feature act)
+
+Worktree `.worktrees/fz-bootstrap`, branch `bugfix/ai-fz-bootstrap`, on develop `66e680da2`.
+Command: `mvn -Dmse=relaxed -Dtest=<class> -Ds1.rom.path=s1.gen test`.
+
+**`s1_fz_completerun` went from a frame-0 divergence with 2908 errors to a clean
+4457-frame pass.** Before: `Tests run: 1, Failures: 1` /
+`First error: frame 0 -- x_speed mismatch (expected=0x000C, actual=0x0006)` /
+`Totals: 2908 errors, 0 warnings`. After: `Tests run: 1, Failures: 0, Errors: 0`.
+
+Measured, not inferred. A stack-traced probe on `Sonic1WaterDataProvider.hasWater`
+reported `hasWater(zoneId=5, actId=2)` for Final Zone, reached through
+`WaterSystem.loadForLevelFromProvider` ← `LevelWaterCoordinator.initialize` ←
+`LevelManager.initWater`. `PlayablePhysicsValueResolver.runAcceleration` halves the base
+`$0C` run acceleration to `$06` when water physics are active — exactly the
+recorded/actual pair. The trace independently confirms `$0C` is the dry ground
+acceleration: with right held from frame 0, `x_speed` steps `000C, 0018, 0024, 0030, …`
+and `x_sub` advances by `x_speed << 8` per frame. Final Zone was running underwater for
+its whole length; the 2908 errors were that one wrong initial value cascading.
+
+Root: `4c20ee4ec` answered a `v_act` question through the feature-act channel.
+`Sonic1GameModule.getRemappedFeatureAct` reported act 2 for `ZONE_FZ` so the ported
+`SignpostArtLoad` gate could see the ROM's act3, but that method also keys water and
+palette lookups, where SBZ3 is deliberately reported as the *synthetic* pair (SBZ, act 2).
+Final Zone then collided with SBZ3's water entry.
+
+The two are genuinely different identities, and the disassembly separates them:
+
+- `_Constants.asm:112-113` — `id_LZ_act4: equ (id_LZ<<8)+act4 ; $0103 (SBZ3)` and
+  `id_FZ: equ (id_SBZ<<8)+act3 ; $0502`. Line 111 even flags `id_SBZ_act3` as ambiguous.
+- `_Constants.asm:86-87` — `act3: equ 2`, `act4: equ 3 ; only used for SBZ3/LZ4`.
+- `sonic.asm:2755-2768` — water is enabled only under `cmpi.b #id_LZ,(v_zone).w`. The ROM
+  never reaches water through `id_SBZ` at all, so Final Zone is dry however `v_act` reads.
+- `sonic.asm:2779` — `cmpi.b #act4,(v_act).w` picks the SBZ3 underwater palette *within*
+  the `id_LZ` slot.
+- `sonic.asm:3186-3187` — the signpost gate, `cmpi.b #act3,(v_act).w / beq.s .return`.
+
+Fix: added `GameModule.getRomAct` / `LevelManager.getRomActId`, the `v_act` partner to the
+existing `getRomZoneId`. Sonic 1 reports act4 for SBZ3 and act3 for Final Zone; the
+signpost gate reads it, and `getRemappedFeatureAct` is back to feature identity only. SBZ3
+correctly stops skipping the signpost gate (its `v_act` is act4, not act3) with no effect
+on its trace. Nothing branches on a zone, route or frame, and no trace value is consumed.
+
+Validation over FZ, SBZ1-3 and LZ1-3 — the water and signpost neighbours the change can
+reach: 7 tests, 0 failures, 0 errors, 0 skips. Focused unit run
+(`TestSonic1SbzFinalZoneRouting`, `WaterSystemTest`, `WaterPhysicsTest`): 37 tests,
+0 failures, 0 errors.
+
+### Test-gap note
+
+`TestSonic1SbzFinalZoneRouting.testLevelManagerLoadsFinalZoneWithoutUnderwaterState`
+existed and passed throughout, because it asked the water system about the *logical* act
+(`hasWater(ZONE_SBZ, 0)`) rather than the feature act the level manager actually reports.
+It now queries `getFeatureZoneId()`/`getFeatureActId()` and pins both `v_act` values, so a
+future act remap that collides FZ with SBZ3 cannot slip through the same way.
