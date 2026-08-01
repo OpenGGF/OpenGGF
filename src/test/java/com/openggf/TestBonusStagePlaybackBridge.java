@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.file.Path;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -98,6 +99,39 @@ class TestBonusStagePlaybackBridge {
                     "The synchronous level-load hook must activate the destination cursor");
             assertFalse(manager.activateScheduledLevelLoadSession(),
                     "A scheduled level-load rebind must be one-shot");
+        }
+
+        @Test
+        void wrongLevelLoadCannotConsumeTargetAwareRebind() throws Exception {
+            Bk2Movie movie = new Bk2MovieLoader().load(MOVIE_PATH);
+            manager.startSession(movie, 3);
+            AtomicBoolean targetMatches = new AtomicBoolean();
+            manager.scheduleSessionAtNextLevelLoad(
+                    movie, 17, targetMatches::get);
+
+            assertFalse(manager.activateScheduledLevelLoadSession());
+            assertEquals(3, manager.getCursorFrame());
+            assertTrue(manager.hasScheduledLevelLoadSession(),
+                    "a rejected reload must leave the destination pending");
+
+            targetMatches.set(true);
+            assertTrue(manager.activateScheduledLevelLoadSession());
+            assertEquals(17, manager.getCursorFrame());
+            assertFalse(manager.hasScheduledLevelLoadSession());
+        }
+
+        @Test
+        void targetAwareRebindCanBeCancelledIdempotently() throws Exception {
+            Bk2Movie movie = new Bk2MovieLoader().load(MOVIE_PATH);
+            manager.startSession(movie, 3);
+            manager.scheduleSessionAtNextLevelLoad(movie, 17, () -> true);
+
+            manager.cancelScheduledLevelLoadSession();
+            manager.cancelScheduledLevelLoadSession();
+
+            assertFalse(manager.hasScheduledLevelLoadSession());
+            assertFalse(manager.activateScheduledLevelLoadSession());
+            assertEquals(3, manager.getCursorFrame());
         }
 
         @Test

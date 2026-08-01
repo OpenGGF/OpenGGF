@@ -97,6 +97,7 @@ public final class DynamicArtLifecycleService
             long transferId,
             String owner,
             int mappingFrame,
+            String submissionOrigin,
             List<DynamicArtDiagnosticsSnapshot.Request> requests) {
         public Descriptor {
             requests = List.copyOf(requests);
@@ -158,6 +159,22 @@ public final class DynamicArtLifecycleService
             latestOutstandingTransferIds =
                     List.copyOf(latestOutstandingTransferIds);
         }
+    }
+
+    @Override
+    public DynamicArtGapDiagnosticsSnapshot gapSnapshot() {
+        return new DynamicArtGapDiagnosticsSnapshot(
+                movieLogicalFrame,
+                gapTransitions,
+                ledger.values().stream()
+                        .map(descriptor ->
+                                new DynamicArtGapDiagnosticsSnapshot.Descriptor(
+                                        descriptor.transferId(),
+                                        descriptor.owner(),
+                                        descriptor.mappingFrame(),
+                                        descriptor.submissionOrigin(),
+                                        descriptor.requests()))
+                        .toList());
     }
 
     public void beginRun() {
@@ -358,7 +375,8 @@ public final class DynamicArtLifecycleService
         long transferId = nextTransferId++;
         List<Long> before = List.copyOf(ledger.keySet());
         Descriptor descriptor =
-                new Descriptor(transferId, owner, mappingFrame, requests);
+                new Descriptor(transferId, owner, mappingFrame,
+                        comparisonSegmentOpen ? "segment" : "run_gap", requests);
         ledger.put(transferId, descriptor);
         buffer(transferId, "submitted", owner, mappingFrame, requests, before);
         return new ArtUpdate(true, transferId, checked);
@@ -425,7 +443,9 @@ public final class DynamicArtLifecycleService
             List<Long> before = List.copyOf(ledger.keySet());
             Descriptor descriptor = new Descriptor(
                     transferId, preparation.owner(),
-                    preparation.mappingFrame(), preparation.requests());
+                    preparation.mappingFrame(),
+                    comparisonSegmentOpen ? "segment" : "run_gap",
+                    preparation.requests());
             ledger.put(transferId, descriptor);
             buffer(transferId, "submitted", descriptor.owner(),
                     descriptor.mappingFrame(), descriptor.requests(), before);

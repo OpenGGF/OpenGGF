@@ -59,13 +59,14 @@ import com.openggf.physics.GroundSensor;
 import com.openggf.physics.TerrainCollisionManager;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.timer.TimerManager;
+import com.openggf.trace.replay.runs.RunLevelLoadTracker;
 
-import java.util.Optional;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.logging.Logger;
 
 public final class GameplayModeContext implements ModeContext {
@@ -88,6 +89,7 @@ public final class GameplayModeContext implements ModeContext {
     private final RecordedCompletionAuthority recordedCompletionAuthority;
     private final PlcFrameLifecycleCoordinator plcFrameLifecycle;
     private final DynamicArtLifecycleService dynamicArtLifecycle;
+    private final RunLevelLoadTracker runLevelLoads = new RunLevelLoadTracker();
 
     private Camera camera;
     private TimerManager timerManager;
@@ -497,6 +499,11 @@ public final class GameplayModeContext implements ModeContext {
     /** Read-only player-DPLC diagnostics for observers outside the owner. */
     public DynamicArtDiagnosticsProvider dynamicArtDiagnostics() {
         return dynamicArtLifecycle;
+    }
+
+    /** Production-issued structural receipts consumed by complete-run adapters. */
+    public RunLevelLoadTracker runLevelLoads() {
+        return runLevelLoads;
     }
 
     /**

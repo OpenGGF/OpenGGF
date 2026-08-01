@@ -1,18 +1,19 @@
 package com.openggf;
 
+import com.openggf.debug.playback.PlaybackDebugManager;
 import com.openggf.game.GameMode;
 import com.openggf.game.SpecialStageStartupPolicy;
+import com.openggf.game.recording.UserRecordingRuntimeControls;
+import com.openggf.game.recording.UserRecordingStopReason;
+import com.openggf.game.recording.menu.UserRecordingMenu;
 import com.openggf.game.rewind.RewindBoundary;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.level.LevelManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
-import com.openggf.game.recording.UserRecordingRuntimeControls;
-import com.openggf.game.recording.UserRecordingStopReason;
-import com.openggf.game.recording.menu.UserRecordingMenu;
-import com.openggf.debug.playback.PlaybackDebugManager;
 
-import java.util.function.BooleanSupplier;
 import java.util.Objects;
+import java.util.function.BooleanSupplier;
+import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
 /** Owns level/title admission and deferred seamless-boundary completion. */
@@ -51,6 +52,8 @@ final class LevelIterationAdmissionController {
         if (request != null) {
             deactivateHardwareTimingGap.run();
             recordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
+            TraceSessionLauncher.markNextRunLevelLoadCause(
+                    com.openggf.trace.replay.runs.RunLevelLoadCause.LEVEL_ADVANCE);
             levelManager.applySeamlessTransition(request);
             startPendingTitleCard.run();
             seamlessBoundaryCompletionPending = true;
@@ -136,11 +139,43 @@ final class LevelIterationAdmissionController {
         }
     }
 
+    /** Runs one host step and guarantees all-mode run observation afterward. */
+    static void runTraceObservedStep(
+            Runnable step, Supplier<GameMode> mode, IntSupplier cursorFrame) {
+        try {
+            step.run();
+        } finally {
+            driveTraceRunSession(mode.get(), cursorFrame.getAsInt());
+        }
+    }
+
+    static boolean shouldVisualTraceOwnEscape(
+            GameMode mode, TraceSessionLauncher session, boolean escapePressed) {
+        return session != null && escapePressed
+                && (mode == GameMode.LEVEL || session.isRunSession());
+    }
+
     static void prepareTraceHardwareTimingForAdmission(GameMode mode) {
         TraceSessionLauncher session = TraceSessionLauncher.active();
         if (session != null) {
             session.prepareHardwareTimingForAdmission(mode);
         }
+    }
+
+    static void refreshTraceInputSnapshot(com.openggf.control.InputHandler input) {
+        TraceSessionLauncher.applyRunTerminalTailInputIfActive(input);
+        input.refreshLogicalSnapshot();
+    }
+
+    private static void admitTraceRunDestination(GameMode mode) {
+        TraceSessionLauncher.admitRunDestinationBeforeProductionIfActive(mode);
+    }
+
+    static void prepareTraceRunAdmissionAndHardwareTiming(
+            GameMode mode, Runnable syncPlaybackInput) {
+        admitTraceRunDestination(mode);
+        syncPlaybackInput.run();
+        prepareTraceHardwareTimingForAdmission(mode);
     }
 
     static void deactivateTraceHardwareTimingForAdmission() {

@@ -2,37 +2,42 @@ package com.openggf;
 
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
+import com.openggf.game.GameId;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
-import com.openggf.game.GameId;
+import com.openggf.game.profiles.trace.TracePlaybackProfile;
 import com.openggf.game.resources.DynamicArtDiagnosticsSnapshot;
 import com.openggf.game.resources.PlcLifecyclePhase;
-import com.openggf.level.render.TileLoadRequest;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
+import com.openggf.level.render.TileLoadRequest;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.TestEnvironment;
-import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.DynamicArtTransfer;
 import com.openggf.trace.FrameComparison;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceEvent;
 import com.openggf.trace.TraceFixtures;
+import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.ToleranceConfig;
 import com.openggf.trace.live.LiveTraceComparator;
 import com.openggf.trace.replay.TraceReplayFixture;
+import com.openggf.trace.replay.runs.RunBoundarySignal;
+import com.openggf.trace.replay.runs.RunPlaybackObservation;
+import com.openggf.trace.replay.runs.TraceRunPlaybackCoordinator;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker;
 import com.openggf.trace.timing.HardwareTimingReplayPort;
 import com.openggf.trace.timing.HardwareTimingSchedule;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -49,13 +54,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Unit-level coverage for {@link RunSegmentAdvancer}, the segment-advance
- * state machine driving a visual multi-stage trace run session (Task 3,
- * spec: docs/architecture/designs/2026-07-18-multi-stage-trace-runs-design.md).
- * No ROM/engine involved — feeds synthetic (mode, cursorFrame) sequences
- * against the real {@code run_aiz_gumball_3seg} synthetic fixture's
- * SegmentPlans (level/bonus_stage/level, offsets 500/1900/2900, 2 trace
- * frames each) and asserts the emitted events.
+ * Unit-level coverage for the visual multi-stage trace-run adapter. It proves
+ * the production launcher translates shared coordinator actions identically
+ * to the headless policy harness, and retains focused compatibility coverage
+ * for {@link RunSegmentAdvancer}. Synthetic fixtures exercise level, bonus,
+ * and special-stage segment plans without requiring a ROM.
  */
 class TestTraceSessionLauncherRunBranch {
 
@@ -90,6 +93,105 @@ class TestTraceSessionLauncherRunBranch {
 
         assertEquals(HardwareReadinessAdmissionPolicy.LIVE,
                 next.hardwareTiming().admissionPolicy());
+    }
+
+    @Test
+    void realVisualLauncherAndHeadlessPolicyEmitSameCoordinatorTranscript() {
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
+        new Engine(EngineServices.current());
+
+        TraceRunManifest.Segment level = segments.get(0).segment();
+        TraceRunManifest.Segment bonus = new TraceRunManifest.Segment(
+                "seg01_gumball", "bonus_stage", "s3k_bonus_stage",
+                1900, 2, 19, 1, null, "gumball");
+        TraceRunManifest.Transition transition =
+                new TraceRunManifest.Transition(
+                        0, 1, "starpost_bonus", 1750,
+                        2, null, null, null, null, null, null, null);
+        TraceRunManifest run = new TraceRunManifest(
+                1, "s3k", "visual-headless-parity", "synthetic.bk2",
+                "checksum", "recorder", List.of(level, bonus),
+                List.of(transition));
+        List<TraceRunReplayWalker.SegmentPlan> twoSegments = List.of(
+                new TraceRunReplayWalker.SegmentPlan(
+                        level, segments.get(0).trace(), null, transition),
+                new TraceRunReplayWalker.SegmentPlan(
+                        bonus, segments.get(1).trace(), transition, null));
+        Bk2Movie movie = new Bk2Movie(
+                Path.of("synthetic-run.bk2"), "logkey", Map.of(),
+                List.of(frame(500), frame(1900)), 3);
+
+        TraceSessionLauncher visual =
+                new TraceSessionLauncher(null, movie, twoSegments, null);
+        TraceRunPlaybackCoordinator visualCoordinator =
+                new TraceRunPlaybackCoordinator(
+                        run, TracePlaybackProfile.DISABLED, movie.getFrameCount());
+        setField(visual, "runCoordinator", visualCoordinator);
+        setField(visual, "runBoundaryProbe", new TraceRunReplayWalker.BoundaryProbe(
+                new TraceRunReplayWalker.EngineHooks() {
+                    @Override
+                    public int currentBk2Frame() {
+                        return 1750;
+                    }
+
+                    @Override
+                    public com.openggf.game.BonusStageType peekBonusRequest() {
+                        return com.openggf.game.BonusStageType.GUMBALL;
+                    }
+
+                    @Override
+                    public boolean isSpecialStageRequested() {
+                        return false;
+                    }
+
+                    @Override
+                    public GameMode currentMode() {
+                        return GameMode.BONUS_STAGE;
+                    }
+                }));
+
+        List<TraceRunPlaybackCoordinator.Action> headless =
+                driveCanonicalPolicy(new TraceRunPlaybackCoordinator(
+                        run, TracePlaybackProfile.DISABLED, movie.getFrameCount()));
+        driveCanonicalVisual(visual, visualCoordinator);
+
+        assertEquals(headless, visual.runCoordinatorTranscript());
+        assertEquals(List.of(
+                        "AdmitDestination", "CloseSegment", "EnterTransitionGap",
+                        "AdmitDestination", "CloseSegment", "CompleteRun"),
+                headless.stream()
+                        .map(action -> action.getClass().getSimpleName())
+                        .toList());
+    }
+
+    @Test
+    void loadInsideSourceIterationKeepsSourceOwnerAndDestinationRowZero()
+            throws Exception {
+        RunPlaybackObservation sourceOwner = new RunPlaybackObservation(
+                GameMode.LEVEL, 129, 8,
+                new RunPlaybackObservation.LevelIdentity(10, 0, 0, 0),
+                null, null, true, false, 0, false, 4, 5);
+        RunPlaybackObservation postStepDestination = new RunPlaybackObservation(
+                GameMode.LEVEL, 130, 9,
+                new RunPlaybackObservation.LevelIdentity(11, 1, 1, 0),
+                null, null, false, true, 1, false, 6, 7);
+        Method method = TraceSessionLauncher.class.getDeclaredMethod(
+                "withProductionOwner",
+                RunPlaybackObservation.class, RunPlaybackObservation.class);
+        method.setAccessible(true);
+
+        RunPlaybackObservation published = (RunPlaybackObservation) method.invoke(
+                null, postStepDestination, sourceOwner);
+
+        assertEquals(sourceOwner.level(), published.level());
+        assertEquals(GameMode.LEVEL, published.mode());
+        assertTrue(published.currentSegmentExhausted());
+        assertEquals(130, published.sharedBk2Cursor());
+        assertEquals(9, published.admittedStepOrdinal());
+        assertEquals(0, published.destinationRowsConsumed(),
+                "a remembered load inside source production has not consumed "
+                        + "destination row zero");
     }
 
     @Test
@@ -588,6 +690,72 @@ class TestTraceSessionLauncherRunBranch {
 
     private static Bk2FrameInput frame(int index) {
         return new Bk2FrameInput(index, 0, 0, false, "");
+    }
+
+    private static List<TraceRunPlaybackCoordinator.Action> driveCanonicalPolicy(
+            TraceRunPlaybackCoordinator coordinator) {
+        List<TraceRunPlaybackCoordinator.Action> transcript = new ArrayList<>();
+        transcript.addAll(coordinator.activateInitialLevel(
+                levelObservation(false)));
+        coordinator.observeBoundary(new RunBoundarySignal.BonusRequest(
+                1750, com.openggf.game.BonusStageType.GUMBALL));
+        transcript.addAll(coordinator.afterProduction(levelObservation(true)));
+        transcript.addAll(coordinator.beforeAdmission(bonusObservation(false)));
+        transcript.addAll(coordinator.afterProduction(bonusObservation(true)));
+        return List.copyOf(transcript);
+    }
+
+    private static void driveCanonicalVisual(
+            TraceSessionLauncher launcher,
+            TraceRunPlaybackCoordinator coordinator) {
+        applyCoordinatorActions(launcher,
+                coordinator.activateInitialLevel(levelObservation(false)));
+        coordinator.observeBoundary(new RunBoundarySignal.BonusRequest(
+                1750, com.openggf.game.BonusStageType.GUMBALL));
+        assertNotNull(getField(coordinator, "observedBoundary"));
+        applyCoordinatorActions(launcher,
+                coordinator.afterProduction(levelObservation(true)));
+        assertEquals(TraceRunPlaybackCoordinator.Phase.TRANSITION_GAP,
+                coordinator.phase());
+        assertEquals(0, coordinator.currentSegmentIndex());
+        assertNotNull(getField(coordinator, "observedBoundary"));
+        List<TraceRunPlaybackCoordinator.Action> admission =
+                coordinator.beforeAdmission(bonusObservation(false));
+        assertFalse(admission.isEmpty(),
+                "visual coordinator must admit the observed bonus destination");
+        applyCoordinatorActions(launcher, admission);
+        applyCoordinatorActions(launcher,
+                coordinator.afterProduction(bonusObservation(true)));
+    }
+
+    private static RunPlaybackObservation levelObservation(boolean exhausted) {
+        return new RunPlaybackObservation(
+                GameMode.LEVEL, 500, exhausted ? 2 : 0,
+                new RunPlaybackObservation.LevelIdentity(1, 0, 0, 0),
+                null, null, false, exhausted, 0, false, 10, 20);
+    }
+
+    private static RunPlaybackObservation bonusObservation(boolean exhausted) {
+        return new RunPlaybackObservation(
+                GameMode.BONUS_STAGE, 1900, exhausted ? 4 : 3,
+                null,
+                new RunPlaybackObservation.BonusIdentity(
+                        19, 0, com.openggf.game.BonusStageType.GUMBALL),
+                null, false, exhausted, 0, false, 30, 40);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void applyCoordinatorActions(
+            TraceSessionLauncher launcher,
+            List<TraceRunPlaybackCoordinator.Action> actions) {
+        try {
+            Method method = TraceSessionLauncher.class.getDeclaredMethod(
+                    "applyRunCoordinatorActions", List.class);
+            method.setAccessible(true);
+            method.invoke(launcher, actions);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError(e);
+        }
     }
 
     private static void setField(

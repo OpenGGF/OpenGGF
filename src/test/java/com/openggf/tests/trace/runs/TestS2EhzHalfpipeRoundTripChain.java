@@ -1,20 +1,10 @@
 package com.openggf.tests.trace.runs;
 
-import com.openggf.GameLoop;
-import com.openggf.control.InputHandler;
-import com.openggf.game.GameMode;
-import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
-import com.openggf.trace.SpecialStageTraceData;
-import com.openggf.trace.replay.runs.TraceRunReplayWalker.SegmentPlan;
-import com.openggf.tests.trace.RecordedInputRows;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.file.Path;
-import java.util.function.IntConsumer;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -138,66 +128,4 @@ class TestS2EhzHalfpipeRoundTripChain extends AbstractRunChainTest {
                         + "inside its structural gap");
     }
 
-    /**
-     * S2-specific lag-aware special-stage stepper. The generic base's
-     * {@link AbstractRunChainTest#specialStageDrivenStep} feeds every
-     * recorded BK2 row as a full {@code Sonic2SpecialStageProvider.update()}
-     * tick, but a BizHawk "lag" row is a real elapsed console VBlank where
-     * the ROM's OWN game logic did NOT advance (the same reason
-     * {@code S2SpecialStageReplayHarness}/{@code AbstractS2SpecialStageTraceReplayTest}'s
-     * comparator loop skip lag rows rather than stepping them). Stepping the
-     * provider on a lag row runs an EXTRA physics tick beyond what the
-     * recorded outcome reflects, drifting the half-pipe rotation/ring-count
-     * cadence enough to miss the emerald. Loads the same
-     * {@code SpecialStageTraceData} (the {@code s2_special_stage} physics.csv,
-     * which carries a per-row {@code lag} column) the standalone harness
-     * uses, purely as a read-only lag/pacing signal (comparison-only
-     * invariant: no field from it is ever hydrated into engine state) and
-     * skips lag rows without stepping the engine.
-     */
-    @Override
-    protected IntConsumer uncomparedInteriorStep(
-            GameLoop loop, InputHandler inputHandler, Bk2Movie movie, SegmentPlan interior) {
-        Path ssDir = RUN_DIR.resolve(interior.segment().dir());
-        SpecialStageTraceData trace;
-        try {
-            trace = SpecialStageTraceData.load(ssDir);
-        } catch (IOException e) {
-            throw new UncheckedIOException("Failed to load S2 special-stage lag trace: " + ssDir, e);
-        }
-        int bk2FrameOffset = interior.segment().bk2FrameOffset();
-        RecordedInputRows recordedInputs = new RecordedInputRows(movie, bk2FrameOffset);
-        return traceRow -> {
-            // Once the engine has left the special stage itself (results screen,
-            // fade, and the special-stage-return title card), stop feeding the
-            // special-stage trace as a logical-input override. The recorded SS
-            // physics.csv covers only the SPECIAL_STAGE phase; continuing to
-            // override input through the RESULTS/TITLE_CARD/return frames would
-            // inject a stale SS steering row into the title-card-exit fall-through
-            // LEVEL frame, accelerating the player off the return segment's
-            // gameplay-unlock rest state. Plain-step instead, so the forced-input
-            // cursor (pre-seeked by runChain to the return segment's offset) drives
-            // the fall-through frame.
-            if (loop.getCurrentGameMode() != GameMode.SPECIAL_STAGE) {
-                if (trace.metadata()
-                        .hasPerFrameDynamicArtTransferState()) {
-                    stepUncomparedInteriorLifecycleRow(
-                            traceRow < trace.frameCount()
-                                    && trace.getFrame(traceRow).lag());
-                }
-                return;
-            }
-            if (traceRow < trace.frameCount()
-                    && trace.getFrame(traceRow).lag()) {
-                if (trace.metadata()
-                        .hasPerFrameDynamicArtTransferState()) {
-                    stepUncomparedInteriorLifecycleRow(true);
-                }
-                return;
-            }
-            recordedInputs.withLogicalOverride(traceRow, inputHandler, () -> {
-                AbstractRunChainTest.stepEngineFrame(loop);
-            });
-        };
-    }
 }

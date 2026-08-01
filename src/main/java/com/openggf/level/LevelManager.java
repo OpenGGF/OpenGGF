@@ -3074,7 +3074,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      */
     private void activateScheduledPlaybackForLoadedLevel() {
         PlaybackDebugManager playback = GameServices.playbackDebug();
-        if (!playback.activateScheduledLevelLoadSession()) {
+        if (!com.openggf.TraceSessionLauncher.activateScheduledPlaybackForLoadedLevel(playback)) {
             return;
         }
         spriteManager.setPlaybackInputSuppressed(true);
@@ -3109,7 +3109,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         writeApparentAct(currentAct);
         // Clear checkpoint when manually changing level
         checkpointCoordinator.clear();
-        loadCurrentLevel();
+        com.openggf.TraceSessionLauncher.runLevelAdvanceLoad(this::loadCurrentLevel);
     }
 
     /**
@@ -3132,7 +3132,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         writeApparentAct(currentAct);
         // Clear checkpoint when advancing
         checkpointCoordinator.clear();
-        loadCurrentLevel();
+        com.openggf.TraceSessionLauncher.runLevelAdvanceLoad(this::loadCurrentLevel);
     }
 
     /**
@@ -3426,7 +3426,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         writeApparentAct(0);
         // Clear checkpoint when manually changing level
         checkpointCoordinator.clear();
-        loadCurrentLevel();
+        com.openggf.TraceSessionLauncher.runLevelAdvanceLoad(this::loadCurrentLevel);
     }
 
     public void loadZone(int zone) throws IOException {

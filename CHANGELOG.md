@@ -3,6 +3,17 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Feature: manifest-backed runs selected from the master-title trace picker now
+  remain one visual session across level and act loads, bonus stages, S1/S2/S3K
+  special stages, returns, and the declared terminal movie tail. The visual and
+  headless adapters share structural admission receipts, semantic transition
+  signals, segment-local special-stage input policy, return-boundary comparison,
+  and fail-closed transition caps. PLC/DPLC/Kosinski source closure, native gap
+  work, schedule handoff, destination generation, and opening ledgers are
+  compared in production order through immutable diagnostics; traces still
+  cannot create work or hydrate gameplay. A persistent `TRACE FAILED` picker
+  diagnostic retains the segment, row, and reason until acknowledged.
+
 - Fix: the master-title visual trace player now admits the same represented
   row as headless replay. S3K native-prefix rows validate current BK2 input
   while applying the previous gameplay row; suppressed rows share the

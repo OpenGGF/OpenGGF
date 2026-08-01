@@ -60234,3 +60234,39 @@ the recording rather than by construction. A sparse-heartbeat trace would surfac
 a silently empty outstanding list on the target row — a failure mode with no obvious
 symptom, so check this first if the normalization is ever reused against another
 recorder schema. Also noted at the merge site in `DynamicArtSpillNormalization`.
+
+## 2026-08-01 - Visual complete-run lifecycle and strict transfer diagnostics
+
+- Worktree: `.worktrees/visual-trace-complete-runs`, branch
+  `feature/ai-visual-trace-complete-runs`, based on `ea6d8ad70` before final
+  `develop` reconciliation.
+- The master-title visual trace picker now discovers manifest-backed runs and
+  drives one shared structural session across level/act loads, bonus stages,
+  S1/S2/S3K special stages, returns, and terminal BK2 tails. Visual and real
+  headless adapters share admission receipts, semantic load signals,
+  comparison-only return checks, special-stage local row policy, and
+  production-ordered PLC/DPLC/Kosinski gap comparison.
+- Focused coordinator/catalog/launcher/boundary/dynamic-art/picker command:
+  `mvn -q -Dmse=off -Dtest=<15 focused classes> test`. Result: 122 tests,
+  0 failures, 0 errors. The hardware-timing coordinator suite is 8/8; timing
+  handoff is verified before destination dynamic-art/comparator/input owners
+  open. Authority, S1/S2 PLC comparison-only, rewind, and static-rewind guards
+  are green.
+- Real S1 command: `mvn -q -Dmse=off
+  -Dtest=TestS1GhzMazeRoundTripChain -Dsonic1.rom.path=s1.gen test`. Strict
+  ownership stops at the giant-ring handoff: source comparison is 4084/4182
+  when production has already entered `SPECIAL_STAGE`; no special-stage row is
+  misattributed to the source level.
+- Real S2 command: `mvn -q -Dmse=off
+  -Dtest=TestS2EhzHalfpipeRoundTripChain -Dsonic2.rom.path=s2.gen test`.
+  Schema-2 planning now accepts the manifest-declared opening DPLC ledger, then
+  reports the organic first special-stage exit with 3723 represented rows
+  remaining.
+- Real S3K command: `mvn -q -Dmse=off -Dtest=TestS3kMegaRunChain
+  -Ds3k.rom.path=s3k.gen test`. The first AIZ transition stops with source
+  comparison 4544/4654 after `TITLE_CARD` takes ownership and identifies the
+  unconsumed `KOS_DECOMPRESSION_QUEUE#15` completion at raw frame 4570.
+- These are named fail-closed engine/recording choreography frontiers, not new
+  trace authority. The tool does not seek past represented source rows, create
+  queue work, or restore positions, rings, emeralds, RNG, or clocks from a
+  manifest.

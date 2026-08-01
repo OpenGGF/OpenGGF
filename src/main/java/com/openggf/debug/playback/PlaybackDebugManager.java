@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.function.BooleanSupplier;
 
 /**
  * Runtime controller for in-engine BizHawk playback debugging.
@@ -50,6 +51,7 @@ public final class PlaybackDebugManager {
     private int preparedVblankAdvanceCount;
     private Bk2Movie pendingLevelLoadMovie;
     private int pendingLevelLoadOffset = -1;
+    private BooleanSupplier pendingLevelLoadActivationGuard;
 
     /**
      * Observer hook that lets an external comparator classify each BK2
@@ -391,8 +393,22 @@ public final class PlaybackDebugManager {
      * input without advancing the destination cursor during the preceding fade.
      */
     public synchronized void scheduleSessionAtNextLevelLoad(Bk2Movie movie, int startOffsetIndex) {
+        scheduleSessionAtNextLevelLoad(movie, startOffsetIndex, () -> true);
+    }
+
+    /**
+     * Defers a movie rebind until a level load that satisfies a structural
+     * target guard. A rejected load leaves the descriptor pending, so an
+     * unrelated reload cannot steal a later run segment's input offset.
+     * The guard may inspect live identity but must not mutate gameplay.
+     */
+    public synchronized void scheduleSessionAtNextLevelLoad(
+            Bk2Movie movie, int startOffsetIndex,
+            BooleanSupplier activationGuard) {
         this.pendingLevelLoadMovie = movie;
         this.pendingLevelLoadOffset = Math.max(0, startOffsetIndex);
+        this.pendingLevelLoadActivationGuard =
+                java.util.Objects.requireNonNull(activationGuard, "activationGuard");
     }
 
     /**
@@ -422,12 +438,24 @@ public final class PlaybackDebugManager {
         if (pendingLevelLoadMovie == null) {
             return false;
         }
+        if (pendingLevelLoadActivationGuard != null
+                && !pendingLevelLoadActivationGuard.getAsBoolean()) {
+            return false;
+        }
         Bk2Movie scheduledMovie = pendingLevelLoadMovie;
         int scheduledOffset = pendingLevelLoadOffset;
         pendingLevelLoadMovie = null;
         pendingLevelLoadOffset = -1;
+        pendingLevelLoadActivationGuard = null;
         startSession(scheduledMovie, scheduledOffset);
         return true;
+    }
+
+    /** Cancels a deferred level-load rebind without disturbing active playback. */
+    public synchronized void cancelScheduledLevelLoadSession() {
+        pendingLevelLoadMovie = null;
+        pendingLevelLoadOffset = -1;
+        pendingLevelLoadActivationGuard = null;
     }
 
     /** Programmatic teardown for {@link #startSession}. Idempotent. */
@@ -443,6 +471,7 @@ public final class PlaybackDebugManager {
         this.currentTickSuppressed = false;
         this.pendingLevelLoadMovie = null;
         this.pendingLevelLoadOffset = -1;
+        this.pendingLevelLoadActivationGuard = null;
         clearPreparedFrame();
         clearLastAppliedState();
         setStatus("Session ended", true);

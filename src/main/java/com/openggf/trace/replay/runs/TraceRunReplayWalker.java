@@ -185,12 +185,31 @@ public final class TraceRunReplayWalker {
                         "trace row " + traceIndex + " outside segment "
                                 + segmentIndex);
             }
-            if (segmentIndex == currentSegment + 1) {
-                fixture.handoffHardwareTimingReplay(segment.schedule());
-                currentSegment = segmentIndex;
-            }
+            handoffToSegment(segmentIndex);
             fixture.beginTraceRow(
                     traceIndex, segment.rawFrames().get(traceIndex));
+        }
+
+        /**
+         * Verifies the source schedule and commits the next schedule before a
+         * destination adapter opens any comparison or input owner.
+         */
+        public void handoffToSegment(int segmentIndex) {
+            if (closed) {
+                throw new IllegalStateException(
+                        "hardware timing run is already closed");
+            }
+            if (segmentIndex < currentSegment
+                    || segmentIndex > currentSegment + 1) {
+                throw new IllegalStateException(
+                        "hardware timing segment moved out of structural order: "
+                                + currentSegment + " -> " + segmentIndex);
+            }
+            if (segmentIndex == currentSegment + 1) {
+                fixture.handoffHardwareTimingReplay(
+                        segments.get(segmentIndex).schedule());
+                currentSegment = segmentIndex;
+            }
         }
 
         public void close() {
@@ -311,7 +330,8 @@ public final class TraceRunReplayWalker {
     public enum BoundaryEntryMode {
         BONUS_REQUEST,
         SPECIAL_STAGE_REQUEST,
-        LEVEL_MODE
+        LEVEL_MODE,
+        LEVEL_LOAD
     }
 
     /**
@@ -324,6 +344,7 @@ public final class TraceRunReplayWalker {
             case "starpost_bonus" -> BoundaryEntryMode.BONUS_REQUEST;
             case "giant_ring", "starpost_special" -> BoundaryEntryMode.SPECIAL_STAGE_REQUEST;
             case "stage_exit" -> BoundaryEntryMode.LEVEL_MODE;
+            case "level_advance", "death_restart" -> BoundaryEntryMode.LEVEL_LOAD;
             default -> throw new IllegalArgumentException("Unknown entry_kind '" + entryKind + "'");
         };
     }
@@ -764,8 +785,13 @@ public final class TraceRunReplayWalker {
             // from TraceFrame's primary-level columns -- need not parse there.
             // Metadata loading still exposes its optional DPLC heartbeat.
             traces[i] = isUncomparedInterior(segment)
-                ? TraceData.loadMetadataOnly(segmentDir)
-                : TraceData.load(segmentDir);
+                ? TraceData.loadMetadataOnly(
+                        segmentDir,
+                        com.openggf.trace.StoredPhysicsFrameDomain.FrameEncoding.DECIMAL,
+                        segment.dynamicArtInitialLedgerDescriptors())
+                : TraceData.load(
+                        segmentDir,
+                        segment.dynamicArtInitialLedgerDescriptors());
         }
         run.validateDynamicArtRun(java.util.Arrays.asList(traces));
 
@@ -826,6 +852,7 @@ public final class TraceRunReplayWalker {
     public static final class BoundaryProbe implements PlaybackDebugManager.PlaybackFrameObserver {
         private final EngineHooks hooks;
         private PlaybackDebugManager.PlaybackFrameObserver delegate;
+        private PlaybackDebugManager.PlaybackFrameObserver preparedDelegate;
         private TraceRunManifest.Transition armed;
         private BoundaryObservation latchedObservation;
         private int pendingSpecialStageRequestFrame = -1;
@@ -841,8 +868,6 @@ public final class TraceRunReplayWalker {
         /** Attaches (or, with {@code null}, detaches) the delegate observer. */
         public void setDelegate(PlaybackDebugManager.PlaybackFrameObserver delegate) {
             this.delegate = delegate;
-            preparedFrame = null;
-            framePrepared = false;
         }
 
         /**
@@ -903,41 +928,51 @@ public final class TraceRunReplayWalker {
             }
             preparedFrame = frame;
             framePrepared = true;
+            preparedDelegate = delegate;
             beforeFrameObserver.accept(frame);
-            if (delegate != null) {
-                delegate.prepareFrame(frame);
+            if (preparedDelegate != null) {
+                preparedDelegate.prepareFrame(frame);
             }
         }
 
         @Override
         public int appliedInputOffset(Bk2FrameInput frame) {
             prepareFrame(frame);
-            return delegate != null ? delegate.appliedInputOffset(frame) : 0;
+            return preparedDelegate != null
+                    ? preparedDelegate.appliedInputOffset(frame) : 0;
         }
 
         @Override
         public boolean shouldSkipGameplayTick(Bk2FrameInput frame) {
             prepareFrame(frame);
-            return delegate != null && delegate.shouldSkipGameplayTick(frame);
+            return preparedDelegate != null
+                    && preparedDelegate.shouldSkipGameplayTick(frame);
         }
 
         @Override
         public boolean shouldAdvanceVblankOnSkippedTick(Bk2FrameInput frame) {
-            return delegate == null || delegate.shouldAdvanceVblankOnSkippedTick(frame);
+            prepareFrame(frame);
+            return preparedDelegate == null
+                    || preparedDelegate.shouldAdvanceVblankOnSkippedTick(frame);
         }
 
         @Override
         public int vblankAdvanceCountOnSkippedTick(Bk2FrameInput frame) {
-            return delegate == null ? 1 : delegate.vblankAdvanceCountOnSkippedTick(frame);
+            prepareFrame(frame);
+            return preparedDelegate == null
+                    ? 1 : preparedDelegate.vblankAdvanceCountOnSkippedTick(frame);
         }
 
         @Override
         public void afterFrameAdvanced(Bk2FrameInput frame, boolean wasSkipped) {
-            if (delegate != null) {
-                delegate.afterFrameAdvanced(frame, wasSkipped);
+            PlaybackDebugManager.PlaybackFrameObserver rowDelegate =
+                    framePrepared ? preparedDelegate : delegate;
+            if (rowDelegate != null) {
+                rowDelegate.afterFrameAdvanced(frame, wasSkipped);
             }
             preparedFrame = null;
             framePrepared = false;
+            preparedDelegate = null;
             if (armed == null || latchedObservation != null) {
                 return;
             }
@@ -945,6 +980,7 @@ public final class TraceRunReplayWalker {
                 case BONUS_REQUEST -> hooks.peekBonusRequest() != null;
                 case SPECIAL_STAGE_REQUEST -> hooks.isSpecialStageRequested();
                 case LEVEL_MODE -> false; // stage_exit is persistent; evaluated in latched().
+                case LEVEL_LOAD -> false; // supplied by the production level-load seam.
             };
             if (transientHit) {
                 int observedFrame = hooks.currentBk2Frame();
@@ -956,8 +992,10 @@ public final class TraceRunReplayWalker {
 
         @Override
         public void onSpecialStageRequestRaised() {
-            if (delegate != null) {
-                delegate.onSpecialStageRequestRaised();
+            PlaybackDebugManager.PlaybackFrameObserver rowDelegate =
+                    framePrepared ? preparedDelegate : delegate;
+            if (rowDelegate != null) {
+                rowDelegate.onSpecialStageRequestRaised();
             }
             if (armed == null || latchedObservation != null
                 || boundaryEntryMode(armed.entryKind()) != BoundaryEntryMode.SPECIAL_STAGE_REQUEST) {
@@ -969,6 +1007,37 @@ public final class TraceRunReplayWalker {
             // requests raised after that callback and consumed during a context
             // swap before the next frame observer can run.
             pendingSpecialStageRequestFrame = hooks.currentBk2Frame();
+        }
+
+        /**
+         * Latches a value-only semantic signal emitted outside the ordinary
+         * playback callback, notably level advances and death restarts.
+         */
+        public void observeSignal(RunBoundarySignal signal) {
+            Objects.requireNonNull(signal, "signal");
+            if (armed == null || latchedObservation != null
+                    || !withinBoundaryWindow(
+                            signal.physicalBk2Frame(), armed.modeChangeBk2Frame())
+                    || !matchesArmedSignal(signal)) {
+                return;
+            }
+            latchedObservation = new BoundaryObservation(
+                    true, signal.physicalBk2Frame());
+        }
+
+        private boolean matchesArmedSignal(RunBoundarySignal signal) {
+            return switch (armed.entryKind()) {
+                case "starpost_bonus" ->
+                        signal instanceof RunBoundarySignal.BonusRequest;
+                case "giant_ring", "starpost_special" ->
+                        signal instanceof RunBoundarySignal.SpecialStageRequest;
+                case "stage_exit" -> signal instanceof RunBoundarySignal.StageExit;
+                case "level_advance" -> signal instanceof RunBoundarySignal.LevelLoaded loaded
+                        && loaded.cause() == RunLevelLoadCause.LEVEL_ADVANCE;
+                case "death_restart" -> signal instanceof RunBoundarySignal.LevelLoaded loaded
+                        && loaded.cause() == RunLevelLoadCause.DEATH_RESTART;
+                default -> false;
+            };
         }
     }
 
