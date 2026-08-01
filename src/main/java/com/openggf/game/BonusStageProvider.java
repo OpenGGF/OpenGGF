@@ -44,6 +44,7 @@ public interface BonusStageProvider {
     default boolean updateDuringLevelFrame() { return false; }
     default boolean suppressesDefaultCameraStep() { return false; }
     default boolean hasCompletedExitFadeToBlack() { return false; }
+    default BonusStageType getActiveType() { return BonusStageType.NONE; }
     boolean isStageComplete();
     void requestExit();
     BonusStageRewards getRewards();

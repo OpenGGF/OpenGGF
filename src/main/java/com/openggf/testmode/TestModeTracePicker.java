@@ -5,6 +5,7 @@ import com.openggf.graphics.PixelFont;
 import com.openggf.trace.catalog.TraceEntry;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_END;
@@ -36,6 +37,10 @@ public final class TestModeTracePicker {
     }
 
     public void update(InputHandler input) {
+        if (TraceRunFailureStatus.current().isPresent()) {
+            updateHeldFailure(input);
+            return;
+        }
         if (entries.isEmpty()) {
             if (input.isKeyPressedWithoutModifiers(GLFW_KEY_ESCAPE)) {
                 pendingResult = Result.BACK;
@@ -71,6 +76,40 @@ public final class TestModeTracePicker {
         }
     }
 
+    private void updateHeldFailure(InputHandler input) {
+        if (input.isKeyPressedWithoutModifiers(GLFW_KEY_ENTER)
+                || input.isKeyPressedWithoutModifiers(GLFW_KEY_ESCAPE)) {
+            TraceRunFailureStatus.clear();
+            return;
+        }
+        if (entries.isEmpty()) {
+            return;
+        }
+        int previousCursor = cursor;
+        if (input.isKeyPressedWithoutModifiers(GLFW_KEY_DOWN)) {
+            cursor = Math.min(entries.size() - 1, cursor + 1);
+        }
+        if (input.isKeyPressedWithoutModifiers(GLFW_KEY_UP)) {
+            cursor = Math.max(0, cursor - 1);
+        }
+        if (input.isKeyPressedWithoutModifiers(GLFW_KEY_HOME)) {
+            cursor = 0;
+        }
+        if (input.isKeyPressedWithoutModifiers(GLFW_KEY_END)) {
+            cursor = entries.size() - 1;
+        }
+        if (input.isKeyPressedWithoutModifiers(GLFW_KEY_PAGE_DOWN)) {
+            cursor = nextGroupStart(cursor);
+        }
+        if (input.isKeyPressedWithoutModifiers(GLFW_KEY_PAGE_UP)) {
+            cursor = prevGroupStart(cursor);
+        }
+        firstVisible = computeFirstVisible(firstVisible, cursor);
+        if (cursor != previousCursor) {
+            TraceRunFailureStatus.clear();
+        }
+    }
+
     private static final float SCALE = 0.5f;
     private static final int LINE_HEIGHT = 6;
     private static final int GROUP_GAP = 3;
@@ -80,11 +119,18 @@ public final class TestModeTracePicker {
     // virtual screen. Entries are windowed so the list never spills into it.
     private static final int LIST_TOP = 18;
     private static final int LIST_AREA_BOTTOM = 184;
+    private static final int FAILURE_MAX_CHARS = 68;
 
     public void render() {
         // Entire screen is pure text on the font atlas — mega-batch into one GL draw.
         font.beginMegaBatch();
         try {
+            Optional<TraceRunFailureStatus.Failure> failure =
+                    TraceRunFailureStatus.current();
+            if (failure.isPresent()) {
+                renderFailure(failure.get());
+                return;
+            }
             if (entries.isEmpty()) {
                 font.drawText("TRACE TEST MODE", 8, 6, SCALE, 1f, 1f, 1f, 1f);
                 font.drawText("No traces found.", 8, 24, SCALE, 1f, 0.5f, 0.5f, 1f);
@@ -135,6 +181,43 @@ public final class TestModeTracePicker {
         } finally {
             font.endMegaBatch();
         }
+    }
+
+    private void renderFailure(TraceRunFailureStatus.Failure failure) {
+        int y = 28;
+        font.drawText("TRACE FAILED", 8, y, SCALE, 1f, 0.35f, 0.35f, 1f);
+        y += 16;
+        font.drawText("Segment: " + failure.segmentIndex(), 8, y, SCALE,
+                1f, 1f, 1f, 1f);
+        y += LINE_HEIGHT;
+        if (failure.isComparison()) {
+            y = drawFailureText("Expected: " + failure.expectedIdentity(), y);
+            y = drawFailureText("Actual: " + failure.actualIdentity(), y);
+        } else {
+            y = drawFailureText("Reason: " + failure.reason(), y);
+        }
+        font.drawText("Cursor: " + failure.cursor() + "   Steps: " + failure.stepCount(),
+                8, y, SCALE, 0.9f, 0.9f, 0.9f, 1f);
+        y += 18;
+        font.drawText("ENTER/ESC to acknowledge", 8, y, SCALE,
+                1f, 1f, 0.6f, 1f);
+        y += LINE_HEIGHT;
+        if (!entries.isEmpty()) {
+            font.drawText("Move selection to dismiss", 8, y, SCALE,
+                    0.7f, 0.7f, 0.7f, 1f);
+        }
+    }
+
+    private int drawFailureText(String text, int y) {
+        int offset = 0;
+        while (offset < text.length()) {
+            int end = Math.min(text.length(), offset + FAILURE_MAX_CHARS);
+            font.drawText(text.substring(offset, end), 8, y, SCALE,
+                    0.9f, 0.9f, 0.9f, 1f);
+            offset = end;
+            y += LINE_HEIGHT;
+        }
+        return y;
     }
 
     /**

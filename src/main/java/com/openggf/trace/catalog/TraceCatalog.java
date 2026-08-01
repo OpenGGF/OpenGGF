@@ -1,9 +1,13 @@
 package com.openggf.trace.catalog;
 
+import com.openggf.debug.playback.Bk2Movie;
+import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.game.save.SelectedTeam;
+import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceFiles;
 import com.openggf.trace.TraceMetadata;
 import com.openggf.trace.TraceRunManifest;
+import com.openggf.trace.replay.runs.TraceRunSpecialStageRows;
 
 import java.io.IOException;
 import java.io.BufferedReader;
@@ -13,6 +17,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -39,6 +44,17 @@ public final class TraceCatalog {
     private TraceCatalog() {
     }
 
+    /** Result of deeper validation performed when a discovered run is selected. */
+    public record RunLaunchValidation(boolean launchable, String diagnostic) {
+        private static RunLaunchValidation valid() {
+            return new RunLaunchValidation(true, "");
+        }
+
+        private static RunLaunchValidation invalid(String diagnostic) {
+            return new RunLaunchValidation(false, diagnostic);
+        }
+    }
+
     public static List<TraceEntry> scan(Path root) {
         if (!Files.isDirectory(root)) {
             return List.of();
@@ -62,6 +78,89 @@ public final class TraceCatalog {
                 .thenComparingInt(TraceEntry::act)
                 .thenComparing(e -> e.dir().getFileName().toString()));
         return Collections.unmodifiableList(entries);
+    }
+
+    /**
+     * Performs selection-time validation that is deliberately deeper than
+     * discovery. A failure is returned as a diagnostic so the picker can keep
+     * the catalog entry visible instead of silently filtering it out.
+     */
+    public static RunLaunchValidation validateRunLaunch(TraceEntry entry) {
+        Objects.requireNonNull(entry, "entry");
+        if (!entry.isRun()) {
+            return RunLaunchValidation.invalid("Catalog entry is not a trace run");
+        }
+        TraceRunManifest manifest = entry.runManifest();
+        TraceRunManifest.Segment first = manifest.segments().getFirst();
+        if (!"level".equals(first.kind())) {
+            return RunLaunchValidation.invalid(
+                    "Visual run segment 0 must be level, got " + first.kind());
+        }
+
+        Bk2Movie movie;
+        try {
+            movie = new Bk2MovieLoader().load(entry.bk2Path());
+        } catch (IOException | RuntimeException e) {
+            return RunLaunchValidation.invalid(
+                    "Run BK2 parser failed: " + diagnosticMessage(e));
+        }
+
+        for (int i = 0; i < manifest.segments().size(); i++) {
+            TraceRunManifest.Segment segment = manifest.segments().get(i);
+            int end;
+            try {
+                end = Math.addExact(
+                        segment.bk2FrameOffset(), segment.traceFrameCount());
+            } catch (ArithmeticException e) {
+                return RunLaunchValidation.invalid(
+                        "Segment " + i + " BK2 range overflows");
+            }
+            if (segment.bk2FrameOffset() < 0 || end > movie.getFrameCount()) {
+                return RunLaunchValidation.invalid(
+                        "Segment " + i + " BK2 range ["
+                                + segment.bk2FrameOffset() + ", " + end
+                                + ") exceeds movie row count " + movie.getFrameCount());
+            }
+
+            Path segmentDir = entry.runDir().resolve(segment.dir());
+            TraceMetadata metadata;
+            int actualRows;
+            try {
+                if ("special_stage".equals(segment.kind())) {
+                    TraceRunSpecialStageRows rows = TraceRunSpecialStageRows.load(
+                            segment.traceProfile(), segmentDir);
+                    metadata = rows.metadata();
+                    actualRows = rows.rowCount();
+                } else {
+                    TraceData trace = TraceData.load(segmentDir);
+                    metadata = trace.metadata();
+                    actualRows = trace.frameCount();
+                }
+            } catch (IOException | RuntimeException e) {
+                return RunLaunchValidation.invalid(
+                        "Segment " + i + " parser failed for profile '"
+                                + segment.traceProfile() + "': " + diagnosticMessage(e));
+            }
+            if (!Objects.equals(segment.traceProfile(), metadata.traceProfile())) {
+                return RunLaunchValidation.invalid(
+                        "Segment " + i + " profile mismatch: manifest='"
+                                + segment.traceProfile() + "', metadata='"
+                                + metadata.traceProfile() + "'");
+            }
+            if (actualRows != segment.traceFrameCount()) {
+                return RunLaunchValidation.invalid(
+                        "Segment " + i + " row count mismatch: manifest="
+                                + segment.traceFrameCount() + ", parsed=" + actualRows);
+            }
+        }
+        return RunLaunchValidation.valid();
+    }
+
+    private static String diagnosticMessage(Throwable failure) {
+        String message = failure.getMessage();
+        return message == null || message.isBlank()
+                ? failure.getClass().getSimpleName()
+                : message;
     }
 
     private static boolean isSyntheticSubtree(Path root, Path dir) {
@@ -123,13 +222,21 @@ public final class TraceCatalog {
     }
 
     /**
-     * Resolve a run's shared BK2 movie under the sibling
-     * {@code <game>/_movies/} directory, mirroring {@link #resolveBk2}'s
-     * shared-movie convention. Runs have no legacy per-dir {@code .bk2}
-     * fallback since a run always references a shared movie.
+     * Resolves a run movie from the shared {@code <game>/_movies/} directory,
+     * then from a contained path beneath {@code runDir}. Absolute paths and
+     * parent traversal are rejected before either location is consulted.
      */
-    private static Path resolveRunBk2(Path runDir, TraceRunManifest manifest) {
+    public static Path resolveRunBk2(Path runDir, TraceRunManifest manifest) {
         if (manifest.sourceBk2() == null || manifest.sourceBk2().isBlank()) {
+            return null;
+        }
+        Path source;
+        try {
+            source = Path.of(manifest.sourceBk2());
+        } catch (RuntimeException e) {
+            return null;
+        }
+        if (source.isAbsolute() || containsParentTraversal(source)) {
             return null;
         }
         Path runsDir = runDir.getParent();
@@ -137,8 +244,25 @@ public final class TraceCatalog {
         if (gameDir == null) {
             return null;
         }
-        Path shared = gameDir.resolve("_movies").resolve(manifest.sourceBk2());
-        return Files.isRegularFile(shared) ? shared : null;
+        Path sharedRoot = gameDir.resolve("_movies").normalize();
+        Path shared = sharedRoot.resolve(source).normalize();
+        if (shared.startsWith(sharedRoot) && Files.isRegularFile(shared)) {
+            return shared;
+        }
+        Path localRoot = runDir.normalize();
+        Path local = localRoot.resolve(source).normalize();
+        return local.startsWith(localRoot) && Files.isRegularFile(local)
+                ? local
+                : null;
+    }
+
+    private static boolean containsParentTraversal(Path path) {
+        for (Path component : path) {
+            if ("..".equals(component.toString())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static Optional<TraceEntry> tryLoad(Path dir) {

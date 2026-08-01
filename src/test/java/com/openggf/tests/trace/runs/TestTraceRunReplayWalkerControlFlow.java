@@ -16,6 +16,9 @@ import com.openggf.trace.TraceEvent;
 import com.openggf.trace.TraceFixtures;
 import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker;
+import com.openggf.trace.replay.runs.RunBoundarySignal;
+import com.openggf.trace.replay.runs.RunLevelLoadCause;
+import com.openggf.trace.replay.runs.RunPlaybackObservation;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker.BoundaryEntryMode;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker.BoundaryPairing;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker.ReturnAssertionMode;
@@ -258,6 +261,10 @@ class TestTraceRunReplayWalkerControlFlow {
             TraceRunReplayWalker.boundaryEntryMode("starpost_special"));
         assertEquals(BoundaryEntryMode.LEVEL_MODE,
             TraceRunReplayWalker.boundaryEntryMode("stage_exit"));
+        assertEquals(BoundaryEntryMode.LEVEL_LOAD,
+            TraceRunReplayWalker.boundaryEntryMode("level_advance"));
+        assertEquals(BoundaryEntryMode.LEVEL_LOAD,
+            TraceRunReplayWalker.boundaryEntryMode("death_restart"));
         assertThrows(IllegalArgumentException.class,
             () -> TraceRunReplayWalker.boundaryEntryMode("nonsense"));
     }
@@ -424,6 +431,43 @@ class TestTraceRunReplayWalkerControlFlow {
         assertEquals(2850, obs.observedBk2Frame());  // not vacuous at window start
     }
 
+    @Test
+    void probeLatchesSemanticLevelAdvanceAndDeathRestartSignals() {
+        var hooks = new StubHooks();
+        var probe = new TraceRunReplayWalker.BoundaryProbe(hooks);
+        RunPlaybackObservation.LevelIdentity destination =
+                new RunPlaybackObservation.LevelIdentity(2, 1, 1, 0);
+
+        probe.arm(boundaryOfKind("level_advance", 500));
+        probe.observeSignal(new RunBoundarySignal.LevelLoaded(
+                500, RunLevelLoadCause.LEVEL_ADVANCE, destination));
+        assertTrue(probe.latched());
+        assertEquals(500, probe.observation().observedBk2Frame());
+
+        probe.arm(boundaryOfKind("death_restart", 700));
+        probe.observeSignal(new RunBoundarySignal.LevelLoaded(
+                700, RunLevelLoadCause.DEATH_RESTART, destination));
+        assertTrue(probe.latched());
+        assertEquals(700, probe.observation().observedBk2Frame());
+    }
+
+    @Test
+    void probeRejectsWrongOrLateSemanticLoadSignal() {
+        var hooks = new StubHooks();
+        var probe = new TraceRunReplayWalker.BoundaryProbe(hooks);
+        RunPlaybackObservation.LevelIdentity destination =
+                new RunPlaybackObservation.LevelIdentity(2, 1, 1, 0);
+        probe.arm(boundaryOfKind("death_restart", 700));
+
+        probe.observeSignal(new RunBoundarySignal.LevelLoaded(
+                700, RunLevelLoadCause.LEVEL_ADVANCE, destination));
+        assertFalse(probe.latched());
+        probe.observeSignal(new RunBoundarySignal.LevelLoaded(
+                700 + TraceRunReplayWalker.LATE_BOUNDARY_GRACE_FRAMES + 1,
+                RunLevelLoadCause.DEATH_RESTART, destination));
+        assertFalse(probe.latched());
+    }
+
     /**
      * Step-cap firing: a FROZEN cursor (never advances) with a mode that never
      * settles must throw a diagnostic {@code BoundaryStepCapExceededException}
@@ -450,10 +494,13 @@ class TestTraceRunReplayWalkerControlFlow {
     void probeDelegatesSkipGateToAttachedComparator() {
         var hooks = new StubHooks();
         var probe = new TraceRunReplayWalker.BoundaryProbe(hooks);
-        assertFalse(probe.shouldSkipGameplayTick(null),
+        Bk2FrameInput detachedRow = new Bk2FrameInput(0, 0, 0, false, "detached");
+        assertFalse(probe.shouldSkipGameplayTick(detachedRow),
             "detached probe must not skip gameplay ticks");
+        probe.afterFrameAdvanced(detachedRow, false);
         probe.setDelegate(new AlwaysSkipDelegate());   // tiny inline stub delegate
-        assertTrue(probe.shouldSkipGameplayTick(null),
+        assertTrue(probe.shouldSkipGameplayTick(
+                        new Bk2FrameInput(1, 0, 0, false, "attached")),
             "attached delegate's lag gating must flow through the probe");
     }
 
@@ -471,12 +518,40 @@ class TestTraceRunReplayWalkerControlFlow {
         assertEquals(1, delegate.prepareCalls);
         assertEquals(1, delegate.offsetCalls);
 
+        probe.afterFrameAdvanced(frame, false);
         probe.setDelegate(null);
-        probe.prepareFrame(frame);
-        assertEquals(0, probe.appliedInputOffset(frame),
+        Bk2FrameInput gapFrame = new Bk2FrameInput(
+                24, 0, 0, false, "gap");
+        probe.prepareFrame(gapFrame);
+        assertEquals(0, probe.appliedInputOffset(gapFrame),
                 "a structural run gap must retain ordinary current-row input");
         assertEquals(1, delegate.prepareCalls);
         assertEquals(1, delegate.offsetCalls);
+    }
+
+    @Test
+    void probePinsPreparedRowToItsOriginalDelegateAcrossHandoff() {
+        var hooks = new StubHooks();
+        var probe = new TraceRunReplayWalker.BoundaryProbe(hooks);
+        var source = new RecordingDelegate(false);
+        var destination = new RecordingDelegate(true);
+        Bk2FrameInput sourceRow = new Bk2FrameInput(10, 0, 0, false, "source");
+        Bk2FrameInput destinationRow = new Bk2FrameInput(20, 0, 0, false, "destination");
+
+        probe.setDelegate(source);
+        probe.prepareFrame(sourceRow);
+        probe.setDelegate(destination);
+        assertFalse(probe.shouldSkipGameplayTick(sourceRow),
+                "the prepared source row must retain source lag policy");
+        probe.afterFrameAdvanced(sourceRow, false);
+        assertEquals(List.of(10), source.publishedFrames);
+        assertTrue(destination.publishedFrames.isEmpty(),
+                "a mid-row handoff must not redirect source publication");
+
+        probe.prepareFrame(destinationRow);
+        assertTrue(probe.shouldSkipGameplayTick(destinationRow));
+        probe.afterFrameAdvanced(destinationRow, true);
+        assertEquals(List.of(20), destination.publishedFrames);
     }
 
     @Test
@@ -706,6 +781,26 @@ class TestTraceRunReplayWalkerControlFlow {
 
         @Override
         public void afterFrameAdvanced(Bk2FrameInput frame, boolean wasSkipped) {
+        }
+    }
+
+    private static final class RecordingDelegate
+            implements PlaybackDebugManager.PlaybackFrameObserver {
+        private final boolean skip;
+        private final List<Integer> publishedFrames = new java.util.ArrayList<>();
+
+        private RecordingDelegate(boolean skip) {
+            this.skip = skip;
+        }
+
+        @Override
+        public boolean shouldSkipGameplayTick(Bk2FrameInput frame) {
+            return skip;
+        }
+
+        @Override
+        public void afterFrameAdvanced(Bk2FrameInput frame, boolean wasSkipped) {
+            publishedFrames.add(frame.frameIndex());
         }
     }
 

@@ -58,6 +58,17 @@ public class TraceData {
     }
 
     public static TraceData load(Path traceDirectory) throws IOException {
+        return load(traceDirectory, List.of());
+    }
+
+    /**
+     * Loads a run segment whose first recorded row may inherit production-owned
+     * dynamic-art work submitted in the preceding native transition gap.
+     */
+    public static TraceData load(
+            Path traceDirectory,
+            List<DynamicArtTransfer.Descriptor> openingDynamicArtLedger)
+            throws IOException {
         Path metadataPath = traceDirectory.resolve("metadata.json");
         Path physicsPath = TraceFiles.resolve(traceDirectory, "physics.csv");
         Path auxPath = TraceFiles.resolve(traceDirectory, "aux_state.jsonl");
@@ -77,7 +88,8 @@ public class TraceData {
         TraceData trace = new TraceData(metadata, frames, events, hardwareTimingSchedule);
         trace.validateAdvertisedLoadQueueStates();
         trace.validateAdvertisedDynamicArtTransferStates(
-                StoredPhysicsFrameDomain.fromTraceFrames(frames));
+                StoredPhysicsFrameDomain.fromTraceFrames(frames),
+                openingDynamicArtLedger);
         return trace;
     }
 
@@ -98,6 +110,33 @@ public class TraceData {
      * the manifest instead.
      */
     public static TraceData loadMetadataOnly(Path traceDirectory) throws IOException {
+        return loadMetadataOnly(
+                traceDirectory, StoredPhysicsFrameDomain.FrameEncoding.HEXADECIMAL,
+                List.of());
+    }
+
+    /**
+     * Metadata-only load with the trace profile's physical frame encoding.
+     * Primary level traces use hexadecimal frame labels; special-stage
+     * profiles use decimal labels even when their dynamic-art journal is
+     * validated through this shared path.
+     */
+    public static TraceData loadMetadataOnly(
+            Path traceDirectory,
+            StoredPhysicsFrameDomain.FrameEncoding frameEncoding)
+            throws IOException {
+        return loadMetadataOnly(traceDirectory, frameEncoding, List.of());
+    }
+
+    /**
+     * Metadata-only variant for a run segment with a manifest-validated
+     * dynamic-art opening ledger.
+     */
+    public static TraceData loadMetadataOnly(
+            Path traceDirectory,
+            StoredPhysicsFrameDomain.FrameEncoding frameEncoding,
+            List<DynamicArtTransfer.Descriptor> openingDynamicArtLedger)
+            throws IOException {
         Path metadataPath = traceDirectory.resolve("metadata.json");
         Path auxPath = TraceFiles.resolve(traceDirectory, "aux_state.jsonl");
 
@@ -112,14 +151,14 @@ public class TraceData {
         Path physicsPath = TraceFiles.resolve(traceDirectory, "physics.csv");
         StoredPhysicsFrameDomain frameDomain = physicsPath == null
                 ? null
-                : StoredPhysicsFrameDomain.scan(physicsPath);
+                : StoredPhysicsFrameDomain.scan(physicsPath, frameEncoding);
         if (metadata.hasPerFrameDynamicArtTransferState()) {
             if (frameDomain == null) {
                 throw new NoSuchFileException(
                         traceDirectory.resolve("physics.csv").toString());
             }
             trace.validateAdvertisedDynamicArtTransferStates(
-                    frameDomain);
+                    frameDomain, openingDynamicArtLedger);
         }
         return trace;
     }
@@ -286,12 +325,18 @@ public class TraceData {
      */
     public void validateAdvertisedDynamicArtTransferStates(
             StoredPhysicsFrameDomain frameDomain) {
+        validateAdvertisedDynamicArtTransferStates(frameDomain, List.of());
+    }
+
+    public void validateAdvertisedDynamicArtTransferStates(
+            StoredPhysicsFrameDomain frameDomain,
+            List<DynamicArtTransfer.Descriptor> openingLedger) {
         if (!metadata.hasPerFrameDynamicArtTransferState()) {
             terminalDynamicArtLedger = List.of();
             return;
         }
         terminalDynamicArtLedger = validateDynamicArtTransferStates(
-                metadata, frameDomain, eventsByFrame);
+                metadata, frameDomain, eventsByFrame, openingLedger);
     }
 
     public static List<DynamicArtTransfer.Descriptor>
@@ -299,6 +344,16 @@ public class TraceData {
                     TraceMetadata metadata,
                     StoredPhysicsFrameDomain frameDomain,
                     Map<Integer, List<TraceEvent>> eventsByFrame) {
+        return validateDynamicArtTransferStates(
+                metadata, frameDomain, eventsByFrame, List.of());
+    }
+
+    public static List<DynamicArtTransfer.Descriptor>
+            validateDynamicArtTransferStates(
+                    TraceMetadata metadata,
+                    StoredPhysicsFrameDomain frameDomain,
+                    Map<Integer, List<TraceEvent>> eventsByFrame,
+                    List<DynamicArtTransfer.Descriptor> openingLedger) {
         Set<Integer> domain = new HashSet<>(frameDomain.frames());
         List<TraceEvent.DynamicArtTransferState> ordered =
                 new ArrayList<>(frameDomain.frames().size());
@@ -328,7 +383,7 @@ public class TraceData {
         }
         return DynamicArtTransfer.validateSegment(
                 ordered, frameDomain, metadata.game(),
-                new DynamicArtTransfer.LifecycleIdentity());
+                new DynamicArtTransfer.LifecycleIdentity(), openingLedger);
     }
 
     public List<DynamicArtTransfer.Descriptor> terminalDynamicArtLedger() {

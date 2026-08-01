@@ -439,6 +439,24 @@ class TestDynamicArtLifecycleService {
     }
 
     @Test
+    void immutableGapLedgerPreservesProductionSubmissionOrigin() {
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        service.beginRun();
+
+        service.observePlayerDplc(GameId.S2, "sonic", 9,
+                new SpriteDplcFrame(List.of(new TileLoadRequest(2, 1))));
+
+        DynamicArtGapDiagnosticsSnapshot.Descriptor pending =
+                service.gapSnapshot().ledger().getFirst();
+        assertEquals("run_gap", pending.submissionOrigin());
+
+        service.openComparisonSegment();
+        assertEquals("run_gap",
+                service.gapSnapshot().ledger().getFirst().submissionOrigin(),
+                "opening a destination must not relabel pending gap work");
+    }
+
+    @Test
     void rewindRestoresClosedGapFifoLedgerAndRunCursorsAtomically() {
         DynamicArtLifecycleService service = new DynamicArtLifecycleService();
         service.beginRun();

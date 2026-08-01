@@ -1,22 +1,16 @@
 package com.openggf.tests.trace.runs;
 
-import com.openggf.GameLoop;
-import com.openggf.control.InputHandler;
-import com.openggf.debug.playback.Bk2Movie;
-import com.openggf.game.GameServices;
-import com.openggf.game.GameMode;
-import com.openggf.game.sonic1.specialstage.Sonic1SpecialStageTraceData;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
-import com.openggf.trace.TraceRunManifest;
-import com.openggf.trace.replay.runs.TraceRunReplayWalker.SegmentPlan;
-import com.openggf.tests.trace.RecordedInputRows;
+import com.openggf.trace.replay.runs.TraceRunPlaybackCoordinator.AdmitDestination;
+import com.openggf.trace.replay.runs.TraceRunPlaybackCoordinator.BeginTerminalTail;
+import com.openggf.trace.replay.runs.TraceRunPlaybackCoordinator.CloseSegment;
+import com.openggf.trace.replay.runs.TraceRunPlaybackCoordinator.CompleteRun;
+import com.openggf.trace.replay.runs.TraceRunPlaybackCoordinator.EnterTransitionGap;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.file.Path;
-import java.util.function.IntConsumer;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -45,6 +39,17 @@ class TestS1GhzMazeRoundTripChain extends AbstractRunChainTest {
                 ? DEFAULT_RUN_DIR
                 : Path.of(configuredRunDir).toAbsolutePath().normalize();
         DynamicArtGapJournalEvidence evidence = assertChainReplay(activeRunDir);
+        assertEquals(List.of(
+                        AdmitDestination.class,
+                        CloseSegment.class, EnterTransitionGap.class,
+                        AdmitDestination.class,
+                        CloseSegment.class, EnterTransitionGap.class,
+                        AdmitDestination.class,
+                        CloseSegment.class, BeginTerminalTail.class,
+                        CompleteRun.class),
+                evidence.coordinatorActions().stream()
+                        .map(Object::getClass).toList(),
+                "the real headless chain must follow the shared coordinator transcript");
         DynamicArtStructuralGapEvidence returnGap =
                 evidence.structuralGap("ss", "ghz2");
         assertTrue(returnGap.transitionCountAfterNextArm()
@@ -95,66 +100,8 @@ class TestS1GhzMazeRoundTripChain extends AbstractRunChainTest {
      * at that later observation point by construction, not by an engine bug.
      */
     @Override
-    protected void assertRingsAndEmeralds(
-            TraceRunManifest.Transition exit, Path runDir, boolean assertEmeralds) {
-        if (assertEmeralds && exit.emeraldsAfter() != null) {
-            int actualEmeralds = GameServices.gameState().getEmeraldCount();
-            assertEquals(exit.emeraldsAfter().intValue(), actualEmeralds,
-                    "Emerald count after stage exit for " + runDir);
-        }
+    protected boolean requireSharedBoundaryField(String fieldName) {
+        return !"run_boundary.rings".equals(fieldName);
     }
 
-    /**
-     * S1-specific lag-aware special-stage stepper. The generic base's
-     * {@link AbstractRunChainTest#specialStageDrivenStep} feeds every
-     * recorded BK2 row as a full {@code Sonic1SpecialStageProvider.update()}
-     * tick, but a BizHawk "lag" row is a real elapsed console VBlank where
-     * the ROM's OWN game logic did NOT advance (the same reason
-     * {@code S1SpecialStageReplayHarness.stepFrame} /
-     * {@code AbstractS1SpecialStageTraceReplayTest}'s comparator loop skip
-     * lag rows rather than stepping them -- see that class's "VBlank-paced"
-     * javadoc section). Stepping the provider on a lag row runs an EXTRA
-     * physics tick beyond what the recorded outcome reflects; over this
-     * fixture's 72 lag rows (of 3091) that is enough drift in a
-     * rotation-driven maze to miss the emerald entirely. Loads the same
-     * {@code Sonic1SpecialStageTraceData} the standalone harness uses,
-     * purely as a read-only lag/pacing signal (comparison-only invariant:
-     * no field from it is ever hydrated into engine state) and skips lag
-     * rows without stepping the engine, mirroring the harness's
-     * {@code if (tf.lag()) continue;}.
-     */
-    @Override
-    protected IntConsumer uncomparedInteriorStep(
-            GameLoop loop, InputHandler inputHandler, Bk2Movie movie, SegmentPlan interior) {
-        Path ssDir = activeRunDir.resolve(interior.segment().dir());
-        Sonic1SpecialStageTraceData trace;
-        try {
-            trace = Sonic1SpecialStageTraceData.load(ssDir);
-        } catch (IOException e) {
-            throw new UncheckedIOException("Failed to load S1 special-stage lag trace: " + ssDir, e);
-        }
-        int bk2FrameOffset = interior.segment().bk2FrameOffset();
-        RecordedInputRows recordedInputs = new RecordedInputRows(movie, bk2FrameOffset);
-        return traceRow -> {
-            boolean lagged = traceRow < trace.frameCount()
-                    && trace.getFrame(traceRow).lag();
-            if (lagged || loop.getCurrentGameMode()
-                    != GameMode.SPECIAL_STAGE) {
-                if (trace.metadata()
-                        .hasPerFrameDynamicArtTransferState()) {
-                    stepUncomparedInteriorLifecycleRow(lagged);
-                }
-                GameServices.level().getObjectManager().advanceVblaCounter();
-                return;
-            }
-            int beforeVblank = GameServices.level().getObjectManager().getVblaCounter();
-            recordedInputs.withLogicalOverride(traceRow, inputHandler, () -> {
-                AbstractRunChainTest.stepEngineFrame(loop);
-            });
-            var objectManager = GameServices.level().getObjectManager();
-            if (objectManager.getVblaCounter() == beforeVblank) {
-                objectManager.advanceVblaCounter();
-            }
-        };
-    }
 }

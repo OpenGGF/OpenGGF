@@ -218,6 +218,15 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **Visual complete-run trace playback (2026-08-01):** a run selected on the
+  master title now stays active across level/act replacement, bonus and special
+  stages, return loads, and its terminal movie tail. Visual and headless replay
+  share fail-closed transition/admission policy, S1/S2/S3K special-stage row
+  clocks, return comparisons, and production-ordered PLC/DPLC/Kosinski gap
+  evidence. Recorded data remains comparison-only except for controller input
+  and the existing bounded hardware-readiness delay; failures remain visible in
+  the picker until acknowledged.
+
 - **Visual trace playback now follows the headless replay contract
   (2026-08-01):** traces launched from the master title prepare their applied
   BK2 row before ROM pause admission, including S3K's current-row validation /

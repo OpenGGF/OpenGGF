@@ -180,14 +180,80 @@ public record TraceRunManifest(
                 throw new IOException("Invalid dynamic_art_gap_transitions", e);
             }
         }
+        List<List<DynamicArtTransfer.Descriptor>> segmentInitialLedgers =
+                parseSegmentInitialLedgers(root);
         com.fasterxml.jackson.databind.node.ObjectNode base =
                 ((com.fasterxml.jackson.databind.node.ObjectNode) root.deepCopy());
         base.remove("dynamic_art_gap_transitions");
+        JsonNode baseSegments = base.get("segments");
+        if (baseSegments != null && baseSegments.isArray()) {
+            for (JsonNode segment : baseSegments) {
+                if (segment instanceof com.fasterxml.jackson.databind.node.ObjectNode object) {
+                    object.remove("dynamic_art_initial_ledger_descriptors");
+                }
+            }
+        }
         TraceRunManifest parsed = mapper.treeToValue(base, TraceRunManifest.class);
+        List<Segment> parsedSegments = restoreSegmentInitialLedgers(
+                parsed.segments(), segmentInitialLedgers);
         return new TraceRunManifest(parsed.runSchema(), parsed.game(),
                 parsed.runId(), parsed.sourceBk2(), parsed.romChecksum(),
-                parsed.luaScriptVersion(), parsed.segments(), parsed.transitions(),
+                parsed.luaScriptVersion(), parsedSegments, parsed.transitions(),
                 gaps, parsed.expectedMovieEndMode());
+    }
+
+    private static List<List<DynamicArtTransfer.Descriptor>> parseSegmentInitialLedgers(
+            JsonNode root) throws IOException {
+        JsonNode segments = root.get("segments");
+        if (segments == null || !segments.isArray()) {
+            return List.of();
+        }
+        List<List<DynamicArtTransfer.Descriptor>> ledgers = new ArrayList<>();
+        for (int segmentIndex = 0; segmentIndex < segments.size(); segmentIndex++) {
+            JsonNode descriptorNode = segments.get(segmentIndex)
+                    .get("dynamic_art_initial_ledger_descriptors");
+            if (descriptorNode == null) {
+                ledgers.add(List.of());
+                continue;
+            }
+            if (!descriptorNode.isArray()) {
+                throw new IOException("Segment " + segmentIndex
+                        + " dynamic_art_initial_ledger_descriptors must be an array");
+            }
+            List<DynamicArtTransfer.Descriptor> descriptors = new ArrayList<>();
+            try {
+                for (JsonNode descriptor : descriptorNode) {
+                    descriptors.add(DynamicArtTransfer.parseDescriptor(descriptor));
+                }
+            } catch (IllegalArgumentException e) {
+                throw new IOException("Invalid segment " + segmentIndex
+                        + " dynamic_art_initial_ledger_descriptors", e);
+            }
+            ledgers.add(List.copyOf(descriptors));
+        }
+        return List.copyOf(ledgers);
+    }
+
+    private static List<Segment> restoreSegmentInitialLedgers(
+            List<Segment> segments,
+            List<List<DynamicArtTransfer.Descriptor>> ledgers) throws IOException {
+        if (segments == null || ledgers.isEmpty()) {
+            return segments;
+        }
+        if (segments.size() != ledgers.size()) {
+            throw new IOException("Parsed segment count changed while reading initial ledgers");
+        }
+        List<Segment> restored = new ArrayList<>(segments.size());
+        for (int i = 0; i < segments.size(); i++) {
+            Segment segment = segments.get(i);
+            restored.add(new Segment(
+                    segment.dir(), segment.kind(), segment.traceProfile(),
+                    segment.bk2FrameOffset(), segment.traceFrameCount(),
+                    segment.zoneId(), segment.act(), segment.specialStageIndex(),
+                    segment.bonusStageType(), ledgers.get(i),
+                    segment.dynamicArtInitialLedgerFingerprint()));
+        }
+        return List.copyOf(restored);
     }
 
     /**
@@ -309,9 +375,9 @@ public record TraceRunManifest(
 
     /**
      * Validates segment/gap adjacency with one run-wide edge-ordinal identity
-     * set. Each segment has already been validated from an empty arm by its
-     * loader; its terminal ledger may flow only through the following movie
-     * gap and must be empty before the next segment begins.
+     * set. Each segment loader has already validated its manifest-declared
+     * opening ledger independently; this pass proves that ledger is exactly
+     * what the preceding production gap produced and preserves run-wide IDs.
      */
     public void validateDynamicArtRun(List<TraceData> traces) {
         if (runSchema == 1) {

@@ -706,12 +706,12 @@ public class GameLoop {
      */
     public void step() {
         try {
-            stepInternal();
+            LevelIterationAdmissionController.runTraceObservedStep(this::stepInternal, () -> currentGameMode, playbackDebugManager::getCursorFrame);
             int pumpedFrames = 0;
             while (!isPaused()
                     && userRecordingControls.shouldPumpFastForward()
                     && pumpedFrames < USER_RECORDING_FAST_FORWARD_EXTRA_STEPS_PER_FRAME) {
-                stepInternal();
+                LevelIterationAdmissionController.runTraceObservedStep(this::stepInternal, () -> currentGameMode, playbackDebugManager::getCursorFrame);
                 pumpedFrames++;
             }
         } finally {
@@ -840,7 +840,7 @@ public class GameLoop {
         if (inputHandler == null) {
             throw new IllegalStateException("InputHandler must be set before calling step()");
         }
-        inputHandler.refreshLogicalSnapshot();
+        LevelIterationAdmissionController.refreshTraceInputSnapshot(inputHandler);
         audioUpdatedThisStep = false;
         refreshRuntimeBindings();
         if (currentGameMode == GameMode.SPECIAL_STAGE) {
@@ -923,10 +923,9 @@ public class GameLoop {
             return;
         }
 
-        if (currentGameMode == GameMode.LEVEL
-                && TraceSessionLauncher.active() != null
-                && inputHandler.isKeyPressed(GLFW_KEY_ESCAPE)) {
-            TraceSessionLauncher.active().requestEarlyExit();
+        TraceSessionLauncher visualTraceSession = TraceSessionLauncher.active();
+        if (LevelIterationAdmissionController.shouldVisualTraceOwnEscape(currentGameMode, visualTraceSession, inputHandler.isKeyPressed(GLFW_KEY_ESCAPE))) {
+            visualTraceSession.requestEarlyExit();
             inputHandler.update();
             return;
         }
@@ -1045,9 +1044,6 @@ public class GameLoop {
             updateBonusStageMode(doFrameStep);
         }
 
-        LevelIterationAdmissionController.driveTraceRunSession(
-                currentGameMode, playbackDebugManager.getCursorFrame());
-
         if (traceCameraFocusController != null) {
             traceCameraFocusController.postUpdate();
         }
@@ -1071,8 +1067,7 @@ public class GameLoop {
                 inputHandler.isKeyPressed(configService.getInt(SonicConfiguration.START))
                         || playbackDebugManager.isCurrentForcedStartPress(),
                 userRecordingControls, this::startPendingInLevelTitleCard,
-                () -> LevelIterationAdmissionController
-                        .prepareTraceHardwareTimingForAdmission(currentGameMode),
+                () -> LevelIterationAdmissionController.prepareTraceRunAdmissionAndHardwareTiming(currentGameMode, this::syncPlaybackInputBridge),
                 LevelIterationAdmissionController
                         ::deactivateTraceHardwareTimingForAdmission);
         if (admission == LevelFrameResult.PAUSED) {
@@ -1180,9 +1175,9 @@ public class GameLoop {
                         updateSpecialStageInput();
                         ssProvider.update();
                     });
-        } else {
+        } else if (ssSession.skippedSpecialStagePlcPhase().isPresent()) {
             LevelFrameStep.serviceVBlankOnly(LevelFrameContext.from(gameplayMode),
-                    activePlcLifecycleFrame, PlcLifecyclePhase.LAG);
+                    activePlcLifecycleFrame, ssSession.skippedSpecialStagePlcPhase().orElseThrow());
         }
         specialStageEntryPresentation.update(ssProvider, fadeManager,
                 () -> playSpecialStageStageMusic(ssProvider),
@@ -2406,6 +2401,7 @@ public class GameLoop {
      */
     private void doExitBonusStage(BonusStageProvider provider, BonusStageState savedState) {
         bonusStageTransitionPending = false;
+        TraceSessionLauncher.markNextRunInteriorReturnLoad();
 
         // ROM: on bonus-stage exit the live HUD Ring_count is copied straight into
         // Saved_ring_count (loc_61076: move.w (Ring_count).w,(Saved_ring_count).w,
@@ -2709,6 +2705,7 @@ public class GameLoop {
         resultsScreen = null;
         deregisterSpecialStageAdapter();
         activeSpecialStageProvider = NoOpSpecialStageProvider.INSTANCE;
+        TraceSessionLauncher.markNextRunInteriorReturnLoad();
 
         if (levelManager.getCurrentLevel() == null) {
             // No level was loaded (special stage launched from level select).
@@ -3811,7 +3808,7 @@ public class GameLoop {
      */
     private void doRespawn() {
         // Reload the current level (with title card)
-        levelManager.loadCurrentLevel();
+        TraceSessionLauncher.runDeathRestartLoad(levelManager);
         activateScheduledPlaybackForLoadedLevel();
 
         // Start fade-from-black to reveal the title card
@@ -3918,7 +3915,8 @@ public class GameLoop {
     }
 
     private void activateScheduledPlaybackForLoadedLevel() {
-        if (playbackDebugManager.activateScheduledLevelLoadSession()) {
+        if (TraceSessionLauncher.activateScheduledPlaybackForLoadedLevel(
+                playbackDebugManager)) {
             syncPlaybackInputBridge();
         }
     }

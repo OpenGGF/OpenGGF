@@ -1,0 +1,163 @@
+package com.openggf.trace.replay.runs;
+
+import com.openggf.trace.FieldComparison;
+import com.openggf.trace.FrameComparison;
+import com.openggf.trace.Severity;
+import com.openggf.trace.TraceFrame;
+import com.openggf.trace.TraceRunManifest;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Objects;
+
+/**
+ * Comparison-only return-boundary checks shared by headless and visual run
+ * replay. The caller supplies an immutable engine snapshot; this class owns no
+ * gameplay service and cannot restore or otherwise mutate run state.
+ */
+public final class TraceRunBoundaryComparator {
+
+    private static final String PREFIX = "run_boundary.";
+
+    private TraceRunBoundaryComparator() {
+    }
+
+    /** Manifest and return-frame facts that define one interior return. */
+    public record ExpectedBoundary(
+            TraceRunManifest.Transition entry,
+            TraceRunManifest.Transition exit,
+            TraceRunManifest.Segment preEntryLevel,
+            TraceRunManifest.Segment returnLevel,
+            TraceFrame returnFrameZero,
+            Integer resolvedReturnZone) {
+        public ExpectedBoundary {
+            Objects.requireNonNull(entry, "entry");
+            Objects.requireNonNull(exit, "exit");
+            Objects.requireNonNull(preEntryLevel, "preEntryLevel");
+            Objects.requireNonNull(returnLevel, "returnLevel");
+            Objects.requireNonNull(returnFrameZero, "returnFrameZero");
+        }
+    }
+
+    /** Read-only engine state sampled after the destination level is loaded. */
+    public record ActualBoundary(
+            Integer playerCentreX,
+            Integer playerCentreY,
+            Integer checkpointIndex,
+            Integer currentZone,
+            Integer currentAct,
+            Integer rings,
+            Integer emeralds,
+            boolean organicallyReproducedInterior) {
+    }
+
+    /** Produces ordinary trace diagnostics for every assertion owned by the return policy. */
+    public static FrameComparison compare(
+            int frame, ExpectedBoundary expected, ActualBoundary actual) {
+        Objects.requireNonNull(expected, "expected");
+        Objects.requireNonNull(actual, "actual");
+        Map<String, FieldComparison> fields = new LinkedHashMap<>();
+
+        TraceRunReplayWalker.ReturnAssertionMode mode =
+                TraceRunReplayWalker.returnAssertionMode(expected.entry());
+        switch (mode) {
+            case POSITIONAL_RESTORE -> comparePosition(fields, expected, actual);
+            case CHECKPOINT_RESTORE -> {
+                if (expected.entry().lastStarPostHit() != null) {
+                    put(fields, PREFIX + "checkpoint",
+                            expected.entry().lastStarPostHit(),
+                            actual.checkpointIndex());
+                }
+                comparePosition(fields, expected, actual);
+            }
+            case NEXT_ACT -> compareNextAct(fields, expected, actual);
+            case RINGS_EMERALDS_ONLY -> comparePosition(fields, expected, actual);
+        }
+
+        if (expected.exit().ringsAfter() != null) {
+            put(fields, PREFIX + "rings", expected.exit().ringsAfter(),
+                    actual.rings());
+        }
+        compareEmeralds(fields, expected, actual);
+        return new FrameComparison(frame, fields);
+    }
+
+    private static void comparePosition(
+            Map<String, FieldComparison> fields,
+            ExpectedBoundary expected,
+            ActualBoundary actual) {
+        if (expected.entry().savedXPos() != null) {
+            put(fields, PREFIX + "position.x",
+                    (int) expected.returnFrameZero().x(),
+                    actual.playerCentreX());
+        }
+        if (expected.entry().savedYPos() != null) {
+            put(fields, PREFIX + "position.y",
+                    (int) expected.returnFrameZero().y(),
+                    actual.playerCentreY());
+        }
+    }
+
+    private static void compareNextAct(
+            Map<String, FieldComparison> fields,
+            ExpectedBoundary expected,
+            ActualBoundary actual) {
+        Integer preAct = expected.preEntryLevel().act();
+        Integer returnAct = expected.returnLevel().act();
+        if (preAct != null && returnAct != null) {
+            put(fields, PREFIX + "next_act.manifest_advance",
+                    true, !preAct.equals(returnAct));
+            put(fields, PREFIX + "next_act.act",
+                    engineAct(returnAct), actual.currentAct());
+        }
+        if (expected.returnLevel().zoneId() != null) {
+            put(fields, PREFIX + "next_act.zone",
+                    expected.resolvedReturnZone(), actual.currentZone());
+        }
+    }
+
+    private static void compareEmeralds(
+            Map<String, FieldComparison> fields,
+            ExpectedBoundary expected,
+            ActualBoundary actual) {
+        if (actual.organicallyReproducedInterior()) {
+            if (expected.exit().emeraldsAfter() != null) {
+                put(fields, PREFIX + "emeralds.live",
+                        expected.exit().emeraldsAfter(), actual.emeralds());
+            }
+            return;
+        }
+        if (expected.entry().emeraldsBefore() != null
+                && expected.exit().emeraldsAfter() != null) {
+            put(fields, PREFIX + "emeralds.recorded_progression",
+                    expected.entry().emeraldsBefore() + 1,
+                    expected.exit().emeraldsAfter());
+        }
+    }
+
+    private static int engineAct(int manifestAct) {
+        return Math.max(0, manifestAct - 1);
+    }
+
+    private static void put(
+            Map<String, FieldComparison> fields,
+            String name,
+            Object expected,
+            Object actual) {
+        boolean match = Objects.equals(expected, actual);
+        fields.put(name, new FieldComparison(
+                name, String.valueOf(expected), String.valueOf(actual),
+                match ? Severity.MATCH : Severity.ERROR,
+                delta(expected, actual)));
+    }
+
+    private static int delta(Object expected, Object actual) {
+        if (expected instanceof Number expectedNumber
+                && actual instanceof Number actualNumber) {
+            long value = Math.abs(expectedNumber.longValue()
+                    - actualNumber.longValue());
+            return value > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) value;
+        }
+        return Objects.equals(expected, actual) ? 0 : 1;
+    }
+}
