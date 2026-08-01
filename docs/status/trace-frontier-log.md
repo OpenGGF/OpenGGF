@@ -60070,3 +60070,43 @@ owned by the special-stage effort) remains, byte-identical to baseline.
   special-stage divergence report (20482/20483 errors at f136 on baseline,
   20468/20469 at f165 here), the latter an unrelated recorder-schema string
   (`1.4-s2ss` vs `1.4-s2ss-native`).
+
+
+## 2026-08-01 — S2 special stage: intro pass pipeline fixed, frontier f165 -> f181
+
+Worktree `bugfix/ai-fable-ss-anim` off develop fa3900494. Command:
+`mvn -Dmse=relaxed -Dsurefire.forkCount=1 "-Ds2.rom.path=<s2>" "-Dtest=TestS2SpecialStageTraceReplay" test`.
+
+Established from the fixture's per-row CSV (`lag`, `player_anim_frame_timer`,
+`sonic_anim_frame`) before touching code: the "29-frame mapping-frame hold" is the
+22-frame `Pal_FadeFromWhite` freeze (rows 137-159, s2.asm:3460-3482) plus lag rows; the
+"~4-frame ROM cadence" is the same 3-executed-frame period the engine already runs
+(`SS_player_anim_frame_timer` = 4 both sides) inflated by lag rows. Neither earlier
+framing (missing recurring publishes, wrong cadence) survives that data.
+
+Two fixes landed:
+1. Pre-start passes complete same-observation (deferred pipeline ran every pass one
+   non-lag row late); the slow first post-fade iteration keeps the deferral
+   (fixture: its results surface on lag row 161, invisible to the ledger because its
+   mapping frame 0 art is already loaded).
+2. ROM Obj88 (tails' tails) animates on the startup pass itself (s2.asm:70549-70563),
+   so the engine ticks it once there; its first advance then lands with the players'
+   (row 165) instead of one pass later.
+
+Result: 20468 errors @ f165 -> 18230 @ f181. Full S2 sweep + rewind guards: 21 classes
+pass, no regressions.
+
+### Remaining divergence class: sub-pass frame-boundary submission spills
+
+The recorder timestamps each DPLC submission with the frame it actually crossed
+(`logical_frame`), and later-object submissions within one RunObjects pass can spill
+past a frame boundary into a lag row: fixture row 181 has `ss-sonic` submitted
+(logical 181) while `ss-tails`/`ss-tails-tails` from the SAME pass carry logical 182
+(the lag row), published 183. Row 176 shows the opposite (three submissions, no
+spill). Which objects spill depends on sub-frame 68K execution time — not derivable
+from engine state. The engine publishes each pass atomically on its pass row, so every
+spill row diverges and cascades through the ledger's ordinals. Resolution needs either
+comparator-side normalization (bind same-pass submissions by pass identity rather than
+publication row — the recorder already distinguishes logical vs publication frames) or
+consuming the recorded spill boundaries under the hardware-timing contract (they are
+pure duration data for engine-submitted work). Decision escalated.

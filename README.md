@@ -218,6 +218,22 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **S2 special-stage intro pass pipeline and Obj88 startup tick (2026-08-01):**
+  two more ROM-cited corrections to the special stage's early frames, taking it
+  from 20468 errors at frame 165 to 18230 at frame 181. Before
+  `SpecialStage_Started` each ROM wait-loop `RunObjects` completes within its own
+  observation, and only the slow first post-fade iteration spills into the next
+  row — a spill that is ledger-invisible because its mapping-frame-0 art is
+  deduped; the engine had been deferring *every* pre-start pass to the following
+  observation. Separately, Obj88 (Tails' tails) has no routine gate, so its whole
+  body including `AnimateSprite` runs on the startup pass that created it, unlike
+  Obj09/Obj10 whose init returns via `LoadSS*DynPLC` before `SSPlayer_Animate` —
+  the engine had it running a pass behind from birth. An earlier reading that the
+  ROM's animation clock stalls for 29 frames was wrong: the per-row CSV shows
+  `player_anim_frame_timer=4` and a three-executed-frame advance period on both
+  sides, the apparent gap being the 22-frame `Pal_FadeFromWhite` freeze plus lag
+  rows. No fade-gating was needed and none was added.
+
 - **Visual trace playback now follows the headless replay contract
   (2026-08-01):** traces launched from the master title prepare their applied
   BK2 row before ROM pause admission, including S3K's current-row validation /
