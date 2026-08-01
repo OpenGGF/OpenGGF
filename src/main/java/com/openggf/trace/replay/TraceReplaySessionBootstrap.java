@@ -292,6 +292,7 @@ public final class TraceReplaySessionBootstrap {
                 int cameraX = camera != null ? camera.getX() : 0;
                 objectManager.initVblaCounter(trace.initialVblankCounter() - zoneFeatureVblankOffset);
                 for (int i = 0; i < zoneFeaturePreludeFrames; i++) {
+                    // V-blank-only row: see the exactly-one-tick-per-serviced-V-blank invariant on ObjectManager.vblaCounter.
                     objectManager.advanceVblaCounter();
                     levelManager.getZoneFeatureProvider().updatePrePhysics(
                             null, cameraX, levelManager.getFeatureZoneId());

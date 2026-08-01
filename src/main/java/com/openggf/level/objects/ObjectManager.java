@@ -89,6 +89,30 @@ public class ObjectManager {
     private Comparator<ObjectSpawn> backwardSpawnOrder;
     private final List<GLCommand> renderCommands = new ArrayList<>();
     private int frameCounter;
+    /**
+     * Models the ROM's V-int run counter -- {@code Vint_runcount} in Sonic 2
+     * ({@code docs/s2disasm/s2.asm:508}), {@code v_vblank_count} in Sonic 1
+     * ({@code docs/s1disasm/sonic.asm:682}) and {@code V_int_run_count} in
+     * Sonic 3&amp;K ({@code docs/skdisasm/sonic3k.asm:543}). In all three the
+     * increment sits at V-int exit and runs once per serviced V-blank
+     * regardless of which V-int routine the mode jump table dispatched.
+     *
+     * <p><b>Invariant: exactly one tick per serviced V-blank.</b> The
+     * gameplay row ticks it inside {@link #update} via
+     * {@link #advanceVblaCounter()}; every row where the level loop did not
+     * run but the V-int was still serviced (lag skip, bonus-stage lag,
+     * bonus-exit fade hold, title-card overlay, seamless-reload transition,
+     * trace VBLANK_ONLY / PLAYABLE_ANIMATION_ONLY) must call
+     * {@link #advanceVblaCounter()} exactly once and must not also route
+     * through {@link #update}. A new V-blank-only path that forgets the call
+     * de-phases every consumer of {@link #vblaCounter()} -- it is handed to
+     * every object instance each frame, and feeds spilled-ring floor probes,
+     * S3K bonus-stage RNG seeding and rewind snapshots.
+     *
+     * <p>Known deliberate divergences: PAUSE rows and seamless-boundary LAG
+     * rows service the V-int in the ROM but do not tick here. See
+     * {@code docs/status/known-discrepancies.md}.
+     */
     private int vblaCounter;
     private boolean updating;
     private final InitialObjectDispatchController initialDispatch =
@@ -519,7 +543,10 @@ public class ObjectManager {
             Runnable afterExecBeforePlacement) {
         List<? extends PlayableEntity> activeSidekicks = sidekicks != null ? sidekicks : List.of();
         frameCounter++;
-        vblaCounter++;
+        // Gameplay row of the "exactly one tick per serviced V-blank"
+        // invariant documented on the vblaCounter field. Every V-blank-only
+        // row calls advanceVblaCounter() directly instead of reaching here.
+        advanceVblaCounter();
         // Inline-physics path: snapshotTouchResponseState() ran earlier this
         // frame and already refreshed the cached camera bounds. The second
         // call here is harmless redundancy (the post-camera-step bounds
@@ -2500,7 +2527,15 @@ public class ObjectManager {
     }
 
     /**
-     * Advances the VBla counter by one, mirroring ROM's v_vbla_byte increment.
+     * Advances the VBla counter by one, mirroring the ROM's V-int-exit
+     * increment ({@code docs/s2disasm/s2.asm:508},
+     * {@code docs/s1disasm/sonic.asm:682},
+     * {@code docs/skdisasm/sonic3k.asm:543}).
+     *
+     * <p>This is the single mutation point for the counter. Call it exactly
+     * once per serviced V-blank -- see the invariant on the
+     * {@code vblaCounter} field. Rows that run the level loop get their tick
+     * from {@link #update}; V-blank-only rows must call this directly.
      */
     public void advanceVblaCounter() {
         this.vblaCounter++;
