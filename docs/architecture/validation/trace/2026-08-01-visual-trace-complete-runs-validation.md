@@ -116,5 +116,24 @@ Upstream's S2 special-stage pass-identity/spill-normalization work was retained
 alongside the new immutable lifecycle descriptor provenance. `CHANGELOG.md`,
 `README.md`, and the append-only trace frontier keep both histories.
 
-The post-merge commit IDs and push outcome are recorded here during final
-integration.
+The feature was merged into the main-workspace `develop` as `ba731d143`,
+without switching that workspace. A concurrently published S2 special-stage
+finish-boundary change (`220e0bc35`) was then reconciled additively: its replay
+harness and test changes compose with the shared run coordinator, and both
+release-note/frontier histories were retained. The reconciliation merge is
+`419824d87`.
+
+The final merged-tree full-suite command ran 14,054 tests: 29 failures, 8
+errors, and 31 skips. Compared with the pre-merge feature result, the only
+additional failures were three unrelated suite-order-sensitive object/special-
+stage tests (`Sonic1SpecialStageResultsScreenTest`, `TestS3kSignpostInstance`,
+and `TestMhzMushroomParachuteObjectInstance`); all three classes passed in an
+immediate combined focused rerun. The remaining method-level failure/error set
+matches the feature run, with no visual trace, complete-run coordinator, or
+PLC/DPLC/Kosinski regression. The upstream finish-boundary plus shared
+coordinator focused batch also passed.
+
+`develop` through `419824d87` was pushed successfully. The clean
+`.worktrees/visual-trace-complete-runs` worktree was removed, its fully merged
+local `feature/ai-visual-trace-complete-runs` branch was deleted, and worktree
+metadata was pruned.
