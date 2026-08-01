@@ -56936,3 +56936,42 @@ mgz 18/16510, cnz 7/9711, icz 10/12375, lbz 8/35. `TestS3kAizTraceReplay` holds 
 `TestSonic3kBootstrapResolver` (5), `TestSonic3kDecodingUtils` (3).
 
 Full write-up: [docs/architecture/validation/trace/2026-08-01-mhz-f3246-findfloor-probe.md](../architecture/validation/trace/2026-08-01-mhz-f3246-findfloor-probe.md).
+
+## 2026-08-01 — MHZ f3326: Madmole cap top-landing width (934 -> 838, frontier f3420)
+
+Worktree `.worktrees/mhz-3326`, branch `bugfix/ai-s3k-mhz-3326` off
+`bugfix/ai-s3k-mhz-queue-frontier` (0ab1c8d38). Command:
+`mvn -Ptrace-replay "-Dtest=TestS3kMhzCompleteRunTraceReplay" test -Ds3k.rom.path=<s3k.gen>`.
+
+### Divergence
+
+f3326: ROM lands the lead on an object (`status 0x09`, `stand_on_obj` slot `0x11`,
+`g_speed 0x0071`, `y 0x0728`); engine kept him airborne rolling (`status 0x07`,
+`y_speed 0x03C8`, `y 0x072C` on terrain two frames later). Slot 0x11 is `Obj_Madmole`
+(code `0x0008D586`), the cap parent, which runs `sub_8D876` -> `SolidObjectFull`
+(`d1=$1F, d2=4, d3=5`, sonic3k.asm:193057-193058, 193381-193386) unconditionally every
+frame. Cap at (0x1060, 0x0740); seat `0x740 - 5 - 0x13 = 0x728` matches the ROM row.
+
+### Root cause
+
+Not a stale reference or lifetime effect this time: instrumentation showed the engine
+Madmole in the correct PAUSING state with the solid anchored at homeY 0x740, and the
+generic solid pass reaching the landing branch (`distY = 2`) but rejecting on
+`isWithinTopLandingWidth`. The engine's default landing gate narrows to
+`collisionHalfWidth - $B = $14`, but ROM `Solid_Landed` / `loc_1E154`
+(sonic3k.asm:41611-41621) re-reads `width_pixels(a0)`, and `ObjDat_Madmole`
+(sonic3k.asm:193493-193497) sets `width_pixels = $18`. The player was `+0x14` from the
+cap centre: outside `$14`, inside `$18`.
+
+### Fix
+
+`MadmoleBadnikInstance` overrides `getTopLandingHalfWidth` to return `0x18` — the
+existing provider hook for exactly this ROM pattern (the MHZ1 cutscene button precedent
+is documented at the hook's call site). Object-local, no fitted constant, no zone or
+frame carve-out.
+
+### Regression sweep
+
+Counts: aiz 8, hcz 7, mgz 18, cnz 7, icz 10, lbz 8 — all baseline; mhz 934 -> 838,
+first error f3326 -> f3420 (`rings`). MHZ tail `KOS_DECOMPRESSION_QUEUE#335` throw
+unchanged (known pre-existing; report still covers all 7218 frames).

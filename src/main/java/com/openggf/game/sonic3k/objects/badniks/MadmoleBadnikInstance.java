@@ -171,6 +171,16 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
     }
 
     @Override
+    public int getTopLandingHalfWidth(PlayableEntity player, int collisionHalfWidth) {
+        // ROM Solid_Landed / loc_1E154 (sonic3k.asm:41611-41621) re-reads
+        // width_pixels(a0) for the landing X gate. The cap keeps
+        // ObjDat_Madmole's width_pixels = $18 (sonic3k.asm:193493-193497),
+        // wider than the default d1 - $B = $14 heuristic for sub_8D876's
+        // d1 = $1F.
+        return 0x18;
+    }
+
+    @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         if (isDestroyed()) {
             return;
