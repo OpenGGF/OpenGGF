@@ -327,6 +327,20 @@ public class Sonic2SpecialStagePlayer {
         }
     }
 
+    /**
+     * Runs one tails' tails animation tick outside a full player update.
+     * ROM Obj88 is a separate object with no routine gate: its whole body —
+     * including the generic AnimateSprite call on Ani_obj88 — executes on the
+     * same startup RunObjects pass that created it (s2.asm:70394,70549-70563),
+     * unlike Obj09/Obj10 whose init routine returns via LoadSS*DynPLC before
+     * SSPlayer_Animate. That startup tick loads the tails' tails frame
+     * duration, so its first visible advance lands on the same post-fade pass
+     * as the players' (stage-1 fixture row 165), not one pass later.
+     */
+    public void tickTailsTailsStartupAnimation() {
+        updateTailsTailsAnimation();
+    }
+
     private void updateTailsTailsAnimation() {
         tailsTailsAnim = anim;
         if (tailsTailsAnim >= TAILS_TAILS_ANIM_SCRIPTS.length) {

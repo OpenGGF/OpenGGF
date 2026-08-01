@@ -477,6 +477,22 @@ public final class DynamicArtLifecycleService
         retireSubmittedTransfers();
     }
 
+    /**
+     * Retires already-submitted transfers for a ROM object pass that finished
+     * BEFORE the V-int of the observation it is bound to. On hardware the
+     * pass ran during the preceding (lag) frame, so the V-blank that opens
+     * the bound observation had already run {@code ProcessDMAQueue}
+     * (docs/s2disasm/s2.asm:1769) over its queued work: the pass's
+     * submissions and completions surface on the same observation (stage-1
+     * special-stage fixture rows 435-436, pass 5 — completion cursor 435,
+     * bound row 436). Work queued by a later pass in the same observation
+     * stays pending, exactly as on hardware.
+     */
+    public void serviceVblankBeforeBoundObservation() {
+        requireRunActive();
+        retireSubmittedTransfers();
+    }
+
     private void retireSubmittedTransfers() {
         List<Long> retiring = List.copyOf(pendingS2TransferIds);
         pendingS2TransferIds.clear();

@@ -26,6 +26,67 @@ All notable changes to the OpenGGF project are documented in this file.
   destroy the failed gameplay context, and return directly to the master
   title.
 
+- Fix/Test: S2 special-stage post-start rows now compare DPLC work by pass
+  identity end to end, collapsing `TestS2SpecialStageTraceReplay` from 17747
+  errors (first at f436) to 9 (first at f5181 — the stage-finish boundary).
+  Three pieces, all driven by the recorded `run_objects_end` bindings the
+  replay already consumes for pacing:
+  (1) a pass whose recorded completion cursor precedes its bound observation
+  finished before that observation's V-int on hardware, so the V-blank had
+  already run `ProcessDMAQueue` (s2.asm:1769) over its queued work — the
+  harness now retires such a pass's submissions within the bound
+  observation, before later passes queue
+  (`DynamicArtLifecycleService.serviceVblankBeforeBoundObservation`);
+  (2) `DynamicArtSpillNormalization` binds every paced-region submission
+  edge to the observation of the earliest pass whose cursor covers the
+  edge's wall-clock crossing — the recorder publishes each edge at the first
+  observation after its crossing, which can precede the pass's bound row
+  (fixture: pass 8's `ss-sonic` submission crosses f439, publishes there,
+  pass bound to f441) or trail it;
+  (3) crossing stamps on cursor-preceded rows and outstanding-id windows for
+  moved edges follow the binding, symmetrically in both directions.
+  Cardinality, in-pass order, owner, phase, mapping frame, and request
+  fields remain absolute; `TestDynamicArtSpillNormalization` still proves
+  missing/extra/wrong-owner submissions fail. The 9 residual errors are the
+  stage-finish terminal-pass choreography (rows 5180-5220), documented in
+  the frontier log.
+- Test: the S2 special-stage replay rebinds recorder DPLC submission edges
+  that spilled past a frame boundary back to the object pass that produced
+  them (`DynamicArtSpillNormalization`), for rows before the recorded
+  `SpecialStage_Started` pass pacing takes over. One ROM `RunObjects` pass
+  submits every changed player DPLC in one burst, but the recorder
+  timestamps each submission with the frame it actually crossed: when the
+  pass overruns (a lag row), later objects' submissions carry the lag row as
+  `logical_frame` and surface on the next observation (stage-1 fixture row
+  181: `ss-sonic` logical 181; `ss-tails`/`ss-tails-tails` from the same
+  pass logical 182 — the lag row — published 183). The split point is
+  sub-frame 68K execution time with no ROM-semantic meaning, and the engine
+  publishes passes atomically, so — like the power-on-epoch delivery ids —
+  the spilled edges' frame stamps are compared per pass. Everything else
+  stays absolute (cardinality, in-pass order, owner, phase, mapping frame,
+  every request field); `TestDynamicArtSpillNormalization` proves missing,
+  extra, and wrong-owner submissions still fail. Moves
+  `TestS2SpecialStageTraceReplay`'s frontier from f181 to f436 (the intro
+  region is now fully aligned; the remaining divergence is post-start
+  gameplay animation edges).
+- Fix: the S2 special stage's pre-start object passes complete within their
+  own observation, matching the recorder's end-of-frame rows. Before
+  `SpecialStage_Started`, each wait-loop `RunObjects` iteration finishes
+  inside the frame whose `WaitForVint` started it (s2.asm:6674-6688); only
+  the slow first post-fade iteration overruns into the following (lag) row.
+  The engine deferred every pre-start pass to the next observation, running
+  the whole pass stream one non-lag row late and shifting every player DPLC
+  edge from the first animation advance (frame 165) onward.
+- Fix: the special-stage tails' tails animation ticks once on the startup
+  RunObjects pass. ROM Obj88 is a separate object with no routine gate — its
+  body, including the generic `AnimateSprite` on `Ani_obj88`, runs on the
+  same startup pass that created it (s2.asm:70394, 70549-70563) — unlike
+  Obj09/Obj10, whose init returns via `LoadSS*DynPLC` before
+  `SSPlayer_Animate`. Skipping that tick left the engine's tails' tails one
+  pass behind for the entire stage. Together these move
+  `TestS2SpecialStageTraceReplay` from 20468 errors (first at frame 165) to
+  18230 (first at frame 181); the remaining divergence class is sub-pass
+  frame-boundary submission spills recorded on lag rows (see frontier log).
 - Fix: the CPZ boss pump runs a single pass per pipe cycle, matching the
   ROM's actual control flow. `Obj5D_Pipe_Pump_4`'s would-be repeat branch
   (`Obj5D_timer3 = 2`) writes its restart state but has no `rts` — it falls

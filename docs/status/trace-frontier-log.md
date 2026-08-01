@@ -60071,6 +60071,170 @@ owned by the special-stage effort) remains, byte-identical to baseline.
   20468/20469 at f165 here), the latter an unrelated recorder-schema string
   (`1.4-s2ss` vs `1.4-s2ss-native`).
 
+
+## 2026-08-01 — S2 special stage: intro pass pipeline fixed, frontier f165 -> f181
+
+Worktree `bugfix/ai-fable-ss-anim` off develop fa3900494. Command:
+`mvn -Dmse=relaxed -Dsurefire.forkCount=1 "-Ds2.rom.path=<s2>" "-Dtest=TestS2SpecialStageTraceReplay" test`.
+
+Established from the fixture's per-row CSV (`lag`, `player_anim_frame_timer`,
+`sonic_anim_frame`) before touching code: the "29-frame mapping-frame hold" is the
+22-frame `Pal_FadeFromWhite` freeze (rows 137-159, s2.asm:3460-3482) plus lag rows; the
+"~4-frame ROM cadence" is the same 3-executed-frame period the engine already runs
+(`SS_player_anim_frame_timer` = 4 both sides) inflated by lag rows. Neither earlier
+framing (missing recurring publishes, wrong cadence) survives that data.
+
+Two fixes landed:
+1. Pre-start passes complete same-observation (deferred pipeline ran every pass one
+   non-lag row late); the slow first post-fade iteration keeps the deferral
+   (fixture: its results surface on lag row 161, invisible to the ledger because its
+   mapping frame 0 art is already loaded).
+2. ROM Obj88 (tails' tails) animates on the startup pass itself (s2.asm:70549-70563),
+   so the engine ticks it once there; its first advance then lands with the players'
+   (row 165) instead of one pass later.
+
+Result: 20468 errors @ f165 -> 18230 @ f181. Full S2 sweep + rewind guards: 21 classes
+pass, no regressions.
+
+### Remaining divergence class: sub-pass frame-boundary submission spills
+
+The recorder timestamps each DPLC submission with the frame it actually crossed
+(`logical_frame`), and later-object submissions within one RunObjects pass can spill
+past a frame boundary into a lag row: fixture row 181 has `ss-sonic` submitted
+(logical 181) while `ss-tails`/`ss-tails-tails` from the SAME pass carry logical 182
+(the lag row), published 183. Row 176 shows the opposite (three submissions, no
+spill). Which objects spill depends on sub-frame 68K execution time — not derivable
+from engine state. The engine publishes each pass atomically on its pass row, so every
+spill row diverges and cascades through the ledger's ordinals. Resolution needs either
+comparator-side normalization (bind same-pass submissions by pass identity rather than
+publication row — the recorder already distinguishes logical vs publication frames) or
+consuming the recorded spill boundaries under the hardware-timing contract (they are
+pure duration data for engine-submitted work). Decision escalated.
+
+
+## 2026-08-01 — S2 special stage comparison semantics: submission spill rebinding (f181 -> f436)
+
+Worktree `bugfix/ai-fable-ss-anim`. This entry records a COMPARISON-SEMANTICS change,
+not an engine change; the reasoning matters more than the diff.
+
+The recorder timestamps each DPLC submission with the wall-clock frame it crossed.
+When a pre-start `RunObjects` pass overruns its frame (a lag row), the later objects'
+submissions carry the lag row as `logical_frame` and surface on the following
+observation as `publication_frame`: stage-1 fixture row 181 has `ss-sonic` submitted
+logical 181 while `ss-tails`/`ss-tails-tails` FROM THE SAME PASS carry logical 182 (the
+lag row), published 183 — and row 176 shows three same-pass submissions with no spill
+despite a following lag row. Which objects spill is a function of sub-frame 68K
+execution time inside one pass. The ROM has no semantic notion of the split, and the
+engine publishes each pass atomically, so comparing spilled edges' frame stamps
+absolutely compares an observation artifact as though it were ROM state — the same
+class of defect as the power-on-epoch delivery identities normalised in 0e937a6e3.
+
+`DynamicArtSpillNormalization` therefore rebinds spilled SUBMISSION edges (only those
+whose recorded `logical_frame` differs from `publication_frame`, only in rows before
+the recorded `SpecialStage_Started` pass pacing) to their pass row — the latest
+non-lag row at or before the recorded logical frame — recomputing the row-positional
+`logical_edge_index` and carrying the moved ids in `outstanding_transfer_ids` from the
+pass row to the recorded publication row. Everything else stays absolute: per-pass
+cardinality, in-pass ordinal order, owner, phase, mapping frame, and every request
+field. `TestDynamicArtSpillNormalization` proves a missing, extra, or wrong-owner
+submission still fails after normalization.
+
+Why the engine-side alternative was rejected: consuming the recorded spill boundaries
+to pace engine publication would use trace data to shape when the comparator-visible
+output appears. The hardware-timing contract permits recorded timing to delay the
+READINESS of already-submitted engine-created work; publication is not readiness, so
+that use fails the contract's test even though it carries no gameplay value.
+
+Result: `TestS2SpecialStageTraceReplay` frontier f181 -> f436; the pre-start intro
+region is fully aligned. The remaining divergence (first error f436,
+`dynamic_art.edges` expected 5 vs actual 3) sits in post-`SpecialStage_Started`
+gameplay, where mapping-frame changes are input/collision-driven — a separate
+investigation. The rebinding deliberately does not apply there: the recorded
+`run_objects_end` bindings already pace each pass against its bound observation.
+
+
+## 2026-08-01 — S2 special stage: pass-identity binding end to end (f436 -> f5181, 17747 -> 9)
+
+Worktree `bugfix/ai-fable-ss-anim`, on top of the merged spill rebinding. The f436 event
+decomposed into three recorder-vs-atomic-pass artifacts, each measured before fixing:
+
+1. **Same-observation completions.** Pass 5 (completion cursor 435, bound row 436) ran
+   during the preceding lag frame on hardware; the V-int opening row 436 had already run
+   ProcessDMAQueue over its work, so ROM row 436 carries the pass's submissions AND
+   completions. The engine, executing the pass at its bound observation, retired one
+   V-blank later (row 438). Fixed engine-side: when a bound pass's recorded cursor
+   precedes its observation, the harness retires its submissions within the observation,
+   after that pass and before later passes queue — readiness timing of engine-submitted
+   work, driven by the same binder fields that already pace execution.
+2. **Edges published off their pass's bound row.** The recorder publishes each edge at
+   the first observation after its wall-clock crossing; pass 8's ss-sonic submission
+   crossed f439 and published there while the pass is bound to f441 (its ss-tails
+   partner crossed f440, publishing f441). The normalization now binds every
+   paced-region submission edge to the earliest pass whose cursor covers its crossing —
+   pass identity rather than publication row, the same doctrine as the pre-start
+   rebinding, generalized to both directions.
+3. **Crossing stamps and outstanding windows** follow the binding: stamps rewritten only
+   on cursor-preceded rows (rows the engine provably queues later than the ROM crossed;
+   fixture row 425 shows the terminal-boundary case where the engine reproduces the
+   recorded stamp and it stays absolute), outstanding ids added for backward moves and
+   removed for forward moves over the affected row windows.
+
+Result: 17747 errors @ f436 -> 9 @ f5181. The full stage — every pass, submission,
+retirement, and animation cycle across 5180 rows — now compares clean. The residual 9
+errors are the stage-finish boundary (rows 5180-5220): the recorder labels finish with
+the last logical non-lag frame while publishing the finish-causing pass at the following
+observation, holds the final submissions outstanding through the results screen, and
+publishes their completions at f5220. That choreography is owned by the existing
+terminal-pass machinery (terminal_forwarded, ssFinishedObserved special cases) and needs
+its own careful pass rather than a fourth normalization refinement.
+
+
+## 2026-08-01 — Supersession note: the "paced region needs no rebinding" rationale is withdrawn
+
+The entry for the pre-start spill rebinding (commit 120847ce3, "Remaining divergence
+class" and its closing paragraph) stated that the rebinding **deliberately does not
+apply** after `SpecialStage_Started`, on the grounds that "the recorded
+`run_objects_end` bindings already pace each pass against its bound observation." The
+pass-identity entry above (commit 5ab37efcb) crosses that boundary intentionally, and
+this note records why, so the sequence does not read as a design line silently crossed.
+
+**What the earlier entry claimed:** recorded pass pacing makes publication rows in the
+started region trustworthy as recorded.
+
+**What disproved it:** the bindings pace *passes*, not *edges*. The recorder publishes
+each edge at the first observation after its wall-clock crossing, independent of the
+pass's bound row. Fixture evidence in both directions: pass 8's `ss-sonic` submission
+crosses f439 and publishes there while its pass is bound to f441 (publication precedes
+the bound row); pass 5's player submissions cross f435 — the lag row — and publish at
+f436 (publication trails the crossing). "Already paced" was true of pass execution and
+false of edge publication, so the boundary protected an assumption, not an invariant.
+
+**What replaces it:** every paced-region submission edge is bound to the observation of
+the earliest pass whose recorded completion cursor covers its crossing — the same
+pass-identity doctrine as the pre-start rebinding, applied uniformly. The boundary in
+`DynamicArtSpillNormalization` (`rebindEndExclusive`) now separates the two *mechanisms*
+for locating an edge's pass (lag-walk before pacing starts, cursor coverage after), not
+a region where rebinding is off.
+
+**Relation to the rejected engine-side alternative:** the same 120847ce3 entry rejected
+consuming recorded spill boundaries to pace engine *publication*, and that rejection
+stands unmodified. The engine-side change in 5ab37efcb
+(`DynamicArtLifecycleService.serviceVblankBeforeBoundObservation`) is the adjacent
+*permitted* case, not an erosion of it: it retires already-submitted, engine-created
+transfers — readiness, which the hardware-timing contract covers — gated on the binder's
+recorded pass structure that already paces execution. It does not time any
+comparator-visible publication row. Publication is not readiness; the rejected option
+paced publication, this one releases readiness.
+
+**Known precondition of the outstanding-id merge.** Surfaced while writing the
+sensitivity tests above: the merge assumes the target row carries a recorded heartbeat
+whose outstanding list already includes the in-flight id. Every row of the S2
+special-stage schema does (5299 heartbeats for 5299 rows), so this holds by property of
+the recording rather than by construction. A sparse-heartbeat trace would surface it as
+a silently empty outstanding list on the target row — a failure mode with no obvious
+symptom, so check this first if the normalization is ever reused against another
+recorder schema. Also noted at the merge site in `DynamicArtSpillNormalization`.
+
 ## 2026-08-01 - Visual complete-run lifecycle and strict transfer diagnostics
 
 - Worktree: `.worktrees/visual-trace-complete-runs`, branch

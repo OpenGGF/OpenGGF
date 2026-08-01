@@ -227,6 +227,61 @@ Development since `v0.5.20260411` is the active 0.6 prerelease line. The release
   and the existing bounded hardware-readiness delay; failures remain visible in
   the picker until acknowledged.
 
+- **S2 special stage compares DPLC work by pass identity end to end
+  (2026-08-01):** `TestS2SpecialStageTraceReplay` drops from 17747 errors (first
+  at frame 436) to 9 (first at frame 5181) — every pass, submission, retirement,
+  and animation cycle across the stage's 5180 gameplay rows now compares clean.
+  Three pieces, all driven by the recorded `run_objects_end` bindings the replay
+  already consumes: a pass whose completion cursor precedes its bound
+  observation now retires its submissions within that observation (on hardware
+  the V-blank had already run `ProcessDMAQueue` over its queued work); paced
+  submission edges bind to the earliest pass whose cursor covers their
+  wall-clock crossing, in both directions, since the recorder can publish an
+  edge before its pass's bound row as readily as after; and crossing stamps and
+  outstanding-id windows follow that binding. This removes the post-start scope
+  boundary the previous entry set, which held for passes but not for individual
+  edges. The 9 residual errors are the stage-finish terminal-pass choreography
+  (rows 5180-5220), left as a scoped follow-up.
+
+- **Special-stage submission spills compared by pass, not publication row
+  (2026-08-01):** the S2 special-stage intro is now byte-aligned through frame
+  423, taking the frontier from 181 to 436. The remaining intro divergence was
+  not an engine defect: when a `RunObjects` pass overruns its frame, the later
+  objects' submissions carry the *lag* row as their `logical_frame` and surface a
+  row later, and which objects spill depends on sub-frame 68K execution time
+  inside a single pass — recorder row 176 shows three submissions with no spill
+  despite a following lag row, so it is not predictable from lag adjacency. The
+  engine publishes each pass atomically and cannot derive that split point. This
+  is the same class as the recorder power-on epoch normalisation already applied
+  to `transfer_id`/`edge_ordinal`: an observation artifact being compared as
+  though it were ROM state. `DynamicArtSpillNormalization` rebinds only
+  *submission* edges whose recorded `logical_frame` differs from their
+  `publication_frame`, only before the recorded `SpecialStage_Started` transition
+  (after which recorded pass bindings already pace each pass), moving them to the
+  latest non-lag row at or before their logical frame. Cardinality, in-pass
+  ordinal order, owner, phase, mapping frame and every `requests[]` field stay
+  absolute, and dedicated tests assert that a missing submission, an extra
+  submission and a wrong-owner attribution all still fail. The engine-side
+  alternative — consuming the recorded spill boundaries under the hardware-timing
+  contract — was rejected: that contract governs when engine-created work becomes
+  *ready*, and pacing the publication of diagnostic rows is not readiness.
+
+- **S2 special-stage intro pass pipeline and Obj88 startup tick (2026-08-01):**
+  two more ROM-cited corrections to the special stage's early frames, taking it
+  from 20468 errors at frame 165 to 18230 at frame 181. Before
+  `SpecialStage_Started` each ROM wait-loop `RunObjects` completes within its own
+  observation, and only the slow first post-fade iteration spills into the next
+  row — a spill that is ledger-invisible because its mapping-frame-0 art is
+  deduped; the engine had been deferring *every* pre-start pass to the following
+  observation. Separately, Obj88 (Tails' tails) has no routine gate, so its whole
+  body including `AnimateSprite` runs on the startup pass that created it, unlike
+  Obj09/Obj10 whose init returns via `LoadSS*DynPLC` before `SSPlayer_Animate` —
+  the engine had it running a pass behind from birth. An earlier reading that the
+  ROM's animation clock stalls for 29 frames was wrong: the per-row CSV shows
+  `player_anim_frame_timer=4` and a three-executed-frame advance period on both
+  sides, the apparent gap being the 22-frame `Pal_FadeFromWhite` freeze plus lag
+  rows. No fade-gating was needed and none was added.
+
 - **Visual trace playback now follows the headless replay contract
   (2026-08-01):** traces launched from the master title prepare their applied
   BK2 row before ROM pause admission, including S3K's current-row validation /

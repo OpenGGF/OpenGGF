@@ -137,7 +137,8 @@ final class S2SpecialStageReplayHarness {
     void stepPasses(
             List<CompletedPass> passes,
             boolean completeTerminalPreStartPass,
-            boolean lagged) {
+            boolean lagged,
+            int observationFrame) {
         runProductionRow(
                 lagged ? PlcLifecyclePhase.LAG
                         : PlcLifecyclePhase.SPECIAL_STAGE,
@@ -145,7 +146,21 @@ final class S2SpecialStageReplayHarness {
             if (completeTerminalPreStartPass) {
                 completeTerminalPreStartPassBody();
             }
-            passes.forEach(this::stepPassBody);
+            for (CompletedPass pass : passes) {
+                stepPassBody(pass);
+                if (pass.completionCursorFrame() < observationFrame) {
+                    // The pass finished before this observation's V-int on
+                    // hardware, so that V-blank already ran ProcessDMAQueue
+                    // over its queued work: submissions and completions
+                    // surface together on the bound row, while later passes'
+                    // work in this same observation stays pending. See
+                    // DynamicArtLifecycleService.serviceVblankBeforeBoundObservation.
+                    var lifecycle = GameServices.dynamicArtLifecycleOrNull();
+                    if (lifecycle != null && lifecycle.isRunActive()) {
+                        lifecycle.serviceVblankBeforeBoundObservation();
+                    }
+                }
+            }
         });
     }
 
