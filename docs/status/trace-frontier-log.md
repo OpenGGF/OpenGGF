@@ -60110,3 +60110,44 @@ comparator-side normalization (bind same-pass submissions by pass identity rathe
 publication row — the recorder already distinguishes logical vs publication frames) or
 consuming the recorded spill boundaries under the hardware-timing contract (they are
 pure duration data for engine-submitted work). Decision escalated.
+
+
+## 2026-08-01 — S2 special stage comparison semantics: submission spill rebinding (f181 -> f436)
+
+Worktree `bugfix/ai-fable-ss-anim`. This entry records a COMPARISON-SEMANTICS change,
+not an engine change; the reasoning matters more than the diff.
+
+The recorder timestamps each DPLC submission with the wall-clock frame it crossed.
+When a pre-start `RunObjects` pass overruns its frame (a lag row), the later objects'
+submissions carry the lag row as `logical_frame` and surface on the following
+observation as `publication_frame`: stage-1 fixture row 181 has `ss-sonic` submitted
+logical 181 while `ss-tails`/`ss-tails-tails` FROM THE SAME PASS carry logical 182 (the
+lag row), published 183 — and row 176 shows three same-pass submissions with no spill
+despite a following lag row. Which objects spill is a function of sub-frame 68K
+execution time inside one pass. The ROM has no semantic notion of the split, and the
+engine publishes each pass atomically, so comparing spilled edges' frame stamps
+absolutely compares an observation artifact as though it were ROM state — the same
+class of defect as the power-on-epoch delivery identities normalised in 0e937a6e3.
+
+`DynamicArtSpillNormalization` therefore rebinds spilled SUBMISSION edges (only those
+whose recorded `logical_frame` differs from `publication_frame`, only in rows before
+the recorded `SpecialStage_Started` pass pacing) to their pass row — the latest
+non-lag row at or before the recorded logical frame — recomputing the row-positional
+`logical_edge_index` and carrying the moved ids in `outstanding_transfer_ids` from the
+pass row to the recorded publication row. Everything else stays absolute: per-pass
+cardinality, in-pass ordinal order, owner, phase, mapping frame, and every request
+field. `TestDynamicArtSpillNormalization` proves a missing, extra, or wrong-owner
+submission still fails after normalization.
+
+Why the engine-side alternative was rejected: consuming the recorded spill boundaries
+to pace engine publication would use trace data to shape when the comparator-visible
+output appears. The hardware-timing contract permits recorded timing to delay the
+READINESS of already-submitted engine-created work; publication is not readiness, so
+that use fails the contract's test even though it carries no gameplay value.
+
+Result: `TestS2SpecialStageTraceReplay` frontier f181 -> f436; the pre-start intro
+region is fully aligned. The remaining divergence (first error f436,
+`dynamic_art.edges` expected 5 vs actual 3) sits in post-`SpecialStage_Started`
+gameplay, where mapping-frame changes are input/collision-driven — a separate
+investigation. The rebinding deliberately does not apply there: the recorded
+`run_objects_end` bindings already pace each pass against its bound observation.
