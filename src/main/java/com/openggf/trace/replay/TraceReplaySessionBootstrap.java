@@ -246,17 +246,19 @@ public final class TraceReplaySessionBootstrap {
         int zoneFeaturePreludeFrames =
                 TraceReplayBootstrap.zoneFeatureTitleCardPreludeFramesForTraceReplay(trace);
         var gameplayMode = fixture.gameplayMode();
-        // Complete-run segments restore state that already represents the
-        // production setup pass. Their reset/restore/dispatch envelope is not
-        // a replay prelude knob and must not consume fresh-load authority.
         boolean representedS3kCompleteRun =
                 TraceReplayBootstrap.isS3kCompleteRunSegment(trace);
-        if (representedS3kCompleteRun
-                && gameplayMode != null
-                && gameplayMode.getLevelManager() != null) {
-            gameplayMode.getLevelManager()
-                    .discardPendingInitialProcessSpritesForStateRestoration();
-        }
+        // The level's own Load_Sprites/Process_Sprites setup pass
+        // (Level loc_6468, sonic3k.asm:7849-7860) is NOT discarded here for any
+        // trace. It runs below, in bootstrap, before the first driven frame --
+        // see the consumePendingInitialProcessSpritesPass call at the end of
+        // this method. That placement is the whole model: the pass precedes
+        // LevelLoop, so it performs no Wait_VSync, no Read_Joypads and no
+        // addq.w #1,(Level_frame_counter).w (that increment lives inside
+        // LevelLoop at sonic3k.asm:7888-7894). It must therefore spend neither
+        // a recorded controller row nor a frame-counter tick, and recorded row
+        // 0 -- which reads Level_frame_counter == 1 on every segment -- anchors
+        // to the first LevelLoop frame, the first frame the driver steps.
         if (gameplayMode != null
                 && gameplayMode.getLevelManager() != null
                 && gameplayMode.getLevelManager().getObjectManager() != null) {
@@ -317,12 +319,6 @@ public final class TraceReplaySessionBootstrap {
             // object ticks, so prelude state comes from object code rather
             // than recorded SST data.
             objectManager.reset(cameraX);
-            if (representedS3kCompleteRun) {
-                var levelEventProvider = GameServices.module().getLevelEventProvider();
-                if (levelEventProvider instanceof Sonic3kLevelEventManager s3kLem) {
-                    s3kLem.restoreCompleteRunSegmentObjectsAfterPreludeReset();
-                }
-            }
             AbstractPlayableSprite player = fixture != null ? fixture.sprite() : null;
             List<AbstractPlayableSprite> sidekicks = gameplayMode.getSpriteManager() != null
                     ? gameplayMode.getSpriteManager().getSidekicks()
@@ -404,7 +400,30 @@ public final class TraceReplaySessionBootstrap {
                     fixture != null ? fixture.sprite() : null);
         }
         primeLeaderJumpEdgeFromBk2Prelude(fixture);
+        // Execute the level setup pass (Sonic_Init/Tails_Init dispatch) here,
+        // uniformly for every trace, and here only. Running it in bootstrap
+        // rather than as a driven frame is what keeps it off the BK2 row and
+        // frame-counter budget; the first frame the driver then steps is the
+        // ROM's first LevelLoop iteration, which is recorded row 0. Nothing
+        // about this decision reads the fixture, its metadata, the zone, or the
+        // frame index.
         if (gameplayMode != null && gameplayMode.getLevelManager() != null) {
+            // Objects the ROM creates from SpawnLevelMainSprites (loc_690A /
+            // loc_6926, sonic3k.asm:8205-8216) are written into
+            // Dynamic_object_RAM at main-sprite spawn -- which happens as part
+            // of this same setup pass, after the title card. They are therefore
+            // not resident for any earlier Level_MainLoop tick, and the pass
+            // below is their first and only dispatch before LevelLoop. Install
+            // them here rather than before the prelude loop above: that loop
+            // models title-card-era ticks, when no SpawnLevelMainSprites object
+            // exists yet, so dispatching them there gave every such object two
+            // executions before recorded row 0 where the ROM gives one.
+            if (representedS3kCompleteRun && objectDispatchFrames > 0) {
+                var levelEventProvider = GameServices.module().getLevelEventProvider();
+                if (levelEventProvider instanceof Sonic3kLevelEventManager s3kLem) {
+                    s3kLem.restoreCompleteRunSegmentObjectsAfterPreludeReset();
+                }
+            }
             gameplayMode.getLevelManager().consumePendingInitialProcessSpritesPass();
         }
         applyInitialRngSeedForReplay(trace.metadata());
@@ -413,6 +432,68 @@ public final class TraceReplaySessionBootstrap {
         TraceReplayBootstrap.ReplayStartState replayStart =
                 TraceReplayBootstrap.applyReplayStartStateForTraceReplay(trace, fixture);
         return new BootstrapResult(snapshotReport, replayStart);
+    }
+
+
+    /**
+     * Seeds the velocity the ROM's player already carried into a complete-run
+     * segment.
+     *
+     * <p>These segments open on the level's own setup pass, where
+     * {@code Sonic_Init} does {@code routine += 2} then {@code rts} without
+     * touching {@code x_vel}/{@code y_vel} (sonic3k.asm:21902-21943). Whatever
+     * the SST held when the level loaded therefore survives into the first
+     * recorded row: HCZ and MGZ record the routine change with {@code y_vel}
+     * already {@code 0x38}, ICZ with {@code 0x280}, while AIZ, CNZ, LBZ and MHZ
+     * record zero.
+     *
+     * <p>Position, angle and airborne status come from the same row for the same
+     * reason: {@code Sonic_Init} leaves all of them untouched, so row 0 records
+     * the state the level was entered with rather than anything the setup frame
+     * produced.
+     *
+     * <p>This is pre-trace bootstrap in the same class as the start position and
+     * RNG seed — the state a save state at the BK2 start would restore, applied
+     * once before any frame is driven. It is not per-frame hydration: nothing
+     * reads the trace again after this point.
+     */
+    private static void seedSegmentEntryVelocity(
+            TraceData trace, AbstractPlayableSprite sprite) {
+        if (trace == null || sprite == null
+                || !TraceReplayBootstrap.isS3kCompleteRunSegment(trace)
+                || trace.frameCount() == 0) {
+            return;
+        }
+        var entry = trace.getFrame(0);
+        sprite.setAngle(entry.angle());
+        // Position, subpixel, velocity and Status_InAir are NOT seeded from row
+        // 0. Row 0 is a recorded LevelLoop iteration-1 row -- a POST-frame
+        // sample -- so copying it in as pre-frame state hands the engine frame
+        // 0's own result before frame 0 runs. The player's spawn state is owned
+        // by SpawnLevelMainSprites (sonic3k.asm:8111-8205), which takes x_pos /
+        // y_pos from the level start position and sets Status_InAir only via
+        // the explicit per-zone bsets, leaving velocity and the subpixel
+        // fraction zero (the object RAM is cleared before the spawn writes);
+        // MHZ1 $700 and CNZ1 $300 fall through to loc_68D8 (8178-8197) and
+        // spawn grounded, so their frame-0 floor check is what sets
+        // Status_InAir, as the frame's outcome. The caller has already applied
+        // the metadata start centre, which is that spawn position.
+        //
+        // Seeding position here silently handed the engine one frame of
+        // recorded movement for any segment whose row-0 sample had already
+        // moved off the spawn coordinate: HCZ1 spawns falling with left held,
+        // so its row 0 is $027F.E800 rather than the $0280.0000 spawn, and the
+        // engine then ran frame 0's own -$1800 air-control step on top of it --
+        // a permanent one-frame x offset, plus a 1px sidekick placement error
+        // because SpawnLevelMainSprites_SpawnPlayers derives Player_2's x_pos
+        // from Player_1's (sonic3k.asm:8363-8366).
+        // anim/prev_anim and mapping_frame survive the load the same way: ROM
+        // writes them as a word at spawn for the zones that need one
+        // (sonic3k.asm:8155-8190) and Sonic_Init never touches them, so row 0
+        // carries whatever the previous segment left behind.
+        sprite.setAnimationId(entry.animationId());
+        sprite.getAnimationManager().publishPreviousAnimationId(entry.animationId());
+        sprite.setMappingFrame(entry.mappingFrame());
     }
 
     public static void installHardwareTimingReplay(
@@ -1095,6 +1176,7 @@ public final class TraceReplaySessionBootstrap {
         // initial load, which drifts physics at the first collision.
         sprite.setCentreX(meta.startX());
         sprite.setCentreY(meta.startY());
+        seedSegmentEntryVelocity(trace, sprite);
         var level = GameServices.levelOrNull();
         if (level != null) {
             GameplayTeamBootstrap.repositionRegisteredSidekicks(

@@ -5,7 +5,12 @@ import com.openggf.game.PlayerCharacter;
 import com.openggf.game.RespawnState;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
+import com.openggf.game.timing.HardwareWorkHandle;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
@@ -66,6 +71,9 @@ public final class Mhz1CutsceneButtonInstance extends AbstractObjectInstance
     private boolean cutsceneDoorLatched;
     private int timer;
     private int cutscenePressedFrames;
+    private S3kKosModuleQueue knuxPeerArtQueue;
+    private HardwareWorkHandle knuxPeerArtHandle;
+    private long knuxPeerArtOrdinal = -1;
 
     public Mhz1CutsceneButtonInstance(ObjectSpawn spawn) {
         super(spawn, "MHZ1CutsceneButton");
@@ -105,6 +113,7 @@ public final class Mhz1CutsceneButtonInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
+        retireKnucklesPeerArt();
         spawnDoorOnce();
         Mhz1CutsceneKnucklesInstance knuckles =
                 Mhz1CutsceneKnucklesInstance.activeInstance(services().objectManager());
@@ -186,11 +195,53 @@ public final class Mhz1CutsceneButtonInstance extends AbstractObjectInstance
             return;
         }
         peerSpawned = true;
+        queueKnucklesPeerArt();
         spawnFreeChild(() -> {
             spawnedKnuckles = new CutsceneKnucklesMhz1Instance(new ObjectSpawn(
                     0x0374, 0x066C, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x1C, 0, false, 0), this);
             return spawnedKnuckles;
         });
+    }
+
+    /**
+     * ROM {@code MHZ1CutsceneButton_LoadKnucklesPeer} submits
+     * {@code ArtKosM_MHZKnuxPeer} through {@code Queue_Kos_Module} immediately
+     * before {@code CreateChild6_Simple}, and does not wait for the module to
+     * finish (sonic3k.asm:130077-130085). The decompressed payload is unused
+     * here -- the peer sprite sheet is already registered as standalone art --
+     * but the submission itself is ROM-visible hardware work, so it must exist
+     * for the module and its direct child to complete on the ROM frames.
+     */
+    private void queueKnucklesPeerArt() {
+        try {
+            knuxPeerArtQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
+            knuxPeerArtHandle = knuxPeerArtQueue.queue(
+                    services().rom(),
+                    Sonic3kConstants.ART_KOSM_MHZ_KNUX_PEER_ADDR,
+                    Sonic3kConstants.ARTTILE_MHZ_KNUX_PEER);
+            knuxPeerArtOrdinal = knuxPeerArtHandle.ordinal();
+        } catch (Exception e) {
+            throw new IllegalStateException(
+                    "Unable to queue MHZ1 cutscene Knuckles peer KosM art", e);
+        }
+    }
+
+    private void retireKnucklesPeerArt() {
+        if (knuxPeerArtOrdinal >= 0 && knuxPeerArtQueue == null) {
+            knuxPeerArtHandle = services().hardwareTiming().pendingHandle(
+                            HardwareWorkKind.KOS_MODULE_QUEUE, knuxPeerArtOrdinal)
+                    .orElseThrow(() -> new IllegalStateException(
+                            "Missing restored MHZ1 Knuckles peer KosM job "
+                                    + knuxPeerArtOrdinal));
+            knuxPeerArtQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
+        }
+        if (knuxPeerArtQueue == null || !knuxPeerArtQueue.isReady(knuxPeerArtHandle)) {
+            return;
+        }
+        knuxPeerArtQueue.claim(knuxPeerArtHandle);
+        knuxPeerArtHandle = null;
+        knuxPeerArtQueue = null;
+        knuxPeerArtOrdinal = -1;
     }
 
     private boolean spawnedKnucklesInButtonRange() {

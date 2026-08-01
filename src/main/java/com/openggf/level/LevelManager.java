@@ -2819,7 +2819,16 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 && zoneFeatureProvider.shouldSuppressInitialTitleCard(
                         currentZone, currentAct);
         if (presentationSuppressed) {
-            completeSkippedInitialTitleCardPresentation();
+            // A suppressed presentation models a load where ROM never creates
+            // the title-card owner at all (S3K Level init skips the
+            // Obj_TitleCard install for a fresh AIZ1 Sonic/Tails game:
+            // docs/skdisasm/sonic3k.asm:7702-7709 branch past 7728-7735).
+            // With no owner object there is no Obj_TitleCardWait2 teardown and
+            // no LoadEnemyArt submission — the intro installs the title card
+            // itself much later (sonic3k.asm:114393-114396). Reach the PLC
+            // boundary without starting the skipped-presentation teardown
+            // model.
+            completeInitialTitleCardPresentation();
             return;
         }
         if (!graphicsManager.isHeadlessMode() || headlessWholeRunHandoff) {
@@ -2850,14 +2859,16 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     private void completeSkippedInitialTitleCardPresentation() {
         completeInitialTitleCardPresentation();
-        // A headless fresh load omits presentation, but it still begins at the
-        // post-title-card production boundary. Publish the same runtime-art
-        // admission that Obj_TitleCardWait2 opens via LoadEnemyArt; this only
-        // arms ROM-owned work, and the ordinary level frame submits it later.
-        // docs/skdisasm/sonic3k.asm:62287-62300, 64302-64309
+        // A headless fresh load omits presentation, but the title-card owner
+        // object is not deleted with it: it keeps running through
+        // Obj_TitleCardWait2 and only opens runtime-art admission via
+        // LoadEnemyArt once its own counter and element drain finish. Tell the
+        // provider the presentation was skipped and let it model that lifetime
+        // rather than retiring the art on the first level frame.
+        // docs/skdisasm/sonic3k.asm:62249-62261, 62295-62301, 64302-64309
         var objectArtProvider = activeGameModule().getObjectArtProvider();
         if (objectArtProvider != null) {
-            objectArtProvider.onTitleCardArtRetired();
+            objectArtProvider.onTitleCardPresentationSkipped();
         }
         // Omitting the presentation does not end the title card's object
         // lifetime. Sonic 2's pieces survive the locked loop and run

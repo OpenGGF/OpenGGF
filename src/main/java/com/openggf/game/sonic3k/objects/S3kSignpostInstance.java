@@ -104,7 +104,12 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
     private static final int POST_LAND_TIMER = 0x40;
     private static final int BUMP_COOLDOWN = 0x20;
     private static final int RESULTS_CARRIED_RETIRE_DISPATCHES = 3;
-    private static final int RESULTS_WAITED_LANDING_RETIRE_DISPATCHES = 2;
+    // ROM Obj_LevelResultsWait2 observes $30(a0) reaching zero one pass after
+    // the last child SST deletes (children allocate after the parent,
+    // docs/skdisasm/sonic3k.asm:62600, 62691-62693); the player-visible control
+    // release lands on the following dispatch. onExitReady's next-dispatch
+    // scheduling supplies the first pass, so one retained dispatch remains.
+    private static final int RESULTS_WAITED_LANDING_RETIRE_DISPATCHES = 1;
 
     // Bump detection box relative to signpost center
     private static final int BUMP_LEFT = -0x20;

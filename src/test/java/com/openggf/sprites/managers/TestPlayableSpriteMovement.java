@@ -1578,8 +1578,27 @@ public class TestPlayableSpriteMovement {
                 sidekick.setCpuControlled(true);
                 GameServices.sprites().addSprite(sidekick, "tails");
                 PlayableSpriteMovement sidekickMovement = new PlayableSpriteMovement(sidekick);
-                assertNull(publisherMethod.invoke(sidekickMovement),
-                                "CPU Tails retains its separate player-tail cadence");
+                // ROM Tails_Control copies Primary_Angle/Secondary_Angle into the
+                // sidekick's own next_tilt/tilt unconditionally (sonic3k.asm:26243-26244),
+                // exactly as Sonic_Control does for the leader (25718-25719). So CPU Tails
+                // owns a SEPARATE publisher writing its own latched pair -- the tail is not
+                // absent, it is independent, and running it must not rescan or disturb the
+                // leader's bytes.
+                @SuppressWarnings("unchecked")
+                Consumer<SensorResult[]> sidekickPublisher =
+                                (Consumer<SensorResult[]>) publisherMethod.invoke(sidekickMovement);
+                assertNotNull(sidekickPublisher,
+                                "CPU Tails owns its own player-tail next_tilt/tilt copy");
+
+                sidekickPublisher.accept(new SensorResult[]{
+                        new SensorResult((byte) 0x20, (byte) -3, 0, Direction.DOWN),
+                        new SensorResult((byte) 0x40, (byte) 11, 0, Direction.DOWN)});
+                assertEquals(0x40, nextTilt.getInt(sidekickMovement));
+                assertEquals(0x20, tilt.getInt(sidekickMovement));
+
+                // The leader's latched bytes are untouched: separate cadence, no rescan.
+                assertEquals(3, nextTilt.getInt(manager));
+                assertEquals(0xFF, tilt.getInt(manager));
         }
 
         @Test

@@ -54428,6 +54428,3036 @@ TestS3kHardwareTimingReplay" test
   per-class totals and S3K runtime frontiers are recorded in
   `docs/architecture/validation/trace/2026-07-30-native-trace-frontiers.md`.
 
+## 2026-07-31 — MHZ complete-run frontier MOVED: enemy KosM art (`PLCKosM_MHZ`) implemented
+
+- Context: branch `develop` at `a50b3f497`, primary working tree, S3K ROM
+  `Sonic and Knuckles & Sonic 3 (W) [!].gen`.
+- Cause: `Sonic3kObjectArtProvider.scheduleEnemyKosArt` had no
+  `ZONE_MHZ` case, so MHZ fell through to `default -> List.of()` and the
+  engine never submitted the `LoadEnemyArt` module-queue work the ROM
+  performs (`sonic3k.asm:64331-64332,64404-64415`). Act 1 queues Madmole,
+  Mushmeanie, Dragonfly; act 2 leads with the Cluckoid arrow at
+  `ArtTile_Cluckoid+$22` before the same three.
+- Fix: added the MHZ act-split entry list plus the four `ArtTile_*`
+  destination constants (`sonic3k.constants.asm:1270,1276-1278`). All four
+  `ArtKosM_*` source offsets re-verified with
+  `RomOffsetFinder --game s3k find` (`0x165F02`, `0x166234`, `0x166386`,
+  `0x1664C8`), matching the existing constants.
+- Frontier movement for `TestS3kMhzCompleteRunTraceReplay.replayMatchesTrace`:
+
+| | Before | After |
+|---|---|---|
+| First error | `KOS_MODULE_QUEUE#221` sha256:`1d7237fa…`, engine pending `<none>` | `KOS_DECOMPRESSION_QUEUE#333` sha256:`889451af…`, engine pending `<none>` |
+| Errors | 1 | 1 |
+
+  The module-queue admission now matches; the remaining red is a downstream
+  direct-Kosinski submission gap, the same StarPost / enemy-art / reload
+  lifecycle class already noted in the 2026-07-29 publication entry. This
+  also supersedes the older comparison frontier recorded for MHZ
+  (f2920 `tails_status_byte`, 2,452 errors), which the run no longer
+  reaches.
+- Command and result:
+
+```bash
+mvn -Dmse=off '-Dtest=*Mhz*,*MHZ*,TestSonic3kPlcArtRegistry,TestPatternSpriteRendererCorruptionGuard' \
+  -DfailIfNoTests=false '-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen' test
+```
+
+  531 tests run, 0 failures, 1 error (the trace replay above), 0 skips. The
+  mandatory art guards `TestSonic3kPlcArtRegistry` (66) and
+  `TestPatternSpriteRendererCorruptionGuard` (2) both pass.
+- Note: LBZ has the same missing `scheduleEnemyKosArt` case and is expected
+  to show an equivalent module-queue admission error.
+
+### 2026-07-31 — MHZ complete-run frontier MOVED again: raw frame 301 -> 1670
+
+Two further fixes on the same branch/tree/ROM, taken in causal order.
+
+**Fix 1 — the carry-intro handoff ran one CPU tick early.**
+
+`Sonic3kLevelEventManager.armCarryIntroHandoffAfterTitleCard` pre-armed
+`SidekickCpuController.State.CARRY_INIT` (`Tails_CPU_routine = $0C`) during
+replay bootstrap, on the stated assumption that a complete-run handoff begins
+after ROM's first Tails CPU init tick. The fixtures say the opposite:
+
+- MHZ complete-run row 0 records `cpu_routine 0x0C` with Sonic still
+  un-grabbed at the raw start location `(0xD8, 0x500)` and `anim 0x05`.
+- CNZ complete-run row 0 records the same shape at `(0x18, 0x600)`.
+
+Row 0 *is* the init tick. ROM `Tails_CPU_Control` dispatches routine 0 to
+`loc_13A32` / `loc_13A8E` → `loc_13A5A`, which places Tails and writes
+`Tails_CPU_routine = $0C` before `rts` (sonic3k.asm:26400-26436). Routine
+`$0C`'s body — `loc_13FC2`: `x_vel=$100`, `sub_1459E` pickup (`y_pos + $1C`,
+`anim $22`), then fall-through to `$0E` — runs on the *next* frame. Pre-arming
+ran that body a frame early, which is why the carried player's x was one pixel
+off for the whole carry. The method now only binds the carry trigger; the
+placement, airborne status and zeroed velocities belong to the controller's own
+INIT handler, which already models them.
+
+Effect on `TestS3kMhzCompleteRunTraceReplay` over its first 301 rows:
+
+| | Before | After |
+|---|---:|---:|
+| Divergence groups | 229 | 60 |
+| `tails_cpu_routine` groups | 1 (`f0`, `0x0C`/`0x0E`) | 0 |
+| `x` groups | 4, incl. `f104-218` 1px lag | 0 |
+| `y` first group | `f0`, `0x0500`/`0x051C` | `f62` (1px slope) |
+
+With the player's x matching ROM the `x=0x389` clamp lands on ROM's row 218,
+so the whole MHZ1 cutscene chain (routine 4/6/8, the 32-frame wait, the 50
+scroll steps) now runs on the ROM rows.
+
+**Fix 2 — the MHZ1 cutscene peer art submission.**
+
+With the cadence corrected, `MHZ1CutsceneButton_LoadKnucklesPeer`'s
+`Queue_Kos_Module` of `ArtKosM_MHZKnuxPeer` to `ArtTile_MHZKnuxPeer`
+(sonic3k.asm:130077-130081; `sonic3k.constants.asm:1272`) is now landed in
+`Mhz1CutsceneButtonInstance`, submitted immediately before the child spawn and
+without waiting for readiness, matching the ROM. The six button tests that
+reach that path moved into a `@Nested @RequiresRom(SONIC_3K)`
+`KnucklesPeerArtSubmission` class, since a real KosM archive is required; the
+other 76 tests in the class stay ROM-free.
+
+**Frontier movement.**
+
+Baseline measured by stashing all three fixes and re-running on the clean tree,
+not quoted from an earlier entry:
+
+| | Clean `develop` | After enemy art | After all three |
+|---|---|---|---|
+| First error | `KOS_DECOMPRESSION_QUEUE#330` | `KOS_DECOMPRESSION_QUEUE#333` | `KOS_DECOMPRESSION_QUEUE#334` |
+| Raw frame | 36 | 301 | 1670 |
+| Report groups / rows | 43 / 36 | 229 / 301 | 369 / 1670 |
+
+(The clean-tree first error is `#330`, the direct child of the first
+`PLCKosM_MHZ1` module, one ordinal ahead of the `KOS_MODULE_QUEUE#221` parent
+quoted in the enemy-art entry above; both describe the same missing
+`LoadEnemyArt` submission.)
+
+**Regression sweep.**
+
+`-Dtest=com.openggf.tests.trace.s3k.*TraceReplay` run on the clean tree and on
+the fixed tree, one fork, 4 GiB heap. All 14 S3K replay classes report
+**identical** run/failure/error counts on both sides:
+
+`AizCompleteRun 1/0/1`, `AizTrace 16/4/1`, `CnzCompleteRun 1/0/1`,
+`CnzTrace 27/0/27`, `Gumball 1/0/1`, `HczCompleteRun 2/0/2`,
+`IczCompleteRun 1/0/1`, `LbzCompleteRun 1/0/1`, `MgzCompleteRun 1/0/1`,
+`MgzTrace 1/0/1`, `MhzCompleteRun 1/0/1`, `Pachinko 1/0/1`, `Slots 1/0/1`,
+`SpecialStage 2/0/0`. MHZ's count is unchanged because the run still ends on
+one admission error; only its position moved (raw 36 -> 1670).
+
+A wider `-Dtest=*TraceReplay` sweep over all three games reported 108 tests,
+46 failures, 40 errors. That is **pre-existing `develop` state**, not branch
+damage: the S1/S2 reds are the `dynamic_art.*` frontiers recorded in the
+2026-07-30 entries, the S3K complete-run errors are the hardware-timing
+admissions recorded on 2026-07-29, and none of the three fixes touch a file
+reachable from S1 or S2. The per-class S3K comparison above is the controlled
+evidence; the fleet total is not.
+
+Note: the local tree was 4 commits behind `origin/develop` when these numbers
+were taken.
+
+`#334` is direct source `0xdb408` (aux frames 1668-1669), which recurs at
+frames 7218 and 7982 — a repeated common-art submission, not another one-shot
+cutscene load.
+
+- Local test state: 591 tests over the MHZ suite, the PLC/sprite/rewind guards
+  and the four S3K must-keep-green classes — 0 failures, 1 error (the trace
+  replay above), 0 skips.
+- Still open, unrelated to this path: the residual `f0 y_speed 0x0000/0x0038`
+  bootstrap value, and 1-unit slope divergences (`y` ±1, `angle` ±2) on the
+  MHZ1 descent from frame ~62.
+
+### 2026-07-31 — MHZ complete-run frontier MOVED: raw frame 1670 -> 7218
+
+- Context: branch `bugfix/ai-s3k-mhz-queue-frontier` rebased onto
+  `origin/develop` at `b18aab55e`, S3K ROM as above.
+- `#334` identified from the fixture rather than guessed: direct
+  `active_source 0xdb408` at aux frames 1668-1669 implies KosM parent
+  `0xDB406`, which `RomOffsetFinder` confirms is **`ArtKosM_BadnikExplosion`**
+  (2176 decompressed bytes).
+- Owner is `SSEntryRing_Display` (sonic3k.asm:128448-128490). The special-stage
+  entry ring draws over `ArtTile_Explosion` (`$05A0`,
+  sonic3k.constants.asm:1404) through its own DPLC, so `loc_6196A` restores two
+  palette longs and re-queues the archive before `Go_Delete_SpriteSlotted`.
+  That tail is reached from the flash-driven `btst #5,$38` branch and from the
+  off-screen branch `loc_61928`, which tests the coarse horizontal band
+  (`(x & $FF80) - Camera_X_pos_coarse_back > $280`) and the vertical band
+  (`y - Camera_Y_pos + $80 > $200`), both unsigned.
+- The engine had neither: `Sonic3kSSEntryRingObjectInstance` carried a comment
+  saying restoration was unnecessary because the ring renders from a standalone
+  `Pattern[]`. True for rendering, but the ROM still performs the decompression
+  and the timing ledger compares it. It also had no off-screen retire branch at
+  all — it stopped updating outside the render box and left the object manager
+  to cull it.
+- Fix: ported `loc_61928`/`loc_6196A`. The submission goes through
+  `Sonic3kObjectArtProvider.queueBadnikExplosionArt()`, alongside the existing
+  StarPost bonus-art path and for the same documented reason — the ring is
+  deleted the same frame and never polls the job, so the session-owned provider
+  retains and claims the handle while the shared FIFO stays observable. An
+  earlier attempt that held the handle on the ring left a completed-but-
+  unclaimed module at the head of the queue and blocked the next submission.
+- Frontier: `KOS_DECOMPRESSION_QUEUE#334` at raw 1670 ->
+  `KOS_DECOMPRESSION_QUEUE#335` at raw **7218**. Report grows 369 groups / 1670
+  rows -> 1926 groups / 7218 rows.
+- Regression check: `com.openggf.tests.trace.s3k.*TraceReplay` run against the
+  stashed clean tree and after the fix — all 14 classes report identical
+  run/failure/error counts, timings aside.
+
+**Next cause, already decoded.** `#335` is the same archive from the next ring.
+MHZ act 1 places five SS entry rings:
+
+| Layout idx | x | y | subtype |
+|---:|---|---|---|
+| 5 | `0x01C0` | `0x0680` | `0x81` |
+| 31 | `0x04C0` | `0x0A00` | `0x82` |
+| 329 | `0x2240` | `0x0440` | `0x03` |
+| 409 | `0x2D40` | `0x06C0` | `0x04` |
+| 528 | `0x38C0` | `0x0740` | `0x05` |
+
+Instrumented construction (reverted) shows the engine only ever constructs the
+`0x01C0` ring; the other four are never created, even though the player passes
+`0x2240` at frame 7218 (`x=0x23AD`) and `0x2D40` at 7982 (`x=0x2EA8`), and the
+segment stays in act 1 throughout (one `zone_act_state` event, frame 0). So the
+next frontier is an **object-placement gap, not a ring-behaviour gap** — those
+layout entries never reach the spawn cursor. Investigate the S3K placement
+cursor before touching the ring again.
+
+### 2026-07-31 — MHZ: queue frontier overtakes physics; real blocker decoded
+
+After the SS-entry-ring fix the MHZ replay reaches raw frame 7218, but the
+`queue.*`/admission frontier is now **ahead of a much earlier physics
+divergence**, so "how far the replay gets" has stopped being the useful
+measure. Full report state at that point: 1926 groups over 7218 rows.
+
+**The replay is no longer following the ROM's route.** `camera_x`/`x` diverge
+progressively — by frame 3381 ROM `x=0x10CC` vs engine `0x0D21`, and by frame
+6877 ROM `x=0x2023` vs engine `0x12F9`, with engine `y` going negative. That
+also explains the object-placement observation in the previous entry: the
+engine's placement cursor stops near `x=0x1750` simply because the engine's
+camera never gets further, not because the cursor stalls. The four unspawned
+SS entry rings are a *symptom*, not a cause — retract that reading.
+
+**Shared root, and it is not MHZ-specific.** MHZ and CNZ complete-run report
+identical leading signatures:
+
+| Frame | Field | ROM | Engine |
+|---|---|---|---|
+| 0 | `y_speed` | `0x0000` | `0x0038` |
+| 0 | `player_animation_id` | `0x0005` | `0x0000` |
+| 0 | `player_mapping_frame` | `0x00BA` | `0x0007` |
+| 1-1260 (MHZ) / 1-1074 (CNZ) | `y_sub` | `0x0000` | `0x3800` |
+
+The engine applies one frame of gravity (`+0x38`) to the player on segment
+frame 0. ROM does not, so the engine carries a permanent `0x3800` sub-pixel
+offset for the next ~1100-1260 frames; that is what produces the 1px `y` and
+2-unit `angle` drift from frame 53 (CNZ) / 62 (MHZ) onward, which then
+compounds into the route divergence above.
+
+**Why ROM does not move the player on that frame.** The `interact_state` aux
+records Sonic's `object_control` as `0x00` at frame 0 and `0x03` from frame 1,
+so the suppression is *not* object control. Tails moves on the same frame
+(`y_speed 0x0038` at row 0), so it is not a global freeze. The remaining
+ROM-consistent explanation is that frame 0 is `Obj_Sonic`'s routine-0 frame:
+`Sonic_Init` sets routine 2 and returns without moving, and the recorder's
+end-of-frame sample already shows `routine 0x02`. That is the same
+"ROM init consumes the object's first execution frame" pattern already fixed
+for the Tails CPU tick in this branch — here applied to the player object.
+
+HCZ/MGZ/ICZ/LBZ segments show `y_speed 0x0038` at row 0, i.e. their player
+*does* move on frame 0, because those segments continue seamlessly rather than
+starting at a level load. Only the two carry-intro zones start fresh.
+
+**Blocker.** Closing this needs a one-shot "consume the ROM init frame" for the
+player at complete-run segment handoffs, gated on a *segment begins at a level
+load* predicate that does not exist yet (the existing hooks key off carry-intro
+or seamless-handoff, neither of which is the right owner), plus validation
+across all seven S3K complete-run segments. Beyond it sits the long tail of
+1888 non-queue groups. This is past a bounded fix and is where the session
+stops.
+
+**Also still open:** `queue.s3k_kos_direct.busy` false/true over frames 0-33.
+MHZ now matches ICZ/MGZ/HCZ exactly here — all four submit enemy art at frame 0
+while ROM submits around frame 34 — so it is shared pre-existing behaviour that
+MHZ has simply joined, not a regression from the enemy-art fix. AIZ is clean
+because its fixture carries a pre-level prefix.
+
+### 2026-07-31 — MHZ frame-0 root cause found: the level setup pass is discarded after it is published
+
+Follow-up to the entry above, which left the frame-0 gravity as "probably
+`Sonic_Init`". That is now proven, and the mechanism is located exactly.
+
+**ROM.** `Obj_Sonic` dispatches on `routine(a0)` through `Sonic_Index`;
+routine 0 is `Sonic_Init`, which does `addq.b #2,routine(a0)`, sets radii,
+mappings, priority, `Max_speed`/`Acceleration`/`Deceleration`, seeds the
+position-record array, and `rts` — **no movement and no gravity**
+(sonic3k.asm:21852-21943). The level's one `Load_Sprites`/`Process_Sprites`
+walk at `Level`'s `loc_6468` (sonic3k.asm:7849-7860) is the frame that runs it,
+and for MHZ/CNZ complete-run that walk is recorded row 0.
+
+**Engine.** The equivalent is
+`SpriteManager.initializeInitialAssemblyPlayableSlot`, reached from
+`InitialProcessSpritesCoordinator.execute` →
+`processInitialPlayableSlots`. That dispatch is gated by a one-shot token:
+`LevelInitProfile.initialProcessSpritesLifecycle()` returns
+`LOAD_THEN_PROCESS_ONCE` for S3K, `loadLevel` publishes it, and
+`LevelFrameStep.admit`/`execute` consume it by returning `SETUP_ONLY` — a frame
+that runs the setup walk and no physics. That is a faithful model of the ROM
+frame.
+
+**The defect.** In trace replay the token is destroyed before any frame can
+consume it. Instrumented order (reverted):
+
+```
+5  discard[lifecycle]  LevelManager.loadLevel:334          (start of load)
+6  PUBLISH=LOAD_THEN_PROCESS_ONCE                          (end of load)
+7  discard[lifecycle]  LevelManager.resetGameplayState:3487
+```
+
+`resetGameplayState` is called from `GameplayModeContext.tearDownManagers`, and
+the replay harness tears the managers down *after* the load. Every
+`consumePendingInitialProcessSpritesPass()` call in the run — bootstrap and
+both `LevelFrameStep` sites — was logged returning `false`, confirming the walk
+never executes. So `Sonic_Init` never runs, the first driven frame executes
+`Sonic_Control`, and the engine applies a frame of gravity the ROM does not:
+`y_speed 0x0038` at frame 0 and a permanent `y_sub 0x3800` offset for the next
+~1100-1260 frames, which produces the 1px `y` / 2-unit `angle` drift and
+compounds into the route divergence.
+
+**Attempts that did not work** (all reverted, recorded so they are not retried):
+
+1. Skipping the S3K-complete-run `discardPendingInitialProcessSpritesForStateRestoration`
+   at `TraceReplaySessionBootstrap:258` — no effect; the token was already gone.
+2. Also skipping the bootstrap's own `consumePendingInitialProcessSpritesPass`
+   at `:407` — no effect, same reason.
+3. Re-arming via `restorePendingInitialProcessSpritesLifecycleForRewind` at the
+   end of `applyBootstrap` — no effect, so the teardown discard happens after
+   `applyBootstrap` too.
+
+A gate predicate `segmentBeginsAtLevelSetupPass` was written for these attempts
+and verified to fire correctly (`zone=7 act=0 leader=d8,500 intro=true`); it
+derives from ROM state (`loc_13A32`/`loc_13A8E` only run on the level's first
+`Tails_CPU_Control` dispatch) rather than trace data, so it is reusable.
+
+**Blocker.** The fix is a harness lifecycle ordering correction — tear the
+managers down *before* the load, or stop `resetGameplayState` from discarding a
+token published by the current level — in code shared by every trace in all
+three games. S1/S2 are currently red under separate work, so half the
+validation surface is unavailable, and landing a shared-lifecycle reorder that
+cannot be regression-checked across the fleet is not defensible. Handing this
+off with the mechanism fully pinned rather than guessing at the reorder.
+
+### 2026-07-31 — MHZ/CNZ frame-0 FIXED: the setup pass now owns its recorded row
+
+Lands the fix for the blocker recorded above, accepting the AIZ regression it
+exposes (explicitly authorised).
+
+**Chain, all four links proven by instrumentation (reverted):**
+
+1. `loadLevel` publishes `LOAD_THEN_PROCESS_ONCE`.
+2. `TraceReplaySessionBootstrap.applyBootstrap:258` discards it for S3K
+   complete-run segments (`pending=true` before the call).
+3. With it gone, `LevelFrameStep` never returns `SETUP_ONLY`, so the engine's
+   `Sonic_Init` equivalent (`initializeInitialAssemblyPlayableSlot`) never runs.
+4. Even with the token kept, `HeadlessTestRunner.stepFrameFromRecording` ran a
+   `do { } while (result == SETUP_ONLY)` loop that stepped past the setup frame,
+   so its recorded row was compared against the following gameplay frame.
+
+**Fix.** `segmentBeginsAtLevelSetupPass` (derived from ROM state: `loc_13A32`/
+`loc_13A8E` only run on the level's first `Tails_CPU_Control` dispatch) keeps
+the authority pending for segments whose row 0 is that pass. The setup frame
+now consumes a BK2 row like any other frame, and the skip loop is gone.
+
+On the setup frame ROM re-inits Player_1 only — `Sonic_Init` does
+`routine += 2` then `rts`, no movement and no gravity
+(sonic3k.asm:21902-21943) — while Player_2's routine persists across the load,
+so the sidekick keeps running `Tails_Control`. That is why the recorded row
+shows Tails already placed by `loc_13A8E` at CPU routine `$0C` with a frame of
+gravity applied. The initial-assembly walk now models exactly that split.
+
+**MHZ result:**
+
+| | Before | After |
+|---|---:|---:|
+| Non-queue divergence groups | 1888 | **1039** |
+| `x` groups | 143 | **5** |
+| `camera_x` groups | 130 | **4** |
+| `y` groups | 174 | **5** |
+| First physics divergence | frame 0 (`y_speed`) | frame 31 (`x_speed`) |
+
+Frame 0 now carries only `player_animation_id` / `player_mapping_frame`
+(`0x05`/`0xBA` vs `0x00`); all frame-0 physics matches, and the permanent
+`y_sub 0x3800` offset is gone.
+
+**Accepted regression.** `TestS3kAizTraceReplay` goes 4 -> 13 failures. All nine
+are frame-alignment and Tails-CPU-cadence assertions (hollow-tree capture frame,
+giant-ride-vine handoff, reload catch-up gates, intro marker transition). Cause:
+the sidekick now runs its control path on the initial pass unconditionally,
+whereas ROM runs it only when Player_2's routine survived the load. The engine
+does not yet model whether a load reset Player_2, so AIZ — which re-inits — gets
+a control pass it should not. That predicate is the next piece of work. Every
+other S3K replay class is unchanged; the four S3K must-keep-green classes and
+the MHZ/rewind suites pass (135 tests, 0 failures).
+
+**Still open on MHZ:** the late route divergence (`x` at frame 3381 ROM
+`0x10CC` vs engine `0x0D28`) survives untouched, so it has a separate cause
+from the frame-0 offset.
+
+### 2026-07-31 — setup-pass fix refined: entry state seeded; MGZ regression open
+
+Refines the previous entry after measuring the whole S3K complete-run fleet.
+
+**Predicate simplified and generalised.** The `routine_change` aux proves row 0
+is the level setup pass for *every* S3K complete-run segment, not just the
+carry-intro ones — AIZ, HCZ, MGZ, CNZ, ICZ, LBZ and MHZ all record
+`routine 0x00 -> 0x02` for `Player_1` on frame 0, which is `Sonic_Init`.
+`segmentBeginsAtLevelSetupPass` is therefore just
+`isS3kCompleteRunSegment(trace)`; the carry-intro coupling is gone.
+
+**Entry state seeded.** `Sonic_Init` touches neither position, velocity, angle,
+airborne status nor sub-pixel, so row 0 records the state the level was
+*entered* with. HCZ and MGZ record `y_vel` already `0x38` at the routine change,
+ICZ `0x280`; HCZ also records `x_sub 0xE800`. The bootstrap now seeds position,
+velocity, ground speed, angle, air and sub-pixel from row 0 — one-shot
+pre-trace bootstrap in the same class as the start position and RNG seed, not
+per-frame hydration. Nothing reads the trace again after it.
+
+Seeding progression on HCZ non-queue groups: 1162 (nothing seeded) -> 879
+(velocity) -> 883 (+position/angle/air) -> **376** (+sub-pixel). Sub-pixel was
+by far the largest single contributor.
+
+Animation-id seeding was tried and reverted: no effect on MGZ or HCZ, and it
+cost LBZ 8 -> 10 and ICZ 106 -> 107.
+
+**Fleet position against the pre-fix baseline (non-queue groups):**
+
+| Segment | Before | After | |
+|---|---:|---:|---|
+| MHZ | 1888 | **1039** | improved |
+| ICZ | 95 | **92** | improved |
+| AIZ complete | 0 | 0 | unchanged |
+| LBZ | 0 | 0 | unchanged |
+| CNZ | ~1640 | 1748 | slightly worse |
+| HCZ | ~30 | 376 | worse |
+| MGZ | ~17 | 3966 | **much worse** |
+
+`TestS3kAizTraceReplay` (standard, not complete-run) also goes 4 -> 13 failures.
+No replay class changed pass/fail status other than that one.
+
+**Open, and the named next target: MGZ.** Its 3966 groups are almost entirely
+`player_animation_id` / `player_mapping_frame`, starting with
+`anim 0x001B` vs `0x0000` at frame 0. ROM sets that at spawn —
+`SpawnLevelMainSprites` writes `move.b #$1B,anim(a1)` for the zones that start
+airborne (`loc_6834` for `$100`, `loc_68A6` for `$200`/`$900`/`$1600`,
+sonic3k.asm:8155-8190) — and `Sonic_Init` leaves it alone, so the engine needs
+to reproduce that spawn write rather than seed it from the row. Doing it
+properly in `SpawnLevelMainSprites`' engine equivalent is the next step and
+should also recover most of HCZ.
+
+The AIZ-standard regression has its own cause, recorded in the previous entry:
+the sidekick takes a control pass on initial assembly unconditionally, whereas
+ROM only does so when `Player_2`'s routine survived the load.
+
+### 2026-07-31 — entry animation seeded; MHZ first divergence decoded to the carry Right pulse
+
+- `anim`/`prev_anim` and `mapping_frame` join the seeded entry state. ROM writes
+  them as a word at spawn for the zones that need one
+  (`SpawnLevelMainSprites`, sonic3k.asm:8155-8190) and `Sonic_Init` never
+  touches them, so row 0 carries whatever the previous segment left. Seeding via
+  `setAnimationId` + `publishPreviousAnimationId` + `setMappingFrame` clears the
+  frame-0 `player_animation_id`/`player_mapping_frame` groups on every segment
+  (each -2 groups, no collateral). An earlier attempt using
+  `setForcedAnimationId` was wrong — it pins the animation for the whole run and
+  cost LBZ 8 -> 10 and ICZ 106 -> 107.
+- Fleet after this: AIZ 0, LBZ 0, ICZ 92, HCZ 374, MHZ **1037**, CNZ 1746,
+  MGZ 3964 (non-queue groups).
+
+**MHZ's first divergence is now frame 31, and decoded.** ROM's carry body
+`loc_13FFA` clears `Ctrl_2_logical` then, when
+`(Level_frame_counter+1).b & $1F == 0`, holds Right for that frame
+(sonic3k.asm:26918). The fixture shows the pulse at rows 31 and 63
+(`tails_cpu_ctrl2_held 0x0008`); the engine holds nothing, so Tails never gets
+the acceleration and both `tails_x_speed` and the carried `x_speed` stay at
+`0x0100` where ROM reaches `0x0118`. `tails_x_sub` then diverges for 920 rows.
+
+The engine *does* implement this (`carryTrigger.carryInputInjectMask()`, "CNZ
+pulses Right every 32 frames"), so the gate is firing on the wrong row rather
+than being absent. Two counter-alignment theories were tested and **both had
+zero effect**, so neither is the cause — recorded so they are not retried:
+
+1. Advancing `RecordingFrameDriver.frameCounter` on the SETUP_ONLY frame.
+2. Adding a setup-frame increment to the sprite counter in
+   `alignFrameCountersForReplayStart`.
+
+Next step is to instrument `romVisibleLevelFrameCounter()` against the trace's
+`gameplay_frame_counter` column across rows 28-34 and find where the two
+diverge, rather than guessing at another counter seed.
+
+**MGZ regression, now characterised.** Its 3964 groups are dominated by
+`player_mapping_frame` (716) alternating `0x8C`/`0x8D` every 10 rows from frame
+10 — an animation-tick phase offset, not a value error. Seeding
+`mapping_frame` fixes row 0 but not the phase, because the carried
+`anim_frame_timer` is not in the fixture. That makes MGZ a recorder-coverage
+gap rather than an engine gap, and it is the largest single item outstanding
+from this work.
+
+### 2026-07-31 — setup frame now advances the sprite counter: fleet-wide recovery
+
+The previous entry named "instrument `romVisibleLevelFrameCounter()` against the
+recorded rows" as the next step. Done, and it found the off-by-one.
+
+Logging the carry body's gate showed the 32-frame Right pulse *does* fire — at
+`romVis=32`, on the engine's 32nd carry frame. But the setup pass owns recorded
+row 0 while running no sprite frame, so every later row sat one behind: at row
+31, where ROM's `(Level_frame_counter+1).b` is `$20` and `loc_13FFA`
+(sonic3k.asm:26918) holds Right, the engine's visible counter was `31` and the
+gate stayed shut. Tails never took the acceleration, so `tails_x_speed` and the
+carried `x_speed` held `0x0100` where ROM reached `0x0118`, and `tails_x_sub`
+diverged for 920 rows.
+
+Fix: `RecordingFrameDriver` advances the sprite frame counter on the
+`SETUP_ONLY` frame, matching ROM's `LevelLoop`, which increments
+`Level_frame_counter` before `Process_Sprites` (sonic3k.asm:7888-7894) — and
+consistent with row 0 already reading `gameplay_frame_counter 1`.
+
+This is the same idea as the two attempts recorded as having no effect in the
+previous entry; the difference is *which* counter. Those touched
+`RecordingFrameDriver.frameCounter` and the `alignFrameCountersForReplayStart`
+seed; the gate reads the **SpriteManager** counter, which neither advanced.
+
+**Non-queue groups, against the pre-work baseline:**
+
+| Segment | Baseline | Previous entry | Now |
+|---|---:|---:|---:|
+| MHZ | 1888 | 1037 | **602** |
+| MGZ | ~17 | 3964 | **128** |
+| ICZ | 95 | 92 | **81** |
+| CNZ | ~1640 | 1746 | **1665** |
+| HCZ | ~30 | 374 | 507 |
+| AIZ complete / LBZ | 0 | 0 | 0 |
+
+MGZ's animation-phase regression is essentially resolved — it was the same
+counter offset, not the missing `anim_frame_timer` I had assumed, so retract
+that reading. ICZ is now better than it has ever been. HCZ is the one segment
+that moved the wrong way and is the next target.
+
+MHZ's first divergence moves frame 31 -> **175** (`tails_y` off by one), then
+`tails_animation_id 0x0000` vs `0x0008` across rows 218-849.
+
+`TestS3kAizTraceReplay` improves 13 -> 11 failures but is still above its
+baseline of 4; its cause is unchanged (the sidekick's unconditional control
+pass on initial assembly).
+
+### 2026-07-31 — MHZ down to 601 groups; remaining bulk is one missed Madmole hit
+
+- MHZ1 cutscene Player_2 duck-pose comparison fixed (inverted `bhi` port,
+  `loc_62DDC`, sonic3k.asm:130020-130030). Removes the 632-row
+  `tails_animation_id` group; MHZ 602 -> 601 non-queue groups.
+
+**The remaining bulk is a single event.** Ranking the surviving groups by frames
+covered rather than by first occurrence shows twelve fields each spanning
+~4,000 of the 7,218 rows — `tails_y` 4231, `tails_x` 4158, `x`/`camera_x` 4065,
+`y` 4064, `player_mapping_frame` 4021 and so on. They are all one route
+divergence, and it starts at **frame 3152**:
+
+| Row | ROM | Engine |
+|---|---|---|
+| 3151 | `x=0x103E y=0x0726 ys=0x0450` falling | matches |
+| 3152 | `ys` flips to `-0x0200`, `anim 0x1A`, x moves left | keeps falling |
+| 3165 | `status 0x09`, lands on slot `0x0C`, `ys=0` | airborne, rolling |
+
+`anim 0x1A` is HURT (`Player_Hurt`, sonic3k.asm:21109) and the ring count holds
+at `0x2C` across the event, which is the shielded-hit signature: knockback and
+hurt pose without scattering. The `object_near` aux at row 3151 puts three
+`Obj_Madmole` parts around the player — slots 17/19/20 at code pointers
+`0x0008D586`, `0x0008D602`, `0x0008D6E6`, all inside `Obj_Madmole`
+(sonic3k.asm:193075, dispatcher at `loc_8D6E6` 193218) — with slot 20 at
+`(0x1046, 0x0724)` against the player's `(0x103E, 0x072A)`.
+
+Both sides agree on position right up to row 3151 (the first `x` group starts at
+3153), so this is not drift: the ROM's player is struck by the Madmole and the
+engine's is not. `MadmoleBadnikInstance` exists, so the gap is in its touch
+response or hitbox rather than a missing object.
+
+That single miss is worth roughly 4,000 rows across a dozen fields — by far the
+largest remaining item, and the next target.
+
+**MHZ progress this session:** 1888 -> 601 non-queue groups; queue/admission
+frontier raw frame 36 -> 7218.
+
+### 2026-07-31 — MHZ route divergence traced to the pollen spawner never executing
+
+Chased the frame-3152 Madmole miss from the previous entry to its actual root.
+Each link is instrumented evidence, all instrumentation reverted.
+
+1. **The hit is real and the hitbox is right.** At row 3151 both sides put the
+   player at `(0x103E, ~0x0726)` and the Madmole side child on top of it —
+   engine child `(0x1047, 0x72a)` vs ROM `(0x1046, 0x0724)`. Collision flags
+   match (`0xD8`), and the engine's response is a faithful port of
+   `sub_8D8E6`: `x_vel*2`, `y_vel=-0x200`, `anim $1A`, spindash cleared
+   (sonic3k.asm:193430-193450).
+
+2. **The child is in the wrong phase.** ROM's slot-20 routine is `0x02`, the
+   straight phase whose `y` stays flat at `0x724`; the engine's child is
+   arcing, its `y` falling `726 -> 728 -> 72a -> 72c -> 72f`. The engine's
+   `onTouchResponse` records a capture candidate while arcing instead of
+   launching, so the hit is silently swallowed.
+
+3. **The phase comes from a coin flip.** `loc_8D89E` calls `Random_Number`
+   and takes the arc branch on `tst.b d0` being negative — bit 7 of the low
+   byte (sonic3k.asm:193570-193580). The engine reads the same bit. Same test,
+   different value: the RNG streams have parted.
+
+4. **The RNG streams diverge at frame 74.** Comparing the engine's seed against
+   the fixture's per-frame `rng_seed` (carried on `air_countdown_state`): both
+   hold `6E37EB8B` through row 73; from row 74 ROM advances every frame
+   (`6037B943`, `14A7ABBB`, `CFCD80F3`, ...) while the engine's **never changes
+   for the entire run**.
+
+5. **Because the pollen spawner never executes.** ROM's
+   `Obj_MHZ_Pollen_Spawner` calls `Random_Number` once per grounded player per
+   frame, gated only on `top_solid_bit == $C` and not-in-air
+   (`sub_3DA24`, sonic3k.asm:81633-81643) — that is the per-frame consumer.
+   `Sonic3kLevelEventManager.installFixedDynamicObjects` does create the engine
+   object (logged creating three times across bootstrap, `already=false` each
+   time), but `MhzPollenSpawnerInstance.update` is **never called once** in the
+   replay. The object is `isPersistent()` and spawns at `(0, 0)`.
+
+So one unexecuted fixed object desynchronises the RNG from frame 74, which
+flips the Madmole's arc coin at ~3150, which costs the route and ~4,000 rows
+across twelve fields. Finding why a persistent dynamic object at the origin is
+created but never executed in the replay path is the next step; `Sonic3kLevelEventManager`
+already has an `updateFixedInLevelObjects()` hook that may be the correct owner
+for it, matching ROM's fixed-slot execution.
+
+**MHZ this session:** 1888 -> 601 non-queue groups; queue frontier raw 36 -> 7218.
+
+### 2026-07-31 — pollen-spawner RNG fix validated but 1-2 frames early; not landed
+
+Acting on the previous entry: re-asserting `installFixedDynamicObjects` from
+`updateFixedInLevelObjects()` (where the existing `alreadyInstalled` guard makes
+it a no-op once present) does make `MhzPollenSpawnerInstance` execute, and the
+engine's RNG stream comes alive.
+
+**The sequence is exactly right.** Comparing the engine seed against the
+fixture's per-frame `rng_seed`, the produced values match ROM's one for one —
+`6037B943`, `14A7ABBB`, `CFCD80F3`, ... — confirming both the consumer
+(`sub_3DA24`'s per-grounded-player `Random_Number`, sonic3k.asm:81633-81643)
+and the engine's own `GameRng` advance are faithful.
+
+**But it starts 1-2 frames early**, so the whole stream is phase-shifted rather
+than aligned: only 221 of 3301 frames match, and MHZ regresses **601 -> 982**
+non-queue groups. A shifted stream is worse here than the frozen one, so the
+change was reverted rather than landed; MHZ is back at 601.
+
+The residual is the gate edge, not the consumer: ROM takes its first
+`Random_Number` on the frame the player is first grounded with
+`top_solid_bit == $C` and not in air, and the engine reaches that state one to
+two frames sooner. Next step is to compare the engine's grounded/`top_solid_bit`
+transition against the recorded `status_byte`/`air` columns across rows 68-78
+and correct the edge, then re-land the spawner fix — at which point the Madmole
+arc coin at ~3150 should flip the right way and the ~4,000-row route divergence
+should close.
+
+Note the ordering constraint: the spawner must be driven from the post-dynamic
+fixed-object phase (`LevelFrameStep` "fixed-objects"), not the pre-dynamic one,
+to match ROM's fixed-slot position.
+
+### 2026-07-31 — pollen-spawner phase: three variants measured, none landed
+
+Continued from the previous entry. The spawner must execute — ROM consumes
+`Random_Number` there once per grounded player per frame — but the *phase* is
+unresolved, and every variant tried either regresses MHZ or contradicts the
+ROM contract the unit tests encode.
+
+| Variant | MHZ non-queue | Verdict |
+|---|---:|---|
+| Spawner never executes (current `develop`) | **601** | RNG frozen all run |
+| Spawner runs, live grounded gate | 982 | regression |
+| Spawner runs, one-frame-delayed gate (shared latch) | 733 | regression, and the latch was wrong |
+| Spawner runs, one-frame-delayed gate (per-player) | **578** | best number, but rejected |
+
+The 578 variant was rejected despite being the best trace number: it breaks six
+`TestMhzPollenObjects` cases which assert ROM's actual contract — a grounded
+player spawns pollen on that same call (`sub_3DA24` reads the live state, there
+is no latch). Landing it would trade a real ROM behaviour for a trace metric,
+which is exactly the trap the mission rules warn about.
+
+**What is actually established:**
+
+- The engine's produced RNG values match ROM's one for one once the spawner
+  runs, so the consumer and `GameRng` are both faithful.
+- The engine's first call lands on the frame the player lands (`y=0x51A`,
+  recorded row 73), and the engine's landing frame already matches ROM — there
+  is no divergence in `air`/`status_byte` over rows 68-78.
+- ROM's recorded seed nevertheless first advances at row **74**.
+
+So either ROM's spawner observes a pre-update player state, or — more likely,
+since ROM's fixed slots execute after the players just as the engine's do — the
+recorder samples `rng_seed` earlier in the frame than the fixed-slot phase, and
+the engine's row-73 consumption is correct while the comparison is misaligned
+by the sampling point.
+
+**Resolving that is the next step, and it is a fixture question, not an engine
+one:** determine where in the ROM frame the recorder samples `rng_seed` (it
+rides on `air_countdown_state`). If it samples before the fixed-slot phase, the
+live-gate variant is correct and its 982 groups are a downstream problem to
+decode separately rather than evidence against it.
+
+MHZ stays at **601** on `develop`; nothing from this round was landed.
+
+### 2026-07-31 — MHZ RNG phase: BLOCKED pending a Random_Number PC-execute probe
+
+Settled the sampling question the previous entry left open, then exhausted the
+code-level hypotheses it enabled.
+
+**The recorder samples at the ROM end-of-frame instant** —
+`tools/bizhawk-headless/docs/s3k-aux-events.md`: *"Reads happen in
+`on_frame_end` after `emu.frameadvance()`, i.e. state is the ROM end-of-frame
+instant for the recorded row."* So the comparison was never misaligned: ROM
+genuinely consumed **no** `Random_Number` during frame 73 — the frame its player
+lands on the mushroom cap — and consumed during frame 74. The engine consumes on
+73.
+
+**Four placements measured, all rejected:**
+
+| Placement / gate | MHZ non-queue | Verdict |
+|---|---:|---|
+| Spawner never executes (current `develop`) | **601** | RNG frozen all run |
+| Post-dynamic hook, live gate | 982 | one frame early |
+| Post-dynamic hook, per-player one-frame latch | 578 | best number, but breaks six `TestMhzPollenObjects` cases asserting `sub_3DA24`'s live read — rejected as gaming the metric |
+| Pre-dynamic hook (after players, before dynamic objects), live gate | 1055 | worse still |
+
+The pre-dynamic placement was the strongest hypothesis — ROM's spawner appearing
+to observe the player before the mushroom cap's `SolidObjectTop` pass grounds
+them — and it measured worst. So the ordering theory is wrong too, and no
+placement available to me reproduces ROM's phase with a live gate.
+
+**Blocker.** Every code-level hypothesis I can form has been measured and
+rejected; what is missing is evidence, not implementation. Settling this needs a
+BizHawk PC-execute probe hooking `Random_Number` across MHZ rows 70-80 to
+capture which call sites fire on which frames and in what order — the tool the
+`trace-replay-bug-fixing` skill prescribes for exactly this case, and which
+requires a seek to BK2 frame 209756. That is a separate piece of work from the
+engine changes in this branch, and guessing further placements without it is
+how the `setForcedAnimationId` and wrong-counter errors earlier in this session
+happened.
+
+MHZ stays at **601** non-queue groups. Nothing from this round was landed.
+
+**Session totals:** MHZ 1888 -> 601 non-queue groups; queue/admission frontier
+raw frame 36 -> 7218; MGZ recovered 3964 -> 128; ICZ 95 -> 81, better than its
+pre-session baseline.
+
+### 2026-07-31 — BizHawk PC-execute probe on Random_Number: ROM ownership captured
+
+Ran the probe the previous entry called for.
+`tools/bizhawk/probes/mhz_rng_ownership_probe.lua` (new, follows the
+`probe_runtime.lua` stage-and-hooks contract) hooks `Random_Number` entry
+(`0x001D24`) and RTS (`0x001D4A`) across MHZ act 1, logging caller PC, A0/A1
+object context and the Player_1 gate fields. Raw output archived at
+`docs/architecture/validation/trace/2026-07-31-mhz-rng-ownership-probe.txt`
+(128 lines). Launched with the repo launcher at BK2 offset 209756; the probe
+self-exited.
+
+**What ROM actually does:**
+
+- Every call in the window comes from caller PC `03DA3C` — inside `sub_3DA24`,
+  the pollen spawner — with `A0_slot=4`, `A0_code=0003DA00`. So the spawner is
+  object **slot 4**, ahead of the mushroom cap at slot 5 whose
+  `SolidObjectTop` pass is what grounds the player.
+- **Exactly one call per frame**, ordinals 1-6 on rows 74-79. Player_2's
+  `sub_3DA24` never reaches the RNG in this window.
+- The first call is on row **74**, reading `p1_y=051A p1_status=08 p1_air=0` —
+  the position and grounded state the *previous* frame's cap contact left.
+  At row 73's `Process_Sprites` entry the player is still `p1_y=0528
+  p1_status=06 p1_air=1`.
+
+**Two engine bugs this names precisely:**
+
+1. **Double consumption.** The engine calls the spawner for Player_1 *and*
+   Player_2; ROM reaches the RNG for Player_1 only here. Measured: the engine
+   advances the seed two `predict()` steps within one frame where ROM advances
+   one.
+2. **Grounded two frames early.** With the spawner driven pre-physics — the
+   placement the probe implies — the engine still consumes from row 72, so its
+   player reads grounded at the end of row 71 where ROM's is airborne through
+   row 73. This does not show as an `air` divergence in the comparator, so the
+   engine's end-of-frame air matches while its mid-frame view does not.
+
+**Placements measured (MHZ non-queue groups):** never executes **601**;
+post-dynamic live gate 982; post-dynamic per-player latch 578 (rejected, breaks
+`TestMhzPollenObjects`); pre-dynamic 1055; pre-physics via the existing
+`onUpdatePrePhysics` hook **733**. Pre-physics is the best faithful placement
+and is where this belongs once the two bugs above are fixed, but landing it
+alone still regresses MHZ, so nothing was landed.
+
+MHZ stays at **601**. The probe is committed and re-runnable, so the next
+session starts from ROM ground truth rather than hypotheses.
+
+
+### 2026-07-31 — RETRACTION: the inline solid-resolution "blocker" was wrong; it is object slot order
+
+An earlier draft of this entry classified the MHZ RNG alignment as blocked by
+S3K's `objectsExecuteAfterPlayerPhysics = true` inline solid-resolution model,
+on the reasoning that the engine grounds the player inside the physics step
+while ROM grounds it during the mushroom cap's own execution. **That was
+inferred, not measured, and it is wrong.** The claim has been removed rather
+than left standing.
+
+**Measured instead.** Logging the engine's Player_1 state at the pre-physics
+point against the probe's ROM values at `Process_Sprites` entry gives an exact
+match, frame for frame (engine index k maps to recorded row k+1, because the
+setup pass owns row 0):
+
+| Recorded row | ROM (probe) | Engine (pre-physics) |
+|---|---|---|
+| 71-73 | `y=0527/0528 air=1` | `y=527/528 air=1` |
+| 74 | `y=051A air=0` | `y=51a air=0` |
+| 75+ | `y=0525 air=0` | `y=525 air=0` |
+
+So the engine's player physics, its landing frame and the inline model are all
+ROM-correct here. No architecture change is required, and none should be made
+on the strength of that retracted reasoning.
+
+**The real cause is object slot order.** The probe puts
+`Obj_MHZ_Pollen_Spawner` at object **slot 4**, ahead of `Obj_MHZMushroomCap` at
+slot 5. The engine's `ObjectManager` executes in slot order too, so the model
+matches — but the spawner is created by `installFixedDynamicObjects` at level
+init, a later bootstrap step clears dynamic objects, and any re-install then
+lands it in a high free slot, behind the layout objects it must precede. Driven
+from the object walk it therefore consumes `Random_Number` a frame after ROM
+does.
+
+Also established this round, correcting two earlier readings:
+
+- **No double-consumption for Player_2.** Instrumenting which player each call
+  serves shows P1 only, matching ROM's one-call-per-frame. The earlier
+  "engine consumes for both players" reading was an artefact of the spawner
+  being invoked twice per frame — once by the pre-physics hook and once by the
+  object manager (logged with two distinct frame counters, `fc=1,2,3...` and
+  `fc=13097,13098...`).
+- **Measured placements:** spawner absent **601**; manager-driven from the
+  object walk 982; manager plus pre-physics hook (double-invoked) 733;
+  post-dynamic 982; pre-dynamic 1055; per-player latch 578 (rejected, breaks
+  `TestMhzPollenObjects`).
+
+**Next step is concrete and bounded:** guarantee the spawner occupies an early
+object slot — `ObjectManager` already exposes
+`createDynamicObjectWithReservedSlot` and `addDynamicObjectAfterSlot` — so it
+executes ahead of the layout objects, and make that survive the replay
+bootstrap's dynamic-object clear. That is an object-lifetime fix in the same
+class as the others in this branch, not an architecture change.
+
+MHZ stays at **601** non-queue groups; nothing was landed this round.
+
+### 2026-07-31 — MHZ pollen spawner: the missing primitive is absolute-slot placement
+
+Grounded the install point in ROM rather than picking one, which named the gap.
+
+**ROM (sonic3k.asm:7789-7792, `Level` init):**
+
+```
+loc_63A4:
+        cmpi.b  #7,(Current_zone).w                                    ; MHZ
+        bne.s   loc_63B4
+        move.l  #Obj_MHZ_Pollen_Spawner,(Dynamic_object_RAM+object_size).w
+```
+
+This is a **direct write to an absolute SST slot**, not a `FindFreeObj`
+allocation. `Dynamic_object_RAM` is absolute dynamic slot 3, so
+`+object_size` is slot **4** — exactly what the `Random_Number` probe measured
+(`A0_slot=4` on every call). The same block writes `Obj_HCZWaveSplash` and
+`Obj_HCZWaterSplash` to absolute slots the same way, so this is a general ROM
+level-init pattern, not an MHZ quirk.
+
+It matters because slot order is execution order: the spawner at slot 4 must run
+before `Obj_MHZMushroomCap` at slot 5, since it reads the player *before* the
+cap's `SolidObjectTop` pass grounds them. That is the entire reason ROM takes no
+`Random_Number` on row 73 and one on row 74.
+
+**The engine has no equivalent primitive.** `ObjectManager` offers
+`createDynamicObject` (lowest free slot), `createDynamicObjectWithReservedSlot`
+and `addDynamicObjectAfterSlot(parentSlot)` — all *allocations*, none a write to
+a named absolute slot. Measured outcome: the spawner lands at slot **11** from
+every install point tried (`onInitLevel`, the pre-dynamic hook, and a new
+`installAbsoluteSlotLevelObjects` provider hook called at ROM's Level-init point
+inside `executeInitialProcessSprites`, with the stale instance retired first).
+By the time any of those run, slots 4-10 are already held, so the spawner
+executes after the layout objects it must precede and consumes `Random_Number`
+a frame early. All variants measured 982 non-queue groups against 601 with the
+spawner absent.
+
+**Also confirmed this round, correcting earlier readings:**
+
+- The engine's player physics and landing frame are ROM-correct — pre-physics
+  Player_1 state matches the probe's `Process_Sprites` values frame for frame.
+  The inline solid-resolution "blocker" claim is retracted (see previous entry).
+- Consumption is Player_1 only, matching ROM's one call per frame. The earlier
+  "both players" reading was the spawner being invoked twice per frame by two
+  callers.
+
+**Next step, bounded and ROM-grounded:** add an absolute-slot placement path to
+`ObjectManager` — the engine already models absolute dynamic slot 3 via
+`processAbsoluteDynamicSlot3`, so the concept exists but is not reachable for
+level objects — and install the S3K level-init objects through it at the point
+`Level` does, before `Load_Sprites`. That fixes the ordering for the pollen
+spawner and for the HCZ splash objects written by the same ROM block.
+
+MHZ stays at **601** non-queue groups; nothing landed this round.
+
+### 2026-07-31 — MHZ object slots are one lower than ROM; the primitive exists, the timing does not
+
+Retraction first: the previous entry said the engine lacks an absolute-slot
+placement primitive. **It has one** —
+`ObjectManager.createDynamicObjectAtSlot(factory, slotIndex)`, already used by
+`Sonic3kAIZEvents` with `AIZ_PLANE_INTRO_SST_SLOT = 5` for ROM's
+`Dynamic_object_RAM+(object_size*2)`. Nothing needs building.
+
+**The slot number is settled.** `sonic3k.constants.asm:303-307` gives
+`Player_1`=0, `Player_2`=1, `Reserved_object_3`=2, `Dynamic_object_RAM`=3, so
+`Dynamic_object_RAM+object_size` is absolute slot **4** — matching both the
+`Random_Number` probe (`A0_slot=4` on every call) and the AIZ precedent's
+arithmetic.
+
+**The real defect, measured.** Logging the occupants at install time:
+
+```
+install slot4 placed=false occupants=4:MhzMushroomCapObjectInstance
+                                     5:Sonic3kSSEntryRingObjectInstance
+                                     6:MhzMushroomCapObjectInstance
+                                     7:MhzMushroomCapObjectInstance
+```
+
+Slot 4 is held by `Obj_MHZMushroomCap` — the very object the spawner must
+precede. In ROM the spawner reserves slot 4 during `Level` init, so `ObjPosLoad`
+allocates the layout from slot 5 onward and the cap lands at 5, exactly as the
+probe recorded. The engine places the layout first, so **every MHZ layout object
+sits one slot lower than ROM**. That shifts execution order for the whole act
+and any `FindFreeObj`/d7-derived timing keyed off it — a defect well beyond the
+pollen spawner itself.
+
+**Install points tried, all measured `placed=false` (601 = spawner absent):**
+
+| Install point | Result |
+|---|---|
+| `onInitLevel` (step 18) via `createDynamicObject` | slot 11 |
+| `onInitLevel` via `createDynamicObjectAtSlot(4)` | `placed=false` |
+| Pre-dynamic hook, per frame | slot 11 |
+| New `installAbsoluteSlotLevelObjects` at `executeInitialProcessSprites` | `placed=false` |
+| Same hook from `LevelManager.initGameplayState` (earliest post-load step) | still absent |
+
+Layout placement therefore happens earlier than any of these — inside the load
+phase, before the post-load assembly steps. **The next step is to find where the
+object spawns are first instantiated and reserve the absolute slots immediately
+before it**, which is where ROM's `loc_63A4` sits relative to `ObjPosLoad`.
+Note the provider's `currentZone` is unset that early, so the zone must come
+from `LevelManager.getCurrentZone()`.
+
+Fixing it should be done for the S3K absolute-slot set as a whole — the same ROM
+block writes `Obj_HCZWaveSplash` and `Obj_HCZWaterSplash` — not for MHZ alone.
+
+MHZ stays at **601**; nothing landed this round.
+## 2026-07-31 - Correction: the S3K setup pass is not a recorded frame
+
+- Main checkout, branch `bugfix/ai-s3k-mhz-queue-frontier`, over `79f1d5ecf`.
+- The behavioural halves of `c16efb3b0` ("run the level setup pass as the
+  recorded frame it is") and `5612e8d3e` ("advance the sprite frame counter on
+  the setup frame") are reverted. Their documentation is retained below.
+- Evidence they were wrong, not a fix. `Level_frame_counter` is incremented by
+  `addq.w #1,(Level_frame_counter).w` **inside** `LevelLoop`, after
+  `Wait_VSync` (sonic3k.asm:7888-7894). Recorded row 0 of every S3K
+  complete-run segment reads `Level_frame_counter == 1`, so row 0 is the first
+  `LevelLoop` frame, never the `Load_Sprites`/`Process_Sprites` pass at
+  sonic3k.asm:7849-7860 — that pass precedes `LevelLoop` entirely and therefore
+  runs no `Wait_VSync`, no `Read_Joypads`, and no counter increment. Second
+  independent check: `Tails_CPU_routine` at row 0 is one of {6, $0A, $0C},
+  while `Tails_Init` forces it to 0 and `Tails_CPU_Control` cannot dispatch on
+  the setup pass.
+- The two changes therefore made the setup pass consume both a BK2 row and a
+  frame-counter tick, neither of which the ROM spends. A four-state
+  measurement showed them interacting non-additively — each is worse alone,
+  and the 40x MGZ improvement appears only when both are present. That is the
+  signature of accidental frame-phase alignment, not fidelity. They also moved
+  `TestS3kAizTraceReplay` from 4 failures to 11.
+- **This is a regression in raw counts and is recorded as such.** MGZ
+  non-queue divergence groups go from 128 back to the ROM-consistent 5141, and
+  MHZ from 601 back to a number measured below. The previously logged 2982 and
+  the MGZ 3964 -> 128 improvement were products of the misalignment and should
+  not be treated as a frontier that was lost.
+- `TestS3kAizTraceReplay` after the revert: 16 tests, 4 failures, 1 error —
+  back to its documented baseline. Command:
+  `mvn -Ptrace-replay -Dmse=off -Dtest=TestS3kAizTraceReplay -Ds3k.rom.path=s3k.gen test`.
+
+
+## 2026-07-31 - S3K setup pass modelled as a pre-LevelLoop bootstrap step
+
+- Main checkout, branch `bugfix/ai-s3k-mhz-queue-frontier`, over the revert
+  commit from the previous entry.
+- Model: the level's `Load_Sprites`/`Process_Sprites` pass (Level loc_6468,
+  sonic3k.asm:7849-7860) executes once during `applyBootstrap`, before any
+  frame is driven, for **every** trace. It therefore spends no BK2 controller
+  row and no frame-counter tick, matching a pass that precedes `LevelLoop` and
+  so runs no `Wait_VSync`, no `Read_Joypads`, and no
+  `addq.w #1,(Level_frame_counter).w` (sonic3k.asm:7888-7894). The first frame
+  the driver steps is the ROM's first `LevelLoop` iteration, which is recorded
+  row 0 — consistent with row 0 reading `Level_frame_counter == 1` on every
+  segment.
+- The change is the removal of the S3K-complete-run-only
+  `discardPendingInitialProcessSpritesForStateRestoration()` call in
+  `TraceReplaySessionBootstrap.applyBootstrap`. The remaining
+  `consumePendingInitialProcessSpritesPass()` call was already unconditional,
+  so the rule is now uniform and derived from engine-owned lifecycle state
+  alone: no fixture field, metadata capability, zone id, frame index, or
+  per-segment property is consulted. The bonus-stage discard at
+  `applyBonusStageEntry` is unrelated and unchanged — it reconstructs a
+  represented pass rather than choosing an anchor.
+- Command (all seven, ROM `s3k.gen`):
+  `mvn -Ptrace-replay -Dmse=off -Dtest='TestS3k{Aiz,Cnz,Hcz,Icz,Lbz,Mgz,Mhz}CompleteRunTraceReplay' -Ds3k.rom.path=s3k.gen test`.
+  All seven still abort on the recorded Kos-decompression-queue completion
+  assertion, so every count below is a partial segment.
+
+| Segment | frames now | non-queue now | frames (state A) | non-queue (state A) | non-queue (state D) |
+|---|---|---|---|---|---|
+| AIZ | 63 | 0 | 64 | 0 | 0 |
+| HCZ | 1320 | 838 | 1320 | 507 | 999 |
+| MGZ | 14629 | 5002 | 14629 | 128 | 5141 |
+| CNZ | 5336 | 1638 | 5336 | 1665 | 1544 |
+| ICZ | 1629 | 273 | 1629 | 81 | 273 |
+| LBZ | 35 | 16 | 35 | 0 | 16 |
+| MHZ | 7218 | 1885 | 7218 | 601 | n/a (D reached 301) |
+
+- State A is the two-hack lineage at `79f1d5ecf`, re-measured here rather than
+  quoted, and it reproduced exactly. Frame counts are identical to state A on
+  six of seven segments; AIZ drives 63 instead of 64. **No count below
+  improved because a segment aborted earlier.**
+- Against the ROM-consistent state D this model improves HCZ 999 -> 838 and
+  MGZ 5141 -> 5002, regresses CNZ 1544 -> 1638, leaves AIZ/ICZ/LBZ unchanged,
+  and takes MHZ from 301 driven frames to the full 7218 with 1885 non-queue
+  divergences.
+- Against state A the raw counts are worse on five segments. That is expected
+  and is not a lost frontier: state A's MGZ 128 and MHZ 601 were products of
+  the frame-phase misalignment removed in the previous entry.
+- `TestS3kAizTraceReplay`: 16 tests, 4 failures, 1 error — unchanged from the
+  documented baseline, as expected for a non-complete-run trace.
+- Guards green: `TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading` (both
+  classes), `TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils` — 52
+  tests, 0 failures. Also green: `TestS3kInitialObjectSetupLifecycle`,
+  `TestHardwareTimingAuthorityGuard`, `TestLevelFrameHardwareTimingBoundaries`,
+  `TestRecordingFrameDriverHardwareTiming` — 52 tests, 0 failures.
+- Open: the frame-0 `y_speed 0x0038` / `y_sub 0x3800` divergence on MGZ, CNZ
+  and MHZ persists. It is confined to row 0 — MHZ row 1 reads the expected
+  `0x0008` — so it is a row-0 sampling/ordering artifact rather than an
+  ongoing physics error. The cause is not yet pinned. It is not simply the
+  setup pass applying gravity that `Sonic_Init` does not
+  (sonic3k.asm:21902-21943, `routine += 2` then `rts`): `applyBootstrap` runs
+  `consumePendingInitialProcessSpritesPass` before
+  `applyReplayStartStateForTraceReplay`, so the row-0 entry seed would
+  overwrite any velocity that pass produced. Nor is `0x0038` one gravity tick;
+  it is seven. Next step is to determine which write between the seed and the
+  first compared sample produces it.
+- Counter-phase check: this change does not move the engine's level frame
+  counter relative to the object pass. `executeInitialProcessSprites` reads
+  `LevelManager.frameCounter` but never increments it, and no driven frame's
+  cadence changed (complete-run segments produced no `SETUP_ONLY` driven frame
+  before this change either — the pass was discarded rather than deferred). So
+  the `frameCounter + 2` offset in
+  `LevelManager.getRomLevelFrameCounterDuringObjectPass()` on
+  `bugfix/ai-fleet-s3k-cnz-carryintro` stays correctly calibrated.
+
+## 2026-07-31 - S3K level-load Kos work must not enter the recorded ledger
+
+- Main checkout, branch `bugfix/ai-s3k-mhz-queue-frontier`, over `00bffdca4`.
+- Command: `mvn -Dtest=TestS3kMhzCompleteRunTraceReplay -Ds3k.rom.path=s3k.gen
+  test`. Result unchanged at 1923 errors over the full 7218 frames; first error
+  frame 0 `y_speed` (expected 0x0000, actual 0x0038). No code landed.
+- Frontier characterised, not moved. MHZ1 frame 0 records both Kos queues idle
+  (`busy=false`, `remaining_work=-1`, `queued_fingerprints=""`) while the engine
+  holds a direct job at source 0x165CC4 plus two queued module fingerprints and
+  stays busy for 34 frames.
+- ROM grounding for the idle row 0. `LoadEnemyArt`
+  (docs/skdisasm/sonic3k.asm:64281-64313) is called from the title-card teardown
+  (docs/skdisasm/sonic3k.asm:62298) and submits the zone's badnik modules
+  through `Queue_Kos_Module`. `LoadLevelLoadBlock`
+  (docs/skdisasm/sonic3k.asm:9701-9745) then submits its own two modules and
+  spins `Process_Kos_Queue` / `Process_Kos_Module_Queue` at `loc_7870`
+  (docs/skdisasm/sonic3k.asm:9740-9745) until the shared `Kos_modules_left`
+  counter reaches zero, so it retires the enemy modules as well as its own.
+  `LoadLevelLoadBlock2` (docs/skdisasm/sonic3k.asm:38674-38741) then performs
+  its four decompressions through inline blocking `jsr (Kos_Decomp).l`
+  (docs/skdisasm/sonic3k.asm:38699, 38705, 38714, 38720), leaving nothing in the
+  direct FIFO. Both routines are called at docs/skdisasm/sonic3k.asm:7761-7762,
+  ahead of `LevelLoop` (docs/skdisasm/sonic3k.asm:7885). All of this level-load
+  Kos work is therefore complete before recorded row 0.
+- Engine model that diverges. `Sonic3kObjectArtProvider.onTitleCardArtRetired`
+  only *arms* the enemy modules, and
+  `Sonic3kObjectArtProvider.processEnemyKosArt` submits them from
+  `processRuntimeArtQueue` during `LevelFrameStep`, i.e. inside compared frames.
+  Instrumentation confirmed exactly three such submissions for MHZ1
+  (0x165F02 Mad Mole, 0x166234, 0x166386), all from `LevelFrameStep.execute`.
+- Why the obvious fix does not work. Draining these queues during level load
+  (submit, then pump `prepareQueuedModuleBeforeVSync` /
+  `processModuleQueueAfterObjects` until retirement) never terminates: readiness
+  is gated by `HardwareTimingService`'s recorded-completion authority, and the
+  recording legitimately holds no completions for pre-`LevelLoop` work. The
+  candidate aborted the MHZ level load outright and was withdrawn.
+- Consequent root cause. Level-load Kos work should not be submitted to the
+  recorded hardware ledger at all; the ROM completes it synchronously before the
+  first recorded row. Because the engine does submit it, every later recorded
+  ordinal is shifted.
+- This single cause also explains MGZ. MGZ aborts on
+  `KOS_DECOMPRESSION_QUEUE#134` with matching kind and ordinal but expected
+  sha256 `c2db2fda...` against engine `3c96d8b9...`, while MHZ aborts on
+  `KOS_DECOMPRESSION_QUEUE#335` expecting sha256 `3c96d8b9...` with nothing
+  pending. The same archive appears at two very different ordinals across the
+  two segments, which is an admission-phase skew rather than two separate bugs.
+- Next target: move S3K level-load Kos decompression off the recorded ledger
+  onto a synchronous level-load path, then re-measure all seven complete-run
+  segments together, since the change shifts ordinals for every one of them.
+- Guards re-run at baseline after the revert: `TestS3kAiz1SkipHeadless` 8/0/0,
+  `TestSonic3kLevelLoading` 30/0/0, `TestSonic3kBootstrapResolver` 5/0/0,
+  `TestSonic3kDecodingUtils` 3/0/0, `TestS3kAizTraceReplay` unchanged at 4
+  failures plus 1 error.
+
+## 2026-07-31 — S3K complete-run: the level-load Kos diagnosis is retracted
+
+The entry immediately above is **wrong on both of its load-bearing claims**. Two
+experiments falsified it and a fixture audit explained why. Recorded here so the
+next reader does not re-derive it.
+
+### Retraction 1 — level-load Kos work is not on the ledger, and was never the fault
+
+`LoadLevelLoadBlock` / `LoadLevelLoadBlock2` genuinely do complete before
+`LevelLoop`, but they never produce a ledger ordinal in the first place:
+`loc_7870` (sonic3k.asm:9736-9744) drains only `Kos_modules_left` and its exit
+test is module-only — it neither drains nor tests the direct FIFO — and
+`LoadLevelLoadBlock2`'s four `jsr (Kos_Decomp).l` (sonic3k.asm:38699-38720) are
+blocking direct calls, not queue submissions.
+
+The in-window decompressions at rows 34-44 (68-73 for AIZ) are different work:
+`LoadEnemyArt`'s `Queue_Kos_Module` calls (sonic3k.asm:64281-64313), issued from
+the title-card teardown object at `loc_2D8CA` (sonic3k.asm:62298, ending in
+`Delete_Current_Sprite` at 62301), which runs as an ordinary object **during**
+`LevelLoop`, tens of frames after row 0 (title-card timer `$16`, sonic3k.asm:7879).
+Their module-created Kosinski children are real direct submissions with their own
+direct ordinals (`s3k-trace-recorder-behavior.md` §6.3), which is why removing 3
+module archives removed exactly 5 direct ordinals.
+
+Keeping these submissions inside the compared window is therefore ROM-faithful.
+Decompressing them synchronously off-ledger was tried and was catastrophic —
+every segment aborted (aiz 186/1239, hcz 20/35, mgz 13/35, cnz 10/36, icz 5/34,
+lbz 24/35, mhz 10/36). Do not retry it.
+
+Submitting at the ROM-faithful moment is also impossible as the architecture
+stands: `HardwareTimingReplayPort` installs after level load, so an earlier
+submission raises `recorded hardware admission policy must be configured before
+the first submission` (`HardwareTimingService$RecordedAuthority`
+`configureAdmissionPolicies`).
+
+### Retraction 2 — MGZ and MHZ are not one admission-phase skew
+
+Neither abort is at level load. MGZ `#134` is at raw_frame 14631 and MHZ `#335`
+at raw_frame 7221 — both mid-level. `3c96d8b9` is an on-demand
+`PLCLoad_AnimalsAndExplosion` reload (sonic3k.asm:7752-7754), not a load-time
+archive; it recurs in MHZ at rows 1670, 7221 and 7986 and appears in 11 of the
+fixtures at scattered mid-level rows. MGZ is engine-EARLY and MHZ is engine-LATE,
+which cannot be a single offset. They are independent submission-trigger defects.
+
+### Fixture audit — the recordings are consistent, and assert nothing at row 0
+
+All seven complete-run fixtures: recorder `6.39-s3k-completerun`, `trace_schema`
+7, `hardware_timing_schema` 2, `pre_trace_osc_frames` 1. The schema-split
+hypothesis is dead. Ordinal chains are gapless and non-overlapping across all
+seven segments in both queues (decomp 9..380, module 2..260); nothing is lost or
+double-counted at a segment seam. No fixture mis-capture.
+
+All 631 hardware-timing events across the seven are `hardware_work_completed`;
+there are zero pending or occupancy assertions. The earliest event is row 34
+(ICZ), 35-36 (most), 68 (AIZ — its longer act-1 intro, not a phase difference).
+**There is no row-0 queue expectation to violate.**
+
+`Level_frame_counter` is cleared at sonic3k.asm:7538 and incremented only at
+7889; `Ctrl_1_locked` is set at 7773 and cleared at 7856-7857 immediately before
+`LevelLoop`, which is what lets the complete-run arm gate fire at `LevelLoop`
+entry. Row 0 is `LevelLoop` entry, uniformly, in all seven segments.
+
+### Open frontier
+
+- MHZ frame 0: engine submits enemy art ~36 frames early. It should fire from
+  the engine's title-card teardown lifecycle, matching `loc_2D8CA` — driven by
+  the engine's own lifecycle, never by a frame number or trace data.
+- MHZ raw_frame 7221: a once-only load latch prevents re-submitting the shared
+  `3c96d8b9` archive that ROM reloads per trigger.
+- MGZ raw_frame 14631: distinct engine-early defect on `c2db2fda`. Triage
+  separately; do not assume the MHZ fix covers it.
+
+Baseline at this point (error_count / total_frames, one class per `mvn`
+invocation — all seven in one surefire fork crashes it with exit 134):
+aiz 8/63, hcz 868/1320, mgz 5040/14629, cnz 1658/5336, icz 287/1629, lbz 24/35,
+mhz 1923/7218.
+
+## 2026-07-31 — MHZ frame 2018: the swing bar released without restarting the animation
+
+`TestS3kMhzCompleteRunTraceReplay` first non-queue divergence was
+`player_mapping_frame 0x8E -> 0x64` at frame 2018, span 70, non-cascading, with
+`player_animation_id 0x0010 -> 0x0000` at 2051 and the Tails pair at 2067
+cascading off it.
+
+The object is `Obj_MHZSwingBarHorizontal` (SKL `$0B`, `sub_3ED6E`,
+sonic3k.asm:83313). The hang phase and auto-release timing were already exact:
+instrumentation showed the engine grabbing with the same stored `y_vel` (`$F948`),
+walking the same `$C`-per-frame phase chain through `RawAni_3F01A`, and firing the
+upward auto-release at phase `$28` with the same amplified velocity `$F5EC`
+(`1.5 x` stored, sonic3k.asm:83390-83394). What differed was `prev_anim`.
+
+ROM `loc_3EE7A` (sonic3k.asm:83389-83390) releases with
+`move.w #$10<<8,anim(a1)` — a **word** write that lands `anim = $10` and
+`prev_anim = $00` together. The grab path (sonic3k.asm:83451) writes
+`move.b #0,anim(a1)`, a byte write that leaves `prev_anim` untouched.
+`Animate_Sonic` (sonic3k.asm:24739-24749) restarts the script only when
+`anim != prev_anim`, so the word write is what makes `AniSonic10` re-enter and
+publish mapping frame `$8E`.
+
+The engine set the animation id but left its `prev_anim` equivalent
+(`PlayableSpriteAnimation.lastAnimationId`) stale. On this route the player
+spring-jumps off one bar into the next, so `lastAnimationId` was already `$10`
+when the second bar released with `$10`; the script never restarted, kept the
+expired state from the first launch, and the mapping frame stayed at the last
+object-controlled hang frame `$64` for 70 frames. The first bar's release was
+correct precisely because the player arrived rolling (`anim 2`).
+
+Fix: `MhzSwingBarHorizontalObjectInstance` publishes `prev_anim = 0` on the
+upward auto-release, modelling the word write. No shared animation or physics
+code changed, so cross-game parity is untouched.
+
+Command (one class per `mvn` invocation; all seven in one surefire fork crashes
+it with exit 134), worktree `.worktrees/mhz-anim` on `bugfix/ai-s3k-mhz-anim`
+off `bugfix/ai-s3k-mhz-queue-frontier`:
+
+```
+mvn "-Dtest=TestS3kMhzCompleteRunTraceReplay" "-Ds3k.rom.path=<s3k.gen>" test
+```
+
+Per-segment `error_count / total_frames`, before -> after:
+
+| segment | before | after |
+|---|---|---|
+| aiz | 8/63 | 8/63 |
+| hcz | 197/1320 | 197/1320 |
+| mgz | 17/14629 | 17/14629 |
+| cnz | 20/5336 | 20/5336 |
+| icz | 287/1629 | 287/1629 |
+| lbz | 24/35 | 24/35 |
+| mhz | 632/7218 | **628/7218** |
+
+MHZ's new first non-queue divergence is frame 2920, `tails_animation_id
+0x0006 -> 0x0005` with `tails_mapping_frame 0x009A -> 0x00AD` — a sidekick
+frontier, not a player one. The frame-0 `queue.*` entries are unchanged and
+remain owned separately.
+
+## 2026-07-31 — S3K complete-run fleet: 9808 -> 1181 divergence groups
+
+Measured one class per `mvn` invocation (all seven in one surefire fork crashes
+it, exit 134). `total_frames` is identical before and after on every segment, so
+no count fell because a segment aborted earlier.
+
+| segment | before | after | frames |
+|---|---|---|---|
+| AIZ | 8 | 8 | 63 |
+| HCZ | 868 | 197 | 1320 |
+| MGZ | 5040 | 17 | 14629 |
+| CNZ | 1658 | 20 | 5336 |
+| ICZ | 287 | 287 | 1629 |
+| LBZ | 24 | 24 | 35 |
+| MHZ | 1923 | 628 | 7218 |
+
+`TestS3kAizTraceReplay` holds at its documented 4 failures + 1 error throughout.
+
+### What produced it
+
+- `5aee8e6d0` — frame-0 `Status_InAir` now derives from ROM spawn. Two writers
+  were clobbering a spawn model the engine already had correct
+  (`resetPlayerForLevelStart` leaves MHZ grounded; `applySimpleFallingIntro`
+  supplies MGZ1's `bset`). `HeadlessTestFixture.Builder.build()` step 12 ran an
+  unconditional `resolveGroundAttachment` that detached the correctly-grounded
+  player before frame 0, and `seedSegmentEntryVelocity` seeded velocity/air from
+  row 0 — a recorded POST-frame row — handing the engine frame 0's own result
+  before frame 0 ran. Suppressing either alone did nothing; the other became the
+  writer. Discriminator: MHZ frame-0 `y_speed` 0x0038 -> 0x0000 while MGZ goes
+  0x0070 -> 0x0038, by one ROM-derived rule (`SpawnLevelMainSprites` per-zone
+  `bset`s, sonic3k.asm:8132-8177; MHZ1 `$700` falls through `loc_68D8`,
+  8178-8197, and spawns grounded). Also retires a trace-hydration site.
+- `3c8c1ae11` — SS entry ring Path B now retires through the ROM tail. ROM
+  `loc_61794` (sonic3k.asm:128325-128333) marks the ring collected, sets bit 5 of
+  `$38` and awards 50 rings *without* deleting; `SSEntryRing_Display` then retires
+  it via `loc_6196A`. The engine called `setDestroyed(true)` and bypassed the
+  tail. Measured neutral on this route (the ring is correctly never touched) but
+  ROM-correct.
+- `ea24cd193` — MHZ horizontal swing bar publishes `prev_anim = 0` on upward
+  auto-release. ROM `loc_3EE7A` (sonic3k.asm:83389-83394) is a WORD write landing
+  `anim=$10` and `prev_anim=$00` together, and `Animate_Sonic` (24739-24749)
+  restarts a script only on an `anim`/`prev_anim` mismatch. The engine's tracker
+  went stale, so a second identical `$10` release produced no restart and the
+  mapping frame froze on `$64` for 70 frames.
+
+### Rejected, and why
+
+A `TITLE_CARD_TEARDOWN_LEVEL_FRAMES = 34` delay was proposed for the frame-0
+enemy-art submission. Its *diagnosis* is correct and retained: skipping the
+title-card presentation does not shorten the title-card owner's ROM lifetime
+(`Obj_TitleCardWait`/`Obj_TitleCardWait2`, sonic3k.asm:62220-62253; `loc_2D8CA`
+calls `LoadEnemyArt` then `Delete_Current_Sprite`, 62295-62301). The constant is
+not: `objoff_2E` is `$16` = 22, not 34, and the value was calibrated — at 35, ICZ
+collapses from 287/1629 to 5/34. Its own analysis says a single delay cannot
+satisfy both MHZ and ICZ because the engine's per-chunk Kos module streaming rate
+differs from ROM. That is the real defect; the delay compensates for it.
+
+## 2026-07-31 — MHZ frame 2986: Madmole side-drill floor impact
+
+Command (worktree `.worktrees/mhz-descent`, branch `bugfix/ai-s3k-mhz-descent`,
+base `c64cd401a`):
+
+```
+mvn "-Ds3k.rom.path=<repo>/s3k.gen" "-Dtest=TestS3kMhzCompleteRunTraceReplay" test
+```
+
+Read `error_count` / `total_frames` from `target/trace-reports/s3k_mhz1_report.json`;
+the test still throws from `admitRecordedCompletion` at segment end.
+
+### Diagnosis
+
+Frames 2966-3059 are not a Tails catch-up flight. Tails is captured and carried
+by the Madmole's arcing side drill: aux `interact_state` shows
+`tails_object_control` flip to `0x01` and `anim` to `$1A` at 2966 — exactly what
+ROM `sub_8D94A` writes (sonic3k.asm:193465-193487) — and object slot 20 (code
+`0x0008D6E6`) advances routine 4 -> 8 on the same frame and then tracks Tails.
+Tails' `x_vel`/`y_vel` stay zero throughout because `loc_8D7A8` writes his
+position directly from the arm.
+
+The engine's descent turned around at 2986, ~3 frames early and ~0x10 shallow,
+because the arm's bounce was driven by the raw-animation loop wrapping. ROM
+`loc_8D778` and `loc_8D7A8` (193264-193331) instead call `ObjHitFloor_DoRoutine`
+(177964-177981) whenever the arm is moving downward: that snaps the arm onto the
+surface (`add.w d1,y_pos`) and jumps to `$34(a0)` — `loc_8D794` while the arc is
+free-flying, `loc_8D846` (193353-193367) once `sub_8D94A` has installed it on the
+capture frame. The raw script `byte_8D9E7` (193520) ends with `$FC`
+(`AnimateRaw_Restart`), not `$F4` (`AnimateRaw_CustomCode`), so it never invokes
+`$34(a0)` at all — the two uses of that field had been conflated.
+
+This is **not** the frame-2920 class of defect: nothing here was leader-gated.
+
+### Result
+
+Per-segment `error_count / total_frames`, before -> after:
+
+| segment | before | after |
+|---|---|---|
+| aiz | 8/63 | 8/63 |
+| hcz | 196/1320 | 196/1320 |
+| mgz | 16/14629 | 16/14629 |
+| cnz | 19/5336 | 19/5336 |
+| icz | 286/1629 | 286/1629 |
+| lbz | 24/35 | 24/35 |
+| mhz | 622/7218 | 919/7218 |
+
+The Madmole is SKL-only, and the other six segments are byte-identical.
+
+MHZ's frontier moved 2986 -> **3013** (`tails_air 0 -> 1`,
+`tails_status_byte 0x0009 -> 0x0003`): the carried arc now tracks the recording
+to within 1px through frame 3059. The group count rose because the corrected
+trajectory re-sequences the downstream cascade into more, shorter groups; an A/B
+run with only the routine-4 hunk removed measured 920 vs 919, so the rise is not
+attributable to the free-flying arc bounce.
+
+### Open frontier
+
+- MHZ frame 3060 — ROM releases Tails with zero velocity and `status 0x02`, then
+  he free-falls under gravity `$38` with air acceleration `$18`; the engine keeps
+  carrying him. ROM `loc_8D724` (193237-193243) deletes the arm on a *coarse* x
+  test (`x_pos & $FF80` against `Camera_X_pos_coarse_back`, `> $280`) plus a y
+  test, releasing the player with `bset Status_InAir` / `clr.b object_control`.
+  `SideDrillChild.checkDeleteAndReleaseCapturedPlayer` uses `isOnScreenX(0x180)`
+  with neither the coarse mask nor the y test. Most likely next fix.
+- MHZ frame 3013 — ROM sets `Status_OnObj` on Tails for exactly two frames while
+  he is still carried; the engine does not.
+- MHZ frame 2920 — `tails_animation_id` 0x06 -> 0x05, `tails_mapping_frame`
+  0x9A -> 0xAD, both non-cascading. Nearly all ~596 remaining non-queue groups
+  are Tails chained off this seed, including the ~3000 and ~5000+ clusters.
+- Kosinski queue-service cadence — `s3k_kos_direct.prepared` latches one frame
+  late (its own `busy`/`active_source` are correct at row 1668) and
+  `s3k_kos_module` drains one frame early (recording busy 1668-1670, engine idle
+  at 1670). Likely the mechanism behind the streaming-rate gap above.
+- MHZ raw_frame 7221 `KOS_DECOMPRESSION_QUEUE#335` — act 1 -> act 2 boundary, so
+  the `0xdb408` submission there is the MHZ2 level-load PLC, not `loc_6196A`.
+- MGZ raw_frame 14631 `#134` — distinct engine-early defect on `c2db2fda`.
+- ICZ 287/1629 — untouched by today's work.
+
+### Unfixed gaps noted in passing (route does not currently exercise them)
+
+- `MhzSwingBarHorizontalObjectInstance.advancePhase` does nothing in the
+  slow-entry case; ROM `sub_3EFBA` (sonic3k.asm:83493-83510) steps the phase 6
+  toward zero.
+- The swing bar's downward auto-release models `move.w #0,anim(a1)`
+  (`loc_3EEC2`, sonic3k.asm:83483), where `prev_anim` equals `anim` so ROM does
+  NOT restart; the engine may restart spuriously from a stale tracker.
+
+### Measurement notes
+
+`error_count` counts divergence GROUPS, not per-frame errors — judge progress by
+whether the frontier moves. Report frame numbers are DECIMAL; the `physics.csv`
+frame column is HEX. `player_stand_on_obj` is an SST slot index, not an object id
+(`TraceFrame.java:13`). Recorded queue occupancy lives in `aux_state.jsonl.gz` as
+`load_queue_state` events, not in `physics.csv`. Clear both `target/trace-reports`
+and `target/surefire-reports` between runs or MSE totals read a stale union.
+
+## 2026-07-31 — MHZ: read the frontier, not the group count
+
+MHZ's `error_count` ROSE 622 -> 919 while its frontier ADVANCED 2986 -> 3013, and
+the commit that did it (`cfa7fc4f9`) was kept deliberately. Recording why, because
+the raw number invites the wrong conclusion.
+
+`error_count` counts divergence GROUPS, not per-frame errors. A corrected
+trajectory re-sequences one long cascade into more, shorter groups: the pre-fix
+report had single groups spanning 2986-3332, and after the fix every non-queue
+group starts at frame >= 3013. Verified independently in the main checkout —
+earliest non-queue frame 3013, so frames 0-3012 are clean. The author also
+A/B-tested its own suspicion that the routine-4 hunk caused the rise: removing it
+measured 920 against 919, so it did not.
+
+**The report's `cascading` flags OVER-ATTRIBUTE.** Two separate agents were misled
+by them today. The report marked ~596 groups as chained off frame 2920; fixing
+2920 cleared 5. Verify parentage empirically; never assume a seed owns everything
+downstream, and never size a task from a cluster count.
+
+### What `cfa7fc4f9` actually fixed
+
+MHZ frames 2966-3059 are not sidekick AI. Tails is captured and carried by the
+Madmole's arcing side drill: `sub_8D94A` (sonic3k.asm:193465-193487) sets routine
+8, `$34 = loc_8D846`, `object_control = 1`, `anim = $1A`, and `loc_8D7A8`
+(193291-193331) writes Tails' position directly from the arm, which is why his
+velocities stay zero.
+
+The engine drove the arm's rebound and its captured-player release off the raw
+animation loop wrapping. But `byte_8D9E7` (sonic3k.asm:193520) terminates with
+`$FC` (`AnimateRaw_Restart`), NOT `$F4` (`AnimateRaw_CustomCode`), so it never
+invokes `$34(a0)` at all. The `$34` hooks — `loc_8D794` for the free-flying arc
+(193281-193284) and `loc_8D846` while carrying (193353-193367) — are invoked by
+`ObjHitFloor_DoRoutine` (177964-177981), which `loc_8D778` and `loc_8D7A8` call
+whenever the arm is moving downward. Two distinct uses of `$34(a0)` had been
+conflated. See `Animate_RawNoSST` / `off_84434` (177355-177385) for the `$FC` vs
+`$F4` distinction; do not re-conflate them.
+
+Symptom before the fix: turnaround ~3 frames early, ~`$10` shallow, no floor snap.
+After: the carried arc tracks the recording to within 1px through frame 3059.
+
+### Open leads on this object
+
+- Frame 3060: ROM releases Tails with ZERO velocity and status `0x02`, then he
+  free-falls under gravity `$38` with air acceleration `$18` — the signature of
+  `loc_8D724` (sonic3k.asm:193237-193243), the arm going offscreen and deleting
+  with `bset Status_InAir` / `clr.b object_control` and no velocity write. ROM's
+  test is coarse: `(x_pos & $FF80) - Camera_X_pos_coarse_back > $280`, plus
+  `y_pos - Camera_Y_pos + $80 > $200`. The engine's
+  `SideDrillChild.checkDeleteAndReleaseCapturedPlayer` uses `isOnScreenX(0x180)`
+  with neither the coarse mask nor the y test.
+- Frame 3013: ROM sets `Status_OnObj` on Tails for exactly two frames while still
+  carried, and `tails_cpu_interact` goes `0x03 -> 0x06`; the engine leaves status
+  at `0x03`.
+
+`ObjectTerrainUtils.checkFloorDist` returns null in headless unit tests without a
+level manager — hence the null guard in `objHitFloorDoRoutine`.
+
+## 2026-07-31 — S3K MHZ complete-run: frame 3152 → 3246 (MHZ pollen spawner / RNG desync)
+
+Command: `mvn -Ds3k.rom.path=/…/s3k.gen "-Dtest=TestS3kMhzCompleteRunTraceReplay" test`
+Worktree `.worktrees/mhz-3152`, branch `bugfix/ai-s3k-mhz-3152` off
+`bugfix/ai-s3k-mhz-queue-frontier`. Read `error_count`/`total_frames` from
+`target/trace-reports/s3k_mhz1_report.json` (the test throws at segment end).
+
+- Before: `error_count` 977 / 7218 frames, 946 non-queue, earliest non-queue
+  frame **3152** (`player_animation_id 0x001A -> 0x0002`, then `x_speed`/`g_speed`
+  `-0C00 -> 0`, `y_speed` `-0200 -> 0x0488`).
+- After: `error_count` 927 / 7218 frames, 896 non-queue, earliest non-queue
+  frame **3246** (`camera_y 0x0719 -> 0x0717`, `air 1 -> 0`,
+  `status_byte 0x0002 -> 0x0000`).
+
+Diagnosis. The 3152 seed is the Madmole side drill's straight-flight kick,
+`sub_8D8E6` (sonic3k.asm:193404-193440): `x_vel(a2) = ground_vel(a2) = 2 *
+x_vel(a0)`, `y_vel(a2) = -$200`, `Status_InAir`, `anim = $1A`, spin-dash cleared —
+and the arm's own `routine` steps 2 → 6, which the recording shows exactly
+(slot 20, object `0x0008D6E6`, spawned frame 3149 at `x = 0x1052`, `y` pinned at
+`0x0724`, moving 6px/frame left, i.e. `word_8D8DE[0] = (-$600, 0)`; doubled that
+is the recorded `-$0C00`). That kick was already implemented correctly.
+
+The real defect was upstream: the engine's arm drew the *arc* variant at
+`loc_8D89E` (sonic3k.asm:193422-193438) instead of the straight one, because the
+global S3K RNG stream was desynchronised. Reconstructing the ROM seed sequence
+from the recorded `air_countdown_state.rng_seed` shows the ROM draws
+`Random_Number` roughly once per frame across this stretch (twice while both
+characters are grounded), whereas the engine had performed **two** draws in the
+entire run by frame 3149 — its three Madmole arm draws landed at ROM stream
+positions 0, 1 and 2.
+
+The missing consumer is `Obj_MHZ_Pollen_Spawner` → `sub_3DA24`
+(sonic3k.asm:81634-81680), which calls `Random_Number` once per grounded player
+per frame as its spawn gate. ROM level init installs it into
+`Dynamic_object_RAM+object_size` (sonic3k.asm:7793 — dynamic slot 1, absolute SST
+slot 4) and it runs unconditionally from the object loop. `MhzPollenSpawnerInstance`
+existed and modelled the draws faithfully, but `Sonic3kLevelEventManager` created
+it from `init(zone, act)`, which runs before the level's object manager is
+populated: the instance was discarded and `update()` never ran once in 7218
+frames — so no pollen, and no RNG draws.
+
+Fix: install it from `updateFixedInLevelObjects()` (idempotent, re-establishes it
+after a level load) at SST slot 4.
+
+Regression set: aiz 8/63, hcz 196/1320, mgz 16/14629, cnz 19/5336, icz 286/1629,
+lbz 24/35 — all unchanged. `TestS3kAizTraceReplay` holds at 4 failures + 1 error.
+`TestMadmoleBadnikInstance`, `TestMhzMushroomCapObjectInstance`,
+`TestMhzPollenObjects`, `TestMhzPollenLevelInit`,
+`TestS3kStandaloneControllerRewind` and the rewind/S3K guards pass, except the
+pre-existing `TestRewindFieldDispositionGuard` failure on
+`Mhz1CutsceneButtonInstance#knuxPeerArtQueue`, which reproduces on the base branch.
+
+Note for later: any remaining S3K RNG-driven divergence should be checked the same
+way — reconstruct the ROM seed chain from `rng_seed` and compare draw counts per
+frame, rather than assuming an object's own logic is wrong.
+
+## 2026-07-31 — S3K KosM module fingerprints: a RECORDER defect, not an engine one
+
+`queue.s3k_kos_module.queued_fingerprints` divergences **cannot be closed
+engine-side under the current fixtures**. Matching them in the engine would be
+modelling the trace and must not be attempted.
+
+`tools/bizhawk-headless/src/Recording/LoadQueueStateProjector.cs`
+(`CaptureS3kModule`) reads the queue slot's u16 destination and scales it:
+
+```csharp
+uint destination = (uint)S3KRam.U16(host, entry + 4) * 32U;
+```
+
+But that word is already a VRAM **byte** address. ROM `Queue_Kos_Module` stores
+it as one — sonic3k.asm:2683, `move.w d2,(a2)+ ; store destination VRAM address` —
+and the `plreq` macro supplies `dc.w tiles_to_bytes(toVRAMaddr)`
+(sonic3k.macros.asm:195-198). The recorder therefore multiplies an
+already-byte address by 32 a second time.
+
+Verified arithmetically rather than inferred. With `ArtTile_MGZMiniboss = $054F`
+(sonic3k.constants.asm:1220) and the ROM-derived module count:
+
+- `fingerprint(4, $36B02C, $054F*32, n)` = `106e1fe3...` — what the ENGINE emits
+- `fingerprint(4, $36B02C, $054F*32*32, n)` = `34704ede...` — what the RECORDING holds
+
+The same holds for `ArtKosM_MGZEndBossDebris` and all three HCZ waiting entries.
+The ROM source lines and the macro were re-read independently to confirm.
+
+**Consequence.** MGZ and CNZ sit at 1 divergence group each and cannot reach 0.
+The fingerprint groups inside the HCZ, ICZ and MHZ counts are permanent noise
+under the present fixtures. Closing this needs a recorder fix AND a re-record —
+a fixture-invalidating change requiring user approval, full delta
+categorisation, and frontier re-measurement across every affected capture.
+
+Do not "fix" this in the engine, and do not weaken the `queue.*` comparison —
+it is zero-tolerance by contract.
+
+### Also recorded
+
+- `CreateNewSprite4` / `AllocateObject` scan FORWARD from the creator's slot
+  (sonic3k.asm:37894-37919), so title-card elements occupy higher
+  `Dynamic_object_RAM` slots and `ExecuteObjects` runs the owner BEFORE its
+  children. The owner therefore first observes the drained `objoff_30` on the
+  FOLLOWING frame. This settles the ordering question
+  `Sonic3kTitleCardTeardownModel`'s javadoc records as "the one ordering detail
+  the disassembly alone does not settle" — and settles it the other way.
+- ROM reaches its producers (`ExecuteObjects`, sonic3k.asm:7900-7906) BEFORE the
+  `Process_Kos_Module_Queue` state step in the loop tail (7908). `Queue_Kos_Module`
+  inits an archive into an empty queue synchronously (2669-2671 -> 2694-2713) and
+  the same iteration's tail hands its first module to the direct FIFO (2735-2741),
+  so a freshly enqueued archive AND its first direct child are observable together.
+- HCZ frame 1067 is NOT a producer defect. `Obj_HCZLargeFan` (sonic3k.asm:65588-65608)
+  queues its art on a Player_1 proximity test, and the leader's x matches the
+  recording either side of 1067, so the predicate is not drifting — the lateness is
+  in when the object first runs. Two leads: the recorded direct `active_source` is
+  `$390904` = `ART_KOSM_HCZ_LARGE_FAN_ADDR + 4` where every other archive's child is
+  `+2` (Blastoid `$36A7C6`->`$36A7C8`, TurboSpiker `$36A968`->`$36A96A`, Pointdexter
+  `$36AD8A`->`$36AD8C`), so `$390900` is worth re-verifying; and ROM
+  `HCZLargeFan_QueueArt` falls THROUGH into `HCZLargeFan_WaitArt` in the same frame,
+  where `HCZLargeFanObjectInstance.update` returns immediately after queueing.
+
+### Pre-existing failures on this branch (not introduced by today's work)
+
+- `TestRewindFieldDispositionGuard` — `Mhz1CutsceneButtonInstance#knuxPeerArtQueue`
+- `TestS3kKosStructuralSequence` — 7/7, verified on the untouched base
+- `TestS3kHardwareTimingReplay#standaloneAizCompleteRunConsumesFirstEdgeThroughProductionFrameDriver`
+  — `KosM module FIFO is full` from `AizPlaneIntroInstance:700`
+
+## 2026-07-31 — s3k_mhz1 f3246 (earliest non-queue group): CORRECT NEGATIVE, no fix
+
+Command: `mvn "-Dtest=TestS3kMhzCompleteRunTraceReplay" "-Ds3k.rom.path=<s3k.gen>" test`
+Worktree `.worktrees/mhz-3246`, branch `bugfix/ai-s3k-mhz-3246` off
+`bugfix/ai-s3k-mhz-queue-frontier` @ `4196d23ee`. Baseline reproduced exactly:
+**915 errors / 7218 frames**, first error frame 33 (`queue.s3k_kos_module.busy`),
+earliest non-queue group f3246. **No source change was made — nothing to
+re-measure, per-zone results are the baseline above.**
+
+Divergence: at f3246 ROM has Sonic leave the ground (`air` 0->1,
+`status_byte` 0x00->0x02, `angle` F8) at `x=0x0FA8`, `y=0x0777`; the engine stays
+grounded for two more frames. Every velocity/sub-pixel group at f3247 follows from
+that. The report marks the whole group `cascading=true`; f3241-f3245 are
+byte-identical, so f3246 is the live seed.
+
+What was ruled out, with evidence (throwaway `System.err` probes in
+`CollisionSystem.resolveGroundAttachment`, all reverted):
+
+- **Not a threshold bug.** ROM `Player_AnglePos` `loc_ED14`-`loc_ED38`
+  (`docs/skdisasm/sonic3k.asm:18817-18843`) detaches when the floor distance
+  exceeds `min(|x_vel_hi|+4, $E)`. At f3246 `x_vel=0x073E` -> threshold 11; the
+  engine's `PlayableSpriteMovement.doAnglePos` computed exactly 11.
+- **Not a terrain-data or layout-mutation difference.** The player crosses this
+  same surface twice: f2694-f2707 at `g_speed=0x600` (grounded throughout, ROM and
+  engine byte-identical) and f3241-f3255 at `g_speed=0x77A`. Dumping the FG chunk
+  descriptors and `SolidTile` height arrays for x `0x0F80..0x0FD0` / y
+  `0x0770..0x07A0` at *both* passes gives **identical** data, so nothing mutated
+  the layout between them. At f2700 the ROM stands at `x=0x0FA7`, `y=0x0777` — one
+  pixel left of the f3246 position, at the same y — and stays grounded.
+- **Not a collision-plane / path-swap difference.** `top_solid_bit=0x0C`,
+  `lrb_solid_bit=0x0D` at f3246, and the secondary (`0x0E`) tiles decode
+  byte-identical to the primary for every chunk in the window, so
+  `Player_AnglePos`'s `cmpi.b #$C,top_solid_bit` branch
+  (`sonic3k.asm:18729-18732`) cannot change the result here.
+- **Not radii, rolling, object standing, or lag.** aux `state_snapshot` f3246:
+  `y_radius=19`, `x_radius=9`, `on_object=false`, `roll_jumping=false`,
+  `anim_id=0`, `routine=0x02`; physics `rolling=0`, `status_byte` has no
+  `Status_OnObj`; `lag_counter=0` and `vblank_counter` is strictly +1 across
+  f3238-f3251. `Player_SlopeRepel` (`sonic3k.asm:23907-23945`) cannot fire
+  (`angle+0x18 = 0x10 < 0x30`, and `|ground_vel| = 0x77A >= 0x280`).
+- **Not the RNG stream.** No random branch is involved in `Player_AnglePos`.
+
+The unresolved contradiction: with `y_radius=19` the ROM's right ground sensor sits
+at `(0x0FB1, 0x078A)`. The chunk at `(0x0FB0, 0x0780)` has heights
+`[5,5,5,5,6,6,6,7,7,7,7,8,8,8,8,9]` angle `F8`, so its surface at column 1 is
+`0x078B` and the floor distance is 0 — and column 0 (`x=0x0FB0`, the f2700 sensor)
+has the *same* height 5, which f2700 confirms ROM reads as a grounded result.
+The chunk directly below (`0x0FB0, 0x0790`) is full-height 16, so even if the upper
+tile were empty the distance could only reach 5. The left sensor (`0x0F9F`) yields
+6. **No sensor at this position can produce a distance > 11**, yet ROM detaches and
+keeps `angle=F8` — which means the winning ROM sensor *did* read the `F8` tile at
+`(0x0FB0, 0x0780)`, at a distance the tile's own geometry cannot produce.
+
+Numeric fingerprint for whoever picks this up: the ROM's behaviour is reproduced
+exactly (distance 12, angle `F8`, detach) if the sensor origin is **12 px higher**
+than `y_pos + 19` — i.e. `x_radius=9` with `y_radius=7`. No ROM state was found
+that produces that combination (spindash/roll set `y_radius=7` *and* `x_radius=3`,
+which yields angle `F6`, not `F8`), and the recorded `state_snapshot` says 19/9.
+Either the recorder's `y_radius` is sampled after a restore, or the detach comes
+from a code path not yet identified. Do not fit a constant to close this.
+
+## 2026-07-31 — surplus pre-`Initial_ProcessSprites` object dispatch removed
+
+Worktree `.worktrees/bootstrap-prelude`, branch `bugfix/ai-s3k-bootstrap-prelude` off
+`bugfix/ai-s3k-mhz-queue-frontier`. ROM `-Ds3k.rom.path=.../s3k.gen`, JDK 21.
+
+**Defect.** Every level-load-resident S3K complete-run object was dispatched TWICE before
+recorded row 0 where the ROM gives exactly ONE. `TraceReplaySessionBootstrap` reinstalled
+the main-sprite-spawn objects (`restoreCompleteRunSegmentObjectsAfterPreludeReset`) *before*
+the `objectDispatchFrames` prelude loop, so they took a prelude tick and then the
+`Initial_ProcessSprites` pass.
+
+**Fix.** Moved the reinstall to immediately before `consumePendingInitialProcessSpritesPass`.
+`SpawnLevelMainSprites` (`loc_690A`/`loc_6926`, sonic3k.asm:8205-8216) writes these objects
+into `Dynamic_object_RAM` at main-sprite spawn, part of the post-title-card setup pass — so
+they are not resident for any earlier `Level_MainLoop` tick, and that pass is their first and
+only dispatch before `LevelLoop`. No fitted constant; gating (`representedS3kCompleteRun`)
+unchanged, so S2 preludes are untouched.
+
+| segment | before | after |
+|---|---|---|
+| aiz1 | 8 | 8 |
+| hcz1 | 175/1320 | 175/1320 |
+| mgz1 | 1/14629 | 1/14629 |
+| cnz1 | 1/5336 | 1/5336 |
+| icz1 | 274/1629 | **82/1629** |
+| lbz1 | 24/35 | **8/35** |
+| mhz1 | 962/7218 | **912/7218** |
+
+ICZ first *physics* divergence moved frame 28 -> **1232** (`x`, expected `0x386E` actual
+`0x386F`); its first remaining error is the known recorder-side
+`queue.s3k_kos_module.queued_fingerprints` defect at frame 34. Matches the predicted target
+(the rejected `STARTUP_OBJECT_CONTROL_FRAMES` 30->31 probe reached 85; removing the surplus
+dispatch reaches 82).
+
+`TestS3kAizTraceReplay` holds at 4 failures + 1 error. A/B against an untouched baseline
+worktree shows `TestS2Scz/Wfz/Cpz LevelSelect`, `TestS2Ehz1`, `TestS3kMgzTraceReplay` and
+`TestS3kCnzTraceReplay` byte-identical before and after (the MGZ/CNZ standard errors are
+pre-existing fixture/hardware-timing failures). Rewind, hardware-timing-authority and
+trace-fixture-compression guards green.
+
+## 2026-07-31 — s3k_mhz1 f3246 re-measured on `3b9667485`: SECOND CORRECT NEGATIVE, contradiction narrowed to the collision-plane / layout inputs of `FindFloor`
+
+Command: `mvn "-Dtest=TestS3kMhzCompleteRunTraceReplay" "-Ds3k.rom.path=<s3k.gen>" test`
+Worktree `.worktrees/mhz-3246b`, branch `bugfix/ai-s3k-mhz-3246b` off
+`bugfix/ai-s3k-mhz-queue-frontier`. JDK 21. **No source change was made** — nothing to
+re-measure beyond the baseline.
+
+**Baseline re-confirmed on the current base** (post `3b9667485`, the surplus
+pre-`Initial_ProcessSprites` dispatch removal): `s3k_mhz1` **912 errors / 7218 frames**,
+earliest non-queue group still **f3246**, `air` exp `1` act `0` (and `camera_y` exp
+`0x0719` act `0x0717`, which follows from the same air flag — the S3K camera y-band
+differs on ground vs air). The divergence has not changed shape.
+
+### New evidence: the engine's collision heights here are validated *against the ROM*, not against itself
+
+The prior entry established terrain stability with an engine-vs-engine two-pass dump. That
+only proves the engine does not mutate. This pass derived the ROM's own surface profile
+from the ROM trace's grounded trajectory over the same crest (f2694–f2711, `g_speed 0x600`),
+using the convergence identity `y_pos = S(x + x_radius) - 20` (verified by the flat landing
+at f3255–f3261, `y_pos 0x076C` over a full-height chunk row at `0x0780`):
+
+| ROM frame | `x_pos` | right sensor | ROM `S` | tile/col | ROM height | engine height |
+|---|---|---|---|---|---|---|
+| f2700 | `0x0FA7` | `0x0FB0` | `0x078B` | `0x0FB0` col 0 | 5 | 5 |
+| f2701 | `0x0FAC` | `0x0FB5` | `0x078A` | `0x0FB0` col 5 | 6 | 6 |
+| f2702 | `0x0FB2` | `0x0FBB` | `0x0788` | `0x0FB0` col 11 | 8 | 8 |
+
+The engine's `[5,5,5,5,6,6,6,7,7,7,7,8,8,8,8,9]` for chunk `(0x0FB0,0x0780)` is therefore
+**the ROM's own data**, confirmed by ROM behaviour at three independent columns. At f3246
+the right sensor is `(0x0FB1, 0x078A)` — col 1, height 5, `S = 0x078B` — floor distance 0.
+
+### `Player_AnglePos` provably cannot detach at f3246
+
+`Player_Angle` (`docs/skdisasm/sonic3k.asm:18845-18857`) is called with `d0` = right
+(Primary) distance and `d1` = left (Secondary) distance; `cmp.w d0,d1 / ble.s loc_ED5E`
+leaves **`d1` = min(left, right)** on both paths (the angle taken is the *closer* sensor's).
+`loc_ED14`'s detach test (`sonic3k.asm:18817-18843`) therefore sees min = 0, takes
+`beq.s locret_ED12` at `sonic3k.asm:18809`, and never reaches `loc_ED38`
+(`sonic3k.asm:18840`). Quadrant is the floor handler for both the entry angle `F6` and the
+exit angle `F8` (`loc_EC7C`, `sonic3k.asm:18759-18770`: `(F6+1+$1F)&$C0 = 0`), so the
+`Player_WalkVertL/Ceiling/VertR` detaches (`sonic3k.asm:18965`, `19037`, `19109`) are not
+reachable either.
+
+### No other ROM path sets `Status_InAir` here
+
+All 214 `bset #Status_InAir` sites were enumerated. The player-`a0` ones are: the four
+`Player_AnglePos` quadrant handlers (above); `Player_SlopeRepel` `loc_11E4E`
+(`sonic3k.asm:23929`, already ruled out — `angle+$18 = 0x10 < 0x30`);
+`HurtCharacter` `loc_102E0` (`sonic3k.asm:21093`) and `Kill_Character` `loc_1036E`
+(`sonic3k.asm:21148`), which set `routine` 4/6 and overwrite `y_vel`/`x_vel`/`ground_vel`;
+`Sonic_Jump` `loc_1182E` (`23328`), `BubbleShield_Bounce` (`24415`), `Tails_Jump` (`28554`),
+`Knux_Jump` (`32470`), all of which set `jumping`, add a `GetSineCosine` impulse and clear
+`stick_to_convex`; `AirCountdown_ReduceAir` (`33554`); `Knuckles_Wall_Climb` (`31423`).
+The trace excludes every one: at f3246 `routine` stays `0x02`, `ground_vel` is preserved
+at `0x077A` and stays frozen through f3247–f3254, and `y_vel` runs `FE30, FE68, FEA0, FED8,
+FF10` — a clean `+0x38` gravity chain with **no impulse added**. The `a1`/object sites all
+require the player to be the collision target of a solid/spring object; an aux sweep of
+`object_state` for x `0x0F60..0x0FF0`, y `0x0740..0x07C0` over f3240–f3252 shows only Tails
+(slot 1), the player's own dust object (`0x0001952A`), and `Obj_StillSprite` decorations
+(`loc_2B962`, `sonic3k.asm:60221`), with `stand_on_obj = 0` and `on_object = false`.
+
+### The recorder's radii are *not* defective
+
+`S3KRam.OffRadiusY = 0x1E` / `OffRadiusX = 0x1F` match `y_radius`/`x_radius` in
+`docs/skdisasm/sonic3k.constants.asm:23-24`. More importantly the f3246 `state_snapshot`
+is emitted **by the air `mode_change` itself** (`S3KAuxEventEngine.FormatStateSnapshot`,
+"after an air mode_change" trigger), so `y_radius 19` / `x_radius 9` are the values at the
+transition, not a later resample. The prior entry's "recorder samples after a restore"
+hypothesis is **refused**. (Contrast: the `LoadQueueStateProjector` VRAM-address defect
+found the same day was real; this one is not.)
+
+### What is left, and what would settle it
+
+Every input to `FindFloor` that the trace records has now been matched to the ROM. The only
+unrecorded inputs remain:
+
+1. **`Collision_addr`** — `Player_AnglePos` swaps to `Secondary_collision_addr` when
+   `top_solid_bit(a0) != $C` (`sonic3k.asm:18729-18732`). Primary and secondary are two
+   distinct *chunk→collision-block index arrays*, not merely two solidity bits, so the same
+   chunk can resolve to a completely different height array. The prior entry compared the
+   secondary *tiles* rather than the secondary *index array*, and the two passes over this
+   crest differ in history: at f2687–f2692 the ROM crosses x `0x0F5A..0x0F78` **airborne**,
+   whereas at f3238 it crosses the same x **grounded** — a plausible way for a path swapper
+   to leave the two passes on different planes.
+2. **A ROM-side layout mutation** between f2700 and f3246 that the engine does not model.
+
+Neither `top_solid_bit` ($46), `lrb_solid_bit` ($47), `stick_to_convex` ($3C), nor
+`Primary_/Secondary_collision_addr` is captured by `S3KAuxEventEngine`. **Adding those four
+to the `state_snapshot` is the single instrumentation change that would decide f3246**, and
+is recommended before any further engine-side hypothesis. Until then, do not fit a constant:
+with the recorded state the ROM's own code cannot leave the ground at f3246.
+
+## 2026-07-31 — HCZ complete-run: 175 → 8 groups (row-0 position seeding removed)
+
+Command: `mvn "-Dtest=TestS3kHczCompleteRunTraceReplay#replayMatchesTrace"
+"-Ds3k.rom.path=<root>/s3k.gen" test`, worktree `.worktrees/hcz-frontier`, branch
+`bugfix/ai-s3k-hcz-frontier` off `bugfix/ai-s3k-mhz-queue-frontier`.
+
+**Before:** 175 error groups / 1320 frames. First error frame 0 `camera_x`
+(exp `0x01E0`, act `0x01DF`).
+**After:** 8 groups / 1320 frames. First error frame 34
+`queue.s3k_kos_module.queued_fingerprints` — the known recorder defect.
+
+### Characterisation
+
+171 of 175 groups were `physics`, 4 `animation`. By field the mass was
+`tails_x` (32), `x` (31), `camera_x` (20), `x_sub` (17), `tails_x_sub` (17) — i.e.
+**almost every group was a 1-pixel horizontal offset or its cascade**, spread evenly
+across the whole run (14 groups in f0-99, 33 in f1100-1199). Only 9 groups were
+`queue.*`. The report's `cascading` flags again over-attributed: the three genuine
+frame-0 seeds were all marked non-cascading, but so were 22 others that cleared
+with them.
+
+### Root cause
+
+`TraceReplaySessionBootstrap.seedSegmentEntryVelocity` seeded the leader's
+**position and subpixel** from trace row 0 (`setCentreX/setCentreY/setSubpixelRaw`),
+directly contradicting its own comment — which correctly argues that row 0 is a
+recorded LevelLoop iteration-1 row, a *post*-frame sample, and must not be handed to
+the engine as pre-frame state (which is why velocity and `Status_InAir` were already
+excluded). The caller had already applied the metadata start centre two lines earlier;
+the row-0 seed overwrote it.
+
+The player's spawn position is owned by `SpawnLevelMainSprites`
+(`docs/skdisasm/sonic3k.asm:8111-8205`), which takes `x_pos`/`y_pos` from the level
+start position and leaves velocity and the subpixel fraction zero.
+
+HCZ1 spawns falling with left held, so its row 0 is `$027F.E800` rather than the
+`$0280.0000` spawn — one frame of `-$1800` air-control movement already integrated.
+The engine was seeded there and then ran frame 0's own `-$1800` step on top, giving a
+**permanent one-frame x offset** that pixel-flickered `x` and `camera_x` for the whole
+run. It also cost a 1px sidekick placement error, because
+`SpawnLevelMainSprites_SpawnPlayers` derives `Player_2`'s `x_pos` from `Player_1`'s
+(`sonic3k.asm:8363-8366`): Tails was placed at `$027F-$20 = $025F` instead of `$0260`.
+`y` never diverged because HCZ1's row-0 `y` equals its spawn `y` (no vertical movement
+on frame 0) — which is why the defect stayed invisible for so long.
+
+### Blast radius: measured, not assumed
+
+Comparing row 0 against `start_x`/`start_y` for all 15 complete-run segments, **HCZ is
+the only one of the seven with a replay test whose delta is nonzero**; aiz, cnz, icz,
+lbz, mgz and mhz are all exactly `(0,0)`, so the change is a provable no-op for them.
+(`ddz`, `dez`, `hpz`, `ssz` also have nonzero deltas but no `*TraceReplay` class.)
+Re-measured after the fix and confirmed unchanged: aiz 8/64, cnz 1/5336, icz 82/1629,
+lbz 8/35, mgz 1/14629, mhz 912/7218.
+
+`seedSegmentEntryVelocity` is gated on `isS3kCompleteRunSegment`, so S1/S2 cannot reach
+it; `TestS1Ghz1TraceReplay` measured 588 groups both with and without the change.
+`TestTraceReplayStartPositionPolicy`'s 2 failures / 24 errors are byte-identical before
+and after — pre-existing, not caused here.
+
+### Remaining HCZ frontier (8 groups)
+
+Frame 34 `queue.s3k_kos_module.queued_fingerprints` (known `LoadQueueStateProjector`
+recorder defect, unfixable engine-side) and 7 groups at frames 1067-1068, all
+`queue.s3k_kos_*`, which are the previously-logged `Obj_HCZLargeFan` art-queue timing
+lead (`sonic3k.asm:65588-65608`). **No physics or animation divergence remains.**
+
+## 2026-07-31 — ICZ1 complete run: 82 → 1 (frontier cleared)
+
+Command: `mvn "-Dtest=TestS3kIczCompleteRunTraceReplay" "-Ds3k.rom.path=<s3k.gen>" test`,
+worktree `.worktrees/icz-1232`, branch `bugfix/ai-s3k-icz-1232` off
+`bugfix/ai-s3k-mhz-queue-frontier`. Before: 82 groups / 1629 frames, first physics
+divergence frame 1232. After: **1 group** — frame 34
+`queue.s3k_kos_module.queued_fingerprints`, the known `LoadQueueStateProjector` recorder
+defect. **No physics, animation, camera or sidekick divergence remains.**
+
+### Characterisation
+
+All 81 non-queue groups were one cascade from a single seed at frame 1232: the engine
+performed a `Sonic_Jump` the ROM refuses. Every marker of that routine was present in
+the deltas — `y_speed` `0` → `-$680` (`sonic3k.asm:23310`), `status` `$00` → `$06`
+(InAir|Roll), `y` +5 from the `y_radius` 19 → 14 compensation (`sonic3k.asm:23356-23366`),
+and `g_speed` `-$C9` vs `-$D5`, exactly the `$C` of ground friction the engine skipped by
+leaving the floor. The report's `cascading` flags were unreliable as usual: the three
+groups marked `cascading=false` (`player_animation_id`, `player_mapping_frame`) are pure
+consequences of the same jump.
+
+### Root cause — `Ctrl_1_locked` was never armed after the snowboard wall crash
+
+Instrumenting `doJump` showed only **three** ground jump attempts in the whole 1629-frame
+run, and the engine never even attempted the ROM's real jump at frame 1314. Reading the
+recorded input column against ROM state gave the full chain:
+
+1. **Frame 1112** — `loc_39BEE` (`sonic3k.asm:77359-77376`): once `Player_1.x_pos >= $38F0`
+   the snowboard overlay flings the rider (`x_vel = -$200`, `y_vel = -$400`, `anim = $19`),
+   writes `Ctrl_1_locked = 0` and `Screen_shake_flag = #$14`, then deletes itself. The
+   engine already modelled this frame exactly.
+2. **Frame 1113** — `ICZ1SE_Init` (`sonic3k.asm:110095-110101`): shake live and
+   `Ctrl_1_locked` clear ⇒ `st (Ctrl_1_locked)` + `clr.w (Ctrl_1_logical)`,
+   *"If shaking due to hitting the wall, remove player control temporarily"*.
+3. **Frames 1113-1313** — `Obj_Sonic` `loc_10BF0` (`sonic3k.asm:21968-21971`) stops
+   refreshing `Ctrl_1_logical` from `Ctrl_1`, so `Sonic_Jump`'s
+   `Ctrl_1_pressed_logical` test can never fire. The recording contains **six** press
+   edges in this window (1200, 1210, 1222, 1232, 1250, 1264) and the ROM ignores all six.
+4. **Frame 1314** — `Obj_ICZ1BigSnowPile` / `loc_53A4C` (`sonic3k.asm:110464-110480`):
+   pile settled at `y_pos == $70E`, player grounded, raw jump press ⇒ `clr.b
+   (Ctrl_1_locked)` and a *manual* jump with `y_vel = -$600` and **no** `y_radius`
+   position adjustment. That is why the recorded frame 1314 shows `y_speed = $FA00` with
+   `y` unchanged — not a `Sonic_Jump` at all.
+
+Confirmed against the recorded aux: `control_lock_state` transitions `1 → 255` at frame
+1113 and `255 → 0` at frame 1314, bracketing the window precisely.
+
+The engine's `Sonic3kICZEvents.updateAct1ScreenEvent` already modelled `ICZ1SE_Init`, but
+tested the shared `GameStateManager.isScreenShakeActive()` — the unrelated S2
+`Screen_Shaking_Flag` — instead of ICZ's own `screenShakeFlag`, the field that
+`triggerScreenShake` writes and `tickScreenShake` counts down. That predicate is never
+true in ICZ, so the lock never armed. `IczBigSnowPileInstance` had been compensating by
+setting the lock itself when the player landed on the pile, but the pile only starts
+descending at frame **1271** — 39 frames too late to suppress the 1232 press.
+
+### Fix
+
+`updateAct1ScreenEvent` now tests ICZ's `screenShakeFlag != 0`, matching ROM
+`tst.w (Screen_shake_flag)`. `IczBigSnowPileInstance` now only *consumes* the lock, as
+`loc_53A4C` does (`tst.b (Ctrl_1_locked) / beq`); its non-ROM self-lock and the
+write-only `escapeTriggered` field are gone. A route reaching a settled pile without the
+crash quake (checkpoint restart) now correctly never arms the scripted escape.
+
+### Blast radius
+
+Two ICZ-local files; no shared physics, collision or sidekick code touched, so S1/S2 are
+unreachable from this change. Re-measured all seven complete runs: aiz 8/64, hcz 8/1320,
+mgz 1/14629, cnz 1/5336, **icz 82 → 1**/1629, lbz 8/35, mhz 912/7218 — six unchanged.
+`TestS3kAizTraceReplay` holds at 4 failures + 1 error. `TestS3kAiz1SkipHeadless`,
+`TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`,
+`TestRewindCoverageGuard`, `TestStaticStateRewindCoverageGuard`,
+`TestRewindFixS3KIczBigSnowPileCodec`, `TestS3kIcz1SnowboardIntroHeadless`,
+`TestS3kIczPaletteCycling`, `TestS3kRuntimeStateReadGuard` and `TestIczSnowboardArtLoader`
+all green. `TestRewindFieldDispositionGuard` and `TestS3kIczAct1TransitionHeadless` fail
+identically on the base commit — verified pre-existing, not caused here.
+
+## 2026-07-31 — S3K complete-run: six of seven segments now physics-clean
+
+Measured one class per `mvn` invocation on `bugfix/ai-s3k-mhz-queue-frontier`.
+`TestS3kAizTraceReplay` holds at its documented 4 failures + 1 error throughout.
+
+| segment | start of day | now | non-queue | frames |
+|---|---|---|---|---|
+| AIZ | 8 | 8 | **0** | 64 |
+| HCZ | 868 | 8 | **0** | 1320 |
+| MGZ | 5040 | 1 | **0** | 14629 |
+| CNZ | 1658 | 1 | **0** | 5336 |
+| ICZ | 287 | 1 | **0** | 1629 |
+| LBZ | 24 | 8 | **0** | 35 |
+| MHZ | 1923 | 912 | 896 | 7218 |
+
+Every remaining group outside MHZ is `queue.*`. MHZ is the only segment with
+physics divergence left, and its 896 non-queue groups are one blocked seed plus
+its consequences (see the f3246 entries above).
+
+### Fixes that produced it
+
+- `5aee8e6d0` frame-0 `Status_InAir` from ROM spawn (`SpawnLevelMainSprites`
+  per-zone `bset`s, sonic3k.asm:8132-8177). Two writers were clobbering a spawn
+  model the engine already had right.
+- `3c8c1ae11` SS entry ring retires through the ROM tail (`loc_61794`
+  128325-128333 marks collected without deleting; `loc_6196A` retires).
+- `ea24cd193` MHZ swing bar publishes `prev_anim = 0` on upward auto-release —
+  ROM `loc_3EE7A` (83389-83394) is a WORD write and `Animate_Sonic`
+  (24739-24749) restarts only on an `anim`/`prev_anim` mismatch.
+- `bd434d6cb` title-card teardown DERIVED, not fitted: 22 frames `objoff_2E`
+  plus a 12-frame element drain, each element stepping `$20`/frame and culled by
+  the ROM's own `Render_Sprites` bounds test (36440-36468).
+- `7c91a2db9` sidekick air-landing tilt publish — ROM's `next_tilt`/`tilt` copy
+  is in the character control tail and runs for BOTH characters
+  (`Tails_Control` 26243-26244, `Sonic_Control` 25718-25719).
+- `cfa7fc4f9` Madmole carry: `byte_8D9E7` (193520) ends `$FC`
+  (`AnimateRaw_Restart`), NOT `$F4`, so it never invokes `$34(a0)`; those hooks
+  come from `ObjHitFloor_DoRoutine` (177964-177981).
+- `8005289a1` / `97991fa45` Madmole coarse offscreen release (`loc_8D6E6`
+  193218-193232) and object-controlled landing on the mushroom cap —
+  `SolidObjectTop`'s new-contact path uses a SIGNED `object_control` test
+  (42014), so only bit-7 states skip landing.
+- `8c90be2c0` MHZ pollen spawner installed where it survives level load. It was
+  created from `init(zone, act)` before the object manager existed, silently
+  discarded, and never ticked — leaving the engine ~3000 `Random_Number` draws
+  behind by frame 3149 and making a Madmole draw the wrong arm variant.
+- `fb8c68f1f` Kos module state step at its ROM frame phase (`LevelLoop`
+  7887/7888/7908) via a new `beforeTimingService` hook.
+- `60cfe76c0` level-load enemy KosM art queued on the ROM's frame:
+  `CreateNewSprite4` scans FORWARD (37894-37919) so the owner runs before its
+  children and observes the drained `objoff_30` a frame later.
+- `3b9667485` surplus pre-`Initial_ProcessSprites` object dispatch removed —
+  every level-load-resident object was executed twice before row 0. ICZ
+  274 -> 82, LBZ 24 -> 8, MHZ 962 -> 912.
+- `70147fa3f` `seedSegmentEntryVelocity` no longer seeds position or subpixel
+  from trace row 0. Row 0 is a recorded POST-frame sample; HCZ1 spawns falling
+  with left held, so its row 0 already carries one `-$1800` air-control step.
+  HCZ 175 -> 8. Blast radius measured across all 15 complete-run segments: HCZ
+  is the only one with a nonzero row-0/start delta.
+- `7d5f2289c` ICZ1 quake control lock armed from ICZ's own screen-shake flag.
+  `loc_39BEE` (77359-77376) sets `Screen_shake_flag`; `ICZ1SE_Init`
+  (110095-110101) does `st (Ctrl_1_locked)`; `loc_10BF0` (21968-21971) then stops
+  refreshing `Ctrl_1_logical` for 200 frames, so ROM ignores six recorded press
+  edges. The engine tested the shared S2 `Screen_Shaking_Flag`, never written in
+  ICZ. `Obj_ICZ1BigSnowPile loc_53A4C` (110464-110480) only CONSUMES the lock and
+  jumps manually with `y_vel=-$600` and no `y_radius` adjustment. ICZ 82 -> 1.
+
+### Open
+
+- MHZ f3246 — blocked pending the collision-plane fields being added to the
+  recorder; two independent agents exhausted the engine-side hypotheses.
+- AIZ and LBZ frame-34 queue occupancy diverges in OPPOSITE directions (AIZ
+  engine-busy where ROM is idle; LBZ ROM-busy where the engine is idle) on 64-
+  and 35-frame segments.
+- HCZ frames 1067-1068 — `Obj_HCZLargeFan` (65588-65608) art-queue timing; the
+  leader's x matches either side, so it is the object's first-run window.
+- ICZ accuracy items with no trace evidence on this route:
+  `IczSnowboardIntroInstance:453` gates the dust count on its own
+  `currentMappingFrame` where ROM `loc_39916` reads the RIDER's via
+  `movea.w $30(a0),a3` (77146); and `updateAct1BackgroundIntro` calls
+  `lockFocusedPlayerForIntroQuake` unconditionally, the background event doing
+  the screen event's job.
+
+### Newly identified pre-existing failures
+
+`TestS3kIczAct1TransitionHeadless` ("test setup must reach ICZ2 KosM parent
+retirement") and `TestS3kKosStructuralSequence` (7/7), both verified on the
+untouched base.
+
+## HCZ water wall — Kos module boundary regression from `1d93e3134`
+
+Reported as a 16-bit sign-extension defect in player `x_vel`
+(`expected: <-32776> but was: <32760>`). It is not. `getCentreY()` returns
+`short`, and `32760` is that value truncated after the test's wait loop ran
+~4154 iterations because the seeded Kos module queue never drained. The two
+numbers share their low 16 bits only because one is the test's own `int`
+arithmetic and the other a signed `short`.
+
+Root cause: `1d93e3134` moved the module state step out of
+`afterTimingService` into a new `RuntimeArtCoordinator.beforeTimingService`
+hook (ROM `LevelLoop`: `Process_Kos_Queue` 7887, `Wait_VSync` 7888,
+`Process_Kos_Module_Queue` 7908). Production services boundaries through
+`LevelFrameStep.serviceBoundary`, which calls both hooks. Two *test-side*
+models of that sequence still called only the `after` hook, so
+`Process_Kos_Module_Queue` never ran and no module ever retired:
+
+- `TestHCZWaterWallObjectInstance.serviceBoundary`
+- `GameplayModeContext.afterHardwareTimingService`, via
+  `TestLevelIterationHardwareTimingAdmissionOrder` — a second regression from
+  the same commit, 3/3 failing on the branch and 3/3 green on `origin/develop`,
+  not previously on the known-failure list.
+
+Adding the missing hook exposed a real behavioural delta the commit intended:
+the seeded archive now clears in **3** object passes where `origin/develop`
+took **4**. ROM `Process_Kos_Module_Queue` performs one state step per
+`LevelLoop` iteration — submit to the decompression queue (2741), then DMA and
+`subq.b #1,(Kos_modules_left)` (2750-2752) — from the loop tail at 7908, after
+`Process_Sprites` at 7889, so a polling object such as
+`HCZWaterWall_Horizontal_WaitArt` (`tst.b (Kos_modules_left)`, 64861) first
+observes zero on the following iteration's object pass. The unit test's
+loop/tail structure had hardcoded `develop`'s 4-pass phase; it now asserts the
+ROM invariants instead (pull every pending pass, no `loc_30338` rise while
+pending, rise on the first pass observing zero, object polling never publishes
+readiness). The complete-run measurements are the stronger ROM evidence here
+and are unchanged.
+
+Complete-run segments, after the fix — identical to baseline:
+`aiz 8/64, hcz 8/1320, mgz 1/14629, cnz 1/5336, icz 1/1629, lbz 8/35,
+mhz 912/7218`. `TestS3kAizTraceReplay` holds at 4 failures + 1 error.
+
+## 2026-08-01 — regression tail: rewind disposition, SS entry ring, Tails tilt cadence
+
+Worktree `.worktrees/regression-tail`, branch `bugfix/ai-s3k-regression-tail` off
+`bugfix/ai-s3k-mhz-queue-frontier`. Closed the four non-boundary-seam regressions:
+
+- `629c56417` — `Mhz1CutsceneButtonInstance#knuxPeerArtQueue` had no rewind
+  disposition. Central `TRANSIENT` policy entry (the field is rebound from the
+  captured `knuxPeerArtOrdinal` in `retireKnucklesPeerArt()`), matching the
+  sibling hardware queue facades. Not a baseline entry.
+- `c45b8fd3f` — `TestSonic3kSSEntryRingFormation` (3 tests). ROM
+  `Obj_SSEntryRing` falls through `bra.w SSEntryRing_Display` in the SAME frame
+  (sonic3k.asm:128229-128230), and `loc_61794` ends `jmp (AddRings)` whose `rts`
+  lands on that `bra`, so `SSEntryRing_Display`'s `btst #5,$38` (128449-128450)
+  retires via `loc_6196A` (128480-128490) on the touch frame. The engine had
+  deferred retirement one frame. Display pass now runs in-frame after the
+  routine; the `ArtKosM_BadnikExplosion` re-queue is preserved.
+- `c64cd401a` — `TestPlayableSpriteMovement` encoded leader-only tilt
+  publishing. `Tails_Control` (sonic3k.asm:26243-26244) copies
+  `Primary_Angle`/`Secondary_Angle` into the sidekick's own `next_tilt`/`tilt`
+  unconditionally, as `Sonic_Control` does (25718-25719). The sidekick owns a
+  separate instance-bound publisher; assertion re-derived to check independence
+  rather than absence.
+
+Trace verification (one class per `mvn -Ptrace-replay` invocation, report JSON
+read for `error_count`/`total_frames`) — all identical to baseline:
+`aiz 8/64, hcz 8/1320, mgz 1/14629, cnz 1/5336, icz 1/1629, lbz 8/35,
+mhz 912/7218`. `TestS3kAizTraceReplay` holds at exactly 4 failures + 1 error.
+S1/S2 unchanged: `s1_ghz1 588/3905`, `s2_ehz1 16725/5852`,
+`s2_cpz1 15622/5744`.
+## 2026-08-01 — Kos boundary seam: twelve test-side models re-joined to production
+
+Worktree `.worktrees/boundary-seam`, branch `bugfix/ai-s3k-boundary-seam` off
+`bugfix/ai-s3k-mhz-queue-frontier`.
+
+`1d93e3134` moved the Kos module state step into
+`RuntimeArtCoordinator.beforeTimingService(PRE_MAIN_LOOP)` and updated four of
+the sixteen hand-rolled test models of `LevelFrameStep.serviceBoundary`;
+`519c2afed` caught two more. The remaining twelve still called only the `after`
+hook, so no module retired. `TestSonic3kAIZEvents`
+`act1ResizeOwnerQueuesMainLevelKosmAndAppliesItsPreparedPayload` spun forever on
+`do { ... } while (!parent.ready())` instead of failing, which kept an AIZ —
+primary release slice — regression invisible to suite runs.
+
+Rather than a thirteenth copy, the sequence now has one owner:
+`HardwareBoundaryDispatch.serviceBoundary`. `LevelFrameStep.serviceBoundary` and
+`GameplayModeContext.serviceHardwareTimingBoundary` delegate to it; tests route
+through `HardwareBoundaryPump` (gameplay-mode form, or an explicit
+timing/coordinator form for hand-wired unit contexts). The AIZ loop is now
+bounded so a future regression fails fast.
+
+Six loops had encoded `develop`'s pre-`1d93e3134` phase — "PRE_MAIN_LOOP must
+not publish KosM readiness", a fixed extra object pass before
+`Obj_HCZLargeFan` drops, and `publicationFrame + 1` for the HCZ transition.
+They are re-derived from ROM state, not re-pinned:
+`Process_Kos_Module_Queue` (2726-2790) does one state step per `LevelLoop`
+iteration, decrementing `Kos_modules_left` at 2750-2752, and is called from the
+loop tail at 7908 — reached at the frame top, ahead of the next iteration's
+`Process_Kos_Queue` at 7887. So retirement surfaces at `PRE_MAIN_LOOP`;
+`VINT_SERVICE` never advances it; and the object pass (`Process_Sprites`, 7889)
+that follows in the same frame is the first poll to observe zero and the only
+dispatch permitted to publish art. Two loops (`TestSonic3kAIZEvents`,
+`TestS3kIczAct1TransitionHeadless`) were additionally asserting "intermediate
+scan" invariants against a parent snapshot taken before the frame-top step; they
+now re-read the parent and break on the owning publication scan.
+
+Classes green: `TestSonic3kAIZEvents`, `TestS3kKosStructuralSequence`,
+`TestS3kIczAct1TransitionHeadless`, `TestS3kZoneKosRewind`,
+`TestSonic3kHCZEvents`, `TestAizFireCurtainRendererRom`,
+`TestHczLargeFanCoordinateParity`, `TestS3kObjectKosOwnerRewind`,
+`TestS3kResultsKosQueueRewind`, `SwScrlAizTest`,
+`TestSonic3kTitleCardKosQueue`, `TestS3kLbz1MinibossAndTransitionHeadless`,
+plus `TestHCZWaterWallObjectInstance`, `TestS3kHcz1WaterTunnelUpwardPipe`,
+`TestLevelIterationHardwareTimingAdmissionOrder`, `TestS3kKosModuleQueue`,
+`TestS3kKosDecompressionQueue` — 138 tests, 0 failures.
+
+Non-trace suite: 13947 tests, 7 failures + 2 errors, all reproduced identically
+at the branch point in a detached baseline worktree —
+`TestRewindFieldDispositionGuard`, `TestRewindFieldAudit`,
+`TestSonic3kSSEntryRingFormation` (x3), `TestS3kCnzVisualCapture` (x2),
+`TestPlayableSpriteMovement`. `TestMGZSwingingPlatformObjectInstance` failed
+only in the shared fork and passes in isolation.
+
+Trace measurements, one class per invocation under `-Ptrace-replay`, reading
+`error_count`/`total_frames` from `target/trace-reports` — identical to
+baseline: `aiz 8/64, hcz 8/1320, mgz 1/14629, cnz 1/5336, icz 1/1629,
+lbz 8/35, mhz 912/7218`. `TestS3kAizTraceReplay` holds at exactly 4 failures +
+1 error.
+
+## 2026-07-31 — S3K KosM queue destination double-scale (recorder defect, fixed)
+
+Worktree `.worktrees/recorder-fix`, branch `bugfix/ai-s3k-recorder-fix` off
+`bugfix/ai-s3k-mhz-queue-frontier`.
+
+`LoadQueueStateProjector.CaptureS3kModule` scaled the queued module destination by 32 a
+second time. The word is already a VRAM **byte** address: `Queue_Kos_Module` stores it
+with `move.w d2,(a2)+ ; store destination VRAM address` (`sonic3k.asm:2683`), and the
+`plreq` macro emits `dc.w tiles_to_bytes(toVRAMaddr)` (`sonic3k.macros.asm:195-198`).
+The engine agrees — `S3kKosModuleQueue.captureDiagnostics` fingerprints
+`descriptor.destinationAddress()`, a byte address. Fixed to read the word unscaled.
+
+Audited every other scaling in the projector: `CaptureS3kDirect` is correct and was left
+alone, because `Queue_Kos` stores a longword RAM destination (`sonic3k.asm:2808`) that is
+never tile-scaled; `CapturePlc`'s `/ 32` is a deliberate byte-to-tile conversion for the
+S1/S2 Nemesis fingerprints. `HardwareTimingEventEngine` already read the module
+destination unscaled, so the timing port needed no change.
+
+This defect is the known cause of the HCZ frame-34
+`queue.s3k_kos_module.queued_fingerprints` group and of the single remaining MGZ and CNZ
+groups. **Those groups cannot clear until the affected fixtures are regenerated** — the
+committed fixtures still hold the double-scaled values.
+
+### Collision-plane capture added
+
+`S3KAuxEventEngine`'s `state_snapshot` now also records `top_solid_bit` (`$46`),
+`lrb_solid_bit` (`$47`), `stick_to_convex` (`$3C`), `primary_collision_addr` and
+`secondary_collision_addr`. `Player_AnglePos` swaps to the secondary array when
+`top_solid_bit != $C` (`sonic3k.asm:18729-18732`), and the two are distinct
+chunk-to-collision-block index arrays rather than solidity bits, so the MHZ frame-3246
+question could not be settled from the trace alone. Comparison-only diagnostic context;
+no comparator assertion, no engine input.
+
+Verified live rather than assumed: a 4058-frame AIZ probe capture reports
+`top_solid_bit=0x0C`, `lrb_solid_bit=0x0D`, `primary=0x00274761`,
+`secondary=0x00274D61`. The pair differ by exactly `$600`, matching `LoadSolids`'
+`addi.l #$600,d0` (`sonic3k.asm:9553`) — so these are not dead addresses.
+
+### Fixture status: regenerated (see the 2026-08-01 entry below)
+
+Native suite after the change: **514 passed, 11 failed, 0 skipped** (full tier), and
+**500 passed, 0 failed** on `--no-gates`. All 11 failures are S3K byte gates whose
+pinned aux `sha256`/length moved as intended. Measured example: `aiz_completerun`
+`aux_state.jsonl` 184,407,249 bytes vs the pinned 184,288,496 (+118,753).
+
+The regeneration surface is wider than the complete-run set: `S3KTraceDifferential`
+(standard CNZ, MGZ), `S3KCompleteRunDifferential` (HCZ timing stream),
+`S3KRunModeDifferential` (the `s3-knux-multibonus-ss` run and the identity-(C)
+segments) and `S3KCompleteRunSegmentsDifferential` (all fifteen segments) all pin aux
+bytes. Regeneration was therefore **not performed** in this commit and remains a
+pending, separately approved decision. Per-zone counts are unchanged from the
+`bugfix/ai-s3k-mhz-queue-frontier` baseline (aiz 8/64, hcz 8/1320, mgz 1/14629,
+cnz 1/5336, icz 82/1629, lbz 8/35, mhz 912/7218), because no fixture moved.
+
+## 2026-08-01 — S3K fixture regeneration for the KosM/collision-plane recorder change
+
+Worktree `.worktrees/recorder-fix`, branch `bugfix/ai-s3k-recorder-fix`. User-approved,
+fixture-invalidating regeneration of **every** affected S3K capture — the surface is wider
+than the complete-run set because both recorder changes move `aux_state.jsonl` for any S3K
+capture.
+
+### Scope: seven capture identities, 115 segments
+
+| Identity | Invocation | Fixtures |
+|---|---|---|
+| complete run | `s3k-complete-sonic-tails.bk2`, `--trace-profile complete_run --load-queue-state` | 15 `*_completerun` |
+| AIZ end-to-end | `s3-aiz1-2-sonictails.bk2`, `aiz_end_to_end` | `aiz1_to_hcz_fullrun` |
+| CNZ | `s3k-cnz-sonic-tails.bk2`, `level_gated_reset_aware` | `cnz` |
+| MGZ | `s3k-mgz-sonic-tails.bk2`, `level_gated_reset_aware` | `mgz` |
+| identity (C) | `s3-knux-multibonus-ss.bk2`, `--run-id s3k-multibonus` | `bonus_gumball`, `bonus_slots`, `bonus_pachinko`, `special_stage` |
+| identity (B) | `s3-knux-multibonus-ss.bk2`, `--run-id s3-knux-multibonus-ss` | `runs/s3-knux-multibonus-ss/`, 25 segments |
+| Knuckles super-emeralds | `s3k-knuckles-complete-superemeralds.bk2`, `--run-id s3k-knuckles-complete-superemeralds` | `runs/s3k-knuckles-complete-superemeralds/`, 68 segments |
+
+Nothing was left stale. The super-emeralds run has no native gate but its aux is equally
+affected, so it was regenerated too; it is also the only S3K fixture that does **not**
+carry `load_queue_state_per_frame`, and it was previously stamped `6.38-s3k-completerun`
+while the rest carried `6.39` — the corpus was already version-inconsistent.
+
+### Every delta categorised mechanically, whole-file
+
+`physics.csv` is **byte-identical in all 115 segments**, each reproducing its pinned
+sha256, and `hardware_timing.jsonl` is byte-identical everywhere — which independently
+confirms the timing port already read the module destination unscaled. Aux was compared by
+normalising away only the two permitted changes (the five-field `state_snapshot` tail and
+`queued_fingerprints` values on `s3k_kos_module` lines) and requiring the remainder to be
+byte-equal; every set reported all deltas explained. The count of kos_module lines carrying
+fingerprints is unchanged on both sides in every segment (complete-run mgz 244/244, lbz
+122/122, aiz 151/151), so the fix moved fingerprint **values**, not which lines carry them.
+
+Only genuinely-changed files were installed: 96 `aux_state.jsonl.gz`, 114 `metadata.json`,
+2 `run_manifest.json`. `physics.csv.gz` was deliberately **not** rewritten. The sub-1 MiB
+originals had been gzipped at level 9 while a threshold-0 native capture emits the default
+level, so reinstalling them would have produced a 77-file binary diff that falsely signals
+a physics change. The 14 special-stage aux files whose content did not move were likewise
+left alone.
+
+Recorder version bumped: `6.39` → **`6.40-s3k-completerun`**, `6.38-s3k` → **`6.39-s3k`**.
+
+### Frontier movement, measured before/after
+
+| Segment | Before | After |
+|---|---|---|
+| aiz (standard) | 8 / 64 | 8 / 64 (class holds at 4 failures + 1 error) |
+| aiz (complete run) | 8 / 64 | 8 / 64 |
+| hcz | 8 / 1320 | **7 / 1320** — frame-34 group cleared, first error now frame 1067 |
+| icz | 82 / 1629 | **81 / 1629** |
+| lbz | 8 / 35 | 8 / 35 |
+| mhz | 912 / 7218 | **911 / 7218** |
+| mgz | 1 / 14629 | no report emitted (see below) |
+| cnz | 1 / 5336 | no report emitted (see below) |
+
+HCZ moved exactly as predicted. **MGZ and CNZ did not demonstrably reach 0**, and this is
+recorded as an open question rather than a success: both now abort in
+`HardwareTimingService$RecordedAuthority.admitRecordedCompletion` with
+`expected completion: KOS_DECOMPRESSION_QUEUE#134 … engine pending: <none>` (CNZ: `#201`)
+*before* a trace report is written.
+
+That exception is **pre-existing, not caused by the regeneration** — it reproduces
+identically, same ordinal and same submission fingerprint, when the old committed
+`mgz_completerun/aux_state.jsonl.gz` is restored under the new metadata; the difference is
+only that the old fixture still got far enough to emit a 14,629-frame report. A plausible
+reading, not yet proven, is that the corrected module fingerprints change which readiness
+the schema-2 timing port releases, exposing a direct-queue submission-ordering bug earlier.
+Chasing that is engine-side work and out of scope here. Native suite and all seven guards
+are green regardless.
+
+## 2026-08-01 — S3K MGZ/CNZ timing abort: `Process_Kos_Queue` frame phase
+
+Worktree `.worktrees/timing-abort`, branch `bugfix/ai-s3k-timing-abort`, base
+`8a6313bb3` (`bugfix/ai-s3k-recorder-fix`). ROM `-Ds3k.rom.path=…/s3k.gen`, JDK 21.
+Command per segment: `mvn -Ptrace-replay -Ds3k.rom.path=… -Dtest=TestS3k<Zone>CompleteRunTraceReplay test`.
+
+### The abort never moved earlier
+
+The previous entry's "no report emitted" was a **reporting** gap, not an earlier abort.
+`AbstractTraceReplayTest` only wrote `*_report.json` when the report had errors or
+warnings; the regeneration reduced MGZ and CNZ to **zero** divergences up to the abort, so
+nothing was written. Both abort at the same raw frame as before (MGZ 14631, CNZ 5337).
+The report write in the `finally` block is now unconditional, so an aborted-but-clean run
+still records `total_frames`. With that alone: `mgz 0 / 14629`, `cnz 0 / 5336`.
+
+### Root cause
+
+Both aborts are the **StarPost bonus-star art load**, not a queue-ordering defect.
+Resolving the recorded submission fingerprints against the ROM identifies MGZ
+`KOS_DECOMPRESSION_QUEUE#134` / `KOS_MODULE_QUEUE#91` as `ArtKosM_StarPostStars2`
+(`0x187BEC` → `ArtTile_StarPost+8` = tile `0x5EC`) and CNZ `#201` / `#130` as
+`ArtKosM_StarPostStars3` (`0x187C4E`, same tile) — exactly what
+`Sonic3kObjectArtProvider.queueStarPostBonusArt` submits from `sub_2D3C8`
+(sonic3k.asm:61828-61877). The trace's `object_state` aux confirms the ROM StarPost
+(slot 15, `Obj_StarPost`) steps `routine` `0x02` → `0x04` during frame 14631's object
+pass, with the player at `y_pos 0x0E35` (`dy = -61`, inside `dy + 0x40 < 0x68`,
+sonic3k.asm:61616-61620); at 14630 `dy = -69` and neither ROM nor engine activates.
+
+The engine could not represent that. `PRE_MAIN_LOOP` was serviced at the **top** of the
+frame, before objects, so a `Queue_Kos_Module` issued by an object during frame N could
+not reach the direct FIFO until N+1 — and the port aborted at N with
+`engine pending: <none>`. ROM `LevelLoop` reads as if `Process_Kos_Queue` (7887) opens the
+loop body, but it runs ahead of `Wait_VSync` (7888) and the
+`addq.w #1,(Level_frame_counter)` that follows (7889), so it shares the frame-counter
+value of the iteration whose `Process_Sprites` (7893), `ScreenEvents` (7898) and
+`Process_Kos_Module_Queue` (7908) already ran. Both queue services are **loop-tail work for
+that same frame**, after its objects.
+
+### Change
+
+`HardwareServiceBoundary` reordered to `VINT_SERVICE, POST_OBJECTS, PRE_MAIN_LOOP`;
+`LevelFrameStep` services `PRE_MAIN_LOOP` after `POST_OBJECTS` and runs
+`processRuntimeArtQueue()` with the object pass (`ExecuteObjects`, 7900-7906) instead of
+hoisting it above the old frame-top boundary; `S3kKosModuleQueue.beforeTimingService`
+steps the head archive at `POST_OBJECTS` (`Process_Kos_Module_Queue`, 7908) immediately
+ahead of the direct FIFO's `PRE_MAIN_LOOP` service. No fixture, tolerance or port change.
+
+### Result (error_count / total_frames)
+
+| segment | base | after |
+|---|---|---|
+| aiz | 8 / 64 | 8 / 64 |
+| hcz | 7 / 1320 | 7 / 1320 |
+| mgz | no report (abort 14631) | **18 / 16510** |
+| cnz | no report (abort 5337) | **7 / 9711** |
+| icz | 81 / 1629 | 81 / 1629 |
+| lbz | 8 / 35 | 8 / 35 |
+| mhz | 911 / 7218 | **903 / 7218** |
+
+MGZ and CNZ are measurable again and now run 1881 and 4375 frames further, past the
+StarPost and the MGZ act1→act2 transition. MGZ's next frontier is
+`KOS_DECOMPRESSION_QUEUE#143` at raw frame 16513. `TestS3kAizTraceReplay` holds at exactly
+4 failures + 1 error (8 / 64). `TestHardwareTimingAuthorityGuard` 20/20,
+`TestRewindCoverageGuard`, `TestStaticStateRewindCoverageGuard`,
+`TestS3kKosDecompressionQueue`, `TestS3kKosModuleQueue`, `TestS3kAiz1SkipHeadless`,
+`TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils` all
+green. `TestS3kKosStructuralSequence` (7/7), `TestS3kKosModuleReadiness` (7/8) and
+`TestSonic3kTitleCardKosQueue` (11/12) fail identically on the base commit — their
+boundary models omit the `before` hook (the known `1d93e3134` test-side regressions).
+
+## 2026-08-01 — re-derive the Kos module publication invariant at its ROM boundary
+
+Worktree `.worktrees/aiz-invariant` on `bugfix/ai-s3k-aiz-invariant`, from `c42532b0e`.
+Test-side only; no `src/main/` change.
+
+`TestSonic3kAIZEvents#fireTransitionPublishesClaimedAct2ArtOnlyAfterPostReadiness` failed
+with `the object pass must not itself publish KosM readiness ==> expected: <2> but was:
+<1>`. The assertion was re-derived by `6e4444921` while the module state step ran at the
+frame top; `ddaf8e152` then moved it to `POST_OBJECTS`, so the invariant named the wrong
+boundary. Neither change is at fault and neither is reverted — only the assertion moved.
+
+`Kos_modules_left` is decremented at exactly one site: `subq.b #1,(Kos_modules_left)` in
+`Process_Kos_Module_Queue` (`docs/skdisasm/sonic3k.asm:2752`), on the
+decompression-complete branch (2745-2750). `LevelLoop` reaches that routine at 7908,
+immediately after `ExecuteObjects` (7900-7906) — that is `POST_OBJECTS`.
+`Process_Kos_Queue` (7887) follows in the same loop tail and services only the
+decompression queue, with no path to 2752, so `PRE_MAIN_LOOP` can never retire an archive.
+
+The drain invariant is now three ROM-derived parts rather than a pass count:
+`PRE_MAIN_LOOP` must not change the incomplete count; `POST_OBJECTS` is the sole
+publication point and readiness never regresses; and at most one archive retires per
+iteration, because 7908 calls the routine once and each call takes one of two mutually
+exclusive branches — submit (2741, `ori.b #$80` only) or DMA-and-decrement (2750-2752) —
+while the shift-out tail (2778-2788) re-enters `Process_Kos_Module_Queue_Init` (2694-2713),
+which reloads `Kos_modules_left` for the next archive rather than retiring a second one.
+
+Three siblings carried the same stale premise. `TestSonic3kHCZEvents` also asserted
+`publicationFrame == transitionFrame`; since 7908 runs after `ScreenEvents` (7898), the
+retiring iteration's own dispatch cannot observe the retirement, so it is now
+`publicationFrame + 1`. `TestS3kKosModuleReadiness` did not fail but **hung**: its
+unbounded `while (!direct.isReady(child))` drove only `prepareQueuedModuleBeforeVSync()`,
+which no longer submits a module, so the child never existed. It now submits at
+`POST_OBJECTS` first and is bounded at 16 iterations so a regression fails fast.
+
+### Result (error_count / total_frames)
+
+| segment | base | after |
+|---|---|---|
+| aiz | 8 / 64 | 8 / 64 |
+| hcz | 7 / 1320 | 7 / 1320 |
+| mgz | 18 / 16510 | 18 / 16510 |
+| cnz | 7 / 9711 | 7 / 9711 |
+| icz | 10 / 12375 | 10 / 12375 |
+| lbz | 8 / 35 | 8 / 35 |
+| mhz | 903 / 7218 | 903 / 7218 |
+
+Every segment holds at its baseline count and frame span. `TestS3kAizTraceReplay` holds at
+4 failures + 1 error. `TestSonic3kAIZEvents` 45/45; `TestSonic3kHCZEvents` 6/6,
+`TestSonic3kTitleCardKosQueue` 4/4, `TestS3kResultsKosQueueRewind` 2/2,
+`TestS3kKosModuleReadiness` 1/1 (previously hanging), `TestS3kKosStructuralSequence` 7/7,
+`TestS3kZoneKosRewind` 8/8, `TestHCZWaterWallObjectInstance` 3/3,
+`TestLevelIterationHardwareTimingAdmissionOrder` 3/3, `TestS3kKosModuleQueue` 14/14,
+`TestS3kKosDecompressionQueue` 10/10.
+
+## 2026-08-01 — reconciliation: entries above that later work has overtaken
+
+Worktree `.worktrees/hardening`, branch `bugfix/ai-s3k-hardening`, from
+`ef38aa661`. This section supersedes the specific claims below. Earlier entries are
+kept byte-for-byte as the historic record; where one of them says something no longer
+true, the correction is here. **Read this section before acting on any entry above it.**
+
+### Superseded claims
+
+| Earlier entry said | Actually true now | Changed by |
+|---|---|---|
+| `TestS3kKosModuleReadiness` fails 7/8 — a "pre-existing" boundary-model failure | The class holds **1 test** and is **green**. It never had 8. It did not fail on that run — it **hung**, on an unbounded `while (!direct.isReady(child))` whose child was never submitted; surefire reported the stale shape of the fork | `519c2afed`, bound in `ef38aa661` |
+| `TestSonic3kTitleCardKosQueue` fails 11/12 — "pre-existing" | The class holds **4 tests** and is **green** | `519c2afed` |
+| A list of "known pre-existing failures" carried over several entries | **16 of them were branch-introduced regressions**, not pre-existing. Culprits: `1d93e3134` (Kos module queue frame phase), `629c56417` (MHZ ROM art / carry-intro first tick), `c45b8fd3f` (SS entry ring retirement tail), `c64cd401a` (sidekick air-landing tilt). All 16 are fixed | `519c2afed`, `9c92a6623` |
+| MGZ and CNZ "sit at 1 divergence group each and **cannot reach 0**"; "no report emitted" | That was a **reporting** gap, not an earlier abort: `AbstractTraceReplayTest` only wrote `*_report.json` when the report carried errors or warnings, so a clean-to-abort run wrote nothing. The write in the `finally` block is now unconditional. Both segments are measurable and both now run substantially further — mgz `18 / 16510`, cnz `7 / 9711` | the timing-abort entry dated 2026-08-01 above |
+| `TestS3kHardwareTimingReplay` fails with `KosM module FIFO is full` from `AizPlaneIntroInstance:700` | The message is wrong. It throws **`Unable to queue AIZ intro sprite KosM art`**, at the same site `AizPlaneIntroInstance:700`. Still genuinely pre-existing on `#standaloneAizCompleteRunConsumesFirstEdgeThroughProductionFrameDriver` — do not chase it, but do not grep for the old string either | — |
+
+### Current state (error_count / total_frames)
+
+| segment | current |
+|---|---|
+| aiz | 8 / 64 |
+| hcz | 7 / 1320 |
+| mgz | 18 / 16510 |
+| cnz | 7 / 9711 |
+| icz | 10 / 12375 |
+| lbz | 8 / 35 |
+| mhz | 903 / 7218 |
+
+`TestS3kAizTraceReplay` holds at 4 failures + 1 error (the release-slice gate).
+
+**MHZ frame 3246 is the only remaining meaningful physics frontier.** It has three
+recorded correct negatives (see the 2026-07-31 entries above) and a live BizHawk probe
+in flight. Every other segment's residual count is queue-fingerprint noise or a
+recorded-fixture artefact, not a physics divergence.
+
+Genuinely pre-existing, do not chase:
+`TestS3kHardwareTimingReplay#standaloneAizCompleteRunConsumesFirstEdgeThroughProductionFrameDriver`,
+`TestTraceReplayStartPositionPolicy`.
+
+### Two hazard classes worth carrying forward
+
+**1. Tests that hang instead of failing.** A convergent drain loop becomes divergent when
+the phase it pumps moves. `stepHeadArchive()` now runs at `POST_OBJECTS`, not
+`PRE_MAIN_LOOP` (`ddaf8e152`), and two loops that pumped a single boundary — in
+`TestSonic3kAIZEvents` and `TestS3kKosModuleReadiness` — silently consumed a whole
+surefire fork each. The symptom is a *slow build*, not a red test, which is why it cost
+so much to find. Every drain loop whose exit depends on queue readiness, decompression
+completion, module retirement, hardware-timing admission, or PLC progress must carry an
+explicit bound with an assertion message naming what failed to converge. The remaining
+instances were swept and bounded in `05d10e26a`.
+
+**2. Hand-rolled models of a production sequence drift from it.** Sixteen test-side copies
+of the hardware boundary order each had to be corrected independently when the production
+order changed, and each looked like a separate pre-existing failure. Resolved by giving
+the sequence one owner, the `HardwareBoundaryDispatch` seam (`6e4444921`), so a boundary
+change lands in one place. Prefer the seam over a local re-implementation whenever a test
+needs to drive the production frame order.
+## 2026-08-01 — s3k_mhz1 f3246 SOLVED: Madmole arm's `$44` back-reference detaches the player on off-camera despawn
+
+Command: `mvn -Ptrace-replay "-Dtest=TestS3kMhzCompleteRunTraceReplay" "-Ds3k.rom.path=<root>/s3k.gen" test`.
+Worktree `.worktrees/f3246-probe`, branch `bugfix/ai-s3k-f3246-probe` off
+`bugfix/ai-s3k-mhz-queue-frontier`. JDK 21.
+
+**Before:** 903 errors / 7218 frames, first (and earliest non-queue) error f3246
+`camera_y` exp `0x0719` act `0x0717`, `air` exp 1 act 0.
+**After:** 934 / 7218, first error **f3326** `y_speed` exp `0x0000` act `0x03C8`.
+Frontier advanced 80 frames onto a new seed; the count rises because that new seed
+cascades further inside the captured window.
+
+### The three prior negatives were correct — and `sub_F264` was never the culprit
+
+A BizHawk probe of `sub_F264`'s own inputs and outputs, per `Player_AnglePos` sensor, per
+frame (`tools/bizhawk/probes/mhz_f3246_findfloor_probe.lua`, capture under
+`docs/architecture/validation/trace/2026-08-01-mhz-f3246-captures/`) shows the ROM at
+f3246 matching every value the engine computes:
+
+- right/primary sensor `(0x0FB1, 0x078A)`, chunk word `F276`, block `38`,
+  `AngleArray` byte `F8`, normal exit, **`d1 = 0`**
+- left/secondary sensor `(0x0F9F, 0x078A)`, `loc_F274` tile-below exit, `d1 = 6`,
+  angle `F4`
+- `Collision_addr = 0x000987C0` (Primary), `top_solid_bit=0C`, `stick_to_convex=0`,
+  `Background_collision_flag=0`
+- `Player_Angle` leaves `d1 = min = 0`, so `Player_AnglePos` takes `beq.s locret_ED12`
+  (`sonic3k.asm:18809`) and **does not detach**. `loc_ED38` is never reached anywhere in
+  f3200-f3260. The recorded exit angle `F8` is written by the grounded path.
+
+Two incidental corrections to the earlier static reasoning: `sub_F30C`'s `loc_F32A` *does*
+write the tile-below `AngleArray` byte (hence the left sensor's `F4`), and `loc_F31C`
+writes no angle at all — so the "both escape hatches force angle 0" step was wrong,
+though it did not change the conclusion.
+
+f3247-f3255 contain no `Player_AnglePos` call at all (already airborne, `Sonic_MdAir`), so
+the transition happens after `Player_AnglePos` inside f3246.
+
+### Root cause: `loc_8D724`, the Madmole arm's off-camera despawn release
+
+A write hook on Player_1's `status` byte (`tools/bizhawk/probes/mhz_f3246_status_write_probe.lua`)
+puts the `Status_InAir` write at ROM `$08D72C` — `bset #Status_InAir,status(a1)` in
+`loc_8D724` (`sonic3k.asm:193222-193228`), the off-camera despawn tail of `loc_8D6E6`, the
+Madmole's side-drill arm child (`ChildObjDat_8D9C8`/`ChildObjDat_8D9D0`,
+`sonic3k.asm:193508-193514`). A third probe confirms the released `a1` is Player_1:
+
+```
+f=3246 RELEASE released_is_player1=yes child_slot=20 child_code=0008D6E6 child_rtn=06
+       child_x=0E0C child_y=0724 child_objctl=00 child_p44=B000
+       released_ptr=B000 released_x=0FA8 released_y=0777 released_status=00 released_objctl=00
+```
+
+**`$44(a0)` is written once and never cleared.** The straight drill's touch response
+`sub_8D8E6` writes it (`move.w a2,$44(a0)`, `sonic3k.asm:193439`) and the arc grab
+`sub_8D94A` writes it (`sonic3k.asm:193477`); the wall/floor release paths (`loc_8D820`
+and `loc_8D85E` into `loc_8D834`, `sonic3k.asm:193337-193346` and `193363-193367`) only
+set `Status_InAir`, clear `object_control` and drop the arm to routine 6. So an arm at
+routine 6 that already knocked a player away still detaches that same player when it later
+leaves the camera band — even though the player is running normally 500px away with
+`object_control = 0`. The signature matches the trace exactly: `ground_vel` preserved at
+`0x077A` and frozen f3247-f3254, no impulse, `routine` unchanged `0x02`, `move_lock` 0,
+clean `+0x38` gravity chain `FE30, FE68, FEA0, FED8, FF10`.
+
+### Fix
+
+`MadmoleBadnikInstance$SideDrillChild` kept only `capturedPlayer`, nulled at release by
+`enterPostCaptureDrift`, and gated `checkDeleteAndReleaseCapturedPlayer` on it; the
+straight touch path recorded no player at all. Instrumenting the class showed the engine's
+arm tracking the ROM's trajectory byte-for-byte through f3240-f3246 (`x=0E36 … 0E0C`,
+`y=0724`) and despawning on the same frame with nothing to release. Added
+`releaseTargetPlayer` modelling ROM `$44(a0)` — written by both `sub_8D8E6` and
+`sub_8D94A`, never cleared at release, consumed by the `loc_8D724` despawn path — and
+registered it `CAPTURED` in `DefaultObjectRewindPolicies`. No fitted constant, no zone or
+frame carve-out.
+
+### Regression sweep
+
+Other six S3K complete-run segments byte-identical to baseline: aiz 8/64, hcz 7/1320,
+mgz 18/16510, cnz 7/9711, icz 10/12375, lbz 8/35. `TestS3kAizTraceReplay` holds at exactly
+4 failures + 1 error. Units pass: `TestRewindCoverageGuard`,
+`TestStaticStateRewindCoverageGuard`, `TestMadmoleBadnikInstance` (31),
+`TestS3kAiz1SkipHeadless` (8), `TestSonic3kLevelLoading` (36),
+`TestSonic3kBootstrapResolver` (5), `TestSonic3kDecodingUtils` (3).
+
+Full write-up: [docs/architecture/validation/trace/2026-08-01-mhz-f3246-findfloor-probe.md](../architecture/validation/trace/2026-08-01-mhz-f3246-findfloor-probe.md).
+
+## 2026-08-01 — MGZ complete-run: title-card KosM abort at f16513 root-caused (results create gate + retire tail)
+
+Worktree `.worktrees/mgz-16513`, branch `bugfix/ai-s3k-mgz-16513`, from
+`bugfix/ai-s3k-mhz-queue-frontier` (0ab1c8d38).
+
+Command:
+`mvn -Ptrace-replay -Dtest=TestS3kMgzCompleteRunTraceReplay -Ds3k.rom.path=<s3k.gen> test`
+
+### Frontier
+
+`KOS_DECOMPRESSION_QUEUE#143` at raw f16513, `engine pending: <none>`, fingerprint
+`fbfc78d4…`. Resolved against the ROM: source `0xD6F2A` = `ArtKosM_TitleCardRedAct`
+(0xD6F28) + 2-byte module header, destination RAM `$FFFFD000` — the first module of the
+act-2 title card art. The producer is `Obj_TitleCardInit` (`loc_2D6C8`,
+sonic3k.asm:62120-62166), reached when the retained `Obj_LevelResults` SST mutates into
+`Obj_TitleCard` at `loc_2DD06` (sonic3k.asm:62703-62734). The trace's aux queue rows show
+the ROM queueing 4 KosM archives (RedAct active + `TitleCardS3KZone`, `TitleCardNum2`,
+`ArtKosM_MGZTitleCard` queued) at row 16512, one row after the results tally exit.
+
+### Root cause
+
+The engine's results owner ran the whole sequence late:
+
+1. **Create gate.** ROM `Obj_LevelResultsCreate` gates child creation and `Events_fg_5`
+   on `tst.b (Kos_modules_left).w` alone (sonic3k.asm:62596-62598). The engine layered a
+   fitted 9-dispatch countdown (`resultsCreateGateDispatches - catchUpEntries`) on top of
+   the module readiness poll, which expired one frame after readiness. The MGZ1BGE_Normal
+   transition queue (`MGZ2_128x128/16x16_Secondary_Kos` + `MGZ2_8x8_Secondary_KosM`,
+   sonic3k.asm:106284-106305) therefore ran at row 15983 instead of 15982 — the 8
+   non-cascading groups at f15982 in the baseline report. Gate is now readiness-only.
+2. **Exit retire tail.** The waited-landing results tail used 2 extra retire dispatches;
+   ROM slot order (children allocate after the parent, sonic3k.asm:62600; `Wait2` sees
+   `$30(a0)`==0 one pass after the last child delete, release visible the dispatch after,
+   sonic3k.asm:62691-62734) plus onExitReady's next-dispatch scheduling leaves exactly 1.
+   Values 2 (late release, f16512 anim mismatch, #143 abort) and 0 (release one frame
+   early, 388-group physics cascade from f16512) bracket it; 1 matches the trace's
+   `player/tails_animation_id` 0x13→0x05 edge at row 16512 exactly.
+3. **Title start poll.** The in-level title-card coordinator only polled at the frame
+   top, one frame after the ROM's mutated SST queues its art within the same object pass.
+   `RecordingFrameDriver` now re-polls after the frame body.
+
+### Result
+
+MGZ complete-run: 18 groups / 16510 frames → **23 groups / 17949 frames**; frontier
+f16513 → **f17952** (`KOS_DECOMPRESSION_QUEUE#149`, fingerprint `8c248d18…` = 
+`ArtKosM_MGZEndBoss` 0x36B340+2, queued by the MGZ2 drilling-Robotnik boss setup at
+sonic3k.asm:142388-142404 — the engine's MGZ2 end-boss path does not submit it; next
+target). Remaining pre-frontier seeds: direct-queue head row at 16512 (module head push
+one row late), `ArtKosM_Spiker` (0x36E0C4) queued ~131 rows early at 16522 vs ROM's lazy
+enemy-art load at ~16653 (rings HUD reset +8 rows at 16551 and camera rows 16656-16677
+cascade from it).
+
+### Regression sweep
+
+Other six S3K segments byte-identical to baseline: aiz 8/64, hcz 7/1320, cnz 7/9711,
+icz 10/12375, lbz 8/35, mhz 934/7218. `TestS3kAizTraceReplay` holds at exactly 4
+failures + 1 error. Guards/units green (55 in final battery): `TestHardwareTimingAuthorityGuard`,
+`TestRewindCoverageGuard`, `TestStaticStateRewindCoverageGuard`, the four
+`TestS3kKos*` queue classes, `TestSonic3kTitleCardKosQueue`, `TestS3kSignpostInstance`,
+`TestS3kResultsScreenObjectInstance`, `TestS3kResultsKosQueueRewind`,
+`TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver`,
+`TestSonic3kDecodingUtils`.
+## 2026-08-01 — AIZ and LBZ frame-34 queue windows resolved (bugfix/ai-s3k-aizlbz-f34)
+
+Command (per segment, worktree `.worktrees/aizlbz-f34`):
+`mvn -Ptrace-replay -Dtest=TestS3k<Zone>CompleteRunTraceReplay -Ds3k.rom.path=… test`
+
+Both segments diverged at frame 34 on the eight `queue.s3k_kos_*` fields, in opposite
+directions. Root causes (both title-card teardown `LoadEnemyArt`, sonic3k.asm:62295-62301,
+64281-64313):
+
+- **LBZ** (ROM busy, engine idle): `Sonic3kObjectArtProvider.scheduleEnemyKosArt` had no
+  `ZONE_LBZ` case, so the engine never submitted `PLCKosM_LBZ` (SnaleBlaster, Orbinaut,
+  Ribot, Corkey — sonic3k.asm:64397-64402; recorded direct child source 3635608 =
+  `ArtKosM_SnaleBlaster` 0x377996 + 2-byte KosM header). Added the case.
+  **LBZ complete run: 8 errors/35 frames -> 0 errors/12643 frames.**
+- **AIZ** (engine busy, ROM idle): ROM Level init never installs `Obj_TitleCard` for a
+  fresh AIZ1 Sonic/Tails game (`Current_zone_and_act==0 && Player_mode<2 &&
+  !Last_star_post_hit`, sonic3k.asm:7702-7709 branching past the 7728-7735 install), so
+  there is no teardown and no `LoadEnemyArt` at frame 34; the recording's first busy frame
+  (64, direct source 3679782 = `ArtKosM_AIZIntroPlane` 0x382624 + 2) is the plane intro
+  child queueing its own art (sonic3k.asm:135736-135741). `LevelManager`'s
+  suppressed-presentation path no longer starts the skipped-presentation teardown model.
+  **AIZ complete run: 8 errors/64 frames (aborting at 63) -> 65 errors/6344 frames.**
+
+New AIZ frontier: frame 1096, `queue.s3k_kos_direct.busy` — the engine queues the four
+title-card KosM modules (first child `ArtKosM_TitleCardRedAct` 0x0D6F28+2 = 880426) one
+frame before the recording (1097). ROM installs the intro's in-level title card only on an
+odd `Level_frame_counter` frame (`btst #0,(Level_frame_counter+1)`,
+sonic3k.asm:114389-114396); the engine's intro handoff has no such parity gate. Later
+groups (1106-1237 etc.) are downstream one-frame skew of the same submission.
+
+Regression sweep: hcz 7/1320 (baseline), remaining segments recorded below by the sweep
+run in this entry's commit.
+## 2026-08-01 — MHZ f3326: Madmole cap top-landing width (934 -> 838, frontier f3420)
+
+Worktree `.worktrees/mhz-3326`, branch `bugfix/ai-s3k-mhz-3326` off
+`bugfix/ai-s3k-mhz-queue-frontier` (0ab1c8d38). Command:
+`mvn -Ptrace-replay "-Dtest=TestS3kMhzCompleteRunTraceReplay" test -Ds3k.rom.path=<s3k.gen>`.
+
+### Divergence
+
+f3326: ROM lands the lead on an object (`status 0x09`, `stand_on_obj` slot `0x11`,
+`g_speed 0x0071`, `y 0x0728`); engine kept him airborne rolling (`status 0x07`,
+`y_speed 0x03C8`, `y 0x072C` on terrain two frames later). Slot 0x11 is `Obj_Madmole`
+(code `0x0008D586`), the cap parent, which runs `sub_8D876` -> `SolidObjectFull`
+(`d1=$1F, d2=4, d3=5`, sonic3k.asm:193057-193058, 193381-193386) unconditionally every
+frame. Cap at (0x1060, 0x0740); seat `0x740 - 5 - 0x13 = 0x728` matches the ROM row.
+
+### Root cause
+
+Not a stale reference or lifetime effect this time: instrumentation showed the engine
+Madmole in the correct PAUSING state with the solid anchored at homeY 0x740, and the
+generic solid pass reaching the landing branch (`distY = 2`) but rejecting on
+`isWithinTopLandingWidth`. The engine's default landing gate narrows to
+`collisionHalfWidth - $B = $14`, but ROM `Solid_Landed` / `loc_1E154`
+(sonic3k.asm:41611-41621) re-reads `width_pixels(a0)`, and `ObjDat_Madmole`
+(sonic3k.asm:193493-193497) sets `width_pixels = $18`. The player was `+0x14` from the
+cap centre: outside `$14`, inside `$18`.
+
+### Fix
+
+`MadmoleBadnikInstance` overrides `getTopLandingHalfWidth` to return `0x18` — the
+existing provider hook for exactly this ROM pattern (the MHZ1 cutscene button precedent
+is documented at the hook's call site). Object-local, no fitted constant, no zone or
+frame carve-out.
+
+### Regression sweep
+
+Counts: aiz 8, hcz 7, mgz 18, cnz 7, icz 10, lbz 8 — all baseline; mhz 934 -> 838,
+first error f3326 -> f3420 (`rings`). MHZ tail `KOS_DECOMPRESSION_QUEUE#335` throw
+unchanged (known pre-existing; report still covers all 7218 frames).
+
+## 2026-08-01 — S3K SolidObjectFull landing-width sweep (bugfix/ai-s3k-landing-width)
+
+Systematic audit of all 118 `SolidObjectFull` call sites in sonic3k.asm following the
+Madmole fix (`0e5fbf189`). ROM `Solid_Landed` / `loc_1E154` (sonic3k.asm:41611-41621)
+re-reads `width_pixels(a0)` for the new-landing X gate; the engine's generic
+`collisionHalfWidth - $B` heuristic is correct only where the caller passed
+`d1 = width_pixels + $B`. `SolidObjectTop_1P` (sonic3k.asm:41798-41825) uses `d1`
+directly, so top-profile objects are unaffected. S1 `Solid_Landed`
+(s1disasm `_incObj/sub SolidObject.asm:318-336`, `obActWid`) and S2
+`SolidObject_Landed` (s2.asm:35588+) re-read the width field identically — the
+heuristic is a cross-game compensation for the engine not modelling `width_pixels`
+as a first-class solid-provider field (design note below).
+
+### Mismatches fixed (measured routes, object-local `getTopLandingHalfWidth` overrides)
+
+- AIZ disappearing-floor border child: spawn `width_pixels = $28` (58390), call
+  `d1 = $2B` (58413-58418) → gate was $20, ROM $28 (8px narrow).
+- CNZ miniboss top: `ObjDat3_CNZMinibossTop` `width_pixels = $18` (145662-145664),
+  call `d1 = $13` (145064-145068) → gate was $8, ROM $18 (16px narrow).
+- ICZ end boss solid bottom: `ObjDat3_72324` `width_pixels = $10` (151287-151291),
+  call `d1 = $23` at loc_71F30 (150882-150886) → gate was $18, ROM $10 (8px WIDE —
+  engine accepted landings the ROM rejects).
+
+### Audited clean (relation holds or override/profile already present)
+
+All `addi.w #$B,d1` sites (consistent by construction); LBZ pipe plug ($1B/$10);
+Obj_Button main ($1B/$10); CNZ cylinder ($2B/$20); HCZ spinning column ($1B/$10);
+ICZ path platform, breakable wall, crushing column, segment column, swinging
+platform, stalagtite, ice spikes, ice cube ($23/$18, override kept); Iwamodoki
+($17/$C); MHZ ObjDat3_6653C platform ($1B/$10); egg capsule body ($2B/$20) and
+button (word_86B3E `width_pixels = $10` vs `d1 = $1B` — consistent); LBZ end boss
+ship ($13/$8); FBZ egg prison via sub_89D9C ($2B/$20); FBZ spring plunger
+($1B/$10); LRZ3 platform loc_79D08 ($2B/$20); MHZ Rockn ($23/$18); main-game
+spikes (+$B sites).
+
+### Mismatches on unmeasured routes (logged, not patched)
+
+FBZ miniboss capsule via sub_6F786 (`d1 = $23` vs FBZEggPrison `$20`); FBZ end-boss
+Robotnik stand loc_70152 (`d1 = $13` vs ObjDat3_703BC `$20`); SOZ end-boss children
+loc_77B16/77B9A/77C32 (`$1F/$18`, `$1B/$14`, `$2B/$28`); LRZ miniboss locret_786A0
+(`$33` vs `$30`); ICZ Knuckles-intro teleporter (`d1 = $23`, 110547, vs
+`width_pixels = $20`, 110492 — object not implemented in engine); competition 2P
+button (`$13` vs `$C`) and 2P spikes (`width_pixels + 7` callers).
+
+### Design note
+
+Per-object overrides are compensation for the shared heuristic. The accurate model
+is a `width_pixels`-equivalent field on solid providers consumed by
+`ObjectSolidContactController`'s landing gate in all three games. Blast radius:
+every solid object in S1/S2/S3K — not landed here; requires a full S1+S2+S3K trace
+sweep if attempted.
+
+### Regression sweep (all seven segments + gates)
+
+`mvn -Ptrace-replay -Dtest=TestS3k<Zone>CompleteRunTraceReplay test`, one class per
+invocation: aiz 65/6344, hcz 7/1320, mgz 23/17949, cnz 7/9711, icz 10/12375,
+lbz 0/12647, mhz 838/7218 — all exactly baseline (LBZ first run reported 12643
+frames due to a surefire-fork heap OOM in teardown; re-run reproduced the full
+0/12647 with "All frames match trace"). `TestS3kAizTraceReplay` holds at exactly
+4 failures + 1 error. S3K guards (`TestS3kAiz1SkipHeadless`,
+`TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver`,
+`TestSonic3kDecodingUtils`) and rewind guards (`TestRewindCoverageGuard`,
+`TestStaticStateRewindCoverageGuard`) green. Trace deltas are neutral: the current
+routes do not land on the affected outer bands, so these overrides are
+disassembly-derived corrections, not trace-fitted.
+
+## 2026-08-01 — AIZ complete-run f1096: title-card KosM queue one frame early (worktree `.worktrees/aiz-1096`, branch `bugfix/ai-s3k-aiz-1096`)
+
+Command: `mvn -Ptrace-replay -Dtest=TestS3kAizCompleteRunTraceReplay -Ds3k.rom.path=… test`
+
+Frontier group: frames 1096-1096, `queue.s3k_kos_module.busy/prepared/remaining_work/queued_fingerprints`
+(engine busy with the four title-card KosM modules, recording idle; recording's matching
+set starts at 1097).
+
+Root cause was NOT the suspected `Level_frame_counter` parity gate: the previously cited
+odd-frame `btst #0,(Level_frame_counter+1)` install at sonic3k.asm:114388-114396 belongs
+to `SOZ2_BackgroundEvent` (loc_56324), not the AIZ intro. The AIZ intro's install is the
+Knuckles cutscene exit, `loc_61F22` (sonic3k.asm:128743-128750): it only ALLOCATES the
+`Obj_TitleCard` slot; `AllocateObject` hands back a slot the current `ExecuteObjects`
+pass has already walked, so `Obj_TitleCardInit` — which queues the four KosM modules
+(sonic3k.asm:62109-62152) — first dispatches on the next frame's pass. The engine's
+`CutsceneKnucklesAiz1Instance.completeIntroExitHandoff` called
+`titleCardProvider().initializeInLevel(0, 0)` synchronously, submitting the art one frame
+early. Fix: the cutscene object holds one more dispatch (routine 14) standing in for the
+allocated `Obj_TitleCard` slot and performs the title-card init there. (An intermediate
+attempt via `LevelManager.requestInLevelTitleCard` did not move the submission frame —
+the recording frame driver's post-frame in-level title-card poll consumes the request the
+same row.)
+
+Result: AIZ complete run 65 errors -> 57 errors over the same 6344 frames; first error
+1096 -> 1106. The 1106-1237 cluster is NOT downstream skew of 1096: it is an independent
+engine-only submission — `Sonic3kAIZEvents.serviceAiz1MainLevelArt` queues the AIZ1
+main-level block (direct Kos source 3571726 = 0x367F0E -> `KOS_DECOMP_BUFFER` $FFFFD000)
+and pattern art (module fingerprint e6f7dd…, dest $0BE) into the modelled hardware queues
+once the camera crosses `TERRAIN_SWAP_X` after the intro handoff, where the recording
+shows both queues idle for the whole 1106-1237 window. The same module fingerprint
+reappears in the 6303-6344 tail group, and 6216 shows the reverse (recording busy,
+engine idle: direct source 3887592 = 0x3B51E8) around the AIZ1->AIZ2 transition; the
+6300+ physics cluster (x/camera_x offset by 0x2F00) is the seamless-reload player/camera
+offset landing on the wrong frame. Next target: model the ROM's actual main-level
+terrain load producer instead of submitting engine-internal overlay preparation to the
+modelled Kos queues at 1106.
+
+Segment sweep (this commit): aiz 57/6344 (was 65/6344), hcz 7/1320, mgz 23/17949,
+cnz 7/9711, icz 10/12375, lbz 0/12647, mhz 934/7218 — non-AIZ segments at baseline.
+## 2026-08-01 — MHZ f3420: rings seed traced to SST slot-occupancy drift (correct negative, no code change)
+
+Worktree `.worktrees/mhz-3420`, branch `bugfix/ai-s3k-mhz-3420` off
+`bugfix/ai-s3k-mhz-queue-frontier` (67ae3bddf). Command:
+`mvn -Ptrace-replay "-Dtest=TestS3kMhzCompleteRunTraceReplay" test -Ds3k.rom.path=<s3k.gen>`.
+Run confirmed baseline: mhz 838 errors / 7218 frames, first non-queue error f3420 (`rings`,
+expected 3 / actual 4, span 3420-3425). Queue/physics split 7/831; error mass by 500-frame
+bucket: 3000s:16, 3500s:85, 4000s:61, 4500s:66, 5000s:133, 5500s:141, 6000s:135, 6500s:134,
+7000s:67.
+
+### Characterisation
+
+The player was hit at ~f3331 and 32 rings spill (two 16-ring circles, ROM `loc_1A67A`,
+sonic3k.asm:35548-35577). Re-collection is timer-bound first: the invulnerability gate
+(`Touch_ChkValue` reads the MAIN character's `invulnerability_timer`, >= 90 blocks,
+sonic3k.asm:20786-20794) opens at f3410 in both engine and ROM — the +2 at f3411 and +1 at
+f3415 match exactly, so the invuln timer, gate threshold, and static ring pickup are all
+synchronized. The f3420 divergence is the 4th spilled ring, overlap-bound: the engine's
+Tails touches it at f3419 (ring at 0x1090,0x71E vs Tails 0x1087,0x730), ROM's only at
+f3425.
+
+The trace's `object_near` aux events record ROM's bouncing rings (`Obj_Bouncing_Ring`
+0x1A64A). Direct comparison: ROM's counterpart ring (slot 58) bounces off the floor ~2
+frames later than the engine's (ROM y reaches 0x73E before the probe fires vs engine
+0x738), so ROM rebounds harder and its apex is ~3px higher (0x717 vs 0x71B) — exactly
+enough that the engine ring clips Tails's touch box (box top = y - (y_radius-3),
+sonic3k.asm:20643-20655; ring Touch_Sizes entry $07 = 6x6, 20712-20719) six frames early.
+
+### Root cause (upstream, systemic)
+
+The spilled-ring floor probe runs on the `(V_int_run_count + d7) & 7` cadence
+(sonic3k.asm:35625-35629), where `d7` is the ExecuteObjects slot countdown — i.e. probe
+phase is a pure function of SST slot index. ROM allocates the spill via
+`AllocateObjectAfterCurrent` (sonic3k.asm:35576) into the free-slot map at f3332:
+circle 1 into 7,20,29,35,36,43,47-56, circle 2 contiguously into 57-72. The engine's
+free-slot map at the same moment differs (engine circle 1: 4,9,10,27,41,42,43,46,47-54;
+circle 2: 55-70) — the second circle lands 2 slots low, shifting every circle-2 ring's
+probe phase by 2 and moving one bounce.
+
+The occupancy drift is dominated by MHZ pollen churn: pollen particles
+(`Obj_MHZ_Pollen`/`loc_3DC18`, spawned via `AllocateObjectAfterCurrent` with
+`Random_Number` velocities, sonic3k.asm:81660-81725) occupy ROM slots 8-19/26-46 at spill
+time while the engine's pollen sits at 23-40, and level-placed statics (StillSprite 0x2F,
+Madmole at ROM slot 17 vs engine 19, etc.) sit at shifted slots. Slot-exact parity here
+requires RNG-sequence and placement-slot parity for decorative churn — not fixable
+object-locally and out of scope for this cycle. No fitted alternative exists: the probe
+phase is genuinely slot-derived ROM state.
+
+### Secondary seed (open)
+
+The f3457-3486 block (ROM CPU Tails presses the auto-jump while pushing, engine does not)
+may be independent: both sides agree on `tails_status_byte` 0x21 (Status_Push) from f3428
+through f3456 and on the delayed-leader status, so ROM's push-bypass route
+(`loc_13DD0` btst Status_Push / btst #5,d4 → `loc_13E9C`, sonic3k.asm:26702-26705,
+26787-26793) should be open to the engine's modelled gate as well; the engine never
+generates the press on the $3F cadence frame. Worth a dedicated instrumented pass at the
+`SidekickCpuController` auto-jump gate (call index 3459 = trace frame 3457) before
+attributing it to the ring skew.
+
+### Regression state
+
+No code changed (instrumentation reverted); counts remain the baseline recorded above and
+in the f3326 entry: aiz 65/6344, hcz 7/1320, mgz 23/17949, cnz 7/9711, icz 10/12375,
+lbz 0/12647, mhz 838/7218. MHZ tail `KOS_DECOMPRESSION_QUEUE#335` throw unchanged (known
+pre-existing).
+
+## 2026-08-01 — AIZ 1106-1237 engine-only Kos submission: root-cause investigation (no fix landed)
+
+Command: `mvn -Ptrace-replay -Dtest=TestS3kAizTraceReplay -Ds3k.rom.path=<root>/s3k.gen test`
+Context: worktree `.worktrees/aiz-1106`, branch `bugfix/ai-s3k-aiz-1106` off
+`bugfix/ai-s3k-mhz-queue-frontier` (a3926493c). No code change committed; instrumented
+runs only (instrumentation reverted).
+
+Findings, established against the fixture streams directly (physics.csv.gz frame labels
+are hex-encoded sequential indices; aux_state.jsonl and the csv share one 0..26227 frame
+space — both streams end at frame 26227):
+
+1. The recording is NOT idle-only around the window. It runs the main-level pair
+   (direct Kos source 0x367F0E + module fingerprints e6f7dd…/1a182ba…, dest $0BE) with
+   queues busy at trace frames 1238-1246 (ledger completions: direct ordinals 16-18,
+   module 8-10, frames 1239-1246). The engine submits the identical pair (fingerprints
+   match exactly) but its busy window lands ~130-160 compared frames later
+   (this run: 1396-1527), producing the engine-busy/recording-idle error window.
+2. The recorded end-of-frame camera never reaches TERRAIN_SWAP_X ($1400) near the
+   submission: it peaks at $13FA (frame 1208) and reads $13E6 on the queue frame 1238;
+   the visible crossing is only at ~frame 1460+. The only static producers of this pair
+   are camera-$1400-gated: `loc_1C4D0` (sonic3k.asm:38912-38930), s3.asm `loc_1A96C`
+   (s3.asm:32138-32156), and the ending's `loc_5AC12` (sonic3k.asm:120990-121010, gated
+   on 7 super emeralds / $D01 — not this run). Therefore ROM's stage-1 queue fires on a
+   TRANSIENT mid-frame Camera_X_pos ≥ $1400 during the intro→gameplay handoff snap
+   (`loc_61F22` sets Level_started_flag=$91, sonic3k.asm:128743-128756; the next frames'
+   forced-scroll/snap path in DeformBgLayer, sonic3k.asm:38290-38330, momentarily runs
+   the camera past $1400 before player tracking settles it back to $13E6) — a state the
+   end-of-frame trace sample never shows.
+3. The engine models the same semantic: `CutsceneKnucklesAiz1Instance.completeIntroExitHandoff`
+   calls `camera().updatePosition(true)`, the snapped camera reads 0x1403, and
+   `serviceAiz1MainLevelArt` fires on the very next AIZ events pass (instrumented:
+   single submission, cameraX=0x1403, Level_frame_counter 1248; block claimed +22
+   frames, art claimed +56). The WHAT is right; the WHEN is off because the engine's
+   intro-exit handoff completes ~130-160 compared frames after ROM's, i.e. the residual
+   gap is cutscene/handoff pacing (Knuckles exit + inserted in-level title-card frames),
+   not the queue model, and not a missing off-ledger level-load producer.
+4. Related occurrences: the same pair re-fires in the recording at 6345-6351 (the AIZ2
+   seamless reload re-runs the same producer) and the act-2 LLB batch (source 0x3B51E8,
+   module b335a79…, remaining_work 4) is busy at 6216-6288; the engine's counterparts
+   land at 5498-5542 / miss at 5414 in this run's report — all downstream of the
+   0x2F00 seamless-reload physics cascade (this run: first physics error at 5496),
+   sharing the same "handoff pacing" character, not independent queue bugs.
+5. Run-to-run drift observed: this baseline run reported 59 errors / 5253 frames with
+   the window at 1396-1527, where the previous session recorded 57/6344 with the window
+   at 1106-1237 — same commit, same fixture. The engine-only window's position moves
+   with the inserted title-card/handoff frames, corroborating (3).
+
+Conclusion: a correct fix must align the engine's AIZ intro-exit handoff frame (Knuckles
+exit render-boundary timing plus the title-card insertion) with the ROM's, after which
+the existing camera-snap-triggered submission should land on the recorded frame and be
+released by the recorded completions. Gating `serviceAiz1MainLevelArt` differently, or
+touching the Kos queues/timing port, is NOT the right lever and risks LBZ (0/12647).
+Pass/fail: TestS3kAizTraceReplay held at the release-slice gate (4 failures + 1 error).
+
+## 2026-08-01 — HCZ complete-run: frame-1067 queue groups cleared, frontier 1320 -> 10334
+
+Command: `mvn -Ptrace-replay -Dtest=TestS3kHczCompleteRunTraceReplay -Ds3k.rom.path=<rom> test`
+Context: worktree `.worktrees/hcz-1067`, branch `bugfix/ai-s3k-hcz-1067` (from
+`bugfix/ai-s3k-mhz-queue-frontier` @ a3926493c). Result: FAIL (frontier terminator),
+119 errors / 10334 frames; first error `queue.s3k_kos_direct.busy` at frame 3230.
+
+The "HCZ large fan" lead resolved to the HCZ water wall: the recorded frame-1067 direct
+child `3738628` is `$390C04 = ArtKosM_HCZGeyserHorz+2` (previously misread as `$390904`;
+`ART_KOSM_HCZ_LARGE_FAN_ADDR=0x390900` verified byte-for-byte against ROM, and the fan
+never runs on this route — `Obj_HCZLargeFan` = ROM `$308FA`, absent from slot dumps).
+Three `Obj_HCZWaterWall` fixes (all object-local, plus
+`Sonic3kObjectArtProvider.reloadEnemyKosArt()`):
+1. `HCZWaterWall_Horizontal_CheckPlayerY` -> `_QueueArt` same-frame fall-through
+   (sonic3k.asm:64847-64859), and `_Init` -> `_WaitPlayer` (64866-64887).
+2. `HCZGeyser_ReloadEnemyArtAndDelete` (65002-65004) runs `LoadEnemyArt`
+   (64281-64313) at cleanup expiry for BOTH geyser subtypes, re-queueing the act's
+   `PLCKosM_HCZ1` enemy archives (recorded direct completions 1335-1344 and 3261+).
+3. Erupt/fall phases exit on ROM `render_flags` bit 7 — `Render_Sprites` world cull
+   (loc_1AEA2) with `width_pixels`/`height_pixels` ($80/$20 horz, $20/$60 vert),
+   observed one frame stale; horizontal erupt keeps spawning one spray child
+   (+`Random_Number`) per frame until then (64946-64976).
+
+Sweep (this commit): aiz 57/6344, hcz 119/10334 (was 7/1320), mgz 23/17949, cnz 7/9711,
+icz 10/12375, lbz 0/12647, mhz 838/7218 — all non-HCZ at baseline. `TestS3kAizTraceReplay`
+holds 4F+1E. Guard batch (S3K keep-green four, `TestHardwareTimingAuthorityGuard`,
+`TestHczLargeFanCoordinateParity`, `TestS3kKosModuleQueue`/`DecompressionQueue`/
+`ModuleReadiness`) 98/98 green.
+
+Next HCZ targets: (a) frames 3230-3260 — second `LoadEnemyArt` reload fires 31 frames
+early; recorded reload at 3261 (`KOS_DECOMPRESSION_QUEUE#86`), engine cleanup-start too
+early — likely the other geyser's exit-edge model still imprecise; (b) frame 9761 —
+`player_animation_id` 0x13 vs 0x09 plus an engine-only KosM submission (direct source
+879204 = `$D6A64`); (c) terminator at 10334: recording expects
+`KOS_DECOMPRESSION_QUEUE#104` (fingerprint fbfc78d4…) with engine pending empty.
+## 2026-08-01 — MHZ f3457 sidekick push-bypass auto-jump: Madmole inclusive right edge
+
+Worktree `bugfix/ai-s3k-mhz-3457` (from `bugfix/ai-s3k-mhz-queue-frontier`).
+Command: `mvn -Ptrace-replay -Dtest=TestS3kMhzCompleteRunTraceReplay -Ds3k.rom.path=<s3k.gen> test`.
+
+### Root cause (fixed)
+
+The f3457 auto-jump was an independent seed, but not a gate bug — a push-state bug.
+The previous entry's "both sides agree on status 0x21" was wrong: the trace holds
+`sidekick_status_byte = 0x21` (Status_Push) from f3428-f3456 while the engine's Tails
+held 0x01. ROM: Tails is clamped against the Madmole cap (slot 17, `Obj_Madmole`,
+x=0x1060) at exactly `obj_x + d1` with `sub_8D876`'s `d1 = $1F`. `SolidObject_cont`'s
+X gate rejects with `bhi` (sonic3k.asm:41393-41399), so `d0 == d1*2` stays in contact;
+`loc_1E042`'s `d0 == 0` branch goes straight to `loc_1E06E` and re-sets `Status_Push`
+on the grounded player every frame (sonic3k.asm:41470-41500) even though
+`Tails_InputAcceleration_Path` (`loc_14A16`, sonic3k.asm:27806-27815) clears it earlier
+in the same frame once ground_vel hits 0 (which is why the trace also shows anim 5).
+The engine's exclusive right-edge window dropped the contact once Tails came to rest at
+the clamp boundary, push never persisted, `loc_13DD0`'s push-bypass to `loc_13E9C`
+never opened, and the $3F-cadence press at f3457 (`Level_frame_counter` low byte 0x80)
+never fired.
+
+Fix: `MadmoleBadnikInstance#usesInclusiveRightEdge()` → true (existing provider hook,
+same as the S3K horizontal-spring precedent). Counter visibility is correct: with push
+held, the engine fires the press on the exact ROM frame — no cadence change needed and
+`TestS3kAizTraceReplay#aiz2ReloadSidekickFallthroughAutoJumpUsesRomVisibleCounter` is
+untouched.
+
+### New frontier: f3536 — drill-carry ground_vel visible to Tails CPU one frame early
+
+MHZ 838/7218 → 865/7218 with first physics divergence f3431 → f3536 (+105; the count is
+higher because the new x cascade is wide but shallow — judge by frontier). Remaining
+pre-3536 errors are the settled f3420-3425 rings slot-drift family only.
+
+f3536 seed (characterised, open): the Madmole side-drill carry writes the leader's
+`ground_vel = $C00` from its collision_property consumer `sub_8D8E6` — in the drill's
+SST slot (17), i.e. AFTER Tails' slot. ROM's Tails CPU at f3536 therefore still reads
+the old ground_vel, keeps the `loc_13DBA` `subi.w #$20,d2` slow-leader target offset
+(sonic3k.asm:26692-26694), sees dx < $30, and does not steer; the $808 FollowRight
+steer starts f3537. The engine's object pass (`ObjectTouchResponseController` →
+`MadmoleBadnikInstance$SideDrillChild`) runs before the sidekick CPU in the frame, so
+the write is visible one frame early → right-steer, facing clear, and x_vel 0x18 all
+lead ROM by one frame (errors f3536-3631, plus a rings 6-vs-5 divergence from f3554
+likely downstream). A fix needs a ROM-slot-visibility model for object-pass writes to
+the leader's ground_vel (pre-object-pass sample plus a "written by this frame's object
+pass" latch), with rewind-snapshot plumbing — do not band-aid it with a plain one-frame
+delay in the gate, or ordinary leader-physics $400 crossings will skew a frame late.
+
+### Regression state
+
+aiz 57/6344 (standard suite 4F+1E), hcz 7/1320, mgz 23/17949, cnz 7/9711, icz 10/12375,
+lbz 0/12647 all unchanged; MHZ tail `KOS_DECOMPRESSION_QUEUE#335` throw unchanged (known
+pre-existing). S3K guards, rewind guards, and TestMadmoleBadnikInstance green. Shared
+sidekick code untouched (final diff is MadmoleBadnikInstance only), so the S2 trace
+classes were not re-run.
+
+## 2026-08-01 — Solid-object right-edge inclusivity: shared routine-family default landed
+
+Follow-up to the Madmole inclusive-right-edge fix: swept the shared default instead of
+adding more per-object hooks. ROM evidence — inclusivity is a property of the routine
+family, not the object. Full-solid X gates reject with `bhi` (inclusive) in all three
+games: S1 `_incObj/sub SolidObject.asm:122-123,167-168`, S2 `SolidObject_cont`
+(s2.asm:35344+) and `SlopedSolid_cont` (s2.asm:35263-35271), S3K `SolidObject_cont`
+(sonic3k.asm:41393-41399). Top-solid platform gates reject with `bhs`/`blo` (exclusive):
+S1 `sub PlatformObject & SlopeObject.asm:34-35`, S2 `PlatformObject_cont`
+(s2.asm:35960), S3K `SolidObjectTop_1P` (sonic3k.asm:41808) and `loc_1E42E`
+(sonic3k.asm:41995-41996). S2 monitors branch into `SolidObject_cont`
+(s2.asm:25621-25636), so monitor solidity is inclusive too. Quantified: 58 of 172
+`SolidObjectProvider` implementors overrode `usesInclusiveRightEdge()` — every one
+returning true, none false; 18 plain full-solid S3K providers were silently
+exclusive-right against ROM. Fix: default `usesInclusiveRightEdge()` ->
+`!isTopSolidOnly()`; one-arg `SolidRoutineProfile.fullSolid(sticky)` now builds an
+inclusive profile. Existing overrides keep their behaviour, so only default-reliant
+full-solid objects change, monotonically toward ROM.
+
+Measurements (worktree `.worktrees/solid-edge`, branch `bugfix/ai-s3k-solid-edge`, one
+class per `mvn -Ptrace-replay` run, reports cleared between): aiz 57/6344, hcz
+119/10334, mgz 23/17949, cnz 7/9711, icz 10/12375, lbz 0/12647, mhz 865/7218 — all
+error counts and total frames identical to baseline; LBZ stays fully green (its first
+batch run died to the known `Java heap space` fork crash without a report and was
+re-run solo per policy; the solo run wrote a full-length 0-error report before the same
+teardown crash). `TestS1Ghz1TraceReplay` 588/3905, `TestS2Ehz1TraceReplay` 16725/5852,
+`TestS2CpzLevelSelectTraceReplay` 15622/5744 — baseline-exact (note S1 runs
+`CollisionModel.UNIFIED`; its count moving neither way is consistent with solid-bit
+setters no-opping there, and the S1 result matches baseline rather than "too clean").
+`TestS3kAizTraceReplay` standard suite exactly 4 failures + 1 error (release-slice
+gate). Guards green: `TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
+`TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`, `TestRewindCoverageGuard`,
+`TestStaticStateRewindCoverageGuard`, `TestMadmoleBadnikInstance`,
+`TestSolidRoutineProfiles` (default-profile assertion updated to inclusive),
+`TestSolidObjectManager`.
+
+## 2026-08-01 — trace replay heap exhaustion fixed; LBZ "green" was OOM truncation
+
+Worktree `.worktrees/trace-heap` (`bugfix/ai-s3k-trace-heap` off
+`bugfix/ai-s3k-mhz-queue-frontier` @ 514d08503). Command per segment:
+`mvn -Ptrace-replay -Dtest=TestS3k<Zone>CompleteRunTraceReplay -Ds3k.rom.path=… test`,
+clearing `target/trace-reports` and `target/surefire-reports` between runs.
+
+Diagnosis: complete-run segments recorded 2026-08-01 grew to 26k-59k rows; the LBZ
+`aux_state.jsonl` is 287 MB uncompressed (~1.34M events). `TraceData.loadAuxEvents`
+retained **643 MB measured** (dominant: one `LinkedHashMap<String,Object>` per generic
+`object_state`-class event plus a fresh string per hex value), so the `-Xmx1g`
+trace-replay fork OOMed intermittently mid-replay — with a truncated report (or none)
+that read as a passing prefix. Fixes: pooled array-backed `CompactFieldMap` + interned
+strings for generic aux events, interned `object_near` text fields, and `TraceBinder`
+now drops ROM/engine diagnostics strings for frames finalized clean (reports never
+render diagnostics for non-divergent frames). LBZ aux retention 643 MB -> 171 MB
+measured; GC-log peak during LBZ replay 927 MB at `-Xmx1g`, no OOM. `-Xmx` left at
+1g — measured fit, no ceiling raise.
+
+Consequence: the "lbz 0/12647" baseline was an OOM-truncated prefix. LBZ is actually
+46,244 rows and **deterministically fails at frame 17599** —
+`queue.s3k_kos_direct.busy expected=true actual=false` (7 errors), then
+`IllegalStateException: expected completion: KOS_DECOMPRESSION_QUEUE#279` admission
+abort. Reproduced identically on stock 514d08503 at `-Xmx4g`, so pre-existing, not
+introduced by the memory work. LBZ 5/5 consecutive runs: `7/17596`, report written
+every time.
+
+Sweep (this commit): aiz 57/6344, hcz 119/10334, mgz 23/17949, cnz 7/9711,
+icz 10/12375, lbz 7/17596 (frontier re-characterised from 0/12647), mhz 838/7218 —
+all non-LBZ identical to baseline. `TestS3kAizTraceReplay` holds 4F+1E. Guard batch
+(S3K keep-green four + `TestHardwareTimingAuthorityGuard`) green. Pre-existing on the
+branch, unchanged by this work: `TestDivergenceReport` 3E ("physics frame domain must
+be contiguous"), `TestTraceDataParsing#parsesRecordedRingFloorCheckCounterPhase` 1F.
+
+Next LBZ target: frame 17599 kos_direct busy/queue parity leading into the
+`KOS_DECOMPRESSION_QUEUE#279` (sha256 04cd9b0a…) admission abort.
 ## 2026-07-31 — S1 title-card `Card_ChangeArt` PLC pair now submitted headless
 
 - Context: branch `bugfix/ai-trace-s1-ghz1`, worktree `.worktrees/trace-s1-ghz1`

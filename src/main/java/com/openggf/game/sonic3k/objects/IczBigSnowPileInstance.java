@@ -74,7 +74,6 @@ public final class IczBigSnowPileInstance extends AbstractObjectInstance
     private final PatternDesc renderDesc = new PatternDesc();
     private int currentY = BASE_Y;
     private int lastRenderedTileCount;
-    private boolean escapeTriggered;
 
     public IczBigSnowPileInstance(ObjectSpawn spawn, Sonic3kICZEvents events) {
         super(spawn, "ICZ1BigSnowPile");
@@ -106,10 +105,6 @@ public final class IczBigSnowPileInstance extends AbstractObjectInstance
         updateDynamicSpawn(X_POSITION, currentY);
         AbstractPlayableSprite player = services().camera().getFocusedSprite();
         if (player != null && currentY == FINAL_Y) {
-            if (!escapeTriggered && !player.getAir()
-                    && Math.abs(player.getCentreX() - X_POSITION) <= HALF_WIDTH) {
-                player.setControlLocked(true);
-            }
             handleJumpEscape(player);
         }
     }
@@ -176,9 +171,6 @@ public final class IczBigSnowPileInstance extends AbstractObjectInstance
         if (currentY != FINAL_Y || !contact.standing() || !(playerEntity instanceof AbstractPlayableSprite player)) {
             return;
         }
-        if (!escapeTriggered) {
-            player.setControlLocked(true);
-        }
         handleJumpEscape(player);
     }
 
@@ -215,12 +207,18 @@ public final class IczBigSnowPileInstance extends AbstractObjectInstance
         return Math.floorDiv(value, Pattern.PATTERN_WIDTH) * Pattern.PATTERN_WIDTH;
     }
 
+    /**
+     * ROM {@code loc_53A4C} (sonic3k.asm:110464-110480): the pile only tests
+     * {@code Ctrl_1_locked} — it never sets it. The lock is established by
+     * {@code ICZ1SE_Init} after the snowboard wall crash, so a route that
+     * reaches a settled pile without that quake (a checkpoint restart) simply
+     * never arms the scripted escape.
+     */
     private void handleJumpEscape(AbstractPlayableSprite player) {
         if (!player.isControlLocked() || player.getAir() || !player.isJumpJustPressed()) {
             return;
         }
         player.setControlLocked(false);
-        escapeTriggered = true;
         int releaseY = player.getCentreY();
         player.setYSpeed((short) JUMP_Y_SPEED);
         player.setAir(true);

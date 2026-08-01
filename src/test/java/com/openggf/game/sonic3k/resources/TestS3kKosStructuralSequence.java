@@ -27,6 +27,7 @@ import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.Sonic;
+import com.openggf.tests.HardwareBoundaryPump;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.rules.RequiresRom;
@@ -570,9 +571,8 @@ class TestS3kKosStructuralSequence {
     private static void service(
             HardwareTimingService timing,
             HardwareServiceBoundary boundary) {
-        timing.service(boundary);
-        S3kRuntimeArtCoordinator.current().directQueue().afterTimingService(boundary);
-        S3kRuntimeArtCoordinator.current().moduleQueue().afterTimingService(boundary);
+        HardwareBoundaryPump.service(
+                timing, S3kRuntimeArtCoordinator.current(), boundary);
     }
 
     private static void assertCapturedSession(

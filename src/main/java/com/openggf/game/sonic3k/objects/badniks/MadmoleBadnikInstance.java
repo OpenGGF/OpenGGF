@@ -26,6 +26,7 @@ import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
+import java.util.function.IntConsumer;
 
 /**
  * S3K SKL Obj $8C - Madmole.
@@ -69,6 +70,12 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
     private static final int SIDE_CHILD_ARC_RELEASE_PLAYER_Y_VELOCITY = -0x300;
     private static final int SIDE_CHILD_ARC_RELEASE_DRILL_Y_VELOCITY = -0x200;
     private static final int SIDE_CHILD_CAPTURE_WALL_SENSOR_OFFSET = 0x18;
+    // ROM loc_8D6E6 offscreen bands (sonic3k.asm:193223-193232).
+    private static final int SIDE_CHILD_OFFSCREEN_BAND_X = 0x280;
+    private static final int SIDE_CHILD_OFFSCREEN_BAND_Y = 0x200;
+    // ROM loc_8D746 sets y_radius(a0) = 8 for the side drill; ObjCheckFloorDist
+    // probes from (x_pos, y_pos + y_radius).
+    private static final int SIDE_CHILD_Y_RADIUS = 0x08;
     // ROM MoveSprite_LightGravity (sonic3k.asm:178357) uses moveq #$20,d1 as its
     // per-frame gravity, NOT the standard $38 object gravity. The arcing side
     // drill (loc_8D768/loc_8D778/loc_8D7A8) moves via MoveSprite_LightGravity.
@@ -161,6 +168,28 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
     @Override
     public SolidObjectParams getSolidParams() {
         return SolidObjectParams.of(0x1F, 4, 5, 0, homeY - currentY);
+    }
+
+    @Override
+    public boolean usesInclusiveRightEdge() {
+        // sub_8D876 runs SolidObjectFull with d1 = $1F; SolidObject_cont's X
+        // gate rejects with bhi (sonic3k.asm:41394-41400), so a player resting
+        // exactly at obj_x + d1 (d0 == d1 * 2) is a zero-distance side contact.
+        // loc_1E042 takes the d0 == 0 branch straight to loc_1E06E, which
+        // re-sets Status_Push on the grounded player every frame
+        // (sonic3k.asm:41498-41512) — the state Tails' CPU push-bypass
+        // auto-jump reads at loc_13DD0/loc_13E9C.
+        return true;
+    }
+
+    @Override
+    public int getTopLandingHalfWidth(PlayableEntity player, int collisionHalfWidth) {
+        // ROM Solid_Landed / loc_1E154 (sonic3k.asm:41611-41621) re-reads
+        // width_pixels(a0) for the landing X gate. The cap keeps
+        // ObjDat_Madmole's width_pixels = $18 (sonic3k.asm:193493-193497),
+        // wider than the default d1 - $B = $14 heuristic for sub_8D876's
+        // d1 = $1F.
+        return 0x18;
     }
 
     @Override
@@ -400,6 +429,16 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
         // carry by one frame accordingly.
         private boolean awaitingCarryRoutine;
         private AbstractPlayableSprite capturedPlayer;
+        // ROM $44(a0). Written by the straight drill's touch response sub_8D8E6
+        // (move.w a2,$44(a0), sonic3k.asm:193439) and by the arc grab sub_8D94A
+        // (sonic3k.asm:193477), and never cleared afterwards: the wall and floor
+        // release paths (loc_8D820/loc_8D85E into loc_8D834,
+        // sonic3k.asm:193337-193346 and 193363-193367) only set Status_InAir,
+        // clear object_control and drop the arm to routine 6. The stale
+        // back-reference is what loc_8D724 (sonic3k.asm:193222-193228) re-uses
+        // when the arm later scrolls off-camera, so it must outlive
+        // capturedPlayer rather than be nulled at release.
+        private AbstractPlayableSprite releaseTargetPlayer;
         // Player recorded by this frame's TouchResponse pass (the engine equivalent
         // of collision_property). Applied during the arm's own update, so only the
         // last player to overlap is grabbed and any earlier overlapping player
@@ -460,14 +499,30 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
                 // arm.
                 carryCapturedPlayer();
                 move();
+                boolean releasedByWall = false;
                 if (capturedPlayer != null) {
-                    releaseCapturedPlayerOnWallImpact();
+                    releasedByWall = releaseCapturedPlayerOnWallImpact();
+                }
+                if (!releasedByWall) {
+                    // ROM loc_8D80A: with no wall ahead, a downward-moving arm runs
+                    // ObjHitFloor_DoRoutine, whose $34(a0) hook is loc_8D846.
+                    objHitFloorDoRoutine(this::runCarriedFloorImpact, frameCounter);
                 }
             } else {
                 // ROM routine 4 (loc_8D768/loc_8D778) before capture, and the
                 // capture frame itself: MoveSprite advances the arm but the player
                 // is not carried until routine 8 runs next frame.
                 move();
+                if (arcing && !postCaptureDrift) {
+                    // ROM loc_8D778 (routine 4) also ends in ObjHitFloor_DoRoutine.
+                    // Its $34(a0) hook is loc_8D794 while the arc is free-flying, but
+                    // sub_8D94A installs loc_8D846 during the capture frame itself,
+                    // before loc_8D778's MoveSprite_LightGravity and floor test run.
+                    objHitFloorDoRoutine(capturedPlayer != null
+                            ? this::runCarriedFloorImpact
+                            : unused -> yVelocity = SIDE_CHILD_ARC_REBOUND_Y_VELOCITY,
+                            frameCounter);
+                }
                 awaitingCarryRoutine = false;
             }
             animateRawLoop(frameCounter);
@@ -563,6 +618,11 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
             player.setYSpeed((short) -0x200);
             player.setAir(true);
             if (player instanceof AbstractPlayableSprite sprite) {
+                // ROM sub_8D8E6 move.w a2,$44(a0) (sonic3k.asm:193439), the same
+                // back-reference the arc grab writes. The straight knock-back does
+                // not carry the player, so this is the only record the arm keeps of
+                // whom to detach when loc_8D724 despawns it off-camera.
+                releaseTargetPlayer = sprite;
                 sprite.setAnimationId(0x1A);
                 sprite.setSpindash(false);
             }
@@ -586,6 +646,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
             }
 
             capturedPlayer = sprite;
+            releaseTargetPlayer = sprite;
             // ROM sub_8D94A sets routine 8, but loc_8D778 (routine 4) still runs
             // to completion this frame without carrying; the carry (loc_8D7A8)
             // starts next frame.
@@ -658,12 +719,30 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
             NativePositionOps.writeYPosPreserveSubpixel(capturedPlayer, currentY + 8);
         }
 
-        private void releaseCapturedPlayerOnWallImpact() {
+        /**
+         * ROM {@code ObjHitFloor_DoRoutine} (sonic3k.asm:177964-177981): only a
+         * downward-moving object probes the floor, and the {@code $34(a0)} hook
+         * runs after the object is snapped onto the surface.
+         */
+        private void objHitFloorDoRoutine(IntConsumer onImpact, int frameCounter) {
+            if (yVelocity < 0) {
+                return;
+            }
+            TerrainCheckResult floor =
+                    ObjectTerrainUtils.checkFloorDist(currentX, currentY, SIDE_CHILD_Y_RADIUS);
+            if (floor == null || !floor.hasCollision()) {
+                return;
+            }
+            currentY += floor.distance();
+            onImpact.accept(frameCounter);
+        }
+
+        private boolean releaseCapturedPlayerOnWallImpact() {
             TerrainCheckResult wall = xVelocity >= 0
                     ? ObjectTerrainUtils.checkRightWallDist(currentX + SIDE_CHILD_CAPTURE_WALL_SENSOR_OFFSET, currentY)
                     : ObjectTerrainUtils.checkLeftWallDist(currentX - SIDE_CHILD_CAPTURE_WALL_SENSOR_OFFSET, currentY);
             if (!wall.hasCollision()) {
-                return;
+                return false;
             }
 
             int reboundVelocity = -xVelocity;
@@ -672,17 +751,43 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
             capturedPlayer.setAir(true);
             ObjectControlState.none().applyTo(capturedPlayer);
             enterPostCaptureDrift();
+            return true;
         }
 
+        /**
+         * ROM {@code loc_8D6E6} (sonic3k.asm:193218-193243): after the routine
+         * dispatch, the arm tests a coarse horizontal band
+         * ({@code (x_pos & $FF80) - Camera_X_pos_coarse_back > $280}) and a
+         * vertical band ({@code y_pos - Camera_Y_pos + $80 > $200}), both
+         * unsigned. Either one falls through to {@code loc_8D724}, which sets
+         * {@code Status_InAir} and clears {@code object_control} on the player in
+         * {@code $44(a0)} — leaving its velocities untouched — and deletes the arm.
+         *
+         * <p>{@code loc_8D724} tests {@code $44(a0)} itself, not whether the arm is
+         * still carrying. Because nothing ever clears {@code $44}, an arm that
+         * already released its player (routine 6 drift) still detaches that player
+         * when it finally scrolls off-camera. Measured on hardware at MHZ
+         * complete-run frame 3246: slot 20 (code {@code $0008D6E6}, routine 6,
+         * {@code $44 = $B000}) despawns and sets {@code Status_InAir} on a Sonic
+         * who is running normally with {@code object_control = 0}, immediately
+         * after {@code Player_AnglePos} returned him grounded. See
+         * docs/architecture/validation/trace/2026-08-01-mhz-f3246-findfloor-probe.md.
+         */
         private void checkDeleteAndReleaseCapturedPlayer() {
-            if (isOnScreenX(0x180)) {
+            int cameraX = cameraLeft();
+            int cameraY = cameraTop();
+            int coarseBack = ((cameraX & 0xFFFF) - 0x80) & 0xFF80;
+            int bandX = ((currentX & 0xFF80) - coarseBack) & 0xFFFF;
+            int bandY = ((currentY - cameraY) + 0x80) & 0xFFFF;
+            if (bandX <= SIDE_CHILD_OFFSCREEN_BAND_X && bandY <= SIDE_CHILD_OFFSCREEN_BAND_Y) {
                 return;
             }
 
-            if (capturedPlayer != null) {
-                capturedPlayer.setAir(true);
-                ObjectControlState.none().applyTo(capturedPlayer);
+            if (releaseTargetPlayer != null) {
+                releaseTargetPlayer.setAir(true);
+                ObjectControlState.none().applyTo(releaseTargetPlayer);
                 capturedPlayer = null;
+                releaseTargetPlayer = null;
             }
             setDestroyedByOffscreen();
         }
@@ -695,9 +800,9 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
 
             animFrame++;
             if (animFrame >= SIDE_CHILD_FRAMES.length) {
-                if (arcing && capturedPlayer != null) {
-                    runArcingRawCallback(frameCounter);
-                }
+                // ROM byte_8D9E7 terminates with $FC (AnimateRaw_Restart), so the
+                // raw animation script never invokes the $34(a0) hook; the arm's
+                // bounce/release is driven purely by ObjHitFloor_DoRoutine.
                 animFrame = 0;
                 mappingFrame = SIDE_CHILD_FRAMES[0];
                 animTimer = RAW_ANIMATION_DELAY;
@@ -708,7 +813,12 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
             animTimer = RAW_ANIMATION_DELAY;
         }
 
-        private void runArcingRawCallback(int frameCounter) {
+        /**
+         * ROM {@code loc_8D846} (sonic3k.asm:193353-193367), installed as
+         * {@code $34(a0)} by the capture in {@code sub_8D94A} and invoked from
+         * {@code ObjHitFloor_DoRoutine} when the carrying arm lands.
+         */
+        private void runCarriedFloorImpact(int frameCounter) {
             if (yVelocity < SIDE_CHILD_ARC_RELEASE_THRESHOLD_Y_VELOCITY) {
                 yVelocity = SIDE_CHILD_ARC_REBOUND_Y_VELOCITY;
                 if (tryServices() != null) {

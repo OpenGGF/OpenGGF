@@ -684,6 +684,20 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     }
 
     /**
+     * The frame's camera origin, the engine equivalent of the ROM's
+     * {@code Camera_X_pos} / {@code Camera_Y_pos}. Objects that port a ROM
+     * offscreen band literally (coarse-masked horizontal distance, +$80
+     * vertical distance) need the raw origin rather than a bounds predicate.
+     */
+    protected static int cameraLeft() {
+        return cameraBounds.left();
+    }
+
+    protected static int cameraTop() {
+        return cameraBounds.top();
+    }
+
+    /**
      * ROM parity for SolidObject_OnScreenTest (s2.asm:35140-35145,
      * sonic3k.asm:41390-41392 loc_1DF88, s1disasm/_incObj/sub SolidObject.asm
      * Solid_ChkEnter / SolidObject2F): returns true when the object's render

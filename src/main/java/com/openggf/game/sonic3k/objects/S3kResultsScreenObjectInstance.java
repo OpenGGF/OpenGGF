@@ -461,34 +461,25 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         if (resultsChildrenCreated) {
             return true;
         }
-        if (createGateFrames < 0) {
-            createGateFrames =
-                    S3kTransitionWriteSupport.resultsCreateGateDispatches(services())
-                            - resultsChildTimingAdjustment.catchUpEntries();
+        // ROM Obj_LevelResultsCreate gates on Kos_modules_left alone
+        // (docs/skdisasm/sonic3k.asm:62596-62598): the first object dispatch
+        // after the queued results art has fully decompressed creates the
+        // children and sets Events_fg_5. Module readiness is the exact engine
+        // equivalent of that flag, so no additional dispatch countdown applies.
+        rebindQueuedResultsArtAfterRestore();
+        if (queuedResultsArt == null || !queuedResultsArt.isReady()) {
+            return false;
         }
-
-        createGateFrames--;
-        if (romResultsCreateGateReady(createGateFrames)) {
-            rebindQueuedResultsArtAfterRestore();
-            if (queuedResultsArt == null || !queuedResultsArt.isReady()) {
-                return false;
-            }
-            // ROM Obj_LevelResultsInit queues three Kosinski module loads and
-            // advances to Obj_LevelResultsCreate; Create polls Kos_modules_left
-            // before allocating child objects and setting Events_fg_5
-            // (docs/skdisasm/sonic3k.asm:62512-62584, 62586-62616).
-            finishQueuedArt();
-            createElements();
-            signalActTransitionIfNeeded();
-            actTransitionSignaled = true;
-            resultsChildrenCreated = true;
-            return true;
-        }
-        return false;
-    }
-
-    static boolean romResultsCreateGateReady(int framesAfterDecrement) {
-        return framesAfterDecrement <= 0;
+        // ROM Obj_LevelResultsInit queues three Kosinski module loads and
+        // advances to Obj_LevelResultsCreate; Create polls Kos_modules_left
+        // before allocating child objects and setting Events_fg_5
+        // (docs/skdisasm/sonic3k.asm:62512-62584, 62586-62616).
+        finishQueuedArt();
+        createElements();
+        signalActTransitionIfNeeded();
+        actTransitionSignaled = true;
+        resultsChildrenCreated = true;
+        return true;
     }
 
     /**

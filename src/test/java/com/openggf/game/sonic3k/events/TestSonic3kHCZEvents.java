@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.events;
 
+import com.openggf.tests.HardwareBoundaryPump;
 import com.openggf.tests.TestEnvironment;
 
 import com.openggf.game.GameModule;
@@ -103,23 +104,33 @@ class TestSonic3kHCZEvents {
         for (int frame = 1;
                 frame < 100_000 && !events.isTransitionRequested();
                 frame++) {
-            int beforePre = timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE);
+            // Kos_modules_left is decremented only by Process_Kos_Module_Queue
+            // (docs/skdisasm/sonic3k.asm:2750-2752), which LevelLoop reaches at 7908 --
+            // after ScreenEvents (7898) and the object pass (7900-7906). Neither
+            // VINT_SERVICE nor Process_Kos_Queue (7887, decompression queue only) can
+            // advance it.
+            int beforeFrame = timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE);
             serviceBoundary(HardwareServiceBoundary.VINT_SERVICE);
-            serviceBoundary(HardwareServiceBoundary.PRE_MAIN_LOOP);
-            assertEquals(beforePre,
+            assertEquals(beforeFrame,
                     timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE),
-                    "PRE_MAIN_LOOP must not publish HCZ2 secondary art readiness");
+                    "VINT_SERVICE does not run the module state step");
+            serviceBoundary(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            assertEquals(beforeFrame,
+                    timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE),
+                    "Process_Kos_Queue (7887) advances only the decompression queue and "
+                            + "must not retire an HCZ2 secondary art archive");
             events.update(0, frame);
             if (publicationFrame >= 0 && events.isTransitionRequested()) {
                 transitionFrame = frame;
             }
             serviceBoundary(HardwareServiceBoundary.POST_OBJECTS);
-            boolean publishedThisFrame = beforePre > 0
-                    && timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE) == 0;
-            if (publishedThisFrame) {
+            int afterState = timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE);
+            assertTrue(afterState <= beforeFrame,
+                    "module readiness must never regress across a LevelLoop iteration");
+            if (beforeFrame > 0 && afterState == 0) {
                 assertFalse(events.isTransitionRequested(),
-                        "ScreenEvents runs before module retirement and cannot consume "
-                                + "same-dispatch readiness");
+                        "retirement alone cannot request the transition — only the "
+                                + "ScreenEvents dispatch that observes it may");
                 publicationFrame = frame;
             }
         }
@@ -127,13 +138,14 @@ class TestSonic3kHCZEvents {
         assertEquals(0, timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE));
         assertTrue(events.isTransitionRequested());
         assertEquals(publicationFrame + 1, transitionFrame,
-                "the event owner consumes POST retirement on its next dispatch");
+                "Process_Kos_Module_Queue (sonic3k.asm:7908) runs after ScreenEvents "
+                        + "(7898), so the retiring iteration's own dispatch cannot see "
+                        + "the retirement — the next one is the first that may consume it");
         assertTrue(Files.exists(saveDir.resolve("slot1.json")));
     }
 
     private static void serviceBoundary(HardwareServiceBoundary boundary) {
-        GameServices.hardwareTiming().service(boundary);
-        GameServices.runtimeArtCoordinator().afterTimingService(boundary);
+        HardwareBoundaryPump.service(boundary);
     }
 
     @Test

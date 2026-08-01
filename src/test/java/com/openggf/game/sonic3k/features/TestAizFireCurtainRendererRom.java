@@ -17,6 +17,7 @@ import com.openggf.level.Pattern;
 import com.openggf.level.animation.AnimatedPaletteManager;
 import com.openggf.level.resources.LoadOp;
 import com.openggf.level.resources.ResourceLoader;
+import com.openggf.tests.HardwareBoundaryPump;
 import com.openggf.tests.SharedLevel;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -327,17 +328,10 @@ public class TestAizFireCurtainRendererRom {
 
     private static void updateWithHardware(
             Sonic3kAIZEvents events, int act, int frame) {
-        var timing = GameServices.hardwareTiming();
-        timing.service(HardwareServiceBoundary.VINT_SERVICE);
-        GameServices.runtimeArtCoordinator()
-                .afterTimingService(HardwareServiceBoundary.VINT_SERVICE);
-        timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
-        GameServices.runtimeArtCoordinator()
-                .afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        HardwareBoundaryPump.service(HardwareServiceBoundary.VINT_SERVICE);
+        HardwareBoundaryPump.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
         events.update(act, frame);
-        timing.service(HardwareServiceBoundary.POST_OBJECTS);
-        GameServices.runtimeArtCoordinator()
-                .afterTimingService(HardwareServiceBoundary.POST_OBJECTS);
+        HardwareBoundaryPump.service(HardwareServiceBoundary.POST_OBJECTS);
     }
 
     private static void stageFireOverlay(Sonic3kAIZEvents events) {

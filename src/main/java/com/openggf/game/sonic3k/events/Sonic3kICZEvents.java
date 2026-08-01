@@ -879,8 +879,21 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
                                 + kind + " ordinal " + ordinal));
     }
 
+    /**
+     * ROM {@code ICZ1SE_Init} (sonic3k.asm:110095-110101): while the screen
+     * event is still on its first routine, a live {@code Screen_shake_flag}
+     * with {@code Ctrl_1_locked} clear means the quake came from the snowboard
+     * wall crash, so controller 1 is locked and {@code Ctrl_1_logical} cleared
+     * until {@code Obj_ICZ1BigSnowPile} releases it (sonic3k.asm:110468).
+     *
+     * <p>The predicate is ROM {@code Screen_shake_flag} — the same word
+     * {@code loc_39BEE} writes {@code #$14} into (sonic3k.asm:77370) and
+     * {@code ShakeScreen_Setup} counts down (sonic3k.asm:104193-104198) — not
+     * the shared {@code GameStateManager} shaking flag, which models the
+     * unrelated S2 {@code Screen_Shaking_Flag} and is never written here.
+     */
     private void updateAct1ScreenEvent() {
-        if (backgroundRoutine != ICZ1_BG_INTRO || !gameState().isScreenShakeActive()) {
+        if (backgroundRoutine != ICZ1_BG_INTRO || screenShakeFlag == 0) {
             return;
         }
         lockFocusedPlayerForIntroQuake();

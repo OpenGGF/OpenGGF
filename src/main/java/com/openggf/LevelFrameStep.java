@@ -3,6 +3,7 @@ package com.openggf;
 import com.openggf.camera.Camera;
 import com.openggf.game.BonusStageProvider;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.HardwareBoundaryDispatch;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame;
@@ -142,9 +143,9 @@ public final class LevelFrameStep {
         Objects.requireNonNull(objectScan, "objectScan");
         frame.claim(phase);
         serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
-        serviceBoundary(context, HardwareServiceBoundary.PRE_MAIN_LOOP);
         objectScan.run();
         serviceBoundary(context, HardwareServiceBoundary.POST_OBJECTS);
+        serviceBoundary(context, HardwareServiceBoundary.PRE_MAIN_LOOP);
         if (frame.isOwnedBy(phase)) {
             frame.prepareAfterLoop(phase);
         }
@@ -179,7 +180,6 @@ public final class LevelFrameStep {
 
         frame.claim(phase);
         serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
-        serviceBoundary(context, HardwareServiceBoundary.PRE_MAIN_LOOP);
 
         // 0a. Drain the per-frame palette-write accumulator at frame top, before
         //     any submitter (object palette writes in steps 2-3, zone palette
@@ -194,13 +194,6 @@ public final class LevelFrameStep {
         PaletteOwnershipRegistry paletteRegistry = context.paletteOwnershipRegistry();
         if (paletteRegistry != null) {
             paletteRegistry.beginFrame();
-        }
-
-        // Runtime art queues are consumed once per active gameplay frame. S3K
-        // uses this for Queue_Kos_Module workloads whose object routines poll
-        // Kos_modules_left on later frames.
-        if (context.gameModule().getObjectArtProvider() != null) {
-            context.gameModule().getObjectArtProvider().processRuntimeArtQueue();
         }
 
         // 0. Process dirty regions from MutableLevel (editor mutations).
@@ -347,7 +340,26 @@ public final class LevelFrameStep {
         // (docs/skdisasm/sonic3k.asm:7898-7908). A completion retired here is
         // therefore first observable by object/event consumers on their next
         // dispatch, never by this frame's ScreenEvents pass.
+        // Runtime art queues are consumed once per active gameplay frame. S3K
+        // uses this for Queue_Kos_Module workloads whose object routines poll
+        // Kos_modules_left on later frames. It runs with the object pass because
+        // ROM LevelLoop reaches its producers in ExecuteObjects
+        // (docs/skdisasm/sonic3k.asm:7900-7906), ahead of the
+        // Process_Kos_Module_Queue state step in the loop tail (7908).
+        if (context.gameModule().getObjectArtProvider() != null) {
+            context.gameModule().getObjectArtProvider().processRuntimeArtQueue();
+        }
+
         serviceBoundary(context, HardwareServiceBoundary.POST_OBJECTS);
+
+        // ROM LevelLoop's Process_Kos_Queue (docs/skdisasm/sonic3k.asm:7887)
+        // runs after this iteration's Process_Kos_Module_Queue (7908) and before
+        // Wait_VSync (7888) increments Level_frame_counter (7889), so the direct
+        // FIFO service is the tail of THIS frame. Servicing it here lets a
+        // Queue_Kos_Module issued by an object during this frame's pass have its
+        // first child decompressed on the same frame, which the frame-top
+        // placement could not represent.
+        serviceBoundary(context, HardwareServiceBoundary.PRE_MAIN_LOOP);
         if (frame.isOwnedBy(phase)) {
             frame.prepareAfterLoop(phase);
         }
@@ -419,14 +431,11 @@ public final class LevelFrameStep {
         if (context == null) {
             throw new NullPointerException("context");
         }
-        context.hardwareTiming().service(boundary);
-        if (boundary == HardwareServiceBoundary.PRE_MAIN_LOOP) {
-            context.hardwareTimingBoundaryObserver().onBoundary(boundary);
-        }
-        context.runtimeArtCoordinator().afterTimingService(boundary);
-        if (boundary != HardwareServiceBoundary.PRE_MAIN_LOOP) {
-            context.hardwareTimingBoundaryObserver().onBoundary(boundary);
-        }
+        HardwareBoundaryDispatch.serviceBoundary(
+                boundary,
+                context.runtimeArtCoordinator(),
+                context.hardwareTiming(),
+                context.hardwareTimingBoundaryObserver());
     }
 
 }

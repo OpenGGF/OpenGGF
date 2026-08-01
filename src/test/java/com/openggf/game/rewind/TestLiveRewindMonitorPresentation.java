@@ -148,7 +148,11 @@ class TestLiveRewindMonitorPresentation {
             assertFalse(explosionRenderer.frames.isEmpty(), "broken monitor explosion must reach its draw sink");
 
             rewindInput.handleKeyEvent(rewindKey, GLFW_PRESS);
+            int heldSteps = 0;
             while (gameplayMode.getRewindController().currentFrame() >= brokenFrame) {
+                assertTrue(heldSteps++ < 4096,
+                        "held rewind must reach a frame before the break within a bounded"
+                                + " number of steps");
                 assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, false, rewindInput));
             }
             assertNull(firstLive(objects, MonitorContentsObjectInstance.class),

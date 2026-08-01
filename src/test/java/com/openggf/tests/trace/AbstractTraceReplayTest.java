@@ -282,7 +282,19 @@ public abstract class AbstractTraceReplayTest {
                         .startPosition(meta.startX(), meta.startY())
                         .startPositionIsCentre();
             }
-            if (TraceReplayBootstrap.shouldGroundSnapMetadataStartForTraceReplay(trace)) {
+            // The lifecycle claim is about ROM state, not fixture mechanics: it
+            // asks whether the ROM has just run SpawnLevelMainSprites and no
+            // LevelLoop iteration has been dispatched yet. A replay that begins
+            // at trace row 0 is exactly that -- row 0 is LevelLoop iteration 1,
+            // so the player still carries its spawn-determined Status_InAir
+            // (set only by the explicit per-zone bsets at sonic3k.asm:8132-8177;
+            // MHZ1 $700 and CNZ1 $300 fall through to loc_68D8 at 8178-8197 and
+            // spawn grounded). Whether the fixture also ground-snaps the
+            // metadata start is a separate question, and gating on it let the
+            // fixture's synthetic pre-frame terrain probe consume the floor
+            // check that ROM performs during row 0 itself.
+            if (TraceReplayBootstrap.shouldGroundSnapMetadataStartForTraceReplay(trace)
+                    || TraceReplayBootstrap.replaySeedTraceIndexForTraceReplay(trace) == 0) {
                 fixtureBuilder.withFreshLevelStartLifecycle();
             }
             fixture = fixtureBuilder.build();
@@ -492,10 +504,13 @@ public abstract class AbstractTraceReplayTest {
             // Best-effort: report regeneration must not suppress the real failure.
             if (binder != null) {
                 try {
-                    DivergenceReport finalReport = buildDivergenceReport(binder, meta, trace);
-                    if (finalReport.hasErrors() || finalReport.hasWarnings()) {
-                        writeReport(finalReport, meta);
-                    }
+                    // Unconditional: a run that aborts mid-replay with a clean
+                    // comparison so far (e.g. a hardware-timing admission throw)
+                    // has zero divergences, and a divergence-gated write left no
+                    // report at all -- indistinguishable from a run that never
+                    // started. The report's total_frames is the only record of
+                    // how far the replay actually reached.
+                    writeReport(buildDivergenceReport(binder, meta, trace), meta);
                 } catch (RuntimeException | java.io.IOError ignored) {
                     // diagnostics only
                 }

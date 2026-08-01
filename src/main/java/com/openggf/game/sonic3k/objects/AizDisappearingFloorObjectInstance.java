@@ -223,6 +223,16 @@ public class AizDisappearingFloorObjectInstance extends AbstractObjectInstance
         }
 
         @Override
+        public int getTopLandingHalfWidth(PlayableEntity player, int collisionHalfWidth) {
+            // ROM Solid_Landed / loc_1E154 (sonic3k.asm:41611-41621) re-reads
+            // width_pixels(a0) for the landing X gate. The border child is
+            // spawned with width_pixels = $28 (sonic3k.asm:58390) while its
+            // solid call passes d1 = $2B (sonic3k.asm:58413-58418), so the
+            // default d1 - $B = $20 heuristic is 8px too narrow.
+            return 0x28;
+        }
+
+        @Override
         public void onSolidContact(PlayableEntity player, SolidContact contact, int fc) {
         }
 

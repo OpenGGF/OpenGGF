@@ -5,6 +5,7 @@ import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
@@ -140,6 +141,12 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
     private HardwareWorkHandle artHandle;
     private long artOrdinal = -1;
 
+    // ROM render_flags bit 7 as observed by the object: Render_Sprites sets or
+    // clears it after the object executed, so a routine testing it reacts one
+    // frame after the sprite left the draw cull. True until a phase that
+    // maintains it observes a non-drawn frame.
+    private boolean drawnLastFrame = true;
+
     // Mapping frame for rendering
     private int mappingFrame;
 
@@ -186,7 +193,7 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
     private void updateHorizontal(int frameCounter, AbstractPlayableSprite player) {
         switch (horzPhase) {
             case Y_GUARD -> updateHorzYGuard(player);
-            case ART_LOAD -> updateHorzArtLoad();
+            case ART_LOAD -> updateHorzArtLoad(player);
             case WAIT_PROXIMITY -> updateHorzWaitProximity(player);
             case SPRAY_ANIM -> updateHorzSprayAnim(player);
             case CLEANUP -> updateHorzCleanup();
@@ -203,23 +210,31 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
             return;
         }
         horzPhase = HorzPhase.ART_LOAD;
+        // ROM: HCZWaterWall_Horizontal_CheckPlayerY falls through into
+        // HCZWaterWall_Horizontal_QueueArt — the guard and the Queue_Kos_Module
+        // call happen on the object's first execution frame.
+        updateHorzArtLoad(player);
     }
 
     /**
      * Phase 2: Load art.
-     * ROM: loc_2FF14 - Queue ArtKosM_HCZGeyserHorz.
-     * We load synchronously, so just mark done and proceed to setup.
+     * ROM: HCZWaterWall_Horizontal_QueueArt - Queue ArtKosM_HCZGeyserHorz,
+     * then HCZWaterWall_Horizontal_WaitArt polls Kos_modules_left.
      */
-    private void updateHorzArtLoad() {
+    private void updateHorzArtLoad(AbstractPlayableSprite player) {
         if (!queueArtIfNeeded(
                 Sonic3kConstants.ART_KOSM_HCZ_GEYSER_HORZ_ADDR)) {
             return;
         }
         artLoaded = true;
-        // ROM setup (loc_2FF32): render_flags=4, priority=$300, width=$80, height=$20
-        // Timer $30 = $20 (32 frames initial animation)
+        // ROM setup (HCZWaterWall_Horizontal_Init): render_flags=4,
+        // priority=$300, width=$80, height=$20, timer $30 = $20
         timer = HORZ_INITIAL_TIMER;
         horzPhase = HorzPhase.WAIT_PROXIMITY;
+        // ROM: HCZWaterWall_Horizontal_Init falls through into
+        // HCZWaterWall_Horizontal_WaitPlayer — the proximity check runs on the
+        // same frame the art-wait completes.
+        updateHorzWaitProximity(player);
     }
 
     /**
@@ -268,16 +283,24 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
      * scrolled off screen, not when the timer expires.
      */
     private void updateHorzSprayAnim(AbstractPlayableSprite player) {
+        // ROM: HCZWaterWall_Horizontal_Erupt — while $30 is non-zero the geyser
+        // moves right 8px/frame; the move stopping does NOT end the phase.
         if (timer > 0) {
             timer--;
             x += HORZ_SPRAY_MOVE_PX;
         }
 
-        // Spawn a spray particle each frame
+        // ROM: HCZWaterWall_Horizontal_SpawnSpray runs every frame the phase is
+        // active (also consuming Random_Number), not only while moving.
         spawnHorzSprayChild();
 
-        // ROM loc_300C8: tst.b render_flags(a0) / bmi loc_30100
-        if (!isOnScreen(0x80)) {
+        // ROM: HCZWaterWall_Horizontal_UpdateChildSprites tests render_flags
+        // bit 7 — cleanup begins the frame after Render_Sprites' cull
+        // (width_pixels=$80 / height_pixels=$20, sonic3k.asm loc_1AEA2) stops
+        // drawing the sprite, not on the move timer.
+        boolean wasDrawn = drawnLastFrame;
+        drawnLastFrame = isWithinRenderSpriteBounds(0x80, 0x20);
+        if (!wasDrawn) {
             // ROM: clr.b (Palette_cycle_counters+$00).w
             HCZWaterRushObjectInstance.HCZWaterRushPaletteCycleGate.setActive(false);
             timer = HORZ_CLEANUP_TIMER;
@@ -287,12 +310,25 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
 
     /**
      * Phase 6: Cleanup.
-     * ROM: loc_30106 - Counts down timer, then deletes.
+     * ROM: HCZGeyser_CleanupDelay - Counts down timer, then
+     * HCZGeyser_ReloadEnemyArtAndDelete calls LoadEnemyArt (re-queueing the
+     * act's PLCKosM enemy archives the geyser sheet overwrote) and deletes.
      */
     private void updateHorzCleanup() {
         timer--;
         if (timer <= 0) {
+            reloadEnemyArt();
             setDestroyed(true);
+        }
+    }
+
+    /** ROM: jsr (LoadEnemyArt).l from HCZGeyser_ReloadEnemyArtAndDelete. */
+    private void reloadEnemyArt() {
+        var module = services().gameModule();
+        if (module != null
+                && module.getObjectArtProvider()
+                instanceof Sonic3kObjectArtProvider provider) {
+            provider.reloadEnemyKosArt();
         }
     }
 
@@ -535,18 +571,23 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
      * ROM: loc_3052A - MoveSprite + gravity. Delete when off screen.
      */
     private void updateVertFalling() {
+        // ROM: HCZWaterWall_Vertical_Fall tests render_flags bit 7 first —
+        // the sprite falls only while Render_Sprites still drew it last frame
+        // (width_pixels=$20 / height_pixels=$60, HCZWaterWall_Vertical_InitRise).
+        if (!drawnLastFrame) {
+            // ROM: clr.b (Palette_cycle_counters+$00).w
+            HCZWaterRushObjectInstance.HCZWaterRushPaletteCycleGate.setActive(false);
+            timer = VERT_CLEANUP_TIMER;
+            vertPhase = VertPhase.CLEANUP;
+            return;
+        }
+
         SubpixelMotion.State motionState = new SubpixelMotion.State(x, y, 0, ySub, 0, yVel);
         SubpixelMotion.moveSprite(motionState, VERT_FALLING_GRAVITY);
         y = motionState.y;
         ySub = motionState.ySub;
         yVel = motionState.yVel;
-
-        if (!isOnScreen(0x80)) {
-            // ROM: clr.b (Palette_cycle_counters+$00).w
-            HCZWaterRushObjectInstance.HCZWaterRushPaletteCycleGate.setActive(false);
-            timer = VERT_CLEANUP_TIMER;
-            vertPhase = VertPhase.CLEANUP;
-        }
+        drawnLastFrame = isWithinRenderSpriteBounds(0x20, 0x60);
     }
 
     /**
@@ -556,6 +597,9 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
     private void updateVertCleanup() {
         timer--;
         if (timer <= 0) {
+            // ROM: the vertical fall path also ends in HCZGeyser_CleanupDelay ->
+            // HCZGeyser_ReloadEnemyArtAndDelete (LoadEnemyArt + delete).
+            reloadEnemyArt();
             setDestroyed(true);
         }
     }

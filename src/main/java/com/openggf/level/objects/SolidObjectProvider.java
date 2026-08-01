@@ -652,12 +652,21 @@ public interface SolidObjectProvider {
     /**
      * Whether the right edge of the full solid X window is inclusive.
      * <p>
-     * Most engine objects keep the established exclusive bound. S3K horizontal
-     * springs use {@code SolidObjectFull2_1P}, whose initial X gate rejects with
-     * {@code bhi}; that makes {@code relX == width * 2} a valid contact.
+     * Inclusivity is a property of the ROM routine family, not the object.
+     * Every full-solid X gate rejects with {@code bhi}, making
+     * {@code relX == width * 2} a valid zero-distance side contact: S1
+     * {@code SolidObject} ({@code _incObj/sub SolidObject.asm:122-123,167-168}),
+     * S2 {@code SolidObject_cont} ({@code s2.asm:35344+}) and
+     * {@code SlopedSolid_cont} ({@code s2.asm:35263-35271}), S3K
+     * {@code SolidObject_cont} ({@code sonic3k.asm:41393-41399}). Top-solid
+     * platform gates instead reject with {@code bhs}/{@code blo} — exclusive:
+     * S1 {@code _incObj/sub PlatformObject & SlopeObject.asm:34-35}, S2
+     * {@code PlatformObject_cont} ({@code s2.asm:35960}), S3K
+     * {@code SolidObjectTop_1P} ({@code sonic3k.asm:41808}) and
+     * {@code loc_1E42E} ({@code sonic3k.asm:41995-41996}).
      */
     default boolean usesInclusiveRightEdge() {
-        return false;
+        return !isTopSolidOnly();
     }
 
     /**

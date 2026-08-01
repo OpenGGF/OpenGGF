@@ -3237,11 +3237,17 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 	private Consumer<SensorResult[]> landingTiltPublisher() {
 		PlayerAnimationRules animationRules = playerAnimationRulesOrNull();
-		var sprites = sprite.currentSpriteManagerOrNull();
-		return animationRules != null
-				&& animationRules.airLandingPublishesTiltAngles()
-				&& sprites != null
-				&& sprites.getMainPlayable() == sprite
+		// The next_tilt/tilt copy from Primary_Angle/Secondary_Angle sits in the
+		// character control tail, and the sidekick's tail carries the identical
+		// pair as the leader's: S3K Sonic_Control sonic3k.asm:25718-25719 and
+		// Tails_Control sonic3k.asm:26243-26244; S2 Obj01 s2.asm:36253-36254 and
+		// Obj02 s2.asm:38988-38989. Both run unconditionally every frame, so a
+		// landing frame publishes the fresh floor angles for either character.
+		// Restricting this to the leader left the sidekick consuming a stale
+		// airborne tilt on its first grounded control frame, which deferred the
+		// Tails_InputAcceleration_Path edge-balance branch (sonic3k.asm:27837-27849)
+		// by one frame - Wait (anim 5) instead of Balance (anim 6).
+		return animationRules != null && animationRules.airLandingPublishesTiltAngles()
 				? this::captureTiltAnglesFromLandingProbes
 				: null;
 	}

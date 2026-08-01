@@ -230,6 +230,14 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
                         stepWrapper);
                 lastFrameRanGameplay =
                         lastFrameResult == LevelFrameResult.GAMEPLAY_FRAME;
+                // ROM: a retained Obj_LevelResults that mutates into
+                // Obj_TitleCard runs Obj_TitleCardInit and queues its KosM art
+                // within the same object pass that observed the cleared
+                // End_of_level state (docs/skdisasm/sonic3k.asm:62703-62734,
+                // 62120-62166). Poll again after the frame body so a results
+                // exit during this pass starts the in-level title card in the
+                // same frame rather than the next frame's top.
+                startPendingInLevelTitleCardIfRequested();
             }
         } finally {
             inputHandler.clearLogicalOverride();

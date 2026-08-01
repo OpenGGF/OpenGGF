@@ -76,7 +76,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private const string PublishedQueuePredecessorVersionLine =
             "  \"lua_script_version\": \"6.38-s3k-completerun\",";
         private const string CurrentVersionLine =
-            "  \"lua_script_version\": \"6.39-s3k-completerun\",";
+            "  \"lua_script_version\": \"6.40-s3k-completerun\",";
         private const string FixtureTraceSchemaLine =
             "  \"trace_schema\": 6,";
         private const string CurrentTraceSchemaLine =
@@ -220,7 +220,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 PlayerMode = 0,
                 SourceBk2 = CompleteRunSourceBk2,
                 RunId = null,
-                RecordingDate = "2026-07-30"
+                RecordingDate = "2026-08-01"
             },
             new MetadataFixture
             {
@@ -238,7 +238,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 PlayerMode = 0,
                 SourceBk2 = CompleteRunSourceBk2,
                 RunId = null,
-                RecordingDate = "2026-07-30"
+                RecordingDate = "2026-08-01"
             },
             new MetadataFixture
             {
@@ -258,7 +258,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 PlayerMode = 3,
                 SourceBk2 = MultiBonusSourceBk2,
                 RunId = MultiBonusRunId,
-                RecordingDate = "2026-07-30"
+                RecordingDate = "2026-08-01"
             },
             new MetadataFixture
             {
@@ -278,7 +278,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 PlayerMode = 3,
                 SourceBk2 = MultiBonusSourceBk2,
                 RunId = MultiBonusRunId,
-                RecordingDate = "2026-07-30"
+                RecordingDate = "2026-08-01"
             },
             new MetadataFixture
             {
@@ -298,7 +298,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 PlayerMode = 3,
                 SourceBk2 = MultiBonusSourceBk2,
                 RunId = MultiBonusRunId,
-                RecordingDate = "2026-07-30"
+                RecordingDate = "2026-08-01"
             },
             new MetadataFixture
             {
@@ -311,7 +311,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 PlayerMode = 3,
                 SourceBk2 = MultiBonusSourceBk2,
                 RunId = MultiBonusRunId,
-                RecordingDate = "2026-07-30"
+                RecordingDate = "2026-08-01"
             }
         };
 
@@ -533,7 +533,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
             AssertContains(
                 current,
-                "\"lua_script_version\": \"6.39-s3k-completerun\"");
+                "\"lua_script_version\": \"6.40-s3k-completerun\"");
             AssertContains(current, "\"hardware_timing_schema\": 2");
             AssertContains(legacy, "\"hardware_timing_schema\": 1");
         }
@@ -832,7 +832,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     + " modes (docs/s3k-run-publication.md section 6).");
             }
             const string FixtureManifestVersionLine =
-                "  \"lua_script_version\": \"6.39-s3k-completerun\",\n";
+                "  \"lua_script_version\": \"6.40-s3k-completerun\",\n";
             AssertContains(expected, FixtureManifestVersionLine);
 
             var transitions = new List<RunManifestTransition>();
@@ -857,7 +857,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     SetBSegments,
                     transitions);
             const string CurrentManifestVersionLine =
-                "  \"lua_script_version\": \"6.39-s3k-completerun\",\n";
+                "  \"lua_script_version\": \"6.40-s3k-completerun\",\n";
             AssertEx.Equal(
                 1,
                 CountOccurrences(actual, CurrentManifestVersionLine));

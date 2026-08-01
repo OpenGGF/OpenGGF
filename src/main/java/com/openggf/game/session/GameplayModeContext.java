@@ -9,6 +9,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameRng;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.HardwareBoundaryDispatch;
 import com.openggf.game.NoOpBonusStageProvider;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.RuntimeArtCoordinator;
@@ -555,9 +556,34 @@ public final class GameplayModeContext implements ModeContext {
         return seamlessTransitionResourceHandoffs;
     }
 
+    /**
+     * Runs the frame's module state step ahead of timing admission at the boundary,
+     * modelling LevelLoop's tail call to Process_Kos_Module_Queue (sonic3k.asm:7908)
+     * reaching the next iteration's Process_Kos_Queue (7887) across Wait_VSync (7888).
+     * Pairs with {@link #afterHardwareTimingService}; a caller that services a boundary
+     * must invoke both, in the order LevelFrameStep.serviceBoundary uses.
+     */
+    public void beforeHardwareTimingService(HardwareServiceBoundary boundary) {
+        runtimeArtCoordinator.beforeTimingService(boundary);
+    }
+
     /** Completes direct physical retirement after timing admission at the boundary. */
     public void afterHardwareTimingService(HardwareServiceBoundary boundary) {
         runtimeArtCoordinator.afterTimingService(boundary);
+    }
+
+    /**
+     * Traverses a hardware service boundary exactly as the production frame does.
+     *
+     * <p>Callers outside {@code LevelFrameStep} that need to advance hardware timing
+     * — alternate loops and tests modelling a frame — use this rather than composing
+     * {@link #beforeHardwareTimingService}, {@code hardwareTiming().service} and
+     * {@link #afterHardwareTimingService} by hand, so the sequence has one definition.
+     */
+    public void serviceHardwareTimingBoundary(HardwareServiceBoundary boundary) {
+        HardwareBoundaryDispatch.serviceBoundary(
+                boundary, runtimeArtCoordinator, hardwareTiming,
+                hardwareTimingBoundaryObserver);
     }
 
     public RecordedCompletionAuthority recordedCompletionAuthority() {

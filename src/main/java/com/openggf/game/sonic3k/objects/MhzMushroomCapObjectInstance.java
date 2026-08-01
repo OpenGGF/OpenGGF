@@ -219,6 +219,17 @@ public final class MhzMushroomCapObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean allowsObjectControlledSolidContacts() {
+        // Obj_MHZMushroomCap_Main reaches its landing path through SolidObjectTop
+        // (sonic3k.asm:82182), whose new-contact test rejects object_control with
+        // a SIGNED test -- `tst.b object_control(a1) / bmi` (sonic3k.asm:42014).
+        // Only bit-7 states (warp/respawn) skip the contact; a positive
+        // object_control, such as the Madmole side drill's carry value of 1
+        // (sub_8D94A, sonic3k.asm:193465-193487), still lands on the cap.
+        return true;
+    }
+
+    @Override
     public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
         return false;
     }

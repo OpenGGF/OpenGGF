@@ -42,6 +42,13 @@ public class TraceBinder {
     // held-rewind segment-cache rebuilds in test mode) replace the previous
     // entry instead of accumulating duplicates. Memory bounded by trace length.
     private final TreeMap<Integer, FrameComparison> comparisonsByFrame = new TreeMap<>();
+    // Highest frame stored so far. Once the replay moves past a frame, aux
+    // merges for it can no longer arrive, so its multi-KB ROM/engine
+    // diagnostics strings are released if every field compared clean —
+    // reports and context windows only ever render diagnostics for divergent
+    // frames, and long complete-run segments would otherwise retain tens of
+    // thousands of them.
+    private int highestComparedFrame = Integer.MIN_VALUE;
     private List<BootstrapDivergence> lastBootstrapDivergences = List.of();
     // One binder compares one replay segment, so it owns that segment's
     // dynamic-art delivery-id origin. See DynamicArtIdEpoch.
@@ -278,8 +285,35 @@ public class TraceBinder {
         String engDiag = engineDiag != null ? engineDiag.format() : "";
 
         FrameComparison result = new FrameComparison(expected.frame(), fields, romDiag, engDiag);
-        comparisonsByFrame.put(result.frame(), result);
+        putComparison(result);
         return result;
+    }
+
+    /**
+     * Stores a comparison, releasing the diagnostics strings of the
+     * previously-highest frame once the replay has moved past it and it
+     * compared clean. Re-puts of the current frame (aux merges) and
+     * re-comparisons of earlier frames leave prior entries untouched.
+     */
+    private void putComparison(FrameComparison result) {
+        int frame = result.frame();
+        if (frame > highestComparedFrame) {
+            compactFinalizedFrame(highestComparedFrame);
+            highestComparedFrame = frame;
+        }
+        comparisonsByFrame.put(frame, result);
+    }
+
+    private void compactFinalizedFrame(int frame) {
+        FrameComparison finalized = comparisonsByFrame.get(frame);
+        if (finalized == null
+                || finalized.hasDivergence()
+                || (finalized.romDiagnostics().isEmpty()
+                        && finalized.engineDiagnostics().isEmpty())) {
+            return;
+        }
+        comparisonsByFrame.put(frame,
+                new FrameComparison(finalized.frame(), finalized.fields(), "", ""));
     }
 
     /**
@@ -446,7 +480,7 @@ public class TraceBinder {
                 expected.frame(), fields,
                 existing != null ? existing.romDiagnostics() : "",
                 existing != null ? existing.engineDiagnostics() : "");
-        comparisonsByFrame.put(expected.frame(), result);
+        putComparison(result);
         return result;
     }
 

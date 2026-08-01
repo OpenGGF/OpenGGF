@@ -41,6 +41,19 @@ public interface ObjectArtProvider {
     }
 
     /**
+     * Signals that the title-card <em>presentation</em> was omitted while the
+     * title-card owner object's ROM lifetime still runs.
+     *
+     * <p>Omitting the presentation does not delete the owner: it keeps
+     * executing as an ordinary level object and opens runtime-art admission
+     * only when its own state machine retires it. Providers that model that
+     * lifetime override this; the default treats retirement as immediate.
+     */
+    default void onTitleCardPresentationSkipped() {
+        onTitleCardArtRetired();
+    }
+
+    /**
      * Loads object art for the specified zone.
      *
      * @param zoneIndex the zone index (-1 for default/non-zone-specific)

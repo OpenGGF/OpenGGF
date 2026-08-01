@@ -17,6 +17,7 @@ import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.sprites.playable.Sonic;
+import com.openggf.tests.HardwareBoundaryPump;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -155,24 +156,25 @@ class TestS3kResultsKosQueueRewind {
                 return;
             }
 
-            timing.service(HardwareServiceBoundary.VINT_SERVICE);
-            TestEnvironment.activeGameplayMode().runtimeArtCoordinator()
-                    .afterTimingService(HardwareServiceBoundary.VINT_SERVICE);
+            // Kos_modules_left is decremented only by Process_Kos_Module_Queue
+            // (docs/skdisasm/sonic3k.asm:2750-2752), which LevelLoop reaches at 7908,
+            // immediately after the object pass (7900-7906). Retirement therefore lands
+            // on POST_OBJECTS; Process_Kos_Queue (7887) follows in the same loop tail and
+            // services only the decompression queue.
+            HardwareBoundaryPump.service(HardwareServiceBoundary.VINT_SERVICE);
             assertEquals(readyBefore, readyHandles(timing, submitted),
-                    "VINT_SERVICE must not expose results art before its FIFO POST_OBJECTS retirement");
+                    "VINT_SERVICE does not run the module state step");
 
-            timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
-            TestEnvironment.activeGameplayMode().runtimeArtCoordinator()
-                    .afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
-            assertEquals(readyBefore, readyHandles(timing, submitted),
-                    "PRE_MAIN_LOOP must prepare work without exposing results art readiness");
+            HardwareBoundaryPump.service(HardwareServiceBoundary.POST_OBJECTS);
+            List<HardwareWorkHandle> readyAfterState = readyHandles(timing, submitted);
+            assertEquals(submitted.subList(0, readyAfterState.size()), readyAfterState,
+                    "the module state step may expose only the next FIFO results-art handle");
+            assertTrue(readyAfterState.size() - readyBefore.size() <= 1,
+                    "at most one results-art archive may retire per LevelLoop iteration");
 
-            timing.service(HardwareServiceBoundary.POST_OBJECTS);
-            TestEnvironment.activeGameplayMode().runtimeArtCoordinator()
-                    .afterTimingService(HardwareServiceBoundary.POST_OBJECTS);
-            List<HardwareWorkHandle> readyAfterPostObjects = readyHandles(timing, submitted);
-            assertEquals(submitted.subList(0, readyAfterPostObjects.size()), readyAfterPostObjects,
-                    "POST_OBJECTS may expose only the next FIFO results-art handle");
+            HardwareBoundaryPump.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            assertEquals(readyAfterState, readyHandles(timing, submitted),
+                    "Process_Kos_Queue (7887) must not itself publish results-art readiness");
         }
         throw new AssertionError("results art did not become ready within the bounded hardware service loop");
     }

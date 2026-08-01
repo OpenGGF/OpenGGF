@@ -27,7 +27,10 @@ class TestResumableKosinskiDecoder {
         assertFalse(first.complete());
         assertArrayEquals(new byte[] {'A', 'B'}, decoder.output());
 
+        int steps = 0;
         while (!decoder.complete()) {
+            assertTrue(steps++ < 4096,
+                    "the resumable decoder must complete within a bounded number of steps");
             decoder.step(1);
         }
 
@@ -46,10 +49,16 @@ class TestResumableKosinskiDecoder {
                 ResumableKosinskiDecoder.fromSnapshot(original.snapshot());
 
         assertFalse(restored.complete());
+        int originalSteps = 0;
         while (!original.complete()) {
+            assertTrue(originalSteps++ < 4096,
+                    "the original decoder must complete within a bounded number of steps");
             original.step(1);
         }
+        int restoredSteps = 0;
         while (!restored.complete()) {
+            assertTrue(restoredSteps++ < 4096,
+                    "the snapshot-restored decoder must complete within a bounded number of steps");
             restored.step(1);
         }
 

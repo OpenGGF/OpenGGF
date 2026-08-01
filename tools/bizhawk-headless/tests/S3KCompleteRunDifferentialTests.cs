@@ -10,7 +10,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
     /// <summary>
     /// ROM-backed differential gate for the native S3K COMPLETE-RUN
     /// recorder (tools/bizhawk/s3k_complete_run_recorder.lua
-    /// v6.39-s3k-completerun; spec
+    /// v6.40-s3k-completerun; spec
     /// tools/bizhawk-headless/docs/s3k-run-publication.md). It runs the
     /// real CLI end-to-end through run.sh over the canonical Knuckles
     /// multi-bonus movie and asserts that the published bonus segment is
@@ -69,7 +69,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private const string PublishedQueueLuaScriptVersionLine =
             "  \"lua_script_version\": \"6.38-s3k-completerun\",";
         private const string CurrentLuaScriptVersionLine =
-            "  \"lua_script_version\": \"6.39-s3k-completerun\",";
+            "  \"lua_script_version\": \"6.40-s3k-completerun\",";
         private const string FixtureTraceSchemaLine =
             "  \"trace_schema\": 6,";
         private const string CurrentTraceSchemaLine =
@@ -91,8 +91,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
             "8d6e3e3004e811a124c516ac224fe9e9dd5476cce1d6c3097b3b7c65c2"
             + "526dd6";
         private const string GumballAuxSha256 =
-            "7efd3b263a0194239ad712d94a8fa4f75b405cf5dbda1da326fec116da"
-            + "50843e";
+            "612914268da742c0da96896b938aa0c531b2446562243b9537f93344fb"
+            + "68c416";
 
         public static void Register(ICollection<TestMain.TestCase> tests)
         {
@@ -155,7 +155,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     EndToEndTests.ComputeSha256(
                         Path.Combine(aiz, "physics.csv")));
                 AssertEx.Equal(
-                    "48d01a1d3cee368ac5be20a55cae94cbfc8f46ad9caf353adc4c6816ab5d1d23",
+                    "7ea46ac823cb29e59fa17203fa221c04f5fb9125fb52e9adb7d4d289077c4f13",
                     EndToEndTests.ComputeSha256(
                         Path.Combine(aiz, "aux_state.jsonl")));
                 string timing =
@@ -206,7 +206,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     EndToEndTests.ComputeSha256(
                         Path.Combine(hcz, "physics.csv")));
                 AssertEx.Equal(
-                    "d476cfca26294d7e8170f24e6b611a4566edb154d68b197c7f655eead43dfb9e",
+                    "05345f60c609b5d30f1381aa93fe7ed1f6cddfce72c59e0073c4302572719bc0",
                     EndToEndTests.ComputeSha256(
                         Path.Combine(hcz, "aux_state.jsonl")));
                 string timing =

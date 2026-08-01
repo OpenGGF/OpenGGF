@@ -68,6 +68,14 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     private S3kKosModuleQueue enemyKosQueue;
     private boolean enemyKosSubmissionArmed;
 
+    /**
+     * Residual ROM lifetime of the title-card owner when its presentation was
+     * skipped. Non-null only while the owner is still running toward
+     * {@code loc_2D8CA}'s {@code LoadEnemyArt}.
+     */
+    private com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardTeardownModel
+            titleCardTeardown;
+
     private record EnemyKosEntry(int source, int destinationTile) {
     }
 
@@ -1384,9 +1392,42 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         }
     }
 
+    /**
+     * Mirrors {@code SSEntryRing_Display}'s {@code loc_6196A} tail, which
+     * re-queues {@code ArtKosM_BadnikExplosion} to {@code ArtTile_Explosion}
+     * when a special-stage entry ring retires (sonic3k.asm:128448-128490).
+     *
+     * <p>The ring is deleted on the same frame and never polls the job, so —
+     * exactly as for the StarPost bonus stars above — the ROM's global module
+     * FIFO stays the owner and this session-owned provider retains and claims
+     * the handle.
+     */
+    public void queueBadnikExplosionArt() {
+        try {
+            Rom rom = GameServices.rom().getRom();
+            if (enemyKosQueue == null) {
+                enemyKosQueue =
+                        S3kRuntimeArtCoordinator.current().moduleQueue();
+            }
+            for (EnemyKosEntry entry : pendingEnemyKosEntries) {
+                enemyKosHandles.add(enemyKosQueue.queue(
+                        rom, entry.source(), entry.destinationTile()));
+            }
+            pendingEnemyKosEntries = List.of();
+            enemyKosHandles.add(enemyKosQueue.queue(
+                    rom,
+                    Sonic3kConstants.ART_KOSM_BADNIK_EXPLOSION_ADDR,
+                    Sonic3kConstants.ARTTILE_EXPLOSION));
+        } catch (IOException e) {
+            throw new IllegalStateException(
+                    "Unable to queue S3K badnik explosion art", e);
+        }
+    }
+
     @Override
     public void processRuntimeArtQueue() {
         boolean registeredRuntimeSheet = false;
+        advanceTitleCardTeardown();
         processEnemyKosArt();
         if (cnzTeleporterArtState == RuntimeArtState.PENDING) {
             loadCnzTeleporterArt();
@@ -1420,6 +1461,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         enemyKosHandles.clear();
         enemyKosQueue = null;
         enemyKosSubmissionArmed = false;
+        titleCardTeardown = null;
         pendingEnemyKosEntries = switch (zoneIndex) {
             case Sonic3kZoneIds.ZONE_AIZ -> List.of(
                     new EnemyKosEntry(
@@ -1499,6 +1541,49 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
                     new EnemyKosEntry(
                             Sonic3kConstants.ART_KOSM_ICZ_STAR_POINTER_ADDR,
                             Sonic3kConstants.ARTTILE_ICZ_STAR_POINTER));
+            // ROM PLCKosM_LBZ queues these entries in this order from
+            // LoadEnemyArt after the title-card owner retires.
+            // docs/skdisasm/sonic3k.asm:62287-62300, 64397-64402
+            case Sonic3kZoneIds.ZONE_LBZ -> List.of(
+                    new EnemyKosEntry(
+                            Sonic3kConstants.ART_KOSM_SNALE_BLASTER_ADDR,
+                            Sonic3kConstants.ARTTILE_SNALE_BLASTER),
+                    new EnemyKosEntry(
+                            Sonic3kConstants.ART_KOSM_ORBINAUT_ADDR,
+                            Sonic3kConstants.ARTTILE_ORBINAUT),
+                    new EnemyKosEntry(
+                            Sonic3kConstants.ART_KOSM_RIBOT_ADDR,
+                            Sonic3kConstants.ARTTILE_RIBOT),
+                    new EnemyKosEntry(
+                            Sonic3kConstants.ART_KOSM_CORKEY_ADDR,
+                            Sonic3kConstants.ARTTILE_CORKEY));
+            // ROM PLCKosM_MHZ1 / PLCKosM_MHZ2 queue these entries in this
+            // order from LoadEnemyArt; act 2 leads with the Cluckoid arrow.
+            // docs/skdisasm/sonic3k.asm:64331-64332, 64404-64415
+            case Sonic3kZoneIds.ZONE_MHZ -> actIndex == 0
+                    ? List.of(
+                            new EnemyKosEntry(
+                                    Sonic3kConstants.ART_KOSM_MADMOLE_ADDR,
+                                    Sonic3kConstants.ARTTILE_MADMOLE),
+                            new EnemyKosEntry(
+                                    Sonic3kConstants.ART_KOSM_MUSHMEANIE_ADDR,
+                                    Sonic3kConstants.ARTTILE_MUSHMEANIE),
+                            new EnemyKosEntry(
+                                    Sonic3kConstants.ART_KOSM_DRAGONFLY_ADDR,
+                                    Sonic3kConstants.ARTTILE_DRAGONFLY))
+                    : List.of(
+                            new EnemyKosEntry(
+                                    Sonic3kConstants.ART_KOSM_CLUCKOID_ARROW_ADDR,
+                                    Sonic3kConstants.ARTTILE_CLUCKOID_ARROW),
+                            new EnemyKosEntry(
+                                    Sonic3kConstants.ART_KOSM_MADMOLE_ADDR,
+                                    Sonic3kConstants.ARTTILE_MADMOLE),
+                            new EnemyKosEntry(
+                                    Sonic3kConstants.ART_KOSM_MUSHMEANIE_ADDR,
+                                    Sonic3kConstants.ARTTILE_MUSHMEANIE),
+                            new EnemyKosEntry(
+                                    Sonic3kConstants.ART_KOSM_DRAGONFLY_ADDR,
+                                    Sonic3kConstants.ARTTILE_DRAGONFLY));
             default -> List.of();
         };
     }
@@ -1545,7 +1630,70 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
      */
     @Override
     public void onTitleCardArtRetired() {
+        titleCardTeardown = null;
         enemyKosSubmissionArmed = true;
+    }
+
+    /**
+     * Begins modelling the title-card owner's remaining ROM lifetime instead of
+     * retiring its art immediately.
+     *
+     * <p>A skipped presentation removes only the locked display loop. The owner
+     * object still runs {@code Obj_TitleCardWait2}'s {@code objoff_2E} countdown
+     * and then drains its card elements before {@code loc_2D8CA} reaches
+     * {@code LoadEnemyArt} ({@code docs/skdisasm/sonic3k.asm:62249-62261},
+     * {@code 62295-62301}).
+     */
+    @Override
+    public void onTitleCardPresentationSkipped() {
+        enemyKosSubmissionArmed = false;
+        titleCardTeardown =
+                new com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardTeardownModel();
+    }
+
+    /**
+     * Runs one level frame of the modelled title-card owner.
+     *
+     * <p>{@code Obj_TitleCard} creates its card elements through
+     * {@code CreateNewSprite4}, which scans forward from the creator's own slot
+     * ({@code docs/skdisasm/sonic3k.asm:37894-37919}), so every element lives in
+     * a higher {@code Dynamic_object_RAM} slot and {@code ExecuteObjects} runs
+     * the owner before its children. On the frame an element renders off-screen
+     * and decrements {@code objoff_30}
+     * ({@code docs/skdisasm/sonic3k.asm:62362-62363}), the owner has already
+     * tested {@code objoff_30} that frame and taken the
+     * {@code addq.w #1,objoff_32} branch ({@code 62256-62261}). It first
+     * observes the drained counter — and so first reaches {@code loc_2D8CA}'s
+     * {@code LoadEnemyArt} ({@code 62295-62301}) — on the following frame.
+     */
+    /**
+     * Re-queues the current zone/act's enemy KosM archives, matching a
+     * mid-level ROM {@code jsr (LoadEnemyArt).l}
+     * ({@code docs/skdisasm/sonic3k.asm:64281-64313}): the caller's object runs
+     * {@code Queue_Kos_Module} for every {@code PLCKosM_*} entry during its own
+     * execution frame, so the submissions happen immediately rather than
+     * waiting for the next {@link #processRuntimeArtQueue()} pump.
+     *
+     * <p>Used by {@code HCZGeyser_ReloadEnemyArtAndDelete}
+     * ({@code docs/skdisasm/sonic3k.asm:65002-65004}), which restores the
+     * badnik art the horizontal geyser sheet overwrote before deleting itself.
+     */
+    public void reloadEnemyKosArt() {
+        scheduleEnemyKosArt(currentZoneIndex, currentActIndex);
+        enemyKosSubmissionArmed = true;
+        processEnemyKosArt();
+    }
+
+    private void advanceTitleCardTeardown() {
+        if (titleCardTeardown == null) {
+            return;
+        }
+        if (titleCardTeardown.isComplete()) {
+            enemyKosSubmissionArmed = true;
+            titleCardTeardown = null;
+            return;
+        }
+        titleCardTeardown.tick();
     }
 
     /**
@@ -2185,7 +2333,8 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
                         | (cnzEndBossArtState.ordinal() << 2),
                 pendingModules,
                 enemyKosHandles.stream().map(HardwareWorkHandle::ordinal).toList(),
-                enemyKosSubmissionArmed);
+                enemyKosSubmissionArmed,
+                titleCardTeardown == null ? -1 : titleCardTeardown.ticksElapsed());
     }
 
     /**
@@ -2203,6 +2352,13 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
                         entry.sourceAddress(), entry.destinationTile()))
                 .toList();
         enemyKosSubmissionArmed = snap.kosSubmissionArmed();
+        if (snap.titleCardTeardownTicks() < 0) {
+            titleCardTeardown = null;
+        } else {
+            titleCardTeardown =
+                    new com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardTeardownModel();
+            titleCardTeardown.restoreTicks(snap.titleCardTeardownTicks());
+        }
         enemyKosHandles.clear();
         enemyKosQueue = null;
         if (!snap.pendingKosOrdinals().isEmpty()) {

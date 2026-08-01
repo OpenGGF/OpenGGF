@@ -14,6 +14,7 @@ import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.game.timing.HardwareTimingSnapshot;
 import com.openggf.game.timing.HardwareWorkHandle;
+import com.openggf.tests.HardwareBoundaryPump;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -199,29 +200,48 @@ class TestSonic3kTitleCardKosQueue {
     }
 
     private void drainThroughPostObjects(List<HardwareWorkHandle> handles) throws Exception {
+        // Kos_modules_left is decremented at exactly one site,
+        // Process_Kos_Module_Queue (docs/skdisasm/sonic3k.asm:2750-2752), which LevelLoop
+        // reaches at 7908 -- immediately after the object pass (ExecuteObjects,
+        // 7900-7906), i.e. POST_OBJECTS. Process_Kos_Queue (7887) follows it in the same
+        // loop tail and services only the decompression queue, so it can never retire an
+        // archive. The object pass therefore observes readiness; it cannot create it.
         boolean sawPostObjectsPublication = false;
         for (int frame = 0; frame < 4096 && readyCount(handles) < handles.size(); frame++) {
             int readyBefore = readyCount(handles);
-            service(HardwareServiceBoundary.PRE_MAIN_LOOP);
-            assertEquals(readyBefore, readyCount(handles),
-                    "PRE_MAIN_LOOP must not publish newly completed KosM work");
 
             manager.update();
             assertTrue(isArtLoading(manager),
                     "the title-card consumer must keep polling until every archive is ready");
+            assertEquals(readyBefore, readyCount(handles),
+                    "the object pass observes KosM readiness, it cannot create it");
 
             service(HardwareServiceBoundary.POST_OBJECTS);
-            int readyAfter = readyCount(handles);
-            if (readyAfter > readyBefore) {
+            int readyAfterPost = readyCount(handles);
+            assertTrue(readyAfterPost >= readyBefore,
+                    "module readiness must never regress across a LevelLoop iteration");
+            // One call to Process_Kos_Module_Queue per iteration, taking one of two
+            // mutually exclusive branches: submit (2741) or DMA-and-decrement
+            // (2750-2752). The shift-out tail (2778-2788) re-enters
+            // Process_Kos_Module_Queue_Init (2694-2713) for the next archive, which
+            // reloads Kos_modules_left rather than retiring a second archive.
+            assertTrue(readyAfterPost - readyBefore <= 1,
+                    "at most one archive may retire per LevelLoop iteration");
+            if (readyAfterPost > readyBefore) {
                 sawPostObjectsPublication = true;
             }
+
+            service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+            assertEquals(readyAfterPost, readyCount(handles),
+                    "Process_Kos_Queue (7887) advances only the decompression queue and "
+                            + "must not publish newly completed KosM work");
         }
 
         assertEquals(handles.size(), readyCount(handles));
         assertTrue(sawPostObjectsPublication,
-                "at least one archive must publish readiness at POST_OBJECTS");
+                "at least one archive must publish readiness at the module state step");
         assertTrue(isArtLoading(manager),
-                "final POST_OBJECTS publishes readiness without running the consumer");
+                "the state step publishes readiness without running the consumer");
 
         manager.update();
 
@@ -241,9 +261,8 @@ class TestSonic3kTitleCardKosQueue {
     }
 
     private void service(HardwareServiceBoundary boundary) {
-        timing.service(boundary);
-        directQueue().afterTimingService(boundary);
-        S3kRuntimeArtCoordinator.current().moduleQueue().afterTimingService(boundary);
+        HardwareBoundaryPump.service(
+                timing, S3kRuntimeArtCoordinator.current(), boundary);
     }
 
     private S3kKosDecompressionQueue directQueue() {
