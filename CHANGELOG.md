@@ -3,6 +3,20 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the S3K results screen's create gate now mirrors ROM
+  `Obj_LevelResultsCreate`, which gates child creation and the `Events_fg_5`
+  act-transition signal on `Kos_modules_left` alone (sonic3k.asm:62596-62598).
+  The engine had layered a fitted dispatch countdown on top of the module-queue
+  readiness poll, pushing the MGZ1 transition queue one frame late. The waited
+  results retire tail is now one dispatch (ROM parent-before-children slot
+  order: `Obj_LevelResultsWait2` sees `$30(a0)` reach zero one pass after the
+  last child SST deletes, and the player-visible release lands the dispatch
+  after, sonic3k.asm:62600, 62691-62734), and the recording frame driver polls
+  the in-level title-card start again after the frame body so a results owner
+  that exits during the object pass starts `Obj_TitleCardInit`'s KosM queue on
+  the ROM frame (sonic3k.asm:62120-62166). MGZ complete-run frontier
+  f16513 (`KOS_DECOMPRESSION_QUEUE#143`, `ArtKosM_TitleCardRedAct`) -> f17952
+  (`#149`, `ArtKosM_MGZEndBoss`), run length 16510 -> 17949 frames.
 - Fix: the S3K Madmole's side-drill arm now models ROM `$44(a0)`, the player
   back-reference it keeps after knocking a player away. `sub_8D8E6`
   (sonic3k.asm:193439) and `sub_8D94A` (193477) write it and nothing ever clears

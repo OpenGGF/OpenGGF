@@ -56936,3 +56936,66 @@ mgz 18/16510, cnz 7/9711, icz 10/12375, lbz 8/35. `TestS3kAizTraceReplay` holds 
 `TestSonic3kBootstrapResolver` (5), `TestSonic3kDecodingUtils` (3).
 
 Full write-up: [docs/architecture/validation/trace/2026-08-01-mhz-f3246-findfloor-probe.md](../architecture/validation/trace/2026-08-01-mhz-f3246-findfloor-probe.md).
+
+## 2026-08-01 — MGZ complete-run: title-card KosM abort at f16513 root-caused (results create gate + retire tail)
+
+Worktree `.worktrees/mgz-16513`, branch `bugfix/ai-s3k-mgz-16513`, from
+`bugfix/ai-s3k-mhz-queue-frontier` (0ab1c8d38).
+
+Command:
+`mvn -Ptrace-replay -Dtest=TestS3kMgzCompleteRunTraceReplay -Ds3k.rom.path=<s3k.gen> test`
+
+### Frontier
+
+`KOS_DECOMPRESSION_QUEUE#143` at raw f16513, `engine pending: <none>`, fingerprint
+`fbfc78d4…`. Resolved against the ROM: source `0xD6F2A` = `ArtKosM_TitleCardRedAct`
+(0xD6F28) + 2-byte module header, destination RAM `$FFFFD000` — the first module of the
+act-2 title card art. The producer is `Obj_TitleCardInit` (`loc_2D6C8`,
+sonic3k.asm:62120-62166), reached when the retained `Obj_LevelResults` SST mutates into
+`Obj_TitleCard` at `loc_2DD06` (sonic3k.asm:62703-62734). The trace's aux queue rows show
+the ROM queueing 4 KosM archives (RedAct active + `TitleCardS3KZone`, `TitleCardNum2`,
+`ArtKosM_MGZTitleCard` queued) at row 16512, one row after the results tally exit.
+
+### Root cause
+
+The engine's results owner ran the whole sequence late:
+
+1. **Create gate.** ROM `Obj_LevelResultsCreate` gates child creation and `Events_fg_5`
+   on `tst.b (Kos_modules_left).w` alone (sonic3k.asm:62596-62598). The engine layered a
+   fitted 9-dispatch countdown (`resultsCreateGateDispatches - catchUpEntries`) on top of
+   the module readiness poll, which expired one frame after readiness. The MGZ1BGE_Normal
+   transition queue (`MGZ2_128x128/16x16_Secondary_Kos` + `MGZ2_8x8_Secondary_KosM`,
+   sonic3k.asm:106284-106305) therefore ran at row 15983 instead of 15982 — the 8
+   non-cascading groups at f15982 in the baseline report. Gate is now readiness-only.
+2. **Exit retire tail.** The waited-landing results tail used 2 extra retire dispatches;
+   ROM slot order (children allocate after the parent, sonic3k.asm:62600; `Wait2` sees
+   `$30(a0)`==0 one pass after the last child delete, release visible the dispatch after,
+   sonic3k.asm:62691-62734) plus onExitReady's next-dispatch scheduling leaves exactly 1.
+   Values 2 (late release, f16512 anim mismatch, #143 abort) and 0 (release one frame
+   early, 388-group physics cascade from f16512) bracket it; 1 matches the trace's
+   `player/tails_animation_id` 0x13→0x05 edge at row 16512 exactly.
+3. **Title start poll.** The in-level title-card coordinator only polled at the frame
+   top, one frame after the ROM's mutated SST queues its art within the same object pass.
+   `RecordingFrameDriver` now re-polls after the frame body.
+
+### Result
+
+MGZ complete-run: 18 groups / 16510 frames → **23 groups / 17949 frames**; frontier
+f16513 → **f17952** (`KOS_DECOMPRESSION_QUEUE#149`, fingerprint `8c248d18…` = 
+`ArtKosM_MGZEndBoss` 0x36B340+2, queued by the MGZ2 drilling-Robotnik boss setup at
+sonic3k.asm:142388-142404 — the engine's MGZ2 end-boss path does not submit it; next
+target). Remaining pre-frontier seeds: direct-queue head row at 16512 (module head push
+one row late), `ArtKosM_Spiker` (0x36E0C4) queued ~131 rows early at 16522 vs ROM's lazy
+enemy-art load at ~16653 (rings HUD reset +8 rows at 16551 and camera rows 16656-16677
+cascade from it).
+
+### Regression sweep
+
+Other six S3K segments byte-identical to baseline: aiz 8/64, hcz 7/1320, cnz 7/9711,
+icz 10/12375, lbz 8/35, mhz 934/7218. `TestS3kAizTraceReplay` holds at exactly 4
+failures + 1 error. Guards/units green (55 in final battery): `TestHardwareTimingAuthorityGuard`,
+`TestRewindCoverageGuard`, `TestStaticStateRewindCoverageGuard`, the four
+`TestS3kKos*` queue classes, `TestSonic3kTitleCardKosQueue`, `TestS3kSignpostInstance`,
+`TestS3kResultsScreenObjectInstance`, `TestS3kResultsKosQueueRewind`,
+`TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver`,
+`TestSonic3kDecodingUtils`.

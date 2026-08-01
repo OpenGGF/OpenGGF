@@ -53,7 +53,10 @@ class TestS3kResultsScreenObjectInstance {
     }
 
     @Test
-    void timingCompensationStartsCreateGateOneDispatchCloserWithoutChangingShortTail() throws Exception {
+    void timingCompensationDoesNotDelayReadinessGatedCreate() throws Exception {
+        // ROM Obj_LevelResultsCreate gates on Kos_modules_left alone
+        // (docs/skdisasm/sonic3k.asm:62596-62598); no dispatch countdown
+        // delays child creation once the queued results art is ready.
         S3kResultsScreenObjectInstance none = resultsWithTimingAdjustment("NONE", true);
         S3kResultsScreenObjectInstance compensation = resultsWithTimingAdjustment(
                 "UNSUPPORTED_GROUNDED_COMPENSATION", true);
@@ -61,9 +64,9 @@ class TestS3kResultsScreenObjectInstance {
         invokeCreateGate(none);
         invokeCreateGate(compensation);
 
-        assertEquals(8, privateInt(none, "createGateFrames"));
-        assertEquals(7, privateInt(compensation, "createGateFrames"),
-                "the isolated grounded compensation starts the child one dispatch closer to readiness");
+        assertEquals(-1, privateInt(none, "createGateFrames"),
+                "readiness-gated create keeps no dispatch countdown");
+        assertEquals(-1, privateInt(compensation, "createGateFrames"));
         assertTrue(privateBoolean(none, "usesShortResultsChildRetireTail"));
         assertTrue(privateBoolean(compensation, "usesShortResultsChildRetireTail"),
                 "short-tail retirement remains independent from create-gate timing compensation");
