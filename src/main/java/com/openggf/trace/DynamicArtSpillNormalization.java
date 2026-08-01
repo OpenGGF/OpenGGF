@@ -196,6 +196,14 @@ public final class DynamicArtSpillNormalization {
                     }
                 }
             }
+            // PRECONDITION: the outstanding-id merge below assumes the target
+            // row has a RECORDED heartbeat whose outstanding list already
+            // carries every id in flight at that row. The S2 special-stage
+            // schema satisfies this by construction (one
+            // dynamic_art_transfer_state per stored row); a sparse-heartbeat
+            // trace would reach the empty-list branch here and present as a
+            // silently empty expected outstanding list at a moved edge's
+            // target row — an expectation defect, not an engine divergence.
             List<Long> outstanding = original != null
                     ? new ArrayList<>(original.outstandingTransferIds())
                     : new ArrayList<>();
