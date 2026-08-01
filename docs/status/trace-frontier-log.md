@@ -57031,3 +57031,43 @@ groups (1106-1237 etc.) are downstream one-frame skew of the same submission.
 
 Regression sweep: hcz 7/1320 (baseline), remaining segments recorded below by the sweep
 run in this entry's commit.
+
+## 2026-08-01 — AIZ complete-run f1096: title-card KosM queue one frame early (worktree `.worktrees/aiz-1096`, branch `bugfix/ai-s3k-aiz-1096`)
+
+Command: `mvn -Ptrace-replay -Dtest=TestS3kAizCompleteRunTraceReplay -Ds3k.rom.path=… test`
+
+Frontier group: frames 1096-1096, `queue.s3k_kos_module.busy/prepared/remaining_work/queued_fingerprints`
+(engine busy with the four title-card KosM modules, recording idle; recording's matching
+set starts at 1097).
+
+Root cause was NOT the suspected `Level_frame_counter` parity gate: the previously cited
+odd-frame `btst #0,(Level_frame_counter+1)` install at sonic3k.asm:114388-114396 belongs
+to `SOZ2_BackgroundEvent` (loc_56324), not the AIZ intro. The AIZ intro's install is the
+Knuckles cutscene exit, `loc_61F22` (sonic3k.asm:128743-128750): it only ALLOCATES the
+`Obj_TitleCard` slot; `AllocateObject` hands back a slot the current `ExecuteObjects`
+pass has already walked, so `Obj_TitleCardInit` — which queues the four KosM modules
+(sonic3k.asm:62109-62152) — first dispatches on the next frame's pass. The engine's
+`CutsceneKnucklesAiz1Instance.completeIntroExitHandoff` called
+`titleCardProvider().initializeInLevel(0, 0)` synchronously, submitting the art one frame
+early. Fix: the cutscene object holds one more dispatch (routine 14) standing in for the
+allocated `Obj_TitleCard` slot and performs the title-card init there. (An intermediate
+attempt via `LevelManager.requestInLevelTitleCard` did not move the submission frame —
+the recording frame driver's post-frame in-level title-card poll consumes the request the
+same row.)
+
+Result: AIZ complete run 65 errors -> 57 errors over the same 6344 frames; first error
+1096 -> 1106. The 1106-1237 cluster is NOT downstream skew of 1096: it is an independent
+engine-only submission — `Sonic3kAIZEvents.serviceAiz1MainLevelArt` queues the AIZ1
+main-level block (direct Kos source 3571726 = 0x367F0E -> `KOS_DECOMP_BUFFER` $FFFFD000)
+and pattern art (module fingerprint e6f7dd…, dest $0BE) into the modelled hardware queues
+once the camera crosses `TERRAIN_SWAP_X` after the intro handoff, where the recording
+shows both queues idle for the whole 1106-1237 window. The same module fingerprint
+reappears in the 6303-6344 tail group, and 6216 shows the reverse (recording busy,
+engine idle: direct source 3887592 = 0x3B51E8) around the AIZ1->AIZ2 transition; the
+6300+ physics cluster (x/camera_x offset by 0x2F00) is the seamless-reload player/camera
+offset landing on the wrong frame. Next target: model the ROM's actual main-level
+terrain load producer instead of submitting engine-internal overlay preparation to the
+modelled Kos queues at 1106.
+
+Segment sweep (this commit): aiz 57/6344 (was 65/6344), hcz 7/1320, mgz 23/17949,
+cnz 7/9711, icz 10/12375, lbz 0/12647, mhz 934/7218 — non-AIZ segments at baseline.

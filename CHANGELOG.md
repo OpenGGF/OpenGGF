@@ -3,6 +3,17 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the AIZ1 intro cutscene's title-card art now starts one object dispatch
+  after Knuckles' exit, matching ROM `loc_61F22`
+  (sonic3k.asm:128743-128750), which only allocates the `Obj_TitleCard` slot
+  when Knuckles walks offscreen; `AllocateObject` returns a slot the current
+  `ExecuteObjects` pass has already walked, so `Obj_TitleCardInit`'s four-KosM
+  queue (sonic3k.asm:62109-62152) first runs on the next frame's pass. The
+  engine had initialised the in-level title card (and submitted its KosM
+  modules) synchronously inside the exit handoff, one frame early.
+  `CutsceneKnucklesAiz1Instance` now holds one more dispatch (routine 14)
+  standing in for the allocated `Obj_TitleCard` slot. AIZ complete-run
+  frontier f1096 -> f1106, 65 -> 57 groups over the same 6344 frames.
 - Fix: the S3K results screen's create gate now mirrors ROM
   `Obj_LevelResultsCreate`, which gates child creation and the `Events_fg_5`
   act-transition signal on `Kos_modules_left` alone (sonic3k.asm:62596-62598).
