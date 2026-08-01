@@ -227,6 +227,17 @@ Development since `v0.5.20260411` is the active 0.6 prerelease line. The release
   and the existing bounded hardware-readiness delay; failures remain visible in
   the picker until acknowledged.
 
+- **S1 and S2 trace-replay fleet green (2026-08-01):** the last red,
+  `TestS2SpecialStageTraceReplay`, closes its final 9 errors at the
+  stage-finish boundary. The cause was not a comparison gap but the replay
+  harness stepping two kinds of observation in the wrong V-int lifecycle
+  phase: an observation that runs a `RunObjects` pass is never a lag V-blank
+  (the ROM waits on `VintID_S2SS` immediately before the pass), and the
+  39-row window where the finish's art stays outstanding is
+  `Pal_FadeToWhite`'s 22 fade V-blanks plus the interrupts-disabled results
+  setup, none of which service the DMA queue. Both corrections are general
+  rules rather than finish-specific cases, and the engine itself is unchanged.
+
 - **S2 special stage compares DPLC work by pass identity end to end
   (2026-08-01):** `TestS2SpecialStageTraceReplay` drops from 17747 errors (first
   at frame 436) to 9 (first at frame 5181) — every pass, submission, retirement,

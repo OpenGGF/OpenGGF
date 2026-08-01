@@ -14,6 +14,23 @@ All notable changes to the OpenGGF project are documented in this file.
   cannot create work or hydrate gameplay. A persistent `TRACE FAILED` picker
   diagnostic retains the segment, row, and reason until acknowledged.
 
+- Fix/Test: the S2 special-stage replay harness now steps each observation in
+  the lifecycle phase the ROM's V-int actually ran, taking
+  `TestS2SpecialStageTraceReplay` from 9 errors (first at f5181) to green and
+  closing the S1/S2 trace-replay fleet. Two harness-side corrections, no engine
+  change: (1) an observation that executes a `RunObjects` pass is never a lag
+  V-blank whatever the recorder's lag heuristic reports — the special-stage
+  loop sets `VintID_S2SS` and waits on it immediately before the pass
+  (s2.asm:6694-6706) and `V_Int` reaches `Vint_Lag` only while `Vint_routine`
+  is 0 (s2.asm:483-484), so the finish observation stops publishing a row late;
+  (2) the finish's 39-row outstanding window is `Pal_FadeToWhite`'s `$15 + 1`
+  `VintID_Fade` V-blanks (s2.asm:6725-6745, 3570-3581) followed by the
+  interrupts-disabled results setup, none of which reach `ProcessDMAQueue`
+  (s2.asm:1770), so the terminal pass's art now survives to the results loop's
+  first `VintID_Level` (s2.asm:6800-6806). `S2SpecialStageFinishBoundaryPhaseTest`
+  proves missing, extra, wrong-owner, and early-retired terminal transfers all
+  still fail, and measures the one-pass-owning-lag-row property across all 5299
+  recorded rows.
 - Fix: the master-title visual trace player now admits the same represented
   row as headless replay. S3K native-prefix rows validate current BK2 input
   while applying the previous gameplay row; suppressed rows share the
