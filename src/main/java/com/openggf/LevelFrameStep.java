@@ -142,9 +142,9 @@ public final class LevelFrameStep {
         Objects.requireNonNull(objectScan, "objectScan");
         frame.claim(phase);
         serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
-        serviceBoundary(context, HardwareServiceBoundary.PRE_MAIN_LOOP);
         objectScan.run();
         serviceBoundary(context, HardwareServiceBoundary.POST_OBJECTS);
+        serviceBoundary(context, HardwareServiceBoundary.PRE_MAIN_LOOP);
         if (frame.isOwnedBy(phase)) {
             frame.prepareAfterLoop(phase);
         }
@@ -179,24 +179,6 @@ public final class LevelFrameStep {
 
         frame.claim(phase);
         serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
-
-        // Runtime art queues are consumed once per active gameplay frame. S3K
-        // uses this for Queue_Kos_Module workloads whose object routines poll
-        // Kos_modules_left on later frames.
-        //
-        // This runs ahead of the PRE_MAIN_LOOP boundary because ROM LevelLoop
-        // reaches its producers (ExecuteObjects, docs/skdisasm/sonic3k.asm:
-        // 7900-7906) before the Process_Kos_Module_Queue state step in the loop
-        // tail (7908). Queue_Kos_Module inits an archive into an empty queue
-        // synchronously (2669-2671, 2694-2713) and that same iteration's tail
-        // call then hands its first module to the direct FIFO (2735-2741), so a
-        // freshly enqueued archive and its first child become observable on the
-        // same frame.
-        if (context.gameModule().getObjectArtProvider() != null) {
-            context.gameModule().getObjectArtProvider().processRuntimeArtQueue();
-        }
-
-        serviceBoundary(context, HardwareServiceBoundary.PRE_MAIN_LOOP);
 
         // 0a. Drain the per-frame palette-write accumulator at frame top, before
         //     any submitter (object palette writes in steps 2-3, zone palette
@@ -357,7 +339,26 @@ public final class LevelFrameStep {
         // (docs/skdisasm/sonic3k.asm:7898-7908). A completion retired here is
         // therefore first observable by object/event consumers on their next
         // dispatch, never by this frame's ScreenEvents pass.
+        // Runtime art queues are consumed once per active gameplay frame. S3K
+        // uses this for Queue_Kos_Module workloads whose object routines poll
+        // Kos_modules_left on later frames. It runs with the object pass because
+        // ROM LevelLoop reaches its producers in ExecuteObjects
+        // (docs/skdisasm/sonic3k.asm:7900-7906), ahead of the
+        // Process_Kos_Module_Queue state step in the loop tail (7908).
+        if (context.gameModule().getObjectArtProvider() != null) {
+            context.gameModule().getObjectArtProvider().processRuntimeArtQueue();
+        }
+
         serviceBoundary(context, HardwareServiceBoundary.POST_OBJECTS);
+
+        // ROM LevelLoop's Process_Kos_Queue (docs/skdisasm/sonic3k.asm:7887)
+        // runs after this iteration's Process_Kos_Module_Queue (7908) and before
+        // Wait_VSync (7888) increments Level_frame_counter (7889), so the direct
+        // FIFO service is the tail of THIS frame. Servicing it here lets a
+        // Queue_Kos_Module issued by an object during this frame's pass have its
+        // first child decompressed on the same frame, which the frame-top
+        // placement could not represent.
+        serviceBoundary(context, HardwareServiceBoundary.PRE_MAIN_LOOP);
         if (frame.isOwnedBy(phase)) {
             frame.prepareAfterLoop(phase);
         }
