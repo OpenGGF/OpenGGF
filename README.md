@@ -218,6 +218,18 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **Special-stage dynamic art starts publishing (2026-08-01):** both special-stage
+  traces diverged early with the engine publishing *no* dynamic-art edges at all
+  where the ROM publishes its first few. The players' art was only submitted from
+  the first recurring V-int pass, but `LoadSSSonicDynPLC` / `LoadSSTailsDynPLC` /
+  `LoadSSTailsTailsDynPLC` run inside the startup `RunObjects` pass, and the
+  startup sequence then waits on `VintID_CtrlDMA` — a handler that is nothing but
+  `ProcessDMAQueue` — so that V-blank retires the queued transfers even though the
+  surrounding `Pal_FadeFromWhite` loop never polls the joypad and reads as a lag
+  frame. The S1 side was separately pre-consuming its first Sonic DPLC change.
+  Both frontiers move; the special stages are not yet green and the residual is
+  recorded as a recurring-pass attribution gap.
+
 - **Final Zone stopped running underwater; ROM `v_act` split from the feature act
   (2026-08-01):** an earlier fix in this line answered a `v_act` question through
   `getRemappedFeatureAct`, which also keys water and palette lookups where SBZ3 is

@@ -1569,7 +1569,17 @@ public final class Sonic1SpecialStageManager {
         sonicAnimFrameIndex = 0;
         sonicAnimFrameTimer = 0;
         sonicSpriteFrame = resolveSpecialStageSonicFrame(sonicArt);
-        publishSonicDynamicArt();
+        // No dynamic-art publication here: GM_Special
+        // (docs/s1disasm/sonic.asm:3222-3292) never runs Sonic_LoadGfx while
+        // setting the stage up. It clears v_levelvariables
+        // (sonic.asm:3245), and v_sonframenum -- the "frame already in VRAM"
+        // latch Sonic_LoadGfx compares against
+        // (docs/s1disasm/_incObj/01 Sonic.asm:2394-2398) -- lives inside that
+        // block (docs/s1disasm/_Variables.asm:174, 225, 296). So the SS Sonic
+        // object's first main-loop Sonic_LoadGfx always sees a changed frame
+        // and sets f_sonframechg (01 Sonic.asm:2408) for VBlank_SpecialStage
+        // to DMA (sonic.asm:890-894). Publishing the initial frame here would
+        // consume that first change and swallow the ROM's first transfer.
     }
 
     private int resolveSpecialStageSonicFrame(SpriteArtSet sonicArt) {

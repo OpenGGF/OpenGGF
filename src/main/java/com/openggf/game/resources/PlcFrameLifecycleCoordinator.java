@@ -20,6 +20,7 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
     private boolean comparisonSegmentsExternallyManaged;
     private boolean representedIterationWithoutVblank;
     private boolean vblankOverrunCarry;
+    private boolean nextVblankServicesDmaQueue;
 
     public PlcFrameLifecycleCoordinator(GameModule module) {
         this(() -> module.getGameService(PlcLifecycleService.class), null,
@@ -159,10 +160,34 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
         representedIterationWithoutVblank = true;
     }
 
+    /**
+     * Declares that the V-blank opening the next represented iteration runs a
+     * DMA-queue-only V-int instead of the mode's ordinary handler, so it
+     * services the dynamic-art queue whatever phase that row carries.
+     *
+     * <p>ROM basis: the S2 special stage's startup sequence queues the player
+     * objects' art from its one-off {@code RunObjects} pass
+     * (docs/s2disasm/s2.asm:6662) and then explicitly asks for
+     * {@code VintID_CtrlDMA} before waiting (s2.asm:6665-6668).
+     * {@code Vint_CtrlDMA} is nothing but {@code ProcessDMAQueue}
+     * (s2.asm:998-1001, routine at s2.asm:1770), so that V-blank retires the
+     * queued transfers even though the main loop it belongs to
+     * ({@code Pal_FadeFromWhite}, s2.asm:3460-3482) never polls the joypad and
+     * therefore reads as a lag frame.
+     *
+     * <p>This carries no gameplay value and no transfer identity -- it only
+     * classifies which V-blank ran a real DMA handler. It is a one-shot
+     * consumed by the very next claim.
+     */
+    public void markNextVblankServicesDmaQueue() {
+        nextVblankServicesDmaQueue = true;
+    }
+
     public void reset() {
         activeFrame = null;
         representedIterationWithoutVblank = false;
         vblankOverrunCarry = false;
+        nextVblankServicesDmaQueue = false;
         if (activeFade != null) {
             activeFade.closed = true;
             activeFade = null;
@@ -208,8 +233,11 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
                 // be LAG to keep gameplay suppressed. A genuine Vint_Lag row
                 // (Vint_routine still 0, s2.asm:483-484) never reaches
                 // ProcessDMAQueue and keeps the per-game phase policy's answer.
+                boolean declaredDmaVblank = nextVblankServicesDmaQueue;
+                nextVblankServicesDmaQueue = false;
                 if (dynamicArtDmaService.services(phase)
-                        || representedIterationWithoutVblank) {
+                        || representedIterationWithoutVblank
+                        || declaredDmaVblank) {
                     dynamicArtLifecycle.serviceProductionVBlank();
                 }
                 if (!comparisonSegmentsExternallyManaged

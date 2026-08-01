@@ -60023,3 +60023,50 @@ matches the ROM decomposition. **CPZ2 PASS** (was 7 errors, first at f11491).
 Full `TestS2*TraceReplay` sweep after the fix: 19 classes pass; only
 `TestS2SpecialStageTraceReplay` (20482 @ f136 `dynamic_art.edges`, long-standing,
 owned by the special-stage effort) remains, byte-identical to baseline.
+## 2026-08-01 - S1 special stage green; S2 special stage frontier f136 -> f165
+
+- Worktree `.worktrees/specialstage-dynamic-art`, branch
+  `bugfix/ai-specialstage-dynamic-art`, over `66e680da2`.
+- Command: `mvn -Dmse=relaxed -Ds1.rom.path=s1.gen -Ds2.rom.path=s2.gen
+  -Dtest=TestS1SpecialStageTraceReplay,TestS2SpecialStageTraceReplay test`.
+- `TestS1SpecialStageTraceReplay`: was 2307 errors, first error frame 99 --
+  `dynamic_art.edges` (expected `[0, 1]`, actual `[]`). Now green. Cause:
+  `Sonic1SpecialStageManager.loadSonicSprite()` published Sonic's initial
+  mapping frame at stage load, latching it as already-transferred. `GM_Special`
+  (docs/s1disasm/sonic.asm:3222-3292) runs no `Sonic_LoadGfx` during setup and
+  clears `v_levelvariables` (sonic.asm:3245), which holds `v_sonframenum`
+  (docs/s1disasm/_Variables.asm:174, 225, 296), so the SS Sonic object's first
+  main-loop `Sonic_LoadGfx` always sees a changed frame
+  (docs/s1disasm/_incObj/01 Sonic.asm:2394-2408). The engine emitted 811 of the
+  ROM's 812 edge rows.
+- `TestS2SpecialStageTraceReplay`: was 20482 errors, first error frame 136 --
+  `dynamic_art.edges` (expected `[0, 1, 2]`, actual `[]`). Now 20468 errors,
+  first error frame 165 -- `dynamic_art.edge[0].present`. Rows 136 and 138 are
+  correct: the players' first art transfer is queued from the startup
+  `RunObjects` pass (docs/s2disasm/s2.asm:6662) and retired by the
+  `VintID_CtrlDMA` V-blank the startup sequence then waits on (s2.asm:6665-6668,
+  `Vint_CtrlDMA` at s2.asm:998-1001 -> `ProcessDMAQueue` at s2.asm:1770), even
+  though `Pal_FadeFromWhite` (s2.asm:3460-3482) makes BizHawk read that row as
+  lag.
+- Remaining S2 frontier (measured, not fixed): every recurring-pass player DPLC
+  submission publishes exactly one engine row late (engine 166/171/174/179/183
+  vs ROM 165/169/173/178/181). The ROM's `RunObjects` (s2.asm:6685) runs inside
+  the same main-loop iteration the row samples, but the engine defers the
+  RunObjects-phase pass to the next observation so that the row's gameplay
+  sample excludes it (`Sonic2SpecialStageManager.scheduleRecurringMainPass` /
+  `executePendingRecurringMainPass`). Gameplay comparison needs the deferral;
+  the dynamic-art edge needs the pass's own row. All 20468 remaining errors are
+  `dynamic_art.*` -- no other field diverges. Closing this needs the player pass
+  to run at its ROM row with its comparison snapshot double-buffered, not a
+  change to the dynamic-art lifecycle.
+- Regression check on the same worktree: `TestS1SpecialStageTraceReplay`,
+  `TestPlcFrameLifecycleCoordinator`, `S2SpecialStageReplayDeterminismTest`,
+  `S2SpecialStageExpectedComparisonTest`,
+  `S2SpecialStageTrackDurationMappingTest`, `TestS1Ghz1TraceReplay`,
+  `TestS1Ghz1CompleteRunTraceReplay`, `TestS2Ehz1TraceReplay` all green.
+  `S2SpecialStageFinishBoundaryMappingTest` and
+  `S2SpecialStageRecorderContractTest` fail on `develop` before this branch too
+  (verified in a detached baseline worktree): the former asserts the same S2
+  special-stage divergence report (20482/20483 errors at f136 on baseline,
+  20468/20469 at f165 here), the latter an unrelated recorder-schema string
+  (`1.4-s2ss` vs `1.4-s2ss-native`).

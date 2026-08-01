@@ -23,6 +23,32 @@ All notable changes to the OpenGGF project are documented in this file.
   cancelled for every player-visible timing. Together these green
   `TestS2Cpz2LevelSelectTraceReplay` (was 7 errors from frame 11491,
   `queue.s2_nemesis_plc.busy`), the last non-special-stage S2 failure.
+- Fix: the S2 special stage now queues the players' first art transfer from its
+  one-off startup `RunObjects` pass (docs/s2disasm/s2.asm:6662), where
+  `LoadSSSonicDynPLC` / `LoadSSTailsDynPLC` / `LoadSSTailsTailsDynPLC`
+  (s2.asm:69194, 70493, 70575) actually run, instead of waiting for the first
+  recurring V-int pass. The startup sequence then explicitly asks for
+  `VintID_CtrlDMA` before waiting (s2.asm:6665-6668), and `Vint_CtrlDMA`
+  (s2.asm:998-1001) is nothing but `ProcessDMAQueue` (s2.asm:1770), so that
+  V-blank retires the queued transfers even though the surrounding
+  `Pal_FadeFromWhite` loop (s2.asm:3460-3482) never polls the joypad and reads
+  as a lag frame; `PlcFrameLifecycleCoordinator.markNextVblankServicesDmaQueue`
+  models that one-shot. `TestS2SpecialStageTraceReplay` moves from 20482 errors
+  first diverging at f136 to 20468 first diverging at f165; the remainder is a
+  separate recurring-pass attribution gap (see
+  docs/status/trace-frontier-log.md).
+- Fix: the S1 special stage no longer publishes Sonic's dynamic-art transfer
+  while loading the stage. `GM_Special` (docs/s1disasm/sonic.asm:3222-3292)
+  never runs `Sonic_LoadGfx` during setup, and it clears `v_levelvariables`
+  (sonic.asm:3245), which contains `v_sonframenum`
+  (docs/s1disasm/_Variables.asm:174, 225, 296) — the "frame already in VRAM"
+  latch `Sonic_LoadGfx` compares against
+  (docs/s1disasm/_incObj/01 Sonic.asm:2394-2398). The SS Sonic object's first
+  main-loop pass therefore always sees a changed frame and sets
+  `f_sonframechg` for `VBlank_SpecialStage` to DMA (sonic.asm:890-894).
+  Publishing at load consumed that first change, so the engine emitted 811 of
+  the ROM's 812 dynamic-art edge rows and never published the first one.
+  Greens `TestS1SpecialStageTraceReplay` (was 2307 errors from f99).
 - Fix: the S1 prison capsule's explosion phase no longer starts on the button
   trigger frame. ROM `Pri_Switch` only writes routine=$A/obTimeFrame=60 and
   returns, so the first `Pri_Explosion` pass is always the frame AFTER the
