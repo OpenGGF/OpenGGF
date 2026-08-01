@@ -56767,3 +56767,50 @@ delivered. That single comparison is the next step.
 5. Global `vIntRunCounter` phase offset — helps the two early traces, worsens CPZ2.
 6. Act-end free-slot scan probe (`ObjectManager#hasFreeDynamicSlot`) — explored, no
    measurable change.
+
+## 2026-08-01 — capsule busy-window root causes found: RNG stream desync (2 of 3 greened)
+
+Worktree `bugfix/ai-fable-capsule-lifetime` off `develop` (a50b3f497). Command per trace:
+`mvn -Dmse=relaxed -Dsurefire.forkCount=1 "-Ds1.rom.path=<s1>" "-Ds2.rom.path=<s2>" "-Dtest=<class>" test`.
+
+The missing engine-side animal lifetime table was produced (temporary probe, removed
+before commit). It showed the capsule spawn cadence and slots matching the ROM exactly
+while the random-spawn X offsets and species did not — the divergence is the
+`RandomNumber` **stream position**, not the capsule, the animals, or the PLC queue.
+Per-trace root causes, each verified by aligning the engine's seed sequence against
+ROM-observable draws (explosion offsets, spawn X offsets, bubble cadence):
+
+- GHZ3: engine RNG was 12 draws behind the ROM at the capsule. The GHZ wrecking ball
+  (`GBall_Ball` routine 8) runs `BossDefeated` for `$60` frames after Eggman's defeat
+  (second explosion stream, ~12 draws) before converting itself to an explosion
+  (`3D, 48 Boss - GHZ Main and Wrecking Ball.asm:484,578-596`); the engine destroyed it
+  instantly. Additionally the capsule's random X offset negation tested bit 15 of the
+  returned d0 instead of the new seed (`tst.w d1`, `3E Prison Capsule.asm:180-185`).
+  Both fixed. **PASS** (was 5 errors, first at f9183 `queue.s1_nemesis_plc.busy`).
+- MTZ3: `Sonic2MTZBossInstance` called `spawnDefeatExplosion()` every frame of the
+  defeat window (179 draws); ROM `Boss_LoadExplosion` gates on `(Vint_runcount+3)&7`
+  before drawing (s2.asm:61419-61424) — 23 draws. Fixed. **PASS** (was 9 errors,
+  first at f15258).
+- CPZ2: two causes. (1) The S2 fixed air countdown ticked while CPU Tails was dead
+  underwater; ROM `Obj0A_Countdown` returns when `routine(a2) >= 6`
+  (s2.asm:42095-42096). Fixed — all 26 air ticks / 41 bubbles now align with the ROM.
+  (2) Remaining 7 errors (first at f11491, was 8): the engine's CPZ boss second
+  pipe-docking cycle starts ~300 frames later than the ROM's (ROM extends its second
+  pipe at vfc 10288 and finishes retracting at 10527, before defeat; the engine's
+  second pipe control was still waiting and activated at defeat, drawing one extra
+  `RandomNumber` via the `Obj5D_PipeSegment_End` conversion). Needs an audit of the
+  engine's Obj5D docking/refill cadence against `Obj5D_Main`; the +1 draw at defeat
+  is the entire remaining divergence.
+
+Full S1/S2 `TestS1*TraceReplay,TestS2*TraceReplay` sweep after the fixes (single
+grouped run, `forkCount=1`): 43 classes pass, including the previously failing
+GHZ3 and MTZ3. Remaining failures — S1/S2 special stages (2307 @ f99 / 20482 @
+f136, `dynamic_art.edges`), CPZ2 (7 @ f11491), and `TestS1Lz3CompleteRunTraceReplay`
+(5 @ f17398), `TestS1Mz3CompleteRunTraceReplay` (6 @ f18584),
+`TestS1Slz3CompleteRunTraceReplay` (5 @ f13222), `TestS1Syz3CompleteRunTraceReplay`
+(5 @ f13237), `TestS1FzCompleteRunTraceReplay` (errors at 0.4s before replaying) —
+were re-measured grouped at the base `develop` commit in a detached worktree and are
+byte-identical there (same totals, same first-error frames): pre-existing, not
+regressions. The four S1 act-3 `queue.s1_nemesis_plc.busy` stragglers are the same
+defect family — suspect each zone's boss-defeat RNG cadence (LZ/MZ/SLZ/SYZ
+equivalents of the GHZ wrecking-ball stream) as the next targets.

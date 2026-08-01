@@ -218,6 +218,30 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **Boss-defeat RNG stream desync greened the GHZ3 and MTZ3 capsules
+  (2026-08-01):** the last `queue.*_nemesis_plc.busy` frontiers turned out not to
+  be a PLC defect at all. Instrumenting the queue showed all three traces
+  submitting an identical PLC and draining it at an identical rate, with the whole
+  busy episode merely time-shifted — and by different amounts in different
+  directions, which no queue defect can produce. The busy flag was faithfully
+  mirroring when the egg-prison capsule decided the act was over, and that
+  decision (scan for `ObjID_Animal`; when none remain, `Load_EndOfAct`) was
+  landing on the wrong frame because the RandomNumber stream had desynced
+  *upstream*, in boss-defeat code. The capsule machinery itself measured exact —
+  spawn cadence, slot assignment, burst positions and despawn scan all match the
+  ROM frame for frame; only the random spawn offsets and species differed, which
+  is a stream-position signature. GHZ's wrecking ball runs `BossDefeated` for
+  `$60` frames after Eggman's defeat and then converts itself into an explosion
+  (12 draws the engine never made, since it destroyed the ball instantly), and the
+  S1 capsule's offset negation tested bit 15 of the returned value where ROM
+  `tst.w d1` tests the *new* seed. MTZ's boss spawned a defeat explosion every
+  frame of its defeat window — 179 draws — where `Boss_LoadExplosion` gates on
+  `(Vint_runcount+3)&7` before allocating, giving the 23 draws the recording
+  actually contains. CPZ2 improved but still carries one extra draw: the ROM runs a
+  second pipe-docking cycle before defeat that the engine never runs, so its
+  waiting pipe activates at defeat and draws once. Verified across the full 57-class
+  S1/S2 fleet at 49 passing.
+
 - **V-blank counter clarity (2026-08-01):** two clock-related pieces of the
   engine were documented as doing something other than what they do, and the
   discrepancy cost real investigation time during the S1/S2 trace re-green.

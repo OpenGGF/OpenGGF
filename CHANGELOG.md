@@ -3,6 +3,40 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the GHZ boss wrecking ball now runs the ROM's defeat sequence instead of
+  vanishing instantly. `GBall_Ball` (routine 8) calls `BossDefeated` every frame
+  once Eggman's defeated flag is set — spawning an explosion and drawing
+  `RandomNumber` only on `v_vblank_byte&7 == 0` frames — while
+  `BGHZ_BossGenericTimer` counts down from the ball's chain target
+  (`GBall_PosData` last entry, `$60`), then the ball converts itself into an
+  explosion (`docs/s1disasm/_incObj/3D, 48 Boss - GHZ Main and Wrecking
+  Ball.asm:484,578-596`; `docs/s1disasm/_incObj/sub BossDefeated &
+  BossMove.asm:6-36`). The missing second explosion stream left the engine's
+  RNG stream 12 draws behind the ROM's by the prison capsule, changing every
+  capsule animal's species/X offset and shifting the end-of-act trigger.
+- Fix: the S1 prison capsule's random animal X offset now negates on the sign
+  of the *new* RNG seed. `tst.w d1 / bpl.s .setX / neg.w d0` tests d1 — the
+  seed value RandomNumber just wrote — not the returned d0
+  (`docs/s1disasm/_incObj/3E Prison Capsule.asm:180-185`). Together with the
+  wrecking-ball fix this greens `TestS1Ghz3CompleteRunTraceReplay`
+  (was 5 errors from frame 9183, `queue.s1_nemesis_plc.busy`).
+- Fix: the MTZ boss defeat explosions now respect `Boss_LoadExplosion`'s
+  internal `(Vint_runcount+3)&7` gate (`docs/s2disasm/s2.asm:61419-61424`);
+  `Obj54_MainSub10` calls it every frame but it only allocates and draws
+  `RandomNumber` on every 8th V-blank. The engine drew (and spawned) every
+  frame — 179 draws where the ROM makes 23 — desynchronising the RNG stream
+  ahead of the prison capsule. Greens `TestS2Mtz3LevelSelectTraceReplay`
+  (was 9 errors from frame 15258, `queue.s2_nemesis_plc.busy`).
+- Fix: the S2 fixed air countdown (Obj0A port) now stops ticking while its
+  bound player is in the dead routine. `Obj0A_Countdown` returns before
+  decrementing `obj0a_timer` when `routine(a2) >= 6`
+  (`docs/s2disasm/s2.asm:42095-42096`); the CPU sidekick's death keeps the
+  engine `dead` flag clear and models routine 6 as
+  `SidekickCpuController.State.DEAD_FALLING`, so the countdown kept consuming
+  `RandomNumber` draws while Tails lay dead underwater. Aligns all 26 CPZ2
+  air ticks and 41 bubbles with the ROM; moves
+  `TestS2Cpz2LevelSelectTraceReplay` from 8 to 7 errors (remaining divergence
+  is a CPZ boss pipe-cycle cadence gap, one RNG draw at defeat).
 - Fix: Sonic 2's CNZ boss (Obj51) now carries the ROM's routine-read-once defeat
   offset and opens `Camera_Max_X_pos` immediately while fleeing. `Obj51` reads
   `boss_routine(a0)` once at the top of its update (`docs/s2disasm/s2.asm:66554-66566`)

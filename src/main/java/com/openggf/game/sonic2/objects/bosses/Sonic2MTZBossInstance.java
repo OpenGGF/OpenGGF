@@ -892,7 +892,12 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
             // ROM: bmi.s + handled above by the blo (unsigned) split; here
             // countdown >= 60 so it is non-negative => spawn explosions.
             // ROM: bsr.w Boss_LoadExplosion / move.b #7,anim (frame 7).
-            spawnDefeatExplosion();
+            // Boss_LoadExplosion itself gates on (Vint_runcount+3)&7 BEFORE
+            // allocating and drawing RandomNumber (s2.asm:61419-61424), so a
+            // non-multiple-of-8 frame spawns nothing and consumes no RNG.
+            if ((frameCounter & 7) == 0) {
+                spawnDefeatExplosion();
+            }
             faceFrame = FRAME_FACE_DEFEAT;
         } else if (bossCountdown < 0) {
             // ROM: bmi.s + (the < 60 unsigned compare reaches here once it
