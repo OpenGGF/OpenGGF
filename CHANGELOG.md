@@ -28,6 +28,15 @@ All notable changes to the OpenGGF project are documented in this file.
   there is no owner object to tear down, and the intro installs the title
   card itself much later (sonic3k.asm:114393-114396). AIZ complete-run
   frontier f34 -> f1096, LBZ f34 -> clean (0 errors, 12643 frames).
+- Fix: the S3K Madmole cap's top-landing X gate now uses the ROM's
+  `width_pixels = $18` (`ObjDat_Madmole`, sonic3k.asm:193493-193497). ROM
+  `Solid_Landed` / `loc_1E154` (sonic3k.asm:41611-41621) re-reads
+  `width_pixels(a0)` for the landing check, which for the Madmole is wider than
+  the engine's default `d1 - $B = $14` heuristic (its `sub_8D876` passes
+  `d1 = $1F`, sonic3k.asm:193381-193386). A player descending onto the cap's
+  outer 4px band — MHZ complete-run frame 3326, landing at `x_pos` +0x14 from
+  the cap — fell through and hit terrain 4px lower instead of standing on the
+  cap. MHZ frontier f3326 -> f3420.
 - Fix: the S3K Madmole's side-drill arm now models ROM `$44(a0)`, the player
   back-reference it keeps after knocking a player away. `sub_8D8E6`
   (sonic3k.asm:193439) and `sub_8D94A` (193477) write it and nothing ever clears
