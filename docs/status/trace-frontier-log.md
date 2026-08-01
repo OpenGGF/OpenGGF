@@ -60187,3 +60187,41 @@ observation, holds the final submissions outstanding through the results screen,
 publishes their completions at f5220. That choreography is owned by the existing
 terminal-pass machinery (terminal_forwarded, ssFinishedObserved special cases) and needs
 its own careful pass rather than a fourth normalization refinement.
+
+
+## 2026-08-01 — Supersession note: the "paced region needs no rebinding" rationale is withdrawn
+
+The entry for the pre-start spill rebinding (commit 120847ce3, "Remaining divergence
+class" and its closing paragraph) stated that the rebinding **deliberately does not
+apply** after `SpecialStage_Started`, on the grounds that "the recorded
+`run_objects_end` bindings already pace each pass against its bound observation." The
+pass-identity entry above (commit 5ab37efcb) crosses that boundary intentionally, and
+this note records why, so the sequence does not read as a design line silently crossed.
+
+**What the earlier entry claimed:** recorded pass pacing makes publication rows in the
+started region trustworthy as recorded.
+
+**What disproved it:** the bindings pace *passes*, not *edges*. The recorder publishes
+each edge at the first observation after its wall-clock crossing, independent of the
+pass's bound row. Fixture evidence in both directions: pass 8's `ss-sonic` submission
+crosses f439 and publishes there while its pass is bound to f441 (publication precedes
+the bound row); pass 5's player submissions cross f435 — the lag row — and publish at
+f436 (publication trails the crossing). "Already paced" was true of pass execution and
+false of edge publication, so the boundary protected an assumption, not an invariant.
+
+**What replaces it:** every paced-region submission edge is bound to the observation of
+the earliest pass whose recorded completion cursor covers its crossing — the same
+pass-identity doctrine as the pre-start rebinding, applied uniformly. The boundary in
+`DynamicArtSpillNormalization` (`rebindEndExclusive`) now separates the two *mechanisms*
+for locating an edge's pass (lag-walk before pacing starts, cursor coverage after), not
+a region where rebinding is off.
+
+**Relation to the rejected engine-side alternative:** the same 120847ce3 entry rejected
+consuming recorded spill boundaries to pace engine *publication*, and that rejection
+stands unmodified. The engine-side change in 5ab37efcb
+(`DynamicArtLifecycleService.serviceVblankBeforeBoundObservation`) is the adjacent
+*permitted* case, not an erosion of it: it retires already-submitted, engine-created
+transfers — readiness, which the hardware-timing contract covers — gated on the binder's
+recorded pass structure that already paces execution. It does not time any
+comparator-visible publication row. Publication is not readiness; the rejected option
+paced publication, this one releases readiness.
