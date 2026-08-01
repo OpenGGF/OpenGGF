@@ -144,6 +144,140 @@ class TestDynamicArtSpillNormalization {
                 "a wrong-owner submission must still error");
     }
 
+    // ---- Paced region (recorded run_objects_end pass bindings) ----
+
+    private static final int PACED_START = 400;
+
+    /** Pass-8 shape: crossing 439, pass cursor 440, bound row 441. */
+    private static final List<DynamicArtSpillNormalization.PassBinding> PACED_BINDINGS =
+            List.of(
+                    new DynamicArtSpillNormalization.PassBinding(438, 438),
+                    new DynamicArtSpillNormalization.PassBinding(440, 441),
+                    new DynamicArtSpillNormalization.PassBinding(443, 443));
+
+    private static Map<Integer, TraceEvent.DynamicArtTransferState> normalizePaced(
+            Map<Integer, TraceEvent.DynamicArtTransferState> states,
+            java.util.function.IntPredicate cursorPreceded) {
+        return DynamicArtSpillNormalization.rebindSubmissionSpills(
+                states, 450, PACED_START, row -> row == 440,
+                cursorPreceded, PACED_BINDINGS);
+    }
+
+    @Test
+    void pacedEdgePublishedBeforeItsBoundRowBindsForward() {
+        // Recorder: crossing 439, published 439; the covering pass (cursor
+        // 440) is bound to row 441 — the engine publishes it there.
+        // The recording carries a heartbeat for every row; the bound row's
+        // outstanding list already includes the in-flight id.
+        Map<Integer, TraceEvent.DynamicArtTransferState> normalized = normalizePaced(
+                Map.of(
+                        439, new TraceEvent.DynamicArtTransferState(
+                                439,
+                                List.of(expectedSubmitted(20, 9, "ss-sonic", 439, 439)),
+                                List.of(9L)),
+                        441, new TraceEvent.DynamicArtTransferState(
+                                441, List.of(), List.of(9L))),
+                row -> false);
+        assertTrue(normalized.get(439).edges().isEmpty(),
+                "early-published edge leaves its recorder row");
+        assertEquals(1, normalized.get(441).edges().size(),
+                "early-published edge binds forward to the pass's bound row");
+        assertEquals(441, normalized.get(441).edges().get(0).publicationFrame());
+        assertEquals(List.of(),
+                normalized.get(439).outstandingTransferIds(),
+                "the moved id is not outstanding before its bound row");
+
+        FrameComparison comparison = new DynamicArtSpecialStageComparator().compare(
+                normalized.get(441),
+                new DynamicArtDiagnosticsSnapshot(441, List.of(
+                        actualSubmitted(20, 9, "ss-sonic", 441, 0)),
+                        List.of(9L)));
+        assertEquals(0, errorCount(comparison),
+                "atomic publication at the bound row matches");
+    }
+
+    @Test
+    void pacedEdgePublishedAfterItsBoundRowBindsBackward() {
+        // Recorder: crossing 440 (the lag row), published 442; the covering
+        // pass (cursor 440) is bound to row 441.
+        Map<Integer, TraceEvent.DynamicArtTransferState> normalized = normalizePaced(
+                Map.of(442, new TraceEvent.DynamicArtTransferState(
+                        442,
+                        List.of(expectedSubmitted(21, 10, "ss-tails", 440, 442)),
+                        List.of(10L))),
+                row -> false);
+        assertTrue(normalized.get(442).edges().isEmpty(),
+                "late-published edge leaves its recorder row");
+        assertEquals(1, normalized.get(441).edges().size(),
+                "late-published edge binds back to the pass's bound row");
+        assertEquals(List.of(10L),
+                normalized.get(441).outstandingTransferIds(),
+                "the moved id is outstanding from its bound row");
+    }
+
+    @Test
+    void pacedMissingExtraAndWrongOwnerStillFail() {
+        Map<Integer, TraceEvent.DynamicArtTransferState> normalized = normalizePaced(
+                Map.of(441, new TraceEvent.DynamicArtTransferState(
+                        441,
+                        List.of(expectedSubmitted(20, 9, "ss-sonic", 441, 441),
+                                expectedSubmitted(21, 10, "ss-tails", 441, 441)),
+                        List.of(9L, 10L))),
+                row -> false);
+        DynamicArtSpecialStageComparator comparator;
+
+        comparator = new DynamicArtSpecialStageComparator();
+        assertTrue(errorCount(comparator.compare(
+                normalized.get(441),
+                new DynamicArtDiagnosticsSnapshot(441, List.of(
+                        actualSubmitted(20, 9, "ss-sonic", 441, 0)),
+                        List.of(9L)))) > 0,
+                "missing paced submission must still error");
+
+        comparator = new DynamicArtSpecialStageComparator();
+        assertTrue(errorCount(comparator.compare(
+                normalized.get(441),
+                new DynamicArtDiagnosticsSnapshot(441, List.of(
+                        actualSubmitted(20, 9, "ss-sonic", 441, 0),
+                        actualSubmitted(21, 10, "ss-tails", 441, 1),
+                        actualSubmitted(22, 11, "ss-tails-tails", 441, 2)),
+                        List.of(9L, 10L, 11L)))) > 0,
+                "extra paced submission must still error");
+
+        comparator = new DynamicArtSpecialStageComparator();
+        assertTrue(errorCount(comparator.compare(
+                normalized.get(441),
+                new DynamicArtDiagnosticsSnapshot(441, List.of(
+                        actualSubmitted(20, 9, "ss-sonic", 441, 0),
+                        actualSubmitted(21, 10, "ss-tails-tails", 441, 1)),
+                        List.of(9L, 10L)))) > 0,
+                "wrong-owner paced submission must still error");
+    }
+
+    @Test
+    void crossingStampRewrittenOnlyOnCursorPrecededRows() {
+        // Row-425 shape: the edge already sits on its bound row with a
+        // crossing stamp one frame earlier, and the engine reproduces that
+        // stamp (terminal-boundary queueing). Without the row being flagged
+        // cursor-preceded, the stamp must stay absolute...
+        TraceEvent.DynamicArtTransferState onBoundRow =
+                new TraceEvent.DynamicArtTransferState(
+                        441,
+                        List.of(expectedSubmitted(20, 9, "ss-sonic", 440, 441)),
+                        List.of(9L));
+        Map<Integer, TraceEvent.DynamicArtTransferState> untouched = normalizePaced(
+                Map.of(441, onBoundRow), row -> false);
+        assertEquals(440, untouched.get(441).edges().get(0).logicalFrame(),
+                "recorded crossing stamp stays absolute off cursor-preceded rows");
+
+        // ...and on a cursor-preceded row (row-436 shape) it is compared as
+        // published-on-this-row, because the engine provably queues there.
+        Map<Integer, TraceEvent.DynamicArtTransferState> rewritten = normalizePaced(
+                Map.of(441, onBoundRow), row -> row == 441);
+        assertEquals(441, rewritten.get(441).edges().get(0).logicalFrame(),
+                "cursor-preceded rows compare the stamp as published-on-row");
+    }
+
     @Test
     void completionEdgesAreNeverMoved() {
         DynamicArtTransfer.SegmentEdge completed = new DynamicArtTransfer.SegmentEdge(
