@@ -57330,3 +57330,58 @@ early — likely the other geyser's exit-edge model still imprecise; (b) frame 9
 `player_animation_id` 0x13 vs 0x09 plus an engine-only KosM submission (direct source
 879204 = `$D6A64`); (c) terminator at 10334: recording expects
 `KOS_DECOMPRESSION_QUEUE#104` (fingerprint fbfc78d4…) with engine pending empty.
+## 2026-08-01 — MHZ f3457 sidekick push-bypass auto-jump: Madmole inclusive right edge
+
+Worktree `bugfix/ai-s3k-mhz-3457` (from `bugfix/ai-s3k-mhz-queue-frontier`).
+Command: `mvn -Ptrace-replay -Dtest=TestS3kMhzCompleteRunTraceReplay -Ds3k.rom.path=<s3k.gen> test`.
+
+### Root cause (fixed)
+
+The f3457 auto-jump was an independent seed, but not a gate bug — a push-state bug.
+The previous entry's "both sides agree on status 0x21" was wrong: the trace holds
+`sidekick_status_byte = 0x21` (Status_Push) from f3428-f3456 while the engine's Tails
+held 0x01. ROM: Tails is clamped against the Madmole cap (slot 17, `Obj_Madmole`,
+x=0x1060) at exactly `obj_x + d1` with `sub_8D876`'s `d1 = $1F`. `SolidObject_cont`'s
+X gate rejects with `bhi` (sonic3k.asm:41393-41399), so `d0 == d1*2` stays in contact;
+`loc_1E042`'s `d0 == 0` branch goes straight to `loc_1E06E` and re-sets `Status_Push`
+on the grounded player every frame (sonic3k.asm:41470-41500) even though
+`Tails_InputAcceleration_Path` (`loc_14A16`, sonic3k.asm:27806-27815) clears it earlier
+in the same frame once ground_vel hits 0 (which is why the trace also shows anim 5).
+The engine's exclusive right-edge window dropped the contact once Tails came to rest at
+the clamp boundary, push never persisted, `loc_13DD0`'s push-bypass to `loc_13E9C`
+never opened, and the $3F-cadence press at f3457 (`Level_frame_counter` low byte 0x80)
+never fired.
+
+Fix: `MadmoleBadnikInstance#usesInclusiveRightEdge()` → true (existing provider hook,
+same as the S3K horizontal-spring precedent). Counter visibility is correct: with push
+held, the engine fires the press on the exact ROM frame — no cadence change needed and
+`TestS3kAizTraceReplay#aiz2ReloadSidekickFallthroughAutoJumpUsesRomVisibleCounter` is
+untouched.
+
+### New frontier: f3536 — drill-carry ground_vel visible to Tails CPU one frame early
+
+MHZ 838/7218 → 865/7218 with first physics divergence f3431 → f3536 (+105; the count is
+higher because the new x cascade is wide but shallow — judge by frontier). Remaining
+pre-3536 errors are the settled f3420-3425 rings slot-drift family only.
+
+f3536 seed (characterised, open): the Madmole side-drill carry writes the leader's
+`ground_vel = $C00` from its collision_property consumer `sub_8D8E6` — in the drill's
+SST slot (17), i.e. AFTER Tails' slot. ROM's Tails CPU at f3536 therefore still reads
+the old ground_vel, keeps the `loc_13DBA` `subi.w #$20,d2` slow-leader target offset
+(sonic3k.asm:26692-26694), sees dx < $30, and does not steer; the $808 FollowRight
+steer starts f3537. The engine's object pass (`ObjectTouchResponseController` →
+`MadmoleBadnikInstance$SideDrillChild`) runs before the sidekick CPU in the frame, so
+the write is visible one frame early → right-steer, facing clear, and x_vel 0x18 all
+lead ROM by one frame (errors f3536-3631, plus a rings 6-vs-5 divergence from f3554
+likely downstream). A fix needs a ROM-slot-visibility model for object-pass writes to
+the leader's ground_vel (pre-object-pass sample plus a "written by this frame's object
+pass" latch), with rewind-snapshot plumbing — do not band-aid it with a plain one-frame
+delay in the gate, or ordinary leader-physics $400 crossings will skew a frame late.
+
+### Regression state
+
+aiz 57/6344 (standard suite 4F+1E), hcz 7/1320, mgz 23/17949, cnz 7/9711, icz 10/12375,
+lbz 0/12647 all unchanged; MHZ tail `KOS_DECOMPRESSION_QUEUE#335` throw unchanged (known
+pre-existing). S3K guards, rewind guards, and TestMadmoleBadnikInstance green. Shared
+sidekick code untouched (final diff is MadmoleBadnikInstance only), so the S2 trace
+classes were not re-run.

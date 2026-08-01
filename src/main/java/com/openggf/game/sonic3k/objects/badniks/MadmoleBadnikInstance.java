@@ -171,6 +171,18 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // sub_8D876 runs SolidObjectFull with d1 = $1F; SolidObject_cont's X
+        // gate rejects with bhi (sonic3k.asm:41394-41400), so a player resting
+        // exactly at obj_x + d1 (d0 == d1 * 2) is a zero-distance side contact.
+        // loc_1E042 takes the d0 == 0 branch straight to loc_1E06E, which
+        // re-sets Status_Push on the grounded player every frame
+        // (sonic3k.asm:41498-41512) — the state Tails' CPU push-bypass
+        // auto-jump reads at loc_13DD0/loc_13E9C.
+        return true;
+    }
+
+    @Override
     public int getTopLandingHalfWidth(PlayableEntity player, int collisionHalfWidth) {
         // ROM Solid_Landed / loc_1E154 (sonic3k.asm:41611-41621) re-reads
         // width_pixels(a0) for the landing X gate. The cap keeps
