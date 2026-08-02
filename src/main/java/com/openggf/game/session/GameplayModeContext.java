@@ -754,6 +754,25 @@ public final class GameplayModeContext implements ModeContext {
     }
 
     /**
+     * Rebinds only the concrete managers replaced by an in-place act reload.
+     * Other adapter owners retain their registration identity and restore order.
+     */
+    public void rebindActTransitionManagerAdapters(
+            ObjectManager objectManager, RingManager ringManager) {
+        if (rewindRegistry == null) {
+            return;
+        }
+        rewindRegistry.deregister("object-manager");
+        rewindRegistry.deregister("rings");
+        if (objectManager != null) {
+            rewindRegistry.register(objectManager.rewindSnapshottable());
+        }
+        if (ringManager != null) {
+            rewindRegistry.register(ringManager);
+        }
+    }
+
+    /**
      * Registers an {@link com.openggf.game.ObjectArtProvider} that also implements
      * {@link com.openggf.game.rewind.RewindSnapshottable} with the rewind registry.
      * Called from {@link com.openggf.level.LevelManager} after object art is loaded.

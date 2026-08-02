@@ -3247,9 +3247,10 @@ public class ObjectManager {
             if (previousYCoarse == Integer.MIN_VALUE) {
                 previousYCoarse = currentYCoarse;
             }
-            for (ObjectSpawn spawn : placement.drainPendingCursorLoadSpawns()) {
+            for (ObjectSpawn spawn : placement.pendingCursorLoadSpawns()) {
                 changed |= tryLoadPlacementSpawn(spawn, allowVerticalLoadBypassForS2);
             }
+            placement.finishPendingCursorLoadBatch();
             if (currentYCoarse != previousYCoarse) {
                 for (ObjectSpawn spawn : placement.getDeferredVerticalLoadSpawns()) {
                     changed |= tryLoadPlacementSpawnForTwoAxisYPass(spawn, previousYCoarse, currentYCoarse);
@@ -3360,12 +3361,14 @@ public class ObjectManager {
                 || activeObjects.containsKey(spawn)
                 || (placement.isRemembered(spawn) && !placement.isStayActive(spawn))
                 || placement.isDormant(spawn)) {
+            placement.completePendingCursorLoad(spawn);
             return false;
         }
         if (!isSpawnVerticallyEligibleForLoad(spawn, allowVerticalLoadBypassForS2)) {
             if (slotLayout.twoAxisCursorPlacement()) {
                 placement.markDeferredVerticalLoad(spawn);
             }
+            placement.completePendingCursorLoad(spawn);
             return false;
         }
         // Pre-allocate parent slot — consumed by AbstractObjectInstance's
@@ -3393,11 +3396,13 @@ public class ObjectManager {
             }
             registerActiveObject(spawn, instance);
             placement.clearDeferredVerticalLoad(spawn);
+            placement.completePendingCursorLoad(spawn);
             return true;
         }
         if (preSlot >= 0) {
             releaseSlot(preSlot);
         }
+        placement.completePendingCursorLoad(spawn);
         return false;
     }
 

@@ -65,7 +65,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     private final BitSet destroyedInWindow = new BitSet();
     private final BitSet pendingCursorLoad = new BitSet();
     private final ArrayList<Integer> pendingCursorLoadOrder = new ArrayList<>();
-    /** Reused result buffer for {@link #drainPendingCursorLoadSpawns()}; see its contract. */
+    /** Reused result buffer for {@link #pendingCursorLoadSpawns()}; see its contract. */
     private final ArrayList<ObjectSpawn> drainedCursorLoadScratch = new ArrayList<>();
     private final BitSet deferredVerticalLoad = new BitSet();
     /**
@@ -979,7 +979,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
                 && spawns.get(leftCursorIndex).x() < windowStart) {
             active.remove(spawns.get(leftCursorIndex));
             dormant.clear(leftCursorIndex);
-            pendingCursorLoad.clear(leftCursorIndex);
+            removePendingCursorLoad(leftCursorIndex);
             deferredVerticalLoad.clear(leftCursorIndex);
             leftCursorIndex++;
         }
@@ -1032,7 +1032,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
             cursorIndex--;
             active.remove(previous);
             dormant.clear(cursorIndex);
-            pendingCursorLoad.clear(cursorIndex);
+            removePendingCursorLoad(cursorIndex);
             deferredVerticalLoad.clear(cursorIndex);
         }
         // ROM parity: do NOT clear destroyedInWindow here (see update()).
@@ -1070,7 +1070,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
                 // setting the respawn bit or preserving X-pass priority; the
                 // later loc_1B982 Y-camera pass scans the cursor-passed range
                 // in object-list order (docs/skdisasm/sonic3k.asm:37723-37762).
-                pendingCursorLoad.clear(index);
+                removePendingCursorLoad(index);
                 if (created) {
                     deferredVerticalLoad.clear(index);
                 } else {
@@ -1089,14 +1089,15 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     }
 
     /**
-     * Drains the queued S3K X-cursor loads in queue order. Returns a reused
+     * Exposes the queued S3K X-cursor loads in queue order. Returns a reused
      * scratch list valid only until the next call: the sole consumer
      * ({@code ObjectManager.syncActiveSpawnsLoad}) iterates it synchronously
-     * and must not retain the reference. The pending queue itself is cleared
-     * before returning, so loads queued while the caller iterates land in the
-     * next drain, not in the returned list.
+     * and must not retain the reference. Cursor ownership is retained until the
+     * consumer reports a terminal construction outcome. In particular,
+     * FindFreeObj failure must leave the entry pending for the next loader pass
+     * instead of advancing past it permanently.
      */
-    List<ObjectSpawn> drainPendingCursorLoadSpawns() {
+    List<ObjectSpawn> pendingCursorLoadSpawns() {
         drainedCursorLoadScratch.clear();
         for (int i = 0; i < pendingCursorLoadOrder.size(); i++) {
             int index = pendingCursorLoadOrder.get(i);
@@ -1104,9 +1105,28 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
                 drainedCursorLoadScratch.add(spawns.get(index));
             }
         }
-        pendingCursorLoad.clear();
-        pendingCursorLoadOrder.clear();
         return drainedCursorLoadScratch;
+    }
+
+    void completePendingCursorLoad(ObjectSpawn spawn) {
+        if (spawn == null) {
+            return;
+        }
+        int index = getSpawnIndex(spawn);
+        if (index >= 0) {
+            pendingCursorLoad.clear(index);
+        }
+    }
+
+    void finishPendingCursorLoadBatch() {
+        pendingCursorLoadOrder.removeIf(index -> index < 0
+                || index >= spawns.size()
+                || !pendingCursorLoad.get(index));
+    }
+
+    private void removePendingCursorLoad(int index) {
+        pendingCursorLoad.clear(index);
+        pendingCursorLoadOrder.removeIf(candidate -> candidate == index);
     }
 
     List<ObjectSpawn> getDeferredVerticalLoadSpawns() {
@@ -1138,7 +1158,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     private void clearCursorLoadState(ObjectSpawn spawn) {
         int index = getSpawnIndex(spawn);
         if (index >= 0) {
-            pendingCursorLoad.clear(index);
+            removePendingCursorLoad(index);
             deferredVerticalLoad.clear(index);
         }
     }

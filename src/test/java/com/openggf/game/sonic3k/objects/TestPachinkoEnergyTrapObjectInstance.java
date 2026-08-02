@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
@@ -66,6 +67,29 @@ public class TestPachinkoEnergyTrapObjectInstance {
     }
 
     @Test
+    public void mainCharacterAtInclusiveTopBoundaryDoesNotRequestExit() {
+        PachinkoEnergyTrapObjectInstance trap = new PachinkoEnergyTrapObjectInstance(
+                new ObjectSpawn(0x78, 0xF30, 0xE8, 0, 0, false, 0));
+        AbstractPlayableSprite player = mock(AbstractPlayableSprite.class);
+        when(player.isDebugMode()).thenReturn(false);
+        when(player.getCentreY()).thenReturn((short) -0x20);
+        when(player.isObjectControlled()).thenReturn(false);
+
+        boolean[] exitRequested = {false};
+        TestObjectServices services = new TestObjectServices() {
+            @Override
+            public void requestBonusStageExit() {
+                exitRequested[0] = true;
+            }
+        };
+
+        trap.setServices(services);
+        trap.update(0, player);
+
+        assertFalse(exitRequested[0]);
+    }
+
+    @Test
     public void trapRisesUntilMainPlayerCaptureThenStopsRising() {
         PachinkoEnergyTrapObjectInstance trap = new PachinkoEnergyTrapObjectInstance(
                 new ObjectSpawn(0x78, 0xF30, 0xE8, 0, 0, false, 0));
@@ -92,5 +116,3 @@ public class TestPachinkoEnergyTrapObjectInstance {
         assertEquals(yAfterCapture, trap.getY());
     }
 }
-
-

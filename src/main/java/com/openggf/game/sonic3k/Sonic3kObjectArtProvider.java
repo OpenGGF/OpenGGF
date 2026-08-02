@@ -6,6 +6,9 @@ import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.GameServices;
 import com.openggf.game.ObjectArtProvider;
+import com.openggf.game.RuntimeArtAdmissionLease;
+import com.openggf.game.RuntimeArtAdmissionOwnerKind;
+import com.openggf.game.RuntimeArtAdmissionPolicy;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
@@ -67,8 +70,14 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     private final List<HardwareWorkHandle> enemyKosHandles = new ArrayList<>();
     private S3kKosModuleQueue enemyKosQueue;
     private boolean enemyKosSubmissionArmed;
+    private long runtimeArtAdmissionGeneration;
+    private long runtimeArtAdmissionNextLeaseId;
+    private RuntimeArtAdmissionLease runtimeArtAdmissionLease;
+    private boolean runtimeArtAdmissionBound;
+    private boolean runtimeArtAdmissionConsumed;
+    private long titleCardTeardownLeaseId = -1;
 
-    /** One-pass deferral for {@link #onInLevelTitleCardCompleted()}. */
+    /** One-pass deferral for {@link #onInLevelTitleCardCompleted(RuntimeArtAdmissionLease)}. */
     private boolean enemyKosArmOnNextRuntimePass;
 
     /**
@@ -179,6 +188,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         // Get act index from LevelManager (available during level load)
         currentActIndex = GameServices.level().getCurrentAct();
         scheduleEnemyKosArt(zoneIndex, currentActIndex);
+        issueRuntimeArtAdmissionLease(RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
         Sonic3kPlcArtRegistry.ZoneArtPlan plan =
                 Sonic3kPlcArtRegistry.getPlan(zoneIndex, currentActIndex);
         loadStandaloneFromRegistry(plan);
@@ -998,6 +1008,12 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
 
     @Override
     public void reloadStandaloneArtForActTransition(int zoneIndex) {
+        reloadStandaloneRegistryForActTransition(zoneIndex);
+        scheduleEnemyKosArt(zoneIndex, currentActIndex);
+        issueRuntimeArtAdmissionLease(RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
+    }
+
+    private void reloadStandaloneRegistryForActTransition(int zoneIndex) {
         // Refresh act index from LevelManager (act has changed since initial load)
         currentActIndex = GameServices.level().getCurrentAct();
 
@@ -1007,13 +1023,37 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         Sonic3kPlcArtRegistry.ZoneArtPlan plan =
                 Sonic3kPlcArtRegistry.getPlan(zoneIndex, currentActIndex);
         loadStandaloneFromRegistry(plan);
-        scheduleEnemyKosArt(zoneIndex, currentActIndex);
         if (zoneIndex == Sonic3kZoneIds.ZONE_CNZ) {
             loadCnzTraversalArt();
         }
 
         LOG.info("Reloaded standalone art for zone " + zoneIndex
                 + " act " + currentActIndex);
+    }
+
+    @Override
+    public RuntimeArtAdmissionLease prepareRuntimeArtForActTransition(
+            int zoneIndex, RuntimeArtAdmissionPolicy policy) {
+        if (policy == RuntimeArtAdmissionPolicy.PRESERVE_CURRENT) {
+            reloadStandaloneRegistryForActTransition(zoneIndex);
+            return null;
+        }
+
+        reloadStandaloneRegistryForActTransition(zoneIndex);
+        scheduleEnemyKosArt(zoneIndex, currentActIndex);
+        RuntimeArtAdmissionOwnerKind ownerKind = switch (policy) {
+            case IMMEDIATE -> RuntimeArtAdmissionOwnerKind.IMMEDIATE;
+            case TITLE_OWNER -> RuntimeArtAdmissionOwnerKind.TITLE_OWNER;
+            case RESOURCE_HANDOFF_OWNER ->
+                    RuntimeArtAdmissionOwnerKind.RESOURCE_HANDOFF_OWNER;
+            case PRESERVE_CURRENT -> throw new IllegalStateException(
+                    "preserve-current admission does not issue a lease");
+        };
+        RuntimeArtAdmissionLease lease = issueRuntimeArtAdmissionLease(ownerKind);
+        if (policy == RuntimeArtAdmissionPolicy.IMMEDIATE) {
+            consumeRuntimeArtAdmission(lease, ownerKind);
+        }
+        return lease;
     }
 
     /**
@@ -1599,6 +1639,106 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         };
     }
 
+    RuntimeArtAdmissionLease issueRuntimeArtAdmissionLease(
+            RuntimeArtAdmissionOwnerKind ownerKind) {
+        runtimeArtAdmissionGeneration++;
+        RuntimeArtAdmissionLease lease = new RuntimeArtAdmissionLease(
+                runtimeArtAdmissionNextLeaseId++,
+                runtimeArtAdmissionGeneration,
+                fingerprintEnemyKosBatch(pendingEnemyKosEntries),
+                ownerKind);
+        runtimeArtAdmissionLease = lease;
+        runtimeArtAdmissionBound = ownerKind != RuntimeArtAdmissionOwnerKind.TITLE_OWNER;
+        runtimeArtAdmissionConsumed = false;
+        titleCardTeardownLeaseId = -1;
+        return lease;
+    }
+
+    private static long fingerprintEnemyKosBatch(List<EnemyKosEntry> entries) {
+        long hash = 0xcbf29ce484222325L;
+        hash ^= entries.size();
+        hash *= 0x100000001b3L;
+        for (EnemyKosEntry entry : entries) {
+            hash ^= Integer.toUnsignedLong(entry.source());
+            hash *= 0x100000001b3L;
+            hash ^= Integer.toUnsignedLong(entry.destinationTile());
+            hash *= 0x100000001b3L;
+        }
+        return hash;
+    }
+
+    @Override
+    public RuntimeArtAdmissionLease bindPendingRuntimeArtAdmission(
+            RuntimeArtAdmissionOwnerKind ownerKind) {
+        if (runtimeArtAdmissionLease == null) {
+            throw new IllegalStateException("runtime-art admission lease is missing");
+        }
+        return bindRuntimeArtAdmission(runtimeArtAdmissionLease.id(), ownerKind);
+    }
+
+    @Override
+    public RuntimeArtAdmissionLease bindRuntimeArtAdmission(
+            long leaseId, RuntimeArtAdmissionOwnerKind ownerKind) {
+        RuntimeArtAdmissionLease lease = requireRuntimeArtAdmissionLease(
+                leaseId, ownerKind);
+        if (runtimeArtAdmissionConsumed) {
+            throw new IllegalStateException("runtime-art admission lease is already consumed");
+        }
+        if (runtimeArtAdmissionBound) {
+            throw new IllegalStateException("runtime-art admission lease is already bound");
+        }
+        runtimeArtAdmissionBound = true;
+        return lease;
+    }
+
+    @Override
+    public RuntimeArtAdmissionLease rebindRuntimeArtAdmission(
+            long leaseId, RuntimeArtAdmissionOwnerKind ownerKind) {
+        RuntimeArtAdmissionLease lease = requireRuntimeArtAdmissionLease(
+                leaseId, ownerKind);
+        if (!runtimeArtAdmissionBound) {
+            throw new IllegalStateException("runtime-art admission lease is not bound");
+        }
+        return lease;
+    }
+
+    @Override
+    public void consumeRuntimeArtAdmission(
+            RuntimeArtAdmissionLease lease,
+            RuntimeArtAdmissionOwnerKind ownerKind) {
+        if (lease == null) {
+            throw new IllegalStateException("runtime-art admission lease is missing");
+        }
+        RuntimeArtAdmissionLease current = requireRuntimeArtAdmissionLease(
+                lease.id(), ownerKind);
+        if (!current.equals(lease)) {
+            throw new IllegalStateException(
+                    "runtime-art admission lease generation or batch does not match");
+        }
+        if (!runtimeArtAdmissionBound) {
+            throw new IllegalStateException("runtime-art admission lease is not bound");
+        }
+        if (runtimeArtAdmissionConsumed) {
+            throw new IllegalStateException("runtime-art admission lease is already consumed");
+        }
+        runtimeArtAdmissionConsumed = true;
+        enemyKosSubmissionArmed = true;
+    }
+
+    private RuntimeArtAdmissionLease requireRuntimeArtAdmissionLease(
+            long leaseId, RuntimeArtAdmissionOwnerKind ownerKind) {
+        if (runtimeArtAdmissionLease == null) {
+            throw new IllegalStateException("runtime-art admission lease is missing");
+        }
+        if (runtimeArtAdmissionLease.id() != leaseId) {
+            throw new IllegalStateException("runtime-art admission lease is stale");
+        }
+        if (runtimeArtAdmissionLease.ownerKind() != ownerKind) {
+            throw new IllegalStateException("runtime-art admission owner does not match");
+        }
+        return runtimeArtAdmissionLease;
+    }
+
     private void processEnemyKosArt() {
         if (pendingEnemyKosEntries.isEmpty() && enemyKosHandles.isEmpty()) {
             return;
@@ -1641,8 +1781,8 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
      */
     @Override
     public void onTitleCardArtRetired() {
-        titleCardTeardown = null;
-        enemyKosSubmissionArmed = true;
+        throw new IllegalStateException(
+                "S3K title retirement requires an exact admission lease");
     }
 
     /**
@@ -1654,7 +1794,9 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
      * the native level frame.
      */
     @Override
-    public void onInLevelTitleCardCompleted() {
+    public void onInLevelTitleCardCompleted(RuntimeArtAdmissionLease lease) {
+        consumeRuntimeArtAdmission(
+                lease, RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
         titleCardTeardown = null;
         enemyKosSubmissionArmed = false;
         enemyKosArmOnNextRuntimePass = true;
@@ -1672,26 +1814,14 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
      */
     @Override
     public void onTitleCardPresentationSkipped() {
+        RuntimeArtAdmissionLease lease = bindPendingRuntimeArtAdmission(
+                RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
         enemyKosSubmissionArmed = false;
+        titleCardTeardownLeaseId = lease.id();
         titleCardTeardown =
                 new com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardTeardownModel();
     }
 
-    /**
-     * Runs one level frame of the modelled title-card owner.
-     *
-     * <p>{@code Obj_TitleCard} creates its card elements through
-     * {@code CreateNewSprite4}, which scans forward from the creator's own slot
-     * ({@code docs/skdisasm/sonic3k.asm:37894-37919}), so every element lives in
-     * a higher {@code Dynamic_object_RAM} slot and {@code ExecuteObjects} runs
-     * the owner before its children. On the frame an element renders off-screen
-     * and decrements {@code objoff_30}
-     * ({@code docs/skdisasm/sonic3k.asm:62362-62363}), the owner has already
-     * tested {@code objoff_30} that frame and taken the
-     * {@code addq.w #1,objoff_32} branch ({@code 62256-62261}). It first
-     * observes the drained counter — and so first reaches {@code loc_2D8CA}'s
-     * {@code LoadEnemyArt} ({@code 62295-62301}) — on the following frame.
-     */
     /**
      * Re-queues the current zone/act's enemy KosM archives, matching a
      * mid-level ROM {@code jsr (LoadEnemyArt).l}
@@ -1710,16 +1840,43 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         processEnemyKosArt();
     }
 
+    /**
+     * Runs one level frame of the modelled title-card owner and its children.
+     *
+     * <p>{@code Obj_TitleCard} creates its card elements through
+     * {@code CreateNewSprite4}, which scans forward from the creator's own slot
+     * ({@code docs/skdisasm/sonic3k.asm:37894-37919}), so every element lives in
+     * a higher {@code Dynamic_object_RAM} slot and {@code ExecuteObjects} runs
+     * the owner before its children. After {@code Draw_Sprite} records an
+     * off-screen result, the child's following dispatch sees the clear render
+     * flag and decrements {@code objoff_30}
+     * ({@code docs/skdisasm/sonic3k.asm:62358-62361}). The owner has already
+     * tested {@code objoff_30} in that retirement dispatch and returned through the
+     * {@code addq.w #1,objoff_32} branch ({@code 62256-62261}). It first
+     * observes the drained counter — and so first reaches {@code loc_2D8CA}'s
+     * {@code LoadEnemyArt} ({@code 62295-62301}) — on its following dispatch.
+     */
     private void advanceTitleCardTeardown() {
         if (titleCardTeardown == null) {
             return;
         }
         if (titleCardTeardown.isComplete()) {
-            enemyKosSubmissionArmed = true;
+            consumeTitleCardTeardownLease();
             titleCardTeardown = null;
             return;
         }
-        titleCardTeardown.tick();
+        if (titleCardTeardown.tick()) {
+            consumeTitleCardTeardownLease();
+            titleCardTeardown = null;
+        }
+    }
+
+    private void consumeTitleCardTeardownLease() {
+        RuntimeArtAdmissionLease lease = rebindRuntimeArtAdmission(
+                titleCardTeardownLeaseId,
+                RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
+        consumeRuntimeArtAdmission(lease, RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
+        titleCardTeardownLeaseId = -1;
     }
 
     /**
@@ -2361,7 +2518,17 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
                 pendingModules,
                 enemyKosHandles.stream().map(HardwareWorkHandle::ordinal).toList(),
                 enemyKosSubmissionArmed,
-                titleCardTeardown == null ? -1 : titleCardTeardown.ticksElapsed());
+                titleCardTeardown == null ? -1 : titleCardTeardown.ticksElapsed(),
+                runtimeArtAdmissionGeneration,
+                runtimeArtAdmissionNextLeaseId,
+                runtimeArtAdmissionLease == null ? -1 : runtimeArtAdmissionLease.id(),
+                runtimeArtAdmissionLease == null
+                        ? 0 : runtimeArtAdmissionLease.batchFingerprint(),
+                runtimeArtAdmissionLease == null
+                        ? null : runtimeArtAdmissionLease.ownerKind(),
+                runtimeArtAdmissionBound,
+                runtimeArtAdmissionConsumed,
+                titleCardTeardownLeaseId);
     }
 
     /**
@@ -2380,6 +2547,18 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
                         entry.sourceAddress(), entry.destinationTile()))
                 .toList();
         enemyKosSubmissionArmed = snap.kosSubmissionArmed();
+        runtimeArtAdmissionGeneration = snap.runtimeArtAdmissionGeneration();
+        runtimeArtAdmissionNextLeaseId = snap.runtimeArtAdmissionNextLeaseId();
+        runtimeArtAdmissionLease = snap.runtimeArtAdmissionLeaseId() < 0
+                ? null
+                : new RuntimeArtAdmissionLease(
+                        snap.runtimeArtAdmissionLeaseId(),
+                        snap.runtimeArtAdmissionGeneration(),
+                        snap.runtimeArtAdmissionBatchFingerprint(),
+                        snap.runtimeArtAdmissionOwnerKind());
+        runtimeArtAdmissionBound = snap.runtimeArtAdmissionBound();
+        runtimeArtAdmissionConsumed = snap.runtimeArtAdmissionConsumed();
+        titleCardTeardownLeaseId = snap.titleCardTeardownLeaseId();
         if (snap.titleCardTeardownTicks() < 0) {
             titleCardTeardown = null;
         } else {

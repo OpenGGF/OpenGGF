@@ -22,6 +22,7 @@ import com.openggf.tools.NemesisReader;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Pattern;
+import com.openggf.level.CarriedTitlePublicationTiming;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
@@ -99,6 +100,13 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private boolean usesShortResultsChildRetireTail;
     private boolean controlsReleasedAheadOfHandoff;
     private boolean carriedAcrossSeamlessTransition;
+    private boolean carriedTitleTimingExplicit;
+    private boolean carriedTitleResetLevelGamestateAtDisplay;
+    private int carriedTitleResetAdditionalDispatches;
+    private int carriedTitleResetPhaseOneDispatchOverlap;
+    private boolean carriedTitleLockPlayerControl;
+    private int carriedTitleExitAdditionalDispatches;
+    private int carriedTitleExitPhaseOneDispatchOverlap;
 
     // Tally values
     private int timeBonus;
@@ -545,6 +553,22 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         carriedAcrossSeamlessTransition = true;
     }
 
+    @Override
+    public void onCarriedAcrossSeamlessTransition(
+            int offsetX,
+            int offsetY,
+            CarriedTitlePublicationTiming titleTiming) {
+        onCarriedAcrossSeamlessTransition(offsetX, offsetY);
+        carriedTitleTimingExplicit = titleTiming.explicitTiming();
+        carriedTitleResetLevelGamestateAtDisplay =
+                titleTiming.resetLevelGamestateAtDisplay();
+        carriedTitleResetAdditionalDispatches = titleTiming.resetAdditionalDispatches();
+        carriedTitleResetPhaseOneDispatchOverlap = titleTiming.resetPhaseOneDispatchOverlap();
+        carriedTitleLockPlayerControl = titleTiming.lockPlayerControl();
+        carriedTitleExitAdditionalDispatches = titleTiming.exitAdditionalDispatches();
+        carriedTitleExitPhaseOneDispatchOverlap = titleTiming.exitPhaseOneDispatchOverlap();
+    }
+
     // ---- Pre-tally delay with music trigger ----
 
     @Override
@@ -758,7 +782,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             // show its own title card after the level reload).
             // ROM lines 62713-62720
             boolean skipTitleCard = (zone == 0x08) || (zone == 0x0B);
-            if (!skipTitleCard && !hasSeamlessTransition) {
+            if (!skipTitleCard && (!hasSeamlessTransition || retainedReloadState)) {
                 titleInitializationPending = true;
                 pendingPreloadedTitleHandoff = preloadedNextActHandoff;
                 pendingAizTitleHandoff = aizAct1MinibossTitleHandoff;
@@ -811,9 +835,23 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                 // This Obj_LevelResults survived an earlier Load_Level and now
                 // dispatches as Obj_TitleCard. The title owner resets the
                 // counters after its native create dispatches.
-                s3kTitleCard.requestLevelGamestateResetAfterCreateDispatches(
-                        mutatedTitleCardResetDispatches(
-                                usesShortResultsChildRetireTail));
+                if (carriedTitleTimingExplicit) {
+                    if (carriedTitleResetLevelGamestateAtDisplay) {
+                        s3kTitleCard.requestLevelGamestateResetAtInLevelDisplay(
+                                carriedTitleResetAdditionalDispatches,
+                                carriedTitleResetPhaseOneDispatchOverlap);
+                    }
+                    if (carriedTitleLockPlayerControl) {
+                        s3kTitleCard.requestInLevelPlayerControlLock();
+                    }
+                    s3kTitleCard.requestInLevelExitAdditionalDispatches(
+                            carriedTitleExitAdditionalDispatches,
+                            carriedTitleExitPhaseOneDispatchOverlap);
+                } else {
+                    s3kTitleCard.requestLevelGamestateResetAfterCreateDispatches(
+                            mutatedTitleCardResetDispatches(
+                                    usesShortResultsChildRetireTail));
+                }
             }
         }
         pendingPreloadedTitleHandoff = false;

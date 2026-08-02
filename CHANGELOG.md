@@ -16,6 +16,76 @@ All notable changes to the OpenGGF project are documented in this file.
   preserving pending production transfers and strict atomic publication. The
   picker renders a loading frame before synchronous parsing and retains launch,
   bootstrap, or replay exceptions on screen until acknowledged.
+- Test/Docs: the queue-lifecycle Wave 2 fleet publishes a complete 64-class,
+  108-method trace ledger. All 30 S1 and 20 S2 classes remain green, the four
+  standalone S3K bonus/special-stage classes remain green, and the strict
+  timing/authority matrix remains 142/142. CNZ standard advances to direct
+  `#24` and CNZ complete advances through `#203/#204` to `#205`. The first
+  sweep exposed a shared eight-field frame-33 early-title queue regression in
+  eight S3K route classes; it was attributed to same-dispatch skipped-title
+  owner/child observation and corrected by preserving native SST order. The
+  final fleet removes exactly eight comparator groups from each affected
+  class and restores their pre-existing gameplay or later queue frontiers.
+- Fix/Test: S3K two-axis placement now retains ordered X-cursor work until
+  `ObjectManager` records a terminal construction outcome, so a full SST pool
+  retries the same entry instead of losing it and rewind preserves the pending
+  order. CNZ SS-entry rings now release placement ownership through their
+  shared marked/offscreen retirement tail while still submitting their exact
+  explosion KosM parent and direct child once,
+  advancing the complete-run queue frontier through direct ordinals `#203` and
+  `#204` to `#205`.
+- Fix/Test: ICZ's seamless Act 1 reload now carries its exact enemy-art
+  admission lease through the resource handoff and publishes only after the
+  module parent and both direct children are ready. Terrain and art apply
+  before the lease is consumed; any post-claim failure becomes a rewind-owned
+  terminal tombstone, while missing or already-claimed carried work is fenced
+  instead of waiting forever, so retries cannot duplicate queue work or
+  partially republish the transition.
+- Fix/Test: MGZ and LBZ seamless Act 1 reloads now leave the carried results
+  SST as the sole Act 2 title publisher. MGZ transfers its ROM-derived 12/6
+  reset and 10/5 exit timing through a game-neutral, rewind-owned carry
+  contract instead of creating a competing executor overlay; LBZ now holds a
+  title-owner admission lease and preserves the established 38/40 retained
+  results fallback. Both routes publish the exact four title parents once and
+  admit their target enemy batch only after title completion.
+- Fix/Test: CNZ's seamless Act 1 reload now preserves the carried results SST as
+  the exact owner of the Act 2 title-card admission lease. The transition holds
+  enemy art until that title reaches `COMPLETE`, publishes the four title KosM
+  parents and four enemy parents once at their production boundaries, rejects
+  stale pre-reload owners, and rebinds only the replaced object/ring rewind
+  adapters. Seamless-transition rewind rerooting makes the source layout
+  inaccessible, while target-root restores retain the carried owner.
+- Fix/Test: S3K runtime-art admission rewind now restores title-owner scalar
+  identity without inspecting provider state until the owner's next action,
+  preserving production registry restore order and exact stale/missing failure.
+  Legacy title-retirement and skipped-presentation paths can no longer invent
+  or select leases, unsupported resource-handoff admission is rejected before
+  transition or provider mutation, and the S3K builder guard validates exactly
+  one reviewed policy within each individual builder chain.
+- Refactor/Test: S3K runtime-art admission now uses generation- and
+  fingerprint-bound leases with explicit immediate, preserve-current,
+  title-owner, and resource-handoff policies. Title-card completion and the
+  skipped-initial-title timer consume their exact leases once, rewind restores
+  the same owner identity, and all seven seamless-transition builders declare
+  their interim policy explicitly. AIZ now preserves its existing enemy-art
+  batch across the fire transition, matching the ROM producer sequence instead
+  of scheduling an engine-only replacement batch.
+- Fix/Test: S3K title-card KosM payload readiness now only makes the title
+  renderable; runtime enemy art is admitted once when the title owner reaches
+  `COMPLETE`. Cached title art follows the same owner boundary, and the
+  provider-owned skipped-initial-title model releases on its ROM-derived 34th
+  tick instead of a frame later. Rewind coverage preserves the completion
+  edge, while false-overlay seamless transitions retain their existing
+  pre-policy direct-retirement behavior.
+- Fix/Test: standalone S3K Gumball, Pachinko, and Slots trace replays now close
+  at their recorder-observed bonus-mode boundary after proving all in-scope
+  hardware work is consumed and the production ledger is empty; later
+  return-to-level/title timing remains out of scope and ordinary trace closure
+  stays strict. LBZ now submits and rewind-owns the miniboss-box KosM parent at
+  both ROM producer sites, advancing its fail-closed direct-queue terminal from
+  `#279`/raw 17604 to `#282`/raw 19871. The expanded timing/authority matrix is
+  142/142 green, all three bonus traces pass, and the full S1/S2 trace fleets
+  remain green.
 - Refactor/Test: object execution now names its dispatched clock
   `vIntRunCount` across all 809 `update(int, PlayableEntity)` declarations,
   framework hook overrides, unanimous private-helper flows, and 25 proven

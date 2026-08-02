@@ -6,6 +6,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.CutsceneKnucklesLbz1CollapseChild;
@@ -19,6 +20,9 @@ import com.openggf.game.sonic3k.objects.Lbz1RobotnikEventController;
 import com.openggf.game.sonic3k.objects.S3kBossExplosionChild;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.game.sonic3k.objects.SongFadeTransitionInstance;
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
+import com.openggf.game.timing.HardwareWorkHandle;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.level.objects.ExplosionObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
@@ -634,6 +638,33 @@ class TestS3kLbz1KnucklesSequenceHeadless {
     }
 
     @Test
+    void lbz1RobotnikInitQueuesMinibossBoxKosmOnce() {
+        HeadlessTestFixture fixture = lbzFixture();
+        AbstractPlayableSprite player = fixture.sprite();
+        removeLbz1GroundLaunchIntro();
+        applyTitleCardHandoff();
+        Lbz1RobotnikEventController robotnik = spawnRobotnikCollapseController();
+        List<HardwareWorkHandle> before = pendingKosModuleHandles();
+
+        robotnik.update(0, player);
+
+        List<HardwareWorkHandle> submitted = addedKosModuleHandles(before);
+        assertEquals(1, submitted.size(),
+                "loc_8CB9E must submit ArtKosM_LBZMinibossBox exactly once.");
+        HardwareWorkHandle handle = submitted.getFirst();
+        var queue = S3kRuntimeArtCoordinator.from(GameServices.runtimeArtCoordinator()).moduleQueue();
+        assertEquals(Sonic3kConstants.ART_KOSM_LBZ_MINIBOSS_BOX_ADDR,
+                queue.descriptor(handle).sourceAddress());
+        assertEquals(Sonic3kConstants.ART_TILE_LBZ_MINIBOSS_BOX * 32,
+                queue.descriptor(handle).destinationAddress());
+
+        robotnik.update(1, player);
+
+        assertEquals(submitted, addedKosModuleHandles(before),
+                "ROUTINE_APPROACH_HOVER must not resubmit the initialization parent.");
+    }
+
+    @Test
     void lbz1RobotnikUsesNormalBossHitReactionWithoutDefeat() {
         List<Integer> sfx = new ArrayList<>();
         ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
@@ -756,6 +787,43 @@ class TestS3kLbz1KnucklesSequenceHeadless {
         assertEquals(0x3B68, GameServices.camera().getMaxX() & 0xFFFF,
                 "Obj_IncLevEndXGradual applies the swapped high word each frame, "
                         + "not a simple fractional carry.");
+    }
+
+    @Test
+    void lbz1RobotnikCollapseClearRequeuesMinibossBoxKosmOnce() {
+        HeadlessTestFixture fixture = lbzFixture();
+        AbstractPlayableSprite player = fixture.sprite();
+        removeLbz1GroundLaunchIntro();
+        applyTitleCardHandoff();
+        Sonic3kLevelEventManager manager = (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
+        Lbz1RobotnikEventController robotnik = spawnRobotnikCollapseController();
+        robotnik.forceRoutineForTest(0x06);
+
+        GameServices.camera().setX((short) 0x3B40);
+        player.setCentreY((short) 0x01C0);
+        player.setAir(false);
+        robotnik.update(0, player);
+        List<HardwareWorkHandle> beforeCollapseClear = pendingKosModuleHandles();
+        for (int frame = 1; frame <= 609; frame++) {
+            manager.getLbzEvents().update(0, frame);
+        }
+
+        robotnik.update(610, player);
+
+        List<HardwareWorkHandle> submitted = addedKosModuleHandles(beforeCollapseClear);
+        assertEquals(1, submitted.size(),
+                "loc_8CC8C must requeue ArtKosM_LBZMinibossBox once when collapse clears.");
+        HardwareWorkHandle handle = submitted.getFirst();
+        var queue = S3kRuntimeArtCoordinator.from(GameServices.runtimeArtCoordinator()).moduleQueue();
+        assertEquals(Sonic3kConstants.ART_KOSM_LBZ_MINIBOSS_BOX_ADDR,
+                queue.descriptor(handle).sourceAddress());
+        assertEquals(Sonic3kConstants.ART_TILE_LBZ_MINIBOSS_BOX * 32,
+                queue.descriptor(handle).destinationAddress());
+
+        robotnik.update(611, player);
+
+        assertEquals(submitted, addedKosModuleHandles(beforeCollapseClear),
+                "ROUTINE_AFTER_COLLAPSE must not resubmit the collapse-clear parent.");
     }
 
     @Test
@@ -1037,6 +1105,18 @@ class TestS3kLbz1KnucklesSequenceHeadless {
         return GameServices.level().getObjectManager().createDynamicObject(
                 () -> new Lbz1RobotnikEventController(new ObjectSpawn(
                         0x3EC0, 0x01A0, Sonic3kObjectIds.LBZ1_ROBOTNIK, 0, 0, false, 0)));
+    }
+
+    private List<HardwareWorkHandle> pendingKosModuleHandles() {
+        return GameServices.hardwareTiming().pendingHandles().stream()
+                .filter(handle -> handle.kind() == HardwareWorkKind.KOS_MODULE_QUEUE)
+                .toList();
+    }
+
+    private List<HardwareWorkHandle> addedKosModuleHandles(List<HardwareWorkHandle> before) {
+        return pendingKosModuleHandles().stream()
+                .filter(handle -> !before.contains(handle))
+                .toList();
     }
 
     private void placePlayerInsideHelperBox(AbstractPlayableSprite player) {

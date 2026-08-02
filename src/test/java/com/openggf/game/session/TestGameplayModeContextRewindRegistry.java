@@ -43,8 +43,12 @@ import com.openggf.level.ParallaxManager;
 import com.openggf.level.Pattern;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.animation.AnimatedPatternManager;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.level.rings.RingManager;
+import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
+import com.openggf.game.rewind.snapshot.RingSnapshot;
 import com.openggf.physics.CollisionSystem;
 import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.physics.TerrainCollisionManager;
@@ -59,6 +63,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -143,11 +149,107 @@ class TestGameplayModeContextRewindRegistry {
     }
 
     @Test
+    void actTransitionRebindMovesOnlyObjectAndRingManagers() {
+        GameplayModeContext ctx = buildAttachedContext();
+        RewindRegistry registry = ctx.getRewindRegistry();
+        @SuppressWarnings("unchecked")
+        RewindSnapshottable<ObjectManagerSnapshot> sourceObjects =
+                mock(RewindSnapshottable.class);
+        ObjectManagerSnapshot sourceObjectSnapshot = mock(ObjectManagerSnapshot.class);
+        when(sourceObjects.key()).thenReturn("object-manager");
+        when(sourceObjects.capture()).thenReturn(sourceObjectSnapshot);
+        registry.register(sourceObjects);
+        RingManager sourceRings = mock(RingManager.class);
+        RingSnapshot sourceRingSnapshot = mock(RingSnapshot.class);
+        when(sourceRings.key()).thenReturn("rings");
+        when(sourceRings.capture()).thenReturn(sourceRingSnapshot);
+        registry.register(sourceRings);
+        RewindSnapshottable<Integer> title = adapter("s3k-title-card");
+        RewindSnapshottable<Integer> provider = adapter("s3k-plc-art");
+        RewindSnapshottable<Integer> event = adapter("level-event");
+        RewindSnapshottable<Integer> solids = adapter("solid-objects");
+        RewindSnapshottable<Integer> tilemap = adapter("tilemap-mutations");
+        registry.register(title);
+        registry.register(provider);
+        registry.register(event);
+        registry.register(solids);
+        registry.register(tilemap);
+        CompositeSnapshot sourceSnapshot = registry.capture();
+        List<String> before = List.copyOf(sourceSnapshot.entries().keySet());
+
+        ObjectManager replacementObjects = mock(ObjectManager.class);
+        @SuppressWarnings("unchecked")
+        RewindSnapshottable<ObjectManagerSnapshot> objectAdapter =
+                mock(RewindSnapshottable.class);
+        when(objectAdapter.key()).thenReturn("object-manager");
+        when(objectAdapter.capture()).thenReturn(mock(ObjectManagerSnapshot.class));
+        when(replacementObjects.rewindSnapshottable()).thenReturn(objectAdapter);
+        RingManager replacementRings = mock(RingManager.class);
+        when(replacementRings.key()).thenReturn("rings");
+        when(replacementRings.capture()).thenReturn(mock(RingSnapshot.class));
+
+        ctx.rebindActTransitionManagerAdapters(replacementObjects, replacementRings);
+
+        List<String> after = List.copyOf(registry.capture().entries().keySet());
+        assertEquals(withoutTransitionManagers(before), withoutTransitionManagers(after),
+                "the narrow transition rebind must not move title, provider, event, solid, or tilemap owners");
+        assertEquals(List.of("object-manager", "rings"), after.subList(after.size() - 2, after.size()));
+        assertTrue(after.indexOf("s3k-title-card") < after.indexOf("s3k-plc-art"),
+                "title-before-provider restore ordering must remain unchanged");
+
+        registry.restore(sourceSnapshot);
+
+        verify(objectAdapter).restore(sourceObjectSnapshot);
+        verify(replacementRings).restore(sourceRingSnapshot);
+        verify(sourceObjects, never()).restore(sourceObjectSnapshot);
+        verify(sourceRings, never()).restore(sourceRingSnapshot);
+        assertEquals(1, ((TrackingAdapter) title).restoreCount);
+        assertEquals(1, ((TrackingAdapter) provider).restoreCount);
+        assertEquals(1, ((TrackingAdapter) event).restoreCount);
+        assertEquals(1, ((TrackingAdapter) solids).restoreCount);
+        assertEquals(1, ((TrackingAdapter) tilemap).restoreCount);
+    }
+
+    @Test
     void registryIsNullBeforeAttach() {
         WorldSession world = new WorldSession(new Sonic2GameModule());
         GameplayModeContext ctx = new GameplayModeContext(world);
         assertNull(ctx.getRewindRegistry(),
                 "Registry should be null until attachGameplayManagers is called");
+    }
+
+    private static RewindSnapshottable<Integer> adapter(String key) {
+        return new TrackingAdapter(key);
+    }
+
+    private static final class TrackingAdapter implements RewindSnapshottable<Integer> {
+        private final String key;
+        private int restoreCount;
+
+        private TrackingAdapter(String key) {
+            this.key = key;
+        }
+
+        @Override
+        public String key() {
+            return key;
+        }
+
+        @Override
+        public Integer capture() {
+            return 1;
+        }
+
+        @Override
+        public void restore(Integer snapshot) {
+            restoreCount++;
+        }
+    }
+
+    private static List<String> withoutTransitionManagers(List<String> keys) {
+        return keys.stream()
+                .filter(key -> !key.equals("object-manager") && !key.equals("rings"))
+                .toList();
     }
 
     @Test
