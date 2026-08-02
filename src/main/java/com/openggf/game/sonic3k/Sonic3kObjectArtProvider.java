@@ -1795,21 +1795,6 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     }
 
     /**
-     * Runs one level frame of the modelled title-card owner.
-     *
-     * <p>{@code Obj_TitleCard} creates its card elements through
-     * {@code CreateNewSprite4}, which scans forward from the creator's own slot
-     * ({@code docs/skdisasm/sonic3k.asm:37894-37919}), so every element lives in
-     * a higher {@code Dynamic_object_RAM} slot and {@code ExecuteObjects} runs
-     * the owner before its children. On the frame an element renders off-screen
-     * and decrements {@code objoff_30}
-     * ({@code docs/skdisasm/sonic3k.asm:62362-62363}), the owner has already
-     * tested {@code objoff_30} that frame and taken the
-     * {@code addq.w #1,objoff_32} branch ({@code 62256-62261}). It first
-     * observes the drained counter — and so first reaches {@code loc_2D8CA}'s
-     * {@code LoadEnemyArt} ({@code 62295-62301}) — on the following frame.
-     */
-    /**
      * Re-queues the current zone/act's enemy KosM archives, matching a
      * mid-level ROM {@code jsr (LoadEnemyArt).l}
      * ({@code docs/skdisasm/sonic3k.asm:64281-64313}): the caller's object runs
@@ -1827,6 +1812,22 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         processEnemyKosArt();
     }
 
+    /**
+     * Runs one level frame of the modelled title-card owner and its children.
+     *
+     * <p>{@code Obj_TitleCard} creates its card elements through
+     * {@code CreateNewSprite4}, which scans forward from the creator's own slot
+     * ({@code docs/skdisasm/sonic3k.asm:37894-37919}), so every element lives in
+     * a higher {@code Dynamic_object_RAM} slot and {@code ExecuteObjects} runs
+     * the owner before its children. After {@code Draw_Sprite} records an
+     * off-screen result, the child's following dispatch sees the clear render
+     * flag and decrements {@code objoff_30}
+     * ({@code docs/skdisasm/sonic3k.asm:62358-62361}). The owner has already
+     * tested {@code objoff_30} in that retirement dispatch and returned through the
+     * {@code addq.w #1,objoff_32} branch ({@code 62256-62261}). It first
+     * observes the drained counter — and so first reaches {@code loc_2D8CA}'s
+     * {@code LoadEnemyArt} ({@code 62295-62301}) — on its following dispatch.
+     */
     private void advanceTitleCardTeardown() {
         if (titleCardTeardown == null) {
             return;

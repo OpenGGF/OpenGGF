@@ -60610,3 +60610,102 @@ after the last represented row). The comparison report records 427 errors and
 0 warnings, first f33 `queue.s3k_kos_direct.busy` (`false` / `true`). That f33
 regression remains assigned to the separate Wave 2 attribution lane and is not
 reclassified by this placement fix.
+
+## 2026-08-02 — S3K queue lifecycle recovery Wave 2 complete fleet
+
+Context: `.worktrees/s3k-queue-lifecycle-recovery`, branch
+`bugfix/ai-s3k-queue-lifecycle-recovery`, HEAD `5fc1d61d4`, JDK 21.0.11,
+verified S1 REV01, S2 REV01, and locked-on S3K ROMs. No trace fixture changed.
+
+The exact focused seven-route selector from the reviewed Wave 2 plan exits 1
+with 48 methods: 11 pass, 4 fail, and 33 error. The exact 15-class
+queue/timing/authority selector exits 0 at 142/142, with no failures, errors,
+or skips. The exact complete command
+`mvn -q -Dmse=off -Dtest='*TraceReplay' -Dsonic1.rom.path=<verified-s1> -Dsonic2.rom.path=<verified-s2> -Ds3k.rom.path=<verified-s3k> test`
+exits 1 across the expected 64 concrete classes and 108 methods: 67 pass,
+4 fail, 37 error, 0 skip. All 30 S1 and all 20 S2 classes remain green. S3K
+Gumball, Pachinko, Slots, and Special Stage remain green, for 4/14 S3K classes.
+The line-by-line 64-class ledger and exact fingerprints are published in
+`docs/architecture/validation/trace/2026-08-02-s3k-queue-lifecycle-wave2-validation.md`.
+
+| S3K canonical class | Wave 2 measured frontier |
+|---|---|
+| `TestS3kAizCompleteRunTraceReplay` | 56 comparator errors, first f1237 direct busy false/true; terminal raw 6346 direct `#35` `c3e8ddd3...`, engine pending none |
+| `TestS3kAizTraceReplay` | 58 comparator errors, first f1527 direct busy false/true; terminal raw 5543 direct `#36` `c3e8ddd3...`, engine pending none |
+| `TestS3kCnzCompleteRunTraceReplay` | **REGRESSION INTRODUCED:** 427 comparator errors, first f33 direct busy false/true; separately advanced through direct `#203/#204` to terminal raw 13962 direct `#205` `589a478d...`, engine pending none |
+| `TestS3kCnzTraceReplay` | **REGRESSION INTRODUCED:** 103 comparator errors, first f33 direct busy false/true; separately advanced from raw 17278/direct `#20` mismatch to raw 17421/direct `#24` `c2b0befc...`, engine pending none |
+| `TestS3kGumballBonusTraceReplay` | PASS through structural boundary raw 1276 |
+| `TestS3kHczCompleteRunTraceReplay` | **REGRESSION INTRODUCED:** 36 comparator errors, first f33 direct busy false/true, masking the prior f3253 `tails_x_speed` lane; terminal unchanged raw 3341/direct `#90` `66961069...`, engine pending none |
+| `TestS3kIczCompleteRunTraceReplay` | **REGRESSION INTRODUCED:** 17 comparator errors, first f33 direct busy false/true, versus Wave 1 first f12320 module state; terminal unchanged raw 12380/direct `#245`, expected `66961069...`, pending same ordinal `403b1d33...` |
+| `TestS3kLbzCompleteRunTraceReplay` | **REGRESSION INTRODUCED:** 15 comparator errors, first f33 direct busy false/true; terminal remains raw 19871/direct `#282` `45546caa...`, engine pending none |
+| `TestS3kMgzCompleteRunTraceReplay` | **REGRESSION INTRODUCED:** 25 comparator errors, first f33 direct busy false/true; terminal moves backwards from Wave 1 raw 17952/direct `#149` to raw 16655/direct `#147` `e045a539...`, engine pending none |
+| `TestS3kMgzTraceReplay` | **REGRESSION INTRODUCED:** 87 comparator errors, first f33 direct busy false/true, masking the separate prior f13903 `animation` lane; terminal unchanged raw 14386/direct `#24` `fbfc78d4...`, engine pending none |
+| `TestS3kMhzCompleteRunTraceReplay` | **REGRESSION INTRODUCED:** 873 comparator errors, first f33 direct busy false/true, masking the separate prior f3420 `rings` lane; terminal unchanged raw 7221/direct `#335` `3c96d8b9...`, engine pending none |
+| `TestS3kPachinkoBonusTraceReplay` | PASS through structural boundary raw 2902 |
+| `TestS3kSlotsBonusTraceReplay` | PASS through structural boundary raw 1028 |
+| `TestS3kSpecialStageTraceReplay` | PASS (2 methods) |
+
+The f33 regression is one shared eight-field queue signature, not eight
+independently attributed route defects: direct busy/prepared/source/destination
+plus module busy/prepared/remaining/fingerprints. It affects CNZ standard and
+complete, HCZ, ICZ, LBZ, MGZ standard and complete, and MHZ. Commit attribution
+is pending the sibling regression audit; the fleet result does not assign it
+to the later route-specific owner commits. AIZ's current raw 5543/6346
+`PRESERVE_CURRENT` terminals and its former raw 6351 module observation remain
+in the separately scoped native-recorder/service-row attribution lane. The
+MGZ-standard, HCZ, and MHZ gameplay-first lanes are likewise retained rather
+than reclassified as queue-owner wins.
+
+## 2026-08-02 — Wave 2 Task 7B skipped-title SST dispatch correction
+
+Context: `.worktrees/s3k-queue-lifecycle-recovery`, branch
+`bugfix/ai-s3k-queue-lifecycle-recovery`, base HEAD `5fc1d61d4`, JDK 21.0.11,
+with the Task 7B source/test correction still uncommitted at measurement time.
+The locked-on S3K ROM is the verified root fixture; no trace fixture or timing
+authority changed.
+
+The shared frame-33 regression above is conclusively attributed to
+`633e06cec` (`fix(s3k): retire enemy art at title owner completion`). That
+commit correctly made the title owner the sole admission releaser, but changed
+`advanceTitleCardTeardown()` to consume a true `tick()` result before the same
+provider pump called `processEnemyKosArt()`. The teardown model's latent
+same-dispatch observation then submitted enemy KosM work one physical row early.
+
+ROM SST order supplies the correction. `Obj_TitleCardWait2` tests the live-child
+counter and returns through `loc_2D862` at
+`docs/skdisasm/sonic3k.asm:62256-62260`. The card children occupy higher slots
+because `AllocateObjectAfterCurrent`/`CreateNewSprite4` scan forward
+(`37894-37930`), and only later decrement the owner's counter at `62305-62312`
+and `62354-62363`. Thus provider tick 34 (zero-based trace frame 33) drains the
+last child after the owner has returned. Provider tick 35 (trace frame 34) is
+the first owner dispatch that can fall through `loc_2D86E` to `LoadEnemyArt`
+at `62263,62295-62299`. The fix changes only that modelled owner/child order;
+the exact production lease, provider pump, queue implementation, and timing
+authority remain unchanged.
+
+The exact eight-class selector
+`mvn -q -Dmse=off -Dtest='TestS3kCnzTraceReplay,TestS3kCnzCompleteRunTraceReplay,TestS3kHczCompleteRunTraceReplay,TestS3kIczCompleteRunTraceReplay,TestS3kLbzCompleteRunTraceReplay,TestS3kMgzTraceReplay,TestS3kMgzCompleteRunTraceReplay,TestS3kMhzCompleteRunTraceReplay' -Ds3k.rom.path=<verified-s3k> test`
+exits 1 with 35 methods, 0 failures, 35 errors, and 0 skips. The non-canonical
+CNZ/HCZ helper-method errors remain the same outer-selector behavior measured
+in Task 7A. Every canonical replay loses exactly the shared eight-field frame-33
+queue group and restores its prior first-error owner:
+
+| Canonical class | Task 7B corrected frontier |
+|---|---|
+| `TestS3kCnzTraceReplay` | 95 comparator errors, first f16661 `player_animation_id`; terminal raw 17421/direct `#24` `c2b0befc...`, engine pending none |
+| `TestS3kCnzCompleteRunTraceReplay` | 419 comparator errors, first f12024 `g_speed`; terminal raw 13962/direct `#205` `589a478d...`, engine pending none |
+| `TestS3kHczCompleteRunTraceReplay` | 28 comparator errors, first f3253 `tails_x_speed`; terminal raw 3341/direct `#90` `66961069...`, engine pending none |
+| `TestS3kIczCompleteRunTraceReplay` | 9 comparator errors, first f12320 module `remaining_work` (`5`/`4`); terminal raw 12380/direct `#245`, expected `66961069...`, pending same ordinal `403b1d33...` |
+| `TestS3kLbzCompleteRunTraceReplay` | 7 comparator errors, first f19870 direct busy false/true; terminal raw 19871/direct `#282` `45546caa...`, engine pending none |
+| `TestS3kMgzTraceReplay` | 79 comparator errors, first f13903 `player_animation_id`; terminal raw 14386/direct `#24` `fbfc78d4...`, engine pending none |
+| `TestS3kMgzCompleteRunTraceReplay` | 17 comparator errors, first f16512 direct busy false/true; terminal raw 16655/direct `#147` `e045a539...`, engine pending none |
+| `TestS3kMhzCompleteRunTraceReplay` | 865 comparator errors, first f3420 `rings`; terminal raw 7221/direct `#335` `3c96d8b9...`, engine pending none |
+
+The focused teardown/provider/title/rewind selector is 108/108 green. The exact
+15-class timing/queue/authority matrix is 142/142 green. The two-class AIZ
+selector retains its existing outer exit 1 (17 methods: 11 pass, 4 fail, 2
+error): standard remains 58 comparator errors, first f1527 direct busy and
+terminal raw 5543/direct `#36`; complete remains 56 comparator errors, first
+f1237 direct busy and terminal raw 6346/direct `#35`. Those AIZ
+`PRESERVE_CURRENT`/suppressed-row terminals are therefore unchanged and remain
+separate from the repaired skipped-title SST cadence.

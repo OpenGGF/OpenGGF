@@ -32,9 +32,9 @@ import java.util.concurrent.atomic.AtomicReference;
  *
  * <ul>
  *   <li>{@code objoff_2E} is seeded to {@code $16} (22) at line 7878, one write
- *       before {@code LevelLoop}, and {@code Obj_TitleCardWait2} spends level
- *       frames 0-21 draining it (62249-62253).</li>
- *   <li>Frame 22 first bumps {@code objoff_32} (62256-62261). The longest-lived
+ *       before {@code LevelLoop}, and {@code Obj_TitleCardWait2} spends
+ *       zero-based trace frames 0-21 draining it (62249-62253).</li>
+ *   <li>Trace frame 22 first bumps {@code objoff_32} (62256-62261). The longest-lived
  *       element is {@code Obj_TitleCardName}: {@code objoff_28} = 3, so it starts
  *       moving on frame 24 and advances {@code $20} per frame from its
  *       {@code objoff_46} rest position {@code $120} (288) (62450-62456,
@@ -43,14 +43,18 @@ import java.util.concurrent.atomic.AtomicReference;
  *       once {@code x_pos - 128 - width_pixels >= 320} (36444-36456). With
  *       {@code width_pixels} = {@code $80} (128) that is {@code x_pos >= 576},
  *       reached after nine steps on frame 32: {@code 288 + 9 * 32 = 576}.</li>
- *   <li>Frame 33 is the first frame the element renders off-screen, so on frame
- *       34 it decrements {@code objoff_30} to zero and deletes itself
- *       (62362-62363), and the owner falls through {@code loc_2D86E} to
- *       {@code loc_2D8CA}'s {@code LoadEnemyArt} (62263, 62295-62299).</li>
+ *   <li>The trace-frame-32 draw records the element as off-screen. On trace
+ *       frame 33, the child's following dispatch sees the clear render flag,
+ *       decrements {@code objoff_30} to zero, and deletes itself
+ *       (62358-62361). The lower-slot owner already returned from its nonzero
+ *       {@code objoff_30} branch, so it first falls through {@code loc_2D86E}
+ *       to {@code loc_2D8CA}'s {@code LoadEnemyArt} on provider tick 35,
+ *       zero-based trace frame 34
+ *       (62256-62263, 62295-62299).</li>
  * </ul>
  *
  * <p>Recorded ROM ground truth agrees: every non-AIZ S3K zone first becomes
- * Kos-queue busy on level frame 34, and ICZ's recorded
+ * Kos-queue busy on zero-based trace frame 34 (the 35th provider tick), and ICZ's recorded
  * {@code KOS_DECOMPRESSION_QUEUE} completion whose fingerprint matches the
  * engine's enemy-art submission is admitted on that frame.
  */
@@ -58,15 +62,14 @@ import java.util.concurrent.atomic.AtomicReference;
 class TestSonic3kTitleCardTeardownModel {
 
     /**
-     * Level frame on which the ROM reaches LoadEnemyArt, counted as ticks of
-     * the model. The provider ticks once per level frame and the engine's
-     * canonical {@code Level_frame_counter} is {@code frameCounter + 1}, so the
-     * Nth tick is level frame N.
+     * Provider tick on which the ROM reaches LoadEnemyArt. The provider ticks
+     * once per represented level frame, so provider tick N corresponds to
+     * zero-based trace frame N - 1.
      */
-    private static final int EXPECTED_LOAD_ENEMY_ART_FRAME = 34;
+    private static final int EXPECTED_LOAD_ENEMY_ART_TICK = 35;
 
     @Test
-    @DisplayName("owner reaches LoadEnemyArt on level frame 34")
+    @DisplayName("owner reaches LoadEnemyArt one dispatch after its last child retires")
     void reachesLoadEnemyArtOnDerivedFrame() {
         Sonic3kTitleCardTeardownModel model = new Sonic3kTitleCardTeardownModel();
         int firedFrame = -1;
@@ -76,9 +79,28 @@ class TestSonic3kTitleCardTeardownModel {
                 break;
             }
         }
-        assertEquals(EXPECTED_LOAD_ENEMY_ART_FRAME, firedFrame,
-                "LoadEnemyArt frame must match the ROM-derived count");
+        assertEquals(EXPECTED_LOAD_ENEMY_ART_TICK, firedFrame,
+                "LoadEnemyArt tick must match the ROM-derived count");
         assertTrue(model.isComplete());
+    }
+
+    @Test
+    @DisplayName("tick 34 drains children but tick 35 owns LoadEnemyArt")
+    void ownerCannotObserveHigherSlotRetirementUntilFollowingDispatch() {
+        Sonic3kTitleCardTeardownModel model = new Sonic3kTitleCardTeardownModel();
+
+        for (int tick = 1; tick <= 34; tick++) {
+            assertFalse(model.tick(),
+                    "the lower-slot owner cannot observe a higher-slot child "
+                            + "retirement during tick " + tick);
+        }
+
+        assertEquals(34, model.ticksElapsed());
+        assertFalse(model.isComplete(),
+                "tick 34 is a distinct drained-children/pending-owner state");
+        assertTrue(model.tick(), "tick 35 is the owner's next SST dispatch");
+        assertTrue(model.isComplete());
+        assertFalse(model.tick(), "the owner reaches LoadEnemyArt exactly once");
     }
 
     @Test
@@ -95,18 +117,18 @@ class TestSonic3kTitleCardTeardownModel {
     @DisplayName("restoreTicks replays the model exactly")
     void restoreReplaysDeterministically() {
         Sonic3kTitleCardTeardownModel reference = new Sonic3kTitleCardTeardownModel();
-        for (int frame = 0; frame < 30; frame++) {
+        for (int frame = 0; frame < 34; frame++) {
             reference.tick();
         }
         Sonic3kTitleCardTeardownModel restored = new Sonic3kTitleCardTeardownModel();
         restored.restoreTicks(reference.ticksElapsed());
         assertEquals(reference.ticksElapsed(), restored.ticksElapsed());
-        for (int frame = 30; frame < EXPECTED_LOAD_ENEMY_ART_FRAME - 1; frame++) {
-            // both models are still mid-drain here
-            assertEquals(reference.tick(), restored.tick(),
-                    "restored model must fire on the same frame");
-        }
-        assertTrue(restored.tick(), "restored model fires on the derived frame");
+        assertFalse(reference.isComplete());
+        assertFalse(restored.isComplete(),
+                "restore must preserve the tick-34 pending owner observation");
+        assertEquals(reference.tick(), restored.tick(),
+                "restored model must fire on the same owner dispatch");
+        assertTrue(restored.isComplete(), "restored model fires on tick 35");
         assertTrue(restored.isComplete());
     }
 

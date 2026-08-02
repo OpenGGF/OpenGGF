@@ -33,25 +33,29 @@ package com.openggf.game.sonic3k.titlecard;
  * {@code render_flags} {@code $40} sprite
  * ({@code docs/skdisasm/sonic3k.asm:36440-36468}).
  *
- * <p>Working the two phases through gives level frame 34 for the standard
- * four-element card: frames 0-21 drain {@code objoff_2E} ({@code $16} = 22),
- * frame 22 first bumps {@code objoff_32}, and the longest-lived element
+ * <p>Working the two phases through gives final-child retirement on provider
+ * tick 34 and owner release on provider tick 35 for the standard four-element
+ * card: zero-based trace frames 0-21 drain {@code objoff_2E}
+ * ({@code $16} = 22), trace frame 22 first bumps {@code objoff_32}, and the longest-lived element
  * ({@code Obj_TitleCardName}, {@code objoff_28} = 3, {@code width_pixels} =
  * {@code $80}) starts moving on frame 24 and needs nine {@code $20} steps to
  * pass the {@code x_pos >= 576} cull from its {@code objoff_46} rest position
- * {@code $120}. It renders off-screen on frame 33 and retires on frame 34,
- * which is the frame the owner reaches {@code LoadEnemyArt}.
+ * {@code $120}. Its trace-frame-32 draw records the cull, and the child's next
+ * dispatch retires it on provider tick 34 (zero-based trace frame 33). The
+ * lower-slot owner has already returned
+ * from its dispatch, so it reaches {@code LoadEnemyArt} on provider tick 35
+ * (trace frame 34).
  *
  * <p>Recorded ROM ground truth agrees on both counts: every non-AIZ S3K zone
- * first becomes Kos-queue busy on level frame 34, and ICZ's recorded
+ * first becomes Kos-queue busy on zero-based trace frame 34, and ICZ's recorded
  * {@code KOS_DECOMPRESSION_QUEUE} completion whose fingerprint matches the
  * engine's enemy-art submission is admitted on that frame.
  *
- * <p>The one ordering detail the disassembly alone does not settle is whether
- * the owner observes the drained {@code objoff_30} in the same level frame the
- * last element retires or on the following one, since the owner runs before its
- * children within a frame. The fingerprint-matched recorded completion pins it
- * to the same frame, which is what this model implements.
+ * <p>The owner runs before its higher-slot children in {@code ExecuteObjects}.
+ * It therefore tests the still-nonzero {@code objoff_30} and returns before the
+ * final child decrements that word. The owner can first observe zero on its
+ * following dispatch; the fingerprint-matched recorded completion confirms
+ * that ordering.
  *
  * <p>The model is a pure function of ROM data, so its progress is fully
  * described by the number of ticks taken; {@link #ticksElapsed()} and
@@ -62,7 +66,7 @@ public final class Sonic3kTitleCardTeardownModel {
     /** {@code move.w #$16,...objoff_2E} — sonic3k.asm:7878. */
     private static final int WAIT2_INITIAL_COUNTER = 0x16;
 
-    /** {@code addi.w #$20,x_pos} / {@code subi.w #$20,y_pos} — 62360, 62311. */
+    /** {@code addi.w #$20,x_pos} / {@code subi.w #$20,y_pos} — 62367, 62318. */
     private static final int EXIT_STEP = 0x20;
 
     /** {@code move.b #$70,height_pixels} — Obj_TitleCardRedBanner, 62327. */
@@ -121,7 +125,7 @@ public final class Sonic3kTitleCardTeardownModel {
                 return false;
             }
             if (!onScreen) {
-                // subq.w #1,$30(a1); Delete_Current_Sprite — 62362-62363, 62309-62310
+                // subq.w #1,$30(a1); Delete_Current_Sprite — 62360-62361, 62311-62312
                 retired = true;
                 return true;
             }
@@ -183,7 +187,8 @@ public final class Sonic3kTitleCardTeardownModel {
             wait2Counter--;
             return false;
         }
-        // loc_2D862: tst.w $30; addq.w #1,$32; rts — 62256-62261
+        // loc_2D862: the lower-slot owner tests/increments/returns before the
+        // higher-slot children execute and can decrement $30 — 62256-62261.
         if (elementsLeft > 0) {
             cardStagger++;
             for (Element element : elements) {
@@ -191,15 +196,10 @@ public final class Sonic3kTitleCardTeardownModel {
                     elementsLeft--;
                 }
             }
-            if (elementsLeft == 0) {
-                // The drain finished this frame, so the owner falls through
-                // loc_2D86E to loc_2D8CA's LoadEnemyArt — 62263, 62295-62299.
-                complete = true;
-                return true;
-            }
             return false;
         }
-        // loc_2D86E falls through to loc_2D8CA: jsr LoadEnemyArt — 62263, 62295-62299
+        // On the following owner dispatch loc_2D86E falls through to
+        // loc_2D8CA: jsr LoadEnemyArt — 62263, 62295-62299.
         complete = true;
         return true;
     }

@@ -9,6 +9,10 @@ import com.openggf.game.rewind.snapshot.PlcProgressSnapshot;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.resources.S3kKosRamDestinations;
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
+import com.openggf.game.timing.HardwareTimingJob;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -224,18 +228,22 @@ class TestSonic3kPlcArtRewindSnapshot {
     }
 
     @Test
-    void skippedTitleSnapshotRetainsItsExactLeaseThroughTickThirtyFour()
+    void skippedTitleSnapshotRetainsItsExactLeaseAfterChildrenDrainOnTickThirtyFour()
             throws Exception {
         Sonic3kObjectArtProvider provider = loadProvider(
                 Sonic3kZoneIds.ZONE_AIZ, 0);
         PlcProgressSnapshot prepared = provider.capture();
         RuntimeArtAdmissionLease lease = leaseFrom(prepared);
         provider.onTitleCardPresentationSkipped();
-        for (int tick = 1; tick <= 33; tick++) {
+        for (int tick = 1; tick <= 34; tick++) {
             provider.processRuntimeArtQueue();
         }
         PlcProgressSnapshot snapshot = provider.capture();
         assertEquals(lease.id(), snapshot.titleCardTeardownLeaseId());
+        assertEquals(34, snapshot.titleCardTeardownTicks());
+        assertFalse(snapshot.runtimeArtAdmissionConsumed());
+        assertEquals(List.of(), snapshot.pendingKosOrdinals(),
+                "the last child retirement cannot submit the enemy batch");
 
         Sonic3kObjectArtProvider restored = new Sonic3kObjectArtProvider();
         restored.restore(snapshot);
@@ -243,6 +251,8 @@ class TestSonic3kPlcArtRewindSnapshot {
 
         assertTrue(restored.capture().runtimeArtAdmissionConsumed());
         assertEquals(-1, restored.capture().titleCardTeardownLeaseId());
+        assertEquals(3, restored.capture().pendingKosOrdinals().size(),
+                "the restored lower-slot owner submits one exact AIZ enemy batch");
         assertThrows(IllegalStateException.class, () ->
                 restored.consumeRuntimeArtAdmission(
                         lease, RuntimeArtAdmissionOwnerKind.TITLE_OWNER));
@@ -324,24 +334,7 @@ class TestSonic3kPlcArtRewindSnapshot {
     }
 
     @Test
-    void skippedInitialTitleOwnerHoldsRuntimeArtThroughTickThirtyThree()
-            throws Exception {
-        Sonic3kObjectArtProvider provider = loadProvider(
-                Sonic3kZoneIds.ZONE_AIZ, 0);
-        provider.onTitleCardPresentationSkipped();
-
-        for (int tick = 1; tick <= 33; tick++) {
-            provider.processRuntimeArtQueue();
-        }
-
-        PlcProgressSnapshot beforeProductionRetirement = provider.capture();
-        assertEquals(33, beforeProductionRetirement.titleCardTeardownTicks());
-        assertFalse(beforeProductionRetirement.kosSubmissionArmed(),
-                "the skipped initial title owner still owns admission before tick 34");
-    }
-
-    @Test
-    void skippedInitialTitleOwnerReleasesRuntimeArtOnTickThirtyFourOnlyOnce()
+    void skippedInitialTitleOwnerHoldsRuntimeArtThroughChildRetirementOnTickThirtyFour()
             throws Exception {
         Sonic3kObjectArtProvider provider = loadProvider(
                 Sonic3kZoneIds.ZONE_AIZ, 0);
@@ -351,11 +344,30 @@ class TestSonic3kPlcArtRewindSnapshot {
             provider.processRuntimeArtQueue();
         }
 
+        PlcProgressSnapshot beforeProductionRetirement = provider.capture();
+        assertEquals(34, beforeProductionRetirement.titleCardTeardownTicks());
+        assertFalse(beforeProductionRetirement.kosSubmissionArmed(),
+                "the skipped initial title owner already returned before its final child retired");
+        assertFalse(beforeProductionRetirement.runtimeArtAdmissionConsumed());
+        assertEquals(List.of(), beforeProductionRetirement.pendingKosOrdinals());
+    }
+
+    @Test
+    void skippedInitialTitleOwnerReleasesRuntimeArtOnTickThirtyFiveOnlyOnce()
+            throws Exception {
+        Sonic3kObjectArtProvider provider = loadProvider(
+                Sonic3kZoneIds.ZONE_AIZ, 0);
+        provider.onTitleCardPresentationSkipped();
+
+        for (int tick = 1; tick <= 35; tick++) {
+            provider.processRuntimeArtQueue();
+        }
+
         PlcProgressSnapshot released = provider.capture();
         assertEquals(-1, released.titleCardTeardownTicks(),
-                "the provider drops its completed skipped-title owner at tick 34");
+                "the provider drops its completed skipped-title owner at tick 35");
         assertTrue(released.kosSubmissionArmed(),
-                "tick 34 is the production LoadEnemyArt release boundary");
+                "tick 35 is the production LoadEnemyArt release boundary");
 
         provider.processRuntimeArtQueue();
 
@@ -363,6 +375,71 @@ class TestSonic3kPlcArtRewindSnapshot {
         assertEquals(-1, afterRelease.titleCardTeardownTicks());
         assertTrue(afterRelease.kosSubmissionArmed(),
                 "the completed skipped-title owner cannot release a second time");
+    }
+
+    @Test
+    void productionPumpSubmitsExactFirstEnemyParentAndChildOnlyOnTickThirtyFive()
+            throws Exception {
+        Sonic3kObjectArtProvider provider = loadProvider(
+                Sonic3kZoneIds.ZONE_AIZ, 0);
+        provider.onTitleCardPresentationSkipped();
+
+        for (int tick = 1; tick <= 34; tick++) {
+            provider.processRuntimeArtQueue();
+        }
+
+        assertEquals(0, jobs(HardwareWorkKind.KOS_MODULE_QUEUE, 0x36800C).size(),
+                "trace frame 33 cannot contain the first Monkey Dude parent");
+        assertEquals(0, jobs(HardwareWorkKind.KOS_DECOMPRESSION_QUEUE, 0x36800E).size(),
+                "trace frame 33 cannot contain its first direct child");
+
+        provider.processRuntimeArtQueue();
+
+        List<HardwareTimingJob.Snapshot> parents =
+                jobs(HardwareWorkKind.KOS_MODULE_QUEUE, 0x36800C);
+        assertEquals(1, parents.size());
+        assertEquals(0x548 * 32, parents.getFirst().destinationAddress(),
+                "LoadEnemyArt schedules Monkey Dude at ArtTile_MonkeyDude");
+
+        S3kRuntimeArtCoordinator.current().moduleQueue()
+                .processModuleQueueAfterObjects();
+
+        List<HardwareTimingJob.Snapshot> children =
+                jobs(HardwareWorkKind.KOS_DECOMPRESSION_QUEUE, 0x36800E);
+        assertEquals(1, children.size());
+        assertEquals(S3kKosRamDestinations.KOS_DECOMP_BUFFER,
+                children.getFirst().destinationAddress());
+    }
+
+    @Test
+    void postCompletionRestoreCannotReleaseOrSubmitTheEnemyBatchAgain()
+            throws Exception {
+        Sonic3kObjectArtProvider provider = loadProvider(
+                Sonic3kZoneIds.ZONE_AIZ, 0);
+        provider.onTitleCardPresentationSkipped();
+        for (int tick = 1; tick <= 35; tick++) {
+            provider.processRuntimeArtQueue();
+        }
+        PlcProgressSnapshot completed = provider.capture();
+        int submittedParents = jobs(
+                HardwareWorkKind.KOS_MODULE_QUEUE, 0x36800C).size();
+
+        Sonic3kObjectArtProvider restored = new Sonic3kObjectArtProvider();
+        restored.restore(completed);
+        restored.processRuntimeArtQueue();
+
+        assertEquals(submittedParents,
+                jobs(HardwareWorkKind.KOS_MODULE_QUEUE, 0x36800C).size());
+        assertEquals(-1, restored.capture().titleCardTeardownTicks());
+        assertTrue(restored.capture().runtimeArtAdmissionConsumed());
+    }
+
+    private static List<HardwareTimingJob.Snapshot> jobs(
+            HardwareWorkKind kind, int sourceAddress) {
+        return GameServices.hardwareTiming().capture().jobs().stream()
+                .filter(job -> job.kind() == kind)
+                .filter(job -> job.romSourceAddress() == sourceAddress)
+                .toList();
     }
 
     @Test
