@@ -147,44 +147,116 @@ merged local route branch. Route branches are never pushed.
 
 ## Task 3: Resolve or re-characterize the AIZ direct `#35` frontier
 
-Likely files, selected only after measurement:
+Triage selected one exclusive ownership set:
 
-- `src/main/java/com/openggf/game/sonic3k/events/Sonic3kAIZEvents.java`
-- `src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesAiz1Instance.java`
-- `src/main/java/com/openggf/level/LevelActTransitionExecutor.java`
-- `src/test/java/com/openggf/game/sonic3k/events/TestSonic3kAIZEvents.java`
-- the existing AIZ cutscene/transition focused test nearest the demonstrated owner
-
-The Triage handoff replaces this candidate list with one exact exclusive ownership set before
-Fix begins.
+- `docs/architecture/designs/2026-07-27-cross-game-hardware-timing-trace-contract.md`
+- `src/main/java/com/openggf/trace/replay/TraceSuppressedRowClosure.java`
+- `src/main/java/com/openggf/trace/timing/TraceHardwareTimingBoundaryObserver.java`
+- `src/main/java/com/openggf/trace/timing/HardwareTimingReplayPort.java` for a current-row
+  scheduled-boundary helper that shares ordinary edge-consumption bookkeeping
+- `src/main/java/com/openggf/game/timing/RecordedCompletionAuthority.java` and
+  `src/main/java/com/openggf/game/timing/HardwareTimingService.java` for one suppressed-row
+  admission operation that bypasses only the ordinary last-service-boundary equality
+- `src/test/java/com/openggf/tools/TestRecordingFrameDriverHardwareTiming.java`
+- `src/test/java/com/openggf/trace/replay/TestTraceSuppressedRowClosure.java`
+- `src/test/java/com/openggf/trace/timing/TestHardwareTimingReplayPort.java` only for the
+  helper's current-row/stale/gap and rewind contracts, plus the stale pre-August-1
+  same-row module/direct ordering expectation
+- `src/test/java/com/openggf/game/timing/TestHardwareTimingService.java` for direct
+  suppressed-authority boundary and ordinary-authority regression coverage
+- `src/test/java/com/openggf/game/sonic3k/resources/TestS3kKosStructuralSequence.java`
+  for real direct-FIFO/KosM-parent and rewind integration coverage
+- `src/test/java/com/openggf/trace/timing/TestHardwareTimingAuthorityGuard.java` only if a
+  new source-level confinement assertion is needed
 
 Investigation gate:
 
-1. Rerun the complete segment and extract every queue group at frames 1106-1238,
-   6216-6288, and 6300 through the terminal edge.
-2. Instrument, without committing diagnostics, these native lifecycle boundaries:
-   - Knuckles intro-exit completion and allocated title-card dispatch;
-   - forced camera snap and the first transient `$1400` crossing;
-   - `serviceAiz1MainLevelArt` claim/submission;
-   - seamless AIZ1-to-AIZ2 mutation and transition completion.
-3. Compare engine transitions to the fixture's physics/aux rows and the corresponding
-   `sonic3k.asm` dispatch order. Do not infer producer time from an end-of-frame camera row
-   alone.
-4. Establish whether direct `#35` is causally downstream of the same transition skew or is
-   an independent repeated producer edge.
+1. Preserve the extracted queue groups at frames 1106-1238, 6216-6288, and 6300 through
+   the terminal edge as comparator context.
+2. Pin the decisive raw-row facts: raw 6346 has unchanged gameplay-frame counter and a lag
+   observation, while `hardware_timing.jsonl` records prepared direct `#35` at
+   `PRE_MAIN_LOOP`; raw 6347 currently rejects the unconsumed edge.
+3. Confirm the engine pending head before the edge is the real post-reload Monkey Dude child
+   with kind, ordinal, and fingerprint matching `#35`.
+4. Keep the separate one-frame seamless offset and intro/title-card queue windows recorded
+   as later comparator frontiers; do not use them to deny an otherwise exact hardware edge.
 
 Implementation gate:
 
-- Add a focused failing lifecycle test for the measured ROM boundary before changing code.
-- Correct only the owner that collapses or delays a native dispatch: event, allocated object
-  turn, transition sequencing, or placement cursor as the evidence shows.
-- Do not gate on trace frame, route identity, zone name in shared code, or recorded edge.
-- Do not change `HardwareTimingService`, `HardwareTimingReplayPort`, or fixture data.
+- Add a focused red driver test with a real, already-prepared S3K direct job and a
+  `PRE_MAIN_LOOP` edge on raw N. Drive raw N through the VBlank-only skip path and require
+  the exact edge to be consumed, with no gameplay body, object scan, gameplay event update,
+  coordinator pre-step, `HardwareTimingService.service`, new submission, or payload
+  preparation. Require the coordinator post-service hook described below and preserve the
+  closure's native event/object VBlank-only state advancement after admission.
+- Add fail-closed coverage proving the suppressed-row path does nothing without a compiled
+  current-row edge and rejects absent, unprepared, wrong-kind, wrong-ordinal,
+  wrong-fingerprint, wrong-boundary, stale same-enum, and unrepresented-gap cases. Preserve
+  exact-once deduplication and rewind re-consumption.
+- Correct the pre-existing schema-2 ordering test to traverse same-row module
+  `POST_OBJECTS` before direct loop-tail `PRE_MAIN_LOOP`, matching
+  `HardwareServiceBoundary` and commit `ddaf8e152`; do not change production ordering.
+- After the ordinary VInt closure, let `TraceSuppressedRowClosure` ask only an installed
+  `TraceHardwareTimingBoundaryObserver` to expose a scheduled suppressed-row completion.
+  The observer/port may apply only a current-raw `PRE_MAIN_LOOP` head and must share the
+  existing port's ordering, identity, rollback, deduplication, cursor, and rewind path.
+- Return whether the observer consumed an exact edge. Only on success, have the closure run
+  `RuntimeArtCoordinator.afterTimingService(PRE_MAIN_LOOP)` so the production direct FIFO
+  observes and retires its newly ready head. Do not run the coordinator pre-step or
+  `HardwareTimingService.service`; the KosM parent remains owned by its next ordinary
+  `POST_OBJECTS` state step.
+- Add a real S3K queue integration test: successful suppressed admission retires the direct
+  physical FIFO head through the post-service hook, leaves its KosM parent unprepared until
+  the next ordinary `POST_OBJECTS` state step, and after restoring timing, port, and direct
+  FIFO rewind snapshots re-admits/retires the same child exactly once.
+- Add `RecordedCompletionAuthority.admitRecordedSuppressedRowCompletion` as a separate
+  capability. It accepts only `PRE_MAIN_LOOP` and bypasses only
+  `HardwareTimingService.lastServicedBoundary`, which is necessarily `VINT_SERVICE` after
+  the row closure. It must reuse all ordinary FIFO-head, identity, fingerprint,
+  preparation, already-released, and readiness mutations.
+- Add direct service tests proving the suppressed authority admits exact prepared work
+  after `VINT_SERVICE`, rejects `VINT_SERVICE` and `POST_OBJECTS`, and leaves ordinary
+  admission's `lastServicedBoundary` enforcement unchanged.
+- Pin closure ordering in `TestTraceSuppressedRowClosure`: scheduled exposure occurs once,
+  immediately after `VINT_SERVICE`, followed only on success by the runtime-art coordinator
+  post-service hook, then pending-title start, level-event VBlank state, and object
+  VBlank-counter mutation. The no-edge path retains the existing VInt-only event sequence
+  and does not call the coordinator.
+- Extend `TestHardwareTimingAuthorityGuard` so the new authority method is callable only
+  from `HardwareTimingReplayPort`, and the port helper is callable only from
+  `TraceHardwareTimingBoundaryObserver`. Gameplay/replay drivers may not import or invoke
+  either capability directly.
+- Do not infer the boundary from lag/physics/auxiliary row contents. Do not advance a stale
+  edge at `beginRawFrame`, run `HardwareBoundaryDispatch` or
+  `HardwareTimingService.service`, create or prepare work, or change fixture data,
+  gameplay owners, or shared game logic.
+- Run `TestHardwareTimingAuthorityGuard`, replay-port/service/order tests, then AIZ replay.
+  HCZ and MHZ must retain their producer-mismatch terminal errors rather than being admitted
+  by this change.
 
 Terminal condition:
 
 - Advance/remove `#35` without new regressions, or publish an exact negative result with
   the demonstrated causal chain, unchanged baseline, and next safe owner.
+
+Measured disposition:
+
+- The current-row path admits exact prepared direct `#35` at raw 6346 and the coordinator
+  post-hook retires the real FIFO head. The dependent module `#15` then prepares and admits
+  through the next ordinary `POST_OBJECTS` step.
+- The next terminal is module `#16` at raw 6351 `VINT_SERVICE`. Raw 6351 is another
+  held-counter row, but the engine's production parent is not prepared because its ordinary
+  `POST_OBJECTS` state step has not run since the direct child became ready. Do not add a
+  timing-authority path that prepares it or runs the module coordinator.
+- `HardwareTimingEventEngine.ObserveFrameEnd` and the frozen Lua scanner classify a module
+  retirement first observed on a duplicate `Level_frame_counter` sample as `vint_service`.
+  The current fixture timing was published before the August 1 `ddaf8e152` loop-tail phase
+  migration; the later `8a6313bb3` regeneration explicitly found the timing bytes unchanged.
+  Record this as the next safe owner: audited native-recorder service-row attribution. If
+  the audit proves the stamp stale, correction and fixture regeneration/publication require
+  separate approval. If the stamp is validated, a broader partial-CPU-prefix replay
+  contract requires a separate design/review. Fixture edits and either speculative outcome
+  are outside this branch.
 
 ## Task 4: Resolve or re-characterize the HCZ direct `#90` frontier
 
@@ -215,6 +287,12 @@ Terminal condition:
 - Advance/remove `#90`, or record exact evidence that the edge remains downstream of an
   unresolved owner with unchanged baseline. Never synthesize the Stars3 work from timing
   data.
+
+Measured disposition on the AIZ candidate: unchanged at 28 errors / 3,295 represented
+rows, first frame 3253 `tails_x_speed`, then direct `#90` with no engine submission. The
+suppressed-row capability is not reached because this is an ordinary production boundary;
+the next safe owner remains the earlier Tails/water-wall interaction and its downstream
+StarPost contact.
 
 ## Task 5: Resolve or re-characterize the MHZ direct `#335` frontier
 
@@ -247,6 +325,11 @@ Terminal condition:
 
 - Advance/remove `#335`, or record an evidence-backed negative with unchanged baseline.
   The timing layer must not create the missing repeated work.
+
+Measured disposition on the AIZ candidate: unchanged at 865 errors / 7,218 represented
+rows, first frame 3420 `rings`, then direct `#335` with no engine submission. The
+suppressed-row capability is not reached; the next safe owner remains the earlier
+slot-phased bouncing-ring/entry-ring production chain rather than timing authority.
 
 ## Task 6: Regression, documentation, and review
 

@@ -8,6 +8,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.openggf.game.timing.HardwareServiceBoundary.POST_OBJECTS;
+import static com.openggf.game.timing.HardwareServiceBoundary.PRE_MAIN_LOOP;
 import static com.openggf.game.timing.HardwareServiceBoundary.VINT_SERVICE;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -205,6 +206,61 @@ class TestHardwareTimingService {
                         VINT_SERVICE, handle.kind(), handle.ordinal(),
                         handle.submissionFingerprint()));
         assertTrue(error.getMessage().contains("not prepared"), error::getMessage);
+        assertFalse(service.isReady(handle));
+    }
+
+    @Test
+    void suppressedRowAdmissionAcceptsOnlyPreparedPreMainLoopWorkAfterVint() {
+        HardwareTimingService service = new HardwareTimingService();
+        RecordedCompletionAuthority authority = service.beginRecordedAdmission();
+        HardwareWorkHandle handle = service.submit(submission(1, new byte[] {46}));
+        service.service(POST_OBJECTS);
+        service.service(VINT_SERVICE);
+
+        authority.admitRecordedSuppressedRowCompletion(
+                PRE_MAIN_LOOP, handle.kind(), handle.ordinal(),
+                handle.submissionFingerprint());
+
+        assertTrue(service.isReady(handle));
+    }
+
+    @Test
+    void suppressedRowAdmissionRejectsNonPreMainLoopBoundaries() {
+        for (HardwareServiceBoundary boundary : List.of(VINT_SERVICE, POST_OBJECTS)) {
+            HardwareTimingService service = new HardwareTimingService();
+            RecordedCompletionAuthority authority = service.beginRecordedAdmission();
+            HardwareWorkHandle handle = service.submit(submission(1, new byte[] {47}));
+            service.service(POST_OBJECTS);
+            service.service(VINT_SERVICE);
+
+            IllegalArgumentException error = assertThrows(
+                    IllegalArgumentException.class,
+                    () -> authority.admitRecordedSuppressedRowCompletion(
+                            boundary, handle.kind(), handle.ordinal(),
+                            handle.submissionFingerprint()));
+
+            assertTrue(error.getMessage().contains("PRE_MAIN_LOOP"), error::getMessage);
+            assertFalse(service.isReady(handle));
+        }
+    }
+
+    @Test
+    void ordinaryAdmissionStillRequiresTheProductionServiceBoundary() {
+        HardwareTimingService service = new HardwareTimingService();
+        RecordedCompletionAuthority authority = service.beginRecordedAdmission();
+        HardwareWorkHandle handle = service.submit(submission(1, new byte[] {48}));
+        service.service(POST_OBJECTS);
+        service.service(VINT_SERVICE);
+
+        IllegalStateException error = assertThrows(
+                IllegalStateException.class,
+                () -> authority.admitRecordedCompletion(
+                        PRE_MAIN_LOOP, handle.kind(), handle.ordinal(),
+                        handle.submissionFingerprint()));
+
+        assertTrue(error.getMessage().contains(
+                "expected PRE_MAIN_LOOP, production serviced VINT_SERVICE"),
+                error::getMessage);
         assertFalse(service.isReady(handle));
     }
 

@@ -3,6 +3,18 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: trace replay can now expose an exact, already-prepared S3K direct
+  Kosinski completion recorded on a held-counter row after that row's VInt-only
+  closure. The capability is confined to the hardware-timing replay port,
+  accepts only the current raw row's `PRE_MAIN_LOOP` edge, reuses strict
+  kind/ordinal/fingerprint/preparation and rewind checks, and runs only the
+  direct FIFO's production post-service observation after admission. It never
+  services a producer or prepares work. This advances the AIZ complete-run
+  terminal through direct `#35` and its dependent module `#15`; the next module
+  `#16` edge remains fail-closed because the published native recorder assigns
+  its first held-counter observation to `VINT_SERVICE` before production has
+  prepared the parent. HCZ direct `#90` and MHZ direct `#335` remain unchanged
+  missing-production-submission frontiers.
 - Fix/Test: S3K AIZ Draw Bridge and MHZ Swing Vine no longer pin placement
   slots through over-broad `isPersistent()` results. Draw Bridge normal/wait
   operations use their saved pivot and the native unsigned `$280` coarse-back

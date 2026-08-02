@@ -431,6 +431,31 @@ public final class HardwareTimingService
                 HardwareWorkKind kind,
                 long ordinal,
                 String submissionFingerprint) {
+            admitRecordedCompletion(
+                    boundary, kind, ordinal, submissionFingerprint, true);
+        }
+
+        @Override
+        public void admitRecordedSuppressedRowCompletion(
+                HardwareServiceBoundary boundary,
+                HardwareWorkKind kind,
+                long ordinal,
+                String submissionFingerprint) {
+            if (boundary != HardwareServiceBoundary.PRE_MAIN_LOOP) {
+                throw new IllegalArgumentException(
+                        "suppressed-row completion requires PRE_MAIN_LOOP: "
+                                + boundary);
+            }
+            admitRecordedCompletion(
+                    boundary, kind, ordinal, submissionFingerprint, false);
+        }
+
+        private void admitRecordedCompletion(
+                HardwareServiceBoundary boundary,
+                HardwareWorkKind kind,
+                long ordinal,
+                String submissionFingerprint,
+                boolean requireServicedBoundary) {
             requireRecordedAdmission();
             Objects.requireNonNull(boundary, "boundary");
             Objects.requireNonNull(kind, "kind");
@@ -439,7 +464,7 @@ public final class HardwareTimingService
                 throw new IllegalStateException(
                         "recorded completion kind is not recorded by this stream: " + kind);
             }
-            if (lastServicedBoundary != boundary) {
+            if (requireServicedBoundary && lastServicedBoundary != boundary) {
                 throw new IllegalStateException(
                         "recorded completion boundary mismatch: expected " + boundary
                                 + ", production serviced " + lastServicedBoundary);

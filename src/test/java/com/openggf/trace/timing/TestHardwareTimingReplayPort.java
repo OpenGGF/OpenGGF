@@ -1,6 +1,7 @@
 package com.openggf.trace.timing;
 
 import com.openggf.game.timing.HardwareServiceBoundary;
+import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.game.timing.HardwareTimingSnapshot;
 import com.openggf.game.timing.HardwareSubmissionFingerprint;
@@ -39,9 +40,9 @@ class TestHardwareTimingReplayPort {
     }
 
     @Test
-    void schemaTwoAdmitsDirectPreEdgeBeforeIndependentModulePostEdge() {
+    void schemaTwoAdmitsModulePostEdgeBeforeDirectLoopTailEdge() {
         HardwareTimingService service = new HardwareTimingService(
-                com.openggf.game.timing.RomWorkBudgetScheduler.oneWorkUnitAt(PRE_MAIN_LOOP));
+                com.openggf.game.timing.RomWorkBudgetScheduler.oneWorkUnitAt(POST_OBJECTS));
         RecordedCompletionAuthority authority = service.beginRecordedAdmission();
         HardwareWorkSubmission directSubmission = submission(
                 HardwareWorkKind.KOS_DECOMPRESSION_QUEUE, false, 1, 70);
@@ -54,21 +55,21 @@ class TestHardwareTimingReplayPort {
                 0, POST_OBJECTS, HardwareWorkKind.KOS_MODULE_QUEUE, 0,
                 HardwareSubmissionFingerprint.compute(moduleSubmission));
         HardwareTimingReplayPort port = port(authority,
-                new HardwareTimingSchedule(2, List.of(directEdge, moduleEdge)));
+                new HardwareTimingSchedule(2, List.of(moduleEdge, directEdge)));
         HardwareWorkHandle direct = service.submit(directSubmission);
         HardwareWorkHandle module = service.submit(moduleSubmission);
 
         port.beginRawFrame(0);
+        service.service(POST_OBJECTS);
+        port.apply(POST_OBJECTS);
+
+        assertFalse(service.isReady(direct));
+        assertTrue(service.isReady(module));
+
         service.service(PRE_MAIN_LOOP);
         port.apply(PRE_MAIN_LOOP);
 
         assertTrue(service.isReady(direct));
-        assertFalse(service.isReady(module));
-
-        service.service(POST_OBJECTS);
-        port.apply(POST_OBJECTS);
-
-        assertTrue(service.isReady(module));
     }
 
     @Test
@@ -352,6 +353,202 @@ class TestHardwareTimingReplayPort {
         port.apply(POST_OBJECTS);
 
         assertTrue(harness.service.isReady(harness.handle));
+    }
+
+    @Test
+    void suppressedRowCompletionReleasesOnlyCurrentPreMainLoopHead() {
+        ReplayHarness harness = harness(false, 1, 49);
+        harness.service.service(POST_OBJECTS);
+        HardwareTimingReplayPort port = port(
+                harness.authority, edge(18, PRE_MAIN_LOOP, harness.handle));
+        port.beginRawFrame(18);
+        harness.service.service(VINT_SERVICE);
+        port.apply(VINT_SERVICE);
+
+        port.applySuppressedRowCompletion();
+
+        assertTrue(harness.service.isReady(harness.handle));
+        assertEquals(1, port.capture().consumedIdentities().size());
+    }
+
+    @Test
+    void suppressedRowCompletionWithoutScheduledEdgeIsNoOp() {
+        HardwareTimingService service = new HardwareTimingService();
+        RecordedCompletionAuthority authority = service.beginRecordedAdmission();
+        HardwareTimingReplayPort port = port(
+                authority, HardwareTimingSchedule.empty());
+        port.beginRawFrame(18);
+        service.service(VINT_SERVICE);
+        port.apply(VINT_SERVICE);
+
+        port.applySuppressedRowCompletion();
+
+        assertEquals(0, port.capture().edgeCursor());
+        assertTrue(port.capture().consumedIdentities().isEmpty());
+    }
+
+    @Test
+    void suppressedRowCompletionFailsClosedForMissingUnpreparedAndMismatchedHeads() {
+        HardwareTimingService missingService = new HardwareTimingService();
+        RecordedCompletionAuthority missingAuthority =
+                missingService.beginRecordedAdmission();
+        HardwareCompletionEdge missingEdge = new HardwareCompletionEdge(
+                19, PRE_MAIN_LOOP, HardwareWorkKind.KOS_MODULE_QUEUE,
+                0, fingerprint('1'));
+        HardwareTimingReplayPort missingPort = port(missingAuthority, missingEdge);
+        missingPort.beginRawFrame(19);
+        missingService.service(VINT_SERVICE);
+        missingPort.apply(VINT_SERVICE);
+        assertThrows(IllegalStateException.class,
+                missingPort::applySuppressedRowCompletion);
+
+        ReplayHarness unprepared = harness(false, 1, 50);
+        HardwareTimingReplayPort unpreparedPort = port(
+                unprepared.authority, edge(20, PRE_MAIN_LOOP, unprepared.handle));
+        unpreparedPort.beginRawFrame(20);
+        unprepared.service.service(VINT_SERVICE);
+        unpreparedPort.apply(VINT_SERVICE);
+        IllegalStateException unpreparedError = assertThrows(
+                IllegalStateException.class,
+                unpreparedPort::applySuppressedRowCompletion);
+        assertTrue(unpreparedError.getMessage().contains("not prepared"),
+                unpreparedError::getMessage);
+
+        ReplayHarness mismatched = harness(false, 1, 51);
+        mismatched.service.service(POST_OBJECTS);
+        HardwareCompletionEdge wrongFingerprint = new HardwareCompletionEdge(
+                21, PRE_MAIN_LOOP, mismatched.handle.kind(),
+                mismatched.handle.ordinal(), fingerprint('2'));
+        HardwareTimingReplayPort mismatchPort = port(
+                mismatched.authority, wrongFingerprint);
+        mismatchPort.beginRawFrame(21);
+        mismatched.service.service(VINT_SERVICE);
+        mismatchPort.apply(VINT_SERVICE);
+        IllegalStateException mismatchError = assertThrows(
+                IllegalStateException.class,
+                mismatchPort::applySuppressedRowCompletion);
+        assertExpectedAndEngineIdentities(
+                mismatchError, wrongFingerprint, mismatched.handle);
+
+        ReplayHarness wrongOrdinalHarness = harness(false, 1, 56);
+        wrongOrdinalHarness.service.service(POST_OBJECTS);
+        HardwareCompletionEdge wrongOrdinal = new HardwareCompletionEdge(
+                21, PRE_MAIN_LOOP, wrongOrdinalHarness.handle.kind(),
+                wrongOrdinalHarness.handle.ordinal() + 1,
+                wrongOrdinalHarness.handle.submissionFingerprint());
+        HardwareTimingReplayPort wrongOrdinalPort = port(
+                wrongOrdinalHarness.authority, wrongOrdinal);
+        wrongOrdinalPort.beginRawFrame(21);
+        wrongOrdinalHarness.service.service(VINT_SERVICE);
+        wrongOrdinalPort.apply(VINT_SERVICE);
+        IllegalStateException ordinalError = assertThrows(
+                IllegalStateException.class,
+                wrongOrdinalPort::applySuppressedRowCompletion);
+        assertExpectedAndEngineIdentities(
+                ordinalError, wrongOrdinal, wrongOrdinalHarness.handle);
+
+        HardwareTimingService wrongKindService = new HardwareTimingService();
+        RecordedCompletionAuthority wrongKindAuthority =
+                wrongKindService.beginRecordedAdmission();
+        wrongKindAuthority.configureAdmissionPolicies(Map.of(
+                HardwareWorkKind.KOS_MODULE_QUEUE,
+                HardwareReadinessAdmissionPolicy.RECORDED,
+                HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
+                HardwareReadinessAdmissionPolicy.RECORDED));
+        HardwareWorkHandle moduleHandle = wrongKindService.submit(submission(
+                HardwareWorkKind.KOS_MODULE_QUEUE, false, 1, 58));
+        wrongKindService.service(POST_OBJECTS);
+        HardwareCompletionEdge wrongKind = new HardwareCompletionEdge(
+                22,
+                PRE_MAIN_LOOP,
+                HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
+                moduleHandle.ordinal(),
+                moduleHandle.submissionFingerprint());
+        HardwareTimingReplayPort wrongKindPort = port(
+                wrongKindAuthority,
+                new HardwareTimingSchedule(2, List.of(wrongKind)));
+        wrongKindPort.beginRawFrame(22);
+        wrongKindService.service(VINT_SERVICE);
+        wrongKindPort.apply(VINT_SERVICE);
+
+        IllegalStateException kindError = assertThrows(
+                IllegalStateException.class,
+                wrongKindPort::applySuppressedRowCompletion);
+
+        assertTrue(kindError.getMessage().contains(
+                "expected completion: " + wrongKind.kind() + "#"
+                        + wrongKind.ordinal()), kindError::getMessage);
+        assertTrue(kindError.getMessage().contains(describe(moduleHandle)),
+                kindError::getMessage);
+        assertFalse(wrongKindService.isReady(moduleHandle));
+        assertEquals(0, wrongKindPort.capture().edgeCursor());
+        assertTrue(wrongKindPort.capture().consumedIdentities().isEmpty());
+    }
+
+    @Test
+    void suppressedRowCompletionRejectsWrongBoundaryStaleRowAndGap() {
+        ReplayHarness noCurrentService = harness(false, 1, 57);
+        noCurrentService.service.service(POST_OBJECTS);
+        HardwareTimingReplayPort noCurrentServicePort = port(
+                noCurrentService.authority,
+                edge(22, PRE_MAIN_LOOP, noCurrentService.handle));
+        noCurrentServicePort.beginRawFrame(22);
+        assertThrows(IllegalStateException.class,
+                noCurrentServicePort::applySuppressedRowCompletion);
+
+        ReplayHarness wrongBoundary = harness(false, 1, 52);
+        wrongBoundary.service.service(POST_OBJECTS);
+        HardwareTimingReplayPort wrongBoundaryPort = port(
+                wrongBoundary.authority,
+                edge(22, POST_OBJECTS, wrongBoundary.handle));
+        wrongBoundaryPort.beginRawFrame(22);
+        wrongBoundary.service.service(VINT_SERVICE);
+        wrongBoundaryPort.apply(VINT_SERVICE);
+        assertThrows(IllegalStateException.class,
+                wrongBoundaryPort::applySuppressedRowCompletion);
+
+        ReplayHarness stale = harness(false, 1, 53);
+        stale.service.service(POST_OBJECTS);
+        HardwareTimingReplayPort stalePort = port(
+                stale.authority, edge(23, PRE_MAIN_LOOP, stale.handle));
+        stalePort.beginRawFrame(23);
+        stale.service.service(VINT_SERVICE);
+        stalePort.apply(VINT_SERVICE);
+        assertThrows(IllegalStateException.class,
+                () -> stalePort.beginRawFrame(24));
+
+        ReplayHarness gap = harness(false, 1, 54);
+        gap.service.service(POST_OBJECTS);
+        HardwareTimingReplayPort gapPort = port(
+                gap.authority, edge(24, PRE_MAIN_LOOP, gap.handle));
+        gapPort.beginRawFrame(24);
+        gapPort.enterUnrepresentedGap();
+        gapPort.applySuppressedRowCompletion();
+        assertFalse(gap.service.isReady(gap.handle));
+        assertThrows(IllegalStateException.class, gapPort::verifySegmentEdges);
+    }
+
+    @Test
+    void rewindRestoresSuppressedRowCompletionForExactOnceReadmission() {
+        ReplayHarness harness = harness(false, 1, 55);
+        harness.service.service(POST_OBJECTS);
+        HardwareTimingReplayPort port = port(
+                harness.authority, edge(25, PRE_MAIN_LOOP, harness.handle));
+        port.beginRawFrame(25);
+        harness.service.service(VINT_SERVICE);
+        port.apply(VINT_SERVICE);
+        HardwareTimingSnapshot serviceBeforeEdge = harness.service.capture();
+        HardwareTimingReplaySnapshot portBeforeEdge = port.capture();
+
+        port.applySuppressedRowCompletion();
+        assertTrue(harness.service.isReady(harness.handle));
+
+        harness.service.restore(serviceBeforeEdge);
+        port.restore(portBeforeEdge);
+        port.applySuppressedRowCompletion();
+
+        assertTrue(harness.service.isReady(harness.handle));
+        assertEquals(1, port.capture().consumedIdentities().size());
     }
 
     @Test

@@ -55,7 +55,10 @@
   exact causal/independence evidence, report counts, and the next safe owner. Any change
   must not regress the other complete-run segments, the AIZ release-slice gate, rewind
   coverage, or hardware-authority guards.
-- The hardware timing authority tests remain green and no timing-layer exception is added.
+- The hardware timing authority tests remain green. The sole generalized replay
+  clarification is that a compiled current-row `PRE_MAIN_LOOP` completion may be exposed
+  from a suppressed held-counter row without running production service or gameplay. It
+  does not loosen identity, preparation, producer, or boundary requirements.
 - The broad `frameCounter` rename is either completed atomically with hierarchy-wide
   verification or explicitly deferred with measured blast radius and a quiet-tree gate.
 
@@ -139,17 +142,61 @@ after an earlier divergence.
 
 The timing service is fail-closed: it admits only an already-prepared FIFO head with the
 recorded kind, ordinal, fingerprint, and boundary. Earlier matching admissions succeed.
-Changing this layer would hide missing or mistimed production work and violate the hardware
-timing contract. An earlier comparator divergence is not automatically causal: an
+The August 1 loop-tail migration correctly changed production and enum order to
+`VINT_SERVICE`, `POST_OBJECTS`, `PRE_MAIN_LOOP`, but left one replay-port test and two
+contract sentences in the former PRE-before-POST order. Those stale expectations are
+corrected here; no runtime boundary order changes.
+Producer mismatches must not be repaired in this layer. AIZ triage found one narrower replay
+representation seam, however: raw 6346 is a lag row whose ROM CPU prefix reaches
+`Process_Kos_Queue` before `Wait_VSync`, and the schema-2 ledger records direct `#35` at
+`PRE_MAIN_LOOP`; the replay skips the whole gameplay tick, so no production boundary callback
+consumes the otherwise exact, prepared engine submission before raw 6347 rejects it. The
+permitted correction belongs to the shared suppressed-row replay lifecycle. When the
+compiled schedule has a `PRE_MAIN_LOOP` completion on the current held-counter raw row,
+`TraceSuppressedRowClosure` exposes that one boundary to
+`TraceHardwareTimingBoundaryObserver` after the row's VInt closure. It does not execute a
+second `HardwareBoundaryDispatch`, production decompressor service, main loop, object scan,
+or producer. After an exact admission, the closure runs only
+`RuntimeArtCoordinator.afterTimingService(PRE_MAIN_LOOP)`, the missing production
+post-service half that retires the now-ready direct FIFO head. It does not run the
+coordinator pre-step or timing service, so it cannot advance preparation or create work;
+the KosM parent observes the retired child through its ordinary next `POST_OBJECTS` step.
+After VInt, production's last-service marker correctly reads `VINT_SERVICE`,
+so the ordinary completion-authority operation cannot certify the earlier loop-tail edge.
+The authority therefore gains one separate suppressed-row operation, callable only by the
+replay port for a compiled current-raw `PRE_MAIN_LOOP` head. It bypasses only that stale
+last-service equality and reuses the exact pending-head, kind, ordinal, fingerprint,
+preparation, release, ordering, deduplication, and rewind checks. Source guards confine the
+operation to the port and the port entry to the stateless observer. Raw-time advancement
+alone remains non-authoritative and stale edges still fail. This changes only when real,
+already-prepared submitted work becomes ready and reads no lag, physics, auxiliary, game,
+zone, route, or frame-specific comparison state.
+
+HCZ `#90` and MHZ `#335` do not have matching engine submissions and therefore remain
+producer/lifecycle failures; the current-row suppressed-boundary path must reject them
+unchanged. An earlier comparator divergence is not automatically causal: an
 independent, exactly identified production edge may still be corrected while earlier
 physics differences remain. Instrumentation must establish causality or independence
 before selecting an owner.
 
 The route-specific upstream owners are:
 
-- AIZ: intro-exit/title-card/seamless transition choreography and
-  `Sonic3kAIZEvents.serviceAiz1MainLevelArt`; existing evidence shows the producer identity
-  is right but its lifecycle moment is wrong.
+- AIZ: the repeated post-reload Monkey Dude job is real, already submitted, prepared, and
+  fingerprint/ordinal exact. The terminal is the collapsed CPU-prefix timing seam above;
+  intro/title-card and seamless-transition mismatches remain comparator frontiers after the
+  admission error is removed, but they are not prerequisites for admitting `#35`. The
+  implemented closure admits direct `#35`, retires its real FIFO head, and then admits the
+  dependent module `#15` on the next ordinary `POST_OBJECTS` step. Replay reaches raw 6351,
+  where fixture module `#16` is stamped `VINT_SERVICE` on another held-counter row while
+  the production parent is still unprepared. The authority correctly rejects it. The
+  native classifier in `HardwareTimingEventEngine.ObserveFrameEnd` assigns duplicate
+  `Level_frame_counter` module retirements to `vint_service`; the fixture was published by
+  `bceb299d8`/regenerated byte-identically by `8a6313bb3` before `ddaf8e152` changed the
+  engine's loop-tail phase model. The next owner is an audited recorder
+  observation-row/service-row attribution review. A stale attribution requires correction
+  and separately approved re-publication; if the current stamp is validated, any broader
+  partial-CPU-prefix representation requires a separate design review. This branch must not
+  guess between those outcomes or broaden timing authority.
 - HCZ: direct `#90` is the Stars3 child of module `28a69b8f...`, produced by the StarPost
   bonus-star art path at raw 3341/3342. Measure whether the frame-3253 Tails divergence
   changes StarPost contact/production. Select among sidekick, earlier water-wall/geyser
@@ -173,8 +220,9 @@ helpers, followed by a full compile and suite run.
 ## Architecture Decision
 
 Use a provenance correction, a bounded ROM-lifetime audit, and trace-frontier-first S3K
-fixes. Do not change the hardware timing authority and do not perform the update-parameter
-rename in this active tree.
+fixes. Preserve `HardwareTimingService` and its production authority. The only timing replay
+change allowed here is the fail-closed current-row suppressed-boundary exposure above; do
+not perform the update-parameter rename in this active tree.
 
 This keeps ownership at the smallest accurate boundary:
 
@@ -182,8 +230,9 @@ This keeps ownership at the smallest accurate boundary:
 - Persistence corrections live in the affected object and its focused lifetime test.
 - S3K changes remain at the smallest ROM-owned production/lifecycle boundary, including
   event or object state, execution ordering, placement/cursor lifetime, sidekick control,
-  or transition sequencing as evidence requires. The shared hardware timing port continues
-  to control only when matching production work becomes ready.
+  or transition sequencing as evidence requires. The shared hardware timing port and its
+  narrowly confined suppressed-row authority continue to control only when matching,
+  already-prepared production work becomes ready.
 - The semantic rename is reserved for a dedicated quiet-tree branch because it is a broad
   source-compatibility edit with no behavioral coupling to the other work.
 
@@ -194,9 +243,9 @@ Alternatives rejected:
 2. Re-recording with Lua: the Lua recorder lacks the fixture's native dynamic-art stream.
 3. Synthesizing a missing S3K job at an expected edge: recorded timing would decide what
    happens, violating the authority boundary.
-4. Patching a terminal edge in the timing layer: all three runs already have production
-   state to investigate, and timing authority cannot replace the exact owner even when the
-   terminal edge proves independent of an earlier comparator divergence.
+4. Synthesizing, moving, or identity-loosening a terminal edge in the timing layer: timing
+   authority cannot replace the exact production owner. The accepted AIZ correction only
+   exposes the fixture's exact current-row boundary to an already-prepared matching job.
 5. Opportunistic partial parameter rename: it increases conceptual inconsistency and merge
    conflicts.
 
@@ -248,6 +297,11 @@ candidate. MHZ may still receive an independent, ROM-grounded producer fix while
 slot-dependent comparator error remains, but no trace-driven or fitted substitute is
 permitted. Each route closes with either an advanced/removed named edge or a documented
 negative result meeting the acceptance criterion above.
+
+The AIZ route therefore closes this branch with a bounded positive and a bounded negative:
+direct `#35` and its dependent module `#15` advance through the production queues, while
+module `#16` remains a fail-closed recorder/fixture-contract frontier. No fixture payload is
+edited under this workstream.
 
 ### Workstream D: semantic rename disposition
 

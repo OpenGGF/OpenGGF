@@ -60378,3 +60378,51 @@ Context: `.worktrees/handover-followups`, branch `bugfix/ai-handover-followups`,
 The corrections remove latent placement-slot leaks without moving the current early trace
 frontiers. The next active pipeline remains AIZ frame 1106/direct `#35`; hardware timing
 authority is unchanged.
+
+## 2026-08-02 — S3K held-counter direct admission advances AIZ to recorder attribution
+
+Context: `.worktrees/handover-aiz`, branch `bugfix/ai-handover-aiz`, based on foundation
+commit `19a220906`. JDK 21.0.11; verified S3K locked-on ROM. Focused authority/core command:
+`mvn -Dmse=off -Dtest=TestHardwareTimingAuthorityGuard,TestHardwareTimingReplayPort,`
+`TestHardwareTimingService,TestLevelIterationHardwareTimingAdmissionOrder,`
+`TestS3kKosDecompressionQueue,TestS3kKosModuleQueue,TestS3kKosStructuralSequence,`
+`TestS3kHardwareTimingReplay,TestRecordingFrameDriverHardwareTiming,`
+`TestTraceSuppressedRowClosure -Ds3k.rom.path=<verified-s3k> test`.
+Result: 118 tests, 0 failures, 0 errors. The S3K event/object/keep-green/rewind
+batch listed in the handover plan also passed 151/151.
+
+AIZ raw 6346 is a held `Level_frame_counter`/lag observation whose compiled schema-2 edge
+is direct `KOS_DECOMPRESSION_QUEUE#35` at `PRE_MAIN_LOOP`. The engine already owns the
+exact prepared production submission. Suppressed-row closure now exposes only that current
+raw edge after VInt; strict kind, ordinal, fingerprint, preparation, ordering, deduplication,
+and rewind checks remain in force. An exact admission runs only
+`RuntimeArtCoordinator.afterTimingService(PRE_MAIN_LOOP)`, retiring the newly ready real
+direct FIFO head without a coordinator pre-step, timing service, main loop, object scan, or
+producer.
+
+Result: direct `#35` is consumed, and its real Monkey Dude KosM parent advances through
+module `#15` at the next ordinary `POST_OBJECTS` step. AIZ reaches 6,347 represented rows
+with 60 comparator errors, then stops at module `#16` on raw 6351 `VINT_SERVICE`. Raw 6351
+is another held-counter row, but this time the production parent is not prepared; admitting
+it would require replay to run the omitted module coordinator, which hard rule 4 forbids.
+
+History identifies the next owner. Native
+`HardwareTimingEventEngine.ObserveFrameEnd` (and the frozen Lua scanner) labels a module
+retirement first observed on a duplicate `Level_frame_counter` sample as `vint_service`.
+The fixture stream was published by `bceb299d8` and remained byte-identical through the
+`8a6313bb3` regeneration; both precede `ddaf8e152`, which changed the engine's production
+model to `VINT_SERVICE -> POST_OBJECTS -> PRE_MAIN_LOOP`. The safe next action is an
+audited native-recorder observation-row/service-row attribution review. If it proves the
+stamp stale, correction and fixture regeneration/publication require separate approval; if
+it validates the current edge, any broader partial-CPU-prefix replay contract requires a
+separate design and review. No fixture was edited here, and timing authority does not create
+or prepare the missing parent.
+
+Cross-route regression replays on this candidate:
+
+- HCZ isolated method: 28 errors / 3,295 represented rows, first frame 3253
+  `tails_x_speed`; unchanged terminal direct `#90` with engine pending `<none>`.
+- MHZ complete: 865 errors / 7,218 represented rows, first frame 3420 `rings`; unchanged
+  terminal direct `#335` with engine pending `<none>`.
+
+Those ordinary-boundary producer gaps are unaffected by the new exact held-row path.

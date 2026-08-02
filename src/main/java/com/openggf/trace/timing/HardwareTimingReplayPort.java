@@ -132,6 +132,43 @@ public final class HardwareTimingReplayPort
                             + boundary + ": " + describe(next));
         }
 
+        consumeAtBoundary(boundary, false);
+        lastAppliedBoundary = boundary;
+    }
+
+    /**
+     * Exposes an exact loop-tail completion recorded on the current suppressed
+     * row after that row has traversed VInt service.
+     */
+    public boolean applySuppressedRowCompletion() {
+        requireActive();
+        if (rawFrameLatch == null) {
+            return false;
+        }
+        rejectEdgeBefore(rawFrameLatch);
+        HardwareCompletionEdge next = nextEdge();
+        if (next == null || next.rawFrame() > rawFrameLatch) {
+            return false;
+        }
+        if (lastAppliedBoundary != HardwareServiceBoundary.VINT_SERVICE) {
+            throw new IllegalStateException(
+                    "suppressed-row completion requires current-row VINT_SERVICE: "
+                            + describe(next));
+        }
+        if (next.boundary() != HardwareServiceBoundary.PRE_MAIN_LOOP) {
+            throw new IllegalStateException(
+                    "suppressed row cannot expose hardware completion at "
+                            + next.boundary() + ": " + describe(next));
+        }
+        consumeAtBoundary(HardwareServiceBoundary.PRE_MAIN_LOOP, true);
+        lastAppliedBoundary = HardwareServiceBoundary.PRE_MAIN_LOOP;
+        return true;
+    }
+
+    private void consumeAtBoundary(
+            HardwareServiceBoundary boundary,
+            boolean suppressedRow) {
+        HardwareCompletionEdge next;
         while ((next = nextEdge()) != null
                 && next.rawFrame() == rawFrameLatch
                 && next.boundary() == boundary) {
@@ -142,18 +179,25 @@ public final class HardwareTimingReplayPort
                                 + describe(next));
             }
             try {
-                authority.admitRecordedCompletion(
-                        boundary,
-                        next.kind(),
-                        next.ordinal(),
-                        next.submissionFingerprint());
+                if (suppressedRow) {
+                    authority.admitRecordedSuppressedRowCompletion(
+                            boundary,
+                            next.kind(),
+                            next.ordinal(),
+                            next.submissionFingerprint());
+                } else {
+                    authority.admitRecordedCompletion(
+                            boundary,
+                            next.kind(),
+                            next.ordinal(),
+                            next.submissionFingerprint());
+                }
             } catch (RuntimeException failure) {
                 consumedIdentities.remove(identity);
                 throw failure;
             }
             edgeCursor++;
         }
-        lastAppliedBoundary = boundary;
     }
 
     public void handoffTo(HardwareTimingSchedule nextSchedule) {
