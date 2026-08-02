@@ -88,9 +88,7 @@ class TestLbz1RobotnikKosOwnerRewind {
         GameServices.level().getObjectManager().removeDynamicObject(controller);
         fixture.gameplayMode().getRewindRegistry().restore(snapshot);
         Lbz1RobotnikEventController restored = activeController();
-        setField(restored, "initialBoxArtQueue", null);
         setField(restored, "initialBoxArtHandle", null);
-        setField(restored, "collapseBoxArtQueue", null);
         setField(restored, "collapseBoxArtHandle", null);
         setField(restored, "collapseBoxArtOrdinal", -1L);
         long nextOrdinal = nextKosOrdinal(timing);
@@ -118,10 +116,8 @@ class TestLbz1RobotnikKosOwnerRewind {
         GameServices.level().getObjectManager().removeDynamicObject(controller);
         fixture.gameplayMode().getRewindRegistry().restore(snapshot);
         Lbz1RobotnikEventController restored = activeController();
-        setField(restored, "initialBoxArtQueue", null);
         setField(restored, "initialBoxArtHandle", null);
         setField(restored, "initialBoxArtOrdinal", -1L);
-        setField(restored, "collapseBoxArtQueue", null);
         setField(restored, "collapseBoxArtHandle", null);
         long nextOrdinal = nextKosOrdinal(timing);
 
@@ -180,9 +176,7 @@ class TestLbz1RobotnikKosOwnerRewind {
     private static CompositeSnapshot captureWithTransientOwnerStateCleared(
             HeadlessTestFixture fixture, Lbz1RobotnikEventController controller) throws Exception {
         setField(controller, "boxRig", null);
-        setField(controller, "initialBoxArtQueue", null);
         setField(controller, "initialBoxArtHandle", null);
-        setField(controller, "collapseBoxArtQueue", null);
         setField(controller, "collapseBoxArtHandle", null);
         return fixture.gameplayMode().getRewindRegistry().capture();
     }

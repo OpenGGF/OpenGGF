@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.titlecard;
 
+import com.openggf.data.RomManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.RuntimeArtAdmissionLease;
 import com.openggf.game.RuntimeArtAdmissionOwnerKind;
@@ -26,6 +27,9 @@ public class TestSonic3kBonusTitleCard {
     @BeforeEach
     public void setUp() throws Exception {
         TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_3K);
+        // This state-machine fixture does not service the KosM queues. Keep a
+        // ROM left by an earlier class in the reused fork from starting them.
+        RomManager.getInstance().setRom(null);
         Sonic3kGameModule module = (Sonic3kGameModule) GameServices.module();
         Field providerField = Sonic3kGameModule.class.getDeclaredField("objectArtProvider");
         providerField.setAccessible(true);

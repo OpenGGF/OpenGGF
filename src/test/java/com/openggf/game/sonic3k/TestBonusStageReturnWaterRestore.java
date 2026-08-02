@@ -10,6 +10,7 @@ import com.openggf.game.BonusStageState;
 import com.openggf.game.BonusStageType;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
+import com.openggf.game.LevelLoadContext;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.LevelManager;
@@ -24,6 +25,8 @@ import org.junit.jupiter.api.Test;
 import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_3K)
 public class TestBonusStageReturnWaterRestore {
@@ -36,6 +39,39 @@ public class TestBonusStageReturnWaterRestore {
     public static void configure() {
         SonicConfigurationService.getInstance()
                 .setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, true);
+    }
+
+    @Test
+    public void aiz1BonusReturnOverridesFreshIntroSuppressionWithoutSkippedOwner() {
+        SonicConfigurationService.getInstance()
+                .setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, false);
+        GraphicsManager.getInstance().initHeadless();
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_AIZ, ACT_1)
+                .build();
+
+        LevelManager levelManager = GameServices.level();
+        Sonic3kObjectArtProvider artProvider = (Sonic3kObjectArtProvider)
+                GameModuleRegistry.getCurrent().getObjectArtProvider();
+        var beforeReturn = artProvider.capture();
+        assertFalse(levelManager.isTitleCardRequested(),
+                "fresh AIZ intro suppression should begin without a title request");
+        assertEquals(-1, beforeReturn.titleCardTeardownTicks(),
+                "fresh AIZ intro suppression should not create a skipped-title owner");
+
+        levelManager.setBonusStageReturnCheckpointIndex(0);
+        try {
+            LevelLoadContext returnLoad = new LevelLoadContext();
+            returnLoad.setShowTitleCard(true);
+            levelManager.requestTitleCardIfNeeded(returnLoad);
+        } finally {
+            levelManager.clearBonusStageReturn();
+        }
+
+        assertTrue(levelManager.isTitleCardRequested(),
+                "bonus return must preserve the mandatory title request for GameLoop");
+        assertEquals(beforeReturn, artProvider.capture(),
+                "requesting the real return title must not start a competing skipped owner");
     }
 
     @Test

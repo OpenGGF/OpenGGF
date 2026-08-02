@@ -246,6 +246,40 @@ Every source-task commit carries all repository trailers. A `fix`/`refactor` com
 4. Add focused tests for ordinary delayed submission, held-results direct consumption, stale/replacement rejection with full provider-state immutability, and rewind before/after the next-pass edge. Run title/provider/lease/rewind tests, both AIZ traces, the seven-route group, exact 142 matrix, then the ordinary full suite and full trace fleet used for post-merge comparison.
 5. Re-review the amended design/plan and runtime reconciliation until GREEN before completing the merge commit.
 
+## Task 7F: close post-merge full-suite lifecycle regressions
+
+1. Reproduce the broad-suite title failures in a small ordered selector. Keep
+   production's duplicate-lease rejection unchanged. During a headless bonus
+   return, preserve the pending mandatory title request instead of creating a
+   skipped-presentation owner before `GameLoop` enters the return card. Update
+   `TestTitleCardObjectExecution` so its explicit fresh-AIZ title starts from the
+   ROM-accurate absent owner. Isolate `TestSonic3kBonusTitleCard` from ROM/service
+   state left by an earlier fork, then prove its four broad-suite-only assertions
+   pass both alone and after the reproducing predecessor selector.
+2. Add a RED rewind-field audit for the two `S3kKosModuleQueue` references in
+   `Lbz1RobotnikEventController`. Remove those stored references. Resolve the
+   current coordinator's module queue locally when queuing, readiness-testing,
+   or claiming, while retaining the handle and captured ordinal as the object's
+   exact job identity. Run the field audit/disposition guards and
+   `TestLbz1RobotnikKosOwnerRewind`; do not add a baseline exemption.
+3. Update `TestTraceReplayInvariantGuard` to locate
+   `private boolean replayS3kTrace(`. Preserve the BK2 validation, gameplay-row
+   normalization, and strict ring-diagnostic assertions verbatim, then run the
+   complete guard class.
+4. Re-run `TestMhzMushroomParachuteObjectInstance` alone and in its recorded
+   predecessor order. Change production only if current-HEAD evidence produces
+   a deterministic lifecycle leak; otherwise classify the non-atomic earlier
+   observation as contamination and retain the source-of-truth behavior.
+5. Run focused title/provider/lease/rewind gates, the exact 142-test matrix, the
+   ordinary three-ROM full suite, and the complete 108-method trace fleet from
+   Task 7D. Compare exact test identities against the saved updated-develop
+   baseline; no baseline pass may regress. Restore and hash-check the user-owned
+   rewind-gap report after every Maven batch.
+6. Commit the reviewed Task 7F changes on `develop`, fetch and reconcile any new
+   upstream commits without switching the main workspace, repeat verification
+   if the tested tree changes, push only `develop`, then perform Task 7D's
+   campaign-worktree and local-branch cleanup.
+
 Final Task 7D evidence at `f05ac8eae`: the focused seven-route group is
 11 pass / 4 fail / 33 error across 48 methods; the strict matrix is 142/142;
 and the complete three-ROM fleet is 67 pass / 4 fail / 37 error across the

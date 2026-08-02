@@ -134,6 +134,39 @@ raw 13962/direct `#205`. AIZ's raw 5543/6346 outcomes remain isolated to the
 separate recorder/service-row attribution lane, and the MGZ-standard, HCZ, and
 MHZ gameplay-first lanes remain open.
 
+### Post-merge full-suite lifecycle closure
+
+The updated-develop full suite exposes three integration-only lifecycle gaps
+that focused queue tests do not cover. First, a headless bonus-stage return load
+falls through the ordinary omitted-presentation path, creating a skipped-title
+lease owner before `GameLoop` enters the mandatory return title card. The return
+flag is active only around that reload and identifies the real title-card owner,
+so `requestTitleCardIfNeeded()` must retain the pending request instead of
+starting an omitted owner. Production must continue to reject a second bind.
+The explicit locked-title fixture must likewise leave its fresh-AIZ owner absent
+until the title card under test starts. Bonus-title state-machine tests must
+isolate the ROM/service state left by an earlier fork so unserviced KosM work
+cannot change their parent-observation tick.
+
+Second, `Lbz1RobotnikEventController` stores `S3kKosModuleQueue` service
+references beside the scalar ordinals that identify its two outstanding jobs.
+The queues are runtime-owned services already captured by their registered
+rewind adapter, so retaining them in the object creates a second, uncaptured
+ownership edge. The object must retain only the hardware handles/ordinals and
+resolve the current coordinator queue at each service operation. After rewind,
+the ordinal remains the authority used to recover a pending handle; no queue
+reference is serialized, baselined, or marked as an exception.
+
+Third, `TestTraceReplayInvariantGuard` still locates the S3K replay method by its
+former `void` declaration even though Task 7E made terminal-scope closure an
+explicit boolean result. The guard must follow the exact boolean signature while
+preserving its existing BK2-alignment and row-strict ring assertions.
+
+These are delivery-gate corrections, not new trace behavior. They must leave the
+142-test matrix and the measured 108-method frontier unchanged, remove every new
+ordinary-suite regression against the updated-develop baseline, and keep the
+user-owned rewind-gap report byte-identical.
+
 ## Delivery sequence
 
 Shared owners are serialized:
@@ -149,6 +182,7 @@ Shared owners are serialized:
 9. Extract seamless-transition orchestration so `LevelManager` falls below the existing 2,500-line ratchet, normalize only Markdown whitespace in the pre-existing prose guard, and rerun focused transition/guard tests plus the ordinary full suite.
 10. Publish the post-correction 64-class fleet and perform baseline comparison, integration, push, and cleanup.
 11. During updated-develop reconciliation, replace its no-argument in-level completion callback with an exact-lease hook, cover stale/missing/rewind and ordinary-versus-held owner timing, then rerun the affected AIZ/title/queue gates before post-merge comparison.
+12. Close full-suite-only lifecycle gaps: make title fixtures own exactly one lease, remove LBZ's secondary queue-reference ownership, and update the invariant guard to the boolean replay signature without weakening its checks.
 
 The AIZ complete terminal module event at raw 6351 remains a separate native-recorder observation/service-row attribution audit. It must not receive a production workaround. MGZ standard, HCZ, and MHZ retain their earlier gameplay owners.
 
@@ -164,6 +198,7 @@ The AIZ complete terminal module event at raw 6351 remains a separate native-rec
 - Skipped-title teardown observes last-child retirement on the owner's following SST dispatch, so affected enemy batches first submit at trace frame 34 without changing lease identity or ownership.
 - `LevelManager` is below its existing 2,500-effective-line guard with seamless-transition behavior delegated intact, and the agent-guidance guard accepts Markdown wrapping while still requiring the exact policy sentence.
 - Updated-develop's one-pass in-level completion cadence accepts and consumes only the title manager's exact rebound lease; it cannot arm a current or replacement batch implicitly.
+- Full-suite title fixtures cannot double-bind admission; LBZ retains no runtime queue service references; and the replay invariant guard locates the boolean replay method while enforcing the same invariants.
 - The authority/queue matrix remains green, S1 stays 30/30, S2 stays 20/20, and every moved S3K frontier is recorded line-by-line.
 
 ## Risks and mitigations

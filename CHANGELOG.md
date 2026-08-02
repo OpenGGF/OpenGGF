@@ -3,6 +3,14 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K queue owners now retain only rewind-authoritative hardware
+  handles and ordinals instead of cached LBZ module-queue service references.
+  Headless bonus-stage returns preserve their mandatory title request rather
+  than creating a competing skipped-title lease owner, and title/MHZ fixtures
+  reset inherited runtime state so broad-suite ordering cannot change title
+  completion or mushroom wall-sensor results. Replay source guards follow the
+  terminal-aware boolean S3K replay signature without weakening BK2 or ring-row
+  invariants.
 - Fix/Test: the master-title visual trace tool is aligned with the headless
   replay contracts added for whole runs and hardware-timed PLC/DPLC/Kosinski
   work. Legacy catalog-level S1 and S3K complete-run segments now also appear

@@ -2836,7 +2836,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             completeSkippedInitialTitleCardPresentation();
             return;
         }
-        boolean presentationSuppressed = zoneFeatureProvider != null
+        boolean bonusStageReturn = transitions.isBonusStageReturn();
+        boolean presentationSuppressed = !bonusStageReturn
+                && zoneFeatureProvider != null
                 && zoneFeatureProvider.shouldSuppressInitialTitleCard(
                         currentZone, currentAct);
         if (presentationSuppressed) {
@@ -2852,7 +2854,11 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             completeInitialTitleCardPresentation();
             return;
         }
-        if (!graphicsManager.isHeadlessMode() || headlessWholeRunHandoff) {
+        // GameLoop owns the mandatory bonus-return card after the reload. Keep
+        // its lease unbound until that explicit initialization, even headless.
+        if (!graphicsManager.isHeadlessMode()
+                || headlessWholeRunHandoff
+                || bonusStageReturn) {
             // ROM: title card reads Apparent_act, not Current_act.
             // After AIZ's seamless fire transition, Current_act is 1 but
             // Apparent_act stays 0 until the results screen exits.

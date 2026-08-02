@@ -114,7 +114,9 @@ class TestTitleCardObjectExecution {
         // those sprites, so loaded level objects stay fresh while VBlank ticks.
         File romFile = RomTestUtils.ensureSonic3kRomAvailable();
         Assumptions.assumeTrue(romFile != null, "Sonic 3&K ROM not available — skipping test");
-        runTitleCardAdvancementCheck(SonicGame.SONIC_3K, romFile, 0, 0, true,
+        // Preserve the fresh-AIZ intro's absent initial owner so enterTitleCard
+        // below creates the one title-card owner exercised by this test.
+        runTitleCardAdvancementCheck(SonicGame.SONIC_3K, romFile, 0, 0, false,
                 /* expectObjectAdvance */ false, /* expectLevelAdvance */ false, null);
     }
 

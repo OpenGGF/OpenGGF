@@ -107,10 +107,8 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
     private LbzMinibossBoxRig boxRig;
     private int hitReactionTimer;
     private boolean shipGone;
-    private S3kKosModuleQueue initialBoxArtQueue;
     private HardwareWorkHandle initialBoxArtHandle;
     private long initialBoxArtOrdinal = -1;
-    private S3kKosModuleQueue collapseBoxArtQueue;
     private HardwareWorkHandle collapseBoxArtHandle;
     private long collapseBoxArtOrdinal = -1;
 
@@ -297,8 +295,8 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
             return;
         }
         try {
-            initialBoxArtQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
-            initialBoxArtHandle = initialBoxArtQueue.queue(
+            S3kKosModuleQueue moduleQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
+            initialBoxArtHandle = moduleQueue.queue(
                     services().rom(),
                     Sonic3kConstants.ART_KOSM_LBZ_MINIBOSS_BOX_ADDR,
                     Sonic3kConstants.ART_TILE_LBZ_MINIBOSS_BOX);
@@ -313,8 +311,8 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
             return;
         }
         try {
-            collapseBoxArtQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
-            collapseBoxArtHandle = collapseBoxArtQueue.queue(
+            S3kKosModuleQueue moduleQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
+            collapseBoxArtHandle = moduleQueue.queue(
                     services().rom(),
                     Sonic3kConstants.ART_KOSM_LBZ_MINIBOSS_BOX_ADDR,
                     Sonic3kConstants.ART_TILE_LBZ_MINIBOSS_BOX);
@@ -333,9 +331,7 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
         if (initialBoxArtOrdinal < 0) {
             return;
         }
-        if (initialBoxArtQueue == null) {
-            initialBoxArtQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
-        }
+        S3kKosModuleQueue moduleQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
         if (initialBoxArtHandle == null) {
             initialBoxArtHandle = services().hardwareTiming().pendingHandle(
                             HardwareWorkKind.KOS_MODULE_QUEUE, initialBoxArtOrdinal)
@@ -343,9 +339,8 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
                             "Missing restored LBZ initial miniboss-box KosM job "
                                     + initialBoxArtOrdinal));
         }
-        if (initialBoxArtQueue.isReady(initialBoxArtHandle)) {
-            initialBoxArtQueue.claim(initialBoxArtHandle);
-            initialBoxArtQueue = null;
+        if (moduleQueue.isReady(initialBoxArtHandle)) {
+            moduleQueue.claim(initialBoxArtHandle);
             initialBoxArtHandle = null;
             initialBoxArtOrdinal = -1;
         }
@@ -355,9 +350,7 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
         if (collapseBoxArtOrdinal < 0) {
             return;
         }
-        if (collapseBoxArtQueue == null) {
-            collapseBoxArtQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
-        }
+        S3kKosModuleQueue moduleQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
         if (collapseBoxArtHandle == null) {
             collapseBoxArtHandle = services().hardwareTiming().pendingHandle(
                             HardwareWorkKind.KOS_MODULE_QUEUE, collapseBoxArtOrdinal)
@@ -365,9 +358,8 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
                             "Missing restored LBZ collapse miniboss-box KosM job "
                                     + collapseBoxArtOrdinal));
         }
-        if (collapseBoxArtQueue.isReady(collapseBoxArtHandle)) {
-            collapseBoxArtQueue.claim(collapseBoxArtHandle);
-            collapseBoxArtQueue = null;
+        if (moduleQueue.isReady(collapseBoxArtHandle)) {
+            moduleQueue.claim(collapseBoxArtHandle);
             collapseBoxArtHandle = null;
             collapseBoxArtOrdinal = -1;
         }
