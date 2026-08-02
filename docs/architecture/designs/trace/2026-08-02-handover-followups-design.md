@@ -310,6 +310,26 @@ name in the implementation plan. A future dedicated branch must begin from a qui
 mechanically rename the interface and all implementations, remove redundant local
 `resolveVIntRunCount` bridges where justified, and compile before behavior tests.
 
+### Integration-suite isolation blocker
+
+The first development full-suite run exposed an order-sensitive failure in
+`Sonic1SpecialStageResultsScreenTest`. The result screen's readiness contract polls the
+session-owned `Sonic1PlcService`, while this test currently resets only game-state and
+session facades. A reused Surefire fork can therefore leave an unrelated PLC busy and
+freeze the result card for the test's entire frame budget. The unchanged baseline and the
+development branch both pass all four methods when the class runs alone, and no production
+change in this delivery touches Sonic 1 results behavior.
+
+Treat this as test isolation, not a production timing change: install the repository's
+standard `SingletonResetExtension` and `@FullReset` at class scope. The full reset is
+required because the lighter per-test profile does not clear `Sonic1PlcService`; it rebuilds
+the module boundary instead of mutating a potentially inherited service. Retain the existing
+per-test assertions. Remove the test's now-stale ambient-setup exemption from
+`TestSingletonLifecycleGuard`, whose scanner treats the class-scoped extension as safe, and
+run that guard before the exact development full suite. Do not change result-card timing,
+PLC readiness semantics, or production reset ownership to compensate for fork-local test
+contamination.
+
 ### Verification and rollback
 
 Focused tests precede route replays. Hardware timing authority, rewind coverage, the four

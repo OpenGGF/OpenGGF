@@ -218,6 +218,22 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **Native-recorder provenance, route lifetimes, and held-row Kos timing
+  (2026-08-02):** the S2 special-stage contract now pins the committed native
+  fixture's `1.4-s2ss-native` stamp while continuing to pin the Lua recorder's
+  `1.4-s2ss` source version. A route-led `RememberState` audit corrected AIZ
+  Draw Bridge and MHZ Swing Vine range lifetimes, including their native fixed
+  `$280` anchor checks, so roots no longer retain dynamic slots after leaving
+  range. S3K schema-2 replay can now admit an exact prepared direct-Kos
+  completion recorded on a VBlank-only row, confined to the timing port and
+  production coordinator post-hook: AIZ direct `#35` and dependent module
+  `#15` advance, while unprepared module `#16` and the HCZ/MHZ missing-work
+  terminals still fail closed. The full-suite comparison improves the existing
+  red baseline by two tests with no new regression; a newly exposed S1 results
+  test now fully resets inherited module state. The broad object-update
+  `frameCounter` to `vIntRunCount` rename remains deliberately deferred to a
+  quiet-tree change.
+
 - **Visual complete-run trace playback (2026-08-01):** a run selected on the
   master title now stays active across level/act replacement, bonus and special
   stages, return loads, and its terminal movie tail. Visual and headless replay

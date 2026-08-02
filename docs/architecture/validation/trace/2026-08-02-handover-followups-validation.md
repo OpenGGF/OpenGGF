@@ -82,6 +82,20 @@ The misleading object-update parameter name remains unchanged. Approximately 590
 implementations call the V-int run count `frameCounter`; the atomic `vIntRunCount` hierarchy
 rename is reserved for a quiet-tree branch.
 
+## Integration-suite isolation
+
+The first development full suite exposed
+`Sonic1SpecialStageResultsScreenTest#testRingBonusTalliesIntoScoreAndCompletes` only under
+reused-fork ordering. Both the unchanged baseline and candidate passed the four-method class
+alone. The test polls session-owned S1 PLC readiness, but its setup previously relied on
+ambient gameplay state and could inherit a busy S1 module from an earlier class.
+
+The test now uses class-scoped `SingletonResetExtension` plus `@FullReset`; its stale entry
+in `TestSingletonLifecycleGuard.AMBIENT_GAMEPLAY_MODE_SETUP_BASELINE` was removed. No
+production result-card or PLC behavior changed. Focused verification passed 12 tests across
+the results class and lifecycle guard. The repeated candidate full suite passed this method
+and introduced no new failure relative to the exact baseline failure set.
+
 ## Remaining gates
 
 Before delivery, run the exact full JDK 21 suite against the updated `develop` baseline,

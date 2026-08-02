@@ -3,14 +3,19 @@ package com.openggf.game.sonic1.specialstage;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.session.SessionManager;
+import com.openggf.tests.FullReset;
+import com.openggf.tests.SingletonResetExtension;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@FullReset
+@ExtendWith(SingletonResetExtension.class)
 public class Sonic1SpecialStageResultsScreenTest {
 
     private GameStateManager gameState;
@@ -71,5 +76,4 @@ public class Sonic1SpecialStageResultsScreenTest {
         assertEquals(startScore + 50, gameState.getScore(), "Score should increase by ring bonus total");
     }
 }
-
 

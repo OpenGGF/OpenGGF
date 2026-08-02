@@ -386,6 +386,27 @@ then in the development worktree, recording exact Surefire failures for both. Af
 run the same command a third time on `develop` and compare exact failures. A pre-existing red
 baseline is acceptable; any new or worsened failure is not.
 
+The first baseline/development comparison found one development-only failure in
+`Sonic1SpecialStageResultsScreenTest#testRingBonusTalliesIntoScoreAndCompletes`. Both
+revisions pass the four-method class alone. Before repeating the development suite:
+
+1. Add class-scoped `SingletonResetExtension` and `@FullReset` to
+   `Sonic1SpecialStageResultsScreenTest`. The lighter `resetPerTest()` path does not clear
+   `Sonic1PlcService`; the full reset rebuilds the inherited module boundary without a
+   production workaround.
+2. Remove
+   `Sonic1SpecialStageResultsScreenTest.java#setUp` from
+   `TestSingletonLifecycleGuard.AMBIENT_GAMEPLAY_MODE_SETUP_BASELINE`; the scanner already
+   recognizes class-scoped `SingletonResetExtension`, so the exemption becomes stale.
+3. Leave the results test's existing setup, teardown, frame budget, and result-card
+   assertions unchanged.
+4. Run `Sonic1SpecialStageResultsScreenTest` and `TestSingletonLifecycleGuard` together on
+   the candidate, then rerun the exact full-suite command and
+   compare only reports written by that invocation; generated rewind-gap inventory is not
+   a deliverable.
+5. If the class still fails, stop this correction and investigate the concrete inherited
+   owner rather than widening reset or result-card behavior speculatively.
+
 ### Whole-delivery review gate
 
 After code, tests, audit, validation, frontier log, changelog, and README are final, produce
