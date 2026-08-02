@@ -11,12 +11,14 @@
 > for independent review before publication.
 > The canonical 466,334-row Sonic-and-Tails validation capture retains exact
 > committed physics/aux identity and produces a reviewed timing-only delta:
-> 25 in-place `vint_service`-to-`post_objects` substitutions across 14 of 15
+> 27 in-place `vint_service`-to-`post_objects` substitutions across 14 of 15
 > segments, with raw frame, kind, ordinal, fingerprint, position, and ordering
 > unchanged. The 15-segment gate independently pins the byte length, line
 > count, and SHA-256 of both every committed predecessor and every prospective
 > timing file. This is validation evidence, not publication authorization;
 > no fixture is installed by the gate.
+> A cheap companion contract sums all 15 reviewed per-segment counts, pins the
+> aggregate at 27, and proves a deliberately wrong expected total fails.
 >
 > **2026-07-27 publication note.** The canonical committed fleet is native
 > recorder v6.37. It contains 47 timing-owned fixture destinations plus the
@@ -1220,7 +1222,7 @@ committed `*_completerun` dirs under the reviewed 6.40-to-6.42 recorder
 migration. Physics and aux are byte-identical. Metadata may differ only
 by the exact recorder-version literal and recording date. Timing first
 attests every committed predecessor and then the exact prospective output;
-the only accepted content delta is the pinned 25-line VINT-to-POST
+the only accepted content delta is the pinned 27-line VINT-to-POST
 attribution correction across fourteen segments.
 
 Measured, not estimated: **5m57s wall, 235 MB peak RSS, 2.84 GB of
@@ -1250,11 +1252,13 @@ Four deliberate strength choices:
 3. **Both timing identities are independently attested.** Each committed
    `hardware_timing.jsonl` and each prospective file has a pinned byte
    length, line count, and SHA-256. A second semantic comparison requires
-   exactly 25 in-place substitutions across 14 segments, each replacing
+   exactly 27 in-place substitutions across 14 segments, each replacing
    only `"boundary":"vint_service"` with
    `"boundary":"post_objects"`. The ending segment stays byte-identical;
    raw frame, kind, ordinal, fingerprint, event position, and ordering
    cannot move.
+   A cheap non-capture contract separately sums all fifteen reviewed counts,
+   pins 27, and rejects a deliberately wrong expected aggregate.
 4. **`run_id` absence asserted directly.** Line-count equality alone
    would let a stray `run_id` line pass if it displaced another key, so
    both files are probed for a `"run_id":` line explicitly. That absence

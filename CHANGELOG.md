@@ -18,8 +18,10 @@ All notable changes to the OpenGGF project are documented in this file.
   boundaries reconcile normally, preserving multi-entry FIFO ordinals.
   An untruncated 466,334-row validation capture attests all 15 predecessor and
   prospective timing files and proves the complete reviewed delta is exactly
-  25 in-place VINT-to-POST substitutions across 14 segments; fixtures remain
-  unmodified.
+  27 in-place VINT-to-POST substitutions across 14 segments; fixtures remain
+  unmodified. A cheap aggregate guard sums the 15 per-segment counts and
+  rejects a deliberately wrong expected total so the documented aggregate
+  cannot drift from the attested table.
 - Fix/Test: MHZ fixed SST occupants, plane switchers, pollen, cutscene children,
   pulley, Curled Vine, Madmole, and enemy-touch bounce now follow their ROM slot,
   lifetime, geometry, and resolved-contact semantics. The complete-run physics

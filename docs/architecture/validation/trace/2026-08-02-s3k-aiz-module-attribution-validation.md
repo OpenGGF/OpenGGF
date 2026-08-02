@@ -45,7 +45,7 @@ the prospective file by the same measures. Physics and aux remained at their
 committed exact length/SHA identity, and metadata differed only by the reviewed
 recorder version and recording date.
 
-Across timing, 25 of 1,087 event rows changed in 14 segments. Every changed row
+Across timing, 27 of 1,087 event rows changed in 14 segments. Every changed row
 kept its raw frame, kind, ordinal, fingerprint, file position, and ordering;
 the sole byte-level semantic change was
 `"boundary":"vint_service"` to `"boundary":"post_objects"`. The ending
@@ -69,6 +69,13 @@ prospective hashes:
 | DEZ | 1 | `de34b9fe…c815e` | `391d1ad5…a4528` |
 | DDZ | 1 | `88407da5…54fd` | `56c6b5d3…989f8` |
 | ending | 0 | `f414d1a7…dddec` | `f414d1a7…dddec` |
+
+An independent Candidate B/repeat comparison found both captures
+byte-identical and confirmed every row-level claim above, while exposing that
+the prose had incorrectly totaled the correct per-segment counts as 25. The
+cheap aggregate contract now sums all 15 `TimingCase` rows and pins 27. Its
+negative vector deliberately requests 26 and requires the exact aggregate
+failure, preventing the prose total from drifting away from the table again.
 
 ```text
 S3K_ROM_PATH=<verified-s3k> BIZHAWK_HOME=<2.11> ./test.sh \

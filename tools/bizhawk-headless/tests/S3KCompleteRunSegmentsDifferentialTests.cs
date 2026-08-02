@@ -37,9 +37,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
     ///   the absence of a <c>run_id</c> key is asserted explicitly.
     /// - hardware_timing.jsonl first attests the committed predecessor by
     ///   byte length, line count, and sha256, then attests the prospective
-    ///   capture by the same three measures. Its 25 changed rows across 14
+    ///   capture by the same three measures. Its 27 changed rows across 14
     ///   segments must be exact, in-place VINT-to-POST substitutions; the
-    ///   ending segment must remain byte-identical.
+    ///   ending segment must remain byte-identical. A cheap unit contract
+    ///   sums all fifteen table rows and pins the aggregate at 27.
     ///
     /// The first seven physics.csv hashes below were last moved by Lua
     /// 6.33-s3k-completerun, the ADDR_VBLA_WORD fix: vblank_counter reads
@@ -78,6 +79,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private const int CaptureTimeoutMilliseconds = 3600000;
         private const string MovieFileName = "s3k-complete-sonic-tails.bk2";
         private const int MovieFrameCount = 466334;
+        private const int ReviewedTimingDeltaAggregate = 27;
 
         private const string RecordingDateLinePrefix =
             "  \"recording_date\": \"";
@@ -354,6 +356,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S3KCompleteRunSegmentsDifferential AIZ timing delta is exact",
                 ReviewedAizTimingDeltaIsExact));
             tests.Add(new TestMain.TestCase(
+                "S3KCompleteRunSegmentsDifferential timing delta aggregate is exact",
+                ReviewedTimingDeltaAggregateIsExact));
+            tests.Add(new TestMain.TestCase(
                 "S3KCompleteRunSegmentsDifferential native capture matches"
                 + " all fifteen canonical completerun segments",
                 NativeCaptureMatchesCanonicalCompleteRunSegments,
@@ -551,6 +556,38 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     published + "unchanged\n",
                     corrected + "changed\n"),
                 "beyond the reviewed edge");
+        }
+
+        private static void ReviewedTimingDeltaAggregateIsExact()
+        {
+            AssertEx.Equal(15, TimingCases.Count);
+            AssertReviewedTimingDeltaAggregate(
+                ReviewedTimingDeltaAggregate);
+            int deliberatelyWrongAggregate =
+                ReviewedTimingDeltaAggregate - 1;
+            AssertEx.Throws<InvalidOperationException>(
+                delegate
+                {
+                    AssertReviewedTimingDeltaAggregate(
+                        deliberatelyWrongAggregate);
+                },
+                "expected " + deliberatelyWrongAggregate);
+        }
+
+        private static void AssertReviewedTimingDeltaAggregate(
+            int expectedAggregate)
+        {
+            var actualAggregate = 0;
+            foreach (TimingCase timing in TimingCases.Values)
+            {
+                actualAggregate += timing.ReviewedDeltaCount;
+            }
+            if (actualAggregate != expectedAggregate)
+            {
+                throw new InvalidOperationException(
+                    "reviewed timing delta aggregate is " + actualAggregate
+                    + "; expected " + expectedAggregate + ".");
+            }
         }
 
         private static void AssertReviewedAizTimingDelta(

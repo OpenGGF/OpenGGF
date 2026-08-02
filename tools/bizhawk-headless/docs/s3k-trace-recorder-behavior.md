@@ -163,12 +163,14 @@ so they are reconciled without a pending fence and retain their ordinals across
 normal multi-entry FIFO retirement.
 
 For the canonical 15-segment Sonic-and-Tails complete run, the maintained
-6.42 writer changes exactly 25 predecessor event lines across 14 segments from
+6.42 writer changes exactly 27 predecessor event lines across 14 segments from
 `vint_service` to `post_objects`; raw frame, kind, ordinal, fingerprint, line
 position, and order remain unchanged, and the ending segment is byte-identical.
 The differential gate attests both the committed predecessor files and the
 prospective files by byte length, line count, and SHA-256 before applying this
 exact semantic-delta check. It does not install either output.
+The test suite also sums the 15 per-segment reviewed counts and pins their
+aggregate at 27, with a deliberately wrong-26 negative vector.
 
 Segment handoffs may pass a null timing writer while keeping both ledgers and
 ordinals alive. A standard-recorder discard/reset clears both ledgers and

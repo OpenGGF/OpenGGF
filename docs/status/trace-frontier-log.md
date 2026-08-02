@@ -60815,11 +60815,18 @@ The untruncated native command replayed all 466,334 rows of
 `s3k-complete-sonic-tails.bk2` and published all 15 expected scratch segments.
 The strengthened gate attests each committed timing predecessor and each
 prospective timing output by byte length, line count, and SHA-256. Physics and
-aux remain at their committed exact identities. Timing contains exactly 25
+aux remain at their committed exact identities. Timing contains exactly 27
 in-place `VINT_SERVICE` to `POST_OBJECTS` substitutions across 14 segments;
 raw frame, kind, ordinal, submission fingerprint, event position, and ordering
 are unchanged, and the ending segment is byte-identical. The committed fixture
 tree was opened read-only and no candidate bytes were installed.
+
+An exhaustive Candidate B/repeat comparison subsequently proved both captures
+byte-identical and all per-segment claims correct, but caught that this prose
+had incorrectly totaled the 14 nonzero segment counts as 25. Their actual sum
+is 27. A new cheap aggregate contract sums all 15 table rows, pins 27, and
+contains a wrong-26 negative assertion; no third capture or fixture change was
+needed for this bookkeeping correction.
 
 Review also tightened replay installation to accept schema-2 POST only for
 `FULL_LEVEL_FRAME` and
