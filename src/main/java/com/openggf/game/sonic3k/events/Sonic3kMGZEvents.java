@@ -33,6 +33,7 @@ import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
+import com.openggf.game.RuntimeArtAdmissionPolicy;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
@@ -2432,6 +2433,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
                 SeamlessLevelTransitionRequest.builder(
                                 SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
                         .targetZoneAct(Sonic3kZoneIds.ZONE_MGZ, 1)
+                        .runtimeArtAdmissionPolicy(RuntimeArtAdmissionPolicy.TITLE_OWNER)
                         .deactivateLevelNow(false)
                         // Results screen already started act 2 music.
                         .preserveMusic(true)
@@ -2442,9 +2444,9 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
                         // Load_Level clears the old End_of_level_flag before
                         // Obj_TitleCardWait2 publishes the new completion edge.
                         .preserveEndOfLevelActive(true)
-                        // Title card skipped during the results path for seamless
-                        // transitions; show it after the reload completes.
-                        .showInLevelTitleCard(true)
+                        // The carried Obj_LevelResults mutates into Obj_TitleCard
+                        // and is the sole publisher after the reload.
+                        .showInLevelTitleCard(false)
                         .resetLevelGamestateAtInLevelTitleCardDisplay(true)
                         // The carried results parent mutates into Obj_TitleCard;
                         // its twelve child SST create/render entries precede

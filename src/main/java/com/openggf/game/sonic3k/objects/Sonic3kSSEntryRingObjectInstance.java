@@ -209,7 +209,7 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance imp
      */
     private void retireRing() {
         queueBadnikExplosionArt();
-        setDestroyed(true);
+        setDestroyedByOffscreen();
     }
 
     /**

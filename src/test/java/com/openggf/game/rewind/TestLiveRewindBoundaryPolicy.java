@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -103,6 +104,8 @@ class TestLiveRewindBoundaryPolicy {
         assertEquals(2, fixture.controller.currentFrame());
         assertEquals(2, fixture.inputSource.earliestFrame());
         assertEquals(3, fixture.inputSource.frameCount());
+        assertFalse(fixture.controller.stepBackward(),
+                "live rewind must not expose the frame before a seamless-transition reroot");
     }
 
     @Test

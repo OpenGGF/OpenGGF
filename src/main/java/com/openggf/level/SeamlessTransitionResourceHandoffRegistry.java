@@ -16,6 +16,9 @@ public final class SeamlessTransitionResourceHandoffRegistry
     private final Map<SeamlessTransitionResourceHandoffId,
             SeamlessTransitionResourceHandoff> pending =
             new LinkedHashMap<>();
+    private final Map<SeamlessTransitionResourceHandoffId,
+            SeamlessTransitionResourceHandoff> failedTransfers =
+            new LinkedHashMap<>();
 
     public SeamlessTransitionResourceHandoffId register(
             SeamlessTransitionResourceHandoff handoff) {
@@ -28,6 +31,7 @@ public final class SeamlessTransitionResourceHandoffRegistry
 
     public SeamlessTransitionResourceHandoff peek(
             SeamlessTransitionResourceHandoffId id) {
+        rejectFailedTransfer(id);
         SeamlessTransitionResourceHandoff handoff = pending.get(id);
         if (handoff == null) {
             throw new IllegalStateException(
@@ -39,6 +43,7 @@ public final class SeamlessTransitionResourceHandoffRegistry
 
     public SeamlessTransitionResourceHandoff claim(
             SeamlessTransitionResourceHandoffId id) {
+        rejectFailedTransfer(id);
         SeamlessTransitionResourceHandoff handoff = pending.remove(id);
         if (handoff == null) {
             throw new IllegalStateException(
@@ -48,6 +53,39 @@ public final class SeamlessTransitionResourceHandoffRegistry
         return handoff;
     }
 
+    public void recordFailedTransfer(
+            SeamlessTransitionResourceHandoffId id,
+            SeamlessTransitionResourceHandoff handoff) {
+        Objects.requireNonNull(id, "id");
+        Objects.requireNonNull(handoff, "handoff");
+        pending.remove(id);
+        if (failedTransfers.putIfAbsent(id, handoff) != null) {
+            throw new IllegalStateException(
+                    "seamless resource handoff transfer already failed " + id);
+        }
+    }
+
+    public boolean hasFailedTransfer(SeamlessTransitionResourceHandoffId id) {
+        return failedTransfers.containsKey(id);
+    }
+
+    public SeamlessTransitionResourceHandoff failedTransfer(
+            SeamlessTransitionResourceHandoffId id) {
+        SeamlessTransitionResourceHandoff handoff = failedTransfers.get(id);
+        if (handoff == null) {
+            throw new IllegalStateException(
+                    "seamless resource handoff has no failed transfer " + id);
+        }
+        return handoff;
+    }
+
+    private void rejectFailedTransfer(SeamlessTransitionResourceHandoffId id) {
+        if (failedTransfers.containsKey(id)) {
+            throw new IllegalStateException(
+                    "seamless resource handoff transfer failed terminally " + id);
+        }
+    }
+
     @Override
     public String key() {
         return "seamless_transition_resource_handoffs";
@@ -55,7 +93,8 @@ public final class SeamlessTransitionResourceHandoffRegistry
 
     @Override
     public Snapshot capture() {
-        return new Snapshot(nextId, Map.copyOf(pending));
+        return new Snapshot(
+                nextId, Map.copyOf(pending), Map.copyOf(failedTransfers));
     }
 
     @Override
@@ -63,20 +102,26 @@ public final class SeamlessTransitionResourceHandoffRegistry
         nextId = snapshot.nextId();
         pending.clear();
         pending.putAll(snapshot.pending());
+        failedTransfers.clear();
+        failedTransfers.putAll(snapshot.failedTransfers());
     }
 
     @Override
     public void resetForMissingSnapshot() {
         nextId = 0;
         pending.clear();
+        failedTransfers.clear();
     }
 
     public record Snapshot(
             long nextId,
             Map<SeamlessTransitionResourceHandoffId,
-                    SeamlessTransitionResourceHandoff> pending) {
+                    SeamlessTransitionResourceHandoff> pending,
+            Map<SeamlessTransitionResourceHandoffId,
+                    SeamlessTransitionResourceHandoff> failedTransfers) {
         public Snapshot {
             pending = Map.copyOf(pending);
+            failedTransfers = Map.copyOf(failedTransfers);
         }
     }
 }

@@ -10,6 +10,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -159,6 +160,57 @@ class TestObjectManagerVerticalPlacement {
                 "Pending X-pass load order must rewind with ObjectManager placement state");
         assertEquals(5, registry.instances.get(deferredLowX).getSlotIndex(),
                 "Deferred Y-pass membership must rewind with ObjectManager placement state");
+    }
+
+    @Test
+    void s3kTwoAxisCursorRetriesPendingEntryAfterFindFreeObjFailure() {
+        Camera camera = new Camera(SonicConfigurationService.getInstance());
+        camera.setMinY((short) 0);
+        camera.setY((short) 0);
+
+        ObjectSpawn late = new ObjectSpawn(0x02C0, 0x0100, 0x41, 0, 0, false, 0x0100);
+        TrackingRegistry registry = new TrackingRegistry();
+        ObjectManager manager = new ObjectManager(
+                List.of(late),
+                registry,
+                -1,
+                null,
+                null,
+                null,
+                camera,
+                new StubObjectServices() {
+                    @Override
+                    public Camera camera() {
+                        return camera;
+                    }
+                });
+        manager.enableExecThenLoadPlacement();
+        manager.reset(0);
+
+        DummyObject firstOccupant = null;
+        for (int slot = ObjectSlotLayout.SONIC_3K.firstDynamicSlot();
+                slot < ObjectSlotLayout.SONIC_3K.lastDynamicSlotExclusive(); slot++) {
+            DummyObject occupant = new DummyObject(null);
+            manager.addDynamicObjectAtSlot(occupant, slot);
+            if (firstOccupant == null) {
+                firstOccupant = occupant;
+            }
+        }
+
+        manager.update(0x0080, null, List.of(), 1, false);
+        assertFalse(registry.instances.containsKey(late),
+                "the X cursor may cross the entry while FindFreeObj has no slot");
+        assertArrayEquals(new int[] {0}, manager.rewindSnapshottable().capture()
+                        .placement().pendingCursorLoadOrder(),
+                "FindFreeObj failure must retain ordered cursor ownership");
+
+        manager.removeDynamicObject(firstOccupant);
+        manager.update(0x0080, null, List.of(), 2, false);
+
+        assertTrue(registry.instances.containsKey(late),
+                "cursor-owned work must retry after an SST slot becomes available");
+        assertEquals(ObjectSlotLayout.SONIC_3K.firstDynamicSlot(),
+                registry.instances.get(late).getSlotIndex());
     }
 
     @Test

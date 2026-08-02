@@ -60,10 +60,53 @@ public interface ObjectArtProvider {
      *
      * <p>An in-level card runs its whole presentation over live gameplay, so
      * runtime-art admission opens here rather than at art retirement. The
-     * default treats it as immediate retirement.
+     * The exact production-issued lease prevents a completed owner from
+     * releasing a replacement batch that became current later.
      */
-    default void onInLevelTitleCardCompleted() {
-        onTitleCardArtRetired();
+    default void onInLevelTitleCardCompleted(RuntimeArtAdmissionLease lease) {
+        consumeRuntimeArtAdmission(
+                lease, RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
+    }
+
+    /**
+     * Registers transition runtime art under the request's semantic owner.
+     * Providers without lease-backed queues retain their existing behavior.
+     */
+    default RuntimeArtAdmissionLease prepareRuntimeArtForActTransition(
+            int zoneIndex, RuntimeArtAdmissionPolicy policy) {
+        if (policy == RuntimeArtAdmissionPolicy.PRESERVE_CURRENT) {
+            return null;
+        }
+        reloadStandaloneArtForActTransition(zoneIndex);
+        if (policy == RuntimeArtAdmissionPolicy.IMMEDIATE) {
+            onTitleCardArtRetired();
+        }
+        return null;
+    }
+
+    /** Binds the provider's one pending lease during owner initialization. */
+    default RuntimeArtAdmissionLease bindPendingRuntimeArtAdmission(
+            RuntimeArtAdmissionOwnerKind ownerKind) {
+        throw new IllegalStateException("runtime-art admission leases are not supported");
+    }
+
+    /** Binds a known scalar lease id to a production owner. */
+    default RuntimeArtAdmissionLease bindRuntimeArtAdmission(
+            long leaseId, RuntimeArtAdmissionOwnerKind ownerKind) {
+        throw new IllegalStateException("runtime-art admission leases are not supported");
+    }
+
+    /** Rebinds a rewind-restored owner to the same scalar lease identity. */
+    default RuntimeArtAdmissionLease rebindRuntimeArtAdmission(
+            long leaseId, RuntimeArtAdmissionOwnerKind ownerKind) {
+        throw new IllegalStateException("runtime-art admission leases are not supported");
+    }
+
+    /** Consumes one exact production-issued lease. */
+    default void consumeRuntimeArtAdmission(
+            RuntimeArtAdmissionLease lease,
+            RuntimeArtAdmissionOwnerKind ownerKind) {
+        throw new IllegalStateException("runtime-art admission leases are not supported");
     }
 
     /**

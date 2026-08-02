@@ -1,20 +1,35 @@
 package com.openggf.game.sonic3k.titlecard;
 
+import com.openggf.game.GameServices;
+import com.openggf.game.RuntimeArtAdmissionLease;
+import com.openggf.game.RuntimeArtAdmissionOwnerKind;
+import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
+import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests bonus mode behavior in Sonic3kTitleCardManager.
- * These tests don't require ROM or OpenGL â€” they exercise the state machine only.
+ * These tests need a session-owned admission stub but no ROM or OpenGL; they
+ * otherwise exercise the title-card state machine only.
  */
 public class TestSonic3kBonusTitleCard {
 
     private Sonic3kTitleCardManager manager;
 
     @BeforeEach
-    public void setUp() {
+    public void setUp() throws Exception {
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_3K);
+        Sonic3kGameModule module = (Sonic3kGameModule) GameServices.module();
+        Field providerField = Sonic3kGameModule.class.getDeclaredField("objectArtProvider");
+        providerField.setAccessible(true);
+        providerField.set(module, new LeaseOnlyObjectArtProvider());
         manager = new Sonic3kTitleCardManager();
         manager.reset();
     }
@@ -88,5 +103,34 @@ public class TestSonic3kBonusTitleCard {
                 "native render bounds remove the last title child on phase 12 and the parent observes it on 13");
         assertFalse(manager.isComplete(), "the parent completion dispatch remains one manager tick later");
     }
-}
 
+    private static final class LeaseOnlyObjectArtProvider
+            extends Sonic3kObjectArtProvider {
+        private final RuntimeArtAdmissionLease lease = new RuntimeArtAdmissionLease(
+                1, 1, 1, RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
+
+        @Override
+        public RuntimeArtAdmissionLease bindPendingRuntimeArtAdmission(
+                RuntimeArtAdmissionOwnerKind ownerKind) {
+            assertEquals(RuntimeArtAdmissionOwnerKind.TITLE_OWNER, ownerKind);
+            return lease;
+        }
+
+        @Override
+        public RuntimeArtAdmissionLease rebindRuntimeArtAdmission(
+                long leaseId,
+                RuntimeArtAdmissionOwnerKind ownerKind) {
+            assertEquals(lease.id(), leaseId);
+            assertEquals(RuntimeArtAdmissionOwnerKind.TITLE_OWNER, ownerKind);
+            return lease;
+        }
+
+        @Override
+        public void consumeRuntimeArtAdmission(
+                RuntimeArtAdmissionLease consumed,
+                RuntimeArtAdmissionOwnerKind ownerKind) {
+            assertEquals(lease, consumed);
+            assertEquals(RuntimeArtAdmissionOwnerKind.TITLE_OWNER, ownerKind);
+        }
+    }
+}

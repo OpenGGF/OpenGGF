@@ -5,6 +5,8 @@ import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.OscillationManager;
+import com.openggf.game.RuntimeArtAdmissionLease;
+import com.openggf.game.RuntimeArtAdmissionPolicy;
 import com.openggf.level.animation.SeamlessTransitionAnimationClock;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -28,12 +30,36 @@ final class LevelActTransitionExecutor {
         if (request == null) {
             return;
         }
+        if (request.runtimeArtAdmissionPolicy()
+                        == RuntimeArtAdmissionPolicy.RESOURCE_HANDOFF_OWNER
+                && request.resourceHandoffId() == null) {
+            throw new IllegalStateException(
+                    "resource-handoff runtime-art admission requires a handoff");
+        }
 
-        SeamlessTransitionResourceHandoff handoff =
+        SeamlessTransitionResourceHandoffRegistry handoffRegistry =
+                GameServices.seamlessTransitionResourceHandoffs();
+        ClaimedTransitionHandoff claimed = new ClaimedTransitionHandoff(
                 request.resourceHandoffId() != null
-                        ? GameServices.seamlessTransitionResourceHandoffs()
-                                .claim(request.resourceHandoffId())
-                        : null;
+                        ? handoffRegistry.claim(request.resourceHandoffId())
+                        : null);
+        try {
+            executeClaimed(request, claimed);
+        } catch (IOException | RuntimeException failure) {
+            if (claimed.handoff != null
+                    && !claimed.transferComplete
+                    && request.resourceHandoffId() != null) {
+                handoffRegistry.recordFailedTransfer(
+                        request.resourceHandoffId(), claimed.handoff);
+            }
+            throw failure;
+        }
+    }
+
+    private void executeClaimed(
+            SeamlessLevelTransitionRequest request,
+            ClaimedTransitionHandoff claimed) throws IOException {
+        SeamlessTransitionResourceHandoff handoff = claimed.handoff;
         DeferredLevelResourceTracker deferredResources =
                 handoff != null
                         ? handoff.deferredResources().newTracker()
@@ -88,11 +114,20 @@ final class LevelActTransitionExecutor {
                 ? levelManager.gameModule.getObjectArtProvider()
                 : null;
         if (artProvider != null) {
-            artProvider.reloadStandaloneArtForActTransition(levelManager.currentZone);
-            artProvider.registerLevelTileArt(levelManager.level, levelManager.currentZone);
-            if (!request.showInLevelTitleCard()) {
-                artProvider.onTitleCardArtRetired();
+            RuntimeArtAdmissionLease admissionLease =
+                    artProvider.prepareRuntimeArtForActTransition(
+                            levelManager.currentZone,
+                            request.runtimeArtAdmissionPolicy());
+            if (request.runtimeArtAdmissionPolicy()
+                    == RuntimeArtAdmissionPolicy.RESOURCE_HANDOFF_OWNER) {
+                if (admissionLease == null) {
+                    throw new IllegalStateException(
+                            "resource-handoff admission did not issue a lease");
+                }
+                handoff = handoff.withAdmissionLease(admissionLease);
+                claimed.handoff = handoff;
             }
+            artProvider.registerLevelTileArt(levelManager.level, levelManager.currentZone);
             if (levelManager.objectRenderManager != null) {
                 levelManager.objectRenderManager.ensurePatternsCached(
                         levelManager.graphicsManager, LevelManager.OBJECT_PATTERN_BASE);
@@ -125,8 +160,15 @@ final class LevelActTransitionExecutor {
 
         resetSidekickCpuBoundsAfterTransition(cam);
         levelManager.initLevelEventsForCurrentZoneAct();
+        var gameplayMode = com.openggf.game.session.SessionManager
+                .getCurrentGameplayMode();
+        if (gameplayMode != null) {
+            gameplayMode.rebindActTransitionManagerAdapters(
+                    levelManager.objectManager, levelManager.ringManager);
+        }
         if (handoff != null) {
             handoff.transferAfterTargetInit();
+            claimed.transferComplete = true;
         }
 
         try {
@@ -161,6 +203,16 @@ final class LevelActTransitionExecutor {
                         (int) cam.getMaxX(),
                         (int) Math.max(cam.getMaxY(), cam.getMaxYTarget()));
             }
+        }
+    }
+
+    private static final class ClaimedTransitionHandoff {
+        private SeamlessTransitionResourceHandoff handoff;
+        private boolean transferComplete;
+
+        private ClaimedTransitionHandoff(
+                SeamlessTransitionResourceHandoff handoff) {
+            this.handoff = handoff;
         }
     }
 }

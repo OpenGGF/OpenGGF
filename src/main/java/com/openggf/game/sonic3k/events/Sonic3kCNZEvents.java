@@ -20,6 +20,7 @@ import com.openggf.level.ChunkDesc;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
+import com.openggf.game.RuntimeArtAdmissionPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.Sprite;
 import com.openggf.sprites.managers.SpriteManager;
@@ -848,9 +849,9 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         // that ROM reload: loc_2DD06 later clears _unkFAA8, and
         // Obj_EndSignControlAwaitStart restores P1/P2 control
         // (docs/skdisasm/sonic3k.asm:62708-62720,180407-180412).
-        // The engine rebuilds the object manager for the reload, so keep that
-        // delayed handoff in the CNZ event bridge instead of preserving stale
-        // act-1 object instances.
+        // The engine rebuilds the object manager for the reload. The persistent
+        // results SST is carried into the target manager, while this CNZ event
+        // bridge owns only the delayed player-control release.
         S3kTransitionWriteSupport.requestCnzPostTransitionRelease(
                 module().getLevelEventProvider(),
                 ACT1_POST_TRANSITION_CONTROL_RELEASE_FRAMES);
@@ -862,6 +863,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         SeamlessLevelTransitionRequest request = SeamlessLevelTransitionRequest.builder(
                         SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
                 .targetZoneAct(Sonic3kZoneIds.ZONE_CNZ, 1)
+                .runtimeArtAdmissionPolicy(RuntimeArtAdmissionPolicy.TITLE_OWNER)
                 .deactivateLevelNow(false)
                 .preserveMusic(true)
                 .preserveLevelGamestate(true)

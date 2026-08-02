@@ -4,6 +4,8 @@ import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 
 import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
+import com.openggf.game.RuntimeArtAdmissionLease;
+import com.openggf.game.RuntimeArtAdmissionOwnerKind;
 import com.openggf.game.TitleCardProvider;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.sonic3k.events.S3kTransitionWriteSupport;
@@ -172,6 +174,7 @@ public class Sonic3kTitleCardManager
     private final List<HardwareWorkHandle> artHandles = new ArrayList<>();
     private final List<Integer> artDestinations = new ArrayList<>();
     private boolean artLoading;
+    private long runtimeArtAdmissionLeaseId = -1;
 
     /**
      * Immutable live-title snapshot. Array accessors clone their payload so a
@@ -210,7 +213,8 @@ public class Sonic3kTitleCardManager
             int lastLoadedAct,
             List<HardwareWorkHandle> artHandles,
             List<Integer> artDestinations,
-            boolean artLoading) {
+            boolean artLoading,
+            long runtimeArtAdmissionLeaseId) {
         public Snapshot {
             Objects.requireNonNull(state, "state");
             elemX = elemX.clone();
@@ -257,7 +261,8 @@ public class Sonic3kTitleCardManager
                 elemX, elemY, elemFrame, elemAtTarget, elemExiting,
                 elemOutsideViewport, elemExited, actNumberVisible,
                 combinedPatterns, artLoaded, artCached, lastLoadedZone,
-                lastLoadedAct, artHandles, artDestinations, artLoading);
+                lastLoadedAct, artHandles, artDestinations, artLoading,
+                runtimeArtAdmissionLeaseId);
     }
 
     @Override
@@ -311,6 +316,7 @@ public class Sonic3kTitleCardManager
         artHandles.clear();
         artDestinations.clear();
         artLoading = snapshot.artLoading();
+        runtimeArtAdmissionLeaseId = snapshot.runtimeArtAdmissionLeaseId();
         if (!snapshot.artHandles().isEmpty()) {
             var timing = GameServices.hardwareTiming();
             for (HardwareWorkHandle captured : snapshot.artHandles()) {
@@ -553,6 +559,11 @@ public class Sonic3kTitleCardManager
         this.stateTimer = 0;
         this.phaseCounter = 0;
         this.exitChildrenGone = false;
+        RuntimeArtAdmissionLease admissionLease = GameServices.module()
+                .getObjectArtProvider()
+                .bindPendingRuntimeArtAdmission(
+                        RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
+        this.runtimeArtAdmissionLeaseId = admissionLease.id();
 
         // Load art if needed
         if (!artLoaded || lastLoadedZone != zoneIndex || lastLoadedAct != actIndex) {
@@ -764,6 +775,7 @@ public class Sonic3kTitleCardManager
         artHandles.clear();
         artDestinations.clear();
         artLoading = false;
+        runtimeArtAdmissionLeaseId = -1;
         Arrays.fill(elemX, 0);
         Arrays.fill(elemY, 0);
         Arrays.fill(elemFrame, 0);
@@ -902,25 +914,32 @@ public class Sonic3kTitleCardManager
                 }
                 return;
             }
+            // Title KosM payload readiness only makes the card renderable.
+            // Obj_TitleCardWait2 reaches LoadEnemyArt after the title owner has
+            // observed every child retire, which is this sole EXIT -> COMPLETE
+            // transition.
+            if (!bonusMode) {
+                var provider = GameServices.module().getObjectArtProvider();
+                if (provider == null || runtimeArtAdmissionLeaseId < 0) {
+                    throw new IllegalStateException(
+                            "title owner is missing its runtime-art admission lease");
+                }
+                RuntimeArtAdmissionLease lease = provider.rebindRuntimeArtAdmission(
+                        runtimeArtAdmissionLeaseId,
+                        RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
+                if (inLevelMode && !heldLevelCounterDispatchOwned) {
+                    provider.onInLevelTitleCardCompleted(lease);
+                } else {
+                    provider.consumeRuntimeArtAdmission(
+                            lease, RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
+                }
+            }
             state = Sonic3kTitleCardState.COMPLETE;
             if (inLevelMode) {
                 // ROM Obj_TitleCardWait2 sets End_of_level_flag only after the
                 // in-level title-card timer has elapsed and its child objects
                 // have disappeared (sonic3k.asm:62244-62279).
                 GameServices.gameState().setEndOfLevelFlag(true);
-                // The same native dispatch falls through loc_2D8A2 into
-                // loc_2D8CA's LoadEnemyArt/PLCLoad_AnimalsAndExplosion
-                // (docs/skdisasm/sonic3k.asm:62302-62312), so the enemy KosM
-                // batch is released from this completion rather than at art
-                // retirement. This manager transition runs one dispatch ahead
-                // of the native owner's (see
-                // willSetInLevelEndOfLevelFlagThisUpdate); the provider defers
-                // the actual submission to the following runtime-art pass.
-                if (!heldLevelCounterDispatchOwned
-                        && GameServices.module().getObjectArtProvider() != null) {
-                    GameServices.module().getObjectArtProvider()
-                            .onInLevelTitleCardCompleted();
-                }
                 releasePreloadedActCamera();
             }
             LOG.fine("S3K title card: COMPLETE");
@@ -1126,24 +1145,6 @@ public class Sonic3kTitleCardManager
         artLoading = false;
         artLoaded = true;
         artCached = false;
-        // ROM reaches loc_2D8CA's LoadEnemyArt through Obj_TitleCardWait2 only
-        // after the card's display hold and child exit drain
-        // (docs/skdisasm/sonic3k.asm:62252-62312). For a pre-level card that
-        // whole lifetime elapses under the load blackout, so art retirement is
-        // the structural release point; an in-level card runs its full
-        // presentation over live gameplay, and its LoadEnemyArt belongs to the
-        // COMPLETE dispatch alongside End_of_level_flag (62302-62305) instead.
-        // Exception: results-return cards (held-level-counter flows, including
-        // the retained results SST mutating into Obj_TitleCard) still run a
-        // few dispatches behind the native owner mid-presentation, so
-        // releasing at their COMPLETE would miss the recorded completion edge
-        // entirely; they keep the art-retirement release until their display
-        // cadence is re-derived.
-        if ((!inLevelMode || heldLevelCounterDispatchOwned)
-                && GameServices.module().getObjectArtProvider() != null) {
-            GameServices.module().getObjectArtProvider()
-                    .onTitleCardArtRetired();
-        }
         return true;
     }
 
