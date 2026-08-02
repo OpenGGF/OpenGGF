@@ -3251,12 +3251,11 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         }
         int offsetX = request.playerOffsetX();
         int offsetY = request.playerOffsetY();
-        if (offsetX == 0 && offsetY == 0) {
-            return;
-        }
+        CarriedTitlePublicationTiming titleTiming =
+                CarriedTitlePublicationTiming.from(request);
         for (ObjectInstance instance : carried) {
             if (instance != null && !instance.isDestroyed()) {
-                instance.onCarriedAcrossSeamlessTransition(offsetX, offsetY);
+                instance.onCarriedAcrossSeamlessTransition(offsetX, offsetY, titleTiming);
             }
         }
     }
@@ -3794,6 +3793,18 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                             .preserveMusic(request.preserveMusic())
                             .preserveLevelGamestate(request.preserveLevelGamestate())
                             .showInLevelTitleCard(request.showInLevelTitleCard()).runtimeArtAdmissionPolicy(request.runtimeArtAdmissionPolicy())
+                            .resetLevelGamestateAtInLevelTitleCardDisplay(
+                                    request.resetLevelGamestateAtInLevelTitleCardDisplay())
+                            .inLevelTitleCardResetAdditionalDispatches(
+                                    request.inLevelTitleCardResetAdditionalDispatches())
+                            .inLevelTitleCardResetPhaseOneDispatchOverlap(
+                                    request.inLevelTitleCardResetPhaseOneDispatchOverlap())
+                            .lockPlayerControlForInLevelTitleCard(
+                                    request.lockPlayerControlForInLevelTitleCard())
+                            .inLevelTitleCardExitAdditionalDispatches(
+                                    request.inLevelTitleCardExitAdditionalDispatches())
+                            .inLevelTitleCardExitPhaseOneDispatchOverlap(
+                                    request.inLevelTitleCardExitPhaseOneDispatchOverlap())
                             .forceAirOnStaleObjectSupportLoss(request.forceAirOnStaleObjectSupportLoss())
                             .preserveOffsetCameraPosition(request.preserveOffsetCameraPosition())
                             .postTransitionMinXIfPresent(request.postTransitionMinX())

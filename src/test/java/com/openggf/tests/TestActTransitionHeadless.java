@@ -1,6 +1,7 @@
 package com.openggf.tests;
 
 import com.openggf.game.GameServices;
+import com.openggf.level.CarriedTitlePublicationTiming;
 import com.openggf.level.LevelManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.level.SeamlessLevelTransitionRequest.TransitionType;
@@ -277,6 +278,34 @@ public class TestActTransitionHeadless {
                 "Carried object Y must shift by the transition world delta");
     }
 
+    @Test
+    public void sameLevelReloadCarriesExactTitleTimingWhenWorldOffsetIsZero() {
+        LevelManager lm = GameServices.level();
+        TimingCarryStub carried = new TimingCarryStub();
+        lm.getObjectManager().addDynamicObject(carried);
+
+        SeamlessLevelTransitionRequest request = SeamlessLevelTransitionRequest
+                .builder(TransitionType.RELOAD_SAME_LEVEL)
+                .preserveMusic(true)
+                .showInLevelTitleCard(false)
+                .resetLevelGamestateAtInLevelTitleCardDisplay(true)
+                .inLevelTitleCardResetAdditionalDispatches(12)
+                .inLevelTitleCardResetPhaseOneDispatchOverlap(6)
+                .lockPlayerControlForInLevelTitleCard(true)
+                .inLevelTitleCardExitAdditionalDispatches(10)
+                .inLevelTitleCardExitPhaseOneDispatchOverlap(5)
+                .build();
+
+        lm.applySeamlessTransition(request);
+
+        assertTrue(carried.offsetCalled,
+                "the semantic carry hook must run even without a geometric offset");
+        assertEquals(new CarriedTitlePublicationTiming(
+                        true, true, 12, 6, true, 10, 5),
+                carried.titleTiming,
+                "the carried object must receive timing from the exact transition request");
+    }
+
     /** Minimal persistent object that records the seamless-transition offset hook. */
     private static final class CarryStub extends com.openggf.level.objects.AbstractObjectInstance {
         int worldX;
@@ -301,6 +330,30 @@ public class TestActTransitionHeadless {
             offsetCalled = true;
             worldX += offsetX;
             worldY += offsetY;
+        }
+    }
+
+    private static final class TimingCarryStub
+            extends com.openggf.level.objects.AbstractObjectInstance {
+        boolean offsetCalled;
+        CarriedTitlePublicationTiming titleTiming;
+
+        TimingCarryStub() {
+            super(null, "TimingCarryStub");
+        }
+
+        @Override public boolean isPersistent() { return true; }
+        @Override public boolean isHighPriority() { return false; }
+        @Override public void update(int vIntRunCount, com.openggf.game.PlayableEntity player) { }
+        @Override public void appendRenderCommands(java.util.List<com.openggf.graphics.GLCommand> commands) { }
+
+        @Override
+        public void onCarriedAcrossSeamlessTransition(
+                int offsetX,
+                int offsetY,
+                CarriedTitlePublicationTiming timing) {
+            offsetCalled = true;
+            titleTiming = timing;
         }
     }
 

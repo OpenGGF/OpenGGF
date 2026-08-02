@@ -803,7 +803,7 @@ class TestArchitecturalSourceGuard {
                 "Sonic3kAIZEvents.java", "PRESERVE_CURRENT",
                 "Sonic3kCNZEvents.java", "TITLE_OWNER",
                 "Sonic3kICZEvents.java", "IMMEDIATE",
-                "Sonic3kLBZEvents.java", "IMMEDIATE",
+                "Sonic3kLBZEvents.java", "TITLE_OWNER",
                 "Sonic3kMGZEvents.java", "TITLE_OWNER",
                 "Sonic3kHCZEvents.java", "TITLE_OWNER",
                 "Sonic3kMHZEvents.java", "TITLE_OWNER");
@@ -848,10 +848,10 @@ class TestArchitecturalSourceGuard {
             assertEquals(1, policies,
                     eventFile + " builder " + index
                             + " must declare exactly one admission policy");
-            assertTrue(chain.contains(
+                    assertTrue(chain.contains(
                             "RuntimeArtAdmissionPolicy." + expectedPolicy),
                     eventFile + " builder " + index
-                            + " must retain the reviewed Task 2 interim policy");
+                            + " must retain its reviewed admission policy");
         }
     }
 

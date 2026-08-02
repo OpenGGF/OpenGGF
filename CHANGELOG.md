@@ -3,6 +3,13 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: MGZ and LBZ seamless Act 1 reloads now leave the carried results
+  SST as the sole Act 2 title publisher. MGZ transfers its ROM-derived 12/6
+  reset and 10/5 exit timing through a game-neutral, rewind-owned carry
+  contract instead of creating a competing executor overlay; LBZ now holds a
+  title-owner admission lease and preserves the established 38/40 retained
+  results fallback. Both routes publish the exact four title parents once and
+  admit their target enemy batch only after title completion.
 - Fix/Test: CNZ's seamless Act 1 reload now preserves the carried results SST as
   the exact owner of the Act 2 title-card admission lease. The transition holds
   enemy art until that title reaches `COMPLETE`, publishes the four title KosM

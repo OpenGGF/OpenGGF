@@ -1,6 +1,7 @@
 package com.openggf.level.objects;
 
 import com.openggf.debug.DebugRenderContext;
+import com.openggf.level.CarriedTitlePublicationTiming;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.game.PlayableEntity;
@@ -212,6 +213,17 @@ public interface ObjectInstance {
      * leave this as a no-op.
      */
     default void onCarriedAcrossSeamlessTransition(int offsetX, int offsetY) {
+    }
+
+    /**
+     * Carries both the world delta and semantic title timing. The default
+     * preserves the established offset-only hook for existing objects.
+     */
+    default void onCarriedAcrossSeamlessTransition(
+            int offsetX,
+            int offsetY,
+            CarriedTitlePublicationTiming titleTiming) {
+        onCarriedAcrossSeamlessTransition(offsetX, offsetY);
     }
 
     /**

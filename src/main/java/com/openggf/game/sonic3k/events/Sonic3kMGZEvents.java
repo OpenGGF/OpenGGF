@@ -2444,9 +2444,9 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
                         // Load_Level clears the old End_of_level_flag before
                         // Obj_TitleCardWait2 publishes the new completion edge.
                         .preserveEndOfLevelActive(true)
-                        // Title card skipped during the results path for seamless
-                        // transitions; show it after the reload completes.
-                        .showInLevelTitleCard(true)
+                        // The carried Obj_LevelResults mutates into Obj_TitleCard
+                        // and is the sole publisher after the reload.
+                        .showInLevelTitleCard(false)
                         .resetLevelGamestateAtInLevelTitleCardDisplay(true)
                         // The carried results parent mutates into Obj_TitleCard;
                         // its twelve child SST create/render entries precede
