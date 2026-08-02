@@ -1,5 +1,7 @@
 package com.openggf.game.rewind.snapshot;
 
+import com.openggf.game.RuntimeArtAdmissionOwnerKind;
+
 import java.util.List;
 
 /**
@@ -20,7 +22,15 @@ public record PlcProgressSnapshot(
         List<Long> pendingKosOrdinals,
         boolean kosSubmissionArmed,
         /** Ticks the modelled title-card owner has run; -1 when not modelled. */
-        int titleCardTeardownTicks) {
+        int titleCardTeardownTicks,
+        long runtimeArtAdmissionGeneration,
+        long runtimeArtAdmissionNextLeaseId,
+        long runtimeArtAdmissionLeaseId,
+        long runtimeArtAdmissionBatchFingerprint,
+        RuntimeArtAdmissionOwnerKind runtimeArtAdmissionOwnerKind,
+        boolean runtimeArtAdmissionBound,
+        boolean runtimeArtAdmissionConsumed,
+        long titleCardTeardownLeaseId) {
 
     public PlcProgressSnapshot {
         pendingKosModules = List.copyOf(pendingKosModules);
@@ -28,11 +38,13 @@ public record PlcProgressSnapshot(
     }
 
     public PlcProgressSnapshot(int loadEpoch) {
-        this(loadEpoch, 0, List.of(), List.of(), false, -1);
+        this(loadEpoch, 0, List.of(), List.of(), false, -1,
+                0, 0, -1, 0, null, false, false, -1);
     }
 
     public PlcProgressSnapshot(int loadEpoch, int runtimeState) {
-        this(loadEpoch, runtimeState, List.of(), List.of(), false, -1);
+        this(loadEpoch, runtimeState, List.of(), List.of(), false, -1,
+                0, 0, -1, 0, null, false, false, -1);
     }
 
     public record PendingKosModule(int sourceAddress, int destinationTile) {

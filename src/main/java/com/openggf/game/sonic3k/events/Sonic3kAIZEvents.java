@@ -39,6 +39,7 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 import com.openggf.level.SeamlessLevelTransitionRequest;
+import com.openggf.game.RuntimeArtAdmissionPolicy;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
@@ -2693,6 +2694,8 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                         // ROM loads AIZ act 2 resources here, but this is presented as
                         // a seamless continuation (no title card transition).
                         .targetZoneAct(levelManager.getCurrentZone(), 1)
+                        .runtimeArtAdmissionPolicy(
+                                RuntimeArtAdmissionPolicy.PRESERVE_CURRENT)
                         // ROM: level stays active during the Kos decompression
                         // wait in AIZ1BGE_Finish — fire keeps rising and rendering.
                         // deactivateLevelNow(true) freezes the game loop, killing all

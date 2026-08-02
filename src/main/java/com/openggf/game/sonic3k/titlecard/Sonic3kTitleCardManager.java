@@ -4,6 +4,8 @@ import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 
 import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
+import com.openggf.game.RuntimeArtAdmissionLease;
+import com.openggf.game.RuntimeArtAdmissionOwnerKind;
 import com.openggf.game.TitleCardProvider;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.sonic3k.events.S3kTransitionWriteSupport;
@@ -172,6 +174,7 @@ public class Sonic3kTitleCardManager
     private final List<HardwareWorkHandle> artHandles = new ArrayList<>();
     private final List<Integer> artDestinations = new ArrayList<>();
     private boolean artLoading;
+    private long runtimeArtAdmissionLeaseId = -1;
 
     /**
      * Immutable live-title snapshot. Array accessors clone their payload so a
@@ -210,7 +213,8 @@ public class Sonic3kTitleCardManager
             int lastLoadedAct,
             List<HardwareWorkHandle> artHandles,
             List<Integer> artDestinations,
-            boolean artLoading) {
+            boolean artLoading,
+            long runtimeArtAdmissionLeaseId) {
         public Snapshot {
             Objects.requireNonNull(state, "state");
             elemX = elemX.clone();
@@ -257,7 +261,8 @@ public class Sonic3kTitleCardManager
                 elemX, elemY, elemFrame, elemAtTarget, elemExiting,
                 elemOutsideViewport, elemExited, actNumberVisible,
                 combinedPatterns, artLoaded, artCached, lastLoadedZone,
-                lastLoadedAct, artHandles, artDestinations, artLoading);
+                lastLoadedAct, artHandles, artDestinations, artLoading,
+                runtimeArtAdmissionLeaseId);
     }
 
     @Override
@@ -311,6 +316,12 @@ public class Sonic3kTitleCardManager
         artHandles.clear();
         artDestinations.clear();
         artLoading = snapshot.artLoading();
+        runtimeArtAdmissionLeaseId = snapshot.runtimeArtAdmissionLeaseId();
+        if (runtimeArtAdmissionLeaseId >= 0) {
+            GameServices.module().getObjectArtProvider().rebindRuntimeArtAdmission(
+                    runtimeArtAdmissionLeaseId,
+                    RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
+        }
         if (!snapshot.artHandles().isEmpty()) {
             var timing = GameServices.hardwareTiming();
             for (HardwareWorkHandle captured : snapshot.artHandles()) {
@@ -553,6 +564,11 @@ public class Sonic3kTitleCardManager
         this.stateTimer = 0;
         this.phaseCounter = 0;
         this.exitChildrenGone = false;
+        RuntimeArtAdmissionLease admissionLease = GameServices.module()
+                .getObjectArtProvider()
+                .bindPendingRuntimeArtAdmission(
+                        RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
+        this.runtimeArtAdmissionLeaseId = admissionLease.id();
 
         // Load art if needed
         if (!artLoaded || lastLoadedZone != zoneIndex || lastLoadedAct != actIndex) {
@@ -764,6 +780,7 @@ public class Sonic3kTitleCardManager
         artHandles.clear();
         artDestinations.clear();
         artLoading = false;
+        runtimeArtAdmissionLeaseId = -1;
         Arrays.fill(elemX, 0);
         Arrays.fill(elemY, 0);
         Arrays.fill(elemFrame, 0);
@@ -907,9 +924,14 @@ public class Sonic3kTitleCardManager
             // Obj_TitleCardWait2 reaches LoadEnemyArt after the title owner has
             // observed every child retire, which is this sole EXIT -> COMPLETE
             // transition.
-            if (GameServices.module().getObjectArtProvider() != null) {
-                GameServices.module().getObjectArtProvider()
-                        .onTitleCardArtRetired();
+            if (runtimeArtAdmissionLeaseId >= 0
+                    && GameServices.module().getObjectArtProvider() != null) {
+                var provider = GameServices.module().getObjectArtProvider();
+                RuntimeArtAdmissionLease lease = provider.rebindRuntimeArtAdmission(
+                        runtimeArtAdmissionLeaseId,
+                        RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
+                provider.consumeRuntimeArtAdmission(
+                        lease, RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
             }
             if (inLevelMode) {
                 // ROM Obj_TitleCardWait2 sets End_of_level_flag only after the

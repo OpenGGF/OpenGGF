@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.openggf.game.GameServices;
+import com.openggf.game.RuntimeArtAdmissionPolicy;
+import com.openggf.game.rewind.snapshot.PlcProgressSnapshot;
 import com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardTeardownModel;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.tests.HeadlessTestFixture;
@@ -100,14 +102,14 @@ class TestSonic3kTitleCardTeardownModel {
     }
 
     @Test
-    @DisplayName("false-overlay executor retirement does not start the skipped initial-title model")
-    void falseOverlayTransitionDoesNotCreateSkippedInitialTitleTeardown() throws Exception {
+    @DisplayName("AIZ preserve-current reload keeps the existing enemy batch and lease")
+    void aizPreserveCurrentTransitionDoesNotRegisterOrReleaseEnemyArt() throws Exception {
         HeadlessTestFixture.builder()
                 .withZoneAndAct(0, 0)
                 .build();
         Sonic3kObjectArtProvider provider = (Sonic3kObjectArtProvider) GameServices.module()
                 .getObjectArtProvider();
-        provider.onTitleCardArtRetired();
+        PlcProgressSnapshot before = provider.capture();
 
         GameServices.level().executeActTransition(SeamlessLevelTransitionRequest.builder(
                         SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
@@ -115,11 +117,51 @@ class TestSonic3kTitleCardTeardownModel {
                 .preserveMusic(true)
                 .preserveLevelGamestate(true)
                 .showInLevelTitleCard(false)
+                .runtimeArtAdmissionPolicy(RuntimeArtAdmissionPolicy.PRESERVE_CURRENT)
                 .build());
 
-        assertEquals(-1, provider.capture().titleCardTeardownTicks(),
-                "a false in-level overlay remains ordinary retirement before policy migration");
-        assertTrue(provider.capture().kosSubmissionArmed(),
-                "Task 1 preserves the executor's existing direct retirement callback");
+        PlcProgressSnapshot after = provider.capture();
+        assertEquals(before.runtimeArtAdmissionGeneration(),
+                after.runtimeArtAdmissionGeneration(),
+                "AIZ1BGE_FireTransition does not execute LoadEnemyArt");
+        assertEquals(before.runtimeArtAdmissionLeaseId(),
+                after.runtimeArtAdmissionLeaseId());
+        assertEquals(before.pendingKosModules(), after.pendingKosModules(),
+                "the existing AIZ enemy descriptors stay owned");
+        assertEquals(before.pendingKosOrdinals(), after.pendingKosOrdinals(),
+                "preserve-current cannot clear or resubmit live enemy work");
+        assertEquals(-1, after.titleCardTeardownTicks(),
+                "a false transition overlay never creates skipped-initial teardown");
+    }
+
+    @Test
+    void immediateTransitionArmsInExecutorAndSubmitsAtFollowingProviderPump()
+            throws Exception {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(0, 0)
+                .build();
+        Sonic3kObjectArtProvider provider = (Sonic3kObjectArtProvider) GameServices.module()
+                .getObjectArtProvider();
+
+        GameServices.level().executeActTransition(SeamlessLevelTransitionRequest.builder(
+                        SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
+                .targetZoneAct(0, 1)
+                .preserveMusic(true)
+                .preserveLevelGamestate(true)
+                .showInLevelTitleCard(false)
+                .runtimeArtAdmissionPolicy(RuntimeArtAdmissionPolicy.IMMEDIATE)
+                .build());
+
+        PlcProgressSnapshot armed = provider.capture();
+        assertTrue(armed.runtimeArtAdmissionConsumed());
+        assertTrue(armed.kosSubmissionArmed());
+        assertFalse(armed.pendingKosModules().isEmpty());
+        assertTrue(armed.pendingKosOrdinals().isEmpty(),
+                "executor consumption arms only; it must not submit parents");
+
+        provider.processRuntimeArtQueue();
+
+        assertFalse(provider.capture().pendingKosOrdinals().isEmpty(),
+                "the existing following provider pump submits the armed batch");
     }
 }

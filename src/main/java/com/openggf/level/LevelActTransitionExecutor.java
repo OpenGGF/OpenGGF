@@ -88,11 +88,10 @@ final class LevelActTransitionExecutor {
                 ? levelManager.gameModule.getObjectArtProvider()
                 : null;
         if (artProvider != null) {
-            artProvider.reloadStandaloneArtForActTransition(levelManager.currentZone);
+            artProvider.prepareRuntimeArtForActTransition(
+                    levelManager.currentZone,
+                    request.runtimeArtAdmissionPolicy());
             artProvider.registerLevelTileArt(levelManager.level, levelManager.currentZone);
-            if (!request.showInLevelTitleCard()) {
-                artProvider.onTitleCardArtRetired();
-            }
             if (levelManager.objectRenderManager != null) {
                 levelManager.objectRenderManager.ensurePatternsCached(
                         levelManager.graphicsManager, LevelManager.OBJECT_PATTERN_BASE);

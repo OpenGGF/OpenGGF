@@ -2,6 +2,8 @@ package com.openggf.game.sonic3k.titlecard;
 
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
+import com.openggf.game.RuntimeArtAdmissionOwnerKind;
+import com.openggf.game.RuntimeArtAdmissionLease;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindRegistry;
@@ -23,6 +25,8 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSonic3kTitleCardManagerRewind {
@@ -69,11 +73,48 @@ class TestSonic3kTitleCardManagerRewind {
     }
 
     @Test
+    void snapshotStoresAndRebindsTheExactTitleAdmissionLease() throws Exception {
+        startLevel();
+        Sonic3kObjectArtProvider provider =
+                (Sonic3kObjectArtProvider) GameServices.module()
+                        .getObjectArtProvider();
+        Sonic3kTitleCardManager title = new Sonic3kTitleCardManager();
+
+        title.initializeInLevel(0, 0);
+        Sonic3kTitleCardManager.Snapshot held = title.capture();
+        long leaseId = admissionLeaseId(held);
+
+        assertTrue(leaseId >= 0,
+                "title initialization binds a lease even while art is queued or cached");
+        assertEquals(provider.capture().runtimeArtAdmissionLeaseId(), leaseId);
+
+        title.reset();
+        title.restore(held);
+        assertEquals(leaseId, admissionLeaseId(title.capture()));
+        assertEquals(leaseId, provider.rebindRuntimeArtAdmission(
+                leaseId, RuntimeArtAdmissionOwnerKind.TITLE_OWNER).id());
+
+        provider.reloadStandaloneArtForActTransition(0);
+        var issue = Sonic3kObjectArtProvider.class.getDeclaredMethod(
+                "issueRuntimeArtAdmissionLease", RuntimeArtAdmissionOwnerKind.class);
+        issue.setAccessible(true);
+        issue.invoke(provider, RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
+
+        assertThrows(IllegalStateException.class, () -> title.restore(held),
+                "a stale title snapshot cannot attach itself to the current batch");
+    }
+
+    @Test
     void rewindAroundCompletionReleasesOnlyWhenReplayingTheExitTransition()
             throws Exception {
         startLevel();
         Sonic3kTitleCardManager title = new Sonic3kTitleCardManager();
         CountingObjectArtProvider provider = installCountingProvider();
+        setField(title, "artLoaded", true);
+        setField(title, "lastLoadedZone", 0);
+        setField(title, "lastLoadedAct", 0);
+        setField(title, "combinedPatterns", new com.openggf.level.Pattern[0x100]);
+        title.initializeInLevel(0, 0);
         prepareExitForCompletion(title);
 
         Sonic3kTitleCardManager.Snapshot beforeCompletion = title.capture();
@@ -112,6 +153,14 @@ class TestSonic3kTitleCardManagerRewind {
         field.setAccessible(true);
         CountingObjectArtProvider provider = new CountingObjectArtProvider();
         field.set(module, provider);
+        var schedule = Sonic3kObjectArtProvider.class.getDeclaredMethod(
+                "scheduleEnemyKosArt", int.class, int.class);
+        schedule.setAccessible(true);
+        schedule.invoke(provider, 0, 0);
+        var issue = Sonic3kObjectArtProvider.class.getDeclaredMethod(
+                "issueRuntimeArtAdmissionLease", RuntimeArtAdmissionOwnerKind.class);
+        issue.setAccessible(true);
+        issue.invoke(provider, RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
         return provider;
     }
 
@@ -136,13 +185,27 @@ class TestSonic3kTitleCardManagerRewind {
         return field.get(target);
     }
 
+    private static long admissionLeaseId(Sonic3kTitleCardManager.Snapshot snapshot)
+            throws Exception {
+        try {
+            return (long) snapshot.getClass()
+                    .getMethod("runtimeArtAdmissionLeaseId")
+                    .invoke(snapshot);
+        } catch (NoSuchMethodException e) {
+            fail("title snapshot must store the scalar admission lease id");
+            return -1;
+        }
+    }
+
     private static final class CountingObjectArtProvider extends Sonic3kObjectArtProvider {
         private int titleCardRetirementCount;
 
         @Override
-        public void onTitleCardArtRetired() {
+        public void consumeRuntimeArtAdmission(
+                RuntimeArtAdmissionLease lease,
+                RuntimeArtAdmissionOwnerKind ownerKind) {
+            super.consumeRuntimeArtAdmission(lease, ownerKind);
             titleCardRetirementCount++;
-            super.onTitleCardArtRetired();
         }
     }
 }

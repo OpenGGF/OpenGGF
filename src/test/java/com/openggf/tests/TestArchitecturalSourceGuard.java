@@ -795,6 +795,34 @@ class TestArchitecturalSourceGuard {
     }
 
     @Test
+    void everyS3kSeamlessTransitionBuilderDeclaresRuntimeArtAdmissionPolicy()
+            throws IOException {
+        Map<String, String> eventFiles = Map.of(
+                "Sonic3kAIZEvents.java", "PRESERVE_CURRENT",
+                "Sonic3kCNZEvents.java", "IMMEDIATE",
+                "Sonic3kICZEvents.java", "IMMEDIATE",
+                "Sonic3kLBZEvents.java", "IMMEDIATE",
+                "Sonic3kMGZEvents.java", "TITLE_OWNER",
+                "Sonic3kHCZEvents.java", "TITLE_OWNER",
+                "Sonic3kMHZEvents.java", "TITLE_OWNER");
+        for (var entry : eventFiles.entrySet()) {
+            String eventFile = entry.getKey();
+            String source = Files.readString(SRC_MAIN.resolve(
+                    "com/openggf/game/sonic3k/events/" + eventFile));
+            int builders = source.split(
+                    "SeamlessLevelTransitionRequest\\.builder\\(", -1).length - 1;
+            int policies = source.split(
+                    "\\.runtimeArtAdmissionPolicy\\(", -1).length - 1;
+            assertTrue(builders > 0, eventFile + " must retain its transition builder");
+            assertEquals(builders, policies,
+                    eventFile + " must declare one admission policy per builder");
+            assertTrue(source.contains(
+                            "RuntimeArtAdmissionPolicy." + entry.getValue()),
+                    eventFile + " must retain the reviewed Task 2 interim policy");
+        }
+    }
+
+    @Test
     void gameLoopRoutesMenuScreenUpdatesThroughModeControllers() throws IOException {
         String source = stripCommentsAndStrings(Files.readString(SRC_MAIN.resolve("com/openggf/GameLoop.java")));
         List<String> forbiddenDirectUpdates = List.of(

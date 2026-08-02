@@ -60472,3 +60472,35 @@ MGZ-complete results/title handoff. AIZ complete raw 6351 remains a separate
 recorder-attribution audit. MGZ standard, HCZ, and MHZ are gameplay-first lanes
 because animation, sidekick speed, and rings diverge before their queue
 terminals.
+
+## 2026-08-02 — Wave 2 Task 2 AIZ preserve-current admission correction
+
+Context: `.worktrees/s3k-queue-lifecycle-recovery`, branch
+`bugfix/ai-s3k-queue-lifecycle-recovery`, uncommitted Task 2 candidate based on
+`633e06cecc6444b0ef248d8456ba862583e8dbe7`, JDK 21.0.11, verified S3K locked-on
+ROM. No trace fixture changed.
+
+The reviewed Task 2 queue/timing/authority matrix passes 142/142 (0 failures,
+0 errors). Its exact selector is:
+
+`mvn -q -Dmse=off -Dtest='TestS3kKosDecompressionQueue,TestS3kKosDecompressionQueueLifecycle,TestS3kKosModuleQueue,TestS3kKosModuleReadiness,TestS3kKosStructuralSequence,TestS3kHardwareTimingReplay,TestHardwareTimingReplayPort,TestHardwareTimingAuthorityGuard,TestHardwareTimingService,TestLevelIterationHardwareTimingAdmissionOrder,TestSpecialStageHardwareTimingLifecycle,TestTraceRunHardwareTimingCoordinator,TestTraceSuppressedRowClosure,TestLoadQueueTraceComparison,TestQueueDiagnosticSnapshot' -Ds3k.rom.path=<verified-s3k> test`.
+
+The canonical AIZ standard replay command
+`mvn -q -Dmse=off -Dtest='TestS3kAizTraceReplay#replayMatchesTrace' -Ds3k.rom.path=<verified-s3k> test`
+reports 1 error and 0 failures at raw 5543: the timing stream expects direct
+Kosinski ordinal `#36`, fingerprint `c3e8...`, while the engine has no pending
+direct submission. The canonical complete-run command
+`mvn -q -Dmse=off -Dtest='TestS3kAizTraceReplay,TestS3kAizCompleteRunTraceReplay' -Ds3k.rom.path=<verified-s3k> test`
+reports the complete-run terminal at raw 6346, direct ordinal `#35`, the same
+fingerprint prefix, with no pending engine submission. The prior Wave 1
+terminals were raw 8942/direct `#47` for standard AIZ and raw 6351/module `#16`
+for the complete run.
+
+This terminal change is the expected consequence of the approved
+`PRESERVE_CURRENT` policy for AIZ. The ROM's `AIZ1BGE_FireTransition` and
+`AIZ1BGE_Finish` path does not call `LoadEnemyArt`; the engine therefore keeps
+the current batch and neither advances its admission generation nor clears or
+resubmits enemy art. The published timing stream still expects that former
+engine-created replacement work. No trace/timing workaround was added: the
+next action is the separately scoped native-recorder attribution and canonical
+fixture audit, with fixture regeneration requiring its own approval.

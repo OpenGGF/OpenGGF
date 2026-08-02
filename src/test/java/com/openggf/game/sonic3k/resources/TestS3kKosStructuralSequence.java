@@ -177,7 +177,7 @@ class TestS3kKosStructuralSequence {
         assertLiteralJob(timing, 2, 0x0D6D84, 0x53D);
         assertLiteralJob(timing, 3, 0x39BDC8, 0x54D);
         drainHardware(timing);
-        title.update();
+        advanceTitleToCompletion(title);
 
         provider.processRuntimeArtQueue();
         assertLiteralJob(timing, 4, 0x36800C, 0x548);
@@ -355,7 +355,7 @@ class TestS3kKosStructuralSequence {
         Sonic3kTitleCardManager title = new Sonic3kTitleCardManager();
         title.initialize(0, 0);
         drainHardware(timing);
-        title.update();
+        advanceTitleToCompletion(title);
         provider.processRuntimeArtQueue();
         drainHardware(timing);
         provider.processRuntimeArtQueue();
@@ -434,12 +434,9 @@ class TestS3kKosStructuralSequence {
                 (Sonic3kObjectArtProvider) GameServices.module()
                         .getObjectArtProvider();
         provider.processRuntimeArtQueue();
-        assertLiteralJob(timing, 3, 0x36800C, 0x548);
-        assertLiteralJob(timing, 4, 0x367DCA, 0x52A);
-        assertLiteralJob(timing, 5, 0x3681FE, 0x55F);
-        assertEquals(6, moduleJobs(timing).size(),
-                "AIZ1BGE_Finish must continue with LoadEnemyArt, without "
-                        + "inserting a second fire-overlay job");
+        assertEquals(3, moduleJobs(timing).size(),
+                "AIZ1BGE_FireTransition preserves the existing enemy set and "
+                        + "must not insert enemy or fire-overlay work");
     }
 
     @Test
@@ -484,7 +481,7 @@ class TestS3kKosStructuralSequence {
         Sonic3kTitleCardManager title = new Sonic3kTitleCardManager();
         title.initialize(1, 0);
         drainHardware(timing);
-        title.update();
+        advanceTitleToCompletion(title);
 
         provider.processRuntimeArtQueue();
         assertLiteralJob(timing, 4, 0x36A7C6, 0x539);
@@ -584,7 +581,7 @@ class TestS3kKosStructuralSequence {
         Sonic3kTitleCardManager title = new Sonic3kTitleCardManager();
         title.initialize(1, 1);
         drainHardware(timing);
-        title.update();
+        advanceTitleToCompletion(title);
 
         provider.processRuntimeArtQueue();
         assertLiteralJob(timing, 4, 0x36A552, 0x539);
@@ -647,6 +644,14 @@ class TestS3kKosStructuralSequence {
         }
         assertEquals(0, timing.incompleteCount(
                 com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE));
+    }
+
+    private static void advanceTitleToCompletion(Sonic3kTitleCardManager title) {
+        for (int dispatch = 0; dispatch < 1_000 && !title.isComplete(); dispatch++) {
+            title.update();
+        }
+        assertTrue(title.isComplete(),
+                "enemy art remains title-owned until the EXIT to COMPLETE dispatch");
     }
 
     private static void service(

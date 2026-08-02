@@ -3793,7 +3793,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                             .deactivateLevelNow(request.deactivateLevelNow())
                             .preserveMusic(request.preserveMusic())
                             .preserveLevelGamestate(request.preserveLevelGamestate())
-                            .showInLevelTitleCard(request.showInLevelTitleCard())
+                            .showInLevelTitleCard(request.showInLevelTitleCard()).runtimeArtAdmissionPolicy(request.runtimeArtAdmissionPolicy())
                             .forceAirOnStaleObjectSupportLoss(request.forceAirOnStaleObjectSupportLoss())
                             .preserveOffsetCameraPosition(request.preserveOffsetCameraPosition())
                             .postTransitionMinXIfPresent(request.postTransitionMinX())

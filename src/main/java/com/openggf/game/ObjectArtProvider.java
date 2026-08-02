@@ -54,6 +54,47 @@ public interface ObjectArtProvider {
     }
 
     /**
+     * Registers transition runtime art under the request's semantic owner.
+     * Providers without lease-backed queues retain their existing behavior.
+     */
+    default RuntimeArtAdmissionLease prepareRuntimeArtForActTransition(
+            int zoneIndex, RuntimeArtAdmissionPolicy policy) {
+        if (policy == RuntimeArtAdmissionPolicy.PRESERVE_CURRENT) {
+            return null;
+        }
+        reloadStandaloneArtForActTransition(zoneIndex);
+        if (policy == RuntimeArtAdmissionPolicy.IMMEDIATE) {
+            onTitleCardArtRetired();
+        }
+        return null;
+    }
+
+    /** Binds the provider's one pending lease during owner initialization. */
+    default RuntimeArtAdmissionLease bindPendingRuntimeArtAdmission(
+            RuntimeArtAdmissionOwnerKind ownerKind) {
+        throw new IllegalStateException("runtime-art admission leases are not supported");
+    }
+
+    /** Binds a known scalar lease id to a production owner. */
+    default RuntimeArtAdmissionLease bindRuntimeArtAdmission(
+            long leaseId, RuntimeArtAdmissionOwnerKind ownerKind) {
+        throw new IllegalStateException("runtime-art admission leases are not supported");
+    }
+
+    /** Rebinds a rewind-restored owner to the same scalar lease identity. */
+    default RuntimeArtAdmissionLease rebindRuntimeArtAdmission(
+            long leaseId, RuntimeArtAdmissionOwnerKind ownerKind) {
+        throw new IllegalStateException("runtime-art admission leases are not supported");
+    }
+
+    /** Consumes one exact production-issued lease. */
+    default void consumeRuntimeArtAdmission(
+            RuntimeArtAdmissionLease lease,
+            RuntimeArtAdmissionOwnerKind ownerKind) {
+        throw new IllegalStateException("runtime-art admission leases are not supported");
+    }
+
+    /**
      * Loads object art for the specified zone.
      *
      * @param zoneIndex the zone index (-1 for default/non-zone-specific)

@@ -4,6 +4,8 @@ import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 
 import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
+import com.openggf.game.RuntimeArtAdmissionLease;
+import com.openggf.game.RuntimeArtAdmissionOwnerKind;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.rewind.snapshot.PlcProgressSnapshot;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
@@ -52,12 +54,14 @@ class TestSonic3kTitleCardKosQueue {
     private Sonic3kTitleCardManager manager;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         timing = GameServices.hardwareTiming();
         timing.resetForMissingSnapshot();
         rom = TestEnvironment.currentRom();
         manager = new Sonic3kTitleCardManager();
         manager.reset();
+        prepareTitleLease((Sonic3kObjectArtProvider) GameServices.module()
+                .getObjectArtProvider());
     }
 
     @Test
@@ -157,6 +161,11 @@ class TestSonic3kTitleCardKosQueue {
     @Test
     void titleOwnerRetiresRuntimeArtExactlyOnceOnCompleteTransition() throws Exception {
         CountingObjectArtProvider provider = installCountingProvider();
+        setField(manager, "artLoaded", true);
+        setField(manager, "lastLoadedZone", 0);
+        setField(manager, "lastLoadedAct", 0);
+        setField(manager, "combinedPatterns", new com.openggf.level.Pattern[0x100]);
+        manager.initialize(0, 0);
         prepareExitForCompletion(manager);
 
         manager.update();
@@ -322,7 +331,21 @@ class TestSonic3kTitleCardKosQueue {
         field.setAccessible(true);
         CountingObjectArtProvider provider = new CountingObjectArtProvider();
         field.set(module, provider);
+        prepareTitleLease(provider);
         return provider;
+    }
+
+    private static void prepareTitleLease(Sonic3kObjectArtProvider provider)
+            throws Exception {
+        Method schedule = Sonic3kObjectArtProvider.class.getDeclaredMethod(
+                "scheduleEnemyKosArt", int.class, int.class);
+        schedule.setAccessible(true);
+        schedule.invoke(provider, 0, 0);
+        Method issue = Sonic3kObjectArtProvider.class.getDeclaredMethod(
+                "issueRuntimeArtAdmissionLease",
+                RuntimeArtAdmissionOwnerKind.class);
+        issue.setAccessible(true);
+        issue.invoke(provider, RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
     }
 
     private static void prepareExitForCompletion(Sonic3kTitleCardManager manager)
@@ -350,9 +373,11 @@ class TestSonic3kTitleCardKosQueue {
         private int titleCardRetirementCount;
 
         @Override
-        public void onTitleCardArtRetired() {
+        public void consumeRuntimeArtAdmission(
+                RuntimeArtAdmissionLease lease,
+                RuntimeArtAdmissionOwnerKind ownerKind) {
+            super.consumeRuntimeArtAdmission(lease, ownerKind);
             titleCardRetirementCount++;
-            super.onTitleCardArtRetired();
         }
     }
 }

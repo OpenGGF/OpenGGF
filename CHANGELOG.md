@@ -3,6 +3,14 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Refactor/Test: S3K runtime-art admission now uses generation- and
+  fingerprint-bound leases with explicit immediate, preserve-current,
+  title-owner, and resource-handoff policies. Title-card completion and the
+  skipped-initial-title timer consume their exact leases once, rewind restores
+  the same owner identity, and all seven seamless-transition builders declare
+  their interim policy explicitly. AIZ now preserves its existing enemy-art
+  batch across the fire transition, matching the ROM producer sequence instead
+  of scheduling an engine-only replacement batch.
 - Fix/Test: S3K title-card KosM payload readiness now only makes the title
   renderable; runtime enemy art is admitted once when the title owner reaches
   `COMPLETE`. Cached title art follows the same owner boundary, and the

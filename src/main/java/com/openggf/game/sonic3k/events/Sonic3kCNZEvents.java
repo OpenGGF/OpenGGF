@@ -20,6 +20,7 @@ import com.openggf.level.ChunkDesc;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
+import com.openggf.game.RuntimeArtAdmissionPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.Sprite;
 import com.openggf.sprites.managers.SpriteManager;
@@ -862,6 +863,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         SeamlessLevelTransitionRequest request = SeamlessLevelTransitionRequest.builder(
                         SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
                 .targetZoneAct(Sonic3kZoneIds.ZONE_CNZ, 1)
+                .runtimeArtAdmissionPolicy(RuntimeArtAdmissionPolicy.IMMEDIATE)
                 .deactivateLevelNow(false)
                 .preserveMusic(true)
                 .preserveLevelGamestate(true)
