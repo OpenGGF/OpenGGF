@@ -3,6 +3,14 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K two-axis placement now retains ordered X-cursor work until
+  `ObjectManager` records a terminal construction outcome, so a full SST pool
+  retries the same entry instead of losing it and rewind preserves the pending
+  order. CNZ SS-entry rings now release placement ownership through their
+  shared marked/offscreen retirement tail while still submitting their exact
+  explosion KosM parent and direct child once,
+  advancing the complete-run queue frontier through direct ordinals `#203` and
+  `#204` to `#205`.
 - Fix/Test: ICZ's seamless Act 1 reload now carries its exact enemy-art
   admission lease through the resource handoff and publishes only after the
   module parent and both direct children are ready. Terrain and art apply

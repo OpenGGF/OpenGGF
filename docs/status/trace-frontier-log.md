@@ -60567,3 +60567,46 @@ The comparison report now records 17 errors, first f33
 errors first at f12320 `queue.s3k_kos_module.state`. Earliest campaign-commit
 attribution for that f33 regression is pending the Wave 2 Task 7 validation
 sweep; Task 5 did not rewrite history or dismiss it as inherited.
+
+## 2026-08-02 — Wave 2 Task 6 CNZ late-placement cursor ownership
+
+Context: `.worktrees/s3k-queue-lifecycle-recovery`, branch
+`bugfix/ai-s3k-queue-lifecycle-recovery`, Task 6 candidate based on
+`cacd8f145`, JDK 21.0.11, verified S3K locked-on ROM. No trace fixture changed.
+
+The CNZ complete-run ring at `(0x2DC0,0x064C)`, object `0x85`, subtype `4`,
+is first constructed when the ordered two-axis cursor reaches it. Its first
+offscreen retirement submits `ArtKosM_BadnikExplosion`; the former ordinary
+destroy path then latched the placement's `destroyedInWindow` bit, so the
+later cursor re-entry could not reconstruct the same ring and its next
+production submission was absent. The shared marked/offscreen retirement tail
+now uses the existing respawnable-destroy semantic, while only the initial
+already-collected precheck remains permanent. The shared cursor queue also
+retains ordered work across a failed
+`FindFreeObj` allocation and removes ownership only after `ObjectManager`
+reports construction, remembered/dormant resolution, vertical deferral, or a
+definitive registry result. Post-camera rejection removes its stale order
+entry, and rewind retains the exact pending order before crossing and before
+construction.
+
+The focused placement/ring route selector passes 36/36 (0 failures, 0 errors).
+It proves the real CNZ fixture submits exactly one explosion KosM parent at
+`0xDB406`, destination `ArtTile_Explosion * 32`, fingerprint
+`70da89e553f70fe647a00489dec5f2612854986b444b87a2e8d81ab0f821e431`,
+and exactly one new first direct child at `0xDB408`, destination
+`0xFFFFD000`, fingerprint
+`3c96d8b9573e86f26814cb8a605459c8fef23cc1ca5425db2fd1cc250d408d91`.
+The exact queue/timing/authority selector remains green at 142/142, and the
+exact S1/S2 `*TraceReplay` selector is green across 50 classes / 51 methods.
+
+The canonical command
+`mvn -q -Dmse=off -Dtest='TestS3kCnzCompleteRunTraceReplay' -Ds3k.rom.path=<verified-s3k> test`
+reports 1 error and 0 failures after 13,961 represented rows. Direct ordinals
+`#203` (raw 9712) and `#204` (raw 10932) are now consumed; the next fail-closed
+terminal expects direct ordinal `#205`, fingerprint
+`589a478d29f5c788ad304520acc86172ea220a4a68b5a74ac25ee62e80d5899c`,
+with engine pending `<none>` (the recorded completion is raw 13962, immediately
+after the last represented row). The comparison report records 427 errors and
+0 warnings, first f33 `queue.s3k_kos_direct.busy` (`false` / `true`). That f33
+regression remains assigned to the separate Wave 2 attribution lane and is not
+reclassified by this placement fix.
