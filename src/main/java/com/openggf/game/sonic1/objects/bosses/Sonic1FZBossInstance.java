@@ -1090,7 +1090,9 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
         if (state.routineSecondary == STATE_CYLINDER_ATTACK) {
             return COMBAT_TOP_LANDING_HALF_WIDTH;
         }
-        return collisionHalfWidth;
+        // Escape phases follow the full-solid family default: Solid_Landed
+        // re-reads obActWid = d1 - $B (_incObj/sub SolidObject.asm:318-336).
+        return Math.max(0, collisionHalfWidth - 0x0B);
     }
 
     // === Rendering ===
