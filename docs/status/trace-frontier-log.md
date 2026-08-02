@@ -60336,3 +60336,45 @@ untouched by this branch. `S2SpecialStageFinishBoundaryMappingTest`, which asser
 old divergence report, now passes.
 
 **The S1/S2 trace fleet is green.**
+
+## 2026-08-02 — S2 native recorder contract green; bounded S3K persistence audit fixes two slot leaks
+
+Context: `.worktrees/handover-followups`, branch `bugfix/ai-handover-followups`, based on
+`develop` `2c64e09d4`.
+
+- `S2SpecialStageRecorderContractTest` now treats the Lua source declaration
+  (`1.4-s2ss`) and the committed audited native fixture stamp
+  (`1.4-s2ss-native`) as separate exact contracts. Commit `bceb299d8` published the
+  native fixture and dynamic-art auxiliary stream but left the artifact assertion stale;
+  no fixture was edited or re-recorded. Java result: 6/6 pass. Native standalone runner:
+  6/6 pass with explicit `BIZHAWK_HOME` and S2 REV01 ROM.
+- A route-led `isPersistent()` audit covered concrete persistent classes reached before
+  the current AIZ, HCZ, and MHZ complete-run frontiers. Two mismatches were found and
+  corrected from the S&K-side tails: AIZ Draw Bridge normal/wait operations use saved pivot
+  `$30` in their unsigned coarse-back `$280` delete/respawn-clear tail
+  (`sonic3k.asm:59649-59676`), while the triggered collapse operation skips that tail for
+  its `$0E` countdown (`59769-59791`); MHZ Swing Vine applies its root tail even while a
+  player is grabbed (`47164-47192`). Draw Bridge is persistent only during its timer-owned
+  collapse delete, and Swing Vine is non-persistent with an exact anchor predicate; the
+  remaining audited overrides are self-managed, coupled, fixed-slot, or event-owned.
+- Test-first evidence: the combined focused run initially failed only the three new
+  lifetime assertions; after the object-local fixes,
+  `S2SpecialStageRecorderContractTest,TestAiz2BossEndSequenceObjects,`
+  `TestMhzSwingVineObjectInstance,TestObjectManagerCounterBasedDynamicUnload,`
+  `TestRewindCoverageGuard,TestStaticStateRewindCoverageGuard` passed 75/75 after the
+  independent review correction. The Draw Bridge manager regression triggers collapse
+  while already beyond `$280`, proving that the wait routine transitions before its
+  post-routine range decision and that the `$0E` phase then self-deletes on schedule.
+- AIZ complete-run command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest=TestS3kAizCompleteRunTraceReplay -Ds3k.rom.path=<verified-s3k> test`.
+  Result unchanged: 57 errors / 6344 represented rows; first frame 1106
+  `queue.s3k_kos_direct.busy`; terminal direct `#35` at raw 6346.
+- MHZ complete-run command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest=TestS3kMhzCompleteRunTraceReplay -Ds3k.rom.path=<verified-s3k> test`.
+  Result unchanged: 865 errors / 7218 represented rows; first frame 3420 `rings`;
+  terminal direct `#335` at raw 7221. The corrected Swing Vine lifetime therefore does
+  not explain the earlier pollen/bouncing-ring slot map on this route.
+
+The corrections remove latent placement-slot leaks without moving the current early trace
+frontiers. The next active pipeline remains AIZ frame 1106/direct `#35`; hardware timing
+authority is unchanged.

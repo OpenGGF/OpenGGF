@@ -3,6 +3,19 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K AIZ Draw Bridge and MHZ Swing Vine no longer pin placement
+  slots through over-broad `isPersistent()` results. Draw Bridge normal/wait
+  operations use their saved pivot and the native unsigned `$280` coarse-back
+  window, while its triggered `$0E` collapse countdown correctly remains live
+  until its timer-owned delete; Swing Vine uses the same native window at its
+  fixed root even while grabbed. Focused S3K-layout tests cover Draw Bridge
+  unload/recreation and collapse survival, plus the Swing Vine's simultaneous
+  forced-camera request and range eligibility. A route-led AIZ/HCZ/MHZ audit
+  also records the self-managed, coupled, fixed-slot, and event-owned lifetimes
+  that are intentionally persistent. The S2 special-stage recorder contract now pins the audited
+  native fixture's `1.4-s2ss-native` provenance separately from the legacy Lua
+  source's `1.4-s2ss` declaration.
+
 - Feature: manifest-backed runs selected from the master-title trace picker now
   remain one visual session across level and act loads, bonus stages, S1/S2/S3K
   special stages, returns, and the declared terminal movie tail. The visual and
