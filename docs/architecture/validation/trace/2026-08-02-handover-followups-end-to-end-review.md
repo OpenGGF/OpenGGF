@@ -44,6 +44,8 @@ below before integration.
 | S1 results isolation plus lifecycle guard | 12/12 pass |
 | Baseline full JDK 21 suite | 14,054 tests; 27 failures; 8 errors; 31 skipped |
 | Final candidate full JDK 21 suite | 14,072 tests; 26 failures; 7 errors; 31 skipped |
+| Final merged full JDK 21 suite | 14,072 tests; 26 failures; 7 errors; 31 skipped |
+| Post-merge signpost isolation plus lifecycle guard | 25/25 pass |
 
 The final candidate failure/error identities are a strict subset of the baseline set. The
 candidate removes the stale replay-port ordering error and the MHZ mushroom test's inherited
@@ -69,13 +71,18 @@ Route replays ran separately:
 - The broad `frameCounter` rename remains deliberately out of this conflict-heavy branch.
 - The repository full suite is red on the updated baseline. The candidate improves that
   exact set without claiming unrelated baseline failures are resolved.
+- The first post-merge suite exposed inherited terrain in the otherwise isolated signpost
+  falling contract. The class passes alone; the integration correction is test-scoped and
+  passes its focused lifecycle batch and repeated post-merge suite. The renewed review below
+  remains the final pre-push gate.
 
 ## Independent review result
 
-`NO BLOCKERS`. The independent reviewer checked the full branch diff and current intended
-changes against requirement traceability, ROM lifetime evidence, hard-rule-4 confinement,
-focused/trace/full-suite results, documentation, policy obligations, unresolved risks, and
-deferrals.
+The pre-merge review reported `NO BLOCKERS`. After the post-merge signpost isolation
+correction, a fresh independent reviewer checked the complete merged diff, focused and
+repeated full-suite evidence, updated integration state, hard-rule-4 confinement, ROM
+lifetime ownership, documentation, policy obligations, unresolved risks, and deferrals.
+Renewed result: `NO BLOCKERS`.
 
 ## Human integration checklist
 
@@ -85,9 +92,9 @@ deferrals.
   coverage fixes.
 - [x] Updated `develop` baseline recorded before merge.
 - [x] Development full suite compared by exact method identity.
-- [x] Independent whole-delivery review green.
-- [ ] Generated rewind-gap output discarded with explicit authorization.
+- [x] Renewed independent whole-delivery review green after post-merge correction.
+- [x] Generated rewind-gap output discarded with explicit authorization.
 - [ ] README staged in the merge into `develop`.
-- [ ] Post-merge full suite introduces no baseline regression.
+- [x] Post-merge full suite introduces no baseline regression.
 - [ ] Only `develop` pushed; implementation branches remain local.
 - [ ] Clean worktree removed and fully merged local branches deleted.

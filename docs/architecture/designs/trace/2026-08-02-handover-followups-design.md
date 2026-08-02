@@ -330,6 +330,15 @@ run that guard before the exact development full suite. Do not change result-car
 PLC readiness semantics, or production reset ownership to compensate for fork-local test
 contamination.
 
+The first post-merge suite exposed the same class of ambient-state dependency in
+`TestS3kSignpostInstance#fallingDispatchSkipsExpiringCooldownThenAppliesBumpBeforeGravity`.
+Its local services intentionally omit terrain, but production `ObjectTerrainUtils` resolves
+the level through `GameServices.levelOrNull()`. In a reused fork the class can inherit a
+loaded level, land the signpost during the falling-only contract, and zero `yVel`; the full
+17-method class passes alone. Install `SingletonResetExtension` plus `@FullReset` at class
+scope so the falling contract begins without inherited terrain. Keep production collision,
+signpost behavior, and the existing assertion unchanged.
+
 ### Verification and rollback
 
 Focused tests precede route replays. Hardware timing authority, rewind coverage, the four

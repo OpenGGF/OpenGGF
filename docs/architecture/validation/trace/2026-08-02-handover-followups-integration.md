@@ -58,6 +58,41 @@ That rewrite is not an intended deliverable and must be discarded before integra
 
 ## Integration completion
 
-Pending independent end-to-end review, merge, post-merge suite, push, and worktree cleanup.
-This section will be completed on merged `develop` with exact commits, conflicts, regression
-comparison, and cleanup state.
+The initial independent end-to-end review was green and merge `2d76b8951` applied without
+conflicts. Post-merge verification, renewed review of the isolation correction, push, and
+worktree cleanup remain pending. This report will be completed with exact repeated-suite,
+review, push, and cleanup state.
+
+### First post-merge run
+
+Merge commit `2d76b8951` applied without conflicts. The first post-merge suite ran 14,072
+tests with 28 failures, 7 errors, and 31 skipped. It retained the baseline MHZ mushroom
+failure and added one baseline-passing failure in
+`TestS3kSignpostInstance#fallingDispatchSkipsExpiringCooldownThenAppliesBumpBeforeGravity`.
+The complete signpost class passes alone, 17/17. The test's local services omit terrain,
+but `ObjectTerrainUtils` consults the ambient `GameServices` level; a reused fork can
+therefore land the signpost and zero its falling velocity. The reviewed correction is
+class-scoped `SingletonResetExtension` plus `@FullReset`, with no production change. A
+repeated post-merge result and renewed independent whole-delivery review are required before
+commit and push.
+
+### Final post-merge verification
+
+The signpost class and singleton lifecycle guard pass together, 25/25. The exact full-suite
+command was then repeated on merged `develop`:
+
+| Revision | Tests | Failures | Errors | Skipped | Result |
+|---|---:|---:|---:|---:|---|
+| merged `develop` after isolation correction | 14,072 | 26 | 7 | 31 | strict subset of baseline |
+
+The repeated failure/error identities exactly match the final development-worktree set and
+are a strict subset of the updated baseline. The baseline-only failures removed are
+`TestHardwareTimingReplayPort#schemaTwoAdmitsDirectPreEdgeBeforeIndependentModulePostEdge`
+and `TestMhzMushroomParachuteObjectInstance#fallingPlayerInGrabWindowIsCarriedAtRomOffsetAndParachuteStartsFalling`.
+No baseline-passing method fails. The generated `rewind-round-trip-gaps.md` rewrite was
+discarded under explicit user authorization.
+
+Remote refresh found `origin/develop` already current before merge. Merge `2d76b8951`
+applied without conflicts, and all pre-existing untracked main-workspace files remained
+untouched. Renewed independent whole-delivery review reported `NO BLOCKERS`. The follow-up
+documentation/test commit, push, and worktree cleanup remain before delivery closes.

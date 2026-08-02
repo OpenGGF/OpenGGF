@@ -17,8 +17,11 @@ import com.openggf.level.objects.TestObjectServices;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
+import com.openggf.tests.FullReset;
+import com.openggf.tests.SingletonResetExtension;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -33,6 +36,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+@FullReset
+@ExtendWith(SingletonResetExtension.class)
 class TestS3kSignpostInstance {
 
     @Test

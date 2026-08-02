@@ -407,6 +407,24 @@ revisions pass the four-method class alone. Before repeating the development sui
 5. If the class still fails, stop this correction and investigate the concrete inherited
    owner rather than widening reset or result-card behavior speculatively.
 
+The first post-merge suite added one baseline-passing failure:
+`TestS3kSignpostInstance#fallingDispatchSkipsExpiringCooldownThenAppliesBumpBeforeGravity`.
+The complete signpost class passes alone, 17/17. Its falling-only local services omit
+terrain, but `ObjectTerrainUtils` consults the ambient `GameServices` level; inherited
+terrain can therefore land the signpost and zero `yVel`. Before the repeated post-merge
+suite:
+
+1. Add class-scoped `SingletonResetExtension` and `@FullReset` to
+   `TestS3kSignpostInstance`.
+2. Leave production code, its falling-state setup, and the ROM-order assertions unchanged.
+3. Run `TestS3kSignpostInstance` with `TestSingletonLifecycleGuard`; no ambient-setup
+   baseline entry currently exists for this class.
+4. Repeat the exact post-merge full-suite command and require its failure/error identities
+   to be a subset of the updated `develop` baseline.
+5. Record the focused and repeated-suite results in both integration and end-to-end
+   artifacts, then rerun the independent whole-delivery review. Commit and push only after
+   that renewed review reports no blocker.
+
 ### Whole-delivery review gate
 
 After code, tests, audit, validation, frontier log, changelog, and README are final, produce
