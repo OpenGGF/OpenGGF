@@ -39,6 +39,15 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "HardwareTiming mode reset crossing emits no completion",
                 ModeResetCrossingEmitsNoCompletion));
             tests.Add(new TestMain.TestCase(
+                "HardwareTiming mode transition fences a delayed queue clear",
+                ModeTransitionFencesDelayedQueueClear));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTiming transition-visible work stays fenced until clear",
+                TransitionVisibleWorkStaysFencedUntilClear));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTiming post-clear level queues preserve FIFO ordinals",
+                PostClearLevelQueuesPreserveFifoOrdinals));
+            tests.Add(new TestMain.TestCase(
                 "HardwareTiming empty-to-active transition manufactures no completion",
                 EmptyToActiveTransitionManufacturesNoCompletion));
             tests.Add(new TestMain.TestCase(
@@ -393,6 +402,117 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(
                 true,
                 writer.ToString().Contains("\"ordinal\":1"));
+        }
+
+        private static void ModeTransitionFencesDelayedQueueClear()
+        {
+            const int source = 0x100;
+            byte[] rom = RomWithSingleModule(source);
+            var host = NewHost();
+            var writer = new StringWriter();
+            var engine = new HardwareTimingEventEngine(rom);
+
+            host.Ram[S3KRam.GameMode] = S3KRam.GameModeLevel;
+            StageActive(host, source, 0xA400, 0x81);
+            engine.ObserveFrameEnd(30, host, writer);
+
+            // A mode transition is the reset fence even when the bulk clear
+            // is not visible until the next frame-end sample.
+            host.Ram[S3KRam.GameMode] = 0x04;
+            engine.ObserveFrameEnd(31, host, writer);
+            StageEmpty(host);
+            engine.ObserveFrameEnd(32, host, writer);
+
+            AssertEx.Equal(string.Empty, writer.ToString());
+
+            // The pre-transition lifecycle consumed ordinal zero even though
+            // reset fencing suppressed its completion event.
+            host.Ram[S3KRam.GameMode] = S3KRam.GameModeLevel;
+            StageEmpty(host);
+            engine.ObserveFrameEnd(33, host, writer);
+            StageActive(host, source, 0xA400, 0x81);
+            engine.ObserveFrameEnd(34, host, writer);
+            StageEmpty(host);
+            engine.ObserveFrameEnd(35, host, writer);
+            AssertEx.Equal(
+                true, writer.ToString().Contains("\"ordinal\":1"));
+        }
+
+        private static void TransitionVisibleWorkStaysFencedUntilClear()
+        {
+            const int source = 0x100;
+            byte[] rom = RomWithSingleModule(source);
+            var host = NewHost();
+            var writer = new StringWriter();
+            var engine = new HardwareTimingEventEngine(rom);
+
+            host.Ram[S3KRam.GameMode] = S3KRam.GameModeLevel;
+            StageEmpty(host);
+            engine.ObserveFrameEnd(50, host, writer);
+
+            // Work first visible on the transition sample is ledgered so its
+            // ordinal is consumed, but it is not proof of new-mode ownership:
+            // the following physical disappearance may be the delayed reset.
+            host.Ram[S3KRam.GameMode] = S3KRam.GameModeTitle;
+            StageActive(host, source, 0xA400, 0x81);
+            engine.ObserveFrameEnd(51, host, writer);
+            StageEmpty(host);
+            engine.ObserveFrameEnd(52, host, writer);
+            AssertEx.Equal(string.Empty, writer.ToString());
+
+            host.Ram[S3KRam.GameMode] = S3KRam.GameModeLevel;
+            engine.ObserveFrameEnd(53, host, writer);
+            StageActive(host, source, 0xA400, 0x81);
+            engine.ObserveFrameEnd(54, host, writer);
+            StageEmpty(host);
+            engine.ObserveFrameEnd(55, host, writer);
+            AssertEx.Equal(
+                true, writer.ToString().Contains("\"ordinal\":1"));
+        }
+
+        private static void PostClearLevelQueuesPreserveFifoOrdinals()
+        {
+            AssertPostClearLevelQueueOrdinals(
+                S3KRam.GameModeLevel, 0x8C);
+            AssertPostClearLevelQueueOrdinals(
+                0x8C, S3KRam.GameModeLevel);
+        }
+
+        private static void AssertPostClearLevelQueueOrdinals(
+            byte priorMode, byte transitionMode)
+        {
+            const int first = 0x100;
+            const int second = 0x200;
+            byte[] rom = RomWithSingleModules(first, second);
+            var host = NewHost();
+            var writer = new StringWriter();
+            var engine = new HardwareTimingEventEngine(rom);
+
+            host.Ram[S3KRam.GameMode] = priorMode;
+            StageEmpty(host);
+            engine.ObserveFrameEnd(60, host, writer);
+
+            // Level clears the old FIFO before its first loading sample; it
+            // can then publish one or two genuine post-clear parents. The
+            // loading-bit exit likewise first exposes sprite-owned work that
+            // was queued after the same clear. Neither case may re-ledger a
+            // surviving suffix after the first canonical retirement.
+            host.Ram[S3KRam.GameMode] = transitionMode;
+            StageActive(host, first, 0x4000, 0x81);
+            StageQueued(host, 1, second, 0x6000);
+            engine.ObserveFrameEnd(61, host, writer);
+            StageActive(host, second, 0x6000, 0x01);
+            engine.ObserveFrameEnd(62, host, writer);
+            StageActive(host, second, 0x6000, 0x81);
+            engine.ObserveFrameEnd(63, host, writer);
+            StageEmpty(host);
+            engine.ObserveFrameEnd(64, host, writer);
+
+            string[] lines = writer.ToString().Split(
+                new[] {'\n'}, StringSplitOptions.RemoveEmptyEntries);
+            AssertEx.Equal(2, lines.Length);
+            AssertEx.Equal(true, lines[0].Contains("\"ordinal\":0"));
+            AssertEx.Equal(true, lines[1].Contains("\"ordinal\":1"));
         }
 
         private static void EmptyToActiveTransitionManufacturesNoCompletion()

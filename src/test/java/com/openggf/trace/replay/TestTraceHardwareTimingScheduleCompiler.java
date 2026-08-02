@@ -5,6 +5,7 @@ import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.trace.TraceData;
+import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.TraceFixtures;
 import com.openggf.trace.TraceFrame;
 import com.openggf.trace.timing.HardwareCompletionEdge;
@@ -78,6 +79,44 @@ class TestTraceHardwareTimingScheduleCompiler {
                         trace, fixture, true));
 
         verify(fixture).installHardwareTimingReplay(any());
+    }
+
+    @Test
+    void postObjectsRejectsPlayableAnimationOnlyPhase() {
+        assertUnsupportedPostPhase(TraceExecutionPhase.PLAYABLE_ANIMATION_ONLY);
+    }
+
+    @Test
+    void postObjectsRejectsAdvanceOnlyPhase() {
+        assertUnsupportedPostPhase(TraceExecutionPhase.ADVANCE_ONLY);
+    }
+
+    @Test
+    void postObjectsRejectsVblankOnlyPhase() {
+        assertUnsupportedPostPhase(TraceExecutionPhase.VBLANK_ONLY);
+    }
+
+    @Test
+    void postObjectsAcceptsBothFullLevelPhases() {
+        assertDoesNotThrow(() ->
+                TraceHardwareTimingScheduleCompiler.requireExecutablePostPhase(
+                        edge(300, HardwareServiceBoundary.POST_OBJECTS),
+                        TraceExecutionPhase.FULL_LEVEL_FRAME));
+        assertDoesNotThrow(() ->
+                TraceHardwareTimingScheduleCompiler.requireExecutablePostPhase(
+                        edge(301, HardwareServiceBoundary.POST_OBJECTS),
+                        TraceExecutionPhase.FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD));
+    }
+
+    private static void assertUnsupportedPostPhase(TraceExecutionPhase phase) {
+        IllegalStateException error = assertThrows(
+                IllegalStateException.class,
+                () -> TraceHardwareTimingScheduleCompiler.requireExecutablePostPhase(
+                        edge(299, HardwareServiceBoundary.POST_OBJECTS), phase));
+        assertTrue(error.getMessage().contains("unsupported-row-POST"),
+                error::getMessage);
+        assertTrue(error.getMessage().contains("phase=" + phase),
+                error::getMessage);
     }
 
     private static TraceData trace(

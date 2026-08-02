@@ -146,6 +146,30 @@ ROM's `Process_Kos_Module_Queue` owner, so the module retirement emits at
 `post_objects` even when `Level_frame_counter` is held. A duplicate counter
 without that transition remains VInt-only for other observations.
 
+Every observed game-mode transition fences and clears the logical module
+mirror before unchanged-queue and empty-queue fast paths. The ROM bulk clear
+may become observable one sample after the mode byte changes; clearing the
+mirror at the transition prevents that delayed physical clear from being
+mistaken for a queue retirement. The fence emits no event and leaves the
+run-wide ordinal ledger monotonic. Outside the Level-loading exception below,
+a queue first visible on the transition is ledgered only after the old mirror
+is cleared, so its ordinal is consumed, but the reset fence remains pending:
+its subsequent physical disappearance is suppressed as an ambiguous delayed
+clear rather than emitted as completion. Level's `$0C->$8C` loading entry and
+`$8C->$0C` loading-bit exit are stronger ROM-owned cases. The bulk clear
+precedes the first observable loading sample;
+queues first visible at those two boundaries contain post-clear submissions,
+so they are reconciled without a pending fence and retain their ordinals across
+normal multi-entry FIFO retirement.
+
+For the canonical 15-segment Sonic-and-Tails complete run, the maintained
+6.42 writer changes exactly 25 predecessor event lines across 14 segments from
+`vint_service` to `post_objects`; raw frame, kind, ordinal, fingerprint, line
+position, and order remain unchanged, and the ending segment is byte-identical.
+The differential gate attests both the committed predecessor files and the
+prospective files by byte length, line count, and SHA-256 before applying this
+exact semantic-delta check. It does not install either output.
+
 Segment handoffs may pass a null timing writer while keeping both ledgers and
 ordinals alive. A standard-recorder discard/reset clears both ledgers and
 resets both ordinal bases atomically. A module-created Kosinski child is a

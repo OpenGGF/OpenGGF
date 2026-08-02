@@ -82,6 +82,7 @@ namespace OpenGGF.BizHawk.Headless
         private byte priorModulesLeft;
         private ushort? priorLevelFrameCounter;
         private byte? priorGameMode;
+        private bool moduleResetClearPending;
         private bool titleCardLoadLoopActive;
         private bool priorDirectBusy;
         private readonly List<DirectSubmission> stagedDirectRetirements =
@@ -162,6 +163,7 @@ namespace OpenGGF.BizHawk.Headless
             priorModulesLeft = 0;
             priorLevelFrameCounter = null;
             priorGameMode = null;
+            moduleResetClearPending = false;
             titleCardLoadLoopActive = false;
             priorDirectBusy = false;
             stagedDirectRetirements.Clear();
@@ -334,6 +336,17 @@ namespace OpenGGF.BizHawk.Headless
             if (moduleTransition == ModuleTransition.QueueReset)
             {
                 queue.Clear();
+                moduleResetClearPending = false;
+            }
+            else if (moduleTransition
+                    == ModuleTransition.QueueResetAndReconcile
+                || moduleTransition
+                    == ModuleTransition.QueueResetAndReconcilePending)
+            {
+                queue.Clear();
+                ReconcileQueue(host, physicalCount);
+                moduleResetClearPending = moduleTransition
+                    == ModuleTransition.QueueResetAndReconcilePending;
             }
             else
             {
@@ -348,7 +361,9 @@ namespace OpenGGF.BizHawk.Headless
         {
             None,
             FinalHeadRetired,
-            QueueReset
+            QueueReset,
+            QueueResetAndReconcile,
+            QueueResetAndReconcilePending
         }
 
         private ModuleTransition ClassifyModuleTransition(
@@ -357,31 +372,63 @@ namespace OpenGGF.BizHawk.Headless
             int physicalCount,
             byte gameMode)
         {
-            if (queue.Count == 0)
-            {
-                return ModuleTransition.None;
-            }
-
+            bool modeChanged = priorGameMode.HasValue
+                && priorGameMode.Value != gameMode;
+            bool levelResetObservation = modeChanged
+                && S3KRam.IsLevelFamilyMode(gameMode)
+                && ((gameMode & 0x80) != 0
+                    || (S3KRam.IsLevelFamilyMode(priorGameMode.Value)
+                        && (priorGameMode.Value & 0x80) != 0));
             bool lostPhysicalHead = physicalCount < queue.Count;
             bool shiftedToNext = physicalCount != 0
                 && queue.Count >= 2
                 && ActiveEntryMatches(host, queue[1]);
             bool headChanged = lostPhysicalHead || shiftedToNext;
-            if (!headChanged)
+            if (levelResetObservation)
             {
-                return ModuleTransition.None;
+                // Level clears the old Kos state before the first observable
+                // $8C loading sample. Work first observed there, or after the
+                // later $8C->$0C loading-bit exit, was queued after that clear
+                // and keeps normal FIFO identity and ordinals.
+                return physicalCount == 0
+                    ? ModuleTransition.QueueReset
+                    : ModuleTransition.QueueResetAndReconcile;
             }
-
-            bool modeChanged = priorGameMode.HasValue
-                && priorGameMode.Value != gameMode;
+            if (moduleResetClearPending && lostPhysicalHead)
+            {
+                // A FIFO first observed on a mode-transition sample can be
+                // old-mode work submitted after the preceding observation.
+                // Ledger it so the ordinal is consumed, but keep the reset
+                // fence until its delayed physical clear is observed.
+                return ModuleTransition.QueueReset;
+            }
             if (modeChanged)
             {
-                if (modulesLeft == 0 && physicalCount == 0)
+                // Title_Screen and Level bulk-clear the complete queue RAM
+                // during mode changes (sonic3k.asm:5391-5397,7507-7516).
+                // Fence the logical mirror at the transition sample even if
+                // the physical clear is not observable until the next sample;
+                // otherwise that delayed clear can be misclassified later as
+                // a Process_Kos_Module_Queue retirement.
+                if (queue.Count == 0 && physicalCount != 0)
+                {
+                    // Outside Level's proven post-clear observation window,
+                    // transition-visible work can still be predecessor-mode
+                    // residue. Ledger it so its ordinal is consumed, but keep
+                    // the fence pending through the later physical clear.
+                    return ModuleTransition.QueueResetAndReconcilePending;
+                }
+                if (!headChanged || (modulesLeft == 0 && physicalCount == 0))
                 {
                     return ModuleTransition.QueueReset;
                 }
                 throw new InvalidDataException(
                     "Kos module FIFO changed across a game-mode transition;");
+            }
+
+            if (queue.Count == 0 || !headChanged)
+            {
+                return ModuleTransition.None;
             }
 
             if (priorModulesLeft != 0x81)

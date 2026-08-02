@@ -8,10 +8,18 @@ All notable changes to the OpenGGF project are documented in this file.
   canonical one-head shift, even when the sampled level counter is held.
   Malformed, stale, reset-crossing, multi-head, and cardinality-inconsistent
   transitions fail closed; frozen Lua recorders remain unchanged. Trace replay
-  rejects a corrected held-row POST fixture during installation as
-  `unsupported-held-row-POST` before touching gameplay or timing state, because
-  recorded authority still cannot manufacture the omitted CPU phase or prepare
-  its parent job.
+  accepts schema-2 POST only on the two full-level execution phases and rejects
+  every non-full phase before touching gameplay or timing state, because
+  recorded authority still cannot manufacture an omitted CPU phase or prepare
+  its parent job. Mode transitions now fence the recorder's logical module
+  mirror even when the physical bulk clear appears on the following sample;
+  transition-visible work consumes its ordinal but remains fenced through that
+  ambiguous delayed clear. Level loading's two proven post-clear observation
+  boundaries reconcile normally, preserving multi-entry FIFO ordinals.
+  An untruncated 466,334-row validation capture attests all 15 predecessor and
+  prospective timing files and proves the complete reviewed delta is exactly
+  25 in-place VINT-to-POST substitutions across 14 segments; fixtures remain
+  unmodified.
 - Fix/Test: MHZ fixed SST occupants, plane switchers, pollen, cutscene children,
   pulley, Curled Vine, Madmole, and enemy-touch bounce now follow their ROM slot,
   lifetime, geometry, and resolved-contact semantics. The complete-run physics

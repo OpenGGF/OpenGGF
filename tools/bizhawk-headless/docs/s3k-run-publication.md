@@ -9,6 +9,14 @@
 > the candidate under
 > `tools/bizhawk-headless/.scratch/s3k-knuckles-complete-superemeralds-v642/`
 > for independent review before publication.
+> The canonical 466,334-row Sonic-and-Tails validation capture retains exact
+> committed physics/aux identity and produces a reviewed timing-only delta:
+> 25 in-place `vint_service`-to-`post_objects` substitutions across 14 of 15
+> segments, with raw frame, kind, ordinal, fingerprint, position, and ordering
+> unchanged. The 15-segment gate independently pins the byte length, line
+> count, and SHA-256 of both every committed predecessor and every prospective
+> timing file. This is validation evidence, not publication authorization;
+> no fixture is installed by the gate.
 >
 > **2026-07-27 publication note.** The canonical committed fleet is native
 > recorder v6.37. It contains 47 timing-owned fixture destinations plus the
@@ -1207,10 +1215,13 @@ Nothing in the publication contract is now left to manual verification.
 
 `S3KCompleteRunSegmentsDifferentialTests` runs **one untruncated**
 `--trace-profile complete_run` pass (no `--run-id`) over the full
-466,334-row `s3k-complete-sonic-tails.bk2` and reproduces all seven
-`*_completerun` dirs byte for byte. It passed on the first attempt: no
-production change was needed, and every permitted delta is the one §7.4
-already predicted.
+466,334-row `s3k-complete-sonic-tails.bk2` and validates all fifteen
+committed `*_completerun` dirs under the reviewed 6.40-to-6.42 recorder
+migration. Physics and aux are byte-identical. Metadata may differ only
+by the exact recorder-version literal and recording date. Timing first
+attests every committed predecessor and then the exact prospective output;
+the only accepted content delta is the pinned 25-line VINT-to-POST
+attribution correction across fourteen segments.
 
 Measured, not estimated: **5m57s wall, 235 MB peak RSS, 2.84 GB of
 output.** The earlier "hours of wall clock" note in this section was
@@ -1221,28 +1232,36 @@ gate stages under `tools/bizhawk-headless/.scratch/` (beside the
 existing `bin/` and `obj/`, covered by the repo's `tools/*` ignore
 rule) rather than `Path.GetTempPath()`, and deletes it in a `finally`.
 
-Three deliberate strength choices:
+Four deliberate strength choices:
 
 1. **No truncation.** Stopping at MHZ would satisfy the seven fixtures
    by construction. Running to DDZ and asserting the whole fifteen-line
    segment summary proves `mhz` ends at 28,156 rows *because* `fbz`
    arms at BK2 frame 237,913 — the post-advance arm ordering of §1.5 —
-   and not because the capture ran out of movie. It also pins the eight
-   post-MHZ segments (`fbz`, `soz`, `lrz`, `hpz22`, `hpz`, `ssz`,
-   `dez23`, `ddz`) for which no fixture was ever committed.
-2. **No version normalization.** Unlike the S1 complete-run gate, which
-   must tolerate a `3.14`→`3.17` stamp change, identity (A) was
-   captured at 6.32 — the stamp this port emits. The gate pins
-   `"lua_script_version": "6.33-s3k-completerun"` as an exact literal on
-   *both* sides and requires exactly one such line, so a drift in either
-   direction fails rather than being absorbed.
-3. **`run_id` absence asserted directly.** Line-count equality alone
+   and not because the capture ran out of movie. It also exercises the
+   eight post-MHZ segment boundaries (`fbz`, `soz`, `lrz`, `hpz22`,
+   `hpz`, `ssz`, `dez23`, `ddz`) before final comparison against their
+   committed fixture directories.
+2. **Narrow metadata migration.** The committed side must contain the
+   exact published `6.40-s3k-completerun` literal and the prospective side
+   the exact maintained `6.42-s3k-completerun` literal. Only that literal
+   and the validated `recording_date` line may differ; schema, key order,
+   line count, and every other byte remain pinned.
+3. **Both timing identities are independently attested.** Each committed
+   `hardware_timing.jsonl` and each prospective file has a pinned byte
+   length, line count, and SHA-256. A second semantic comparison requires
+   exactly 25 in-place substitutions across 14 segments, each replacing
+   only `"boundary":"vint_service"` with
+   `"boundary":"post_objects"`. The ending segment stays byte-identical;
+   raw frame, kind, ordinal, fingerprint, event position, and ordering
+   cannot move.
+4. **`run_id` absence asserted directly.** Line-count equality alone
    would let a stray `run_id` line pass if it displaced another key, so
    both files are probed for a `"run_id":` line explicitly. That absence
    plus the absent `run_manifest.json` is what makes this identity (A)
    and not (B)/(C).
 
-Byte lengths are asserted before sha256 on every stream: a length
+Byte lengths are asserted before SHA-256 on every payload stream: a length
 mismatch localises a truncated or over-long file, where a hash mismatch
 only says "different". Fixture `.gz` bytes are streamed through SHA256
 rather than materialised, which keeps the gate's footprint at the

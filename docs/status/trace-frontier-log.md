@@ -60427,13 +60427,6 @@ Cross-route regression replays on this candidate:
 
 Those ordinary-boundary producer gaps are unaffected by the new exact held-row path.
 
-Commands selected `TestS3kHczCompleteRunTraceReplay` and isolated
-`TestS3kCnzCompleteRunTraceReplay#replayMatchesTrace` with the same Maven/ROM
-prefix. The full HCZ class also retains its separate pre-existing Poindexter
-helper error (`gameplay context was not constructed for recorded hardware
-admission`). No fixture, comparison expectation, or hardware-timing schedule
-was edited.
-
 ## 2026-08-02 — S3K queue lifecycle recovery Wave 1
 
 Context: `.worktrees/s3k-queue-lifecycle-recovery`, branch
@@ -60796,20 +60789,46 @@ No callback was added and frozen Lua 6.37 behavior is unchanged. Maintained
 native versions advance to `6.41-s3k` and `6.42-s3k-completerun`.
 
 The corrected prospective raw-6351 module `#16` edge is not executable replay
-authority. A schema-2 POST edge on a `VBLANK_ONLY` row is now rejected during
-installation as `unsupported-held-row-POST` before the fixture or gameplay
-session is touched. Ordinary current-row POST and held-row PRE controls pass;
-lower-level authority still rejects an unprepared parent and cannot reach the
-runtime-art coordinator. The focused Java command ran 52 tests with zero
-failures/errors/skips. Native hardware-timing, held-AIZ behavioral,
+authority. Schema-2 POST is accepted only on the two full-level phases; all
+three non-full phases are rejected before the fixture or gameplay session is
+touched, with `unsupported-held-row-POST` retained as the VBLANK-specific
+reason. Held-row PRE controls pass; lower-level authority still rejects an
+unprepared parent and cannot reach the runtime-art coordinator. The focused
+Java command ran 56 tests with zero failures/errors/skips. Native
+hardware-timing, held-AIZ behavioral,
 special-stage-results, and all runnable non-gate tests passed; ROM-backed
 vectors without configured ROM variables skipped.
 
-No fixture was regenerated or installed. Consequently the currently committed
+No fixture was installed. Prospective output was generated only under ignored
+scratch and deleted after comparison. Consequently the currently committed
 Candidate A stream and its measured AIZ frontier remain unchanged at 60 errors
 / 6,347 rows, first comparison frame 1106, terminal published module `#16`
 `5c387ee74a9433eebd0f6700c270d1def12cc8157434d37e33eaf8c422312399`
 stamped `VINT_SERVICE` with the engine parent unprepared. A separately approved
  6.41/6.42 publication would replace that late runtime failure with the earlier
- explicit pre-mutation `unsupported-held-row-POST` classification; it does not
- authorize a partial CPU prefix or a fixture install in this task.
+explicit pre-mutation `unsupported-held-row-POST` classification; it does not
+authorize a partial CPU prefix or a fixture install in this task.
+
+### Review hardening: complete-run delta attestation
+
+The untruncated native command replayed all 466,334 rows of
+`s3k-complete-sonic-tails.bk2` and published all 15 expected scratch segments.
+The strengthened gate attests each committed timing predecessor and each
+prospective timing output by byte length, line count, and SHA-256. Physics and
+aux remain at their committed exact identities. Timing contains exactly 25
+in-place `VINT_SERVICE` to `POST_OBJECTS` substitutions across 14 segments;
+raw frame, kind, ordinal, submission fingerprint, event position, and ordering
+are unchanged, and the ending segment is byte-identical. The committed fixture
+tree was opened read-only and no candidate bytes were installed.
+
+Review also tightened replay installation to accept schema-2 POST only for
+`FULL_LEVEL_FRAME` and
+`FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD`; all three non-full execution
+phases now fail before session mutation. The native module mirror is fenced on
+every game-mode transition, including when the ROM bulk clear becomes visible
+one observation later. Work first visible on the transition consumes its
+ordinal but retains the reset fence through the subsequent clear, so a delayed
+clear emits no completion and ordinals are not reused. Level's proven
+post-clear `$0C->$8C` and `$8C->$0C` observations instead reconcile normally;
+two-entry vectors preserve ordinals 0/1 across canonical shifts without
+ re-ledgering. These validation and fail-closed changes move no replay frontier.

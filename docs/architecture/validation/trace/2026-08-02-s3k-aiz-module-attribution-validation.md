@@ -11,17 +11,73 @@ retirement to `post_objects` from ROM state transition evidence even when the
 sampled `Level_frame_counter` is held. It does not add a callback, infer
 completion from the held counter alone, or alter the frozen Lua recorder.
 
-Replay deliberately does not execute that prior-loop POST shape. A schema-2
-POST edge on a row classified `VBLANK_ONLY` is rejected during timing schedule
-installation as `unsupported-held-row-POST`, before `TraceReplayFixture` is
-queried and therefore before gameplay, runtime-art queue, timing cursor/service,
-rewind registry, or session mutation. Ordinary current-row POST and supported
-held-row PRE continue to install.
+Replay deliberately does not execute POST on a row without the complete level
+loop. A schema-2 POST edge is accepted only for `FULL_LEVEL_FRAME` and
+`FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD`. `PLAYABLE_ANIMATION_ONLY`,
+`ADVANCE_ONLY`, and `VBLANK_ONLY` are rejected during timing schedule
+installation as `unsupported-row-POST` before `TraceReplayFixture` is queried
+and therefore before gameplay, runtime-art queue, timing cursor/service,
+rewind registry, or session mutation. The VBLANK diagnostic retains the
+specific `unsupported-held-row-POST` reason. Supported held-row PRE continues
+to install.
 
-This task generated and installed no fixture. The approved Candidate A bytes
-remain unchanged and retain their published recorder version and timing edge.
-Any corrected 6.41/6.42 capture still requires a separate repeat comparison,
-exact-byte approval, and publication transaction.
+The native recorder also clears its logical module mirror on every observed
+game-mode transition before unchanged-queue/empty-queue early returns.
+Regression vectors delay the physical bulk clear until the following sample
+for both an already-mirrored parent and a parent first visible on the
+transition. The latter consumes its ordinal but remains reset-fenced until the
+clear, which cannot emit a false retirement; the next real lifecycle keeps the
+next run-wide ordinal. Separate two-entry vectors cover Level's proven
+post-clear observation windows at `$0C->$8C` and `$8C->$0C`; their canonical
+A/B retirements keep ordinals 0/1 and never re-ledger the surviving suffix.
+
+This task generated prospective output but installed no fixture. The approved
+Candidate A bytes remain unchanged and retain their published recorder version
+and timing edges. Any corrected 6.41/6.42 publication still requires a
+separate exact-byte approval and publication transaction.
+
+## Route-wide prospective-capture comparison
+
+One untruncated native capture replayed all 466,334 movie rows and produced all
+15 canonical complete-run segments. The gate first attested every committed
+`hardware_timing.jsonl` by byte length, line count, and SHA-256, then attested
+the prospective file by the same measures. Physics and aux remained at their
+committed exact length/SHA identity, and metadata differed only by the reviewed
+recorder version and recording date.
+
+Across timing, 25 of 1,087 event rows changed in 14 segments. Every changed row
+kept its raw frame, kind, ordinal, fingerprint, file position, and ordering;
+the sole byte-level semantic change was
+`"boundary":"vint_service"` to `"boundary":"post_objects"`. The ending
+segment was byte-identical. The gate pins the complete predecessor and
+prospective hashes:
+
+| segment | changed rows | published SHA-256 | prospective SHA-256 |
+|---|---:|---|---|
+| AIZ | 3 | `c80a9c2f…9f8d9e4` | `b8ebb466…b4df24` |
+| HCZ | 2 | `a19d98bd…a34aeb` | `f055e486…02a811` |
+| MGZ | 1 | `82cc794f…387562` | `e87d25f5…d1f8c` |
+| CNZ | 2 | `821810c7…086c2f` | `cb0d1ddc…a91af` |
+| ICZ | 2 | `bc006d24…677b92` | `4d6fd592…10ee6e` |
+| LBZ | 2 | `50ced6a9…754b6` | `a1cce9f4…d9fe6b` |
+| MHZ | 1 | `8741efc9…34c77` | `a015ea48…eef415` |
+| FBZ | 2 | `90f519de…8997ce` | `c7513a13…1d7c2` |
+| SOZ | 2 | `bd531c00…b5a78` | `c4b80609…a038a8` |
+| LRZ | 2 | `5716fc06…9e685` | `6f9bf1ce…f5c6c` |
+| HPZ | 4 | `8585a2e0…826a34` | `fb894bc7…fc264` |
+| SSZ | 2 | `3cc18542…4a741` | `84565e6b…e0179` |
+| DEZ | 1 | `de34b9fe…c815e` | `391d1ad5…a4528` |
+| DDZ | 1 | `88407da5…54fd` | `56c6b5d3…989f8` |
+| ending | 0 | `f414d1a7…dddec` | `f414d1a7…dddec` |
+
+```text
+S3K_ROM_PATH=<verified-s3k> BIZHAWK_HOME=<2.11> ./test.sh \
+  --filter 'native capture matches all fifteen canonical completerun segments' \
+  --jobs 1
+```
+
+The complete capture gate passed. Its scratch output was discarded after the
+comparison; committed fixtures were not rewritten.
 
 ## TDD evidence
 
@@ -82,10 +138,11 @@ mvn -Dmse=off \
 TestHardwareTimingAuthorityGuard test
 ```
 
-52 tests passed, with zero failures, errors, or skips. Coverage includes:
+56 tests passed, with zero failures, errors, or skips. Coverage includes:
 
 - early install rejection with zero fixture interactions;
-- ordinary full-row POST and held-row PRE installation controls;
+- both full-level POST phases, negative coverage for all three non-full
+  phases, and held-row PRE installation controls;
 - lower-level refusal to release an unprepared submitted parent; and
 - proof that failure cannot reach the modeled runtime-art coordinator hook.
 

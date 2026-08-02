@@ -15,7 +15,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
     /// (src/test/resources/traces/s3k/_movies/s3k-complete-sonic-tails.bk2,
     /// 466,334 input rows) reproduces all fifteen committed
     /// <c>*_completerun</c> fixture directories — identity (A) of
-    /// docs/s3k-run-publication.md §0.1 — byte for byte.
+    /// docs/s3k-run-publication.md §0.1 — under the reviewed recorder
+    /// migration contract below.
     ///
     /// The pass is deliberately NOT truncated. The canonical capture ran
     /// the whole movie and publishes fifteen committed segments.
@@ -29,11 +30,16 @@ namespace OpenGGF.BizHawk.Headless.Tests
     /// - physics.csv and aux_state.jsonl by raw byte length AND sha256,
     ///   with ZERO normalization.
     /// - metadata.json line for line at exact
-    ///   v6.38/schema-7/hardware-schema-2 identity; recording_date values
-    ///   may differ. Later unapproved schema-one fixtures therefore remain
-    ///   an explicit publication-boundary failure.
-    ///   No other key or line may move, and the absence of a <c>run_id</c>
-    ///   key is asserted explicitly.
+    ///   schema-7/hardware-schema-2 identity; only the reviewed recorder
+    ///   version and recording_date values may differ. Later unapproved
+    ///   schema-one fixtures therefore remain an explicit
+    ///   publication-boundary failure. No other key or line may move, and
+    ///   the absence of a <c>run_id</c> key is asserted explicitly.
+    /// - hardware_timing.jsonl first attests the committed predecessor by
+    ///   byte length, line count, and sha256, then attests the prospective
+    ///   capture by the same three measures. Its 25 changed rows across 14
+    ///   segments must be exact, in-place VINT-to-POST substitutions; the
+    ///   ending segment must remain byte-identical.
     ///
     /// The first seven physics.csv hashes below were last moved by Lua
     /// 6.33-s3k-completerun, the ADDR_VBLA_WORD fix: vblank_counter reads
@@ -108,6 +114,36 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// explicit probe names the failure instead.
         /// </summary>
         private const string RunIdLinePrefix = "  \"run_id\":";
+        private const string PublishedAizHeldTimingEdge16 =
+            "{\"event\":\"hardware_work_completed\",\"raw_frame\":6351,"
+            + "\"boundary\":\"vint_service\",\"kind\":\"kos_module_queue\","
+            + "\"ordinal\":16,\"submission_fingerprint\":"
+            + "\"sha256:5c387ee74a9433eebd0f6700c270d1def12cc8157434d37e33eaf8c422312399\"}";
+        private const string CorrectedAizHeldTimingEdge16 =
+            "{\"event\":\"hardware_work_completed\",\"raw_frame\":6351,"
+            + "\"boundary\":\"post_objects\",\"kind\":\"kos_module_queue\","
+            + "\"ordinal\":16,\"submission_fingerprint\":"
+            + "\"sha256:5c387ee74a9433eebd0f6700c270d1def12cc8157434d37e33eaf8c422312399\"}";
+        private const string PublishedAizHeldTimingEdge41 =
+            "{\"event\":\"hardware_work_completed\",\"raw_frame\":26189,"
+            + "\"boundary\":\"vint_service\",\"kind\":\"kos_module_queue\","
+            + "\"ordinal\":41,\"submission_fingerprint\":"
+            + "\"sha256:6d16d4e9eac92bb7ff5ee450e2fa0c12db8d5d16dd652676932a47b9a04306c3\"}";
+        private const string CorrectedAizHeldTimingEdge41 =
+            "{\"event\":\"hardware_work_completed\",\"raw_frame\":26189,"
+            + "\"boundary\":\"post_objects\",\"kind\":\"kos_module_queue\","
+            + "\"ordinal\":41,\"submission_fingerprint\":"
+            + "\"sha256:6d16d4e9eac92bb7ff5ee450e2fa0c12db8d5d16dd652676932a47b9a04306c3\"}";
+        private const string PublishedAizHeldTimingEdge42 =
+            "{\"event\":\"hardware_work_completed\",\"raw_frame\":26208,"
+            + "\"boundary\":\"vint_service\",\"kind\":\"kos_module_queue\","
+            + "\"ordinal\":42,\"submission_fingerprint\":"
+            + "\"sha256:6f27fe001c4a21687a98eb0dc8178340e7434967941c7a2fb7df442285b4c6f0\"}";
+        private const string CorrectedAizHeldTimingEdge42 =
+            "{\"event\":\"hardware_work_completed\",\"raw_frame\":26208,"
+            + "\"boundary\":\"post_objects\",\"kind\":\"kos_module_queue\","
+            + "\"ordinal\":42,\"submission_fingerprint\":"
+            + "\"sha256:6f27fe001c4a21687a98eb0dc8178340e7434967941c7a2fb7df442285b4c6f0\"}";
 
         /// <summary>
         /// All fifteen segments the full pass publishes, in recorder
@@ -238,12 +274,85 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 + "0c8f7c43")
         };
 
+        /// <summary>
+        /// Exact attestation of the published timing fixtures and the
+        /// reviewed prospective 6.42 capture. Each nonzero delta count is
+        /// made exclusively of same-edge VINT-to-POST substitutions.
+        /// </summary>
+        private static readonly Dictionary<string, TimingCase> TimingCases =
+            new Dictionary<string, TimingCase>(StringComparer.Ordinal)
+            {
+                {"aiz", Timing(107, 23788, 3,
+                    "c80a9c2f0383cfb3ad153ea5448684657543676f1c5920a0e472095a09f8d9e4",
+                    "b8ebb4662c7361984e21541824166fbd597970171eed5025b6fdadbee6b4df24")},
+                {"hcz", Timing(101, 22429, 2,
+                    "a19d98bd7cf341ffcf1c19871e22044abc00bbde99ad352a0e1d41e8f3a34aeb",
+                    "f055e4863d0048dd5143d353ad5946544a09da9d14325fe0fdf113a3d002a811")},
+                {"mgz", Timing(104, 23274, 1,
+                    "82cc794ff12d811cc4be3c99af2e28d1cb8ea4b8ddb04f0ea53142275d387562",
+                    "e87d25f5778461ada46fc52ef84da722f864cfb3440ac282f561a08b84ad1f8c")},
+                {"cnz", Timing(69, 15377, 2,
+                    "821810c7cd400064f2f204eed333b16880f86a3b81dc333e7c7b74d16d086c2f",
+                    "cb0d1ddc860f6984654ee0a9ed794a100733ffe11002facde19592724a9a91af")},
+                {"icz", Timing(65, 14531, 2,
+                    "bc006d24b4065ac13fd9d464a14d12618f4811e9a9679ce2f45f62b554677b92",
+                    "4d6fd592d37b07ecce4462483b18ca5446a8f444ab98f7a110929af35410ee6e")},
+                {"lbz", Timing(94, 21016, 2,
+                    "50ced6a921fbf006ed0175a068d2441fe7e7255a63b1da64027c2b18597594b6",
+                    "a1cce9f42ec0e7b164b2cf002a2f225ee55bf00b367e7f209537be2862d9fe6b")},
+                {"mhz", Timing(91, 20309, 1,
+                    "8741efc93c731c207905850e97362b704225c93462d9ffa612530c2c22c34c77",
+                    "a015ea48eb6c3068e9f1c2bdc706aeeadf5e38e02f5386b8d326b6b94deef415")},
+                {"fbz", Timing(72, 16060, 2,
+                    "90f519de7f679b7d91a9fc34dff2a68e5afb38318235ef4f6d31e07e588997ce",
+                    "c7513a1399cbd5b99b0136a03641e11e7fccffff93316fba9074ebdc2001d7c2")},
+                {"soz", Timing(100, 22334, 2,
+                    "bd531c00e5b6958ae5b41965fc2968417da72b7a0ebfdca14eab8660166b5a78",
+                    "c4b80609ead1d6d9e5d7365de8357679fd0df30401e99f0ee00e92da74a038a8")},
+                {"lrz", Timing(78, 17422, 2,
+                    "5716fc06ced7cd112fd11a9e3d800b95c3029b20858300b08bea3e7b2cb9e685",
+                    "6f9bf1ce3bd9cfd99c90ae613bda78c1148ed1849e87b39f356e0c6e8e6f5c6c")},
+                {"hpz22", Timing(64, 14268, 4,
+                    "8585a2e0f65c1f9c63a12b76b662e75039a791027e8f1300aa5bc66810826a34",
+                    "fb894bc710be8b8e28ef9ed7078cc5be3c95d205be39d1d906a5a68cfa7fc264")},
+                {"hpz", Timing(65, 14503, 2,
+                    "3cc18542ac2b3539d95ad81a1090f37f3a8070affe390da8b48d534406a4a741",
+                    "84565e6b08321137e5b175511a4a88f8ba8374839391ff4db0f75c96f07e0179")},
+                {"ssz", Timing(50, 11174, 1,
+                    "de34b9fe7b358246577418ff7242a06c606d6428f0ff2b1cb13865a17edc815e",
+                    "391d1ad57d44156f9f3e6a84a71d241260183ef9bf85fc4eb4e575db696a4528")},
+                {"dez23", Timing(17, 3785, 1,
+                    "88407da56ad67405229bdedab0d1f18362a455a247644efbccc370ded57654fd",
+                    "56c6b5d3bc2ff996154d21f41520d5a86e7f4b58453714ece5b06d58c06989f8")},
+                {"ddz", Timing(10, 2207, 0,
+                    "f414d1a774ff97c012f626c08b1dd6a896c71719c386f6635abd20d7bb8dddec",
+                    "f414d1a774ff97c012f626c08b1dd6a896c71719c386f6635abd20d7bb8dddec")}
+            };
+
+        private static TimingCase Timing(
+            int lineCount,
+            long byteLength,
+            int reviewedDeltaCount,
+            string publishedSha256,
+            string correctedSha256)
+        {
+            return new TimingCase(
+                lineCount,
+                byteLength,
+                reviewedDeltaCount,
+                publishedSha256,
+                correctedSha256);
+        }
+
         public static void Register(ICollection<TestMain.TestCase> tests)
         {
             tests.Add(new TestMain.TestCase(
                 "S3KCompleteRunSegmentsDifferential schema migration shapes"
                 + " fail closed",
                 MetadataMigrationShapesFailClosed));
+            tests.Add(new TestMain.TestCase(
+                "S3KCompleteRunSegmentsDifferential AIZ timing delta is exact",
+                ReviewedAizTimingDeltaIsExact));
             tests.Add(new TestMain.TestCase(
                 "S3KCompleteRunSegmentsDifferential native capture matches"
                 + " all fifteen canonical completerun segments",
@@ -309,6 +418,20 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         Path.Combine(fixtureDirectory, "aux_state.jsonl"),
                         segment.AuxStateLength,
                         segment.AuxStateSha256);
+                    TimingCase timing = TimingCases[segment.DirToken];
+                    string fixtureTimingPath = Path.Combine(
+                        fixtureDirectory, "hardware_timing.jsonl");
+                    AssertProducedBytes(
+                        segment.FixtureDirectoryName
+                        + "/hardware_timing.jsonl (published fixture)",
+                        fixtureTimingPath,
+                        timing.ByteLength,
+                        timing.PublishedSha256);
+                    AssertTimingLineCount(
+                        segment.FixtureDirectoryName
+                        + "/hardware_timing.jsonl (published fixture)",
+                        fixtureTimingPath,
+                        timing.LineCount);
                 }
 
                 string stdout = RunCompleteRunCapture(
@@ -347,13 +470,37 @@ namespace OpenGGF.BizHawk.Headless.Tests
                             segment.FixtureDirectoryName,
                             "metadata.json"),
                         Path.Combine(produced, "metadata.json"));
-                    AssertEx.Equal(
-                        File.ReadAllText(Path.Combine(
-                            tracesRoot,
-                            segment.FixtureDirectoryName,
-                            "hardware_timing.jsonl")),
-                        File.ReadAllText(Path.Combine(
-                            produced, "hardware_timing.jsonl")));
+                    string fixtureTimingPath = Path.Combine(
+                        tracesRoot,
+                        segment.FixtureDirectoryName,
+                        "hardware_timing.jsonl");
+                    string producedTimingPath = Path.Combine(
+                        produced, "hardware_timing.jsonl");
+                    TimingCase timing = TimingCases[segment.DirToken];
+                    AssertProducedBytes(
+                        segment.DirToken + "/hardware_timing.jsonl"
+                        + " (reviewed prospective capture)",
+                        producedTimingPath,
+                        timing.ByteLength,
+                        timing.CorrectedSha256);
+                    AssertTimingLineCount(
+                        segment.DirToken + "/hardware_timing.jsonl"
+                        + " (reviewed prospective capture)",
+                        producedTimingPath,
+                        timing.LineCount);
+                    string fixtureTiming = File.ReadAllText(fixtureTimingPath);
+                    string producedTiming = File.ReadAllText(producedTimingPath);
+                    AssertReviewedTimingDelta(
+                        segment.DirToken,
+                        fixtureTiming,
+                        producedTiming,
+                        timing.ReviewedDeltaCount);
+                    if (segment.DirToken == "aiz")
+                    {
+                        AssertReviewedAizTimingDelta(
+                            fixtureTiming,
+                            producedTiming);
+                    }
                 }
 
                 AssertOutputLayoutIsExactlyTheSegments(output);
@@ -364,6 +511,161 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 {
                     Directory.Delete(root, true);
                 }
+            }
+        }
+
+        private static void ReviewedAizTimingDeltaIsExact()
+        {
+            string published = PublishedAizHeldTimingEdge16 + "\n"
+                + PublishedAizHeldTimingEdge41 + "\n"
+                + PublishedAizHeldTimingEdge42 + "\n";
+            string corrected = CorrectedAizHeldTimingEdge16 + "\n"
+                + CorrectedAizHeldTimingEdge41 + "\n"
+                + CorrectedAizHeldTimingEdge42 + "\n";
+
+            AssertReviewedTimingDelta("AIZ unit vector", published, corrected, 3);
+            AssertReviewedAizTimingDelta(published, corrected);
+            AssertEx.Throws<InvalidOperationException>(
+                () => AssertReviewedTimingDelta(
+                    "AIZ unit vector", published, corrected, 2),
+                "expected 2");
+            AssertEx.Throws<InvalidOperationException>(
+                () => AssertReviewedTimingDelta(
+                    "AIZ unit vector",
+                    published,
+                    corrected.Replace("\"ordinal\":42", "\"ordinal\":43"),
+                    3),
+                "changed beyond");
+            AssertEx.Throws<InvalidOperationException>(
+                () => AssertReviewedAizTimingDelta(published, published),
+                "corrected edge");
+            AssertEx.Throws<InvalidOperationException>(
+                () => AssertReviewedAizTimingDelta(
+                    published,
+                    corrected.Replace(
+                        CorrectedAizHeldTimingEdge42,
+                        PublishedAizHeldTimingEdge42)),
+                "corrected edge");
+            AssertEx.Throws<InvalidOperationException>(
+                () => AssertReviewedAizTimingDelta(
+                    published + "unchanged\n",
+                    corrected + "changed\n"),
+                "beyond the reviewed edge");
+        }
+
+        private static void AssertReviewedAizTimingDelta(
+            string published, string corrected)
+        {
+            RequireReviewedAizEdgePair(
+                published, corrected,
+                PublishedAizHeldTimingEdge16,
+                CorrectedAizHeldTimingEdge16);
+            RequireReviewedAizEdgePair(
+                published, corrected,
+                PublishedAizHeldTimingEdge41,
+                CorrectedAizHeldTimingEdge41);
+            RequireReviewedAizEdgePair(
+                published, corrected,
+                PublishedAizHeldTimingEdge42,
+                CorrectedAizHeldTimingEdge42);
+            string normalized = corrected
+                .Replace(
+                    CorrectedAizHeldTimingEdge16,
+                    PublishedAizHeldTimingEdge16)
+                .Replace(
+                    CorrectedAizHeldTimingEdge41,
+                    PublishedAizHeldTimingEdge41)
+                .Replace(
+                    CorrectedAizHeldTimingEdge42,
+                    PublishedAizHeldTimingEdge42);
+            if (normalized != published)
+            {
+                throw new InvalidOperationException(
+                    "AIZ hardware timing changed beyond the reviewed edge");
+            }
+        }
+
+        private static void RequireReviewedAizEdgePair(
+            string published,
+            string corrected,
+            string publishedEdge,
+            string correctedEdge)
+        {
+            if (CountOccurrences(published, publishedEdge) != 1
+                || CountOccurrences(published, correctedEdge) != 0)
+            {
+                throw new InvalidOperationException(
+                    "published fixture does not contain exactly one reviewed"
+                    + " predecessor edge");
+            }
+            if (CountOccurrences(corrected, correctedEdge) != 1
+                || CountOccurrences(corrected, publishedEdge) != 0)
+            {
+                throw new InvalidOperationException(
+                    "corrected edge is not the exact reviewed AIZ attribution");
+            }
+        }
+
+        private static void AssertReviewedTimingDelta(
+            string context,
+            string published,
+            string corrected,
+            int expectedDeltaCount)
+        {
+            string[] publishedLines = published.Split('\n');
+            string[] correctedLines = corrected.Split('\n');
+            if (publishedLines.Length != correctedLines.Length)
+            {
+                throw new InvalidOperationException(
+                    context + " timing line count changed from "
+                    + publishedLines.Length + " to "
+                    + correctedLines.Length + ".");
+            }
+
+            var deltaCount = 0;
+            for (var index = 0; index < publishedLines.Length; index++)
+            {
+                if (publishedLines[index] == correctedLines[index])
+                {
+                    continue;
+                }
+                deltaCount++;
+                string expectedCorrected = publishedLines[index].Replace(
+                    "\"boundary\":\"vint_service\"",
+                    "\"boundary\":\"post_objects\"");
+                if (expectedCorrected == publishedLines[index]
+                    || correctedLines[index] != expectedCorrected)
+                {
+                    throw new InvalidOperationException(
+                        context + " timing line " + (index + 1)
+                        + " changed beyond one exact VINT-to-POST"
+                        + " attribution substitution.");
+                }
+            }
+            if (deltaCount != expectedDeltaCount)
+            {
+                throw new InvalidOperationException(
+                    context + " timing changed " + deltaCount
+                    + " lines; expected " + expectedDeltaCount + ".");
+            }
+        }
+
+        private static void AssertTimingLineCount(
+            string context, string path, int expectedLineCount)
+        {
+            var actualLineCount = 0;
+            using (var reader = new StreamReader(path))
+            {
+                while (reader.ReadLine() != null)
+                {
+                    actualLineCount++;
+                }
+            }
+            if (actualLineCount != expectedLineCount)
+            {
+                throw new InvalidOperationException(
+                    context + " has " + actualLineCount
+                    + " lines; expected " + expectedLineCount + ".");
             }
         }
 
@@ -938,6 +1240,29 @@ namespace OpenGGF.BizHawk.Headless.Tests
             {
                 get { return FixtureDirectoryName != null; }
             }
+        }
+
+        private sealed class TimingCase
+        {
+            public TimingCase(
+                int lineCount,
+                long byteLength,
+                int reviewedDeltaCount,
+                string publishedSha256,
+                string correctedSha256)
+            {
+                LineCount = lineCount;
+                ByteLength = byteLength;
+                ReviewedDeltaCount = reviewedDeltaCount;
+                PublishedSha256 = publishedSha256;
+                CorrectedSha256 = correctedSha256;
+            }
+
+            public int LineCount { get; private set; }
+            public long ByteLength { get; private set; }
+            public int ReviewedDeltaCount { get; private set; }
+            public string PublishedSha256 { get; private set; }
+            public string CorrectedSha256 { get; private set; }
         }
     }
 }
