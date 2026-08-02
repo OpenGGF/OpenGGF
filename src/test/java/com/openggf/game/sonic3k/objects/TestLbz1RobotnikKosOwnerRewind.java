@@ -1,0 +1,179 @@
+package com.openggf.game.sonic3k.objects;
+
+import com.openggf.game.GameServices;
+import com.openggf.game.rewind.CompositeSnapshot;
+import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
+import com.openggf.game.timing.HardwareServiceBoundary;
+import com.openggf.game.timing.HardwareTimingService;
+import com.openggf.game.timing.HardwareWorkHandle;
+import com.openggf.game.timing.HardwareWorkKind;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.tests.HardwareBoundaryPump;
+import com.openggf.tests.HeadlessTestFixture;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.Test;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+@RequiresRom(SonicGame.SONIC_3K)
+class TestLbz1RobotnikKosOwnerRewind {
+
+    @Test
+    void pendingRestoreRebindsBothMinibossBoxParentsWithoutNewOrdinals() throws Exception {
+        HeadlessTestFixture fixture = lbzFixture();
+        Lbz1RobotnikEventController controller = queueBothParentSites(fixture);
+        HardwareTimingService timing = GameServices.hardwareTiming();
+        List<HardwareWorkHandle> expected = ownerHandles(controller, timing);
+        long nextOrdinal = nextKosOrdinal(timing);
+        CompositeSnapshot snapshot = captureWithTransientOwnerStateCleared(fixture, controller);
+
+        GameServices.level().getObjectManager().removeDynamicObject(controller);
+        fixture.gameplayMode().getRewindRegistry().restore(snapshot);
+        Lbz1RobotnikEventController restored = activeController();
+
+        restored.update(1, fixture.sprite());
+
+        assertEquals(expected, ownerHandles(restored, timing),
+                "pending restore must bind the original two KosM parent handles.");
+        assertNotNull(field(restored, "initialBoxArtHandle"));
+        assertNotNull(field(restored, "collapseBoxArtHandle"));
+        assertEquals(nextOrdinal, nextKosOrdinal(timing),
+                "pending restore must not submit replacement work.");
+    }
+
+    @Test
+    void readyRestoreClaimsBothMinibossBoxParentsWithoutReplacementWork() throws Exception {
+        HeadlessTestFixture fixture = lbzFixture();
+        Lbz1RobotnikEventController controller = queueBothParentSites(fixture);
+        HardwareTimingService timing = GameServices.hardwareTiming();
+        List<HardwareWorkHandle> expected = ownerHandles(controller, timing);
+        long nextOrdinal = nextKosOrdinal(timing);
+        drain(timing);
+        CompositeSnapshot snapshot = captureWithTransientOwnerStateCleared(fixture, controller);
+
+        GameServices.level().getObjectManager().removeDynamicObject(controller);
+        fixture.gameplayMode().getRewindRegistry().restore(snapshot);
+        Lbz1RobotnikEventController restored = activeController();
+
+        restored.update(1, fixture.sprite());
+
+        assertTrue(expected.stream().noneMatch(timing::isPending),
+                "ready restore must claim each original KosM parent exactly once.");
+        assertEquals(nextOrdinal, nextKosOrdinal(timing),
+                "ready restore must not submit replacement work.");
+    }
+
+    @Test
+    void restoredNonNegativeOrdinalWithoutPendingParentFailsClosed() throws Exception {
+        HeadlessTestFixture fixture = lbzFixture();
+        Lbz1RobotnikEventController controller = queueBothParentSites(fixture);
+        HardwareTimingService timing = GameServices.hardwareTiming();
+        drain(timing);
+        for (HardwareWorkHandle handle : ownerHandles(controller, timing)) {
+            S3kRuntimeArtCoordinator.from(GameServices.runtimeArtCoordinator())
+                    .moduleQueue().claim(handle);
+        }
+        CompositeSnapshot snapshot = captureWithTransientOwnerStateCleared(fixture, controller);
+
+        GameServices.level().getObjectManager().removeDynamicObject(controller);
+        fixture.gameplayMode().getRewindRegistry().restore(snapshot);
+        Lbz1RobotnikEventController restored = activeController();
+        setField(restored, "initialBoxArtQueue", null);
+        setField(restored, "initialBoxArtHandle", null);
+        setField(restored, "collapseBoxArtQueue", null);
+        setField(restored, "collapseBoxArtHandle", null);
+
+        IllegalStateException thrown = assertThrows(IllegalStateException.class,
+                () -> restored.update(1, fixture.sprite()));
+
+        assertTrue(thrown.getMessage().contains("Missing restored LBZ"),
+                "a captured ordinal without its pending parent must not resubmit work.");
+    }
+
+    private static HeadlessTestFixture lbzFixture() {
+        return HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_LBZ, 0)
+                .build();
+    }
+
+    private static Lbz1RobotnikEventController queueBothParentSites(
+            HeadlessTestFixture fixture) throws Exception {
+        GameServices.level().getObjectManager().setRewindInPlaceRestoreEnabledForTest(false);
+        Lbz1RobotnikEventController controller = GameServices.level().getObjectManager()
+                .createDynamicObject(() -> new Lbz1RobotnikEventController(new ObjectSpawn(
+                        0x3EC0, 0x01A0, Sonic3kObjectIds.LBZ1_ROBOTNIK, 0, 0, false, 0)));
+        invoke(controller, "queueInitialMinibossBoxArt");
+        invoke(controller, "queueCollapseMinibossBoxArt");
+        controller.forceRoutineForTest(0x02);
+        return controller;
+    }
+
+    private static Lbz1RobotnikEventController activeController() {
+        return GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(Lbz1RobotnikEventController.class::isInstance)
+                .map(Lbz1RobotnikEventController.class::cast)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("restored LBZ Robotnik controller is absent"));
+    }
+
+    private static List<HardwareWorkHandle> ownerHandles(
+            Lbz1RobotnikEventController controller, HardwareTimingService timing) throws Exception {
+        return List.of(
+                timing.pendingHandle(HardwareWorkKind.KOS_MODULE_QUEUE,
+                        (long) field(controller, "initialBoxArtOrdinal")).orElseThrow(),
+                timing.pendingHandle(HardwareWorkKind.KOS_MODULE_QUEUE,
+                        (long) field(controller, "collapseBoxArtOrdinal")).orElseThrow());
+    }
+
+    private static CompositeSnapshot captureWithTransientOwnerStateCleared(
+            HeadlessTestFixture fixture, Lbz1RobotnikEventController controller) throws Exception {
+        setField(controller, "initialBoxArtQueue", null);
+        setField(controller, "initialBoxArtHandle", null);
+        setField(controller, "collapseBoxArtQueue", null);
+        setField(controller, "collapseBoxArtHandle", null);
+        return fixture.gameplayMode().getRewindRegistry().capture();
+    }
+
+    private static void drain(HardwareTimingService timing) {
+        for (int frame = 0; frame < 4096
+                && timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE) > 0; frame++) {
+            HardwareBoundaryPump.service(timing, GameServices.runtimeArtCoordinator(),
+                    HardwareServiceBoundary.PRE_MAIN_LOOP);
+            HardwareBoundaryPump.service(timing, GameServices.runtimeArtCoordinator(),
+                    HardwareServiceBoundary.POST_OBJECTS);
+        }
+        assertEquals(0, timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE));
+    }
+
+    private static long nextKosOrdinal(HardwareTimingService timing) {
+        return timing.capture().nextOrdinals().getOrDefault(HardwareWorkKind.KOS_MODULE_QUEUE, 0L);
+    }
+
+    private static Object field(Object target, String name) throws Exception {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field.get(target);
+    }
+
+    private static void setField(Object target, String name, Object value) throws Exception {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        field.set(target, value);
+    }
+
+    private static void invoke(Object target, String name) throws Exception {
+        Method method = target.getClass().getDeclaredMethod(name);
+        method.setAccessible(true);
+        method.invoke(target);
+    }
+}
