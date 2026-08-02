@@ -89,7 +89,7 @@ public class Sonic2EHZBossInstance extends AbstractBossInstance
     private int wheelYAccumulator;
     private int waitTimer;
     private int defeatTimer;
-    private int currentFrameCounter;
+    private int currentVIntRunCount;
 
     public Sonic2EHZBossInstance(ObjectSpawn spawn) {
         super(spawn, "EHZ Boss");
@@ -140,9 +140,9 @@ public class Sonic2EHZBossInstance extends AbstractBossInstance
     }
 
     @Override
-    protected void updateBossLogic(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        currentFrameCounter = frameCounter;
+        currentVIntRunCount = vIntRunCount;
         // Run state machine
         switch (state.routineSecondary) {
             case SUB0_APPROACH_DIAGONAL -> updateSub0ApproachDiagonal();
@@ -237,7 +237,7 @@ public class Sonic2EHZBossInstance extends AbstractBossInstance
             return;
         }
 
-        if ((currentFrameCounter & 7) == 0) {
+        if ((currentVIntRunCount & 7) == 0) {
             spawnDefeatExplosion();
         }
 

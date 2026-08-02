@@ -293,7 +293,7 @@ public class TestActTransitionHeadless {
         @Override public int getY() { return worldY; }
         @Override public boolean isPersistent() { return true; }
         @Override public boolean isHighPriority() { return false; }
-        @Override public void update(int frameCounter, com.openggf.game.PlayableEntity player) { }
+        @Override public void update(int vIntRunCount, com.openggf.game.PlayableEntity player) { }
         @Override public void appendRenderCommands(java.util.List<com.openggf.graphics.GLCommand> commands) { }
 
         @Override

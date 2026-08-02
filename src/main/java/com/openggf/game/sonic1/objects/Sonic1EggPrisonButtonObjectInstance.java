@@ -97,7 +97,7 @@ public class Sonic1EggPrisonButtonObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Resolve parent body on first update
         if (!parentResolved) {

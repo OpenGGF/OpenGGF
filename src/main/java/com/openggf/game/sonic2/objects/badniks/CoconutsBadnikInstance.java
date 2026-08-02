@@ -122,7 +122,7 @@ public class CoconutsBadnikInstance extends AbstractBadnikInstance implements Re
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         currentX = spawn.x();
         switch (state) {
@@ -238,13 +238,13 @@ public class CoconutsBadnikInstance extends AbstractBadnikInstance implements Re
     }
 
     @Override
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         if (state == State.THROWING) {
             animFrame = (throwState == ThrowState.HAND_RAISED) ? 1 : 2;
             return;
         }
         if (state == State.CLIMBING) {
-            animFrame = ((frameCounter / CLIMB_ANIM_SPEED) & 1);
+            animFrame = ((vIntRunCount / CLIMB_ANIM_SPEED) & 1);
         }
     }
 

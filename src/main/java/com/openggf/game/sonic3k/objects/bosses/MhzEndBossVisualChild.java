@@ -75,7 +75,7 @@ public final class MhzEndBossVisualChild extends AbstractObjectInstance implemen
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if ((parent.getCustomFlag(ARENA_ANCHORED_FLAG_OFFSET) & CHILD_DRAW_SPRITE2_DELETE_FLAG) != 0) {
             setDestroyed(true);
             return;

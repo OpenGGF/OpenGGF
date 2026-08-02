@@ -29,8 +29,8 @@ final class HczEndBossRobotnikHead extends AbstractBossChild implements RewindRe
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
-        if (!beginUpdate(frameCounter)) {
+    public void update(int vIntRunCount, PlayableEntity player) {
+        if (!beginUpdate(vIntRunCount)) {
             return;
         }
         HczEndBossRobotnikShip ship = services().objectManager()

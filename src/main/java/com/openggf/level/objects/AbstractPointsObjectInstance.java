@@ -54,7 +54,7 @@ public abstract class AbstractPointsObjectInstance extends AbstractObjectInstanc
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         // ROM: tst.w y_vel(a0) / bpl.w DeleteObject
         if (yVel >= 0) {
             ObjectLifetimeOps.expireDynamic(this);

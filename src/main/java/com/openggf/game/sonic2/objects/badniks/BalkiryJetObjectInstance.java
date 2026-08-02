@@ -60,7 +60,7 @@ public class BalkiryJetObjectInstance extends AbstractObjectInstance implements 
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // ROM: cmp.b id(a1),d0 / bne.w JmpTo65_DeleteObject
         if (parent.isDestroyed()) {

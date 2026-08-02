@@ -136,7 +136,7 @@ public class Sonic1RollerBadnikInstance extends AbstractBadnikInstance implement
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (!initialized) {
             initialize();
@@ -376,7 +376,7 @@ public class Sonic1RollerBadnikInstance extends AbstractBadnikInstance implement
     }
 
     @Override
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         // Only animate in routine 2 (Roll_Action) - not during init
         if (!initialized) {
             return;

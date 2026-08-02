@@ -31,7 +31,7 @@ public final class LbzKnuxPillarInstance extends AbstractObjectInstance implemen
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         y = (y + launchYDelta()) & 0xFFFF;
         updateDynamicSpawn(x, y);
         if (!isInRangeAt(x)) {

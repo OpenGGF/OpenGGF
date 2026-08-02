@@ -116,7 +116,7 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         if (isDestroyed()) {
             return;
         }
@@ -500,7 +500,7 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (deleteNextFrame) {
                 ObjectLifetimeOps.expireDynamic(this);
                 return;
@@ -643,7 +643,7 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (deleteNextFrame) {
                 ObjectLifetimeOps.expireDynamic(this);
                 return;
@@ -659,9 +659,9 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
                 return;
             }
 
-            if ((frameCounter & SPAWN_INTERVAL_MASK) == 0) {
-                int xJitter = ((frameCounter >> 2) & 7) - 3;
-                int yJitter = ((frameCounter >> 3) & 7) - 3;
+            if ((vIntRunCount & SPAWN_INTERVAL_MASK) == 0) {
+                int xJitter = ((vIntRunCount >> 2) & 7) - 3;
+                int yJitter = ((vIntRunCount >> 3) & 7) - 3;
                 spawnChild(() -> new TurboSpikerShellDripParticle(
                         getX() + xJitter,
                         getY() + yJitter + 4,
@@ -799,7 +799,7 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (playSound && !soundPlayed) {
                 services().playSfx(Sonic3kSfx.SPLASH.id);
                 soundPlayed = true;
@@ -867,7 +867,7 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (!parent.shouldShowWaterfallOverlay()) {
                 setDestroyed(true);
             }

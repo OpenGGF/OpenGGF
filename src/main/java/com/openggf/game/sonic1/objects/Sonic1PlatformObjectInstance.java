@@ -181,7 +181,7 @@ public class Sonic1PlatformObjectInstance extends AbstractObjectInstance
         return y;
     }
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ensureInitialized();
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         var objectManager = services().objectManager();

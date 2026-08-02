@@ -130,7 +130,7 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
     private final String[] diagnosticBranchHistoryBranch = new String[DIAGNOSTIC_BRANCH_HISTORY_SIZE];
     private int diagnosticBranchHistoryCursor;
     private int diagnosticBranchHistoryCount;
-    private int diagnosticCurrentFrameCounter;
+    private int diagnosticCurrentVIntRunCount;
 
     // ---- Arena collision seam preserved from Task 7 scaffold ----
     private boolean arenaCollisionPending;
@@ -235,8 +235,8 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
-        diagnosticCurrentFrameCounter = frameCounter;
+    public void update(int vIntRunCount, PlayableEntity player) {
+        diagnosticCurrentVIntRunCount = vIntRunCount;
         PlayableEntity nativeP2 = services().playerQuery().nativeP2OrNull();
         if (nativeP2BounceUsesPreUpdateSolidPosition
                 && nativeP2 != null && nativeP2.getYSpeed() >= 0) {
@@ -663,7 +663,7 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
         if ("none".equals(diagnosticLastMainBranch) || "main_free".equals(diagnosticLastMainBranch)) {
             return;
         }
-        diagnosticBranchHistoryFrame[diagnosticBranchHistoryCursor] = diagnosticCurrentFrameCounter;
+        diagnosticBranchHistoryFrame[diagnosticBranchHistoryCursor] = diagnosticCurrentVIntRunCount;
         diagnosticBranchHistoryX[diagnosticBranchHistoryCursor] = motion.x;
         diagnosticBranchHistoryY[diagnosticBranchHistoryCursor] = motion.y;
         diagnosticBranchHistoryXVel[diagnosticBranchHistoryCursor] = motion.xVel;

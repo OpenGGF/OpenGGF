@@ -175,7 +175,7 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
         return y;
     }
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (routine) {
             case 2 -> updateTouch(player);

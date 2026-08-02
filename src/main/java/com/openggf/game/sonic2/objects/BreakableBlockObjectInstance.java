@@ -102,7 +102,7 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ensureInitialized();
         // ROM Obj32_Main (s2.asm:48889-48905) runs SolidObject and then checks the
         // BLOCK's own standing_mask (status bits 6/7). No special "rolling player
@@ -400,7 +400,7 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
             if (isDestroyed()) {
                 return;

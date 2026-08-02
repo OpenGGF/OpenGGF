@@ -77,7 +77,7 @@ public final class CnzMinibossSparkInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (boss != null && (boss.isDefeatedForChild() || !boss.isOpenForTopHit())) {
             setDestroyed(true);
             return;

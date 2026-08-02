@@ -184,9 +184,9 @@ public class MTZPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        applyMovement(frameCounter);
+        applyMovement(vIntRunCount);
         updateDynamicSpawn(x, y);
     }
 
@@ -304,7 +304,7 @@ public class MTZPlatformObjectInstance extends AbstractObjectInstance
     /**
      * Applies movement based on movement type.
      */
-    private void applyMovement(int frameCounter) {
+    private void applyMovement(int vIntRunCount) {
         boolean standing = contactStanding;
         contactStanding = false;
 

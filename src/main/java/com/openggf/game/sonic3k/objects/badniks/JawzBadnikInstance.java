@@ -59,7 +59,7 @@ public final class JawzBadnikInstance extends AbstractS3kBadnikInstance
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         if (isDestroyed()) {
             return;
         }

@@ -106,7 +106,7 @@ public final class MhzSwingVineObjectInstance extends AbstractObjectInstance
      */
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         updateRootState();
         updateHandlePosition();
         AbstractPlayableSprite player = playerEntity instanceof AbstractPlayableSprite playable ? playable : null;

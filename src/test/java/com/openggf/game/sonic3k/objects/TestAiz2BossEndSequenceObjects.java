@@ -286,7 +286,7 @@ class TestAiz2BossEndSequenceObjects {
         setField(capsule, "mappingFrame", 1);
         setField(capsule, "buttonRecess", 8);
         setField(capsule, "buttonTriggerSource", 2);
-        setField(capsule, "buttonTriggerFrame", 0x1234);
+        setField(capsule, "buttonTriggerVIntRunCount", 0x1234);
         setField(capsule, "openFrame", 0x1235);
 
         assertEquals("cap=open/0020 t=1 o=1 r=0 mf=01 btn=08 src=p2 tf=1234 of=1235",

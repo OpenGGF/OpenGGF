@@ -73,7 +73,7 @@ public class HCZLargeFanObjectInstance extends AbstractObjectInstance implements
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         rebindArtAfterRestore();
         AbstractPlayableSprite player = (playerEntity instanceof AbstractPlayableSprite sprite)
                 ? sprite : null;
@@ -111,7 +111,7 @@ public class HCZLargeFanObjectInstance extends AbstractObjectInstance implements
 
         // ROM: sfx_FanBig every 16 frames (sonic3k.asm:65632-65636)
         // ROM uses (Level_frame_counter+1) & $F, matching global frame counter
-        if ((frameCounter & 0x0F) == 0) {
+        if ((vIntRunCount & 0x0F) == 0) {
             // ROM: only reaches this code if Sprite_OnScreen_Test passes (object
             // is deleted when off-screen).  Guard with isOnScreen() so we don't
             // play the sound for a fan that has scrolled out of view.

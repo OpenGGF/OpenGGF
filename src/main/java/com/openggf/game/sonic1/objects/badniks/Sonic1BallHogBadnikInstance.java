@@ -132,7 +132,7 @@ public class Sonic1BallHogBadnikInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (destroyed) {
             return;
@@ -141,7 +141,7 @@ public class Sonic1BallHogBadnikInstance extends AbstractObjectInstance
         if (!initialized) {
             initialize();
         } else {
-            updateAction(frameCounter, player);
+            updateAction(vIntRunCount, player);
         }
     }
 
@@ -205,7 +205,7 @@ public class Sonic1BallHogBadnikInstance extends AbstractObjectInstance
      *     [spawn cannonball]
      * </pre>
      */
-    private void updateAction(int frameCounter, AbstractPlayableSprite player) {
+    private void updateAction(int vIntRunCount, AbstractPlayableSprite player) {
         // AnimateSprite: advance animation
         updateAnimation();
 

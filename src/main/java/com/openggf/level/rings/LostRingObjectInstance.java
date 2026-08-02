@@ -274,7 +274,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
      * deletes on the same frame the spin animation finishes, matching the ROM.
      */
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (isDestroyed()) {
             return;
         }
@@ -296,7 +296,7 @@ public class LostRingObjectInstance extends AbstractObjectInstance
         // delete cadence, mirroring the placed-ring Obj25 path (Sonic1RingInstance.java:145
         // -> RingManager.isCollectedAndSparkleDone). The physics floor-check cadence keeps
         // using v_vbla_byte separately via resolveVblaCounter() (ROM RLoss_Bounce spread).
-        int executedFrame = resolveExecutedFrameCounter(frameCounter);
+        int executedFrame = resolveExecutedFrameCounter(vIntRunCount);
         lastFrameCounter = executedFrame;
 
         // Touch_ChkValue only writes routine=4 and returns. Until this Obj37 SST

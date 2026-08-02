@@ -87,7 +87,7 @@ public class Sonic1CaterkillerBodyInstance extends AbstractObjectInstance
     private boolean destroyed;
     private boolean fragmenting;
     private boolean renderOnScreen;
-    private int deleteFrame = -1;
+    private int deleteVIntRunCount = -1;
 
     // Body segment type: true if this is a BodySeg2 (has independent animation)
     private boolean isAnimatedSegment;
@@ -216,14 +216,14 @@ public class Sonic1CaterkillerBodyInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (destroyed) {
             return;
         }
 
         if (deleting) {
-            if (frameCounter > deleteFrame) {
+            if (vIntRunCount > deleteVIntRunCount) {
                 markDestroyed();
             }
             return;
@@ -241,9 +241,9 @@ public class Sonic1CaterkillerBodyInstance extends AbstractObjectInstance
             startFragmenting();
             return;
         }
-        if (head.shouldDeleteBodySegments(frameCounter)) {
+        if (head.shouldDeleteBodySegments(vIntRunCount)) {
             deleting = true;
-            deleteFrame = frameCounter;
+            deleteVIntRunCount = vIntRunCount;
             return;
         }
 

@@ -82,7 +82,7 @@ public class Sonic3kTwistedRampObjectInstance extends AbstractObjectInstance imp
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ObjectServices ctx = tryServices();
         if (ctx != null) {
             List<PlayableEntity> players = ctx.playerQuery().playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2);

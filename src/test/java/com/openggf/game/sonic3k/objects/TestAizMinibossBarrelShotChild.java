@@ -164,7 +164,7 @@ public class TestAizMinibossBarrelShotChild {
         }
 
         @Override
-        protected void updateBossLogic(int frameCounter, PlayableEntity player) {
+        protected void updateBossLogic(int vIntRunCount, PlayableEntity player) {
             // No-op test stub.
         }
 

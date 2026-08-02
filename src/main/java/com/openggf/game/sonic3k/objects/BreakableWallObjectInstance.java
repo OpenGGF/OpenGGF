@@ -183,7 +183,7 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (broken) {
             return;
         }
@@ -642,7 +642,7 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             motionState.x = currentX;
             motionState.y = currentY;
             SubpixelMotion.moveSprite(motionState, FRAGMENT_GRAVITY);

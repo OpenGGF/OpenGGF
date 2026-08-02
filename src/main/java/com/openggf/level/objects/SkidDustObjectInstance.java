@@ -79,7 +79,7 @@ public class SkidDustObjectInstance extends AbstractObjectInstance implements Sp
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (deleteRoutineDelay >= 0) {
             if (deleteRoutineDelay-- == 0) {
                 ObjectLifetimeOps.expireDynamic(this);

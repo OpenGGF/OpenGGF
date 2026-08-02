@@ -368,7 +368,7 @@ class TestS2Ehz1BridgeTailsStandingRegression {
                     signpost.getCenterY() & 0xFFFF,
                     reflectField(signpost, "routineState"),
                     reflectField(signpost, "resultsSpawned"),
-                    reflectField(signpost, "walkOffEnteredFrame"));
+                    reflectField(signpost, "walkOffEnteredVIntRunCount"));
         }
 
         private String resultsDescription() {

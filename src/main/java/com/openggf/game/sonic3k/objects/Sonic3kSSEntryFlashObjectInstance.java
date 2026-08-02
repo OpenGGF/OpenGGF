@@ -122,7 +122,7 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance im
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (state) {
             case ANIMATING -> updateAnimation();

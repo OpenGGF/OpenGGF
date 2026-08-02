@@ -58,9 +58,9 @@ public class LightningShieldObjectInstance extends ShieldObjectInstance {
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        super.update(frameCounter, player);
+        super.update(vIntRunCount, player);
         if (isShieldDestroyed()) return;
         ensureShieldArtLoaded();
         stepAnimation();

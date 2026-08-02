@@ -217,7 +217,7 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
     // =========================================================================
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         serviceQueuedArt();
         AbstractPlayableSprite player = resolveTargetPlayer(playerEntity);
 
@@ -606,7 +606,7 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (isDestroyed()) return;
 
             switch (state) {

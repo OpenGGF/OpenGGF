@@ -186,7 +186,7 @@ public final class MhzMinibossInstance extends AbstractBossInstance implements S
     }
 
     @Override
-    protected void updateBossLogic(int frameCounter, PlayableEntity player) {
+    protected void updateBossLogic(int vIntRunCount, PlayableEntity player) {
         if (state.defeated) {
             updateDefeatHandoff();
             return;

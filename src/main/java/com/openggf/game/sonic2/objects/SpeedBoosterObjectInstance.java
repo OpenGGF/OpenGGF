@@ -51,12 +51,12 @@ public class SpeedBoosterObjectInstance extends AbstractObjectInstance implement
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Animation: Toggle between frame 0 (visible) and frame 2 (empty)
         // ROM: move.b (Level_frame_counter+1).w,d0 / andi.b #2,d0 / move.b d0,mapping_frame(a0)
         // This masks bit 1 directly, producing 0 or 2
-        mappingFrame = frameCounter & 2;
+        mappingFrame = vIntRunCount & 2;
 
         // ROM Obj1B_Main checks BOTH characters independently against the same
         // +/-$10 box and boosts each grounded one via Obj1B_GiveBoost:

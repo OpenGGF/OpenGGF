@@ -414,10 +414,10 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
      * queue each frame until all children are off-screen, THEN transitions.
      */
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         this.playerRef = player;
-        this.frameCounter = frameCounter;
+        this.frameCounter = vIntRunCount;
         if (!updateCreateGate()) {
             return;
         }

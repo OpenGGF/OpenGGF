@@ -98,7 +98,7 @@ public class NebulaBadnikInstance extends AbstractBadnikInstance implements Rewi
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         if (!initialized) {
             // Obj99_Init only loads SubObjData and x_vel, then returns; the
             // first ObjectMove occurs when routine 2 runs on the next object
@@ -212,7 +212,7 @@ public class NebulaBadnikInstance extends AbstractBadnikInstance implements Rewi
     }
 
     @Override
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         // Ani_obj99: dc.b 3, 0, 1, 2, 3, $FF
         // Speed 3 means update every 4 frames (original uses > not >=)
         anim.tick();

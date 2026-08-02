@@ -132,7 +132,7 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ensureInitialized();
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Handle falling state first (ROM: Obj26_Main routine_secondary check)

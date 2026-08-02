@@ -129,7 +129,7 @@ public class Sonic1MonitorObjectInstance extends AbstractMonitorObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ensureInitialized();
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // ROM Mon_BreakOpen runs in the monitor's own SST slot (this update),

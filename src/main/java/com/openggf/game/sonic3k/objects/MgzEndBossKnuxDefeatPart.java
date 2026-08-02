@@ -28,7 +28,7 @@ final class MgzEndBossKnuxDefeatPart extends AbstractObjectInstance implements S
         frame = 0x2E + index;
     }
 
-    @Override public void update(int frameCounter, PlayableEntity player) {
+    @Override public void update(int vIntRunCount, PlayableEntity player) {
         xFixed += xVel; yFixed += yVel;
         CameraBounds bounds = cameraBounds();
         if (getX() < bounds.left || getX() > bounds.right || getY() < bounds.top || getY() > bounds.bottom) {

@@ -104,7 +104,7 @@ public class ExplosionObjectInstance extends AbstractObjectInstance implements S
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         spawnDestructionChildrenOnce();
         if (animFrameDuration < 0) {
             animFrameDuration = resolveInitialAnimDuration();

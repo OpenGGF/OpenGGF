@@ -271,7 +271,7 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance implem
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         // ROM: loc_295E8 — process both players independently
         AbstractPlayableSprite player1 = (AbstractPlayableSprite) playerEntity;
         if (player1 != null) {

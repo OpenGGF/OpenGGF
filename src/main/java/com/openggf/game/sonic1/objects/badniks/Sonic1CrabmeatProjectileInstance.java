@@ -121,7 +121,7 @@ public class Sonic1CrabmeatProjectileInstance extends AbstractProjectileInstance
     }
 
     @Override
-    protected void updateExtra(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateExtra(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Animate: alternate between ball frame 1 and 2 at speed 1
         animTimer++;

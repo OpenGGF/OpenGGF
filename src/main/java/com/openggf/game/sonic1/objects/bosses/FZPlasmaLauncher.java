@@ -119,9 +119,9 @@ public class FZPlasmaLauncher extends AbstractBossChild implements SolidObjectPr
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (!beginUpdate(frameCounter)) return;
+        if (!beginUpdate(vIntRunCount)) return;
 
         Sonic1FZBossInstance fzParent = (Sonic1FZBossInstance) parent;
 

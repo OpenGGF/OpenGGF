@@ -81,9 +81,9 @@ public class AizMinibossBodyChild extends AbstractBossChild implements TouchResp
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (!shouldUpdate(frameCounter)) {
+        if (!shouldUpdate(vIntRunCount)) {
             return;
         }
         syncPositionWithParent();

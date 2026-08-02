@@ -256,7 +256,7 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance implements Re
     }
 
     @Override
-    protected void updateBossLogic(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // ROM loc_39D1C (s2.asm:78013-78039) runs at the top of the main routine,
         // BEFORE the per-routine handler animates the sprite. Latch the collision
@@ -268,10 +268,10 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance implements Re
         switch (state.routine) {
             case ROUTINE_WAIT_CAMERA -> updateWaitCamera();
             case ROUTINE_COUNTDOWN -> updateCountdown();
-            case ROUTINE_DESCEND -> updateDescend(frameCounter);
+            case ROUTINE_DESCEND -> updateDescend(vIntRunCount);
             case ROUTINE_IDLE -> updateIdle();
             case ROUTINE_ATTACK -> updateAttack(player);
-            case ROUTINE_DEFEAT -> updateDefeat(frameCounter);
+            case ROUTINE_DEFEAT -> updateDefeat(vIntRunCount);
         }
     }
 
@@ -367,8 +367,8 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance implements Re
     // ROM: loc_397FE — ObjectMove + positioning only
     // ========================================================================
 
-    private void updateDescend(int frameCounter) {
-        if ((frameCounter & 0x1F) == 0) {
+    private void updateDescend(int vIntRunCount) {
+        if ((vIntRunCount & 0x1F) == 0) {
             services().playSfx(Sonic2Sfx.FIRE.id);
         }
 
@@ -883,7 +883,7 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance implements Re
     // Routine C: Defeat sequence
     // ========================================================================
 
-    private void updateDefeat(int frameCounter) {
+    private void updateDefeat(int vIntRunCount) {
         defeatTimer--;
         if (defeatTimer < 0) {
             Camera camera = services().camera();
@@ -1134,9 +1134,9 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance implements Re
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-            if (!beginUpdate(frameCounter)) return;
+            if (!beginUpdate(vIntRunCount)) return;
             // ROM: routine $1C — wait for parent's y_flip flag before animating
             if (waitingForLanding) {
                 updateDynamicSpawn();
@@ -1263,9 +1263,9 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance implements Re
         public int getCollisionFlags() { return collisionEnabled ? 0x98 : 0x00; }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-            if (!beginUpdate(frameCounter)) return;
+            if (!beginUpdate(vIntRunCount)) return;
             syncPositionWithParent();
             updateDynamicSpawn();
         }
@@ -1339,9 +1339,9 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance implements Re
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-            if (!beginUpdate(frameCounter)) return;
+            if (!beginUpdate(vIntRunCount)) return;
             syncPositionWithParent();
             // ROM: AnimateSprite_Checked — animate with whatever anim was set by parent.
             // Anim selection is event-driven from parent (updateDashAcross, transitionToIdle),
@@ -1422,9 +1422,9 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance implements Re
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-            if (!beginUpdate(frameCounter)) return;
+            if (!beginUpdate(vIntRunCount)) return;
             xFixed += (xVel << 8);
             yFixed += (yVel << 8);
             currentX = xFixed >> 16;

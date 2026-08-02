@@ -99,15 +99,15 @@ public final class CutsceneKnucklesLbz1Instance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         switch (routine) {
             case INIT -> routineInit(playerEntity);
             case WAIT_FOR_HELPER_SIGNAL -> routineWaitForHelperSignal();
             case WAIT_AFTER_SIGNAL -> routineWaitAfterSignal();
             case THROW_ANIMATION -> routineThrowAnimation();
             case WAIT_AFTER_BOMB -> routineWaitAfterBomb();
-            case WAIT_BEFORE_COLLAPSE -> routineWaitBeforeCollapse(frameCounter);
-            case COLLAPSE_WAIT -> routineCollapseWait(frameCounter);
+            case WAIT_BEFORE_COLLAPSE -> routineWaitBeforeCollapse(vIntRunCount);
+            case COLLAPSE_WAIT -> routineCollapseWait(vIntRunCount);
             case EXIT_RIGHT -> routineExitRight();
         }
     }
@@ -205,7 +205,7 @@ public final class CutsceneKnucklesLbz1Instance extends AbstractObjectInstance
         routine = Routine.WAIT_BEFORE_COLLAPSE;
     }
 
-    private void routineWaitBeforeCollapse(int frameCounter) {
+    private void routineWaitBeforeCollapse(int vIntRunCount) {
         applyCollapseShake();
         timer--;
         if (timer >= 0) {
@@ -217,7 +217,7 @@ public final class CutsceneKnucklesLbz1Instance extends AbstractObjectInstance
         routine = Routine.COLLAPSE_WAIT;
     }
 
-    private void routineCollapseWait(int frameCounter) {
+    private void routineCollapseWait(int vIntRunCount) {
         applyCollapseShake();
         timer--;
         if (timer >= 0) {

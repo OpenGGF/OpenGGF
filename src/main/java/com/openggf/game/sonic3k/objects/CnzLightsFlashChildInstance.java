@@ -101,7 +101,7 @@ public final class CnzLightsFlashChildInstance extends AbstractObjectInstance im
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (failed) {
             setDestroyed(true);
             return;

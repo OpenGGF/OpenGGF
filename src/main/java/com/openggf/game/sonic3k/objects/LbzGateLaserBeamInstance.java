@@ -57,12 +57,12 @@ public final class LbzGateLaserBeamInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (isDestroyed()) {
             return;
         }
 
-        if (((frameCounter + 1) & 1) == 0) {
+        if (((vIntRunCount + 1) & 1) == 0) {
             renderFlags ^= 0x02;
         }
 

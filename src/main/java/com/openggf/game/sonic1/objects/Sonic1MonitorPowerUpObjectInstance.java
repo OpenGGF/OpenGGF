@@ -38,7 +38,7 @@ public final class Sonic1MonitorPowerUpObjectInstance extends AbstractMonitorObj
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         updateDynamicSpawn(spawn.x(), iconSubY >> 8);
         updateIcon();
     }

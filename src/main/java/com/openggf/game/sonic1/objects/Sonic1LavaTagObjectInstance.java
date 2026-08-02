@@ -108,7 +108,7 @@ public class Sonic1LavaTagObjectInstance extends AbstractObjectInstance
     // ========================================================================
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // ROM LTag_ChkDel (Routine 2) only performs off-screen culling via MarkObjGone.
         // The ObjectManager.Placement system handles this automatically,

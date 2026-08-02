@@ -59,7 +59,7 @@ public final class StarPointerBadnikInstance extends AbstractS3kBadnikInstance i
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         if (isDestroyed()) {
             return;
         }
@@ -258,7 +258,7 @@ public final class StarPointerBadnikInstance extends AbstractS3kBadnikInstance i
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             touchListPublishedThisFrame = false;
             if (!initialized) {
                 initialized = true;
@@ -279,7 +279,7 @@ public final class StarPointerBadnikInstance extends AbstractS3kBadnikInstance i
                 return;
             }
 
-            if ((frameCounter & 1) == 0) {
+            if ((vIntRunCount & 1) == 0) {
                 angle = parent.isFacingRight() ? (angle + 1) & 0xFF : (angle - 1) & 0xFF;
                 if (angle == 0 && parent.shouldReleaseChildren()) {
                     launchFromParent();

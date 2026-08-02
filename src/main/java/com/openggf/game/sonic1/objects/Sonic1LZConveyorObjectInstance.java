@@ -303,13 +303,13 @@ public class Sonic1LZConveyorObjectInstance extends AbstractObjectInstance
         return y;
     }
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ensureInitialized();
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (mode) {
             case SPAWNER -> updateSpawner();
-            case PLATFORM -> updatePlatform(frameCounter, player);
-            case WHEEL -> updateWheel(frameCounter);
+            case PLATFORM -> updatePlatform(vIntRunCount, player);
+            case WHEEL -> updateWheel(vIntRunCount);
         }
     }
 
@@ -602,7 +602,7 @@ public class Sonic1LZConveyorObjectInstance extends AbstractObjectInstance
      * loc_124C2 (routine 4): ExitPlatform + sub_12502 + MvSonicOnPtfm2
      * </pre>
      */
-    private void updatePlatform(int frameCounter, AbstractPlayableSprite player) {
+    private void updatePlatform(int vIntRunCount, AbstractPlayableSprite player) {
         // Check for player standing (transitions between routine 2 and 4)
         boolean playerRiding = isPlayerRiding();
         if (playerRiding) {
@@ -743,9 +743,9 @@ public class Sonic1LZConveyorObjectInstance extends AbstractObjectInstance
      *   andi.b  #3,obFrame(a0)         ; wrap to 0-3
      * </pre>
      */
-    private void updateWheel(int frameCounter) {
+    private void updateWheel(int vIntRunCount) {
         // Every 4th frame: advance animation
-        if ((frameCounter & WHEEL_ANIM_FRAME_MASK) == 0) {
+        if ((vIntRunCount & WHEEL_ANIM_FRAME_MASK) == 0) {
             int step = 1;
             if (services().gameService(Sonic1ConveyorState.class).isReversed()) {
                 step = -1;

@@ -193,7 +193,7 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance
      */
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         // ROM: First-frame initialization (sonic3k.asm:66306-66342)
         if (!initialized) {
             initialized = true;
@@ -213,13 +213,13 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance
         // ROM: loc_311C4 (sonic3k.asm:66344-66365)
         // Process Player 1
         if (slots.p1 != null) {
-            processPlayer(slots.p1, p1State, frameCounter);
+            processPlayer(slots.p1, p1State, vIntRunCount);
         }
 
         // Process native Player 2 only. Extended engine sidekicks need their own
         // per-sidekick state before they can safely participate in this object.
         if (slots.p2 != null) {
-            processPlayer(slots.p2, p2State, frameCounter);
+            processPlayer(slots.p2, p2State, vIntRunCount);
         }
 
         // Camera culling (sonic3k.asm:66355-66364)
@@ -268,13 +268,13 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance
      * ROM: sub_31226 (sonic3k.asm:66384-66547).
      */
     private void processPlayer(AbstractPlayableSprite player, PlayerBeltState state,
-                               int frameCounter) {
+                               int vIntRunCount) {
         if (state.active) {
             // Player is currently on the belt — handle input and movement
-            processOnBelt(player, state, frameCounter);
+            processOnBelt(player, state, vIntRunCount);
         } else {
             // Player is not on the belt — check for capture
-            processOffBelt(player, state, frameCounter);
+            processOffBelt(player, state, vIntRunCount);
         }
     }
 
@@ -284,15 +284,15 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance
      * ROM: sub_31226, active path (sonic3k.asm:66384-66457).
      */
     private void processOnBelt(AbstractPlayableSprite player, PlayerBeltState state,
-                               int frameCounter) {
+                               int vIntRunCount) {
         // ROM: tst.w (Debug_placement_mode).w (sonic3k.asm:66387-66388)
         if (player.isDebugMode()) {
-            releaseBelt(player, state, frameCounter);
+            releaseBelt(player, state, vIntRunCount);
             return;
         }
         // ROM: cmpi.b #4,routine(a1) (sonic3k.asm:66389-66390)
         if (player.isHurt() || player.getDead()) {
-            releaseBelt(player, state, frameCounter);
+            releaseBelt(player, state, vIntRunCount);
             return;
         }
 
@@ -322,7 +322,7 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance
             } else {
                 player.setYSpeed(JUMP_VELOCITY);
             }
-            releaseBelt(player, state, frameCounter);
+            releaseBelt(player, state, vIntRunCount);
             return;
         }
 
@@ -338,7 +338,7 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance
         int playerX = player.getCentreX() & 0xFFFF;
         if (playerX < activeLeftBound || playerX >= activeRightBound) {
             // Player has moved off the belt
-            releaseBelt(player, state, frameCounter);
+            releaseBelt(player, state, vIntRunCount);
             return;
         }
 
@@ -352,7 +352,7 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance
      * ROM: loc_31322 (sonic3k.asm:66460-66547).
      */
     private void processOffBelt(AbstractPlayableSprite player, PlayerBeltState state,
-                                int frameCounter) {
+                                int vIntRunCount) {
         // ROM: tst.b 2(a2) / beq.s loc_3132E (sonic3k.asm:66460-66464)
         if (state.cooldownTimer > 0) {
             state.cooldownTimer--;
@@ -367,12 +367,12 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance
 
         // ROM: cmpi.w #1,ground_vel(a1) / beq.w loc_313D6 (sonic3k.asm:66473-66474)
         if (player.getGSpeed() == 1) {
-            tryCapturHanging(player, state, frameCounter);
+            tryCapturHanging(player, state, vIntRunCount);
             return;
         }
 
         // ROM: Standing-on-top detection (sonic3k.asm:66475-66511)
-        tryCapturStanding(player, state, frameCounter);
+        tryCapturStanding(player, state, vIntRunCount);
     }
 
     /**
@@ -381,7 +381,7 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance
      * ROM: loc_3132E, standing path (sonic3k.asm:66475-66511).
      */
     private void tryCapturStanding(AbstractPlayableSprite player, PlayerBeltState state,
-                                   int frameCounter) {
+                                   int vIntRunCount) {
         int playerY = player.getCentreY() & 0xFFFF;
 
         // ROM: Y range check for standing on top
@@ -414,7 +414,7 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance
      * Entered when {@code ground_vel == 1} (set by fan push).
      */
     private void tryCapturHanging(AbstractPlayableSprite player, PlayerBeltState state,
-                                  int frameCounter) {
+                                  int vIntRunCount) {
         int playerY = player.getCentreY() & 0xFFFF;
 
         // ROM: Y range check for hanging below
@@ -481,7 +481,7 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance
      * ROM: loc_312D4 (sonic3k.asm:66440-66457).
      */
     private void releaseBelt(AbstractPlayableSprite player, PlayerBeltState state,
-                             int frameCounter) {
+                             int vIntRunCount) {
         int releaseCentreY = player.getCentreY() & 0xFFFF;
         // ROM: loc_312D4 does NOT modify ground_vel on release. The alternation
         // between top/bottom surfaces is driven by external forces (the HCZ fan)
@@ -493,7 +493,7 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance
         state.cooldownTimer = player.isInWater() ? COOLDOWN_UNDERWATER : COOLDOWN_NORMAL;
 
         // ROM: andi.b #$FC,object_control(a1) — clear object control
-        player.releaseFromObjectControl(frameCounter);
+        player.releaseFromObjectControl(vIntRunCount);
 
         // ROM: bset #Status_InAir,status(a1) (sonic3k.asm:66449)
         player.setAir(true);

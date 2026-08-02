@@ -45,7 +45,7 @@ public class PachinkoTriangleBumperObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (hitAnimationFrame >= 0) {
             hitAnimationFrame++;
             if (hitAnimationFrame >= HIT_ANIMATION.length) {

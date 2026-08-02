@@ -291,7 +291,7 @@ public class TensionBridgeObjectInstance extends AbstractObjectInstance
     // --- Update ---
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         Variant v = resolveVariant();
 
         // Trigger-collapse variant: check trigger each frame (loc_387B6)
@@ -639,13 +639,13 @@ public class TensionBridgeObjectInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             // loc_388E4: delay countdown, then fall
             if (delay > 0) {
                 delay--;
                 return;
             }
-            super.update(frameCounter, player);
+            super.update(vIntRunCount, player);
         }
 
         @Override

@@ -150,7 +150,7 @@ public class TiltingPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Fix #3: One-frame-early initialization for behavior types 0, 2, and 6.
         // ROM: ObjB6_Init returns after setting routine. On the NEXT frame, the object
@@ -177,7 +177,7 @@ public class TiltingPlatformObjectInstance extends AbstractObjectInstance
         }
 
         switch (behaviorType) {
-            case BEHAVIOR_TIMED_TILT -> updateTimedTilt(frameCounter);
+            case BEHAVIOR_TIMED_TILT -> updateTimedTilt(vIntRunCount);
             case BEHAVIOR_COUNTDOWN_FIRE -> updateCountdownFire();
             case BEHAVIOR_PLAYER_TRIGGERED -> updatePlayerTriggered(player);
             case BEHAVIOR_VERTICAL_COUNTDOWN -> updateVerticalCountdown();
@@ -253,13 +253,13 @@ public class TiltingPlatformObjectInstance extends AbstractObjectInstance
     // s2.asm loc_3B602-3B654
     // Waits for frame counter sync, then plays tilt animation sequence, advances via $FA
 
-    private void updateTimedTilt(int frameCounter) {
+    private void updateTimedTilt(int vIntRunCount) {
         switch (subRoutine) {
             case 2 -> {
                 // loc_3B624: solid platform, check frame counter sync
                 runSolidCheckpoint();
                 // move.b (Vint_runcount+3).w,d0 / andi.b #$F0,d0 / cmp.b subtype(a0),d0
-                int maskedFrame = (frameCounter & 0xFF) & 0xF0;
+                int maskedFrame = (vIntRunCount & 0xFF) & 0xF0;
                 int subtypeMasked = spawn.subtype() & 0xF0;
                 if (maskedFrame == subtypeMasked) {
                     // loc_3B638: trigger tilt animation

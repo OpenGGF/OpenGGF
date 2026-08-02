@@ -106,7 +106,7 @@ public class CNZBigBlockObjectInstance extends BoxObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Apply movement based on type
         if (moveType == MOVE_HORIZONTAL) {

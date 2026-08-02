@@ -198,7 +198,7 @@ class TestRewindCaptureMemoizationEquivalence {
         }
 
         @Override
-        protected void updateMovement(int frameCounter, PlayableEntity player) {
+        protected void updateMovement(int vIntRunCount, PlayableEntity player) {
         }
 
         @Override

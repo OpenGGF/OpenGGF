@@ -154,10 +154,10 @@ public class Sonic1SpinPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (isSpinner) {
-            updateSpinner(frameCounter, player);
+            updateSpinner(vIntRunCount, player);
         } else {
             updateTrapdoor(player);
         }
@@ -222,13 +222,13 @@ public class Sonic1SpinPlatformObjectInstance extends AbstractObjectInstance
     // Spinner logic (Spin_Spinner, routine 4)
     // ========================================
 
-    private void updateSpinner(int frameCounter, AbstractPlayableSprite player) {
+    private void updateSpinner(int vIntRunCount, AbstractPlayableSprite player) {
         // ROM Spin_Spinner reads (v_framecount).w (the Level frame counter), NOT
         // the VBla clock ObjectManager passes into update(); the VBla gate runs
         // the spin cycle ~14 frames out of phase (docs/s1disasm/_incObj/69 SBZ
         // Spinning Platforms and Trapdoors.asm:96). Route through the trace-seeded
         // Level frame counter (same pattern as the Electrocuter f1925 fix).
-        int vfc = resolveVFrameCounter(frameCounter);
+        int vfc = resolveVFrameCounter(vIntRunCount);
         // move.w (v_framecount).w,d0 / and.w objoff_36(a0),d0 / bne.s .delay
         if ((vfc & frameCounterMask) == 0) {
             // move.b #1,objoff_34(a0)
@@ -293,12 +293,12 @@ public class Sonic1SpinPlatformObjectInstance extends AbstractObjectInstance
      * frame's v_framecount. Mirrors
      * {@code Sonic1ElectrocuterObjectInstance.resolveVFrameCounter}.
      */
-    private int resolveVFrameCounter(int fallbackFrameCounter) {
+    private int resolveVFrameCounter(int vIntRunCount) {
         LevelManager lm = services().levelManager();
         if (lm != null) {
             return lm.getFrameCounter() + 1;
         }
-        return fallbackFrameCounter;
+        return vIntRunCount;
     }
 
     /**

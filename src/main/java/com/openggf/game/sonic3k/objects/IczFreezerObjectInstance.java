@@ -91,7 +91,7 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         // Obj_WaitOffscreen installs a $20-by-$20 placeholder. Render_Sprites
         // sets its on-screen bit after object execution, then the next object
         // pass restores Obj_ICZFreezer and returns; initialization begins on
@@ -385,7 +385,7 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (isDestroyed() || frozenBlock != null) {
                 return;
             }
@@ -558,7 +558,7 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (isDestroyed()) {
                 return;
             }
@@ -574,11 +574,11 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
             syncCapturedPlayer();
 
             if (--breakTimer < 0) {
-                breakOpen(frameCounter, true);
+                breakOpen(vIntRunCount, true);
                 return;
             }
             if (tryBreakFromOtherPlayer(playerEntity)) {
-                breakOpen(frameCounter, false);
+                breakOpen(vIntRunCount, false);
             }
         }
 
@@ -662,26 +662,26 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
             capturedPlayer.setGSpeed((short) 0);
         }
 
-        private void breakOpen(int frameCounter, boolean applyDamage) {
+        private void breakOpen(int vIntRunCount, boolean applyDamage) {
             if (capturedPlayer != null) {
                 if (applyDamage) {
-                    applyBreakDamage(frameCounter);
+                    applyBreakDamage(vIntRunCount);
                 }
                 capturedPlayer.setAir(true);
-                capturedPlayer.releaseFromObjectControl(frameCounter);
+                capturedPlayer.releaseFromObjectControl(vIntRunCount);
                 capturedPlayer.setInvulnerableFrames(POST_BREAK_INVULNERABILITY);
             }
             spawnDebris();
             setDestroyed(true);
         }
 
-        private void applyBreakDamage(int frameCounter) {
+        private void applyBreakDamage(int vIntRunCount) {
             boolean sidekick = capturedPlayer.isCpuControlled();
             boolean hadRings = !sidekick && capturedPlayer.getRingCount() > 0;
             if (hadRings && !capturedPlayer.hasShield() && !capturedPlayer.suppressesLostRingSpawnOnHurt()) {
                 ObjectServices services = tryServices();
                 if (services != null) {
-                    services.spawnLostRings(capturedPlayer, frameCounter);
+                    services.spawnLostRings(capturedPlayer, vIntRunCount);
                 }
             }
             boolean hurt = sidekick
@@ -795,7 +795,7 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             drawThisFrame = false;
             if (!initialized) {
                 initialized = true;
@@ -903,9 +903,9 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             animateRaw();
-            super.update(frameCounter, player);
+            super.update(vIntRunCount, player);
         }
 
         private void animateRaw() {

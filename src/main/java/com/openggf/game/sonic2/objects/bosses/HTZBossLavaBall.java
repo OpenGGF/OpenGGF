@@ -148,9 +148,9 @@ public class HTZBossLavaBall extends AbstractBossChild
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (!shouldUpdate(frameCounter)) {
+        if (!shouldUpdate(vIntRunCount)) {
             return;
         }
         if (!initialized) {

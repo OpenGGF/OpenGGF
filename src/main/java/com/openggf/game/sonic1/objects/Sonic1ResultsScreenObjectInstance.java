@@ -209,7 +209,7 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
     // -----------------------------------------------------------------------
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
 
         // ROM Got_ChkPLC is routine 0 only. Once it has released, later card
@@ -217,7 +217,7 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
         if (!plcReadinessPassed) {
             Sonic1PlcService plcService = services().gameService(Sonic1PlcService.class);
             if (plcService != null && plcService.isBusy()) {
-                this.frameCounter = frameCounter;
+                this.frameCounter = vIntRunCount;
                 return;
             }
             plcReadinessPassed = true;
@@ -225,7 +225,7 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
 
         // Handle SBZ2 special states outside the base class state machine
         if (state == STATE_SBZ2_SLIDE_OUT || state == STATE_SBZ2_SCROLL) {
-            this.frameCounter = frameCounter;
+            this.frameCounter = vIntRunCount;
             stateTimer++;
             totalFrames++;
             if (state == STATE_SBZ2_SLIDE_OUT) {
@@ -235,7 +235,7 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
             }
             return;
         }
-        super.update(frameCounter, player);
+        super.update(vIntRunCount, player);
     }
 
     @Override

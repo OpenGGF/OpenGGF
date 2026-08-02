@@ -73,12 +73,12 @@ public class ShieldObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (destroyed) {
             return;
         }
         // Animation sequence from disassembly - step through the sequence
-        if (frameCounter % animationSpeed == 0) {
+        if (vIntRunCount % animationSpeed == 0) {
             sequenceIndex++;
             if (sequenceIndex >= animationSequence.length) {
                 sequenceIndex = 0;

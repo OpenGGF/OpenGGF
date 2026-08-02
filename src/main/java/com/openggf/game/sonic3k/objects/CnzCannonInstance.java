@@ -100,7 +100,7 @@ public final class CnzCannonInstance extends AbstractObjectInstance
      */
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = playerEntity instanceof AbstractPlayableSprite sprite
                 ? sprite
                 : null;
@@ -108,10 +108,10 @@ public final class CnzCannonInstance extends AbstractObjectInstance
         updateReleasedPlayerPriority();
 
         switch (state) {
-            case STATE_IDLE -> updateIdle(frameCounter, player);
+            case STATE_IDLE -> updateIdle(vIntRunCount, player);
             case STATE_PULLING_PLAYER -> updatePullingPlayer(player);
-            case STATE_READY_TO_LAUNCH -> updateReadyToLaunch(frameCounter, player);
-            case STATE_COOLDOWN -> updateCooldown(frameCounter);
+            case STATE_READY_TO_LAUNCH -> updateReadyToLaunch(vIntRunCount, player);
+            case STATE_COOLDOWN -> updateCooldown(vIntRunCount);
             default -> {
                 state = STATE_IDLE;
                 chamberFrame = FRAME_CHAMBER_IDLE;
@@ -133,7 +133,7 @@ public final class CnzCannonInstance extends AbstractObjectInstance
         }
     }
 
-    private void updateIdle(int frameCounter, AbstractPlayableSprite player) {
+    private void updateIdle(int vIntRunCount, AbstractPlayableSprite player) {
         chamberFrame = FRAME_CHAMBER_IDLE;
         if (player == null || player.isObjectControlled()) {
             return;
@@ -164,14 +164,14 @@ public final class CnzCannonInstance extends AbstractObjectInstance
         activePlayer.setAir(true);
     }
 
-    private void updateReadyToLaunch(int frameCounter, AbstractPlayableSprite player) {
+    private void updateReadyToLaunch(int vIntRunCount, AbstractPlayableSprite player) {
         // ROM sub_3192C runs before sub_319F4. On the first ready dispatch,
         // $34(a0) is still zero while sub_3192C checks it, then sub_319F4 sees
         // player state word $0200/$0202 and arms $34 for the following frame.
         // Keep that read-before-write ordering so ordinary cannons retain their
         // idle chamber frame for the first ready dispatch.
         if (spinArmed) {
-            advanceSpin(frameCounter);
+            advanceSpin(vIntRunCount);
         } else {
             spinArmed = true;
         }
@@ -194,13 +194,13 @@ public final class CnzCannonInstance extends AbstractObjectInstance
                 ? (activePlayer.getForcedInputMask() & AbstractPlayableSprite.INPUT_JUMP) != 0
                 : activePlayer.isJumpPressed();
         if (jumpPressed) {
-            launchPlayer(activePlayer, frameCounter);
+            launchPlayer(activePlayer, vIntRunCount);
         }
     }
 
-    private void updateCooldown(int frameCounter) {
+    private void updateCooldown(int vIntRunCount) {
         advanceSpin(-1);
-        if (stateTimer >= 0 && (frameCounter & 0x03) == 0) {
+        if (stateTimer >= 0 && (vIntRunCount & 0x03) == 0) {
             spawnLaunchPuff();
         }
         stateTimer--;
@@ -445,7 +445,7 @@ public final class CnzCannonInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             xSubpixel += xVelocity;
             ySubpixel += yVelocity;
             x += xSubpixel >> 8;

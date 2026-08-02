@@ -58,7 +58,7 @@ final class AizAct2CameraResizeController extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (boundary == MAX_X) {
             updateMaxX(playerEntity);
         } else {

@@ -121,10 +121,10 @@ public class LateralCannonObjectInstance extends AbstractObjectInstance
     private int mappingFrame;    // Current mapping frame (0-4)
     private boolean hFlip;       // Horizontal flip from render flags
     private String lastSolidTrace = "solid=none";
-    private int phaseMatchedFrame = -1;
-    private int holdEnteredFrame = -1;
-    private int retractEnteredFrame = -1;
-    private int lastUpdateFrameCounter = -1;
+    private int phaseMatchedVIntRunCount = -1;
+    private int holdEnteredVIntRunCount = -1;
+    private int retractEnteredVIntRunCount = -1;
+    private int lastUpdateVIntRunCount = -1;
 
     public LateralCannonObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
@@ -150,14 +150,14 @@ public class LateralCannonObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
-        lastUpdateFrameCounter = frameCounter;
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        lastUpdateVIntRunCount = vIntRunCount;
         AbstractPlayableSprite player = playerEntity instanceof AbstractPlayableSprite sprite ? sprite : null;
         switch (routine) {
-            case WAIT_FOR_PHASE -> updateWaitForPhase(frameCounter);
-            case EXTEND_ANIM -> updateAnimation(EXTEND_FRAMES, Routine.EXTENDED_HOLD, frameCounter);
-            case EXTENDED_HOLD -> updateExtendedHold(player, frameCounter);
-            case RETRACT_ANIM -> updateAnimation(RETRACT_FRAMES, Routine.RESET, frameCounter);
+            case WAIT_FOR_PHASE -> updateWaitForPhase(vIntRunCount);
+            case EXTEND_ANIM -> updateAnimation(EXTEND_FRAMES, Routine.EXTENDED_HOLD, vIntRunCount);
+            case EXTENDED_HOLD -> updateExtendedHold(player, vIntRunCount);
+            case RETRACT_ANIM -> updateAnimation(RETRACT_FRAMES, Routine.RESET, vIntRunCount);
             case RESET -> updateReset();
         }
     }
@@ -171,9 +171,9 @@ public class LateralCannonObjectInstance extends AbstractObjectInstance
      * Wait until the global frame counter's upper nibble matches our phase offset.
      * When matched: advance to extend animation, reset anim and set hold timer.
      */
-    private void updateWaitForPhase(int frameCounter) {
+    private void updateWaitForPhase(int vIntRunCount) {
         // ROM uses Vint_runcount+3 (the lowest byte of the 32-bit frame counter)
-        int maskedFrame = frameCounter & 0xF0;
+        int maskedFrame = vIntRunCount & 0xF0;
         if (maskedFrame != phaseMask) {
             return; // Not our turn yet
         }
@@ -185,7 +185,7 @@ public class LateralCannonObjectInstance extends AbstractObjectInstance
         animTimer = ANIM_DELAY;
         mappingFrame = EXTEND_FRAMES[0];
         timer = EXTEND_TIMER;
-        phaseMatchedFrame = frameCounter;
+        phaseMatchedVIntRunCount = vIntRunCount;
     }
 
     // ========================================================================
@@ -202,7 +202,7 @@ public class LateralCannonObjectInstance extends AbstractObjectInstance
      * (extend->hold) or routine 8->$A (retract->reset). Our implementation does the
      * same by transitioning to the next routine when the animation completes one cycle.
      */
-    private void updateAnimation(int[] frames, Routine nextRoutine, int frameCounter) {
+    private void updateAnimation(int[] frames, Routine nextRoutine, int vIntRunCount) {
         animTimer--;
         if (animTimer >= 0) {
             return; // Still waiting for current frame delay
@@ -216,7 +216,7 @@ public class LateralCannonObjectInstance extends AbstractObjectInstance
             if (nextRoutine == Routine.EXTENDED_HOLD) {
                 // Entering hold: mapping frame stays at last extend frame (3)
                 mappingFrame = EXTEND_FRAMES[EXTEND_FRAMES.length - 1];
-                holdEnteredFrame = frameCounter;
+                holdEnteredVIntRunCount = vIntRunCount;
             } else if (nextRoutine == Routine.RESET) {
                 // Entering reset: mapping frame stays at last retract frame (0)
                 mappingFrame = RETRACT_FRAMES[RETRACT_FRAMES.length - 1];
@@ -235,7 +235,7 @@ public class LateralCannonObjectInstance extends AbstractObjectInstance
      * Countdown the timer. While active, check if frame 3 or 4 to provide platform collision.
      * When timer expires: start retract animation, drop standing players.
      */
-    private void updateExtendedHold(AbstractPlayableSprite player, int frameCounter) {
+    private void updateExtendedHold(AbstractPlayableSprite player, int vIntRunCount) {
         timer--;
         if (timer < -2) {
             // Timer expired - start retracting
@@ -244,7 +244,7 @@ public class LateralCannonObjectInstance extends AbstractObjectInstance
             animIndex = 0;
             animTimer = ANIM_DELAY;
             mappingFrame = RETRACT_FRAMES[0];
-            retractEnteredFrame = frameCounter;
+            retractEnteredVIntRunCount = vIntRunCount;
 
             // bsr.w loc_3B7BC - drop standing players
             dropStandingPlayers(player);
@@ -351,9 +351,9 @@ public class LateralCannonObjectInstance extends AbstractObjectInstance
     }
 
     private boolean inPostRetractSolidGrace() {
-        return retractEnteredFrame >= 0
-                && lastUpdateFrameCounter >= retractEnteredFrame
-                && lastUpdateFrameCounter - retractEnteredFrame <= POST_RETRACT_SOLID_GRACE_FRAMES;
+        return retractEnteredVIntRunCount >= 0
+                && lastUpdateVIntRunCount >= retractEnteredVIntRunCount
+                && lastUpdateVIntRunCount - retractEnteredVIntRunCount <= POST_RETRACT_SOLID_GRACE_FRAMES;
     }
 
     @Override
@@ -414,9 +414,9 @@ public class LateralCannonObjectInstance extends AbstractObjectInstance
                 timer,
                 animTimer,
                 phaseMask,
-                phaseMatchedFrame,
-                holdEnteredFrame,
-                retractEnteredFrame,
+                phaseMatchedVIntRunCount,
+                holdEnteredVIntRunCount,
+                retractEnteredVIntRunCount,
                 isSolidFor(null),
                 lastSolidTrace);
     }

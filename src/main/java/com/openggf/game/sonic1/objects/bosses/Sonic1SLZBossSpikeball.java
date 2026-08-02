@@ -300,7 +300,7 @@ public class Sonic1SLZBossSpikeball extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (isDestroyed()) {
             return;
@@ -311,7 +311,7 @@ public class Sonic1SLZBossSpikeball extends AbstractObjectInstance
             case RESTING -> updateResting();
             case FLYING -> updateFlying();
             case EXPLODING -> updateExploding();
-            case FRAGMENT -> updateFragment(frameCounter);
+            case FRAGMENT -> updateFragment(vIntRunCount);
         }
     }
 
@@ -582,7 +582,7 @@ public class Sonic1SLZBossSpikeball extends AbstractObjectInstance
 
     // === FRAGMENT — fragment movement with gravity and rotation ===
     // ROM: BossSpikeball_MoveFrag (routine 10)
-    private void updateFragment(int frameCounter) {
+    private void updateFragment(int vIntRunCount) {
         // Apply velocity (SpeedToPos)
         xPos += (xVel << 8);
         yPos += (yVel << 8);

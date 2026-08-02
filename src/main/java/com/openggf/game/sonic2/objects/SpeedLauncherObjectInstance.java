@@ -178,7 +178,7 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
     // ========================================================================
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // ROM: ObjC0_Main (s2.asm lines 80242-80251)
         // Process state machine, then PlatformObject + MarkObjGone

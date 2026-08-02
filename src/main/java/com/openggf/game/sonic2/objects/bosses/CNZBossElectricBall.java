@@ -64,7 +64,7 @@ public class CNZBossElectricBall extends AbstractObjectInstance implements Touch
     private int ballRiseOffset;
     private boolean exploding;
     private int renderFlags;
-    private int lastFrameCounter;
+    private int lastVIntRunCount;
     private int positiveSplitPrePhysicsX;
     private int positiveSplitPrePhysicsY;
     private boolean positiveSplitPrePhysicsReady;
@@ -144,12 +144,12 @@ public class CNZBossElectricBall extends AbstractObjectInstance implements Touch
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (isDestroyed()) {
             return;
         }
-        lastFrameCounter = frameCounter;
+        lastVIntRunCount = vIntRunCount;
 
         // Check if parent boss is defeated - delete ball
         if (mainBoss.isInDefeatSequence()) {
@@ -158,7 +158,7 @@ public class CNZBossElectricBall extends AbstractObjectInstance implements Touch
         }
 
         switch (routineState) {
-            case BALL_ATTACH -> updateBallAttach(frameCounter);
+            case BALL_ATTACH -> updateBallAttach(vIntRunCount);
             case BALL_FALL -> updateBallFall();
             case BALL_SPLIT -> updateBallSplit();
         }
@@ -169,7 +169,7 @@ public class CNZBossElectricBall extends AbstractObjectInstance implements Touch
      * objoff_28 starts at 0, increments by 1 per frame, caps at $2E.
      * Position = parent.y + objoff_28
      */
-    private void updateBallAttach(int frameCounter) {
+    private void updateBallAttach(int vIntRunCount) {
         // ROM loc_31F96 recopies the stationary parent x_pos. The equivalent
         // engine value was captured by the allocation spawn; re-reading the
         // live boss would expose a different fixed-accumulator phase.
@@ -187,7 +187,7 @@ public class CNZBossElectricBall extends AbstractObjectInstance implements Touch
 
         // ROM: tst.w (Boss_Countdown).w / bne.w DisplaySprite
         // Wait for main boss countdown to reach 0
-        if (mainBoss.getBossCountdownVisibleToBall(frameCounter) == 0) {
+        if (mainBoss.getBossCountdownVisibleToBall(vIntRunCount) == 0) {
             routineState = BALL_FALL;
             xVel = 0;
             yVel = 0;
@@ -293,7 +293,7 @@ public class CNZBossElectricBall extends AbstractObjectInstance implements Touch
     private int getBallMappingFrame() {
         if (exploding) {
             // Cycle between FRAME_ORB_1 (18) and FRAME_ORB_2 (19) every 4 frames
-            return FRAME_ORB_1 + ((lastFrameCounter >> 2) & 1);
+            return FRAME_ORB_1 + ((lastVIntRunCount >> 2) & 1);
         }
         // During attach/fall phases, show the spiked ball
         return FRAME_SPIKED_BALL;

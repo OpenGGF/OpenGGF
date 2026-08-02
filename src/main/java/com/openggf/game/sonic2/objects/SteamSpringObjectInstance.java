@@ -111,7 +111,7 @@ public class SteamSpringObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // ROM: s2.asm:52030-52049 -- loc_26688 calls SolidObject_Always_SingleCharacter
         // BEFORE the state machine moves the spring's y_pos. This lets the player land

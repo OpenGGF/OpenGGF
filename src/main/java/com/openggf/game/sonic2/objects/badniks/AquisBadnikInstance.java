@@ -96,7 +96,7 @@ public class AquisBadnikInstance extends AbstractBadnikInstance implements Rewin
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         spawnWingChildOnce();
         AbstractPlayableSprite player = closestPlayer(playerEntity);
         switch (state) {
@@ -110,7 +110,7 @@ public class AquisBadnikInstance extends AbstractBadnikInstance implements Rewin
     }
 
     @Override
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         animationState.update();
         animFrame = animationState.getMappingFrame();
     }
@@ -429,7 +429,7 @@ public class AquisBadnikInstance extends AbstractBadnikInstance implements Rewin
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (parent == null || parent.isDestroyed()) {
                 ObjectLifetimeOps.expireDynamic(this);
                 return;

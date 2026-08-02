@@ -94,7 +94,7 @@ public class CloudObjectInstance extends AbstractObjectInstance implements Rewin
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // ROM: ObjB3_Main
         // jsrto JmpTo26_ObjectMove  -> applies x_vel to x_pos (256 subpixels)

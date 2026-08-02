@@ -85,7 +85,7 @@ public class AizBattleshipInstance extends AbstractObjectInstance implements Spa
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (isDestroyed() || finished) return;
 
         this.frameCounter++;

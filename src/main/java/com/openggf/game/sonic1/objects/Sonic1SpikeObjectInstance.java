@@ -113,7 +113,7 @@ public class Sonic1SpikeObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         updateMovement();
         updateDynamicSpawn(currentX, currentY);
         SolidCheckpointBatch batch = checkpointAll();
@@ -123,7 +123,7 @@ public class Sonic1SpikeObjectInstance extends AbstractObjectInstance
         }
         for (PlayableEntity candidate : players) {
             if (candidate instanceof AbstractPlayableSprite player) {
-                applyCheckpointContact(player, batch.perPlayer().get(candidate), frameCounter);
+                applyCheckpointContact(player, batch.perPlayer().get(candidate), vIntRunCount);
             }
         }
     }
@@ -141,11 +141,11 @@ public class Sonic1SpikeObjectInstance extends AbstractObjectInstance
 
     private void applyCheckpointContact(AbstractPlayableSprite player,
                                         PlayerSolidContactResult result,
-                                        int frameCounter) {
+                                        int vIntRunCount) {
         if (player == null || result == null || result.kind() == ContactKind.NONE) {
             return;
         }
-        handleSolidContact(player, contactFrom(result), frameCounter);
+        handleSolidContact(player, contactFrom(result), vIntRunCount);
     }
 
     private void handleSolidContact(AbstractPlayableSprite player, SolidContact contact, int frameCounter) {

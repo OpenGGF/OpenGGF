@@ -239,12 +239,12 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
         return y;
     }
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ensureInitialized();
         deletePending = false;
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (routine) {
-            case 2 -> updateActive(frameCounter, player);
+            case 2 -> updateActive(vIntRunCount, player);
             case 4 -> updateOffscreen();
             default -> { }
         }
@@ -266,7 +266,7 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
      * States 0 and 2 are delegated to the engine's SolidContacts system
      * (which calls onSolidContact). States 4 and 6 are handled here directly.
      */
-    private void updateActive(int frameCounter, AbstractPlayableSprite player) {
+    private void updateActive(int vIntRunCount, AbstractPlayableSprite player) {
         // ROM parity: snapshot the entering solidState so we know which loc_C186
         // branch ROM would have taken this frame. ROM's state-4 (loc_C1AA) and
         // state-6 (loc_C1F2) paths return WITHOUT ever calling Solid_ChkEnter,
@@ -321,7 +321,7 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
             SolidCheckpointBatch batch = checkpointAll();
             pushReleasePendingAfterRideExit = false;
             if (solidState == 0 && !inMotion) {
-                applyPushContacts(batch, frameCounter);
+                applyPushContacts(batch, vIntRunCount);
             }
             if (solidState == 0
                     && hasStandingContact(batch)
@@ -835,7 +835,7 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
         return objectManager != null && objectManager.isAnyPlayerRiding(this);
     }
 
-    private void applyPushContacts(SolidCheckpointBatch batch, int frameCounter) {
+    private void applyPushContacts(SolidCheckpointBatch batch, int vIntRunCount) {
         for (PlayableEntity entity : batch.perPlayer().keySet()) {
             if (!(entity instanceof AbstractPlayableSprite player)) {
                 continue;
@@ -844,7 +844,7 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
             if (result == null || result.kind() != ContactKind.SIDE) {
                 continue;
             }
-            handlePush(player, result.sideDistX(), frameCounter);
+            handlePush(player, result.sideDistX(), vIntRunCount);
         }
     }
 

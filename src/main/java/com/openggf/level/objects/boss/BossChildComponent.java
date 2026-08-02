@@ -14,10 +14,10 @@ public interface BossChildComponent extends ObjectInstance {
     /**
      * Update the component's state.
      *
-     * @param frameCounter Global frame counter
+     * @param vIntRunCount Object-visible V-int run count
      * @param player       Player sprite
      */
-    void update(int frameCounter, PlayableEntity player);
+    void update(int vIntRunCount, PlayableEntity player);
 
     /**
      * Append render commands for this component.

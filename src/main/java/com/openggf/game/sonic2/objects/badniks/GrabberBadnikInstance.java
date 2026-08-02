@@ -130,7 +130,7 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance implements Spa
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (state) {
             case PATROL -> updatePatrol(player);
@@ -636,7 +636,7 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance implements Spa
     }
 
     @Override
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         // Animation is simple: frame 0 = open claws, frame 1 = closed claws
         // Already handled in state transitions
         if (state == State.CARRYING) {
@@ -644,7 +644,7 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance implements Spa
         } else {
             // Animate between frames 0 and 1 when patrolling
             if (state == State.PATROL) {
-                animFrame = ((frameCounter / 8) & 1);
+                animFrame = ((vIntRunCount / 8) & 1);
             }
         }
     }

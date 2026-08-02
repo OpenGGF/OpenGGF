@@ -101,7 +101,7 @@ public class BarrierObjectInstance extends AbstractObjectInstance
         return y;
     }
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         // Calculate detection boundaries using PREVIOUS frame's movingUp state
         // ROM behavior: detection boundaries are calculated using routine_secondary from the previous frame,
         // then routine_secondary is cleared to 0, then character detection is performed.

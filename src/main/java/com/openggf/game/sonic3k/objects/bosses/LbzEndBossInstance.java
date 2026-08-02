@@ -174,7 +174,7 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
     }
 
     @Override
-    protected void updateBossLogic(int frameCounter, PlayableEntity player) {
+    protected void updateBossLogic(int vIntRunCount, PlayableEntity player) {
         if (paletteRuntimeIntegrationPending) {
             requestStartupAssets();
         }
@@ -209,7 +209,7 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
     }
 
     @Override
-    protected void updateOwnerManagedChildren(int frameCounter, PlayableEntity player) {
+    protected void updateOwnerManagedChildren(int vIntRunCount, PlayableEntity player) {
         LbzEndBossExplosionControllerChild controller = deferredExplosionControllerChild;
         if (controller == null) {
             return;
@@ -221,7 +221,7 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         // ObjectManager may also dispatch this live dynamic helper in the same
         // frame. Its beginUpdate guard keeps that second path from advancing the
         // ROM emitter twice, while direct/headless boss updates still drive it.
-        controller.update(frameCounter, player);
+        controller.update(vIntRunCount, player);
         if (controller.isDestroyed()) {
             onDeferredExplosionControllerRemoved(controller);
         }
@@ -841,8 +841,8 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
-            if (!shouldUpdate(frameCounter)) {
+        public void update(int vIntRunCount, PlayableEntity player) {
+            if (!shouldUpdate(vIntRunCount)) {
                 return;
             }
             LbzEndBossInstance boss = boss();
@@ -908,8 +908,8 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
-            if (!shouldUpdate(frameCounter)) {
+        public void update(int vIntRunCount, PlayableEntity player) {
+            if (!shouldUpdate(vIntRunCount)) {
                 return;
             }
             LbzEndBossInstance boss = boss();
@@ -986,8 +986,8 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
-            if (!shouldUpdate(frameCounter)) {
+        public void update(int vIntRunCount, PlayableEntity player) {
+            if (!shouldUpdate(vIntRunCount)) {
                 return;
             }
             LbzEndBossInstance boss = boss();
@@ -1088,8 +1088,8 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
-            if (!shouldUpdate(frameCounter)) {
+        public void update(int vIntRunCount, PlayableEntity player) {
+            if (!shouldUpdate(vIntRunCount)) {
                 return;
             }
             LbzEndBossInstance boss = boss();
@@ -1241,8 +1241,8 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
-            if (!beginUpdate(frameCounter)) {
+        public void update(int vIntRunCount, PlayableEntity player) {
+            if (!beginUpdate(vIntRunCount)) {
                 return;
             }
             // loc_73D8E only installs ObjDat3_740F8, velocity, animation data,
@@ -1367,8 +1367,8 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
-            if (!beginUpdate(frameCounter)) {
+        public void update(int vIntRunCount, PlayableEntity player) {
+            if (!beginUpdate(vIntRunCount)) {
                 return;
             }
             if (exploded) {
@@ -1391,7 +1391,7 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
                     }
                 }
                 case 1 -> updateFalling();
-                case 2 -> updateRolling(frameCounter);
+                case 2 -> updateRolling(vIntRunCount);
                 default -> {
                 }
             }
@@ -1483,7 +1483,7 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
             }
         }
 
-        private void updateRolling(int frameCounter) {
+        private void updateRolling(int vIntRunCount) {
             // loc_73B3C with $34 = loc_73B82: a wall contact or losing the floor
             // detonates the ball - the ROM never bounces or re-falls here.
             TerrainCheckResult wall = ObjectTerrainUtils.checkRightWallDist(currentX + TERRAIN_RADIUS, currentY);
@@ -1509,7 +1509,7 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
             move();
             // Smoke gate is an unsigned compare: x_vel + $200 >= $400, i.e.
             // |speed| beyond $200 in either direction, every 4th global frame.
-            if (((xVel + 0x200) & 0xFFFF) >= 0x400 && (frameCounter & 3) == 0) {
+            if (((xVel + 0x200) & 0xFFFF) >= 0x400 && (vIntRunCount & 3) == 0) {
                 LbzEndBossInstance boss = boss();
                 boss.recordChild(boss.spawnChild(() -> new LbzEndBossSmokePuffChild(
                         boss, currentX, currentY + TERRAIN_RADIUS, 0)));
@@ -1589,8 +1589,8 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
-            if (!beginUpdate(frameCounter)) {
+        public void update(int vIntRunCount, PlayableEntity player) {
+            if (!beginUpdate(vIntRunCount)) {
                 return;
             }
             if (delayTimer < 0) {
@@ -1675,8 +1675,8 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
-            if (!beginUpdate(frameCounter)) {
+        public void update(int vIntRunCount, PlayableEntity player) {
+            if (!beginUpdate(vIntRunCount)) {
                 return;
             }
             // MoveSprite: position moves by the old velocity, then $38 gravity.
@@ -1741,8 +1741,8 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
-            if (!beginUpdate(frameCounter)) {
+        public void update(int vIntRunCount, PlayableEntity player) {
+            if (!beginUpdate(vIntRunCount)) {
                 return;
             }
             LbzEndBossInstance boss = boss();
@@ -1818,8 +1818,8 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
-            if (!beginUpdate(frameCounter)) {
+        public void update(int vIntRunCount, PlayableEntity player) {
+            if (!beginUpdate(vIntRunCount)) {
                 return;
             }
             Camera camera = ((LbzEndBossInstance) parent).cameraOrNull();

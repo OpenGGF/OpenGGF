@@ -681,7 +681,7 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
     // ===== Update =====
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (mode == CollapseMode.MGZ_STOMP && state == 0 && !fragmented) {
             SolidCheckpointBatch batch = checkpointAll();

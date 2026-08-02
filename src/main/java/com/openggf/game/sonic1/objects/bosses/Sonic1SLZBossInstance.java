@@ -177,7 +177,7 @@ public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance implemen
     }
 
     @Override
-    protected void updateBossLogic(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Lazy seesaw scanning — ensures seesaws are loaded before scanning.
         // Re-scan whenever the cache is empty (not a separate "already
@@ -203,7 +203,7 @@ public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance implemen
                 runSine = timerExpired;
             }
             case STATE_DEFEAT_WAIT -> {
-                updateDefeatWait(frameCounter);
+                updateDefeatWait(vIntRunCount);
                 runBossMove = false;
                 runSine = false;
             }
@@ -344,7 +344,7 @@ public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance implemen
 
     // === State 6: DEFEAT_WAIT ===
     // ROM: loc_18B48
-    private void updateDefeatWait(int frameCounter) {
+    private void updateDefeatWait(int vIntRunCount) {
         timer--;
         if (timer < 0) {
             // Timer expired — start exit jump (loc_18B52)
@@ -359,7 +359,7 @@ public class Sonic1SLZBossInstance extends AbstractS1EggmanBossInstance implemen
             services().gameState().setCurrentBossId(0);
         } else {
             // Spawn explosions every 8 frames (BossDefeated)
-            if ((frameCounter & 7) == 0) {
+            if ((vIntRunCount & 7) == 0) {
                 spawnDefeatExplosion();
             }
         }

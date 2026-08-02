@@ -105,7 +105,7 @@ public class CrawltonBadnikInstance extends AbstractBadnikInstance implements Re
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = playerEntity instanceof AbstractPlayableSprite playable ? playable : null;
         switch (state) {
             case DETECT_PLAYER -> updateDetection(player);
@@ -274,7 +274,7 @@ public class CrawltonBadnikInstance extends AbstractBadnikInstance implements Re
     }
 
     @Override
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         // Head uses frame 0 (from SubObjData init via LoadSubObject)
         // Body segments use frame 2 (s2.asm:74912: move.w #2,(a2)+)
         animFrame = 0;

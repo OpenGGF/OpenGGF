@@ -124,7 +124,7 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ensureOverlayChild();
         if (!closedOnly) {
             updateAction(playerEntity);
@@ -640,7 +640,7 @@ public final class LbzTubeElevatorInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (parent.isDestroyed() || parent.closedOnly) {
                 setDestroyed(true);
             }

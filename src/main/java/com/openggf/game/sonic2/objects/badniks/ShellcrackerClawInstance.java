@@ -136,7 +136,7 @@ public class ShellcrackerClawInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (initRoutinePending) {
             // ROM ObjA0_Init performs setup and ends at JmpTo39_MarkObjGone

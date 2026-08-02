@@ -183,7 +183,7 @@ class TestS3kBossTouchResponseProfiles {
         }
 
         @Override
-        protected void updateBossLogic(int frameCounter, PlayableEntity player) {
+        protected void updateBossLogic(int vIntRunCount, PlayableEntity player) {
         }
 
         @Override

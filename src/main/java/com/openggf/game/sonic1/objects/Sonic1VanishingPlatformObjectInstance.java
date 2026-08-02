@@ -150,7 +150,7 @@ public class Sonic1VanishingPlatformObjectInstance extends AbstractObjectInstanc
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (isDestroyed()) {
             return;
@@ -160,7 +160,7 @@ public class Sonic1VanishingPlatformObjectInstance extends AbstractObjectInstanc
         playerStanding = hasStandingContact(batch);
 
         if (routine == 6) {
-            updateIdle(frameCounter, player);
+            updateIdle(vIntRunCount, player);
         } else {
             // Routine 2 or 4 (VanP_Vanish / VanP_Appear - same code)
             updateVanishAppear(player);
@@ -179,12 +179,11 @@ public class Sonic1VanishingPlatformObjectInstance extends AbstractObjectInstanc
      * - If non-zero: animate and display
      * - If zero: transition to routine 2 (vanish)
      */
-    private void updateIdle(int frameCounter, AbstractPlayableSprite player) {
+    private void updateIdle(int vIntRunCount, AbstractPlayableSprite player) {
         // ROM VanP_Sync (docs/s1disasm/_incObj/6C SBZ Vanishing Platforms.asm:51-56):
         //   move.w (v_framecount).w,d0 / sub.w objoff_36,d0 / and.w objoff_38,d0
         // The routine 6->2 transition gate reads v_framecount (= Level_frame_counter),
-        // NOT the V-int/VBla clock. The engine's update() frameCounter parameter is the
-        // VBla counter for S1 objects (ObjectManager passes vblaCounter), which runs
+        // NOT the V-int run count passed to update(). That V-int clock runs
         // ahead of and out of phase with v_framecount, so the platform entered its
         // vanish/appear cycle at the wrong absolute frame (SBZ1 trace: VBla 0x8500
         // multiple at vfc 2170 instead of ROM's v_framecount 0x800 multiple at vfc
@@ -196,7 +195,7 @@ public class Sonic1VanishingPlatformObjectInstance extends AbstractObjectInstanc
         // object_near obj_frame confirmed the target platform is solid (obj_frame 0) at
         // f2268 in both ROM and the engine after this fix.
         LevelManager levelManager = services().levelManager();
-        int vFrameCount = levelManager != null ? levelManager.getFrameCounter() + 1 : frameCounter;
+        int vFrameCount = levelManager != null ? levelManager.getFrameCounter() + 1 : vIntRunCount;
         int check = (vFrameCount - phaseOffset) & phaseMask;
         if (check == 0) {
             // subq.b #4,obRoutine(a0) -> routine 6-4 = 2

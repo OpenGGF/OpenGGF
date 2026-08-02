@@ -85,7 +85,7 @@ public final class CutsceneKnucklesLbz1CollapseChild extends AbstractObjectInsta
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (parent == null || parent.isDestroyed()) {
             ObjectLifetimeOps.expireDynamic(this);
             return;

@@ -78,7 +78,7 @@ public class IczHarmfulIceObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         // Obj_WaitOffscreen can keep the object alive in the placement load
         // window before Render_Sprites marks it visible. ObjectManager owns the
         // MarkObjGone-style out-of-range unload for layout objects.
@@ -243,9 +243,9 @@ public class IczHarmfulIceObjectInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             animateRaw();
-            super.update(frameCounter, player);
+            super.update(vIntRunCount, player);
         }
 
         private void animateRaw() {

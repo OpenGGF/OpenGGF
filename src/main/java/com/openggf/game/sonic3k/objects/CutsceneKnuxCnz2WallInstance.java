@@ -76,7 +76,7 @@ public final class CutsceneKnuxCnz2WallInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         // ROM loc_62458: btst #7,status(parent) -> CutsceneKnux_Delete. The wall
         // lives exactly as long as the cutscene parent.
         if (owner != null && owner.isDestroyed()) {

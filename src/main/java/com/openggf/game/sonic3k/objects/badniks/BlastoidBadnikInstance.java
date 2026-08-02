@@ -126,7 +126,7 @@ public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance impl
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         if (isDestroyed()) return;
 
         // Obj_WaitOffscreen parity: the ROM entry point begins with
@@ -363,7 +363,7 @@ public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance impl
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             // Move_AnimateRaw → MoveSprite2: velocity to position, no gravity
             int xPos24 = (currentX << 8) | (xSubpixel & 0xFF);
             int yPos24 = (currentY << 8) | (ySubpixel & 0xFF);

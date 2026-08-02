@@ -68,6 +68,22 @@ class TestObjectScaffoldTool {
     }
 
     @Test
+    void generatedObjectClockParametersUseVIntRunCountTerminology() {
+        String nonBadnik = ObjectScaffoldTool.generateInstance(
+                Game.S2, "ClockedObjectInstance", "0x40", false);
+        assertTrue(nonBadnik.contains("public void update(int vIntRunCount, PlayableEntity player)"));
+
+        for (Game game : new Game[] {Game.S1, Game.S2, Game.S3K}) {
+            String badnik = ObjectScaffoldTool.generateInstance(
+                    game, "ClockedBadnikInstance", "0x40", true);
+            assertTrue(badnik.contains("protected void updateMovement(int vIntRunCount, PlayableEntity player)"),
+                    game + " badnik movement hook must expose the V-int run count");
+            assertTrue(badnik.contains("protected void updateAnimation(int vIntRunCount)"),
+                    game + " badnik animation hook must expose the V-int run count");
+        }
+    }
+
+    @Test
     void s1AndS2InstancesUseCorrectPackages() {
         assertTrue(ObjectScaffoldTool.generateInstance(Game.S1, "FooObjectInstance", "0x10", false)
                         .contains("package com.openggf.game.sonic1.objects;"),

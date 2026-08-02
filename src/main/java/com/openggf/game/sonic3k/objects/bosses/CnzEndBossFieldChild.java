@@ -44,14 +44,14 @@ final class CnzEndBossFieldChild extends AbstractObjectInstance
     public int getCentreY() { return centreY; }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (!boss.magneticFieldActive() || boss.defeatStarted()) {
             ObjectLifetimeOps.expireDynamic(this);
             return;
         }
         centreX = boss.getCentreX() + xOffset;
         centreY = boss.getCentreY() + 0x54;
-        boss.playGravityMachineSfx(frameCounter);
+        boss.playGravityMachineSfx(vIntRunCount);
         if (--animTimer < 0) {
             animIndex = (animIndex + 1) & 3;
             frame = FRAMES[animIndex];

@@ -1243,7 +1243,7 @@ public class TestTouchResponseManager {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {}
+        public void update(int vIntRunCount, PlayableEntity player) {}
 
         @Override
         public void appendRenderCommands(List<GLCommand> commands) {}
@@ -1492,7 +1492,7 @@ public class TestTouchResponseManager {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
         }
 
         @Override
@@ -1519,7 +1519,7 @@ public class TestTouchResponseManager {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             currentX = movedX;
             currentY = movedY;
         }
@@ -1626,7 +1626,7 @@ public class TestTouchResponseManager {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
         }
 
         @Override
@@ -1665,7 +1665,7 @@ public class TestTouchResponseManager {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
         }
 
         @Override

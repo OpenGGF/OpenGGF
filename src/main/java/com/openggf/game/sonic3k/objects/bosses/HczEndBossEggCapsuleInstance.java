@@ -135,7 +135,7 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
     // ===== Update =====
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (!buttonSpawned) {
             buttonSpawned = true;
             spawnChild(() -> new HczEndBossEggCapsuleButton(

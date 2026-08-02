@@ -149,7 +149,7 @@ public class SinkingMudObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         killedThisFrame.clear();
         ObjectServices svc = tryServices();
         List<PlayableEntity> participants = svc != null

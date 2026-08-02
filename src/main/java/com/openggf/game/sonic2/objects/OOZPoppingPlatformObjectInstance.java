@@ -182,14 +182,14 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ensureFlameChildSpawned();
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (mode) {
             case TIMER_COUNTDOWN -> updateTimerCountdown();
             case POP_PHYSICS -> updatePopPhysics();
-            case WAIT_FOR_PLAYER -> updateWaitForPlayer(player, frameCounter);
-            case RISE_AND_LAUNCH -> updateRiseAndLaunch(player, frameCounter);
+            case WAIT_FOR_PLAYER -> updateWaitForPlayer(player, vIntRunCount);
+            case RISE_AND_LAUNCH -> updateRiseAndLaunch(player, vIntRunCount);
             case IDLE -> { /* rts - do nothing */ }
         }
         updateDynamicSpawn(x, currentY);
@@ -249,7 +249,7 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
     // Mode 4: Wait for Player Standing (loc_23C26)
     // ========================================================================
 
-    private void updateWaitForPlayer(AbstractPlayableSprite player, int frameCounter) {
+    private void updateWaitForPlayer(AbstractPlayableSprite player, int vIntRunCount) {
         ObjectManager objectManager = services().objectManager();
         AbstractPlayableSprite sidekick = firstTrackedSidekick();
 
@@ -333,7 +333,7 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
     // Mode 6: Rise to Apex and Launch Player (loc_23D20)
     // ========================================================================
 
-    private void updateRiseAndLaunch(AbstractPlayableSprite player, int frameCounter) {
+    private void updateRiseAndLaunch(AbstractPlayableSprite player, int vIntRunCount) {
         // Apply velocity (same as pop physics)
         int yPos32 = (currentY << 16) | (yFractional & 0xFFFF);
         yPos32 += velocity;
@@ -362,13 +362,13 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
         ObjectManager objectManager = services().objectManager();
 
         if (player != null && objectManager.isRidingObject(player, this)) {
-            launchPlayer(player, frameCounter);
+            launchPlayer(player, vIntRunCount);
         }
         mainCharLocked = false;
 
         AbstractPlayableSprite sidekick = firstTrackedSidekick();
         if (sidekick != null && objectManager.isRidingObject(sidekick, this)) {
-            launchPlayer(sidekick, frameCounter);
+            launchPlayer(sidekick, vIntRunCount);
         }
         sidekickLocked = false;
     }
@@ -395,7 +395,7 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
      *      bset #1,status(a1) / move.w #-$1000,y_vel(a1)
      *      bclr #3,status(a1) / clr.b obj_control(a1)
      */
-    private void launchPlayer(AbstractPlayableSprite player, int frameCounter) {
+    private void launchPlayer(AbstractPlayableSprite player, int vIntRunCount) {
         // ROM move.w x_pos(a0),x_pos(a1): write the native pixel word and preserve x_sub.
         NativePositionOps.writeXPosPreserveSubpixel(player, x);
         // Set rolling animation
@@ -409,7 +409,7 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
         // ROM bclr #status.player.on_object,status(a1)
         player.setOnObject(false);
         // Release from object control
-        player.releaseFromObjectControl(frameCounter);
+        player.releaseFromObjectControl(vIntRunCount);
         // Play spring sound
         services().playSfx(Sonic2Sfx.SPRING.id);
     }

@@ -53,7 +53,7 @@ final class CnzEndBossDefeatDebrisChild extends AbstractObjectInstance implement
     int getCentreY() { return yFixed >> SUBPIXEL_SHIFT; }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         xFixed = S3kBossFlickerMove.integrate(xFixed, xVelocity);
         yFixed = S3kBossFlickerMove.integrate(yFixed, yVelocity);
         yVelocity += 0x38;

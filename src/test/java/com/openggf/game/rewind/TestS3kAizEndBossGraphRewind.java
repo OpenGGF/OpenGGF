@@ -343,12 +343,12 @@ class TestS3kAizEndBossGraphRewind {
     }
 
     private static void spawnPropellersViaArmInit(ObjectManager objectManager, AizEndBossInstance boss) {
-        boss.getState().lastUpdatedFrame = 1;
+        boss.getState().lastUpdatedVIntRunCount = 1;
         armBySubtype(liveObjects(objectManager, AizEndBossArmChild.class), 0)
                 .update(1, null);
         armBySubtype(liveObjects(objectManager, AizEndBossArmChild.class), 1)
                 .update(1, null);
-        boss.getState().lastUpdatedFrame = 2;
+        boss.getState().lastUpdatedVIntRunCount = 2;
         for (AizEndBossPropellerChild propeller :
                 liveObjects(objectManager, AizEndBossPropellerChild.class)) {
             propeller.update(2, null);

@@ -208,6 +208,10 @@ The route-specific upstream owners are:
 
 ### Update parameter name
 
+> **Superseded 2026-08-02:** the dedicated quiet-tree work is now specified in
+> [the object V-int run-count terminology design](../2026-08-02-object-vint-run-count-terminology.md).
+> The deferral below records the constraint on the original mixed-workstream branch.
+
 `ObjectExecutionController` passes `ObjectManager.vblaCounter()` to
 `ObjectInstance.update`, but the interface and approximately 590 update implementations
 name the parameter `frameCounter`. `ObjectManager` also has a distinct generic

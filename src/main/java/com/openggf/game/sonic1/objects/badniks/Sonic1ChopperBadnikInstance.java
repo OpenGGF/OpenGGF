@@ -83,7 +83,7 @@ public class Sonic1ChopperBadnikInstance extends AbstractBadnikInstance implemen
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Chop_ChgSpeed: SpeedToPos - apply velocity to Y position, then add gravity
         // (matches ROM order: move with current velocity, then add gravity for next frame).
@@ -145,7 +145,7 @@ public class Sonic1ChopperBadnikInstance extends AbstractBadnikInstance implemen
     }
 
     @Override
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         animTickCounter++;
     }
 

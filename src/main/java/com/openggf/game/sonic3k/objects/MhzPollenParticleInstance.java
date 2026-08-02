@@ -84,7 +84,7 @@ public class MhzPollenParticleInstance extends AbstractObjectInstance implements
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (isDestroyed()) {
             return;
         }
@@ -98,7 +98,7 @@ public class MhzPollenParticleInstance extends AbstractObjectInstance implements
             if (motion.yVel >= 0) {
                 routine = Routine.FLOATING;
                 if (!preserveInitialAngleOnFloat) {
-                    angle = (frameCounter + 1) & 0xFF;
+                    angle = (vIntRunCount + 1) & 0xFF;
                 }
             }
         } else {

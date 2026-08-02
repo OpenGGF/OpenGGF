@@ -206,7 +206,7 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
     }
 
     @Override
-    protected void updateBossLogic(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         boolean applyVelocity = false;
         switch (state.routine) {
@@ -224,7 +224,7 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
             case ROUTINE_RETRACT_SHOOTER -> updateRetractShooter();
             case ROUTINE_CLOSE_ANIM -> updateCloseAnim();
             case ROUTINE_LOOP -> updateLoop();
-            case ROUTINE_DEFEAT -> updateDefeat(frameCounter);
+            case ROUTINE_DEFEAT -> updateDefeat(vIntRunCount);
         }
 
         // Apply velocity only for phases that call ObjectMove in the ROM.
@@ -590,7 +590,7 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
     // Routine $1E: Defeat
     // ========================================================================
 
-    private void updateDefeat(int frameCounter) {
+    private void updateDefeat(int vIntRunCount) {
         // ROM: ObjC5_CaseDefeated - subq.w #1,objoff_30(a0) / bmi.s ObjC5_End
         defeatTimer--;
 
@@ -991,8 +991,8 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
-            if (!beginUpdate(frameCounter)) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
+            if (!beginUpdate(vIntRunCount)) {
                 return;
             }
             if (defeatSignaled) {
@@ -1150,9 +1150,9 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-            if (!beginUpdate(frameCounter)) {
+            if (!beginUpdate(vIntRunCount)) {
                 return;
             }
 
@@ -1297,9 +1297,9 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-            if (!beginUpdate(frameCounter)) {
+            if (!beginUpdate(vIntRunCount)) {
                 return;
             }
 
@@ -1463,9 +1463,9 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-            if (!beginUpdate(frameCounter)) {
+            if (!beginUpdate(vIntRunCount)) {
                 return;
             }
             if (platformParent.isDestroyed()) {
@@ -1531,9 +1531,9 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-            if (!beginUpdate(frameCounter)) {
+            if (!beginUpdate(vIntRunCount)) {
                 return;
             }
             syncPositionWithParent();
@@ -1631,9 +1631,9 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-            if (!beginUpdate(frameCounter)) {
+            if (!beginUpdate(vIntRunCount)) {
                 return;
             }
             syncPositionWithParent();
@@ -1840,9 +1840,9 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-            if (!beginUpdate(frameCounter)) {
+            if (!beginUpdate(vIntRunCount)) {
                 return;
             }
 
@@ -1948,9 +1948,9 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-            if (!beginUpdate(frameCounter)) {
+            if (!beginUpdate(vIntRunCount)) {
                 return;
             }
             if (robotnikParent.isDestroyed()) {

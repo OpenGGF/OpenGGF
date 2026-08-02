@@ -162,7 +162,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         capturedThisUpdateMask = 0;
         // ROM sub_324C0 / SolidObjectFull (sonic3k.asm:41006-41008): when a
         // rider is offscreen (`tst.b render_flags(a1); bpl.w locret_1DCB4`)
@@ -199,7 +199,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         int previousCenterY = centerY;
         updateMotion();
         currentYVelocity = motionSelector == 0 ? mode0Velocity : ((centerY - previousCenterY) << 8);
-        updateRiderSlots(frameCounter);
+        updateRiderSlots(vIntRunCount);
         advanceAnimation();
     }
 
@@ -413,17 +413,17 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         return foundLiveStandingRider ? mask : heldInputMask;
     }
 
-    private void updateRiderSlots(int frameCounter) {
-        updateRiderSlot(playerOneSlot, frameCounter);
-        updateRiderSlot(playerTwoSlot, frameCounter);
+    private void updateRiderSlots(int vIntRunCount) {
+        updateRiderSlot(playerOneSlot, vIntRunCount);
+        updateRiderSlot(playerTwoSlot, vIntRunCount);
     }
 
-    private void updateRiderSlot(RiderSlot slot, int frameCounter) {
+    private void updateRiderSlot(RiderSlot slot, int vIntRunCount) {
         AbstractPlayableSprite player = slot.player;
         if (isInvalidRider(player)) {
             if (slot.active) {
                 beginPlayerTwoDiagnostic(slot, "release_invalid", player);
-                releaseInvalidSlot(slot, frameCounter);
+                releaseInvalidSlot(slot, vIntRunCount);
                 endPlayerTwoDiagnostic(slot, player);
             }
             slot.contactLatched = false;
@@ -481,7 +481,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
             if (!playerOnScreen) {
                 // ROM loc_325F2: bset Status_InAir, object_control=0, (a2)=0.
                 beginPlayerTwoDiagnostic(slot, "release_offscreen", player);
-                releaseSlot(slot, frameCounter, false);
+                releaseSlot(slot, vIntRunCount, false);
                 endPlayerTwoDiagnostic(slot, player);
                 return;
             }
@@ -489,7 +489,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
             if (!standing) {
                 beginPlayerTwoDiagnostic(slot, "release_no_standing", player);
                 clearStaleCylinderSupport(player);
-                releaseSlot(slot, frameCounter, false);
+                releaseSlot(slot, vIntRunCount, false);
                 endPlayerTwoDiagnostic(slot, player);
                 return;
             }
@@ -507,7 +507,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
             slot.jumpPressedLastFrame = player.isJumpPressed();
             if (jumpPressed) {
                 beginPlayerTwoDiagnostic(slot, "release_jump", player);
-                releaseSlot(slot, frameCounter, true, preHoldReleaseY);
+                releaseSlot(slot, vIntRunCount, true, preHoldReleaseY);
                 endPlayerTwoDiagnostic(slot, player);
                 return;
             }
@@ -820,19 +820,19 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         slot.externalAirRetirePending = false;
     }
 
-    private void releaseInvalidSlot(RiderSlot slot, int frameCounter) {
+    private void releaseInvalidSlot(RiderSlot slot, int vIntRunCount) {
         AbstractPlayableSprite player = slot.player;
         if (player != null) {
             clearCylinderReleaseSupport(player);
         }
-        releaseSlot(slot, frameCounter, false);
+        releaseSlot(slot, vIntRunCount, false);
     }
 
-    private void releaseSlot(RiderSlot slot, int frameCounter, boolean jumpedOff) {
-        releaseSlot(slot, frameCounter, jumpedOff, (short) 0);
+    private void releaseSlot(RiderSlot slot, int vIntRunCount, boolean jumpedOff) {
+        releaseSlot(slot, vIntRunCount, jumpedOff, (short) 0);
     }
 
-    private void releaseSlot(RiderSlot slot, int frameCounter, boolean jumpedOff, short jumpReleaseY) {
+    private void releaseSlot(RiderSlot slot, int vIntRunCount, boolean jumpedOff, short jumpReleaseY) {
         AbstractPlayableSprite player = slot.player;
         if (player == null) {
             slot.active = false;
@@ -841,7 +841,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
 
         slot.active = false;
         player.setObjectMappingFrameControl(false);
-        player.releaseFromObjectControl(frameCounter);
+        player.releaseFromObjectControl(vIntRunCount);
         player.setControlLocked(false);
         player.setPriorityBucket(RenderPriority.PLAYER_DEFAULT);
         player.setForcedAnimationId(-1);

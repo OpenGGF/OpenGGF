@@ -51,7 +51,7 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
     private int currentX;
     private int currentY;
     private int updateCount;
-    private int lastUpdateFrameCounter = -1;
+    private int lastUpdateVIntRunCount = -1;
     private int renderCount;
     private int beamSpawnCount;
 
@@ -73,9 +73,9 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
      */
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         updateCount++;
-        lastUpdateFrameCounter = frameCounter;
+        lastUpdateVIntRunCount = vIntRunCount;
         if (!initialized) {
             initialized = true;
             LOGGER.info(() -> "Pachinko trap initialized at x=" + currentX + " y=" + currentY
@@ -83,7 +83,7 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
             spawnChild(() -> new EnergyTrapColumnChild(createColumnSpawn(), this));
         }
 
-        if ((frameCounter & (BEAM_SPAWN_PERIOD - 1)) == 0) {
+        if ((vIntRunCount & (BEAM_SPAWN_PERIOD - 1)) == 0) {
             beamSpawnCount++;
             spawnChild(() -> new EnergyTrapBeamChild(createBeamSpawn(), this, beamAngle));
         }
@@ -103,8 +103,8 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
             requestExit();
         }
 
-        maybePlayTransporterSfx(frameCounter, playerEntity);
-        updateCapture(frameCounter, playerEntity);
+        maybePlayTransporterSfx(vIntRunCount, playerEntity);
+        updateCapture(vIntRunCount, playerEntity);
     }
 
     @Override
@@ -138,7 +138,7 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
     }
 
     public int getLastUpdateFrameCounter() {
-        return lastUpdateFrameCounter;
+        return lastUpdateVIntRunCount;
     }
 
     public int getRenderCount() {
@@ -149,7 +149,7 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
         return beamSpawnCount;
     }
 
-    private void updateCapture(int frameCounter, PlayableEntity playerEntity) {
+    private void updateCapture(int vIntRunCount, PlayableEntity playerEntity) {
         if (!(playerEntity instanceof AbstractPlayableSprite player) || player.isDebugMode()) {
             return;
         }
@@ -162,7 +162,7 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
         }
 
         capturedPlayer = player;
-        releaseCompetingMagnetOrbs(player, frameCounter);
+        releaseCompetingMagnetOrbs(player, vIntRunCount);
         setPlayerCenterY(player, currentY);
         ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setControlLocked(true);
@@ -174,7 +174,7 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
 
         if (!exitArmed) {
             playSfx(Sonic3kSfx.BOUNCY);
-            LOGGER.info(() -> "Pachinko trap captured player at frame=" + frameCounter
+            LOGGER.info(() -> "Pachinko trap captured player at frame=" + vIntRunCount
                     + " y=" + currentY + " playerY=" + playerCenterY);
             exitArmed = true;
         }
@@ -199,13 +199,13 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
         services().requestBonusStageExit();
     }
 
-    private void releaseCompetingMagnetOrbs(AbstractPlayableSprite player, int frameCounter) {
+    private void releaseCompetingMagnetOrbs(AbstractPlayableSprite player, int vIntRunCount) {
         if (services().objectManager() == null) {
             return;
         }
         for (ObjectInstance instance : services().objectManager().getActiveObjects()) {
             if (instance instanceof PachinkoMagnetOrbObjectInstance magnetOrb) {
-                magnetOrb.forceReleasePlayer(player, frameCounter);
+                magnetOrb.forceReleasePlayer(player, vIntRunCount);
             }
         }
     }
@@ -216,7 +216,7 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
                 + " destroyed=" + isDestroyed() + " slot=" + getSlotIndex());
     }
 
-    private void maybePlayTransporterSfx(int frameCounter, PlayableEntity playerEntity) {
+    private void maybePlayTransporterSfx(int vIntRunCount, PlayableEntity playerEntity) {
         if (!(playerEntity instanceof AbstractPlayableSprite player)) {
             return;
         }
@@ -224,7 +224,7 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
         if (relativeY < -0x180 || relativeY >= 0) {
             return;
         }
-        if ((frameCounter & (TRANSPORTER_PERIOD - 1)) == 0) {
+        if ((vIntRunCount & (TRANSPORTER_PERIOD - 1)) == 0) {
             playSfx(Sonic3kSfx.TRANSPORTER);
         }
     }
@@ -308,7 +308,7 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             currentY = parent.getY();
             updateDynamicSpawn(currentX, currentY);
         }
@@ -363,7 +363,7 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             currentY = parent.getY() + (TrigLookupTable.sinHex(beamAngle) >> 4);
             currentX += 2;
             beamAngle = (beamAngle + 0x84) & 0xFF;

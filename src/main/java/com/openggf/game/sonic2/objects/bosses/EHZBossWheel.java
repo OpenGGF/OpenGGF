@@ -72,9 +72,9 @@ public class EHZBossWheel extends AbstractBossChild implements RewindRecreatable
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (isDestroyed() || !shouldUpdate(frameCounter)) {
+        if (isDestroyed() || !shouldUpdate(vIntRunCount)) {
             return;
         }
         if (parent == null) {

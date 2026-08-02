@@ -218,6 +218,16 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **Object update clocks use ROM-accurate terminology (2026-08-02):** all 809
+  `update(int, PlayableEntity)` boundaries now name their first argument
+  `vIntRunCount`, matching the `ObjectManager.vblaCounter` value actually
+  dispatched and distinguishing it from executed-frame and
+  `Level_frame_counter` clocks. A symbol-attributed refactor carried the name
+  through 154 framework hooks/overrides, 219 unanimous private-helper flows,
+  25 retained fields, and one local alias while excluding mixed-clock and
+  animation/index counters. The object scaffold emits the same terminology and
+  an attributed source guard prevents drift.
+
 - **Native-recorder provenance, route lifetimes, and held-row Kos timing
   (2026-08-02):** the S2 special-stage contract now pins the committed native
   fixture's `1.4-s2ss-native` stamp while continuing to pin the Lua recorder's
@@ -231,8 +241,8 @@ Development since `v0.5.20260411` is the active 0.6 prerelease line. The release
   terminals still fail closed. The full-suite comparison improves the existing
   red baseline by two tests with no new regression; a newly exposed S1 results
   test now fully resets inherited module state. The broad object-update
-  `frameCounter` to `vIntRunCount` rename remains deliberately deferred to a
-  quiet-tree change.
+  `frameCounter` to `vIntRunCount` rename was deliberately left to the dedicated
+  quiet-tree follow-up above.
 
 - **Visual complete-run trace playback (2026-08-01):** a run selected on the
   master title now stays active across level/act replacement, bonus and special

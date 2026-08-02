@@ -62,7 +62,7 @@ public abstract class AbstractProjectileInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         updateMotion();
         currentX = motionState.x;
         currentY = motionState.y;
@@ -72,7 +72,7 @@ public abstract class AbstractProjectileInstance extends AbstractObjectInstance
             return;
         }
 
-        updateExtra(frameCounter, player);
+        updateExtra(vIntRunCount, player);
     }
 
     /**
@@ -100,7 +100,7 @@ public abstract class AbstractProjectileInstance extends AbstractObjectInstance
      * Hook for subclass-specific per-frame logic (animation, parent tracking, etc.).
      * Called after motion update and off-screen check. Default is no-op.
      */
-    protected void updateExtra(int frameCounter, PlayableEntity player) {
+    protected void updateExtra(int vIntRunCount, PlayableEntity player) {
         // Default no-op
     }
 

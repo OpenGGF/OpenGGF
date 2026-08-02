@@ -180,7 +180,7 @@ public class Sonic1BridgeObjectInstance extends AbstractObjectInstance
     // ---- Update logic ----
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (playerOnBridge) {
             AbstractPlayableSprite currentRider = currentRidingPlayer();
             if (currentRider != null) {

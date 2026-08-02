@@ -146,7 +146,7 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
         return y;
     }
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         transitionFrameSlopeSkip = false;
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (routine) {

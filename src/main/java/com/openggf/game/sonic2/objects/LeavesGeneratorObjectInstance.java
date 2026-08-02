@@ -88,8 +88,8 @@ public class LeavesGeneratorObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
-        processTouchLatch(levelFrameCounter(frameCounter));
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        processTouchLatch(levelFrameCounter(vIntRunCount));
     }
 
     /**
@@ -144,13 +144,13 @@ public class LeavesGeneratorObjectInstance extends AbstractObjectInstance
         }
     }
 
-    private int levelFrameCounter(int fallback) {
+    private int levelFrameCounter(int vIntRunCount) {
         var levelManager = services().levelManager();
         // Obj2C_Main reads the ROM Level_frame_counter during object execution
         // (s2.asm:52090, 52109, 52116). LevelManager still stores the previous
         // completed frame until its late-frame update, so object code observes
         // the next visible level counter here.
-        return levelManager != null ? levelManager.getFrameCounter() + 1 : fallback;
+        return levelManager != null ? levelManager.getFrameCounter() + 1 : vIntRunCount;
     }
 
     private AbstractPlayableSprite mainPlayer() {

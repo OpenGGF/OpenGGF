@@ -105,7 +105,7 @@ public final class MgzEndBossKnuxInstance extends MgzDrillingRobotnikInstance {
     }
 
     @Override
-    protected void updateBossLogic(int frameCounter, PlayableEntity player) {
+    protected void updateBossLogic(int vIntRunCount, PlayableEntity player) {
         prepareSharedBossPresentation();
         if (state.invulnerable && --state.invulnerabilityTimer <= 0) {
             state.invulnerable = false;

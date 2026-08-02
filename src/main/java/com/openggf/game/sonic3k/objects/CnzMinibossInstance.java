@@ -324,7 +324,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance implements S
     }
 
     @Override
-    protected void updateBossLogic(int frameCounter, PlayableEntity player) {
+    protected void updateBossLogic(int vIntRunCount, PlayableEntity player) {
         resetTraceFrameFlags();
         Sonic3kCNZEvents cnz = getCnzEvents();
         if (cnz != null) {

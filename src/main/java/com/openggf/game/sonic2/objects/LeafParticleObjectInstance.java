@@ -99,7 +99,7 @@ public class LeafParticleObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         frameCount++;
 
@@ -111,10 +111,10 @@ public class LeafParticleObjectInstance extends AbstractObjectInstance
         // ROM: Obj2C_Leaf adds (Vint_runcount+3) to objoff_38 and gates on
         // $1F, then uses ExecuteObjects' d7 loop register, not RNG, to decide
         // whether to negate objoff_38 (docs/s2disasm/s2.asm:52202-52208).
-        int check = (oscillationSpeed + frameCounter) & 0x1F;
+        int check = (oscillationSpeed + vIntRunCount) & 0x1F;
         if (check == 0) {
             int slot = getSlotIndex();
-            int romD7 = slot >= 0 && slot <= 127 ? 127 - slot : frameCounter;
+            int romD7 = slot >= 0 && slot <= 127 ? 127 - slot : vIntRunCount;
             if ((romD7 & 1) != 0) {
                 oscillationSpeed = -oscillationSpeed;
             }

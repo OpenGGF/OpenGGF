@@ -593,16 +593,16 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
     // ========================================================================
 
     @Override
-    protected void updateBossLogic(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (bodyRoutine) {
             case BODY_WAIT_EGGMAN -> updateWaitEggman();
             case BODY_COUNTDOWN -> updateCountdown();
-            case BODY_RISE -> updateRise(frameCounter);
+            case BODY_RISE -> updateRise(vIntRunCount);
             case BODY_WAIT_READY -> updateWaitReady();
             case BODY_SELECT_ATTACK -> updateSelectAttack();
-            case BODY_EXECUTE_ATTACK -> updateExecuteAttack(frameCounter, player);
-            case BODY_DEFEAT -> updateDefeat(frameCounter, player);
+            case BODY_EXECUTE_ATTACK -> updateExecuteAttack(vIntRunCount, player);
+            case BODY_DEFEAT -> updateDefeat(vIntRunCount, player);
         }
     }
 
@@ -641,7 +641,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
     }
 
     /** State 6: Rise - move upward with rumbling sound */
-    private void updateRise(int frameCounter) {
+    private void updateRise(int vIntRunCount) {
         actionTimer--;
         if (actionTimer == 0) {
             bodyRoutine = BODY_WAIT_READY;
@@ -692,12 +692,12 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
     }
 
     /** State C: ExecuteAttack - dispatch to current attack type */
-    private void updateExecuteAttack(int frameCounter, AbstractPlayableSprite player) {
+    private void updateExecuteAttack(int vIntRunCount, AbstractPlayableSprite player) {
         checkHit();
         switch (currentAttack) {
-            case 0 -> updateAttackWalkPunch(frameCounter, player);
-            case 2 -> updateAttackJetStomp(frameCounter, player);
-            case 4 -> updateAttackStompBombs(frameCounter, player);
+            case 0 -> updateAttackWalkPunch(vIntRunCount, player);
+            case 2 -> updateAttackJetStomp(vIntRunCount, player);
+            case 4 -> updateAttackStompBombs(vIntRunCount, player);
         }
     }
 
@@ -706,7 +706,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
     // ROM: loc_3D6AA (anim=0)
     // ========================================================================
 
-    private void updateAttackWalkPunch(int frameCounter, AbstractPlayableSprite player) {
+    private void updateAttackWalkPunch(int vIntRunCount, AbstractPlayableSprite player) {
         switch (attackPhase) {
             case 0 -> { // Wait $20 frames
                 actionTimer--;
@@ -742,7 +742,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
     // ROM: loc_3D702 (anim=2)
     // ========================================================================
 
-    private void updateAttackJetStomp(int frameCounter, AbstractPlayableSprite player) {
+    private void updateAttackJetStomp(int vIntRunCount, AbstractPlayableSprite player) {
         switch (attackPhase) {
             case 0 -> { // Wait
                 actionTimer--;
@@ -770,7 +770,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
                     return;
                 }
                 // Fire sound every 32 frames
-                if ((frameCounter & 0x1F) == 0) {
+                if ((vIntRunCount & 0x1F) == 0) {
                     services().playSfx(Sonic2Sfx.FIRE.id);
                 }
                 // ObjectMove
@@ -794,7 +794,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
                 // frame across the DEZ fight.
                 boolean sensorReported = targetedPlayerX != 0;
                 if (sensorChild != null) {
-                    sensorChild.update(frameCounter, player);
+                    sensorChild.update(vIntRunCount, player);
                 }
                 if (sensorReported) {
                     attackPhase = 8;
@@ -857,7 +857,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
     // ROM: loc_3D83C (anim=4)
     // ========================================================================
 
-    private void updateAttackStompBombs(int frameCounter, AbstractPlayableSprite player) {
+    private void updateAttackStompBombs(int vIntRunCount, AbstractPlayableSprite player) {
         switch (attackPhase) {
             case 0 -> { // Wait
                 actionTimer--;
@@ -943,23 +943,23 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
     // DEFEAT SEQUENCE (State E)
     // ========================================================================
 
-    private void updateDefeat(int frameCounter, AbstractPlayableSprite player) {
+    private void updateDefeat(int vIntRunCount, AbstractPlayableSprite player) {
         switch (defeatPhase) {
-            case 0 -> updateDefeatFall(frameCounter);
-            case 2 -> updateDefeatExplode(frameCounter);
-            case 4 -> updateDefeatWalkPlayer(frameCounter, player);
-            case 6 -> updateDefeatSetupEnding(frameCounter, player);
+            case 0 -> updateDefeatFall(vIntRunCount);
+            case 2 -> updateDefeatExplode(vIntRunCount);
+            case 4 -> updateDefeatWalkPlayer(vIntRunCount, player);
+            case 6 -> updateDefeatSetupEnding(vIntRunCount, player);
             case 8 -> updateDefeatFade();
             case 10 -> {} // Terminal: ending triggered, waiting for game mode change
         }
     }
 
     /** Defeat phase 0: Fall with gravity, bounce at floor Y=$15C */
-    private void updateDefeatFall(int frameCounter) {
+    private void updateDefeatFall(int vIntRunCount) {
         // ROM: Boss_LoadExplosion only spawns an explosion every 8th frame
-        // (andi.b #7,(Vint_runcount+3).w / bne.s rts). frameCounter is the
-        // Java equivalent of Vint_runcount.
-        if ((frameCounter & 7) == 0) {
+        // (andi.b #7,(Vint_runcount+3).w / bne.s rts). vIntRunCount is the
+        // Java equivalent of Vint_runcount at object execution.
+        if ((vIntRunCount & 7) == 0) {
             spawnDefeatExplosion();
         }
         // ObjectMoveAndFall
@@ -995,14 +995,14 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
     }
 
     /** Defeat phase 2: 64 frames of explosions, then lock controls and walk player right */
-    private void updateDefeatExplode(int frameCounter) {
+    private void updateDefeatExplode(int vIntRunCount) {
         // ROM: Head stays attached during ground explosion phase (loc_3E282 every frame)
         positionNonAnimatedChildren();
 
         actionTimer--;
         if (actionTimer >= 0) {
             // ROM: Boss_LoadExplosion only spawns every 8th frame
-            if ((frameCounter & 7) == 0) {
+            if ((vIntRunCount & 7) == 0) {
                 spawnDefeatExplosion();
             }
         } else {
@@ -1019,7 +1019,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
 
     /** Defeat phase 4: Force player right, advance to setup-ending when camera reaches $840.
      *  ROM: ObjC7_Phase3 (s2.asm) - lock controls, walk right until Camera_X >= $840. */
-    private void updateDefeatWalkPlayer(int frameCounter, AbstractPlayableSprite player) {
+    private void updateDefeatWalkPlayer(int vIntRunCount, AbstractPlayableSprite player) {
         if (player != null) {
             // ROM splits the ending handoff across two body dispatches:
             // loc_3D922 locks Control_Locked (s2.asm:82966-82975), so Obj01_Control
@@ -1064,7 +1064,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
      * Robot position: X = player_X - offset, Y = player_Y.
      * Wait until Player X >= $EC0 (3776 decimal) before advancing to fade.
      */
-    private void updateDefeatSetupEnding(int frameCounter, AbstractPlayableSprite player) {
+    private void updateDefeatSetupEnding(int vIntRunCount, AbstractPlayableSprite player) {
         // Keep player controls locked and forcing right
         if (player != null) {
             player.setControlLocked(true);
@@ -1654,9 +1654,9 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-            if (!beginUpdate(frameCounter)) return;
+            if (!beginUpdate(vIntRunCount)) return;
             if (falling) {
                 fallTimer--;
                 if (fallTimer < 0) {
@@ -1749,12 +1749,12 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-            if (!beginUpdate(frameCounter)) return;
+            if (!beginUpdate(vIntRunCount)) return;
 
             if (falling) {
-                super.update(frameCounter, player);
+                super.update(vIntRunCount, player);
                 return;
             }
 
@@ -1899,9 +1899,9 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-            if (!beginUpdate(frameCounter)) return;
+            if (!beginUpdate(vIntRunCount)) return;
 
             switch (headRoutine) {
                 case 0 -> {
@@ -2071,9 +2071,9 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-            if (!beginUpdate(frameCounter)) return;
+            if (!beginUpdate(vIntRunCount)) return;
 
             Sonic2DeathEggRobotInstance boss = (Sonic2DeathEggRobotInstance) parent;
             if (boss.bodyRoutine >= BODY_RISE && jetRoutine > 0) {
@@ -2209,9 +2209,9 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-            if (!beginUpdate(frameCounter)) return;
+            if (!beginUpdate(vIntRunCount)) return;
 
             Sonic2DeathEggRobotInstance boss = (Sonic2DeathEggRobotInstance) parent;
 
@@ -2405,9 +2405,9 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance implements
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-            if (!beginUpdate(frameCounter)) return;
+            if (!beginUpdate(vIntRunCount)) return;
 
             Sonic2DeathEggRobotInstance boss = (Sonic2DeathEggRobotInstance) parent;
 

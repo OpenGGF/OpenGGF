@@ -81,7 +81,7 @@ public class IczBreakableWallObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (broken || isDestroyed()) {
             return;
         }
@@ -283,9 +283,9 @@ public class IczBreakableWallObjectInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             animateRaw();
-            super.update(frameCounter, player);
+            super.update(vIntRunCount, player);
             if (isDestroyed()) {
                 return;
             }

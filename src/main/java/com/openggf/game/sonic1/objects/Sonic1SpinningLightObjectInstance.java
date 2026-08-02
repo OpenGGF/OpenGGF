@@ -62,7 +62,7 @@ public class Sonic1SpinningLightObjectInstance extends AbstractObjectInstance im
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Light_Animate: subq.b #1,obTimeFrame(a0) / bpl.s .chkdel
         frameTimer--;

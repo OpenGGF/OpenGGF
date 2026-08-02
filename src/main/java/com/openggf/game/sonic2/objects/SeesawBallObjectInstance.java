@@ -215,7 +215,7 @@ public class SeesawBallObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Update palette animation (toggle every 4 frames)
         // ROM: Obj14_Animate

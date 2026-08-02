@@ -125,7 +125,7 @@ public final class MonkeyDudeBadnikInstance extends AbstractS3kBadnikInstance im
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // ROM entry point begins with Obj_WaitOffscreen, so the state machine,
         // arm animation, and throw cadence must not advance until visible.

@@ -154,7 +154,7 @@ public class Sonic1LZBossInstance extends AbstractS1EggmanBossInstance implement
     }
 
     @Override
-    protected void updateBossLogic(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (state.routineSecondary) {
             case STATE_ENTRY -> updateEntry(player);
@@ -543,9 +543,9 @@ public class Sonic1LZBossInstance extends AbstractS1EggmanBossInstance implement
      * The boss is NOT deleted here — it continues through its state machine.
      */
     private void handleBossDefeated() {
-        int frameCounter = state.lastUpdatedFrame;
+        int vIntRunCount = state.lastUpdatedVIntRunCount;
         // ROM: move.b (v_vbla_byte).w,d0 / andi.b #7,d0 / bne.s .noexplosion
-        if ((frameCounter & 7) == 0) {
+        if ((vIntRunCount & 7) == 0) {
             spawnDefeatExplosion();
         }
     }

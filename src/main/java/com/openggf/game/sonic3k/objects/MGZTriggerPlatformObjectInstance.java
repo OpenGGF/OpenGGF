@@ -117,7 +117,7 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (isDestroyed()) {
             return;
         }
@@ -141,7 +141,7 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
         if (!completed && activationVisibleThisPass) {
             advanceActiveMotion();
             if (!completed) {
-                applyScreenShake(frameCounter);
+                applyScreenShake(vIntRunCount);
             }
         }
 
@@ -194,7 +194,7 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
         ObjectLifetimeOps.markSpawnRemembered(objectManager, spawn);
     }
 
-    private void applyScreenShake(int frameCounter) {
+    private void applyScreenShake(int vIntRunCount) {
         MgzZoneRuntimeState mgzState = resolveMgzRuntimeState();
         if (mgzState == null) {
             return;
@@ -203,7 +203,7 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
         // pipeline, while Camera_Y_pos_copy consumes the sample prepared by
         // ShakeScreen_Setup on the preceding native frame.
         mgzState.requestScreenShakeOffset(
-                SCREEN_SHAKE_CONTINUOUS[(frameCounter - 3) & SCREEN_SHAKE_MASK]);
+                SCREEN_SHAKE_CONTINUOUS[(vIntRunCount - 3) & SCREEN_SHAKE_MASK]);
     }
 
     private MgzZoneRuntimeState resolveMgzRuntimeState() {

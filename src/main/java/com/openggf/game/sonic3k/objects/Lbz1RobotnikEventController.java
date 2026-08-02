@@ -139,7 +139,7 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (isPlayerKnuckles()) {
             // ROM loc_8CB90: Knuckles never meets Obj_LBZ1Robotnik here.
             ObjectLifetimeOps.deleteNoRespawn(this);
@@ -172,8 +172,8 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
             }
             case ROUTINE_AFTER_COLLAPSE -> updateAfterCollapse(player);
             case ROUTINE_SECOND_RISE -> updateSecondRise();
-            case ROUTINE_DIAGONAL_ESCAPE -> updateDiagonalEscape(frameCounter);
-            case ROUTINE_POST_HANDOFF -> updatePostHandoff(frameCounter);
+            case ROUTINE_DIAGONAL_ESCAPE -> updateDiagonalEscape(vIntRunCount);
+            case ROUTINE_POST_HANDOFF -> updatePostHandoff(vIntRunCount);
             default -> {
             }
         }
@@ -349,9 +349,9 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
         moveSprite2();
     }
 
-    private void updateDiagonalEscape(int frameCounter) {
+    private void updateDiagonalEscape(int vIntRunCount) {
         moveSprite2();
-        flameVisible = (frameCounter & 1) == 0 && motion.xVel != 0;
+        flameVisible = (vIntRunCount & 1) == 0 && motion.xVel != 0;
         updateDroppedBoxHandoff();
         if ((motion.y & 0xFFFF) >= DIAGONAL_ESCAPE_HANDOFF_Y) {
             routine = ROUTINE_POST_HANDOFF;
@@ -359,11 +359,11 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
         }
     }
 
-    private void updatePostHandoff(int frameCounter) {
+    private void updatePostHandoff(int vIntRunCount) {
         // ROM loc_8CD4C: keep moving and delete once coarse-off-screen; the
         // floating box panels are independent and stay behind.
         moveSprite2();
-        flameVisible = !shipGone && (frameCounter & 1) == 0 && motion.xVel != 0;
+        flameVisible = !shipGone && (vIntRunCount & 1) == 0 && motion.xVel != 0;
         updateDroppedBoxHandoff();
         if (!shipGone && isShipCoarseOffscreen()) {
             shipGone = true;

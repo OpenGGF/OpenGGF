@@ -320,7 +320,7 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ensureInitialized();
         if (isDestroyed()) {
             return;

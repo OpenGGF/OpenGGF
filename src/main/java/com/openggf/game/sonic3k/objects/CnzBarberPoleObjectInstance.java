@@ -60,7 +60,7 @@ public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite updatePlayer = playerEntity instanceof AbstractPlayableSprite player ? player : null;
         List<PlayableEntity> participants = services().playerQuery().playersFor(
                 ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);

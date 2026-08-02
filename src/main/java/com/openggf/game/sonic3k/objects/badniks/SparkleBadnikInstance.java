@@ -60,7 +60,7 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance imple
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         if (isDestroyed()) {
             return;
         }
@@ -276,7 +276,7 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance imple
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (frameTimer-- > 0) {
                 return;
             }
@@ -365,7 +365,7 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance imple
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             animate();
             if (!drifting) {
                 decelerate();

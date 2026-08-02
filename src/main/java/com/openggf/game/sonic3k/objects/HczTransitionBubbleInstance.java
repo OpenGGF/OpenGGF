@@ -72,7 +72,7 @@ public final class HczTransitionBubbleInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         // CreateChild6_Simple can place this child after its controller in the
         // same RunObjects pass. loc_6A710 initializes and draws, but does not
         // enter loc_6A79C movement until the child's following dispatch.
