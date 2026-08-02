@@ -903,6 +903,14 @@ public class Sonic3kTitleCardManager
                 return;
             }
             state = Sonic3kTitleCardState.COMPLETE;
+            // Title KosM payload readiness only makes the card renderable.
+            // Obj_TitleCardWait2 reaches LoadEnemyArt after the title owner has
+            // observed every child retire, which is this sole EXIT -> COMPLETE
+            // transition.
+            if (GameServices.module().getObjectArtProvider() != null) {
+                GameServices.module().getObjectArtProvider()
+                        .onTitleCardArtRetired();
+            }
             if (inLevelMode) {
                 // ROM Obj_TitleCardWait2 sets End_of_level_flag only after the
                 // in-level title-card timer has elapsed and its child objects
@@ -1113,10 +1121,6 @@ public class Sonic3kTitleCardManager
         artLoading = false;
         artLoaded = true;
         artCached = false;
-        if (GameServices.module().getObjectArtProvider() != null) {
-            GameServices.module().getObjectArtProvider()
-                    .onTitleCardArtRetired();
-        }
         return true;
     }
 

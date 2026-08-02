@@ -3,6 +3,13 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K title-card KosM payload readiness now only makes the title
+  renderable; runtime enemy art is admitted once when the title owner reaches
+  `COMPLETE`. Cached title art follows the same owner boundary, and the
+  provider-owned skipped-initial-title model releases on its ROM-derived 34th
+  tick instead of a frame later. Rewind coverage preserves the completion
+  edge, while false-overlay seamless transitions retain their existing
+  pre-policy direct-retirement behavior.
 - Fix/Test: standalone S3K Gumball, Pachinko, and Slots trace replays now close
   at their recorder-observed bonus-mode boundary after proving all in-scope
   hardware work is consumed and the production ledger is empty; later

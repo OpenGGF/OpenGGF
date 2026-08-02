@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.titlecard;
 
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
+import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.session.EngineContext;
@@ -16,6 +17,7 @@ import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -66,6 +68,29 @@ class TestSonic3kTitleCardManagerRewind {
         assertTrue(keys.contains(Sonic3kTitleCardManager.REWIND_KEY));
     }
 
+    @Test
+    void rewindAroundCompletionReleasesOnlyWhenReplayingTheExitTransition()
+            throws Exception {
+        startLevel();
+        Sonic3kTitleCardManager title = new Sonic3kTitleCardManager();
+        CountingObjectArtProvider provider = installCountingProvider();
+        prepareExitForCompletion(title);
+
+        Sonic3kTitleCardManager.Snapshot beforeCompletion = title.capture();
+        title.restore(beforeCompletion);
+        title.update();
+
+        assertEquals(1, provider.titleCardRetirementCount,
+                "restoring immediately before COMPLETE must replay one owner release");
+
+        Sonic3kTitleCardManager.Snapshot afterCompletion = title.capture();
+        title.restore(afterCompletion);
+        title.update();
+
+        assertEquals(1, provider.titleCardRetirementCount,
+                "restoring COMPLETE must not create another owner release");
+    }
+
     private static HardwareTimingService startLevel() {
         TestEnvironment.resetAll();
         SessionManager.clear();
@@ -79,5 +104,45 @@ class TestSonic3kTitleCardManagerRewind {
         HardwareTimingService timing = GameServices.hardwareTiming();
         timing.resetForMissingSnapshot();
         return timing;
+    }
+
+    private static CountingObjectArtProvider installCountingProvider() throws Exception {
+        Sonic3kGameModule module = (Sonic3kGameModule) GameServices.module();
+        Field field = Sonic3kGameModule.class.getDeclaredField("objectArtProvider");
+        field.setAccessible(true);
+        CountingObjectArtProvider provider = new CountingObjectArtProvider();
+        field.set(module, provider);
+        return provider;
+    }
+
+    private static void prepareExitForCompletion(Sonic3kTitleCardManager title)
+            throws Exception {
+        setField(title, "state", Sonic3kTitleCardState.EXIT);
+        setField(title, "exitChildrenGone", true);
+        setField(title, "actNumberVisible", true);
+        boolean[] exited = (boolean[]) getField(title, "elemExited");
+        java.util.Arrays.fill(exited, true);
+    }
+
+    private static void setField(Object target, String name, Object value) throws Exception {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        field.set(target, value);
+    }
+
+    private static Object getField(Object target, String name) throws Exception {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field.get(target);
+    }
+
+    private static final class CountingObjectArtProvider extends Sonic3kObjectArtProvider {
+        private int titleCardRetirementCount;
+
+        @Override
+        public void onTitleCardArtRetired() {
+            titleCardRetirementCount++;
+            super.onTitleCardArtRetired();
+        }
     }
 }

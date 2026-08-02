@@ -1693,7 +1693,10 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
             titleCardTeardown = null;
             return;
         }
-        titleCardTeardown.tick();
+        if (titleCardTeardown.tick()) {
+            enemyKosSubmissionArmed = true;
+            titleCardTeardown = null;
+        }
     }
 
     /**

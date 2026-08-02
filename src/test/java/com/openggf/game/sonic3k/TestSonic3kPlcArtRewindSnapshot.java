@@ -126,6 +126,46 @@ class TestSonic3kPlcArtRewindSnapshot {
     }
 
     @Test
+    void skippedInitialTitleOwnerHoldsRuntimeArtThroughTickThirtyThree()
+            throws Exception {
+        Sonic3kObjectArtProvider provider = new Sonic3kObjectArtProvider();
+        provider.onTitleCardPresentationSkipped();
+
+        for (int tick = 1; tick <= 33; tick++) {
+            provider.processRuntimeArtQueue();
+        }
+
+        PlcProgressSnapshot beforeProductionRetirement = provider.capture();
+        assertEquals(33, beforeProductionRetirement.titleCardTeardownTicks());
+        assertFalse(beforeProductionRetirement.kosSubmissionArmed(),
+                "the skipped initial title owner still owns admission before tick 34");
+    }
+
+    @Test
+    void skippedInitialTitleOwnerReleasesRuntimeArtOnTickThirtyFourOnlyOnce()
+            throws Exception {
+        Sonic3kObjectArtProvider provider = new Sonic3kObjectArtProvider();
+        provider.onTitleCardPresentationSkipped();
+
+        for (int tick = 1; tick <= 34; tick++) {
+            provider.processRuntimeArtQueue();
+        }
+
+        PlcProgressSnapshot released = provider.capture();
+        assertEquals(-1, released.titleCardTeardownTicks(),
+                "the provider drops its completed skipped-title owner at tick 34");
+        assertTrue(released.kosSubmissionArmed(),
+                "tick 34 is the production LoadEnemyArt release boundary");
+
+        provider.processRuntimeArtQueue();
+
+        PlcProgressSnapshot afterRelease = provider.capture();
+        assertEquals(-1, afterRelease.titleCardTeardownTicks());
+        assertTrue(afterRelease.kosSubmissionArmed(),
+                "the completed skipped-title owner cannot release a second time");
+    }
+
+    @Test
     void iczEnemyArtScheduleMatchesLoadEnemyArtTable() throws Exception {
         Sonic3kObjectArtProvider provider = new Sonic3kObjectArtProvider();
         Method schedule = Sonic3kObjectArtProvider.class.getDeclaredMethod(

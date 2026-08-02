@@ -4,7 +4,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardTeardownModel;
+import com.openggf.level.SeamlessLevelTransitionRequest;
+import com.openggf.tests.HeadlessTestFixture;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -38,6 +43,7 @@ import org.junit.jupiter.api.Test;
  * {@code KOS_DECOMPRESSION_QUEUE} completion whose fingerprint matches the
  * engine's enemy-art submission is admitted on that frame.
  */
+@RequiresRom(SonicGame.SONIC_3K)
 class TestSonic3kTitleCardTeardownModel {
 
     /**
@@ -91,5 +97,29 @@ class TestSonic3kTitleCardTeardownModel {
         }
         assertTrue(restored.tick(), "restored model fires on the derived frame");
         assertTrue(restored.isComplete());
+    }
+
+    @Test
+    @DisplayName("false-overlay executor retirement does not start the skipped initial-title model")
+    void falseOverlayTransitionDoesNotCreateSkippedInitialTitleTeardown() throws Exception {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(0, 0)
+                .build();
+        Sonic3kObjectArtProvider provider = (Sonic3kObjectArtProvider) GameServices.module()
+                .getObjectArtProvider();
+        provider.onTitleCardArtRetired();
+
+        GameServices.level().executeActTransition(SeamlessLevelTransitionRequest.builder(
+                        SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
+                .targetZoneAct(0, 1)
+                .preserveMusic(true)
+                .preserveLevelGamestate(true)
+                .showInLevelTitleCard(false)
+                .build());
+
+        assertEquals(-1, provider.capture().titleCardTeardownTicks(),
+                "a false in-level overlay remains ordinary retirement before policy migration");
+        assertTrue(provider.capture().kosSubmissionArmed(),
+                "Task 1 preserves the executor's existing direct retirement callback");
     }
 }
