@@ -4,13 +4,23 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.audio.NullAudioBackend;
 import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.game.GameServices;
+import com.openggf.game.RuntimeArtAdmissionPolicy;
+import com.openggf.game.rewind.CompositeSnapshot;
+import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
+import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
 import com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance;
 import com.openggf.game.sonic3k.objects.S3kSignpostInstance;
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
+import com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager;
+import com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardState;
+import com.openggf.game.timing.HardwareServiceBoundary;
+import com.openggf.game.timing.HardwareTimingService;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectInstance;
@@ -22,12 +32,16 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Supplier;
+import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_3K)
@@ -90,6 +104,9 @@ class TestS3kCnzAct1EventFlow {
         assertEquals(SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL, request.type());
         assertEquals(Sonic3kZoneIds.ZONE_CNZ, request.targetZone());
         assertEquals(1, request.targetAct());
+        assertEquals(RuntimeArtAdmissionPolicy.TITLE_OWNER,
+                request.runtimeArtAdmissionPolicy(),
+                "the carried Obj_LevelResults/Obj_TitleCard SST owns CNZ2 enemy admission");
         assertEquals(-0x3000, request.playerOffsetX());
         assertEquals(0x0200, request.playerOffsetY());
         assertEquals(-0x3000, request.cameraOffsetX());
@@ -253,6 +270,186 @@ class TestS3kCnzAct1EventFlow {
                         + "the signpost must not vanish when Obj_LevelResults starts");
         assertTrue(active.contains(results),
                 "Obj_LevelResults must survive the CNZ Act 1 reload it requests so the results screen can show");
+    }
+
+    @Test
+    void productionCnzReloadCarriesTheResultsTitleOwnerUntilTitleCompletion()
+            throws Exception {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .startPosition((short) 0x32D0, (short) 0x04AC)
+                .startPositionIsCentre()
+                .build();
+        GameServices.camera().setFocusedSprite(fixture.sprite());
+
+        S3kResultsScreenObjectInstance actOneResults = ObjectConstructionContext.construct(
+                TestEnvironment.objectServices(),
+                () -> new S3kResultsScreenObjectInstance(
+                        com.openggf.game.PlayerCharacter.SONIC_AND_TAILS, 0));
+        GameServices.level().getObjectManager().addDynamicObject(actOneResults);
+
+        HardwareTimingService timing = GameServices.hardwareTiming();
+        int resultsParentCount = moduleJobCount(timing);
+        assertEquals(3, resultsParentCount,
+                "the live Act 1 results owner begins with its three ROM KosM parents");
+        drainModuleHardware(timing);
+        actOneResults.update(0, fixture.sprite());
+
+        Sonic3kCNZEvents events = initCnzEvents(0);
+        events.forceBackgroundRoutine(Sonic3kCNZEvents.BG_DO_TRANSITION);
+        events.setEventsFg5(true);
+        events.update(0, 0);
+
+        S3kResultsScreenObjectInstance carriedResults = GameServices.level()
+                .getObjectManager().getActiveObjects().stream()
+                .filter(S3kResultsScreenObjectInstance.class::isInstance)
+                .map(S3kResultsScreenObjectInstance.class::cast)
+                .findFirst()
+                .orElseThrow();
+        assertSame(actOneResults, carriedResults,
+                "CNZ Load_Level must carry the semantic Obj_LevelResults SST, not replace it with a control-delay bridge");
+        assertEquals(resultsParentCount, moduleJobCount(timing),
+                "the executor must neither publish a title nor submit CNZ2 enemies");
+
+        Sonic3kObjectArtProvider artProvider = (Sonic3kObjectArtProvider)
+                GameServices.module().getObjectArtProvider();
+        artProvider.processRuntimeArtQueue();
+        assertEquals(resultsParentCount, moduleJobCount(timing),
+                "the held TITLE_OWNER lease blocks enemy submission before title publication");
+
+        prepareFinalResultsExit(carriedResults);
+        carriedResults.update(1, fixture.sprite());
+        assertEquals(resultsParentCount, moduleJobCount(timing),
+                "the child-retirement completion dispatch only publishes the mutated title owner");
+
+        carriedResults.update(2, fixture.sprite());
+        assertEquals(resultsParentCount + 4, moduleJobCount(timing),
+                "the following Obj_TitleCard dispatch queues exactly four title parents");
+        Sonic3kTitleCardManager title = (Sonic3kTitleCardManager)
+                GameServices.module().getTitleCardProvider();
+        assertEquals(artProvider.capture().runtimeArtAdmissionLeaseId(),
+                title.capture().runtimeArtAdmissionLeaseId(),
+                "the carried title binds the exact CNZ reload lease");
+
+        artProvider.processRuntimeArtQueue();
+        assertEquals(resultsParentCount + 4, moduleJobCount(timing),
+                "enemy work remains held until the title owner reaches COMPLETE");
+
+        drainModuleHardware(timing);
+        for (int dispatch = 0; dispatch < 1_000 && !title.isComplete(); dispatch++) {
+            title.update();
+        }
+        assertTrue(title.isComplete());
+        assertEquals(resultsParentCount + 4, moduleJobCount(timing),
+                "title completion arms but does not submit enemy parents inside the owner dispatch");
+
+        artProvider.processRuntimeArtQueue();
+        assertEquals(resultsParentCount + 8, moduleJobCount(timing),
+                "the actual COMPLETE boundary admits the four CNZ2 enemy parents exactly once");
+        artProvider.processRuntimeArtQueue();
+        assertEquals(resultsParentCount + 8, moduleJobCount(timing),
+                "later provider pumps cannot publish a second enemy batch");
+    }
+
+    @Test
+    void productionCnzCarriedTitleOwnerRewindsAtEveryOwnershipBoundary()
+            throws Exception {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .startPosition((short) 0x32D0, (short) 0x04AC)
+                .startPositionIsCentre()
+                .build();
+        GameServices.camera().setFocusedSprite(fixture.sprite());
+        HardwareTimingService timing = GameServices.hardwareTiming();
+        RewindRegistry rewind = TestEnvironment.activeGameplayMode().getRewindRegistry();
+
+        S3kResultsScreenObjectInstance results = ObjectConstructionContext.construct(
+                TestEnvironment.objectServices(),
+                () -> new S3kResultsScreenObjectInstance(
+                        com.openggf.game.PlayerCharacter.SONIC_AND_TAILS, 0));
+        GameServices.level().getObjectManager().addDynamicObject(results);
+        drainModuleHardware(timing);
+        results.update(0, fixture.sprite());
+        CompositeSnapshot beforeReload = rewind.capture();
+        prepareFinalResultsExit(results);
+        rewind.restore(beforeReload);
+        results = reacquireResultsOwner();
+        assertFalse((boolean) getField(results, "exitPublicationComplete"),
+                "rewind immediately before reload restores the live Act 1 results owner");
+
+        GameServices.level().executeActTransition(cnzAct2TransitionRequest());
+        S3kResultsScreenObjectInstance carried = reacquireResultsOwner();
+        prepareFinalResultsExit(carried);
+        CompositeSnapshot afterRecreation = rewind.capture();
+
+        carried.update(1, fixture.sprite());
+        CompositeSnapshot beforeTitlePublication = rewind.capture();
+        carried.update(2, fixture.sprite());
+        Sonic3kTitleCardManager title = (Sonic3kTitleCardManager)
+                GameServices.module().getTitleCardProvider();
+        drainModuleHardware(timing);
+        for (int dispatch = 0; dispatch < 1_000 && !title.isComplete(); dispatch++) {
+            title.update();
+        }
+        Sonic3kObjectArtProvider artProvider = (Sonic3kObjectArtProvider)
+                GameServices.module().getObjectArtProvider();
+        artProvider.processRuntimeArtQueue();
+        CompositeSnapshot afterCompletion = rewind.capture();
+
+        rewind.restore(afterCompletion);
+        int completedJobCount = moduleJobCount(timing);
+        ((Sonic3kObjectArtProvider) GameServices.module().getObjectArtProvider())
+                .processRuntimeArtQueue();
+        assertEquals(completedJobCount, moduleJobCount(timing),
+                "restoring after COMPLETE cannot release a second enemy batch");
+
+        rewind.restore(beforeTitlePublication);
+        assertEquals(3, moduleJobCount(timing));
+        S3kResultsScreenObjectInstance restoredBeforeTitle = reacquireResultsOwner();
+        assertTrue((boolean) getField(restoredBeforeTitle, "exitPublicationComplete"));
+        assertTrue((boolean) getField(restoredBeforeTitle, "titleInitializationPending"));
+        restoredBeforeTitle.update(3, fixture.sprite());
+        assertEquals(7, moduleJobCount(timing),
+                "rewind before title publication replays the single four-parent dispatch");
+
+        rewind.restore(afterRecreation);
+        assertEquals(3, moduleJobCount(timing));
+        S3kResultsScreenObjectInstance restoredAfterReload = reacquireResultsOwner();
+        restoredAfterReload.update(4, fixture.sprite());
+        restoredAfterReload.update(5, fixture.sprite());
+        assertEquals(7, moduleJobCount(timing),
+                "rewind after target recreation retains the same semantic results/title owner");
+
+    }
+
+    @Test
+    void stalePreReloadTitleOwnerCannotClaimTheNewCnzLease() throws Exception {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build();
+        HardwareTimingService timing = GameServices.hardwareTiming();
+        Sonic3kObjectArtProvider artProvider = (Sonic3kObjectArtProvider)
+                GameServices.module().getObjectArtProvider();
+        artProvider.prepareRuntimeArtForActTransition(
+                Sonic3kZoneIds.ZONE_CNZ, RuntimeArtAdmissionPolicy.TITLE_OWNER);
+        Sonic3kTitleCardManager title = new Sonic3kTitleCardManager();
+        title.initialize(Sonic3kZoneIds.ZONE_CNZ, 0);
+        prepareTitleCompletionDispatch(title);
+        Sonic3kTitleCardManager.Snapshot staleOwner = title.capture();
+        long staleLease = staleOwner.runtimeArtAdmissionLeaseId();
+        assertTrue(staleLease >= 0,
+                "the pre-reload production title owner must carry its exact scalar lease id");
+
+        GameServices.level().executeActTransition(cnzAct2TransitionRequest());
+        assertTrue(artProvider.capture().runtimeArtAdmissionLeaseId() != staleLease,
+                "the target CNZ batch receives a new exact lease identity");
+
+        title.restore(staleOwner);
+        drainModuleHardware(timing);
+        assertThrows(IllegalStateException.class, title::update,
+                "the stale pre-reload title scalar cannot bind or consume the new CNZ lease");
+        assertFalse(artProvider.capture().runtimeArtAdmissionConsumed());
+        assertEquals(Sonic3kTitleCardState.EXIT, title.capture().state());
     }
 
     @Test
@@ -508,6 +705,7 @@ class TestS3kCnzAct1EventFlow {
         return SeamlessLevelTransitionRequest.builder(
                         SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
                 .targetZoneAct(Sonic3kZoneIds.ZONE_CNZ, 1)
+                .runtimeArtAdmissionPolicy(RuntimeArtAdmissionPolicy.TITLE_OWNER)
                 .preserveMusic(true)
                 .preserveLevelGamestate(true)
                 .showInLevelTitleCard(false)
@@ -520,6 +718,81 @@ class TestS3kCnzAct1EventFlow {
                 .playerOffset(-0x3000, 0x0200)
                 .cameraOffset(-0x3000, 0x0200)
                 .build();
+    }
+
+    private static void prepareFinalResultsExit(S3kResultsScreenObjectInstance results)
+            throws ReflectiveOperationException {
+        setField(results, "resultsChildrenCreated", true);
+        setField(results, "state", 4);
+        setField(results, "childrenRemaining", 0);
+        setField(results, "carriedResultsRenderRetireDispatches", 0);
+        setField(results, "exitRetireDispatchesInitialized", true);
+    }
+
+    private static void prepareTitleCompletionDispatch(Sonic3kTitleCardManager title)
+            throws ReflectiveOperationException {
+        setField(title, "state", Sonic3kTitleCardState.EXIT);
+        setField(title, "exitChildrenGone", true);
+        boolean[] exited = (boolean[]) getField(title, "elemExited");
+        Arrays.fill(exited, true);
+    }
+
+    private static Object getField(Object target, String name)
+            throws ReflectiveOperationException {
+        Class<?> type = target.getClass();
+        while (type != null) {
+            try {
+                Field field = type.getDeclaredField(name);
+                field.setAccessible(true);
+                return field.get(target);
+            } catch (NoSuchFieldException ignored) {
+                type = type.getSuperclass();
+            }
+        }
+        throw new NoSuchFieldException(name);
+    }
+
+    private static S3kResultsScreenObjectInstance reacquireResultsOwner() {
+        return GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(S3kResultsScreenObjectInstance.class::isInstance)
+                .map(S3kResultsScreenObjectInstance.class::cast)
+                .findFirst()
+                .orElseThrow();
+    }
+
+    private static void setField(Object target, String name, Object value)
+            throws ReflectiveOperationException {
+        Class<?> type = target.getClass();
+        while (type != null) {
+            try {
+                Field field = type.getDeclaredField(name);
+                field.setAccessible(true);
+                field.set(target, value);
+                return;
+            } catch (NoSuchFieldException ignored) {
+                type = type.getSuperclass();
+            }
+        }
+        throw new NoSuchFieldException(name);
+    }
+
+    private static int moduleJobCount(HardwareTimingService timing) {
+        return (int) timing.capture().jobs().stream()
+                .filter(job -> job.kind() == HardwareWorkKind.KOS_MODULE_QUEUE)
+                .count();
+    }
+
+    private static void drainModuleHardware(HardwareTimingService timing) {
+        for (int frame = 0;
+                frame < 100_000
+                        && timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE) > 0;
+                frame++) {
+            HardwareBoundaryPump.service(timing, S3kRuntimeArtCoordinator.current(),
+                    HardwareServiceBoundary.PRE_MAIN_LOOP);
+            HardwareBoundaryPump.service(timing, S3kRuntimeArtCoordinator.current(),
+                    HardwareServiceBoundary.POST_OBJECTS);
+        }
+        assertEquals(0, timing.incompleteCount(HardwareWorkKind.KOS_MODULE_QUEUE));
     }
 
     private void advanceCnzPostBossRefresh(Sonic3kCNZEvents events, int firstFrame, int updates) {

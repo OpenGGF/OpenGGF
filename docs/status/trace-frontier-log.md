@@ -60504,3 +60504,29 @@ resubmits enemy art. The published timing stream still expects that former
 engine-created replacement work. No trace/timing workaround was added: the
 next action is the separately scoped native-recorder attribution and canonical
 fixture audit, with fixture regeneration requiring its own approval.
+
+## 2026-08-02 — Wave 2 Task 3 CNZ carried-results title ownership
+
+Context: `.worktrees/s3k-queue-lifecycle-recovery`, branch
+`bugfix/ai-s3k-queue-lifecycle-recovery`, Task 3 candidate based on `f3f05acf4`,
+JDK 21.0.11, verified S3K locked-on ROM. No trace fixture changed.
+
+CNZ's `CNZ1BGE_DoTransition` reload now declares `TITLE_OWNER`. The same
+production `Obj_LevelResults` SST survives the reload, publishes the title on
+its following dispatch, binds the target batch's exact lease, and admits the
+four CNZ Act 2 enemy KosM parents only after title `COMPLETE`. Rewind coverage
+crosses the pre-reload, target-recreation, pre-title-publication, and
+post-completion layouts; the reload rebinds only the replaced object-manager
+and ring-manager adapters, retaining title-before-provider restore order.
+
+The exact queue/timing/authority selector remains green at 142/142 (0 failures,
+0 errors). The canonical command
+`mvn -q -Dmse=off -Dtest='TestS3kCnzTraceReplay#replayMatchesTrace' -Ds3k.rom.path=<verified-s3k> test`
+reports 1 error and 0 failures after 17,420 represented rows. Its fail-closed
+terminal advances from Wave 1 raw 17278 direct ordinal `#20` fingerprint
+mismatch to raw 17421 direct ordinal `#24`, fingerprint
+`c2b0befca6c881f069f36f7bf5955eda3974e620af2f01172124ba808eeb4650`,
+with engine pending `<none>`. The comparison report records 103 errors and 0
+warnings, first f33 `queue.s3k_kos_direct.busy` (`false` / `true`). This task
+does not alter timing authority or the canonical fixture; the next missing
+production submission remains a separate producer-attribution problem.

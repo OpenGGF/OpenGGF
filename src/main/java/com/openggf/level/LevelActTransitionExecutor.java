@@ -130,6 +130,12 @@ final class LevelActTransitionExecutor {
 
         resetSidekickCpuBoundsAfterTransition(cam);
         levelManager.initLevelEventsForCurrentZoneAct();
+        var gameplayMode = com.openggf.game.session.SessionManager
+                .getCurrentGameplayMode();
+        if (gameplayMode != null) {
+            gameplayMode.rebindActTransitionManagerAdapters(
+                    levelManager.objectManager, levelManager.ringManager);
+        }
         if (handoff != null) {
             handoff.transferAfterTargetInit();
         }

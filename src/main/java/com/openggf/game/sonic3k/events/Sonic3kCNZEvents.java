@@ -863,7 +863,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         SeamlessLevelTransitionRequest request = SeamlessLevelTransitionRequest.builder(
                         SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
                 .targetZoneAct(Sonic3kZoneIds.ZONE_CNZ, 1)
-                .runtimeArtAdmissionPolicy(RuntimeArtAdmissionPolicy.IMMEDIATE)
+                .runtimeArtAdmissionPolicy(RuntimeArtAdmissionPolicy.TITLE_OWNER)
                 .deactivateLevelNow(false)
                 .preserveMusic(true)
                 .preserveLevelGamestate(true)
