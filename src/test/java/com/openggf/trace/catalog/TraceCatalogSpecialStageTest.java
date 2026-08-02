@@ -52,6 +52,18 @@ class TraceCatalogSpecialStageTest {
         assertEquals("S2 SPECIAL STAGE 1", entries.getFirst().displayLabel());
     }
 
+    @Test
+    void committedSonicOneSpecialStageUsesProfileAwareLabel() {
+        TraceEntry entry = TraceCatalog.scan(Path.of(
+                "src", "test", "resources", "traces")).stream()
+                .filter(candidate -> "s1_special_stage".equals(
+                        candidate.metadata().traceProfile()))
+                .findFirst()
+                .orElseThrow();
+
+        assertEquals("S1 SPECIAL STAGE 1", entry.displayLabel());
+    }
+
     private static void writeSpecialStageTrace(Path dir, Integer specialStageIndex, String bk2Name)
             throws Exception {
         Files.createDirectories(dir);

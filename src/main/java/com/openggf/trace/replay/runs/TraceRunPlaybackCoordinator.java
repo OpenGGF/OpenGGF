@@ -437,7 +437,7 @@ public final class TraceRunPlaybackCoordinator {
             TraceRunManifest.Segment destination) {
         if (expected == null) {
             return signal instanceof RunBoundarySignal.LevelLoaded loaded
-                    && loaded.cause() == RunLevelLoadCause.ORDINARY;
+                    && isTransitionlessLevelLoad(loaded.cause());
         }
         if (!TraceRunReplayWalker.withinBoundaryWindow(
                 signal.physicalBk2Frame(), expected.modeChangeBk2Frame())) {
@@ -463,7 +463,7 @@ public final class TraceRunPlaybackCoordinator {
             TraceRunManifest.Transition expected,
             RunLevelLoadCause actual) {
         if (expected == null) {
-            return actual == RunLevelLoadCause.ORDINARY;
+            return isTransitionlessLevelLoad(actual);
         }
         return switch (expected.entryKind()) {
             case "stage_exit" -> actual == RunLevelLoadCause.INTERIOR_RETURN;
@@ -471,6 +471,12 @@ public final class TraceRunPlaybackCoordinator {
             case "death_restart" -> actual == RunLevelLoadCause.DEATH_RESTART;
             default -> false;
         };
+    }
+
+    private static boolean isTransitionlessLevelLoad(
+            RunLevelLoadCause cause) {
+        return cause == RunLevelLoadCause.ORDINARY
+                || cause == RunLevelLoadCause.LEVEL_ADVANCE;
     }
 
     private static BonusStageType bonusType(String token) {

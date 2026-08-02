@@ -67,7 +67,7 @@ class TestTraceRunSpecialStageRows {
     }
 
     @Test
-    void s3kAdmissionsRunEveryRepresentedRowWithGenericVblankFallback(
+    void s3kAdmissionsPreserveRecordedLagWithGenericVblankFallback(
             @TempDir Path dir) throws Exception {
         writeMetadata(dir, "s3k", "s3k_special_stage", 1, false);
         Files.writeString(dir.resolve("physics.csv"),
@@ -78,7 +78,7 @@ class TestTraceRunSpecialStageRows {
         var admission = rows.admission(0);
 
         assertAll(
-                () -> assertTrue(admission.executeGameplay()),
+                () -> assertFalse(admission.executeGameplay()),
                 () -> assertTrue(admission.syntheticPlcPhase().isEmpty()),
                 () -> assertTrue(admission.advancePreservedVblankIfUnchanged()),
                 () -> assertTrue(admission.admitHardwareTiming()));

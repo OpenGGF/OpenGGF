@@ -12,6 +12,7 @@ import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.session.WorldSession;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.level.render.TileLoadRequest;
@@ -294,6 +295,164 @@ class TestTraceSessionLauncherRunBranch {
         assertEquals(List.of("submitted"),
                 context.dynamicArtLifecycle().gapEdges().stream()
                         .map(edge -> edge.phase()).toList());
+    }
+
+    @Test
+    void singleTraceSegmentOwnershipRejectsAnAlreadyOpenWindowWithoutRebasingIt() {
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
+        GameplayModeContext context = SessionManager.getCurrentGameplayMode();
+        context.dynamicArtLifecycle().openComparisonSegment();
+        long generation = context.dynamicArtDiagnostics()
+                .latestSnapshot().segmentGeneration();
+        TraceSessionLauncher session =
+                new TraceSessionLauncher(null, null, segments, null);
+
+        assertThrows(IllegalStateException.class,
+                () -> session.installDynamicArtSegments(context));
+
+        assertTrue(context.dynamicArtLifecycle().isComparisonSegmentOpen());
+        assertEquals(generation, context.dynamicArtDiagnostics()
+                .latestSnapshot().segmentGeneration());
+    }
+
+    @Test
+    void singleTraceSegmentOwnershipPublishesComparisonRowZeroAtomically() {
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
+        GameplayModeContext context = SessionManager.getCurrentGameplayMode();
+        TraceData source = segments.getFirst().trace();
+        TraceData trace = TraceFixtures.trace(
+                TraceFixtures.metadataWithDynamicArt("s2", 0, 0, 2),
+                List.of(source.getFrame(0), source.getFrame(1)),
+                Map.of(
+                        0, List.of(new TraceEvent.DynamicArtTransferState(
+                                0, List.of(), List.of())),
+                        1, List.of(new TraceEvent.DynamicArtTransferState(
+                                1, List.of(), List.of()))));
+        LiveTraceComparator comparator = new LiveTraceComparator(
+                trace, ToleranceConfig.DEFAULT, 0, () -> null, null, ignored -> { });
+        TraceSessionLauncher session =
+                new TraceSessionLauncher(null, null, segments, null);
+        setField(session, "comparator", comparator);
+        session.installDynamicArtSegments(context);
+
+        session.beforeProductionIteration();
+        comparator.afterFrameAdvanced(frame(0), false);
+        context.plcFrameLifecycle().runLogicalIteration(() -> { }, row -> {
+            row.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
+            row.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+            return null;
+        });
+        session.afterProductionIteration();
+
+        DynamicArtDiagnosticsSnapshot published =
+                context.dynamicArtDiagnostics().latestSnapshot();
+        assertTrue(published.published());
+        assertEquals(0, published.frame());
+    }
+
+    @Test
+    void abortClosesStoredDynamicArtOwnerWhenNoGameplayContextIsCurrent()
+            throws Exception {
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        SessionManager.clear();
+        GameplayModeContext context = new GameplayModeContext(
+                new WorldSession(new Sonic2GameModule()));
+        context.dynamicArtLifecycle().beginRun();
+        TraceSessionLauncher session =
+                new TraceSessionLauncher(null, null, segments, null);
+        session.installDynamicArtSegments(context);
+        assertTrue(context.dynamicArtLifecycle().isComparisonSegmentOpen());
+
+        Method abort = TraceSessionLauncher.class.getDeclaredMethod(
+                "abortIncompleteSession", Throwable.class, String.class,
+                GameLoop.class);
+        abort.setAccessible(true);
+        abort.invoke(session, null, "test abort", null);
+
+        assertFalse(context.dynamicArtLifecycle().isComparisonSegmentOpen());
+        context.plcFrameLifecycle().runLogicalIteration(() -> { }, row -> {
+            row.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
+            row.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+            return null;
+        });
+        assertTrue(context.dynamicArtLifecycle().isComparisonSegmentOpen(),
+                "abort must restore automatic lifecycle ownership");
+        context.destroy();
+    }
+
+    @Test
+    void abortResetsStoredDynamicArtOwnerWithUnpublishedProductionEdge()
+            throws Exception {
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        SessionManager.clear();
+        GameplayModeContext context = new GameplayModeContext(
+                new WorldSession(new Sonic2GameModule()));
+        context.dynamicArtLifecycle().beginRun();
+        TraceSessionLauncher session =
+                new TraceSessionLauncher(null, null, segments, null);
+        session.installDynamicArtSegments(context);
+        context.dynamicArtLifecycle().observeRamDplc(
+                GameId.S2, "sonic", 1, List.of(new TileLoadRequest(0, 1)),
+                0x1000, 0xF000);
+
+        Method abort = TraceSessionLauncher.class.getDeclaredMethod(
+                "abortIncompleteSession", Throwable.class, String.class,
+                GameLoop.class);
+        abort.setAccessible(true);
+        Object cleanupFailure = abort.invoke(
+                session, null, "test buffered-edge abort", null);
+
+        assertNull(cleanupFailure,
+                "a production-owned abort reset must recover graceful-close rejection");
+        assertFalse(context.dynamicArtLifecycle().isComparisonSegmentOpen());
+        context.plcFrameLifecycle().runLogicalIteration(() -> { }, row -> {
+            row.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
+            row.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+            return null;
+        });
+        assertTrue(context.dynamicArtLifecycle().isComparisonSegmentOpen(),
+                "automatic lifecycle ownership must resume after abort reset");
+        context.destroy();
+    }
+
+    @Test
+    void abortDoesNotMaskUnrelatedDynamicArtCloseFailure() throws Exception {
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        SessionManager.clear();
+        GameplayModeContext context = new GameplayModeContext(
+                new WorldSession(new Sonic2GameModule()));
+        context.dynamicArtLifecycle().beginRun();
+        TraceRunReplayWalker.DynamicArtSegmentController controller =
+                new TraceRunReplayWalker.DynamicArtSegmentController(
+                        new TraceRunReplayWalker.DynamicArtSegmentWindow() {
+                            @Override
+                            public void open() {
+                            }
+
+                            @Override
+                            public void close() {
+                                throw new IllegalStateException(
+                                        "unrelated close invariant");
+                            }
+                        });
+        controller.beginSegment();
+        TraceSessionLauncher session =
+                new TraceSessionLauncher(null, null, segments, null);
+        setField(session, "runDynamicArtSegments", controller);
+        setField(session, "dynamicArtSegmentGameplayMode", context);
+
+        Method abort = TraceSessionLauncher.class.getDeclaredMethod(
+                "abortIncompleteSession", Throwable.class, String.class,
+                GameLoop.class);
+        abort.setAccessible(true);
+        Throwable cleanupFailure = (Throwable) abort.invoke(
+                session, null, "test unrelated close failure", null);
+
+        assertNotNull(cleanupFailure);
+        assertEquals("unrelated close invariant", cleanupFailure.getMessage());
+        context.destroy();
     }
 
     @Test

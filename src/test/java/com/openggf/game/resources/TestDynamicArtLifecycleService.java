@@ -220,6 +220,37 @@ class TestDynamicArtLifecycleService {
     }
 
     @Test
+    void abandoningUnpublishedWindowPreservesProductionIdentityAndPendingWork() {
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        startOpen(service);
+        DynamicArtLifecycleService.ArtUpdate pending = service.observeRamDplc(
+                GameId.S2, "sonic", 1,
+                List.of(new TileLoadRequest(0, 1)), 0x1000, SONIC_VRAM);
+
+        service.abandonComparisonSegment();
+
+        assertFalse(service.isComparisonSegmentOpen());
+        assertFalse(service.observeRamDplc(
+                GameId.S2, "sonic", 1,
+                List.of(new TileLoadRequest(0, 1)), 0x1000, SONIC_VRAM)
+                .submitted(), "mapping identity must prevent duplicate submission");
+        assertEquals(List.of(pending.transferId()),
+                service.gapSnapshot().ledger().stream()
+                        .map(DynamicArtGapDiagnosticsSnapshot.Descriptor::transferId)
+                        .toList());
+
+        service.serviceProductionVBlank();
+        assertTrue(service.gapSnapshot().ledger().isEmpty(),
+                "pre-abort pending work must retire at its normal VBlank");
+        service.openComparisonSegment();
+        DynamicArtLifecycleService.ArtUpdate next = service.observeRamDplc(
+                GameId.S2, "sonic", 2,
+                List.of(new TileLoadRequest(1, 1)), 0x1000, SONIC_VRAM);
+        assertEquals(pending.transferId() + 1, next.transferId(),
+                "abandon must preserve stable monotonic transfer identities");
+    }
+
+    @Test
     void comparisonSegmentOpenRejectsPendingWorkSubmittedByPriorSegment() {
         DynamicArtLifecycleService service = new DynamicArtLifecycleService();
         startOpen(service);

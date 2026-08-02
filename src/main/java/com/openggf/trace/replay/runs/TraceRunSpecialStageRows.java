@@ -3,13 +3,17 @@ package com.openggf.trace.replay.runs;
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.sonic1.specialstage.Sonic1SpecialStageTraceData;
 import com.openggf.game.sonic3k.specialstage.S3kSpecialStageTraceData;
+import com.openggf.trace.DynamicArtTransfer;
 import com.openggf.trace.SpecialStageTraceData;
 import com.openggf.trace.TraceMetadata;
+import com.openggf.trace.timing.HardwareTimingSchedule;
+import com.openggf.trace.timing.HardwareTimingStreamLoader;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.OptionalInt;
 
 /**
  * Read-only, profile-specific pacing view for a complete-run special-stage
@@ -19,7 +23,7 @@ import java.util.Optional;
 public sealed interface TraceRunSpecialStageRows
         permits TraceRunSpecialStageRows.S1Rows,
                 TraceRunSpecialStageRows.S2Rows,
-                TraceRunSpecialStageRows.S3kRows {
+                TraceRunSpecialStageRows.BlueSphereRows {
 
     /** One represented special-stage row's execution/lifecycle policy. */
     record SpecialStageRowAdmission(
@@ -40,27 +44,56 @@ public sealed interface TraceRunSpecialStageRows
 
     SpecialStageRowAdmission admission(int localRow);
 
+    HardwareTimingSchedule hardwareTimingSchedule();
+
+    default OptionalInt terminalRow() {
+        return OptionalInt.of(rowCount() - 1);
+    }
+
     static TraceRunSpecialStageRows load(String profile, Path directory)
+            throws IOException {
+        return load(profile, directory, java.util.List.of());
+    }
+
+    static TraceRunSpecialStageRows load(
+            String profile,
+            Path directory,
+            java.util.List<DynamicArtTransfer.Descriptor> openingLedger)
             throws IOException {
         Objects.requireNonNull(profile, "profile");
         Objects.requireNonNull(directory, "directory");
         return switch (profile) {
-            case "s1_special_stage" ->
-                    new S1Rows(Sonic1SpecialStageTraceData.load(directory));
+            case "s1_special_stage" -> {
+                Sonic1SpecialStageTraceData trace =
+                        Sonic1SpecialStageTraceData.load(directory, openingLedger);
+                yield new S1Rows(trace, HardwareTimingStreamLoader.load(
+                        directory, trace.metadata()));
+            }
             case "s2_special_stage" ->
-                    new S2Rows(SpecialStageTraceData.load(directory));
-            case "s3k_special_stage" ->
-                    new S3kRows(S3kSpecialStageTraceData.load(directory));
+                    new S2Rows(SpecialStageTraceData.load(directory, openingLedger));
+            case "s3k_special_stage" -> {
+                S3kSpecialStageTraceData trace =
+                        S3kSpecialStageTraceData.load(directory);
+                yield new BlueSphereRows(trace, HardwareTimingStreamLoader.load(
+                        directory, trace.metadata()));
+            }
             default -> throw new IllegalArgumentException(
                     "Unsupported special-stage trace profile '" + profile + "'");
         };
     }
 
+    static TraceRunSpecialStageRows forS2(SpecialStageTraceData trace) {
+        return new S2Rows(Objects.requireNonNull(trace, "trace"));
+    }
+
     final class S1Rows implements TraceRunSpecialStageRows {
         private final Sonic1SpecialStageTraceData trace;
+        private final HardwareTimingSchedule hardwareTimingSchedule;
 
-        private S1Rows(Sonic1SpecialStageTraceData trace) {
+        private S1Rows(Sonic1SpecialStageTraceData trace,
+                HardwareTimingSchedule hardwareTimingSchedule) {
             this.trace = trace;
+            this.hardwareTimingSchedule = hardwareTimingSchedule;
         }
 
         @Override
@@ -81,6 +114,11 @@ public sealed interface TraceRunSpecialStageRows
                     syntheticLagPhase(lagged, trace.metadata()),
                     true,
                     true);
+        }
+
+        @Override
+        public HardwareTimingSchedule hardwareTimingSchedule() {
+            return hardwareTimingSchedule;
         }
     }
 
@@ -110,13 +148,26 @@ public sealed interface TraceRunSpecialStageRows
                     false,
                     true);
         }
+
+        @Override
+        public HardwareTimingSchedule hardwareTimingSchedule() {
+            return trace.hardwareTimingSchedule();
+        }
+
+        @Override
+        public OptionalInt terminalRow() {
+            return trace.stageFinishedFrame();
+        }
     }
 
-    final class S3kRows implements TraceRunSpecialStageRows {
+    final class BlueSphereRows implements TraceRunSpecialStageRows {
         private final S3kSpecialStageTraceData trace;
+        private final HardwareTimingSchedule hardwareTimingSchedule;
 
-        private S3kRows(S3kSpecialStageTraceData trace) {
+        private BlueSphereRows(S3kSpecialStageTraceData trace,
+                HardwareTimingSchedule hardwareTimingSchedule) {
             this.trace = trace;
+            this.hardwareTimingSchedule = hardwareTimingSchedule;
         }
 
         @Override
@@ -131,12 +182,17 @@ public sealed interface TraceRunSpecialStageRows
 
         @Override
         public SpecialStageRowAdmission admission(int localRow) {
-            trace.getFrame(localRow);
+            boolean lagged = trace.getFrame(localRow).lag();
             return new SpecialStageRowAdmission(
-                    true,
-                    Optional.empty(),
+                    !lagged,
+                    syntheticLagPhase(lagged, trace.metadata()),
                     true,
                     true);
+        }
+
+        @Override
+        public HardwareTimingSchedule hardwareTimingSchedule() {
+            return hardwareTimingSchedule;
         }
     }
 

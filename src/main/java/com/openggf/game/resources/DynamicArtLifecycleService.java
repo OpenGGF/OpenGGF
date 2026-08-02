@@ -25,6 +25,14 @@ public final class DynamicArtLifecycleService
         implements DynamicArtDiagnosticsProvider,
         RewindSnapshottable<DynamicArtLifecycleService.RewindState> {
 
+    /** Graceful close cannot publish buffered edges without an observed row. */
+    public static final class UnpublishedComparisonRowException
+            extends IllegalStateException {
+        public UnpublishedComparisonRowException() {
+            super("cannot forward dynamic-art edges without a production row");
+        }
+    }
+
     public static final String REWIND_KEY = "dynamic-art-diagnostics";
     private static final Set<String> OWNERS = Set.of(
             "sonic", "tails", "tails-tails",
@@ -214,8 +222,7 @@ public final class DynamicArtLifecycleService
         requireComparisonSegmentOpen();
         if (!bufferedEdges.isEmpty()) {
             if (nextPublicationFrame == 0) {
-                throw new IllegalStateException(
-                        "cannot forward dynamic-art edges without a production row");
+                throw new UnpublishedComparisonRowException();
             }
             int terminalFrame = nextPublicationFrame - 1;
             // The forwarded edges land on a row that was already published,
@@ -238,6 +245,27 @@ public final class DynamicArtLifecycleService
             closeComparisonSegment();
         }
         runActive = false;
+    }
+
+    /**
+     * Abandons an observer window that never published its first row.
+     * Production mapping decisions, preparations, outstanding transfers, and
+     * monotonic identities survive so ordinary lifecycle ownership can resume.
+     */
+    public void abandonComparisonSegment() {
+        requireComparisonSegmentOpen();
+        if (nextPublicationFrame != 0) {
+            throw new IllegalStateException(
+                    "only an unpublished dynamic-art segment may be abandoned");
+        }
+        bufferedEdges.clear();
+        comparisonSegmentOpen = false;
+        publishedOutstanding = List.copyOf(ledger.keySet());
+        latest = DynamicArtDiagnosticsSnapshot.unpublished(
+                deliverySerial, segmentGeneration);
+        logicalFrame = 0;
+        nextLogicalEdgeIndex = 0;
+        nextPublicationFrame = 0;
     }
 
     public ArtUpdate observeRomDplc(

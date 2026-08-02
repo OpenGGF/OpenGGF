@@ -330,6 +330,8 @@ public class MasterTitleScreen {
                     if (entry != null) {
                         if (TraceSessionLauncher.launch(entry)) {
                             tracePicker = null;
+                        } else {
+                            tracePicker.launchFailed();
                         }
                     }
                 }

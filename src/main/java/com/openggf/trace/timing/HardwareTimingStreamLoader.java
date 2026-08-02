@@ -93,7 +93,6 @@ public final class HardwareTimingStreamLoader {
         List<HardwareCompletionEdge> edges = new ArrayList<>();
         Map<HardwareWorkKind, Long> lastOrdinalByKind = new HashMap<>();
         Set<EdgeIdentity> identities = new HashSet<>();
-        HardwareCompletionEdge previous = null;
         String[] lines = content.split("\n", -1);
         for (int index = 0; index < lines.length - 1; index++) {
             String line = lines[index];
@@ -123,16 +122,48 @@ public final class HardwareTimingStreamLoader {
             if (previousOrdinal != null && edge.ordinal() <= previousOrdinal) {
                 throw rejected(timingPath, "ordinal must increase per kind " + edge.kind());
             }
-            if (previous != null
-                    && HardwareTimingSchedule.CANONICAL_ORDER.compare(previous, edge) >= 0) {
-                throw rejected(timingPath, "events must use canonical ordering");
-            }
-            previous = edge;
             edges.add(edge);
         }
+        edges = normalizeCanonicalOrder(timingPath, timingSchema, edges);
         return edges.isEmpty() && timingSchema == 1
                 ? HardwareTimingSchedule.empty()
                 : new HardwareTimingSchedule(timingSchema, edges);
+    }
+
+    private static List<HardwareCompletionEdge> normalizeCanonicalOrder(
+            Path timingPath,
+            int timingSchema,
+            List<HardwareCompletionEdge> source) throws IOException {
+        List<HardwareCompletionEdge> normalized = new ArrayList<>(source);
+        for (int i = 1; i < normalized.size(); i++) {
+            HardwareCompletionEdge previous = normalized.get(i - 1);
+            HardwareCompletionEdge current = normalized.get(i);
+            if (HardwareTimingSchedule.CANONICAL_ORDER.compare(
+                    previous, current) < 0) {
+                continue;
+            }
+            if (timingSchema == 2
+                    && previous.rawFrame() == current.rawFrame()
+                    && previous.boundary()
+                            == HardwareServiceBoundary.PRE_MAIN_LOOP
+                    && previous.kind()
+                            == HardwareWorkKind.KOS_DECOMPRESSION_QUEUE
+                    && current.boundary()
+                            == HardwareServiceBoundary.POST_OBJECTS
+                    && current.kind() == HardwareWorkKind.KOS_MODULE_QUEUE) {
+                normalized.set(i - 1, current);
+                normalized.set(i, previous);
+                continue;
+            }
+            throw rejected(timingPath, "events must use canonical ordering");
+        }
+        for (int i = 1; i < normalized.size(); i++) {
+            if (HardwareTimingSchedule.CANONICAL_ORDER.compare(
+                    normalized.get(i - 1), normalized.get(i)) >= 0) {
+                throw rejected(timingPath, "events must use canonical ordering");
+            }
+        }
+        return normalized;
     }
 
     private static HardwareCompletionEdge parseEdge(Path timingPath, int lineNumber, String line)

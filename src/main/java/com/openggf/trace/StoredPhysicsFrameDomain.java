@@ -45,16 +45,18 @@ public record StoredPhysicsFrameDomain(List<Integer> frames) {
             FrameEncoding encoding) throws IOException {
         List<Integer> frames = new ArrayList<>();
         try (BufferedReader reader = TraceFiles.openReader(physicsPath)) {
-            String header = reader.readLine();
-            if (header == null) {
-                return new StoredPhysicsFrameDomain(List.of());
-            }
+            boolean firstMeaningfulLine = true;
             String line;
             while ((line = reader.readLine()) != null) {
                 String trimmed = line.trim();
-                if (trimmed.isEmpty()) {
+                if (trimmed.isEmpty() || trimmed.startsWith("#")) {
                     continue;
                 }
+                if (firstMeaningfulLine && TraceFiles.isCsvHeader(trimmed)) {
+                    firstMeaningfulLine = false;
+                    continue;
+                }
+                firstMeaningfulLine = false;
                 int comma = trimmed.indexOf(',');
                 String rawFrame = comma >= 0
                         ? trimmed.substring(0, comma).trim()

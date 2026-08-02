@@ -51,6 +51,13 @@ public final class SpecialStageTraceData {
     }
 
     public static SpecialStageTraceData load(Path traceDirectory) throws IOException {
+        return load(traceDirectory, List.of());
+    }
+
+    public static SpecialStageTraceData load(
+            Path traceDirectory,
+            List<DynamicArtTransfer.Descriptor> openingDynamicArtLedger)
+            throws IOException {
         Path metadataPath = traceDirectory.resolve("metadata.json");
         TraceMetadata metadata = TraceMetadata.load(metadataPath);
 
@@ -77,7 +84,7 @@ public final class SpecialStageTraceData {
             : Collections.emptyMap();
         if (metadata.hasPerFrameDynamicArtTransferState()) {
             TraceData.validateDynamicArtTransferStates(
-                    metadata, frameDomain, events);
+                    metadata, frameDomain, events, openingDynamicArtLedger);
         }
         HardwareTimingSchedule hardwareTimingSchedule =
                 HardwareTimingStreamLoader.load(traceDirectory, metadata);
@@ -194,13 +201,19 @@ public final class SpecialStageTraceData {
     private static List<SpecialStageTraceFrame> loadPhysicsCsv(Path csvPath) throws IOException {
         List<SpecialStageTraceFrame> frames = new ArrayList<>();
         try (BufferedReader reader = TraceFiles.openReader(csvPath)) {
-            String line = reader.readLine(); // skip header
-            if (line == null) return frames;
+            boolean firstMeaningfulLine = true;
+            String line;
             while ((line = reader.readLine()) != null) {
                 String trimmed = line.trim();
-                if (!trimmed.isEmpty()) {
-                    frames.add(SpecialStageTraceFrame.parseCsvRow(trimmed));
+                if (trimmed.isEmpty() || trimmed.startsWith("#")) {
+                    continue;
                 }
+                if (firstMeaningfulLine && TraceFiles.isCsvHeader(trimmed)) {
+                    firstMeaningfulLine = false;
+                    continue;
+                }
+                firstMeaningfulLine = false;
+                frames.add(SpecialStageTraceFrame.parseCsvRow(trimmed));
             }
         }
         return frames;
