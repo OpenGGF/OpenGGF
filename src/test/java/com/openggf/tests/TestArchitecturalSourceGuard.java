@@ -802,7 +802,7 @@ class TestArchitecturalSourceGuard {
         Map<String, String> eventFiles = Map.of(
                 "Sonic3kAIZEvents.java", "PRESERVE_CURRENT",
                 "Sonic3kCNZEvents.java", "TITLE_OWNER",
-                "Sonic3kICZEvents.java", "IMMEDIATE",
+                "Sonic3kICZEvents.java", "RESOURCE_HANDOFF_OWNER",
                 "Sonic3kLBZEvents.java", "TITLE_OWNER",
                 "Sonic3kMGZEvents.java", "TITLE_OWNER",
                 "Sonic3kHCZEvents.java", "TITLE_OWNER",

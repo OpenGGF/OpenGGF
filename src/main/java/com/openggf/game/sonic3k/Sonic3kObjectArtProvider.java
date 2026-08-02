@@ -1031,10 +1031,6 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     @Override
     public RuntimeArtAdmissionLease prepareRuntimeArtForActTransition(
             int zoneIndex, RuntimeArtAdmissionPolicy policy) {
-        if (policy == RuntimeArtAdmissionPolicy.RESOURCE_HANDOFF_OWNER) {
-            throw new IllegalStateException(
-                    "resource-handoff runtime-art admission is not installed");
-        }
         if (policy == RuntimeArtAdmissionPolicy.PRESERVE_CURRENT) {
             reloadStandaloneRegistryForActTransition(zoneIndex);
             return null;
@@ -1045,8 +1041,8 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         RuntimeArtAdmissionOwnerKind ownerKind = switch (policy) {
             case IMMEDIATE -> RuntimeArtAdmissionOwnerKind.IMMEDIATE;
             case TITLE_OWNER -> RuntimeArtAdmissionOwnerKind.TITLE_OWNER;
-            case RESOURCE_HANDOFF_OWNER -> throw new IllegalStateException(
-                    "resource-handoff runtime-art admission is not installed");
+            case RESOURCE_HANDOFF_OWNER ->
+                    RuntimeArtAdmissionOwnerKind.RESOURCE_HANDOFF_OWNER;
             case PRESERVE_CURRENT -> throw new IllegalStateException(
                     "preserve-current admission does not issue a lease");
         };

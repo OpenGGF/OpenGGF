@@ -3,6 +3,13 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: ICZ's seamless Act 1 reload now carries its exact enemy-art
+  admission lease through the resource handoff and publishes only after the
+  module parent and both direct children are ready. Terrain and art apply
+  before the lease is consumed; any post-claim failure becomes a rewind-owned
+  terminal tombstone, while missing or already-claimed carried work is fenced
+  instead of waiting forever, so retries cannot duplicate queue work or
+  partially republish the transition.
 - Fix/Test: MGZ and LBZ seamless Act 1 reloads now leave the carried results
   SST as the sole Act 2 title publisher. MGZ transfers its ROM-derived 12/6
   reset and 10/5 exit timing through a game-neutral, rewind-owned carry

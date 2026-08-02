@@ -4,9 +4,13 @@ import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
+import com.openggf.game.RuntimeArtAdmissionOwnerKind;
 import com.openggf.game.sonic3k.Sonic3k;
 import com.openggf.game.sonic3k.Sonic3kLevel;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
+import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
+import com.openggf.game.rewind.snapshot.PlcProgressSnapshot;
+import com.openggf.game.rewind.schema.ZoneEventSchemaSidecar;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.events.Sonic3kICZEvents;
 import com.openggf.game.sonic3k.resources.S3kKosRamDestinations;
@@ -204,6 +208,23 @@ class TestS3kIczAct1TransitionHeadless {
                 "the seamless reload must transfer queue ownership to the new ICZ2 event owner");
         Sonic3kLevel icz2Level =
                 (Sonic3kLevel) GameServices.level().getCurrentLevel();
+        Sonic3kObjectArtProvider artProvider =
+                (Sonic3kObjectArtProvider) GameServices.module()
+                        .getObjectArtProvider();
+        PlcProgressSnapshot heldAdmission = artProvider.capture();
+        assertEquals(RuntimeArtAdmissionOwnerKind.RESOURCE_HANDOFF_OWNER,
+                heldAdmission.runtimeArtAdmissionOwnerKind());
+        assertTrue(heldAdmission.runtimeArtAdmissionBound());
+        assertFalse(heldAdmission.runtimeArtAdmissionConsumed());
+        assertFalse(heldAdmission.kosSubmissionArmed());
+        assertEquals(List.of(), heldAdmission.pendingKosOrdinals());
+        assertEquals(List.of(
+                        new PlcProgressSnapshot.PendingKosModule(
+                                0x375134, 0x0558),
+                        new PlcProgressSnapshot.PendingKosModule(
+                                0x3751C6, 0x0548)),
+                heldAdmission.pendingKosModules(),
+                "the exact ICZ Snowdust/StarPointer batch stays production-owned but unsubmitted");
         var beforePost = GameServices.hardwareTiming().capture().jobs();
         assertTrue(beforePost.stream()
                         .filter(job -> job.kind() == HardwareWorkKind.KOS_DECOMPRESSION_QUEUE)
@@ -316,6 +337,30 @@ class TestS3kIczAct1TransitionHeadless {
                 expectedPublishedPatterns,
                 snapshotPatternRange(icz2Level, patternStart, patternCount),
                 "the publication scan must expose every claimed pattern byte");
+        PlcProgressSnapshot admitted = artProvider.capture();
+        assertTrue(admitted.runtimeArtAdmissionConsumed(),
+                "successful terrain and art publication consumes the exact lease last");
+        assertTrue(admitted.kosSubmissionArmed());
+        assertEquals(List.of(), admitted.pendingKosOrdinals(),
+                "lease consumption arms the enemy batch but does not submit inside the event scan");
+        artProvider.processRuntimeArtQueue();
+        assertEquals(2, artProvider.capture().pendingKosOrdinals().size(),
+                "the following provider pump submits Snowdust then StarPointer exactly once");
+        byte[] publishedOwnerState =
+                ZoneEventSchemaSidecar.capture(icz2Events);
+        var providerAfterPublication = artProvider.capture();
+        int jobsAfterPublication =
+                GameServices.hardwareTiming().capture().jobs().size();
+        Sonic3kICZEvents restoredPublishedOwner = new Sonic3kICZEvents();
+        restoredPublishedOwner.init(1);
+        ZoneEventSchemaSidecar.restore(
+                restoredPublishedOwner, publishedOwnerState);
+        restoredPublishedOwner.update(1, 2);
+        assertEquals(providerAfterPublication, artProvider.capture(),
+                "restoring after successful publication cannot consume or submit twice");
+        assertEquals(jobsAfterPublication,
+                GameServices.hardwareTiming().capture().jobs().size(),
+                "restoring the successful fence cannot duplicate queue work");
         int[][] chunksAfterPublication =
                 snapshotChunkRange(icz2Level, chunkStart, chunkCount);
         manager.update();

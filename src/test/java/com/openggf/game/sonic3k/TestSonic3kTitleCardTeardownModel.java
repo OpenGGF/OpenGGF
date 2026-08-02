@@ -7,6 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.openggf.game.GameServices;
+import com.openggf.game.RuntimeArtAdmissionLease;
+import com.openggf.game.RuntimeArtAdmissionOwnerKind;
 import com.openggf.game.RuntimeArtAdmissionPolicy;
 import com.openggf.game.rewind.snapshot.PlcProgressSnapshot;
 import com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardTeardownModel;
@@ -18,6 +20,9 @@ import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Pins the ROM-derived residual lifetime of the title-card owner object.
@@ -170,24 +175,30 @@ class TestSonic3kTitleCardTeardownModel {
     }
 
     @Test
-    void directResourceHandoffPreparationFailsWithoutProviderMutation() {
+    void directResourceHandoffPreparationIssuesHeldResourceOwnerLease() {
         HeadlessTestFixture.builder()
                 .withZoneAndAct(0, 0)
                 .build();
         Sonic3kObjectArtProvider provider = (Sonic3kObjectArtProvider)
                 GameServices.module().getObjectArtProvider();
-        PlcProgressSnapshot before = provider.capture();
-
-        assertThrows(IllegalStateException.class, () ->
+        RuntimeArtAdmissionLease lease =
                 provider.prepareRuntimeArtForActTransition(
-                        0, RuntimeArtAdmissionPolicy.RESOURCE_HANDOFF_OWNER));
+                        0, RuntimeArtAdmissionPolicy.RESOURCE_HANDOFF_OWNER);
 
-        assertEquals(before, provider.capture(),
-                "unsupported direct preparation cannot refresh, schedule, issue, or arm");
+        PlcProgressSnapshot prepared = provider.capture();
+        assertEquals(RuntimeArtAdmissionOwnerKind.RESOURCE_HANDOFF_OWNER,
+                lease.ownerKind());
+        assertEquals(lease.id(), prepared.runtimeArtAdmissionLeaseId());
+        assertEquals(lease.generation(), prepared.runtimeArtAdmissionGeneration());
+        assertEquals(lease.batchFingerprint(),
+                prepared.runtimeArtAdmissionBatchFingerprint());
+        assertFalse(prepared.runtimeArtAdmissionConsumed());
+        assertFalse(prepared.kosSubmissionArmed(),
+                "resource-owner preparation must hold enemy admission");
     }
 
     @Test
-    void resourceHandoffPolicyFailsAtExecutorEntryWithoutMutation()
+    void resourceHandoffPolicyTransfersExactHeldLeaseAfterTargetInit()
             throws Exception {
         HeadlessTestFixture.builder()
                 .withZoneAndAct(0, 0)
@@ -195,22 +206,52 @@ class TestSonic3kTitleCardTeardownModel {
         var levelManager = GameServices.level();
         Sonic3kObjectArtProvider provider = (Sonic3kObjectArtProvider)
                 GameServices.module().getObjectArtProvider();
-        var gameState = GameServices.gameState();
-        gameState.setEndOfLevelActive(true);
-        gameState.setEndOfLevelFlag(true);
         var handoff = new RecordingHandoff();
         var handoffId = GameServices.seamlessTransitionResourceHandoffs()
                 .register(handoff);
 
-        int beforeZone = levelManager.getCurrentZone();
-        int beforeAct = levelManager.getCurrentAct();
-        var beforeLevel = levelManager.getCurrentLevel();
-        var beforeObjectManager = levelManager.getObjectManager();
-        var beforeRingManager = levelManager.getRingManager();
-        var beforeRenderer = levelManager.getObjectRenderManager();
-        var beforeLevelState = levelManager.getLevelGamestate();
-        PlcProgressSnapshot beforeProvider = provider.capture();
+        SeamlessLevelTransitionRequest request =
+                SeamlessLevelTransitionRequest.builder(
+                                SeamlessLevelTransitionRequest.TransitionType
+                                        .RELOAD_TARGET_LEVEL)
+                        .targetZoneAct(0, 1)
+                        .preserveMusic(true)
+                        .resourceHandoff(handoffId)
+                        .runtimeArtAdmissionPolicy(
+                                RuntimeArtAdmissionPolicy.RESOURCE_HANDOFF_OWNER)
+                        .build();
 
+        levelManager.executeActTransition(request);
+
+        RuntimeArtAdmissionLease transferred = handoff.transferredLease.get();
+        assertEquals(RuntimeArtAdmissionOwnerKind.RESOURCE_HANDOFF_OWNER,
+                transferred.ownerKind());
+        PlcProgressSnapshot prepared = provider.capture();
+        assertEquals(transferred.id(), prepared.runtimeArtAdmissionLeaseId());
+        assertEquals(transferred.generation(),
+                prepared.runtimeArtAdmissionGeneration());
+        assertEquals(transferred.batchFingerprint(),
+                prepared.runtimeArtAdmissionBatchFingerprint());
+        assertFalse(prepared.runtimeArtAdmissionConsumed());
+        assertFalse(prepared.kosSubmissionArmed());
+        assertEquals(1, handoff.transferCount.get());
+        assertThrows(IllegalStateException.class,
+                () -> GameServices.seamlessTransitionResourceHandoffs()
+                        .claim(handoffId));
+    }
+
+    @Test
+    void failedPostClaimResourceTransferIsTerminalWithoutRebindingLease()
+            throws Exception {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(0, 0)
+                .build();
+        var levelManager = GameServices.level();
+        Sonic3kObjectArtProvider provider = (Sonic3kObjectArtProvider)
+                GameServices.module().getObjectArtProvider();
+        RecordingHandoff handoff = new RecordingHandoff(true);
+        var registry = GameServices.seamlessTransitionResourceHandoffs();
+        var handoffId = registry.register(handoff);
         SeamlessLevelTransitionRequest request =
                 SeamlessLevelTransitionRequest.builder(
                                 SeamlessLevelTransitionRequest.TransitionType
@@ -225,28 +266,51 @@ class TestSonic3kTitleCardTeardownModel {
         assertThrows(IllegalStateException.class,
                 () -> levelManager.executeActTransition(request));
 
-        assertSame(handoff,
-                GameServices.seamlessTransitionResourceHandoffs().peek(handoffId),
-                "entry rejection cannot claim registry ownership");
-        assertEquals(0, handoff.transferCount);
-        assertTrue(gameState.isEndOfLevelActive(),
-                "entry rejection cannot reset Level_end_flag");
-        assertTrue(gameState.isEndOfLevelFlag(),
-                "entry rejection cannot reset End_of_level_flag");
-        assertEquals(beforeZone, levelManager.getCurrentZone());
-        assertEquals(beforeAct, levelManager.getCurrentAct());
-        assertSame(beforeLevel, levelManager.getCurrentLevel());
-        assertSame(beforeObjectManager, levelManager.getObjectManager());
-        assertSame(beforeRingManager, levelManager.getRingManager());
-        assertSame(beforeRenderer, levelManager.getObjectRenderManager());
-        assertSame(beforeLevelState, levelManager.getLevelGamestate());
-        assertEquals(beforeProvider, provider.capture(),
-                "entry rejection cannot refresh, schedule, issue, or admit art");
+        RecordingHandoff failed =
+                (RecordingHandoff) registry.failedTransfer(handoffId);
+        RuntimeArtAdmissionLease exactLease = failed.admissionLease;
+        PlcProgressSnapshot afterFailure = provider.capture();
+        assertEquals(exactLease.id(), afterFailure.runtimeArtAdmissionLeaseId());
+        assertEquals(exactLease.generation(),
+                afterFailure.runtimeArtAdmissionGeneration());
+        assertEquals(exactLease.batchFingerprint(),
+                afterFailure.runtimeArtAdmissionBatchFingerprint());
+        assertFalse(afterFailure.runtimeArtAdmissionConsumed());
+        assertFalse(afterFailure.kosSubmissionArmed());
+
+        assertThrows(IllegalStateException.class,
+                () -> levelManager.executeActTransition(request));
+        assertEquals(afterFailure, provider.capture(),
+                "a terminal claimed-transfer fence cannot bind a later batch or retry admission");
+        assertEquals(1, handoff.transferCount.get());
     }
 
     private static final class RecordingHandoff
             implements SeamlessTransitionResourceHandoff {
-        private int transferCount;
+        private final AtomicInteger transferCount;
+        private final AtomicReference<RuntimeArtAdmissionLease> transferredLease;
+        private final RuntimeArtAdmissionLease admissionLease;
+        private final boolean failTransfer;
+
+        private RecordingHandoff() {
+            this(false);
+        }
+
+        private RecordingHandoff(boolean failTransfer) {
+            this(new AtomicInteger(), new AtomicReference<>(), null,
+                    failTransfer);
+        }
+
+        private RecordingHandoff(
+                AtomicInteger transferCount,
+                AtomicReference<RuntimeArtAdmissionLease> transferredLease,
+                RuntimeArtAdmissionLease admissionLease,
+                boolean failTransfer) {
+            this.transferCount = transferCount;
+            this.transferredLease = transferredLease;
+            this.admissionLease = admissionLease;
+            this.failTransfer = failTransfer;
+        }
 
         @Override
         public DeferredLevelResourceManifest deferredResources() {
@@ -254,8 +318,19 @@ class TestSonic3kTitleCardTeardownModel {
         }
 
         @Override
+        public SeamlessTransitionResourceHandoff withAdmissionLease(
+                RuntimeArtAdmissionLease lease) {
+            return new RecordingHandoff(
+                    transferCount, transferredLease, lease, failTransfer);
+        }
+
+        @Override
         public void transferAfterTargetInit() {
-            transferCount++;
+            transferredLease.set(admissionLease);
+            transferCount.incrementAndGet();
+            if (failTransfer) {
+                throw new IllegalStateException("injected target transfer failure");
+            }
         }
     }
 }

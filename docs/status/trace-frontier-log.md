@@ -60532,3 +60532,38 @@ with engine pending `<none>`. The comparison report records 103 errors and 0
 warnings, first f33 `queue.s3k_kos_direct.busy` (`false` / `true`). This task
 does not alter timing authority or the canonical fixture; the next missing
 production submission remains a separate producer-attribution problem.
+
+## 2026-08-02 — Wave 2 Task 5 ICZ transactional resource-owner admission
+
+Context: `.worktrees/s3k-queue-lifecycle-recovery`, branch
+`bugfix/ai-s3k-queue-lifecycle-recovery`, uncommitted Task 5 candidate based on
+`d1095220c`, JDK 21.0.11, verified S3K locked-on ROM. No trace fixture changed.
+
+ICZ's `ICZ1BGE_DoTransition` reload now declares `RESOURCE_HANDOFF_OWNER` and
+transfers the provider-issued target batch lease as immutable handoff state.
+The target waits for the module parent and both direct children, claims the
+three exact carried resources, applies terrain and art, then consumes the
+exact lease as the final publication operation. Any claim, application, or
+lease-consumption exception after the destructive registry claim records a
+rewind-owned terminal failure, preventing retry or duplicate publication.
+Successful rewind retains the accepted lease identity without resubmitting
+provider work.
+
+The focused ICZ, handoff, rewind, source-guard, and timing-authority selector
+passes 101/101 (0 failures, 0 errors). The exact queue/timing/authority selector
+remains green at 142/142 (0 failures, 0 errors):
+
+`mvn -q -Dmse=off -Dtest='TestS3kKosDecompressionQueue,TestS3kKosDecompressionQueueLifecycle,TestS3kKosModuleQueue,TestS3kKosModuleReadiness,TestS3kKosStructuralSequence,TestS3kHardwareTimingReplay,TestHardwareTimingReplayPort,TestHardwareTimingAuthorityGuard,TestHardwareTimingService,TestLevelIterationHardwareTimingAdmissionOrder,TestSpecialStageHardwareTimingLifecycle,TestTraceRunHardwareTimingCoordinator,TestTraceSuppressedRowClosure,TestLoadQueueTraceComparison,TestQueueDiagnosticSnapshot' -Ds3k.rom.path=<verified-s3k> test`.
+
+The canonical command
+`mvn -q -Dmse=off -Dtest=TestS3kIczCompleteRunTraceReplay -Ds3k.rom.path=<verified-s3k> test`
+reports 1 error and 0 failures. Its terminal identity is unchanged from Wave 1
+at raw 12380: direct Kosinski ordinal `#245`, expected fingerprint
+`66961069e564ef707173bbad733f75e3ab034e29e3f4833a02e2e26af452d8fd`,
+engine-pending fingerprint
+`403b1d33b7d7af9a32e45aca194d548b6c96a8fc718daca7e19aed05d14a14c8`.
+The comparison report now records 17 errors, first f33
+`queue.s3k_kos_direct.busy` (`false` / `true`), regressed from Wave 1's 10
+errors first at f12320 `queue.s3k_kos_module.state`. Earliest campaign-commit
+attribution for that f33 regression is pending the Wave 2 Task 7 validation
+sweep; Task 5 did not rewrite history or dismiss it as inherited.
