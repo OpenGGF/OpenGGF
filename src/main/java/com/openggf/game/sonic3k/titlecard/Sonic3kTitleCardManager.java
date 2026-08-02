@@ -908,6 +908,19 @@ public class Sonic3kTitleCardManager
                 // in-level title-card timer has elapsed and its child objects
                 // have disappeared (sonic3k.asm:62244-62279).
                 GameServices.gameState().setEndOfLevelFlag(true);
+                // The same native dispatch falls through loc_2D8A2 into
+                // loc_2D8CA's LoadEnemyArt/PLCLoad_AnimalsAndExplosion
+                // (docs/skdisasm/sonic3k.asm:62302-62312), so the enemy KosM
+                // batch is released from this completion rather than at art
+                // retirement. This manager transition runs one dispatch ahead
+                // of the native owner's (see
+                // willSetInLevelEndOfLevelFlagThisUpdate); the provider defers
+                // the actual submission to the following runtime-art pass.
+                if (!heldLevelCounterDispatchOwned
+                        && GameServices.module().getObjectArtProvider() != null) {
+                    GameServices.module().getObjectArtProvider()
+                            .onInLevelTitleCardCompleted();
+                }
                 releasePreloadedActCamera();
             }
             LOG.fine("S3K title card: COMPLETE");
@@ -1113,7 +1126,21 @@ public class Sonic3kTitleCardManager
         artLoading = false;
         artLoaded = true;
         artCached = false;
-        if (GameServices.module().getObjectArtProvider() != null) {
+        // ROM reaches loc_2D8CA's LoadEnemyArt through Obj_TitleCardWait2 only
+        // after the card's display hold and child exit drain
+        // (docs/skdisasm/sonic3k.asm:62252-62312). For a pre-level card that
+        // whole lifetime elapses under the load blackout, so art retirement is
+        // the structural release point; an in-level card runs its full
+        // presentation over live gameplay, and its LoadEnemyArt belongs to the
+        // COMPLETE dispatch alongside End_of_level_flag (62302-62305) instead.
+        // Exception: results-return cards (held-level-counter flows, including
+        // the retained results SST mutating into Obj_TitleCard) still run a
+        // few dispatches behind the native owner mid-presentation, so
+        // releasing at their COMPLETE would miss the recorded completion edge
+        // entirely; they keep the art-retirement release until their display
+        // cadence is re-derived.
+        if ((!inLevelMode || heldLevelCounterDispatchOwned)
+                && GameServices.module().getObjectArtProvider() != null) {
             GameServices.module().getObjectArtProvider()
                     .onTitleCardArtRetired();
         }
