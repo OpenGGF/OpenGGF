@@ -317,11 +317,6 @@ public class Sonic3kTitleCardManager
         artDestinations.clear();
         artLoading = snapshot.artLoading();
         runtimeArtAdmissionLeaseId = snapshot.runtimeArtAdmissionLeaseId();
-        if (runtimeArtAdmissionLeaseId >= 0) {
-            GameServices.module().getObjectArtProvider().rebindRuntimeArtAdmission(
-                    runtimeArtAdmissionLeaseId,
-                    RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
-        }
         if (!snapshot.artHandles().isEmpty()) {
             var timing = GameServices.hardwareTiming();
             for (HardwareWorkHandle captured : snapshot.artHandles()) {
@@ -919,7 +914,6 @@ public class Sonic3kTitleCardManager
                 }
                 return;
             }
-            state = Sonic3kTitleCardState.COMPLETE;
             // Title KosM payload readiness only makes the card renderable.
             // Obj_TitleCardWait2 reaches LoadEnemyArt after the title owner has
             // observed every child retire, which is this sole EXIT -> COMPLETE
@@ -933,6 +927,7 @@ public class Sonic3kTitleCardManager
                 provider.consumeRuntimeArtAdmission(
                         lease, RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
             }
+            state = Sonic3kTitleCardState.COMPLETE;
             if (inLevelMode) {
                 // ROM Obj_TitleCardWait2 sets End_of_level_flag only after the
                 // in-level title-card timer has elapsed and its child objects

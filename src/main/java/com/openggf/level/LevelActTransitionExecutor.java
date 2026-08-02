@@ -5,6 +5,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.OscillationManager;
+import com.openggf.game.RuntimeArtAdmissionPolicy;
 import com.openggf.level.animation.SeamlessTransitionAnimationClock;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -27,6 +28,11 @@ final class LevelActTransitionExecutor {
     void execute(SeamlessLevelTransitionRequest request) throws IOException {
         if (request == null) {
             return;
+        }
+        if (request.runtimeArtAdmissionPolicy()
+                == RuntimeArtAdmissionPolicy.RESOURCE_HANDOFF_OWNER) {
+            throw new IllegalStateException(
+                    "resource-handoff runtime-art admission is not installed");
         }
 
         SeamlessTransitionResourceHandoff handoff =

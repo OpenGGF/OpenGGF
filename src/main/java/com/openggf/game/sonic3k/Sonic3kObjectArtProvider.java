@@ -1031,6 +1031,10 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     @Override
     public RuntimeArtAdmissionLease prepareRuntimeArtForActTransition(
             int zoneIndex, RuntimeArtAdmissionPolicy policy) {
+        if (policy == RuntimeArtAdmissionPolicy.RESOURCE_HANDOFF_OWNER) {
+            throw new IllegalStateException(
+                    "resource-handoff runtime-art admission is not installed");
+        }
         if (policy == RuntimeArtAdmissionPolicy.PRESERVE_CURRENT) {
             reloadStandaloneRegistryForActTransition(zoneIndex);
             return null;
@@ -1041,8 +1045,8 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         RuntimeArtAdmissionOwnerKind ownerKind = switch (policy) {
             case IMMEDIATE -> RuntimeArtAdmissionOwnerKind.IMMEDIATE;
             case TITLE_OWNER -> RuntimeArtAdmissionOwnerKind.TITLE_OWNER;
-            case RESOURCE_HANDOFF_OWNER ->
-                    RuntimeArtAdmissionOwnerKind.RESOURCE_HANDOFF_OWNER;
+            case RESOURCE_HANDOFF_OWNER -> throw new IllegalStateException(
+                    "resource-handoff runtime-art admission is not installed");
             case PRESERVE_CURRENT -> throw new IllegalStateException(
                     "preserve-current admission does not issue a lease");
         };
@@ -1770,19 +1774,8 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
      */
     @Override
     public void onTitleCardArtRetired() {
-        titleCardTeardown = null;
-        titleCardTeardownLeaseId = -1;
-        if (runtimeArtAdmissionLease == null) {
-            issueRuntimeArtAdmissionLease(RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
-        }
-        RuntimeArtAdmissionLease lease = runtimeArtAdmissionBound
-                ? rebindRuntimeArtAdmission(
-                        runtimeArtAdmissionLease.id(),
-                        RuntimeArtAdmissionOwnerKind.TITLE_OWNER)
-                : bindRuntimeArtAdmission(
-                        runtimeArtAdmissionLease.id(),
-                        RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
-        consumeRuntimeArtAdmission(lease, RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
+        throw new IllegalStateException(
+                "S3K title retirement requires an exact admission lease");
     }
 
     /**
@@ -1797,13 +1790,9 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
      */
     @Override
     public void onTitleCardPresentationSkipped() {
-        enemyKosSubmissionArmed = false;
-        if (runtimeArtAdmissionLease == null) {
-            issueRuntimeArtAdmissionLease(RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
-        }
-        RuntimeArtAdmissionLease lease = bindRuntimeArtAdmission(
-                runtimeArtAdmissionLease.id(),
+        RuntimeArtAdmissionLease lease = bindPendingRuntimeArtAdmission(
                 RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
+        enemyKosSubmissionArmed = false;
         titleCardTeardownLeaseId = lease.id();
         titleCardTeardown =
                 new com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardTeardownModel();

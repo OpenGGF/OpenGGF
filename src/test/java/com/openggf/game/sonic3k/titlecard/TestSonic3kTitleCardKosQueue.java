@@ -6,6 +6,7 @@ import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
 import com.openggf.game.RuntimeArtAdmissionLease;
 import com.openggf.game.RuntimeArtAdmissionOwnerKind;
+import com.openggf.game.RuntimeArtAdmissionPolicy;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.rewind.snapshot.PlcProgressSnapshot;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
@@ -25,7 +26,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -115,10 +115,6 @@ class TestSonic3kTitleCardKosQueue {
     @Test
     void readyUnclaimedTitleJobsDoNotSubmitEnemyArt() throws Exception {
         CountingObjectArtProvider provider = installCountingProvider();
-        Method schedule = Sonic3kObjectArtProvider.class.getDeclaredMethod(
-                "scheduleEnemyKosArt", int.class, int.class);
-        schedule.setAccessible(true);
-        schedule.invoke(provider, 0, 0);
 
         manager.initialize(0, 0);
         List<HardwareWorkHandle> titleHandles = moduleHandles();
@@ -187,10 +183,6 @@ class TestSonic3kTitleCardKosQueue {
         Sonic3kObjectArtProvider provider =
                 (Sonic3kObjectArtProvider) GameServices.module()
                         .getObjectArtProvider();
-        Method schedule = Sonic3kObjectArtProvider.class.getDeclaredMethod(
-                "scheduleEnemyKosArt", int.class, int.class);
-        schedule.setAccessible(true);
-        schedule.invoke(provider, 0, 0);
 
         manager.initialize(0, 0);
         List<HardwareWorkHandle> titleHandles =
@@ -337,15 +329,8 @@ class TestSonic3kTitleCardKosQueue {
 
     private static void prepareTitleLease(Sonic3kObjectArtProvider provider)
             throws Exception {
-        Method schedule = Sonic3kObjectArtProvider.class.getDeclaredMethod(
-                "scheduleEnemyKosArt", int.class, int.class);
-        schedule.setAccessible(true);
-        schedule.invoke(provider, 0, 0);
-        Method issue = Sonic3kObjectArtProvider.class.getDeclaredMethod(
-                "issueRuntimeArtAdmissionLease",
-                RuntimeArtAdmissionOwnerKind.class);
-        issue.setAccessible(true);
-        issue.invoke(provider, RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
+        provider.prepareRuntimeArtForActTransition(
+                0, RuntimeArtAdmissionPolicy.TITLE_OWNER);
     }
 
     private static void prepareExitForCompletion(Sonic3kTitleCardManager manager)

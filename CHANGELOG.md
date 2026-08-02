@@ -3,6 +3,13 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K runtime-art admission rewind now restores title-owner scalar
+  identity without inspecting provider state until the owner's next action,
+  preserving production registry restore order and exact stale/missing failure.
+  Legacy title-retirement and skipped-presentation paths can no longer invent
+  or select leases, unsupported resource-handoff admission is rejected before
+  transition or provider mutation, and the S3K builder guard validates exactly
+  one reviewed policy within each individual builder chain.
 - Refactor/Test: S3K runtime-art admission now uses generation- and
   fingerprint-bound leases with explicit immediate, preserve-current,
   title-owner, and resource-handoff policies. Title-card completion and the

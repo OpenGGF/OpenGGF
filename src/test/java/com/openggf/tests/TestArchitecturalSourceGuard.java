@@ -19,6 +19,8 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -807,18 +809,69 @@ class TestArchitecturalSourceGuard {
                 "Sonic3kMHZEvents.java", "TITLE_OWNER");
         for (var entry : eventFiles.entrySet()) {
             String eventFile = entry.getKey();
-            String source = Files.readString(SRC_MAIN.resolve(
-                    "com/openggf/game/sonic3k/events/" + eventFile));
-            int builders = source.split(
-                    "SeamlessLevelTransitionRequest\\.builder\\(", -1).length - 1;
-            int policies = source.split(
+            String source = stripCommentsAndStrings(Files.readString(SRC_MAIN.resolve(
+                    "com/openggf/game/sonic3k/events/" + eventFile)));
+            assertS3kBuilderPolicies(eventFile, source, entry.getValue());
+        }
+    }
+
+    @Test
+    void s3kPolicyGuardRejectsDuplicateAndMissingPoliciesOnSeparateBuilders() {
+        String duplicate = """
+                SeamlessLevelTransitionRequest.builder(TYPE)
+                    .runtimeArtAdmissionPolicy(RuntimeArtAdmissionPolicy.IMMEDIATE)
+                    .runtimeArtAdmissionPolicy(RuntimeArtAdmissionPolicy.IMMEDIATE)
+                    .build();
+                """;
+        String missing = """
+                SeamlessLevelTransitionRequest.builder(TYPE)
+                    .build();
+                """;
+
+        assertThrows(AssertionError.class, () ->
+                assertS3kBuilderPolicies(
+                        "DuplicatePolicyEvents.java", duplicate, "IMMEDIATE"));
+        assertThrows(AssertionError.class, () ->
+                assertS3kBuilderPolicies(
+                        "MissingPolicyEvents.java", missing, "IMMEDIATE"));
+    }
+
+    private static void assertS3kBuilderPolicies(
+            String eventFile, String source, String expectedPolicy) {
+        List<String> builderChains = seamlessTransitionBuilderChains(source);
+        assertFalse(builderChains.isEmpty(),
+                eventFile + " must retain its transition builder");
+        for (int index = 0; index < builderChains.size(); index++) {
+            String chain = builderChains.get(index);
+            int policies = chain.split(
                     "\\.runtimeArtAdmissionPolicy\\(", -1).length - 1;
-            assertTrue(builders > 0, eventFile + " must retain its transition builder");
-            assertEquals(builders, policies,
-                    eventFile + " must declare one admission policy per builder");
-            assertTrue(source.contains(
-                            "RuntimeArtAdmissionPolicy." + entry.getValue()),
-                    eventFile + " must retain the reviewed Task 2 interim policy");
+            assertEquals(1, policies,
+                    eventFile + " builder " + index
+                            + " must declare exactly one admission policy");
+            assertTrue(chain.contains(
+                            "RuntimeArtAdmissionPolicy." + expectedPolicy),
+                    eventFile + " builder " + index
+                            + " must retain the reviewed Task 2 interim policy");
+        }
+    }
+
+    private static List<String> seamlessTransitionBuilderChains(String source) {
+        String marker = "SeamlessLevelTransitionRequest.builder(";
+        String terminator = ".build()";
+        List<String> chains = new ArrayList<>();
+        int cursor = 0;
+        while (true) {
+            int start = source.indexOf(marker, cursor);
+            if (start < 0) {
+                return chains;
+            }
+            int end = source.indexOf(terminator, start + marker.length());
+            if (end < 0) {
+                throw new IllegalStateException(
+                        "unterminated seamless transition builder at offset " + start);
+            }
+            chains.add(source.substring(start, end + terminator.length()));
+            cursor = end + terminator.length();
         }
     }
 

@@ -4,9 +4,11 @@ import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
 import com.openggf.game.RuntimeArtAdmissionOwnerKind;
 import com.openggf.game.RuntimeArtAdmissionLease;
+import com.openggf.game.RuntimeArtAdmissionPolicy;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindRegistry;
+import com.openggf.game.rewind.snapshot.PlcProgressSnapshot;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
@@ -24,6 +26,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -73,35 +76,98 @@ class TestSonic3kTitleCardManagerRewind {
     }
 
     @Test
-    void snapshotStoresAndRebindsTheExactTitleAdmissionLease() throws Exception {
+    void productionRegistryRestoresTitleBeforeProviderAndConsumesTheExactLease()
+            throws Exception {
         startLevel();
         Sonic3kObjectArtProvider provider =
                 (Sonic3kObjectArtProvider) GameServices.module()
                         .getObjectArtProvider();
-        Sonic3kTitleCardManager title = new Sonic3kTitleCardManager();
+        Sonic3kTitleCardManager title = (Sonic3kTitleCardManager)
+                GameServices.module().getTitleCardProvider();
+        RewindRegistry registry = TestEnvironment.activeGameplayMode()
+                .getRewindRegistry();
+
+        List<String> productionOrder = List.copyOf(
+                registry.capture().entries().keySet());
+        assertTrue(productionOrder.indexOf(Sonic3kTitleCardManager.REWIND_KEY)
+                        < productionOrder.indexOf(provider.key()),
+                "production registers the title owner before its PLC provider");
 
         title.initializeInLevel(0, 0);
-        Sonic3kTitleCardManager.Snapshot held = title.capture();
-        long leaseId = admissionLeaseId(held);
+        prepareExitForCompletion(title);
+        CompositeSnapshot beforeCompletion = registry.capture();
+        long leaseId = admissionLeaseId((Sonic3kTitleCardManager.Snapshot)
+                beforeCompletion.get(Sonic3kTitleCardManager.REWIND_KEY));
 
         assertTrue(leaseId >= 0,
                 "title initialization binds a lease even while art is queued or cached");
         assertEquals(provider.capture().runtimeArtAdmissionLeaseId(), leaseId);
 
-        title.reset();
-        title.restore(held);
+        RuntimeArtAdmissionLease replacement =
+                provider.prepareRuntimeArtForActTransition(
+                        0, RuntimeArtAdmissionPolicy.TITLE_OWNER);
+        assertTrue(replacement.id() != leaseId);
+
+        assertDoesNotThrow(() -> registry.restore(beforeCompletion),
+                "title restore must copy its scalar before the provider restores");
         assertEquals(leaseId, admissionLeaseId(title.capture()));
-        assertEquals(leaseId, provider.rebindRuntimeArtAdmission(
-                leaseId, RuntimeArtAdmissionOwnerKind.TITLE_OWNER).id());
+        assertEquals(leaseId, provider.capture().runtimeArtAdmissionLeaseId());
 
-        provider.reloadStandaloneArtForActTransition(0);
-        var issue = Sonic3kObjectArtProvider.class.getDeclaredMethod(
-                "issueRuntimeArtAdmissionLease", RuntimeArtAdmissionOwnerKind.class);
-        issue.setAccessible(true);
-        issue.invoke(provider, RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
+        title.update();
+        assertTrue(provider.capture().runtimeArtAdmissionConsumed());
 
-        assertThrows(IllegalStateException.class, () -> title.restore(held),
-                "a stale title snapshot cannot attach itself to the current batch");
+        CompositeSnapshot afterCompletion = registry.capture();
+        RuntimeArtAdmissionLease laterReplacement =
+                provider.prepareRuntimeArtForActTransition(
+                        0, RuntimeArtAdmissionPolicy.TITLE_OWNER);
+        assertTrue(laterReplacement.id() != leaseId);
+
+        assertDoesNotThrow(() -> registry.restore(afterCompletion));
+        PlcProgressSnapshot restoredConsumed = provider.capture();
+        assertEquals(leaseId, restoredConsumed.runtimeArtAdmissionLeaseId());
+        assertTrue(restoredConsumed.runtimeArtAdmissionConsumed());
+        title.update();
+        assertTrue(provider.capture().runtimeArtAdmissionConsumed(),
+                "restoring COMPLETE cannot consume or rebind a later batch");
+    }
+
+    @Test
+    void titleRestoreDefersStaleAndMissingLeaseValidationUntilOwnerAction()
+            throws Exception {
+        startLevel();
+        Sonic3kObjectArtProvider provider =
+                (Sonic3kObjectArtProvider) GameServices.module()
+                        .getObjectArtProvider();
+        Sonic3kTitleCardManager title = (Sonic3kTitleCardManager)
+                GameServices.module().getTitleCardProvider();
+
+        title.initializeInLevel(0, 0);
+        prepareExitForCompletion(title);
+        Sonic3kTitleCardManager.Snapshot held = title.capture();
+        long leaseId = admissionLeaseId(held);
+
+        provider.prepareRuntimeArtForActTransition(
+                0, RuntimeArtAdmissionPolicy.TITLE_OWNER);
+        PlcProgressSnapshot replacement = provider.capture();
+
+        assertDoesNotThrow(() -> title.restore(held),
+                "scalar restore must not inspect the still-live provider");
+        assertEquals(replacement, provider.capture(),
+                "title restore cannot opportunistically bind current provider state");
+        assertThrows(IllegalStateException.class, title::update,
+                "the next lease-dependent action rejects the stale scalar id");
+        assertEquals(Sonic3kTitleCardState.EXIT, title.capture().state(),
+                "a rejected owner action cannot publish title completion");
+        assertFalse(provider.capture().runtimeArtAdmissionConsumed());
+
+        provider.restore(new PlcProgressSnapshot(replacement.loadEpoch()));
+        assertDoesNotThrow(() -> title.restore(held));
+        assertThrows(IllegalStateException.class, title::update,
+                "the next lease-dependent action rejects a missing lease");
+        assertEquals(Sonic3kTitleCardState.EXIT, title.capture().state(),
+                "a missing exact lease keeps the title owner retryable");
+        assertEquals(leaseId, admissionLeaseId(title.capture()));
+        assertFalse(provider.capture().kosSubmissionArmed());
     }
 
     @Test
@@ -153,14 +219,8 @@ class TestSonic3kTitleCardManagerRewind {
         field.setAccessible(true);
         CountingObjectArtProvider provider = new CountingObjectArtProvider();
         field.set(module, provider);
-        var schedule = Sonic3kObjectArtProvider.class.getDeclaredMethod(
-                "scheduleEnemyKosArt", int.class, int.class);
-        schedule.setAccessible(true);
-        schedule.invoke(provider, 0, 0);
-        var issue = Sonic3kObjectArtProvider.class.getDeclaredMethod(
-                "issueRuntimeArtAdmissionLease", RuntimeArtAdmissionOwnerKind.class);
-        issue.setAccessible(true);
-        issue.invoke(provider, RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
+        provider.prepareRuntimeArtForActTransition(
+                0, RuntimeArtAdmissionPolicy.TITLE_OWNER);
         return provider;
     }
 
@@ -168,6 +228,8 @@ class TestSonic3kTitleCardManagerRewind {
             throws Exception {
         setField(title, "state", Sonic3kTitleCardState.EXIT);
         setField(title, "exitChildrenGone", true);
+        setField(title, "inLevelExitDelayFrames", 0);
+        setField(title, "artLoading", false);
         setField(title, "actNumberVisible", true);
         boolean[] exited = (boolean[]) getField(title, "elemExited");
         java.util.Arrays.fill(exited, true);

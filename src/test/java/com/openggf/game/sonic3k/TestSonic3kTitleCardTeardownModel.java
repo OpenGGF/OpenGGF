@@ -2,6 +2,8 @@ package com.openggf.game.sonic3k;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.openggf.game.GameServices;
@@ -9,6 +11,8 @@ import com.openggf.game.RuntimeArtAdmissionPolicy;
 import com.openggf.game.rewind.snapshot.PlcProgressSnapshot;
 import com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardTeardownModel;
 import com.openggf.level.SeamlessLevelTransitionRequest;
+import com.openggf.level.SeamlessTransitionResourceHandoff;
+import com.openggf.level.resources.DeferredLevelResourceManifest;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -163,5 +167,95 @@ class TestSonic3kTitleCardTeardownModel {
 
         assertFalse(provider.capture().pendingKosOrdinals().isEmpty(),
                 "the existing following provider pump submits the armed batch");
+    }
+
+    @Test
+    void directResourceHandoffPreparationFailsWithoutProviderMutation() {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(0, 0)
+                .build();
+        Sonic3kObjectArtProvider provider = (Sonic3kObjectArtProvider)
+                GameServices.module().getObjectArtProvider();
+        PlcProgressSnapshot before = provider.capture();
+
+        assertThrows(IllegalStateException.class, () ->
+                provider.prepareRuntimeArtForActTransition(
+                        0, RuntimeArtAdmissionPolicy.RESOURCE_HANDOFF_OWNER));
+
+        assertEquals(before, provider.capture(),
+                "unsupported direct preparation cannot refresh, schedule, issue, or arm");
+    }
+
+    @Test
+    void resourceHandoffPolicyFailsAtExecutorEntryWithoutMutation()
+            throws Exception {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(0, 0)
+                .build();
+        var levelManager = GameServices.level();
+        Sonic3kObjectArtProvider provider = (Sonic3kObjectArtProvider)
+                GameServices.module().getObjectArtProvider();
+        var gameState = GameServices.gameState();
+        gameState.setEndOfLevelActive(true);
+        gameState.setEndOfLevelFlag(true);
+        var handoff = new RecordingHandoff();
+        var handoffId = GameServices.seamlessTransitionResourceHandoffs()
+                .register(handoff);
+
+        int beforeZone = levelManager.getCurrentZone();
+        int beforeAct = levelManager.getCurrentAct();
+        var beforeLevel = levelManager.getCurrentLevel();
+        var beforeObjectManager = levelManager.getObjectManager();
+        var beforeRingManager = levelManager.getRingManager();
+        var beforeRenderer = levelManager.getObjectRenderManager();
+        var beforeLevelState = levelManager.getLevelGamestate();
+        PlcProgressSnapshot beforeProvider = provider.capture();
+
+        SeamlessLevelTransitionRequest request =
+                SeamlessLevelTransitionRequest.builder(
+                                SeamlessLevelTransitionRequest.TransitionType
+                                        .RELOAD_TARGET_LEVEL)
+                        .targetZoneAct(0, 1)
+                        .preserveMusic(true)
+                        .resourceHandoff(handoffId)
+                        .runtimeArtAdmissionPolicy(
+                                RuntimeArtAdmissionPolicy.RESOURCE_HANDOFF_OWNER)
+                        .build();
+
+        assertThrows(IllegalStateException.class,
+                () -> levelManager.executeActTransition(request));
+
+        assertSame(handoff,
+                GameServices.seamlessTransitionResourceHandoffs().peek(handoffId),
+                "entry rejection cannot claim registry ownership");
+        assertEquals(0, handoff.transferCount);
+        assertTrue(gameState.isEndOfLevelActive(),
+                "entry rejection cannot reset Level_end_flag");
+        assertTrue(gameState.isEndOfLevelFlag(),
+                "entry rejection cannot reset End_of_level_flag");
+        assertEquals(beforeZone, levelManager.getCurrentZone());
+        assertEquals(beforeAct, levelManager.getCurrentAct());
+        assertSame(beforeLevel, levelManager.getCurrentLevel());
+        assertSame(beforeObjectManager, levelManager.getObjectManager());
+        assertSame(beforeRingManager, levelManager.getRingManager());
+        assertSame(beforeRenderer, levelManager.getObjectRenderManager());
+        assertSame(beforeLevelState, levelManager.getLevelGamestate());
+        assertEquals(beforeProvider, provider.capture(),
+                "entry rejection cannot refresh, schedule, issue, or admit art");
+    }
+
+    private static final class RecordingHandoff
+            implements SeamlessTransitionResourceHandoff {
+        private int transferCount;
+
+        @Override
+        public DeferredLevelResourceManifest deferredResources() {
+            return DeferredLevelResourceManifest.EMPTY;
+        }
+
+        @Override
+        public void transferAfterTargetInit() {
+            transferCount++;
+        }
     }
 }

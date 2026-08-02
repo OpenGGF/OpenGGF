@@ -2,17 +2,20 @@ package com.openggf.game.sonic3k;
 
 import com.openggf.game.RuntimeArtAdmissionLease;
 import com.openggf.game.RuntimeArtAdmissionOwnerKind;
+import com.openggf.game.RuntimeArtAdmissionPolicy;
+import com.openggf.game.GameServices;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.rewind.snapshot.PlcProgressSnapshot;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.tests.HeadlessTestFixture;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.Method;
-import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -24,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * <p>Tests verify that the key and epoch capture are stable without requiring
  * a full level load.
  */
+@RequiresRom(SonicGame.SONIC_3K)
 class TestSonic3kPlcArtRewindSnapshot {
 
     @BeforeEach
@@ -103,11 +107,8 @@ class TestSonic3kPlcArtRewindSnapshot {
     @Test
     void snapshotPreservesEnemyEntriesAndRetirementArmState()
             throws Exception {
-        Sonic3kObjectArtProvider provider = new Sonic3kObjectArtProvider();
-        Method schedule = Sonic3kObjectArtProvider.class.getDeclaredMethod(
-                "scheduleEnemyKosArt", int.class, int.class);
-        schedule.setAccessible(true);
-        schedule.invoke(provider, 0, 0);
+        Sonic3kObjectArtProvider provider = loadProvider(
+                Sonic3kZoneIds.ZONE_AIZ, 0);
         PlcProgressSnapshot beforeRetirement = provider.capture();
 
         assertEquals(3, beforeRetirement.pendingKosModules().size());
@@ -115,7 +116,9 @@ class TestSonic3kPlcArtRewindSnapshot {
                 beforeRetirement.pendingKosModules().get(0).sourceAddress());
         assertFalse(beforeRetirement.kosSubmissionArmed());
 
-        provider.onTitleCardArtRetired();
+        RuntimeArtAdmissionLease lease = exactPreparedTitleLease(provider);
+        provider.consumeRuntimeArtAdmission(
+                lease, RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
         PlcProgressSnapshot afterRetirement = provider.capture();
         assertTrue(afterRetirement.kosSubmissionArmed());
 
@@ -131,24 +134,20 @@ class TestSonic3kPlcArtRewindSnapshot {
     @Test
     void issuedLeaseIsGenerationBatchAndOwnerBoundAndConsumesExactlyOnce()
             throws Exception {
-        Sonic3kObjectArtProvider provider = scheduledProvider(
+        Sonic3kObjectArtProvider provider = loadProvider(
                 Sonic3kZoneIds.ZONE_AIZ, 0);
-        RuntimeArtAdmissionLease lease = issueLease(
-                provider, RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
+        RuntimeArtAdmissionLease lease = exactPreparedTitleLease(provider);
 
         assertEquals(1, lease.generation());
         assertNotEquals(0, lease.batchFingerprint());
         assertEquals(RuntimeArtAdmissionOwnerKind.TITLE_OWNER, lease.ownerKind());
-        assertEquals(lease, bindLease(
-                provider, lease.id(), RuntimeArtAdmissionOwnerKind.TITLE_OWNER));
-
-        consumeLease(provider,
+        provider.consumeRuntimeArtAdmission(
                 lease, RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
 
         assertTrue(provider.capture().kosSubmissionArmed());
         assertTrue(snapshotAdmissionConsumed(provider.capture()));
         assertThrows(IllegalStateException.class, () ->
-                consumeLease(provider,
+                provider.consumeRuntimeArtAdmission(
                         lease, RuntimeArtAdmissionOwnerKind.TITLE_OWNER));
     }
 
@@ -158,44 +157,40 @@ class TestSonic3kPlcArtRewindSnapshot {
         RuntimeArtAdmissionLease fabricated = new RuntimeArtAdmissionLease(
                 17, 1, 0x1234, RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
         assertThrows(IllegalStateException.class, () ->
-                consumeLease(missing,
+                missing.consumeRuntimeArtAdmission(
                         fabricated, RuntimeArtAdmissionOwnerKind.TITLE_OWNER));
 
-        Sonic3kObjectArtProvider provider = scheduledProvider(
+        Sonic3kObjectArtProvider provider = loadProvider(
                 Sonic3kZoneIds.ZONE_AIZ, 0);
-        RuntimeArtAdmissionLease stale = issueLease(
-                provider, RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
-        bindLease(provider,
-                stale.id(), RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
+        RuntimeArtAdmissionLease stale = exactPreparedTitleLease(provider);
 
-        schedule(provider, Sonic3kZoneIds.ZONE_ICZ, 0);
-        RuntimeArtAdmissionLease current = issueLease(
-                provider, RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
-        bindLease(provider,
-                current.id(), RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
+        provider.prepareRuntimeArtForActTransition(
+                Sonic3kZoneIds.ZONE_ICZ,
+                RuntimeArtAdmissionPolicy.TITLE_OWNER);
+        RuntimeArtAdmissionLease current = exactPreparedTitleLease(provider);
 
         assertThrows(IllegalStateException.class, () ->
-                consumeLease(provider,
+                provider.consumeRuntimeArtAdmission(
                         stale, RuntimeArtAdmissionOwnerKind.TITLE_OWNER));
         assertThrows(IllegalStateException.class, () ->
-                consumeLease(provider,
+                provider.consumeRuntimeArtAdmission(
                         new RuntimeArtAdmissionLease(
                                 current.id(), current.generation() + 1,
                                 current.batchFingerprint(), current.ownerKind()),
                         RuntimeArtAdmissionOwnerKind.TITLE_OWNER));
         assertThrows(IllegalStateException.class, () ->
-                consumeLease(provider,
+                provider.consumeRuntimeArtAdmission(
                         new RuntimeArtAdmissionLease(
                                 current.id(), current.generation(),
                                 current.batchFingerprint() ^ 1, current.ownerKind()),
                         RuntimeArtAdmissionOwnerKind.TITLE_OWNER));
         assertThrows(IllegalStateException.class, () ->
-                consumeLease(provider,
+                provider.consumeRuntimeArtAdmission(
                         current, RuntimeArtAdmissionOwnerKind.IMMEDIATE));
 
         assertFalse(provider.capture().kosSubmissionArmed(),
                 "failed release attempts cannot arm the current batch");
-        consumeLease(provider,
+        provider.consumeRuntimeArtAdmission(
                 current, RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
         assertTrue(provider.capture().kosSubmissionArmed(),
                 "the exact current lease remains consumable after rejected attempts");
@@ -204,11 +199,9 @@ class TestSonic3kPlcArtRewindSnapshot {
     @Test
     void heldAndConsumedAdmissionLeasesRoundTripWithoutClaimingCurrentBatch()
             throws Exception {
-        Sonic3kObjectArtProvider provider = scheduledProvider(
+        Sonic3kObjectArtProvider provider = loadProvider(
                 Sonic3kZoneIds.ZONE_ICZ, 0);
-        RuntimeArtAdmissionLease held = issueLease(
-                provider, RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
-        bindLease(provider, held.id(), RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
+        RuntimeArtAdmissionLease held = exactPreparedTitleLease(provider);
         PlcProgressSnapshot heldSnapshot = provider.capture();
 
         Sonic3kObjectArtProvider restoredHeld = new Sonic3kObjectArtProvider();
@@ -233,9 +226,10 @@ class TestSonic3kPlcArtRewindSnapshot {
     @Test
     void skippedTitleSnapshotRetainsItsExactLeaseThroughTickThirtyFour()
             throws Exception {
-        Sonic3kObjectArtProvider provider = new Sonic3kObjectArtProvider();
-        RuntimeArtAdmissionLease lease = issueLease(
-                provider, RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
+        Sonic3kObjectArtProvider provider = loadProvider(
+                Sonic3kZoneIds.ZONE_AIZ, 0);
+        PlcProgressSnapshot prepared = provider.capture();
+        RuntimeArtAdmissionLease lease = leaseFrom(prepared);
         provider.onTitleCardPresentationSkipped();
         for (int tick = 1; tick <= 33; tick++) {
             provider.processRuntimeArtQueue();
@@ -254,111 +248,86 @@ class TestSonic3kPlcArtRewindSnapshot {
                         lease, RuntimeArtAdmissionOwnerKind.TITLE_OWNER));
     }
 
-    private static Sonic3kObjectArtProvider scheduledProvider(int zone, int act)
-            throws Exception {
-        Sonic3kObjectArtProvider provider = new Sonic3kObjectArtProvider();
-        schedule(provider, zone, act);
-        return provider;
+    @Test
+    void legacyRetirementCannotFabricateOrSelectAnAdmissionLease() {
+        Sonic3kObjectArtProvider missing = new Sonic3kObjectArtProvider();
+        PlcProgressSnapshot missingBefore = missing.capture();
+
+        assertThrows(IllegalStateException.class,
+                missing::onTitleCardArtRetired);
+        assertEquals(missingBefore, missing.capture(),
+                "missing legacy retirement cannot schedule, issue, bind, or arm work");
+
+        Sonic3kObjectArtProvider loaded = loadProvider(
+                Sonic3kZoneIds.ZONE_AIZ, 0);
+        PlcProgressSnapshot heldBefore = loaded.capture();
+
+        assertThrows(IllegalStateException.class,
+                loaded::onTitleCardArtRetired);
+        assertEquals(heldBefore, loaded.capture(),
+                "legacy retirement cannot select and release the current lease");
     }
 
-    private static void schedule(
-            Sonic3kObjectArtProvider provider, int zone, int act) throws Exception {
-        Method schedule = Sonic3kObjectArtProvider.class.getDeclaredMethod(
-                "scheduleEnemyKosArt", int.class, int.class);
-        schedule.setAccessible(true);
-        schedule.invoke(provider, zone, act);
+    @Test
+    void skippedPresentationRequiresAnExistingUnboundTitleLease() {
+        Sonic3kObjectArtProvider missing = new Sonic3kObjectArtProvider();
+        PlcProgressSnapshot missingBefore = missing.capture();
+
+        assertThrows(IllegalStateException.class,
+                missing::onTitleCardPresentationSkipped);
+        assertEquals(missingBefore, missing.capture(),
+                "missing skipped-title ownership cannot mutate provider state");
+
+        Sonic3kObjectArtProvider wrongOwner = loadProvider(
+                Sonic3kZoneIds.ZONE_AIZ, 0);
+        wrongOwner.prepareRuntimeArtForActTransition(
+                Sonic3kZoneIds.ZONE_AIZ,
+                RuntimeArtAdmissionPolicy.IMMEDIATE);
+        PlcProgressSnapshot wrongOwnerBefore = wrongOwner.capture();
+
+        assertThrows(IllegalStateException.class,
+                wrongOwner::onTitleCardPresentationSkipped);
+        assertEquals(wrongOwnerBefore, wrongOwner.capture(),
+                "wrong-owner skipped presentation cannot clear, schedule, or arm work");
     }
 
-    private static RuntimeArtAdmissionLease issueLease(
-            Sonic3kObjectArtProvider provider,
-            RuntimeArtAdmissionOwnerKind ownerKind) throws Exception {
-        Method issue;
-        try {
-            issue = Sonic3kObjectArtProvider.class.getDeclaredMethod(
-                    "issueRuntimeArtAdmissionLease",
-                    RuntimeArtAdmissionOwnerKind.class);
-        } catch (NoSuchMethodException e) {
-            fail("provider must production-issue a typed runtime-art lease");
-            return null;
+    private static Sonic3kObjectArtProvider loadProvider(int zone, int act) {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(zone, act)
+                .build();
+        return (Sonic3kObjectArtProvider) GameServices.module()
+                .getObjectArtProvider();
+    }
+
+    private static boolean snapshotAdmissionConsumed(PlcProgressSnapshot snapshot) {
+        return snapshot.runtimeArtAdmissionConsumed();
+    }
+
+    private static RuntimeArtAdmissionLease leaseFrom(PlcProgressSnapshot snapshot) {
+        return new RuntimeArtAdmissionLease(
+                snapshot.runtimeArtAdmissionLeaseId(),
+                snapshot.runtimeArtAdmissionGeneration(),
+                snapshot.runtimeArtAdmissionBatchFingerprint(),
+                snapshot.runtimeArtAdmissionOwnerKind());
+    }
+
+    private static RuntimeArtAdmissionLease exactPreparedTitleLease(
+            Sonic3kObjectArtProvider provider) {
+        PlcProgressSnapshot snapshot = provider.capture();
+        if (snapshot.runtimeArtAdmissionBound()) {
+            return provider.rebindRuntimeArtAdmission(
+                    snapshot.runtimeArtAdmissionLeaseId(),
+                    RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
         }
-        issue.setAccessible(true);
-        try {
-            return (RuntimeArtAdmissionLease) issue.invoke(provider, ownerKind);
-        } catch (InvocationTargetException e) {
-            if (e.getCause() instanceof Exception cause) {
-                throw cause;
-            }
-            throw e;
-        }
-    }
-
-    private static RuntimeArtAdmissionLease bindLease(
-            Sonic3kObjectArtProvider provider,
-            long leaseId,
-            RuntimeArtAdmissionOwnerKind ownerKind) throws Exception {
-        return (RuntimeArtAdmissionLease) invokeAdmissionMethod(
-                provider,
-                "bindRuntimeArtAdmission",
-                new Class<?>[] {long.class, RuntimeArtAdmissionOwnerKind.class},
-                leaseId,
-                ownerKind);
-    }
-
-    private static void consumeLease(
-            Sonic3kObjectArtProvider provider,
-            RuntimeArtAdmissionLease lease,
-            RuntimeArtAdmissionOwnerKind ownerKind) throws Exception {
-        invokeAdmissionMethod(
-                provider,
-                "consumeRuntimeArtAdmission",
-                new Class<?>[] {
-                        RuntimeArtAdmissionLease.class,
-                        RuntimeArtAdmissionOwnerKind.class
-                },
-                lease,
-                ownerKind);
-    }
-
-    private static Object invokeAdmissionMethod(
-            Sonic3kObjectArtProvider provider,
-            String methodName,
-            Class<?>[] parameterTypes,
-            Object... arguments) throws Exception {
-        Method method;
-        try {
-            method = Sonic3kObjectArtProvider.class.getMethod(
-                    methodName, parameterTypes);
-        } catch (NoSuchMethodException e) {
-            fail("provider is missing runtime-art admission method " + methodName);
-            return null;
-        }
-        try {
-            return method.invoke(provider, arguments);
-        } catch (InvocationTargetException e) {
-            if (e.getCause() instanceof Exception cause) {
-                throw cause;
-            }
-            throw e;
-        }
-    }
-
-    private static boolean snapshotAdmissionConsumed(PlcProgressSnapshot snapshot)
-            throws Exception {
-        Method accessor;
-        try {
-            accessor = PlcProgressSnapshot.class.getMethod(
-                    "runtimeArtAdmissionConsumed");
-        } catch (NoSuchMethodException e) {
-            fail("PLC rewind snapshot must retain lease consumption state");
-            return false;
-        }
-        return (boolean) accessor.invoke(snapshot);
+        return provider.bindPendingRuntimeArtAdmission(
+                RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
     }
 
     @Test
     void skippedInitialTitleOwnerHoldsRuntimeArtThroughTickThirtyThree()
             throws Exception {
-        Sonic3kObjectArtProvider provider = new Sonic3kObjectArtProvider();
+        Sonic3kObjectArtProvider provider = loadProvider(
+                Sonic3kZoneIds.ZONE_AIZ, 0);
         provider.onTitleCardPresentationSkipped();
 
         for (int tick = 1; tick <= 33; tick++) {
@@ -374,7 +343,8 @@ class TestSonic3kPlcArtRewindSnapshot {
     @Test
     void skippedInitialTitleOwnerReleasesRuntimeArtOnTickThirtyFourOnlyOnce()
             throws Exception {
-        Sonic3kObjectArtProvider provider = new Sonic3kObjectArtProvider();
+        Sonic3kObjectArtProvider provider = loadProvider(
+                Sonic3kZoneIds.ZONE_AIZ, 0);
         provider.onTitleCardPresentationSkipped();
 
         for (int tick = 1; tick <= 34; tick++) {
@@ -397,11 +367,8 @@ class TestSonic3kPlcArtRewindSnapshot {
 
     @Test
     void iczEnemyArtScheduleMatchesLoadEnemyArtTable() throws Exception {
-        Sonic3kObjectArtProvider provider = new Sonic3kObjectArtProvider();
-        Method schedule = Sonic3kObjectArtProvider.class.getDeclaredMethod(
-                "scheduleEnemyKosArt", int.class, int.class);
-        schedule.setAccessible(true);
-        schedule.invoke(provider, Sonic3kZoneIds.ZONE_ICZ, 0);
+        Sonic3kObjectArtProvider provider = loadProvider(
+                Sonic3kZoneIds.ZONE_ICZ, 0);
 
         PlcProgressSnapshot scheduled = provider.capture();
         assertEquals(List.of(
@@ -412,7 +379,9 @@ class TestSonic3kPlcArtRewindSnapshot {
                         + "(sonic3k.asm:64392-64395)");
         assertFalse(scheduled.kosSubmissionArmed());
 
-        provider.onTitleCardArtRetired();
+        RuntimeArtAdmissionLease lease = exactPreparedTitleLease(provider);
+        provider.consumeRuntimeArtAdmission(
+                lease, RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
         assertTrue(provider.capture().kosSubmissionArmed(),
                 "LoadEnemyArt runs when the normal title-card owner retires "
                         + "(sonic3k.asm:62287-62300)");
@@ -447,11 +416,7 @@ class TestSonic3kPlcArtRewindSnapshot {
             int zone, int act,
             List<PlcProgressSnapshot.PendingKosModule> expected)
             throws Exception {
-        Sonic3kObjectArtProvider provider = new Sonic3kObjectArtProvider();
-        Method schedule = Sonic3kObjectArtProvider.class.getDeclaredMethod(
-                "scheduleEnemyKosArt", int.class, int.class);
-        schedule.setAccessible(true);
-        schedule.invoke(provider, zone, act);
+        Sonic3kObjectArtProvider provider = loadProvider(zone, act);
 
         PlcProgressSnapshot beforeRetirement = provider.capture();
         assertEquals(expected, beforeRetirement.pendingKosModules());
@@ -459,7 +424,9 @@ class TestSonic3kPlcArtRewindSnapshot {
                 "LoadEnemyArt must not submit before title-card retirement");
         assertFalse(beforeRetirement.kosSubmissionArmed());
 
-        provider.onTitleCardArtRetired();
+        RuntimeArtAdmissionLease lease = exactPreparedTitleLease(provider);
+        provider.consumeRuntimeArtAdmission(
+                lease, RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
         PlcProgressSnapshot armed = provider.capture();
         assertTrue(armed.kosSubmissionArmed());
 
