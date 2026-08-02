@@ -63,6 +63,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -150,14 +152,30 @@ class TestGameplayModeContextRewindRegistry {
     void actTransitionRebindMovesOnlyObjectAndRingManagers() {
         GameplayModeContext ctx = buildAttachedContext();
         RewindRegistry registry = ctx.getRewindRegistry();
-        registry.register(adapter("object-manager"));
-        registry.register(adapter("rings"));
-        registry.register(adapter("s3k-title-card"));
-        registry.register(adapter("s3k-plc-art"));
-        registry.register(adapter("level-event"));
-        registry.register(adapter("solid-objects"));
-        registry.register(adapter("tilemap-mutations"));
-        List<String> before = List.copyOf(registry.capture().entries().keySet());
+        @SuppressWarnings("unchecked")
+        RewindSnapshottable<ObjectManagerSnapshot> sourceObjects =
+                mock(RewindSnapshottable.class);
+        ObjectManagerSnapshot sourceObjectSnapshot = mock(ObjectManagerSnapshot.class);
+        when(sourceObjects.key()).thenReturn("object-manager");
+        when(sourceObjects.capture()).thenReturn(sourceObjectSnapshot);
+        registry.register(sourceObjects);
+        RingManager sourceRings = mock(RingManager.class);
+        RingSnapshot sourceRingSnapshot = mock(RingSnapshot.class);
+        when(sourceRings.key()).thenReturn("rings");
+        when(sourceRings.capture()).thenReturn(sourceRingSnapshot);
+        registry.register(sourceRings);
+        RewindSnapshottable<Integer> title = adapter("s3k-title-card");
+        RewindSnapshottable<Integer> provider = adapter("s3k-plc-art");
+        RewindSnapshottable<Integer> event = adapter("level-event");
+        RewindSnapshottable<Integer> solids = adapter("solid-objects");
+        RewindSnapshottable<Integer> tilemap = adapter("tilemap-mutations");
+        registry.register(title);
+        registry.register(provider);
+        registry.register(event);
+        registry.register(solids);
+        registry.register(tilemap);
+        CompositeSnapshot sourceSnapshot = registry.capture();
+        List<String> before = List.copyOf(sourceSnapshot.entries().keySet());
 
         ObjectManager replacementObjects = mock(ObjectManager.class);
         @SuppressWarnings("unchecked")
@@ -178,6 +196,18 @@ class TestGameplayModeContextRewindRegistry {
         assertEquals(List.of("object-manager", "rings"), after.subList(after.size() - 2, after.size()));
         assertTrue(after.indexOf("s3k-title-card") < after.indexOf("s3k-plc-art"),
                 "title-before-provider restore ordering must remain unchanged");
+
+        registry.restore(sourceSnapshot);
+
+        verify(objectAdapter).restore(sourceObjectSnapshot);
+        verify(replacementRings).restore(sourceRingSnapshot);
+        verify(sourceObjects, never()).restore(sourceObjectSnapshot);
+        verify(sourceRings, never()).restore(sourceRingSnapshot);
+        assertEquals(1, ((TrackingAdapter) title).restoreCount);
+        assertEquals(1, ((TrackingAdapter) provider).restoreCount);
+        assertEquals(1, ((TrackingAdapter) event).restoreCount);
+        assertEquals(1, ((TrackingAdapter) solids).restoreCount);
+        assertEquals(1, ((TrackingAdapter) tilemap).restoreCount);
     }
 
     @Test
@@ -189,21 +219,31 @@ class TestGameplayModeContextRewindRegistry {
     }
 
     private static RewindSnapshottable<Integer> adapter(String key) {
-        return new RewindSnapshottable<>() {
-            @Override
-            public String key() {
-                return key;
-            }
+        return new TrackingAdapter(key);
+    }
 
-            @Override
-            public Integer capture() {
-                return 1;
-            }
+    private static final class TrackingAdapter implements RewindSnapshottable<Integer> {
+        private final String key;
+        private int restoreCount;
 
-            @Override
-            public void restore(Integer snapshot) {
-            }
-        };
+        private TrackingAdapter(String key) {
+            this.key = key;
+        }
+
+        @Override
+        public String key() {
+            return key;
+        }
+
+        @Override
+        public Integer capture() {
+            return 1;
+        }
+
+        @Override
+        public void restore(Integer snapshot) {
+            restoreCount++;
+        }
     }
 
     private static List<String> withoutTransitionManagers(List<String> keys) {

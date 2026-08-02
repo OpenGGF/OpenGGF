@@ -60515,9 +60515,11 @@ CNZ's `CNZ1BGE_DoTransition` reload now declares `TITLE_OWNER`. The same
 production `Obj_LevelResults` SST survives the reload, publishes the title on
 its following dispatch, binds the target batch's exact lease, and admits the
 four CNZ Act 2 enemy KosM parents only after title `COMPLETE`. Rewind coverage
-crosses the pre-reload, target-recreation, pre-title-publication, and
-post-completion layouts; the reload rebinds only the replaced object-manager
-and ring-manager adapters, retaining title-before-provider restore order.
+proves a source snapshot restores only before the reload, then the seamless
+boundary reroot makes source frames inaccessible in both live and trace rewind
+history. New-root, post-recreation, pre-title-publication, and post-completion
+snapshots restore through the rebound target object/ring managers; the reload
+rebinds only those adapters and retains title-before-provider restore order.
 
 The exact queue/timing/authority selector remains green at 142/142 (0 failures,
 0 errors). The canonical command

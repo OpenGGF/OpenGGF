@@ -8,7 +8,8 @@ All notable changes to the OpenGGF project are documented in this file.
   enemy art until that title reaches `COMPLETE`, publishes the four title KosM
   parents and four enemy parents once at their production boundaries, rejects
   stale pre-reload owners, and rebinds only the replaced object/ring rewind
-  adapters so cross-layout restores retain the carried owner.
+  adapters. Seamless-transition rewind rerooting makes the source layout
+  inaccessible, while target-root restores retain the carried owner.
 - Fix/Test: S3K runtime-art admission rewind now restores title-owner scalar
   identity without inspecting provider state until the owner's next action,
   preserving production registry restore order and exact stale/missing failure.

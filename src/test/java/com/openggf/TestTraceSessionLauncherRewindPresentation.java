@@ -8,16 +8,20 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
+import com.openggf.game.GameMode;
 import com.openggf.game.rewind.InMemoryKeyframeStore;
 import com.openggf.game.rewind.InputSource;
 import com.openggf.game.rewind.PlaybackController;
 import com.openggf.game.rewind.RewindController;
 import com.openggf.game.rewind.RewindRegistry;
+import com.openggf.game.recording.UserRecordingRuntimeControls;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.FadeManager;
+import com.openggf.level.LevelManager;
+import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.live.LiveTraceComparator;
@@ -39,6 +43,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
 import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class TestTraceSessionLauncherRewindPresentation {
     private SonicConfigurationService config;
@@ -263,8 +269,34 @@ class TestTraceSessionLauncherRewindPresentation {
             rewindController.recordExternalStep();
         }
         setField(launcher, "rewindController", rewindController);
+        setStaticField(TraceSessionLauncher.class, "activeSession", launcher);
+        var admission = new LevelIterationAdmissionController();
+        var level = mock(LevelManager.class);
+        var request = SeamlessLevelTransitionRequest.builder(
+                SeamlessLevelTransitionRequest.TransitionType.MUTATE_ONLY)
+                .build();
+        when(level.consumeSeamlessTransitionRequest()).thenReturn(request);
+        Runnable startPendingTitle = mock(Runnable.class);
 
-        launcher.recordExternalRewindFrameAtBoundary();
+        admission.admit(
+                GameMode.LEVEL,
+                () -> false,
+                () -> LevelFrameResult.SETUP_ONLY,
+                level,
+                TestEnvironment.activeGameplayMode(),
+                false,
+                mock(UserRecordingRuntimeControls.class),
+                startPendingTitle,
+                () -> { },
+                () -> { });
+        verify(level).applySeamlessTransition(request);
+        verify(startPendingTitle).run();
+
+        assertTrue(admission.completePendingBoundary(
+                true,
+                ignored -> { },
+                () -> { },
+                TestEnvironment::activeGameplayMode));
 
         assertEquals(6, rewindController.currentFrame());
         assertEquals(6, rewindController.earliestAvailableFrame());
