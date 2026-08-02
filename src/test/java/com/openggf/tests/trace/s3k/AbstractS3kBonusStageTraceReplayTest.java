@@ -27,11 +27,16 @@ public abstract class AbstractS3kBonusStageTraceReplayTest extends AbstractTrace
 
     @Override
     protected Integer semanticTimingPrefixLastRawFrame(TraceData trace) {
+        return deriveLastBonusRawFrame(trace);
+    }
+
+    static int deriveLastBonusRawFrame(TraceData trace) {
         List<TraceFrame> representedFrames = new ArrayList<>();
         List<ZoneActState> zoneActStates = new ArrayList<>();
         for (int traceIndex = 0; traceIndex < trace.frameCount(); traceIndex++) {
-            representedFrames.add(trace.getFrame(traceIndex));
-            for (var event : trace.getEventsForFrame(traceIndex)) {
+            TraceFrame frame = trace.getFrame(traceIndex);
+            representedFrames.add(frame);
+            for (var event : trace.getEventsForFrame(frame.frame())) {
                 if (event instanceof ZoneActState state) {
                     zoneActStates.add(state);
                 }

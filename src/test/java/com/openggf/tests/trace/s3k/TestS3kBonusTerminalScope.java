@@ -1,10 +1,13 @@
 package com.openggf.tests.trace.s3k;
 
 import com.openggf.trace.TraceEvent.ZoneActState;
+import com.openggf.trace.TraceData;
+import com.openggf.trace.TraceFixtures;
 import com.openggf.trace.TraceFrame;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -19,6 +22,19 @@ class TestS3kBonusTerminalScope {
                 frames,
                 List.of(new ZoneActState(0, 19, 0, 0, 12),
                         new ZoneActState(1277, 0, 0, 0, 140))));
+    }
+
+    @Test
+    void derivesBoundaryWhenRawFramesDoNotEqualTraceIndexes() {
+        TraceData trace = TraceFixtures.trace(
+                TraceFixtures.metadata("s3k", 19, 0),
+                List.of(frame(0), frame(2), frame(3)),
+                Map.of(
+                        0, List.of(new ZoneActState(0, 19, 0, 0, 12)),
+                        3, List.of(new ZoneActState(3, 0, 0, 0, 140))));
+
+        assertEquals(2,
+                AbstractS3kBonusStageTraceReplayTest.deriveLastBonusRawFrame(trace));
     }
 
     @Test
