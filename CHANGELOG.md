@@ -3,6 +3,15 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: the maintained S3K native recorder now attributes an exact
+  final-active KosM FIFO retirement to the ROM's post-object service from its
+  canonical one-head shift, even when the sampled level counter is held.
+  Malformed, stale, reset-crossing, multi-head, and cardinality-inconsistent
+  transitions fail closed; frozen Lua recorders remain unchanged. Trace replay
+  rejects a corrected held-row POST fixture during installation as
+  `unsupported-held-row-POST` before touching gameplay or timing state, because
+  recorded authority still cannot manufacture the omitted CPU phase or prepare
+  its parent job.
 - Fix/Test: MHZ fixed SST occupants, plane switchers, pollen, cutscene children,
   pulley, Curled Vine, Madmole, and enemy-touch bounce now follow their ROM slot,
   lifetime, geometry, and resolved-contact semantics. The complete-run physics

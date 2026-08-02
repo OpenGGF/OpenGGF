@@ -1,0 +1,119 @@
+package com.openggf.trace.replay;
+
+import com.openggf.game.session.GameplayModeContext;
+import com.openggf.game.timing.HardwareServiceBoundary;
+import com.openggf.game.timing.HardwareTimingService;
+import com.openggf.game.timing.HardwareWorkKind;
+import com.openggf.trace.TraceData;
+import com.openggf.trace.TraceFixtures;
+import com.openggf.trace.TraceFrame;
+import com.openggf.trace.timing.HardwareCompletionEdge;
+import com.openggf.trace.timing.HardwareTimingSchedule;
+import org.junit.jupiter.api.Test;
+
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
+class TestTraceHardwareTimingScheduleCompiler {
+
+    @Test
+    void installRejectsHeldRowPostBeforeFixtureOrTimingMutation() {
+        TraceData trace = trace(
+                6350,
+                0x2a,
+                6351,
+                0x2a,
+                edge(6351, HardwareServiceBoundary.POST_OBJECTS));
+        TraceReplayFixture fixture = mock(TraceReplayFixture.class);
+
+        IllegalStateException error = assertThrows(
+                IllegalStateException.class,
+                () -> TraceReplaySessionBootstrap.installHardwareTimingReplay(
+                        trace, fixture, true));
+
+        assertTrue(error.getMessage().contains("unsupported-held-row-POST"),
+                error::getMessage);
+        assertTrue(error.getMessage().contains("raw_frame=6351"),
+                error::getMessage);
+        verifyNoInteractions(fixture);
+    }
+
+    @Test
+    void installAcceptsOrdinaryCurrentRowPost() {
+        TraceData trace = trace(
+                100,
+                0x2a,
+                101,
+                0x2b,
+                edge(101, HardwareServiceBoundary.POST_OBJECTS));
+        TraceReplayFixture fixture = installingFixture();
+
+        assertDoesNotThrow(() ->
+                TraceReplaySessionBootstrap.installHardwareTimingReplay(
+                        trace, fixture, true));
+
+        verify(fixture).installHardwareTimingReplay(any());
+    }
+
+    @Test
+    void installAcceptsHeldRowPreMainLoop() {
+        TraceData trace = trace(
+                200,
+                0x2a,
+                201,
+                0x2a,
+                edge(201, HardwareServiceBoundary.PRE_MAIN_LOOP));
+        TraceReplayFixture fixture = installingFixture();
+
+        assertDoesNotThrow(() ->
+                TraceReplaySessionBootstrap.installHardwareTimingReplay(
+                        trace, fixture, true));
+
+        verify(fixture).installHardwareTimingReplay(any());
+    }
+
+    private static TraceData trace(
+            int previousRawFrame,
+            int previousGameplayCounter,
+            int currentRawFrame,
+            int currentGameplayCounter,
+            HardwareCompletionEdge edge) {
+        return TraceFixtures.trace(
+                TraceFixtures.metadataWithHardwareTiming("s3k", 0, 1, 2),
+                List.of(
+                        TraceFrame.executionTestFrame(
+                                previousRawFrame, 10, previousGameplayCounter, 0),
+                        TraceFrame.executionTestFrame(
+                                currentRawFrame, 11, currentGameplayCounter, 0)),
+                new HardwareTimingSchedule(2, List.of(edge)));
+    }
+
+    private static HardwareCompletionEdge edge(
+            int rawFrame,
+            HardwareServiceBoundary boundary) {
+        return new HardwareCompletionEdge(
+                rawFrame,
+                boundary,
+                HardwareWorkKind.KOS_MODULE_QUEUE,
+                0,
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    }
+
+    private static TraceReplayFixture installingFixture() {
+        TraceReplayFixture fixture = mock(TraceReplayFixture.class);
+        GameplayModeContext gameplayMode = mock(GameplayModeContext.class);
+        HardwareTimingService timing = new HardwareTimingService();
+        when(fixture.gameplayMode()).thenReturn(gameplayMode);
+        when(gameplayMode.recordedCompletionAuthority())
+                .thenReturn(timing.beginRecordedAdmission());
+        return fixture;
+    }
+}

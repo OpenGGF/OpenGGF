@@ -506,7 +506,9 @@ public final class TraceReplaySessionBootstrap {
                         && !trace.metadata().hasHardwareTimingStream())) {
             return;
         }
-        installHardwareTimingReplay(trace.hardwareTimingSchedule(), fixture);
+        HardwareTimingSchedule schedule =
+                TraceHardwareTimingScheduleCompiler.compileForInstall(trace);
+        installHardwareTimingReplay(schedule, fixture);
     }
 
     /** Installs one already-validated replay schedule into the active gameplay session. */

@@ -81,6 +81,7 @@ namespace OpenGGF.BizHawk.Headless
         private long nextDirectOrdinal;
         private byte priorModulesLeft;
         private ushort? priorLevelFrameCounter;
+        private byte? priorGameMode;
         private bool titleCardLoadLoopActive;
         private bool priorDirectBusy;
         private readonly List<DirectSubmission> stagedDirectRetirements =
@@ -160,6 +161,7 @@ namespace OpenGGF.BizHawk.Headless
             nextDirectOrdinal = 0;
             priorModulesLeft = 0;
             priorLevelFrameCounter = null;
+            priorGameMode = null;
             titleCardLoadLoopActive = false;
             priorDirectBusy = false;
             stagedDirectRetirements.Clear();
@@ -251,8 +253,10 @@ namespace OpenGGF.BizHawk.Headless
         /// <summary>
         /// Observes one frame-end RAM sample. A changed Level_frame_counter
         /// proves that the main loop and its post-objects boundary ran.
-        /// A duplicate counter normally proves only VInt admission. The
-        /// in-level title-card loop is the ROM-owned exception: loc_62CC
+        /// A duplicate counter normally proves only VInt admission. A
+        /// canonical final-active module head shift independently proves
+        /// Process_Kos_Module_Queue POST service. The in-level title-card
+        /// loop is the other ROM-owned exception: loc_62CC
         /// executes Process_Sprites and Process_Kos_Module_Queue without
         /// incrementing Level_frame_counter, while its Obj_TitleCard parent
         /// remains in the SST. A null writer keeps the run-wide FIFO/ordinal
@@ -274,16 +278,22 @@ namespace OpenGGF.BizHawk.Headless
             int physicalCount = ReadModulePhysicalCount(host);
             ushort levelFrameCounter =
                 S3KRam.U16(host, S3KRam.LevelFrameCounter);
+            byte gameMode = S3KRam.U8(host, S3KRam.GameMode);
             bool titleCardLoopAdmitted =
                 UpdateTitleCardLoadLoop(host, levelFrameCounter);
-            string boundary =
+            string observedRowBoundary =
                 priorLevelFrameCounter.HasValue
                     && priorLevelFrameCounter.Value == levelFrameCounter
                     && !titleCardLoopAdmitted
                 ? "vint_service"
                 : "post_objects";
+            ModuleTransition moduleTransition = ClassifyModuleTransition(
+                host, modulesLeft, physicalCount, gameMode);
+            string moduleBoundary =
+                moduleTransition == ModuleTransition.FinalHeadRetired
+                    ? "post_objects" : observedRowBoundary;
             ObserveMeasurementService(
-                rawFrame, boundary != "vint_service");
+                rawFrame, observedRowBoundary != "vint_service");
             ushort directCountWord =
                 S3KRam.U16(host, S3KRam.KosDecompQueueCount);
             List<DeferredDirectCompletion> deferredDirectCompletions = null;
@@ -295,15 +305,14 @@ namespace OpenGGF.BizHawk.Headless
                 writer,
                 directCountWord & 0x7FFF,
                 (directCountWord & 0x8000) != 0,
-                boundary != "vint_service",
+                observedRowBoundary != "vint_service",
                 ref deferredDirectCompletions);
 
             // 0x81 is specifically "the final module is active in the
             // direct decoder". A fall from any other busy value is only a
             // per-module transition and is not an eligible completion.
-            bool retired = priorModulesLeft == 0x81
-                && queue.Count != 0
-                && HeadRetired(host, modulesLeft, physicalCount);
+            bool retired =
+                moduleTransition == ModuleTransition.FinalHeadRetired;
             if (retired)
             {
                 Submission completed = queue[0];
@@ -313,7 +322,7 @@ namespace OpenGGF.BizHawk.Headless
                     WriteCompletion(
                         writer,
                         rawFrame,
-                        boundary,
+                        moduleBoundary,
                         ModuleEventKind,
                         completed.Ordinal,
                         completed.Fingerprint);
@@ -322,9 +331,117 @@ namespace OpenGGF.BizHawk.Headless
             WriteDeferredDirectCompletions(
                 writer, rawFrame, deferredDirectCompletions);
 
-            ReconcileQueue(host, physicalCount);
+            if (moduleTransition == ModuleTransition.QueueReset)
+            {
+                queue.Clear();
+            }
+            else
+            {
+                ReconcileQueue(host, physicalCount);
+            }
             priorModulesLeft = modulesLeft;
             priorLevelFrameCounter = levelFrameCounter;
+            priorGameMode = gameMode;
+        }
+
+        private enum ModuleTransition
+        {
+            None,
+            FinalHeadRetired,
+            QueueReset
+        }
+
+        private ModuleTransition ClassifyModuleTransition(
+            IGpgxHost host,
+            byte modulesLeft,
+            int physicalCount,
+            byte gameMode)
+        {
+            if (queue.Count == 0)
+            {
+                return ModuleTransition.None;
+            }
+
+            bool lostPhysicalHead = physicalCount < queue.Count;
+            bool shiftedToNext = physicalCount != 0
+                && queue.Count >= 2
+                && ActiveEntryMatches(host, queue[1]);
+            bool headChanged = lostPhysicalHead || shiftedToNext;
+            if (!headChanged)
+            {
+                return ModuleTransition.None;
+            }
+
+            bool modeChanged = priorGameMode.HasValue
+                && priorGameMode.Value != gameMode;
+            if (modeChanged)
+            {
+                if (modulesLeft == 0 && physicalCount == 0)
+                {
+                    return ModuleTransition.QueueReset;
+                }
+                throw new InvalidDataException(
+                    "Kos module FIFO changed across a game-mode transition;");
+            }
+
+            if (priorModulesLeft != 0x81)
+            {
+                return ModuleTransition.None;
+            }
+            int expectedCount = queue.Count - 1;
+            if (physicalCount != expectedCount)
+            {
+                throw new InvalidDataException(
+                    "Kos module final-head retirement changed FIFO"
+                    + " cardinality from " + queue.Count + " to "
+                    + physicalCount + "; expected " + expectedCount + ".");
+            }
+            if (physicalCount == 0)
+            {
+                if (modulesLeft != 0)
+                {
+                    throw new InvalidDataException(
+                        "Kos module empty final-head retirement retained"
+                        + " a nonzero module count.");
+                }
+                return ModuleTransition.FinalHeadRetired;
+            }
+            if ((modulesLeft & 0x80) != 0 || (modulesLeft & 0x7F) == 0)
+            {
+                throw new InvalidDataException(
+                    "Kos module shifted head was not canonically"
+                    + " initialized after final-head retirement.");
+            }
+            if (!ActiveEntryMatches(host, queue[1]))
+            {
+                throw new InvalidDataException(
+                    "Kos module final-head retirement did not install the"
+                    + " mirrored next head.");
+            }
+            for (int index = 1; index < physicalCount; index++)
+            {
+                int entry = S3KRam.KosModuleQueue
+                    + index * S3KRam.KosModuleQueueEntrySize;
+                Submission expected = queue[index + 1];
+                if (S3KRam.U32(host, entry) != expected.Source
+                    || S3KRam.U16(host, entry + 4)
+                        != expected.Destination)
+                {
+                    throw new InvalidDataException(
+                        "Kos module final-head retirement did not preserve"
+                        + " canonical shifted entry " + index + ".");
+                }
+            }
+            return ModuleTransition.FinalHeadRetired;
+        }
+
+        private static bool ActiveEntryMatches(
+            IGpgxHost host, Submission submission)
+        {
+            return S3KRam.U32(host, S3KRam.KosModuleSource)
+                    == submission.Source + 2
+                && S3KRam.U16(host, S3KRam.KosModuleDestination)
+                    == submission.Destination;
         }
 
         private void EmitStagedDirectRetirements(
@@ -953,29 +1070,6 @@ namespace OpenGGF.BizHawk.Headless
                     return result.ToString();
                 }
             }
-        }
-
-        private bool HeadRetired(
-            IGpgxHost host,
-            byte modulesLeft,
-            int physicalCount)
-        {
-            if (modulesLeft == 0 || physicalCount == 0)
-            {
-                return true;
-            }
-            if (queue.Count < 2)
-            {
-                return false;
-            }
-
-            Submission next = queue[1];
-            uint observedSource =
-                S3KRam.U32(host, S3KRam.KosModuleSource);
-            ushort observedDestination =
-                S3KRam.U16(host, S3KRam.KosModuleDestination);
-            return observedSource == next.Source + 2
-                && observedDestination == next.Destination;
         }
 
         private void ReconcileQueue(IGpgxHost host, int physicalCount)

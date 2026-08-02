@@ -60427,6 +60427,13 @@ Cross-route regression replays on this candidate:
 
 Those ordinary-boundary producer gaps are unaffected by the new exact held-row path.
 
+Commands selected `TestS3kHczCompleteRunTraceReplay` and isolated
+`TestS3kCnzCompleteRunTraceReplay#replayMatchesTrace` with the same Maven/ROM
+prefix. The full HCZ class also retains its separate pre-existing Poindexter
+helper error (`gameplay context was not constructed for recorded hardware
+admission`). No fixture, comparison expectation, or hardware-timing schedule
+was edited.
+
 ## 2026-08-02 — S3K queue lifecycle recovery Wave 1
 
 Context: `.worktrees/s3k-queue-lifecycle-recovery`, branch
@@ -60773,3 +60780,36 @@ Focused banking verification covered 15 classes, including fixed-slot,
 plane-switch, pollen, pulley, Curled Vine, Madmole, touch-response, rewind schema,
 cutscene graph, rewind-coverage, and trace-invariant tests. All selected tests
 passed after adding captured rewind identity for the button's `spawnedDoor` link.
+
+## 2026-08-02 — AIZ module recorder attribution corrected; replay remains pre-mutation fail-closed
+
+Context: `.worktrees/red-s3k-aiz-module-admission`, branch
+`bugfix/ai-red-s3k-aiz-module-admission`, base `2d6f67020`. A disassembly
+single-writer audit proved that prior `Kos_modules_left == $81` plus the exact
+one-head `$FF64-$FF7B` FIFO shift is written only by
+`Process_Kos_Module_Queue` (`$1B28`, canonical shift through `$1BC4`). The
+maintained native recorder therefore attributes that exact transition to
+`POST_OBJECTS` even when the observation row holds `Level_frame_counter`.
+Duplicate/no-retirement, stale, reset-crossing, multi-head-loss,
+shift-plus-append/cardinality, and empty-to-active negatives remain fail-closed.
+No callback was added and frozen Lua 6.37 behavior is unchanged. Maintained
+native versions advance to `6.41-s3k` and `6.42-s3k-completerun`.
+
+The corrected prospective raw-6351 module `#16` edge is not executable replay
+authority. A schema-2 POST edge on a `VBLANK_ONLY` row is now rejected during
+installation as `unsupported-held-row-POST` before the fixture or gameplay
+session is touched. Ordinary current-row POST and held-row PRE controls pass;
+lower-level authority still rejects an unprepared parent and cannot reach the
+runtime-art coordinator. The focused Java command ran 52 tests with zero
+failures/errors/skips. Native hardware-timing, held-AIZ behavioral,
+special-stage-results, and all runnable non-gate tests passed; ROM-backed
+vectors without configured ROM variables skipped.
+
+No fixture was regenerated or installed. Consequently the currently committed
+Candidate A stream and its measured AIZ frontier remain unchanged at 60 errors
+/ 6,347 rows, first comparison frame 1106, terminal published module `#16`
+`5c387ee74a9433eebd0f6700c270d1def12cc8157434d37e33eaf8c422312399`
+stamped `VINT_SERVICE` with the engine parent unprepared. A separately approved
+ 6.41/6.42 publication would replace that late runtime failure with the earlier
+ explicit pre-mutation `unsupported-held-row-POST` classification; it does not
+ authorize a partial CPU prefix or a fixture install in this task.

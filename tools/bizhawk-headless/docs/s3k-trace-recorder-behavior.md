@@ -19,7 +19,7 @@ segmentation and metadata extensions remain owned by
 recorders remain the historical authority for the physics/aux surface they
 published, but they stop at version 6.37 and hardware-timing schema 1. The
 native implementations are the maintained behavior and publication authority
-for STANDARD version 6.40, complete-run version 6.41, and hardware-timing
+for STANDARD version 6.41, complete-run version 6.42, and hardware-timing
 schema 2.
 
 The S1 spec's frame-alignment / `IGpgxHost` translation model (S1
@@ -31,8 +31,8 @@ per line.
 
 | producer/data | version | trace schema | hardware-timing schema | timing kinds |
 |---|---|---:|---:|---|
-| Current native STANDARD writer | `6.40-s3k` | 7 | 2 | module and direct |
-| Current native complete-run writer | `6.41-s3k-completerun` | 7 | 2 | module and direct |
+| Current native STANDARD writer | `6.41-s3k` | 7 | 2 | module and direct |
+| Current native complete-run writer | `6.42-s3k-completerun` | 7 | 2 | module and direct |
 | Committed S3K fixtures | `6.39-s3k` / `6.40-s3k-completerun` | 7 | 2 | module and direct |
 | Frozen Lua recorders | `6.37-s3k` / `6.37-s3k-completerun` | 7 | 1 | module only |
 
@@ -70,7 +70,7 @@ default; schema 1 is accepted only for explicit compatibility tests.
   "sidekicks": ["tails"],
   "rng_seed": "0x<hex8>",
   "recording_date": "<YYYY-MM-DD>",
-  "lua_script_version": "6.40-s3k",
+  "lua_script_version": "6.41-s3k",
   "trace_schema": 7,
   "hardware_timing_schema": 2,
   "csv_version": 7,
@@ -85,8 +85,8 @@ default; schema 1 is accepted only for explicit compatibility tests.
 ```
 
 The recording date is the only nondeterministic value. Standard native
-captures use `6.40-s3k`; complete-run, bonus, and special-stage metadata use
-`6.41-s3k-completerun` and their complete-run-owned key set. The committed
+captures use `6.41-s3k`; complete-run, bonus, and special-stage metadata use
+`6.42-s3k-completerun` and their complete-run-owned key set. The committed
 fixtures intentionally retain their published `6.39-s3k` /
 `6.40-s3k-completerun` metadata and must not be rewritten merely to match a
 recorder version bump.
@@ -103,9 +103,10 @@ LF per event:
 Fields and field order are exact. Events sort by `raw_frame`, boundary order
 `vint_service`, `post_objects`, `pre_main_loop`, kind, then ordinal. On a raw
 frame where both physical owners retire, the module `post_objects` event is
-written before the direct `pre_main_loop` event. Recorder versions 6.40/6.41
-encode this canonical same-frame service order; they do not change event
-identity, queue ownership, measurement, or ledger reconciliation.
+written before the direct `pre_main_loop` event. Recorder versions 6.41/6.42
+also attribute a held-counter final-parent retirement from the canonical FIFO
+transition described below; they do not change event identity, queue
+ownership, measurement, or ordinal reconciliation.
 
 The fingerprint is independently derived from length-prefixed UTF-8 kind,
 big-endian signed 32-bit canonical source, compressed length, canonical
@@ -135,11 +136,15 @@ but suppresses the direct event.
 
 The module ledger normalizes an active source to its two-byte archive header,
 retains that canonical identity while the active pointer advances, and
-recognizes final retirement only from the tracked final-module state plus
-head removal/shift. Per-module busy-bit falls are not archive completion.
-Module retirement emits at `post_objects`, or `vint_service` for a genuine
-held-counter row without an admitted object loop. The exact title-card parent
-state is the sole held-counter exception that preserves `post_objects`.
+recognizes final retirement only when the prior modules-left byte is exactly
+`0x81` and one observation interval contains the canonical one-head FIFO
+removal/shift. The shifted active source/destination, every trailing entry,
+physical/logical cardinality, and mode/reset fence must all agree. Per-module
+busy-bit falls, stale final-active state, multi-head loss, shift-plus-append,
+and reset crossings cannot manufacture completion. This transition proves the
+ROM's `Process_Kos_Module_Queue` owner, so the module retirement emits at
+`post_objects` even when `Level_frame_counter` is held. A duplicate counter
+without that transition remains VInt-only for other observations.
 
 Segment handoffs may pass a null timing writer while keeping both ledgers and
 ordinals alive. A standard-recorder discard/reset clears both ledgers and
@@ -167,9 +172,9 @@ exact movie end (511 + 20798 = 21309); CNZ finalised on zone-leave at row
 
 These immutable fixtures are stamped `6.39-s3k`, `trace_schema: 7`, and
 `hardware_timing_schema: 2`. Their published physics/aux bytes and timing
-streams are protected by frozen hashes. Current native 6.40 output must keep
+streams are protected by frozen hashes. Current native 6.41 output must keep
 physics and aux byte-identical. Metadata may differ only by recording date and
-the exact 6.39-to-6.40 version migration. Timing must be byte-identical unless
+the exact 6.39-to-6.41 version migration. Timing must be byte-identical unless
 the only difference is the canonical same-frame module-POST-before-direct-PRE
 reorder with the exact event-line multiset preserved. Differential tests must
 fail closed on any other payload or event change.
@@ -624,7 +629,7 @@ Different (S3K-specific — never copy S1/S2 values):
 - Much larger poll-driven aux vocabulary, including per-frame full-OST
   proximity scans against BOTH players (`object_state`) alongside the
   Player-1-only legacy scan (`object_near`).
-- Metadata: the current native contract is `6.40-s3k`, `trace_schema` 7,
+- Metadata: the current native contract is `6.41-s3k`, `trace_schema` 7,
   `hardware_timing_schema` 2, plus hardcoded characters/sidekicks,
   `aux_schema_extras`, `capture_mode`, and constant `rom_checksum`.
   Committed `6.39-s3k` / trace-schema-7 / hardware-schema-2 metadata is the

@@ -1,7 +1,9 @@
 # S3K Complete-Run Recorder — Byte-Level SEGMENTATION Specification
 
 > **2026-08-02 recorder-order note.** The maintained native complete-run
-> writer is now `6.41-s3k-completerun`, with hardware-timing events serialized
+> writer is now `6.42-s3k-completerun`, with held-counter final-parent
+> retirements attributed from canonical FIFO state transitions and
+> hardware-timing events serialized
 > in canonical same-frame service order: `vint_service`, module
 > `post_objects`, then direct `pre_main_loop`. The committed complete-run fleet,
 > including the 67-segment super-emerald publication, remains immutable at

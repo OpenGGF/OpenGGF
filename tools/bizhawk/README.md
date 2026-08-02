@@ -334,20 +334,22 @@ tools/bizhawk-headless/run.sh \
 
 Current native S3K captures keep `trace_schema: 7` and write
 `hardware_timing_schema: 2`, `hardware_timing.jsonl`, and recorder versions
-`6.40-s3k` / `6.41-s3k-completerun`. Schema 2 authorizes exactly two
+`6.41-s3k` / `6.42-s3k-completerun`. Schema 2 authorizes exactly two
 production-submitted work kinds:
 
 - `KOS_DECOMPRESSION_QUEUE`, emitted when the mirrored `$FF40-$FF5F` direct
   FIFO retires a proven head at `pre_main_loop`; and
-- `KOS_MODULE_QUEUE`, emitted when the module parent retires at
-  `vint_service` or `post_objects` according to the ROM-owned loop.
+- `KOS_MODULE_QUEUE`, emitted at `post_objects` when a final-active parent
+  retires through the canonical ROM FIFO shift. Observation on a held level-
+  counter row does not move that ROM-owned service phase to `vint_service`.
 
 Each kind owns an independent ordinal ledger. Events carry only kind,
 ordinal, submission fingerprint, raw frame, and boundary; they never contain
 compressed or decoded bytes. When both kinds retire on one raw frame, the
 module `post_objects` edge is serialized before the direct `pre_main_loop`
-edge. Versions 6.40/6.41 record that canonical service order without changing
-the event identities or queue ledgers.
+edge. Versions 6.41/6.42 additionally use the canonical final-active FIFO
+transition to attribute a held-row retirement without changing event
+identities or queue ledgers.
 
 The native recorder is the maintained publication authority. The Lua S3K
 recorders are intentionally frozen at schema 1 and emit module edges only.
@@ -360,10 +362,10 @@ payloads as part of a recorder implementation change.
 
 **Current schema-2 publication boundary:** the three canonical STANDARD
 fixtures are committed as `6.39-s3k`, `trace_schema: 7`, and
-`hardware_timing_schema: 2`; the maintained native writer emits `6.40-s3k`
+`hardware_timing_schema: 2`; the maintained native writer emits `6.41-s3k`
 with the same schemas. `S3KTraceDifferentialTests` require byte identity for
 `physics.csv` / `aux_state.jsonl`, permit only recording date and the exact
-6.39-to-6.40 metadata migration, and require byte-identical timing unless the
+6.39-to-6.41 metadata migration, and require byte-identical timing unless the
 only delta is the canonical same-frame module-POST-before-direct-PRE reorder
 with the exact event-line multiset preserved. Any changed event field,
 cross-frame movement, or payload difference fails closed:
@@ -426,7 +428,7 @@ Full table and rationale: `s3k-aux-events.md` §5.1.
 
 With the S3&K locked-on ROM, `--mode trace` also replaces the frozen
 `s3k_complete_run_recorder.lua` (`6.37-s3k-completerun`) on Linux — the
-maintained native writer is `6.41-s3k-completerun`. This is the separate
+maintained native writer is `6.42-s3k-completerun`. This is the separate
 per-zone-segment / bonus-stage / special-stage recorder, distinct from the
 STANDARD recorder above. It is selected the same way as S1's
 complete-run recorder, not via `--trace-profile <one of the three STANDARD
@@ -503,12 +505,12 @@ Its exact file lengths, hashes, timing edges, and manifest are frozen in
 inventory and terminal-tail arithmetic are recorded in
 `docs/architecture/validation/2026-07-30-s3k-knuckles-superemerald-trace-publication.md`.
 
-The command above creates a 6.41 candidate in scratch; do not run or install
+The command above creates a 6.42 candidate in scratch; do not run or install
 it without the separate review and publication approval.
 
 **Current schema-2 fixture parity:** committed complete-run/run fixtures are
 `6.40-s3k-completerun`, trace schema 7, hardware-timing schema 2. The
-maintained native writer emits `6.41-s3k-completerun` with the same schemas.
+maintained native writer emits `6.42-s3k-completerun` with the same schemas.
 Three ROM-backed differential gates cover
 the capture identities below (`docs/s3k-run-publication.md` §0). In this
 historical inventory, “byte-identical” refers to physics/aux payloads and
@@ -551,7 +553,7 @@ schema-2 timing streams are publication candidates:
 
 **Pinned metadata compatibility (no loose normalization):** committed
 metadata carries `6.40-s3k-completerun`, trace schema 7, hardware-timing
-schema 2. Current native metadata carries `6.41-s3k-completerun` with the same
+schema 2. Current native metadata carries `6.42-s3k-completerun` with the same
 schemas. Apart from `recording_date`, only that exact version literal may
 differ. Timing events are never normalized away; publication of newly
 captured bytes still requires separate approval.

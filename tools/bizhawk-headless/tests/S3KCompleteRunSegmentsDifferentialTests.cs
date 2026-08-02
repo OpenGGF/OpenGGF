@@ -87,7 +87,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private const string PublishedDirectLuaScriptVersionLine =
             "  \"lua_script_version\": \"6.40-s3k-completerun\",";
         private const string CurrentLuaScriptVersionLine =
-            "  \"lua_script_version\": \"6.41-s3k-completerun\",";
+            "  \"lua_script_version\": \"6.42-s3k-completerun\",";
         private const string CurrentTraceSchemaLine =
             "  \"trace_schema\": 7,";
         private const string CurrentHardwareTimingSchemaLine =
@@ -418,7 +418,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         }
 
         /// <summary>
-        /// Requires exact published-v6.40 to current-v6.41 equality apart
+        /// Requires exact published-v6.40 to current-v6.42 equality apart
         /// from recorder version and recording_date. Both sides stay
         /// LF-only and carry no run_id.
         /// </summary>

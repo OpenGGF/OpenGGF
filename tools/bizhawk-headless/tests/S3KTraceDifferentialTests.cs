@@ -24,7 +24,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
     ///   there before the produced files are hashed. The fixtures under
     ///   src/test/resources/traces/ are never written to.
     /// - metadata.json line-for-line equality apart from the exact
-    ///   6.39-s3k to 6.40-s3k version delta and nondeterministic
+    ///   6.39-s3k to 6.41-s3k version delta and nondeterministic
     ///   recording_date;
     /// - hardware_timing.jsonl is byte-identical to the committed stream,
     ///   unless canonical same-frame ordering alone changed with an exact
@@ -81,7 +81,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private const string PublishedLuaScriptVersionLine =
             "  \"lua_script_version\": \"6.39-s3k\",";
         private const string CurrentLuaScriptVersionLine =
-            "  \"lua_script_version\": \"6.40-s3k\",";
+            "  \"lua_script_version\": \"6.41-s3k\",";
         private const string CurrentTraceSchemaLine =
             "  \"trace_schema\": 7,";
         private const string CommittedHardwareTimingSchemaLine =
@@ -622,7 +622,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private static void MetadataCompatibilityShapesAreExact()
         {
             const string currentVersion =
-                "  \"lua_script_version\": \"6.40-s3k\",";
+                "  \"lua_script_version\": \"6.41-s3k\",";
             const string publishedVersion =
                 "  \"lua_script_version\": \"6.39-s3k\",";
             const string legacyVersion =

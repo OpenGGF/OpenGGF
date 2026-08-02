@@ -120,13 +120,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
             "^  \"recording_date\": \"[0-9]{4}-[0-9]{2}-[0-9]{2}\",$");
 
         /// <summary>
-        /// The published v6.40 stamp and current v6.41 recorder stamp.
+        /// The published v6.40 stamp and current v6.42 recorder stamp.
         /// Only this reviewed recorder-version delta is normalized.
         /// </summary>
         private const string PublishedVersionLine =
             "  \"lua_script_version\": \"6.40-s3k-completerun\",";
         private const string CurrentVersionLine =
-            "  \"lua_script_version\": \"6.41-s3k-completerun\",";
+            "  \"lua_script_version\": \"6.42-s3k-completerun\",";
         private const string CurrentTraceSchemaLine =
             "  \"trace_schema\": 7,";
         private const string PublishedHardwareTimingSchemaLine =
