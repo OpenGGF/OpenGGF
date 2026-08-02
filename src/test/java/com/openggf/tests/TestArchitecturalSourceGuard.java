@@ -510,11 +510,13 @@ class TestArchitecturalSourceGuard {
                 "AGENTS.md and CLAUDE.md must remain byte-identical");
 
         String agentGuidance = new String(agentsBytes, StandardCharsets.UTF_8);
+        String normalizedAgentGuidance = agentGuidance.replaceAll("\\s+", " ");
         assertTrue(agentGuidance.contains("Trace data is comparison-only by default."),
                 "agent guidance must retain the comparison-only trace rule");
         assertTrue(agentGuidance.contains("dedicated hardware-timing input contract"),
                 "agent guidance must retain the dedicated hardware-timing exception");
-        assertTrue(agentGuidance.contains("it may release only the readiness of a matching, prepared, production-submitted"),
+        assertTrue(normalizedAgentGuidance.contains(
+                        "It may release only the readiness of a matching, prepared, production-submitted"),
                 "agent guidance must retain the bounded timing-release rule");
 
         String discrepancies = Files.readString(Path.of("docs", "status", "known-discrepancies.md"));
