@@ -3,6 +3,16 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Test/Docs: the queue-lifecycle Wave 2 fleet publishes a complete 64-class,
+  108-method trace ledger. All 30 S1 and 20 S2 classes remain green, the four
+  standalone S3K bonus/special-stage classes remain green, and the strict
+  timing/authority matrix remains 142/142. CNZ standard advances to direct
+  `#24` and CNZ complete advances through `#203/#204` to `#205`. The first
+  sweep exposed a shared eight-field frame-33 early-title queue regression in
+  eight S3K route classes; it was attributed to same-dispatch skipped-title
+  owner/child observation and corrected by preserving native SST order. The
+  final fleet removes exactly eight comparator groups from each affected
+  class and restores their pre-existing gameplay or later queue frontiers.
 - Fix/Test: S3K two-axis placement now retains ordered X-cursor work until
   `ObjectManager` records a terminal construction outcome, so a full SST pool
   retries the same entry instead of losing it and rewind preserves the pending

@@ -218,6 +218,19 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **S3K queue lifecycle recovery Wave 2 (2026-08-02):** runtime enemy-art
+  admission now uses exact owner leases across initial titles, carried
+  CNZ/MGZ/LBZ results titles, and ICZ's transactional resource handoff; the
+  generic placement lifecycle also carries CNZ's later special-stage entry
+  ring through its second retirement. The measured 64-class fleet keeps all
+  30 S1 and 20 S2 classes green and the strict authority matrix 142/142, while
+  advancing CNZ standard to direct `#24` and CNZ complete through `#203/#204`
+  to `#205`. The first full sweep also found a shared frame-33 early-title
+  queue regression across eight S3K route classes. It was attributed to the
+  skipped-title owner observing its last higher-slot child in the same
+  dispatch and corrected to preserve native SST order; the final sweep removes
+  all eight shared groups per class and restores the earlier route frontiers.
+
 - **S3K queue lifecycle recovery Wave 1 (2026-08-02):** standalone
   Gumball, Pachinko, and Slots replays now verify and close only their
   recorder-declared bonus prefix instead of treating the outer return-to-level

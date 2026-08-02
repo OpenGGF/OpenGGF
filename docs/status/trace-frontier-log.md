@@ -60709,3 +60709,37 @@ terminal raw 5543/direct `#36`; complete remains 56 comparator errors, first
 f1237 direct busy and terminal raw 6346/direct `#35`. Those AIZ
 `PRESERVE_CURRENT`/suppressed-row terminals are therefore unchanged and remain
 separate from the repaired skipped-title SST cadence.
+
+## 2026-08-02 — Wave 2 final post-correction fleet publication
+
+Context: `.worktrees/s3k-queue-lifecycle-recovery`, branch
+`bugfix/ai-s3k-queue-lifecycle-recovery`, verified at `f05ac8eae` on Maven
+3.9.16 / JDK 21.0.11 with verified S1 REV01, S2 REV01, and locked-on S3K
+ROMs. No trace fixture changed.
+
+The exact focused seven-route selector exits 1 across 48 methods: 11 pass,
+4 fail, 33 error, and 0 skip. The exact 15-class authority/queue selector is
+142/142 green. The final three-ROM `*TraceReplay` fleet exits 1 across exactly
+64 concrete classes and 108 methods: 67 pass, 4 fail, 37 error, and 0 skip.
+All 30 S1 and 20 S2 classes remain green; S3K remains 4/14 classes green via
+Gumball, Pachinko, Slots, and Special Stage. The complete line-by-line ledger,
+including full terminal fingerprints, is
+`docs/architecture/validation/trace/2026-08-02-s3k-queue-lifecycle-wave2-validation.md`.
+
+The final comparator reports reproduce every Task 7B corrected frontier and
+contain none of the shared f33 groups. Commit `f05ac8eae` is a behavior-neutral
+seamless-transition extraction and moves no route: CNZ standard remains
+95/f16661 and raw 17421/direct `#24`; CNZ complete remains 419/f12024 and raw
+13962/direct `#205`; HCZ remains 28/f3253 and raw 3341/direct `#90`; ICZ
+remains 9/f12320 and raw 12380/direct `#245`; LBZ remains 7/f19870 and raw
+19871/direct `#282`; MGZ standard remains 79/f13903 and raw 14386/direct
+`#24`; MGZ complete remains 17/f16512 and raw 16655/direct `#147`; and MHZ
+remains 865/f3420 and raw 7221/direct `#335`.
+
+AIZ remains separately attributable to the `PRESERVE_CURRENT`/native-recorder
+service-row lane at standard raw 5543/direct `#36` and complete raw
+6346/direct `#35`; its former raw 6351 module observation is not reclassified.
+MGZ standard, HCZ, and MHZ likewise retain their gameplay-first animation,
+sidekick-speed, and ring frontiers. The final publication closes the temporary
+f33 regression record without claiming those independent gameplay lanes were
+fixed.
