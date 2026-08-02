@@ -4537,21 +4537,22 @@ public final class ObjectSolidContactController {
                 : provider.getTopLandingHalfWidth(player, collisionHalfWidth);
         int allowedHalfWidth;
         if (provider.getSolidRoutineProfile().usesCollisionHalfWidthForTopLanding()) {
+            // Caller's d1 already equals the object's own width byte (e.g. S2
+            // Obj70 passes d1 = width_pixels = $10, s2.asm:55111, 35588-35620).
             allowedHalfWidth = collisionHalfWidth;
-        } else if (pieceConfigured || configuredHalfWidth != collisionHalfWidth) {
-            // Provider explicitly set a landing width distinct from its side/body
-            // collision half-width — use it directly (narrower OR wider). ROM
-            // SolidObjectFull's top-slice clamp (loc_1E154 / Solid_Landed) re-reads
-            // width_pixels(a0) for the landing X gate, which is NOT always
-            // collision_d1 - $B: e.g. the MHZ1 cutscene button (sub_65DEC passes
-            // d1 = $1B but ObjDat sets width_pixels = $80), so the landing gate is
-            // far wider than the side-collision box. The default heuristic below
-            // only holds when the caller passed d1 = width_pixels + $B.
-            allowedHalfWidth = configuredHalfWidth;
         } else {
-            // ROM: SolidObjectFull's Solid_Landed re-reads obActWid (= width_pixels),
-            // which is narrower than collision halfWidth (= width_pixels + $B).
-            allowedHalfWidth = Math.max(0, collisionHalfWidth - 0x0B);
+            // ROM's landing clamp re-reads the object's own width byte, not the
+            // caller's collision d1: S1 Solid_Landed re-reads obActWid
+            // (_incObj/sub SolidObject.asm:318-336), S2 SolidObject_Landed and
+            // S3K Solid_Landed / loc_1E154 re-read width_pixels(a0)
+            // (s2.asm:35588+, sonic3k.asm:41611-41621). The provider models that
+            // field first-class: its family default reconstructs the width byte
+            // (full-solid d1 = width_pixels + $B; top-solid d1 used directly per
+            // SolidObjectTop_1P, sonic3k.asm:41798-41825), and objects whose
+            // caller broke the idiom override with the ObjDat width — used
+            // verbatim, narrower OR wider (e.g. the MHZ1 cutscene button's
+            // d1 = $1B against width_pixels = $80).
+            allowedHalfWidth = configuredHalfWidth;
         }
 
         // ROM: Solid_Landed checks: d1 = playerX + obActWid - objX,

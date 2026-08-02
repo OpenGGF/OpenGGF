@@ -218,6 +218,21 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **Landing width and the AIZ intro title-card handoff modelled from ROM
+  (2026-08-02):** two follow-ups salvaged from the S3K trace pass. The solid
+  landing clamp now models the object's own width byte as a first-class provider
+  field with a routine-family default, matching ROM in all three games — S1
+  `Solid_Landed` re-reads `obActWid`, S2 `SolidObject_Landed` and S3K
+  `loc_1E154` re-read `width_pixels(a0)`, while top-solid platform routines land
+  on the caller's `d1` directly. That replaces a controller heuristic which
+  inferred "the provider overrode the width" by comparing it against the
+  collision half-width, and so silently failed whenever an override returned the
+  same value. Separately, ROM installs the AIZ intro's in-level title card from
+  the Knuckles cutscene exit, which only *allocates* the object slot — the
+  allocator returns a slot the current object pass has already walked, so the
+  art submission first dispatches a frame later. AIZ complete-run divergence
+  groups fall 60 to 52 with every other segment byte-identical.
+
 - **Object update clocks use ROM-accurate terminology (2026-08-02):** all 809
   `update(int, PlayableEntity)` boundaries now name their first argument
   `vIntRunCount`, matching the `ObjectManager.vblaCounter` value actually

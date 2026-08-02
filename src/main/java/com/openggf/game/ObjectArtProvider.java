@@ -54,6 +54,19 @@ public interface ObjectArtProvider {
     }
 
     /**
+     * Signals that an in-level title card's owner reached its final
+     * {@code Obj_TitleCardWait2} dispatch — the one that falls through to
+     * {@code LoadEnemyArt} (docs/skdisasm/sonic3k.asm:62302-62312).
+     *
+     * <p>An in-level card runs its whole presentation over live gameplay, so
+     * runtime-art admission opens here rather than at art retirement. The
+     * default treats it as immediate retirement.
+     */
+    default void onInLevelTitleCardCompleted() {
+        onTitleCardArtRetired();
+    }
+
+    /**
      * Loads object art for the specified zone.
      *
      * @param zoneIndex the zone index (-1 for default/non-zone-specific)

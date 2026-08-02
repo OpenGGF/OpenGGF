@@ -68,6 +68,9 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     private S3kKosModuleQueue enemyKosQueue;
     private boolean enemyKosSubmissionArmed;
 
+    /** One-pass deferral for {@link #onInLevelTitleCardCompleted()}. */
+    private boolean enemyKosArmOnNextRuntimePass;
+
     /**
      * Residual ROM lifetime of the title-card owner when its presentation was
      * skipped. Non-null only while the owner is still running toward
@@ -1429,6 +1432,13 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         boolean registeredRuntimeSheet = false;
         advanceTitleCardTeardown();
         processEnemyKosArt();
+        if (enemyKosArmOnNextRuntimePass) {
+            // The in-level card owner's LoadEnemyArt dispatch is the level
+            // frame after the manager's top-of-frame COMPLETE transition, so
+            // the submission first becomes eligible on the next pass.
+            enemyKosArmOnNextRuntimePass = false;
+            enemyKosSubmissionArmed = true;
+        }
         if (cnzTeleporterArtState == RuntimeArtState.PENDING) {
             loadCnzTeleporterArt();
             PatternSpriteRenderer renderer = renderers.get(Sonic3kObjectArtKeys.CNZ_TELEPORTER);
@@ -1461,6 +1471,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         enemyKosHandles.clear();
         enemyKosQueue = null;
         enemyKosSubmissionArmed = false;
+        enemyKosArmOnNextRuntimePass = false;
         titleCardTeardown = null;
         pendingEnemyKosEntries = switch (zoneIndex) {
             case Sonic3kZoneIds.ZONE_AIZ -> List.of(
@@ -1632,6 +1643,21 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     public void onTitleCardArtRetired() {
         titleCardTeardown = null;
         enemyKosSubmissionArmed = true;
+    }
+
+    /**
+     * An in-level card presents over live gameplay, and the manager's COMPLETE
+     * transition runs at the top of the frame — one dispatch ahead of the
+     * native {@code Obj_TitleCardWait2} dispatch that reaches
+     * {@code LoadEnemyArt} (docs/skdisasm/sonic3k.asm:62302-62312). Defer the
+     * enemy KosM submission to the following runtime-art pass so it lands on
+     * the native level frame.
+     */
+    @Override
+    public void onInLevelTitleCardCompleted() {
+        titleCardTeardown = null;
+        enemyKosSubmissionArmed = false;
+        enemyKosArmOnNextRuntimePass = true;
     }
 
     /**
@@ -2330,7 +2356,8 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
                 .toList();
         return new com.openggf.game.rewind.snapshot.PlcProgressSnapshot(
                 loadEpoch, cnzTeleporterArtState.ordinal()
-                        | (cnzEndBossArtState.ordinal() << 2),
+                        | (cnzEndBossArtState.ordinal() << 2)
+                        | (enemyKosArmOnNextRuntimePass ? 1 << 4 : 0),
                 pendingModules,
                 enemyKosHandles.stream().map(HardwareWorkHandle::ordinal).toList(),
                 enemyKosSubmissionArmed,
@@ -2347,6 +2374,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         int packedState = snap.runtimeState();
         cnzTeleporterArtState = decodeRuntimeArtState(packedState & 3);
         cnzEndBossArtState = decodeRuntimeArtState((packedState >>> 2) & 3);
+        enemyKosArmOnNextRuntimePass = (packedState & (1 << 4)) != 0;
         pendingEnemyKosEntries = snap.pendingKosModules().stream()
                 .map(entry -> new EnemyKosEntry(
                         entry.sourceAddress(), entry.destinationTile()))
