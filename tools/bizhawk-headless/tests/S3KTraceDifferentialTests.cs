@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace OpenGGF.BizHawk.Headless.Tests
@@ -22,12 +23,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
     ///   bytes are decompressed read-only into the temp root and hashed
     ///   there before the produced files are hashed. The fixtures under
     ///   src/test/resources/traces/ are never written to.
-    /// - metadata.json line-for-line equality apart from the
-    ///   nondeterministic recording_date, only when both sides use the
-    ///   current 6.39-s3k / trace-schema-7 / hardware-schema-2 contract;
-    /// - hardware_timing.jsonl has the exact schema-2 event shape and
-    ///   contains independently increasing kos_decompression_queue and
-    ///   kos_module_queue ledgers at their permitted boundaries.
+    /// - metadata.json line-for-line equality apart from the exact
+    ///   6.39-s3k to 6.40-s3k version delta and nondeterministic
+    ///   recording_date;
+    /// - hardware_timing.jsonl is byte-identical to the committed stream,
+    ///   unless canonical same-frame ordering alone changed with an exact
+    ///   event-line multiset, and contains independently increasing direct
+    ///   and module ledgers at their permitted boundaries.
     ///
     /// The committed 6.37-s3k / trace-schema-7 / hardware-schema-1
     /// fixtures remain readable historical inputs, but they are explicit
@@ -71,13 +73,15 @@ namespace OpenGGF.BizHawk.Headless.Tests
             "^  \"recording_date\": \"[0-9]{4}-[0-9]{2}-[0-9]{2}\",$");
 
         /// <summary>
-        /// Exact current and committed compatibility literals. Any other
-        /// value, or any mixed combination, fails.
+        /// Exact current, published and legacy compatibility literals. Any
+        /// other value, or any mixed combination, fails.
         /// </summary>
-        private const string CommittedLuaScriptVersionLine =
+        private const string LegacyLuaScriptVersionLine =
             "  \"lua_script_version\": \"6.37-s3k\",";
-        private const string CurrentLuaScriptVersionLine =
+        private const string PublishedLuaScriptVersionLine =
             "  \"lua_script_version\": \"6.39-s3k\",";
+        private const string CurrentLuaScriptVersionLine =
+            "  \"lua_script_version\": \"6.40-s3k\",";
         private const string CurrentTraceSchemaLine =
             "  \"trace_schema\": 7,";
         private const string CommittedHardwareTimingSchemaLine =
@@ -143,9 +147,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 + " ledgers",
                 CurrentHardwareTimingRequiresBothLedgers));
             tests.Add(new TestMain.TestCase(
-                "S3KTraceDifferential orders same-frame VINT before PRE"
-                + " before POST",
+                "S3KTraceDifferential orders same-frame VINT before POST"
+                + " before PRE",
                 CurrentHardwareTimingUsesCanonicalSameFrameOrder));
+            tests.Add(new TestMain.TestCase(
+                "S3KTraceDifferential permits only canonical same-frame"
+                + " timing reordering",
+                TimingComparisonAllowsOnlyCanonicalSameFrameReorder));
             tests.Add(new TestMain.TestCase(
                 "S3KTraceDifferential native capture matches canonical AIZ"
                 + " timing stream",
@@ -180,7 +188,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// movie frame count, and the canonical sha256 hashes of the Lua
         /// recorder's physics.csv and aux_state.jsonl bytes. There is no
         /// per-fixture metadata allowance field any more: every fixture is
-        /// held to the same recording_date-only delta.
+        /// held to the same recording-date plus exact version delta.
         /// </summary>
         private sealed class S3KDifferentialCase
         {
@@ -282,7 +290,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     File.Exists(hardwareTimingPath
                         + TracePayloadCompressor.GzipExtension));
                 AssertCurrentHardwareTimingLedgers(hardwareTimingPath);
-                AssertRecordingDateOnlyMetadataEquality(
+                AssertHardwareTimingMatchesFixture(
+                    Path.Combine(traceDirectory, "hardware_timing.jsonl"),
+                    hardwareTimingPath);
+                AssertRecordingDateAndVersionOnlyMetadataEquality(
                     Path.Combine(traceDirectory, "metadata.json"),
                     Path.Combine(output, "metadata.json"));
             }
@@ -474,17 +485,16 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
         /// <summary>
         /// Asserts the produced metadata.json is byte-identical to the
-        /// fixture's except for the ONE delta
-        /// docs/s3k-trace-recorder-behavior.md §6.1 still permits: the
-        /// recording_date value, which is nondeterministic and is only
-        /// required to keep the exact key formatting and an ISO date value.
-        /// It must occur exactly once.
+        /// fixture's except for the reviewed 6.39 to 6.40 recorder-version
+        /// delta and the recording_date value, which is nondeterministic
+        /// and must keep the exact key formatting and an ISO date value.
+        /// Each permitted field must occur exactly once.
         ///
         /// Everything else is exact-line equality, including the line
         /// count. Only current schema-2 metadata can establish differential
         /// success; committed schema-1 metadata is load-only compatibility.
         /// </summary>
-        private static void AssertRecordingDateOnlyMetadataEquality(
+        private static void AssertRecordingDateAndVersionOnlyMetadataEquality(
             string fixturePath,
             string producedPath)
         {
@@ -548,16 +558,19 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
             if (HasMetadataShape(
                 fixtureText,
-                CurrentLuaScriptVersionLine,
+                PublishedLuaScriptVersionLine,
                 CurrentTraceSchemaLine,
                 HardwareTimingSchemaLine))
             {
                 return new MetadataNormalization(
-                    producedText, CurrentLuaScriptVersionLine);
+                    producedText.Replace(
+                        CurrentLuaScriptVersionLine,
+                        PublishedLuaScriptVersionLine),
+                    PublishedLuaScriptVersionLine);
             }
             if (HasMetadataShape(
                 fixtureText,
-                CommittedLuaScriptVersionLine,
+                LegacyLuaScriptVersionLine,
                 CurrentTraceSchemaLine,
                 CommittedHardwareTimingSchemaLine))
             {
@@ -609,8 +622,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private static void MetadataCompatibilityShapesAreExact()
         {
             const string currentVersion =
+                "  \"lua_script_version\": \"6.40-s3k\",";
+            const string publishedVersion =
                 "  \"lua_script_version\": \"6.39-s3k\",";
-            const string committedVersion =
+            const string legacyVersion =
                 "  \"lua_script_version\": \"6.37-s3k\",";
             const string currentHardwareSchema =
                 "  \"hardware_timing_schema\": 2,";
@@ -619,17 +634,20 @@ namespace OpenGGF.BizHawk.Headless.Tests
             string current = currentVersion + "\n"
                 + CurrentTraceSchemaLine + "\n"
                 + currentHardwareSchema + "\n";
-            string committed = committedVersion + "\n"
+            string published = publishedVersion + "\n"
+                + CurrentTraceSchemaLine + "\n"
+                + currentHardwareSchema + "\n";
+            string legacy = legacyVersion + "\n"
                 + CurrentTraceSchemaLine + "\n"
                 + committedHardwareSchema + "\n";
 
             AssertEx.Equal(
-                current,
+                published,
                 NormalizeCurrentMetadataForFixture(
-                    current, current).Text);
+                    published, current).Text);
             AssertEx.Throws<InvalidOperationException>(
                 () => NormalizeCurrentMetadataForFixture(
-                    committed, current),
+                    legacy, current),
                 "load-only compatibility");
             AssertEx.Throws<InvalidOperationException>(
                 () => NormalizeCurrentMetadataForFixture(
@@ -643,9 +661,119 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     current.Replace(
                         CurrentLuaScriptVersionLine,
                         CurrentLuaScriptVersionLine + "\n"
-                            + CommittedLuaScriptVersionLine),
+                            + LegacyLuaScriptVersionLine),
                     current),
                 "unknown or mixed");
+        }
+
+        private static void AssertHardwareTimingMatchesFixture(
+            string fixturePath,
+            string producedPath)
+        {
+            AssertCurrentHardwareTimingLedgers(producedPath);
+            string fixtureText = File.ReadAllText(fixturePath);
+            string producedText = File.ReadAllText(producedPath);
+            if (fixtureText == producedText)
+            {
+                return;
+            }
+
+            string canonicalFixture =
+                CanonicalizeSameFrameTiming(fixtureText);
+            if (canonicalFixture != producedText)
+            {
+                throw new InvalidOperationException(
+                    "Fresh standard S3K hardware timing changed event"
+                    + " fields or more than same-frame canonical order.");
+            }
+        }
+
+        private static string CanonicalizeSameFrameTiming(string text)
+        {
+            if (text.IndexOf('\r') >= 0 || !text.EndsWith("\n"))
+            {
+                throw new InvalidOperationException(
+                    "Fixture hardware timing must be LF-terminated JSONL.");
+            }
+            string[] lines = text.Split('\n');
+            var events = new List<HardwareTimingLine>();
+            long lastRawFrame = -1;
+            for (var index = 0; index < lines.Length - 1; index++)
+            {
+                Match match = HardwareTimingEventLine.Match(lines[index]);
+                if (!match.Success)
+                {
+                    throw new InvalidOperationException(
+                        "Fixture hardware timing line " + (index + 1)
+                        + " does not have the exact event shape.");
+                }
+                long rawFrame = Convert.ToInt64(match.Groups[1].Value);
+                if (rawFrame < lastRawFrame)
+                {
+                    throw new InvalidOperationException(
+                        "Fixture hardware timing differs across raw frames,"
+                        + " not only within one frame.");
+                }
+                events.Add(new HardwareTimingLine(
+                    rawFrame,
+                    BoundaryRank(match.Groups[2].Value),
+                    match.Groups[3].Value == "kos_module_queue" ? 0 : 1,
+                    Convert.ToInt64(match.Groups[4].Value),
+                    lines[index]));
+                lastRawFrame = rawFrame;
+            }
+
+            var result = new StringBuilder(text.Length);
+            var start = 0;
+            while (start < events.Count)
+            {
+                var end = start + 1;
+                while (end < events.Count
+                    && events[end].RawFrame == events[start].RawFrame)
+                {
+                    end++;
+                }
+                List<HardwareTimingLine> sameFrame =
+                    events.GetRange(start, end - start);
+                sameFrame.Sort((left, right) =>
+                {
+                    int boundary = left.BoundaryRank.CompareTo(
+                        right.BoundaryRank);
+                    if (boundary != 0)
+                    {
+                        return boundary;
+                    }
+                    int kind = left.KindRank.CompareTo(right.KindRank);
+                    return kind != 0
+                        ? kind
+                        : left.Ordinal.CompareTo(right.Ordinal);
+                });
+                foreach (HardwareTimingLine line in sameFrame)
+                {
+                    result.Append(line.Text);
+                    result.Append('\n');
+                }
+                start = end;
+            }
+            return result.ToString();
+        }
+
+        private static int BoundaryRank(string boundary)
+        {
+            if (boundary == "vint_service")
+            {
+                return 0;
+            }
+            if (boundary == "post_objects")
+            {
+                return 1;
+            }
+            if (boundary == "pre_main_loop")
+            {
+                return 2;
+            }
+            throw new InvalidOperationException(
+                "Unknown hardware timing boundary " + boundary + ".");
         }
 
         private static void AssertCurrentHardwareTimingLedgers(string path)
@@ -690,7 +818,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                             + " pre_main_loop.");
                     }
                     directSeen = true;
-                    boundaryRank = 1;
+                    boundaryRank = 2;
                     previousOrdinal = lastDirectOrdinal;
                     lastDirectOrdinal = ordinal;
                 }
@@ -705,7 +833,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     }
                     moduleSeen = true;
                     boundaryRank =
-                        boundary == "vint_service" ? 0 : 2;
+                        boundary == "vint_service" ? 0 : 1;
                     previousOrdinal = lastModuleOrdinal;
                     lastModuleOrdinal = ordinal;
                 }
@@ -763,7 +891,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             try
             {
                 Directory.CreateDirectory(root);
-                File.WriteAllText(path, direct + module);
+                File.WriteAllText(path, module + direct);
                 AssertCurrentHardwareTimingLedgers(path);
 
                 File.WriteAllText(path, module);
@@ -807,7 +935,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             const string post =
                 "{\"event\":\"hardware_work_completed\",\"raw_frame\":13,"
                 + "\"boundary\":\"post_objects\","
-                + "\"kind\":\"kos_module_queue\",\"ordinal\":0,"
+                + "\"kind\":\"kos_module_queue\",\"ordinal\":1,"
                 + "\"submission_fingerprint\":\"sha256:"
                 + "fedcba9876543210fedcba9876543210"
                 + "fedcba9876543210fedcba9876543210\"}\n";
@@ -815,7 +943,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             {
                 Directory.CreateDirectory(root);
 
-                File.WriteAllText(path, vint + pre);
+                File.WriteAllText(path, vint + post + pre);
                 AssertCurrentHardwareTimingLedgers(path);
 
                 File.WriteAllText(path, pre + vint);
@@ -823,8 +951,58 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     () => AssertCurrentHardwareTimingLedgers(path),
                     "raw-frame and boundary order");
 
-                File.WriteAllText(path, pre + post);
+                File.WriteAllText(path, post + pre);
                 AssertCurrentHardwareTimingLedgers(path);
+
+                File.WriteAllText(path, pre + post);
+                AssertEx.Throws<InvalidOperationException>(
+                    () => AssertCurrentHardwareTimingLedgers(path),
+                    "raw-frame and boundary order");
+            }
+            finally
+            {
+                if (Directory.Exists(root))
+                {
+                    Directory.Delete(root, true);
+                }
+            }
+        }
+
+        private static void TimingComparisonAllowsOnlyCanonicalSameFrameReorder()
+        {
+            string root = TestScratch.CreateRootPath(
+                "openggf-s3k-trace-timing-delta");
+            string fixturePath = Path.Combine(root, "fixture.jsonl");
+            string producedPath = Path.Combine(root, "produced.jsonl");
+            const string pre =
+                "{\"event\":\"hardware_work_completed\",\"raw_frame\":13,"
+                + "\"boundary\":\"pre_main_loop\","
+                + "\"kind\":\"kos_decompression_queue\",\"ordinal\":0,"
+                + "\"submission_fingerprint\":\"sha256:"
+                + "0123456789abcdef0123456789abcdef"
+                + "0123456789abcdef0123456789abcdef\"}\n";
+            const string post =
+                "{\"event\":\"hardware_work_completed\",\"raw_frame\":13,"
+                + "\"boundary\":\"post_objects\","
+                + "\"kind\":\"kos_module_queue\",\"ordinal\":0,"
+                + "\"submission_fingerprint\":\"sha256:"
+                + "fedcba9876543210fedcba9876543210"
+                + "fedcba9876543210fedcba9876543210\"}\n";
+            try
+            {
+                Directory.CreateDirectory(root);
+                File.WriteAllText(fixturePath, pre + post);
+                File.WriteAllText(producedPath, post + pre);
+                AssertHardwareTimingMatchesFixture(
+                    fixturePath, producedPath);
+
+                File.WriteAllText(
+                    producedPath,
+                    (post + pre).Replace("fedcba", "eedcba"));
+                AssertEx.Throws<InvalidOperationException>(
+                    () => AssertHardwareTimingMatchesFixture(
+                        fixturePath, producedPath),
+                    "changed event fields");
             }
             finally
             {
@@ -845,6 +1023,29 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
             internal string Text { get; private set; }
             internal string VersionLine { get; private set; }
+        }
+
+        private sealed class HardwareTimingLine
+        {
+            internal HardwareTimingLine(
+                long rawFrame,
+                int boundaryRank,
+                int kindRank,
+                long ordinal,
+                string text)
+            {
+                RawFrame = rawFrame;
+                BoundaryRank = boundaryRank;
+                KindRank = kindRank;
+                Ordinal = ordinal;
+                Text = text;
+            }
+
+            internal long RawFrame { get; private set; }
+            internal int BoundaryRank { get; private set; }
+            internal int KindRank { get; private set; }
+            internal long Ordinal { get; private set; }
+            internal string Text { get; private set; }
         }
 
         private static int CountOccurrences(string value, string needle)

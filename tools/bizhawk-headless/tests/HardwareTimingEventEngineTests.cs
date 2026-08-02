@@ -87,8 +87,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "HardwareTimingEventEngine identical direct jobs do not fabricate shifts",
                 IdenticalDirectJobsDoNotFabricateShifts));
             tests.Add(new TestMain.TestCase(
-                "HardwareTimingEventEngine direct PRE sorts before module POST",
-                DirectPreSortsBeforeModulePost));
+                "HardwareTimingEventEngine module POST sorts before direct PRE",
+                ModulePostSortsBeforeDirectPre));
             tests.Add(new TestMain.TestCase(
                 "HardwareTimingEventEngine callback observes short-lived child",
                 CallbackObservesShortLivedChild));
@@ -111,8 +111,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "HardwareTimingEventEngine callback gap and reset preserve authority",
                 CallbackGapAndResetPreserveAuthority));
             tests.Add(new TestMain.TestCase(
-                "HardwareTimingEventEngine callback direct PRE sorts before module POST",
-                CallbackDirectPreSortsBeforeModulePost));
+                "HardwareTimingEventEngine callback module POST sorts before direct PRE",
+                CallbackModulePostSortsBeforeDirectPre));
             tests.Add(new TestMain.TestCase(
                 "HardwareTimingEventEngine scanner matches language-neutral vectors",
                 DirectScannerMatchesLanguageNeutralVectors));
@@ -804,7 +804,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
         }
 
-        private static void DirectPreSortsBeforeModulePost()
+        private static void ModulePostSortsBeforeDirectPre()
         {
             const int directSource = 0x100;
             const int moduleSource = 0x200;
@@ -835,13 +835,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(
                 true,
                 lines[0].Contains(
-                    "\"boundary\":\"pre_main_loop\","
-                    + "\"kind\":\"kos_decompression_queue\""));
+                    "\"boundary\":\"post_objects\","
+                    + "\"kind\":\"kos_module_queue\""));
             AssertEx.Equal(
                 true,
                 lines[1].Contains(
-                    "\"boundary\":\"post_objects\","
-                    + "\"kind\":\"kos_module_queue\""));
+                    "\"boundary\":\"pre_main_loop\","
+                    + "\"kind\":\"kos_decompression_queue\""));
         }
 
         private static void CallbackObservesShortLivedChild()
@@ -1148,7 +1148,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "\"classified\":false"));
         }
 
-        private static void CallbackDirectPreSortsBeforeModulePost()
+        private static void CallbackModulePostSortsBeforeDirectPre()
         {
             const int directSource = 0x100;
             const int moduleSource = 0x200;
@@ -1180,13 +1180,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(
                 true,
                 lines[0].Contains(
-                    "\"boundary\":\"pre_main_loop\","
-                    + "\"kind\":\"kos_decompression_queue\""));
+                    "\"boundary\":\"post_objects\","
+                    + "\"kind\":\"kos_module_queue\""));
             AssertEx.Equal(
                 true,
                 lines[1].Contains(
-                    "\"boundary\":\"post_objects\","
-                    + "\"kind\":\"kos_module_queue\""));
+                    "\"boundary\":\"pre_main_loop\","
+                    + "\"kind\":\"kos_decompression_queue\""));
         }
 
         private static void DirectScannerMatchesLanguageNeutralVectors()
@@ -1693,10 +1693,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private static void LagBoundaryHasNewRecorderVersion()
         {
             AssertEx.Equal(
-                "6.39-s3k",
+                "6.40-s3k",
                 S3KTraceMetadataWriter.LuaScriptVersion);
             AssertEx.Equal(
-                "6.40-s3k-completerun",
+                "6.41-s3k-completerun",
                 S3KCompleteRunMetadataWriter.LuaScriptVersion);
 
             string standard = File.ReadAllText(Path.Combine(

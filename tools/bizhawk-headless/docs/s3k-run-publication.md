@@ -1,5 +1,15 @@
 # S3K Complete-Run Recorder — Publication Specification (directories, metadata.json, run_manifest.json, encodings)
 
+> **2026-08-02 recorder-order note.** The maintained native complete-run
+> writer is `6.41-s3k-completerun`. On a shared raw frame it serializes module
+> `post_objects` before direct `pre_main_loop`, after any `vint_service` event.
+> The committed complete-run and run fixtures remain read-only at
+> `6.40-s3k-completerun`. No fixture is installed by the recorder change. If a
+> replacement 67-segment super-emerald capture is explicitly approved, stage
+> the candidate under
+> `tools/bizhawk-headless/.scratch/s3k-knuckles-complete-superemeralds-v641/`
+> for independent review before publication.
+>
 > **2026-07-27 publication note.** The canonical committed fleet is native
 > recorder v6.37. It contains 47 timing-owned fixture destinations plus the
 > 25-segment/22-transition Knuckles B manifest. The immutable, machine-checked

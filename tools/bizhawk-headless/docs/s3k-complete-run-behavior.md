@@ -1,5 +1,14 @@
 # S3K Complete-Run Recorder — Byte-Level SEGMENTATION Specification
 
+> **2026-08-02 recorder-order note.** The maintained native complete-run
+> writer is now `6.41-s3k-completerun`, with hardware-timing events serialized
+> in canonical same-frame service order: `vint_service`, module
+> `post_objects`, then direct `pre_main_loop`. The committed complete-run fleet,
+> including the 67-segment super-emerald publication, remains immutable at
+> `6.40-s3k-completerun`; this recorder correction does not authorize a fixture
+> rewrite. A replacement super-emerald capture is a separately reviewed and
+> approved publication action.
+>
 > **2026-07-27 publication note.** The committed fleet is now native
 > recorder v6.37, not the v6.33 Lua fixture generation described in the
 > historical sections below. The Sonic+Tails pass publishes all 15 captured

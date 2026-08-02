@@ -80,14 +80,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
         /// <summary>
         /// Exact published and current literals. Only this reviewed
-        /// schema-one to schema-two migration is normalized.
+        /// recorder-version migration is normalized.
         /// </summary>
         private const string PublishedLuaScriptVersionLine =
             "  \"lua_script_version\": \"6.40-s3k-completerun\",";
         private const string PublishedDirectLuaScriptVersionLine =
             "  \"lua_script_version\": \"6.40-s3k-completerun\",";
         private const string CurrentLuaScriptVersionLine =
-            "  \"lua_script_version\": \"6.40-s3k-completerun\",";
+            "  \"lua_script_version\": \"6.41-s3k-completerun\",";
         private const string CurrentTraceSchemaLine =
             "  \"trace_schema\": 7,";
         private const string CurrentHardwareTimingSchemaLine =
@@ -418,8 +418,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
         }
 
         /// <summary>
-        /// Requires exact v6.38/schema-7/hardware-schema-2 equality apart
-        /// from recording_date. Both sides stay LF-only and carry no run_id.
+        /// Requires exact published-v6.40 to current-v6.41 equality apart
+        /// from recorder version and recording_date. Both sides stay
+        /// LF-only and carry no run_id.
         /// </summary>
         private static void AssertMetadataEqualExceptRecordingDate(
             string context, string fixturePath, string producedPath)
@@ -433,6 +434,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 context, fixtureText, producedText);
             bool directPredecessor =
                 DirectPredecessorSegments.Contains(context);
+            producedText = producedText.Replace(
+                CurrentLuaScriptVersionLine,
+                directPredecessor
+                    ? PublishedDirectLuaScriptVersionLine
+                    : PublishedLuaScriptVersionLine);
             AssertEx.Equal(
                 1,
                 CountOccurrences(
@@ -550,13 +556,17 @@ namespace OpenGGF.BizHawk.Headless.Tests
             string context, string fixtureText, string producedText)
         {
             RequireLiteralCount(context + " fixture", fixtureText,
-                CurrentLuaScriptVersionLine, 1);
+                PublishedLuaScriptVersionLine, 1);
+            RequireLiteralCount(context + " fixture", fixtureText,
+                CurrentLuaScriptVersionLine, 0);
             RequireLiteralCount(context + " fixture", fixtureText,
                 CurrentTraceSchemaLine, 1);
             RequireLiteralCount(context + " fixture", fixtureText,
                 CurrentHardwareTimingSchemaLine, 1);
             RequireLiteralCount(context + " produced", producedText,
                 CurrentLuaScriptVersionLine, 1);
+            RequireLiteralCount(context + " produced", producedText,
+                PublishedLuaScriptVersionLine, 0);
             RequireLiteralCount(context + " produced", producedText,
                 CurrentTraceSchemaLine, 1);
             RequireLiteralCount(context + " produced", producedText,

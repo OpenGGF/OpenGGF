@@ -10,7 +10,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
     /// <summary>
     /// ROM-backed differential gate for the native S3K COMPLETE-RUN
     /// recorder (tools/bizhawk/s3k_complete_run_recorder.lua
-    /// v6.40-s3k-completerun; spec
+    /// v6.41-s3k-completerun; spec
     /// tools/bizhawk-headless/docs/s3k-run-publication.md). It runs the
     /// real CLI end-to-end through run.sh over the canonical Knuckles
     /// multi-bonus movie and asserts that the published bonus segment is
@@ -69,7 +69,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private const string PublishedQueueLuaScriptVersionLine =
             "  \"lua_script_version\": \"6.38-s3k-completerun\",";
         private const string CurrentLuaScriptVersionLine =
-            "  \"lua_script_version\": \"6.40-s3k-completerun\",";
+            "  \"lua_script_version\": \"6.41-s3k-completerun\",";
         private const string FixtureTraceSchemaLine =
             "  \"trace_schema\": 6,";
         private const string CurrentTraceSchemaLine =

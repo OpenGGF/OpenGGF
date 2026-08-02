@@ -334,7 +334,7 @@ tools/bizhawk-headless/run.sh \
 
 Current native S3K captures keep `trace_schema: 7` and write
 `hardware_timing_schema: 2`, `hardware_timing.jsonl`, and recorder versions
-`6.38-s3k` / `6.38-s3k-completerun`. Schema 2 authorizes exactly two
+`6.40-s3k` / `6.41-s3k-completerun`. Schema 2 authorizes exactly two
 production-submitted work kinds:
 
 - `KOS_DECOMPRESSION_QUEUE`, emitted when the mirrored `$FF40-$FF5F` direct
@@ -345,7 +345,9 @@ production-submitted work kinds:
 Each kind owns an independent ordinal ledger. Events carry only kind,
 ordinal, submission fingerprint, raw frame, and boundary; they never contain
 compressed or decoded bytes. When both kinds retire on one raw frame, the
-direct `pre_main_loop` edge sorts before the module `post_objects` edge.
+module `post_objects` edge is serialized before the direct `pre_main_loop`
+edge. Versions 6.40/6.41 record that canonical service order without changing
+the event identities or queue ledgers.
 
 The native recorder is the maintained publication authority. The Lua S3K
 recorders are intentionally frozen at schema 1 and emit module edges only.
@@ -356,18 +358,15 @@ boundary until a separately reviewed and explicitly approved schema-2
 publication replaces them. Do not hand-edit or regenerate committed fixture
 payloads as part of a recorder implementation change.
 
-**Schema-1 compatibility and schema-2 publication boundary:** the three
-canonical STANDARD fixtures are committed as `6.37-s3k`,
-`trace_schema: 7`, `hardware_timing_schema: 1`. The frozen Lua recorder emits
-that schema-1 shape and module-only timing. The maintained native writer emits
-`6.38-s3k`, trace schema 7, hardware-timing schema 2 and the additional direct
-ledger. `S3KTraceDifferentialTests` require byte identity for `physics.csv` /
-`aux_state.jsonl`, validate the exact schema-2 event shape and the presence of
-independent direct and module ledgers, then deliberately reject the committed
-schema-1 metadata as load-only compatibility. The ROM-backed gate therefore
-remains red at that explicit publication boundary until separately approved
-schema-2 fixtures replace the committed payloads; schema-1 timing is never
-normalized into direct-authority success:
+**Current schema-2 publication boundary:** the three canonical STANDARD
+fixtures are committed as `6.39-s3k`, `trace_schema: 7`, and
+`hardware_timing_schema: 2`; the maintained native writer emits `6.40-s3k`
+with the same schemas. `S3KTraceDifferentialTests` require byte identity for
+`physics.csv` / `aux_state.jsonl`, permit only recording date and the exact
+6.39-to-6.40 metadata migration, and require byte-identical timing unless the
+only delta is the canonical same-frame module-POST-before-direct-PRE reorder
+with the exact event-line multiset preserved. Any changed event field,
+cross-frame movement, or payload difference fails closed:
 
 - `src/test/resources/traces/s3k/aiz1_to_hcz_fullrun/` — `aiz_end_to_end`,
   BK2 frame offset 511, 20798 trace rows (ends on the BK2-end guard: 511 +
@@ -427,7 +426,7 @@ Full table and rationale: `s3k-aux-events.md` §5.1.
 
 With the S3&K locked-on ROM, `--mode trace` also replaces the frozen
 `s3k_complete_run_recorder.lua` (`6.37-s3k-completerun`) on Linux — the
-maintained native writer is `6.38-s3k-completerun`. This is the separate
+maintained native writer is `6.41-s3k-completerun`. This is the separate
 per-zone-segment / bonus-stage / special-stage recorder, distinct from the
 STANDARD recorder above. It is selected the same way as S1's
 complete-run recorder, not via `--trace-profile <one of the three STANDARD
@@ -484,30 +483,33 @@ tools/bizhawk-headless/run.sh \
   --output "$PWD/target/bizhawk-headless-s3k-run-b" \
   --run-id s3-knux-multibonus-ss
 
-# Knuckles complete super-emerald run: immutable 67-segment publication
+# Knuckles complete super-emerald run: candidate capture only after approval
 BIZHAWK_HOME=/abs/path/to/docs/BizHawk-2.11-linux-x64 \
 tools/bizhawk-headless/run.sh \
   --mode trace \
   --rom "$S3K_ROM_PATH" \
   --movie "$PWD/src/test/resources/traces/s3k/_movies/s3k-knuckles-complete-superemeralds.bk2" \
-  --output "$PWD/tools/bizhawk-headless/.scratch/s3k-knuckles-complete-superemeralds" \
+  --output "$PWD/tools/bizhawk-headless/.scratch/s3k-knuckles-complete-superemeralds-v641" \
   --run-id s3k-knuckles-complete-superemeralds
 ```
 
 The super-emerald movie has 434,417 input rows and SHA-256
 `aa892856df22b7bb1fe5accb48db10b90dc26845d1dccee90352da30349f53cc`.
-The schema-2 native capture publishes 67 segments and 48 transitions at
+The committed 6.40 schema-2 native capture publishes 67 segments and 48
+transitions at
 `src/test/resources/traces/s3k/runs/s3k-knuckles-complete-superemeralds/`.
 Its exact file lengths, hashes, timing edges, and manifest are frozen in
 `src/test/resources/traces/s3k/hardware-timing-publication.tsv`; the reviewed
 inventory and terminal-tail arithmetic are recorded in
 `docs/architecture/validation/2026-07-30-s3k-knuckles-superemerald-trace-publication.md`.
 
-**Schema-1 fixture parity and schema-2 publication boundary:** committed
-complete-run/run fixtures are `6.37-s3k-completerun`, trace schema 7,
-hardware-timing schema 1. The frozen Lua recorder emits that module-only
-shape; the maintained native writer emits `6.38-s3k-completerun`, trace
-schema 7, hardware-timing schema 2. Three ROM-backed differential gates cover
+The command above creates a 6.41 candidate in scratch; do not run or install
+it without the separate review and publication approval.
+
+**Current schema-2 fixture parity:** committed complete-run/run fixtures are
+`6.40-s3k-completerun`, trace schema 7, hardware-timing schema 2. The
+maintained native writer emits `6.41-s3k-completerun` with the same schemas.
+Three ROM-backed differential gates cover
 the capture identities below (`docs/s3k-run-publication.md` §0). In this
 historical inventory, “byte-identical” refers to physics/aux payloads and
 manifests; current metadata has the exact declared version/schema delta, and
@@ -548,12 +550,11 @@ schema-2 timing streams are publication candidates:
   `mgz_3`) that used to carry real ones before the hooks-off recapture.
 
 **Pinned metadata compatibility (no loose normalization):** committed
-metadata carries `6.37-s3k-completerun`, trace schema 7, hardware-timing
-schema 1. Current native metadata carries `6.38-s3k-completerun`, trace
-schema 7, hardware-timing schema 2. Apart from `recording_date`, only those
-exact version/schema literals may differ. Direct timing events are not
-normalized away and cannot replace committed schema-1 payloads without the
-separate publication approval.
+metadata carries `6.40-s3k-completerun`, trace schema 7, hardware-timing
+schema 2. Current native metadata carries `6.41-s3k-completerun` with the same
+schemas. Apart from `recording_date`, only that exact version literal may
+differ. Timing events are never normalized away; publication of newly
+captured bytes still requires separate approval.
 
 Identity (B) reached that state by regeneration rather than by normalization.
 The committed `runs/s3-knux-multibonus-ss/` set was a 2026-07-19 Windows

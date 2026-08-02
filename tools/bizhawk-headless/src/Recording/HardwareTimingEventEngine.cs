@@ -56,6 +56,13 @@ namespace OpenGGF.BizHawk.Headless
             public string ParentFingerprint;
         }
 
+        private sealed class DeferredDirectCompletion
+        {
+            public string Boundary;
+            public long Ordinal;
+            public string Fingerprint;
+        }
+
         private sealed class StandardKosShape
         {
             public int CompressedLength;
@@ -279,14 +286,17 @@ namespace OpenGGF.BizHawk.Headless
                 rawFrame, boundary != "vint_service");
             ushort directCountWord =
                 S3KRam.U16(host, S3KRam.KosDecompQueueCount);
-            EmitStagedDirectRetirements(rawFrame, writer);
+            List<DeferredDirectCompletion> deferredDirectCompletions = null;
+            EmitStagedDirectRetirements(
+                rawFrame, writer, ref deferredDirectCompletions);
             ObserveDirectQueue(
                 rawFrame,
                 host,
                 writer,
                 directCountWord & 0x7FFF,
                 (directCountWord & 0x8000) != 0,
-                boundary != "vint_service");
+                boundary != "vint_service",
+                ref deferredDirectCompletions);
 
             // 0x81 is specifically "the final module is active in the
             // direct decoder". A fall from any other busy value is only a
@@ -309,6 +319,8 @@ namespace OpenGGF.BizHawk.Headless
                         completed.Fingerprint);
                 }
             }
+            WriteDeferredDirectCompletions(
+                writer, rawFrame, deferredDirectCompletions);
 
             ReconcileQueue(host, physicalCount);
             priorModulesLeft = modulesLeft;
@@ -316,7 +328,9 @@ namespace OpenGGF.BizHawk.Headless
         }
 
         private void EmitStagedDirectRetirements(
-            int rawFrame, TextWriter writer)
+            int rawFrame,
+            TextWriter writer,
+            ref List<DeferredDirectCompletion> deferredCompletions)
         {
             if (stagedDirectRetirements.Count == 0)
             {
@@ -332,11 +346,9 @@ namespace OpenGGF.BizHawk.Headless
                 WriteMeasurement(completed, rawFrame, "pre_main_loop");
                 if (hardwareTimingSchema == CurrentSchema && writer != null)
                 {
-                    WriteCompletion(
-                        writer,
-                        rawFrame,
+                    DeferDirectCompletion(
+                        ref deferredCompletions,
                         "pre_main_loop",
-                        DirectEventKind,
                         completed.Ordinal,
                         completed.Fingerprint);
                 }
@@ -350,7 +362,8 @@ namespace OpenGGF.BizHawk.Headless
             TextWriter writer,
             int physicalCount,
             bool busy,
-            bool directServiceAdmitted)
+            bool directServiceAdmitted,
+            ref List<DeferredDirectCompletion> deferredCompletions)
         {
             if (physicalCount < 0
                 || physicalCount > S3KRam.KosDecompQueueCapacity)
@@ -422,11 +435,9 @@ namespace OpenGGF.BizHawk.Headless
                 if (hardwareTimingSchema == CurrentSchema
                     && writer != null)
                 {
-                    WriteCompletion(
-                        writer,
-                        rawFrame,
+                    DeferDirectCompletion(
+                        ref deferredCompletions,
                         "pre_main_loop",
-                        DirectEventKind,
                         completed.Ordinal,
                         completed.Fingerprint);
                 }
@@ -447,6 +458,45 @@ namespace OpenGGF.BizHawk.Headless
                     host, index, false, int.MinValue));
             }
             priorDirectBusy = busy;
+        }
+
+        private static void DeferDirectCompletion(
+            ref List<DeferredDirectCompletion> completions,
+            string boundary,
+            long ordinal,
+            string fingerprint)
+        {
+            if (completions == null)
+            {
+                completions = new List<DeferredDirectCompletion>();
+            }
+            completions.Add(new DeferredDirectCompletion
+            {
+                Boundary = boundary,
+                Ordinal = ordinal,
+                Fingerprint = fingerprint
+            });
+        }
+
+        private static void WriteDeferredDirectCompletions(
+            TextWriter writer,
+            int rawFrame,
+            List<DeferredDirectCompletion> completions)
+        {
+            if (writer == null || completions == null)
+            {
+                return;
+            }
+            foreach (DeferredDirectCompletion completion in completions)
+            {
+                WriteCompletion(
+                    writer,
+                    rawFrame,
+                    completion.Boundary,
+                    DirectEventKind,
+                    completion.Ordinal,
+                    completion.Fingerprint);
+            }
         }
 
         private void RequireDirectOverlap(

@@ -75,8 +75,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
             "  \"lua_script_version\": \"6.37-s3k-completerun\",";
         private const string PublishedQueuePredecessorVersionLine =
             "  \"lua_script_version\": \"6.38-s3k-completerun\",";
-        private const string CurrentVersionLine =
+        private const string PublishedCurrentVersionLine =
             "  \"lua_script_version\": \"6.40-s3k-completerun\",";
+        private const string CurrentVersionLine =
+            "  \"lua_script_version\": \"6.41-s3k-completerun\",";
         private const string FixtureTraceSchemaLine =
             "  \"trace_schema\": 6,";
         private const string CurrentTraceSchemaLine =
@@ -362,6 +364,16 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
             if (HasMetadataShape(
                 fixtureText,
+                PublishedCurrentVersionLine,
+                CurrentTraceSchemaLine,
+                true))
+            {
+                return producedText.Replace(
+                    CurrentVersionLine,
+                    PublishedCurrentVersionLine);
+            }
+            if (HasMetadataShape(
+                fixtureText,
                 PublishedQueuePredecessorVersionLine,
                 CurrentTraceSchemaLine,
                 true))
@@ -473,6 +485,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
             string current = CurrentVersionLine + "\n"
                 + CurrentTraceSchemaLine + "\n"
                 + HardwareTimingSchemaLine;
+            string publishedCurrent = PublishedCurrentVersionLine + "\n"
+                + CurrentTraceSchemaLine + "\n"
+                + HardwareTimingSchemaLine;
             string published = PublishedDirectPredecessorVersionLine + "\n"
                 + CurrentTraceSchemaLine + "\n"
                 + LegacyHardwareTimingSchemaLine;
@@ -483,6 +498,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(
                 current,
                 NormalizeCurrentMetadataForFixture(current, current));
+            AssertEx.Equal(
+                publishedCurrent,
+                NormalizeCurrentMetadataForFixture(
+                    publishedCurrent, current));
             AssertEx.Equal(
                 published,
                 NormalizeCurrentMetadataForFixture(published, current));
@@ -533,7 +552,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
             AssertContains(
                 current,
-                "\"lua_script_version\": \"6.40-s3k-completerun\"");
+                "\"lua_script_version\": \"6.41-s3k-completerun\"");
             AssertContains(current, "\"hardware_timing_schema\": 2");
             AssertContains(legacy, "\"hardware_timing_schema\": 1");
         }
@@ -857,7 +876,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     SetBSegments,
                     transitions);
             const string CurrentManifestVersionLine =
-                "  \"lua_script_version\": \"6.40-s3k-completerun\",\n";
+                "  \"lua_script_version\": \"6.41-s3k-completerun\",\n";
             AssertEx.Equal(
                 1,
                 CountOccurrences(actual, CurrentManifestVersionLine));
