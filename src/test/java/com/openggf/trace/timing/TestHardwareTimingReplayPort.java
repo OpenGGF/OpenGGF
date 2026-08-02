@@ -28,6 +28,59 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestHardwareTimingReplayPort {
 
     @Test
+    void prefixCloseAcceptsOnlyFutureEdgesWhenProductionLedgerIsEmpty() {
+        HardwareTimingService service = new HardwareTimingService();
+        RecordedCompletionAuthority authority = service.beginRecordedAdmission();
+        HardwareTimingReplayPort port = port(authority, new HardwareCompletionEdge(
+                101, POST_OBJECTS, HardwareWorkKind.KOS_MODULE_QUEUE, 0,
+                fingerprint('a')));
+
+        port.verifyPrefixComplete(100);
+
+        assertTrue(port.capture().runComplete());
+    }
+
+    @Test
+    void prefixCloseRejectsUnconsumedEdgeWithinInclusiveBoundary() {
+        HardwareTimingService service = new HardwareTimingService();
+        RecordedCompletionAuthority authority = service.beginRecordedAdmission();
+        HardwareTimingReplayPort port = port(authority, new HardwareCompletionEdge(
+                100, POST_OBJECTS, HardwareWorkKind.KOS_MODULE_QUEUE, 0,
+                fingerprint('b')));
+
+        IllegalStateException error = assertThrows(IllegalStateException.class,
+                () -> port.verifyPrefixComplete(100));
+
+        assertTrue(error.getMessage().contains("raw_frame=100"), error::getMessage);
+    }
+
+    @Test
+    void prefixCloseRejectsPendingProductionSubmission() {
+        ReplayHarness harness = harness(false, 1, 101);
+        HardwareTimingReplayPort port = port(
+                harness.authority, HardwareTimingSchedule.empty());
+
+        IllegalStateException error = assertThrows(IllegalStateException.class,
+                () -> port.verifyPrefixComplete(100));
+
+        assertTrue(error.getMessage().contains(describe(harness.handle)), error::getMessage);
+    }
+
+    @Test
+    void ordinaryRunCloseRemainsStrictForFutureEdge() {
+        HardwareTimingService service = new HardwareTimingService();
+        RecordedCompletionAuthority authority = service.beginRecordedAdmission();
+        HardwareTimingReplayPort port = port(authority, new HardwareCompletionEdge(
+                101, POST_OBJECTS, HardwareWorkKind.KOS_MODULE_QUEUE, 0,
+                fingerprint('c')));
+
+        IllegalStateException error = assertThrows(IllegalStateException.class,
+                port::verifyRunComplete);
+
+        assertTrue(error.getMessage().contains("raw_frame=101"), error::getMessage);
+    }
+
+    @Test
     void schemaTwoScheduleRejectsDirectEdgesOutsidePreMainLoop() {
         for (HardwareServiceBoundary boundary : List.of(VINT_SERVICE, POST_OBJECTS)) {
             HardwareCompletionEdge edge = new HardwareCompletionEdge(

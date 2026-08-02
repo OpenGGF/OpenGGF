@@ -5,8 +5,13 @@ import com.openggf.game.GameServices;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.trace.TraceData;
+import com.openggf.trace.TraceEvent.ZoneActState;
+import com.openggf.trace.TraceFrame;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 import com.openggf.tests.trace.AbstractTraceReplayTest;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Shared base for S3K bonus-stage trace replay (gumball/pachinko/slots).
@@ -18,6 +23,21 @@ public abstract class AbstractS3kBonusStageTraceReplayTest extends AbstractTrace
     @Override
     protected void afterFixtureBuild(TraceData trace) {
         TraceReplaySessionBootstrap.applyBonusStageEntry(trace);
+    }
+
+    @Override
+    protected Integer semanticTimingPrefixLastRawFrame(TraceData trace) {
+        List<TraceFrame> representedFrames = new ArrayList<>();
+        List<ZoneActState> zoneActStates = new ArrayList<>();
+        for (int traceIndex = 0; traceIndex < trace.frameCount(); traceIndex++) {
+            representedFrames.add(trace.getFrame(traceIndex));
+            for (var event : trace.getEventsForFrame(traceIndex)) {
+                if (event instanceof ZoneActState state) {
+                    zoneActStates.add(state);
+                }
+            }
+        }
+        return deriveLastBonusRawFrame(representedFrames, zoneActStates);
     }
 
     /**
@@ -44,6 +64,67 @@ public abstract class AbstractS3kBonusStageTraceReplayTest extends AbstractTrace
 
     static boolean hasReachedTerminalBoundary(BonusStageProvider provider) {
         return provider != null && provider.isStageComplete();
+    }
+
+    static int deriveLastBonusRawFrame(
+            List<TraceFrame> representedFrames, List<ZoneActState> zoneActStates) {
+        if (zoneActStates.isEmpty()
+                || zoneActStates.getFirst().frame() != 0
+                || zoneActStates.getFirst().gameMode() == null
+                || zoneActStates.getFirst().gameMode() != 12) {
+            throw new IllegalArgumentException(
+                    "standalone bonus trace must start in game_mode=12");
+        }
+
+        List<ZoneActState> departures = zoneActStates.stream()
+                .filter(state -> state.frame() > 0)
+                .filter(state -> state.gameMode() == null || state.gameMode() != 12)
+                .toList();
+        if (departures.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "standalone bonus trace has no departure from game_mode=12");
+        }
+        if (departures.size() != 1) {
+            throw new IllegalArgumentException(
+                    "standalone bonus trace has ambiguous departures from game_mode=12: "
+                            + departures.size());
+        }
+
+        int departureFrame = departures.getFirst().frame();
+        return representedFrames.stream()
+                .mapToInt(TraceFrame::frame)
+                .filter(rawFrame -> rawFrame < departureFrame)
+                .max()
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "standalone bonus departure has no represented predecessor: raw_frame="
+                                + departureFrame));
+    }
+
+    static TimingPrefixDecision decideTimingPrefixClose(
+            int currentRawFrame, int lastBonusRawFrame, boolean ignoredLiveStageComplete) {
+        if (currentRawFrame < lastBonusRawFrame) {
+            return TimingPrefixDecision.CONTINUE;
+        }
+        if (currentRawFrame > lastBonusRawFrame) {
+            throw new IllegalStateException(
+                    "bonus replay advanced beyond semantic timing prefix boundary: "
+                            + "current_raw_frame=" + currentRawFrame
+                            + ", last_bonus_raw_frame=" + lastBonusRawFrame);
+        }
+        return TimingPrefixDecision.CLOSE_PREFIX;
+    }
+
+    @Override
+    protected boolean validateSemanticTimingPrefix(
+            int currentRawFrame, int lastPrefixRawFrame) {
+        return decideTimingPrefixClose(
+                currentRawFrame, lastPrefixRawFrame, false)
+                == TimingPrefixDecision.CLOSE_PREFIX;
+    }
+
+    enum TimingPrefixDecision {
+        CONTINUE,
+        CLOSE_PREFIX
     }
 
     /**

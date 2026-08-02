@@ -198,6 +198,28 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
     }
 
     /**
+     * Closes recorded timing at a verified semantic trace prefix while leaving
+     * later, unrepresented schedule edges untouched.
+     */
+    public void closeHardwareTimingReplayPrefix(int inclusiveRawFrame) {
+        if (hardwareTimingReplayClosed || hardwareTimingReplayPort == null) {
+            return;
+        }
+        hardwareTimingReplayClosed = true;
+        try {
+            hardwareTimingReplayPort.verifyPrefixComplete(inclusiveRawFrame);
+        } finally {
+            runner.clearHardwareTimingReplayObserver();
+            gameplayMode.setHardwareTimingBoundaryObserver(null);
+            if (gameplayMode.getRewindRegistry() != null) {
+                gameplayMode.getRewindRegistry()
+                        .deregister(HardwareTimingReplayPort.REWIND_KEY);
+            }
+            gameplayMode.clearHardwareTimingReplayCloseHook();
+        }
+    }
+
+    /**
      * Detaches recorded timing after another replay assertion has already
      * failed. Teardown must preserve that primary failure instead of replacing
      * it with the expected "unconsumed edge" consequence of an interrupted

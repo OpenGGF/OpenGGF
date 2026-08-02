@@ -268,6 +268,32 @@ public final class HardwareTimingReplayPort
         runComplete = true;
     }
 
+    /**
+     * Closes a semantically complete trace prefix without admitting future
+     * recorded edges. Every edge represented by the prefix and every
+     * production submission it created must already be complete.
+     */
+    public void verifyPrefixComplete(int inclusiveRawFrame) {
+        requireActive();
+        HardwareCompletionEdge next = nextEdge();
+        if (next != null && next.rawFrame() <= inclusiveRawFrame) {
+            throw new IllegalStateException(
+                    "unconsumed hardware completion edge at prefix end raw_frame="
+                            + inclusiveRawFrame + ": " + describe(next));
+        }
+        List<PendingRecordedSubmission> pendingSubmissions = authority.pendingSubmissions();
+        if (!pendingSubmissions.isEmpty()) {
+            throw new IllegalStateException(
+                    "pending recorded hardware submissions at prefix end raw_frame="
+                            + inclusiveRawFrame + ": " + pendingSubmissions.stream()
+                            .map(PendingRecordedSubmission::handle)
+                            .map(HardwareTimingReplayPort::describe)
+                            .toList());
+        }
+        authority.endRecordedAdmission();
+        runComplete = true;
+    }
+
     @Override
     public String key() {
         return REWIND_KEY;

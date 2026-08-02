@@ -183,6 +183,15 @@ public abstract class AbstractTraceReplayTest {
         return false;
     }
 
+    /**
+     * Optional semantic end for the hardware-timing schedule. Returning a raw
+     * frame asks the S3K replay loop to drive and compare through that
+     * represented frame, then close the timing prefix.
+     */
+    protected Integer semanticTimingPrefixLastRawFrame(TraceData trace) {
+        return null;
+    }
+
     static boolean shouldValidateRewindReferenceClosure(SonicGame game) {
         return game == SonicGame.SONIC_2 || game == SonicGame.SONIC_3K;
     }
@@ -362,7 +371,8 @@ public abstract class AbstractTraceReplayTest {
 
             FrontierReplayStopper frontierStopper = FrontierReplayStopper.fromSystemProperties();
             if ("s3k".equals(meta.game())) {
-                replayS3kTrace(trace, meta, fixture, binder, replayStart, frontierStopper);
+                hardwareTimingReplayClosed = replayS3kTrace(
+                        trace, meta, fixture, binder, replayStart, frontierStopper);
             } else {
                 int startTraceIndex = replayStart.startingTraceIndex();
                 for (int i = startTraceIndex; i < trace.frameCount(); i++) {
@@ -477,8 +487,10 @@ public abstract class AbstractTraceReplayTest {
             finishDynamicArtComparison(
                     trace, binder, fixture,
                     !frontierStopper.stoppedEarly());
-            fixture.closeHardwareTimingReplayRun();
-            hardwareTimingReplayClosed = true;
+            if (!hardwareTimingReplayClosed) {
+                fixture.closeHardwareTimingReplayRun();
+                hardwareTimingReplayClosed = true;
+            }
 
             // 6. Build report
             DivergenceReport report = buildDivergenceReport(binder, meta, trace);
@@ -574,7 +586,7 @@ public abstract class AbstractTraceReplayTest {
         return TraceReplayBootstrap.shouldApplyMetadataStartPositionForTraceReplay(trace);
     }
 
-    private void replayS3kTrace(TraceData trace, TraceMetadata meta,
+    private boolean replayS3kTrace(TraceData trace, TraceMetadata meta,
                                 HeadlessTestFixture fixture, TraceBinder binder,
                                 TraceReplayBootstrap.ReplayStartState replayStart,
                                 FrontierReplayStopper frontierStopper) {
@@ -584,6 +596,7 @@ public abstract class AbstractTraceReplayTest {
                 : driveTraceIndex > 0 ? trace.getFrame(driveTraceIndex - 1) : null;
         S3kReplayCheckpointDetector detector = new S3kReplayCheckpointDetector();
         S3kRequiredCheckpointGuard checkpointGuard = new S3kRequiredCheckpointGuard();
+        Integer semanticTimingPrefixLastRawFrame = semanticTimingPrefixLastRawFrame(trace);
 
         if (replayStart.hasSeededTraceState()) {
             TraceFrame seededFrame = trace.getFrame(replayStart.seededTraceIndex());
@@ -768,14 +781,14 @@ public abstract class AbstractTraceReplayTest {
                 compareDynamicArtIfAdvertised(
                         trace, binder, driveFrame.frame());
                 if (observeFrontierAndShouldStop(frontierStopper, binder, driveFrame.frame())) {
-                    break;
+                    return false;
                 }
             } else {
                 compareDynamicArtIfAdvertised(
                         trace, binder, driveFrame.frame());
                 if (observeFrontierAndShouldStop(
                         frontierStopper, binder, driveFrame.frame())) {
-                    break;
+                    return false;
                 }
             }
 
@@ -788,13 +801,34 @@ public abstract class AbstractTraceReplayTest {
                         detector.requiredCheckpointNamesReached());
             }
 
-            if (replayTerminalReached()) {
-                break;
+            if (semanticTimingPrefixLastRawFrame != null) {
+                if (validateSemanticTimingPrefix(
+                        driveFrame.frame(), semanticTimingPrefixLastRawFrame)) {
+                    fixture.closeHardwareTimingReplayPrefix(semanticTimingPrefixLastRawFrame);
+                    return true;
+                }
+            } else if (replayTerminalReached()) {
+                return false;
             }
 
             driveTraceIndex++;
             previousDriveFrame = driveFrame;
         }
+        return false;
+    }
+
+    protected boolean validateSemanticTimingPrefix(
+            int currentRawFrame, int lastPrefixRawFrame) {
+        if (currentRawFrame < lastPrefixRawFrame) {
+            return false;
+        }
+        if (currentRawFrame > lastPrefixRawFrame) {
+            throw new IllegalStateException(
+                    "trace replay advanced beyond semantic timing prefix boundary: "
+                            + "current_raw_frame=" + currentRawFrame
+                            + ", last_prefix_raw_frame=" + lastPrefixRawFrame);
+        }
+        return true;
     }
 
     private static void compareLoadQueuesIfAdvertised(
