@@ -298,11 +298,13 @@ class TestTraceSessionLauncherRunBranch {
     }
 
     @Test
-    void singleTraceSegmentOwnershipRejectsAnAlreadyOpenWindowWithoutRebasingIt() {
+    void singleTraceSegmentOwnershipRejectsAnAlreadyExternalWindowWithoutRebasingIt() {
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
         GameplayModeContext context = SessionManager.getCurrentGameplayMode();
         context.dynamicArtLifecycle().openComparisonSegment();
+        context.plcFrameLifecycle()
+                .setComparisonSegmentsExternallyManaged(true);
         long generation = context.dynamicArtDiagnostics()
                 .latestSnapshot().segmentGeneration();
         TraceSessionLauncher session =
@@ -314,6 +316,119 @@ class TestTraceSessionLauncherRunBranch {
         assertTrue(context.dynamicArtLifecycle().isComparisonSegmentOpen());
         assertEquals(generation, context.dynamicArtDiagnostics()
                 .latestSnapshot().segmentGeneration());
+        context.dynamicArtLifecycle().closeComparisonSegment();
+        context.plcFrameLifecycle().runLogicalIteration(() -> { }, row -> {
+            row.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
+            row.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+            return null;
+        });
+        assertFalse(context.dynamicArtLifecycle().isComparisonSegmentOpen(),
+                "rejecting a second owner must preserve the first external owner");
+        assertEquals(generation, context.dynamicArtDiagnostics()
+                .latestSnapshot().segmentGeneration());
+    }
+
+    @Test
+    void visualOwnershipReplacesCompletedAutomaticWindowAndPreservesPendingS2Transfer() {
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
+        GameplayModeContext context = SessionManager.getCurrentGameplayMode();
+        final long[] transferId = {-1};
+        context.plcFrameLifecycle().runLogicalIteration(() -> { }, row -> {
+            row.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
+            row.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+            transferId[0] = context.dynamicArtLifecycle().observeRamDplc(
+                    GameId.S2, "sonic", 1,
+                    List.of(new TileLoadRequest(0, 1)),
+                    0x1000, 0xF000).transferId();
+            return null;
+        });
+        DynamicArtDiagnosticsSnapshot automatic =
+                context.dynamicArtDiagnostics().latestSnapshot();
+        assertTrue(automatic.published());
+        assertEquals(List.of(transferId[0]),
+                automatic.outstandingTransferIds());
+        long automaticGeneration = automatic.segmentGeneration();
+        TraceSessionLauncher session =
+                new TraceSessionLauncher(null, null, segments, null);
+
+        session.installDynamicArtSegments(context);
+
+        DynamicArtDiagnosticsSnapshot traceOrigin =
+                context.dynamicArtDiagnostics().latestSnapshot();
+        assertTrue(context.dynamicArtLifecycle().isComparisonSegmentOpen());
+        assertFalse(traceOrigin.published());
+        assertEquals(-1, traceOrigin.frame());
+        assertEquals(automaticGeneration + 1,
+                traceOrigin.segmentGeneration());
+        assertEquals(List.of(transferId[0]),
+                traceOrigin.outstandingTransferIds());
+
+        context.plcFrameLifecycle().runLogicalIteration(() -> { }, row -> {
+            row.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
+            row.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+            return null;
+        });
+        DynamicArtDiagnosticsSnapshot retired =
+                context.dynamicArtDiagnostics().latestSnapshot();
+        assertEquals(List.of(), retired.outstandingTransferIds());
+        assertEquals(1, retired.edges().size(),
+                "the handoff must not duplicate the original submission");
+        assertEquals(transferId[0], retired.edges().getFirst().transferId());
+        assertEquals("completed", retired.edges().getFirst().phase());
+
+        TraceRunReplayWalker.DynamicArtSegmentController controller =
+                (TraceRunReplayWalker.DynamicArtSegmentController)
+                        getField(session, "runDynamicArtSegments");
+        controller.enterGap();
+        long closedGeneration = context.dynamicArtDiagnostics()
+                .latestSnapshot().segmentGeneration();
+        context.plcFrameLifecycle().runLogicalIteration(() -> { }, row -> {
+            row.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
+            row.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+            return null;
+        });
+        assertFalse(context.dynamicArtLifecycle().isComparisonSegmentOpen(),
+                "external ownership must suppress automatic windows in run gaps");
+        assertEquals(closedGeneration, context.dynamicArtDiagnostics()
+                .latestSnapshot().segmentGeneration());
+    }
+
+    @Test
+    void failedFreshTraceWindowOpenRestoresAutomaticOwnership() {
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
+        GameplayModeContext context = SessionManager.getCurrentGameplayMode();
+        context.plcFrameLifecycle().runLogicalIteration(() -> { }, row -> {
+            row.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
+            row.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+            return null;
+        });
+        var pending = context.dynamicArtLifecycle().observeRomDplc(
+                "sonic", 7, List.of(new TileLoadRequest(0, 1)),
+                0x2000, 0xF000);
+        TraceSessionLauncher session =
+                new TraceSessionLauncher(null, null, segments, null);
+
+        IllegalStateException failure = assertThrows(IllegalStateException.class,
+                () -> session.installDynamicArtSegments(context));
+
+        assertTrue(failure.getMessage().contains("pending production work"));
+        assertFalse(context.dynamicArtLifecycle().isComparisonSegmentOpen());
+        assertEquals(List.of(pending.transferId()),
+                context.dynamicArtDiagnostics().latestSnapshot()
+                        .outstandingTransferIds());
+
+        context.dynamicArtLifecycle().completeApplied(pending);
+        context.plcFrameLifecycle().runLogicalIteration(() -> { }, row -> {
+            row.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
+            row.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+            return null;
+        });
+        assertTrue(context.dynamicArtLifecycle().isComparisonSegmentOpen(),
+                "normal lifecycle ownership must resume after launch rollback");
+        assertEquals(List.of(), context.dynamicArtDiagnostics().latestSnapshot()
+                .outstandingTransferIds());
     }
 
     @Test
