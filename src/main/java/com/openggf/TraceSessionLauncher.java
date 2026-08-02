@@ -1422,7 +1422,7 @@ public final class TraceSessionLauncher {
     void installDynamicArtSegments(GameplayModeContext gameplayMode) {
         Objects.requireNonNull(gameplayMode, "gameplayMode");
         gameplayMode.plcFrameLifecycle()
-                .setComparisonSegmentsExternallyManaged(true);
+                .acquireExternalComparisonSegmentOwnership();
         dynamicArtSegmentGameplayMode = gameplayMode;
         TraceRunReplayWalker.DynamicArtSegmentController controller =
                 new TraceRunReplayWalker.DynamicArtSegmentController(

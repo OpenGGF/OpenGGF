@@ -215,8 +215,8 @@ Steps:
 4. Record status in synchronous parser/validation catches, bootstrap callback
    aborts, and non-run replay aborts. Preserve `TraceRunFailureStatus` for its
    richer in-run segment diagnostics.
-5. Extend Task 5's already-open-segment case through the launcher and prove its
-   safe lifecycle failure is rendered as a held launch error.
+5. Extend Task 5's already-externally-managed segment case through the launcher
+   and prove its safe lifecycle failure is rendered as a held launch error.
 6. Have the master title retain the picker on a synchronous false result and
    clear its loading latch. A callback failure may recreate the picker after
    teardown; the process-held failure remains available for it.
@@ -270,3 +270,56 @@ Steps:
 8. Push only `develop`. After successful push, verify the worktree is clean and
    merged, remove it, delete the local worktree branch, and prune worktree
    metadata. Preserve all pre-existing main-workspace user changes.
+
+## Task 8: Deferred callback dynamic-art ownership handoff
+
+Files:
+
+- `src/test/java/com/openggf/TestTraceSessionLauncherRunBranch.java`
+- `src/test/java/com/openggf/game/resources/TestPlcFrameLifecycleCoordinator.java`
+- `src/main/java/com/openggf/game/resources/PlcFrameLifecycleCoordinator.java`
+- `src/main/java/com/openggf/TraceSessionLauncher.java`
+- this design and plan
+
+Steps:
+
+1. Add a launcher regression that lets ordinary PLC lifecycle ownership open
+   and publish a comparison window containing a real pending S2 transfer, then
+   installs visual run ownership. Assert installation succeeds, closes the
+   automatic generation, opens a fresh generation at unpublished row zero,
+   leaves external management armed, and preserves the transfer identity and
+   outstanding ledger without duplicate submission. Service its normal VBlank
+   and prove the original transfer retires. Run the test before production
+   changes and confirm it fails with
+   `dynamic-art comparison segment is already open`.
+2. Retain a distinct regression in which external management is already armed.
+   Installing a second visual owner must fail without closing, abandoning, or
+   incrementing that segment's generation.
+3. Add a coordinator regression that attempts acquisition while an automatic
+   window is open but has not published any row. Even with an empty edge buffer,
+   acquisition must fail and preserve the open window, generation, and automatic
+   ownership.
+4. Add an atomic PLC coordinator operation that acquires external comparison
+   ownership. It rejects duplicate external acquisition, requires any open
+   automatic window's latest snapshot to be published, marks the coordinator
+   externally managed before touching the lifecycle, and closes that completed
+   automatic window. If validation or close fails, it restores automatic
+   ownership and propagates the original lifecycle failure; it never invokes
+   the unpublished-window abandon path.
+5. Make `TraceSessionLauncher.installDynamicArtSegments` use the acquisition
+   operation before opening its controller window. Existing close and abort
+   paths continue to release external management, and installation rollback
+   does the same if opening trace row zero fails.
+6. Add a launcher regression whose completed automatic window carries a pending
+   direct/non-FIFO ROM transfer that makes the fresh trace-window open fail
+   after acquisition. Assert the failure is propagated, external ownership is
+   released, and no window or transfer is abandoned. Complete that transfer
+   through its real production completion path, then prove the next logical
+   iteration reopens automatic ownership.
+7. Run:
+
+   `mvn -Dmse=off -Dtest='com.openggf.TestTraceSessionLauncherRunBranch,com.openggf.game.resources.TestPlcFrameLifecycleCoordinator,com.openggf.trace.live.TestLiveTraceComparatorObserver,com.openggf.game.resources.TestDynamicArtLifecycleService' test`
+
+8. Run the combined visual-trace focused suite, `git diff --check`, and an
+   independent code review. Re-run the full JDK 21 suite against the recorded
+   integration baseline before merging and pushing `develop`.

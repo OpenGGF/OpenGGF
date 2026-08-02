@@ -112,16 +112,25 @@ that every recorded row advances gameplay.
 
 Single-level visual sessions adopt the existing whole-run launch ordering. In
 the game-bootstrap callback, after the new gameplay context exists but before
-`TraceReplayDriver.start` installs the comparator, the launcher switches that
-context's PLC coordinator to externally managed comparison segments and opens
-segment zero through `TraceRunReplayWalker.DynamicArtSegmentController`.
+`TraceReplayDriver.start` installs the comparator, the launcher asks that
+context's PLC coordinator to transfer comparison-segment ownership from its
+ordinary automatic policy to external management. The transfer closes any
+completed automatic diagnostics window, then the launcher opens trace segment
+zero through `TraceRunReplayWalker.DynamicArtSegmentController`.
 
-This is deliberately not deferred to `beforeProductionIteration`: by then an
-ordinary production claim could already have auto-opened a segment, and a
-close/reopen could reject unpublished buffered work. It is also not applied to
-the old master-title/fade context. The same callback-time operation already
-used by manifest runs therefore establishes row zero before any replay-owned
-production claim and preserves production-created ledger/buffer state.
+This is deliberately not deferred to `beforeProductionIteration`: by then a
+replay-owned production claim could already have published against the wrong
+origin. It is also not applied to the old master-title/fade context. The
+master-title launch callback itself is deferred until the enclosing logical
+iteration has finished, so a newly selected game's ordinary lifecycle may
+already have opened and published a diagnostics window before the callback.
+That completed automatic window is valid prior state, not stale trace
+ownership. “Completed” is proven by its latest diagnostics snapshot carrying a
+published row; an open automatic window with no published row remains an
+in-flight invariant failure even when its edge buffer is empty. Closing a
+completed window preserves production-created ledger and delivery state;
+opening the externally managed window then establishes trace row zero before
+`TraceReplayDriver.start` performs its first nested replay iteration.
 
 Comparator row zero is then followed by exactly one production publication
 with the same generation and row number. Segment close and session abort paths
@@ -137,10 +146,12 @@ clears only buffered comparison edges and row-publication coordinates. It
 preserves mapping-frame decisions, the production ledger, pending S1/S2 work,
 preparations, gap state, and monotonic transfer/edge identities, so real queued
 work retires normally before automatic segment ownership resumes. Unrelated
-close and gap-journal invariant failures remain visible. If the newly created
-gameplay context unexpectedly already
-owns an open comparison segment, launch fails visibly
-instead of trying to discard or rebase unpublished production state.
+close and gap-journal invariant failures remain visible. The ownership-transfer
+operation rejects a context that is already externally managed, so a stale
+visual-session owner still fails visibly. It also refuses to abandon or rebase
+an unpublished automatic window: callback-after-step ordering guarantees the
+supported automatic window is completed, and a violation of that ordering
+remains an error rather than discarding production evidence.
 
 No expected edge, frame value, or trace payload is sent into the production
 lifecycle; the comparator still pulls immutable diagnostics after production.
@@ -215,8 +226,14 @@ without introducing background access to engine/configuration singletons.
   profiles receive compatibility.
 - Special-stage tests load committed S1 and S2 standalone fixtures through the
   profile-polymorphic path and verify pacing/terminal selection.
-- Dynamic-art tests begin from a previously published lifecycle, activate a
-  visual session, and prove row zero receives a fresh atomic publication. An
+- Dynamic-art tests begin from a previously published automatically managed
+  lifecycle with a pending production transfer, transfer it to visual
+  ownership, and prove the old window closes, transfer identity and outstanding
+  state survive without duplicate submission, normal VBlank retirement still
+  occurs, and row zero receives a fresh atomic publication. An unpublished
+  automatic window and a separately externally managed open window both remain
+  launch errors without changing their ownership or generation. A fresh-window
+  open failure after successful acquisition restores automatic ownership. An
   abort regression buffers production work before row zero, removes the global
   gameplay locator, and proves stored-owner abandonment disarms the window,
   preserves production identity/pending retirement, and lets automatic

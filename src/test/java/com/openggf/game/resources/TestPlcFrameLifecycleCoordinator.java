@@ -135,6 +135,32 @@ class TestPlcFrameLifecycleCoordinator {
     }
 
     @Test
+    void externalOwnershipRejectsAnUnpublishedAutomaticWindowWithoutChangingIt() {
+        DynamicArtLifecycleService dynamicArt =
+                new DynamicArtLifecycleService();
+        dynamicArt.beginRun();
+        PlcFrameLifecycleCoordinator coordinator =
+                new PlcFrameLifecycleCoordinator(
+                        recording(new ArrayList<>()), dynamicArt);
+        var frame = coordinator.latchBeforeFadeUpdate();
+        frame.claim(PlcLifecyclePhase.ENDING);
+        long generation = dynamicArt.latestSnapshot().segmentGeneration();
+
+        IllegalStateException failure = assertThrows(IllegalStateException.class,
+                coordinator::acquireExternalComparisonSegmentOwnership);
+
+        assertTrue(failure.getMessage().contains("has not published a row"));
+        assertTrue(dynamicArt.isComparisonSegmentOpen());
+        assertEquals(generation,
+                dynamicArt.latestSnapshot().segmentGeneration());
+        frame.finish();
+
+        coordinator.acquireExternalComparisonSegmentOwnership();
+        assertFalse(dynamicArt.isComparisonSegmentOpen(),
+                "a completed automatic window can be handed off");
+    }
+
+    @Test
     void rewindRestoreDoesNotPublishSnapshot() {
         DynamicArtLifecycleService dynamicArt =
                 new DynamicArtLifecycleService();

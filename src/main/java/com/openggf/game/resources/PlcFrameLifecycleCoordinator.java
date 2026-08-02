@@ -202,6 +202,34 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
         comparisonSegmentsExternallyManaged = externallyManaged;
     }
 
+    /**
+     * Transfers a completed automatically managed diagnostics window to an
+     * external run-segment owner. The caller opens the new external window
+     * after this operation returns.
+     */
+    public void acquireExternalComparisonSegmentOwnership() {
+        if (comparisonSegmentsExternallyManaged) {
+            throw new IllegalStateException(
+                    "dynamic-art comparison segments are already externally managed");
+        }
+        if (dynamicArtLifecycle != null
+                && dynamicArtLifecycle.isComparisonSegmentOpen()
+                && !dynamicArtLifecycle.latestSnapshot().published()) {
+            throw new IllegalStateException(
+                    "automatic dynamic-art comparison segment has not published a row");
+        }
+        comparisonSegmentsExternallyManaged = true;
+        try {
+            if (dynamicArtLifecycle != null
+                    && dynamicArtLifecycle.isComparisonSegmentOpen()) {
+                dynamicArtLifecycle.closeComparisonSegment();
+            }
+        } catch (RuntimeException | Error failure) {
+            comparisonSegmentsExternallyManaged = false;
+            throw failure;
+        }
+    }
+
     public final class PlcLifecycleFrame {
         private final PlcLifecycleService service;
         private PlcLifecyclePhase owner;

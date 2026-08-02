@@ -11,8 +11,9 @@ All notable changes to the OpenGGF project are documented in this file.
   S1/S2/S3K special stages use their typed row schemas, old `complete_run`
   level metadata may omit its profile, and schema-2 timing narrowly
   canonicalises the legacy same-frame direct-PRE/module-POST emission pair.
-  Single-level sessions open the same externally managed dynamic-art segment
-  as whole runs before row zero, preserving strict atomic publication. The
+  Single-level sessions transfer any completed automatic PLC/DPLC diagnostics
+  window to the same externally managed segment as whole runs before row zero,
+  preserving pending production transfers and strict atomic publication. The
   picker renders a loading frame before synchronous parsing and retains launch,
   bootstrap, or replay exceptions on screen until acknowledged.
 - Refactor/Test: object execution now names its dispatched clock
