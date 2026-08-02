@@ -207,7 +207,7 @@ class TestShieldRewindPendingRestore {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
         }
 
         @Override
@@ -229,7 +229,7 @@ class TestShieldRewindPendingRestore {
             super(null, "NullSpawnPublisher");
         }
 
-        @Override public void update(int frameCounter, PlayableEntity player) {}
+        @Override public void update(int vIntRunCount, PlayableEntity player) {}
         @Override public void appendRenderCommands(List<GLCommand> commands) {}
         @Override public AbstractObjectInstance recreateForRewind(RewindRecreateContext context) {
             return new NullSpawnPublisher();
@@ -243,7 +243,7 @@ class TestShieldRewindPendingRestore {
             super(null, "FixedPowerUpPublisher");
         }
 
-        @Override public void update(int frameCounter, PlayableEntity player) { updates++; }
+        @Override public void update(int vIntRunCount, PlayableEntity player) { updates++; }
         @Override public void appendRenderCommands(List<GLCommand> commands) {}
         @Override public void destroy() { setDestroyed(true); }
         @Override public void setVisible(boolean visible) {}

@@ -126,7 +126,7 @@ public class VPropellerObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // ROM: ObjB4_Main
         // 1. Animate sprite (Ani_objB4: duration=1, frames 0,1,2, loop)
@@ -138,7 +138,7 @@ public class VPropellerObjectInstance extends AbstractObjectInstance
         // PlaySoundLocal (s2.asm:1555) only queues the SFX when render_flags.on_screen
         // is set; without this gate the propeller keeps sounding across its whole
         // off-screen placement window. isOnScreen() is that on-screen bit.
-        if (((frameCounter + VINT_RUNCOUNT_OFFSET) & SOUND_INTERVAL_MASK) == 0 && isOnScreen()) {
+        if (((vIntRunCount + VINT_RUNCOUNT_OFFSET) & SOUND_INTERVAL_MASK) == 0 && isOnScreen()) {
             services().playSfx(Sonic2AudioConstants.SFX_HELICOPTER);
         }
 

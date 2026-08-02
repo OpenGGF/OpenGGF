@@ -103,7 +103,7 @@ public class WFZShipFireObjectInstance extends AbstractObjectInstance implements
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (!initialized) {
             // ROM ObjBC_Init runs LoadSubObject, saves objoff_2C, then rts.

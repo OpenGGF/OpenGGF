@@ -98,9 +98,9 @@ public class SpikyBlockSpikeInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        updateAction(frameCounter);
+        updateAction(vIntRunCount);
         updatePosition();
         updateDynamicSpawn(currentX, currentY);
         // ROM Obj68_Spike (s2.asm:53302) ends with MarkObjGone2 keyed on
@@ -116,12 +116,12 @@ public class SpikyBlockSpikeInstance extends AbstractObjectInstance
      * ROM: Obj68_Spike_Action (s2.asm lines 53345-53382)
      * Handles the expand/retract/wait cycle and direction rotation.
      */
-    private void updateAction(int frameCounter) {
+    private void updateAction(int vIntRunCount) {
         // ROM Obj68_Spike_Action reads Level_frame_counter, not the
         // VBlank-style object update counter passed into ObjectManager.
         int levelFrameCounter = services().levelManager() != null
                 ? services().levelManager().getFrameCounter() + 1
-                : frameCounter;
+                : vIntRunCount;
         if (waiting != 0) {
             // ROM: move.b (Level_frame_counter+1).w,d0 / andi.b #$3F,d0
             int timerByte = levelFrameCounter & 0xFF;

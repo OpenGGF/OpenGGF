@@ -324,7 +324,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
     }
 
     @Override
-    protected void updateBossLogic(int frameCounter, PlayableEntity player) {
+    protected void updateBossLogic(int vIntRunCount, PlayableEntity player) {
         // Native smoke children execute after the bottom solid child. Promote
         // last pass's folded overlap so this pass's solid checkpoint can carry
         // the rider before the later-slot capture publishes object_control.
@@ -1604,9 +1604,9 @@ public final class IczEndBossInstance extends AbstractBossInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             visible = !visible;
-            super.update(frameCounter, player);
+            super.update(vIntRunCount, player);
         }
 
         @Override
@@ -1651,7 +1651,7 @@ public final class IczEndBossInstance extends AbstractBossInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (!flyingRight) {
                 int targetY = services().camera() != null
                         ? (services().camera().getY() & 0xFFFF) + 0x40

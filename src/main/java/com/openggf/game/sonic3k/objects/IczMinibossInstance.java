@@ -182,7 +182,7 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         // ROM Obj_ICZMiniboss deletes on direct ICZ2 entry:
         // cmpi.w #$501,(Apparent_zone_and_act).w / beq Delete_Current_Sprite.
         // ICZ1's seamless reload changes Current_act to 1 but leaves
@@ -191,7 +191,7 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
             setDestroyed(true);
             return;
         }
-        super.update(frameCounter, player);
+        super.update(vIntRunCount, player);
     }
 
     @Override
@@ -234,7 +234,7 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
     }
 
     @Override
-    protected void updateBossLogic(int frameCounter, PlayableEntity player) {
+    protected void updateBossLogic(int vIntRunCount, PlayableEntity player) {
         updateHitFlash();
 
         if (!arenaGateComplete) {

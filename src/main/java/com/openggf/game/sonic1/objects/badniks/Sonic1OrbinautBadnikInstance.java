@@ -82,7 +82,7 @@ public class Sonic1OrbinautBadnikInstance extends AbstractBadnikInstance impleme
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (!initialized) {
             spawnSatellites();
@@ -133,7 +133,7 @@ public class Sonic1OrbinautBadnikInstance extends AbstractBadnikInstance impleme
     }
 
     @Override
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         if (animationId == 0) {
             animationFrame = 0;
             return;
@@ -365,7 +365,7 @@ public class Sonic1OrbinautBadnikInstance extends AbstractBadnikInstance impleme
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
             if (isDestroyed()) {
                 return;

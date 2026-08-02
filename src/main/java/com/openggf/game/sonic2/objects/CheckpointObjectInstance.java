@@ -97,7 +97,7 @@ public class CheckpointObjectInstance extends BoxObjectInstance implements Rewin
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ensureInitialized();
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (!activated && player != null) {

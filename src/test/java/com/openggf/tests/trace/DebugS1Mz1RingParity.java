@@ -234,7 +234,7 @@ class DebugS1Mz1RingParity {
 
                 int dx = ringX - 6 - playerLeft;
                 int dyMinus3 = ringY - 6 - playerTopMinus3;
-                int collectFrame = readIntField(ring, "sparkleStartFrame");
+                int collectFrame = readIntField(ring, "sparkleStartVIntRunCount");
                 int yVel = readIntField(ring, "yVel");
                 int lifetime = readIntField(ring, "lifetime");
                 int slotIndex = readOptionalIntField(ring, "slotIndex", -1);

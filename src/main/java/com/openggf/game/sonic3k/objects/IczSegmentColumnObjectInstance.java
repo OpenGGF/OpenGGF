@@ -74,7 +74,7 @@ public class IczSegmentColumnObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (!spawnedSegments) {
             spawnSegments();
             spawnedSegments = true;
@@ -243,7 +243,7 @@ public class IczSegmentColumnObjectInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (isDestroyed()) {
                 return;
             }
@@ -449,9 +449,9 @@ public class IczSegmentColumnObjectInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             animateRaw();
-            super.update(frameCounter, player);
+            super.update(vIntRunCount, player);
         }
 
         private void animateRaw() {

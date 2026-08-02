@@ -212,7 +212,7 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance implements Rewin
     }
 
     @Override
-    protected void updateBossLogic(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (!initialized) {
             if (!checkInitConditions(player)) {
@@ -226,15 +226,15 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance implements Rewin
         }
 
         if (bossCollisionRoutine != 0) {
-            checkHammerCollision(frameCounter, player);
+            checkHammerCollision(vIntRunCount, player);
         }
 
         switch (state.routine) {
             case MAIN_SUB0 -> updateMainSub0(player);
             case MAIN_SUB2 -> updateMainSub2(player);
             case MAIN_SUB4 -> updateMainSub4(player);
-            case MAIN_SUB6 -> updateMainSub6(frameCounter, player);
-            case MAIN_SUB8 -> updateMainSub8(frameCounter);
+            case MAIN_SUB6 -> updateMainSub6(vIntRunCount, player);
+            case MAIN_SUB8 -> updateMainSub8(vIntRunCount);
             case MAIN_SUBA -> updateMainSubA(player);
             case MAIN_SUBC -> updateMainSubC(player);
         }
@@ -385,7 +385,7 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance implements Rewin
         animateBoss();
     }
 
-    private void updateMainSub6(int frameCounter, AbstractPlayableSprite player) {
+    private void updateMainSub6(int vIntRunCount, AbstractPlayableSprite player) {
         if (bossCountdown == 0x14) {
             hammerFlags |= 0x01;
             bossCollisionRoutine = 1;
@@ -403,12 +403,12 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance implements Rewin
         animateBoss();
     }
 
-    private void updateMainSub8(int frameCounter) {
+    private void updateMainSub8(int vIntRunCount) {
         bossCountdown--;
         if (bossCountdown < 0) {
             setupEscapeAnim();
         } else {
-            if ((frameCounter & 7) == 0) {
+            if ((vIntRunCount & 7) == 0) {
                 spawnDefeatExplosion();
             }
         }
@@ -554,7 +554,7 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance implements Rewin
         }
     }
 
-    private void checkHammerCollision(int frameCounter, AbstractPlayableSprite player) {
+    private void checkHammerCollision(int vIntRunCount, AbstractPlayableSprite player) {
         if (bossCollisionRoutine == 0 || player == null) {
             return;
         }
@@ -578,7 +578,7 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance implements Rewin
             }
             boolean hadRings = player.getRingCount() > 0;
             if (hadRings && !player.hasShield()) {
-                services().spawnLostRings(player, frameCounter);
+                services().spawnLostRings(player, vIntRunCount);
             }
             player.applyHurtOrDeath(hammerX, false, hadRings);
         }

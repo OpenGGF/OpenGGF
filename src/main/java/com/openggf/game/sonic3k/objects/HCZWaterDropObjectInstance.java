@@ -94,7 +94,7 @@ public class HCZWaterDropObjectInstance extends AbstractObjectInstance implement
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (isDestroyed()) return;
 
         // ROM: subq.w #1,$30(a0) / bpl.s skip
@@ -194,7 +194,7 @@ public class HCZWaterDropObjectInstance extends AbstractObjectInstance implement
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (isDestroyed()) return;
 
             // State: falling (routine != 0) — apply movement + gravity + floor check

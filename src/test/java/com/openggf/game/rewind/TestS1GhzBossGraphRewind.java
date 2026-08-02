@@ -188,7 +188,7 @@ class TestS1GhzBossGraphRewind {
         boss.getState().y = DESCENT_TARGET_Y;
         boss.getState().xVel = 0;
         boss.getState().yVel = 0;
-        boss.update(boss.getState().lastUpdatedFrame + 1, player);
+        boss.update(boss.getState().lastUpdatedVIntRunCount + 1, player);
     }
 
     private static ObjectInstance genericRecreate(ObjectManager objectManager) {

@@ -121,7 +121,7 @@ public class Sonic1GlassReflectionInstance extends AbstractObjectInstance implem
         return y;
     }
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Check if parent is destroyed -> self-destruct
         if (parent == null || parent.isDestroyed()) {

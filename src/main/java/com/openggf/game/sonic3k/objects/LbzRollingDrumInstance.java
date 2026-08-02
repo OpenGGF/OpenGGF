@@ -60,7 +60,7 @@ public final class LbzRollingDrumInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         captureActivationCameraX();
         int playerIndex = 0;
         for (PlayableEntity candidate : playersToProcess(playerEntity)) {

@@ -58,7 +58,7 @@ public final class MhzSwingBarVerticalObjectInstance extends AbstractObjectInsta
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player1 = playerEntity instanceof AbstractPlayableSprite player ? player : null;
         if (player1 != null) {
             updatePlayer(player1);

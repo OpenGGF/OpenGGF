@@ -258,7 +258,7 @@ public class Sonic1FloatingBlockObjectInstance extends AbstractObjectInstance
         return y;
     }
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         Sonic1FloatingBlockState blockState = services().gameService(Sonic1FloatingBlockState.class);
         if (syz3TunnelRealBlock && blockState != null && blockState.isTunnelBlockAtDestination()) {
             setDestroyed(true);

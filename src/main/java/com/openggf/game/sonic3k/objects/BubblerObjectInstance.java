@@ -115,7 +115,7 @@ public class BubblerObjectInstance extends AbstractObjectInstance implements Rew
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         boolean initializedThisFrame = routine == ROUTINE_INIT;
         if (routine == ROUTINE_INIT) {
             initialize();

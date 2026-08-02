@@ -39,7 +39,7 @@ public final class CnzEndBossRobotnikHeadChild extends AbstractObjectInstance
     @Override public boolean isPersistent() { return true; }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (ship.isDestroyed()) {
             ObjectLifetimeOps.expireDynamic(this);
             return;

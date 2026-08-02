@@ -140,7 +140,7 @@ public final class CnzHoverFanInstance extends AbstractObjectInstance implements
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         currentX = resolveCurrentX();
         updateDynamicSpawn(currentX, baseY);
 
@@ -160,7 +160,7 @@ public final class CnzHoverFanInstance extends AbstractObjectInstance implements
             }
         }
 
-        if (captured && ((frameCounter + 1) & 0x1F) == 0) {
+        if (captured && ((vIntRunCount + 1) & 0x1F) == 0) {
             try {
                 services().playSfx(Sonic3kSfx.HOVERPAD.id);
             } catch (Exception ignored) {

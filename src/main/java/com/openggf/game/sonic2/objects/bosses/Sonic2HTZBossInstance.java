@@ -105,7 +105,7 @@ public class Sonic2HTZBossInstance extends AbstractBossInstance implements Rewin
     private int actionTimer;
     private int defeatTimer;
     private int sineCounter;
-    private int currentFrameCounter;
+    private int currentVIntRunCount;
     private boolean defeatFleeStarted;
 
     // Child sprite state for eye animation (ROM: sub2_* fields, Boss_AnimationArray)
@@ -165,9 +165,9 @@ public class Sonic2HTZBossInstance extends AbstractBossInstance implements Rewin
     }
 
     @Override
-    protected void updateBossLogic(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        currentFrameCounter = frameCounter;
+        currentVIntRunCount = vIntRunCount;
 
         // Update eye animation (ROM: Boss_AnimationArray cycles frames 2,3 with delay 6)
         // ROM: s2.asm:63671-63676 - Boss_AnimationArray setup
@@ -358,7 +358,7 @@ public class Sonic2HTZBossInstance extends AbstractBossInstance implements Rewin
 
         // Smoke phase (defeatTimer < 0)
         // ROM: Spawn smoke every 32 frames
-        if ((currentFrameCounter & 0x1F) == 0) {
+        if ((currentVIntRunCount & 0x1F) == 0) {
             spawnDefeatSmoke();
         }
 

@@ -124,7 +124,7 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (!initialized && isKnucklesPlayer()) {
             spawnSwitchChildOnce();
             setDestroyed(true);
@@ -482,7 +482,7 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             y += yVelocity;
             Camera camera = services().camera();
             int deleteY = (camera != null ? camera.getY() : 0) + LEAF_DELETE_CAMERA_Y_OFFSET;
@@ -544,7 +544,7 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (player == null) {
                 setDestroyed(true);
                 return;

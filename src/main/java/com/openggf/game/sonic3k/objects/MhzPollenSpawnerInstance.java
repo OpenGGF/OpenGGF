@@ -49,16 +49,16 @@ public class MhzPollenSpawnerInstance extends AbstractObjectInstance implements 
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         MhzZoneRuntimeState state = currentMhzState();
         if (state == null || state.pollenParticleCount() >= MAX_PARTICLES) {
             return;
         }
 
-        playerOneStoredYVelocity = processPlayer(frameCounter, player, playerOneStoredYVelocity, state);
+        playerOneStoredYVelocity = processPlayer(vIntRunCount, player, playerOneStoredYVelocity, state);
         PlayableEntity nativeP2 = nativeP2(player);
         if (nativeP2 != null && sidekickRenderFlagsOnScreen(nativeP2)) {
-            playerTwoStoredYVelocity = processPlayer(frameCounter, nativeP2, playerTwoStoredYVelocity, state);
+            playerTwoStoredYVelocity = processPlayer(vIntRunCount, nativeP2, playerTwoStoredYVelocity, state);
         }
     }
 
@@ -88,7 +88,7 @@ public class MhzPollenSpawnerInstance extends AbstractObjectInstance implements 
     }
 
     private int processPlayer(
-            int frameCounter,
+            int vIntRunCount,
             PlayableEntity player,
             int storedYVelocity,
             MhzZoneRuntimeState state) {

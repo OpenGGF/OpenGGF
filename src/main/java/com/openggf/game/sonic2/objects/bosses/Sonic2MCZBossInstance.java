@@ -159,7 +159,7 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance
     private boolean flipped; // render_flags.x_flip
     private boolean screenShaking; // ROM: Screen_Shaking_Flag
     private int sineCounter;
-    private int currentFrameCounter;
+    private int currentVIntRunCount;
 
     // ── Digger animation sequences (pre-expanded from ROM Ani_obj57 chained anims) ──
     // Speed byte is always 1, so each data frame shows for 2 ticks.
@@ -273,9 +273,9 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance
     }
 
     @Override
-    protected void updateBossLogic(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        currentFrameCounter = frameCounter;
+        currentVIntRunCount = vIntRunCount;
 
         // ROM's AnimateBoss is only called in Sub0/Sub2/Sub4/Sub6.
         // Sub8/SubA/SubC set mapframes directly and do NOT call AnimateBoss.
@@ -535,7 +535,7 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance
 
             // ROM: Boss_LoadExplosion checks (Vint_runcount+3) & 7 == 0
             // Only spawn explosion every 8th frame (~22 total over 179 frames)
-            if ((currentFrameCounter & 7) == 0) {
+            if ((currentVIntRunCount & 7) == 0) {
                 spawnDefeatExplosion();
             }
         } else {
@@ -700,7 +700,7 @@ public class Sonic2MCZBossInstance extends AbstractBossInstance
         // ROM: move.b (Vint_runcount+3).w,d1 - use the global gameplay frame
         // counter, not a boss-local phase, so stone/spike selection stays aligned
         // with Obj57_SpawnStoneSpike (s2.asm:66128-66160).
-        int d1 = currentFrameCounter & 0xFF;
+        int d1 = currentVIntRunCount & 0xFF;
         boolean isSpike;
 
         // ROM: sf d2 (d2=0=spike default), andi.b #$1F,d1 / beq.s Obj57_LoadStoneSpike

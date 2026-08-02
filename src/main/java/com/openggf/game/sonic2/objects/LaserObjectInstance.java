@@ -111,7 +111,7 @@ public class LaserObjectInstance extends AbstractObjectInstance implements Rewin
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         switch (routine) {
             case 2 -> updateWaitForOnScreen();
             case 4 -> updateFiring();

@@ -30,7 +30,7 @@ public class Mgz2PostBossSequenceController extends AbstractObjectInstance imple
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         GameStateManager gameState = services().gameState();
         if (gameState == null || !gameState.isEndOfLevelFlag()) {
             return;

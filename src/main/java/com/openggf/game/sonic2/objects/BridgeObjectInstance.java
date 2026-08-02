@@ -179,7 +179,7 @@ public class BridgeObjectInstance extends BoxObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         updateDepressionState();
         rebuildBridgeShape();
         updateSlopeData();

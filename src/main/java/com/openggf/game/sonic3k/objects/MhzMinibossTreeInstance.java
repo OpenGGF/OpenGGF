@@ -41,7 +41,7 @@ public final class MhzMinibossTreeInstance extends AbstractObjectInstance implem
     }
 
     @Override
-    public void update(int frameCounter, com.openggf.game.PlayableEntity player) {
+    public void update(int vIntRunCount, com.openggf.game.PlayableEntity player) {
         MhzMinibossInstance miniboss = findActiveMiniboss();
         if (miniboss == null) {
             return;
@@ -168,7 +168,7 @@ public final class MhzMinibossTreeInstance extends AbstractObjectInstance implem
         }
 
         @Override
-        public void update(int frameCounter, com.openggf.game.PlayableEntity player) {
+        public void update(int vIntRunCount, com.openggf.game.PlayableEntity player) {
             animateRawNoSst();
             if (bounceEnabled) {
                 updateBounceVelocity();

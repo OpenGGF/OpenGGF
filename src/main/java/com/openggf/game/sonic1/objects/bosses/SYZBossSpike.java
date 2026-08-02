@@ -87,8 +87,8 @@ public class SYZBossSpike extends AbstractBossChild implements TouchResponseProv
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
-        if (isDestroyed() || !shouldUpdate(frameCounter)) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        if (isDestroyed() || !shouldUpdate(vIntRunCount)) {
             return;
         }
         // Defensive same-frame destroy sync (belt-and-suspenders alongside

@@ -53,7 +53,7 @@ final class MgzDrillingRobotnikCameraUnlockController extends AbstractObjectInst
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         accumulator += ACCELERATION;
         int step = accumulator >>> 16;
         if (decrementMinX) {

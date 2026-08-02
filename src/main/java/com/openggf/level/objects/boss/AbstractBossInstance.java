@@ -98,7 +98,7 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
     /**
      * Update boss-specific logic.
      */
-    protected abstract void updateBossLogic(int frameCounter, PlayableEntity player);
+    protected abstract void updateBossLogic(int vIntRunCount, PlayableEntity player);
 
     /**
      * Get initial hit count (typically 8 for Sonic 2 bosses).
@@ -116,7 +116,7 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
     protected abstract int getCollisionSizeIndex();
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (defeatEntryPending && prepareDefeatEntry()) {
             defeatEntryPending = false;
             hitHandler.commitDefeat();
@@ -136,23 +136,23 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
         boolean deferThisFrame = deferDefeatRoutineDispatch;
         deferDefeatRoutineDispatch = false;
         if ((!state.defeated || !usesDefeatSequencer()) && !deferThisFrame) {
-            updateBossLogic(frameCounter, player);
+            updateBossLogic(vIntRunCount, player);
         }
 
         if (state.defeated && usesDefeatSequencer()) {
-            defeatSequencer.update(frameCounter);
+            defeatSequencer.update(vIntRunCount);
         }
 
-        state.lastUpdatedFrame = frameCounter;
-        updateChildren(frameCounter, player);
-        updateOwnerManagedChildren(frameCounter, player);
+        state.lastUpdatedVIntRunCount = vIntRunCount;
+        updateChildren(vIntRunCount, player);
+        updateOwnerManagedChildren(vIntRunCount, player);
         updateDynamicSpawn();
     }
 
-    private void updateChildren(int frameCounter, PlayableEntity player) {
+    private void updateChildren(int vIntRunCount, PlayableEntity player) {
         childComponents.removeIf(BossChildComponent::isDestroyed);
         for (BossChildComponent child : List.copyOf(childComponents)) {
-            child.update(frameCounter, player);
+            child.update(vIntRunCount, player);
         }
         // A child may destroy itself while the parent is updating it. Prune again
         // before ObjectManager's later same-pass removal makes that child's
@@ -165,7 +165,7 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
      * {@link #childComponents}' compact structural rewind graph. The default
      * has no such helpers; subclasses retain exact ownership and lifecycle.
      */
-    protected void updateOwnerManagedChildren(int frameCounter, PlayableEntity player) {
+    protected void updateOwnerManagedChildren(int vIntRunCount, PlayableEntity player) {
     }
 
     public int getCollisionFlags() {
@@ -533,15 +533,15 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
             onDefeatStarted();
         }
 
-        public void update(int frameCounter) {
+        public void update(int vIntRunCount) {
             switch (defeatState) {
-                case EXPLODING -> updateExploding(frameCounter);
-                case FLEEING -> updateFleeing(frameCounter);
+                case EXPLODING -> updateExploding(vIntRunCount);
+                case FLEEING -> updateFleeing(vIntRunCount);
                 case SPAWN_PRISON -> spawnEggPrison();
             }
         }
 
-        private void updateExploding(int frameCounter) {
+        private void updateExploding(int vIntRunCount) {
             // ROM: s2.asm:62990 - subq.w #1,objoff_3C(a0)
             defeatTimer--;
 
@@ -559,7 +559,7 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
             }
         }
 
-        private void updateFleeing(int frameCounter) {
+        private void updateFleeing(int vIntRunCount) {
             fleeTimer++;
             updateFleeingMovement();
 

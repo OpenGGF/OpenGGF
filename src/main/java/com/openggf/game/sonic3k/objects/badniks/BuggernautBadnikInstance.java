@@ -130,7 +130,7 @@ public final class BuggernautBadnikInstance extends AbstractS3kBadnikInstance im
     private boolean babySpawned;
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         if (isDestroyed()) return;
 
         // Obj_WaitOffscreen parity: suppress logic until on-screen

@@ -262,7 +262,7 @@ class TestSolidOrderingSentinelsHeadless {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             switch (scenario) {
                 case SAME_FRAME_STANDING -> handleSameFrameStanding(player);
                 case NO_CONTACT_CLEAR -> handleNoContactClear(player);

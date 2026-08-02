@@ -206,7 +206,7 @@ public class Sonic1GrassFireObjectInstance extends AbstractObjectInstance
     // ========================================================================
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Play burning sound on first frame (GFire_Main: jsr QueueSound2)
         if (!soundPlayed) {

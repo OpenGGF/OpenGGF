@@ -329,7 +329,7 @@ public class SpringboardObjectInstance extends BoxObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ensureInitialized();
         // ROM: Obj40_Main calls AnimateSprite before collision check
         animationState.update();

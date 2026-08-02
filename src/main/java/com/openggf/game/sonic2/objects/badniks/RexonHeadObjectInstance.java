@@ -231,7 +231,7 @@ public class RexonHeadObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (destroyed) {
             return;
@@ -241,7 +241,7 @@ public class RexonHeadObjectInstance extends AbstractObjectInstance
             case INIT -> initHead();
             case INITIAL_WAIT -> updateInitialWait();
             case RAISE_HEAD -> updateRaiseHead();
-            case NORMAL -> updateNormal(frameCounter);
+            case NORMAL -> updateNormal(vIntRunCount);
             case DEATH_DROP -> updateDeathDrop();
         }
     }
@@ -295,7 +295,7 @@ public class RexonHeadObjectInstance extends AbstractObjectInstance
         }
     }
 
-    private void updateNormal(int frameCounter) {
+    private void updateNormal(int vIntRunCount) {
         // Fire projectile timer check (tip head only, headIndex == 8)
         // From s2.asm:73882-73886
         if (headIndex == 8) {

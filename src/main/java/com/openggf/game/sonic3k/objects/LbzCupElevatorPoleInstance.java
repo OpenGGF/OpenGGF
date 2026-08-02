@@ -47,7 +47,7 @@ public final class LbzCupElevatorPoleInstance extends AbstractObjectInstance imp
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if ((spawn.subtype() & 0x40) != 0 && currentPlayerCharacter() == PlayerCharacter.KNUCKLES) {
             setDestroyed(true);
             return;

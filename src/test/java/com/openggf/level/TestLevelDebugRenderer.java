@@ -60,7 +60,7 @@ class TestLevelDebugRenderer {
         }
 
         @Override
-        default void update(int frameCounter, PlayableEntity player) {
+        default void update(int vIntRunCount, PlayableEntity player) {
         }
 
         @Override

@@ -260,7 +260,7 @@ public class TestObjectManagerChildSlotAllocation {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (child == null) {
                 child = spawnChild(() -> new ChildObject(buildSpawnAt(spawn.x(), spawn.y())));
                 childWaitsForNextPass = services().objectManager()
@@ -281,7 +281,7 @@ public class TestObjectManagerChildSlotAllocation {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             updateCount++;
         }
 
@@ -298,7 +298,7 @@ public class TestObjectManagerChildSlotAllocation {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (child == null) {
                 child = spawnChild(() -> new OptOutChildObject(buildSpawnAt(spawn.x(), spawn.y())));
             }
@@ -322,7 +322,7 @@ public class TestObjectManagerChildSlotAllocation {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             updateCount++;
         }
 
@@ -340,7 +340,7 @@ public class TestObjectManagerChildSlotAllocation {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (child == null) {
                 child = spawnFreeChild(() -> new FindFreeChildObject(buildSpawnAt(spawn.x(), spawn.y())));
                 childWaitsForNextPass = services().objectManager()
@@ -361,7 +361,7 @@ public class TestObjectManagerChildSlotAllocation {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             updateCount++;
         }
 
@@ -388,7 +388,7 @@ public class TestObjectManagerChildSlotAllocation {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (!children.isEmpty()) {
                 return;
             }

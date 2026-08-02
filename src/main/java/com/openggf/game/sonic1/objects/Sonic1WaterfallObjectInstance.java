@@ -99,7 +99,7 @@ public class Sonic1WaterfallObjectInstance extends AbstractObjectInstance implem
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (routine) {
             case ROUTINE_ON_WATER -> {

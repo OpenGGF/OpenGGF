@@ -151,20 +151,20 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (isDestroyed()) {
             return;
         }
 
         if (invisibleLauncherOnly) {
-            if (launcherActive && frameCounter != sameFrameLauncherScanFrame) {
-                updateInvisibleLauncher(frameCounter, player);
+            if (launcherActive && vIntRunCount != sameFrameLauncherScanFrame) {
+                updateInvisibleLauncher(vIntRunCount, player);
             }
         } else if (parentFragmentActive) {
             updateParentFragment();
         } else if (!broken) {
-            updateMainBlock(frameCounter, player);
+            updateMainBlock(vIntRunCount, player);
         }
     }
 
@@ -173,7 +173,7 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
      * Saves player animation/velocity before solid collision check,
      * then checks if rolling player is standing on block.
      */
-    private void updateMainBlock(int frameCounter, AbstractPlayableSprite player) {
+    private void updateMainBlock(int vIntRunCount, AbstractPlayableSprite player) {
         if (player == null) {
             return;
         }
@@ -720,7 +720,7 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
             if (isDestroyed()) {
                 return;

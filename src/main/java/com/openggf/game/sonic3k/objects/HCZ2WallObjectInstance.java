@@ -88,7 +88,7 @@ public class HCZ2WallObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         // ROM: Obj_HCZ2Wall checks Events_routine_bg == 4; if not, deletes itself.
         // The event handler calls deactivate() when the wall chase ends.
         if (!active) {

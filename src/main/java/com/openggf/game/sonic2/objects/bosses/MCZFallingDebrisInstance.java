@@ -57,7 +57,7 @@ public class MCZFallingDebrisInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // ROM: Obj57_FallingStuff - ObjectMoveAndFall
         yFixed += (yVel << 8);

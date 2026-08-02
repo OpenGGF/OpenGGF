@@ -278,12 +278,12 @@ public class Sonic1SpinConveyorObjectInstance extends AbstractObjectInstance
         return y;
     }
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ensureInitialized();
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (mode) {
             case SPAWNER -> updateSpawner();
-            case PLATFORM -> updatePlatform(frameCounter, player);
+            case PLATFORM -> updatePlatform(vIntRunCount, player);
         }
     }
 
@@ -398,7 +398,7 @@ public class Sonic1SpinConveyorObjectInstance extends AbstractObjectInstance
      *   bra.w   loc_16424              ; movement only
      * </pre>
      */
-    private void updatePlatform(int frameCounter, AbstractPlayableSprite player) {
+    private void updatePlatform(int vIntRunCount, AbstractPlayableSprite player) {
         // Step 1: Animate
         animate();
 

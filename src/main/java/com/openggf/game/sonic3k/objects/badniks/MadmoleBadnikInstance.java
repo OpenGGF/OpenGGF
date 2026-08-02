@@ -116,7 +116,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         if (isDestroyed()) {
             return;
         }
@@ -481,7 +481,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (!initialized) {
                 initializeMotion();
                 updateDynamicSpawn(currentX, currentY);
@@ -506,7 +506,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
                 if (!releasedByWall) {
                     // ROM loc_8D80A: with no wall ahead, a downward-moving arm runs
                     // ObjHitFloor_DoRoutine, whose $34(a0) hook is loc_8D846.
-                    objHitFloorDoRoutine(this::runCarriedFloorImpact, frameCounter);
+                    objHitFloorDoRoutine(this::runCarriedFloorImpact, vIntRunCount);
                 }
             } else {
                 // ROM routine 4 (loc_8D768/loc_8D778) before capture, and the
@@ -521,11 +521,11 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
                     objHitFloorDoRoutine(capturedPlayer != null
                             ? this::runCarriedFloorImpact
                             : unused -> yVelocity = SIDE_CHILD_ARC_REBOUND_Y_VELOCITY,
-                            frameCounter);
+                            vIntRunCount);
                 }
                 awaitingCarryRoutine = false;
             }
-            animateRawLoop(frameCounter);
+            animateRawLoop(vIntRunCount);
             updateDynamicSpawn(currentX, currentY);
             checkDeleteAndReleaseCapturedPlayer();
         }
@@ -724,7 +724,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
          * downward-moving object probes the floor, and the {@code $34(a0)} hook
          * runs after the object is snapped onto the surface.
          */
-        private void objHitFloorDoRoutine(IntConsumer onImpact, int frameCounter) {
+        private void objHitFloorDoRoutine(IntConsumer onImpact, int vIntRunCount) {
             if (yVelocity < 0) {
                 return;
             }
@@ -734,7 +734,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
                 return;
             }
             currentY += floor.distance();
-            onImpact.accept(frameCounter);
+            onImpact.accept(vIntRunCount);
         }
 
         private boolean releaseCapturedPlayerOnWallImpact() {
@@ -792,7 +792,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
             setDestroyedByOffscreen();
         }
 
-        private void animateRawLoop(int frameCounter) {
+        private void animateRawLoop(int vIntRunCount) {
             animTimer--;
             if (animTimer >= 0) {
                 return;

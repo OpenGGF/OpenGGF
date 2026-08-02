@@ -50,15 +50,15 @@ final class TunnelExhaustControlObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (subtype != 0) {
-            maybeEmitTimedExhaust(frameCounter);
+            maybeEmitTimedExhaust(vIntRunCount);
             deleteIfNotInRange();
             return;
         }
 
         if (isSmokeMode()) {
-            updateSmoke(frameCounter);
+            updateSmoke(vIntRunCount);
             return;
         }
 
@@ -83,8 +83,8 @@ final class TunnelExhaustControlObjectInstance extends AbstractObjectInstance
      * ROM {@code Obj_TunnelExSmoke} (act 1): puff a dissipating smoke sprite every
      * four frames, carrying the exit velocity the tunnel handed this controller.
      */
-    private void updateSmoke(int frameCounter) {
-        if ((frameCounter & 3) == 0) {
+    private void updateSmoke(int vIntRunCount) {
+        if ((vIntRunCount & 3) == 0) {
             int smokeXVel = xVel;
             int smokeYVel = yVel;
             spawnChild(() -> new FireShieldDissipateInstance(
@@ -130,10 +130,10 @@ final class TunnelExhaustControlObjectInstance extends AbstractObjectInstance
         // Control object is not drawn by the ROM; it only emits exhaust children.
     }
 
-    private void maybeEmitTimedExhaust(int frameCounter) {
+    private void maybeEmitTimedExhaust(int vIntRunCount) {
         // ROM: move.b (Level_frame_counter+1).w,d0; andi.b #3,d0; bne.s skip
         // (Level_frame_counter+1) addresses the counter's low byte, it is not +1.
-        if ((frameCounter & 3) == 0) {
+        if ((vIntRunCount & 3) == 0) {
             spawnChild(() -> new TunnelExhaustParticleInstance(buildSpawnAt(getX(), getY()), 0, 0x400, true));
         }
     }
@@ -206,8 +206,8 @@ final class TunnelExhaustParticleInstance extends AbstractObjectInstance impleme
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
-        if ((frameCounter & 1) == 0) {
+    public void update(int vIntRunCount, PlayableEntity player) {
+        if ((vIntRunCount & 1) == 0) {
             renderFlags ^= horizontal ? 2 : 1;
         }
         if (timed) {

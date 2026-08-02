@@ -415,7 +415,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
     // =========================================================================
 
     @Override
-    protected void updateBossLogic(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (!initialized) {
             return;
@@ -435,7 +435,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
             case 0x0A -> updateSubARetractAfterHit();
             case 0x0C -> updateSubCDecision(player);
             case 0x0E -> updateSubELaserDive();
-            case 0x10 -> updateSub10DefeatExplosions(frameCounter);
+            case 0x10 -> updateSub10DefeatExplosions(vIntRunCount);
             case 0x12 -> updateSub12Flee();
         }
 
@@ -882,7 +882,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
     // ROM: Obj54_MainSub10 (s2.asm:67144-67178)
     // =========================================================================
 
-    private void updateSub10DefeatExplosions(int frameCounter) {
+    private void updateSub10DefeatExplosions(int vIntRunCount) {
         // ROM: Obj54_MainSub10 (s2.asm:67148-67166)
         // subq.w #1,(Boss_Countdown).w
         bossCountdown--;
@@ -895,7 +895,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
             // Boss_LoadExplosion itself gates on (Vint_runcount+3)&7 BEFORE
             // allocating and drawing RandomNumber (s2.asm:61419-61424), so a
             // non-multiple-of-8 frame spawns nothing and consumes no RNG.
-            if ((frameCounter & 7) == 0) {
+            if ((vIntRunCount & 7) == 0) {
                 spawnDefeatExplosion();
             }
             faceFrame = FRAME_FACE_DEFEAT;
@@ -1278,9 +1278,9 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-            if (!shouldUpdate(frameCounter)) {
+            if (!shouldUpdate(vIntRunCount)) {
                 return;
             }
 
@@ -1772,9 +1772,9 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-            if (!shouldUpdate(frameCounter)) {
+            if (!shouldUpdate(vIntRunCount)) {
                 return;
             }
             // Follow boss position
@@ -1870,7 +1870,7 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance implements Rewin
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (firstUpdate) {
                 firstUpdate = false;
                 // ROM: Obj54_Laser_Init PlaySound SndID_LaserBurst (== Sonic2Sfx.LASER_BURST $EA).

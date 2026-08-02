@@ -114,7 +114,7 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (isDestroyed()) {
             return;
         }
@@ -122,8 +122,8 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
         tickReleaseCooldowns();
         updateExtensionAndFrame();
         NativePlayerSlots slots = nativePlayerSlots(playerEntity);
-        updatePlayerSlot(slots.player(0), 0, frameCounter);
-        updatePlayerSlot(slots.player(1), 1, frameCounter);
+        updatePlayerSlot(slots.player(0), 0, vIntRunCount);
+        updatePlayerSlot(slots.player(1), 1, vIntRunCount);
         updateDynamicSpawn(anchorX, anchorY);
     }
 
@@ -213,10 +213,10 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
         mappingFrame = motionDirection == 0 ? BODY_FRAME_IDLE : BODY_FRAME_MOVING;
     }
 
-    private void updatePlayerSlot(AbstractPlayableSprite player, int slot, int frameCounter) {
+    private void updatePlayerSlot(AbstractPlayableSprite player, int slot, int vIntRunCount) {
         AbstractPlayableSprite tracked = grabbedPlayers[slot];
         if (grabbed[slot]) {
-            updateGrabbedPlayer(tracked != null ? tracked : player, slot, frameCounter);
+            updateGrabbedPlayer(tracked != null ? tracked : player, slot, vIntRunCount);
             return;
         }
         if (player == null || releaseCooldown[slot] > 0) {
@@ -272,15 +272,15 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
         services().playSfx(Sonic3kSfx.PULLEY_GRAB.id);
     }
 
-    private void updateGrabbedPlayer(AbstractPlayableSprite player, int slot, int frameCounter) {
+    private void updateGrabbedPlayer(AbstractPlayableSprite player, int slot, int vIntRunCount) {
         if (player == null || player.getDead() || player.isDebugMode() || player.isHurt()
                 || isPlayerOffScreen(player)) {
-            releasePlayer(player, slot, frameCounter, false);
+            releasePlayer(player, slot, vIntRunCount, false);
             return;
         }
 
         if (player.isJumpPressed()) {
-            releasePlayer(player, slot, frameCounter, true);
+            releasePlayer(player, slot, vIntRunCount, true);
             return;
         }
 
@@ -443,7 +443,7 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (parent.isDestroyed()) {
                 setDestroyed(true);
             }

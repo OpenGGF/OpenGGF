@@ -122,7 +122,7 @@ public class HCZConveyorSpikeObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         switch (state) {
             case MOVE_RIGHT -> updateMoveRight();
             case CURVE_RIGHT -> updateCurveRight();

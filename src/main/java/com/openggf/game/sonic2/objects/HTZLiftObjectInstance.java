@@ -144,7 +144,7 @@ public class HTZLiftObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (isDestroyed()) {
             return;
@@ -152,7 +152,7 @@ public class HTZLiftObjectInstance extends AbstractObjectInstance
 
         switch (routineSecondary) {
             case STATE_WAIT -> updateWait();
-            case STATE_SLIDE -> updateSlide(frameCounter);
+            case STATE_SLIDE -> updateSlide(vIntRunCount);
             case STATE_FALL -> updateFall(player);
         }
 
@@ -190,10 +190,10 @@ public class HTZLiftObjectInstance extends AbstractObjectInstance
      * Slide state: Move diagonally and play click sound every 16 frames.
      * ROM: Obj16_Slide (docs/s2disasm/s2.asm:47420-47433)
      */
-    private void updateSlide(int frameCounter) {
+    private void updateSlide(int vIntRunCount) {
         // Play click sound every 16 frames
         // ROM: andi.w #$F,d0 / bne.s + / move.w #SndID_HTZLiftClick,d0
-        if ((frameCounter & 0x0F) == 0) {
+        if ((vIntRunCount & 0x0F) == 0) {
             services().playSfx(Sonic2Sfx.HTZ_LIFT_CLICK.id);
         }
 

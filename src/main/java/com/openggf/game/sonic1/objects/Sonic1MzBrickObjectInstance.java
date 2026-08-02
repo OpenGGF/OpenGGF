@@ -122,7 +122,7 @@ public class Sonic1MzBrickObjectInstance extends AbstractObjectInstance
         return y;
     }
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // From disassembly: tst.b obRender(a0) / bpl.s .chkdel
         // Only process behavior when on-screen (render flag bit 7 set)

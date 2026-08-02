@@ -31,11 +31,11 @@ public final class IczEndBossEggCapsuleInstance extends AbstractS3kUprightEggCap
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (!isResultsStarted() && services().camera() != null) {
             services().camera().setMinX(services().camera().getX());
         }
-        super.update(frameCounter, player);
+        super.update(vIntRunCount, player);
     }
 
     @Override

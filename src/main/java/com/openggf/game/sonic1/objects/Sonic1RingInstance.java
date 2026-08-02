@@ -117,7 +117,7 @@ public class Sonic1RingInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         switch (state) {
             case INIT -> {
                 RingManager ringManager = services().ringManager();
@@ -154,7 +154,7 @@ public class Sonic1RingInstance extends AbstractObjectInstance
             }
             case SPARKLE -> {
                 RingManager ringManager = services().ringManager();
-                int gameplayFrameCounter = frameCounter;
+                int gameplayFrameCounter = vIntRunCount;
                 ObjectManager objectManager = services().objectManager();
                 if (objectManager != null) {
                     // ROM parity: Ring_Sparkle advances only when ExecuteObjects runs.

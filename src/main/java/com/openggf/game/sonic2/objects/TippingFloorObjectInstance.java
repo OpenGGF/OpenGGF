@@ -84,11 +84,11 @@ public class TippingFloorObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ensureInitialized();
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (routine) {
-            case ROUTINE_DELAY -> updateDelay(frameCounter);
+            case ROUTINE_DELAY -> updateDelay(vIntRunCount);
             case ROUTINE_MAIN -> updateMain();
         }
     }
@@ -97,8 +97,8 @@ public class TippingFloorObjectInstance extends AbstractObjectInstance
      * Delay phase: wait until synchronized with global frame counter.
      * ROM: loc_2AFE0 - waits until ((frameCounter + delay) & 0xFF) == 0
      */
-    private void updateDelay(int frameCounter) {
-        int sum = (frameCounter & 0xFF) + delay;
+    private void updateDelay(int vIntRunCount) {
+        int sum = (vIntRunCount & 0xFF) + delay;
         if ((sum & 0xFF) == 0) {
             routine = ROUTINE_MAIN;
         }

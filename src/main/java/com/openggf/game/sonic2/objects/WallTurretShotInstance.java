@@ -94,7 +94,7 @@ public class WallTurretShotInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Obj98_WallTurretShotMove:
         //   jsrto JmpTo26_ObjectMove   ; apply velocity to position

@@ -226,7 +226,7 @@ public class DoorObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (horizontal) {
             updateHorizontalDoor(playerEntity);
         } else {

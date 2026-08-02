@@ -106,7 +106,7 @@ public class Sonic1SpringObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ensureInitialized();
         contactEnabledThisFrame = postTriggerInactiveFrames == 0;
         if (postTriggerInactiveFrames > 0) {

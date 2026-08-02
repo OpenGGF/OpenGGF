@@ -72,7 +72,7 @@ public final class MhzCurledVineObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         int tableIndex = selectStandingTableIndex();
         rangeWidth = RANGE_WIDTHS[tableIndex];
         curveState = approachCurveState(curveState, CURVE_TARGETS[tableIndex]);

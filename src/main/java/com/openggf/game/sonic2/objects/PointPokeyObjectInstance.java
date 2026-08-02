@@ -339,7 +339,7 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (player == null) {
             return;
@@ -363,9 +363,9 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
         }
 
         switch (playerState) {
-            case STATE_OCCUPIED -> updateOccupied(activePlayer, frameCounter);
-            case STATE_WAITING_SLOT -> updateWaitingSlot(activePlayer, frameCounter);
-            case STATE_SPAWNING_PRIZES -> updateSpawningPrizes(activePlayer, frameCounter);
+            case STATE_OCCUPIED -> updateOccupied(activePlayer, vIntRunCount);
+            case STATE_WAITING_SLOT -> updateWaitingSlot(activePlayer, vIntRunCount);
+            case STATE_SPAWNING_PRIZES -> updateSpawningPrizes(activePlayer, vIntRunCount);
             case STATE_RELEASE_COOLDOWN -> updateReleaseCooldown();
         }
     }
@@ -374,7 +374,7 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
      * Update for simple occupied state (subtype 0x00).
      * For this mode, SFX plays when countdown & 0x0F == 0 (s2.asm line 58731-58735).
      */
-    private void updateOccupied(AbstractPlayableSprite player, int frameCounter) {
+    private void updateOccupied(AbstractPlayableSprite player, int vIntRunCount) {
         if (releaseIfOccupiedOffScreen(player)) {
             return;
         }
@@ -414,7 +414,7 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
      * Update while waiting for slot machine to finish.
      * SFX plays when (Vint_runcount+3) & 0x0F == 0 (s2.asm line 58704-58708).
      */
-    private void updateWaitingSlot(AbstractPlayableSprite player, int frameCounter) {
+    private void updateWaitingSlot(AbstractPlayableSprite player, int vIntRunCount) {
         if (releaseIfOccupiedOffScreen(player)) {
             return;
         }
@@ -451,7 +451,7 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
             }
         } else {
             // Play sound at 16-frame intervals using global counter (s2.asm: (Vint_runcount+3) & 0x0F == 0)
-            if (((frameCounter + SFX_FRAME_OFFSET) & 0x0F) == 0) {
+            if (((vIntRunCount + SFX_FRAME_OFFSET) & 0x0F) == 0) {
                 playCasinoBonusSound();
             }
         }
@@ -467,7 +467,7 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
      * - Continue spawning until prizesToSpawn reaches 0
      * - Eject when all prizes spawned AND all collected/expired (activePrizeCount == 0)
      */
-    private void updateSpawningPrizes(AbstractPlayableSprite player, int frameCounter) {
+    private void updateSpawningPrizes(AbstractPlayableSprite player, int vIntRunCount) {
         // Keep player locked
         keepPlayerLocked(player);
 
@@ -482,7 +482,7 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
             prizeSpawnTimer = 0;
             // Only spawn if more prizes to spawn AND less than 16 currently active
             if (prizesToSpawn > 0 && activePrizeCount[0] < MAX_PRIZES) {
-                spawnPrize(player, frameCounter);
+                spawnPrize(player, vIntRunCount);
                 prizesToSpawn--;
             }
         }
@@ -667,7 +667,7 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
      * Spawn a prize (ring or bomb) at an angle from the cage.
      * Per disassembly, prizes spiral inward from a starting radius of 128 pixels.
      */
-    private void spawnPrize(AbstractPlayableSprite player, int frameCounter) {
+    private void spawnPrize(AbstractPlayableSprite player, int vIntRunCount) {
         ObjectManager objectManager = services().objectManager();
         if (objectManager == null) {
             return;

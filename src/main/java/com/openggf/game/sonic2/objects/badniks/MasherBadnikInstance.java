@@ -47,7 +47,7 @@ public class MasherBadnikInstance extends AbstractBadnikInstance implements Rewi
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         // Obj5C_Main: ObjectMove first, then gravity, then clamp against the saved
         // bottom y position. The move.w to y_pos keeps y_sub intact for the next jump.
         SubpixelMotion.speedToPosY(motionState);
@@ -64,18 +64,18 @@ public class MasherBadnikInstance extends AbstractBadnikInstance implements Rewi
     }
 
     @Override
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         int threshold = initialYPos - JUMP_HEIGHT;
 
         if (currentY <= threshold) {
             // Ani_obj5C anim 1: fast 0,1 toggle while near the top of the leap.
-            animFrame = (frameCounter >> 2) & 1;
+            animFrame = (vIntRunCount >> 2) & 1;
         } else if (yVelocity >= 0) {
             // Ani_obj5C anim 2: static closed mouth while falling.
             animFrame = 0;
         } else {
             // Ani_obj5C anim 0: slower 0,1 toggle while rising from the water.
-            animFrame = (frameCounter >> 3) & 1;
+            animFrame = (vIntRunCount >> 3) & 1;
         }
     }
 

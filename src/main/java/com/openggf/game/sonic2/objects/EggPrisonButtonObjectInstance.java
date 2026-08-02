@@ -65,7 +65,7 @@ public class EggPrisonButtonObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Button is purely reactive - no autonomous updates
         // Collision system handles player landing detection via SolidObjectProvider

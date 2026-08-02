@@ -88,7 +88,7 @@ public final class CnzWaterLevelButtonInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         // ROM loc_65D8C: move.b #0,mapping_frame; then set #1 if standing.
         mappingFrame = FRAME_UNPRESSED;
 

@@ -108,7 +108,7 @@ public class Sonic1BuzzBomberMissileInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         // ROM Msl_ChkCancel (parent-destroyed -> delete) is called ONLY from
         // Msl_Main (routine 0) and Msl_Animate (routine 2) — the flare phases.
         // Msl_FromBuzz (routine 4, the active flight phase) does NOT call it

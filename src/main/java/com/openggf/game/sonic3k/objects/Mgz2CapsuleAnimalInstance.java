@@ -57,7 +57,7 @@ public class Mgz2CapsuleAnimalInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int vblaCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (waitDelay > 0) {
             waitDelay--;
             return;

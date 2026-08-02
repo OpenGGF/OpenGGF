@@ -161,7 +161,7 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
     private boolean resultsTriggered = false;
 
     // Frame counter for spawn timing
-    private int globalFrameCounter = 0;
+    private int vIntRunCount = 0;
 
     public EggPrisonObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
@@ -238,20 +238,20 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (player == null) {
             return;
         }
 
         this.lastPlayer = player;
-        this.globalFrameCounter = frameCounter;
+        this.vIntRunCount = vIntRunCount;
         spawnComponentSlotObjects();
 
         // Update each sub-object according to its routine
         updateBody(player);
         updateLock();
-        updateBrokenPiece(frameCounter);
+        updateBrokenPiece(vIntRunCount);
     }
 
     /**
@@ -395,7 +395,7 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
      * Broken piece routine (loc_3F3A8).
      * Spawns random animals at regular intervals.
      */
-    private void updateBrokenPiece(int frameCounter) {
+    private void updateBrokenPiece(int vIntRunCount) {
         if (brokenRoutineSecondary == BROKEN_STATE_WAITING) {
             return;
         }
@@ -403,7 +403,7 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
         if (brokenRoutineSecondary == BROKEN_STATE_SPAWNING) {
             // ROM loc_3F3A8 samples (Vint_runcount+3) and spawns only when
             // its low three bits are zero (docs/s2disasm/s2.asm:84935-84942).
-            if (!skipRandomAnimalSpawnThisFrame && (frameCounter & 7) == 0) {
+            if (!skipRandomAnimalSpawnThisFrame && (vIntRunCount & 7) == 0) {
                 spawnRandomAnimal();
             }
             skipRandomAnimalSpawnThisFrame = false;
@@ -808,7 +808,7 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (parent == null || parent.isDestroyed()) {
                 ObjectLifetimeOps.expireDynamic(this);
             }
@@ -855,7 +855,7 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (parent == null || parent.isDestroyed()) {
                 ObjectLifetimeOps.expireDynamic(this);
             }

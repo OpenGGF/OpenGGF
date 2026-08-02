@@ -80,7 +80,7 @@ public class VerticalLaserObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         // ObjB7_Init runs on first frame (routine 0 -> routine 2)
         if (!initialized) {
             initialized = true;

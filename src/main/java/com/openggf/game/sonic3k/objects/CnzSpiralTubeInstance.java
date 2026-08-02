@@ -64,7 +64,7 @@ public final class CnzSpiralTubeInstance extends AbstractObjectInstance implemen
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         PlayableEntity queriedMainPlayer = services().playerQuery().mainPlayerOrNull();
         AbstractPlayableSprite mainPlayer = queriedMainPlayer instanceof AbstractPlayableSprite sprite ? sprite : null;
         if (mainPlayer == null && playerEntity instanceof AbstractPlayableSprite sprite) {

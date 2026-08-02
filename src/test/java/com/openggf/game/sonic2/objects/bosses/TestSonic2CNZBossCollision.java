@@ -142,7 +142,7 @@ class TestSonic2CNZBossCollision {
         Sonic2CNZBossInstance boss = newCnzBossAt(0x2909, 0x0657);
         boss.getState().routine = 2;
         setField(boss, "bossCountdown", 1);
-        setField(boss, "lastFrameCounter", 100);
+        setField(boss, "lastVIntRunCount", 100);
         CNZBossElectricBall ball = new CNZBossElectricBall(
                 new ObjectSpawn(0x2909, 0x0657, Sonic2ObjectIds.CNZ_BOSS, 4, 0, false, 0), boss);
 
@@ -157,7 +157,7 @@ class TestSonic2CNZBossCollision {
         Sonic2CNZBossInstance boss = newCnzBossAt(0x2909, 0x0657);
         boss.getState().routine = 2;
         setField(boss, "bossCountdown", -1);
-        setField(boss, "lastFrameCounter", 101);
+        setField(boss, "lastVIntRunCount", 101);
         CNZBossElectricBall ball = new CNZBossElectricBall(
                 new ObjectSpawn(0x2909, 0x0657, Sonic2ObjectIds.CNZ_BOSS, 4, 0, false, 0), boss);
 
@@ -391,7 +391,7 @@ class TestSonic2CNZBossCollision {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (!spawned) {
                 spawned = true;
                 objectManager.addDynamicObjectAfterCurrent(clone);

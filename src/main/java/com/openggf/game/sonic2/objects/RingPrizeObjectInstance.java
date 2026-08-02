@@ -67,12 +67,12 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance
     private boolean ringCollected = false;
 
     // Sparkle animation tracking
-    private int sparkleStartFrame = -1;
+    private int sparkleStartVIntRunCount = -1;
 
     // Reference to LevelManager for ring renderer
 
     // Frame counter for animation (stored from update for use in render)
-    private int lastFrameCounter = 0;
+    private int lastVIntRunCount = 0;
 
     /**
      * Creates a ring prize object.
@@ -106,21 +106,21 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (isDestroyed()) {
             return;
         }
 
         // Store frame counter for animation in render
-        lastFrameCounter = frameCounter;
+        lastVIntRunCount = vIntRunCount;
 
         switch (state) {
             case STATE_SPIRAL:
-                updateSpiral(frameCounter, player);
+                updateSpiral(vIntRunCount, player);
                 break;
             case STATE_COLLECTED:
-                updateCollected(frameCounter);
+                updateCollected(vIntRunCount);
                 break;
             default:
                 break;
@@ -136,7 +136,7 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance
      * STATE_SPIRAL: Move toward machine center and count down display delay.
      * When delay reaches 0, collect ring and transition to STATE_COLLECTED.
      */
-    private void updateSpiral(int frameCounter, AbstractPlayableSprite player) {
+    private void updateSpiral(int vIntRunCount, AbstractPlayableSprite player) {
         // Move position toward machine center (1/16th of distance per frame)
         // Based on ObjDC_Main in s2.asm lines 25288-25307
         long machineX32 = (long) machineX << 16;
@@ -166,7 +166,7 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance
             if (displayDelay == 0) {
                 collectRing(player);
                 // Transition to sparkle state
-                sparkleStartFrame = frameCounter;
+                sparkleStartVIntRunCount = vIntRunCount;
                 state = STATE_COLLECTED;
             }
         }
@@ -176,12 +176,12 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance
      * STATE_COLLECTED: Ring stays at current position showing sparkle animation.
      * When sparkle animation completes, destroy the object.
      */
-    private void updateCollected(int frameCounter) {
+    private void updateCollected(int vIntRunCount) {
         // Ring no longer moves - stays at current position
 
         // Check if sparkle animation is complete
         RingManager ringManager = services().ringManager();
-        if (ringManager == null || sparkleStartFrame < 0) {
+        if (ringManager == null || sparkleStartVIntRunCount < 0) {
             // No sparkle available, destroy immediately
             setDestroyed(true);
             return;
@@ -196,7 +196,7 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        int elapsed = frameCounter - sparkleStartFrame;
+        int elapsed = vIntRunCount - sparkleStartVIntRunCount;
         if (elapsed < 0) {
             elapsed = 0;
         }
@@ -270,7 +270,7 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance
         switch (state) {
             case STATE_SPIRAL:
                 // Draw animated spinning ring
-                ringManager.drawRingAt(screenX, screenY, lastFrameCounter);
+                ringManager.drawRingAt(screenX, screenY, lastVIntRunCount);
                 break;
             case STATE_COLLECTED:
                 // Draw sparkle animation
@@ -285,7 +285,7 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance
      * Draw the sparkle animation at the current position.
      */
     private void drawSparkle(RingManager ringManager, int x, int y) {
-        if (sparkleStartFrame < 0) {
+        if (sparkleStartVIntRunCount < 0) {
             return;
         }
 
@@ -297,7 +297,7 @@ public class RingPrizeObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        int elapsed = lastFrameCounter - sparkleStartFrame;
+        int elapsed = lastVIntRunCount - sparkleStartVIntRunCount;
         if (elapsed < 0) {
             elapsed = 0;
         }

@@ -49,7 +49,7 @@ public class WFZWheelObjectInstance extends AbstractObjectInstance implements Re
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // ROM: ObjBA_Main just calls MarkObjGone (off-screen despawn handled by engine)
         // No movement, animation, or collision - purely decorative

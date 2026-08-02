@@ -30,7 +30,7 @@ public final class Sonic3kPathSwapObjectInstance extends AbstractObjectInstance 
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         // Behavior is applied from ObjectManager.PlaneSwitchers over the same spawn data.
     }
 

@@ -364,7 +364,7 @@ class TestObjectManagerRewindDynamicClassification {
         }
 
         @Override
-        protected void updateMovement(int frameCounter, PlayableEntity player) {
+        protected void updateMovement(int vIntRunCount, PlayableEntity player) {
             // no-op
         }
 

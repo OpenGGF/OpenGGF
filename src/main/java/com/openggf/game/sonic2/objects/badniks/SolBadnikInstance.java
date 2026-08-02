@@ -69,7 +69,7 @@ public class SolBadnikInstance extends AbstractBadnikInstance implements RewindR
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         ensureFireballsSpawned();
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (state) {
@@ -82,7 +82,7 @@ public class SolBadnikInstance extends AbstractBadnikInstance implements RewindR
     }
 
     @Override
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         // In AFTER_FIRE state, use fast flashing animation (duration 5 = ~5 Hz)
         // In WAIT_FOR_PLAYER state, use slower body animation (duration 15)
         ObjectAnimationState animationState = (state == State.AFTER_FIRE) ? afterAnimation : bodyAnimation;

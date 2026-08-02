@@ -151,8 +151,8 @@ public class BumperObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
-        processPendingBounce(playerEntity, frameCounter);
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        processPendingBounce(playerEntity, vIntRunCount);
 
         // Return to idle frame after animation
         if (animTimer > 0) {
@@ -164,18 +164,18 @@ public class BumperObjectInstance extends AbstractObjectInstance
 
     }
 
-    private void processPendingBounce(PlayableEntity playerEntity, int frameCounter) {
+    private void processPendingBounce(PlayableEntity playerEntity, int vIntRunCount) {
         int pending = collisionProperty;
         if (pending == 0) {
             return;
         }
 
         if ((pending & 0x01) != 0 && playerEntity instanceof AbstractPlayableSprite player) {
-            applyBounce(player, frameCounter);
+            applyBounce(player, vIntRunCount);
         }
         if ((pending & 0x02) != 0) {
             if (services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick) {
-                applyBounce(sidekick, frameCounter);
+                applyBounce(sidekick, vIntRunCount);
             }
         }
         collisionProperty = 0;
@@ -189,15 +189,15 @@ public class BumperObjectInstance extends AbstractObjectInstance
      * Physics:
      * <ol>
      *   <li>Calculate angle from bumper center to player center</li>
-     *   <li>Add (frameCounter &amp; 3) for wobble variation</li>
+     *   <li>Add (vIntRunCount &amp; 3) for wobble variation</li>
      *   <li>Apply velocity in that direction with magnitude $700</li>
      *   <li>Set player to airborne state</li>
      * </ol>
      *
      * @param player The player sprite to bounce
-     * @param frameCounter Current frame counter for wobble calculation
+     * @param vIntRunCount object-visible V-int run count for wobble calculation
      */
-    private void applyBounce(AbstractPlayableSprite player, int frameCounter) {
+    private void applyBounce(AbstractPlayableSprite player, int vIntRunCount) {
         // ROM: CalcAngle(x_pos(a0) - x_pos(a1), y_pos(a0) - y_pos(a1))
         // ROM x_pos is the center position. Use getCentreX()/getCentreY() to match.
         int dx = spawn.x() - player.getCentreX();
@@ -210,7 +210,7 @@ public class BumperObjectInstance extends AbstractObjectInstance
         // big-endian word on 68k, then masks it with 3 (s2.asm:44675-44677).
         int levelFrameCounter = services().levelManager() != null
                 ? services().levelManager().getFrameCounter()
-                : frameCounter;
+                : vIntRunCount;
         angle = (angle + ((levelFrameCounter >> 8) & 3)) & 0xFF;
 
         // CalcSine + apply -$700 velocity

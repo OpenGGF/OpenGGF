@@ -175,14 +175,14 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (isDestroyed()) return;
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
 
         if (isHorizontal) {
-            updateHorizontal(frameCounter, player);
+            updateHorizontal(vIntRunCount, player);
         } else {
-            updateVertical(frameCounter, player);
+            updateVertical(vIntRunCount, player);
         }
     }
 
@@ -190,7 +190,7 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
     // HORIZONTAL GEYSER (Subtype 0)
     // =====================================================================
 
-    private void updateHorizontal(int frameCounter, AbstractPlayableSprite player) {
+    private void updateHorizontal(int vIntRunCount, AbstractPlayableSprite player) {
         switch (horzPhase) {
             case Y_GUARD -> updateHorzYGuard(player);
             case ART_LOAD -> updateHorzArtLoad(player);
@@ -357,7 +357,7 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
     // VERTICAL GEYSER (Subtype != 0)
     // =====================================================================
 
-    private void updateVertical(int frameCounter, AbstractPlayableSprite player) {
+    private void updateVertical(int vIntRunCount, AbstractPlayableSprite player) {
         switch (vertPhase) {
             case PROXIMITY_CHECK -> updateVertProximityCheck(player);
             case ART_LOAD -> updateVertArtLoad(player);
@@ -907,7 +907,7 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (isDestroyed()) return;
 
             switch (state) {
@@ -1040,7 +1040,7 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (isDestroyed()) return;
 
             switch (state) {
@@ -1183,7 +1183,7 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance implement
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (isDestroyed()) return;
 
             animTimer--;

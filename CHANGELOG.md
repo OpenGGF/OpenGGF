@@ -3,6 +3,14 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Refactor/Test: object execution now names its dispatched clock
+  `vIntRunCount` across all 809 `update(int, PlayableEntity)` declarations,
+  framework hook overrides, unanimous private-helper flows, and 25 proven
+  retained fields. The value remains `ObjectManager.vblaCounter`; no timing or
+  behavior changes. Mixed-clock callbacks, animation frames, results-age
+  counters, and other genuine `frameCounter` values remain distinct. Generated
+  object scaffolds use the canonical name, and an attributed source guard keeps
+  future implementations aligned.
 - Fix/Test: trace replay can now expose an exact, already-prepared S3K direct
   Kosinski completion recorded on a held-counter row after that row's VInt-only
   closure. The capability is confined to the hardware-timing replay port,

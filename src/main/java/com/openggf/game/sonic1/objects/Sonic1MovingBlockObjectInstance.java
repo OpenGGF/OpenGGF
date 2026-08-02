@@ -213,7 +213,7 @@ public class Sonic1MovingBlockObjectInstance extends AbstractObjectInstance
         return y;
     }
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ensureInitialized();
         // ROM order:
         // - routine 2: MBlock_Move, then PlatformObject

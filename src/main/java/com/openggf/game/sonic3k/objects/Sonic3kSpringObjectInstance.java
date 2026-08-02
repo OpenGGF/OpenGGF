@@ -421,7 +421,7 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         nativeInitExecutedThisFrame = false;
         ensureInitialized();
         if (nativeInitExecutionPending) {

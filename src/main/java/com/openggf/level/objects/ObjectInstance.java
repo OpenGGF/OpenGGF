@@ -162,7 +162,7 @@ public interface ObjectInstance {
         // Default no-op.
     }
 
-    void update(int frameCounter, PlayableEntity player);
+    void update(int vIntRunCount, PlayableEntity player);
 
     void appendRenderCommands(List<GLCommand> commands);
 

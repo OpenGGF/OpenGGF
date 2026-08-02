@@ -91,7 +91,7 @@ public class Sonic1MotobugBadnikInstance extends AbstractBadnikInstance implemen
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (!initialized) {
             initialize();
@@ -213,7 +213,7 @@ public class Sonic1MotobugBadnikInstance extends AbstractBadnikInstance implemen
     }
 
     @Override
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         // Animation is driven by animFrame set in state machine.
         // Walking animation cycles through frames 0→1→0→2 at speed 7.
         // Standing uses frame 2 at speed $F.

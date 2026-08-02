@@ -51,7 +51,7 @@ public final class BatbotBadnikInstance extends AbstractS3kBadnikInstance implem
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         if (isDestroyed()) {
             return;
         }
@@ -304,7 +304,7 @@ public final class BatbotBadnikInstance extends AbstractS3kBadnikInstance implem
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (isDestroyed()) {
                 return;
             }

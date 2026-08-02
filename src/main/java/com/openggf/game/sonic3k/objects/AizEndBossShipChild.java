@@ -80,8 +80,8 @@ public class AizEndBossShipChild extends AbstractBossChild implements RewindRecr
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
-        if (!shouldUpdate(frameCounter)) {
+    public void update(int vIntRunCount, PlayableEntity player) {
+        if (!shouldUpdate(vIntRunCount)) {
             return;
         }
 

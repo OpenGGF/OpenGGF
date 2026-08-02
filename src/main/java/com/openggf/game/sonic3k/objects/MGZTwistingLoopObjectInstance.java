@@ -77,9 +77,9 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (playerEntity instanceof AbstractPlayableSprite player) {
-            processPlayer(frameCounter, player, player1);
+            processPlayer(vIntRunCount, player, player1);
         }
         ObjectServices svc = tryServices();
         if (svc == null) {
@@ -87,7 +87,7 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
         }
         AbstractPlayableSprite nativeP2 = nativeP2FromQuery(svc, playerEntity);
         if (nativeP2 != null) {
-            processPlayer(frameCounter, nativeP2, player2);
+            processPlayer(vIntRunCount, nativeP2, player2);
         } else {
             player2.active = false;
             player2.releaseFrames = 0;
@@ -110,9 +110,9 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
         return null;
     }
 
-    private void processPlayer(int frameCounter, AbstractPlayableSprite player, PlayerState state) {
+    private void processPlayer(int vIntRunCount, AbstractPlayableSprite player, PlayerState state) {
         if (state.releaseFrames > 0) {
-            updateReleasedPlayer(frameCounter, player, state);
+            updateReleasedPlayer(vIntRunCount, player, state);
             return;
         }
         if (state.convexReleaseFrames > 0) {
@@ -125,22 +125,22 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
             state.cooldownFrames--;
         }
         if (state.active) {
-            updateCapturedPlayer(frameCounter, player, state);
+            updateCapturedPlayer(vIntRunCount, player, state);
             return;
         }
         if (state.cooldownFrames == 0) {
-            tryCapturePlayer(frameCounter, player, state);
+            tryCapturePlayer(vIntRunCount, player, state);
         }
     }
 
-    private void tryCapturePlayer(int frameCounter, AbstractPlayableSprite player, PlayerState state) {
+    private void tryCapturePlayer(int vIntRunCount, AbstractPlayableSprite player, PlayerState state) {
         if (player == null || player.getDead() || player.isHurt() || player.isDebugMode()) {
             return;
         }
         if (player.isObjectControlled()) {
             return;
         }
-        if (player.wasRecentlyObjectControlled(frameCounter, ACTIVE_RELEASE_COOLDOWN)) {
+        if (player.wasRecentlyObjectControlled(vIntRunCount, ACTIVE_RELEASE_COOLDOWN)) {
             return;
         }
         if (player.getAir()) {
@@ -201,14 +201,14 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
         }
     }
 
-    private void updateCapturedPlayer(int frameCounter, AbstractPlayableSprite player, PlayerState state) {
+    private void updateCapturedPlayer(int vIntRunCount, AbstractPlayableSprite player, PlayerState state) {
         if (player == null || player.getDead() || player.isHurt() || player.isDebugMode()) {
-            releaseCapturedPlayer(frameCounter, player, state, false);
+            releaseCapturedPlayer(vIntRunCount, player, state, false);
             return;
         }
 
         if (player.isJumpPressed()) {
-            releaseCapturedPlayer(frameCounter, player, state, true);
+            releaseCapturedPlayer(vIntRunCount, player, state, true);
             return;
         }
 
@@ -225,7 +225,7 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
             int ySpeed = updateCapturedGroundMotion(player);
             int releaseProgressFixed = state.progressFixed + ySpeed * DESCENT_PROGRESS_SCALE;
             positionPlayerHorizontally(player, state, releaseProgressFixed >> 16);
-            releaseCapturedPlayer(frameCounter, player, state, false);
+            releaseCapturedPlayer(vIntRunCount, player, state, false);
             return;
         }
 
@@ -282,7 +282,7 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
         player.setMappingFrame(TWIST_FRAMES[frameIndex]);
     }
 
-    private void releaseCapturedPlayer(int frameCounter, AbstractPlayableSprite player, PlayerState state, boolean jumpedOut) {
+    private void releaseCapturedPlayer(int vIntRunCount, AbstractPlayableSprite player, PlayerState state, boolean jumpedOut) {
         state.active = false;
         state.cooldownFrames = ACTIVE_RELEASE_COOLDOWN;
         state.releaseFrames = jumpedOut ? JUMP_RELEASE_FRAMES : 0;
@@ -301,7 +301,7 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
         } else if (state.compensateReleaseHandoff) {
             player.deferObjectControlRelease();
         } else {
-            player.releaseFromObjectControl(frameCounter);
+            player.releaseFromObjectControl(vIntRunCount);
         }
         short centreXBeforeRelease = player.getCentreX();
         short centreYBeforeRelease = player.getCentreY();
@@ -341,7 +341,7 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
         state.compensateReleaseHandoff = false;
     }
 
-    private void updateReleasedPlayer(int frameCounter, AbstractPlayableSprite player, PlayerState state) {
+    private void updateReleasedPlayer(int vIntRunCount, AbstractPlayableSprite player, PlayerState state) {
         if (player == null) {
             state.releaseFrames = 0;
             return;
@@ -349,7 +349,7 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance implem
 
         state.releaseFrames--;
         if (state.releaseFrames == 0) {
-            player.releaseFromObjectControl(frameCounter);
+            player.releaseFromObjectControl(vIntRunCount);
             return;
         }
 

@@ -100,7 +100,7 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
 
     private State state = State.IDLE;
     private int timer;
-    private int buttonTriggerFrame = -1;
+    private int buttonTriggerVIntRunCount = -1;
     private int currentFrame = FRAME_CAPSULE;
     private boolean buttonTriggered;
     private boolean resultsTriggered;
@@ -141,7 +141,7 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
         // tick the 60-frame timer once on the trigger frame, ending the phase
         // a frame early and shifting the whole animal window.
         ObjectManager triggerObjectManager = services().objectManager();
-        buttonTriggerFrame = triggerObjectManager != null ? triggerObjectManager.getVblaCounter() : -1;
+        buttonTriggerVIntRunCount = triggerObjectManager != null ? triggerObjectManager.getVblaCounter() : -1;
 
         LOGGER.info("S1 EggPrison triggered at X=" + spawn.x());
 
@@ -189,7 +189,7 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (player == null) {
             return;
@@ -199,11 +199,11 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
         switch (state) {
             case IDLE -> updateIdle();
             case EXPLODING -> {
-                if (frameCounter != buttonTriggerFrame) {
-                    updateExploding(frameCounter);
+                if (vIntRunCount != buttonTriggerVIntRunCount) {
+                    updateExploding(vIntRunCount);
                 }
             }
-            case ANIMAL_SPAWN -> updateAnimalSpawn(frameCounter);
+            case ANIMAL_SPAWN -> updateAnimalSpawn(vIntRunCount);
             case END_ACT -> updateEndAct(player);
             case COMPLETE -> { /* Nothing — results screen active */ }
         }
@@ -228,9 +228,9 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
      * ROM: Spawn one explosion every 8 frames with random offset.
      * After timer expires, spawn initial animal burst.
      */
-    private void updateExploding(int frameCounter) {
+    private void updateExploding(int vIntRunCount) {
         // ROM: move.b (v_vbla_byte).w,d0 / andi.b #7,d0 / bne.s .skip
-        if ((frameCounter & 7) == 0) {
+        if ((vIntRunCount & 7) == 0) {
             spawnExplosion();
         }
 
@@ -258,9 +258,9 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
      * Pri_Animals (routine $C): Continuous random animal spawning.
      * ROM: Every 8 frames, spawn one animal at random X offset.
      */
-    private void updateAnimalSpawn(int frameCounter) {
+    private void updateAnimalSpawn(int vIntRunCount) {
         // ROM: move.b (v_vbla_byte).w,d0 / andi.b #7,d0 / bne.s .skip
-        if ((frameCounter & 7) == 0) {
+        if ((vIntRunCount & 7) == 0) {
             spawnRandomAnimal();
         }
 

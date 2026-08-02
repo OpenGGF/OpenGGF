@@ -52,7 +52,7 @@ public final class MhzSwingBarHorizontalObjectInstance extends AbstractObjectIns
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (playerEntity instanceof AbstractPlayableSprite player) {
             updatePlayer(player);
         }

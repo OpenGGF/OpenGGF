@@ -305,7 +305,7 @@ public class Sonic1StaircaseObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         // ROM Stair_Main allocates child blocks via FindNextFreeObj on the parent's
         // first ExecuteObjects pass; mirror that here so the consolidated instance
         // executes from the child slot range (after the fan).

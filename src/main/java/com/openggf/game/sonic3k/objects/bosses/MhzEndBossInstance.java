@@ -140,7 +140,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
     }
 
     @Override
-    protected void updateBossLogic(int frameCounter, PlayableEntity player) {
+    protected void updateBossLogic(int vIntRunCount, PlayableEntity player) {
         if (!cameraRangePassed) {
             if (state.defeated || state.routine != ROUTINE_WAIT_FOR_CHILD_SIGNAL
                     || getCustomFlag(INITIAL_CHILDREN_SPAWNED_OFFSET) != 0) {
@@ -962,7 +962,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             AbstractPlayableSprite sidekick = nativeSidekickOrNull();
             if (sidekick == null) {
                 setDestroyed(true);
@@ -1033,7 +1033,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (parent.finalHitHandoffFlag || !(player instanceof AbstractPlayableSprite sprite)) {
                 return;
             }
@@ -1087,7 +1087,7 @@ public final class MhzEndBossInstance extends AbstractBossInstance implements Sp
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (!(services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick)) {
                 return;
             }

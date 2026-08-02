@@ -25,7 +25,7 @@ public final class ScreenShakeTimerSlotObjectInstance extends AbstractObjectInst
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (remainingFrames > 0) {
             remainingFrames--;
         }

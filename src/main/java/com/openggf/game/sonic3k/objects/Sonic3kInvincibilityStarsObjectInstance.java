@@ -111,7 +111,7 @@ public class Sonic3kInvincibilityStarsObjectInstance extends AbstractObjectInsta
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         boolean facingLeft = player.getDirection() == Direction.LEFT;
         int dirSign = facingLeft ? -1 : 1;
 

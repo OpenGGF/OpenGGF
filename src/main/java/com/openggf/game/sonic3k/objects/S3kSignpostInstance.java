@@ -256,19 +256,19 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = resolveUpdatePlayer(playerEntity);
         if (isDestroyed()) {
             return;
         }
-        if (landingSparklePending && isRomSparkleFrame(frameCounter)) {
+        if (landingSparklePending && isRomSparkleFrame(vIntRunCount)) {
             spawnRomSparkle();
             landingSparklePending = false;
         }
 
         switch (state) {
             case INIT -> updateInit(player);
-            case FALLING -> updateFalling(frameCounter, player);
+            case FALLING -> updateFalling(vIntRunCount, player);
             case LANDED -> updateLanded(player);
             case RESULTS -> updateResults(player);
             case AFTER -> updateAfter(player);
@@ -307,10 +307,10 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
     // FALLING
     // =========================================================================
 
-    private void updateFalling(int frameCounter, AbstractPlayableSprite player) {
+    private void updateFalling(int vIntRunCount, AbstractPlayableSprite player) {
         // ROM Obj_EndSignFall owns interaction before gravity and MoveSprite2:
         // sparkle -> EndSign_CheckPlayerHit -> addi #$C,y_vel -> movement.
-        if (isRomSparkleFrame(frameCounter)) {
+        if (isRomSparkleFrame(vIntRunCount)) {
             spawnRomSparkle();
         }
         if (romBumpCheckAvailableAfterCooldownEntry(bumpCooldown)) {
@@ -360,7 +360,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
             subY = 0;
             state = State.LANDED;
             landingSparklePending = preservesPostLandingSparkleGate
-                    && isRomSparkleFrame(frameCounter + 1);
+                    && isRomSparkleFrame(vIntRunCount + 1);
             LOG.fine("S3K Signpost FALLING -> LANDED at Y=" + worldY);
         }
     }

@@ -56,7 +56,7 @@ public class HCZWaterSplashObjectInstance extends AbstractObjectInstance impleme
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if (isDestroyed()) return;
 
         // Animation timer (sonic3k.asm:75286-75293)

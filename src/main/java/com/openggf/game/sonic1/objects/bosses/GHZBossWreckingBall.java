@@ -169,9 +169,9 @@ public class GHZBossWreckingBall extends AbstractBossChild
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (!shouldUpdate(frameCounter)) {
+        if (!shouldUpdate(vIntRunCount)) {
             return;
         }
 
@@ -189,7 +189,7 @@ public class GHZBossWreckingBall extends AbstractBossChild
                 parentDefeated = true;
                 defeatTimer = DEFEAT_EXPLOSION_TIMER;
             }
-            if ((frameCounter & 7) == 0) {
+            if ((vIntRunCount & 7) == 0) {
                 spawnBallDefeatExplosion();
             }
             defeatTimer--;

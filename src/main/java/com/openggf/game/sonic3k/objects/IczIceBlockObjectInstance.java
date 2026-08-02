@@ -49,7 +49,7 @@ public class IczIceBlockObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         // Static top-solid. ObjectManager owns MarkObjGone-style unload for layout objects.
     }
 

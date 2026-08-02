@@ -38,7 +38,7 @@ public final class ButterdroidBadnikInstance extends AbstractS3kBadnikInstance i
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         if (isDestroyed()) {
             return;
         }

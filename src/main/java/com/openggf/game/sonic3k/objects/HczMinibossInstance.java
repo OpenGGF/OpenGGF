@@ -236,7 +236,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
     private boolean vortexTrackedP2;
     private int defeatHandoffTimer;
     private boolean defeatHandoffStarted;
-    private int lastFrameCounter;
+    private int lastVIntRunCount;
     private int lastHitFrame = -1;
     private int lastHitRoutine = -1;
     private int lastHitWaitTimer = -1;
@@ -499,9 +499,9 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
     }
 
     @Override
-    protected void updateBossLogic(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = playerEntity instanceof AbstractPlayableSprite aps ? aps : null;
-        lastFrameCounter = frameCounter;
+        lastVIntRunCount = vIntRunCount;
         updateWaterLevel();
         ensureWaterEffectPalette();
 
@@ -822,7 +822,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
 
     private void updateVortex(AbstractPlayableSprite player) {
         if (waterEffectRoutine == WATER_EFFECT_ROUTINE_PULL
-                && (lastFrameCounter & (CONTINUOUS_SFX_INTERVAL - 1)) == 0
+                && (lastVIntRunCount & (CONTINUOUS_SFX_INTERVAL - 1)) == 0
                 && isOnScreen()) {
             services().playSfx(Sonic3kSfx.BOSS_ROTATE.id);
         }
@@ -1492,7 +1492,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         }
 
         @Override
-        public void update(int frameCounter, com.openggf.game.PlayableEntity player) {
+        public void update(int vIntRunCount, com.openggf.game.PlayableEntity player) {
             applyVortexPull();
             switch (phase) {
                 case PHASE_PULL -> {
@@ -1932,7 +1932,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         // Rockets orbit the boss with a front/back split matching VDP priority:
         // Back rockets (priority $200, phaseY index < 8) drawn BEHIND boss body.
         // Front rockets (priority $280, phaseY index >= 8) drawn IN FRONT of boss body.
-        boolean showRocketExhaust = areRocketExhaustsVisible() && (lastFrameCounter & 1) == 0;
+        boolean showRocketExhaust = areRocketExhaustsVisible() && (lastVIntRunCount & 1) == 0;
         for (RocketState rocket : rockets()) {
             if (!rocket.front) {
                 if (showRocketExhaust) {

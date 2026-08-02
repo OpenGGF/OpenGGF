@@ -49,7 +49,7 @@ public class S3kBossExplosionChild extends AbstractObjectInstance implements Spa
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // SFX is played by the controller (sub_52850), not each child
         if (delayCounter > 0) {

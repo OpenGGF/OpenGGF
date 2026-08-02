@@ -472,7 +472,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
     }
 
     @Override
-    protected void updateBossLogic(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
         prepareSharedBossPresentation();
 
         if (!endBossMode && miniInitialExecutionPending) {
@@ -1778,20 +1778,20 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
      * set, so the lower thruster flames blink every other frame.
      */
     private boolean shouldDrawThrusterFlames() {
-        // AbstractBossInstance stores ObjectManager's VBlank-style update counter here.
-        return shouldDrawThrusterFlamesForFrame(state.lastUpdatedFrame);
+        // AbstractBossInstance stores the object-visible V-int run count here.
+        return shouldDrawThrusterFlamesForFrame(state.lastUpdatedVIntRunCount);
     }
 
-    private boolean shouldDrawThrusterFlamesForFrame(int frameCounter) {
-        return frameCounter >= 0 && (resolveVIntRunCount(frameCounter) & 1) == 0;
+    private boolean shouldDrawThrusterFlamesForFrame(int vIntRunCount) {
+        return vIntRunCount >= 0 && (resolveVIntRunCount(vIntRunCount) & 1) == 0;
     }
 
     private boolean shouldDrawShipFlame() {
-        return state.lastUpdatedFrame >= 0 && (resolveVIntRunCount(state.lastUpdatedFrame) & 1) == 0;
+        return state.lastUpdatedVIntRunCount >= 0 && (resolveVIntRunCount(state.lastUpdatedVIntRunCount) & 1) == 0;
     }
 
-    private int resolveVIntRunCount(int vIntRunCountAtObservation) {
-        return services().resolveVIntRunCount(vIntRunCountAtObservation);
+    private int resolveVIntRunCount(int vIntRunCount) {
+        return services().resolveVIntRunCount(vIntRunCount);
     }
 
     /**

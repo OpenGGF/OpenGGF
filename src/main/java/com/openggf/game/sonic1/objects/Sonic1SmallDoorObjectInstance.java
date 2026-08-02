@@ -96,7 +96,7 @@ public class Sonic1SmallDoorObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // ADoor_OpenShut logic:
         // clr.b obAnim(a0)  ; default to closing animation (0)

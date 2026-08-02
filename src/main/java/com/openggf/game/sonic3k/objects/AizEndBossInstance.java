@@ -319,7 +319,7 @@ public class AizEndBossInstance extends AbstractBossInstance
     // ===== Main update loop =====
 
     @Override
-    protected void updateBossLogic(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
         serviceBossArtQueue();
         if (collisionEnablePending) {
             collisionEnabled = true;

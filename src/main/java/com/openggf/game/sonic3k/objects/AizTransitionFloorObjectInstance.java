@@ -37,7 +37,7 @@ public final class AizTransitionFloorObjectInstance extends AbstractObjectInstan
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         // ROM deletes the helper once Current_act is non-zero.
         if (services().currentAct() != 0) {
             setDestroyed(true);

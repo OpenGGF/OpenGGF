@@ -175,6 +175,12 @@ against a disassembly trace without converting. Y increases downward (Mega Drive
 convention). VDP coordinates in the disassembly are offset by +128; the engine uses direct
 screen coordinates.
 
+**Object clocks.** `ObjectInstance.update(int vIntRunCount, ...)` receives the
+object-visible ROM `V_int_run_count`, stored by `ObjectManager` as `vblaCounter`. It is not
+the manager's executed-frame counter or the ROM `Level_frame_counter`; lag frames can
+de-phase those clocks. When porting a frame gate, name and read the clock the disassembly
+actually uses instead of treating the update parameter as a generic frame number.
+
 **Terminology** differs from standard Sonic 2 naming: **Pattern** = 8x8 tile, **Chunk** =
 16x16 (composed of Patterns), **Block** = 128x128 (composed of Chunks).
 

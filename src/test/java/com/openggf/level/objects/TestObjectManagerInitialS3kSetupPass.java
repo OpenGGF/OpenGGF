@@ -306,7 +306,7 @@ class TestObjectManagerInitialS3kSetupPass {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             updates++;
             if (throwsOnUpdate) {
                 throw new IllegalStateException("setup boom");

@@ -80,7 +80,7 @@ public class Sonic1ElectrocuterObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Elec_Shock:
         //   move.w (v_framecount).w,d0
@@ -92,7 +92,7 @@ public class Sonic1ElectrocuterObjectInstance extends AbstractObjectInstance
         //   play electricity sound
         // ObjectManager passes the VBla clock into update(...), but this S1 routine
         // reads the gameplay frame counter instead (docs/s1disasm/_incObj/6E Electrocuter.asm:29-34).
-        int vFrameCounter = resolveVFrameCounter(frameCounter);
+        int vFrameCounter = resolveVFrameCounter(vIntRunCount);
         if ((vFrameCounter & frequencyMask) == 0) {
             if (animationId != 1) {
                 animationId = 1;
@@ -107,7 +107,7 @@ public class Sonic1ElectrocuterObjectInstance extends AbstractObjectInstance
         animate();
     }
 
-    private int resolveVFrameCounter(int fallbackFrameCounter) {
+    private int resolveVFrameCounter(int vIntRunCount) {
         // ROM Elec_Shock reads v_framecount (Level_frame_counter). The engine's
         // canonical Level_frame_counter is LevelManager.frameCounter (the value the
         // trace records as gameplay_frame_counter and seeds on replay). The
@@ -121,7 +121,7 @@ public class Sonic1ElectrocuterObjectInstance extends AbstractObjectInstance
         if (levelManager != null) {
             return levelManager.getFrameCounter() + 1;
         }
-        return fallbackFrameCounter;
+        return vIntRunCount;
     }
 
     private void animate() {

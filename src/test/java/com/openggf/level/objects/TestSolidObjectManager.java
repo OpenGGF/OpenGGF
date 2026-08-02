@@ -2480,7 +2480,7 @@ public class TestSolidObjectManager {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             // No-op for tests.
         }
 
@@ -2904,7 +2904,7 @@ public class TestSolidObjectManager {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             PlayerSolidContactResult result = services().solidExecution().resolveSolidNow(player);
             standingSeenInsideUpdate = result.standingNow();
             manualCheckpointCount++;
@@ -2972,7 +2972,7 @@ public class TestSolidObjectManager {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (skipNextCheckpoint) {
                 skipNextCheckpoint = false;
                 return;
@@ -3016,7 +3016,7 @@ public class TestSolidObjectManager {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             // No-op for tests.
         }
 
@@ -3070,7 +3070,7 @@ public class TestSolidObjectManager {
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             // No-op for tests.
         }
 

@@ -112,7 +112,7 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (isDestroyed()) {
             return;
         }
@@ -121,7 +121,7 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
         int dispatchCounter = getSlotIndex() >= 0
                 && objectServices != null && objectServices.objectManager() != null
                 ? objectServices.objectManager().getFrameCounter()
-                : frameCounter;
+                : vIntRunCount;
         if (pendingUnderwaterBubblerSpawn) {
             pendingUnderwaterBubblerSpawn = false;
             spawnUnderwaterBubblerChildren();

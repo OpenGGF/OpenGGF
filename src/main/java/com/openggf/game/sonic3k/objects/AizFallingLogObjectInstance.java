@@ -136,7 +136,7 @@ public class AizFallingLogObjectInstance extends AbstractObjectInstance implemen
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         ensureInitialized();
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (isDestroyed()) return;
@@ -152,7 +152,7 @@ public class AizFallingLogObjectInstance extends AbstractObjectInstance implemen
         // independent Level_frame_counter here (sonic3k.asm:59918-59922). The
         // LevelManager stores the previous completed frame until its late-frame
         // update, so +1 is the value visible during Process_Sprites.
-        int levelFrameCounter = levelFrameCounterForSpawner(frameCounter);
+        int levelFrameCounter = levelFrameCounterForSpawner(vIntRunCount);
         if (((levelFrameCounter + phaseOffset) & timingMask) != 0) {
             return;
         }
@@ -295,7 +295,7 @@ public class AizFallingLogObjectInstance extends AbstractObjectInstance implemen
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
             if (isDestroyed()) return;
 
@@ -459,7 +459,7 @@ public class AizFallingLogObjectInstance extends AbstractObjectInstance implemen
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
             if (isDestroyed()) return;
 

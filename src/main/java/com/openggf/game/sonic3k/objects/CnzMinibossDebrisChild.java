@@ -70,8 +70,8 @@ public final class CnzMinibossDebrisChild extends GravityDebrisChild implements 
     }
 
     @Override
-    public void update(int frameCounter, com.openggf.game.PlayableEntity player) {
-        super.update(frameCounter, player);
+    public void update(int vIntRunCount, com.openggf.game.PlayableEntity player) {
+        super.update(vIntRunCount, player);
         flickerCounter++;
     }
 

@@ -142,7 +142,7 @@ public class TestHTZBossChildObjects {
         Sonic2HTZBossInstance parent = new Sonic2HTZBossInstance(
                 new ObjectSpawn(0x2F40, 0x0538, Sonic2ObjectIds.HTZ_BOSS, 0, 0, false, 0));
         parent.setServices(services);
-        parent.getState().lastUpdatedFrame = 7;
+        parent.getState().lastUpdatedVIntRunCount = 7;
 
         HTZBossLavaBall firstBall =
                 HTZBossLavaBall.createInitialPairSpawner(parent, 0x2F40, 0x0538);
@@ -183,7 +183,7 @@ public class TestHTZBossChildObjects {
         parent.setServices(services);
         HTZBossLavaBall lavaBall = new HTZBossLavaBall(parent, 0x3040, 0x0580, true, false);
         lavaBall.setServices(services);
-        parent.getState().lastUpdatedFrame = 1;
+        parent.getState().lastUpdatedVIntRunCount = 1;
 
         try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
             terrain.when(() -> ObjectTerrainUtils.checkFloorDist(anyInt(), anyInt(), anyInt()))

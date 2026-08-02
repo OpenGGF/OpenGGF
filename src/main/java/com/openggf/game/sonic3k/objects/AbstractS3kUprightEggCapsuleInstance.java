@@ -84,7 +84,7 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         boolean buttonWasTriggered = buttonTriggered;
         checkpointAll();
         if (!opened) {
@@ -96,7 +96,7 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
 
         tickExplosionController();
         if (resultsStarted) {
-            updateAfterResultsStarted(frameCounter, player);
+            updateAfterResultsStarted(vIntRunCount, player);
             return;
         }
         postOpenTimer--;

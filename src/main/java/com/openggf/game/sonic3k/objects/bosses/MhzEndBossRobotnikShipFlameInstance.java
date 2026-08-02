@@ -62,7 +62,7 @@ public final class MhzEndBossRobotnikShipFlameInstance extends AbstractObjectIns
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         if ((parent.getCustomFlag(STATE_FLAGS_OFFSET) & DELETE_WHEN_PARENT_FLAG) != 0 || parent.isDestroyed()) {
             setDestroyed(true);
             return;
@@ -70,7 +70,7 @@ public final class MhzEndBossRobotnikShipFlameInstance extends AbstractObjectIns
         flipX = (parent.getState().renderFlags & 1) != 0;
         int xOffset = flipX ? -X_OFFSET : X_OFFSET;
         updateDynamicSpawn(parent.getX() + xOffset, parent.getY() + Y_OFFSET);
-        visibleThisFrame = (frameCounter & 1) == 0 && parent.getState().xVel != 0;
+        visibleThisFrame = (vIntRunCount & 1) == 0 && parent.getState().xVel != 0;
     }
 
     @Override

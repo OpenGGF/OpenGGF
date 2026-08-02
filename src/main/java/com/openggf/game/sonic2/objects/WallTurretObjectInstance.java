@@ -93,7 +93,7 @@ public class WallTurretObjectInstance extends AbstractObjectInstance implements 
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         PlayableEntity player = closestOrientationPlayer(playerEntity);
         switch (routine) {
             case 2:

@@ -21,7 +21,7 @@ public abstract class AbstractBossChild extends AbstractObjectInstance implement
     /** X-flip state, set by parent's updateChildFacing() */
     protected boolean flipX;
     private ObjectSpawn dynamicSpawn;
-    private int lastUpdatedFrame = -1;
+    private int lastUpdatedVIntRunCount = -1;
     /**
      * Stable 0-based construction ordinal among this parent's SAME-RUNTIME-CLASS
      * siblings (see {@link AbstractBossInstance#nextChildOrdinal}), carried through
@@ -63,11 +63,11 @@ public abstract class AbstractBossChild extends AbstractObjectInstance implement
                 spawn.rawYWord());
     }
 
-    protected boolean beginUpdate(int frameCounter) {
-        if (lastUpdatedFrame == frameCounter) {
+    protected boolean beginUpdate(int vIntRunCount) {
+        if (lastUpdatedVIntRunCount == vIntRunCount) {
             return false;
         }
-        lastUpdatedFrame = frameCounter;
+        lastUpdatedVIntRunCount = vIntRunCount;
         return true;
     }
 
@@ -187,11 +187,11 @@ public abstract class AbstractBossChild extends AbstractObjectInstance implement
         }
     }
 
-    protected boolean shouldUpdate(int frameCounter) {
-        if (parent != null && parent.getState().lastUpdatedFrame != frameCounter) {
+    protected boolean shouldUpdate(int vIntRunCount) {
+        if (parent != null && parent.getState().lastUpdatedVIntRunCount != vIntRunCount) {
             return false;
         }
-        return beginUpdate(frameCounter);
+        return beginUpdate(vIntRunCount);
     }
 
     @Override

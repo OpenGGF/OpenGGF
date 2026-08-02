@@ -297,11 +297,11 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         rebindIntroSpriteArtAfterRestore();
         claimIntroSpriteArtIfReady();
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        lastFrameCounter = frameCounter;
+        lastFrameCounter = vIntRunCount;
         AbstractPlayableSprite trackedPlayer = resolveTrackedPlayer(player);
 
         // ROM: routine dispatch FIRST (s3.asm line 81188-81195)

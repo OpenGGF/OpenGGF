@@ -83,11 +83,11 @@ public class Sonic1BuzzBomberBadnikInstance extends AbstractBadnikInstance imple
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (secondaryState) {
             case STATE_HOVER -> updateHover(player);
-            case STATE_FLY -> updateFly(player, frameCounter);
+            case STATE_FLY -> updateFly(player, vIntRunCount);
         }
     }
 
@@ -118,7 +118,7 @@ public class Sonic1BuzzBomberBadnikInstance extends AbstractBadnikInstance imple
      * ob2ndRout=2 (.chknearsonic): Flying state.
      * Move horizontally, check proximity to Sonic.
      */
-    private void updateFly(AbstractPlayableSprite player, int frameCounter) {
+    private void updateFly(AbstractPlayableSprite player, int vIntRunCount) {
         timeDelay--;
         if (timeDelay < 0) {
             // Timer expired: change direction
@@ -201,7 +201,7 @@ public class Sonic1BuzzBomberBadnikInstance extends AbstractBadnikInstance imple
     }
 
     @Override
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         // ROM AnimateSprite: obTimeFrame decrements from speed value (1) to 0, then advances.
         // Per-object timer ensures independent wing flap timing for each Buzz Bomber.
         wingTimer--;

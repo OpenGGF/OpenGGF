@@ -215,7 +215,7 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (!cutsceneOverride && Aiz2BossEndSequenceState.isCutsceneOverrideObjectsActive()) {
             ObjectLifetimeOps.deleteNoRespawn(this);
             return;
@@ -372,7 +372,7 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity playerEntity) {
+        public void update(int vIntRunCount, PlayableEntity playerEntity) {
             if (delay > 0) {
                 delay--;
                 return;

@@ -117,7 +117,7 @@ public class SpinyBadnikInstance extends AbstractBadnikInstance implements Rewin
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (state) {
             case PATROLLING -> updatePatrolling(player);
@@ -303,13 +303,13 @@ public class SpinyBadnikInstance extends AbstractBadnikInstance implements Rewin
     }
 
     @Override
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         if (state == State.ATTACKING) {
             // Attack pose (frame 2)
             animFrame = 2;
         } else {
             // Crawling animation (frames 0-1, 9-frame delay)
-            animFrame = ((frameCounter / CRAWL_ANIM_DELAY) & 1);
+            animFrame = ((vIntRunCount / CRAWL_ANIM_DELAY) & 1);
         }
     }
 

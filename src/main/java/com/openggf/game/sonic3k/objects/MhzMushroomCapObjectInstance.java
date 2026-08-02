@@ -169,7 +169,7 @@ public final class MhzMushroomCapObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity player) {
+    public void update(int vIntRunCount, PlayableEntity player) {
         recordPreviousYVelocity(player);
         ObjectServices services = tryServices();
         if (services != null) {
@@ -186,7 +186,7 @@ public final class MhzMushroomCapObjectInstance extends AbstractObjectInstance
         }
         animationState.update();
         mappingFrame = animationState.getMappingFrame();
-        updatePosition(frameCounter);
+        updatePosition(vIntRunCount);
     }
 
     @Override

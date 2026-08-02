@@ -509,7 +509,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         renderThisFrame = false;
         solidActive = false;
@@ -528,7 +528,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
             }
             case ROUTINE_WFZ_START -> {
                 animatePilot();
-                updateWfzStart(frameCounter, player);
+                updateWfzStart(vIntRunCount, player);
                 applyDeleteOffScreenCulling();
             }
             case ROUTINE_WFZ_END -> {
@@ -613,7 +613,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     // Routine 4: ObjB2_Main_WFZ_Start
     // ------------------------------------------------------------------------
 
-    private void updateWfzStart(int frameCounter, AbstractPlayableSprite player) {
+    private void updateWfzStart(int vIntRunCount, AbstractPlayableSprite player) {
         advanceMainAnimation();
         renderThisFrame = true;
         solidActive = true;
@@ -646,7 +646,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
                 // ObjB2_Main_WFZ_Start_shot_down: ROM plays SndID_Scatter ($EB) every
                 // $20 frames as the Tornado is gunned down (s2.asm:78890-78895), not the
                 // ring-loss/RingSpill sound ($C6). SndID_Scatter aliases SndID_LaserFloor.
-                if ((frameCounter & WFZ_SCATTER_SFX_MASK) == 0) {
+                if ((vIntRunCount & WFZ_SCATTER_SFX_MASK) == 0) {
                     services().playSfx(Sonic2Sfx.LASER_FLOOR.id);
                 }
 

@@ -217,7 +217,7 @@ public class Sonic1AnimalsObjectInstance extends AbstractObjectInstance implemen
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (!initialized) {
             ensureInitialized();
             // ROM Anml_Main (routine 0) sets obRoutine (addq.b #2,obRoutine for
@@ -236,7 +236,7 @@ public class Sonic1AnimalsObjectInstance extends AbstractObjectInstance implemen
         }
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (routine) {
-            case 0x02 -> updateRoutine912A(frameCounter);
+            case 0x02 -> updateRoutine912A(vIntRunCount);
             case 0x04, 0x08, 0x0A, 0x0C, 0x10 -> updateRoutine9184(player);
             case 0x06, 0x0E -> updateRoutine91C0(player);
             case 0x12 -> updateRoutine9240();
@@ -254,7 +254,7 @@ public class Sonic1AnimalsObjectInstance extends AbstractObjectInstance implemen
     /**
      * loc_912A: initial falling state for enemy-spawned animals.
      */
-    private void updateRoutine912A(int frameCounter) {
+    private void updateRoutine912A(int vIntRunCount) {
         if (!romRenderOnScreen) {
             setDestroyed(true);
             return;
@@ -268,7 +268,7 @@ public class Sonic1AnimalsObjectInstance extends AbstractObjectInstance implemen
             routine = (fromEnemyVariantIndex << 1) + 4;
 
             if ((fromPrison || services().gameState().isBossFightActive())
-                    && (frameCounter & 0x10) != 0) {
+                    && (vIntRunCount & 0x10) != 0) {
                 xVelocity = -xVelocity;
                 hFlip = !hFlip;
             }

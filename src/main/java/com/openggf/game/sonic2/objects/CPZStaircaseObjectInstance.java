@@ -323,7 +323,7 @@ public class CPZStaircaseObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         boolean touchTop = contactTop;
         boolean touchBottom = contactBottom;
         contactTop = false;

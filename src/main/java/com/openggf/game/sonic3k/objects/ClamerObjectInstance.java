@@ -165,7 +165,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    public void update(int vIntRunCount, PlayableEntity playerEntity) {
         if (destroyed) {
             return;
         }
@@ -179,7 +179,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
             return;
         }
         ensureSpringChildSlot();
-        lastObservedFrameCounter = frameCounter;
+        lastObservedFrameCounter = vIntRunCount;
 
         // ROM Clamer_Index dispatch (sonic3k.asm:185860).
         switch (routine) {
@@ -791,7 +791,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
         }
 
         @Override
-        public void update(int frameCounter, PlayableEntity player) {
+        public void update(int vIntRunCount, PlayableEntity player) {
             if (deleteNextFrame) {
                 setDestroyed(true);
                 return;

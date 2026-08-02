@@ -123,7 +123,7 @@ public class SlicerBadnikInstance extends AbstractBadnikInstance implements Rewi
     }
 
     @Override
-    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (state) {
             // Routine 0 -> 2 transition consumes a frame without moving, matching
@@ -287,7 +287,7 @@ public class SlicerBadnikInstance extends AbstractBadnikInstance implements Rewi
     }
 
     @Override
-    protected void updateAnimation(int frameCounter) {
+    protected void updateAnimation(int vIntRunCount) {
         // Animation state is set directly in state machine methods
     }
 
