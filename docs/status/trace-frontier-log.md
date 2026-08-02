@@ -60426,3 +60426,49 @@ Cross-route regression replays on this candidate:
   terminal direct `#335` with engine pending `<none>`.
 
 Those ordinary-boundary producer gaps are unaffected by the new exact held-row path.
+
+## 2026-08-02 — S3K queue lifecycle recovery Wave 1
+
+Context: `.worktrees/s3k-queue-lifecycle-recovery`, branch
+`bugfix/ai-s3k-queue-lifecycle-recovery`, verified at `59686c9e5` on JDK 21.
+No trace fixture changed.
+
+The exact focused queue/timing/authority command from the reviewed Wave 1 plan
+passes 142/142 (0 failures, 0 errors), up from its 138-test baseline because
+four prefix-close authority cases were added. The complete `*TraceReplay`
+command with all three verified ROM properties covers 64 concrete classes and
+108 methods: S1 30/30 classes green, S2 20/20 green, and S3K 4/14 green. The
+full line-by-line class ledger, exact commands, XML totals, and secondary-error
+classification are published in
+`docs/architecture/validation/trace/2026-08-02-s3k-queue-lifecycle-wave1-validation.md`.
+
+| S3K canonical class | Wave 1 result / frontier |
+|---|---|
+| `TestS3kAizCompleteRunTraceReplay` | unchanged: 60 comparator errors, first f1106 direct busy false/true; terminal raw 6351 module `#16` not prepared |
+| `TestS3kAizTraceReplay` | unchanged: 77 comparator errors, first f1396 direct busy false/true; terminal raw 8942 direct `#47` absent |
+| `TestS3kCnzCompleteRunTraceReplay` | unchanged: 7 comparator errors, first f9710 direct busy true/false; terminal raw 9712 direct `#203` absent |
+| `TestS3kCnzTraceReplay` | unchanged: 7 comparator errors, first f9710 direct busy true/false; terminal raw 17278 direct `#20` fingerprint mismatch |
+| `TestS3kGumballBonusTraceReplay` | **PASS** through structural boundary raw 1276; outer timing tail remains untouched |
+| `TestS3kHczCompleteRunTraceReplay` | unchanged: 28 comparator errors, first f3253 `tails_x_speed`; terminal raw 3341 direct `#90` absent |
+| `TestS3kIczCompleteRunTraceReplay` | unchanged: 10 comparator errors, first f12320 module state; terminal raw 12380 direct `#245` fingerprint mismatch |
+| `TestS3kLbzCompleteRunTraceReplay` | **advanced**: direct `#279` raw 17604 and `#280` raw 19709 consumed; next direct `#282` raw 19871 (`45546caa...`) absent |
+| `TestS3kMgzCompleteRunTraceReplay` | unchanged: 23 comparator errors, first f16512 direct busy true/false; terminal raw 17952 direct `#149` absent |
+| `TestS3kMgzTraceReplay` | unchanged: 79 comparator errors, first f13903 `animation`; terminal raw 14386 direct `#24` absent |
+| `TestS3kMhzCompleteRunTraceReplay` | unchanged: 865 comparator errors, first f3420 `rings`; terminal raw 7221 direct `#335` absent |
+| `TestS3kPachinkoBonusTraceReplay` | **PASS** through structural boundary raw 2902; outer timing tail remains untouched |
+| `TestS3kSlotsBonusTraceReplay` | **PASS** through structural boundary raw 1028; outer timing tail remains untouched |
+| `TestS3kSpecialStageTraceReplay` | PASS (2 methods) |
+
+The broad wildcard run reports 27 errors for the multi-method CNZ class and two
+for HCZ. Only one in each is the canonical replay terminal: the remainder are
+follow-on bootstrap/context errors after the earlier class failure (plus six
+CNZ metadata variants that intentionally do not copy the timing stream). They
+are recorded as class-level regression evidence, not as moved canonical trace
+frontiers.
+
+Wave 2 selection is owner-first: AIZ standard title retirement; the shared CNZ
+standard/ICZ deferred-transition admission order; CNZ-complete placement; then
+MGZ-complete results/title handoff. AIZ complete raw 6351 remains a separate
+recorder-attribution audit. MGZ standard, HCZ, and MHZ are gameplay-first lanes
+because animation, sidekick speed, and rings diverge before their queue
+terminals.

@@ -3,6 +3,15 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: standalone S3K Gumball, Pachinko, and Slots trace replays now close
+  at their recorder-observed bonus-mode boundary after proving all in-scope
+  hardware work is consumed and the production ledger is empty; later
+  return-to-level/title timing remains out of scope and ordinary trace closure
+  stays strict. LBZ now submits and rewind-owns the miniboss-box KosM parent at
+  both ROM producer sites, advancing its fail-closed direct-queue terminal from
+  `#279`/raw 17604 to `#282`/raw 19871. The expanded timing/authority matrix is
+  142/142 green, all three bonus traces pass, and the full S1/S2 trace fleets
+  remain green.
 - Refactor/Test: object execution now names its dispatched clock
   `vIntRunCount` across all 809 `update(int, PlayableEntity)` declarations,
   framework hook overrides, unanimous private-helper flows, and 25 proven

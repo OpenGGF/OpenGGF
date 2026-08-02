@@ -218,6 +218,15 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **S3K queue lifecycle recovery Wave 1 (2026-08-02):** standalone
+  Gumball, Pachinko, and Slots replays now verify and close only their
+  recorder-declared bonus prefix instead of treating the outer return-to-level
+  timing tail as fixture-owned. LBZ now performs and rewind-owns both native
+  miniboss-box KosM submissions, moving its missing-production terminal from
+  direct `#279` at raw 17604 to `#282` at raw 19871. The strict
+  timing/authority matrix is 142/142 green and the S1/S2 trace fleets remain
+  fully green.
+
 - **Object update clocks use ROM-accurate terminology (2026-08-02):** all 809
   `update(int, PlayableEntity)` boundaries now name their first argument
   `vIntRunCount`, matching the `ObjectManager.vblaCounter` value actually
