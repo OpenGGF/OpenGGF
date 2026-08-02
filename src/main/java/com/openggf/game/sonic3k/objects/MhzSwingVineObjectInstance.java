@@ -162,7 +162,23 @@ public final class MhzSwingVineObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isPersistent() {
-        return p1.grabFlag != 0 || p2.grabFlag != 0;
+        // loc_22824 applies the root's coarse-X tail even while either handle
+        // grab byte is set (sonic3k.asm:47164-47192).
+        return false;
+    }
+
+    @Override
+    public boolean usesCustomOutOfRangeCheck() {
+        return true;
+    }
+
+    @Override
+    public boolean isCustomOutOfRange(int cameraX) {
+        // The root x_pos is the fixed vine anchor and the ROM uses the native
+        // Camera_X_pos_coarse_back/$280 range rather than a viewport margin.
+        int coarseBack = (cameraX - 0x80) & 0xFF80;
+        int distance = (((spawn.x() & 0xFFFF) & 0xFF80) - coarseBack) & 0xFFFF;
+        return distance > 0x280;
     }
 
     @Override

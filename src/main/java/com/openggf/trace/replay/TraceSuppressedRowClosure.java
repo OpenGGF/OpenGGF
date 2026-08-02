@@ -7,6 +7,7 @@ import com.openggf.game.TitleCardProvider;
 import com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame;
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.level.LevelManager;
+import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
 
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -100,6 +101,12 @@ public final class TraceSuppressedRowClosure {
         } else {
             LevelFrameStep.serviceVBlankOnly(
                     context, lifecycleFrame, PlcLifecyclePhase.LAG);
+            if (context.hardwareTimingBoundaryObserver()
+                    instanceof TraceHardwareTimingBoundaryObserver replayObserver
+                    && replayObserver.applySuppressedRowCompletion()) {
+                context.runtimeArtCoordinator().afterTimingService(
+                        com.openggf.game.timing.HardwareServiceBoundary.PRE_MAIN_LOOP);
+            }
         }
 
         if (levelManager.hasPendingInLevelTitleCardHeldCounterDispatch()) {

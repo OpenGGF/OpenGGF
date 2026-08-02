@@ -60336,3 +60336,93 @@ untouched by this branch. `S2SpecialStageFinishBoundaryMappingTest`, which asser
 old divergence report, now passes.
 
 **The S1/S2 trace fleet is green.**
+
+## 2026-08-02 — S2 native recorder contract green; bounded S3K persistence audit fixes two slot leaks
+
+Context: `.worktrees/handover-followups`, branch `bugfix/ai-handover-followups`, based on
+`develop` `2c64e09d4`.
+
+- `S2SpecialStageRecorderContractTest` now treats the Lua source declaration
+  (`1.4-s2ss`) and the committed audited native fixture stamp
+  (`1.4-s2ss-native`) as separate exact contracts. Commit `bceb299d8` published the
+  native fixture and dynamic-art auxiliary stream but left the artifact assertion stale;
+  no fixture was edited or re-recorded. Java result: 6/6 pass. Native standalone runner:
+  6/6 pass with explicit `BIZHAWK_HOME` and S2 REV01 ROM.
+- A route-led `isPersistent()` audit covered concrete persistent classes reached before
+  the current AIZ, HCZ, and MHZ complete-run frontiers. Two mismatches were found and
+  corrected from the S&K-side tails: AIZ Draw Bridge normal/wait operations use saved pivot
+  `$30` in their unsigned coarse-back `$280` delete/respawn-clear tail
+  (`sonic3k.asm:59649-59676`), while the triggered collapse operation skips that tail for
+  its `$0E` countdown (`59769-59791`); MHZ Swing Vine applies its root tail even while a
+  player is grabbed (`47164-47192`). Draw Bridge is persistent only during its timer-owned
+  collapse delete, and Swing Vine is non-persistent with an exact anchor predicate; the
+  remaining audited overrides are self-managed, coupled, fixed-slot, or event-owned.
+- Test-first evidence: the combined focused run initially failed only the three new
+  lifetime assertions; after the object-local fixes,
+  `S2SpecialStageRecorderContractTest,TestAiz2BossEndSequenceObjects,`
+  `TestMhzSwingVineObjectInstance,TestObjectManagerCounterBasedDynamicUnload,`
+  `TestRewindCoverageGuard,TestStaticStateRewindCoverageGuard` passed 75/75 after the
+  independent review correction. The Draw Bridge manager regression triggers collapse
+  while already beyond `$280`, proving that the wait routine transitions before its
+  post-routine range decision and that the `$0E` phase then self-deletes on schedule.
+- AIZ complete-run command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest=TestS3kAizCompleteRunTraceReplay -Ds3k.rom.path=<verified-s3k> test`.
+  Result unchanged: 57 errors / 6344 represented rows; first frame 1106
+  `queue.s3k_kos_direct.busy`; terminal direct `#35` at raw 6346.
+- MHZ complete-run command: `mvn -Ptrace-replay -Dmse=off
+  -Dtest=TestS3kMhzCompleteRunTraceReplay -Ds3k.rom.path=<verified-s3k> test`.
+  Result unchanged: 865 errors / 7218 represented rows; first frame 3420 `rings`;
+  terminal direct `#335` at raw 7221. The corrected Swing Vine lifetime therefore does
+  not explain the earlier pollen/bouncing-ring slot map on this route.
+
+The corrections remove latent placement-slot leaks without moving the current early trace
+frontiers. The next active pipeline remains AIZ frame 1106/direct `#35`; hardware timing
+authority is unchanged.
+
+## 2026-08-02 — S3K held-counter direct admission advances AIZ to recorder attribution
+
+Context: `.worktrees/handover-aiz`, branch `bugfix/ai-handover-aiz`, based on foundation
+commit `19a220906`. JDK 21.0.11; verified S3K locked-on ROM. Focused authority/core command:
+`mvn -Dmse=off -Dtest=TestHardwareTimingAuthorityGuard,TestHardwareTimingReplayPort,`
+`TestHardwareTimingService,TestLevelIterationHardwareTimingAdmissionOrder,`
+`TestS3kKosDecompressionQueue,TestS3kKosModuleQueue,TestS3kKosStructuralSequence,`
+`TestS3kHardwareTimingReplay,TestRecordingFrameDriverHardwareTiming,`
+`TestTraceSuppressedRowClosure -Ds3k.rom.path=<verified-s3k> test`.
+Result: 118 tests, 0 failures, 0 errors. The S3K event/object/keep-green/rewind
+batch listed in the handover plan also passed 151/151.
+
+AIZ raw 6346 is a held `Level_frame_counter`/lag observation whose compiled schema-2 edge
+is direct `KOS_DECOMPRESSION_QUEUE#35` at `PRE_MAIN_LOOP`. The engine already owns the
+exact prepared production submission. Suppressed-row closure now exposes only that current
+raw edge after VInt; strict kind, ordinal, fingerprint, preparation, ordering, deduplication,
+and rewind checks remain in force. An exact admission runs only
+`RuntimeArtCoordinator.afterTimingService(PRE_MAIN_LOOP)`, retiring the newly ready real
+direct FIFO head without a coordinator pre-step, timing service, main loop, object scan, or
+producer.
+
+Result: direct `#35` is consumed, and its real Monkey Dude KosM parent advances through
+module `#15` at the next ordinary `POST_OBJECTS` step. AIZ reaches 6,347 represented rows
+with 60 comparator errors, then stops at module `#16` on raw 6351 `VINT_SERVICE`. Raw 6351
+is another held-counter row, but this time the production parent is not prepared; admitting
+it would require replay to run the omitted module coordinator, which hard rule 4 forbids.
+
+History identifies the next owner. Native
+`HardwareTimingEventEngine.ObserveFrameEnd` (and the frozen Lua scanner) labels a module
+retirement first observed on a duplicate `Level_frame_counter` sample as `vint_service`.
+The fixture stream was published by `bceb299d8` and remained byte-identical through the
+`8a6313bb3` regeneration; both precede `ddaf8e152`, which changed the engine's production
+model to `VINT_SERVICE -> POST_OBJECTS -> PRE_MAIN_LOOP`. The safe next action is an
+audited native-recorder observation-row/service-row attribution review. If it proves the
+stamp stale, correction and fixture regeneration/publication require separate approval; if
+it validates the current edge, any broader partial-CPU-prefix replay contract requires a
+separate design and review. No fixture was edited here, and timing authority does not create
+or prepare the missing parent.
+
+Cross-route regression replays on this candidate:
+
+- HCZ isolated method: 28 errors / 3,295 represented rows, first frame 3253
+  `tails_x_speed`; unchanged terminal direct `#90` with engine pending `<none>`.
+- MHZ complete: 865 errors / 7,218 represented rows, first frame 3420 `rings`; unchanged
+  terminal direct `#335` with engine pending `<none>`.
+
+Those ordinary-boundary producer gaps are unaffected by the new exact held-row path.

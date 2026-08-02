@@ -245,6 +245,30 @@ class TestMhzSwingVineObjectInstance {
     }
 
     @Test
+    void grabbedVineStillUsesTheUnconditionalRomRootRangeTail() {
+        Camera camera = mock(Camera.class);
+        MhzSwingVineObjectInstance vine = new MhzSwingVineObjectInstance(new ObjectSpawn(
+                0x2600, 0x0660, MHZ_SWING_VINE, 0, 0, true, 0));
+        vine.setServices(new TestObjectServices().withCamera(camera));
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x2600, (short) 0x0680);
+        player.setXSpeed((short) 0x0400);
+
+        vine.update(0, player);
+        vine.update(1, player);
+
+        assertTrue(player.isObjectControlled(), "setup sanity: the player remains grabbed while the root swings");
+        verify(camera, atLeastOnce()).requestForcedScroll(0x2600, 0x0660);
+        assertFalse(vine.isPersistent(),
+                "loc_22824 always applies the root range tail; a grab does not exempt the vine from deletion");
+        assertTrue(vine.usesCustomOutOfRangeCheck(),
+                "loc_22824 uses Camera_X_pos_coarse_back and the fixed native $280 threshold");
+        assertFalse(vine.isCustomOutOfRange(0x2400),
+                "anchor $2600 minus coarse-back $2380 is exactly the in-range $280 boundary");
+        assertTrue(vine.isCustomOutOfRange(0x2880),
+                "the unsigned native distance wraps out of range once the camera passes the anchor");
+    }
+
+    @Test
     void releasedVineStopsForcingCameraScroll() {
         Camera camera = mock(Camera.class);
         MhzSwingVineObjectInstance vine = new MhzSwingVineObjectInstance(new ObjectSpawn(

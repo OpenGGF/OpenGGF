@@ -23,7 +23,12 @@ import com.openggf.game.sonic3k.objects.Sonic3kStarPostObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossGeyserCutscene;
 import com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager;
 import com.openggf.game.timing.HardwareServiceBoundary;
+import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.game.timing.HardwareTimingService;
+import com.openggf.game.timing.HardwareTimingSnapshot;
+import com.openggf.game.timing.HardwareWorkHandle;
+import com.openggf.game.timing.HardwareWorkKind;
+import com.openggf.game.timing.RecordedCompletionAuthority;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.Sonic;
@@ -32,12 +37,18 @@ import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import com.openggf.trace.timing.HardwareCompletionEdge;
+import com.openggf.trace.timing.HardwareTimingReplayPort;
+import com.openggf.trace.timing.HardwareTimingReplaySnapshot;
+import com.openggf.trace.timing.HardwareTimingSchedule;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -228,6 +239,76 @@ class TestS3kKosStructuralSequence {
                 AIZ_FIRE,
                 AIZ2_PRIMARY,
                 AIZ2_SECONDARY));
+    }
+
+    @Test
+    void suppressedDirectAdmissionRetiresPhysicalHeadAndRewindsBeforeParentStep()
+            throws Exception {
+        HardwareTimingService timing = startLevel(0, 0);
+        S3kRuntimeArtCoordinator coordinator =
+                S3kRuntimeArtCoordinator.current();
+        coordinator.resetForMissingSnapshot();
+        timing.resetForMissingSnapshot();
+        RecordedCompletionAuthority authority = timing.beginRecordedAdmission(Map.of(
+                HardwareWorkKind.KOS_MODULE_QUEUE,
+                HardwareReadinessAdmissionPolicy.RECORDED,
+                HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
+                HardwareReadinessAdmissionPolicy.RECORDED));
+        HardwareWorkHandle parent = coordinator.moduleQueue().queue(
+                GameServices.rom().getRom(),
+                AIZ_MONKEY.source(),
+                AIZ_MONKEY.destinationTile());
+        coordinator.beforeTimingService(HardwareServiceBoundary.POST_OBJECTS);
+        timing.service(HardwareServiceBoundary.POST_OBJECTS);
+        coordinator.afterTimingService(HardwareServiceBoundary.POST_OBJECTS);
+        HardwareWorkHandle child = timing.pendingHandles().stream()
+                .filter(handle -> handle.kind()
+                        == HardwareWorkKind.KOS_DECOMPRESSION_QUEUE)
+                .findFirst()
+                .orElseThrow();
+        timing.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        assertTrue(timing.coordinatorPreparation(child).isPrepared());
+        assertTrue(coordinator.directQueue().decompressionsPending());
+
+        HardwareTimingReplayPort port = new HardwareTimingReplayPort(authority);
+        port.install(new HardwareTimingSchedule(2, List.of(
+                new HardwareCompletionEdge(
+                        1,
+                        HardwareServiceBoundary.PRE_MAIN_LOOP,
+                        child.kind(),
+                        child.ordinal(),
+                        child.submissionFingerprint()))));
+        port.beginRawFrame(1);
+        timing.service(HardwareServiceBoundary.VINT_SERVICE);
+        port.apply(HardwareServiceBoundary.VINT_SERVICE);
+        HardwareTimingSnapshot timingBeforeAdmission = timing.capture();
+        HardwareTimingReplaySnapshot portBeforeAdmission = port.capture();
+        S3kKosDecompressionQueueSnapshot directBeforeAdmission =
+                coordinator.directQueue().capture();
+
+        assertTrue(port.applySuppressedRowCompletion());
+        coordinator.afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
+
+        assertFalse(coordinator.directQueue().decompressionsPending());
+        assertFalse(timing.coordinatorPreparation(parent).isPrepared(),
+                "the KosM parent remains owned by its next POST_OBJECTS step");
+
+        timing.restore(timingBeforeAdmission);
+        port.restore(portBeforeAdmission);
+        coordinator.directQueue().restore(directBeforeAdmission);
+        assertTrue(coordinator.directQueue().decompressionsPending());
+
+        assertTrue(port.applySuppressedRowCompletion());
+        coordinator.afterTimingService(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        assertFalse(coordinator.directQueue().decompressionsPending());
+        assertEquals(1, port.capture().consumedIdentities().size());
+
+        coordinator.beforeTimingService(HardwareServiceBoundary.POST_OBJECTS);
+        timing.service(HardwareServiceBoundary.POST_OBJECTS);
+        coordinator.afterTimingService(HardwareServiceBoundary.POST_OBJECTS);
+        assertTrue(timing.coordinatorPreparation(parent).isPrepared());
+        assertFalse(timing.isReady(parent),
+                "recorded authority still owns the parent's later completion edge");
     }
 
     @Test

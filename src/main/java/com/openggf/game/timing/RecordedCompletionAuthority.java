@@ -30,6 +30,20 @@ public interface RecordedCompletionAuthority {
             long ordinal,
             String submissionFingerprint);
 
+    /**
+     * Admits a loop-tail completion whose visibility was recorded on a
+     * suppressed held-counter row after that row's VInt service.
+     *
+     * <p>This capability bypasses only the ordinary last-serviced-boundary
+     * equality. The replay port must prove a compiled current-row
+     * {@link HardwareServiceBoundary#PRE_MAIN_LOOP} edge before invoking it.
+     */
+    void admitRecordedSuppressedRowCompletion(
+            HardwareServiceBoundary boundary,
+            HardwareWorkKind kind,
+            long ordinal,
+            String submissionFingerprint);
+
     List<PendingRecordedSubmission> pendingSubmissions();
 
     void endRecordedAdmission();

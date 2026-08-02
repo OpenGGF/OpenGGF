@@ -11,6 +11,7 @@ import com.openggf.game.resources.PlcLifecycleService;
 import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -76,6 +77,58 @@ class TestTraceSuppressedRowClosure {
     }
 
     @Test
+    void scheduledSuppressedCompletionRunsAfterVintBeforeVblankState() {
+        List<String> events = new ArrayList<>();
+        TitleCardProvider titleCard = mock(TitleCardProvider.class);
+        LevelEventProvider levelEvents = recordingLevelEvents(events);
+        LevelManager level = recordingLevel(events, true);
+        TraceHardwareTimingBoundaryObserver observer =
+                mock(TraceHardwareTimingBoundaryObserver.class);
+        doAnswer(invocation -> {
+            events.add("boundary:" + invocation.getArgument(0));
+            return null;
+        }).when(observer).onBoundary(
+                org.mockito.ArgumentMatchers.any());
+        doAnswer(ignored -> {
+            events.add("suppressed-completion");
+            return true;
+        }).when(observer).applySuppressedRowCompletion();
+        RuntimeArtCoordinator coordinator = mock(RuntimeArtCoordinator.class);
+        doAnswer(invocation -> {
+            events.add("coordinator-after:" + invocation.getArgument(0));
+            return null;
+        }).when(coordinator).afterTimingService(
+                org.mockito.ArgumentMatchers.any());
+        LevelFrameContext context = context(
+                titleCard, levelEvents, observer, coordinator, events);
+        PlcFrameLifecycleCoordinator lifecycle =
+                new PlcFrameLifecycleCoordinator(recordingPlc(events));
+
+        lifecycle.runLogicalIteration(() -> { }, frame -> {
+            TraceSuppressedRowClosure.execute(
+                    context,
+                    frame,
+                    level,
+                    () -> events.add("pending-title"),
+                    locked -> events.add("control:" + locked));
+            return null;
+        });
+
+        assertEquals(List.of(
+                "phase:LAG",
+                "coordinator-after:VINT_SERVICE",
+                "boundary:VINT_SERVICE",
+                "suppressed-completion",
+                "coordinator-after:PRE_MAIN_LOOP",
+                "pending-title",
+                "event-vblank",
+                "object-vblank"), events);
+        verify(observer).applySuppressedRowCompletion();
+        verify(coordinator).afterTimingService(
+                com.openggf.game.timing.HardwareServiceBoundary.PRE_MAIN_LOOP);
+    }
+
+    @Test
     void heldTitleCardRunsOneHardwareTimedScanThenCompletesSkippedRowState() {
         List<String> events = new ArrayList<>();
         TitleCardProvider titleCard = mock(TitleCardProvider.class);
@@ -121,6 +174,20 @@ class TestTraceSuppressedRowClosure {
             TitleCardProvider titleCard,
             LevelEventProvider levelEvents,
             List<String> events) {
+        return context(
+                titleCard,
+                levelEvents,
+                boundary -> events.add("boundary:" + boundary.name()),
+                RuntimeArtCoordinator.NONE,
+                events);
+    }
+
+    private static LevelFrameContext context(
+            TitleCardProvider titleCard,
+            LevelEventProvider levelEvents,
+            com.openggf.game.timing.HardwareTimingBoundaryObserver observer,
+            RuntimeArtCoordinator coordinator,
+            List<String> events) {
         GameModule module = mock(GameModule.class);
         when(module.getTitleCardProvider()).thenReturn(titleCard);
         return new LevelFrameContext(
@@ -133,8 +200,8 @@ class TestTraceSuppressedRowClosure {
                 null,
                 null,
                 new HardwareTimingService(),
-                boundary -> events.add("boundary:" + boundary.name()),
-                RuntimeArtCoordinator.NONE);
+                observer,
+                coordinator);
     }
 
     private static LevelManager recordingLevel(

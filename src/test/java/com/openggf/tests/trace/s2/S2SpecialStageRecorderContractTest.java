@@ -138,7 +138,7 @@ class S2SpecialStageRecorderContractTest {
                 frame -> !trace.getFrame(frame).lag() || frame == finishObservation,
                 trace.metadata().bk2FrameOffset(), movie.getFrames());
 
-        assertEquals("1.4-s2ss", trace.metadata().luaScriptVersion());
+        assertEquals("1.4-s2ss-native", trace.metadata().luaScriptVersion());
         assertFalse(trace.controlStateTransitions().isEmpty());
         assertEquals(0, trace.controlStateTransitions().get(0).frame());
         assertFalse(trace.controlStateTransitions().get(0).started());

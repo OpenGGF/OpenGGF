@@ -26,6 +26,11 @@ public final class TraceHardwareTimingBoundaryObserver
         replayPort.enterUnrepresentedGap();
     }
 
+    /** Applies only a compiled completion on the latched suppressed row. */
+    public boolean applySuppressedRowCompletion() {
+        return replayPort.applySuppressedRowCompletion();
+    }
+
     @Override
     public void onBoundary(HardwareServiceBoundary boundary) {
         replayPort.apply(boundary);
