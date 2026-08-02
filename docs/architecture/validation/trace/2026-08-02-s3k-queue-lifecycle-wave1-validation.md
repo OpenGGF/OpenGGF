@@ -18,13 +18,16 @@ KosM parent submissions, including rewind rebind/claim ownership.
 
 ## Focused timing/authority matrix
 
-Command:
+Reproducible command template:
 
 ```bash
 mvn -q -Dmse=off \
   -Dtest='TestS3kKosDecompressionQueue,TestS3kKosDecompressionQueueLifecycle,TestS3kKosModuleQueue,TestS3kKosModuleReadiness,TestS3kKosStructuralSequence,TestS3kHardwareTimingReplay,TestHardwareTimingReplayPort,TestHardwareTimingAuthorityGuard,TestHardwareTimingService,TestLevelIterationHardwareTimingAdmissionOrder,TestSpecialStageHardwareTimingLifecycle,TestTraceRunHardwareTimingCoordinator,TestTraceSuppressedRowClosure,TestLoadQueueTraceComparison,TestQueueDiagnosticSnapshot' \
   -Ds3k.rom.path=<verified-s3k> test
 ```
+
+The executed invocation used the same options and selectors, substituting the
+machine-local verified S3K ROM path for `<verified-s3k>`.
 
 Result: exit 0, 142 tests, 0 failures, 0 errors, 0 skipped. The
 pre-Wave-1 matrix was 138/138; the four additional passing methods are the new
@@ -52,7 +55,7 @@ wall time was not retained.
 
 ## Complete trace fleet
 
-Command:
+Reproducible command template:
 
 ```bash
 mvn -q -Dmse=off -Dtest='*TraceReplay' \
@@ -60,6 +63,10 @@ mvn -q -Dmse=off -Dtest='*TraceReplay' \
   -Dsonic2.rom.path=<verified-s2> \
   -Ds3k.rom.path=<verified-s3k> test
 ```
+
+The executed invocation used the same options and selector, substituting the
+three machine-local verified ROM paths for `<verified-s1>`, `<verified-s2>`,
+and `<verified-s3k>`.
 
 Result: exit 1 across 64 concrete classes and 108 JUnit methods: 67 methods
 passed, 4 failed, and 37 errored. S1 is 30/30 classes green, S2 is 20/20

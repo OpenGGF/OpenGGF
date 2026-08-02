@@ -60433,13 +60433,13 @@ Context: `.worktrees/s3k-queue-lifecycle-recovery`, branch
 `bugfix/ai-s3k-queue-lifecycle-recovery`, verified at `59686c9e5` on JDK 21.
 No trace fixture changed.
 
-The exact focused queue/timing/authority command from the reviewed Wave 1 plan
+The focused queue/timing/authority selector from the reviewed Wave 1 plan
 passes 142/142 (0 failures, 0 errors), up from its 138-test baseline because
 four prefix-close authority cases were added. The complete `*TraceReplay`
-command with all three verified ROM properties covers 64 concrete classes and
-108 methods: S1 30/30 classes green, S2 20/20 green, and S3K 4/14 green. The
-full line-by-line class ledger, exact commands, XML totals, and secondary-error
-classification are published in
+selector with all three machine-local verified ROM properties covers 64
+concrete classes and 108 methods: S1 30/30 classes green, S2 20/20 green, and
+S3K 4/14 green. The full line-by-line class ledger, reproducible command
+templates, XML totals, and secondary-error classification are published in
 `docs/architecture/validation/trace/2026-08-02-s3k-queue-lifecycle-wave1-validation.md`.
 
 | S3K canonical class | Wave 1 result / frontier |
