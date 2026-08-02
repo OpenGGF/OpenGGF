@@ -1128,16 +1128,22 @@ public class TraceData {
             throws IOException {
         List<TraceFrame> frames = new ArrayList<>();
         try (BufferedReader reader = TraceFiles.openReader(csvPath)) {
-            String line = reader.readLine(); // skip header
-            if (line == null) return frames;
+            boolean firstMeaningfulLine = true;
+            String line;
             while ((line = reader.readLine()) != null) {
                 String trimmed = line.trim();
-                if (!trimmed.isEmpty()) {
-                    Integer csvVersion = metadata.csvVersion() != null
-                            ? metadata.csvVersion()
-                            : metadata.traceSchema();
-                    frames.add(TraceFrame.parseCsvRow(trimmed, csvVersion));
+                if (trimmed.isEmpty() || trimmed.startsWith("#")) {
+                    continue;
                 }
+                if (firstMeaningfulLine && TraceFiles.isCsvHeader(trimmed)) {
+                    firstMeaningfulLine = false;
+                    continue;
+                }
+                firstMeaningfulLine = false;
+                Integer csvVersion = metadata.csvVersion() != null
+                        ? metadata.csvVersion()
+                        : metadata.traceSchema();
+                frames.add(TraceFrame.parseCsvRow(trimmed, csvVersion));
             }
         }
         return frames;

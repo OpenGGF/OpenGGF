@@ -174,6 +174,32 @@ class TestTraceRunPlaybackCoordinator {
     }
 
     @Test
+    void transitionlessLevelAdjacencyAcceptsProductionLevelAdvanceOnly() {
+        assertLevelBoundaryCause(null, RunLevelLoadCause.LEVEL_ADVANCE);
+
+        for (RunLevelLoadCause rejected : List.of(
+                RunLevelLoadCause.DEATH_RESTART,
+                RunLevelLoadCause.INTERIOR_RETURN)) {
+            TraceRunPlaybackCoordinator coordinator = coordinator(
+                    List.of(level("a", 0, 1, 100, 10),
+                            level("b", 1, 1, 120, 10)), List.of(), 160);
+            coordinator.activateInitialLevel(
+                    levelObservation(1, 0, 0, 0, false, 0));
+            coordinator.beforeLoadedLevelActivation(
+                    new RunBoundarySignal.LevelLoaded(115, rejected,
+                            new RunPlaybackObservation.LevelIdentity(
+                                    2, 1, 1, 0)),
+                    levelObservation(2, 1, 0, 1, false, 0));
+            coordinator.afterProduction(
+                    levelObservation(1, 0, 0, 2, true, 0));
+
+            assertTrue(coordinator.beforeAdmission(
+                    levelObservation(2, 1, 0, 2, false, 0)).isEmpty(),
+                    rejected + " must not satisfy transitionless adjacency");
+        }
+    }
+
+    @Test
     void stageExitRequiresBothExitSignalAndMatchingReturnLoad() {
         TraceRunPlaybackCoordinator coordinator = coordinator(
                 List.of(level("ehz", 0, 1, 0, 10),

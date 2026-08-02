@@ -37,4 +37,20 @@ public final class TraceFiles {
             throw e;
         }
     }
+
+    /** True when a meaningful CSV line is the recorder's optional header. */
+    public static boolean isCsvHeader(String line) {
+        if (line == null) {
+            return false;
+        }
+        String trimmed = line.strip();
+        if (trimmed.startsWith("\uFEFF")) {
+            trimmed = trimmed.substring(1).stripLeading();
+        }
+        int comma = trimmed.indexOf(',');
+        String firstColumn = comma >= 0
+                ? trimmed.substring(0, comma).strip()
+                : trimmed;
+        return "frame".equalsIgnoreCase(firstColumn);
+    }
 }

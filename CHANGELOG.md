@@ -3,6 +3,18 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: the master-title visual trace tool is aligned with the headless
+  replay contracts added for whole runs and hardware-timed PLC/DPLC/Kosinski
+  work. Legacy catalog-level S1 and S3K complete-run segments now also appear
+  as grouped run entries without hiding their individual levels; transitionless
+  adjacency accepts only production ordinary/level-advance loads. Standalone
+  S1/S2/S3K special stages use their typed row schemas, old `complete_run`
+  level metadata may omit its profile, and schema-2 timing narrowly
+  canonicalises the legacy same-frame direct-PRE/module-POST emission pair.
+  Single-level sessions open the same externally managed dynamic-art segment
+  as whole runs before row zero, preserving strict atomic publication. The
+  picker renders a loading frame before synchronous parsing and retains launch,
+  bootstrap, or replay exceptions on screen until acknowledged.
 - Refactor/Test: object execution now names its dispatched clock
   `vIntRunCount` across all 809 `update(int, PlayableEntity)` declarations,
   framework hook overrides, unanimous private-helper flows, and 25 proven

@@ -50,8 +50,17 @@ public final class TraceRunReplayWalker {
         TraceRunManifest.Segment segment,
         TraceData trace,
         TraceRunManifest.Transition entryBoundary,
-        TraceRunManifest.Transition exitBoundary
-    ) {}
+        TraceRunManifest.Transition exitBoundary,
+        TraceRunSpecialStageRows specialStageRows
+    ) {
+        public SegmentPlan(
+                TraceRunManifest.Segment segment,
+                TraceData trace,
+                TraceRunManifest.Transition entryBoundary,
+                TraceRunManifest.Transition exitBoundary) {
+            this(segment, trace, entryBoundary, exitBoundary, null);
+        }
+    }
 
     /**
      * Hardware-timing view of one structural run segment. Raw frame numbers
@@ -775,6 +784,8 @@ public final class TraceRunReplayWalker {
         int segmentCount = segments.size();
 
         TraceData[] traces = new TraceData[segmentCount];
+        TraceRunSpecialStageRows[] specialStageRows =
+                new TraceRunSpecialStageRows[segmentCount];
         for (int i = 0; i < segmentCount; i++) {
             TraceRunManifest.Segment segment = segments.get(i);
             Path segmentDir = runDir.resolve(segment.dir());
@@ -784,14 +795,29 @@ public final class TraceRunReplayWalker {
             // which uses a per-game special-stage schema structurally distinct
             // from TraceFrame's primary-level columns -- need not parse there.
             // Metadata loading still exposes its optional DPLC heartbeat.
-            traces[i] = isUncomparedInterior(segment)
-                ? TraceData.loadMetadataOnly(
-                        segmentDir,
-                        com.openggf.trace.StoredPhysicsFrameDomain.FrameEncoding.DECIMAL,
-                        segment.dynamicArtInitialLedgerDescriptors())
-                : TraceData.load(
-                        segmentDir,
-                        segment.dynamicArtInitialLedgerDescriptors());
+            try {
+                if (isUncomparedInterior(segment)) {
+                    specialStageRows[i] = TraceRunSpecialStageRows.load(
+                            segment.traceProfile(), segmentDir,
+                            segment.dynamicArtInitialLedgerDescriptors());
+                    traces[i] = TraceData.loadMetadataOnly(
+                            segmentDir,
+                            com.openggf.trace.StoredPhysicsFrameDomain.FrameEncoding.DECIMAL,
+                            segment.dynamicArtInitialLedgerDescriptors());
+                } else {
+                    traces[i] = TraceData.load(
+                            segmentDir,
+                            segment.dynamicArtInitialLedgerDescriptors());
+                }
+            } catch (IOException | RuntimeException failure) {
+                throw new IOException(
+                        "Segment " + i + " parser failed for profile '"
+                                + segment.traceProfile() + "': "
+                                + (failure.getMessage() != null
+                                        ? failure.getMessage()
+                                        : failure.getClass().getSimpleName()),
+                        failure);
+            }
         }
         run.validateDynamicArtRun(java.util.Arrays.asList(traces));
 
@@ -801,7 +827,8 @@ public final class TraceRunReplayWalker {
         for (int i = 0; i < segmentCount; i++) {
             plans.add(new SegmentPlan(
                 segments.get(i), traces[i],
-                pairing.entryBoundaries()[i], pairing.exitBoundaries()[i]));
+                pairing.entryBoundaries()[i], pairing.exitBoundaries()[i],
+                specialStageRows[i]));
         }
         return plans;
     }

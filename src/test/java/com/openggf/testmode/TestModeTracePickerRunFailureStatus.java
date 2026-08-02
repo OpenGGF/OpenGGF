@@ -71,7 +71,8 @@ class TestModeTracePickerRunFailureStatus {
     @Test
     void confirmAcknowledgesFailureWithoutLaunchingSelectedTrace() {
         TraceRunFailureStatus.recordReason(0, "wrong terminal mode", 99, 100);
-        TestModeTracePicker picker = new TestModeTracePicker(entries("s1"), null);
+        TestModeTracePicker picker = new TestModeTracePicker(
+                entries("s1"), mock(PixelFont.class));
         InputHandler input = inputWith(GLFW_KEY_ENTER);
 
         picker.update(input);
@@ -83,10 +84,13 @@ class TestModeTracePickerRunFailureStatus {
     @Test
     void confirmCanLaunchOnTheNextPressAfterAcknowledgement() {
         TraceRunFailureStatus.recordReason(0, "wrong terminal mode", 99, 100);
-        TestModeTracePicker picker = new TestModeTracePicker(entries("s1"), null);
+        TestModeTracePicker picker = new TestModeTracePicker(
+                entries("s1"), mock(PixelFont.class));
 
         picker.update(inputWith(GLFW_KEY_ENTER));
         picker.update(inputWith(GLFW_KEY_ENTER));
+        picker.render();
+        picker.update(mock(InputHandler.class));
 
         assertEquals(TestModeTracePicker.Result.LAUNCH, picker.consumeResult());
     }

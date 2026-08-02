@@ -1,5 +1,7 @@
 package com.openggf.trace.catalog;
 
+import com.openggf.trace.StoredPhysicsFrameDomain;
+import com.openggf.trace.TraceData;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -8,6 +10,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TraceCatalogTest {
@@ -125,6 +128,54 @@ class TraceCatalogTest {
 
         assertEquals(1, entries.size());
         assertEquals(2, entries.getFirst().frameCount());
+    }
+
+    @Test
+    void scanDoesNotCountRecorderCsvHeaderAsAFrame(@TempDir Path tmp)
+            throws Exception {
+        Path dir = tmp.resolve("s1/ghz1");
+        writeValidTrace(dir, "s1", 0, 1);
+        Files.writeString(dir.resolve("physics.csv"),
+                "frame,input,camera_x\n"
+                        + "0000,0000,0000\n"
+                        + "0001,0000,0000\n");
+
+        List<TraceEntry> entries = TraceCatalog.scan(tmp);
+
+        assertEquals(2, entries.getFirst().frameCount());
+    }
+
+    @Test
+    void scanPreservesEveryHeaderlessLegacyCsvRow(@TempDir Path tmp)
+            throws Exception {
+        Path dir = tmp.resolve("s1/ghz1");
+        writeValidTrace(dir, "s1", 0, 1);
+
+        List<TraceEntry> entries = TraceCatalog.scan(tmp);
+
+        assertEquals(2, entries.getFirst().frameCount());
+        assertEquals(2, TraceData.load(dir).frameCount());
+        assertEquals(List.of(0, 1), StoredPhysicsFrameDomain.scan(
+                dir.resolve("physics.csv")).frames());
+    }
+
+    @Test
+    void malformedEqualOffsetLegacyCohortIsOmittedWithoutAbortingScan(
+            @TempDir Path tmp) throws Exception {
+        Path first = tmp.resolve("s1/first_completerun");
+        Path second = tmp.resolve("s1/second_completerun");
+        writeTraceWithoutBk2(first, "s1", 0, 1, "legacy.bk2");
+        writeTraceWithoutBk2(second, "s1", 1, 1, "legacy.bk2");
+        Files.writeString(first.resolve("physics.csv"), "");
+        Files.writeString(second.resolve("physics.csv"), "");
+        Files.createDirectories(tmp.resolve("s1/_movies"));
+        Files.writeString(tmp.resolve("s1/_movies/legacy.bk2"), "movie");
+
+        List<TraceEntry> entries = assertDoesNotThrow(
+                () -> TraceCatalog.scan(tmp));
+
+        assertEquals(2, entries.size());
+        assertTrue(entries.stream().noneMatch(TraceEntry::isRun));
     }
 
     private static void writeValidTrace(Path dir, String game, int zoneId, int act)

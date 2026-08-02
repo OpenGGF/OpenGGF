@@ -97,13 +97,19 @@ public final class S3kSpecialStageTraceData {
     private static List<S3kSpecialStageTraceFrame> loadPhysicsCsv(Path csvPath) throws IOException {
         List<S3kSpecialStageTraceFrame> frames = new ArrayList<>();
         try (BufferedReader reader = TraceFiles.openReader(csvPath)) {
-            String line = reader.readLine(); // skip header
-            if (line == null) return frames;
+            boolean firstMeaningfulLine = true;
+            String line;
             while ((line = reader.readLine()) != null) {
                 String trimmed = line.trim();
-                if (!trimmed.isEmpty()) {
-                    frames.add(S3kSpecialStageTraceFrame.parseCsvRow(trimmed));
+                if (trimmed.isEmpty() || trimmed.startsWith("#")) {
+                    continue;
                 }
+                if (firstMeaningfulLine && TraceFiles.isCsvHeader(trimmed)) {
+                    firstMeaningfulLine = false;
+                    continue;
+                }
+                firstMeaningfulLine = false;
+                frames.add(S3kSpecialStageTraceFrame.parseCsvRow(trimmed));
             }
         }
         return frames;

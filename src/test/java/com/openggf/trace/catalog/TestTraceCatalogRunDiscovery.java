@@ -14,6 +14,42 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestTraceCatalogRunDiscovery {
 
     @Test
+    void discoversLegacyCatalogCompleteRunsWithoutHidingIndividualSegments() {
+        Path tracesRoot = Path.of("src", "test", "resources", "traces");
+
+        List<TraceEntry> entries = TraceCatalog.scan(tracesRoot);
+
+        TraceEntry s1 = entries.stream()
+                .filter(TraceEntry::isRun)
+                .filter(entry -> "s1-complete-run".equals(
+                        entry.runManifest().runId()))
+                .findFirst()
+                .orElseThrow();
+        TraceEntry s3k = entries.stream()
+                .filter(TraceEntry::isRun)
+                .filter(entry -> "s3k-complete-sonic-tails".equals(
+                        entry.runManifest().runId()))
+                .findFirst()
+                .orElseThrow();
+
+        assertEquals(19, s1.runManifest().segments().size());
+        assertEquals("ghz1_completerun",
+                s1.runManifest().segments().getFirst().dir());
+        assertEquals(5_598,
+                s1.runManifest().segments().getFirst().traceFrameCount());
+        assertEquals("fz_completerun",
+                s1.runManifest().segments().getLast().dir());
+        assertTrue(s1.runManifest().transitions().isEmpty());
+        assertEquals(15, s3k.runManifest().segments().size());
+        assertTrue(entries.stream().anyMatch(entry -> !entry.isRun()
+                && "ghz1_completerun".equals(
+                        entry.dir().getFileName().toString())));
+        assertTrue(entries.stream().anyMatch(entry -> !entry.isRun()
+                && "aiz_completerun".equals(
+                        entry.dir().getFileName().toString())));
+    }
+
+    @Test
     void discoversRunManifestAsSingleEntry(@TempDir Path root) throws Exception {
         // Copy the committed synthetic run fixture into <root>/s3k/runs/run_aiz_gumball_3seg
         Path src = Path.of("src", "test", "resources", "traces", "synthetic", "run_aiz_gumball_3seg");

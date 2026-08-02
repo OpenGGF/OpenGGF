@@ -218,6 +218,16 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **Visual trace launch parity and diagnostics (2026-08-02):** the master-title
+  picker now exposes grouped legacy S1/S3K complete runs alongside their level
+  entries, dispatches all three games' typed special-stage traces, and accepts
+  the narrow profile/timing compatibility needed by older committed captures.
+  Level traces establish PLC/DPLC comparison ownership before row zero, using
+  the same production-published lifecycle as whole-run replay. Selecting a
+  trace first renders a loading screen; parser, bootstrap, and replay failures
+  return to a persistent in-picker diagnostic instead of disappearing into the
+  console.
+
 - **Landing width and the AIZ intro title-card handoff modelled from ROM
   (2026-08-02):** two follow-ups salvaged from the S3K trace pass. The solid
   landing clamp now models the object's own width byte as a first-class provider

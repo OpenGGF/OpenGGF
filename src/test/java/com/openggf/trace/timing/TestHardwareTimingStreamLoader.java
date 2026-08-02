@@ -178,6 +178,74 @@ class TestHardwareTimingStreamLoader {
     }
 
     @Test
+    void schemaTwoCanonicalisesLegacySameFrameDirectThenModulePair()
+            throws IOException {
+        Path fixture = writeFixture(7, 2,
+                edge(0, "pre_main_loop", "kos_decompression_queue", 10) + "\n"
+                        + edge(0, "post_objects", "kos_module_queue", 20) + "\n", 2);
+
+        HardwareTimingSchedule schedule =
+                TraceData.load(fixture).hardwareTimingSchedule();
+
+        assertEquals(HardwareWorkKind.KOS_MODULE_QUEUE,
+                schedule.edges().get(0).kind());
+        assertEquals(HardwareServiceBoundary.POST_OBJECTS,
+                schedule.edges().get(0).boundary());
+        assertEquals(20, schedule.edges().get(0).ordinal());
+        assertEquals(HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
+                schedule.edges().get(1).kind());
+        assertEquals(HardwareServiceBoundary.PRE_MAIN_LOOP,
+                schedule.edges().get(1).boundary());
+        assertEquals(10, schedule.edges().get(1).ordinal());
+    }
+
+    @Test
+    void legacyPairNormalizationRemainsConfinedToSchemaTwoSameFrameKinds()
+            throws IOException {
+        Path schemaOne = writeFixture(7, 1,
+                edge(0, "pre_main_loop", "kos_decompression_queue", 10) + "\n"
+                        + edge(0, "post_objects", "kos_module_queue", 20) + "\n", 2);
+        assertRejected(schemaOne, "hardware_timing.jsonl", "not authorized");
+
+        Path differentFrames = writeFixture(7, 2,
+                edge(1, "pre_main_loop", "kos_decompression_queue", 10) + "\n"
+                        + edge(0, "post_objects", "kos_module_queue", 20) + "\n", 2);
+        assertRejected(differentFrames, "hardware_timing.jsonl", "canonical ordering");
+
+        Path wrongPreviousKind = writeFixture(7, 2,
+                edge(0, "pre_main_loop", "kos_module_queue", 10) + "\n"
+                        + edge(0, "post_objects", "kos_module_queue", 20) + "\n", 2);
+        assertRejected(wrongPreviousKind, "hardware_timing.jsonl", "canonical ordering");
+
+        Path wrongCurrentBoundary = writeFixture(7, 2,
+                edge(0, "pre_main_loop", "kos_decompression_queue", 10) + "\n"
+                        + edge(0, "vint_service", "kos_module_queue", 20) + "\n", 2);
+        assertRejected(wrongCurrentBoundary, "hardware_timing.jsonl", "canonical ordering");
+    }
+
+    @Test
+    void normalizedLegacyPairStillRejectsNoncanonicalSuccessor()
+            throws IOException {
+        Path fixture = writeFixture(7, 2,
+                edge(0, "pre_main_loop", "kos_decompression_queue", 10) + "\n"
+                        + edge(0, "post_objects", "kos_module_queue", 20) + "\n"
+                        + edge(0, "vint_service", "kos_module_queue", 21) + "\n", 2);
+
+        assertRejected(fixture, "hardware_timing.jsonl", "canonical ordering");
+    }
+
+    @Test
+    void committedKnucklesLbz2LegacyTimingOrderLoads() throws IOException {
+        Path fixture = Path.of("src", "test", "resources", "traces", "s3k",
+                "runs", "s3k-knuckles-complete-superemeralds", "lbz_2");
+
+        HardwareTimingSchedule schedule =
+                TraceData.load(fixture).hardwareTimingSchedule();
+
+        assertEquals(45, schedule.edges().size());
+    }
+
+    @Test
     void duplicateIdentityFails() throws IOException {
         String edge = edge(0, "vint_service", 0);
         Path fixture = writeFixture(7, 1, edge + "\n" + edge + "\n", 2);

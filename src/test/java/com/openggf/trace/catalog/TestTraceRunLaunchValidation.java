@@ -9,12 +9,57 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestTraceRunLaunchValidation {
+
+    @Test
+    void committedLegacyS1CompleteRunAcceptsMissingLevelMetadataProfile() {
+        Path root = Path.of("src", "test", "resources", "traces");
+        TraceEntry entry = TraceCatalog.scan(root).stream()
+                .filter(TraceEntry::isRun)
+                .filter(candidate -> "s1-ghz-maze-roundtrip".equals(
+                        candidate.runManifest().runId()))
+                .findFirst()
+                .orElseThrow();
+
+        TraceCatalog.RunLaunchValidation validation =
+                TraceCatalog.validateRunLaunch(entry);
+
+        assertTrue(validation.launchable(), validation.diagnostic());
+    }
+
+    @Test
+    void preparationLoadsMovieAndSegmentPayloadsExactlyOnce() throws Exception {
+        Path root = Path.of("src", "test", "resources", "traces");
+        TraceEntry entry = TraceCatalog.scan(root).stream()
+                .filter(TraceEntry::isRun)
+                .filter(candidate -> "s1-ghz-maze-roundtrip".equals(
+                        candidate.runManifest().runId()))
+                .findFirst()
+                .orElseThrow();
+        AtomicInteger movieLoads = new AtomicInteger();
+        AtomicInteger planLoads = new AtomicInteger();
+
+        TraceCatalog.PreparedRunLaunch prepared = TraceCatalog.prepareRunLaunch(
+                entry,
+                movie -> {
+                    movieLoads.incrementAndGet();
+                    return new com.openggf.debug.playback.Bk2MovieLoader().load(movie);
+                },
+                (manifest, runDir) -> {
+                    planLoads.incrementAndGet();
+                    return TraceRunReplayWalker.plan(manifest, runDir);
+                });
+
+        assertEquals(1, movieLoads.get());
+        assertEquals(1, planLoads.get());
+        assertFalse(prepared.segments().isEmpty());
+    }
 
     @Test
     void committedSchemaTwoRunValidatesNonEmptyDestinationOpeningLedger()
@@ -46,6 +91,24 @@ class TestTraceRunLaunchValidation {
                 TraceCatalog.validateRunLaunch(entry);
 
         assertTrue(validation.launchable(), validation.diagnostic());
+    }
+
+    @Test
+    void headerlessLegacyLevelSegmentRetainsEveryRowDuringPreparation(
+            @TempDir Path root) throws Exception {
+        Path runDir = prepareSyntheticRunWithValidMovie(root);
+        Path physics = runDir.resolve("seg00_aiz/physics.csv");
+        List<String> lines = Files.readAllLines(physics);
+        Files.write(physics, lines.subList(1, lines.size()));
+        TraceEntry entry = TraceCatalog.scan(root).stream()
+                .filter(TraceEntry::isRun)
+                .findFirst()
+                .orElseThrow();
+
+        TraceCatalog.PreparedRunLaunch prepared =
+                TraceCatalog.prepareRunLaunch(entry);
+
+        assertEquals(2, prepared.segments().getFirst().trace().frameCount());
     }
 
     @Test
