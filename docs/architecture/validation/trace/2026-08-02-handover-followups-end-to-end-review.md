@@ -96,5 +96,5 @@ Renewed result: `NO BLOCKERS`.
 - [x] Generated rewind-gap output discarded with explicit authorization.
 - [ ] README staged in the merge into `develop`.
 - [x] Post-merge full suite introduces no baseline regression.
-- [ ] Only `develop` pushed; implementation branches remain local.
-- [ ] Clean worktree removed and fully merged local branches deleted.
+- [x] Only `develop` pushed; implementation branches remained local.
+- [x] Clean worktree removed and fully merged local branches deleted.
