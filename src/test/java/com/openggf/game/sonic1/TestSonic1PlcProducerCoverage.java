@@ -5,6 +5,7 @@ import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelLoadContext;
 import com.openggf.game.rewind.snapshot.NemesisPlcQueueSnapshot;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
+import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 import com.openggf.game.sonic1.credits.Sonic1CreditsManager;
 import com.openggf.game.sonic1.events.Sonic1LevelEventManager;
 import com.openggf.game.sonic1.resources.Sonic1PlcService;
@@ -39,6 +40,7 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.verify;
 
 /**
  * Executes the S1-owned credits producer and records the complete descriptor
@@ -245,13 +247,13 @@ class TestSonic1PlcProducerCoverage {
         routine.setInt(signpost, 2);
 
         AbstractPlayableSprite player = org.mockito.Mockito.mock(AbstractPlayableSprite.class);
-        org.mockito.Mockito.when(player.isHidden()).thenReturn(true);
-        org.mockito.Mockito.when(player.isObjectControlled()).thenReturn(true);
-        org.mockito.Mockito.when(player.isObjectControlSuppressesMovement()).thenReturn(true);
-        org.mockito.Mockito.when(player.isObjectControlAllowsCpu()).thenReturn(false);
+        org.mockito.Mockito.when(player.isNativeSlotPresent()).thenReturn(false);
         org.mockito.Mockito.when(player.getRingCount()).thenReturn(50);
 
         signpost.update(1, player);
+
+        verify(player).setAnimationId(Sonic1AnimationIds.NULL.id());
+        verify(player).setForcedAnimationId(Sonic1AnimationIds.NULL.id());
 
         Sonic1PlcService queue = GameServices.module().getGameService(Sonic1PlcService.class);
         assertEquals(expectedDescriptors(16), queue.capture().queuedEntries());

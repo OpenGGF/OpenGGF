@@ -3,6 +3,18 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: visual and headless whole-run special stages now share one atomic
+  represented-row driver for input admission, hardware timing, dynamic-art
+  publication, comparison, and closure. Visual replay publishes the admitted
+  row before boundary verification, rejects skipped special-local row zero,
+  and committed run manifests are guarded for one launchable master-title
+  catalog entry each. Shared fixture defaults also own playable-prefix and
+  fixed-slot dispatch. S1 giant-ring completion preserves the ROM's deleted
+  player-SST `id_Null` state with an explicit rewind-safe native-slot-presence
+  lifecycle, suppressing animation only after the ROM slot is actually
+  cleared; the emerald route no longer diverges at frame 3596. A committed
+  emerald prefix crosses into special stage through the shared driver, and
+  structural coverage verifies all 3,728 advertised rows commit exactly once.
 - Fix/Test: S1 visual whole-run replay now carries the ROM-visible object
   VBlank epoch across compressed act/title-card and special-stage transitions
   using the same manifest/BK2 timing budgets as headless chains. Prepared

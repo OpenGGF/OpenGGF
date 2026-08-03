@@ -2,6 +2,7 @@ package com.openggf;
 
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
+import com.openggf.control.InputHandler;
 import com.openggf.game.GameId;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
@@ -36,6 +37,7 @@ import com.openggf.trace.replay.runs.RunLevelLoadCause;
 import com.openggf.trace.replay.runs.RunPlaybackObservation;
 import com.openggf.trace.replay.runs.TraceRunPlaybackCoordinator;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker;
+import com.openggf.trace.replay.runs.TraceRunSpecialStageRowDriver;
 import com.openggf.trace.replay.runs.TraceRunVblankClock;
 import com.openggf.trace.timing.HardwareTimingReplayPort;
 import com.openggf.trace.timing.HardwareTimingSchedule;
@@ -1276,6 +1278,201 @@ class TestTraceSessionLauncherRunBranch {
                 session::afterProductionIteration);
     }
 
+    @Test
+    void specialStagePublicationPrecedesPendingSegmentVerification() {
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
+        GameplayModeContext context = SessionManager.getCurrentGameplayMode();
+        List<TraceRunReplayWalker.SegmentPlan> plans;
+        try {
+            TraceRunManifest run = TraceRunManifest.load(
+                    SS_RUN_DIR.resolve("run_manifest.json"));
+            plans = List.of(TraceRunReplayWalker.plan(run, SS_RUN_DIR).get(1));
+        } catch (Exception e) {
+            throw new AssertionError(e);
+        }
+        TraceData trace = plans.getFirst().trace();
+        TraceSessionLauncher session = new TraceSessionLauncher(
+                null, null, plans, null);
+        List<FrameComparison> observed = new ArrayList<>();
+        LiveTraceComparator sink = new LiveTraceComparator(
+                trace, ToleranceConfig.DEFAULT, 0,
+                () -> null, null, observed::add);
+        setField(session, "fixture", new RecordingTimingFixture(context));
+        setField(session, "comparator", sink);
+        session.installRunDynamicArtSegments(context);
+        TraceRunSpecialStageRowDriver rowDriver =
+                new TraceRunSpecialStageRowDriver(
+                        plans.getFirst().specialStageRows(), trace);
+        rowDriver.admitCurrentRow(context.dynamicArtDiagnostics().latestSnapshot());
+        context.plcFrameLifecycle().runLogicalIteration(() -> { }, row -> {
+            row.claim(PlcLifecyclePhase.SPECIAL_STAGE);
+            row.prepareAfterLoop(PlcLifecyclePhase.SPECIAL_STAGE);
+            return null;
+        });
+        rowDriver.publishAdmittedRow(context.dynamicArtDiagnostics().latestSnapshot());
+        rowDriver.admitCurrentRow(context.dynamicArtDiagnostics().latestSnapshot());
+        setField(session, "runSpecialRowDriver", rowDriver);
+        setField(session, "runSpecialVerificationPending", true);
+
+        session.beforeProductionIteration();
+        context.plcFrameLifecycle().runLogicalIteration(() -> { }, row -> {
+            row.claim(PlcLifecyclePhase.SPECIAL_STAGE);
+            row.prepareAfterLoop(PlcLifecyclePhase.SPECIAL_STAGE);
+            return null;
+        });
+
+        assertDoesNotThrow(session::afterProductionIteration,
+                "the admitted row must publish before pending verification closes it");
+        assertTrue(rowDriver.isComplete());
+        assertTrue(observed.isEmpty());
+    }
+
+    @Test
+    void coordinatorAdmissionOwnsSpecialInputTimingPublicationAndClosure()
+            throws Exception {
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
+        GameplayModeContext context = SessionManager.getCurrentGameplayMode();
+        TraceRunManifest run = TraceRunManifest.load(
+                SS_RUN_DIR.resolve("run_manifest.json"));
+        List<TraceRunReplayWalker.SegmentPlan> plans =
+                withAdvertisedSpecialStageTrace();
+        List<Bk2FrameInput> movieFrames = new ArrayList<>();
+        for (int frameIndex = 0; frameIndex < 1200; frameIndex++) {
+            int inputMask = frameIndex == 800
+                    ? AbstractPlayableSprite.INPUT_RIGHT : 0;
+            movieFrames.add(new Bk2FrameInput(
+                    frameIndex, inputMask, 0, false, ""));
+        }
+        Bk2Movie movie = new Bk2Movie(
+                Path.of("synthetic-run.bk2"), "logkey", Map.of(),
+                movieFrames, 3);
+        TraceSessionLauncher session = new TraceSessionLauncher(
+                null, movie, plans, null);
+        RecordingTimingFixture fixture = new RecordingTimingFixture(context);
+        TraceRunPlaybackCoordinator coordinator =
+                new TraceRunPlaybackCoordinator(
+                        run, TracePlaybackProfile.DISABLED,
+                        movie.getFrameCount());
+        TraceRunReplayWalker.BoundaryProbe probe =
+                new TraceRunReplayWalker.BoundaryProbe(
+                        new TraceRunReplayWalker.EngineHooks() {
+                            @Override
+                            public int currentBk2Frame() {
+                                return 750;
+                            }
+
+                            @Override
+                            public com.openggf.game.BonusStageType peekBonusRequest() {
+                                return com.openggf.game.BonusStageType.NONE;
+                            }
+
+                            @Override
+                            public boolean isSpecialStageRequested() {
+                                return true;
+                            }
+
+                            @Override
+                            public GameMode currentMode() {
+                                return GameMode.SPECIAL_STAGE;
+                            }
+                        });
+        setField(session, "fixture", fixture);
+        setField(session, "runCoordinator", coordinator);
+        setField(session, "runBoundaryProbe", probe);
+        setField(session, "comparator", new LiveTraceComparator(
+                plans.getFirst().trace(), ToleranceConfig.DEFAULT, 0,
+                () -> null, null));
+        setField(session, "runHardwareTiming",
+                new TraceRunReplayWalker.HardwareTimingCoordinator(
+                        fixture,
+                        TraceRunReplayWalker.hardwareTimingSegments(plans)));
+        session.installRunDynamicArtSegments(context);
+        context.plcFrameLifecycle().runLogicalIteration(() -> { }, row -> {
+            row.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
+            row.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+            return null;
+        });
+
+        RunPlaybackObservation source = new RunPlaybackObservation(
+                GameMode.LEVEL, 500, 0,
+                new RunPlaybackObservation.LevelIdentity(7, 0, 0, 0),
+                false, null, null, false, false, 0, false, 0, 0);
+        appendCoordinatorTranscript(session,
+                coordinator.activateInitialLevel(source));
+        coordinator.observeBoundary(
+                new RunBoundarySignal.SpecialStageRequest(750, 0));
+        RunPlaybackObservation sourceComplete = new RunPlaybackObservation(
+                GameMode.LEVEL, 502, 1, source.level(),
+                false, null, null, false, true, 0, false, 0, 0);
+        applyCoordinatorActions(session,
+                coordinator.afterProduction(sourceComplete));
+        RunPlaybackObservation special = new RunPlaybackObservation(
+                GameMode.SPECIAL_STAGE, 800, 2,
+                null, false, null, 0,
+                false, false, 0, false, 1, 1);
+        applyCoordinatorActions(session,
+                coordinator.beforeAdmission(special));
+
+        TraceRunSpecialStageRowDriver driver =
+                (TraceRunSpecialStageRowDriver) getField(
+                        session, "runSpecialRowDriver");
+        assertNotNull(driver);
+        assertEquals(0, driver.cursor());
+        assertTrue(session.runCoordinatorTranscript().stream()
+                .filter(TraceRunPlaybackCoordinator.AdmitDestination.class::isInstance)
+                .map(TraceRunPlaybackCoordinator.AdmitDestination.class::cast)
+                .anyMatch(action -> action.receipt().segmentIndex() == 1
+                        && action.receipt().inputClock()
+                        == DestinationAdmissionReceipt.InputClock.SPECIAL_LOCAL));
+
+        InputHandler input = new InputHandler();
+        session.prepareHardwareTimingForAdmission(GameMode.SPECIAL_STAGE);
+        session.applySpecialStageTraceInputIfActive(input);
+        input.refreshLogicalSnapshot();
+        assertEquals(AbstractPlayableSprite.INPUT_RIGHT,
+                input.logical().player1().heldMask());
+        session.beforeProductionIteration();
+        context.plcFrameLifecycle().runLogicalIteration(() -> { }, row -> {
+            row.claim(PlcLifecyclePhase.SPECIAL_STAGE);
+            row.prepareAfterLoop(PlcLifecyclePhase.SPECIAL_STAGE);
+            return null;
+        });
+        session.afterProductionIteration();
+        session.advanceSpecialStageTraceCursorIfActive(input);
+
+        assertFalse(input.hasLogicalOverride());
+        assertEquals(1, driver.cursor());
+        assertEquals(1, driver.comparisons().size());
+        assertEquals(1, fixture.rawFrames.size());
+
+        session.prepareHardwareTimingForAdmission(GameMode.SPECIAL_STAGE);
+        session.beforeProductionIteration();
+        context.plcFrameLifecycle().runLogicalIteration(() -> { }, row -> {
+            row.claim(PlcLifecyclePhase.SPECIAL_STAGE);
+            row.prepareAfterLoop(PlcLifecyclePhase.SPECIAL_STAGE);
+            return null;
+        });
+        session.afterProductionIteration();
+        assertTrue(driver.isComplete());
+        assertEquals(2, driver.comparisons().size());
+
+        RunPlaybackObservation specialComplete = new RunPlaybackObservation(
+                GameMode.SPECIAL_STAGE, 802, 3,
+                null, false, null, 0,
+                false, true, 0, false, 1, 1);
+        applyCoordinatorActions(session,
+                coordinator.afterProduction(specialComplete));
+
+        assertNull(getField(session, "runSpecialRowDriver"));
+        assertEquals(1, session.runCoordinatorTranscript().stream()
+                .filter(TraceRunPlaybackCoordinator.CloseSegment.class::isInstance)
+                .map(TraceRunPlaybackCoordinator.CloseSegment.class::cast)
+                .filter(action -> action.segmentIndex() == 1)
+                .count());
+    }
+
     private List<TraceRunReplayWalker.SegmentPlan>
             withAdvertisedSpecialStageTrace() {
         List<TraceRunReplayWalker.SegmentPlan> specialSegments;
@@ -1307,7 +1504,8 @@ class TestTraceSessionLauncherRunBranch {
                 specialSegments.get(0),
                 new TraceRunReplayWalker.SegmentPlan(
                         middle.segment(), trace,
-                        middle.entryBoundary(), middle.exitBoundary()),
+                        middle.entryBoundary(), middle.exitBoundary(),
+                        middle.specialStageRows()),
                 specialSegments.get(2));
     }
 

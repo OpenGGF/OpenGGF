@@ -131,6 +131,9 @@ public class PlayableSpriteAnimation {
     }
 
     public void update(int frameCounter) {
+        if (sprite != null && !sprite.isNativeSlotPresent()) {
+            return;
+        }
         updateAnimation(frameCounter);
         if (dynamicArtDecisionOwner != null) {
             dynamicArtDecisionOwner.observe(sprite.getMappingFrame());

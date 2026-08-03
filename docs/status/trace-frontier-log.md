@@ -61154,3 +61154,60 @@ to synthesize a POST phase on a VBLANK-only row.
   already red in the recorded `develop` baseline (14,383 completed tests;
   32 failures, 47 errors, 31 skips); a normalized class/method comparison found
   no feature-only red method.
+
+## 2026-08-03 - Visual/headless represented-row convergence
+
+- Worktree: `.worktrees/visual-s1-emerald-handoff`, branch
+  `bugfix/ai-visual-s1-emerald-handoff`, based on `f6ef45479`.
+- The visual launcher's special-stage cursor, hardware-timing admission, and
+  dynamic-art comparison were independent from the headless chain adapter.
+  The launcher could therefore close or replace a segment before its admitted
+  production row published, producing `expected 3728 rows but compared 0`.
+  Both adapters now use `TraceRunSpecialStageRowDriver`; its cursor advances
+  only after an atomic post-production snapshot, and visual boundary actions
+  drain only after that publication.
+- Focused parity command:
+  `mvn -q -Dsonic1.rom.path=s1.gen
+  -Dtest='com.openggf.trace.replay.runs.TestTraceRunSpecialStageRowDriver,com.openggf.TestTraceSessionLauncherRunBranch,com.openggf.TestSpecialStageVisualTraceSession,com.openggf.TestSpecialStageHardwareTimingLifecycle,com.openggf.trace.replay.runs.TestTraceRunSpecialStageRows,com.openggf.trace.catalog.TraceCatalogTest,com.openggf.sprites.managers.TestPlayableSpriteAnimation,com.openggf.game.sonic1.TestSonic1PlcProducerCoverage,com.openggf.game.sonic1.objects.TestSonic1GiantRingObjectInstance'
+  test`. Result: all 125 selected tests passed; Maven Silent Extension also
+  listed one stale failure from an earlier external emerald invocation, not a
+  test selected or executed by this command.
+- Review-strengthened coordinator and row-count command:
+  `mvn -q
+  -Dtest=com.openggf.TestTraceSessionLauncherRunBranch,com.openggf.trace.replay.runs.TestTraceRunSpecialStageRowDriver
+  test`. Result: exit 0. The coordinator-path regression admits the real
+  special-local destination and verifies BK2 input, hardware timing, atomic
+  publication, comparison ingestion, cursor advancement, and exactly one
+  segment-1 close. The real emerald `ss` fixture commits and verifies all
+  3,728 advertised rows through the same driver.
+- Dedicated executable emerald-prefix command:
+  `mvn -q -Dsonic1.rom.path=s1.gen
+  -Dtest=com.openggf.tests.trace.runs.TestS1CompleteEmeraldRunPrefix test`.
+  Result: exit 0. The lane completes GHZ1, asserts no
+  `player_animation_id` mismatch in segment 0, crosses the giant-ring boundary,
+  and atomically commits special-stage row 0. The native-slot-presence state is
+  rewind-captured; a separate S3K regression proves hidden plus full object
+  control remains a live, dispatching slot.
+- Exact emerald diagnostic command:
+  `mvn -q -Dsonic1.rom.path=s1.gen
+  -Dopenggf.trace.s1.run.dir=src/test/resources/traces/s1/runs/s1-sonic-complete-withemeralds
+  -Dtest=com.openggf.tests.trace.runs.TestS1GhzMazeRoundTripChain test`.
+  Segment 0's frame-3596 `player_animation_id` mismatch is fixed (errors fell
+  from 6 to 1), and segment 1 reports `comparisonCount=3728, errorCount=0`.
+  The command continues through later represented segments and then fails at
+  the independent second-special-stage frontier with 1,444 rows remaining.
+  The remaining segment-0 error is the terminal dynamic-art publication clock
+  at frame 4114 (expected 4114, actual 4125); neither remaining frontier is a
+  visual/headless ownership discrepancy introduced by this change.
+- Catalog parity guard independently enumerated every committed
+  `s1|s2|s3k/runs/*/run_manifest.json`, required exactly one master-title
+  catalog entry, and fully validated each launch. Result: pass.
+- Full all-ROM regression command:
+  `mvn -q -Pci -Dmse=off -Dsonic1.rom.path=s1.gen
+  -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test`. It reached the
+  repository's existing `Java heap space` termination after completing 12,903
+  tests: 12,841 passed, 23 failed, 9 errored, and 30 skipped. The red cases are
+  confined to the same pre-existing baseline areas already recorded above
+  (display-aspect resolution, event/object guards, rewind torture, S2 special
+  stage cadence, S3K MGZ boss registration/rewind, and related infrastructure);
+  no convergence-focused test regressed.

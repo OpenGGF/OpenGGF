@@ -42,6 +42,7 @@ import com.openggf.trace.replay.runs.TraceRunDynamicArtGapComparator;
 import com.openggf.trace.replay.runs.RunLevelLoadTracker;
 import com.openggf.trace.replay.runs.TraceRunPlaybackCoordinator;
 import com.openggf.trace.replay.runs.TraceRunSpecialStageRows;
+import com.openggf.trace.replay.runs.TraceRunSpecialStageRowDriver;
 import com.openggf.trace.timing.HardwareTimingReplayPort;
 import com.openggf.trace.timing.HardwareTimingSchedule;
 import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
@@ -605,6 +606,21 @@ abstract class AbstractRunChainTest {
      */
     protected DynamicArtGapJournalEvidence assertChainReplay(Path runDir)
             throws Exception {
+        return assertChainReplay(runDir, null);
+    }
+
+    protected DynamicArtGapJournalEvidence assertChainReplayThroughSpecialStageRow(
+            Path runDir, int segmentIndex, int committedRows) throws Exception {
+        if (segmentIndex < 0 || committedRows <= 0) {
+            throw new IllegalArgumentException(
+                    "prefix target requires a nonnegative segment and positive row count");
+        }
+        return assertChainReplay(
+                runDir, new ReplayPrefixTarget(segmentIndex, committedRows));
+    }
+
+    private DynamicArtGapJournalEvidence assertChainReplay(
+            Path runDir, ReplayPrefixTarget prefixTarget) throws Exception {
         // --- Step 1: load + validate manifest, plan segments (manifest-driven) --
         TraceRunManifest run;
         try {
@@ -726,6 +742,7 @@ abstract class AbstractRunChainTest {
                 new HeadlessRunCoordinatorAdapter(run, movie);
         activeRunCoordinator = runCoordinator;
         Throwable primaryFailure = null;
+        boolean prefixReached = false;
         try {
             PlaybackDebugManager playback = GameServices.playbackDebug();
             RealEngineHooks hooks = new RealEngineHooks(loop);
@@ -842,8 +859,7 @@ abstract class AbstractRunChainTest {
                 // structural row driver compares only that diagnostic channel.
                 boolean uncomparedInterior = TraceRunReplayWalker.isUncomparedInterior(seg.segment());
                 Runnable stepOneFrame;
-                TraceRunReplayWalker.DynamicArtSegmentComparison
-                        interiorDynamicArt = null;
+                TraceRunSpecialStageRowDriver interiorRows = null;
                 boolean[] dynamicArtGapOpened = {false};
                 boolean[] interiorCoordinatorSourceClosed = {false};
                 if (uncomparedInterior) {
@@ -863,36 +879,40 @@ abstract class AbstractRunChainTest {
                     IntConsumer driveInterior =
                             uncomparedInteriorStep(
                                     loop, inputHandler, movie, seg, specialRows);
-                    interiorDynamicArt =
-                            new TraceRunReplayWalker.DynamicArtSegmentComparison(
-                                    seg.trace(),
-                                    seg.segment().traceFrameCount());
-                    var dynamicArtComparison = interiorDynamicArt;
+                    interiorRows = new TraceRunSpecialStageRowDriver(
+                            specialRows, seg.trace());
+                    var rowDriver = interiorRows;
                     int segmentIndex = i;
-                    int[] traceRow = {0};
                     stepOneFrame = () -> {
-                        if (traceRow[0] < seg.segment().traceFrameCount()) {
+                        if (!rowDriver.isComplete()) {
                             if (loop.getCurrentGameMode() != GameMode.SPECIAL_STAGE) {
                                 throw new AssertionError(
                                         "special stage exited with "
                                                 + (seg.segment().traceFrameCount()
-                                                - traceRow[0])
+                                                - rowDriver.cursor())
                                                 + " represented rows remaining in "
                                                 + seg.segment().dir());
                             }
-                            int representedRow = traceRow[0];
-                            if (specialRows.admission(representedRow)
+                            DynamicArtDiagnosticsSnapshot before =
+                                    GameServices.captureDynamicArtDiagnostics();
+                            var admitted = rowDriver.admitCurrentRow(before);
+                            int representedRow = admitted.row();
+                            if (admitted.policy()
                                     .admitHardwareTiming()) {
                                 hardwareTiming.beginSegmentRow(
                                         segmentIndex, representedRow);
                             }
                             driveInterior.accept(representedRow);
-                            traceRow[0]++;
-                            dynamicArtComparison.compareRow(
-                                    representedRow,
+                            rowDriver.publishAdmittedRow(
                                     GameServices.captureDynamicArtDiagnostics());
-                            if (traceRow[0] == seg.segment().traceFrameCount()) {
-                                dynamicArtComparison.verifyComplete();
+                            if (prefixTarget != null
+                                    && prefixTarget.segmentIndex() == segmentIndex
+                                    && prefixTarget.committedRows()
+                                            == rowDriver.cursor()) {
+                                throw new ReplayPrefixReached();
+                            }
+                            if (rowDriver.isComplete()) {
+                                rowDriver.verifyComplete();
                                 dynamicArtGapJournal.sourceClosed(
                                         seg.segment().dir());
                                 dynamicArtSegments.enterGap();
@@ -975,11 +995,11 @@ abstract class AbstractRunChainTest {
                     requireComparatorComplete(seg, activeComparator);
                 }
                 maybeWriteReport(run.runId(), i, activeComparator);
-                if (interiorDynamicArt != null) {
-                    interiorDynamicArt.verifyComplete();
-                    if (interiorDynamicArt.isAdvertised()) {
+                if (interiorRows != null) {
+                    interiorRows.verifyComplete();
+                    if (!interiorRows.comparisons().isEmpty()) {
                         writeDynamicArtInteriorReport(
-                                run.runId(), i, interiorDynamicArt.comparisons());
+                                run.runId(), i, interiorRows.comparisons());
                     }
                 }
                 if (!dynamicArtGapOpened[0]) {
@@ -1153,6 +1173,9 @@ abstract class AbstractRunChainTest {
             }
             dynamicArtSegments.close();
             hardwareTiming.close();
+        } catch (ReplayPrefixReached reached) {
+            prefixReached = true;
+            hardwareTiming.abort();
         } catch (Exception | Error failure) {
             primaryFailure = failure;
             throw failure;
@@ -1178,8 +1201,19 @@ abstract class AbstractRunChainTest {
                 }
             }
         }
-        dynamicArtGapJournal.verify(run);
+        if (!prefixReached) {
+            dynamicArtGapJournal.verify(run);
+        }
         return dynamicArtGapJournal.evidence(runCoordinator.actions());
+    }
+
+    private record ReplayPrefixTarget(int segmentIndex, int committedRows) {
+    }
+
+    private static final class ReplayPrefixReached extends RuntimeException {
+        private ReplayPrefixReached() {
+            super(null, null, false, false);
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -2163,7 +2197,13 @@ abstract class AbstractRunChainTest {
         if (comparator == null) {
             return;
         }
+        assertCompletedSegmentComparison(segmentIndex, comparator);
         writeChainSegmentReport(runId, segmentIndex, comparator);
+    }
+
+    /** Adapter-neutral assertions a committed route can add at a completed source segment. */
+    protected void assertCompletedSegmentComparison(
+            int segmentIndex, LiveTraceComparator comparator) {
     }
 
     private void writeChainSegmentReport(String runId, int segmentIndex, LiveTraceComparator comparator)
@@ -2404,28 +2444,6 @@ abstract class AbstractRunChainTest {
                     .deregister(HardwareTimingReplayPort.REWIND_KEY);
             gameplayMode().clearHardwareTimingReplayCloseHook();
             hardwareTimingObserver = null;
-        }
-
-        @Override
-        public void advancePlayableAnimationsOnly() {
-            // Live action, honored identically to the canonical fixtures:
-            // advance every playable sprite's animation manager one step at the
-            // current animation frame counter, without a gameplay tick.
-            var sprites = GameServices.sprites();
-            int animationFrame = sprites.getFrameCounter();
-            for (var candidate : sprites.getAllSprites()) {
-                if (candidate instanceof AbstractPlayableSprite playable) {
-                    playable.getAnimationManager().update(animationFrame);
-                }
-            }
-        }
-
-        @Override
-        public void advancePlayableFixedSlotsOnly() {
-            // Live action, honored identically to the canonical fixtures: run the
-            // fixed in-level Tails' tails slot ROM RunObjects executes after the
-            // dynamic objects (docs/s2disasm/s2.asm:41760-41764).
-            GameServices.sprites().advanceTailsTailsAfterObjectExecution();
         }
 
         @Override
