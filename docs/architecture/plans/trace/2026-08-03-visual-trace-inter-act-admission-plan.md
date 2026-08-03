@@ -344,7 +344,7 @@ Expected: no whitespace errors and only intended files changed.
 
 Give the reviewer the design, plan, base SHA, final diff, red/green evidence, and exact verification results. Resolve every Critical or Important issue and repeat review until none remain.
 
-- [ ] **Step 3: Commit with required documentation trailers**
+- [x] **Step 3: Commit with required documentation trailers**
 
 Use subject:
 
@@ -354,7 +354,7 @@ fix: defer visual run admission through title cards
 
 Set `Changelog: updated`; set the remaining trailers accurately. Never use `--no-verify`.
 
-- [ ] **Step 4: Refresh, reconcile, and compare the integration baseline**
+- [x] **Step 4: Refresh, reconcile, and compare the integration baseline**
 
 Fetch and fast-forward the main `develop` workspace without disturbing its
 existing user changes. Run the full all-ROM suite on that updated baseline. If

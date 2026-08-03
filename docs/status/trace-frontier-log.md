@@ -61035,3 +61035,13 @@ to synthesize a POST phase on a VBLANK-only row.
   normalized Surefire XML comparison of class, method, and failure/error
   severity was identical across all 46 red methods; no previously green replay
   regressed and no existing failure changed severity.
+- Full all-ROM suite command on both workspaces:
+  `mvn -q -Dmse=off -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen
+  -Ds3k.rom.path=s3k.gen test`. Both runs ended with the same existing
+  Surefire fork `Java heap space` termination. Completed baseline reports
+  covered 14,336 tests (32 failures, 47 errors, 31 skips); feature reports
+  covered 14,359 tests (33 failures, 47 errors, 31 skips). No baseline-passing
+  method became red and no shared red changed severity. The sole feature-only
+  red XML was the previously generated GHZ-maze chain report already proven to
+  fail identically on baseline. The focused launcher/coordinator/GHZ1/GHZ2 set
+  passed again after the order-heavy full run.
