@@ -15,6 +15,9 @@ All notable changes to the OpenGGF project are documented in this file.
   cleared; the emerald route no longer diverges at frame 3596. A committed
   emerald prefix crosses into special stage through the shared driver, and
   structural coverage verifies all 3,728 advertised rows commit exactly once.
+- Fix/Test: S3K results-owned in-level title cards now receive a fresh title-owner
+  runtime-art admission after a consumed seamless resource handoff, preserving
+  already-admitted enemy queues across ICZ and AIZ act-transition flows.
 - Fix/Test: S1 visual whole-run replay now carries the ROM-visible object
   VBlank epoch across compressed act/title-card and special-stage transitions
   using the same manifest/BK2 timing budgets as headless chains. Prepared
