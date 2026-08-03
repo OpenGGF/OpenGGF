@@ -528,9 +528,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
                             + "  \"zone\": \"aiz\",\n");
                         AssertContains(
                             metadata,
-                            "  \"lua_script_version\": \""
-                            + TraceContract.RecorderVersion
-                            + "\",\n");
+                            "  \"recorder\": \"native-bizhawk-headless\",\n"
+                            + "  \"recorder_version\": \"3.0\",\n"
+                            + "  \"trace_schema\": 5,\n");
+                        AssertEx.Equal(
+                            false, metadata.Contains("lua_script_version"));
+                        AssertEx.Equal(false, metadata.Contains("csv_version"));
+                        AssertEx.Equal(
+                            false, metadata.Contains("hardware_timing_schema"));
                         AssertContains(
                             metadata,
                             "  \"trace_profile\": \"complete_run\",\n"
@@ -1104,9 +1109,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
                             + "  \"trace_frame_count\": 4,\n");
                         AssertContains(
                             metadata,
-                            "  \"lua_script_version\": \""
-                            + TraceContract.RecorderVersion
-                            + "\",\n");
+                            "  \"recorder\": \"native-bizhawk-headless\",\n"
+                            + "  \"recorder_version\": \"3.0\",\n"
+                            + "  \"trace_schema\": 5,\n");
+                        AssertEx.Equal(
+                            false, metadata.Contains("lua_script_version"));
+                        AssertEx.Equal(false, metadata.Contains("csv_version"));
+                        AssertEx.Equal(
+                            false, metadata.Contains("hardware_timing_schema"));
                         AssertContains(
                             metadata,
                             "  \"source_bk2\": \"synthetic.bk2\"\n}\n");

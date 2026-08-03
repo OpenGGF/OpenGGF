@@ -1562,7 +1562,8 @@ function write_run_manifest()
         f:write(string.format('    {%s}%s\n', table.concat(parts, ", "),
             (i < #transitions_done) and "," or ""))
     end
-    f:write('  ]\n}\n')
+    f:write('  ],\n')
+    f:write('  "dynamic_art_gap_transitions": [\n  ]\n}\n')
     f:close()
     print(string.format("Wrote run_manifest.json (%d segments, %d transitions).",
         #segments_done, #transitions_done))
