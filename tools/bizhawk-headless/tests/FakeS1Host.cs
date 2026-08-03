@@ -45,13 +45,18 @@ namespace OpenGGF.BizHawk.Headless.Tests
         public int LagCount { get; set; }
         public uint? ExecuteCallbackAddress { get; private set; }
         public bool ExecuteCallbackDisposed { get; private set; }
+        public int ClearButtonsCount { get; private set; }
+        public IList<string> ButtonWrites { get; private set; } =
+            new List<string>();
 
         public void ClearButtons()
         {
+            ClearButtonsCount++;
         }
 
         public void SetButton(string name, bool pressed)
         {
+            ButtonWrites.Add(name + "=" + pressed);
         }
 
         public IDisposable RegisterExecuteCallback(

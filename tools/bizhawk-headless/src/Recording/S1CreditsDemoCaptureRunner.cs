@@ -37,6 +37,20 @@ namespace OpenGGF.BizHawk.Headless
             S1CreditsDemoCollectionSink sink,
             byte[] requiredDynamicArtRom)
         {
+            return Capture(
+                host, ramWriter, target, recordingDate, sink,
+                requiredDynamicArtRom, null);
+        }
+
+        internal static S1CreditsDemoCaptureResult Capture(
+            IGpgxHost host,
+            IMainRamWriter ramWriter,
+            int? target,
+            string recordingDate,
+            S1CreditsDemoCollectionSink sink,
+            byte[] requiredDynamicArtRom,
+            S1CreditsRawHostEvidenceCollector rawEvidence)
+        {
             if (host == null) throw new ArgumentNullException("host");
             if (ramWriter == null)
             {
@@ -115,12 +129,22 @@ namespace OpenGGF.BizHawk.Headless
                     if (segment == null)
                     {
                         waitFrames++;
-                        if (waitFrames > DefaultStartTimeout)
-                        {
-                            throw LifecycleFailure("timed out waiting for credits demo", host, null);
-                        }
+                        ThrowIfDemoWaitTimedOut(host, waitFrames);
                         S1CreditsDemoDefinition demo;
                         if (!TryGetActiveDemo(host, out demo)) continue;
+                        if (!target.HasValue)
+                        {
+                            try
+                            {
+                                ValidateAllRouteOrder(
+                                    demo, nextExpected, captured);
+                            }
+                            catch (InvalidOperationException exception)
+                            {
+                                throw LifecycleFailure(
+                                    exception.Message, host, demo);
+                            }
+                        }
                         if (!ShouldCapture(demo, target, captured))
                         {
                             // A single requested late demo deliberately
@@ -133,10 +157,6 @@ namespace OpenGGF.BizHawk.Headless
                                 waitFrames = 0;
                             }
                             continue;
-                        }
-                        if (!target.HasValue && demo.Index != nextExpected)
-                        {
-                            throw LifecycleFailure("credits flow skipped or reordered demo " + demo.Index, host, demo);
                         }
                         dynamicArt.PublishGap();
                         dynamicArt.ArmSegment();
@@ -154,11 +174,9 @@ namespace OpenGGF.BizHawk.Headless
                         if (sink.IsComplete(target)) break;
                         continue; // Exit frame is not a trace row.
                     }
-                    if (segment.TraceFrames >= DefaultMaxTraceFrames)
-                    {
-                        throw LifecycleFailure("credits demo exceeded capture limit", host, segment.Demo);
-                    }
-                    segment.Record(host, dynamicArt);
+                    ThrowIfSegmentTimedOut(
+                        host, segment.Demo, segment.TraceFrames);
+                    segment.Record(host, dynamicArt, rawEvidence);
                 }
             }
             return new S1CreditsDemoCaptureResult(captured);
@@ -182,6 +200,47 @@ namespace OpenGGF.BizHawk.Headless
             {
                 throw LifecycleFailure(
                     "timed out waiting to redirect title to credits", host, null);
+            }
+        }
+
+        internal static void ThrowIfDemoWaitTimedOut(
+            IGpgxHost host, int framesWaited)
+        {
+            if (framesWaited > DefaultStartTimeout)
+            {
+                throw LifecycleFailure(
+                    "timed out waiting for credits demo", host, null);
+            }
+        }
+
+        internal static void ThrowIfSegmentTimedOut(
+            IGpgxHost host,
+            S1CreditsDemoDefinition demo,
+            int traceFrames)
+        {
+            if (traceFrames >= DefaultMaxTraceFrames)
+            {
+                throw LifecycleFailure(
+                    "credits demo exceeded capture limit", host, demo);
+            }
+        }
+
+        internal static void ValidateAllRouteOrder(
+            S1CreditsDemoDefinition demo,
+            int nextExpected,
+            IList<int> captured)
+        {
+            if (demo == null) throw new ArgumentNullException("demo");
+            if (captured == null) throw new ArgumentNullException("captured");
+            if (captured.Contains(demo.Index))
+            {
+                throw new InvalidOperationException(
+                    "credits flow duplicated demo " + demo.Index);
+            }
+            if (demo.Index != nextExpected)
+            {
+                throw new InvalidOperationException(
+                    "credits flow skipped or reordered demo " + demo.Index);
             }
         }
 
@@ -275,7 +334,10 @@ namespace OpenGGF.BizHawk.Headless
                 return new Segment(demo, startFrame, physics, aux, sink);
             }
 
-            public void Record(IGpgxHost host, S1DynamicArtObserver dynamicArt)
+            public void Record(
+                IGpgxHost host,
+                S1DynamicArtObserver dynamicArt,
+                S1CreditsRawHostEvidenceCollector rawEvidence)
             {
                 if (!firstRow)
                 {
@@ -285,6 +347,10 @@ namespace OpenGGF.BizHawk.Headless
                     zoneId = S1Ram.U8(host, S1Ram.Zone);
                     actRaw = S1Ram.U8(host, S1Ram.Act);
                     rngSeed = S1Ram.U32(host, S1Ram.Random);
+                }
+                if (rawEvidence != null)
+                {
+                    rawEvidence.Observe(Demo.Index, TraceFrames, host);
                 }
                 var lines = new List<string>();
                 foreach (string line in auxEngine.ProcessFrame(TraceFrames, host)) lines.Add(line);
