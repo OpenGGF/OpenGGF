@@ -50,7 +50,7 @@ final class LiveRewindStepper implements RewindSeekAwareEngineStepper {
         if (gameplayMode == null) {
             return LevelFrameResult.PAUSED;
         }
-        return gameplayMode.plcFrameLifecycle().runLogicalIteration(
+        return gameplayMode.plcFrameLifecycle().runReplayedLogicalIteration(
                 gameplayMode.getFadeManager()::update,
                 frame -> step(input, sprites, level, camera, liveInput, frame));
     }

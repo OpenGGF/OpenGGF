@@ -290,6 +290,37 @@ class TestPlcFrameLifecycleCoordinator {
     }
 
     @Test
+    void replayedIterationReplacesOnlyAnUnclaimedOuterFrame() {
+        List<String> events = new ArrayList<>();
+        PlcFrameLifecycleCoordinator coordinator =
+                new PlcFrameLifecycleCoordinator(recording(events));
+
+        coordinator.runLogicalIteration(() -> events.add("outer-fade"), outer ->
+                coordinator.runReplayedLogicalIteration(
+                        () -> events.add("replay-fade"), replay -> {
+                            replay.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
+                            replay.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+                            return null;
+                        }));
+
+        assertEquals(List.of(
+                "outer-fade", "replay-fade",
+                "service:ORDINARY_LEVEL", "prepare:ORDINARY_LEVEL"), events);
+    }
+
+    @Test
+    void replayedIterationRetainsTheGuardForAClaimedOuterFrame() {
+        PlcFrameLifecycleCoordinator coordinator =
+                new PlcFrameLifecycleCoordinator(recording(new ArrayList<>()));
+
+        assertThrows(IllegalStateException.class, () ->
+                coordinator.runLogicalIteration(() -> { }, outer -> {
+                    outer.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
+                    return coordinator.runReplayedLogicalIteration(() -> { }, replay -> null);
+                }));
+    }
+
+    @Test
     void preparationValidationDoesNotMaskThePrimaryIterationFailure() {
         PlcFrameLifecycleCoordinator coordinator =
                 new PlcFrameLifecycleCoordinator(recording(new ArrayList<>()));

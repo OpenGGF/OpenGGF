@@ -2504,7 +2504,7 @@ public final class TraceSessionLauncher {
         @Override
         public LevelFrameResult step(Bk2FrameInput inputs) {
             var gameplayMode = SessionManager.getCurrentGameplayMode();
-            LevelFrameResult result = gameplayMode.plcFrameLifecycle().runLogicalIteration(
+            LevelFrameResult result = gameplayMode.plcFrameLifecycle().runReplayedLogicalIteration(
                     gameplayMode.getFadeManager()::update,
                     frame -> step(inputs, frame));
             if (pendingPlayableAnimationAfterClosure) {

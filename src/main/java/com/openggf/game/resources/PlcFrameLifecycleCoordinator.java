@@ -113,7 +113,13 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
             throw failure;
         } finally {
             try {
-                frame.finish();
+                // A live rewind can replace the unclaimed outer frame with a
+                // replay frame while the iteration callback is running. The
+                // outer wrapper still owns the Java finally, but its token was
+                // deliberately finished before the replay token was latched.
+                if (!frame.finished) {
+                    frame.finish();
+                }
             } catch (RuntimeException | Error validationFailure) {
                 if (primaryFailure != null) {
                     primaryFailure.addSuppressed(validationFailure);
@@ -122,6 +128,35 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
                 }
             }
         }
+    }
+
+    /**
+     * Runs one logical iteration while an outer live iteration is still on the
+     * Java call stack. Live rewind is checked before the outer frame claims a
+     * phase, so that unclaimed token is only a placeholder for the visual
+     * frame; replay must own the represented logical VBlank instead. A claimed
+     * frame is never replaceable and retains the normal lifecycle guard.
+     *
+     * <p>The method is also used by visual trace rewind, whose replay callback
+     * has the same nesting shape. It is intentionally separate from
+     * {@link #runLogicalIteration(Runnable, Function)} so ordinary lifecycle
+     * callers cannot silently mask a real phase-ownership error.</p>
+     */
+    public <T> T runReplayedLogicalIteration(
+            Runnable fadeUpdate, Function<PlcLifecycleFrame, T> iteration) {
+        Objects.requireNonNull(fadeUpdate, "fadeUpdate");
+        Objects.requireNonNull(iteration, "iteration");
+        if (activeFrame != null && !activeFrame.finished) {
+            if (activeFrame.owner != null) {
+                throw new IllegalStateException(
+                        "a replayed PLC lifecycle frame cannot replace a claimed frame");
+            }
+            // The outer runLogicalIteration() finally remains responsible for
+            // its token, so it observes the finished state and does not finish
+            // the placeholder a second time after replay returns.
+            activeFrame.finish();
+        }
+        return runLogicalIteration(fadeUpdate, iteration);
     }
 
     @Override

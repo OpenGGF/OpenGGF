@@ -3,6 +3,9 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: Rewind now replaces the unclaimed outer PLC lifecycle placeholder
+  with its replay frame, preventing lifecycle re-entry crashes across games and
+  special stages while preserving the guard for claimed frames.
 - Fix/Test: level-backed visual traces now show their complete production title
   card before playback, then reopen a clean replay context so presentation PLC,
   DPLC, timing, and title-provider state cannot contaminate comparison. The
