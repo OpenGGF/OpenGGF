@@ -1,10 +1,12 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 
 import java.util.List;
 
@@ -25,6 +27,14 @@ public class Sonic2LayerSwitcherObjectInstance extends AbstractObjectInstance im
     @Override
     public Sonic2LayerSwitcherObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new Sonic2LayerSwitcherObjectInstance(ctx.spawn(), getName());
+    }
+
+    @Override
+    public void update(int vIntRunCount, PlayableEntity player) {
+        for (PlayableEntity participant : services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+            services().objectManager().applyPlaneSwitcher(getSpawn(), participant);
+        }
     }
 
     @Override

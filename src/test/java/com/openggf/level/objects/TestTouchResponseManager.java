@@ -1025,6 +1025,53 @@ public class TestTouchResponseManager {
     }
 
     @Test
+    public void s3kInlineEnemyBounceUsesPreviousCollisionResponseListY() {
+        when(player.getCentreX()).thenReturn((short) 160);
+        when(player.getCentreY()).thenReturn((short) 0x0491);
+        when(player.getYRadius()).thenReturn((short) 15);
+        when(player.getGameRules()).thenReturn(GameRules.SONIC_3K);
+        when(player.getAnimationId()).thenReturn(Sonic3kAnimationIds.SPINDASH.id());
+        when(player.getYSpeed()).thenReturn((short) 0x0400);
+
+        MockDestroyableSnapshotAttackableEnemy enemy =
+                new MockDestroyableSnapshotAttackableEnemy(160, 0x0491, 0x02);
+        setupTableSize(2, 12, 12);
+        objectManager.addDynamicObject(enemy);
+
+        objectManager.update(0, player, List.of(), 5646, false, true, true);
+        enemy.setPosition(160, 0x0492);
+        objectManager.snapshotTouchResponseState(true);
+        objectManager.runTouchResponsesForPlayer(player, 5647, true);
+
+        assertTrue(enemy.wasAttacked, "The previous collision-response-list position should overlap");
+        verify(player).setYSpeed((short) 0x0300);
+    }
+
+    @Test
+    public void multiRegionEnemyBounceUsesMatchedRegionY() {
+        when(player.getCentreX()).thenReturn((short) 160);
+        when(player.getCentreY()).thenReturn((short) 0x0491);
+        when(player.getYRadius()).thenReturn((short) 15);
+        when(player.getGameRules()).thenReturn(GameRules.SONIC_3K);
+        when(player.getAnimationId()).thenReturn(Sonic3kAnimationIds.SPINDASH.id());
+        when(player.getYSpeed()).thenReturn((short) 0x0400);
+
+        MockMultiRegionDestroyableSnapshotEnemy enemy =
+                new MockMultiRegionDestroyableSnapshotEnemy(
+                        160, 0x0491, new TouchResponseProvider.TouchRegion(160, 0x0491, 0x02));
+        setupTableSize(2, 12, 12);
+        objectManager.addDynamicObject(enemy);
+
+        objectManager.update(0, player, List.of(), 5646, false, true, true);
+        enemy.setPosition(160, 0x0492);
+        objectManager.snapshotTouchResponseState(true);
+        objectManager.runTouchResponsesForPlayer(player, 5647, true);
+
+        assertTrue(enemy.wasAttacked, "The matched multi-touch region should be attacked");
+        verify(player).setYSpeed((short) 0x0300);
+    }
+
+    @Test
     public void testS3kPreviousCollisionResponseListCapturesPostObjectUpdatePosition() {
         when(player.getCentreX()).thenReturn((short) 160);
         when(player.getCentreY()).thenReturn((short) 112);
@@ -1447,7 +1494,7 @@ public class TestTouchResponseManager {
         }
     }
 
-    private static final class MockSnapshotAttackableEnemy extends AbstractObjectInstance
+    private static class MockSnapshotAttackableEnemy extends AbstractObjectInstance
             implements TouchResponseProvider, TouchResponseAttackable {
         private int currentX;
         private int currentY;
@@ -1497,6 +1544,35 @@ public class TestTouchResponseManager {
 
         @Override
         public void appendRenderCommands(List<GLCommand> commands) {
+        }
+    }
+
+    private static class MockDestroyableSnapshotAttackableEnemy
+            extends MockSnapshotAttackableEnemy {
+        private MockDestroyableSnapshotAttackableEnemy(int x, int y, int flags) {
+            super(x, y, flags);
+        }
+
+        @Override
+        public void onPlayerAttack(PlayableEntity player, TouchResponseResult result) {
+            super.onPlayerAttack(player, result);
+            setDestroyed(true);
+        }
+    }
+
+    private static final class MockMultiRegionDestroyableSnapshotEnemy
+            extends MockDestroyableSnapshotAttackableEnemy {
+        private final TouchResponseProvider.TouchRegion[] regions;
+
+        private MockMultiRegionDestroyableSnapshotEnemy(
+                int x, int y, TouchResponseProvider.TouchRegion... regions) {
+            super(x, y, 0);
+            this.regions = regions;
+        }
+
+        @Override
+        public TouchResponseProvider.TouchRegion[] getMultiTouchRegions() {
+            return regions;
         }
     }
 

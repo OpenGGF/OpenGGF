@@ -44,6 +44,7 @@ import com.openggf.game.sonic3k.objects.bosses.MhzEndBossDefeatFragmentChild;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossEggCapsuleInstance;
 import com.openggf.game.sonic3k.objects.bosses.MhzEndBossInstance;
 import com.openggf.level.objects.AbstractObjectRegistry;
+import com.openggf.level.objects.FixedSstSlotSink;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSlotLayout;
 import com.openggf.level.objects.ObjectSpawn;
@@ -68,6 +69,16 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
     @Override
     public ObjectSlotLayout objectSlotLayout() {
         return ObjectSlotLayout.SONIC_3K;
+    }
+
+    @Override
+    public void installFixedSstObjects(
+            int romZoneId,
+            int act,
+            FixedSstSlotSink slots) {
+        if (romZoneId == Sonic3kZoneIds.ZONE_MHZ) {
+            slots.install(4, MhzPollenSpawnerInstance::new);
+        }
     }
 
     @Override

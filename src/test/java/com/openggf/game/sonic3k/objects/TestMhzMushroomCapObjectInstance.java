@@ -76,6 +76,9 @@ class TestMhzMushroomCapObjectInstance {
                         + "otherwise low caps catch Sonic while he is still following terrain slopes");
         assertFalse(solid.usesPlatformObjectLandingSnap(),
                 "SolidObjectTop landing preserves the helper's y_pos += d0+3 result, not PlatformObject snap");
+        assertTrue(solid.rejectsZeroDistanceTopSolidLanding(),
+                "SolidObjectTop rejects d0 == 0 through cmpi.w #-$10,d0 / blo "
+                        + "(sonic3k.asm:41996-42015)");
         assertFalse(solid.carriesRiderOnHorizontalMove(null),
                 "Obj_MHZMushroomCap passes current x_pos as SolidObjectTop d4, so horizontal bobbing "
                         + "does not carry riders through MvSonicOnPtfm");

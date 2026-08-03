@@ -5,6 +5,7 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SlopedSolidProvider;
@@ -62,6 +63,22 @@ class TestMhzCurledVineObjectInstance {
     }
 
     @Test
+    void curledVineReservesItsAllocateObjectAfterCurrentDisplayChildSlot() {
+        ObjectSpawn spawn = new ObjectSpawn(
+                0x2000, 0x0600, MHZ_CURLED_VINE, 0, 0, false, 0);
+        MhzCurledVineObjectInstance vine = new MhzCurledVineObjectInstance(spawn);
+        ObjectManager objectManager = mock(ObjectManager.class);
+        when(levelManager.getObjectManager()).thenReturn(objectManager);
+        vine.setServices(new TestObjectServices().withLevelManager(levelManager));
+        vine.setSlotIndex(13);
+
+        vine.update(0, null);
+        vine.update(1, null);
+
+        verify(objectManager, times(1)).allocateChildSlotsAfter(spawn, 1, 13);
+    }
+
+    @Test
     void curledVineExposesRomTopSolidFootprint() {
         Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
         ObjectInstance vine = registry.create(new ObjectSpawn(
@@ -106,6 +123,25 @@ class TestMhzCurledVineObjectInstance {
                 "The curve state moves one $10000 step from $FFF40000 toward byte index 8's $FFFF0000 target");
         assertTrue(vine.traceDebugDetails().contains("range=$80"),
                 "The live standable range mirrors byte_3E8F6 for the selected rider index");
+    }
+
+    @Test
+    void fartherOfTwoStandingRidersControlsSharedRange() {
+        MhzCurledVineObjectInstance vine = new MhzCurledVineObjectInstance(new ObjectSpawn(
+                0x2000, 0x0600, MHZ_CURLED_VINE, 0, 0, false, 0));
+        TestablePlayableSprite player2 = new TestablePlayableSprite("tails_p2", (short) 0x1FC0, (short) 0x05E0);
+        TestablePlayableSprite player1 = new TestablePlayableSprite("sonic", (short) 0x2000, (short) 0x05E0);
+        SolidObjectListener listener = vine;
+
+        // sub_3E9AC visits P2 ($37) then P1 ($36). Their ROM d0 values are
+        // respectively $00 and $40, so loc_3E9FA stores segments 0 and 4.
+        listener.onSolidContact(player2, new SolidContact(true, false, false, true, false), 0);
+        listener.onSolidContact(player1, new SolidContact(true, false, false, true, false), 0);
+        vine.update(1, player1);
+
+        assertEquals(0x30, vine.getSolidParams().halfWidth(),
+                "loc_3E8A2 retains the farther P1 segment 4 over P2 segment 0, adds one, "
+                        + "and selects byte_3E8F6[5]=$60 (sonic3k.asm:82810-82820)");
     }
 
     @Test

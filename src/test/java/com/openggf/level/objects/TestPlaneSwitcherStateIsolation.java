@@ -141,6 +141,71 @@ class TestPlaneSwitcherStateIsolation {
         assertEquals(0x0F, tails.getLrbSolidBit() & 0xFF);
     }
 
+    @Test
+    void oneSpawnDispatchInitializesThenAppliesOnlyThatSwitchersCrossing() {
+        ObjectSpawn switcher = new ObjectSpawn(0x06A8, 0x02C8, 0x03, 0x11, 0x00, false, 0);
+        ObjectManager objectManager = objectManager(switcher);
+        TestableSprite sonic = new TestableSprite("sonic");
+        sonic.setCentreX((short) 0x06A8);
+        sonic.setCentreY((short) 0x02D0);
+        sonic.setAir(false);
+        sonic.setTopSolidBit((byte) 0x0C);
+        sonic.setLrbSolidBit((byte) 0x0D);
+
+        objectManager.applyPlaneSwitcher(switcher, sonic);
+        assertEquals(0, sonic.getLayer(), "first object execution only seeds the current side");
+
+        sonic.setCentreX((short) 0x06A2);
+        objectManager.applyPlaneSwitcher(switcher, sonic);
+        assertEquals(1, sonic.getLayer());
+        assertEquals(0x0E, sonic.getTopSolidBit() & 0xFF);
+        assertEquals(0x0F, sonic.getLrbSolidBit() & 0xFF);
+    }
+
+    @Test
+    void resyncingSpawnListDropsUnloadedSwitcherSideState() {
+        ObjectSpawn switcher = new ObjectSpawn(0x06A8, 0x02C8, 0x03, 0x11, 0x00, false, 0);
+        ObjectManager objectManager = objectManager(switcher);
+        TestableSprite sonic = new TestableSprite("sonic");
+        sonic.setCentreX((short) 0x06A8);
+        sonic.setCentreY((short) 0x02D0);
+
+        objectManager.applyPlaneSwitcher(switcher, sonic);
+        assertEquals(1, objectManager.getPlaneSwitcherSideState(switcher));
+
+        objectManager.resyncSpawnList(List.of());
+
+        assertEquals(-1, objectManager.getPlaneSwitcherSideState(switcher));
+    }
+
+    private static ObjectManager objectManager(ObjectSpawn switcher) {
+        ObjectManager objectManager = new ObjectManager(
+                List.of(switcher),
+                new ObjectRegistry() {
+                    @Override
+                    public ObjectInstance create(ObjectSpawn spawn) {
+                        return null;
+                    }
+
+                    @Override
+                    public void reportCoverage(List<ObjectSpawn> spawns) {
+                    }
+
+                    @Override
+                    public String getPrimaryName(int objectId) {
+                        return "Test";
+                    }
+                },
+                0x03,
+                new PlaneSwitcherConfig((byte) 0x0C, (byte) 0x0D, (byte) 0x0E, (byte) 0x0F),
+                null,
+                null,
+                null,
+                null);
+        objectManager.reset(0x060A);
+        return objectManager;
+    }
+
     static class TestableSprite extends AbstractPlayableSprite {
         TestableSprite(String code) {
             super(code, (short) 0, (short) 0);

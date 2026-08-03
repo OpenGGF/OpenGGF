@@ -3,6 +3,7 @@ package com.openggf.game.sonic2.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
@@ -10,6 +11,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.tests.TestablePlayableSprite;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -21,6 +23,11 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestOOZLauncherObjectInstance {
+
+    @BeforeEach
+    void resetCameraBounds() {
+        AbstractObjectInstance.resetCameraBoundsForTests();
+    }
 
     @Test
     void queriedEngineSidekicksEachUseIndependentLauncherParticipation() {
