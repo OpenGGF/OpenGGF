@@ -3,11 +3,10 @@ using System.Collections.Generic;
 namespace OpenGGF.BizHawk.Headless.Tests
 {
     /// <summary>
-    /// Literal-byte tests for the S2 metadata writer against the shapes of
-    /// the three canonical level fixtures (ehz1_fullrun / arz / arz2). The
-    /// expected strings are the fixture bytes with lua_script_version
-    /// switched to the native port's "9.13-s2" and the injected recording
-    /// date — exactly the two normalizations the differential gate permits.
+    /// Strict-v5 assertions for the S2 metadata writer. The current expected
+    /// strings cover EHZ1, ARZ, and ARZ2 shapes with an injected recording
+    /// date, required recorder fields, and absence of removed version
+    /// fields; historical version fields are not permitted.
     /// </summary>
     internal static class S2TraceMetadataWriterTests
     {

@@ -5,21 +5,19 @@ using System.Text.RegularExpressions;
 namespace OpenGGF.BizHawk.Headless.Tests
 {
     /// <summary>
-    /// Literal-byte tests for run_manifest.json: reconstructing the
-    /// canonical s2-ehz-halfpipe-roundtrip manifest from its recorded
-    /// values must reproduce the committed fixture exactly (the fixture was
-    /// captured through Windows text-mode io by the v9.12 Lua, so its CRLF
-    /// line endings are normalized to the Lua's written LF and its version
-    /// line to the native writer's 9.13-s2 stamp before comparison — the
-    /// only differences). Also covers the optional-field emission rule (present
-    /// iff recorded, zero values still render) and Lua %q escaping.
+    /// Strict-v5 assertions for the S2 run_manifest.json writer. The tests
+    /// construct current in-memory segments and transitions, then require
+    /// the v5 recorder fields, explicit empty dynamic-art-gap array, and
+    /// absence of removed version fields. They also cover optional-field
+    /// emission (present iff recorded, including zero values) and Lua %q
+    /// escaping without transforming an installed fixture.
     /// </summary>
     internal static class S2RunManifestWriterTests
     {
         public static void Register(ICollection<TestMain.TestCase> tests)
         {
             tests.Add(new TestMain.TestCase(
-                "S2RunManifest writer reproduces the canonical fixture bytes",
+                "S2RunManifest writer emits current strict v5 fields",
                 ReproducesCanonicalFixtureBytes));
             tests.Add(new TestMain.TestCase(
                 "S2RunManifest optional fields render by presence not value",

@@ -11,15 +11,13 @@ namespace OpenGGF.BizHawk.Headless
     /// s1-complete-run-behavior.md section 7): 2-space indent, fixed key
     /// order, LF line endings, and a trailing newline after the closing
     /// brace. Differs from the standard recorder's
-    /// <see cref="S1TraceMetadataWriter"/> in the script version, the
-    /// 9-entry aux_schema_extras list, and the trailing source_bk2 key.
+    /// <see cref="S1TraceMetadataWriter"/> in the 9-entry
+    /// aux_schema_extras list and the trailing source_bk2 key.
     /// All start-captured values come from the segment's arm-frame RAM;
     /// zone/zone_id/act are the raw ROM values (SBZ3 is lz/1/4 and Final
     /// Zone is sbz/5/3 — fixture directory names were renamed by hand, not
     /// by the recorder). The recording date is the only nondeterministic
-    /// field; versus the 3.14-stamped fixtures the lua_script_version line
-    /// is additionally normalized (verified byte-compatible in spec
-    /// section 2).
+    /// field; current strict-v5 output emits no legacy version fields.
     /// </summary>
     public static class S1CompleteRunMetadataWriter
     {

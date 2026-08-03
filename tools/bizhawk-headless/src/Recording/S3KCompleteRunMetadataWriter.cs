@@ -6,11 +6,11 @@ namespace OpenGGF.BizHawk.Headless
 {
     /// <summary>
     /// Native writer for the S3K complete-run recorder's THREE
-    /// metadata.json shapes, derived from the frozen Lua layout
-    /// (tools/bizhawk/s3k_complete_run_recorder.lua) and advanced to
-    /// v6.42-s3k-completerun: <c>write_metadata</c> for the level and
-    /// bonus shapes, <c>write_ss_metadata</c> L5103 for the special-stage
-    /// shape; spec tools/bizhawk-headless/docs/s3k-run-publication.md §3).
+    /// metadata.json shapes, derived from the recorder layout
+    /// (tools/bizhawk/s3k_complete_run_recorder.lua): <c>write_metadata</c>
+    /// for the level and bonus shapes, <c>write_ss_metadata</c> for the
+    /// special-stage shape; spec tools/bizhawk-headless/docs/
+    /// s3k-run-publication.md §3).
     ///
     /// This is deliberately NOT an extension of
     /// <see cref="S3KTraceMetadataWriter"/> (the STANDARD recorder's
@@ -18,9 +18,9 @@ namespace OpenGGF.BizHawk.Headless
     /// parameterisable: the complete-run shape adds source_bk2,
     /// pre_trace_osc_frames, an optional run_id, segment_index, the
     /// Player_mode-derived character triple and a 19-name
-    /// aux_schema_extras list, moves notes/trace_profile, and stamps a
-    /// different lua_script_version. Sharing one formatter would mean a
-    /// flag per line.
+    /// aux_schema_extras list, and moves notes/trace_profile. Sharing one
+    /// formatter would mean a flag per line. All shapes assert the current
+    /// strict-v5 recorder contract and omit removed version fields.
     ///
     /// Three shapes, and the differences between them are load-bearing
     /// (spec §3.3):
@@ -34,9 +34,8 @@ namespace OpenGGF.BizHawk.Headless
     ///   pre_trace_osc_frames, no start_x/start_y, no rng_seed, no
     ///   csv_version, no capture_mode, and no profile aux schema extras
     ///   (the optional physical queue capability is still advertised); no
-    ///   bonus_stage_type, no v_int_run_count, no notes; plus
-    ///   trace_schema 7 / hardware_timing_schema 2,
-    ///   ss_csv_version and a hardcoded fresh_load false.
+    ///   bonus_stage_type, no v_int_run_count, no notes; plus a hardcoded
+    ///   fresh_load false.
     ///
     /// The two special-stage absences that look like env or version deltas
     /// but are structural: <c>write_ss_metadata</c> never reads

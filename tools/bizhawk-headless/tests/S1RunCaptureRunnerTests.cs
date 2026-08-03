@@ -683,7 +683,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// playthrough. Arm F=3, rows F=4-8, exit 0x8C at F=9, re-arm
         /// F=12, rows F=13-19, movie-done guard at F=20. Stage-free with
         /// no run id: the manifest gate suppresses run_manifest.json so
-        /// the output layout matches the legacy recorder exactly.
+        /// the output layout follows the current stage-free contract.
         /// </summary>
         private static void RearmsAfterNonSsModeExit()
         {

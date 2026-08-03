@@ -10,8 +10,7 @@ namespace OpenGGF.BizHawk.Headless
     /// went straight into the caller's sink as the capture produced them),
     /// the recorded transitions, and the formatted run_manifest.json bytes —
     /// null when the Lua's emission gate suppressed it (no transitions and
-    /// no run id), which keeps a stage-free pass output-identical to the
-    /// legacy layout.
+    /// no run id), which preserves the current stage-free output contract.
     /// </summary>
     public sealed class S1RunCaptureResult
     {
@@ -51,8 +50,8 @@ namespace OpenGGF.BizHawk.Headless
     /// detour-free pass and (b) adds the run_id lines to ss metadata and
     /// the manifest. A movie that never reads game_mode $10 produces
     /// exactly the plain complete-run layout with a null manifest (the
-    /// stage-free semantics are gated by S1RunCaptureRunnerStageFreeTests
-    /// and the ROM-backed complete-run differential gate).
+    /// stage-free semantics are gated by the current
+    /// S1RunCaptureRunnerStageFreeTests contract).
     ///
     /// Frame alignment is the complete-run model per segment: post-advance
     /// inspection, bk2_frame_offset := completed frame count at detection
@@ -88,11 +87,9 @@ namespace OpenGGF.BizHawk.Headless
         /// rows into writers obtained from <paramref name="segmentSink"/>
         /// and finalizing them in recording order.
         /// <paramref name="runId"/> is null when OGGF_TRACE_RUN_ID is
-        /// unset. <paramref name="luaScriptVersion"/> is the session's
-        /// version stamp (production:
-        /// <see cref="S1CompleteRunMetadataWriter.LuaScriptVersion"/>; the
-        /// canonical run fixtures: "3.15" — see
-        /// <see cref="S1RunManifestWriter"/>). <paramref name="stopAtFrame"/>
+    /// unset. <paramref name="luaScriptVersion"/> is retained as a
+    /// capture-session compatibility input but is not serialized by the
+    /// strict-v5 manifest or metadata writers. <paramref name="stopAtFrame"/>
         /// models S1_STOP_AT_FRAME (0 = off); the movie-done guard folds
         /// the Lua's frame-count and FINISHED checks into "completed frames
         /// >= movie length", evaluated after each advance before any

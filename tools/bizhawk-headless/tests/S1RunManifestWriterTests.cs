@@ -4,20 +4,19 @@ using System.IO;
 namespace OpenGGF.BizHawk.Headless.Tests
 {
     /// <summary>
-    /// Literal-byte tests for the S1 run_manifest.json: reconstructing the
-    /// canonical s1-ghz-maze-roundtrip manifest from its recorded values
-    /// must reproduce the recorder-regenerated 3.18 fixture exactly,
-    /// including its level endpoint. The fixture is stored using the run
-    /// bundle's CRLF convention, so its line endings are normalized to the
-    /// Lua's written LF before comparison — the only transformation. Also
-    /// covers the S1-only optional run_id line.
+    /// Strict-v5 assertions for the S1 run_manifest.json writer. The tests
+    /// construct current in-memory segments and transitions, then require
+    /// the v5 recorder fields, explicit empty dynamic-art-gap array, and
+    /// absence of removed version fields. They also cover S1's optional
+    /// run_id and terminal-mode fields without reading or transforming an
+    /// installed fixture.
     /// </summary>
     internal static class S1RunManifestWriterTests
     {
         public static void Register(ICollection<TestMain.TestCase> tests)
         {
             tests.Add(new TestMain.TestCase(
-                "S1RunManifestWriter reproduces the canonical fixture bytes",
+                "S1RunManifestWriter emits current strict v5 fields",
                 ReproducesCanonicalFixtureBytes));
             tests.Add(new TestMain.TestCase(
                 "S1RunManifestWriter omits the run_id line when no run id"

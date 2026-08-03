@@ -17,10 +17,8 @@ namespace OpenGGF.BizHawk.Headless
     /// matter, so the native port formats once at finalize. source_bk2 is
     /// rendered with Lua %q (not json_escape); the run_id line is emitted
     /// only when non-null and is written RAW (plain concatenation, no
-    /// escaping). lua_script_version is a capture-session input for the same
-    /// reason as in <see cref="S1RunManifestWriter"/>: the canonical
-    /// fixtures stamp "3.15" while the current Lua stamps "3.18", with no
-    /// other output-affecting delta (spec §10).
+    /// escaping). The current strict-v5 shape carries only recorder-owned
+    /// fields; removed script-version fields are never emitted.
     /// </summary>
     public static class S1SpecialStageMetadataWriter
     {

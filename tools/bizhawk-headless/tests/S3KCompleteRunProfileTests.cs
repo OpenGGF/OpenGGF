@@ -20,9 +20,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
     ///   scripts' "event" literals: game_paused_state is the only delta),
     ///   including its exact emission slot and its vfc source.
     ///
-    /// Every expected string below is LITERAL fixture bytes, grepped from
-    /// the gunzipped (A)/(C) fixtures under
-    /// src/test/resources/traces/s3k/. Never edit one to make a test pass.
+    /// Every expected string below asserts the current strict-v5 recorder
+    /// contract. Keep these independently derived literals intact rather
+    /// than relaxing them to accommodate historical fixture shapes.
     /// </summary>
     internal static class S3KCompleteRunProfileTests
     {

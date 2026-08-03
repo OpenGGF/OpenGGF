@@ -626,8 +626,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// <summary>
         /// The 4b guard uses the injected capture-session movie length when
         /// it is shorter than the BK2's own row count (spec §2 caveat: the
-        /// canonical fixture's seg3 tail is not reproducible from the
-        /// file-derived length). Same schedule as the round trip's seg1,
+        /// historical seg3 tail cannot be inferred from the file-derived
+        /// length). Same schedule as the round trip's seg1,
         /// with the guard pulled in from F=28 to F=12.
         /// </summary>
         private static void HonorsEffectiveMovieLengthOverride()

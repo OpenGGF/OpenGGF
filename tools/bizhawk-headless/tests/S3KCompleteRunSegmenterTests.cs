@@ -21,15 +21,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
     ///    state machine, the dir suffixes, the transition pushes and every
     ///    stop terminator's row arithmetic.
     ///
-    /// 2. Fixture-literal replays that reproduce the committed (A) and (B)
-    ///    offset / frame-count tables end to end. These are built from the
-    ///    fixtures' bk2_frame_offsets (plus, for the three special stages,
-    ///    their published last-row frames) and the REAL movie length, so
-    ///    every trace_frame_count is DERIVED by the segmenter and then
-    ///    asserted against the fixture literal rather than fed in. Set
-    ///    (B)'s movie length 114622 is the actual
-    ///    s3-knux-multibonus-ss.bk2 input-row count, which makes its
-    ///    terminal mgz_3 count (8517) a fully independent derivation.
+    /// 2. Current strict-v5 frame-stream assertions that derive segment
+    ///    offsets and row counts end to end. The plans use published frame
+    ///    boundaries and real movie lengths, so every trace_frame_count is
+    ///    derived by the segmenter rather than hydrated from a fixture.
+    ///    The multi-bonus stream's 114622 input rows make the terminal
+    ///    mgz_3 count (8517) an independent derivation.
     ///
     /// The tests are hermetic: no ROM, no BizHawk, no fixture file I/O.
     /// </summary>

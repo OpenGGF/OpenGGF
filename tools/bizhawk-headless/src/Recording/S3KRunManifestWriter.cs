@@ -9,7 +9,7 @@ namespace OpenGGF.BizHawk.Headless
     /// L1458; spec tools/bizhawk-headless/docs/s3k-run-publication.md §4).
     /// The structural layout is character-identical to the S1 and S2
     /// manifests, so only the literals live here: the game id, the inline
-    /// rom_checksum and lua_script_version, and Lua %q quoting for
+    /// rom_checksum, and Lua %q quoting for
     /// source_bk2 (the S1 convention; S2 uses json_escape). The one
     /// genuinely new thing — the bonus_stage kind's bonus_stage_type extra
     /// — was added to the shared writer as an additive branch rather than

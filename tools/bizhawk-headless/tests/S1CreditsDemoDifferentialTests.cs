@@ -8,10 +8,10 @@ using Newtonsoft.Json.Linq;
 namespace OpenGGF.BizHawk.Headless.Tests
 {
     /// <summary>
-    /// Read-only predecessor evidence for the one-time 20-to-42-column
-    /// credits migration. The capture gate compares common columns by name;
-    /// columns absent from the predecessor are additions, never normalized
-    /// mismatches. Canonical fixture bytes are never opened for writing.
+    /// Deferred Task 10 predecessor evidence for the one-time 20-to-42-column
+    /// credits migration. This source is intentionally not registered by
+    /// Task 6, so its installed-fixture comparisons and capture gates are
+    /// inactive until the credits fleet is migrated or retired.
     /// </summary>
     internal static class S1CreditsDemoDifferentialTests
     {
