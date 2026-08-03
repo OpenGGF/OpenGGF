@@ -170,13 +170,49 @@ unless the recorder correction already approved for that family explains a
 delta. Timing must remain identical to the former schema-2 semantics; its
 authority and events do not change.
 
+### S1 credits predecessor-oracle failure
+
+The first native all-eight capture proved that the stable-retro credits
+fixtures are useful predecessor evidence but are not an exact ROM oracle. All
+eight legacy files record `v_framecount` as constant `0000`, even though both
+recorders name `$FE04` and the S1 disassembly resets then increments that word
+before `MoveSonicInDemo`; the native capture observes `0001` on the first
+stored row. Six routes also contain disclosed in-route input or physical-state
+deltas, so those differences cannot be described as metadata, new-column, or
+end-boundary changes.
+
+This discovery does not permit normalization or silent exclusions. The
+20-to-42 comparator remains literal, reports every shared-field mismatch, and
+must remain red when the predecessor differs. For S1 credits only,
+predecessor equality is diagnostic evidence rather than a publication oracle.
+A native candidate may advance to explicit approval only when all of the
+following are frozen in the candidate report:
+
+1. the complete unmodified predecessor delta inventory, including row-count
+   differences and the first mismatch for every shared field;
+2. ROM/disassembly evidence for the capture boundary, controller source,
+   setup writes, and every claimed recorder correction;
+3. two clean, independent all-eight native captures with byte-identical
+   logical physics and auxiliary payloads, segment inventory, and metadata
+   other than deliberately injected recording-date provenance;
+4. raw-host-to-writer checks showing that rows at the disclosed first native
+   divergences contain the values actually present in emulated RAM; and
+5. successful candidate validation plus all eight Java credits replays, with
+   any changed replay frontier classified before approval.
+
+The remaining physical deltas are not pre-approved by this amendment. They
+stay visible for Task 9 adjudication and the Task 10 exact-byte user approval.
+The installed credits fixtures remain untouched until that approval.
+
 The native S1 credits mode captures all eight ROM ending-demo routes with the
 canonical 42-column v5 level writer and current S1 auxiliary-event engine. It
 preserves the existing `trace_type: credits_demo`,
 `input_source: rom_ending_demo`, demo index, and demo slug semantics. For each
 route, the candidate report compares every column shared with the predecessor's
 20-column evidence, field by field. New v5 columns and auxiliary-event changes
-are reported and classified separately. All eight candidates remain subject to
+are reported and classified separately. A mismatch is reported rather than
+normalized and is adjudicated under the predecessor-oracle failure contract
+above. All eight candidates remain subject to
 the same inventory, hash, exact-byte approval, and replay gates as every other
 fixture family. The old fixture remains installed until its native replacement
 has passed those gates and is approved.

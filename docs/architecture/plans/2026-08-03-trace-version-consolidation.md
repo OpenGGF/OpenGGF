@@ -52,6 +52,11 @@ inventory/comparison tooling, gzip/SHA-256.
 
 1. Record the worktree commit, dirty diff, JDK, Mono, BizHawk, ROM hashes, and
    current fixture counts by game/profile/row width/version field.
+   Freeze a deterministic machine-readable per-path inventory for every
+   installed file under `src/test/resources/traces/`, with file kind, stored
+   SHA-256, logical SHA-256 for gzip payloads, and a stable aggregate hash. The
+   inventory generator and Task 8 verifier must share the same implementation
+   so added, removed, or changed files are detected.
 2. Record the pre-change Java full-suite and `*TraceReplay` outcomes. Classify
    environment-wide failures such as unavailable LWJGL separately so they can
    be compared after the change.
@@ -147,10 +152,19 @@ needed.
    drain before each arm, terminal-forward only callbacks belonging to the last
    stored row, and fail with lifecycle details rather than clearing or
    fabricating pending work.
-8. Add a ROM-backed differential gate. For each old 20-column fixture compare
-   every overlapping field row by row; report new v5 columns and aux changes as
-   additions, not mismatches hidden by normalization.
-9. Run the focused unit tests and the eight-route ROM-backed native gate. Treat
+8. Add a ROM-backed differential diagnostic. For each old 20-column fixture
+   compare every overlapping field row by row; report new v5 columns and aux
+   changes as additions, and report every common-field mismatch without
+   normalization. The known constant-zero predecessor `v_framecount` defect
+   must remain visible. Do not require predecessor equality to make the normal
+   native unit suite green.
+9. Add a clean-root native determinism gate that captures all eight routes
+   twice and requires identical logical physics/aux payloads, inventory, and
+   fixed-date metadata. At each predecessor first-divergence frame, assert the
+   emitted common fields equal independent raw-host RAM reads. Record the full
+   predecessor delta inventory in the ignored task report for later freezing
+   in Task 9; do not approve the six physical-delta routes in this task.
+10. Run the focused unit tests and the eight-route ROM-backed native gates. Treat
    predecessor counts 535/539/535/523/538/539/535/537 as validation evidence,
    never as hardcoded stop conditions.
 
@@ -176,9 +190,11 @@ needed.
    and profile, and assert fixed widths S1=14, S2=48, S3K=20.
 5. Make animation/subpixel availability inherent in v5 and update callers and
    diagnostics that still mention CSV v7.
-6. Rewrite necessary synthetic fixtures to canonical v5 shapes. Retain only
-   small explicit invalid inputs inside negative tests; no production legacy
-   allowlist.
+6. Replace resource-backed synthetic dependencies with canonical v5 inputs
+   generated under test-owned temporary roots or constructed in memory. Leave
+   every installed path under `src/test/resources/traces/` byte-identical to
+   the frozen Task 1 baseline until Task 10. Retain only small explicit invalid
+   inputs inside negative tests; no production legacy allowlist.
 7. Run focused trace parsing, bootstrap, catalog, special-stage, and invariant
    guards.
 
@@ -210,9 +226,11 @@ writers, run walkers/catalog tests, synthetics, and publication gates.
 2. Remove `run_schema`, Lua-version properties, schema-1 bypasses, schema-2
    branches, and differential normalizers.
 3. Make structural and semantic dynamic-art-gap validation unconditional.
-4. Update all run modes and synthetic run fixtures, then run run-manifest,
-   walker, and catalog tests against generated v5 inputs. Defer any publication
-   gate that compares with the installed legacy fleet until Task 10.
+4. Update all run modes and move synthetic run inputs to test-owned temporary
+   roots or in-memory builders, then run run-manifest, walker, and catalog tests
+   against those generated v5 inputs. Do not rewrite installed trace resources.
+   Defer any publication gate that compares with the installed legacy fleet
+   until Task 10.
 
 ## Task 7: Add programmatic candidate comparison and finish policy docs
 
@@ -243,7 +261,17 @@ writers, run walkers/catalog tests, synthetics, and publication gates.
    rule 4 to one v5 grammar without changing authority.
 4. Document native credits capture, the single schema, opaque provenance,
    fixture validation, capture matrix, and exact-byte publication workflow.
-5. Run doc mirrors/policy guards and prove AGENTS/CLAUDE and mirrored skills are
+5. Add a read-only test resource-root override confined to trace fixture
+   loaders so Java replay tests can consume a complete scratch candidate fleet.
+   It selects comparison data only, must not hydrate gameplay state, and must
+   not be set by committed default configuration. Add an authority guard for
+   that confinement.
+6. Define a machine-readable S1 credits raw-host evidence artifact outside the
+   candidate fixture root. For each disclosed predecessor first-divergence it
+   records route, row, common field, RAM address and endianness or documented
+   derivation, raw value, emitted value, and the candidate logical-payload hash.
+   Add a verifier that rejects a mismatch or hash drift.
+7. Run doc mirrors/policy guards and prove AGENTS/CLAUDE and mirrored skills are
    synchronized where required.
 
 ## Task 8: Gate the implementation before capture
@@ -258,20 +286,26 @@ writers, run walkers/catalog tests, synthetics, and publication gates.
    contracts. Do not run production fixture replays here: the installed fleet
    is intentionally still legacy until approval and Task 10.
 3. Run the v5 validator against generated test candidates and require green.
-4. Fetch the latest `origin/develop` and reconcile it into this worktree before
+4. Compare the current worktree and index against the Task 1 frozen inventory
+   of `src/test/resources/traces/` and fail if any installed trace resource was
+   added, removed, or changed. Generated v5 synthetics must live outside that
+   root. Repeat this guard immediately before the Task 10 installer; only that
+   installer is allowed to mutate installed trace resources.
+5. Fetch the latest `origin/develop` and reconcile it into this worktree before
    freezing the recorder. Do not update, switch, or merge the main workspace.
    Re-run Tasks 2–8 tests affected by the reconciliation.
-5. Obtain independent code review for trace authority, native recorder
+6. Obtain independent code review for trace authority, native recorder
    semantics, strict parsing, credits lifecycle, and publication safety. Fix
    every valid issue and repeat until no blocker remains.
-6. Rebuild once after review and freeze source commit/diff hash plus native
+7. Rebuild once after review and freeze source commit/diff hash plus native
    artifact SHA-256. Any later source change invalidates all captures.
 
 ## Task 9: Regenerate the complete native fleet to scratch
 
 1. Create a new v5 capture-matrix artifact under
    `docs/architecture/validation/trace/` with a supersession link to the
-   historical July plan. Include one native S1 credits `all` invocation and
+   historical July plan. Include two native S1 credits `all` invocations into
+   distinct newly absent roots and
    current v5 assumptions, then expand it programmatically to literal commands.
    Do not edit the dated July implementation plan.
 2. Verify ROM and BK2 hashes, scratch capacity, output absence, source/diff
@@ -284,17 +318,34 @@ writers, run walkers/catalog tests, synthetics, and publication gates.
    membership. Reject and diagnose any partial or unexpected output.
 5. Run the v5 validator on the entire candidate root. Require every retained
    production fixture and all eight credits demos exactly once.
-6. Run the candidate comparator against the installed predecessor. Classify
-   every literal change. Credits require row-by-row common-field equality or an
-   independently justified ROM/recorder correction; new 42-column and aux
-   evidence is listed separately.
-7. Record the immutable report in
+6. Compare the two post-freeze credits captures. Require identical segment
+   inventory, logical physics/aux payloads, and fixed-date metadata; freeze both
+   hashes and identify one root as the publication candidate.
+7. Run the candidate comparator against the installed predecessor. Classify
+   every literal change. For credits, preserve the comparator's literal red
+   result and freeze the complete per-route/per-field mismatch inventory. Apply
+   the design's S1 credits predecessor-oracle gates: two clean native captures,
+   ROM/disassembly justification, and changed replay frontier classification.
+   New 42-column and aux evidence is listed separately; no normalization or
+   silent exclusion is allowed.
+8. Generate and verify the machine-readable raw-host evidence artifact from
+   step 7's final first-divergence inventory, binding every disclosed
+   row/value to the publication candidate's logical hash. Reject missing,
+   extra, stale-hash, or emitted-versus-raw mismatches.
+9. Point the strict Java replay tests at the read-only candidate root and run
+   all eight S1 credits replays before approval. Freeze pass/fail, first-error
+   frame/field, and frontier classification in the candidate report. The
+   installed legacy fixtures remain untouched.
+10. Record the immutable report in
    `docs/architecture/validation/trace/2026-08-03-trace-v5-candidates.md`.
 
 ## Task 10: Approve and publish candidates atomically
 
 1. Present the frozen inventory, hashes, and classified deltas for explicit
-   exact-byte approval. Do not replace canonical fixtures before approval.
+   exact-byte approval. For S1 credits, call out that predecessor equality is
+   red, include every shared-field mismatch and the independent native/ROM
+   evidence, and require explicit approval of those replacement bytes. Do not
+   replace canonical fixtures before approval.
 2. After approval, install exactly the frozen candidate bytes. Delete only the
    obsolete `*_retro` alternate sidecars; do not delete any credits fixture,
    replay class, or focused consumer.
