@@ -181,8 +181,8 @@ namespace OpenGGF.BizHawk.Headless
     /// literals, quoting, and the S1-only nullable
     /// expected_movie_end_mode field, injected by the thin
     /// <see cref="S1RunManifestWriter"/> / <see cref="S2RunManifestWriter"/>
-    /// front-ends: the game name, the inline rom_checksum and
-    /// lua_script_version literals, whether the run_id line may be absent
+    /// front-ends: the game name, the inline rom_checksum, whether the
+    /// run_id line may be absent
     /// (S1: emitted iff OGGF_TRACE_RUN_ID was set; S2: always present), and
     /// whether source_bk2 is rendered with Lua %q (S1) or the shared
     /// json_escape helper (S2), and whether expected_movie_end_mode is

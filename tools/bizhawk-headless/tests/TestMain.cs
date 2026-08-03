@@ -170,7 +170,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
             LoadQueueStateEventTests.Register(tests);
             S1TraceCaptureRunnerTests.Register(tests);
             S1CreditsDemoCaptureRunnerTests.Register(tests);
-            S1CreditsDemoDifferentialTests.Register(tests);
+            // Task 10 owns migration or retirement of the installed credits
+            // differential fleet; Task 6 must not register its fixture gates.
             S1CompleteRunMetadataWriterTests.Register(tests);
             S1RunCaptureRunnerStageFreeTests.Register(tests);
             S1SpecialStageWriterTests.Register(tests);
