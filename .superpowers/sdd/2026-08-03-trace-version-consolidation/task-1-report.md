@@ -51,6 +51,38 @@ python3 tools/traces/validate_trace_v5.py src/test/resources/traces
 The six validator tests passed. The last command exited 1 as required for the
 legacy fixture fleet; it did not change fixture bytes.
 
+## Review fix: timing counts and special-stage ownership
+
+An independent review found that malformed `trace_frame_count` values bypassed
+timing bounds, and that cross-game special-stage profile names fell back to the
+ordinary 42-column rule. The regression tests were written first and failed
+with seven expected assertions: absent, boolean, negative, and fractional
+frame counts; plus S1/S2/S3K special-stage profiles paired with other games.
+
+The validator now requires every metadata `trace_frame_count` to be a
+non-boolean non-negative integer before it loads timing data, and its timing
+loader receives that validated integer so every `raw_frame` has a bound.
+Known special-stage profiles now have an explicit owning game; a mismatch is
+rejected instead of falling through to the ordinary profile width.
+
+Covering verification after the fix:
+
+```text
+$ python3 -m unittest tools.testing.test_validate_trace_v5
+.........
+Ran 9 tests in 0.418s
+OK
+
+$ python3 -m py_compile tools/traces/validate_trace_v5.py tools/testing/test_validate_trace_v5.py
+$ python3 tools/traces/validate_trace_v5.py src/test/resources/traces
+exit=1 (expected legacy-fleet red)
+```
+
+Fix self-review: the count predicate excludes `bool` despite Python's integer
+subclassing, rejects absent/negative/fractional counts before timing can skip a
+bound, and maps each special-stage profile to exactly one game. No fixtures or
+runtime source were changed.
+
 ## Self-review
 
 - Read-only behavior is exercised by a before/after byte snapshot test.

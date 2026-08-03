@@ -91,6 +91,55 @@ class ValidateTraceV5Tests(unittest.TestCase):
         self.assertIn(f"{fixture / 'hardware_timing.jsonl'}: line 1", result.stderr)
         self.assertIn("pre_main_loop", result.stderr)
 
+    def test_requires_a_non_boolean_non_negative_trace_frame_count_before_loading_timing(self) -> None:
+        for invalid_count in (None, True, -1, 1.5):
+            with self.subTest(invalid_count=invalid_count):
+                fixture = self.write_fixture("s3k", "complete_run", name=f"invalid-count-{invalid_count}")
+                metadata_path = fixture / "metadata.json"
+                metadata = json.loads(metadata_path.read_text())
+                if invalid_count is None:
+                    del metadata["trace_frame_count"]
+                else:
+                    metadata["trace_frame_count"] = invalid_count
+                metadata_path.write_text(json.dumps(metadata))
+                self.write_timing(fixture, raw_frame=0)
+
+                result = self.validate(fixture)
+
+                self.assertNotEqual(0, result.returncode)
+                self.assertIn(f"{metadata_path}: trace_frame_count must be a non-negative integer", result.stderr)
+
+    def test_rejects_timing_frame_outside_the_required_trace_frame_count(self) -> None:
+        fixture = self.write_fixture("s3k", "complete_run")
+        self.write_timing(fixture, raw_frame=2)
+
+        result = self.validate()
+
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn(
+            f"{fixture / 'hardware_timing.jsonl'}: line 1 raw_frame 2 is outside [0, 2)",
+            result.stderr,
+        )
+
+    def test_rejects_special_stage_profiles_owned_by_another_game(self) -> None:
+        for game, profile in (
+            ("s2", "s1_special_stage"),
+            ("s3k", "s2_special_stage"),
+            ("s1", "s3k_special_stage"),
+        ):
+            with self.subTest(game=game, profile=profile):
+                fixture = self.write_fixture(game, profile, name=f"{game}-{profile}")
+                (fixture / "physics.csv").write_text(
+                    ",".join(["column"] * 42) + "\n" + ",".join(["0"] * 42) + "\n")
+
+                result = self.validate(fixture)
+
+                self.assertNotEqual(0, result.returncode)
+                self.assertIn(
+                    f"{fixture / 'metadata.json'}: trace_profile {profile} is owned by another game",
+                    result.stderr,
+                )
+
     def test_requires_current_manifest_gap_array_and_native_provenance(self) -> None:
         self.write_manifest({"dynamic_art_gap_transitions": {}})
 
@@ -107,8 +156,9 @@ class ValidateTraceV5Tests(unittest.TestCase):
         self.assertNotEqual(0, result.returncode)
         self.assertIn("run_manifest.json: segments must be an array", result.stderr)
 
-    def write_fixture(self, game: str, profile: str, compressed: bool = False) -> Path:
-        fixture = self.root / "fixture"
+    def write_fixture(
+            self, game: str, profile: str, compressed: bool = False, name: str = "fixture") -> Path:
+        fixture = self.root / name
         fixture.mkdir()
         metadata = {
             "game": game,
@@ -140,6 +190,18 @@ class ValidateTraceV5Tests(unittest.TestCase):
         (self.root / "run_manifest.json").write_text(json.dumps(manifest))
 
     @staticmethod
+    def write_timing(fixture: Path, raw_frame: int) -> None:
+        (fixture / "hardware_timing.jsonl").write_text(
+            json.dumps({
+                "event": "hardware_work_completed",
+                "raw_frame": raw_frame,
+                "boundary": "vint_service",
+                "kind": "kos_module_queue",
+                "ordinal": 0,
+                "submission_fingerprint": FINGERPRINT,
+            }) + "\n")
+
+    @staticmethod
     def write_payload(path: Path, content: str, compressed: bool) -> None:
         if compressed:
             with gzip.open(path.with_suffix(path.suffix + ".gz"), "wt", encoding="utf-8") as output:
@@ -147,9 +209,9 @@ class ValidateTraceV5Tests(unittest.TestCase):
         else:
             path.write_text(content)
 
-    def validate(self) -> subprocess.CompletedProcess[str]:
+    def validate(self, root: Path | None = None) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
-            [sys.executable, str(VALIDATOR), str(self.root)],
+            [sys.executable, str(VALIDATOR), str(root or self.root)],
             text=True,
             capture_output=True,
             check=False,

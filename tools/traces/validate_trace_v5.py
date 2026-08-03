@@ -22,6 +22,9 @@ SPECIAL_STAGE_WIDTHS = {
     ("s2", "s2_special_stage"): 48,
     ("s3k", "s3k_special_stage"): 20,
 }
+SPECIAL_STAGE_PROFILE_OWNERS = {
+    profile: game for game, profile in SPECIAL_STAGE_WIDTHS
+}
 TIMING_FIELDS = frozenset({
     "event", "raw_frame", "boundary", "kind", "ordinal", "submission_fingerprint",
 })
@@ -70,13 +73,24 @@ class Validation:
             self.reject(path, "game must be one of s1, s2, s3k")
         if not isinstance(profile, str) or not profile:
             self.reject(path, "trace_profile must be a non-empty string")
+        owner = SPECIAL_STAGE_PROFILE_OWNERS.get(profile)
+        if owner is not None and game != owner:
+            self.reject(path, f"trace_profile {profile} is owned by another game")
+        trace_frame_count = metadata.get("trace_frame_count")
+        valid_trace_frame_count = (
+            isinstance(trace_frame_count, int)
+            and not isinstance(trace_frame_count, bool)
+            and trace_frame_count >= 0
+        )
+        if not valid_trace_frame_count:
+            self.reject(path, "trace_frame_count must be a non-negative integer")
         fixture_directory = path.parent
         physics = self.single_payload(fixture_directory, "physics.csv")
         if physics is not None and isinstance(game, str) and isinstance(profile, str):
             self.validate_rows(physics, SPECIAL_STAGE_WIDTHS.get((game, profile), 42))
         timing = self.single_payload(fixture_directory, "hardware_timing.jsonl", required=False)
-        if timing is not None:
-            self.validate_timing(timing, metadata.get("trace_frame_count"))
+        if timing is not None and valid_trace_frame_count:
+            self.validate_timing(timing, trace_frame_count)
 
     def validate_manifest(self, path: Path) -> None:
         manifest = self.read_json(path)
@@ -131,7 +145,7 @@ class Validation:
         except csv.Error as error:
             self.reject(path, f"invalid CSV: {error}")
 
-    def validate_timing(self, path: Path, frame_count: Any) -> None:
+    def validate_timing(self, path: Path, frame_count: int) -> None:
         content = self.read_text(path)
         if content is None:
             return
@@ -149,9 +163,8 @@ class Validation:
             if event is None:
                 continue
             raw_frame, boundary, kind, ordinal = event
-            if isinstance(frame_count, int) and not isinstance(frame_count, bool):
-                if raw_frame >= frame_count:
-                    self.reject(path, f"line {number} raw_frame {raw_frame} is outside [0, {frame_count})")
+            if raw_frame >= frame_count:
+                self.reject(path, f"line {number} raw_frame {raw_frame} is outside [0, {frame_count})")
             identity = (kind, ordinal)
             if identity in identities:
                 self.reject(path, f"line {number} has duplicate identity {kind}#{ordinal}")
