@@ -3,12 +3,20 @@
 from __future__ import annotations
 
 import gzip
+import hashlib
 import json
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+
+from tools.traces.trace_fixture_inventory import (
+    InventoryVerificationError,
+    build_inventory,
+    verify_inventory,
+    write_inventory,
+)
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
@@ -217,6 +225,99 @@ class ValidateTraceV5Tests(unittest.TestCase):
             check=False,
         )
 
+
+class TraceFixtureInventoryTests(unittest.TestCase):
+    """Regression coverage for the immutable installed-fixture inventory."""
+
+    def setUp(self) -> None:
+        self.temporary_directory = tempfile.TemporaryDirectory()
+        self.root = Path(self.temporary_directory.name) / "traces"
+        self.root.mkdir()
+
+    def tearDown(self) -> None:
+        self.temporary_directory.cleanup()
+
+    def test_records_sorted_paths_file_kinds_and_stored_and_logical_gzip_hashes(self) -> None:
+        (self.root / "s1").mkdir()
+        (self.root / "s1" / "metadata.json").write_text("{\"trace_schema\":5}\n")
+        with gzip.GzipFile(self.root / "s1" / "physics.csv.gz", "wb", mtime=0) as output:
+            output.write(b"x,y\\n1,2\\n")
+
+        inventory = build_inventory(self.root)
+
+        self.assertEqual("openggf-trace-fixture-inventory-v1", inventory["format"])
+        self.assertEqual("s1/metadata.json", inventory["files"][0]["path"])
+        self.assertEqual("metadata", inventory["files"][0]["kind"])
+        self.assertNotIn("logical_sha256", inventory["files"][0])
+        compressed = inventory["files"][1]
+        self.assertEqual("s1/physics.csv.gz", compressed["path"])
+        self.assertEqual("physics", compressed["kind"])
+        self.assertEqual(
+            hashlib.sha256(b"x,y\\n1,2\\n").hexdigest(), compressed["logical_sha256"]
+        )
+        self.assertEqual(build_inventory(self.root), inventory)
+
+    def test_verifier_reports_added_removed_and_changed_paths(self) -> None:
+        (self.root / "metadata.json").write_text("baseline\\n")
+        (self.root / "physics.csv").write_text("baseline\\n")
+        expected = build_inventory(self.root)
+        (self.root / "metadata.json").write_text("changed\\n")
+        (self.root / "physics.csv").unlink()
+        (self.root / "aux_state.jsonl").write_text("added\\n")
+
+        with self.assertRaises(InventoryVerificationError) as raised:
+            verify_inventory(self.root, expected)
+
+        self.assertEqual(
+            [
+                "added aux_state.jsonl",
+                "changed metadata.json stored_sha256",
+                "removed physics.csv",
+            ],
+            raised.exception.differences,
+        )
+
+    def test_verifier_reports_a_changed_logical_hash_for_a_gzip_payload(self) -> None:
+        payload = self.root / "physics.csv.gz"
+        with gzip.GzipFile(payload, "wb", mtime=0) as output:
+            output.write(b"before\n")
+        expected = build_inventory(self.root)
+        with gzip.GzipFile(payload, "wb", mtime=0) as output:
+            output.write(b"after\n")
+
+        with self.assertRaises(InventoryVerificationError) as raised:
+            verify_inventory(self.root, expected)
+
+        self.assertIn("changed physics.csv.gz logical_sha256", raised.exception.differences)
+
+    def test_verifier_rejects_an_inventory_with_a_tampered_aggregate_hash(self) -> None:
+        (self.root / "metadata.json").write_text("baseline\\n")
+        expected = build_inventory(self.root)
+        expected["aggregate_sha256"] = "0" * 64
+
+        with self.assertRaises(InventoryVerificationError) as raised:
+            verify_inventory(self.root, expected)
+
+        self.assertEqual(["inventory aggregate_sha256 does not match its files"], raised.exception.differences)
+
+    def test_generation_and_verification_never_write_the_fixture_root(self) -> None:
+        source_root = REPOSITORY_ROOT / "src" / "test" / "resources" / "traces"
+        before = {path.relative_to(source_root): path.read_bytes() for path in source_root.rglob("*") if path.is_file()}
+
+        inventory = build_inventory(source_root)
+        verify_inventory(source_root, inventory)
+
+        after = {path.relative_to(source_root): path.read_bytes() for path in source_root.rglob("*") if path.is_file()}
+        self.assertEqual(before, after)
+
+    def test_inventory_writer_refuses_to_create_an_artifact_inside_the_fixture_root(self) -> None:
+        (self.root / "metadata.json").write_text("baseline\n")
+        before = {path: path.read_bytes() for path in self.root.rglob("*") if path.is_file()}
+
+        with self.assertRaises(ValueError):
+            write_inventory(build_inventory(self.root), self.root, self.root / "inventory.json")
+
+        self.assertEqual(before, {path: path.read_bytes() for path in self.root.rglob("*") if path.is_file()})
 
 if __name__ == "__main__":
     unittest.main()

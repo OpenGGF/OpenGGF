@@ -30,6 +30,14 @@ The inventory scans all 217 `metadata.json` files and all seven
 current `physics.csv` or `physics.csv.gz` header width. No fixture bytes were
 changed while producing this inventory.
 
+The complete machine-readable [per-path fixture inventory](2026-08-03-trace-v5-baseline-inventory.json)
+freezes all 809 installed files, their kind, exact stored SHA-256, and logical
+SHA-256 for every gzip file. Its stable aggregate SHA-256 is
+`6885fbd0b0c5f02adf95ca33841c9755d2c81b46220f918d810394108b25da00`.
+`tools/traces/trace_fixture_inventory.py` generates and verifies this exact
+format for both the worktree and staged Git index; Task 8 must use it before
+capture and immediately before fixture installation.
+
 | Game | Profile | Width | Count |
 | --- | --- | ---: | ---: |
 | s1 | missing | 11 | 1 |
