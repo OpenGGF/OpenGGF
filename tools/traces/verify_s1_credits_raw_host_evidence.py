@@ -8,6 +8,7 @@ import csv
 import gzip
 import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -20,10 +21,16 @@ from tools.traces.compare_trace_v5_candidates import (
     CREDITS_CANDIDATE_DIRECTORIES,
     CREDITS_COLUMN_MAP,
 )
+from tools.traces.trace_fixture_inventory import (
+    InventoryVerificationError,
+    build_inventory,
+    validate_inventory_document,
+)
 
 
 EVIDENCE_FORMAT = "openggf-s1-credits-raw-host-evidence-v1"
 COMPARISON_FORMAT = "openggf-trace-v5-candidate-comparison-v1"
+RAM_ADDRESS = re.compile(r"0x[0-9A-F]{8}\Z")
 
 
 def verify_evidence(candidate_root: Path, comparison_report: Path, evidence_path: Path) -> None:
@@ -33,12 +40,23 @@ def verify_evidence(candidate_root: Path, comparison_report: Path, evidence_path
     report, evidence = load_document(comparison_report), load_document(evidence_path)
     if report.get("format") != COMPARISON_FORMAT:
         raise ValueError("comparison report format is not supported")
+    report_candidate_root = require_string(report, "candidate_root")
+    if Path(report_candidate_root).resolve() != candidate_root:
+        raise ValueError("comparison report candidate root does not match candidate root")
+    report_inventory = report.get("candidate_inventory")
+    try:
+        validate_inventory_document(report_inventory)
+    except InventoryVerificationError as error:
+        raise ValueError(f"comparison report candidate inventory is invalid: {error}") from error
+    if report_inventory != build_inventory(candidate_root):
+        raise ValueError("comparison report candidate inventory does not match candidate root")
     if evidence.get("format") != EVIDENCE_FORMAT or not isinstance(evidence.get("routes"), list):
         raise ValueError("evidence format is not supported")
     disclosed = disclosed_first_divergences(report)
+    candidate_files = comparison_candidate_files(report)
     observed: set[tuple[str, int, str]] = set()
     for route in evidence["routes"]:
-        verify_route(candidate_root, route, observed)
+        verify_route(candidate_root, route, observed, candidate_files)
     missing, extra = sorted(disclosed - observed), sorted(observed - disclosed)
     if missing:
         raise ValueError(f"missing evidence for disclosed first divergences: {missing}")
@@ -47,15 +65,22 @@ def verify_evidence(candidate_root: Path, comparison_report: Path, evidence_path
 
 
 def verify_route(candidate_root: Path, route: dict[str, Any],
-                 observed: set[tuple[str, int, str]]) -> None:
+                 observed: set[tuple[str, int, str]],
+                 candidate_files: dict[str, tuple[Path, str]]) -> None:
     route_name = require_string(route, "route")
     logical_path = require_string(route, "candidate_payload")
     candidate_directory = CREDITS_CANDIDATE_DIRECTORIES.get(route_name)
     if candidate_directory is None or logical_path != f"s1/{candidate_directory}/physics.csv":
         raise ValueError(f"candidate payload does not match route {route_name}")
-    content = read_logical(resolve_payload(candidate_root, logical_path))
-    if hashlib.sha256(content).hexdigest() != require_string(route, "candidate_logical_sha256"):
+    payload_path = resolve_payload(candidate_root, logical_path)
+    content = read_logical(payload_path)
+    logical_hash = hashlib.sha256(content).hexdigest()
+    if logical_hash != require_string(route, "candidate_logical_sha256"):
         raise ValueError(f"candidate logical hash drift for {route_name}")
+    report_file = candidate_files.get(route_name)
+    if report_file is None or report_file[0].resolve() != payload_path.resolve() \
+            or report_file[1] != logical_hash:
+        raise ValueError(f"comparison report file logical hash or identity drift for {route_name}")
     rows = list(csv.reader(content.decode("utf-8").splitlines()))
     if not rows:
         raise ValueError(f"candidate physics has no header for {route_name}")
@@ -73,12 +98,20 @@ def verify_route(candidate_root: Path, route: dict[str, Any],
         raw, emitted = require_string(observation, "raw_value"), require_string(observation, "emitted_value")
         if raw != emitted:
             raise ValueError(f"raw/emitted mismatch for {route_name} row {row} field {field}")
-        has_ram = isinstance(observation.get("ram_address"), str)
-        has_derivation = isinstance(observation.get("derivation"), str)
+        has_ram = "ram_address" in observation
+        has_derivation = "derivation" in observation
         if has_ram == has_derivation:
             raise ValueError("evidence requires exactly one RAM address or documented derivation")
-        if has_ram and observation.get("endianness") not in {"big", "little", "byte"}:
-            raise ValueError("RAM evidence requires big, little, or byte endianness")
+        if has_ram:
+            address = observation.get("ram_address")
+            if not isinstance(address, str) or RAM_ADDRESS.fullmatch(address) is None:
+                raise ValueError("RAM address must use canonical 0x1234ABCD format")
+            if observation.get("endianness") not in {"big", "little", "byte"}:
+                raise ValueError("RAM evidence requires big, little, or byte endianness")
+        else:
+            derivation = observation.get("derivation")
+            if not isinstance(derivation, str) or not derivation.strip():
+                raise ValueError("derivation must be a non-empty string")
         try:
             candidate_value = rows[row + 1][index[candidate_field]]
         except IndexError as error:
@@ -104,6 +137,22 @@ def disclosed_first_divergences(report: dict[str, Any]) -> set[tuple[str, int, s
             if isinstance(field, str) and isinstance(row, int):
                 first_by_field[field] = min(row, first_by_field.get(field, row))
         result.update((parts[1], row, field) for field, row in first_by_field.items())
+    return result
+
+
+def comparison_candidate_files(report: dict[str, Any]) -> dict[str, tuple[Path, str]]:
+    result: dict[str, tuple[Path, str]] = {}
+    for file_report in report.get("files", []):
+        parts = Path(file_report.get("logical_path", "")).parts
+        if len(parts) != 3 or parts[0] != "s1" or not parts[1].startswith("credits_") \
+                or parts[2] != "physics.csv":
+            continue
+        candidate = file_report.get("candidate")
+        if not isinstance(candidate, dict):
+            raise ValueError(f"comparison report candidate identity is absent for {parts[1]}")
+        path = require_string(candidate, "path")
+        logical_hash = require_string(candidate, "logical_sha256")
+        result[parts[1]] = (Path(path), logical_hash)
     return result
 
 

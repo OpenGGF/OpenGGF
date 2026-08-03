@@ -53,6 +53,8 @@ class Validation:
                 self.reject(path, "alternate *_retro sidecars are forbidden")
         metadata_paths = [path for path in files if path.name in {"metadata.json", "metadata.json.gz"}]
         manifest_paths = [path for path in files if path.name in {"run_manifest.json", "run_manifest.json.gz"}]
+        if not metadata_paths:
+            self.reject(self.root, "trace fleet must contain at least one metadata document")
         for path in metadata_paths:
             self.validate_metadata(path)
         for path in manifest_paths:

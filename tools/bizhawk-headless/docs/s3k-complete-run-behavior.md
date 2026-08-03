@@ -911,8 +911,9 @@ equals the *next level segment's* `bk2_frame_offset` for `stage_exit`.
 ## 8. Segmentation-derived `metadata.json` fields
 
 Full byte layout is owned by
-[s3k-trace-recorder-behavior.md](s3k-trace-recorder-behavior.md) §6. Only
-the complete-run deltas are specified here.
+[s3k-trace-recorder-behavior.md](s3k-trace-recorder-behavior.md), under
+"Current v5 container contract". Only the complete-run deltas are specified
+here.
 
 ### 8.1 Level / bonus segments (`write_metadata`)
 

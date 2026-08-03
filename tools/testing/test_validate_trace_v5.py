@@ -48,6 +48,21 @@ class ValidateTraceV5Tests(unittest.TestCase):
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertEqual(original, {path: path.read_bytes() for path in fixture.rglob("*") if path.is_file()})
 
+    def test_rejects_empty_and_arbitrary_directories_as_non_fleets(self) -> None:
+        for label, populate in (
+            ("empty", lambda: None),
+            ("arbitrary", lambda: (self.root / "notes.txt").write_text("not a trace\n")),
+        ):
+            with self.subTest(label=label):
+                populate()
+
+                result = self.validate()
+
+                self.assertNotEqual(0, result.returncode)
+                self.assertIn("trace fleet must contain at least one metadata document", result.stderr)
+                for path in self.root.iterdir():
+                    path.unlink()
+
     def test_reports_exact_paths_for_envelope_legacy_width_timing_manifest_and_sidecar_errors(self) -> None:
         fixture = self.write_fixture("s1", "complete_run")
         metadata = json.loads((fixture / "metadata.json").read_text())

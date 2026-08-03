@@ -546,10 +546,10 @@ public abstract class AbstractTraceReplayTest {
 
     /**
      * Capture a read-only snapshot of engine state at frame 0 for the
-     * bootstrap comparator. The comparator only activates for traces with
-     * {@code lua_script_version >= 9.2-s2} (see
-     * {@link TraceMetadata#hasNativePreludeBootstrap()}); for traces without it this
-     * snapshot is built but discarded. Captures whatever is readily
+     * bootstrap comparator. The comparator only activates for v5 traces that
+     * advertise the {@code native_prelude_bootstrap} semantic capability (see
+     * {@link TraceMetadata#hasNativePreludeBootstrap()}); for traces without it
+     * this snapshot is built but discarded. Captures whatever is readily
      * available from the fixture; fields without an accessible source are
      * left null/empty (the comparator emits WARNING entries for those).
      */

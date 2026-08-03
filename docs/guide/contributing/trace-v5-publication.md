@@ -99,9 +99,12 @@ python3 tools/traces/verify_s1_credits_raw_host_evidence.py \
   /scratch/s1-credits-raw-host-evidence.json
 ```
 
-The verifier rejects missing/extra first-divergence evidence, raw/emitted/CSV
-value disagreement, candidate hash drift, and an evidence artifact placed
-inside the candidate root.
+RAM addresses use canonical `0x` plus eight uppercase hexadecimal digits and
+require `big`, `little`, or `byte` endianness. A derivation must be non-empty.
+The verifier rejects missing/extra first-divergence evidence, malformed
+provenance, raw/emitted/CSV value disagreement, report candidate-root,
+inventory, or file-hash drift, candidate hash drift, and an evidence artifact
+placed inside the candidate root.
 
 ## Candidate-root Java replay
 

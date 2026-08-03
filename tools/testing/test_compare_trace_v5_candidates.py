@@ -12,6 +12,7 @@ import unittest
 from pathlib import Path
 
 from tools.traces.compare_trace_v5_candidates import compare_roots
+from tools.traces.trace_fixture_inventory import build_inventory
 from tools.traces.verify_s1_credits_raw_host_evidence import verify_evidence
 
 
@@ -29,6 +30,7 @@ HEADER_42 = ["frame", "input", "camera_x", "camera_y", "rings", "gameplay_frame_
              "sidekick_x_sub", "sidekick_y_sub", "sidekick_routine", "sidekick_status_byte",
              "sidekick_stand_on_obj", "sidekick_animation_id", "sidekick_mapping_frame"]
 COMPARATOR = Path(__file__).resolve().parents[1] / "traces" / "compare_trace_v5_candidates.py"
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 
 
 class CompareTraceV5CandidatesTests(unittest.TestCase):
@@ -98,6 +100,57 @@ class CompareTraceV5CandidatesTests(unittest.TestCase):
         metadata = self.file_report(report, "s1/credits_00_ghz1/metadata.json")
         self.assertTrue(metadata["logical_equal"])
 
+    def test_aux_comparison_explains_same_event_count_payload_changes(self) -> None:
+        self.write_fixture(self.old, HEADER_42, [["0"] * 42])
+        self.write_fixture(self.candidate, HEADER_42, [["0"] * 42])
+        old_fixture = self.old / "s1" / "credits_00_ghz1"
+        candidate_fixture = self.candidate / "s1" / "credits_00_ghz1"
+        (old_fixture / "aux_state.jsonl").write_text('{"event":"state","x":1}\n')
+        (candidate_fixture / "aux_state.jsonl").write_text('{"event":"state","x":2}\n')
+
+        report = compare_roots(self.old, self.candidate)
+
+        comparison = self.file_report(
+            report, "s1/credits_00_ghz1/aux_state.jsonl")["comparison"]
+        self.assertEqual({}, comparison["event_count_deltas"])
+        self.assertEqual(1, comparison["literal_delta_count"])
+        self.assertEqual(1, len(comparison["literal_deltas"]))
+        delta = comparison["literal_deltas"][0]
+        self.assertEqual("replace", delta["tag"])
+        self.assertEqual((0, 1), (delta["predecessor_start"], delta["predecessor_end"]))
+        self.assertEqual((0, 1), (delta["candidate_start"], delta["candidate_end"]))
+        self.assertEqual(['{"event":"state","x":1}'], delta["predecessor_lines"])
+        self.assertEqual(['{"event":"state","x":2}'], delta["candidate_lines"])
+        self.assertFalse(delta["lines_truncated"])
+        self.assertFalse(comparison["literal_deltas_truncated"])
+
+    def test_aux_literal_explanations_are_deterministically_bounded(self) -> None:
+        self.write_fixture(self.old, HEADER_42, [["0"] * 42])
+        self.write_fixture(self.candidate, HEADER_42, [["0"] * 42])
+        old_fixture = self.old / "s1" / "credits_00_ghz1"
+        candidate_fixture = self.candidate / "s1" / "credits_00_ghz1"
+        old_lines = [json.dumps({"event": "state", "index": index, "payload": "a" * 2048})
+                     for index in range(66)]
+        new_lines = [line if index % 2 else line.replace('"a', '"b', 1)
+                     for index, line in enumerate(old_lines)]
+        (old_fixture / "aux_state.jsonl").write_text("\n".join(old_lines) + "\n")
+        (candidate_fixture / "aux_state.jsonl").write_text("\n".join(new_lines) + "\n")
+
+        comparison = self.file_report(
+            compare_roots(self.old, self.candidate),
+            "s1/credits_00_ghz1/aux_state.jsonl")["comparison"]
+
+        self.assertGreater(comparison["literal_delta_count"], 32)
+        self.assertEqual(32, len(comparison["literal_deltas"]))
+        self.assertTrue(comparison["literal_deltas_truncated"])
+        for delta in comparison["literal_deltas"]:
+            self.assertLessEqual(len(delta["predecessor_lines"]), 8)
+            self.assertLessEqual(len(delta["candidate_lines"]), 8)
+            for line in delta["predecessor_lines"] + delta["candidate_lines"]:
+                self.assertLessEqual(len(line), 512)
+            self.assertRegex(delta["predecessor_sha256"], r"^[0-9a-f]{64}$")
+            self.assertRegex(delta["candidate_sha256"], r"^[0-9a-f]{64}$")
+
     def test_v5_mode_rejects_legacy_envelopes_without_treating_scanning_as_acceptance(self) -> None:
         self.write_fixture(self.old, HEADER_20, [["0"] * 20], v5=False)
         self.write_fixture(self.candidate, HEADER_42, [["0"] * 42])
@@ -108,6 +161,17 @@ class CompareTraceV5CandidatesTests(unittest.TestCase):
         report = compare_roots(self.old, self.candidate, mode="credits-20-to-42")
         self.assertIn("lua_script_version", report["predecessor_scan"]["legacy_keys"])
         self.assertEqual([20], report["predecessor_scan"]["physics_widths"])
+
+    def test_rejects_empty_or_arbitrary_candidate_roots_in_both_modes(self) -> None:
+        self.write_fixture(self.old, HEADER_20, [["0"] * 20], v5=False)
+        for name, content in (("empty", None), ("arbitrary", "not a trace\n")):
+            with self.subTest(name=name):
+                root = Path(self.temporary_directory.name) / name
+                root.mkdir()
+                if content is not None:
+                    (root / "notes.txt").write_text(content)
+                with self.assertRaisesRegex(ValueError, "candidate root is not v5"):
+                    compare_roots(self.old, root, mode="credits-20-to-42")
 
     def test_cli_refuses_to_write_a_report_inside_either_compared_root(self) -> None:
         self.write_fixture(self.old, HEADER_42, [["0"] * 42])
@@ -121,6 +185,26 @@ class CompareTraceV5CandidatesTests(unittest.TestCase):
         self.assertNotEqual(0, result.returncode)
         self.assertIn("outside both compared roots", result.stderr)
         self.assertFalse(output.exists())
+
+    def test_s3k_current_contract_documentation_has_only_the_v5_axes(self) -> None:
+        document = (REPOSITORY_ROOT / "tools" / "bizhawk-headless" / "docs"
+                    / "s3k-trace-recorder-behavior.md").read_text()
+        current = document.split("## Pre-v5 historical evidence", maxsplit=1)[0]
+        self.assertIn('`recorder: native-bizhawk-headless`', current)
+        self.assertIn('`recorder_version: 3.0`', current)
+        self.assertIn('`trace_schema: 5`', current)
+        self.assertIn("one module-plus-direct timing grammar", current)
+        for legacy_axis in ("lua_script_version", "csv_version", "hardware_timing_schema",
+                            "trace_schema: 7", "schema 1", "schema 2"):
+            self.assertNotIn(legacy_axis, current)
+
+    def test_bootstrap_snapshot_javadoc_names_the_semantic_v5_capability(self) -> None:
+        source = (REPOSITORY_ROOT / "src" / "test" / "java" / "com" / "openggf" / "tests"
+                  / "trace" / "AbstractTraceReplayTest.java").read_text()
+        paragraph = source[source.index("Capture a read-only snapshot"):source.index(
+            "private EngineSnapshot captureEngineSnapshot")]
+        self.assertIn("native_prelude_bootstrap", paragraph)
+        self.assertNotIn("lua_script_version", paragraph)
 
     def write_fixture(self, root: Path, header: list[str], rows: list[list[str]],
                       compressed: bool = False, v5: bool = True,
@@ -176,14 +260,28 @@ class CreditsRawHostEvidenceTests(unittest.TestCase):
         payload = ",".join(HEADER_42) + "\n" + ",".join(candidate_row) + "\n"
         with gzip.GzipFile(fixture / "physics.csv.gz", "wb", mtime=0) as output:
             output.write(payload.encode())
+        (fixture / "metadata.json").write_text(json.dumps({
+            "game": "s1", "trace_profile": "complete_run", "trace_frame_count": 1,
+            "recorder": "native-bizhawk-headless", "recorder_version": "3.0",
+            "trace_schema": 5,
+        }) + "\n")
         self.logical_hash = hashlib.sha256(payload.encode()).hexdigest()
         self.report = root / "comparison.json"
-        self.report.write_text(json.dumps({"format": "openggf-trace-v5-candidate-comparison-v1", "files": [{
+        self.report_document = {
+            "format": "openggf-trace-v5-candidate-comparison-v1",
+            "candidate_root": str(self.candidate),
+            "candidate_inventory": build_inventory(self.candidate),
+            "files": [{
             "logical_path": "s1/credits_00_ghz1/physics.csv",
+            "candidate": {
+                "path": str(fixture / "physics.csv.gz"),
+                "logical_sha256": self.logical_hash,
+            },
             "comparison": {"common_field_mismatches": [
                 {"row": 0, "column": "x", "predecessor": "0000", "candidate": "0001"}
             ]},
-        }]}))
+        }]}
+        self.report.write_text(json.dumps(self.report_document))
         self.evidence = root / "evidence.json"
 
     def tearDown(self) -> None:
@@ -210,6 +308,46 @@ class CreditsRawHostEvidenceTests(unittest.TestCase):
         inside.write_text(json.dumps(document))
         with self.assertRaisesRegex(ValueError, "outside candidate root"):
             verify_evidence(self.candidate, self.report, inside)
+
+    def test_verifier_rejects_empty_or_noncanonical_provenance(self) -> None:
+        cases = (
+            ({"ram_address": "", "endianness": "big"}, "RAM address"),
+            ({"ram_address": "ffffd008", "endianness": "big"}, "RAM address"),
+            ({"ram_address": "0xffffd008", "endianness": "big"}, "RAM address"),
+            ({"ram_address": "0xFFFFD008", "endianness": "middle"}, "endianness"),
+            ({"derivation": ""}, "derivation"),
+            ({"derivation": "   "}, "derivation"),
+        )
+        for index, (provenance, message) in enumerate(cases):
+            with self.subTest(provenance=provenance):
+                document = self.document()
+                observation = document["routes"][0]["observations"][0]
+                observation.pop("ram_address", None)
+                observation.pop("endianness", None)
+                observation.update(provenance)
+                path = self.evidence.with_name(f"provenance-{index}.json")
+                path.write_text(json.dumps(document))
+                with self.assertRaisesRegex(ValueError, message):
+                    verify_evidence(self.candidate, self.report, path)
+
+    def test_verifier_rejects_comparison_candidate_identity_inventory_and_file_hash_drift(self) -> None:
+        cases = []
+        wrong_root = json.loads(json.dumps(self.report_document))
+        wrong_root["candidate_root"] = str(self.candidate.parent / "other")
+        cases.append((wrong_root, "candidate root"))
+        wrong_inventory = json.loads(json.dumps(self.report_document))
+        wrong_inventory["candidate_inventory"]["aggregate_sha256"] = "0" * 64
+        cases.append((wrong_inventory, "candidate inventory"))
+        wrong_file_hash = json.loads(json.dumps(self.report_document))
+        wrong_file_hash["files"][0]["candidate"]["logical_sha256"] = "0" * 64
+        cases.append((wrong_file_hash, "file logical hash"))
+        self.evidence.write_text(json.dumps(self.document()))
+        for index, (report, message) in enumerate(cases):
+            with self.subTest(message=message):
+                report_path = self.report.with_name(f"report-{index}.json")
+                report_path.write_text(json.dumps(report))
+                with self.assertRaisesRegex(ValueError, message):
+                    verify_evidence(self.candidate, report_path, self.evidence)
 
     def document(self) -> dict[str, object]:
         return {"format": "openggf-s1-credits-raw-host-evidence-v1", "routes": [{

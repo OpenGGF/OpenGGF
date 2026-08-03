@@ -22,6 +22,9 @@ from tools.traces.validate_trace_v5 import LEGACY_KEYS, Validation
 
 
 REPORT_FORMAT = "openggf-trace-v5-candidate-comparison-v1"
+MAX_AUX_LITERAL_DELTAS = 32
+MAX_AUX_LINES_PER_DELTA = 8
+MAX_AUX_CHARACTERS_PER_LINE = 512
 MODES = ("v5-literal", "credits-20-to-42")
 CREDITS_CANDIDATE_DIRECTORIES = {
     "credits_00_ghz1": "00_ghz1_credits_demo_1",
@@ -48,6 +51,8 @@ CREDITS_COLUMN_MAP = {
 def compare_roots(predecessor_root: Path, candidate_root: Path,
                   mode: str = "v5-literal") -> dict[str, Any]:
     """Return a literal machine-readable comparison; never write either root."""
+    predecessor_root = predecessor_root.resolve()
+    candidate_root = candidate_root.resolve()
     if mode not in MODES:
         raise ValueError(f"unsupported comparison mode {mode}")
     candidate_errors = Validation(candidate_root).run()
@@ -182,6 +187,9 @@ def compare_physics(logical_path: str, predecessor: bytes, candidate: bytes,
 
 def compare_aux(predecessor: bytes, candidate: bytes) -> dict[str, Any]:
     old_events, new_events = event_counts(predecessor), event_counts(candidate)
+    old_lines = predecessor.decode("utf-8").splitlines()
+    new_lines = candidate.decode("utf-8").splitlines()
+    delta_count, deltas = literal_deltas(old_lines, new_lines)
     return {
         "predecessor_event_counts": dict(sorted(old_events.items())),
         "candidate_event_counts": dict(sorted(new_events.items())),
@@ -190,7 +198,56 @@ def compare_aux(predecessor: bytes, candidate: bytes) -> dict[str, Any]:
         "event_count_deltas": {event: new_events[event] - old_events[event]
                                for event in sorted(old_events.keys() | new_events.keys())
                                if new_events[event] != old_events[event]},
+        "literal_delta_count": delta_count,
+        "literal_deltas": deltas,
+        "literal_deltas_truncated": delta_count > len(deltas),
     }
+
+
+def literal_deltas(old_lines: list[str], new_lines: list[str]) -> tuple[int, list[dict[str, Any]]]:
+    count = 0
+    result: list[dict[str, Any]] = []
+    for index in range(max(len(old_lines), len(new_lines))):
+        old = old_lines[index:index + 1]
+        new = new_lines[index:index + 1]
+        if old == new:
+            continue
+        count += 1
+        if len(result) == MAX_AUX_LITERAL_DELTAS:
+            continue
+        tag = "replace" if old and new else "delete" if old else "insert"
+        result.append(literal_delta(tag, index, index + len(old), index, index + len(new), old, new))
+    return count, result
+
+
+def literal_delta(tag: str, old_start: int, old_end: int,
+                  new_start: int, new_end: int,
+                  old_lines: list[str], new_lines: list[str]) -> dict[str, Any]:
+    previews = old_lines[:MAX_AUX_LINES_PER_DELTA], new_lines[:MAX_AUX_LINES_PER_DELTA]
+    truncated = (
+        len(old_lines) > MAX_AUX_LINES_PER_DELTA
+        or len(new_lines) > MAX_AUX_LINES_PER_DELTA
+        or any(len(line) > MAX_AUX_CHARACTERS_PER_LINE for lines in previews for line in lines)
+    )
+    return {
+        "tag": tag,
+        "predecessor_start": old_start,
+        "predecessor_end": old_end,
+        "candidate_start": new_start,
+        "candidate_end": new_end,
+        "predecessor_line_count": len(old_lines),
+        "candidate_line_count": len(new_lines),
+        "predecessor_sha256": lines_sha256(old_lines),
+        "candidate_sha256": lines_sha256(new_lines),
+        "predecessor_lines": [line[:MAX_AUX_CHARACTERS_PER_LINE] for line in previews[0]],
+        "candidate_lines": [line[:MAX_AUX_CHARACTERS_PER_LINE] for line in previews[1]],
+        "lines_truncated": truncated,
+    }
+
+
+def lines_sha256(lines: list[str]) -> str:
+    encoded = json.dumps(lines, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    return sha256(encoded).hexdigest()
 
 
 def event_counts(content: bytes) -> Counter[str]:
