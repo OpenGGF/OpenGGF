@@ -1,8 +1,10 @@
 package com.openggf.game.sonic1.objects;
 
 import com.openggf.game.GameStateManager;
+import com.openggf.audio.GameMusic;
 import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.TouchCategory;
@@ -92,6 +94,26 @@ class TestSonic1GiantRingObjectInstance {
         }
 
         verify(player).applyObjectControlState(ObjectControlState.NATIVE_BIT_7_FULL_CONTROL);
+    }
+
+    @Test
+    void flashCompletionLeavesGotThroughActAndEndCardCreationToSignpost() {
+        Sonic1RingFlashObjectInstance flash = new Sonic1RingFlashObjectInstance(
+                null, 0x1FAC, 0x0350, false);
+        ObjectServices services = mock(ObjectServices.class);
+        GameStateManager gameState = mock(GameStateManager.class);
+        ObjectManager objectManager = mock(ObjectManager.class);
+        when(services.gameState()).thenReturn(gameState);
+        when(services.objectManager()).thenReturn(objectManager);
+        when(objectManager.getActiveObjects()).thenReturn(List.of());
+        flash.setServices(services);
+
+        for (int frame = 0; frame < 17; frame++) {
+            flash.update(frame, mock(AbstractPlayableSprite.class));
+        }
+
+        verify(objectManager, never()).addDynamicObject(any());
+        verify(services, never()).playMusic(GameMusic.ACT_CLEAR);
     }
 
     @Test

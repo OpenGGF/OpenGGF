@@ -1608,9 +1608,14 @@ public final class Sonic1SpecialStageManager {
         SpriteAnimationScript activeScript = useRoll2 ? sonicRoll2Script : rollScript;
 
         if (sonicAnimId != targetAnimId) {
+            // SAnim_RollJump selects SonAni_Roll/SonAni_Roll2 without changing
+            // obAniFrame or obTimeFrame. Both are special six-position
+            // animations specifically shaped so the script can change at the
+            // $600 speed threshold without restarting the roll cycle
+            // (01 Sonic.asm SAnim_RollJump; _anim/Sonic.asm special-animation
+            // contract). Restarting here duplicated fr_Roll1 at the threshold
+            // and delayed every subsequent S1 DPLC transfer by one frame.
             sonicAnimId = targetAnimId;
-            sonicAnimFrameIndex = 0;
-            sonicAnimFrameTimer = 0;
         }
 
         if (sonicAnimFrameTimer > 0) {

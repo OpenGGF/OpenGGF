@@ -320,6 +320,8 @@ abstract class AbstractRunChainTest {
                 new ArrayList<>();
         private final RunLevelLoadTracker levelLoads;
         private long admittedStepOrdinal;
+        private RunPlaybackObservation productionOwnerObservation;
+        private int productionOwnerSegmentIndex = -1;
 
         private HeadlessRunCoordinatorAdapter(
                 TraceRunManifest run, Bk2Movie movie) {
@@ -347,9 +349,13 @@ abstract class AbstractRunChainTest {
                         "cannot close represented segment " + source
                                 + " before its comparator publication completed");
             }
+            RunPlaybackObservation current = observation(mode, true, 0, false);
+            RunPlaybackObservation production = productionOwnerSegmentIndex == source
+                    && productionOwnerObservation != null
+                    ? withProductionOwner(current, productionOwnerObservation)
+                    : current;
             List<TraceRunPlaybackCoordinator.Action> emitted =
-                    coordinator.afterProduction(
-                            observation(mode, true, 0, false));
+                    coordinator.afterProduction(production);
             actions.addAll(emitted);
             if (emitted.isEmpty()
                     || !(emitted.getFirst()
@@ -360,10 +366,21 @@ abstract class AbstractRunChainTest {
             }
         }
 
+        private void beforeProduction(GameMode mode) {
+            productionOwnerSegmentIndex = coordinator.currentSegmentIndex();
+            productionOwnerObservation = observation(mode, false, 0, false);
+        }
+
         private void afterStep(GameMode mode) {
             admittedStepOrdinal++;
+            RunPlaybackObservation current = observation(mode, false, 0, false);
+            RunPlaybackObservation step = productionOwnerSegmentIndex
+                    == coordinator.currentSegmentIndex()
+                    && productionOwnerObservation != null
+                    ? withProductionOwner(current, productionOwnerObservation)
+                    : current;
             List<TraceRunPlaybackCoordinator.Action> emitted =
-                    coordinator.afterStep(observation(mode, false, 0, false));
+                    coordinator.afterStep(step);
             actions.addAll(emitted);
             if (!emitted.isEmpty()) {
                 TraceRunPlaybackCoordinator.Action action = emitted.getFirst();
@@ -373,6 +390,21 @@ abstract class AbstractRunChainTest {
                 throw new AssertionError(
                         "unexpected coordinator action after a headless step: " + action);
             }
+        }
+
+        private static RunPlaybackObservation withProductionOwner(
+                RunPlaybackObservation current,
+                RunPlaybackObservation owner) {
+            return new RunPlaybackObservation(
+                    owner.mode(), current.sharedBk2Cursor(),
+                    current.admittedStepOrdinal(), owner.level(),
+                    current.initialTitleCardPending(), owner.bonus(),
+                    owner.specialStageIndex(), current.productionOpen(),
+                    current.currentSegmentExhausted(),
+                    current.destinationRowsConsumed(),
+                    current.lagOnlySameLevelContinuation(),
+                    current.timingScheduleGeneration(),
+                    current.dynamicArtGeneration());
         }
 
         private DestinationAdmissionReceipt admitInterior(
@@ -685,10 +717,8 @@ abstract class AbstractRunChainTest {
         // compared row as the comparator/input cursor. This is initial adapter
         // alignment outside the coordinator transcript; later segments must earn
         // their publication generation through ordinary close/gap/open actions.
-        for (int skippedRow = 0;
-                skippedRow < initialComparisonCursor; skippedRow++) {
-            gameplayMode.dynamicArtLifecycle().serviceProductionVBlank();
-        }
+        gameplayMode.dynamicArtLifecycle()
+                .advanceComparisonCursor(initialComparisonCursor);
         DynamicArtGapJournalProbe dynamicArtGapJournal =
                 new DynamicArtGapJournalProbe(
                         gameplayMode.dynamicArtLifecycle());
@@ -775,6 +805,8 @@ abstract class AbstractRunChainTest {
                 activeComparator = attachPreparedLevelSegment(
                         playback, probe, movie, next, fixture, rowsConsumed);
                 dynamicArtSegments.beginSegment();
+                gameplayMode.dynamicArtLifecycle()
+                        .advanceComparisonCursor(rowsConsumed);
                 dynamicArtGapJournal.nextSegmentArmed(
                         next.segment().dir());
                 i++;
@@ -813,6 +845,7 @@ abstract class AbstractRunChainTest {
                 TraceRunReplayWalker.DynamicArtSegmentComparison
                         interiorDynamicArt = null;
                 boolean[] dynamicArtGapOpened = {false};
+                boolean[] interiorCoordinatorSourceClosed = {false};
                 if (uncomparedInterior) {
                     TraceRunSpecialStageRows specialRows;
                     try {
@@ -866,6 +899,9 @@ abstract class AbstractRunChainTest {
                                 dynamicArtGapJournal.gapOpened(
                                         seg.segment().dir());
                                 dynamicArtGapOpened[0] = true;
+                                runCoordinator.closeCurrent(
+                                        loop.getCurrentGameMode(), true);
+                                interiorCoordinatorSourceClosed[0] = true;
                             }
                         } else {
                             fixture.enterHardwareTimingGap();
@@ -950,17 +986,20 @@ abstract class AbstractRunChainTest {
                     dynamicArtGapJournal.sourceClosed(seg.segment().dir());
                     dynamicArtSegments.enterGap();
                 }
-                runCoordinator.closeCurrent(
-                        loop.getCurrentGameMode(), uncomparedInterior
-                                ? dynamicArtGapOpened[0]
-                                : activeComparator != null
-                                        && activeComparator.isComplete());
+                if (!interiorCoordinatorSourceClosed[0]) {
+                    runCoordinator.closeCurrent(
+                            loop.getCurrentGameMode(), uncomparedInterior
+                                    ? dynamicArtGapOpened[0]
+                                    : activeComparator != null
+                                            && activeComparator.isComplete());
+                }
                 assertTrue(obs.observed(),
                         "Interior exit boundary (stage_exit) was never observed within the "
                                 + "boundary window for " + runDir);
                 assertReturnBoundary(plans, i, runDir);
                 dynamicArtGapJournal.gapOpened(seg.segment().dir());
                 // Attach the return comparator, keying on interior kind.
+                int returnRowsConsumed;
                 if (uncomparedInterior) {
                     if (GameServices.module().getTracePlaybackProfile()
                             .alignUncomparedInteriorReturnVblank()) {
@@ -983,6 +1022,7 @@ abstract class AbstractRunChainTest {
                             runCoordinator.latestLoadReceipt());
                     activeComparator = attachReturnedLevelSegment(
                             probe, plans.get(i + 1), fixture, framesConsumed);
+                    returnRowsConsumed = framesConsumed;
                 } else {
                     // OPTION B (bonus interior): the engine's bonus-exit sequence is
                     // shorter than the recorded post-catch BONUS_STAGE tail, and ~80 of
@@ -1000,8 +1040,11 @@ abstract class AbstractRunChainTest {
                             runCoordinator.latestLoadReceipt());
                     activeComparator = attachReturnedLevelSegment(
                             probe, plans.get(i + 1), fixture, 1);
+                    returnRowsConsumed = 1;
                 }
                 dynamicArtSegments.beginSegment();
+                gameplayMode.dynamicArtLifecycle()
+                        .advanceComparisonCursor(returnRowsConsumed);
                 dynamicArtGapJournal.nextSegmentArmed(
                         plans.get(i + 1).segment().dir());
                 i++;
@@ -1052,6 +1095,8 @@ abstract class AbstractRunChainTest {
                 activeComparator = attachPreparedLevelSegment(
                         playback, probe, movie, next, fixture, rowsConsumed);
                 dynamicArtSegments.beginSegment();
+                gameplayMode.dynamicArtLifecycle()
+                        .advanceComparisonCursor(rowsConsumed);
                 dynamicArtGapJournal.nextSegmentArmed(next.segment().dir());
                 i++;
             } else {
@@ -1099,6 +1144,8 @@ abstract class AbstractRunChainTest {
                 activeComparator = attachPreparedInterior(
                         probe, interior, fixture, rowsConsumed);
                 dynamicArtSegments.beginSegment();
+                gameplayMode.dynamicArtLifecycle()
+                        .advanceComparisonCursor(rowsConsumed);
                 dynamicArtGapJournal.nextSegmentArmed(
                         interior.segment().dir());
                 i++;
@@ -2077,6 +2124,10 @@ abstract class AbstractRunChainTest {
     void stepEngineFrame(GameLoop loop) {
         DynamicArtDiagnosticsSnapshot before =
                 GameServices.captureDynamicArtDiagnostics();
+        HeadlessRunCoordinatorAdapter coordinator = activeRunCoordinator;
+        if (coordinator != null) {
+            coordinator.beforeProduction(loop.getCurrentGameMode());
+        }
         var fade = GameServices.fadeOrNull();
         if (fade != null) {
             fade.update();
@@ -2096,7 +2147,6 @@ abstract class AbstractRunChainTest {
                         failure);
             }
         }
-        HeadlessRunCoordinatorAdapter coordinator = activeRunCoordinator;
         if (coordinator != null) {
             coordinator.afterStep(loop.getCurrentGameMode());
         }

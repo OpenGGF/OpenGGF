@@ -1,6 +1,7 @@
 package com.openggf.game.sonic1.specialstage;
 
 import com.openggf.control.InputActionMasks;
+import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 import com.openggf.graphics.WaterShaderProgram;
 import com.openggf.physics.TrigLookupTable;
 import org.junit.jupiter.api.AfterEach;
@@ -130,6 +131,38 @@ public class Sonic1SpecialStageManagerTest {
         }
 
         assertTrue(seenFrames.size() > 1, "Sonic special-stage roll animation should advance through multiple frames");
+    }
+
+    @Test
+    public void testRollSpeedScriptSwitchPreservesSpecialAnimationPosition()
+            throws Exception {
+        manager.initialize(0);
+        Field inertia = field("sonicInertia");
+        Field animation = field("sonicAnimId");
+        Field frameIndex = field("sonicAnimFrameIndex");
+        Field frameTimer = field("sonicAnimFrameTimer");
+        Field spriteFrame = field("sonicSpriteFrame");
+        Method updateAnimation = Sonic1SpecialStageManager.class
+                .getDeclaredMethod("updateSonicAnimation");
+        updateAnimation.setAccessible(true);
+
+        inertia.setInt(manager, 0x600);
+        animation.setInt(manager, Sonic1AnimationIds.ROLL.id());
+        frameIndex.setInt(manager, 1);
+        frameTimer.setInt(manager, 0);
+
+        updateAnimation.invoke(manager);
+
+        assertEquals(Sonic1AnimationIds.ROLL2.id(), animation.getInt(manager));
+        assertEquals(0x2F, spriteFrame.getInt(manager),
+                "Roll2 must continue at the shared second special-animation position");
+        assertEquals(2, frameIndex.getInt(manager));
+    }
+
+    private static Field field(String name) throws NoSuchFieldException {
+        Field field = Sonic1SpecialStageManager.class.getDeclaredField(name);
+        field.setAccessible(true);
+        return field;
     }
 
     @Test
@@ -359,5 +392,4 @@ public class Sonic1SpecialStageManagerTest {
                 "The pressed edge should be cleared after being consumed by a single update()");
     }
 }
-
 

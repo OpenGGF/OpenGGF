@@ -3545,8 +3545,8 @@ public class ObjectManager {
             if (deferredDynamicExecThisFrame.contains(inst)) {
                 continue;
             }
-            if (inst instanceof AbstractObjectInstance aoi
-                    && isManagedDynamicSlot(executionSlotIndex(aoi))) {
+            if (inst instanceof AbstractObjectInstance aoi && (isManagedDynamicSlot(executionSlotIndex(aoi))
+                    || FixedRuntimeObjectInstance.ownsFixedPass(aoi, slotLayout))) {
                 continue;
             }
             dynamicFallbackScratch.add(inst);

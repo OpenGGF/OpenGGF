@@ -3,6 +3,16 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S1 visual whole-run replay now carries the ROM-visible object
+  VBlank epoch across compressed act/title-card and special-stage transitions
+  using the same manifest/BK2 timing budgets as headless chains. Prepared
+  single-level replay establishes the same pre-row clock as ordinary headless
+  bootstrap, dynamic-art comparison skips already-produced destination rows
+  without advancing the movie clock, and S1 special-stage roll-script changes
+  preserve their animation position. End-act results now occupy the ROM's
+  fixed `v_endcard` SST slot and remain owned by the signpost/capsule cue-16
+  producer; giant-ring flash hands completion back to the signpost instead of
+  creating a competing card or replaying clear music.
 - Fix/Test: visual whole-run replay now holds a newly loaded level in its
   native initial-title-card gap before transferring comparator, input,
   PLC/DPLC/Kosinski timing, or dynamic-art ownership. Inter-act S1 runs retain
