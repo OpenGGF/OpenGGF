@@ -62,6 +62,7 @@
     <Compile Include="src/Bk2/Bk2Reader.cs" />
     <Compile Include="src/Core/GpgxHost.cs" />
     <Compile Include="src/Core/IGpgxHost.cs" />
+    <Compile Include="src/Core/IMainRamWriter.cs" />
     <Compile Include="src/Core/MutableController.cs" />
     <Compile Include="src/Core/NoFirmwareProvider.cs" />
     <Compile Include="src/Core/RomAsset.cs" />
@@ -74,6 +75,10 @@
     <Compile Include="src/Recording/StagedRunSegmentSink.cs" />
     <Compile Include="src/Recording/S1AuxEventEngine.cs" />
     <Compile Include="src/Recording/S1CompleteRunMetadataWriter.cs" />
+    <Compile Include="src/Recording/S1CreditsDemoCatalog.cs" />
+    <Compile Include="src/Recording/S1CreditsDemoCollectionSink.cs" />
+    <Compile Include="src/Recording/S1CreditsDemoCaptureRunner.cs" />
+    <Compile Include="src/Recording/S1CreditsDemoMetadataWriter.cs" />
     <Compile Include="src/Recording/S1InputMask.cs" />
     <Compile Include="src/Recording/S1Ram.cs" />
     <Compile Include="src/Recording/S1RunCaptureRunner.cs" />

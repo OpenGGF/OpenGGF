@@ -25,7 +25,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
     /// (never auto-stamped) so aux expectations stay byte-exact. Shared
     /// by the S1 run/complete-run runner tests and the CLI tests.
     /// </summary>
-    internal sealed class FakeS1Host : IGpgxHost, ICpuRegisterReader
+    internal sealed class FakeS1Host : IGpgxHost, ICpuRegisterReader, IMainRamWriter
     {
         private readonly Action<FakeS1Host, int> onAdvance;
         private readonly Dictionary<uint, Action> executeCallbacks =
@@ -98,6 +98,15 @@ namespace OpenGGF.BizHawk.Headless.Tests
         public byte ReadMainRamByte(int offset)
         {
             return Ram[offset];
+        }
+
+        public void WriteMainRamByte(int offset, byte value)
+        {
+            if (offset < 0 || offset >= Ram.Length)
+            {
+                throw new ArgumentOutOfRangeException("offset");
+            }
+            Ram[offset] = value;
         }
 
         public uint ReadCpuRegister(string name)

@@ -53,7 +53,8 @@ namespace BizHawk.Headless.Gpgx
             int effectiveMovieLength,
             bool loadQueueState,
             bool compress,
-            long compressThresholdBytes)
+            long compressThresholdBytes,
+            int? creditsTarget = null)
         {
             Mode = mode;
             RomPath = romPath;
@@ -68,6 +69,7 @@ namespace BizHawk.Headless.Gpgx
             LoadQueueState = loadQueueState;
             Compress = compress;
             CompressThresholdBytes = compressThresholdBytes;
+            CreditsTarget = creditsTarget;
         }
 
         public CaptureMode Mode { get; private set; }
@@ -138,6 +140,8 @@ namespace BizHawk.Headless.Gpgx
         /// </summary>
         public bool Compress { get; private set; }
         public long CompressThresholdBytes { get; private set; }
+        /// <summary>Null selects all eight ROM ending demos.</summary>
+        public int? CreditsTarget { get; private set; }
 
         /// <summary>
         /// The compressor for this invocation, or null under --no-compress.
@@ -203,17 +207,19 @@ namespace BizHawk.Headless.Gpgx
             }
 
             string romPath = Required(values, "--rom");
-            string moviePath = Required(values, "--movie");
             string outputDirectory = Required(values, "--output");
             CaptureMode mode = ParseMode(values);
             if (mode == CaptureMode.Trace)
             {
+                string traceMoviePath;
+                values.TryGetValue("--movie", out traceMoviePath);
                 return ParseTrace(
                     values,
                     romPath,
-                    moviePath,
+                    traceMoviePath,
                     outputDirectory);
             }
+            string moviePath = Required(values, "--movie");
             if (mode == CaptureMode.LoadTime)
             {
                 return ParseLoadTime(
@@ -332,6 +338,43 @@ namespace BizHawk.Headless.Gpgx
 
             string traceProfile;
             values.TryGetValue("--trace-profile", out traceProfile);
+            bool credits = traceProfile == "credits_demo";
+            int? creditsTarget = null;
+            if (values.ContainsKey("--credits-target"))
+            {
+                if (!credits)
+                {
+                    throw new ArgumentException(
+                        "Argument --credits-target requires --trace-profile credits_demo.");
+                }
+                string value = values["--credits-target"];
+                if (value != "all")
+                {
+                    int parsed;
+                    if (!int.TryParse(value, NumberStyles.Integer,
+                        CultureInfo.InvariantCulture, out parsed)
+                        || parsed < 0 || parsed > 7)
+                    {
+                        throw new ArgumentOutOfRangeException(
+                            "--credits-target", "Argument --credits-target must be all or 0 through 7.");
+                    }
+                    creditsTarget = parsed;
+                }
+            }
+            else if (credits)
+            {
+                throw new ArgumentException(
+                    "Argument --credits-target is required for --trace-profile credits_demo.");
+            }
+            if (credits && moviePath != null)
+            {
+                throw new ArgumentException(
+                    "Argument --movie is forbidden for ROM-owned credits_demo capture.");
+            }
+            if (!credits && moviePath == null)
+            {
+                throw new ArgumentException("Required argument is missing: --movie.");
+            }
             string runId;
             values.TryGetValue("--run-id", out runId);
             int? gameplaySegment = null;
@@ -352,6 +395,13 @@ namespace BizHawk.Headless.Gpgx
                     "Argument --run-id cannot be combined with"
                     + " --trace-profile: run mode always records"
                     + " gameplay_unlock level segments.");
+            }
+            if (credits && (runId != null || gameplaySegment.HasValue
+                || values.ContainsKey("--effective-movie-length")
+                || values.ContainsKey("--load-queue-state")))
+            {
+                throw new ArgumentException(
+                    "credits_demo cannot be combined with run, segment, movie-length or load-queue arguments.");
             }
             if (runId != null && gameplaySegment.HasValue)
             {
@@ -419,6 +469,25 @@ namespace BizHawk.Headless.Gpgx
 
             string fullOutputDirectory =
                 Path.GetFullPath(outputDirectory);
+            if (credits)
+            {
+                if (values.ContainsKey("--no-compress")
+                    || values.ContainsKey("--compress-threshold"))
+                {
+                    throw new ArgumentException(
+                        "credits_demo always uses canonical forced compression.");
+                }
+                if (LinuxPathEntry.Exists(fullOutputDirectory))
+                {
+                    throw new IOException(
+                        "Credits candidate output root must not already exist: "
+                        + fullOutputDirectory);
+                }
+                return new CommandLineOptions(
+                    CaptureMode.Trace, Path.GetFullPath(romPath), null,
+                    fullOutputDirectory, 0, 0, traceProfile, null, null, 0,
+                    false, true, 0, creditsTarget);
+            }
             if (runId != null)
             {
                 // Run mode writes run_manifest.json at the output root and
@@ -540,6 +609,7 @@ namespace BizHawk.Headless.Gpgx
                 || name == "--bk2-frame-offset"
                 || name == "--max-frames"
                 || name == "--trace-profile"
+                || name == "--credits-target"
                 || name == "--gameplay-segment"
                 || name == "--run-id"
                 || name == "--effective-movie-length"
@@ -676,13 +746,16 @@ namespace BizHawk.Headless.Gpgx
                 {
                     romSha1 = RomIdentity.ValidateSonic1Rev01(romBytes);
                 }
-                if (!File.Exists(options.MoviePath))
+                Bk2Movie movie = null;
+                if (options.MoviePath != null)
                 {
-                    throw new FileNotFoundException(
-                        "BK2 movie does not exist.",
-                        options.MoviePath);
+                    if (!File.Exists(options.MoviePath))
+                    {
+                        throw new FileNotFoundException(
+                            "BK2 movie does not exist.", options.MoviePath);
+                    }
+                    movie = Bk2Reader.Read(options.MoviePath);
                 }
-                Bk2Movie movie = Bk2Reader.Read(options.MoviePath);
                 if (options.Mode != CaptureMode.Smoke)
                 {
                     if (options.Mode == CaptureMode.LoadTime)
@@ -705,6 +778,12 @@ namespace BizHawk.Headless.Gpgx
                     }
                     if (traceGame == "s1")
                     {
+                        if (options.TraceProfile == "credits_demo")
+                        {
+                            return RunS1CreditsDemo(
+                                options, installation, romSha1, romBytes,
+                                stdout, stderr, openHost);
+                        }
                         if (options.GameplaySegment.HasValue)
                         {
                             throw new ArgumentException(
@@ -973,6 +1052,89 @@ namespace BizHawk.Headless.Gpgx
                     + "Aux state JSONL: " + auxStatePath + "\n"
                     + "Metadata JSON: " + metadataPath + "\n",
                 new NoReplacePublisher(options.CreateCompressor()));
+        }
+
+        private static int RunS1CreditsDemo(
+            CommandLineOptions options,
+            BizHawkInstallation installation,
+            string romSha1,
+            byte[] romBytes,
+            TextWriter stdout,
+            TextWriter stderr,
+            Func<string, GPGX.GPGXSyncSettings, IGpgxHost> openHost)
+        {
+            NoReplacePublisher.IncrementalStagingSession session = null;
+            NoReplacePublisher.StagedPublicationSet staged = null;
+            try
+            {
+                if (!IsCreditsCandidatePathSafe(options.OutputDirectory))
+                {
+                    throw new ArgumentException(
+                        "credits_demo candidate output must not be a canonical fixture path.");
+                }
+                var publisher = new NoReplacePublisher(
+                    new TracePayloadCompressor(0));
+                session = publisher.OpenSession(options.OutputDirectory);
+                S1CreditsDemoCaptureResult result;
+                using (new NativeStandardOutputSilencer())
+                using (IGpgxHost host = openHost(
+                    options.RomPath, GpgxHost.CreateGhz1SyncSettings()))
+                using (var sink = new S1CreditsDemoCollectionSink(session))
+                {
+                    var writer = host as IMainRamWriter;
+                    result = S1CreditsDemoCaptureRunner.Capture(
+                        host, writer, options.CreditsTarget,
+                        DateTime.Now.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                        sink, romBytes);
+                }
+                staged = session.Complete();
+                session = null;
+                staged.Publish();
+                staged = null;
+                stdout.Write("BizHawk: " + installation.ManagedVersion + "\n"
+                    + "ROM SHA-1: " + romSha1 + "\n"
+                    + "Credits demos: " + result.CapturedIndices.Count + "\n"
+                    + "Candidate root: " + options.OutputDirectory + "\n");
+                stdout.Flush();
+                return 0;
+            }
+            catch (Exception exception)
+            {
+                if (staged != null) staged.Dispose();
+                ReportFailure(stderr, exception);
+                return 1;
+            }
+            finally
+            {
+                if (session != null) session.Dispose();
+            }
+        }
+
+        internal static bool IsCreditsCandidatePathSafe(string outputDirectory)
+        {
+            if (string.IsNullOrEmpty(outputDirectory)) return false;
+            string root = Directory.GetCurrentDirectory();
+            while (!Directory.Exists(Path.Combine(
+                root, "src", "test", "resources", "traces")))
+            {
+                string parent = Path.GetDirectoryName(root);
+                if (string.IsNullOrEmpty(parent) || parent == root)
+                {
+                    return false;
+                }
+                root = parent;
+            }
+            string canonical = LinuxPathEntry.ResolveExistingAncestor(
+                Path.Combine(root, "src", "test", "resources", "traces"));
+            string candidateAncestor = LinuxPathEntry.ResolveExistingAncestor(
+                outputDirectory);
+            string canonicalPrefix = canonical.TrimEnd(Path.DirectorySeparatorChar)
+                + Path.DirectorySeparatorChar;
+            return !candidateAncestor.Equals(
+                    canonical.TrimEnd(Path.DirectorySeparatorChar),
+                    StringComparison.Ordinal)
+                && !candidateAncestor.StartsWith(
+                    canonicalPrefix, StringComparison.Ordinal);
         }
 
         /// <summary>

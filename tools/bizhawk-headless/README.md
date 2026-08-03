@@ -145,6 +145,29 @@ Output is published all-or-nothing: files are staged and only linked into
 `--output` once the whole capture succeeds, so a failed run never leaves a
 half-written trace behind.
 
+### S1 ending credits demos
+
+The eight Sonic 1 ending demos are captured without a BK2 movie. The harness
+presses Start only to leave the title screen, redirects that level entry into
+the ROM's credits flow by writing `f_demo = 0`, `v_creditsnum = 0`, and
+`v_gamemode = GM_Credits`, then clears external input permanently. Each trace
+row reads the ROM-held controller byte; directions are preserved, A/B/C become
+the engine jump bit, and Start is ignored. The ROM—not the harness—selects
+demo identities and any LZ restore/water state.
+
+```bash
+BIZHAWK_HOME=/abs/path/to/docs/BizHawk-2.11-linux-x64 \
+./run.sh --mode trace --rom "$S1_ROM_PATH" \
+  --trace-profile credits_demo --credits-target all \
+  --output /scratch/credits-v5-candidate
+```
+
+`--credits-target` is `all` or `0` through `7`; a single target is diagnostic
+only. `--movie`, run/segment arguments, and compression overrides are rejected
+for this profile. The candidate root must not exist and must never be a
+canonical fixture path. All selected directories are staged as one no-replace,
+forced-compression transaction; only the publication workflow may install them.
+
 S1/S2 player-art audit is mandatory. Standalone captures arm with an empty
 submitted ledger. S1 may carry only an unpublished staging preparation; it
 receives no transfer id or manifest descriptor until a verified VBlank probe

@@ -50,6 +50,8 @@
     <Compile Include="tests/S1AuxEventEngineTests.cs" />
     <Compile Include="tests/FakeS1Host.cs" />
     <Compile Include="tests/S1CompleteRunDifferentialTests.cs" />
+    <Compile Include="tests/S1CreditsDemoCaptureRunnerTests.cs" />
+    <Compile Include="tests/S1CreditsDemoDifferentialTests.cs" />
     <Compile Include="tests/S1CompleteRunMetadataWriterTests.cs" />
     <Compile Include="tests/S1RunCaptureRunnerTests.cs" />
     <Compile Include="tests/S1RunCaptureRunnerStageFreeTests.cs" />

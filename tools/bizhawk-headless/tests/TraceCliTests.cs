@@ -5,6 +5,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Text;
+using System.Runtime.InteropServices;
 using BizHawk.Headless.Gpgx;
 
 namespace OpenGGF.BizHawk.Headless.Tests
@@ -29,6 +30,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "TraceCli trace mode rejects smoke-only arguments",
                 TraceModeRejectsSmokeOnlyArguments));
+            tests.Add(new TestMain.TestCase(
+                "TraceCli accepts movie-free S1 credits selectors and rejects incompatible input",
+                CreditsDemoSelectorsAreStrict));
+            tests.Add(new TestMain.TestCase(
+                "TraceCli credits candidates cannot resolve into canonical fixtures",
+                CreditsCandidatePathIsCanonicalSafe));
             tests.Add(new TestMain.TestCase(
                 "TraceCli trace mode refuses each existing final output",
                 TraceModeRefusesEachExistingFinalOutput));
@@ -129,6 +136,69 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 game: "s3k",
                 serial: true));
         }
+
+        private static void CreditsDemoSelectorsAreStrict()
+        {
+            string root = TestScratch.CreateRootPath("credits-cli");
+            CommandLineOptions options = CommandLineOptions.Parse(new[]
+            {
+                "--mode", "trace", "--rom", "s1.gen", "--output", root,
+                "--trace-profile", "credits_demo", "--credits-target", "7"
+            });
+            AssertEx.Equal(null, options.MoviePath);
+            AssertEx.Equal(7, options.CreditsTarget.Value);
+            AssertEx.Equal(0L, options.CompressThresholdBytes);
+            AssertEx.Throws<ArgumentException>(
+                () => CommandLineOptions.Parse(new[]
+                {
+                    "--mode", "trace", "--rom", "s1.gen", "--movie", "x.bk2",
+                    "--output", root + "-movie", "--trace-profile", "credits_demo",
+                    "--credits-target", "all"
+                }), "--movie is forbidden");
+            AssertEx.Throws<ArgumentOutOfRangeException>(
+                () => CommandLineOptions.Parse(new[]
+                {
+                    "--mode", "trace", "--rom", "s1.gen", "--output", root + "-bad",
+                    "--trace-profile", "credits_demo", "--credits-target", "8"
+                }), "all or 0 through 7");
+            AssertEx.Throws<ArgumentException>(
+                () => CommandLineOptions.Parse(new[]
+                {
+                    "--mode", "trace", "--rom", "s1.gen", "--movie", "x.bk2",
+                    "--output", root + "-other", "--credits-target", "0"
+                }), "requires --trace-profile credits_demo");
+        }
+
+        private static void CreditsCandidatePathIsCanonicalSafe()
+        {
+            string canonical = Path.Combine(EndToEndTests.RepositoryRoot,
+                "src", "test", "resources", "traces");
+            AssertEx.Equal(false, Program.IsCreditsCandidatePathSafe(canonical));
+            AssertEx.Equal(false, Program.IsCreditsCandidatePathSafe(
+                Path.Combine(canonical, "s1", "..", "s1", "candidate")));
+            string scratch = TestScratch.CreateRootPath("credits-path");
+            Directory.CreateDirectory(scratch);
+            try
+            {
+                string alias = Path.Combine(scratch, "canonical-alias");
+                if (CreateSymlink(canonical, alias) != 0)
+                {
+                    throw new InvalidOperationException("Unable to create test symlink.");
+                }
+                AssertEx.Equal(false, Program.IsCreditsCandidatePathSafe(
+                    Path.Combine(alias, "candidate")));
+                AssertEx.Equal(true, Program.IsCreditsCandidatePathSafe(
+                    Path.Combine(scratch, "candidate")));
+                File.Delete(alias);
+            }
+            finally
+            {
+                if (Directory.Exists(scratch)) Directory.Delete(scratch, true);
+            }
+        }
+
+        [DllImport("libc", EntryPoint = "symlink", SetLastError = true)]
+        private static extern int CreateSymlink(string target, string linkPath);
 
         /// <summary>
         /// S3K standard trace (auto-detected from the locked-on ROM's
