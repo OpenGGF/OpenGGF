@@ -105,8 +105,10 @@ from waiting on or consuming the trace's hardware-timing schedule.
 
 ### 2. Clean context handoff
 
-`GameLoop` owns a narrow replay-context reopen operation because it caches the
-gameplay managers used by stepping and rendering. The operation:
+`TraceSessionLauncher` delegates lifecycle replacement to
+`VisualTraceReplayContextHandoff`. Because `GameLoop` caches the gameplay
+managers used by stepping and rendering, the launcher passes only callbacks
+that reset module-scoped providers and bind the new mode. The operation:
 
 1. resets the completed presentation title-card provider;
 2. resets every retained module-owned rewind adapter to its missing-snapshot
@@ -114,7 +116,8 @@ gameplay managers used by stepping and rendering. The operation:
 3. reopens the current world session with the requested
    `HardwareReadinessAdmissionPolicy`;
 4. attaches production gameplay managers through `GameplaySessionFactory`;
-5. rebinds `GameLoop` and graphics-managed references to the new context; and
+5. rebinds `GameLoop` and graphics-managed references to the new context
+   without mutating the legacy `GameModuleRegistry`; and
 6. clears the loop's cached module-scoped title-card provider so the replay's
    omitted-presentation tail starts from a reset provider.
 

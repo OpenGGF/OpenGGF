@@ -152,8 +152,7 @@ final class LevelIterationAdmissionController {
     static boolean shouldVisualTraceOwnEscape(
             GameMode mode, TraceSessionLauncher session, boolean escapePressed) {
         return session != null && escapePressed
-                && (mode == GameMode.LEVEL
-                        || session.isRunSession()
+                && (mode == GameMode.LEVEL || session.isRunSession()
                         || session.isPresentingTitleCard());
     }
 

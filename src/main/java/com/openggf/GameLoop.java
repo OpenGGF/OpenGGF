@@ -57,7 +57,6 @@ import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.GameplaySessionFactory;
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.integration.presence.PresenceFormatter;
 import com.openggf.integration.presence.PresenceManager;
 import com.openggf.integration.presence.RuntimePresenceSnapshotProvider;
@@ -3234,35 +3233,6 @@ public class GameLoop {
         } catch (IOException e) {
             throw new RuntimeException("Failed to restart from recording launch context", e);
         }
-    }
-
-    /**
-     * Replaces a visual trace's disposable title-card context with the clean
-     * gameplay context that will own deterministic replay.
-     */
-    GameplayModeContext reopenGameplayForTraceReplay(
-            HardwareReadinessAdmissionPolicy admissionPolicy) {
-        Objects.requireNonNull(admissionPolicy, "admissionPolicy");
-        GameModule module = SessionManager.requireCurrentGameModule();
-
-        TitleCardProvider presentationTitleCard = getTitleCardProviderLazy();
-        if (presentationTitleCard != null) {
-            presentationTitleCard.reset();
-        }
-        for (var adapter : module.rewindAdapters()) {
-            adapter.resetForMissingSnapshot();
-        }
-
-        resetModuleScopedProviders();
-        GameplayModeContext replay =
-                SessionManager.reopenGameplaySession(admissionPolicy);
-        GameplaySessionFactory.attachManagers(replay, engineServices);
-        replay.getGameStateManager().configureSpecialStageProgress(
-                module.getSpecialStageCycleCount(),
-                module.getChaosEmeraldCount());
-        GameModuleRegistry.setCurrent(module);
-        setGameplayMode(replay);
-        return replay;
     }
 
     private FadeManager resolveFadeManager() {

@@ -944,8 +944,12 @@ public class TestGameLoop {
         assertEquals(HardwareReadinessAdmissionPolicy.LIVE,
                 presentation.hardwareTiming().admissionPolicy());
 
-        GameplayModeContext replay = loop.reopenGameplayForTraceReplay(
-                HardwareReadinessAdmissionPolicy.RECORDED);
+        GameplayModeContext replay =
+                com.openggf.game.session.VisualTraceReplayContextHandoff.reopen(
+                        HardwareReadinessAdmissionPolicy.RECORDED,
+                        loop.getTitleCardProvider(),
+                        loop::resetModuleScopedProviders,
+                        loop::setGameplayMode);
 
         assertNotSame(presentation, replay);
         assertFalse(presentation.isGameplayRuntimeReady());

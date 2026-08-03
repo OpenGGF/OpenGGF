@@ -53,6 +53,7 @@ Files:
 - Modify `src/test/java/com/openggf/TestGameLoop.java` or add a focused
   `src/test/java/com/openggf/TestGameLoopTraceReplayContextHandoff.java`
 - Modify `src/main/java/com/openggf/GameLoop.java`
+- Add `src/main/java/com/openggf/game/session/VisualTraceReplayContextHandoff.java`
 
 Steps:
 
@@ -71,12 +72,15 @@ Steps:
    - no presentation dynamic-art state survives.
    Assert separately that the disposable presentation context uses `LIVE`
    admission and the replacement uses the requested `RECORDED` policy.
-3. Implement the narrow package-owned `GameLoop` handoff using
+3. Keep `GameLoop` free of lifecycle replacement logic: have the launcher
+   delegate to `VisualTraceReplayContextHandoff`, passing only its existing
+   provider-reset and gameplay-mode binding callbacks. The collaborator uses
    `SessionManager.reopenGameplaySession`, `GameplaySessionFactory`, and the
-   current module. Reset retained adapters before destroying their registered
-   presentation context, reset and invalidate the cached title-card provider,
-   configure fresh game-state special-stage progress, and bind the resulting
-   context through the normal loop seam.
+   current world-session module. Reset retained adapters before destroying
+   their registered presentation context, reset and invalidate the cached
+   title-card provider, configure fresh game-state special-stage progress, and
+   bind the resulting context through the normal loop seam. Do not mutate the
+   legacy `GameModuleRegistry` compatibility state.
 4. Run the focused handoff test plus `TestGameLoop`.
 
 ## Task 3: Pin the title-card launch phase
