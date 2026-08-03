@@ -180,10 +180,7 @@ class TestTraceRunLaunchValidation {
 
     private static Path prepareSyntheticRunWithValidMovie(Path root) throws IOException {
         Path runDir = TraceV5RunFixture.writeS3kBonusRun(root.resolve("s3k/runs"));
-        Files.copy(
-                Path.of("src", "test", "resources", "traces", "s2", "runs",
-                        "s2-ehz-halfpipe-roundtrip", "s2-ehz-halfpipe-roundtrip.bk2"),
-                runDir.resolve("synthetic.bk2"));
+        TraceV5RunFixture.writeMovie(runDir.resolve("synthetic.bk2"));
         return runDir;
     }
 
@@ -193,17 +190,4 @@ class TestTraceRunLaunchValidation {
         Files.writeString(manifest, mutation.apply(Files.readString(manifest)));
     }
 
-    private static void copyRecursively(Path source, Path destination) throws IOException {
-        try (var paths = Files.walk(source)) {
-            for (Path path : paths.toList()) {
-                Path target = destination.resolve(source.relativize(path));
-                if (Files.isDirectory(path)) {
-                    Files.createDirectories(target);
-                } else {
-                    Files.createDirectories(target.getParent());
-                    Files.copy(path, target);
-                }
-            }
-        }
-    }
 }

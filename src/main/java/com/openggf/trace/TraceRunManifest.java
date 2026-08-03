@@ -3,10 +3,13 @@ package com.openggf.trace;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -150,29 +153,36 @@ public record TraceRunManifest(
     ) {}
 
     public static TraceRunManifest load(Path manifestPath) throws IOException {
-        ObjectMapper mapper = new ObjectMapper();
-        JsonNode root = mapper.readTree(Files.readString(manifestPath));
-        JsonNode expectedEndMode = root.get("expected_movie_end_mode");
-        if (expectedEndMode != null && !expectedEndMode.isTextual()) {
-            throw new IOException("expected_movie_end_mode must be a string when present");
-        }
-        for (String field : REMOVED_VERSION_FIELDS) {
-            if (root.has(field)) {
-                throw new IOException("Removed manifest field '" + field + "'");
+        JsonFactory factory = new JsonFactory()
+                .enable(JsonParser.Feature.STRICT_DUPLICATE_DETECTION);
+        ObjectMapper mapper = new ObjectMapper(factory);
+        try (InputStream input = Files.newInputStream(manifestPath);
+             JsonParser parser = factory.createParser(input)) {
+            JsonNode root = mapper.readTree(parser);
+            if (root == null || !root.isObject() || parser.nextToken() != null) {
+                throw new IOException(manifestPath.getFileName()
+                        + ": manifest must be one JSON object");
             }
-        }
-        JsonNode schemaNode = root.get("trace_schema");
-        if (schemaNode == null || !schemaNode.isIntegralNumber()
-                || !schemaNode.canConvertToInt() || schemaNode.asInt() != TRACE_SCHEMA) {
-            throw new IOException("trace_schema must be integer " + TRACE_SCHEMA);
-        }
-        JsonNode gapNode = root.get("dynamic_art_gap_transitions");
-        if (gapNode == null || !gapNode.isArray()) {
-            throw new IOException(
-                    "trace_schema 5 requires dynamic_art_gap_transitions array");
-        }
-        List<DynamicArtTransfer.GapTransition> gaps = new ArrayList<>();
-        if (gapNode != null) {
+            JsonNode expectedEndMode = root.get("expected_movie_end_mode");
+            if (expectedEndMode != null && !expectedEndMode.isTextual()) {
+                throw new IOException("expected_movie_end_mode must be a string when present");
+            }
+            for (String field : REMOVED_VERSION_FIELDS) {
+                if (root.has(field)) {
+                    throw new IOException("Removed manifest field '" + field + "'");
+                }
+            }
+            JsonNode schemaNode = root.get("trace_schema");
+            if (schemaNode == null || !schemaNode.isIntegralNumber()
+                    || !schemaNode.canConvertToInt() || schemaNode.asInt() != TRACE_SCHEMA) {
+                throw new IOException("trace_schema must be integer " + TRACE_SCHEMA);
+            }
+            JsonNode gapNode = root.get("dynamic_art_gap_transitions");
+            if (gapNode == null || !gapNode.isArray()) {
+                throw new IOException(
+                        "trace_schema 5 requires dynamic_art_gap_transitions array");
+            }
+            List<DynamicArtTransfer.GapTransition> gaps = new ArrayList<>();
             try {
                 for (JsonNode transition : gapNode) {
                     gaps.add(DynamicArtTransfer.parseGapTransition(transition));
@@ -180,27 +190,27 @@ public record TraceRunManifest(
             } catch (IllegalArgumentException e) {
                 throw new IOException("Invalid dynamic_art_gap_transitions", e);
             }
-        }
-        List<List<DynamicArtTransfer.Descriptor>> segmentInitialLedgers =
-                parseSegmentInitialLedgers(root);
-        com.fasterxml.jackson.databind.node.ObjectNode base =
-                ((com.fasterxml.jackson.databind.node.ObjectNode) root.deepCopy());
-        base.remove("trace_schema");
-        base.remove("dynamic_art_gap_transitions");
-        JsonNode baseSegments = base.get("segments");
-        if (baseSegments != null && baseSegments.isArray()) {
-            for (JsonNode segment : baseSegments) {
-                if (segment instanceof com.fasterxml.jackson.databind.node.ObjectNode object) {
-                    object.remove("dynamic_art_initial_ledger_descriptors");
+            List<List<DynamicArtTransfer.Descriptor>> segmentInitialLedgers =
+                    parseSegmentInitialLedgers(root);
+            com.fasterxml.jackson.databind.node.ObjectNode base =
+                    ((com.fasterxml.jackson.databind.node.ObjectNode) root.deepCopy());
+            base.remove("trace_schema");
+            base.remove("dynamic_art_gap_transitions");
+            JsonNode baseSegments = base.get("segments");
+            if (baseSegments != null && baseSegments.isArray()) {
+                for (JsonNode segment : baseSegments) {
+                    if (segment instanceof com.fasterxml.jackson.databind.node.ObjectNode object) {
+                        object.remove("dynamic_art_initial_ledger_descriptors");
+                    }
                 }
             }
+            TraceRunManifest parsed = mapper.treeToValue(base, TraceRunManifest.class);
+            List<Segment> parsedSegments = restoreSegmentInitialLedgers(
+                    parsed.segments(), segmentInitialLedgers);
+            return new TraceRunManifest(parsed.game(), parsed.runId(),
+                    parsed.sourceBk2(), parsed.romChecksum(), parsedSegments, parsed.transitions(),
+                    gaps, parsed.expectedMovieEndMode());
         }
-        TraceRunManifest parsed = mapper.treeToValue(base, TraceRunManifest.class);
-        List<Segment> parsedSegments = restoreSegmentInitialLedgers(
-                parsed.segments(), segmentInitialLedgers);
-        return new TraceRunManifest(parsed.game(), parsed.runId(),
-                parsed.sourceBk2(), parsed.romChecksum(), parsedSegments, parsed.transitions(),
-                gaps, parsed.expectedMovieEndMode());
     }
 
     private static List<List<DynamicArtTransfer.Descriptor>> parseSegmentInitialLedgers(

@@ -193,6 +193,21 @@ class TestTraceRunManifest {
     }
 
     @Test
+    void rejectsDuplicateSchemaFieldsAndTrailingJson(@TempDir Path dir) {
+        String duplicateSchema = VALID_MANIFEST.replace(
+                "\"trace_schema\": 5,",
+                "\"trace_schema\": 5,\n  \"trace_schema\": 5,");
+        String trailingJson = VALID_MANIFEST + "\n{}";
+
+        assertThrows(IOException.class, () -> TraceRunManifest.load(writeRun(
+                dir.resolve("duplicate"), duplicateSchema,
+                "seg00_aiz", "seg01_gumball", "seg02_aiz")));
+        assertThrows(IOException.class, () -> TraceRunManifest.load(writeRun(
+                dir.resolve("trailing"), trailingJson,
+                "seg00_aiz", "seg01_gumball", "seg02_aiz")));
+    }
+
+    @Test
     void validatesCompleteOrderedGapLifecycleAndHashes(@TempDir Path dir)
             throws IOException {
         String descriptor = descriptorJson();

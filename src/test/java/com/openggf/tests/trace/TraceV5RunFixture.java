@@ -1,9 +1,12 @@
 package com.openggf.tests.trace;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 /** Builds disposable strict-v5 run inputs for manifest, catalog, and walker tests. */
 public final class TraceV5RunFixture {
@@ -68,6 +71,22 @@ public final class TraceV5RunFixture {
         return run;
     }
 
+    /** Writes a minimal BK2 movie that covers every generated manifest offset. */
+    public static Path writeMovie(Path movie) throws IOException {
+        Files.createDirectories(movie.getParent());
+        StringBuilder inputLog = new StringBuilder("[Input]\n")
+                .append("LogKey:|P1 Up|P1 Down|P1 Left|P1 Right|P1 B|P1 C|P1 A|P1 Start|\n");
+        for (int frame = 0; frame < 3_000; frame++) {
+            inputLog.append("|.|.|.|.|.|.|.|.|\n");
+        }
+        inputLog.append("[/Input]\n");
+        try (ZipOutputStream zip = new ZipOutputStream(Files.newOutputStream(movie))) {
+            writeZipEntry(zip, "Header.txt", "Author: generated-v5-test\n");
+            writeZipEntry(zip, "Input Log.txt", inputLog.toString());
+        }
+        return movie;
+    }
+
     private static void writeLevelSegment(Path run, String name, String game, String zone,
             String profile, int zoneId, int act, int offset, int segmentIndex) throws IOException {
         Path segment = run.resolve(name);
@@ -111,5 +130,12 @@ public final class TraceV5RunFixture {
                 "rom_checksum":"checksum","recorder":"native-bizhawk-headless","recorder_version":"3.0",
                 "segments":[%s],"transitions":[%s],"dynamic_art_gap_transitions":[]}
                 """.formatted(game, runId, segments, transitions));
+    }
+
+    private static void writeZipEntry(ZipOutputStream zip, String name, String content)
+            throws IOException {
+        zip.putNextEntry(new ZipEntry(name));
+        zip.write(content.getBytes(StandardCharsets.UTF_8));
+        zip.closeEntry();
     }
 }

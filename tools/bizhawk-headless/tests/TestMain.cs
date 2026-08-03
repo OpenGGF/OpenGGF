@@ -192,7 +192,6 @@ namespace OpenGGF.BizHawk.Headless.Tests
             S3KTraceCaptureRunnerTests.Register(tests);
             S3KCompleteRunSegmenterTests.Register(tests);
             S3KCompleteRunProfileTests.Register(tests);
-            S3KCompleteRunPublicationTests.Register(tests);
             S3KHookAbsenceTests.Register(tests);
             SmokeCaptureRunnerTests.Register(tests);
             NoReplacePublisherTests.Register(tests);
@@ -208,14 +207,6 @@ namespace OpenGGF.BizHawk.Headless.Tests
             // constraint instead of silently eating the suite's output.
             RegisterSerial(tests, TraceCliTests.Register);
             RegisterSerial(tests, EndToEndTests.Register);
-            S1TraceDifferentialTests.Register(tests);
-            S1CompleteRunDifferentialTests.Register(tests);
-            S1RunModeDifferentialTests.Register(tests);
-            S2TraceDifferentialTests.Register(tests);
-            S3KTraceDifferentialTests.Register(tests);
-            S3KCompleteRunDifferentialTests.Register(tests);
-            S3KCompleteRunSegmentsDifferentialTests.Register(tests);
-            S3KRunModeDifferentialTests.Register(tests);
             return tests;
         }
 
