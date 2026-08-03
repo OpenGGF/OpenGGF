@@ -21,7 +21,6 @@ import com.openggf.game.resources.DynamicArtLifecycleService;
 import com.openggf.game.session.GameplayTeamBootstrap;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.session.VisualTraceReplayContextHandoff;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.game.rewind.InputSource;
 import com.openggf.game.rewind.PlaybackController;
@@ -1069,9 +1068,8 @@ public final class TraceSessionLauncher {
             return true;
         }
         try {
-            VisualTraceReplayContextHandoff.reopen(
-                    replayAdmissionPolicy(), loop.getTitleCardProvider(),
-                    loop::resetModuleScopedProviders, loop::setGameplayMode);
+            Engine.reopenCurrentGameplayForVisualTrace(
+                    replayAdmissionPolicy(), loop.getTitleCardProvider());
             if (isRunSession()) {
                 finishRunReplayLaunch(loop);
             } else {

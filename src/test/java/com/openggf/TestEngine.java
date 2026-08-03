@@ -31,6 +31,7 @@ import com.openggf.game.session.GameplaySessionFactory;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.WorldSession;
+import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.camera.Camera;
 import com.openggf.level.LevelManager;
@@ -38,6 +39,7 @@ import com.openggf.sprites.playable.Knuckles;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.game.RomDetectionService;
 import com.openggf.graphics.TilemapGpuRenderer;
+import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.Test;
@@ -56,6 +58,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -85,6 +88,27 @@ class TestEngine {
         Engine.clearGlobalInstance();
         SessionManager.clear();
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+    }
+
+    @Test
+    void visualTraceReplayHandoffRebindsEngineRenderManagers() throws Exception {
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
+        GameplayModeContext presentation = SessionManager.getCurrentGameplayMode();
+        Engine engine = new Engine(EngineServices.current());
+
+        GameplayModeContext replay = engine.reopenGameplayForVisualTrace(
+                HardwareReadinessAdmissionPolicy.RECORDED, null);
+
+        assertNotSame(presentation, replay);
+        assertFalse(presentation.isGameplayRuntimeReady());
+        assertSame(replay, getPrivateField(engine, "gameplayMode"));
+        assertSame(replay.getLevelManager(), getPrivateField(engine, "levelManager"));
+        assertSame(replay.getSpriteManager(), getPrivateField(engine, "spriteManager"));
+        assertSame(replay.getCamera(), getPrivateField(engine, "camera"));
+        assertSame(replay, getPrivateField(engine.getGameLoop(), "gameplayMode"));
+        assertSame(replay.getLevelManager(),
+                getPrivateField(engine.getGameLoop(), "levelManager"));
     }
 
     @Test

@@ -50,9 +50,11 @@ Steps:
 
 Files:
 
-- Modify `src/test/java/com/openggf/TestGameLoop.java` or add a focused
-  `src/test/java/com/openggf/TestGameLoopTraceReplayContextHandoff.java`
-- Modify `src/main/java/com/openggf/GameLoop.java`
+- Modify `src/test/java/com/openggf/TestEngine.java`
+- Modify `src/test/java/com/openggf/TestGameLoop.java`
+- Modify `src/test/java/com/openggf/TestTraceSessionLauncherFailureCleanup.java`
+- Modify `src/main/java/com/openggf/Engine.java`
+- Modify `src/main/java/com/openggf/TraceSessionLauncher.java`
 - Add `src/main/java/com/openggf/game/session/VisualTraceReplayContextHandoff.java`
 
 Steps:
@@ -62,26 +64,44 @@ Steps:
      state;
    - active context-owned dynamic-art/runtime lifecycle state; and
    - a completed/resettable title-card provider.
-2. Invoke the proposed trace replay-context reopen seam and assert that:
+2. Invoke the proposed Engine-owned trace replay-context reopen seam and
+   assert that:
    - the old context is destroyed;
    - the title-card provider is reset;
    - every retained module rewind adapter receives
      `resetForMissingSnapshot()`;
    - the new context uses the requested live/recorded hardware admission;
-   - production managers are attached and rebound to `GameLoop`; and
+   - production managers are attached and rebound to `GameLoop`;
+   - `Engine` caches the replacement context's `LevelManager`,
+     `SpriteManager`, and `Camera` used by `Engine.draw()`; and
    - no presentation dynamic-art state survives.
    Assert separately that the disposable presentation context uses `LIVE`
    admission and the replacement uses the requested `RECORDED` policy.
-3. Keep `GameLoop` free of lifecycle replacement logic: have the launcher
-   delegate to `VisualTraceReplayContextHandoff`, passing only its existing
-   provider-reset and gameplay-mode binding callbacks. The collaborator uses
-   `SessionManager.reopenGameplaySession`, `GameplaySessionFactory`, and the
-   current world-session module. Reset retained adapters before destroying
+3. Keep `GameLoop` free of lifecycle replacement logic. Add a narrow
+   package-owned `Engine.reopenCurrentGameplayForVisualTrace(...)` static
+   composition action that validates the active Engine internally without
+   exposing it to the launcher. Have it delegate through the instance-owned
+   `reopenGameplayForVisualTrace(...)` seam to
+   `VisualTraceReplayContextHandoff`, passing the loop's provider-reset
+   callback and `Engine::bindGameplayMode`. The collaborator
+   uses `SessionManager.reopenGameplaySession`, `GameplaySessionFactory`, and
+   the current world-session module. Reset retained adapters before destroying
    their registered presentation context, reset and invalidate the cached
    title-card provider, configure fresh game-state special-stage progress, and
-   bind the resulting context through the normal loop seam. Do not mutate the
-   legacy `GameModuleRegistry` compatibility state.
-4. Run the focused handoff test plus `TestGameLoop`.
+   bind the resulting context through the normal Engine seam. Do not mutate
+   the legacy `GameModuleRegistry` compatibility state.
+4. Change the launcher after-step handoff to require an active loop and call
+   the narrow Engine-owned static composition action rather than acquiring
+   the Engine singleton or passing `GameLoop::setGameplayMode` directly.
+   Preserve the existing launch-failure abort path if the engine is absent or
+   replacement fails.
+5. Add replay-bootstrap failure tests that begin title-card presentation and
+   then prove (a) a missing active `Engine` and (b) an exception from the
+   Engine-owned reopen seam both clear the active trace, restore launch
+   configuration/admission state, and return to the picker/master-title path
+   when a loop is still available.
+6. Run the focused handoff tests in `TestEngine`, `TestGameLoop`, and
+   `TestTraceSessionLauncherFailureCleanup`.
 
 ## Task 3: Pin the title-card launch phase
 
@@ -195,7 +215,7 @@ Steps:
 
    ```bash
    mvn -Dmse=relaxed \
-     -Dtest=com.openggf.game.resources.TestPlcFrameLifecycleCoordinator,com.openggf.TestTraceSessionLauncherRunBranch,com.openggf.TestTraceSessionLauncherFailureCleanup,com.openggf.TestGameLoop,com.openggf.trace.replay.TestVisualTraceLaunchPhase \
+     -Dtest=com.openggf.game.TestProductionSingletonClosureGuard,com.openggf.game.resources.TestPlcFrameLifecycleCoordinator,com.openggf.TestEngine,com.openggf.TestTraceSessionLauncherRunBranch,com.openggf.TestTraceSessionLauncherFailureCleanup,com.openggf.TestGameLoop,com.openggf.trace.replay.TestVisualTraceLaunchPhase \
      test
    ```
 
@@ -205,7 +225,8 @@ Steps:
    `TestS1Ghz1CompleteRunTraceReplay` with the verified S1 REV01
    ROM. Run representative S2 EHZ1 and an S3K hardware-timed run/trace canary
    because launch admission and external segment zero are cross-game.
-4. Run architecture/authority guards for hardware timing, PLC comparison-only
+4. Run `TestProductionSingletonClosureGuard` explicitly alongside the
+   architecture/authority guards for hardware timing, PLC comparison-only
    behavior, rewind coverage, and trace payload compression.
 5. Run the complete Maven suite on JDK 21 and compare its exact result with an
    updated clean `develop` baseline as required by `AGENTS.md`.

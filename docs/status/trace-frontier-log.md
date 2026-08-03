@@ -60771,6 +60771,19 @@ passes 1/1 with no comparator errors. The headless GHZ1 frontier therefore
 remains complete; the repaired frontier is the visual launch boundary at row
 zero.
 
+Follow-up visual validation exposed a render-owner regression after that
+handoff: the title card completed and the fresh replay context advanced input,
+objects, and audio, but `Engine.draw()` retained the destroyed presentation
+context's cached `LevelManager`, `SpriteManager`, and `Camera`, producing a
+black frame over audible gameplay. The handoff now routes through the normal
+Engine composition binding seam, which updates those render references and
+then rebinds `GameLoop` to the same fresh context. The focused visual,
+launcher-failure, Engine, GameLoop, comparator, and architecture selector
+passes 291 tests with zero failures/errors/skips, including the production
+singleton-closure guard. Both ROM-backed S1 GHZ1
+standalone and complete-run replay tests pass (2/2), so no headless trace
+frontier moved; this closes only the visual post-title render boundary.
+
 ## 2026-08-03 — MHZ fixed-SST and object parity advances physics to frame 6337
 
 Context: `.worktrees/red-s3k-mhz-fixed-sst`, branch

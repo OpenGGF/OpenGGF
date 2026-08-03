@@ -10,7 +10,9 @@ All notable changes to the OpenGGF project are documented in this file.
   decision, keeping S1 bootstrap submit/complete edges in the native run gap
   while preserving exact atomic row comparison. Escape also exits safely
   during the pre-replay card, and complete runs use the same segment-zero
-  launch boundary.
+  launch boundary. The clean-context handoff now binds through the Engine
+  composition root so its render-side level, sprite, and camera references
+  advance with GameLoop instead of drawing the destroyed presentation context.
 - Fix/Test: the maintained S3K native recorder now attributes an exact
   final-active KosM FIFO retirement to the ROM's post-object service from its
   canonical one-head shift, even when the sampled level counter is held.
