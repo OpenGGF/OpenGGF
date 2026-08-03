@@ -241,6 +241,15 @@ its authority scan.
 
 There is no legacy path allowlist.
 
+The Java metadata record, strict level loader, and hardware-timing loader form
+one compile-time migration boundary. Removing `hardware_timing_schema` also
+removes its generated record accessor, which the old timing loader and timing
+tests consume. Tasks 4 and 5 therefore land as one green implementation
+checkpoint: no intermediate commit retains a dummy accessor, default schema,
+or other compatibility shim. This atomic sequencing changes no timing
+authority; the resulting loader still admits only matching, prepared,
+production-submitted ROM work under hard rule 4.
+
 ## Testing strategy
 
 Implementation is test-first:

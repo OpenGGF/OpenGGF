@@ -170,6 +170,21 @@ needed.
 
 ## Task 4: Make Java trace loading strict v5-only
 
+Tasks 4 and 5 are one atomic green checkpoint. Removing the metadata record's
+`hardware_timing_schema` component removes its Java accessor, so the strict
+loader and sole timing grammar must be implemented, tested, reviewed, and
+committed together. Do not create an intermediate compatibility accessor or
+commit a tree that does not compile.
+
+Before resuming implementation, replace the separate Task 4 brief with one
+joint Tasks 4+5 brief. The joint checkpoint must delete the transient
+`hasHardwareTimingStream()` metadata shim and migrate every production caller
+(`TraceSessionLauncher`, `TraceRunReplayWalker`, replay bootstrap, capture tool,
+and benchmark tool) to the compiled schedule/file-presence contract. It must
+also update every removed-accessor call and positional `TraceMetadata`
+constructor across all test sources; a focused Surefire selection is not a
+substitute for compiling the complete test tree.
+
 **Modify:**
 
 - `src/main/java/com/openggf/trace/TraceMetadata.java`
@@ -196,9 +211,16 @@ needed.
    the frozen Task 1 baseline until Task 10. Retain only small explicit invalid
    inputs inside negative tests; no production legacy allowlist.
 7. Run focused trace parsing, bootstrap, catalog, special-stage, and invariant
-   guards.
+   guards. First run JDK-21 `mvn -DskipTests test-compile` and require the whole
+   test source tree to compile. Tests that execute installed legacy resources,
+   including committed timing-order cases, use temporary v5 inputs where they
+   are contract tests or are explicitly deferred until Task 10 where they are
+   publication tests; installed resources remain untouched.
 
 ## Task 5: Collapse hardware timing to the sole current grammar
+
+Complete and commit this task together with Task 4 as the atomic Java
+metadata/timing checkpoint described above.
 
 **Modify:** Java timing loader/schedule/compiler, C# timing engine, authority
 guard, committed-fixture guard/tests, and synchronized hard-rule documentation.
@@ -207,14 +229,26 @@ guard, committed-fixture guard/tests, and synchronized hard-rule documentation.
    `kos_module_queue` and `kos_decompression_queue`, rejects malformed/currently
    unauthorized events, and has no timing-schema selector.
 2. Delete timing schema 1 behavior, constructors, branches, metadata accessors,
-   normalizers, and exact-literal compatibility cases in Java and C#.
+   normalizers, and exact-literal compatibility cases in Java and C#. This
+   explicitly includes `HardwareTimingStreamLoader.normalizeCanonicalOrder` and
+   its special direct-PRE/module-POST swap. Native v5 writers emit canonical
+   order directly, and loader tests accept only that order.
 3. Preserve ordinal, stable submission fingerprint, prepared production-work,
    and service-boundary matching unchanged.
 4. Update `TestHardwareTimingAuthorityGuard` for the unversioned dynamic-art
    capability and prove no new parser/authority path was introduced.
-5. Run timing unit tests, authority guards, and S3K recorder tests using
+5. Add or retain behavioral replay-port tests for both allowed work kinds and
+   rejection of mismatched kind, ordinal, stable submission fingerprint,
+   service boundary, unprepared work, duplicate/stale completion edges, and
+   suppressed-row escape. The source authority guard complements rather than
+   replaces these release tests.
+6. Run timing unit tests, authority guards, and S3K recorder tests using
    synthetic/generated v5 inputs. Defer AIZ/HCZ/MHZ committed-fixture replays
    until approved v5 fixtures are installed in Task 10.
+7. Run the no-ROM C# timing/writer suite explicitly:
+   `BIZHAWK_HOME=... ./test.sh --no-gates --jobs 1`, in addition to the Java
+   JDK-21 `test-compile` and focused tests. Require both languages green, both
+   fixture-inventory verifiers green, and commit Tasks 4+5 together.
 
 ## Task 6: Collapse run manifests to the sole current grammar
 
