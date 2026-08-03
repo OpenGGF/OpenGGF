@@ -60999,3 +60999,39 @@ to synthesize a POST phase on a VBLANK-only row.
   the two feature-only methods passed when rerun on both workspaces. No
   attributable regression or worsened baseline failure was found. No trace
   fixture or comparison value changed.
+
+## 2026-08-03 - Visual trace inter-act title-card admission
+
+- Worktree: `.worktrees/visual-trace-level-handoff`, branch
+  `bugfix/ai-visual-trace-level-handoff`, candidate over `e33f909c6`.
+- A visual S1 complete run loaded GHZ2 during GHZ1's terminal production step,
+  admitted GHZ2 immediately while `LevelManager` still held its initial title
+  card request, and then failed with `segment 1 lost production ownership`
+  when the next step entered `TITLE_CARD`. The load itself was correct; the
+  destination comparison/input/PLC/dynamic-art owners opened one lifecycle
+  boundary too early.
+- `RunPlaybackObservation` now carries the live, structural initial-title-card
+  barrier in both visual and headless adapters. The shared run coordinator
+  remembers the engine-created load but keeps destination ownership closed
+  until that request clears. Source identity pinning preserves the live
+  destination barrier, and no game, zone, route, frame, trace value, second
+  level load, or music restart is involved.
+- Focused launcher/coordinator command:
+  `mvn -q -Dmse=off
+  -Dtest='TestTraceSessionLauncherRunBranch,com.openggf.tests.trace.runs.TestTraceRunPlaybackCoordinator,com.openggf.tests.trace.runs.TestTraceRunPlaybackTranscriptParity'
+  test`. Result: all selected tests passed.
+- S1 inter-act segment command:
+  `mvn -q -Dmse=off -Dsonic1.rom.path=s1.gen
+  -Dtest='TestS1Ghz1CompleteRunTraceReplay,TestS1Ghz2CompleteRunTraceReplay'
+  test`. Result: 2 tests, 0 failures, 0 errors, 0 skips.
+- The S1 GHZ-maze round-trip chain remains red at its existing special-stage
+  boundary (`segment 0 lost production ownership`, BK2 cursor 4858). The exact
+  command fails identically on updated `develop`; it is not an inter-act
+  regression and no frontier moved.
+- Full replay command, run on updated `develop` and the feature worktree:
+  `mvn -q -Dmse=off -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen
+  -Ds3k.rom.path=s3k.gen -Dtest='*TraceReplay' -DfailIfNoTests=false test`.
+  Both runs reported 108 tests, 6 failures, 40 errors, and 0 skips. A
+  normalized Surefire XML comparison of class, method, and failure/error
+  severity was identical across all 46 red methods; no previously green replay
+  regressed and no existing failure changed severity.

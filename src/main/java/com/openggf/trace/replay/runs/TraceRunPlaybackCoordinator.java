@@ -309,7 +309,8 @@ public final class TraceRunPlaybackCoordinator {
         TraceRunManifest.Transition expected =
                 boundaries.exitBoundaries()[currentSegmentIndex];
         if ("level".equals(destination.kind())) {
-            if (observation.mode() != GameMode.LEVEL) {
+            if (observation.mode() != GameMode.LEVEL
+                    || observation.initialTitleCardPending()) {
                 return false;
             }
             if (observation.lagOnlySameLevelContinuation()

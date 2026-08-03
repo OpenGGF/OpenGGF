@@ -121,12 +121,12 @@ class TestTraceRunPlaybackTranscriptParity {
     private static RunPlaybackObservation level(boolean exhausted) {
         return new RunPlaybackObservation(GameMode.LEVEL, 0, exhausted ? 2 : 0,
                 new RunPlaybackObservation.LevelIdentity(1, 0, 0, 0),
-                null, null, false, exhausted, 0, false, 4, 5);
+                false, null, null, false, exhausted, 0, false, 4, 5);
     }
 
     private static RunPlaybackObservation bonus(boolean exhausted) {
         return new RunPlaybackObservation(GameMode.BONUS_STAGE, 10,
-                exhausted ? 4 : 3, null,
+                exhausted ? 4 : 3, null, false,
                 new RunPlaybackObservation.BonusIdentity(
                         19, 0, BonusStageType.GUMBALL),
                 null, false, exhausted, 0, false, 6, 7);

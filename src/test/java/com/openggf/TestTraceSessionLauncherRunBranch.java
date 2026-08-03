@@ -29,6 +29,7 @@ import com.openggf.trace.ToleranceConfig;
 import com.openggf.trace.live.LiveTraceComparator;
 import com.openggf.trace.replay.TraceReplayFixture;
 import com.openggf.trace.replay.runs.RunBoundarySignal;
+import com.openggf.trace.replay.runs.RunLevelLoadCause;
 import com.openggf.trace.replay.runs.RunPlaybackObservation;
 import com.openggf.trace.replay.runs.TraceRunPlaybackCoordinator;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker;
@@ -229,11 +230,11 @@ class TestTraceSessionLauncherRunBranch {
         RunPlaybackObservation sourceOwner = new RunPlaybackObservation(
                 GameMode.LEVEL, 129, 8,
                 new RunPlaybackObservation.LevelIdentity(10, 0, 0, 0),
-                null, null, true, false, 0, false, 4, 5);
+                false, null, null, true, false, 0, false, 4, 5);
         RunPlaybackObservation postStepDestination = new RunPlaybackObservation(
                 GameMode.LEVEL, 130, 9,
                 new RunPlaybackObservation.LevelIdentity(11, 1, 1, 0),
-                null, null, false, true, 1, false, 6, 7);
+                false, null, null, false, true, 1, false, 6, 7);
         Method method = TraceSessionLauncher.class.getDeclaredMethod(
                 "withProductionOwner",
                 RunPlaybackObservation.class, RunPlaybackObservation.class);
@@ -250,6 +251,160 @@ class TestTraceSessionLauncherRunBranch {
         assertEquals(0, published.destinationRowsConsumed(),
                 "a remembered load inside source production has not consumed "
                         + "destination row zero");
+    }
+
+    @Test
+    void captureObservationReportsPendingInitialTitleCard() throws Exception {
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
+        TraceSessionLauncher session =
+                new TraceSessionLauncher(null, null, segments, null);
+        GameServices.level().requestTitleCard(0, 1);
+
+        RunPlaybackObservation observation = captureObservation(
+                session, GameMode.LEVEL);
+
+        assertTrue(observation.initialTitleCardPending());
+    }
+
+    @Test
+    void productionOwnerPinKeepsDestinationTitleCardBarrier()
+            throws Exception {
+        RunPlaybackObservation sourceOwner = new RunPlaybackObservation(
+                GameMode.LEVEL, 129, 8,
+                new RunPlaybackObservation.LevelIdentity(10, 0, 0, 0),
+                false, null, null, true, false, 0, false, 4, 5);
+        RunPlaybackObservation postStepDestination = new RunPlaybackObservation(
+                GameMode.LEVEL, 130, 9,
+                new RunPlaybackObservation.LevelIdentity(11, 0, 0, 1),
+                true, null, null, false, true, 0, false, 6, 7);
+        Method method = TraceSessionLauncher.class.getDeclaredMethod(
+                "withProductionOwner",
+                RunPlaybackObservation.class, RunPlaybackObservation.class);
+        method.setAccessible(true);
+
+        RunPlaybackObservation published = (RunPlaybackObservation) method.invoke(
+                null, postStepDestination, sourceOwner);
+
+        assertEquals(sourceOwner.level(), published.level());
+        assertEquals(GameMode.LEVEL, published.mode());
+        assertTrue(published.initialTitleCardPending(),
+                "source identity pinning must preserve the live destination barrier");
+    }
+
+    @Test
+    void pendingInitialTitleCardKeepsVisualDestinationOwnersClosed()
+            throws Exception {
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
+        GameplayModeContext context = SessionManager.getCurrentGameplayMode();
+        new Engine(EngineServices.current());
+
+        TraceRunManifest.Segment source = segments.getFirst().segment();
+        TraceRunManifest.Segment destination = new TraceRunManifest.Segment(
+                "seg01_next_act", "level", "complete_run",
+                600, source.traceFrameCount(), 0, 2, null, null);
+        TraceRunManifest.Transition transition = new TraceRunManifest.Transition(
+                0, 1, "level_advance", 502,
+                null, null, null, null, null, null, null, null);
+        TraceRunManifest run = new TraceRunManifest(
+                1, "s2", "visual-title-card-barrier", "synthetic.bk2",
+                "checksum", "recorder", List.of(source, destination),
+                List.of(transition));
+        List<TraceRunReplayWalker.SegmentPlan> twoLevels = List.of(
+                new TraceRunReplayWalker.SegmentPlan(
+                        source, segments.getFirst().trace(), null, transition),
+                new TraceRunReplayWalker.SegmentPlan(
+                        destination, segments.getFirst().trace(), transition, null));
+        Bk2Movie movie = new Bk2Movie(
+                Path.of("synthetic-run.bk2"), "logkey", Map.of(),
+                List.of(frame(500), frame(600)), 3);
+        TraceSessionLauncher session =
+                new TraceSessionLauncher(null, movie, twoLevels, null);
+        RecordingTimingFixture fixture = new RecordingTimingFixture(context);
+        TraceRunPlaybackCoordinator coordinator =
+                new TraceRunPlaybackCoordinator(
+                        run, TracePlaybackProfile.DISABLED, movie.getFrameCount());
+        TraceRunReplayWalker.BoundaryProbe sourceBoundaryProbe =
+                new TraceRunReplayWalker.BoundaryProbe(
+                        new TraceRunReplayWalker.EngineHooks() {
+                            @Override
+                            public int currentBk2Frame() {
+                                return GameServices.playbackDebug().getCursorFrame();
+                            }
+
+                            @Override
+                            public com.openggf.game.BonusStageType peekBonusRequest() {
+                                return com.openggf.game.BonusStageType.NONE;
+                            }
+
+                            @Override
+                            public boolean isSpecialStageRequested() {
+                                return false;
+                            }
+
+                            @Override
+                            public GameMode currentMode() {
+                                return GameMode.LEVEL;
+                            }
+                        });
+        setField(session, "fixture", fixture);
+        setField(session, "runCoordinator", coordinator);
+        setField(session, "runBoundaryProbe", sourceBoundaryProbe);
+        setField(session, "runHardwareTiming",
+                new TraceRunReplayWalker.HardwareTimingCoordinator(
+                        fixture,
+                        TraceRunReplayWalker.hardwareTimingSegments(twoLevels)));
+        session.installRunDynamicArtSegments(context);
+        GameServices.playbackDebug().setFrameObserver(sourceBoundaryProbe);
+
+        RunPlaybackObservation sourceActive = new RunPlaybackObservation(
+                GameMode.LEVEL, 500, 0,
+                new RunPlaybackObservation.LevelIdentity(10, 0, 0, 0),
+                false, null, null, false, false, 0, false, 0, 0);
+        appendCoordinatorTranscript(session,
+                coordinator.activateInitialLevel(sourceActive));
+        LiveTraceComparator sourceComparator = new LiveTraceComparator(
+                twoLevels.getFirst().trace(), ToleranceConfig.DEFAULT, 0,
+                () -> null, null);
+        setField(session, "comparator", sourceComparator);
+        sourceBoundaryProbe.setDelegate(sourceComparator);
+        GameServices.playbackDebug().startSession(movie, 500);
+        int sourceCursor = GameServices.playbackDebug().getCursorFrame();
+
+        GameServices.level().requestTitleCard(0, 2);
+        boolean titleCardPending = captureObservation(session, GameMode.LEVEL)
+                .initialTitleCardPending();
+        RunPlaybackObservation destinationPending = new RunPlaybackObservation(
+                GameMode.LEVEL, sourceCursor, 1,
+                new RunPlaybackObservation.LevelIdentity(11, 0, 0, 1),
+                titleCardPending, null, null, false, false, 0, false, 0, 0);
+        RunBoundarySignal.LevelLoaded loaded = new RunBoundarySignal.LevelLoaded(
+                sourceCursor, RunLevelLoadCause.LEVEL_ADVANCE,
+                destinationPending.level());
+        assertTrue(coordinator.beforeLoadedLevelActivation(
+                loaded, destinationPending).isEmpty());
+        RunPlaybackObservation sourceExhausted = new RunPlaybackObservation(
+                GameMode.LEVEL, sourceCursor, 2, sourceActive.level(),
+                titleCardPending, null, null, false, true, 0, false, 0, 0);
+        applyCoordinatorActions(session,
+                coordinator.afterProduction(sourceExhausted));
+        applyCoordinatorActions(session,
+                coordinator.beforeAdmission(destinationPending));
+
+        assertSame(sourceBoundaryProbe,
+                getField(GameServices.playbackDebug(), "frameObserver"));
+        assertNull(getField(sourceBoundaryProbe, "delegate"));
+        assertSame(sourceComparator, getField(session, "comparator"));
+        assertTrue(fixture.handoffs.isEmpty());
+        assertFalse(context.dynamicArtLifecycle().isComparisonSegmentOpen());
+        assertEquals(sourceCursor,
+                GameServices.playbackDebug().getCursorFrame());
+        assertEquals(List.of(0), session.runCoordinatorTranscript().stream()
+                .filter(TraceRunPlaybackCoordinator.AdmitDestination.class::isInstance)
+                .map(TraceRunPlaybackCoordinator.AdmitDestination.class::cast)
+                .map(action -> action.receipt().segmentIndex())
+                .toList());
     }
 
     @Test
@@ -1102,16 +1257,38 @@ class TestTraceSessionLauncherRunBranch {
         return new RunPlaybackObservation(
                 GameMode.LEVEL, 500, exhausted ? 2 : 0,
                 new RunPlaybackObservation.LevelIdentity(1, 0, 0, 0),
-                null, null, false, exhausted, 0, false, 10, 20);
+                false, null, null, false, exhausted, 0, false, 10, 20);
     }
 
     private static RunPlaybackObservation bonusObservation(boolean exhausted) {
         return new RunPlaybackObservation(
                 GameMode.BONUS_STAGE, 1900, exhausted ? 4 : 3,
-                null,
+                null, false,
                 new RunPlaybackObservation.BonusIdentity(
                         19, 0, com.openggf.game.BonusStageType.GUMBALL),
                 null, false, exhausted, 0, false, 30, 40);
+    }
+
+    private static RunPlaybackObservation captureObservation(
+            TraceSessionLauncher launcher, GameMode mode) {
+        try {
+            Method method = TraceSessionLauncher.class.getDeclaredMethod(
+                    "captureRunObservation", GameMode.class, int.class,
+                    boolean.class);
+            method.setAccessible(true);
+            return (RunPlaybackObservation) method.invoke(
+                    launcher, mode, 0, false);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void appendCoordinatorTranscript(
+            TraceSessionLauncher launcher,
+            List<TraceRunPlaybackCoordinator.Action> actions) {
+        ((List<TraceRunPlaybackCoordinator.Action>) getField(
+                launcher, "runCoordinatorTranscript")).addAll(actions);
     }
 
     @SuppressWarnings("unchecked")

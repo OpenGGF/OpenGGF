@@ -807,6 +807,7 @@ public final class TraceSessionLauncher {
                 Math.max(0, GameServices.playbackDebug().getCursorFrame()),
                 runAdmittedStepOrdinal,
                 levelIdentity,
+                levelManager.isTitleCardRequested(),
                 bonusIdentity,
                 specialStageIndex,
                 productionIterationInProgress,
@@ -1181,7 +1182,8 @@ public final class TraceSessionLauncher {
             RunPlaybackObservation owner) {
         return new RunPlaybackObservation(
                 owner.mode(), current.sharedBk2Cursor(),
-                current.admittedStepOrdinal(), owner.level(), owner.bonus(),
+                current.admittedStepOrdinal(), owner.level(),
+                current.initialTitleCardPending(), owner.bonus(),
                 owner.specialStageIndex(), current.productionOpen(),
                 current.currentSegmentExhausted(), 0,
                 current.lagOnlySameLevelContinuation(),

@@ -14,6 +14,7 @@ public record RunPlaybackObservation(
         int sharedBk2Cursor,
         long admittedStepOrdinal,
         LevelIdentity level,
+        boolean initialTitleCardPending,
         BonusIdentity bonus,
         Integer specialStageIndex,
         boolean productionOpen,

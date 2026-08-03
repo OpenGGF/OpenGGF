@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: visual whole-run replay now holds a newly loaded level in its
+  native initial-title-card gap before transferring comparator, input,
+  PLC/DPLC/Kosinski timing, or dynamic-art ownership. Inter-act S1 runs retain
+  the production load receipt and admit the next act when the existing title
+  card releases, without reloading the level or restarting its music.
 - Fix: S3K vertically wrapping levels now render placed and lost rings at their
   wrapped Y positions when the camera crosses the level boundary.
 - Fix/Test: visual trace action edges now remain exact recorded controller
