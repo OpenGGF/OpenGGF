@@ -219,6 +219,14 @@ public final class MhzMushroomCapObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean rejectsZeroDistanceTopSolidLanding() {
+        // SolidObjectTop reaches loc_1E45A for a fresh cap landing. Its
+        // unsigned cmpi.w #-$10,d0 / blo window accepts only [-$10,-1],
+        // excluding the exact d0=0 boundary (sonic3k.asm:41996-42015).
+        return true;
+    }
+
+    @Override
     public boolean allowsObjectControlledSolidContacts() {
         // Obj_MHZMushroomCap_Main reaches its landing path through SolidObjectTop
         // (sonic3k.asm:82182), whose new-contact test rejects object_control with
