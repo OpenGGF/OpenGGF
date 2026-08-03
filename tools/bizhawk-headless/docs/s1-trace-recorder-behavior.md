@@ -1,5 +1,9 @@
 # S1 Trace Recorder — Byte-Level Behavioral Specification for the Native Port
 
+> **V5 supersession (2026-08-03).** The maintained native writer emits the
+> strict v5 envelope and 42-column level rows. Legacy version literals and
+> byte-porting notes below are historical evidence, not compatibility rules.
+
 Authoritative specification for porting `tools/bizhawk/s1_trace_recorder.lua`
 (v3.5, using `tools/bizhawk/lib/oggf_trace_common.lua`) to the C# headless
 harness (`tools/bizhawk-headless/`). The port must produce **byte-identical**

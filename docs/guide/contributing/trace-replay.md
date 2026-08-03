@@ -140,73 +140,38 @@ ROM-vs-engine columns.
 
 ## Recording Or Refreshing A Trace
 
-The recorder workflow is game-specific at the BizHawk entrypoint. The emitted trace contract has
-diverged per game as each game's recorder evolves to capture more diagnostic state — schema
-versions are tracked independently in `metadata.json` (`trace_schema`, `csv_version`,
-`lua_script_version`).
+The native BizHawk headless harness is the canonical recorder for all three
+games and all production profiles. Every output uses one strict contract:
+`trace_schema: 5`. Ordinary level rows have 42 columns; game/profile selects
+the dedicated S1/S2/S3K special-stage width. A v5 timing file has one grammar,
+and every run manifest includes `dynamic_art_gap_transitions`, even when empty.
 
-| Game | Recorder script | Launcher | `metadata.json["game"]` | `gameplay_frame_counter` | `vblank_counter` | `lag_counter` | Current `trace_schema` / `csv_version` / `lua_script_version` |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| Sonic 1 | [`s1_trace_recorder.lua`](../../../tools/bizhawk/s1_trace_recorder.lua) | [`record_trace.bat`](../../../tools/bizhawk/record_trace.bat) | `s1` | `0xFE04` | `0xFE0E` | placeholder `0` | `3 / 4 / 3.0` |
-| Sonic 2 | [`s2_trace_recorder.lua`](../../../tools/bizhawk/s2_trace_recorder.lua) | [`record_s2_trace.bat`](../../../tools/bizhawk/record_s2_trace.bat) | `s2` | `0xFE04` | `0xFE0E` | placeholder `0` | `8 / 6 / 9.1-s2` |
-| Sonic 3&K | [`s3k_trace_recorder.lua`](../../../tools/bizhawk/s3k_trace_recorder.lua) | [`record_s3k_trace.bat`](../../../tools/bizhawk/record_s3k_trace.bat) | `s3k` | `0xFE08` | `0xFE12` | `0xF628` diagnostic counter | `5 / 5 / 6.4-s3k` |
+Metadata uses `recorder` to identify the producer and `recorder_version` to
+identify that implementation. They are opaque provenance and never select
+parsing or replay. `lua_script_version`, `csv_version`, `ss_csv_version`,
+`hardware_timing_schema`, and `run_schema` are removed rather than renamed.
 
-Schema versioning rules:
-
-- `trace_schema` — bumps on **CSV column** changes only.
-- `csv_version` — bumps independently from `trace_schema` when CSV semantics change but column
-  count stays the same.
-- `lua_script_version` — bumps on any recorder change (CSV, aux, behaviour, hooks). Per-game
-  versions exist independently.
+See [Trace v5 capture and publication](trace-v5-publication.md) for the capture
+matrix, validator, comparator, candidate-root replay, raw-host evidence, and
+exact-byte approval workflow.
 
 Prerequisites:
 
-- BizHawk 2.11 installed at `docs/BizHawk-2.11-win-x64/EmuHawk.exe`, or set `BIZHAWK_EXE`
+- BizHawk 2.11 installed at `docs/BizHawk-2.11-linux-x64`, or set `BIZHAWK_HOME`
 - the matching game ROM for the recorder you are using
 - a BK2 movie for the act you want to record
 
 Examples:
 
-```bat
-tools\bizhawk\record_trace.bat ^
-  "s1.gen" ^
-  "docs\BizHawk-2.11-win-x64\Movies\s1-mz1.bk2"
-
-tools\bizhawk\record_s2_trace.bat ^
-  "s2.gen" ^
-  "docs\BizHawk-2.11-win-x64\Movies\s2-ehz1.bk2"
-
-tools\bizhawk\record_s2_trace.bat ^
-  "s2.gen" ^
-  "docs\BizHawk-2.11-win-x64\Movies\s2-lvl-select-CPZ.bk2" ^
-  level_gated_reset_aware
-
-PowerShell -NoProfile -ExecutionPolicy Bypass -File tools\bizhawk\record_s2_level_select_traces.ps1 ^
-  -RomPath "s2.gen" ^
-  -Only cpz
-
-tools\bizhawk\record_s3k_trace.bat ^
-  "s3k.gen" ^
-  "docs\BizHawk-2.11-win-x64\Movies\s3k-aiz1.bk2"
-
-tools\bizhawk\record_s3k_trace.bat ^
-  "s3k.gen" ^
-  "src\test\resources\traces\s3k\aiz1_to_hcz_fullrun\s3k-aiz1-aiz2-sonictails.bk2" ^
-  aiz_end_to_end
+```bash
+tools/bizhawk-headless/run.sh --mode trace \
+  --rom "$S3K_ROM_PATH" --movie /absolute/movie.bk2 \
+  --output /absent/scratch/candidate --trace-profile aiz_end_to_end
 ```
 
-The recorder writes output relative to the recorder script:
-
-- `tools/bizhawk/trace_output/`
-
-After recording, copy:
-
-- `metadata.json`
-- `physics.csv`
-- `aux_state.jsonl`
-
-into the target trace directory under `src/test/resources/traces/<game>/...`, and place the `.bk2`
-movie in the same directory if it is not already there.
+Capture only to a new scratch root. Never copy candidate bytes into
+`src/test/resources/traces` until the complete candidate is validated,
+compared, frozen, and explicitly approved.
 
 Sanity-check `metadata.json` before trusting the trace:
 
@@ -214,8 +179,9 @@ Sanity-check `metadata.json` before trusting the trace:
 - `zone` and `act` should match the intended recording
 - `trace_frame_count` should be in the expected range for that route
 - `start_x` and `start_y` should look plausible for the level start
-- `trace_schema`, `csv_version`, `lua_script_version` should match the current per-game values
-  in the recorder source (see the table above)
+- `trace_schema` must be integer `5`
+- `recorder` must be `native-bizhawk-headless` for publication and
+  `recorder_version` must be `3.0`; neither controls replay
 - `bizhawk_version` should be `2.11`
 - `genesis_core` should be `Genplus-gx`
 
@@ -232,8 +198,8 @@ alignment, frame-zero marker, and gzip-only payload storage before copying fixtu
 The Sonic 2 DEZ ending movie is catalog/parser-only until replay support for the ending sequence is
 proven; keep it out of replay test discovery unless that support is added deliberately.
 
-If `trace_schema` is below the engine's expected version for that game, the parser will load
-the trace but warn about missing fields. Older fixtures may need regeneration.
+Any absent or non-5 schema and every removed version key is rejected. There is
+no legacy reader or compatibility warning path.
 
 S3K traces additionally include `aux_schema_extras` listing opt-in per-frame event types — see
 [Aux event types](#aux-event-types) below.
@@ -257,7 +223,7 @@ present in every game's trace:
 - `object_appeared` / `object_near` / `object_removed` — object-window tracking
 
 S3K traces opt in to additional per-frame diagnostic events declared in `aux_schema_extras`.
-The current set (S3K recorder v6.4-s3k):
+Current capabilities are semantic names advertised in `aux_schema_extras`:
 
 | Aux key | Event type | Purpose |
 | --- | --- | --- |
@@ -277,12 +243,14 @@ harness in committed code (see [Comparison-Only Invariant](#the-comparison-only-
 
 Adding a new event type:
 
-1. Lua: emit a JSONL line with a new `event` field; bump `lua_script_version`; add the opt-in
-   key to `aux_schema_extras`.
+1. Native recorder: emit a JSONL line with a new `event` field, add the semantic
+   opt-in key to `aux_schema_extras`, and add behavioral/unit coverage. Lua may
+   mirror it for scratch diagnostics but is not publication authority.
 2. Java parser: add a new sealed-record subtype to
    [`TraceEvent.java`](../../../src/main/java/com/openggf/trace/TraceEvent.java); parse it
    in `parseJsonLine`; add `TraceMetadata.hasPerFrame<Feature>()` + a typed accessor on
-   `TraceData`. Keep parsers tolerant: old traces without the new key must still load.
+   `TraceData`. Keep v5 strict: absent optional capability means absent events,
+   not a legacy compatibility branch.
 3. Wire the data into `DivergenceReport.getContextWindow` rendering or a probe class.
 4. Regenerate the affected trace(s). Commit the regen as a separate logical change from the
    recorder schema bump.
@@ -600,8 +568,9 @@ Skills:
   canonical workflow for any `*TraceReplay` test failure.
 - [`s1-trace-replay`](../../../.claude/skills/s1-trace-replay/) — Sonic 1 trace recording
   specifics.
-- [`s1-retro-trace`](../../../.claude/skills/s1-retro-trace/) — recording S1 traces using
-  stable-retro instead of BizHawk.
+- **`bizhawk-headless-trace`** — canonical native capture and publication,
+  including S1 credits demos; the maintained protocol is
+  [`tools/bizhawk-headless/README.md`](../../../tools/bizhawk-headless/README.md).
 
 ## Next Steps
 

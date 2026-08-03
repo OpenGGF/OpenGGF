@@ -1,5 +1,9 @@
 # S3K Standard Trace Recorder — Profiles, Hooks, and Movie Handling
 
+> **V5 supersession (2026-08-03).** Profiles remain semantic capture choices,
+> but current output always uses v5 and opaque recorder provenance. Lua stamp
+> details below are historical/diagnostic evidence only.
+
 Authoritative migration spec for `tools/bizhawk/s3k_trace_recorder.lua`
 (v6.32-s3k at HEAD, using `tools/bizhawk/lib/oggf_trace_common.lua`) covering:
 

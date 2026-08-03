@@ -1,5 +1,9 @@
 # S3K Complete-Run Recorder — Byte-Level SEGMENTATION Specification
 
+> **V5 supersession (2026-08-03).** Current native output has one v5 contract
+> and one module-plus-direct timing grammar. Versioned recorder/timing text
+> below records predecessor history and does not select live behavior.
+
 > **2026-08-02 recorder-order note.** The maintained native complete-run
 > writer is now `6.42-s3k-completerun`, with held-counter final-parent
 > retirements attributed from canonical FIFO state transitions and

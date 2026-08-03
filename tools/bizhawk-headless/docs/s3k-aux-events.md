@@ -1,5 +1,9 @@
 # S3K Standard Recorder — Authoritative AUX Event Spec
 
+> **V5 supersession (2026-08-03).** Current semantic aux capabilities live in
+> the strict v5 envelope. Native ROM/disassembly behavior and native tests are
+> authoritative for publication; Lua/version text below is diagnostic history.
+
 Source of truth: `tools/bizhawk/s3k_trace_recorder.lua` (metadata stamp
 `6.32-s3k` at HEAD, `trace_schema` 6, `csv_version` 7) plus
 `tools/bizhawk/lib/oggf_trace_common.lua`. This document is a byte-level

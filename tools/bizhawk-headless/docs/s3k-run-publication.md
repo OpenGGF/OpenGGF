@@ -1,5 +1,10 @@
 # S3K Complete-Run Recorder — Publication Specification (directories, metadata.json, run_manifest.json, encodings)
 
+> **V5 supersession (2026-08-03).** Publication now uses the single v5
+> envelope and literal candidate workflow in
+> `docs/guide/contributing/trace-v5-publication.md`. The Candidate-B and
+> versioned identities below remain historical publication evidence.
+
 > **2026-08-02 recorder-order note.** The maintained native complete-run
 > writer is `6.42-s3k-completerun`. On a shared raw frame it serializes module
 > `post_objects` before direct `pre_main_loop`, after any `vint_service` event.

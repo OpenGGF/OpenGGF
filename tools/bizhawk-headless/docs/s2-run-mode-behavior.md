@@ -1,5 +1,10 @@
 # S2 Trace Recorder — Run Mode (OGGF_TRACE_RUN_ID) Byte-Level Behavior Spec
 
+> **V5 supersession (2026-08-03).** The maintained native writer emits the
+> strict v5 envelope; every manifest has `dynamic_art_gap_transitions`.
+> Recorder provenance is opaque. Legacy Lua stamps below are predecessor
+> evidence only.
+
 Authority: `tools/bizhawk/s2_trace_recorder.lua` v`9.12-s2` (the Lua recorder is
 the behavioral authority; where any spec text and the Lua disagree, the Lua
 wins). Consumer contract: `src/main/java/com/openggf/trace/TraceRunManifest.java`.

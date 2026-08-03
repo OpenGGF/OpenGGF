@@ -12,6 +12,21 @@ owned by
 [`2026-07-28-s3k-kos-decompression-queue.md`](2026-07-28-s3k-kos-decompression-queue.md);
 this document remains the cross-game authority boundary.
 
+### 2026-08-03 v5 grammar supersession
+
+The trace-v5 consolidation supersedes the schema-selection mechanics below,
+without changing this document's authority boundary. Current metadata declares
+only `trace_schema: 5`; `hardware_timing_schema` is removed. Presence of
+`hardware_timing.jsonl` enables the one current registry, covering both
+`kos_module_queue` and `kos_decompression_queue`. Every event still admits only
+matching, prepared, production-submitted ROM work after kind, ordinal, stable
+submission fingerprint, and service-boundary checks succeed.
+
+Historical schema-1/schema-2 names and recorder stamps later in this document
+describe the evidence and decisions that led to v5. They are not live parser
+choices or compatibility obligations. `recorder` and `recorder_version` are
+opaque provenance; `lua_script_version` was removed rather than renamed.
+
 The governing principle is:
 
 > Record the smallest scheduling outcome observable to the game, not the

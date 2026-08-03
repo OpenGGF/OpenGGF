@@ -5,6 +5,7 @@ import com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageComparisonState;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.trace.TraceFixtureRoot;
 import com.openggf.tests.trace.TraceReportWriter;
 import com.openggf.game.sonic3k.specialstage.S3kSpecialStageTraceData;
 import com.openggf.game.sonic3k.specialstage.S3kSpecialStageTraceFrame;
@@ -123,7 +124,7 @@ public abstract class AbstractS3kSpecialStageTraceReplayTest {
         assumeTrue(romFile != null,
                 "s3k.gen ROM required for S3K special-stage trace replay");
 
-        Path dir = traceDirectory();
+        Path dir = TraceFixtureRoot.resolve(traceDirectory());
         assumeTrue(Files.exists(dir.resolve("metadata.json")),
                 "No S3K special-stage trace committed yet at " + dir);
 

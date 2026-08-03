@@ -7,6 +7,7 @@ import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageComparisonState.Pl
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.trace.TraceFixtureRoot;
 import com.openggf.tests.trace.TraceReportWriter;
 import com.openggf.trace.DivergenceReport;
 import com.openggf.trace.DynamicArtSpecialStageComparator;
@@ -156,7 +157,7 @@ public abstract class AbstractS2SpecialStageTraceReplayTest {
         assumeTrue(romFile != null && Files.exists(Path.of("s2.gen")),
                 "s2.gen ROM required for S2 special-stage trace replay");
 
-        Path dir = traceDirectory();
+        Path dir = TraceFixtureRoot.resolve(traceDirectory());
         SpecialStageTraceData trace = SpecialStageTraceData.load(dir);
 
         // Pipeline assertion: the trace loads with the expected profile + frames.

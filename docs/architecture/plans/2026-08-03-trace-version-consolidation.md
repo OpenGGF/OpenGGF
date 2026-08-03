@@ -402,8 +402,10 @@ writers, run walkers/catalog tests, synthetics, and publication gates.
    required trailers; never use `--no-verify`.
 3. Fetch and fast-forward the main-workspace `develop` only after this worktree
    is fully green. On that fast-forwarded, pre-merge `develop`, run and preserve
-   the full three-ROM Maven baseline with `surefire.forkCount=1` so the known
-   cold LWJGL extraction race cannot corrupt the comparison. If new upstream
+   the full three-ROM Maven baseline with `surefire.forkCount=1` for a stable,
+   memory-bounded comparison. A fresh current-`develop` four-fork run loaded
+   every LWJGL native successfully; its failure was Java heap exhaustion, so
+   there is no confirmed native-library extraction defect to work around. If new upstream
    source or recorder-relevant documentation
    appeared after Task 8's freeze, reconcile it into this worktree and return to
    Tasks 8–9 for a fresh review, artifact freeze, complete fleet recapture, new

@@ -1,5 +1,11 @@
 # S1 Complete-Run Recorder — Byte-Level Segmentation Specification
 
+> **V5 supersession (2026-08-03).** Current native output uses
+> `trace_schema: 5`, `recorder: native-bizhawk-headless`, and
+> `recorder_version: 3.0`. Provenance never selects behavior;
+> `lua_script_version` and the separate schema fields below are predecessor
+> history only. ROM/disassembly semantics plus native tests are authoritative.
+
 Authoritative specification of the COMPLETE-RUN (multi-level-segment) behavior
 of `tools/bizhawk/s1_complete_run_recorder.lua` (1792 lines, currently
 stamping `lua_script_version` **"3.18"** — see §2) with

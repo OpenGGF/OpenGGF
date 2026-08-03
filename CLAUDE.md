@@ -117,7 +117,11 @@ file is guidance you can weigh against the situation in front of you.
    confined to the timing port. `TestHardwareTimingAuthorityGuard` enforces parser/authority
    isolation and forbids physics/aux/gameplay and reflective mutation paths. A v5
    `hardware_timing.jsonl` stream records module-queue and direct Kosinski readiness;
-   either still requires matching production-submitted ROM work.
+   either still requires matching production-submitted ROM work. V5 is the sole live
+   trace contract: `trace_schema: 5` owns metadata, rows, timing, and run manifests.
+   `recorder` and `recorder_version` are opaque provenance only;
+   `lua_script_version` was removed, not renamed, and no provenance field selects
+   replay behaviour.
 5. **Objects never call `getInstance()`.** Use the injected `services()`.
 6. **Gameplay tile edits route through `ZoneLayoutMutationPipeline` / a
    `LevelMutationSurface`** — never a direct `getMap().setValue(...)`. Editor commands and

@@ -1,5 +1,9 @@
 # S3K Trace Recorder — Byte-Level CORE Specification (RAM map, physics.csv, metadata)
 
+> **V5 supersession (2026-08-03).** Current native output has one v5 envelope,
+> 42-column level rows, and one module-plus-direct timing grammar. The
+> schema-1/schema-2 and recorder-stamp sections below are historical evidence.
+
 Authoritative byte-level specification for the maintained native S3K
 STANDARD recorder in `tools/bizhawk-headless/`. This document owns the S3K
 RAM address map, `physics.csv`, metadata shape, hardware-timing stream,

@@ -1,5 +1,10 @@
 # S1 Complete-Run Recorder — Run Mode + Special-Stage Byte-Level Behavior Spec
 
+> **V5 supersession (2026-08-03).** Current native metadata and manifests use
+> the sole `trace_schema: 5` contract and opaque `recorder` /
+> `recorder_version` provenance. Legacy Lua stamps and schema axes below are
+> retained only to explain predecessor bytes, not as live choices.
+
 Authority: `tools/bizhawk/s1_complete_run_recorder.lua` at current HEAD (the
 file stamps `lua_script_version "3.18"`; see §10 for the 3.15-fixture
 provenance). The Lua is the behavioral authority; where any spec text and the

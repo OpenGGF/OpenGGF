@@ -1,5 +1,9 @@
 # S2 Trace Recorder — Byte-Level Behavioral Specification (Level Gameplay)
 
+> **V5 supersession (2026-08-03).** The maintained native writer emits the
+> strict v5 envelope and 42-column level rows. `native_prelude_bootstrap`, not
+> a recorder-version comparison, declares frame-zero bootstrap evidence.
+
 Authoritative specification for porting the LEVEL-GAMEPLAY behavior of
 `tools/bizhawk/s2_trace_recorder.lua` (v9.12-s2, using
 `tools/bizhawk/lib/oggf_trace_common.lua`) to the C# headless harness

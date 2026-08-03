@@ -190,6 +190,33 @@ be able to.
 - `metadata.json` — capture identity, profile, offsets, versions
 - `run_manifest.json` — run mode only: segment inventory and transitions
 
+Every production output uses the sole v5 envelope:
+
+```json
+"recorder": "native-bizhawk-headless",
+"recorder_version": "3.0",
+"trace_schema": 5
+```
+
+Provenance is opaque and never selects parser/replay behavior.
+`lua_script_version` is removed, not renamed. Ordinary level rows are fixed at
+42 columns; special stages are fixed by game/profile. Timing uses one
+module-plus-direct grammar, and every run manifest includes
+`dynamic_art_gap_transitions` (including empty).
+
+Validate and compare a complete scratch fleet before publication:
+
+```bash
+python3 tools/traces/validate_trace_v5.py /scratch/v5-candidate/traces
+python3 tools/traces/compare_trace_v5_candidates.py \
+  src/test/resources/traces /scratch/v5-candidate/traces \
+  --mode credits-20-to-42 --output /scratch/v5-candidate-report.json
+```
+
+The comparator never installs output. Detailed capture-matrix, credits
+raw-host-evidence, candidate-root replay, and exact-byte approval instructions
+live in `docs/guide/contributing/trace-v5-publication.md`.
+
 **The two payloads are gzipped at publication by default**, landing as
 `physics.csv.gz` and `aux_state.jsonl.gz` once they reach `--compress-threshold`
 (default 1 MiB). `metadata.json` and `run_manifest.json` are never compressed,

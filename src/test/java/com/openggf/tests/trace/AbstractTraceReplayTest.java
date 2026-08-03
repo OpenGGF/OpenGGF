@@ -231,7 +231,7 @@ public abstract class AbstractTraceReplayTest {
     @Test
     public void replayMatchesTrace() throws Exception {
         // 0. Skip if trace directory or required files are missing
-        Path traceDir = traceDirectory();
+        Path traceDir = TraceFixtureRoot.resolve(traceDirectory());
         Assumptions.assumeTrue(Files.isDirectory(traceDir), "Trace directory not found: " + traceDir);
         Assumptions.assumeTrue(Files.exists(traceDir.resolve("metadata.json")), "metadata.json not found in " + traceDir);
         Assumptions.assumeTrue(hasTracePayload(traceDir, "physics.csv"), "physics.csv(.gz) not found in " + traceDir);
