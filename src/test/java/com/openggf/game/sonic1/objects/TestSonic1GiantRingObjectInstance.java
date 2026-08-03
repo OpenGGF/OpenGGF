@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -75,6 +76,11 @@ class TestSonic1GiantRingObjectInstance {
         verify(player).setForcedAnimationId(Sonic1AnimationIds.NULL.id());
         verify(player).clearPowerUps();
         verify(player, never()).applyObjectControlState(any(ObjectControlState.class));
+
+        reset(player);
+        flash.update(7, player);
+        verify(player).setAnimationId(Sonic1AnimationIds.NULL.id());
+        verify(player).setForcedAnimationId(Sonic1AnimationIds.NULL.id());
     }
 
     @Test
@@ -93,6 +99,7 @@ class TestSonic1GiantRingObjectInstance {
             flash.update(frame, player);
         }
 
+        verify(player).setNativeSlotPresent(false);
         verify(player).applyObjectControlState(ObjectControlState.NATIVE_BIT_7_FULL_CONTROL);
     }
 

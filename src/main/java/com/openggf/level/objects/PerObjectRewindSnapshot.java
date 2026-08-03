@@ -394,7 +394,7 @@ public record PerObjectRewindSnapshot(
             int objectControlReleasedFrame,
             boolean suppressAirCollision, boolean suppressGroundWallCollision, boolean forceFloorCheck,
             int suppressedObjectMoveAndFallAxes,
-            boolean hidden,
+            boolean hidden, boolean nativeSlotPresent,
             boolean renderFlagOnScreen, boolean renderFlagOnScreenValid,
             boolean renderHFlip, boolean renderVFlip,
             // MGZ-specific

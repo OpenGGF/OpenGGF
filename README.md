@@ -218,6 +218,14 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **Shared visual/headless represented-row harness (2026-08-03):** complete-run
+  special stages now use one production-row driver for input, hardware timing,
+  dynamic-art publication, comparison, cursor advancement, and segment closure
+  in both visual and headless replay. The visual launcher drains an admitted row
+  before boundary work, and fixture defaults share playable/fixed-slot dispatch.
+  S1 giant-ring completion also tracks the ROM's deleted native player slot as
+  explicit rewind state, keeping the emerald route's end-card animation stable
+  while all 3,728 represented special-stage rows are verified atomically.
 - **Visual/headless S1 run lifecycle parity (2026-08-03):** visual complete
   runs now carry the same ROM-visible object VBlank pacing across compressed
   act/title-card transitions as headless chains, keeping non-emerald GHZ3

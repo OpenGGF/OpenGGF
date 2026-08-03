@@ -65,6 +65,7 @@ import com.openggf.trace.replay.runs.TraceRunPlaybackCoordinator;
 import com.openggf.trace.replay.runs.TraceRunBoundaryComparator;
 import com.openggf.trace.replay.runs.TraceRunDynamicArtGapJournal;
 import com.openggf.trace.replay.runs.TraceRunSpecialStageRows;
+import com.openggf.trace.replay.runs.TraceRunSpecialStageRowDriver;
 import com.openggf.trace.replay.runs.TraceRunSpecialStageRows.SpecialStageRowAdmission;
 import com.openggf.trace.replay.runs.TraceRunVblankClock;
 import com.openggf.trace.timing.HardwareTimingReplayPort;
@@ -145,6 +146,7 @@ public final class TraceSessionLauncher {
     private long runLevelLoadGeneration;
     private int runForwardedBoundarySegment = -1;
     private TraceRunSpecialStageRows runSpecialRows;
+    private TraceRunSpecialStageRowDriver runSpecialRowDriver;
     private int runSpecialLocalRow;
     private int runSpecialVblankBefore;
     private boolean runSpecialInputApplied;
@@ -845,8 +847,10 @@ public final class TraceSessionLauncher {
             return false;
         }
         if ("special_stage".equals(runSegments.get(index).segment().kind())) {
-            return runSpecialRows != null
-                    && runSpecialLocalRow >= runSpecialRows.rowCount();
+            return runSpecialRowDriver != null
+                    ? runSpecialRowDriver.isComplete()
+                    : runSpecialRows != null
+                            && runSpecialLocalRow >= runSpecialRows.rowCount();
         }
         return comparator != null && comparator.isComplete();
     }
@@ -928,7 +932,7 @@ public final class TraceSessionLauncher {
             physicalRow = ssBk2FrameOffset + ssCursor;
         } else if (currentRunSpecialAdmission().isPresent()) {
             physicalRow = runSegments.get(currentRunSegmentIndex()).segment()
-                    .bk2FrameOffset() + runSpecialLocalRow;
+                    .bk2FrameOffset() + currentRunSpecialRow();
             var objects = GameServices.level().getObjectManager();
             runSpecialVblankBefore = objects != null ? objects.getVblaCounter() : 0;
             runSpecialInputApplied = true;
@@ -957,7 +961,6 @@ public final class TraceSessionLauncher {
         if (runSpecialInputApplied) {
             applyRunSpecialPreservedVblankPolicy();
             runSpecialInputApplied = false;
-            runSpecialLocalRow++;
             return;
         }
         if (ssTrace == null) {
@@ -977,18 +980,17 @@ public final class TraceSessionLauncher {
     }
 
     private Optional<SpecialStageRowAdmission> currentRunSpecialAdmission() {
-        if (runCoordinator == null || runSpecialRows == null || fadeStarted
+        if (runCoordinator == null || runSpecialRowDriver == null || fadeStarted
                 || runCoordinator.phase()
                         != TraceRunPlaybackCoordinator.Phase.CURRENT_SEGMENT
-                || runSpecialLocalRow < 0
-                || runSpecialLocalRow >= runSpecialRows.rowCount()) {
+                || runSpecialRowDriver.isComplete()) {
             return Optional.empty();
         }
-        return Optional.of(runSpecialRows.admission(runSpecialLocalRow));
+        return Optional.of(runSpecialRowDriver.currentPolicy());
     }
 
     private void applyRunSpecialPreservedVblankPolicy() {
-        SpecialStageRowAdmission admission = runSpecialRows.admission(runSpecialLocalRow);
+        SpecialStageRowAdmission admission = currentRunSpecialAdmission().orElseThrow();
         if (!admission.advancePreservedVblankIfUnchanged()) {
             return;
         }
@@ -996,6 +998,11 @@ public final class TraceSessionLauncher {
         if (objects != null && objects.getVblaCounter() == runSpecialVblankBefore) {
             objects.initVblaCounter(runSpecialVblankBefore + 1);
         }
+    }
+
+    private int currentRunSpecialRow() {
+        return runSpecialRowDriver != null
+                ? runSpecialRowDriver.cursor() : runSpecialLocalRow;
     }
 
     /**
@@ -1140,12 +1147,12 @@ public final class TraceSessionLauncher {
             finishRunTerminalTailStep(mode);
             return;
         }
-        if (runSpecialRows != null && mode != GameMode.SPECIAL_STAGE
-                && runSpecialLocalRow < runSpecialRows.rowCount()) {
+        if (runSpecialRowDriver != null && mode != GameMode.SPECIAL_STAGE
+                && !runSpecialRowDriver.isComplete()) {
             applyRunCoordinatorActions(runCoordinator.abort(
                     "special-stage segment " + currentRunSegmentIndex()
-                            + " exited after " + runSpecialLocalRow + " of "
-                            + runSpecialRows.rowCount() + " rows"));
+                            + " exited after " + runSpecialRowDriver.cursor() + " of "
+                            + runSpecialRowDriver.rowCount() + " rows"));
             clearRunOwnedInputOverride();
             return;
         }
@@ -1271,7 +1278,11 @@ public final class TraceSessionLauncher {
         if (runBoundaryProbe != null) {
             runBoundaryProbe.setDelegate(null);
         }
-        if (runSpecialRows != null) {
+        if (runSpecialRowDriver != null) {
+            runSpecialRowDriver.verifyComplete();
+            runSpecialRowDriver = null;
+            runSpecialRows = null;
+        } else if (runSpecialRows != null) {
             requireNoPendingRunSpecialDynamicArtRow();
             if (runSpecialDynamicArtComparison != null) {
                 runSpecialDynamicArtComparison.verifyComplete();
@@ -1302,14 +1313,20 @@ public final class TraceSessionLauncher {
         }
         FrameComparison gapComparison = null;
         if (receipt.inputClock() == DestinationAdmissionReceipt.InputClock.SPECIAL_LOCAL) {
+            TraceRunSpecialStageRowDriver.requireFreshAdmission(
+                    receipt.rowsConsumed());
             runSpecialRows = Objects.requireNonNull(
                     segment.specialStageRows(),
                     "prepared special-stage rows for segment "
                             + receipt.segmentIndex());
             runSpecialLocalRow = receipt.rowsConsumed();
+            runSpecialRowDriver = new TraceRunSpecialStageRowDriver(
+                    runSpecialRows, segment.trace());
             runBoundaryProbe.setDelegate(null);
         }
-        armRunSpecialDynamicArtComparison(receipt.segmentIndex());
+        if (runCoordinator == null) {
+            armRunSpecialDynamicArtComparison(receipt.segmentIndex());
+        }
         if (runDynamicArtSegments != null) {
             runDynamicArtSegments.beginSegment();
             dynamicArtSegmentGameplayMode.dynamicArtLifecycle()
@@ -1837,6 +1854,7 @@ public final class TraceSessionLauncher {
             iterationComparator.publishPendingDynamicArtComparison(
                     before, after);
         }
+        publishPendingRunSpecialStageRow();
         drainPendingRunBoundaryActions();
         if (runSpecialDynamicArtPendingRow >= 0) {
             DynamicArtDiagnosticsSnapshot snapshot =
@@ -1870,6 +1888,15 @@ public final class TraceSessionLauncher {
         retryPendingTeardown();
     }
 
+    private void publishPendingRunSpecialStageRow() {
+        if (runSpecialRowDriver == null || !runSpecialRowDriver.hasPendingRow()) {
+            return;
+        }
+        runSpecialRowDriver.publishAdmittedRow(
+                        GameServices.captureDynamicArtDiagnostics())
+                .ifPresent(this::ingestRunSpecialDynamicArtComparison);
+    }
+
     private void drainPendingRunBoundaryActions() {
         if (runSpecialVerificationPending) {
             runSpecialVerificationPending = false;
@@ -1887,6 +1914,10 @@ public final class TraceSessionLauncher {
     }
 
     private void verifyRunSpecialDynamicArtComplete() {
+        if (runSpecialRowDriver != null) {
+            runSpecialRowDriver.verifyComplete();
+            return;
+        }
         requireNoPendingRunSpecialDynamicArtRow();
         runSpecialDynamicArtComparison.verifyComplete();
     }
@@ -2029,18 +2060,17 @@ public final class TraceSessionLauncher {
                 fixture.enterHardwareTimingGap();
                 return;
             }
-            if (runSpecialTimingSegment != segmentIndex) {
-                armRunSpecialDynamicArtComparison(segmentIndex);
+            if (!runSpecialRowDriver.hasPendingRow()) {
+                runSpecialRowDriver.admitCurrentRow(
+                        GameServices.captureDynamicArtDiagnostics());
             }
             SpecialStageRowAdmission admission =
-                    runSpecialRows.admission(runSpecialLocalRow);
+                    runSpecialRowDriver.currentPolicy();
             if (admission.admitHardwareTiming()) {
-                runHardwareTiming.beginSegmentRow(segmentIndex, runSpecialLocalRow);
+                runHardwareTiming.beginSegmentRow(
+                        segmentIndex, runSpecialRowDriver.cursor());
             } else {
                 fixture.enterHardwareTimingGap();
-            }
-            if (runSpecialRows.metadata().hasPerFrameDynamicArtTransferState()) {
-                runSpecialDynamicArtPendingRow = runSpecialLocalRow;
             }
             return;
         }
@@ -3032,16 +3062,6 @@ public final class TraceSessionLauncher {
             int mask = toReplayValidationMask(frame);
             playback.advanceCurrentFrameWithoutGameplay();
             return mask;
-        }
-
-        @Override
-        public void advancePlayableAnimationsOnly() {
-            GameServices.sprites().advancePlayableSlotPrefix();
-        }
-
-        @Override
-        public void advancePlayableFixedSlotsOnly() {
-            GameServices.sprites().advanceTailsTailsAfterObjectExecution();
         }
 
         @Override

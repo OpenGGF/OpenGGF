@@ -101,6 +101,16 @@ public class Sonic1RingFlashObjectInstance extends AbstractObjectInstance implem
             return;
         }
 
+        // Flash_Collect's id_Null write remains in the player SST until the
+        // later word clear deletes that slot. The engine keeps a structural
+        // player instance alive, so republish the retained native byte while
+        // the flash owns this interval instead of allowing normal animation
+        // selection to rewrite it between flash ticks.
+        if (triggerFired && player != null) {
+            player.setAnimationId(Sonic1AnimationIds.NULL.id());
+            player.setForcedAnimationId(Sonic1AnimationIds.NULL.id());
+        }
+
         // Flash_Collect subroutine
         frameTimer--;
         if (frameTimer >= 0) {
@@ -162,6 +172,7 @@ public class Sonic1RingFlashObjectInstance extends AbstractObjectInstance implem
         // instance across the results transition, so represent the absent SST
         // slot by suppressing movement and touch processing from this point.
         if (player != null) {
+            player.setNativeSlotPresent(false);
             ObjectControlState.nativeBit7FullControl().applyTo(player);
         }
 

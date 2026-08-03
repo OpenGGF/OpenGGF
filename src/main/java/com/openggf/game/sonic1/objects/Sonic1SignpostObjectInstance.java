@@ -2,6 +2,7 @@ package com.openggf.game.sonic1.objects;
 import com.openggf.audio.GameMusic;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic1.resources.Sonic1PlcService;
+import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
@@ -320,6 +321,12 @@ public class Sonic1SignpostObjectInstance extends AbstractObjectInstance
      */
     private void updateWalkOff(AbstractPlayableSprite player) {
         if (isRetainedGiantRingPlayerSstDeleted(player)) {
+            // The native player SST has been cleared, so no later player-slot
+            // animation dispatch can rewrite Flash_Collect's retained
+            // id_Null byte. Keep the structural engine sprite aligned with
+            // that absent-slot state while the signpost commits v_endcard.
+            player.setAnimationId(Sonic1AnimationIds.NULL.id());
+            player.setForcedAnimationId(Sonic1AnimationIds.NULL.id());
             triggerGotThroughAct(player);
             return;
         }
@@ -352,10 +359,7 @@ public class Sonic1SignpostObjectInstance extends AbstractObjectInstance
         var gameState = services().gameState();
         return gameState != null
                 && gameState.isBigRingCollected()
-                && player.isHidden()
-                && player.isObjectControlled()
-                && player.isObjectControlSuppressesMovement()
-                && !player.isObjectControlAllowsCpu();
+                && !player.isNativeSlotPresent();
     }
 
     /**
