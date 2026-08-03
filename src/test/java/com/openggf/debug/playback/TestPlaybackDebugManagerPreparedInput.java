@@ -66,6 +66,25 @@ class TestPlaybackDebugManagerPreparedInput {
     }
 
     @Test
+    void preparedAppliedRowPublishesACompleteLogicalSnapshot() {
+        RecordingObserver observer = new RecordingObserver(-1, false, 0);
+        playback.startSession(movie(), 2);
+        playback.setFrameObserver(observer);
+
+        var snapshot = playback.getCurrentLogicalInputSnapshot();
+
+        assertEquals(AbstractPlayableSprite.INPUT_LEFT
+                        | AbstractPlayableSprite.INPUT_JUMP,
+                snapshot.player1().heldMask());
+        assertEquals(AbstractPlayableSprite.INPUT_LEFT
+                        | AbstractPlayableSprite.INPUT_JUMP,
+                snapshot.player1().pressedMask());
+        assertTrue(snapshot.player1().startHeld());
+        assertTrue(snapshot.player1().startPressed());
+        assertEquals(2, playback.getCursorFrame());
+    }
+
+    @Test
     void invalidAppliedOffsetFailsBeforeInputFallsBackOrCursorMoves() {
         playback.startSession(movie(), 0);
         playback.setFrameObserver(new RecordingObserver(-1, false, 0));

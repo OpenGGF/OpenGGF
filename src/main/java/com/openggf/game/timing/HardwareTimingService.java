@@ -206,6 +206,41 @@ public final class HardwareTimingService
         return recordedAuthority;
     }
 
+    /**
+     * Crosses from a completed live prelude into recorded readiness on this
+     * same session-owned service. Only claimed diagnostic history is retired;
+     * any live job still owned by production rejects the transition.
+     */
+    public RecordedCompletionAuthority beginRecordedAdmissionAfterLiveEpoch() {
+        return beginRecordedAdmissionAfterLiveEpoch(
+                schemaOneAdmissionPolicies());
+    }
+
+    public RecordedCompletionAuthority beginRecordedAdmissionAfterLiveEpoch(
+            Map<HardwareWorkKind, HardwareReadinessAdmissionPolicy> policies) {
+        if (recordedAdmissionActive) {
+            throw new IllegalStateException(
+                    "recorded hardware admission is already active");
+        }
+        List<HardwareWorkHandle> pending = pendingHandles();
+        if (!pending.isEmpty()) {
+            throw new IllegalStateException(
+                    "live hardware admission still owns pending work: "
+                            + pendingDescription());
+        }
+        EnumMap<HardwareWorkKind, HardwareReadinessAdmissionPolicy> checked =
+                validateAdmissionPolicies(policies);
+
+        jobs.clear();
+        nextOrdinals.clear();
+        admissionPolicies.clear();
+        admissionPolicies.putAll(checked);
+        recordedAdmissionActive = true;
+        hasSubmitted = false;
+        lastServicedBoundary = null;
+        return recordedAuthority;
+    }
+
     public HardwareReadinessAdmissionPolicy admissionPolicy() {
         return recordedAdmissionActive
                 ? HardwareReadinessAdmissionPolicy.RECORDED
@@ -521,6 +556,15 @@ public final class HardwareTimingService
 
     private void installAdmissionPolicies(
             Map<HardwareWorkKind, HardwareReadinessAdmissionPolicy> policies) {
+        EnumMap<HardwareWorkKind, HardwareReadinessAdmissionPolicy> checked =
+                validateAdmissionPolicies(policies);
+        admissionPolicies.clear();
+        admissionPolicies.putAll(checked);
+    }
+
+    private static EnumMap<HardwareWorkKind, HardwareReadinessAdmissionPolicy>
+            validateAdmissionPolicies(
+                    Map<HardwareWorkKind, HardwareReadinessAdmissionPolicy> policies) {
         Objects.requireNonNull(policies, "admissionPolicies");
         EnumMap<HardwareWorkKind, HardwareReadinessAdmissionPolicy> checked =
                 new EnumMap<>(HardwareWorkKind.class);
@@ -537,8 +581,7 @@ public final class HardwareTimingService
             throw new IllegalArgumentException(
                     "recorded admission policy cannot leave every kind live");
         }
-        admissionPolicies.clear();
-        admissionPolicies.putAll(checked);
+        return checked;
     }
 
     private static EnumMap<HardwareWorkKind, HardwareReadinessAdmissionPolicy>

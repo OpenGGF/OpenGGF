@@ -3,6 +3,7 @@ package com.openggf.level;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.*;
 import com.openggf.Engine;
+import com.openggf.GameLoop;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -3084,11 +3085,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         if (!com.openggf.TraceSessionLauncher.activateScheduledPlaybackForLoadedLevel(playback)) {
             return;
         }
-        spriteManager.setPlaybackInputSuppressed(true);
-        Sprite main = spriteManager.getSprite(resolveMainCharacterCode());
-        if (main instanceof AbstractPlayableSprite playable) {
-            playable.setForcedInputMask(playback.getCurrentForcedInputMask());
-            playable.setForcedJumpPress(playback.isCurrentForcedJumpPress());
+        GameLoop loop = Engine.currentGameLoop();
+        if (loop != null) {
+            loop.applyScheduledPlaybackInputImmediately();
         }
     }
 

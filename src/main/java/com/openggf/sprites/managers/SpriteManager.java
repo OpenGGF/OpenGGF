@@ -404,7 +404,8 @@ public class SpriteManager implements PlayableSstDispatcher {
 		if (handler == null) {
 			return;
 		}
-		boolean suppressInput = inputSuppressed || playbackInputSuppressed;
+        boolean suppressInput = inputSuppressed
+                || (playbackInputSuppressed && !handler.hasLogicalOverride());
 		PlayerInputState p1 = handler.logical().player1();
 		int p1Held = !suppressInput ? p1.heldMask() : 0;
 		boolean up = (p1Held & AbstractPlayableSprite.INPUT_UP) != 0;
@@ -421,7 +422,8 @@ public class SpriteManager implements PlayableSstDispatcher {
 
 	public void update(InputHandler handler) {
 		frameCounter++;
-		boolean suppressInput = inputSuppressed || playbackInputSuppressed;
+        boolean suppressInput = inputSuppressed
+                || (playbackInputSuppressed && !handler.hasLogicalOverride());
 		PlayerInputState p1 = handler.logical().player1();
 		int p1Held = !suppressInput ? p1.heldMask() : 0;
 		int p1Pressed = !suppressInput ? p1.pressedMask() : 0;

@@ -113,6 +113,80 @@ class TestLevelIterationAdmissionController {
                 GameMode.TITLE_CARD, session, false));
     }
 
+    @Test
+    void visualTraceTitleCardReleaseBecomesAOneShotSetupBarrier()
+            throws Exception {
+        TraceSessionLauncher session = new TraceSessionLauncher(
+                null, null,
+                List.<com.openggf.trace.replay.runs.TraceRunReplayWalker
+                        .SegmentPlan>of(), null);
+        session.beginTitleCardPresentation(
+                new TraceSessionLauncher.TitleCardPresentation() {
+                    @Override
+                    public void prepareLevel() {
+                    }
+
+                    @Override
+                    public void enterTitleCard() {
+                    }
+                });
+        var controller = new LevelIterationAdmissionController();
+
+        LevelFrameResult release = controller.admit(
+                GameMode.TITLE_CARD,
+                () -> true,
+                () -> LevelFrameResult.GAMEPLAY_FRAME,
+                mock(LevelManager.class),
+                new GameplayModeContext(
+                        new WorldSession(new Sonic2GameModule())),
+                false,
+                mock(UserRecordingRuntimeControls.class),
+                () -> { }, () -> { }, () -> { });
+
+        assertEquals(LevelFrameResult.SETUP_ONLY, release,
+                "S2 must not fall through into an uncontrolled level frame");
+        assertTrue(session.beginReplayBootstrapAfterTitleCardIfReady(
+                GameMode.LEVEL));
+        assertFalse(session.beginReplayBootstrapAfterTitleCardIfReady(
+                GameMode.LEVEL));
+    }
+
+    @Test
+    void visualTraceSetupOnlyTitleCardReleaseStillArmsReplayBootstrap()
+            throws Exception {
+        TraceSessionLauncher session = new TraceSessionLauncher(
+                null, null,
+                List.<com.openggf.trace.replay.runs.TraceRunReplayWalker
+                        .SegmentPlan>of(), null);
+        session.beginTitleCardPresentation(
+                new TraceSessionLauncher.TitleCardPresentation() {
+                    @Override
+                    public void prepareLevel() {
+                    }
+
+                    @Override
+                    public void enterTitleCard() {
+                    }
+                });
+        var controller = new LevelIterationAdmissionController();
+
+        LevelFrameResult release = controller.admit(
+                GameMode.TITLE_CARD,
+                () -> true,
+                () -> LevelFrameResult.SETUP_ONLY,
+                mock(LevelManager.class),
+                new GameplayModeContext(
+                        new WorldSession(new Sonic2GameModule())),
+                false,
+                mock(UserRecordingRuntimeControls.class),
+                () -> { }, () -> { }, () -> { });
+
+        assertEquals(LevelFrameResult.SETUP_ONLY, release);
+        assertTrue(session.beginReplayBootstrapAfterTitleCardIfReady(
+                GameMode.LEVEL),
+                "S1/S3K setup-only release must still arm prepared replay");
+    }
+
     private static void setActiveTraceSession(TraceSessionLauncher session)
             throws Exception {
         Field field = TraceSessionLauncher.class.getDeclaredField("activeSession");

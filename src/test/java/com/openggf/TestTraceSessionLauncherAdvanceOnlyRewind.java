@@ -76,8 +76,10 @@ class TestTraceSessionLauncherAdvanceOnlyRewind {
             assertEquals(vblank, GameServices.level().getObjectManager().getVblaCounter(),
                     "ADVANCE_ONLY must not advance the VBlank/object clock");
             assertEquals(AbstractPlayableSprite.INPUT_RIGHT | AbstractPlayableSprite.INPUT_JUMP,
-                    fixture.sprite().getForcedInputMask(),
+                    loop.getInputHandler().logical().player1().heldMask(),
                     "the input-only row must still latch its held controller state");
+            assertEquals(0, fixture.sprite().getForcedInputMask(),
+                    "recorded raw input must not overwrite game-owned forced input");
             assertTrue(fixture.sprite().isForcedJumpPress(),
                     "the input-only action edge must remain pending");
             assertFalse(fixture.sprite().getAir(),

@@ -52,7 +52,6 @@ import com.openggf.game.save.SelectedTeam;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.session.VisualTraceReplayContextHandoff;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.game.startup.DonatedDataSelectWarmupTask;
 import com.openggf.data.Rom;
@@ -1308,26 +1307,6 @@ public class Engine {
 		this.levelManager = gameplayMode.getLevelManager();
 		this.levelManager.setEditorSaveManager(editorSaveManager);
 		gameLoop.setGameplayMode(gameplayMode);
-	}
-
-	GameplayModeContext reopenGameplayForVisualTrace(
-			HardwareReadinessAdmissionPolicy admissionPolicy,
-			TitleCardProvider presentationTitleCard) {
-		return VisualTraceReplayContextHandoff.reopen(
-				admissionPolicy,
-				presentationTitleCard,
-				gameLoop::resetModuleScopedProviders,
-				this::bindGameplayMode);
-	}
-
-	static GameplayModeContext reopenCurrentGameplayForVisualTrace(
-			HardwareReadinessAdmissionPolicy admissionPolicy,
-			TitleCardProvider presentationTitleCard) {
-		if (instance == null) {
-			throw new IllegalStateException("visual trace replay has no active engine");
-		}
-		return instance.reopenGameplayForVisualTrace(
-				admissionPolicy, presentationTitleCard);
 	}
 
 	private void bindEditorLevelView(Level editorLevel,

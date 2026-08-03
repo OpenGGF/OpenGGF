@@ -1,6 +1,7 @@
 package com.openggf.debug.playback;
 
 import com.openggf.control.InputHandler;
+import com.openggf.control.LogicalInputSnapshot;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
@@ -191,29 +192,37 @@ public final class PlaybackDebugManager {
     }
 
     public synchronized int getCurrentForcedInputMask() {
+        getCurrentLogicalInputSnapshot();
+        return lastAppliedMask;
+    }
+
+    /** Returns the selected BK2 row as ROM-visible held and edge input. */
+    public synchronized LogicalInputSnapshot getCurrentLogicalInputSnapshot() {
         if (movie == null || timeline == null) {
             lastAppliedMask = 0;
             lastAppliedStart = false;
             currentForcedJumpPress = false;
             currentForcedStartPress = false;
-            return 0;
+            return LogicalInputSnapshot.neutral();
         }
         if (!timeline.isPlaying()) {
             lastAppliedMask = 0;
             lastAppliedStart = false;
             currentForcedJumpPress = false;
             currentForcedStartPress = false;
-            return 0;
+            return LogicalInputSnapshot.neutral();
         }
         prepareCurrentFrame();
         if (preparedInputApplied) {
-            return lastAppliedMask;
+            return RecordedInputSnapshots.fromBk2(
+                    preparedAppliedFrame, preparedAppliedPredecessor);
         }
         lastAppliedMask = preparedAppliedFrame.p1InputMask();
         lastAppliedStart = preparedAppliedFrame.p1StartPressed();
         preparedInputApplied = true;
 
-        return lastAppliedMask;
+        return RecordedInputSnapshots.fromBk2(
+                preparedAppliedFrame, preparedAppliedPredecessor);
     }
 
     /**

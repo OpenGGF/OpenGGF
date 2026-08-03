@@ -22,7 +22,7 @@ import java.util.function.Supplier;
  * (A/B/C/U/D/L/R/S); and the last five mismatch entries, severity
  * coloured, with repeat counts.
  */
-public final class TraceHudOverlay {
+public final class TraceHudOverlay implements TraceSessionOverlay {
 
     private final LiveTraceComparator comparator;
     private final Supplier<String> pauseKeyLabelSupplier;
@@ -80,6 +80,7 @@ public final class TraceHudOverlay {
     private static final int RIGHT_MARGIN = 4;
     private static final int NATIVE_WIDTH = 320;
 
+    @Override
     public void render(PixelFontTextRenderer text) {
         text.beginBatch();
         try {

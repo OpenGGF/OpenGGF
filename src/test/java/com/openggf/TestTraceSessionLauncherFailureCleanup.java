@@ -96,6 +96,8 @@ class TestTraceSessionLauncherFailureCleanup {
         when(loop.getTitleCardProvider()).thenReturn(titleCard);
         installCurrentLoop(loop);
         session.beginTitleCardPresentation(noopPresentation());
+        assertTrue(TraceSessionLauncher
+                .claimTitleCardControlReleaseBarrierIfActive());
         SessionManager.armNextGameplayAdmissionPolicy(
                 HardwareReadinessAdmissionPolicy.RECORDED);
 
@@ -111,7 +113,7 @@ class TestTraceSessionLauncherFailureCleanup {
     }
 
     @Test
-    void replayBootstrapReopenFailureReturnsToMasterTitleAndCleansSession()
+    void preparedReplayBootstrapFailureReturnsToMasterTitleAndCleansSession()
             throws Exception {
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         GameServices.configuration().setConfigValue(
@@ -125,10 +127,10 @@ class TestTraceSessionLauncherFailureCleanup {
         TitleCardProvider titleCard = mock(TitleCardProvider.class);
         when(titleCard.isComplete()).thenReturn(true);
         when(loop.getTitleCardProvider()).thenReturn(titleCard);
-        Engine engine = installCurrentLoop(loop);
-        when(engine.reopenGameplayForVisualTrace(any(), any()))
-                .thenThrow(new IllegalStateException("reopen failed"));
+        installCurrentLoop(loop);
         session.beginTitleCardPresentation(noopPresentation());
+        assertTrue(TraceSessionLauncher
+                .claimTitleCardControlReleaseBarrierIfActive());
         SessionManager.armNextGameplayAdmissionPolicy(
                 HardwareReadinessAdmissionPolicy.RECORDED);
 
@@ -141,8 +143,6 @@ class TestTraceSessionLauncherFailureCleanup {
                 SessionManager.openGameplaySession(new Sonic1GameModule())
                         .hardwareTiming().admissionPolicy());
         verify(loop).returnToMasterTitle();
-        verify(engine).reopenGameplayForVisualTrace(
-                HardwareReadinessAdmissionPolicy.LIVE, titleCard);
     }
 
     private static TraceSessionLauncher presentationSession(

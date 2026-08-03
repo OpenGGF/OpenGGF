@@ -220,6 +220,11 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
     }
 
     public void reset() {
+        if (externalComparisonSegmentOpenDeferred
+                && dynamicArtLifecycle != null
+                && dynamicArtLifecycle.isComparisonSegmentReserved()) {
+            dynamicArtLifecycle.cancelReservedComparisonSegment();
+        }
         activeFrame = null;
         representedIterationWithoutVblank = false;
         vblankOverrunCarry = false;
@@ -236,6 +241,11 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
      * not accept expected events or any gameplay value.
      */
     public void setComparisonSegmentsExternallyManaged(boolean externallyManaged) {
+        if (!externallyManaged && externalComparisonSegmentOpenDeferred
+                && dynamicArtLifecycle != null
+                && dynamicArtLifecycle.isComparisonSegmentReserved()) {
+            dynamicArtLifecycle.cancelReservedComparisonSegment();
+        }
         comparisonSegmentsExternallyManaged = externallyManaged;
         if (!externallyManaged) {
             externalComparisonSegmentOpenDeferred = false;
@@ -280,6 +290,10 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
                     && dynamicArtLifecycle.isComparisonSegmentOpen()) {
                 dynamicArtLifecycle.closeComparisonSegment();
             }
+            if (deferWindowUntilAfterService
+                    && dynamicArtLifecycle != null) {
+                dynamicArtLifecycle.reserveComparisonSegment();
+            }
         } catch (RuntimeException | Error failure) {
             comparisonSegmentsExternallyManaged = false;
             externalComparisonSegmentOpenDeferred = false;
@@ -299,6 +313,10 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
         }
         if (externalComparisonSegmentOpenDeferred) {
             externalComparisonSegmentOpenDeferred = false;
+            if (dynamicArtLifecycle != null
+                    && dynamicArtLifecycle.isComparisonSegmentReserved()) {
+                dynamicArtLifecycle.cancelReservedComparisonSegment();
+            }
             return;
         }
         if (dynamicArtLifecycle != null) {
@@ -345,7 +363,7 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
                     dynamicArtLifecycle.serviceProductionVBlank();
                 }
                 if (externalComparisonSegmentOpenDeferred) {
-                    dynamicArtLifecycle.openComparisonSegment();
+                    dynamicArtLifecycle.activateReservedComparisonSegment();
                     externalComparisonSegmentOpenDeferred = false;
                 } else if (!comparisonSegmentsExternallyManaged
                         && !dynamicArtLifecycle.isComparisonSegmentOpen()) {

@@ -50,6 +50,24 @@ class TestTraceCatalogRunDiscovery {
     }
 
     @Test
+    void preparesCommittedKnucklesCompleteRunWithCanonicalizedTiming()
+            throws Exception {
+        Path tracesRoot = Path.of("src", "test", "resources", "traces");
+        TraceEntry run = TraceCatalog.scan(tracesRoot).stream()
+                .filter(TraceEntry::isRun)
+                .filter(entry -> "s3k-knuckles-complete-superemeralds"
+                        .equals(entry.runManifest().runId()))
+                .findFirst()
+                .orElseThrow();
+
+        TraceCatalog.PreparedRunLaunch prepared =
+                TraceCatalog.prepareRunLaunch(run);
+
+        assertEquals(run.runManifest().segments().size(),
+                prepared.segments().size());
+    }
+
+    @Test
     void discoversRunManifestAsSingleEntry(@TempDir Path root) throws Exception {
         // Copy the committed synthetic run fixture into <root>/s3k/runs/run_aiz_gumball_3seg
         Path src = Path.of("src", "test", "resources", "traces", "synthetic", "run_aiz_gumball_3seg");

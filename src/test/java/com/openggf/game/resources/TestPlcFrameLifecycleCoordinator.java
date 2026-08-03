@@ -173,6 +173,10 @@ class TestPlcFrameLifecycleCoordinator {
         // Visual launch transfers ownership before TraceReplayDriver.start()
         // loads the level and performs the playable setup pass.
         coordinator.acquireExternalComparisonSegmentOwnershipAfterNextService();
+        long reservedGeneration =
+                dynamicArt.latestSnapshot().segmentGeneration();
+        assertTrue(dynamicArt.isComparisonSegmentReserved());
+        assertFalse(dynamicArt.latestSnapshot().published());
         dynamicArt.observePlayerDplc(
                 com.openggf.game.GameId.S1, "sonic", 8,
                 new com.openggf.level.render.SpriteDplcFrame(List.of(
@@ -190,6 +194,8 @@ class TestPlcFrameLifecycleCoordinator {
         assertTrue(dynamicArt.isComparisonSegmentOpen());
         assertTrue(rowZero.published());
         assertEquals(0, rowZero.frame());
+        assertEquals(reservedGeneration, rowZero.segmentGeneration(),
+                "the pre-iteration snapshot and row zero must share a generation");
         assertEquals(List.of(), rowZero.edges(),
                 "bootstrap submit/complete must not become comparison row zero");
         assertEquals(List.of(), rowZero.outstandingTransferIds());
@@ -210,13 +216,15 @@ class TestPlcFrameLifecycleCoordinator {
         long generation = dynamicArt.latestSnapshot().segmentGeneration();
 
         coordinator.acquireExternalComparisonSegmentOwnershipAfterNextService();
+        assertTrue(dynamicArt.isComparisonSegmentReserved());
         coordinator.closeExternallyManagedComparisonSegment();
         coordinator.setComparisonSegmentsExternallyManaged(false);
 
         assertFalse(dynamicArt.isComparisonSegmentOpen());
-        assertEquals(generation,
+        assertFalse(dynamicArt.isComparisonSegmentReserved());
+        assertEquals(generation + 1,
                 dynamicArt.latestSnapshot().segmentGeneration(),
-                "cancelling before the first claim must not invent a segment");
+                "cancellation keeps the already allocated monotonic generation");
         coordinator.runLogicalIteration(() -> { }, frame -> {
             frame.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
             frame.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
@@ -224,6 +232,20 @@ class TestPlcFrameLifecycleCoordinator {
         });
         assertTrue(dynamicArt.isComparisonSegmentOpen(),
                 "automatic ownership must resume after cancellation");
+    }
+
+    @Test
+    void resetCancelsDeferredExternalComparisonReservation() {
+        DynamicArtLifecycleService dynamicArt = new DynamicArtLifecycleService();
+        dynamicArt.beginRun();
+        PlcFrameLifecycleCoordinator coordinator = new PlcFrameLifecycleCoordinator(
+                recording(new ArrayList<>()), dynamicArt);
+        coordinator.acquireExternalComparisonSegmentOwnershipAfterNextService();
+
+        coordinator.reset();
+
+        assertFalse(dynamicArt.isComparisonSegmentReserved());
+        assertFalse(dynamicArt.isComparisonSegmentOpen());
     }
 
     @Test

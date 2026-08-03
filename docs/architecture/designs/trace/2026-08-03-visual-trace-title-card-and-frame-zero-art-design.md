@@ -1,232 +1,340 @@
-# Visual trace title-card and frame-zero dynamic-art parity
+# Visual trace single-load replay and special-stage presentation parity
 
 Date: 2026-08-03
 
 ## Problem
 
-The master-title visual trace path still differs from the headless replay path
-at the boundary between level presentation and compared production:
+The visual trace launcher has accumulated several boundaries that differ from
+the headless replay path and from ordinary production presentation:
 
-1. it suppresses the level title card, so a user enters the trace directly;
-2. it opens an externally managed dynamic-art comparison segment before the
-   first replay production claim;
-3. S1 level loading has already prepared the player's initial DPLC at that
-   point, so the first production V-blank publishes its real `submitted` and
-   `completed` edges into comparison row zero; and
-4. headless replay services that bootstrap preparation while no comparison
-   segment is open, then opens and publishes an empty row zero.
+1. level-backed traces load the selected zone once to show its title card,
+   destroy that runtime, and load the same zone again to begin replay. This
+   restarts music and repeats level, PLC, and dynamic-art initialization;
+2. level playback writes BK2 input into `AbstractPlayableSprite`'s scripted
+   forced-input latch. A later visual-frame bridge therefore overwrites
+   game-owned input such as S1's signpost walk-off. In GHZ1 this first diverges
+   at trace frame 4998 while the headless logical-input path remains green;
+3. direct special-stage traces create no comparator and consequently install
+   no HUD, even though the trace cursor and recorded input are active;
+4. direct special-stage launch initializes the audio profile and ROM but not
+   the game's `GameSound` routing map, so S1 ring collection falls through to
+   the non-SMPS fallback instead of resolving the alternating ring IDs; and
+5. standalone S1 special-stage completion can already be holding a white fade.
+   The launcher's generic fade-to-black call cannot take ownership of that
+   state, so its teardown callback never runs and the session remains white.
 
-For S1 GHZ1 this produces the observed visual-only mismatch
-`dynamic_art.edges expected=[] actual=[0, 1]` even though every physics,
-animation, camera, and PLC queue field matches and the headless trace remains
-green.
+The fixes must retain exact PLC/DPLC and hardware-timing comparison. They must
+not filter diagnostics, copy trace gameplay state into the engine, or add a
+game/zone/frame exception.
 
 ## Constraints
 
-- The title card is presentation before the trace. It must not consume BK2
-  rows or comparison rows.
-- Title-card PLC/DPLC work must not leak into the replay's production ledger,
-  hardware-timing admission, or dynamic-art comparison generation.
-- The replay after the card must retain the same deterministic bootstrap used
-  by headless tests. Visual presentation cannot replace or mutate that
-  contract.
-- Dynamic-art diagnostics remain exact and comparison-only. No edge may be
-  discarded, filtered by expected trace data, or moved by a game/zone/frame
-  exception.
-- Complete-run segment zero uses the same launch boundary. Later run segments
-  retain their existing production-driven transition and external segment
-  ownership.
-- Standalone special-stage traces do not acquire a level title card.
+- A level-backed visual trace loads its initial zone exactly once.
+- The production title card is part of the visual prelude. It consumes no BK2
+  rows and no comparison rows.
+- Title-card work uses live hardware readiness. Recorded hardware timing begins
+  only after every production-submitted prelude job has completed and been
+  claimed; no pending work may be cleared to cross the boundary.
+- The prepared level, player team, object manager, PLC owners, camera, and music
+  remain in the same gameplay context across title-card release and replay
+  activation.
+- Playback input must use the same logical-input abstraction as headless replay
+  and remain lower priority than game-owned forced input/control locks.
+- Dynamic-art comparison remains atomic and exact. Prelude transitions live in
+  the unobserved gap; comparison row zero starts in a fresh segment generation.
+- Special-stage HUD and exit behavior must not invent a physics comparator.
+- Standalone special stages return to the visual trace picker at the terminal
+  trace row. Complete-run special-stage transfer remains owned by the run
+  coordinator.
 
 ## Options considered
 
-### Run the title card inside the compared replay context
+### Suppress the second load's music
 
-This is superficially simple, but it is not safe. The title card can service
-PLC/DPLC and hardware queues, advance playable/object preludes, and mutate the
-title-card provider before trace row zero. Hardware-timed traces also create
-their gameplay context with recorded admission, while the recorded schedule
-does not describe this extra visual prelude. Allowing that work to share the
-replay context either contaminates row zero or requires trace-specific cleanup.
+This hides the audible symptom while retaining duplicate level initialization,
+PLC submissions, object creation, and lifecycle ownership. It is rejected.
 
-### Draw a synthetic title-card overlay over an already-running replay
+### Keep a disposable title-card context and reload into a replay context
 
-This avoids runtime contamination but is not the production title card. It
-would either obscure live compared frames or need a parallel animation clock,
-and would duplicate game-specific title-card behavior outside its owner.
+This isolates recorded timing, but the same zone is loaded twice and the title
+card the user sees is not the runtime that continues into replay. It is
+rejected by the single-load invariant.
 
-### Use a disposable presentation context, then reopen a clean replay context
+### Run the title card and replay in one context with an explicit timing epoch
 
-This is the selected design. The first gameplay context loads the requested
-zone and runs its normal title card with no playback, comparator, hardware
-timing schedule, or externally managed dynamic-art segment. When the card
-releases back to level mode, that context is destroyed. A new gameplay context
-is opened with the trace's required hardware-admission policy and the existing
-`TraceReplayDriver` performs the unchanged headless-equivalent reset, level
-load, omitted-title-card tail, bootstrap, counter alignment, playback start,
-and comparator attachment.
-
-This makes presentation disposable and keeps the compared run reproducible.
+This is the selected design. The initial context loads the level once under
+live timing, displays the real title card, and continues into replay. At the
+handoff, a checked timing operation proves the live prelude has no unclaimed
+hardware jobs, retires its completed diagnostic epoch, and begins recorded
+admission with fresh ordinals when the trace has a hardware schedule. No level,
+queue facade, runtime-art coordinator, or gameplay manager is recreated.
 
 ## Design
 
-### 1. Two-phase visual level launch
+### 1. One level load and two lifecycle phases
 
-`TraceSessionLauncher` gains an explicit launch phase for level-backed visual
-sessions:
+`TraceSessionLauncher` retains its structural launch phases but changes their
+ownership:
 
-- `TITLE_CARD_PRESENTATION`: the requested zone/act is loaded in the initial
-  live context, the pending automatic title-card request is consumed, and
-  `GameLoop.enterTitleCard` starts the normal card immediately. The session is
-  made active so Escape and teardown remain owned, but the fixture, playback,
-  comparator, rewind controller, run coordinator, hardware schedule, and
-  external dynamic-art controller remain absent.
-- `REPLAY_BOOTSTRAP`: after the all-mode, after-step hook observes that the
-  card has returned to `LEVEL` and its overlay reports complete, it reopens a
-  clean gameplay context using the stored trace admission policy and runs the
-  existing replay launch body.
-- `ACTIVE`: the comparator/run coordinator is installed and normal visual
-  trace behavior resumes.
+- `TITLE_CARD_PRESENTATION`: reset per-level subsystems, register the recorded
+  team, load zone/act once, consume the automatic request, and enter the normal
+  production title card. Playback, comparator, rewind, and external comparison
+  ownership remain absent.
+- `REPLAY_BOOTSTRAP`: on the title card's production control-release step, the
+  loop returns to `LEVEL` while the text/pieces may still be in their ordinary
+  gameplay-phase exit tail. Adopt the already-loaded runtime at that boundary.
+  Do not wait for `isComplete()`, reopen a gameplay context, reset the team, or
+  call `loadZoneAndAct`.
+- `ACTIVE`: install playback, comparison, HUD/ghost, rewind, and run-boundary
+  ownership against that same runtime.
 
-The after-step hook is the handoff point because title-card release may fall
-through into one gameplay tick in the same host step, and the slide-out tail
-continues as an in-level overlay. Those presentation ticks remain in the
-disposable context and are destroyed only after the provider reports the full
-overlay complete; no active PLC lifecycle frame is destroyed mid-iteration.
+The reset that gives the visual launch a deterministic base remains before the
+single load. The replay driver gains an explicit prepared-level entry point.
+Its ordinary `start(zone, act)` remains the headless/capture entry point and
+continues to reset and load. Both paths converge on one activation method for
+start-position policy, bootstrap state, counter alignment, playback, and
+comparator installation.
 
-Both standalone level traces and complete runs use this phase. Special-stage
-launch remains direct.
+Control release needs one structural admission barrier. S1/S3K commonly still
+have a pending initial `Process_Sprites` token at release, which already makes
+the release iteration setup-only. S2 can consume that token earlier because it
+runs player physics during the locked card; its release would otherwise fall
+through into one ordinary `LEVEL` frame before the between-iterations launcher
+hook can install playback. While the visual launch phase owns the title-card
+presentation, `LevelIterationAdmissionController` therefore converts the
+single release iteration to `SETUP_ONLY` after all production release setup and
+mode changes have completed. It claims that boundary whether the production
+release result was already `SETUP_ONLY` (the usual S1/S3K path) or would have
+been `GAMEPLAY_FRAME` (the S2 path). The barrier is consumed once and carries
+no game, zone, trace, frame, input, or expected value. Replay activation then
+runs between iterations, and the next host iteration is comparison/BK2 row
+zero.
 
-The master-title game bootstrap always opens the disposable presentation
-context with live hardware admission. The session stores whether the actual
-trace needs live or recorded admission and applies that policy only when it
-opens the clean replay context. This prevents an unrepresented title-card job
-from waiting on or consuming the trace's hardware-timing schedule.
+The prepared-level path tells bootstrap that the production title card's locked
+prelude and release setup already ran. Synthetic title-card object, sidekick,
+animated-tile, oscillation, and initial setup passes used by headless omitted-
+presentation replay are not run a second time. Non-presentation bootstrap
+policy, hardware schedule installation, allowed metadata start placement,
+counter alignment, and comparator setup remain shared. The title-card provider
+is neither reset nor fast-forwarded at handoff: its real exit tail continues to
+update and render over the first compared gameplay rows. This matches the
+headless provider's `beginOmittedPresentationExitTail` boundary without letting
+unrecorded gameplay run while the launcher waits for the overlay to disappear.
 
-### 2. Clean context handoff
+Because `LevelManager.initAudio` executes only during the one load, level music
+starts once and remains continuous when the card releases.
 
-`TraceSessionLauncher` asks the `Engine` composition root to reopen the visual
-replay context through a narrow static action owned by `Engine`; the launcher
-never acquires the process singleton. `Engine` validates its active instance
-internally and delegates lifecycle replacement to
-`VisualTraceReplayContextHandoff`, passing callbacks that reset module-scoped
-providers and bind the new mode through its normal `bindGameplayMode` seam.
-This ownership matters because `GameLoop` caches the managers used by
-simulation, while `Engine.draw()` separately caches the `LevelManager`,
-`SpriteManager`, and `Camera` used by rendering. The operation:
+### 2. Checked live-to-recorded hardware epoch handoff
 
-1. resets the completed presentation title-card provider;
-2. resets every retained module-owned rewind adapter to its missing-snapshot
-   baseline (notably the S1/S2 `PlcLifecycleService` queue);
-3. reopens the current world session with the requested
-   `HardwareReadinessAdmissionPolicy`;
-4. attaches production gameplay managers through `GameplaySessionFactory`;
-5. atomically rebinds both `Engine` rendering references and `GameLoop`
-   simulation/graphics-managed references to the new context without mutating
-   the legacy `GameModuleRegistry`; and
-6. clears the loop's cached module-scoped title-card provider so the replay's
-   omitted-presentation tail starts from a reset provider.
+The gameplay context initially uses live hardware readiness so title-card PLC,
+DPLC, and Kosinski work follows production timing without consulting a trace
+schedule that does not describe the visual prelude.
 
-Destroying the presentation context resets its dynamic-art lifecycle,
-context-owned runtime-art queues, hardware timing state, PLC lifecycle
-coordinator, rewind registry, and other manager-owned state. The explicit
-adapter reset is required because reopening retains the `WorldSession` and
-`GameModule`, and the S1/S2 Nemesis PLC services are mutable module fields
-rather than gameplay-context fields. The selected game module and loaded ROM
-remain in the world session. `TraceReplayDriver.start` then registers the
-recorded team and loads the trace level exactly as it does today.
+For a trace with recorded timing, replay activation asks the existing
+`HardwareTimingService` to begin a recorded epoch after its live prelude. The
+operation is legal only when:
 
-Launch failures in either phase use the existing held launch error and abort
-path. Escape during `TITLE_CARD_PRESENTATION` aborts immediately even though no
-comparator exists yet.
+- recorded admission is not already active;
+- every submitted live job has been claimed by its production coordinator; and
+- no runtime-art owner reports an outstanding prepared/active transfer at the
+  handoff boundary.
 
-### 3. First comparison window opens after bootstrap service
+Only after those checks may the service discard completed live diagnostic jobs,
+clear the live epoch's per-kind ordinal counters and serviced-boundary marker,
+and install recorded admission. Before any replay production submission, the
+normal `HardwareTimingReplayPort.install` initializes each recorded kind to the
+schedule's declared first ordinal. That base is often nonzero in complete runs;
+the new epoch is fresh, not universally zero-based. The service object and all
+coordinators that reference it remain the same. The returned narrow
+`RecordedCompletionAuthority` is stored by the current
+`GameplayModeContext` and used by the normal replay port. The operation changes
+only when future real jobs become ready; it cannot create work or mutate
+gameplay.
 
-The clean replay context still prepares S1's initial player DPLC during level
-load. The visual launcher therefore requests a deferred transfer of comparison
-segment ownership from `PlcFrameLifecycleCoordinator` for segment zero.
+Traces without a hardware schedule keep live admission. A failed drain check is
+a launch error shown by the existing trace failure path; pending work is never
+dropped to force activation.
 
-At request time the coordinator:
+### 3. Dynamic-art comparison boundary
 
-- rejects an existing external owner;
-- requires any automatic open window to have published;
-- closes that completed automatic window;
-- marks comparison segments externally managed; and
-- records that the external segment must open after the next production
-  service.
+Title-card and load-time dynamic-art events occur before external comparison
+ownership. They are unobserved prelude diagnostics; the design does not require
+them to be represented specifically as gap-journal edges because automatic
+production windows may already have published them.
 
-On the next `PlcLifecycleFrame.claim`, the normal production service runs
-first. Any initial S1 submit/complete pair is therefore recorded as genuine
-run-gap diagnostics, matching the headless order. The coordinator then opens
-external segment zero before the iteration body and
-`finishProductionIteration`, so row zero is still published atomically in the
-new generation. A lag claim that does not service DMA behaves identically to
-automatic headless ownership: it still opens row zero after the claim's
-service decision.
+Segment zero reserves a fresh external comparison generation before the first
+replay iteration. Reservation closes the last published automatic window,
+increments the generation, and exposes a real unpublished origin snapshot, but
+does not yet open the window for production. The launcher's pre-iteration pull
+therefore observes this unpublished origin rather than the preceding published
+automatic row. On the next claim, normal production service runs first. If any
+work remains, the existing no-pending-work guard rejects activation; otherwise
+the coordinator activates the reserved generation without incrementing it a
+second time. Iteration closure publishes row zero in that same generation.
 
-The segment controller's first `open` uses this deferred acquisition. Later
-run-segment opens remain immediate because their source close, transition gap,
-and destination open are already production-defined. Closing or aborting
-before the first claim cancels the pending open and restores automatic
-ownership without inventing a row. Production ledger entries, pending work,
-mapping decisions, and monotonic identities are never cleared by the handoff.
+The comparator keeps its ordinary atomic contract: delivery serial advances,
+the before snapshot is unpublished, the after snapshot is published, generation
+is stable, and the published row is the expected row. No adjacent-generation
+exception or one-shot comparator authorization is needed. Edges and outstanding
+transfer identities are compared exactly. Cancelling before activation abandons
+the reservation without publishing a row and restores automatic ownership.
+Later complete-run segment boundaries remain immediate and production-driven.
 
-The launcher's pre-iteration snapshot precedes that deferred open, so row zero
-may atomically arrive in the immediately following segment generation. The
-launcher arms a one-shot structural authorization only for this first deferred
-window. `LiveTraceComparator` accepts the rollover only when that authorization
-is present, the expected row is zero, the before snapshot is unpublished and
-identifies no row, the generation is exactly adjacent, the delivery serial is
-newer, and the after snapshot is published row zero. The authorization is
-consumed by the first publication attempt, including a stable-generation
-publication. Stable-generation rows otherwise retain the existing rule, and
-generation skips, published-before snapshots, or nonzero-row handoffs remain
-launch failures. The comparator still compares the complete published edge and
-outstanding-transfer payload exactly; the exception carries no gameplay value
-and does not discard or reclassify work.
+Reserved/active/absent segment ownership is part of
+`DynamicArtLifecycleService` rewind state. Capturing the initial visual rewind
+frame occurs after reservation but before the first replay row, so restoring
+that frame must restore the same unpublished reserved generation. Activation
+after restore reuses that generation; it may not treat the reservation as
+closed or increment again.
 
-### 4. Comparison and UI behavior
+### 4. Replay input is logical input
 
-The title card renders through the existing `TITLE_CARD` engine draw path.
-Playback does not start until the disposable context has been replaced, so the
-first BK2 row remains aligned with comparison row zero. The HUD and ghost are
-installed only in `ACTIVE`; the ordinary title card is the only presentation
-during the prelude.
+`PlaybackDebugManager` exposes the prepared applied BK2 row and its physical
+predecessor as a `LogicalInputSnapshot`. It preserves the existing latched
+action-press behavior across advance-only/lag rows while retaining P1, P2,
+Start, and debug modifier semantics.
 
-After replay bootstrap, `LiveTraceComparator` retains its exact dynamic-art
-assertions. For GHZ1 the bootstrap submit/complete edges still exist in
-production diagnostics as pre-segment gap transitions, while the compared row
-zero remains empty as recorded.
+An extracted `PlaybackInputBridge` installs that snapshot on `InputHandler`
+and stops using `AbstractPlayableSprite.setForcedInputMask`. It retains the
+existing playback-suppression marker so sprite publication cannot fall back to
+live input, but `SpriteManager` explicitly admits the owned logical override as
+the playback source. `SpriteManager` then resolves
+the ROM-visible words explicitly: the recorded snapshot remains the raw
+controller word, while game-owned control locks and forced latches produce the
+logical movement word. A forced-right latch suppresses an opposing recorded
+left bit in movement and logical history, while the raw word remains left as it
+would on hardware. The resolved logical word is published once; the later
+publisher must not OR the recorded conflict back into it. P2 and Start retain
+their raw recorded semantics. When playback stops or leaves a driven mode, the
+bridge clears only the logical override it owns and refreshes the live logical
+snapshot before any same-step gameplay can consume it; it never clears a
+scripted forced-input latch.
+
+Recorded Start remains ROM input, not an engine UI command. While playback is
+driving, the visible user-pause branch ignores Start from the published BK2
+logical snapshot; the existing forced-Start admission path still delivers it
+to ROM gameplay. The configured live pause key remains active so a user can
+pause a visual replay deliberately.
+
+The same helper is used at synchronous complete-run level-load activation,
+where the destination's first gameplay tick can fall through before the next
+loop-top bridge, and by `VisualTraceRewindStepper` while it deterministically
+replays forward. Those paths must not retain the old forced-mask shortcut or a
+signpost/control-lock divergence would reappear after a zone transition or
+rewind. Standalone/run special-stage input already uses logical overrides and
+keeps its current per-row ownership/cleanup.
+
+This makes visual level/bonus playback use the same input channel as headless
+replay and special-stage replay. S1 signpost forced-right therefore survives
+the next BK2 sync without a signpost- or frame-specific branch.
+
+The bridge is a small stateful collaborator rather than additional ownership
+inside `GameLoop`: it tracks whether suppression and the logical override are
+its own, allowing immediate same-step publication to be cleared reliably when
+playback ends while keeping the release-critical loop below its source-size
+ratchet.
+
+### 5. Direct special-stage audio and HUD
+
+Direct special-stage launch performs the same game-audio routing setup normally
+completed by level loading: audio profile, ROM, the active module profile's
+`GameSound` map, and ring alternation reset. It does not start level music.
+Special-stage presentation remains responsible for starting its own music at
+the recorded reveal boundary. S1 `GameSound.RING` consequently resolves to the
+normal alternating SMPS ring commands.
+
+The launcher's render owner is generalized behind a small trace-overlay
+interface. Level traces keep `TraceHudOverlay`. Standalone special stages
+install a dedicated overlay backed by their typed row source, movie offset,
+and current cursor. It displays trace progress and whether the current row is
+playable or lagged, without fabricating physics errors or a
+`LiveTraceComparator`.
+
+### 6. Standalone special-stage terminal state
+
+At the standalone terminal row, hardware replay closes first. If the gameplay
+fade is idle, the existing fade-to-black teardown is used. If S1 already owns
+`HOLD_WHITE` with no completion callback, the launcher treats that as an
+already-opaque terminal boundary and requests teardown through the existing
+`teardownPending` path. It does not destroy the gameplay context from inside
+the production iteration: post-iteration dynamic-art publication and run
+boundary drains finish first, then the all-mode teardown retry returns to the
+picker. Engine teardown recreates the master trace picker and starts its
+graphics-owned fade from black, so the gameplay fade cannot strand the new
+screen.
+
+Other active fades with pending completions are not overwritten. The launcher
+marks standalone terminal exit pending and retries from its all-mode,
+between-iterations owner, allowing the existing callback to run even if it
+changes mode. It then re-evaluates the resulting state until it can take the
+idle or callback-free-white terminal path. If the callback completes into an
+unsupported non-progressing hold, the launcher records a structural failure
+and uses normal deferred cleanup rather than leaving the session active. Run
+special stages do not use this standalone terminal branch.
+
+## Failure and loading presentation
+
+Run parsing remains off the render thread only where already supported; this
+change does not broaden asynchronous ownership. Existing launch status remains
+the source for picker-visible errors and loading state. All newly checked
+handoffs report their exact failure there and clean up playback, timing,
+dynamic-art ownership, logical input overrides, audio routing state, and
+configuration before returning to the picker.
 
 ## Testing
 
-- A PLC lifecycle test prepares an S1 transfer, requests deferred external
-  ownership, drives one logical iteration, and proves the submit/complete
-  transitions occur outside the segment while a fresh generation publishes an
-  empty row zero.
-- A launcher lifecycle test proves the initial controller open is deferred,
-  publishes row zero atomically, and later segment opens remain immediate.
-- Comparator tests prove the one-shot authorized adjacent row-zero generation
-  is accepted while a generation skip, stale delivery, published-before
-  snapshot, nonzero row, or reuse after a stable first publication is rejected.
-- Cleanup tests prove abort before the first production claim cancels the
-  pending open and restores automatic ownership.
-- Title-card phase tests prove replay bootstrap waits for both the transition
-  back to `LEVEL` and completion of the visible exit overlay, runs once, and
-  Escape is owned before a comparator exists.
-- A gameplay-context handoff test proves presentation lifecycle state does not
-  survive the reopen, including non-empty active/queued S1/S2 PLC state, and
-  the requested hardware-admission policy owns the new context. It also proves
-  that `Engine` and `GameLoop` cache the replacement context's level, sprite,
-  and camera managers, preventing gameplay from advancing behind a black frame
-  through destroyed presentation managers.
-- The S1 GHZ1 headless trace remains green, focused visual-launch lifecycle
-  tests pass, and cross-game launch/run/dynamic-art suites show no regression.
+- Context-identity tests prove title-card presentation and replay activation
+  retain the same gameplay context and managers. A driver/launcher structural
+  guard pins the prepared activation path against level load, team reset,
+  context reopen, or music commands.
+- A launch-phase test proves activation occurs on the `TITLE_CARD`→`LEVEL`
+  control-release step while `isOverlayActive()` is still true, and that the
+  real tail continues over replay rather than consuming uncontrolled frames.
+- An S2 release test consumes the initial setup token during the locked loop,
+  proves the visual launch barrier still prevents same-step `LEVEL` gameplay,
+  then proves the next iteration owns BK2/comparison row zero. S1/S3K coverage
+  proves an already-`SETUP_ONLY` production release still arms replay without
+  repeating their release setup pass.
+- Hardware timing tests prove a fully claimed live prelude can begin a fresh
+  recorded epoch, including a schedule whose first ordinal is nonzero, while
+  pending/unclaimed production work rejects the handoff without mutation.
+- Bootstrap tests prove the prepared-level path omits synthetic title-card
+  preludes but retains shared start, counter, timing, and comparator setup.
+- A launcher-through-coordinator dynamic-art test proves reservation exposes an
+  unpublished generation before production, activates after service, and
+  publishes exact row zero in the same generation; cancellation and pending
+  work retain their strict guards.
+- A rewind round-trip test captures a reserved unpublished generation,
+  activates/mutates it, restores the snapshot, and proves the same generation
+  is reserved and later activates without an increment.
+- Input bridge tests prove BK2 directions reach ordinary movement, P2/Start and
+  held action edges remain correct, and a scripted forced-right latch survives
+  a later playback sync, synchronous destination load, and replayed rewind
+  step. Cleanup refreshes live logical input in the same step, and a behavioral
+  BK2 Start-edge test proves recorded Start cannot toggle the visible/audio
+  pause while the configured live pause key still can. The S1 GHZ1 complete-run
+  headless test remains green, and the logical bridge regression models the
+  opposing BK2/signpost ownership that caused the former visual-only frame-4998
+  divergence.
+- Audio tests prove direct S1 special-stage launch installs the profile sound
+  map and alternating ring commands use SMPS routing rather than fallback.
+- Overlay tests prove a standalone special stage renders progress/input without
+  a comparator.
+- Terminal lifecycle tests place the fade in `HOLD_WHITE`, advance the terminal
+  row inside a production iteration, prove the context remains valid through
+  post-production publication, and then prove deferred teardown returns to the
+  picker rather than remaining active.
+- A callback-bearing terminal fade test proves the launcher never replaces the
+  callback, retries after it executes (including a mode change), and reaches
+  either the supported teardown path or a recorded structural failure rather
+  than a permanent pending state.
+- Cross-game level/run, PLC lifecycle, hardware-authority, special-stage, and
+  failure-cleanup suites show no regression.
 
 ## Follow-up boundary
 
-This change shows the initial level title card before standalone and complete
-run playback. It does not add replay comparison during title cards, rewind
-across the presentation/replay context boundary, or new title cards for direct
-special-stage traces. Later in-run zone transitions continue to show or omit
-their production title cards according to the run's real transition path.
+Initial level-backed standalone traces and complete runs use this single-load
+handoff. End-to-end transitions between later zones and special stages remain
+owned by the existing complete-run coordinator; extending the same visible
+loading/error treatment and rewind support across every run boundary is a
+separate task unless required by a focused regression uncovered here.

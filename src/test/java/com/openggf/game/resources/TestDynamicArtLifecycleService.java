@@ -18,6 +18,89 @@ class TestDynamicArtLifecycleService {
     private static final int SONIC_VRAM = 0xF000;
 
     @Test
+    void reservedComparisonSegmentOwnsGenerationBeforeActivation() {
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        startOpen(service);
+        service.finishProductionIteration(false);
+        service.closeComparisonSegment();
+        long automaticGeneration =
+                service.latestSnapshot().segmentGeneration();
+
+        service.reserveComparisonSegment();
+        DynamicArtDiagnosticsSnapshot reserved = service.latestSnapshot();
+
+        assertTrue(service.isComparisonSegmentReserved());
+        assertFalse(service.isComparisonSegmentOpen());
+        assertFalse(reserved.published());
+        assertEquals(automaticGeneration + 1,
+                reserved.segmentGeneration());
+
+        service.activateReservedComparisonSegment();
+        service.finishProductionIteration(false);
+
+        assertFalse(service.isComparisonSegmentReserved());
+        assertTrue(service.isComparisonSegmentOpen());
+        assertEquals(0, service.latestSnapshot().frame());
+        assertEquals(reserved.segmentGeneration(),
+                service.latestSnapshot().segmentGeneration(),
+                "activation and row zero must retain the reserved generation");
+    }
+
+    @Test
+    void reservedComparisonSegmentRejectsInvalidTransitionsAtomically() {
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        service.beginRun();
+        service.reserveComparisonSegment();
+        long generation = service.latestSnapshot().segmentGeneration();
+
+        assertThrows(IllegalStateException.class,
+                service::reserveComparisonSegment);
+        assertEquals(generation,
+                service.latestSnapshot().segmentGeneration());
+
+        service.observeRomDplc("sonic", 1,
+                List.of(new TileLoadRequest(0, 1)), SONIC_ART, SONIC_VRAM);
+        assertThrows(IllegalStateException.class,
+                service::activateReservedComparisonSegment);
+        assertTrue(service.isComparisonSegmentReserved());
+        assertEquals(generation,
+                service.latestSnapshot().segmentGeneration());
+    }
+
+    @Test
+    void cancellingAndRewindingReservedComparisonSegmentNeverPublishesIt() {
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        service.beginRun();
+        service.reserveComparisonSegment();
+        DynamicArtLifecycleService.RewindState reserved = service.capture();
+        long generation = service.latestSnapshot().segmentGeneration();
+
+        service.activateReservedComparisonSegment();
+        service.finishProductionIteration(false);
+        service.restore(reserved);
+
+        assertTrue(service.isComparisonSegmentReserved());
+        assertFalse(service.isComparisonSegmentOpen());
+        assertFalse(service.latestSnapshot().published());
+        assertEquals(generation,
+                service.latestSnapshot().segmentGeneration());
+
+        service.activateReservedComparisonSegment();
+        assertEquals(generation,
+                service.latestSnapshot().segmentGeneration());
+        service.abandonComparisonSegment();
+
+        service.reserveComparisonSegment();
+        long cancelledGeneration =
+                service.latestSnapshot().segmentGeneration();
+        service.cancelReservedComparisonSegment();
+        assertFalse(service.isComparisonSegmentReserved());
+        assertFalse(service.latestSnapshot().published());
+        assertEquals(cancelledGeneration,
+                service.latestSnapshot().segmentGeneration());
+    }
+
+    @Test
     void duplicateAndEmptyDplcsAdvanceTheOwnerCursorWithoutSubmittingWork() {
         DynamicArtLifecycleService service = new DynamicArtLifecycleService();
         startOpen(service);

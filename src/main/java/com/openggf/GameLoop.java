@@ -48,6 +48,7 @@ import com.openggf.graphics.FadeManager;
 import com.openggf.game.DemoLamppostState;
 import com.openggf.level.WaterSystem;
 import com.openggf.debug.playback.PlaybackDebugManager;
+import com.openggf.debug.playback.PlaybackInputBridge;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.data.RomManager;
 import com.openggf.data.Rom;
@@ -126,6 +127,7 @@ public class GameLoop {
     private WaterSystem waterSystem;
     private final PerformanceProfiler profiler;
     private final PlaybackDebugManager playbackDebugManager;
+    private final PlaybackInputBridge playbackInputBridge = new PlaybackInputBridge();
     private final LiveRewindManager liveRewindManager;
     private final StartupRouteResolver startupRouteResolver = new StartupRouteResolver();
     private final BootScreenModeController bootScreenModeController = new BootScreenModeController();
@@ -315,8 +317,6 @@ public class GameLoop {
 
     private volatile boolean paused = false;      // Window focus pause
     private volatile boolean userPaused = false;  // Keyboard toggle pause
-    private boolean playbackInputSuppressed = false;
-    private boolean playbackForcedMaskApplied = false;
     private PlcLifecycleFrame activePlcLifecycleFrame;
 
     public GameLoop() {
@@ -943,7 +943,8 @@ public class GameLoop {
         if (!playbackTakeoverConsumedPausePress
                 && userPauseInputAllowedForCurrentMode()
                 && (inputHandler.isKeyPressed(pauseKey)
-                || inputHandler.logical().player1().startPressed())) {
+                || (!playbackDebugManager.isDriving(currentGameMode)
+                && inputHandler.logical().player1().startPressed()))) {
             if (userPaused && userRecordingControls.handlePlaybackTakeoverRequest()) {
                 userPaused = false;
                 updateAudioPauseState();
@@ -1679,33 +1680,13 @@ public class GameLoop {
     }
 
     private void syncPlaybackInputBridge() {
-        boolean shouldDrive = playbackDebugManager.isDriving(currentGameMode);
-        if (spriteManager == null) {
-            playbackDebugManager.clearLastAppliedState();
-            playbackForcedMaskApplied = false;
-            playbackInputSuppressed = false;
-            return;
-        }
-        if (shouldDrive != playbackInputSuppressed) {
-            spriteManager.setPlaybackInputSuppressed(shouldDrive);
-            playbackInputSuppressed = shouldDrive;
-        }
+        playbackInputBridge.sync(playbackDebugManager, currentGameMode, inputHandler,
+                spriteManager, getMainPlayableSprite());
+    }
 
-        AbstractPlayableSprite player = getMainPlayableSprite();
-        if (shouldDrive && player != null) {
-            player.setForcedInputMask(playbackDebugManager.getCurrentForcedInputMask());
-            player.setForcedJumpPress(playbackDebugManager.isCurrentForcedJumpPress());
-            playbackForcedMaskApplied = true;
-            return;
-        }
-
-        playbackDebugManager.clearLastAppliedState();
-        if (playbackForcedMaskApplied && player != null) {
-            player.clearForcedInputMask();
-            playbackForcedMaskApplied = false;
-        } else if (player == null) {
-            playbackForcedMaskApplied = false;
-        }
+    public void applyScheduledPlaybackInputImmediately() {
+        playbackInputBridge.publishImmediately(playbackDebugManager, inputHandler,
+                spriteManager, getMainPlayableSprite());
     }
 
     /**
