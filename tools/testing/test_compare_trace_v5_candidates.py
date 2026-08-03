@@ -246,6 +246,24 @@ class CompareTraceV5CandidatesTests(unittest.TestCase):
                 self.assertNotIn(legacy, section)
             self.assertIsNone(re.search(r"\b(?:v)?6\.\d", section))
 
+    def test_bizhawk_readme_round_trip_publication_is_native_v5_only(self) -> None:
+        readme = (REPOSITORY_ROOT / "tools" / "bizhawk" / "README.md").read_text()
+        self.assertEqual(3, readme.count("## Pre-v5 historical capture notes: S3K"))
+        live = readme[readme.index("## Recording S3K Round-Trip Traces (Native v5)"):
+                      readme.index("## Pre-v5 historical capture notes: S3K Bonus")]
+        for required in (
+            "tools/bizhawk-headless/run.sh", "trace_schema: 5",
+            "recorder_version: 3.0", "validate_trace_v5.py",
+            "trace-v5-publication.md", "scratch",
+        ):
+            self.assertIn(required, live)
+        for forbidden in (
+            "run_bizhawk_lua", "s3k_complete_run_recorder.lua",
+            "ss_csv_version", "src/test/resources/traces/s3k/bonus_",
+            "src/test/resources/traces/s3k/runs/", "gzip compression is applied at commit time",
+        ):
+            self.assertNotIn(forbidden, live)
+
     def write_fixture(self, root: Path, header: list[str], rows: list[list[str]],
                       compressed: bool = False, v5: bool = True,
                       name: str = "credits_00_ghz1") -> Path:

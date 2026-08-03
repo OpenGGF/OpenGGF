@@ -679,7 +679,12 @@ facts encoded there (BizHawk 2.11.1 `bizhawk-bin` on CachyOS/Wayland):
   or a Lua-side movie loader). Until then, run the byte-diff regen gate on a
   platform where BizHawk plays BK2s headlessly (e.g. Windows).
 
-## Capture Launch Notes (verified live 2026-07-19)
+## Pre-v5 historical capture notes: Lua launch
+
+This section preserves the retired interactive Lua launch procedure and its
+pre-v5 schema observations. It is diagnostic history only, not a current
+capture or publication workflow. Current S3K recording begins at the native
+v5 round-trip section below.
 
 Facts established during the first round-trip captures — they override any older
 invocation text in this file:
@@ -738,7 +743,42 @@ Metropolis Act 3 is recorded as route `mtz3`; Sonic 2 stores it as raw ROM zone 
 with act byte `0`, so the recorder reports metadata act `3` while preserving the raw
 zone/act in aux diagnostics.
 
-## Recording S3K Bonus Round-Trip Traces
+## Recording S3K Round-Trip Traces (Native v5)
+
+Gumball, pachinko, slot-machine, and blue-spheres round trips are captured by
+the native headless complete-run path. Its only envelope is `trace_schema: 5`,
+`recorder: native-bizhawk-headless`, and `recorder_version: 3.0`. Record the
+desired route as a BK2, then capture into a new scratch candidate directory:
+
+```bash
+BIZHAWK_HOME=/abs/path/to/docs/BizHawk-2.11-linux-x64 \
+tools/bizhawk-headless/run.sh \
+  --mode trace \
+  --rom "$S3K_ROM_PATH" \
+  --movie /abs/path/to/s3k-roundtrip.bk2 \
+  --output "$PWD/target/s3k-roundtrip-v5-scratch" \
+  --run-id s3k-roundtrip-candidate
+```
+
+Change the movie and run id for each route; never point `--output` at the
+installed fixture tree. Validate the entire scratch fleet before replay or
+review:
+
+```bash
+python3 tools/traces/validate_trace_v5.py \
+  "$PWD/target/s3k-roundtrip-v5-scratch"
+```
+
+Then run candidate-root replay and the native ROM-backed gates, produce the
+literal comparison artifacts, and obtain explicit publication approval using
+[`trace-v5-publication.md`](../../docs/guide/contributing/trace-v5-publication.md).
+Compression and installation are publication actions, never capture steps.
+
+## Pre-v5 historical capture notes: S3K Bonus
+
+The procedure below is retained to explain the predecessor bonus fixtures. It
+uses the retired Lua publication path and must not be used to create or
+install a current trace.
 
 A **bonus round-trip trace** captures a single level playthrough that includes a
 star-post bonus zone (gumball or pachinko). The trace includes both the level
@@ -825,7 +865,10 @@ The test classes `TestS3kGumballBonusTraceReplay` and `TestS3kPachinkoBonusTrace
 automatically activate (skip-if-missing) once their respective `bonus_gumball/` and
 `bonus_pachinko/` directories exist in test resources.
 
-## Recording S3K Slot-Machine Round-Trip Traces
+## Pre-v5 historical capture notes: S3K Slot Machine
+
+The procedure below is retained to explain the predecessor slot-machine
+fixtures. It is not a live recorder or publication workflow.
 
 A **slot-machine round-trip trace** captures a single level playthrough that includes a
 star-post bonus zone (slot machine). The trace includes both the level segment (up to
@@ -912,7 +955,11 @@ src/test/resources/traces/s3k/runs/s3k-aiz-slots-roundtrip/
 The test class `TestS3kSlotsBonusTraceReplay` automatically activates (skip-if-missing) once
 the `bonus_slots/` directory exists in test resources.
 
-## Recording S3K Blue-Spheres Round-Trip Traces
+## Pre-v5 historical capture notes: S3K Blue Spheres
+
+The procedure below is retained to explain the predecessor blue-spheres
+fixtures, including its retired special-stage CSV version field. It is not a
+live recorder or publication workflow.
 
 A **blue-spheres round-trip trace** captures a single playthrough that includes entry into
 a special stage (blue-spheres, accessed via giant ring) mid-level, completion or failure of
