@@ -226,6 +226,13 @@ Development since `v0.5.20260411` is the active 0.6 prerelease line. The release
   service-before-open order as headless replay, fixing S1 GHZ1's visual-only
   frame-zero dynamic-art mismatch without filtering any recorded edges.
 
+- **S3K native recorder timing attribution (2026-08-03):** recorder 6.42 now
+  attributes held-frame KosM retirements from canonical FIFO transitions and
+  emits module `post_objects` before direct `pre_main_loop` work. Two
+  byte-identical full-route captures validated the publication: 15 metadata
+  files and 14 timing streams moved, with exactly 27 boundary-only
+  `vint_service`-to-`post_objects` substitutions; physics, auxiliary state,
+  ordinals, fingerprints, and ending timing remain unchanged.
 - **MHZ fixed-SST and route-object parity (2026-08-03):** pollen and plane
   switchers now use slot-owned fixed-SST installation and cleanup, while the
   MHZ cutscene door, pulley, curled vine, Madmole, enemy bounce, and mushroom

@@ -1,5 +1,6 @@
 package com.openggf.trace.timing;
 
+import com.openggf.game.RuntimeArtCoordinator;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.game.timing.HardwareTimingService;
@@ -24,6 +25,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 class TestHardwareTimingReplayPort {
 
@@ -648,6 +651,30 @@ class TestHardwareTimingReplayPort {
 
         assertTrue(error.getMessage().contains("not prepared"), error::getMessage);
         assertFalse(harness.service.isReady(harness.handle));
+    }
+
+    @Test
+    void heldRowPostAuthorityCannotPrepareParentOrReachRuntimeArtCoordinator() {
+        ReplayHarness harness = harness(false, 2, 131);
+        HardwareTimingReplayPort port = port(
+                harness.authority,
+                edge(6351, POST_OBJECTS, harness.handle));
+        RuntimeArtCoordinator coordinator = mock(RuntimeArtCoordinator.class);
+
+        port.beginRawFrame(6351);
+        harness.service.service(POST_OBJECTS);
+
+        IllegalStateException error = assertThrows(
+                IllegalStateException.class,
+                () -> {
+                    port.apply(POST_OBJECTS);
+                    coordinator.afterTimingService(POST_OBJECTS);
+                });
+
+        assertTrue(error.getMessage().contains("not prepared"), error::getMessage);
+        assertTrue(harness.service.isPending(harness.handle));
+        assertFalse(harness.service.isReady(harness.handle));
+        verifyNoInteractions(coordinator);
     }
 
     @Test

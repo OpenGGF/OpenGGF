@@ -8,7 +8,7 @@ namespace OpenGGF.BizHawk.Headless
     /// Native writer for the S3K complete-run recorder's THREE
     /// metadata.json shapes, derived from the frozen Lua layout
     /// (tools/bizhawk/s3k_complete_run_recorder.lua) and advanced to
-    /// v6.39-s3k-completerun: <c>write_metadata</c> for the level and
+    /// v6.42-s3k-completerun: <c>write_metadata</c> for the level and
     /// bonus shapes, <c>write_ss_metadata</c> L5103 for the special-stage
     /// shape; spec tools/bizhawk-headless/docs/s3k-run-publication.md §3).
     ///
@@ -69,8 +69,12 @@ namespace OpenGGF.BizHawk.Headless
         /// (the queued word is already a VRAM byte address) plus the five
         /// collision-plane fields added to state_snapshot; both change
         /// aux_state.jsonl bytes and neither touches physics.csv.
+        /// 6.40 -> 6.41: same-frame hardware timing events serialize in
+        /// canonical VINT, POST_OBJECTS, PRE_MAIN_LOOP order.
+        /// 6.41 -> 6.42: a canonical final-active KosM head shift proves
+        /// POST service independently of a held Level_frame_counter.
         /// </summary>
-        public const string LuaScriptVersion = "6.40-s3k-completerun";
+        public const string LuaScriptVersion = "6.42-s3k-completerun";
 
         /// <summary>
         /// The Lua's hardcoded S3K_ROM_CHECKSUM: the BizHawk movie-header

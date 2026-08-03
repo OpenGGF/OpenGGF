@@ -75,8 +75,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
             "  \"lua_script_version\": \"6.37-s3k-completerun\",";
         private const string PublishedQueuePredecessorVersionLine =
             "  \"lua_script_version\": \"6.38-s3k-completerun\",";
-        private const string CurrentVersionLine =
+        private const string PublishedCurrentVersionLine =
             "  \"lua_script_version\": \"6.40-s3k-completerun\",";
+        private const string CurrentVersionLine =
+            "  \"lua_script_version\": \"6.42-s3k-completerun\",";
         private const string FixtureTraceSchemaLine =
             "  \"trace_schema\": 6,";
         private const string CurrentTraceSchemaLine =
@@ -128,6 +130,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S3KCompleteRunCaptureRunner reconciles unexported"
                 + " special-stage results work across native and Lua",
                 CapturesSpecialStageResultsHardwareTiming));
+            tests.Add(new TestMain.TestCase(
+                "S3KCompleteRunCaptureRunner attributes held-counter AIZ"
+                + " parent shift to post-objects",
+                CapturesHeldCounterAizParentShiftAsPostObjects));
             tests.Add(new TestMain.TestCase(
                 "S3KCompleteRunCaptureRunner aligns each row's input column"
                 + " with BK2 row bk2_frame_offset + N",
@@ -196,11 +202,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// (Player_mode 0) — and identity (C) — the run pass under
         /// --run-id s3k-multibonus, Knuckles solo (Player_mode 3), whose
         /// three bonus dirs carry capture_mode AND v_int_run_count while
-        /// special_stage/ carries neither. AIZ and HCZ were republished with
-        /// hardware timing on 2026-07-29; the remaining fixtures retain
-        /// their 2026-07-25 capture date. These comparisons are FULL-FILE
-        /// equality, so each date is injected to match the fixture rather
-        /// than allowed to differ.
+        /// special_stage/ carries neither. AIZ and HCZ now carry the
+        /// explicitly approved 2026-08-02 Candidate B metadata bytes; the
+        /// other four fixtures in this formatter gate retain their own
+        /// installed dates. These comparisons are FULL-FILE equality, so
+        /// each date is injected to match the fixture rather than allowed
+        /// to differ.
         /// </summary>
         private static readonly MetadataFixture[] MetadataFixtures =
         {
@@ -220,7 +227,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 PlayerMode = 0,
                 SourceBk2 = CompleteRunSourceBk2,
                 RunId = null,
-                RecordingDate = "2026-08-01"
+                RecordingDate = "2026-08-02"
             },
             new MetadataFixture
             {
@@ -238,7 +245,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 PlayerMode = 0,
                 SourceBk2 = CompleteRunSourceBk2,
                 RunId = null,
-                RecordingDate = "2026-08-01"
+                RecordingDate = "2026-08-02"
             },
             new MetadataFixture
             {
@@ -362,6 +369,16 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
             if (HasMetadataShape(
                 fixtureText,
+                PublishedCurrentVersionLine,
+                CurrentTraceSchemaLine,
+                true))
+            {
+                return producedText.Replace(
+                    CurrentVersionLine,
+                    PublishedCurrentVersionLine);
+            }
+            if (HasMetadataShape(
+                fixtureText,
                 PublishedQueuePredecessorVersionLine,
                 CurrentTraceSchemaLine,
                 true))
@@ -473,6 +490,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
             string current = CurrentVersionLine + "\n"
                 + CurrentTraceSchemaLine + "\n"
                 + HardwareTimingSchemaLine;
+            string publishedCurrent = PublishedCurrentVersionLine + "\n"
+                + CurrentTraceSchemaLine + "\n"
+                + HardwareTimingSchemaLine;
             string published = PublishedDirectPredecessorVersionLine + "\n"
                 + CurrentTraceSchemaLine + "\n"
                 + LegacyHardwareTimingSchemaLine;
@@ -483,6 +503,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(
                 current,
                 NormalizeCurrentMetadataForFixture(current, current));
+            AssertEx.Equal(
+                publishedCurrent,
+                NormalizeCurrentMetadataForFixture(
+                    publishedCurrent, current));
             AssertEx.Equal(
                 published,
                 NormalizeCurrentMetadataForFixture(published, current));
@@ -533,7 +557,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
             AssertContains(
                 current,
-                "\"lua_script_version\": \"6.40-s3k-completerun\"");
+                "\"lua_script_version\": \"6.42-s3k-completerun\"");
             AssertContains(current, "\"hardware_timing_schema\": 2");
             AssertContains(legacy, "\"hardware_timing_schema\": 1");
         }
@@ -857,7 +881,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     SetBSegments,
                     transitions);
             const string CurrentManifestVersionLine =
-                "  \"lua_script_version\": \"6.40-s3k-completerun\",\n";
+                "  \"lua_script_version\": \"6.42-s3k-completerun\",\n";
             AssertEx.Equal(
                 1,
                 CountOccurrences(actual, CurrentManifestVersionLine));
@@ -1350,9 +1374,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 AssertEx.Equal(
                     "{\"event\":\"hardware_work_completed\","
                     + "\"raw_frame\":1,"
-                    // Results mode leaves Level_frame_counter unchanged,
-                    // so frame-end observation proves only VInt admission.
-                    + "\"boundary\":\"vint_service\","
+                    // The exact final-active-to-empty parent transition is
+                    // ROM POST evidence even though results mode leaves the
+                    // sampled Level_frame_counter unchanged.
+                    + "\"boundary\":\"post_objects\","
                     + "\"kind\":\"kos_module_queue\","
                     + "\"ordinal\":4,"
                     + "\"submission_fingerprint\":\""
@@ -1376,7 +1401,97 @@ namespace OpenGGF.BizHawk.Headless.Tests
                                         .TraceFrameCount);
                     }
                 }
-                AssertLuaResultsParity(sink.Timing[2]);
+                // Frozen Lua intentionally keeps its legacy duplicate-LFC
+                // VInt attribution; only maintained native versions change.
+            });
+        }
+
+        private static void CapturesHeldCounterAizParentShiftAsPostObjects()
+        {
+            const int first = 0x100;
+            const int second = 0x120;
+            const int third = 0x140;
+            const int firstDestination = 0xA900;
+            byte[] rom = FiveSingleModuleArchives(first);
+            WithMovie(MaskRows(12), movie =>
+            {
+                var host = new FakeS1Host((h, frame) =>
+                {
+                    h.Ram[S3KRam.GameMode] = frame >= 3
+                        ? (byte)S3KRam.GameModeLevel : (byte)0;
+                    h.Ram[S3KRam.Zone] = 0;
+                    h.Ram[S3KRam.Act] = 0;
+                    h.SetU16(
+                        S3KRam.PlayerBase + S3KRam.OffMoveLock, 0);
+                    h.Ram[S3KRam.Ctrl1Locked] = 0;
+                    h.SetU16(S3KRam.LevelFrameCounter, 0x18CB);
+                    ClearKosQueue(h);
+                    if (frame == 5)
+                    {
+                        h.Ram[S3KRam.KosModulesLeft] = 0x81;
+                        h.SetU32(S3KRam.KosModuleQueue, first + 2);
+                        h.SetU16(
+                            S3KRam.KosModuleDestination,
+                            firstDestination);
+                        h.SetU32(
+                            S3KRam.KosModuleQueue
+                                + S3KRam.KosModuleQueueEntrySize,
+                            second);
+                        h.SetU16(
+                            S3KRam.KosModuleQueue
+                                + S3KRam.KosModuleQueueEntrySize + 4,
+                            0xA540);
+                        h.SetU32(
+                            S3KRam.KosModuleQueue
+                                + 2 * S3KRam.KosModuleQueueEntrySize,
+                            third);
+                        h.SetU16(
+                            S3KRam.KosModuleQueue
+                                + 2 * S3KRam.KosModuleQueueEntrySize + 4,
+                            0xABE0);
+                    }
+                    else if (frame >= 6)
+                    {
+                        h.Ram[S3KRam.KosModulesLeft] = 0x01;
+                        h.SetU32(S3KRam.KosModuleQueue, second + 2);
+                        h.SetU16(S3KRam.KosModuleDestination, 0xA540);
+                        h.SetU32(
+                            S3KRam.KosModuleQueue
+                                + S3KRam.KosModuleQueueEntrySize,
+                            third);
+                        h.SetU16(
+                            S3KRam.KosModuleQueue
+                                + S3KRam.KosModuleQueueEntrySize + 4,
+                            0xABE0);
+                    }
+                });
+                var sink = new RecordingSink();
+                S3KCompleteRunCaptureRunner.Capture(
+                    movie,
+                    host,
+                    "aiz-held-post",
+                    "synthetic.bk2",
+                    "2026-08-02",
+                    0,
+                    rom,
+                    sink);
+
+                AssertEx.Equal(1, sink.Timing.Count);
+                string fingerprint =
+                    HardwareTimingEventEngine.ComputeSubmissionFingerprint(
+                        "KOS_MODULE_QUEUE",
+                        first,
+                        7,
+                        firstDestination,
+                        1,
+                        "kosinski_moduled",
+                        1);
+                AssertContains(
+                    sink.Timing[0],
+                    "\"boundary\":\"post_objects\","
+                    + "\"kind\":\"kos_module_queue\",\"ordinal\":0,"
+                    + "\"submission_fingerprint\":\""
+                    + fingerprint + "\"");
             });
         }
 

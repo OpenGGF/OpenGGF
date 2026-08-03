@@ -271,9 +271,9 @@ The container contract is exact:
 - metadata discovery key: `"hardware_timing_schema": 1` or
   `"hardware_timing_schema": 2`;
 - fixture trace schema: `trace_schema: 7`;
-- current native S3K standard recorder version for schema 2: `6.39-s3k`;
+- current native S3K standard recorder version for schema 2: `6.41-s3k`;
 - native S3K complete-run recorder version for schema 2:
-  `6.40-s3k-completerun` (schema 2 was introduced in both native recorder
+  `6.42-s3k-completerun` (schema 2 was introduced in both native recorder
   families at version `6.38`); and
 - the frozen Lua recorders remain at `6.37-s3k` and
   `6.37-s3k-completerun`, emitting schema 1 only.
@@ -469,7 +469,7 @@ Lua/native byte equivalence is optional corroboration, not a publication
 prerequisite. Version-1 differential coverage includes `6.37-s3k` standard and
 `6.37-s3k-completerun` captures and byte-exact empty streams for routes with no
 eligible completion. The maintained native schema-2 recorders are
-`6.39-s3k` and `6.40-s3k-completerun`; they emit both module and direct
+`6.41-s3k` and `6.42-s3k-completerun`; they emit both module and direct
 retirements. Recorder 6.37 treats an unchanged
 `Level_frame_counter` as `vint_service` unless the ROM is inside its
 held-counter title-card load loop. That loop is armed only by the fixed
@@ -479,6 +479,15 @@ raw `objoff_48` or `Nem_decomp_queue` exit predicates. An advancing counter
 also admits `post_objects`. A Nemesis job alone cannot arm the exception, so
 ordinary lag rows remain VInt-only. The stream is not declared through
 `aux_schema_extras`.
+
+Native 6.41/6.42 no longer uses the generic row heuristic for a module parent
+whose prior modules-left byte is exactly `0x81`: a canonical one-head FIFO
+removal/shift, including exact active identity, trailing entries, cardinality,
+and reset/mode fencing, proves the ROM POST owner even when the observation row
+holds `Level_frame_counter`. Duplicate/no-retirement rows remain VInt-only;
+stale, malformed, multi-head, append-during-shift, and reset-crossing shapes
+fail closed. Frozen Lua 6.37 behavior is unchanged and may therefore differ at
+this one native state-proven attribution.
 
 After capture, publication records and pins the native candidate's digests,
 lengths, event counts, ordering, ranges, and semantic inventory as immutable

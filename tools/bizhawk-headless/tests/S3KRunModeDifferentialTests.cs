@@ -120,14 +120,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
             "^  \"recording_date\": \"[0-9]{4}-[0-9]{2}-[0-9]{2}\",$");
 
         /// <summary>
-        /// Exact v6.40 stamps shared by the freshly published fixture and
-        /// the current native capture. No schema/version normalization is
-        /// permitted.
+        /// The published v6.40 stamp and current v6.42 recorder stamp.
+        /// Only this reviewed recorder-version delta is normalized.
         /// </summary>
         private const string PublishedVersionLine =
             "  \"lua_script_version\": \"6.40-s3k-completerun\",";
         private const string CurrentVersionLine =
-            "  \"lua_script_version\": \"6.40-s3k-completerun\",";
+            "  \"lua_script_version\": \"6.42-s3k-completerun\",";
         private const string CurrentTraceSchemaLine =
             "  \"trace_schema\": 7,";
         private const string PublishedHardwareTimingSchemaLine =
@@ -806,11 +805,15 @@ namespace OpenGGF.BizHawk.Headless.Tests
             RequireLiteralCount(context + " fixture", fixtureText,
                 PublishedVersionLine, 1);
             RequireLiteralCount(context + " fixture", fixtureText,
+                CurrentVersionLine, 0);
+            RequireLiteralCount(context + " fixture", fixtureText,
                 CurrentTraceSchemaLine, 1);
             RequireLiteralCount(context + " fixture", fixtureText,
                 PublishedHardwareTimingSchemaLine, 1);
             RequireLiteralCount(context + " produced", producedText,
                 CurrentVersionLine, 1);
+            RequireLiteralCount(context + " produced", producedText,
+                PublishedVersionLine, 0);
             RequireLiteralCount(context + " produced", producedText,
                 CurrentTraceSchemaLine, 1);
             RequireLiteralCount(context + " produced", producedText,
@@ -822,8 +825,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
         {
             RequireLiteralCount(context + " fixture", fixtureText,
                 PublishedVersionLine, 1);
+            RequireLiteralCount(context + " fixture", fixtureText,
+                CurrentVersionLine, 0);
             RequireLiteralCount(context + " produced", producedText,
                 CurrentVersionLine, 1);
+            RequireLiteralCount(context + " produced", producedText,
+                PublishedVersionLine, 0);
         }
 
         private static void RequireLiteralCount(

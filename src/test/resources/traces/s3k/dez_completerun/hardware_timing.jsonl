@@ -47,4 +47,4 @@
 {"event":"hardware_work_completed","raw_frame":44126,"boundary":"pre_main_loop","kind":"kos_decompression_queue","ordinal":625,"submission_fingerprint":"sha256:e6967420d9123b9b7003fa9218e41e623c174e49d31fc877a1f85117a1a27a7e"}
 {"event":"hardware_work_completed","raw_frame":44132,"boundary":"pre_main_loop","kind":"kos_decompression_queue","ordinal":626,"submission_fingerprint":"sha256:7568b4bfaa4ae3f764a73175b942785ca421407ecf11b8ef70483d03546b5d3f"}
 {"event":"hardware_work_completed","raw_frame":44138,"boundary":"pre_main_loop","kind":"kos_decompression_queue","ordinal":627,"submission_fingerprint":"sha256:2cdf1261805c1c25f73f2fbbfd6f5602e04c8dc3a2d1e27eb61fdb6d22a77949"}
-{"event":"hardware_work_completed","raw_frame":44139,"boundary":"vint_service","kind":"kos_module_queue","ordinal":442,"submission_fingerprint":"sha256:6f939c0e638b02f92b012d399f30ebf8facee8b7f6b6c0c3850db893e5af4197"}
+{"event":"hardware_work_completed","raw_frame":44139,"boundary":"post_objects","kind":"kos_module_queue","ordinal":442,"submission_fingerprint":"sha256:6f939c0e638b02f92b012d399f30ebf8facee8b7f6b6c0c3850db893e5af4197"}

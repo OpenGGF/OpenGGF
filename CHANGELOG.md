@@ -11,6 +11,28 @@ All notable changes to the OpenGGF project are documented in this file.
   while preserving exact atomic row comparison. Escape also exits safely
   during the pre-replay card, and complete runs use the same segment-zero
   launch boundary.
+- Fix/Test: the maintained S3K native recorder now attributes an exact
+  final-active KosM FIFO retirement to the ROM's post-object service from its
+  canonical one-head shift, even when the sampled level counter is held.
+  Malformed, stale, reset-crossing, multi-head, and cardinality-inconsistent
+  transitions fail closed; frozen Lua recorders remain unchanged. Trace replay
+  accepts schema-2 POST only on the two full-level execution phases and rejects
+  every non-full phase before touching gameplay or timing state, because
+  recorded authority still cannot manufacture an omitted CPU phase or prepare
+  its parent job. Mode transitions now fence the recorder's logical module
+  mirror even when the physical bulk clear appears on the following sample;
+  transition-visible work consumes its ordinal but remains fenced through that
+  ambiguous delayed clear. Level loading's two proven post-clear observation
+  boundaries reconcile normally, preserving multi-entry FIFO ordinals.
+  Two byte-identical untruncated 466,334-row captures proved the complete
+  reviewed delta is exactly 27 in-place VINT-to-POST substitutions across 14
+  segments. The user explicitly approved the frozen Candidate B manifest;
+  Candidate B supplied exactly 15 installed 6.42 metadata files and 14 changed
+  timing files, while Repeat remained validation-only and physics, aux, and
+  ending timing bytes remained untouched. Native capture gates now compare
+  directly with installed 6.42 bytes. A cheap predecessor ledger retains all
+  27 former 6.40 edges and hashes, pins their aggregate, and rejects the
+  historical wrong expected total of 25.
 - Fix/Test: MHZ fixed SST occupants, plane switchers, pollen, cutscene children,
   pulley, Curled Vine, Madmole, and enemy-touch bounce now follow their ROM slot,
   lifetime, geometry, and resolved-contact semantics. The complete-run physics

@@ -1,5 +1,26 @@
 # S3K Complete-Run Recorder — Byte-Level SEGMENTATION Specification
 
+> **2026-08-02 recorder-order note.** The maintained native complete-run
+> writer is now `6.42-s3k-completerun`, with held-counter final-parent
+> retirements attributed from canonical FIFO state transitions and
+> hardware-timing events serialized
+> in canonical same-frame service order: `vint_service`, module
+> `post_objects`, then direct `pre_main_loop`. Non-Candidate-B fixtures remain
+> immutable at their existing published stamps; the 67-segment super-emerald
+> run and both existing run manifests remain `6.40-s3k-completerun`. This
+> recorder correction does not authorize their rewrite. A replacement
+> super-emerald capture is a separately reviewed and approved publication
+> action.
+> The separate 15-segment Sonic-and-Tails Candidate B publication was
+> explicitly approved and installed: Candidate B supplied exactly 15 metadata
+> files and 14 timing files, while its independent repeat remained
+> validation-only. Installed metadata is canonical 6.42 and the timing delta
+> from 6.40 is exactly 27 in-place `vint_service`-to-`post_objects`
+> substitutions across 14 segments; physics, aux, and ending timing bytes did
+> not move. The permanent capture gate now requires direct installed-6.42
+> equality and retains the exact 6.40 predecessor identities in a cheap
+> non-capture ledger.
+>
 > **2026-07-27 publication note.** The committed fleet is now native
 > recorder v6.37, not the v6.33 Lua fixture generation described in the
 > historical sections below. The Sonic+Tails pass publishes all 15 captured

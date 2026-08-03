@@ -37,6 +37,8 @@ class TestCommittedHardwareTimingFixtures {
     private static final Path PUBLICATION_MANIFEST =
             FIXTURE_ROOT.resolve("hardware-timing-publication.tsv");
     private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final String CANDIDATE_B_COMPLETE_RUN_OWNER =
+            "v642-complete-sonic-tails-candidate-b";
     private static final Map<String, RunOwnership> EXPECTED_RUN_OWNERSHIP =
             Map.of(
                     "runs/s3-knux-multibonus-ss/",
@@ -53,35 +55,35 @@ class TestCommittedHardwareTimingFixtures {
                     Map.entry("cnz", new Ownership("v637-standard-cnz", ".")),
                     Map.entry("mgz", new Ownership("v637-standard-mgz", ".")),
                     Map.entry("aiz_completerun",
-                            new Ownership("v638-complete-sonic-tails-task8", "aiz")),
+                            new Ownership(CANDIDATE_B_COMPLETE_RUN_OWNER, "aiz")),
                     Map.entry("hcz_completerun",
-                            new Ownership("v638-complete-sonic-tails-task8", "hcz")),
+                            new Ownership(CANDIDATE_B_COMPLETE_RUN_OWNER, "hcz")),
                     Map.entry("mgz_completerun",
-                            new Ownership("v638-complete-sonic-tails-task8", "mgz")),
+                            new Ownership(CANDIDATE_B_COMPLETE_RUN_OWNER, "mgz")),
                     Map.entry("cnz_completerun",
-                            new Ownership("v638-complete-sonic-tails-task8", "cnz")),
+                            new Ownership(CANDIDATE_B_COMPLETE_RUN_OWNER, "cnz")),
                     Map.entry("icz_completerun",
-                            new Ownership("v638-complete-sonic-tails-task8", "icz")),
+                            new Ownership(CANDIDATE_B_COMPLETE_RUN_OWNER, "icz")),
                     Map.entry("lbz_completerun",
-                            new Ownership("v637-complete-sonic-tails", "lbz")),
+                            new Ownership(CANDIDATE_B_COMPLETE_RUN_OWNER, "lbz")),
                     Map.entry("mhz_completerun",
-                            new Ownership("v637-complete-sonic-tails", "mhz")),
+                            new Ownership(CANDIDATE_B_COMPLETE_RUN_OWNER, "mhz")),
                     Map.entry("fbz_completerun",
-                            new Ownership("v637-complete-sonic-tails", "fbz")),
+                            new Ownership(CANDIDATE_B_COMPLETE_RUN_OWNER, "fbz")),
                     Map.entry("soz_completerun",
-                            new Ownership("v637-complete-sonic-tails", "soz")),
+                            new Ownership(CANDIDATE_B_COMPLETE_RUN_OWNER, "soz")),
                     Map.entry("lrz_completerun",
-                            new Ownership("v637-complete-sonic-tails", "lrz")),
+                            new Ownership(CANDIDATE_B_COMPLETE_RUN_OWNER, "lrz")),
                     Map.entry("hpz_completerun",
-                            new Ownership("v637-complete-sonic-tails", "hpz22")),
+                            new Ownership(CANDIDATE_B_COMPLETE_RUN_OWNER, "hpz22")),
                     Map.entry("ssz_completerun",
-                            new Ownership("v637-complete-sonic-tails", "hpz")),
+                            new Ownership(CANDIDATE_B_COMPLETE_RUN_OWNER, "hpz")),
                     Map.entry("dez_completerun",
-                            new Ownership("v637-complete-sonic-tails", "ssz")),
+                            new Ownership(CANDIDATE_B_COMPLETE_RUN_OWNER, "ssz")),
                     Map.entry("ddz_completerun",
-                            new Ownership("v637-complete-sonic-tails", "dez23")),
+                            new Ownership(CANDIDATE_B_COMPLETE_RUN_OWNER, "dez23")),
                     Map.entry("ending_completerun",
-                            new Ownership("v637-complete-sonic-tails", "ddz")),
+                            new Ownership(CANDIDATE_B_COMPLETE_RUN_OWNER, "ddz")),
                     Map.entry("bonus_gumball",
                             new Ownership("v637-knuckles-c", "gumball")),
                     Map.entry("bonus_slots",
@@ -263,14 +265,15 @@ class TestCommittedHardwareTimingFixtures {
         assertEquals(Set.of(
                         new RunManifestExpectation(
                                 "runs/s3-knux-multibonus-ss/run_manifest.json",
-                                "v637-knuckles-b", 8740,
-                                "f2e3151b339c680277ad8121f24d6ebc14fb67a47cfabae7fd97f1da1ea97bbd",
+                                "v637-knuckles-b", "6.40-s3k-completerun", 8740,
+                                "be3f3940abd8932559dd556913be792f6968edbd39310c70ebb32c9d5b08d550",
                                 25, 22),
                         new RunManifestExpectation(
                                 "runs/s3k-knuckles-complete-superemeralds/"
                                         + "run_manifest.json",
-                                "v638-knuckles-superemeralds", 20740,
-                                "01246e7e74f019382b2e210896c12668266fd3d3e11914da3a84428904fdc6a3",
+                                "v638-knuckles-superemeralds",
+                                "6.40-s3k-completerun", 20740,
+                                "8ec67dc30a852d547ac4e4e7acf96757107749c5bbbbf5bc4c69008888cb1455",
                                 67, 48)),
                 new HashSet<>(runManifests));
         for (RunManifestExpectation runManifest : runManifests) {
@@ -418,6 +421,8 @@ class TestCommittedHardwareTimingFixtures {
         RunOwnership ownership = EXPECTED_RUN_OWNERSHIP.get(prefix);
         assertEquals(expected.owner(), ownership.owner(), expected.path());
         assertEquals(ownership.runId(), manifest.runId(), expected.path());
+        assertEquals(expected.luaScriptVersion(), manifest.luaScriptVersion(),
+                expected.path());
         assertEquals(expected.segmentCount(), manifest.segments().size());
         assertEquals(expected.transitionCount(), manifest.transitions().size());
     }
@@ -536,16 +541,18 @@ class TestCommittedHardwareTimingFixtures {
     private record RunManifestExpectation(
             String path,
             String owner,
+            String luaScriptVersion,
             long bytes,
             String hash,
             int segmentCount,
             int transitionCount) {
 
         private static RunManifestExpectation parse(String[] fields) {
-            assertFieldCount(fields, 7);
+            assertFieldCount(fields, 8);
             return new RunManifestExpectation(
-                    fields[1], fields[2], Long.parseLong(fields[3]), fields[4],
-                    Integer.parseInt(fields[5]), Integer.parseInt(fields[6]));
+                    fields[1], fields[2], fields[3], Long.parseLong(fields[4]),
+                    fields[5], Integer.parseInt(fields[6]),
+                    Integer.parseInt(fields[7]));
         }
     }
 
