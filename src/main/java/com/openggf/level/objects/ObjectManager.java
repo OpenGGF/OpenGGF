@@ -223,6 +223,7 @@ public class ObjectManager {
     // of each restore so it never leaks instances across passes.
     private final List<AbstractObjectInstance> rewindReconstructionChildren = new ArrayList<>();
     private boolean rewindReconstructionChildCapture;
+    private final FixedSstObjectInstaller fixedSstObjects;
     private final PlaneSwitchers planeSwitchers;
     private final ObjectSolidContactController solidContacts;
     private final ObjectTouchResponseController touchResponses;
@@ -257,6 +258,9 @@ public class ObjectManager {
                 slotLayout.twoAxisCursorPlacement()
                         ? SlotEmptyPredicate.ROUTINE_POINTER
                         : SlotEmptyPredicate.ID_BYTE);
+        this.fixedSstObjects = new FixedSstObjectInstaller(
+                registry, objectServices, slotLayout, slotAllocator,
+                this::addDynamicObject, this::releaseSlot);
         this.planeSwitchers = planeSwitcherConfig != null
                 ? new PlaneSwitchers(placement, planeSwitcherObjectId, planeSwitcherConfig)
                 : null;
@@ -350,32 +354,13 @@ public class ObjectManager {
         if (touchResponses != null) {
             touchResponses.reset();
         }
-        installFixedSstObjects();
+        fixedSstObjects.installConfiguredObjects();
         // Materialize the current ObjectPlacementController window immediately after reset.
         // S1 needs this for ROM parity at level start; for S2/S3K it keeps
         // manual camera resets and headless probes from sitting on an empty
         // active window until a later ObjectPlacementController delta occurs. Initial reset
         // materialization still honors the camera-Y filter; S2's vertical bypass is runtime-only.
         syncActiveSpawnsLoad(false);
-    }
-
-    private void installFixedSstObjects() {
-        if (registry == null || objectServices == null) {
-            return;
-        }
-        registry.installFixedSstObjects(
-                objectServices.romZoneId(),
-                objectServices.currentAct(),
-                (absoluteSlot, factory) -> {
-                    AbstractObjectInstance installed = createDynamicObjectAtSlot(
-                            factory::get, absoluteSlot);
-                    if (installed == null) {
-                        throw new IllegalStateException(
-                                "ROM fixed SST slot " + absoluteSlot
-                                        + " is unavailable during object-manager reset");
-                    }
-                    return installed;
-                });
     }
 
     ObjectServices services() {
@@ -1776,30 +1761,7 @@ public class ObjectManager {
      */
     public <T extends ObjectInstance> T createDynamicObjectAtSlot(
             Supplier<T> factory, int slotIndex) {
-        if (!isManagedDynamicSlot(slotIndex) || !slotAllocator.reserve(slotIndex)) {
-            return null;
-        }
-        return ObjectConstructionContext.construct(objectServices, () -> {
-            T object;
-            try {
-                object = factory.get();
-            } catch (RuntimeException | Error ex) {
-                releaseSlot(slotIndex);
-                throw ex;
-            }
-            if (object == null) {
-                releaseSlot(slotIndex);
-                return null;
-            }
-            if (!(object instanceof AbstractObjectInstance aoi)) {
-                releaseSlot(slotIndex);
-                throw new IllegalArgumentException(
-                        "Fixed-slot dynamic objects must extend AbstractObjectInstance");
-            }
-            aoi.setSlotIndex(slotIndex);
-            addDynamicObject(object);
-            return object;
-        });
+        return fixedSstObjects.create(factory, slotIndex);
     }
 
     /**

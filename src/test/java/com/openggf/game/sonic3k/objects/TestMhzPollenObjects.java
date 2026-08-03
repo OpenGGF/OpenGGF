@@ -13,6 +13,7 @@ import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.tests.TestablePlayableSprite;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -28,6 +29,11 @@ import static org.mockito.Mockito.mock;
 
 class TestMhzPollenObjects {
     private static final ObjectSpawn SPAWNER_SPAWN = new ObjectSpawn(0, 0, 0, 0, 0, false, 0);
+
+    @AfterEach
+    void resetCameraBounds() {
+        AbstractObjectInstance.resetCameraBoundsForTests();
+    }
 
     @Test
     void groundedFastPlayerSpawnsSpringPollenAndReservesRuntimeCounter() {
