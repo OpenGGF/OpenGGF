@@ -74,6 +74,8 @@ namespace OpenGGF.BizHawk.Headless
             int waitFrames = 0;
             Segment segment = null;
             int nextExpected = 0;
+            int nextPriorExpected = 0;
+            int lastObservedDemo = -1;
             var captured = new List<int>();
             int dynamicArtFrame = 0;
             using (var dynamicArt = new S1DynamicArtObserver(
@@ -145,17 +147,29 @@ namespace OpenGGF.BizHawk.Headless
                                     exception.Message, host, demo);
                             }
                         }
+                        else
+                        {
+                            bool progressed;
+                            try
+                            {
+                                progressed = ObserveSingleTargetProgression(
+                                    demo.Index, target.Value,
+                                    ref nextPriorExpected,
+                                    ref lastObservedDemo);
+                            }
+                            catch (InvalidOperationException exception)
+                            {
+                                throw LifecycleFailure(
+                                    exception.Message, host, demo);
+                            }
+                            if (demo.Index < target.Value)
+                            {
+                                if (progressed) waitFrames = 0;
+                                continue;
+                            }
+                        }
                         if (!ShouldCapture(demo, target, captured))
                         {
-                            // A single requested late demo deliberately
-                            // observes prior ROM demos without treating
-                            // their (valid) playback time as a stalled
-                            // transition. This is a state transition, not a
-                            // fixture-row-count allowance.
-                            if (target.HasValue && demo.Index < target.Value)
-                            {
-                                waitFrames = 0;
-                            }
                             continue;
                         }
                         dynamicArt.PublishGap();
@@ -242,6 +256,51 @@ namespace OpenGGF.BizHawk.Headless
                 throw new InvalidOperationException(
                     "credits flow skipped or reordered demo " + demo.Index);
             }
+        }
+
+        internal static bool ObserveSingleTargetProgression(
+            int demoIndex,
+            int target,
+            ref int nextPriorExpected,
+            ref int lastObservedDemo)
+        {
+            if (demoIndex > target)
+            {
+                throw new InvalidOperationException(
+                    "credits flow passed requested demo " + target
+                    + " with demo " + demoIndex);
+            }
+            if (demoIndex == target)
+            {
+                if (nextPriorExpected != target)
+                {
+                    throw new InvalidOperationException(
+                        "credits flow skipped prior demo "
+                        + nextPriorExpected + " before requested demo "
+                        + target);
+                }
+                return false;
+            }
+            if (demoIndex == lastObservedDemo)
+            {
+                return false;
+            }
+            if (demoIndex < nextPriorExpected)
+            {
+                throw new InvalidOperationException(
+                    "credits flow duplicated or reordered prior demo "
+                    + demoIndex);
+            }
+            if (demoIndex > nextPriorExpected)
+            {
+                throw new InvalidOperationException(
+                    "credits flow skipped prior demo "
+                    + nextPriorExpected + " and observed demo "
+                    + demoIndex);
+            }
+            lastObservedDemo = demoIndex;
+            nextPriorExpected++;
+            return true;
         }
 
         private static bool ShouldCapture(

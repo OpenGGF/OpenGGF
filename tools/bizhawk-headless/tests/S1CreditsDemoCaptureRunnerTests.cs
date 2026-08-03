@@ -35,6 +35,15 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "S1 credits synthetic all-eight capture owns lifecycle boundaries",
                 SyntheticAllEightCaptureOwnsLifecycleBoundaries));
+            tests.Add(new TestMain.TestCase(
+                "S1 credits single target times out when a prior demo stalls",
+                SingleTargetTimesOutWhenPriorDemoStalls));
+            tests.Add(new TestMain.TestCase(
+                "S1 credits single target accepts only sequential new prior identities",
+                SingleTargetAcceptsOnlySequentialPriorIdentities));
+            tests.Add(new TestMain.TestCase(
+                "S1 credits single target fails immediately after the requested demo is passed",
+                SingleTargetFailsImmediatelyAfterRequestedDemoIsPassed));
         }
 
         private static void ConvertsRomControllerInput()
@@ -310,6 +319,133 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 if (session != null) session.Dispose();
                 if (Directory.Exists(root)) Directory.Delete(root, true);
             }
+        }
+
+        private static void SingleTargetTimesOutWhenPriorDemoStalls()
+        {
+            string root = TestScratch.CreateRootPath("credits-stuck-prior");
+            var host = new FakeS1Host((fake, completedFrame) =>
+            {
+                if (completedFrame == 1)
+                {
+                    fake.Ram[S1Ram.GameMode] = 0x0C;
+                    return;
+                }
+                if (fake.Ram[S1Ram.GameMode] == 0x1C)
+                {
+                    SetActiveDemo(fake, 0);
+                    return;
+                }
+                if (completedFrame > 2505)
+                {
+                    throw new InvalidOperationException(
+                        "test host exceeded the credits watchdog");
+                }
+            });
+            AssertCaptureFailure(
+                root, host, 7,
+                "timed out waiting for credits demo: mode=0x08, credits=1, demo=none");
+        }
+
+        private static void SingleTargetAcceptsOnlySequentialPriorIdentities()
+        {
+            int nextPrior = 0;
+            int lastObserved = -1;
+            for (int demo = 0; demo < 7; demo++)
+            {
+                AssertEx.Equal(true,
+                    S1CreditsDemoCaptureRunner.ObserveSingleTargetProgression(
+                        demo, 7, ref nextPrior, ref lastObserved));
+                AssertEx.Equal(false,
+                    S1CreditsDemoCaptureRunner.ObserveSingleTargetProgression(
+                        demo, 7, ref nextPrior, ref lastObserved));
+            }
+            AssertEx.Equal(false,
+                S1CreditsDemoCaptureRunner.ObserveSingleTargetProgression(
+                    7, 7, ref nextPrior, ref lastObserved));
+            AssertEx.Equal(7, nextPrior);
+
+            nextPrior = 0;
+            lastObserved = -1;
+            S1CreditsDemoCaptureRunner.ObserveSingleTargetProgression(
+                0, 7, ref nextPrior, ref lastObserved);
+            AssertEx.Throws<InvalidOperationException>(
+                () => S1CreditsDemoCaptureRunner.ObserveSingleTargetProgression(
+                    2, 7, ref nextPrior, ref lastObserved),
+                "skipped prior demo 1");
+
+            nextPrior = 0;
+            lastObserved = -1;
+            S1CreditsDemoCaptureRunner.ObserveSingleTargetProgression(
+                0, 7, ref nextPrior, ref lastObserved);
+            S1CreditsDemoCaptureRunner.ObserveSingleTargetProgression(
+                1, 7, ref nextPrior, ref lastObserved);
+            AssertEx.Throws<InvalidOperationException>(
+                () => S1CreditsDemoCaptureRunner.ObserveSingleTargetProgression(
+                    0, 7, ref nextPrior, ref lastObserved),
+                "duplicated or reordered prior demo 0");
+        }
+
+        private static void SingleTargetFailsImmediatelyAfterRequestedDemoIsPassed()
+        {
+            string root = TestScratch.CreateRootPath("credits-passed-target");
+            var host = new FakeS1Host((fake, completedFrame) =>
+            {
+                if (completedFrame == 1)
+                {
+                    fake.Ram[S1Ram.GameMode] = 0x0C;
+                    return;
+                }
+                if (fake.Ram[S1Ram.GameMode] == 0x1C)
+                {
+                    SetActiveDemo(fake, 3);
+                    return;
+                }
+                if (completedFrame > 12)
+                {
+                    throw new InvalidOperationException(
+                        "test host did not reject a passed credits target");
+                }
+            });
+            AssertCaptureFailure(
+                root, host, 2,
+                "passed requested demo 2 with demo 3: mode=0x08, credits=4, demo=3");
+        }
+
+        private static void AssertCaptureFailure(
+            string root, FakeS1Host host, int target, string message)
+        {
+            NoReplacePublisher.IncrementalStagingSession session = null;
+            try
+            {
+                session = new NoReplacePublisher(
+                    new TracePayloadCompressor(0)).OpenSession(root);
+                using (var sink = new S1CreditsDemoCollectionSink(session))
+                {
+                    AssertEx.Throws<InvalidOperationException>(
+                        () => S1CreditsDemoCaptureRunner.Capture(
+                            host, host, target, "2000-01-02", sink,
+                            S1DynamicArtObserverTests.CreateRom()),
+                        message);
+                }
+            }
+            finally
+            {
+                if (session != null) session.Dispose();
+                if (Directory.Exists(root)) Directory.Delete(root, true);
+            }
+        }
+
+        private static void SetActiveDemo(FakeS1Host fake, int demoIndex)
+        {
+            S1CreditsDemoDefinition demo =
+                S1CreditsDemoCatalog.Get(demoIndex);
+            fake.Ram[S1Ram.GameMode] = 0x08;
+            fake.SetU16(S1Ram.DemoFlag, 0x8001);
+            fake.SetU16(S1Ram.CreditsNum,
+                (ushort)(demoIndex + 1));
+            fake.SetU16(S1Ram.Zone, (ushort)demo.ZoneActWord);
+            fake.Ram[S1Ram.PlayerBase + S1Ram.OffRoutine] = 2;
         }
 
         private static string[] ReadGzipLines(string path)
