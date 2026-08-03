@@ -91,24 +91,20 @@ class TestEngine {
     }
 
     @Test
-    void visualTraceReplayHandoffRebindsEngineRenderManagers() throws Exception {
+    void visualTraceReplayActivationKeepsPreparedRenderManagers() throws Exception {
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
         GameplayModeContext presentation = SessionManager.getCurrentGameplayMode();
         Engine engine = new Engine(EngineServices.current());
 
-        GameplayModeContext replay = engine.reopenGameplayForVisualTrace(
-                HardwareReadinessAdmissionPolicy.RECORDED, null);
+        GameplayModeContext replay = presentation;
+        replay.activateRecordedHardwareAdmission();
 
-        assertNotSame(presentation, replay);
-        assertFalse(presentation.isGameplayRuntimeReady());
-        assertSame(replay, getPrivateField(engine, "gameplayMode"));
-        assertSame(replay.getLevelManager(), getPrivateField(engine, "levelManager"));
-        assertSame(replay.getSpriteManager(), getPrivateField(engine, "spriteManager"));
-        assertSame(replay.getCamera(), getPrivateField(engine, "camera"));
-        assertSame(replay, getPrivateField(engine.getGameLoop(), "gameplayMode"));
-        assertSame(replay.getLevelManager(),
-                getPrivateField(engine.getGameLoop(), "levelManager"));
+        assertSame(presentation, replay);
+        assertTrue(presentation.isGameplayRuntimeReady());
+        assertSame(replay, SessionManager.getCurrentGameplayMode());
+        assertEquals(HardwareReadinessAdmissionPolicy.RECORDED,
+                replay.hardwareTiming().admissionPolicy());
     }
 
     @Test

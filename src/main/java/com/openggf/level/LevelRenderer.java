@@ -1490,21 +1490,32 @@ public final class LevelRenderer {
             return;
         }
 
-        graphicsManager.flushPatternBatch();
-        graphicsManager.setCurrentSpriteHighPriority(false);
-        graphicsManager.beginPatternBatch();
-        ringManager.draw(lm.frameCounter);
+        Camera camera = lm.camera;
+        boolean verticalWrapEnabled = camera != null && camera.isVerticalWrapEnabled();
+        if (verticalWrapEnabled) {
+            graphicsManager.enableVerticalWrapAdjust(camera.getVerticalWrapRange(), camera.getY());
+        }
+        try {
+            graphicsManager.flushPatternBatch();
+            graphicsManager.setCurrentSpriteHighPriority(false);
+            graphicsManager.beginPatternBatch();
+            ringManager.draw(lm.frameCounter);
 
-        // ROM: Lost rings (Ring_LostRing) use art_tile with priority bit set,
-        // rendering them in front of both playfield layers (including waterfalls).
-        graphicsManager.flushPatternBatch();
-        graphicsManager.setCurrentSpriteHighPriority(true);
-        graphicsManager.beginPatternBatch();
-        ringManager.drawLostRings(lm.frameCounter);
+            // ROM: Lost rings (Ring_LostRing) use art_tile with priority bit set,
+            // rendering them in front of both playfield layers (including waterfalls).
+            graphicsManager.flushPatternBatch();
+            graphicsManager.setCurrentSpriteHighPriority(true);
+            graphicsManager.beginPatternBatch();
+            ringManager.drawLostRings(lm.frameCounter);
 
-        graphicsManager.flushPatternBatch();
-        graphicsManager.setCurrentSpriteHighPriority(false);
-        graphicsManager.beginPatternBatch();
+            graphicsManager.flushPatternBatch();
+            graphicsManager.setCurrentSpriteHighPriority(false);
+            graphicsManager.beginPatternBatch();
+        } finally {
+            if (verticalWrapEnabled) {
+                graphicsManager.disableVerticalWrapAdjust();
+            }
+        }
     }
 
     /**

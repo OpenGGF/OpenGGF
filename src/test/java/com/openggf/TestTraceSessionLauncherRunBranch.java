@@ -40,6 +40,7 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -132,6 +133,24 @@ class TestTraceSessionLauncherRunBranch {
         session.requestEarlyExit();
         assertNull(TraceSessionLauncher.active(),
                 "Escape ownership must work before a comparator exists");
+    }
+
+    @Test
+    void visualReplayActivationCannotReloadLevelOrRestartMusic() throws Exception {
+        String launcher = Files.readString(Path.of("src", "main", "java",
+                "com", "openggf", "TraceSessionLauncher.java"));
+        String driver = Files.readString(Path.of("src", "main", "java",
+                "com", "openggf", "trace", "replay", "TraceReplayDriver.java"));
+        int preparedStart = driver.indexOf("public void startPreparedLevel()");
+        int sharedStart = driver.indexOf("private void startPlayback(", preparedStart);
+        assertTrue(preparedStart >= 0 && sharedStart > preparedStart);
+        String preparedPath = driver.substring(preparedStart, sharedStart);
+        assertTrue(launcher.contains("driver.startPreparedLevel();"));
+        assertFalse(launcher.contains("reopenCurrentGameplayForVisualTrace"));
+        assertFalse(preparedPath.contains("loadZoneAndAct("));
+        assertFalse(preparedPath.contains("resetLevelSubsystemsForReplay("));
+        assertFalse(preparedPath.contains("registerActiveTeam("));
+        assertFalse(preparedPath.contains("playMusic("));
     }
 
     @Test
@@ -400,8 +419,9 @@ class TestTraceSessionLauncherRunBranch {
         DynamicArtDiagnosticsSnapshot traceOrigin =
                 context.dynamicArtDiagnostics().latestSnapshot();
         assertFalse(context.dynamicArtLifecycle().isComparisonSegmentOpen());
-        assertTrue(traceOrigin.published());
-        assertEquals(automaticGeneration,
+        assertTrue(context.dynamicArtLifecycle().isComparisonSegmentReserved());
+        assertFalse(traceOrigin.published());
+        assertEquals(automaticGeneration + 1,
                 traceOrigin.segmentGeneration());
         assertEquals(List.of(transferId[0]),
                 traceOrigin.outstandingTransferIds());
@@ -510,7 +530,9 @@ class TestTraceSessionLauncherRunBranch {
                 new TraceSessionLauncher(null, null, segments, null);
         setField(session, "comparator", comparator);
         session.installDynamicArtSegments(context);
-        comparator.authorizeDeferredInitialDynamicArtGeneration();
+        long reservedGeneration = context.dynamicArtDiagnostics()
+                .latestSnapshot().segmentGeneration();
+        assertTrue(context.dynamicArtLifecycle().isComparisonSegmentReserved());
         assertFalse(context.dynamicArtLifecycle().isComparisonSegmentOpen());
         context.dynamicArtLifecycle().observePlayerDplc(
                 GameId.S1, "sonic", 8,
@@ -530,6 +552,7 @@ class TestTraceSessionLauncherRunBranch {
                 context.dynamicArtDiagnostics().latestSnapshot();
         assertTrue(published.published());
         assertEquals(0, published.frame());
+        assertEquals(reservedGeneration, published.segmentGeneration());
         assertEquals(List.of(), published.edges());
         assertEquals(List.of("submitted", "completed"),
                 context.dynamicArtLifecycle().gapEdges().stream()
@@ -765,7 +788,7 @@ class TestTraceSessionLauncherRunBranch {
 
         assertEquals(1, observed.size());
         assertFalse(observed.getFirst().hasDivergence());
-        assertEquals(alreadyOpenGeneration + 1,
+        assertEquals(alreadyOpenGeneration,
                 context.dynamicArtDiagnostics().latestSnapshot()
                         .segmentGeneration());
     }

@@ -86,7 +86,7 @@ public final class GameplayModeContext implements ModeContext {
     private final RuntimeArtCoordinator runtimeArtCoordinator;
     private final SeamlessTransitionResourceHandoffRegistry
             seamlessTransitionResourceHandoffs;
-    private final RecordedCompletionAuthority recordedCompletionAuthority;
+    private RecordedCompletionAuthority recordedCompletionAuthority;
     private final PlcFrameLifecycleCoordinator plcFrameLifecycle;
     private final DynamicArtLifecycleService dynamicArtLifecycle;
     private final RunLevelLoadTracker runLevelLoads = new RunLevelLoadTracker();
@@ -599,6 +599,35 @@ public final class GameplayModeContext implements ModeContext {
                     "gameplay context was not constructed for recorded hardware admission");
         }
         return recordedCompletionAuthority;
+    }
+
+    /**
+     * Converts a production-live title-card prelude into recorded readiness
+     * without replacing any gameplay or runtime-art owner.
+     */
+    public RecordedCompletionAuthority activateRecordedHardwareAdmission() {
+        if (recordedCompletionAuthority != null) {
+            throw new IllegalStateException(
+                    "gameplay context already owns recorded hardware admission");
+        }
+        requireQueuesIdleForRecordedAdmission(captureQueueDiagnostics());
+        RecordedCompletionAuthority activated =
+                hardwareTiming.beginRecordedAdmissionAfterLiveEpoch();
+        recordedCompletionAuthority = activated;
+        return activated;
+    }
+
+    static void requireQueuesIdleForRecordedAdmission(
+            List<QueueDiagnosticSnapshot> snapshots) {
+        Objects.requireNonNull(snapshots, "queue diagnostics");
+        for (QueueDiagnosticSnapshot snapshot : snapshots) {
+            Objects.requireNonNull(snapshot, "queue diagnostic");
+            if (snapshot.busy()) {
+                throw new IllegalStateException(
+                        "runtime-art queue is not idle: "
+                                + snapshot.kind().wireName());
+            }
+        }
     }
 
     public HardwareTimingBoundaryObserver hardwareTimingBoundaryObserver() {

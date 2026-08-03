@@ -218,16 +218,22 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **Visual trace locked-input parity (2026-08-03):** recorded A/B/C press
+  identity now survives input-only trace rows but reaches movement only after
+  queued object control and the ROM control lock are applied. S1 signpost
+  walk-off retains forced Right against recorded Left+jump, while objects still
+  observe the raw controller edge. Rewind replay-forward reconstructs the same
+  pending input without storing trace-owned state in the player sprite.
 - **Visual trace title-card and row-zero parity (2026-08-03):** level-backed
   traces and complete runs selected from the master title now show the full
-  production title card before replay begins. Playback then starts in a clean
-  gameplay context, preventing presentation PLC/DPLC and hardware-timing state
-  from leaking into the trace. The first comparison window follows the same
-  service-before-open order as headless replay, fixing S1 GHZ1's visual-only
-  frame-zero dynamic-art mismatch without filtering any recorded edges. The
-  replacement context is rebound through the Engine composition root so the
-  visible level continues rendering after the title card alongside the live
-  replay simulation.
+  production title card and continue into replay in the same loaded gameplay
+  context, so the level and music are not restarted. A checked timing-epoch
+  handoff and reserved unpublished dynamic-art window preserve exact headless
+  PLC/DPLC/Kosinski row-zero comparison. Recorded input uses the logical-input
+  path, allowing native scripted control such as S1's signpost walk-off to win.
+  Standalone special stages also render trace progress, install base-game ring
+  SFX routing, and leave S1's terminal white hold through a deterministic
+  return to the trace picker.
 
 - **S3K native recorder timing attribution (2026-08-03):** recorder 6.42 now
   attributes held-frame KosM retirements from canonical FIFO transitions and

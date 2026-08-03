@@ -8,19 +8,27 @@ All notable changes to the OpenGGF project are documented in this file.
   are rejected, and hardware-timing authority is determined solely by the
   presence of its strict v5 stream, which supports both module and direct
   Kosinski readiness without changing production-work matching.
+- Fix: S3K vertically wrapping levels now render placed and lost rings at their
+  wrapped Y positions when the camera crosses the level boundary.
+- Fix/Test: visual trace action edges now remain exact recorded controller
+  masks until playable dispatch applies queued object control and the ROM
+  control lock. S1's signpost walk-off therefore keeps its forced logical
+  direction and rejects a simultaneous recorded jump, while raw input remains
+  visible to objects. Advance-only edges and rewind replay-forward retain
+  one-shot delivery without writing or clearing gameplay-owned sprite latches.
 - Fix/Test: Rewind now replaces the unclaimed outer PLC lifecycle placeholder
   with its replay frame, preventing lifecycle re-entry crashes across games and
   special stages while preserving the guard for claimed frames.
 - Fix/Test: level-backed visual traces now show their complete production title
-  card before playback, then reopen a clean replay context so presentation PLC,
-  DPLC, timing, and title-provider state cannot contaminate comparison. The
-  first externally owned dynamic-art window opens after the row-zero service
-  decision, keeping S1 bootstrap submit/complete edges in the native run gap
-  while preserving exact atomic row comparison. Escape also exits safely
-  during the pre-replay card, and complete runs use the same segment-zero
-  launch boundary. The clean-context handoff now binds through the Engine
-  composition root so its render-side level, sprite, and camera references
-  advance with GameLoop instead of drawing the destroyed presentation context.
+  card and begin replay in that same gameplay context, eliminating the second
+  level load and its music restart. A checked live-to-recorded timing epoch
+  keeps the existing PLC/DPLC/Kosinski owners, while a reserved unpublished
+  dynamic-art generation gives row zero the same strict atomic boundary as
+  headless replay. Recorded input now enters through the logical-input bridge,
+  so game-owned control such as S1's signpost walk-off wins without a trace or
+  frame exception. Standalone special stages gain a trace HUD, base-game sound
+  routing for ring SFX, and fade-aware terminal cleanup that returns S1's white
+  hold to the picker instead of softlocking.
 - Fix/Test: the maintained S3K native recorder now attributes an exact
   final-active KosM FIFO retirement to the ROM's post-object service from its
   canonical one-head shift, even when the sampled level counter is held.

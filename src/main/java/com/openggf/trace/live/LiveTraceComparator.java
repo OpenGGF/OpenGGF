@@ -67,7 +67,6 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
     private TraceFrame pendingDynamicArtFrame;
     private FrameComparison pendingDynamicArtBaseComparison;
     private boolean pendingDynamicArtRequiresPublication;
-    private boolean deferredInitialDynamicArtGenerationAuthorized;
     private boolean pendingPlayableAnimationOnly;
     private Bk2FrameInput pendingPlayableAnimationInput;
     private List<BootstrapDivergence> bootstrapDivergences = List.of();
@@ -398,17 +397,9 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
         Objects.requireNonNull(before, "before");
         Objects.requireNonNull(after, "after");
         if (pendingDynamicArtRequiresPublication) {
-            boolean deferredInitialWindow =
-                    deferredInitialDynamicArtGenerationAuthorized
-                    && expected.frame() == 0
-                    && !before.published()
-                    && after.segmentGeneration()
-                            == before.segmentGeneration() + 1;
-            deferredInitialDynamicArtGenerationAuthorized = false;
             if (after.deliverySerial() <= before.deliverySerial()
                     || !after.published()
-                    || (after.segmentGeneration() != before.segmentGeneration()
-                            && !deferredInitialWindow)
+                    || after.segmentGeneration() != before.segmentGeneration()
                     || after.frame() != expected.frame()) {
                 throw new IllegalStateException(
                         "dynamic-art row " + expected.frame()
@@ -430,15 +421,6 @@ public final class LiveTraceComparator implements PlaybackFrameObserver {
         pendingDynamicArtRequiresPublication = false;
         publishComparison(merged, expected.frame());
         return merged;
-    }
-
-    /** Authorizes one structural first-window generation handoff. */
-    public void authorizeDeferredInitialDynamicArtGeneration() {
-        if (deferredInitialDynamicArtGenerationAuthorized) {
-            throw new IllegalStateException(
-                    "deferred initial dynamic-art generation is already authorized");
-        }
-        deferredInitialDynamicArtGenerationAuthorized = true;
     }
 
     /** Runs the S3K playable-prefix slice after the represented row published. */

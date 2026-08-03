@@ -38,6 +38,9 @@ final class LevelIterationAdmissionController {
                 return LevelFrameResult.SETUP_ONLY;
             }
             LevelFrameResult releaseResult = titleReleaseResult.get();
+            if (TraceSessionLauncher.claimTitleCardControlReleaseBarrierIfActive()) {
+                return LevelFrameResult.SETUP_ONLY;
+            }
             if (releaseResult == LevelFrameResult.GAMEPLAY_FRAME) {
                 activateRepresentedHardwareTiming.run();
             }

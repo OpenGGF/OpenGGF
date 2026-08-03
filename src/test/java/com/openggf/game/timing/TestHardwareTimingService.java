@@ -19,6 +19,68 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestHardwareTimingService {
 
     @Test
+    void completedLiveEpochCanBecomeRecordedWithANonzeroOrdinalBase() {
+        HardwareTimingService service = new HardwareTimingService();
+        HardwareWorkHandle live = service.submit(
+                submission(1, new byte[] {31}));
+        service.service(POST_OBJECTS);
+        service.claim(live);
+
+        RecordedCompletionAuthority authority =
+                service.beginRecordedAdmissionAfterLiveEpoch();
+        authority.initializeOrdinalBases(
+                Map.of(HardwareWorkKind.KOS_MODULE_QUEUE, 37L));
+        HardwareWorkHandle recorded = service.submit(
+                submission(1, new byte[] {32}));
+        service.service(POST_OBJECTS);
+
+        assertEquals(37, recorded.ordinal());
+        assertFalse(service.isReady(recorded));
+        authority.admitRecordedCompletion(
+                POST_OBJECTS, recorded.kind(), recorded.ordinal(),
+                recorded.submissionFingerprint());
+        assertTrue(service.isReady(recorded));
+    }
+
+    @Test
+    void liveToRecordedEpochRejectsPendingWorkAndInvalidPolicyWithoutMutation() {
+        HardwareTimingService service = new HardwareTimingService();
+        HardwareWorkHandle pending = service.submit(
+                submission(1, new byte[] {33}));
+        HardwareTimingSnapshot beforePendingRejection = service.capture();
+
+        assertThrows(IllegalStateException.class,
+                service::beginRecordedAdmissionAfterLiveEpoch);
+        assertEquals(beforePendingRejection.nextOrdinals(),
+                service.capture().nextOrdinals());
+        assertEquals(beforePendingRejection.admissionPolicies(),
+                service.capture().admissionPolicies());
+        assertEquals(List.of(pending), service.pendingHandles());
+
+        service.service(POST_OBJECTS);
+        service.claim(pending);
+        HardwareTimingSnapshot beforePolicyRejection = service.capture();
+        assertThrows(IllegalArgumentException.class,
+                () -> service.beginRecordedAdmissionAfterLiveEpoch(Map.of()));
+        assertEquals(beforePolicyRejection.nextOrdinals(),
+                service.capture().nextOrdinals());
+        assertEquals(beforePolicyRejection.jobs().size(),
+                service.capture().jobs().size());
+        assertEquals(beforePolicyRejection.admissionPolicies(),
+                service.capture().admissionPolicies());
+        assertFalse(service.capture().recordedAdmissionActive());
+    }
+
+    @Test
+    void liveToRecordedEpochCannotBeActivatedTwice() {
+        HardwareTimingService service = new HardwareTimingService();
+        service.beginRecordedAdmissionAfterLiveEpoch();
+
+        assertThrows(IllegalStateException.class,
+                service::beginRecordedAdmissionAfterLiveEpoch);
+    }
+
+    @Test
     void liveReadinessWaitsForPreparationAndProfileCountdown() {
         LoadTimeProfile profile = (submission, handle) -> new LoadTimeDecision(
                 2,

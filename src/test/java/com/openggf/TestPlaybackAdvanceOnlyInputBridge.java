@@ -21,6 +21,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -62,8 +63,11 @@ class TestPlaybackAdvanceOnlyInputBridge {
             invokeSyncPlaybackInputBridge(loop);
             assertTrue(playback.isCurrentForcedJumpPress(),
                     "publishing the following held row must not erase the pending edge");
-            assertTrue(fixture.sprite().isForcedJumpPress(),
-                    "the first gameplay row must observe the pending action edge");
+            assertEquals(0x01, loop.getInputHandler().logical()
+                    .player1().actionPressedMask(),
+                    "the first gameplay row must publish the pending action edge");
+            assertFalse(fixture.sprite().isForcedJumpPress(),
+                    "the playback bridge must not mutate gameplay-owned input latches");
             invokeUpdateLevelMode(loop);
 
             assertTrue(playback.isCurrentForcedJumpPress(),
@@ -74,6 +78,8 @@ class TestPlaybackAdvanceOnlyInputBridge {
 
             assertFalse(playback.isCurrentForcedJumpPress(),
                     "the gameplay dispatch must consume the pending edge exactly once");
+            assertTrue(fixture.sprite().getAir(),
+                    "the unlocked gameplay dispatch must consume the carried jump edge");
             invokeSyncPlaybackInputBridge(loop);
             assertFalse(playback.isCurrentForcedJumpPress(),
                     "a later held row must not repeat the consumed action edge");
@@ -83,6 +89,82 @@ class TestPlaybackAdvanceOnlyInputBridge {
             config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS,
                     oldSkipIntros != null ? oldSkipIntros : false);
         }
+    }
+
+    @Test
+    void immediateLoadedLevelPublicationRemainsOwnedByPlaybackBridgeForCleanup() throws Exception {
+        InputHandler input = new InputHandler();
+        GameLoop loop = new GameLoop(input);
+        playback.startSession(heldActionMovie(), 0);
+
+        loop.applyScheduledPlaybackInputImmediately();
+        assertTrue(input.hasLogicalOverride(),
+                "the synchronously loaded player must see trace input before its first tick");
+
+        playback.endSession();
+        invokeSyncPlaybackInputBridge(loop);
+        assertFalse(input.hasLogicalOverride(),
+                "the bridge must clear the immediate publication when playback ends");
+        assertEquals(0, input.logical().player1().heldMask(),
+                "same-step consumers must see refreshed live input, not stale BK2 state");
+    }
+
+    @Test
+    void controlLockSuppressesRecordedActionEdgeForMovement() throws Exception {
+        SonicConfigurationService config = SonicConfigurationService.getInstance();
+        Object oldSkipIntros = config.getConfigValue(SonicConfiguration.S3K_SKIP_INTROS);
+        config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, true);
+        try {
+            HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                    .withZoneAndAct(0, 0)
+                    .build();
+            GameLoop loop = new GameLoop(new InputHandler());
+            loop.changeGameModeWithoutRewindBoundary(GameMode.LEVEL);
+            playback.startSession(heldActionMovie(), 0);
+            fixture.sprite().setControlLocked(true);
+
+            invokeSyncPlaybackInputBridge(loop);
+            invokeUpdateLevelMode(loop);
+            invokeUpdateLevelMode(loop);
+
+            assertEquals(0x01, loop.getInputHandler().logical()
+                    .player1().actionPressedMask(),
+                    "the recorded raw controller edge remains published");
+            assertTrue(fixture.sprite().isRawControllerJumpJustPressed(),
+                    "objects retain the raw controller press while movement is locked");
+            assertFalse(fixture.sprite().getAir(),
+                    "Ctrl_1_locked must prevent the recorded press from starting a jump");
+            assertFalse(fixture.sprite().isForcedJumpPress(),
+                    "playback publication must not leave a gameplay-owned latch behind");
+        } finally {
+            config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS,
+                    oldSkipIntros != null ? oldSkipIntros : false);
+        }
+    }
+
+    @Test
+    void recordedStartDoesNotToggleVisibleUserPause() {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(0, 0)
+                .build();
+        InputHandler input = new InputHandler();
+        GameLoop loop = new GameLoop(input);
+        loop.changeGameModeWithoutRewindBoundary(GameMode.LEVEL);
+        playback.startSession(startEdgeMovie(), 0);
+
+        loop.applyScheduledPlaybackInputImmediately();
+        loop.step();
+
+        assertFalse(loop.isUserPaused(),
+                "recorded Start belongs to ROM input and must not toggle the visual pause overlay");
+
+        int pauseKey = SonicConfigurationService.getInstance()
+                .getInt(SonicConfiguration.PAUSE_KEY);
+        input.handleKeyEvent(pauseKey, org.lwjgl.glfw.GLFW.GLFW_PRESS);
+        loop.step();
+
+        assertTrue(loop.isUserPaused(),
+                "the configured live pause key must remain usable during playback");
     }
 
     private static Bk2Movie heldActionMovie() {
@@ -95,6 +177,17 @@ class TestPlaybackAdvanceOnlyInputBridge {
                         new Bk2FrameInput(0, heldMask, 1, false, "press"),
                         new Bk2FrameInput(1, heldMask, 1, false, "hold"),
                         new Bk2FrameInput(2, heldMask, 1, false, "hold")),
+                1);
+    }
+
+    private static Bk2Movie startEdgeMovie() {
+        return new Bk2Movie(
+                Path.of("synthetic-start-edge.bk2"),
+                "logkey",
+                Map.of(),
+                List.of(
+                        new Bk2FrameInput(0, 0, 0, true, "start"),
+                        new Bk2FrameInput(1, 0, 0, false, "release")),
                 1);
     }
 

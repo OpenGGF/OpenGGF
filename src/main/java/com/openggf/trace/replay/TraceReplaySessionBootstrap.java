@@ -434,6 +434,26 @@ public final class TraceReplaySessionBootstrap {
         return new BootstrapResult(snapshotReport, replayStart);
     }
 
+    /**
+     * Finishes deterministic replay bootstrap after the real production title
+     * card has already run. Synthetic title-card/object/animated-art setup is
+     * deliberately omitted; the prepared gameplay context owns that state.
+     */
+    public static BootstrapResult applyPreparedLevelBootstrap(
+            TraceData trace,
+            TraceReplayFixture fixture,
+            boolean forceHardwareTimingReplay) {
+        installHardwareTimingReplay(trace, fixture, forceHardwareTimingReplay);
+        primeLeaderJumpEdgeFromBk2Prelude(fixture);
+        applyInitialRngSeedForReplay(trace.metadata());
+        TraceReplayBootstrap.SnapshotReport snapshotReport =
+                TraceReplayBootstrap.reportPreTraceObjectSnapshots(trace);
+        TraceReplayBootstrap.ReplayStartState replayStart =
+                TraceReplayBootstrap.applyReplayStartStateForTraceReplay(
+                        trace, fixture);
+        return new BootstrapResult(snapshotReport, replayStart);
+    }
+
 
     /**
      * Seeds the velocity the ROM's player already carried into a complete-run

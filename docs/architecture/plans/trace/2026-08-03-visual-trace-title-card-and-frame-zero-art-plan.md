@@ -1,4 +1,4 @@
-# Visual trace title-card and frame-zero dynamic-art implementation plan
+# Visual trace single-load and special-stage parity implementation plan
 
 Date: 2026-08-03
 
@@ -7,236 +7,340 @@ Design:
 
 ## Goal
 
-Show the complete production title card before level-backed visual traces,
-then start replay in a clean deterministic context whose first dynamic-art
-comparison row matches the headless service-before-open lifecycle. Preserve
-exact PLC/DPLC and hardware-timing comparison semantics for standalone traces
-and complete runs.
+Make level-backed visual traces load their selected level once, continue from
+the production title card into deterministic replay without restarting music,
+and retain exact headless PLC/dynamic-art/hardware timing behavior. Route visual
+BK2 input through ROM-correct raw/logical ownership so scripted input wins.
+Give standalone special-stage traces an on-screen trace HUD, correct base-game
+SFX routing, and a deterministic terminal return from S1's white hold.
 
-## Task 1: Pin the deferred external-segment boundary
+Every production change below begins with a focused failing test and the test is
+rerun red before implementation.
+
+## Task 1: Reserve an unpublished dynamic-art segment origin
 
 Files:
 
+- Modify `src/test/java/com/openggf/game/resources/TestDynamicArtLifecycleService.java`
 - Modify `src/test/java/com/openggf/game/resources/TestPlcFrameLifecycleCoordinator.java`
-- Modify `src/main/java/com/openggf/game/resources/PlcFrameLifecycleCoordinator.java`
-
-Steps:
-
-1. Add a failing test that begins a dynamic-art run, requests deferred
-   external ownership exactly where the real launcher does, then prepares an
-   S1 player DPLC during the simulated `TraceReplayDriver.start()` level
-   bootstrap, and finally drives one ordinary logical iteration.
-2. Assert before implementation that the desired behavior is unavailable or
-   fails: the S1 `submitted`/`completed` pair must be present in run-gap
-   transitions, while the newly opened external generation publishes row zero
-   with no edges and no outstanding transfer.
-3. Add a failing cleanup test that closes the external controller before the
-   first production claim and proves the pending window is cancelled without
-   creating a generation or publication.
-4. Implement an explicit deferred external-open state in
-   `PlcFrameLifecycleCoordinator`:
-   - share the existing validation/automatic-window close logic;
-   - mark external ownership immediately;
-   - service the first claim before opening the external window;
-   - open before the iteration body/finish boundary;
-   - provide a close operation that cancels a still-deferred open or closes an
-     actual external window; and
-   - clear deferred state when external management is released or the
-     coordinator resets.
-5. Run `TestPlcFrameLifecycleCoordinator` and retain all existing automatic,
-   lag, overrun, and ownership-handoff behavior.
-
-## Task 2: Pin clean presentation-context replacement
-
-Files:
-
-- Modify `src/test/java/com/openggf/TestEngine.java`
-- Modify `src/test/java/com/openggf/TestGameLoop.java`
-- Modify `src/test/java/com/openggf/TestTraceSessionLauncherFailureCleanup.java`
-- Modify `src/main/java/com/openggf/Engine.java`
-- Modify `src/main/java/com/openggf/TraceSessionLauncher.java`
-- Add `src/main/java/com/openggf/game/session/VisualTraceReplayContextHandoff.java`
-
-Steps:
-
-1. Add a failing test around a gameplay context with:
-   - a non-empty retained module rewind adapter standing in for S1/S2 PLC
-     state;
-   - active context-owned dynamic-art/runtime lifecycle state; and
-   - a completed/resettable title-card provider.
-2. Invoke the proposed Engine-owned trace replay-context reopen seam and
-   assert that:
-   - the old context is destroyed;
-   - the title-card provider is reset;
-   - every retained module rewind adapter receives
-     `resetForMissingSnapshot()`;
-   - the new context uses the requested live/recorded hardware admission;
-   - production managers are attached and rebound to `GameLoop`;
-   - `Engine` caches the replacement context's `LevelManager`,
-     `SpriteManager`, and `Camera` used by `Engine.draw()`; and
-   - no presentation dynamic-art state survives.
-   Assert separately that the disposable presentation context uses `LIVE`
-   admission and the replacement uses the requested `RECORDED` policy.
-3. Keep `GameLoop` free of lifecycle replacement logic. Add a narrow
-   package-owned `Engine.reopenCurrentGameplayForVisualTrace(...)` static
-   composition action that validates the active Engine internally without
-   exposing it to the launcher. Have it delegate through the instance-owned
-   `reopenGameplayForVisualTrace(...)` seam to
-   `VisualTraceReplayContextHandoff`, passing the loop's provider-reset
-   callback and `Engine::bindGameplayMode`. The collaborator
-   uses `SessionManager.reopenGameplaySession`, `GameplaySessionFactory`, and
-   the current world-session module. Reset retained adapters before destroying
-   their registered presentation context, reset and invalidate the cached
-   title-card provider, configure fresh game-state special-stage progress, and
-   bind the resulting context through the normal Engine seam. Do not mutate
-   the legacy `GameModuleRegistry` compatibility state.
-4. Change the launcher after-step handoff to require an active loop and call
-   the narrow Engine-owned static composition action rather than acquiring
-   the Engine singleton or passing `GameLoop::setGameplayMode` directly.
-   Preserve the existing launch-failure abort path if the engine is absent or
-   replacement fails.
-5. Add replay-bootstrap failure tests that begin title-card presentation and
-   then prove (a) a missing active `Engine` and (b) an exception from the
-   Engine-owned reopen seam both clear the active trace, restore launch
-   configuration/admission state, and return to the picker/master-title path
-   when a loop is still available.
-6. Run the focused handoff tests in `TestEngine`, `TestGameLoop`, and
-   `TestTraceSessionLauncherFailureCleanup`.
-
-## Task 3: Pin the title-card launch phase
-
-Files:
-
-- Add `src/main/java/com/openggf/trace/replay/VisualTraceLaunchPhase.java`
-  if a small state owner keeps the launcher branch testable; otherwise keep an
-  equivalent package-private state owner in `TraceSessionLauncher`
-- Add `src/test/java/com/openggf/trace/replay/TestVisualTraceLaunchPhase.java`
-
-Steps:
-
-1. Write failing state tests proving:
-   - a presentation phase does not admit replay while mode is `TITLE_CARD`;
-   - returning to `LEVEL` is insufficient while the overlay remains active;
-   - `LEVEL` plus a complete overlay admits replay exactly once; and
-   - the phase owns early exit before a comparator exists.
-2. Implement the minimal state machine with explicit presentation,
-   bootstrapping, active, and terminal/aborted transitions. It must carry no
-   trace frame, expected edge, gameplay state, or recorded hardware data.
-3. Run the focused phase tests.
-
-## Task 4: Integrate two-phase launch and first-window ownership
-
-Files:
-
 - Modify `src/test/java/com/openggf/TestTraceSessionLauncherRunBranch.java`
-- Modify `src/test/java/com/openggf/TestTraceSessionLauncherFailureCleanup.java`
-  as needed
-- Modify `src/test/java/com/openggf/trace/live/TestLiveTraceComparatorObserver.java`
+- Modify `src/main/java/com/openggf/game/resources/DynamicArtLifecycleService.java`
+- Modify `src/main/java/com/openggf/game/resources/PlcFrameLifecycleCoordinator.java`
 - Modify `src/main/java/com/openggf/TraceSessionLauncher.java`
 - Modify `src/main/java/com/openggf/trace/live/LiveTraceComparator.java`
-- Modify `src/main/java/com/openggf/LevelIterationAdmissionController.java`
-  only if Escape ownership needs a narrow mode predicate update
 
 Steps:
 
-1. Update/add launcher tests before production edits to prove:
-   - the game-bootstrap callback loads segment zero with the recorded team,
-     consumes the pending automatic request, calls the production
-     `enterTitleCard`, and leaves its provider initialized/advancing through
-     `TITLE_CARD` rendering;
-   - playback, comparator, hardware replay, HUD/ghost, and external
-     dynamic-art ownership are all absent during that visible presentation;
-   - the first segment-controller open requests deferred ownership and has no
-     open dynamic-art segment until the first claim;
-   - that first claim publishes atomic empty row zero after servicing a
-     prepared S1 transfer into the gap;
-   - a later run-segment open remains immediate;
-   - abort before the first claim cancels deferred ownership and automatic
-     ownership resumes;
-   - title-card presentation owns Escape even with a null comparator; and
-   - existing pending S2 work is retired rather than dropped, with its
-     pre-segment completion remaining outside comparison row zero.
-2. Refactor standalone and run game-bootstrap callbacks to begin a title-card
-   presentation rather than immediately creating `LiveFixture` and
-   `TraceReplayDriver`:
-   - initial master-title gameplay admission is explicitly `LIVE`;
-   - reset/load the requested segment-zero level and recorded team;
-   - consume the automatic request and enter the production title card
-     immediately;
-   - make the session active with no playback/comparator/external segment.
-3. In the all-mode after-step hook, wait until mode is `LEVEL` and the title
-   provider reports complete. Transition once to replay bootstrap, reopen the
-   clean context with the stored trace admission policy, then execute the
-   existing standalone or run launch body.
-4. Change the first `DynamicArtSegmentController` open to use deferred
-   ownership. Its close delegates to the coordinator so an early abort can
-   cancel the pending open. All subsequent opens call the normal immediate
-   `DynamicArtLifecycleService.openComparisonSegment` path.
-5. Arm a one-shot comparator authorization only for the launcher's deferred
-   initial window. Allow the pre/post production check to recognize only that
-   shape: expected row zero, an unpublished before snapshot, and row zero
-   published in the exactly adjacent generation with a newer delivery serial.
-   Consume authorization on the first publication attempt. Retain exact edge
-   and outstanding-transfer comparison, with failing tests for generation
-   skips, nonzero rows, stale delivery serials, published-before snapshots, and
-   attempted authorization reuse after a stable first publication.
-6. Preserve current comparator, HUD, ghost, rewind, complete-run coordinator,
-   gap-journal, failure-status, and teardown setup after replay bootstrap.
-   Special-stage launch remains direct and marks the visual phase active.
-7. Extend early-exit handling so the presentation phase aborts cleanly without
-   requiring a comparator.
-8. Run the launcher, failure cleanup, run coordinator, dynamic-art lifecycle,
-   GameLoop, and `TestEngineRenderDispatcher` focused suites. The render
-   dispatcher assertion must retain `TITLE_CARD` routing to the title-card draw
-   action while the new launcher integration test proves that the launcher
-   actually enters that mode.
+1. Add lifecycle tests for a reserved external segment: closing the last
+   published automatic window creates a new unpublished generation before the
+   next iteration; production service then activates that same generation and
+   row closure publishes row zero without another generation increment.
+2. Add failures for double reservation, activation with pending production
+   work, cancellation before activation, and restoring automatic ownership.
+3. Add a rewind round-trip test that captures a reserved unpublished
+   generation, activates/mutates it, restores it, and proves the identical
+   generation remains reserved and activates without incrementing.
+4. Add a launcher-through-coordinator integration test that captures the real
+   pre-iteration snapshot, runs the first claim/finish, and passes the strict
+   comparator atomicity check. Start from a published automatic snapshot so the
+   old implementation fails for the same reason as the console report.
+5. Refactor `DynamicArtLifecycleService` and its `RewindState` capture/restore/
+   reset validation to distinguish reserved, active, and
+   absent external windows. Reservation owns the generation/unpublished origin;
+   activation reuses it and retains all pending-work guards; cancellation never
+   publishes a row.
+6. Refactor the coordinator's deferred ownership API to reserve at acquisition,
+   service before activation, and cancel safely. Remove the launcher's adjacent-
+   generation authorization and the comparator exception once the ordinary
+   stable-generation contract covers row zero.
+7. Run the focused lifecycle, rewind round-trip, coordinator, and launcher
+   suites.
 
-## Task 5: User-facing and trace-frontier documentation
+## Task 2: Add a checked live-to-recorded hardware epoch
+
+Files:
+
+- Modify `src/test/java/com/openggf/game/timing/TestHardwareTimingService.java`
+- Modify `src/test/java/com/openggf/game/session/TestSessionManager.java` or add
+  focused `GameplayModeContext` coverage beside existing admission tests
+- Modify `src/test/java/com/openggf/trace/timing/TestHardwareTimingAuthorityGuard.java`
+- Modify `src/main/java/com/openggf/game/timing/HardwareTimingService.java`
+- Modify `src/main/java/com/openggf/game/session/GameplayModeContext.java`
+- Modify `src/main/java/com/openggf/trace/replay/TraceReplaySessionBootstrap.java`
+
+Steps:
+
+1. Add a failing service test that submits, prepares, and claims live work,
+   begins a recorded epoch on the same service, installs a schedule whose first
+   ordinal is nonzero, and proves the first subsequent production submission
+   receives that schedule ordinal and remains held until its matching edge.
+2. Add rejection tests for unclaimed live jobs, repeat activation, incomplete
+   policy maps, and any mutation of jobs/ordinals/policy after rejection.
+3. Add context tests proving the narrow recorded completion authority can be
+   activated only after both the timing ledger and every runtime-art owner are
+   quiescent. Exercise `QueueDiagnosticSnapshot` shapes with busy, prepared,
+   active, or queued work and prove rejection leaves queue diagnostics, jobs,
+   ordinals, boundaries, and admission policies byte-for-byte unchanged.
+4. Implement the combined context-owned checked epoch transition: require
+   quiescent runtime-art queue diagnostics and no unclaimed timing jobs before
+   asking the timing service to retire only completed live diagnostic records,
+   clear live ordinal/boundary state, and begin recorded admission. Expose its
+   capability through the same gameplay context and keep the service and
+   runtime-art coordinators.
+5. Install the compiled replay schedule immediately after epoch activation and
+   before bootstrap or production can submit replay work. Let the existing
+   replay port initialize the schedule's per-kind first ordinal bases.
+6. Extend the authority guard so the new transition remains confined to timing
+   owners and cannot accept physics, aux, route, zone, game, or frame values.
+7. Run hardware service, context, schedule compiler, replay port, rewind, and
+   authority guard suites.
+
+## Task 3: Adopt the prepared level without reloading
+
+Files:
+
+- Modify `src/test/java/com/openggf/trace/replay/TestTraceReplayDriver.java` or
+  the closest existing driver bootstrap test
+- Modify `src/test/java/com/openggf/TestTraceSessionLauncherRunBranch.java`
+- Modify `src/test/java/com/openggf/TestTraceSessionLauncherFailureCleanup.java`
+- Modify `src/test/java/com/openggf/TestEngine.java`
+- Modify `src/test/java/com/openggf/TestLevelIterationAdmissionController.java`
+- Modify `src/test/java/com/openggf/trace/replay/TestVisualTraceLaunchPhase.java`
+- Modify `src/main/java/com/openggf/trace/replay/TraceReplayDriver.java`
+- Modify `src/main/java/com/openggf/trace/replay/TraceReplaySessionBootstrap.java`
+- Modify `src/main/java/com/openggf/trace/replay/VisualTraceLaunchPhase.java`
+- Modify `src/main/java/com/openggf/TraceSessionLauncher.java`
+- Modify `src/main/java/com/openggf/LevelIterationAdmissionController.java`
+- Modify `src/main/java/com/openggf/Engine.java`
+- Delete `src/main/java/com/openggf/game/session/VisualTraceReplayContextHandoff.java`
+
+Steps:
+
+1. Add a failing launcher test that reaches the production control-release
+   step (`TITLE_CARD`→`LEVEL`) while the exit overlay remains active and asserts
+   replay activation keeps the identical gameplay context, level manager,
+   player, loaded-level generation, title-card provider, and audio command
+   timeline. Verify `loadZoneAndAct` is called exactly once, `playMusic` has no
+   second command, and no uncontrolled `LEVEL` frame runs before activation.
+   Include S2 with its initial setup token already consumed during locked-card
+   physics; this is the case that currently falls through into gameplay.
+2. Add driver tests for two explicit paths:
+   - ordinary headless/capture `start(zone, act)` retains reset/team/load and
+     omitted-title-card bootstrap behavior;
+   - visual `startPreparedLevel()` performs no reset, registration, load, or
+     title-card reset and converges on shared playback/comparator activation.
+3. Before production edits, add launch-phase/controller tests proving overlay
+   completion is no longer required, the release transition/barrier is
+   one-shot, an already-consumed S2 setup token still produces no ordinary
+   gameplay, and S1/S3K release setup/pass counts are not duplicated.
+4. Before production edits, add launcher failures for a non-drained prelude and
+   prepared-level bootstrap exception. Keep mutation-free rejection assertions
+   in Task 2; here prove no second load or epoch crossing occurs, the on-screen
+   failure is recorded, and normal cleanup may then destroy the rejected
+   context while returning to the picker.
+5. Introduce a typed bootstrap presentation policy. For a production title card
+   that has released control, omit synthetic title-card oscillation/animated-
+   tile/object/sidekick preludes and duplicate setup passes already executed by
+   production; retain hardware schedule installation, allowed start placement,
+   native counter alignment, RNG/start policy, and comparator setup. Leave the
+   real provider in its active exit tail so it continues over compared rows.
+6. Change standalone and run replay handoff to activate the existing context,
+   using Task 2 when recorded timing is present. Remove the Engine reopen seam,
+   context replacement helper, retained-adapter reset, and all related failure
+   branches/tests that existed solely for the second load.
+7. Change launch admission from full-overlay completion to the structural
+   control-release boundary: current mode is `LEVEL` after a session-owned
+   title-card phase. Add a one-shot launch-phase release barrier in
+   `LevelIterationAdmissionController` that converts that completed release to
+   `SETUP_ONLY` after all release setup/mode changes, independent of both the
+   level's initial setup token and whether production already returned
+   `SETUP_ONLY`. Activate replay between iterations so the next host step owns
+   row zero. Retain early exit, deferred dynamic-art reservation,
+   HUD/ghost/rewind setup, overlay-tail rendering, and cleanup.
+8. Run driver, launch-phase, launcher, failure cleanup, Engine, GameLoop
+   title-card, admission controller, PLC, and audio timeline focused suites.
+
+## Task 4: Replace visual forced-mask playback with logical input
+
+Files:
+
+- Modify `src/test/java/com/openggf/debug/playback/TestPlaybackDebugManagerPreparedInput.java`
+- Modify `src/test/java/com/openggf/TestPlaybackAdvanceOnlyInputBridge.java`
+- Modify `src/test/java/com/openggf/TestBonusStagePlaybackBridge.java`
+- Add or modify a focused `SpriteManager` input-resolution test
+- Modify complete-run destination activation and visual rewind tests near their
+  existing owners
+- Modify `src/main/java/com/openggf/debug/playback/PlaybackDebugManager.java`
+- Add `src/main/java/com/openggf/debug/playback/PlaybackInputBridge.java`
+- Modify `src/main/java/com/openggf/GameLoop.java`
+- Modify `src/main/java/com/openggf/sprites/managers/SpriteManager.java`
+- Modify `src/main/java/com/openggf/level/LevelManager.java`
+- Modify `src/main/java/com/openggf/TraceSessionLauncher.java`
+
+Steps:
+
+1. Add playback-manager tests for a prepared `LogicalInputSnapshot` containing
+   P1/P2 held and pressed masks, action edge latching across an advance-only
+   row, Start, and debug modifiers.
+2. Add the GHZ signpost-shaped red test: BK2 holds left, a later scripted owner
+   latches forced right/control lock, the next visual bridge runs, and movement
+   plus published ROM-logical history contain right but not left while the raw
+   controller snapshot remains left.
+3. Add equivalent coverage at synchronous destination load activation and in
+   `VisualTraceRewindStepper`; ensure P2 and Start remain available.
+4. Have the playback manager publish its prepared applied row/predecessor as a
+   logical snapshot while preserving the existing pending action edge.
+5. Extract the loop bridge into a focused collaborator that owns an
+   `InputHandler` logical override and the existing suppression marker. Remove
+   sprite forced-mask writes, admit the logical override through
+   `SpriteManager` while playback is suppressed, and clear only the
+   bridge-owned override when driving stops, immediately refreshing the live
+   logical snapshot for same-step consumers. Use the same ownership for the
+   immediate post-load publication so it cannot leak after playback ends.
+6. Use the same logical publisher for same-step destination activation and
+   visual rewind replay. Do not clear game-owned forced latches.
+7. Make `SpriteManager` publish the already-resolved logical directions instead
+   of OR-ing conflicting forced/recorded directions back together. Preserve
+   raw controller fields, forced-right precedence, CPU policy, and jump edges.
+8. Gate the engine's gamepad-Start user-pause path while playback drives the
+   logical snapshot, without gating the configured raw pause key. Add a
+   behavioral BK2 Start-edge test covering both sides of that ownership.
+9. Run all playback bridge, bonus-stage, rewind, input snapshot, playable
+   movement, and run-transition suites.
+
+## Task 5: Give standalone special stages audio routing and a HUD
+
+Files:
+
+- Modify `src/test/java/com/openggf/TestSpecialStageVisualTraceSession.java`
+- Modify or add focused audio command-timeline coverage
+- Modify HUD renderer tests beside `TraceHudOverlay`
+- Add `src/main/java/com/openggf/testmode/TraceSessionOverlay.java`
+- Add `src/main/java/com/openggf/testmode/SpecialStageTraceHudOverlay.java`
+- Modify `src/main/java/com/openggf/testmode/TraceHudOverlay.java`
+- Modify `src/main/java/com/openggf/TraceSessionLauncher.java`
+
+Steps:
+
+1. Add a red direct-launch audio test proving S1 `GameSound.RING` currently
+   resolves to fallback. Expected behavior is alternating base-SMPS IDs after
+   profile/ROM/map setup without starting level music.
+2. Add overlay tests for cursor/row-count progress, current lag/play admission,
+   and safe rendering without a comparator.
+3. Introduce the minimal shared render interface; keep the existing level HUD
+   behavior unchanged and install the special-stage HUD only for standalone
+   typed special-stage rows.
+4. During direct special-stage finish, configure audio profile, ROM-backed
+   loader, module sound map, and ring alternation before provider entry. Leave
+   special-stage music start at the existing reveal boundary.
+5. Run S1/S2/S3K typed special-stage parser/lifecycle tests, HUD tests, and
+   audio routing/timeline tests.
+
+## Task 6: Drain S1 white-hold completion safely
+
+Files:
+
+- Modify `src/test/java/com/openggf/TestSpecialStageVisualTraceSession.java`
+- Modify `src/test/java/com/openggf/TestTraceSessionLauncherFailureCleanup.java`
+- Modify `src/main/java/com/openggf/TraceSessionLauncher.java`
+
+Steps:
+
+1. Add a red lifecycle test that puts the gameplay fade in `HOLD_WHITE`,
+   advances the terminal standalone row inside the launcher's production
+   wrapper, and asserts the session does not destroy the context before
+   post-production publication.
+2. Assert hardware replay closes first, `teardownPending` is armed, and the
+   after-production/all-mode retry clears the active session and invokes the
+   return-to-picker owner exactly once.
+3. Add a red callback-bearing-fade test: terminal exit becomes pending without
+   replacing the existing callback; the all-mode retry lets that callback run,
+   re-evaluates the resulting fade state, and then reaches teardown/picker
+   exactly once. This branch must have a terminal outcome, not remain pending
+   indefinitely after the callback completes or changes mode.
+4. Add a red unsupported-hold test: the preserved callback completes into a
+   callback-free `HOLD_BLACK`; repeated all-mode retry detects the
+   non-progressing unsupported hold, records `TraceLaunchStatus`, and performs
+   deferred cleanup/return exactly once without replacing the callback or
+   hanging.
+5. Implement a fade-state-aware standalone terminal helper: idle uses the
+   normal fade-to-black callback; callback-free `HOLD_WHITE` requests existing
+   deferred teardown; an active callback-bearing fade is left untouched and an
+   all-mode terminal-exit retry re-evaluates it after completion until it can
+   take one of the supported terminal paths. Record/clean up a structural
+   failure if completion leaves an unsupported non-progressing hold.
+6. Retain run-special-stage boundary ownership and failure cleanup behavior.
+7. Run special-stage lifecycle, failure cleanup, PLC publication, and master
+   title return tests.
+
+## Task 7: Focused, ROM-backed, guard, and full verification
+
+1. Run `mvn -v` and record that Maven is using JDK 21. If it is not, locate the
+   installed JDK 21 and set `JAVA_HOME` before any Maven command; rerun `mvn -v`
+   to prove the correction.
+2. Run focused non-ROM suites for every touched owner, including hardware
+   authority/rewind, PLC/dynamic-art, launcher/failure cleanup, input bridge,
+   special-stage lifecycle, HUD, audio timeline, Engine, and GameLoop.
+3. Discover `.gen` files from the repository root without copying, renaming, or
+   symlinking them. Verify each required image against the repository CRC32 and
+   SHA-1 table, record its absolute path, and pass those discovered paths to the
+   correct `sonic1.rom.path`, `sonic2.rom.path`, and `s3k.rom.path` properties.
+4. Run the S1 GHZ1 complete-run headless regression and the visual input-bridge
+   regression that reproduces the former frame-4998 opposing BK2/signpost
+   ownership. Run the S1 standalone special-stage lifecycle/audio terminal
+   canary.
+5. Run representative S2 level/complete-run and S3K hardware-timed nonzero-
+   ordinal canaries with the verified ROMs.
+6. Run architecture guards for production singleton closure, hardware timing
+   authority, trace comparison-only behavior, rewind coverage/static coverage,
+   trace fixture compression, and documentation placement.
+7. Run the complete JDK-21 Maven suite in the feature worktree and record the
+   exact outcome. Any verification-driven code change repeats its relevant
+   focused/ROM/guard tests and the final independent review below.
+
+## Task 8: Result documentation, final review, and feature commit
 
 Files:
 
 - Modify `CHANGELOG.md`
 - Modify `README.md`
 - Modify `docs/status/trace-frontier-log.md`
+- Retain this reviewed design and plan
 
 Steps:
 
-1. Record that visual level traces now show the complete title card before
-   deterministic replay begins and that S1 frame-zero DPLC comparison follows
-   headless service ordering.
-2. Record the exact S1 GHZ1 headless command/result and the visual-only
-   regression/fix context in the trace frontier log. Do not claim a gameplay
-   frontier moved.
-3. Include the reviewed design and plan in the delivered commit.
+1. Record the visual trace single-load, input, dynamic-art, and standalone
+   special-stage fixes in the changelog and README release section.
+2. Record the exact verified S1 GHZ1 command/result and the visual-only
+   frame-4998 regression/fix in the trace frontier log without claiming a
+   headless gameplay frontier movement.
+3. Delegate the complete implementation and result-documentation diff for
+   independent code review. Fix every valid issue, rerun affected verification,
+   refresh exact result docs, and repeat review until no blocking issue remains.
+4. Stage every intended source/test/documentation file, commit the feature
+   branch with required policy trailers, and verify the worktree is clean apart
+   from classified generated output.
 
-## Task 6: Verification, review, and integration
+## Task 9: Updated-baseline integration and cleanup
 
-1. Run focused non-ROM tests:
+1. Use the verified discovered S1 path for commands such as:
 
    ```bash
-   mvn -Dmse=relaxed \
-     -Dtest=com.openggf.game.TestProductionSingletonClosureGuard,com.openggf.game.resources.TestPlcFrameLifecycleCoordinator,com.openggf.TestEngine,com.openggf.TestTraceSessionLauncherRunBranch,com.openggf.TestTraceSessionLauncherFailureCleanup,com.openggf.TestGameLoop,com.openggf.trace.replay.TestVisualTraceLaunchPhase \
-     test
+   mvn -Dmse=off \
+     -Dsonic1.rom.path="$DISCOVERED_S1_ROM" \
+     -Dtest=com.openggf.tests.trace.s1.TestS1Ghz1CompleteRunTraceReplay test
    ```
 
-2. Run relevant dynamic-art/visual launch suites discovered from the touched
-   code, including special-stage launch regression coverage.
-3. Run `TestS1Ghz1TraceReplay` and
-   `TestS1Ghz1CompleteRunTraceReplay` with the verified S1 REV01
-   ROM. Run representative S2 EHZ1 and an S3K hardware-timed run/trace canary
-   because launch admission and external segment zero are cross-game.
-4. Run `TestProductionSingletonClosureGuard` explicitly alongside the
-   architecture/authority guards for hardware timing, PLC comparison-only
-   behavior, rewind coverage, and trace payload compression.
-5. Run the complete Maven suite on JDK 21 and compare its exact result with an
-   updated clean `develop` baseline as required by `AGENTS.md`.
-6. Delegate the implementation diff for independent code review. Fix every
-   valid issue and repeat until no blocking issue remains.
-7. Fetch and fast-forward the main `develop` workspace without disturbing its
-   user-owned changes. Rebase or merge the development branch onto that
-   integration baseline as needed, rerun feature and full verification, merge
-   into `develop`, update `README.md` for the required develop merge, run the
-   post-merge regression comparison, and push only `develop`.
-8. After verifying the feature branch is fully merged and its worktree has no
-   user/unmerged changes, remove the worktree, delete the local feature branch,
-   and prune worktree metadata.
+2. Fetch and fast-forward the main `develop` workspace without disturbing its
+   user-owned changes. Record the updated full JDK-21 baseline result, then run
+   the same full suite plus focused tests on the committed feature branch.
+3. Merge the committed feature branch into the main workspace without switching
+   its branch, reconcile any
+   upstream conflicts, run the same full suite post-merge, and verify no new or
+   worsened failures relative to baseline.
+4. If conflict resolution or updated-baseline adaptation changes code, rerun the
+   affected focused/ROM/guard/full verification and independent review before
+   completing the merge commit.
+5. Push only `develop`, verify the feature commit is fully merged and the
+   worktree has no user/unmerged changes, remove its worktree, delete the local
+   feature branch, and prune stale worktree metadata.
