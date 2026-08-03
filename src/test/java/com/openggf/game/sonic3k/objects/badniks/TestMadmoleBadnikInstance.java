@@ -63,6 +63,32 @@ class TestMadmoleBadnikInstance {
     }
 
     @Test
+    void wakingMadmoleReservesItsCreateChild1BodySlotAfterTheParent() {
+        ObjectManager objectManager = mock(ObjectManager.class);
+        LevelManager levelManager = mock(LevelManager.class);
+        when(levelManager.getObjectManager()).thenReturn(objectManager);
+        ObjectSpawn spawn = new ObjectSpawn(
+                0x120, 0x100, Sonic3kObjectIds.MADMOLE, 0, 0, false, 0);
+        MadmoleBadnikInstance madmole = new MadmoleBadnikInstance(spawn);
+        madmole.setServices(new TestObjectServices()
+                .withLevelManager(levelManager)
+                .withGameState(mock(GameStateManager.class)));
+        madmole.setSlotIndex(17);
+        TestablePlayableSprite player = player(0x120, 0x100);
+
+        advanceToRising(madmole, player);
+
+        verify(objectManager).allocateChildSlotsAfter(spawn, 1, 17);
+
+        int frame = advanceWhileState(madmole, player, 3, "RISING");
+        frame = advanceWhileState(madmole, player, frame, "PAUSING");
+        frame = advanceWhileState(madmole, player, frame, "DRILLING");
+        advanceWhileState(madmole, player, frame, "SINKING");
+
+        verify(objectManager).freeReservedChildSlot(spawn, 0);
+    }
+
+    @Test
     void usesRomRenderBoundsAndSideDrillPriorityFromObjectData() {
         MadmoleBadnikInstance madmole = madmole();
         MadmoleBadnikInstance.SideDrillChild child = spawnedSideDrillChild();
@@ -485,6 +511,15 @@ class TestMadmoleBadnikInstance {
                 "loc_8D768 polls sub_8D8E6 for collision_property on the straight drill branch");
         listener.onTouchResponse(player, new TouchResponseResult(0x18, 0x18, 0x08, TouchCategory.ENEMY), 0x49);
 
+        assertEquals(List.of(), services.soundIds,
+                "TouchResponse only writes collision_property; the later side-drill SST slot owns sub_8D8E6");
+        assertEquals(0, player.getXSpeed());
+        assertEquals(0, player.getGSpeed());
+        assertEquals(0, player.getYSpeed());
+        assertEquals(false, player.getAir());
+
+        child.update(0x49, player);
+
         assertEquals(List.of(Sonic3kSfx.FLIPPER.id), services.soundIds);
         assertEquals(-0xC00, player.getXSpeed(),
                 "sub_8D8E6 doubles the side-drill x_vel into player x_vel");
@@ -509,6 +544,13 @@ class TestMadmoleBadnikInstance {
 
         TouchResponseListener listener = assertInstanceOf(TouchResponseListener.class, child);
         listener.onTouchResponse(player, new TouchResponseResult(0x18, 0x18, 0x08, TouchCategory.ENEMY), 0x49);
+
+        assertEquals(List.of(), services.soundIds,
+                "post-hit invulnerability still permits collision_property, but not an inline player mutation");
+        assertEquals(0, player.getXSpeed());
+        assertEquals(0, player.getYSpeed());
+
+        child.update(0x49, player);
 
         assertEquals(List.of(Sonic3kSfx.FLIPPER.id), services.soundIds,
                 "sub_8D8E6 checks Status_Invincible in status_secondary, not invulnerable_time");
@@ -791,9 +833,14 @@ class TestMadmoleBadnikInstance {
         }
         assertEquals("DRILLING", madmole.getStateName());
 
+        player.setCentreY((short) 0x0E0);
+        player.setYSpeed((short) 0x029B);
         TouchResponseResult result = new TouchResponseResult(0x18, 0x18, 0x08, TouchCategory.ENEMY);
         madmole.onPlayerAttack(player, result);
 
+        assertEquals((short) -0x029B, player.getYSpeed(),
+                "Touch_EnemyNormal negates downward y_vel when the player destroys the body from above, "
+                        + "even though the separate parent-cap SST remains alive");
         assertEquals(false, madmole.isDestroyed(),
                 "sub_8D876 keeps running unconditionally on the parent's own SST slot every frame; "
                         + "EnemyDefeated only removes the body child, not the cap");

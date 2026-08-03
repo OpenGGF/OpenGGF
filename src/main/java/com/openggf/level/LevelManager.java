@@ -1213,10 +1213,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         if (player == null) {
             return;
         }
-        if (objectManager != null) {
-            objectManager.applyPlaneSwitchers(player);
-        }
-        // Sonic 1 loop-based plane switching (and any other game-specific plane logic)
+        // Object-backed S2/S3K switches execute from their own SST slots.
+        // This player-slot hook remains for module-owned switching such as S1 loops.
         GameModule module = activeGameModule();
         if (module != null) {
             module.applyPlaneSwitching(player);

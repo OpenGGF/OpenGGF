@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 
@@ -31,7 +32,10 @@ public final class Sonic3kPathSwapObjectInstance extends AbstractObjectInstance 
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
-        // Behavior is applied from ObjectManager.PlaneSwitchers over the same spawn data.
+        for (PlayableEntity participant : services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+            services().objectManager().applyPlaneSwitcher(getSpawn(), participant);
+        }
     }
 
     @Override

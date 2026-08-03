@@ -159,6 +159,21 @@ class TestMhzPollenObjects {
     }
 
     @Test
+    void landingBurstUsesRomUnsignedWordComparisonForStoredVelocity() {
+        Harness harness = new Harness(false);
+        TestablePlayableSprite player = groundedPlayer(0x1200, 0x0700, 0);
+        player.setAirForTest(true);
+        player.setYSpeed((short) 0xFFF0);
+        harness.spawner.update(0, player);
+
+        player.setAirForTest(false);
+        harness.spawner.update(1, player);
+
+        assertEquals(6, harness.spawned.size(),
+                "cmpi.w #$400 / bhs treats a negative stored y_vel as an unsigned word and takes loc_3DACA");
+    }
+
+    @Test
     void landingBurstCanExceedParticleGateBecauseRomChecksCounterBeforePlayerRoutine() {
         Harness harness = new Harness(false);
         for (int i = 0; i < 15; i++) {
@@ -222,6 +237,26 @@ class TestMhzPollenObjects {
 
         assertEquals(0x7F00, particle.getX(),
                 "loc_3DBE0 writes x_pos=$7F00 when render_flags reports the pollen off-screen");
+        assertEquals(0, harness.runtimeState.pollenParticleCount());
+    }
+
+    @Test
+    void floatingParticleUsesPriorRenderBoundsWithoutGenericOffscreenMargin() {
+        Harness harness = new Harness(false);
+        assertTrue(harness.runtimeState.tryReservePollenParticle());
+        MhzPollenParticleInstance particle = new MhzPollenParticleInstance(
+                0x02DF, 0x055D, 0, 0, 2, 0, MhzPollenParticleInstance.ArtMode.POLLEN);
+        particle.setServices(harness.services);
+
+        AbstractObjectInstance.updateCameraBounds(0x02E9, 0x054C, 0x0429, 0x062C, 0);
+        particle.snapshotPreUpdatePosition();
+        particle.update(0, null);
+        particle.snapshotPreUpdatePosition();
+        particle.update(1, null);
+
+        assertEquals(0x7F00, particle.getX(),
+                "loc_3DBE0 reads the prior Render_Sprites flag using width_pixels=4; "
+                        + "the generic 32-pixel object margin must not retain pollen left of camera");
         assertEquals(0, harness.runtimeState.pollenParticleCount());
     }
 

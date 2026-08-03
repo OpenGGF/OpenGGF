@@ -109,7 +109,7 @@ public class MhzPollenSpawnerInstance extends AbstractObjectInstance implements 
 
         int previousYVelocity = storedYVelocity;
         storedYVelocity = 0;
-        if (previousYVelocity >= LANDING_BURST_MIN_Y_SPEED && !sprite.isOnObject()) {
+        if ((previousYVelocity & 0xFFFF) >= LANDING_BURST_MIN_Y_SPEED && !sprite.isOnObject()) {
             spawnLandingBurst(sprite, state);
             return storedYVelocity;
         }
