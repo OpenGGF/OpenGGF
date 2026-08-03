@@ -21,6 +21,11 @@ from tools.traces.trace_fixture_inventory import (
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 VALIDATOR = REPOSITORY_ROOT / "tools" / "traces" / "validate_trace_v5.py"
+INVENTORY = REPOSITORY_ROOT / "tools" / "traces" / "trace_fixture_inventory.py"
+BASELINE_INVENTORY = (
+    REPOSITORY_ROOT / "docs" / "architecture" / "validation" / "trace"
+    / "2026-08-03-trace-v5-baseline-inventory.json"
+)
 FINGERPRINT = "sha256:" + "a" * 64
 
 
@@ -318,6 +323,27 @@ class TraceFixtureInventoryTests(unittest.TestCase):
             write_inventory(build_inventory(self.root), self.root, self.root / "inventory.json")
 
         self.assertEqual(before, {path: path.read_bytes() for path in self.root.rglob("*") if path.is_file()})
+
+    def test_git_index_verification_discovers_the_worktree_from_root_and_child_directories(self) -> None:
+        fixture_root = REPOSITORY_ROOT / "src" / "test" / "resources" / "traces"
+        for cwd in (REPOSITORY_ROOT, fixture_root / "s1"):
+            with self.subTest(cwd=cwd):
+                result = subprocess.run(
+                    [
+                        sys.executable,
+                        str(INVENTORY),
+                        "verify",
+                        str(fixture_root),
+                        str(BASELINE_INVENTORY),
+                        "--git-index",
+                    ],
+                    cwd=cwd,
+                    text=True,
+                    capture_output=True,
+                    check=False,
+                )
+
+                self.assertEqual(0, result.returncode, result.stderr)
 
 if __name__ == "__main__":
     unittest.main()

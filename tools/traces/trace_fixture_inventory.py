@@ -184,6 +184,17 @@ def load_inventory(path: Path) -> dict[str, Any]:
         raise ValueError(f"cannot read inventory {path}: {error}") from error
 
 
+def git_worktree_root(path: Path) -> Path:
+    """Resolve the enclosing Git worktree for an absolute or relative fixture root."""
+
+    return Path(subprocess.run(
+        ["git", "-C", str(path), "rev-parse", "--show-toplevel"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()).resolve()
+
+
 def encoded_inventory(inventory: dict[str, Any]) -> str:
     validate_inventory_document(inventory)
     return json.dumps(inventory, indent=2, sort_keys=True) + "\n"
@@ -221,7 +232,7 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         expected = load_inventory(args.inventory)
         if args.git_index:
-            verify_index_inventory(Path.cwd(), args.root, expected)
+            verify_index_inventory(git_worktree_root(args.root), args.root, expected)
         else:
             verify_inventory(args.root, expected)
     except (InventoryVerificationError, ValueError, subprocess.CalledProcessError) as error:
