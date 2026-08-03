@@ -139,7 +139,7 @@ class TestS1SpecialStageTraceParsing {
             {
               "game": "s1",
               "trace_profile": "%s",
-              "trace_schema": 1,
+              "trace_schema": 5,
               "act": 1,
               "bk2_frame_offset": 0,
               "trace_frame_count": 2,

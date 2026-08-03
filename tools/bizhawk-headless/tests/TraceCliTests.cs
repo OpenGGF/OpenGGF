@@ -636,7 +636,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                             + " \"trace_frame_count\": 8, \"zone_id\": 0,"
                             + " \"act\": 1}\n");
                         AssertContains(
-                            manifest, "  \"transitions\": [\n  ]\n}\n");
+                            manifest,
+                            "  \"transitions\": [\n  ],\n"
+                            + "  \"dynamic_art_gap_transitions\": [\n"
+                            + "  ]\n}\n");
                     }));
         }
 

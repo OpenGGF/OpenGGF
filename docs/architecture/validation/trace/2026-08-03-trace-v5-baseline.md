@@ -23,20 +23,37 @@
   - S3&K locked-on: CRC32 `63522553`, SHA-1
     `cfbf98c36c776677290a872547ac47c53d2761d6`.
 
-## Current fixture inventory
+## Fixture inventory
 
-The inventory scans all 217 `metadata.json` files and all seven
+The original Task 1 inventory scanned all 217 `metadata.json` files and all seven
 `run_manifest.json` files under `src/test/resources/traces`. Width is the
 current `physics.csv` or `physics.csv.gz` header width. No fixture bytes were
 changed while producing this inventory.
 
-The complete machine-readable [per-path fixture inventory](2026-08-03-trace-v5-baseline-inventory.json)
-freezes all 809 installed files, their kind, exact stored SHA-256, and logical
-SHA-256 for every gzip file. Its stable aggregate SHA-256 is
+Task 8 merged `origin/develop` at `8211d923f`, which legitimately added the
+104-file legacy production run
+`s1/runs/s1-sonic-complete-withemeralds/`. Every added byte matches that
+upstream tree, and the inventory verifier reported no change to any of the
+original 809 files. The complete machine-readable
+[per-path fixture inventory](2026-08-03-trace-v5-baseline-inventory.json) was
+therefore re-frozen at 913 files: 251 metadata documents, eight run manifests,
+and an aggregate SHA-256 of
+`52ea19afea7250121c35a94927e3a4b950c6b00b8fac9570284401db3f0615bd`.
+The original Task 1 aggregate was
 `6885fbd0b0c5f02adf95ca33841c9755d2c81b46220f918d810394108b25da00`.
+The upstream run is retained predecessor evidence and is part of Task 9's
+complete native-v5 capture matrix; it is not normalized, deleted, or treated
+as current-schema input before that capture.
+
+The inventory freezes each file's kind, exact stored SHA-256, and logical
+SHA-256 for every gzip file.
 `tools/traces/trace_fixture_inventory.py` generates and verifies this exact
 format for both the worktree and staged Git index; Task 8 must use it before
 capture and immediately before fixture installation.
+
+The following table records the original Task 1 migration baseline; the
+upstream run is accounted for separately above so its provenance remains
+explicit.
 
 | Game | Profile | Width | Count |
 | --- | --- | ---: | ---: |

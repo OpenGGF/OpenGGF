@@ -38,7 +38,6 @@ CNZ --validate-only
 | **s3k-parallax** | `.agents/skills/s3k-parallax/SKILL.md` | Implement per-line scroll handlers and deform routines |
 | **s3k-animated-tiles** | `.agents/skills/s3k-animated-tiles/SKILL.md` | Implement AniPLC script triggers, gating conditions, dynamic art overrides |
 | **s3k-palette-cycling** | `.agents/skills/s3k-palette-cycling/SKILL.md` | Implement AnPal handlers with counter/step/limit cycling and validation |
-| **s3k-zone-validate** | `.agents/skills/s3k-zone-validate/SKILL.md` | Visual comparison via stable-retro + image recognition for validation |
 
 ## S&K-Side Addresses by Default — Sonic 3 Standalone Is a Rare Fallback
 
@@ -64,7 +63,7 @@ Every bring-up plan should identify:
 - Traversal blockers: doors, launchers, forced-movement paths, water/chase mechanics, boss gates, and terrain mutations required to finish the route.
 - Event flow: camera locks, bounds, cutscenes, act transitions, boss/miniboss arenas, and palette mutations.
 - Visual coherence: parallax, animated tiles, palette cycling, PLC/art loads, staged overlays, and render-mode state needed for the area to look recognizable.
-- Parity gates: known trace blockers, object lifecycle, player/sidekick participation, coordinate semantics, rewind-relevant state, focused headless tests, and stable-retro visual validation where practical.
+- Parity gates: known trace blockers, object lifecycle, player/sidekick participation, coordinate semantics, rewind-relevant state, focused headless tests, and native screenshot/headless validation where practical.
 
 When route blockers involve objects or bosses, make the object contract decision explicit in the plan: `ObjectControlState` for forced/control bits, `ObjectPlayerQuery` plus `ObjectPlayerParticipationPolicy` for native slots versus OpenGGF sidekicks, `ObjectLifetimeOps` for delete/despawn/remembered-object behavior, and canonical solid/touch/lifecycle profiles through compatibility wrappers. Guard work should ratchet baselines from inventory before hard-failing new shortcuts.
 
@@ -236,13 +235,11 @@ mvn test -Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBoots
 
 ### Step 7: Validate
 
-Dispatch an agent with the `s3k-zone-validate` skill for the target zone:
-
-```
-Use /s3k-zone-validate {ZONE}
-```
-
-The validation agent captures reference screenshots from stable-retro and compares them against the engine's output for feature presence (parallax layers, palette cycling, animated tiles, camera locks). Review the validation report and flag any FAIL results for manual investigation.
+Run the focused headless zone tests and capture engine screenshots where the
+zone supports them. Compare against the ROM-backed trace/replay evidence and
+the zone analysis targets for parallax layers, palette cycling, animated tiles,
+and camera locks. Record any unsupported visual comparison as a validation gap
+rather than introducing a second emulator workflow.
 
 ## Shared File Conflict Resolution
 

@@ -1,0 +1,18 @@
+{
+  "game": "s1",
+  "trace_profile": "s1_special_stage",
+  "special_stage_index": 0,
+  "ss_csv_version": 1,
+  "aux_schema_extras": ["dynamic_art_transfer_state_per_frame_v1"],
+  "characters": ["sonic"],
+  "main_character": "sonic",
+  "sidekicks": [],
+  "bk2_frame_offset": 4976,
+  "trace_frame_count": 3728,
+  "source_bk2": "sonic1-complete-withemeralds.bk2",
+  "lua_script_version": "3.18",
+  "recording_date": "2026-08-03",
+  "run_id": "s1-sonic-complete-withemeralds",
+  "fresh_load": false,
+  "segment_index": 1
+}

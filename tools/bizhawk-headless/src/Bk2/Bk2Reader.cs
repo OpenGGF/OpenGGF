@@ -353,7 +353,11 @@ namespace OpenGGF.BizHawk.Headless
             // domain is honored as-is through the sync settings.
             RequireSyncRange("Overscan", 0, 3, dto.Overscan);
             RequireSyncValue("GGExtra", false, dto.GGExtra);
-            RequireSyncValue("SMSFMSoundChip", 1, dto.SMSFMSoundChip);
+            // SMS FM chip selection is not used by a Genesis recording. Keep
+            // the recorded BizHawk enum value so older valid movies (for
+            // example YM2413_NUKED=2) can be replayed without rewriting their
+            // SyncSettings.json payload.
+            RequireSyncRange("SMSFMSoundChip", 0, 2, dto.SMSFMSoundChip);
             // The Genesis FM chip model IS machine-relevant (unlike the
             // presentation settings above), which is exactly why the movie's
             // recorded value must be honored rather than pinned: the sync

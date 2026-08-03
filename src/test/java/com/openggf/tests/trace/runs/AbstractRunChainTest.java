@@ -550,6 +550,7 @@ abstract class AbstractRunChainTest {
                             GameServices.playbackDebug().getCursorFrame()),
                     stepOrdinal,
                     levelIdentity,
+                    levelManager.isTitleCardRequested(),
                     bonusIdentity,
                     specialStageIndex,
                     lifecycleState.comparisonSegmentOpen(),

@@ -1,5 +1,5 @@
 {
-  "aggregate_sha256": "6885fbd0b0c5f02adf95ca33841c9755d2c81b46220f918d810394108b25da00",
+  "aggregate_sha256": "52ea19afea7250121c35a94927e3a4b950c6b00b8fac9570284401db3f0615bd",
   "files": [
     {
       "kind": "other",
@@ -442,6 +442,594 @@
       "logical_sha256": "45b58e1a9705397084698a53e121971cc49235456214548882c8b4687f1bd55e",
       "path": "s1/runs/s1-ghz-maze-roundtrip/ss/physics.csv.gz",
       "stored_sha256": "9b1aa77a44bf15725d4c4e2b94ad8b0d6bacea27e6932b4a0f0688fcf132793b"
+    },
+    {
+      "kind": "auxiliary-state",
+      "logical_sha256": "ee0c203c8ec009b98faa4414e118ac5176a8a1a6797fec80a2f972b9cd5ce452",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/ghz1/aux_state.jsonl.gz",
+      "stored_sha256": "59a8ae960bc2f533a1072f95f62fa52ae6af04939c246d1dec05c2a782bfda7d"
+    },
+    {
+      "kind": "metadata",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/ghz1/metadata.json",
+      "stored_sha256": "98eb1964d6ff60e63e21e33c4e306a3090947554722bf83862fdf20d4638c157"
+    },
+    {
+      "kind": "physics",
+      "logical_sha256": "3ee112704f33be83e1563abe1fba7d2ebd93fc5a2a2090527322a4584457398b",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/ghz1/physics.csv.gz",
+      "stored_sha256": "3684739359e18acb36399b5623ae56c398236eddc46decc4413d97fbb6d3777f"
+    },
+    {
+      "kind": "auxiliary-state",
+      "logical_sha256": "40063a2392922d1ef6281990395760512091e20337b407eea0b3a86014533731",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/ghz2/aux_state.jsonl.gz",
+      "stored_sha256": "3b18c57fbb6261b10d217fdfc9a102aab8d64a81248746daa5573bc8a1912a7c"
+    },
+    {
+      "kind": "metadata",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/ghz2/metadata.json",
+      "stored_sha256": "36c0e9745c460ae2d20080a3d1c51cdd4f0d59c295774c14c2749adea1b4adce"
+    },
+    {
+      "kind": "physics",
+      "logical_sha256": "d1e3f3d1612c48bd0a66314f3d166c365a71e163f6764bcd7d88b0c9b858f6f2",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/ghz2/physics.csv.gz",
+      "stored_sha256": "3aa325343ef60526e916d2aa9ae8d6ea6196df1b3fda80311db813932f15e406"
+    },
+    {
+      "kind": "auxiliary-state",
+      "logical_sha256": "f4340645cc7f82f015ce77baef4fe24d73b94725e56a5ebaf153687d9854289a",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/ghz2_2/aux_state.jsonl.gz",
+      "stored_sha256": "ef4194c42ba91d1751753f292e080ebfda116c43d2388ff2c5a86f70e90ed1a5"
+    },
+    {
+      "kind": "metadata",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/ghz2_2/metadata.json",
+      "stored_sha256": "456dd0b176968db2d7f4371c270b1888dab374bcd996811526d5066f5132d245"
+    },
+    {
+      "kind": "physics",
+      "logical_sha256": "f4689134f688575421e4470a815262124cb38c4ba2aabc17cb0e9dc9fc0d976c",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/ghz2_2/physics.csv.gz",
+      "stored_sha256": "a2d3bed80ad6c80066d3ca2f26b7ac34cb4a82b6bcb41ba78bcfb005fb284e08"
+    },
+    {
+      "kind": "auxiliary-state",
+      "logical_sha256": "b336a5058586f0ccaa5a353dac47c6283f6dee8343afd93f7e461e9c2ff10c6b",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/ghz3/aux_state.jsonl.gz",
+      "stored_sha256": "38a437fd38f01d761cb14373fbb3af082283c7b1b52010516ad1d8b11a44019a"
+    },
+    {
+      "kind": "metadata",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/ghz3/metadata.json",
+      "stored_sha256": "8f94464c1ddff890fd92d1f57328c0f81c615e4b107fb1fe99937bc0c8724a55"
+    },
+    {
+      "kind": "physics",
+      "logical_sha256": "df334fabca35939c1997a3664fcb9e458f69ea7710d5683489181fd49e49829b",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/ghz3/physics.csv.gz",
+      "stored_sha256": "85316b44a1fb64394fc431574ae5f8e069d3c03b9d91d504908c87984a6c48ff"
+    },
+    {
+      "kind": "auxiliary-state",
+      "logical_sha256": "886ee6d18b049a7dbef3c08be4f667a2a7fb8a7642ad44258ff275793aad56df",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/ghz3_2/aux_state.jsonl.gz",
+      "stored_sha256": "9653e0e547439b5ea5531d3aaf24350b0df6be0d5839eb7a88df8a9558afd7b8"
+    },
+    {
+      "kind": "metadata",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/ghz3_2/metadata.json",
+      "stored_sha256": "4cd3eae386ba2fe157892e5928558fd68be954683428ba42afe4c24c1ee0fbf5"
+    },
+    {
+      "kind": "physics",
+      "logical_sha256": "6a8625c0b6cfa4a7aeacfc5880870ca6acbe85e493ac63ce88f8c653742aa10c",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/ghz3_2/physics.csv.gz",
+      "stored_sha256": "82a8f5134d9e384966f00eb3c623c937c05247e93f65988a8829de70bcaf2c23"
+    },
+    {
+      "kind": "auxiliary-state",
+      "logical_sha256": "a1ceeec5a70b58fc78994f321e1674043b88d2e67eda8a280ebc9a6ec5a9cdf4",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/lz1/aux_state.jsonl.gz",
+      "stored_sha256": "fb4265541a6006f440e40d0833de586c55a44638fff39c81ebc7d13ed534eb1e"
+    },
+    {
+      "kind": "metadata",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/lz1/metadata.json",
+      "stored_sha256": "8ed4ce16c9d2bfece96f06d3df08a1bdcd8d1dbb745da713555a3af9d206f0cd"
+    },
+    {
+      "kind": "physics",
+      "logical_sha256": "a1fc435b0cfab9a0be200aac030e122bb20216d405036c60b7c3251c2f5254e8",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/lz1/physics.csv.gz",
+      "stored_sha256": "d1399b148388c6bc926474ef4ec301df522a18a141cad068fbae28edc7f05578"
+    },
+    {
+      "kind": "auxiliary-state",
+      "logical_sha256": "f97d42c6b3535925b8a0c69908a96f41ed07b2a2e754a8b3ef1f09c8354404a3",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/lz1_2/aux_state.jsonl.gz",
+      "stored_sha256": "79b28045ca5cf1af38f091d317ca9da0905345ff335b7e0920659572a14e9452"
+    },
+    {
+      "kind": "metadata",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/lz1_2/metadata.json",
+      "stored_sha256": "3e48138fe66090e4f067ed23c258c8a79c062d810e6982cea828e54abe2824b9"
+    },
+    {
+      "kind": "physics",
+      "logical_sha256": "08dabb5e3957b5da59ace161d1da1e9c11ecc75ca8b6ade4047ebfc9fa1644da",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/lz1_2/physics.csv.gz",
+      "stored_sha256": "49091cbf12afab282a3f848866edcd0d8e55860a8debb3c1bee053de16dead79"
+    },
+    {
+      "kind": "auxiliary-state",
+      "logical_sha256": "049c6a2f9a254e353e6de7075d8f0c237e75e381a9ffc760bcf0f242f44f2b0d",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/lz2/aux_state.jsonl.gz",
+      "stored_sha256": "92142a860c501709b9217382bc6329cd2da4d12a76c5d185e34bfe16ca569574"
+    },
+    {
+      "kind": "metadata",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/lz2/metadata.json",
+      "stored_sha256": "650474fc6cc810b329466216de1c77114e1fdbecfc55d1ad673471e5693b6062"
+    },
+    {
+      "kind": "physics",
+      "logical_sha256": "7704ae9378d0ddfbb3fbd703194df85afad8eade56f20a8952ad3ed7f8b3dee1",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/lz2/physics.csv.gz",
+      "stored_sha256": "15094a2d91ecb9ff3c3aa41d54f083e1ab0b05fae303fcf5a6d2099173c53df5"
+    },
+    {
+      "kind": "auxiliary-state",
+      "logical_sha256": "592ce8f52c5acbce86f0f73d5570bcee54beed819b69312407bdfa08c1196408",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/lz3/aux_state.jsonl.gz",
+      "stored_sha256": "67bfa33c8312baf5d9874649c8de2c2423cabc8f418c3021705339d49d63eae0"
+    },
+    {
+      "kind": "metadata",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/lz3/metadata.json",
+      "stored_sha256": "4f41246fe0a7c77ceada79f7efa9d648131436869df547f6b05f3586248bad3d"
+    },
+    {
+      "kind": "physics",
+      "logical_sha256": "5c4414e5d3f71868938b19582d5cb31c662f31ff8b72eb0205ab4a55115a4f61",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/lz3/physics.csv.gz",
+      "stored_sha256": "3c213355755694d61b1a27738aedb82d22f6ab3bd5bf25f04c91b71fdc195272"
+    },
+    {
+      "kind": "auxiliary-state",
+      "logical_sha256": "3208efd3fc7fe493ae64b49277e5a02b79e2ad0e30148b506b739ea1131fde8d",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/lz4/aux_state.jsonl.gz",
+      "stored_sha256": "c5d8a8cd67913412b1db2d61ab20add3f681c7d0d95ef97d8d8acf17030579bb"
+    },
+    {
+      "kind": "metadata",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/lz4/metadata.json",
+      "stored_sha256": "2905d613a27f5689528ec14f348a4e6aac6ca61b2396ad7036ebb040ae06d761"
+    },
+    {
+      "kind": "physics",
+      "logical_sha256": "96e9a9142cd5e1c965556c7514ab1b114de0fed2a581db4e7dfd8dbec56f821f",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/lz4/physics.csv.gz",
+      "stored_sha256": "1315133dcb308bf56d824132e00fb0c07047e90fae4395349d9945859a503b5a"
+    },
+    {
+      "kind": "auxiliary-state",
+      "logical_sha256": "62dd111f7203941d4e762c37e74bab26d162de8578afe099dd673327672baa1a",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/mz1/aux_state.jsonl.gz",
+      "stored_sha256": "d6001aae4c592fedc90753b8d56af60d21619d8885f7cd5c0214e3396e2d2b29"
+    },
+    {
+      "kind": "metadata",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/mz1/metadata.json",
+      "stored_sha256": "b712eac3bd492c02a01a0eee4cebdffcd0df7c740364788e407d24a3c8d43cd9"
+    },
+    {
+      "kind": "physics",
+      "logical_sha256": "6c94de02957ff0c7f065fc9fe5e75ecb1a7ebdca51b33fcffd4de550e7444ff0",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/mz1/physics.csv.gz",
+      "stored_sha256": "ee094fdfc75938805cd1efb0a75aa5606946f20a513878ccdf1be247f8464e1b"
+    },
+    {
+      "kind": "auxiliary-state",
+      "logical_sha256": "5773472f5bf6c0ecf15d14edb70121e9ed4602153585b4eba7015ae671053d3a",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/mz1_2/aux_state.jsonl.gz",
+      "stored_sha256": "aaf9a68e530cb3ea8262c8630a7479105614f368d70be137ebd9945e9571d0bc"
+    },
+    {
+      "kind": "metadata",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/mz1_2/metadata.json",
+      "stored_sha256": "70349845581c5a5f1ad3e0e86217bd8ccee5be4167b98bd44499a264d019134f"
+    },
+    {
+      "kind": "physics",
+      "logical_sha256": "30a3c569648b9673b08e81bb40a0805bf85b898797936efc127fc647f254b92b",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/mz1_2/physics.csv.gz",
+      "stored_sha256": "e40bba5f04ac855ea26fdc37bdc4e98bd1a3db7f249b3db6af597ab7d1c19e68"
+    },
+    {
+      "kind": "auxiliary-state",
+      "logical_sha256": "f4360026b94b3041fd6938758dc50d0fd651988aae52a73091b3c4e66ed063ed",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/mz2/aux_state.jsonl.gz",
+      "stored_sha256": "2e52d6ae5ded6540fb00a83dcaf290cf687e5145050374cd5d262e93969e816c"
+    },
+    {
+      "kind": "metadata",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/mz2/metadata.json",
+      "stored_sha256": "2e375163e8eebcf4b88f5ddfae27de48a5819d03a874843084e04dc6e1fd197b"
+    },
+    {
+      "kind": "physics",
+      "logical_sha256": "61b96113bff0950df98592a68298dbce9d446abfc150e1dc8d37b276098bd2bc",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/mz2/physics.csv.gz",
+      "stored_sha256": "c597b1c19e2cc56a5efa3bff027636543eaa4173b8993cc615645ad5a948abb0"
+    },
+    {
+      "kind": "auxiliary-state",
+      "logical_sha256": "5cc787e1e5c1dd0c129f10a74d334e8f5bff20a48d2e942d62b022e4f803603c",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/mz2_2/aux_state.jsonl.gz",
+      "stored_sha256": "a05a293653d6d7f482347415f9de6fb6aaa8ea7da63d5695981fccdca02cfe0f"
+    },
+    {
+      "kind": "metadata",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/mz2_2/metadata.json",
+      "stored_sha256": "d0b5de1e54ddfefe3ceac920a00214212303330dbbce461a6e52fe93ba71f945"
+    },
+    {
+      "kind": "physics",
+      "logical_sha256": "f7acec8d3a5c54c5ef3eb4d6c322b0323816d2ab8713510d13dcc226b40c5ceb",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/mz2_2/physics.csv.gz",
+      "stored_sha256": "5ca8a7dce1dfacb4cb1b6840c626b28cd126c5e14c3f5356543edf82af9aebb0"
+    },
+    {
+      "kind": "auxiliary-state",
+      "logical_sha256": "fc14ba5b4bf79ad929d54eaf03e92a1886719181f119a77f9754e99aa94795de",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/mz2_3/aux_state.jsonl.gz",
+      "stored_sha256": "89abe355c98e19a9737c559bfe4b948f774af00af0ac1f3dc8c3b3b91527ebc7"
+    },
+    {
+      "kind": "metadata",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/mz2_3/metadata.json",
+      "stored_sha256": "6e7457012d5074d5272c0d383283d795cdb629d279ec4c7f6f1782b5b140e20a"
+    },
+    {
+      "kind": "physics",
+      "logical_sha256": "33cb958439c0eb25cfe3928de9e42e1516e28f4ecfdde963fe6b65009f348286",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/mz2_3/physics.csv.gz",
+      "stored_sha256": "6013d46820f0c3daea10e3e1c51c23462ce092fcd82c3660c2537361eb9f6f21"
+    },
+    {
+      "kind": "auxiliary-state",
+      "logical_sha256": "600b7422c73f0c17115a1ebd442a9ea6562f4bca153e49cd6c262d5de0fde72b",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/mz3/aux_state.jsonl.gz",
+      "stored_sha256": "78d9c006205ed295165c704fc91d65b898711da633df0167ce84756b98fd2f32"
+    },
+    {
+      "kind": "metadata",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/mz3/metadata.json",
+      "stored_sha256": "9c5e0666fdb0844a57da991686cac6f93dbc6bf69261952de9fe1ef6d7af5789"
+    },
+    {
+      "kind": "physics",
+      "logical_sha256": "2b1b87e12ef4fb46bbd7c73c7002b6751cefae5f86e7a1953563a02dd2dfda3e",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/mz3/physics.csv.gz",
+      "stored_sha256": "487711c331f6f137ece0f88df4830870f77e4802b3e2d6a7cd9495a7c0859eff"
+    },
+    {
+      "kind": "auxiliary-state",
+      "logical_sha256": "b717b2650a15271b5e3f9a017b86e3a485a94432973030296521e5278a387367",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/mz3_2/aux_state.jsonl.gz",
+      "stored_sha256": "0bf73684f1d6b8137ead2917fb6d971c5379d3154a83962bbefbb4c711f517f6"
+    },
+    {
+      "kind": "metadata",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/mz3_2/metadata.json",
+      "stored_sha256": "eb587bf46ca5cd7255fd18efb65b505db04ba1ea35307cbc6fe83859c354bea7"
+    },
+    {
+      "kind": "physics",
+      "logical_sha256": "4e00facb494550b64ecd1d0228091a02e8efe135a3fa46f1b92b2fb70104ada3",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/mz3_2/physics.csv.gz",
+      "stored_sha256": "48fb230d2fee117f89320067a00d02c0abe0164739c9d7fa42781274cf763ec6"
+    },
+    {
+      "kind": "run-manifest",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/run_manifest.json",
+      "stored_sha256": "7f0e86dfb96b5fa48fffbd05c0eb3af1e88d20cdc807a0172a35b5d49b6770cf"
+    },
+    {
+      "kind": "auxiliary-state",
+      "logical_sha256": "f9e045476a564287a2cd41705074293b903eb06838a2e5e46366cdfaaa6fcd74",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/sbz1/aux_state.jsonl.gz",
+      "stored_sha256": "a83d9c6555061b7adddd91a12fc90b42ad2be4e8a68d52ada1ad151a12fe04a9"
+    },
+    {
+      "kind": "metadata",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/sbz1/metadata.json",
+      "stored_sha256": "5b8a97991f7f3f85651b5fda85debf6656e408b7ddf4ea91c9307b5bd9bcb68a"
+    },
+    {
+      "kind": "physics",
+      "logical_sha256": "a30ae3ac6f37cc2d83900cbdbfce190d7f3aca5b5979fd73ea49321fe70cd826",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/sbz1/physics.csv.gz",
+      "stored_sha256": "ceed2e8b0e00e8e7a693b3c8b3a0efe548db33957e1234b9be0bacfa1d4574ec"
+    },
+    {
+      "kind": "auxiliary-state",
+      "logical_sha256": "f640823973e1de4554e1179d36893fb607eefef4b8052c393e0902df142e0502",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/sbz2/aux_state.jsonl.gz",
+      "stored_sha256": "c9bd1b9ae843f6809c504f13f7b296e40ba291f3c2308fadb3ca45f83c42497e"
+    },
+    {
+      "kind": "metadata",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/sbz2/metadata.json",
+      "stored_sha256": "7571b4a1b07119868b96a2d371f373cfef542a5c772096b66bce3e9ed34dc76d"
+    },
+    {
+      "kind": "physics",
+      "logical_sha256": "8f1cd04d8eb4f4d0ce079d0000037596ba63585e080180954bffc2f81365058e",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/sbz2/physics.csv.gz",
+      "stored_sha256": "898898c3009aee1a41eb2fcdf4e115517b9e8cb98e5b7973f30a91de2a1019a9"
+    },
+    {
+      "kind": "auxiliary-state",
+      "logical_sha256": "260430a8f991ce2207e5d4f6d79e05f2259c7c7a883e66967007591243dbbd72",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/sbz3/aux_state.jsonl.gz",
+      "stored_sha256": "c5e08406c3fb333f4cf18db2f83629384862923679bd4ed7f76baa2d6f25dfd9"
+    },
+    {
+      "kind": "metadata",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/sbz3/metadata.json",
+      "stored_sha256": "9633e2696145625b9b7dd2b1715b4ed5997975bc816724b57b1cdca57e48e48e"
+    },
+    {
+      "kind": "physics",
+      "logical_sha256": "41614e71145785825cd82c783cfec91f2fcc3ee476977bf647a28f6fd1983880",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/sbz3/physics.csv.gz",
+      "stored_sha256": "a335fee676a4f0b80462a7e92ef3ab131c4dff4a2a756ac99c4e26194bd277db"
+    },
+    {
+      "kind": "auxiliary-state",
+      "logical_sha256": "770c1ea6e643f859388bacca9516a2f89bd890ade27fb2e3bf16722b54ab47f2",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/slz1/aux_state.jsonl.gz",
+      "stored_sha256": "797c491157f73a301391831e103784dffa2a5017735e6155d49efc9468fa49a7"
+    },
+    {
+      "kind": "metadata",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/slz1/metadata.json",
+      "stored_sha256": "ad9b68cc648c1e6b2a59304f8681453257cf66bd920dda2aba5fd38fc128b9e0"
+    },
+    {
+      "kind": "physics",
+      "logical_sha256": "80d6fccb8abb4ecafb1a625ec06ccca4e0750b30d2883cebd77d7c579b8f846b",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/slz1/physics.csv.gz",
+      "stored_sha256": "e87d7d3d6a1c94bd9630c0cb473519c3b0c386b77b08936862a4d4885e49d939"
+    },
+    {
+      "kind": "auxiliary-state",
+      "logical_sha256": "a56c2f6dc7aca530ff99bb9dac88e2c535156881310ce1ade58430b2f96069af",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/slz2/aux_state.jsonl.gz",
+      "stored_sha256": "d28c1bdbf01cda5d306b7621efa06fcf8c90a0887ae1137501aa172db5623d08"
+    },
+    {
+      "kind": "metadata",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/slz2/metadata.json",
+      "stored_sha256": "25ebcda2b176f7668b09023e151ead646ca1d6b9e8b70d958b7a2e933e645643"
+    },
+    {
+      "kind": "physics",
+      "logical_sha256": "f6e9e811c9330970c96307d0ea1aa6570b815fc092f4096fd2fc7003a6fd61b8",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/slz2/physics.csv.gz",
+      "stored_sha256": "940976cc13ab9334977756911199207c9759430917e63f60e001e6395691e425"
+    },
+    {
+      "kind": "auxiliary-state",
+      "logical_sha256": "be2bc4225b7226185f405974982e22534c31042fba2b2967e0889812705cbba2",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/slz3/aux_state.jsonl.gz",
+      "stored_sha256": "f3eaae274a7879786917194b944284fa5fdde6d6982c551d8d53de60d9480a31"
+    },
+    {
+      "kind": "metadata",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/slz3/metadata.json",
+      "stored_sha256": "c692e98792aaada3e3fcdd65aab5df1865234c9c11fc89b6fe9fe6466e777bd3"
+    },
+    {
+      "kind": "physics",
+      "logical_sha256": "b93fd776178e13d304eb99efb343100ebfe14ca819d52fb0f061e5a36a0921c6",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/slz3/physics.csv.gz",
+      "stored_sha256": "b95cbdc2b2b7e853a4663ff9d51d3b794b2f81372cacbac8425002c0b933cfca"
+    },
+    {
+      "kind": "other",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/sonic1-complete-withemeralds.bk2",
+      "stored_sha256": "f2e817936d07b2b1f2b80d61451f174189509a2817da2b2349ce0e19b8a5567b"
+    },
+    {
+      "kind": "auxiliary-state",
+      "logical_sha256": "9036bf6c1f976ffc2674b3d265230207a647ca80f8e9fb8b0e2218b0e602da42",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/ss/aux_state.jsonl.gz",
+      "stored_sha256": "d802095a360395ccaf9910ce7ea276f725effd32a6b8ad914e037c45b00cab9d"
+    },
+    {
+      "kind": "metadata",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/ss/metadata.json",
+      "stored_sha256": "f4b96a29cba81607ae414ed0d66db294adc378193be5f256cc7ed8d7743a2486"
+    },
+    {
+      "kind": "physics",
+      "logical_sha256": "a5787835129a1c06971fb064a372b9dab9030179e41389dbe25bd4038c16b5a5",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/ss/physics.csv.gz",
+      "stored_sha256": "24d51daa7c265db07f00bf322183983c7183d0b5183639d4fa6775bd9d1bbd1a"
+    },
+    {
+      "kind": "auxiliary-state",
+      "logical_sha256": "e2c3c4886be078641b324bc9f0e281739899d04203bff408985383741a521680",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/ss_2/aux_state.jsonl.gz",
+      "stored_sha256": "d3ca6d02b454f2128a9a64478ac7f26e0e8b5239347d5a688b0ea3babcf751db"
+    },
+    {
+      "kind": "metadata",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/ss_2/metadata.json",
+      "stored_sha256": "e47f59831823f5ccd56bcc3375b0d08db40c9a2fc9a48fadd068d292a8579808"
+    },
+    {
+      "kind": "physics",
+      "logical_sha256": "8068339716ff9bcbf8f75059b9e87ab32a851b8e48c84ccfc04e3148cb67554c",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/ss_2/physics.csv.gz",
+      "stored_sha256": "1b021f9ce9025825081f9037b12d3b8ecf08624af08bdb3d59bf497ba58ed094"
+    },
+    {
+      "kind": "auxiliary-state",
+      "logical_sha256": "b71cc64ea07adc5bbceeafe83c80e7f7517104d4813a9001cb0b25a29e987b75",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/ss_3/aux_state.jsonl.gz",
+      "stored_sha256": "9f9d36f7447cfc1f88e8fb0de562aafd0b30eb3e93ce576c7cab171d18173b8a"
+    },
+    {
+      "kind": "metadata",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/ss_3/metadata.json",
+      "stored_sha256": "6b5ab6636a791ddae7aa52f8bc2bca226654506e2216b16f1171483fb2abfd71"
+    },
+    {
+      "kind": "physics",
+      "logical_sha256": "f11b4224c7aee1dc00795797f5407e3f8b345c02d7152ea4d64a177a0dee77cb",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/ss_3/physics.csv.gz",
+      "stored_sha256": "1b0b2cebe70aa87dd125183225b764fc1b5aca8c779b831f1ea16b55b88330cf"
+    },
+    {
+      "kind": "auxiliary-state",
+      "logical_sha256": "8703f64350143a1e31a0534edd3ef791bb9ad75d01a8712e3424981e38bd4142",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/ss_4/aux_state.jsonl.gz",
+      "stored_sha256": "f213112c9775932363785a6ea6b40a9173d0240dc75a3dc5c924b7ad6c078d7c"
+    },
+    {
+      "kind": "metadata",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/ss_4/metadata.json",
+      "stored_sha256": "3c51209454899617d97938ba03338bb0019f46610374367b865cf0e89913155d"
+    },
+    {
+      "kind": "physics",
+      "logical_sha256": "0f57d9d8a55cb0c216b1febab8ac5b4722e85937cc77c53e5e424d5e49f27ef6",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/ss_4/physics.csv.gz",
+      "stored_sha256": "d9c9687ee33153f4859f99e58cf846c60d8f9ecd7339ec0b6c455de75fe17eb5"
+    },
+    {
+      "kind": "auxiliary-state",
+      "logical_sha256": "ddd505dbcfaff9c06525ea583dc992f0259eba9ae7affcdd1ddadaa24bc4a521",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/ss_5/aux_state.jsonl.gz",
+      "stored_sha256": "78d49a0eca4146863b7f5f5fe11528ea219ed79c87826ead2456575a08255696"
+    },
+    {
+      "kind": "metadata",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/ss_5/metadata.json",
+      "stored_sha256": "1347043eeddda86e224a83d2692bc06971d15cbc4e27fd4c22da36b76e3a624d"
+    },
+    {
+      "kind": "physics",
+      "logical_sha256": "d41f9649284e3feeaf09cd025a38219cca0f3d14d7804a0298050fce5e863c4d",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/ss_5/physics.csv.gz",
+      "stored_sha256": "85d77ccc1aa2bd45bc7b4628489d588301cfec0c7d1a98381f78b8ea7f682ce4"
+    },
+    {
+      "kind": "auxiliary-state",
+      "logical_sha256": "17bd9d722a706e22176df514b975c44283f61fe533aaf27c79a6dcbe1e3b77fd",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/ss_6/aux_state.jsonl.gz",
+      "stored_sha256": "b490663e7e58b23c4571ebd2361d39edc4be2706c0e31d3232593d2728876500"
+    },
+    {
+      "kind": "metadata",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/ss_6/metadata.json",
+      "stored_sha256": "813eab677a39c42684bc3a65c303ada3acf8861221558145e83753a94b19e9e7"
+    },
+    {
+      "kind": "physics",
+      "logical_sha256": "874a8982286fa00d6695afa5aa19292146521ca0a8e345b30676bbce42cdefae",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/ss_6/physics.csv.gz",
+      "stored_sha256": "a3510f192c9793b5851977077bfd799b61c6335d19ac35da584f69fd4835b903"
+    },
+    {
+      "kind": "auxiliary-state",
+      "logical_sha256": "ba60be007026e73097634dec792acf04a3baf9f3a57fe7fbb0c26ea2e2a49f44",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/syz1/aux_state.jsonl.gz",
+      "stored_sha256": "35fed6988d2566b4f2365c25e50adbe452ad2eb8d035dfc95386c89e0c46cb67"
+    },
+    {
+      "kind": "metadata",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/syz1/metadata.json",
+      "stored_sha256": "9029cccbcfb9bab884769beb8ab04815d28859de1f9bcac5ac0b315b2070399d"
+    },
+    {
+      "kind": "physics",
+      "logical_sha256": "d6e8ba14392f10f5f84a36bdb0436b98fe37fcf2bacefef7352b218b0c145aa4",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/syz1/physics.csv.gz",
+      "stored_sha256": "118a579e38b46a0c0f4c7b1d06c37e137da2c381ef6e839eac40fd5ffaca3f3f"
+    },
+    {
+      "kind": "auxiliary-state",
+      "logical_sha256": "4ce822ca13597cfbaa7075000100b4631f540904172f6d53ac9011950c691168",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/syz2/aux_state.jsonl.gz",
+      "stored_sha256": "4a2804b49409a8a095b4891ac3a328ec551feeb434dba87f6071ebc2c466cf24"
+    },
+    {
+      "kind": "metadata",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/syz2/metadata.json",
+      "stored_sha256": "a668af909865f6d0773a2994cf97d78a26578b27fd2b875be1c28dee6f2a6c97"
+    },
+    {
+      "kind": "physics",
+      "logical_sha256": "edc416202d5ec0c0466530c4e89795103d43a9031a22982a48193596e7b962d7",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/syz2/physics.csv.gz",
+      "stored_sha256": "8d209c91bb57747bc3a0c39a781a31a5901a37ad84c62a7c02631b53895a8d98"
+    },
+    {
+      "kind": "auxiliary-state",
+      "logical_sha256": "1fdbb68d779aacbdca91104e2f42b615b391b96491147cf95068feab511c85f8",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/syz2_2/aux_state.jsonl.gz",
+      "stored_sha256": "3ea13bb30627d60d2ef25857d09b37a02eff677468b9e55db8a25b6ef693316c"
+    },
+    {
+      "kind": "metadata",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/syz2_2/metadata.json",
+      "stored_sha256": "b3ec79e96c876f7e36128407fc61d4acfc5660917018e9b625597e7686b35986"
+    },
+    {
+      "kind": "physics",
+      "logical_sha256": "b049e9ef22ef1e2f5e5fa850a7ca5cafacf71606a46525b5df69b117a0a26d2a",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/syz2_2/physics.csv.gz",
+      "stored_sha256": "7ab50bfbea4fc62992b7f3f615ae7bd7a824f97645e94a084c610b6f3e4d8bc5"
+    },
+    {
+      "kind": "auxiliary-state",
+      "logical_sha256": "a61495d208b020b86c37587b1c8332d3b7e5241c3fe6453db2098b9fff3477e8",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/syz3/aux_state.jsonl.gz",
+      "stored_sha256": "d412ae2f99422c34c82d170e63bb7df10b01ace8f30c46a6009e375fa07a86e1"
+    },
+    {
+      "kind": "metadata",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/syz3/metadata.json",
+      "stored_sha256": "2ac72dc5f1608b3044d925a6c00f5fd518854f9a52254d3b63c7e030d2fa737d"
+    },
+    {
+      "kind": "physics",
+      "logical_sha256": "561f54515f3a8a7bea492d96a114053f682b7f4a336c493b626c2a7ea8937532",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/syz3/physics.csv.gz",
+      "stored_sha256": "37acf733e0201eb70c13a04477f3c385553e0d1d1c29f60cd8e8f1dbd54234bf"
+    },
+    {
+      "kind": "auxiliary-state",
+      "logical_sha256": "19991218ba83a34d7d9d8fdaf8ebdce7c34722c9c970fca92903b19865ba5bfe",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/syz3_2/aux_state.jsonl.gz",
+      "stored_sha256": "b933456b86ccbad5560cd6352e48f79a91e7b9fb253d8bb56464a2175edb01f0"
+    },
+    {
+      "kind": "metadata",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/syz3_2/metadata.json",
+      "stored_sha256": "7feef32fe1f4d33eec065780b8adeabdf7ec0c3888655f03838e53a6166cd788"
+    },
+    {
+      "kind": "physics",
+      "logical_sha256": "e82995fe2109f91f26309860ba80a785311cc79c82eee67a7a24811719a68b2a",
+      "path": "s1/runs/s1-sonic-complete-withemeralds/syz3_2/physics.csv.gz",
+      "stored_sha256": "fa1e3ca01274bde6f3c747048d13f8aeff894ce1725b744f3d58d40da9bac1d8"
     },
     {
       "kind": "auxiliary-state",

@@ -61010,3 +61010,96 @@ to synthesize a POST phase on a VBLANK-only row.
 - Trace-v5 integration therefore uses `surefire.forkCount=1` to obtain a stable,
   memory-bounded baseline comparison. It is not a native-loader workaround,
   and there is no confirmed current `develop` native-library defect to fix.
+
+## 2026-08-03 - Visual trace inter-act title-card admission
+
+- Worktree: `.worktrees/visual-trace-level-handoff`, branch
+  `bugfix/ai-visual-trace-level-handoff`, candidate over `e33f909c6`.
+- A visual S1 complete run loaded GHZ2 during GHZ1's terminal production step,
+  admitted GHZ2 immediately while `LevelManager` still held its initial title
+  card request, and then failed with `segment 1 lost production ownership`
+  when the next step entered `TITLE_CARD`. The load itself was correct; the
+  destination comparison/input/PLC/dynamic-art owners opened one lifecycle
+  boundary too early.
+- `RunPlaybackObservation` now carries the live, structural initial-title-card
+  barrier in both visual and headless adapters. The shared run coordinator
+  remembers the engine-created load but keeps destination ownership closed
+  until that request clears. Source identity pinning preserves the live
+  destination barrier, and no game, zone, route, frame, trace value, second
+  level load, or music restart is involved.
+- Focused launcher/coordinator command:
+  `mvn -q -Dmse=off
+  -Dtest='TestTraceSessionLauncherRunBranch,com.openggf.tests.trace.runs.TestTraceRunPlaybackCoordinator,com.openggf.tests.trace.runs.TestTraceRunPlaybackTranscriptParity'
+  test`. Result: all selected tests passed.
+- S1 inter-act segment command:
+  `mvn -q -Dmse=off -Dsonic1.rom.path=s1.gen
+  -Dtest='TestS1Ghz1CompleteRunTraceReplay,TestS1Ghz2CompleteRunTraceReplay'
+  test`. Result: 2 tests, 0 failures, 0 errors, 0 skips.
+- The S1 GHZ-maze round-trip chain remains red at its existing special-stage
+  boundary (`segment 0 lost production ownership`, BK2 cursor 4858). The exact
+  command fails identically on updated `develop`; it is not an inter-act
+  regression and no frontier moved.
+- Full replay command, run on updated `develop` and the feature worktree:
+  `mvn -q -Dmse=off -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen
+  -Ds3k.rom.path=s3k.gen -Dtest='*TraceReplay' -DfailIfNoTests=false test`.
+  Both runs reported 108 tests, 6 failures, 40 errors, and 0 skips. A
+  normalized Surefire XML comparison of class, method, and failure/error
+  severity was identical across all 46 red methods; no previously green replay
+  regressed and no existing failure changed severity.
+- Full all-ROM suite command on both workspaces:
+  `mvn -q -Dmse=off -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen
+  -Ds3k.rom.path=s3k.gen test`. Both runs ended with the same existing
+  Surefire fork `Java heap space` termination. Completed baseline reports
+  covered 14,336 tests (32 failures, 47 errors, 31 skips); feature reports
+  covered 14,359 tests (33 failures, 47 errors, 31 skips). No baseline-passing
+  method became red and no shared red changed severity. The sole feature-only
+  red XML was the previously generated GHZ-maze chain report already proven to
+  fail identically on baseline. The focused launcher/coordinator/GHZ1/GHZ2 set
+  passed again after the order-heavy full run.
+
+## 2026-08-03 - Visual trace inter-act row-zero publication ownership
+
+- Worktree: `.worktrees/visual-trace-row-zero-handoff`, branch
+  `bugfix/ai-visual-trace-row-zero-handoff`, candidate over `4b954a6b5`.
+- After the title-card admission fix, S1 GHZ2 reached production but its visual
+  comparator aborted on the following row with `dynamic-art comparison row
+  was not drained after production: 0` and a suppressed `row 0 was not
+  published atomically` failure. The host production wrapper had captured the
+  closed GHZ1 comparator before title-card release admitted GHZ2 inside that
+  same wrapper, so post-production drained the stale source owner.
+- Shared-clock destination admission now transfers the active wrapper's
+  deferred comparator to the newly installed destination comparator and
+  rebases the immutable before-snapshot after the destination dynamic-art
+  generation opens. No expected trace value enters production, and the
+  special-local path plus strict missing-publication abort remain unchanged.
+- Exact RED/GREEN command:
+  `mvn -q -Dmse=off
+  -Dtest='TestTraceSessionLauncherRunBranch#destinationAdmissionInsideProductionTransfersRowZeroPublisher'
+  test`. Before the fix: 1 test, 1 failure at destination row one with the
+  reported undrained-row-zero exception. After the fix: 1 test, 0 failures,
+  0 errors, 0 skips.
+- Focused launcher/lifecycle command:
+  `mvn -q -Dmse=off
+  -Dtest='TestTraceSessionLauncherRunBranch,TestTraceSessionLauncherProductionFailureCleanup,TestGameLoopTraceRunPostIteration,com.openggf.trace.live.TestLiveTraceComparatorObserver'
+  test`. Result: all selected tests passed. Intentional failure-containment
+  cases still emitted their expected severe diagnostics.
+- S1 segment command:
+  `mvn -q -Dmse=off -Dsonic1.rom.path=s1.gen
+  -Dtest='TestS1Ghz1CompleteRunTraceReplay,TestS1Ghz2CompleteRunTraceReplay'
+  test`. Result: 2 tests, 0 failures, 0 errors, 0 skips.
+- Feature-worktree replay command:
+  `mvn -q -Dmse=off -Dsonic1.rom.path=s1.gen
+  -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen
+  -Dtest='*TraceReplay' -DfailIfNoTests=false test`. Result: 108 tests,
+  6 failures, 40 errors, 0 skips, matching the existing `develop` result at
+  this base. The red set remains the documented S2 MTZ input and S3K
+  timing/authority/frontier fleet; the targeted S1 segments remain green.
+- Full all-ROM suite command, run on the fresh `develop` baseline and feature
+  worktree: `mvn -q -Dmse=off -Dsonic1.rom.path=s1.gen
+  -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test`. Both runs ended with
+  the same existing Surefire fork `Java heap space` termination. The baseline
+  completed 14,253 tests (26 failures, 7 errors, 31 skips); the feature
+  completed 14,254 tests (26 failures, 7 errors, 31 skips), with the added
+  passing launcher regression accounting for the single-test difference. A
+  normalized Surefire XML comparison found the same 79 red methods and
+  identical failure/error severities; no baseline-passing test regressed.

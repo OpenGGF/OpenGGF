@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.RecordComponent;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -30,6 +31,14 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestTraceRunPlaybackCoordinator {
+
+    @Test
+    void observationCarriesInitialTitleCardProductionBarrier() {
+        assertTrue(Arrays.stream(
+                        RunPlaybackObservation.class.getRecordComponents())
+                .anyMatch(component -> component.getName()
+                        .equals("initialTitleCardPending")));
+    }
 
     @Test
     void initialLevelAdmissionCarriesExplicitRowZeroAndLoadGeneration() {
@@ -59,7 +68,7 @@ class TestTraceRunPlaybackCoordinator {
         RunPlaybackObservation wrongMode = new RunPlaybackObservation(
                 GameMode.TITLE_CARD, 0, 0,
                 new RunPlaybackObservation.LevelIdentity(100, 0, 0, 0),
-                null, null, false, false, 0, false, 10, 20);
+                false, null, null, false, false, 0, false, 10, 20);
 
         assertThrows(IllegalArgumentException.class,
                 () -> coordinator.activateInitialLevel(wrongMode));
@@ -146,6 +155,35 @@ class TestTraceRunPlaybackCoordinator {
     }
 
     @Test
+    void matchingLoadDuringSourceTailWaitsForInitialTitleCardRelease() {
+        TraceRunPlaybackCoordinator coordinator = coordinator(
+                List.of(level("aiz", 0, 1, 100, 20),
+                        level("hcz", 1, 1, 130, 20)),
+                List.of(transition(0, "level_advance", 125)), 180);
+        coordinator.activateInitialLevel(levelObservation(
+                10, 0, 0, 0, false, 0, false, false));
+
+        RunBoundarySignal.LevelLoaded loaded = new RunBoundarySignal.LevelLoaded(
+                125, RunLevelLoadCause.LEVEL_ADVANCE,
+                new RunPlaybackObservation.LevelIdentity(11, 1, 1, 0));
+        assertTrue(coordinator.beforeLoadedLevelActivation(
+                loaded, levelObservation(
+                        11, 1, 0, 1, false, 0, false, true)).isEmpty());
+        assertEquals(
+                List.of(new CloseSegment(0), new EnterTransitionGap(0, 1)),
+                coordinator.afterProduction(levelObservation(
+                        10, 0, 0, 2, true, 0, false, true)));
+
+        assertTrue(coordinator.beforeAdmission(levelObservation(
+                11, 1, 0, 3, false, 0, false, true)).isEmpty());
+        assertEquals(TraceRunPlaybackCoordinator.Phase.TRANSITION_GAP,
+                coordinator.phase());
+        assertInstanceOf(AdmitDestination.class,
+                coordinator.beforeAdmission(levelObservation(
+                        11, 1, 0, 4, false, 0, false, false)).getFirst());
+    }
+
+    @Test
     void loadedDestinationIsNotAdmittedUntilLevelModeIsActive() {
         TraceRunPlaybackCoordinator coordinator = levelPairCoordinator();
         coordinator.activateInitialLevel(levelObservation(1, 0, 0, 0, false, 0));
@@ -158,7 +196,7 @@ class TestTraceRunPlaybackCoordinator {
         coordinator.afterProduction(levelObservation(1, 0, 0, 2, true, 0));
         RunPlaybackObservation titleCard = new RunPlaybackObservation(
                 GameMode.TITLE_CARD, 0, 2, destination,
-                null, null, false, false, 0, false, 10, 20);
+                false, null, null, false, false, 0, false, 10, 20);
 
         assertTrue(coordinator.beforeAdmission(titleCard).isEmpty());
         assertInstanceOf(AdmitDestination.class,
@@ -218,7 +256,7 @@ class TestTraceRunPlaybackCoordinator {
                         new RunPlaybackObservation.LevelIdentity(2, 0, 0, 0)),
                 levelObservation(2, 0, 0, 1, false, 0));
         RunPlaybackObservation exhaustedSpecial = new RunPlaybackObservation(
-                GameMode.SPECIAL_STAGE, 10, 2, null, null, 0,
+                GameMode.SPECIAL_STAGE, 10, 2, null, false, null, 0,
                 false, true, 0, false, 12, 22);
         coordinator.afterProduction(exhaustedSpecial);
 
@@ -449,24 +487,34 @@ class TestTraceRunPlaybackCoordinator {
     private static RunPlaybackObservation levelObservation(
             long generation, int romZone, int act, long step,
             boolean exhausted, int rowsConsumed, boolean lagOnly) {
+        return levelObservation(generation, romZone, act, step,
+                exhausted, rowsConsumed, lagOnly, false);
+    }
+
+    private static RunPlaybackObservation levelObservation(
+            long generation, int romZone, int act, long step,
+            boolean exhausted, int rowsConsumed, boolean lagOnly,
+            boolean initialTitleCardPending) {
         return new RunPlaybackObservation(GameMode.LEVEL, 0, step,
                 new RunPlaybackObservation.LevelIdentity(
                         generation, romZone, romZone, act),
-                null, null, false, exhausted, rowsConsumed,
+                initialTitleCardPending, null, null, false,
+                exhausted, rowsConsumed,
                 lagOnly, 10, 20);
     }
 
     private static RunPlaybackObservation bonusObservation(
             int cursor, long step, BonusStageType type, int rowsConsumed) {
         return new RunPlaybackObservation(GameMode.BONUS_STAGE, cursor, step,
-                null, new RunPlaybackObservation.BonusIdentity(19, 0, type),
+                null, false,
+                new RunPlaybackObservation.BonusIdentity(19, 0, type),
                 null, false, false, rowsConsumed, false, 11, 21);
     }
 
     private static RunPlaybackObservation specialObservation(
             int cursor, long step, int stage, int rowsConsumed) {
         return new RunPlaybackObservation(GameMode.SPECIAL_STAGE, cursor, step,
-                null, null, stage, false, false, rowsConsumed,
+                null, false, null, stage, false, false, rowsConsumed,
                 false, 12, 22);
     }
 }
