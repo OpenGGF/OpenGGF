@@ -4,6 +4,7 @@ import com.openggf.game.LevelEventProvider;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelState;
+import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.TitleCardProvider;
 import com.openggf.game.ZoneRegistry;
@@ -209,6 +210,8 @@ class TestS3kResultsScreenObjectInstance {
     @Test
     void cnzActOneExitStartsActTwoTitleCardAndMusic() throws Exception {
         ActTransitionRecordingServices services = new ActTransitionRecordingServices(0x03, Sonic3kMusic.CNZ2.id);
+        ObjectArtProvider objectArtProvider = mock(ObjectArtProvider.class);
+        services.objectArtProvider = objectArtProvider;
         S3kResultsScreenObjectInstance results = transitionShell(
                 services, PlayerCharacter.SONIC_AND_TAILS, 0);
         results.setServices(services);
@@ -227,6 +230,7 @@ class TestS3kResultsScreenObjectInstance {
         assertEquals(1, services.apparentAct,
                 "Act 1 results exit must update Apparent_act to Act 2 before title-card handoff "
                         + "(docs/skdisasm/sonic3k.asm:62708-62720)");
+        verify(objectArtProvider).prepareRuntimeArtForInLevelTitleCard();
     }
 
     @Test
@@ -521,6 +525,7 @@ class TestS3kResultsScreenObjectInstance {
         private final LevelManager levelManager = mock(LevelManager.class);
         private final List<Integer> playedMusic = new ArrayList<>();
         private final boolean retainedTransitionFlagOwner;
+        private ObjectArtProvider objectArtProvider;
         private int apparentAct = -1;
 
         private ActTransitionRecordingServices(int zone, int act2MusicId) {
@@ -565,6 +570,7 @@ class TestS3kResultsScreenObjectInstance {
             ZoneRegistry zoneRegistry = mock(ZoneRegistry.class);
             when(zoneRegistry.getMusicId(zone, 1)).thenReturn(act2MusicId);
             when(module.getZoneRegistry()).thenReturn(zoneRegistry);
+            when(module.getObjectArtProvider()).thenReturn(objectArtProvider);
             return module;
         }
 

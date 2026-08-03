@@ -783,6 +783,12 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             // ROM lines 62713-62720
             boolean skipTitleCard = (zone == 0x08) || (zone == 0x0B);
             if (!skipTitleCard && (!hasSeamlessTransition || retainedReloadState)) {
+                var gameModule = services().gameModule();
+                var objectArtProvider = gameModule == null
+                        ? null : gameModule.getObjectArtProvider();
+                if (objectArtProvider != null) {
+                    objectArtProvider.prepareRuntimeArtForInLevelTitleCard();
+                }
                 titleInitializationPending = true;
                 pendingPreloadedTitleHandoff = preloadedNextActHandoff;
                 pendingAizTitleHandoff = aizAct1MinibossTitleHandoff;

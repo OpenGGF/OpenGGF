@@ -3,6 +3,9 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K results-owned in-level title cards now receive a fresh title-owner
+  runtime-art admission after a consumed seamless resource handoff, preserving
+  already-admitted enemy queues across ICZ and AIZ act-transition flows.
 - Fix/Test: visual whole-run replay now holds a newly loaded level in its
   native initial-title-card gap before transferring comparator, input,
   PLC/DPLC/Kosinski timing, or dynamic-art ownership. Inter-act S1 runs retain
