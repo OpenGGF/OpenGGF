@@ -67,6 +67,7 @@ public final class DynamicArtLifecycleService
     private long segmentGeneration;
     private boolean runActive;
     private boolean comparisonSegmentOpen;
+    private boolean comparisonSegmentReserved;
     private long nextTransferId;
     private long nextEdgeOrdinal;
     private int logicalFrame;
@@ -149,6 +150,7 @@ public final class DynamicArtLifecycleService
             Preparation s1Preparation,
             boolean runActive,
             boolean comparisonSegmentOpen,
+            boolean comparisonSegmentReserved,
             long nextTransferId,
             long nextEdgeOrdinal,
             int logicalFrame,
@@ -195,10 +197,63 @@ public final class DynamicArtLifecycleService
 
     public void openComparisonSegment() {
         requireRunActive();
-        if (comparisonSegmentOpen) {
+        if (comparisonSegmentOpen || comparisonSegmentReserved) {
             throw new IllegalStateException(
-                    "dynamic-art comparison segment is already open");
+                    "dynamic-art comparison segment is already open or reserved");
         }
+        validateComparisonSegmentActivation();
+        comparisonSegmentOpen = true;
+        initializeComparisonSegment();
+    }
+
+    /**
+     * Allocates the unpublished generation observed immediately before an
+     * externally managed row zero. Production remains gap-owned until the
+     * coordinator services the opening V-blank and activates the reservation.
+     */
+    public void reserveComparisonSegment() {
+        requireRunActive();
+        if (comparisonSegmentOpen || comparisonSegmentReserved) {
+            throw new IllegalStateException(
+                    "dynamic-art comparison segment is already open or reserved");
+        }
+        if (!bufferedEdges.isEmpty()) {
+            throw new IllegalStateException(
+                    "cannot open dynamic-art segment with unpublished production work");
+        }
+        comparisonSegmentReserved = true;
+        initializeComparisonSegment();
+    }
+
+    /** Activates a reserved window without changing its observed generation. */
+    public void activateReservedComparisonSegment() {
+        requireRunActive();
+        if (!comparisonSegmentReserved || comparisonSegmentOpen) {
+            throw new IllegalStateException(
+                    "dynamic-art comparison segment is not reserved");
+        }
+        validateComparisonSegmentActivation();
+        comparisonSegmentReserved = false;
+        comparisonSegmentOpen = true;
+    }
+
+    /** Cancels an unpublished reservation without publishing a synthetic row. */
+    public void cancelReservedComparisonSegment() {
+        requireRunActive();
+        if (!comparisonSegmentReserved || comparisonSegmentOpen) {
+            throw new IllegalStateException(
+                    "dynamic-art comparison segment is not reserved");
+        }
+        comparisonSegmentReserved = false;
+        publishedOutstanding = List.copyOf(ledger.keySet());
+        latest = DynamicArtDiagnosticsSnapshot.unpublished(
+                deliverySerial, segmentGeneration);
+        logicalFrame = 0;
+        nextLogicalEdgeIndex = 0;
+        nextPublicationFrame = 0;
+    }
+
+    private void validateComparisonSegmentActivation() {
         if (!bufferedEdges.isEmpty()) {
             throw new IllegalStateException(
                     "cannot open dynamic-art segment with unpublished production work");
@@ -207,7 +262,9 @@ public final class DynamicArtLifecycleService
             throw new IllegalStateException(
                     "cannot open dynamic-art segment with pending production work");
         }
-        comparisonSegmentOpen = true;
+    }
+
+    private void initializeComparisonSegment() {
         segmentGeneration++;
         publishedOutstanding = List.copyOf(ledger.keySet());
         latest = new DynamicArtDiagnosticsSnapshot(
@@ -243,6 +300,8 @@ public final class DynamicArtLifecycleService
         requireRunActive();
         if (comparisonSegmentOpen) {
             closeComparisonSegment();
+        } else if (comparisonSegmentReserved) {
+            cancelReservedComparisonSegment();
         }
         runActive = false;
     }
@@ -626,6 +685,7 @@ public final class DynamicArtLifecycleService
                 latest.outstandingTransferIds(), latest.published(),
                 s1Preparation, runActive,
                 comparisonSegmentOpen,
+                comparisonSegmentReserved,
                 nextTransferId, nextEdgeOrdinal,
                 logicalFrame, nextLogicalEdgeIndex, nextPublicationFrame,
                 movieLogicalFrame, nextGapEdgeIndex);
@@ -654,6 +714,7 @@ public final class DynamicArtLifecycleService
         s1Preparation = snapshot.s1Preparation();
         runActive = snapshot.runActive();
         comparisonSegmentOpen = snapshot.comparisonSegmentOpen();
+        comparisonSegmentReserved = snapshot.comparisonSegmentReserved();
         nextTransferId = snapshot.nextTransferId();
         nextEdgeOrdinal = snapshot.nextEdgeOrdinal();
         logicalFrame = snapshot.logicalFrame();
@@ -680,6 +741,7 @@ public final class DynamicArtLifecycleService
                 deliverySerial, segmentGeneration);
         runActive = false;
         comparisonSegmentOpen = false;
+        comparisonSegmentReserved = false;
         nextTransferId = 0;
         nextEdgeOrdinal = 0;
         logicalFrame = 0;
@@ -699,6 +761,10 @@ public final class DynamicArtLifecycleService
 
     public boolean isComparisonSegmentOpen() {
         return comparisonSegmentOpen;
+    }
+
+    public boolean isComparisonSegmentReserved() {
+        return comparisonSegmentReserved;
     }
 
     private void buffer(

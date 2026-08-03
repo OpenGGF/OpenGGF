@@ -131,6 +131,30 @@ public final class TraceReplayDriver {
         GameServices.level().skipPendingInitialTitleCardPresentation();
         GameServices.level().consumeInLevelTitleCardRequest();
 
+        startPlayback(playback, false);
+    }
+
+    /**
+     * Adopts the level and title-card state already owned by the visual game
+     * session. This path never resets, registers a team, loads a level, or
+     * clears the production title-card provider.
+     */
+    public void startPreparedLevel() throws Exception {
+        PlaybackDebugManager playback = GameServices.playbackDebug();
+        if (loop.getCurrentGameMode() != GameMode.LEVEL) {
+            throw new IllegalStateException(
+                    "prepared visual trace requires released LEVEL mode");
+        }
+        if (forceHardwareTimingReplay
+                || trace.metadata().hasHardwareTimingStream()) {
+            fixture.gameplayMode().activateRecordedHardwareAdmission();
+        }
+        startPlayback(playback, true);
+    }
+
+    private void startPlayback(
+            PlaybackDebugManager playback, boolean preparedLevel)
+            throws Exception {
         int startIndex = TraceReplayBootstrap
                 .recordingStartFrameForTraceReplay(trace);
         playback.startSession(movie, startIndex);
@@ -184,8 +208,10 @@ public final class TraceReplayDriver {
             }
         }
         TraceReplaySessionBootstrap.applyStartPositionAndGroundSnap(trace, fixture);
-        TraceReplaySessionBootstrap.BootstrapResult boot =
-                TraceReplaySessionBootstrap.applyBootstrap(
+        TraceReplaySessionBootstrap.BootstrapResult boot = preparedLevel
+                ? TraceReplaySessionBootstrap.applyPreparedLevelBootstrap(
+                        trace, fixture, forceHardwareTimingReplay)
+                : TraceReplaySessionBootstrap.applyBootstrap(
                         trace, fixture, -1, forceHardwareTimingReplay);
 
         this.initialCursor = boot.replayStart().startingTraceIndex();

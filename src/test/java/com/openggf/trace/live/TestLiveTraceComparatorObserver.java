@@ -240,23 +240,20 @@ class TestLiveTraceComparatorObserver {
     }
 
     @Test
-    void rowZeroAcceptsDeferredInitialSegmentGeneration() {
+    void rowZeroRejectsGenerationChange() {
         List<FrameComparison> observed = new ArrayList<>();
         LiveTraceComparator comparator = new LiveTraceComparator(
                 emptyDynamicArtTrace(), ToleranceConfig.DEFAULT, 0,
                 TestLiveTraceComparatorObserver::stubSprite,
                 null, observed::add);
-        comparator.authorizeDeferredInitialDynamicArtGeneration();
         comparator.afterFrameAdvanced(
                 new Bk2FrameInput(0, 0, 0, false, "0"), false);
 
-        comparator.publishPendingDynamicArtComparison(
-                DynamicArtDiagnosticsSnapshot.unpublished(4, 7),
-                new DynamicArtDiagnosticsSnapshot(
-                        0, List.of(), List.of(), 5, 8, true));
-
-        assertEquals(1, observed.size());
-        assertFalse(observed.getFirst().hasDivergence());
+        assertThrows(IllegalStateException.class,
+                () -> comparator.publishPendingDynamicArtComparison(
+                        DynamicArtDiagnosticsSnapshot.unpublished(4, 7),
+                        new DynamicArtDiagnosticsSnapshot(
+                                0, List.of(), List.of(), 5, 8, true)));
     }
 
     @Test
@@ -265,7 +262,6 @@ class TestLiveTraceComparatorObserver {
                 emptyDynamicArtTrace(), ToleranceConfig.DEFAULT, 0,
                 TestLiveTraceComparatorObserver::stubSprite,
                 null, ignored -> { });
-        comparator.authorizeDeferredInitialDynamicArtGeneration();
         comparator.afterFrameAdvanced(
                 new Bk2FrameInput(0, 0, 0, false, "0"), false);
 
@@ -282,7 +278,6 @@ class TestLiveTraceComparatorObserver {
                 emptyDynamicArtTrace(1), ToleranceConfig.DEFAULT, 1,
                 TestLiveTraceComparatorObserver::stubSprite,
                 null, ignored -> { });
-        comparator.authorizeDeferredInitialDynamicArtGeneration();
         comparator.afterFrameAdvanced(
                 new Bk2FrameInput(0, 0, 0, false, "0"), false);
 
@@ -299,7 +294,6 @@ class TestLiveTraceComparatorObserver {
                 emptyDynamicArtTrace(), ToleranceConfig.DEFAULT, 0,
                 TestLiveTraceComparatorObserver::stubSprite,
                 null, ignored -> { });
-        comparator.authorizeDeferredInitialDynamicArtGeneration();
         comparator.afterFrameAdvanced(
                 new Bk2FrameInput(0, 0, 0, false, "0"), false);
 
@@ -316,7 +310,6 @@ class TestLiveTraceComparatorObserver {
                 emptyDynamicArtTrace(), ToleranceConfig.DEFAULT, 0,
                 TestLiveTraceComparatorObserver::stubSprite,
                 null, ignored -> { });
-        comparator.authorizeDeferredInitialDynamicArtGeneration();
         comparator.afterFrameAdvanced(
                 new Bk2FrameInput(0, 0, 0, false, "0"), false);
 
@@ -329,7 +322,7 @@ class TestLiveTraceComparatorObserver {
     }
 
     @Test
-    void stableRowZeroConsumesDeferredGenerationAuthorization() {
+    void laterRowRejectsGenerationChangeAfterStableRowZero() {
         TraceData source = emptyDynamicArtTrace();
         TraceData trace = TraceFixtures.trace(
                 source.metadata(),
@@ -344,7 +337,6 @@ class TestLiveTraceComparatorObserver {
                 trace, ToleranceConfig.DEFAULT, 0,
                 TestLiveTraceComparatorObserver::stubSprite,
                 null, ignored -> { });
-        comparator.authorizeDeferredInitialDynamicArtGeneration();
         Bk2FrameInput input = new Bk2FrameInput(0, 0, 0, false, "0");
         comparator.afterFrameAdvanced(input, false);
         comparator.publishPendingDynamicArtComparison(

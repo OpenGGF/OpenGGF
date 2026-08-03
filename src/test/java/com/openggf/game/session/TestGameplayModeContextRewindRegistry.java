@@ -33,6 +33,7 @@ import com.openggf.game.timing.HardwareTimingBoundaryObserver;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.game.resources.DynamicArtLifecycleService;
+import com.openggf.game.resources.QueueDiagnosticSnapshot;
 import com.openggf.game.zone.NoOpZoneRuntimeState;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.game.zone.ZoneRuntimeState;
@@ -363,6 +364,53 @@ class TestGameplayModeContextRewindRegistry {
         assertEquals(HardwareReadinessAdmissionPolicy.RECORDED,
                 context.hardwareTiming().admissionPolicy());
         assertNotNull(context.recordedCompletionAuthority());
+    }
+
+    @Test
+    void liveContextActivatesRecordedAdmissionWithoutReplacingRuntimeOwners() {
+        GameplayModeContext context = new GameplayModeContext(
+                new WorldSession(new Sonic2GameModule()));
+        HardwareTimingService timing = context.hardwareTiming();
+        RuntimeArtCoordinator runtimeArt = context.runtimeArtCoordinator();
+
+        var authority = context.activateRecordedHardwareAdmission();
+
+        assertSame(timing, context.hardwareTiming());
+        assertSame(runtimeArt, context.runtimeArtCoordinator());
+        assertSame(authority, context.recordedCompletionAuthority());
+        assertEquals(HardwareReadinessAdmissionPolicy.RECORDED,
+                timing.admissionPolicy());
+        assertThrows(IllegalStateException.class,
+                context::activateRecordedHardwareAdmission);
+    }
+
+    @Test
+    void recordedAdmissionRequiresEveryRuntimeArtQueueToBeIdle() {
+        QueueDiagnosticSnapshot busy = new QueueDiagnosticSnapshot(
+                QueueDiagnosticSnapshot.Kind.S3K_KOS_MODULE,
+                true, false, 0x1000, 0x2000, 8, 4,
+                List.of(), List.of());
+        QueueDiagnosticSnapshot prepared = new QueueDiagnosticSnapshot(
+                QueueDiagnosticSnapshot.Kind.S3K_KOS_MODULE,
+                true, true, 0x1000, 0x2000, 8, 0,
+                List.of(), List.of());
+        QueueDiagnosticSnapshot queued = new QueueDiagnosticSnapshot(
+                QueueDiagnosticSnapshot.Kind.S3K_KOS_MODULE,
+                true, false, -1, -1, -1, -1,
+                List.of("queued"), List.of());
+
+        for (QueueDiagnosticSnapshot active : List.of(busy, prepared, queued)) {
+            IllegalStateException failure = assertThrows(
+                    IllegalStateException.class,
+                    () -> GameplayModeContext
+                            .requireQueuesIdleForRecordedAdmission(
+                                    List.of(active)));
+            assertTrue(failure.getMessage().contains("not idle"));
+        }
+        GameplayModeContext.requireQueuesIdleForRecordedAdmission(List.of(
+                QueueDiagnosticSnapshot.idle(
+                        QueueDiagnosticSnapshot.Kind.S3K_KOS_MODULE,
+                        List.of())));
     }
 
     @Test

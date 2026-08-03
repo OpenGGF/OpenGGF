@@ -60918,3 +60918,43 @@ session mutation:
 These are publication-driven timing-authority frontiers, not new gameplay
 comparison regressions. The fail-closed schedule contract deliberately refuses
 to synthesize a POST phase on a VBLANK-only row.
+
+## 2026-08-03 - Visual trace replay parity boundaries
+
+- Worktree: `.worktrees/visual-trace-replay-boundary`, branch
+  `bugfix/ai-visual-trace-replay-boundary`, uncommitted candidate over
+  `2c7fb8fbb`.
+- The visual S1 GHZ1 regression at frame 4998 (`x_sub`, followed by speed)
+  was a playback-input ownership error: the visual bridge published a forced
+  sprite mask separately from logical controller state, so the signpost's
+  forced-right control lost to the next recorded row. Visual replay now
+  publishes BK2 through the logical input owner, preserves game-scripted
+  control precedence, and prevents recorded Start from reaching the engine's
+  separate visible-pause command. No trace-specific gameplay branch or trace
+  value was added.
+- Visual row-zero dynamic-art comparison now reserves its publication window
+  before production and activates that same generation after PLC service.
+  Title-card presentation and replay share the original level load and gameplay
+  context, with a checked live-to-recorded hardware-timing epoch transition at
+  release; no second load or music restart occurs.
+- Focused regression command:
+  `mvn -q -Dmse=off
+  -Ds3k.rom.path=s3k.gen
+  -Dtest='TestLevelIterationAdmissionController#visualTraceSetupOnlyTitleCardReleaseStillArmsReplayBootstrap,TestPlaybackAdvanceOnlyInputBridge#immediateLoadedLevelPublicationRemainsOwnedByPlaybackBridgeForCleanup+recordedStartDoesNotToggleVisibleUserPause'
+  test`. Result: 3 tests, 0 failures, 0 errors, 0 skips.
+- Existing headless parity command:
+  `mvn -q -Dmse=off
+  -Dsonic1.rom.path=s1.gen
+  -Dtest='TestS1Ghz1CompleteRunTraceReplay,TestS1SpecialStageTraceReplay'
+  test`. Result: 2 tests, 0 failures, 0 errors, 0 skips.
+- Full-suite comparison command, run first on updated `develop` and then on the
+  feature worktree:
+  `mvn -q -Dmse=off
+  -Dsonic1.rom.path=s1.gen
+  -Dsonic2.rom.path=s2.gen
+  -Ds3k.rom.path=s3k.gen test`.
+  Updated `develop`: 14,233 tests, 26 failures, 7 errors, 31 skips. Feature:
+  14,254 tests, 26 failures, 7 errors, 31 skips. A normalized comparison of
+  every failing test name and failure/error severity was empty: all 33 red
+  methods are the unchanged baseline set, and the 21 added tests pass. No
+  headless trace frontier or previously green test regressed.

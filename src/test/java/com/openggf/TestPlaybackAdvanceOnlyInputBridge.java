@@ -21,6 +21,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -85,6 +86,49 @@ class TestPlaybackAdvanceOnlyInputBridge {
         }
     }
 
+    @Test
+    void immediateLoadedLevelPublicationRemainsOwnedByPlaybackBridgeForCleanup() throws Exception {
+        InputHandler input = new InputHandler();
+        GameLoop loop = new GameLoop(input);
+        playback.startSession(heldActionMovie(), 0);
+
+        loop.applyScheduledPlaybackInputImmediately();
+        assertTrue(input.hasLogicalOverride(),
+                "the synchronously loaded player must see trace input before its first tick");
+
+        playback.endSession();
+        invokeSyncPlaybackInputBridge(loop);
+        assertFalse(input.hasLogicalOverride(),
+                "the bridge must clear the immediate publication when playback ends");
+        assertEquals(0, input.logical().player1().heldMask(),
+                "same-step consumers must see refreshed live input, not stale BK2 state");
+    }
+
+    @Test
+    void recordedStartDoesNotToggleVisibleUserPause() {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(0, 0)
+                .build();
+        InputHandler input = new InputHandler();
+        GameLoop loop = new GameLoop(input);
+        loop.changeGameModeWithoutRewindBoundary(GameMode.LEVEL);
+        playback.startSession(startEdgeMovie(), 0);
+
+        loop.applyScheduledPlaybackInputImmediately();
+        loop.step();
+
+        assertFalse(loop.isUserPaused(),
+                "recorded Start belongs to ROM input and must not toggle the visual pause overlay");
+
+        int pauseKey = SonicConfigurationService.getInstance()
+                .getInt(SonicConfiguration.PAUSE_KEY);
+        input.handleKeyEvent(pauseKey, org.lwjgl.glfw.GLFW.GLFW_PRESS);
+        loop.step();
+
+        assertTrue(loop.isUserPaused(),
+                "the configured live pause key must remain usable during playback");
+    }
+
     private static Bk2Movie heldActionMovie() {
         int heldMask = AbstractPlayableSprite.INPUT_RIGHT | AbstractPlayableSprite.INPUT_JUMP;
         return new Bk2Movie(
@@ -95,6 +139,17 @@ class TestPlaybackAdvanceOnlyInputBridge {
                         new Bk2FrameInput(0, heldMask, 1, false, "press"),
                         new Bk2FrameInput(1, heldMask, 1, false, "hold"),
                         new Bk2FrameInput(2, heldMask, 1, false, "hold")),
+                1);
+    }
+
+    private static Bk2Movie startEdgeMovie() {
+        return new Bk2Movie(
+                Path.of("synthetic-start-edge.bk2"),
+                "logkey",
+                Map.of(),
+                List.of(
+                        new Bk2FrameInput(0, 0, 0, true, "start"),
+                        new Bk2FrameInput(1, 0, 0, false, "release")),
                 1);
     }
 

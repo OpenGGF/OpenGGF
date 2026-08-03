@@ -7,6 +7,7 @@ import java.util.Objects;
 /** Structural launch state for a visual trace's unobserved title-card prelude. */
 public final class VisualTraceLaunchPhase {
     private State state = State.NEW;
+    private boolean titleCardControlReleased;
 
     public void beginTitleCardPresentation() {
         if (state != State.NEW) {
@@ -16,16 +17,22 @@ public final class VisualTraceLaunchPhase {
         state = State.TITLE_CARD_PRESENTATION;
     }
 
-    /**
-     * Claims the one between-iterations handoff after the complete overlay.
-     * Carries only presentation structure, never trace or gameplay values.
-     */
-    public boolean beginReplayBootstrapIfReady(
-            GameMode mode, boolean titleCardComplete) {
+    /** Claims the real title-card control-release boundary exactly once. */
+    public boolean claimTitleCardControlRelease() {
+        if (state != State.TITLE_CARD_PRESENTATION
+                || titleCardControlReleased) {
+            return false;
+        }
+        titleCardControlReleased = true;
+        return true;
+    }
+
+    /** Claims the one between-iterations handoff after control is released. */
+    public boolean beginReplayBootstrapIfReady(GameMode mode) {
         Objects.requireNonNull(mode, "mode");
         if (state != State.TITLE_CARD_PRESENTATION
                 || mode != GameMode.LEVEL
-                || !titleCardComplete) {
+                || !titleCardControlReleased) {
             return false;
         }
         state = State.REPLAY_BOOTSTRAP;

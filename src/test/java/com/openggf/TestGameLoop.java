@@ -922,7 +922,7 @@ public class TestGameLoop {
     }
 
     @Test
-    void traceReplayContextHandoffResetsPresentationAndRetainedModuleState() {
+    void traceReplayActivationPreservesPresentationAndRetainedModuleState() {
         Sonic2GameModule module = spy(new Sonic2GameModule());
         @SuppressWarnings("unchecked")
         RewindSnapshottable<Object> retained = mock(RewindSnapshottable.class);
@@ -944,22 +944,18 @@ public class TestGameLoop {
         assertEquals(HardwareReadinessAdmissionPolicy.LIVE,
                 presentation.hardwareTiming().admissionPolicy());
 
-        GameplayModeContext replay =
-                com.openggf.game.session.VisualTraceReplayContextHandoff.reopen(
-                        HardwareReadinessAdmissionPolicy.RECORDED,
-                        loop.getTitleCardProvider(),
-                        loop::resetModuleScopedProviders,
-                        loop::setGameplayMode);
+        GameplayModeContext replay = presentation;
+        replay.activateRecordedHardwareAdmission();
 
-        assertNotSame(presentation, replay);
-        assertFalse(presentation.isGameplayRuntimeReady());
-        verify(titleCard).reset();
-        verify(retained).resetForMissingSnapshot();
+        assertSame(presentation, replay);
+        assertTrue(presentation.isGameplayRuntimeReady());
+        verify(titleCard, never()).reset();
+        verify(retained, never()).resetForMissingSnapshot();
         assertEquals(HardwareReadinessAdmissionPolicy.RECORDED,
                 replay.hardwareTiming().admissionPolicy());
         assertTrue(replay.isGameplayRuntimeReady());
-        assertTrue(replay.dynamicArtLifecycle().capture().ledger().isEmpty(),
-                "presentation dynamic-art state must not cross the handoff");
+        assertFalse(replay.dynamicArtLifecycle().capture().ledger().isEmpty(),
+                "production dynamic-art state must remain in the same context");
         assertSame(replay, SessionManager.getCurrentGameplayMode());
     }
 
