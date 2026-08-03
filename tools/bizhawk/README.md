@@ -332,9 +332,9 @@ tools/bizhawk-headless/run.sh \
 
 #### S3K hardware-timing stream
 
-Current native S3K captures keep `trace_schema: 7` and write
-`hardware_timing_schema: 2`, `hardware_timing.jsonl`, and recorder versions
-`6.41-s3k` / `6.42-s3k-completerun`. Schema 2 authorizes exactly two
+Current native S3K captures use `trace_schema: 5`,
+`recorder: native-bizhawk-headless`, and `recorder_version: 3.0`. Optional
+`hardware_timing.jsonl` uses one module-plus-direct grammar with exactly two
 production-submitted work kinds:
 
 - `KOS_DECOMPRESSION_QUEUE`, emitted when the mirrored `$FF40-$FF5F` direct
@@ -347,49 +347,23 @@ Each kind owns an independent ordinal ledger. Events carry only kind,
 ordinal, submission fingerprint, raw frame, and boundary; they never contain
 compressed or decoded bytes. When both kinds retire on one raw frame, the
 module `post_objects` edge is serialized before the direct `pre_main_loop`
-edge. Versions 6.41/6.42 additionally use the canonical final-active FIFO
-transition to attribute a held-row retirement without changing event
-identities or queue ledgers.
+edge. The canonical final-active FIFO transition may attribute a held-row
+retirement without changing event identities or queue ledgers.
 
-The native recorder is the maintained publication authority. The Lua S3K
-recorders are intentionally frozen at schema 1 and emit module edges only.
-Existing schema-1 fixtures remain loadable, with direct jobs using the live
-production scheduler. The AIZ intro and ICZ act-transition fixtures listed in
-the S3K hardware-timing inventory cannot certify their direct queue-empty
-boundary until a separately reviewed and explicitly approved schema-2
-publication replaces them. Do not hand-edit or regenerate committed fixture
-payloads as part of a recorder implementation change.
-
-**Current schema-2 publication boundary:** the three canonical STANDARD
-fixtures are committed as `6.39-s3k`, `trace_schema: 7`, and
-`hardware_timing_schema: 2`; the maintained native writer emits `6.41-s3k`
-with the same schemas. `S3KTraceDifferentialTests` require byte identity for
-`physics.csv` / `aux_state.jsonl`, permit only recording date and the exact
-6.39-to-6.41 metadata migration, and require byte-identical timing unless the
-only delta is the canonical same-frame module-POST-before-direct-PRE reorder
-with the exact event-line multiset preserved. Any changed event field,
-cross-frame movement, or payload difference fails closed:
-
-- `src/test/resources/traces/s3k/aiz1_to_hcz_fullrun/` — `aiz_end_to_end`,
-  BK2 frame offset 511, 20798 trace rows (ends on the BK2-end guard: 511 +
-  20798 == the movie's 21309 input rows);
-- `src/test/resources/traces/s3k/cnz/` — `level_gated_reset_aware`, offset
-  3171 (the last-armed segment after a pause+A discard-and-re-arm out of
-  AIZ), 42253 trace rows, finalizing on the zone-leave check;
-- `src/test/resources/traces/s3k/mgz/` — `level_gated_reset_aware`, offset
-  2602, 35912 trace rows, pinning the profile's zone-independence (it
-  advertises the `cnz_cylinder_*` aux families and finalizes on zone-leave
-  despite never starting in CNZ, and legitimately carries no
-  `gameplay_start`/act-transition checkpoint — only `gameplay_end`).
+There is no timing-schema compatibility mode. The native recorder and the
+cross-game hardware-timing contract own current behavior; frozen Lua and
+numbered predecessor schemas are research evidence only. A candidate stays in
+scratch until strict v5 validation, literal comparison, candidate-root replay,
+native gates, and explicit publication review succeed. Never hand-edit an
+installed payload to cross the v5 boundary.
 
 The byte-level contract lives in
 `tools/bizhawk-headless/docs/s3k-trace-recorder-behavior.md` (RAM map,
-physics CSV, schema-2 timing ledgers/stream, metadata) and
+physics CSV, v5 timing ledgers/stream, metadata) and
 `tools/bizhawk-headless/docs/s3k-profiles-and-hooks.md`
 (profiles, stop ordering, hook architecture); `tools/bizhawk-headless/docs/s3k-aux-events.md`
-owns the aux event surface. For the frozen physics/aux schema-1 surface, the
-published Lua bytes remain historical truth. For current schema-2 timing, the
-native recorder and approved hardware-timing contract are authoritative.
+owns the aux event surface. Their `Pre-v5 historical evidence` sections retain
+the numbered predecessor record without creating a live compatibility axis.
 
 **Deferred: hook-driven aux families.** The Lua's M68K exec/memory-write
 diagnostic hooks (`OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS=1`) drive 13 aux event
@@ -426,13 +400,13 @@ Full table and rationale: `s3k-aux-events.md` §5.1.
 
 ### Sonic 3 & Knuckles complete-run and run mode
 
-With the S3&K locked-on ROM, `--mode trace` also replaces the frozen
-`s3k_complete_run_recorder.lua` (`6.37-s3k-completerun`) on Linux — the
-maintained native writer is `6.42-s3k-completerun`. This is the separate
-per-zone-segment / bonus-stage / special-stage recorder, distinct from the
-STANDARD recorder above. It is selected the same way as S1's
-complete-run recorder, not via `--trace-profile <one of the three STANDARD
-profiles>`:
+With the S3&K locked-on ROM, `--mode trace` uses the same sole v5 envelope:
+`trace_schema: 5`, `recorder: native-bizhawk-headless`, and
+`recorder_version: 3.0`. Complete-run timing uses the same
+module-plus-direct grammar as the STANDARD recorder. This is the separate
+per-zone-segment / bonus-stage / special-stage recorder, selected the same way
+as S1's complete-run recorder, not via `--trace-profile <one of the three
+STANDARD profiles>`:
 
 - **`--trace-profile complete_run`** — one movie pass over an entire
   playthrough BK2 emits a separate per-zone segment directory
@@ -462,9 +436,7 @@ tools/bizhawk-headless/run.sh \
   --output "$PWD/target/bizhawk-headless-s3k-completerun" \
   --trace-profile complete_run
 
-# Run mode, identity (C): Knuckles multi-bonus movie under the run_id the
-# bonus_gumball / bonus_slots / bonus_pachinko / special_stage fixtures were
-# captured under
+# Run mode: Knuckles multi-bonus movie with an explicit run id
 BIZHAWK_HOME=/abs/path/to/docs/BizHawk-2.11-linux-x64 \
 tools/bizhawk-headless/run.sh \
   --mode trace \
@@ -473,10 +445,7 @@ tools/bizhawk-headless/run.sh \
   --output "$PWD/target/bizhawk-headless-s3k-run-c" \
   --run-id s3k-multibonus
 
-# Run mode, identity (B): the same movie under the run_id the
-# runs/s3-knux-multibonus-ss/ tree carries (byte-exact since that set was
-# regenerated at 6.32, then again at 6.33 for the ADDR_VBLA_WORD fix —
-# see the byte-parity note below)
+# Run mode: the same movie under a second explicit run id
 BIZHAWK_HOME=/abs/path/to/docs/BizHawk-2.11-linux-x64 \
 tools/bizhawk-headless/run.sh \
   --mode trace \
@@ -491,9 +460,16 @@ tools/bizhawk-headless/run.sh \
   --mode trace \
   --rom "$S3K_ROM_PATH" \
   --movie "$PWD/src/test/resources/traces/s3k/_movies/s3k-knuckles-complete-superemeralds.bk2" \
-  --output "$PWD/tools/bizhawk-headless/.scratch/s3k-knuckles-complete-superemeralds-v641" \
+  --output "$PWD/tools/bizhawk-headless/.scratch/s3k-knuckles-complete-superemeralds-v5-candidate" \
   --run-id s3k-knuckles-complete-superemeralds
 ```
+
+#### Pre-v5 historical capture notes
+
+Everything below this heading records predecessor fixture identities,
+differential gates, and migration decisions. Versioned stamps and schema axes
+here are historical evidence only; they do not select live recorder, parser,
+replay, or publication behavior.
 
 The super-emerald movie has 434,417 input rows and SHA-256
 `aa892856df22b7bb1fe5accb48db10b90dc26845d1dccee90352da30349f53cc`.

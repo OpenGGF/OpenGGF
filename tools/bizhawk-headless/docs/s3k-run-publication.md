@@ -1,9 +1,25 @@
 # S3K Complete-Run Recorder — Publication Specification (directories, metadata.json, run_manifest.json, encodings)
 
-> **V5 supersession (2026-08-03).** Publication now uses the single v5
-> envelope and literal candidate workflow in
-> `docs/guide/contributing/trace-v5-publication.md`. The Candidate-B and
-> versioned identities below remain historical publication evidence.
+## Current v5 contract
+
+Publication accepts only `recorder: native-bizhawk-headless`,
+`recorder_version: 3.0`, and `trace_schema: 5`. Recorder provenance is opaque
+and never selects parser or replay behavior. Level and bonus payloads use the
+42-column level row; S3K special-stage payloads use the game-owned 20-column
+row. Optional hardware timing uses one module-plus-direct timing grammar.
+There is no numbered Lua stamp, CSV version, or secondary timing-schema axis.
+
+Every candidate remains outside the installed fixture root until the strict
+v5 validator, literal comparator, candidate-root replay, native gates, and
+explicit publication review succeed. The maintained workflow is
+`docs/guide/contributing/trace-v5-publication.md`.
+
+## Pre-v5 historical evidence
+
+Everything below this heading is a record of predecessor publication events
+and byte identities. Any “current”, “maintained”, “canonical”,
+“authoritative”, compatibility, or normalization statement is historical
+within that recorder state and is not a live v5 rule.
 
 > **2026-08-02 recorder-order note.** The maintained native complete-run
 > writer is `6.42-s3k-completerun`. On a shared raw frame it serializes module

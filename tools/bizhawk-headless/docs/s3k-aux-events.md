@@ -1,8 +1,24 @@
-# S3K Standard Recorder — Authoritative AUX Event Spec
+# S3K Standard Recorder — AUX Event Reference
 
-> **V5 supersession (2026-08-03).** Current semantic aux capabilities live in
-> the strict v5 envelope. Native ROM/disassembly behavior and native tests are
-> authoritative for publication; Lua/version text below is diagnostic history.
+## Current v5 contract
+
+The maintained native recorder emits only `recorder: native-bizhawk-headless`,
+`recorder_version: 3.0`, and `trace_schema: 5`.
+Provenance is opaque and never selects aux parsing or replay behavior. Aux
+events are semantic capabilities inside that envelope; optional hardware
+timing uses one module-plus-direct timing grammar and remains isolated from
+aux/gameplay authority. No numbered Lua stamp, CSV version, or secondary
+timing-schema axis is emitted or accepted.
+
+Current event behavior is resolved against the ROM/disassembly and native
+tests. The byte-level catalogue below is retained as predecessor derivation
+evidence, not as a compatibility surface.
+
+## Pre-v5 historical evidence
+
+Everything below this heading describes predecessor Lua output and frozen
+fixtures. Any “current”, “canonical”, “authoritative”, or normative wording is
+historical within that recorder state and does not define live v5 output.
 
 Source of truth: `tools/bizhawk/s3k_trace_recorder.lua` (metadata stamp
 `6.32-s3k` at HEAD, `trace_schema` 6, `csv_version` 7) plus

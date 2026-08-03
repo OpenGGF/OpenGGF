@@ -1,8 +1,23 @@
 # S3K Standard Trace Recorder — Profiles, Hooks, and Movie Handling
 
-> **V5 supersession (2026-08-03).** Profiles remain semantic capture choices,
-> but current output always uses v5 and opaque recorder provenance. Lua stamp
-> details below are historical/diagnostic evidence only.
+## Current v5 contract
+
+Profiles remain semantic capture choices, but every maintained native capture
+emits only `recorder: native-bizhawk-headless`, `recorder_version: 3.0`, and
+`trace_schema: 5`. Provenance is opaque and never selects parser or replay
+behavior. Ordinary level profiles use the 42-column level row; optional
+hardware timing uses one module-plus-direct timing grammar. No numbered Lua
+stamp, CSV version, or secondary timing-schema axis is emitted or accepted.
+
+Current profile and hook behavior is resolved against the ROM/disassembly and
+native tests. The detailed Lua migration record below is retained only as
+derivation evidence.
+
+## Pre-v5 historical evidence
+
+Everything below this heading describes predecessor recorder states. Any
+“current”, “canonical”, “authoritative”, or normative wording is historical
+within that state and does not define live v5 output or compatibility.
 
 Authoritative migration spec for `tools/bizhawk/s3k_trace_recorder.lua`
 (v6.32-s3k at HEAD, using `tools/bizhawk/lib/oggf_trace_common.lua`) covering:

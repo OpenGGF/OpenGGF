@@ -34,8 +34,8 @@ class TestTraceFixtureRootOverride {
     @Test
     void authorityGuardConfinesOverrideLiteralToTheTestFixtureResolver() throws Exception {
         assertEquals(java.util.List.of(
-                        "src/test/java/com/openggf/tests/trace/TestTraceFixtureRootOverride.java",
-                        "src/test/java/com/openggf/tests/trace/TraceFixtureRoot.java"),
+                        Path.of("src/test/java/com/openggf/tests/trace/TestTraceFixtureRootOverride.java"),
+                        Path.of("src/test/java/com/openggf/tests/trace/TraceFixtureRoot.java")),
                 java.nio.file.Files.walk(Path.of("src"))
                         .filter(path -> path.toString().endsWith(".java"))
                         .filter(path -> {
@@ -46,7 +46,7 @@ class TestTraceFixtureRootOverride {
                                 throw new java.io.UncheckedIOException(exception);
                             }
                         })
-                        .map(Path::toString)
+                        .map(Path::normalize)
                         .sorted()
                         .toList());
 

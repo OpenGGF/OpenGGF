@@ -5,6 +5,7 @@ from __future__ import annotations
 import gzip
 import hashlib
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -31,6 +32,14 @@ HEADER_42 = ["frame", "input", "camera_x", "camera_y", "rings", "gameplay_frame_
              "sidekick_stand_on_obj", "sidekick_animation_id", "sidekick_mapping_frame"]
 COMPARATOR = Path(__file__).resolve().parents[1] / "traces" / "compare_trace_v5_candidates.py"
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+S3K_V5_DOCUMENTS = (
+    "s3k-trace-recorder-behavior.md",
+    "s3k-complete-run-behavior.md",
+    "s3k-run-publication.md",
+    "s3k-aux-events.md",
+    "s3k-profiles-and-hooks.md",
+    "s3k-completerun-profiles.md",
+)
 
 
 class CompareTraceV5CandidatesTests(unittest.TestCase):
@@ -187,16 +196,24 @@ class CompareTraceV5CandidatesTests(unittest.TestCase):
         self.assertFalse(output.exists())
 
     def test_s3k_current_contract_documentation_has_only_the_v5_axes(self) -> None:
-        document = (REPOSITORY_ROOT / "tools" / "bizhawk-headless" / "docs"
-                    / "s3k-trace-recorder-behavior.md").read_text()
-        current = document.split("## Pre-v5 historical evidence", maxsplit=1)[0]
-        self.assertIn('`recorder: native-bizhawk-headless`', current)
-        self.assertIn('`recorder_version: 3.0`', current)
-        self.assertIn('`trace_schema: 5`', current)
-        self.assertIn("one module-plus-direct timing grammar", current)
-        for legacy_axis in ("lua_script_version", "csv_version", "hardware_timing_schema",
-                            "trace_schema: 7", "schema 1", "schema 2"):
-            self.assertNotIn(legacy_axis, current)
+        docs = REPOSITORY_ROOT / "tools" / "bizhawk-headless" / "docs"
+        for name in S3K_V5_DOCUMENTS:
+            with self.subTest(document=name):
+                document = (docs / name).read_text()
+                self.assertIn("## Pre-v5 historical evidence", document)
+                current = document.split("## Pre-v5 historical evidence", maxsplit=1)[0]
+                self.assertIn('`recorder: native-bizhawk-headless`', current)
+                self.assertIn('`recorder_version: 3.0`', current)
+                self.assertIn('`trace_schema: 5`', current)
+                self.assertRegex(current, r"one\s+module-plus-direct\s+timing grammar")
+                for legacy_axis in (
+                    "lua_script_version", "LUA_SCRIPT_VERSION", "csv_version",
+                    "hardware_timing_schema", "trace_schema: 7", "trace_schema 7",
+                    "schema 1", "schema 2", "schema-1", "schema-2",
+                    "Lua is the behavioral authority", "Lua is authoritative",
+                ):
+                    self.assertNotIn(legacy_axis, current)
+                self.assertIsNone(re.search(r"\b(?:v)?6\.\d", current))
 
     def test_bootstrap_snapshot_javadoc_names_the_semantic_v5_capability(self) -> None:
         source = (REPOSITORY_ROOT / "src" / "test" / "java" / "com" / "openggf" / "tests"
@@ -205,6 +222,29 @@ class CompareTraceV5CandidatesTests(unittest.TestCase):
             "private EngineSnapshot captureEngineSnapshot")]
         self.assertIn("native_prelude_bootstrap", paragraph)
         self.assertNotIn("lua_script_version", paragraph)
+
+    def test_fixture_root_authority_guard_compares_paths_without_platform_separators(self) -> None:
+        source = (REPOSITORY_ROOT / "src" / "test" / "java" / "com" / "openggf" / "tests"
+                  / "trace" / "TestTraceFixtureRootOverride.java").read_text()
+        self.assertIn(".map(Path::normalize)", source)
+        self.assertNotIn(".map(Path::toString)", source)
+
+    def test_bizhawk_readme_s3k_live_sections_use_only_v5(self) -> None:
+        readme = (REPOSITORY_ROOT / "tools" / "bizhawk" / "README.md").read_text()
+        sections = (
+            readme[readme.index("#### S3K hardware-timing stream"):readme.index(
+                "**Deferred: hook-driven aux families.")],
+            readme[readme.index("### Sonic 3 & Knuckles complete-run and run mode"):readme.index(
+                "#### Pre-v5 historical capture notes")],
+        )
+        for section in sections:
+            self.assertIn("trace_schema: 5", section)
+            self.assertIn("recorder_version: 3.0", section)
+            self.assertIn("module-plus-direct", section)
+            for legacy in ("hardware_timing_schema", "trace schema 7", "schema-1",
+                           "schema-2", "6.40", "6.41", "6.42"):
+                self.assertNotIn(legacy, section)
+            self.assertIsNone(re.search(r"\b(?:v)?6\.\d", section))
 
     def write_fixture(self, root: Path, header: list[str], rows: list[list[str]],
                       compressed: bool = False, v5: bool = True,
