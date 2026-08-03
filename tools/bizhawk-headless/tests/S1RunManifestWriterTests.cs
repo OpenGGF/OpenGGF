@@ -17,7 +17,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         {
             tests.Add(new TestMain.TestCase(
                 "S1RunManifestWriter emits current strict v5 fields",
-                ReproducesCanonicalFixtureBytes));
+                EmitsStrictV5ManifestEnvelope));
             tests.Add(new TestMain.TestCase(
                 "S1RunManifestWriter omits the run_id line when no run id"
                 + " was set",
@@ -33,7 +33,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 OmitsUnspecifiedMovieEndpoint));
         }
 
-        private static void ReproducesCanonicalFixtureBytes()
+        private static void EmitsStrictV5ManifestEnvelope()
         {
             var segments = new List<RunManifestSegment>
             {

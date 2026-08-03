@@ -480,14 +480,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S3K complete-run absolute frame cap matches the Lua",
                 AbsoluteFrameCapMatchesTheLua));
             tests.Add(new TestMain.TestCase(
-                "S3K complete-run reproduces the set (A) fixture table",
-                ReproducesSetAFixtureTable));
+                "S3K complete-run derives the current set (A) table",
+                AssertsSetATable));
             tests.Add(new TestMain.TestCase(
-                "S3K complete-run reproduces the set (B) fixture table",
-                ReproducesSetBFixtureTable));
+                "S3K complete-run derives the current set (B) table",
+                AssertsSetBTable));
             tests.Add(new TestMain.TestCase(
-                "S3K complete-run reproduces the set (B) transition table",
-                ReproducesSetBTransitionTable));
+                "S3K complete-run derives the current set (B) transitions",
+                AssertsSetBTransitionTable));
         }
 
         // ------------------------------------------------------------------
@@ -1149,7 +1149,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
         }
 
-        private static void ReproducesSetAFixtureTable()
+        private static void AssertsSetATable()
         {
             SyntheticPlan plan = BuildFixturePlan(
                 SetA, new int[0], SetAPredictedFbzArmFrame);
@@ -1183,7 +1183,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
         }
 
-        private static void ReproducesSetBFixtureTable()
+        private static void AssertsSetBTable()
         {
             SyntheticPlan plan = BuildFixturePlan(
                 SetB, SetBSpecialStageLastRowFrames, SetBMovieFrameCount);
@@ -1208,7 +1208,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
         }
 
-        private static void ReproducesSetBTransitionTable()
+        private static void AssertsSetBTransitionTable()
         {
             SyntheticPlan plan = BuildFixturePlan(
                 SetB, SetBSpecialStageLastRowFrames, SetBMovieFrameCount);

@@ -17,11 +17,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
         {
             tests.Add(new TestMain.TestCase(
                 "S1CompleteRunMetadataWriter asserts GHZ1 strict v5 metadata",
-                MatchesGhz1CompleteRunFixtureBytes));
+                AssertsGhz1StrictV5Metadata));
             tests.Add(new TestMain.TestCase(
                 "S1CompleteRunMetadataWriter asserts FZ strict v5 metadata"
                 + " (ROM sbz act 3)",
-                MatchesFzCompleteRunFixtureBytes));
+                AssertsFzStrictV5Metadata));
             tests.Add(new TestMain.TestCase(
                 "S1CompleteRunMetadataWriter names SBZ3 as ROM lz act 4",
                 NamesSbz3AsRomLzAct4));
@@ -39,7 +39,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// (0x0050, 0x03B0), rng 0. The fixed recording date makes the
         /// strict-v5 writer assertion deterministic.
         /// </summary>
-        private static void MatchesGhz1CompleteRunFixtureBytes()
+        private static void AssertsGhz1StrictV5Metadata()
         {
             AssertStrictV5Metadata(
                 S1CompleteRunMetadataWriter.Format(
@@ -52,7 +52,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// fz_completerun fixture carries zone sbz/5/3 with offset 189578
         /// and 4457 rows.
         /// </summary>
-        private static void MatchesFzCompleteRunFixtureBytes()
+        private static void AssertsFzStrictV5Metadata()
         {
             AssertStrictV5Metadata(
                 S1CompleteRunMetadataWriter.Format(

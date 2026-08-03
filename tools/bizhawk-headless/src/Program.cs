@@ -1151,17 +1151,13 @@ namespace BizHawk.Headless.Gpgx
         /// supplied (Lua gate) — a stage-free pass without --run-id
         /// publishes exactly the per-level directories.
         ///
-        /// Line-ending policy follows the canonical fixture set each
-        /// invocation reproduces (per-fixture-set, see
-        /// docs/s1-complete-run-behavior.md section 8 and
-        /// docs/s1-run-mode-behavior.md section 9): --run-id captures get
-        /// the Windows text-mode CRLF expansion of the canonical
-        /// runs/s1-ghz-maze-roundtrip capture; --trace-profile complete_run
-        /// captures stay LF like the 19 *_completerun fixtures. The
-        /// session's version stamp is the current Lua's
-        /// (S1CompleteRunMetadataWriter.LuaScriptVersion); the Lua's
-        /// OGGF_TRACE_SOURCE_BK2 env input is derived from the movie file
-        /// itself.
+        /// Line endings are an output-mode policy: a named --run-id capture
+        /// expands staged newlines to CRLF, while --trace-profile
+        /// complete_run remains LF. Every published metadata and manifest
+        /// document uses the current TraceContract envelope — recorder
+        /// native-bizhawk-headless, recorder_version 3.0, and trace_schema
+        /// 5 — with removed version fields omitted. source_bk2 is derived
+        /// from the movie file itself.
         /// </summary>
         private static int RunS1CompleteRun(
             CommandLineOptions options,

@@ -298,9 +298,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
                             + "  \"zone\": \"cnz\",\n");
                         AssertContains(
                             metadata,
-                            "  \"lua_script_version\": \"6.41-s3k\",\n"
-                            + "  \"trace_schema\": 7,\n"
-                            + "  \"hardware_timing_schema\": 2,\n");
+                            "  \"recorder\": \"native-bizhawk-headless\",\n"
+                            + "  \"recorder_version\": \"3.0\",\n"
+                            + "  \"trace_schema\": 5,\n");
+                        AssertEx.Equal(false, metadata.Contains("run_schema"));
+                        AssertEx.Equal(false, metadata.Contains("lua_script_version"));
+                        AssertEx.Equal(false, metadata.Contains("csv_version"));
+                        AssertEx.Equal(false, metadata.Contains("ss_csv_version"));
+                        AssertEx.Equal(false, metadata.Contains("hardware_timing_schema"));
                         AssertContains(
                             metadata,
                             "  \"trace_profile\": \"gameplay_unlock\",\n");

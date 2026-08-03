@@ -18,7 +18,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         {
             tests.Add(new TestMain.TestCase(
                 "S2RunManifest writer emits current strict v5 fields",
-                ReproducesCanonicalFixtureBytes));
+                EmitsStrictV5ManifestEnvelope));
             tests.Add(new TestMain.TestCase(
                 "S2RunManifest optional fields render by presence not value",
                 OptionalFieldsRenderByPresenceNotValue));
@@ -27,7 +27,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 QuotesRunIdWithLuaPercentQEscaping));
         }
 
-        private static void ReproducesCanonicalFixtureBytes()
+        private static void EmitsStrictV5ManifestEnvelope()
         {
             var segments = new List<RunManifestSegment>
             {

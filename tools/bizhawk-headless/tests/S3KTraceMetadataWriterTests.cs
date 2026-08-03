@@ -66,15 +66,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
         public static void Register(List<TestMain.TestCase> tests)
         {
             tests.Add(new TestMain.TestCase(
-                "S3K metadata matches the AIZ fixture bytes at version 6.30",
-                MatchesAizFixtureBytes));
+                "S3K metadata asserts the AIZ strict v5 shape",
+                AssertsAizStrictV5Shape));
             tests.Add(new TestMain.TestCase(
-                "S3K metadata matches the CNZ fixture bytes at version 6.30",
-                MatchesCnzFixtureBytes));
+                "S3K metadata asserts the CNZ strict v5 shape",
+                AssertsCnzStrictV5Shape));
             tests.Add(new TestMain.TestCase(
-                "S3K metadata matches the MGZ fixture bytes minus"
-                + " pre_trace_osc_frames",
-                MatchesMgzFixtureBytesWithoutOscLine));
+                "S3K metadata asserts the MGZ strict v5 field absences",
+                AssertsMgzStrictV5FieldAbsences));
             tests.Add(new TestMain.TestCase(
                 "S3K metadata gives unknown profiles the non-AIZ surface"
                 + " verbatim",
@@ -83,15 +82,15 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S3K metadata scopes the CNZ notes to level-gated cnz only",
                 CnzNotesRequireLevelGatedCnz));
             tests.Add(new TestMain.TestCase(
-                "S3K metadata defaults to schema two and selects schema one",
-                DefaultsToSchemaTwoAndSelectsSchemaOne));
+                "S3K metadata emits the strict v5 envelope without timing schema",
+                EmitsStrictV5EnvelopeWithoutTimingSchema));
         }
 
         /// <summary>
         /// aiz_end_to_end at the AIZ arm values using a fixed recording
         /// date. The assertion covers the current strict-v5 metadata shape.
         /// </summary>
-        private static void MatchesAizFixtureBytes()
+        private static void AssertsAizStrictV5Shape()
         {
             string formatted = S3KTraceMetadataWriter.Format(
                 0x00,
@@ -127,7 +126,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 formatted);
         }
 
-        private static void MatchesCnzFixtureBytes()
+        private static void AssertsCnzStrictV5Shape()
         {
             string formatted = S3KTraceMetadataWriter.Format(
                 0x03,
@@ -170,7 +169,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// while the aux tail still advertises the CNZ families (the
         /// advertisement is profile-based, not zone-based).
         /// </summary>
-        private static void MatchesMgzFixtureBytesWithoutOscLine()
+        private static void AssertsMgzStrictV5FieldAbsences()
         {
             string formatted = S3KTraceMetadataWriter.Format(
                 0x02,
@@ -274,7 +273,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 levelGatedInAiz.Contains("  \"notes\": \"\"\n"));
         }
 
-        private static void DefaultsToSchemaTwoAndSelectsSchemaOne()
+        private static void EmitsStrictV5EnvelopeWithoutTimingSchema()
         {
             string current = S3KTraceMetadataWriter.Format(
                 0, 0, 1, 1, 0, 0, 0,

@@ -13,14 +13,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
         public static void Register(ICollection<TestMain.TestCase> tests)
         {
             tests.Add(new TestMain.TestCase(
-                "S2TraceMetadataWriter matches ehz1_fullrun fixture bytes",
-                MatchesEhz1FullrunFixtureBytes));
+                "S2TraceMetadataWriter asserts the EHZ1 strict v5 shape",
+                AssertsEhz1StrictV5Shape));
             tests.Add(new TestMain.TestCase(
-                "S2TraceMetadataWriter matches arz fixture bytes",
-                MatchesArzFixtureBytes));
+                "S2TraceMetadataWriter asserts the ARZ strict v5 shape",
+                AssertsArzStrictV5Shape));
             tests.Add(new TestMain.TestCase(
-                "S2TraceMetadataWriter matches arz2 fixture bytes",
-                MatchesArz2FixtureBytes));
+                "S2TraceMetadataWriter asserts the ARZ2 strict v5 shape",
+                AssertsArz2StrictV5Shape));
             tests.Add(new TestMain.TestCase(
                 "S2TraceMetadataWriter renders sonic-alone character lists",
                 RendersSonicAloneCharacterLists));
@@ -35,7 +35,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 JsonEscapesProfileAndSource));
         }
 
-        private static void MatchesEhz1FullrunFixtureBytes()
+        private static void AssertsEhz1StrictV5Shape()
         {
             AssertEx.Equal(
                 "{\n"
@@ -83,7 +83,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     "2026-07-13"));
         }
 
-        private static void MatchesArzFixtureBytes()
+        private static void AssertsArzStrictV5Shape()
         {
             AssertEx.Equal(
                 "{\n"
@@ -131,7 +131,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     "2026-07-13"));
         }
 
-        private static void MatchesArz2FixtureBytes()
+        private static void AssertsArz2StrictV5Shape()
         {
             string metadata = S2TraceMetadataWriter.Format(
                 0x0F,

@@ -23,10 +23,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 CsvHeaderMatchesRecorder));
             tests.Add(new TestMain.TestCase(
                 "S1SpecialStage csv row matches the current row contract",
-                CsvRowReproducesSsFixtureRowZero));
+                CsvRowMatchesCurrentContract));
             tests.Add(new TestMain.TestCase(
                 "S1SpecialStage metadata emits current strict v5 fields",
-                MetadataReproducesSsFixtureBytes));
+                MetadataEmitsStrictV5Fields));
             tests.Add(new TestMain.TestCase(
                 "S1SpecialStage metadata omits run_id when no run id was set",
                 MetadataOmitsRunIdWhenNoRunIdWasSet));
@@ -43,7 +43,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 S1SpecialStageCsvWriter.Header.Split(',').Length);
         }
 
-        private static void CsvRowReproducesSsFixtureRowZero()
+        private static void CsvRowMatchesCurrentContract()
         {
             // Canonical ss fixture row 0:
             // 0,0,0,25ab0300,44d8300,ffde,48,13c,7,0,0,0,55,0
@@ -71,7 +71,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 S1SpecialStageCsvWriter.FormatRow(12, 0x18, true, host));
         }
 
-        private static void MetadataReproducesSsFixtureBytes()
+        private static void MetadataEmitsStrictV5Fields()
         {
             string produced = S1SpecialStageMetadataWriter.Format(
                 0,
