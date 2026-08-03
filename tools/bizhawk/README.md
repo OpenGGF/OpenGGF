@@ -29,17 +29,19 @@ Use this folder for the recorder scripts and local BizHawk assets:
   retained for predecessor diagnostics
 - `record_s1_credits_traces.bat` launches forced Sonic 1 credits-demo capture
 - `s1_credits_trace_recorder.lua` records the built-in ending replays without a BK2
-- `lib/oggf_trace_common.lua` is a shared module of game-agnostic leaf helpers
+- `lib/oggf_trace_common.lua` is retained predecessor Lua support: a shared
+  module of game-agnostic leaf helpers
   (`bk2_input_mask`, `hex`, `angle_to_ground_mode`, `read_speed`,
   `rom_joypad_to_mask`, `write_aux`, `json_escape`, `json_quote`, and the
   `INPUT_*` bitmask constants) that every recorder `loadfile`s at startup via a
   small `oggf_lib_dir()` loader. It holds only pure helpers whose emitted bytes
-  are identical to the previously-inlined copies — schema writers, `*_csv_version`
-  constants, and the fast-headless toggle block deliberately stay inline per
-  recorder. `run_bizhawk_lua.bat` exports `OGGF_BIZHAWK_LIB` so the loader finds
-  it on the wrapper/headless route; a `debug.getinfo` fallback covers direct
-  `--lua=` launches. Any edit here must be regen-validated for a byte-identical
-  `physics.csv` / `aux_state.jsonl` / `metadata.json` before committing.
+  are identical to the previously-inlined copies. Predecessor schema writers,
+  version constants, and the fast-headless toggle block deliberately stay
+  inline per recorder. `run_bizhawk_lua.bat` exports `OGGF_BIZHAWK_LIB` so the
+  loader finds it on the historical wrapper/headless route; a `debug.getinfo`
+  fallback covers direct `--lua=` diagnostics. These details document
+  predecessor reproduction only and cannot select native v5 publication
+  behavior.
 
 ## Required BizHawk version
 

@@ -170,8 +170,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
             LoadQueueStateEventTests.Register(tests);
             S1TraceCaptureRunnerTests.Register(tests);
             S1CreditsDemoCaptureRunnerTests.Register(tests);
-            // Task 10 owns migration or retirement of the installed credits
-            // differential fleet; Task 6 must not register its fixture gates.
+            // Pre-capture selection is deliberately method-level: candidate
+            // comparison belongs to the Task 7 Python comparator and must not
+            // become a skip when Task 9 candidate roots do not exist yet.
+            S1CreditsDemoDifferentialTests.RegisterPreCapture(tests);
             S1CompleteRunMetadataWriterTests.Register(tests);
             S1RunCaptureRunnerStageFreeTests.Register(tests);
             S1SpecialStageWriterTests.Register(tests);

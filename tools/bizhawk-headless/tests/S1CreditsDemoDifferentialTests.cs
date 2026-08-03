@@ -8,10 +8,10 @@ using Newtonsoft.Json.Linq;
 namespace OpenGGF.BizHawk.Headless.Tests
 {
     /// <summary>
-    /// Deferred Task 10 predecessor evidence for the one-time 20-to-42-column
-    /// credits migration. This source is intentionally not registered by
-    /// Task 6, so its installed-fixture comparisons and capture gates are
-    /// inactive until the credits fleet is migrated or retired.
+    /// Safe pre-capture evidence for the one-time 20-to-42-column credits
+    /// migration. Candidate-root comparison is owned by the Task 7 Python
+    /// comparator; this native registry contains only predecessor inventory,
+    /// raw-host independence, and deterministic real-ROM capture evidence.
     /// </summary>
     internal static class S1CreditsDemoDifferentialTests
     {
@@ -29,18 +29,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
             "06_sbz2_credits_demo", "07_ghz1_credits_demo_2"
         };
 
-        public static void Register(ICollection<TestMain.TestCase> tests)
+        public static void RegisterPreCapture(ICollection<TestMain.TestCase> tests)
         {
             tests.Add(new TestMain.TestCase(
                 "S1 credits predecessor evidence keeps eight 20-column fixtures",
                 PredecessorEvidenceIsComplete));
-            tests.Add(new TestMain.TestCase(
-                "S1 credits native candidate preserves every predecessor column",
-                NativeCandidatePreservesCommonColumns,
-                game: "s1", kind: TestKind.Gate));
-            tests.Add(new TestMain.TestCase(
-                "S1 credits diagnostic candidate reports literal common-field deltas",
-                ReportCandidateDeltas));
             tests.Add(new TestMain.TestCase(
                 "S1 credits raw-host evidence is independent and hash-bound",
                 RawHostEvidenceIsIndependentAndHashBound));
@@ -65,129 +58,6 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     header = reader.ReadLine();
                 }
                 AssertEx.Equal(20, header.Split(',').Length);
-            }
-        }
-
-        private static void NativeCandidatePreservesCommonColumns()
-        {
-            string candidateRoot = Environment.GetEnvironmentVariable(
-                "OGGF_S1_CREDITS_CANDIDATE_ROOT");
-            if (string.IsNullOrEmpty(candidateRoot)
-                || !Directory.Exists(candidateRoot))
-            {
-                throw new TestMain.SkipTestException(
-                    "OGGF_S1_CREDITS_CANDIDATE_ROOT not set.");
-            }
-            string predecessorRoot = Path.Combine(EndToEndTests.RepositoryRoot,
-                "src", "test", "resources", "traces", "s1");
-            for (int index = 0; index < Directories.Length; index++)
-            {
-                CompareCommonColumns(
-                    Path.Combine(predecessorRoot, Directories[index], "physics.csv"),
-                    Path.Combine(candidateRoot, CandidateDirectories[index],
-                        "physics.csv.gz"));
-            }
-        }
-
-        private static void CompareCommonColumns(
-            string predecessorPath, string candidateGzipPath)
-        {
-            string[] oldLines = File.ReadAllLines(predecessorPath);
-            string[] candidateLines;
-            using (FileStream input = File.OpenRead(candidateGzipPath))
-            using (var gzip = new System.IO.Compression.GZipStream(
-                input, System.IO.Compression.CompressionMode.Decompress))
-            using (var reader = new StreamReader(gzip))
-            {
-                var lines = new List<string>();
-                string line;
-                while ((line = reader.ReadLine()) != null) lines.Add(line);
-                candidateLines = lines.ToArray();
-            }
-            AssertEx.Equal(oldLines.Length, candidateLines.Length);
-            string[] oldHeader = oldLines[0].Split(',');
-            string[] newHeader = candidateLines[0].Split(',');
-            var newIndex = new Dictionary<string, int>(StringComparer.Ordinal);
-            for (int index = 0; index < newHeader.Length; index++)
-            {
-                newIndex.Add(newHeader[index], index);
-            }
-            string[] mapped =
-            {
-                "frame", "input", "player_x", "player_y", "player_x_speed",
-                "player_y_speed", "player_g_speed", "player_angle", "player_air",
-                "player_rolling", "player_ground_mode", "player_x_sub", "player_y_sub",
-                "player_routine", "camera_x", "camera_y", "rings", "player_status_byte",
-                "gameplay_frame_counter", "player_stand_on_obj"
-            };
-            for (int row = 1; row < oldLines.Length; row++)
-            {
-                string[] oldFields = oldLines[row].Split(',');
-                string[] newFields = candidateLines[row].Split(',');
-                for (int column = 0; column < oldHeader.Length; column++)
-                {
-                    string actual = newFields[newIndex[mapped[column]]];
-                    if (oldFields[column] != actual)
-                    {
-                        throw new InvalidOperationException(
-                            Path.GetFileName(Path.GetDirectoryName(predecessorPath))
-                            + " row " + (row - 1) + " field " + oldHeader[column]
-                            + ": expected " + oldFields[column]
-                            + " but was " + actual + ".");
-                    }
-                }
-            }
-        }
-
-        private static void ReportCandidateDeltas()
-        {
-            string candidateRoot = Environment.GetEnvironmentVariable(
-                "OGGF_S1_CREDITS_DIAGNOSTIC_ROOT");
-            if (string.IsNullOrEmpty(candidateRoot)
-                || !Directory.Exists(candidateRoot))
-            {
-                throw new TestMain.SkipTestException(
-                    "OGGF_S1_CREDITS_DIAGNOSTIC_ROOT not set.");
-            }
-            string predecessorRoot = Path.Combine(EndToEndTests.RepositoryRoot,
-                "src", "test", "resources", "traces", "s1");
-            for (int demo = 0; demo < Directories.Length; demo++)
-            {
-                string[] oldLines = File.ReadAllLines(Path.Combine(
-                    predecessorRoot, Directories[demo], "physics.csv"));
-                string[] newLines = ReadGzipLines(Path.Combine(candidateRoot,
-                    CandidateDirectories[demo], "physics.csv.gz"));
-                string[] oldHeader = oldLines[0].Split(',');
-                string[] newHeader = newLines[0].Split(',');
-                var newIndex = new Dictionary<string, int>(StringComparer.Ordinal);
-                for (int index = 0; index < newHeader.Length; index++) newIndex.Add(newHeader[index], index);
-                string[] mapped = { "frame", "input", "player_x", "player_y", "player_x_speed", "player_y_speed", "player_g_speed", "player_angle", "player_air", "player_rolling", "player_ground_mode", "player_x_sub", "player_y_sub", "player_routine", "camera_x", "camera_y", "rings", "player_status_byte", "gameplay_frame_counter", "player_stand_on_obj" };
-                var counts = new Dictionary<string, int>(StringComparer.Ordinal);
-                var first = new Dictionary<string, string>(StringComparer.Ordinal);
-                int compared = Math.Min(oldLines.Length, newLines.Length);
-                for (int row = 1; row < compared; row++)
-                {
-                    string[] oldFields = oldLines[row].Split(',');
-                    string[] newFields = newLines[row].Split(',');
-                    for (int column = 0; column < oldHeader.Length; column++)
-                    {
-                        string key = oldHeader[column];
-                        string actual = newFields[newIndex[mapped[column]]];
-                        if (oldFields[column] == actual) continue;
-                        counts[key] = counts.ContainsKey(key) ? counts[key] + 1 : 1;
-                        if (!first.ContainsKey(key)) first.Add(key,
-                            "row " + (row - 1) + " " + oldFields[column] + "->" + actual);
-                    }
-                }
-                var summary = new List<string>();
-                foreach (string field in oldHeader)
-                {
-                    if (counts.ContainsKey(field)) summary.Add(field + "=" + counts[field] + " (" + first[field] + ")");
-                }
-                Console.WriteLine("CREDITS-DIAGNOSTIC " + Directories[demo]
-                    + " old_rows=" + (oldLines.Length - 1)
-                    + " new_rows=" + (newLines.Length - 1)
-                    + " deltas=" + string.Join("; ", summary.ToArray()));
             }
         }
 

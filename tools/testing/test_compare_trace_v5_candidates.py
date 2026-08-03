@@ -242,6 +242,9 @@ class CompareTraceV5CandidatesTests(unittest.TestCase):
 
     def test_bizhawk_readme_s1_s2_live_contract_is_native_v5_only(self) -> None:
         readme = (REPOSITORY_ROOT / "tools" / "bizhawk" / "README.md").read_text()
+        preamble = readme[:readme.index("## Native S1/S2 v5 capture contract")]
+        self.assertIn("predecessor Lua support", preamble)
+        self.assertNotIn("*_csv_version", preamble)
         live = readme[readme.index("## Native S1/S2 v5 capture contract"):
                       readme.index("## Pre-v5 historical evidence: S1/S2")]
         for required in (
