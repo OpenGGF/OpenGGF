@@ -30,6 +30,7 @@ import com.openggf.graphics.PixelFontTextRenderer;
 import com.openggf.graphics.FadeManager;
 import com.openggf.sprites.ghost.GhostTraceRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.testmode.TraceCameraFocusController;
 import com.openggf.testmode.TraceHudOverlay;
 import com.openggf.testmode.SpecialStageTraceHudOverlay;
@@ -43,6 +44,7 @@ import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.TraceFrame;
 import com.openggf.trace.TraceMetadata;
+import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.TraceReplayBootstrap;
 import com.openggf.trace.catalog.TraceEntry;
 import com.openggf.trace.catalog.TraceCatalog;
@@ -64,6 +66,7 @@ import com.openggf.trace.replay.runs.TraceRunBoundaryComparator;
 import com.openggf.trace.replay.runs.TraceRunDynamicArtGapJournal;
 import com.openggf.trace.replay.runs.TraceRunSpecialStageRows;
 import com.openggf.trace.replay.runs.TraceRunSpecialStageRows.SpecialStageRowAdmission;
+import com.openggf.trace.replay.runs.TraceRunVblankClock;
 import com.openggf.trace.timing.HardwareTimingReplayPort;
 import com.openggf.trace.timing.HardwareTimingSchedule;
 import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
@@ -151,6 +154,8 @@ public final class TraceSessionLauncher {
     private InputHandler runOwnedInputHandler;
     private boolean runLevelLoadedDuringSourceProduction;
     private RunPlaybackObservation runProductionOwnerObservation;
+    private Integer runProductionOwnerVblank;
+    private TraceRunVblankClock runVblankClock;
     private TraceRunReplayWalker.HardwareTimingCoordinator runHardwareTiming;
     private TraceRunReplayWalker.DynamicArtSegmentController runDynamicArtSegments;
     private GameplayModeContext dynamicArtSegmentGameplayMode;
@@ -703,6 +708,8 @@ public final class TraceSessionLauncher {
                     entry.runManifest(),
                     GameServices.module().getTracePlaybackProfile(),
                     movie.getFrameCount());
+            this.runVblankClock = new TraceRunVblankClock(
+                    GameServices.module().getTracePlaybackProfile());
             this.runBoundaryProbe = createRunBoundaryProbe(loop);
             runBoundaryProbe.setDelegate(comparator);
             playback.setFrameObserver(runBoundaryProbe);
@@ -1174,6 +1181,7 @@ public final class TraceSessionLauncher {
                                 isLagOnlySameLevelContinuation());
         applyRunCoordinatorActions(runCoordinator.afterStep(stepObservation));
         runProductionOwnerObservation = null;
+        runProductionOwnerVblank = null;
         clearRunOwnedInputOverride();
     }
 
@@ -1259,6 +1267,7 @@ public final class TraceSessionLauncher {
     }
 
     private void closeRunSegment(int segmentIndex) {
+        captureRunLevelSourceTail(segmentIndex);
         if (runBoundaryProbe != null) {
             runBoundaryProbe.setDelegate(null);
         }
@@ -1282,6 +1291,10 @@ public final class TraceSessionLauncher {
 
     private void applyRunDestinationAdmission(DestinationAdmissionReceipt receipt) {
         TraceRunReplayWalker.SegmentPlan segment = runSegments.get(receipt.segmentIndex());
+        ObjectManager objects = GameServices.level().getObjectManager();
+        if (objects != null) {
+            applyRunDestinationVblankAdmission(receipt, objects);
+        }
         if (runHardwareTiming != null) {
             // The handoff verifies the source schedule. It must succeed before
             // any destination comparison, dynamic-art, or input owner opens.
@@ -1299,6 +1312,8 @@ public final class TraceSessionLauncher {
         armRunSpecialDynamicArtComparison(receipt.segmentIndex());
         if (runDynamicArtSegments != null) {
             runDynamicArtSegments.beginSegment();
+            dynamicArtSegmentGameplayMode.dynamicArtLifecycle()
+                    .advanceComparisonCursor(receipt.rowsConsumed());
             bindRunSpecialDynamicArtTargetGeneration();
             if (runDynamicArtGapJournal != null
                     && receipt.segmentIndex() > 0) {
@@ -1318,6 +1333,69 @@ public final class TraceSessionLauncher {
         runLevelLoadedDuringSourceProduction = false;
         completionArmed = false;
         completionHoldFrames = 0;
+    }
+
+    private void captureRunLevelSourceTail(int segmentIndex) {
+        if (runVblankClock == null) {
+            return;
+        }
+        RunPlaybackObservation owner = runProductionOwnerObservation;
+        Integer observedVblank = runProductionOwnerVblank;
+        if (owner == null || observedVblank == null) {
+            var objects = GameServices.level().getObjectManager();
+            if (objects == null) {
+                return;
+            }
+            owner = captureRunObservation(
+                    Engine.currentGameLoop() != null
+                            ? Engine.currentGameLoop().getCurrentGameMode()
+                            : GameMode.LEVEL,
+                    0, isLagOnlySameLevelContinuation());
+            observedVblank = objects.getVblaCounter();
+        }
+        runVblankClock.captureLevelSourceTail(
+                segmentIndex,
+                runSegments.get(segmentIndex).segment(),
+                owner.sharedBk2Cursor(),
+                observedVblank);
+    }
+
+    void applyRunDestinationVblankAdmission(
+            DestinationAdmissionReceipt receipt,
+            ObjectManager objects) {
+        if (runVblankClock == null
+                || !(receipt.identity()
+                        instanceof DestinationAdmissionReceipt.LevelIdentity)) {
+            return;
+        }
+        Objects.requireNonNull(objects, "objects");
+        int destinationIndex = receipt.segmentIndex();
+        TraceRunManifest.Segment destination =
+                runSegments.get(destinationIndex).segment();
+        if (destinationIndex <= 0) {
+            return;
+        }
+        TraceRunManifest.Segment previous =
+                runSegments.get(destinationIndex - 1).segment();
+        if ("level".equals(previous.kind())) {
+            runVblankClock.levelDestinationTarget(
+                    destinationIndex - 1, previous, destination,
+                    receipt.rowsConsumed()).ifPresent(objects::initVblaCounter);
+            return;
+        }
+        if (!"special_stage".equals(previous.kind())) {
+            return;
+        }
+        TraceRunManifest.Transition entryBoundary =
+                runSegments.get(destinationIndex - 1).entryBoundary();
+        if (entryBoundary == null) {
+            return;
+        }
+        int sourceIndex = entryBoundary.fromSegment();
+        runVblankClock.uncomparedInteriorReturnTarget(
+                sourceIndex,
+                runSegments.get(sourceIndex).segment(),
+                destination).ifPresent(objects::initVblaCounter);
     }
 
     private void installRunComparator(
@@ -1687,6 +1765,10 @@ public final class TraceSessionLauncher {
                 ? captureRunObservation(
                         loop.getCurrentGameMode(), 0,
                         isLagOnlySameLevelContinuation())
+                : null;
+        var objects = GameServices.level().getObjectManager();
+        runProductionOwnerVblank = runCoordinator != null && objects != null
+                ? objects.getVblaCounter()
                 : null;
         dynamicArtSnapshotBeforeIteration =
                 GameServices.captureDynamicArtDiagnostics();

@@ -61092,3 +61092,65 @@ to synthesize a POST phase on a VBLANK-only row.
   passing launcher regression accounting for the single-test difference. A
   normalized Surefire XML comparison found the same 79 red methods and
   identical failure/error severities; no baseline-passing test regressed.
+
+## 2026-08-03 - Visual/headless S1 replay-clock and end-act PLC parity
+
+- Worktree: `.worktrees/visual-s1-results-plc`, branch
+  `bugfix/ai-visual-s1-results-plc`, candidate over `8211d923f`.
+- The reported GHZ3 failure is the non-emerald complete run, whose standalone
+  headless fixture was already green. Its visual log showed identical player
+  physics at the capsule but ROM `v_vblank_byte=0x4D21` versus engine `0x49AA`.
+  The capsule schedules animals with that free-running clock; visual whole-run
+  choreography had inherited its shorter engine title-card/act epoch instead
+  of applying the manifest/BK2 transition budget already used by headless
+  chains. The idle S1 PLC queue was downstream: one animal remained, so
+  `GotThroughAct` had not yet submitted cue 16.
+- Prepared visual bootstrap now establishes the same pre-row object clock as
+  standalone headless bootstrap. Whole-run destination admission carries only
+  the observed production source clock and manifest/BK2 row distance, applying
+  the S1 GHZ1→GHZ2 and GHZ2→GHZ3 budgets of 230 and 229 ticks through the
+  production visual launcher. An authority guard excludes physics/aux frames,
+  comparators, dynamic-art journals, and hardware-timing schedules from that
+  clock contract.
+- S1's results producer now claims the ROM fixed `v_endcard` slot 23 and commits
+  exact cue 16 before the card advances. Giant-ring flash leaves card/music
+  creation to the signpost's deleted-SST handoff, while the capsule follows the
+  same fixed-slot transaction. Rewind distinguishes the explicit fixed-runtime
+  marker from unrelated dynamic objects that merely use a low slot.
+- Focused launcher/bootstrap/PLC/dynamic-art/special-stage/rewind command:
+  `mvn -q
+  -Dtest='com.openggf.trace.replay.TestTraceReplaySessionBootstrapClockParity,com.openggf.game.sonic1.TestSonic1PlcProducerCoverage,com.openggf.game.sonic1.objects.TestSonic1EggPrisonObjectInstance,com.openggf.game.sonic1.objects.TestSonic1GiantRingObjectInstance,com.openggf.game.sonic1.objects.TestSonic1FixedEndCardSlot,com.openggf.game.sonic1.specialstage.Sonic1SpecialStageManagerTest,com.openggf.game.resources.TestDynamicArtLifecycleService,com.openggf.trace.replay.runs.TestTraceRunVblankClock,com.openggf.trace.replay.runs.TestTraceRunVblankClockAuthorityGuard,com.openggf.TestTraceSessionLauncherRunBranch,com.openggf.tests.TestArchitecturalSourceGuard'
+  test`. Result: 180 tests, 0 failures, 0 errors, 0 skips. The two
+  rewind coverage guards also passed under their correct
+  `com.openggf.game.rewind.coverage` package.
+- Exact standalone regression command:
+  `mvn -q -Dsonic1.rom.path=s1.gen
+  -Dtest='com.openggf.tests.trace.s1.TestS1Ghz1CompleteRunTraceReplay,com.openggf.tests.trace.s1.TestS1Ghz3CompleteRunTraceReplay'
+  test`. Result: 2 tests, 0 failures, 0 errors, 0 skips.
+- Full S1 replay command:
+  `mvn -q -Dsonic1.rom.path=s1.gen
+  -Dtest='com.openggf.tests.trace.s1.*TraceReplay' test`. Result: all 30 S1
+  replay classes passed with 0 failures, 0 errors, and 0 skips.
+- Cross-game chain command:
+  `mvn -q -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen
+  -Ds3k.rom.path=s3k.gen
+  -Dtest='com.openggf.tests.trace.runs.Test*Chain' test`. Result: 5 tests,
+  2 failures, 1 error, 2 skips. The S2 halfpipe still exits with 3,723
+  represented special-stage rows remaining, and the S3K mega run retains its
+  existing unsupported held-row POST at raw frame 4571/module ordinal 10. The
+  S1 maze run advances beyond its prior `segment 0 lost production ownership`
+  frontier and returns from the special stage into GHZ2; its new first failure
+  is the `ss -> ghz2` dynamic-art gap comparison with 32 unexpected edges.
+  Continuous emerald-route parity remains follow-up work: the independently
+  isolated second S1 special-stage fixture also remains red at frame 2162
+  (`ss_rotate`, expected 65472, actual 65408).
+- Full all-ROM suite command used the repository's single-fork `ci` profile
+  after a clean four-fork attempt hit an LWJGL native-extraction race:
+  `mvn -q -Pci -Dorg.lwjgl.system.SharedLibraryExtractPath=<fresh-dir>
+  -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen
+  -Ds3k.rom.path=s3k.gen test`. It reached the repository's existing
+  `Java heap space` termination after completing 11,532 tests: 11,485 passed,
+  17 failed, 7 errored, and 23 skipped. Every one of its 24 red test cases was
+  already red in the recorded `develop` baseline (14,383 completed tests;
+  32 failures, 47 errors, 31 skips); a normalized class/method comparison found
+  no feature-only red method.

@@ -5,6 +5,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic1.Sonic1LoopManager;
 import com.openggf.game.sonic1.resources.Sonic1PlcService;
+import com.openggf.game.sonic1.objects.Sonic1FixedEndCardSlot;
 import com.openggf.game.sonic1.scroll.Sonic1ZoneConstants;
 import com.openggf.level.LevelManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -126,6 +127,13 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
         // element's Card_Wait/Card_MoveOut tail re-queues the explosion and
         // animal art (docs/s1disasm/_incObj/34 Title Cards.asm:122-168).
         fixedTitleCardManager.update();
+        LevelManager level = levelManager();
+        if (level != null && level.getObjectManager() != null) {
+            Sonic1FixedEndCardSlot.updateFixedPass(
+                    level.getObjectManager(),
+                    level.getObjectManager().getVblaCounter(),
+                    Sonic1ZoneEvents.focusedSpriteOrNull());
+        }
     }
 
     /** ROM {@code act3} (docs/s1disasm/sonic.asm:3186); acts are 0-based here. */

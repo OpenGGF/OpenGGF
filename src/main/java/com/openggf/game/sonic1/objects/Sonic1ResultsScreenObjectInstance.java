@@ -9,6 +9,7 @@ import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.game.sonic1.resources.Sonic1PlcService;
 import com.openggf.game.sonic1.scroll.Sonic1ZoneConstants;
 import com.openggf.level.objects.AbstractResultsScreen;
+import com.openggf.level.objects.FixedRuntimeObjectInstance;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.ObjectRenderManager;
@@ -38,10 +39,12 @@ import java.util.logging.Logger;
  * @see AbstractResultsScreen
  */
 public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
-        implements ZeroScalarArgsRewindRecreatable {
+        implements FixedRuntimeObjectInstance, ZeroScalarArgsRewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(Sonic1ResultsScreenObjectInstance.class.getName());
     /** True once the ROM's routine-0 PLC gate has released this card. */
     private boolean plcReadinessPassed;
+    /** True once GotThroughAct has submitted {@code plcid_TitleCard}. */
+    private boolean resultsPlcCommitted;
 
     // -----------------------------------------------------------------------
     // Time bonus table (from s1disasm 0D Signpost.asm:TimeBonuses)
@@ -174,10 +177,17 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
     }
 
     public Sonic1ResultsScreenObjectInstance(int elapsedTimeSeconds, int ringCount, int actNumber) {
+        this(elapsedTimeSeconds, ringCount, actNumber, true);
+    }
+
+    private Sonic1ResultsScreenObjectInstance(
+            int elapsedTimeSeconds, int ringCount, int actNumber,
+            boolean resultsPlcCommitted) {
         super("s1_results_screen");
         this.elapsedTimeSeconds = elapsedTimeSeconds;
         this.ringCount = ringCount;
         this.actNumber = actNumber;
+        this.resultsPlcCommitted = resultsPlcCommitted;
 
         calculateBonuses();
 
@@ -186,6 +196,20 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
 
         LOGGER.info("S1 Results screen created: act=" + actNumber
                 + ", timeBonus=" + timeBonus + ", ringBonus=" + ringBonus);
+    }
+
+    static Sonic1ResultsScreenObjectInstance awaitingResultsPlc(
+            int elapsedTimeSeconds, int ringCount, int actNumber) {
+        return new Sonic1ResultsScreenObjectInstance(
+                elapsedTimeSeconds, ringCount, actNumber, false);
+    }
+
+    public boolean isResultsPlcCommitted() {
+        return resultsPlcCommitted;
+    }
+
+    public void markResultsPlcCommitted() {
+        resultsPlcCommitted = true;
     }
 
     private void calculateBonuses() {
@@ -211,6 +235,11 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+
+        if (!resultsPlcCommitted) {
+            this.frameCounter = vIntRunCount;
+            return;
+        }
 
         // ROM Got_ChkPLC is routine 0 only. Once it has released, later card
         // routines must keep running even when unrelated PLC work is submitted.

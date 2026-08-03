@@ -218,6 +218,14 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **Visual/headless S1 run lifecycle parity (2026-08-03):** visual complete
+  runs now carry the same ROM-visible object VBlank pacing across compressed
+  act/title-card transitions as headless chains, keeping non-emerald GHZ3
+  capsule/results PLC timing in sync. S1 end-act results use the ROM's fixed
+  `v_endcard` slot and commit cue 16 through the signpost/capsule producer;
+  giant-ring completion no longer creates a competing card or restarts clear
+  music. Dynamic-art comparison also opens at the destination's already
+  consumed row cursor, preserving atomic publication ownership.
 - **Visual trace inter-act handoff parity (2026-08-03):** complete runs now
   keep a destination level's comparator, input, hardware-timing, and
   dynamic-art owners closed while its production initial title card is
