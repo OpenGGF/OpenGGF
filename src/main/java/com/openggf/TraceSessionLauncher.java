@@ -1308,6 +1308,7 @@ public final class TraceSessionLauncher {
         }
         if (receipt.inputClock() == DestinationAdmissionReceipt.InputClock.SHARED) {
             installRunComparator(segment, receipt.rowsConsumed(), receipt.absoluteBk2Row());
+            adoptRunDestinationProductionIterationOwner(comparator);
             compareRunReturnBoundaryIfPresent(receipt.segmentIndex());
         }
         if (gapComparison != null && comparator != null) {
@@ -1341,6 +1342,26 @@ public final class TraceSessionLauncher {
                 () -> cameraFocusController.currentLabel(), this::rewindStatusLabel);
         runBoundaryProbe.setDelegate(comparator);
         GameServices.playbackDebug().startSession(movie, absoluteBk2Row);
+    }
+
+    /**
+     * Transfers the current host wrapper's deferred publication owner when a
+     * destination is admitted before its first production row. The snapshot
+     * is rebased after the destination segment opens so generation and row-zero
+     * publication are compared within the same production window.
+     */
+    private void adoptRunDestinationProductionIterationOwner(
+            LiveTraceComparator destinationComparator) {
+        if (!productionIterationInProgress) {
+            return;
+        }
+        productionIterationComparator = Objects.requireNonNull(
+                destinationComparator, "destinationComparator");
+        DynamicArtDiagnosticsSnapshot destinationBefore =
+                GameServices.captureDynamicArtDiagnostics();
+        dynamicArtSnapshotBeforeIteration = destinationBefore;
+        dynamicArtDeliverySerialBeforeIteration =
+                destinationBefore.deliverySerial();
     }
 
     private void enterRunDynamicArtGapForSegment(int segmentIndex) {

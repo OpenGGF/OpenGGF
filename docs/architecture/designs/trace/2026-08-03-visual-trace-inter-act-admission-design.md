@@ -151,3 +151,83 @@ user-visible failure path and diagnostic rather than hanging indefinitely.
 Record the reproduced failure and fixed boundary in
 `docs/status/trace-frontier-log.md`, including the worktree/commit context and
 the exact focused and cross-game verification commands.
+
+## Post-Delivery Row-Zero Publication Correction
+
+### Observed failure
+
+The title-card readiness barrier allows GHZ2 to reach its first production
+iteration, but the following host step aborts with:
+
+```text
+dynamic-art comparison row was not drained after production: 0
+Suppressed: dynamic-art row 0 was not published atomically after production
+```
+
+This is not a duplicate row-zero observation. `GameLoop.stepInternal()` calls
+`TraceSessionLauncher.beforeProductionIteration()` before entering the shared
+PLC lifecycle. At that instant the launcher's `comparator` still refers to the
+closed GHZ1 segment, so `productionIterationComparator` captures GHZ1. During
+the iteration, title-card release reaches the pre-production admission seam,
+opens the GHZ2 dynamic-art generation, installs the GHZ2 comparator, and then
+executes GHZ2 row zero. The post-production hook nevertheless drains the GHZ1
+comparator captured at iteration entry. GHZ2 row zero remains pending until
+row one attempts to queue another comparison and triggers the reported error.
+
+### Correct ownership transfer
+
+Destination admission already transfers timing, dynamic-art, comparator, and
+input ownership before destination production. When that admission happens
+inside an active production wrapper, it must also transfer the wrapper's
+deferred post-production comparison owner to the newly installed comparator.
+
+The transfer rebases `dynamicArtSnapshotBeforeIteration` immediately after the
+destination dynamic-art segment has opened and the destination comparator has
+been installed. This matters because opening the segment allocates a new
+generation. Reusing the wrapper-entry snapshot would compare the destination's
+publication against the preceding gap/source generation and correctly fail
+the atomic-generation invariant.
+
+The transfer is structural and value-free:
+
+- it occurs only while `productionIterationInProgress` is true;
+- it selects the comparator that destination admission just created;
+- it captures only the immutable production diagnostics snapshot at that
+  ownership seam; and
+- it does not read expected trace rows, manifest values, game identity, zone,
+  route, or frame number.
+
+Admissions outside a production wrapper keep the existing behavior. Special
+local comparison remains on its dedicated post-production path. Source
+terminal comparison still finalizes before destination ownership opens.
+
+### Revised production sequence
+
+1. The host wrapper starts while GHZ1 remains the launcher's comparator and
+   captures the wrapper-entry diagnostics snapshot.
+2. The title card releases; the coordinator admits GHZ2 before level
+   production.
+3. Source timing handoff completes and the GHZ2 dynamic-art generation opens.
+4. The launcher installs the GHZ2 comparator and transfers the active
+   post-production owner to it, rebasing the before-snapshot in the GHZ2
+   generation.
+5. GHZ2 row zero executes and publishes its production snapshot.
+6. `afterProductionIteration()` drains GHZ2 row zero against the rebased
+   before-snapshot. Row one begins with no pending dynamic-art comparison.
+
+### Additional regression coverage
+
+Add a production-shaped launcher test with an already-published source
+segment. Close the source window and enter the dynamic-art gap before the next
+host production wrapper, deliberately leaving the closed source comparator
+installed as the launcher does. Then begin that wrapper, open the destination
+generation, install/adopt the destination comparator, observe destination row
+zero, and finish the PLC lifecycle. Assert that the destination row is drained
+in the same wrapper, its comparison is non-divergent, and a following
+destination row can be queued without the `row was not drained` invariant
+firing. This exact ordering prevents the test from passing only because source
+close and destination admission happened within one wrapper.
+
+Retain the existing negative coverage that a comparator row queued without a
+matching production publication aborts the session. The fix transfers the
+right owner and snapshot; it does not weaken atomic-publication validation.

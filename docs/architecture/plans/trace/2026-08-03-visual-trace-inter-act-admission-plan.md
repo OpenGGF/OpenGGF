@@ -364,6 +364,148 @@ full and focused suites in the worktree. Compare exact failures before merging
 the reconciled branch into the main workspace; do not assume a fast-forward is
 available until ancestry is verified.
 
-- [ ] **Step 5: Verify and push merged develop**
+- [x] **Step 5: Verify and push merged develop**
 
 Run the full all-ROM suite and the Task 4 focused command on merged `develop`. Confirm no baseline-passing test becomes red, push only `develop`, then remove the clean worktree and fully merged local branch.
+
+### Task 6: Transfer destination row-zero post-production ownership
+
+This task is a post-delivery correction for the GHZ2 row-zero failure reported
+after Tasks 1-5 shipped. The title-card barrier is retained unchanged.
+
+**Files:**
+- Modify: `src/main/java/com/openggf/TraceSessionLauncher.java`
+- Modify: `src/test/java/com/openggf/TestTraceSessionLauncherRunBranch.java`
+- Modify: `docs/status/trace-frontier-log.md`
+- Modify: `CHANGELOG.md`
+- Modify: `README.md`
+
+**Interfaces:**
+- Consumes: the destination comparator and immutable dynamic-art snapshot that
+  exist at the pre-production admission seam.
+- Produces: one matching post-production publisher for the destination row
+  observed during that host wrapper.
+- Preserves: zero-tolerance atomic publication, source terminal comparison,
+  special-local comparison, and all trace comparison-only boundaries.
+
+- [x] **Step 1: Add the exact stale-wrapper-owner regression**
+
+Build a two-generation dynamic-art fixture in
+`TestTraceSessionLauncherRunBranch`:
+
+1. publish the source segment's row zero;
+2. close the source segment and enter the gap while deliberately leaving the
+   source comparator installed;
+3. call `beforeProductionIteration()` so the wrapper captures that closed
+   source comparator;
+4. invoke the existing `applyRunDestinationAdmission(receipt)` production
+   path through the test class's reflection utilities, letting that path open
+   the destination generation, install its comparator, and start destination
+   playback;
+5. send destination row zero through the installed boundary probe/comparator;
+6. execute/finish the production PLC lifecycle and call
+   `afterProductionIteration()`; and
+7. queue destination row one to prove row zero was drained.
+
+Assert the destination row-zero comparison was published without divergence,
+the destination generation stayed stable across the row, and no source
+comparison received destination row zero. Do not invoke the new adoption
+helper directly in this acceptance regression: the test must fail if the real
+admission path omits the call or places it on the wrong side of generation
+opening/comparator installation.
+
+- [x] **Step 2: Run the new test and verify RED**
+
+Run:
+
+```bash
+mvn -q -Dmse=off \
+  -Dtest='TestTraceSessionLauncherRunBranch#destinationAdmissionInsideProductionTransfersRowZeroPublisher' test
+```
+
+Expected: the destination comparator retains pending row zero and queuing row
+one throws `dynamic-art comparison row was not drained after production: 0`.
+
+- [x] **Step 3: Implement the structural owner transfer**
+
+Add
+`adoptRunDestinationProductionIterationOwner(LiveTraceComparator destinationComparator)`,
+a narrowly scoped launcher helper that, only when
+`productionIterationInProgress` is true:
+
+1. sets `productionIterationComparator` to the newly installed destination
+   comparator;
+2. captures a fresh `DynamicArtDiagnosticsSnapshot` after the destination
+   segment has opened; and
+3. updates `dynamicArtSnapshotBeforeIteration` and its delivery serial from
+   that same snapshot.
+
+Call it from `applyRunDestinationAdmission` for a shared-clock destination
+immediately after `installRunComparator`. Do not call it for special-local rows
+and do not relax
+`LiveTraceComparator.publishPendingDynamicArtComparison`.
+
+- [x] **Step 4: Run focused lifecycle and launcher tests**
+
+Run:
+
+```bash
+mvn -q -Dmse=off \
+  -Dtest='TestTraceSessionLauncherRunBranch,TestTraceSessionLauncherProductionFailureCleanup,TestGameLoopTraceRunPostIteration,com.openggf.trace.live.TestLiveTraceComparatorObserver' test
+```
+
+Expected: all tests pass, including the unchanged missing-publication abort
+coverage.
+
+- [x] **Step 5: Run S1 segment and trace regression coverage**
+
+Run:
+
+```bash
+mvn -q -Dmse=off \
+  -Dsonic1.rom.path=s1.gen \
+  -Dtest='TestS1Ghz1CompleteRunTraceReplay,TestS1Ghz2CompleteRunTraceReplay' test
+
+mvn -q -Dmse=off \
+  -Dsonic1.rom.path=s1.gen \
+  -Dsonic2.rom.path=s2.gen \
+  -Ds3k.rom.path=s3k.gen \
+  -Dtest='*TraceReplay' -DfailIfNoTests=false test
+```
+
+Record exact pass/fail outcomes and compare the all-trace result with the
+updated `develop` baseline. The existing headless S1 maze chain does not
+exercise this visual wrapper transfer and is supplementary rather than the
+acceptance oracle.
+
+- [x] **Step 6: Update documentation and obtain code review**
+
+Document the corrected row-zero ownership transfer in the changelog, release
+summary, and frontier log with exact commands/results. Run `git diff --check`
+and the focused suite again. Give an independent reviewer the amended design,
+plan, final diff, and red/green evidence; resolve every blocking or important
+issue and repeat review until green.
+
+- [ ] **Step 7: Integrate and deliver**
+
+Follow the repository completion workflow: fetch and fast-forward `develop`
+without disturbing user changes, record the updated integration baseline,
+reconcile the worktree if needed, run the same full/focused suites in the
+worktree, merge into `develop`, re-run and compare the merged suite, push only
+`develop`, then remove the clean worktree and fully merged local branch.
+
+The required complete-suite command at each of the updated `develop`
+baseline, reconciled feature worktree, and merged `develop` checkpoints is:
+
+```bash
+mvn -q -Dmse=off \
+  -Dsonic1.rom.path=s1.gen \
+  -Dsonic2.rom.path=s2.gen \
+  -Ds3k.rom.path=s3k.gen test
+```
+
+Record the exact failing test/error set at all three checkpoints. A red
+baseline does not block delivery, but no baseline-passing test may become red
+and no baseline failure may worsen or change in a way attributable to this
+branch. The `*TraceReplay` and focused commands in Steps 4-5 are additional to,
+not substitutes for, this full-suite comparison.

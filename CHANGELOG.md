@@ -7,7 +7,11 @@ All notable changes to the OpenGGF project are documented in this file.
   native initial-title-card gap before transferring comparator, input,
   PLC/DPLC/Kosinski timing, or dynamic-art ownership. Inter-act S1 runs retain
   the production load receipt and admit the next act when the existing title
-  card releases, without reloading the level or restarting its music.
+  card releases, without reloading the level or restarting its music. When
+  release and admission occur inside the destination's first production
+  wrapper, the deferred post-production comparator and its immutable
+  pre-publication snapshot now transfer to the destination generation too, so
+  GHZ2 dynamic-art row zero drains atomically instead of aborting on row one.
 - Fix: S3K vertically wrapping levels now render placed and lost rings at their
   wrapped Y positions when the camera crosses the level boundary.
 - Fix/Test: visual trace action edges now remain exact recorded controller

@@ -61045,3 +61045,50 @@ to synthesize a POST phase on a VBLANK-only row.
   red XML was the previously generated GHZ-maze chain report already proven to
   fail identically on baseline. The focused launcher/coordinator/GHZ1/GHZ2 set
   passed again after the order-heavy full run.
+
+## 2026-08-03 - Visual trace inter-act row-zero publication ownership
+
+- Worktree: `.worktrees/visual-trace-row-zero-handoff`, branch
+  `bugfix/ai-visual-trace-row-zero-handoff`, candidate over `4b954a6b5`.
+- After the title-card admission fix, S1 GHZ2 reached production but its visual
+  comparator aborted on the following row with `dynamic-art comparison row
+  was not drained after production: 0` and a suppressed `row 0 was not
+  published atomically` failure. The host production wrapper had captured the
+  closed GHZ1 comparator before title-card release admitted GHZ2 inside that
+  same wrapper, so post-production drained the stale source owner.
+- Shared-clock destination admission now transfers the active wrapper's
+  deferred comparator to the newly installed destination comparator and
+  rebases the immutable before-snapshot after the destination dynamic-art
+  generation opens. No expected trace value enters production, and the
+  special-local path plus strict missing-publication abort remain unchanged.
+- Exact RED/GREEN command:
+  `mvn -q -Dmse=off
+  -Dtest='TestTraceSessionLauncherRunBranch#destinationAdmissionInsideProductionTransfersRowZeroPublisher'
+  test`. Before the fix: 1 test, 1 failure at destination row one with the
+  reported undrained-row-zero exception. After the fix: 1 test, 0 failures,
+  0 errors, 0 skips.
+- Focused launcher/lifecycle command:
+  `mvn -q -Dmse=off
+  -Dtest='TestTraceSessionLauncherRunBranch,TestTraceSessionLauncherProductionFailureCleanup,TestGameLoopTraceRunPostIteration,com.openggf.trace.live.TestLiveTraceComparatorObserver'
+  test`. Result: all selected tests passed. Intentional failure-containment
+  cases still emitted their expected severe diagnostics.
+- S1 segment command:
+  `mvn -q -Dmse=off -Dsonic1.rom.path=s1.gen
+  -Dtest='TestS1Ghz1CompleteRunTraceReplay,TestS1Ghz2CompleteRunTraceReplay'
+  test`. Result: 2 tests, 0 failures, 0 errors, 0 skips.
+- Feature-worktree replay command:
+  `mvn -q -Dmse=off -Dsonic1.rom.path=s1.gen
+  -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen
+  -Dtest='*TraceReplay' -DfailIfNoTests=false test`. Result: 108 tests,
+  6 failures, 40 errors, 0 skips, matching the existing `develop` result at
+  this base. The red set remains the documented S2 MTZ input and S3K
+  timing/authority/frontier fleet; the targeted S1 segments remain green.
+- Full all-ROM suite command, run on the fresh `develop` baseline and feature
+  worktree: `mvn -q -Dmse=off -Dsonic1.rom.path=s1.gen
+  -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test`. Both runs ended with
+  the same existing Surefire fork `Java heap space` termination. The baseline
+  completed 14,253 tests (26 failures, 7 errors, 31 skips); the feature
+  completed 14,254 tests (26 failures, 7 errors, 31 skips), with the added
+  passing launcher regression accounting for the single-test difference. A
+  normalized Surefire XML comparison found the same 79 red methods and
+  identical failure/error severities; no baseline-passing test regressed.

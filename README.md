@@ -223,7 +223,11 @@ Development since `v0.5.20260411` is the active 0.6 prerelease line. The release
   dynamic-art owners closed while its production initial title card is
   pending. The existing level load is remembered and admitted when the title
   card releases, preventing an S1 GHZ1-to-GHZ2 run from aborting without
-  introducing a second load or another music restart.
+  introducing a second load or another music restart. If admission occurs
+  inside GHZ2's first production wrapper, that wrapper now transfers its
+  deferred dynamic-art publication owner and rebases the before-snapshot in
+  the destination generation, keeping row zero atomic and drained before row
+  one.
 - **Visual trace locked-input parity (2026-08-03):** recorded A/B/C press
   identity now survives input-only trace rows but reaches movement only after
   queued object control and the ROM control lock are applied. S1 signpost
