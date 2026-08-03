@@ -16,6 +16,7 @@ import com.openggf.trace.TraceEvent;
 import com.openggf.trace.TraceFixtures;
 import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker;
+import com.openggf.tests.trace.TraceV5RunFixture;
 import com.openggf.trace.replay.runs.RunBoundarySignal;
 import com.openggf.trace.replay.runs.RunLevelLoadCause;
 import com.openggf.trace.replay.runs.RunPlaybackObservation;
@@ -25,6 +26,7 @@ import com.openggf.trace.replay.runs.TraceRunReplayWalker.ReturnAssertionMode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -33,14 +35,6 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestTraceRunReplayWalkerControlFlow {
-
-    private static final Path RUN_DIR =
-        Path.of("src", "test", "resources", "traces", "synthetic", "run_aiz_gumball_3seg");
-
-    /** The committed 25-segment S3K run (with plain level->level gaps + repeat dirs). */
-    private static final Path S3K_RUN_MANIFEST = Path.of(
-        "src", "test", "resources", "traces", "s3k", "runs",
-        "s3-knux-multibonus-ss", "run_manifest.json");
 
     // A high cap so the frozen-cursor guard never trips in tests that exercise
     // the window-edge / peek / persistent-mode paths instead.
@@ -170,9 +164,11 @@ class TestTraceRunReplayWalkerControlFlow {
     }
 
     @Test
-    void plansSegmentsWithExplicitTransitionPairing() throws Exception {
-        TraceRunManifest run = TraceRunManifest.load(RUN_DIR.resolve("run_manifest.json"));
-        List<TraceRunReplayWalker.SegmentPlan> plans = TraceRunReplayWalker.plan(run, RUN_DIR);
+    void plansGeneratedV5SegmentsWithExplicitTransitionPairing(@TempDir Path root)
+            throws Exception {
+        Path runDir = TraceV5RunFixture.writeS3kBonusRun(root);
+        TraceRunManifest run = TraceRunManifest.load(runDir.resolve("run_manifest.json"));
+        List<TraceRunReplayWalker.SegmentPlan> plans = TraceRunReplayWalker.plan(run, runDir);
         assertEquals(3, plans.size());
         assertNull(plans.get(0).entryBoundary());
         assertEquals("starpost_bonus", plans.get(0).exitBoundary().entryKind());
@@ -190,25 +186,24 @@ class TestTraceRunReplayWalkerControlFlow {
         Files.writeString(segment.resolve("metadata.json"), """
                 {"game":"s2","zone":"special_stage","act":1,
                  "bk2_frame_offset":0,"trace_frame_count":2,
-                 "trace_schema":6,"trace_profile":"s2_special_stage",
+                 "trace_schema":5,"trace_profile":"s2_special_stage",
                  "start_x":"0000","start_y":"0000"}
                 """);
         Files.writeString(segment.resolve("physics.csv"),
                 "frame,anything\n0,a\n2,c\n");
         Files.writeString(runDir.resolve("run_manifest.json"), """
-                {"run_schema":1,"game":"s2","run_id":"gap",
+                {"trace_schema":5,"game":"s2","run_id":"gap",
                  "source_bk2":"gap.bk2","rom_checksum":"x",
-                 "lua_script_version":"legacy",
                  "segments":[{"dir":"ss","kind":"special_stage",
                    "trace_profile":"s2_special_stage","bk2_frame_offset":0,
                    "trace_frame_count":2,"special_stage_index":1}],
-                 "transitions":[]}
+                 "transitions":[],"dynamic_art_gap_transitions":[]}
                 """);
 
         TraceRunManifest manifest = TraceRunManifest.load(
                 runDir.resolve("run_manifest.json"));
-        IllegalArgumentException error = assertThrows(
-                IllegalArgumentException.class,
+        IOException error = assertThrows(
+                IOException.class,
                 () -> TraceRunReplayWalker.plan(manifest, runDir));
         assertTrue(error.getMessage().contains("contiguous"), error.getMessage());
     }
@@ -220,34 +215,40 @@ class TestTraceRunReplayWalkerControlFlow {
      * (AIZ->HCZ seg 8->9, HCZ->MGZ seg 18->19). Pure -- no ROM, no trace load.
      */
     @Test
-    void pairBoundariesHandlesGapsAndRepeatDirsForFullRun() throws Exception {
-        TraceRunManifest run = TraceRunManifest.load(S3K_RUN_MANIFEST);
-        assertEquals(25, run.segments().size(), "sanity: the committed S3K run has 25 segments");
+    void pairBoundariesHandlesGeneratedV5GapsAndTransitions() {
+        List<TraceRunManifest.Segment> segments = List.of(
+                segmentAt("aiz", "level", 0),
+                segmentAt("gumball", "bonus_stage", 100),
+                segmentAt("aiz_return", "level", 200),
+                segmentAt("ss", "special_stage", 300));
+        TraceRunManifest run = new TraceRunManifest(
+                "s3k", "generated", "movie.bk2", "checksum", segments,
+                List.of(new TraceRunManifest.Transition(0, 1, "starpost_bonus", 50,
+                                null, null, null, null, null, null, null, null),
+                        new TraceRunManifest.Transition(2, 3, "giant_ring", 250,
+                                null, null, null, null, null, null, null, null)));
 
         BoundaryPairing pairing = TraceRunReplayWalker.pairBoundaries(run);
-        assertEquals(25, pairing.entryBoundaries().length);
-        assertEquals(25, pairing.exitBoundaries().length);
+        assertEquals(4, pairing.entryBoundaries().length);
+        assertEquals(4, pairing.exitBoundaries().length);
 
         // Segment 0 is the run start: no entry boundary; exits via starpost_bonus.
         assertNull(pairing.entryBoundaries()[0]);
         assertEquals("starpost_bonus", pairing.exitBoundaries()[0].entryKind());
 
-        // Interior 1 (gumball) is bounded by starpost_bonus (entry) / stage_exit.
+        // Interior 1 (gumball) has the explicit starpost bonus entry.
         assertEquals("starpost_bonus", pairing.entryBoundaries()[1].entryKind());
-        assertEquals("stage_exit", pairing.exitBoundaries()[1].entryKind());
 
         // Plain level->level gaps carry NO transition record -> null both sides.
-        assertNull(pairing.exitBoundaries()[8], "AIZ->HCZ (8->9) is a plain level boundary");
-        assertNull(pairing.entryBoundaries()[9], "HCZ has no entry transition record");
-        assertNull(pairing.exitBoundaries()[19], "HCZ->MGZ (19->20) is a plain level boundary");
-        assertNull(pairing.entryBoundaries()[20], "MGZ has no entry transition record");
+        assertNull(pairing.exitBoundaries()[1], "gumball->AIZ is a plain boundary");
+        assertNull(pairing.entryBoundaries()[2], "AIZ has no entry transition record");
 
-        // A giant_ring special-stage entry is paired by explicit index (11->12).
-        assertEquals("giant_ring", pairing.exitBoundaries()[11].entryKind());
-        assertEquals("giant_ring", pairing.entryBoundaries()[12].entryKind());
+        // A giant_ring special-stage entry is paired by explicit index.
+        assertEquals("giant_ring", pairing.exitBoundaries()[2].entryKind());
+        assertEquals("giant_ring", pairing.entryBoundaries()[3].entryKind());
 
         // Last segment ends the run: no exit boundary.
-        assertNull(pairing.exitBoundaries()[24]);
+        assertNull(pairing.exitBoundaries()[3]);
     }
 
     @Test
@@ -334,7 +335,7 @@ class TestTraceRunReplayWalkerControlFlow {
     @Test
     void interSegmentStepCapIsMaxGapPlusWindow() {
         TraceRunManifest run = new TraceRunManifest(
-            1, "s3k", "syn", "syn.bk2", "cs", "lua",
+            "s3k", "syn", "syn.bk2", "cs",
             List.of(segmentAt("a", "level", 0),
                     segmentAt("b", "bonus_stage", 100),
                     segmentAt("c", "level", 1000)),

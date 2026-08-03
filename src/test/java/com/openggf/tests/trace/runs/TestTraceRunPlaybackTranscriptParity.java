@@ -113,8 +113,8 @@ class TestTraceRunPlaybackTranscriptParity {
         var transition = new TraceRunManifest.Transition(
                 0, 1, "starpost_bonus", 10,
                 null, null, null, null, null, null, null, null);
-        return new TraceRunManifest(1, "s3k", "run", "movie.bk2",
-                "checksum", "recorder", List.of(level, bonus),
+        return new TraceRunManifest("s3k", "run", "movie.bk2",
+                "checksum", List.of(level, bonus),
                 List.of(transition));
     }
 

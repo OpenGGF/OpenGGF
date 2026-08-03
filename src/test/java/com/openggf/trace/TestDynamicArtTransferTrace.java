@@ -566,7 +566,7 @@ class TestDynamicArtTransferTrace {
     private static TraceRunManifest runManifest(
             List<DynamicArtTransfer.GapTransition> gaps, int frameCount) {
         return new TraceRunManifest(
-                2, "s2", "synthetic", "synthetic.bk2", "checksum", "lua",
+                "s2", "synthetic", "synthetic.bk2", "checksum",
                 List.of(new TraceRunManifest.Segment(
                         "segment", "level", "complete_run", 0, frameCount,
                         0, 1, null, null)),

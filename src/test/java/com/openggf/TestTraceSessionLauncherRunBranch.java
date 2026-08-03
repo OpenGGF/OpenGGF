@@ -19,6 +19,7 @@ import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.level.render.TileLoadRequest;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.TestTempFiles;
 import com.openggf.trace.DynamicArtTransfer;
 import com.openggf.trace.FrameComparison;
 import com.openggf.trace.TraceData;
@@ -34,6 +35,7 @@ import com.openggf.trace.replay.runs.TraceRunPlaybackCoordinator;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker;
 import com.openggf.trace.timing.HardwareTimingReplayPort;
 import com.openggf.trace.timing.HardwareTimingSchedule;
+import com.openggf.tests.trace.TraceV5RunFixture;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -65,17 +67,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class TestTraceSessionLauncherRunBranch {
 
-    private static final Path RUN_DIR =
-            Path.of("src", "test", "resources", "traces", "synthetic", "run_aiz_gumball_3seg");
-    private static final Path SS_RUN_DIR =
-            Path.of("src", "test", "resources", "traces", "synthetic", "run_ehz_ss_3seg");
-
     private List<TraceRunReplayWalker.SegmentPlan> segments;
+    private Path runDir;
+    private Path specialStageRunDir;
 
     @BeforeEach
     void loadFixture() throws Exception {
-        TraceRunManifest run = TraceRunManifest.load(RUN_DIR.resolve("run_manifest.json"));
-        segments = TraceRunReplayWalker.plan(run, RUN_DIR);
+        Path root = TestTempFiles.createTempDirectory("trace-run-launcher-v5");
+        runDir = TraceV5RunFixture.writeS3kBonusRun(root.resolve("s3k"));
+        specialStageRunDir = TraceV5RunFixture.writeS2SpecialStageRun(root.resolve("s2"));
+        TraceRunManifest run = TraceRunManifest.load(runDir.resolve("run_manifest.json"));
+        segments = TraceRunReplayWalker.plan(run, runDir);
     }
 
     @AfterEach
@@ -168,8 +170,8 @@ class TestTraceSessionLauncherRunBranch {
                         0, 1, "starpost_bonus", 1750,
                         2, null, null, null, null, null, null, null);
         TraceRunManifest run = new TraceRunManifest(
-                1, "s3k", "visual-headless-parity", "synthetic.bk2",
-                "checksum", "recorder", List.of(level, bonus),
+                "s3k", "visual-headless-parity", "synthetic.bk2",
+                "checksum", List.of(level, bonus),
                 List.of(transition));
         List<TraceRunReplayWalker.SegmentPlan> twoSegments = List.of(
                 new TraceRunReplayWalker.SegmentPlan(
@@ -940,8 +942,8 @@ class TestTraceSessionLauncherRunBranch {
         List<TraceRunReplayWalker.SegmentPlan> specialSegments;
         try {
             TraceRunManifest run = TraceRunManifest.load(
-                    SS_RUN_DIR.resolve("run_manifest.json"));
-            specialSegments = TraceRunReplayWalker.plan(run, SS_RUN_DIR);
+                    specialStageRunDir.resolve("run_manifest.json"));
+            specialSegments = TraceRunReplayWalker.plan(run, specialStageRunDir);
         } catch (Exception e) {
             throw new AssertionError(e);
         }

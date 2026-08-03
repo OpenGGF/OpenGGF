@@ -113,8 +113,8 @@ class TestModeTracePickerLaunchStatus {
                 "second_completerun", "level", "complete_run",
                 1, 1, 1, 1, null, null);
         TraceRunManifest manifest = new TraceRunManifest(
-                1, "s1", "s1-complete-run", "s1-complete-run.bk2",
-                "checksum", "recorder", List.of(first, second), List.of());
+                "s1", "s1-complete-run", "s1-complete-run.bk2",
+                "checksum", List.of(first, second), List.of());
         return new TraceEntry(
                 Path.of("s1"), "s1", 0, 0, 2, 0, 0,
                 new SelectedTeam("sonic", List.of()),

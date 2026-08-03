@@ -39,7 +39,7 @@ class TestTraceRunDynamicArtGapJournal {
                 0, 1, null, null, List.of(),
                 DynamicArtTransfer.ledgerHash(List.of()));
         return new TraceRunManifest(
-                1, "s2", "run", "movie.bk2", "crc", "lua",
+                "s2", "run", "movie.bk2", "crc",
                 List.of(source, destination), List.of(), List.of(),
                 TraceRunManifest.ExpectedMovieEndMode.UNSPECIFIED);
     }

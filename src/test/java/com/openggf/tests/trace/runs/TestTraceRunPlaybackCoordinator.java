@@ -411,8 +411,8 @@ class TestTraceRunPlaybackCoordinator {
             List<TraceRunManifest.Segment> segments,
             List<TraceRunManifest.Transition> transitions,
             TraceRunManifest.ExpectedMovieEndMode endMode) {
-        return new TraceRunManifest(1, "test", "run", "movie.bk2",
-                "checksum", "recorder", segments, transitions, endMode);
+        return new TraceRunManifest("test", "run", "movie.bk2",
+                "checksum", segments, transitions, endMode);
     }
 
     private static TraceRunManifest.Segment level(
