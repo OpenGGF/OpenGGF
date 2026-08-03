@@ -7,11 +7,13 @@ import com.openggf.game.GameStateManager;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 
@@ -23,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 
 class TestMhzPulleyLiftObjectInstance {
@@ -39,6 +42,23 @@ class TestMhzPulleyLiftObjectInstance {
                 "SKL slot $06 is Obj_MHZPulleyLift; MHZ must not use the S3KL AIZ ride-vine object");
         assertEquals(5, pulley.getPriorityBucket(),
                 "Obj_MHZPulleyLift initializes parent and handle priority=$280");
+    }
+
+    @Test
+    void pulleyReservesBothAllocateObjectAfterCurrentHandleSlots() {
+        ObjectSpawn spawn = new ObjectSpawn(
+                0x1800, 0x0600, MHZ_PULLEY_LIFT, 1, 0, false, 0);
+        MhzPulleyLiftObjectInstance pulley = new MhzPulleyLiftObjectInstance(spawn);
+        ObjectManager objectManager = mock(ObjectManager.class);
+        LevelManager levelManager = mock(LevelManager.class);
+        when(levelManager.getObjectManager()).thenReturn(objectManager);
+        pulley.setServices(new TestObjectServices().withLevelManager(levelManager));
+        pulley.setSlotIndex(37);
+
+        pulley.update(0, null);
+        pulley.update(1, null);
+
+        verify(objectManager, times(1)).allocateChildSlotsAfter(spawn, 2, 37);
     }
 
     @Test
@@ -96,6 +116,60 @@ class TestMhzPulleyLiftObjectInstance {
     }
 
     @Test
+    void nativeP2CanJoinPlayerOneOnTheSamePulleyHandle() {
+        Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
+        AbstractObjectInstance pulley = (AbstractObjectInstance) registry.create(new ObjectSpawn(
+                0x1800, 0x0600, MHZ_PULLEY_LIFT, 1, 0, false, 0));
+        TestablePlayableSprite sidekick = fallingPlayerAt(0x1900, 0x0660);
+        pulley.setServices(new TestObjectServices()
+                .withGameState(mock(GameStateManager.class))
+                .withSidekicks(List.of(sidekick)));
+        TestablePlayableSprite sonic = fallingPlayerAt(0x17CE, 0x062C);
+
+        pulley.update(0, sonic);
+        assertTrue(sonic.isObjectControlled());
+        assertFalse(sidekick.isObjectControlled());
+
+        NativePositionOps.writeXPosPreserveSubpixel(sidekick, 0x17CE);
+        NativePositionOps.writeYPosPreserveSubpixel(sidekick, 0x062C);
+        sidekick.setYSpeed((short) 0x200);
+        pulley.update(1, sonic);
+
+        assertTrue(sonic.isObjectControlled(),
+                "the handle's $30 occupancy byte keeps Player_1 attached");
+        assertTrue(sidekick.isObjectControlled(),
+                "sub_3E4EC gives the same handle independent $31/$30 occupancy bytes, so Player_2 may join Player_1");
+        assertEquals(sonic.getCentreX() & 0xFFFF, sidekick.getCentreX() & 0xFFFF);
+        assertEquals(sonic.getCentreY() & 0xFFFF, sidekick.getCentreY() & 0xFFFF);
+        assertEquals(0x90, sidekick.getMappingFrame());
+    }
+
+    @Test
+    void nativeP2ReleasesOnCpuGeneratedLogicalJumpEdge() {
+        Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
+        AbstractObjectInstance pulley = (AbstractObjectInstance) registry.create(new ObjectSpawn(
+                0x1800, 0x0600, MHZ_PULLEY_LIFT, 1, 0, false, 0));
+        TestablePlayableSprite sidekick = fallingPlayerAt(0x17CE, 0x062C);
+        pulley.setServices(new TestObjectServices()
+                .withGameState(mock(GameStateManager.class))
+                .withSidekicks(List.of(sidekick)));
+        TestablePlayableSprite sonic = fallingPlayerAt(0x1900, 0x0660);
+
+        pulley.update(0, sonic);
+        assertTrue(sidekick.isObjectControlled());
+
+        sidekick.setDirectionalInputPressed(false, false, false, true);
+        sidekick.setJumpInputPressed(false, false);
+        sidekick.setLogicalInputState(false, false, false, true, true, true);
+        pulley.update(1, sonic);
+
+        assertFalse(sidekick.isObjectControlled(),
+                "sub_3E508 reads the Ctrl_2_logical pressed byte, including CPU-generated jump edges");
+        assertEquals((short) 0x200, sidekick.getXSpeed());
+        assertEquals((short) -0x380, sidekick.getYSpeed());
+    }
+
+    @Test
     void hurtPlayerInsidePulleyGrabWindowIsNotCaptured() {
         Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
         ObjectInstance pulley = registry.create(new ObjectSpawn(
@@ -123,8 +197,10 @@ class TestMhzPulleyLiftObjectInstance {
         assertEquals("MHZPulleyLift", pulley.getName(),
                 "SKL slot $06 must construct the MHZ pulley before behavior can be validated");
         pulley.update(0, player);
+        int heldY = player.getCentreY() & 0xFFFF;
         player.setDirectionalInputPressed(false, false, true, false);
         player.setJumpInputPressed(true, true);
+        player.setLogicalInputState(false, false, true, false, true, true);
         pulley.update(1, player);
 
         assertFalse(player.isObjectControlled(),
@@ -135,6 +211,8 @@ class TestMhzPulleyLiftObjectInstance {
                 "holding left during pulley release writes x_vel=-$200");
         assertEquals((short) -0x380, player.getYSpeed(),
                 "pulley release writes y_vel=-$380");
+        assertEquals(heldY, player.getCentreY() & 0xFFFF,
+                "sub_3E508 changes status and radii without changing the ROM y_pos centre in the later handle slot");
         assertTrue(player.getAir(), "release sets Status_InAir");
         assertTrue(player.isJumping(), "sub_3E508 writes jumping=1 on pulley release");
         assertTrue(player.getRolling(), "release sets Status_Roll");
@@ -247,6 +325,34 @@ class TestMhzPulleyLiftObjectInstance {
     }
 
     @Test
+    void releasingDownRetractsHandleAndMovesHeldPlayerOnFollowingParentPass() {
+        Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
+        ObjectInstance pulley = registry.create(new ObjectSpawn(
+                0x1800, 0x0600, MHZ_PULLEY_LIFT, 0xFF, 0, false, 0));
+        TestablePlayableSprite player = fallingPlayerAt(0x17CE, 0x062C);
+
+        pulley.update(0, player);
+        player.setDirectionalInputPressed(false, true, false, false);
+        for (int frame = 1; frame <= 16; frame++) {
+            pulley.update(frame, player);
+        }
+        assertTrue(pulley.traceDebugDetails().contains(" leftOffset=64 "));
+        pulley.update(17, player);
+
+        player.setDirectionalInputPressed(false, false, false, false);
+        int heldY = player.getCentreY() & 0xFFFF;
+        pulley.update(18, player);
+
+        assertTrue(pulley.traceDebugDetails().contains(" leftOffset=60 "),
+                "loc_3E4AA retracts the child handle by four as soon as DOWN is no longer held");
+
+        pulley.update(19, player);
+
+        assertEquals(heldY - 6, player.getCentreY() & 0xFFFF,
+                "the next parent slot consumes the child offset delta (-2 parent, -4 handle) before loc_3E646 snaps the player");
+    }
+
+    @Test
     void downInputOnlyPlaysPulleyMoveSfxForNonZeroSubtype() {
         Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
         RecordingServices services = new RecordingServices();
@@ -278,6 +384,34 @@ class TestMhzPulleyLiftObjectInstance {
 
         assertTrue(enabledServices.playedSfx(Sonic3kSfx.PULLEY_MOVE.id),
                 "loc_3E632 plays sfx_PulleyMove when down is pressed and the parent subtype is nonzero");
+    }
+
+    @Test
+    void heldDownKeepsHandleExtendedAfterPullCounterIsExhausted() {
+        Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
+        ObjectInstance pulley = registry.create(new ObjectSpawn(
+                0x1800, 0x0600, MHZ_PULLEY_LIFT, 1, 0, false, 0));
+        TestablePlayableSprite player = fallingPlayerAt(0x17CE, 0x062C);
+
+        pulley.update(0, player);
+        player.setDirectionalInputPressed(false, true, false, false);
+        int frame = 1;
+        while (!pulley.traceDebugDetails().contains(" remainingPullSteps=0 ") && frame <= 32) {
+            pulley.update(frame, player);
+            frame++;
+        }
+
+        assertTrue(pulley.traceDebugDetails().contains(" remainingPullSteps=0 "),
+                "precondition: loc_3E3F8 consumes the single permitted pull step");
+        int exhaustedOffset = detailValue(pulley.traceDebugDetails(), "leftOffset");
+        assertTrue(exhaustedOffset > 0,
+                "the child remains extended when the parent consumes its final pull step");
+
+        pulley.update(frame, player);
+
+        assertEquals(exhaustedOffset, detailValue(pulley.traceDebugDetails(), "leftOffset"),
+                "with DOWN held, loc_3E472 sees $3A!=0 then subtype=0 and branches directly to loc_3E4B6; "
+                        + "it neither extends nor retracts the handle");
     }
 
     @Test
@@ -371,6 +505,13 @@ class TestMhzPulleyLiftObjectInstance {
         player.setGSpeed((short) 0x100);
         player.setAir(true);
         return player;
+    }
+
+    private static int detailValue(String details, String key) {
+        int start = details.indexOf(key + "=");
+        int valueStart = start + key.length() + 1;
+        int valueEnd = details.indexOf(' ', valueStart);
+        return Integer.parseInt(details.substring(valueStart, valueEnd));
     }
 
     private static final class RecordingServices extends TestObjectServices {

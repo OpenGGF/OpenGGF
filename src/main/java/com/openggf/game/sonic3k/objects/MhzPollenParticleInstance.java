@@ -109,7 +109,9 @@ public class MhzPollenParticleInstance extends AbstractObjectInstance implements
         }
 
         animateMappingFrame();
-        if (enteredFloatingRoutine && !isOnScreen(0x20)) {
+        if (enteredFloatingRoutine
+                && !isPreUpdateWithinRenderSpriteBounds(
+                        getOnScreenHalfWidth(), getOnScreenHalfHeight())) {
             cleanupOffscreen();
         }
     }

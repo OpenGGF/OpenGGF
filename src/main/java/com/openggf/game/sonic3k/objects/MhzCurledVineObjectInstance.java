@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.SlopedSolidProvider;
@@ -57,6 +58,7 @@ public final class MhzCurledVineObjectInstance extends AbstractObjectInstance
     private final int[] segmentXs = new int[SEGMENT_COUNT];
     private final int[] segmentYs = new int[SEGMENT_COUNT];
     private boolean hFlip;
+    private boolean displayChildSlotReserved;
     private int curveState = INITIAL_CURVE_STATE;
     private int rangeWidth = INITIAL_RANGE_WIDTH;
 
@@ -73,10 +75,32 @@ public final class MhzCurledVineObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        reserveDisplayChildSlot();
         int tableIndex = selectStandingTableIndex();
         rangeWidth = RANGE_WIDTHS[tableIndex];
         curveState = approachCurveState(curveState, CURVE_TARGETS[tableIndex]);
         updateSegmentPositions();
+    }
+
+    @Override
+    public int getReservedChildSlotCount() {
+        return 1;
+    }
+
+    private void reserveDisplayChildSlot() {
+        if (displayChildSlotReserved || getSlotIndex() < 0) {
+            return;
+        }
+        ObjectServices objectServices = tryServices();
+        if (objectServices == null || objectServices.objectManager() == null) {
+            return;
+        }
+        displayChildSlotReserved = true;
+        // AllocateObjectAfterCurrent creates loc_3E9A6 in its own SST entry.
+        // Rendering remains consolidated here, but that ROM slot must stay
+        // occupied so later FindFree/FindNextFree allocations see the same pool.
+        objectServices.objectManager().allocateChildSlotsAfter(
+                spawn, getReservedChildSlotCount(), getSlotIndex());
     }
 
     @Override
@@ -265,11 +289,13 @@ public final class MhzCurledVineObjectInstance extends AbstractObjectInstance
         if (standingSegmentIndices.isEmpty()) {
             return 0;
         }
-        int minimumSegment = Integer.MAX_VALUE;
+        // loc_3E8A2 compares P2's $37 against P1's $36 and retains the larger
+        // segment before incrementing for its range/curve tables (sonic3k.asm:82810-82823).
+        int maximumSegment = 0;
         for (int segmentIndex : standingSegmentIndices.values()) {
-            minimumSegment = Math.min(minimumSegment, segmentIndex);
+            maximumSegment = Math.max(maximumSegment, segmentIndex);
         }
-        return Math.min(minimumSegment + 1, RANGE_WIDTHS.length - 1);
+        return Math.min(maximumSegment + 1, RANGE_WIDTHS.length - 1);
     }
 
     /**

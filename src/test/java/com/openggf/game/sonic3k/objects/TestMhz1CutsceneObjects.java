@@ -2499,6 +2499,51 @@ class TestMhz1CutsceneObjects {
     }
 
     @Test
+    void mhz1ButtonAndDoorOnlyBecomeUnloadableAfterMainRoutineIsInstalled() {
+        ObjectManager objectManager = mock(ObjectManager.class);
+        List<ObjectInstance> spawned = new ArrayList<>();
+        doAnswer(invocation -> {
+            spawned.add(invocation.getArgument(0));
+            return null;
+        }).when(objectManager).addDynamicObject(any(ObjectInstance.class));
+        CheckpointState checkpointState = new CheckpointState();
+        checkpointState.restoreFromSaved(0x0190, 0x056C, 0, 0, 1);
+        TestObjectServices services = new TestObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return objectManager;
+            }
+
+            @Override
+            public RespawnState checkpointState() {
+                return checkpointState;
+            }
+        }.withZoneRuntimeRegistry(runtime(PlayerCharacter.SONIC_AND_TAILS));
+        Mhz1CutsceneButtonInstance button = new Mhz1CutsceneButtonInstance(new ObjectSpawn(
+                0x0380, MHZ1_SWITCH_SPAWN_Y, Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, 0, 0, false, 0));
+        button.setServices(services);
+
+        assertTrue(button.isPersistent(),
+                "WaitForKnucklesEvent/Depress/Wait_Draw only draw; they do not run Sprite_CheckDelete");
+
+        button.update(0, new TestablePlayableSprite("sonic", (short) 0x0389, (short) 0x0580));
+        Mhz1CutsceneDoorInstance door = spawned.stream()
+                .filter(Mhz1CutsceneDoorInstance.class::isInstance)
+                .map(Mhz1CutsceneDoorInstance.class::cast)
+                .findFirst().orElseThrow();
+
+        assertFalse(button.isPersistent(),
+                "Last_star_post_hit selects MHZ1CutsceneButton_Main, whose tail is Sprite_CheckDelete");
+        assertTrue(door.isPersistent(),
+                "Child_Draw_Sprite keeps the door alive while its parent remains live");
+
+        button.onUnload();
+
+        assertTrue(door.isDestroyed(),
+                "Child_Draw_Sprite observes the deleted parent and retires the door child");
+    }
+
+    @Test
     void buttonSpawnsMhz1DoorChildFromRomInit() {
         ObjectManager objectManager = mock(ObjectManager.class);
         List<ObjectInstance> spawned = new ArrayList<>();

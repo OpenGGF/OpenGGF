@@ -545,9 +545,9 @@ final class ObjectTouchResponseController {
                         sizeIndex, width, height, category, touchProfile.shieldReactionFlags());
                 TouchResponseListener listener = instance instanceof TouchResponseListener casted ? casted : null;
                 if (isSidekick) {
-                    handleTouchResponseSidekick(player, instance, listener, result, touchProfile);
+                    handleTouchResponseSidekick(player, instance, listener, result, touchProfile, objY);
                 } else {
-                    handleTouchResponse(player, instance, listener, result, touchProfile);
+                    handleTouchResponse(player, instance, listener, result, touchProfile, objY);
                 }
             }
             // ROM parity: ReactToItem ALWAYS exits after the first overlapping
@@ -638,9 +638,9 @@ final class ObjectTouchResponseController {
                         sizeIndex, width, height, category, region.shieldReactionFlags(), region.x());
                 TouchResponseListener listener = instance instanceof TouchResponseListener casted ? casted : null;
                 if (isSidekick) {
-                    handleTouchResponseSidekick(player, instance, listener, result, profile);
+                    handleTouchResponseSidekick(player, instance, listener, result, profile, region.y());
                 } else {
-                    handleTouchResponse(player, instance, listener, result, profile);
+                    handleTouchResponse(player, instance, listener, result, profile, region.y());
                 }
             }
             // ROM parity: ReactToItem ALWAYS exits on first overlap, even
@@ -692,7 +692,8 @@ final class ObjectTouchResponseController {
      * - Special category objects still interact normally
      */
     private void handleTouchResponseSidekick(PlayableEntity sidekick, ObjectInstance instance,
-            TouchResponseListener listener, TouchResponseResult result, TouchResponseProfile profile) {
+            TouchResponseListener listener, TouchResponseResult result, TouchResponseProfile profile,
+            int resolvedTouchY) {
         if (sidekick == null) {
             return;
         }
@@ -745,7 +746,7 @@ final class ObjectTouchResponseController {
                         boolean isNowDestroyed = instance instanceof AbstractObjectInstance postAoi
                                 && postAoi.isDestroyed();
                         if (isNowDestroyed) {
-                            applyEnemyBounce(sidekick, instance);
+                            applyEnemyBounce(sidekick, resolvedTouchY);
                         }
                     }
                 } else {
@@ -909,7 +910,8 @@ final class ObjectTouchResponseController {
     }
 
     private void handleTouchResponse(PlayableEntity player, ObjectInstance instance,
-            TouchResponseListener listener, TouchResponseResult result, TouchResponseProfile profile) {
+            TouchResponseListener listener, TouchResponseResult result, TouchResponseProfile profile,
+            int resolvedTouchY) {
         if (player == null) {
             return;
         }
@@ -968,7 +970,7 @@ final class ObjectTouchResponseController {
                         boolean isNowDestroyed = instance instanceof AbstractObjectInstance postAoi
                                 && postAoi.isDestroyed();
                         if (isNowDestroyed) {
-                            applyEnemyBounce(player, instance);
+                            applyEnemyBounce(player, resolvedTouchY);
                         }
                     }
                 } else {
@@ -1056,7 +1058,7 @@ final class ObjectTouchResponseController {
         return angle & 0xFF;
     }
 
-    private void applyEnemyBounce(PlayableEntity player, ObjectInstance instance) {
+    private void applyEnemyBounce(PlayableEntity player, int enemyY) {
         // ROM-accurate: React_Enemy (s1.asm) only modifies obVelY, it does NOT
         // set the air flag. Letting the collision system handle air state naturally
         // preserves rolling through enemy bounces (ground roll into badnik).
@@ -1067,8 +1069,10 @@ final class ObjectTouchResponseController {
         }
         // Use center coordinates to match ROM y_pos behavior
         int playerY = player.getCentreY();
-        // ROM: cmp.w y_pos(a1),d0 — use current position, not spawn
-        int enemyY = instance != null ? instance.getY() : playerY;
+        // The overlap and bounce both dereference the same object slot in all three
+        // ROMs; keep the already-resolved touch Y instead of re-reading a later
+        // engine projection (S1 ReactToItem.asm:163,301-304; S2 s2.asm:
+        // 85127,85414-85420; S3K sonic3k.asm:20697,20974-20989).
         if (playerY < enemyY) {
             player.setYSpeed((short) -ySpeed);
         } else {

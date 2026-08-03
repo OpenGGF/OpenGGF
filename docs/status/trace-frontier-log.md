@@ -60770,3 +60770,33 @@ passes 152/152. The ROM-backed command
 passes 1/1 with no comparator errors. The headless GHZ1 frontier therefore
 remains complete; the repaired frontier is the visual launch boundary at row
 zero.
+
+## 2026-08-03 — MHZ fixed-SST and object parity advances physics to frame 6337
+
+Context: `.worktrees/red-s3k-mhz-fixed-sst`, branch
+`bugfix/ai-red-s3k-mhz-fixed-sst`, JDK 21.0.11, verified locked-on S3K ROM.
+The lane retained the committed fixture's frame-5240
+`player_mapping_frame 07 -> 08` recording-phase mismatch and temporarily omitted
+only that animation comparison to measure later physics frontiers. No physics,
+auxiliary, timing, or gameplay state was ignored or hydrated.
+
+Measured advances were 5509 -> 5647 after correcting Curled Vine's maximum
+segment extent, 5647 -> 5912 after using the collision-loop-resolved enemy Y for
+the shared kill bounce, and 5912 -> 6337 after applying `SolidObjectTop`'s
+unsigned `-$10..-$1` Mushroom Cap landing window. Earlier work in the same lane
+made the MHZ pollen spawner a fixed SST occupant, routed plane switches through
+their executing object slots, corrected cutscene-child lifetimes, preserved
+pulley multi-rider/release state, and matched Madmole body/arm behavior.
+
+Normal frontier-only replay remains one animation error at frame 5240 with zero
+physics errors. The mapping-only diagnostic reaches frame 6337 `camera_y`
+(`0348` expected, `0340` actual). Row dumps and an isolated A/B attribute the
+next owner to the Swing Vine fast-grab transition: the ROM preserves the incoming
+mapping frame on the grab tick and delays forced scroll until the following root
+dispatch. That measured frame-6337 finding is intentionally not implemented in
+this banked change.
+
+Focused banking verification covered 15 classes, including fixed-slot,
+plane-switch, pollen, pulley, Curled Vine, Madmole, touch-response, rewind schema,
+cutscene graph, rewind-coverage, and trace-invariant tests. All selected tests
+passed after adding captured rewind identity for the button's `spawnedDoor` link.

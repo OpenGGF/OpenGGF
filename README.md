@@ -226,6 +226,14 @@ Development since `v0.5.20260411` is the active 0.6 prerelease line. The release
   service-before-open order as headless replay, fixing S1 GHZ1's visual-only
   frame-zero dynamic-art mismatch without filtering any recorded edges.
 
+- **MHZ fixed-SST and route-object parity (2026-08-03):** pollen and plane
+  switchers now use slot-owned fixed-SST installation and cleanup, while the
+  MHZ cutscene door, pulley, curled vine, Madmole, enemy bounce, and mushroom
+  cap paths follow their ROM lifetime, geometry, and contact semantics. Rewind
+  preserves the cutscene child identity, and the MHZ complete-run physics
+  frontier advances from frame 5,509 to 6,337. The three-ROM suite retains the
+  pre-existing failure/error baseline with no new failing test.
+
 - **Visual trace launch parity and diagnostics (2026-08-02):** the master-title
   picker now exposes grouped legacy S1/S3K complete runs alongside their level
   entries, dispatches all three games' typed special-stage traces, and accepts

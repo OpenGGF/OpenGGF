@@ -441,11 +441,12 @@ class TestRewindSchemaRegistry {
         RewindClassSchema peerSchema =
                 RewindSchemaRegistry.defaultObjectSubclassSchemaFor(CutsceneKnucklesMhz1PeerInstance.class);
 
+        assertPolicy(buttonSchema, "spawnedDoor", RewindFieldPolicy.CAPTURED);
         assertPolicy(buttonSchema, "spawnedKnuckles", RewindFieldPolicy.CAPTURED);
         assertPolicy(knucklesSchema, "parentButton", RewindFieldPolicy.CAPTURED);
         assertPolicy(peerSchema, "parent", RewindFieldPolicy.CAPTURED);
         assertTrue(buttonSchema.unsupportedFields().isEmpty(),
-                "MHZ1 cutscene button compact schema must capture spawned Knuckles without fallback: "
+                "MHZ1 cutscene button compact schema must capture spawned children without fallback: "
                         + buttonSchema.unsupportedFields().stream().map(RewindFieldPlan::key).toList());
         assertTrue(knucklesSchema.unsupportedFields().isEmpty(),
                 "MHZ1 cutscene Knuckles compact schema must capture the parent button without fallback: "

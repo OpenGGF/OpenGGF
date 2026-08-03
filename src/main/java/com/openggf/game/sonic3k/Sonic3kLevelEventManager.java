@@ -54,7 +54,6 @@ import com.openggf.game.sonic3k.objects.IczSnowboardArtLoader;
 import com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance;
 import com.openggf.game.sonic3k.objects.Lbz1GroundLaunchIntroInstance;
 import com.openggf.game.sonic3k.objects.MgzDrillingRobotnikInstance;
-import com.openggf.game.sonic3k.objects.MhzPollenSpawnerInstance;
 import com.openggf.camera.Camera;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -97,7 +96,6 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     // Dynamic_object_RAM+object_size (sonic3k.asm:7793) == dynamic slot 1, which
     // is absolute SST slot 4 (Player_1, Player_2, Reserved_object_3 precede the
     // dynamic range -- sonic3k.constants.asm:303-307).
-    private static final int MHZ_POLLEN_SPAWNER_SST_SLOT = 4;
     private static final int CNZ_POST_TITLE_CARD_CONTROL_HANDOFF_DISPATCHES = 9;
     private static final int CNZ2_CAMERA_MIN_X = 0x0000;
     private static final int CNZ2_CAMERA_MAX_X = 0x6000;
@@ -252,12 +250,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         // Uses getActiveRuntime() to avoid the mode-checking side effects of
         // getCurrent() which can destroy the runtime during level loading.
         installZoneRuntimeState(zone, act);
-        installFixedDynamicObjects(zone);
     }
 
     @Override
     public void updateFixedInLevelObjects() {
-        installFixedDynamicObjects(currentZone);
         fixedAirCountdownManager.update();
     }
 
@@ -353,41 +349,6 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (mgzEvents != null) {
             mgzEvents.updateBgRiseObjectAfterPlayerPhysics(currentAct);
             mgzEvents.updateBossTransitionObjectBeforeDynamicObjects(currentAct);
-        }
-    }
-
-    /**
-     * ROM level init writes {@code Obj_MHZ_Pollen_Spawner} into
-     * {@code Dynamic_object_RAM+object_size} for MHZ (sonic3k.asm:7793) — dynamic
-     * slot 1, absolute SST slot 4. It then runs from the ordinary object loop
-     * every frame with no camera or on-screen gate, and its {@code sub_3DA24}
-     * draws {@code Random_Number} once per grounded player each frame
-     * (sonic3k.asm:81639), so it is a standing consumer of the global RNG stream
-     * rather than just a cosmetic particle source.
-     *
-     * <p>The install therefore has to happen where the object survives. Running
-     * it from {@link #init} alone lands before the level's object manager is
-     * populated and the instance is discarded, which left the S3K RNG stream
-     * desynchronised for the whole of MHZ and turned every downstream RNG branch
-     * (e.g. the Madmole side-drill arc/straight selection in {@code loc_8D89E})
-     * into a coin flip. It is idempotent, so the per-frame call re-establishes it.
-     */
-    private void installFixedDynamicObjects(int zone) {
-        if (!GameServices.hasRuntime() || zone != Sonic3kZoneIds.ZONE_MHZ) {
-            return;
-        }
-        ObjectManager objectManager = GameServices.level().getObjectManager();
-        if (objectManager == null) {
-            return;
-        }
-        boolean alreadyInstalled = objectManager.getActiveObjects().stream()
-                .anyMatch(MhzPollenSpawnerInstance.class::isInstance);
-        if (alreadyInstalled) {
-            return;
-        }
-        if (objectManager.createDynamicObjectAtSlot(
-                MhzPollenSpawnerInstance::new, MHZ_POLLEN_SPAWNER_SST_SLOT) == null) {
-            objectManager.createDynamicObject(MhzPollenSpawnerInstance::new);
         }
     }
 

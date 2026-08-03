@@ -63,6 +63,7 @@ public final class Mhz1CutsceneButtonInstance extends AbstractObjectInstance
     private boolean normalPressed;
     private boolean contactStanding;
     private boolean doorSpawned;
+    private Mhz1CutsceneDoorInstance spawnedDoor;
     private boolean peerSpawned;
     private CutsceneKnucklesMhz1Instance spawnedKnuckles;
     private boolean doorSwitchActive;
@@ -71,6 +72,7 @@ public final class Mhz1CutsceneButtonInstance extends AbstractObjectInstance
     private boolean cutsceneDoorLatched;
     private int timer;
     private int cutscenePressedFrames;
+    private boolean mainRoutineActive;
     private S3kKosModuleQueue knuxPeerArtQueue;
     private HardwareWorkHandle knuxPeerArtHandle;
     private long knuxPeerArtOrdinal = -1;
@@ -98,7 +100,19 @@ public final class Mhz1CutsceneButtonInstance extends AbstractObjectInstance
 
     @Override
     public boolean isPersistent() {
-        return true;
+        // WaitForKnucklesEvent, CheckKnucklesPress, Depress, and Wait_Draw only
+        // draw the object. Once ReleaseAfterDelay installs
+        // MHZ1CutsceneButton_Main (or init selects Main from checkpoint/Knuckles
+        // state), every normal routine ends in Sprite_CheckDelete.
+        return !mainRoutineActive;
+    }
+
+    @Override
+    public void onUnload() {
+        if (spawnedDoor != null) {
+            spawnedDoor.setDestroyed(true);
+            spawnedDoor = null;
+        }
     }
 
     @Override
@@ -118,6 +132,7 @@ public final class Mhz1CutsceneButtonInstance extends AbstractObjectInstance
         Mhz1CutsceneKnucklesInstance knuckles =
                 Mhz1CutsceneKnucklesInstance.activeInstance(services().objectManager());
         if (usesNormalSwitchPath(knuckles)) {
+            mainRoutineActive = true;
             updateNormalSwitchPath();
             return;
         }
@@ -144,6 +159,7 @@ public final class Mhz1CutsceneButtonInstance extends AbstractObjectInstance
                 return;
             }
         }
+        mainRoutineActive = true;
         knuckles.signalButtonCallback();
     }
 
@@ -272,7 +288,7 @@ public final class Mhz1CutsceneButtonInstance extends AbstractObjectInstance
             return;
         }
         doorSpawned = true;
-        spawnFreeChild(() -> new Mhz1CutsceneDoorInstance(this));
+        spawnedDoor = spawnFreeChild(() -> new Mhz1CutsceneDoorInstance(this));
     }
 
     boolean isDoorSwitchActive() {
@@ -286,6 +302,12 @@ public final class Mhz1CutsceneButtonInstance extends AbstractObjectInstance
     void detachSpawnedKnuckles(CutsceneKnucklesMhz1Instance actor) {
         if (spawnedKnuckles == actor) {
             spawnedKnuckles = null;
+        }
+    }
+
+    void detachDoor(Mhz1CutsceneDoorInstance door) {
+        if (spawnedDoor == door) {
+            spawnedDoor = null;
         }
     }
 

@@ -99,6 +99,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
     private boolean awaitingParentObserve;
     private boolean waitingForOnscreen = true;
     private boolean initialized;
+    private boolean bodyChildSlotReserved;
     // ROM parity: models the parent's $38(a0) bit 1 "child alive" latch never
     // clearing once EnemyDefeated destroys the body child off the normal
     // sink-delete path (loc_8D6D6 is the only place that bclr's it). Once set,
@@ -233,6 +234,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
         }
 
         state = State.RISING;
+        reserveBodyChildSlot();
         currentY = homeY + BODY_CHILD_Y_OFFSET;
         mappingFrame = 0;
         ySubpixel = 0;
@@ -337,6 +339,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
         yVelocity = 0;
         mappingFrame = CAP_MAPPING_FRAME;
         awaitingParentObserve = true;
+        releaseBodyChildSlot();
     }
 
     private void updateCooldown() {
@@ -358,6 +361,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
             return;
         }
         bodyDefeated = true;
+        releaseBodyChildSlot();
         int bodyX = currentX;
         int bodyY = currentY;
         state = State.BURIED;
@@ -374,6 +378,43 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
         // rather than transferring the parent cap's slot -- the cap keeps its
         // own slot and keeps running SolidObjectFull every frame).
         DestructionEffects.destroyBadnik(bodyX, bodyY, null, player, services(), getDestructionConfig());
+        if (player instanceof AbstractPlayableSprite playable) {
+            // Touch_EnemyNormal applies its kill bounce after EnemyDefeated.
+            // This class consolidates the destroyed body child into the still-live
+            // parent cap, so ObjectTouchResponseController cannot infer the child
+            // death from this parent instance's isDestroyed() flag.
+            applyEnemyDefeatedBounce(playable, bodyY);
+        }
+    }
+
+    private static void applyEnemyDefeatedBounce(AbstractPlayableSprite player, int enemyY) {
+        int ySpeed = player.getYSpeed();
+        if (ySpeed < 0) {
+            player.setYSpeed((short) (ySpeed + 0x100));
+        } else if (player.getCentreY() >= enemyY) {
+            player.setYSpeed((short) (ySpeed - 0x100));
+        } else {
+            player.setYSpeed((short) -ySpeed);
+        }
+    }
+
+    private void reserveBodyChildSlot() {
+        if (bodyChildSlotReserved || getSlotIndex() < 0
+                || services().objectManager() == null) {
+            return;
+        }
+        bodyChildSlotReserved = true;
+        // loc_8D5BE uses CreateChild1_Normal, whose allocator scans forward
+        // from the parent cap's slot for the body at loc_8D602.
+        services().objectManager().allocateChildSlotsAfter(spawn, 1, getSlotIndex());
+    }
+
+    private void releaseBodyChildSlot() {
+        if (!bodyChildSlotReserved || services().objectManager() == null) {
+            return;
+        }
+        services().objectManager().freeReservedChildSlot(spawn, 0);
+        bodyChildSlotReserved = false;
     }
 
     private boolean isBodyChildActive() {
@@ -488,10 +529,15 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
                 return;
             }
 
-            // ROM loc_8D778 (routine 4) begins with bsr sub_8D94A, which reads the
-            // collision_property set during this frame's TouchResponse pass. Apply
-            // any pending arc capture here, before the arm moves.
-            applyPendingArcCapture();
+            // TouchResponse only writes collision_property. The arm consumes it
+            // later in its own SST slot: sub_8D8E6 for a straight drill or
+            // sub_8D94A for an arcing drill (sonic3k.asm:193250-193266,
+            // 193427-193452). Apply that pending response before the arm moves.
+            if (arcing) {
+                applyPendingArcCapture();
+            } else {
+                applyPendingStraightLaunch();
+            }
             if (capturedPlayer != null && !awaitingCarryRoutine) {
                 // ROM routine 8 (loc_8D7A8): pin the captured player to the arm's
                 // current (pre-move) x_pos/y_pos, THEN MoveSprite_LightGravity
@@ -611,21 +657,35 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
                 return;
             }
 
+            if (player instanceof AbstractPlayableSprite sprite) {
+                // Player_2's later TouchResponse overwrites Player_1 in the
+                // shared collision_property byte; the last overlap wins.
+                pendingCapturePlayer = sprite;
+            }
+        }
+
+        private void applyPendingStraightLaunch() {
+            AbstractPlayableSprite player = pendingCapturePlayer;
+            pendingCapturePlayer = null;
+            if (player == null || straightTouchConsumed || postCaptureDrift
+                    || player.getInvincibleFrames() != 0
+                    || player.isObjectControlled()) {
+                return;
+            }
+
             straightTouchConsumed = true;
             int launchX = xVelocity * 2;
             player.setXSpeed((short) launchX);
             player.setGSpeed((short) launchX);
             player.setYSpeed((short) -0x200);
             player.setAir(true);
-            if (player instanceof AbstractPlayableSprite sprite) {
-                // ROM sub_8D8E6 move.w a2,$44(a0) (sonic3k.asm:193439), the same
-                // back-reference the arc grab writes. The straight knock-back does
-                // not carry the player, so this is the only record the arm keeps of
-                // whom to detach when loc_8D724 despawns it off-camera.
-                releaseTargetPlayer = sprite;
-                sprite.setAnimationId(0x1A);
-                sprite.setSpindash(false);
-            }
+            // ROM sub_8D8E6 move.w a2,$44(a0) (sonic3k.asm:193439), the same
+            // back-reference the arc grab writes. The straight knock-back does
+            // not carry the player, so this is the only record the arm keeps of
+            // whom to detach when loc_8D724 despawns it off-camera.
+            releaseTargetPlayer = player;
+            player.setAnimationId(0x1A);
+            player.setSpindash(false);
             if (tryServices() != null) {
                 tryServices().playSfx(Sonic3kSfx.FLIPPER.id);
             }

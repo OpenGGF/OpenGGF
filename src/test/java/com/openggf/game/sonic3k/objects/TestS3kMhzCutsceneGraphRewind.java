@@ -98,6 +98,7 @@ class TestS3kMhzCutsceneGraphRewind {
 
         Mhz1CutsceneDoorInstance door = objectManager.createDynamicObject(
                 () -> new Mhz1CutsceneDoorInstance(buttonCaptured));
+        setObjectField(buttonCaptured, "spawnedDoor", door);
         CutsceneKnucklesMhz1Instance spawnedKnuckles = objectManager.createDynamicObject(
                 () -> new CutsceneKnucklesMhz1Instance(CUTSCENE_KNUCKLES_CAPTURED, buttonCaptured));
         setObjectField(buttonCaptured, "spawnedKnuckles", spawnedKnuckles);
@@ -140,6 +141,7 @@ class TestS3kMhzCutsceneGraphRewind {
                         0x0390, 0x05B0, Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, 0, 0, false, 0x41)));
         Mhz1CutsceneDoorInstance divergentDoor = objectManager.createDynamicObject(
                 () -> new Mhz1CutsceneDoorInstance(divergentButton));
+        setObjectField(divergentButton, "spawnedDoor", divergentDoor);
         CutsceneKnucklesMhz1Instance divergentSpawnedKnuckles = objectManager.createDynamicObject(
                 () -> new CutsceneKnucklesMhz1Instance(new ObjectSpawn(
                         0x0388, 0x066C, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x1C, 0, false, 0x44),
@@ -211,6 +213,8 @@ class TestS3kMhzCutsceneGraphRewind {
 
         assertSame(restoredButton, readObjectField(restoredDoor, "parent"),
                 "door parent must relink to the captured restored button, not the nearest/first live button");
+        assertSame(restoredDoor, readObjectField(restoredButton, "spawnedDoor"),
+                "button spawnedDoor must relink to the captured restored door");
         assertSame(restoredSpawnedKnuckles, readObjectField(restoredButton, "spawnedKnuckles"),
                 "button spawnedKnuckles must relink to the captured restored Knuckles actor");
         assertSame(restoredButton, readObjectField(restoredSpawnedKnuckles, "parentButton"),

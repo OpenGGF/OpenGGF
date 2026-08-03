@@ -11,6 +11,11 @@ All notable changes to the OpenGGF project are documented in this file.
   while preserving exact atomic row comparison. Escape also exits safely
   during the pre-replay card, and complete runs use the same segment-zero
   launch boundary.
+- Fix/Test: MHZ fixed SST occupants, plane switchers, pollen, cutscene children,
+  pulley, Curled Vine, Madmole, and enemy-touch bounce now follow their ROM slot,
+  lifetime, geometry, and resolved-contact semantics. The complete-run physics
+  frontier advances from frame 5509 through 6337 without trace-driven gameplay
+  state; rewind captures the cutscene button's structural door reference.
 - Fix/Test: S3K queue owners now retain only rewind-authoritative hardware
   handles and ordinals instead of cached LBZ module-queue service references.
   Headless bonus-stage returns preserve their mandatory title request rather
