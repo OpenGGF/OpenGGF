@@ -40,6 +40,13 @@ S3K_V5_DOCUMENTS = (
     "s3k-profiles-and-hooks.md",
     "s3k-completerun-profiles.md",
 )
+S1_S2_V5_DOCUMENTS = (
+    "s1-trace-recorder-behavior.md",
+    "s1-complete-run-behavior.md",
+    "s1-run-mode-behavior.md",
+    "s2-trace-recorder-behavior.md",
+    "s2-run-mode-behavior.md",
+)
 
 
 class CompareTraceV5CandidatesTests(unittest.TestCase):
@@ -214,6 +221,49 @@ class CompareTraceV5CandidatesTests(unittest.TestCase):
                 ):
                     self.assertNotIn(legacy_axis, current)
                 self.assertIsNone(re.search(r"\b(?:v)?6\.\d", current))
+
+    def test_s1_s2_current_contract_documentation_is_strict_v5(self) -> None:
+        docs = REPOSITORY_ROOT / "tools" / "bizhawk-headless" / "docs"
+        for name in S1_S2_V5_DOCUMENTS:
+            with self.subTest(document=name):
+                document = (docs / name).read_text()
+                self.assertIn("## Pre-v5 historical evidence", document)
+                current = document.split("## Pre-v5 historical evidence", maxsplit=1)[0]
+                self.assertIn('`recorder: native-bizhawk-headless`', current)
+                self.assertIn('`recorder_version: 3.0`', current)
+                self.assertIn('`trace_schema: 5`', current)
+                self.assertIn("are absent", current)
+                for predecessor_claim in (
+                    "trace_schema: 4", "trace_schema 4", "trace_schema: 9",
+                    "trace_schema 9", "CSV v7", "ss_csv_version 1",
+                    "Lua is the behavioral authority", "Lua is authoritative",
+                ):
+                    self.assertNotIn(predecessor_claim, current)
+
+    def test_bizhawk_readme_s1_s2_live_contract_is_native_v5_only(self) -> None:
+        readme = (REPOSITORY_ROOT / "tools" / "bizhawk" / "README.md").read_text()
+        live = readme[readme.index("## Native S1/S2 v5 capture contract"):
+                      readme.index("## Pre-v5 historical evidence: S1/S2")]
+        for required in (
+            "tools/bizhawk-headless/run.sh", "trace_schema: 5",
+            "recorder: native-bizhawk-headless", "recorder_version: 3.0",
+            "dynamic_art_transfer_state_per_frame", "are absent",
+        ):
+            self.assertIn(required, live)
+        for predecessor_claim in (
+            "trace_schema 4", "trace_schema 9", "schema v3", "schema v8",
+            "3.5", "9.13-s2", "dynamic_art_transfer_state_per_frame_v1",
+        ):
+            self.assertNotIn(predecessor_claim, live)
+
+    def test_trace_skills_name_the_current_dynamic_art_capability(self) -> None:
+        for skill in ("trace-capture", "trace-green-fleet"):
+            agent = (REPOSITORY_ROOT / ".agents" / "skills" / skill / "SKILL.md").read_text()
+            claude = (REPOSITORY_ROOT / ".claude" / "skills" / skill / "SKILL.md").read_text()
+            with self.subTest(skill=skill):
+                self.assertEqual(agent, claude)
+                self.assertIn("dynamic_art_transfer_state_per_frame", agent)
+                self.assertNotIn("dynamic_art_transfer_state_per_frame_v1", agent)
 
     def test_bootstrap_snapshot_javadoc_names_the_semantic_v5_capability(self) -> None:
         source = (REPOSITORY_ROOT / "src" / "test" / "java" / "com" / "openggf" / "tests"

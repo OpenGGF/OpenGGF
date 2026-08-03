@@ -77,6 +77,67 @@ class TestHardwareTimingStreamLoader {
         assertRejected(measurement, "tooling-only");
     }
 
+    @Test
+    void timingStreamRejectsUnknownAndMissingFields() throws IOException {
+        assertRejected(writeFixture(edge(0, "post_objects", "kos_module_queue", 0)
+                .replace("}", ",\"extra\":true}") + "\n"), "unknown or missing field");
+        assertRejected(writeFixture(edge(0, "post_objects", "kos_module_queue", 0)
+                .replace(",\"ordinal\":0", "") + "\n"), "unknown or missing field");
+    }
+
+    @Test
+    void timingStreamRejectsUnknownEventDuplicateFieldAndTrailingJson() throws IOException {
+        assertRejected(writeFixture(edge(0, "post_objects", "kos_module_queue", 0)
+                .replace("hardware_work_completed", "hardware_work_started") + "\n"),
+                "invalid event");
+        assertRejected(writeFixture(edge(0, "post_objects", "kos_module_queue", 0)
+                .replace("{", "{\"event\":\"hardware_work_completed\",") + "\n"),
+                "duplicate JSON field");
+        assertRejected(writeFixture(edge(0, "post_objects", "kos_module_queue", 0)
+                + " {}\n"), "trailing JSON values");
+    }
+
+    @Test
+    void timingStreamRejectsNonCanonicalWireNamesAndFingerprints() throws IOException {
+        assertRejected(writeFixture(edge(0, "POST_OBJECTS", "kos_module_queue", 0) + "\n"),
+                "invalid boundary");
+        assertRejected(writeFixture(edge(0, "post_objects", "KOS_MODULE_QUEUE", 0) + "\n"),
+                "invalid kind");
+        assertRejected(writeFixture(edge(0, "post_objects", "kos_module_queue", 0)
+                .replace("sha256:", "SHA256:") + "\n"), "invalid submission_fingerprint");
+        assertRejected(writeFixture(edge(0, "post_objects", "kos_module_queue", 0)
+                .replace("a".repeat(64), "A" + "a".repeat(63)) + "\n"),
+                "invalid submission_fingerprint");
+    }
+
+    @Test
+    void timingStreamRejectsInvalidUtf8AndNonLfFraming() throws IOException {
+        Path invalidUtf8 = writeFixture(null);
+        Files.write(invalidUtf8.resolve("hardware_timing.jsonl"), new byte[]{(byte) 0xC3, 0x28});
+        assertRejected(invalidUtf8, "valid UTF-8");
+
+        assertRejected(writeFixture(edge(0, "post_objects", "kos_module_queue", 0) + "\r\n"),
+                "LF-terminated UTF-8 lines");
+        assertRejected(writeFixture(edge(0, "post_objects", "kos_module_queue", 0)),
+                "LF-terminated UTF-8 lines");
+    }
+
+    @Test
+    void timingStreamRejectsDuplicateIdentityAndNonIncreasingPerKindOrdinal() throws IOException {
+        assertRejected(writeFixture(edge(0, "post_objects", "kos_module_queue", 0) + "\n"
+                + edge(1, "post_objects", "kos_module_queue", 0) + "\n"),
+                "duplicate identity");
+        assertRejected(writeFixture(edge(0, "post_objects", "kos_module_queue", 1) + "\n"
+                + edge(1, "post_objects", "kos_module_queue", 0) + "\n"),
+                "ordinal must increase per kind");
+    }
+
+    @Test
+    void timingStreamRejectsNegativeRawFrame() throws IOException {
+        assertRejected(writeFixture(edge(-1, "post_objects", "kos_module_queue", 0) + "\n"),
+                "raw_frame");
+    }
+
     private Path writeFixture(String hardwareTiming) throws IOException {
         Path fixture = Files.createTempDirectory(temporaryDirectory, "fixture-");
         Files.writeString(fixture.resolve("metadata.json"), """

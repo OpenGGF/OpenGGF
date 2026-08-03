@@ -591,7 +591,7 @@ reason, and total error count. Queue/DPLC failures take precedence over
 downstream physics, object, event, or audio symptoms. Do not promote a fixture
 to audited status unless native capture used `--load-queue-state` and metadata
 advertises `load_queue_state_per_frame`; DPLC/player-art evidence additionally
-requires `dynamic_art_transfer_state_per_frame_v1`.
+requires `dynamic_art_transfer_state_per_frame`.
 
 Update `docs/status/trace-frontier-log.md` whenever the first queue or
 `dynamic_art` frontier moves, a green regresses, or an admission error changes.

@@ -10,25 +10,23 @@ Use this folder for the recorder scripts and local BizHawk assets:
 - `run_bizhawk_lua.bat` launches any Lua/BK2/ROM combination safely for
   diagnostics and one-off probes
 - `record_trace.bat` launches S1 recording through the reusable no-audio/no-render launcher
-- `s1_trace_recorder.lua` captures the ROM-side trace data using schema v3
+- `s1_trace_recorder.lua` is retained for predecessor diagnostics and recorder
+  research; it is not a current publication path
 - `s1_complete_run_recorder.lua` records per-level segments (plus special-stage
   segments and `run_manifest.json` in run mode) from a single Sonic 1 BK2
-  playthrough — natively superseded on Linux by the headless harness's
-  `--trace-profile complete_run` / `--run-id` modes below; the Lua remains the
-  reference implementation and the non-Linux recording path
+  playthrough for predecessor diagnostics; native v5 publication uses the
+  headless harness
 - `record_s2_trace.bat` launches the Sonic 2 recorder through the reusable no-audio/no-render launcher
 - `record_s2_level_select_traces.ps1` records the Sonic 2 level-select BK2 set into test resources
-- `s2_trace_recorder.lua` captures Sonic 2 ROM-side trace data using schema v8, including
-  first-sidekick state for Sonic/Tails parity debugging; its v9.13-s2 run mode
-  (`OGGF_TRACE_RUN_ID`) survives in-level title-card reloads, so complete-game
-  S2 runs capture end-to-end (see "Recording S2 Complete-Game Runs" below)
+- `s2_trace_recorder.lua` is retained for predecessor diagnostics and recorder
+  research; it is not a current publication path
 - `record_s3k_trace.bat` launches the Sonic 3&K recorder through the reusable no-audio/no-render launcher
-- `s3k_trace_recorder.lua` captures Sonic 3&K ROM-side trace data using schema v3, including
-  `zone_act_state` diagnostics and the `aiz_end_to_end` checkpoint stream
+- `s3k_trace_recorder.lua` is retained for predecessor diagnostics and recorder
+  research; it is not a current publication path
 - `s3k_complete_run_recorder.lua` records per-zone segments from any Sonic 3&K BK2 (see
   "Trace Run Manifests" section below) — natively superseded on Linux by the headless
-  harness's `--trace-profile complete_run` / `--run-id` modes below; the Lua remains the
-  reference implementation and the non-Linux recording path
+  harness's `--trace-profile complete_run` / `--run-id` modes below; the Lua is
+  retained for predecessor diagnostics
 - `record_s1_credits_traces.bat` launches forced Sonic 1 credits-demo capture
 - `s1_credits_trace_recorder.lua` records the built-in ending replays without a BK2
 - `lib/oggf_trace_common.lua` is a shared module of game-agnostic leaf helpers
@@ -62,7 +60,44 @@ Do not substitute BizHawk 2.11.1 for trace recording. BizHawk 2.11.1 removed
 capture. An existing 2.11.1 installation may remain locally, but it must not be
 selected when running the trace tools.
 
-## Native headless GPGX harness (the entire Lua recorder fleet, on Linux)
+## Native S1/S2 v5 capture contract
+
+Current S1 and S2 publication runs through
+`tools/bizhawk-headless/run.sh`. Every candidate eligible for publication must
+be a strict v5 envelope with `recorder: native-bizhawk-headless`,
+`recorder_version: 3.0`, and `trace_schema: 5`; level segments use the shared
+42-column physics row.
+The predecessor metadata keys `lua_script_version`, `csv_version`,
+`ss_csv_version`, `hardware_timing_schema`, and `run_schema` are absent and
+are not compatibility inputs.
+
+When `--load-queue-state` is selected, current captures advertise
+`load_queue_state_per_frame` and
+`dynamic_art_transfer_state_per_frame`. Validate every scratch candidate with
+`tools/traces/validate_trace_v5.py` and follow
+[`docs/guide/contributing/trace-v5-publication.md`](../../docs/guide/contributing/trace-v5-publication.md)
+before replacing a committed fixture.
+
+The standard invocation shape is:
+
+```bash
+BIZHAWK_HOME=/abs/path/to/docs/BizHawk-2.11-linux-x64 \
+tools/bizhawk-headless/run.sh --mode trace --rom /abs/path/to/game.gen \
+  --movie /abs/path/to/movie.bk2 --output /abs/path/to/scratch-candidate
+```
+
+Use `--trace-profile complete_run` or `--run-id <id>` for the corresponding
+native v5 run publication mode. Game-specific selection and output layout are
+documented in the headless harness README.
+
+## Pre-v5 historical evidence: S1/S2 native-port parity ledger
+
+The following S1/S2 sections preserve the predecessor Lua-to-native parity
+record. Their version stamps, secondary schema axes, fixture normalization,
+and byte-identity rules are historical evidence only, not current capture or
+publication instructions.
+
+### Native headless GPGX harness (historical parity ledger)
 
 The Linux-only native GPGX harness (`tools/bizhawk-headless/`) runs the
 BizHawk 2.11 core through Mono without starting EmuHawk and without requiring

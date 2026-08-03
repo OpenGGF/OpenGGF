@@ -1,8 +1,19 @@
 # S1 Trace Recorder — Byte-Level Behavioral Specification for the Native Port
 
-> **V5 supersession (2026-08-03).** The maintained native writer emits the
-> strict v5 envelope and 42-column level rows. Legacy version literals and
-> byte-porting notes below are historical evidence, not compatibility rules.
+## Current native v5 contract
+
+The maintained writer emits `recorder: native-bizhawk-headless`,
+`recorder_version: 3.0`, and `trace_schema: 5`. Level payloads use the shared
+42-column physics grammar. The predecessor keys `lua_script_version`,
+`csv_version`, `ss_csv_version`, `hardware_timing_schema`, and `run_schema`
+are absent. They are not accepted aliases and do not select behavior.
+
+## Pre-v5 historical evidence
+
+Everything below records the predecessor Lua-to-native port and its fixture
+evidence. Its old version literals, exact metadata templates, and byte-parity
+claims are retained for provenance only; they do not describe current output
+or a compatibility path.
 
 Authoritative specification for porting `tools/bizhawk/s1_trace_recorder.lua`
 (v3.5, using `tools/bizhawk/lib/oggf_trace_common.lua`) to the C# headless

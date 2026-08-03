@@ -1,9 +1,19 @@
 # S1 Complete-Run Recorder — Run Mode + Special-Stage Byte-Level Behavior Spec
 
-> **V5 supersession (2026-08-03).** Current native metadata and manifests use
-> the sole `trace_schema: 5` contract and opaque `recorder` /
-> `recorder_version` provenance. Legacy Lua stamps and schema axes below are
-> retained only to explain predecessor bytes, not as live choices.
+## Current native v5 contract
+
+The maintained writer emits `recorder: native-bizhawk-headless`,
+`recorder_version: 3.0`, and `trace_schema: 5` for level, special-stage, and
+manifest publication. Level payloads use the shared 42-column physics grammar.
+The predecessor keys `lua_script_version`, `csv_version`, `ss_csv_version`,
+`hardware_timing_schema`, and `run_schema` are absent. They are not accepted
+aliases and do not select behavior.
+
+## Pre-v5 historical evidence
+
+Everything below records predecessor run-mode behavior and fixture evidence.
+Old exact templates, version provenance, and Lua parity claims are historical
+only and cannot select current writer or parser behavior.
 
 Authority: `tools/bizhawk/s1_complete_run_recorder.lua` at current HEAD (the
 file stamps `lua_script_version "3.18"`; see §10 for the 3.15-fixture

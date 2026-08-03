@@ -81,7 +81,7 @@ This tool renders an existing replay; it does not add audit capabilities to a
 fixture. For queue/DPLC sync work, regenerate the fixture with the native
 BizHawk recorder's `--load-queue-state` option and verify
 `load_queue_state_per_frame` plus
-`dynamic_art_transfer_state_per_frame_v1` in `metadata.json`.
+`dynamic_art_transfer_state_per_frame` in `metadata.json`.
 
 The capture deliberately continues through desyncs, so a finished video is not
 evidence that queue timing matched. Inspect the replay JSON report:
