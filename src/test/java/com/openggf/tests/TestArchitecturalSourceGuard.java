@@ -64,7 +64,9 @@ class TestArchitecturalSourceGuard {
             // refactor (d9b727925) settled the sprite at 3115 effective lines.
             // 2026-07-09: 3115 -> 3159 for drowning, speed-shoes, and fixed-skid
             // controller state captured by the playable rewind schema.
-            "com/openggf/sprites/playable/AbstractPlayableSprite.java", 3159,
+            // 2026-08-03: 3159 -> 3161 for explicit native player-SST presence
+            // reset/restore state; accessors retain the existing compact precedent.
+            "com/openggf/sprites/playable/AbstractPlayableSprite.java", 3161,
             "com/openggf/level/LevelManager.java", 2500,
             // 2026-07-02: 2888 -> 2890 for the live-rewind VHS effect envelope tick
             // (RewindEffectEnvelope wiring + intensity/speed accessors).

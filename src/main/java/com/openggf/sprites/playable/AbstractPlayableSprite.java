@@ -3064,13 +3064,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 return hidden;
         }
 
-        public boolean isNativeSlotPresent() {
-                return nativeSlotPresent;
-        }
+        public boolean isNativeSlotPresent() { return nativeSlotPresent; }
 
-        public void setNativeSlotPresent(boolean nativeSlotPresent) {
-                this.nativeSlotPresent = nativeSlotPresent;
-        }
+        public void setNativeSlotPresent(boolean nativeSlotPresent) { this.nativeSlotPresent = nativeSlotPresent; }
 
         public void setHidden(boolean hidden) {
                 this.hidden = hidden;
