@@ -304,7 +304,25 @@ writers, run walkers/catalog tests, synthetics, and publication gates.
    candidate fixture root. For each disclosed predecessor first-divergence it
    records route, row, common field, RAM address and endianness or documented
    derivation, raw value, emitted value, and the candidate logical-payload hash.
-   Add a verifier that rejects a mismatch or hash drift.
+   Add a credits-only, no-replace raw-observation side channel to the native CLI
+   that records pre-writer RAM/derivation values outside both candidate and
+   installed roots without affecting capture bytes. Add a builder that joins
+   those independent observations to the final comparator report, plus a
+   verifier that rejects a mismatch or hash drift.
+   The CLI option is accepted only with movie-free
+   `credits_demo --credits-target all`. Refactor the collector to stream all 20
+   common fields per stored row in canonical order to a bounded private spool;
+   capture code must not accept emitted rows or candidate hashes. Validate
+   duplicate, missing, out-of-order, malformed, over-limit, existing-path,
+   overlap, symlink, partial-capture, serialization, and seal failures. The
+   builder and verifier both consume the raw sidecar; test swapped sidecars,
+   candidate hash drift, and candidate-derived fabricated evidence.
+   Add `--credits-raw-observation-id` as a required opaque printable-ASCII token
+   whenever the sidecar option is present; reject controls, separators, empty
+   and dot-path identities, and do not synthesize a wall-clock default. Seal
+   the stream with a completion record binding that identity, resolved
+   candidate root, all-eight completion, row/observation/byte totals, and the
+   SHA-256 of preceding bytes; reject truncation or inconsistent totals.
 7. Run doc mirrors/policy guards and prove AGENTS/CLAUDE and mirrored skills are
    synchronized where required.
 
@@ -325,6 +343,11 @@ writers, run walkers/catalog tests, synthetics, and publication gates.
    added, removed, or changed. Generated v5 synthetics must live outside that
    root. Repeat this guard immediately before the Task 10 installer; only that
    installer is allowed to mutate installed trace resources.
+   Audit the full Java test source tree for positive-path legacy metadata and
+   direct resource-backed synthetic dependencies. Replace them with generated
+   temporary v5 inputs, retain legacy literals only in explicit rejection
+   tests, and guard that boundary. The resulting unused legacy synthetic files
+   remain installed and frozen until their explicit Task 10 deletion delta.
 5. Fetch the latest `origin/develop` and reconcile it into this worktree before
    freezing the recorder. Do not update, switch, or merge the main workspace.
    Re-run Tasks 2–8 tests affected by the reconciliation.
@@ -338,15 +361,22 @@ writers, run walkers/catalog tests, synthetics, and publication gates.
 
 1. Create a new v5 capture-matrix artifact under
    `docs/architecture/validation/trace/` with a supersession link to the
-   historical July plan. Include two native S1 credits `all` invocations into
-   distinct newly absent roots and
-   current v5 assumptions, then expand it programmatically to literal commands.
+   historical July plan. Derive 36 invocations from the reconciled retained
+   tree: the historical 32, the upstream S1 emerald complete run, the
+   independent 67-segment S3K Knuckles complete-super-emerald run, and two
+   native S1 credits `all` invocations into distinct newly absent roots. Record
+   current v5 assumptions, then expand the matrix programmatically to literal
+   commands. Each credits command supplies its own stable capture identity and
+   distinct newly absent raw-sidecar path outside both roots; freeze its schema,
+   record count, byte count, and stored SHA-256 with that invocation.
    Do not edit the dated July implementation plan.
 2. Verify ROM and BK2 hashes, scratch capacity, output absence, source/diff
    hash, and harness artifact hash before each invocation.
 3. Run the complete matrix serially through `tools/bizhawk-headless/run.sh`.
    Credits use the new movie-free BizHawk-headless selector; all other routes
-   retain their reviewed movies/selectors.
+   retain their reviewed movies/selectors. A credits candidate is inseparable
+   from its paired raw sidecar; selecting one of the two captures also selects
+   only that sidecar.
 4. Freeze invocation command, elapsed time, exit status, output inventory,
    stored/logical SHA-256, row/event counts, segment identities, and manifest
    membership. Reject and diagnose any partial or unexpected output.
@@ -364,14 +394,22 @@ writers, run walkers/catalog tests, synthetics, and publication gates.
    silent exclusion is allowed.
 8. Generate and verify the machine-readable raw-host evidence artifact from
    step 7's final first-divergence inventory, binding every disclosed
-   row/value to the publication candidate's logical hash. Reject missing,
-   extra, stale-hash, or emitted-versus-raw mismatches.
+   row/value to the publication candidate's logical hash. Build it only from
+   the frozen CLI raw-observation sidecar and comparator report; reject missing,
+   extra, stale-hash, emitted-versus-raw mismatches, or candidate-derived values
+   that lack an independent raw observation. Freeze the comparator report
+   before evidence construction. Comparator, builder, and verifier outputs are
+   no-replace; the verifier rereads the predecessor, candidate, and raw sidecar
+   and independently recomputes the expected evidence.
 9. Point the strict Java replay tests at the read-only candidate root and run
    all eight S1 credits replays before approval. Freeze pass/fail, first-error
    frame/field, and frontier classification in the candidate report. The
    installed legacy fixtures remain untouched.
 10. Record the immutable report in
    `docs/architecture/validation/trace/2026-08-03-trace-v5-candidates.md`.
+   Include an exact deletion manifest for each obsolete `*_retro` sidecar and
+   unused legacy synthetic, with predecessor stored/logical hashes. No credits
+   fixture, replay, or focused consumer may appear in that manifest.
 
 ## Task 10: Approve and publish candidates atomically
 
@@ -380,9 +418,13 @@ writers, run walkers/catalog tests, synthetics, and publication gates.
    red, include every shared-field mismatch and the independent native/ROM
    evidence, and require explicit approval of those replacement bytes. Do not
    replace canonical fixtures before approval.
-2. After approval, install exactly the frozen candidate bytes. Delete only the
-   obsolete `*_retro` alternate sidecars; do not delete any credits fixture,
-   replay class, or focused consumer.
+2. After explicit approval of the frozen publication delta manifest, install
+   exactly the frozen candidate bytes and delete exactly the approved deletion
+   paths: obsolete `*_retro` sidecars and the named unused resource-backed
+   legacy synthetics. The installer verifies each predecessor stored/logical
+   hash and rejects any added, removed, or changed installed trace path outside
+   that manifest. It must never delete an `s1/credits_*` directory, credits
+   replay class, or focused credits consumer.
 3. Re-run the validator and comparator against installed bytes and prove exact
    candidate identity.
 4. Run native publication/differential gates, Java fixture guards, all eight S1

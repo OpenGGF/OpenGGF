@@ -79,9 +79,19 @@ For `trace_schema: 5`, the level `physics.csv` contract is the current symmetric
 42-column player/sidekick row formerly called CSV v7. Current metadata does not
 emit a separate `csv_version`; the trace schema identifies the row shape.
 
-All 11-, 18-, 19-, 20-, 22-, 37-, and 38-column compatibility readers and tests
-are removed. Synthetic fixtures are rewritten to v5 or deleted. The ordinary
-level parser accepts exactly the 42-column v5 row.
+All 11-, 18-, 19-, 20-, 22-, 37-, and 38-column compatibility readers and
+positive-path tests are removed. Resource-backed legacy level synthetics have
+no place in the publication candidate: active semantic tests build v5 inputs
+under test-owned temporary roots, and the obsolete installed synthetic files
+are explicit deletion deltas at publication. Small legacy documents may remain
+only as inline negative inputs that prove the strict v5 parser rejects them.
+A source guard rejects `TraceData.load` or fixture-loader dependencies beneath
+`src/test/resources/traces/synthetic` and rejects retired metadata keys or row
+widths in positive-path test helpers. Legacy literals are permitted only in a
+dedicated rejection-test class whose methods assert load failure. The guard has
+its own accepted/rejected source samples, so an indirect schema-3/4/6/8/9
+fixture dependency cannot return. The ordinary level parser accepts exactly
+the 42-column v5 row.
 
 `TraceMetadata` no longer models `luaScriptVersion` or `csvVersion`.
 `TraceData` performs strict profile-aware dispatch instead of passing a version
@@ -152,6 +162,15 @@ scratch output loadable by the strict v5 tools without creating a compatibility
 parser or allowing Lua output to become canonical.
 
 Each production capture family is regenerated with the reviewed native writer.
+The matrix is derived from the reconciled retained fixture tree rather than
+copied from the historical July list. The current matrix contains 36 serial
+invocations: the historical 32, the upstream S1 emerald complete run, the
+independently published 67-segment S3K Knuckles complete-super-emerald run,
+and two independent movie-free S1 credits captures. The S3K super-emerald run
+has its own curated BK2 and `--run-id`; it cannot be represented by the Sonic
+and Tails complete-run or multi-bonus invocations without dropping retained
+segments and committed timing evidence.
+
 Publication follows the existing exact-byte contract:
 
 1. capture to scratch;
@@ -217,8 +236,60 @@ the same inventory, hash, exact-byte approval, and replay gates as every other
 fixture family. The old fixture remains installed until its native replacement
 has passed those gates and is approved.
 
-Legacy alternate sidecar deletion is recorded separately from regenerated
-candidate output so deletion cannot be mistaken for a capture delta.
+The credits CLI also supports an optional audit-only
+`--credits-raw-observations <path>` sidecar and stable capture identity. They
+are valid only for movie-free `credits_demo --credits-target all`. Before
+capture, candidate root, installed root, final sidecar, and sidecar parent are
+resolved through existing-ancestor and real-path checks. The command rejects
+overlap, symlink traversal, existing final paths, and non-absent output roots.
+The sidecar never changes metadata, physics, auxiliary payloads, or publication
+membership.
+
+The identity is supplied by `--credits-raw-observation-id <id>`. It is an
+opaque, non-empty printable ASCII token with no control characters, path
+separators, `.` or `..` path identities, and no wall-clock-derived default.
+
+The sidecar is a deterministic JSONL stream with format
+`openggf-s1-credits-raw-observations-v1`. Its header identifies the capture,
+resolved candidate root, ROM, and recorder; each record contains only route and
+demo identity, row ordinal, predecessor-common field, canonical RAM address and
+endianness or a named derivation, and the raw formatted value. It contains no
+predecessor value, comparator result, emitted CSV value, candidate hash, or
+candidate payload bytes. The collector reads directly from emulated RAM before
+the writer formats the row and spools records incrementally to a private file
+under the sidecar parent. It enforces canonical demo/row/field order, at most
+86,400 observations and 64 MiB, and never retains the complete capture in
+memory. Its final completion record repeats the stable capture identity and
+resolved candidate root and records all-eight completion, per-route and total
+row counts, total observation count, pre-completion byte count, and the SHA-256
+of every preceding sidecar byte. The reader rejects any missing, duplicate, or
+inconsistent completion record.
+
+On capture or candidate-publication failure, only the private spool is removed
+and the final sidecar remains absent. After successful candidate publication,
+the recorder writes a completion record and seals the spool using a no-replace
+atomic move. A seal failure makes the already-published scratch candidate
+quarantined and ineligible for approval; it is never reused or silently paired
+with another sidecar.
+
+Task 9 freezes one distinct sidecar with each credits invocation. The
+postprocessor, not the collector, reads the selected sidecar, frozen comparator
+report, predecessor inventory, and candidate payload; it selects every
+disclosed first divergence and binds it to the candidate logical-payload hash.
+The verifier independently rereads the raw sidecar and recomputes the selection
+instead of trusting the final evidence fields. Raw sidecar, comparator report,
+and final evidence all use no-replace publication and must resolve outside both
+candidate and installed roots, including through symlinks. Missing, extra,
+duplicate, out-of-order, malformed, swapped-capture, stale-hash, or
+raw-versus-emitted evidence is rejected. Candidate CSV values alone are never
+accepted as raw-host observations.
+
+Every deletion is recorded separately from regenerated candidate output so it
+cannot be mistaken for a capture delta. The immutable candidate report lists
+each obsolete `*_retro` sidecar and unused resource-backed legacy synthetic
+with its predecessor stored and logical hashes. The approved installer rejects
+any deletion outside that exact manifest and unconditionally rejects an
+`s1/credits_*` directory, credits replay class, or focused credits consumer.
 
 ## Guards
 
