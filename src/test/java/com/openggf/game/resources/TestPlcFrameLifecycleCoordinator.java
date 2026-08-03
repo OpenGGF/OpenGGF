@@ -161,6 +161,72 @@ class TestPlcFrameLifecycleCoordinator {
     }
 
     @Test
+    void deferredExternalOwnershipServicesBootstrapArtBeforePublishingRowZero() {
+        DynamicArtLifecycleService dynamicArt =
+                new DynamicArtLifecycleService();
+        dynamicArt.beginRun();
+        PlcFrameLifecycleCoordinator coordinator =
+                new PlcFrameLifecycleCoordinator(
+                        recording(new ArrayList<>()), dynamicArt,
+                        DynamicArtDmaServiceModel.SONIC_1_VBLANK_SONIC_GFX);
+
+        // Visual launch transfers ownership before TraceReplayDriver.start()
+        // loads the level and performs the playable setup pass.
+        coordinator.acquireExternalComparisonSegmentOwnershipAfterNextService();
+        dynamicArt.observePlayerDplc(
+                com.openggf.game.GameId.S1, "sonic", 8,
+                new com.openggf.level.render.SpriteDplcFrame(List.of(
+                        new com.openggf.level.render.TileLoadRequest(0, 12))));
+
+        assertFalse(dynamicArt.isComparisonSegmentOpen(),
+                "segment zero must wait for the first production service");
+        coordinator.runLogicalIteration(() -> { }, frame -> {
+            frame.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
+            frame.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+            return null;
+        });
+
+        DynamicArtDiagnosticsSnapshot rowZero = dynamicArt.latestSnapshot();
+        assertTrue(dynamicArt.isComparisonSegmentOpen());
+        assertTrue(rowZero.published());
+        assertEquals(0, rowZero.frame());
+        assertEquals(List.of(), rowZero.edges(),
+                "bootstrap submit/complete must not become comparison row zero");
+        assertEquals(List.of(), rowZero.outstandingTransferIds());
+        assertEquals(List.of("submitted", "completed"),
+                dynamicArt.gapEdges().stream()
+                        .map(DynamicArtGapTransition.GapEdge::phase)
+                        .toList());
+    }
+
+    @Test
+    void closingDeferredExternalOwnershipBeforeClaimCreatesNoWindow() {
+        DynamicArtLifecycleService dynamicArt =
+                new DynamicArtLifecycleService();
+        dynamicArt.beginRun();
+        PlcFrameLifecycleCoordinator coordinator =
+                new PlcFrameLifecycleCoordinator(
+                        recording(new ArrayList<>()), dynamicArt);
+        long generation = dynamicArt.latestSnapshot().segmentGeneration();
+
+        coordinator.acquireExternalComparisonSegmentOwnershipAfterNextService();
+        coordinator.closeExternallyManagedComparisonSegment();
+        coordinator.setComparisonSegmentsExternallyManaged(false);
+
+        assertFalse(dynamicArt.isComparisonSegmentOpen());
+        assertEquals(generation,
+                dynamicArt.latestSnapshot().segmentGeneration(),
+                "cancelling before the first claim must not invent a segment");
+        coordinator.runLogicalIteration(() -> { }, frame -> {
+            frame.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
+            frame.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+            return null;
+        });
+        assertTrue(dynamicArt.isComparisonSegmentOpen(),
+                "automatic ownership must resume after cancellation");
+    }
+
+    @Test
     void rewindRestoreDoesNotPublishSnapshot() {
         DynamicArtLifecycleService dynamicArt =
                 new DynamicArtLifecycleService();

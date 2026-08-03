@@ -89,6 +89,30 @@ class TestLevelIterationAdmissionController {
                 "a completed seamless boundary must not be reported twice");
     }
 
+    @Test
+    void visualTraceOwnsEscapeDuringTitleCardPresentation()
+            throws Exception {
+        TraceSessionLauncher session = new TraceSessionLauncher(
+                null, null,
+                List.<com.openggf.trace.replay.runs.TraceRunReplayWalker
+                        .SegmentPlan>of(), null);
+        session.beginTitleCardPresentation(
+                new TraceSessionLauncher.TitleCardPresentation() {
+                    @Override
+                    public void prepareLevel() {
+                    }
+
+                    @Override
+                    public void enterTitleCard() {
+                    }
+                });
+
+        assertTrue(LevelIterationAdmissionController.shouldVisualTraceOwnEscape(
+                GameMode.TITLE_CARD, session, true));
+        assertFalse(LevelIterationAdmissionController.shouldVisualTraceOwnEscape(
+                GameMode.TITLE_CARD, session, false));
+    }
+
     private static void setActiveTraceSession(TraceSessionLauncher session)
             throws Exception {
         Field field = TraceSessionLauncher.class.getDeclaredField("activeSession");

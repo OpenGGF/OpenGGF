@@ -18,6 +18,7 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
     private NativeBlockingFadeImpl activeFade;
     private PlcLifecycleFrame activeFrame;
     private boolean comparisonSegmentsExternallyManaged;
+    private boolean externalComparisonSegmentOpenDeferred;
     private boolean representedIterationWithoutVblank;
     private boolean vblankOverrunCarry;
     private boolean nextVblankServicesDmaQueue;
@@ -188,6 +189,7 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
         representedIterationWithoutVblank = false;
         vblankOverrunCarry = false;
         nextVblankServicesDmaQueue = false;
+        externalComparisonSegmentOpenDeferred = false;
         if (activeFade != null) {
             activeFade.closed = true;
             activeFade = null;
@@ -200,6 +202,9 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
      */
     public void setComparisonSegmentsExternallyManaged(boolean externallyManaged) {
         comparisonSegmentsExternallyManaged = externallyManaged;
+        if (!externallyManaged) {
+            externalComparisonSegmentOpenDeferred = false;
+        }
     }
 
     /**
@@ -208,6 +213,21 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
      * after this operation returns.
      */
     public void acquireExternalComparisonSegmentOwnership() {
+        acquireExternalComparisonSegmentOwnership(false);
+    }
+
+    /**
+     * Transfers comparison ownership now but opens the first external window
+     * only after the next production service decision. This matches automatic
+     * ownership's service-before-open ordering while still guaranteeing that
+     * the same logical iteration publishes external row zero.
+     */
+    public void acquireExternalComparisonSegmentOwnershipAfterNextService() {
+        acquireExternalComparisonSegmentOwnership(true);
+    }
+
+    private void acquireExternalComparisonSegmentOwnership(
+            boolean deferWindowUntilAfterService) {
         if (comparisonSegmentsExternallyManaged) {
             throw new IllegalStateException(
                     "dynamic-art comparison segments are already externally managed");
@@ -219,6 +239,7 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
                     "automatic dynamic-art comparison segment has not published a row");
         }
         comparisonSegmentsExternallyManaged = true;
+        externalComparisonSegmentOpenDeferred = deferWindowUntilAfterService;
         try {
             if (dynamicArtLifecycle != null
                     && dynamicArtLifecycle.isComparisonSegmentOpen()) {
@@ -226,7 +247,27 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
             }
         } catch (RuntimeException | Error failure) {
             comparisonSegmentsExternallyManaged = false;
+            externalComparisonSegmentOpenDeferred = false;
             throw failure;
+        }
+    }
+
+    /**
+     * Closes the current externally managed comparison window, or cancels its
+     * not-yet-serviced initial open. External ownership itself remains active
+     * so a run gap cannot fall back to automatic windows.
+     */
+    public void closeExternallyManagedComparisonSegment() {
+        if (!comparisonSegmentsExternallyManaged) {
+            throw new IllegalStateException(
+                    "dynamic-art comparison segments are not externally managed");
+        }
+        if (externalComparisonSegmentOpenDeferred) {
+            externalComparisonSegmentOpenDeferred = false;
+            return;
+        }
+        if (dynamicArtLifecycle != null) {
+            dynamicArtLifecycle.closeComparisonSegment();
         }
     }
 
@@ -268,7 +309,10 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
                         || declaredDmaVblank) {
                     dynamicArtLifecycle.serviceProductionVBlank();
                 }
-                if (!comparisonSegmentsExternallyManaged
+                if (externalComparisonSegmentOpenDeferred) {
+                    dynamicArtLifecycle.openComparisonSegment();
+                    externalComparisonSegmentOpenDeferred = false;
+                } else if (!comparisonSegmentsExternallyManaged
                         && !dynamicArtLifecycle.isComparisonSegmentOpen()) {
                     dynamicArtLifecycle.openComparisonSegment();
                 }

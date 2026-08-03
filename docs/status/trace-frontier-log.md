@@ -60743,3 +60743,30 @@ MGZ standard, HCZ, and MHZ likewise retain their gameplay-first animation,
 sidekick-speed, and ring frontiers. The final publication closes the temporary
 f33 regression record without claiming those independent gameplay lanes were
 fixed.
+
+## 2026-08-03 — Visual S1 GHZ1 frame-zero dynamic-art parity
+
+Context: `.worktrees/visual-trace-frame0-art`, branch
+`bugfix/ai-visual-trace-frame0-art`, base `e1f280a47`, JDK 21. The user-reported
+master-title visual launch diverged immediately at trace frame 0 with
+`dynamic_art.edges expected=[] actual=[0, 1]`; physics, animation, camera, and
+the S1 Nemesis PLC queue fields all matched. The corresponding headless trace
+was green before the fix, identifying launch lifecycle ordering rather than a
+gameplay frontier regression.
+
+The visual launcher now presents the complete title card in a disposable live
+context, reopens a clean replay context, and defers the first external
+dynamic-art comparison window until after the first production service
+decision. The genuine S1 bootstrap submit/complete pair remains visible in
+run-gap diagnostics while the newly opened comparison generation publishes an
+empty row zero. The one permitted adjacent-generation publication is
+launcher-authorized, one-shot, requires an unpublished before snapshot and a
+new delivery, and retains exact edge/outstanding-transfer comparison.
+
+The focused lifecycle/launcher/comparator/render selector
+`mvn -q -Dtest=TestTraceSessionLauncherRunBranch,TestTraceSessionLauncherFailureCleanup,TestPlcFrameLifecycleCoordinator,TestVisualTraceLaunchPhase,TestGameLoop,TestLevelIterationAdmissionController,TestLiveTraceComparatorObserver,TestEngineRenderDispatcher test`
+passes 152/152. The ROM-backed command
+`mvn -q -Dtest=com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay -Dsonic1.rom.path=<verified-S1-REV01> test`
+passes 1/1 with no comparator errors. The headless GHZ1 frontier therefore
+remains complete; the repaired frontier is the visual launch boundary at row
+zero.

@@ -3,6 +3,14 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: level-backed visual traces now show their complete production title
+  card before playback, then reopen a clean replay context so presentation PLC,
+  DPLC, timing, and title-provider state cannot contaminate comparison. The
+  first externally owned dynamic-art window opens after the row-zero service
+  decision, keeping S1 bootstrap submit/complete edges in the native run gap
+  while preserving exact atomic row comparison. Escape also exits safely
+  during the pre-replay card, and complete runs use the same segment-zero
+  launch boundary.
 - Fix/Test: S3K queue owners now retain only rewind-authoritative hardware
   handles and ordinals instead of cached LBZ module-queue service references.
   Headless bonus-stage returns preserve their mandatory title request rather
