@@ -60958,3 +60958,44 @@ to synthesize a POST phase on a VBLANK-only row.
   every failing test name and failure/error severity was empty: all 33 red
   methods are the unchanged baseline set, and the 21 added tests pass. No
   headless trace frontier or previously green test regressed.
+
+## 2026-08-03 - Visual trace signpost action-lock parity
+
+- Worktree: `.worktrees/visual-trace-signpost-input`, branch
+  `bugfix/ai-visual-trace-signpost-input`, candidate over `47b4a13ef`.
+- The remaining S1 GHZ1 visual-only divergence at frame 4999 was a recorded
+  action-edge ownership error. `PlaybackInputBridge` preserved pending presses
+  across advance-only rows by writing `forcedJumpPress` directly to Sonic, so
+  the C press bypassed `Sign_SonicRun`'s existing control lock even though the
+  raw Left direction was correctly rejected. PLC state and all dynamic-art
+  edges already matched on the failing row.
+- Recorded P1 action identity now remains an A/B/C mask through the logical
+  snapshot and playable dispatch. `SpriteManager` publishes raw controller
+  state for objects, then admits the one-shot movement edge only after queued
+  object state and control locks are applied. Ordinary playback and visual
+  rewind publication no longer write or clear gameplay-owned jump latches;
+  rewind restore reconstructs pending edges only across the contiguous
+  non-gameplay interval.
+- Focused command:
+  `mvn -q -Dmse=off -Dsonic1.rom.path=s1.gen -Ds3k.rom.path=s3k.gen
+  -Dtest='TestS1VisualPlaybackControlLock,TestPlaybackAdvanceOnlyInputBridge,TestTraceSessionLauncherAdvanceOnlyRewind,com.openggf.debug.playback.TestPlaybackDebugManagerPreparedInput'
+  test`. Result: 20 tests, 0 failures, 0 errors, 0 skips. The S1-shaped case
+  proves raw Left+C remains visible, ROM-logical movement remains forced Right,
+  and Sonic stays grounded. Advance-only and rewind cases cover exact mask
+  carry, one-time unlocked consumption, locked suppression, and the gameplay
+  boundary that prevents resurrection.
+- Headless parity command:
+  `mvn -q -Dmse=off -Dsonic1.rom.path=s1.gen
+  -Dtest='TestS1Ghz1CompleteRunTraceReplay' test`. Result: 1 test, 0 failures,
+  0 errors, 0 skips.
+- Full-suite command, run on both the fetched `develop` baseline and the
+  feature worktree:
+  `mvn -q -Dmse=off -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen
+  -Ds3k.rom.path=s3k.gen test`. Baseline: 14,244 tests, 27 failures, 7 errors,
+  31 skips, followed by an existing Surefire fork heap-space termination.
+  Feature: 14,260 tests, 28 failures, 7 errors, 31 skips. XML method/severity
+  comparison found two feature-only order-sensitive failures and one
+  baseline-only order-sensitive failure, all outside the changed input paths;
+  the two feature-only methods passed when rerun on both workspaces. No
+  attributable regression or worsened baseline failure was found. No trace
+  fixture or comparison value changed.

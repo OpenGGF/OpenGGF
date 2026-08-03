@@ -80,8 +80,11 @@ class TestTraceSessionLauncherAdvanceOnlyRewind {
                     "the input-only row must still latch its held controller state");
             assertEquals(0, fixture.sprite().getForcedInputMask(),
                     "recorded raw input must not overwrite game-owned forced input");
-            assertTrue(fixture.sprite().isForcedJumpPress(),
-                    "the input-only action edge must remain pending");
+            assertEquals(0x01, loop.getInputHandler().logical()
+                    .player1().actionPressedMask(),
+                    "the input-only action edge must remain pending in recorded input");
+            assertFalse(fixture.sprite().isForcedJumpPress(),
+                    "rewind input publication must not mutate gameplay-owned latches");
             assertFalse(fixture.sprite().getAir(),
                     "the input-only row must leave player gameplay untouched");
 
@@ -89,8 +92,10 @@ class TestTraceSessionLauncherAdvanceOnlyRewind {
 
             assertEquals(spriteFrame, GameServices.sprites().getFrameCounter(),
                     "the structural level boundary remains a no-gameplay row");
-            assertTrue(fixture.sprite().isForcedJumpPress(),
+            assertEquals(0x01, loop.getInputHandler().logical()
+                    .player1().actionPressedMask(),
                     "the action edge must remain pending across later no-gameplay rows");
+            assertFalse(fixture.sprite().isForcedJumpPress());
 
             int setupRetries = 0;
             do {
@@ -115,6 +120,93 @@ class TestTraceSessionLauncherAdvanceOnlyRewind {
             config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS,
                     oldSkipIntros != null ? oldSkipIntros : false);
         }
+    }
+
+    @Test
+    void visualRewindRestoreReconstructsPendingActionUntilGameplayConsumesIt()
+            throws Exception {
+        SonicConfigurationService.getInstance().setConfigValue(
+                SonicConfiguration.S3K_SKIP_INTROS, true);
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(0, 0)
+                .build();
+        GameLoop loop = new GameLoop(new InputHandler());
+        Bk2Movie movie = heldActionMovie();
+        RewindSeekAwareEngineStepper stepper = visualStepper(
+                loop, movie, advanceOnlyTrace(), mock(TraceReplayFixture.class));
+
+        stepper.restoreToFrame(1, movie.getFrame(1));
+
+        assertEquals(0x01, loop.getInputHandler().logical()
+                .player1().actionPressedMask(),
+                "restore inside the no-gameplay interval must reconstruct the exact edge");
+        assertFalse(fixture.sprite().isForcedJumpPress(),
+                "restored pending replay state must not be stored in the player");
+
+        int spriteFrame = GameServices.sprites().getFrameCounter();
+        int retries = 0;
+        do {
+            stepper.step(movie.getFrame(2));
+            retries++;
+        } while (GameServices.sprites().getFrameCounter() == spriteFrame
+                && retries < 120);
+
+        assertTrue(fixture.sprite().getAir(),
+                "the next unlocked gameplay dispatch consumes the reconstructed edge");
+        stepper.step(movie.getFrame(2));
+        assertEquals(0, loop.getInputHandler().logical()
+                .player1().actionPressedMask(),
+                "a later row must not repeat the consumed reconstructed edge");
+    }
+
+    @Test
+    void visualRewindRestoreAfterGameplayDoesNotResurrectEarlierAction() throws Exception {
+        SonicConfigurationService.getInstance().setConfigValue(
+                SonicConfiguration.S3K_SKIP_INTROS, true);
+        HeadlessTestFixture.builder().withZoneAndAct(0, 0).build();
+        GameLoop loop = new GameLoop(new InputHandler());
+        Bk2Movie movie = heldActionMovie();
+        RewindSeekAwareEngineStepper stepper = visualStepper(
+                loop, movie, advanceOnlyTrace(), mock(TraceReplayFixture.class));
+
+        stepper.restoreToFrame(2, movie.getFrame(2));
+
+        assertEquals(0, loop.getInputHandler().logical()
+                .player1().actionPressedMask(),
+                "a gameplay boundary must consume earlier pending action edges");
+    }
+
+    @Test
+    void visualRewindRestoredRawActionStillRespectsControlLock() throws Exception {
+        SonicConfigurationService.getInstance().setConfigValue(
+                SonicConfiguration.S3K_SKIP_INTROS, true);
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(0, 0)
+                .build();
+        GameLoop loop = new GameLoop(new InputHandler());
+        Bk2Movie movie = heldActionMovie();
+        RewindSeekAwareEngineStepper stepper = visualStepper(
+                loop, movie, advanceOnlyTrace(), mock(TraceReplayFixture.class));
+
+        stepper.restoreToFrame(1, movie.getFrame(1));
+        assertEquals(0x01, loop.getInputHandler().logical()
+                .player1().actionPressedMask(),
+                "the locked case must begin with a genuinely reconstructed edge");
+        fixture.sprite().setControlLocked(true);
+
+        int spriteFrame = GameServices.sprites().getFrameCounter();
+        int retries = 0;
+        do {
+            stepper.step(movie.getFrame(2));
+            retries++;
+        } while (GameServices.sprites().getFrameCounter() == spriteFrame
+                && retries < 120);
+
+        assertTrue(fixture.sprite().isRawControllerJumpJustPressed(),
+                "objects must still observe the restored raw controller edge");
+        assertFalse(fixture.sprite().getAir(),
+                "Ctrl_1_locked must suppress the restored edge for movement");
+        assertFalse(fixture.sprite().isForcedJumpPress());
     }
 
     @Test

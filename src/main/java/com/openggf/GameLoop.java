@@ -1681,12 +1681,12 @@ public class GameLoop {
 
     private void syncPlaybackInputBridge() {
         playbackInputBridge.sync(playbackDebugManager, currentGameMode, inputHandler,
-                spriteManager, getMainPlayableSprite());
+                spriteManager);
     }
 
     public void applyScheduledPlaybackInputImmediately() {
         playbackInputBridge.publishImmediately(playbackDebugManager, inputHandler,
-                spriteManager, getMainPlayableSprite());
+                spriteManager);
     }
 
     /**

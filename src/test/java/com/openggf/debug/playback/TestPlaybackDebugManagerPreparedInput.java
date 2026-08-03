@@ -85,6 +85,28 @@ class TestPlaybackDebugManagerPreparedInput {
     }
 
     @Test
+    void actionPressRemainsInSnapshotAfterInputOnlyCursorAdvance() {
+        playback.startSession(actionCarryMovie(), 0);
+
+        var pressed = playback.getCurrentLogicalInputSnapshot();
+        assertEquals(0x02, pressed.player1().actionPressedMask());
+
+        playback.onLevelFrameAdvanced();
+
+        var held = playback.getCurrentLogicalInputSnapshot();
+        assertEquals(0x02, held.player1().actionPressedMask(),
+                "a skipped gameplay row must carry the exact pending action edge");
+        assertTrue((held.player1().pressedMask()
+                        & AbstractPlayableSprite.INPUT_JUMP) != 0,
+                "the carried action edge must remain visible as abstract jump press");
+
+        playback.onCurrentGameplayTickExecuted();
+        assertEquals(0, playback.getCurrentLogicalInputSnapshot()
+                .player1().actionPressedMask(),
+                "the first real gameplay dispatch consumes the pending edge");
+    }
+
+    @Test
     void invalidAppliedOffsetFailsBeforeInputFallsBackOrCursorMoves() {
         playback.startSession(movie(), 0);
         playback.setFrameObserver(new RecordingObserver(-1, false, 0));
@@ -150,6 +172,19 @@ class TestPlaybackDebugManagerPreparedInput {
                         new Bk2FrameInput(2,
                                 AbstractPlayableSprite.INPUT_DOWN,
                                 1, true, "down+hold")),
+                1);
+    }
+
+    private static Bk2Movie actionCarryMovie() {
+        return new Bk2Movie(
+                Path.of("pending-action-input.bk2"), "logkey", Map.of(),
+                List.of(
+                        new Bk2FrameInput(0,
+                                AbstractPlayableSprite.INPUT_JUMP,
+                                0x02, false, "press B"),
+                        new Bk2FrameInput(1,
+                                AbstractPlayableSprite.INPUT_JUMP,
+                                0x02, false, "hold B")),
                 1);
     }
 

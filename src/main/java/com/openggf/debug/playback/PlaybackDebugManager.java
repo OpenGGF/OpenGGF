@@ -36,7 +36,7 @@ public final class PlaybackDebugManager {
     private boolean lastAppliedStart;
     private int previousActionMask;
     private boolean previousStartPressed;
-    private boolean currentForcedJumpPress;
+    private int pendingP1ActionPressMask;
     private boolean currentForcedStartPress;
     private GameMode lastObservedMode = GameMode.LEVEL;
     private int firstActiveFrame = -1;
@@ -201,28 +201,30 @@ public final class PlaybackDebugManager {
         if (movie == null || timeline == null) {
             lastAppliedMask = 0;
             lastAppliedStart = false;
-            currentForcedJumpPress = false;
+            pendingP1ActionPressMask = 0;
             currentForcedStartPress = false;
             return LogicalInputSnapshot.neutral();
         }
         if (!timeline.isPlaying()) {
             lastAppliedMask = 0;
             lastAppliedStart = false;
-            currentForcedJumpPress = false;
+            pendingP1ActionPressMask = 0;
             currentForcedStartPress = false;
             return LogicalInputSnapshot.neutral();
         }
         prepareCurrentFrame();
         if (preparedInputApplied) {
             return RecordedInputSnapshots.fromBk2(
-                    preparedAppliedFrame, preparedAppliedPredecessor);
+                    preparedAppliedFrame, preparedAppliedPredecessor,
+                    pendingP1ActionPressMask);
         }
         lastAppliedMask = preparedAppliedFrame.p1InputMask();
         lastAppliedStart = preparedAppliedFrame.p1StartPressed();
         preparedInputApplied = true;
 
         return RecordedInputSnapshots.fromBk2(
-                preparedAppliedFrame, preparedAppliedPredecessor);
+                preparedAppliedFrame, preparedAppliedPredecessor,
+                pendingP1ActionPressMask);
     }
 
     /**
@@ -263,9 +265,7 @@ public final class PlaybackDebugManager {
 
         int previousAction = predecessor != null ? predecessor.p1ActionMask() : 0;
         int pressed = applied.p1ActionMask() & ~previousAction;
-        if (pressed != 0) {
-            currentForcedJumpPress = true;
-        }
+        pendingP1ActionPressMask |= pressed;
         boolean previousStart = predecessor != null && predecessor.p1StartPressed();
         currentForcedStartPress = applied.p1StartPressed() && !previousStart;
         previousActionMask = applied.p1ActionMask();
@@ -289,7 +289,7 @@ public final class PlaybackDebugManager {
     }
 
     public synchronized boolean isCurrentForcedJumpPress() {
-        return currentForcedJumpPress;
+        return pendingP1ActionPressMask != 0;
     }
 
     public synchronized boolean isCurrentForcedStartPress() {
@@ -303,7 +303,7 @@ public final class PlaybackDebugManager {
      * callback.
      */
     public synchronized void onCurrentGameplayTickExecuted() {
-        currentForcedJumpPress = false;
+        pendingP1ActionPressMask = 0;
     }
 
     public synchronized void onLevelFrameAdvanced() {
@@ -519,7 +519,7 @@ public final class PlaybackDebugManager {
         previousStartPressed = cursor > 0 && movie.getFrame(cursor - 1).p1StartPressed();
         lastAppliedMask = 0;
         lastAppliedStart = false;
-        currentForcedJumpPress = false;
+        pendingP1ActionPressMask = 0;
         currentForcedStartPress = false;
         currentTickSuppressed = false;
         clearPreparedFrame();
@@ -528,7 +528,7 @@ public final class PlaybackDebugManager {
     public synchronized void clearLastAppliedState() {
         lastAppliedMask = 0;
         lastAppliedStart = false;
-        currentForcedJumpPress = false;
+        pendingP1ActionPressMask = 0;
         currentForcedStartPress = false;
         previousActionMask = 0;
         previousStartPressed = false;

@@ -218,6 +218,12 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **Visual trace locked-input parity (2026-08-03):** recorded A/B/C press
+  identity now survives input-only trace rows but reaches movement only after
+  queued object control and the ROM control lock are applied. S1 signpost
+  walk-off retains forced Right against recorded Left+jump, while objects still
+  observe the raw controller edge. Rewind replay-forward reconstructs the same
+  pending input without storing trace-owned state in the player sprite.
 - **Visual trace title-card and row-zero parity (2026-08-03):** level-backed
   traces and complete runs selected from the master title now show the full
   production title card and continue into replay in the same loaded gameplay

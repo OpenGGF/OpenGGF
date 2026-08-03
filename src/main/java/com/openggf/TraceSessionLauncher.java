@@ -2530,7 +2530,7 @@ public final class TraceSessionLauncher {
         private final TraceReplayFixture fixture;
         private final int movieBaseFrame;
         private final int traceBaseFrame;
-        private boolean pendingForcedJumpPress;
+        private int pendingP1ActionPressMask;
         private boolean pendingPlayableAnimationAfterClosure;
         private boolean pendingVblankStarvedProductionMarker;
 
@@ -2583,7 +2583,7 @@ public final class TraceSessionLauncher {
                     ? rowPolicy.phase() : TraceExecutionPhase.FULL_LEVEL_FRAME;
             if (phase == TraceExecutionPhase.ADVANCE_ONLY) {
                 activateProductionMarker(rowPolicy);
-                publishPlaybackInput(appliedInput);
+                publishPlaybackInput(appliedInput, rowPolicy);
                 return LevelFrameResult.GAMEPLAY_FRAME;
             }
             if (phase == TraceExecutionPhase.VBLANK_ONLY
@@ -2636,7 +2636,7 @@ public final class TraceSessionLauncher {
                 return admission.result();
             }
             activateProductionMarker(rowPolicy);
-            publishPlaybackInput(appliedInput);
+            publishPlaybackInput(appliedInput, rowPolicy);
             sprites.setPlaybackInputSuppressed(true);
             sprites.publishHeldInputForLevelEvents(loop.getInputHandler());
             LevelFrameResult result = LevelFrameStep.execute(
@@ -2646,53 +2646,87 @@ public final class TraceSessionLauncher {
                     level, camera, () -> sprites.update(loop.getInputHandler()),
                     LevelFrameStep.DIRECT_WRAPPER);
             if (result == LevelFrameResult.GAMEPLAY_FRAME) {
-                pendingForcedJumpPress = false;
+                pendingP1ActionPressMask = 0;
             }
             return result;
         }
 
         @Override
         public void restoreToFrame(int frame, Bk2FrameInput inputAtFrame) {
-            AbstractPlayableSprite player = loop.getMainPlayableSprite();
-            if (player != null && inputAtFrame != null) {
-                Bk2FrameInput previous = inputAtFrame.frameIndex() > 0
-                        ? movie.getFrame(inputAtFrame.frameIndex() - 1)
-                        : null;
+            int traceIndex = traceIndexForInput(inputAtFrame);
+            pendingP1ActionPressMask = restorePendingP1ActionPressMask(traceIndex);
+            if (inputAtFrame != null) {
+                TraceReplayRowPolicy policy = rowPolicy(
+                        traceIndex, inputAtFrame.frameIndex());
+                Bk2FrameInput applied = policy != null
+                        ? movie.getFrame(policy.appliedBk2Index()) : inputAtFrame;
+                int predecessorIndex = policy != null
+                        ? policy.appliedPredecessorBk2Index()
+                        : applied.frameIndex() - 1;
+                Bk2FrameInput previous = predecessorIndex >= 0
+                        ? movie.getFrame(predecessorIndex) : null;
                 loop.getInputHandler().setLogicalOverride(
                         RecordedInputSnapshots.fromBk2(
-                                inputAtFrame, previous));
-                pendingForcedJumpPress = player.isForcedJumpPress();
-            } else {
-                pendingForcedJumpPress = false;
+                                applied, previous, pendingP1ActionPressMask));
             }
-            int traceIndex = traceIndexForInput(inputAtFrame);
             pendingVblankStarvedProductionMarker =
                     restorePendingProductionMarker(traceIndex);
         }
 
-        private void publishPlaybackInput(Bk2FrameInput inputs) {
-            AbstractPlayableSprite player = loop.getMainPlayableSprite();
-            if (player == null) {
-                return;
-            }
-            Bk2FrameInput previous = inputs.frameIndex() > 0
-                    ? movie.getFrame(inputs.frameIndex() - 1)
-                    : null;
+        private void publishPlaybackInput(
+                Bk2FrameInput inputs,
+                TraceReplayRowPolicy rowPolicy) {
+            int predecessorIndex = rowPolicy != null
+                    ? rowPolicy.appliedPredecessorBk2Index()
+                    : inputs.frameIndex() - 1;
+            Bk2FrameInput previous = predecessorIndex >= 0
+                    ? movie.getFrame(predecessorIndex) : null;
+            pendingP1ActionPressMask |= newP1ActionPressMask(inputs, previous);
             loop.getInputHandler().setLogicalOverride(
-                    RecordedInputSnapshots.fromBk2(inputs, previous));
-            int previousAction = inputs.frameIndex() > 0
-                    ? movie.getFrame(inputs.frameIndex() - 1).p1ActionMask()
-                    : 0;
-            int pressed = (inputs.p1ActionMask() ^ previousAction) & inputs.p1ActionMask();
-            if (pressed != 0) {
-                pendingForcedJumpPress = true;
-            }
-            player.setForcedJumpPress(pendingForcedJumpPress);
+                    RecordedInputSnapshots.fromBk2(
+                            inputs, previous, pendingP1ActionPressMask));
 
             var sprites = GameServices.spritesOrNull();
             if (sprites != null) {
                 sprites.setPlaybackInputSuppressed(true);
             }
+        }
+
+        private int restorePendingP1ActionPressMask(int restoredTraceIndex) {
+            if (restoredTraceIndex < traceBaseFrame
+                    || restoredTraceIndex >= trace.frameCount()) {
+                return 0;
+            }
+            int pending = 0;
+            for (int index = restoredTraceIndex; index >= traceBaseFrame; index--) {
+                int validationBk2Index = movieBaseFrame + index - traceBaseFrame;
+                if (validationBk2Index < 0
+                        || validationBk2Index >= movie.getFrameCount()) {
+                    break;
+                }
+                TraceReplayRowPolicy policy = TraceReplayRowPolicy.resolve(
+                        trace, index, validationBk2Index);
+                if (policy.phase() == TraceExecutionPhase.FULL_LEVEL_FRAME
+                        || policy.phase()
+                        == TraceExecutionPhase.FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD) {
+                    break;
+                }
+                if (policy.phase() != TraceExecutionPhase.ADVANCE_ONLY) {
+                    continue;
+                }
+                Bk2FrameInput applied = movie.getFrame(policy.appliedBk2Index());
+                Bk2FrameInput previous = policy.appliedPredecessorBk2Index() >= 0
+                        ? movie.getFrame(policy.appliedPredecessorBk2Index()) : null;
+                pending |= newP1ActionPressMask(applied, previous);
+            }
+            return pending;
+        }
+
+        private static int newP1ActionPressMask(
+                Bk2FrameInput current,
+                Bk2FrameInput previous) {
+            int previousAction = previous != null ? previous.p1ActionMask() : 0;
+            return current.p1ActionMask() & ~previousAction;
         }
 
         private boolean isAppliedStartPressEdge(

@@ -3,7 +3,6 @@ package com.openggf.debug.playback;
 import com.openggf.control.InputHandler;
 import com.openggf.game.GameMode;
 import com.openggf.sprites.managers.SpriteManager;
-import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /** Owns publication and cleanup of recorded logical input during playback. */
 public final class PlaybackInputBridge {
@@ -14,12 +13,11 @@ public final class PlaybackInputBridge {
             PlaybackDebugManager playback,
             GameMode mode,
             InputHandler input,
-            SpriteManager sprites,
-            AbstractPlayableSprite player) {
+            SpriteManager sprites) {
         boolean shouldDrive = playback.isDriving(mode);
         if (sprites == null) {
             playback.clearLastAppliedState();
-            clearOwnedOverride(input, player);
+            clearOwnedOverride(input);
             inputSuppressed = false;
             return;
         }
@@ -27,19 +25,18 @@ public final class PlaybackInputBridge {
             sprites.setPlaybackInputSuppressed(shouldDrive);
             inputSuppressed = shouldDrive;
         }
-        if (shouldDrive && player != null) {
-            publishImmediately(playback, input, sprites, player);
+        if (shouldDrive) {
+            publishImmediately(playback, input, sprites);
             return;
         }
         playback.clearLastAppliedState();
-        clearOwnedOverride(input, player);
+        clearOwnedOverride(input);
     }
 
     public void publishImmediately(
             PlaybackDebugManager playback,
             InputHandler input,
-            SpriteManager sprites,
-            AbstractPlayableSprite player) {
+            SpriteManager sprites) {
         if (sprites != null && !inputSuppressed) {
             sprites.setPlaybackInputSuppressed(true);
             inputSuppressed = true;
@@ -48,21 +45,15 @@ public final class PlaybackInputBridge {
             input.setLogicalOverride(playback.getCurrentLogicalInputSnapshot());
             logicalOverrideApplied = true;
         }
-        if (player != null) {
-            player.setForcedJumpPress(playback.isCurrentForcedJumpPress());
-        }
     }
 
-    private void clearOwnedOverride(InputHandler input, AbstractPlayableSprite player) {
+    private void clearOwnedOverride(InputHandler input) {
         if (!logicalOverrideApplied) {
             return;
         }
         if (input != null) {
             input.clearLogicalOverride();
             input.refreshLogicalSnapshot();
-        }
-        if (player != null) {
-            player.setForcedJumpPress(false);
         }
         logicalOverrideApplied = false;
     }

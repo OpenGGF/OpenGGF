@@ -7,11 +7,12 @@ package com.openggf.sprites.managers;
 public record InitialPlayableInput(
         int p1Held,
         int p1Pressed,
+        int p1ActionPressedMask,
         int p2Held,
         int p2Pressed,
         boolean consumeQueuedObjectControlState) {
 
     public static InitialPlayableInput nativeNeutral() {
-        return new InitialPlayableInput(0, 0, 0, 0, true);
+        return new InitialPlayableInput(0, 0, 0, 0, 0, true);
     }
 }

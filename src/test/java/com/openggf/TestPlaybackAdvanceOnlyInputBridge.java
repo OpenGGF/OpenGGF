@@ -63,8 +63,11 @@ class TestPlaybackAdvanceOnlyInputBridge {
             invokeSyncPlaybackInputBridge(loop);
             assertTrue(playback.isCurrentForcedJumpPress(),
                     "publishing the following held row must not erase the pending edge");
-            assertTrue(fixture.sprite().isForcedJumpPress(),
-                    "the first gameplay row must observe the pending action edge");
+            assertEquals(0x01, loop.getInputHandler().logical()
+                    .player1().actionPressedMask(),
+                    "the first gameplay row must publish the pending action edge");
+            assertFalse(fixture.sprite().isForcedJumpPress(),
+                    "the playback bridge must not mutate gameplay-owned input latches");
             invokeUpdateLevelMode(loop);
 
             assertTrue(playback.isCurrentForcedJumpPress(),
@@ -75,6 +78,8 @@ class TestPlaybackAdvanceOnlyInputBridge {
 
             assertFalse(playback.isCurrentForcedJumpPress(),
                     "the gameplay dispatch must consume the pending edge exactly once");
+            assertTrue(fixture.sprite().getAir(),
+                    "the unlocked gameplay dispatch must consume the carried jump edge");
             invokeSyncPlaybackInputBridge(loop);
             assertFalse(playback.isCurrentForcedJumpPress(),
                     "a later held row must not repeat the consumed action edge");
@@ -102,6 +107,39 @@ class TestPlaybackAdvanceOnlyInputBridge {
                 "the bridge must clear the immediate publication when playback ends");
         assertEquals(0, input.logical().player1().heldMask(),
                 "same-step consumers must see refreshed live input, not stale BK2 state");
+    }
+
+    @Test
+    void controlLockSuppressesRecordedActionEdgeForMovement() throws Exception {
+        SonicConfigurationService config = SonicConfigurationService.getInstance();
+        Object oldSkipIntros = config.getConfigValue(SonicConfiguration.S3K_SKIP_INTROS);
+        config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, true);
+        try {
+            HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                    .withZoneAndAct(0, 0)
+                    .build();
+            GameLoop loop = new GameLoop(new InputHandler());
+            loop.changeGameModeWithoutRewindBoundary(GameMode.LEVEL);
+            playback.startSession(heldActionMovie(), 0);
+            fixture.sprite().setControlLocked(true);
+
+            invokeSyncPlaybackInputBridge(loop);
+            invokeUpdateLevelMode(loop);
+            invokeUpdateLevelMode(loop);
+
+            assertEquals(0x01, loop.getInputHandler().logical()
+                    .player1().actionPressedMask(),
+                    "the recorded raw controller edge remains published");
+            assertTrue(fixture.sprite().isRawControllerJumpJustPressed(),
+                    "objects retain the raw controller press while movement is locked");
+            assertFalse(fixture.sprite().getAir(),
+                    "Ctrl_1_locked must prevent the recorded press from starting a jump");
+            assertFalse(fixture.sprite().isForcedJumpPress(),
+                    "playback publication must not leave a gameplay-owned latch behind");
+        } finally {
+            config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS,
+                    oldSkipIntros != null ? oldSkipIntros : false);
+        }
     }
 
     @Test

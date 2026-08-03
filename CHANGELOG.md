@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: visual trace action edges now remain exact recorded controller
+  masks until playable dispatch applies queued object control and the ROM
+  control lock. S1's signpost walk-off therefore keeps its forced logical
+  direction and rejects a simultaneous recorded jump, while raw input remains
+  visible to objects. Advance-only edges and rewind replay-forward retain
+  one-shot delivery without writing or clearing gameplay-owned sprite latches.
 - Fix/Test: Rewind now replaces the unclaimed outer PLC lifecycle placeholder
   with its replay frame, preventing lifecycle re-entry crashes across games and
   special stages while preserving the guard for claimed frames.
