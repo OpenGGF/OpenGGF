@@ -1069,7 +1069,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             return plan;
         }
 
-        private static void AssertMatchesFixtureTable(
+        private static void AssertExpectedTable(
             ExpectedSegment[] expected, S3KCompleteRunSegmenter segmenter)
         {
             AssertEx.Equal(expected.Length, segmenter.Segments.Count);
@@ -1159,7 +1159,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 plan,
                 SetAPredictedFbzArmFrame + 10);
 
-            AssertMatchesFixtureTable(SetA, segmenter);
+            AssertExpectedTable(SetA, segmenter);
             AssertSuccessionIdentity(segmenter);
             // No detour and no bonus zone in the whole pass, so the Lua's
             // manifest emission gate (#transitions == 0 and no run id) is
@@ -1193,7 +1193,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 plan,
                 SetBMovieFrameCount + 10);
 
-            AssertMatchesFixtureTable(SetB, segmenter);
+            AssertExpectedTable(SetB, segmenter);
             AssertSuccessionIdentity(segmenter);
             for (var index = 0; index < SetB.Length; index++)
             {

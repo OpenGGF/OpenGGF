@@ -101,10 +101,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
         {
             tests.Add(new TestMain.TestCase(
                 "S3K aux: cpu_state_snapshot matches the CNZ fixture literal",
-                CpuStateSnapshotMatchesFixture));
+                CpuStateSnapshotMatchesCurrentContract));
             tests.Add(new TestMain.TestCase(
                 "S3K aux: object_state_snapshot emits the CNZ balloon literal for balloon slots only",
-                ObjectStateSnapshotMatchesFixture));
+                ObjectStateSnapshotMatchesCurrentContract));
             tests.Add(new TestMain.TestCase(
                 "S3K aux: zone_act_state baseline and gameplay_start match CNZ literals and dedup",
                 ZoneActStateAndGameplayStart));
@@ -131,10 +131,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 RoutineChangeWithStandContext));
             tests.Add(new TestMain.TestCase(
                 "S3K aux: cpu_state matches the CNZ frame-0 literal",
-                CpuStateMatchesFixture));
+                CpuStateMatchesCurrentContract));
             tests.Add(new TestMain.TestCase(
                 "S3K aux: oscillation_state matches the CNZ frame-0 literal",
-                OscillationStateMatchesFixture));
+                OscillationStateMatchesCurrentContract));
             tests.Add(new TestMain.TestCase(
                 "S3K aux: control_lock_state baseline literal, change suppression, 60-frame force",
                 ControlLockState));
@@ -179,7 +179,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 Frame0EmissionOrder));
         }
 
-        private static void CpuStateSnapshotMatchesFixture()
+        private static void CpuStateSnapshotMatchesCurrentContract()
         {
             var host = NewHost();
             host.SetU16(0xF708, 12);
@@ -196,7 +196,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 lines[0]);
         }
 
-        private static void ObjectStateSnapshotMatchesFixture()
+        private static void ObjectStateSnapshotMatchesCurrentContract()
         {
             var host = NewHost();
             host.SetU16(0xF708, 12);
@@ -486,7 +486,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(1, Of(lines, "state_snapshot").Count);
         }
 
-        private static void CpuStateMatchesFixture()
+        private static void CpuStateMatchesCurrentContract()
         {
             var host = NewHost();
             StageCnzFrame0(host);
@@ -505,7 +505,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 lines[0]);
         }
 
-        private static void OscillationStateMatchesFixture()
+        private static void OscillationStateMatchesCurrentContract()
         {
             var host = NewHost();
             StageCnzFrame0(host);

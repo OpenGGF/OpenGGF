@@ -8,14 +8,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
         public static void Register(ICollection<TestMain.TestCase> tests)
         {
             tests.Add(new TestMain.TestCase(
-                "S3KTraceCsvWriter header matches canonical fixture header",
-                HeaderMatchesCanonicalFixtureHeader));
+                "S3KTraceCsvWriter emits the current header contract",
+                HeaderMatchesCurrentContract));
             tests.Add(new TestMain.TestCase(
-                "S3KTraceCsvWriter reproduces aiz1_to_hcz_fullrun fixture row 0",
-                ReproducesAizFullrunFixtureRowZero));
+                "S3KTraceCsvWriter emits the current AIZ row-zero contract",
+                EmitsAizRowZeroContract));
             tests.Add(new TestMain.TestCase(
-                "S3KTraceCsvWriter reproduces the AIZ ADVANCE_ONLY prefix row 0x00A1",
-                ReproducesAizAdvanceOnlyPrefixRow));
+                "S3KTraceCsvWriter emits the AIZ ADVANCE_ONLY prefix contract",
+                EmitsAizAdvanceOnlyPrefixContract));
             tests.Add(new TestMain.TestCase(
                 "S3KTraceCsvWriter renders player_present 1 for all-zero player RAM",
                 RendersPlayerPresentOneForAllZeroPlayerRam));
@@ -71,7 +71,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
             return host;
         }
 
-        private static void HeaderMatchesCanonicalFixtureHeader()
+        private static void HeaderMatchesCurrentContract()
         {
             // LITERAL header line of the gunzipped
             // src/test/resources/traces/s3k/aiz1_to_hcz_fullrun/physics.csv
@@ -92,7 +92,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 S3KTraceCsvWriter.Header);
         }
 
-        private static void ReproducesAizFullrunFixtureRowZero()
+        private static void EmitsAizRowZeroContract()
         {
             RamBackedHost host = BuildAizRowZeroHost();
 
@@ -110,7 +110,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 S3KTraceCsvWriter.FormatRow(0, 0x0000, host));
         }
 
-        private static void ReproducesAizAdvanceOnlyPrefixRow()
+        private static void EmitsAizAdvanceOnlyPrefixContract()
         {
             // LITERAL row 0x00A1 of the gunzipped AIZ fixture physics.csv -
             // the first ADVANCE_ONLY-classified prefix row: its BK2-derived

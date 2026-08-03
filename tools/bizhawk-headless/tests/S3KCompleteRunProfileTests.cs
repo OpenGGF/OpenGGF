@@ -29,42 +29,40 @@ namespace OpenGGF.BizHawk.Headless.Tests
         public static void Register(ICollection<TestMain.TestCase> tests)
         {
             tests.Add(new TestMain.TestCase(
-                "S3KCompleteRun level header matches the completerun fixture"
-                + " header",
-                LevelHeaderMatchesCompleteRunFixtureHeader));
+                "S3KCompleteRun emits the current level header contract",
+                LevelHeaderMatchesCurrentContract));
             tests.Add(new TestMain.TestCase(
-                "S3KCompleteRun reproduces aiz_completerun physics row 0",
-                ReproducesAizCompleteRunRowZero));
+                "S3KCompleteRun emits the current AIZ row-zero contract",
+                EmitsAizRowZeroContract));
             tests.Add(new TestMain.TestCase(
-                "S3KCompleteRun reproduces bonus_gumball physics row 0",
-                ReproducesBonusGumballRowZero));
+                "S3KCompleteRun emits the current bonus row-zero contract",
+                EmitsBonusRowZeroContract));
             tests.Add(new TestMain.TestCase(
                 "S3KCompleteRun row and standard row both read"
                 + " Level_frame_counter",
                 LevelAndStandardRowsReadTheSameFrameCounter));
             tests.Add(new TestMain.TestCase(
-                "S3KCompleteRun special-stage header matches the"
-                + " special_stage fixture header",
-                SpecialStageHeaderMatchesFixtureHeader));
+                "S3KCompleteRun emits the current special-stage header contract",
+                SpecialStageHeaderMatchesCurrentContract));
             tests.Add(new TestMain.TestCase(
-                "S3KCompleteRun reproduces special_stage physics row 0",
-                ReproducesSpecialStageRowZero));
+                "S3KCompleteRun emits the current special-stage row-zero contract",
+                EmitsSpecialStageRowZeroContract));
             tests.Add(new TestMain.TestCase(
                 "S3KCompleteRun special-stage row emits rate before"
                 + " rate_timer (fixture row 1000)",
-                ReproducesSpecialStageRowOneThousand));
+                EmitsSpecialStageRowOneThousandContract));
             tests.Add(new TestMain.TestCase(
                 "S3KCompleteRun special-stage row wraps negative velocity"
                 + " (fixture row 3295)",
-                ReproducesSpecialStageNegativeVelocityRow));
+                EmitsSpecialStageNegativeVelocityContract));
             tests.Add(new TestMain.TestCase(
                 "S3KCompleteRun special-stage row renders y_pos unsigned"
                 + " (fixture row 4629)",
-                ReproducesSpecialStageUnsignedYPosRow));
+                EmitsSpecialStageUnsignedYPosContract));
             tests.Add(new TestMain.TestCase(
                 "S3KCompleteRun special-stage row reports the host lag flag"
                 + " (fixture row 22)",
-                ReproducesSpecialStageLagRow));
+                EmitsSpecialStageLagContract));
             tests.Add(new TestMain.TestCase(
                 "S3KCompleteRun special-stage started renders as a 0/1 flag",
                 SpecialStageStartedRendersAsFlag));
@@ -108,7 +106,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         // 42-column level / bonus rows
         // ------------------------------------------------------------------
 
-        private static void LevelHeaderMatchesCompleteRunFixtureHeader()
+        private static void LevelHeaderMatchesCurrentContract()
         {
             // LITERAL header line of the gunzipped
             // src/test/resources/traces/s3k/aiz_completerun/physics.csv.
@@ -133,7 +131,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 S3KTraceCsvWriter.Header);
         }
 
-        private static void ReproducesAizCompleteRunRowZero()
+        private static void EmitsAizRowZeroContract()
         {
             var host = new RamBackedHost();
             host.SetWord(S3KRam.CameraX, 0x0000);
@@ -166,7 +164,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 S3KTraceCsvWriter.FormatRow(0, 0x0000, host));
         }
 
-        private static void ReproducesBonusGumballRowZero()
+        private static void EmitsBonusRowZeroContract()
         {
             // A bonus segment runs the SAME 42-column writer as a level
             // segment (spec §1.2) — only metadata.json and the manifest
@@ -229,7 +227,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         // 20-column special-stage rows
         // ------------------------------------------------------------------
 
-        private static void SpecialStageHeaderMatchesFixtureHeader()
+        private static void SpecialStageHeaderMatchesCurrentContract()
         {
             // LITERAL header line of the gunzipped
             // src/test/resources/traces/s3k/special_stage/physics.csv.
@@ -241,7 +239,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 S3KSpecialStageCsvWriter.Header);
         }
 
-        private static void ReproducesSpecialStageRowZero()
+        private static void EmitsSpecialStageRowZeroContract()
         {
             var host = new RamBackedHost();
             StageSpecialStage(
@@ -270,7 +268,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 S3KSpecialStageCsvWriter.FormatRow(0, 0, 0, false, host));
         }
 
-        private static void ReproducesSpecialStageRowOneThousand()
+        private static void EmitsSpecialStageRowOneThousandContract()
         {
             // rate (0xE444) is column 16 and rate_timer (0xE43E) is column
             // 17 — TABLE order, not address order. Staging the two RAM
@@ -302,7 +300,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 S3KSpecialStageCsvWriter.FormatRow(1000, 0x8, 0, false, host));
         }
 
-        private static void ReproducesSpecialStageNegativeVelocityRow()
+        private static void EmitsSpecialStageNegativeVelocityContract()
         {
             var host = new RamBackedHost();
             StageSpecialStage(
@@ -332,7 +330,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 S3KSpecialStageCsvWriter.FormatRow(3295, 0x1, 0, false, host));
         }
 
-        private static void ReproducesSpecialStageUnsignedYPosRow()
+        private static void EmitsSpecialStageUnsignedYPosContract()
         {
             // y_pos is an UNSIGNED u16 read: 0xFC24 renders "fc24", not a
             // sign-wrapped or negative form.
@@ -362,7 +360,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 S3KSpecialStageCsvWriter.FormatRow(4629, 0, 0, false, host));
         }
 
-        private static void ReproducesSpecialStageLagRow()
+        private static void EmitsSpecialStageLagContract()
         {
             // lag is emu.islagged() for the just-completed frame, not a RAM
             // read and not a placeholder: 113 of the fixture's 4630 rows

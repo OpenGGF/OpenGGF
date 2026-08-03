@@ -23,8 +23,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S2SpecialStage input mask collapses ABC and includes Start",
                 InputMaskCollapsesAbcAndIncludesStart));
             tests.Add(new TestMain.TestCase(
-                "S2SpecialStage metadata matches the ss fixture byte layout",
-                MetadataMatchesSsFixtureByteLayout));
+                "S2SpecialStage metadata emits the strict v5 shape",
+                MetadataEmitsStrictV5Shape));
         }
 
         private static void CsvHeaderMatchesRecorder()
@@ -117,9 +117,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     new Bk2Frame { P1Start = true }));
         }
 
-        private static void MetadataMatchesSsFixtureByteLayout()
+        private static void MetadataEmitsStrictV5Shape()
         {
-            // Values from the canonical run fixture's ss/metadata.json.
+            // Current strict-v5 special-stage metadata values.
             AssertEx.Equal(
                 "{\n"
                 + "  \"game\": \"s2\",\n"
