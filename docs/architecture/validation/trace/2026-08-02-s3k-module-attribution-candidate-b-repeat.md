@@ -1,7 +1,8 @@
 # S3K module-attribution Candidate B / Repeat validation
 
-**Status:** exact-byte publication approval pending  
-**Conductor commit:** `ab7b85426`  
+**Status:** explicitly approved and installed byte-for-byte
+**Approval manifest commit:** `f7827cb1f`
+**Conductor commit:** `77965d4f2`
 **Recorder:** `6.42-s3k-completerun`  
 **ROM SHA-1:** `CFBF98C36C776677290A872547AC47C53D2761D6`  
 **Movie:** `s3k-complete-sonic-tails.bk2`, 466,334 frames
@@ -26,7 +27,7 @@ Against the committed fixture tree:
 
 The first exhaustive comparator deliberately pinned the stale aggregate of 25
 and failed after all per-segment checks passed. The per-segment counts sum to
-27. Commit `ab7b85426` adds the independently reviewed aggregate contract; its
+27. Commit `77965d4f2` adds the independently reviewed aggregate contract; its
 negative reports actual 27 / expected 25 and its positive pins 27.
 
 ## Frozen install manifest
@@ -52,11 +53,36 @@ Repeat has the exact same bytes.
 | `dez23` | `ddz_completerun` | 1 | `1644 / 9239a2fbad626056523e3a02c786dfc1e18965c1e59e95ce9947d62de36c1fc2` | `3785 / 56c6b5d3bc2ff996154d21f41520d5a86e7f4b58453714ece5b06d58c06989f8` |
 | `ddz` | `ending_completerun` | 0 | `1641 / 24eb5cb16f5443105e5cdd40653632d19dbf0eb07833627d8009364bbc20a30a` | `2207 / f414d1a774ff97c012f626c08b1dd6a896c71719c386f6635abd20d7bb8dddec` |
 
-## Proposed publication scope
+## Approved publication transaction
 
-After explicit approval, install exactly the 15 metadata files and the 14
-changed timing files above. Keep every compressed physics/aux payload and the
-byte-identical ending timing file untouched. Re-hash the installed files against
-this manifest, run the publication/schema/compression/reference guards, then
-remeasure the complete-run replay frontiers. No fixture bytes are approved or
-installed by this document alone.
+The user explicitly approved the exact frozen bytes in this manifest. On
+2026-08-03 the conductor installed exactly the 15 metadata files and 14 changed
+timing files from Candidate B, for 29 installed files total. Repeat remained
+validation-only and supplied no installed byte. Every compressed physics/aux
+payload, all physics/aux decoded content, and the byte-identical ending timing
+file remained untouched.
+
+The post-install hash check re-read all 15 metadata files and all 15 timing
+files: every length and SHA-256 matches the frozen table, and the modified
+fixture-file inventory is exactly the approved 29 paths. The canonical native
+gate now compares a fresh 6.42 capture directly with the installed 6.42 bytes;
+the old 6.40 identities remain frozen as non-capture predecessor evidence.
+
+## Post-install verification
+
+The full 466,334-row native capture gate passed all fifteen canonical segments
+against the installed fixture bytes. The complete native non-gate suite passed
+516 tests with zero failures or skips; the focused bonus-gumball, AIZ, and HCZ
+differential captures also passed. The Java publication, schema/loader,
+compression, catalog/reference/provenance, schedule-compiler, authority,
+replay-port, trace-data, and recording-driver selection passed 130 tests with
+zero failures, errors, or skips.
+
+Fresh complete-run replay installation remains intentionally fail-closed on
+installed POST authority whenever its recorded row has no executable
+object/POST phase: AIZ raw 6351/module `#16`, HCZ raw 31361/module `#82`, CNZ
+raw 39940/module `#152`, and MHZ raw 28017/module `#256` all stop with
+`unsupported-held-row-POST` before fixture or gameplay-session mutation. These
+measured compiler frontiers are recorded in
+`docs/status/trace-frontier-log.md`; publication does not synthesize the
+missing CPU prefix.

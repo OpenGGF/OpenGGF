@@ -1,8 +1,9 @@
 # S3K AIZ module attribution and fail-closed replay validation
 
 Date: 2026-08-02
-Branch: `bugfix/ai-red-s3k-aiz-module-admission`
-Base: `2d6f67020b1db9cab1a36860bf34250b7890f2a1`
+Branch: `bugfix/ai-s3k-recorder-integration`
+Base: `ecf1deb30`
+Implementation: `1e96d6213`
 
 ## Result
 
@@ -31,12 +32,14 @@ next run-wide ordinal. Separate two-entry vectors cover Level's proven
 post-clear observation windows at `$0C->$8C` and `$8C->$0C`; their canonical
 A/B retirements keep ordinals 0/1 and never re-ledger the surviving suffix.
 
-This task generated prospective output but installed no fixture. The approved
-Candidate A bytes remain unchanged and retain their published recorder version
-and timing edges. Any corrected 6.41/6.42 publication still requires a
-separate exact-byte approval and publication transaction.
+This implementation task generated candidate output but installed no fixture
+at the time. That historical gate was subsequently satisfied: Candidate B and
+an independent repeat reproduced all 60 capture files byte-for-byte, the user
+explicitly approved the exact 29-file scope frozen by manifest commit
+`f7827cb1f`, and Candidate B supplied the 15 installed metadata files plus 14
+changed timing files. Repeat remained validation-only.
 
-## Route-wide prospective-capture comparison
+## Route-wide candidate-capture comparison
 
 One untruncated native capture replayed all 466,334 movie rows and produced all
 15 canonical complete-run segments. The gate first attested every committed
@@ -74,7 +77,7 @@ An independent Candidate B/repeat comparison found both captures
 byte-identical and confirmed every row-level claim above, while exposing that
 the prose had incorrectly totaled the correct per-segment counts as 25. The
 cheap aggregate contract now sums all 15 `TimingCase` rows and pins 27. Its
-negative vector deliberately requests 26 and requires the exact aggregate
+negative vector deliberately requests 25 and requires the exact aggregate
 failure, preventing the prose total from drifting away from the table again.
 
 ```text
@@ -83,8 +86,11 @@ S3K_ROM_PATH=<verified-s3k> BIZHAWK_HOME=<2.11> ./test.sh \
   --jobs 1
 ```
 
-The complete capture gate passed. Its scratch output was discarded after the
-comparison; committed fixtures were not rewritten.
+The pre-publication complete capture gate passed and its scratch output was
+discarded after comparison. Following exact-byte approval, the independently
+reproduced Candidate B bytes were installed through the separate publication
+transaction described in
+`2026-08-02-s3k-module-attribution-candidate-b-repeat.md`.
 
 ## TDD evidence
 

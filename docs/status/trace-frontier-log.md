@@ -60788,7 +60788,7 @@ shift-plus-append/cardinality, and empty-to-active negatives remain fail-closed.
 No callback was added and frozen Lua 6.37 behavior is unchanged. Maintained
 native versions advance to `6.41-s3k` and `6.42-s3k-completerun`.
 
-The corrected prospective raw-6351 module `#16` edge is not executable replay
+The corrected Candidate B raw-6351 module `#16` edge is not executable replay
 authority. Schema-2 POST is accepted only on the two full-level phases; all
 three non-full phases are rejected before the fixture or gameplay session is
 touched, with `unsupported-held-row-POST` retained as the VBLANK-specific
@@ -60799,22 +60799,17 @@ hardware-timing, held-AIZ behavioral,
 special-stage-results, and all runnable non-gate tests passed; ROM-backed
 vectors without configured ROM variables skipped.
 
-No fixture was installed. Prospective output was generated only under ignored
-scratch and deleted after comparison. Consequently the currently committed
-Candidate A stream and its measured AIZ frontier remain unchanged at 60 errors
-/ 6,347 rows, first comparison frame 1106, terminal published module `#16`
-`5c387ee74a9433eebd0f6700c270d1def12cc8157434d37e33eaf8c422312399`
-stamped `VINT_SERVICE` with the engine parent unprepared. A separately approved
- 6.41/6.42 publication would replace that late runtime failure with the earlier
-explicit pre-mutation `unsupported-held-row-POST` classification; it does not
-authorize a partial CPU prefix or a fixture install in this task.
+The implementation task itself installed no fixture: candidate output remained
+under ignored scratch and was deleted after comparison. The later Candidate B
+publication transaction is recorded below; it supersedes this historical
+pre-publication frontier without authorizing a partial CPU prefix.
 
 ### Review hardening: complete-run delta attestation
 
 The untruncated native command replayed all 466,334 rows of
 `s3k-complete-sonic-tails.bk2` and published all 15 expected scratch segments.
-The strengthened gate attests each committed timing predecessor and each
-prospective timing output by byte length, line count, and SHA-256. Physics and
+The strengthened pre-publication gate attested each timing predecessor and each
+Candidate B timing output by byte length, line count, and SHA-256. Physics and
 aux remain at their committed exact identities. Timing contains exactly 27
 in-place `VINT_SERVICE` to `POST_OBJECTS` substitutions across 14 segments;
 raw frame, kind, ordinal, submission fingerprint, event position, and ordering
@@ -60825,7 +60820,7 @@ An exhaustive Candidate B/repeat comparison subsequently proved both captures
 byte-identical and all per-segment claims correct, but caught that this prose
 had incorrectly totaled the 14 nonzero segment counts as 25. Their actual sum
 is 27. A new cheap aggregate contract sums all 15 table rows, pins 27, and
-contains a wrong-26 negative assertion; no third capture or fixture change was
+contains a wrong-25 negative assertion; no third capture or fixture change was
 needed for this bookkeeping correction.
 
 Review also tightened replay installation to accept schema-2 POST only for
@@ -60839,3 +60834,47 @@ clear emits no completion and ordinals are not reused. Level's proven
 post-clear `$0C->$8C` and `$8C->$0C` observations instead reconcile normally;
 two-entry vectors preserve ordinals 0/1 across canonical shifts without
  re-ledgering. These validation and fail-closed changes move no replay frontier.
+
+## 2026-08-03 — Candidate B complete-run timing publication
+
+Context: `.worktrees/red-suite-rom-parity`, branch
+`bugfix/ai-red-suite-rom-parity`, approval manifest integrated as commit
+`f7827cb1f`, JDK 21.0.11,
+verified locked-on S3K ROM (SHA-1
+`cfbf98c36c776677290a872547ac47c53d2761d6`). The explicitly approved Candidate
+B transaction installed exactly 15 recorder-6.42 metadata files and the 14
+changed timing files frozen by the approval manifest. Repeat remained
+validation-only. All physics/aux payloads and `ending_completerun` timing remain
+untouched. A post-install audit re-read all 30 metadata/timing table entries and
+matched every frozen byte length and SHA-256; the changed fixture inventory is
+exactly the approved 29 paths.
+
+The native non-gate command used all three verified ROM variables and
+`tools/bizhawk-headless/test.sh --no-gates`: 516 tests passed, zero failed or
+skipped. The focused `S3KCompleteRunDifferential` selection reproduced the
+canonical bonus-gumball, AIZ, and HCZ streams. The full command
+`tools/bizhawk-headless/test.sh --filter "S3KCompleteRunSegmentsDifferential native capture matches all fifteen canonical completerun segments" --jobs 1`
+replayed all 466,334 movie rows and passed all fifteen installed canonical
+segments. The cheap companion gate independently names the 27 reviewed edges,
+reconstructs every 6.40 predecessor stream and hash from the installed 6.42
+bytes, pins the aggregate at 27, and rejects the historical wrong total 25.
+
+The Java publication, schema/loader, compression, catalog/reference/provenance,
+schedule-compiler, authority, replay-port, trace-data, and recording-driver
+selection ran 130 tests with zero failures, errors, or skips. The affected
+complete-run replay command selected AIZ, HCZ, CNZ, and MHZ together: five
+tests, zero assertion failures, five expected pre-session compiler errors. The
+installed authoritative POST rows are not executable on their recorded
+VBLANK-only phases, so the compiler now stops before any fixture or gameplay
+session mutation:
+
+| route | tests / errors | retained fail-closed compiler frontier |
+|---|---:|---|
+| AIZ | 1 / 1 | raw 6351, module `#16`, `unsupported-held-row-POST` |
+| HCZ | 2 / 2 | raw 31361, module `#82`, `unsupported-held-row-POST`; whole replay and Poindexter helper stop identically |
+| CNZ | 1 / 1 | raw 39940, module `#152`, `unsupported-held-row-POST` |
+| MHZ | 1 / 1 | raw 28017, module `#256`, `unsupported-held-row-POST` |
+
+These are publication-driven timing-authority frontiers, not new gameplay
+comparison regressions. The fail-closed schedule contract deliberately refuses
+to synthesize a POST phase on a VBLANK-only row.

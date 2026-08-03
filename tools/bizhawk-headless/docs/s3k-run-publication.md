@@ -3,22 +3,25 @@
 > **2026-08-02 recorder-order note.** The maintained native complete-run
 > writer is `6.42-s3k-completerun`. On a shared raw frame it serializes module
 > `post_objects` before direct `pre_main_loop`, after any `vint_service` event.
-> The committed complete-run and run fixtures remain read-only at
-> `6.40-s3k-completerun`. No fixture is installed by the recorder change. If a
-> replacement 67-segment super-emerald capture is explicitly approved, stage
-> the candidate under
+> Non-Candidate-B fixtures remain read-only at their existing published
+> stamps; the 67-segment super-emerald run and both existing run manifests
+> remain `6.40-s3k-completerun`. Candidate B is the explicitly approved
+> installed exception. A replacement 67-segment super-emerald capture still
+> requires separate approval and must be staged under
 > `tools/bizhawk-headless/.scratch/s3k-knuckles-complete-superemeralds-v642/`
 > for independent review before publication.
 > The canonical 466,334-row Sonic-and-Tails validation capture retains exact
 > committed physics/aux identity and produces a reviewed timing-only delta:
 > 27 in-place `vint_service`-to-`post_objects` substitutions across 14 of 15
 > segments, with raw frame, kind, ordinal, fingerprint, position, and ordering
-> unchanged. The 15-segment gate independently pins the byte length, line
-> count, and SHA-256 of both every committed predecessor and every prospective
-> timing file. This is validation evidence, not publication authorization;
-> no fixture is installed by the gate.
-> A cheap companion contract sums all 15 reviewed per-segment counts, pins the
-> aggregate at 27, and proves a deliberately wrong expected total fails.
+> unchanged. The user explicitly approved the Candidate B bytes frozen by
+> manifest commit `f7827cb1f`; exactly 15 metadata files and 14 changed timing
+> files were installed from Candidate B, while the independent repeat remained
+> validation-only. The 15-segment gate now pins the installed 6.42 bytes and
+> requires a fresh capture to match them exactly, with only recording_date
+> normalized in metadata. A cheap companion contract retains all 27 literal
+> 6.40 predecessor edges, reconstructs and verifies every predecessor hash,
+> pins the aggregate at 27, and proves the historical wrong-25 total fails.
 >
 > **2026-07-27 publication note.** The canonical committed fleet is native
 > recorder v6.37. It contains 47 timing-owned fixture destinations plus the
@@ -1218,12 +1221,12 @@ Nothing in the publication contract is now left to manual verification.
 `S3KCompleteRunSegmentsDifferentialTests` runs **one untruncated**
 `--trace-profile complete_run` pass (no `--run-id`) over the full
 466,334-row `s3k-complete-sonic-tails.bk2` and validates all fifteen
-committed `*_completerun` dirs under the reviewed 6.40-to-6.42 recorder
-migration. Physics and aux are byte-identical. Metadata may differ only
-by the exact recorder-version literal and recording date. Timing first
-attests every committed predecessor and then the exact prospective output;
-the only accepted content delta is the pinned 27-line VINT-to-POST
-attribution correction across fourteen segments.
+committed `*_completerun` dirs against the installed canonical 6.42
+publication. Physics, aux, and timing are byte-identical. Metadata may differ
+only by recording date. The former 6.40 timing identities remain independently
+attested by a cheap non-capture migration test: it reverses exactly the 27
+approved VINT-to-POST substitutions across fourteen segments and requires all
+15 frozen predecessor hashes, including the byte-identical ending stream.
 
 Measured, not estimated: **5m57s wall, 235 MB peak RSS, 2.84 GB of
 output.** The earlier "hours of wall clock" note in this section was
@@ -1244,21 +1247,19 @@ Four deliberate strength choices:
    eight post-MHZ segment boundaries (`fbz`, `soz`, `lrz`, `hpz22`,
    `hpz`, `ssz`, `dez23`, `ddz`) before final comparison against their
    committed fixture directories.
-2. **Narrow metadata migration.** The committed side must contain the
-   exact published `6.40-s3k-completerun` literal and the prospective side
-   the exact maintained `6.42-s3k-completerun` literal. Only that literal
-   and the validated `recording_date` line may differ; schema, key order,
-   line count, and every other byte remain pinned.
-3. **Both timing identities are independently attested.** Each committed
-   `hardware_timing.jsonl` and each prospective file has a pinned byte
-   length, line count, and SHA-256. A second semantic comparison requires
-   exactly 27 in-place substitutions across 14 segments, each replacing
-   only `"boundary":"vint_service"` with
-   `"boundary":"post_objects"`. The ending segment stays byte-identical;
-   raw frame, kind, ordinal, fingerprint, event position, and ordering
-   cannot move.
-   A cheap non-capture contract separately sums all fifteen reviewed counts,
-   pins 27, and rejects a deliberately wrong expected aggregate.
+2. **Canonical metadata identity.** Both installed and captured sides must
+   contain the exact `6.42-s3k-completerun` literal. Only the validated
+   `recording_date` line may differ; schema, key order, line count, and every
+   other byte remain pinned.
+3. **Canonical timing plus retained predecessor evidence.** Each installed
+   and captured `hardware_timing.jsonl` has the same pinned byte length, line
+   count, and 6.42 SHA-256. The cheap non-capture contract separately names
+   all 27 migrated rows, reverses each exact `"boundary":"post_objects"` to
+   `"boundary":"vint_service"`, and requires the frozen 6.40 predecessor
+   hash per segment. It sums all fifteen reviewed counts, pins 27, and rejects
+   the deliberately wrong expected aggregate 25. The ending segment stays
+   byte-identical; raw frame, kind, ordinal, fingerprint, event position, and
+   ordering cannot move.
 4. **`run_id` absence asserted directly.** Line-count equality alone
    would let a stray `run_id` line pass if it displaced another key, so
    both files are probed for a `"run_id":` line explicitly. That absence

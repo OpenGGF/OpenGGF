@@ -202,11 +202,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// (Player_mode 0) — and identity (C) — the run pass under
         /// --run-id s3k-multibonus, Knuckles solo (Player_mode 3), whose
         /// three bonus dirs carry capture_mode AND v_int_run_count while
-        /// special_stage/ carries neither. AIZ and HCZ were republished with
-        /// hardware timing on 2026-07-29; the remaining fixtures retain
-        /// their 2026-07-25 capture date. These comparisons are FULL-FILE
-        /// equality, so each date is injected to match the fixture rather
-        /// than allowed to differ.
+        /// special_stage/ carries neither. AIZ and HCZ now carry the
+        /// explicitly approved 2026-08-02 Candidate B metadata bytes; the
+        /// other four fixtures in this formatter gate retain their own
+        /// installed dates. These comparisons are FULL-FILE equality, so
+        /// each date is injected to match the fixture rather than allowed
+        /// to differ.
         /// </summary>
         private static readonly MetadataFixture[] MetadataFixtures =
         {
@@ -226,7 +227,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 PlayerMode = 0,
                 SourceBk2 = CompleteRunSourceBk2,
                 RunId = null,
-                RecordingDate = "2026-08-01"
+                RecordingDate = "2026-08-02"
             },
             new MetadataFixture
             {
@@ -244,7 +245,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 PlayerMode = 0,
                 SourceBk2 = CompleteRunSourceBk2,
                 RunId = null,
-                RecordingDate = "2026-08-01"
+                RecordingDate = "2026-08-02"
             },
             new MetadataFixture
             {

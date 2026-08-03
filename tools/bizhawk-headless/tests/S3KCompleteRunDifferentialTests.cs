@@ -37,10 +37,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
     /// special_stage) would each need their own long pass over THIS movie
     /// and remain uncovered.
     ///
-    /// Metadata permits only the exact approved 6.34 -> 6.33,
-    /// trace_schema 7 -> 6, hardware_timing_schema removal, and
-    /// recording_date-value normalization. run_id is identical in the
-    /// bonus case. physics.csv and aux_state.jsonl use ZERO normalization.
+    /// Metadata permits only the enumerated legacy/published shapes and the
+    /// exact installed/current 6.42 shape, plus recording_date-value
+    /// normalization. run_id is identical in the bonus case. physics.csv
+    /// and aux_state.jsonl use ZERO normalization.
     ///
     /// Skips (does not pass) when S3K_ROM_PATH, a BizHawk distribution or
     /// the fixtures are absent; fails (does not skip) on any mismatch.
@@ -68,6 +68,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
             "  \"lua_script_version\": \"6.37-s3k-completerun\",";
         private const string PublishedQueueLuaScriptVersionLine =
             "  \"lua_script_version\": \"6.38-s3k-completerun\",";
+        private const string PublishedCurrentLuaScriptVersionLine =
+            "  \"lua_script_version\": \"6.40-s3k-completerun\",";
         private const string CurrentLuaScriptVersionLine =
             "  \"lua_script_version\": \"6.42-s3k-completerun\",";
         private const string FixtureTraceSchemaLine =
@@ -79,9 +81,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private const string CurrentHardwareTimingSchemaLine =
             "  \"hardware_timing_schema\": 2,";
         private const string HczTimingSha256 =
-            "a19d98bd7cf341ffcf1c19871e22044abc00bbde99ad352a0e1d41e8f3a34aeb";
+            "f055e4863d0048dd5143d353ad5946544a09da9d14325fe0fdf113a3d002a811";
         private const string AizTimingSha256 =
-            "c80a9c2f0383cfb3ad153ea5448684657543676f1c5920a0e472095a09f8d9e4";
+            "b8ebb4662c7361984e21541824166fbd597970171eed5025b6fdadbee6b4df24";
 
         // docs/s3k-run-publication.md §0.3, identity (C). The physics hash
         // was last moved by Lua 6.33-s3k-completerun (ADDR_VBLA_WORD 0xFE12
@@ -422,6 +424,18 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
             if (HasMetadataShape(
                 fixtureText,
+                PublishedCurrentLuaScriptVersionLine,
+                CurrentTraceSchemaLine,
+                CurrentHardwareTimingSchemaLine))
+            {
+                return new MetadataNormalization(
+                    producedText.Replace(
+                        CurrentLuaScriptVersionLine,
+                        PublishedCurrentLuaScriptVersionLine),
+                    PublishedCurrentLuaScriptVersionLine);
+            }
+            if (HasMetadataShape(
+                fixtureText,
                 PublishedQueueLuaScriptVersionLine,
                 CurrentTraceSchemaLine,
                 CurrentHardwareTimingSchemaLine))
@@ -534,6 +548,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 PublishedQueueLuaScriptVersionLine + "\n"
                 + CurrentTraceSchemaLine + "\n"
                 + CurrentHardwareTimingSchemaLine + "\n";
+            string publishedCurrent =
+                PublishedCurrentLuaScriptVersionLine + "\n"
+                + CurrentTraceSchemaLine + "\n"
+                + CurrentHardwareTimingSchemaLine + "\n";
             string legacy = LegacyLuaScriptVersionLine + "\n"
                 + FixtureTraceSchemaLine + "\n";
 
@@ -554,6 +572,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 NormalizeCurrentMetadataForFixture(
                     publishedQueue, current).Text);
             AssertEx.Equal(
+                publishedCurrent,
+                NormalizeCurrentMetadataForFixture(
+                    publishedCurrent, current).Text);
+            AssertEx.Equal(
                 legacy,
                 NormalizeCurrentMetadataForFixture(
                     legacy, current).Text);
@@ -563,6 +585,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         + " \"9.99-s3k-completerun\",\n"
                         + CurrentTraceSchemaLine + "\n"
                         + CurrentHardwareTimingSchemaLine + "\n",
+                    current),
+                "unknown or mixed");
+            AssertEx.Throws<InvalidOperationException>(
+                () => NormalizeCurrentMetadataForFixture(
+                    current.Replace(
+                        CurrentLuaScriptVersionLine,
+                        CurrentLuaScriptVersionLine + "\n"
+                            + PublishedCurrentLuaScriptVersionLine),
                     current),
                 "unknown or mixed");
             AssertEx.Throws<InvalidOperationException>(

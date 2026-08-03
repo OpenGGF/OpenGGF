@@ -16,12 +16,15 @@ All notable changes to the OpenGGF project are documented in this file.
   transition-visible work consumes its ordinal but remains fenced through that
   ambiguous delayed clear. Level loading's two proven post-clear observation
   boundaries reconcile normally, preserving multi-entry FIFO ordinals.
-  An untruncated 466,334-row validation capture attests all 15 predecessor and
-  prospective timing files and proves the complete reviewed delta is exactly
-  27 in-place VINT-to-POST substitutions across 14 segments; fixtures remain
-  unmodified. A cheap aggregate guard sums the 15 per-segment counts and
-  rejects a deliberately wrong expected total so the documented aggregate
-  cannot drift from the attested table.
+  Two byte-identical untruncated 466,334-row captures proved the complete
+  reviewed delta is exactly 27 in-place VINT-to-POST substitutions across 14
+  segments. The user explicitly approved the frozen Candidate B manifest;
+  Candidate B supplied exactly 15 installed 6.42 metadata files and 14 changed
+  timing files, while Repeat remained validation-only and physics, aux, and
+  ending timing bytes remained untouched. Native capture gates now compare
+  directly with installed 6.42 bytes. A cheap predecessor ledger retains all
+  27 former 6.40 edges and hashes, pins their aggregate, and rejects the
+  historical wrong expected total of 25.
 - Fix/Test: MHZ fixed SST occupants, plane switchers, pollen, cutscene children,
   pulley, Curled Vine, Madmole, and enemy-touch bounce now follow their ROM slot,
   lifetime, geometry, and resolved-contact semantics. The complete-run physics

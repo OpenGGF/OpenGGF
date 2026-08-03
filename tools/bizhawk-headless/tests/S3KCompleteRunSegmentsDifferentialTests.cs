@@ -29,18 +29,16 @@ namespace OpenGGF.BizHawk.Headless.Tests
     /// Comparison strength, per fixture:
     /// - physics.csv and aux_state.jsonl by raw byte length AND sha256,
     ///   with ZERO normalization.
-    /// - metadata.json line for line at exact
-    ///   schema-7/hardware-schema-2 identity; only the reviewed recorder
-    ///   version and recording_date values may differ. Later unapproved
-    ///   schema-one fixtures therefore remain an explicit
-    ///   publication-boundary failure. No other key or line may move, and
-    ///   the absence of a <c>run_id</c> key is asserted explicitly.
-    /// - hardware_timing.jsonl first attests the committed predecessor by
-    ///   byte length, line count, and sha256, then attests the prospective
-    ///   capture by the same three measures. Its 27 changed rows across 14
-    ///   segments must be exact, in-place VINT-to-POST substitutions; the
-    ///   ending segment must remain byte-identical. A cheap unit contract
-    ///   sums all fifteen table rows and pins the aggregate at 27.
+    /// - metadata.json line for line at exact installed
+    ///   6.42/schema-7/hardware-schema-2 identity; only recording_date may
+    ///   differ. No other key or line may move, and the absence of a
+    ///   <c>run_id</c> key is asserted explicitly.
+    /// - hardware_timing.jsonl by installed byte length, line count, and
+    ///   sha256. A separate cheap, non-capture contract reconstructs the
+    ///   former 6.40 timing streams from all 27 reviewed in-place
+    ///   VINT-to-POST substitutions, pins every predecessor hash, and
+    ///   proves the historical wrong-25 aggregate fails. The ending segment
+    ///   remains byte-identical across the migration.
     ///
     /// The first seven physics.csv hashes below were last moved by Lua
     /// 6.33-s3k-completerun, the ADDR_VBLA_WORD fix: vblank_counter reads
@@ -87,27 +85,15 @@ namespace OpenGGF.BizHawk.Headless.Tests
             "^  \"recording_date\": \"[0-9]{4}-[0-9]{2}-[0-9]{2}\",$");
 
         /// <summary>
-        /// Exact published and current literals. Only this reviewed
-        /// recorder-version migration is normalized.
+        /// Exact installed canonical literal. A fresh capture may differ
+        /// only in recording_date.
         /// </summary>
-        private const string PublishedLuaScriptVersionLine =
-            "  \"lua_script_version\": \"6.40-s3k-completerun\",";
-        private const string PublishedDirectLuaScriptVersionLine =
-            "  \"lua_script_version\": \"6.40-s3k-completerun\",";
-        private const string CurrentLuaScriptVersionLine =
+        private const string CanonicalLuaScriptVersionLine =
             "  \"lua_script_version\": \"6.42-s3k-completerun\",";
         private const string CurrentTraceSchemaLine =
             "  \"trace_schema\": 7,";
         private const string CurrentHardwareTimingSchemaLine =
             "  \"hardware_timing_schema\": 2,\n";
-        private const string PublishedHardwareTimingSchemaLine =
-            "  \"hardware_timing_schema\": 2,\n";
-        private static readonly HashSet<string> DirectPredecessorSegments =
-            new HashSet<string>(StringComparer.Ordinal)
-            {
-                "ddz", "dez", "ending", "fbz", "hpz", "lbz", "lrz",
-                "mhz", "soz", "ssz"
-            };
 
         /// <summary>
         /// Identity (A) carries no run_id key at all. Identities (B) and
@@ -277,9 +263,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
         };
 
         /// <summary>
-        /// Exact attestation of the published timing fixtures and the
-        /// reviewed prospective 6.42 capture. Each nonzero delta count is
-        /// made exclusively of same-edge VINT-to-POST substitutions.
+        /// Exact attestation of the former 6.40 timing fixtures and the
+        /// installed canonical 6.42 timing streams. Each nonzero delta
+        /// count is made exclusively of same-edge VINT-to-POST
+        /// substitutions.
         /// </summary>
         private static readonly Dictionary<string, TimingCase> TimingCases =
             new Dictionary<string, TimingCase>(StringComparer.Ordinal)
@@ -331,6 +318,77 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     "f414d1a774ff97c012f626c08b1dd6a896c71719c386f6635abd20d7bb8dddec")}
             };
 
+        /// <summary>
+        /// Literal identity of every row changed by the approved 6.40 to
+        /// 6.42 publication. These are deliberately independent of a
+        /// recorder invocation: the cheap migration test reads the
+        /// installed canonical streams, reverses exactly these rows, and
+        /// requires the frozen predecessor hashes above.
+        /// </summary>
+        private static readonly TimingEdge[] ReviewedTimingEdges =
+        {
+            Edge("aiz", 6351, 16,
+                "5c387ee74a9433eebd0f6700c270d1def12cc8157434d37e33eaf8c422312399"),
+            Edge("aiz", 26189, 41,
+                "6d16d4e9eac92bb7ff5ee450e2fa0c12db8d5d16dd652676932a47b9a04306c3"),
+            Edge("aiz", 26208, 42,
+                "6f27fe001c4a21687a98eb0dc8178340e7434967941c7a2fb7df442285b4c6f0"),
+            Edge("hcz", 31455, 86,
+                "433528472fa55a3b8e512530e41d2b1d47ebd06e069f27d48988f388063ca8fc"),
+            Edge("hcz", 31461, 87,
+                "f7494191ee9cfd23061afe24051ea2a3ebf06ed397e40004ba9e56be2db9a4ad"),
+            Edge("mgz", 39375, 125,
+                "b5567e4f10bffc7360e18d2ca0706b93d6dd0f7a579323cd844299d9bf7dfc24"),
+            Edge("cnz", 40028, 156,
+                "81c2f091840f5c9e82a54f988d86fe8edb29c6cd95d9a92714beed72b2242538"),
+            Edge("cnz", 40044, 157,
+                "26b13360dd345d34b890725a34c96e1224725d95acd9583b75b6237052350c66"),
+            Edge("icz", 25352, 182,
+                "1c1ea8249576bb90701fa2c5fbb25897aa3de7f9bde8324144769f89117ebf9b"),
+            Edge("icz", 25370, 183,
+                "0cb0ec2d16ae44f272700f6e4825526242417afa145a7ff8405f92db8f341be2"),
+            Edge("lbz", 46211, 219,
+                "3a9332547c74746aab54cb0d8feadbbad89049d7e3bb63c69c8096afa94d25ca"),
+            Edge("lbz", 46221, 220,
+                "485c4340dd40f7988fb2a3f2c9b28974feb54890386db7f6c70ef499e6f5274a"),
+            Edge("mhz", 28135, 260,
+                "d13010e8f2cb3f92e75faeb30830d98c78901cac9bcff7f4200df353debf4f72"),
+            Edge("fbz", 44256, 292,
+                "0b39c4a911c7fa68f718dee7bfd865779d73690ff521aa0c5229af8bf0804153"),
+            Edge("fbz", 44260, 293,
+                "4038c54b66a46cedd2b134f65c7211534b6c9480c272c984b60bb3f7c31ef13c"),
+            Edge("soz", 59460, 335,
+                "d6bad33e9fcf494b82d1f65d72c23416960e7ce36d1de484033e669e75dbc2be"),
+            Edge("soz", 59486, 336,
+                "9c49c66c6abb197e601db51c9d510b358646651e1861d8d3a8a87345f86bec18"),
+            Edge("lrz", 38719, 367,
+                "99fb158050c83782939e7edbc30349610aa94aa2e49cf4968eb919b6f3e7ce96"),
+            Edge("lrz", 38746, 368,
+                "7f7e05c5d82aec2bdbc3bbac4e3cb76bb56eb1a88223add00e3066ccda5dce13"),
+            Edge("hpz22", 9422, 382,
+                "99fb158050c83782939e7edbc30349610aa94aa2e49cf4968eb919b6f3e7ce96"),
+            Edge("hpz22", 9446, 383,
+                "c07de7ca7641c3415a371c0a77fcedb4fdfda04d498610e10739d42c2550b4a4"),
+            Edge("hpz22", 16221, 393,
+                "73bda490c12257aaa8d9a4defb2750b75c521a26388440288268cd535d0f3cbc"),
+            Edge("hpz22", 16240, 394,
+                "826696a588fd597eddbd45b8c36a2c5502411b75535947ed9b4a55b0f269d0d7"),
+            Edge("hpz", 18616, 421,
+                "1d70906eea9debc3e24454f0a024a5111b28f035ce46382b357b188f64590be8"),
+            Edge("hpz", 18620, 422,
+                "3e7fc21fad21f2f944f9495c3b0671a21e5d3086d31bd137340967cd69c417bb"),
+            Edge("ssz", 44139, 442,
+                "6f939c0e638b02f92b012d399f30ebf8facee8b7f6b6c0c3850db893e5af4197"),
+            Edge("dez23", 6096, 448,
+                "2436b34fc3609439dac39f01324da2b27542f97cdee51fccab76ec5e3b91ee9c")
+        };
+
+        private static TimingEdge Edge(
+            string segment, int rawFrame, int ordinal, string fingerprint)
+        {
+            return new TimingEdge(segment, rawFrame, ordinal, fingerprint);
+        }
+
         private static TimingCase Timing(
             int lineCount,
             long byteLength,
@@ -349,12 +407,16 @@ namespace OpenGGF.BizHawk.Headless.Tests
         public static void Register(ICollection<TestMain.TestCase> tests)
         {
             tests.Add(new TestMain.TestCase(
-                "S3KCompleteRunSegmentsDifferential schema migration shapes"
+                "S3KCompleteRunSegmentsDifferential canonical metadata shapes"
                 + " fail closed",
-                MetadataMigrationShapesFailClosed));
+                CanonicalMetadataShapesFailClosed));
             tests.Add(new TestMain.TestCase(
                 "S3KCompleteRunSegmentsDifferential AIZ timing delta is exact",
                 ReviewedAizTimingDeltaIsExact));
+            tests.Add(new TestMain.TestCase(
+                "S3KCompleteRunSegmentsDifferential installed timing preserves"
+                + " all predecessor evidence",
+                InstalledTimingMigrationPreservesPredecessorEvidence));
             tests.Add(new TestMain.TestCase(
                 "S3KCompleteRunSegmentsDifferential timing delta aggregate is exact",
                 ReviewedTimingDeltaAggregateIsExact));
@@ -428,13 +490,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         fixtureDirectory, "hardware_timing.jsonl");
                     AssertProducedBytes(
                         segment.FixtureDirectoryName
-                        + "/hardware_timing.jsonl (published fixture)",
+                        + "/hardware_timing.jsonl (canonical fixture)",
                         fixtureTimingPath,
                         timing.ByteLength,
-                        timing.PublishedSha256);
+                        timing.CanonicalSha256);
                     AssertTimingLineCount(
                         segment.FixtureDirectoryName
-                        + "/hardware_timing.jsonl (published fixture)",
+                        + "/hardware_timing.jsonl (canonical fixture)",
                         fixtureTimingPath,
                         timing.LineCount);
                 }
@@ -484,28 +546,15 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     TimingCase timing = TimingCases[segment.DirToken];
                     AssertProducedBytes(
                         segment.DirToken + "/hardware_timing.jsonl"
-                        + " (reviewed prospective capture)",
+                        + " (canonical capture)",
                         producedTimingPath,
                         timing.ByteLength,
-                        timing.CorrectedSha256);
+                        timing.CanonicalSha256);
                     AssertTimingLineCount(
                         segment.DirToken + "/hardware_timing.jsonl"
-                        + " (reviewed prospective capture)",
+                        + " (canonical capture)",
                         producedTimingPath,
                         timing.LineCount);
-                    string fixtureTiming = File.ReadAllText(fixtureTimingPath);
-                    string producedTiming = File.ReadAllText(producedTimingPath);
-                    AssertReviewedTimingDelta(
-                        segment.DirToken,
-                        fixtureTiming,
-                        producedTiming,
-                        timing.ReviewedDeltaCount);
-                    if (segment.DirToken == "aiz")
-                    {
-                        AssertReviewedAizTimingDelta(
-                            fixtureTiming,
-                            producedTiming);
-                    }
                 }
 
                 AssertOutputLayoutIsExactlyTheSegments(output);
@@ -558,13 +607,78 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "beyond the reviewed edge");
         }
 
+        private static void InstalledTimingMigrationPreservesPredecessorEvidence()
+        {
+            string tracesRoot = Path.Combine(
+                EndToEndTests.RepositoryRoot,
+                "src", "test", "resources", "traces", "s3k");
+            AssertEx.Equal(ReviewedTimingDeltaAggregate,
+                ReviewedTimingEdges.Length);
+
+            foreach (SegmentCase segment in SegmentCases)
+            {
+                TimingCase timing = TimingCases[segment.DirToken];
+                string path = Path.Combine(
+                    tracesRoot,
+                    segment.FixtureDirectoryName,
+                    "hardware_timing.jsonl");
+                string canonical = File.ReadAllText(path);
+                AssertProducedBytes(
+                    segment.DirToken + " installed canonical timing",
+                    path,
+                    timing.ByteLength,
+                    timing.CanonicalSha256);
+                AssertTimingLineCount(
+                    segment.DirToken + " installed canonical timing",
+                    path,
+                    timing.LineCount);
+
+                string predecessor = canonical;
+                var reversed = 0;
+                foreach (TimingEdge edge in ReviewedTimingEdges)
+                {
+                    if (edge.Segment != segment.DirToken)
+                    {
+                        continue;
+                    }
+                    string canonicalLine = edge.Format("post_objects");
+                    string predecessorLine = edge.Format("vint_service");
+                    RequireLiteralCount(
+                        segment.DirToken + " canonical timing",
+                        predecessor,
+                        canonicalLine,
+                        1);
+                    RequireLiteralCount(
+                        segment.DirToken + " canonical timing",
+                        predecessor,
+                        predecessorLine,
+                        0);
+                    predecessor = predecessor.Replace(
+                        canonicalLine, predecessorLine);
+                    reversed++;
+                }
+                AssertEx.Equal(timing.ReviewedDeltaCount, reversed);
+                AssertEx.Equal(
+                    timing.PredecessorSha256,
+                    ComputeSha256(predecessor));
+                AssertReviewedTimingDelta(
+                    segment.DirToken,
+                    predecessor,
+                    canonical,
+                    timing.ReviewedDeltaCount);
+                if (segment.DirToken == "aiz")
+                {
+                    AssertReviewedAizTimingDelta(predecessor, canonical);
+                }
+            }
+        }
+
         private static void ReviewedTimingDeltaAggregateIsExact()
         {
             AssertEx.Equal(15, TimingCases.Count);
             AssertReviewedTimingDeltaAggregate(
                 ReviewedTimingDeltaAggregate);
-            int deliberatelyWrongAggregate =
-                ReviewedTimingDeltaAggregate - 1;
+            const int deliberatelyWrongAggregate = 25;
             AssertEx.Throws<InvalidOperationException>(
                 delegate
                 {
@@ -632,7 +746,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 || CountOccurrences(published, correctedEdge) != 0)
             {
                 throw new InvalidOperationException(
-                    "published fixture does not contain exactly one reviewed"
+                    "predecessor vector does not contain exactly one reviewed"
                     + " predecessor edge");
             }
             if (CountOccurrences(corrected, correctedEdge) != 1
@@ -757,9 +871,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
         }
 
         /// <summary>
-        /// Requires exact published-v6.40 to current-v6.42 equality apart
-        /// from recorder version and recording_date. Both sides stay
-        /// LF-only and carry no run_id.
+        /// Requires installed-v6.42 to captured-v6.42 equality apart from
+        /// recording_date. Both sides stay LF-only and carry no run_id.
         /// </summary>
         private static void AssertMetadataEqualExceptRecordingDate(
             string context, string fixturePath, string producedPath)
@@ -769,29 +882,16 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertMetadataShape(
                 context + " (fixture)", fixtureText);
             AssertMetadataShape(context, producedText);
-            RequireExactMetadataMigrationShapes(
+            RequireExactCanonicalMetadataShapes(
                 context, fixtureText, producedText);
-            bool directPredecessor =
-                DirectPredecessorSegments.Contains(context);
-            producedText = producedText.Replace(
-                CurrentLuaScriptVersionLine,
-                directPredecessor
-                    ? PublishedDirectLuaScriptVersionLine
-                    : PublishedLuaScriptVersionLine);
             AssertEx.Equal(
                 1,
                 CountOccurrences(
-                    producedText,
-                    directPredecessor
-                        ? PublishedDirectLuaScriptVersionLine
-                        : PublishedLuaScriptVersionLine));
+                    producedText, CanonicalLuaScriptVersionLine));
             AssertEx.Equal(
                 1,
                 CountOccurrences(
-                    producedText,
-                    directPredecessor
-                        ? PublishedHardwareTimingSchemaLine
-                        : CurrentHardwareTimingSchemaLine));
+                    producedText, CurrentHardwareTimingSchemaLine));
             AssertEx.Equal(
                 1,
                 CountOccurrences(
@@ -827,9 +927,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     continue;
                 }
                 if (fixtureLines[index]
-                    == (directPredecessor
-                        ? PublishedDirectLuaScriptVersionLine
-                        : PublishedLuaScriptVersionLine))
+                    == CanonicalLuaScriptVersionLine)
                 {
                     versionLines++;
                 }
@@ -846,66 +944,57 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(1, versionLines);
         }
 
-        private static void MetadataMigrationShapesFailClosed()
+        private static void CanonicalMetadataShapesFailClosed()
         {
-            string published = PublishedLuaScriptVersionLine + "\n"
+            string canonical = CanonicalLuaScriptVersionLine + "\n"
                 + CurrentTraceSchemaLine + "\n"
                 + CurrentHardwareTimingSchemaLine;
-            string current = CurrentLuaScriptVersionLine + "\n"
+            string captured = CanonicalLuaScriptVersionLine + "\n"
                 + CurrentTraceSchemaLine + "\n"
                 + CurrentHardwareTimingSchemaLine;
-            string direct = PublishedDirectLuaScriptVersionLine + "\n"
-                + CurrentTraceSchemaLine + "\n"
-                + PublishedHardwareTimingSchemaLine;
-            RequireExactMetadataMigrationShapes(
-                "valid", published, current);
-            RequireExactMetadataMigrationShapes(
-                "valid direct", direct, current);
+            RequireExactCanonicalMetadataShapes(
+                "valid", canonical, captured);
             AssertEx.Throws<InvalidOperationException>(
-                () => RequireExactMetadataMigrationShapes(
+                () => RequireExactCanonicalMetadataShapes(
                     "wrong fixture version",
-                    published.Replace("6.40", "6.39"), current),
+                    canonical.Replace("6.42", "6.40"), captured),
                 "fixture");
             AssertEx.Throws<InvalidOperationException>(
-                () => RequireExactMetadataMigrationShapes(
-                    "mixed", published + CurrentVersionLineForTest(),
-                    current),
+                () => RequireExactCanonicalMetadataShapes(
+                    "mixed", canonical + CurrentVersionLineForTest(),
+                    captured),
                 "fixture");
             AssertEx.Throws<InvalidOperationException>(
-                () => RequireExactMetadataMigrationShapes(
-                    "duplicate", published,
-                    current + CurrentLuaScriptVersionLine + "\n"),
+                () => RequireExactCanonicalMetadataShapes(
+                    "duplicate", canonical,
+                    captured + CanonicalLuaScriptVersionLine + "\n"),
                 "produced");
             AssertEx.Throws<InvalidOperationException>(
-                () => RequireExactMetadataMigrationShapes(
+                () => RequireExactCanonicalMetadataShapes(
                     "wrong schema",
-                    published.Replace(
+                    canonical.Replace(
                         CurrentTraceSchemaLine,
                         "  \"trace_schema\": 6,"),
-                    current),
+                    captured),
                 "fixture");
         }
 
         private static string CurrentVersionLineForTest()
         {
-            return CurrentLuaScriptVersionLine + "\n";
+            return CanonicalLuaScriptVersionLine + "\n";
         }
 
-        private static void RequireExactMetadataMigrationShapes(
+        private static void RequireExactCanonicalMetadataShapes(
             string context, string fixtureText, string producedText)
         {
             RequireLiteralCount(context + " fixture", fixtureText,
-                PublishedLuaScriptVersionLine, 1);
-            RequireLiteralCount(context + " fixture", fixtureText,
-                CurrentLuaScriptVersionLine, 0);
+                CanonicalLuaScriptVersionLine, 1);
             RequireLiteralCount(context + " fixture", fixtureText,
                 CurrentTraceSchemaLine, 1);
             RequireLiteralCount(context + " fixture", fixtureText,
                 CurrentHardwareTimingSchemaLine, 1);
             RequireLiteralCount(context + " produced", producedText,
-                CurrentLuaScriptVersionLine, 1);
-            RequireLiteralCount(context + " produced", producedText,
-                PublishedLuaScriptVersionLine, 0);
+                CanonicalLuaScriptVersionLine, 1);
             RequireLiteralCount(context + " produced", producedText,
                 CurrentTraceSchemaLine, 1);
             RequireLiteralCount(context + " produced", producedText,
@@ -936,6 +1025,17 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 index += expected.Length;
             }
             return count;
+        }
+
+        private static string ComputeSha256(string text)
+        {
+            using (SHA256 sha256 = SHA256.Create())
+            {
+                return BitConverter.ToString(
+                    sha256.ComputeHash(Encoding.UTF8.GetBytes(text)))
+                    .Replace("-", string.Empty)
+                    .ToLowerInvariant();
+            }
         }
 
         private static void AssertMetadataShape(string context, string text)
@@ -1285,21 +1385,52 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 int lineCount,
                 long byteLength,
                 int reviewedDeltaCount,
-                string publishedSha256,
-                string correctedSha256)
+                string predecessorSha256,
+                string canonicalSha256)
             {
                 LineCount = lineCount;
                 ByteLength = byteLength;
                 ReviewedDeltaCount = reviewedDeltaCount;
-                PublishedSha256 = publishedSha256;
-                CorrectedSha256 = correctedSha256;
+                PredecessorSha256 = predecessorSha256;
+                CanonicalSha256 = canonicalSha256;
             }
 
             public int LineCount { get; private set; }
             public long ByteLength { get; private set; }
             public int ReviewedDeltaCount { get; private set; }
-            public string PublishedSha256 { get; private set; }
-            public string CorrectedSha256 { get; private set; }
+            public string PredecessorSha256 { get; private set; }
+            public string CanonicalSha256 { get; private set; }
+        }
+
+        private sealed class TimingEdge
+        {
+            public TimingEdge(
+                string segment,
+                int rawFrame,
+                int ordinal,
+                string fingerprint)
+            {
+                Segment = segment;
+                RawFrame = rawFrame;
+                Ordinal = ordinal;
+                Fingerprint = fingerprint;
+            }
+
+            public string Segment { get; private set; }
+            public int RawFrame { get; private set; }
+            public int Ordinal { get; private set; }
+            public string Fingerprint { get; private set; }
+
+            public string Format(string boundary)
+            {
+                return "{\"event\":\"hardware_work_completed\","
+                    + "\"raw_frame\":" + RawFrame
+                    + ",\"boundary\":\"" + boundary + "\""
+                    + ",\"kind\":\"kos_module_queue\""
+                    + ",\"ordinal\":" + Ordinal
+                    + ",\"submission_fingerprint\":\"sha256:"
+                    + Fingerprint + "\"}";
+            }
         }
     }
 }
