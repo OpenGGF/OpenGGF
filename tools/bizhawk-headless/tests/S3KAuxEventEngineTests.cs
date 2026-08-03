@@ -100,7 +100,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
         public static void Register(List<TestMain.TestCase> tests)
         {
             tests.Add(new TestMain.TestCase(
-                "S3K aux: cpu_state_snapshot matches the CNZ fixture literal",
+                "S3K aux: cpu_state_snapshot asserts the current CNZ contract",
                 CpuStateSnapshotMatchesCurrentContract));
             tests.Add(new TestMain.TestCase(
                 "S3K aux: object_state_snapshot emits the CNZ balloon literal for balloon slots only",
@@ -172,10 +172,10 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S3K aux: aiz_handoff_terrain_state emits the hook-less skeleton literal in-window",
                 AizHandoffTerrainState));
             tests.Add(new TestMain.TestCase(
-                "S3K aux: scan_objects appeared/near/removed/slot_dump match fixture literals",
+                "S3K aux: scan_objects asserts the current lifecycle contract",
                 ScanObjectsLiterals));
             tests.Add(new TestMain.TestCase(
-                "S3K aux: frame-0 emission order matches the CNZ fixture event sequence",
+                "S3K aux: frame-0 emission order asserts the current CNZ contract",
                 Frame0EmissionOrder));
         }
 
