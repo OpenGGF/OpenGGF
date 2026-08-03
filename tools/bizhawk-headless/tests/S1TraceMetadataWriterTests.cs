@@ -34,15 +34,15 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 + "  \"sidekicks\": [],\n"
                 + "  \"rng_seed\": \"0x00000000\",\n"
                 + "  \"recording_date\": \"2026-07-13\",\n"
-                + "  \"lua_script_version\": \"3.5\",\n"
-                + "  \"trace_schema\": 4,\n"
-                + "  \"csv_version\": 7,\n"
+                + "  \"recorder\": \"native-bizhawk-headless\",\n"
+                + "  \"recorder_version\": \"3.0\",\n"
+                + "  \"trace_schema\": 5,\n"
                 + "  \"aux_schema_extras\": [\"s1_obj64_state_per_frame\"],\n"
                 + "  \"rom_checksum\": \"\",\n"
                 + "  \"notes\": \"\"\n"
                 + "}\n";
 
-            AssertEx.Equal(expected, S1TraceMetadataWriter.Format(
+            string metadata = S1TraceMetadataWriter.Format(
                 0,
                 0,
                 840,
@@ -50,7 +50,13 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 0x0050,
                 0x03B0,
                 0x00000000u,
-                "2026-07-13"));
+                "2026-07-13");
+            AssertEx.Equal(expected, metadata);
+            AssertEx.Equal(false, metadata.Contains("lua_script_version"));
+            AssertEx.Equal(false, metadata.Contains("csv_version"));
+            AssertEx.Equal(false, metadata.Contains("ss_csv_version"));
+            AssertEx.Equal(false, metadata.Contains("hardware_timing_schema"));
+            AssertEx.Equal(false, metadata.Contains("run_schema"));
         }
 
         private static void MapsZoneNamesWithUnknownFallback()

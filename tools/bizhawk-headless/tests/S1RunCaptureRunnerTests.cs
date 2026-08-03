@@ -96,7 +96,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         null,
                         "synthetic.bk2",
                         "2026-07-30",
-                        S1CompleteRunMetadataWriter.LuaScriptVersion,
+                        TraceContract.RecorderVersion,
                         0,
                         new RunSegmentCollector(),
                         null),
@@ -302,17 +302,17 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         "\"event\":\"dynamic_art_transfer_state\""));
                 AssertContains(
                     outputs[0].MetadataJson,
-                    "\"dynamic_art_transfer_state_per_frame_v1\"");
-                AssertContains(result.RunManifestJson, "\"run_schema\": 2");
+                    "\"dynamic_art_transfer_state_per_frame\"");
+                AssertContains(result.RunManifestJson, "\"trace_schema\": 5");
                 AssertContains(
                     result.RunManifestJson,
                     "\"dynamic_art_gap_transitions\": [");
                 AssertEx.Equal(0, result.DynamicArtGapTransitions.Count);
                 AssertContains(
                     S1SpecialStageMetadataWriter.Format(
-                        0, 1, 1, "synthetic.bk2", "3.18",
-                        "2026-07-30", "audit-run", 1, true),
-                    "\"dynamic_art_transfer_state_per_frame_v1\"");
+                        0, 1, 1, "synthetic.bk2", "2026-07-30",
+                        "audit-run", 1, true),
+                    "\"dynamic_art_transfer_state_per_frame\"");
             });
         }
 
@@ -409,7 +409,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 AssertContains(seg1.MetadataJson,
                     "  \"source_bk2\": \"synthetic.bk2\"\n");
                 AssertContains(seg1.MetadataJson,
-                    "  \"lua_script_version\": \"3.18\",\n");
+                    "  \"trace_schema\": 5,\n");
                 // S1 level metadata is byte-identical in and out of run
                 // context: no run_id / segment_index lines (spec §7).
                 AssertEx.Equal(false, seg1.MetadataJson.Contains("run_id"));
@@ -765,7 +765,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 AssertEx.Equal(
                     true,
                     result.RunManifestJson.EndsWith(
-                        "  \"transitions\": [\n  ]\n}\n"));
+                        "  \"transitions\": [\n  ],\n"
+                        + "  \"dynamic_art_gap_transitions\": [\n  ]\n}\n"));
             });
         }
 
@@ -917,7 +918,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     runId,
                     "synthetic.bk2",
                     "2026-07-24",
-                    S1CompleteRunMetadataWriter.LuaScriptVersion,
+                    TraceContract.RecorderVersion,
                     stopAtFrame,
                     collector)
                 : S1RunCaptureRunner.Capture(
@@ -926,7 +927,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     runId,
                     "synthetic.bk2",
                     "2026-07-24",
-                    S1CompleteRunMetadataWriter.LuaScriptVersion,
+                    TraceContract.RecorderVersion,
                     stopAtFrame,
                     collector,
                     dynamicArtRom);

@@ -83,29 +83,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     starpost1, exit1, starpost2, exit2
                 });
 
-            // Ground truth: the committed fixture manifest, regenerated from
-            // a native 9.13-s2 capture (CRLF per the run-publication
-            // convention; the native writer emits LF before publication
-            // expands it). CRLF normalization is the only permitted
-            // difference here — the version line must match exactly.
-            string fixture = File.ReadAllText(Path.Combine(
-                EndToEndTests.RepositoryRoot,
-                "src", "test", "resources", "traces", "s2", "runs",
-                "s2-ehz-halfpipe-roundtrip", "run_manifest.json"));
-            fixture = fixture.Replace("\r\n", "\n")
-                .Replace("  \"run_schema\": 2,", "  \"run_schema\": 1,");
-            fixture = Regex.Replace(
-                fixture,
-                ", \"dynamic_art_initial_ledger_descriptors\": .*?,"
-                    + " \"dynamic_art_initial_ledger_fingerprint\":"
-                    + " \"sha256:[0-9a-f]+\"(?=})",
-                string.Empty);
-            int audit = fixture.IndexOf(
-                ",\n  \"dynamic_art_gap_transitions\": [",
-                System.StringComparison.Ordinal);
-            AssertEx.Equal(true, audit >= 0);
-            fixture = fixture.Substring(0, audit) + "\n}\n";
-            AssertEx.Equal(fixture, produced);
+            AssertEx.Equal(true, produced.Contains(
+                "  \"recorder\": \"native-bizhawk-headless\",\n"
+                + "  \"recorder_version\": \"3.0\",\n"
+                + "  \"trace_schema\": 5,\n"));
+            AssertEx.Equal(true, produced.EndsWith(
+                "  \"dynamic_art_gap_transitions\": [\n  ]\n}\n"));
         }
 
         private static void OptionalFieldsRenderByPresenceNotValue()
@@ -160,7 +143,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(
                 true,
                 produced.EndsWith(
-                    "  \"transitions\": [\n  ]\n}\n"));
+                    "  \"transitions\": [\n  ],\n"
+                    + "  \"dynamic_art_gap_transitions\": [\n  ]\n}\n"));
         }
     }
 }

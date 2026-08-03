@@ -1053,7 +1053,7 @@ namespace BizHawk.Headless.Gpgx
                         DateTime.Now.ToString(
                             "yyyy-MM-dd",
                             CultureInfo.InvariantCulture),
-                        S1CompleteRunMetadataWriter.LuaScriptVersion,
+                        TraceContract.RecorderVersion,
                         0,
                         sink,
                         File.ReadAllBytes(options.RomPath));

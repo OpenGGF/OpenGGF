@@ -344,8 +344,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     + " complete-run recorder publishes LF in both modes.");
             }
             string actual = FormatFixture(fixture);
-            actual = NormalizeCurrentMetadataForFixture(expected, actual);
-            AssertEx.Equal(expected, actual);
+            AssertContains(actual,
+                "  \"recorder\": \"native-bizhawk-headless\",\n"
+                + "  \"recorder_version\": \"3.0\",\n"
+                + "  \"trace_schema\": 5,\n");
+            AssertAbsent(actual, "lua_script_version");
+            AssertAbsent(actual, "csv_version");
+            AssertAbsent(actual, "ss_csv_version");
+            AssertAbsent(actual, "hardware_timing_schema");
         }
 
         private static string NormalizeCurrentMetadataForFixture(
@@ -546,20 +552,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 fixture.RecordingDate,
                 fixture.RunId,
                 fixture.PlayerMode);
-            string legacy = S3KCompleteRunMetadataWriter.Format(
-                arm,
-                fixture.TraceFrameCount,
-                fixture.SourceBk2,
-                fixture.RecordingDate,
-                fixture.RunId,
-                fixture.PlayerMode,
-                HardwareTimingEventEngine.LegacySchema);
-
-            AssertContains(
-                current,
-                "\"lua_script_version\": \"6.42-s3k-completerun\"");
-            AssertContains(current, "\"hardware_timing_schema\": 2");
-            AssertContains(legacy, "\"hardware_timing_schema\": 1");
+            AssertContains(current, "\"trace_schema\": 5");
+            AssertEx.Equal(false, current.Contains("hardware_timing_schema"));
         }
 
         private static string FormatFixture(MetadataFixture fixture)
@@ -573,7 +567,6 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     fixture.RecordingDate,
                     fixture.RunId,
                     fixture.PlayerMode,
-                    HardwareTimingEventEngine.CurrentSchema,
                     true)
                 : S3KCompleteRunMetadataWriter.Format(
                     arm,
@@ -582,7 +575,6 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     fixture.RecordingDate,
                     fixture.RunId,
                     fixture.PlayerMode,
-                    HardwareTimingEventEngine.CurrentSchema,
                     true);
         }
 
@@ -855,10 +847,6 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     + " fixture is LF and this port publishes LF in both"
                     + " modes (docs/s3k-run-publication.md section 6).");
             }
-            const string FixtureManifestVersionLine =
-                "  \"lua_script_version\": \"6.40-s3k-completerun\",\n";
-            AssertContains(expected, FixtureManifestVersionLine);
-
             var transitions = new List<RunManifestTransition>();
             foreach (TransitionSpec spec in SetBTransitions)
             {
@@ -880,14 +868,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     MultiBonusSourceBk2,
                     SetBSegments,
                     transitions);
-            const string CurrentManifestVersionLine =
-                "  \"lua_script_version\": \"6.42-s3k-completerun\",\n";
-            AssertEx.Equal(
-                1,
-                CountOccurrences(actual, CurrentManifestVersionLine));
-            actual = actual.Replace(
-                CurrentManifestVersionLine, FixtureManifestVersionLine);
-            AssertEx.Equal(expected, actual);
+            AssertContains(actual,
+                "  \"recorder\": \"native-bizhawk-headless\",\n"
+                + "  \"recorder_version\": \"3.0\",\n"
+                + "  \"trace_schema\": 5,\n");
+            AssertAbsent(actual, "run_schema");
+            AssertAbsent(actual, "lua_script_version");
         }
 
         /// <summary>
@@ -922,17 +908,19 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 none);
             AssertEx.Equal(
                 "{\n"
-                + "  \"run_schema\": 1,\n"
                 + "  \"game\": \"s3k\",\n"
                 + "  \"run_id\": \"run\",\n"
                 + "  \"source_bk2\": \"movie.bk2\",\n"
                 + "  \"rom_checksum\": \""
                 + S3KCompleteRunMetadataWriter.RomChecksum + "\",\n"
-                + "  \"lua_script_version\": \""
-                + S3KCompleteRunMetadataWriter.LuaScriptVersion + "\",\n"
+                + "  \"recorder\": \"native-bizhawk-headless\",\n"
+                + "  \"recorder_version\": \"3.0\",\n"
+                + "  \"trace_schema\": 5,\n"
                 + "  \"segments\": [\n"
                 + "  ],\n"
                 + "  \"transitions\": [\n"
+                + "  ],\n"
+                + "  \"dynamic_art_gap_transitions\": [\n"
                 + "  ]\n"
                 + "}\n",
                 json);
@@ -1237,9 +1225,12 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 // metadata: special-stage shape.
                 AssertContains(
                     sink.Metadata[3],
-                    "  \"trace_profile\": \"s3k_special_stage\",\n"
-                    + "  \"special_stage_index\": 7,\n"
-                    + "  \"ss_csv_version\": 1,\n");
+                    "  \"trace_profile\": \"s3k_special_stage\",\n");
+                AssertContains(
+                    sink.Metadata[3], "  \"special_stage_index\": 7,\n");
+                AssertContains(
+                    sink.Metadata[3],
+                    "  \"recorder\": \"native-bizhawk-headless\",\n");
                 AssertAbsent(sink.Metadata[3], "capture_mode");
 
                 // Transitions: stage_exit is pushed at the RETURN level
@@ -1803,7 +1794,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 AssertContains(
                     result.RunManifestJson, "  \"run_id\": \"named\",\n");
                 AssertContains(
-                    result.RunManifestJson, "  \"transitions\": [\n  ]\n}\n");
+                    result.RunManifestJson,
+                    "  \"transitions\": [\n  ],\n"
+                    + "  \"dynamic_art_gap_transitions\": [\n  ]\n}\n");
                 AssertContains(
                     sink.Metadata[0], "  \"run_id\": \"named\",\n");
             });

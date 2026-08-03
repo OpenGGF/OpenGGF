@@ -42,17 +42,6 @@ namespace OpenGGF.BizHawk.Headless
     public static class S3KTraceMetadataWriter
     {
         /// <summary>
-        /// 6.38 -> 6.39: the KosM queue destination double-scale fix and
-        /// the five collision-plane state_snapshot fields. Both move
-        /// aux_state.jsonl only; physics.csv is byte-identical across it.
-        /// 6.39 -> 6.40: same-frame hardware timing events serialize in
-        /// canonical VINT, POST_OBJECTS, PRE_MAIN_LOOP order.
-        /// 6.40 -> 6.41: a canonical final-active KosM head shift proves
-        /// POST service independently of a held Level_frame_counter.
-        /// </summary>
-        public const string LuaScriptVersion = "6.41-s3k";
-
-        /// <summary>
         /// The Lua's hardcoded S3K_ROM_CHECKSUM constant: the BizHawk
         /// movie-header hash of the locked-on combined image (32-hex,
         /// MD5-shaped). NOT the file SHA-1 used by RomIdentity.
@@ -89,8 +78,6 @@ namespace OpenGGF.BizHawk.Headless
             uint rngSeed,
             string traceProfile,
             string recordingDate,
-            int hardwareTimingSchema =
-                HardwareTimingEventEngine.CurrentSchema,
             bool loadQueueState = false)
         {
             if (traceProfile == null)
@@ -101,7 +88,6 @@ namespace OpenGGF.BizHawk.Headless
             {
                 throw new ArgumentNullException("recordingDate");
             }
-            RequireHardwareTimingSchema(hardwareTimingSchema);
 
             bool aiz =
                 traceProfile == S3KTraceCaptureRunner.AizEndToEndProfile;
@@ -141,12 +127,7 @@ namespace OpenGGF.BizHawk.Headless
                 .Append(Hex8(rngSeed)).Append("\",\n");
             json.Append("  \"recording_date\": \"")
                 .Append(recordingDate).Append("\",\n");
-            json.Append("  \"lua_script_version\": \"")
-                .Append(LuaScriptVersion).Append("\",\n");
-            json.Append("  \"trace_schema\": 7,\n");
-            json.Append("  \"hardware_timing_schema\": ")
-                .Append(Dec(hardwareTimingSchema)).Append(",\n");
-            json.Append("  \"csv_version\": 7,\n");
+            TraceContract.AppendNativeEnvelope(json);
             json.Append("  \"capture_mode\": "
                 + "\"physics_animation_aux_without_diagnostic_hooks\",\n");
             json.Append("  \"aux_schema_extras\": [");
@@ -250,16 +231,6 @@ namespace OpenGGF.BizHawk.Headless
         private static string Dec(int value)
         {
             return value.ToString(CultureInfo.InvariantCulture);
-        }
-
-        private static void RequireHardwareTimingSchema(int schema)
-        {
-            if (schema != HardwareTimingEventEngine.LegacySchema
-                && schema != HardwareTimingEventEngine.CurrentSchema)
-            {
-                throw new ArgumentOutOfRangeException(
-                    "hardwareTimingSchema");
-            }
         }
 
         private static string Hex4(int value)

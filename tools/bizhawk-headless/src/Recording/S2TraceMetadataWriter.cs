@@ -45,7 +45,8 @@ namespace OpenGGF.BizHawk.Headless
             string traceProfile,
             string sourceBk2,
             string recordingDate,
-            bool loadQueueState = false)
+            bool loadQueueState = false,
+            bool nativePreludeBootstrap = false)
         {
             return Format(
                 romZoneId,
@@ -62,7 +63,8 @@ namespace OpenGGF.BizHawk.Headless
                 recordingDate,
                 null,
                 0,
-                loadQueueState);
+                loadQueueState,
+                nativePreludeBootstrap);
         }
 
         /// <summary>
@@ -89,7 +91,8 @@ namespace OpenGGF.BizHawk.Headless
             string recordingDate,
             string runId,
             int segmentIndex,
-            bool loadQueueState = false)
+            bool loadQueueState = false,
+            bool nativePreludeBootstrap = false)
         {
             if (traceProfile == null)
             {
@@ -137,10 +140,7 @@ namespace OpenGGF.BizHawk.Headless
                 .Append(Hex8(rngSeed)).Append("\",\n");
             json.Append("  \"recording_date\": \"")
                 .Append(recordingDate).Append("\",\n");
-            json.Append("  \"lua_script_version\": \"9.13-s2\",\n");
-            json.Append("  \"trace_schema\": ")
-                .Append(loadQueueState ? "10" : "9").Append(",\n");
-            json.Append("  \"csv_version\": 7,\n");
+            TraceContract.AppendNativeEnvelope(json);
             json.Append("  \"aux_schema_extras\": "
                 + "[\"cnz_slot_machine_state_per_frame\", "
                 + "\"cpu_state_per_frame\"");
@@ -148,7 +148,14 @@ namespace OpenGGF.BizHawk.Headless
             {
                 json.Append(", \"load_queue_state_per_frame\"");
                 json.Append(
-                    ", \"dynamic_art_transfer_state_per_frame_v1\"");
+                    ", \"").Append(
+                        TraceContract.DynamicArtTransferStatePerFrame)
+                    .Append("\"");
+            }
+            if (nativePreludeBootstrap)
+            {
+                json.Append(", \"").Append(
+                    TraceContract.NativePreludeBootstrap).Append("\"");
             }
             json.Append("],\n");
             json.Append("  \"trace_profile\": \"")

@@ -199,14 +199,13 @@ namespace OpenGGF.BizHawk.Headless
             string sourceBk2,
             bool sourceBk2LuaQuoted,
             string romChecksum,
-            string luaScriptVersion,
             string expectedMovieEndMode,
             IList<RunManifestSegment> segments,
             IList<RunManifestTransition> transitions)
         {
             return Format(
                 game, runId, sourceBk2, sourceBk2LuaQuoted, romChecksum,
-                luaScriptVersion, expectedMovieEndMode, segments, transitions,
+                expectedMovieEndMode, segments, transitions,
                 null);
         }
 
@@ -216,7 +215,6 @@ namespace OpenGGF.BizHawk.Headless
             string sourceBk2,
             bool sourceBk2LuaQuoted,
             string romChecksum,
-            string luaScriptVersion,
             string expectedMovieEndMode,
             IList<RunManifestSegment> segments,
             IList<RunManifestTransition> transitions,
@@ -234,10 +232,6 @@ namespace OpenGGF.BizHawk.Headless
             {
                 throw new ArgumentNullException("romChecksum");
             }
-            if (luaScriptVersion == null)
-            {
-                throw new ArgumentNullException("luaScriptVersion");
-            }
             if (segments == null)
             {
                 throw new ArgumentNullException("segments");
@@ -249,9 +243,6 @@ namespace OpenGGF.BizHawk.Headless
 
             var json = new StringBuilder(1024);
             json.Append("{\n");
-            json.Append("  \"run_schema\": ")
-                .Append(dynamicArtGapTransitions == null ? "1" : "2")
-                .Append(",\n");
             json.Append("  \"game\": \"").Append(game).Append("\",\n");
             if (runId != null)
             {
@@ -270,8 +261,7 @@ namespace OpenGGF.BizHawk.Headless
             }
             json.Append("  \"rom_checksum\": \"").Append(romChecksum)
                 .Append("\",\n");
-            json.Append("  \"lua_script_version\": \"")
-                .Append(luaScriptVersion).Append("\",\n");
+            TraceContract.AppendNativeEnvelope(json);
             if (expectedMovieEndMode != null)
             {
                 json.Append("  \"expected_movie_end_mode\": \"")
@@ -354,24 +344,23 @@ namespace OpenGGF.BizHawk.Headless
                 }
                 json.Append('\n');
             }
-            json.Append("  ]");
-            if (dynamicArtGapTransitions != null)
-            {
-                json.Append(",\n  \"dynamic_art_gap_transitions\": [\n");
-                for (int index = 0;
-                    index < dynamicArtGapTransitions.Count;
+            json.Append("  ],\n  \"dynamic_art_gap_transitions\": [\n");
+            IList<DynamicArtGapTransition> gapTransitions =
+                dynamicArtGapTransitions
+                    ?? new List<DynamicArtGapTransition>();
+            for (int index = 0;
+                    index < gapTransitions.Count;
                     index++)
+            {
+                json.Append("    ")
+                    .Append(gapTransitions[index].Format());
+                if (index < gapTransitions.Count - 1)
                 {
-                    json.Append("    ")
-                        .Append(dynamicArtGapTransitions[index].Format());
-                    if (index < dynamicArtGapTransitions.Count - 1)
-                    {
-                        json.Append(',');
-                    }
-                    json.Append('\n');
+                    json.Append(',');
                 }
-                json.Append("  ]");
+                json.Append('\n');
             }
+            json.Append("  ]");
             json.Append("\n}\n");
             return json.ToString();
         }

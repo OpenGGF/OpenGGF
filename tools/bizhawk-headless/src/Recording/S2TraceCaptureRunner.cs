@@ -444,7 +444,8 @@ namespace OpenGGF.BizHawk.Headless
                     traceProfile,
                     sourceBk2,
                     recordingDate,
-                    loadQueueRom != null));
+                    loadQueueRom != null,
+                    traceFrame > 0));
                 return new S2TraceCaptureResult(
                     offset, traceFrame, gameplaySegmentIndex);
                 }

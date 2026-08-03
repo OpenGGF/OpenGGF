@@ -32,11 +32,12 @@ namespace OpenGGF.BizHawk.Headless
             json.Append("  \"game\": \"s2\",\n");
             json.Append("  \"trace_profile\": \"s2_special_stage\",\n");
             json.Append("  \"special_stage_index\": 0,\n");
-            json.Append("  \"ss_csv_version\": 1,\n");
             if (dynamicArtAudit)
             {
                 json.Append("  \"aux_schema_extras\": "
-                    + "[\"dynamic_art_transfer_state_per_frame_v1\"],\n");
+                    + "[\"").Append(
+                        TraceContract.DynamicArtTransferStatePerFrame)
+                    .Append("\"],\n");
             }
             json.Append("  \"characters\": [\"sonic\", \"tails\"],\n");
             json.Append("  \"main_character\": \"sonic\",\n");
@@ -47,7 +48,7 @@ namespace OpenGGF.BizHawk.Headless
                 .Append(",\n");
             json.Append("  \"source_bk2\": \"").Append(JsonEscape(sourceBk2))
                 .Append("\",\n");
-            json.Append("  \"lua_script_version\": \"1.4-s2ss-native\",\n");
+            TraceContract.AppendNativeEnvelope(json);
             json.Append("  \"recording_date\": \"").Append(recordingDate)
                 .Append("\",\n");
             json.Append("  \"bizhawk_version\": \"2.11\",\n");
@@ -81,11 +82,12 @@ namespace OpenGGF.BizHawk.Headless
             json.Append("  \"trace_profile\": \"s2_special_stage\",\n");
             json.Append("  \"special_stage_index\": ")
                 .Append(Dec(specialStageIndex)).Append(",\n");
-            json.Append("  \"ss_csv_version\": 1,\n");
             if (dynamicArtAudit)
             {
                 json.Append("  \"aux_schema_extras\": "
-                    + "[\"dynamic_art_transfer_state_per_frame_v1\"],\n");
+                    + "[\"").Append(
+                        TraceContract.DynamicArtTransferStatePerFrame)
+                    .Append("\"],\n");
             }
             json.Append("  \"characters\": [\"sonic\", \"tails\"],\n");
             json.Append("  \"main_character\": \"sonic\",\n");
@@ -96,7 +98,7 @@ namespace OpenGGF.BizHawk.Headless
                 .Append(Dec(traceFrameCount)).Append(",\n");
             json.Append("  \"source_bk2\": \"")
                 .Append(JsonEscape(sourceBk2)).Append("\",\n");
-            json.Append("  \"lua_script_version\": \"9.13-s2\",\n");
+            TraceContract.AppendNativeEnvelope(json);
             json.Append("  \"recording_date\": \"")
                 .Append(recordingDate).Append("\",\n");
             if (runId != null)

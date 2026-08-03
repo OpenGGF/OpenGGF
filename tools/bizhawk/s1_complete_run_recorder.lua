@@ -514,9 +514,9 @@ local function write_metadata()
     meta_file:write('  "sidekicks": [],\n')
     meta_file:write('  "rng_seed": "0x' .. hex(start_rng_seed, 8) .. '",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
-    meta_file:write('  "lua_script_version": "3.18",\n')
-    meta_file:write('  "trace_schema": 4,\n')
-    meta_file:write('  "csv_version": 7,\n')
+    meta_file:write('  "recorder": "lua-bizhawk-diagnostic",\n')
+    meta_file:write('  "recorder_version": "3.0",\n')
+    meta_file:write('  "trace_schema": 5,\n')
     meta_file:write('  "aux_schema_extras": ["s1_obj64_state_per_frame", "object_near_obj_frame", '
         .. '"v_objstate_per_frame", "camera_boundary_per_frame", "object_near_routine2_objoff3c", '
         .. '"object_near_objoff_34_36_38", "v_oscillate_per_frame", "lag_state_per_frame", '
@@ -590,14 +590,15 @@ function write_ss_metadata()
     meta_file:write('  "game": "s1",\n')
     meta_file:write('  "trace_profile": "s1_special_stage",\n')
     meta_file:write('  "special_stage_index": ' .. current_ss_index .. ',\n')
-    meta_file:write('  "ss_csv_version": 1,\n')
     meta_file:write('  "characters": ["sonic"],\n')
     meta_file:write('  "main_character": "sonic",\n')
     meta_file:write('  "sidekicks": [],\n')
     meta_file:write('  "bk2_frame_offset": ' .. bk2_frame_offset .. ',\n')
     meta_file:write('  "trace_frame_count": ' .. trace_frame .. ',\n')
     meta_file:write(string.format('  "source_bk2": %q,\n', source_bk2_name))
-    meta_file:write('  "lua_script_version": "3.18",\n')
+    meta_file:write('  "recorder": "lua-bizhawk-diagnostic",\n')
+    meta_file:write('  "recorder_version": "3.0",\n')
+    meta_file:write('  "trace_schema": 5,\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
     if run_id ~= nil then
         meta_file:write('  "run_id": "' .. run_id .. '",\n')
@@ -820,12 +821,13 @@ function write_run_manifest(expected_movie_end_mode)
         end
     end
     f:write('{\n')
-    f:write('  "run_schema": 1,\n')
     f:write('  "game": "s1",\n')
     if run_id then f:write(string.format('  "run_id": %q,\n', run_id)) end
     f:write(string.format('  "source_bk2": %q,\n', source_bk2_name))
     f:write('  "rom_checksum": "AFE05EEE",\n')
-    f:write('  "lua_script_version": "3.18",\n')
+    f:write('  "recorder": "lua-bizhawk-diagnostic",\n')
+    f:write('  "recorder_version": "3.0",\n')
+    f:write('  "trace_schema": 5,\n')
     if expected_movie_end_mode then
         f:write(string.format(
             '  "expected_movie_end_mode": %q,\n', expected_movie_end_mode))

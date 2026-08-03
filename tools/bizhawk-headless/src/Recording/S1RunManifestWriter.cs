@@ -34,7 +34,6 @@ namespace OpenGGF.BizHawk.Headless
         public static string Format(
             string runId,
             string sourceBk2,
-            string luaScriptVersion,
             string expectedMovieEndMode,
             IList<RunManifestSegment> segments,
             IList<RunManifestTransition> transitions,
@@ -46,7 +45,6 @@ namespace OpenGGF.BizHawk.Headless
                 sourceBk2,
                 true,
                 RomChecksum,
-                luaScriptVersion,
                 expectedMovieEndMode,
                 segments,
                 transitions,

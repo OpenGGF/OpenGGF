@@ -525,7 +525,6 @@ namespace OpenGGF.BizHawk.Headless
                     startRngSeed,
                     recordingDate,
                     sourceBk2,
-                    luaScriptVersion,
                     loadQueueRom != null);
                 var entry = new RunManifestSegment(
                     dirToken,
@@ -623,7 +622,6 @@ namespace OpenGGF.BizHawk.Headless
                     bk2FrameOffset,
                     traceFrame,
                     sourceBk2,
-                    luaScriptVersion,
                     recordingDate,
                     runId,
                     segments.Count,
@@ -676,7 +674,6 @@ namespace OpenGGF.BizHawk.Headless
                         runManifestJson = S1RunManifestWriter.Format(
                             runId,
                             sourceBk2,
-                            luaScriptVersion,
                             expectedMovieEndMode,
                             segments,
                             transitions,

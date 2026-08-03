@@ -224,8 +224,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         "\"event\":\"dynamic_art_transfer_state\""));
                 AssertContains(
                     result.Segments[0].MetadataJson,
-                    "\"dynamic_art_transfer_state_per_frame_v1\"");
-                AssertContains(result.RunManifestJson, "\"run_schema\": 2");
+                    "\"dynamic_art_transfer_state_per_frame\"");
+                AssertContains(result.RunManifestJson, "\"trace_schema\": 5");
                 AssertContains(
                     result.RunManifestJson,
                     "\"dynamic_art_gap_transitions\": [");
@@ -234,7 +234,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     S2SpecialStageMetadataWriter.Format(
                         0, 1, 1, "synthetic.bk2", "2026-07-30",
                         "audit-run", 1, true),
-                    "\"dynamic_art_transfer_state_per_frame_v1\"");
+                    "\"dynamic_art_transfer_state_per_frame\"");
             });
         }
 
@@ -856,7 +856,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     3, result.Segments[0].ManifestEntry.TraceFrameCount);
                 AssertEx.Equal(0, result.Transitions.Count);
                 AssertContains(result.RunManifestJson,
-                    "  \"transitions\": [\n  ]\n}\n");
+                    "  \"transitions\": [\n  ],\n"
+                    + "  \"dynamic_art_gap_transitions\": [\n  ]\n}\n");
             });
         }
 

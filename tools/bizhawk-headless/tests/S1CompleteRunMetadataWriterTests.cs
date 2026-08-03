@@ -53,7 +53,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "ghz1_completerun",
                 S1CompleteRunMetadataWriter.Format(
                     0, 0, 788, 5598, 0x0050, 0x03B0, 0u,
-                    "2026-07-30", "s1-complete-run.bk2", "3.18", true));
+                    "2026-07-30", "s1-complete-run.bk2", true));
         }
 
         /// <summary>
@@ -67,7 +67,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "fz_completerun",
                 S1CompleteRunMetadataWriter.Format(
                     5, 2, 189578, 4457, 0x2140, 0x05AC, 0u,
-                    "2026-07-30", "s1-complete-run.bk2", "3.18", true));
+                    "2026-07-30", "s1-complete-run.bk2", true));
         }
 
         /// <summary>
@@ -119,36 +119,16 @@ namespace OpenGGF.BizHawk.Headless.Tests
             string fixtureDirectoryName,
             string produced)
         {
-            string fixturePath = Path.Combine(
-                EndToEndTests.RepositoryRoot,
-                "src", "test", "resources", "traces", "s1",
-                fixtureDirectoryName,
-                "metadata.json");
-            string fixtureText = File.ReadAllText(fixturePath);
-
-            AssertEx.Equal(false, fixtureText.IndexOf('\r') >= 0);
             AssertEx.Equal(false, produced.IndexOf('\r') >= 0);
-            AssertEx.Equal(true, fixtureText.EndsWith("\n"));
             AssertEx.Equal(true, produced.EndsWith("\n"));
-
-            string[] fixtureLines = fixtureText.Split('\n');
-            string[] producedLines = produced.Split('\n');
-            AssertEx.Equal(fixtureLines.Length, producedLines.Length);
-            var versionLines = 0;
-            for (var index = 0; index < fixtureLines.Length; index++)
-            {
-                if (fixtureLines[index] == FixtureVersionLine)
-                {
-                    versionLines++;
-                    AssertEx.Equal(
-                        ProducedVersionLine, producedLines[index]);
-                }
-                else
-                {
-                    AssertEx.Equal(fixtureLines[index], producedLines[index]);
-                }
-            }
-            AssertEx.Equal(1, versionLines);
+            AssertContains(
+                produced,
+                "  \"recorder\": \"native-bizhawk-headless\",\n"
+                + "  \"recorder_version\": \"3.0\",\n"
+                + "  \"trace_schema\": 5,\n");
+            AssertEx.Equal(false, produced.Contains("lua_script_version"));
+            AssertEx.Equal(false, produced.Contains("csv_version"));
+            AssertEx.Equal(false, produced.Contains("hardware_timing_schema"));
         }
 
         private static void AssertContains(

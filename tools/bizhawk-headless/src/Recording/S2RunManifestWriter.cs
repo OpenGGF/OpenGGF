@@ -36,7 +36,6 @@ namespace OpenGGF.BizHawk.Headless
                 sourceBk2,
                 false,
                 "7B905383",
-                "9.13-s2",
                 null,
                 segments,
                 transitions,

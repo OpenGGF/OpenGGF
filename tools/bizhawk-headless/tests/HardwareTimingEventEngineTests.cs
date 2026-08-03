@@ -2018,11 +2018,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private static void LagBoundaryHasNewRecorderVersion()
         {
             AssertEx.Equal(
-                "6.41-s3k",
-                S3KTraceMetadataWriter.LuaScriptVersion);
+                "3.0",
+                TraceContract.RecorderVersion);
             AssertEx.Equal(
-                "6.42-s3k-completerun",
-                S3KCompleteRunMetadataWriter.LuaScriptVersion);
+                "3.0",
+                TraceContract.RecorderVersion);
 
             string standard = File.ReadAllText(Path.Combine(
                 EndToEndTests.RepositoryRoot,
@@ -2033,11 +2033,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(
                 true,
                 standard.Contains(
-                    "\"lua_script_version\": \"6.37-s3k\""));
+                    "\"recorder\": \"lua-bizhawk-diagnostic\""));
             AssertEx.Equal(
                 true,
                 complete.Contains(
-                    "LUA_SCRIPT_VERSION = \"6.37-s3k-completerun\""));
+                    "\"recorder_version\": \"3.0\""));
         }
 
         private static string LuaBehaviorVectorScript(

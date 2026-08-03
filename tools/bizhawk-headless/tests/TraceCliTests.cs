@@ -529,7 +529,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         AssertContains(
                             metadata,
                             "  \"lua_script_version\": \""
-                            + S3KCompleteRunMetadataWriter.LuaScriptVersion
+                            + TraceContract.RecorderVersion
                             + "\",\n");
                         AssertContains(
                             metadata,
@@ -1105,7 +1105,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         AssertContains(
                             metadata,
                             "  \"lua_script_version\": \""
-                            + S1CompleteRunMetadataWriter.LuaScriptVersion
+                            + TraceContract.RecorderVersion
                             + "\",\n");
                         AssertContains(
                             metadata,
@@ -1747,7 +1747,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                             "\"load_queue_state_per_frame\"");
                         AssertContains(
                             metadata,
-                            "\"dynamic_art_transfer_state_per_frame_v1\"");
+                            "\"dynamic_art_transfer_state_per_frame\"");
                         AssertContains(
                             metadata,
                             "  \"source_bk2\": \"synthetic.bk2\",\n"
@@ -2348,7 +2348,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                             "\"load_queue_state_per_frame\"");
                         AssertContains(
                             metadata,
-                            "\"dynamic_art_transfer_state_per_frame_v1\"");
+                            "\"dynamic_art_transfer_state_per_frame\"");
                         AssertContains(
                             metadata,
                             "  \"start_x\": \"0x0103\",\n");

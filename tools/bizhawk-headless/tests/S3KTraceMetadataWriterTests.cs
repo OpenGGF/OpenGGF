@@ -24,10 +24,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
             + "  \"sidekicks\": [\"tails\"],\n";
 
         private const string SharedVersionBlock =
-            "  \"lua_script_version\": \"6.41-s3k\",\n"
-            + "  \"trace_schema\": 7,\n"
-            + "  \"hardware_timing_schema\": 2,\n"
-            + "  \"csv_version\": 7,\n"
+            "  \"recorder\": \"native-bizhawk-headless\",\n"
+            + "  \"recorder_version\": \"3.0\",\n"
+            + "  \"trace_schema\": 5,\n"
             + "  \"capture_mode\": "
             + "\"physics_animation_aux_without_diagnostic_hooks\",\n";
 
@@ -288,21 +287,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
             string current = S3KTraceMetadataWriter.Format(
                 0, 0, 1, 1, 0, 0, 0,
                 "gameplay_unlock", "2026-07-28");
-            string legacy = S3KTraceMetadataWriter.Format(
-                0, 0, 1, 1, 0, 0, 0,
-                "gameplay_unlock", "2026-07-28",
-                HardwareTimingEventEngine.LegacySchema);
-
-            AssertEx.Equal(
-                true,
-                current.Contains(
-                    "\"lua_script_version\": \"6.41-s3k\""));
-            AssertEx.Equal(
-                true,
-                current.Contains("\"hardware_timing_schema\": 2"));
-            AssertEx.Equal(
-                true,
-                legacy.Contains("\"hardware_timing_schema\": 1"));
+            AssertEx.Equal(true, current.Contains("\"trace_schema\": 5"));
+            AssertEx.Equal(false, current.Contains("hardware_timing_schema"));
         }
     }
 }

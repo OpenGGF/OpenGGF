@@ -1004,7 +1004,8 @@ local function write_metadata()
     meta_file:write('  "sidekicks": ["tails"],\n')
     meta_file:write('  "rng_seed": "0x' .. hex(start_rng_seed, 8) .. '",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
-    meta_file:write('  "lua_script_version": "6.37-s3k",\n')
+    meta_file:write('  "recorder": "lua-bizhawk-diagnostic",\n')
+    meta_file:write('  "recorder_version": "3.0",\n')
     -- trace_schema 7 adds the authoritative hardware timing stream.
     -- csv_version 7
     -- adds player and sidekick animation_id/mapping_frame to physics.csv. New per-frame
@@ -1071,9 +1072,7 @@ local function write_metadata()
     -- and camera copy).
     -- Diagnostic-only.
     -- All diagnostic-only.
-    meta_file:write('  "trace_schema": 7,\n')
-    meta_file:write('  "hardware_timing_schema": 1,\n')
-    meta_file:write('  "csv_version": 7,\n')
+    meta_file:write('  "trace_schema": 5,\n')
     if LIGHTWEIGHT_REGEN then
         meta_file:write('  "capture_mode": "physics_animation_aux_without_diagnostic_hooks",\n')
     end

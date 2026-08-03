@@ -530,7 +530,6 @@ namespace OpenGGF.BizHawk.Headless
                     startRngSeed,
                     traceProfile,
                     recordingDate,
-                    HardwareTimingEventEngine.CurrentSchema,
                     loadQueueState));
                 return new S3KTraceCaptureResult(offset, traceFrame);
             }
