@@ -105,10 +105,15 @@ from waiting on or consuming the trace's hardware-timing schedule.
 
 ### 2. Clean context handoff
 
-`TraceSessionLauncher` delegates lifecycle replacement to
-`VisualTraceReplayContextHandoff`. Because `GameLoop` caches the gameplay
-managers used by stepping and rendering, the launcher passes only callbacks
-that reset module-scoped providers and bind the new mode. The operation:
+`TraceSessionLauncher` asks the `Engine` composition root to reopen the visual
+replay context through a narrow static action owned by `Engine`; the launcher
+never acquires the process singleton. `Engine` validates its active instance
+internally and delegates lifecycle replacement to
+`VisualTraceReplayContextHandoff`, passing callbacks that reset module-scoped
+providers and bind the new mode through its normal `bindGameplayMode` seam.
+This ownership matters because `GameLoop` caches the managers used by
+simulation, while `Engine.draw()` separately caches the `LevelManager`,
+`SpriteManager`, and `Camera` used by rendering. The operation:
 
 1. resets the completed presentation title-card provider;
 2. resets every retained module-owned rewind adapter to its missing-snapshot
@@ -116,8 +121,9 @@ that reset module-scoped providers and bind the new mode. The operation:
 3. reopens the current world session with the requested
    `HardwareReadinessAdmissionPolicy`;
 4. attaches production gameplay managers through `GameplaySessionFactory`;
-5. rebinds `GameLoop` and graphics-managed references to the new context
-   without mutating the legacy `GameModuleRegistry`; and
+5. atomically rebinds both `Engine` rendering references and `GameLoop`
+   simulation/graphics-managed references to the new context without mutating
+   the legacy `GameModuleRegistry`; and
 6. clears the loop's cached module-scoped title-card provider so the replay's
    omitted-presentation tail starts from a reset provider.
 
@@ -210,7 +216,10 @@ zero remains empty as recorded.
   Escape is owned before a comparator exists.
 - A gameplay-context handoff test proves presentation lifecycle state does not
   survive the reopen, including non-empty active/queued S1/S2 PLC state, and
-  the requested hardware-admission policy owns the new context.
+  the requested hardware-admission policy owns the new context. It also proves
+  that `Engine` and `GameLoop` cache the replacement context's level, sprite,
+  and camera managers, preventing gameplay from advancing behind a black frame
+  through destroyed presentation managers.
 - The S1 GHZ1 headless trace remains green, focused visual-launch lifecycle
   tests pass, and cross-game launch/run/dynamic-art suites show no regression.
 

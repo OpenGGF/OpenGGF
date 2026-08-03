@@ -224,7 +224,10 @@ Development since `v0.5.20260411` is the active 0.6 prerelease line. The release
   gameplay context, preventing presentation PLC/DPLC and hardware-timing state
   from leaking into the trace. The first comparison window follows the same
   service-before-open order as headless replay, fixing S1 GHZ1's visual-only
-  frame-zero dynamic-art mismatch without filtering any recorded edges.
+  frame-zero dynamic-art mismatch without filtering any recorded edges. The
+  replacement context is rebound through the Engine composition root so the
+  visible level continues rendering after the title card alongside the live
+  replay simulation.
 
 - **S3K native recorder timing attribution (2026-08-03):** recorder 6.42 now
   attributes held-frame KosM retirements from canonical FIFO transitions and

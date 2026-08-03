@@ -3,6 +3,8 @@ package com.openggf;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.game.MasterTitleScreen;
 import com.openggf.game.GameServices;
+import com.openggf.game.GameMode;
+import com.openggf.game.TitleCardProvider;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.SessionManager;
@@ -17,6 +19,7 @@ import org.mockito.ArgumentCaptor;
 
 import java.lang.reflect.Field;
 import java.nio.file.Path;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -77,7 +80,96 @@ class TestTraceSessionLauncherFailureCleanup {
         }
     }
 
-    private static void installCurrentLoop(GameLoop loop) {
+    @Test
+    void replayBootstrapWithoutActiveEngineRestoresConfigAndAdmission() throws Exception {
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        GameServices.configuration().setConfigValue(
+                SonicConfiguration.MAIN_CHARACTER_CODE, "knuckles");
+        TraceReplaySessionBootstrap.ConfigSnapshot original =
+                TraceReplaySessionBootstrap.snapshotGameplayConfig();
+        GameServices.configuration().setConfigValue(
+                SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+        TraceSessionLauncher session = presentationSession(original);
+        GameLoop loop = mock(GameLoop.class);
+        TitleCardProvider titleCard = mock(TitleCardProvider.class);
+        when(titleCard.isComplete()).thenReturn(true);
+        when(loop.getTitleCardProvider()).thenReturn(titleCard);
+        installCurrentLoop(loop);
+        session.beginTitleCardPresentation(noopPresentation());
+        SessionManager.armNextGameplayAdmissionPolicy(
+                HardwareReadinessAdmissionPolicy.RECORDED);
+
+        Engine.clearGlobalInstance();
+        session.runAdvanceTickIfActive(GameMode.LEVEL, 0);
+
+        assertNull(TraceSessionLauncher.active());
+        assertEquals("knuckles", GameServices.configuration().getConfigValue(
+                SonicConfiguration.MAIN_CHARACTER_CODE));
+        assertEquals(HardwareReadinessAdmissionPolicy.LIVE,
+                SessionManager.openGameplaySession(new Sonic1GameModule())
+                        .hardwareTiming().admissionPolicy());
+    }
+
+    @Test
+    void replayBootstrapReopenFailureReturnsToMasterTitleAndCleansSession()
+            throws Exception {
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        GameServices.configuration().setConfigValue(
+                SonicConfiguration.MAIN_CHARACTER_CODE, "knuckles");
+        TraceReplaySessionBootstrap.ConfigSnapshot original =
+                TraceReplaySessionBootstrap.snapshotGameplayConfig();
+        GameServices.configuration().setConfigValue(
+                SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+        TraceSessionLauncher session = presentationSession(original);
+        GameLoop loop = mock(GameLoop.class);
+        TitleCardProvider titleCard = mock(TitleCardProvider.class);
+        when(titleCard.isComplete()).thenReturn(true);
+        when(loop.getTitleCardProvider()).thenReturn(titleCard);
+        Engine engine = installCurrentLoop(loop);
+        when(engine.reopenGameplayForVisualTrace(any(), any()))
+                .thenThrow(new IllegalStateException("reopen failed"));
+        session.beginTitleCardPresentation(noopPresentation());
+        SessionManager.armNextGameplayAdmissionPolicy(
+                HardwareReadinessAdmissionPolicy.RECORDED);
+
+        session.runAdvanceTickIfActive(GameMode.LEVEL, 0);
+
+        assertNull(TraceSessionLauncher.active());
+        assertEquals("knuckles", GameServices.configuration().getConfigValue(
+                SonicConfiguration.MAIN_CHARACTER_CODE));
+        assertEquals(HardwareReadinessAdmissionPolicy.LIVE,
+                SessionManager.openGameplaySession(new Sonic1GameModule())
+                        .hardwareTiming().admissionPolicy());
+        verify(loop).returnToMasterTitle();
+        verify(engine).reopenGameplayForVisualTrace(
+                HardwareReadinessAdmissionPolicy.LIVE, titleCard);
+    }
+
+    private static TraceSessionLauncher presentationSession(
+            TraceReplaySessionBootstrap.ConfigSnapshot configSnapshot) {
+        TraceEntry entry = TraceCatalog.scan(Path.of("src/test/resources/traces"))
+                .stream()
+                .filter(candidate -> "s1".equals(candidate.gameId()))
+                .filter(candidate -> "ghz1_fullrun".equals(
+                        candidate.dir().getFileName().toString()))
+                .findFirst()
+                .orElseThrow();
+        return new TraceSessionLauncher(entry, null, List.of(), configSnapshot);
+    }
+
+    private static TraceSessionLauncher.TitleCardPresentation noopPresentation() {
+        return new TraceSessionLauncher.TitleCardPresentation() {
+            @Override
+            public void prepareLevel() {
+            }
+
+            @Override
+            public void enterTitleCard() {
+            }
+        };
+    }
+
+    private static Engine installCurrentLoop(GameLoop loop) {
         try {
             Engine engine = mock(Engine.class);
             Field loopField = Engine.class.getDeclaredField("gameLoop");
@@ -86,6 +178,7 @@ class TestTraceSessionLauncherFailureCleanup {
             Field instanceField = Engine.class.getDeclaredField("instance");
             instanceField.setAccessible(true);
             instanceField.set(null, engine);
+            return engine;
         } catch (ReflectiveOperationException e) {
             throw new AssertionError(e);
         }
