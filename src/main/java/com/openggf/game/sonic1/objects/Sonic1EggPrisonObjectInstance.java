@@ -407,9 +407,27 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
         if (resultsTriggered) {
             return;
         }
+        var levelGamestate = services().levelGamestate();
+        final int elapsedSeconds = levelGamestate != null ? levelGamestate.getElapsedSeconds() : 0;
+        final int ringCount = player.getRingCount();
+        final int actNumber = services().currentAct() + 1;
+        Sonic1FixedEndCardSlot.ClaimResult claim = Sonic1FixedEndCardSlot.claim(
+                services(),
+                new Sonic1FixedEndCardSlot.ResultsData(
+                        elapsedSeconds, ringCount, actNumber, false));
+        Sonic1ResultsScreenObjectInstance card = claim.requireCard();
+        if (claim.state() == Sonic1FixedEndCardSlot.ClaimState.EXISTING_COMMITTED) {
+            resultsTriggered = true;
+            state = State.COMPLETE;
+            if (buttonObject != null) {
+                buttonObject.detachFromParent();
+            }
+            return;
+        }
         if (!queueResultsPlc()) {
             return;
         }
+        card.markResultsPlcCommitted();
         resultsTriggered = true;
         state = State.COMPLETE;
 
@@ -423,17 +441,6 @@ public class Sonic1EggPrisonObjectInstance extends AbstractObjectInstance
             services().playMusic(GameMusic.ACT_CLEAR);
         } catch (Exception e) {
             LOGGER.warning("Failed to play stage clear music: " + e.getMessage());
-        }
-
-        // Spawn results screen
-        var levelGamestate = services().levelGamestate();
-        final int elapsedSeconds = levelGamestate != null ? levelGamestate.getElapsedSeconds() : 0;
-        final int ringCount = player.getRingCount();
-        final int actNumber = services().currentAct() + 1;
-
-        if (services().objectManager() != null) {
-            spawnFreeChild(() -> new Sonic1ResultsScreenObjectInstance(
-                    elapsedSeconds, ringCount, actNumber));
         }
 
         // Detach button (keep it alive for visual during results)

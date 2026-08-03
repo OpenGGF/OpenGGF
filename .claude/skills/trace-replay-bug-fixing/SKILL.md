@@ -1039,8 +1039,8 @@ When working through a trace bug you'll often pull these in:
 
 - **Disassembly navigation:** `s1disasm-guide`, `s2disasm-guide`, `s3k-disasm-guide` — label conventions, file structure, RomOffsetFinder commands.
 - **Object/badnik implementation:** `s1-implement-object`, `s2-implement-object`, `s3k-implement-object`, `s1-implement-boss`, `s2-implement-boss`, `s3k-implement-boss`.
-- **Trace recording (game-specific):** `s1-trace-replay`, `s1-retro-trace`.
-- **S3K specific:** `s3k-plc-system`, `s3k-zone-events`, `s3k-zone-validate`, `s3k-zone-analysis`, `s3k-zone-bring-up`, `s3k-palette-cycling`, `s3k-parallax`, `s3k-animated-tiles`.
+- **Trace recording (game-specific):** `bizhawk-headless-trace`, `s1-trace-replay`.
+- **S3K specific:** `s3k-plc-system`, `s3k-zone-events`, `s3k-zone-analysis`, `s3k-zone-bring-up`, `s3k-palette-cycling`, `s3k-parallax`, `s3k-animated-tiles`.
 - **Generic engineering process:** `superpowers:systematic-debugging`, `superpowers:dispatching-parallel-agents`, `superpowers:writing-plans`, `superpowers:test-driven-development`, `superpowers:verification-before-completion`, `superpowers:requesting-code-review`.
 
 ## Queue and Dynamic-Art Frontier Triage

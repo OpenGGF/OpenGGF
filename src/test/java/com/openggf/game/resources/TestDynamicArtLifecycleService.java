@@ -18,6 +18,21 @@ class TestDynamicArtLifecycleService {
     private static final int SONIC_VRAM = 0xF000;
 
     @Test
+    void consumedDestinationRowsAdvanceOnlyTheComparisonCursor() {
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        startOpen(service);
+        int movieFrameBefore = service.gapSnapshot().movieLogicalFrame();
+
+        service.advanceComparisonCursor(1);
+        service.finishProductionIteration(false);
+
+        assertEquals(1, service.latestSnapshot().frame());
+        assertEquals(movieFrameBefore + 1,
+                service.gapSnapshot().movieLogicalFrame(),
+                "the consumed row already advanced the run clock in the preceding gap");
+    }
+
+    @Test
     void reservedComparisonSegmentOwnsGenerationBeforeActivation() {
         DynamicArtLifecycleService service = new DynamicArtLifecycleService();
         startOpen(service);

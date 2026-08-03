@@ -1,6 +1,5 @@
 package com.openggf.game.sonic1.objects;
 
-import com.openggf.audio.GameMusic;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 import com.openggf.graphics.GLCommand;
@@ -166,19 +165,6 @@ public class Sonic1RingFlashObjectInstance extends AbstractObjectInstance implem
             ObjectControlState.nativeBit7FullControl().applyTo(player);
         }
 
-        // Play "Got Through" music
-        try {
-            services().playMusic(GameMusic.ACT_CLEAR);
-        } catch (Exception e) {
-            LOGGER.warning("Failed to play stage clear music: " + e.getMessage());
-        }
-
-        // Gather results data
-        var levelGamestate = services().levelGamestate();
-        final int elapsedSeconds = levelGamestate != null ? levelGamestate.getElapsedSeconds() : 0;
-        final int ringCount = player != null ? player.getRingCount() : 0;
-        final int actNumber = services().currentAct() + 1;
-
         // v_endcard is a fixed singleton slot in the ROM. A glitched/fast route
         // can cross the signpost walk-off threshold and start the card before
         // entering the giant ring; Got_NextLevel reads f_bigring dynamically
@@ -187,13 +173,6 @@ public class Sonic1RingFlashObjectInstance extends AbstractObjectInstance implem
         Sonic1ResultsScreenObjectInstance existingResults = findExistingResultsScreen();
         if (existingResults != null) {
             existingResults.setSpecialStageAfter(true);
-        } else if (services().objectManager() != null) {
-            spawnFreeChild(() -> {
-                Sonic1ResultsScreenObjectInstance resultsScreen = new Sonic1ResultsScreenObjectInstance(
-                        elapsedSeconds, ringCount, actNumber);
-                resultsScreen.setSpecialStageAfter(true);
-                return resultsScreen;
-            });
         }
     }
 

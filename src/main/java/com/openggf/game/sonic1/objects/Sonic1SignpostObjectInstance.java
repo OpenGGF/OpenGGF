@@ -319,6 +319,11 @@ public class Sonic1SignpostObjectInstance extends AbstractObjectInstance
      *   addq.b #2,obRoutine(a0)            - advance to GotThroughAct
      */
     private void updateWalkOff(AbstractPlayableSprite player) {
+        if (isRetainedGiantRingPlayerSstDeleted(player)) {
+            triggerGotThroughAct(player);
+            return;
+        }
+
         // ROM re-applies control lock every frame while player is on the ground.
         // If player is in air, skip the control lock (original S1 behavior).
         if (!player.getAir()) {
@@ -339,13 +344,39 @@ public class Sonic1SignpostObjectInstance extends AbstractObjectInstance
     }
 
     /**
+     * Object 7C clears the Sonic SST after collecting a giant ring. The engine
+     * retains the structural sprite, so this conjunction is the S1-owned
+     * equivalent of Sign_SonicRun's {@code tst.b (v_player+obID)} reading zero.
+     */
+    private boolean isRetainedGiantRingPlayerSstDeleted(AbstractPlayableSprite player) {
+        var gameState = services().gameState();
+        return gameState != null
+                && gameState.isBigRingCollected()
+                && player.isHidden()
+                && player.isObjectControlled()
+                && player.isObjectControlSuppressesMovement()
+                && !player.isObjectControlAllowsCpu();
+    }
+
+    /**
      * GotThroughAct subroutine from the disassembly.
      * ROM: clr.b (v_invinc).w; clr.b (f_timecount).w;
      *      move.b #id_GotThroughCard,(v_endcard).w;
      *      move.w #bgm_GotThrough,d0; jsr (QueueSound2).l
      */
     private void triggerGotThroughAct(AbstractPlayableSprite player) {
-        if (hasActiveResultsCard()) {
+        var levelGamestate = services().levelGamestate();
+        final int elapsedSeconds = levelGamestate != null ? levelGamestate.getElapsedSeconds() : 0;
+        final int ringCount = player.getRingCount();
+        final int actNumber = services().currentAct() + 1; // 1-indexed for display
+        final boolean specialStageAfter = services().gameState() != null
+                && services().gameState().isBigRingCollected();
+        Sonic1FixedEndCardSlot.ClaimResult claim = Sonic1FixedEndCardSlot.claim(
+                services(),
+                new Sonic1FixedEndCardSlot.ResultsData(
+                        elapsedSeconds, ringCount, actNumber, specialStageAfter));
+        Sonic1ResultsScreenObjectInstance card = claim.requireCard();
+        if (claim.state() == Sonic1FixedEndCardSlot.ClaimState.EXISTING_COMMITTED) {
             resultsSpawned = true;
             routineState = STATE_COMPLETE;
             return;
@@ -353,6 +384,7 @@ public class Sonic1SignpostObjectInstance extends AbstractObjectInstance
         if (!queueResultsPlc()) {
             return;
         }
+        card.markResultsPlcCommitted();
         resultsSpawned = true;
         routineState = STATE_COMPLETE;
         LOGGER.info("S1 Player off-screen, triggering GotThroughAct");
@@ -367,30 +399,7 @@ public class Sonic1SignpostObjectInstance extends AbstractObjectInstance
             LOGGER.warning("Failed to play stage clear music: " + e.getMessage());
         }
 
-        var levelGamestate = services().levelGamestate();
-        final int elapsedSeconds = levelGamestate != null ? levelGamestate.getElapsedSeconds() : 0;
-        final int ringCount = player.getRingCount();
-        final int actNumber = services().currentAct() + 1; // 1-indexed for display
-
-        if (services().objectManager() != null) {
-            spawnFreeChild(() -> new Sonic1ResultsScreenObjectInstance(
-                    elapsedSeconds, ringCount, actNumber));
-            LOGGER.info("S1 Results screen spawned");
-        }
-    }
-
-    private boolean hasActiveResultsCard() {
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager == null) {
-            return false;
-        }
-        for (var object : objectManager.getActiveObjects()) {
-            if (object instanceof Sonic1ResultsScreenObjectInstance results
-                    && !results.isDestroyed()) {
-                return true;
-            }
-        }
-        return false;
+        LOGGER.info("S1 Results screen committed in fixed v_endcard slot");
     }
 
     private boolean queueResultsPlc() {

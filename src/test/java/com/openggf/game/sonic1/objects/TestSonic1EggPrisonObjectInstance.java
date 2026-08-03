@@ -1,13 +1,17 @@
 package com.openggf.game.sonic1.objects;
 
+import com.openggf.camera.Camera;
 import com.openggf.game.GameModule;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -32,12 +36,21 @@ class TestSonic1EggPrisonObjectInstance {
         Sonic1EggPrisonObjectInstance prison = new Sonic1EggPrisonObjectInstance(
                 new ObjectSpawn(0x100, 0x100, Sonic1ObjectIds.EGG_PRISON, 0, 0, false, 0));
         GameModule module = mock(GameModule.class);
-        prison.setServices(new StubObjectServices() {
+        ObjectManager[] objectManager = new ObjectManager[1];
+        ObjectServices services = new StubObjectServices() {
             @Override
             public GameModule gameModule() {
                 return module;
             }
-        });
+
+            @Override
+            public ObjectManager objectManager() {
+                return objectManager[0];
+            }
+        };
+        objectManager[0] = new ObjectManager(
+                List.of(), null, 0, null, null, null, new Camera(), services);
+        prison.setServices(services);
 
         Field state = Sonic1EggPrisonObjectInstance.class.getDeclaredField("state");
         state.setAccessible(true);
