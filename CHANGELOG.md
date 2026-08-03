@@ -3,6 +3,8 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: S3K vertically wrapping levels now render placed and lost rings at their
+  wrapped Y positions when the camera crosses the level boundary.
 - Fix/Test: visual trace action edges now remain exact recorded controller
   masks until playable dispatch applies queued object control and the ROM
   control lock. S1's signpost walk-off therefore keeps its forced logical
