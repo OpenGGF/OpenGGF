@@ -147,9 +147,6 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "HardwareTimingEventEngine scanner matches language-neutral vectors",
                 DirectScannerMatchesLanguageNeutralVectors));
             tests.Add(new TestMain.TestCase(
-                "HardwareTimingEventEngine schema one suppresses direct authority",
-                SchemaOneSuppressesDirectAuthority));
-            tests.Add(new TestMain.TestCase(
                 "HardwareTimingEventEngine reset clears both ledgers and ordinal bases",
                 ResetClearsBothLedgersAndOrdinalBases));
             tests.Add(new TestMain.TestCase(
@@ -1581,24 +1578,6 @@ namespace OpenGGF.BizHawk.Headless.Tests
             {
                 AssertEx.Equal(true, coveredFeatures.Contains(feature));
             }
-        }
-
-        private static void SchemaOneSuppressesDirectAuthority()
-        {
-            const int source = 0x100;
-            byte[] rom = RomWithStandardStream(source);
-            var host = NewHost();
-            var writer = new StringWriter();
-            var engine = new HardwareTimingEventEngine(
-                rom, HardwareTimingEventEngine.LegacySchema);
-
-            StageDirect(host, 0, source, unchecked((int)0xFFFF9268));
-            host.SetU16(S3KRam.KosDecompQueueCount, 1);
-            engine.ObserveFrameEnd(0, host, writer);
-            host.SetU16(S3KRam.KosDecompQueueCount, 0);
-            engine.ObserveFrameEnd(1, host, writer);
-
-            AssertEx.Equal("", writer.ToString());
         }
 
         private static void ResetClearsBothLedgersAndOrdinalBases()

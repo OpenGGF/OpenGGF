@@ -304,7 +304,7 @@ public final class TraceCatalog {
                 TraceRunManifest manifest = new TraceRunManifest(
                         1, first.gameId(), runId,
                         metadata.sourceBk2(), metadata.romChecksum(),
-                        metadata.luaScriptVersion(), segments, List.of());
+                        null, segments, List.of());
                 manifest.validate(gameDir);
                 entries.add(TraceEntry.forRun(
                         gameDir, manifest, first.bk2Path()));

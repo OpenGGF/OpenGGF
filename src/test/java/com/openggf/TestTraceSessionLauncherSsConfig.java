@@ -158,8 +158,8 @@ class TestTraceSessionLauncherSsConfig {
                 "0x0000",
                 null,
                 null,
-                3,
                 null,
+                5,
                 null,
                 null,
                 null,
@@ -183,7 +183,6 @@ class TestTraceSessionLauncherSsConfig {
                 null,
                 null,
                 freshLoad,
-                null,
                 null);
     }
 }

@@ -559,7 +559,7 @@ class TestDynamicArtTransferTrace {
                  "trace_frame_count":%d,"trace_schema":6,"csv_version":7,
                  "start_x":"0000","start_y":"0000",
                  "aux_schema_extras":["pre_level_intro_prefix",
-                   "dynamic_art_transfer_state_per_frame_v1"]}
+                   "dynamic_art_transfer_state_per_frame"]}
                 """.formatted(game, frameCount));
     }
 
@@ -581,7 +581,7 @@ class TestDynamicArtTransferTrace {
                  "bk2_frame_offset":0,"trace_frame_count":%d,
                  "trace_schema":6,"csv_version":7,
                  "start_x":"0000","start_y":"0000",
-                 "aux_schema_extras":["dynamic_art_transfer_state_per_frame_v1"]}
+                 "aux_schema_extras":["dynamic_art_transfer_state_per_frame"]}
                 """.formatted(game, profile, frameCount));
     }
 

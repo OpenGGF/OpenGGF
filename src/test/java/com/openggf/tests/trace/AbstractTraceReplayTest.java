@@ -257,7 +257,7 @@ public abstract class AbstractTraceReplayTest {
                 "No BK2 found for " + traceDir + " (no _movies/<source_bk2> and no .bk2 in dir)");
         boolean requiresFreshLevelLoad =
                 TraceReplayBootstrap.requiresFreshLevelLoadForTraceReplay(trace)
-                        || meta.hasHardwareTimingStream();
+                        || trace.hardwareTimingSchedule().hasRecordedInput();
 
         // 3. Validate test configuration matches metadata
         validateMetadata(meta);
@@ -279,7 +279,7 @@ public abstract class AbstractTraceReplayTest {
                 .withRecording(bk2Path)
                 .withRecordingStartFrame(TraceReplayBootstrap.recordingStartFrameForTraceReplay(trace))
                 .withHardwareReadinessAdmissionPolicy(
-                        meta.hasHardwareTimingStream()
+                        trace.hardwareTimingSchedule().hasRecordedInput()
                                 ? HardwareReadinessAdmissionPolicy.RECORDED
                                 : HardwareReadinessAdmissionPolicy.LIVE);
             if (sharedLevel != null) {
@@ -361,7 +361,7 @@ public abstract class AbstractTraceReplayTest {
 
             // Frame-0 bootstrap comparison. Active only for traces recorded
             // against the post-universal-title-card engine (TraceMetadata
-            // .nativePreludeMode() derived from lua_script_version >= 9.2-s2);
+            // .hasNativePreludeBootstrap() derived from explicit metadata);
             // a no-op return for legacy traces. Surfaces a BootstrapDivergence
             // category in the final DivergenceReport for any mismatch between
             // engine state at frame 0 and the recorded ROM frame-0 snapshot
@@ -548,7 +548,7 @@ public abstract class AbstractTraceReplayTest {
      * Capture a read-only snapshot of engine state at frame 0 for the
      * bootstrap comparator. The comparator only activates for traces with
      * {@code lua_script_version >= 9.2-s2} (see
-     * {@link TraceMetadata#nativePreludeMode()}); for legacy traces this
+     * {@link TraceMetadata#hasNativePreludeBootstrap()}); for traces without it this
      * snapshot is built but discarded. Captures whatever is readily
      * available from the fixture; fields without an accessible source are
      * left null/empty (the comparator emits WARNING entries for those).

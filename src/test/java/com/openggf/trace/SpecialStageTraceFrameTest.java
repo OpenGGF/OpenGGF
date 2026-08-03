@@ -167,18 +167,15 @@ class SpecialStageTraceFrameTest {
     }
 
     @Test
-    void loadRejectsTimingSchemaWithoutDedicatedStream(@TempDir Path dir)
+    void loadWithoutDedicatedTimingStreamHasNoRecordedAuthority(@TempDir Path dir)
             throws IOException {
         writeHardwareTimingMetadata(dir);
         Files.writeString(dir.resolve("physics.csv"),
                 HEADER + "\n" + rowForFrame(0) + "\n");
 
-        IOException error = assertThrows(
-                IOException.class,
-                () -> SpecialStageTraceData.load(dir));
+        SpecialStageTraceData data = SpecialStageTraceData.load(dir);
 
-        assertTrue(error.getMessage().contains("hardware_timing.jsonl"),
-                error::getMessage);
+        assertTrue(data.hardwareTimingSchedule().edges().isEmpty());
     }
 
     @Test
@@ -205,8 +202,7 @@ class SpecialStageTraceFrameTest {
             {
               "game": "s2",
               "trace_profile": "%s",
-              "trace_schema": 1,
-              "csv_version": 1,
+              "trace_schema": 5,
               "act": 1,
               "bk2_frame_offset": 0,
               "trace_frame_count": 3,
@@ -224,9 +220,7 @@ class SpecialStageTraceFrameTest {
             {
               "game": "s2",
               "trace_profile": "s2_special_stage",
-              "trace_schema": 7,
-              "csv_version": 1,
-              "hardware_timing_schema": 1,
+              "trace_schema": 5,
               "act": 1,
               "bk2_frame_offset": 0,
               "trace_frame_count": 1,

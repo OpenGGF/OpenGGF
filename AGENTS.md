@@ -115,9 +115,9 @@ file is guidance you can weigh against the situation in front of you.
    engine-created work becomes ready; anything deciding *what* happens is outside the
    exception however well the ROM behaviour is cited. Guard tests must keep this exception
    confined to the timing port. `TestHardwareTimingAuthorityGuard` enforces parser/authority
-   isolation and forbids physics/aux/gameplay and reflective mutation paths. S3K schema 1
-   records only module-queue readiness; schema 2 records module and direct Kosinski
-   readiness, while both schemas still require production-submitted ROM work.
+   isolation and forbids physics/aux/gameplay and reflective mutation paths. A v5
+   `hardware_timing.jsonl` stream records module-queue and direct Kosinski readiness;
+   either still requires matching production-submitted ROM work.
 5. **Objects never call `getInstance()`.** Use the injected `services()`.
 6. **Gameplay tile edits route through `ZoneLayoutMutationPipeline` / a
    `LevelMutationSurface`** — never a direct `getMap().setValue(...)`. Editor commands and

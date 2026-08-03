@@ -503,7 +503,7 @@ public final class TraceReplaySessionBootstrap {
         if (trace == null
                 || fixture == null
                 || (!forceHardwareTimingReplay
-                        && !trace.metadata().hasHardwareTimingStream())) {
+                        && !trace.hardwareTimingSchedule().hasRecordedInput())) {
             return;
         }
         HardwareTimingSchedule schedule =
@@ -711,7 +711,7 @@ public final class TraceReplaySessionBootstrap {
         }
         TraceMetadata meta = trace.metadata();
         return "s2".equals(meta.game())
-                && meta.nativePreludeMode()
+                && meta.hasNativePreludeBootstrap()
                 && sidekickPreludeFrames > 0
                 && sidekickPreludeFrames == objectPreludeFrames;
     }
@@ -723,7 +723,7 @@ public final class TraceReplaySessionBootstrap {
         boolean useMetadataStartAnchor = trace != null
                 && trace.metadata() != null
                 && "s2".equals(trace.metadata().game())
-                && trace.metadata().nativePreludeMode()
+                && trace.metadata().hasNativePreludeBootstrap()
                 && !tornadoPreludeOrder;
         int[] levelStart = useMetadataStartAnchor
                 ? resolveCurrentLevelStart()
@@ -1184,7 +1184,7 @@ public final class TraceReplaySessionBootstrap {
             GameplayTeamBootstrap.repositionRegisteredSidekicks(
                     GameServices.module(),
                     level);
-            if ("s2".equals(meta.game()) && meta.nativePreludeMode()) {
+            if ("s2".equals(meta.game()) && meta.hasNativePreludeBootstrap()) {
                 for (AbstractPlayableSprite sidekick : GameServices.sprites().getRegisteredSidekicks()) {
                     SidekickCpuController cpu = sidekick.getCpuController();
                     if (cpu != null) {

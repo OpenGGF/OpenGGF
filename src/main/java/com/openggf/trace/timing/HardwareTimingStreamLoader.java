@@ -48,39 +48,16 @@ public final class HardwareTimingStreamLoader {
                     measurementPath,
                     "load-time measurements are tooling-only and cannot be loaded as trace data");
         }
-        Path metadataPath = traceDirectory.resolve("metadata.json");
         Path timingPath = traceDirectory.resolve(FILE_NAME);
         boolean hasFile = Files.isRegularFile(timingPath);
-        boolean hasKey = metadata.hasHardwareTimingStream();
-        Integer traceSchema = metadata.traceSchema();
-
-        if (traceSchema != null && traceSchema == 7 && !hasKey) {
-            throw rejected(metadataPath, "hardware_timing_schema is required for trace_schema 7");
-        }
-        if (!hasKey) {
-            if (hasFile) {
-                throw rejected(timingPath, "hardware_timing_schema metadata key is required");
-            }
+        if (!hasFile) {
             return HardwareTimingSchedule.empty();
         }
-
-        final int timingSchema;
-        try {
-            timingSchema = metadata.requiredHardwareTimingSchema();
-        } catch (IllegalArgumentException e) {
-            throw rejected(metadataPath, e.getMessage());
-        }
-        if (traceSchema == null || traceSchema != 7) {
-            throw rejected(metadataPath, "trace_schema must be 7 for hardware_timing_schema " + timingSchema);
-        }
-        if (!hasFile) {
-            throw rejected(timingPath, "hardware_timing_schema requires " + FILE_NAME);
-        }
-        return loadVersion(timingPath, metadata.traceFrameCount(), timingSchema);
+        return loadVersion(timingPath, metadata.traceFrameCount());
     }
 
     private static HardwareTimingSchedule loadVersion(
-            Path timingPath, int traceFrameCount, int timingSchema)
+            Path timingPath, int traceFrameCount)
             throws IOException {
         if (traceFrameCount < 0) {
             throw rejected(timingPath, "trace_frame_count must not be negative");
@@ -101,11 +78,6 @@ public final class HardwareTimingStreamLoader {
             }
             HardwareCompletionEdge edge = parseEdge(timingPath, index + 1, line);
             if (edge.kind() == HardwareWorkKind.KOS_DECOMPRESSION_QUEUE
-                    && timingSchema == 1) {
-                throw rejected(timingPath, "line " + (index + 1)
-                        + " kind is not authorized by hardware_timing_schema 1");
-            }
-            if (edge.kind() == HardwareWorkKind.KOS_DECOMPRESSION_QUEUE
                     && edge.boundary() != HardwareServiceBoundary.PRE_MAIN_LOOP) {
                 throw rejected(timingPath, "line " + (index + 1)
                         + " direct completion kind requires pre_main_loop boundary");
@@ -124,46 +96,13 @@ public final class HardwareTimingStreamLoader {
             }
             edges.add(edge);
         }
-        edges = normalizeCanonicalOrder(timingPath, timingSchema, edges);
-        return edges.isEmpty() && timingSchema == 1
-                ? HardwareTimingSchedule.empty()
-                : new HardwareTimingSchedule(timingSchema, edges);
-    }
-
-    private static List<HardwareCompletionEdge> normalizeCanonicalOrder(
-            Path timingPath,
-            int timingSchema,
-            List<HardwareCompletionEdge> source) throws IOException {
-        List<HardwareCompletionEdge> normalized = new ArrayList<>(source);
-        for (int i = 1; i < normalized.size(); i++) {
-            HardwareCompletionEdge previous = normalized.get(i - 1);
-            HardwareCompletionEdge current = normalized.get(i);
+        for (int i = 1; i < edges.size(); i++) {
             if (HardwareTimingSchedule.CANONICAL_ORDER.compare(
-                    previous, current) < 0) {
-                continue;
-            }
-            if (timingSchema == 2
-                    && previous.rawFrame() == current.rawFrame()
-                    && previous.boundary()
-                            == HardwareServiceBoundary.PRE_MAIN_LOOP
-                    && previous.kind()
-                            == HardwareWorkKind.KOS_DECOMPRESSION_QUEUE
-                    && current.boundary()
-                            == HardwareServiceBoundary.POST_OBJECTS
-                    && current.kind() == HardwareWorkKind.KOS_MODULE_QUEUE) {
-                normalized.set(i - 1, current);
-                normalized.set(i, previous);
-                continue;
-            }
-            throw rejected(timingPath, "events must use canonical ordering");
-        }
-        for (int i = 1; i < normalized.size(); i++) {
-            if (HardwareTimingSchedule.CANONICAL_ORDER.compare(
-                    normalized.get(i - 1), normalized.get(i)) >= 0) {
+                    edges.get(i - 1), edges.get(i)) >= 0) {
                 throw rejected(timingPath, "events must use canonical ordering");
             }
         }
-        return normalized;
+        return new HardwareTimingSchedule(edges);
     }
 
     private static HardwareCompletionEdge parseEdge(Path timingPath, int lineNumber, String line)

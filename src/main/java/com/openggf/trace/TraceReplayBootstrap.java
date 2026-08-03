@@ -281,7 +281,7 @@ public final class TraceReplayBootstrap {
             return 0;
         }
         TraceMetadata meta = trace.metadata();
-        if (!"s2".equals(meta.game()) || !meta.nativePreludeMode()) {
+        if (!"s2".equals(meta.game()) || !meta.hasNativePreludeBootstrap()) {
             return 0;
         }
         if (!meta.hasPerFrameSlotMachineState()) {
@@ -349,7 +349,7 @@ public final class TraceReplayBootstrap {
         TraceMetadata meta = trace.metadata();
         if (meta == null
                 || !"s2".equals(meta.game())
-                || !meta.nativePreludeMode()
+                || !meta.hasNativePreludeBootstrap()
                 || meta.recordedSidekicks().isEmpty()
                 || replaySeedTraceIndexForTraceReplay(trace) != 0) {
             return 0;
@@ -368,7 +368,7 @@ public final class TraceReplayBootstrap {
         if (meta == null || !"s2".equals(meta.game())) {
             return 0;
         }
-        if (!meta.nativePreludeMode()) {
+        if (!meta.hasNativePreludeBootstrap()) {
             return 0;
         }
         if (meta.recordedSidekicks().isEmpty()) {
@@ -530,7 +530,7 @@ public final class TraceReplayBootstrap {
                 || replaySeedTraceIndexForTraceReplay(trace) != 0) {
             return false;
         }
-        return metadata.nativePreludeMode()
+        return metadata.hasNativePreludeBootstrap()
                 && "level_gated_reset_aware".equals(metadata.traceProfile())
                 && !metadata.recordedSidekicks().isEmpty();
     }

@@ -288,7 +288,7 @@ public class TestTraceDataParsing {
         assertEquals("cpz", metadata.zone());
         assertEquals(1, metadata.zoneId());
         assertEquals(13, metadata.romZoneId());
-        assertEquals(6, metadata.csvVersion());
+        assertEquals(6, metadata.traceSchema());
         assertEquals("level_gated_reset_aware", metadata.traceProfile());
         assertEquals("2.11", metadata.bizhawkVersion());
         assertEquals("Genplus-gx", metadata.genesisCore());
@@ -560,8 +560,7 @@ public class TestTraceDataParsing {
         String recordedRow = Files.readAllLines(dir.resolve("physics.csv")).get(1);
         TraceFrame animationOnlyChange = TraceFrame.parseCsvRow(
                 recordedRow.replace(",05,23,1,", ",07,24,1,")
-                        .replace(",11,42", ",12,43"),
-                7);
+                        .replace(",11,42", ",12,43"));
         assertTrue(data.getFrame(0).stateEquals(animationOnlyChange),
                 "animation observations must not alter physics replay pacing");
     }

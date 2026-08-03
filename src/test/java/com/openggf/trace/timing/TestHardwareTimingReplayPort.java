@@ -84,19 +84,19 @@ class TestHardwareTimingReplayPort {
     }
 
     @Test
-    void schemaTwoScheduleRejectsDirectEdgesOutsidePreMainLoop() {
+    void v5ScheduleRejectsDirectEdgesOutsidePreMainLoop() {
         for (HardwareServiceBoundary boundary : List.of(VINT_SERVICE, POST_OBJECTS)) {
             HardwareCompletionEdge edge = new HardwareCompletionEdge(
                     0, boundary, HardwareWorkKind.KOS_DECOMPRESSION_QUEUE, 0,
                     fingerprint('a'));
 
             assertThrows(IllegalArgumentException.class,
-                    () -> new HardwareTimingSchedule(2, List.of(edge)));
+                    () -> new HardwareTimingSchedule(List.of(edge)));
         }
     }
 
     @Test
-    void schemaTwoAdmitsModulePostEdgeBeforeDirectLoopTailEdge() {
+    void v5AdmitsModulePostEdgeBeforeDirectLoopTailEdge() {
         HardwareTimingService service = new HardwareTimingService(
                 com.openggf.game.timing.RomWorkBudgetScheduler.oneWorkUnitAt(POST_OBJECTS));
         RecordedCompletionAuthority authority = service.beginRecordedAdmission();
@@ -111,7 +111,7 @@ class TestHardwareTimingReplayPort {
                 0, POST_OBJECTS, HardwareWorkKind.KOS_MODULE_QUEUE, 0,
                 HardwareSubmissionFingerprint.compute(moduleSubmission));
         HardwareTimingReplayPort port = port(authority,
-                new HardwareTimingSchedule(2, List.of(moduleEdge, directEdge)));
+                new HardwareTimingSchedule(List.of(moduleEdge, directEdge)));
         HardwareWorkHandle direct = service.submit(directSubmission);
         HardwareWorkHandle module = service.submit(moduleSubmission);
 
@@ -522,7 +522,7 @@ class TestHardwareTimingReplayPort {
                 moduleHandle.submissionFingerprint());
         HardwareTimingReplayPort wrongKindPort = port(
                 wrongKindAuthority,
-                new HardwareTimingSchedule(2, List.of(wrongKind)));
+                new HardwareTimingSchedule(List.of(wrongKind)));
         wrongKindPort.beginRawFrame(22);
         wrongKindService.service(VINT_SERVICE);
         wrongKindPort.apply(VINT_SERVICE);
@@ -887,6 +887,8 @@ class TestHardwareTimingReplayPort {
             boolean exportable, int workUnits, int payloadByte) {
         HardwareTimingService service = new HardwareTimingService();
         RecordedCompletionAuthority authority = service.beginRecordedAdmission();
+        authority.configureAdmissionPolicies(
+                new HardwareTimingSchedule(List.of()).admissionPolicies());
         HardwareWorkHandle handle =
                 service.submit(submission(exportable, workUnits, payloadByte));
         return new ReplayHarness(service, authority, handle);

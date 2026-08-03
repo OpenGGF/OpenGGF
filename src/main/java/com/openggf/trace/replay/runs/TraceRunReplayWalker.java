@@ -82,11 +82,11 @@ public final class TraceRunReplayWalker {
         }
     }
 
-    /** True when any structural segment declares the timing stream schema. */
+    /** True when any segment has a recorded timing stream. */
     public static boolean hasHardwareTimingStream(List<SegmentPlan> plans) {
         Objects.requireNonNull(plans, "plans");
         return plans.stream().anyMatch(
-                plan -> plan.trace().metadata().hasHardwareTimingStream());
+                plan -> plan.trace().hardwareTimingSchedule().hasRecordedInput());
     }
 
     /**

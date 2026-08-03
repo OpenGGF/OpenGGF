@@ -53,10 +53,10 @@ public final class Sonic1SpecialStageTraceData {
         TraceMetadata metadata = TraceMetadata.load(metadataPath);
 
         String traceProfile = metadata.traceProfile();
-        if (!REQUIRED_TRACE_PROFILE.equals(traceProfile)) {
+        if (!"s1".equals(metadata.game()) || !REQUIRED_TRACE_PROFILE.equals(traceProfile)) {
             throw new IllegalArgumentException(
-                "Expected trace_profile '" + REQUIRED_TRACE_PROFILE + "', got '"
-                    + traceProfile + "' in " + metadataPath);
+                "Expected s1 trace_profile '" + REQUIRED_TRACE_PROFILE + "', got game '"
+                    + metadata.game() + "' profile '" + traceProfile + "' in " + metadataPath);
         }
 
         Path physicsPath = TraceFiles.resolve(traceDirectory, "physics.csv");

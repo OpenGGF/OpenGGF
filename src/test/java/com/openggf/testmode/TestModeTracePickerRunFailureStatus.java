@@ -4,6 +4,7 @@ import com.openggf.control.InputHandler;
 import com.openggf.game.save.SelectedTeam;
 import com.openggf.graphics.PixelFont;
 import com.openggf.trace.TraceMetadata;
+import com.openggf.trace.TraceFixtures;
 import com.openggf.trace.catalog.TraceEntry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -184,15 +185,6 @@ class TestModeTracePickerRunFailureStatus {
     }
 
     private static TraceMetadata metadataStub(String gameId) {
-        return new TraceMetadata(
-                gameId, "TEST", 0, 0, 0, null, 0,
-                "0x0000", "0x0000",
-                null, null, 3,
-                null, null, null, null,
-                null,
-                null, null, null,
-                null, null, null,
-                "sonic", List.of(), 0, null, null, null, null, null, null,
-                null, null, null, null, null, null);
+        return TraceFixtures.metadata(gameId, 0, 0);
     }
 }

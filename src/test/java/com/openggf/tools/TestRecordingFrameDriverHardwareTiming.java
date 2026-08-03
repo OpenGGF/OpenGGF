@@ -211,7 +211,7 @@ class TestRecordingFrameDriverHardwareTiming {
                 0,
                 HardwareSubmissionFingerprint.compute(submission));
         HardwareTimingReplayPort port = new HardwareTimingReplayPort(authority);
-        port.install(new HardwareTimingSchedule(2, List.of(edge)));
+        port.install(new HardwareTimingSchedule(List.of(edge)));
         HardwareWorkHandle handle = context.hardwareTiming().submit(submission);
         context.hardwareTiming().service(
                 com.openggf.game.timing.HardwareServiceBoundary.POST_OBJECTS);

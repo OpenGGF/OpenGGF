@@ -222,7 +222,7 @@ class TestTraceAnimationRecorderContract {
             assertEquals(entry.getValue(), fixtures.size(), entry.getKey());
             for (Path fixture : fixtures) {
                 TraceMetadata metadata = TraceMetadata.load(fixture.resolve("metadata.json"));
-                assertEquals(7, metadata.csvVersion(), fixture.toString());
+                assertEquals(7, metadata.traceSchema(), fixture.toString());
                 String header = readPhysicsHeader(fixture);
                 assertEquals(42, header.split(",", -1).length, fixture.toString());
                 assertTrue(header.contains("player_animation_id"), fixture.toString());

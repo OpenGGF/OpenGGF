@@ -13,8 +13,6 @@ namespace OpenGGF.BizHawk.Headless
     /// </summary>
     public sealed class HardwareTimingEventEngine
     {
-        public const int LegacySchema = 1;
-        public const int CurrentSchema = 2;
         public const uint ModuleChildSubmissionPc = 0x001B46;
         private const string ModuleKindName = "KOS_MODULE_QUEUE";
         private const string ModuleEventKind = "kos_module_queue";
@@ -87,7 +85,6 @@ namespace OpenGGF.BizHawk.Headless
         private bool priorDirectBusy;
         private readonly List<DirectSubmission> stagedDirectRetirements =
             new List<DirectSubmission>();
-        private readonly int hardwareTimingSchema;
         private readonly TextWriter measurementWriter;
         private readonly string measurementFixture;
         private readonly string measurementMovieSha256;
@@ -97,12 +94,7 @@ namespace OpenGGF.BizHawk.Headless
         private int measurementSequenceInFrame;
 
         public HardwareTimingEventEngine(byte[] rom)
-            : this(rom, CurrentSchema)
-        {
-        }
-
-        public HardwareTimingEventEngine(byte[] rom, int hardwareTimingSchema)
-            : this(rom, hardwareTimingSchema, null, null, null, null)
+            : this(rom, null, null, null, null)
         {
         }
 
@@ -111,7 +103,7 @@ namespace OpenGGF.BizHawk.Headless
             TextWriter measurementWriter,
             string measurementFixture)
             : this(
-                rom, CurrentSchema, measurementWriter, measurementFixture,
+                rom, measurementWriter, measurementFixture,
                 new string('0', 64), new string('0', 40))
         {
         }
@@ -122,32 +114,12 @@ namespace OpenGGF.BizHawk.Headless
             string measurementFixture,
             string movieSha256,
             string romSha1)
-            : this(
-                rom, CurrentSchema, measurementWriter, measurementFixture,
-                movieSha256, romSha1)
-        {
-        }
-
-        private HardwareTimingEventEngine(
-            byte[] rom,
-            int hardwareTimingSchema,
-            TextWriter measurementWriter,
-            string measurementFixture,
-            string movieSha256,
-            string romSha1)
         {
             if (rom == null)
             {
                 throw new ArgumentNullException("rom");
             }
-            if (hardwareTimingSchema != LegacySchema
-                && hardwareTimingSchema != CurrentSchema)
-            {
-                throw new ArgumentOutOfRangeException(
-                    "hardwareTimingSchema");
-            }
             this.rom = rom;
-            this.hardwareTimingSchema = hardwareTimingSchema;
             this.measurementWriter = measurementWriter;
             this.measurementFixture = measurementFixture;
             this.measurementMovieSha256 = movieSha256;
@@ -508,7 +480,7 @@ namespace OpenGGF.BizHawk.Headless
             foreach (DirectSubmission completed in stagedDirectRetirements)
             {
                 WriteMeasurement(completed, rawFrame, "pre_main_loop");
-                if (hardwareTimingSchema == CurrentSchema && writer != null)
+                if (writer != null)
                 {
                     DeferDirectCompletion(
                         ref deferredCompletions,
@@ -596,8 +568,7 @@ namespace OpenGGF.BizHawk.Headless
                 DirectSubmission completed = directQueue[0];
                 directQueue.RemoveAt(0);
                 WriteMeasurement(completed, rawFrame, "pre_main_loop");
-                if (hardwareTimingSchema == CurrentSchema
-                    && writer != null)
+                if (writer != null)
                 {
                     DeferDirectCompletion(
                         ref deferredCompletions,

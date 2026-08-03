@@ -165,7 +165,7 @@ class TestLevelFrameHardwareTimingBoundaries {
                 HardwareWorkKind.KOS_DECOMPRESSION_QUEUE, 0,
                 com.openggf.game.timing.HardwareSubmissionFingerprint.compute(submission));
         HardwareTimingReplayPort port = new HardwareTimingReplayPort(authority);
-        port.install(new HardwareTimingSchedule(2, List.of(edge)));
+        port.install(new HardwareTimingSchedule(List.of(edge)));
         HardwareWorkHandle direct = timing.submit(submission);
         port.beginRawFrame(0);
         LevelFrameContext context = context(timing,

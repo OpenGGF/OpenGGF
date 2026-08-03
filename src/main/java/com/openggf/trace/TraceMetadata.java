@@ -29,9 +29,9 @@ public record TraceMetadata(
     @JsonProperty("start_x") String startXHex,
     @JsonProperty("start_y") String startYHex,
     @JsonProperty("recording_date") String recordingDate,
-    @JsonProperty("lua_script_version") String luaScriptVersion,
+    @JsonProperty("recorder") String recorder,
+    @JsonProperty("recorder_version") String recorderVersion,
     @JsonProperty("trace_schema") Integer traceSchema,
-    @JsonProperty("csv_version") Integer csvVersion,
     @JsonProperty("trace_profile") String traceProfile,
     @JsonProperty("bizhawk_version") String bizhawkVersion,
     @JsonProperty("genesis_core") String genesisCore,
@@ -55,20 +55,11 @@ public record TraceMetadata(
     @JsonProperty("segment_index") Integer segmentIndex,
     @JsonProperty("bonus_stage_type") String bonusStageType,
     @JsonProperty("fresh_load") Boolean freshLoad,
-    @JsonProperty("v_int_run_count") Integer vIntRunCount,
-    @JsonProperty("hardware_timing_schema") Integer hardwareTimingSchema
+    @JsonProperty("v_int_run_count") Integer vIntRunCount
 ) {
-
-    /**
-     * Recorder version at which the engine title-card phase began executing
-     * objects natively (matching ROM `TitleCard_Main`). Traces recorded at or
-     * after this version have frame-0 state captured against the
-     * universal-ADR-1 engine; the bootstrap comparator can assert against
-     * them. Earlier traces captured under the freeze-during-card workaround
-     * are not bootstrap-comparable.
-     */
-    private static final int BOOTSTRAP_MIN_MAJOR = 9;
-    private static final int BOOTSTRAP_MIN_MINOR = 2;
+    private static final List<String> REMOVED_VERSION_FIELDS = List.of(
+            "lua_script_version", "csv_version", "ss_csv_version",
+            "hardware_timing_schema", "run_schema");
 
     /**
      * Number of Level_MainLoop frames the ROM executed between OscillateNumInit
@@ -80,34 +71,10 @@ public record TraceMetadata(
         return preTraceOscFrames != null ? preTraceOscFrames : 0;
     }
 
-    /**
-     * Whether this trace's frame-0 state is comparable against the
-     * post-universal-title-card engine (ADR-1, design spec 2026-05-15).
-     * Derived from {@link #luaScriptVersion}: true when the recorder version
-     * is at or above v9.2-s2. Older recordings captured frame-0 against the
-     * freeze-during-card engine workaround and are skipped by the bootstrap
-     * comparator.
-     */
-    public boolean nativePreludeMode() {
-        if (luaScriptVersion == null) {
-            return false;
-        }
-        int dot = luaScriptVersion.indexOf('.');
-        if (dot <= 0) {
-            return false;
-        }
-        int end = luaScriptVersion.indexOf('-', dot);
-        if (end < 0) {
-            end = luaScriptVersion.length();
-        }
-        try {
-            int major = Integer.parseInt(luaScriptVersion.substring(0, dot));
-            int minor = Integer.parseInt(luaScriptVersion.substring(dot + 1, end));
-            return major > BOOTSTRAP_MIN_MAJOR
-                    || (major == BOOTSTRAP_MIN_MAJOR && minor >= BOOTSTRAP_MIN_MINOR);
-        } catch (NumberFormatException e) {
-            return false;
-        }
+    /** Whether the fixture includes frame-zero native-prelude evidence. */
+    public boolean hasNativePreludeBootstrap() {
+        return auxSchemaExtras != null
+                && auxSchemaExtras.contains("native_prelude_bootstrap");
     }
 
     /**
@@ -171,7 +138,7 @@ public record TraceMetadata(
 
     /** Whether the primary CSV carries strict per-character animation fields. */
     public boolean hasPerFrameCharacterAnimation() {
-        return csvVersion != null && csvVersion >= 7;
+        return true;
     }
 
     /**
@@ -310,18 +277,12 @@ public record TraceMetadata(
     public boolean hasPerFrameDynamicArtTransferState() {
         return auxSchemaExtras != null
                 && auxSchemaExtras.contains(
-                        "dynamic_art_transfer_state_per_frame_v1");
+                        "dynamic_art_transfer_state_per_frame");
     }
 
-    /**
-     * Whether the trace's physics.csv carries the player sub-pixel fraction
-     * columns ({@code x_sub}/{@code y_sub}). These have been present since the
-     * v2.0 (18-column) CSV, so any csv_version &gt;= 2 trace has them; this is a
-     * convenience predicate for sub-pixel-trajectory diagnostics (SBZ2 f2224,
-     * SYZ3 f6358). Legacy v1 (11-column) traces return false.
-     */
+    /** Whether the fixed v5 level row carries player sub-pixel fractions. */
     public boolean hasSubpixel() {
-        return csvVersion != null && csvVersion >= 2;
+        return true;
     }
 
     /**
@@ -514,21 +475,6 @@ public record TraceMetadata(
         return vIntRunCount != null ? (vIntRunCount.longValue() & 0xFFFFFFFFL) : null;
     }
 
-    public boolean hasHardwareTimingStream() {
-        return hardwareTimingSchema != null;
-    }
-
-    public int requiredHardwareTimingSchema() {
-        if (hardwareTimingSchema == null) {
-            return 0;
-        }
-        if (hardwareTimingSchema != 1 && hardwareTimingSchema != 2) {
-            throw new IllegalArgumentException(
-                    "Unsupported hardware_timing_schema: " + hardwareTimingSchema);
-        }
-        return hardwareTimingSchema;
-    }
-
     /** Load metadata from a metadata.json file. */
     public static TraceMetadata load(Path metadataFile) throws IOException {
         JsonFactory factory = new JsonFactory()
@@ -540,11 +486,16 @@ public record TraceMetadata(
             if (root == null || !root.isObject() || parser.nextToken() != null) {
                 throw new IOException(metadataFile.getFileName() + ": metadata must be one JSON object");
             }
-            JsonNode timingSchema = root.get("hardware_timing_schema");
-            if (timingSchema != null && (!timingSchema.isInt()
-                    || (timingSchema.intValue() != 1 && timingSchema.intValue() != 2))) {
-                throw new IOException(metadataFile.getFileName()
-                        + ": hardware_timing_schema must be JSON integer 1 or 2");
+            for (String removedField : REMOVED_VERSION_FIELDS) {
+                if (root.has(removedField)) {
+                    throw new IllegalArgumentException(metadataFile.getFileName()
+                            + ": unsupported legacy field " + removedField);
+                }
+            }
+            JsonNode traceSchema = root.get("trace_schema");
+            if (traceSchema == null || !traceSchema.isInt() || traceSchema.intValue() != 5) {
+                throw new IllegalArgumentException(metadataFile.getFileName()
+                        + ": trace_schema must be integer 5");
             }
             return mapper.treeToValue(root, TraceMetadata.class);
         }

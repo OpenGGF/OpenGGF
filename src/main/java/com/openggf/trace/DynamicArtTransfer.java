@@ -15,7 +15,7 @@ import java.util.Set;
 
 /**
  * Immutable comparison-only model and validators for the native
- * {@code dynamic_art_transfer_state_per_frame_v1} contract.
+ * {@code dynamic_art_transfer_state_per_frame} contract.
  */
 public final class DynamicArtTransfer {
 

@@ -471,7 +471,7 @@ class TestHardwareTimingAuthorityGuard {
             if (!comparisonSource
                     || (!source.content().contains("DynamicArtDiagnosticsSnapshot")
                     && !source.content().contains(
-                            "dynamic_art_transfer_state_per_frame_v1"))) {
+                            "dynamic_art_transfer_state_per_frame"))) {
                 continue;
             }
             violations.addAll(scanForbiddenTimingServiceAccess(

@@ -305,7 +305,7 @@ class TestCommittedHardwareTimingFixtures {
             TraceMetadata metadata =
                     TraceMetadata.load(fixture.resolve("metadata.json"));
             assertEquals(7, metadata.traceSchema(), inventory.getValue());
-            assertEquals(2, metadata.hardwareTimingSchema(),
+            assertEquals(2, metadata.traceSchema(),
                     inventory.getValue());
 
             List<HardwareCompletionEdge> edges =
