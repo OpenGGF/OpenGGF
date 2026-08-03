@@ -3,6 +3,14 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: level-backed visual traces now show their complete production title
+  card before playback, then reopen a clean replay context so presentation PLC,
+  DPLC, timing, and title-provider state cannot contaminate comparison. The
+  first externally owned dynamic-art window opens after the row-zero service
+  decision, keeping S1 bootstrap submit/complete edges in the native run gap
+  while preserving exact atomic row comparison. Escape also exits safely
+  during the pre-replay card, and complete runs use the same segment-zero
+  launch boundary.
 - Fix/Test: MHZ fixed SST occupants, plane switchers, pollen, cutscene children,
   pulley, Curled Vine, Madmole, and enemy-touch bounce now follow their ROM slot,
   lifetime, geometry, and resolved-contact semantics. The complete-run physics

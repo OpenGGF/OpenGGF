@@ -18,8 +18,10 @@ import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.SpecialStageStartupPolicy;
 import com.openggf.game.resources.DynamicArtDiagnosticsSnapshot;
 import com.openggf.game.resources.DynamicArtLifecycleService;
+import com.openggf.game.session.GameplayTeamBootstrap;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.session.VisualTraceReplayContextHandoff;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.game.rewind.InputSource;
 import com.openggf.game.rewind.PlaybackController;
@@ -48,6 +50,7 @@ import com.openggf.trace.replay.TraceGhostHook;
 import com.openggf.trace.replay.TraceReplayFixture;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 import com.openggf.trace.replay.TraceReplayRowPolicy;
+import com.openggf.trace.replay.VisualTraceLaunchPhase;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker;
 import com.openggf.trace.replay.runs.DestinationAdmissionReceipt;
 import com.openggf.trace.replay.runs.RunBoundarySignal;
@@ -76,8 +79,9 @@ import java.util.logging.Logger;
  * <ol>
  *   <li>asks {@link GameLoop#launchGameByEntry} to run the same
  *       master-title exit path as a user selecting the game,</li>
- *   <li>when the runtime is ready (callback from step 1), loads the
- *       trace's zone/act, starts programmatic BK2 playback, applies
+ *   <li>loads the trace's zone/act in a disposable live context and shows the
+ *       complete production title card without advancing replay, then</li>
+ *   <li>reopens a clean context, starts programmatic BK2 playback, applies
  *       {@link TraceReplaySessionBootstrap}, and attaches a
  *       {@link LiveTraceComparator} + HUD overlay.</li>
  * </ol>
@@ -95,6 +99,9 @@ public final class TraceSessionLauncher {
     private static final double COMPLETION_HOLD_SECONDS = 1.0;
 
     private static TraceSessionLauncher activeSession;
+
+    private final VisualTraceLaunchPhase launchPhase =
+            new VisualTraceLaunchPhase();
 
     private final TraceEntry entry;
     /** Null for special-stage sessions (which use {@link #ssTrace} instead). */
@@ -145,6 +152,7 @@ public final class TraceSessionLauncher {
     private TraceRunReplayWalker.HardwareTimingCoordinator runHardwareTiming;
     private TraceRunReplayWalker.DynamicArtSegmentController runDynamicArtSegments;
     private GameplayModeContext dynamicArtSegmentGameplayMode;
+    private boolean deferredInitialDynamicArtGenerationHandoffPending;
     private TraceRunDynamicArtGapJournal runDynamicArtGapJournal;
     private int runClosingDynamicArtSegment = -1;
     private int runSpecialTimingSegment = -1;
@@ -307,10 +315,10 @@ public final class TraceSessionLauncher {
                     entry, trace, movie, configSnapshot);
             TraceReplaySessionBootstrap.prepareConfiguration(trace, trace.metadata());
             configMutated = true;
+            // The first context is presentation-only. Replay timing authority
+            // is installed on a clean context after the title card finishes.
             SessionManager.armNextGameplayAdmissionPolicy(
-                    trace.metadata().hasHardwareTimingStream()
-                            ? HardwareReadinessAdmissionPolicy.RECORDED
-                            : HardwareReadinessAdmissionPolicy.LIVE);
+                    HardwareReadinessAdmissionPolicy.LIVE);
             loop.launchGameByEntry(
                     resolveGameEntry(entry.gameId()),
                     session::finishLaunchAfterGameBootstrap);
@@ -348,10 +356,10 @@ public final class TraceSessionLauncher {
                     new TraceSessionLauncher(entry, movie, segments, configSnapshot);
             TraceReplaySessionBootstrap.prepareConfiguration(seg0Trace, seg0Trace.metadata());
             configMutated = true;
+            // The first context is presentation-only. Replay timing authority
+            // is installed on a clean context after the title card finishes.
             SessionManager.armNextGameplayAdmissionPolicy(
-                    TraceRunReplayWalker.hasHardwareTimingStream(segments)
-                            ? HardwareReadinessAdmissionPolicy.RECORDED
-                            : HardwareReadinessAdmissionPolicy.LIVE);
+                    HardwareReadinessAdmissionPolicy.LIVE);
             loop.launchGameByEntry(
                     resolveGameEntry(entry.gameId()),
                     session::finishRunLaunch);
@@ -494,12 +502,72 @@ public final class TraceSessionLauncher {
             SpecialStageProvider provider = GameServices.module().getSpecialStageProvider();
             Integer index = ssTrace.metadata().specialStageIndex();
             enterSpecialStageTrace(loop, provider, index != null ? index : 0);
+            launchPhase.markActive();
         } catch (Throwable launchFailure) {
             abortLaunchFailure(
                     launchFailure,
                     "special-stage visual trace launch failed",
                     loop,
                     "Failed to finish SS trace launch for " + entry.dir());
+        }
+    }
+
+    interface TitleCardPresentation {
+        void prepareLevel() throws Exception;
+
+        void enterTitleCard() throws Exception;
+    }
+
+    /** Starts the visible prelude before any replay observer is installed. */
+    void beginTitleCardPresentation(TitleCardPresentation presentation)
+            throws Exception {
+        Objects.requireNonNull(presentation, "presentation");
+        presentation.prepareLevel();
+        launchPhase.beginTitleCardPresentation();
+        activeSession = this;
+        presentation.enterTitleCard();
+    }
+
+    boolean isPresentingTitleCard() {
+        return launchPhase.isPresentingTitleCard();
+    }
+
+    private void beginTitleCardPresentationAfterGameBootstrap() {
+        GameLoop loop = Engine.currentGameLoop();
+        if (loop == null) {
+            abortLaunchFailure(
+                    null,
+                    "visual trace title-card callback followed engine teardown",
+                    null,
+                    "Failed to abort trace after engine teardown");
+            return;
+        }
+        try {
+            beginTitleCardPresentation(new TitleCardPresentation() {
+                @Override
+                public void prepareLevel() throws Exception {
+                    TraceReplaySessionBootstrap.resetLevelSubsystemsForReplay();
+                    GameplayTeamBootstrap.registerActiveTeam(
+                            GameServices.module(),
+                            GameServices.sprites(),
+                            GameServices.configuration());
+                    GameServices.level().loadZoneAndAct(entry.zone(), entry.act());
+                    loop.setGameMode(GameMode.LEVEL);
+                    GameServices.level().consumeTitleCardRequest();
+                    GameServices.level().consumeInLevelTitleCardRequest();
+                }
+
+                @Override
+                public void enterTitleCard() {
+                    loop.enterTitleCard(entry.zone(), entry.act());
+                }
+            });
+        } catch (Throwable launchFailure) {
+            abortLaunchFailure(
+                    launchFailure,
+                    "visual trace title-card presentation failed",
+                    loop,
+                    "Failed to present trace title card for " + entry.dir());
         }
     }
 
@@ -512,15 +580,10 @@ public final class TraceSessionLauncher {
     }
 
     private void finishLaunchAfterGameBootstrap() {
-        GameLoop loop = Engine.currentGameLoop();
-        if (loop == null) {
-            abortLaunchFailure(
-                    null,
-                    "visual trace callback followed engine teardown",
-                    null,
-                    "Failed to abort trace after engine teardown");
-            return;
-        }
+        beginTitleCardPresentationAfterGameBootstrap();
+    }
+
+    private void finishStandaloneReplayLaunch(GameLoop loop) {
         PlaybackDebugManager playback = GameServices.playbackDebug();
         try {
             // The reusable deterministic-replay bootstrap (reset team,
@@ -538,6 +601,7 @@ public final class TraceSessionLauncher {
             int startIndex = driver.recordingStartFrame();
             int initialCursor = driver.initialCursor();
             this.comparator = driver.comparator();
+            comparator.authorizeDeferredInitialDynamicArtGeneration();
             playback.setFrameObserver(comparator);
             this.cameraFocusController = new TraceCameraFocusController(
                     comparator,
@@ -560,6 +624,7 @@ public final class TraceSessionLauncher {
             installTraceRewindController(loop, startIndex, initialCursor);
             activeSession = this;
             TraceGhostHook.set(ghostHook);
+            launchPhase.markActive();
         } catch (Throwable launchFailure) {
             abortLaunchFailure(
                     launchFailure,
@@ -582,15 +647,10 @@ public final class TraceSessionLauncher {
      * all-mode GameLoop hook.
      */
     private void finishRunLaunch() {
-        GameLoop loop = Engine.currentGameLoop();
-        if (loop == null) {
-            abortLaunchFailure(
-                    null,
-                    "visual trace-run callback followed engine teardown",
-                    null,
-                    "Failed to abort trace run after engine teardown");
-            return;
-        }
+        beginTitleCardPresentationAfterGameBootstrap();
+    }
+
+    private void finishRunReplayLaunch(GameLoop loop) {
         PlaybackDebugManager playback = GameServices.playbackDebug();
         try {
             TraceData seg0Trace = runSegments.get(0).trace();
@@ -603,6 +663,7 @@ public final class TraceSessionLauncher {
             driver.start(entry.zone(), entry.act());
 
             this.comparator = driver.comparator();
+            comparator.authorizeDeferredInitialDynamicArtGeneration();
             this.runHardwareTiming =
                     new TraceRunReplayWalker.HardwareTimingCoordinator(
                             fixture,
@@ -640,6 +701,7 @@ public final class TraceSessionLauncher {
             // call here — see method javadoc.
             activeSession = this;
             TraceGhostHook.set(ghostHook);
+            launchPhase.markActive();
         } catch (Throwable launchFailure) {
             abortLaunchFailure(
                     launchFailure,
@@ -933,6 +995,9 @@ public final class TraceSessionLauncher {
      * callback.
      */
     public void runAdvanceTickIfActive(GameMode mode, int cursorFrame) {
+        if (advanceTitleCardPresentationIfReady(mode)) {
+            return;
+        }
         if (runCoordinator != null) {
             try {
                 runCoordinatorTick(mode);
@@ -983,6 +1048,53 @@ public final class TraceSessionLauncher {
                 finishPendingRunEnd();
             }
         }
+    }
+
+    private boolean advanceTitleCardPresentationIfReady(GameMode mode) {
+        if (!launchPhase.isPresentingTitleCard()) {
+            return false;
+        }
+        GameLoop loop = Engine.currentGameLoop();
+        if (loop == null) {
+            abortLaunchFailure(
+                    null,
+                    "visual trace title-card presentation lost its game loop",
+                    null,
+                    "Failed to continue trace title card for " + entry.dir());
+            return true;
+        }
+        boolean complete = loop.getTitleCardProvider() != null
+                && loop.getTitleCardProvider().isComplete();
+        if (!launchPhase.beginReplayBootstrapIfReady(mode, complete)) {
+            return true;
+        }
+        try {
+            VisualTraceReplayContextHandoff.reopen(
+                    replayAdmissionPolicy(), loop.getTitleCardProvider(),
+                    loop::resetModuleScopedProviders, loop::setGameplayMode);
+            if (isRunSession()) {
+                finishRunReplayLaunch(loop);
+            } else {
+                finishStandaloneReplayLaunch(loop);
+            }
+        } catch (Throwable launchFailure) {
+            abortLaunchFailure(
+                    launchFailure,
+                    "visual trace replay handoff failed",
+                    loop,
+                    "Failed to start trace replay after title card for "
+                            + entry.dir());
+        }
+        return true;
+    }
+
+    private HardwareReadinessAdmissionPolicy replayAdmissionPolicy() {
+        boolean recorded = runSegments != null
+                ? TraceRunReplayWalker.hasHardwareTimingStream(runSegments)
+                : trace != null && trace.metadata().hasHardwareTimingStream();
+        return recorded
+                ? HardwareReadinessAdmissionPolicy.RECORDED
+                : HardwareReadinessAdmissionPolicy.LIVE;
     }
 
     private void runCoordinatorTick(GameMode mode) {
@@ -1421,22 +1533,29 @@ public final class TraceSessionLauncher {
 
     void installDynamicArtSegments(GameplayModeContext gameplayMode) {
         Objects.requireNonNull(gameplayMode, "gameplayMode");
-        gameplayMode.plcFrameLifecycle()
-                .acquireExternalComparisonSegmentOwnership();
         dynamicArtSegmentGameplayMode = gameplayMode;
+        boolean[] firstWindow = {true};
+        boolean[] ownershipAcquired = {false};
         TraceRunReplayWalker.DynamicArtSegmentController controller =
                 new TraceRunReplayWalker.DynamicArtSegmentController(
                         new TraceRunReplayWalker.DynamicArtSegmentWindow() {
                             @Override
                             public void open() {
-                                gameplayMode.dynamicArtLifecycle()
-                                        .openComparisonSegment();
+                                if (firstWindow[0]) {
+                                    firstWindow[0] = false;
+                                    gameplayMode.plcFrameLifecycle()
+                                            .acquireExternalComparisonSegmentOwnershipAfterNextService();
+                                    ownershipAcquired[0] = true;
+                                } else {
+                                    gameplayMode.dynamicArtLifecycle()
+                                            .openComparisonSegment();
+                                }
                             }
 
                             @Override
                             public void close() {
-                                gameplayMode.dynamicArtLifecycle()
-                                        .closeComparisonSegment();
+                                gameplayMode.plcFrameLifecycle()
+                                        .closeExternallyManagedComparisonSegment();
                                 if (runDynamicArtGapJournal != null
                                         && runClosingDynamicArtSegment >= 0) {
                                     runDynamicArtGapJournal.sourceClosed(
@@ -1447,6 +1566,7 @@ public final class TraceSessionLauncher {
         runDynamicArtSegments = controller;
         try {
             controller.beginSegment();
+            deferredInitialDynamicArtGenerationHandoffPending = true;
             if (entry != null && entry.runManifest() != null) {
                 runDynamicArtGapJournal = new TraceRunDynamicArtGapJournal(
                         entry.runManifest(), gameplayMode.dynamicArtLifecycle());
@@ -1454,8 +1574,11 @@ public final class TraceSessionLauncher {
         } catch (RuntimeException | Error failure) {
             runDynamicArtSegments = null;
             dynamicArtSegmentGameplayMode = null;
-            gameplayMode.plcFrameLifecycle()
-                    .setComparisonSegmentsExternallyManaged(false);
+            deferredInitialDynamicArtGenerationHandoffPending = false;
+            if (ownershipAcquired[0]) {
+                gameplayMode.plcFrameLifecycle()
+                        .setComparisonSegmentsExternallyManaged(false);
+            }
             throw failure;
         }
     }
@@ -1478,6 +1601,7 @@ public final class TraceSessionLauncher {
             }
             runDynamicArtSegments = null;
             dynamicArtSegmentGameplayMode = null;
+            deferredInitialDynamicArtGenerationHandoffPending = false;
             runDynamicArtGapJournal = null;
         }
     }
@@ -1504,6 +1628,7 @@ public final class TraceSessionLauncher {
             }
             runDynamicArtSegments = null;
             dynamicArtSegmentGameplayMode = null;
+            deferredInitialDynamicArtGenerationHandoffPending = false;
             runDynamicArtGapJournal = null;
         }
     }
@@ -1585,13 +1710,36 @@ public final class TraceSessionLauncher {
         dynamicArtSnapshotBeforeIteration = null;
         if (iterationComparator != null && before != null) {
             iterationComparator.consumePostProductionPlayableAnimationAction();
+            DynamicArtDiagnosticsSnapshot after =
+                    GameServices.captureDynamicArtDiagnostics();
             iterationComparator.publishPendingDynamicArtComparison(
-                    before, GameServices.captureDynamicArtDiagnostics());
+                    before, after);
+            if (runSpecialDynamicArtPendingRow < 0
+                    && after.deliverySerial() > before.deliverySerial()) {
+                deferredInitialDynamicArtGenerationHandoffPending = false;
+            }
         }
         drainPendingRunBoundaryActions();
         if (runSpecialDynamicArtPendingRow >= 0) {
             DynamicArtDiagnosticsSnapshot snapshot =
                     GameServices.captureDynamicArtDiagnostics();
+            boolean deferredInitialGeneration =
+                    deferredInitialDynamicArtGenerationHandoffPending
+                    && runSpecialDynamicArtPendingRow == 0
+                    && before != null
+                    && !before.published()
+                    && snapshot.published()
+                    && snapshot.frame() == 0
+                    && snapshot.segmentGeneration()
+                            == runSpecialDynamicArtTargetGeneration + 1;
+            deferredInitialDynamicArtGenerationHandoffPending = false;
+            if (deferredInitialGeneration) {
+                // The initial external window opens after its first service,
+                // so a special-stage row-zero admission may structurally bind
+                // the just-opened generation only after production closes it.
+                runSpecialDynamicArtTargetGeneration =
+                        snapshot.segmentGeneration();
+            }
             if (snapshot.deliverySerial()
                     <= dynamicArtDeliverySerialBeforeIteration) {
                 throw new IllegalStateException(
@@ -2057,7 +2205,8 @@ public final class TraceSessionLauncher {
 
     /** Called when Esc is pressed during a LEVEL tick. */
     public void requestEarlyExit() {
-        if (comparator == null || fadeStarted) {
+        if (fadeStarted
+                || (comparator == null && !launchPhase.ownsEarlyExit())) {
             return;
         }
         Throwable failure = abortIncompleteSession(
@@ -2072,6 +2221,7 @@ public final class TraceSessionLauncher {
             Throwable primary, String reason, GameLoop fallbackLoop) {
         Throwable failure = primary;
         activeSession = null;
+        launchPhase.abort();
         teardownPending = false;
         completionStartPending = false;
         runEndPending = false;

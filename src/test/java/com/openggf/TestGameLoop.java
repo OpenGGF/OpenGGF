@@ -32,6 +32,8 @@ import com.openggf.game.save.SaveSessionContext;
 import com.openggf.game.save.SelectedTeam;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
+import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.solid.DefaultSolidExecutionRegistry;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameRng;
@@ -917,6 +919,48 @@ public class TestGameLoop {
 
         assertSame(provider2, loop.getTitleCardProvider(),
                 "module reset must clear cached title-card provider so the new module supplies it");
+    }
+
+    @Test
+    void traceReplayContextHandoffResetsPresentationAndRetainedModuleState() {
+        Sonic2GameModule module = spy(new Sonic2GameModule());
+        @SuppressWarnings("unchecked")
+        RewindSnapshottable<Object> retained = mock(RewindSnapshottable.class);
+        when(retained.key()).thenReturn("test-retained-plc");
+        when(module.rewindAdapters()).thenReturn(List.of(retained));
+        TitleCardProvider titleCard = mock(TitleCardProvider.class);
+        when(module.getTitleCardProvider()).thenReturn(titleCard);
+        TestEnvironment.configureGameModuleFixture(module);
+        GameLoop loop = new GameLoop(mockInputHandler);
+        assertSame(titleCard, loop.getTitleCardProvider());
+        GameplayModeContext presentation =
+                SessionManager.getCurrentGameplayMode();
+        presentation.dynamicArtLifecycle().observeRamDplc(
+                "sonic", 1,
+                List.of(new com.openggf.level.render.TileLoadRequest(0, 1)),
+                0x1000, 0xF000);
+        assertFalse(presentation.dynamicArtLifecycle()
+                .capture().ledger().isEmpty());
+        assertEquals(HardwareReadinessAdmissionPolicy.LIVE,
+                presentation.hardwareTiming().admissionPolicy());
+
+        GameplayModeContext replay =
+                com.openggf.game.session.VisualTraceReplayContextHandoff.reopen(
+                        HardwareReadinessAdmissionPolicy.RECORDED,
+                        loop.getTitleCardProvider(),
+                        loop::resetModuleScopedProviders,
+                        loop::setGameplayMode);
+
+        assertNotSame(presentation, replay);
+        assertFalse(presentation.isGameplayRuntimeReady());
+        verify(titleCard).reset();
+        verify(retained).resetForMissingSnapshot();
+        assertEquals(HardwareReadinessAdmissionPolicy.RECORDED,
+                replay.hardwareTiming().admissionPolicy());
+        assertTrue(replay.isGameplayRuntimeReady());
+        assertTrue(replay.dynamicArtLifecycle().capture().ledger().isEmpty(),
+                "presentation dynamic-art state must not cross the handoff");
+        assertSame(replay, SessionManager.getCurrentGameplayMode());
     }
 
     // ==================== Game Mode Listener Tests ====================

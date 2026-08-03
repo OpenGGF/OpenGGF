@@ -218,6 +218,14 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **Visual trace title-card and row-zero parity (2026-08-03):** level-backed
+  traces and complete runs selected from the master title now show the full
+  production title card before replay begins. Playback then starts in a clean
+  gameplay context, preventing presentation PLC/DPLC and hardware-timing state
+  from leaking into the trace. The first comparison window follows the same
+  service-before-open order as headless replay, fixing S1 GHZ1's visual-only
+  frame-zero dynamic-art mismatch without filtering any recorded edges.
+
 - **MHZ fixed-SST and route-object parity (2026-08-03):** pollen and plane
   switchers now use slot-owned fixed-SST installation and cleanup, while the
   MHZ cutscene door, pulley, curled vine, Madmole, enemy bounce, and mushroom

@@ -13,6 +13,7 @@ import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.WorldSession;
+import com.openggf.game.sonic1.Sonic1GameModule;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.level.render.TileLoadRequest;
@@ -94,6 +95,43 @@ class TestTraceSessionLauncherRunBranch {
 
         assertEquals(HardwareReadinessAdmissionPolicy.LIVE,
                 next.hardwareTiming().admissionPolicy());
+    }
+
+    @Test
+    void levelLaunchPresentsTitleCardBeforeInstallingReplayState()
+            throws Exception {
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
+        List<String> events = new ArrayList<>();
+        TraceSessionLauncher session =
+                new TraceSessionLauncher(null, null, segments, null);
+
+        session.beginTitleCardPresentation(
+                new TraceSessionLauncher.TitleCardPresentation() {
+                    @Override
+                    public void prepareLevel() {
+                        events.add("prepare-level-and-team");
+                    }
+
+                    @Override
+                    public void enterTitleCard() {
+                        events.add("enter-title-card");
+                    }
+                });
+
+        assertEquals(List.of(
+                "prepare-level-and-team", "enter-title-card"), events);
+        assertSame(session, TraceSessionLauncher.active());
+        assertTrue(session.isPresentingTitleCard());
+        assertNull(getField(session, "fixture"));
+        assertNull(getField(session, "comparator"));
+        assertNull(getField(session, "runDynamicArtSegments"));
+        assertFalse(GameServices.playbackDebug().isSessionPlaying(),
+                "title-card presentation must not start playback");
+
+        session.requestEarlyExit();
+        assertNull(TraceSessionLauncher.active(),
+                "Escape ownership must work before a comparator exists");
     }
 
     @Test
@@ -256,6 +294,11 @@ class TestTraceSessionLauncherRunBranch {
         setField(session, "runAdvancer", new RunSegmentAdvancer(segments));
         session.installRunDynamicArtSegments(context);
 
+        context.plcFrameLifecycle().runLogicalIteration(() -> { }, row -> {
+            row.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
+            row.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+            return null;
+        });
         assertTrue(context.dynamicArtLifecycle().isComparisonSegmentOpen());
 
         session.runAdvanceTickIfActive(GameMode.TITLE_CARD, 501);
@@ -356,10 +399,9 @@ class TestTraceSessionLauncherRunBranch {
 
         DynamicArtDiagnosticsSnapshot traceOrigin =
                 context.dynamicArtDiagnostics().latestSnapshot();
-        assertTrue(context.dynamicArtLifecycle().isComparisonSegmentOpen());
-        assertFalse(traceOrigin.published());
-        assertEquals(-1, traceOrigin.frame());
-        assertEquals(automaticGeneration + 1,
+        assertFalse(context.dynamicArtLifecycle().isComparisonSegmentOpen());
+        assertTrue(traceOrigin.published());
+        assertEquals(automaticGeneration,
                 traceOrigin.segmentGeneration());
         assertEquals(List.of(transferId[0]),
                 traceOrigin.outstandingTransferIds());
@@ -372,10 +414,13 @@ class TestTraceSessionLauncherRunBranch {
         DynamicArtDiagnosticsSnapshot retired =
                 context.dynamicArtDiagnostics().latestSnapshot();
         assertEquals(List.of(), retired.outstandingTransferIds());
-        assertEquals(1, retired.edges().size(),
-                "the handoff must not duplicate the original submission");
-        assertEquals(transferId[0], retired.edges().getFirst().transferId());
-        assertEquals("completed", retired.edges().getFirst().phase());
+        assertEquals(List.of(), retired.edges(),
+                "pre-segment completion must not enter comparison row zero");
+        assertEquals(List.of("completed"),
+                context.dynamicArtLifecycle().gapEdges().stream()
+                        .map(edge -> edge.phase()).toList());
+        assertEquals(automaticGeneration + 1,
+                retired.segmentGeneration());
 
         TraceRunReplayWalker.DynamicArtSegmentController controller =
                 (TraceRunReplayWalker.DynamicArtSegmentController)
@@ -410,8 +455,14 @@ class TestTraceSessionLauncherRunBranch {
         TraceSessionLauncher session =
                 new TraceSessionLauncher(null, null, segments, null);
 
+        session.installDynamicArtSegments(context);
         IllegalStateException failure = assertThrows(IllegalStateException.class,
-                () -> session.installDynamicArtSegments(context));
+                () -> context.plcFrameLifecycle().runLogicalIteration(
+                        () -> { }, row -> {
+                            row.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
+                            row.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+                            return null;
+                        }));
 
         assertTrue(failure.getMessage().contains("pending production work"));
         assertFalse(context.dynamicArtLifecycle().isComparisonSegmentOpen());
@@ -419,6 +470,14 @@ class TestTraceSessionLauncherRunBranch {
                 context.dynamicArtDiagnostics().latestSnapshot()
                         .outstandingTransferIds());
 
+        try {
+            Method abort = TraceSessionLauncher.class.getDeclaredMethod(
+                    "abortRunDynamicArtSegments");
+            abort.setAccessible(true);
+            abort.invoke(session);
+        } catch (ReflectiveOperationException reflectionFailure) {
+            throw new AssertionError(reflectionFailure);
+        }
         context.dynamicArtLifecycle().completeApplied(pending);
         context.plcFrameLifecycle().runLogicalIteration(() -> { }, row -> {
             row.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
@@ -434,7 +493,7 @@ class TestTraceSessionLauncherRunBranch {
     @Test
     void singleTraceSegmentOwnershipPublishesComparisonRowZeroAtomically() {
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
+        TestEnvironment.configureGameModuleFixture(new Sonic1GameModule());
         GameplayModeContext context = SessionManager.getCurrentGameplayMode();
         TraceData source = segments.getFirst().trace();
         TraceData trace = TraceFixtures.trace(
@@ -451,6 +510,12 @@ class TestTraceSessionLauncherRunBranch {
                 new TraceSessionLauncher(null, null, segments, null);
         setField(session, "comparator", comparator);
         session.installDynamicArtSegments(context);
+        comparator.authorizeDeferredInitialDynamicArtGeneration();
+        assertFalse(context.dynamicArtLifecycle().isComparisonSegmentOpen());
+        context.dynamicArtLifecycle().observePlayerDplc(
+                GameId.S1, "sonic", 8,
+                new com.openggf.level.render.SpriteDplcFrame(List.of(
+                        new TileLoadRequest(0, 12))));
 
         session.beforeProductionIteration();
         comparator.afterFrameAdvanced(frame(0), false);
@@ -465,6 +530,10 @@ class TestTraceSessionLauncherRunBranch {
                 context.dynamicArtDiagnostics().latestSnapshot();
         assertTrue(published.published());
         assertEquals(0, published.frame());
+        assertEquals(List.of(), published.edges());
+        assertEquals(List.of("submitted", "completed"),
+                context.dynamicArtLifecycle().gapEdges().stream()
+                        .map(edge -> edge.phase()).toList());
     }
 
     @Test
@@ -478,7 +547,7 @@ class TestTraceSessionLauncherRunBranch {
         TraceSessionLauncher session =
                 new TraceSessionLauncher(null, null, segments, null);
         session.installDynamicArtSegments(context);
-        assertTrue(context.dynamicArtLifecycle().isComparisonSegmentOpen());
+        assertFalse(context.dynamicArtLifecycle().isComparisonSegmentOpen());
 
         Method abort = TraceSessionLauncher.class.getDeclaredMethod(
                 "abortIncompleteSession", Throwable.class, String.class,
@@ -696,7 +765,7 @@ class TestTraceSessionLauncherRunBranch {
 
         assertEquals(1, observed.size());
         assertFalse(observed.getFirst().hasDivergence());
-        assertEquals(alreadyOpenGeneration,
+        assertEquals(alreadyOpenGeneration + 1,
                 context.dynamicArtDiagnostics().latestSnapshot()
                         .segmentGeneration());
     }
@@ -808,7 +877,11 @@ class TestTraceSessionLauncherRunBranch {
                         fixture,
                         TraceRunReplayWalker.hardwareTimingSegments(advertised)));
         session.installRunDynamicArtSegments(context);
-        context.dynamicArtLifecycle().finishProductionIteration(false);
+        context.plcFrameLifecycle().runLogicalIteration(() -> { }, row -> {
+            row.claim(PlcLifecyclePhase.ORDINARY_LEVEL);
+            row.prepareAfterLoop(PlcLifecyclePhase.ORDINARY_LEVEL);
+            return null;
+        });
         var oldWork = context.dynamicArtLifecycle().observeRamDplc(
                 "ss-sonic", 7, List.of(new TileLoadRequest(0, 1)),
                 0xFF0000, 0x5CA0);
