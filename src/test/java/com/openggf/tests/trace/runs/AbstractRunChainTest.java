@@ -333,7 +333,7 @@ abstract class AbstractRunChainTest {
                     movie.getFrameCount());
             this.levelLoads = SessionManager.getCurrentGameplayMode()
                     .runLevelLoads();
-            this.levelLoads.prime(GameServices.level().getCurrentLevel());
+            this.levelLoads.prime(GameServices.level());
         }
 
         private void activateInitial(GameMode mode) {

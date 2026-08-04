@@ -45,6 +45,13 @@ observation clears only that admission predicate; it does not mutate level
 state or consume trace data. A new level-load request still blocks admission
 until its own title card releases.
 
+Completed level loads are identified by a monotonic production-load generation
+owned by `LevelManager`, not by `LevelData` object identity. Same-zone/act
+reloads intentionally reuse the same data object, so reference comparison
+cannot distinguish a special-stage return or death reload from no load at all.
+The run tracker consumes the generation only as structural lifecycle evidence
+and continues to derive the destination identity from the loaded runtime.
+
 ## Invariants
 
 * Already-faded and newly-fading transitions each issue one entry SFX.
@@ -63,6 +70,8 @@ until its own title card releases.
 * A title-card release cannot advance a destination row before the coordinator
   has had its pre-production admission opportunity, including setup-only
   releases from special-stage results.
+* Reloading the same `LevelData` instance still publishes a new level-load
+  receipt and generation.
 
 ## Verification
 

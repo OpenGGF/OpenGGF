@@ -167,6 +167,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     private boolean sidekickRomVisibleReloadFrameCounterBridgeActive;
     private boolean sidekickRomVisibleReloadFrameCounterBridgePrimed;
     private boolean resetCounterPlacementAfterCameraSnap;
+    private long completedProductionLoadGeneration;
 
     void writeCurrentZone(int zone) {
         this.currentZone = zone;
@@ -371,6 +372,10 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
                 spriteManager.setFrameCounter(0);
             }
             publishInitialProcessSpritesLifecycle(requestedSetup);
+            if (loadMode == LevelLoadMode.FULL) {
+                completedProductionLoadGeneration = Math.incrementExact(
+                        completedProductionLoadGeneration);
+            }
         } catch (Exception e) {
             discardInitialProcessSpritesLifecycle();
             // Profile steps wrap checked exceptions in RuntimeException; unwrap if cause is IOException
@@ -2015,6 +2020,11 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      */
     public Level getCurrentLevel() {
         return level;
+    }
+
+    /** Monotonic token for successful full loads, including same-level reloads. */
+    public long getCompletedProductionLoadGeneration() {
+        return completedProductionLoadGeneration;
     }
 
     public int getCurrentZone() {

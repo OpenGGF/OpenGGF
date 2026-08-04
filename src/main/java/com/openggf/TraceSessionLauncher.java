@@ -756,10 +756,12 @@ public final class TraceSessionLauncher {
             this.runBoundaryProbe = createRunBoundaryProbe(loop);
             runBoundaryProbe.setDelegate(comparator);
             playback.setFrameObserver(runBoundaryProbe);
+            this.runLevelLoadGeneration =
+                    GameServices.level().getCompletedProductionLoadGeneration();
             runCoordinatorTranscript.addAll(runCoordinator.activateInitialLevel(
                     captureRunObservation(loop.getCurrentGameMode(), 0, false)));
             fixture.gameplayMode().runLevelLoads()
-                    .prime(GameServices.level().getCurrentLevel());
+                    .prime(GameServices.level());
             armCurrentRunBoundary();
             this.cameraFocusController = new TraceCameraFocusController(
                     comparator,

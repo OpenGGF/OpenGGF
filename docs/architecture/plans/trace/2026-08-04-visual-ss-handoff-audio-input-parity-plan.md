@@ -28,6 +28,10 @@
 - Build the release observation with the explicit post-release predicate rather
   than a stale level-load request bit, while retaining all native level identity
   and production ownership values.
+- Replace `RunLevelLoadTracker`'s `LevelData` reference comparison with a
+  `LevelManager`-owned completed-load generation, incremented once after each
+  successful production load. Cover same-instance reload, unchanged generation,
+  and failed-load behavior.
 - Keep deferred scheduling valid for `level_load` transitions whose boundary
   probe intentionally has no latch; the coordinator's accepted load and
   transition-gap phase are the structural guard.

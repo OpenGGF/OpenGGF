@@ -61316,15 +61316,17 @@ to synthesize a POST phase on a VBLANK-only row.
 
 - User-reported failure: after the S1 special-stage return title card, the
   visual run aborted with `rowsConsumed must be 0 or 1` before GHZ2.
-- Root cause: results-return title-card releases can consume the one-shot
-  setup-only pass, bypassing the ordinary level admission callback; the shared
-  BK2 cursor then advanced before the run coordinator received destination
-  ownership.
-- Fix under validation: invoke the same coordinator admission from the shared
-  `GameLoop` title-card release seam after changing to `LEVEL`, and pass the
-  measured zero/one destination-row count through the launcher helper. No
-  cursor cap, trace hydration, or second level load is used.
-- Focused validation: `TestTraceSessionLauncherRunBranch` — 37 tests, 0
-  failures, 0 errors. The larger visual focused command encountered the
-  existing JVM crash in `TestGameLoopSpecialStageEntryPresentation` (exit 134)
-  before completing; rerun separately before integration.
+- Root cause: `RunLevelLoadTracker` used `LevelData` object identity to detect
+  completed loads. S1's special-stage return reloads the same zone/act and
+  reuses the same `LevelData` instance, so no `INTERIOR_RETURN` receipt reached
+  the coordinator; destination admission stayed blocked until the BK2 cursor
+  overran the allowed zero/one-row window.
+- Fix: `LevelManager` now publishes a monotonic generation after each successful
+  full production load. The shared tracker observes that generation, including
+  same-instance reloads; preview and failed loads publish nothing. Title-card
+  release still admits before destination input/gameplay. No cursor cap, trace
+  hydration, or second level load is used.
+- Focused validation: 65 tests across `TestInitialProcessSpritesArmingEpoch`,
+  `TestRunLevelLoadTracker`, `TestTraceSessionLauncherRunBranch`,
+  `TestTraceRunPlaybackCoordinator`, and `TestGameLoopTraceRunPostIteration`;
+  0 failures and 0 errors.

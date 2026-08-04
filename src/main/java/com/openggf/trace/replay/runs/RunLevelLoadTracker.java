@@ -21,12 +21,13 @@ public final class RunLevelLoadTracker {
     }
 
     private RunLevelLoadCause nextCause = RunLevelLoadCause.ORDINARY;
-    private Object lastLevel;
-    private long generation;
+    private long lastCompletedLoadGeneration = -1;
     private Receipt latest;
 
-    public void prime(Object currentLevel) {
-        lastLevel = currentLevel;
+    public void prime(LevelManager levelManager) {
+        Objects.requireNonNull(levelManager, "levelManager");
+        lastCompletedLoadGeneration =
+                levelManager.getCompletedProductionLoadGeneration();
         latest = null;
     }
 
@@ -37,13 +38,16 @@ public final class RunLevelLoadTracker {
     public Optional<Receipt> observeLoaded(LevelManager levelManager) {
         Objects.requireNonNull(levelManager, "levelManager");
         Object current = levelManager.getCurrentLevel();
-        if (current == null || current == lastLevel) {
+        long completedLoadGeneration =
+                levelManager.getCompletedProductionLoadGeneration();
+        if (current == null
+                || completedLoadGeneration == lastCompletedLoadGeneration) {
             return Optional.empty();
         }
-        lastLevel = current;
+        lastCompletedLoadGeneration = completedLoadGeneration;
         latest = new Receipt(nextCause,
                 new RunPlaybackObservation.LevelIdentity(
-                        ++generation,
+                        completedLoadGeneration,
                         levelManager.getCurrentZone(),
                         levelManager.getRomZoneId(),
                         levelManager.getCurrentAct()));
@@ -56,6 +60,6 @@ public final class RunLevelLoadTracker {
     }
 
     public long generation() {
-        return generation;
+        return Math.max(0, lastCompletedLoadGeneration);
     }
 }

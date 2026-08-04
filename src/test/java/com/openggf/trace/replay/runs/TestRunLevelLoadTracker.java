@@ -12,24 +12,25 @@ import static org.mockito.Mockito.when;
 class TestRunLevelLoadTracker {
 
     @Test
-    void emitsProductionCauseAndGenerationOnlyForAChangedLoadedLevel() {
+    void emitsProductionCauseAndGenerationForSameInstanceReload() {
         LevelManager levels = mock(LevelManager.class);
         Level first = mock(Level.class);
-        Level second = mock(Level.class);
-        when(levels.getCurrentLevel()).thenReturn(first, first, second, second);
+        when(levels.getCurrentLevel()).thenReturn(first);
+        when(levels.getCompletedProductionLoadGeneration())
+                .thenReturn(1L, 1L, 2L, 2L);
         when(levels.getCurrentZone()).thenReturn(3);
         when(levels.getRomZoneId()).thenReturn(5);
         when(levels.getCurrentAct()).thenReturn(1);
         RunLevelLoadTracker tracker = new RunLevelLoadTracker();
 
-        tracker.prime(levels.getCurrentLevel());
+        tracker.prime(levels);
         tracker.markNext(RunLevelLoadCause.DEATH_RESTART);
         assertTrue(tracker.observeLoaded(levels).isEmpty());
         RunLevelLoadTracker.Receipt receipt =
                 tracker.observeLoaded(levels).orElseThrow();
 
         assertEquals(RunLevelLoadCause.DEATH_RESTART, receipt.cause());
-        assertEquals(1, receipt.identity().loadGeneration());
+        assertEquals(2, receipt.identity().loadGeneration());
         assertEquals(3, receipt.identity().progressionZone());
         assertEquals(5, receipt.identity().romZone());
         assertEquals(1, receipt.identity().act());
