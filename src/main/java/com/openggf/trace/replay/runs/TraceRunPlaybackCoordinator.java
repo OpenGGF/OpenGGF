@@ -82,6 +82,8 @@ public final class TraceRunPlaybackCoordinator {
     private final TracePlaybackProfile profile;
     private final int movieFrameCount;
     private final TraceRunReplayWalker.BoundaryPairing boundaries;
+    private final List<TraceRunReplayWalker.SegmentExecutionPolicy>
+            executionPolicies;
     private final int transitionStepCap;
 
     private Phase phase = Phase.DESTINATION_READY;
@@ -95,6 +97,14 @@ public final class TraceRunPlaybackCoordinator {
             TraceRunManifest run,
             TracePlaybackProfile profile,
             int movieFrameCount) {
+        this(run, profile, movieFrameCount, null);
+    }
+
+    public TraceRunPlaybackCoordinator(
+            TraceRunManifest run,
+            TracePlaybackProfile profile,
+            int movieFrameCount,
+            List<TraceRunReplayWalker.SegmentPlan> plans) {
         this.run = Objects.requireNonNull(run, "run");
         this.profile = Objects.requireNonNull(profile, "profile");
         if (run.segments() == null || run.segments().isEmpty()) {
@@ -109,6 +119,21 @@ public final class TraceRunPlaybackCoordinator {
         }
         this.movieFrameCount = movieFrameCount;
         this.boundaries = TraceRunReplayWalker.pairBoundaries(run);
+        if (plans != null) {
+            if (plans.size() != run.segments().size()) {
+                throw new IllegalArgumentException(
+                        "segment plans must match manifest segment count");
+            }
+            this.executionPolicies = plans.stream()
+                    .map(TraceRunReplayWalker.SegmentPlan::executionPolicy)
+                    .toList();
+        } else {
+            this.executionPolicies = run.segments().stream()
+                    .map(segment -> "special_stage".equals(segment.kind())
+                            ? TraceRunReplayWalker.SegmentExecutionPolicy.SPECIAL_LOCAL
+                            : TraceRunReplayWalker.SegmentExecutionPolicy.GAMEPLAY)
+                    .toList();
+        }
         this.transitionStepCap = TraceRunReplayWalker.interSegmentStepCap(run);
     }
 
@@ -315,6 +340,17 @@ public final class TraceRunPlaybackCoordinator {
         TraceRunManifest.Transition expected =
                 boundaries.exitBoundaries()[currentSegmentIndex];
         if ("level".equals(destination.kind())) {
+            if (policy(destinationIndex())
+                    == TraceRunReplayWalker.SegmentExecutionPolicy
+                            .LEVEL_PRESENTATION_BRIDGE) {
+                // The recorded bridge can begin while the native special-stage
+                // exit fade still owns SPECIAL_STAGE. Source publication has
+                // already closed to enter TRANSITION_GAP; exact physical-row
+                // and destination level identity are the admission authority.
+                return observation.sharedBk2Cursor()
+                                == destination.bk2FrameOffset()
+                        && matchesLevel(destination, observation.level());
+            }
             if (observation.mode() != GameMode.LEVEL
                     || observation.initialTitleCardPending()) {
                 return false;
@@ -346,6 +382,16 @@ public final class TraceRunPlaybackCoordinator {
 
     private boolean ownsCurrentSegment(RunPlaybackObservation observation) {
         TraceRunManifest.Segment segment = currentSegment();
+        if (policy(currentSegmentIndex)
+                == TraceRunReplayWalker.SegmentExecutionPolicy
+                        .LEVEL_PRESENTATION_BRIDGE) {
+            return matchesLevel(segment, observation.level())
+                    && observation.sharedBk2Cursor()
+                            >= segment.bk2FrameOffset()
+                    && observation.sharedBk2Cursor()
+                            <= Math.addExact(segment.bk2FrameOffset(),
+                                    segment.traceFrameCount());
+        }
         return switch (segment.kind()) {
             case "level" -> observation.mode() == GameMode.LEVEL
                     && matchesLevel(segment, observation.level())
@@ -390,9 +436,16 @@ public final class TraceRunPlaybackCoordinator {
         if ("level".equals(segment.kind())) {
             RunPlaybackObservation.LevelIdentity level =
                     Objects.requireNonNull(observation.level(), "level identity");
-            identity = new DestinationAdmissionReceipt.LevelIdentity(
-                    level.progressionZone(), level.romZone(), level.act());
-            loadGeneration = level.loadGeneration();
+            if (policy(segmentIndex)
+                    == TraceRunReplayWalker.SegmentExecutionPolicy
+                            .LEVEL_PRESENTATION_BRIDGE) {
+                identity = new DestinationAdmissionReceipt.LevelPresentationIdentity(
+                        level.progressionZone(), level.romZone(), level.act());
+            } else {
+                identity = new DestinationAdmissionReceipt.LevelIdentity(
+                        level.progressionZone(), level.romZone(), level.act());
+                loadGeneration = level.loadGeneration();
+            }
         } else if ("bonus_stage".equals(segment.kind())) {
             RunPlaybackObservation.BonusIdentity bonus =
                     Objects.requireNonNull(observation.bonus(), "bonus identity");
@@ -408,7 +461,15 @@ public final class TraceRunPlaybackCoordinator {
                 Math.addExact(segment.bk2FrameOffset(), rowsConsumed),
                 rowsConsumed, identity, loadGeneration,
                 observation.timingScheduleGeneration(),
-                observation.dynamicArtGeneration()));
+                observation.dynamicArtGeneration(), policy(segmentIndex)));
+    }
+
+    private int destinationIndex() {
+        return currentSegmentIndex + 1;
+    }
+
+    private TraceRunReplayWalker.SegmentExecutionPolicy policy(int segmentIndex) {
+        return executionPolicies.get(segmentIndex);
     }
 
     private boolean matchesLevel(

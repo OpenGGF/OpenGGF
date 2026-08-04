@@ -92,7 +92,7 @@ public final class TraceV5RunFixture {
         Path segment = run.resolve(name);
         Files.createDirectories(segment);
         Files.write(segment.resolve("physics.csv"), List.of(
-                LEVEL_HEADER, LEVEL_ROW, LEVEL_ROW.replaceFirst("0000", "0001")));
+                LEVEL_HEADER, LEVEL_ROW, advancingLevelRow()));
         Files.write(segment.resolve("aux_state.jsonl"), List.of(
                 "{\"frame\":0,\"event\":\"dynamic_art_transfer_state\",\"edges\":[],\"outstanding_transfer_ids\":[]}",
                 "{\"frame\":1,\"event\":\"dynamic_art_transfer_state\",\"edges\":[],\"outstanding_transfer_ids\":[]}"));
@@ -104,6 +104,14 @@ public final class TraceV5RunFixture {
                 "aux_schema_extras":["dynamic_art_transfer_state_per_frame"]}
                 """.formatted(game, zone, zoneId, act, offset, profile,
                         run.getFileName(), segmentIndex));
+    }
+
+    private static String advancingLevelRow() {
+        String[] columns = LEVEL_ROW.split(",", -1);
+        columns[0] = "0001";
+        columns[5] = "0001";
+        columns[6] = "0301";
+        return String.join(",", columns);
     }
 
     private static void writeSpecialStageSegment(Path segment) throws IOException {

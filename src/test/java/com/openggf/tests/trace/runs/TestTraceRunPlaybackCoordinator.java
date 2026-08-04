@@ -4,6 +4,9 @@ import com.openggf.game.BonusStageType;
 import com.openggf.game.GameMode;
 import com.openggf.game.profiles.trace.TracePlaybackProfile;
 import com.openggf.trace.TraceRunManifest;
+import com.openggf.trace.TraceData;
+import com.openggf.trace.TraceFixtures;
+import com.openggf.trace.TraceFrame;
 import com.openggf.trace.replay.runs.DestinationAdmissionReceipt;
 import com.openggf.trace.replay.runs.RunBoundarySignal;
 import com.openggf.trace.replay.runs.RunLevelLoadCause;
@@ -15,6 +18,7 @@ import com.openggf.trace.replay.runs.TraceRunPlaybackCoordinator.BeginTerminalTa
 import com.openggf.trace.replay.runs.TraceRunPlaybackCoordinator.CloseSegment;
 import com.openggf.trace.replay.runs.TraceRunPlaybackCoordinator.EnterTransitionGap;
 import com.openggf.trace.replay.runs.TraceRunPlaybackCoordinator.FailRun;
+import com.openggf.trace.replay.runs.TraceRunReplayWalker;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.RecordComponent;
@@ -273,6 +277,61 @@ class TestTraceRunPlaybackCoordinator {
     }
 
     @Test
+    void presentationBridgeAdmitsAtItsPhysicalOffsetWithoutGameplayModeOrLoadHydration() {
+        List<TraceRunManifest.Segment> segments = List.of(
+                level("ghz1", 0, 1, 0, 5),
+                special("ss", 5, 5, 0),
+                level("ghz2_bridge", 0, 2, 11, 2));
+        List<TraceRunManifest.Transition> transitions = List.of(
+                transition(0, "giant_ring", 5),
+                transition(1, "stage_exit", 10));
+        TraceRunManifest run = run(segments, transitions,
+                TraceRunManifest.ExpectedMovieEndMode.UNSPECIFIED);
+        TraceData gameplay = executionTrace(1, 2);
+        TraceData specialTrace = TraceFixtures.trace(
+                TraceFixtures.metadata("s1", 0, 1), List.of());
+        TraceData bridge = executionTrace(10, 10);
+        List<TraceRunReplayWalker.SegmentPlan> plans = List.of(
+                new TraceRunReplayWalker.SegmentPlan(
+                        segments.get(0), gameplay, null, transitions.get(0)),
+                new TraceRunReplayWalker.SegmentPlan(
+                        segments.get(1), specialTrace, transitions.get(0),
+                        transitions.get(1)),
+                new TraceRunReplayWalker.SegmentPlan(
+                        segments.get(2), bridge, transitions.get(1), null));
+        TraceRunPlaybackCoordinator coordinator =
+                new TraceRunPlaybackCoordinator(
+                        run, TracePlaybackProfile.DISABLED, 30, plans);
+        coordinator.activateInitialLevel(
+                levelObservation(1, 0, 0, 0, false, 0));
+        coordinator.observeBoundary(
+                new RunBoundarySignal.SpecialStageRequest(5, 0));
+        coordinator.afterProduction(
+                levelObservation(1, 0, 0, 1, true, 0));
+        coordinator.beforeAdmission(specialObservation(5, 2, 0, 0));
+        coordinator.observeBoundary(new RunBoundarySignal.StageExit(10));
+        coordinator.afterProduction(new RunPlaybackObservation(
+                GameMode.SPECIAL_STAGE, 11, 3, null, false, null, 0,
+                false, true, 0, false, 1, 1));
+        RunPlaybackObservation titleCard = new RunPlaybackObservation(
+                GameMode.TITLE_CARD, 11, 4,
+                new RunPlaybackObservation.LevelIdentity(2, 0, 0, 1),
+                true, null, null, false, false, 0, false, 2, 2);
+
+        AdmitDestination admission = assertInstanceOf(AdmitDestination.class,
+                coordinator.beforeAdmission(titleCard).getFirst());
+
+        assertEquals(-1, admission.receipt().loadGeneration());
+        assertEquals(
+                TraceRunReplayWalker.SegmentExecutionPolicy
+                        .LEVEL_PRESENTATION_BRIDGE,
+                admission.receipt().executionPolicy());
+        assertInstanceOf(
+                DestinationAdmissionReceipt.LevelPresentationIdentity.class,
+                admission.receipt().identity());
+    }
+
+    @Test
     void deathRestartRejectsReusedGenerationAndWrongCause() {
         TraceRunPlaybackCoordinator coordinator = coordinator(
                 List.of(level("mz2", 2, 2, 100, 10),
@@ -482,6 +541,16 @@ class TestTraceRunPlaybackCoordinator {
             int from, String kind, int frame) {
         return new TraceRunManifest.Transition(from, from + 1, kind, frame,
                 null, null, null, null, null, null, null, null);
+    }
+
+    private static TraceData executionTrace(int... gameplayCounters) {
+        List<TraceFrame> frames = new ArrayList<>();
+        for (int index = 0; index < gameplayCounters.length; index++) {
+            frames.add(TraceFrame.executionTestFrame(
+                    index, 0x300 + index, gameplayCounters[index], 0));
+        }
+        return TraceFixtures.trace(
+                TraceFixtures.metadata("s1", 0, 1), frames);
     }
 
     private static RunPlaybackObservation levelObservation(

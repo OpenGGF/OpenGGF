@@ -13,6 +13,7 @@ import com.openggf.trace.DynamicArtTransfer;
 import com.openggf.trace.FrameComparison;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceEvent;
+import com.openggf.trace.TraceFrame;
 import com.openggf.trace.TraceFixtures;
 import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker;
@@ -23,6 +24,7 @@ import com.openggf.trace.replay.runs.RunPlaybackObservation;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker.BoundaryEntryMode;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker.BoundaryPairing;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker.ReturnAssertionMode;
+import com.openggf.trace.replay.runs.TraceRunReplayWalker.SegmentExecutionPolicy;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -175,6 +177,10 @@ class TestTraceRunReplayWalkerControlFlow {
         assertEquals("starpost_bonus", plans.get(1).entryBoundary().entryKind());
         assertEquals("stage_exit", plans.get(1).exitBoundary().entryKind());
         assertEquals("stage_exit", plans.get(2).entryBoundary().entryKind());
+        assertEquals(SegmentExecutionPolicy.GAMEPLAY,
+                plans.get(2).executionPolicy(),
+                "a generated S3K stage-exit destination with an advancing "
+                        + "gameplay clock remains ordinary gameplay");
         assertNull(plans.get(2).exitBoundary());
     }
 
@@ -297,6 +303,43 @@ class TestTraceRunReplayWalkerControlFlow {
         assertTrue(TraceRunReplayWalker.isUncomparedInterior(segment("special_stage")));
         assertFalse(TraceRunReplayWalker.isUncomparedInterior(segment("bonus_stage")));
         assertFalse(TraceRunReplayWalker.isUncomparedInterior(segment("level")));
+    }
+
+    @Test
+    void segmentExecutionPolicyRecognizesStageExitPresentationBridgeByRowShape() {
+        TraceRunManifest.Segment destination = segmentAt("return", "level", 1200);
+        TraceRunManifest.Transition stageExit = boundaryOfKind("stage_exit", 1100);
+        TraceData bridge = executionTrace(100, 100, 100);
+
+        assertEquals(SegmentExecutionPolicy.LEVEL_PRESENTATION_BRIDGE,
+                TraceRunReplayWalker.segmentExecutionPolicy(
+                        destination, stageExit, bridge));
+        assertEquals(com.openggf.trace.TraceExecutionPhase.FULL_LEVEL_FRAME,
+                com.openggf.trace.replay.TraceReplayRowPolicy.resolve(
+                        bridge, 0, destination.bk2FrameOffset()).phase(),
+                "row zero is synthetic FULL only because it has no predecessor");
+        assertEquals(com.openggf.trace.TraceExecutionPhase.VBLANK_ONLY,
+                com.openggf.trace.replay.TraceReplayRowPolicy.resolve(
+                        bridge, 1, destination.bk2FrameOffset() + 1).phase());
+    }
+
+    @Test
+    void segmentExecutionPolicyKeepsGameplayStageExitDestinationsAndSpecialLocalsDistinct() {
+        TraceRunManifest.Transition stageExit = boundaryOfKind("stage_exit", 1100);
+
+        assertEquals(SegmentExecutionPolicy.GAMEPLAY,
+                TraceRunReplayWalker.segmentExecutionPolicy(
+                        segmentAt("return", "level", 1200), stageExit,
+                        executionTrace(100, 101, 102)));
+        assertEquals(SegmentExecutionPolicy.GAMEPLAY,
+                TraceRunReplayWalker.segmentExecutionPolicy(
+                        segmentAt("ordinary", "level", 1200), null,
+                        executionTrace(100, 100, 100)));
+        assertEquals(SegmentExecutionPolicy.SPECIAL_LOCAL,
+                TraceRunReplayWalker.segmentExecutionPolicy(
+                        segmentAt("ss", "special_stage", 800), null,
+                        TraceFixtures.trace(
+                                TraceFixtures.metadata("s1", 0, 1), List.of())));
     }
 
     @Test
@@ -689,6 +732,16 @@ class TestTraceRunReplayWalkerControlFlow {
     private static TraceRunManifest.Segment segmentAt(String dir, String kind, int bk2FrameOffset) {
         return new TraceRunManifest.Segment(
             dir, kind, "profile", bk2FrameOffset, 10, 0, 1, null, null);
+    }
+
+    private static TraceData executionTrace(int... gameplayCounters) {
+        List<TraceFrame> frames = new java.util.ArrayList<>();
+        for (int index = 0; index < gameplayCounters.length; index++) {
+            frames.add(TraceFrame.executionTestFrame(
+                    index, 0x300 + index, gameplayCounters[index], 0));
+        }
+        return TraceFixtures.trace(
+                TraceFixtures.metadata("s1", 0, 1), frames);
     }
 
     /**

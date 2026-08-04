@@ -300,6 +300,19 @@ class TestEngineLiveCapturePresentation {
     }
 
     @Test
+    void traceLogicalOverrideCannotHideThePhysicalCaptureChord() {
+        SonicConfigurationService config =
+                SonicConfigurationService.createStandalone();
+        InputHandler input = new InputHandler(InputBindingFactory.supplier(config));
+        input.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS);
+        input.handleKeyEvent(GLFW_KEY_O, GLFW_PRESS);
+        input.setLogicalOverride(
+                com.openggf.control.LogicalInputSnapshot.neutral());
+
+        assertTrue(toggles(config, input));
+    }
+
+    @Test
     void aBareKeyBindingTogglesUnmodifiedAndNotWhileShiftIsHeld() {
         SonicConfigurationService config = SonicConfigurationService.createStandalone();
         config.setConfigValue(SonicConfiguration.CAPTURE_TOGGLE_KEY, "SCROLL_LOCK");

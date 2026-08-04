@@ -292,6 +292,27 @@ class TestPlcFrameLifecycleCoordinator {
     }
 
     @Test
+    void suppressedLagLeavesAnActiveNativeFadePaused() {
+        List<String> events = new ArrayList<>();
+        PlcFrameLifecycleCoordinator coordinator =
+                new PlcFrameLifecycleCoordinator(recording(events));
+        coordinator.beginNativeBlockingFade();
+
+        coordinator.runSuppressedLagIteration(frame -> {
+            assertTrue(frame.claim(PlcLifecyclePhase.LAG));
+            return null;
+        });
+        coordinator.runLogicalIteration(() -> { }, frame -> {
+            assertTrue(frame.isOwnedBy(PlcLifecyclePhase.PALETTE_FADE));
+            return null;
+        });
+
+        assertEquals(List.of(
+                "service:LAG", "service:PALETTE_FADE",
+                "prepare:PALETTE_FADE"), events);
+    }
+
+    @Test
     void tokenRejectsReuseDuplicatePreparationAndMissingPreparation() {
         PlcFrameLifecycleCoordinator coordinator =
                 new PlcFrameLifecycleCoordinator(recording(new ArrayList<>()));

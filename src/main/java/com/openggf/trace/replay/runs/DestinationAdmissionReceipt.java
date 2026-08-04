@@ -16,7 +16,24 @@ public record DestinationAdmissionReceipt(
         DestinationIdentity identity,
         long loadGeneration,
         long timingScheduleGeneration,
-        long dynamicArtGeneration) {
+        long dynamicArtGeneration,
+        TraceRunReplayWalker.SegmentExecutionPolicy executionPolicy) {
+
+    public DestinationAdmissionReceipt(
+            int segmentIndex,
+            InputClock inputClock,
+            int absoluteBk2Row,
+            int rowsConsumed,
+            DestinationIdentity identity,
+            long loadGeneration,
+            long timingScheduleGeneration,
+            long dynamicArtGeneration) {
+        this(segmentIndex, inputClock, absoluteBk2Row, rowsConsumed, identity,
+                loadGeneration, timingScheduleGeneration, dynamicArtGeneration,
+                inputClock == InputClock.SPECIAL_LOCAL
+                        ? TraceRunReplayWalker.SegmentExecutionPolicy.SPECIAL_LOCAL
+                        : TraceRunReplayWalker.SegmentExecutionPolicy.GAMEPLAY);
+    }
 
     public DestinationAdmissionReceipt {
         if (segmentIndex < 0) {
@@ -30,6 +47,8 @@ public record DestinationAdmissionReceipt(
             throw new IllegalArgumentException("rowsConsumed must be 0 or 1");
         }
         identity = Objects.requireNonNull(identity, "identity");
+        executionPolicy = Objects.requireNonNull(
+                executionPolicy, "executionPolicy");
         if (identity instanceof LevelIdentity && loadGeneration < 0) {
             throw new IllegalArgumentException(
                     "level admission requires a load generation");
@@ -42,10 +61,17 @@ public record DestinationAdmissionReceipt(
     }
 
     public sealed interface DestinationIdentity permits
-            LevelIdentity, BonusIdentity, SpecialStageIdentity {
+            LevelIdentity, LevelPresentationIdentity, BonusIdentity,
+            SpecialStageIdentity {
     }
 
     public record LevelIdentity(
+            int progressionZone, int romZone, int act)
+            implements DestinationIdentity {
+    }
+
+    /** Level identity retained while presentation owns the physical clock. */
+    public record LevelPresentationIdentity(
             int progressionZone, int romZone, int act)
             implements DestinationIdentity {
     }

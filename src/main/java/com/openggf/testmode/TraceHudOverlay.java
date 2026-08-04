@@ -50,6 +50,14 @@ public final class TraceHudOverlay implements TraceSessionOverlay {
                 TraceHudOverlay::isGameLoopPaused, focusLabelSupplier, rewindStatusSupplier);
     }
 
+    public TraceHudOverlay(TraceHudModel model,
+                           Supplier<String> focusLabelSupplier,
+                           Supplier<String> rewindStatusSupplier) {
+        this(model, TraceHudOverlay::configuredPauseKeyLabel,
+                TraceHudOverlay::isGameLoopPaused,
+                focusLabelSupplier, rewindStatusSupplier);
+    }
+
     TraceHudOverlay(LiveTraceComparator comparator,
                     Supplier<String> pauseKeyLabelSupplier,
                     BooleanSupplier pausedSupplier,

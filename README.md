@@ -216,6 +216,9 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Visual run presentation clock parity (2026-08-04):** complete-run playback now
+  keeps the shared input, PLC, dynamic-art, and trace HUD clocks continuous across
+  title cards, special stages, inter-act gaps, and the terminal movie tail.
 - **Visual special-stage handoff parity (2026-08-04):** held-white S1 entry
   no longer replays the transition SFX, and complete-run returns rebind the
   BK2 input cursor at level load so GHZ2 consumes and compares the same

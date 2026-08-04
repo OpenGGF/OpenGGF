@@ -833,7 +833,13 @@ public class GameLoop {
                             activePlcLifecycleFrame = null;
                         }
                     });
-        TraceSessionLauncher.runProductionIterationIfActive(productionIteration);
+        TraceSessionLauncher.runProductionIterationIfActive(
+                productionIteration, this::advanceTraceRunPhysicalRow);
+    }
+
+    private void advanceTraceRunPhysicalRow() {
+        levelIterationAdmission.advanceTraceRunPhysicalRow(
+                playbackDebugManager, userRecordingControls, TraceSessionLauncher.active());
     }
 
     private void stepInternalBody() {
@@ -943,7 +949,8 @@ public class GameLoop {
         if (!playbackTakeoverConsumedPausePress
                 && userPauseInputAllowedForCurrentMode()
                 && (inputHandler.isKeyPressed(pauseKey)
-                || (!playbackDebugManager.isDriving(currentGameMode)
+                || (!TraceSessionLauncher.isRunFrameDriverActive()
+                && !playbackDebugManager.isDriving(currentGameMode)
                 && inputHandler.logical().player1().startPressed()))) {
             if (userPaused && userRecordingControls.handlePlaybackTakeoverRequest()) {
                 userPaused = false;
@@ -965,7 +972,7 @@ public class GameLoop {
             return;
         }
 
-        if (currentGameMode == GameMode.LEVEL || currentGameMode == GameMode.BONUS_STAGE) {
+        if (TraceSessionLauncher.admitsRunLogicalGameplayInput(currentGameMode)) {
             playbackDebugManager.shouldSkipCurrentGameplayTick();
         }
 
@@ -1036,6 +1043,11 @@ public class GameLoop {
         }
 
         profiler.endSection("input");
+
+        if (TraceSessionLauncher.suppressesRunNativeLevelBody(currentGameMode)) {
+            inputHandler.update();
+            return;
+        }
 
         if (currentGameMode == GameMode.LEVEL) {
             if (!updateLevelMode(doFrameStep)) {
@@ -1197,9 +1209,16 @@ public class GameLoop {
         // results screen.
         if (ssProvider.isFinished()
                 && (ssSession == null || !ssSession.isSpecialStageSession())) {
-            boolean gotEmerald = ssProvider.isEmeraldCollected();
-            enterResultsScreen(gotEmerald);
+            if (TraceSessionLauncher.shouldDeferRunModeBoundaryCommit()) {
+                return;
+            }
+            enterResultsScreen(ssProvider.isEmeraldCollected());
         }
+    }
+
+    public boolean commitDeferredTraceRunModeBoundaryIfReady() {
+        return TraceSessionLauncher.commitDeferredRunModeBoundary(
+                currentGameMode, getActiveSpecialStageProvider(), this::enterResultsScreen);
     }
 
     /**
@@ -1370,11 +1389,10 @@ public class GameLoop {
             // query here is intentionally idempotent: it reuses the prepared
             // result in production and keeps focused level-mode drivers from
             // accidentally bypassing replay suppression.
-            boolean skipGameplay =
-                    playbackDebugManager.shouldSkipCurrentGameplayTick();
             boolean holdVblankForPendingLoad =
                     playbackDebugManager.shouldHoldVblankForPendingLevelLoad();
-            if (!skipGameplay) {
+            if (!TraceSessionLauncher.shouldSkipRunGameplayTick(
+                    playbackDebugManager)) {
                 // Canonical level tick sequence — see LevelFrameStep for ordering rationale.
                 spriteManager.publishHeldInputForLevelEvents(inputHandler);
                 // ROM in-game pause (Game_paused / Pause_Loop): the P1 Start leading
@@ -1430,20 +1448,14 @@ public class GameLoop {
             // gameplay ticks and lag-gated skips — so the observer's
             // cursor always matches the BK2 cursor. onLevelFrameAdvanced
             // is a no-op when no playback session is active.
-            int appliedPlaybackFrame = playbackDebugManager.getCursorFrame();
-            levelIterationAdmission.setLastAppliedPlaybackFrame(appliedPlaybackFrame);
-            playbackDebugManager.onLevelFrameAdvanced();
-            userRecordingControls.afterPlaybackFrame(
-                    appliedPlaybackFrame,
-                    false,
-                    LevelIterationAdmissionController.isPlaybackMovieEnd(
-                            appliedPlaybackFrame,
-                            playbackDebugManager.getMovieFrameCount(),
-                            playbackDebugManager.isSessionPlaying()));
+            if (!TraceSessionLauncher.isRunFrameDriverActive()) {
+                advanceTraceRunPhysicalRow();
+            }
             TraceSessionLauncher traceSession = TraceSessionLauncher.active();
-            if (traceSession != null) {
+            if (traceSession != null
+                    && !TraceSessionLauncher.isRunFrameDriverActive()) {
                 traceSession.recordExternalRewindFrame();
-            } else {
+            } else if (traceSession == null) {
                 // Reached only inside the !freezeForNonRewindableTransition branch,
                 // so the transition-pending predicate is guaranteed false here.
                 liveRewindManager.recordExternalFrame(currentGameMode, freezeForNonRewindableTransition, inputHandler);
@@ -1547,8 +1559,8 @@ public class GameLoop {
             // skip the gameplay tick on ROM lag frames so the engine and trace
             // stay aligned. Cursor advance still runs via onLevelFrameAdvanced
             // below. Mirrors updateLevelMode's skip gate.
-            boolean skipGameplay = playbackDebugManager.shouldSkipCurrentGameplayTick();
-            if (!skipGameplay) {
+            if (!TraceSessionLauncher.shouldSkipRunGameplayTick(
+                    playbackDebugManager)) {
                 LevelFrameStep.execute(
                         LevelFrameContext.from(gameplayMode),
                         activePlcLifecycleFrame, PlcLifecyclePhase.ORDINARY_LEVEL,
@@ -2585,6 +2597,7 @@ public class GameLoop {
         if (currentGameMode != GameMode.SPECIAL_STAGE) {
             return;
         }
+        TraceSessionLauncher.observeRunStageExitIfActive();
 
         // Check if the SS manager pre-started a fade (S1: concurrent fade during exit spin)
         FadeManager fadeManager = this.fadeManager;

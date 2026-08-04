@@ -471,7 +471,7 @@ public final class LiveTraceComparator implements PlaybackFrameObserver, TraceHu
                 new FrameComparison(expectedDynamicArt.frame(), dynamicFields);
         deferredTerminalDynamicArtFrame = null;
         if (perFrameObserver != null) {
-            perFrameObserver.accept(merged);
+            perFrameObserver.accept(dynamicOnly);
         }
         absorbDivergentFields(dynamicOnly, expected.frame());
         return merged;

@@ -412,8 +412,10 @@ class TestLiveTraceComparatorObserver {
                 List.of(TraceFrame.executionTestFrame(0, 10, 0x100, 0)),
                 Map.of(0, List.of(expected)));
         List<FrameComparison> observed = new ArrayList<>();
+        AbstractPlayableSprite sprite = stubSprite();
+        when(sprite.getCentreX()).thenReturn((short) 11);
         LiveTraceComparator comparator = new LiveTraceComparator(
-                trace, ToleranceConfig.DEFAULT, 0, () -> null,
+                trace, ToleranceConfig.DEFAULT, 0, () -> sprite,
                 null, observed::add, lifecycle::latestSnapshot);
 
         coordinator.runLogicalIteration(() -> {
@@ -424,23 +426,25 @@ class TestLiveTraceComparatorObserver {
                     0x22610, 0xF000);
             row.prepareAfterLoop(PlcLifecyclePhase.LAG);
             comparator.afterFrameAdvanced(
-                    new Bk2FrameInput(0, 0, 0, false, "0"), true);
+                    new Bk2FrameInput(0, 0, 1, false, "0"), true);
             return null;
         });
 
         assertTrue(comparator.hasDeferredTerminalDynamicArt());
-        assertEquals(0, observed.size(),
-                "final DPLC must not compare before terminal publication");
+        assertEquals(1, observed.size(),
+                "terminal base fields publish before the deferred DPLC");
+        assertTrue(observed.getFirst().fields().containsKey("input_alignment"));
 
         lifecycle.closeComparisonSegment();
         comparator.finalizeTerminalDynamicArtComparison();
         comparator.finalizeTerminalDynamicArtComparison();
 
         assertFalse(comparator.hasDeferredTerminalDynamicArt());
-        assertEquals(1, observed.size(),
-                "terminal DPLC must be published exactly once");
-        assertFalse(observed.getFirst().hasDivergence());
-        assertTrue(observed.getFirst().fields().containsKey(
+        assertEquals(2, observed.size(),
+                "terminal base and DPLC deltas must each publish exactly once");
+        assertFalse(observed.getLast().fields().containsKey("input_alignment"),
+                "the terminal DPLC observer event must not repeat base fields");
+        assertTrue(observed.getLast().fields().containsKey(
                 "dynamic_art.edge[0].terminal_forwarded"));
     }
 

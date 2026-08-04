@@ -1970,7 +1970,7 @@ public class Engine {
 	 *
 	 * <p>An unbound chord cannot fire, and no longer needs a guard here to say
 	 * so: its key code is negative, which
-	 * {@link com.openggf.control.InputHandler#isKeyDown(int)} reports as not
+	 * {@link com.openggf.control.InputHandler#isPhysicalKeyDown(int)} reports as not
 	 * down, and {@link LiveCaptureChord#update} requires {@code isBound()} of
 	 * its own accord. It used to need one, because {@code isKeyDown(-1)} fell
 	 * through to the pad-rewind substitution and {@code rewindKey()} is -1 too
@@ -1983,9 +1983,10 @@ public class Engine {
 		if (chord == null) {
 			return false;
 		}
-		return detector.update(chord, input.isKeyDown(chord.keyCode()),
-				input.isShiftDown(), input.isControlDown(),
-				input.isAltDown(), input.isSuperDown());
+		return detector.update(chord,
+				input.isPhysicalKeyDown(chord.keyCode()),
+				input.isPhysicalShiftDown(), input.isPhysicalControlDown(),
+				input.isPhysicalAltDown(), input.isPhysicalSuperDown());
 	}
 
 	private void handleLiveCaptureShortcut() {
@@ -1994,8 +1995,7 @@ public class Engine {
 		}
 		if (!shouldToggleLiveCapture(
 				configService.getKeyChord(SonicConfiguration.CAPTURE_TOGGLE_KEY),
-				liveCaptureChord,
-				new PhysicalCaptureInput(inputHandler))) {
+				liveCaptureChord, inputHandler)) {
 			return;
 		}
 		switch (liveCaptureController.state()) {
@@ -2007,27 +2007,8 @@ public class Engine {
 		}
 	}
 
-	/** Physical-only view used by the global capture chord. */
-	private record PhysicalCaptureInput(InputHandler input) {
-		boolean isKeyDown(int keyCode) { return input.isPhysicalKeyDown(keyCode); }
-		boolean isShiftDown() { return input.isPhysicalShiftDown(); }
-		boolean isControlDown() { return input.isPhysicalControlDown(); }
-		boolean isAltDown() { return input.isPhysicalAltDown(); }
-		boolean isSuperDown() { return input.isPhysicalSuperDown(); }
-	}
-
 	private CaptureViewport currentCaptureViewport() {
 		return new CaptureViewport(viewportX, viewportY, viewportWidth, viewportHeight);
-	}
-
-	private static boolean shouldToggleLiveCapture(KeyChord chord,
-			LiveCaptureChord detector, PhysicalCaptureInput input) {
-		if (chord == null) {
-			return false;
-		}
-		return detector.update(chord, input.isKeyDown(chord.keyCode()),
-				input.isShiftDown(), input.isControlDown(),
-				input.isAltDown(), input.isSuperDown());
 	}
 
 	private void captureScreenshotIfRequested() {

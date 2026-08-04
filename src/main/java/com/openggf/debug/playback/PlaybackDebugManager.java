@@ -188,7 +188,9 @@ public final class PlaybackDebugManager {
 
     public synchronized boolean isDriving(GameMode mode) {
         return enabled && movie != null && timeline != null
-                && (mode == GameMode.LEVEL || mode == GameMode.BONUS_STAGE);
+                && (mode == GameMode.LEVEL || mode == GameMode.BONUS_STAGE)
+                && com.openggf.TraceSessionLauncher
+                        .allowsRunLogicalGameplayInput();
     }
 
     public synchronized int getCurrentForcedInputMask() {

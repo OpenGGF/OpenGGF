@@ -108,6 +108,19 @@ public class Sonic1SpecialStageManagerTest {
     }
 
     @Test
+    public void finishLoopTimerStartsOnTheFollowingVblank() {
+        int timer = Sonic1SpecialStageManager.advanceFinishLoopTimer(60, true);
+        assertEquals(60, timer,
+                "SS_Finish sets v_generictimer after the threshold row's VBlank");
+        for (int i = 0; i < 59; i++) {
+            timer = Sonic1SpecialStageManager.advanceFinishLoopTimer(timer, false);
+        }
+        assertEquals(1, timer);
+        assertEquals(0, Sonic1SpecialStageManager.advanceFinishLoopTimer(
+                timer, false));
+    }
+
+    @Test
     public void testBackdropColorUsesResolvedSpecialPalette() throws Exception {
         manager.initialize(0);
         Palette.Color backdrop = manager.getBackdropColor();
@@ -392,4 +405,3 @@ public class Sonic1SpecialStageManagerTest {
                 "The pressed edge should be cleared after being consumed by a single update()");
     }
 }
-

@@ -403,6 +403,39 @@ public final class DynamicArtLifecycleService
         return update;
     }
 
+    /**
+     * Primes a freshly loaded playable's ROM-backed art without publishing a
+     * runtime transfer edge. Native level setup establishes this initial bank
+     * before the compared presentation/main-loop stream begins.
+     */
+    public ArtUpdate primePlayerDplc(
+            GameId gameId,
+            String owner,
+            int mappingFrame,
+            SpriteDplcFrame dplcFrame) {
+        requireRunActive();
+        validateOwner(owner);
+        if (mappingFrame < 0) {
+            throw new IllegalArgumentException(
+                    "mappingFrame must be nonnegative");
+        }
+        Map<String, ProductionArtProfile> gameProfiles =
+                PLAYER_PROFILES.get(gameId);
+        ProductionArtProfile profile =
+                gameProfiles != null ? gameProfiles.get(owner) : null;
+        if (profile == null) {
+            return new ArtUpdate(false, -1, List.of());
+        }
+        List<TileLoadRequest> requests = dplcFrame != null
+                && dplcFrame.requests() != null
+                ? List.copyOf(dplcFrame.requests()) : List.of();
+        Integer previous = lastMappingFrames.put(owner, mappingFrame);
+        if (previous != null && previous == mappingFrame) {
+            return new ArtUpdate(false, -1, List.of());
+        }
+        return new ArtUpdate(true, -1, requests);
+    }
+
     public void completePlayerDplc(
             GameId gameId,
             String owner,

@@ -924,7 +924,9 @@ public class SpriteManager implements PlayableSstDispatcher {
 			return;
 		}
 		int savedFrameCounter = frameCounter;
+		PlayableSpriteAnimation animation = mainPlayable.getAnimationManager();
 		try {
+			animation.setBootstrapDynamicArtPrime(true);
 			mainPlayable.setAir(false);
 			mainPlayable.setAngle((byte) 0);
 			mainPlayable.setGroundMode(GroundMode.GROUND);
@@ -957,6 +959,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 				}
 			}
 		} finally {
+			animation.setBootstrapDynamicArtPrime(false);
 			frameCounter = savedFrameCounter;
 		}
 	}
