@@ -35,6 +35,7 @@ import com.openggf.testmode.TraceCameraFocusController;
 import com.openggf.testmode.TraceHudOverlay;
 import com.openggf.testmode.SpecialStageTraceHudOverlay;
 import com.openggf.testmode.TraceSessionOverlay;
+import com.openggf.trace.TraceHudModel;
 import com.openggf.testmode.TraceLaunchStatus;
 import com.openggf.testmode.TraceRunFailureStatus;
 import com.openggf.trace.SpecialStageTraceData;
@@ -507,11 +508,11 @@ public final class TraceSessionLauncher {
             installSpecialStageHardwareTiming(fixture);
             configureStandaloneSpecialStageAudio();
             this.overlay = new SpecialStageTraceHudOverlay(
+                    createStandaloneSpecialStageHudModel(),
                     () -> ssTrace.metadata().traceProfile()
                             .replace('_', ' ').toUpperCase(java.util.Locale.ROOT),
-                    () -> ssCursor,
-                    ssTrace::rowCount,
-                    this::isCurrentSpecialStageRowLagged);
+                    () -> null,
+                    this::rewindStatusLabel);
             // Mark active before entering so any entry-time rewind recording is
             // suppressed (GameLoop gates SS capture on active() == null).
             activeSession = this;
@@ -543,6 +544,46 @@ public final class TraceSessionLauncher {
     private boolean isCurrentSpecialStageRowLagged() {
         return ssCursor >= 0 && ssCursor < ssTrace.rowCount()
                 && !ssTrace.admission(ssCursor).executeGameplay();
+    }
+
+    private TraceHudModel createStandaloneSpecialStageHudModel() {
+        return new TraceHudModel() {
+            @Override public int errorCount() { return 0; }
+            @Override public int warningCount() { return 0; }
+            @Override
+            public int laggedFrames() {
+                int count = 0;
+                for (int i = 0; i < Math.min(ssCursor, ssTrace.rowCount()); i++) {
+                    if (!ssTrace.admission(i).executeGameplay()) count++;
+                }
+                return count;
+            }
+            @Override
+            public int recentActionMask() {
+                return standaloneInput().p1ActionMask();
+            }
+            @Override
+            public int recentInputMask() {
+                return standaloneInput().p1InputMask();
+            }
+            @Override
+            public boolean recentStartPressed() {
+                return standaloneInput().p1StartPressed();
+            }
+            @Override public List<com.openggf.trace.live.MismatchEntry> recentMismatches() {
+                return List.of();
+            }
+            @Override public boolean hasRecordingDesync() { return false; }
+            @Override public boolean isComplete() {
+                return ssCursor >= ssTrace.rowCount();
+            }
+            private Bk2FrameInput standaloneInput() {
+                int index = ssBk2FrameOffset + Math.max(0, ssCursor - 1);
+                return index >= 0 && index < movie.getFrameCount()
+                        ? movie.getFrame(index)
+                        : new Bk2FrameInput(index, 0, 0, false, "");
+            }
+        };
     }
 
     interface TitleCardPresentation {
@@ -1328,6 +1369,13 @@ public final class TraceSessionLauncher {
             runSpecialRowDriver = new TraceRunSpecialStageRowDriver(
                     runSpecialRows, segment.trace());
             runBoundaryProbe.setDelegate(null);
+            TraceRunSpecialStageRows hudRows = runSpecialRows;
+            overlay = new SpecialStageTraceHudOverlay(
+                    createRunSpecialStageHudModel(segment),
+                    () -> hudRows.metadata().traceProfile()
+                            .replace('_', ' ').toUpperCase(java.util.Locale.ROOT),
+                    () -> null,
+                    this::rewindStatusLabel);
         }
         if (runCoordinator == null) {
             armRunSpecialDynamicArtComparison(receipt.segmentIndex());
@@ -1355,6 +1403,71 @@ public final class TraceSessionLauncher {
         runLevelLoadedDuringSourceProduction = false;
         completionArmed = false;
         completionHoldFrames = 0;
+    }
+
+    private TraceHudModel createRunSpecialStageHudModel(
+            TraceRunReplayWalker.SegmentPlan segment) {
+        return new TraceHudModel() {
+            @Override
+            public int errorCount() {
+                return runSpecialRowDriver != null
+                        ? runSpecialRowDriver.errorCount() : 0;
+            }
+
+            @Override
+            public int warningCount() {
+                return runSpecialRowDriver != null
+                        ? runSpecialRowDriver.warningCount() : 0;
+            }
+
+            @Override
+            public int laggedFrames() {
+                return runSpecialRowDriver != null
+                        ? runSpecialRowDriver.laggedFrames() : 0;
+            }
+
+            @Override
+            public int recentActionMask() {
+                return currentRunSpecialInput(segment).p1ActionMask();
+            }
+
+            @Override
+            public int recentInputMask() {
+                return currentRunSpecialInput(segment).p1InputMask();
+            }
+
+            @Override
+            public boolean recentStartPressed() {
+                return currentRunSpecialInput(segment).p1StartPressed();
+            }
+
+            @Override
+            public List<com.openggf.trace.live.MismatchEntry> recentMismatches() {
+                return runSpecialRowDriver != null
+                        ? runSpecialRowDriver.recentMismatches() : List.of();
+            }
+
+            @Override
+            public boolean hasRecordingDesync() {
+                return errorCount() > 0;
+            }
+
+            @Override
+            public boolean isComplete() {
+                return runSpecialRowDriver != null
+                        && runSpecialRowDriver.isComplete();
+            }
+
+            private Bk2FrameInput currentRunSpecialInput(
+                    TraceRunReplayWalker.SegmentPlan plan) {
+                int row = runSpecialRowDriver != null
+                        ? Math.max(0, runSpecialRowDriver.cursor() - 1) : 0;
+                int index = plan.segment().bk2FrameOffset() + row;
+                return index >= 0 && index < movie.getFrameCount()
+                        ? movie.getFrame(index)
+                        : new Bk2FrameInput(index, 0, 0, false, "");
+            }
+        };
     }
 
     private void captureRunLevelSourceTail(int segmentIndex) {
@@ -2237,8 +2350,12 @@ public final class TraceSessionLauncher {
         this.overlay = new TraceHudOverlay(comparator,
                 () -> cameraFocusController.currentLabel(),
                 this::rewindStatusLabel);
-        GameServices.playbackDebug().setFrameObserver(
-                comparator);
+        if (runBoundaryProbe != null) {
+            runBoundaryProbe.setDelegate(comparator);
+            GameServices.playbackDebug().setFrameObserver(runBoundaryProbe);
+        } else {
+            GameServices.playbackDebug().setFrameObserver(comparator);
+        }
         GameServices.playbackDebug().startSession(movie, action.reseekOffset());
         completionArmed = false;
         completionHoldFrames = 0;

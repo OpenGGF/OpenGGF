@@ -8,6 +8,11 @@ All notable changes to the OpenGGF project are documented in this file.
   are rejected, and hardware-timing authority is determined solely by the
   presence of its strict v5 stream, which supports both module and direct
   Kosinski readiness without changing production-work matching.
+- Fix/Test: visual complete-run special stages now honor the S1 ROM startup
+  readiness hold, use the common trace HUD with live recorded inputs and
+  mismatch state, preserve the run boundary probe when GHZ2 is admitted, and
+  keep the global capture chord physical while playback overrides gameplay
+  input.
 - Fix/Test: visual whole-run admission now invalidates a source-segment
   observation when the shared run coordinator transfers ownership during the
   same tick. S1 giant-ring transitions therefore retain the newly admitted

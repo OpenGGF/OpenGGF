@@ -118,6 +118,31 @@ public class InputHandler {
 		return keyCode == inputBindings.rewindKey() && gamepadInputManager.isRewindHeld();
 	}
 
+	/** Returns raw keyboard state, ignoring any trace/replay logical override. */
+	public boolean isPhysicalKeyDown(int keyCode) {
+		return keyCode >= 0 && keyCode < MAX_KEYS && keys[keyCode];
+	}
+
+	public boolean isPhysicalShiftDown() {
+		return isPhysicalKeyDown(GLFW_KEY_LEFT_SHIFT)
+				|| isPhysicalKeyDown(GLFW_KEY_RIGHT_SHIFT);
+	}
+
+	public boolean isPhysicalControlDown() {
+		return isPhysicalKeyDown(GLFW_KEY_LEFT_CONTROL)
+				|| isPhysicalKeyDown(GLFW_KEY_RIGHT_CONTROL);
+	}
+
+	public boolean isPhysicalAltDown() {
+		return isPhysicalKeyDown(GLFW_KEY_LEFT_ALT)
+				|| isPhysicalKeyDown(GLFW_KEY_RIGHT_ALT);
+	}
+
+	public boolean isPhysicalSuperDown() {
+		return isPhysicalKeyDown(GLFW_KEY_LEFT_SUPER)
+				|| isPhysicalKeyDown(GLFW_KEY_RIGHT_SUPER);
+	}
+
 	/**
 	 * Held state for a directional menu-cursor key, keyboard OR gamepad (D-pad/stick),
 	 * for callers that drive their own hold-repeat timer (e.g. level-select screens).

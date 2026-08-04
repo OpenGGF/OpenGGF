@@ -123,14 +123,16 @@ public final class Sonic1SpecialStageProvider implements SpecialStageProvider {
         onEnterResults();
     }
 
-    // isEntryPresentationReady() intentionally keeps the SpecialStageProvider
-    // default (always true): S1's entry reveal timing is owned entirely by
-    // GM_Special's own PaletteWhiteIn fade in GameLoop's transition path, not
-    // gated on Obj09's physics hold (see
-    // TestGameLoopSpecialStageEntryPresentation#concreteS1AndS3kProvidersRetainImmediateWhiteAndBlackEntry).
-    // The pre-physics hold modeled by SS_STARTUP_HOLD_TICKS only matters to
-    // the frame-accurate trace-replay harness, which drives the manager
-    // directly and never consults this readiness gate.
+    /**
+     * The ROM reveal cannot begin until GM_Special's startup hold has reached
+     * its presentation boundary. FAST initialization consumes that hold before
+     * returning; TRACE_ACCURATE leaves it observable to the GameLoop so visual
+     * complete-run playback keeps the fade and recorded lag rows aligned.
+     */
+    @Override
+    public boolean isEntryPresentationReady() {
+        return manager.isEntryPresentationReady();
+    }
 
     @Override
     public int getCurrentStage() {

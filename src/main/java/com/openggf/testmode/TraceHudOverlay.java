@@ -9,6 +9,7 @@ import com.openggf.game.GameServices;
 import com.openggf.graphics.PixelFontTextRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.trace.Severity;
+import com.openggf.trace.TraceHudModel;
 import com.openggf.trace.live.LiveTraceComparator;
 import com.openggf.trace.live.MismatchEntry;
 
@@ -24,7 +25,7 @@ import java.util.function.Supplier;
  */
 public final class TraceHudOverlay implements TraceSessionOverlay {
 
-    private final LiveTraceComparator comparator;
+    private final TraceHudModel model;
     private final Supplier<String> pauseKeyLabelSupplier;
     private final BooleanSupplier pausedSupplier;
     private final Supplier<String> focusLabelSupplier;
@@ -54,7 +55,19 @@ public final class TraceHudOverlay implements TraceSessionOverlay {
                     BooleanSupplier pausedSupplier,
                     Supplier<String> focusLabelSupplier,
                     Supplier<String> rewindStatusSupplier) {
-        this.comparator = comparator;
+        this.model = comparator;
+        this.pauseKeyLabelSupplier = pauseKeyLabelSupplier;
+        this.pausedSupplier = pausedSupplier;
+        this.focusLabelSupplier = focusLabelSupplier;
+        this.rewindStatusSupplier = rewindStatusSupplier;
+    }
+
+    TraceHudOverlay(TraceHudModel model,
+                    Supplier<String> pauseKeyLabelSupplier,
+                    BooleanSupplier pausedSupplier,
+                    Supplier<String> focusLabelSupplier,
+                    Supplier<String> rewindStatusSupplier) {
+        this.model = model;
         this.pauseKeyLabelSupplier = pauseKeyLabelSupplier;
         this.pausedSupplier = pausedSupplier;
         this.focusLabelSupplier = focusLabelSupplier;
@@ -89,26 +102,26 @@ public final class TraceHudOverlay implements TraceSessionOverlay {
             if (desyncPauseMessageShown && !paused) {
                 desyncPauseMessageDismissed = true;
             }
-            if (comparator.hasRecordingDesync() && paused && !desyncPauseMessageDismissed) {
+            if (model.hasRecordingDesync() && paused && !desyncPauseMessageDismissed) {
                 desyncPauseMessageShown = true;
                 text.drawShadowedText("Game Paused due to recording desync. Press "
                                 + pauseKeyLabelSupplier.get() + " to resume",
                         X, TOP_Y - LINE_HEIGHT, DebugColor.RED, SCALE);
             }
 
-            text.drawShadowedText(String.format("ERRORS %4d", comparator.errorCount()),
+            text.drawShadowedText(String.format("ERRORS %4d", model.errorCount()),
                     X, y, DebugColor.RED, SCALE);
             y += LINE_HEIGHT;
-            text.drawShadowedText(String.format("WARN   %4d", comparator.warningCount()),
+            text.drawShadowedText(String.format("WARN   %4d", model.warningCount()),
                     X, y, DebugColor.ORANGE, SCALE);
             y += LINE_HEIGHT;
-            text.drawShadowedText(String.format("LAG    %4d", comparator.laggedFrames()),
+            text.drawShadowedText(String.format("LAG    %4d", model.laggedFrames()),
                     X, y, DebugColor.GRAY, SCALE);
             y += SECTION_GAP;
 
-            int actionMask = comparator.recentActionMask();
-            int inputMask = comparator.recentInputMask();
-            boolean start = comparator.recentStartPressed();
+            int actionMask = model.recentActionMask();
+            int inputMask = model.recentInputMask();
+            boolean start = model.recentStartPressed();
             StringBuilder active = new StringBuilder();
             active.append(bit(actionMask, 0x01, 'A'));
             active.append(bit(actionMask, 0x02, 'B'));
@@ -129,7 +142,7 @@ public final class TraceHudOverlay implements TraceSessionOverlay {
 
             text.drawShadowedText("Last mismatches:", X, y, DebugColor.LIGHT_GRAY, SCALE);
             y += LINE_HEIGHT;
-            List<MismatchEntry> recent = comparator.recentMismatches();
+            List<MismatchEntry> recent = model.recentMismatches();
             for (MismatchEntry m : recent) {
                 String line = String.format("f %04X %s rom=%s eng=%s \u0394%s%s",
                         m.frame(), m.field(), m.romValue(),
@@ -141,7 +154,7 @@ public final class TraceHudOverlay implements TraceSessionOverlay {
                 y += LINE_HEIGHT;
             }
 
-            if (comparator.isComplete()) {
+            if (model.isComplete()) {
                 text.drawShadowedText("TRACE COMPLETE", X, COMPLETE_BANNER_Y,
                         DebugColor.YELLOW, SCALE);
             }
@@ -191,12 +204,12 @@ public final class TraceHudOverlay implements TraceSessionOverlay {
         return (mask & flag) != 0 ? letter : '.';
     }
 
-    private static String configuredPauseKeyLabel() {
+    static String configuredPauseKeyLabel() {
         int pauseKey = GameServices.configuration().getInt(SonicConfiguration.PAUSE_KEY);
         return GlfwKeyNameResolver.nameOf(pauseKey);
     }
 
-    private static boolean isGameLoopPaused() {
+    static boolean isGameLoopPaused() {
         GameLoop loop = Engine.currentGameLoop();
         return loop != null && loop.isPaused();
     }

@@ -2,8 +2,12 @@ package com.openggf.trace.replay.runs;
 
 import com.openggf.game.resources.DynamicArtDiagnosticsSnapshot;
 import com.openggf.trace.FrameComparison;
+import com.openggf.trace.FieldComparison;
+import com.openggf.trace.Severity;
 import com.openggf.trace.TraceData;
+import com.openggf.trace.live.MismatchEntry;
 
+import java.util.ArrayDeque;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.List;
@@ -27,6 +31,10 @@ public final class TraceRunSpecialStageRowDriver {
     private final TraceRunReplayWalker.DynamicArtSegmentComparison comparison;
     private int cursor;
     private DynamicArtDiagnosticsSnapshot admissionBaseline;
+    private int laggedFrames;
+    private int errorCount;
+    private int warningCount;
+    private final ArrayDeque<MismatchEntry> recentMismatches = new ArrayDeque<>();
 
     public TraceRunSpecialStageRowDriver(
             TraceRunSpecialStageRows rows, TraceData trace) {
@@ -94,6 +102,27 @@ public final class TraceRunSpecialStageRowDriver {
             }
         }
         FrameComparison result = comparison.compareRow(cursor, after);
+        if (!rows.admission(cursor).executeGameplay()) {
+            laggedFrames++;
+        }
+        if (result != null) {
+            for (FieldComparison field : result.fields().values()) {
+                if (field.severity() == Severity.ERROR) {
+                    errorCount++;
+                } else if (field.severity() == Severity.WARNING) {
+                    warningCount++;
+                }
+                if (field.isDivergent()) {
+                    if (recentMismatches.size() == 5) {
+                        recentMismatches.removeFirst();
+                    }
+                    recentMismatches.addLast(new MismatchEntry(
+                            cursor, field.fieldName(), field.expected(),
+                            field.actual(), String.valueOf(field.delta()),
+                            field.severity(), 1));
+                }
+            }
+        }
         admissionBaseline = null;
         cursor++;
         return Optional.ofNullable(result);
@@ -114,6 +143,22 @@ public final class TraceRunSpecialStageRowDriver {
 
     public List<FrameComparison> comparisons() {
         return comparison.comparisons();
+    }
+
+    public int laggedFrames() {
+        return laggedFrames;
+    }
+
+    public int errorCount() {
+        return errorCount;
+    }
+
+    public int warningCount() {
+        return warningCount;
+    }
+
+    public List<MismatchEntry> recentMismatches() {
+        return List.copyOf(recentMismatches);
     }
 
     private void requireCurrentRow() {
