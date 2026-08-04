@@ -61268,7 +61268,6 @@ to synthesize a POST phase on a VBLANK-only row.
 - Focused command: `mvn -q -Dtest='TestSpecialStageVisualTraceSession,TestTraceSessionLauncherRunBranch,TestEngineLiveCapturePresentation,TestGameLoopSpecialStageEntryPresentation,TestSpecialStageTraceHudOverlay,TestInputHandlerLogicalSnapshot,TestTraceRunSpecialStageRowDriver' test`.
 - Result: the selected visual/run/capture tests passed; the repository's Maven test extension also executed the broader suite and reported the existing environment/classpath reds documented in the baseline comparison.
 - Special-stage seam coverage: the committed S1 emerald fixture still publishes and verifies all 3,728 represented rows before destination closure; GHZ2 rebind retains `BoundaryProbe` as the playback observer.
-
 ## 2026-08-04 - v5 timing-contract remediation and publication closure
 
 - Worktree: `.worktrees/trace-contract-remediation`, branch
@@ -61287,3 +61286,28 @@ to synthesize a POST phase on a VBLANK-only row.
   46114/module 215, MHZ 28017/module 256, MGZ 39274/module 121, plus the
   known MGZ direct-completion mismatch. S1 LZ3 retains 15 animation-only
   errors (first error frame 156).
+
+## 2026-08-04 - Visual special-stage audio and return-input handoff
+
+- Scope: S1 visual complete-run special-stage entry and SS→level return.
+- Root causes: the S1 results-owned HOLD_WHITE fade emitted the entry SFX,
+  then the generic special-stage entry path emitted it again; visual replay
+  rebound the shared BK2 session after title-card release, so the release
+  fall-through consumed stale special-stage input and the destination
+  comparator started too late.
+- Fix: HOLD_WHITE is treated as already owning the transition SFX while
+  HOLD_BLACK retains the generic emission. Matching level loads schedule the
+  destination BK2 cursor at the common load seam; destination admission carries
+  consumed rows into the comparator and direct admissions publish the current
+  row immediately. No second level load or trace-field hydration is added.
+- Validation: `mvn -q -Dmse=off -Dsurefire.forkCount=1
+  -Dtest=TestTraceSessionLauncherRunBranch,TestTraceRunSpecialStageRowDriver,
+  TestSpecialStageVisualTraceSession,TestGameLoopSpecialStageEntryPresentation,
+  TestEngineLiveCapturePresentation,TestSpecialStageTraceHudOverlay,
+  TestInputHandlerLogicalSnapshot,TestBonusStagePlaybackBridge surefire:test`
+  — focused visual/input parity tests passed. The full baseline was 14,278
+  tests (23 failures, 7 errors, 35 skipped); post-change was 14,283 tests
+  (24 failures, 7 errors, 35 skipped). The additional failure is the existing
+  `TestTraceRunReplayWalkerControlFlow.probePinsPreparedRowToItsOriginalDelegateAcrossHandoff`
+  expectation against the already-merged probe-cache invalidation contract;
+  no visual-parity focused test failed.
