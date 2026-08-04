@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: visual complete-run return loads now timestamp Special Stage exits
+  with the segment-local movie clock and only rebind destination playback after
+  the shared run coordinator accepts that exact production load. This keeps
+  GHZ2 input and comparison ownership atomic and prevents the post-title-card
+  `rowsConsumed must be 0 or 1` abort.
 - Fix/Test: visual special-stage entry now emits its transition SFX once when
   S1's held-white results fade already owns the sound. Whole-run returns park
   the shared BK2 cursor at the loaded level before title-card release, consume

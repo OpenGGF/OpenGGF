@@ -1062,6 +1062,20 @@ public final class TraceSessionLauncher {
                 ? runSpecialRowDriver.cursor() : runSpecialLocalRow;
     }
 
+    /** Resolves the active run source's physical row in its declared input clock. */
+    int currentRunBoundaryBk2Frame() {
+        int segmentIndex = currentRunSegmentIndex();
+        if (segmentIndex >= 0 && segmentIndex < runSegments.size()) {
+            TraceRunManifest.Segment segment =
+                    runSegments.get(segmentIndex).segment();
+            if ("special_stage".equals(segment.kind())) {
+                return Math.addExact(
+                        segment.bk2FrameOffset(), currentRunSpecialRow());
+            }
+        }
+        return Math.max(0, GameServices.playbackDebug().getCursorFrame());
+    }
+
     /**
      * Called from {@link GameLoop} each LEVEL tick while active. A run
      * session early-returns here: this completion-hold arms a fade the
@@ -1319,7 +1333,8 @@ public final class TraceSessionLauncher {
                     ? new RunBoundarySignal.SpecialStageRequest(
                             frame, getActiveSpecialStageIndex()) : null;
             case "stage_exit" -> mode == GameMode.LEVEL
-                    ? new RunBoundarySignal.StageExit(frame) : null;
+                    ? new RunBoundarySignal.StageExit(
+                            currentRunBoundaryBk2Frame()) : null;
             default -> null; // level-load signals are forwarded at their load seam
         };
         if (signal != null) {
@@ -1360,6 +1375,7 @@ public final class TraceSessionLauncher {
         }
         if (runSpecialRowDriver != null) {
             runSpecialRowDriver.verifyComplete();
+            runSpecialLocalRow = runSpecialRowDriver.cursor();
             runSpecialRowDriver = null;
             runSpecialRows = null;
         } else if (runSpecialRows != null) {
@@ -1799,7 +1815,7 @@ public final class TraceSessionLauncher {
             return;
         }
         session.runLevelLoadGeneration = receipt.identity().loadGeneration();
-        int frame = Math.max(0, GameServices.playbackDebug().getCursorFrame());
+        int frame = session.currentRunBoundaryBk2Frame();
         RunPlaybackObservation.LevelIdentity identity = receipt.identity();
         RunLevelLoadCause cause = receipt.cause();
         if (cause == RunLevelLoadCause.INTERIOR_RETURN) {
@@ -1823,21 +1839,31 @@ public final class TraceSessionLauncher {
                                 session.destinationRowsConsumedForAdmission(),
                                 false));
         session.applyRunCoordinatorActions(actions);
-        // Park the shared BK2 cursor at the destination level's offset before
-        // its title card can release. The release fall-through then consumes
-        // destination row zero, matching the headless chain handoff.
-        if (actions.isEmpty()
-                && session.runCoordinator.phase()
-                        == TraceRunPlaybackCoordinator.Phase.TRANSITION_GAP
-                && session.runCoordinator.currentSegmentIndex() + 1
-                        < session.runSegments.size()) {
-            TraceRunManifest.Segment destination = session.runSegments
-                    .get(session.runCoordinator.currentSegmentIndex() + 1).segment();
-            if ("level".equals(destination.kind())) {
-                GameServices.playbackDebug().scheduleSessionAtNextLevelLoad(
-                        session.movie, destination.bk2FrameOffset());
-            }
+        session.scheduleAcceptedRunLevelDestinationIfNeeded(signal, actions);
+    }
+
+    /** Arms the level rebind only for the exact load accepted by run policy. */
+    boolean scheduleAcceptedRunLevelDestinationIfNeeded(
+            RunBoundarySignal.LevelLoaded signal,
+            List<TraceRunPlaybackCoordinator.Action> actions) {
+        Objects.requireNonNull(signal, "signal");
+        Objects.requireNonNull(actions, "actions");
+        if (!actions.isEmpty() || runCoordinator == null
+                || !runCoordinator.remembersLevelLoad(signal)) {
+            return false;
         }
+        int destinationIndex = runCoordinator.currentSegmentIndex() + 1;
+        if (destinationIndex < 0 || destinationIndex >= runSegments.size()) {
+            return false;
+        }
+        TraceRunManifest.Segment destination =
+                runSegments.get(destinationIndex).segment();
+        if (!"level".equals(destination.kind())) {
+            return false;
+        }
+        GameServices.playbackDebug().scheduleSessionAtNextLevelLoad(
+                movie, destination.bk2FrameOffset());
+        return true;
     }
 
     /** Couples load notification with the existing pending playback activation. */

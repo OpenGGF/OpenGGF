@@ -124,6 +124,12 @@ public final class TraceRunPlaybackCoordinator {
         return transitionStepCap;
     }
 
+    /** True only for the exact production load retained for destination admission. */
+    public boolean remembersLevelLoad(RunBoundarySignal.LevelLoaded signal) {
+        return rememberedLevelLoad != null
+                && rememberedLevelLoad.equals(Objects.requireNonNull(signal, "signal"));
+    }
+
     public List<Action> activateInitialLevel(RunPlaybackObservation observation) {
         Objects.requireNonNull(observation, "observation");
         if (currentSegmentIndex >= 0 || phase != Phase.DESTINATION_READY) {

@@ -1565,6 +1565,111 @@ class TestTraceSessionLauncherRunBranch {
                 .map(TraceRunPlaybackCoordinator.CloseSegment.class::cast)
                 .filter(action -> action.segmentIndex() == 1)
                 .count());
+
+        GameServices.playbackDebug().startSession(movie, 500);
+        assertEquals(802, session.currentRunBoundaryBk2Frame(),
+                "the closed special-stage source must retain its local physical clock");
+    }
+
+    @Test
+    void specialStageReturnTranslatesForwardedBoundaryAndGatesLevelRebind()
+            throws Exception {
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
+        TraceRunManifest run = TraceRunManifest.load(
+                specialStageRunDir.resolve("run_manifest.json"));
+        List<TraceRunReplayWalker.SegmentPlan> plans =
+                withAdvertisedSpecialStageTrace();
+        List<Bk2FrameInput> movieFrames = new ArrayList<>();
+        for (int frameIndex = 0; frameIndex < 1_205; frameIndex++) {
+            movieFrames.add(frame(frameIndex));
+        }
+        Bk2Movie movie = new Bk2Movie(
+                Path.of("synthetic-ss-return.bk2"), "logkey", Map.of(),
+                movieFrames, movieFrames.size());
+        TraceRunPlaybackCoordinator coordinator =
+                new TraceRunPlaybackCoordinator(
+                        run, TracePlaybackProfile.DISABLED,
+                        movie.getFrameCount());
+        coordinator.activateInitialLevel(new RunPlaybackObservation(
+                GameMode.LEVEL, 500, 0,
+                new RunPlaybackObservation.LevelIdentity(7, 0, 0, 0),
+                false, null, null, false, false, 0, false, 0, 0));
+        coordinator.observeBoundary(
+                new RunBoundarySignal.SpecialStageRequest(750, 0));
+        coordinator.afterProduction(new RunPlaybackObservation(
+                GameMode.LEVEL, 502, 1,
+                new RunPlaybackObservation.LevelIdentity(7, 0, 0, 0),
+                false, null, null, false, true, 0, false, 0, 0));
+        coordinator.beforeAdmission(new RunPlaybackObservation(
+                GameMode.SPECIAL_STAGE, 800, 2, null,
+                false, null, 0, false, false, 0, false, 1, 1));
+        coordinator.afterProduction(new RunPlaybackObservation(
+                GameMode.SPECIAL_STAGE, 800, 3, null,
+                false, null, 0, false, true, 0, false, 1, 1));
+
+        TraceRunReplayWalker.BoundaryProbe probe =
+                new TraceRunReplayWalker.BoundaryProbe(
+                        new TraceRunReplayWalker.EngineHooks() {
+                            @Override
+                            public int currentBk2Frame() {
+                                return 499;
+                            }
+
+                            @Override
+                            public com.openggf.game.BonusStageType peekBonusRequest() {
+                                return com.openggf.game.BonusStageType.NONE;
+                            }
+
+                            @Override
+                            public boolean isSpecialStageRequested() {
+                                return false;
+                            }
+
+                            @Override
+                            public GameMode currentMode() {
+                                return GameMode.LEVEL;
+                            }
+                        });
+        probe.arm(plans.get(1).exitBoundary());
+        setObjectField(probe, "latchedObservation",
+                new TraceRunReplayWalker.BoundaryObservation(true, 499));
+        TraceSessionLauncher session = new TraceSessionLauncher(
+                null, movie, plans, null);
+        setField(session, "runCoordinator", coordinator);
+        setField(session, "runBoundaryProbe", probe);
+        setField(session, "runSpecialLocalRow", 2);
+        GameServices.playbackDebug().startSession(movie, 499);
+
+        session.runAdvanceTickIfActive(GameMode.LEVEL, 499);
+
+        RunPlaybackObservation.LevelIdentity destinationIdentity =
+                new RunPlaybackObservation.LevelIdentity(8, 0, 0, 0);
+        RunBoundarySignal.LevelLoaded accepted =
+                new RunBoundarySignal.LevelLoaded(
+                        802, RunLevelLoadCause.INTERIOR_RETURN,
+                        destinationIdentity);
+        RunPlaybackObservation pendingTitleCard = new RunPlaybackObservation(
+                GameMode.TITLE_CARD, 499, 4, destinationIdentity,
+                true, null, null, false, false, 0, false, 2, 2);
+        List<TraceRunPlaybackCoordinator.Action> actions =
+                coordinator.beforeLoadedLevelActivation(
+                        accepted, pendingTitleCard);
+        assertTrue(actions.isEmpty());
+        assertTrue(coordinator.remembersLevelLoad(accepted),
+                "the forwarded stage exit must use the special-local clock");
+
+        RunBoundarySignal.LevelLoaded rejected =
+                new RunBoundarySignal.LevelLoaded(
+                        802, RunLevelLoadCause.INTERIOR_RETURN,
+                        new RunPlaybackObservation.LevelIdentity(9, 0, 0, 0));
+        assertFalse(session.scheduleAcceptedRunLevelDestinationIfNeeded(
+                rejected, actions));
+        assertFalse(GameServices.playbackDebug().hasScheduledLevelLoadSession());
+
+        assertTrue(session.scheduleAcceptedRunLevelDestinationIfNeeded(
+                accepted, actions));
+        assertTrue(GameServices.playbackDebug().hasScheduledLevelLoadSession());
     }
 
     @Test

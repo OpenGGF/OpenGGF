@@ -20,6 +20,18 @@ consumed. Finally, live capture shortcut modifier checks read the logical
 trace-input override, so a physical capture chord can be hidden by recorded
 input.
 
+The return load exposes a second clock-domain mismatch. Level and bonus
+segments advance `PlaybackDebugManager`'s shared BK2 cursor, but special-stage
+segments deliberately advance `TraceRunSpecialStageRowDriver`'s local cursor.
+The production return-load hook nevertheless timestamps `StageExit` and
+`LevelLoaded` with the parked shared cursor. For the first emerald route this
+reports the completed special-stage exit at BK2 row 4,976 instead of the local
+clock's row 8,704/8,705 boundary. The coordinator correctly rejects that
+out-of-window signal, while the visual adapter currently rebinds playback to
+GHZ2 anyway. That splits input ownership from comparison ownership: GHZ2 input
+starts advancing without a destination admission receipt until the strict
+zero-or-one-row overrun guard fires.
+
 ## Design
 
 1. **Use the provider's native startup readiness.** S1's provider will report
@@ -55,6 +67,26 @@ input.
    force; this change does not bypass them. Existing chord semantics (rising
    edge and exact modifiers) remain unchanged.
 
+5. **Translate boundary observations through the active segment clock.** The
+   launcher will derive the physical BK2 boundary row from the coordinator's
+   active segment. Shared-clock level/bonus segments continue to use
+   `PlaybackDebugManager`; a special-stage source uses its segment offset plus
+   the committed local row cursor, retained when the strict row driver closes.
+   Both the immediate production return-load signal and any later
+   boundary-probe `stage_exit` forwarding use this resolver; the probe's
+   shared-clock observation cannot overwrite the source segment's clock.
+   This value is observation-only: it timestamps an engine-created load and
+   never writes gameplay state or selects a route outcome.
+
+6. **Couple level rebind to coordinator acceptance.** A completed production
+   load may arm the destination BK2 rebind only when the coordinator retained
+   that exact `LevelLoaded` signal as the pending destination receipt. An
+   identity, cause, generation, or boundary-window rejection leaves playback
+   parked. Accepted loads may rebind while the source is either closing or
+   already in `TRANSITION_GAP`; the title card does not drive playback, so the
+   accepted destination row remains at zero until the common release seam
+   admits comparison and input ownership together.
+
 ## Error and transition handling
 
 The existing run coordinator remains the single transition authority. A HUD
@@ -77,6 +109,11 @@ Add focused tests for:
   counts;
 * capture chord matching physical modifiers while a logical trace override is
   active, without bypassing trace/test-mode ownership guards.
+* a special-stage local cursor at its terminal row producing an in-window
+  `stage_exit` signal even while the shared level cursor remains parked at the
+  special-stage entry, including the later latched-boundary forwarding path;
+* rejected return loads being unable to activate a destination playback
+  rebind, and an accepted return load admitting GHZ2 at row zero.
 
 Run the existing complete-run visual launcher tests, S1 special-stage replay
 tests, run coordinator tests, capture tests, and the full `*TraceReplay` sweep.

@@ -47,3 +47,25 @@
   main workspace, update the release README summary, run the focused suite on
   merged `develop`, push `develop`, and remove only a clean/known-generated
   feature worktree.
+
+## 4. Correct special-stage return clock ownership
+
+- Add a launcher regression whose shared playback cursor remains at the first
+  S1 special-stage offset while the real special row driver reaches its end.
+  Assert that the production return-load signal uses the local segment clock,
+  is retained by the coordinator, and admits GHZ2 at destination row zero.
+- Add the negative half of the contract: an out-of-window or otherwise
+  rejected `LevelLoaded` signal must not arm or activate the pending level-load
+  playback rebind.
+- Retain the special driver's committed local cursor when closing the segment,
+  and resolve boundary timestamps from the current segment's declared input
+  clock rather than unconditionally reading `PlaybackDebugManager`. Apply the
+  resolver to both the production load hook and `stage_exit` conversion in
+  `forwardLatchedRunBoundary`; reset/re-key the retained local cursor at every
+  special-stage admission.
+- Expose only a structural coordinator query for whether the exact load signal
+  was retained; use it to gate the existing deferred rebind. Do not hydrate
+  gameplay, infer success from cursor position, or add S1/zone/run branches.
+- Verify red then green with the focused launcher/coordinator tests, followed
+  by the complete visual run handoff selection and the headless S1 emerald
+  prefix test.

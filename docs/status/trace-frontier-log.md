@@ -61330,3 +61330,18 @@ to synthesize a POST phase on a VBLANK-only row.
   `TestRunLevelLoadTracker`, `TestTraceSessionLauncherRunBranch`,
   `TestTraceRunPlaybackCoordinator`, and `TestGameLoopTraceRunPostIteration`;
   0 failures and 0 errors.
+
+## 2026-08-04 - Visual SS return segment-clock correction
+
+- User-reported failure remained after the same-instance load fix: the S1
+  emerald run returned from its first Special Stage and aborted after the GHZ2
+  title card with `rowsConsumed must be 0 or 1` (cursor 8,707).
+- Root cause: Special Stage rows advanced the local row driver while the
+  shared BK2 cursor remained parked at 4,976. The return load was rejected
+  against the recorded 8,705 exit window, but visual playback still rebound to
+  GHZ2, splitting input from comparison ownership.
+- Fix: boundary observations now use the active segment's declared clock; the
+  destination rebind requires the coordinator to retain the exact production
+  load. Focused visual/headless parity validation passed 138/138 tests. The
+  full suite reached 13,897 tests (24 failures, 7 errors, 31 skips) before an
+  unrelated JVM fork crash; no changed launcher/coordinator test failed.

@@ -250,11 +250,18 @@ class TestTraceRunPlaybackCoordinator {
         coordinator.afterProduction(levelObservation(1, 0, 0, 1, true, 0));
         coordinator.beforeAdmission(specialObservation(10, 1, 0, 0));
         coordinator.observeBoundary(new RunBoundarySignal.StageExit(20));
-        coordinator.beforeLoadedLevelActivation(
+        RunBoundarySignal.LevelLoaded loaded =
                 new RunBoundarySignal.LevelLoaded(20,
                         RunLevelLoadCause.INTERIOR_RETURN,
-                        new RunPlaybackObservation.LevelIdentity(2, 0, 0, 0)),
+                        new RunPlaybackObservation.LevelIdentity(2, 0, 0, 0));
+        coordinator.beforeLoadedLevelActivation(
+                loaded,
                 levelObservation(2, 0, 0, 1, false, 0));
+        assertTrue(coordinator.remembersLevelLoad(loaded));
+        assertFalse(coordinator.remembersLevelLoad(
+                new RunBoundarySignal.LevelLoaded(20,
+                        RunLevelLoadCause.INTERIOR_RETURN,
+                        new RunPlaybackObservation.LevelIdentity(3, 0, 0, 0))));
         RunPlaybackObservation exhaustedSpecial = new RunPlaybackObservation(
                 GameMode.SPECIAL_STAGE, 10, 2, null, false, null, 0,
                 false, true, 0, false, 12, 22);
