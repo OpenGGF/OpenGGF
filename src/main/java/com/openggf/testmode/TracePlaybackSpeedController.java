@@ -77,4 +77,13 @@ public final class TracePlaybackSpeedController {
                 ? (long) rate + "x"
                 : rate + "x";
     }
+
+    /**
+     * HUD label with the Left/Right affordance around it, e.g. {@code < 1x >}.
+     * Both arrows are always drawn, including at the ends of the ladder, so the
+     * line does not change width as the rate moves.
+     */
+    public String rateDisplay() {
+        return "< " + label() + " >";
+    }
 }

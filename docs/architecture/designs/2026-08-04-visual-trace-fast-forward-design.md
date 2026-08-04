@@ -76,6 +76,40 @@ exclusive: `stepInternalBody()` already routes rewind to the trace session **ins
 `liveRewindEffectIntensity()` survives for the live-capture presentation state alone, so a
 visual trace transport is not classified as a live rewind for recording.
 
+## HUD
+
+The legacy `== PLAYBACK ==` debug panel stands down for the whole of a trace session and
+the trace HUD renders the transport itself, pinned right-aligned to the top-right corner
+(`STATUS_TOP_Y`, clear of both the ROM's left-anchored top bar and the paused
+camera-focus block at `TOP_Y`):
+
+```
+                                                    ghz1.bk2
+                                                 Mode: LEVEL
+                                            Frame: 1234/5678
+                                              Rate: < 1.5x >
+```
+
+`Rate` is the fast-forward ladder — Right increases, Left decreases — and both arrows stay
+drawn at the ends of the ladder so the line keeps its width. Frame is
+`cursor / lastFrameIndex`, the same pair the legacy panel showed.
+
+Dropped from the legacy panel: `Input` (the trace HUD already draws the BK2 input glyphs),
+`Session started` / status message (redundant), `State`, and `First Active`. `Movie` and
+`Mode` are kept.
+
+`PlaybackDebugManager.setOverlayOwnedExternally(boolean)` is the handoff — it empties
+`buildOverlayLines()` and clears `isHudVisible()`, so the panel neither draws nor reserves
+overlay state. `TraceSessionLauncher.becomeActiveSession()` /
+`releaseActiveSession()` are the single choke points for it: every entry and exit path
+routes `activeSession` through those two methods precisely so no path can miss the
+handoff. `SpecialStageTraceHudOverlay` delegates wholesale to `TraceHudOverlay`, so
+special-stage segments get the same block without their own wiring.
+
+The fast-forward rate is deliberately **not** reported on the rewind status line — the
+Rate line is its single display, and unlike the rewind line it stays visible for run
+sessions, which never install a rewind controller.
+
 ## Deliberate non-goals
 
 - **Frame-accurate audio command placement.** A frame's worth of queued audio commands
@@ -95,6 +129,10 @@ visual trace transport is not classified as a live rewind for recording.
 - `TestAudioPresentationProducer` — decimation across a chunk boundary with the voice
   advancing by the consumed source frames, fractional-rate frame spacing, NaN/non-positive
   fallback to real time, and rate scoping (SILENT and REVERSE unaffected).
+- `TestTraceHudOverlay` — transport block pinned top-right in stacked line order, and
+  omitted entirely without an active session status.
+- `TestPlaybackDebugManagerOverlayOwnership` — the legacy panel silences and hands back,
+  and the transport accessors feeding the replacement HUD.
 - `TestRewindVhsEffectPass` — signed scroll advance and backward wrap.
 - `TestDisplayShaderPipelineSmoke` — GL apply through the widened signature.
 - Visuals and audio verified by running a trace session and walking the ladder.

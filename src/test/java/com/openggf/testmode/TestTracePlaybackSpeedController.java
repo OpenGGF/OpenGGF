@@ -142,6 +142,18 @@ class TestTracePlaybackSpeedController {
     }
 
     @Test
+    void rateDisplayCarriesTheLeftRightAffordanceAtBothEndsOfTheLadder() {
+        assertEquals("< 1x >", controller.rateDisplay());
+        press(RIGHT);
+        assertEquals("< 1.5x >", controller.rateDisplay());
+        for (int i = 0; i < 10; i++) {
+            press(RIGHT);
+        }
+        assertEquals("< 5x >", controller.rateDisplay(),
+                "both arrows stay drawn at the top rung so the line keeps its width");
+    }
+
+    @Test
     void noLadderEntryExceedsTheDeclaredExtraStepCeiling() {
         for (int i = 0; i < 10; i++) {
             press(RIGHT);

@@ -68,9 +68,13 @@ of continuing forward.
 
 While the trace is playing — not paused, not rewinding — the `LEFT`/`RIGHT` bindings
 (arrow keys by default) walk a playback speed ladder: `Right` steps up through
-1x, 1.5x, 2x, 3x, 5x and `Left` steps back down. The HUD shows `FF 2x` and so on
-whenever the rate is above real time. Those same keys keep their paused-only meaning
-for the camera-focus cycle, so the two never contend.
+1x, 1.5x, 2x, 3x, 5x and `Left` steps back down. Those same keys keep their paused-only
+meaning for the camera-focus cycle, so the two never contend.
+
+The current rate shows as `Rate: < 1.5x >` in the trace HUD's transport block, pinned
+right-aligned to the top-right corner alongside the movie name, mode, and frame counter.
+That block replaces the legacy `== PLAYBACK ==` debug panel for the whole of a trace
+session — the panel neither draws nor reserves overlay state while a session is active.
 
 Fast-forward folds extra gameplay steps into each rendered frame, and the audio speeds
 and pitches up with the picture the way rewind at speed already does. The VHS tape effect

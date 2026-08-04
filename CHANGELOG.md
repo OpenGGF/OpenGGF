@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Feature: the visual trace HUD now owns the playback transport display,
+  replacing the legacy `== PLAYBACK ==` debug panel for the whole of a trace
+  session. Movie name, mode, frame counter, and a `Rate: < 1x >` fast-forward
+  readout are pinned right-aligned in the top-right corner; the panel's input
+  visualiser and status message are dropped as redundant with the trace HUD's
+  own input glyphs and state.
 - Feature: visual Trace Test Mode playback can now fast-forward. While playback
   is running, Right steps up a 1x / 1.5x / 2x / 3x / 5x ladder and Left steps
   back down, folding extra gameplay steps into each rendered frame. Audio

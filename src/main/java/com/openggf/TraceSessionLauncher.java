@@ -542,7 +542,7 @@ public final class TraceSessionLauncher {
                     this::rewindStatusLabel);
             // Mark active before entering so any entry-time rewind recording is
             // suppressed (GameLoop gates SS capture on active() == null).
-            activeSession = this;
+            becomeActiveSession();
             SpecialStageProvider provider = GameServices.module().getSpecialStageProvider();
             Integer index = ssTrace.metadata().specialStageIndex();
             enterSpecialStageTrace(loop, provider, index != null ? index : 0);
@@ -625,7 +625,7 @@ public final class TraceSessionLauncher {
         Objects.requireNonNull(presentation, "presentation");
         presentation.prepareLevel();
         launchPhase.beginTitleCardPresentation();
-        activeSession = this;
+        becomeActiveSession();
         presentation.enterTitleCard();
     }
 
@@ -729,7 +729,7 @@ public final class TraceSessionLauncher {
             // TraceReplayDriver.startPreparedLevel already attached the
             // comparator as the playback frame observer.
             installTraceRewindController(loop, startIndex, initialCursor);
-            activeSession = this;
+            becomeActiveSession();
             TraceGhostHook.set(ghostHook);
             launchPhase.markActive();
         } catch (Throwable launchFailure) {
@@ -816,7 +816,7 @@ public final class TraceSessionLauncher {
             // TraceReplayDriver.startPreparedLevel already attached the
             // comparator as the playback frame observer. No
             // installTraceRewindController call here — see method javadoc.
-            activeSession = this;
+            becomeActiveSession();
             TraceGhostHook.set(ghostHook);
             launchPhase.markActive();
         } catch (Throwable launchFailure) {
@@ -3145,6 +3145,28 @@ public final class TraceSessionLauncher {
         return tapeEffectScrollDirection;
     }
 
+    /** Speed ladder display for the trace HUD, e.g. {@code < 1.5x >}. */
+    public String playbackRateDisplay() {
+        return playbackSpeed.rateDisplay();
+    }
+
+    /**
+     * The single choke point for becoming the active session. Every entry path
+     * routes through here so the legacy {@code == PLAYBACK ==} panel handoff
+     * cannot be missed by one of them — this HUD renders that information
+     * itself, top-right, for the session's lifetime.
+     */
+    private void becomeActiveSession() {
+        activeSession = this;
+        GameServices.playbackDebug().setOverlayOwnedExternally(true);
+    }
+
+    /** The matching choke point for standing down; hands the panel back. */
+    private void releaseActiveSession() {
+        activeSession = null;
+        GameServices.playbackDebug().setOverlayOwnedExternally(false);
+    }
+
     /**
      * Drops playback back to real time and kills the tape effect. The forward
      * rate outlives this session on the shared producer, so every exit path
@@ -3283,7 +3305,7 @@ public final class TraceSessionLauncher {
     private Throwable abortIncompleteSession(
             Throwable primary, String reason, GameLoop fallbackLoop) {
         Throwable failure = primary;
-        activeSession = null;
+        releaseActiveSession();
         launchPhase.abort();
         teardownPending = false;
         completionStartPending = false;
@@ -3513,11 +3535,9 @@ public final class TraceSessionLauncher {
     }
 
     private String rewindStatusLabel() {
-        // Checked before the rewind controller, which a run session never
-        // installs — fast-forward is available to those sessions too.
-        if (playbackSpeed.isFastForwarding() && !realtimeRewinding) {
-            return "FF " + playbackSpeed.label();
-        }
+        // Fast-forward state is not reported here — the top-right transport
+        // block's Rate line is its single display, and it stays visible for
+        // run sessions, which never install a rewind controller.
         if (rewindController == null) {
             return null;
         }
@@ -3555,7 +3575,7 @@ public final class TraceSessionLauncher {
                 return true;
             }
         }
-        activeSession = null;
+        releaseActiveSession();
         GameplayModeContext runContext = SessionManager.getCurrentGameplayMode();
         if (runContext != null && runFrameDriver != null) {
             runContext.clearTraceRunFrameDriver(runFrameDriver);
