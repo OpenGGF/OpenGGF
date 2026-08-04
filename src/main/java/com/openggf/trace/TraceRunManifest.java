@@ -3,10 +3,13 @@ package com.openggf.trace;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -24,12 +27,10 @@ import java.util.Set;
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record TraceRunManifest(
-    @JsonProperty("run_schema") int runSchema,
     @JsonProperty("game") String game,
     @JsonProperty("run_id") String runId,
     @JsonProperty("source_bk2") String sourceBk2,
     @JsonProperty("rom_checksum") String romChecksum,
-    @JsonProperty("lua_script_version") String luaScriptVersion,
     @JsonProperty("segments") List<Segment> segments,
     @JsonProperty("transitions") List<Transition> transitions,
     @JsonProperty("dynamic_art_gap_transitions")
@@ -37,7 +38,10 @@ public record TraceRunManifest(
     @JsonProperty("expected_movie_end_mode") ExpectedMovieEndMode expectedMovieEndMode
 ) {
 
-    public static final int SUPPORTED_RUN_SCHEMA = 2;
+    public static final int TRACE_SCHEMA = 5;
+    private static final Set<String> REMOVED_VERSION_FIELDS = Set.of(
+            "run_schema", "lua_script_version", "csv_version",
+            "ss_csv_version", "hardware_timing_schema");
     public static final Set<String> SEGMENT_KINDS = Set.of("level", "special_stage", "bonus_stage");
     public static final Set<String> ENTRY_KINDS =
         Set.of("giant_ring", "starpost_special", "starpost_bonus", "stage_exit",
@@ -52,23 +56,23 @@ public record TraceRunManifest(
         }
     }
 
-    /** Source-compatible constructor for manifests created before terminal mode was recorded. */
+    /** Convenience constructor for manifests without an explicit terminal mode. */
     public TraceRunManifest(
-            int runSchema, String game, String runId, String sourceBk2,
-            String romChecksum, String luaScriptVersion, List<Segment> segments,
+            String game, String runId, String sourceBk2,
+            String romChecksum, List<Segment> segments,
             List<Transition> transitions) {
-        this(runSchema, game, runId, sourceBk2, romChecksum, luaScriptVersion,
+        this(game, runId, sourceBk2, romChecksum,
                 segments, transitions, List.of(),
                 ExpectedMovieEndMode.UNSPECIFIED);
     }
 
-    /** Source-compatible constructor for pre-schema-2 callers with terminal mode. */
+    /** Convenience constructor for manifests without dynamic-art gaps. */
     public TraceRunManifest(
-            int runSchema, String game, String runId, String sourceBk2,
-            String romChecksum, String luaScriptVersion, List<Segment> segments,
+            String game, String runId, String sourceBk2,
+            String romChecksum, List<Segment> segments,
             List<Transition> transitions,
             ExpectedMovieEndMode expectedMovieEndMode) {
-        this(runSchema, game, runId, sourceBk2, romChecksum, luaScriptVersion,
+        this(game, runId, sourceBk2, romChecksum,
                 segments, transitions, List.of(), expectedMovieEndMode);
     }
 
@@ -149,29 +153,36 @@ public record TraceRunManifest(
     ) {}
 
     public static TraceRunManifest load(Path manifestPath) throws IOException {
-        ObjectMapper mapper = new ObjectMapper();
-        JsonNode root = mapper.readTree(Files.readString(manifestPath));
-        JsonNode expectedEndMode = root.get("expected_movie_end_mode");
-        if (expectedEndMode != null && !expectedEndMode.isTextual()) {
-            throw new IOException("expected_movie_end_mode must be a string when present");
-        }
-        JsonNode schemaNode = root.get("run_schema");
-        if (schemaNode == null || !schemaNode.isIntegralNumber()
-                || !schemaNode.canConvertToInt()) {
-            throw new IOException("run_schema must be an integer");
-        }
-        int schema = schemaNode.asInt();
-        JsonNode gapNode = root.get("dynamic_art_gap_transitions");
-        if (schema == 2 && (gapNode == null || !gapNode.isArray())) {
-            throw new IOException(
-                    "run_schema 2 requires dynamic_art_gap_transitions array");
-        }
-        if (schema == 1 && gapNode != null) {
-            throw new IOException(
-                    "run_schema 1 must omit dynamic_art_gap_transitions");
-        }
-        List<DynamicArtTransfer.GapTransition> gaps = new ArrayList<>();
-        if (gapNode != null) {
+        JsonFactory factory = new JsonFactory()
+                .enable(JsonParser.Feature.STRICT_DUPLICATE_DETECTION);
+        ObjectMapper mapper = new ObjectMapper(factory);
+        try (InputStream input = Files.newInputStream(manifestPath);
+             JsonParser parser = factory.createParser(input)) {
+            JsonNode root = mapper.readTree(parser);
+            if (root == null || !root.isObject() || parser.nextToken() != null) {
+                throw new IOException(manifestPath.getFileName()
+                        + ": manifest must be one JSON object");
+            }
+            JsonNode expectedEndMode = root.get("expected_movie_end_mode");
+            if (expectedEndMode != null && !expectedEndMode.isTextual()) {
+                throw new IOException("expected_movie_end_mode must be a string when present");
+            }
+            for (String field : REMOVED_VERSION_FIELDS) {
+                if (root.has(field)) {
+                    throw new IOException("Removed manifest field '" + field + "'");
+                }
+            }
+            JsonNode schemaNode = root.get("trace_schema");
+            if (schemaNode == null || !schemaNode.isIntegralNumber()
+                    || !schemaNode.canConvertToInt() || schemaNode.asInt() != TRACE_SCHEMA) {
+                throw new IOException("trace_schema must be integer " + TRACE_SCHEMA);
+            }
+            JsonNode gapNode = root.get("dynamic_art_gap_transitions");
+            if (gapNode == null || !gapNode.isArray()) {
+                throw new IOException(
+                        "trace_schema 5 requires dynamic_art_gap_transitions array");
+            }
+            List<DynamicArtTransfer.GapTransition> gaps = new ArrayList<>();
             try {
                 for (JsonNode transition : gapNode) {
                     gaps.add(DynamicArtTransfer.parseGapTransition(transition));
@@ -179,27 +190,27 @@ public record TraceRunManifest(
             } catch (IllegalArgumentException e) {
                 throw new IOException("Invalid dynamic_art_gap_transitions", e);
             }
-        }
-        List<List<DynamicArtTransfer.Descriptor>> segmentInitialLedgers =
-                parseSegmentInitialLedgers(root);
-        com.fasterxml.jackson.databind.node.ObjectNode base =
-                ((com.fasterxml.jackson.databind.node.ObjectNode) root.deepCopy());
-        base.remove("dynamic_art_gap_transitions");
-        JsonNode baseSegments = base.get("segments");
-        if (baseSegments != null && baseSegments.isArray()) {
-            for (JsonNode segment : baseSegments) {
-                if (segment instanceof com.fasterxml.jackson.databind.node.ObjectNode object) {
-                    object.remove("dynamic_art_initial_ledger_descriptors");
+            List<List<DynamicArtTransfer.Descriptor>> segmentInitialLedgers =
+                    parseSegmentInitialLedgers(root);
+            com.fasterxml.jackson.databind.node.ObjectNode base =
+                    ((com.fasterxml.jackson.databind.node.ObjectNode) root.deepCopy());
+            base.remove("trace_schema");
+            base.remove("dynamic_art_gap_transitions");
+            JsonNode baseSegments = base.get("segments");
+            if (baseSegments != null && baseSegments.isArray()) {
+                for (JsonNode segment : baseSegments) {
+                    if (segment instanceof com.fasterxml.jackson.databind.node.ObjectNode object) {
+                        object.remove("dynamic_art_initial_ledger_descriptors");
+                    }
                 }
             }
+            TraceRunManifest parsed = mapper.treeToValue(base, TraceRunManifest.class);
+            List<Segment> parsedSegments = restoreSegmentInitialLedgers(
+                    parsed.segments(), segmentInitialLedgers);
+            return new TraceRunManifest(parsed.game(), parsed.runId(),
+                    parsed.sourceBk2(), parsed.romChecksum(), parsedSegments, parsed.transitions(),
+                    gaps, parsed.expectedMovieEndMode());
         }
-        TraceRunManifest parsed = mapper.treeToValue(base, TraceRunManifest.class);
-        List<Segment> parsedSegments = restoreSegmentInitialLedgers(
-                parsed.segments(), segmentInitialLedgers);
-        return new TraceRunManifest(parsed.runSchema(), parsed.game(),
-                parsed.runId(), parsed.sourceBk2(), parsed.romChecksum(),
-                parsed.luaScriptVersion(), parsedSegments, parsed.transitions(),
-                gaps, parsed.expectedMovieEndMode());
     }
 
     private static List<List<DynamicArtTransfer.Descriptor>> parseSegmentInitialLedgers(
@@ -261,9 +272,6 @@ public record TraceRunManifest(
      * {@link IllegalStateException} naming the first violation.
      */
     public void validate(Path runDir) {
-        if (runSchema < 1 || runSchema > SUPPORTED_RUN_SCHEMA) {
-            throw new IllegalStateException("Unsupported run_schema " + runSchema);
-        }
         if (segments == null || segments.isEmpty()) {
             throw new IllegalStateException("Manifest has no segments");
         }
@@ -350,13 +358,6 @@ public record TraceRunManifest(
             List<DynamicArtTransfer.Descriptor> openingLedger,
             boolean requireEmptyPostGap,
             DynamicArtTransfer.LifecycleIdentity identity) {
-        if (runSchema == 1) {
-            if (!dynamicArtGapTransitions.isEmpty()) {
-                throw new IllegalStateException(
-                        "legacy run schema cannot carry dynamic-art gaps");
-            }
-            return List.copyOf(openingLedger);
-        }
         List<DynamicArtTransfer.Descriptor> terminal;
         try {
             terminal = DynamicArtTransfer.validateGaps(
@@ -380,9 +381,6 @@ public record TraceRunManifest(
      * what the preceding production gap produced and preserves run-wide IDs.
      */
     public void validateDynamicArtRun(List<TraceData> traces) {
-        if (runSchema == 1) {
-            return;
-        }
         if (traces.size() != segments.size()) {
             throw new IllegalStateException(
                     "dynamic-art run trace count does not match segments");
@@ -390,7 +388,7 @@ public record TraceRunManifest(
         for (TraceData trace : traces) {
             if (!trace.metadata().hasPerFrameDynamicArtTransferState()) {
                 throw new IllegalStateException(
-                        "run_schema 2 segment omits dynamic-art capability");
+                        "trace_schema 5 segment omits dynamic-art capability");
             }
         }
 
@@ -449,7 +447,6 @@ public record TraceRunManifest(
                 }
                 slice.add(transition);
             }
-            boolean nextSegmentArms = segmentIndex + 1 < segments.size();
             opening = validateGapSlice(slice, opening, false, identity);
         }
         if (gapIndex != dynamicArtGapTransitions.size()) {

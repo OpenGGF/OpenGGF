@@ -1335,7 +1335,8 @@ local function write_metadata()
     meta_file:write(character_metadata_json())
     meta_file:write('  "rng_seed": "0x' .. hex(start_rng_seed, 8) .. '",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
-    meta_file:write(string.format('  "lua_script_version": %q,\n', LUA_SCRIPT_VERSION))
+    meta_file:write('  "recorder": "lua-bizhawk-diagnostic",\n')
+    meta_file:write('  "recorder_version": "3.0",\n')
     -- trace_schema 7 adds the authoritative hardware timing stream.
     -- csv_version 7
     -- adds player and sidekick animation_id/mapping_frame to physics.csv. New per-frame
@@ -1402,9 +1403,7 @@ local function write_metadata()
     -- and camera copy).
     -- Diagnostic-only.
     -- All diagnostic-only.
-    meta_file:write('  "trace_schema": 7,\n')
-    meta_file:write('  "hardware_timing_schema": 1,\n')
-    meta_file:write('  "csv_version": 7,\n')
+    meta_file:write('  "trace_schema": 5,\n')
     if LIGHTWEIGHT_REGEN then
         meta_file:write('  "capture_mode": "physics_animation_aux_without_diagnostic_hooks",\n')
     end
@@ -1515,7 +1514,6 @@ function write_run_manifest()
         end
     end
     f:write('{\n')
-    f:write('  "run_schema": 1,\n')
     f:write('  "game": "s3k",\n')  -- "s3k" is the canonical trace game id
                                    -- (TraceCatalog.VALID_GAME_IDS,
                                    -- TraceExecutionModel.forGame); NEVER
@@ -1523,7 +1521,9 @@ function write_run_manifest()
     if run_id then f:write(string.format('  "run_id": %q,\n', run_id)) end
     f:write(string.format('  "source_bk2": %q,\n', SOURCE_BK2_NAME))
     f:write(string.format('  "rom_checksum": %q,\n', S3K_ROM_CHECKSUM))
-    f:write(string.format('  "lua_script_version": %q,\n', LUA_SCRIPT_VERSION))
+    f:write('  "recorder": "lua-bizhawk-diagnostic",\n')
+    f:write('  "recorder_version": "3.0",\n')
+    f:write('  "trace_schema": 5,\n')
     f:write('  "segments": [\n')
     for i, s in ipairs(segments_done) do
         local extra = ""
@@ -1562,7 +1562,8 @@ function write_run_manifest()
         f:write(string.format('    {%s}%s\n', table.concat(parts, ", "),
             (i < #transitions_done) and "," or ""))
     end
-    f:write('  ]\n}\n')
+    f:write('  ],\n')
+    f:write('  "dynamic_art_gap_transitions": [\n  ]\n}\n')
     f:close()
     print(string.format("Wrote run_manifest.json (%d segments, %d transitions).",
         #segments_done, #transitions_done))
@@ -5146,14 +5147,13 @@ function write_ss_metadata()
     meta_file:write('  "game": "s3k",\n')
     meta_file:write('  "trace_profile": "s3k_special_stage",\n')
     meta_file:write('  "special_stage_index": ' .. current_ss_index .. ',\n')
-    meta_file:write('  "ss_csv_version": 1,\n')
     meta_file:write(character_metadata_json())
     meta_file:write('  "bk2_frame_offset": ' .. bk2_frame_offset .. ',\n')
     meta_file:write('  "trace_frame_count": ' .. trace_frame .. ',\n')
     meta_file:write(string.format('  "source_bk2": %q,\n', SOURCE_BK2_NAME))
-    meta_file:write(string.format('  "lua_script_version": %q,\n', LUA_SCRIPT_VERSION))
-    meta_file:write('  "trace_schema": 7,\n')
-    meta_file:write('  "hardware_timing_schema": 1,\n')
+    meta_file:write('  "recorder": "lua-bizhawk-diagnostic",\n')
+    meta_file:write('  "recorder_version": "3.0",\n')
+    meta_file:write('  "trace_schema": 5,\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
     meta_file:write('  "bizhawk_version": "' .. BIZHAWK_VERSION .. '",\n')
     meta_file:write('  "genesis_core": "' .. GENESIS_CORE .. '",\n')

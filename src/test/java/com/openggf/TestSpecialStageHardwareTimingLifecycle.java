@@ -51,20 +51,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 class TestSpecialStageHardwareTimingLifecycle {
-    private static final String HEADER =
-            "frame,input,input_p2,lag,speed_factor,track_anim,track_anim_frame,"
-                    + "track_drawing_index,track_orientation,track_duration_timer,"
-                    + "current_segment,player_anim_frame_timer,rings_togo_bcd,"
-                    + "check_rings_flag,tails_control_counter,swap_positions_flag,"
-                    + "sonic_present,sonic_ss_x,sonic_ss_x_sub,sonic_ss_y,"
-                    + "sonic_ss_y_sub,sonic_ss_z,sonic_angle,sonic_routine,"
-                    + "sonic_routine_secondary,sonic_status,sonic_anim,"
-                    + "sonic_anim_frame,sonic_rings_bcd,sonic_hurt_timer,"
-                    + "sonic_slide_timer,sonic_flip_timer,tails_present,tails_ss_x,"
-                    + "tails_ss_x_sub,tails_ss_y,tails_ss_y_sub,tails_ss_z,"
-                    + "tails_angle,tails_routine,tails_routine_secondary,tails_status,"
-                    + "tails_anim,tails_anim_frame,tails_rings_bcd,tails_hurt_timer,"
-                    + "tails_slide_timer,tails_flip_timer";
 
     @AfterEach
     void tearDown() {
@@ -109,7 +95,7 @@ class TestSpecialStageHardwareTimingLifecycle {
     }
 
     @Test
-    void legacyStandaloneSpecialStageKeepsLivePolicyAndNoReplayPort(
+    void standaloneSpecialStageWithoutTimingKeepsLivePolicyAndNoReplayPort(
             @TempDir Path dir) throws Exception {
         writeTrace(dir, false);
         SpecialStageTraceData trace = SpecialStageTraceData.load(dir);
@@ -244,20 +230,16 @@ class TestSpecialStageHardwareTimingLifecycle {
                 {
                   "game":"s2",
                   "trace_profile":"s2_special_stage",
-                  "trace_schema":%d,
-                  "csv_version":1,
-                  %s
+                  "trace_schema":5,
                   "act":1,
                   "bk2_frame_offset":0,
                   "trace_frame_count":1,
                   "start_x":"0x0000",
                   "start_y":"0x0000"
                 }
-                """.formatted(
-                timing ? 7 : 1,
-                timing ? "\"hardware_timing_schema\":1," : ""));
+                """);
         Files.writeString(dir.resolve("physics.csv"),
-                HEADER + "\n0," + "0,".repeat(46) + "0\n");
+                "0,".repeat(47) + "0\n");
         if (timing) {
             Files.writeString(
                     dir.resolve("hardware_timing.jsonl"),

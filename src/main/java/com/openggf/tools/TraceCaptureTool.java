@@ -201,7 +201,7 @@ public final class TraceCaptureTool {
                 romPath,
                 entry.zone(),
                 entry.act(),
-                meta.hasHardwareTimingStream()
+                trace.hardwareTimingSchedule().hasRecordedInput()
                         ? HardwareReadinessAdmissionPolicy.RECORDED
                         : HardwareReadinessAdmissionPolicy.LIVE);
 

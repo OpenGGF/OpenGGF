@@ -7,7 +7,7 @@ using BizHawk.Emulation.Cores.Consoles.Sega.gpgx;
 
 namespace OpenGGF.BizHawk.Headless
 {
-    public sealed class GpgxHost : IGpgxHost, ICpuRegisterReader
+    public sealed class GpgxHost : IGpgxHost, ICpuRegisterReader, IMainRamWriter
     {
         private readonly GPGX core;
         private readonly MutableController controller;
@@ -239,7 +239,23 @@ namespace OpenGGF.BizHawk.Headless
 
         public byte ReadMainRamByte(int offset)
         {
+            CheckMainRamOffset(offset);
             return mainRam.PeekByte(offset);
+        }
+
+        public void WriteMainRamByte(int offset, byte value)
+        {
+            CheckMainRamOffset(offset);
+            mainRam.PokeByte(offset, value);
+        }
+
+        private void CheckMainRamOffset(int offset)
+        {
+            if (offset < 0 || offset >= mainRam.Size)
+            {
+                throw new ArgumentOutOfRangeException(
+                    "offset", "Main RAM offset must be within the 68K RAM domain.");
+            }
         }
 
         public uint ReadCpuRegister(string name)

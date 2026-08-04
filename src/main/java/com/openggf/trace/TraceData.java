@@ -15,8 +15,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Logger;
 
 /**
  * Reads and holds the contents of a trace directory:
@@ -26,9 +24,6 @@ import java.util.logging.Logger;
  * Auxiliary events are lazy-loaded and indexed by frame number.
  */
 public class TraceData {
-
-    private static final Logger LOGGER = Logger.getLogger(TraceData.class.getName());
-    private static final Set<Path> LEGACY_TRACE_WARNINGS = ConcurrentHashMap.newKeySet();
 
     private final TraceMetadata metadata;
     private final HardwareTimingSchedule hardwareTimingSchedule;
@@ -74,6 +69,7 @@ public class TraceData {
         Path auxPath = TraceFiles.resolve(traceDirectory, "aux_state.jsonl");
 
         TraceMetadata metadata = TraceMetadata.load(metadataPath);
+        rejectSpecialStageProfile(metadata, metadataPath);
         if (physicsPath == null) {
             throw new NoSuchFileException(traceDirectory.resolve("physics.csv").toString());
         }
@@ -82,8 +78,6 @@ public class TraceData {
             ? loadAuxEvents(auxPath, metadata)
             : Collections.emptyMap();
         HardwareTimingSchedule hardwareTimingSchedule = HardwareTimingStreamLoader.load(traceDirectory, metadata);
-
-        warnIfLegacyExecutionCounters(traceDirectory, metadata, frames);
 
         TraceData trace = new TraceData(metadata, frames, events, hardwareTimingSchedule);
         trace.validateAdvertisedLoadQueueStates();
@@ -178,10 +172,8 @@ public class TraceData {
     /**
      * Returns the ROM VBlank counter value that corresponds to trace frame 0.
      *
-     * <p>Schema v3 traces record the real ROM VBlank counter per frame. Older
-     * traces do not, so fall back to the historical BK2 frame offset metadata.
-     * That fallback preserves legacy replay behaviour until all fixtures carry
-     * explicit execution counters.
+     * <p>V5 rows record the ROM VBlank counter directly. Metadata-only loads
+     * retain their explicit BK2 offset because they have no physics row.
      */
     public int initialVblankCounter() {
         if (!frames.isEmpty()) {
@@ -194,46 +186,12 @@ public class TraceData {
     }
 
     /**
-     * Returns the initial clock for ROM object routines that read
-     * {@code V_int_run_count}. S3K schema-v6 captures wrote the adjacent
-     * life-count word (for example $0800/$0A00) into the CSV counter
-     * column. A repeated value across changing gameplay rows identifies that
-     * recorder layout. Complete-run captures that carry an independently
-     * measured lost-ring floor-check phase expose the same low three bits of
-     * {@code V_int_run_count}; use those bits directly. Older fixtures fall
-     * back to BK2 parity while the recorded word retains the established
-     * higher-bit replay phase.
+     * Returns the explicitly recorded low-bit phase for ROM object routines
+     * that read {@code V_int_run_count}; absent evidence means no adjustment.
      */
     public int initialVIntRunCounterPhaseOffset() {
-        int recorded = initialVblankCounter();
-        if (!usesBk2VblankCounterFallback()) {
-            return 0;
-        }
         Integer recordedCounterPhase = metadata.ringFloorCheckCounterPhase();
-        if (recordedCounterPhase != null) {
-            return recordedCounterPhase & 7;
-        }
-        return (metadata.bk2FrameOffset() - recorded) & 1;
-    }
-
-    private boolean usesBk2VblankCounterFallback() {
-        if (!"s3k".equals(metadata.game()) || frames.size() < 2
-                || frames.get(0).vblankCounter() < 0) {
-            return false;
-        }
-        int recorded = frames.get(0).vblankCounter();
-        boolean gameplayChanged = false;
-        int sampleCount = Math.min(frames.size(), 1024);
-        for (int i = 1; i < sampleCount; i++) {
-            TraceFrame current = frames.get(i);
-            if (current.vblankCounter() != recorded) {
-                return false;
-            }
-            if (!current.stateEquals(frames.get(i - 1))) {
-                gameplayChanged = true;
-            }
-        }
-        return gameplayChanged;
+        return recordedCounterPhase == null ? 0 : recordedCounterPhase & 7;
     }
 
     public TraceFrame getFrame(int traceFrame) {
@@ -1140,10 +1098,7 @@ public class TraceData {
                     continue;
                 }
                 firstMeaningfulLine = false;
-                Integer csvVersion = metadata.csvVersion() != null
-                        ? metadata.csvVersion()
-                        : metadata.traceSchema();
-                frames.add(TraceFrame.parseCsvRow(trimmed, csvVersion));
+                frames.add(TraceFrame.parseCsvRow(trimmed));
             }
         }
         return frames;
@@ -1194,19 +1149,12 @@ public class TraceData {
         return TraceFiles.openReader(path);
     }
 
-    private static void warnIfLegacyExecutionCounters(Path traceDirectory,
-            TraceMetadata metadata, List<TraceFrame> frames) {
-        Integer traceSchema = metadata.traceSchema();
-        if (traceSchema != null && traceSchema >= 3) {
-            return;
-        }
-        if (!frames.isEmpty() && frames.get(0).vblankCounter() >= 0) {
-            return;
-        }
-        Path normalized = traceDirectory.toAbsolutePath().normalize();
-        if (LEGACY_TRACE_WARNINGS.add(normalized)) {
-            LOGGER.info(() -> "Trace " + normalized
-                    + " is pre-v3; replay is using the legacy lag heuristic.");
+    private static void rejectSpecialStageProfile(TraceMetadata metadata, Path metadataPath) {
+        if ("s1_special_stage".equals(metadata.traceProfile())
+                || "s2_special_stage".equals(metadata.traceProfile())
+                || "s3k_special_stage".equals(metadata.traceProfile())) {
+            throw new IllegalArgumentException("special-stage trace profile must use its game-owned "
+                    + "reader: " + metadataPath);
         }
     }
 }

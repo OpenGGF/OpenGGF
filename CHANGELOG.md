@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: trace loading now accepts only schema-5 metadata and its fixed
+  level-row layout. Recorder provenance is opaque, retired version selectors
+  are rejected, and hardware-timing authority is determined solely by the
+  presence of its strict v5 stream, which supports both module and direct
+  Kosinski readiness without changing production-work matching.
 - Fix/Test: visual whole-run admission now invalidates a source-segment
   observation when the shared run coordinator transfers ownership during the
   same tick. S1 giant-ring transitions therefore retain the newly admitted

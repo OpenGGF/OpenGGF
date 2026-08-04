@@ -145,6 +145,37 @@ Output is published all-or-nothing: files are staged and only linked into
 `--output` once the whole capture succeeds, so a failed run never leaves a
 half-written trace behind.
 
+### S1 ending credits demos
+
+The eight Sonic 1 ending demos are captured without a BK2 movie. The harness
+presses Start only to leave the title screen, redirects that level entry into
+the ROM's credits flow by writing `f_demo = 0`, `v_creditsnum = 0`, and
+`v_gamemode = GM_Credits`, then clears external input permanently. Each trace
+row reads the ROM-held controller byte; directions are preserved, A/B/C become
+the engine jump bit, and Start is ignored. The ROM—not the harness—selects
+demo identities and any LZ restore/water state.
+
+```bash
+BIZHAWK_HOME=/abs/path/to/docs/BizHawk-2.11-linux-x64 \
+./run.sh --mode trace --rom "$S1_ROM_PATH" \
+  --trace-profile credits_demo --credits-target all \
+  --output /scratch/credits-v5-candidate
+```
+
+`--credits-target` is `all` or `0` through `7`; a single target is diagnostic
+only. `--movie`, run/segment arguments, and compression overrides are rejected
+for this profile. The candidate root must not exist and must never be a
+canonical fixture path. All selected directories are staged as one no-replace,
+forced-compression transaction; only the publication workflow may install them.
+
+For the one-time credits migration evidence, pass
+`--credits-raw-observations <path>` and the required printable-ASCII
+`--credits-raw-observation-id <id>` together with `--credits-target all`.
+The JSONL sidecar is streamed from raw host reads outside both the candidate and
+installed fixture roots, sealed only after candidate publication, and is never
+replaced. A failed capture or seal leaves the final sidecar absent; a seal
+failure quarantines the already-published scratch candidate.
+
 S1/S2 player-art audit is mandatory. Standalone captures arm with an empty
 submitted ledger. S1 may carry only an unpublished staging preparation; it
 receives no transfer id or manifest descriptor until a verified VBlank probe
@@ -166,6 +197,33 @@ be able to.
 - `aux_state.jsonl` — per-frame auxiliary events
 - `metadata.json` — capture identity, profile, offsets, versions
 - `run_manifest.json` — run mode only: segment inventory and transitions
+
+Every production output uses the sole v5 envelope:
+
+```json
+"recorder": "native-bizhawk-headless",
+"recorder_version": "3.0",
+"trace_schema": 5
+```
+
+Provenance is opaque and never selects parser/replay behavior.
+`lua_script_version` is removed, not renamed. Ordinary level rows are fixed at
+42 columns; special stages are fixed by game/profile. Timing uses one
+module-plus-direct grammar, and every run manifest includes
+`dynamic_art_gap_transitions` (including empty).
+
+Validate and compare a complete scratch fleet before publication:
+
+```bash
+python3 tools/traces/validate_trace_v5.py /scratch/v5-candidate/traces
+python3 tools/traces/compare_trace_v5_candidates.py \
+  src/test/resources/traces /scratch/v5-candidate/traces \
+  --mode credits-20-to-42 --output /scratch/v5-candidate-report.json
+```
+
+The comparator never installs output. Detailed capture-matrix, credits
+raw-host-evidence, candidate-root replay, and exact-byte approval instructions
+live in `docs/guide/contributing/trace-v5-publication.md`.
 
 **The two payloads are gzipped at publication by default**, landing as
 `physics.csv.gz` and `aux_state.jsonl.gz` once they reach `--compress-threshold`

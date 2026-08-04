@@ -428,7 +428,7 @@ public final class TraceSessionLauncher {
 
     static void armSpecialStageAdmissionPolicy(TraceRunSpecialStageRows trace) {
         SessionManager.armNextGameplayAdmissionPolicy(
-                trace.metadata().hasHardwareTimingStream()
+                trace.hardwareTimingSchedule().hasRecordedInput()
                         ? HardwareReadinessAdmissionPolicy.RECORDED
                         : HardwareReadinessAdmissionPolicy.LIVE);
     }
@@ -1978,7 +1978,7 @@ public final class TraceSessionLauncher {
     void installSpecialStageHardwareTiming(TraceReplayFixture replayFixture) {
         fixture = replayFixture;
         if (ssTrace != null
-                && ssTrace.metadata().hasHardwareTimingStream()) {
+                && ssTrace.hardwareTimingSchedule().hasRecordedInput()) {
             TraceReplaySessionBootstrap.installHardwareTimingReplay(
                     ssTrace.hardwareTimingSchedule(), replayFixture);
         }
@@ -2016,7 +2016,7 @@ public final class TraceSessionLauncher {
         }
         if (ssTrace != null) {
             if (mode == GameMode.SPECIAL_STAGE
-                    && ssTrace.metadata().hasHardwareTimingStream()
+                    && ssTrace.hardwareTimingSchedule().hasRecordedInput()
                     && ssCursor >= 0
                     && ssCursor < ssTrace.rowCount()) {
                 fixture.beginTraceRow(ssCursor, ssCursor);
@@ -2026,7 +2026,7 @@ public final class TraceSessionLauncher {
             return;
         }
         if (trace != null
-                && trace.metadata().hasHardwareTimingStream()
+                && trace.hardwareTimingSchedule().hasRecordedInput()
                 && mode == GameMode.LEVEL
                 && comparator != null) {
             int cursor = comparator.cursor();

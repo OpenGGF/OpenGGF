@@ -658,18 +658,18 @@ public class TestDivergenceReport {
               "start_x": "0x0080",
               "start_y": "0x03A0",
               "recording_date": "2026-04-21",
-              "lua_script_version": "3.1-s3k",
-              "trace_schema": 3,
-              "csv_version": 4,
+              "trace_schema": 5,
               "rom_checksum": "test"
             }
             """);
-        Files.writeString(dir.resolve("physics.csv"), """
-            frame,input,x,y,x_speed,y_speed,g_speed,angle,air,rolling,ground_mode,x_sub,y_sub,routine,camera_x,camera_y,rings,status_byte,gameplay_frame_counter,stand_on_obj,vblank_counter,lag_counter
-            0000,0000,0080,03A0,0000,0000,0000,00,0,0,0,0000,0000,02,0000,0000,0000,00,0001,00,0001,0000
-            0001,0000,0081,03A0,0000,0000,0000,00,0,0,0,0000,0000,02,0000,0000,0000,00,0002,00,0002,0000
-            0002,0000,0082,03A0,0000,0000,0000,00,0,0,0,0000,0000,02,0000,0000,0000,00,0003,00,0003,0000
-            """);
+        Files.writeString(dir.resolve("physics.csv"),
+                TraceV5TestFixture.LEVEL_HEADER + "\n"
+                        + canonicalRow(0, "8=0", "9=0080", "10=03A0", "20=02",
+                                "5=0001", "6=0001") + "\n"
+                        + canonicalRow(1, "8=0", "9=0081", "10=03A0", "20=02",
+                                "5=0002", "6=0002") + "\n"
+                        + canonicalRow(2, "8=0", "9=0082", "10=03A0", "20=02",
+                                "5=0003", "6=0003") + "\n");
         Files.writeString(dir.resolve("aux_state.jsonl"), """
             {"frame":0,"event":"checkpoint","name":"intro_begin","actual_zone_id":null,"actual_act":null,"apparent_act":null,"game_mode":12}
             {"frame":1,"event":"zone_act_state","actual_zone_id":0,"actual_act":0,"apparent_act":0,"game_mode":12}
@@ -687,21 +687,27 @@ public class TestDivergenceReport {
               "zone_id": 3,
               "act": 1,
               "bk2_frame_offset": 0,
-              "trace_frame_count": 1,
+              "trace_frame_count": 6,
               "start_x": "0x0080",
               "start_y": "0x03A0",
               "recording_date": "2026-04-29",
-              "lua_script_version": "test",
               "trace_schema": 5,
-              "csv_version": 5,
               "aux_schema_extras": ["tails_cpu_normal_step_per_frame", "sidekick_interact_object_per_frame"],
               "rom_checksum": "test"
             }
             """);
-        Files.writeString(dir.resolve("physics.csv"), """
-            frame,input,x,y,x_speed,y_speed,g_speed,angle,air,rolling,ground_mode,x_sub,y_sub,routine,camera_x,camera_y,rings,status_byte,gameplay_frame_counter,stand_on_obj,vblank_counter,lag_counter,sidekick_present,sidekick_x,sidekick_y,sidekick_x_speed,sidekick_y_speed,sidekick_g_speed,sidekick_angle,sidekick_air,sidekick_rolling,sidekick_ground_mode,sidekick_x_sub,sidekick_y_sub,sidekick_routine,sidekick_status_byte,sidekick_stand_on_obj
-            0005,0000,0080,03A0,0000,0000,0000,00,0,0,0,0000,0000,02,0000,0000,0000,00,0001,00,0001,0000,1,0050,0288,0010,FFF0,000C,08,1,0,0,8000,4000,02,0A,03
-            """);
+        Files.writeString(dir.resolve("physics.csv"),
+                TraceV5TestFixture.LEVEL_HEADER + "\n"
+                        + TraceV5TestFixture.levelRow(0) + "\n"
+                        + TraceV5TestFixture.levelRow(1) + "\n"
+                        + TraceV5TestFixture.levelRow(2) + "\n"
+                        + TraceV5TestFixture.levelRow(3) + "\n"
+                        + TraceV5TestFixture.levelRow(4) + "\n"
+                        + canonicalRow(5, "8=1", "9=0080", "10=03A0", "20=02",
+                                "5=0001", "6=0001", "25=1", "26=0050",
+                                "27=0288", "28=0010", "29=FFF0", "30=000C",
+                                "31=08", "32=1", "35=8000", "36=4000",
+                                "37=02", "39=03") + "\n");
         Files.writeString(dir.resolve("aux_state.jsonl"), """
             {"frame":5,"vfc":6,"event":"tails_cpu_normal_step","character":"tails","status":"0x00","object_control":"0x00","ground_vel":"0x000C","x_vel":"0x0000","delayed_stat":"0x08","delayed_input":"0x0800","loc_13dd0_branch":"leader_on_object","ctrl2_logical":"0x0808","ctrl2_held_logical":"0x08","path_pre_ground_vel":"0x000C","path_pre_x_vel":"0x0000","path_pre_status":"0x00","path_post_ground_vel":"0x000C","path_post_x_vel":"0x000C","path_post_status":"0x00"}
             {"frame":5,"vfc":6,"event":"sidekick_interact_object","character":"tails","interact":"0xB128","interact_slot":4,"tails_render_flags":"0x80","tails_object_control":"0x03","tails_status":"0x08","tails_on_object":true,"object_code":"0x000220C2","object_routine":"0x02","object_status":"0x10","object_x":"0x2D95","object_y":"0x0420","object_subtype":"0x40","object_render_flags":"0x80","object_object_control":"0x00","object_active":true,"object_destroyed":false,"object_p1_standing":false,"object_p2_standing":true}
@@ -718,21 +724,28 @@ public class TestDivergenceReport {
               "zone_id": 0,
               "act": 1,
               "bk2_frame_offset": 0,
-              "trace_frame_count": 1,
+              "trace_frame_count": 6,
               "start_x": "0x0080",
               "start_y": "0x03A0",
               "recording_date": "2026-04-29",
-              "lua_script_version": "test",
               "trace_schema": 5,
-              "csv_version": 5,
               "aux_schema_extras": ["aiz_boundary_state_per_frame"],
               "rom_checksum": "test"
             }
             """);
-        Files.writeString(dir.resolve("physics.csv"), """
-            frame,input,x,y,x_speed,y_speed,g_speed,angle,air,rolling,ground_mode,x_sub,y_sub,routine,camera_x,camera_y,rings,status_byte,gameplay_frame_counter,stand_on_obj,vblank_counter,lag_counter,sidekick_present,sidekick_x,sidekick_y,sidekick_x_speed,sidekick_y_speed,sidekick_g_speed,sidekick_angle,sidekick_air,sidekick_rolling,sidekick_ground_mode,sidekick_x_sub,sidekick_y_sub,sidekick_routine,sidekick_status_byte,sidekick_stand_on_obj
-            0005,0000,2E2B,0339,0600,0000,0600,00,0,0,0,DA00,3700,02,2D8B,02E0,0049,00,0466,04,058C,0000,1,2D95,040F,0000,0000,0000,00,1,0,0,0000,3A00,06,02,27
-            """);
+        Files.writeString(dir.resolve("physics.csv"),
+                TraceV5TestFixture.LEVEL_HEADER + "\n"
+                        + TraceV5TestFixture.levelRow(0) + "\n"
+                        + TraceV5TestFixture.levelRow(1) + "\n"
+                        + TraceV5TestFixture.levelRow(2) + "\n"
+                        + TraceV5TestFixture.levelRow(3) + "\n"
+                        + TraceV5TestFixture.levelRow(4) + "\n"
+                        + canonicalRow(5, "8=1", "9=2E2B", "10=0339", "11=0600",
+                                "13=0600", "18=DA00", "19=3700", "20=02",
+                                "2=2D8B", "3=02E0", "4=0049", "5=0466",
+                                "6=058C", "22=04", "25=1", "26=2D95",
+                                "27=040F", "32=1", "35=0000", "36=3A00",
+                                "37=06", "38=02", "39=27") + "\n");
         Files.writeString(dir.resolve("aux_state.jsonl"), """
             {"frame":5,"vfc":1126,"event":"aiz_boundary_state","character":"tails","camera_min_x":"0x2D80","camera_max_x":"0x4000","camera_min_y":"0x0000","camera_max_y":"0x0300","tree_pre_x":"0x2D40","tree_pre_y":"0x0402","tree_pre_x_vel":"0x00F7","tree_pre_y_vel":"0x0198","tree_post_x":"0x2D95","tree_post_y":"0x040F","tree_post_x_vel":"0x0000","tree_post_y_vel":"0x0000","boundary_pre_x":"0x2D95","boundary_pre_y":"0x040F","boundary_pre_x_vel":"0x0000","boundary_pre_y_vel":"0x0000","boundary_post_x":"0x2D95","boundary_post_y":"0x040F","boundary_post_x_vel":"0x0000","boundary_post_y_vel":"0x0000","boundary_action":"none","post_move_x":"0x2D95","post_move_y":"0x040F","post_move_x_vel":"0x0000","post_move_y_vel":"0x0000"}
             """);
@@ -748,21 +761,27 @@ public class TestDivergenceReport {
               "zone_id": 0,
               "act": 1,
               "bk2_frame_offset": 0,
-              "trace_frame_count": 1,
+              "trace_frame_count": 6,
               "start_x": "0x0080",
               "start_y": "0x03A0",
               "recording_date": "2026-04-30",
-              "lua_script_version": "test",
               "trace_schema": 5,
-              "csv_version": 5,
               "aux_schema_extras": ["aiz_transition_floor_solid_per_frame"],
               "rom_checksum": "test"
             }
             """);
-        Files.writeString(dir.resolve("physics.csv"), """
-            frame,input,x,y,x_speed,y_speed,g_speed,angle,air,rolling,ground_mode,x_sub,y_sub,routine,camera_x,camera_y,rings,status_byte,gameplay_frame_counter,stand_on_obj,vblank_counter,lag_counter,sidekick_present,sidekick_x,sidekick_y,sidekick_x_speed,sidekick_y_speed,sidekick_g_speed,sidekick_angle,sidekick_air,sidekick_rolling,sidekick_ground_mode,sidekick_x_sub,sidekick_y_sub,sidekick_routine,sidekick_status_byte,sidekick_stand_on_obj
-            0005,0000,2FCD,0379,0000,0000,0000,00,0,0,0,CA00,F700,02,2F10,02E0,0049,00,1406,04,1700,0000,1,2FB1,0380,0000,0000,0000,00,0,0,0,9A00,3200,02,08,04
-            """);
+        Files.writeString(dir.resolve("physics.csv"),
+                TraceV5TestFixture.LEVEL_HEADER + "\n"
+                        + TraceV5TestFixture.levelRow(0) + "\n"
+                        + TraceV5TestFixture.levelRow(1) + "\n"
+                        + TraceV5TestFixture.levelRow(2) + "\n"
+                        + TraceV5TestFixture.levelRow(3) + "\n"
+                        + TraceV5TestFixture.levelRow(4) + "\n"
+                        + canonicalRow(5, "8=1", "9=2FCD", "10=0379", "18=CA00",
+                                "19=F700", "20=02", "2=2F10", "3=02E0",
+                                "4=0049", "5=1406", "6=1700", "22=04", "25=1",
+                                "26=2FB1", "27=0380", "35=9A00", "36=3200",
+                                "37=02", "38=08", "39=04") + "\n");
         Files.writeString(dir.resolve("aux_state.jsonl"), """
             {"frame":5,"vfc":1700,"event":"aiz_transition_floor_solid","slot":4,"object_status":"0x90","object_x":"0x2FB0","object_y":"0x03A0","p1_standing":false,"p2_standing":true,"p1_path":"first_reject","p2_path":"standing","p1_d1":"0x00A0","p1_d2":"0x0010","p1_d3":"0x0010","p1_status":"0x00","p1_object_control":"0x00","p1_y_radius":"0x13","p1_x":"0x2FCD","p1_y":"0x0379","p1_y_vel":"0x0000","p1_interact_slot":4,"p2_d1":"0x00A0","p2_d2":"0x0140","p2_d3":"0x0010","p2_status":"0x08","p2_object_control":"0x00","p2_y_radius":"0x10","p2_x":"0x2FB1","p2_y":"0x0380","p2_y_vel":"0x0000","p2_interact_slot":4}
             """);
@@ -777,6 +796,23 @@ public class TestDivergenceReport {
             index += needle.length();
         }
         return count;
+    }
+
+    /** Builds a canonical v5 row from field-index assignments. */
+    private static String canonicalRow(int frame, String... assignments) {
+        String[] v5 = TraceV5TestFixture.levelRow(frame).split(",", -1);
+        for (String assignment : assignments) {
+            int separator = assignment.indexOf('=');
+            if (separator <= 0 || separator == assignment.length() - 1) {
+                throw new IllegalArgumentException("invalid v5 field assignment: " + assignment);
+            }
+            int index = Integer.parseInt(assignment.substring(0, separator));
+            if (index < 0 || index >= v5.length) {
+                throw new IllegalArgumentException("v5 field index out of range: " + index);
+            }
+            v5[index] = assignment.substring(separator + 1);
+        }
+        return String.join(",", v5);
     }
 
     private static void restoreProperty(String key, String value) {

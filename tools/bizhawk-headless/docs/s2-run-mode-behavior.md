@@ -1,5 +1,21 @@
 # S2 Trace Recorder — Run Mode (OGGF_TRACE_RUN_ID) Byte-Level Behavior Spec
 
+## Current native v5 contract
+
+The maintained writer emits `recorder: native-bizhawk-headless`,
+`recorder_version: 3.0`, and `trace_schema: 5` for level, special-stage, and
+manifest publication. Level payloads use the shared 42-column physics grammar,
+and every manifest includes `dynamic_art_gap_transitions`. The predecessor
+keys `lua_script_version`, `csv_version`, `ss_csv_version`,
+`hardware_timing_schema`, and `run_schema` are absent. They are not accepted
+aliases and do not select behavior.
+
+## Pre-v5 historical evidence
+
+Everything below records predecessor run-mode behavior and fixture evidence.
+Old exact templates, version provenance, and Lua parity claims are historical
+only and cannot select current writer or parser behavior.
+
 Authority: `tools/bizhawk/s2_trace_recorder.lua` v`9.12-s2` (the Lua recorder is
 the behavioral authority; where any spec text and the Lua disagree, the Lua
 wins). Consumer contract: `src/main/java/com/openggf/trace/TraceRunManifest.java`.

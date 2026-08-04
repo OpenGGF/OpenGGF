@@ -69,7 +69,13 @@ If a trace replay test passes only because engine state is snapped back to ROM-c
 
 ### Frame-0 bootstrap comparator
 
-For traces recorded at `lua_script_version >= 9.2-s2`, `TraceBinder.compareBootstrapFrame0(trace, EngineSnapshot)` runs once at the start of each test and asserts engine state at frame 0 against the recorder's `player_history_snapshot`, `cpu_state_snapshot`, and `object_state_snapshot` events. Mismatches become `BootstrapDivergence` entries rendered ahead of per-frame divergences in `target/trace-reports/<game>_<zone>_report.json`. Legacy traces (older recorder versions) are skipped — their frame-0 state was captured under the pre-ADR-1 freeze-during-title-card engine and is no longer valid for comparison; re-record at v9.2-s2 to opt in.
+For v5 traces advertising `native_prelude_bootstrap`,
+`TraceBinder.compareBootstrapFrame0(trace, EngineSnapshot)` runs once at the
+start of each test and asserts engine state at frame 0 against the recorder's
+`player_history_snapshot`, `cpu_state_snapshot`, and `object_state_snapshot`
+events. Mismatches become `BootstrapDivergence` entries rendered ahead of
+per-frame divergences. Eligibility is capability-based; recorder provenance
+never selects behaviour.
 
 ### Engine title-card behaviour
 
@@ -91,7 +97,7 @@ pipelines of all three games:
 |---|---|
 | S1 | PLC |
 | S2 | DPLC |
-| S3K | Kosinski queues (schema 1 module-queue readiness; schema 2 module + direct) |
+| S3K | Kosinski module and direct-decompression queues |
 
 "Drive a delay" means exactly that: defer or release *when* already-submitted,
 production-created work becomes ready. A V-blank-count-derived latch that defers
@@ -225,7 +231,7 @@ the recorder is unchanged. Pick by game:
 | S1 standard + complete-run | **native** (`tools/bizhawk-headless/`) | Migrated and gated |
 | S2 all modes + complete-run | **native** | Migrated and gated |
 | S3K standard | **native** | Migrated and gated (AIZ end-to-end, CNZ, MGZ). Hook-driven aux families are deferred, and the CLI refuses every unmodeled `OGGF_*` recorder variable rather than diverging silently |
-| S3K complete-run | **native** | Migrated and gated — `--trace-profile complete_run` / `--run-id` on the S3K ROM, everything stamped `6.33-s3k-completerun` (`runs/`, `special_stage/`, `bonus_*`, `*_completerun`; bumped from `6.32-s3k-completerun` when `ADDR_VBLA_WORD` moved off `Life_count` — see below). Same hook-driven-aux deferral and `OGGF_*` refusal policy as S3K standard. All three capture identities gate byte-exactly, including `runs/s3-knux-multibonus-ss/`, which was regenerated at 6.33 to make it reproducible |
+| S3K complete-run | **native** | `--trace-profile complete_run` / `--run-id`; emits the same strict v5 envelope as every other mode |
 
 The entire Lua recorder fleet (S1, S2, S3K standard, S3K complete-run) now has a
 byte-parity-gated native port. `s3k_trace_recorder.lua` /
@@ -308,14 +314,19 @@ Lessons already paid for on the S1 and S2 ports:
   those, and document deferral for env-gated-off ones rather than dropping them silently.
 - **Never commit ROMs, BizHawk binaries, or capture outputs.**
 
-Lua-side schema versioning:
-- `local TRACE_SCHEMA_VERSION = 5` — bumped only when CSV columns change.
-- `local LUA_SCRIPT_VERSION = "<version>"` — bumped on any recorder change (CSV, aux, or behaviour).
-- `aux_schema_extras` — list of optional aux event types this trace contains. Parsers opt in by checking `TraceMetadata.has<Feature>()`.
+Current schema ownership:
+- `trace_schema: 5` owns metadata, row shapes, timing, and run manifests.
+- `recorder` identifies the producer and `recorder_version` identifies its
+  implementation. Both are opaque provenance and never select parsing/replay.
+- `lua_script_version` is removed, not renamed. Diagnostic Lua emits
+  `recorder: lua-bizhawk-diagnostic` and the same v5 data contract.
+- `aux_schema_extras` lists optional semantic capabilities.
 
 ### Trace files (`src/test/resources/traces/<game>/<zone>/`)
 
-- `metadata.json` — game, zone, act, BK2 frame offset, trace frame count, oscillation pre-advance, character set, lua/recorder version, ROM checksum, profile, `aux_schema_extras`.
+- `metadata.json` — game, zone, act, BK2 frame offset, trace frame count,
+  oscillation pre-advance, character set, opaque recorder provenance, ROM
+  checksum, profile, `trace_schema: 5`, and `aux_schema_extras`.
 - `physics.csv` — one row per recorded frame. Frame numbers are hex; fields documented in the recorder's CSV header function.
 - `aux_state.jsonl` — one JSON object per line. Standard event types: `zone_act_state`, `checkpoint`, `state_snapshot`, `mode_change`, `slot_dump`, `object_appeared`, `object_near`, `object_removed`. Plus opt-in events declared in `aux_schema_extras` (e.g. `cpu_state` per-frame for sidekick CPU state). The S1 complete-run recorder (`s1_complete_run_recorder.lua`) is at **v3.13**: beyond the standard set it carries `objoff_32/34/36/38` (maker/collapse/approach timers), `v_oscillate` (the osc array @`0xFFFE5E`), `lag_state` (`emu.islagged`/`lagcount`), and conveyor-specific `s1_obj64_state`/`tracked_obj`. Before claiming a counter/osc/lag/maker-timer frontier is gated, check whether the field is ALREADY captured here; if a needed field is missing, extend the recorder and regen (it is byte-identical physics + new aux — verify, then swap aux+metadata only).
 - `*.bk2` — the BK2 movie. Bizhawk replays this against the ROM to drive the recording. `bk2_frame_offset` in metadata is where recording starts inside the BK2.
@@ -588,10 +599,9 @@ capability the native harness lacks, implement and independently review that nat
 capability first, or obtain an explicit policy redesign before publication. Do not
 substitute Lua-produced bytes.
 
-**Before regenerating, confirm which recorder produced the target trace** — read its
-`metadata.json` `profile` / `lua_script_version`. A trace stamped e.g. `6.32-s3k-completerun`
-came from the complete-run recorder, not the standard one, and regenerating with the wrong
-recorder produces a plausible-looking but wrong fixture.
+**Before regenerating, confirm the capture mode** from semantic metadata such
+as `game`, `trace_profile`, `trace_type`, and `run_id`. `recorder` and
+`recorder_version` document provenance only; do not infer a mode from them.
 
 Profiles are declared inside the lua via `is_*_profile()` predicates — check the recorder for the available list. Common ones: gameplay-unlock starts at controls-active, level-gated-reset-aware starts at gameplay and discards on soft-reset, end-to-end starts at BK2 frame 0.
 
@@ -631,7 +641,7 @@ When a divergence can't be pinpointed without more ROM-side state:
    native implementation backed by ROM/disassembly semantics, native behavioral/unit
    coverage, and independent review.
    If a focused frontier only needs a few extra fields on an existing generic diagnostic such as `state_snapshot`, add the fields there and force snapshots for a narrow frame window instead of creating a new event type. Typical S1/S2 movement-input questions need both BK2/CSV input and ROM-side `Ctrl_1_Held_Logical` plus `move_lock`, because `Sonic_Move` consumes the logical RAM byte after `ReadJoypads` runs from V-int (`docs/s2disasm/s2.asm:701,1361-1387,36253-36260`).
-2. **Java parser.** Add a new sealed-record type to `TraceEvent` (e.g. `TraceEvent.<Feature>State`). Parse the new JSON event in `TraceEvent.parseJsonLine`. Add `TraceMetadata.hasPerFrame<Feature>()` and `TraceData.<feature>StateForFrame(frame)`. Keep parsers tolerant — old traces without the new key must still load.
+2. **Java parser.** Add a new sealed-record type to `TraceEvent` (e.g. `TraceEvent.<Feature>State`). Parse the new JSON event in `TraceEvent.parseJsonLine`. Add `TraceMetadata.hasPerFrame<Feature>()` and `TraceData.<feature>StateForFrame(frame)`. V5 is strict; an optional event remains absent unless its semantic capability is advertised.
 3. **Diagnostic use.** Wire the new data into `DivergenceReport.getContextWindow` rendering, or into a dedicated probe class for targeted bug investigation. **Do not** wire it into engine state mutation in the per-frame test loop.
 4. **Regenerate with the native recorder.** If the new field belongs in a canonical
    fixture, complete the publication contract and exact-byte approval, then commit the
@@ -659,7 +669,7 @@ The single highest-leverage method for frontiers labelled "RAM-gated" / "BizHawk
   scratch-only. The full ROM name (spaces/parens/`[!]`) works as the trailing positional
   ROM arg to the recorder — the "spaces break it" trap is specific to the ad-hoc
   diag-capture path below, not the recorder. **Check which recorder made the target trace**
-  via its `metadata.json` `profile`/`lua_script_version` when comparing legacy evidence.
+  via semantic profile/type metadata when comparing predecessor evidence.
 - **The regen CORRECTS wrong "gated" labels — distrust them.** Real ground truth disproved root after root: "needs BizHawk v_objstate" (LZ2) was actually a ring/object placement-pass separation; "needs BizHawk x_sub" (SBZ2) was a no-hardware conveyor subpixel-discard → a WIN; "boss 1px behind" (GHZ3) was a byte-identical boss with a 1-frame defeat-routine slip; a guessed `v_limitbtm2 ~0x2E8` (MZ1) was 0x02EA with a different (camera-ORDER) root. **Before accepting a "RAM-gated" verdict, regen the data that would prove it.** Equally, re-attack any frontier decoded BEFORE a pattern you have since learned (PlatformObject landing-flags, object-push/self-motion subpixel, the bclr-release pattern) — the old decode was blind to it.
 - **Validate recorder lua with a real compile, not balance-checking.** `pip install lupa`, then:
   ```
@@ -1048,7 +1058,7 @@ When working through a trace bug you'll often pull these in:
 First verify the fixture's declared evidence. Audited native captures use
 `--load-queue-state` and advertise `load_queue_state_per_frame`;
 DPLC/player-art auditing additionally advertises
-`dynamic_art_transfer_state_per_frame_v1`.
+`dynamic_art_transfer_state_per_frame`.
 
 Interpret report families separately:
 
@@ -1063,7 +1073,7 @@ Interpret report families separately:
 
 All are zero-tolerance, comparison-only fields. Fix the earliest queue or
 dynamic-art cause before downstream symptoms. For S3K, distinguish an ordinary
-comparator mismatch from a hardware-timing admission error: schema 2 can only
+comparator mismatch from a hardware-timing admission error: v5 timing can only
 release a matching, prepared, production-submitted ROM job after kind,
 ordinal, fingerprint, and service-boundary checks; it cannot create work.
 

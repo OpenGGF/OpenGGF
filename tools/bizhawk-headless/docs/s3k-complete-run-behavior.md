@@ -1,5 +1,27 @@
 # S3K Complete-Run Recorder — Byte-Level SEGMENTATION Specification
 
+## Current v5 contract
+
+The maintained native complete-run recorder emits only
+`recorder: native-bizhawk-headless`, `recorder_version: 3.0`, and
+`trace_schema: 5`. Provenance is opaque and never selects parser or replay
+behavior. Level and bonus segments use the 42-column level row; special-stage
+segments use the S3K-owned 20-column row. Optional hardware timing uses one
+module-plus-direct timing grammar. No numbered Lua stamp, CSV version, or
+secondary timing-schema axis is emitted or accepted.
+
+Current publication and validation are owned by the native harness,
+`docs/guide/contributing/trace-v5-publication.md`, and the v5 contract tests.
+The detailed material below is retained solely to explain how the native
+segmentation model and frozen predecessor bytes were derived.
+
+## Pre-v5 historical evidence
+
+Everything below this heading is predecessor research. Any use of “current”,
+“maintained”, “canonical”, “authoritative”, or “must” is scoped to the
+historical recorder state being documented; it does not define live output or
+authorize compatibility with a legacy trace.
+
 > **2026-08-02 recorder-order note.** The maintained native complete-run
 > writer is now `6.42-s3k-completerun`, with held-counter final-parent
 > retirements attributed from canonical FIFO state transitions and
@@ -907,8 +929,9 @@ equals the *next level segment's* `bk2_frame_offset` for `stage_exit`.
 ## 8. Segmentation-derived `metadata.json` fields
 
 Full byte layout is owned by
-[s3k-trace-recorder-behavior.md](s3k-trace-recorder-behavior.md) §6. Only
-the complete-run deltas are specified here.
+[s3k-trace-recorder-behavior.md](s3k-trace-recorder-behavior.md), under
+"Current v5 container contract". Only the complete-run deltas are specified
+here.
 
 ### 8.1 Level / bonus segments (`write_metadata`)
 

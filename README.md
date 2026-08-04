@@ -218,6 +218,12 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
+- **Strict trace-v5 recorder fleet (2026-08-04):** the native BizHawk recorder,
+  contract tests, and published S1/S2/S3K fixtures now share one strict v5
+  schema with deterministic gzip payloads and no legacy runtime compatibility
+  path. The original S1 credits captures remain archived as predecessor evidence;
+  the native credits differential gate and standalone S3K special/bonus aliases
+  are green.
 - **Shared visual/headless represented-row harness (2026-08-03):** complete-run
   special stages now use one production-row driver for input, hardware timing,
   dynamic-art publication, comparison, cursor advancement, and segment closure

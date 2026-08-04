@@ -224,8 +224,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         "\"event\":\"dynamic_art_transfer_state\""));
                 AssertContains(
                     result.Segments[0].MetadataJson,
-                    "\"dynamic_art_transfer_state_per_frame_v1\"");
-                AssertContains(result.RunManifestJson, "\"run_schema\": 2");
+                    "\"dynamic_art_transfer_state_per_frame\"");
+                AssertContains(result.RunManifestJson, "\"trace_schema\": 5");
                 AssertContains(
                     result.RunManifestJson,
                     "\"dynamic_art_gap_transitions\": [");
@@ -234,7 +234,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     S2SpecialStageMetadataWriter.Format(
                         0, 1, 1, "synthetic.bk2", "2026-07-30",
                         "audit-run", 1, true),
-                    "\"dynamic_art_transfer_state_per_frame_v1\"");
+                    "\"dynamic_art_transfer_state_per_frame\"");
             });
         }
 
@@ -626,8 +626,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
         /// <summary>
         /// The 4b guard uses the injected capture-session movie length when
         /// it is shorter than the BK2's own row count (spec §2 caveat: the
-        /// canonical fixture's seg3 tail is not reproducible from the
-        /// file-derived length). Same schedule as the round trip's seg1,
+        /// historical seg3 tail cannot be inferred from the file-derived
+        /// length). Same schedule as the round trip's seg1,
         /// with the guard pulled in from F=28 to F=12.
         /// </summary>
         private static void HonorsEffectiveMovieLengthOverride()
@@ -856,7 +856,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     3, result.Segments[0].ManifestEntry.TraceFrameCount);
                 AssertEx.Equal(0, result.Transitions.Count);
                 AssertContains(result.RunManifestJson,
-                    "  \"transitions\": [\n  ]\n}\n");
+                    "  \"transitions\": [\n  ],\n"
+                    + "  \"dynamic_art_gap_transitions\": [\n  ]\n}\n");
             });
         }
 

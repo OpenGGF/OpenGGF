@@ -1,10 +1,11 @@
 {
-  "run_schema": 2,
   "game": "s2",
   "run_id": "s2-ehz-halfpipe-roundtrip",
   "source_bk2": "s2-ehz-halfpipe-roundtrip.bk2",
   "rom_checksum": "7B905383",
-  "lua_script_version": "9.13-s2",
+  "recorder": "native-bizhawk-headless",
+  "recorder_version": "3.0",
+  "trace_schema": 5,
   "segments": [
     {"dir": "seg1_ehz1", "kind": "level", "trace_profile": "gameplay_unlock", "bk2_frame_offset": 825, "trace_frame_count": 2969, "zone_id": 0, "act": 1, "dynamic_art_initial_ledger_descriptors": [], "dynamic_art_initial_ledger_fingerprint": "sha256:42f87419ea3765ece5e0a63ffa9f9ebe5e60d91c115090adf9133c0bd0aca3c9"},
     {"dir": "ss", "kind": "special_stage", "trace_profile": "s2_special_stage", "bk2_frame_offset": 3795, "trace_frame_count": 5733, "zone_id": 0, "act": 0, "special_stage_index": 0, "dynamic_art_initial_ledger_descriptors": [], "dynamic_art_initial_ledger_fingerprint": "sha256:42f87419ea3765ece5e0a63ffa9f9ebe5e60d91c115090adf9133c0bd0aca3c9"},

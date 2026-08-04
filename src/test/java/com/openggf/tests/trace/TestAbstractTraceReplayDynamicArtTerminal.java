@@ -97,7 +97,7 @@ class TestAbstractTraceReplayDynamicArtTerminal
                 new TypeReference<>() {});
         List<String> extras = new ArrayList<>(
                 (List<String>) metadata.get("aux_schema_extras"));
-        extras.add("dynamic_art_transfer_state_per_frame_v1");
+        extras.add("dynamic_art_transfer_state_per_frame");
         metadata.put("aux_schema_extras", extras);
         mapper.writeValue(activeTrace.resolve("metadata.json").toFile(),
                 metadata);

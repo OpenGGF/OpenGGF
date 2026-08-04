@@ -271,7 +271,7 @@ class TestS3kKosStructuralSequence {
         assertTrue(coordinator.directQueue().decompressionsPending());
 
         HardwareTimingReplayPort port = new HardwareTimingReplayPort(authority);
-        port.install(new HardwareTimingSchedule(2, List.of(
+        port.install(new HardwareTimingSchedule(List.of(
                 new HardwareCompletionEdge(
                         1,
                         HardwareServiceBoundary.PRE_MAIN_LOOP,

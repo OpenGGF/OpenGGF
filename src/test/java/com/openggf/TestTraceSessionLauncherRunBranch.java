@@ -1,5 +1,7 @@
 package com.openggf;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
@@ -22,6 +24,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.render.TileLoadRequest;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.TestTempFiles;
 import com.openggf.testmode.TraceRunFailureStatus;
 import com.openggf.trace.DynamicArtTransfer;
 import com.openggf.trace.FrameComparison;
@@ -43,6 +46,7 @@ import com.openggf.trace.replay.runs.TraceRunSpecialStageRowDriver;
 import com.openggf.trace.replay.runs.TraceRunVblankClock;
 import com.openggf.trace.timing.HardwareTimingReplayPort;
 import com.openggf.trace.timing.HardwareTimingSchedule;
+import com.openggf.tests.trace.TraceV5RunFixture;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -53,6 +57,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -78,20 +83,23 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class TestTraceSessionLauncherRunBranch {
 
-    private static final Path RUN_DIR =
-            Path.of("src", "test", "resources", "traces", "synthetic", "run_aiz_gumball_3seg");
-    private static final Path SS_RUN_DIR =
-            Path.of("src", "test", "resources", "traces", "synthetic", "run_ehz_ss_3seg");
     private static final Path S1_EMERALD_RUN_DIR = Path.of(
             "src", "test", "resources", "traces", "s1", "runs",
             "s1-sonic-complete-withemeralds");
-
     private List<TraceRunReplayWalker.SegmentPlan> segments;
+    private Path runDir;
+    private Path specialStageRunDir;
+    private Path canonicalEmeraldRunDir;
 
     @BeforeEach
     void loadFixture() throws Exception {
-        TraceRunManifest run = TraceRunManifest.load(RUN_DIR.resolve("run_manifest.json"));
-        segments = TraceRunReplayWalker.plan(run, RUN_DIR);
+        Path root = TestTempFiles.createTempDirectory("trace-run-launcher-v5");
+        runDir = TraceV5RunFixture.writeS3kBonusRun(root.resolve("s3k"));
+        specialStageRunDir = TraceV5RunFixture.writeS2SpecialStageRun(root.resolve("s2"));
+        canonicalEmeraldRunDir = canonicalizeInstalledRun(
+                S1_EMERALD_RUN_DIR, root.resolve("s1"));
+        TraceRunManifest run = TraceRunManifest.load(runDir.resolve("run_manifest.json"));
+        segments = TraceRunReplayWalker.plan(run, runDir);
     }
 
     @AfterEach
@@ -185,8 +193,8 @@ class TestTraceSessionLauncherRunBranch {
                         0, 1, "starpost_bonus", 1750,
                         2, null, null, null, null, null, null, null);
         TraceRunManifest run = new TraceRunManifest(
-                1, "s3k", "visual-headless-parity", "synthetic.bk2",
-                "checksum", "recorder", List.of(level, bonus),
+                "s3k", "visual-headless-parity", "synthetic.bk2",
+                "checksum", List.of(level, bonus),
                 List.of(transition));
         List<TraceRunReplayWalker.SegmentPlan> twoSegments = List.of(
                 new TraceRunReplayWalker.SegmentPlan(
@@ -324,8 +332,8 @@ class TestTraceSessionLauncherRunBranch {
                 0, 1, "level_advance", 502,
                 null, null, null, null, null, null, null, null);
         TraceRunManifest run = new TraceRunManifest(
-                1, "s2", "visual-title-card-barrier", "synthetic.bk2",
-                "checksum", "recorder", List.of(source, destination),
+                "s2", "visual-title-card-barrier", "synthetic.bk2",
+                "checksum", List.of(source, destination),
                 List.of(transition));
         List<TraceRunReplayWalker.SegmentPlan> twoLevels = List.of(
                 new TraceRunReplayWalker.SegmentPlan(
@@ -1292,12 +1300,12 @@ class TestTraceSessionLauncherRunBranch {
         List<TraceRunReplayWalker.SegmentPlan> plans;
         try {
             TraceRunManifest run = TraceRunManifest.load(
-                    SS_RUN_DIR.resolve("run_manifest.json"));
-            plans = List.of(TraceRunReplayWalker.plan(run, SS_RUN_DIR).get(1));
+                    specialStageRunDir.resolve("run_manifest.json"));
+            plans = List.of(TraceRunReplayWalker.plan(run, specialStageRunDir).get(1));
         } catch (Exception e) {
             throw new AssertionError(e);
         }
-        TraceData trace = plans.getFirst().trace();
+        TraceData trace = specialStagePublicationTrace();
         TraceSessionLauncher session = new TraceSessionLauncher(
                 null, null, plans, null);
         List<FrameComparison> observed = new ArrayList<>();
@@ -1331,7 +1339,8 @@ class TestTraceSessionLauncherRunBranch {
         assertDoesNotThrow(session::afterProductionIteration,
                 "the admitted row must publish before pending verification closes it");
         assertTrue(rowDriver.isComplete());
-        assertTrue(observed.isEmpty());
+        assertEquals(1, observed.size());
+        assertFalse(observed.getFirst().hasDivergence());
     }
 
     @Test
@@ -1341,7 +1350,7 @@ class TestTraceSessionLauncherRunBranch {
         TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
         GameplayModeContext context = SessionManager.getCurrentGameplayMode();
         TraceRunManifest run = TraceRunManifest.load(
-                SS_RUN_DIR.resolve("run_manifest.json"));
+                specialStageRunDir.resolve("run_manifest.json"));
         List<TraceRunReplayWalker.SegmentPlan> plans =
                 withAdvertisedSpecialStageTrace();
         List<Bk2FrameInput> movieFrames = new ArrayList<>();
@@ -1493,11 +1502,11 @@ class TestTraceSessionLauncherRunBranch {
                 GameServices.module().getSpecialStageProvider());
 
         TraceRunManifest run = TraceRunManifest.load(
-                S1_EMERALD_RUN_DIR.resolve("run_manifest.json"));
+                canonicalEmeraldRunDir.resolve("run_manifest.json"));
         List<TraceRunReplayWalker.SegmentPlan> plans =
-                TraceRunReplayWalker.plan(run, S1_EMERALD_RUN_DIR);
+                TraceRunReplayWalker.plan(run, canonicalEmeraldRunDir);
         Bk2Movie movie = new Bk2MovieLoader().load(
-                S1_EMERALD_RUN_DIR.resolve(run.sourceBk2()));
+                canonicalEmeraldRunDir.resolve(run.sourceBk2()));
         TraceSessionLauncher session = new TraceSessionLauncher(
                 null, movie, plans, null);
         RecordingTimingFixture fixture = new RecordingTimingFixture(context);
@@ -1595,8 +1604,8 @@ class TestTraceSessionLauncherRunBranch {
         List<TraceRunReplayWalker.SegmentPlan> specialSegments;
         try {
             TraceRunManifest run = TraceRunManifest.load(
-                    SS_RUN_DIR.resolve("run_manifest.json"));
-            specialSegments = TraceRunReplayWalker.plan(run, SS_RUN_DIR);
+                    specialStageRunDir.resolve("run_manifest.json"));
+            specialSegments = TraceRunReplayWalker.plan(run, specialStageRunDir);
         } catch (Exception e) {
             throw new AssertionError(e);
         }
@@ -1624,6 +1633,71 @@ class TestTraceSessionLauncherRunBranch {
                         middle.entryBoundary(), middle.exitBoundary(),
                         middle.specialStageRows()),
                 specialSegments.get(2));
+    }
+
+    private static TraceData specialStagePublicationTrace() {
+        return TraceFixtures.trace(
+                TraceFixtures.metadataWithDynamicArt("s2", 0, 0, 2),
+                List.of(),
+                Map.of(
+                        0, List.of(new TraceEvent.DynamicArtTransferState(
+                                0,
+                                List.of(new DynamicArtTransfer.SegmentEdge(
+                                        0, 0, "submitted", "ss-sonic",
+                                        "segment", 3, 1, 0, 1, true,
+                                        0x33ADA,
+                                        List.of(new DynamicArtTransfer.Request(
+                                                -1, -1, 0xFF0020,
+                                                0x5CA0, 0x20)))),
+                                List.of(0L))),
+                        1, List.of(new TraceEvent.DynamicArtTransferState(
+                                1, List.of(), List.of()))));
+    }
+
+    private static Path canonicalizeInstalledRun(Path source, Path target)
+            throws Exception {
+        Files.createDirectories(target);
+        ObjectMapper mapper = new ObjectMapper();
+        try (var paths = Files.walk(source)) {
+            for (Path path : paths.filter(Files::isRegularFile).toList()) {
+                Path relative = source.relativize(path);
+                Path destination = target.resolve(relative);
+                Files.createDirectories(destination.getParent());
+                String filename = path.getFileName().toString();
+                if (filename.equals("metadata.json")
+                        || filename.equals("run_manifest.json")) {
+                    ObjectNode json = (ObjectNode) mapper.readTree(
+                            Files.readString(path));
+                    for (String removed : List.of(
+                            "run_" + "schema", "lua_" + "script_version",
+                            "csv_" + "version", "ss_" + "csv_" + "version",
+                            "hardware_" + "timing_schema")) {
+                        json.remove(removed);
+                    }
+                    json.put("trace_schema", 5);
+                    if (json.has("aux_schema_extras")) {
+                        var extras = json.withArray("aux_schema_extras");
+                        for (int index = 0; index < extras.size(); index++) {
+                            if ("dynamic_art_transfer_state_per_frame_v1"
+                                    .equals(extras.get(index).asText())) {
+                                extras.set(index,
+                                        mapper.getNodeFactory().textNode(
+                                                "dynamic_art_transfer_state_per_frame"));
+                            }
+                        }
+                    }
+                    if (filename.equals("run_manifest.json")
+                            && !json.has("dynamic_art_gap_transitions")) {
+                        json.putArray("dynamic_art_gap_transitions");
+                    }
+                    Files.writeString(destination,
+                            mapper.writeValueAsString(json));
+                } else {
+                    Files.copy(path, destination, StandardCopyOption.REPLACE_EXISTING);
+                }
+            }
+        }
+        return target;
     }
 
     @Test

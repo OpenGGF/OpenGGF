@@ -27,13 +27,11 @@ public class TraceBinder {
      * Test-only override for the native-prelude-mode signal consumed by
      * {@link #compareBootstrapFrame0(TraceData, EngineSnapshot)}. When
      * non-{@code null}, the comparator uses this value instead of reading
-     * {@code trace.metadata().nativePreludeMode()}.
+     * {@code trace.metadata().hasNativePreludeBootstrap()}.
      *
      * <p>Test-only hook for synthetic {@link TraceData} fixtures that omit
-     * {@code lua_script_version} or otherwise can't satisfy the production
-     * version-gate. Production callers leave the override {@code null} and
-     * read the real metadata flag, which derives bootstrap eligibility from
-     * {@code luaScriptVersion >= 9.2-s2}.
+     * the native-prelude capability. Production callers leave the override
+     * {@code null} and read the explicit metadata capability.
      */
     private static volatile Boolean NATIVE_PRELUDE_OVERRIDE_FOR_TESTS = null;
 
@@ -66,11 +64,11 @@ public class TraceBinder {
     /**
      * Package-private hook used only by tests in this package to flip the
      * native-prelude-mode signal for synthetic {@link TraceData} fixtures
-     * that don't carry a realistic {@code luaScriptVersion}.
+     * that don't carry the native-prelude capability.
      *
      * @param value {@code true} to force native-prelude mode on,
      *              {@code false} to force it off, {@code null} to fall back
-     *              to {@link TraceMetadata#nativePreludeMode()}.
+     *              to {@link TraceMetadata#hasNativePreludeBootstrap()}.
      */
     static void setNativePreludeOverrideForTests(Boolean value) {
         NATIVE_PRELUDE_OVERRIDE_FOR_TESTS = value;
@@ -1341,8 +1339,7 @@ public class TraceBinder {
     /**
      * Resolves the native-prelude-mode flag for {@code trace}. Tests can
      * override via {@link #setNativePreludeOverrideForTests(Boolean)};
-     * production reads {@link TraceMetadata#nativePreludeMode()} (which
-     * derives eligibility from {@code luaScriptVersion >= 9.2-s2}).
+     * production reads {@link TraceMetadata#hasNativePreludeBootstrap()}.
      */
     private static boolean nativePreludeMode(TraceData trace) {
         Boolean override = NATIVE_PRELUDE_OVERRIDE_FOR_TESTS;
@@ -1352,7 +1349,7 @@ public class TraceBinder {
         if (trace == null || trace.metadata() == null) {
             return false;
         }
-        return trace.metadata().nativePreludeMode();
+        return trace.metadata().hasNativePreludeBootstrap();
     }
 
     private static void comparePlayerHistory(TraceData trace,

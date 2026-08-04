@@ -13,8 +13,6 @@ namespace OpenGGF.BizHawk.Headless
     /// </summary>
     public sealed class HardwareTimingEventEngine
     {
-        public const int LegacySchema = 1;
-        public const int CurrentSchema = 2;
         public const uint ModuleChildSubmissionPc = 0x001B46;
         private const string ModuleKindName = "KOS_MODULE_QUEUE";
         private const string ModuleEventKind = "kos_module_queue";
@@ -87,7 +85,6 @@ namespace OpenGGF.BizHawk.Headless
         private bool priorDirectBusy;
         private readonly List<DirectSubmission> stagedDirectRetirements =
             new List<DirectSubmission>();
-        private readonly int hardwareTimingSchema;
         private readonly TextWriter measurementWriter;
         private readonly string measurementFixture;
         private readonly string measurementMovieSha256;
@@ -97,12 +94,7 @@ namespace OpenGGF.BizHawk.Headless
         private int measurementSequenceInFrame;
 
         public HardwareTimingEventEngine(byte[] rom)
-            : this(rom, CurrentSchema)
-        {
-        }
-
-        public HardwareTimingEventEngine(byte[] rom, int hardwareTimingSchema)
-            : this(rom, hardwareTimingSchema, null, null, null, null)
+            : this(rom, null, null, null, null)
         {
         }
 
@@ -111,7 +103,7 @@ namespace OpenGGF.BizHawk.Headless
             TextWriter measurementWriter,
             string measurementFixture)
             : this(
-                rom, CurrentSchema, measurementWriter, measurementFixture,
+                rom, measurementWriter, measurementFixture,
                 new string('0', 64), new string('0', 40))
         {
         }
@@ -122,32 +114,12 @@ namespace OpenGGF.BizHawk.Headless
             string measurementFixture,
             string movieSha256,
             string romSha1)
-            : this(
-                rom, CurrentSchema, measurementWriter, measurementFixture,
-                movieSha256, romSha1)
-        {
-        }
-
-        private HardwareTimingEventEngine(
-            byte[] rom,
-            int hardwareTimingSchema,
-            TextWriter measurementWriter,
-            string measurementFixture,
-            string movieSha256,
-            string romSha1)
         {
             if (rom == null)
             {
                 throw new ArgumentNullException("rom");
             }
-            if (hardwareTimingSchema != LegacySchema
-                && hardwareTimingSchema != CurrentSchema)
-            {
-                throw new ArgumentOutOfRangeException(
-                    "hardwareTimingSchema");
-            }
             this.rom = rom;
-            this.hardwareTimingSchema = hardwareTimingSchema;
             this.measurementWriter = measurementWriter;
             this.measurementFixture = measurementFixture;
             this.measurementMovieSha256 = movieSha256;
@@ -436,7 +408,17 @@ namespace OpenGGF.BizHawk.Headless
                 return ModuleTransition.None;
             }
             int expectedCount = queue.Count - 1;
-            if (physicalCount != expectedCount)
+            bool retirementWithAppend = physicalCount == queue.Count
+                && queue.Count >= 2
+                && ActiveEntryMatches(host, queue[1])
+                && ModuleQueueSlotMatchesActive(
+                    host, 0, queue[1]);
+            bool singleRetirementWithAppend = queue.Count == 1
+                && physicalCount == 1
+                && !ActiveEntryMatches(host, queue[0]);
+            if (physicalCount != expectedCount
+                && !retirementWithAppend
+                && !singleRetirementWithAppend)
             {
                 throw new InvalidDataException(
                     "Kos module final-head retirement changed FIFO"
@@ -453,7 +435,10 @@ namespace OpenGGF.BizHawk.Headless
                 }
                 return ModuleTransition.FinalHeadRetired;
             }
-            if ((modulesLeft & 0x80) != 0 || (modulesLeft & 0x7F) == 0)
+            bool busyShiftedHead = retirementWithAppend
+                || singleRetirementWithAppend;
+            if (((modulesLeft & 0x80) != 0 && !busyShiftedHead)
+                || (modulesLeft & 0x7F) == 0)
             {
                 throw new InvalidDataException(
                     "Kos module shifted head was not canonically"
@@ -465,7 +450,9 @@ namespace OpenGGF.BizHawk.Headless
                     "Kos module final-head retirement did not install the"
                     + " mirrored next head.");
             }
-            for (int index = 1; index < physicalCount; index++)
+            int shiftedExistingCount = Math.Min(
+                physicalCount, queue.Count - 1);
+            for (int index = 1; index < shiftedExistingCount; index++)
             {
                 int entry = S3KRam.KosModuleQueue
                     + index * S3KRam.KosModuleQueueEntrySize;
@@ -480,6 +467,18 @@ namespace OpenGGF.BizHawk.Headless
                 }
             }
             return ModuleTransition.FinalHeadRetired;
+        }
+
+        private static bool ModuleQueueSlotMatchesActive(
+            IGpgxHost host,
+            int index,
+            Submission submission)
+        {
+            int entry = S3KRam.KosModuleQueue
+                + index * S3KRam.KosModuleQueueEntrySize;
+            return S3KRam.U32(host, entry) == submission.Source + 2
+                && S3KRam.U16(host, entry + 4)
+                    == submission.Destination;
         }
 
         private static bool ActiveEntryMatches(
@@ -508,7 +507,7 @@ namespace OpenGGF.BizHawk.Headless
             foreach (DirectSubmission completed in stagedDirectRetirements)
             {
                 WriteMeasurement(completed, rawFrame, "pre_main_loop");
-                if (hardwareTimingSchema == CurrentSchema && writer != null)
+                if (writer != null)
                 {
                     DeferDirectCompletion(
                         ref deferredCompletions,
@@ -596,8 +595,7 @@ namespace OpenGGF.BizHawk.Headless
                 DirectSubmission completed = directQueue[0];
                 directQueue.RemoveAt(0);
                 WriteMeasurement(completed, rawFrame, "pre_main_loop");
-                if (hardwareTimingSchema == CurrentSchema
-                    && writer != null)
+                if (writer != null)
                 {
                     DeferDirectCompletion(
                         ref deferredCompletions,

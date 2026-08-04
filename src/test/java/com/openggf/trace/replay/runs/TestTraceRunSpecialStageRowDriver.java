@@ -6,6 +6,7 @@ import com.openggf.trace.TraceEvent;
 import com.openggf.trace.TraceFixtures;
 import com.openggf.trace.TraceFrame;
 import com.openggf.trace.TraceRunManifest;
+import com.openggf.tests.TestTempFiles;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -21,10 +22,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestTraceRunSpecialStageRowDriver {
-
-    private static final Path EMERALD_SPECIAL_STAGE = Path.of(
-            "src", "test", "resources", "traces", "s1", "runs",
-            "s1-sonic-complete-withemeralds", "ss");
 
     @Test
     void commitsAdvertisedRowOnlyAfterAtomicPublication(@TempDir Path dir)
@@ -94,11 +91,29 @@ class TestTraceRunSpecialStageRowDriver {
 
     @Test
     void commitsAll3728AdvertisedRowsFromEmeraldSpecialStage() throws Exception {
-        Path runDir = EMERALD_SPECIAL_STAGE.getParent();
+        Path runDir = TestTempFiles.createTempDirectory("trace-v5-emerald-run");
+        fixture(runDir.resolve("ss"), 3728);
+        Files.writeString(runDir.resolve("run_manifest.json"), """
+                {
+                  "trace_schema": 5,
+                  "game": "s1",
+                  "run_id": "synthetic-emerald",
+                  "source_bk2": "synthetic.bk2",
+                  "rom_checksum": "AFE05EEE",
+                  "segments": [
+                    {"dir":"ss","kind":"special_stage",
+                     "trace_profile":"s1_special_stage",
+                     "bk2_frame_offset":0,"trace_frame_count":3728,
+                     "zone_id":0,"act":0,"special_stage_index":0}
+                  ],
+                  "transitions": [],
+                  "dynamic_art_gap_transitions": []
+                }
+                """);
         TraceRunManifest run = TraceRunManifest.load(
                 runDir.resolve("run_manifest.json"));
         TraceRunReplayWalker.SegmentPlan special =
-                TraceRunReplayWalker.plan(run, runDir).get(1);
+                TraceRunReplayWalker.plan(run, runDir).getFirst();
         TraceRunSpecialStageRows rows = special.specialStageRows();
         TraceRunSpecialStageRowDriver driver = new TraceRunSpecialStageRowDriver(
                 rows, special.trace());
@@ -152,17 +167,18 @@ class TestTraceRunSpecialStageRowDriver {
     }
 
     private static Fixture fixture(Path dir, int rowCount) throws Exception {
+        Files.createDirectories(dir);
         Files.writeString(dir.resolve("metadata.json"), String.format("""
                 {
                   "game": "s1",
                   "act": 0,
                   "bk2_frame_offset": 0,
                   "trace_frame_count": %d,
-                  "trace_schema": 3,
+                  "trace_schema": 5,
                   "trace_profile": "s1_special_stage",
                   "start_x": "0000",
                   "start_y": "0000",
-                  "aux_schema_extras": ["dynamic_art_transfer_state_per_frame_v1"]
+                  "aux_schema_extras": ["dynamic_art_transfer_state_per_frame"]
                 }
                 """, rowCount));
         StringBuilder physics = new StringBuilder(

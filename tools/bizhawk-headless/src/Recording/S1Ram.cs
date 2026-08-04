@@ -12,6 +12,9 @@ namespace OpenGGF.BizHawk.Headless
     {
         // Global variables.
         public const int GameMode = 0xF600;              // u8 v_gamemode
+        public const int Ctrl1 = 0xF604;                 // u8 v_jpadhold1
+        public const int DemoFlag = 0xFFF0;              // u16be f_demo
+        public const int CreditsNum = 0xFFF4;            // u16be v_creditsnum
         public const int RingCount = 0xFE20;             // u16be ring count
         public const int CameraX = 0xF700;               // u16be pixel word of v_screenposx
         public const int CameraY = 0xF704;               // u16be pixel word of v_screenposy

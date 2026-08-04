@@ -23,8 +23,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S2SpecialStage input mask collapses ABC and includes Start",
                 InputMaskCollapsesAbcAndIncludesStart));
             tests.Add(new TestMain.TestCase(
-                "S2SpecialStage metadata matches the ss fixture byte layout",
-                MetadataMatchesSsFixtureByteLayout));
+                "S2SpecialStage metadata emits the strict v5 shape",
+                MetadataEmitsStrictV5Shape));
         }
 
         private static void CsvHeaderMatchesRecorder()
@@ -117,22 +117,23 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     new Bk2Frame { P1Start = true }));
         }
 
-        private static void MetadataMatchesSsFixtureByteLayout()
+        private static void MetadataEmitsStrictV5Shape()
         {
-            // Values from the canonical run fixture's ss/metadata.json.
+            // Current strict-v5 special-stage metadata values.
             AssertEx.Equal(
                 "{\n"
                 + "  \"game\": \"s2\",\n"
                 + "  \"trace_profile\": \"s2_special_stage\",\n"
                 + "  \"special_stage_index\": 0,\n"
-                + "  \"ss_csv_version\": 1,\n"
                 + "  \"characters\": [\"sonic\", \"tails\"],\n"
                 + "  \"main_character\": \"sonic\",\n"
                 + "  \"sidekicks\": [\"tails\"],\n"
                 + "  \"bk2_frame_offset\": 3795,\n"
                 + "  \"trace_frame_count\": 5733,\n"
                 + "  \"source_bk2\": \"s2-ehz-halfpipe-roundtrip.bk2\",\n"
-                + "  \"lua_script_version\": \"9.13-s2\",\n"
+                + "  \"recorder\": \"native-bizhawk-headless\",\n"
+                + "  \"recorder_version\": \"3.0\",\n"
+                + "  \"trace_schema\": 5,\n"
                 + "  \"recording_date\": \"2026-07-19\",\n"
                 + "  \"run_id\": \"s2-ehz-halfpipe-roundtrip\",\n"
                 + "  \"fresh_load\": false,\n"

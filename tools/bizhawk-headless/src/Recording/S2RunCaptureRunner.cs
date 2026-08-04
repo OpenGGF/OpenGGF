@@ -575,7 +575,8 @@ namespace OpenGGF.BizHawk.Headless
                     recordingDate,
                     runId,
                     segments.Count,
-                    loadQueueRom != null);
+                    loadQueueRom != null,
+                    traceFrame > 0);
                 var entry = new RunManifestSegment(
                     dirToken,
                     RunManifestSegment.LevelKind,

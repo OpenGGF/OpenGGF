@@ -1,6 +1,7 @@
 package com.openggf.trace.catalog;
 
 import com.openggf.trace.TraceRunManifest;
+import com.openggf.tests.trace.TraceV5RunFixture;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -14,48 +15,37 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestTraceCatalogRunDiscovery {
 
     @Test
-    void discoversLegacyCatalogCompleteRunsWithoutHidingIndividualSegments() {
-        Path tracesRoot = Path.of("src", "test", "resources", "traces");
+    void discoversGeneratedV5RunWithoutHidingIndividualSegments(@TempDir Path tracesRoot)
+            throws IOException {
+        Path runs = tracesRoot.resolve("s3k/runs");
+        TraceV5RunFixture.writeS3kBonusRun(runs);
+        Path movies = tracesRoot.resolve("s3k/_movies");
+        TraceV5RunFixture.writeMovie(movies.resolve("synthetic.bk2"));
 
         List<TraceEntry> entries = TraceCatalog.scan(tracesRoot);
 
-        TraceEntry s1 = entries.stream()
-                .filter(TraceEntry::isRun)
-                .filter(entry -> "s1-complete-run".equals(
-                        entry.runManifest().runId()))
-                .findFirst()
-                .orElseThrow();
         TraceEntry s3k = entries.stream()
                 .filter(TraceEntry::isRun)
-                .filter(entry -> "s3k-complete-sonic-tails".equals(
+                .filter(entry -> "run_aiz_gumball_3seg".equals(
                         entry.runManifest().runId()))
                 .findFirst()
                 .orElseThrow();
 
-        assertEquals(19, s1.runManifest().segments().size());
-        assertEquals("ghz1_completerun",
-                s1.runManifest().segments().getFirst().dir());
-        assertEquals(5_598,
-                s1.runManifest().segments().getFirst().traceFrameCount());
-        assertEquals("fz_completerun",
-                s1.runManifest().segments().getLast().dir());
-        assertTrue(s1.runManifest().transitions().isEmpty());
-        assertEquals(15, s3k.runManifest().segments().size());
-        assertTrue(entries.stream().anyMatch(entry -> !entry.isRun()
-                && "ghz1_completerun".equals(
-                        entry.dir().getFileName().toString())));
-        assertTrue(entries.stream().anyMatch(entry -> !entry.isRun()
-                && "aiz_completerun".equals(
-                        entry.dir().getFileName().toString())));
+        assertEquals(3, s3k.runManifest().segments().size());
+        assertEquals("seg00_aiz", s3k.runManifest().segments().getFirst().dir());
+        assertEquals("seg02_aiz", s3k.runManifest().segments().getLast().dir());
+        assertEquals(2, s3k.runManifest().transitions().size());
     }
 
     @Test
-    void preparesCommittedKnucklesCompleteRunWithCanonicalizedTiming()
+    void preparesGeneratedV5RunWithCanonicalizedTiming(@TempDir Path tracesRoot)
             throws Exception {
-        Path tracesRoot = Path.of("src", "test", "resources", "traces");
+        TraceV5RunFixture.writeS3kBonusRun(tracesRoot.resolve("s3k/runs"));
+        Path movies = tracesRoot.resolve("s3k/_movies");
+        TraceV5RunFixture.writeMovie(movies.resolve("synthetic.bk2"));
         TraceEntry run = TraceCatalog.scan(tracesRoot).stream()
                 .filter(TraceEntry::isRun)
-                .filter(entry -> "s3k-knuckles-complete-superemeralds"
+                .filter(entry -> "run_aiz_gumball_3seg"
                         .equals(entry.runManifest().runId()))
                 .findFirst()
                 .orElseThrow();
@@ -69,15 +59,10 @@ class TestTraceCatalogRunDiscovery {
 
     @Test
     void discoversRunManifestAsSingleEntry(@TempDir Path root) throws Exception {
-        // Copy the committed synthetic run fixture into <root>/s3k/runs/run_aiz_gumball_3seg
-        Path src = Path.of("src", "test", "resources", "traces", "synthetic", "run_aiz_gumball_3seg");
-        Path runDir = root.resolve("s3k").resolve("runs").resolve("run_aiz_gumball_3seg");
-        Files.createDirectories(runDir.getParent());
-        copyRecursively(src, runDir);
-        // The manifest's source_bk2 must resolve: place a dummy bk2 at <root>/s3k/_movies/synthetic.bk2
+        Path runDir = TraceV5RunFixture.writeS3kBonusRun(root.resolve("s3k/runs"));
+        // The manifest's source_bk2 resolves to a generated movie at this standard path.
         Path movies = root.resolve("s3k").resolve("_movies");
-        Files.createDirectories(movies);
-        Files.write(movies.resolve("synthetic.bk2"), new byte[] {0});
+        TraceV5RunFixture.writeMovie(movies.resolve("synthetic.bk2"));
 
         List<TraceEntry> entries = TraceCatalog.scan(root);
         List<TraceEntry> runs = entries.stream().filter(TraceEntry::isRun).toList();
@@ -94,9 +79,8 @@ class TestTraceCatalogRunDiscovery {
     void sharedMovieWinsWhenRunAlsoContainsLocalCopy(@TempDir Path root) throws Exception {
         Path runDir = copySyntheticRun(root, "s3k");
         Path sharedMovie = root.resolve("s3k/_movies/synthetic.bk2");
-        Files.createDirectories(sharedMovie.getParent());
-        Files.write(sharedMovie, new byte[] {1});
-        Files.write(runDir.resolve("synthetic.bk2"), new byte[] {2});
+        TraceV5RunFixture.writeMovie(sharedMovie);
+        TraceV5RunFixture.writeMovie(runDir.resolve("synthetic.bk2"));
 
         TraceEntry run = TraceCatalog.scan(root).stream()
                 .filter(TraceEntry::isRun)
@@ -110,7 +94,7 @@ class TestTraceCatalogRunDiscovery {
     void fallsBackToContainedMovieInsideRunDirectory(@TempDir Path root) throws Exception {
         Path runDir = copySyntheticRun(root, "s3k");
         Path localMovie = runDir.resolve("synthetic.bk2");
-        Files.write(localMovie, new byte[] {1});
+        TraceV5RunFixture.writeMovie(localMovie);
 
         TraceEntry run = TraceCatalog.scan(root).stream()
                 .filter(TraceEntry::isRun)
@@ -124,7 +108,7 @@ class TestTraceCatalogRunDiscovery {
     void rejectsAbsoluteRunMoviePath(@TempDir Path root) throws Exception {
         Path runDir = copySyntheticRun(root, "s3k");
         Path outsideMovie = root.resolve("outside.bk2").toAbsolutePath();
-        Files.write(outsideMovie, new byte[] {1});
+        TraceV5RunFixture.writeMovie(outsideMovie);
         replaceSourceBk2(runDir, outsideMovie.toString());
 
         assertTrue(TraceCatalog.scan(root).stream().noneMatch(TraceEntry::isRun));
@@ -134,30 +118,30 @@ class TestTraceCatalogRunDiscovery {
     void rejectsRunMovieParentTraversal(@TempDir Path root) throws Exception {
         Path runDir = copySyntheticRun(root, "s3k");
         Path outsideMovie = runDir.getParent().resolve("outside.bk2");
-        Files.write(outsideMovie, new byte[] {1});
+        TraceV5RunFixture.writeMovie(outsideMovie);
         replaceSourceBk2(runDir, "../outside.bk2");
 
         assertTrue(TraceCatalog.scan(root).stream().noneMatch(TraceEntry::isRun));
     }
 
     @Test
-    void discoversCommittedS2RunWithLocalMovie() throws Exception {
-        Path tracesRoot = Path.of("src", "test", "resources", "traces");
-        Path runDir = tracesRoot.resolve("s2/runs/s2-ehz-halfpipe-roundtrip");
+    void discoversGeneratedS2RunWithLocalMovie(@TempDir Path tracesRoot) throws Exception {
+        Path runDir = TraceV5RunFixture.writeS2SpecialStageRun(tracesRoot.resolve("s2/runs"));
+        TraceV5RunFixture.writeMovie(runDir.resolve("synthetic.bk2"));
         TraceRunManifest manifest = TraceRunManifest.load(
                 runDir.resolve("run_manifest.json"));
         manifest.validate(runDir);
-        assertEquals(runDir.resolve("s2-ehz-halfpipe-roundtrip.bk2"),
+        assertEquals(runDir.resolve("synthetic.bk2"),
                 TraceCatalog.resolveRunBk2(runDir, manifest));
 
         TraceEntry run = TraceCatalog.scan(tracesRoot).stream()
                 .filter(TraceEntry::isRun)
-                .filter(entry -> "s2-ehz-halfpipe-roundtrip"
+                .filter(entry -> "run_ehz_ss_3seg"
                         .equals(entry.runManifest().runId()))
                 .findFirst()
                 .orElseThrow();
 
-        assertEquals(runDir.resolve("s2-ehz-halfpipe-roundtrip.bk2"),
+        assertEquals(runDir.resolve("synthetic.bk2"),
                 run.bk2Path());
     }
 
@@ -166,13 +150,9 @@ class TestTraceCatalogRunDiscovery {
         // Place an OTHERWISE-VALID run under synthetic/runs/ — without the scanRuns
         // synthetic filter it would be discovered. Assert it is excluded, mirroring
         // the level scan's synthetic exclusion.
-        Path src = Path.of("src", "test", "resources", "traces", "synthetic", "run_aiz_gumball_3seg");
-        Path runDir = root.resolve("synthetic").resolve("runs").resolve("run_aiz_gumball_3seg");
-        Files.createDirectories(runDir.getParent());
-        copyRecursively(src, runDir);
+        Path runDir = TraceV5RunFixture.writeS3kBonusRun(root.resolve("synthetic/runs"));
         Path movies = root.resolve("synthetic").resolve("_movies");
-        Files.createDirectories(movies);
-        Files.write(movies.resolve("synthetic.bk2"), new byte[] {0});
+        TraceV5RunFixture.writeMovie(movies.resolve("synthetic.bk2"));
 
         List<TraceEntry> entries = TraceCatalog.scan(root);
         assertTrue(entries.stream().noneMatch(TraceEntry::isRun),
@@ -183,19 +163,13 @@ class TestTraceCatalogRunDiscovery {
     void invalidRunIsSkippedNotFatal(@TempDir Path root) throws Exception {
         Path badRun = root.resolve("s3k").resolve("runs").resolve("broken");
         Files.createDirectories(badRun);
-        Files.writeString(badRun.resolve("run_manifest.json"), "{\"run_schema\": 99}");
+        Files.writeString(badRun.resolve("run_manifest.json"), "{}");
         List<TraceEntry> entries = TraceCatalog.scan(root);
         assertTrue(entries.stream().noneMatch(TraceEntry::isRun));
     }
 
     private static Path copySyntheticRun(Path root, String game) throws IOException {
-        Path src = Path.of("src", "test", "resources", "traces", "synthetic",
-                "run_aiz_gumball_3seg");
-        Path runDir = root.resolve(game).resolve("runs")
-                .resolve("run_aiz_gumball_3seg");
-        Files.createDirectories(runDir.getParent());
-        copyRecursively(src, runDir);
-        return runDir;
+        return TraceV5RunFixture.writeS3kBonusRun(root.resolve(game).resolve("runs"));
     }
 
     private static void replaceSourceBk2(Path runDir, String sourceBk2)
@@ -207,17 +181,4 @@ class TestTraceCatalogRunDiscovery {
                         "\"source_bk2\": \"" + sourceBk2.replace("\\", "\\\\") + "\""));
     }
 
-    private static void copyRecursively(Path src, Path dest) throws IOException {
-        try (var stream = Files.walk(src)) {
-            for (Path path : stream.toList()) {
-                Path target = dest.resolve(src.relativize(path));
-                if (Files.isDirectory(path)) {
-                    Files.createDirectories(target);
-                } else {
-                    Files.createDirectories(target.getParent());
-                    Files.copy(path, target);
-                }
-            }
-        }
-    }
 }

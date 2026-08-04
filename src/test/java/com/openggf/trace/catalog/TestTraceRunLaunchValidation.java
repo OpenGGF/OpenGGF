@@ -2,6 +2,7 @@ package com.openggf.trace.catalog;
 
 import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker;
+import com.openggf.tests.trace.TraceV5RunFixture;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -18,11 +19,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestTraceRunLaunchValidation {
 
     @Test
-    void committedLegacyS1CompleteRunAcceptsMissingLevelMetadataProfile() {
-        Path root = Path.of("src", "test", "resources", "traces");
+    void generatedV5RunPassesLaunchValidation(@TempDir Path root) throws Exception {
+        prepareSyntheticRunWithValidMovie(root);
         TraceEntry entry = TraceCatalog.scan(root).stream()
                 .filter(TraceEntry::isRun)
-                .filter(candidate -> "s1-ghz-maze-roundtrip".equals(
+                .filter(candidate -> "run_aiz_gumball_3seg".equals(
                         candidate.runManifest().runId()))
                 .findFirst()
                 .orElseThrow();
@@ -34,11 +35,12 @@ class TestTraceRunLaunchValidation {
     }
 
     @Test
-    void preparationLoadsMovieAndSegmentPayloadsExactlyOnce() throws Exception {
-        Path root = Path.of("src", "test", "resources", "traces");
+    void preparationLoadsGeneratedV5MovieAndSegmentPayloadsExactlyOnce(
+            @TempDir Path root) throws Exception {
+        prepareSyntheticRunWithValidMovie(root);
         TraceEntry entry = TraceCatalog.scan(root).stream()
                 .filter(TraceEntry::isRun)
-                .filter(candidate -> "s1-ghz-maze-roundtrip".equals(
+                .filter(candidate -> "run_aiz_gumball_3seg".equals(
                         candidate.runManifest().runId()))
                 .findFirst()
                 .orElseThrow();
@@ -62,20 +64,16 @@ class TestTraceRunLaunchValidation {
     }
 
     @Test
-    void committedSchemaTwoRunValidatesNonEmptyDestinationOpeningLedger()
-            throws Exception {
-        Path runDir = Path.of("src", "test", "resources", "traces", "s2",
-                "runs", "s2-ehz-halfpipe-roundtrip");
+    void generatedV5RunPlansEverySegment(@TempDir Path root) throws Exception {
+        Path runDir = prepareSyntheticRunWithValidMovie(root);
         TraceRunManifest run = TraceRunManifest.load(
                 runDir.resolve("run_manifest.json"));
 
         var plans = TraceRunReplayWalker.plan(run, runDir);
 
-        assertEquals(5, plans.size());
-        assertEquals(List.of(8078L), plans.get(3).segment()
-                .dynamicArtInitialLedgerDescriptors().stream()
-                .map(descriptor -> descriptor.transferId())
-                .toList());
+        assertEquals(3, plans.size());
+        assertTrue(plans.stream().allMatch(plan -> plan.trace().metadata()
+                .hasPerFrameDynamicArtTransferState()));
     }
 
     @Test
@@ -116,10 +114,10 @@ class TestTraceRunLaunchValidation {
             throws Exception {
         Path runDir = prepareSyntheticRunWithValidMovie(root);
         mutateManifest(runDir, json -> json
-                .replaceFirst("\"kind\": \"level\"",
-                        "\"kind\": \"special_stage\"")
-                .replaceFirst("\"act\": 1}",
-                        "\"act\": 1, \"special_stage_index\": 0}"));
+                .replaceFirst("\"kind\":\"level\"",
+                        "\"kind\":\"special_stage\"")
+                .replaceFirst("\"act\":1}",
+                        "\"act\":1,\"special_stage_index\":0}"));
 
         assertVisibleButInvalid(root, "segment 0 must be level");
     }
@@ -129,8 +127,8 @@ class TestTraceRunLaunchValidation {
             throws Exception {
         Path runDir = prepareSyntheticRunWithValidMovie(root);
         mutateManifest(runDir,
-                json -> json.replace("\"bk2_frame_offset\": 2900",
-                        "\"bk2_frame_offset\": 999999"));
+                json -> json.replace("\"bk2_frame_offset\":2900",
+                        "\"bk2_frame_offset\":999999"));
 
         assertVisibleButInvalid(root, "BK2 range");
     }
@@ -140,8 +138,8 @@ class TestTraceRunLaunchValidation {
             throws Exception {
         Path runDir = prepareSyntheticRunWithValidMovie(root);
         mutateManifest(runDir,
-                json -> json.replace("\"trace_profile\": \"s3k_bonus_stage\"",
-                        "\"trace_profile\": \"unsupported_bonus\""));
+                json -> json.replace("\"trace_profile\":\"s3k_bonus_stage\"",
+                        "\"trace_profile\":\"unsupported_bonus\""));
 
         assertVisibleButInvalid(root, "profile");
     }
@@ -161,8 +159,8 @@ class TestTraceRunLaunchValidation {
             throws Exception {
         Path runDir = prepareSyntheticRunWithValidMovie(root);
         mutateManifest(runDir,
-                json -> json.replaceFirst("\"trace_frame_count\": 2",
-                        "\"trace_frame_count\": 3"));
+                json -> json.replaceFirst("\"trace_frame_count\":2",
+                        "\"trace_frame_count\":3"));
 
         assertVisibleButInvalid(root, "row count");
     }
@@ -181,14 +179,8 @@ class TestTraceRunLaunchValidation {
     }
 
     private static Path prepareSyntheticRunWithValidMovie(Path root) throws IOException {
-        Path source = Path.of("src", "test", "resources", "traces", "synthetic",
-                "run_aiz_gumball_3seg");
-        Path runDir = root.resolve("s3k/runs/run_aiz_gumball_3seg");
-        copyRecursively(source, runDir);
-        Files.copy(
-                Path.of("src", "test", "resources", "traces", "s2", "runs",
-                        "s2-ehz-halfpipe-roundtrip", "s2-ehz-halfpipe-roundtrip.bk2"),
-                runDir.resolve("synthetic.bk2"));
+        Path runDir = TraceV5RunFixture.writeS3kBonusRun(root.resolve("s3k/runs"));
+        TraceV5RunFixture.writeMovie(runDir.resolve("synthetic.bk2"));
         return runDir;
     }
 
@@ -198,17 +190,4 @@ class TestTraceRunLaunchValidation {
         Files.writeString(manifest, mutation.apply(Files.readString(manifest)));
     }
 
-    private static void copyRecursively(Path source, Path destination) throws IOException {
-        try (var paths = Files.walk(source)) {
-            for (Path path : paths.toList()) {
-                Path target = destination.resolve(source.relativize(path));
-                if (Files.isDirectory(path)) {
-                    Files.createDirectories(target);
-                } else {
-                    Files.createDirectories(target.getParent());
-                    Files.copy(path, target);
-                }
-            }
-        }
-    }
 }

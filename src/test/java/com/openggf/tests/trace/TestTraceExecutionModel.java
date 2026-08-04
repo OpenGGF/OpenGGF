@@ -163,8 +163,8 @@ class TestTraceExecutionModel {
 
     @Test
     void sonic3kMissingCpuExecutionHookMarksMovingDuplicateAsLag() throws Exception {
-        TraceData trace = TraceData.load(
-                Path.of("src/test/resources/traces/s3k/cnz_completerun"));
+        TraceData trace = TraceData.load(TraceV5TestFixture.canonicalizeInstalledTrace(
+                Path.of("src/test/resources/traces/s3k/cnz_completerun")));
         TraceFrame previous = trace.getFrame(22347);
         TraceFrame current = trace.getFrame(22348);
 
@@ -176,8 +176,8 @@ class TestTraceExecutionModel {
 
     @Test
     void sonic3kObjectHeldDuplicateStillExecutesItsControllerFrame() throws Exception {
-        TraceData trace = TraceData.load(
-                Path.of("src/test/resources/traces/s3k/hcz_completerun"));
+        TraceData trace = TraceData.load(TraceV5TestFixture.canonicalizeInstalledTrace(
+                Path.of("src/test/resources/traces/s3k/hcz_completerun")));
         TraceFrame previous = trace.getFrame(17415);
         TraceFrame current = trace.getFrame(17416);
 
@@ -188,8 +188,8 @@ class TestTraceExecutionModel {
 
     @Test
     void preLevelS3kIntroPrefixTicksReplayAsFullFramesBeforeGameplayStart() throws Exception {
-        TraceData trace = TraceData.load(
-                Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun"));
+        TraceData trace = TraceData.load(TraceV5TestFixture.canonicalizeInstalledTrace(
+                Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun")));
         // Frames 500/501 are well into the AIZ1 intro cutscene (past the first
         // in-level frame at 289, before gameplay_start). This section is
         // native level execution, so it must tick as full frames even while
@@ -204,7 +204,8 @@ class TestTraceExecutionModel {
 
     @Test
     void s2VblankSplitUsesFollowingVisualDiagnosticsOnly() throws Exception {
-        TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s2/mtz3"));
+        TraceData trace = TraceData.load(TraceV5TestFixture.canonicalizeInstalledTrace(
+                Path.of("src/test/resources/traces/s2/mtz3")));
         TraceFrame previous = trace.getFrame(5179);
         TraceFrame current = trace.getFrame(5180);
         TraceFrame next = trace.getFrame(5181);
@@ -230,8 +231,8 @@ class TestTraceExecutionModel {
 
     @Test
     void s3kRingDiagnosticComparisonKeepsCurrentTraceRingCount() throws Exception {
-        TraceData trace = TraceData.load(
-                Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun"));
+        TraceData trace = TraceData.load(TraceV5TestFixture.canonicalizeInstalledTrace(
+                Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun")));
         TraceFrame current = trace.getFrame(6203);
         TraceFrame next = trace.getFrame(6204);
         EngineDiagnostics engineDiag = new EngineDiagnostics(-1, -1, -1, next.rings(),
@@ -252,8 +253,8 @@ class TestTraceExecutionModel {
 
     @Test
     void s3kRingDiagnosticComparisonKeepsPersistentMismatchVisible() throws Exception {
-        TraceData trace = TraceData.load(
-                Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun"));
+        TraceData trace = TraceData.load(TraceV5TestFixture.canonicalizeInstalledTrace(
+                Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun")));
         TraceFrame current = trace.getFrame(6203);
         TraceFrame next = trace.getFrame(6204);
         EngineDiagnostics engineDiag = new EngineDiagnostics(-1, -1, -1, next.rings() + 1,
@@ -268,8 +269,8 @@ class TestTraceExecutionModel {
 
     @Test
     void s3kVblankSplitUsesFollowingCameraButCurrentRingCount() throws Exception {
-        TraceData trace = TraceData.load(
-                Path.of("src/test/resources/traces/s3k/aiz_completerun"));
+        TraceData trace = TraceData.load(TraceV5TestFixture.canonicalizeInstalledTrace(
+                Path.of("src/test/resources/traces/s3k/aiz_completerun")));
         int currentIndex = -1;
         for (int i = 1; i + 1 < trace.frameCount(); i++) {
             TraceFrame candidate = trace.getFrame(i);
@@ -378,20 +379,45 @@ class TestTraceExecutionModel {
               "start_x": "0x0000",
               "start_y": "0x0000",
               "recording_date": "2026-06-09",
-              "lua_script_version": "6.25-s3k",
               "trace_schema": 5,
               "characters": ["sonic", "tails"]
             }
             """);
-        Files.writeString(dir.resolve("physics.csv"), """
-            frame,input,x,y,x_speed,y_speed,g_speed,angle,air,rolling,ground_mode,x_sub,y_sub,routine,camera_x,camera_y,rings,status_byte,gameplay_frame_counter,stand_on_obj,vblank_counter,lag_counter,sidekick_present,sidekick_x,sidekick_y,sidekick_x_speed,sidekick_y_speed,sidekick_g_speed,sidekick_angle,sidekick_air,sidekick_rolling,sidekick_ground_mode,sidekick_x_sub,sidekick_y_sub,sidekick_routine,sidekick_status_byte,sidekick_stand_on_obj
-            0000,0000,4AD8,0342,0000,0C08,0000,00,1,0,0,4100,7B00,02,4A38,02B6,0061,02,0000,08,0500,0000,1,4AE3,0346,0000,0C08,0000,00,1,0,0,E300,7C00,02,03,08
-            0001,0000,4AD8,0342,0000,0C08,0000,00,1,0,0,4100,7B00,02,4A38,02B6,0061,02,0000,08,0500,0000,1,4AE3,0346,0000,0C08,0000,00,1,0,0,E300,7C00,02,03,08
-            """);
+        Files.writeString(dir.resolve("physics.csv"),
+                TraceV5TestFixture.LEVEL_HEADER + "\n"
+                        + s3kPhaseRow(0) + "\n"
+                        + s3kPhaseRow(1) + "\n");
         Files.writeString(dir.resolve("aux_state.jsonl"), String.format(
                 "{\"frame\":0,\"event\":\"zone_act_state\",\"actual_zone_id\":1,"
                         + "\"actual_act\":0,\"apparent_act\":0,\"game_mode\":%d}%n",
                 gameMode));
         return TraceData.load(dir);
+    }
+
+    private static String s3kPhaseRow(int frame) {
+        String[] fields = TraceV5TestFixture.levelRow(frame).split(",", -1);
+        fields[2] = "4A38";
+        fields[3] = "02B6";
+        fields[4] = "0061";
+        fields[5] = "0000";
+        fields[6] = "0500";
+        fields[7] = "0000";
+        fields[8] = "1";
+        fields[9] = "4AD8";
+        fields[10] = "0342";
+        fields[12] = "0C08";
+        fields[20] = "02";
+        fields[22] = "08";
+        fields[25] = "1";
+        fields[26] = "4AE3";
+        fields[27] = "0346";
+        fields[29] = "0C08";
+        fields[31] = "1";
+        fields[36] = "E300";
+        fields[37] = "7C00";
+        fields[38] = "02";
+        fields[39] = "03";
+        fields[40] = "08";
+        return String.join(",", fields);
     }
 }

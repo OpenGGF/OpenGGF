@@ -238,9 +238,9 @@ class TestPreludeFramesKnobsZero {
                 /* startXHex */ "0x0000",
                 /* startYHex */ "0x0000",
                 /* recordingDate */ null,
-                /* luaScriptVersion */ "9.2-s2",
-                /* traceSchema */ 3,
-                /* csvVersion */ null,
+                /* recorder */ null,
+                /* recorderVersion */ null,
+                /* traceSchema */ 5,
                 traceProfile,
                 /* bizhawkVersion */ null,
                 /* genesisCore */ null,
@@ -266,7 +266,6 @@ class TestPreludeFramesKnobsZero {
                 /* segmentIndex */ null,
                 /* bonusStageType */ null,
                 /* freshLoad */ null,
-                /* vIntRunCount */ null,
-                /* hardwareTimingSchema */ null);
+                /* vIntRunCount */ null);
     }
 }

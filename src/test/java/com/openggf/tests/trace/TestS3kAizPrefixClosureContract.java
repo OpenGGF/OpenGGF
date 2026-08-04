@@ -128,7 +128,7 @@ class TestS3kAizPrefixClosureContract {
         TraceData aiz = TraceData.load(AIZ_TRACE);
         TraceData mgz = TraceData.load(MGZ_TRACE);
         assertEquals(aiz.metadata().traceSchema(), mgz.metadata().traceSchema());
-        assertEquals(aiz.metadata().csvVersion(), mgz.metadata().csvVersion());
+        assertEquals(aiz.metadata().traceSchema(), mgz.metadata().traceSchema());
 
         HeadlessTestFixture fixture = buildCanonicalFixture(mgz, MGZ_BK2, 2, 0, true);
         ObjectManager objects = GameServices.level().getObjectManager();

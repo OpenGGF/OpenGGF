@@ -54,10 +54,7 @@ public final class TraceRunDynamicArtGapComparator {
         }
     }
 
-    /**
-     * Compares one source-to-destination gap. Schema 1 deliberately emits only
-     * structural fields because that manifest schema has no gap payload.
-     */
+    /** Compares one source-to-destination gap. */
     public static FrameComparison compare(
             int frame,
             TraceRunManifest manifest,
@@ -78,14 +75,6 @@ public final class TraceRunDynamicArtGapComparator {
                 manifest.segments().get(sourceSegmentIndex + 1);
         Map<String, FieldComparison> fields = new LinkedHashMap<>();
         compareStructure(fields, source, destination, actual);
-        if (manifest.runSchema() == 1) {
-            return new FrameComparison(frame, fields);
-        }
-        if (manifest.runSchema() != 2) {
-            throw new IllegalArgumentException(
-                    "unsupported run schema " + manifest.runSchema());
-        }
-
         List<DynamicArtTransfer.GapTransition> expectedTransitions =
                 gapSlice(manifest, sourceSegmentIndex);
         compareRuntimeTransitions(fields, expectedTransitions, actual,

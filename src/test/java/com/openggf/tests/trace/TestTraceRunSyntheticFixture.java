@@ -3,6 +3,7 @@ package com.openggf.tests.trace;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceRunManifest;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
 
@@ -10,18 +11,16 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class TestTraceRunSyntheticFixture {
 
-    private static final Path RUN_DIR =
-        Path.of("src", "test", "resources", "traces", "synthetic", "run_aiz_gumball_3seg");
-
     @Test
-    void syntheticRunLoadsValidatesAndSegmentsParse() throws Exception {
-        TraceRunManifest run = TraceRunManifest.load(RUN_DIR.resolve("run_manifest.json"));
-        run.validate(RUN_DIR);
+    void syntheticRunLoadsValidatesAndSegmentsParse(@TempDir Path root) throws Exception {
+        Path runDir = TraceV5RunFixture.writeS3kBonusRun(root);
+        TraceRunManifest run = TraceRunManifest.load(runDir.resolve("run_manifest.json"));
+        run.validate(runDir);
         assertEquals(3, run.segments().size());
         // The bonus segment parses through the EXISTING level trace loader —
         // this is the spec's "bonus reuses CSV v7 level schema" contract.
         for (TraceRunManifest.Segment seg : run.segments()) {
-            TraceData data = TraceData.load(RUN_DIR.resolve(seg.dir()));
+            TraceData data = TraceData.load(runDir.resolve(seg.dir()));
             assertEquals(seg.traceFrameCount(), data.frameCount(),
                 "segment " + seg.dir());
         }

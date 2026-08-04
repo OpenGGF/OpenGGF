@@ -198,8 +198,7 @@ class TestS3kSpecialStageTraceParsing {
             {
               "game": "s3k",
               "trace_profile": "%s",
-              "trace_schema": 1,
-              "ss_csv_version": 1,
+              "trace_schema": 5,
               "act": 1,
               "bk2_frame_offset": 0,
               "trace_frame_count": 2,

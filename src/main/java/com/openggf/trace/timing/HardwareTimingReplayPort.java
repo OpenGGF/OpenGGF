@@ -377,12 +377,6 @@ public final class HardwareTimingReplayPort
             }
             Objects.requireNonNull(edge.boundary(), "hardware completion boundary");
             Objects.requireNonNull(edge.kind(), "hardware completion kind");
-            if (schedule.admissionPolicies().get(edge.kind())
-                    != com.openggf.game.timing.HardwareReadinessAdmissionPolicy.RECORDED) {
-                throw new IllegalArgumentException(
-                        "hardware completion edge kind is not recorded by schema "
-                                + schedule.schema() + ": " + edge.kind());
-            }
             Objects.requireNonNull(
                     edge.submissionFingerprint(), "hardware completion fingerprint");
             if (edge.ordinal() < 0) {

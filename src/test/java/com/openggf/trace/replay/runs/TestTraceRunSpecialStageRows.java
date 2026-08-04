@@ -116,7 +116,7 @@ class TestTraceRunSpecialStageRows {
     private static void writeMetadata(Path dir, String game, String profile, int rows,
             boolean advertisedDynamicArt) throws Exception {
         String extras = advertisedDynamicArt
-                ? ",\n  \"aux_schema_extras\": [\"dynamic_art_transfer_state_per_frame_v1\"]"
+                ? ",\n  \"aux_schema_extras\": [\"dynamic_art_transfer_state_per_frame\"]"
                 : "";
         Files.writeString(dir.resolve("metadata.json"), String.format("""
                 {
@@ -124,7 +124,7 @@ class TestTraceRunSpecialStageRows {
                   "act": 0,
                   "bk2_frame_offset": 0,
                   "trace_frame_count": %d,
-                  "trace_schema": 3,
+                  "trace_schema": 5,
                   "trace_profile": "%s",
                   "start_x": "0000",
                   "start_y": "0000"%s

@@ -132,7 +132,7 @@ class TestTraceHardwareTimingScheduleCompiler {
                                 previousRawFrame, 10, previousGameplayCounter, 0),
                         TraceFrame.executionTestFrame(
                                 currentRawFrame, 11, currentGameplayCounter, 0)),
-                new HardwareTimingSchedule(2, List.of(edge)));
+                new HardwareTimingSchedule(List.of(edge)));
     }
 
     private static HardwareCompletionEdge edge(

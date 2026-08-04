@@ -23,7 +23,7 @@ final class TraceHardwareTimingScheduleCompiler {
     static HardwareTimingSchedule compileForInstall(TraceData trace) {
         Objects.requireNonNull(trace, "trace");
         HardwareTimingSchedule schedule = trace.hardwareTimingSchedule();
-        if (schedule.schema() != 2 || schedule.edges().isEmpty()) {
+        if (!schedule.hasRecordedInput() || schedule.edges().isEmpty()) {
             return schedule;
         }
 

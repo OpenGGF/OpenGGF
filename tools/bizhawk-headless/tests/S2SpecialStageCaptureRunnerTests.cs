@@ -138,7 +138,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         "\"event\":\"dynamic_art_transfer_state\""));
                 AssertContains(
                     metadata.ToString(),
-                    "\"dynamic_art_transfer_state_per_frame_v1\"");
+                    "\"dynamic_art_transfer_state_per_frame\"");
                 AssertEx.Equal(
                     false,
                     metadata.ToString().Contains(

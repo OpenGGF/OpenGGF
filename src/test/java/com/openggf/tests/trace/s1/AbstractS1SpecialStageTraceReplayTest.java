@@ -7,6 +7,7 @@ import com.openggf.game.sonic1.specialstage.Sonic1SpecialStageTraceFrame;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.trace.TraceFixtureRoot;
 import com.openggf.tests.trace.TraceReportWriter;
 import com.openggf.trace.DivergenceReport;
 import com.openggf.trace.DynamicArtSpecialStageComparator;
@@ -179,7 +180,7 @@ public abstract class AbstractS1SpecialStageTraceReplayTest {
         assumeTrue(romFile != null,
                 "s1.gen ROM required for S1 special-stage trace replay");
 
-        Path dir = traceDirectory();
+        Path dir = TraceFixtureRoot.resolve(traceDirectory());
         assumeTrue(Files.exists(dir.resolve("metadata.json")),
                 "No S1 special-stage trace committed yet at " + dir);
 

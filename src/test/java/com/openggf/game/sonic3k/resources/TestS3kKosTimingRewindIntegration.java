@@ -55,7 +55,7 @@ class TestS3kKosTimingRewindIntegration {
                 HardwareWorkKind.KOS_MODULE_QUEUE,
                 handle.ordinal(),
                 handle.submissionFingerprint());
-        replay.install(new HardwareTimingSchedule(1, java.util.List.of(recordedEdge)));
+        replay.install(new HardwareTimingSchedule(java.util.List.of(recordedEdge)));
 
         replay.beginRawFrame(recordedEdge.rawFrame());
         // The module state step is the previous LevelLoop iteration's tail call

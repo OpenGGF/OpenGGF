@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestTraceRunDynamicArtGapComparator {
 
     @Test
-    void schemaTwoComparesOrdinalsFingerprintsCompletedForwardingAndDestinationLedger() {
+    void comparesOrdinalsFingerprintsCompletedForwardingAndDestinationLedger() {
         DynamicArtTransfer.Descriptor forwarded = descriptor(
                 7, "sonic", 4, "segment", request(0x50000, 4));
         DynamicArtTransfer.Descriptor destination = descriptor(
@@ -28,7 +28,7 @@ class TestTraceRunDynamicArtGapComparator {
                         List.of(forwarded), List.of()),
                 expectedGap(11, destination, "submitted", 112, 0,
                         List.of(), List.of(destination)));
-        TraceRunManifest manifest = manifest(2, expected, destination);
+        TraceRunManifest manifest = manifest(expected, destination);
         RuntimeGap actual = runtimeGap(List.of(forwarded), List.of(
                 actualGap(10, forwarded, "completed", 111, 0,
                         List.of(7L), List.of()),
@@ -46,12 +46,12 @@ class TestTraceRunDynamicArtGapComparator {
     }
 
     @Test
-    void schemaTwoReportsWrongEdgeOrdinalAndAfterLedgerFingerprint() {
+    void reportsWrongEdgeOrdinalAndAfterLedgerFingerprint() {
         DynamicArtTransfer.Descriptor expectedDescriptor = descriptor(
                 8, "tails", 9, "run_gap", request(0x64000, 9));
         DynamicArtTransfer.Descriptor actualDescriptor = descriptor(
                 8, "tails", 10, "run_gap", request(0x64000, 10));
-        TraceRunManifest manifest = manifest(2, List.of(
+        TraceRunManifest manifest = manifest(List.of(
                 expectedGap(11, expectedDescriptor, "submitted", 112, 0,
                         List.of(), List.of(expectedDescriptor))),
                 expectedDescriptor);
@@ -70,12 +70,12 @@ class TestTraceRunDynamicArtGapComparator {
     }
 
     @Test
-    void schemaTwoReportsForwardedCompletionWithWrongSubmissionOwnership() {
+    void reportsForwardedCompletionWithWrongSubmissionOwnership() {
         DynamicArtTransfer.Descriptor expectedForwarded = descriptor(
                 7, "sonic", 4, "segment", request(0x50000, 4));
         DynamicArtTransfer.Descriptor actualInherited = descriptor(
                 7, "sonic", 4, "run_gap", request(0x50000, 4));
-        TraceRunManifest manifest = manifest(2, List.of(
+        TraceRunManifest manifest = manifest(List.of(
                 expectedGap(10, expectedForwarded, "completed", 111, 0,
                         List.of(expectedForwarded), List.of())), null);
         RuntimeGap actual = runtimeGap(List.of(actualInherited), List.of(
@@ -92,8 +92,8 @@ class TestTraceRunDynamicArtGapComparator {
     }
 
     @Test
-    void schemaOneChecksOnlyStructuralCloseGapOpenOrder() {
-        TraceRunManifest manifest = manifest(1, List.of(), null);
+    void emptyGapArrayStillChecksStructuralCloseGapOpenOrder() {
+        TraceRunManifest manifest = manifest(List.of(), null);
         RuntimeGap actual = new RuntimeGap(
                 "source", "destination", new StructuralOrder(2, 1, 3),
                 List.of(), List.of());
@@ -103,12 +103,12 @@ class TestTraceRunDynamicArtGapComparator {
 
         assertTrue(comparison.hasErrorInField(
                 "run_gap.structure.source_closed_before_gap"));
-        assertFalse(comparison.fields().containsKey("run_gap.edge_count"));
+        assertTrue(comparison.fields().containsKey("run_gap.edge_count"));
     }
 
     @Test
-    void schemaOneAcceptsOrderedCloseGapAndDestinationOpenWithoutPayload() {
-        TraceRunManifest manifest = manifest(1, List.of(), null);
+    void emptyGapArrayAcceptsOrderedCloseGapAndDestinationOpen() {
+        TraceRunManifest manifest = manifest(List.of(), null);
         RuntimeGap actual = runtimeGap(List.of(), List.of());
 
         FrameComparison comparison = TraceRunDynamicArtGapComparator.compare(
@@ -125,7 +125,6 @@ class TestTraceRunDynamicArtGapComparator {
     }
 
     private static TraceRunManifest manifest(
-            int schema,
             List<DynamicArtTransfer.GapTransition> gaps,
             DynamicArtTransfer.Descriptor destinationLedger) {
         var source = new TraceRunManifest.Segment(
@@ -136,8 +135,8 @@ class TestTraceRunDynamicArtGapComparator {
         var destination = new TraceRunManifest.Segment(
                 "destination", "level", "gameplay_unlock", 120, 10,
                 0, 1, null, null, ledger, DynamicArtTransfer.ledgerHash(ledger));
-        return new TraceRunManifest(schema, "s2", "run", "movie.bk2",
-                "crc", "lua", List.of(source, destination), List.of(), gaps,
+        return new TraceRunManifest("s2", "run", "movie.bk2",
+                "crc", List.of(source, destination), List.of(), gaps,
                 TraceRunManifest.ExpectedMovieEndMode.UNSPECIFIED);
     }
 

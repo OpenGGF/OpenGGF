@@ -17,10 +17,8 @@ namespace OpenGGF.BizHawk.Headless
     /// matter, so the native port formats once at finalize. source_bk2 is
     /// rendered with Lua %q (not json_escape); the run_id line is emitted
     /// only when non-null and is written RAW (plain concatenation, no
-    /// escaping). lua_script_version is a capture-session input for the same
-    /// reason as in <see cref="S1RunManifestWriter"/>: the canonical
-    /// fixtures stamp "3.15" while the current Lua stamps "3.18", with no
-    /// other output-affecting delta (spec §10).
+    /// escaping). The current strict-v5 shape carries only recorder-owned
+    /// fields; removed script-version fields are never emitted.
     /// </summary>
     public static class S1SpecialStageMetadataWriter
     {
@@ -29,7 +27,6 @@ namespace OpenGGF.BizHawk.Headless
             int bk2FrameOffset,
             int traceFrameCount,
             string sourceBk2,
-            string luaScriptVersion,
             string recordingDate,
             string runId,
             int segmentIndex,
@@ -38,10 +35,6 @@ namespace OpenGGF.BizHawk.Headless
             if (sourceBk2 == null)
             {
                 throw new ArgumentNullException("sourceBk2");
-            }
-            if (luaScriptVersion == null)
-            {
-                throw new ArgumentNullException("luaScriptVersion");
             }
             if (recordingDate == null)
             {
@@ -54,11 +47,12 @@ namespace OpenGGF.BizHawk.Headless
             json.Append("  \"trace_profile\": \"s1_special_stage\",\n");
             json.Append("  \"special_stage_index\": ")
                 .Append(Dec(specialStageIndex)).Append(",\n");
-            json.Append("  \"ss_csv_version\": 1,\n");
             if (dynamicArtAudit)
             {
                 json.Append("  \"aux_schema_extras\": "
-                    + "[\"dynamic_art_transfer_state_per_frame_v1\"],\n");
+                    + "[\"").Append(
+                        TraceContract.DynamicArtTransferStatePerFrame)
+                    .Append("\"],\n");
             }
             json.Append("  \"characters\": [\"sonic\"],\n");
             json.Append("  \"main_character\": \"sonic\",\n");
@@ -69,8 +63,7 @@ namespace OpenGGF.BizHawk.Headless
                 .Append(Dec(traceFrameCount)).Append(",\n");
             json.Append("  \"source_bk2\": ")
                 .Append(RunManifestWriter.LuaQ(sourceBk2)).Append(",\n");
-            json.Append("  \"lua_script_version\": \"")
-                .Append(luaScriptVersion).Append("\",\n");
+            TraceContract.AppendNativeEnvelope(json);
             json.Append("  \"recording_date\": \"")
                 .Append(recordingDate).Append("\",\n");
             if (runId != null)

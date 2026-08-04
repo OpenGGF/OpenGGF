@@ -61000,6 +61000,17 @@ to synthesize a POST phase on a VBLANK-only row.
   attributable regression or worsened baseline failure was found. No trace
   fixture or comparison value changed.
 
+### 2026-08-03 — Native-load diagnosis correction for trace-v5 integration
+
+- A fresh cold four-fork full-suite launch on current `develop` extracted and
+  loaded `liblwjgl.so`, `libglfw.so`, `liblwjgl_opengl.so`, and
+  `liblwjgl_stb.so` successfully. The run later terminated with Java heap
+  exhaustion alongside the existing baseline failures; it did not reproduce a
+  native-library load or extraction failure.
+- Trace-v5 integration therefore uses `surefire.forkCount=1` to obtain a stable,
+  memory-bounded baseline comparison. It is not a native-loader workaround,
+  and there is no confirmed current `develop` native-library defect to fix.
+
 ## 2026-08-03 - Visual trace inter-act title-card admission
 
 - Worktree: `.worktrees/visual-trace-level-handoff`, branch

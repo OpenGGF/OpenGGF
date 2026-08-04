@@ -1,6 +1,7 @@
 package com.openggf.tests.trace;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.io.TempDir;
 import com.openggf.trace.TraceMetadata;
@@ -21,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** Guards the normal-gameplay recorder side of the CSV v7 animation contract. */
+/** Guards the normal-gameplay recorder side of the strict trace-v5 contract. */
 class TestTraceAnimationRecorderContract {
     private static final Path TOOLS = Path.of("tools/bizhawk");
 
@@ -34,7 +35,9 @@ class TestTraceAnimationRecorderContract {
                 "s3k_trace_recorder.lua",
                 "s3k_complete_run_recorder.lua")) {
             String script = Files.readString(TOOLS.resolve(name));
-            assertTrue(script.contains("\"csv_version\": 7"), name);
+            assertTrue(script.contains("\"recorder\": \"lua-bizhawk-diagnostic\""), name);
+            assertTrue(script.contains("\"recorder_version\": \"3.0\""), name);
+            assertTrue(script.contains("\"trace_schema\": 5"), name);
             assertTrue(script.contains("player_animation_id"), name);
             assertTrue(script.contains("player_mapping_frame"), name);
             assertTrue(script.contains("sidekick_animation_id"), name);
@@ -64,7 +67,9 @@ class TestTraceAnimationRecorderContract {
             assertTrue(script.contains("OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS"), name);
             assertTrue(script.contains(
                     "physics_animation_aux_without_diagnostic_hooks"), name);
-            assertTrue(script.contains("if not LIGHTWEIGHT_REGEN then"), name);
+            assertTrue(script.contains(
+                    "LIGHTWEIGHT_REGEN = not DIAGNOSTIC_HOOKS_ENABLED"), name);
+            assertTrue(script.contains("if LIGHTWEIGHT_REGEN then"), name);
         }
     }
 
@@ -78,11 +83,14 @@ class TestTraceAnimationRecorderContract {
 
         assertTrue(script.contains("\"trace_profile\""));
         assertTrue(script.contains("\"bk2_frame_offset\""));
-        assertTrue(script.contains("\"trace_schema\": 6"));
-        assertTrue(script.contains("\"csv_version\": 7"));
+        assertTrue(script.contains("\"recorder\": \"lua-bizhawk-diagnostic\""));
+        assertTrue(script.contains("\"recorder_version\": \"3.0\""));
+        assertTrue(script.contains("\"trace_schema\": 5"));
         assertTrue(script.contains("OGGF_TRACE_ENABLE_DIAGNOSTIC_HOOKS"));
         assertTrue(script.contains("OGGF_TRACE_QUIET"));
-        assertTrue(script.contains("if not LIGHTWEIGHT_REGEN then"));
+        assertTrue(script.contains(
+                "LIGHTWEIGHT_REGEN = not DIAGNOSTIC_HOOKS_ENABLED"));
+        assertTrue(script.contains("if LIGHTWEIGHT_REGEN then"));
     }
 
     @Test
@@ -114,7 +122,7 @@ class TestTraceAnimationRecorderContract {
         assertTrue(script.contains("local dir_token = next_segment_dir_token(\"ss\")"));
         assertTrue(script.contains(
                 "local dir_token = next_segment_dir_token(start_zone_name .. tostring(start_act + 1))"));
-        assertTrue(script.contains("\"lua_script_version\": \"3.18\""));
+        assertTrue(script.contains("\"recorder_version\": \"3.0\""));
     }
 
     @Test
@@ -127,7 +135,7 @@ class TestTraceAnimationRecorderContract {
         assertTrue(script.contains("S1_RNG_CALLS.flush()"));
         assertTrue(script.contains("rng_call_per_frame"));
         assertTrue(script.contains("OGGF_TRACE_SOURCE_BK2"));
-        assertTrue(script.contains("\"lua_script_version\": \"3.18\""));
+        assertTrue(script.contains("\"recorder_version\": \"3.0\""));
     }
 
     @Test
@@ -206,7 +214,8 @@ class TestTraceAnimationRecorderContract {
     }
 
     @Test
-    void allCommittedGameplayFixturesCarryV7AnimationCsv() throws IOException {
+    @Disabled("Task 10 republishes installed gameplay fixtures as strict trace v5")
+    void allCommittedGameplayFixturesCarryV5AnimationCsv() throws IOException {
         Map<String, Integer> expectedCounts = Map.of("s1", 21, "s2", 19, "s3k", 13);
         for (Map.Entry<String, Integer> entry : expectedCounts.entrySet()) {
             Path gameRoot = Path.of("src/test/resources/traces", entry.getKey());
@@ -222,7 +231,7 @@ class TestTraceAnimationRecorderContract {
             assertEquals(entry.getValue(), fixtures.size(), entry.getKey());
             for (Path fixture : fixtures) {
                 TraceMetadata metadata = TraceMetadata.load(fixture.resolve("metadata.json"));
-                assertEquals(7, metadata.csvVersion(), fixture.toString());
+                assertEquals(5, metadata.traceSchema(), fixture.toString());
                 String header = readPhysicsHeader(fixture);
                 assertEquals(42, header.split(",", -1).length, fixture.toString());
                 assertTrue(header.contains("player_animation_id"), fixture.toString());

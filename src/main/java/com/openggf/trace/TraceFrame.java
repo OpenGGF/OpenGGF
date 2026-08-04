@@ -5,18 +5,8 @@ package com.openggf.trace;
  * All values match the physics.csv format: positions and speeds are
  * 16-bit values as stored in 68K RAM.
  *
- * <p>Supports v1 (11 columns), v2 (18 columns), v2.1 (19 columns), v2.2 (20 columns),
- * and v3 (22 columns) CSV formats. v2 adds diagnostic fields: x_sub, y_sub, routine,
- * camera_x, camera_y, rings, status_byte. Subpixels/routine/status/camera/rings are
- * compared by {@link TraceBinder} when the engine-side snapshot carries them.
- * v2.1 adds gameplay_frame_counter (ROM's
- * Level_MainLoop counter). v2.2 adds stand_on_obj (SST slot index of object Sonic is
- * riding on). v3 adds vblank_counter and lag_counter. v5 appends optional first-sidekick
- * state. v6 stores explicit named character blocks for both Sonic and Tails while
- * retaining the same in-memory primary/sidekick representation. Non-compared diagnostic
- * fields still appear in divergence report context windows for debugging. v7
- * uses symmetric Player/Sidekick blocks and adds animation ID plus displayed
- * mapping frame to both characters.
+ * <p>V5 rows use the fixed 42-column symmetric primary/sidekick layout. All
+ * primary and sidekick animation and subpixel fields are always present.
  */
 public record TraceFrame(
     int frame,
@@ -147,175 +137,23 @@ public record TraceFrame(
             lagCounter, animationId, mappingFrame, sidekick);
     }
 
-    /** v1 column count (original format). */
-    private static final int V1_COLUMNS = 11;
-
-    /** v2 column count (with diagnostic fields). */
-    private static final int V2_COLUMNS = 18;
-
-    /** v2.1 column count (v2 + gameplay_frame_counter). */
-    private static final int V21_COLUMNS = 19;
-
-    /** v2.2 column count (v2.1 + stand_on_obj). */
-    private static final int V22_COLUMNS = 20;
-
-    /** v3 column count (v2.2 + vblank_counter + lag_counter). */
-    private static final int V3_COLUMNS = 22;
-
-    /** v5 column count (v3 + first-sidekick state block). */
-    private static final int V5_COLUMNS = 37;
-
-    /** v6 column count (shared counters + explicit Sonic/Tails state blocks). */
-    private static final int V6_COLUMNS = 38;
-
-    /** v7 column count (shared counters + symmetric 17-column character blocks). */
-    private static final int V7_COLUMNS = 42;
+    /** V5 level-row column count. */
+    private static final int V5_COLUMNS = 42;
 
     /**
-     * Parse a single CSV row (all values in hex).
-     * Accepts v1 (11), v2 (18), v2.1 (19), v2.2 (20), v3/v4 (22), v5 (37),
-     * v6 (38), and v7 (42) column formats.
-     *
-     * <p>v1: frame,input,x,y,x_speed,y_speed,g_speed,angle,air,rolling,ground_mode
-     * <p>v2: ...same 11...,x_sub,y_sub,routine,camera_x,camera_y,rings,status_byte
-     * <p>v2.1: ...same 18...,gameplay_frame_counter
-     * <p>v2.2: ...same 19...,stand_on_obj
-     * <p>v3/v4: ...same 20...,vblank_counter,lag_counter
-     * <p>v5: ...same 22...,sidekick_present,sidekick_x,sidekick_y,sidekick_x_speed,
-     * sidekick_y_speed,sidekick_g_speed,sidekick_angle,sidekick_air,sidekick_rolling,
-     * sidekick_ground_mode,sidekick_x_sub,sidekick_y_sub,sidekick_routine,
-     * sidekick_status_byte,sidekick_stand_on_obj
-     * <p>v6: frame,input,camera_x,camera_y,rings,gameplay_frame_counter,vblank_counter,
-     * lag_counter,sonic_present,sonic_x,...,sonic_stand_on_obj,tails_present,tails_x,...,
-     * tails_stand_on_obj
-     * <p>v7: frame,input,camera_x,camera_y,rings,gameplay_frame_counter,vblank_counter,
-     * lag_counter,player_present,player_x,...,player_stand_on_obj,player_animation_id,
-     * player_mapping_frame,sidekick_present,sidekick_x,...,sidekick_animation_id,
-     * sidekick_mapping_frame
+     * Parse one fixed-width v5 level row (all values in hexadecimal).
      */
     public static TraceFrame parseCsvRow(String line) {
-        return parseCsvRow(line, null);
-    }
-
-    /**
-     * Parse a single CSV row, using CSV version when present to disambiguate newer formats.
-     */
-    public static TraceFrame parseCsvRow(String line, Integer csvVersion) {
         String[] parts = line.split(",", -1);
-        if (parts.length != V1_COLUMNS && parts.length != V2_COLUMNS
-                && parts.length != V21_COLUMNS && parts.length != V22_COLUMNS
-                && parts.length != V3_COLUMNS && parts.length != V5_COLUMNS
-                && parts.length != V6_COLUMNS && parts.length != V7_COLUMNS) {
+        if (parts.length != V5_COLUMNS) {
             throw new IllegalArgumentException(
-                "Expected " + V1_COLUMNS + ", " + V2_COLUMNS + ", " + V21_COLUMNS
-                + ", " + V22_COLUMNS + ", " + V3_COLUMNS + ", " + V5_COLUMNS
-                + ", " + V6_COLUMNS + ", or " + V7_COLUMNS
-                + " CSV columns, got " + parts.length + ": " + line);
+                    "Trace schema 5 requires " + V5_COLUMNS + " CSV columns, got "
+                            + parts.length + ": " + line);
         }
-
-        if ((csvVersion != null && csvVersion >= 7) || parts.length == V7_COLUMNS) {
-            if (parts.length != V7_COLUMNS) {
-                throw new IllegalArgumentException(
-                        "CSV v7 requires " + V7_COLUMNS + " columns, got " + parts.length
-                                + ": " + line);
-            }
-            return parseV7Row(parts);
-        }
-
-        if ((csvVersion != null && csvVersion == 6) || parts.length == V6_COLUMNS) {
-            if (parts.length < V6_COLUMNS) {
-                throw new IllegalArgumentException(
-                    "Schema v6 requires " + V6_COLUMNS + " CSV columns, got " + parts.length
-                        + ": " + line);
-            }
-            return parseV6Row(parts);
-        }
-
-        int frame = Integer.parseInt(parts[0].trim(), 16);
-        int input = Integer.parseInt(parts[1].trim(), 16);
-        short x = (short) Integer.parseInt(parts[2].trim(), 16);
-        short y = (short) Integer.parseInt(parts[3].trim(), 16);
-        short xSpeed = parseSignedShortHex(parts[4].trim());
-        short ySpeed = parseSignedShortHex(parts[5].trim());
-        short gSpeed = parseSignedShortHex(parts[6].trim());
-        byte angle = (byte) Integer.parseInt(parts[7].trim(), 16);
-        boolean air = !parts[8].trim().equals("0");
-        boolean rolling = !parts[9].trim().equals("0");
-        int groundMode = Integer.parseInt(parts[10].trim());
-
-        int xSub = 0;
-        int ySub = 0;
-        int routine = -1;
-        int cameraX = -1;
-        int cameraY = -1;
-        int rings = -1;
-        int statusByte = -1;
-        int gameplayFrameCounter = -1;
-        int standOnObj = -1;
-        int vblankCounter = -1;
-        int lagCounter = -1;
-        TraceCharacterState sidekick = null;
-        if (parts.length >= V2_COLUMNS) {
-            xSub = Integer.parseInt(parts[11].trim(), 16);
-            ySub = Integer.parseInt(parts[12].trim(), 16);
-            routine = Integer.parseInt(parts[13].trim(), 16);
-            cameraX = Integer.parseInt(parts[14].trim(), 16);
-            cameraY = Integer.parseInt(parts[15].trim(), 16);
-            rings = Integer.parseInt(parts[16].trim(), 16);
-            statusByte = Integer.parseInt(parts[17].trim(), 16);
-        }
-        if (parts.length >= V21_COLUMNS) {
-            gameplayFrameCounter = Integer.parseInt(parts[18].trim(), 16);
-        }
-        if (parts.length >= V22_COLUMNS) {
-            standOnObj = Integer.parseInt(parts[19].trim(), 16);
-        }
-        // csv_version 4 is historically overloaded: the stable-retro S1
-        // recorder emits the v2.2 20-column layout with that value, while the
-        // BizHawk recorder uses it for the 22-column v3 layout. Pre-v5 rows are
-        // therefore identified by their column count. The structurally unique
-        // v5/v6/v7 layouts above and below remain version-strict.
-        if (parts.length >= V3_COLUMNS) {
-            vblankCounter = Integer.parseInt(parts[20].trim(), 16);
-            lagCounter = Integer.parseInt(parts[21].trim(), 16);
-        }
-        if ((csvVersion != null && csvVersion >= 5) || parts.length >= V5_COLUMNS) {
-            if (parts.length < V5_COLUMNS) {
-                throw new IllegalArgumentException(
-                    "Schema v5 requires " + V5_COLUMNS + " CSV columns, got " + parts.length
-                        + ": " + line);
-            }
-            sidekick = TraceCharacterState.parseCsvColumns(parts, V3_COLUMNS);
-        }
-
-        return new TraceFrame(frame, input, x, y, xSpeed, ySpeed, gSpeed, angle,
-            air, rolling, groundMode, xSub, ySub, routine, cameraX, cameraY,
-            rings, statusByte, gameplayFrameCounter, standOnObj, vblankCounter, lagCounter,
-            -1, -1, sidekick);
+        return parseV5Row(parts);
     }
 
-    private static TraceFrame parseV6Row(String[] parts) {
-        int frame = Integer.parseInt(parts[0].trim(), 16);
-        int input = Integer.parseInt(parts[1].trim(), 16);
-        int cameraX = Integer.parseInt(parts[2].trim(), 16);
-        int cameraY = Integer.parseInt(parts[3].trim(), 16);
-        int rings = Integer.parseInt(parts[4].trim(), 16);
-        int gameplayFrameCounter = Integer.parseInt(parts[5].trim(), 16);
-        int vblankCounter = Integer.parseInt(parts[6].trim(), 16);
-        int lagCounter = Integer.parseInt(parts[7].trim(), 16);
-
-        TraceCharacterState sonic = TraceCharacterState.parseCsvColumns(parts, 8);
-        TraceCharacterState tails = TraceCharacterState.parseCsvColumns(parts, 23);
-
-        return new TraceFrame(frame, input,
-            sonic.x(), sonic.y(), sonic.xSpeed(), sonic.ySpeed(), sonic.gSpeed(), sonic.angle(),
-            sonic.air(), sonic.rolling(), sonic.groundMode(),
-            sonic.xSub(), sonic.ySub(), sonic.routine(),
-            cameraX, cameraY, rings, sonic.statusByte(),
-            gameplayFrameCounter, sonic.standOnObj(), vblankCounter, lagCounter, tails);
-    }
-
-    private static TraceFrame parseV7Row(String[] parts) {
+    private static TraceFrame parseV5Row(String[] parts) {
         int frame = Integer.parseInt(parts[0].trim(), 16);
         int input = Integer.parseInt(parts[1].trim(), 16);
         int cameraX = Integer.parseInt(parts[2].trim(), 16);

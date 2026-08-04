@@ -4,6 +4,7 @@ import com.openggf.control.InputHandler;
 import com.openggf.game.save.SelectedTeam;
 import com.openggf.graphics.PixelFont;
 import com.openggf.trace.TraceMetadata;
+import com.openggf.trace.TraceFixtures;
 import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.catalog.TraceEntry;
 import org.junit.jupiter.api.AfterEach;
@@ -112,8 +113,8 @@ class TestModeTracePickerLaunchStatus {
                 "second_completerun", "level", "complete_run",
                 1, 1, 1, 1, null, null);
         TraceRunManifest manifest = new TraceRunManifest(
-                1, "s1", "s1-complete-run", "s1-complete-run.bk2",
-                "checksum", "recorder", List.of(first, second), List.of());
+                "s1", "s1-complete-run", "s1-complete-run.bk2",
+                "checksum", List.of(first, second), List.of());
         return new TraceEntry(
                 Path.of("s1"), "s1", 0, 0, 2, 0, 0,
                 new SelectedTeam("sonic", List.of()),
@@ -122,14 +123,6 @@ class TestModeTracePickerLaunchStatus {
     }
 
     private static TraceMetadata metadataStub() {
-        return new TraceMetadata(
-                "s1", "TEST", 0, 0, 0, null, 0,
-                "0x0000", "0x0000",
-                null, null, 3,
-                null, null, null, null,
-                null, null, null, null,
-                null, null, null,
-                "sonic", List.of(), 0, null, null, null, null, null, null,
-                null, null, null, null, null, null);
+        return TraceFixtures.metadata("s1", 0, 0);
     }
 }

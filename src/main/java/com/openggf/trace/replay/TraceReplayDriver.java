@@ -146,7 +146,7 @@ public final class TraceReplayDriver {
                     "prepared visual trace requires released LEVEL mode");
         }
         if (forceHardwareTimingReplay
-                || trace.metadata().hasHardwareTimingStream()) {
+                || trace.hardwareTimingSchedule().hasRecordedInput()) {
             fixture.gameplayMode().activateRecordedHardwareAdmission();
         }
         startPlayback(playback, true);

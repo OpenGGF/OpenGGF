@@ -24,8 +24,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "HardwareTiming held level frame canonical head shift uses POST boundary",
                 HeldLevelFrameCanonicalHeadShiftUsesPostBoundary));
             tests.Add(new TestMain.TestCase(
-                "HardwareTiming held level frame shift and append rejects cardinality",
-                HeldLevelFrameShiftAndAppendRejectsCardinality));
+                "HardwareTiming held level frame shift and append reconciles",
+                HeldLevelFrameShiftAndAppendReconciles));
+            tests.Add(new TestMain.TestCase(
+                "HardwareTiming held level frame busy shift and append reconciles",
+                HeldLevelFrameBusyShiftAndAppendReconciles));
             tests.Add(new TestMain.TestCase(
                 "HardwareTiming held level frame rejects multi-head loss",
                 HeldLevelFrameRejectsMultiHeadLoss));
@@ -146,9 +149,6 @@ namespace OpenGGF.BizHawk.Headless.Tests
             tests.Add(new TestMain.TestCase(
                 "HardwareTimingEventEngine scanner matches language-neutral vectors",
                 DirectScannerMatchesLanguageNeutralVectors));
-            tests.Add(new TestMain.TestCase(
-                "HardwareTimingEventEngine schema one suppresses direct authority",
-                SchemaOneSuppressesDirectAuthority));
             tests.Add(new TestMain.TestCase(
                 "HardwareTimingEventEngine reset clears both ledgers and ordinal bases",
                 ResetClearsBothLedgersAndOrdinalBases));
@@ -286,7 +286,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
         }
 
-        private static void HeldLevelFrameShiftAndAppendRejectsCardinality()
+        private static void HeldLevelFrameShiftAndAppendReconciles()
         {
             const int first = 0x100;
             const int second = 0x120;
@@ -303,9 +303,54 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
             StageActive(host, second, 0x6000, 0x01);
             StageQueued(host, 1, appended, 0x7000);
-            AssertEx.Throws<InvalidDataException>(
-                () => engine.ObserveFrameEnd(1, host, new StringWriter()),
-                "cardinality");
+            var writer = new StringWriter();
+            engine.ObserveFrameEnd(1, host, writer);
+            AssertEx.Equal(
+                true,
+                writer.ToString().Contains("\"ordinal\":0"));
+
+            StageActive(host, second, 0x6000, 0x81);
+            StageQueued(host, 1, appended, 0x7000);
+            engine.ObserveFrameEnd(2, host, writer);
+            StageActive(host, appended, 0x7000, 0x01);
+            engine.ObserveFrameEnd(3, host, writer);
+            AssertEx.Equal(
+                true,
+                writer.ToString().Contains("\"ordinal\":1"));
+        }
+
+        private static void HeldLevelFrameBusyShiftAndAppendReconciles()
+        {
+            const int first = 0x100;
+            const int second = 0x120;
+            const int appended = 0x140;
+            byte[] rom = RomWithSingleModules(first, second, appended);
+            var host = NewHost();
+            var engine = new HardwareTimingEventEngine(rom);
+            var writer = new StringWriter();
+
+            host.Ram[S3KRam.GameMode] = S3KRam.GameModeLevel;
+            SetLevelFrame(host, 7);
+            StageActive(host, first, 0x4000, 0x81);
+            StageQueued(host, 1, second, 0x6000);
+            engine.ObserveFrameEnd(0, host, writer);
+
+            // The ROM can retire the final head and append its replacement
+            // in one held-counter observation.  The shifted head remains
+            // busy, so the transition must not be rejected as non-canonical.
+            StageActive(host, second, 0x6000, 0x81);
+            StageQueued(host, 1, appended, 0x7000);
+            engine.ObserveFrameEnd(1, host, writer);
+            AssertEx.Equal(
+                true,
+                writer.ToString().Contains("\"ordinal\":0"));
+
+            StageActive(host, appended, 0x7000, 0x01);
+            StageQueued(host, 1, 0, 0);
+            engine.ObserveFrameEnd(2, host, writer);
+            AssertEx.Equal(
+                true,
+                writer.ToString().Contains("\"ordinal\":1"));
         }
 
         private static void StaleFinalActiveStateCannotCertifyLaterShift()
@@ -1583,24 +1628,6 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
         }
 
-        private static void SchemaOneSuppressesDirectAuthority()
-        {
-            const int source = 0x100;
-            byte[] rom = RomWithStandardStream(source);
-            var host = NewHost();
-            var writer = new StringWriter();
-            var engine = new HardwareTimingEventEngine(
-                rom, HardwareTimingEventEngine.LegacySchema);
-
-            StageDirect(host, 0, source, unchecked((int)0xFFFF9268));
-            host.SetU16(S3KRam.KosDecompQueueCount, 1);
-            engine.ObserveFrameEnd(0, host, writer);
-            host.SetU16(S3KRam.KosDecompQueueCount, 0);
-            engine.ObserveFrameEnd(1, host, writer);
-
-            AssertEx.Equal("", writer.ToString());
-        }
-
         private static void ResetClearsBothLedgersAndOrdinalBases()
         {
             const int source = 0x100;
@@ -2018,11 +2045,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private static void LagBoundaryHasNewRecorderVersion()
         {
             AssertEx.Equal(
-                "6.41-s3k",
-                S3KTraceMetadataWriter.LuaScriptVersion);
+                "3.0",
+                TraceContract.RecorderVersion);
             AssertEx.Equal(
-                "6.42-s3k-completerun",
-                S3KCompleteRunMetadataWriter.LuaScriptVersion);
+                "3.0",
+                TraceContract.RecorderVersion);
 
             string standard = File.ReadAllText(Path.Combine(
                 EndToEndTests.RepositoryRoot,
@@ -2033,11 +2060,11 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(
                 true,
                 standard.Contains(
-                    "\"lua_script_version\": \"6.37-s3k\""));
+                    "\"recorder\": \"lua-bizhawk-diagnostic\""));
             AssertEx.Equal(
                 true,
                 complete.Contains(
-                    "LUA_SCRIPT_VERSION = \"6.37-s3k-completerun\""));
+                    "\"recorder_version\": \"3.0\""));
         }
 
         private static string LuaBehaviorVectorScript(

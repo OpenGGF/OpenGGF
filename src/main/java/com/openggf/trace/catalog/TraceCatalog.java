@@ -17,7 +17,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -96,7 +95,6 @@ public final class TraceCatalog {
             LOGGER.log(Level.WARNING, "Could not scan " + root, e);
         }
         scanRuns(root, entries);
-        scanLegacyCompleteRuns(entries);
         entries.sort(Comparator
                 .comparing(TraceEntry::gameId, GAME_ORDER)
                 .thenComparingInt(TraceEntry::zone)
@@ -244,118 +242,6 @@ public final class TraceCatalog {
         }
     }
 
-    /**
-     * Adds a structural run view for legacy stage-free complete-run captures
-     * that predate recorder-published run manifests. Individual entries remain
-     * in the catalog; this merely groups a complete, non-overlapping cohort
-     * backed by one shared movie.
-     */
-    private static void scanLegacyCompleteRuns(List<TraceEntry> entries) {
-        Map<LegacyRunKey, List<TraceEntry>> cohorts = new LinkedHashMap<>();
-        for (TraceEntry entry : List.copyOf(entries)) {
-            if (entry.isRun()
-                    || entry.metadata().sourceBk2() == null
-                    || entry.metadata().sourceBk2().isBlank()
-                    || !entry.dir().getFileName().toString().endsWith("_completerun")
-                    || !(entry.metadata().traceProfile() == null
-                            || "complete_run".equals(
-                                    entry.metadata().traceProfile()))) {
-                continue;
-            }
-            cohorts.computeIfAbsent(
-                    new LegacyRunKey(entry.gameId(), entry.metadata().sourceBk2()),
-                    ignored -> new ArrayList<>()).add(entry);
-        }
-
-        java.util.Set<LegacyRunKey> existing = entries.stream()
-                .filter(TraceEntry::isRun)
-                .map(entry -> new LegacyRunKey(
-                        entry.gameId(), entry.runManifest().runId()))
-                .collect(java.util.stream.Collectors.toSet());
-        for (Map.Entry<LegacyRunKey, List<TraceEntry>> cohortEntry
-                : cohorts.entrySet()) {
-            List<TraceEntry> cohort = cohortEntry.getValue().stream()
-                    .sorted(Comparator.comparingInt(TraceEntry::bk2StartOffset))
-                    .toList();
-            if (cohort.size() < 2 || !isCompleteNonOverlappingCohort(cohort)) {
-                continue;
-            }
-            String runId = movieBasename(cohortEntry.getKey().sourceBk2());
-            LegacyRunKey runKey = new LegacyRunKey(
-                    cohortEntry.getKey().gameId(), runId);
-            if (existing.contains(runKey)) {
-                continue;
-            }
-            TraceEntry first = cohort.getFirst();
-            Path gameDir = first.dir().getParent();
-            if (gameDir == null) {
-                continue;
-            }
-            List<TraceRunManifest.Segment> segments = cohort.stream()
-                    .map(entry -> new TraceRunManifest.Segment(
-                            entry.dir().getFileName().toString(),
-                            "level", "complete_run",
-                            entry.bk2StartOffset(), entry.frameCount(),
-                            entry.metadata().zoneId(), entry.metadata().act(),
-                            null, null))
-                    .toList();
-            TraceMetadata metadata = first.metadata();
-            try {
-                TraceRunManifest manifest = new TraceRunManifest(
-                        1, first.gameId(), runId,
-                        metadata.sourceBk2(), metadata.romChecksum(),
-                        metadata.luaScriptVersion(), segments, List.of());
-                manifest.validate(gameDir);
-                entries.add(TraceEntry.forRun(
-                        gameDir, manifest, first.bk2Path()));
-                existing.add(runKey);
-            } catch (RuntimeException failure) {
-                LOGGER.log(Level.WARNING,
-                        "Skipping malformed legacy complete-run cohort "
-                                + runId, failure);
-            }
-        }
-    }
-
-    private static boolean isCompleteNonOverlappingCohort(
-            List<TraceEntry> cohort) {
-        int previousEnd = -1;
-        int previousStart = -1;
-        Path movie = cohort.getFirst().bk2Path();
-        for (TraceEntry entry : cohort) {
-            int end;
-            try {
-                end = Math.addExact(entry.bk2StartOffset(), entry.frameCount());
-            } catch (ArithmeticException failure) {
-                return false;
-            }
-            if (!entry.bk2Path().equals(movie)
-                    || entry.bk2StartOffset() < 0
-                    || entry.bk2StartOffset() <= previousStart
-                    || entry.bk2StartOffset() < previousEnd) {
-                return false;
-            }
-            previousStart = entry.bk2StartOffset();
-            previousEnd = end;
-        }
-        return true;
-    }
-
-    private static String movieBasename(String sourceBk2) {
-        String name;
-        try {
-            name = Path.of(sourceBk2).getFileName().toString();
-        } catch (RuntimeException failure) {
-            return sourceBk2;
-        }
-        return name.endsWith(".bk2")
-                ? name.substring(0, name.length() - 4)
-                : name;
-    }
-
-    private record LegacyRunKey(String gameId, String sourceBk2) {
-    }
-
     private static Optional<TraceEntry> tryLoadRun(Path runDir) {
         Path manifestPath = runDir.resolve("run_manifest.json");
         if (!Files.isRegularFile(manifestPath)) {
@@ -432,7 +318,7 @@ public final class TraceCatalog {
         try {
             meta = TraceMetadata.load(metaPath);
             frameCount = countCsvRows(physicsPath);
-        } catch (IOException e) {
+        } catch (IOException | IllegalArgumentException e) {
             LOGGER.log(Level.FINE, "Could not load trace at " + dir, e);
             return Optional.empty();
         }

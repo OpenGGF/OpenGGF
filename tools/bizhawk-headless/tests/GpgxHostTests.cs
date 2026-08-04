@@ -37,6 +37,18 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 game: "s1",
                 serial: true,
                 estimatedSeconds: 2.0));
+            tests.Add(new TestMain.TestCase(
+                "GpgxHost exposes bounded optional main RAM writing",
+                WritesBoundedMainRam,
+                game: "s1",
+                serial: true,
+                estimatedSeconds: 2.0));
+            tests.Add(new TestMain.TestCase(
+                "GpgxHost S1 boot accepts a delayed title Start",
+                BootAcceptsDelayedTitleStart,
+                game: "s1",
+                serial: true,
+                estimatedSeconds: 2.0));
         }
 
         private static void BindsPinnedMainRamDomain()
@@ -62,6 +74,54 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 }
                 Console.WriteLine("GPGX completed frame: " + host.CompletedFrame);
                 AssertEx.Equal(10, host.CompletedFrame);
+            }
+        }
+
+        private static void WritesBoundedMainRam()
+        {
+            using (var host = GpgxHost.Open(
+                Environment.GetEnvironmentVariable("S1_ROM_PATH"),
+                GpgxHost.CreateGhz1SyncSettings()))
+            {
+                IMainRamWriter writer = host;
+                writer.WriteMainRamByte(0, 0x5A);
+                AssertEx.Equal((byte)0x5A, host.ReadMainRamByte(0));
+                AssertEx.Throws<ArgumentOutOfRangeException>(
+                    () => writer.WriteMainRamByte(-1, 0), "offset");
+                AssertEx.Throws<ArgumentOutOfRangeException>(
+                    () => writer.WriteMainRamByte(65536, 0), "offset");
+            }
+        }
+
+        private static void BootAcceptsDelayedTitleStart()
+        {
+            using (IGpgxHost host = GpgxHost.Open(
+                Environment.GetEnvironmentVariable("S1_ROM_PATH"),
+                GpgxHost.CreateGhz1SyncSettings()))
+            {
+                int titleFrames = 0;
+                for (int frame = 0; frame < 2400; frame++)
+                {
+                    host.ClearButtons();
+                    if ((host.ReadMainRamByte(S1Ram.GameMode) & 0x7F) == 0x04)
+                    {
+                        titleFrames++;
+                        if (titleFrames >= 120
+                            && ((titleFrames - 120) % 10) < 5)
+                        {
+                            host.SetButton("P1 Start", true);
+                        }
+                    }
+                    host.Advance();
+                    if ((host.ReadMainRamByte(S1Ram.GameMode) & 0x7F) == 0x0C)
+                    {
+                        return;
+                    }
+                }
+                throw new InvalidOperationException("S1 stayed in mode 0x"
+                    + host.ReadMainRamByte(S1Ram.GameMode).ToString("X2")
+                    + " after " + host.CompletedFrame + " frames; title frames="
+                    + titleFrames + ".");
             }
         }
 
