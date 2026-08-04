@@ -41,4 +41,15 @@ public final class DynamicArtDecisionOwner {
             lifecycle.completePlayerDplc(gameId, owner, update);
         }
     }
+
+    public void prime(int mappingFrame) {
+        if (!lifecycle.isRunActive()) {
+            return;
+        }
+        DynamicArtLifecycleService.ArtUpdate update =
+                lifecycle.primePlayerDplc(
+                        gameId, owner, mappingFrame,
+                        renderer.dplcFrame(mappingFrame));
+        renderer.applyRuntimeArtUpdate(mappingFrame, update);
+    }
 }

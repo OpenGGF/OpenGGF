@@ -93,6 +93,38 @@ public final class TraceRunDynamicArtGapJournal {
         return comparison;
     }
 
+    /** Closes and compares the final segment-to-movie-end gap. */
+    public FrameComparison terminalTailClosed(int movieFrameCount) {
+        if (sourceSegmentIndex < 0
+                || sourceSegmentIndex != manifest.segments().size() - 1
+                || gapOpenedOrdinal <= sourceClosedOrdinal) {
+            throw new IllegalStateException(
+                    "dynamic-art terminal tail closed without its final source gap");
+        }
+        List<DynamicArtGapTransition> transitions =
+                diagnostics.gapSnapshot().transitions();
+        List<DynamicArtGapTransition> added =
+                transitions.size() >= transitionCountAtGapStart
+                        ? transitions.subList(transitionCountAtGapStart,
+                                transitions.size())
+                        : List.of();
+        TraceRunManifest.Segment source =
+                manifest.segments().get(sourceSegmentIndex);
+        FrameComparison comparison =
+                TraceRunDynamicArtGapComparator.compareTerminalTail(
+                        gapStartMovieLogicalFrame, manifest, sourceSegmentIndex,
+                        movieFrameCount,
+                        new TraceRunDynamicArtGapComparator.RuntimeTerminalTail(
+                                source.dir(), sourceClosedOrdinal,
+                                gapOpenedOrdinal, ++structuralOrdinal,
+                                openingLedger, added));
+        sourceSegmentIndex = -1;
+        sourceClosedOrdinal = 0;
+        gapOpenedOrdinal = 0;
+        openingLedger = List.of();
+        return comparison;
+    }
+
     private static DynamicArtTransfer.Descriptor toTraceDescriptor(
             DynamicArtGapDiagnosticsSnapshot.Descriptor descriptor) {
         return new DynamicArtTransfer.Descriptor(

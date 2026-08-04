@@ -1256,15 +1256,18 @@ public final class Sonic1SpecialStageManager {
         // At rotation threshold, start concurrent fade (SS_ChkEnd / SS_Finish)
         // ROM: v_ssrotate == $1800 sets v_gamemode = id_Level, triggering SS_Finish
         // which runs WhiteOut_ToWhite alongside ExecuteObjects for 60 frames.
+        boolean enteredFinishLoop = false;
         if (ssRotate >= 0x1800 && !exitFadeStarted) {
             exitFadeStarted = true;
             exitFadeTimer = 60; // v_generictimer = 60
             GameServices.fade().startFadeToWhite(null, Integer.MAX_VALUE);
+            enteredFinishLoop = true;
         }
 
         // Count down fade timer (SS_FinLoop: dbf d1,SS_FinLoop)
-        if (exitFadeStarted) {
-            exitFadeTimer--;
+        if (exitFadeStarted && !enteredFinishLoop) {
+            exitFadeTimer = advanceFinishLoopTimer(
+                    exitFadeTimer, enteredFinishLoop);
             if (exitFadeTimer <= 0) {
                 finished = true;
             }
@@ -1279,6 +1282,11 @@ public final class Sonic1SpecialStageManager {
         // Update animation
         updateAnimCounters();
         updateBgAnimate();
+    }
+
+    static int advanceFinishLoopTimer(
+            int currentTimer, boolean enteredFinishLoop) {
+        return enteredFinishLoop ? currentTimer : currentTimer - 1;
     }
 
     // ---- Camera (from SS_FixCamera) ----

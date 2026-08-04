@@ -174,6 +174,21 @@ class TestTraceSessionLauncherRunBranch {
         String preparedPath = driver.substring(preparedStart, sharedStart);
         assertTrue(launcher.contains("driver.startPreparedLevel();"));
         assertFalse(launcher.contains("reopenCurrentGameplayForVisualTrace"));
+        int installStart = launcher.indexOf("private void installRunComparator(");
+        int installEnd = launcher.indexOf(
+                "private void adoptRunDestinationProductionIterationOwner(",
+                installStart);
+        String destinationInstall = launcher.substring(installStart, installEnd);
+        assertFalse(destinationInstall.contains("startSession("),
+                "destination admission must retain the one run timeline");
+        int acceptedStart = launcher.indexOf(
+                "boolean scheduleAcceptedRunLevelDestinationIfNeeded(");
+        int acceptedEnd = launcher.indexOf(
+                "public static boolean activateScheduledPlaybackForLoadedLevel(",
+                acceptedStart);
+        assertFalse(launcher.substring(acceptedStart, acceptedEnd)
+                        .contains("scheduleSessionAtNextLevelLoad("),
+                "an accepted load must not schedule a destination seek");
         assertFalse(preparedPath.contains("loadZoneAndAct("));
         assertFalse(preparedPath.contains("resetLevelSubsystemsForReplay("));
         assertFalse(preparedPath.contains("registerActiveTeam("));
@@ -205,7 +220,9 @@ class TestTraceSessionLauncherRunBranch {
                         bonus, segments.get(1).trace(), transition, null));
         Bk2Movie movie = new Bk2Movie(
                 Path.of("synthetic-run.bk2"), "logkey", Map.of(),
-                List.of(frame(500), frame(1900)), 3);
+                java.util.stream.IntStream.range(0, 1902)
+                        .mapToObj(TestTraceSessionLauncherRunBranch::frame)
+                        .toList(), 3);
 
         TraceSessionLauncher visual =
                 new TraceSessionLauncher(null, movie, twoSegments, null);
@@ -235,6 +252,7 @@ class TestTraceSessionLauncherRunBranch {
                         return GameMode.BONUS_STAGE;
                     }
                 }));
+        GameServices.playbackDebug().startSession(movie, 500);
 
         List<TraceRunPlaybackCoordinator.Action> headless =
                 driveCanonicalPolicy(new TraceRunPlaybackCoordinator(
@@ -511,6 +529,8 @@ class TestTraceSessionLauncherRunBranch {
         assertFalse(context.dynamicArtLifecycle().isComparisonSegmentOpen());
 
         session.beforeProductionIteration();
+        GameServices.playbackDebug().startSession(
+                movie, 2 + rowsConsumed);
         applyRunDestinationAdmission(session, new DestinationAdmissionReceipt(
                 1, DestinationAdmissionReceipt.InputClock.SHARED,
                 2 + rowsConsumed, rowsConsumed,
@@ -1243,7 +1263,9 @@ class TestTraceSessionLauncherRunBranch {
                 Path.of("synthetic-run.bk2"),
                 "logkey",
                 Map.of(),
-                List.of(frame(500), frame(800)),
+                java.util.stream.IntStream.range(0, 1_200)
+                        .mapToObj(TestTraceSessionLauncherRunBranch::frame)
+                        .toList(),
                 3);
         List<FrameComparison> oldObserved = new ArrayList<>();
         AtomicBoolean oldFirstError = new AtomicBoolean();
@@ -1292,6 +1314,7 @@ class TestTraceSessionLauncherRunBranch {
             assertTrue(beforeFinish.recentMismatches().isEmpty());
             return null;
         });
+        GameServices.playbackDebug().seekSessionFrame(800, true);
         session.afterProductionIteration();
 
         LiveTraceComparator specialStageComparator =
@@ -1641,8 +1664,10 @@ class TestTraceSessionLauncherRunBranch {
         setField(session, "runCoordinator", coordinator);
         setField(session, "runBoundaryProbe", probe);
         setField(session, "runSpecialLocalRow", 2);
+        setField(session, "activeSession", session);
         GameServices.playbackDebug().startSession(movie, 499);
 
+        TraceSessionLauncher.observeRunStageExitIfActive();
         session.runAdvanceTickIfActive(GameMode.LEVEL, 499);
 
         RunPlaybackObservation.LevelIdentity destinationIdentity =
@@ -1671,7 +1696,9 @@ class TestTraceSessionLauncherRunBranch {
 
         assertTrue(session.scheduleAcceptedRunLevelDestinationIfNeeded(
                 accepted, actions));
-        assertTrue(GameServices.playbackDebug().hasScheduledLevelLoadSession());
+        assertFalse(GameServices.playbackDebug().hasScheduledLevelLoadSession(),
+                "the accepted load retains the continuous timeline");
+        assertEquals(499, GameServices.playbackDebug().getCursorFrame());
     }
 
     @Test
@@ -2098,6 +2125,7 @@ class TestTraceSessionLauncherRunBranch {
                 coordinator.beforeAdmission(bonusObservation(false));
         assertFalse(admission.isEmpty(),
                 "visual coordinator must admit the observed bonus destination");
+        GameServices.playbackDebug().seekSessionFrame(1900, true);
         applyCoordinatorActions(launcher, admission);
         applyCoordinatorActions(launcher,
                 coordinator.afterProduction(bonusObservation(true)));

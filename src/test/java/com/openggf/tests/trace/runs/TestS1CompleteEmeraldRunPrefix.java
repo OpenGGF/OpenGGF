@@ -22,7 +22,7 @@ class TestS1CompleteEmeraldRunPrefix extends AbstractRunChainTest {
 
     @Test
     void ghz1ToFirstSpecialStageRow() throws Exception {
-        assertChainReplayThroughSpecialStageRow(RUN_DIR, 1, 1);
+        assertChainReplayThroughSegmentRow(RUN_DIR, 1, 1);
     }
 
     @Override

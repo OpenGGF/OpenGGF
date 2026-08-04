@@ -3,6 +3,16 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: visual and headless whole-run replay now share one segment policy
+  and the same physical-row driver for presentation, structural gaps, and
+  terminal movie tails. Presentation rows keep BK2 input,
+  PLC/load-queue, hardware-timing, and dynamic-art ownership advancing and
+  compared without treating them as playable physics; recorded no-VBlank spans
+  use native suppressed closures, and fresh destination setup art is primed
+  without a false runtime edge. The common trace HUD remains live across the
+  bridge, and physical capture shortcuts remain available while BK2 controls
+  gameplay. S1 special-stage returns therefore resume the next act at the
+  manifest-owned input window without seeking, reloading, or restarting music.
 - Fix/Test: visual and headless complete-run return checks now share one
   manifest-derived field policy. Fresh next-act returns no longer compare a
   Special Stage exit-ring tally against the correctly reset destination level,

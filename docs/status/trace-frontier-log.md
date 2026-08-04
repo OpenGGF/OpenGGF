@@ -61369,3 +61369,36 @@ to synthesize a POST phase on a VBLANK-only row.
   completed 14,268 tests (24 failures, 9 errors, 31 skips); the extra executed
   tests exposed unrelated Special Stage initialization and configuration
   errors. No boundary-comparator or visual-launcher parity test failed.
+
+## 2026-08-04 - Shared physical clock through visual run presentation
+
+- Worktree: `.worktrees/bugfix-ai-visual-run-presentation-clock`, branch
+  `bugfix/ai-visual-run-presentation-clock`, based on `845367f80`.
+- Visual and headless whole-run adapters now use the same segment policy and
+  physical-row driver for presentation, structural-gap, and terminal-tail
+  ownership. The visual adapter uses that owner across the full run, while
+  established headless gameplay retains its fixture loop. The BK2 session is
+  continuous: destination admission neither reloads the level nor
+  restarts/reseeks the movie, so music and production setup are not repeated.
+- Presentation rows compare physical input, PLC/load queues, hardware timing,
+  and atomic dynamic-art publication without hydrating playable state. The
+  terminal movie tail is included in the dynamic-art gap journal, and the
+  common HUD follows physical input until the whole run—not an individual
+  segment—completes.
+- Focused non-ROM validation: 306 tests across launcher, physical-row driver,
+  coordinator, structural comparator, comparator observers, PLC/dynamic-art
+  lifecycle, S1 Special Stage, HUD/capture, bootstrap diagnostics, and policy
+  catalog; 0 failures and 0 errors.
+- Bounded ROM validation:
+  `mvn -q -Dmse=off -Dsonic1.rom.path=s1.gen
+  -Dtest=com.openggf.tests.trace.runs.TestS1GhzMazeRoundTripChain#ghzMazeSpecialStageReturnPresentationBridge test`
+  — 1 test, 0 failures, 0 errors. It consumed all 812 recorded return bridge
+  rows and reached GHZ2 in `LEVEL` mode with its title card cleared at the exact
+  destination boundary. The lane retains its known animation-only first error
+  at GHZ1 frame 2,082 (`player_animation_id`); physics, S1 PLC queue, and
+  dynamic-art fields remained matched there. No gameplay frontier moved and no
+  trace payload changed.
+- Baseline suite on clean `origin/develop` (`845367f80`): 14,291 tests,
+  24 failures, 9 errors, and 31 skips. The feature and post-merge full suites
+  were not run; exhaustive replay of this fixture's 186,000+ unrepresented
+  true-movie-end tail was stopped after timeout and is not a focused gate.

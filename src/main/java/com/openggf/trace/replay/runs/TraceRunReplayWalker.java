@@ -8,6 +8,7 @@ import com.openggf.game.resources.DynamicArtDiagnosticsSnapshot;
 import com.openggf.trace.DynamicArtSpecialStageComparator;
 import com.openggf.trace.FrameComparison;
 import com.openggf.trace.TraceData;
+import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.TraceRunManifest;
 import com.openggf.trace.replay.TraceReplayFixture;
 import com.openggf.trace.timing.HardwareTimingSchedule;
@@ -51,15 +52,73 @@ public final class TraceRunReplayWalker {
         TraceData trace,
         TraceRunManifest.Transition entryBoundary,
         TraceRunManifest.Transition exitBoundary,
-        TraceRunSpecialStageRows specialStageRows
+        TraceRunSpecialStageRows specialStageRows,
+        SegmentExecutionPolicy executionPolicy
     ) {
         public SegmentPlan(
                 TraceRunManifest.Segment segment,
                 TraceData trace,
                 TraceRunManifest.Transition entryBoundary,
                 TraceRunManifest.Transition exitBoundary) {
-            this(segment, trace, entryBoundary, exitBoundary, null);
+            this(segment, trace, entryBoundary, exitBoundary, null,
+                    segmentExecutionPolicy(segment, entryBoundary, trace));
         }
+
+        public SegmentPlan(
+                TraceRunManifest.Segment segment,
+                TraceData trace,
+                TraceRunManifest.Transition entryBoundary,
+                TraceRunManifest.Transition exitBoundary,
+                TraceRunSpecialStageRows specialStageRows) {
+            this(segment, trace, entryBoundary, exitBoundary, specialStageRows,
+                    segmentExecutionPolicy(segment, entryBoundary, trace));
+        }
+    }
+
+    /** Structural execution ownership for one run segment. */
+    public enum SegmentExecutionPolicy {
+        GAMEPLAY,
+        SPECIAL_LOCAL,
+        LEVEL_PRESENTATION_BRIDGE
+    }
+
+    /**
+     * Classifies a segment from manifest topology and recorded row shape. A
+     * stage-exit destination is a presentation bridge only when row zero is the
+     * synthetic full row caused by its missing predecessor and every later row
+     * is canonically non-gameplay.
+     */
+    public static SegmentExecutionPolicy segmentExecutionPolicy(
+            TraceRunManifest.Segment segment,
+            TraceRunManifest.Transition entryBoundary,
+            TraceData trace) {
+        Objects.requireNonNull(segment, "segment");
+        Objects.requireNonNull(trace, "trace");
+        if ("special_stage".equals(segment.kind())) {
+            return SegmentExecutionPolicy.SPECIAL_LOCAL;
+        }
+        if (!"level".equals(segment.kind())
+                || entryBoundary == null
+                || !"stage_exit".equals(entryBoundary.entryKind())
+                || trace.frameCount() < 2) {
+            return SegmentExecutionPolicy.GAMEPLAY;
+        }
+        TraceExecutionPhase first =
+                com.openggf.trace.replay.TraceReplayRowPolicy.resolve(
+                        trace, 0, segment.bk2FrameOffset()).phase();
+        if (first != TraceExecutionPhase.FULL_LEVEL_FRAME) {
+            return SegmentExecutionPolicy.GAMEPLAY;
+        }
+        for (int row = 1; row < trace.frameCount(); row++) {
+            TraceExecutionPhase phase =
+                    com.openggf.trace.replay.TraceReplayRowPolicy.resolve(
+                            trace, row, segment.bk2FrameOffset() + row).phase();
+            if (phase != TraceExecutionPhase.VBLANK_ONLY
+                    && phase != TraceExecutionPhase.ADVANCE_ONLY) {
+                return SegmentExecutionPolicy.GAMEPLAY;
+            }
+        }
+        return SegmentExecutionPolicy.LEVEL_PRESENTATION_BRIDGE;
     }
 
     /**
@@ -838,7 +897,9 @@ public final class TraceRunReplayWalker {
             plans.add(new SegmentPlan(
                 segments.get(i), traces[i],
                 pairing.entryBoundaries()[i], pairing.exitBoundaries()[i],
-                specialStageRows[i]));
+                specialStageRows[i],
+                segmentExecutionPolicy(segments.get(i),
+                        pairing.entryBoundaries()[i], traces[i])));
         }
         return plans;
     }
@@ -905,13 +966,14 @@ public final class TraceRunReplayWalker {
         /** Attaches (or, with {@code null}, detaches) the delegate observer. */
         public void setDelegate(PlaybackDebugManager.PlaybackFrameObserver delegate) {
             this.delegate = delegate;
-            // A destination admission is performed between production
-            // iterations.  Discard any cached source-row delegate so the
-            // next prepare/advance pair cannot replay the old segment's
-            // input or comparison owner.
-            preparedFrame = null;
-            framePrepared = false;
-            preparedDelegate = null;
+            // A handoff may be observed after prepareFrame() but before the
+            // represented row advances. Keep that row pinned to the delegate
+            // which prepared it; afterFrameAdvanced() clears the pin. When no
+            // row is prepared there is no cached ownership to retain.
+            if (!framePrepared) {
+                preparedFrame = null;
+                preparedDelegate = null;
+            }
         }
 
         /**

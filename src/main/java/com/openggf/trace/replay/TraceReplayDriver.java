@@ -12,8 +12,10 @@ import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceFrame;
 import com.openggf.trace.TraceMetadata;
 import com.openggf.trace.TraceReplayBootstrap;
+import com.openggf.trace.FrameComparison;
 import com.openggf.trace.live.LiveTraceComparator;
 
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
@@ -39,6 +41,7 @@ public final class TraceReplayDriver {
     private final Supplier<AbstractPlayableSprite> spriteSupplier;
     private final Runnable onComparatorPause;
     private final boolean forceHardwareTimingReplay;
+    private final Consumer<FrameComparison> comparisonObserver;
 
     private LiveTraceComparator comparator;
     private int initialCursor;
@@ -71,6 +74,19 @@ public final class TraceReplayDriver {
             Supplier<AbstractPlayableSprite> spriteSupplier,
             Runnable onComparatorPause,
             boolean forceHardwareTimingReplay) {
+        this(trace, movie, fixture, loop, spriteSupplier, onComparatorPause,
+                forceHardwareTimingReplay, null);
+    }
+
+    public TraceReplayDriver(
+            TraceData trace,
+            Bk2Movie movie,
+            TraceReplayFixture fixture,
+            GameLoop loop,
+            Supplier<AbstractPlayableSprite> spriteSupplier,
+            Runnable onComparatorPause,
+            boolean forceHardwareTimingReplay,
+            Consumer<FrameComparison> comparisonObserver) {
         this.trace = trace;
         this.movie = movie;
         this.fixture = fixture;
@@ -78,6 +94,7 @@ public final class TraceReplayDriver {
         this.spriteSupplier = spriteSupplier;
         this.onComparatorPause = onComparatorPause;
         this.forceHardwareTimingReplay = forceHardwareTimingReplay;
+        this.comparisonObserver = comparisonObserver;
     }
 
     /**
@@ -228,7 +245,8 @@ public final class TraceReplayDriver {
                 ToleranceConfig.DEFAULT,
                 initialCursor,
                 spriteSupplier::get,
-                onComparatorPause);
+                onComparatorPause,
+                comparisonObserver);
         comparator.compareBootstrap(
                 TraceReplayEngineSnapshot.capture(spriteSupplier.get()));
         playback.setFrameObserver(comparator);

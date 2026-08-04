@@ -28,6 +28,7 @@ public class PlayableSpriteAnimation {
     private boolean nextUpdateSuppressed;
     private boolean animationUpdateSuppressedThisFrame;
     private DynamicArtDecisionOwner dynamicArtDecisionOwner;
+    private boolean bootstrapDynamicArtPrime;
 
     /**
      * Holds one animation dispatch while the rest of the playable tick runs.
@@ -67,6 +68,10 @@ public class PlayableSpriteAnimation {
 
     public boolean hasDynamicArtDecisionOwner() {
         return dynamicArtDecisionOwner != null;
+    }
+
+    public void setBootstrapDynamicArtPrime(boolean bootstrapDynamicArtPrime) {
+        this.bootstrapDynamicArtPrime = bootstrapDynamicArtPrime;
     }
 
     private PlayerAnimationRules playerAnimationRulesOrNull() {
@@ -136,7 +141,11 @@ public class PlayableSpriteAnimation {
         }
         updateAnimation(frameCounter);
         if (dynamicArtDecisionOwner != null) {
-            dynamicArtDecisionOwner.observe(sprite.getMappingFrame());
+            if (bootstrapDynamicArtPrime) {
+                dynamicArtDecisionOwner.prime(sprite.getMappingFrame());
+            } else {
+                dynamicArtDecisionOwner.observe(sprite.getMappingFrame());
+            }
         }
         // Obj05 (Tails' tails) is NOT dispatched here. Its SST lives in
         // LevelOnly_Object_RAM, which starts after Object_RAM_End /

@@ -6,6 +6,7 @@ import com.openggf.control.InputHandler;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.PlaybackDebugManager;
+import com.openggf.debug.playback.RecordedInputSnapshots;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
 import com.openggf.game.session.SessionManager;
@@ -13,6 +14,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import com.openggf.trace.replay.runs.TraceRunFrameDriver;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -165,6 +167,53 @@ class TestPlaybackAdvanceOnlyInputBridge {
 
         assertTrue(loop.isUserPaused(),
                 "the configured live pause key must remain usable during playback");
+    }
+
+    @Test
+    void driverOwnedPresentationStartDoesNotToggleVisibleUserPause() {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(0, 0)
+                .build();
+        InputHandler input = new InputHandler();
+        GameLoop loop = new GameLoop(input);
+        loop.changeGameModeWithoutRewindBoundary(GameMode.LEVEL);
+        Bk2Movie movie = startEdgeMovie();
+        TraceRunFrameDriver driver = new TraceRunFrameDriver();
+        SessionManager.getCurrentGameplayMode()
+                .installTraceRunFrameDriver(driver);
+
+        driver.execute(
+                new TraceRunFrameDriver.Step(
+                        TraceRunFrameDriver.Disposition.PRESENTATION_VBLANK,
+                        0, false),
+                new TraceRunFrameDriver.Hooks<Void>() {
+                    @Override public void preparePhysicalRow(
+                            TraceRunFrameDriver.Step step) {
+                        input.setLogicalOverride(
+                                RecordedInputSnapshots.fromBk2(
+                                        movie.getFrame(0), null));
+                    }
+                    @Override public void prepareHardwareTiming(
+                            TraceRunFrameDriver.Step step) { }
+                    @Override public Void captureBefore(
+                            TraceRunFrameDriver.Step step) { return null; }
+                    @Override public void runProductionLifecycle(
+                            TraceRunFrameDriver.Step step) { loop.step(); }
+                    @Override public void advancePhysicalRow(
+                            TraceRunFrameDriver.Step step) { }
+                    @Override public Void captureAfter(
+                            TraceRunFrameDriver.Step step) { return null; }
+                    @Override public void compare(
+                            TraceRunFrameDriver.Step step,
+                            Void before, Void after) { }
+                    @Override public void afterStep(
+                            TraceRunFrameDriver.Step step) {
+                        input.clearLogicalOverride();
+                    }
+                });
+
+        assertFalse(loop.isUserPaused(),
+                "recorded Start belongs to run presentation, not the visual pause overlay");
     }
 
     private static Bk2Movie heldActionMovie() {

@@ -159,6 +159,46 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
         return runLogicalIteration(fadeUpdate, iteration);
     }
 
+    /**
+     * Runs a represented lag closure without advancing or assigning ownership
+     * to an active native blocking fade. A ROM lag handler leaves that fade's
+     * mode-specific PLC work paused until the next ordinary VBlank.
+     */
+    public <T> T runSuppressedLagIteration(
+            Function<PlcLifecycleFrame, T> iteration) {
+        Objects.requireNonNull(iteration, "iteration");
+        if (activeFrame != null && !activeFrame.finished) {
+            throw new IllegalStateException(
+                    "previous PLC lifecycle frame is still active");
+        }
+        PlcLifecycleFrame frame = new PlcLifecycleFrame(serviceSupplier.get());
+        activeFrame = frame;
+        Throwable primaryFailure = null;
+        try {
+            T result = iteration.apply(frame);
+            if (!frame.isOwnedBy(PlcLifecyclePhase.LAG)) {
+                throw new IllegalStateException(
+                        "suppressed lag iteration did not claim LAG");
+            }
+            return result;
+        } catch (RuntimeException | Error failure) {
+            primaryFailure = failure;
+            throw failure;
+        } finally {
+            try {
+                if (!frame.finished) {
+                    frame.finish();
+                }
+            } catch (RuntimeException | Error validationFailure) {
+                if (primaryFailure != null) {
+                    primaryFailure.addSuppressed(validationFailure);
+                } else {
+                    throw validationFailure;
+                }
+            }
+        }
+    }
+
     @Override
     public NativeBlockingFade beginNativeBlockingFade() {
         if (activeFade != null && !activeFade.closed) {

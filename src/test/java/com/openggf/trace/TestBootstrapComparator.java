@@ -19,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import com.openggf.level.objects.RomObjectSnapshot;
 import com.openggf.trace.live.LiveTraceComparator;
+import com.openggf.trace.replay.runs.TraceRunExternalDiagnostics;
 
 /**
  * Frame-0 bootstrap comparator. Verifies engine state at frame 0 already
@@ -107,6 +108,46 @@ class TestBootstrapComparator {
         assertEquals("player_history.pos",
                 comparator.recentMismatches().getFirst().field());
         assertEquals(divergences, comparator.bootstrapDivergences());
+    }
+
+    @Test
+    void bootstrapObserverPublishesEveryDivergenceBeforeLaterGapErrors() {
+        TraceData trace = traceWithSnapshots(
+                0x34,
+                shorts(64, 0x0500),
+                shorts(64, 0x0300),
+                shorts(64, 0x0000),
+                bytes(64, (byte) 0x00),
+                null,
+                List.of());
+        EngineSnapshot snapshot = new EngineSnapshot(
+                shorts(64, 0x0600),
+                shorts(64, 0x0300),
+                shorts(64, 0x0000),
+                bytes(64, (byte) 0x00),
+                13,
+                null,
+                Map.of());
+        AtomicInteger pauses = new AtomicInteger();
+        TraceRunExternalDiagnostics runDiagnostics =
+                new TraceRunExternalDiagnostics(pauses::incrementAndGet);
+        LiveTraceComparator comparator = new LiveTraceComparator(
+                trace, ToleranceConfig.DEFAULT, 0, () -> null,
+                pauses::incrementAndGet, runDiagnostics::acceptDisplayed);
+
+        List<BootstrapDivergence> divergences =
+                comparator.compareBootstrap(snapshot);
+        runDiagnostics.acceptBootstrap(divergences);
+        runDiagnostics.accept(new FrameComparison(1, Map.of(
+                "run_gap.edge_count", new FieldComparison(
+                        "run_gap.edge_count", "0", "1",
+                        Severity.ERROR, 1))));
+
+        assertTrue(divergences.size() > 5,
+                "coverage requires more mismatches than the HUD ring retains");
+        assertEquals(divergences.size() + 1, runDiagnostics.errorCount());
+        assertEquals(1, pauses.get(),
+                "the later gap error must not toggle pause a second time");
     }
 
     /**

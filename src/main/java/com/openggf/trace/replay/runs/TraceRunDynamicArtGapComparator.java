@@ -22,6 +22,7 @@ import java.util.Objects;
 public final class TraceRunDynamicArtGapComparator {
 
     private static final String PREFIX = "run_gap.";
+    private static final String TAIL_PREFIX = "run_tail.";
 
     private TraceRunDynamicArtGapComparator() {
     }
@@ -54,6 +55,24 @@ public final class TraceRunDynamicArtGapComparator {
         }
     }
 
+    /** Read-only runtime evidence captured after the final segment closes. */
+    public record RuntimeTerminalTail(
+            String sourceSegmentDir,
+            long sourceClosed,
+            long gapOpened,
+            long tailClosed,
+            List<DynamicArtTransfer.Descriptor> openingLedger,
+            List<DynamicArtGapTransition> transitions) {
+        public RuntimeTerminalTail {
+            sourceSegmentDir = Objects.requireNonNull(
+                    sourceSegmentDir, "sourceSegmentDir");
+            openingLedger = List.copyOf(Objects.requireNonNull(
+                    openingLedger, "openingLedger"));
+            transitions = List.copyOf(Objects.requireNonNull(
+                    transitions, "transitions"));
+        }
+    }
+
     /** Compares one source-to-destination gap. */
     public static FrameComparison compare(
             int frame,
@@ -77,8 +96,50 @@ public final class TraceRunDynamicArtGapComparator {
         compareStructure(fields, source, destination, actual);
         List<DynamicArtTransfer.GapTransition> expectedTransitions =
                 gapSlice(manifest, sourceSegmentIndex);
-        compareRuntimeTransitions(fields, expectedTransitions, actual,
-                destination);
+        compareRuntimeTransitions(fields, PREFIX, expectedTransitions,
+                actual.openingLedger(), actual.transitions(), destination);
+        return new FrameComparison(frame, fields);
+    }
+
+    /** Compares the final segment-to-movie-end tail without a fake destination. */
+    public static FrameComparison compareTerminalTail(
+            int frame,
+            TraceRunManifest manifest,
+            int sourceSegmentIndex,
+            int movieFrameCount,
+            RuntimeTerminalTail actual) {
+        Objects.requireNonNull(manifest, "manifest");
+        Objects.requireNonNull(actual, "actual");
+        if (sourceSegmentIndex < 0
+                || sourceSegmentIndex != manifest.segments().size() - 1) {
+            throw new IllegalArgumentException(
+                    "terminal source must be the final segment: "
+                            + sourceSegmentIndex);
+        }
+        TraceRunManifest.Segment source =
+                manifest.segments().get(sourceSegmentIndex);
+        int sourceEnd = Math.addExact(
+                source.bk2FrameOffset(), source.traceFrameCount());
+        if (movieFrameCount < sourceEnd) {
+            throw new IllegalArgumentException(
+                    "movie ends before terminal source closes");
+        }
+        Map<String, FieldComparison> fields = new LinkedHashMap<>();
+        put(fields, TAIL_PREFIX + "structure.source_segment",
+                source.dir(), actual.sourceSegmentDir());
+        put(fields, TAIL_PREFIX + "structure.source_closed_before_gap",
+                true, actual.sourceClosed() < actual.gapOpened());
+        put(fields, TAIL_PREFIX + "structure.gap_before_tail_close",
+                true, actual.gapOpened() < actual.tailClosed());
+        List<DynamicArtTransfer.GapTransition> expected =
+                manifest.dynamicArtGapTransitions().stream()
+                        .filter(transition -> transition.dynamicArtGapEdge()
+                                .movieLogicalFrame() >= sourceEnd)
+                        .filter(transition -> transition.dynamicArtGapEdge()
+                                .movieLogicalFrame() < movieFrameCount)
+                        .toList();
+        compareRuntimeTransitions(fields, TAIL_PREFIX, expected,
+                actual.openingLedger(), actual.transitions(), null);
         return new FrameComparison(frame, fields);
     }
 
@@ -116,23 +177,25 @@ public final class TraceRunDynamicArtGapComparator {
 
     private static void compareRuntimeTransitions(
             Map<String, FieldComparison> fields,
+            String prefix,
             List<DynamicArtTransfer.GapTransition> expectedTransitions,
-            RuntimeGap actual,
+            List<DynamicArtTransfer.Descriptor> openingLedger,
+            List<DynamicArtGapTransition> observedTransitions,
             TraceRunManifest.Segment destination) {
-        put(fields, PREFIX + "edge_count", expectedTransitions.size(),
-                actual.transitions().size());
+        put(fields, prefix + "edge_count", expectedTransitions.size(),
+                observedTransitions.size());
         List<DynamicArtTransfer.Descriptor> runtimeLedger =
-                new ArrayList<>(actual.openingLedger());
+                new ArrayList<>(openingLedger);
         int edgeCount = Math.max(
-                expectedTransitions.size(), actual.transitions().size());
+                expectedTransitions.size(), observedTransitions.size());
         for (int index = 0; index < edgeCount; index++) {
             DynamicArtTransfer.GapTransition expected =
                     index < expectedTransitions.size()
                             ? expectedTransitions.get(index) : null;
             DynamicArtGapTransition observed =
-                    index < actual.transitions().size()
-                            ? actual.transitions().get(index) : null;
-            String edgePrefix = PREFIX + "edge[" + index + "].";
+                    index < observedTransitions.size()
+                            ? observedTransitions.get(index) : null;
+            String edgePrefix = prefix + "edge[" + index + "].";
             put(fields, edgePrefix + "present",
                     expected != null, observed != null);
             if (expected == null || observed == null) {
@@ -147,14 +210,21 @@ public final class TraceRunDynamicArtGapComparator {
                     runtimeLedger);
         }
 
-        List<String> expectedFingerprints = fingerprints(
-                destination.dynamicArtInitialLedgerDescriptors());
-        List<String> actualFingerprints = fingerprints(runtimeLedger);
-        put(fields, PREFIX + "destination.initial_ledger_fingerprints",
-                expectedFingerprints, actualFingerprints);
-        put(fields, PREFIX + "destination.initial_ledger_fingerprint",
-                destination.dynamicArtInitialLedgerFingerprint(),
-                DynamicArtTransfer.ledgerHash(runtimeLedger));
+        if (destination != null) {
+            List<String> expectedFingerprints = fingerprints(
+                    destination.dynamicArtInitialLedgerDescriptors());
+            List<String> actualFingerprints = fingerprints(runtimeLedger);
+            put(fields, prefix + "destination.initial_ledger_fingerprints",
+                    expectedFingerprints, actualFingerprints);
+            put(fields, prefix + "destination.initial_ledger_fingerprint",
+                    destination.dynamicArtInitialLedgerFingerprint(),
+                    DynamicArtTransfer.ledgerHash(runtimeLedger));
+        } else if (!expectedTransitions.isEmpty()) {
+            put(fields, prefix + "final_ledger_fingerprints",
+                    fingerprints(expectedTransitions.getLast()
+                            .afterLedgerDescriptors()),
+                    fingerprints(runtimeLedger));
+        }
     }
 
     private static void compareEdge(
