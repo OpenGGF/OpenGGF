@@ -729,6 +729,8 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.CAPTURE_AUDIO_CODEC, "flac");
 		putDefault(SonicConfiguration.CAPTURE_CONTAINER, "mkv");
 		putDefault(SonicConfiguration.CAPTURE_QUEUE_BUDGET_MB, 192);
+		putDefault(SonicConfiguration.CAPTURE_ENCODER_THREADS, 0);
+		putDefault(SonicConfiguration.CAPTURE_ENCODER_PRESET, "");
 		putDefault(SonicConfiguration.CAPTURE_FFMPEG_PASS1_ARGS, "default");
 		putDefault(SonicConfiguration.CAPTURE_FFMPEG_PASS2_ARGS, "default");
 		// putDefault, not putDefaultKey: the default carries its own modifier.

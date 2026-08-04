@@ -14,15 +14,25 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public final class EncoderSink implements FrameSink {
 
+    private static final java.util.logging.Logger LOGGER =
+            java.util.logging.Logger.getLogger(EncoderSink.class.getName());
     private static final CapturedFrame POISON =
             new CapturedFrame(new byte[0], 0, 0, new short[0], 0, -1L);
     private static final long DEFAULT_STOP_JOIN_TIMEOUT_MILLIS = 5_000L;
+    /** A stalled encoder stalls every frame; warn periodically, not per frame. */
+    private static final long WARNING_INTERVAL_NANOS =
+            TimeUnit.SECONDS.toNanos(5);
+    private static final long NEVER_WARNED = Long.MIN_VALUE;
 
     private final CaptureEncoder encoder;
     private final BackpressurePolicy policy;
     private final BlockingQueue<CapturedFrame> queue;
     private final long stopJoinTimeoutMillis;
     private final AtomicLong dropped = new AtomicLong();
+    private final AtomicLong exhaustedFrames = new AtomicLong();
+    private final AtomicLong blockedNanos = new AtomicLong();
+    private final AtomicLong worstBlockedNanos = new AtomicLong();
+    private final AtomicLong lastWarningNanos = new AtomicLong(NEVER_WARNED);
     private Thread worker;
     private volatile CaptureException workerFailure;
     private volatile Path output;
@@ -60,12 +70,16 @@ public final class EncoderSink implements FrameSink {
         }
         switch (policy) {
             case BLOCK -> {
+                long blockStartNanos = 0L;
                 try {
                     // Timed offer rather than a blocking put: if the worker dies
                     // while the queue is full, an unbounded put() would block the
                     // producer forever and it would never reach stop(). Re-check
                     // worker health between attempts.
                     while (!queue.offer(frame, 50, TimeUnit.MILLISECONDS)) {
+                        if (blockStartNanos == 0L) {
+                            blockStartNanos = System.nanoTime();
+                        }
                         if (workerFailure != null) {
                             throw new CaptureException("encoder thread failed", workerFailure);
                         }
@@ -76,6 +90,10 @@ public final class EncoderSink implements FrameSink {
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     throw new CaptureException("interrupted while submitting", e);
+                } finally {
+                    if (blockStartNanos != 0L) {
+                        recordExhaustion(System.nanoTime() - blockStartNanos);
+                    }
                 }
             }
             case DROP_OLDEST -> {
@@ -165,6 +183,72 @@ public final class EncoderSink implements FrameSink {
 
     public long droppedCount() {
         return dropped.get();
+    }
+
+    /** Frames whose submit had to wait for a full queue. */
+    public long exhaustedFrameCount() {
+        return exhaustedFrames.get();
+    }
+
+    /** Total wall-clock time the submitting thread spent waiting on a full queue. */
+    public long totalBlockedNanos() {
+        return blockedNanos.get();
+    }
+
+    /** Longest single wait on a full queue. */
+    public long worstBlockedNanos() {
+        return worstBlockedNanos.get();
+    }
+
+    /**
+     * Records one exhausted submit and logs a rate-limited warning.
+     * <p>
+     * Under {@code BLOCK} this wait happens on the caller's thread — for live
+     * recording that is the game thread, so an exhausted queue is directly
+     * visible as a stutter. It is worth a warning rather than a silent stat:
+     * the queue is sized to absorb bursts, so reaching the bottom of it means
+     * the encoder is not keeping up with the content being recorded.
+     */
+    private void recordExhaustion(long blockedNanos) {
+        exhaustedFrames.incrementAndGet();
+        this.blockedNanos.addAndGet(blockedNanos);
+        worstBlockedNanos.accumulateAndGet(blockedNanos, Math::max);
+        long now = System.nanoTime();
+        long previous = lastWarningNanos.get();
+        // NEVER_WARNED is a sentinel, not a timestamp: nanoTime() may be
+        // negative, so subtracting it from `now` would overflow rather than
+        // reliably exceed the interval.
+        if ((previous != NEVER_WARNED && now - previous < WARNING_INTERVAL_NANOS)
+                || !lastWarningNanos.compareAndSet(previous, now)) {
+            return;
+        }
+        LOGGER.warning(String.format(
+                "Capture encoder queue exhausted: all %d frames full, submit blocked %d ms"
+                        + " (%d exhausted frames, %d ms total, %d ms worst). The encoder is"
+                        + " not keeping up; lower the capture resolution, use a faster codec"
+                        + " or preset, or raise capture.queueBudgetMb.",
+                capacity(), TimeUnit.NANOSECONDS.toMillis(blockedNanos),
+                exhaustedFrames.get(),
+                TimeUnit.NANOSECONDS.toMillis(this.blockedNanos.get()),
+                TimeUnit.NANOSECONDS.toMillis(worstBlockedNanos.get())));
+    }
+
+    /** One-line summary for the end of a recording; null when nothing stalled. */
+    String exhaustionSummary() {
+        long frames = exhaustedFrames.get();
+        if (frames == 0) {
+            return null;
+        }
+        return String.format(
+                "capture encoder queue (%d frames) was exhausted on %d submits,"
+                        + " blocking the submitting thread for %d ms total, %d ms worst",
+                capacity(), frames,
+                TimeUnit.NANOSECONDS.toMillis(blockedNanos.get()),
+                TimeUnit.NANOSECONDS.toMillis(worstBlockedNanos.get()));
+    }
+
+    private int capacity() {
+        return queue.size() + queue.remainingCapacity();
     }
 
     private void runWorker() {

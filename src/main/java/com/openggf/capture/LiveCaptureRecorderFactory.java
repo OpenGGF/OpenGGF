@@ -50,7 +50,9 @@ public final class LiveCaptureRecorderFactory {
     public CaptureRecorder create(CaptureViewport viewport, int frameRate) {
         FfmpegEncoder encoder = new FfmpegEncoder(ffmpeg, 1);
         encoder.setCodecs(config.getString(SonicConfiguration.CAPTURE_CODEC),
-                config.getString(SonicConfiguration.CAPTURE_AUDIO_CODEC));
+                config.getString(SonicConfiguration.CAPTURE_AUDIO_CODEC),
+                config.getInt(SonicConfiguration.CAPTURE_ENCODER_THREADS),
+                config.getString(SonicConfiguration.CAPTURE_ENCODER_PRESET));
         encoder.setCommandOverrides(
                 config.getString(SonicConfiguration.CAPTURE_FFMPEG_PASS1_ARGS),
                 config.getString(SonicConfiguration.CAPTURE_FFMPEG_PASS2_ARGS));

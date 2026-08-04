@@ -119,6 +119,13 @@ public final class LiveCaptureController implements AutoCloseable {
             warnAudioOnce(audioCloseFailure);
         }
         CaptureRecorder stoppingRecorder = recorder;
+        // Reported at the end of the recording as well as during it: the
+        // periodic warnings are rate-limited, so this is the only place the
+        // full cost of a struggling encoder is stated once, in one line.
+        String exhaustion = stoppingRecorder.exhaustionSummary();
+        if (exhaustion != null) {
+            LOGGER.warning("Live viewport recording: " + exhaustion);
+        }
         finalization = deps.finalizer.submit(() -> {
             try {
                 stoppingRecorder.stop();

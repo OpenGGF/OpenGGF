@@ -337,8 +337,37 @@ a few seconds afterwards.
 `capture.queueBudgetMb` sets how much of that burst the queue can absorb. Raise it if you
 record fast-forwarded playback and can spare the memory; note it bounds a *burst*, not a
 sustained overload — if the encoder is permanently slower than real time, a deeper queue
-only delays the stall. For sustained high-motion recording, prefer a lower window
-resolution or `h264`/`h265` over `ffv1`.
+only delays the stall.
+
+When the queue does run dry, the engine says so: a rate-limited warning naming the queue
+depth, the blocked time, and the running totals, plus a one-line summary when the
+recording stops. If you see those, the encoder is the bottleneck.
+
+#### Making the encoder keep up
+
+H.265 is the slowest of the three codecs by a wide margin because `lossless=1` at the
+default `medium` preset does a great deal of work per frame. Measured here on 180 frames
+of 1280×896 RGBA (3.0 s of real time at 60fps):
+
+| Setting | Encode time | Verdict |
+|---|---|---|
+| `h265`, default preset (`medium`) | 1.45 s | ~2× real time — little headroom |
+| `h265`, `veryfast` | 0.89 s | ~3.4× real time |
+| `h265`, `ultrafast` | 0.41 s | ~7× real time, on par with FFV1 |
+| `ffv1` (sliced, default) | 0.34 s | fastest |
+
+So if H.265 stutters, set `capture.encoderPreset: "ultrafast"` — it brings H.265 to roughly
+FFV1's throughput and is still byte-exact (verified by re-decoding and comparing, not
+assumed; `TestCaptureCodecLosslessness` covers the defaults). Raising
+`capture.encoderThreads` will not help: libx265 already threads internally.
+
+Those figures come from synthetic test video. Real fast-forwarded gameplay changes more
+between frames and will be slower across the board, so treat them as ratios rather than
+absolute budgets. FFV1 is encoded with `-slices 16` so it can use more than one core at
+all, which measured ~17% faster for ~0.3% more file size.
+
+For sustained high-motion recording, a lower window resolution is the other lever — cost
+scales with pixel count.
 
 ### Containers
 
@@ -460,6 +489,8 @@ ones. The bundled `config.yaml` supplies the live toggle default.
 | `CAPTURE_CODEC` | `capture.codec` | string | `"ffv1"` | Video codec for live and trace capture: `ffv1`, `h264` or `h265`. All three are lossless — see the note below. |
 | `CAPTURE_CONTAINER` | `capture.container` | string | `"mkv"` | Recording file extension. ffmpeg selects its muxer from this — see "Containers" below. |
 | `CAPTURE_QUEUE_BUDGET_MB` | `capture.queueBudgetMb` | int | `192` | Live recording only: memory budget for the encoder queue. The queue is sized in whole frames from this budget and the recording viewport (which is the *window*, not 320×224), so it holds fewer frames at larger window sizes — clamped to 8..120 frames. A deeper queue absorbs longer encoder stalls before backpressure blocks the game loop; see "Recording high-motion content" below. |
+| `CAPTURE_ENCODER_PRESET` | `capture.encoderPreset` | string | `""` | x264/x265 speed preset: `ultrafast`, `superfast`, `veryfast`, `faster`, `fast`, `medium`, `slow`, `slower`, `veryslow`, `placebo`. Blank uses the encoder's own default (`medium`). Ignored by FFV1, which has no preset. Presets trade encode speed for file size and **never** affect losslessness. This is the main lever when H.265 cannot keep up — see below. |
+| `CAPTURE_ENCODER_THREADS` | `capture.encoderThreads` | int | `0` | ffmpeg `-threads` for the encode pass. `0` lets ffmpeg choose, which is normally one thread per core and is almost always right. x264/x265 already thread internally, so raising this rarely helps them; prefer `capture.encoderPreset`. |
 | `CAPTURE_AUDIO_CODEC` | `capture.audioCodec` | string | `"flac"` | Audio codec: `flac`, `aac` or `mp3`. **`aac` and `mp3` are lossy**: the recorded audio will not match what the engine produced. `flac` is lossless. |
 | `CAPTURE_FFMPEG_PASS1_ARGS` | `capture.ffmpegPass1Args` | string | `"default"` | **Advanced.** Full ffmpeg argument list for the encode pass. See "Overriding the ffmpeg commands" below. |
 | `CAPTURE_FFMPEG_PASS2_ARGS` | `capture.ffmpegPass2Args` | string | `"default"` | **Advanced.** Full ffmpeg argument list for the mux pass; leave empty to skip it and record video only. |
