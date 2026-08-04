@@ -17,16 +17,16 @@
     },
     "native_artifact": {
       "path": "tools/bizhawk-headless/bin/Release/BizHawk.Headless.Gpgx.exe",
-      "sha256": "81b072f37a1b3a1202d6ac02b5e230365adbe3e9a6e2be9bb2fbee274738f459",
-      "size": 359424
+      "sha256": "48e6deca61ac2a9ad6332e7170aa89f7468d82bfced33f66dd88475b501af3dc",
+      "size": 359936
     },
     "native_test_artifact": {
       "path": "tools/bizhawk-headless/bin/Release/BizHawk.Headless.Gpgx.Tests.exe",
-      "sha256": "3f90d1dc4df4fb80b9e3b3b4445b949934a209c7da2b964f3cbbb078f0730f4b",
+      "sha256": "6c5aad4c1b0a331ee61b096495550f9bf7ba68ebfa65119700c7f07569931e35",
       "size": 619520
     },
-    "source_commit": "cd89d6ab4f623c99afc76629eb423cd03f246809",
-    "source_diff_sha256": "b45bfc7e521cddc5caa18fc4363ec9240a09d7a678e2a8fb36b431abf152335b"
+    "source_commit": "369c3a89975ba54f471cf9560e7008f0aa58761c",
+    "source_diff_sha256": "8ae54221dd82fb4aa43b347c09d1ebe69aa4bc019950b84f1d320e3d2405ee79"
   },
   "roms": {
     "s1": {

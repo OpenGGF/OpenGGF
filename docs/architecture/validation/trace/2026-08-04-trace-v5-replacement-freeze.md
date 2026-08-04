@@ -1,4 +1,4 @@
-# Trace v5 replacement freeze — pre-capture boundary
+# Trace v5 replacement freeze — replacement capture boundary
 
 ## Frozen identity
 
@@ -8,18 +8,21 @@ authorize installation or deletion of committed fixtures.
 
 | Identity | Value |
 | --- | --- |
-| Reviewed source commit | `cd89d6ab4f623c99afc76629eb423cd03f246809` |
+| Reviewed source commit | `369c3a89975ba54f471cf9560e7008f0aa58761c` |
 | Development baseline | `3573af57be947284a1f8398c7b4b4e05a8b12f14` |
-| Source diff SHA-256 | `b45bfc7e521cddc5caa18fc4363ec9240a09d7a678e2a8fb36b431abf152335b` |
-| Diff definition | `git diff --full-index --binary origin/develop..cd89d6ab4 \| sha256sum` |
+| Source diff SHA-256 | `8ae54221dd82fb4aa43b347c09d1ebe69aa4bc019950b84f1d320e3d2405ee79` |
+| Diff definition | `git diff --full-index --binary origin/develop..369c3a899 \| sha256sum` |
 | Native harness | `tools/bizhawk-headless/bin/Release/BizHawk.Headless.Gpgx.exe` |
-| Native harness SHA-256 | `81b072f37a1b3a1202d6ac02b5e230365adbe3e9a6e2be9bb2fbee274738f459` |
-| Native harness size | `359424` bytes |
-| Native test SHA-256 | `3f90d1dc4df4fb80b9e3b3b4445b949934a209c7da2b964f3cbbb078f0730f4b` |
+| Native harness SHA-256 | `48e6deca61ac2a9ad6332e7170aa89f7468d82bfced33f66dd88475b501af3dc` |
+| Native harness size | `359936` bytes |
+| Native test SHA-256 | `6c5aad4c1b0a331ee61b096495550f9bf7ba68ebfa65119700c7f07569931e35` |
 | Native test size | `619520` bytes |
 
-The native harness was rebuilt once from this reviewed source boundary after
-the upstream visual-run merge and reconciliation fixes. The build returned
+The native harness was rebuilt from this replacement source boundary after the
+first 35 matrix rows captured successfully but the 67-segment Knuckles row
+exposed a valid same-frame Kos module retirement plus append. The recorder now
+validates the shifted prefix, retires one completion, and reconciles the new
+tail; its focused contract covers that exact ROM ordering. The build returned
 exit 0; Mono reported only the known .NET Framework 4.8 toolset warning.
 
 ## Reconciled upstream work
@@ -52,10 +55,10 @@ The complete Python testing directory passed:
 
 ```text
 python3 -m unittest discover -s tools/testing -p 'test_*.py'
-Ran 37 tests in 32.821s — OK
+Ran 42 tests — OK
 ```
 
-The native no-gate suite passed with exit 0 after the rebuild. With ROM
+The native no-gate suite passed with exit 0 after the replacement rebuild. With ROM
 variables absent it reported only expected ROM-dependent skips. The real-ROM
 credits gate was run against the verified S1 REV01 ROM and passed:
 
@@ -68,13 +71,15 @@ comparison, raw-host sidecar equality, and first-divergence binding.
 
 The installed fixture inventory passed both filesystem and Git-index checks.
 `git diff --name-only -- src/test/resources/traces` remained empty throughout
-the re-entry and merge. No production fleet capture, candidate assembly,
-fixture regeneration, fixture deletion, or installation has occurred.
+the re-entry, merge, and first capture batch. Rows 1–35 of the first batch
+passed; row 36 was preserved as a failed diagnostic batch after 314 seconds,
+with no published output. No installed fixture has been regenerated, deleted,
+or modified.
 
 ## Next boundary
 
-Task 9 may now implement and review the literal 36-row scratch capture matrix,
-preflight, no-replace assembler, and postprocessor. Every capture must verify
-this source/diff/native identity and the unchanged predecessor inventory.
-Capture output remains outside the installed fixture tree until an explicit
-comparison and installation decision is made.
+Task 9 may now recapture row 36 using a fresh absent batch, then assemble and
+validate the candidate. Every capture must verify this source/diff/native
+identity and the unchanged predecessor inventory. Capture output remains
+outside the installed fixture tree until an explicit comparison and
+installation decision is made.
