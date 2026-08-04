@@ -866,6 +866,9 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                             mutatedTitleCardResetDispatches(
                                     usesShortResultsChildRetireTail,
                                     carriedPreloadedActCameraReleaseDispatches));
+                    if (carriedPreloadedActCameraReleaseDispatches == 0) {
+                        s3kTitleCard.requestInLevelExitAdditionalDispatches(1);
+                    }
                 }
             }
         }

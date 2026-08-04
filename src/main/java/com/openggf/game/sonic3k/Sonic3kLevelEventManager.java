@@ -144,6 +144,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     private int cnzAct2MaxXAccumulator;
     private int cnzAct2MinYAccumulator;
     private int cnzAct2MaxYAccumulator;
+    private boolean cnzAct2SizeUpdatedBeforeCamera;
 
     public Sonic3kLevelEventManager() {
         super();
@@ -353,6 +354,26 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     @Override
+    public void updateAfterObjectsBeforeCamera() {
+        // The retained owner arms the gradual workers from the title-completion
+        // flag in the ordinary ScreenEvents pass. Once armed, the worker itself
+        // runs in the object pass before DeformBgLayer consumes its boundary.
+        if (currentZone == Sonic3kZoneIds.ZONE_CNZ
+                && currentAct == 1) {
+            boolean titleFlagWasConsumed = cnzPendingPostTransitionAct2SizeFrames < 0
+                    && GameServices.gameState().isEndOfLevelFlag();
+            updatePendingCnzAct2LevelSizeChange();
+            if (titleFlagWasConsumed) {
+                // The retained EndSignControl owner consumes the completion
+                // flag and advances its next dispatch in the same object pass
+                // before DeformBgLayer runs.
+                updatePendingCnzAct2LevelSizeChange();
+            }
+            cnzAct2SizeUpdatedBeforeCamera = true;
+        }
+    }
+
+    @Override
     protected void onUpdate() {
         handleBonusStageTopExit();
         // After HCZ seamless transition to Act 2: start the whirlpool descent
@@ -394,7 +415,13 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
         releasePendingMgzPostTransition();
         releasePendingCnzPostTransition();
-        updatePendingCnzAct2LevelSizeChange();
+        if (!cnzAct2SizeUpdatedBeforeCamera) {
+            // Direct manager-driven tests and non-frame callers have no
+            // Process_Sprites/pre-camera slot, so retain their native update
+            // semantics in this fallback path.
+            updatePendingCnzAct2LevelSizeChange();
+        }
+        cnzAct2SizeUpdatedBeforeCamera = false;
         syncSidekickBoundsToCamera();
     }
 
@@ -1554,6 +1581,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         cnzAct2MaxXAccumulator = 0;
         cnzAct2MinYAccumulator = 0;
         cnzAct2MaxYAccumulator = 0;
+        cnzAct2SizeUpdatedBeforeCamera = false;
     }
     /**
      * Intercepts pit death in S3K bonus stages (Gumball, Pachinko, Slots).

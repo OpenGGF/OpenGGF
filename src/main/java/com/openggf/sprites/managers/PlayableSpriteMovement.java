@@ -742,6 +742,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		short originalX = sprite.getX();
 		short originalY = sprite.getY();
+		// Sonic_Move/Tails_Move test move_lock before the ground-input and
+		// balance/lookup tail. SlopeRepel decrements the live timer later in
+		// this dispatch, so retain the entry decision for updateCrouchState.
+		boolean moveLockActiveAtDispatch = sprite.getMoveLockTimer() > 0;
 
 		if (doCheckSpindash()) return;
 		if (inputJumpPress && doJump()) {
@@ -772,7 +776,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (applyFatalBackgroundFloorOverlap()) return;
 		collisionSystem().resolvePostMovementBackgroundWallClamp(
 				FrameCollisionPlan.terrainOnly(), sprite);
-		updateCrouchState();
+		updateCrouchState(moveLockActiveAtDispatch);
 	}
 
 	static boolean controlLockBlocksScriptedMovement(AbstractPlayableSprite sprite) {
@@ -4033,7 +4037,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		sprite.setSkidDustTimer(dustTimer);
 	}
 
-	private void updateCrouchState() {
+	private void updateCrouchState(boolean moveLockActiveAtDispatch) {
 		// S3K: allow ducking while moving at speeds below the roll threshold.
 		// ROM: sonic3k.asm:23223-23240 (SonicKnux_Roll) — down pressed + |gSpeed| < $100
 		// + not left/right + not on object → enter duck animation.
@@ -4097,7 +4101,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		// Update balance state (checks for ledge edges)
 		// ROM: Balance check happens before crouch/lookup in Obj01_LookUpDown
-		if (standingStill
+		if (!moveLockActiveAtDispatch && standingStill
 				&& ((!inputLeft && !inputRight) || directionalBrakeReachedZero)) {
 			if (preMoveBalanceEvaluated) {
 				// doGroundMove evaluated the ROM balance branch before SpeedToPos

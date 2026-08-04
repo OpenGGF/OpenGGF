@@ -3846,7 +3846,9 @@ public class SidekickCpuController {
                             || titleCardOwnsRetainedResultsHeldLevelCounter())
                         ? frameCounter + 1
                         : frameCounter);
-        catchUpFrameCounter = projectRetainedResultsSpriteCadence(catchUpFrameCounter, leader);
+        if (catchUpUsesRomVisibleLevelFrameCounter) {
+            catchUpFrameCounter = projectRetainedResultsSpriteCadence(catchUpFrameCounter, leader);
+        }
         catchUpFrameCounterOverride = -1;
 
         // Ctrl_2_logical A/B/C/START press → immediate trigger

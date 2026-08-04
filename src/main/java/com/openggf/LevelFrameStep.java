@@ -330,6 +330,13 @@ public final class LevelFrameStep {
         // the final player/object updates remain visible on the boundary row.
         boolean levelExitRequestedDuringObjects = levelManager.isLevelInactiveForTransition();
 
+        // Some ROM object workers publish camera boundaries before DeformBgLayer
+        // consumes them. Keep that ordering at the provider boundary so the
+        // shared camera step remains unaware of game- or zone-specific state.
+        if (levelEvents != null) {
+            wrapper.wrap("events-pre-camera", levelEvents::updateAfterObjectsBeforeCamera);
+        }
+
         // 4a. Camera scroll (ROM ScrollHoriz + ScrollVertical): move + clamp to the
         //     prior-frame bottom boundary, BEFORE the zone event handler runs.
         if (!suppressDefaultCamera && !cameraDrivenScroll

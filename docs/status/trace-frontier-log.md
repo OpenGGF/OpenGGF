@@ -61459,3 +61459,30 @@ to synthesize a POST phase on a VBLANK-only row.
   with no matching engine submission. The previous boundary was raw frame
   `20,105`, completion `#28`. Focused transition/title/rewind/timing guards
   passed: 8 classes, 0 failures, 0 errors.
+
+## 2026-08-04 — S3K CNZ catch-up counter frontier
+
+- Worktree: repository root, branch `bugfix/s3k-traces`, parent frontier
+  `bcf70d979`. No trace payloads were edited.
+- Root cause: the retained-results title owner’s playable-history phase
+  projection was applied to every S3K Tails routine-2 catch-up gate. The ROM
+  `Tails_Catch_Up_Flying` gate reads `Level_frame_counter` directly; only the
+  explicit retained-title marker bridge needs the projected phase.
+- Fix: apply the retained-history projection only while the typed
+  `catchUpUsesRomVisibleLevelFrameCounter` bridge is active. Ordinary CNZ
+  catch-up retains the native `$40` counter phase, while the carried-title
+  handoff keeps its established phase.
+- Clean authoritative command:
+  `mvn -q -Dmse=off -Dsurefire.argLine='-Xshare:off -Xmx6g'
+  -Dsurefire.forkCount=1 -DreuseForks=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace'
+  test`
+- Result: expected fail-closed replay reaches report frame `33,746` with
+  2,440 comparison errors (first error frame `20,219`, field `tails_y`,
+  expected `0x0A2E`, actual `0x0A2C`). The next authoritative boundary is raw
+  frame `33,755`, direct Kosinski completion `#31`, fingerprint
+  `66961069e564ef707173bbad733f75e3ab034e29e3f4833a02e2e26af452d8fd`, with
+  no matching engine-submitted job. The previous boundary was raw frame
+  `25,667`, completion `#30`. Focused CNZ/title/results validation passed:
+  6 classes, 0 failures, 0 errors.
