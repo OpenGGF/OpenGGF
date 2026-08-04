@@ -84,6 +84,18 @@ public interface ObjectArtProvider {
         return null;
     }
 
+    /**
+     * Prepares the next production-owned admission for an in-level title card.
+     *
+     * <p>The results owner can create an in-level title after an earlier
+     * runtime-art batch has already been admitted. Providers with exact
+     * admission leases may issue the presentation's lease here; the title-card
+     * owner still binds and consumes that lease through the typed APIs below.
+     * Providers without lease-backed queues retain their existing behavior.
+     */
+    default void prepareRuntimeArtForInLevelTitleCard() {
+    }
+
     /** Binds the provider's one pending lease during owner initialization. */
     default RuntimeArtAdmissionLease bindPendingRuntimeArtAdmission(
             RuntimeArtAdmissionOwnerKind ownerKind) {

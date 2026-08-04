@@ -1057,6 +1057,36 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     }
 
     /**
+     * Issues a fresh title-owner lease when a later in-level title follows a
+     * previously consumed runtime-art admission.
+     *
+     * <p>The results object owns this handoff. The title-card manager remains a
+     * strict consumer of the exact lease and never selects or fabricates one.
+     * Any enemy batch already admitted by the previous owner continues through
+     * the provider queue independently; the new presentation lease represents
+     * no replacement enemy batch.
+     */
+    @Override
+    public void prepareRuntimeArtForInLevelTitleCard() {
+        if (runtimeArtAdmissionLease == null) {
+            throw new IllegalStateException("runtime-art admission lease is missing");
+        }
+        if (!runtimeArtAdmissionConsumed) {
+            if (runtimeArtAdmissionLease.ownerKind()
+                    == RuntimeArtAdmissionOwnerKind.TITLE_OWNER) {
+                return;
+            }
+            throw new IllegalStateException(
+                    "runtime-art admission is still owned by "
+                            + runtimeArtAdmissionLease.ownerKind());
+        }
+
+        issueRuntimeArtAdmissionLease(
+                RuntimeArtAdmissionOwnerKind.TITLE_OWNER,
+                fingerprintEnemyKosBatch(List.of()));
+    }
+
+    /**
      * Registers object sprite sheets that use level patterns.
      * Must be called AFTER the level is loaded.
      *
@@ -1641,11 +1671,17 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
 
     RuntimeArtAdmissionLease issueRuntimeArtAdmissionLease(
             RuntimeArtAdmissionOwnerKind ownerKind) {
+        return issueRuntimeArtAdmissionLease(
+                ownerKind, fingerprintEnemyKosBatch(pendingEnemyKosEntries));
+    }
+
+    private RuntimeArtAdmissionLease issueRuntimeArtAdmissionLease(
+            RuntimeArtAdmissionOwnerKind ownerKind, long batchFingerprint) {
         runtimeArtAdmissionGeneration++;
         RuntimeArtAdmissionLease lease = new RuntimeArtAdmissionLease(
                 runtimeArtAdmissionNextLeaseId++,
                 runtimeArtAdmissionGeneration,
-                fingerprintEnemyKosBatch(pendingEnemyKosEntries),
+                batchFingerprint,
                 ownerKind);
         runtimeArtAdmissionLease = lease;
         runtimeArtAdmissionBound = ownerKind != RuntimeArtAdmissionOwnerKind.TITLE_OWNER;

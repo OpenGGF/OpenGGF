@@ -1,0 +1,38 @@
+package com.openggf.tests.trace.runs;
+
+import com.openggf.trace.live.LiveTraceComparator;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.Test;
+
+import java.nio.file.Path;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * Executable parity frontier for the committed S1 emerald route. The prefix
+ * includes the complete GHZ1 source, its giant-ring handoff, and the first
+ * atomically published special-stage row.
+ */
+@RequiresRom(SonicGame.SONIC_1)
+class TestS1CompleteEmeraldRunPrefix extends AbstractRunChainTest {
+    private static final Path RUN_DIR = Path.of(
+            "src", "test", "resources", "traces", "s1", "runs",
+            "s1-sonic-complete-withemeralds");
+
+    @Test
+    void ghz1ToFirstSpecialStageRow() throws Exception {
+        assertChainReplayThroughSpecialStageRow(RUN_DIR, 1, 1);
+    }
+
+    @Override
+    protected void assertCompletedSegmentComparison(
+            int segmentIndex, LiveTraceComparator comparator) {
+        if (segmentIndex != 0) {
+            return;
+        }
+        assertTrue(comparator.recentMismatches().stream()
+                        .noneMatch(mismatch -> "player_animation_id".equals(mismatch.field())),
+                "GHZ1 giant-ring handoff must retain id_Null after the native player slot is cleared");
+    }
+}

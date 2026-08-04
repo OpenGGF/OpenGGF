@@ -1,15 +1,18 @@
 package com.openggf.game.sonic1;
 
 import com.openggf.game.GameServices;
+import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelLoadContext;
 import com.openggf.game.rewind.snapshot.NemesisPlcQueueSnapshot;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
+import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 import com.openggf.game.sonic1.credits.Sonic1CreditsManager;
 import com.openggf.game.sonic1.events.Sonic1LevelEventManager;
 import com.openggf.game.sonic1.resources.Sonic1PlcService;
 import com.openggf.game.sonic1.titlescreen.Sonic1TitleScreenManager;
 import com.openggf.game.sonic1.objects.Sonic1EggPrisonObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1ResultsScreenObjectInstance;
+import com.openggf.game.sonic1.objects.Sonic1FixedEndCardSlot;
 import com.openggf.game.sonic1.objects.Sonic1SignpostObjectInstance;
 import com.openggf.game.sonic1.specialstage.Sonic1SpecialStageProvider;
 import com.openggf.game.rewind.RewindSnapshottable;
@@ -36,6 +39,8 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.verify;
 
 /**
  * Executes the S1-owned credits producer and records the complete descriptor
@@ -140,10 +145,18 @@ class TestSonic1PlcProducerCoverage {
 
     @Test
     void bothNormalEndActOwnersReplaceResultsPlcAtTheirActualHandoff() throws Exception {
-        TestObjectServices services = new TestObjectServices().withGameModule(GameServices.module());
         AbstractPlayableSprite player = org.mockito.Mockito.mock(AbstractPlayableSprite.class);
         for (Object owner : List.of(new Sonic1SignpostObjectInstance(new ObjectSpawn(0, 0, 0, 0, 0, false, 0)),
                 new Sonic1EggPrisonObjectInstance(new ObjectSpawn(0, 0, 0, 0, 0, false, 0)))) {
+            ObjectManager[] objectManagerRef = new ObjectManager[1];
+            TestObjectServices services = new TestObjectServices() {
+                @Override
+                public ObjectManager objectManager() {
+                    return objectManagerRef[0];
+                }
+            }.withGameModule(GameServices.module());
+            objectManagerRef[0] = new ObjectManager(
+                    List.of(), null, 0, null, null, null, null, services);
             ObjectConstructionContext.with(services, () -> {
                 ((com.openggf.level.objects.AbstractObjectInstance) owner).setServices(services);
                 try {
@@ -163,17 +176,21 @@ class TestSonic1PlcProducerCoverage {
 
     @Test
     void duplicateSignpostsShareTheFixedNativeEndcardSlot() throws Exception {
-        ObjectManager objects = org.mockito.Mockito.mock(ObjectManager.class);
-        Sonic1ResultsScreenObjectInstance existing =
-                new Sonic1ResultsScreenObjectInstance(30, 0, 2);
-        org.mockito.Mockito.when(objects.getActiveObjects()).thenReturn(List.of(existing));
+        ObjectManager[] objectManagerRef = new ObjectManager[1];
         TestObjectServices services = new TestObjectServices() {
             @Override
             public ObjectManager objectManager() {
-                return objects;
+                return objectManagerRef[0];
             }
         }.withGameModule(GameServices.module());
-        existing.setServices(services);
+        ObjectManager objects = new ObjectManager(
+                List.of(), null, 0, null, null, null, null, services);
+        objectManagerRef[0] = objects;
+        Sonic1ResultsScreenObjectInstance existing = Sonic1FixedEndCardSlot.claim(
+                services,
+                new Sonic1FixedEndCardSlot.ResultsData(30, 0, 2, false))
+                .requireCard();
+        existing.markResultsPlcCommitted();
 
         Sonic1PlcService queue =
                 GameServices.module().getGameService(Sonic1PlcService.class);
@@ -191,8 +208,110 @@ class TestSonic1PlcProducerCoverage {
 
         assertEquals(expected, queue.capture().queuedEntries(),
                 "the second GotThroughAct must not replace the fixed v_endcard PLC again");
-        org.mockito.Mockito.verify(objects, org.mockito.Mockito.never())
-                .addDynamicObject(org.mockito.ArgumentMatchers.any());
+        assertEquals(1, objects.getActiveObjects().stream()
+                .filter(Sonic1ResultsScreenObjectInstance.class::isInstance)
+                .count());
+    }
+
+    @Test
+    void signpostObservesRetainedGiantRingPlayerAsDeletedSstAndOwnsGotThroughAct()
+            throws Exception {
+        GameStateManager gameState = new GameStateManager();
+        gameState.setBigRingCollected(true);
+        ObjectManager[] objectManagerRef = new ObjectManager[1];
+        TestObjectServices services = new TestObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return objectManagerRef[0];
+            }
+
+            @Override
+            public GameStateManager gameState() {
+                return gameState;
+            }
+
+            @Override
+            public int currentAct() {
+                return 0;
+            }
+        }.withGameModule(GameServices.module());
+        ObjectManager objects = new ObjectManager(
+                List.of(), null, 0, null, null, null, null, services);
+        objectManagerRef[0] = objects;
+
+        Sonic1SignpostObjectInstance signpost = new Sonic1SignpostObjectInstance(
+                new ObjectSpawn(0x2560, 0x04A2, 0x0D, 0, 0, false, 0));
+        signpost.setServices(services);
+        Field routine = Sonic1SignpostObjectInstance.class.getDeclaredField("routineState");
+        routine.setAccessible(true);
+        routine.setInt(signpost, 2);
+
+        AbstractPlayableSprite player = org.mockito.Mockito.mock(AbstractPlayableSprite.class);
+        org.mockito.Mockito.when(player.isNativeSlotPresent()).thenReturn(false);
+        org.mockito.Mockito.when(player.getRingCount()).thenReturn(50);
+
+        signpost.update(1, player);
+
+        verify(player).setAnimationId(Sonic1AnimationIds.NULL.id());
+        verify(player).setForcedAnimationId(Sonic1AnimationIds.NULL.id());
+
+        Sonic1PlcService queue = GameServices.module().getGameService(Sonic1PlcService.class);
+        assertEquals(expectedDescriptors(16), queue.capture().queuedEntries());
+        Sonic1ResultsScreenObjectInstance card = objects.getActiveObjects().stream()
+                .filter(Sonic1ResultsScreenObjectInstance.class::isInstance)
+                .map(Sonic1ResultsScreenObjectInstance.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Sonic1FixedEndCardSlot.SLOT, card.getSlotIndex());
+        Field specialStageAfter = Sonic1ResultsScreenObjectInstance.class
+                .getDeclaredField("specialStageAfter");
+        specialStageAfter.setAccessible(true);
+        assertTrue(specialStageAfter.getBoolean(card));
+    }
+
+    @Test
+    void rejectedResultsReplacementKeepsFixedCardUncommittedUntilSingleRetry()
+            throws Exception {
+        Sonic1PlcService queue = GameServices.module().getGameService(Sonic1PlcService.class);
+        queue.append(0);
+        queue.prepare();
+        assertNotNull(queue.capture().activeEntry());
+
+        ObjectManager[] objectManagerRef = new ObjectManager[1];
+        TestObjectServices services = new TestObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return objectManagerRef[0];
+            }
+        }.withGameModule(GameServices.module());
+        ObjectManager objects = new ObjectManager(
+                List.of(), null, 0, null, null, null, null, services);
+        objectManagerRef[0] = objects;
+        Sonic1SignpostObjectInstance signpost = new Sonic1SignpostObjectInstance(
+                new ObjectSpawn(0, 0, 0x0D, 0, 0, false, 0));
+        signpost.setServices(services);
+        AbstractPlayableSprite player = org.mockito.Mockito.mock(AbstractPlayableSprite.class);
+        java.lang.reflect.Method handoff = Sonic1SignpostObjectInstance.class
+                .getDeclaredMethod("triggerGotThroughAct", AbstractPlayableSprite.class);
+        handoff.setAccessible(true);
+
+        handoff.invoke(signpost, player);
+
+        Sonic1ResultsScreenObjectInstance pending = objects.getActiveObjects().stream()
+                .filter(Sonic1ResultsScreenObjectInstance.class::isInstance)
+                .map(Sonic1ResultsScreenObjectInstance.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(false, pending.isResultsPlcCommitted());
+        assertNotNull(queue.capture().activeEntry(),
+                "rejected NewPLC must leave the existing decoder untouched");
+
+        drainActive(queue);
+        handoff.invoke(signpost, player);
+
+        assertTrue(pending.isResultsPlcCommitted());
+        assertEquals(expectedDescriptors(16), queue.capture().queuedEntries());
+        assertEquals(1, objects.getActiveObjects().stream()
+                .filter(Sonic1ResultsScreenObjectInstance.class::isInstance)
+                .count());
     }
 
     @Test

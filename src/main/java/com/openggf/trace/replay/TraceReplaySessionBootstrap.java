@@ -426,6 +426,7 @@ public final class TraceReplaySessionBootstrap {
             }
             gameplayMode.getLevelManager().consumePendingInitialProcessSpritesPass();
         }
+        alignObjectVblankCounterForReplayStart(trace);
         applyInitialRngSeedForReplay(trace.metadata());
         TraceReplayBootstrap.SnapshotReport snapshotReport =
                 TraceReplayBootstrap.reportPreTraceObjectSnapshots(trace);
@@ -445,6 +446,7 @@ public final class TraceReplaySessionBootstrap {
             boolean forceHardwareTimingReplay) {
         installHardwareTimingReplay(trace, fixture, forceHardwareTimingReplay);
         primeLeaderJumpEdgeFromBk2Prelude(fixture);
+        alignObjectVblankCounterForReplayStart(trace);
         applyInitialRngSeedForReplay(trace.metadata());
         TraceReplayBootstrap.SnapshotReport snapshotReport =
                 TraceReplayBootstrap.reportPreTraceObjectSnapshots(trace);
@@ -452,6 +454,21 @@ public final class TraceReplaySessionBootstrap {
                 TraceReplayBootstrap.applyReplayStartStateForTraceReplay(
                         trace, fixture);
         return new BootstrapResult(snapshotReport, replayStart);
+    }
+
+    /**
+     * Establishes the object-visible clock immediately before replay row zero.
+     * The first serviced VBlank advances this pre-row value to the counter
+     * recorded on row zero. A zero-valued trace intentionally seeds {@code -1}
+     * rather than masking early, preserving the same first-tick invariant.
+     */
+    static void alignObjectVblankCounterForReplayStart(TraceData trace) {
+        Objects.requireNonNull(trace, "trace");
+        var level = GameServices.levelOrNull();
+        if (level == null || level.getObjectManager() == null) {
+            return;
+        }
+        level.getObjectManager().initVblaCounter(trace.initialVblankCounter() - 1);
     }
 
 

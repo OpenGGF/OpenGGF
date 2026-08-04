@@ -156,6 +156,39 @@ class TestSonic3kPlcArtRewindSnapshot {
     }
 
     @Test
+    void laterInLevelTitleGetsFreshTitleOwnerAfterPreviousBatchWasConsumed()
+            throws Exception {
+        Sonic3kObjectArtProvider provider = loadProvider(
+                Sonic3kZoneIds.ZONE_ICZ, 0);
+        RuntimeArtAdmissionLease previous = exactPreparedTitleLease(provider);
+
+        provider.consumeRuntimeArtAdmission(
+                previous, RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
+        PlcProgressSnapshot beforeTitle = provider.capture();
+        assertTrue(beforeTitle.runtimeArtAdmissionConsumed());
+        assertEquals(2, beforeTitle.pendingKosModules().size());
+
+        provider.prepareRuntimeArtForInLevelTitleCard();
+
+        PlcProgressSnapshot preparedTitle = provider.capture();
+        assertNotEquals(previous.id(), preparedTitle.runtimeArtAdmissionLeaseId());
+        assertEquals(RuntimeArtAdmissionOwnerKind.TITLE_OWNER,
+                preparedTitle.runtimeArtAdmissionOwnerKind());
+        assertFalse(preparedTitle.runtimeArtAdmissionConsumed());
+        assertNotEquals(previous.batchFingerprint(),
+                preparedTitle.runtimeArtAdmissionBatchFingerprint(),
+                "the presentation lease does not claim the already-admitted enemy batch");
+        assertEquals(beforeTitle.pendingKosModules(), preparedTitle.pendingKosModules(),
+                "preparing a later title must not replace admitted enemy work");
+
+        RuntimeArtAdmissionLease titleLease = provider.bindPendingRuntimeArtAdmission(
+                RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
+        provider.consumeRuntimeArtAdmission(
+                titleLease, RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
+        assertTrue(provider.capture().runtimeArtAdmissionConsumed());
+    }
+
+    @Test
     void missingStaleAndMutatedLeaseIdentitiesFailClosed() throws Exception {
         Sonic3kObjectArtProvider missing = new Sonic3kObjectArtProvider();
         RuntimeArtAdmissionLease fabricated = new RuntimeArtAdmissionLease(

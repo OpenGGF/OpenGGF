@@ -648,6 +648,13 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         protected boolean hidden = false;
         /**
+         * Whether the ROM's native player SST slot still exists. The engine keeps
+         * the structural sprite instance across transitions, so object code that
+         * clears the native slot must clear this independently of visibility and
+         * object-control flags.
+         */
+        private boolean nativeSlotPresent = true;
+        /**
          * Frame number when the player was last released from object control.
          * Used to prevent immediate re-capture by nearby objects (e.g., spin tubes).
          */
@@ -854,6 +861,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.suppressedObjectMoveAndFallAxes = 0;
                 controller.clearObjectControlledSolidContactOwner();
                 this.hidden = false;
+                this.nativeSlotPresent = true;
                 this.objectControlReleasedFrame = Integer.MIN_VALUE;
                 this.jumpInputPressed = false;
                 this.jumpInputJustPressed = false;
@@ -957,7 +965,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         objectControlReleasedFrame,
                         suppressAirCollision, suppressGroundWallCollision, forceFloorCheck,
                         suppressedObjectMoveAndFallAxes,
-                        hidden,
+                        hidden, nativeSlotPresent,
                         renderFlagOnScreen, renderFlagOnScreenValid,
                         renderHFlip, renderVFlip,
                         controller.isSpringHandoffPending(),
@@ -1117,6 +1125,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.forceFloorCheck = extra.forceFloorCheck();
                 this.suppressedObjectMoveAndFallAxes = extra.suppressedObjectMoveAndFallAxes();
                 this.hidden = extra.hidden();
+                this.nativeSlotPresent = extra.nativeSlotPresent();
                 this.renderFlagOnScreen = extra.renderFlagOnScreen();
                 this.renderFlagOnScreenValid = extra.renderFlagOnScreenValid();
                 this.renderHFlip = extra.renderHFlip();
@@ -3054,6 +3063,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         public boolean isHidden() {
                 return hidden;
         }
+
+        public boolean isNativeSlotPresent() { return nativeSlotPresent; }
+
+        public void setNativeSlotPresent(boolean nativeSlotPresent) { this.nativeSlotPresent = nativeSlotPresent; }
 
         public void setHidden(boolean hidden) {
                 this.hidden = hidden;

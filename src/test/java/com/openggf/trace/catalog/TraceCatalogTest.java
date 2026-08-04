@@ -9,12 +9,53 @@ import org.junit.jupiter.api.io.TempDir;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TraceCatalogTest {
+
+    @Test
+    void everyCommittedRunManifestHasOneLaunchableCatalogEntry() throws Exception {
+        Path root = Path.of("src", "test", "resources", "traces");
+        List<Path> manifests;
+        try (var paths = Files.walk(root, 4)) {
+            manifests = paths
+                    .filter(path -> path.getFileName().toString()
+                            .equals("run_manifest.json"))
+                    .filter(path -> {
+                        Path relative = root.relativize(path);
+                        return relative.getNameCount() == 4
+                                && relative.getName(1).toString().equals("runs")
+                                && List.of("s1", "s2", "s3k")
+                                        .contains(relative.getName(0).toString());
+                    })
+                    .sorted()
+                    .toList();
+        }
+        Map<Path, List<TraceEntry>> entriesByRun = TraceCatalog.scan(root).stream()
+                .filter(TraceEntry::isRun)
+                .collect(Collectors.groupingBy(
+                        entry -> entry.runDir().toAbsolutePath().normalize()));
+
+        assertFalse(manifests.isEmpty(), "committed run fixture set is empty");
+        assertAll(manifests.stream().map(manifest -> () -> {
+            Path runDir = manifest.getParent().toAbsolutePath().normalize();
+            List<TraceEntry> matches = entriesByRun.getOrDefault(runDir, List.of());
+            assertEquals(1, matches.size(),
+                    "master-title catalog entry count for " + runDir);
+            TraceCatalog.RunLaunchValidation validation =
+                    TraceCatalog.validateRunLaunch(matches.getFirst());
+            assertTrue(validation.launchable(),
+                    () -> "committed visual run is not launchable: " + runDir
+                            + ": " + validation.diagnostic());
+        }));
+    }
 
     @Test
     void scanFiltersInvalidDirsAndSortsByGameZoneAct(@TempDir Path tmp) throws Exception {

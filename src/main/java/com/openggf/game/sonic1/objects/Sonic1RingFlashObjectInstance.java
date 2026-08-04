@@ -1,6 +1,5 @@
 package com.openggf.game.sonic1.objects;
 
-import com.openggf.audio.GameMusic;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 import com.openggf.graphics.GLCommand;
@@ -102,6 +101,16 @@ public class Sonic1RingFlashObjectInstance extends AbstractObjectInstance implem
             return;
         }
 
+        // Flash_Collect's id_Null write remains in the player SST until the
+        // later word clear deletes that slot. The engine keeps a structural
+        // player instance alive, so republish the retained native byte while
+        // the flash owns this interval instead of allowing normal animation
+        // selection to rewrite it between flash ticks.
+        if (triggerFired && player != null) {
+            player.setAnimationId(Sonic1AnimationIds.NULL.id());
+            player.setForcedAnimationId(Sonic1AnimationIds.NULL.id());
+        }
+
         // Flash_Collect subroutine
         frameTimer--;
         if (frameTimer >= 0) {
@@ -163,21 +172,9 @@ public class Sonic1RingFlashObjectInstance extends AbstractObjectInstance implem
         // instance across the results transition, so represent the absent SST
         // slot by suppressing movement and touch processing from this point.
         if (player != null) {
+            player.setNativeSlotPresent(false);
             ObjectControlState.nativeBit7FullControl().applyTo(player);
         }
-
-        // Play "Got Through" music
-        try {
-            services().playMusic(GameMusic.ACT_CLEAR);
-        } catch (Exception e) {
-            LOGGER.warning("Failed to play stage clear music: " + e.getMessage());
-        }
-
-        // Gather results data
-        var levelGamestate = services().levelGamestate();
-        final int elapsedSeconds = levelGamestate != null ? levelGamestate.getElapsedSeconds() : 0;
-        final int ringCount = player != null ? player.getRingCount() : 0;
-        final int actNumber = services().currentAct() + 1;
 
         // v_endcard is a fixed singleton slot in the ROM. A glitched/fast route
         // can cross the signpost walk-off threshold and start the card before
@@ -187,13 +184,6 @@ public class Sonic1RingFlashObjectInstance extends AbstractObjectInstance implem
         Sonic1ResultsScreenObjectInstance existingResults = findExistingResultsScreen();
         if (existingResults != null) {
             existingResults.setSpecialStageAfter(true);
-        } else if (services().objectManager() != null) {
-            spawnFreeChild(() -> {
-                Sonic1ResultsScreenObjectInstance resultsScreen = new Sonic1ResultsScreenObjectInstance(
-                        elapsedSeconds, ringCount, actNumber);
-                resultsScreen.setSpecialStageAfter(true);
-                return resultsScreen;
-            });
         }
     }
 

@@ -87,7 +87,9 @@ public interface TraceReplayFixture {
     int skipFrameFromRecording();
 
     /** Advance only the playable animation slice proven by a native mid-loop trace hook. */
-    void advancePlayableAnimationsOnly();
+    default void advancePlayableAnimationsOnly() {
+        gameplayMode().getSpriteManager().advancePlayableSlotPrefix();
+    }
 
     /**
      * Advance the playable FIXED in-level object slots that ROM
@@ -95,7 +97,10 @@ public interface TraceReplayFixture {
      * (Obj05), whose routine tail submits its own DPLC
      * (docs/s2disasm/s2.asm:41760-41764).
      */
-    void advancePlayableFixedSlotsOnly();
+    default void advancePlayableFixedSlotsOnly() {
+        gameplayMode().getSpriteManager()
+                .advanceTailsTailsAfterObjectExecution();
+    }
 
     /** Hold the first CPU sidekick's next Animate dispatch while running the full tick. */
     void suppressFirstSidekickAnimationOnce();

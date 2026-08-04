@@ -228,6 +228,15 @@ public final class TraceRunReplayWalker {
             closed = true;
             fixture.closeHardwareTimingReplayRun();
         }
+
+        /** Abandons an intentionally truncated diagnostic prefix without verification. */
+        public void abort() {
+            if (closed) {
+                return;
+            }
+            closed = true;
+            fixture.abortHardwareTimingReplayRun();
+        }
     }
 
     /**

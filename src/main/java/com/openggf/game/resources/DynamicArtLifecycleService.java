@@ -237,6 +237,29 @@ public final class DynamicArtLifecycleService
         comparisonSegmentOpen = true;
     }
 
+    /**
+     * Advances a newly opened comparison window past destination rows already
+     * produced while the run was still structurally in the preceding gap.
+     * This moves only the segment-local publication/edge cursors: the shared
+     * movie clock already advanced when those production rows ran and must not
+     * be counted twice.
+     */
+    public void advanceComparisonCursor(int consumedRows) {
+        requireComparisonSegmentOpen();
+        if (consumedRows < 0) {
+            throw new IllegalArgumentException("consumedRows must be nonnegative");
+        }
+        if (nextPublicationFrame != 0 || latest.published()
+                || !bufferedEdges.isEmpty()) {
+            throw new IllegalStateException(
+                    "comparison cursor can advance only before its first publication");
+        }
+        logicalFrame = Math.addExact(logicalFrame, consumedRows);
+        nextPublicationFrame = Math.addExact(
+                nextPublicationFrame, consumedRows);
+        nextLogicalEdgeIndex = 0;
+    }
+
     /** Cancels an unpublished reservation without publishing a synthetic row. */
     public void cancelReservedComparisonSegment() {
         requireRunActive();

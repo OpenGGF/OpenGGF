@@ -61103,3 +61103,160 @@ to synthesize a POST phase on a VBLANK-only row.
   passing launcher regression accounting for the single-test difference. A
   normalized Surefire XML comparison found the same 79 red methods and
   identical failure/error severities; no baseline-passing test regressed.
+
+## 2026-08-03 - Visual/headless S1 replay-clock and end-act PLC parity
+
+- Worktree: `.worktrees/visual-s1-results-plc`, branch
+  `bugfix/ai-visual-s1-results-plc`, candidate over `8211d923f`.
+- The reported GHZ3 failure is the non-emerald complete run, whose standalone
+  headless fixture was already green. Its visual log showed identical player
+  physics at the capsule but ROM `v_vblank_byte=0x4D21` versus engine `0x49AA`.
+  The capsule schedules animals with that free-running clock; visual whole-run
+  choreography had inherited its shorter engine title-card/act epoch instead
+  of applying the manifest/BK2 transition budget already used by headless
+  chains. The idle S1 PLC queue was downstream: one animal remained, so
+  `GotThroughAct` had not yet submitted cue 16.
+- Prepared visual bootstrap now establishes the same pre-row object clock as
+  standalone headless bootstrap. Whole-run destination admission carries only
+  the observed production source clock and manifest/BK2 row distance, applying
+  the S1 GHZ1→GHZ2 and GHZ2→GHZ3 budgets of 230 and 229 ticks through the
+  production visual launcher. An authority guard excludes physics/aux frames,
+  comparators, dynamic-art journals, and hardware-timing schedules from that
+  clock contract.
+- S1's results producer now claims the ROM fixed `v_endcard` slot 23 and commits
+  exact cue 16 before the card advances. Giant-ring flash leaves card/music
+  creation to the signpost's deleted-SST handoff, while the capsule follows the
+  same fixed-slot transaction. Rewind distinguishes the explicit fixed-runtime
+  marker from unrelated dynamic objects that merely use a low slot.
+- Focused launcher/bootstrap/PLC/dynamic-art/special-stage/rewind command:
+  `mvn -q
+  -Dtest='com.openggf.trace.replay.TestTraceReplaySessionBootstrapClockParity,com.openggf.game.sonic1.TestSonic1PlcProducerCoverage,com.openggf.game.sonic1.objects.TestSonic1EggPrisonObjectInstance,com.openggf.game.sonic1.objects.TestSonic1GiantRingObjectInstance,com.openggf.game.sonic1.objects.TestSonic1FixedEndCardSlot,com.openggf.game.sonic1.specialstage.Sonic1SpecialStageManagerTest,com.openggf.game.resources.TestDynamicArtLifecycleService,com.openggf.trace.replay.runs.TestTraceRunVblankClock,com.openggf.trace.replay.runs.TestTraceRunVblankClockAuthorityGuard,com.openggf.TestTraceSessionLauncherRunBranch,com.openggf.tests.TestArchitecturalSourceGuard'
+  test`. Result: 180 tests, 0 failures, 0 errors, 0 skips. The two
+  rewind coverage guards also passed under their correct
+  `com.openggf.game.rewind.coverage` package.
+- Exact standalone regression command:
+  `mvn -q -Dsonic1.rom.path=s1.gen
+  -Dtest='com.openggf.tests.trace.s1.TestS1Ghz1CompleteRunTraceReplay,com.openggf.tests.trace.s1.TestS1Ghz3CompleteRunTraceReplay'
+  test`. Result: 2 tests, 0 failures, 0 errors, 0 skips.
+- Full S1 replay command:
+  `mvn -q -Dsonic1.rom.path=s1.gen
+  -Dtest='com.openggf.tests.trace.s1.*TraceReplay' test`. Result: all 30 S1
+  replay classes passed with 0 failures, 0 errors, and 0 skips.
+- Cross-game chain command:
+  `mvn -q -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen
+  -Ds3k.rom.path=s3k.gen
+  -Dtest='com.openggf.tests.trace.runs.Test*Chain' test`. Result: 5 tests,
+  2 failures, 1 error, 2 skips. The S2 halfpipe still exits with 3,723
+  represented special-stage rows remaining, and the S3K mega run retains its
+  existing unsupported held-row POST at raw frame 4571/module ordinal 10. The
+  S1 maze run advances beyond its prior `segment 0 lost production ownership`
+  frontier and returns from the special stage into GHZ2; its new first failure
+  is the `ss -> ghz2` dynamic-art gap comparison with 32 unexpected edges.
+  Continuous emerald-route parity remains follow-up work: the independently
+  isolated second S1 special-stage fixture also remains red at frame 2162
+  (`ss_rotate`, expected 65472, actual 65408).
+- Full all-ROM suite command used the repository's single-fork `ci` profile
+  after a clean four-fork attempt hit an LWJGL native-extraction race:
+  `mvn -q -Pci -Dorg.lwjgl.system.SharedLibraryExtractPath=<fresh-dir>
+  -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen
+  -Ds3k.rom.path=s3k.gen test`. It reached the repository's existing
+  `Java heap space` termination after completing 11,532 tests: 11,485 passed,
+  17 failed, 7 errored, and 23 skipped. Every one of its 24 red test cases was
+  already red in the recorded `develop` baseline (14,383 completed tests;
+  32 failures, 47 errors, 31 skips); a normalized class/method comparison found
+  no feature-only red method.
+
+## 2026-08-03 - Visual/headless represented-row convergence
+
+- Worktree: `.worktrees/visual-s1-emerald-handoff`, branch
+  `bugfix/ai-visual-s1-emerald-handoff`, based on `f6ef45479`.
+- The visual launcher's special-stage cursor, hardware-timing admission, and
+  dynamic-art comparison were independent from the headless chain adapter.
+  The launcher could therefore close or replace a segment before its admitted
+  production row published, producing `expected 3728 rows but compared 0`.
+  Both adapters now use `TraceRunSpecialStageRowDriver`; its cursor advances
+  only after an atomic post-production snapshot, and visual boundary actions
+  drain only after that publication.
+- Focused parity command:
+  `mvn -q -Dsonic1.rom.path=s1.gen
+  -Dtest='com.openggf.trace.replay.runs.TestTraceRunSpecialStageRowDriver,com.openggf.TestTraceSessionLauncherRunBranch,com.openggf.TestSpecialStageVisualTraceSession,com.openggf.TestSpecialStageHardwareTimingLifecycle,com.openggf.trace.replay.runs.TestTraceRunSpecialStageRows,com.openggf.trace.catalog.TraceCatalogTest,com.openggf.sprites.managers.TestPlayableSpriteAnimation,com.openggf.game.sonic1.TestSonic1PlcProducerCoverage,com.openggf.game.sonic1.objects.TestSonic1GiantRingObjectInstance'
+  test`. Result: all 125 selected tests passed; Maven Silent Extension also
+  listed one stale failure from an earlier external emerald invocation, not a
+  test selected or executed by this command.
+- Review-strengthened coordinator and row-count command:
+  `mvn -q
+  -Dtest=com.openggf.TestTraceSessionLauncherRunBranch,com.openggf.trace.replay.runs.TestTraceRunSpecialStageRowDriver
+  test`. Result: exit 0. The coordinator-path regression admits the real
+  special-local destination and verifies BK2 input, hardware timing, atomic
+  publication, comparison ingestion, cursor advancement, and exactly one
+  segment-1 close. The real emerald `ss` fixture commits and verifies all
+  3,728 advertised rows through the same driver.
+- Dedicated executable emerald-prefix command:
+  `mvn -q -Dsonic1.rom.path=s1.gen
+  -Dtest=com.openggf.tests.trace.runs.TestS1CompleteEmeraldRunPrefix test`.
+  Result: exit 0. The lane completes GHZ1, asserts no
+  `player_animation_id` mismatch in segment 0, crosses the giant-ring boundary,
+  and atomically commits special-stage row 0. The native-slot-presence state is
+  rewind-captured; a separate S3K regression proves hidden plus full object
+  control remains a live, dispatching slot.
+- Exact emerald diagnostic command:
+  `mvn -q -Dsonic1.rom.path=s1.gen
+  -Dopenggf.trace.s1.run.dir=src/test/resources/traces/s1/runs/s1-sonic-complete-withemeralds
+  -Dtest=com.openggf.tests.trace.runs.TestS1GhzMazeRoundTripChain test`.
+  Segment 0's frame-3596 `player_animation_id` mismatch is fixed (errors fell
+  from 6 to 1), and segment 1 reports `comparisonCount=3728, errorCount=0`.
+  The command continues through later represented segments and then fails at
+  the independent second-special-stage frontier with 1,444 rows remaining.
+  The remaining segment-0 error is the terminal dynamic-art publication clock
+  at frame 4114 (expected 4114, actual 4125); neither remaining frontier is a
+  visual/headless ownership discrepancy introduced by this change.
+- Catalog parity guard independently enumerated every committed
+  `s1|s2|s3k/runs/*/run_manifest.json`, required exactly one master-title
+  catalog entry, and fully validated each launch. Result: pass.
+- Full all-ROM regression command:
+  `mvn -q -Pci -Dmse=off -Dsonic1.rom.path=s1.gen
+  -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test`. It reached the
+  repository's existing `Java heap space` termination after completing 12,903
+  tests: 12,841 passed, 23 failed, 9 errored, and 30 skipped. The red cases are
+  confined to the same pre-existing baseline areas already recorded above
+  (display-aspect resolution, event/object guards, rewind torture, S2 special
+  stage cadence, S3K MGZ boss registration/rewind, and related infrastructure);
+  no convergence-focused test regressed.
+
+## 2026-08-04 - Visual S1 giant-ring admission ownership parity
+
+- Worktree: `.worktrees/visual-ss-production-handoff`, branch
+  `bugfix/ai-visual-ss-production-handoff`, based on `41a35c2f6`.
+- The visual launch adapter captured segment 0's exhausted observation, then
+  admitted special-stage segment 1 through the shared coordinator, but reused
+  the stale observation for post-production closure. The strict shared row
+  driver correctly rejected that premature close as `dynamic-art segment
+  expected 3728 rows but compared 0`. The adapter now recaptures structural
+  state whenever admission changes coordinator ownership, before exhaustion
+  or closure is evaluated; shared coordinator, row-driver, hardware-timing,
+  and dynamic-art policy remain unchanged.
+- Exact red/green regression:
+  `mvn -q -Dmse=off
+  -Dtest=com.openggf.TestTraceSessionLauncherRunBranch#specialStageAdmissionRecapturesExhaustionBeforeDestinationClosure
+  test`. Before the fix it reproduced the exact 3,728-versus-zero failure;
+  after the fix it admits the real S1 emerald special stage, retains segment 1
+  at cursor 0, and atomically publishes a non-divergent row 0. Result: 1 test,
+  0 failures, 0 errors, 0 skips.
+- Focused parity selection was compiled first and then executed through
+  Surefire's single-fork goal to avoid an unrelated incremental classpath race:
+  `mvn -q -Dmse=off -DskipTests test-compile`, followed by
+  `mvn -q -Dmse=off -Dsurefire.forkCount=1
+  -Dsonic1.rom.path=s1.gen
+  -Dtest=com.openggf.TestTraceSessionLauncherRunBranch,com.openggf.trace.replay.runs.TestTraceRunSpecialStageRowDriver,com.openggf.TestSpecialStageVisualTraceSession,com.openggf.TestSpecialStageHardwareTimingLifecycle,com.openggf.tests.trace.runs.TestS1CompleteEmeraldRunPrefix,com.openggf.tests.TestArchitecturalSourceGuard
+  surefire:test`. Result: 118 tests, 0 failures, 0 errors, 0 skips.
+- Full all-ROM baseline command in a detached `41a35c2f6` worktree:
+  `mvn -q -Pci -Dmse=off
+  -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen
+  -Ds3k.rom.path=s3k.gen test`.
+  It reached the repository's existing heap-space termination after 13,096
+  tests: 25 failures, 7 errors, and 31 skips. The feature worktree used the
+  same CI/Surefire configuration after an explicit `test-compile` and reached
+  its heap-space termination after 12,449 tests: 21 failures, 7 errors, and 30
+  skips. Normalized class/method comparison found zero feature-only red tests;
+  four baseline reds were not reached or were green before the feature run's
+  earlier termination.

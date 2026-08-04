@@ -8,6 +8,38 @@ All notable changes to the OpenGGF project are documented in this file.
   are rejected, and hardware-timing authority is determined solely by the
   presence of its strict v5 stream, which supports both module and direct
   Kosinski readiness without changing production-work matching.
+- Fix/Test: visual whole-run admission now invalidates a source-segment
+  observation when the shared run coordinator transfers ownership during the
+  same tick. S1 giant-ring transitions therefore retain the newly admitted
+  3,728-row special-stage driver instead of immediately closing it with the
+  source comparator's stale exhausted state; the real emerald fixture now
+  proves row zero publishes atomically through the same coordinator and
+  represented-row contracts used by headless replay.
+- Fix/Test: visual and headless whole-run special stages now share one atomic
+  represented-row driver for input admission, hardware timing, dynamic-art
+  publication, comparison, and closure. Visual replay publishes the admitted
+  row before boundary verification, rejects skipped special-local row zero,
+  and committed run manifests are guarded for one launchable master-title
+  catalog entry each. Shared fixture defaults also own playable-prefix and
+  fixed-slot dispatch. S1 giant-ring completion preserves the ROM's deleted
+  player-SST `id_Null` state with an explicit rewind-safe native-slot-presence
+  lifecycle, suppressing animation only after the ROM slot is actually
+  cleared; the emerald route no longer diverges at frame 3596. A committed
+  emerald prefix crosses into special stage through the shared driver, and
+  structural coverage verifies all 3,728 advertised rows commit exactly once.
+- Fix/Test: S3K results-owned in-level title cards now receive a fresh title-owner
+  runtime-art admission after a consumed seamless resource handoff, preserving
+  already-admitted enemy queues across ICZ and AIZ act-transition flows.
+- Fix/Test: S1 visual whole-run replay now carries the ROM-visible object
+  VBlank epoch across compressed act/title-card and special-stage transitions
+  using the same manifest/BK2 timing budgets as headless chains. Prepared
+  single-level replay establishes the same pre-row clock as ordinary headless
+  bootstrap, dynamic-art comparison skips already-produced destination rows
+  without advancing the movie clock, and S1 special-stage roll-script changes
+  preserve their animation position. End-act results now occupy the ROM's
+  fixed `v_endcard` SST slot and remain owned by the signpost/capsule cue-16
+  producer; giant-ring flash hands completion back to the signpost instead of
+  creating a competing card or replaying clear music.
 - Fix/Test: visual whole-run replay now holds a newly loaded level in its
   native initial-title-card gap before transferring comparator, input,
   PLC/DPLC/Kosinski timing, or dynamic-art ownership. Inter-act S1 runs retain
