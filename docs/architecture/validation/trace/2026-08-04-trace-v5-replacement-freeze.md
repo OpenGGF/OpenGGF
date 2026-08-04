@@ -8,22 +8,23 @@ authorize installation or deletion of committed fixtures.
 
 | Identity | Value |
 | --- | --- |
-| Reviewed source commit | `369c3a89975ba54f471cf9560e7008f0aa58761c` |
+| Reviewed source commit | `93f0abb81dc216f5ab6fee998db75e9eb4410379` |
 | Development baseline | `3573af57be947284a1f8398c7b4b4e05a8b12f14` |
-| Source diff SHA-256 | `8ae54221dd82fb4aa43b347c09d1ebe69aa4bc019950b84f1d320e3d2405ee79` |
-| Diff definition | `git diff --full-index --binary origin/develop..369c3a899 \| sha256sum` |
+| Source diff SHA-256 | `f9e7818f3cef38e7eae3fa623ed4f5956cbe39805006f59ecd668f93d9b8f0d7` |
+| Diff definition | `git diff --full-index --binary origin/develop..93f0abb81 \| sha256sum` |
 | Native harness | `tools/bizhawk-headless/bin/Release/BizHawk.Headless.Gpgx.exe` |
-| Native harness SHA-256 | `48e6deca61ac2a9ad6332e7170aa89f7468d82bfced33f66dd88475b501af3dc` |
+| Native harness SHA-256 | `2237b64955d268a57531b3019abf3c4cf9baece02f50c6558f33473ef51f1a0c` |
 | Native harness size | `359936` bytes |
-| Native test SHA-256 | `6c5aad4c1b0a331ee61b096495550f9bf7ba68ebfa65119700c7f07569931e35` |
-| Native test size | `619520` bytes |
+| Native test SHA-256 | `8c44925e9a99428c0fef20f490ded3e87084dfe1e0a8131e1cf0e22b5cf94f8b` |
+| Native test size | `620032` bytes |
 
 The native harness was rebuilt from this replacement source boundary after the
 first 35 matrix rows captured successfully but the 67-segment Knuckles row
-exposed a valid same-frame Kos module retirement plus append. The recorder now
-validates the shifted prefix, retires one completion, and reconciles the new
-tail; its focused contract covers that exact ROM ordering. The build returned
-exit 0; Mono reported only the known .NET Framework 4.8 toolset warning.
+exposed a valid same-frame Kos module retirement plus append whose shifted head
+remained busy. The recorder now validates the shifted prefix, permits that
+ROM-proven busy state, retires one completion, and reconciles the new tail; its
+focused contract covers that exact ROM ordering. The build returned exit 0;
+Mono reported only the known .NET Framework 4.8 toolset warning.
 
 ## Reconciled upstream work
 
@@ -71,15 +72,15 @@ comparison, raw-host sidecar equality, and first-divergence binding.
 
 The installed fixture inventory passed both filesystem and Git-index checks.
 `git diff --name-only -- src/test/resources/traces` remained empty throughout
-the re-entry, merge, and first capture batch. Rows 1–35 of the first batch
-passed; row 36 was preserved as a failed diagnostic batch after 314 seconds,
-with no published output. No installed fixture has been regenerated, deleted,
-or modified.
+the re-entry, merge, and diagnostic captures. Rows 1–35 of the first batch
+passed; row 36 was preserved as a diagnostic batch after the recorder correction
+and passed strict v5 validation with all 67 segment directories present. No
+installed fixture has been regenerated, deleted, or modified.
 
 ## Next boundary
 
-Task 9 may now recapture row 36 using a fresh absent batch, then assemble and
-validate the candidate. Every capture must verify this source/diff/native
-identity and the unchanged predecessor inventory. Capture output remains
-outside the installed fixture tree until an explicit comparison and
-installation decision is made.
+Task 9 must now recapture all 36 rows in one fresh absent batch because the
+recorder source changed after the preceding diagnostic. Every capture must
+verify this source/diff/native identity and the unchanged predecessor inventory.
+Capture output remains outside the installed fixture tree until an explicit
+comparison and installation decision is made.
