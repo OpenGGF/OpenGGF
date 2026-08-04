@@ -37,7 +37,7 @@ public final class HardwareTimingSchedule {
     }
 
     /** Explicit mixed-policy seam for generic unit tests; v5 loading never uses it. */
-    public static HardwareTimingSchedule withAdmissionPolicies(
+    static HardwareTimingSchedule withAdmissionPolicies(
             List<HardwareCompletionEdge> edges,
             Map<HardwareWorkKind, HardwareReadinessAdmissionPolicy> policies) {
         return new HardwareTimingSchedule(true, edges, Map.copyOf(policies));

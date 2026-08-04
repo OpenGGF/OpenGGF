@@ -251,7 +251,8 @@ public abstract class AbstractTraceReplayTest {
         }
 
         // 2. Resolve BK2: prefer a shared movie referenced by metadata.source_bk2 (stored once
-        //    under <game>/_movies/), else a legacy per-dir .bk2 copy.
+        //    under <game>/_movies/), else use the retained per-directory movie placement.
+        //    This is a v5 movie-location fallback, not legacy trace-schema support.
         Path bk2Path = resolveBk2File(traceDir, meta);
         Assumptions.assumeTrue(bk2Path != null,
                 "No BK2 found for " + traceDir + " (no _movies/<source_bk2> and no .bk2 in dir)");
@@ -943,7 +944,8 @@ public abstract class AbstractTraceReplayTest {
      * Resolve the BK2 movie for a trace. Prefers a shared, deduplicated movie named by
      * {@code metadata.source_bk2} and stored once under {@code <game>/_movies/} (sibling to the
      * per-act trace dirs) — so a complete-run movie used by 18 acts is committed once, not 18×.
-     * Falls back to a legacy {@code .bk2} copy inside the trace dir.
+     * Falls back to the retained per-directory {@code .bk2} movie placement
+     * for v5 fixtures; this is not legacy trace-schema support.
      */
     private Path resolveBk2File(Path traceDir, TraceMetadata meta) throws IOException {
         if (meta != null && meta.sourceBk2() != null && !meta.sourceBk2().isBlank()) {

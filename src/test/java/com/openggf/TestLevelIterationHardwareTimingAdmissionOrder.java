@@ -19,7 +19,7 @@ import com.openggf.game.solid.DefaultSolidExecutionRegistry;
 import com.openggf.timer.TimerManager;
 import com.openggf.trace.timing.HardwareCompletionEdge;
 import com.openggf.trace.timing.HardwareTimingReplayPort;
-import com.openggf.trace.timing.HardwareTimingSchedule;
+import com.openggf.trace.timing.HardwareTimingScheduleTestFactory;
 import com.openggf.trace.timing.TraceHardwareTimingBoundaryObserver;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -172,7 +172,7 @@ class TestLevelIterationHardwareTimingAdmissionOrder {
                 handle.submissionFingerprint());
         HardwareTimingReplayPort port = new HardwareTimingReplayPort(
                 context.recordedCompletionAuthority());
-        port.install(HardwareTimingSchedule.withAdmissionPolicies(
+        port.install(HardwareTimingScheduleTestFactory.withAdmissionPolicies(
                 List.of(edge),
                 Map.of(
                         com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE,
