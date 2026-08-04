@@ -58,3 +58,17 @@
   baseline.
 - Push only `develop`, verify ancestry/remote equality, then remove the clean
   worktree and local branch.
+
+## Review remediation closure
+
+- The README's schema-1 wording is now explicitly historical; v5 remains the
+  sole live trace contract.
+- The publication manifest contains all 24 predecessor archive hashes, and its
+  guard checks the exact synthetic and non-synthetic deletion sets plus the
+  bytes and table entries for every archived file.
+- The capture-matrix tool no longer carries a second stale `FREEZE` authority;
+  the reviewed JSON document is the single source for capture freeze data.
+- TraceCatalog's per-directory `.bk2` path is documented and tested as a
+  movie-placement fallback for v5 fixtures, not as legacy schema support.
+- The full-suite baseline/post comparison is recorded in
+  `2026-08-04-trace-contract-remediation-suite-comparison.md`.

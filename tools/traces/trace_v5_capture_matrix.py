@@ -28,26 +28,6 @@ if str(REPOSITORY_ROOT) not in sys.path:
 MATRIX_FORMAT = "openggf-trace-v5-capture-matrix-v1"
 MATRIX_DOCUMENT = (REPOSITORY_ROOT / "docs" / "architecture" / "validation" /
                    "trace" / "2026-08-04-trace-v5-capture-matrix.json")
-FREEZE = {
-    "source_commit": "cd89d6ab4f623c99afc76629eb423cd03f246809",
-    "development_baseline": "3573af57be947284a1f8398c7b4b4e05a8b12f14",
-    "source_diff_sha256": "127f9ef3cd8269dac419625a737ec4d56b7e9b66e0e57a5262208e008f33ff05",
-    "native_artifact": {
-        "path": "tools/bizhawk-headless/bin/Release/BizHawk.Headless.Gpgx.exe",
-        "size": 359424,
-        "sha256": "81b072f37a1b3a1202d6ac02b5e230365adbe3e9a6e2be9bb2fbee274738f459",
-    },
-    "native_test_artifact": {
-        "path": "tools/bizhawk-headless/bin/Release/BizHawk.Headless.Gpgx.Tests.exe",
-        "size": 619520,
-        "sha256": "3f90d1dc4df4fb80b9e3b3b4445b949934a209c7da2b964f3cbbb078f0730f4b",
-    },
-    "fixture_inventory": {
-        "path": "docs/architecture/validation/trace/2026-08-03-trace-v5-baseline-inventory.json",
-        "aggregate_sha256": "52ea19afea7250121c35a94927e3a4b950c6b00b8fac9570284401db3f0615bd",
-        "file_count": 913,
-    },
-}
 
 ROMS = {
     "s1": {

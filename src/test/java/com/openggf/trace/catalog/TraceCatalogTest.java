@@ -116,9 +116,10 @@ class TraceCatalogTest {
     }
 
     @Test
-    void scanFallsBackToPerDirBk2WhenSharedMovieMissing(@TempDir Path tmp) throws Exception {
-        // source_bk2 declared but the shared movie is absent — a legacy per-dir
-        // copy must still resolve so older traces keep working.
+    void scanUsesPerDirBk2MoviePlacementWhenSharedMovieMissing(@TempDir Path tmp) throws Exception {
+        // source_bk2 declared but the shared movie is absent — the retained
+        // per-directory movie placement resolves the otherwise valid v5
+        // fixture. This does not make an older trace schema loadable.
         Path dir = tmp.resolve("s1/ghz1");
         writeTraceWithoutBk2(dir, "s1", 0, 0, "s1-complete-run.bk2");
         Files.writeString(dir.resolve("trace.bk2"), "stub");

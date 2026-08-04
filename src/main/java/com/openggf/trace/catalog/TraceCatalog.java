@@ -34,8 +34,10 @@ import java.util.stream.Stream;
  * its metadata declares one of the supported games ({@code s1}, {@code s2},
  * {@code s3k}). The BK2 movie is resolved either from a shared, deduplicated
  * copy referenced by {@code metadata.source_bk2} (stored once under
- * {@code <game>/_movies/}) or from a legacy per-dir {@code .bk2} file. The
- * {@code synthetic/} subtree is always filtered out.
+ * {@code <game>/_movies/}) or from a per-directory {@code .bk2} movie
+ * placement retained for development fixtures. That placement fallback is
+ * not a trace-schema compatibility path: v5 metadata and row files are still
+ * required. The {@code synthetic/} subtree is always filtered out.
  */
 public final class TraceCatalog {
     private static final Logger LOGGER = Logger.getLogger(TraceCatalog.class.getName());
@@ -326,10 +328,11 @@ public final class TraceCatalog {
             return Optional.empty();
         }
         // Resolve the BK2 movie: prefer a shared, deduplicated movie referenced
-        // by metadata.source_bk2 (stored once under <game>/_movies/), else fall
-        // back to a legacy per-dir .bk2 copy. Mirrors AbstractTraceReplayTest so
-        // shared-movie traces (e.g. the S1 complete-run suite) appear in trace
-        // test mode, not just the JUnit replay tests.
+        // by metadata.source_bk2 (stored once under <game>/_movies/), else use
+        // the retained per-directory .bk2 movie placement. This is a movie
+        // location fallback, not support for an older trace schema. Mirrors
+        // AbstractTraceReplayTest so shared-movie traces (e.g. the S1
+        // complete-run suite) appear in trace test mode, not just JUnit.
         Path bk2 = resolveBk2(dir, meta);
         if (bk2 == null) {
             return Optional.empty();
@@ -359,9 +362,10 @@ public final class TraceCatalog {
     /**
      * Resolve a trace directory's BK2 movie. A shared movie referenced by
      * {@code metadata.source_bk2} (looked up under the sibling
-     * {@code <game>/_movies/} directory) wins; otherwise the legacy convention
-     * of exactly one per-dir {@code .bk2} applies. Returns {@code null} when no
-     * movie can be resolved (the trace is then skipped).
+     * {@code <game>/_movies/} directory) wins; otherwise exactly one
+     * per-directory {@code .bk2} movie is accepted. The latter is only a
+     * placement fallback for v5 fixtures, not schema compatibility. Returns
+     * {@code null} when no movie can be resolved (the trace is then skipped).
      */
     private static Path resolveBk2(Path dir, TraceMetadata meta) {
         if (meta.sourceBk2() != null && !meta.sourceBk2().isBlank()) {
