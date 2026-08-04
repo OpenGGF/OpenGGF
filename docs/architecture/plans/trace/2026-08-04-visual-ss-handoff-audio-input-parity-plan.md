@@ -69,3 +69,34 @@
 - Verify red then green with the focused launcher/coordinator tests, followed
   by the complete visual run handoff selection and the headless S1 emerald
   prefix test.
+
+## 5. Converge return-boundary ring applicability
+
+- Add a failing `TestTraceRunBoundaryComparator` case for a `NEXT_ACT` return
+  with `rings_after = 55` and a settled destination ring count of `0`. Assert
+  that next-act identity and emerald comparisons remain present while
+  `run_boundary.rings` is absent.
+- Strengthen the positional, checkpoint, and rings/emeralds-only cases to
+  assert that `run_boundary.rings` remains present and exact. Give the latter
+  two a mismatching actual count and assert the ring error is reported, so an
+  accidental suppression of all `giant_ring` or all non-positional returns
+  cannot pass.
+- Add a visual-launcher regression in `TestTraceSessionLauncherRunBranch` using
+  the canonical S1 emerald segment plans and a real `LiveTraceComparator` sink.
+  Invoke the launcher's return-boundary publication seam with a settled
+  destination ring count of `0`; assert that the emitted external comparison
+  retains next-act/emerald fields and contains no `run_boundary.rings`
+  mismatch. This proves the visual adapter consumes the common result without
+  its own field policy.
+- Move field applicability into `TraceRunBoundaryComparator.compare`: derive
+  the return mode once, and compare `rings_after` for every mode except
+  `NEXT_ACT`. Do not add a game, zone, route, frame, or trace-name predicate.
+- Delete `TestS1GhzMazeRoundTripChain.requireSharedBoundaryField` and the base
+  test's adapter-filter hook. Headless and visual must ingest the same complete
+  `FrameComparison` without post-comparison filtering.
+- Update `TraceRunReplayWalker.ReturnAssertionMode` documentation so
+  `NEXT_ACT` no longer promises a post-load ring assertion; retain the ring
+  claim on the three co-temporal return modes.
+- Run the comparator test red before production changes, then green. Verify
+  `TestS1GhzMazeRoundTripChain`, visual launcher return-boundary coverage, the
+  real S1 emerald prefix, coordinator tests, and architecture guards.

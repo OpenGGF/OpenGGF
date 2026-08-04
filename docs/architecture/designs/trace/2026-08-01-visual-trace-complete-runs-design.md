@@ -342,7 +342,10 @@ only engine snapshots plus the manifest transition and reports ordinary
 - next-act identity for S1-style `giant_ring` return;
 - return-frame-zero centre-position comparison for S3K-style `giant_ring`
   (`RINGS_EMERALDS_ONLY`);
-- rings under every return policy;
+- rings for positional, checkpoint, and rings/emeralds-only returns, where the
+  manifest exit sample and the settled engine return snapshot are co-temporal;
+  `NEXT_ACT` omits the ring field because its manifest value is the interior
+  stage tally sampled before the fresh act load clears the level ring count;
 - live emerald count only when the interior was organically reproduced, and
   otherwise the recorded `emeralds_after == emeralds_before + 1` manifest
   invariant used by the current advance-uncompared special-stage policy.

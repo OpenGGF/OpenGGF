@@ -75,33 +75,4 @@ class TestS1GhzMazeRoundTripChain extends AbstractRunChainTest {
                         + "inside its structural gap");
     }
 
-    /**
-     * S1-specific ring semantics: skip the ring-count comparison (still assert
-     * emeralds). ROM's {@code Level_LoadObj} unconditionally clears
-     * {@code v_rings} on any fresh act entry when {@code v_lastlamp == 0}
-     * (docs/s1disasm/sonic.asm:2898-2900 -- "are we starting from a
-     * lamppost?"), and {@code Got_NextLevel} clears {@code v_lastlamp} for
-     * BOTH the normal sign-post route AND the giant-ring route
-     * (docs/s1disasm/_incObj/3A Got Through Card.asm:198, run before the
-     * {@code f_bigring} branch). So S1, unlike S2/S3K, never carries rings
-     * across an act transition -- the settled post-transition ring count is
-     * deterministically 0 regardless of the Special Stage outcome.
-     * <p>
-     * The manifest's recorded {@code rings_after} (67) is the Special Stage's
-     * own ring tally at the instant ROM's {@code v_gamemode} first flips back
-     * to {@code id_Level} (docs/s1disasm/sonic.asm:3332, inside
-     * {@code SS_ChkEnd} -- well before the results-screen/title-card sequence
-     * and {@code Level_LoadObj}'s clear, which run afterward under that SAME
-     * coarse {@code v_gamemode} value). Our engine models that same window
-     * with distinct {@code GameMode} values ({@code SPECIAL_STAGE_RESULTS} ->
-     * {@code TITLE_CARD} -> {@code LEVEL}), so {@code currentMode()==LEVEL}
-     * only becomes observable AFTER the ROM-faithful reload has already run
-     * and organically produced rings=0 -- the recorded 67 is not reproducible
-     * at that later observation point by construction, not by an engine bug.
-     */
-    @Override
-    protected boolean requireSharedBoundaryField(String fieldName) {
-        return !"run_boundary.rings".equals(fieldName);
-    }
-
 }

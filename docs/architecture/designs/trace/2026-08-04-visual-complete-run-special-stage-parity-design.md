@@ -32,6 +32,17 @@ GHZ2 anyway. That splits input ownership from comparison ownership: GHZ2 input
 starts advancing without a destination admission receipt until the strict
 zero-or-one-row overrun guard fires.
 
+The first correctly admitted GHZ2 row exposes a third, independent harness
+split. S1 records `stage_exit.rings_after` when the ROM first changes its
+coarse mode back to level, while the Special Stage ring tally is still live.
+The engine's finer presentation modes do not expose the return boundary until
+after the fresh next-act load, whose native level initialization correctly
+clears rings. The shared boundary comparator currently compares those two
+different phases. Headless hides the resulting false mismatch in an S1-only
+test override; visual replay publishes it as an error. Thus the apparent
+visual-only failure is caused by adapter-specific field filtering around a
+comparison that is not temporally valid for a `NEXT_ACT` return.
+
 ## Design
 
 1. **Use the provider's native startup readiness.** S1's provider will report
@@ -87,6 +98,20 @@ zero-or-one-row overrun guard fires.
    accepted destination row remains at zero until the common release seam
    admits comparison and input ownership together.
 
+7. **Make return-field applicability a comparator contract.** Three approaches
+   were considered: keep separate adapter filters, add explicit ring-sampling
+   phase metadata and regenerate every run, or derive applicability from the
+   existing manifest-owned `ReturnAssertionMode`. The third is the smallest
+   shared correction. `TraceRunBoundaryComparator` will omit the post-load ring
+   field for `NEXT_ACT`, because that mode structurally identifies a fresh act
+   rather than a positional return. It will retain exact ring comparison for
+   positional, checkpoint, and rings/emeralds-only returns, where the recorded
+   value and engine snapshot describe the same settled return phase. The
+   headless S1 subclass filter will be removed so both harnesses consume the
+   comparator result unchanged. Emerald progression and next-act identity
+   checks remain exact. This is keyed on manifest semantics, not game, zone,
+   route, or frame identity, and it never writes gameplay state.
+
 ## Error and transition handling
 
 The existing run coordinator remains the single transition authority. A HUD
@@ -114,6 +139,14 @@ Add focused tests for:
   special-stage entry, including the later latched-boundary forwarding path;
 * rejected return loads being unable to activate a destination playback
   rebind, and an accepted return load admitting GHZ2 at row zero.
+* a `NEXT_ACT` return whose manifest carries a Special Stage exit-ring tally
+  omitting the temporally invalid post-load ring comparison in both harnesses;
+* positional, checkpoint, and rings/emeralds-only returns retaining exact ring
+  comparison, preventing the shared rule from weakening any other return
+  policy;
+* the visual launcher ingesting the common `NEXT_ACT` comparison unchanged and
+  publishing no ring mismatch for the settled destination snapshot;
+* removal of the headless-only S1 field filter.
 
 Run the existing complete-run visual launcher tests, S1 special-stage replay
 tests, run coordinator tests, capture tests, and the full `*TraceReplay` sweep.

@@ -3,6 +3,10 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: visual and headless complete-run return checks now share one
+  manifest-derived field policy. Fresh next-act returns no longer compare a
+  Special Stage exit-ring tally against the correctly reset destination level,
+  while positional and checkpoint returns retain exact ring verification.
 - Fix/Test: visual complete-run return loads now timestamp Special Stage exits
   with the segment-local movie clock and only rebind destination playback after
   the shared run coordinator accepts that exact production load. This keeps

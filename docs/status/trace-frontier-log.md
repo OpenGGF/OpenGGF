@@ -61345,3 +61345,27 @@ to synthesize a POST phase on a VBLANK-only row.
   load. Focused visual/headless parity validation passed 138/138 tests. The
   full suite reached 13,897 tests (24 failures, 7 errors, 31 skips) before an
   unrelated JVM fork crash; no changed launcher/coordinator test failed.
+
+## 2026-08-04 - Visual/headless next-act boundary-ring convergence
+
+- User report: the first S1 emerald return reached GHZ2 row 8,705, then visual
+  replay reported `run_boundary.rings expected=55 actual=0` as the title card
+  released.
+- Root cause: the manifest records the Special Stage tally when ROM first
+  writes its coarse level mode, before the fresh act load clears rings. The
+  settled engine snapshot correctly contains zero. Headless suppressed this in
+  an S1 test-subclass filter while visual published the shared comparator
+  result unchanged.
+- Fix: the common comparator now omits rings only for manifest-derived
+  `NEXT_ACT`; positional, checkpoint, and saved-position giant-ring returns
+  retain exact ring comparison. Both headless adapter filters were deleted.
+- TDD evidence: the comparator and visual-launcher regressions failed on the
+  55-versus-0 field before the production change and passed afterward. The
+  focused visual/headless selection passed 145/145 tests. The separate
+  35-test walker control-flow class retains its existing unrelated
+  `probePinsPreparedRowToItsOriginalDelegateAcrossHandoff` failure.
+- Full-suite comparison: the pre-change run reached 13,897 tests (24 failures,
+  7 errors, 31 skips) before an unrelated JVM fork crash. The post-change run
+  completed 14,268 tests (24 failures, 9 errors, 31 skips); the extra executed
+  tests exposed unrelated Special Stage initialization and configuration
+  errors. No boundary-comparator or visual-launcher parity test failed.

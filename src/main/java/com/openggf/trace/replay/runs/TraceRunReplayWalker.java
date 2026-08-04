@@ -382,7 +382,8 @@ public final class TraceRunReplayWalker {
      *       + rings + emeralds.</li>
      *   <li>{@link #NEXT_ACT} — {@code giant_ring} with no {@code saved_x_pos}
      *       (S1 SS return): NO positional assertion; assert act/zone advance;
-     *       + rings + emeralds.</li>
+     *       + emeralds. The manifest's exit-ring tally precedes the fresh act
+     *       load and is not co-temporal with the settled return snapshot.</li>
      *   <li>{@link #RINGS_EMERALDS_ONLY} — {@code giant_ring} with a
      *       {@code saved_x_pos} (S3K SS return): rings + emeralds only.</li>
      * </ul>

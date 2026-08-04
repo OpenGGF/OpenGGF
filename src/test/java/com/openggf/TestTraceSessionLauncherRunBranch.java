@@ -6,9 +6,11 @@ import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.control.InputHandler;
+import com.openggf.game.CheckpointState;
 import com.openggf.game.GameId;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
+import com.openggf.game.LevelGamestate;
 import com.openggf.game.profiles.trace.TracePlaybackProfile;
 import com.openggf.game.resources.DynamicArtDiagnosticsSnapshot;
 import com.openggf.game.resources.PlcLifecyclePhase;
@@ -1673,6 +1675,42 @@ class TestTraceSessionLauncherRunBranch {
     }
 
     @Test
+    void visualNextActReturnPublishesCommonBoundaryWithoutInteriorRingTally()
+            throws Exception {
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.configureGameModuleFixture(new Sonic1GameModule());
+        new Engine(EngineServices.current());
+        TraceRunManifest run = TraceRunManifest.load(
+                canonicalEmeraldRunDir.resolve("run_manifest.json"));
+        List<TraceRunReplayWalker.SegmentPlan> plans =
+                TraceRunReplayWalker.plan(run, canonicalEmeraldRunDir);
+        List<FrameComparison> observed = new ArrayList<>();
+        LiveTraceComparator destination = new LiveTraceComparator(
+                plans.get(2).trace(), ToleranceConfig.DEFAULT, 0,
+                () -> null, null, observed::add);
+        TraceSessionLauncher session = new TraceSessionLauncher(
+                null, null, plans, null);
+        setField(session, "comparator", destination);
+        GameServices.level().resetLevelGamestate(new LevelGamestate());
+        setObjectField(GameServices.level(), "currentAct", 1);
+        setObjectField(getField(GameServices.level(), "checkpointCoordinator"),
+                "checkpointState", new CheckpointState());
+
+        compareRunReturnBoundary(session, 2);
+
+        assertEquals(1, observed.size());
+        FrameComparison boundary = observed.getFirst();
+        assertTrue(boundary.fields().containsKey(
+                "run_boundary.next_act.manifest_advance"));
+        assertTrue(boundary.fields().containsKey(
+                "run_boundary.emeralds.recorded_progression"));
+        assertFalse(boundary.fields().containsKey("run_boundary.rings"));
+        assertTrue(destination.recentMismatches().stream()
+                .noneMatch(mismatch -> "run_boundary.rings".equals(
+                        mismatch.field())));
+    }
+
+    @Test
     void specialStageAdmissionRecapturesExhaustionBeforeDestinationClosure()
             throws Exception {
         TraceRunFailureStatus.clear();
@@ -2090,6 +2128,18 @@ class TestTraceSessionLauncherRunBranch {
             method.setAccessible(true);
             return (RunPlaybackObservation) method.invoke(
                     launcher, mode, 0, false);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    private static void compareRunReturnBoundary(
+            TraceSessionLauncher launcher, int destinationIndex) {
+        try {
+            Method method = TraceSessionLauncher.class.getDeclaredMethod(
+                    "compareRunReturnBoundaryIfPresent", int.class);
+            method.setAccessible(true);
+            method.invoke(launcher, destinationIndex);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError(e);
         }

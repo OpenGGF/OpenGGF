@@ -28,6 +28,7 @@ class TestTraceRunBoundaryComparator {
         assertFalse(comparison.hasError(), comparison.divergentFields()::toString);
         assertTrue(comparison.fields().containsKey("run_boundary.position.x"));
         assertTrue(comparison.fields().containsKey("run_boundary.position.y"));
+        assertTrue(comparison.fields().containsKey("run_boundary.rings"));
         assertTrue(comparison.fields().containsKey("run_boundary.emeralds.recorded_progression"));
         assertFalse(comparison.fields().containsKey("run_boundary.emeralds.live"));
     }
@@ -39,7 +40,7 @@ class TestTraceRunBoundaryComparator {
                 stageExit(12, 4),
                 level(5, 1), level(5, 1), frame(404, 224), 5);
         ActualBoundary actual = new ActualBoundary(
-                404, 224, 2, 5, 0, 12, 4, true);
+                404, 224, 2, 5, 0, 99, 4, true);
 
         FrameComparison comparison = TraceRunBoundaryComparator.compare(
                 200, expected, actual);
@@ -47,13 +48,14 @@ class TestTraceRunBoundaryComparator {
         assertTrue(comparison.hasErrorInField("run_boundary.checkpoint"));
         assertFalse(comparison.hasErrorInField("run_boundary.position.x"));
         assertFalse(comparison.hasErrorInField("run_boundary.position.y"));
+        assertTrue(comparison.hasErrorInField("run_boundary.rings"));
     }
 
     @Test
     void nextActReturnComparesAdvanceIdentityAndLiveEmeralds() {
         ExpectedBoundary expected = expected(
                 transition("giant_ring", null, null, null, 50, 2, null),
-                stageExit(0, 3),
+                stageExit(55, 3),
                 level(1, 1), level(1, 2), frame(999, 999), 7);
         ActualBoundary actual = new ActualBoundary(
                 1, 2, 0, 7, 1, 0, 3, true);
@@ -67,13 +69,14 @@ class TestTraceRunBoundaryComparator {
         assertTrue(comparison.fields().containsKey("run_boundary.next_act.act"));
         assertTrue(comparison.fields().containsKey("run_boundary.emeralds.live"));
         assertFalse(comparison.fields().containsKey("run_boundary.position.x"));
+        assertFalse(comparison.fields().containsKey("run_boundary.rings"));
     }
 
     @Test
     void giantRingWithSavedPositionUsesS3kPositionPolicyNotNextActPolicy() {
         ExpectedBoundary expected = expected(
                 transition("giant_ring", 800, 300, null, 20, 6, null),
-                stageExit(0, 7),
+                stageExit(33, 7),
                 level(2, 1), level(2, 1), frame(801, 302), 2);
         ActualBoundary actual = new ActualBoundary(
                 801, 302, 0, 99, 99, 0, 7, true);
@@ -81,7 +84,9 @@ class TestTraceRunBoundaryComparator {
         FrameComparison comparison = TraceRunBoundaryComparator.compare(
                 500, expected, actual);
 
-        assertFalse(comparison.hasError(), comparison.divergentFields()::toString);
+        assertTrue(comparison.hasErrorInField("run_boundary.rings"));
+        assertFalse(comparison.hasErrorInField("run_boundary.position.x"));
+        assertFalse(comparison.hasErrorInField("run_boundary.position.y"));
         assertTrue(comparison.fields().containsKey("run_boundary.position.x"));
         assertFalse(comparison.fields().containsKey("run_boundary.next_act.zone"));
     }

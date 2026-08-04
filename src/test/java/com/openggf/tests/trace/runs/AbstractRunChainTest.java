@@ -1703,17 +1703,10 @@ abstract class AbstractRunChainTest {
                 comparison.divergentFields().stream()
                         .filter(field -> field.severity()
                                 == com.openggf.trace.Severity.ERROR)
-                        .filter(field -> requireSharedBoundaryField(
-                                field.fieldName()))
                         .toList();
         assertTrue(errors.isEmpty(),
                 "Shared return-boundary comparison failed for " + runDir
                         + ": " + errors);
-    }
-
-    /** Allows a lane to omit a documented coarse-mode timing mismatch. */
-    protected boolean requireSharedBoundaryField(String fieldName) {
-        return true;
     }
 
     /**

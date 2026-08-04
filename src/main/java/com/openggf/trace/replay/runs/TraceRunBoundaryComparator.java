@@ -74,7 +74,15 @@ public final class TraceRunBoundaryComparator {
             case RINGS_EMERALDS_ONLY -> comparePosition(fields, expected, actual);
         }
 
-        if (expected.exit().ringsAfter() != null) {
+        // NEXT_ACT's exit value is the interior tally sampled when S1 first
+        // writes id_Level (sonic.asm:3332), before the fresh act load clears
+        // v_rings because Got_NextLevel cleared v_lastlamp
+        // (_incObj/3A Got Through Card.asm:198; sonic.asm:2892-2900). The
+        // settled destination snapshot is therefore not co-temporal with that
+        // manifest field. Other return modes restore into the same level and
+        // retain an exact post-load ring comparison.
+        if (mode != TraceRunReplayWalker.ReturnAssertionMode.NEXT_ACT
+                && expected.exit().ringsAfter() != null) {
             put(fields, PREFIX + "rings", expected.exit().ringsAfter(),
                     actual.rings());
         }
