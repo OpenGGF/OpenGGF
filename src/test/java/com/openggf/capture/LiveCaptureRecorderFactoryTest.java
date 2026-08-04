@@ -25,4 +25,32 @@ class LiveCaptureRecorderFactoryTest {
             config.clearSessionOverrides();
         }
     }
+
+    @Test void queueDepthIsBudgetedInBytesSoLargeWindowsHoldFewerFrames() {
+        // 192MB against a 1280x896 window (4.59MB/frame) is ~41 frames; the
+        // same budget at 2560x1792 is a quarter of that.
+        CaptureViewport window = new CaptureViewport(0, 0, 1280, 896);
+        CaptureViewport bigWindow = new CaptureViewport(0, 0, 2560, 1792);
+
+        int frames = LiveCaptureRecorderFactory.queueFrames(192, window);
+        int bigFrames = LiveCaptureRecorderFactory.queueFrames(192, bigWindow);
+
+        assertEquals(192 * 1024 * 1024 / (1280 * 896 * 4), frames);
+        assertEquals(frames / 4, bigFrames,
+                "four times the pixels must buy a quarter of the depth");
+    }
+
+    @Test void queueDepthClampsAtBothEnds() {
+        CaptureViewport huge = new CaptureViewport(0, 0, 3840, 2160);
+        CaptureViewport tiny = new CaptureViewport(0, 0, 320, 224);
+
+        assertEquals(LiveCaptureRecorderFactory.MIN_QUEUE_FRAMES,
+                LiveCaptureRecorderFactory.queueFrames(1, huge),
+                "a budget that cannot fund the floor still gets the floor");
+        assertEquals(LiveCaptureRecorderFactory.MIN_QUEUE_FRAMES,
+                LiveCaptureRecorderFactory.queueFrames(0, tiny));
+        assertEquals(LiveCaptureRecorderFactory.MAX_QUEUE_FRAMES,
+                LiveCaptureRecorderFactory.queueFrames(4096, tiny),
+                "past the ceiling a deeper queue only defers a sustained overload");
+    }
 }

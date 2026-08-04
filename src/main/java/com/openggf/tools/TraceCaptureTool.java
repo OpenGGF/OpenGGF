@@ -310,7 +310,13 @@ public final class TraceCaptureTool {
                     System.out.println("Output size: " + Files.size(out) + " bytes");
                 }
             } finally {
-                GameServices.audio().endCaptureMode();
+                try {
+                    GameServices.audio().endCaptureMode();
+                } finally {
+                    // The grabber holds a frame-sized native read buffer for
+                    // its lifetime now that it reuses one per grab.
+                    grabber.close();
+                }
             }
         }
         return ownership.transfer();

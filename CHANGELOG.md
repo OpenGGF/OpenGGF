@@ -3,6 +3,21 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Perf: live viewport recording no longer allocates two full frames plus a
+  native read buffer per captured frame. The pixel grabber now reuses its
+  buffers — which is exactly the producer-side reuse `CapturedFrame`'s
+  defensive copy already existed to make safe — cutting steady-state capture
+  garbage roughly in half and removing a per-frame native malloc/free. At a
+  1280x896 window that was around 9MB of garbage per frame, and it grew with
+  the window.
+- Perf: the live recording encoder queue is now sized from a memory budget
+  (`capture.queueBudgetMb`, default 192MB) rather than a fixed 8 frames, so it
+  absorbs far longer encoder stalls before `BLOCK` backpressure reaches the
+  game thread. Lossless encoding falls behind on high-motion content — most
+  sharply on fast-forwarded trace playback — and the resulting stall was
+  visible as a stutter in the running game that outlived the burst. Budgeting
+  in bytes keeps the depth honest across window sizes, where a queued frame
+  costs width*height*4.
 - Feature: the visual trace HUD now owns the playback transport display,
   replacing the legacy `== PLAYBACK ==` debug panel for the whole of a trace
   session. Movie name, mode, frame counter, and a `Rate: < 1x >` fast-forward

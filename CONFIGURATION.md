@@ -319,6 +319,27 @@ Choosing `aac` or `mp3` means the recording is no longer a faithful capture of
 the engine's audio. That is a legitimate choice for sharing a clip; it is not
 appropriate for comparing audio against reference material.
 
+### Recording high-motion content
+
+Live recording encodes losslessly at the *window* resolution, so a 1280×896 window is
+about 4.6 MB per raw frame. The encoder runs on its own thread behind a bounded queue,
+and that queue uses `BLOCK` backpressure — it never drops a frame, which means that once
+it fills, the submitting **game thread** waits. A stall in the encoder is therefore
+visible as a stutter in the running game.
+
+Lossless codecs cost roughly in proportion to how much changes between consecutive
+frames, so the encoder falls behind on high-motion content. Fast-forwarded visual trace
+playback is the sharpest case: at 5× each recorded frame is five gameplay frames from the
+last, so per-frame entropy rises steeply. The backlog also outlives the burst — dropping
+back to 1× still leaves the queue and ffmpeg's pipe to drain, so the stutter persists for
+a few seconds afterwards.
+
+`capture.queueBudgetMb` sets how much of that burst the queue can absorb. Raise it if you
+record fast-forwarded playback and can spare the memory; note it bounds a *burst*, not a
+sustained overload — if the encoder is permanently slower than real time, a deeper queue
+only delays the stall. For sustained high-motion recording, prefer a lower window
+resolution or `h264`/`h265` over `ffv1`.
+
 ### Containers
 
 `capture.container` sets the recording's file extension, and ffmpeg picks its
@@ -438,6 +459,7 @@ ones. The bundled `config.yaml` supplies the live toggle default.
 | `CAPTURE_FPS` | `capture.fps` | int | `60` | Trace capture only: output frame rate; live recording uses the engine's effective display rate. |
 | `CAPTURE_CODEC` | `capture.codec` | string | `"ffv1"` | Video codec for live and trace capture: `ffv1`, `h264` or `h265`. All three are lossless — see the note below. |
 | `CAPTURE_CONTAINER` | `capture.container` | string | `"mkv"` | Recording file extension. ffmpeg selects its muxer from this — see "Containers" below. |
+| `CAPTURE_QUEUE_BUDGET_MB` | `capture.queueBudgetMb` | int | `192` | Live recording only: memory budget for the encoder queue. The queue is sized in whole frames from this budget and the recording viewport (which is the *window*, not 320×224), so it holds fewer frames at larger window sizes — clamped to 8..120 frames. A deeper queue absorbs longer encoder stalls before backpressure blocks the game loop; see "Recording high-motion content" below. |
 | `CAPTURE_AUDIO_CODEC` | `capture.audioCodec` | string | `"flac"` | Audio codec: `flac`, `aac` or `mp3`. **`aac` and `mp3` are lossy**: the recorded audio will not match what the engine produced. `flac` is lossless. |
 | `CAPTURE_FFMPEG_PASS1_ARGS` | `capture.ffmpegPass1Args` | string | `"default"` | **Advanced.** Full ffmpeg argument list for the encode pass. See "Overriding the ffmpeg commands" below. |
 | `CAPTURE_FFMPEG_PASS2_ARGS` | `capture.ffmpegPass2Args` | string | `"default"` | **Advanced.** Full ffmpeg argument list for the mux pass; leave empty to skip it and record video only. |

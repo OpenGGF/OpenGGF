@@ -288,6 +288,18 @@ public final class LiveCaptureController implements AutoCloseable {
 
     private void clearResources() {
         viewport = null;
+        // The grabber owns a viewport-sized native read buffer for its lifetime
+        // now that it reuses one instead of allocating per frame, so dropping
+        // the reference is no longer enough to release it.
+        if (grabber != null) {
+            try {
+                grabber.close();
+            } catch (Exception failure) {
+                LOGGER.log(Level.WARNING,
+                        "Live capture frame grabber failed to release its buffers",
+                        failure);
+            }
+        }
         grabber = null;
         recorder = null;
         pcm = null;

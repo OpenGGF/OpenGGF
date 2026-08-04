@@ -246,6 +246,14 @@ public final class ConfigCatalog {
                 "Capture audio codec: flac, aac or mp3. WARNING: aac and mp3 are"
                         + " LOSSY - the recorded audio will not match what the"
                         + " engine produced. flac is lossless and is the default"));
+        put(CAPTURE_QUEUE_BUDGET_MB, of("capture", "queueBudgetMb", INT,
+                "Memory budget in MB for the live-recording encoder queue. The"
+                        + " queue is sized in whole frames from this budget and"
+                        + " the recording viewport, so it holds fewer frames at"
+                        + " larger window sizes. A deeper queue absorbs longer"
+                        + " encoder stalls -- lossless FFV1 falls behind on"
+                        + " high-motion content such as fast-forwarded trace"
+                        + " playback -- before backpressure stalls the game loop"));
         put(CAPTURE_CONTAINER, of("capture", "container", STRING,
                 "Recording file extension, e.g. mkv or mp4. ffmpeg picks its"
                         + " muxer from this. Recent ffmpeg will write every codec"
