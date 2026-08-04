@@ -58,7 +58,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
         private static void PredecessorEvidenceIsComplete()
         {
             string root = Path.Combine(EndToEndTests.RepositoryRoot,
-                "src", "test", "resources", "traces", "s1");
+                "docs", "architecture", "validation", "trace",
+                "2026-08-04-s1-credits-predecessor");
             foreach (string directory in Directories)
             {
                 string physics = Path.Combine(root, directory, "physics.csv");

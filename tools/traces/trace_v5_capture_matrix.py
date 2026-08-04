@@ -120,22 +120,14 @@ ROWS.extend([
 
 
 def matrix_document() -> dict[str, Any]:
-    return {
-        "format": MATRIX_FORMAT,
-        "freeze": FREEZE,
-        "roms": ROMS,
-        "capture": {
-            "runner": "tools/bizhawk-headless/run.sh",
-            "mode": "trace",
-            "batch_root": "tools/bizhawk-headless/.scratch/trace-v5-task9-phase-a-*",
-            "output_template": "captures/{id}",
-            "estimated_peak_bytes": 4_100_000_000,
-            "required_free_space_multiplier": 1.25,
-        },
-        "static_input_suffixes": [".bk2"],
-        "static_paths": ["s3k/hardware-timing-publication.tsv"],
-        "rows": ROWS,
-    }
+    """Return the reviewed on-disk matrix, including its publication mappings.
+
+    The constants above retain the original command-generation defaults for
+    callers that import them, but publication mappings are deliberately owned
+    by the JSON document so a corrected destination cannot be silently masked
+    by a stale embedded copy.
+    """
+    return load_document(MATRIX_DOCUMENT)
 
 
 def load_document(path: Path = MATRIX_DOCUMENT) -> dict[str, Any]:

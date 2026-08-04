@@ -73,7 +73,11 @@ class Validation:
         profile = metadata.get("trace_profile")
         if game not in {"s1", "s2", "s3k"}:
             self.reject(path, "game must be one of s1, s2, s3k")
-        if not isinstance(profile, str) or not profile:
+        # S1's native level and credits writers predate the shared profile
+        # field and intentionally omit it; their v5 contract is identified by
+        # the trace_type/zone surface.  S2 and S3K use the profile to select
+        # their recorder-owned auxiliary surface and must publish it.
+        if game in {"s2", "s3k"} and (not isinstance(profile, str) or not profile):
             self.reject(path, "trace_profile must be a non-empty string")
         owner = SPECIAL_STAGE_PROFILE_OWNERS.get(profile)
         if owner is not None and game != owner:

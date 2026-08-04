@@ -15,7 +15,7 @@ authorize installation or deletion of committed fixtures.
 | Native harness | `tools/bizhawk-headless/bin/Release/BizHawk.Headless.Gpgx.exe` |
 | Native harness SHA-256 | `2237b64955d268a57531b3019abf3c4cf9baece02f50c6558f33473ef51f1a0c` |
 | Native harness size | `359936` bytes |
-| Native test SHA-256 | `8c44925e9a99428c0fef20f490ded3e87084dfe1e0a8131e1cf0e22b5cf94f8b` |
+| Native test SHA-256 | `4e88ebea01e7ba58cc06be4a5f449804f15162fd891bbd28ece8c1fff3e0e003` |
 | Native test size | `620032` bytes |
 
 The native harness was rebuilt from this replacement source boundary after the
@@ -77,10 +77,33 @@ passed; row 36 was preserved as a diagnostic batch after the recorder correction
 and passed strict v5 validation with all 67 segment directories present. No
 installed fixture has been regenerated, deleted, or modified.
 
+The final phase-D batch was then recaptured from the frozen source identity as
+one serial 36-row run. Every row passed, including the 67-segment Knuckles
+super-emerald run. Its assembled scratch candidate contains 981 files (266
+metadata, 266 physics, 266 auxiliary, 139 timing, seven manifests, and 37
+static inputs) and has inventory aggregate
+`c7cc34c0e7bb386f24aef427030d23d7e33731508d66bba5fbe3487b5908e41c` after
+deterministic `gzip -9 -n` publication compression and the standalone S3K
+special-stage/bonus publication mappings.
+`validate_trace_v5.py` passed against that candidate. The two independent
+movie-free credits captures are byte-identical after decompression for all
+eight physics and auxiliary pairs.
+
+The eight candidate credits replays ran through the fixture-root override:
+seven are green. LZ3 exposes one existing engine-side animation discrepancy
+(first error frame 156, candidate `player_animation_id=00`, engine `0F`; 15
+animation-only errors). The native writer reads the ROM's `$D01C` byte directly;
+the candidate is therefore retained as measured evidence rather than
+normalized. S3K complete-run replay still stops at the previously frozen
+hardware-timing frontiers (`unsupported-held-row-POST` and the MGZ direct
+completion), before gameplay comparison; those rows are unchanged in kind from
+the pre-capture baseline.
+
 ## Next boundary
 
-Task 9 must now recapture all 36 rows in one fresh absent batch because the
-recorder source changed after the preceding diagnostic. Every capture must
-verify this source/diff/native identity and the unchanged predecessor inventory.
-Capture output remains outside the installed fixture tree until an explicit
-comparison and installation decision is made.
+The scratch candidate is now the complete replacement evidence set. Before
+installation, the predecessor comparison and the exact deletion list must be
+reviewed; the eight canonical S1 credits directories are preserved as archived
+predecessor evidence and are never deleted as part of this migration. Capture
+output remains outside the installed fixture tree until that controlled
+transaction is complete.

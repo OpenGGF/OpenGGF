@@ -11,9 +11,9 @@
   "freeze": {
     "development_baseline": "3573af57be947284a1f8398c7b4b4e05a8b12f14",
     "fixture_inventory": {
-      "aggregate_sha256": "52ea19afea7250121c35a94927e3a4b950c6b00b8fac9570284401db3f0615bd",
-      "file_count": 913,
-      "path": "docs/architecture/validation/trace/2026-08-03-trace-v5-baseline-inventory.json"
+      "aggregate_sha256": "c7cc34c0e7bb386f24aef427030d23d7e33731508d66bba5fbe3487b5908e41c",
+      "file_count": 981,
+      "path": "docs/architecture/validation/trace/2026-08-04-trace-v5-postinstall-inventory.json"
     },
     "native_artifact": {
       "path": "tools/bizhawk-headless/bin/Release/BizHawk.Headless.Gpgx.exe",
@@ -22,7 +22,7 @@
     },
     "native_test_artifact": {
       "path": "tools/bizhawk-headless/bin/Release/BizHawk.Headless.Gpgx.Tests.exe",
-      "sha256": "8c44925e9a99428c0fef20f490ded3e87084dfe1e0a8131e1cf0e22b5cf94f8b",
+      "sha256": "4e88ebea01e7ba58cc06be4a5f449804f15162fd891bbd28ece8c1fff3e0e003",
       "size": 620032
     },
     "source_commit": "93f0abb81dc216f5ab6fee998db75e9eb4410379",
@@ -82,10 +82,25 @@
       "game": "s1",
       "id": "s1-complete",
       "mappings": [
-        {
-          "destination": "s1",
-          "source": ""
-        }
+        {"destination": "s1/ghz1_completerun", "source": "ghz1"},
+        {"destination": "s1/ghz2_completerun", "source": "ghz2"},
+        {"destination": "s1/ghz3_completerun", "source": "ghz3"},
+        {"destination": "s1/mz1_completerun", "source": "mz1"},
+        {"destination": "s1/mz2_completerun", "source": "mz2"},
+        {"destination": "s1/mz3_completerun", "source": "mz3"},
+        {"destination": "s1/syz1_completerun", "source": "syz1"},
+        {"destination": "s1/syz2_completerun", "source": "syz2"},
+        {"destination": "s1/syz3_completerun", "source": "syz3"},
+        {"destination": "s1/lz1_completerun", "source": "lz1"},
+        {"destination": "s1/lz2_completerun", "source": "lz2"},
+        {"destination": "s1/lz3_completerun", "source": "lz3"},
+        {"destination": "s1/fz_completerun", "source": "lz4"},
+        {"destination": "s1/slz1_completerun", "source": "slz1"},
+        {"destination": "s1/slz2_completerun", "source": "slz2"},
+        {"destination": "s1/slz3_completerun", "source": "slz3"},
+        {"destination": "s1/sbz1_completerun", "source": "sbz1"},
+        {"destination": "s1/sbz2_completerun", "source": "sbz2"},
+        {"destination": "s1/sbz3_completerun", "source": "sbz3"}
       ],
       "movie": "s1/_movies/s1-complete-run.bk2",
       "movie_sha256": "f744c814d8e00d6c367f7fe83bb663cab123b5a4ed385a320d71b74d63146bde",
@@ -139,10 +154,14 @@
       "game": "s1",
       "id": "s1-credits-a",
       "mappings": [
-        {
-          "destination": "s1",
-          "source": ""
-        }
+        {"destination": "s1/credits_00_ghz1", "source": "00_ghz1_credits_demo_1"},
+        {"destination": "s1/credits_01_mz2", "source": "01_mz2_credits_demo"},
+        {"destination": "s1/credits_02_syz3", "source": "02_syz3_credits_demo"},
+        {"destination": "s1/credits_03_lz3", "source": "03_lz3_credits_demo"},
+        {"destination": "s1/credits_04_slz3", "source": "04_slz3_credits_demo"},
+        {"destination": "s1/credits_05_sbz1", "source": "05_sbz1_credits_demo"},
+        {"destination": "s1/credits_06_sbz2", "source": "06_sbz2_credits_demo"},
+        {"destination": "s1/credits_07_ghz1b", "source": "07_ghz1_credits_demo_2"}
       ],
       "movie": null,
       "movie_sha256": null,
@@ -615,10 +634,21 @@
       "game": "s3k",
       "id": "s3k-complete",
       "mappings": [
-        {
-          "destination": "s3k",
-          "source": ""
-        }
+        {"destination": "s3k/aiz_completerun", "source": "aiz"},
+        {"destination": "s3k/hcz_completerun", "source": "hcz"},
+        {"destination": "s3k/mgz_completerun", "source": "mgz"},
+        {"destination": "s3k/cnz_completerun", "source": "cnz"},
+        {"destination": "s3k/icz_completerun", "source": "icz"},
+        {"destination": "s3k/lbz_completerun", "source": "lbz"},
+        {"destination": "s3k/mhz_completerun", "source": "mhz"},
+        {"destination": "s3k/fbz_completerun", "source": "fbz"},
+        {"destination": "s3k/soz_completerun", "source": "soz"},
+        {"destination": "s3k/lrz_completerun", "source": "lrz"},
+        {"destination": "s3k/hpz22_completerun", "source": "hpz22"},
+        {"destination": "s3k/hpz_completerun", "source": "hpz"},
+        {"destination": "s3k/ssz_completerun", "source": "ssz"},
+        {"destination": "s3k/dez_completerun", "source": "dez23"},
+        {"destination": "s3k/ddz_completerun", "source": "ddz"}
       ],
       "movie": "s3k/_movies/s3k-complete-sonic-tails.bk2",
       "movie_sha256": "82eabfbc65e33c160ce209baa1ca3f967cb677fe22350bc100625d8c41a8e1bf",
@@ -633,8 +663,28 @@
       "id": "s3k-multibonus-c",
       "mappings": [
         {
-          "destination": "s3k",
+          "destination": "s3k/runs/s3k-multibonus",
           "source": ""
+        },
+        {
+          "allow_duplicate": true,
+          "destination": "s3k/special_stage",
+          "source": "ss"
+        },
+        {
+          "allow_duplicate": true,
+          "destination": "s3k/bonus_gumball",
+          "source": "gumball"
+        },
+        {
+          "allow_duplicate": true,
+          "destination": "s3k/bonus_pachinko",
+          "source": "pachinko"
+        },
+        {
+          "allow_duplicate": true,
+          "destination": "s3k/bonus_slots",
+          "source": "slots"
         }
       ],
       "movie": "s3k/_movies/s3-knux-multibonus-ss.bk2",
