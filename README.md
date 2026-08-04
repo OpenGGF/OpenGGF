@@ -231,6 +231,10 @@ straightforward to add new objects, zones, and game-specific behaviour.
   transitions retain the destination BK2 row until local Special Stage
   admission, keeping white-screen inputs, lag rows, and the trace HUD on one
   clock.
+- **Visual Special Stage transition dispatch (2026-08-04):** shared transition
+  gaps now consume engine-raised Special Stage requests even while native level
+  gameplay is suppressed, so the held-white S1 results fade enters the stage
+  instead of replaying inputs behind a stuck white screen.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
