@@ -958,7 +958,7 @@ public class Sonic3kTitleCardManager
         RuntimeArtAdmissionLease lease = provider.rebindRuntimeArtAdmission(
                 runtimeArtAdmissionLeaseId,
                 RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
-        if (inLevelMode && !heldLevelCounterDispatchOwned) {
+        if (inLevelMode) {
             provider.onInLevelTitleCardCompleted(lease);
         } else {
             provider.consumeRuntimeArtAdmission(

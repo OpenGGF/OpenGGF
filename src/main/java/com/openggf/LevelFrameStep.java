@@ -266,7 +266,7 @@ public final class LevelFrameStep {
                     : null;
             wrapper.wrap("objects",
                     () -> levelManager.updateObjectPositionsPostPhysicsWithoutTouches(
-                            afterExecBeforePlacement));
+                            afterExecBeforePlacement, false));
         } else {
             LevelEventProvider fixedSlotEvents = context.levelEventProvider();
             if (fixedSlotEvents != null) {
@@ -275,7 +275,7 @@ public final class LevelFrameStep {
 
             // 2. Legacy compatibility path keeps objects before physics. Touch
             //    responses are still deferred to tickPlayablePhysics after movement.
-            wrapper.wrap("objects", levelManager::updateObjectPositionsWithoutTouches);
+            wrapper.wrap("objects", () -> levelManager.updateObjectPositionsWithoutTouches(false));
 
             // 3. Sprite / player physics update (caller-provided).
             wrapper.wrap("physics", spriteUpdate);
@@ -337,7 +337,6 @@ public final class LevelFrameStep {
                 && !levelExitRequestedDuringObjects) {
             wrapper.wrap("camera-scroll", camera::updatePosition);
         }
-
         // 4b. Dynamic level events — boss arenas, boundary changes, zone
         //     transitions. ROM runs the zone handler (DLE_Index) here, after the
         //     scroll, so camera-X gates and the left-boundary lock see the
@@ -350,6 +349,18 @@ public final class LevelFrameStep {
         }
         if (levelEvents != null) {
             levelEvents.update();
+        }
+
+        // OscillateNumDo is the loop-tail update after ScreenEvents. A restart
+        // requested by Process_Sprites/ScreenEvents branches to Level before
+        // this point in the ROM, so that row must retain the prior oscillator
+        // phase even though Level_frame_counter still advances across reload.
+        boolean actTransitionExecutedDuringFrame =
+                levelManager.consumeActTransitionExecutedDuringFrame();
+        if (!bonusStageExitRequestedThisFrame
+                && !levelManager.isLevelInactiveForTransition()
+                && !actTransitionExecutedDuringFrame) {
+            levelManager.advanceGlobalOscillationAtLevelLoopTail();
         }
 
         // ROM LevelLoop runs ScreenEvents before Process_Kos_Module_Queue

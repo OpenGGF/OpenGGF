@@ -166,6 +166,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     int currentZone = 0;
     private boolean sidekickRomVisibleReloadFrameCounterBridgeActive;
     private boolean sidekickRomVisibleReloadFrameCounterBridgePrimed;
+    private boolean actTransitionExecutedDuringFrame;
     private boolean resetCounterPlacementAfterCameraSnap;
     private long completedProductionLoadGeneration;
 
@@ -973,6 +974,16 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * visible and animate without hurting/collecting from the frozen player.
      */
     public void updateObjectPositionsWithoutTouches() {
+        updateObjectPositionsWithoutTouches(true);
+    }
+
+    /**
+     * Advances object execution, optionally leaving the global oscillator for
+     * the canonical loop tail. The latter is needed when ScreenEvents can
+     * request a restart after Process_Sprites: the ROM skips OscillateNumDo on
+     * that row along with the rest of the loop tail.
+     */
+    public void updateObjectPositionsWithoutTouches(boolean advanceOscillation) {
         if (objectManager != null) {
             Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
             AbstractPlayableSprite playable = player instanceof AbstractPlayableSprite ? (AbstractPlayableSprite) player : null;
@@ -986,7 +997,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         // the previous frame's oscillation values, then OscillateNumDo advances
         // them for the next frame. Placing this call before objectManager.update()
         // caused a 1-frame phase shift in oscillating platform positions.
-        advanceGlobalOscillation();
+        if (advanceOscillation) {
+            advanceGlobalOscillation();
+        }
     }
 
     /**
@@ -1014,6 +1027,15 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     public void updateObjectPositionsPostPhysicsWithoutTouches(Runnable afterExecBeforePlacement) {
+        updateObjectPositionsPostPhysicsWithoutTouches(afterExecBeforePlacement, true);
+    }
+
+    /**
+     * Executes the post-physics object pass, optionally deferring the global
+     * oscillator until the canonical level-loop tail.
+     */
+    public void updateObjectPositionsPostPhysicsWithoutTouches(
+            Runnable afterExecBeforePlacement, boolean advanceOscillation) {
         if (objectManager != null) {
             Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
             AbstractPlayableSprite playable = player instanceof AbstractPlayableSprite ? (AbstractPlayableSprite) player : null;
@@ -1024,7 +1046,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
         // ROM parity: objects read the previous frame's oscillation values, then
         // OscillateNumDo advances them for the next frame after ExecuteObjects.
-        advanceGlobalOscillation();
+        if (advanceOscillation) {
+            advanceGlobalOscillation();
+        }
     }
 
     /**
@@ -1050,6 +1074,11 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             // V-blank-only row: see the exactly-one-tick-per-serviced-V-blank invariant on ObjectManager.vblaCounter.
             objectManager.advanceVblaCounter();
         }
+    }
+
+    /** Advances the global oscillator at the canonical level-loop tail. */
+    public void advanceGlobalOscillationAtLevelLoopTail() {
+        advanceGlobalOscillation();
     }
 
     void advanceGlobalOscillation() {
@@ -3206,6 +3235,18 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      */
     public void executeActTransition(SeamlessLevelTransitionRequest request) throws IOException {
         actTransitionExecutor.execute(request);
+        actTransitionExecutedDuringFrame = true;
+    }
+
+    /**
+     * Consumes the marker set when an in-place act transition ran inside the
+     * current level loop. The transition-owned oscillator dispatch replaces
+     * this frame's ordinary loop-tail advance.
+     */
+    public boolean consumeActTransitionExecutedDuringFrame() {
+        boolean executed = actTransitionExecutedDuringFrame;
+        actTransitionExecutedDuringFrame = false;
+        return executed;
     }
 
     void restoreCameraBoundsForCurrentLevel(Camera cam) {
@@ -3664,6 +3705,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         frameCounter = 0;
         sidekickRomVisibleReloadFrameCounterBridgeActive = false;
         sidekickRomVisibleReloadFrameCounterBridgePrimed = false;
+        actTransitionExecutedDuringFrame = false;
         transitions.resetState();
         verticalWrapEnabled = false;
         touchResponseTable = null;
@@ -3693,6 +3735,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         this.frameCounter = 0;
         sidekickRomVisibleReloadFrameCounterBridgeActive = false;
         sidekickRomVisibleReloadFrameCounterBridgePrimed = false;
+        actTransitionExecutedDuringFrame = false;
     }
 
     public void setClearColor() {

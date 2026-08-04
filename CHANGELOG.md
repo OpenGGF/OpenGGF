@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K's global oscillator now advances at the native level-loop tail;
+  an in-frame act transition consumes its provider-owned transition dispatch
+  without a duplicate tail tick. CNZ bumper orbit and carried-results dispatch
+  timing now reach the recorded direct Kosinski completion #30 (raw frame
+  25,667), beyond the previous #28 boundary.
 - Fix/Test: S3K carried title-card reset ownership now continues ticking while
   ROM-backed title KosM work is still being serviced, while the title owner
   keeps target enemy admission sealed until its completion dispatch. CNZ's

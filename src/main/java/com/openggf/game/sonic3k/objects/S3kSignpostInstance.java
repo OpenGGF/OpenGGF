@@ -104,11 +104,14 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
     private static final int POST_LAND_TIMER = 0x40;
     private static final int BUMP_COOLDOWN = 0x20;
     private static final int RESULTS_CARRIED_RETIRE_DISPATCHES = 3;
-    // ROM Obj_LevelResultsWait2 observes $30(a0) reaching zero one pass after
-    // the last child SST deletes (children allocate after the parent,
-    // docs/skdisasm/sonic3k.asm:62600, 62691-62693); the player-visible control
-    // release lands on the following dispatch. onExitReady's next-dispatch
-    // scheduling supplies the first pass, so one retained dispatch remains.
+    // Results children are embedded in the engine owner rather than allocated
+    // as twelve later SSTs. The embedded render-flag retire pass already
+    // represents the native child-slot deletes, so a post-object signpost must
+    // not add another synthetic parent pass before Obj_TitleCardInit
+    // (docs/skdisasm/sonic3k.asm:62600, 62691-62734).
+    private static final int RESULTS_POST_OBJECT_RETIRE_DISPATCHES = 0;
+    // A signpost that waits for the player to land still has one native parent
+    // pass after its embedded child retirement.
     private static final int RESULTS_WAITED_LANDING_RETIRE_DISPATCHES = 1;
 
     // Bump detection box relative to signpost center
@@ -569,9 +572,10 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
     static int resultsChildRetireDispatches(boolean waitedForPlayerLanding,
             boolean preservesPostObjectResultDispatchBoundary,
             boolean usesShortResultsChildRetireTail) {
-        return waitedForPlayerLanding
-                        || preservesPostObjectResultDispatchBoundary
-                        || usesShortResultsChildRetireTail
+        if (preservesPostObjectResultDispatchBoundary) {
+            return RESULTS_POST_OBJECT_RETIRE_DISPATCHES;
+        }
+        return waitedForPlayerLanding || usesShortResultsChildRetireTail
                 ? RESULTS_WAITED_LANDING_RETIRE_DISPATCHES
                 : RESULTS_CARRIED_RETIRE_DISPATCHES;
     }

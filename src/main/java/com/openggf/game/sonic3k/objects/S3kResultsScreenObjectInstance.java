@@ -864,7 +864,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                 } else {
                     s3kTitleCard.requestLevelGamestateResetAfterCreateDispatches(
                             mutatedTitleCardResetDispatches(
-                                    usesShortResultsChildRetireTail));
+                                    usesShortResultsChildRetireTail,
+                                    carriedPreloadedActCameraReleaseDispatches));
                 }
             }
         }
@@ -874,11 +875,22 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     }
 
     static int mutatedTitleCardResetDispatches(boolean usesShortResultsChildRetireTail) {
+        return mutatedTitleCardResetDispatches(usesShortResultsChildRetireTail, -1);
+    }
+
+    static int mutatedTitleCardResetDispatches(
+            boolean usesShortResultsChildRetireTail,
+            int preloadedActCameraReleaseDispatches) {
         // A short child-retirement tail hands ownership to the mutated title
         // card one frame earlier, before the native child/create phase has
         // exposed its final two dispatches.
-        return MUTATED_TITLE_CARD_RESET_DISPATCHES
+        int dispatches = MUTATED_TITLE_CARD_RESET_DISPATCHES
                 + (usesShortResultsChildRetireTail ? 2 : 0);
+        // When the retained transition explicitly has no preloaded-camera
+        // tail, its virtual child retirement also has no synthetic owner pass.
+        // The title initializes one replay row earlier; keep the native
+        // display-time gamestate reset at the same absolute dispatch.
+        return dispatches + (preloadedActCameraReleaseDispatches == 0 ? 1 : 0);
     }
 
     private void releasePlayerControlsForExit() {

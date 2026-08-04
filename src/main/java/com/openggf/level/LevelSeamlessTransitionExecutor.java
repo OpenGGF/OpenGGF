@@ -33,10 +33,12 @@ final class LevelSeamlessTransitionExecutor {
                             levelManager.currentZone,
                             levelManager.currentAct));
                     advanceFrameCounterAcrossReload();
+                    levelManager.consumeActTransitionExecutedDuringFrame();
                 }
                 case RELOAD_TARGET_LEVEL -> {
                     levelManager.executeActTransition(request);
                     advanceFrameCounterAcrossReload();
+                    levelManager.consumeActTransitionExecutedDuringFrame();
                 }
             }
         } catch (IOException e) {
@@ -113,12 +115,9 @@ final class LevelSeamlessTransitionExecutor {
      * without skipping the rest of the gameplay loop.
      */
     void advanceFrameCounterAcrossReload() {
-        // The reload is requested by ScreenEvents, but the ROM returns to the
-        // remainder of LevelLoop afterward: OscillateNumDo still runs before
-        // the next VBlank (docs/skdisasm/sonic3k.asm:7884-7910,
-        // 104722-104774). The engine applies the pending reload at the next
-        // frame top and returns from RecordingFrameDriver/GameLoop, so preserve
-        // that native post-ScreenEvents oscillator tick explicitly.
+        // The outer transition is consumed at the frame boundary, so the
+        // driver returns before the ordinary level-loop tail can run. Preserve
+        // the native OscillateNumDo dispatch for this transition-only row.
         levelManager.advanceGlobalOscillation();
 
         // The pending seamless reload is consumed at frame top, so this row

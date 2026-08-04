@@ -61425,3 +61425,37 @@ to synthesize a POST phase on a VBLANK-only row.
   `17423-17457`, and terminal raw frame `20105`, direct completion `#28`,
   fingerprint `66961069e564ef707173bbad733f75e3ab034e29e3f4833a02e2e26af452d8fd`;
   the engine has no matching submitted job.
+
+## 2026-08-04 — S3K CNZ loop-tail oscillator and late queue frontier
+
+- Worktree: repository root, branch `bugfix/s3k-traces`, candidate based on
+  `606c6fa33`. No trace payloads were edited.
+- Root cause: ordinary object execution advanced `OscillateNumDo` before
+  `ScreenEvents`, while CNZ's in-frame act transition also owns its provider
+  declared inherited oscillator dispatch. Moving the ordinary update to the
+  native loop tail therefore required suppressing that tail only when a real
+  act transition executed in the same frame; the outer frame-boundary reload
+  retains its separate transition-only tail. CNZ's orbiting bumper also needed
+  the visible `Level_frame_counter + 1` epoch without an extra retained-title
+  dispatch, and the carried results owner needed its exact embedded-child
+  retirement/reset timing.
+- Fix: the shared level step now defers oscillator advancement until after
+  `ScreenEvents`, consumes an explicit transition-executed marker, and keeps
+  provider/profile ownership of the transition dispatch. The CNZ bumper,
+  signpost, carried results title, and title-card art handoff retain their ROM
+  dispatch boundaries.
+- Clean authoritative command:
+  `mvn -q -Dmse=off -Dsurefire.argLine='-Xshare:off -Xmx6g'
+  -Dsurefire.forkCount=1 -DreuseForks=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace'
+  test`
+- Result: the replay reaches report frame `25,660` with 843 comparison errors
+  (physics 736, animation 107); the first error remains frame `17,423`,
+  `camera_x` (`0x0261` expected, `0x0260` actual). The next fail-closed
+  boundary is raw frame `25,667`, direct Kosinski completion `#30`,
+  fingerprint
+  `c2db2fda975f758607b601f686bc782c7ebe55e2413f540f23b193ba2b6f1741`,
+  with no matching engine submission. The previous boundary was raw frame
+  `20,105`, completion `#28`. Focused transition/title/rewind/timing guards
+  passed: 8 classes, 0 failures, 0 errors.
