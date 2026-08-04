@@ -25,6 +25,15 @@ public interface RuntimeArtCoordinator extends QueueDiagnosticsProvider {
     default void afterTimingService(HardwareServiceBoundary boundary) {
     }
 
+    /**
+     * Returns whether this game owns the hardware queue tail on a held
+     * level-counter row. Such a row skips the ordinary object/physics body but
+     * can still run the ROM's module and direct-FIFO service boundaries.
+     */
+    default boolean ownsHeldLevelCounterHardwareTail() {
+        return false;
+    }
+
     default void registerRewindAdapters(RewindRegistry registry) {
     }
 

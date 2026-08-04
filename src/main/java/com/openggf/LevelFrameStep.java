@@ -4,6 +4,7 @@ import com.openggf.camera.Camera;
 import com.openggf.game.BonusStageProvider;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.HardwareBoundaryDispatch;
+import com.openggf.game.InLevelTitleCardCoordinator;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame;
@@ -11,6 +12,7 @@ import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.level.LevelManager;
 import com.openggf.sprites.managers.SpriteManager;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.Objects;
 
@@ -126,6 +128,20 @@ public final class LevelFrameStep {
 
     public static void serviceHardwareVBlankOnly(LevelFrameContext context) {
         serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
+    }
+
+    /**
+     * Services only the module-queue boundary represented by a suppressed
+     * held-counter row. The ROM still runs this loop-tail boundary even though
+     * it does not run the ordinary object/physics body for that row.
+     */
+    public static void serviceHardwarePostObjectsOnly(LevelFrameContext context) {
+        serviceBoundary(context, HardwareServiceBoundary.POST_OBJECTS);
+    }
+
+    /** Services only the direct-FIFO boundary represented by a held row tail. */
+    public static void serviceHardwarePreMainLoopOnly(LevelFrameContext context) {
+        serviceBoundary(context, HardwareServiceBoundary.PRE_MAIN_LOOP);
     }
 
     /**
@@ -346,6 +362,11 @@ public final class LevelFrameStep {
         // ROM LevelLoop reaches its producers in ExecuteObjects
         // (docs/skdisasm/sonic3k.asm:7900-7906), ahead of the
         // Process_Kos_Module_Queue state step in the loop tail (7908).
+        // A results owner can publish an in-level title-card request during
+        // ExecuteObjects. Obj_TitleCardInit queues its KosM parents before the
+        // same frame's Process_Kos_Module_Queue, so consume that request here,
+        // after object/event producers and immediately before the art pump.
+        startPendingInLevelTitleCard(context, levelManager, spriteManager);
         if (context.gameModule().getObjectArtProvider() != null) {
             context.gameModule().getObjectArtProvider().processRuntimeArtQueue();
         }
@@ -436,6 +457,25 @@ public final class LevelFrameStep {
                 context.runtimeArtCoordinator(),
                 context.hardwareTiming(),
                 context.hardwareTimingBoundaryObserver());
+    }
+
+    private static void startPendingInLevelTitleCard(
+            LevelFrameContext context, LevelManager levelManager, SpriteManager spriteManager) {
+        InLevelTitleCardCoordinator.startIfRequested(
+                levelManager,
+                context.gameModule().getTitleCardProvider(),
+                context.gameStateManager() != null
+                        && context.gameStateManager().isEndOfLevelActive(),
+                locked -> {
+                    if (spriteManager == null) {
+                        return;
+                    }
+                    for (var sprite : spriteManager.getAllSprites()) {
+                        if (sprite instanceof AbstractPlayableSprite playable) {
+                            playable.setControlLocked(locked);
+                        }
+                    }
+                });
     }
 
 }

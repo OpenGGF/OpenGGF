@@ -61369,3 +61369,30 @@ to synthesize a POST phase on a VBLANK-only row.
   completed 14,268 tests (24 failures, 9 errors, 31 skips); the extra executed
   tests exposed unrelated Special Stage initialization and configuration
   errors. No boundary-comparator or visual-launcher parity test failed.
+
+## 2026-08-04 — S3K held-row queue tails and CNZ title-owner frontier
+
+- Worktree: repository root, branch `bugfix/s3k-traces`, based at
+  `845367f80`. No trace payloads were edited.
+- Root causes: a held-level-counter row still executes S3K's production
+  module/direct queue service tails even though its ordinary object/physics
+  body is suppressed; the retained CNZ results title owner could consume its
+  runtime-art admission more than once or wait until the final title exit;
+  the CNZ signpost also published its ending pose one dispatch early and the
+  act-transition control restore left the previous animation owner active.
+- Fix: the replay closure now traverses the real S3K POST/PRE queue boundaries
+  for held rows, the title owner tracks one rewind-safe admission consumption
+  and pumps the production art provider at its retained LoadEnemyArt dispatch,
+  and the CNZ signpost/event paths follow the native dispatch order.
+- Focused timing/title-card validation passed before the replay check. The
+  canonical command was:
+  `mvn -q -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  '-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace'
+  test`
+- Result: the common held-row setup errors are cleared and CNZ standard now
+  consumes the former direct completion #24. The next authoritative failure is
+  raw frame `20105`, direct Kosinski completion `#28`, fingerprint
+  `66961069e564ef707173bbad733f75e3ab034e29e3f4833a02e2e26af452d8fd`, with
+  no engine-submitted matching job. Before this checkpoint it aborted at raw
+  frame `17421`, direct completion `#24`.

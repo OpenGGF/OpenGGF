@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K held-level-counter replay now services the production module
+  and direct Kosinski queue tails at their recorded ROM boundaries. Retained
+  CNZ results-title ownership consumes its admission once during the held
+  dispatch and pumps the native LoadEnemyArt handoff; CNZ signpost pose and
+  post-transition control restoration now follow the ROM dispatch order. The
+  canonical CNZ timing frontier advances from direct completion #24 to #28.
 - Fix/Test: visual and headless complete-run return checks now share one
   manifest-derived field policy. Fresh next-act returns no longer compare a
   Special Stage exit-ring tally against the correctly reset destination level,

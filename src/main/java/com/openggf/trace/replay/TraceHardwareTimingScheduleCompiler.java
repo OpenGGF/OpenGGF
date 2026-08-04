@@ -49,19 +49,16 @@ final class TraceHardwareTimingScheduleCompiler {
     static void requireExecutablePostPhase(
             HardwareCompletionEdge edge, TraceExecutionPhase phase) {
         if (phase == TraceExecutionPhase.FULL_LEVEL_FRAME
-                || phase == TraceExecutionPhase.FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD) {
+                || phase == TraceExecutionPhase.FULL_LEVEL_FRAME_WITH_SIDEKICK_ANIMATION_HELD
+                || phase == TraceExecutionPhase.VBLANK_ONLY) {
             return;
         }
-        String heldRowReason = phase == TraceExecutionPhase.VBLANK_ONLY
-                ? "; reason=unsupported-held-row-POST"
-                : "";
         throw new IllegalStateException(
                 "unsupported-row-POST: raw_frame="
                         + edge.rawFrame()
                         + " has no scheduled object/POST phase"
                         + "; phase=" + phase
                         + "; kind=" + edge.kind()
-                        + ", ordinal=" + edge.ordinal()
-                        + heldRowReason);
+                        + ", ordinal=" + edge.ordinal());
     }
 }

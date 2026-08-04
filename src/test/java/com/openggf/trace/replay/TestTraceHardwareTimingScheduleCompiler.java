@@ -20,31 +20,25 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class TestTraceHardwareTimingScheduleCompiler {
 
     @Test
-    void installRejectsHeldRowPostBeforeFixtureOrTimingMutation() {
+    void installAcceptsHeldRowPostBeforeFixtureMutation() {
         TraceData trace = trace(
                 6350,
                 0x2a,
                 6351,
                 0x2a,
                 edge(6351, HardwareServiceBoundary.POST_OBJECTS));
-        TraceReplayFixture fixture = mock(TraceReplayFixture.class);
+        TraceReplayFixture fixture = installingFixture();
 
-        IllegalStateException error = assertThrows(
-                IllegalStateException.class,
-                () -> TraceReplaySessionBootstrap.installHardwareTimingReplay(
+        assertDoesNotThrow(() ->
+                TraceReplaySessionBootstrap.installHardwareTimingReplay(
                         trace, fixture, true));
 
-        assertTrue(error.getMessage().contains("unsupported-held-row-POST"),
-                error::getMessage);
-        assertTrue(error.getMessage().contains("raw_frame=6351"),
-                error::getMessage);
-        verifyNoInteractions(fixture);
+        verify(fixture).installHardwareTimingReplay(any());
     }
 
     @Test
@@ -92,8 +86,11 @@ class TestTraceHardwareTimingScheduleCompiler {
     }
 
     @Test
-    void postObjectsRejectsVblankOnlyPhase() {
-        assertUnsupportedPostPhase(TraceExecutionPhase.VBLANK_ONLY);
+    void postObjectsAcceptsVblankOnlyPhaseForSuppressedBoundaryService() {
+        assertDoesNotThrow(() ->
+                TraceHardwareTimingScheduleCompiler.requireExecutablePostPhase(
+                        edge(299, HardwareServiceBoundary.POST_OBJECTS),
+                        TraceExecutionPhase.VBLANK_ONLY));
     }
 
     @Test

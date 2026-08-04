@@ -485,16 +485,6 @@ public class S3kSignpostInstance extends AbstractObjectInstance implements Rewin
                 }
             }
             state = State.RESULTS;
-            if (preservesPostObjectResultDispatchBoundary
-                    && player != null && !player.getAir()) {
-                // A sign allocated by the post-object screen event loses one
-                // later-slot entry when that native loop tail is folded into
-                // the engine transition. Publish only the routine-6 player
-                // writes here; results allocation remains on its original
-                // engine entry so the act-transition owner does not move.
-                applyMainPlayerEndingPose(player);
-                sidekickEndingPoseCheckArmed = true;
-            }
             LOG.fine("S3K Signpost LANDED -> RESULTS");
         }
     }

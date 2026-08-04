@@ -68,6 +68,11 @@ public final class S3kRuntimeArtCoordinator implements RuntimeArtCoordinator {
     }
 
     @Override
+    public boolean ownsHeldLevelCounterHardwareTail() {
+        return true;
+    }
+
+    @Override
     public List<QueueDiagnosticSnapshot> captureQueueDiagnostics() {
         return List.of(
                 directQueue.captureDiagnostics(List.of()),

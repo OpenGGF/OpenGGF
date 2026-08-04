@@ -1277,6 +1277,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         sprite.setControlLocked(false);
         sprite.setForcedAnimationId(-1);
         sprite.setAir(false);
+        sprite.setAnimationId(Sonic3kAnimationIds.WAIT);
     }
 
     /**

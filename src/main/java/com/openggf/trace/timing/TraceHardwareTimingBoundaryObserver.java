@@ -31,6 +31,15 @@ public final class TraceHardwareTimingBoundaryObserver
         return replayPort.applySuppressedRowCompletion();
     }
 
+    /**
+     * Reports whether a recorded edge is waiting at the current raw-frame
+     * latch. The caller still has to traverse the production boundary.
+     */
+    public boolean hasPendingCompletionAtCurrentRawFrame(
+            HardwareServiceBoundary boundary) {
+        return replayPort.hasPendingCompletionAtCurrentRawFrame(boundary);
+    }
+
     @Override
     public void onBoundary(HardwareServiceBoundary boundary) {
         replayPort.apply(boundary);
