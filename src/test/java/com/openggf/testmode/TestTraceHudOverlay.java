@@ -219,4 +219,61 @@ class TestTraceHudOverlay {
                 org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.anyFloat());
     }
+
+    @Test
+    void renderPinsTheTransportBlockToTheTopRightCornerAboveTheCameraBlock() {
+        LiveTraceComparator comparator = mock(LiveTraceComparator.class);
+        when(comparator.recentMismatches()).thenReturn(List.of());
+        PixelFontTextRenderer textRenderer = mock(PixelFontTextRenderer.class);
+
+        TraceHudOverlay overlay = new TraceHudOverlay(
+                comparator, () -> "ENTER", () -> false, () -> null);
+        overlay.setPlaybackStatusSupplier(() -> new TracePlaybackStatus(
+                "ghz1.bk2", "LEVEL", 1234, 5678, "< 1.5x >"));
+
+        overlay.render(textRenderer);
+
+        // Stacked from STATUS_TOP_Y down, one LINE_HEIGHT apart, well clear of
+        // the paused camera-focus block at y=120.
+        verifyLine(textRenderer, "ghz1.bk2", 8);
+        verifyLine(textRenderer, "Mode: LEVEL", 14);
+        verifyLine(textRenderer, "Frame: 1234/5678", 20);
+        verifyLine(textRenderer, "Rate: < 1.5x >", 26);
+    }
+
+    @Test
+    void renderOmitsTheTransportBlockWithoutAnActiveSessionStatus() {
+        LiveTraceComparator comparator = mock(LiveTraceComparator.class);
+        when(comparator.recentMismatches()).thenReturn(List.of());
+        PixelFontTextRenderer textRenderer = mock(PixelFontTextRenderer.class);
+
+        TraceHudOverlay overlay = new TraceHudOverlay(
+                comparator, () -> "ENTER", () -> false, () -> null);
+        overlay.setPlaybackStatusSupplier(() -> null);
+
+        overlay.render(textRenderer);
+
+        verify(textRenderer, never()).drawShadowedText(
+                org.mockito.ArgumentMatchers.startsWith("Rate:"),
+                org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.anyFloat());
+        verify(textRenderer, never()).drawShadowedText(
+                org.mockito.ArgumentMatchers.startsWith("Frame:"),
+                org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.anyFloat());
+    }
+
+    private static void verifyLine(
+            PixelFontTextRenderer textRenderer, String text, int expectedY) {
+        verify(textRenderer).drawShadowedText(
+                org.mockito.ArgumentMatchers.eq(text),
+                org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.eq(expectedY),
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.anyFloat());
+    }
 }

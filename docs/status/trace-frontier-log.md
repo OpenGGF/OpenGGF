@@ -61165,6 +61165,16 @@ to synthesize a POST phase on a VBLANK-only row.
   already red in the recorded `develop` baseline (14,383 completed tests;
   32 failures, 47 errors, 31 skips); a normalized class/method comparison found
   no feature-only red method.
+- After fast-forward integration, the same full command first produced an
+  invalid 3,795-test run when Surefire lost compiled S2 special-stage test
+  classes during discovery. A fresh `mvn -q -Dmse=off -DskipTests
+  test-compile` succeeded, and the repeated merged run completed 14,225 tests
+  (27 failures, 7 errors, 31 skips) before the existing heap-space/fork crash.
+  Against the saved baseline XML it had one extra order-sensitive S3K
+  mushroom-parachute red; that complete class passed immediately when rerun
+  in both merged `develop` and the feature worktree, so no attributable
+  regression remained. The launcher/lifecycle/GHZ1/GHZ2 focused selection
+  also passed again on merged `develop` after the order-heavy run.
 
 ## 2026-08-03 - Visual/headless represented-row convergence
 
@@ -61402,3 +61412,56 @@ to synthesize a POST phase on a VBLANK-only row.
   24 failures, 9 errors, and 31 skips. The feature and post-merge full suites
   were not run; exhaustive replay of this fixture's 186,000+ unrepresented
   true-movie-end tail was stopped after timeout and is not a focused gate.
+
+## 2026-08-04 - Special Stage entry lands on the recorded mode-change frame
+
+- Branch: `feature/ai-visual-trace-fast-forward`, based on `2daa1de28`
+  (shared working tree; a concurrent collaborator held unrelated capture and
+  configuration edits throughout).
+- User report: visual complete-run playback of
+  `s1-sonic-complete-withemeralds` aborted at the GHZ1 giant ring with
+  `IllegalStateException: Special Stage entry crossed destination physical row:
+  cursor=4996, destinationOffset=4976`.
+- Root cause: the engine ran a 22-frame fade-to-white in LEVEL mode before
+  flipping to `SPECIAL_STAGE`, so the mode change landed 22 physical rows late
+  (segment 0 closes at row 4,974, the shared gap opens at 4,975, and
+  4,975 + 22 = 4,996). No ROM does this: `Got_ChkSS`
+  ("_incObj/3A Got Through Card.asm":198-201), `Obj79_Star` (s2.asm:44875-44877)
+  and `SSEntryFlash_GoSS` (s3.asm:79628) all write the game mode in the
+  level-side object tick with no fade, and the white-out belongs to
+  `GM_Special`'s `PaletteWhiteOut` (sonic.asm:3227) — which
+  `Sonic1SpecialStageManager`'s 44-tick pre-physics hold already models, so the
+  engine was performing it twice.
+- Fix: `GameLoop.enterSpecialStage` enters immediately;
+  `SpecialStageEntryPresentationController` owns the white-out and defers its
+  reveal until the fade reaches its opaque hold; and the S1 results card models
+  `Got_Wait`'s routine advance, arming the whole `Got_NextLevel` body — zone/act
+  write included — for the following frame. Advancing zone/act on the arming
+  frame instead would change the observed level identity on segment 0's final
+  represented row and fail source ownership.
+- Evidence:
+  `mvn -Dmse=off -Ptrace-replay -Dtest=TestS1CompleteEmeraldRunPrefix
+  -Dsonic1.rom.path=s1.gen test`
+  — 1 test, 0 failures, 0 errors both before and after, but the pre-change run
+  logged a first error at trace frame 4,114 with
+  `dynamic_art.frame expected=4114 actual=4136` (the same 22-frame skew) and the
+  post-change run logs no first error at all.
+- Follow-up in the same change: `GameLoop.specialStageTransitionPending` became
+  unreachable (nothing arms a window that no longer exists) and was removed
+  along with its term in `isNonRewindableTransitionPending()`.
+  `TestGameLoopSpecialStageEntryPresentation` had been aborting its forked JVM
+  in `Sonic2SpecialStageManager.setupPalettes` -> `glGenTextures` with no GL
+  context — `GraphicsManager.cachePaletteTexture` already guards on headless
+  mode, the class simply never entered it — so it now boots headless graphics
+  like the other 231 GL-touching test classes and runs.
+- Focused non-ROM validation: 54 tests across the transition coordinator, the
+  entry presentation controller, the special-stage entry presentation, the
+  special-stage rewind gate/boundary, and audio presentation modes; 0 failures
+  and 0 errors.
+- Full default suite: 14,346 tests (29 failures, 12 errors, 17 skips), with no
+  fork abort — the run previously died partway through on that GL crash.
+  Against the pre-change list, the ten reds that cleared are all in the classes
+  this change touches; the two that appeared are an order-sensitive
+  `TestBubblerObjectInstance` red that passes in isolation and a
+  `TestEngineLiveCapturePresentation` capture-queue red belonging to unrelated
+  uncommitted capture work in the shared tree.

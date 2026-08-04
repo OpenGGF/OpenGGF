@@ -119,6 +119,13 @@ public final class LiveCaptureController implements AutoCloseable {
             warnAudioOnce(audioCloseFailure);
         }
         CaptureRecorder stoppingRecorder = recorder;
+        // Reported at the end of the recording as well as during it: the
+        // periodic warnings are rate-limited, so this is the only place the
+        // full cost of a struggling encoder is stated once, in one line.
+        String exhaustion = stoppingRecorder.exhaustionSummary();
+        if (exhaustion != null) {
+            LOGGER.warning("Live viewport recording: " + exhaustion);
+        }
         finalization = deps.finalizer.submit(() -> {
             try {
                 stoppingRecorder.stop();
@@ -288,6 +295,18 @@ public final class LiveCaptureController implements AutoCloseable {
 
     private void clearResources() {
         viewport = null;
+        // The grabber owns a viewport-sized native read buffer for its lifetime
+        // now that it reuses one instead of allocating per frame, so dropping
+        // the reference is no longer enough to release it.
+        if (grabber != null) {
+            try {
+                grabber.close();
+            } catch (Exception failure) {
+                LOGGER.log(Level.WARNING,
+                        "Live capture frame grabber failed to release its buffers",
+                        failure);
+            }
+        }
         grabber = null;
         recorder = null;
         pcm = null;

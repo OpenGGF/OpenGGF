@@ -39,6 +39,7 @@ public final class PlaybackDebugManager {
     private int pendingP1ActionPressMask;
     private boolean currentForcedStartPress;
     private GameMode lastObservedMode = GameMode.LEVEL;
+    private boolean overlayOwnedExternally;
     private int firstActiveFrame = -1;
     private int periodicLogCounter;
     private PlaybackFrameObserver frameObserver;
@@ -565,7 +566,7 @@ public final class PlaybackDebugManager {
     }
 
     public synchronized List<String> buildOverlayLines() {
-        if (!enabled && movie == null) {
+        if (overlayOwnedExternally || (!enabled && movie == null)) {
             return List.of();
         }
         List<String> lines = new ArrayList<>(8);
@@ -617,7 +618,32 @@ public final class PlaybackDebugManager {
     }
 
     public synchronized boolean isHudVisible() {
-        return enabled || movie != null;
+        return !overlayOwnedExternally && (enabled || movie != null);
+    }
+
+    /**
+     * Hands the playback panel over to another owner, which then renders this
+     * information itself. Visual Trace Test Mode takes it for the duration of a
+     * session so its own HUD is the single transport display, rather than
+     * painting a second, differently-placed panel over the same frame.
+     */
+    public synchronized void setOverlayOwnedExternally(boolean owned) {
+        this.overlayOwnedExternally = owned;
+    }
+
+    /** File name of the loaded movie, or null when none is loaded. */
+    public synchronized String movieName() {
+        if (movie == null) {
+            return null;
+        }
+        return movie.getSourcePath().getFileName() != null
+                ? movie.getSourcePath().getFileName().toString()
+                : movie.getSourcePath().toString();
+    }
+
+    /** Last mode observed by the playback session. */
+    public synchronized GameMode observedMode() {
+        return lastObservedMode;
     }
 
     public synchronized void setObservedMode(GameMode mode) {

@@ -12,6 +12,7 @@ import com.openggf.game.sonic1.specialstage.Sonic1SpecialStageProvider;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageProvider;
 import com.openggf.graphics.FadeManager;
+import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.LevelManager;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.tests.TestEnvironment;
@@ -51,6 +52,12 @@ class TestGameLoopSpecialStageEntryPresentation {
 
     @BeforeEach
     void setUp() throws Exception {
+        // The entry tests below reach the real module provider's
+        // initializeStage, whose palette setup calls straight into GL. Without
+        // headless mode GraphicsManager issues glGenTextures with no current
+        // context, which aborts the whole forked JVM rather than failing a test.
+        GraphicsManager.getInstance().resetState();
+        GraphicsManager.getInstance().initHeadless();
         TestEnvironment.configureGameModuleFixture(new Sonic2GameModule());
         loop = new GameLoop(new InputHandler());
         fade = mock(FadeManager.class);
@@ -67,7 +74,7 @@ class TestGameLoopSpecialStageEntryPresentation {
     }
 
     @Test
-    void normalReadyEntryUsesFastPolicyAndPreservesMusicRevealListenerOrder() throws Exception {
+    void normalReadyEntryUsesFastPolicyAndWhitesOutBeforeTheModeChangeListener() throws Exception {
         SpecialStageProvider provider = readyProvider();
         GameLoop.GameModeChangeListener listener = mock(GameLoop.GameModeChangeListener.class);
         loop.setGameModeChangeListener(listener);
@@ -76,10 +83,10 @@ class TestGameLoopSpecialStageEntryPresentation {
 
         InOrder order = inOrder(provider, audio, fade, listener);
         order.verify(provider).initializeStage(2, SpecialStageStartupPolicy.FAST);
-        order.verify(audio).playMusic(GameMusic.SPECIAL_STAGE);
-        order.verify(fade).startFadeFromWhite(any());
+        order.verify(fade).startFadeToWhite(any(), anyInt());
         order.verify(listener).onGameModeChanged(GameMode.LEVEL, GameMode.SPECIAL_STAGE);
         verify(fade, never()).holdWhite();
+        verify(audio, never()).playMusic(GameMusic.SPECIAL_STAGE);
         assertEquals(GameMode.SPECIAL_STAGE, loop.getCurrentGameMode());
     }
 
@@ -182,7 +189,7 @@ class TestGameLoopSpecialStageEntryPresentation {
     }
 
     @Test
-    void concreteS1AndS3kProvidersRetainImmediateWhiteAndBlackEntry() throws Exception {
+    void concreteS1AndS3kProvidersRetainWhiteOutAndImmediateBlackEntry() throws Exception {
         doAnswer(invocation -> {
             invocation.<Runnable>getArgument(0).run();
             return null;
@@ -200,7 +207,7 @@ class TestGameLoopSpecialStageEntryPresentation {
         doReturn(Optional.empty()).when(s1).rewindAdapter();
 
         loop.doEnterSpecialStage(s1, 0, false);
-        verify(fade).startFadeFromWhite(any());
+        verify(fade).startFadeToWhite(any(), anyInt());
         verify(fade, never()).holdWhite();
 
         loop.changeGameModeForBoundary(GameMode.LEVEL);

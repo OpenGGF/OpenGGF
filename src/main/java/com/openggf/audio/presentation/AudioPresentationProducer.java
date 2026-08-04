@@ -19,6 +19,13 @@ public final class AudioPresentationProducer {
     private static final int CHANNELS = 2;
     private static final int MAX_CAPTURE_HANDLES = 32;
 
+    /**
+     * Ceiling on {@link #setForwardRate}. Each whole multiple costs another
+     * full mixer pass inside the one outer frame, so this bounds the worst-case
+     * cost of a runaway rate rather than expressing a musical limit.
+     */
+    private static final double MAX_FORWARD_RATE = 8.0;
+
     private final Thread ownerThread;
     private final int sampleRate;
     private final int maxStereoFrames;
@@ -30,6 +37,7 @@ public final class AudioPresentationProducer {
     private final PcmHistoryRing history;
     private final short[] silence;
     private final short[] reversePcm;
+    private final short[] forwardPcm;
     private final AudioPresentationFrameView frameView;
     private final CaptureHandle[] captures =
             new CaptureHandle[MAX_CAPTURE_HANDLES];
@@ -43,6 +51,7 @@ public final class AudioPresentationProducer {
     private AudioPresentationDependencyResolver selectedRestoreResolver;
     private AudioVoiceRegistry.PreparedSnapshotRestore
             preparedSelectedRestore;
+    private double forwardRate = 1.0;
     private int captureCount;
     private int releaseCrossfadeRemaining;
     private short lastReverseLeft;
@@ -106,6 +115,7 @@ public final class AudioPresentationProducer {
         history = new PcmHistoryRing(historyFrames);
         silence = new short[maxStereoFrames * CHANNELS];
         reversePcm = new short[maxStereoFrames * CHANNELS];
+        forwardPcm = new short[maxStereoFrames * CHANNELS];
         frameView = new AudioPresentationFrameView(silence);
         this.commandApplier =
                 commandApplier != null ? commandApplier : registry::apply;
@@ -127,7 +137,9 @@ public final class AudioPresentationProducer {
                 commands.applyPending(commandApplier);
                 registry.beginRendering();
                 try {
-                    pcm = mixer.mix(registry, stereoFrames);
+                    pcm = forwardRate > 1.0
+                            ? mixForwardResampled(stereoFrames)
+                            : mixer.mix(registry, stereoFrames);
                 } finally {
                     registry.endRendering();
                 }
@@ -208,6 +220,21 @@ public final class AudioPresentationProducer {
         if (reverseCursor != null) {
             reverseCursor.setRate(rate);
         }
+    }
+
+    /**
+     * Forward playback rate, 1.0 being real time. A higher rate renders that
+     * many frames of source audio into the one outer-frame packet, the mirror
+     * of {@code PcmHistoryRing.ReverseCursor}'s rate in reverse, so a caller
+     * running the simulation faster than real time hears it speed up and pitch
+     * up together instead of drifting out of sync with the picture. NaN and
+     * non-positive rates fall back to real time.
+     */
+    public void setForwardRate(double rate) {
+        assertOwnerBoundary();
+        forwardRate = Double.isNaN(rate) || rate <= 0.0
+                ? 1.0
+                : Math.min(MAX_FORWARD_RATE, rate);
     }
 
     public void endReverse() {
@@ -517,6 +544,42 @@ public final class AudioPresentationProducer {
                     "sink sample rate does not match producer sample rate");
         }
         return sink;
+    }
+
+    /**
+     * Renders {@code forwardRate x} an outer frame of source audio and
+     * decimates it down to the one packet the frame is allowed to emit. The
+     * source is pulled in chunks no larger than the mixer's declared capacity,
+     * so no buffer has to be sized for the fastest rate — the mixer hands back
+     * its own internal array, hence the copy out of each chunk before the next
+     * pass overwrites it.
+     */
+    private short[] mixForwardResampled(int stereoFrames) {
+        if (stereoFrames <= 0) {
+            return forwardPcm;
+        }
+        long sourceFramesNeeded =
+                (long) Math.floor((stereoFrames - 1) * forwardRate + 0.5) + 1;
+        long consumedSourceFrames = 0;
+        int outputFrame = 0;
+        while (consumedSourceFrames < sourceFramesNeeded) {
+            int chunkFrames = (int) Math.min(
+                    maxStereoFrames, sourceFramesNeeded - consumedSourceFrames);
+            short[] chunk = mixer.mix(registry, chunkFrames);
+            while (outputFrame < stereoFrames) {
+                long picked = (long) Math.floor(outputFrame * forwardRate + 0.5);
+                if (picked >= consumedSourceFrames + chunkFrames) {
+                    break;
+                }
+                int sourceIndex = (int) (picked - consumedSourceFrames) * CHANNELS;
+                int targetIndex = outputFrame * CHANNELS;
+                forwardPcm[targetIndex] = chunk[sourceIndex];
+                forwardPcm[targetIndex + 1] = chunk[sourceIndex + 1];
+                outputFrame++;
+            }
+            consumedSourceFrames += chunkFrames;
+        }
+        return forwardPcm;
     }
 
     private void rememberLastReverseFrame(short[] pcm, int readFrames) {

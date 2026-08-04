@@ -1746,15 +1746,17 @@ public class Engine {
 		if (uiPipeline != null && !userRecordingSceneSuppressed) {
 			uiPipeline.renderFadePass();
 		}
-		// VHS picture-search effect while live rewind is active. Runs BEFORE the
-		// user's PRESENTATION-phase display shader so a CRT preset displays the
+		// VHS picture-search effect while a tape transport is active — live
+		// rewind, or visual trace rewind/fast-forward. Runs BEFORE the user's
+		// PRESENTATION-phase display shader so a CRT preset displays the
 		// damaged "signal" (tape artifacts precede the TV in the real chain).
 		if (!userRecordingSceneSuppressed && rewindVhsEffectPass != null && gameLoop != null) {
-			float rewindEffectIntensity = gameLoop.liveRewindEffectIntensity();
+			float rewindEffectIntensity = gameLoop.tapeEffectIntensity();
 			if (rewindEffectIntensity > 0.0f) {
 				rewindVhsEffectPass.apply(
 						rewindEffectIntensity,
-						gameLoop.liveRewindEffectSpeed(),
+						gameLoop.tapeEffectSpeed(),
+						gameLoop.tapeEffectScrollDirection(),
 						configService.getBoolean(SonicConfiguration.LIVE_REWIND_VHS_TEAR_BANDS),
 						configService.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS),
 						configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS),

@@ -319,6 +319,65 @@ Choosing `aac` or `mp3` means the recording is no longer a faithful capture of
 the engine's audio. That is a legitimate choice for sharing a clip; it is not
 appropriate for comparing audio against reference material.
 
+### Recording high-motion content
+
+Live recording encodes losslessly at the *window* resolution, so a 1280×896 window is
+about 4.6 MB per raw frame. The encoder runs on its own thread behind a bounded queue,
+and that queue uses `BLOCK` backpressure — it never drops a frame, which means that once
+it fills, the submitting **game thread** waits. A stall in the encoder is therefore
+visible as a stutter in the running game.
+
+Lossless codecs cost roughly in proportion to how much changes between consecutive
+frames, so the encoder falls behind on high-motion content. Fast-forwarded visual trace
+playback is the sharpest case: at 5× each recorded frame is five gameplay frames from the
+last, so per-frame entropy rises steeply. The backlog also outlives the burst — dropping
+back to 1× still leaves the queue and ffmpeg's pipe to drain, so the stutter persists for
+a few seconds afterwards.
+
+`capture.queueBudgetMb` sets how much of that burst the queue can absorb. Raise it if you
+record fast-forwarded playback and can spare the memory; note it bounds a *burst*, not a
+sustained overload — if the encoder is permanently slower than real time, a deeper queue
+only delays the stall.
+
+When the queue does run dry, the engine says so: a rate-limited warning naming the queue
+depth, the blocked time, and the running totals, plus a one-line summary when the
+recording stops. If you see those, the encoder is the bottleneck.
+
+#### Making the encoder keep up
+
+H.265 is the slowest of the three codecs because `lossless=1` does a great deal of work
+per frame. At libx265's own default `medium` preset it keeps up with ordinary play, but
+it has little headroom left for high-motion content — fast-forwarded trace playback in
+particular, where each recorded frame is several gameplay frames from the last. That is
+why `capture.encoderPreset` defaults to `fast` rather than leaving the encoder's default
+in place.
+
+Measured on 180 frames of 1280×896 RGBA — 3.0 s of real time at 60fps:
+
+| Setting | Encode time | Output size |
+|---|---|---|
+| `h265`, `medium` (libx265 default) | 1.46 s | 20.5 MB |
+| `h265`, `fast` (our default) | 0.91 s | 22.8 MB |
+| `h265`, `veryfast` | 0.85 s | 22.9 MB |
+| `h265`, `ultrafast` | 0.41 s | 25.3 MB |
+| `ffv1` (sliced, default) | 0.34 s | 17.4 MB |
+
+If H.265 still stutters, step down to `veryfast` or `ultrafast`; `ultrafast` brings it to
+roughly FFV1's throughput for about 23% more file size. Raising `capture.encoderThreads`
+will not help — libx265 already threads internally.
+
+Presets never cost you losslessness. Every preset from `ultrafast` to `slow` was checked
+by re-encoding and re-decoding and comparing byte-for-byte, for both `h264` and `h265` —
+all exact. (`TestCaptureCodecLosslessness` re-measures the shipped configuration.)
+
+Those figures come from synthetic test video. Real fast-forwarded gameplay changes more
+between frames and will be slower across the board, so treat them as ratios rather than
+absolute budgets. FFV1 is encoded with `-slices 16` so it can use more than one core at
+all, which measured ~17% faster for ~0.3% more file size.
+
+For sustained high-motion recording, a lower window resolution is the other lever — cost
+scales with pixel count.
+
 ### Containers
 
 `capture.container` sets the recording's file extension, and ffmpeg picks its
@@ -438,6 +497,9 @@ ones. The bundled `config.yaml` supplies the live toggle default.
 | `CAPTURE_FPS` | `capture.fps` | int | `60` | Trace capture only: output frame rate; live recording uses the engine's effective display rate. |
 | `CAPTURE_CODEC` | `capture.codec` | string | `"ffv1"` | Video codec for live and trace capture: `ffv1`, `h264` or `h265`. All three are lossless — see the note below. |
 | `CAPTURE_CONTAINER` | `capture.container` | string | `"mkv"` | Recording file extension. ffmpeg selects its muxer from this — see "Containers" below. |
+| `CAPTURE_QUEUE_BUDGET_MB` | `capture.queueBudgetMb` | int | `192` | Live recording only: memory budget for the encoder queue. The queue is sized in whole frames from this budget and the recording viewport (which is the *window*, not 320×224), so it holds fewer frames at larger window sizes — clamped to 8..120 frames. A deeper queue absorbs longer encoder stalls before backpressure blocks the game loop; see "Recording high-motion content" below. |
+| `CAPTURE_ENCODER_PRESET` | `capture.encoderPreset` | string | `"fast"` | x264/x265 speed preset: `ultrafast`, `superfast`, `veryfast`, `faster`, `fast`, `medium`, `slow`, `slower`, `veryslow`, `placebo`. Blank uses the encoder's own default (`medium`). Ignored by FFV1, which has no preset. Presets trade encode speed for file size and **never** affect losslessness. This is the main lever when H.265 cannot keep up — see below. |
+| `CAPTURE_ENCODER_THREADS` | `capture.encoderThreads` | int | `0` | ffmpeg `-threads` for the encode pass. `0` lets ffmpeg choose, which is normally one thread per core and is almost always right. x264/x265 already thread internally, so raising this rarely helps them; prefer `capture.encoderPreset`. |
 | `CAPTURE_AUDIO_CODEC` | `capture.audioCodec` | string | `"flac"` | Audio codec: `flac`, `aac` or `mp3`. **`aac` and `mp3` are lossy**: the recorded audio will not match what the engine produced. `flac` is lossless. |
 | `CAPTURE_FFMPEG_PASS1_ARGS` | `capture.ffmpegPass1Args` | string | `"default"` | **Advanced.** Full ffmpeg argument list for the encode pass. See "Overriding the ffmpeg commands" below. |
 | `CAPTURE_FFMPEG_PASS2_ARGS` | `capture.ffmpegPass2Args` | string | `"default"` | **Advanced.** Full ffmpeg argument list for the mux pass; leave empty to skip it and record video only. |
@@ -663,6 +725,7 @@ The gamepad Back/Select/View button on the primary connected pad is a hardcoded 
 | `FRAME_STEP_KEY` | `debug.keys.frameStep` | `81` | Q | Advance one frame while paused. The gamepad right bumper (RB/R1) on the primary connected pad also steps a frame, unconditionally (not remappable). |
 | `RECORDING_RECORD_KEY` | `debug.recording.recordKey` | `298` | F9 | `Shift+Record` starts/opens user recording flows; plain Record stops active recording. |
 | `TRACE_REWIND_KEY` | `debug.traceRewind.key` | `82` | R | Hold during visual Trace Test Mode replay to rewind deterministic engine state in real time, including reverse audio presentation and restored fade snapshots. |
+| `LEFT` / `RIGHT` (reused) | `input.player1.left` / `.right` | `263` / `262` | ← / → Arrow | In visual Trace Test Mode these also drive playback speed while the trace is **playing**: Right steps up the 1x / 1.5x / 2x / 3x / 5x fast-forward ladder, Left steps back down. Audio speeds and pitches up with the picture, and the VHS tape effect scales with the rate. While **paused** the same keys cycle the trace camera focus instead. |
 | `LIVE_REWIND_KEY` | `rewind.liveKey` | `82` | R | Hold during live level play to rewind deterministic gameplay state when `LIVE_REWIND_ENABLED` is true, including reverse audio presentation and restored fade snapshots. The gamepad left bumper (L1/LB) on the primary connected pad also holds rewind, unconditionally (not remappable). |
 | `LIVE_REWIND_HALF_SPEED_KEY` | `rewind.liveHalfSpeedKey` | `341` | Left Ctrl | Modifier held together with the rewind key for half-speed rewind (one engine step every other frame; reverse audio plays slow-motion). The mirrored left/right variant of a modifier key also counts. Holding both speed modifiers cancels back to normal speed. |
 | `LIVE_REWIND_DOUBLE_SPEED_KEY` | `rewind.liveDoubleSpeedKey` | `340` | Left Shift | Modifier held together with the rewind key for double-speed rewind (two engine steps per frame; reverse audio pitches up, and the VHS effect shows a third tear band). The mirrored left/right variant of a modifier key also counts. |

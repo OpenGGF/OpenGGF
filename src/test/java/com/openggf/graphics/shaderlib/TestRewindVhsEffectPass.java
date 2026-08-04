@@ -50,7 +50,14 @@ public class TestRewindVhsEffectPass {
     }
 
     @Test
-    public void scrollPhaseTreatsNegativeSpeedAsStationary() {
-        assertEquals(0.25f, RewindVhsEffectPass.advanceScrollPhase(0.25f, -1.0f), 1e-6f);
+    public void scrollPhaseRunsBackwardForAFastForwardTransport() {
+        // Fast-forward scrolls the bands the other way at the same rate.
+        assertEquals(0.244f, RewindVhsEffectPass.advanceScrollPhase(0.25f, -1.0f), 1e-6f);
+        assertEquals(0.238f, RewindVhsEffectPass.advanceScrollPhase(0.25f, -2.0f), 1e-6f);
+    }
+
+    @Test
+    public void scrollPhaseWrapsBackwardBelowZero() {
+        assertEquals(0.998f, RewindVhsEffectPass.advanceScrollPhase(0.004f, -1.0f), 1e-6f);
     }
 }

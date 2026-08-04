@@ -3,6 +3,60 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: entering a Special Stage no longer costs an extra fade's worth of
+  frames. Every ROM writes the game mode inside the level-side object tick and
+  runs no fade of its own — S1 `Got_ChkSS`, S2 `Obj79_Star`, S3K
+  `SSEntryFlash_GoSS` — with the white-out belonging to the special stage's own
+  entry (`GM_Special`'s `PaletteWhiteOut`). The engine was fading to white in
+  level mode first and only then flipping the mode, so the transition ran 22
+  frames late and performed the white-out twice (S1's provider already models
+  the ROM's 44-tick pre-physics hold). Complete-run visual playback aborted at
+  the giant ring with "Special Stage entry crossed destination physical row".
+  The mode change is now immediate, the white-out is owned by the special-stage
+  entry presentation, and the S1 results card models `Got_Wait`'s routine
+  advance so `Got_NextLevel`'s zone/act write and mode change land together on
+  the following frame. `GameLoop.specialStageTransitionPending` went with it:
+  there is no longer a window between the request and the mode change for it to
+  describe.
+- Feature/Perf: capture encoder speed is now tunable, and an overloaded encoder
+  says so. `capture.encoderPreset` exposes the x264/x265 speed preset and now
+  defaults to `fast`: libx265's own `medium` default keeps up with ordinary
+  play but has little headroom for high-motion content such as fast-forwarded
+  trace playback. It is the lever that matters, since libx265 already threads
+  internally; presets never affect losslessness. `capture.encoderThreads`
+  exposes ffmpeg's `-threads` (0 = auto), and FFV1 is now sliced so threads can
+  be used by it at all. Exhausting the encoder queue logs a rate-limited
+  warning with the blocked time and a one-line summary when the recording
+  stops, rather than silently stalling the game thread.
+- Perf: live viewport recording no longer allocates two full frames plus a
+  native read buffer per captured frame. The pixel grabber now reuses its
+  buffers — which is exactly the producer-side reuse `CapturedFrame`'s
+  defensive copy already existed to make safe — cutting steady-state capture
+  garbage roughly in half and removing a per-frame native malloc/free. At a
+  1280x896 window that was around 9MB of garbage per frame, and it grew with
+  the window.
+- Perf: the live recording encoder queue is now sized from a memory budget
+  (`capture.queueBudgetMb`, default 192MB) rather than a fixed 8 frames, so it
+  absorbs far longer encoder stalls before `BLOCK` backpressure reaches the
+  game thread. Lossless encoding falls behind on high-motion content — most
+  sharply on fast-forwarded trace playback — and the resulting stall was
+  visible as a stutter in the running game that outlived the burst. Budgeting
+  in bytes keeps the depth honest across window sizes, where a queued frame
+  costs width*height*4.
+- Feature: the visual trace HUD now owns the playback transport display,
+  replacing the legacy `== PLAYBACK ==` debug panel for the whole of a trace
+  session. Movie name, mode, frame counter, and a `Rate: < 1x >` fast-forward
+  readout are pinned right-aligned in the top-right corner; the panel's input
+  visualiser and status message are dropped as redundant with the trace HUD's
+  own input glyphs and state.
+- Feature: visual Trace Test Mode playback can now fast-forward. While playback
+  is running, Right steps up a 1x / 1.5x / 2x / 3x / 5x ladder and Left steps
+  back down, folding extra gameplay steps into each rendered frame. Audio
+  speeds and pitches up with the picture through a new forward playback rate on
+  the audio presentation producer, the mirror of the existing reverse rate. The
+  VHS tape effect now covers visual trace transports as well as live rewind,
+  scaling with the fast-forward rate and scrolling its tear bands the opposite
+  way from a rewind. Left/Right keep their paused-only camera-focus meaning.
 - Fix/Test: visual and headless whole-run replay now share one segment policy
   and the same physical-row driver for presentation, structural gaps, and
   terminal movie tails. Presentation rows keep BK2 input,

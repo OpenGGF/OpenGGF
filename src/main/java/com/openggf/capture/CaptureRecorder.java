@@ -84,4 +84,19 @@ public class CaptureRecorder {
     public long droppedCount() {
         return sink.droppedCount();
     }
+
+    /** Frames whose submit had to wait for a full encoder queue. */
+    public long exhaustedFrameCount() {
+        return sink.exhaustedFrameCount();
+    }
+
+    /**
+     * One-line account of encoder-queue exhaustion over this recording, or null
+     * if the queue never ran dry. Under {@code BLOCK} that wait lands on the
+     * submitting thread, so this is the record of how much the encoder cost the
+     * caller.
+     */
+    public String exhaustionSummary() {
+        return sink.exhaustionSummary();
+    }
 }

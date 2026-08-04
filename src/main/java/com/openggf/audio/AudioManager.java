@@ -1186,6 +1186,18 @@ public class AudioManager implements MusicRestoreSink {
     }
 
     /**
+     * Forward playback rate, 1.0 being real time. Owners that run the
+     * simulation faster than real time (visual Trace Test Mode fast-forward)
+     * set this to the same rate so the picture and the audio speed up
+     * together; every such owner must restore 1.0 when it stops, since the
+     * rate outlives the consumer that set it.
+     */
+    public void setForwardPlaybackRate(double rate) {
+        ensureShadowPresentation();
+        shadowProducer.setForwardRate(rate);
+    }
+
+    /**
      * Clears the raw PCM rewind-history ring. Callers must invoke this at a
      * hard rewind boundary (e.g. a fresh level load) so a subsequent held
      * rewind cannot play back samples recorded before the boundary — the
