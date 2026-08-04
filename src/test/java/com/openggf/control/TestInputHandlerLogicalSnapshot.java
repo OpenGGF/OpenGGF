@@ -22,6 +22,7 @@ import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_X;
 import static org.lwjgl.glfw.GLFW.GLFW_GAMEPAD_BUTTON_Y;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_F1;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_ALT;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SUPER;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE;
@@ -29,6 +30,17 @@ import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
 import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
 
 class TestInputHandlerLogicalSnapshot {
+
+    @Test
+    void physicalModifiersRemainVisibleWhenPlaybackOverridesLogicalInput() {
+        InputHandler input = new InputHandler();
+        input.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS);
+        input.setLogicalOverride(LogicalInputSnapshot.neutral());
+
+        assertFalse(input.isShiftDown());
+        assertTrue(input.isPhysicalShiftDown());
+        assertTrue(input.isPhysicalKeyDown(GLFW_KEY_LEFT_SHIFT));
+    }
 
     @Test
     void refreshLogicalSnapshotReadsCurrentKeyboardState() {

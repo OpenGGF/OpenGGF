@@ -14,7 +14,7 @@ import static org.mockito.Mockito.verify;
 class TestSpecialStageTraceHudOverlay {
 
     @Test
-    void renderShowsProfileCursorAndLagAdmission() {
+    void renderUsesTheCommonTraceHudSections() {
         PixelFontTextRenderer text = mock(PixelFontTextRenderer.class);
         SpecialStageTraceHudOverlay overlay =
                 new SpecialStageTraceHudOverlay(
@@ -25,11 +25,11 @@ class TestSpecialStageTraceHudOverlay {
 
         var order = inOrder(text);
         order.verify(text).beginBatch();
-        order.verify(text).drawShadowedText(eq("S1 SPECIAL STAGE"),
+        verify(text).drawShadowedText(eq("ERRORS    0"),
                 anyInt(), anyInt(), any(), anyFloat());
-        verify(text).drawShadowedText(eq("FRAME 0012 / 0100"),
+        verify(text).drawShadowedText(eq("WARN      0"),
                 anyInt(), anyInt(), any(), anyFloat());
-        verify(text).drawShadowedText(eq("LAG ROW"),
+        verify(text).drawShadowedText(eq("LAG       1"),
                 anyInt(), anyInt(), any(), anyFloat());
         order.verify(text).endBatch();
     }

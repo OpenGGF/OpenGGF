@@ -1994,7 +1994,8 @@ public class Engine {
 		}
 		if (!shouldToggleLiveCapture(
 				configService.getKeyChord(SonicConfiguration.CAPTURE_TOGGLE_KEY),
-				liveCaptureChord, inputHandler)) {
+				liveCaptureChord,
+				new PhysicalCaptureInput(inputHandler))) {
 			return;
 		}
 		switch (liveCaptureController.state()) {
@@ -2006,8 +2007,27 @@ public class Engine {
 		}
 	}
 
+	/** Physical-only view used by the global capture chord. */
+	private record PhysicalCaptureInput(InputHandler input) {
+		boolean isKeyDown(int keyCode) { return input.isPhysicalKeyDown(keyCode); }
+		boolean isShiftDown() { return input.isPhysicalShiftDown(); }
+		boolean isControlDown() { return input.isPhysicalControlDown(); }
+		boolean isAltDown() { return input.isPhysicalAltDown(); }
+		boolean isSuperDown() { return input.isPhysicalSuperDown(); }
+	}
+
 	private CaptureViewport currentCaptureViewport() {
 		return new CaptureViewport(viewportX, viewportY, viewportWidth, viewportHeight);
+	}
+
+	private static boolean shouldToggleLiveCapture(KeyChord chord,
+			LiveCaptureChord detector, PhysicalCaptureInput input) {
+		if (chord == null) {
+			return false;
+		}
+		return detector.update(chord, input.isKeyDown(chord.keyCode()),
+				input.isShiftDown(), input.isControlDown(),
+				input.isAltDown(), input.isSuperDown());
 	}
 
 	private void captureScreenshotIfRequested() {

@@ -61249,3 +61249,11 @@ to synthesize a POST phase on a VBLANK-only row.
   skips. Normalized class/method comparison found zero feature-only red tests;
   four baseline reds were not reached or were green before the feature run's
   earlier termination.
+
+## 2026-08-04 — visual complete-run special-stage seam
+
+- Design/plan: `docs/architecture/designs/trace/2026-08-04-visual-complete-run-special-stage-parity-design.md` and `docs/architecture/plans/trace/2026-08-04-visual-complete-run-special-stage-parity-plan.md`; both delegated reviews green.
+- Fix scope: S1 TRACE_ACCURATE startup readiness, shared normal/special HUD state, boundary-probe delegate rebinding across SS → GHZ2, and physical live-capture modifiers while BK2 logical input is active.
+- Focused command: `mvn -q -Dtest='TestSpecialStageVisualTraceSession,TestTraceSessionLauncherRunBranch,TestEngineLiveCapturePresentation,TestGameLoopSpecialStageEntryPresentation,TestSpecialStageTraceHudOverlay,TestInputHandlerLogicalSnapshot,TestTraceRunSpecialStageRowDriver' test`.
+- Result: the selected visual/run/capture tests passed; the repository's Maven test extension also executed the broader suite and reported the existing environment/classpath reds documented in the baseline comparison.
+- Special-stage seam coverage: the committed S1 emerald fixture still publishes and verifies all 3,728 represented rows before destination closure; GHZ2 rebind retains `BoundaryProbe` as the playback observer.

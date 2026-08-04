@@ -132,6 +132,7 @@ class TestGameLoopSpecialStageEntryPresentation {
         Sonic1SpecialStageProvider s1 = spy(new Sonic1SpecialStageProvider());
         doNothing().when(s1).reset();
         doNothing().when(s1).initializeStage(anyInt(), eq(SpecialStageStartupPolicy.FAST));
+        doReturn(true).when(s1).isEntryPresentationReady();
         doReturn(false).when(s1).supportsRewind();
         doReturn(Optional.empty()).when(s1).rewindAdapter();
 
@@ -143,6 +144,7 @@ class TestGameLoopSpecialStageEntryPresentation {
         Sonic3kSpecialStageProvider s3k = spy(new Sonic3kSpecialStageProvider());
         doNothing().when(s3k).reset();
         doNothing().when(s3k).initializeStage(anyInt(), eq(SpecialStageStartupPolicy.FAST));
+        doReturn(true).when(s3k).isEntryPresentationReady();
         doReturn(false).when(s3k).supportsRewind();
         doReturn(Optional.empty()).when(s3k).rewindAdapter();
 

@@ -27,6 +27,7 @@ import com.openggf.trace.VerificationGroup;
 import com.openggf.trace.TraceReplayBootstrap;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 import com.openggf.trace.replay.TraceReplayRowPolicy;
+import com.openggf.trace.TraceHudModel;
 
 import java.util.List;
 import java.util.LinkedHashMap;
@@ -40,7 +41,7 @@ import java.util.function.Supplier;
  * {@link PlaybackFrameObserver}; gates ROM lag frames and accumulates
  * divergences into a ring buffer plus counters.
  */
-public final class LiveTraceComparator implements PlaybackFrameObserver {
+public final class LiveTraceComparator implements PlaybackFrameObserver, TraceHudModel {
     private static final int RING_CAPACITY = 5;
 
     private final TraceData trace;

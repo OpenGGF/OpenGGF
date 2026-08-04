@@ -904,6 +904,13 @@ public final class TraceRunReplayWalker {
         /** Attaches (or, with {@code null}, detaches) the delegate observer. */
         public void setDelegate(PlaybackDebugManager.PlaybackFrameObserver delegate) {
             this.delegate = delegate;
+            // A destination admission is performed between production
+            // iterations.  Discard any cached source-row delegate so the
+            // next prepare/advance pair cannot replay the old segment's
+            // input or comparison owner.
+            preparedFrame = null;
+            framePrepared = false;
+            preparedDelegate = null;
         }
 
         /**
