@@ -226,6 +226,7 @@ class TestAudioManagerRuntimeInstallation {
                 "beginReversePresentation",
                 "endReversePresentation",
                 "setReversePlaybackRate",
+                "setForwardPlaybackRate",
                 "setRewindHistoryArmed",
                 "captureLogicalSnapshot",
                 "restoreLogicalSnapshot",

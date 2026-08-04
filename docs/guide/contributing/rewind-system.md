@@ -64,6 +64,20 @@ normal display-driven fade advancement and renders the restored fade snapshot,
 so fade-from-black/fade-to-black transitions move with the rewound frame instead
 of continuing forward.
 
+#### Fast-forward
+
+While the trace is playing — not paused, not rewinding — the `LEFT`/`RIGHT` bindings
+(arrow keys by default) walk a playback speed ladder: `Right` steps up through
+1x, 1.5x, 2x, 3x, 5x and `Left` steps back down. The HUD shows `FF 2x` and so on
+whenever the rate is above real time. Those same keys keep their paused-only meaning
+for the camera-focus cycle, so the two never contend.
+
+Fast-forward folds extra gameplay steps into each rendered frame, and the audio speeds
+and pitches up with the picture the way rewind at speed already does. The VHS tape effect
+comes on above 1x and scales with the rate, scrolling its tear bands the opposite way
+from a rewind. Rewind itself stays at one step per frame; changing the ladder while the
+rewind key is held only takes effect on release.
+
 ### Live Play
 
 Live gameplay rewind is disabled by default. To enable it:

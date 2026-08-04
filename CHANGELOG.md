@@ -3,6 +3,14 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Feature: visual Trace Test Mode playback can now fast-forward. While playback
+  is running, Right steps up a 1x / 1.5x / 2x / 3x / 5x ladder and Left steps
+  back down, folding extra gameplay steps into each rendered frame. Audio
+  speeds and pitches up with the picture through a new forward playback rate on
+  the audio presentation producer, the mirror of the existing reverse rate. The
+  VHS tape effect now covers visual trace transports as well as live rewind,
+  scaling with the fast-forward rate and scrolling its tear bands the opposite
+  way from a rewind. Left/Right keep their paused-only camera-focus meaning.
 - Fix/Test: visual and headless whole-run replay now share one segment policy
   and the same physical-row driver for presentation, structural gaps, and
   terminal movie tails. Presentation rows keep BK2 input,

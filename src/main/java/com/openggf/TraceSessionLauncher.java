@@ -25,13 +25,16 @@ import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.game.rewind.InputSource;
 import com.openggf.game.rewind.PlaybackController;
 import com.openggf.game.rewind.RewindController;
+import com.openggf.game.rewind.RewindEffectEnvelope;
 import com.openggf.game.rewind.RewindSeekAwareEngineStepper;
 import com.openggf.graphics.PixelFontTextRenderer;
 import com.openggf.graphics.FadeManager;
+import com.openggf.graphics.shaderlib.RewindVhsEffectPass;
 import com.openggf.sprites.ghost.GhostTraceRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.testmode.TraceCameraFocusController;
+import com.openggf.testmode.TracePlaybackSpeedController;
 import com.openggf.testmode.TraceHudOverlay;
 import com.openggf.testmode.SpecialStageTraceHudOverlay;
 import com.openggf.testmode.TraceSessionOverlay;
@@ -209,6 +212,13 @@ public final class TraceSessionLauncher {
     private boolean realtimeRewinding;
     private boolean realtimeReleasePending;
     private AudioPresentationPolicy pendingRealtimeReleasePolicy;
+
+    private final TracePlaybackSpeedController playbackSpeed =
+            new TracePlaybackSpeedController();
+    private final RewindEffectEnvelope tapeEffectEnvelope =
+            new RewindEffectEnvelope();
+    private float tapeEffectScrollDirection =
+            RewindVhsEffectPass.REWIND_SCROLL_DIRECTION;
 
     private boolean completionArmed;
     private int completionHoldFrames;
@@ -3064,6 +3074,99 @@ public final class TraceSessionLauncher {
     }
 
     /**
+     * Opens an outer frame of visual Trace Test Mode fast-forward, and reports
+     * how many EXTRA gameplay steps {@link GameLoop} should pump into it.
+     * <p>
+     * Called once per outer frame, before the frame's first step, so the
+     * Left/Right ladder input is read while the key edges are still fresh and
+     * the audio rate is in place before the frame's one audio presentation.
+     * Left/Right only move the ladder while playback is actually running:
+     * paused, they belong to {@link TraceCameraFocusController}'s focus cycle,
+     * and during a held rewind the rewind transport owns the frame.
+     * <p>
+     * This also owns the tape-effect envelope for every frame it returns
+     * from — except a rewinding one, where
+     * {@link #handleRealtimeRewindInput} ticks it instead, since only that
+     * method knows whether the rewind actually engaged.
+     */
+    public int beginFastForwardOuterFrame(InputHandler input, boolean paused) {
+        if (fadeStarted || teardownPending) {
+            resetFastForward();
+            return 0;
+        }
+        playbackSpeed.handleInput(input, paused || realtimeRewinding,
+                GameServices.configuration().getInt(SonicConfiguration.LEFT),
+                GameServices.configuration().getInt(SonicConfiguration.RIGHT));
+        if (realtimeRewinding) {
+            applyForwardRate(1.0);
+            return 0;
+        }
+        if (paused) {
+            applyForwardRate(1.0);
+            tapeEffectEnvelope.frameInactive();
+            return 0;
+        }
+        double rate = playbackSpeed.rate();
+        applyForwardRate(rate);
+        if (rate > 1.0) {
+            tapeEffectScrollDirection =
+                    RewindVhsEffectPass.FAST_FORWARD_SCROLL_DIRECTION;
+            tapeEffectEnvelope.frameActive(rate);
+        } else {
+            tapeEffectEnvelope.frameInactive();
+        }
+        return playbackSpeed.consumeExtraSteps();
+    }
+
+    /**
+     * Whether another fast-forward step may still be pumped into this outer
+     * frame. Re-checked between pumped steps because any of them can end the
+     * session, engage a rewind, or start the completion fade.
+     */
+    public boolean isFastForwardPumpAllowed() {
+        return activeSession == this
+                && !realtimeRewinding
+                && !fadeStarted
+                && !teardownPending;
+    }
+
+    /** Current VHS tape-effect presentation intensity, 0..1. */
+    public float tapeEffectIntensity() {
+        return tapeEffectEnvelope.intensity();
+    }
+
+    /** Latched tape speed for the VHS presentation, 0.25..4.0. */
+    public float tapeEffectSpeed() {
+        return tapeEffectEnvelope.speed();
+    }
+
+    /** Tear-band scroll direction for the VHS presentation. */
+    public float tapeEffectScrollDirection() {
+        return tapeEffectScrollDirection;
+    }
+
+    /**
+     * Drops playback back to real time and kills the tape effect. The forward
+     * rate outlives this session on the shared producer, so every exit path
+     * has to come through here.
+     */
+    private void resetFastForward() {
+        playbackSpeed.reset();
+        tapeEffectEnvelope.reset();
+        applyForwardRate(1.0);
+    }
+
+    /**
+     * Restated every outer frame rather than only on change, the way
+     * {@link com.openggf.game.rewind.LiveRewindManager} restates the reverse
+     * rate: the producer can be rebuilt mid-session and comes back at real
+     * time, which a change-guarded write would never notice.
+     */
+    private void applyForwardRate(double rate) {
+        GameServices.audio().setForwardPlaybackRate(rate);
+    }
+
+    /**
      * Handles the held real-time rewind key in visual Trace Test Mode.
      *
      * @param rewindBlocked true while rewind engagement must be rejected: either
@@ -3112,6 +3215,11 @@ public final class TraceSessionLauncher {
                 beginReverseFadePresentation();
             }
             realtimeRewinding = true;
+            // Trace rewind walks a fixed one step per frame, so the tape speed
+            // the effect latches is the base speed rather than a controller
+            // reading like live rewind's.
+            tapeEffectScrollDirection = RewindVhsEffectPass.REWIND_SCROLL_DIRECTION;
+            tapeEffectEnvelope.frameActive(1.0);
             rewindPlaybackController.rewind();
             rewindPlaybackController.tick();
             syncVisualRewindCursors(false);
@@ -3190,6 +3298,7 @@ public final class TraceSessionLauncher {
         }
         failure = cleanupFailure(failure, this::abortRunDynamicArtSegments);
         failure = cleanupFailure(failure, () -> TraceGhostHook.clear(ghostHook));
+        failure = cleanupFailure(failure, this::resetFastForward);
         failure = cleanupFailure(failure,
                 () -> GameServices.audio().setRewindHistoryArmed(false));
         failure = cleanupFailure(failure,
@@ -3404,6 +3513,11 @@ public final class TraceSessionLauncher {
     }
 
     private String rewindStatusLabel() {
+        // Checked before the rewind controller, which a run session never
+        // installs — fast-forward is available to those sessions too.
+        if (playbackSpeed.isFastForwarding() && !realtimeRewinding) {
+            return "FF " + playbackSpeed.label();
+        }
         if (rewindController == null) {
             return null;
         }
@@ -3453,6 +3567,7 @@ public final class TraceSessionLauncher {
         runExternalDiagnostics = null;
         closeRunDynamicArtSegments();
         TraceGhostHook.clear(ghostHook);
+        resetFastForward();
         GameServices.audio().setRewindHistoryArmed(false);
         GameServices.playbackDebug().endSession();
         // Restore the user's gameplay-altering config before we

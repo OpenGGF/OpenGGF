@@ -44,6 +44,7 @@ import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.timer.TimerManager;
 import com.openggf.graphics.FadeManager;
+import com.openggf.graphics.shaderlib.RewindVhsEffectPass;
 
 import com.openggf.game.DemoLamppostState;
 import com.openggf.level.WaterSystem;
@@ -426,12 +427,41 @@ public class GameLoop {
         liveRewindManager.renderHud(currentGameMode, textRenderer);
     }
 
+    /**
+     * Live-rewind envelope intensity only. The live-capture presentation state
+     * keys off this rather than {@link #tapeEffectIntensity()} so a visual
+     * trace transport does not get classified as a live rewind for recording.
+     */
     public float liveRewindEffectIntensity() {
         return liveRewindManager.effectIntensity();
     }
 
-    public float liveRewindEffectSpeed() {
-        return liveRewindManager.effectSpeed();
+    /**
+     * VHS tape-effect presentation state, 0..1 intensity. An active visual
+     * trace session owns the effect outright: stepInternalBody() routes rewind
+     * to that session INSTEAD of liveRewindManager while one is running, so
+     * the live manager's envelope is stale for the whole session.
+     */
+    public float tapeEffectIntensity() {
+        TraceSessionLauncher traceSession = TraceSessionLauncher.active();
+        return traceSession != null
+                ? traceSession.tapeEffectIntensity()
+                : liveRewindManager.effectIntensity();
+    }
+
+    public float tapeEffectSpeed() {
+        TraceSessionLauncher traceSession = TraceSessionLauncher.active();
+        return traceSession != null
+                ? traceSession.tapeEffectSpeed()
+                : liveRewindManager.effectSpeed();
+    }
+
+    /** @see RewindVhsEffectPass#apply */
+    public float tapeEffectScrollDirection() {
+        TraceSessionLauncher traceSession = TraceSessionLauncher.active();
+        return traceSession != null
+                ? traceSession.tapeEffectScrollDirection()
+                : RewindVhsEffectPass.REWIND_SCROLL_DIRECTION;
     }
 
     public void renderUserRecordingHud(PixelFontTextRenderer textRenderer) {
@@ -706,7 +736,22 @@ public class GameLoop {
      */
     public void step() {
         try {
+            // Visual trace fast-forward: extra gameplay steps folded into this
+            // one rendered outer frame. Opened before the first step so the
+            // ladder reads Left/Right while the key edges are still fresh —
+            // stepInternal() ends by consuming them.
+            TraceSessionLauncher traceSession = TraceSessionLauncher.active();
+            int traceFastForwardSteps = traceSession == null
+                    ? 0
+                    : traceSession.beginFastForwardOuterFrame(inputHandler, isPaused());
             LevelIterationAdmissionController.runTraceObservedStep(this::stepInternal, () -> currentGameMode, playbackDebugManager::getCursorFrame);
+            int fastForwardedFrames = 0;
+            while (fastForwardedFrames < traceFastForwardSteps
+                    && !isPaused()
+                    && traceSession.isFastForwardPumpAllowed()) {
+                LevelIterationAdmissionController.runTraceObservedStep(this::stepInternal, () -> currentGameMode, playbackDebugManager::getCursorFrame);
+                fastForwardedFrames++;
+            }
             int pumpedFrames = 0;
             while (!isPaused()
                     && userRecordingControls.shouldPumpFastForward()
