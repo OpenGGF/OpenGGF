@@ -318,7 +318,7 @@ public final class TraceCatalog {
         try {
             meta = TraceMetadata.load(metaPath);
             frameCount = countCsvRows(physicsPath);
-        } catch (IOException e) {
+        } catch (IOException | IllegalArgumentException e) {
             LOGGER.log(Level.FINE, "Could not load trace at " + dir, e);
             return Optional.empty();
         }
