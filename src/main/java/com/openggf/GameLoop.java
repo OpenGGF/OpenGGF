@@ -2163,6 +2163,9 @@ public class GameLoop {
                 gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
             }
 
+            TraceSessionLauncher.deferRunPhysicalRowForSpecialStageEntry(
+                    oldMode, currentGameMode);
+
             LOGGER.info("Entered Special Stage " + (stageIndex + 1) + " (H32 mode: 256x224)");
         } catch (IOException e) {
             specialStageEntryPresentation.clear();

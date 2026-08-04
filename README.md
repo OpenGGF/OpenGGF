@@ -227,6 +227,10 @@ straightforward to add new objects, zones, and game-specific behaviour.
   startup now waits for the ROM readiness boundary; special stages share the
   normal trace HUD and recorded input display; GHZ2 rebinds through the run
   boundary probe; and the live capture chord remains usable during playback.
+- **Visual Special Stage physical-row handoff (2026-08-04):** giant-ring
+  transitions retain the destination BK2 row until local Special Stage
+  admission, keeping white-screen inputs, lag rows, and the trace HUD on one
+  clock.
 
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The release focus is S3K playable vertical-slice parity, trace-driven ROM accuracy, release hardening, and gameplay-scoped rewind reliability.
 
