@@ -27,6 +27,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "HardwareTiming held level frame shift and append reconciles",
                 HeldLevelFrameShiftAndAppendReconciles));
             tests.Add(new TestMain.TestCase(
+                "HardwareTiming held level frame busy shift and append reconciles",
+                HeldLevelFrameBusyShiftAndAppendReconciles));
+            tests.Add(new TestMain.TestCase(
                 "HardwareTiming held level frame rejects multi-head loss",
                 HeldLevelFrameRejectsMultiHeadLoss));
             tests.Add(new TestMain.TestCase(
@@ -311,6 +314,40 @@ namespace OpenGGF.BizHawk.Headless.Tests
             engine.ObserveFrameEnd(2, host, writer);
             StageActive(host, appended, 0x7000, 0x01);
             engine.ObserveFrameEnd(3, host, writer);
+            AssertEx.Equal(
+                true,
+                writer.ToString().Contains("\"ordinal\":1"));
+        }
+
+        private static void HeldLevelFrameBusyShiftAndAppendReconciles()
+        {
+            const int first = 0x100;
+            const int second = 0x120;
+            const int appended = 0x140;
+            byte[] rom = RomWithSingleModules(first, second, appended);
+            var host = NewHost();
+            var engine = new HardwareTimingEventEngine(rom);
+            var writer = new StringWriter();
+
+            host.Ram[S3KRam.GameMode] = S3KRam.GameModeLevel;
+            SetLevelFrame(host, 7);
+            StageActive(host, first, 0x4000, 0x81);
+            StageQueued(host, 1, second, 0x6000);
+            engine.ObserveFrameEnd(0, host, writer);
+
+            // The ROM can retire the final head and append its replacement
+            // in one held-counter observation.  The shifted head remains
+            // busy, so the transition must not be rejected as non-canonical.
+            StageActive(host, second, 0x6000, 0x81);
+            StageQueued(host, 1, appended, 0x7000);
+            engine.ObserveFrameEnd(1, host, writer);
+            AssertEx.Equal(
+                true,
+                writer.ToString().Contains("\"ordinal\":0"));
+
+            StageActive(host, appended, 0x7000, 0x01);
+            StageQueued(host, 1, 0, 0);
+            engine.ObserveFrameEnd(2, host, writer);
             AssertEx.Equal(
                 true,
                 writer.ToString().Contains("\"ordinal\":1"));

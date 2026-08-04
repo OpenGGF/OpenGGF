@@ -435,7 +435,10 @@ namespace OpenGGF.BizHawk.Headless
                 }
                 return ModuleTransition.FinalHeadRetired;
             }
-            if ((modulesLeft & 0x80) != 0 || (modulesLeft & 0x7F) == 0)
+            bool busyShiftedHead = retirementWithAppend
+                || singleRetirementWithAppend;
+            if (((modulesLeft & 0x80) != 0 && !busyShiftedHead)
+                || (modulesLeft & 0x7F) == 0)
             {
                 throw new InvalidDataException(
                     "Kos module shifted head was not canonically"

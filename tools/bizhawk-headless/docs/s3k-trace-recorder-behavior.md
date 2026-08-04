@@ -125,8 +125,11 @@ retains that canonical identity while the active pointer advances, and
 recognizes final retirement only when the prior modules-left byte is exactly
 `0x81` and one observation interval contains the canonical one-head FIFO
 removal/shift. The shifted active source/destination, every trailing entry,
-physical/logical cardinality, and mode/reset fence must all agree. Per-module
-busy-bit falls, stale final-active state, multi-head loss, shift-plus-append,
+physical/logical cardinality, and mode/reset fence must all agree. The ROM may
+also append a new tail in that same interval, including leaving the shifted
+head's busy bit set; that is accepted only when the full shifted prefix and
+unchanged cardinality prove the retirement-plus-append transition. Per-module
+busy-bit falls, stale final-active state, multi-head loss, malformed shifts,
 and reset crossings cannot manufacture completion. This transition proves the
 ROM's `Process_Kos_Module_Queue` owner, so the module retirement emits at
 `post_objects` even when `Level_frame_counter` is held. A duplicate counter
