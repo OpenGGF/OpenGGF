@@ -377,7 +377,7 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
     @Override
     protected void onExitReady() {
         if (specialStageAfter) {
-            triggerFadeToWhiteForSpecialStage();
+            advanceToSpecialStage();
         } else if (isSBZ2()) {
             // ROM: Got_ChkBonus lines 122-124: addq.b #4,obRoutine skips
             // Got_NextLevel and goes to Got_Wait($C) -> Got_Move2($E) -> loc_C766($10).
@@ -391,34 +391,24 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen
     }
 
     /**
-     * Fade to white and play the special stage enter SFX before transitioning
-     * to the special stage. ROM-accurate: the screen goes white (like the
-     * normal special stage entry) rather than black.
+     * Hands the act over to the Special Stage. ROM: {@code Got_NextLevel} /
+     * {@code Got_ChkSS} ("_incObj/3A Got Through Card.asm":175-202) reads the
+     * next level out of {@code LevelOrder} into {@code v_zone_act} and, with
+     * {@code f_bigring} set, writes {@code v_gamemode = id_Special} — with no
+     * fade of its own. The 22-frame {@code PaletteWhiteOut} and the
+     * {@code sfx_EnterSS} that accompany it belong to {@code GM_Special}
+     * (sonic.asm:3223-3227), which the special-stage entry owns, so starting a
+     * level-side fade here would run the white-out twice and delay the mode
+     * change by the whole fade.
+     * <p>
+     * {@code Got_Wait} only advances the routine on this frame, so the whole
+     * {@code Got_NextLevel} body — the zone/act advance included — is armed to
+     * land on the next one.
      */
-    private void triggerFadeToWhiteForSpecialStage() {
-        LOGGER.info("S1 Results screen complete, starting fade to white for special stage");
-
-        // Play the special stage enter/exit SFX during the white fade
-        try {
-            services().playSfx(Sonic1Sfx.ENTER_SS.id);
-        } catch (Exception e) {
-            // Don't let audio failure break the transition
-        }
-
-        var fadeManager = services().fadeManager();
-        var marker = services().nativeFadeLifecycle().beginNativeBlockingFade();
-        fadeManager.startFadeToWhite(marker.wrapCompletion(() -> {
-            setDestroyed(true);
-            if (true) {
-                // Giant Ring collected: advance zone/act first (ROM-accurate: Got_NextLevel),
-                // then enter special stage. On return, the advanced values are used.
-                services().advanceZoneActOnly();
-                services().requestSpecialStageFromCheckpoint();
-            }
-            // Don't start fadeFromWhite here — let the screen stay white
-            // (HOLD_WHITE). enterSpecialStage() will detect HOLD_WHITE and
-            // transition directly, fading from white to reveal the special stage.
-        }));
+    private void advanceToSpecialStage() {
+        LOGGER.info("S1 Results screen complete, entering special stage");
+        setDestroyed(true);
+        services().advanceToSpecialStageEntryRoutine();
     }
 
     private void triggerFadeToBlack() {

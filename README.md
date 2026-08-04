@@ -216,6 +216,11 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Special Stage entry frame parity (2026-08-04):** the game mode now changes on
+  the frame the ROM changes it, with the white-out owned by the special stage
+  rather than the level it was entered from. The S1 giant-ring handoff no longer
+  arrives 22 frames late, which had aborted complete-run visual playback at the
+  destination row.
 - **Visual run presentation clock parity (2026-08-04):** complete-run playback now
   keeps the shared input, PLC, dynamic-art, and trace HUD clocks continuous across
   title cards, special stages, inter-act gaps, and the terminal movie tail.

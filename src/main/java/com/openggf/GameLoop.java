@@ -175,8 +175,6 @@ public class GameLoop {
     // handling)
     private boolean returningFromSpecialStage = false;
 
-    // Flag to freeze level updates during special stage entry transition
-    private boolean specialStageTransitionPending = false;
     private boolean specialStageRewindBoundaryThisFrame;
     private final SpecialStageEntryPresentationController specialStageEntryPresentation =
             new SpecialStageEntryPresentationController();
@@ -770,21 +768,26 @@ public class GameLoop {
     }
 
     /**
-     * True while the level is mid a special-stage/bonus-stage/ending transition
-     * or a pending zone/act transition -- the exact same composite condition
-     * the gameplay-tick freeze block below computes (special/bonus/ending/
-     * zone-act freeze). {@code currentGameMode} stays {@code GameMode.LEVEL}
-     * throughout this whole window (the fade only flips the mode once its
-     * completion callback runs), so this is exposed for
-     * {@link LiveRewindManager}'s mode-based "not applicable" gate to consult
-     * -- a sub-state {@code GameMode} alone cannot express. See
-     * ssentry-rewind-report.md.
+     * True while the level is mid a bonus-stage/ending transition or a pending
+     * zone/act transition -- the exact same composite condition the
+     * gameplay-tick freeze block below computes (bonus/ending/zone-act freeze).
+     * {@code currentGameMode} stays {@code GameMode.LEVEL} throughout this whole
+     * window (the fade only flips the mode once its completion callback runs),
+     * so this is exposed for {@link LiveRewindManager}'s mode-based
+     * "not applicable" gate to consult -- a sub-state {@code GameMode} alone
+     * cannot express. See ssentry-rewind-report.md.
+     * <p>
+     * Special-stage entry has no such window: every ROM writes the game mode in
+     * the level-side object tick with no fade of its own, so
+     * {@link #enterSpecialStage()} changes the mode within a single tick and
+     * there is nothing to freeze. It carried a pending flag only while the
+     * engine faded first.
      * <p>
      * <strong>This predicate freezes ordinary gameplay ticks</strong> (via the
      * freeze block below) whenever it is true -- it must stay scoped to
-     * exactly the four flags that legitimately warrant that freeze (this was
+     * exactly the three flags that legitimately warrant that freeze (this was
      * pre-existing behavior). Do NOT fold {@link FadeManager#hasPendingCompletion()}
-     * in here: unlike a special/bonus/ending/zone-act transition, an ordinary
+     * in here: unlike a bonus/ending/zone-act transition, an ordinary
      * callback-bearing fade (e.g. death respawn, act-complete) does not freeze
      * ROM gameplay -- objects keep ticking underneath a cosmetic fade overlay.
      * See {@link #isRewindBlocked()} for the rewind-only superset that adds the
@@ -794,8 +797,7 @@ public class GameLoop {
         // Called unconditionally near the top of stepInternal(), before any
         // currentGameMode-specific dispatch -- levelManager can be null in
         // non-gameplay modes (e.g. MASTER_TITLE_SCREEN with no active session).
-        return specialStageTransitionPending
-                || bonusStageTransitionPending
+        return bonusStageTransitionPending
                 || endingTransitionPending
                 || (levelManager != null && levelManager.isLevelInactiveForTransition());
     }
@@ -2071,7 +2073,18 @@ public class GameLoop {
     /**
      * Enters the special stage from level mode.
      * Uses GameStateManager to track which stage to enter (cycles 0-6).
-     * Performs fade-to-white transition before entering.
+     * <p>
+     * The mode change is immediate, because that is what every ROM does: the
+     * level-side owner writes the game mode inside its own object tick and
+     * runs no fade of its own — S1 {@code Got_ChkSS}
+     * ("_incObj/3A Got Through Card.asm":198-201), S2 {@code Obj79_Star}
+     * (s2.asm:44875-44877), S3K {@code SSEntryFlash_GoSS} (s3.asm:79628). The
+     * white-out that precedes the stage belongs to the special-stage entry
+     * itself ({@code GM_Special}'s {@code PaletteWhiteOut}, sonic.asm:3227 /
+     * {@code SpecialStage}'s {@code Pal_FadeToWhite}, s2.asm:6546), which
+     * {@link SpecialStageEntryPresentationController} owns. Fading here first
+     * would delay the mode change by the whole fade and run the white-out
+     * twice.
      */
     public void enterSpecialStage() {
         if (currentGameMode != GameMode.LEVEL) {
@@ -2079,21 +2092,18 @@ public class GameLoop {
         }
 
         FadeManager fadeManager = this.fadeManager;
-        boolean screenAlreadyFaded = false;
         boolean fadeFromBlack = false;
         boolean transitionSfxAlreadyPlayed = false;
 
         if (fadeManager.isActive()) {
             FadeManager.FadeState fadeState = fadeManager.getState();
             if (fadeState == FadeManager.FadeState.HOLD_WHITE) {
-                // Screen is held white (S1 big ring -> results -> fade to white path).
-                // Take over and enter special stage directly with fade-from-white.
-                screenAlreadyFaded = true;
-                fadeFromBlack = false;
+                // Screen is already held white by a native fade owner, which
+                // also emitted the entry SFX; reveal from white without
+                // replaying either.
                 transitionSfxAlreadyPlayed = true;
             } else if (fadeState == FadeManager.FadeState.HOLD_BLACK) {
                 // Screen is held black. Enter special stage with fade-from-black.
-                screenAlreadyFaded = true;
                 fadeFromBlack = true;
             } else {
                 // Different fade in progress, can't start
@@ -2129,21 +2139,9 @@ public class GameLoop {
         // Determine which stage to enter
         final int stageIndex = ssProvider.consumeStageIndexForEntry(this.gameState);
 
-        if (screenAlreadyFaded) {
-            // Screen is already fully faded (from S1 results screen after big ring).
-            // Cancel the hold, enter the special stage directly, and fade to reveal.
-            fadeManager.cancel();
-            doEnterSpecialStage(ssProvider, stageIndex, fadeFromBlack);
-            LOGGER.info("Entering Special Stage " + (stageIndex + 1) +
-                    " from " + (fadeFromBlack ? "black" : "white") + " screen (S1 big ring path)");
-        } else {
-            // Normal path (S2 checkpoint star): freeze level, fade to white, then enter
-            specialStageTransitionPending = true;
-            GameLoopPlcLifecycle.startToWhite(resolveGameplayModeContext(), fadeManager, () -> {
-                doEnterSpecialStage(ssProvider, stageIndex, false);
-            });
-            LOGGER.info("Starting fade-to-white for Special Stage " + (stageIndex + 1));
-        }
+        doEnterSpecialStage(ssProvider, stageIndex, fadeFromBlack);
+        LOGGER.info("Entered Special Stage " + (stageIndex + 1)
+                + " revealing from " + (fadeFromBlack ? "black" : "white"));
     }
 
     /** Transition SFX is emitted by the owner that starts the fade. */
@@ -2202,9 +2200,6 @@ public class GameLoop {
 
     void doEnterSpecialStage(SpecialStageProvider ssProvider, int stageIndex,
                              boolean fadeFromBlack, SpecialStageStartupPolicy startupPolicy) {
-        // Clear the transition freeze flag (now we're in special stage mode)
-        specialStageTransitionPending = false;
-
         try {
             ssProvider.reset();
             ssProvider.initializeStage(stageIndex, startupPolicy);

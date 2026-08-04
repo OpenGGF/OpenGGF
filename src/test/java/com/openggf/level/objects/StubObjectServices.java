@@ -109,7 +109,7 @@ public class StubObjectServices implements ObjectServices {
     @Override public RingManager ringManager() { return null; }
     @Override public void advanceZoneActOnly() {}
     @Override public void setApparentAct(int act) {}
-    @Override public void requestSpecialStageFromCheckpoint() {}
+    @Override public void advanceToSpecialStageEntryRoutine() {}
     @Override public void requestBonusStageEntry(com.openggf.game.BonusStageType type) {}
     @Override public void requestBonusStageExit() {}
     @Override public void addBonusStageRings(int count) {}

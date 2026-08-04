@@ -69,7 +69,7 @@ class TestObjectServicesConstructionContext {
         @Override public com.openggf.level.rings.RingManager ringManager() { return null; }
         @Override public void advanceZoneActOnly() {}
         @Override public void setApparentAct(int act) {}
-        @Override public void requestSpecialStageFromCheckpoint() {}
+        @Override public void advanceToSpecialStageEntryRoutine() {}
         @Override public void requestBonusStageEntry(com.openggf.game.BonusStageType type) {}
         @Override public void requestBonusStageExit() {}
         @Override public void addBonusStageRings(int count) {}

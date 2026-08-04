@@ -3,6 +3,21 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: entering a Special Stage no longer costs an extra fade's worth of
+  frames. Every ROM writes the game mode inside the level-side object tick and
+  runs no fade of its own — S1 `Got_ChkSS`, S2 `Obj79_Star`, S3K
+  `SSEntryFlash_GoSS` — with the white-out belonging to the special stage's own
+  entry (`GM_Special`'s `PaletteWhiteOut`). The engine was fading to white in
+  level mode first and only then flipping the mode, so the transition ran 22
+  frames late and performed the white-out twice (S1's provider already models
+  the ROM's 44-tick pre-physics hold). Complete-run visual playback aborted at
+  the giant ring with "Special Stage entry crossed destination physical row".
+  The mode change is now immediate, the white-out is owned by the special-stage
+  entry presentation, and the S1 results card models `Got_Wait`'s routine
+  advance so `Got_NextLevel`'s zone/act write and mode change land together on
+  the following frame. `GameLoop.specialStageTransitionPending` went with it:
+  there is no longer a window between the request and the mode change for it to
+  describe.
 - Feature/Perf: capture encoder speed is now tunable, and an overloaded encoder
   says so. `capture.encoderPreset` exposes the x264/x265 speed preset and now
   defaults to `fast`: libx265's own `medium` default keeps up with ordinary

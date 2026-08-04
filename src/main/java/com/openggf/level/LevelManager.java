@@ -3473,9 +3473,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     /** Returns the transition coordinator. */
     public LevelTransitionCoordinator getTransitions() { return transitions; }
 
-    /** @see LevelTransitionCoordinator#requestSpecialStageFromCheckpoint() */
-    public void requestSpecialStageFromCheckpoint() {
-        transitions.requestSpecialStageFromCheckpoint();
+    /** @see LevelTransitionCoordinator#advanceToSpecialStageEntryRoutine() */
+    public void advanceToSpecialStageEntryRoutine() {
+        transitions.advanceToSpecialStageEntryRoutine();
         GameServices.playbackDebug().onSpecialStageRequestRaised();
     }
 
@@ -3485,8 +3485,20 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         GameServices.playbackDebug().onSpecialStageRequestRaised();
     }
 
-    /** @see LevelTransitionCoordinator#consumeSpecialStageRequest() */
-    public boolean consumeSpecialStageRequest() { return transitions.consumeSpecialStageRequest(); }
+    /**
+     * @see LevelTransitionCoordinator#consumeSpecialStageRequest()
+     * <p>
+     * A results card's armed {@code Got_NextLevel} performs its
+     * {@code v_zone_act} write here, on the same frame as the mode change it
+     * returns — not on the earlier frame that armed the routine.
+     */
+    public boolean consumeSpecialStageRequest() {
+        boolean entering = transitions.consumeSpecialStageRequest();
+        if (entering && transitions.consumeSpecialStageEntryLevelAdvance()) {
+            advanceZoneActOnly();
+        }
+        return entering;
+    }
 
     /** @see LevelTransitionCoordinator#consumeSpecialStageReturnLevelReloadRequest() */
     public boolean consumeSpecialStageReturnLevelReloadRequest() { return transitions.consumeSpecialStageReturnLevelReloadRequest(); }
