@@ -163,6 +163,12 @@ public final class TraceSessionLauncher {
     private boolean runTerminalRowAdvanced;
     private boolean runTerminalMovieEndReached;
     private boolean runTerminalTailCompared;
+    /**
+     * The level production row that requests a Special Stage is also the
+     * destination segment's BK2 offset. Keep the shared cursor on that row
+     * until the destination admission installs its local clock.
+     */
+    private boolean runPhysicalRowAdvanceDeferred;
     private Bk2FrameInput runLastPhysicalInput;
     private InputHandler runOwnedInputHandler;
     private boolean runLevelLoadedDuringSourceProduction;
@@ -2295,6 +2301,61 @@ public final class TraceSessionLauncher {
                         .orElse(false);
     }
 
+    /**
+     * Marks the current run row as a mode handoff when production entered a
+     * Special Stage at the destination segment's physical offset. The
+     * destination's local row driver must consume that offset next; advancing
+     * it here would make input and hardware timing one row late.
+     */
+    static void deferRunPhysicalRowForSpecialStageEntry(
+            GameMode previousMode, GameMode nextMode) {
+        if (previousMode != GameMode.LEVEL
+                || nextMode != GameMode.SPECIAL_STAGE) {
+            return;
+        }
+        TraceSessionLauncher session = active();
+        if (session != null) {
+            session.deferRunPhysicalRowForSpecialStageEntry();
+        }
+    }
+
+    private void deferRunPhysicalRowForSpecialStageEntry() {
+        if (runCoordinator == null || runFrameDriver == null
+                || runFrameDriver.currentDisposition()
+                        != TraceRunFrameDriver.Disposition.SHARED_GAP
+                || runCoordinator.phase()
+                        != TraceRunPlaybackCoordinator.Phase.TRANSITION_GAP) {
+            return;
+        }
+        int sourceIndex = runCoordinator.currentSegmentIndex();
+        int destinationIndex = sourceIndex + 1;
+        if (sourceIndex < 0 || destinationIndex >= runSegments.size()
+                || !"special_stage".equals(
+                        runSegments.get(destinationIndex).segment().kind())) {
+            return;
+        }
+        int cursor = GameServices.playbackDebug().getCursorFrame();
+        int destinationOffset = runSegments.get(destinationIndex)
+                .segment().bk2FrameOffset();
+        if (cursor > destinationOffset) {
+            throw new IllegalStateException(
+                    "Special Stage entry crossed destination physical row: "
+                            + "cursor=" + cursor + ", destinationOffset="
+                            + destinationOffset);
+        }
+        if (cursor == destinationOffset) {
+            runPhysicalRowAdvanceDeferred = true;
+        }
+    }
+
+    private boolean consumeDeferredRunPhysicalRowAdvance() {
+        if (!runPhysicalRowAdvanceDeferred) {
+            return false;
+        }
+        runPhysicalRowAdvanceDeferred = false;
+        return true;
+    }
+
     static void runProductionIterationIfActive(
             Runnable productionIteration,
             Runnable advanceRunPhysicalRow) {
@@ -2407,6 +2468,14 @@ public final class TraceSessionLauncher {
                         } else {
                             productionIteration.run();
                         }
+                    }
+
+                    @Override
+                    public boolean shouldAdvancePhysicalRow(
+                            TraceRunFrameDriver.Step row) {
+                        return row.disposition()
+                                != TraceRunFrameDriver.Disposition.SHARED_GAP
+                                || !consumeDeferredRunPhysicalRowAdvance();
                     }
 
                     @Override

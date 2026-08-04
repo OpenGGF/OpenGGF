@@ -75,6 +75,15 @@ public final class TraceRunFrameDriver {
 
         void runProductionLifecycle(Step step);
 
+        /**
+         * Allows an adapter to retain the current physical row when
+         * production crosses a destination boundary. The next admitted
+         * destination row owns that row and advances the shared clock.
+         */
+        default boolean shouldAdvancePhysicalRow(Step step) {
+            return true;
+        }
+
         void advancePhysicalRow(Step step);
 
         S captureAfter(Step step);
@@ -103,7 +112,9 @@ public final class TraceRunFrameDriver {
             if (step.disposition().runsProductionLifecycle()) {
                 hooks.runProductionLifecycle(step);
             }
-            hooks.advancePhysicalRow(step);
+            if (hooks.shouldAdvancePhysicalRow(step)) {
+                hooks.advancePhysicalRow(step);
+            }
             S after = hooks.captureAfter(step);
             hooks.compare(step, before, after);
         } catch (RuntimeException | Error failure) {

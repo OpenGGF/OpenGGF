@@ -32,6 +32,32 @@ class TestTraceRunFrameDriver {
     }
 
     @Test
+    void specialStageEntryCanRetainPhysicalRowUntilDestinationAdmission() {
+        RecordingHooks hooks = new RecordingHooks() {
+            private boolean specialStageEntered;
+
+            @Override
+            public void runProductionLifecycle(Step step) {
+                super.runProductionLifecycle(step);
+                specialStageEntered = true;
+            }
+
+            @Override
+            public boolean shouldAdvancePhysicalRow(Step step) {
+                return !specialStageEntered;
+            }
+        };
+
+        new TraceRunFrameDriver().execute(
+                new Step(Disposition.SHARED_GAP, 4976, false), hooks);
+
+        assertEquals(List.of(
+                "prepare-row", "prepare-hardware", "capture-before",
+                "production", "capture-after", "compare", "after-step"),
+                hooks.events);
+    }
+
+    @Test
     void advanceOnlyBypassesWholeOuterProductionLifecycleButStillAdvancesAndCompares() {
         RecordingHooks hooks = new RecordingHooks();
         TraceRunFrameDriver driver = new TraceRunFrameDriver();
@@ -171,6 +197,11 @@ class TestTraceRunFrameDriver {
         @Override
         public void runProductionLifecycle(Step step) {
             events.add("production");
+        }
+
+        @Override
+        public boolean shouldAdvancePhysicalRow(Step step) {
+            return true;
         }
 
         @Override

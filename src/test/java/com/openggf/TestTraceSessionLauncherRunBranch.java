@@ -43,6 +43,10 @@ import com.openggf.trace.replay.runs.RunBoundarySignal;
 import com.openggf.trace.replay.runs.RunLevelLoadCause;
 import com.openggf.trace.replay.runs.RunPlaybackObservation;
 import com.openggf.trace.replay.runs.TraceRunPlaybackCoordinator;
+import com.openggf.trace.replay.runs.TraceRunFrameDriver;
+import com.openggf.trace.replay.runs.TraceRunFrameDriver.Disposition;
+import com.openggf.trace.replay.runs.TraceRunFrameDriver.Hooks;
+import com.openggf.trace.replay.runs.TraceRunFrameDriver.Step;
 import com.openggf.trace.replay.runs.TraceRunReplayWalker;
 import com.openggf.trace.replay.runs.TraceRunSpecialStageRowDriver;
 import com.openggf.trace.replay.runs.TraceRunVblankClock;
@@ -1846,6 +1850,83 @@ class TestTraceSessionLauncherRunBranch {
         assertEquals(1, driver.cursor());
         assertEquals(1, driver.comparisons().size());
         assertFalse(driver.comparisons().getFirst().hasDivergence());
+    }
+
+    @Test
+    void specialStageEntryRetainsDestinationPhysicalRowForAdmission()
+            throws Exception {
+        TraceRunManifest run = TraceRunManifest.load(
+                canonicalEmeraldRunDir.resolve("run_manifest.json"));
+        List<TraceRunReplayWalker.SegmentPlan> plans =
+                TraceRunReplayWalker.plan(run, canonicalEmeraldRunDir);
+        Bk2Movie movie = new Bk2MovieLoader().load(
+                canonicalEmeraldRunDir.resolve(run.sourceBk2()));
+        TraceRunPlaybackCoordinator coordinator =
+                new TraceRunPlaybackCoordinator(
+                        run, TracePlaybackProfile.SONIC_1,
+                        movie.getFrameCount(), plans);
+        TraceSessionLauncher session = new TraceSessionLauncher(
+                null, movie, plans, null);
+        TraceRunFrameDriver frameDriver = new TraceRunFrameDriver();
+        setField(session, "runCoordinator", coordinator);
+        setField(session, "runFrameDriver", frameDriver);
+        setField(session, "activeSession", session);
+
+        RunPlaybackObservation source = new RunPlaybackObservation(
+                GameMode.LEVEL, 4975, 0,
+                new RunPlaybackObservation.LevelIdentity(1, 0, 0, 0),
+                false, null, null, false, false, 0, false, 0, 0);
+        coordinator.activateInitialLevel(source);
+        coordinator.observeBoundary(
+                new RunBoundarySignal.SpecialStageRequest(4976, 0));
+        coordinator.afterProduction(new RunPlaybackObservation(
+                GameMode.LEVEL, 4976, 1, source.level(),
+                false, null, null, false, true, 0, false, 0, 0));
+        GameServices.playbackDebug().startSession(movie, 4976);
+
+        frameDriver.execute(
+                new Step(Disposition.SHARED_GAP, 4976, false),
+                new Hooks<>() {
+                    @Override
+                    public void preparePhysicalRow(Step step) {
+                    }
+
+                    @Override
+                    public void prepareHardwareTiming(Step step) {
+                    }
+
+                    @Override
+                    public Object captureBefore(Step step) {
+                        return null;
+                    }
+
+                    @Override
+                    public void runProductionLifecycle(Step step) {
+                        TraceSessionLauncher
+                                .deferRunPhysicalRowForSpecialStageEntry(
+                                        GameMode.LEVEL, GameMode.SPECIAL_STAGE);
+                    }
+
+                    @Override
+                    public void advancePhysicalRow(Step step) {
+                    }
+
+                    @Override
+                    public Object captureAfter(Step step) {
+                        return null;
+                    }
+
+                    @Override
+                    public void compare(Step step, Object before, Object after) {
+                    }
+
+                    @Override
+                    public void afterStep(Step step) {
+                    }
+                });
+
+        assertTrue((boolean) getField(
+                session, "runPhysicalRowAdvanceDeferred"));
     }
 
     private List<TraceRunReplayWalker.SegmentPlan>
