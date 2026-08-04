@@ -1,7 +1,6 @@
 package com.openggf.tests.trace;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.io.TempDir;
 import com.openggf.trace.TraceMetadata;
@@ -214,9 +213,8 @@ class TestTraceAnimationRecorderContract {
     }
 
     @Test
-    @Disabled("Task 10 republishes installed gameplay fixtures as strict trace v5")
     void allCommittedGameplayFixturesCarryV5AnimationCsv() throws IOException {
-        Map<String, Integer> expectedCounts = Map.of("s1", 21, "s2", 19, "s3k", 13);
+        Map<String, Integer> expectedCounts = Map.of("s1", 21, "s2", 19, "s3k", 21);
         for (Map.Entry<String, Integer> entry : expectedCounts.entrySet()) {
             Path gameRoot = Path.of("src/test/resources/traces", entry.getKey());
             List<Path> fixtures;

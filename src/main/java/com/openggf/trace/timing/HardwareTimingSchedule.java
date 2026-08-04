@@ -34,7 +34,10 @@ public final class HardwareTimingSchedule {
 
     private HardwareTimingSchedule(boolean recordedInput, List<HardwareCompletionEdge> edges) {
         this.recordedInput = recordedInput;
-        this.admissionPolicies = recordedAdmissionPolicies();
+        this.admissionPolicies = edges.stream().anyMatch(edge ->
+                edge.kind() == HardwareWorkKind.KOS_DECOMPRESSION_QUEUE)
+                ? recordedAdmissionPolicies()
+                : schemaOneAdmissionPolicies();
         this.edges = List.copyOf(edges);
         for (HardwareCompletionEdge edge : this.edges) {
             Objects.requireNonNull(edge, "hardware completion edge");
@@ -87,6 +90,17 @@ public final class HardwareTimingSchedule {
                 HardwareReadinessAdmissionPolicy.RECORDED);
         policies.put(HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
                 HardwareReadinessAdmissionPolicy.RECORDED);
+        return Map.copyOf(policies);
+    }
+
+    private static Map<HardwareWorkKind, HardwareReadinessAdmissionPolicy>
+            schemaOneAdmissionPolicies() {
+        EnumMap<HardwareWorkKind, HardwareReadinessAdmissionPolicy> policies =
+                new EnumMap<>(HardwareWorkKind.class);
+        policies.put(HardwareWorkKind.KOS_MODULE_QUEUE,
+                HardwareReadinessAdmissionPolicy.RECORDED);
+        policies.put(HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
+                HardwareReadinessAdmissionPolicy.LIVE);
         return Map.copyOf(policies);
     }
 }

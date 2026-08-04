@@ -97,7 +97,8 @@ class TestPreludeFramesKnobsZero {
         TraceFrame next = buildFrame(1, /* gfc */ 2,
                 (short) 0, (short) 0, (short) 0, 0, 0);
         TraceData trace = TraceFixtures.trace(
-                metadata("s2", "ehz", 0, 0, List.of("sonic", "tails")),
+                metadata("s2", "ehz", 0, 0, List.of("sonic", "tails"),
+                        List.of("native_prelude_bootstrap")),
                 List.of(seed, next));
 
         assertEquals(26, TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace),

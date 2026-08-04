@@ -31,6 +31,7 @@ class TestGameLoopHardwareTimingBoundaries {
     void setUp() {
         TestEnvironment.configureGameModuleFixture(new Sonic3kGameModule());
         context = SessionManager.getCurrentGameplayMode();
+        context.activateRecordedHardwareAdmission();
         loop = new GameLoop(new InputHandler());
         events = new ArrayList<>();
         context.setHardwareTimingBoundaryObserver(
@@ -58,9 +59,9 @@ class TestGameLoopHardwareTimingBoundaries {
 
         assertEquals(List.of(
                 "VINT_SERVICE",
-                "PRE_MAIN_LOOP",
                 "SPECIAL_STAGE_SCAN",
-                "POST_OBJECTS"), events);
+                "POST_OBJECTS",
+                "PRE_MAIN_LOOP"), events);
     }
 
     @Test
@@ -82,9 +83,9 @@ class TestGameLoopHardwareTimingBoundaries {
 
         assertEquals(List.of(
                 "VINT_SERVICE",
-                "PRE_MAIN_LOOP",
                 "TITLE_CARD_SCAN",
-                "POST_OBJECTS"), events);
+                "POST_OBJECTS",
+                "PRE_MAIN_LOOP"), events);
     }
 
     private static void setField(Object target, String name, Object value)

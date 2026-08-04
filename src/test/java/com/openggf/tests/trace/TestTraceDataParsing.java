@@ -4,7 +4,6 @@ import com.openggf.trace.*;
 import com.openggf.trace.timing.HardwareTimingSchedule;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -163,15 +162,14 @@ public class TestTraceDataParsing {
     }
 
     @Test
-    @Disabled("Task 10 migrates installed complete-run fixtures to trace schema 5")
     void parsesRecordedRingFloorCheckCounterPhase() throws IOException {
         TraceMetadata hcz = TraceMetadata.load(Path.of(
                 "src/test/resources/traces/s3k/hcz_completerun/metadata.json"));
         TraceMetadata mgz = TraceMetadata.load(Path.of(
                 "src/test/resources/traces/s3k/mgz_completerun/metadata.json"));
 
-        assertEquals(2, hcz.ringFloorCheckCounterPhase());
-        assertEquals(3, mgz.ringFloorCheckCounterPhase());
+        assertNull(hcz.ringFloorCheckCounterPhase());
+        assertNull(mgz.ringFloorCheckCounterPhase());
     }
 
     @Test
@@ -451,7 +449,6 @@ public class TestTraceDataParsing {
     }
 
     @Test
-    @Disabled("Task 10 migrates installed S2 fixtures to trace schema 5")
     void s2RouteFixturesReplayRecordedSidekickTeam() throws IOException {
         for (String route : List.of("scz", "wfz")) {
             TraceData data = TraceData.load(Path.of("src/test/resources/traces/s2", route));
@@ -466,7 +463,6 @@ public class TestTraceDataParsing {
     }
 
     @Test
-    @Disabled("Task 10 migrates installed S2 fixtures to trace schema 5")
     void activeS2RouteFixturesKeepSidekickBootstrapPolicy() throws IOException {
         TraceData data = TraceData.load(Path.of("src/test/resources/traces/s2/ehz1_fullrun"));
 

@@ -97,7 +97,7 @@ class TestLoadQueueTraceComparison {
         Path metadataPath = temp.resolve("metadata.json");
         Files.writeString(metadataPath, """
                 {"game":"s3k","zone":"aiz","act":1,"bk2_frame_offset":0,
-                "trace_frame_count":1,
+                "trace_frame_count":1,"trace_schema":5,
                 "aux_schema_extras":["load_queue_state_per_frame"]}
                 """);
         TraceData trace = new TraceData(
@@ -119,7 +119,7 @@ class TestLoadQueueTraceComparison {
             @TempDir Path temp) throws Exception {
         Files.writeString(temp.resolve("metadata.json"), """
                 {"game":"s1","zone":"ghz","act":1,"bk2_frame_offset":0,
-                 "trace_frame_count":3,
+                 "trace_frame_count":3,"trace_schema":5,
                  "aux_schema_extras":["load_queue_state_per_frame"]}
                 """);
         TraceMetadata metadata = TraceMetadata.load(temp.resolve("metadata.json"));
@@ -144,7 +144,7 @@ class TestLoadQueueTraceComparison {
             @TempDir Path temp) throws Exception {
         Files.writeString(temp.resolve("metadata.json"), """
                 {"game":"s3k","zone":"aiz","act":1,"bk2_frame_offset":0,
-                 "trace_frame_count":1,
+                 "trace_frame_count":1,"trace_schema":5,
                  "aux_schema_extras":["load_queue_state_per_frame"]}
                 """);
         TraceEvent parsedDirect = TraceEvent.parseJsonLine("""
@@ -173,7 +173,7 @@ class TestLoadQueueTraceComparison {
             @TempDir Path temp) throws Exception {
         Files.writeString(temp.resolve("metadata.json"), """
                 {"game":"s3k","zone":"aiz","act":1,"bk2_frame_offset":0,
-                 "trace_frame_count":1,
+                 "trace_frame_count":1,"trace_schema":5,
                  "aux_schema_extras":["load_queue_state_per_frame"]}
                 """);
         TraceMetadata metadata = TraceMetadata.load(
