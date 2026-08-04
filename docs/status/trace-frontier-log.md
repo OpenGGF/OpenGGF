@@ -61396,3 +61396,32 @@ to synthesize a POST phase on a VBLANK-only row.
   `66961069e564ef707173bbad733f75e3ab034e29e3f4833a02e2e26af452d8fd`, with
   no engine-submitted matching job. Before this checkpoint it aborted at raw
   frame `17421`, direct completion `#24`.
+
+## 2026-08-04 — S3K CNZ carried-title reset and Act 2-size handoff
+
+- Worktree: repository root, branch `bugfix/s3k-traces`, continuing from
+  `9747996c4`. No trace payloads were edited; the checkpoint is the frontier
+  advance committed with this entry.
+- Root causes: the carried `Obj_TitleCardWait` reset owner stopped counting
+  during title KosM readiness, and the shared title manager could arm the
+  target enemy batch during its pre-completion camera-retirement delay. CNZ's
+  retained `EndSignControl` path also needed its ROM-owned zero extra
+  preloaded-camera tail and two event-manager handoff dispatches before the
+  `$4000` Act 2 size workers begin. These timings follow the native routines
+  at `sonic3k.asm:62214-62235`, `62244-62279`, `180407-180419`, and
+  `178154-178168`.
+- Fix: the carried title owner ticks the level-gamestate reset while its
+  prepared ROM queue remains pending, but consumes runtime-art admission only
+  at title completion. The transition request carries the semantic camera-tail
+  count through the executor and the carried results owner; CNZ supplies zero,
+  while legacy routes retain their default tail. The CNZ event flow models two
+  manager dispatches before the gradual size workers.
+- Focused validation passed with the S3K ROM: CNZ event flow, title KosM and
+  rewind tests, results-screen and queue-rewind tests, and MGZ/LBZ carried-title
+  ownership (51 tests, 0 failures, 0 errors). `TestActTransitionHeadless` also
+  passed with the S2 ROM. The CNZ replay command remains intentionally
+  non-green at the authoritative queue admission: 20,098 frames, 674 report
+  errors, first post-title gameplay mismatch only in `camera_x` at frames
+  `17423-17457`, and terminal raw frame `20105`, direct completion `#28`,
+  fingerprint `66961069e564ef707173bbad733f75e3ab034e29e3f4833a02e2e26af452d8fd`;
+  the engine has no matching submitted job.

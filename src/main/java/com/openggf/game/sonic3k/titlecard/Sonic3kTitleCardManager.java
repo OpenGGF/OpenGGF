@@ -482,12 +482,16 @@ public class Sonic3kTitleCardManager
     }
 
     public void requestPreloadedActCameraReleaseOnComplete() {
+        requestPreloadedActCameraReleaseOnComplete(PRELOADED_ACT_CAMERA_RELEASE_DISPATCHES);
+    }
+
+    public void requestPreloadedActCameraReleaseOnComplete(int dispatches) {
         if (inLevelMode) {
             releasePreloadedActCameraOnComplete = true;
             // A results SST that mutates into Obj_TitleCard retains the parent
             // Wait2/child retirement entries which the slotless overlay folds
             // away. Keep Scroll_lock through those remaining dispatches.
-            inLevelExitDelayFrames += PRELOADED_ACT_CAMERA_RELEASE_DISPATCHES;
+            inLevelExitDelayFrames += Math.max(0, dispatches);
         }
     }
 
@@ -600,6 +604,12 @@ public class Sonic3kTitleCardManager
     @Override
     public void update() {
         if (artLoading && !finishQueuedArtIfReady()) {
+            if (retainedResultsHeldLevelCounterOwned
+                    && resetLevelGamestateOnInLevelDisplay
+                    && resetLevelGamestateCountdown > 0
+                    && --resetLevelGamestateCountdown == 0) {
+                consumeLevelGamestateResetRequest();
+            }
             return;
         }
         if (resetLevelGamestateOnInLevelDisplay && resetLevelGamestateCountdown > 0
@@ -905,9 +915,6 @@ public class Sonic3kTitleCardManager
                 return;
             }
             if (inLevelMode && inLevelExitDelayFrames > 0) {
-                if (retainedResultsHeldLevelCounterOwned) {
-                    consumeRuntimeArtAdmissionIfNeeded();
-                }
                 inLevelExitDelayFrames--;
                 if (inLevelExitDelayFrames == 0
                         && releasePreloadedActCameraOnComplete

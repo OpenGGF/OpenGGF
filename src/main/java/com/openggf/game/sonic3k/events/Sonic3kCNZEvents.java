@@ -869,6 +869,11 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
                 .preserveLevelGamestate(true)
                 .showInLevelTitleCard(false)
                 .preserveOffsetCameraPosition(true)
+                // CNZ's retained EndSignControl reaches Change_Act2Sizes
+                // directly after the title owner retires; it has no extra
+                // preloaded-camera Wait2 tail (sonic3k.asm:62244-62279,
+                // 180407-180419).
+                .inLevelTitleCardPreloadedActCameraReleaseDispatches(0)
                 // CNZ1BGE_DoTransition offsets the live camera bounds after
                 // Load_Level, and copies the offset max Y into the target max
                 // (docs/skdisasm/sonic3k.asm:107638-107646).

@@ -107,6 +107,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private boolean carriedTitleLockPlayerControl;
     private int carriedTitleExitAdditionalDispatches;
     private int carriedTitleExitPhaseOneDispatchOverlap;
+    private int carriedPreloadedActCameraReleaseDispatches = -1;
 
     // Tally values
     private int timeBonus;
@@ -567,6 +568,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         carriedTitleLockPlayerControl = titleTiming.lockPlayerControl();
         carriedTitleExitAdditionalDispatches = titleTiming.exitAdditionalDispatches();
         carriedTitleExitPhaseOneDispatchOverlap = titleTiming.exitPhaseOneDispatchOverlap();
+        carriedPreloadedActCameraReleaseDispatches =
+                titleTiming.preloadedActCameraReleaseDispatches();
     }
 
     // ---- Pre-tally delay with music trigger ----
@@ -833,7 +836,12 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         titleCardProvider.initializeInLevel(zone, 1);
         if (titleCardProvider instanceof Sonic3kTitleCardManager s3kTitleCard) {
             if (pendingPreloadedTitleHandoff) {
-                s3kTitleCard.requestPreloadedActCameraReleaseOnComplete();
+                if (carriedPreloadedActCameraReleaseDispatches < 0) {
+                    s3kTitleCard.requestPreloadedActCameraReleaseOnComplete();
+                } else if (carriedPreloadedActCameraReleaseDispatches > 0) {
+                    s3kTitleCard.requestPreloadedActCameraReleaseOnComplete(
+                            carriedPreloadedActCameraReleaseDispatches);
+                }
             }
             if (pendingAizTitleHandoff) {
                 s3kTitleCard.requestLevelGamestateResetAtInLevelDisplay();

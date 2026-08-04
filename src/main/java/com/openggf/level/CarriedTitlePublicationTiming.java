@@ -8,16 +8,19 @@ public record CarriedTitlePublicationTiming(
         int resetPhaseOneDispatchOverlap,
         boolean lockPlayerControl,
         int exitAdditionalDispatches,
-        int exitPhaseOneDispatchOverlap) {
+        int exitPhaseOneDispatchOverlap,
+        int preloadedActCameraReleaseDispatches) {
 
     public static final CarriedTitlePublicationTiming NONE =
-            new CarriedTitlePublicationTiming(false, false, 0, 0, false, 0, 0);
+            new CarriedTitlePublicationTiming(false, false, 0, 0, false, 0, 0, -1);
 
     public CarriedTitlePublicationTiming {
         resetAdditionalDispatches = Math.max(0, resetAdditionalDispatches);
         resetPhaseOneDispatchOverlap = Math.max(0, resetPhaseOneDispatchOverlap);
         exitAdditionalDispatches = Math.max(0, exitAdditionalDispatches);
         exitPhaseOneDispatchOverlap = Math.max(0, exitPhaseOneDispatchOverlap);
+        preloadedActCameraReleaseDispatches = preloadedActCameraReleaseDispatches < 0
+                ? -1 : preloadedActCameraReleaseDispatches;
     }
 
     /**
@@ -25,25 +28,28 @@ public record CarriedTitlePublicationTiming(
      * executor-created overlay, owns title publication.
      */
     public static CarriedTitlePublicationTiming from(SeamlessLevelTransitionRequest request) {
-        if (request == null || request.showInLevelTitleCard()) {
+        if (request == null) {
             return NONE;
         }
+        int preloadedActCameraReleaseDispatches =
+                request.inLevelTitleCardPreloadedActCameraReleaseDispatches();
         boolean explicitTiming = request.resetLevelGamestateAtInLevelTitleCardDisplay()
                 || request.inLevelTitleCardResetAdditionalDispatches() != 0
                 || request.inLevelTitleCardResetPhaseOneDispatchOverlap() != 0
                 || request.lockPlayerControlForInLevelTitleCard()
                 || request.inLevelTitleCardExitAdditionalDispatches() != 0
                 || request.inLevelTitleCardExitPhaseOneDispatchOverlap() != 0;
-        if (!explicitTiming) {
+        if (!explicitTiming && preloadedActCameraReleaseDispatches < 0) {
             return NONE;
         }
         return new CarriedTitlePublicationTiming(
-                true,
+                explicitTiming,
                 request.resetLevelGamestateAtInLevelTitleCardDisplay(),
                 request.inLevelTitleCardResetAdditionalDispatches(),
                 request.inLevelTitleCardResetPhaseOneDispatchOverlap(),
                 request.lockPlayerControlForInLevelTitleCard(),
                 request.inLevelTitleCardExitAdditionalDispatches(),
-                request.inLevelTitleCardExitPhaseOneDispatchOverlap());
+                request.inLevelTitleCardExitPhaseOneDispatchOverlap(),
+                preloadedActCameraReleaseDispatches);
     }
 }

@@ -72,6 +72,8 @@ final class LevelSeamlessTransitionExecutor {
                         request.inLevelTitleCardExitAdditionalDispatches())
                 .inLevelTitleCardExitPhaseOneDispatchOverlap(
                         request.inLevelTitleCardExitPhaseOneDispatchOverlap())
+                .inLevelTitleCardPreloadedActCameraReleaseDispatches(
+                        request.inLevelTitleCardPreloadedActCameraReleaseDispatches())
                 .forceAirOnStaleObjectSupportLoss(
                         request.forceAirOnStaleObjectSupportLoss())
                 .preserveOffsetCameraPosition(

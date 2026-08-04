@@ -96,7 +96,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     // Dynamic_object_RAM+object_size (sonic3k.asm:7793) == dynamic slot 1, which
     // is absolute SST slot 4 (Player_1, Player_2, Reserved_object_3 precede the
     // dynamic range -- sonic3k.constants.asm:303-307).
-    private static final int CNZ_POST_TITLE_CARD_CONTROL_HANDOFF_DISPATCHES = 9;
+    private static final int CNZ_POST_TITLE_CARD_CONTROL_HANDOFF_DISPATCHES = 2;
     private static final int CNZ2_CAMERA_MIN_X = 0x0000;
     private static final int CNZ2_CAMERA_MAX_X = 0x6000;
     private static final int CNZ2_CAMERA_MIN_Y = 0x0580;

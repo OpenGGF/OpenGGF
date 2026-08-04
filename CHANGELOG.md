@@ -3,6 +3,13 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K carried title-card reset ownership now continues ticking while
+  ROM-backed title KosM work is still being serviced, while the title owner
+  keeps target enemy admission sealed until its completion dispatch. CNZ's
+  retained EndSignControl handoff carries an explicit zero preloaded-camera
+  tail and starts the Act 2 size workers after its two native handoff
+  dispatches; the CNZ report falls from 1,051 to 674 comparison errors without
+  changing the trace payload.
 - Fix/Test: S3K held-level-counter replay now services the production module
   and direct Kosinski queue tails at their recorded ROM boundaries. Retained
   CNZ results-title ownership consumes its admission once during the held

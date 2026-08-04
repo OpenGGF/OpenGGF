@@ -502,13 +502,15 @@ class TestS3kCnzAct1EventFlow {
                 "Change_Act2Sizes must wait on the in-level title-card End_of_level_flag, not elapsed frames");
 
         GameServices.gameState().setEndOfLevelFlag(true);
-        for (int i = 0; i < 12; i++) {
+        for (int i = 0; i < 5; i++) {
             manager.update();
         }
 
         assertEquals(0x0260, GameServices.camera().getMaxX() & 0xFFFF,
-                "Obj_IncLevEndXGradual accumulates $4000 and does not move Camera_max_X_pos "
-                        + "until the fourth update (docs/skdisasm/sonic3k.asm:178154-178168)");
+                "Obj_EndSignControlDoStart retains two dispatches before allocating "
+                        + "Obj_IncLevEndXGradual, which accumulates $4000 and does not move "
+                        + "Camera_max_X_pos until its fourth update "
+                        + "(docs/skdisasm/sonic3k.asm:180407-180419,178154-178168)");
 
         manager.update();
 
