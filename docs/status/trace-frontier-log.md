@@ -61211,3 +61211,41 @@ to synthesize a POST phase on a VBLANK-only row.
   (display-aspect resolution, event/object guards, rewind torture, S2 special
   stage cadence, S3K MGZ boss registration/rewind, and related infrastructure);
   no convergence-focused test regressed.
+
+## 2026-08-04 - Visual S1 giant-ring admission ownership parity
+
+- Worktree: `.worktrees/visual-ss-production-handoff`, branch
+  `bugfix/ai-visual-ss-production-handoff`, based on `41a35c2f6`.
+- The visual launch adapter captured segment 0's exhausted observation, then
+  admitted special-stage segment 1 through the shared coordinator, but reused
+  the stale observation for post-production closure. The strict shared row
+  driver correctly rejected that premature close as `dynamic-art segment
+  expected 3728 rows but compared 0`. The adapter now recaptures structural
+  state whenever admission changes coordinator ownership, before exhaustion
+  or closure is evaluated; shared coordinator, row-driver, hardware-timing,
+  and dynamic-art policy remain unchanged.
+- Exact red/green regression:
+  `mvn -q -Dmse=off
+  -Dtest=com.openggf.TestTraceSessionLauncherRunBranch#specialStageAdmissionRecapturesExhaustionBeforeDestinationClosure
+  test`. Before the fix it reproduced the exact 3,728-versus-zero failure;
+  after the fix it admits the real S1 emerald special stage, retains segment 1
+  at cursor 0, and atomically publishes a non-divergent row 0. Result: 1 test,
+  0 failures, 0 errors, 0 skips.
+- Focused parity selection was compiled first and then executed through
+  Surefire's single-fork goal to avoid an unrelated incremental classpath race:
+  `mvn -q -Dmse=off -DskipTests test-compile`, followed by
+  `mvn -q -Dmse=off -Dsurefire.forkCount=1
+  -Dsonic1.rom.path=s1.gen
+  -Dtest=com.openggf.TestTraceSessionLauncherRunBranch,com.openggf.trace.replay.runs.TestTraceRunSpecialStageRowDriver,com.openggf.TestSpecialStageVisualTraceSession,com.openggf.TestSpecialStageHardwareTimingLifecycle,com.openggf.tests.trace.runs.TestS1CompleteEmeraldRunPrefix,com.openggf.tests.TestArchitecturalSourceGuard
+  surefire:test`. Result: 118 tests, 0 failures, 0 errors, 0 skips.
+- Full all-ROM baseline command in a detached `41a35c2f6` worktree:
+  `mvn -q -Pci -Dmse=off
+  -Dsonic1.rom.path=s1.gen -Dsonic2.rom.path=s2.gen
+  -Ds3k.rom.path=s3k.gen test`.
+  It reached the repository's existing heap-space termination after 13,096
+  tests: 25 failures, 7 errors, and 31 skips. The feature worktree used the
+  same CI/Surefire configuration after an explicit `test-compile` and reached
+  its heap-space termination after 12,449 tests: 21 failures, 7 errors, and 30
+  skips. Normalized class/method comparison found zero feature-only red tests;
+  four baseline reds were not reached or were green before the feature run's
+  earlier termination.

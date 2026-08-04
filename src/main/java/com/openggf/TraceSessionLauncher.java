@@ -1160,8 +1160,13 @@ public final class TraceSessionLauncher {
         int rowsConsumed = 0;
         RunPlaybackObservation currentObservation = captureRunObservation(
                 mode, rowsConsumed, isLagOnlySameLevelContinuation());
+        int observationSegmentIndex = runCoordinator.currentSegmentIndex();
         applyRunCoordinatorActions(runCoordinator.beforeAdmission(
                 currentObservation));
+        if (runCoordinator.currentSegmentIndex() != observationSegmentIndex) {
+            currentObservation = captureRunObservation(
+                    mode, rowsConsumed, isLagOnlySameLevelContinuation());
+        }
         RunPlaybackObservation productionObservation =
                 runLevelLoadedDuringSourceProduction
                         && runProductionOwnerObservation != null

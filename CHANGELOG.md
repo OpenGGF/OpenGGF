@@ -3,6 +3,13 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: visual whole-run admission now invalidates a source-segment
+  observation when the shared run coordinator transfers ownership during the
+  same tick. S1 giant-ring transitions therefore retain the newly admitted
+  3,728-row special-stage driver instead of immediately closing it with the
+  source comparator's stale exhausted state; the real emerald fixture now
+  proves row zero publishes atomically through the same coordinator and
+  represented-row contracts used by headless replay.
 - Fix/Test: visual and headless whole-run special stages now share one atomic
   represented-row driver for input admission, hardware timing, dynamic-art
   publication, comparison, and closure. Visual replay publishes the admitted
