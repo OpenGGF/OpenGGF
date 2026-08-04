@@ -148,6 +148,18 @@ namespace OpenGGF.BizHawk.Headless.Tests
             AssertEx.Equal(null, options.MoviePath);
             AssertEx.Equal(7, options.CreditsTarget.Value);
             AssertEx.Equal(0L, options.CompressThresholdBytes);
+
+            string sidecar = root + "-raw.jsonl";
+            CommandLineOptions audited = CommandLineOptions.Parse(new[]
+            {
+                "--mode", "trace", "--rom", "s1.gen", "--output", root + "-all",
+                "--trace-profile", "credits_demo", "--credits-target", "all",
+                "--credits-raw-observations", sidecar,
+                "--credits-raw-observation-id", "task9-credits-a"
+            });
+            AssertEx.Equal(Path.GetFullPath(sidecar),
+                audited.CreditsRawObservationsPath);
+            AssertEx.Equal("task9-credits-a", audited.CreditsRawObservationId);
             AssertEx.Throws<ArgumentException>(
                 () => CommandLineOptions.Parse(new[]
                 {
@@ -167,6 +179,34 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     "--mode", "trace", "--rom", "s1.gen", "--movie", "x.bk2",
                     "--output", root + "-other", "--credits-target", "0"
                 }), "requires --trace-profile credits_demo");
+
+            AssertEx.Throws<ArgumentException>(
+                () => CommandLineOptions.Parse(new[]
+                {
+                    "--mode", "trace", "--rom", "s1.gen", "--output", root + "-missing-id",
+                    "--trace-profile", "credits_demo", "--credits-target", "all",
+                    "--credits-raw-observations", root + "-missing-id.jsonl"
+                }), "must be supplied together");
+            AssertEx.Throws<ArgumentException>(
+                () => CommandLineOptions.Parse(new[]
+                {
+                    "--mode", "trace", "--rom", "s1.gen", "--output", root + "-single",
+                    "--trace-profile", "credits_demo", "--credits-target", "7",
+                    "--credits-raw-observations", root + "-single.jsonl",
+                    "--credits-raw-observation-id", "single"
+                }), "credits-target all");
+
+            foreach (string identity in new[] { ".", "..", "has/slash", "has\\slash", "line\nbreak", "\u007f" })
+            {
+                AssertEx.Throws<ArgumentException>(
+                    () => CommandLineOptions.Parse(new[]
+                    {
+                        "--mode", "trace", "--rom", "s1.gen", "--output", root + "-identity",
+                        "--trace-profile", "credits_demo", "--credits-target", "all",
+                        "--credits-raw-observations", root + "-identity.jsonl",
+                        "--credits-raw-observation-id", identity
+                    }), "printable ASCII");
+            }
         }
 
         private static void CreditsCandidatePathIsCanonicalSafe()
@@ -189,6 +229,55 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     Path.Combine(alias, "candidate")));
                 AssertEx.Equal(true, Program.IsCreditsCandidatePathSafe(
                     Path.Combine(scratch, "candidate")));
+
+                string candidate = Path.Combine(scratch, "candidate");
+                string raw = Path.Combine(scratch, "evidence", "raw.jsonl");
+                CreditsRawObservationPathPolicy.Validate(
+                    candidate, raw, canonical);
+                AssertEx.Throws<ArgumentException>(
+                    () => CreditsRawObservationPathPolicy.Validate(
+                        candidate, Path.Combine(candidate, "raw.jsonl"), canonical),
+                    "outside the candidate");
+                AssertEx.Throws<ArgumentException>(
+                    () => CreditsRawObservationPathPolicy.Validate(
+                        candidate, Path.Combine(canonical, "raw.jsonl"), canonical),
+                    "outside the installed");
+
+                string outside = Path.Combine(scratch, "outside");
+                Directory.CreateDirectory(outside);
+                string evidenceAlias = Path.Combine(scratch, "evidence-alias");
+                if (CreateSymlink(outside, evidenceAlias) != 0)
+                {
+                    throw new InvalidOperationException("Unable to create evidence symlink.");
+                }
+                AssertEx.Throws<ArgumentException>(
+                    () => CreditsRawObservationPathPolicy.Validate(
+                        candidate, Path.Combine(evidenceAlias, "raw.jsonl"), canonical),
+                    "symlink traversal");
+                File.Delete(evidenceAlias);
+
+                Directory.CreateDirectory(Path.GetDirectoryName(raw));
+                File.WriteAllText(raw, "occupied");
+                AssertEx.Throws<IOException>(
+                    () => CreditsRawObservationPathPolicy.Validate(
+                        candidate, raw, canonical),
+                    "already exists");
+
+                string originalDirectory = Directory.GetCurrentDirectory();
+                string unrelated = Path.Combine(Path.GetTempPath(),
+                    "openggf-credits-path-cwd-" + Guid.NewGuid().ToString("N"));
+                Directory.CreateDirectory(unrelated);
+                try
+                {
+                    Directory.SetCurrentDirectory(unrelated);
+                    AssertEx.Equal(Path.GetFullPath(canonical),
+                        Path.GetFullPath(Program.FindInstalledTraceRoot()));
+                }
+                finally
+                {
+                    Directory.SetCurrentDirectory(originalDirectory);
+                    Directory.Delete(unrelated, true);
+                }
                 File.Delete(alias);
             }
             finally

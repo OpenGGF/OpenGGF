@@ -54,7 +54,9 @@ namespace BizHawk.Headless.Gpgx
             bool loadQueueState,
             bool compress,
             long compressThresholdBytes,
-            int? creditsTarget = null)
+            int? creditsTarget = null,
+            string creditsRawObservationsPath = null,
+            string creditsRawObservationId = null)
         {
             Mode = mode;
             RomPath = romPath;
@@ -70,6 +72,8 @@ namespace BizHawk.Headless.Gpgx
             Compress = compress;
             CompressThresholdBytes = compressThresholdBytes;
             CreditsTarget = creditsTarget;
+            CreditsRawObservationsPath = creditsRawObservationsPath;
+            CreditsRawObservationId = creditsRawObservationId;
         }
 
         public CaptureMode Mode { get; private set; }
@@ -142,6 +146,8 @@ namespace BizHawk.Headless.Gpgx
         public long CompressThresholdBytes { get; private set; }
         /// <summary>Null selects all eight ROM ending demos.</summary>
         public int? CreditsTarget { get; private set; }
+        public string CreditsRawObservationsPath { get; private set; }
+        public string CreditsRawObservationId { get; private set; }
 
         /// <summary>
         /// The compressor for this invocation, or null under --no-compress.
@@ -231,6 +237,8 @@ namespace BizHawk.Headless.Gpgx
             RejectInSmokeMode(values, "--run-id");
             RejectInSmokeMode(values, "--effective-movie-length");
             RejectInSmokeMode(values, "--load-queue-state");
+            RejectInSmokeMode(values, "--credits-raw-observations");
+            RejectInSmokeMode(values, "--credits-raw-observation-id");
             // Smoke mode publishes smoke.csv, which is not a trace payload,
             // so every compression argument would silently do nothing.
             RejectInSmokeMode(values, "--compress");
@@ -297,7 +305,8 @@ namespace BizHawk.Headless.Gpgx
                 "--gameplay-segment", "--run-id",
                 "--effective-movie-length", "--compress",
                 "--no-compress", "--compress-threshold",
-                "--load-queue-state"
+                "--load-queue-state", "--credits-raw-observations",
+                "--credits-raw-observation-id"
             };
             foreach (string name in unsupported)
             {
@@ -339,6 +348,18 @@ namespace BizHawk.Headless.Gpgx
             string traceProfile;
             values.TryGetValue("--trace-profile", out traceProfile);
             bool credits = traceProfile == "credits_demo";
+            bool hasRawPath = values.ContainsKey("--credits-raw-observations");
+            bool hasRawId = values.ContainsKey("--credits-raw-observation-id");
+            if (hasRawPath != hasRawId)
+            {
+                throw new ArgumentException(
+                    "Arguments --credits-raw-observations and --credits-raw-observation-id must be supplied together.");
+            }
+            if (hasRawPath && !credits)
+            {
+                throw new ArgumentException(
+                    "Credits raw-observation arguments require --trace-profile credits_demo.");
+            }
             int? creditsTarget = null;
             if (values.ContainsKey("--credits-target"))
             {
@@ -365,6 +386,16 @@ namespace BizHawk.Headless.Gpgx
             {
                 throw new ArgumentException(
                     "Argument --credits-target is required for --trace-profile credits_demo.");
+            }
+            if (hasRawPath && creditsTarget.HasValue)
+            {
+                throw new ArgumentException(
+                    "Credits raw observations require --credits-target all.");
+            }
+            if (hasRawId)
+            {
+                S1CreditsRawHostEvidenceCollector.ValidateIdentity(
+                    values["--credits-raw-observation-id"]);
             }
             if (credits && moviePath != null)
             {
@@ -483,10 +514,20 @@ namespace BizHawk.Headless.Gpgx
                         "Credits candidate output root must not already exist: "
                         + fullOutputDirectory);
                 }
+                string rawPath = hasRawPath
+                    ? Path.GetFullPath(values["--credits-raw-observations"])
+                    : null;
+                if (rawPath != null)
+                {
+                    CreditsRawObservationPathPolicy.Validate(
+                        fullOutputDirectory, rawPath,
+                        Program.FindInstalledTraceRoot());
+                }
                 return new CommandLineOptions(
                     CaptureMode.Trace, Path.GetFullPath(romPath), null,
                     fullOutputDirectory, 0, 0, traceProfile, null, null, 0,
-                    false, true, 0, creditsTarget);
+                    false, true, 0, creditsTarget, rawPath,
+                    hasRawId ? values["--credits-raw-observation-id"] : null);
             }
             if (runId != null)
             {
@@ -610,6 +651,8 @@ namespace BizHawk.Headless.Gpgx
                 || name == "--max-frames"
                 || name == "--trace-profile"
                 || name == "--credits-target"
+                || name == "--credits-raw-observations"
+                || name == "--credits-raw-observation-id"
                 || name == "--gameplay-segment"
                 || name == "--run-id"
                 || name == "--effective-movie-length"
@@ -1063,8 +1106,54 @@ namespace BizHawk.Headless.Gpgx
             TextWriter stderr,
             Func<string, GPGX.GPGXSyncSettings, IGpgxHost> openHost)
         {
+            return RunS1CreditsDemoCore(
+                options, installation.ManagedVersion, romSha1, romBytes,
+                stdout, stderr, openHost,
+                () => new NoReplacePublisher(new TracePayloadCompressor(0)),
+                (path, id, candidateRoot, sha1) =>
+                    new S1CreditsRawHostEvidenceCollector(
+                        path, id, candidateRoot, sha1),
+                null);
+        }
+
+        internal static int RunS1CreditsDemoForTests(
+            CommandLineOptions options,
+            Version managedVersion,
+            string romSha1,
+            byte[] romBytes,
+            TextWriter stdout,
+            TextWriter stderr,
+            Func<NoReplacePublisher> publisherFactory,
+            Func<string, string, string, string,
+                S1CreditsRawHostEvidenceCollector> rawEvidenceFactory,
+            Func<S1CreditsRawHostEvidenceCollector,
+                S1CreditsDemoCollectionSink,
+                S1CreditsDemoCaptureResult> capture)
+        {
+            return RunS1CreditsDemoCore(
+                options, managedVersion, romSha1, romBytes,
+                stdout, stderr, null, publisherFactory,
+                rawEvidenceFactory, capture);
+        }
+
+        private static int RunS1CreditsDemoCore(
+            CommandLineOptions options,
+            Version managedVersion,
+            string romSha1,
+            byte[] romBytes,
+            TextWriter stdout,
+            TextWriter stderr,
+            Func<string, GPGX.GPGXSyncSettings, IGpgxHost> openHost,
+            Func<NoReplacePublisher> publisherFactory,
+            Func<string, string, string, string,
+                S1CreditsRawHostEvidenceCollector> rawEvidenceFactory,
+            Func<S1CreditsRawHostEvidenceCollector,
+                S1CreditsDemoCollectionSink,
+                S1CreditsDemoCaptureResult> capture)
+        {
             NoReplacePublisher.IncrementalStagingSession session = null;
             NoReplacePublisher.StagedPublicationSet staged = null;
+            S1CreditsRawHostEvidenceCollector rawEvidence = null;
             try
             {
                 if (!IsCreditsCandidatePathSafe(options.OutputDirectory))
@@ -1072,29 +1161,93 @@ namespace BizHawk.Headless.Gpgx
                     throw new ArgumentException(
                         "credits_demo candidate output must not be a canonical fixture path.");
                 }
-                var publisher = new NoReplacePublisher(
-                    new TracePayloadCompressor(0));
+                if (managedVersion == null)
+                {
+                    throw new ArgumentNullException("managedVersion");
+                }
+                if (publisherFactory == null)
+                {
+                    throw new ArgumentNullException("publisherFactory");
+                }
+                if (capture != null && openHost != null)
+                {
+                    throw new ArgumentException(
+                        "Credits test capture cannot be combined with a host opener.");
+                }
+                var publisher = publisherFactory();
+                if (publisher == null)
+                {
+                    throw new InvalidOperationException(
+                        "Credits publisher factory returned null.");
+                }
+                if (options.CreditsRawObservationsPath != null)
+                {
+                    if (rawEvidenceFactory == null)
+                    {
+                        throw new ArgumentNullException("rawEvidenceFactory");
+                    }
+                    rawEvidence = rawEvidenceFactory(
+                        options.CreditsRawObservationsPath,
+                        options.CreditsRawObservationId,
+                        options.OutputDirectory,
+                        romSha1);
+                    if (rawEvidence == null)
+                    {
+                        throw new InvalidOperationException(
+                            "Credits raw-evidence factory returned null.");
+                    }
+                }
                 session = publisher.OpenSession(options.OutputDirectory);
                 S1CreditsDemoCaptureResult result;
-                using (new NativeStandardOutputSilencer())
-                using (IGpgxHost host = openHost(
-                    options.RomPath, GpgxHost.CreateGhz1SyncSettings()))
                 using (var sink = new S1CreditsDemoCollectionSink(session))
                 {
-                    var writer = host as IMainRamWriter;
-                    result = S1CreditsDemoCaptureRunner.Capture(
-                        host, writer, options.CreditsTarget,
-                        DateTime.Now.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
-                        sink, romBytes);
+                    if (capture != null)
+                    {
+                        result = capture(rawEvidence, sink);
+                    }
+                    else
+                    {
+                        if (openHost == null)
+                        {
+                            throw new ArgumentNullException("openHost");
+                        }
+                        using (new NativeStandardOutputSilencer())
+                        using (IGpgxHost host = openHost(
+                            options.RomPath, GpgxHost.CreateGhz1SyncSettings()))
+                        {
+                            var writer = host as IMainRamWriter;
+                            result = S1CreditsDemoCaptureRunner.Capture(
+                                host, writer, options.CreditsTarget,
+                                DateTime.Now.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                                sink, romBytes, rawEvidence);
+                        }
+                    }
+                }
+                if (result == null)
+                {
+                    throw new InvalidOperationException(
+                        "Credits capture returned null.");
                 }
                 staged = session.Complete();
                 session = null;
                 staged.Publish();
                 staged = null;
-                stdout.Write("BizHawk: " + installation.ManagedVersion + "\n"
+                if (rawEvidence != null)
+                {
+                    SealCreditsRawEvidenceAfterCandidatePublication(
+                        rawEvidence, result, options.OutputDirectory);
+                    rawEvidence.Dispose();
+                    rawEvidence = null;
+                }
+                stdout.Write("BizHawk: " + managedVersion + "\n"
                     + "ROM SHA-1: " + romSha1 + "\n"
                     + "Credits demos: " + result.CapturedIndices.Count + "\n"
                     + "Candidate root: " + options.OutputDirectory + "\n");
+                if (options.CreditsRawObservationsPath != null)
+                {
+                    stdout.Write("Credits raw observations: "
+                        + options.CreditsRawObservationsPath + "\n");
+                }
                 stdout.Flush();
                 return 0;
             }
@@ -1107,25 +1260,48 @@ namespace BizHawk.Headless.Gpgx
             finally
             {
                 if (session != null) session.Dispose();
+                if (rawEvidence != null)
+                {
+                    try
+                    {
+                        rawEvidence.Dispose();
+                    }
+                    catch (Exception cleanup)
+                    {
+                        ReportFailure(
+                            stderr,
+                            new InvalidOperationException(
+                                "Raw-observation cleanup failed; publication state is not reusable and the candidate is QUARANTINED.",
+                                cleanup));
+                    }
+                }
+            }
+        }
+
+        internal static void SealCreditsRawEvidenceAfterCandidatePublication(
+            S1CreditsRawHostEvidenceCollector rawEvidence,
+            S1CreditsDemoCaptureResult result,
+            string candidateRoot)
+        {
+            if (rawEvidence == null) throw new ArgumentNullException("rawEvidence");
+            try
+            {
+                rawEvidence.Seal(result);
+            }
+            catch (Exception exception)
+            {
+                throw new InvalidOperationException(
+                    "Raw-observation seal failed after candidate publication; candidate is QUARANTINED and must not be reused: "
+                    + candidateRoot + ". " + exception.Message,
+                    exception);
             }
         }
 
         internal static bool IsCreditsCandidatePathSafe(string outputDirectory)
         {
             if (string.IsNullOrEmpty(outputDirectory)) return false;
-            string root = Directory.GetCurrentDirectory();
-            while (!Directory.Exists(Path.Combine(
-                root, "src", "test", "resources", "traces")))
-            {
-                string parent = Path.GetDirectoryName(root);
-                if (string.IsNullOrEmpty(parent) || parent == root)
-                {
-                    return false;
-                }
-                root = parent;
-            }
             string canonical = LinuxPathEntry.ResolveExistingAncestor(
-                Path.Combine(root, "src", "test", "resources", "traces"));
+                FindInstalledTraceRoot());
             string candidateAncestor = LinuxPathEntry.ResolveExistingAncestor(
                 outputDirectory);
             string canonicalPrefix = canonical.TrimEnd(Path.DirectorySeparatorChar)
@@ -1135,6 +1311,33 @@ namespace BizHawk.Headless.Gpgx
                     StringComparison.Ordinal)
                 && !candidateAncestor.StartsWith(
                     canonicalPrefix, StringComparison.Ordinal);
+        }
+
+        internal static string FindInstalledTraceRoot()
+        {
+            string found = FindInstalledTraceRootFrom(
+                AppDomain.CurrentDomain.BaseDirectory);
+            if (found != null) return found;
+            found = FindInstalledTraceRootFrom(Directory.GetCurrentDirectory());
+            if (found != null) return found;
+            throw new InvalidOperationException(
+                "Unable to locate the installed trace fixture root from the executable or current directory.");
+        }
+
+        private static string FindInstalledTraceRootFrom(string start)
+        {
+            string root = Path.GetFullPath(start);
+            while (!Directory.Exists(Path.Combine(
+                root, "src", "test", "resources", "traces")))
+            {
+                string parent = Path.GetDirectoryName(root);
+                if (string.IsNullOrEmpty(parent) || parent == root)
+                {
+                    return null;
+                }
+                root = parent;
+            }
+            return Path.Combine(root, "src", "test", "resources", "traces");
         }
 
         /// <summary>

@@ -224,16 +224,22 @@ namespace OpenGGF.BizHawk.Headless.Tests
             var credits = new List<TestMain.TestCase>();
             S1CreditsDemoDifferentialTests.RegisterPreCapture(credits);
 
-            AssertEx.Equal(3, credits.Count);
+            AssertEx.Equal(6, credits.Count);
             AssertEx.Equal(
                 "S1 credits predecessor evidence keeps eight 20-column fixtures\n"
-                + "S1 credits raw-host evidence is independent and hash-bound\n"
+                + "S1 credits raw-host sidecar streams canonical independent observations\n"
+                + "S1 credits raw-host sidecar rejects order limits and seal failure\n"
+                + "S1 credits CLI publication failure removes raw sidecar spool\n"
+                + "S1 credits CLI seal failure quarantines published output\n"
                 + "S1 credits captures twice with deterministic logical evidence",
                 string.Join("\n", credits.ConvertAll(item => item.Name).ToArray()));
             AssertEx.Equal(TestKind.Unit, credits[0].Kind);
             AssertEx.Equal(TestKind.Unit, credits[1].Kind);
-            AssertEx.Equal(TestKind.Gate, credits[2].Kind);
-            AssertEx.Equal(true, credits[2].Serial);
+            AssertEx.Equal(TestKind.Unit, credits[2].Kind);
+            AssertEx.Equal(TestKind.Unit, credits[3].Kind);
+            AssertEx.Equal(TestKind.Unit, credits[4].Kind);
+            AssertEx.Equal(TestKind.Gate, credits[5].Kind);
+            AssertEx.Equal(true, credits[5].Serial);
             foreach (TestMain.TestCase test in credits)
             {
                 AssertEx.Equal(false,

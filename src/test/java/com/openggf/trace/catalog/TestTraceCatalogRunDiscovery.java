@@ -163,7 +163,7 @@ class TestTraceCatalogRunDiscovery {
     void invalidRunIsSkippedNotFatal(@TempDir Path root) throws Exception {
         Path badRun = root.resolve("s3k").resolve("runs").resolve("broken");
         Files.createDirectories(badRun);
-        Files.writeString(badRun.resolve("run_manifest.json"), "{\"trace_schema\": 4}");
+        Files.writeString(badRun.resolve("run_manifest.json"), "{}");
         List<TraceEntry> entries = TraceCatalog.scan(root);
         assertTrue(entries.stream().noneMatch(TraceEntry::isRun));
     }

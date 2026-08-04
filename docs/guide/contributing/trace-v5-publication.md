@@ -94,8 +94,10 @@ Verify it against both the candidate and comparison report:
 
 ```bash
 python3 tools/traces/verify_s1_credits_raw_host_evidence.py \
+  src/test/resources/traces \
   /scratch/v5-candidate/traces \
   /scratch/v5-candidate-report.json \
+  /scratch/s1-credits-raw-observations.jsonl \
   /scratch/s1-credits-raw-host-evidence.json
 ```
 

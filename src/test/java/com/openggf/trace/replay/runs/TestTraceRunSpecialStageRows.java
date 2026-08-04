@@ -124,7 +124,7 @@ class TestTraceRunSpecialStageRows {
                   "act": 0,
                   "bk2_frame_offset": 0,
                   "trace_frame_count": %d,
-                  "trace_schema": 3,
+                  "trace_schema": 5,
                   "trace_profile": "%s",
                   "start_x": "0000",
                   "start_y": "0000"%s

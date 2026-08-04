@@ -2,6 +2,7 @@ package com.openggf.trace.catalog;
 
 import com.openggf.trace.StoredPhysicsFrameDomain;
 import com.openggf.trace.TraceData;
+import com.openggf.tests.trace.TraceV5TestFixture;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -146,7 +147,7 @@ class TraceCatalogTest {
     }
 
     @Test
-    void scanPreservesEveryHeaderlessLegacyCsvRow(@TempDir Path tmp)
+    void scanPreservesEveryHeaderlessV5CsvRow(@TempDir Path tmp)
             throws Exception {
         Path dir = tmp.resolve("s1/ghz1");
         writeValidTrace(dir, "s1", 0, 1);
@@ -187,7 +188,7 @@ class TraceCatalogTest {
               "zone": "ZONE",
               "zone_id": %d,
               "act": %d,
-              "trace_schema": 3,
+              "trace_schema": 5,
               "bk2_frame_offset": 100,
               "pre_trace_osc_frames": 12,
               "main_character": "sonic",
@@ -195,7 +196,8 @@ class TraceCatalogTest {
             }
             """, game, zoneId, act));
         Files.writeString(dir.resolve("physics.csv"),
-                "0,0,0,0,0,0,0,0,0,0,0\n1,0,0,0,0,0,0,0,0,0,0\n");
+                TraceV5TestFixture.levelRow(0) + "\n"
+                        + TraceV5TestFixture.levelRow(1) + "\n");
         Files.writeString(dir.resolve("trace.bk2"), "stub");
     }
 
@@ -213,7 +215,7 @@ class TraceCatalogTest {
               "zone": "ZONE",
               "zone_id": %d,
               "act": %d,
-              "trace_schema": 3,
+              "trace_schema": 5,
               "bk2_frame_offset": 100,
               "pre_trace_osc_frames": 12,
               "main_character": "sonic",
@@ -222,6 +224,7 @@ class TraceCatalogTest {
             }
             """, game, zoneId, act, sourceBk2));
         Files.writeString(dir.resolve("physics.csv"),
-                "0,0,0,0,0,0,0,0,0,0,0\n1,0,0,0,0,0,0,0,0,0,0\n");
+                TraceV5TestFixture.levelRow(0) + "\n"
+                        + TraceV5TestFixture.levelRow(1) + "\n");
     }
 }

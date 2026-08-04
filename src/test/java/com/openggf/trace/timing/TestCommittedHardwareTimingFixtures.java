@@ -351,12 +351,10 @@ class TestCommittedHardwareTimingFixtures {
 
         assertEquals(expected.traceSchema(), metadataJson.path("trace_schema").intValue(),
                 expected.directory());
-        assertEquals(expected.hardwareSchema(),
-                metadataJson.path("hardware_timing_schema").intValue(),
-                expected.directory());
-        assertEquals(expected.recorderVersion(),
-                metadataJson.path("lua_script_version").textValue(),
-                expected.directory());
+        assertEquals("native-bizhawk-headless",
+                metadataJson.path("recorder").textValue(), expected.directory());
+        assertEquals("3.0",
+                metadataJson.path("recorder_version").textValue(), expected.directory());
         assertEquals(expected.frameCount(),
                 metadataJson.path("trace_frame_count").intValue(),
                 expected.directory());

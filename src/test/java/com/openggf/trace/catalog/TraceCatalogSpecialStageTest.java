@@ -5,6 +5,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -53,9 +54,10 @@ class TraceCatalogSpecialStageTest {
     }
 
     @Test
-    void committedSonicOneSpecialStageUsesProfileAwareLabel() {
-        TraceEntry entry = TraceCatalog.scan(Path.of(
-                "src", "test", "resources", "traces")).stream()
+    void sonicOneSpecialStageUsesProfileAwareLabel(@TempDir Path tmp) throws Exception {
+        writeSpecialStageTrace(tmp.resolve("s1/special_stage"), "s1",
+                "s1_special_stage", 0, "ss.bk2");
+        TraceEntry entry = TraceCatalog.scan(tmp).stream()
                 .filter(candidate -> "s1_special_stage".equals(
                         candidate.metadata().traceProfile()))
                 .findFirst()
@@ -66,25 +68,37 @@ class TraceCatalogSpecialStageTest {
 
     private static void writeSpecialStageTrace(Path dir, Integer specialStageIndex, String bk2Name)
             throws Exception {
+        writeSpecialStageTrace(dir, "s2", "s2_special_stage", specialStageIndex, bk2Name);
+    }
+
+    private static void writeSpecialStageTrace(Path dir, String game, String profile,
+                                               Integer specialStageIndex, String bk2Name)
+            throws Exception {
         Files.createDirectories(dir);
         String ssIndexLine = specialStageIndex != null
                 ? ",\n  \"special_stage_index\": " + specialStageIndex
                 : "";
         Files.writeString(dir.resolve("metadata.json"), """
             {
-              "game": "s2",
-              "trace_profile": "s2_special_stage",
-              "trace_schema": 1,
-              "csv_version": 1,
+              "game": "%s",
+              "trace_profile": "%s",
+              "trace_schema": 5,
               "bk2_frame_offset": 0,
               "main_character": "sonic",
               "sidekicks": [],
               "source_bk2": "%s"%s
             }
-            """.formatted(bk2Name, ssIndexLine));
+            """.formatted(game, profile, bk2Name, ssIndexLine));
         Files.writeString(dir.resolve("physics.csv"),
-                "0,0,0,0,0,0,0,0,0,0,0\n1,0,0,0,0,0,0,0,0,0,0\n");
+                specialStageRow(0) + "\n" + specialStageRow(1) + "\n");
         Files.writeString(dir.resolve(bk2Name), "stub");
+    }
+
+    private static String specialStageRow(int frame) {
+        String[] row = new String[48];
+        Arrays.fill(row, "0");
+        row[0] = Integer.toString(frame);
+        return String.join(",", row);
     }
 
     private static void writeLevelTrace(Path dir, int zoneId, int act) throws Exception {
@@ -95,7 +109,7 @@ class TraceCatalogSpecialStageTest {
               "zone": "ZONE",
               "zone_id": %d,
               "act": %d,
-              "trace_schema": 3,
+              "trace_schema": 5,
               "bk2_frame_offset": 100,
               "pre_trace_osc_frames": 12,
               "main_character": "sonic",
@@ -103,7 +117,7 @@ class TraceCatalogSpecialStageTest {
             }
             """, zoneId, act));
         Files.writeString(dir.resolve("physics.csv"),
-                "0,0,0,0,0,0,0,0,0,0,0\n1,0,0,0,0,0,0,0,0,0,0\n");
+                specialStageRow(0) + "\n" + specialStageRow(1) + "\n");
         Files.writeString(dir.resolve("trace.bk2"), "stub");
     }
 }

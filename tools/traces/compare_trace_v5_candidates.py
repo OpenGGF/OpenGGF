@@ -19,6 +19,7 @@ if str(REPOSITORY_ROOT) not in sys.path:
 
 from tools.traces.trace_fixture_inventory import build_inventory, compare_inventory_documents
 from tools.traces.validate_trace_v5 import LEGACY_KEYS, Validation
+from tools.traces.no_replace_output import write_bytes_no_replace
 
 
 REPORT_FORMAT = "openggf-trace-v5-candidate-comparison-v1"
@@ -310,7 +311,8 @@ def main(argv: list[str] | None = None) -> int:
             roots = (args.predecessor_root.resolve(), args.candidate_root.resolve())
             if any(destination.is_relative_to(root) for root in roots):
                 raise ValueError("comparison report must remain outside both compared roots")
-            args.output.write_text(encoded, encoding="utf-8")
+            write_bytes_no_replace(
+                args.output, encoded.encode("utf-8"), "comparison report")
         else:
             print(encoded, end="")
         return 1 if args.fail_on_difference and not report["equal"] else 0

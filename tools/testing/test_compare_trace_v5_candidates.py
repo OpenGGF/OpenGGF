@@ -13,8 +13,7 @@ import unittest
 from pathlib import Path
 
 from tools.traces.compare_trace_v5_candidates import compare_roots
-from tools.traces.trace_fixture_inventory import build_inventory
-from tools.traces.verify_s1_credits_raw_host_evidence import verify_evidence
+from tools.traces.s1_credits_raw_evidence import require_outside_roots
 
 
 HEADER_20 = ["frame", "input", "x", "y", "x_speed", "y_speed", "g_speed", "angle",
@@ -31,6 +30,8 @@ HEADER_42 = ["frame", "input", "camera_x", "camera_y", "rings", "gameplay_frame_
              "sidekick_x_sub", "sidekick_y_sub", "sidekick_routine", "sidekick_status_byte",
              "sidekick_stand_on_obj", "sidekick_animation_id", "sidekick_mapping_frame"]
 COMPARATOR = Path(__file__).resolve().parents[1] / "traces" / "compare_trace_v5_candidates.py"
+EVIDENCE_BUILDER = Path(__file__).resolve().parents[1] / "traces" / "build_s1_credits_raw_host_evidence.py"
+EVIDENCE_VERIFIER = Path(__file__).resolve().parents[1] / "traces" / "verify_s1_credits_raw_host_evidence.py"
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 S3K_V5_DOCUMENTS = (
     "s3k-trace-recorder-behavior.md",
@@ -202,6 +203,20 @@ class CompareTraceV5CandidatesTests(unittest.TestCase):
         self.assertIn("outside both compared roots", result.stderr)
         self.assertFalse(output.exists())
 
+    def test_cli_refuses_to_replace_an_existing_frozen_report(self) -> None:
+        self.write_fixture(self.old, HEADER_42, [["0"] * 42])
+        self.write_fixture(self.candidate, HEADER_42, [["0"] * 42])
+        output = Path(self.temporary_directory.name) / "comparison.json"
+        output.write_text("frozen\n")
+
+        result = subprocess.run(
+            [sys.executable, str(COMPARATOR), str(self.old), str(self.candidate),
+             "--output", str(output)], text=True, capture_output=True, check=False)
+
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("already exists", result.stderr)
+        self.assertEqual("frozen\n", output.read_text())
+
     def test_s3k_current_contract_documentation_has_only_the_v5_axes(self) -> None:
         docs = REPOSITORY_ROOT / "tools" / "bizhawk-headless" / "docs"
         for name in S3K_V5_DOCUMENTS:
@@ -359,116 +374,244 @@ class CompareTraceV5CandidatesTests(unittest.TestCase):
         return next(item for item in report["files"] if item["logical_path"] == logical_path)
 
 
-class CreditsRawHostEvidenceTests(unittest.TestCase):
+class CreditsRawHostEvidencePipelineTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temporary_directory = tempfile.TemporaryDirectory()
         root = Path(self.temporary_directory.name)
+        self.predecessor = root / "predecessor"
         self.candidate = root / "candidate"
-        fixture = self.candidate / "s1" / "00_ghz1_credits_demo_1"
-        fixture.mkdir(parents=True)
-        candidate_row = ["0"] * 42
-        candidate_row[HEADER_42.index("player_x")] = "0001"
-        payload = ",".join(HEADER_42) + "\n" + ",".join(candidate_row) + "\n"
-        with gzip.GzipFile(fixture / "physics.csv.gz", "wb", mtime=0) as output:
-            output.write(payload.encode())
-        (fixture / "metadata.json").write_text(json.dumps({
-            "game": "s1", "trace_profile": "complete_run", "trace_frame_count": 1,
-            "recorder": "native-bizhawk-headless", "recorder_version": "3.0",
-            "trace_schema": 5,
-        }) + "\n")
-        self.logical_hash = hashlib.sha256(payload.encode()).hexdigest()
+        self.predecessor.mkdir()
+        self.candidate.mkdir()
+        self.logical_hash_by_route: dict[str, str] = {}
+        for route, candidate_directory in (
+                ("credits_00_ghz1", "00_ghz1_credits_demo_1"),
+                ("credits_01_mz2", "01_mz2_credits_demo"),
+                ("credits_02_syz3", "02_syz3_credits_demo"),
+                ("credits_03_lz3", "03_lz3_credits_demo"),
+                ("credits_04_slz3", "04_slz3_credits_demo"),
+                ("credits_05_sbz1", "05_sbz1_credits_demo"),
+                ("credits_06_sbz2", "06_sbz2_credits_demo"),
+                ("credits_07_ghz1b", "07_ghz1_credits_demo_2"),
+        ):
+            old_fixture = self.predecessor / "s1" / route
+            old_fixture.mkdir(parents=True)
+            old_row = ["0000"] * 20
+            (old_fixture / "metadata.json").write_text(json.dumps({
+                "game": "s1", "trace_profile": "credits_demo", "trace_frame_count": 1,
+                "lua_script_version": "credits-retro-1.4", "csv_version": 4,
+            }) + "\n")
+            (old_fixture / "physics.csv").write_text(
+                ",".join(HEADER_20) + "\n" + ",".join(old_row) + "\n")
+
+            fixture = self.candidate / "s1" / candidate_directory
+            fixture.mkdir(parents=True)
+            candidate_row = ["0000"] * 42
+            candidate_row[HEADER_42.index("gameplay_frame_counter")] = "0001"
+            payload = ",".join(HEADER_42) + "\n" + ",".join(candidate_row) + "\n"
+            with gzip.GzipFile(fixture / "physics.csv.gz", "wb", mtime=0) as output:
+                output.write(payload.encode())
+            (fixture / "metadata.json").write_text(json.dumps({
+                "game": "s1", "trace_profile": "credits_demo", "trace_type": "credits_demo",
+                "trace_frame_count": 1, "recorder": "native-bizhawk-headless",
+                "recorder_version": "3.0", "trace_schema": 5,
+            }) + "\n")
+            self.logical_hash_by_route[route] = hashlib.sha256(payload.encode()).hexdigest()
         self.report = root / "comparison.json"
-        self.report_document = {
-            "format": "openggf-trace-v5-candidate-comparison-v1",
-            "candidate_root": str(self.candidate),
-            "candidate_inventory": build_inventory(self.candidate),
-            "files": [{
-            "logical_path": "s1/credits_00_ghz1/physics.csv",
-            "candidate": {
-                "path": str(fixture / "physics.csv.gz"),
-                "logical_sha256": self.logical_hash,
-            },
-            "comparison": {"common_field_mismatches": [
-                {"row": 0, "column": "x", "predecessor": "0000", "candidate": "0001"}
-            ]},
-        }]}
+        self.report_document = compare_roots(
+            self.predecessor, self.candidate, mode="credits-20-to-42")
         self.report.write_text(json.dumps(self.report_document))
-        self.evidence = root / "evidence.json"
+        self.raw_sidecar = root / "raw-observations.jsonl"
+        self.write_raw_sidecar(self.raw_sidecar)
+        self.evidence = root / "raw-host-evidence.json"
 
     def tearDown(self) -> None:
         self.temporary_directory.cleanup()
 
-    def test_verifier_binds_each_disclosed_first_divergence_to_raw_value_and_candidate_hash(self) -> None:
-        self.evidence.write_text(json.dumps(self.document()))
+    def test_builder_and_verifier_recompute_disclosed_divergences_from_all_independent_inputs(self) -> None:
+        built = self.run_builder()
+        self.assertEqual(0, built.returncode, built.stderr)
+        document = json.loads(self.evidence.read_text())
+        self.assertEqual("openggf-s1-credits-raw-host-evidence-v1", document["format"])
+        self.assertEqual(8, len(document["routes"]))
+        self.assertTrue(all(route["observations"][0]["common_field"] == "v_framecount"
+                            for route in document["routes"]))
 
-        verify_evidence(self.candidate, self.report, self.evidence)
+        verified = self.run_verifier()
+        self.assertEqual(0, verified.returncode, verified.stderr)
 
-    def test_verifier_rejects_missing_observation_raw_mismatch_hash_drift_and_artifact_inside_candidate(self) -> None:
-        document = self.document()
-        cases = []
-        missing = self.document(); missing["routes"][0]["observations"] = []; cases.append((missing, "missing evidence"))
-        raw = self.document(); raw["routes"][0]["observations"][0]["raw_value"] = "0000"; cases.append((raw, "raw/emitted mismatch"))
-        digest = self.document(); digest["routes"][0]["candidate_logical_sha256"] = "0" * 64; cases.append((digest, "hash"))
-        for index, (payload, message) in enumerate(cases):
-            with self.subTest(message=message):
-                path = self.evidence.with_name(f"evidence-{index}.json")
-                path.write_text(json.dumps(payload))
-                with self.assertRaisesRegex(ValueError, message):
-                    verify_evidence(self.candidate, self.report, path)
+    def test_pipeline_rejects_missing_duplicate_reordered_fabricated_and_swapped_observations(self) -> None:
+        documents = [json.loads(line) for line in self.raw_sidecar.read_text().splitlines()]
+        mutations = {
+            "missing": documents[:2] + documents[3:],
+            "duplicate": documents[:-1] + [documents[1]] + documents[-1:],
+            "reordered": documents[:1] + [documents[2], documents[1]] + documents[3:],
+        }
+        fabricated = json.loads(json.dumps(documents))
+        fabricated[19].pop("ram_address", None)
+        fabricated[19].pop("endianness", None)
+        fabricated[19]["derivation"] = "invented_from_candidate_csv"
+        mutations["fabricated"] = fabricated
+        wrong_width = json.loads(json.dumps(documents))
+        wrong_width[1]["raw_value"] = "00"
+        mutations["wrong_width"] = wrong_width
+        swapped = json.loads(json.dumps(documents))
+        swapped[0]["candidate_root"] = str(self.candidate.parent / "other-candidate")
+        swapped[-1]["candidate_root"] = swapped[0]["candidate_root"]
+        mutations["swapped"] = swapped
+
+        for label, mutated_documents in mutations.items():
+            with self.subTest(label=label):
+                path = self.raw_sidecar.with_name(f"raw-{label}.jsonl")
+                self.write_documents(path, mutated_documents)
+                result = self.run_builder(raw_sidecar=path,
+                                          evidence=self.evidence.with_name(f"evidence-{label}.json"))
+                self.assertNotEqual(0, result.returncode)
+
+    def test_pipeline_rejects_truncation_report_drift_path_overlap_and_existing_output(self) -> None:
+        truncated = self.raw_sidecar.with_name("raw-truncated.jsonl")
+        truncated.write_text("\n".join(self.raw_sidecar.read_text().splitlines()[:-1]) + "\n")
+        self.assertNotEqual(0, self.run_builder(raw_sidecar=truncated).returncode)
+
+        drifted = json.loads(self.report.read_text())
+        drifted["files"][0]["candidate"]["logical_sha256"] = "0" * 64
+        drifted_report = self.report.with_name("comparison-drifted.json")
+        drifted_report.write_text(json.dumps(drifted))
+        self.assertNotEqual(0, self.run_builder(report=drifted_report).returncode)
+
         inside = self.candidate / "evidence.json"
-        inside.write_text(json.dumps(document))
-        with self.assertRaisesRegex(ValueError, "outside candidate root"):
-            verify_evidence(self.candidate, self.report, inside)
+        self.assertNotEqual(0, self.run_builder(evidence=inside).returncode)
+        self.assertFalse(inside.exists())
 
-    def test_verifier_rejects_empty_or_noncanonical_provenance(self) -> None:
-        cases = (
-            ({"ram_address": "", "endianness": "big"}, "RAM address"),
-            ({"ram_address": "ffffd008", "endianness": "big"}, "RAM address"),
-            ({"ram_address": "0xffffd008", "endianness": "big"}, "RAM address"),
-            ({"ram_address": "0xFFFFD008", "endianness": "middle"}, "endianness"),
-            ({"derivation": ""}, "derivation"),
-            ({"derivation": "   "}, "derivation"),
-        )
-        for index, (provenance, message) in enumerate(cases):
-            with self.subTest(provenance=provenance):
-                document = self.document()
-                observation = document["routes"][0]["observations"][0]
-                observation.pop("ram_address", None)
-                observation.pop("endianness", None)
-                observation.update(provenance)
-                path = self.evidence.with_name(f"provenance-{index}.json")
-                path.write_text(json.dumps(document))
-                with self.assertRaisesRegex(ValueError, message):
-                    verify_evidence(self.candidate, self.report, path)
+        self.evidence.write_text("frozen\n")
+        result = self.run_builder()
+        self.assertNotEqual(0, result.returncode)
+        self.assertEqual("frozen\n", self.evidence.read_text())
 
-    def test_verifier_rejects_comparison_candidate_identity_inventory_and_file_hash_drift(self) -> None:
-        cases = []
-        wrong_root = json.loads(json.dumps(self.report_document))
-        wrong_root["candidate_root"] = str(self.candidate.parent / "other")
-        cases.append((wrong_root, "candidate root"))
-        wrong_inventory = json.loads(json.dumps(self.report_document))
-        wrong_inventory["candidate_inventory"]["aggregate_sha256"] = "0" * 64
-        cases.append((wrong_inventory, "candidate inventory"))
-        wrong_file_hash = json.loads(json.dumps(self.report_document))
-        wrong_file_hash["files"][0]["candidate"]["logical_sha256"] = "0" * 64
-        cases.append((wrong_file_hash, "file logical hash"))
-        self.evidence.write_text(json.dumps(self.document()))
-        for index, (report, message) in enumerate(cases):
-            with self.subTest(message=message):
-                report_path = self.report.with_name(f"report-{index}.json")
-                report_path.write_text(json.dumps(report))
-                with self.assertRaisesRegex(ValueError, message):
-                    verify_evidence(self.candidate, report_path, self.evidence)
+    def test_pipeline_rejects_symlink_aliases_swapped_capture_and_fabricated_final_evidence(self) -> None:
+        raw_alias = self.raw_sidecar.with_name("raw-alias.jsonl")
+        raw_alias.symlink_to(self.candidate / "s1" / "00_ghz1_credits_demo_1" / "metadata.json")
+        self.assertNotEqual(0, self.run_builder(raw_sidecar=raw_alias).returncode)
+        escaped_alias = self.candidate / "raw-observations-outside-alias.jsonl"
+        escaped_alias.symlink_to(self.raw_sidecar)
+        with self.assertRaisesRegex(ValueError, "outside"):
+            require_outside_roots(
+                escaped_alias, self.predecessor.resolve(), self.candidate.resolve(), "raw sidecar")
+        escaped_alias.unlink()
 
-    def document(self) -> dict[str, object]:
-        return {"format": "openggf-s1-credits-raw-host-evidence-v1", "routes": [{
-            "route": "credits_00_ghz1",
-            "candidate_payload": "s1/00_ghz1_credits_demo_1/physics.csv",
-            "candidate_logical_sha256": self.logical_hash, "observations": [{
-                "row": 0, "common_field": "x", "ram_address": "0xFFFFD008",
-                "endianness": "big", "raw_value": "0001", "emitted_value": "0001",
-            }],
-        }]}
+        sidecar_b = self.raw_sidecar.with_name("raw-capture-b.jsonl")
+        documents = [json.loads(line) for line in self.raw_sidecar.read_text().splitlines()]
+        documents[0]["capture_id"] = "capture-b"
+        documents[-1]["capture_id"] = "capture-b"
+        self.write_documents(sidecar_b, documents)
+        evidence_b = self.evidence.with_name("evidence-b.json")
+        self.assertEqual(0, self.run_builder(raw_sidecar=sidecar_b, evidence=evidence_b).returncode)
+        swapped = subprocess.run([
+            sys.executable, str(EVIDENCE_VERIFIER), str(self.predecessor), str(self.candidate),
+            str(self.report), str(self.raw_sidecar), str(evidence_b),
+        ], text=True, capture_output=True, check=False)
+        self.assertNotEqual(0, swapped.returncode)
+
+        self.assertEqual(0, self.run_builder().returncode)
+        fabricated = json.loads(self.evidence.read_text())
+        fabricated["routes"][0]["observations"][0]["raw_value"] = "0000"
+        self.evidence.write_text(json.dumps(fabricated))
+        self.assertNotEqual(0, self.run_verifier().returncode)
+
+    def write_raw_sidecar(self, path: Path) -> None:
+        candidate_root = str(self.candidate.resolve())
+        documents: list[dict[str, object]] = [{
+            "record_type": "header",
+            "format": "openggf-s1-credits-raw-observations-v1",
+            "capture_id": "capture-a",
+            "candidate_root": candidate_root,
+            "rom_sha1": "69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b",
+            "recorder": "native-bizhawk-headless",
+            "recorder_version": "3.0",
+        }]
+        field_sources = {
+            "frame": {"derivation": "trace_row_ordinal"},
+            "input": {"derivation": "s1_rom_controller_mask"},
+            "x": {"ram_address": "0xFFFFD008", "endianness": "big"},
+            "y": {"ram_address": "0xFFFFD00C", "endianness": "big"},
+            "x_speed": {"ram_address": "0xFFFFD010", "endianness": "big"},
+            "y_speed": {"ram_address": "0xFFFFD012", "endianness": "big"},
+            "g_speed": {"ram_address": "0xFFFFD014", "endianness": "big"},
+            "angle": {"ram_address": "0xFFFFD026", "endianness": "byte"},
+            "air": {"derivation": "s1_status_air_bit"},
+            "rolling": {"derivation": "s1_status_rolling_bit"},
+            "ground_mode": {"derivation": "s1_ground_mode"},
+            "x_sub": {"ram_address": "0xFFFFD00A", "endianness": "big"},
+            "y_sub": {"ram_address": "0xFFFFD00E", "endianness": "big"},
+            "routine": {"ram_address": "0xFFFFD024", "endianness": "byte"},
+            "camera_x": {"ram_address": "0xFFFFF700", "endianness": "big"},
+            "camera_y": {"ram_address": "0xFFFFF704", "endianness": "big"},
+            "rings": {"ram_address": "0xFFFFFE20", "endianness": "big"},
+            "status_byte": {"ram_address": "0xFFFFD022", "endianness": "byte"},
+            "v_framecount": {"ram_address": "0xFFFFFE04", "endianness": "big"},
+            "stand_on_obj": {"ram_address": "0xFFFFD03D", "endianness": "byte"},
+        }
+        routes = list(self.logical_hash_by_route)
+        for demo_index, route in enumerate(routes):
+            candidate_directory = {
+                "credits_00_ghz1": "00_ghz1_credits_demo_1",
+                "credits_01_mz2": "01_mz2_credits_demo",
+                "credits_02_syz3": "02_syz3_credits_demo",
+                "credits_03_lz3": "03_lz3_credits_demo",
+                "credits_04_slz3": "04_slz3_credits_demo",
+                "credits_05_sbz1": "05_sbz1_credits_demo",
+                "credits_06_sbz2": "06_sbz2_credits_demo",
+                "credits_07_ghz1b": "07_ghz1_credits_demo_2",
+            }[route]
+            for field in HEADER_20:
+                if field in {"air", "rolling", "ground_mode"}:
+                    value = "0"
+                elif field in {"angle", "routine", "status_byte", "stand_on_obj"}:
+                    value = "00"
+                else:
+                    value = "0001" if field == "v_framecount" else "0000"
+                documents.append({
+                    "record_type": "observation", "demo_index": demo_index,
+                    "route": route, "candidate_directory": candidate_directory,
+                    "row": 0, "common_field": field, **field_sources[field],
+                    "raw_value": value,
+                })
+        preceding = "".join(json.dumps(item, sort_keys=True, separators=(",", ":")) + "\n"
+                            for item in documents).encode()
+        completion = {
+            "record_type": "completion", "capture_id": "capture-a",
+            "candidate_root": candidate_root, "all_eight_complete": True,
+            "route_rows": {route: 1 for route in routes}, "total_rows": 8,
+            "observation_count": 160, "preceding_byte_count": len(preceding),
+            "preceding_sha256": hashlib.sha256(preceding).hexdigest(),
+        }
+        path.write_bytes(preceding + (
+            json.dumps(completion, sort_keys=True, separators=(",", ":")) + "\n").encode())
+
+    @staticmethod
+    def write_documents(path: Path, documents: list[dict[str, object]]) -> None:
+        completion = documents[-1]
+        preceding = "".join(
+            json.dumps(item, sort_keys=True, separators=(",", ":")) + "\n"
+            for item in documents[:-1]).encode()
+        completion["observation_count"] = len(documents) - 2
+        completion["preceding_byte_count"] = len(preceding)
+        completion["preceding_sha256"] = hashlib.sha256(preceding).hexdigest()
+        path.write_bytes(preceding + (
+            json.dumps(completion, sort_keys=True, separators=(",", ":")) + "\n").encode())
+
+    def run_builder(self, *, raw_sidecar: Path | None = None, report: Path | None = None,
+                    evidence: Path | None = None) -> subprocess.CompletedProcess[str]:
+        return subprocess.run([
+            sys.executable, str(EVIDENCE_BUILDER), str(self.predecessor), str(self.candidate),
+            str(report or self.report), str(raw_sidecar or self.raw_sidecar),
+            str(evidence or self.evidence),
+        ], text=True, capture_output=True, check=False)
+
+    def run_verifier(self) -> subprocess.CompletedProcess[str]:
+        return subprocess.run([
+            sys.executable, str(EVIDENCE_VERIFIER), str(self.predecessor), str(self.candidate),
+            str(self.report), str(self.raw_sidecar), str(self.evidence),
+        ], text=True, capture_output=True, check=False)
 
 
 if __name__ == "__main__":

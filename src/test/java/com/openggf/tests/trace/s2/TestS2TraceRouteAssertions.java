@@ -1,6 +1,7 @@
 package com.openggf.tests.trace.s2;
 
 import com.openggf.tests.TestTempFiles;
+import com.openggf.tests.trace.TraceV5TestFixture;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.trace.TraceData;
 import org.junit.jupiter.api.Test;
@@ -42,7 +43,10 @@ class TestS2TraceRouteAssertions {
                                                        int romZoneId,
                                                        int metadataAct) throws IOException {
         S2TraceRouteAssertions.assertRoute(
-                TraceData.load(Path.of("src/test/resources/traces/s2").resolve(route)),
+                TraceData.load(createTraceDir(
+                        zoneSlug, engineZoneId, romZoneId, metadataAct,
+                        "{\"frame\":0,\"event\":\"zone_act_state\",\"actual_zone_id\":"
+                                + romZoneId + ",\"actual_act\":0,\"apparent_act\":0,\"game_mode\":12}")),
                 zoneSlug,
                 engineZoneId,
                 romZoneId,
@@ -53,7 +57,8 @@ class TestS2TraceRouteAssertions {
     void acceptsRouteWithFrameZeroZoneActMarker() throws IOException {
         Path dir = createTraceDir("""
             {"frame":0,"event":"zone_act_state","actual_zone_id":13,"actual_act":0,"apparent_act":0,"game_mode":12}
-            """);
+            """, "cpz", Sonic2ZoneConstants.ZONE_CPZ,
+                Sonic2ZoneConstants.ROM_ZONE_CPZ, 1);
 
         S2TraceRouteAssertions.assertRoute(
                 TraceData.load(dir),
@@ -67,7 +72,8 @@ class TestS2TraceRouteAssertions {
     void acceptsRouteWithFrameZeroGameplayStartCheckpoint() throws IOException {
         Path dir = createTraceDir("""
             {"frame":0,"event":"checkpoint","name":"gameplay_start","actual_zone_id":13,"actual_act":0,"apparent_act":0,"game_mode":12}
-            """);
+            """, "cpz", Sonic2ZoneConstants.ZONE_CPZ,
+                Sonic2ZoneConstants.ROM_ZONE_CPZ, 1);
 
         S2TraceRouteAssertions.assertRoute(
                 TraceData.load(dir),
@@ -81,7 +87,8 @@ class TestS2TraceRouteAssertions {
     void rejectsRouteWithoutFrameZeroGameplayMarker() throws IOException {
         Path dir = createTraceDir("""
             {"frame":1,"event":"checkpoint","name":"gameplay_start","actual_zone_id":13,"actual_act":0,"apparent_act":0,"game_mode":12}
-            """);
+            """, "cpz", Sonic2ZoneConstants.ZONE_CPZ,
+                Sonic2ZoneConstants.ROM_ZONE_CPZ, 1);
 
         assertThrows(AssertionError.class, () ->
                 S2TraceRouteAssertions.assertRoute(
@@ -95,7 +102,8 @@ class TestS2TraceRouteAssertions {
     @Test
     void rejectsRawRomZoneIdStoredAsCatalogZoneId() throws IOException {
         Path dir = TestTempFiles.createTempDirectory("s2-route-raw-zone");
-        writeMetadata(dir, Sonic2ZoneConstants.ROM_ZONE_CPZ, Sonic2ZoneConstants.ROM_ZONE_CPZ);
+        writeMetadata(dir, "cpz", Sonic2ZoneConstants.ROM_ZONE_CPZ,
+                Sonic2ZoneConstants.ROM_ZONE_CPZ, 1);
         writePhysics(dir);
         Files.writeString(dir.resolve("aux_state.jsonl"), """
             {"frame":0,"event":"zone_act_state","actual_zone_id":13,"actual_act":0,"apparent_act":0,"game_mode":12}
@@ -111,29 +119,39 @@ class TestS2TraceRouteAssertions {
     }
 
     private static Path createTraceDir(String auxState) throws IOException {
+        return createTraceDir("cpz", Sonic2ZoneConstants.ZONE_CPZ,
+                Sonic2ZoneConstants.ROM_ZONE_CPZ, 1, auxState);
+    }
+
+    private static Path createTraceDir(String auxState, String zone, int engineZoneId,
+                                       int romZoneId, int act) throws IOException {
+        return createTraceDir(zone, engineZoneId, romZoneId, act, auxState);
+    }
+
+    private static Path createTraceDir(String zone, int engineZoneId, int romZoneId,
+                                       int act, String auxState) throws IOException {
         Path dir = TestTempFiles.createTempDirectory("s2-route-ok");
-        writeMetadata(dir, Sonic2ZoneConstants.ZONE_CPZ, Sonic2ZoneConstants.ROM_ZONE_CPZ);
+        writeMetadata(dir, zone, engineZoneId, romZoneId, act);
         writePhysics(dir);
         Files.writeString(dir.resolve("aux_state.jsonl"), auxState);
         return dir;
     }
 
-    private static void writeMetadata(Path dir, int engineZoneId, int romZoneId) throws IOException {
+    private static void writeMetadata(Path dir, String zone, int engineZoneId,
+                                      int romZoneId, int act) throws IOException {
         Files.writeString(dir.resolve("metadata.json"), String.format("""
             {
               "game": "s2",
-              "zone": "cpz",
+              "zone": "%s",
               "zone_id": %d,
               "rom_zone_id": %d,
-              "act": 1,
+              "act": %d,
               "bk2_frame_offset": 1234,
               "trace_frame_count": 1,
               "start_x": "0x0060",
               "start_y": "0x0290",
               "recording_date": "2026-05-14",
-              "lua_script_version": "9.0-s2",
-              "trace_schema": 8,
-              "csv_version": 6,
+              "trace_schema": 5,
               "trace_profile": "level_gated_reset_aware",
               "bizhawk_version": "2.11",
               "genesis_core": "Genplus-gx",
@@ -144,12 +162,12 @@ class TestS2TraceRouteAssertions {
               "main_character": "sonic",
               "sidekicks": ["tails"]
             }
-            """, engineZoneId, romZoneId));
+            """, zone, engineZoneId, romZoneId, act));
     }
 
     private static void writePhysics(Path dir) throws IOException {
-        Files.writeString(dir.resolve("physics.csv"), """
-            0000,0000,0060,0290,0000,0000,0000,00,0,0,0
-            """);
+        Files.writeString(dir.resolve("physics.csv"),
+                TraceV5TestFixture.LEVEL_HEADER + "\n"
+                        + TraceV5TestFixture.levelRow(0, 0x0060, 0x0290) + "\n");
     }
 }

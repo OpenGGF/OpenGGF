@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using BizHawk.Headless.Gpgx;
 using Newtonsoft.Json.Linq;
 
 namespace OpenGGF.BizHawk.Headless.Tests
@@ -35,8 +37,17 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "S1 credits predecessor evidence keeps eight 20-column fixtures",
                 PredecessorEvidenceIsComplete));
             tests.Add(new TestMain.TestCase(
-                "S1 credits raw-host evidence is independent and hash-bound",
-                RawHostEvidenceIsIndependentAndHashBound));
+                "S1 credits raw-host sidecar streams canonical independent observations",
+                RawHostSidecarStreamsCanonicalIndependentObservations));
+            tests.Add(new TestMain.TestCase(
+                "S1 credits raw-host sidecar rejects order limits and seal failure",
+                RawHostSidecarRejectsOrderLimitsAndSealFailure));
+            tests.Add(new TestMain.TestCase(
+                "S1 credits CLI publication failure removes raw sidecar spool",
+                RunS1CreditsPublicationFailureRemovesRawSpool));
+            tests.Add(new TestMain.TestCase(
+                "S1 credits CLI seal failure quarantines published output",
+                RunS1CreditsSealFailureQuarantinesCandidate));
             tests.Add(new TestMain.TestCase(
                 "S1 credits captures twice with deterministic logical evidence",
                 CapturesTwiceWithDeterministicLogicalEvidence,
@@ -61,34 +72,236 @@ namespace OpenGGF.BizHawk.Headless.Tests
             }
         }
 
-        private static void RawHostEvidenceIsIndependentAndHashBound()
+        private static void RawHostSidecarStreamsCanonicalIndependentObservations()
         {
+            string root = TestScratch.CreateRootPath("credits-raw-unit");
+            string candidate = Path.Combine(root, "candidate");
+            string sidecarPath = Path.Combine(root, "evidence", "raw.jsonl");
+            Directory.CreateDirectory(candidate);
             var host = new FakeS1Host(null);
             host.Ram[S1Ram.Ctrl1] = 0x78;
             host.SetU16(S1Ram.PlayerBase + S1Ram.OffXPos, 0x1234);
             host.SetU16(S1Ram.PlayerBase + S1Ram.OffYPos, 0x5678);
             host.Ram[S1Ram.PlayerBase + S1Ram.OffStatus] = 0x06;
             host.Ram[S1Ram.PlayerBase + S1Ram.OffAngle] = 0x80;
-            var collector = new S1CreditsRawHostEvidenceCollector();
-            collector.Observe(3, 17, host);
-            string emitted = S1TraceCsvWriter.FormatRow(
-                17, S1InputMask.FromRomControllerByte(host.Ram[S1Ram.Ctrl1]), host);
+            try
+            {
+                using (var collector = new S1CreditsRawHostEvidenceCollector(
+                    sidecarPath, "capture-unit", candidate,
+                    RomIdentity.Sonic1Rev01Sha1))
+                {
+                    for (int demo = 0; demo < 8; demo++)
+                    {
+                        if (demo == 3)
+                        {
+                            host.SetU16(S1Ram.PlayerBase + S1Ram.OffXPos, 0x1234);
+                        }
+                        collector.Observe(demo, 0, host);
+                        collector.CompleteRoute(demo, 1);
+                        host.SetU16(S1Ram.PlayerBase + S1Ram.OffXPos, 0x9999);
+                    }
+                    collector.Seal(AllEightResult());
+                }
 
-            // Prove verification consumes the frozen raw observation, not a
-            // second read performed after the writer has run.
-            host.SetU16(S1Ram.PlayerBase + S1Ram.OffXPos, 0x9999);
-            S1CreditsRawHostEvidenceRecord record = collector.Verify(
-                3, "03_lz3_credits_demo", 17, "x", "player_x",
-                emitted, new string('A', 64));
-            AssertEx.Equal("$FFD008 u16be", record.RawSource);
-            AssertEx.Equal("1234", record.RawValue);
-            AssertEx.Equal("1234", record.EmittedValue);
-            AssertEx.Equal(new string('A', 64), record.CandidateLogicalPayloadSha256);
-            AssertEx.Throws<InvalidOperationException>(
-                () => collector.Verify(
-                    3, "03_lz3_credits_demo", 17, "x", "player_x",
-                    emitted.Replace(",1234,", ",9999,"), new string('A', 64)),
-                "raw-host mismatch");
+                string[] lines = File.ReadAllLines(sidecarPath);
+                AssertEx.Equal(162, lines.Length);
+                JObject header = JObject.Parse(lines[0]);
+                AssertEx.Equal("header", (string)header["record_type"]);
+                AssertEx.Equal("openggf-s1-credits-raw-observations-v1",
+                    (string)header["format"]);
+                AssertEx.Equal("capture-unit", (string)header["capture_id"]);
+                AssertEx.Equal(Path.GetFullPath(candidate),
+                    (string)header["candidate_root"]);
+
+                JObject x = JObject.Parse(lines[1 + 3 * 20 + 2]);
+                AssertEx.Equal("observation", (string)x["record_type"]);
+                AssertEx.Equal(3, (int)x["demo_index"]);
+                AssertEx.Equal("credits_03_lz3", (string)x["route"]);
+                AssertEx.Equal("x", (string)x["common_field"]);
+                AssertEx.Equal("0xFFFFD008", (string)x["ram_address"]);
+                AssertEx.Equal("big", (string)x["endianness"]);
+                AssertEx.Equal("1234", (string)x["raw_value"]);
+                AssertEx.Equal(null, x["emitted_value"]);
+                AssertEx.Equal(null, x["predecessor_value"]);
+                AssertEx.Equal(null, x["candidate_logical_sha256"]);
+
+                JObject completion = JObject.Parse(lines[lines.Length - 1]);
+                AssertEx.Equal("completion", (string)completion["record_type"]);
+                AssertEx.Equal(true, (bool)completion["all_eight_complete"]);
+                AssertEx.Equal(8, (int)completion["total_rows"]);
+                AssertEx.Equal(160, (int)completion["observation_count"]);
+                byte[] preceding = Encoding.UTF8.GetBytes(
+                    string.Join("\n", lines, 0, lines.Length - 1) + "\n");
+                AssertEx.Equal(preceding.Length,
+                    (long)completion["preceding_byte_count"]);
+                AssertEx.Equal(Sha256(preceding),
+                    (string)completion["preceding_sha256"]);
+            }
+            finally
+            {
+                if (Directory.Exists(root)) Directory.Delete(root, true);
+            }
+        }
+
+        private static void RawHostSidecarRejectsOrderLimitsAndSealFailure()
+        {
+            string root = TestScratch.CreateRootPath("credits-raw-failures");
+            string candidate = Path.Combine(root, "candidate");
+            Directory.CreateDirectory(candidate);
+            try
+            {
+                string order = Path.Combine(root, "order.jsonl");
+                using (var collector = new S1CreditsRawHostEvidenceCollector(
+                    order, "order", candidate, RomIdentity.Sonic1Rev01Sha1))
+                {
+                    AssertEx.Throws<InvalidOperationException>(
+                        () => collector.Observe(1, 0, new FakeS1Host(null)),
+                        "expected demo 0 row 0");
+                }
+                AssertEx.Equal(false, File.Exists(order));
+
+                string count = Path.Combine(root, "count.jsonl");
+                using (var collector = new S1CreditsRawHostEvidenceCollector(
+                    count, "count", candidate, RomIdentity.Sonic1Rev01Sha1,
+                    19, 64 * 1024 * 1024, LibcLinkOperation.Instance))
+                {
+                    AssertEx.Throws<InvalidOperationException>(
+                        () => collector.Observe(0, 0, new FakeS1Host(null)),
+                        "86,400-observation limit");
+                }
+                AssertEx.Equal(false, File.Exists(count));
+
+                string bytes = Path.Combine(root, "bytes.jsonl");
+                AssertEx.Throws<InvalidOperationException>(
+                    () => new S1CreditsRawHostEvidenceCollector(
+                        bytes, "bytes", candidate, RomIdentity.Sonic1Rev01Sha1,
+                        86400, 1, LibcLinkOperation.Instance),
+                    "64-MiB limit");
+                AssertEx.Equal(false, File.Exists(bytes));
+                AssertEx.Equal(0, Directory.GetFiles(
+                    root, "bytes.jsonl.tmp.*", SearchOption.AllDirectories).Length);
+
+                string abandoned = Path.Combine(root, "abandoned.jsonl");
+                using (var collector = new S1CreditsRawHostEvidenceCollector(
+                    abandoned, "abandoned", candidate,
+                    RomIdentity.Sonic1Rev01Sha1))
+                {
+                    RecordOneRowAllRoutes(collector, new FakeS1Host(null));
+                    // Models capture or candidate publication failure: no
+                    // completion/seal is legal, so disposal removes the spool.
+                }
+                AssertEx.Equal(false, File.Exists(abandoned));
+
+                string sealedPath = Path.Combine(root, "seal.jsonl");
+                using (var collector = new S1CreditsRawHostEvidenceCollector(
+                    sealedPath, "seal", candidate, RomIdentity.Sonic1Rev01Sha1,
+                    86400, 64 * 1024 * 1024, new FailingLinkOperation()))
+                {
+                    RecordOneRowAllRoutes(collector, new FakeS1Host(null));
+                    AssertEx.Throws<InvalidOperationException>(
+                        () => global::BizHawk.Headless.Gpgx.Program
+                            .SealCreditsRawEvidenceAfterCandidatePublication(
+                                collector, AllEightResult(), candidate),
+                        "QUARANTINED");
+                }
+                AssertEx.Equal(true, Directory.Exists(candidate));
+                AssertEx.Equal(false, File.Exists(sealedPath));
+
+                string raced = Path.Combine(root, "raced.jsonl");
+                using (var collector = new S1CreditsRawHostEvidenceCollector(
+                    raced, "raced", candidate, RomIdentity.Sonic1Rev01Sha1))
+                {
+                    RecordOneRowAllRoutes(collector, new FakeS1Host(null));
+                    File.WriteAllText(raced, "competing-writer");
+                    AssertEx.Throws<IOException>(
+                        () => collector.Seal(AllEightResult()),
+                        "will not be replaced");
+                }
+                AssertEx.Equal("competing-writer", File.ReadAllText(raced));
+                File.Delete(raced);
+                AssertEx.Equal(0, Directory.GetFiles(
+                    root, "*.tmp.*", SearchOption.AllDirectories).Length);
+            }
+            finally
+            {
+                if (Directory.Exists(root)) Directory.Delete(root, true);
+            }
+        }
+
+        private static void RunS1CreditsPublicationFailureRemovesRawSpool()
+        {
+            string root = TestScratch.CreateRootPath("credits-cli-publication-failure");
+            string candidate = Path.Combine(root, "candidate");
+            string sidecar = Path.Combine(root, "raw", "publication.jsonl");
+            Directory.CreateDirectory(Path.GetDirectoryName(sidecar));
+            try
+            {
+                CommandLineOptions options = CommandLineOptions.Parse(new[]
+                {
+                    "--mode", "trace", "--rom", "s1.gen", "--output", candidate,
+                    "--trace-profile", "credits_demo", "--credits-target", "all",
+                    "--credits-raw-observations", sidecar,
+                    "--credits-raw-observation-id", "publication-failure"
+                });
+                int result = global::BizHawk.Headless.Gpgx.Program
+                    .RunS1CreditsDemoForTests(
+                        options, new Version(2, 11),
+                        RomIdentity.Sonic1Rev01Sha1, new byte[0],
+                        new StringWriter(), new StringWriter(),
+                        () => new NoReplacePublisher(
+                            new AlwaysFailLinkOperation(), File.Delete,
+                            new TracePayloadCompressor(0)),
+                        DefaultRawEvidenceFactory,
+                        StageEightSyntheticCredits);
+                AssertEx.Equal(1, result);
+                AssertEx.Equal(false, File.Exists(sidecar));
+                AssertEx.Equal(0, TemporaryFiles(root).Length);
+                AssertEx.Equal(0, PublishedFiles(candidate).Length);
+            }
+            finally
+            {
+                if (Directory.Exists(root)) Directory.Delete(root, true);
+            }
+        }
+
+        private static void RunS1CreditsSealFailureQuarantinesCandidate()
+        {
+            string root = TestScratch.CreateRootPath("credits-cli-seal-failure");
+            string candidate = Path.Combine(root, "candidate");
+            string sidecar = Path.Combine(root, "raw", "seal.jsonl");
+            Directory.CreateDirectory(Path.GetDirectoryName(sidecar));
+            try
+            {
+                CommandLineOptions options = CommandLineOptions.Parse(new[]
+                {
+                    "--mode", "trace", "--rom", "s1.gen", "--output", candidate,
+                    "--trace-profile", "credits_demo", "--credits-target", "all",
+                    "--credits-raw-observations", sidecar,
+                    "--credits-raw-observation-id", "seal-failure"
+                });
+                int result = global::BizHawk.Headless.Gpgx.Program
+                    .RunS1CreditsDemoForTests(
+                        options, new Version(2, 11),
+                        RomIdentity.Sonic1Rev01Sha1, new byte[0],
+                        new StringWriter(), new StringWriter(),
+                        () => new NoReplacePublisher(
+                            new TracePayloadCompressor(0)),
+                        (path, id, candidateRoot, sha1) =>
+                            new S1CreditsRawHostEvidenceCollector(
+                                path, id, candidateRoot, sha1,
+                                S1CreditsRawHostEvidenceCollector.MaximumObservations,
+                                S1CreditsRawHostEvidenceCollector.MaximumBytes,
+                                new AlwaysFailLinkOperation()),
+                        StageEightSyntheticCredits);
+                AssertEx.Equal(1, result);
+                AssertEx.Equal(false, File.Exists(sidecar));
+                AssertEx.Equal(0, TemporaryFiles(root).Length);
+                AssertEx.Equal(true, PublishedFiles(candidate).Length > 0);
+            }
+            finally
+            {
+                if (Directory.Exists(root)) Directory.Delete(root, true);
+            }
         }
 
         private static void CapturesTwiceWithDeterministicLogicalEvidence()
@@ -106,57 +319,51 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
             string first = TestScratch.CreateRootPath("credits-determinism-a");
             string second = TestScratch.CreateRootPath("credits-determinism-b");
+            string firstSidecar = first + "-raw.jsonl";
+            string secondSidecar = second + "-raw.jsonl";
             try
             {
-                var firstEvidence = new S1CreditsRawHostEvidenceCollector();
-                var secondEvidence = new S1CreditsRawHostEvidenceCollector();
-                CaptureAll(romPath, first, firstEvidence);
-                CaptureAll(romPath, second, secondEvidence);
+                CaptureAll(romPath, first, firstSidecar, "real-rom-a");
+                CaptureAll(romPath, second, secondSidecar, "real-rom-b");
                 AssertDeterministicCandidate(first, second);
                 AssertDynamicArtEvidence(first);
                 AssertDynamicArtEvidence(second);
-                AssertFirstDivergencesMatchRawHost(first, firstEvidence);
-                AssertFirstDivergencesMatchRawHost(second, secondEvidence);
+                AssertFirstDivergencesMatchRawHost(first, firstSidecar);
+                AssertFirstDivergencesMatchRawHost(second, secondSidecar);
+                AssertObservationStreamsEqual(firstSidecar, secondSidecar);
             }
             finally
             {
                 if (Directory.Exists(first)) Directory.Delete(first, true);
                 if (Directory.Exists(second)) Directory.Delete(second, true);
+                if (File.Exists(firstSidecar)) File.Delete(firstSidecar);
+                if (File.Exists(secondSidecar)) File.Delete(secondSidecar);
             }
         }
 
         private static void CaptureAll(
             string romPath,
             string outputRoot,
-            S1CreditsRawHostEvidenceCollector evidence)
+            string sidecarPath,
+            string captureId)
         {
-            var publisher = new NoReplacePublisher(new TracePayloadCompressor(0));
-            NoReplacePublisher.IncrementalStagingSession session = null;
-            NoReplacePublisher.StagedPublicationSet staged = null;
-            try
+            var stdout = new StringWriter(CultureInfo.InvariantCulture);
+            var stderr = new StringWriter(CultureInfo.InvariantCulture);
+            int exitCode = global::BizHawk.Headless.Gpgx.Program.Run(new[]
             {
-                session = publisher.OpenSession(outputRoot);
-                using (IGpgxHost host = GpgxHost.Open(
-                    romPath, GpgxHost.CreateGhz1SyncSettings()))
-                using (var sink = new S1CreditsDemoCollectionSink(session))
-                {
-                    S1CreditsDemoCaptureResult result =
-                        S1CreditsDemoCaptureRunner.Capture(
-                            host, host as IMainRamWriter, null,
-                            "2000-01-02", sink, File.ReadAllBytes(romPath),
-                            evidence);
-                    AssertEx.Equal(8, result.CapturedIndices.Count);
-                }
-                staged = session.Complete();
-                session = null;
-                staged.Publish();
-                staged = null;
-            }
-            finally
-            {
-                if (staged != null) staged.Dispose();
-                if (session != null) session.Dispose();
-            }
+                "--mode", "trace",
+                "--rom", romPath,
+                "--output", outputRoot,
+                "--trace-profile", "credits_demo",
+                "--credits-target", "all",
+                "--credits-raw-observations", sidecarPath,
+                "--credits-raw-observation-id", captureId
+            }, stdout, stderr);
+            AssertEx.Equal(string.Empty, stderr.ToString());
+            AssertEx.Equal(0, exitCode);
+            AssertContains(stdout.ToString(),
+                "Credits raw observations: " + Path.GetFullPath(sidecarPath));
+            AssertEx.Equal(true, File.Exists(sidecarPath));
         }
 
         private static void AssertDeterministicCandidate(
@@ -174,12 +381,14 @@ namespace OpenGGF.BizHawk.Headless.Tests
                     first, CandidateDirectories[demo]);
                 string secondDirectory = Path.Combine(
                     second, CandidateDirectories[demo]);
-                AssertEx.Equal(
-                    File.ReadAllText(Path.Combine(firstDirectory, "metadata.json")),
-                    File.ReadAllText(Path.Combine(secondDirectory, "metadata.json")));
-                AssertContains(
-                    File.ReadAllText(Path.Combine(firstDirectory, "metadata.json")),
-                    "\"recording_date\": \"2000-01-02\"");
+                JObject firstMetadata = JObject.Parse(File.ReadAllText(
+                    Path.Combine(firstDirectory, "metadata.json")));
+                JObject secondMetadata = JObject.Parse(File.ReadAllText(
+                    Path.Combine(secondDirectory, "metadata.json")));
+                AssertEx.Equal(true, firstMetadata["recording_date"] != null);
+                firstMetadata.Remove("recording_date");
+                secondMetadata.Remove("recording_date");
+                AssertEx.Equal(firstMetadata.ToString(), secondMetadata.ToString());
                 AssertBytesEqual(
                     ReadGzipBytes(Path.Combine(firstDirectory, "physics.csv.gz")),
                     ReadGzipBytes(Path.Combine(secondDirectory, "physics.csv.gz")));
@@ -191,8 +400,9 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
         private static void AssertFirstDivergencesMatchRawHost(
             string candidateRoot,
-            S1CreditsRawHostEvidenceCollector evidence)
+            string sidecarPath)
         {
+            Dictionary<string, JObject> evidence = ReadRawObservations(sidecarPath);
             string predecessorRoot = Path.Combine(EndToEndTests.RepositoryRoot,
                 "src", "test", "resources", "traces", "s1");
             string[] mapped =
@@ -229,20 +439,55 @@ namespace OpenGGF.BizHawk.Headless.Tests
                         if (seen.Contains(oldHeader[column])) continue;
                         string emitted = newFields[newIndex[mapped[column]]];
                         if (oldFields[column] == emitted) continue;
-                        S1CreditsRawHostEvidenceRecord record = evidence.Verify(
-                            demo, CandidateDirectories[demo], line - 1,
-                            oldHeader[column], mapped[column], newLines[line],
-                            logicalHash);
-                        AssertEx.Equal(emitted, record.RawValue);
-                        AssertEx.Equal(emitted, record.EmittedValue);
-                        AssertEx.Equal(logicalHash,
-                            record.CandidateLogicalPayloadSha256);
+                        string key = demo + ":" + (line - 1) + ":"
+                            + oldHeader[column];
+                        JObject record = evidence[key];
+                        AssertEx.Equal(emitted, (string)record["raw_value"]);
+                        AssertEx.Equal(null, record["emitted_value"]);
+                        AssertEx.Equal(null, record["candidate_logical_sha256"]);
                         seen.Add(oldHeader[column]);
                     }
                 }
                 // Constant-zero v_framecount guarantees at least one
                 // independently verified predecessor divergence per route.
                 AssertEx.Equal(true, seen.Contains("v_framecount"));
+            }
+        }
+
+        private static Dictionary<string, JObject> ReadRawObservations(
+            string sidecarPath)
+        {
+            string[] lines = File.ReadAllLines(sidecarPath);
+            AssertEx.Equal(true, lines.Length > 2);
+            JObject completion = JObject.Parse(lines[lines.Length - 1]);
+            byte[] preceding = Encoding.UTF8.GetBytes(
+                string.Join("\n", lines, 0, lines.Length - 1) + "\n");
+            AssertEx.Equal(preceding.Length,
+                (long)completion["preceding_byte_count"]);
+            AssertEx.Equal(Sha256(preceding),
+                (string)completion["preceding_sha256"]);
+            var result = new Dictionary<string, JObject>(StringComparer.Ordinal);
+            for (int index = 1; index < lines.Length - 1; index++)
+            {
+                JObject item = JObject.Parse(lines[index]);
+                string key = ((int)item["demo_index"]).ToString()
+                    + ":" + ((int)item["row"]).ToString()
+                    + ":" + (string)item["common_field"];
+                result.Add(key, item);
+            }
+            AssertEx.Equal((int)completion["observation_count"], result.Count);
+            return result;
+        }
+
+        private static void AssertObservationStreamsEqual(
+            string firstSidecar, string secondSidecar)
+        {
+            Dictionary<string, JObject> first = ReadRawObservations(firstSidecar);
+            Dictionary<string, JObject> second = ReadRawObservations(secondSidecar);
+            AssertEx.Equal(first.Count, second.Count);
+            foreach (KeyValuePair<string, JObject> pair in first)
+            {
+                AssertEx.Equal(pair.Value.ToString(), second[pair.Key].ToString());
             }
         }
 
@@ -334,6 +579,80 @@ namespace OpenGGF.BizHawk.Headless.Tests
             {
                 throw new InvalidOperationException(
                     "Expected text to contain '" + expected + "' but was '" + actual + "'.");
+            }
+        }
+
+        private static S1CreditsDemoCaptureResult AllEightResult()
+        {
+            return new S1CreditsDemoCaptureResult(
+                new List<int> { 0, 1, 2, 3, 4, 5, 6, 7 });
+        }
+
+        private static void RecordOneRowAllRoutes(
+            S1CreditsRawHostEvidenceCollector collector,
+            IGpgxHost host)
+        {
+            for (int demo = 0; demo < 8; demo++)
+            {
+                collector.Observe(demo, 0, host);
+                collector.CompleteRoute(demo, 1);
+            }
+        }
+
+        private static S1CreditsRawHostEvidenceCollector
+            DefaultRawEvidenceFactory(
+                string path, string id, string candidateRoot, string sha1)
+        {
+            return new S1CreditsRawHostEvidenceCollector(
+                path, id, candidateRoot, sha1);
+        }
+
+        private static S1CreditsDemoCaptureResult StageEightSyntheticCredits(
+            S1CreditsRawHostEvidenceCollector rawEvidence,
+            S1CreditsDemoCollectionSink sink)
+        {
+            if (rawEvidence != null)
+            {
+                RecordOneRowAllRoutes(rawEvidence, new FakeS1Host(null));
+            }
+            foreach (S1CreditsDemoDefinition demo in S1CreditsDemoCatalog.All())
+            {
+                TextWriter aux;
+                TextWriter physics = sink.Begin(demo, out aux);
+                physics.Write(S1TraceCsvWriter.Header);
+                physics.Write('\n');
+                aux.Write("{\"event\":\"synthetic\"}\n");
+                sink.Complete("{}\n");
+            }
+            return AllEightResult();
+        }
+
+        private static string[] TemporaryFiles(string root)
+        {
+            return Directory.GetFiles(
+                root, "*.tmp.*", SearchOption.AllDirectories);
+        }
+
+        private static string[] PublishedFiles(string root)
+        {
+            return Directory.Exists(root)
+                ? Directory.GetFiles(root, "*", SearchOption.AllDirectories)
+                : new string[0];
+        }
+
+        private sealed class FailingLinkOperation : ILinkOperation
+        {
+            public void Create(string temporary, string finalPath)
+            {
+                throw new IOException("synthetic sidecar seal failure");
+            }
+        }
+
+        private sealed class AlwaysFailLinkOperation : ILinkOperation
+        {
+            public void Create(string temporary, string finalPath)
+            {
+                throw new IOException("synthetic candidate publication failure");
             }
         }
 

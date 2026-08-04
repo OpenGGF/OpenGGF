@@ -182,6 +182,11 @@ namespace OpenGGF.BizHawk.Headless
                     if (ExactGameMode(host) != DemoGameMode)
                     {
                         segment.Finish(host, recordingDate, dynamicArt, true);
+                        if (rawEvidence != null)
+                        {
+                            rawEvidence.CompleteRoute(
+                                segment.Demo.Index, segment.TraceFrames);
+                        }
                         captured.Add(segment.Demo.Index);
                         if (!target.HasValue) nextExpected++;
                         segment = null;

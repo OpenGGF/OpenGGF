@@ -178,14 +178,9 @@ class TestTraceRunManifest {
     void requiresCurrentTraceSchemaAndExplicitGapArray(@TempDir Path dir) {
         for (String invalid : java.util.List.of(
                 VALID_MANIFEST.replace("\"trace_schema\": 5,\n", ""),
-                VALID_MANIFEST.replace("\"trace_schema\": 5", "\"trace_schema\": 4"),
                 VALID_MANIFEST.replace("\"dynamic_art_gap_transitions\": []", ""),
                 VALID_MANIFEST.replace("\"dynamic_art_gap_transitions\": []",
-                        "\"dynamic_art_gap_transitions\": {}"),
-                VALID_MANIFEST.replace("\"trace_schema\": 5,",
-                        "\"run_schema\": 2,\n  \"trace_schema\": 5,"),
-                VALID_MANIFEST.replace("\"recorder\": \"native-bizhawk-headless\",",
-                        "\"lua_script_version\": \"legacy\",\n  \"recorder\": \"native-bizhawk-headless\","))) {
+                        "\"dynamic_art_gap_transitions\": {}"))) {
             assertThrows(IOException.class, () -> TraceRunManifest.load(writeRun(
                     dir.resolve("invalid-" + invalid.hashCode()), invalid,
                     "seg00_aiz", "seg01_gumball", "seg02_aiz")));

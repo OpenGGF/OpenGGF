@@ -168,6 +168,14 @@ for this profile. The candidate root must not exist and must never be a
 canonical fixture path. All selected directories are staged as one no-replace,
 forced-compression transaction; only the publication workflow may install them.
 
+For the one-time credits migration evidence, pass
+`--credits-raw-observations <path>` and the required printable-ASCII
+`--credits-raw-observation-id <id>` together with `--credits-target all`.
+The JSONL sidecar is streamed from raw host reads outside both the candidate and
+installed fixture roots, sealed only after candidate publication, and is never
+replaced. A failed capture or seal leaves the final sidecar absent; a seal
+failure quarantines the already-published scratch candidate.
+
 S1/S2 player-art audit is mandatory. Standalone captures arm with an empty
 submitted ledger. S1 may carry only an unpublished staging preparation; it
 receives no transfer id or manifest descriptor until a verified VBlank probe

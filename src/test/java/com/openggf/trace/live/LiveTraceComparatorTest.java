@@ -9,6 +9,7 @@ import com.openggf.trace.TraceEvent;
 import com.openggf.trace.TraceFixtures;
 import com.openggf.trace.TraceFrame;
 import com.openggf.tests.SingletonResetExtension;
+import com.openggf.tests.trace.TraceV5TestFixture;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -198,8 +199,7 @@ class LiveTraceComparatorTest {
         when(sprite.getGroundMode()).thenReturn(GroundMode.GROUND);
         when(sprite.getXSubpixelRaw()).thenReturn(1);
         when(sprite.getYSubpixelRaw()).thenReturn(0);
-        TraceFrame frame = TraceFrame.parseCsvRow(
-                "0000,0000,0000,0000,0000,0000,0000,00,0,0,0,0000,0000,02,0000,0000,0,00,0000,FF,0000,0000");
+        TraceFrame frame = TraceFrame.parseCsvRow(TraceV5TestFixture.levelRow(0));
         LiveTraceComparator c = new LiveTraceComparator(
                 stubTrace(List.of(frame)), ToleranceConfig.DEFAULT, 0, () -> sprite);
 
