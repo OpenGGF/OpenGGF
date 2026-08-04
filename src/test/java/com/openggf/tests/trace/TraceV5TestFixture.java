@@ -2,6 +2,7 @@ package com.openggf.tests.trace;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.openggf.tests.TestTempFiles;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -57,7 +58,7 @@ public final class TraceV5TestFixture {
      * longer accepts. Payload files are copied byte-for-byte.
      */
     public static Path canonicalizeInstalledTrace(Path source) throws IOException {
-        Path target = Files.createTempDirectory("trace-v5-installed-");
+        Path target = TestTempFiles.createTempDirectory("trace-v5-installed-");
         ObjectNode metadata = (ObjectNode) new ObjectMapper().readTree(
                 Files.readString(source.resolve("metadata.json")));
         for (String removed : new String[]{

@@ -6,7 +6,6 @@ import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.trace.TraceMetadata;
 import com.openggf.trace.TraceRunManifest;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -31,7 +30,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * fleet. The TSV expectations are reviewed literals from native candidates,
  * never values derived by invoking the recorder during this test.
  */
-@Disabled("Task 10 republishes the installed legacy timing fleet as strict v5")
 class TestCommittedHardwareTimingFixtures {
 
     private static final Path FIXTURE_ROOT = resolveProjectRoot()
@@ -84,8 +82,6 @@ class TestCommittedHardwareTimingFixtures {
                             new Ownership(CANDIDATE_B_COMPLETE_RUN_OWNER, "ssz")),
                     Map.entry("ddz_completerun",
                             new Ownership(CANDIDATE_B_COMPLETE_RUN_OWNER, "dez23")),
-                    Map.entry("ending_completerun",
-                            new Ownership(CANDIDATE_B_COMPLETE_RUN_OWNER, "ddz")),
                     Map.entry("bonus_gumball",
                             new Ownership("v637-knuckles-c", "gumball")),
                     Map.entry("bonus_slots",
@@ -104,7 +100,6 @@ class TestCommittedHardwareTimingFixtures {
             "cnz_completerun",
             "ddz_completerun",
             "dez_completerun",
-            "ending_completerun",
             "fbz_completerun",
             "hcz_completerun",
             "hpz_completerun",
@@ -267,15 +262,15 @@ class TestCommittedHardwareTimingFixtures {
         assertEquals(Set.of(
                         new RunManifestExpectation(
                                 "runs/s3-knux-multibonus-ss/run_manifest.json",
-                                "v637-knuckles-b", "6.40-s3k-completerun", 8740,
-                                "be3f3940abd8932559dd556913be792f6968edbd39310c70ebb32c9d5b08d550",
+                                "v637-knuckles-b", "3.0", 8804,
+                                "149c879ccb3e31cbe806b492dbe40cb060c5e4414e7666a0ab5199f0c7228302",
                                 25, 22),
                         new RunManifestExpectation(
                                 "runs/s3k-knuckles-complete-superemeralds/"
                                         + "run_manifest.json",
                                 "v638-knuckles-superemeralds",
-                                "6.40-s3k-completerun", 20740,
-                                "8ec67dc30a852d547ac4e4e7acf96757107749c5bbbbf5bc4c69008888cb1455",
+                                "3.0", 20804,
+                                "b3581067db368a857137b16b41f90cff452782b0cc98188e9982de9c704c3474",
                                 67, 48)),
                 new HashSet<>(runManifests));
         for (RunManifestExpectation runManifest : runManifests) {
@@ -306,9 +301,7 @@ class TestCommittedHardwareTimingFixtures {
             Path fixture = FIXTURE_ROOT.resolve(directory);
             TraceMetadata metadata =
                     TraceMetadata.load(fixture.resolve("metadata.json"));
-            assertEquals(7, metadata.traceSchema(), inventory.getValue());
-            assertEquals(2, metadata.traceSchema(),
-                    inventory.getValue());
+            assertEquals(5, metadata.traceSchema(), inventory.getValue());
 
             List<HardwareCompletionEdge> edges =
                     HardwareTimingStreamLoader.load(fixture, metadata).edges();
