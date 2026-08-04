@@ -12,14 +12,54 @@ import java.time.ZoneOffset;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class LiveCaptureRecorderFactoryTest {
+
+    /**
+     * Pins every capture key the factory reads, not just the ones an assertion
+     * names. {@code SonicConfigurationService.getInstance()} resolves against
+     * the developer's real {@code config.yaml}, so anything left unpinned is
+     * ambient: {@code capture.container} decides the asserted file extension
+     * outright, and a non-default codec or preset would make
+     * {@code create()} throw. The result was a test that passed or failed on
+     * whoever's machine ran it.
+     */
+    private static void pinCaptureConfig(SonicConfigurationService config) {
+        config.setSessionOverride(SonicConfiguration.CAPTURE_OUTPUT_DIR, "target/my-live");
+        config.setSessionOverride(SonicConfiguration.CAPTURE_CONTAINER, "mkv");
+        config.setSessionOverride(SonicConfiguration.CAPTURE_CODEC, "ffv1");
+        config.setSessionOverride(SonicConfiguration.CAPTURE_AUDIO_CODEC, "flac");
+        config.setSessionOverride(SonicConfiguration.CAPTURE_ENCODER_THREADS, 0);
+        config.setSessionOverride(SonicConfiguration.CAPTURE_ENCODER_PRESET, "");
+        config.setSessionOverride(SonicConfiguration.CAPTURE_QUEUE_BUDGET_MB, 192);
+        config.setSessionOverride(SonicConfiguration.CAPTURE_FFMPEG_PASS1_ARGS, "default");
+        config.setSessionOverride(SonicConfiguration.CAPTURE_FFMPEG_PASS2_ARGS, "default");
+    }
+
     @Test void usesConfiguredDirectoryFixedUtcTimestampAndLiveLabel() {
         SonicConfigurationService config = SonicConfigurationService.getInstance();
         try {
-            config.setSessionOverride(SonicConfiguration.CAPTURE_OUTPUT_DIR, "target/my-live");
+            pinCaptureConfig(config);
             Clock clock = Clock.fixed(Instant.parse("2026-07-23T10:11:12.345Z"), ZoneOffset.UTC);
             CaptureRecorder recorder = new LiveCaptureRecorderFactory(config, clock, "ffmpeg")
                     .create(new CaptureViewport(4, 5, 320, 224), 60);
             assertEquals(Path.of("target/my-live/capture-live-20260723-101112-345.mkv"),
+                    recorder.outputFile());
+        } finally {
+            config.clearSessionOverrides();
+        }
+    }
+
+    @Test void containerComesFromConfigRatherThanAFixedExtension() {
+        SonicConfigurationService config = SonicConfigurationService.getInstance();
+        try {
+            pinCaptureConfig(config);
+            config.setSessionOverride(SonicConfiguration.CAPTURE_CONTAINER, "mp4");
+            config.setSessionOverride(SonicConfiguration.CAPTURE_CODEC, "h264");
+            Clock clock = Clock.fixed(Instant.parse("2026-07-23T10:11:12.345Z"), ZoneOffset.UTC);
+
+            CaptureRecorder recorder = new LiveCaptureRecorderFactory(config, clock, "ffmpeg")
+                    .create(new CaptureViewport(4, 5, 320, 224), 60);
+
+            assertEquals(Path.of("target/my-live/capture-live-20260723-101112-345.mp4"),
                     recorder.outputFile());
         } finally {
             config.clearSessionOverrides();
