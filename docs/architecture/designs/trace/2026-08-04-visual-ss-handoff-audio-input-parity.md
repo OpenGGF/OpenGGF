@@ -38,6 +38,13 @@ therefore do not pass through the ordinary level admission callback. The
 coordinator still receives the structural destination-row count (zero or one)
 from the shared cursor; it is never capped or rebased after production.
 
+The release callback is also the authoritative structural signal that the
+current title card is no longer pending. If a level-load request flag remains
+latched while the results-return presentation is being torn down, the release
+observation clears only that admission predicate; it does not mutate level
+state or consume trace data. A new level-load request still blocks admission
+until its own title card releases.
+
 ## Invariants
 
 * Already-faded and newly-fading transitions each issue one entry SFX.

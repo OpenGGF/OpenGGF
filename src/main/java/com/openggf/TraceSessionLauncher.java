@@ -832,6 +832,20 @@ public final class TraceSessionLauncher {
     private RunPlaybackObservation captureRunObservation(
             GameMode mode, int rowsConsumed, boolean lagOnlyContinuation) {
         var levelManager = GameServices.level();
+        return captureRunObservation(mode, rowsConsumed, lagOnlyContinuation,
+                levelManager.isTitleCardRequested());
+    }
+
+    /** Captures the release seam after the title-card owner has relinquished control. */
+    private RunPlaybackObservation captureRunObservationAfterTitleCardRelease(
+            GameMode mode, int rowsConsumed, boolean lagOnlyContinuation) {
+        return captureRunObservation(mode, rowsConsumed, lagOnlyContinuation, false);
+    }
+
+    private RunPlaybackObservation captureRunObservation(
+            GameMode mode, int rowsConsumed, boolean lagOnlyContinuation,
+            boolean initialTitleCardPending) {
+        var levelManager = GameServices.level();
         RunPlaybackObservation.LevelIdentity levelIdentity =
                 levelManager.getCurrentLevel() != null
                         ? new RunPlaybackObservation.LevelIdentity(
@@ -857,7 +871,7 @@ public final class TraceSessionLauncher {
                 Math.max(0, GameServices.playbackDebug().getCursorFrame()),
                 runAdmittedStepOrdinal,
                 levelIdentity,
-                levelManager.isTitleCardRequested(),
+                initialTitleCardPending,
                 bonusIdentity,
                 specialStageIndex,
                 productionIterationInProgress,
@@ -1735,7 +1749,7 @@ public final class TraceSessionLauncher {
         session.forwardLatchedRunBoundary(mode);
         int rowsConsumed = session.destinationRowsConsumedForAdmission();
         session.applyRunCoordinatorActions(session.runCoordinator.beforeAdmission(
-                session.captureRunObservation(mode, rowsConsumed,
+                session.captureRunObservationAfterTitleCardRelease(mode, rowsConsumed,
                         session.isLagOnlySameLevelContinuation())));
     }
 
