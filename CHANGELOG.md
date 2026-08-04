@@ -4,14 +4,15 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
 - Feature/Perf: capture encoder speed is now tunable, and an overloaded encoder
-  says so. `capture.encoderPreset` exposes the x264/x265 speed preset — the
-  lever that decides whether lossless H.265 keeps up, since libx265 already
-  threads internally and `medium` leaves almost no headroom; `ultrafast` is
-  roughly 3.5x faster and still byte-exact. `capture.encoderThreads` exposes
-  ffmpeg's `-threads` (0 = auto), and FFV1 is now sliced so threads can be used
-  by it at all. Exhausting the encoder queue logs a rate-limited warning with
-  the blocked time and a one-line summary when the recording stops, rather than
-  silently stalling the game thread.
+  says so. `capture.encoderPreset` exposes the x264/x265 speed preset and now
+  defaults to `fast`: libx265's own `medium` default keeps up with ordinary
+  play but has little headroom for high-motion content such as fast-forwarded
+  trace playback. It is the lever that matters, since libx265 already threads
+  internally; presets never affect losslessness. `capture.encoderThreads`
+  exposes ffmpeg's `-threads` (0 = auto), and FFV1 is now sliced so threads can
+  be used by it at all. Exhausting the encoder queue logs a rate-limited
+  warning with the blocked time and a one-line summary when the recording
+  stops, rather than silently stalling the game thread.
 - Perf: live viewport recording no longer allocates two full frames plus a
   native read buffer per captured frame. The pixel grabber now reuses its
   buffers — which is exactly the producer-side reuse `CapturedFrame`'s

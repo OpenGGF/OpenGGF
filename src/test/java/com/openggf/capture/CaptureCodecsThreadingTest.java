@@ -1,7 +1,11 @@
 package com.openggf.capture;
 
+import com.openggf.configuration.SonicConfiguration;
+import com.openggf.configuration.SonicConfigurationService;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -87,6 +91,26 @@ class CaptureCodecsThreadingTest {
         assertTrue(failure.getMessage().contains("turbo"), failure.getMessage());
         assertTrue(failure.getMessage().contains("ultrafast"),
                 "the message must list what is accepted: " + failure.getMessage());
+    }
+
+    /**
+     * Resolved against an EMPTY config directory, not the process singleton:
+     * the singleton reads the developer's real config.yaml, which is exactly
+     * how this suite's sibling factory test used to pass or fail depending on
+     * whose machine ran it.
+     */
+    @Test
+    void shippedPresetDefaultIsFastAndReachesOnlyTheX26xCodecs(@TempDir Path emptyConfigDir) {
+        String shipped = SonicConfigurationService.createStandalone(emptyConfigDir)
+                .getString(SonicConfiguration.CAPTURE_ENCODER_PRESET);
+
+        assertEquals("fast", shipped,
+                "libx265's own medium default has little headroom for high-motion"
+                        + " content such as fast-forwarded trace playback");
+        assertTrue(CaptureCodecs.PRESETS.contains(shipped));
+        assertTrue(CaptureCodecs.video("h265", 0, shipped).arguments()
+                .containsAll(List.of("-preset", "fast")));
+        assertFalse(CaptureCodecs.video("ffv1", 0, shipped).arguments().contains("-preset"));
     }
 
     @Test

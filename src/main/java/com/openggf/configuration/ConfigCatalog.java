@@ -266,8 +266,11 @@ public final class ConfigCatalog {
                         + " Blank uses the encoder's own default (medium)."
                         + " Ignored by FFV1, which has no preset. Presets trade"
                         + " encode speed for file size and never affect"
-                        + " losslessness. libx265 at its default medium preset"
-                        + " cannot keep up with lossless RGB in real time"));
+                        + " losslessness. Defaults to fast: libx265 at medium"
+                        + " keeps up with ordinary play but not with"
+                        + " high-motion content such as fast-forwarded trace"
+                        + " playback, where each recorded frame is several"
+                        + " gameplay frames from the last"));
         put(CAPTURE_CONTAINER, of("capture", "container", STRING,
                 "Recording file extension, e.g. mkv or mp4. ffmpeg picks its"
                         + " muxer from this. Recent ffmpeg will write every codec"

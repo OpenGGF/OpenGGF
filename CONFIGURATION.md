@@ -345,21 +345,30 @@ recording stops. If you see those, the encoder is the bottleneck.
 
 #### Making the encoder keep up
 
-H.265 is the slowest of the three codecs by a wide margin because `lossless=1` at the
-default `medium` preset does a great deal of work per frame. Measured here on 180 frames
-of 1280×896 RGBA (3.0 s of real time at 60fps):
+H.265 is the slowest of the three codecs because `lossless=1` does a great deal of work
+per frame. At libx265's own default `medium` preset it keeps up with ordinary play, but
+it has little headroom left for high-motion content — fast-forwarded trace playback in
+particular, where each recorded frame is several gameplay frames from the last. That is
+why `capture.encoderPreset` defaults to `fast` rather than leaving the encoder's default
+in place.
 
-| Setting | Encode time | Verdict |
+Measured on 180 frames of 1280×896 RGBA — 3.0 s of real time at 60fps:
+
+| Setting | Encode time | Output size |
 |---|---|---|
-| `h265`, default preset (`medium`) | 1.45 s | ~2× real time — little headroom |
-| `h265`, `veryfast` | 0.89 s | ~3.4× real time |
-| `h265`, `ultrafast` | 0.41 s | ~7× real time, on par with FFV1 |
-| `ffv1` (sliced, default) | 0.34 s | fastest |
+| `h265`, `medium` (libx265 default) | 1.46 s | 20.5 MB |
+| `h265`, `fast` (our default) | 0.91 s | 22.8 MB |
+| `h265`, `veryfast` | 0.85 s | 22.9 MB |
+| `h265`, `ultrafast` | 0.41 s | 25.3 MB |
+| `ffv1` (sliced, default) | 0.34 s | 17.4 MB |
 
-So if H.265 stutters, set `capture.encoderPreset: "ultrafast"` — it brings H.265 to roughly
-FFV1's throughput and is still byte-exact (verified by re-decoding and comparing, not
-assumed; `TestCaptureCodecLosslessness` covers the defaults). Raising
-`capture.encoderThreads` will not help: libx265 already threads internally.
+If H.265 still stutters, step down to `veryfast` or `ultrafast`; `ultrafast` brings it to
+roughly FFV1's throughput for about 23% more file size. Raising `capture.encoderThreads`
+will not help — libx265 already threads internally.
+
+Presets never cost you losslessness. Every preset from `ultrafast` to `slow` was checked
+by re-encoding and re-decoding and comparing byte-for-byte, for both `h264` and `h265` —
+all exact. (`TestCaptureCodecLosslessness` re-measures the shipped configuration.)
 
 Those figures come from synthetic test video. Real fast-forwarded gameplay changes more
 between frames and will be slower across the board, so treat them as ratios rather than
@@ -489,7 +498,7 @@ ones. The bundled `config.yaml` supplies the live toggle default.
 | `CAPTURE_CODEC` | `capture.codec` | string | `"ffv1"` | Video codec for live and trace capture: `ffv1`, `h264` or `h265`. All three are lossless — see the note below. |
 | `CAPTURE_CONTAINER` | `capture.container` | string | `"mkv"` | Recording file extension. ffmpeg selects its muxer from this — see "Containers" below. |
 | `CAPTURE_QUEUE_BUDGET_MB` | `capture.queueBudgetMb` | int | `192` | Live recording only: memory budget for the encoder queue. The queue is sized in whole frames from this budget and the recording viewport (which is the *window*, not 320×224), so it holds fewer frames at larger window sizes — clamped to 8..120 frames. A deeper queue absorbs longer encoder stalls before backpressure blocks the game loop; see "Recording high-motion content" below. |
-| `CAPTURE_ENCODER_PRESET` | `capture.encoderPreset` | string | `""` | x264/x265 speed preset: `ultrafast`, `superfast`, `veryfast`, `faster`, `fast`, `medium`, `slow`, `slower`, `veryslow`, `placebo`. Blank uses the encoder's own default (`medium`). Ignored by FFV1, which has no preset. Presets trade encode speed for file size and **never** affect losslessness. This is the main lever when H.265 cannot keep up — see below. |
+| `CAPTURE_ENCODER_PRESET` | `capture.encoderPreset` | string | `"fast"` | x264/x265 speed preset: `ultrafast`, `superfast`, `veryfast`, `faster`, `fast`, `medium`, `slow`, `slower`, `veryslow`, `placebo`. Blank uses the encoder's own default (`medium`). Ignored by FFV1, which has no preset. Presets trade encode speed for file size and **never** affect losslessness. This is the main lever when H.265 cannot keep up — see below. |
 | `CAPTURE_ENCODER_THREADS` | `capture.encoderThreads` | int | `0` | ffmpeg `-threads` for the encode pass. `0` lets ffmpeg choose, which is normally one thread per core and is almost always right. x264/x265 already thread internally, so raising this rarely helps them; prefer `capture.encoderPreset`. |
 | `CAPTURE_AUDIO_CODEC` | `capture.audioCodec` | string | `"flac"` | Audio codec: `flac`, `aac` or `mp3`. **`aac` and `mp3` are lossy**: the recorded audio will not match what the engine produced. `flac` is lossless. |
 | `CAPTURE_FFMPEG_PASS1_ARGS` | `capture.ffmpegPass1Args` | string | `"default"` | **Advanced.** Full ffmpeg argument list for the encode pass. See "Overriding the ffmpeg commands" below. |
