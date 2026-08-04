@@ -1,5 +1,13 @@
 # Native Trace Fleet Regeneration Implementation Plan
 
+> **Superseded:** The publication work described here is closed by the v5
+> evidence set and remediation records dated 2026-08-04:
+> `2026-08-04-trace-contract-remediation-plan.md`,
+> `2026-08-04-trace-v5-publication-manifest.md`, and the v5 replacement
+> freeze/candidate reports. References below to schema 7, a separate
+> `hardware_timing_schema`, and the pre-v5 publication gate are historical
+> evidence, not live acceptance criteria.
+
 > **For agentic workers:** Execute the checked steps in order. Fixture bytes
 > remain scratch-only until the explicit publication approval gate.
 

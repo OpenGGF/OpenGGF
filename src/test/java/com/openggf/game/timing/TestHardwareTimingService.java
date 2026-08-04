@@ -28,6 +28,10 @@ class TestHardwareTimingService {
 
         RecordedCompletionAuthority authority =
                 service.beginRecordedAdmissionAfterLiveEpoch();
+        assertEquals(HardwareReadinessAdmissionPolicy.RECORDED,
+                service.admissionPolicyFor(HardwareWorkKind.KOS_MODULE_QUEUE));
+        assertEquals(HardwareReadinessAdmissionPolicy.RECORDED,
+                service.admissionPolicyFor(HardwareWorkKind.KOS_DECOMPRESSION_QUEUE));
         authority.initializeOrdinalBases(
                 Map.of(HardwareWorkKind.KOS_MODULE_QUEUE, 37L));
         HardwareWorkHandle recorded = service.submit(
@@ -351,7 +355,7 @@ class TestHardwareTimingService {
     }
 
     @Test
-    void schemaOneRecordsOnlyModuleWorkWhileDirectWorkRemainsLive() {
+    void v5RecordedAdmissionAuthorizesBothQueueKindsOnlyAtRecordedEdges() {
         HardwareTimingService service = new HardwareTimingService();
         RecordedCompletionAuthority authority = service.beginRecordedAdmission();
         HardwareWorkHandle direct = service.submit(submission(
@@ -361,13 +365,12 @@ class TestHardwareTimingService {
 
         service.service(POST_OBJECTS);
 
-        assertTrue(service.isReady(direct));
+        assertFalse(service.isReady(direct));
         assertFalse(service.isReady(module));
-        IllegalStateException rejected = assertThrows(IllegalStateException.class,
-                () -> authority.admitRecordedCompletion(
-                        POST_OBJECTS, direct.kind(), direct.ordinal(),
-                        direct.submissionFingerprint()));
-        assertTrue(rejected.getMessage().contains("not recorded"), rejected::getMessage);
+        authority.admitRecordedCompletion(
+                POST_OBJECTS, direct.kind(), direct.ordinal(),
+                direct.submissionFingerprint());
+        assertTrue(service.isReady(direct));
 
         authority.admitRecordedCompletion(
                 POST_OBJECTS, module.kind(), module.ordinal(),

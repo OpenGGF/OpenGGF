@@ -31,6 +31,38 @@ class TestHardwareTimingStreamLoader {
     }
 
     @Test
+    void presentEmptyStreamUsesTheCompleteV5Registry() throws IOException {
+        HardwareTimingSchedule schedule = TraceData.load(writeFixture(""))
+                .hardwareTimingSchedule();
+
+        assertTrue(schedule.hasRecordedInput());
+        assertTrue(schedule.edges().isEmpty());
+        assertEquals(HardwareReadinessAdmissionPolicy.RECORDED,
+                schedule.admissionPolicies().get(HardwareWorkKind.KOS_MODULE_QUEUE));
+        assertEquals(HardwareReadinessAdmissionPolicy.RECORDED,
+                schedule.admissionPolicies().get(HardwareWorkKind.KOS_DECOMPRESSION_QUEUE));
+    }
+
+    @Test
+    void oneKindStreamStillUsesTheCompleteV5Registry() throws IOException {
+        for (String kind : List.of("kos_module_queue", "kos_decompression_queue")) {
+            HardwareTimingSchedule schedule = TraceData.load(
+                    writeFixture(edge(0,
+                            kind.equals("kos_decompression_queue")
+                                    ? "pre_main_loop" : "post_objects",
+                            kind, 0) + "\n"))
+                    .hardwareTimingSchedule();
+
+            assertEquals(HardwareReadinessAdmissionPolicy.RECORDED,
+                    schedule.admissionPolicies().get(HardwareWorkKind.KOS_MODULE_QUEUE),
+                    kind);
+            assertEquals(HardwareReadinessAdmissionPolicy.RECORDED,
+                    schedule.admissionPolicies().get(HardwareWorkKind.KOS_DECOMPRESSION_QUEUE),
+                    kind);
+        }
+    }
+
+    @Test
     void presentV5StreamAuthorizesBothModuleAndDirectRomWork() throws IOException {
         Path fixture = writeFixture(edge(0, "post_objects", "kos_module_queue", 0) + "\n"
                 + edge(1, "pre_main_loop", "kos_decompression_queue", 0) + "\n");

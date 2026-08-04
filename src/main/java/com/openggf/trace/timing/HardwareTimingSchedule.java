@@ -33,11 +33,22 @@ public final class HardwareTimingSchedule {
     }
 
     private HardwareTimingSchedule(boolean recordedInput, List<HardwareCompletionEdge> edges) {
+        this(recordedInput, edges, recordedAdmissionPolicies());
+    }
+
+    /** Explicit mixed-policy seam for generic unit tests; v5 loading never uses it. */
+    public static HardwareTimingSchedule withAdmissionPolicies(
+            List<HardwareCompletionEdge> edges,
+            Map<HardwareWorkKind, HardwareReadinessAdmissionPolicy> policies) {
+        return new HardwareTimingSchedule(true, edges, Map.copyOf(policies));
+    }
+
+    private HardwareTimingSchedule(
+            boolean recordedInput,
+            List<HardwareCompletionEdge> edges,
+            Map<HardwareWorkKind, HardwareReadinessAdmissionPolicy> policies) {
         this.recordedInput = recordedInput;
-        this.admissionPolicies = edges.stream().anyMatch(edge ->
-                edge.kind() == HardwareWorkKind.KOS_DECOMPRESSION_QUEUE)
-                ? recordedAdmissionPolicies()
-                : schemaOneAdmissionPolicies();
+        this.admissionPolicies = Map.copyOf(policies);
         this.edges = List.copyOf(edges);
         for (HardwareCompletionEdge edge : this.edges) {
             Objects.requireNonNull(edge, "hardware completion edge");
@@ -59,6 +70,11 @@ public final class HardwareTimingSchedule {
 
     public static HardwareTimingSchedule empty() {
         return EMPTY;
+    }
+
+    /** A present, explicitly empty v5 timing stream with the complete registry. */
+    public static HardwareTimingSchedule recordedEmpty() {
+        return new HardwareTimingSchedule(true, List.of());
     }
 
     public List<HardwareCompletionEdge> edges() {
@@ -93,14 +109,4 @@ public final class HardwareTimingSchedule {
         return Map.copyOf(policies);
     }
 
-    private static Map<HardwareWorkKind, HardwareReadinessAdmissionPolicy>
-            schemaOneAdmissionPolicies() {
-        EnumMap<HardwareWorkKind, HardwareReadinessAdmissionPolicy> policies =
-                new EnumMap<>(HardwareWorkKind.class);
-        policies.put(HardwareWorkKind.KOS_MODULE_QUEUE,
-                HardwareReadinessAdmissionPolicy.RECORDED);
-        policies.put(HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
-                HardwareReadinessAdmissionPolicy.LIVE);
-        return Map.copyOf(policies);
-    }
 }

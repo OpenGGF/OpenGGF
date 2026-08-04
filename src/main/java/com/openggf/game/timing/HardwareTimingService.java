@@ -188,7 +188,7 @@ public final class HardwareTimingService
      * provide payload bytes.
      */
     public RecordedCompletionAuthority beginRecordedAdmission() {
-        return beginRecordedAdmission(schemaOneAdmissionPolicies());
+        return beginRecordedAdmission(recordedAdmissionPolicies());
     }
 
     /** Begins recorded readiness with one complete policy for every known work kind. */
@@ -213,7 +213,7 @@ public final class HardwareTimingService
      */
     public RecordedCompletionAuthority beginRecordedAdmissionAfterLiveEpoch() {
         return beginRecordedAdmissionAfterLiveEpoch(
-                schemaOneAdmissionPolicies());
+                recordedAdmissionPolicies());
     }
 
     public RecordedCompletionAuthority beginRecordedAdmissionAfterLiveEpoch(
@@ -595,11 +595,12 @@ public final class HardwareTimingService
     }
 
     private static Map<HardwareWorkKind, HardwareReadinessAdmissionPolicy>
-            schemaOneAdmissionPolicies() {
+            recordedAdmissionPolicies() {
         EnumMap<HardwareWorkKind, HardwareReadinessAdmissionPolicy> policies =
-                liveAdmissionPolicies();
-        policies.put(HardwareWorkKind.KOS_MODULE_QUEUE,
-                HardwareReadinessAdmissionPolicy.RECORDED);
+                new EnumMap<>(HardwareWorkKind.class);
+        for (HardwareWorkKind kind : HardwareWorkKind.values()) {
+            policies.put(kind, HardwareReadinessAdmissionPolicy.RECORDED);
+        }
         return Map.copyOf(policies);
     }
 }

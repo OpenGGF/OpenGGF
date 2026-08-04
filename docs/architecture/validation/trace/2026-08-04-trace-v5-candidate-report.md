@@ -6,7 +6,7 @@ The phase-D batch was captured serially from the frozen recorder identity in
 `2026-08-04-trace-v5-replacement-freeze.md`. All 36 matrix rows passed,
 including the 67-segment S3K Knuckles super-emerald run. The assembled
 candidate contains 981 files and its deterministic inventory aggregate is
-`c7cc34c0e7bb386f24aef427030d23d7e33731508d66bba5fbe3487b5908e41c` after
+`04851c0a146eeb101a0ce0d76c78ba9c861a4eb3d6c9ff50612c84112d868790` after
 deterministic `gzip -9 -n` publication compression and the standalone S3K
 special-stage/bonus publication mappings.
 
@@ -14,8 +14,10 @@ The strict v5 validator passed. The native no-gate suite passed
 `468` tests with zero failures; the focused native busy-module append test is
 part of that result. The Python tooling suite passed all `42` tests.
 
-The candidate is scratch evidence only. No file under
-`src/test/resources/traces/` was changed while capturing or assembling it.
+The candidate is now the installed v5 evidence set. The publication transaction
+and its exact archive/deletion/rename actions are recorded in
+`2026-08-04-trace-v5-publication-manifest.md`; no legacy compatibility reader
+is retained.
 
 ## Predecessor comparison
 

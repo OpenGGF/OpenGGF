@@ -1,10 +1,12 @@
 package com.openggf.game.sonic3k.resources;
 
 import com.openggf.data.Rom;
+import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
 import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareTimingSnapshot;
 import com.openggf.game.timing.HardwareWorkHandle;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.tools.KosinskiReader;
 import com.openggf.game.resources.QueueDiagnosticSnapshot;
@@ -227,14 +229,18 @@ class TestS3kKosModuleQueue {
     }
 
     @Test
-    void schemaOneLiveChildrenPrepareParentBeforeRecordedAdmission()
+    void explicitMixedPolicyMapAllowsLiveChildrenBeforeRecordedParentAdmission()
             throws Exception {
         String configured = System.getProperty("s3k.rom.path");
         Assumptions.assumeTrue(configured != null && !configured.isBlank());
         try (Rom rom = new Rom()) {
             assertTrue(rom.open(configured));
             HardwareTimingService timing = new HardwareTimingService();
-            var recorded = timing.beginRecordedAdmission();
+            var recorded = timing.beginRecordedAdmission(java.util.Map.of(
+                    HardwareWorkKind.KOS_MODULE_QUEUE,
+                    HardwareReadinessAdmissionPolicy.RECORDED,
+                    HardwareWorkKind.KOS_DECOMPRESSION_QUEUE,
+                    HardwareReadinessAdmissionPolicy.LIVE));
             S3kKosDecompressionQueue direct = new S3kKosDecompressionQueue(timing);
             S3kKosModuleQueue queue = new S3kKosModuleQueue(timing, direct);
             HardwareWorkHandle handle = queue.queue(

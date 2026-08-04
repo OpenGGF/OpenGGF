@@ -53,6 +53,9 @@ public final class HardwareTimingStreamLoader {
         if (!hasFile) {
             return HardwareTimingSchedule.empty();
         }
+        if (Files.size(timingPath) == 0) {
+            return HardwareTimingSchedule.recordedEmpty();
+        }
         return loadVersion(timingPath, metadata.traceFrameCount());
     }
 

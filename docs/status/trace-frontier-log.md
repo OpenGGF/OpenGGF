@@ -61268,3 +61268,22 @@ to synthesize a POST phase on a VBLANK-only row.
 - Focused command: `mvn -q -Dtest='TestSpecialStageVisualTraceSession,TestTraceSessionLauncherRunBranch,TestEngineLiveCapturePresentation,TestGameLoopSpecialStageEntryPresentation,TestSpecialStageTraceHudOverlay,TestInputHandlerLogicalSnapshot,TestTraceRunSpecialStageRowDriver' test`.
 - Result: the selected visual/run/capture tests passed; the repository's Maven test extension also executed the broader suite and reported the existing environment/classpath reds documented in the baseline comparison.
 - Special-stage seam coverage: the committed S1 emerald fixture still publishes and verifies all 3,728 represented rows before destination closure; GHZ2 rebind retains `BoundaryProbe` as the playback observer.
+
+## 2026-08-04 - v5 timing-contract remediation and publication closure
+
+- Worktree: `.worktrees/trace-contract-remediation`, branch
+  `bugfix/ai-trace-contract-remediation`, based on `f12977002`.
+- The live timing contract now uses one complete v5 registry whenever
+  `hardware_timing.jsonl` is present; an absent file means no recorded timing
+  port, while an explicitly empty file is a recorded stream with zero edges.
+  No gameplay frontier moved and no trace payload was edited by this change.
+- Focused timing suite: 167 tests, 0 failures, 0 errors, 4 skips. v5 inventory
+  validator passed with aggregate
+  `04851c0a146eeb101a0ce0d76c78ba9c861a4eb3d6c9ff50612c84112d868790`.
+- Python tooling and manifest guard: 43 tests, 0 failures. Native no-gate
+  harness: 468 passed, 0 failed, 32 skipped.
+- Existing S3K replay frontiers remain unchanged: AIZ raw 6351/module 16,
+  HCZ 31361/module 82, CNZ 39940/module 152, ICZ 25280/module 178, LBZ
+  46114/module 215, MHZ 28017/module 256, MGZ 39274/module 121, plus the
+  known MGZ direct-completion mismatch. S1 LZ3 retains 15 animation-only
+  errors (first error frame 156).

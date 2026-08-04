@@ -10,12 +10,12 @@ authorize installation or deletion of committed fixtures.
 | --- | --- |
 | Reviewed source commit | `93f0abb81dc216f5ab6fee998db75e9eb4410379` |
 | Development baseline | `3573af57be947284a1f8398c7b4b4e05a8b12f14` |
-| Source diff SHA-256 | `f9e7818f3cef38e7eae3fa623ed4f5956cbe39805006f59ecd668f93d9b8f0d7` |
-| Diff definition | `git diff --full-index --binary origin/develop..93f0abb81 \| sha256sum` |
+| Source diff SHA-256 | `127f9ef3cd8269dac419625a737ec4d56b7e9b66e0e57a5262208e008f33ff05` |
+| Diff definition | `git diff --full-index --binary origin/develop..93f0abb81 \| sha256sum` (with the visual handoff merge now at `origin/develop=36be0aa44`) |
 | Native harness | `tools/bizhawk-headless/bin/Release/BizHawk.Headless.Gpgx.exe` |
-| Native harness SHA-256 | `2237b64955d268a57531b3019abf3c4cf9baece02f50c6558f33473ef51f1a0c` |
+| Native harness SHA-256 | `1320f95be8f8210a1a1b6f5ef5c6dcff9a5abeca91507e397f7ad1b38b106bb0` |
 | Native harness size | `359936` bytes |
-| Native test SHA-256 | `4e88ebea01e7ba58cc06be4a5f449804f15162fd891bbd28ece8c1fff3e0e003` |
+| Native test SHA-256 | `9c62ad733ad08a8db875093316a5abb8588b8b6b636d18fa8d6f6ad7da591fc1` |
 | Native test size | `620032` bytes |
 
 The native harness was rebuilt from this replacement source boundary after the
@@ -82,7 +82,7 @@ one serial 36-row run. Every row passed, including the 67-segment Knuckles
 super-emerald run. Its assembled scratch candidate contains 981 files (266
 metadata, 266 physics, 266 auxiliary, 139 timing, seven manifests, and 37
 static inputs) and has inventory aggregate
-`c7cc34c0e7bb386f24aef427030d23d7e33731508d66bba5fbe3487b5908e41c` after
+`04851c0a146eeb101a0ce0d76c78ba9c861a4eb3d6c9ff50612c84112d868790` after
 deterministic `gzip -9 -n` publication compression and the standalone S3K
 special-stage/bonus publication mappings.
 `validate_trace_v5.py` passed against that candidate. The two independent
@@ -99,11 +99,11 @@ hardware-timing frontiers (`unsupported-held-row-POST` and the MGZ direct
 completion), before gameplay comparison; those rows are unchanged in kind from
 the pre-capture baseline.
 
-## Next boundary
+## Publication closure
 
-The scratch candidate is now the complete replacement evidence set. Before
-installation, the predecessor comparison and the exact deletion list must be
-reviewed; the eight canonical S1 credits directories are preserved as archived
-predecessor evidence and are never deleted as part of this migration. Capture
-output remains outside the installed fixture tree until that controlled
-transaction is complete.
+The candidate is installed and validated. The exact archive/deletion/rename
+transaction is recorded in
+`2026-08-04-trace-v5-publication-manifest.md`. The eight canonical S1 credits
+directories were archived as predecessor evidence and were not deleted; true
+obsolete files are listed separately in that manifest. Capture output is no
+longer pending outside the installed fixture tree.

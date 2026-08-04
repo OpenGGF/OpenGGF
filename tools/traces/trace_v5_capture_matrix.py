@@ -31,7 +31,7 @@ MATRIX_DOCUMENT = (REPOSITORY_ROOT / "docs" / "architecture" / "validation" /
 FREEZE = {
     "source_commit": "cd89d6ab4f623c99afc76629eb423cd03f246809",
     "development_baseline": "3573af57be947284a1f8398c7b4b4e05a8b12f14",
-    "source_diff_sha256": "b45bfc7e521cddc5caa18fc4363ec9240a09d7a678e2a8fb36b431abf152335b",
+    "source_diff_sha256": "127f9ef3cd8269dac419625a737ec4d56b7e9b66e0e57a5262208e008f33ff05",
     "native_artifact": {
         "path": "tools/bizhawk-headless/bin/Release/BizHawk.Headless.Gpgx.exe",
         "size": 359424,

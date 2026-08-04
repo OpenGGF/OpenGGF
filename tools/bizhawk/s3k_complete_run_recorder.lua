@@ -297,7 +297,8 @@
 -- constant except on 1UPs -- rather than the ROM's free-running V-int counter.
 -- Matches the S1 and S2 recorders, which already read 0xFE0E, and is the low
 -- word of the same ADDR_V_INT_RUN_COUNT long (0xFE0C) that v6.32 added above.
--- v6.34-s3k-completerun adds trace_schema 7 / hardware_timing_schema 1 for
+-- Historical pre-v5 v6.34-s3k-completerun note: this predecessor added
+-- trace_schema 7 / hardware_timing_schema 1 for
 -- every level, bonus, and special-stage segment. The run-scoped Kos module
 -- FIFO observer stays live through unexported boundaries and SS-results $48.
 -- v6.35-s3k-completerun fixes Kosinski descriptor-word refill timing in the
@@ -1337,7 +1338,8 @@ local function write_metadata()
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
     meta_file:write('  "recorder": "lua-bizhawk-diagnostic",\n')
     meta_file:write('  "recorder_version": "3.0",\n')
-    -- trace_schema 7 adds the authoritative hardware timing stream.
+    -- Historical pre-v5 trace_schema 7 added the timing stream. Native v5
+    -- publication is handled by tools/bizhawk-headless.
     -- csv_version 7
     -- adds player and sidekick animation_id/mapping_frame to physics.csv. New per-frame
     -- cpu_state, oscillation_state, object_state, and interact_state aux

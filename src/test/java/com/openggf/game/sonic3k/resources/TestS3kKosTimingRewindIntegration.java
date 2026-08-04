@@ -4,6 +4,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.game.timing.HardwareTimingSnapshot;
+import com.openggf.game.timing.HardwareTimingJob;
 import com.openggf.game.timing.HardwareWorkHandle;
 import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.tests.TestEnvironment;
@@ -40,8 +41,9 @@ class TestS3kKosTimingRewindIntegration {
                         .findFirst()
                         .orElseThrow();
         HardwareTimingService timing = new HardwareTimingService();
+        var recorded = timing.beginRecordedAdmission();
         HardwareTimingReplayPort replay = new HardwareTimingReplayPort(
-                timing.beginRecordedAdmission());
+                recorded);
         S3kKosDecompressionQueue direct =
                 new S3kKosDecompressionQueue(timing);
         S3kKosModuleQueue queue = new S3kKosModuleQueue(timing, direct);
@@ -66,6 +68,7 @@ class TestS3kKosTimingRewindIntegration {
                 servicePass < 100_000 && !isPrepared(timing);
                 servicePass++) {
             queue.prepareQueuedModuleBeforeVSync();
+            admitPreparedDirectChildren(timing, recorded);
             queue.processModuleQueueAfterObjects();
         }
         assertTrue(isPrepared(timing));
@@ -108,5 +111,22 @@ class TestS3kKosTimingRewindIntegration {
 
     private static boolean isPrepared(HardwareTimingService timing) {
         return timing.capture().jobs().getFirst().preparedPayload() != null;
+    }
+
+    private static void admitPreparedDirectChildren(
+            HardwareTimingService timing,
+            com.openggf.game.timing.RecordedCompletionAuthority authority) {
+        for (HardwareTimingJob.Snapshot job : timing.capture().jobs()) {
+            if (job.kind() != HardwareWorkKind.KOS_DECOMPRESSION_QUEUE
+                    || job.preparedPayload() == null
+                    || job.ready()) {
+                continue;
+            }
+            authority.admitRecordedCompletion(
+                    HardwareServiceBoundary.PRE_MAIN_LOOP,
+                    job.handle().kind(),
+                    job.handle().ordinal(),
+                    job.handle().submissionFingerprint());
+        }
     }
 }

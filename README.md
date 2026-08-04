@@ -229,10 +229,12 @@ Development since `v0.5.20260411` is the active 0.6 prerelease line. The release
   path. The original S1 credits captures remain archived as predecessor evidence;
   the native credits differential gate and standalone S3K special/bonus aliases
   are green.
-- **Strict trace-v5 contract follow-up (2026-08-04):** timing-schema admission
-  now distinguishes module-only v5 streams from direct-Kosinski streams, and
-  publication evidence plus boundary, metadata, and temporary-fixture tests
-  match the committed fleet.
+- **Strict trace-v5 contract remediation (2026-08-04):** every present
+  `hardware_timing.jsonl` stream now uses one complete module/direct registry;
+  absent and explicitly empty streams are distinct, and generic mixed-policy
+  tests are explicit. Publication evidence pins the installed inventory,
+  protected S1 credits archive, exact deletion/rename manifest, and native
+  no-gate validation.
 - **Shared visual/headless represented-row harness (2026-08-03):** complete-run
   special stages now use one production-row driver for input, hardware timing,
   dynamic-art publication, comparison, cursor advancement, and segment closure

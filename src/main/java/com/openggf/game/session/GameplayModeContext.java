@@ -41,6 +41,7 @@ import com.openggf.game.solid.SolidExecutionRegistry;
 import com.openggf.game.timing.HardwareTimingBoundaryObserver;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.timing.HardwareReadinessAdmissionPolicy;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.game.timing.LoadTimeProfile;
 import com.openggf.level.SeamlessTransitionResourceHandoffRegistry;
@@ -65,6 +66,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.logging.Logger;
@@ -154,6 +156,24 @@ public final class GameplayModeContext implements ModeContext {
             int spawnY,
             EditorPlaytestStash resumeStash,
             HardwareReadinessAdmissionPolicy admissionPolicy) {
+        this(worldSession, spawnX, spawnY, resumeStash, admissionPolicy, null);
+    }
+
+    /** Test/tool seam for an explicit per-kind recorded policy map. */
+    public GameplayModeContext(
+            WorldSession worldSession,
+            HardwareReadinessAdmissionPolicy admissionPolicy,
+            Map<HardwareWorkKind, HardwareReadinessAdmissionPolicy> recordedPolicies) {
+        this(worldSession, 0, 0, null, admissionPolicy, recordedPolicies);
+    }
+
+    private GameplayModeContext(
+            WorldSession worldSession,
+            int spawnX,
+            int spawnY,
+            EditorPlaytestStash resumeStash,
+            HardwareReadinessAdmissionPolicy admissionPolicy,
+            Map<HardwareWorkKind, HardwareReadinessAdmissionPolicy> recordedPolicies) {
         this.worldSession = Objects.requireNonNull(worldSession, "worldSession");
         this.spawnX = spawnX;
         this.spawnY = spawnY;
@@ -184,7 +204,9 @@ public final class GameplayModeContext implements ModeContext {
                         worldSession.getGameModule(), dynamicArtLifecycle);
         this.recordedCompletionAuthority =
                 checkedPolicy == HardwareReadinessAdmissionPolicy.RECORDED
-                        ? hardwareTiming.beginRecordedAdmission()
+                        ? (recordedPolicies == null
+                                ? hardwareTiming.beginRecordedAdmission()
+                                : hardwareTiming.beginRecordedAdmission(recordedPolicies))
                         : null;
     }
 

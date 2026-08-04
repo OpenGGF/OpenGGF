@@ -49,7 +49,8 @@
 -- except on 1UPs -- rather than the ROM's free-running V-int counter. Matches
 -- the S1 and S2 recorders, which already read 0xFE0E. Existing captures carry
 -- the wrong column and need recapture.
--- v6.34-s3k changes: add trace_schema 7 / hardware_timing_schema 1 and the
+-- Historical pre-v5 v6.34-s3k note: this predecessor added trace_schema 7 /
+-- hardware_timing_schema 1 and the
 -- authoritative hardware_timing.jsonl stream.
 -- v6.35-s3k fixes Kosinski descriptor-word refill timing in the shared
 -- hardware-timing scanner so submission fingerprints use the canonical
@@ -1006,7 +1007,8 @@ local function write_metadata()
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
     meta_file:write('  "recorder": "lua-bizhawk-diagnostic",\n')
     meta_file:write('  "recorder_version": "3.0",\n')
-    -- trace_schema 7 adds the authoritative hardware timing stream.
+    -- Historical pre-v5 trace_schema 7 added the timing stream. Native v5
+    -- publication is handled by tools/bizhawk-headless.
     -- csv_version 7
     -- adds player and sidekick animation_id/mapping_frame to physics.csv. New per-frame
     -- cpu_state, oscillation_state, object_state, and interact_state aux

@@ -979,9 +979,11 @@ readiness of a job only when the engine independently submitted and prepared
 the same job and its kind, ordinal, stable submission fingerprint, and service
 boundary match the recording.
 
-S3K hardware-timing schema 1 grants this authority only to
-`KOS_MODULE_QUEUE`; direct Kosinski jobs remain live production work. Schema
-2 grants it to both `KOS_MODULE_QUEUE` and `KOS_DECOMPRESSION_QUEUE`.
+The live v5 contract grants this authority to both `KOS_MODULE_QUEUE` and
+`KOS_DECOMPRESSION_QUEUE` whenever the dedicated `hardware_timing.jsonl`
+stream is present. The stream has one complete registry; policy is never
+inferred from which kinds happen to have rows. Direct Kosinski edges can
+release only a prepared FIFO head at `pre_main_loop`.
 Schema-2 direct edges can release only a prepared head that the shared
 four-entry production FIFO submitted, and only at `pre_main_loop`. KosM child
 streams are real direct submissions with their own direct ordinals; the trace
@@ -1002,12 +1004,16 @@ completion timing, while a fully cycle-accurate machine is outside the engine's
 scope. The dedicated stream supplies only that otherwise-external completion
 edge; the ROM-modeled consumer still owns every downstream mutation.
 
-Committed schema-1 AIZ intro and ICZ act-transition fixtures remain loadable,
-but they do not certify their direct queue-count boundary because those jobs
-use live timing in schema 1. Their exact inventory is checked by
-`TestCommittedHardwareTimingFixtures`. Replacing them with native schema-2
-output requires separate explicit publication approval; implementation work
-must not mutate their payloads.
+An absent timing file means no recorded timing port and leaves the production
+scheduler live. A present empty file is an explicit v5 recorded stream with
+the complete registry and no edges. Legacy schema-1/schema-2 fixtures and
+their metadata selectors are not supported runtime inputs.
+
+### Historical pre-v5 evidence (not live)
+
+Earlier schema-1/module-only and schema-2/direct-queue descriptions below this
+point document the migration evidence that led to v5. They are retained for
+audit provenance only and must not be implemented as compatibility branches.
 
 ### Guard and Removal Conditions
 

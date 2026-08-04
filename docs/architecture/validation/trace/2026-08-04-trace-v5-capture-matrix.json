@@ -11,22 +11,22 @@
   "freeze": {
     "development_baseline": "3573af57be947284a1f8398c7b4b4e05a8b12f14",
     "fixture_inventory": {
-      "aggregate_sha256": "c7cc34c0e7bb386f24aef427030d23d7e33731508d66bba5fbe3487b5908e41c",
+      "aggregate_sha256": "04851c0a146eeb101a0ce0d76c78ba9c861a4eb3d6c9ff50612c84112d868790",
       "file_count": 981,
       "path": "docs/architecture/validation/trace/2026-08-04-trace-v5-postinstall-inventory.json"
     },
     "native_artifact": {
       "path": "tools/bizhawk-headless/bin/Release/BizHawk.Headless.Gpgx.exe",
-      "sha256": "2237b64955d268a57531b3019abf3c4cf9baece02f50c6558f33473ef51f1a0c",
+      "sha256": "1320f95be8f8210a1a1b6f5ef5c6dcff9a5abeca91507e397f7ad1b38b106bb0",
       "size": 359936
     },
     "native_test_artifact": {
       "path": "tools/bizhawk-headless/bin/Release/BizHawk.Headless.Gpgx.Tests.exe",
-      "sha256": "4e88ebea01e7ba58cc06be4a5f449804f15162fd891bbd28ece8c1fff3e0e003",
+      "sha256": "9c62ad733ad08a8db875093316a5abb8588b8b6b636d18fa8d6f6ad7da591fc1",
       "size": 620032
     },
     "source_commit": "93f0abb81dc216f5ab6fee998db75e9eb4410379",
-    "source_diff_sha256": "f9e7818f3cef38e7eae3fa623ed4f5956cbe39805006f59ecd668f93d9b8f0d7"
+    "source_diff_sha256": "127f9ef3cd8269dac419625a737ec4d56b7e9b66e0e57a5262208e008f33ff05"
   },
   "roms": {
     "s1": {

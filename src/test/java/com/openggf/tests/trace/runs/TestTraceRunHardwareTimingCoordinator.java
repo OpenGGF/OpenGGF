@@ -254,8 +254,8 @@ class TestTraceRunHardwareTimingCoordinator {
                 List.of(
                         new TraceRunReplayWalker.HardwareTimingSegment(
                                 10, List.of(100), HardwareTimingSchedule.empty()),
-                        new TraceRunReplayWalker.HardwareTimingSegment(
-                                20, List.of(200), HardwareTimingSchedule.empty())));
+                new TraceRunReplayWalker.HardwareTimingSegment(
+                        20, List.of(200), HardwareTimingSchedule.recordedEmpty())));
 
         coordinator.beginSegmentRow(0, 0);
         coordinator.handoffToSegment(1);
@@ -274,7 +274,7 @@ class TestTraceRunHardwareTimingCoordinator {
         var trace = TraceFixtures.trace(
                 TraceFixtures.metadataWithHardwareTiming("s3k", 0, 0, 3),
                 List.of(),
-                HardwareTimingSchedule.empty());
+                HardwareTimingSchedule.recordedEmpty());
         var plans = List.of(new TraceRunReplayWalker.SegmentPlan(
                 segment, trace, null, null));
 
@@ -298,7 +298,7 @@ class TestTraceRunHardwareTimingCoordinator {
         var later = TraceFixtures.trace(
                 TraceFixtures.metadataWithHardwareTiming("s3k", 0, 0, 1),
                 List.of(),
-                HardwareTimingSchedule.empty());
+                HardwareTimingSchedule.recordedEmpty());
 
         assertTrue(TraceRunReplayWalker.hasHardwareTimingStream(List.of(
                 new TraceRunReplayWalker.SegmentPlan(

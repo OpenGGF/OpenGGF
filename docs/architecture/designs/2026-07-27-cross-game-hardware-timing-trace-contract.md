@@ -38,6 +38,15 @@ frame, the existing lag-row contract is sufficient. A new completion event is
 reserved for work that remains pending while the main loop continues and the
 ROM explicitly polls a hardware-owned readiness gate.
 
+### Historical pre-v5 wire format (not live)
+
+The schema-1/schema-2 grammar, selectors, and recorder stamps described later
+in this document are retained as migration evidence only. They are not parser
+fallbacks or compatibility obligations. The sole live contract is v5: an
+absent timing file means no recorded timing port; a present file, including an
+explicitly empty file, uses the complete module-and-direct registry. No
+admission policy is inferred from which event kinds happen to be present.
+
 ### 2026-08-02 suppressed-row boundary clarification
 
 Schema-2 capture can observe a loop-tail completion on a physical row whose
