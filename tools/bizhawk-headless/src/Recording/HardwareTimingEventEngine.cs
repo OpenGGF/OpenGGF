@@ -408,7 +408,17 @@ namespace OpenGGF.BizHawk.Headless
                 return ModuleTransition.None;
             }
             int expectedCount = queue.Count - 1;
-            if (physicalCount != expectedCount)
+            bool retirementWithAppend = physicalCount == queue.Count
+                && queue.Count >= 2
+                && ActiveEntryMatches(host, queue[1])
+                && ModuleQueueSlotMatchesActive(
+                    host, 0, queue[1]);
+            bool singleRetirementWithAppend = queue.Count == 1
+                && physicalCount == 1
+                && !ActiveEntryMatches(host, queue[0]);
+            if (physicalCount != expectedCount
+                && !retirementWithAppend
+                && !singleRetirementWithAppend)
             {
                 throw new InvalidDataException(
                     "Kos module final-head retirement changed FIFO"
@@ -437,7 +447,9 @@ namespace OpenGGF.BizHawk.Headless
                     "Kos module final-head retirement did not install the"
                     + " mirrored next head.");
             }
-            for (int index = 1; index < physicalCount; index++)
+            int shiftedExistingCount = Math.Min(
+                physicalCount, queue.Count - 1);
+            for (int index = 1; index < shiftedExistingCount; index++)
             {
                 int entry = S3KRam.KosModuleQueue
                     + index * S3KRam.KosModuleQueueEntrySize;
@@ -452,6 +464,18 @@ namespace OpenGGF.BizHawk.Headless
                 }
             }
             return ModuleTransition.FinalHeadRetired;
+        }
+
+        private static bool ModuleQueueSlotMatchesActive(
+            IGpgxHost host,
+            int index,
+            Submission submission)
+        {
+            int entry = S3KRam.KosModuleQueue
+                + index * S3KRam.KosModuleQueueEntrySize;
+            return S3KRam.U32(host, entry) == submission.Source + 2
+                && S3KRam.U16(host, entry + 4)
+                    == submission.Destination;
         }
 
         private static bool ActiveEntryMatches(

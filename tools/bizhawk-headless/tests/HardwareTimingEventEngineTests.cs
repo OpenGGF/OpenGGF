@@ -24,8 +24,8 @@ namespace OpenGGF.BizHawk.Headless.Tests
                 "HardwareTiming held level frame canonical head shift uses POST boundary",
                 HeldLevelFrameCanonicalHeadShiftUsesPostBoundary));
             tests.Add(new TestMain.TestCase(
-                "HardwareTiming held level frame shift and append rejects cardinality",
-                HeldLevelFrameShiftAndAppendRejectsCardinality));
+                "HardwareTiming held level frame shift and append reconciles",
+                HeldLevelFrameShiftAndAppendReconciles));
             tests.Add(new TestMain.TestCase(
                 "HardwareTiming held level frame rejects multi-head loss",
                 HeldLevelFrameRejectsMultiHeadLoss));
@@ -283,7 +283,7 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
         }
 
-        private static void HeldLevelFrameShiftAndAppendRejectsCardinality()
+        private static void HeldLevelFrameShiftAndAppendReconciles()
         {
             const int first = 0x100;
             const int second = 0x120;
@@ -300,9 +300,20 @@ namespace OpenGGF.BizHawk.Headless.Tests
 
             StageActive(host, second, 0x6000, 0x01);
             StageQueued(host, 1, appended, 0x7000);
-            AssertEx.Throws<InvalidDataException>(
-                () => engine.ObserveFrameEnd(1, host, new StringWriter()),
-                "cardinality");
+            var writer = new StringWriter();
+            engine.ObserveFrameEnd(1, host, writer);
+            AssertEx.Equal(
+                true,
+                writer.ToString().Contains("\"ordinal\":0"));
+
+            StageActive(host, second, 0x6000, 0x81);
+            StageQueued(host, 1, appended, 0x7000);
+            engine.ObserveFrameEnd(2, host, writer);
+            StageActive(host, appended, 0x7000, 0x01);
+            engine.ObserveFrameEnd(3, host, writer);
+            AssertEx.Equal(
+                true,
+                writer.ToString().Contains("\"ordinal\":1"));
         }
 
         private static void StaleFinalActiveStateCannotCertifyLaterShift()
