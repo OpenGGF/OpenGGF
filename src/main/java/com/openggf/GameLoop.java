@@ -756,6 +756,21 @@ public class GameLoop {
     }
 
     /**
+     * Services a queued Special Stage request when the run frame driver owns
+     * the physical row and suppresses the native level body. The request is
+     * still an engine-owned transition; only the ordinary gameplay work is
+     * suppressed for the shared gap.
+     */
+    boolean consumeSpecialStageRequestDuringSuppressedRunRow() {
+        if (currentGameMode != GameMode.LEVEL || levelManager == null
+                || !levelManager.consumeSpecialStageRequest()) {
+            return false;
+        }
+        enterSpecialStage();
+        return true;
+    }
+
+    /**
      * True whenever rewind engagement must be rejected: either
      * {@link #isNonRewindableTransitionPending()} (the four transition flags,
      * which ALSO freeze gameplay), or a fade is in flight with a completion
@@ -1045,6 +1060,12 @@ public class GameLoop {
         profiler.endSection("input");
 
         if (TraceSessionLauncher.suppressesRunNativeLevelBody(currentGameMode)) {
+            // Shared transition-gap rows intentionally skip the ordinary level
+            // body, but the S1 results path can raise the Special Stage request
+            // from a fade callback while that gap is active. Consume that
+            // request at the same dispatch boundary or the fade will remain
+            // white forever while the run driver continues replaying gap input.
+            consumeSpecialStageRequestDuringSuppressedRunRow();
             inputHandler.update();
             return;
         }

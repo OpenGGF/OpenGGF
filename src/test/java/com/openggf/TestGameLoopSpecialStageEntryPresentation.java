@@ -12,6 +12,7 @@ import com.openggf.game.sonic1.specialstage.Sonic1SpecialStageProvider;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageProvider;
 import com.openggf.graphics.FadeManager;
+import com.openggf.level.LevelManager;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
@@ -124,6 +125,22 @@ class TestGameLoopSpecialStageEntryPresentation {
         loop.enterSpecialStage();
 
         verify(audio, times(1)).playSfx(anyInt());
+    }
+
+    @Test
+    void suppressedRunLevelRowStillConsumesPendingSpecialStageRequest()
+            throws Exception {
+        LevelManager levelManager = mock(LevelManager.class);
+        when(levelManager.consumeSpecialStageRequest()).thenReturn(true);
+        setField(loop, "levelManager", levelManager);
+        loop.setGameMode(GameMode.LEVEL);
+        GameLoop dispatch = spy(loop);
+        doNothing().when(dispatch).enterSpecialStage();
+
+        assertTrue(dispatch.consumeSpecialStageRequestDuringSuppressedRunRow());
+
+        verify(levelManager).consumeSpecialStageRequest();
+        verify(dispatch).enterSpecialStage();
     }
 
     @Test
