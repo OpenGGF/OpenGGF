@@ -24,7 +24,7 @@ VALIDATOR = REPOSITORY_ROOT / "tools" / "traces" / "validate_trace_v5.py"
 INVENTORY = REPOSITORY_ROOT / "tools" / "traces" / "trace_fixture_inventory.py"
 BASELINE_INVENTORY = (
     REPOSITORY_ROOT / "docs" / "architecture" / "validation" / "trace"
-    / "2026-08-03-trace-v5-baseline-inventory.json"
+    / "2026-08-04-trace-v5-postinstall-inventory.json"
 )
 FINGERPRINT = "sha256:" + "a" * 64
 
