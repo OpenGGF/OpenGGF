@@ -4,6 +4,7 @@ import com.openggf.control.InputHandler;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.debug.playback.PlaybackDebugManager;
+import com.openggf.debug.playback.PlaybackInputBridge;
 import com.openggf.game.GameMode;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -99,6 +100,21 @@ class TestBonusStagePlaybackBridge {
                     "The synchronous level-load hook must activate the destination cursor");
             assertFalse(manager.activateScheduledLevelLoadSession(),
                     "A scheduled level-load rebind must be one-shot");
+        }
+
+        @Test
+        void directDestinationAdmissionPublishesItsCurrentInputImmediately()
+                throws Exception {
+            Bk2Movie movie = new Bk2MovieLoader().load(MOVIE_PATH);
+            manager.startSession(movie, 17);
+            InputHandler input = new InputHandler();
+
+            new PlaybackInputBridge().publishImmediately(manager, input, null);
+
+            assertEquals(manager.getCurrentLogicalInputSnapshot()
+                    .player1().heldMask(), input.logical().player1().heldMask());
+            assertEquals(manager.getCurrentLogicalInputSnapshot()
+                    .player1().pressedMask(), input.logical().player1().pressedMask());
         }
 
         @Test

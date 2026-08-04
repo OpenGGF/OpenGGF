@@ -610,6 +610,71 @@ class TestTraceSessionLauncherRunBranch {
     }
 
     @Test
+    void specialStageReturnCarriesTitleCardFallthroughRowIntoDestinationAdmission()
+            throws Exception {
+        TraceRunManifest.Segment source = levelSegment("ghz1", 0, 1, 1);
+        TraceRunManifest.Segment special = new TraceRunManifest.Segment(
+                "ss", "special_stage", "s1_special_stage", 1, 1,
+                0, 0, 0, null);
+        TraceRunManifest.Segment destination = levelSegment("ghz2", 3, 1, 2);
+        TraceRunManifest.Transition entry = new TraceRunManifest.Transition(
+                0, 1, "giant_ring", 1,
+                null, null, null, null, null, null, null, null);
+        TraceRunManifest.Transition exit = new TraceRunManifest.Transition(
+                1, 2, "stage_exit", 3,
+                null, null, null, null, null, null, null, null);
+        TraceRunManifest run = new TraceRunManifest(
+                "s1", "synthetic-ss-return", "movie.bk2", "rom",
+                List.of(source, special, destination), List.of(entry, exit));
+        List<TraceRunReplayWalker.SegmentPlan> plans = List.of(
+                new TraceRunReplayWalker.SegmentPlan(
+                        source, dynamicArtTrace(1), null, entry),
+                new TraceRunReplayWalker.SegmentPlan(
+                        special, dynamicArtTrace(1), entry, exit),
+                new TraceRunReplayWalker.SegmentPlan(
+                        destination, dynamicArtTrace(1), exit, null));
+        TraceRunPlaybackCoordinator coordinator =
+                new TraceRunPlaybackCoordinator(
+                        run, TracePlaybackProfile.SONIC_1, 5);
+        coordinator.activateInitialLevel(new RunPlaybackObservation(
+                GameMode.LEVEL, 0, 0,
+                new RunPlaybackObservation.LevelIdentity(1, 0, 0, 0),
+                false, null, null, false, false, 0, false, 0, 0));
+        coordinator.observeBoundary(new RunBoundarySignal.SpecialStageRequest(1, 0));
+        coordinator.afterProduction(new RunPlaybackObservation(
+                GameMode.LEVEL, 1, 1,
+                new RunPlaybackObservation.LevelIdentity(1, 0, 0, 0),
+                false, null, null, false, true, 0, false, 0, 0));
+        coordinator.beforeAdmission(new RunPlaybackObservation(
+                GameMode.SPECIAL_STAGE, 1, 2, null,
+                false, null, 0, false, false, 0, false, 1, 1));
+        coordinator.afterProduction(new RunPlaybackObservation(
+                GameMode.SPECIAL_STAGE, 1, 3, null,
+                false, null, 0, false, true, 0, false, 1, 1));
+        assertEquals(TraceRunPlaybackCoordinator.Phase.TRANSITION_GAP,
+                coordinator.phase());
+
+        int destinationOffset = destination.bk2FrameOffset();
+        List<Bk2FrameInput> rows = new ArrayList<>(destinationOffset + 2);
+        for (int index = 0; index < destinationOffset + 2; index++) {
+            rows.add(frame(index));
+        }
+        Bk2Movie movie = new Bk2Movie(
+                Path.of("synthetic-destination-handoff.bk2"), "logkey",
+                Map.of(), rows, rows.size());
+        TraceSessionLauncher session = new TraceSessionLauncher(
+                null, movie, plans, null);
+        setField(session, "runCoordinator", coordinator);
+        GameServices.playbackDebug().startSession(movie, destinationOffset + 1);
+
+        Method method = TraceSessionLauncher.class.getDeclaredMethod(
+                "destinationRowsConsumedForAdmission");
+        method.setAccessible(true);
+        assertEquals(1, method.invoke(session),
+                "the title-card fall-through must consume destination row zero");
+    }
+
+    @Test
     void admissionLatchesComparedLevelBonusLevelRowsAcrossStructuralHandoffs() {
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         Bk2Movie movie = new Bk2Movie(

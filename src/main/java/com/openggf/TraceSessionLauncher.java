@@ -1198,7 +1198,7 @@ public final class TraceSessionLauncher {
             return;
         }
         forwardLatchedRunBoundary(mode);
-        int rowsConsumed = 0;
+        int rowsConsumed = destinationRowsConsumedForAdmission();
         RunPlaybackObservation currentObservation = captureRunObservation(
                 mode, rowsConsumed, isLagOnlySameLevelContinuation());
         int observationSegmentIndex = runCoordinator.currentSegmentIndex();
@@ -1221,7 +1221,7 @@ public final class TraceSessionLauncher {
             applyRunCoordinatorActions(
                     runCoordinator.afterProduction(productionObservation));
             applyRunCoordinatorActions(runCoordinator.beforeAdmission(
-                    captureRunObservation(mode, 0,
+                    captureRunObservation(mode, rowsConsumed,
                             isLagOnlySameLevelContinuation())));
         }
         RunPlaybackObservation stepObservation =
@@ -1230,12 +1230,30 @@ public final class TraceSessionLauncher {
                         && runCoordinator.currentSegmentIndex()
                                 == productionSegmentIndex
                         ? productionObservation
-                        : captureRunObservation(mode, 0,
+                        : captureRunObservation(mode, rowsConsumed,
                                 isLagOnlySameLevelContinuation());
         applyRunCoordinatorActions(runCoordinator.afterStep(stepObservation));
         runProductionOwnerObservation = null;
         runProductionOwnerVblank = null;
         clearRunOwnedInputOverride();
+    }
+
+    /** Returns destination rows consumed by a title-card release fall-through. */
+    private int destinationRowsConsumedForAdmission() {
+        if (runCoordinator.phase()
+                != TraceRunPlaybackCoordinator.Phase.TRANSITION_GAP) {
+            return 0;
+        }
+        int sourceIndex = runCoordinator.currentSegmentIndex();
+        int destinationIndex = sourceIndex + 1;
+        if (destinationIndex < 0 || destinationIndex >= runSegments.size()
+                || !"level".equals(runSegments.get(destinationIndex).segment().kind())) {
+            return 0;
+        }
+        int destinationOffset = runSegments.get(destinationIndex).segment()
+                .bk2FrameOffset();
+        return Math.max(0,
+                GameServices.playbackDebug().getCursorFrame() - destinationOffset);
     }
 
     private static RunPlaybackObservation withProductionOwner(
@@ -1393,6 +1411,14 @@ public final class TraceSessionLauncher {
         }
         if (receipt.inputClock() == DestinationAdmissionReceipt.InputClock.SHARED) {
             installRunComparator(segment, receipt.rowsConsumed(), receipt.absoluteBk2Row());
+            GameLoop destinationLoop = Engine.currentGameLoop();
+            if (destinationLoop != null) {
+                // A direct level-load admission may continue into gameplay in
+                // the same host step without passing through the scheduled
+                // level-load activation callback. Publish the destination row
+                // at the rebuilt-player seam so it cannot read stale SS input.
+                destinationLoop.applyScheduledPlaybackInputImmediately();
+            }
             adoptRunDestinationProductionIterationOwner(comparator);
             compareRunReturnBoundaryIfPresent(receipt.segmentIndex());
         }
@@ -1774,11 +1800,25 @@ public final class TraceSessionLauncher {
                                 == TraceRunPlaybackCoordinator.Phase.CURRENT_SEGMENT;
         GameLoop loop = Engine.currentGameLoop();
         GameMode mode = loop != null ? loop.getCurrentGameMode() : GameMode.LEVEL;
-        session.applyRunCoordinatorActions(
+        List<TraceRunPlaybackCoordinator.Action> actions =
                 session.runCoordinator.beforeLoadedLevelActivation(
-                        signal, session.captureRunObservation(
-                                mode,
-                                0, false)));
+                        signal, session.captureRunObservation(mode, 0, false));
+        session.applyRunCoordinatorActions(actions);
+        // Park the shared BK2 cursor at the destination level's offset before
+        // its title card can release. The release fall-through then consumes
+        // destination row zero, matching the headless chain handoff.
+        if (actions.isEmpty()
+                && session.runCoordinator.phase()
+                        == TraceRunPlaybackCoordinator.Phase.TRANSITION_GAP
+                && session.runCoordinator.currentSegmentIndex() + 1
+                        < session.runSegments.size()) {
+            TraceRunManifest.Segment destination = session.runSegments
+                    .get(session.runCoordinator.currentSegmentIndex() + 1).segment();
+            if ("level".equals(destination.kind())) {
+                GameServices.playbackDebug().scheduleSessionAtNextLevelLoad(
+                        session.movie, destination.bk2FrameOffset());
+            }
+        }
     }
 
     /** Couples load notification with the existing pending playback activation. */

@@ -216,6 +216,10 @@ straightforward to add new objects, zones, and game-specific behaviour.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Visual special-stage handoff parity (2026-08-04):** held-white S1 entry
+  no longer replays the transition SFX, and complete-run returns rebind the
+  BK2 input cursor at level load so GHZ2 consumes and compares the same
+  fall-through rows as headless replay.
 - **Visual complete-run special-stage parity (2026-08-04):** S1 trace-accurate
   startup now waits for the ROM readiness boundary; special stages share the
   normal trace HUD and recorded input display; GHZ2 rebinds through the run
