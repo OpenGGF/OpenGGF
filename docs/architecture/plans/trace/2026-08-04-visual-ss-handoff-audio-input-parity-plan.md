@@ -21,6 +21,10 @@
   than adding a route-specific input branch.
 - Publish the destination row immediately after a direct destination admission
   so a no-title-card load cannot fall through with stale input.
+- Invoke the same destination admission at the shared title-card release seam,
+  after the mode changes to `LEVEL` and before the release step can fall through
+  to gameplay; pass the measured zero/one destination-row count so setup-only
+  results returns cannot miss the handoff.
 - Keep deferred scheduling valid for `level_load` transitions whose boundary
   probe intentionally has no latch; the coordinator's accepted load and
   transition-gap phase are the structural guard.

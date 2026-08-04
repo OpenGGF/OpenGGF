@@ -655,8 +655,8 @@ class TestTraceSessionLauncherRunBranch {
                 coordinator.phase());
 
         int destinationOffset = destination.bk2FrameOffset();
-        List<Bk2FrameInput> rows = new ArrayList<>(destinationOffset + 2);
-        for (int index = 0; index < destinationOffset + 2; index++) {
+        List<Bk2FrameInput> rows = new ArrayList<>(destinationOffset + 3);
+        for (int index = 0; index < destinationOffset + 3; index++) {
             rows.add(frame(index));
         }
         Bk2Movie movie = new Bk2Movie(
@@ -672,6 +672,20 @@ class TestTraceSessionLauncherRunBranch {
         method.setAccessible(true);
         assertEquals(1, method.invoke(session),
                 "the title-card fall-through must consume destination row zero");
+
+        GameServices.playbackDebug().seekSessionFrame(destinationOffset, true);
+        assertEquals(0, method.invoke(session),
+                "a release seam before destination production consumes no rows");
+
+        GameServices.playbackDebug().seekSessionFrame(destinationOffset + 2, true);
+        assertEquals(2, method.invoke(session),
+                "the adapter must expose an overrun instead of rebasing it");
+        assertThrows(IllegalArgumentException.class,
+                () -> coordinator.beforeAdmission(new RunPlaybackObservation(
+                        GameMode.LEVEL, destinationOffset + 2, 4,
+                        new RunPlaybackObservation.LevelIdentity(1, 0, 1, 1),
+                        false, null, null, false, false, 2, false, 0, 0)),
+                "a second destination row before admission must remain a hard failure");
     }
 
     @Test

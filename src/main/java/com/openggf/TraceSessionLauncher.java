@@ -1733,8 +1733,9 @@ public final class TraceSessionLauncher {
             return;
         }
         session.forwardLatchedRunBoundary(mode);
+        int rowsConsumed = session.destinationRowsConsumedForAdmission();
         session.applyRunCoordinatorActions(session.runCoordinator.beforeAdmission(
-                session.captureRunObservation(mode, 0,
+                session.captureRunObservation(mode, rowsConsumed,
                         session.isLagOnlySameLevelContinuation())));
     }
 
@@ -1802,7 +1803,9 @@ public final class TraceSessionLauncher {
         GameMode mode = loop != null ? loop.getCurrentGameMode() : GameMode.LEVEL;
         List<TraceRunPlaybackCoordinator.Action> actions =
                 session.runCoordinator.beforeLoadedLevelActivation(
-                        signal, session.captureRunObservation(mode, 0, false));
+                        signal, session.captureRunObservation(mode,
+                                session.destinationRowsConsumedForAdmission(),
+                                false));
         session.applyRunCoordinatorActions(actions);
         // Park the shared BK2 cursor at the destination level's offset before
         // its title card can release. The release fall-through then consumes

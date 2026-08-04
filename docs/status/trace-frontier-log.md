@@ -61311,3 +61311,20 @@ to synthesize a POST phase on a VBLANK-only row.
   `TestTraceRunReplayWalkerControlFlow.probePinsPreparedRowToItsOriginalDelegateAcrossHandoff`
   expectation against the already-merged probe-cache invalidation contract;
   no visual-parity focused test failed.
+
+## 2026-08-04 - Visual SS return title-card admission timing follow-up
+
+- User-reported failure: after the S1 special-stage return title card, the
+  visual run aborted with `rowsConsumed must be 0 or 1` before GHZ2.
+- Root cause: results-return title-card releases can consume the one-shot
+  setup-only pass, bypassing the ordinary level admission callback; the shared
+  BK2 cursor then advanced before the run coordinator received destination
+  ownership.
+- Fix under validation: invoke the same coordinator admission from the shared
+  `GameLoop` title-card release seam after changing to `LEVEL`, and pass the
+  measured zero/one destination-row count through the launcher helper. No
+  cursor cap, trace hydration, or second level load is used.
+- Focused validation: `TestTraceSessionLauncherRunBranch` — 37 tests, 0
+  failures, 0 errors. The larger visual focused command encountered the
+  existing JVM crash in `TestGameLoopSpecialStageEntryPresentation` (exit 134)
+  before completing; rerun separately before integration.

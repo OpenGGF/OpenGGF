@@ -28,7 +28,15 @@ comparator, and `PlaybackDebugManager.startSession` resets its prepared and
 edge state at the destination's absolute BK2 row before the first level tick.
 The first destination tick therefore reads the destination row and publishes
 that row through the destination comparator.  No trace values hydrate gameplay;
-the recorded BK2 row is comparison/input authority only, as in headless replay.
+	the recorded BK2 row is comparison/input authority only, as in headless replay.
+
+The title-card release itself is the final pre-production admission seam. The
+shared `GameLoop` release path invokes the run coordinator after it changes the
+mode back to `LEVEL` and before its same-step fall-through input/gameplay work.
+This covers results-return title cards that perform a setup-only release and
+therefore do not pass through the ordinary level admission callback. The
+coordinator still receives the structural destination-row count (zero or one)
+from the shared cursor; it is never capped or rebased after production.
 
 ## Invariants
 
@@ -45,6 +53,9 @@ the recorded BK2 row is comparison/input authority only, as in headless replay.
 * A direct destination admission publishes the current destination input to the
   rebuilt player immediately, covering loads that do not pass through a title
   card.
+* A title-card release cannot advance a destination row before the coordinator
+  has had its pre-production admission opportunity, including setup-only
+  releases from special-stage results.
 
 ## Verification
 

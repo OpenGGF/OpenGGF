@@ -2997,6 +2997,14 @@ public class GameLoop {
         // a death/restart consumes one stale pre-reload input on the first native
         // Level_MainLoop frame before a trace comparator can observe it.
         if (currentGameMode == GameMode.LEVEL) {
+            // A results-return title card may consume its one-shot initial
+            // Process_Sprites pass and report SETUP_ONLY to the admission
+            // controller. Admit the next run segment at this shared release
+            // seam before the same-step LEVEL fall-through can advance the
+            // destination BK2 cursor. This keeps the visual run owner aligned
+            // with the headless handoff without a second level load.
+            TraceSessionLauncher.admitRunDestinationBeforeProductionIfActive(
+                    currentGameMode);
             syncPlaybackInputBridge();
         }
 
