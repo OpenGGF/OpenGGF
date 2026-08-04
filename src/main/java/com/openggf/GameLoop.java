@@ -2003,6 +2003,7 @@ public class GameLoop {
         FadeManager fadeManager = this.fadeManager;
         boolean screenAlreadyFaded = false;
         boolean fadeFromBlack = false;
+        boolean transitionSfxAlreadyPlayed = false;
 
         if (fadeManager.isActive()) {
             FadeManager.FadeState fadeState = fadeManager.getState();
@@ -2011,6 +2012,7 @@ public class GameLoop {
                 // Take over and enter special stage directly with fade-from-white.
                 screenAlreadyFaded = true;
                 fadeFromBlack = false;
+                transitionSfxAlreadyPlayed = true;
             } else if (fadeState == FadeManager.FadeState.HOLD_BLACK) {
                 // Screen is held black. Enter special stage with fade-from-black.
                 screenAlreadyFaded = true;
@@ -2034,8 +2036,13 @@ public class GameLoop {
             playable.clearPowerUps();
         }
 
-        // Play special stage entry sound
-        playSpecialStageTransitionSfx(ssProvider);
+        // A native fade owner (for example S1's big-ring results path) has
+        // already emitted the entry SFX while starting that fade. Reusing the
+        // held screen must not replay the same transition sound; a newly
+        // started fade still owns the one generic entry emission.
+        if (shouldPlaySpecialStageEntrySfx(transitionSfxAlreadyPlayed)) {
+            playSpecialStageTransitionSfx(ssProvider);
+        }
 
         // Fade out the current music gradually (ROM: MusID_FadeOut / zFadeOutMusic)
         // This preserves the SFX we just started, unlike stopMusic() which silences all
@@ -2059,6 +2066,11 @@ public class GameLoop {
             });
             LOGGER.info("Starting fade-to-white for Special Stage " + (stageIndex + 1));
         }
+    }
+
+    /** Transition SFX is emitted by the owner that starts the fade. */
+    static boolean shouldPlaySpecialStageEntrySfx(boolean transitionSfxAlreadyPlayed) {
+        return !transitionSfxAlreadyPlayed;
     }
 
     /**

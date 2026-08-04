@@ -6,11 +6,13 @@ import com.openggf.control.InputHandler;
 import com.openggf.game.GameMode;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.SpecialStageStartupPolicy;
+import com.openggf.game.GameStateManager;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic1.specialstage.Sonic1SpecialStageProvider;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageProvider;
 import com.openggf.graphics.FadeManager;
+import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -78,6 +80,50 @@ class TestGameLoopSpecialStageEntryPresentation {
         order.verify(listener).onGameModeChanged(GameMode.LEVEL, GameMode.SPECIAL_STAGE);
         verify(fade, never()).holdWhite();
         assertEquals(GameMode.SPECIAL_STAGE, loop.getCurrentGameMode());
+    }
+
+    @Test
+    void alreadyFadedSpecialStageEntryDoesNotReplayTransitionSfx() {
+        assertTrue(GameLoop.shouldPlaySpecialStageEntrySfx(false));
+        assertFalse(GameLoop.shouldPlaySpecialStageEntrySfx(true));
+    }
+
+    @Test
+    void normalEntryEmitsTransitionSfxExactlyOnce() throws Exception {
+        loop.setGameMode(GameMode.LEVEL);
+        setField(loop, "spriteManager", new SpriteManager());
+        setField(loop, "gameState", new GameStateManager());
+        when(fade.isActive()).thenReturn(false);
+
+        loop.enterSpecialStage();
+
+        verify(audio, times(1)).playSfx(anyInt());
+    }
+
+    @Test
+    void heldWhiteEntryDoesNotEmitGenericTransitionSfxAgain() throws Exception {
+        loop.setGameMode(GameMode.LEVEL);
+        setField(loop, "spriteManager", new SpriteManager());
+        setField(loop, "gameState", new GameStateManager());
+        when(fade.isActive()).thenReturn(true);
+        when(fade.getState()).thenReturn(FadeManager.FadeState.HOLD_WHITE);
+
+        loop.enterSpecialStage();
+
+        verify(audio, never()).playSfx(anyInt());
+    }
+
+    @Test
+    void heldBlackEntryRetainsGenericTransitionSfxOwnership() throws Exception {
+        loop.setGameMode(GameMode.LEVEL);
+        setField(loop, "spriteManager", new SpriteManager());
+        setField(loop, "gameState", new GameStateManager());
+        when(fade.isActive()).thenReturn(true);
+        when(fade.getState()).thenReturn(FadeManager.FadeState.HOLD_BLACK);
+
+        loop.enterSpecialStage();
+
+        verify(audio, times(1)).playSfx(anyInt());
     }
 
     @Test

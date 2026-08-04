@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: visual special-stage entry now emits its transition SFX once when
+  S1's held-white results fade already owns the sound. Whole-run returns park
+  the shared BK2 cursor at the loaded level before title-card release, consume
+  the same row-zero fall-through as headless replay, and publish direct
+  destination input before any same-step gameplay tick.
 - Fix/Test: trace loading now accepts only schema-5 metadata and its fixed
   level-row layout. Recorder provenance is opaque, retired version selectors
   are rejected, and hardware-timing authority is determined solely by the
