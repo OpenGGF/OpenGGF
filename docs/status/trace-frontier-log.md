@@ -62144,3 +62144,22 @@ to synthesize a POST phase on a VBLANK-only row.
   un-timed load span between the card's drain and the tail is observed by no
   compared field: its right edge is pinned by the counted 26 and its left by
   the modelled PLC drain.
+
+## 2026-08-05 - Durable homes for this lane's reusable facts
+
+- The reusable contracts and traps this lane established have been moved out of
+  this chronological log, which is the wrong place to find them:
+  - `plc-system` skill, "Dynamic-Art Reports and Routing" — the recorder-defined
+    `run_gap` field contracts (`movie_logical_frame` is the physical BK2 movie
+    row; `gap_edge_index` resets per logical frame), the S1
+    `segment_start - 26` load-pair invariant with its `Level_Delay` +
+    `PalFadeIn_Alt` derivation and the manifest query that verifies it, and the
+    S3K-only scope of hardware-timing capture.
+  - `trace-replay-bug-fixing` skill — physics.csv columns are hex (`rings`
+    included), the `art=serial`/gap-ledger trap, the destination-admission
+    ordering of the gap comparison, `VisualRunReplayHarness` versus
+    `AbstractRunChainTest`, and the derive-before-recording method note.
+  - `docs/status/known-discrepancies.md`, "Hardware-Timing Replay Input
+    Exception" — a "Recorder coverage: S3K only" subsection, since the
+    contract's cross-game wording describes what is permitted, not what the
+    recorder implements.

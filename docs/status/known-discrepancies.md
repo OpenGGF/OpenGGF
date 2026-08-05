@@ -956,10 +956,11 @@ release either queue.
 
 The hardware-timing replay exception below does not apply to S1/S2 PLCs.
 Physics and auxiliary trace data remain comparison-only, and no S1/S2
-recorded completion edge is accepted. Remove or amend this entry only if a
-future cycle-accuracy finding proves the modeled native service budget
-insufficient and the hardware-timing contract is deliberately expanded with
-its own guarded schema.
+recorded completion edge is accepted. No S1 or S2 capture can supply one
+either: see "Recorder coverage" under that exception. Remove or amend this
+entry only if a future cycle-accuracy finding proves the modeled native
+service budget insufficient and the hardware-timing contract is deliberately
+expanded with its own guarded schema.
 
 ---
 
@@ -1008,6 +1009,26 @@ An absent timing file means no recorded timing port and leaves the production
 scheduler live. A present empty file is an explicit v5 recorded stream with
 the complete registry and no edges. Legacy schema-1/schema-2 fixtures and
 their metadata selectors are not supported runtime inputs.
+
+### Recorder coverage: S3K only
+
+The contract's wording is cross-game — recorded timing *may* delay S1 PLC, S2
+DPLC, and S3K Kosinski readiness. **The recorder implements it for S3K only.**
+`HardwareTimingEventEngine` is constructed solely by
+`tools/bizhawk-headless/src/Recording/S3KCompleteRunCaptureRunner.cs`:428 and
+`.../S3KTraceCaptureRunner.cs`:297, and `hardware_timing.jsonl` appears only in
+`CommandLineOptions.S3kTraceOutputFileNames` — never in `TraceOutputFileNames`,
+and never in the shared S1/S2 run-mode sink (`StagedRunSegmentSink`:47-49).
+
+Consequently an S1 or S2 capture emits no `hardware_timing.jsonl`, and
+re-recording an S1/S2 run cannot produce one. Treat "re-record it with the
+hardware-timing stream" as unavailable for those games until the recorder side
+is built deliberately, alongside the timing-kind registry change that
+`TestS1S2PlcComparisonOnlyGuard.timingKindRegistryAdmitsOnlyKosinskiWork`
+currently pins to Kosinski kinds. Recorded timing is not the first resort in any
+case: an S1 divergence that looks like elapsed hardware cost is usually a
+counted ROM wait loop in the wrong place (see the `plc-system` skill's S1
+`segment_start - 26` load-pair invariant).
 
 ### Historical pre-v5 evidence (not live)
 
