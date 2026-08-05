@@ -2693,7 +2693,7 @@ public class SidekickCpuController {
             // no trace-profile-gated bridge (sonic3k.asm:26775 loc_13E9C reads the
             // post-increment (Level_frame_counter+1).b low byte).
             int autoJumpFrameCounter = frameCounter;
-            if (titleCardOwnsRetainedResultsHeldLevelCounter()) {
+            if (titleCardOwnsActiveRetainedResultsSpriteCadence()) {
                 // The retained results/title owner continues native
                 // Process_Sprites dispatches while the engine's ordinary
                 // gameplay counter is held. Sonic_RecordPos runs immediately
@@ -3213,6 +3213,15 @@ public class SidekickCpuController {
         GameModule module = sidekick.currentGameModule();
         var titleCardProvider = module != null ? module.getTitleCardProvider() : null;
         return titleCardProvider != null && titleCardProvider.ownsRetainedResultsHeldLevelCounter();
+    }
+
+    private boolean titleCardOwnsActiveRetainedResultsSpriteCadence() {
+        GameModule module = sidekick.currentGameModule();
+        var titleCardProvider = module != null ? module.getTitleCardProvider() : null;
+        return titleCardProvider != null
+                && titleCardProvider.isOverlayActive()
+                && titleCardProvider.ownsRetainedResultsHeldLevelCounter()
+                && titleCardProvider.projectsRetainedResultsSpriteCadence();
     }
 
     private int projectRetainedResultsSpriteCadence(

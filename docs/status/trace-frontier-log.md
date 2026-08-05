@@ -61570,3 +61570,32 @@ to synthesize a POST phase on a VBLANK-only row.
   still fails closed at direct Kosinski completion `#31`, fingerprint
   `66961069e564ef707173bbad733f75e3ab034e29e3f4833a02e2e26af452d8fd`, with
   no matching engine-submitted job.
+
+## 2026-08-04 — S3K CNZ retained-title auto-jump cadence frontier
+
+- Worktree: repository root, branch `bugfix/s3k-traces`, parent frontier
+  `1a7ded617`. No trace payloads were edited.
+- Root cause: the retained-results history projection was shared by Tails'
+  routine-2 catch-up gate and its normal-routine auto-jump gate. The retained
+  owner remains semantically live after the visible title overlay completes,
+  so the catch-up marker bridge still needs the projected history phase; the
+  same projection incorrectly shifted the later normal `$3F` auto-jump tick.
+- Fix: normal auto-jump cadence now asks the title provider for active retained
+  sprite cadence, while catch-up and panic paths retain the sticky retained
+  owner projection used by their native marker bridge. No route, zone, or trace
+  predicate is involved.
+- Clean authoritative command:
+  `mvn -q -Dmse=off -Dsurefire.argLine='-Xshare:off -Xmx6g'
+  -Dsurefire.forkCount=1 -DreuseForks=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace'
+  test`
+- Result: the replay report reaches raw frame `33746` with `1909` comparison
+  errors (physics `1536`, animation `373`). The first comparison error
+  advances from raw frame `23302`, `tails_cpu_ctrl2_pressed` (`$0010`
+  expected, `$0000` actual), to frame `25047`, `tails_x_speed` (`$0060`
+  expected, `$FE00` actual). The first animation error is also frame `25047`,
+  `tails_animation_id` (`$0000` expected, `$001A` actual). The replay still
+  fails closed at direct Kosinski completion `#31`, fingerprint
+  `66961069e564ef707173bbad733f75e3ab034e29e3f4833a02e2e26af452d8fd`, with
+  no matching engine-submitted job.

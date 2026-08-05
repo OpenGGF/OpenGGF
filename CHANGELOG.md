@@ -3,6 +3,10 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K retained-results CPU cadence now keeps playable-history
+  projection for the retained catch-up marker bridge while leaving the normal
+  Tails auto-jump gate on the native counter after the title overlay completes.
+  CNZ's clean replay frontier advances from raw frame 23,302 to 25,047.
 - Fix/Test: S3K off-screen SolidObject push release now publishes the native
   Walk/Run animation word before the sidekick animation slot. CNZ's clean
   replay frontier advances from raw frame 21,146 to 23,302 without changing
