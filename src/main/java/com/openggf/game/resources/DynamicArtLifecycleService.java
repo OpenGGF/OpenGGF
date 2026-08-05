@@ -317,6 +317,12 @@ public final class DynamicArtLifecycleService
             latest = publishBuffered(terminalFrame, true, alreadyPublished);
         }
         comparisonSegmentOpen = false;
+        // Entering a gap starts a fresh gap-edge sequence. The recorder numbers
+        // each transition gap's edges from zero -- both of the S1 emerald
+        // route's recorded pairs carry gap_edge_index 0 and 1 -- so a counter
+        // that only reset at run start reported the second gap's pair as 2 and
+        // 3 and diverged on a field nothing else was wrong with.
+        nextGapEdgeIndex = 0;
     }
 
     public void finishRun() {

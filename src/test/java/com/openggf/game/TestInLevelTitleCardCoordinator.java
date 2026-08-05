@@ -42,7 +42,11 @@ class TestInLevelTitleCardCoordinator {
         order.verify(moduleSupplier).get();
         order.verify(module).getLevelInitProfile();
         order.verify(profile).freshMainPlayablePreludeFrames();
-        order.verify(spriteManager).warmUpFreshMainPlayableOnly(3, levelManager, playable);
+        // A results return runs the prelude for real: the ROM's pass is a
+        // BuildSprites whose player DPLC the recorder captures in the
+        // transition gap, so it must not be art-priming only.
+        order.verify(spriteManager)
+                .warmUpFreshMainPlayableOnly(3, levelManager, playable, false);
     }
 
     @Test

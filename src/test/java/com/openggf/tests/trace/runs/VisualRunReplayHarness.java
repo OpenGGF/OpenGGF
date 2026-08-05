@@ -170,7 +170,7 @@ public final class VisualRunReplayHarness {
                         "visual run paused itself on its first comparison error"
                                 + " -- a windowed session pauses so the user can"
                                 + " read the HUD, which headlessly is a stall"
-                                + window(recent));
+                                + gapLedger() + window(recent));
             }
             if (coordinator(session) != null
                     && !GameServices.playbackDebug().isSessionPlaying()) {
@@ -348,6 +348,23 @@ public final class VisualRunReplayHarness {
 
     /** The in-flight run's timeline, so a thrown failure can carry it. */
     private static final ThreadLocal<List<String>> TIMELINE = new ThreadLocal<>();
+
+    private static String gapLedger() {
+        try {
+            var lifecycle = com.openggf.game.session.SessionManager
+                    .getCurrentGameplayMode().dynamicArtLifecycle();
+            var edges = lifecycle.gapTransitions();
+            StringBuilder out = new StringBuilder("\n  -- gap ledger ("
+                    + edges.size() + ") --");
+            for (Object t : edges) {
+                out.append("\n  ").append(String.valueOf(t), 0,
+                        Math.min(200, String.valueOf(t).length()));
+            }
+            return out.toString();
+        } catch (RuntimeException e) {
+            return "\n  -- gap ledger unavailable --";
+        }
+    }
 
     private static String window(ArrayDeque<String> recent) {
         List<String> timeline = TIMELINE.get();

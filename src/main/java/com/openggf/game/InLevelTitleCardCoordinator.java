@@ -26,7 +26,7 @@ public final class InLevelTitleCardCoordinator {
                     .getLevelInitProfile()
                     .freshMainPlayablePreludeFrames();
             spriteManager.warmUpFreshMainPlayableOnly(
-                    freshPlayerPreludeFrames, levelManager, playable);
+                    freshPlayerPreludeFrames, levelManager, playable, false);
         }
     }
 

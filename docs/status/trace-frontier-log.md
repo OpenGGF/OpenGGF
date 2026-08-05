@@ -61737,3 +61737,36 @@ to synthesize a POST phase on a VBLANK-only row.
 - Next step is therefore to identify the two edges the engine already emits
   into that gap, not to add more emission. Reverted rather than left in tree:
   it makes nothing green and its extra pair is unexplained.
+
+## 2026-08-05 - Gap DPLC now emits with matching identity; one field left
+
+- Dumping `DynamicArtLifecycleService.gapTransitions` directly settled it. With
+  the results-return prelude observing instead of priming, the engine's ledger
+  holds exactly the recorder's edges: ordinals 0/1 and 4964/4965, transfer ids
+  0 and 2482, owner `sonic`, mapping frame 1 -- identical to the manifest's
+  `dynamic_art_gap_transitions`. That identity match is what justifies the
+  change: the ROM's prelude pass is a real `BuildSprites` whose DPLC the
+  recorder captures, and `primePlayerDplc` never calls `buffer` at all, so the
+  prime branch could not produce it.
+- Second fix from the same dump: the recorder numbers each transition gap's
+  edges from zero (both recorded pairs carry `gap_edge_index` 0 and 1) while
+  `nextGapEdgeIndex` only reset at run start, reporting the second gap's pair
+  as 2 and 3. It now resets in `closeComparisonSegment`, which is where a gap
+  begins.
+- `run_gap` is down from three mismatched fields to ONE:
+  `movie_logical_frame`, 8,748 against the recorded 9,715. Two causes, both
+  identified: the prelude runs at the START of the title card while the ROM's
+  equivalent pass is the one immediately before `Level_MainLoop`
+  (`Sonic1LevelInitProfile.freshMainPlayablePreludeFrames`'s own comment says
+  so), and the counter advances per production iteration rather than per movie
+  row, so it loses ground across every suppressed gap. Moving the prelude to
+  the title card's end and making the counter track movie rows are the two
+  remaining steps.
+- The maze round trip moved the same way, from `run_tail.edge_count` 2 vs 0 to
+  an identity mismatch: `edge_ordinal` 4710 vs 4698 and `transfer_id` 2355 vs
+  2349, six extra player transfers accumulated earlier in that run. That is
+  downstream of the lane's long-standing `player_animation_id` divergence at
+  GHZ1 frame 2,082, not of this change; `ghzMazeRoundTrip` was already red.
+- Full suite unchanged at 39 attributable reds. The two that appeared are
+  `TestBubblerObjectInstance` and `TestMhzMushroomParachuteObjectInstance`,
+  both green in isolation -- the known order-sensitive fork flakes.

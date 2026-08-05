@@ -920,13 +920,20 @@ public class SpriteManager implements PlayableSstDispatcher {
 	public void warmUpFreshMainPlayableOnly(int frames,
 			LevelManager levelManager,
 			AbstractPlayableSprite mainPlayable) {
+		warmUpFreshMainPlayableOnly(frames, levelManager, mainPlayable, true);
+	}
+
+	public void warmUpFreshMainPlayableOnly(int frames,
+			LevelManager levelManager,
+			AbstractPlayableSprite mainPlayable,
+			boolean primeDynamicArtOnly) {
 		if (frames <= 0 || levelManager == null || mainPlayable == null) {
 			return;
 		}
 		int savedFrameCounter = frameCounter;
 		PlayableSpriteAnimation animation = mainPlayable.getAnimationManager();
 		try {
-			animation.setBootstrapDynamicArtPrime(true);
+			animation.setBootstrapDynamicArtPrime(primeDynamicArtOnly);
 			mainPlayable.setAir(false);
 			mainPlayable.setAngle((byte) 0);
 			mainPlayable.setGroundMode(GroundMode.GROUND);
