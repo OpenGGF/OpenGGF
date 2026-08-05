@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: LBZ1 Robotnik now submits and rewind-owns the ROM's
+  `ArtKosM_LBZMiniboss` parent at `loc_8CCF6`, instead of relying only on
+  preloaded standalone art. The LBZ complete-run hardware frontier advances
+  from direct Kosinski `#282` at raw frame `19871` to direct `#297` at raw
+  frame `22332`, without changing trace payloads.
 - Fix/Test: S3K AIZ disappearing-floor animation now uses the ROM's
   `Level_frame_counter`, and its border child moves off-screen before still
   running `SolidObjectFull` on the frame-3 reappear edge. The standard AIZ

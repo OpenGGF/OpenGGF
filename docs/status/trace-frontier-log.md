@@ -61964,3 +61964,37 @@ to synthesize a POST phase on a VBLANK-only row.
   contains `194` errors and `0` warnings across `20463` compared frames; no
   trace payloads were changed. The next frontier is the S3K direct Kosinski
   queue boundary at raw frame `16067`.
+
+## 2026-08-05 — S3K LBZ1 miniboss-art parent frontier
+
+- Worktree: repository root, branch `bugfix/s3k-traces`, parent frontier
+  `e99f5bd21`. No trace payloads were edited.
+- Root cause: `Obj_LBZ1Robotnik` queued the miniboss-box parent at its two
+  native producer sites but omitted `Queue_Kos_Module ArtKosM_LBZMiniboss` at
+  `loc_8CCF6`, relying on the standalone art registry's preloaded sheet. The
+  missing parent prevented the recorded direct child `#282` from existing in
+  the production queue.
+- Fix: the Robotnik owner now submits the ROM-backed miniboss parent at the
+  second-rise handoff, retains its hardware ordinal across rewind, rebinds
+  the restored pending handle, and claims the job once it is ready. The
+  standalone renderer fallback remains separate from queue ownership.
+- Focused validation passed:
+  `mvn -q -Dmse=off
+  -Dsurefire.argLine='-Xshare:off -Xmx6g'
+  -Dsurefire.forkCount=1 -DreuseForks=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.tests.TestS3kLbz1KnucklesSequenceHeadless,com.openggf.game.sonic3k.objects.TestLbz1RobotnikKosOwnerRewind'
+  test`
+- Clean authoritative command:
+  `mvn -q -Dmse=off -Dtrace.context.diagnosticChars=full
+  -Dsurefire.argLine='-Xshare:off -Xmx6g'
+  -Dsurefire.forkCount=1 -DreuseForks=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kLbzCompleteRunTraceReplay#replayMatchesTrace'
+  test`
+- Result: recorded direct completion `#282` at raw frame `19871` and its
+  module parent `#193` now pass. The first remaining authority failure is
+  direct completion `#297` at raw frame `22332` (`engine pending: <none>`).
+  The replay aborts before the comparison report is emitted, so no aggregate
+  comparison-error count is available for this failed run; no trace payloads
+  were changed.

@@ -111,6 +111,9 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
     private long initialBoxArtOrdinal = -1;
     private HardwareWorkHandle collapseBoxArtHandle;
     private long collapseBoxArtOrdinal = -1;
+    private HardwareWorkHandle minibossArtHandle;
+    private long minibossArtOrdinal = -1;
+    private boolean minibossArtLoaded;
 
     public Lbz1RobotnikEventController(ObjectSpawn spawn) {
         super(spawn, "LBZ1Robotnik");
@@ -150,6 +153,7 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         serviceMinibossBoxArtQueues();
+        serviceMinibossArtQueue();
         if (isPlayerKnuckles()) {
             // ROM loc_8CB90: Knuckles never meets Obj_LBZ1Robotnik here.
             ObjectLifetimeOps.deleteNoRespawn(this);
@@ -322,9 +326,45 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
         }
     }
 
+    /** ROM loc_8CCF6: queue ArtKosM_LBZMiniboss at the second-rise handoff. */
+    private void queueMinibossArt() {
+        if (minibossArtLoaded || minibossArtOrdinal >= 0) {
+            return;
+        }
+        try {
+            S3kKosModuleQueue moduleQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
+            minibossArtHandle = moduleQueue.queue(
+                    services().rom(),
+                    Sonic3kConstants.ART_KOSM_LBZ_MINIBOSS_ADDR,
+                    Sonic3kConstants.ART_TILE_LBZ_MINIBOSS);
+            minibossArtOrdinal = minibossArtHandle.ordinal();
+        } catch (Exception e) {
+            throw new IllegalStateException("Unable to queue LBZ miniboss KosM art", e);
+        }
+    }
+
     private void serviceMinibossBoxArtQueues() {
         serviceInitialMinibossBoxArt();
         serviceCollapseMinibossBoxArt();
+    }
+
+    private void serviceMinibossArtQueue() {
+        if (minibossArtLoaded || minibossArtOrdinal < 0) {
+            return;
+        }
+        S3kKosModuleQueue moduleQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
+        if (minibossArtHandle == null) {
+            minibossArtHandle = services().hardwareTiming().pendingHandle(
+                            HardwareWorkKind.KOS_MODULE_QUEUE, minibossArtOrdinal)
+                    .orElseThrow(() -> new IllegalStateException(
+                            "Missing restored LBZ miniboss KosM job " + minibossArtOrdinal));
+        }
+        if (moduleQueue.isReady(minibossArtHandle)) {
+            moduleQueue.claim(minibossArtHandle);
+            minibossArtHandle = null;
+            minibossArtOrdinal = -1;
+            minibossArtLoaded = true;
+        }
     }
 
     private void serviceInitialMinibossBoxArt() {
@@ -429,6 +469,9 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
             motion.xVel = DIAGONAL_ESCAPE_X_VEL;
             motion.yVel = DIAGONAL_ESCAPE_Y_VEL;
             flameVisible = true;
+            // ROM loc_8CCF6 queues ArtKosM_LBZMiniboss before the ship hands
+            // the arena over to Obj_LBZMiniboss.
+            queueMinibossArt();
             ensureRobotnikArtLoaded();
             armDroppedBoxHandoff();
             return;
