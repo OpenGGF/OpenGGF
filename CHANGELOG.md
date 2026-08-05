@@ -3,6 +3,20 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix: the special-stage results return now models the next game mode's
+  pre-level fade-out before it reloads the level. S1's `GM_Level` runs
+  `ClearPLC` then `PaletteFadeOut` — an unconditional 22-frame `WaitForVBlank`
+  loop whose `RunPLC` calls only ever see the just-cleared queue — before it
+  decompresses the title-card art and queues the level PLCs
+  (`sonic.asm:2710-2737`, `_inc/Palette Fading.asm:134-149`), so the returning
+  level's art drain starts 22 rows after the game-mode handoff rather than at
+  it. The exit body now waits out the profile-declared fade
+  (`LevelInitProfile.preLevelFadeOutFrames`, S1: 22; other games keep their
+  measured timing until their fades are verified). On the S1 complete-emeralds
+  run the return-gap DPLC pair moves from 59 to 37 rows early — the remainder
+  is real hardware load time that needs the run re-recorded with the v5
+  hardware-timing stream — and the GHZ maze round trip's tail pair moves 22
+  rows closer for the same reason.
 - Fix: the special-stage results return now reaches the returning level the
   way the ROM's GM loop does. The exit body (and its level reload) runs on the
   iteration after the whiteout's final V-int instead of inside the frame that

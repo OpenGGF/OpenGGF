@@ -185,6 +185,12 @@ public class GameLoop {
     private boolean resultsExitFadeCompleted;
     /** The results-exit body runs at the start of this iteration's mode update. */
     private boolean resultsExitReady;
+    /**
+     * Remaining frames of the game's pre-level fade-out between the results
+     * exit and the exit body (ROM: {@code GM_Level}'s {@code PaletteFadeOut}
+     * runs before the level PLCs are queued). -1 while no exit is in flight.
+     */
+    private int resultsExitPreLevelFadeFramesRemaining = -1;
     private BonusStageProvider activeBonusStageProvider;
     // Star-post activation high-water captured at bonus entry (ROM: the star post's
     // respawn bit, kept across the reload by Respawn_table_keep). Restored on bonus
@@ -1305,6 +1311,24 @@ public class GameLoop {
             // returning level's load (and its ClearPLC/AddPLC submissions)
             // belongs to the first frame past the results screen's last
             // sampled row, never to that row itself.
+            if (resultsExitPreLevelFadeFramesRemaining < 0) {
+                resultsExitPreLevelFadeFramesRemaining = GameServices.module()
+                        .getLevelInitProfile().preLevelFadeOutFrames();
+            }
+            if (resultsExitPreLevelFadeFramesRemaining > 0) {
+                // The next mode's own entry fades out the previous screen
+                // before it queues the returning level's PLCs (S1: GM_Level's
+                // ClearPLC + PaletteFadeOut, sonic.asm:2710-2716). Each fade
+                // frame is a WaitForVBlank row whose RunPLC only ever sees the
+                // cleared queue, so hold the exit body — and with it the
+                // reload's PLC submissions — for the fade's duration.
+                resultsExitPreLevelFadeFramesRemaining--;
+                if (activePlcLifecycleFrame.isOwnedBy(PlcLifecyclePhase.SPECIAL_STAGE_RESULTS)) {
+                    activePlcLifecycleFrame.prepareAfterLoop(PlcLifecyclePhase.SPECIAL_STAGE_RESULTS);
+                }
+                return;
+            }
+            resultsExitPreLevelFadeFramesRemaining = -1;
             resultsExitReady = false;
             if (activePlcLifecycleFrame.isOwnedBy(PlcLifecyclePhase.SPECIAL_STAGE_RESULTS)) {
                 activePlcLifecycleFrame.prepareAfterLoop(PlcLifecyclePhase.SPECIAL_STAGE_RESULTS);
@@ -2688,6 +2712,9 @@ public class GameLoop {
             return;
         }
         TraceSessionLauncher.observeRunStageExitIfActive();
+        // A fresh results screen owns a fresh exit sequence; drop any stale
+        // pre-level fade countdown a torn-down session left mid-flight.
+        resultsExitPreLevelFadeFramesRemaining = -1;
 
         // Check if the SS manager pre-started a fade (S1: concurrent fade during exit spin)
         FadeManager fadeManager = this.fadeManager;

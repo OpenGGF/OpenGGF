@@ -88,6 +88,22 @@ public interface LevelInitProfile {
     }
 
     /**
+     * Frames the game's {@code Level:} routine spends fading out the previous
+     * screen before it queues the returning level's initial PLCs.
+     *
+     * <p>Each such frame is a real {@code WaitForVBlank} row that runs
+     * {@code RunPLC} against the just-cleared queue, so the level art's drain
+     * starts this many rows after the game-mode handoff rather than at it.
+     *
+     * <p>Zero for a game whose return-load fade has not been verified against
+     * its disassembly; the shared results-exit path then keeps its established
+     * immediate-load sequencing.
+     */
+    default int preLevelFadeOutFrames() {
+        return 0;
+    }
+
+    /**
      * Ordered steps for entering a level (title card through control unlock).
      * <p>
      * Maps to the game's {@code Level:} routine: S1 has 44 steps (phases A-L),

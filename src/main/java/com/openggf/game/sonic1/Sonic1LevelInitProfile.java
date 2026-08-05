@@ -57,6 +57,17 @@ public class Sonic1LevelInitProfile extends AbstractLevelInitProfile {
     }
 
     @Override
+    public int preLevelFadeOutFrames() {
+        // GM_Level runs ClearPLC then PaletteFadeOut before it decompresses
+        // the title-card art and queues the level PLCs (sonic.asm:2710-2737).
+        // PaletteFadeOut is an unconditional 22-frame WaitForVBlank loop
+        // (move.w #22-1,d4 — docs/s1disasm/_inc/Palette Fading.asm:134-149)
+        // whose RunPLC calls only ever see the just-cleared queue, so the
+        // returning level's drain begins 22 rows after the game-mode handoff.
+        return 22;
+    }
+
+    @Override
     public List<InitStep> levelLoadSteps(LevelLoadContext ctx) {
         List<InitStep> steps = buildCoreSteps(ctx);
         // GM_Level clears v_misc_variables before resource setup

@@ -34,12 +34,12 @@ class TestS1CompleteEmeraldVisualRun {
      * the return gap now emits Sonic's DPLC pair with matching identity at the
      * title card's release, but the run still pauses on
      * {@code run_gap.edge[N].movie_logical_frame}: recorded 9,715 against the
-     * engine's release row 9,656. The remaining 59 rows are GM_Level's
-     * 22-frame {@code PaletteFadeOut} before {@code AddPLC}
-     * (docs/s1disasm/sonic.asm:2710-2737) plus ~37 rows of real load time
-     * (NemDec under disabled interrupts, Hud_Base, level-data KosDec) that
-     * needs this run re-recorded with the v5 hardware-timing stream. Raise the
-     * target here when that lands.
+     * engine's release row 9,678. GM_Level's 22-frame {@code PaletteFadeOut}
+     * before {@code AddPLC} (docs/s1disasm/sonic.asm:2710-2737) is modelled;
+     * the remaining ~37 rows are real load time (NemDec under disabled
+     * interrupts, Hud_Base, level-data KosDec) that needs this run re-recorded
+     * with the v5 hardware-timing stream. Raise the target here when that
+     * lands.
      */
     @Test
     void replaysThroughTheSpecialStageAndItsReturnBridgeAdmission() throws Exception {

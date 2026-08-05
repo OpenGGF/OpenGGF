@@ -61960,3 +61960,42 @@ to synthesize a POST phase on a VBLANK-only row.
   ratchet) + the `TestMhzMushroomParachuteObjectInstance` order flake +
   `TestInLevelTitleCardCoordinator`, updated to the new
   prelude-at-release contract.
+
+## 2026-08-05 - Gap DPLC: GM_Level's pre-queue PaletteFadeOut closes 22 of the last 59
+
+- Command: `mvn -Dmse=off -Ptrace-replay -Dtest=TestS1CompleteEmeraldVisualRun
+  -Dsonic1.rom.path=s1.gen test` with the pin temporarily at
+  `stopAfterSegment(3)`. Still red on the single remaining field,
+  `run_gap.edge[0..1].movie_logical_frame` at comparison frame 9,504, but the
+  delta fell 59 -> 37: recorded 9,715 against the engine's release row 9,656
+  before, 9,678 after. The initial gap pair is unchanged at 860, gameplay
+  admission unchanged at 9,741, and the pair's identity (ordinals 4964/4965,
+  transfer id 2482, owner `sonic`, mapping frame 1, per-frame gap index)
+  intact. The pin stays at 2.
+- The previous entry's 22-row attribution was re-verified against the
+  disassembly before implementing, given this lane's two earlier wrong
+  attributions. It holds: `GM_Level` runs `ClearPLC` then `PaletteFadeOut`
+  BEFORE the `Nem_TitleCard` NemDec and both `AddPLC` calls
+  (sonic.asm:2710-2737), and `PaletteFadeOut` is an unconditional
+  `move.w #22-1,d4` loop of 22 `WaitForVBlank` frames whose per-frame `RunPLC`
+  only ever sees the just-cleared queue
+  (docs/s1disasm/_inc/Palette Fading.asm:134-149). The returning level's
+  drain therefore starts 22 rows after the game-mode handoff, while the
+  engine queued and started draining at the handoff itself.
+- Fix: `LevelInitProfile.preLevelFadeOutFrames()` (default 0; S1 overrides
+  with the cited 22) and `GameLoop.updateSpecialStageResultsMode` holds the
+  latched exit body for that many iterations before running
+  `doExitResultsScreen`, keeping the per-iteration `prepareAfterLoop` (the
+  fade loop's `RunPLC`) on each held row. Measured by harness timeline: the
+  load moves to 9,528 with the 22 fade rows at 9,506-9,527, the card spans
+  9,528-9,678, and the release-row prelude stamps the pair at 9,678. S2/S3K
+  keep their default 0 — their return fades have not been verified against
+  their disassemblies, and their results exits are byte-identical with the
+  default.
+- REMAINING ~37 rows: real hardware load time (NemDec of `Nem_TitleCard`
+  under `disable_ints`, `Hud_Base`, level-data KosDec, FIFO-degraded V-blank
+  service), which needs this run re-recorded with the v5 hardware-timing
+  stream — this fixture has no `hardware_timing` file and its metadata
+  advertises no timing extras. Out of scope here; also note the timing-kind
+  registry currently admits only S3K Kosinski kinds, so S1 PLC timing
+  authority is a deliberate contract change.
