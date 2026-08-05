@@ -3,6 +3,10 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K AIZ's transition floor now enters the normal object pass
+  without a synthetic same-row solid checkpoint. This preserves the ROM's
+  allocation-row versus first-execution-row boundary and advances the AIZ
+  replay frontier from raw frame 5414 to the act-2 reload handoff at 5496.
 - Fix/Test: S3K AIZ fire-transition events now perform the first fire-rise
   step on the same background-event tick that starts the ROM transition.
   This removes the one-frame AIZ queue handoff drift without changing the

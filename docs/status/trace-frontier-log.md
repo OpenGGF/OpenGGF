@@ -61658,3 +61658,35 @@ to synthesize a POST phase on a VBLANK-only row.
   `c3e8ddd34bf587540ca7d131fc68d371538d1a746da64c4eee3ec01f524948b7`, with
   no matching engine-submitted job. The AIZ queue handoff is therefore
   resolved and the next frontier is the Tails vertical-state handoff.
+
+## 2026-08-05 — S3K AIZ transition-floor execution frontier
+
+- Worktree: repository root, branch `bugfix/s3k-traces`, parent frontier
+  `f679f8e63`. No trace payloads were edited.
+- Root cause: the engine called the transition floor's solid checkpoint
+  immediately when the event allocated its SST. The ROM exposes the floor
+  allocation in raw frame `5414`, but the floor's first object execution and
+  Tails' standing bit begin in raw frame `5415`; the synthetic checkpoint
+  therefore landed Tails one row early.
+- Fix: the fire-transition mutation now only adds the floor. Its normal
+  slot-ordered object pass performs the first `SolidObjectTop` checkpoint,
+  while the existing fixed-point retry state remains unchanged.
+- Focused regression validation passed:
+  `mvn -q -Dmse=off -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.level.objects.TestSolidObjectManager,com.openggf.game.sonic3k.events.TestSonic3kAIZEvents'
+  test`
+- Clean authoritative command:
+  `mvn -q -Dmse=off -Dtrace.context.diagnosticChars=full
+  -Dsurefire.argLine='-Xshare:off -Xmx6g'
+  -Dsurefire.forkCount=1 -DreuseForks=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace'
+  test`
+- Result: the first comparison error advances from raw frame `5414`
+  (`tails_y`, expected `$037F`, actual `$0380`) to raw frame `5496`
+  (`x`, expected `$00CD`, actual `$2FCD`). The report contains `41` errors
+  (physics `32`, animation `9`) before the replay fails closed at direct
+  Kosinski completion `#36`, raw frame `5543`, fingerprint
+  `c3e8ddd34bf587540ca7d131fc68d371538d1a746da64c4eee3ec01f524948b7`,
+  with no matching engine-submitted job. The next frontier is the same-row
+  AIZ2 reload/offset handoff.
