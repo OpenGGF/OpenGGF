@@ -151,6 +151,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
     private boolean destroyed;
     private ClamerSpringChild springChildSlot;
     private boolean waitingForOnscreen = true;
+    private boolean initialized;
 
     public ClamerObjectInstance(ObjectSpawn spawn) {
         super(spawn, "Clamer");
@@ -176,6 +177,11 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
             // loc_85B02 restores the saved Clamer entry point and returns;
             // loc_88FDC/CreateChild1_Normal execute on the next object pass.
             waitingForOnscreen = false;
+            return;
+        }
+        if (!initialized) {
+            initialized = true;
+            ensureSpringChildSlot();
             return;
         }
         ensureSpringChildSlot();
@@ -925,6 +931,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
     /** Test-only: bypass Obj_WaitOffscreen for unit fixtures without a camera. */
     void testReleaseWaitOffscreen() {
         waitingForOnscreen = false;
+        initialized = true;
         ensureSpringChildSlot();
     }
 }

@@ -36,6 +36,37 @@ import static org.mockito.Mockito.mock;
 class TestClamerObjectInstance {
 
     @Test
+    void waitOffscreenHandoffRunsInitializationBeforeStateDispatch() {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        try {
+            ClamerObjectInstance clamer =
+                    new ClamerObjectInstance(new ObjectSpawn(0x0100, 0x0070, 0xA3, 0, 1, false, 0));
+            RecordingServices services = new RecordingServices();
+            clamer.setServices(services);
+            AbstractPlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+            player.setCentreX((short) (0x0100 + 0x40));
+            player.setCentreY((short) 0x0070);
+
+            clamer.update(0x1000, player);
+            assertEquals(0, services.spawnedChildren.size(),
+                    "Obj_WaitOffscreen must only release the wrapper on its first visible pass");
+            assertEquals(0x02, clamer.testRoutine());
+
+            clamer.update(0x1001, player);
+            assertEquals(1, services.spawnedChildren.size(),
+                    "Clamer initialization must create its spring child on the pass after the wait wrapper");
+            assertEquals(0x02, clamer.testRoutine(),
+                    "the initialization pass must return before dispatching the idle state");
+
+            clamer.update(0x1002, player);
+            assertEquals(0x06, clamer.testRoutine(),
+                    "the idle gate must run only after the ROM-style initialization pass");
+        } finally {
+            AbstractObjectInstance.resetCameraBoundsForTests();
+        }
+    }
+
+    @Test
     void updateAllocatesRomSpringChildSlotAtChildObjDat89148Offset() {
         ClamerObjectInstance clamer =
                 new ClamerObjectInstance(new ObjectSpawn(0x0578, 0x0690, 0xA3, 0, 0, false, 0));

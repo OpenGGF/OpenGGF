@@ -61599,3 +61599,33 @@ to synthesize a POST phase on a VBLANK-only row.
   fails closed at direct Kosinski completion `#31`, fingerprint
   `66961069e564ef707173bbad733f75e3ab034e29e3f4833a02e2e26af452d8fd`, with
   no matching engine-submitted job.
+
+## 2026-08-04 — S3K CNZ Clamer initialization-boundary frontier
+
+- Worktree: repository root, branch `bugfix/s3k-traces`, parent frontier
+  `6ba5c60db`. No trace payloads were edited.
+- Root cause: the engine released Clamer's `Obj_WaitOffscreen` wrapper and
+  dispatched its idle routine on the same pass. The ROM restores the real
+  Clamer entry point first, runs its one-pass initialization (`loc_88FDC` and
+  `CreateChild1_Normal`), and only dispatches the routine on the following
+  object pass.
+- Fix: Clamer now has an explicit rewind-captured initialization latch. The
+  first visible pass releases the wait wrapper, the next pass creates the
+  spring child and returns, and only the following pass evaluates the idle
+  auto-close gate. A focused unit test covers the three-pass handoff.
+- Clean authoritative command:
+  `mvn -q -Dmse=off -Dtrace.context.diagnosticChars=full
+  -Dsurefire.argLine='-Xshare:off -Xmx6g'
+  -Dsurefire.forkCount=1 -DreuseForks=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace'
+  test`
+- Result: the replay report reaches raw frame `33746` with `1149` comparison
+  errors (physics `899`, animation `250`). The first comparison error
+  advances from raw frame `25047`, `tails_x_speed` (`$0060` expected,
+  `$FE00` actual), to frame `25743`, `camera_x` (`$1D02` expected,
+  `$1D00` actual). The first animation error is now frame `29181`,
+  `tails_animation_id` (`$0015` expected, `$0000` actual). The replay still
+  fails closed at direct Kosinski completion `#31`, fingerprint
+  `66961069e564ef707173bbad733f75e3ab034e29e3f4833a02e2e26af452d8fd`, with
+  no matching engine-submitted job.

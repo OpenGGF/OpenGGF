@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K CNZ Clamer now preserves the ROM's one-pass initialization
+  boundary after `Obj_WaitOffscreen` releases the object, so its idle gate and
+  auto-close projectile path begin on the native execution pass. CNZ's clean
+  replay frontier advances from raw frame 25,047 to 25,743 without changing
+  the trace payload.
 - Fix/Test: S3K retained-results CPU cadence now keeps playable-history
   projection for the retained catch-up marker bridge while leaving the normal
   Tails auto-jump gate on the native counter after the title overlay completes.
