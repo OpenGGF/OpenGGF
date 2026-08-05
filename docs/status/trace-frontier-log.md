@@ -61854,3 +61854,13 @@ to synthesize a POST phase on a VBLANK-only row.
 - Everything else in this defect is closed. The gap pair is emitted with
   matching ordinals, transfer ids, mapping frame, owner and per-frame gap
   index, and `movie_logical_frame` now carries the physical movie row.
+
+- Follow-up attempt, also reverted: moving the fresh-player prelude from
+  `InLevelTitleCardCoordinator.prepareResultsTransition` to the
+  `returningFromSpecialStage` branch of the title-card exit made things WORSE,
+  not better -- `run_gap` went from 2 mismatched fields to 3, with
+  `edge[1].present` false. The pair stops completing when the prelude runs
+  there, so the completed edge does not come from `completePlayerDplc` (a no-op
+  for S1) but from a later boundary that the card's exit position misses.
+  Establish where the S1 completion edge is actually raised before moving the
+  prelude again; the move is necessary but not sufficient on its own.
