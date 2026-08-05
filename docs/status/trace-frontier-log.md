@@ -61589,3 +61589,35 @@ to synthesize a POST phase on a VBLANK-only row.
   not an architecture change.
 - The harness now records a change timeline (mode, coordinator phase, segment,
   level load generation) on `Result`, which is what produced the numbers above.
+
+## 2026-08-05 - The 451 rows are S1's SS-results PLC decompression wait
+
+- ROM budget from the special stage ending to the returning level's load, read
+  off `sonic.asm:3341-3425` and
+  "_incObj/7E, 7F Special Stage Results and Chaos Emeralds.asm":
+  `SS_FinLoop` 60 frames (`v_generictimer = 60`), then the SSResult object --
+  `SSR_ChkPLC` (routine 0) returning every frame until `v_plc_buffer` drains,
+  `SSR_Move` at 16px/frame, `SSR_Wait` 180, `SSR_RingBonus`, `SSR_Wait` 180 --
+  then `sfx_EnterSS` + `PaletteWhiteOut` 22.
+- `SSR_RingBonus` decrements `v_ringbonus` by 10 EVERY frame; the `andi.b #3`
+  gate is on the blip sound only, exactly like `Got_AddBonus`. This stage ends
+  with 37 rings (below `ss_continue_rings`, so no continue branch), giving
+  `v_ringbonus = 370` and a 37-frame tally.
+- Solving the recorded 800-row bridge:
+  `800 = 60 + ChkPLC + 36 + 180 + 37 + 180`, where 36 is the ring-bonus
+  element's slide (0x360 -> 0x120 at 16px). So `SSR_ChkPLC` is ~307 frames.
+  The engine's measured 491-row results phase against the same 433 frames of
+  timed work leaves ~58. The engine's PLC drains about 5x too fast.
+- Everything else already matches. `Sonic1SpecialStageResultsScreen` has the
+  right constants (180/180, 16px slide, decrement 10) and DOES model
+  `SSR_ChkPLC` via its `plcReadinessPassed` gate on `Sonic1PlcService.isBusy()`,
+  and `Sonic1SpecialStageProvider.onEnterResults` submits the right pair --
+  `replace(0)` for `plcid_Main` plus `append(27)` for `plcid_SSResult`,
+  matching the ROM's `NewPLC` + `AddPLC`.
+- So the remaining work is not the results screen or the transition ordering:
+  it is the S1 PLC queue's decompression RATE for that pair, measured against
+  `RunPLC`'s per-frame Nemesis budget. That is the last link between the engine
+  loading the returning level at cursor 9,264 and the ROM loading it at ~9,715,
+  and it is what leaves the recorded Sonic DPLC pair outside the gap in both
+  the complete run (`run_gap.edge_count` 2 vs 0) and the maze round trip
+  (`run_tail.edge_count` 2 vs 0).
