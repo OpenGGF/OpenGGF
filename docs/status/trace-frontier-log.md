@@ -62817,3 +62817,55 @@ to synthesize a POST phase on a VBLANK-only row.
     `TestS1GhzBossGraphRewind`, `TestS1PushBlockSideContact` and
     `TestRewindTorture` produce byte-identical failures with and without the
     change (re-run as an isolated subset on both trees).
+
+## 2026-08-05 - Where the GHZ3 -> MZ1 gap's missing 207 rows go, traced
+
+- Follow-up to the entry above; **no code change**, read-only tracing of the
+  production path so the next agent does not re-derive it. Frontier unchanged:
+  `TestS1CompleteEmeraldVisualRun` lane 2 green at `stopAfterSegmentBody(6)`,
+  failing at `stopAfterSegmentBody(7)` with *"run destination must retain the
+  active movie at row 27467, got cursor=27260"*.
+- **The run already models one 200+ row S1 level entry correctly, and it is a
+  different code path.** The special-stage return into `ghz2_2` spends 23 gap
+  rows in `SPECIAL_STAGE_RESULTS`, **151 in `GameMode.TITLE_CARD`**, then 62 in
+  `LEVEL` before admission -- 236 rows, and every one of them is now exact. The
+  GHZ3 -> MZ1 boundary never enters `TITLE_CARD` at all: all 21 of its gap steps
+  report `mode=LEVEL`.
+- **Why.** S1's end-of-act does not go through the S3K-only
+  `SeamlessLevelTransitionRequest` path (`LevelIterationAdmissionController`
+  :53-63; every `requestSeamlessTransition` caller is under
+  `game/sonic3k/events/`). It goes through
+  `Sonic1ResultsScreenObjectInstance.triggerFadeToBlack`
+  (`Sonic1ResultsScreenObjectInstance.java`:411-430): a native blocking
+  fade-to-black whose completion calls `services().advanceToNextLevel()` and
+  immediately starts a fade-from-black. `LevelManager.advanceToNextLevel`
+  (:3078-3092) then runs `loadCurrentLevel` under
+  `TraceSessionLauncher.runLevelAdvanceLoad`, which marks the load
+  `LEVEL_ADVANCE`, and `beforeRunLevelLoadPlaybackActivationIfActive`
+  (`TraceSessionLauncher.java`:2115-2145) hands the coordinator a
+  `LevelLoaded` signal that admits the destination on the spot.
+- **The title-card barrier does not cover this boundary.**
+  `RunPlaybackObservation.initialTitleCardPending` is populated from
+  `levelManager.isTitleCardRequested()`
+  (`TraceSessionLauncher.java`:868-873) -- the full `GameMode.TITLE_CARD`
+  request. The act advance raises the *in-level* card instead, consumed by
+  `InLevelTitleCardCoordinator.startIfRequested`
+  (`InLevelTitleCardCoordinator.java`:28-56) through
+  `levelManager.consumeInLevelTitleCardRequest()`, which the barrier never
+  observes. So even with the fade lengthened, admission would still not wait
+  for the card.
+- **ROM shape of the missing budget.** `Got_NextLevel` only writes
+  `f_restart = 1` (`docs/s1disasm/_incObj/3A Got Through Card.asm:200-211`); the
+  228 recorded rows are `GM_Level`'s own restart -- its `PaletteFadeOut`, the
+  `Level_ClrRam`/`LevelDataLoad` block, the `Level_TtlCard` wait loop, then
+  `Level_Delay` (4) and `PalFadeIn_Alt` (22) (sonic.asm:2956-2969, and the same
+  counted tail the `segment_start - 26` load-pair invariant already uses). The
+  end-of-act card itself is entirely inside segment 6's rows and now lands
+  exactly, so the whole 207-row deficit is on the restart side of `f_restart`.
+- **Suggested shape, not yet attempted.** Route the S1 act advance through the
+  same counted `GM_Level` restart the results bridge already models rather than
+  a fade-to-black plus immediate load, and widen the admission barrier to the
+  in-level card. Both touch shared owners (`GameLoop` /
+  `LevelIterationAdmissionController` / `TraceSessionLauncher`), so this is a
+  design-then-implement piece, not an in-loop fix. It is also the run's FIRST
+  plain act-to-act boundary, so nothing before it exercised the path.
