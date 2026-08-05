@@ -61770,3 +61770,31 @@ to synthesize a POST phase on a VBLANK-only row.
 - Full suite unchanged at 39 attributable reds. The two that appeared are
   `TestBubblerObjectInstance` and `TestMhzMushroomParachuteObjectInstance`,
   both green in isolation -- the known order-sensitive fork flakes.
+
+## 2026-08-05 - The last field decomposes into three exact causes
+
+- `run_gap.edge[N].movie_logical_frame` is 8,748 against the recorded 9,715.
+  The 967 difference is not one bug. Solving both recorded data points against
+  the engine's values -- (834, 104) for the initial pair and (9,715, 8,748) for
+  the return -- and against the engine's own load row of BK2 9,505:
+  - **730 -- counter origin.** `movieLogicalFrame` resets to 0 in
+    `resetState`, so it counts from the run's dynamic-art start rather than
+    from movie frame 0, where the recorder counts. At the initial pair the
+    engine reads 104 for a recorded 834.
+  - **27 -- counter stall.** It advances only in `finishProductionIteration`,
+    which `PlcFrameLifecycleCoordinator` calls only when the frame had an
+    owner, so it does not move on rows whose level body was suppressed. Across
+    this route that costs 27 rows by the return; it grows with every
+    suppressed row a longer run accumulates.
+  - **210 -- prelude placement.** The engine's prelude runs at BK2 9,505, the
+    start of the title card. The ROM's equivalent pass is the one immediately
+    before `Level_MainLoop` (see `Sonic1LevelInitProfile
+    .freshMainPlayablePreludeFrames`'s own comment), 210 rows later. The
+    engine's title card also spans 9,505-9,607, 103 rows against the ROM's 236
+    from load to gameplay, so the placement fix needs the duration with it.
+  - 730 + 27 + 210 = 967, the observed difference exactly.
+- Order matters when fixing these: the counter changes are shared with the
+  headless chain and the recording driver, so `movieLogicalFrame`'s contract
+  ("movie row" versus "production iterations since run start") should be
+  settled against the native recorder's own definition first, not inferred
+  from these two data points alone.
