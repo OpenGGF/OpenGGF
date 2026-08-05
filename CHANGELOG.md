@@ -3,6 +3,14 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K LBZ's final-boss owner now submits and rewind-owns the
+  ROM-backed `ArtKosM_LBZ2DeathEggSmall` parent, and the final-fall handoff
+  observes the LBZ2 `$-2` camera step at the object/event boundary. Suppressed
+  replay rows now route pending zone transitions and normal title-card art
+  through the same production path. The LBZ complete-run hardware frontier
+  advances from direct Kosinski `#317` at raw frame `44454` to direct `#322` at
+  raw frame `46196`; direct `#317..#321` and module `#214..#218` now match
+  without changing trace payloads.
 - Fix/Test: S3K LBZ final-boss laser children now refresh through their ROM
   parent order, keeping the firing head and muzzle collision state aligned at
   the first HP2 hit. The LBZ complete-run hardware frontier advances from

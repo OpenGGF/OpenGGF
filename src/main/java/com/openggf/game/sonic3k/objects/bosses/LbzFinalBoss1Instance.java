@@ -18,8 +18,12 @@ import com.openggf.game.sonic3k.objects.S3kBossExplosionChild;
 import com.openggf.game.sonic3k.objects.S3kBossExplosionController;
 import com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance;
 import com.openggf.game.sonic3k.objects.SongFadeTransitionInstance;
+import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kZoneRuntimeState;
+import com.openggf.game.timing.HardwareWorkHandle;
+import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractResultsScreen;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -158,6 +162,10 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
     private boolean engineFlamesSpawned;
     private boolean bossExplosionPlcQueued;
     private boolean deathEggSmallArtQueued;
+    private S3kKosModuleQueue deathEggSmallArtQueue;
+    private HardwareWorkHandle deathEggSmallArtHandle;
+    private long deathEggSmallArtOrdinal = -1;
+    private boolean deathEggSmallArtLoaded;
     private boolean cutsceneAnchorRegistered;
     private int mainExternalFrameTimer = -1;
     private int mainExternalFrameIndex;
@@ -275,6 +283,7 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
+        serviceDeathEggSmallArtQueue();
         boolean wasInitialized = initialized;
         ensureInitialized();
         if (!wasInitialized) {
@@ -744,7 +753,16 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
     /** ROM loc_72CDA: StartNewLevel $0700 when P1 falls past camera.y + $120. */
     private void updateFinalFall(PlayableEntity player) {
         int playerY = player == null ? Integer.MIN_VALUE : player.getCentreY() & 0xFFFF;
-        if (playerY >= ((cameraY() + 0x120) & 0xFFFF)) {
+        int thresholdCameraY = cameraY();
+        // LevelFrameStep dispatches objects before ScreenEvents. ROM
+        // LBZ2BGE_Falling lowers the camera by $2 in that same loop, so the
+        // object handoff observes the camera value that the event tail is
+        // about to publish.
+        if (services().zoneRuntimeState() instanceof LbzZoneRuntimeState lbz
+                && lbz.isFinalFallActive()) {
+            thresholdCameraY = (thresholdCameraY - 2) & 0xFFFF;
+        }
+        if (playerY >= ((thresholdCameraY + 0x120) & 0xFFFF)) {
             services().requestZoneAndAct(Sonic3kZoneIds.ZONE_MHZ, 0, true);
             ObjectLifetimeOps.deleteNoRespawn(this);
         }
@@ -795,15 +813,42 @@ public final class LbzFinalBoss1Instance extends AbstractObjectInstance
                 && services().renderManager().getArtProvider() instanceof Sonic3kObjectArtProvider provider) {
             provider.ensureStandaloneArtLoaded(Sonic3kObjectArtKeys.LBZ2_DEATH_EGG_SMALL);
         }
-        if (!(services().currentLevel() instanceof Sonic3kLevel level)) {
+        if (deathEggSmallArtLoaded || deathEggSmallArtOrdinal >= 0
+                || deathEggSmallArtHandle != null) {
             return;
         }
         try {
-            byte[] raw = new ResourceLoader(services().rom()).loadSingle(
-                    LoadOp.kosinskiMBase(Sonic3kConstants.ART_KOSM_LBZ2_DEATH_EGG_SMALL_ADDR));
-            level.applyPatternOverlay(raw, Sonic3kConstants.ART_TILE_LBZ2_DEATH_EGG_SMALL * 32, false);
-        } catch (IOException ex) {
-            LOG.fine("Unable to queue ArtKosM_LBZ2DeathEggSmall in current context: " + ex.getMessage());
+            deathEggSmallArtQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
+            deathEggSmallArtHandle = deathEggSmallArtQueue.queue(
+                    services().rom(),
+                    Sonic3kConstants.ART_KOSM_LBZ2_DEATH_EGG_SMALL_ADDR,
+                    Sonic3kConstants.ART_TILE_LBZ2_DEATH_EGG_SMALL);
+            deathEggSmallArtOrdinal = deathEggSmallArtHandle.ordinal();
+        } catch (Exception ex) {
+            throw new IllegalStateException(
+                    "Unable to queue LBZ2 Death Egg miniature KosM art", ex);
+        }
+    }
+
+    private void serviceDeathEggSmallArtQueue() {
+        if (!deathEggSmallArtQueued || deathEggSmallArtLoaded) {
+            return;
+        }
+        if (deathEggSmallArtQueue == null && deathEggSmallArtOrdinal >= 0) {
+            deathEggSmallArtQueue = S3kRuntimeArtCoordinator.from(services()).moduleQueue();
+            deathEggSmallArtHandle = services().hardwareTiming().pendingHandle(
+                            HardwareWorkKind.KOS_MODULE_QUEUE, deathEggSmallArtOrdinal)
+                    .orElseThrow(() -> new IllegalStateException(
+                            "restored LBZ final-boss owner cannot find Death Egg miniature KosM ordinal "
+                                    + deathEggSmallArtOrdinal));
+        }
+        if (deathEggSmallArtHandle != null
+                && deathEggSmallArtQueue.isReady(deathEggSmallArtHandle)) {
+            deathEggSmallArtQueue.claim(deathEggSmallArtHandle);
+            deathEggSmallArtLoaded = true;
+            deathEggSmallArtHandle = null;
+            deathEggSmallArtQueue = null;
+            deathEggSmallArtOrdinal = -1;
         }
     }
 

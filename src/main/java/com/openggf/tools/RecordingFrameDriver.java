@@ -516,6 +516,20 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
         currentBk2Index++;
         LevelFrameContext context =
                 LevelFrameContext.from(SessionManager.getCurrentGameplayMode());
+        TraceSuppressedRowClosure.executeUnownedTitleCardWork(
+                true,
+                GameServices.module().getTitleCardProvider(),
+                this::startPendingInLevelTitleCardIfRequested,
+                this::applyInLevelTitleCardControlLock);
+        applyPendingSeamlessTransition();
+        boolean loadedZoneActTransition = applyPendingZoneActTransition();
+        // A normal title card is still a ROM-owned object during a suppressed
+        // trace row. Start its art queue before the row's hardware closure so
+        // the next VBlank can admit the same production work as the visible
+        // path.
+        if (!loadedZoneActTransition) {
+            startPendingNormalTitleCardIfRequested();
+        }
         TraceSuppressedRowClosure.execute(
                 context,
                 lifecycleFrame,
