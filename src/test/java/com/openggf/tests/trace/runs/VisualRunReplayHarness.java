@@ -152,6 +152,7 @@ public final class VisualRunReplayHarness {
 
         ArrayDeque<String> recent = new ArrayDeque<>();
         List<String> timeline = new ArrayList<>();
+        TIMELINE.set(timeline);
         String[] lastKey = {""};
         int steps = 0;
         boolean stalled = false;
@@ -164,11 +165,6 @@ public final class VisualRunReplayHarness {
             rethrowIfAborted(session, recent);
             // Only meaningful once the title card has handed off and the run
             // coordinator exists; before that there is no session to stall.
-            if (stop.untilSegmentIndex() >= 0
-                    && currentSegmentIndex(session) >= stop.untilSegmentIndex()) {
-                reachedTarget = true;
-                break;
-            }
             if (loop.isPaused()) {
                 throw new AssertionError(
                         "visual run paused itself on its first comparison error"
@@ -179,6 +175,13 @@ public final class VisualRunReplayHarness {
             if (coordinator(session) != null
                     && !GameServices.playbackDebug().isSessionPlaying()) {
                 stalled = true;
+                break;
+            }
+            // Checked LAST, so a target that lands on the same step as a pause
+            // or a stall reports the failure rather than a hollow success.
+            if (stop.untilSegmentIndex() >= 0
+                    && currentSegmentIndex(session) >= stop.untilSegmentIndex()) {
+                reachedTarget = true;
                 break;
             }
         }
@@ -343,8 +346,14 @@ public final class VisualRunReplayHarness {
         }
     }
 
+    /** The in-flight run's timeline, so a thrown failure can carry it. */
+    private static final ThreadLocal<List<String>> TIMELINE = new ThreadLocal<>();
+
     private static String window(ArrayDeque<String> recent) {
-        return "\n  " + String.join("\n  ", recent);
+        List<String> timeline = TIMELINE.get();
+        String changes = timeline == null || timeline.isEmpty() ? ""
+                : "\n  -- timeline --\n  " + String.join("\n  ", timeline);
+        return "\n  " + String.join("\n  ", recent) + changes;
     }
 
     private static void rethrowIfAborted(TraceSessionLauncher session,

@@ -61621,3 +61621,35 @@ to synthesize a POST phase on a VBLANK-only row.
   and it is what leaves the recorded Sonic DPLC pair outside the gap in both
   the complete run (`run_gap.edge_count` 2 vs 0) and the maze round trip
   (`run_tail.edge_count` 2 vs 0).
+
+## 2026-08-05 - The return delay is three deltas, and the ring counts are hex
+
+- Correction to the entry above: the trace `rings` column is HEX. The complete
+  run's first special stage ends on `0037` = 55 rings and the maze round trip on
+  `0043` = 67, both at or above `ss_continue_rings` (50). So the results card
+  takes `SSR_RingBonus.finished`'s CONTINUE branch -- `1*60`, `SSR_Continue`,
+  `6*60` -- not the plain `3*60`. The earlier "37 rings, no continue" reading,
+  and the ~307-frame `SSR_ChkPLC` estimate built on it, were both wrong.
+- The corrected ROM model fits BOTH bridges with one shared constant:
+  `SS_FinLoop 60 + SSR_ChkPLC + slide 36 + 180 + rings + 60 + 360 = bridge`.
+  Complete run: `751 + ChkPLC + 55 = 800`. Maze: `751 + ChkPLC + 67 = 812`.
+  Both give `SSR_ChkPLC = 49`. `PaletteWhiteOut`'s 22 frames then fall in the
+  gap, putting the ROM's level load at ~9,527 for the complete run.
+- Measured engine, same decomposition:
+  `SS phase 68 + ChkPLC 18 + 36 + 180 + 55 + [no continue] + whiteout 22 = 599`,
+  load at cursor 9,264. Three deltas, worth 263 frames:
+  the missing continue branch (240), `SSR_ChkPLC` 18 vs 49 (31), and the
+  special-stage exit phase 68 vs 60 (-8).
+- Implementing the continue branch alone was tried and REVERTED. It moved the
+  load exactly as predicted, 9,264 -> 9,504, which is verified by the harness
+  timeline; but 9,504 is still the bridge's last row rather than the gap, so
+  `run_gap.edge_count` stayed 2 vs 0, and the remaining 23 frames matter. It
+  also broke `ghzMazeSpecialStageReturnPresentationBridge`, whose
+  "presentation bridge must hand off in LEVEL mode" assertion encodes the
+  engine's current early timing -- with ROM timing the engine is still in its
+  title card there, and the ROM itself is mid-`PaletteWhiteOut`. All three
+  deltas have to land together, and that assertion has to move with them.
+- Harness fix worth keeping: the stop-at-segment check now runs AFTER the pause
+  and stall checks. It ran first, so a target reached on the same step as the
+  self-pause reported success -- which is how the reverted change briefly looked
+  like it had fixed the boundary. Failures also carry the change timeline now.
