@@ -62034,3 +62034,40 @@ to synthesize a POST phase on a VBLANK-only row.
   the engine has no pending job. The replay aborts before the comparison report
   is emitted, so no aggregate comparison-error count is available; no trace
   payloads were changed.
+
+## 2026-08-05 — S3K LBZ Act 2 size-worker frontier
+
+- Worktree: repository root, branch `bugfix/s3k-traces`, parent frontier
+  `2c6c05c20`. No trace payloads were edited.
+- Root cause: LBZ's retained `Obj_EndSignControl` reaches
+  `Change_Act2Sizes` at the title owner's runtime-art publication boundary,
+  while the engine armed the boundary workers at the later camera-release
+  tail. It also discarded the workers' creation-pass fixed-point carry, so
+  LBZ's max-X camera bound began one frame late.
+- Fix: the transition bridge now exposes the provider-owned runtime-art
+  admission boundary; LBZ arms its three gradual workers there, while ICZ
+  retains its own completion-owned timing. LBZ preserves the same-pass
+  creation entry, and the carried results/signpost owner keeps the native
+  control/title publication order across the short tail.
+- Focused validation passed:
+  `mvn -q -Dmse=off
+  -Dsurefire.argLine='-Xshare:off -Xmx6g'
+  -Dsurefire.forkCount=1 -DreuseForks=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.game.sonic3k.titlecard.TestSonic3kTitleCardManagerRewind,com.openggf.game.sonic3k.titlecard.TestSonic3kTitleCardKosQueue,com.openggf.game.sonic3k.events.TestSonic3kLbzRewindRoundTrip'
+  test`
+- Clean authoritative command:
+  `mvn -q -Dmse=off -Dtrace.context.diagnosticChars=full
+  -Dsurefire.argLine='-Xshare:off -Xmx6g'
+  -Dsurefire.forkCount=1 -DreuseForks=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kLbzCompleteRunTraceReplay#replayMatchesTrace'
+  test`
+- Result: direct completions `#301` and `#302` at raw frames `29371` and
+  `36951`, with module completions `#206` and `#207` at raw frames `29372`
+  and `36952`, now match. The first remaining authority failure is direct
+  completion `#303` at raw frame `37405`, fingerprint
+  `sha256:74736e887a82dc6d9717318acb799b83001f3fcfd976b7cf8ab458d4e3bd81c5`;
+  the engine has no pending job. The replay aborts before the comparison
+  report is emitted, so no aggregate comparison-error count is available;
+  no trace payloads were changed.

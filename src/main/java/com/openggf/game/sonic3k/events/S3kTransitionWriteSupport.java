@@ -48,6 +48,13 @@ public final class S3kTransitionWriteSupport {
         }
     }
 
+    public static void preparePreloadedActTitleCardRuntimeArtAdmission(
+            LevelEventProvider provider) {
+        if (provider instanceof S3kTransitionEventBridge bridge) {
+            bridge.preparePreloadedActTitleCardRuntimeArtAdmission();
+        }
+    }
+
     public static void requestMgzPostTransitionRelease(LevelEventProvider provider) {
         if (provider instanceof S3kTransitionEventBridge bridge) {
             bridge.requestMgzPostTransitionRelease();

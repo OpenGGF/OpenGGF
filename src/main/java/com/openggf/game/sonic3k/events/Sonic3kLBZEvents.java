@@ -291,7 +291,11 @@ public final class Sonic3kLBZEvents extends Sonic3kZoneEvents {
         postTitleAct2TargetMinY = level.getMinY();
         postTitleAct2TargetMaxY = level.getMaxY();
         postTitleAct2SizeChangeActive = true;
-        postTitleAct2WorkersCreatedThisPass = true;
+        // The retained worker slots execute their creation entry in the same
+        // Process_Sprites pass that publishes Change_Act2Sizes. Preserve that
+        // first fixed-point carry before the camera step; the next dispatch is
+        // not the creation boundary.
+        postTitleAct2WorkersCreatedThisPass = false;
         act2MaxXAccumulator = 0;
         act2MinYAccumulator = 0;
         act2MaxYAccumulator = 0;

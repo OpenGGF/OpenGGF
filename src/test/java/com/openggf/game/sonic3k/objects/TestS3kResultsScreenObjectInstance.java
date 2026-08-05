@@ -51,6 +51,8 @@ class TestS3kResultsScreenObjectInstance {
     void shortResultsChildTailRetainsTwoMutatedTitleCreateDispatches() {
         assertEquals(38, S3kResultsScreenObjectInstance.mutatedTitleCardResetDispatches(false));
         assertEquals(40, S3kResultsScreenObjectInstance.mutatedTitleCardResetDispatches(true));
+        assertEquals(39, S3kResultsScreenObjectInstance.mutatedTitleCardResetDispatches(
+                true, -1, true));
     }
 
     @Test

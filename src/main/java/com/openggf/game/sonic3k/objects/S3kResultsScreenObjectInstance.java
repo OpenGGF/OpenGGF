@@ -538,6 +538,21 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     }
 
     /**
+     * Reports the retained-owner boundary at which Obj_EndSignControl can
+     * restore the players, before Obj_LevelResults publishes the next owner.
+     * The result children and the carried SST retirement tail are both gone,
+     * but the publication flag is still clear, so the next result dispatch is
+     * the one that clears End_of_level_active.
+     */
+    boolean isEndSignControlRestoreBoundaryReady() {
+        return state == STATE_EXIT
+                && childrenRemaining <= 0
+                && exitRetireDispatchesInitialized
+                && carriedResultsRenderRetireDispatches <= 0
+                && !exitPublicationComplete;
+    }
+
+    /**
      * Additional owner dispatches while ROM child SSTs finish retiring after
      * the engine's embedded result elements have left the screen.
      */
@@ -830,11 +845,24 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             releasePlayerControlsForExit();
             controlsReleasedAheadOfHandoff = true;
         }
+        if (titleInitializationPending && initializeTitleCardOnPublication()) {
+            // This retained owner carries the short native child-retirement
+            // tail. Its Obj_TitleCard init is visible in the same publication
+            // boundary as the parent mutation; keep the ordinary retained
+            // results path on its separately-tested following dispatch.
+            initializePublishedTitleCard();
+            titleInitializationPending = false;
+            complete = true;
+        }
         if (!titleInitializationPending) {
             ObjectLifetimeOps.deleteNoRespawn(this);
         }
         LOG.fine(() -> String.format("S3K results exit: zone=%X act=%d isAct2OrSpecial=%b",
                 zone, act, isAct2OrSpecial));
+    }
+
+    private boolean initializeTitleCardOnPublication() {
+        return carriedAcrossSeamlessTransition && usesShortResultsChildRetireTail;
     }
 
     /**
@@ -878,7 +906,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                     s3kTitleCard.requestLevelGamestateResetAfterCreateDispatches(
                             mutatedTitleCardResetDispatches(
                                     usesShortResultsChildRetireTail,
-                                    carriedPreloadedActCameraReleaseDispatches));
+                                    carriedPreloadedActCameraReleaseDispatches,
+                                    initializeTitleCardOnPublication()));
                     if (carriedPreloadedActCameraReleaseDispatches == 0) {
                         s3kTitleCard.requestInLevelExitAdditionalDispatches(1);
                     }
@@ -897,11 +926,26 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     static int mutatedTitleCardResetDispatches(
             boolean usesShortResultsChildRetireTail,
             int preloadedActCameraReleaseDispatches) {
+        return mutatedTitleCardResetDispatches(
+                usesShortResultsChildRetireTail,
+                preloadedActCameraReleaseDispatches,
+                false);
+    }
+
+    static int mutatedTitleCardResetDispatches(
+            boolean usesShortResultsChildRetireTail,
+            int preloadedActCameraReleaseDispatches,
+            boolean initializesOnPublication) {
         // A short child-retirement tail hands ownership to the mutated title
         // card one frame earlier, before the native child/create phase has
         // exposed its final two dispatches.
         int dispatches = MUTATED_TITLE_CARD_RESET_DISPATCHES
                 + (usesShortResultsChildRetireTail ? 2 : 0);
+        if (initializesOnPublication) {
+            // Sharing the publication dispatch removes one owner pass from the
+            // absolute display-reset schedule.
+            dispatches--;
+        }
         // When the retained transition explicitly has no preloaded-camera
         // tail, its virtual child retirement also has no synthetic owner pass.
         // The title initializes one replay row earlier; keep the native

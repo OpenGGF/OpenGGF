@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K LBZ now arms the retained Act 2 boundary workers at the
+  LBZ event provider's title-owner runtime-art admission boundary and keeps
+  the workers' creation-pass fixed-point carry. The LBZ complete-run hardware
+  frontier advances from direct Kosinski `#301` at raw frame `29371` to direct
+  `#303` at raw frame `37405`; direct `#301..#302` and module `#206..#207`
+  now match without changing trace payloads.
 - Fix/Test: S3K's in-level title owner now models `Obj_TitleCardWait2`'s
   second owner poll for `LoadEnemyArt` independently of the retained camera
   release tail. The LBZ complete-run hardware frontier advances from direct

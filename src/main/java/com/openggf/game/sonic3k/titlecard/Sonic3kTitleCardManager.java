@@ -996,6 +996,14 @@ public class Sonic3kTitleCardManager
                     lease, RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
         }
         runtimeArtAdmissionConsumed = true;
+        if (inLevelMode
+                && releasePreloadedActCameraOnComplete) {
+            // The LBZ retained EndSignControl owner reaches Change_Act2Sizes
+            // at this publication boundary; other transition providers keep
+            // their own completion-owned handoff timing.
+            S3kTransitionWriteSupport.preparePreloadedActTitleCardRuntimeArtAdmission(
+                    GameServices.module().getLevelEventProvider());
+        }
     }
 
     private void releasePreloadedActCamera() {
