@@ -410,6 +410,17 @@ public class BubblerObjectInstance extends AbstractObjectInstance implements Rew
         return 1;
     }
 
+    /**
+     * {@code Obj_Bubbler} writes {@code width_pixels=$10} but leaves
+     * {@code height_pixels} at the cleared SST value (sonic3k.asm:64491-64498).
+     * Its rising-child and maker paths both use the resulting zero-height
+     * Render_Sprites bound as the off-screen delete gate.
+     */
+    @Override
+    public int getOnScreenHalfHeight() {
+        return 0;
+    }
+
     int getWobbleAngleForTest() {
         return wobbleAngle;
     }

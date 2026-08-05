@@ -61486,3 +61486,32 @@ to synthesize a POST phase on a VBLANK-only row.
   no matching engine-submitted job. The previous boundary was raw frame
   `25,667`, completion `#30`. Focused CNZ/title/results validation passed:
   6 classes, 0 failures, 0 errors.
+
+## 2026-08-04 — S3K CNZ zero-height bubble lifetime frontier
+
+- Worktree: repository root, branch `bugfix/s3k-traces`, parent frontier
+  `f50f47a72`. No trace payloads were edited.
+- Root cause: `Obj_AirCountdown` and `Obj_Bubbler` write
+  `width_pixels=$10` but leave `height_pixels` at the cleared SST value. The
+  shared engine visibility predicate supplied its assumed 16-pixel vertical
+  margin, keeping those objects alive after the ROM `Render_Sprites` bit-7
+  check had cleared them. The stale slots shifted CNZ's later fan allocation
+  and execution order.
+- Fix: S3K AirCountdown and Bubbler instances report a zero render half-height,
+  matching the native initialization and their `AirCountdown_Wobble` /
+  `Bubbler` off-screen delete gates (`sonic3k.asm:33324-33330,33400-33408`
+  and `64491-64504,64570-64583`).
+- Clean authoritative command:
+  `mvn -q -Dmse=off -Dsurefire.argLine='-Xshare:off -Xmx6g'
+  -Dsurefire.forkCount=1 -DreuseForks=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace'
+  test`
+- Result: expected fail-closed replay reaches report frame `33,746` with
+  1,311 comparison errors (physics 1,133, animation 178); the first error
+  moves to frame `20,457`, field `y`, expected `0x08EE`, actual `0x08F0`.
+  The next authoritative boundary remains raw frame `33,755`, direct
+  Kosinski completion `#31`, fingerprint
+  `66961069e564ef707173bbad733f75e3ab034e29e3f4833a02e2e26af452d8fd`, with
+  no matching engine-submitted job. Focused `TestBubblerObjectInstance`
+  validation passed.
