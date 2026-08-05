@@ -61515,3 +61515,30 @@ to synthesize a POST phase on a VBLANK-only row.
   `66961069e564ef707173bbad733f75e3ab034e29e3f4833a02e2e26af452d8fd`, with
   no matching engine-submitted job. Focused `TestBubblerObjectInstance`
   validation passed.
+
+## 2026-08-04 - S3K CNZ overlapping hover-fan SST order frontier
+
+- Worktree: repository root, branch `bugfix/s3k-traces`, candidate based on
+  `ade33e5c1`. No trace payloads were edited.
+- Root cause: the CNZ hover-fan execution override reordered adjacent fans by
+  layout index. In the frontier window the native slots are fan subtype `$03`
+  at slot `$15` followed by subtype `$13` at slot `$16`; the override ran the
+  latter first. Its lift-band read then rejected at the upper edge, so the
+  engine applied only the first fan's `-$03` correction instead of the native
+  `-$03` followed by `-$02` pair.
+- Fix: remove the layout-index execution override and retain the normal
+  ascending managed-slot order. This preserves the native write-before-next-
+  test ordering without a route, zone, or trace predicate.
+- Clean authoritative command:
+  `mvn -q -Dmse=off -Dsurefire.argLine='-Xshare:off -Xmx6g'
+  -Dsurefire.forkCount=1 -DreuseForks=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace'
+  test`
+- Result: the replay report reaches raw frame `33746` with `1309` errors
+  (physics `1131`, animation `178`). The first comparison error advances from
+  raw frame `20457` to frame `21146`, `tails_animation_id` (`$0000` expected,
+  `$0005` actual). The replay still fails closed at direct Kosinski completion
+  `#31`, fingerprint
+  `66961069e564ef707173bbad733f75e3ab034e29e3f4833a02e2e26af452d8fd`, with
+  no matching engine-submitted job.

@@ -3,6 +3,9 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K CNZ overlapping hover fans now execute in managed SST order,
+  restoring the native two-fan lift handoff and advancing the clean replay
+  frontier from raw frame 20,457 to 21,146.
 - Fix/Test: S3K's global oscillator now advances at the native level-loop tail;
   an in-frame act transition consumes its provider-owned transition dispatch
   without a duplicate tail tick. CNZ bumper orbit and carried-results dispatch
