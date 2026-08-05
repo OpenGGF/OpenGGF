@@ -62071,3 +62071,39 @@ to synthesize a POST phase on a VBLANK-only row.
   the engine has no pending job. The replay aborts before the comparison
   report is emitted, so no aggregate comparison-error count is available;
   no trace payloads were changed.
+
+## 2026-08-05 — S3K LBZ end-boss art frontier
+
+- Worktree: repository root, branch `bugfix/s3k-traces`, parent frontier
+  `e9a002ba4`. No trace payloads were edited.
+- Root cause: `Obj_LBZEndBoss` loads `ArtKosM_LBZEndBoss` when the launcher
+  object is created, but the engine only marked the PLC request and relied on
+  standalone registry art. The missing ROM-owned KosM parent prevented direct
+  completion `#303` (its first child at `0x376544`) and module completion
+  `#208` from entering the production queues.
+- Fix: `LbzEndBossInstance` now submits the ROM-backed parent through the
+  injected S3K module queue at construction, retains its ordinal, rebinds the
+  pending handle after rewind, and claims the parent after readiness. The
+  standalone renderer remains separate from queue ownership.
+- Focused validation passed:
+  `mvn -q -Dmse=off
+  -Dsurefire.argLine='-Xshare:off -Xmx6g'
+  -Dsurefire.forkCount=1 -DreuseForks=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.game.sonic3k.objects.bosses.TestLbzEndBossInstance,com.openggf.game.rewind.coverage.TestRewindCoverageGuard'
+  test`
+- Clean authoritative command:
+  `mvn -q -Dmse=off -Dtrace.context.diagnosticChars=full
+  -Dsurefire.argLine='-Xshare:off -Xmx6g'
+  -Dsurefire.forkCount=1 -DreuseForks=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kLbzCompleteRunTraceReplay#replayMatchesTrace'
+  test`
+- Result: direct completion `#303` at raw frame `37405` and module
+  completion `#208` at raw frame `37406` now match. The first remaining
+  authority failure is direct completion `#304` at raw frame `39353`,
+  fingerprint
+  `sha256:f98081fe9e27e0c8b66eaf5188e1206ec2d77c97ed4defe85533c0bc1f3b0310`;
+  the engine has no pending job. The replay aborts before the comparison
+  report is emitted, so no aggregate comparison-error count is available;
+  no trace payloads were changed.

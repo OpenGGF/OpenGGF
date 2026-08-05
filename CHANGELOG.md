@@ -3,6 +3,11 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K LBZ's end-boss owner now submits and rewind-owns the ROM-backed
+  `ArtKosM_LBZEndBoss` parent when the launcher object is created. The LBZ
+  complete-run hardware frontier advances from direct Kosinski `#303` at raw
+  frame `37405` to direct `#304` at raw frame `39353`; direct `#303` and module
+  `#208` now match without changing trace payloads.
 - Fix/Test: S3K LBZ now arms the retained Act 2 boundary workers at the
   LBZ event provider's title-owner runtime-art admission boundary and keeps
   the workers' creation-pass fixed-point carry. The LBZ complete-run hardware
