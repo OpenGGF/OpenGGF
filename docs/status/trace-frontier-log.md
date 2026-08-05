@@ -61826,3 +61826,31 @@ to synthesize a POST phase on a VBLANK-only row.
   window, with the ROM's 26-frame `PaletteFadeIn` between its prelude and the
   main loop. Moving the prelude to the title card's end needs that duration
   with it, or it merely lands 108 rows early instead of 210.
+
+## 2026-08-05 - The last 210 frames are architectural, not a constant
+
+- `Level_TtlCardLoop` (sonic.asm:2814-2842) exits on TWO conditions, and its
+  own comment states them: "move in title cards, stay on them until PLCs have
+  finished". Every card element must have reached its target AND
+  `v_plc_buffer` must be empty. The ROM's title card is therefore as long as
+  the level art takes to decompress -- it is NOT a constant, so porting 210 as
+  a duration would have been another fitted number.
+- Adding that PLC condition to `Sonic1TitleCardManager.updateSlideIn` was tried
+  and reverted: it is a no-op. The engine's title card still spans BK2
+  9,505-9,607 because the engine decompresses level art synchronously during
+  the load, so its queue is already drained when the card starts. The ROM
+  spends 236 rows between load and gameplay; the engine spends 103.
+- So the residual 210 needs two things that are architectural rather than
+  numeric:
+  1. the returning level's art to load THROUGH the timed PLC queue across the
+     title card, as `Level_TtlCardLoop` does, instead of synchronously at the
+     load; and
+  2. the fresh-player prelude to move from the card's start
+     (`InLevelTitleCardCoordinator.prepareResultsTransition`) to the point the
+     ROM runs it, immediately before `Level_MainLoop` -- 26 rows before
+     gameplay, after the card and before `PaletteFadeIn`.
+  Lengthening the card alone does not move the prelude, and moving the prelude
+  alone lands it 108 rows early instead of 210. Neither is a constant to tune.
+- Everything else in this defect is closed. The gap pair is emitted with
+  matching ordinals, transfer ids, mapping frame, owner and per-frame gap
+  index, and `movie_logical_frame` now carries the physical movie row.
