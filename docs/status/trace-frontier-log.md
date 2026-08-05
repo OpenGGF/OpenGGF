@@ -62512,3 +62512,109 @@ to synthesize a POST phase on a VBLANK-only row.
   recorder defers), so the next step is either a scratch PC-execute probe on
   `RandomNumber` across the window, or an engine-side RNG-call log compared
   against the recorded animal type/direction outcomes. No change was made.
+
+## 2026-08-05 - GHZ3 animal window: the object V-blank clock, not the RNG
+
+- Frontier unchanged: `TestS1CompleteEmeraldVisualRun` with the second lane's
+  pin raised to `stopAfterSegment(7)`, on `develop` at `18caadb01`. **3 errors**
+  at segment-6 row **7,983** (`ghz3_2`, BK2 26,702) on
+  `queue.s1_nemesis_plc.busy` / `prepared` / `remaining_work`. Nothing was
+  committed beyond this entry; every measurement below came from throwaway
+  instrumentation that has been reverted, and both committed lanes are green
+  again on the clean tree.
+- **The previous entry's two hypotheses are now separated, and neither was the
+  root cause.** The deciding evidence is a plain fixture query: `ghz3_2`'s
+  `physics.csv` carries a `vblank_counter` column that advances exactly once per
+  recorded row, and every `Pri_Animals` spawn lands on a row where
+  `vblank_counter & 7 == 0` (docs/s1disasm/_incObj/3E Prison Capsule.asm:169-170).
+  The recording's burst is row 7,695 with `vblank_counter` `0x65DA` -- 2 mod 8 --
+  so its continuous spawns start at +6. The engine's `ObjectManager.vblaCounter`
+  is 0 mod 8 there.
+- **Measured: the engine's V-blank clock is 1,587 ticks behind the ROM by
+  `ghz3_2`.** Temporary per-row instrumentation on `VisualRunReplayHarness`
+  logging the shared BK2 cursor against `getVblaCounter()`, joined to each level
+  segment's recorded `vblank_counter`, gives a constant per-segment deficit:
+
+  | segment | rows | engine deficit |
+  |---|---|---|
+  | 0 `ghz1` | 4,115 | **1**, constant |
+  | 3 `ghz2_2` | 3,606 | **795**, constant |
+  | 6 `ghz3_2` | 8,520 | **1,587**, constant |
+
+  1,587 is 3 mod 8 and 19 mod 32, which de-phases both animal gates at once:
+  `Pri_Animals`' `moveq #7,d0 / and.b (v_vblank_byte).w,d0` and
+  `Anml_ChkFloor`'s `btst #4,(v_vblank_byte).w` prison-escape direction flip
+  (`_incObj/28, 29 Animals and Points.asm:226-229`). The 32-frame flip gate is
+  what spreads the despawn sequence by tens of frames -- an animal that leaves
+  in the wrong direction exits the opposite screen edge.
+- **Where the deficit accrues.** The counter is frozen for the whole of each
+  presentation bridge segment: `ghz2` (800 rows, played in `SPECIAL_STAGE` then
+  `SPECIAL_STAGE_RESULTS`) and `ghz3` (798 rows) never tick it, while the ROM
+  advances 792 and 790 across them. `TraceSessionLauncher.applyRunSpecialPreservedVblankPolicy`
+  (`TraceSessionLauncher.java`:1090-1097) advances it once per admitted
+  special-stage row, but stops the moment the coordinator leaves that segment,
+  and `GameLoop.updateSpecialStageResultsMode` (`GameLoop.java`:1304-1357) never
+  touches it. `TraceRunVblankClock.levelDestinationTarget` then re-seeds the
+  destination from the *bridge* segment's frozen tail plus a correct 231-row gap
+  budget, so the deficit is carried forward verbatim. The ROM's own increment is
+  unconditional -- `VBlank_Exit: addq.l #1,(v_vblank_count).w`
+  (docs/s1disasm/sonic.asm:684) runs after every V-int routine the mode table
+  dispatched, `VBlank_SpecialStage` and `VBlank_TitleCards` included. This is a
+  third row class alongside the two that
+  [docs/status/known-discrepancies.md](known-discrepancies.md) already records as
+  deliberate, and it is **not** unobservable: the doc's claim that the counter
+  "matches the recorded ROM value every frame on the probed traces" does not hold
+  for this run.
+  - Note for whoever closes it: the ROM misses 7 V-ints inside each bridge, at
+    the same relative rows (60-70) both times. That is `SS_Finish`'s
+    `disable_ints ... ClearScreen / NemDec Nem_TitleCard / Hud_Base ...
+    enable_ints` block (sonic.asm:3369-3383), so the count is payload-fixed
+    rather than route-dependent. `TracePlaybackProfile.interLevelNonAdvancingMovieRows`
+    (currently 6 for S1) is the existing home for exactly this kind of quantity.
+- **Effect of correcting it, measured.** With the `ghz3_2` seed scratch-forced to
+  the recorded `0x47CB`:
+  - all **8** `Pri_Explosion` spawns land on rows 7,637 / 7,645 / ... / 7,693 --
+    identical to the recording;
+  - all **19** `Pri_Animals` spawns land on rows 7,701 / 7,709 / ... / 7,845 --
+    identical to the recording, against 18 spawns at the wrong rows before.
+  Forcing `ghz2_2`'s seed as well (to `0x24C6`) still walks all 3,606 of its rows
+  and both special stages, so the phase correction does not regress anything the
+  lane currently passes. The first error moves to row 7,978 rather than
+  disappearing, because three further defects remain -- so the phase fix is a
+  prerequisite, not a frontier move, and was reverted rather than committed.
+- **Three defects still between here and the frontier**, all measured with the
+  phase corrected:
+  1. **The burst is one row late.** Engine `Pri_SpawnAnimals` at row 7,696
+     against the recording's 7,695; the explosion timer runs 60 rows in both, so
+     the switch's landing trigger itself is one row late (engine 7,636 against
+     7,635).
+  2. **Prison animals spawn 3px too high, and explosions ~29px too low.** The
+     fixture's `object_appeared` puts the prison switch (slot 34) at
+     `y=0x037D` (893) and the capsule body (slot 35) at `y=0x03A2` (930), and the
+     recorded animals at **933** = 893 + 8 + 32 -- `Pri_Switch`'s
+     `addq.w #8,obY` (3E Prison Capsule.asm:99) plus `Pri_SpawnAnimals`'
+     `addi.w #32,obY` (:145). `Sonic1EggPrisonObjectInstance` spawns both
+     animals and explosions from the *body's* `spawn.y()` (930), so every
+     capsule animal starts 3px high and every explosion 29px low. The animals'
+     X values already match exactly, so only the Y owner is wrong. Floor-hit row
+     is what selects the `btst #4` flip, so this feeds straight into the despawn
+     sequence.
+  3. **The ROM makes exactly one more `RandomNumber` draw than the engine before
+     the animal window -- and only one.** Reimplementing `RandomNumber`
+     (`_incObj/sub RandomNumber.asm`: `newSeed = (L<<16) | (41*S & 0xFFFF)`,
+     `L = ((41*S & 0xFFFF) + (41*S >> 16)) & 0xFFFF`) reproduces the engine's
+     logged seed transitions exactly. Replaying that stream from the engine's own
+     seed one draw later, at stride 2, reproduces **all 19** recorded
+     continuous-spawn X offsets
+     (`-6, 16, -5, -3, -6, 5, -12, -3, 7, -13, 2, -17, -8, -14, -25, 9, -6, 6, 5`)
+     -- so the per-spawn draw count (`Pri_Animals` + the animal's own
+     `Anml_FromEnemy`) is already right and the streams differ by a single
+     earlier draw. With the phase corrected the 8 explosion draws and 8 burst
+     draws match the recording's object counts, so the missing draw is upstream,
+     most likely in the GHZ boss's defeat explosions
+     (`sub BossDefeated & BossMove.asm:7,18` gates its `RandomNumber` on
+     `v_vblank_byte` too, so it is itself downstream of the same clock).
+- Method note: no PC-execute probe was needed. `vblank_counter` and `lag_state`
+  are already in the S1 complete-run fixture, and the RNG question was answered
+  by reimplementing the ROM LFSR against the engine's own logged seeds rather
+  than by recording a new stream.
