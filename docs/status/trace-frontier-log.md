@@ -61874,3 +61874,18 @@ to synthesize a POST phase on a VBLANK-only row.
   therefore come from somewhere else, and identifying that path is the
   prerequisite for moving the prelude without losing the pair. `completeApplied`
   has no callers outside the service, which narrows where to look.
+
+- ANSWERED: S1's player DPLC pair is raised by `serviceProductionVBlank`, not
+  by the observe call. `observePlayerDplc` routes S1 to `prepareS1`, which only
+  stores a pending `s1Preparation`; the next `serviceProductionVBlank` turns it
+  into the submitted edge (and its completion), stamping the origin
+  `comparisonSegmentOpen ? "segment" : "run_gap"` at THAT moment. So the
+  `completePlayerDplc` call in `DynamicArtDecisionOwner.observe` is vestigial
+  for S1, and the recorded gap pair's frame is the frame of the VBlank that
+  flushed the preparation -- not the frame the prelude ran on.
+- That explains the reverted prelude move directly: running the prelude at the
+  title card's exit left its preparation to be flushed by a VBlank after the
+  window had reopened, so the pair was stamped `segment` instead of `run_gap`
+  and vanished from the gap ledger. It also means the 210-frame target is
+  reached by controlling WHICH VBlank flushes the preparation, not by moving
+  the prelude alone.
