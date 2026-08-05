@@ -3,6 +3,12 @@
 All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
+- Fix/Test: S3K LBZ now submits the ROM-owned Death Egg terrain Kos/KosM
+  batch through the shared hardware queues, then submits the one-module
+  launch PLC after that terrain batch retires. The LBZ complete-run hardware
+  frontier advances from direct Kosinski `#304` at raw frame `39353` to direct
+  `#314` at raw frame `43942`; direct `#304..#313` and module `#209..#210`
+  now match without changing trace payloads.
 - Fix/Test: S3K LBZ's end-boss owner now submits and rewind-owns the ROM-backed
   `ArtKosM_LBZEndBoss` parent when the launcher object is created. The LBZ
   complete-run hardware frontier advances from direct Kosinski `#303` at raw

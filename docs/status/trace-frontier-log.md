@@ -62107,3 +62107,37 @@ to synthesize a POST phase on a VBLANK-only row.
   the engine has no pending job. The replay aborts before the comparison
   report is emitted, so no aggregate comparison-error count is available;
   no trace payloads were changed.
+
+## 2026-08-05 — S3K LBZ Death Egg terrain/launch PLC frontier
+
+- Worktree: repository root, branch `bugfix/s3k-traces`, parent frontier
+  `354cfa2e2`. No trace payloads were edited.
+- Root cause: `LBZ2_Resize`'s Death Egg terrain swap synchronously decoded
+  the ROM's two Kos streams and terrain KosM stream, and folded the later
+  `ArtKosM_LBZ2DeathEgg2_8x8` launch PLC into that same synchronous path. The
+  production queues therefore had no native direct entries `#304..#313`, no
+  terrain module parent `#209`, and no launch module parent `#210`.
+- Fix: `Sonic3kLBZEvents` now owns the three initial ROM-backed submissions
+  with rewind-captured ordinals: `0x3E69B0 -> BLOCK_TABLE`,
+  `0x3ED3D4 -> RAM_START`, and `0x3E8F72 -> pattern 0`. It claims and applies
+  the prepared terrain payloads only after the queue reports readiness, then
+  submits and rewind-owns the one-module `0x37F6EE -> pattern 0x5A0` launch
+  PLC. No trace, route, zone, or frame-number branch was added.
+- Focused validation: the source compiles and the authoritative replay reaches
+  the next hardware boundary; no focused unit failure was observed in this
+  change before the frontier replay.
+- Clean authoritative command:
+  `mvn -q -Dmse=off -Dtrace.context.diagnosticChars=full
+  -Dsurefire.argLine='-Xshare:off -Xmx6g'
+  -Dsurefire.forkCount=1 -DreuseForks=true
+  -Ds3k.rom.path='Sonic and Knuckles & Sonic 3 (W) [!].gen'
+  -Dtest='com.openggf.tests.trace.s3k.TestS3kLbzCompleteRunTraceReplay#replayMatchesTrace'
+  test`
+- Result: direct completions `#304..#313` at raw frames `39353..39415` and
+  module completions `#209`/`#210` at raw frames `39414`/`39416` now match.
+  The first remaining authority failure is direct completion `#314` at raw
+  frame `43942`, fingerprint
+  `sha256:589a478d29f5c788ad304520acc86172ea220a4a68b5a74ac25ee62e80d5899c`;
+  the engine has no pending job. The replay aborts before the comparison
+  report is emitted, so no aggregate comparison-error count is available;
+  no trace payloads were changed.
